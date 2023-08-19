@@ -184,12 +184,14 @@ type DeployInfo struct {
 	ComposeSection *ComposeSectionInfo `json:"compose,omitempty" yaml:"compose,omitempty"`
 	Endpoints      EndpointSpec        `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	Divert         *DivertDeploy       `json:"divert,omitempty" yaml:"divert,omitempty"`
+	Remote         bool                `json:"remote,omitempty" yaml:"remote,omitempty"`
 }
 
 // DestroyInfo represents what must be destroyed for the app
 type DestroyInfo struct {
 	Image    string          `json:"image,omitempty" yaml:"image,omitempty"`
 	Commands []DeployCommand `json:"commands,omitempty" yaml:"commands,omitempty"`
+	Remote   bool            `json:"remote,omitempty" yaml:"remote,omitempty"`
 }
 
 // DivertDeploy represents information about the deploy divert configuration

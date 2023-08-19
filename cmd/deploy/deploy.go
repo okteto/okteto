@@ -511,9 +511,34 @@ func getDefaultTimeout() time.Duration {
 	return parsed
 }
 
-func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, builder *buildv2.OktetoBuilder, cmapHandler configMapHandler) (deployerInterface, error) {
+func shouldRunInRemote(opts *Options) bool {
+	// already in remote so we need to deploy locally
+	if utils.LoadBoolean(constants.OktetoDeployRemote) {
+		return false
+	}
 
-	if isRemoteDeployer(opts.RunInRemote, opts.Manifest.Deploy.Image) {
+	// --remote flag enabled from command line
+	if opts.RunInRemote {
+		return true
+	}
+
+	// remote option set in the manifest via a remote deployer image or the remote option enabled
+	if opts.Manifest != nil && opts.Manifest.Deploy != nil {
+		if opts.Manifest.Deploy.Image != "" || opts.Manifest.Deploy.Remote {
+			return true
+		}
+	}
+
+	if utils.LoadBoolean(constants.OktetoForceRemote) {
+		return true
+	}
+
+	return false
+
+}
+
+func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, builder *buildv2.OktetoBuilder, cmapHandler configMapHandler) (deployerInterface, error) {
+	if shouldRunInRemote(opts) {
 		// run remote
 		oktetoLog.Info("Deploying remotely...")
 		return newRemoteDeployer(builder), nil

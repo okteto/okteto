@@ -46,7 +46,7 @@ func GetOktetoPipelinePath(wd string) (string, error) {
 	return "", ErrOktetoPipelineManifestNotFound
 }
 
-// GetOktetoPipelinePath returns an okteto pipeline file if exists, error otherwise
+// GetOktetoPipelinePathWithFilesystem returns an okteto pipeline file if exists, error otherwise
 func GetOktetoPipelinePathWithFilesystem(wd string, fs afero.Fs) (string, error) {
 	for _, possibleOktetoPipelineManifest := range possibleOktetoPipelineFiles {
 		manifestPath := filepath.Join(wd, filepath.Join(possibleOktetoPipelineManifest...))

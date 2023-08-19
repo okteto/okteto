@@ -39,7 +39,6 @@ func newLocalDestroyer(
 }
 
 func (ld *localDestroyCommand) destroy(ctx context.Context, opts *Options) error {
-
 	if opts.RunInRemote {
 		if ld.manifest.Destroy != nil && ld.manifest.Destroy.Image == "" {
 			ld.manifest.Destroy.Image = constants.OktetoPipelineRunnerImage
