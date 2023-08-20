@@ -95,6 +95,7 @@ type Dev struct {
 	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	Mode                 string                `json:"mode,omitempty" yaml:"mode,omitempty"`
+	Keda                 bool                  `json:"keda,omitempty" yaml:"keda,omitempty"`
 
 	Replicas *int `json:"replicas,omitempty" yaml:"replicas,omitempty"`
 	// Deprecated fields

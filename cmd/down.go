@@ -201,7 +201,9 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 			return
 		}
 
-		keda.UnpauseKeda(app, restConfig)
+		if dev.Keda {
+			keda.UnpauseKeda(app, restConfig)
+		}
 
 		oktetoLog.Success(fmt.Sprintf("Development container '%s' deactivated", dev.Name))
 

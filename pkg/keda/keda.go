@@ -14,6 +14,7 @@ import (
 
 func UnpauseKeda(app apps.App, restConfig *rest.Config) {
 	workloadName := app.ObjectMeta().Name
+	namespaceName := app.ObjectMeta().Namespace
 	context := context.TODO()
 
 	apiextensionsClient, err := apiextensionsclientset.NewForConfig(restConfig)
@@ -22,7 +23,7 @@ func UnpauseKeda(app apps.App, restConfig *rest.Config) {
 	}
 
 	payload := `{"metadata": {"annotations": {"autoscaling.keda.sh/paused-replicas": null}}}`
-	_, err = apiextensionsClient.KedaV1alpha1().ScaledObjects("default").Patch(context, workloadName, types.MergePatchType, []byte(payload), metav1.PatchOptions{})
+	_, err = apiextensionsClient.KedaV1alpha1().ScaledObjects(namespaceName).Patch(context, workloadName, types.MergePatchType, []byte(payload), metav1.PatchOptions{})
 
 	if err != nil {
 		oktetoLog.Fail(fmt.Sprintf("Keda unpause failed for %v, err: %v", workloadName, err))
@@ -33,6 +34,7 @@ func UnpauseKeda(app apps.App, restConfig *rest.Config) {
 
 func PauseKeda(app apps.App, restConfig *rest.Config) {
 	workloadName := app.ObjectMeta().Name
+	namespaceName := app.ObjectMeta().Namespace
 	context := context.TODO()
 
 	apiextensionsClient, err := apiextensionsclientset.NewForConfig(restConfig)
@@ -41,7 +43,7 @@ func PauseKeda(app apps.App, restConfig *rest.Config) {
 	}
 
 	payload := `{"metadata": {"annotations": {"autoscaling.keda.sh/paused-replicas": "0"}}}`
-	_, err = apiextensionsClient.KedaV1alpha1().ScaledObjects("default").Patch(context, workloadName, types.MergePatchType, []byte(payload), metav1.PatchOptions{})
+	_, err = apiextensionsClient.KedaV1alpha1().ScaledObjects(namespaceName).Patch(context, workloadName, types.MergePatchType, []byte(payload), metav1.PatchOptions{})
 
 	if err != nil {
 		oktetoLog.Fail(fmt.Sprintf("Keda pause failed for %v, err: %v", workloadName, err))
