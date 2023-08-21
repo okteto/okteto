@@ -155,7 +155,7 @@ func (e errIsNotOktetoCtx) Error() string {
 }
 
 func (v *ctxValidator) Validate(ctx context.Context) error {
-	oktetoLog.Info("validating the context")
+	oktetoLog.Debug("validating context for dynamic kubernetes token request")
 	result := make(chan error, 1)
 	go func() {
 		if v.ctxName == "" {
@@ -203,7 +203,7 @@ func newOktetoSupportValidator(ctx context.Context, ctxName, ns string, k8sClien
 }
 
 func (v *oktetoSupportValidator) Validate(ctx context.Context) error {
-	oktetoLog.Info("validating okteto client support for kubetoken")
+	oktetoLog.Debug("validating okteto client support for kubetoken")
 	result := make(chan error, 1)
 	go func() {
 		okClient, err := v.oktetoClientProvider.Provide()
