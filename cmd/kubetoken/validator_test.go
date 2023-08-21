@@ -134,7 +134,7 @@ func TestPreReqValidator(t *testing.T) {
 				withK8sClientProvider(tc.input.k8sClientProvider),
 				withOktetoClientProvider(tc.input.oktetoClientProvider),
 			)
-			err := v.Validate(tc.input.ctx)
+			err := v.validate(tc.input.ctx)
 			assert.ErrorIs(t, err, tc.expected)
 		})
 	}
@@ -220,7 +220,7 @@ func TestCtxValidator(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			v := newCtxValidator(tc.input.ctxName, tc.input.k8sClientProvider)
-			err := v.Validate(tc.input.ctx)
+			err := v.validate(tc.input.ctx)
 			assert.ErrorIs(t, err, tc.expected)
 		})
 	}
@@ -276,6 +276,19 @@ func TestOktetoKubetokenSupportValidation(t *testing.T) {
 			},
 			expected: assert.AnError,
 		},
+		{
+			name: "successful from the same ctx",
+			input: input{
+				ctx:     ctx,
+				ctxName: "https://okteto.cluster.com",
+				oktetoClient: &client.FakeOktetoClient{
+					KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{
+						Token: types.KubeTokenResponse{},
+					}),
+				},
+			},
+			expected: nil,
+		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
@@ -287,7 +300,7 @@ func TestOktetoKubetokenSupportValidation(t *testing.T) {
 				client: tc.input.k8sClient,
 			}
 			v := newOktetoSupportValidator(tc.input.ctx, tc.input.ctxName, tc.input.ns, fakeK8sClientProvider, fakeOktetoClientProvider)
-			err := v.Validate(tc.input.ctx)
+			err := v.validate(tc.input.ctx)
 			assert.ErrorIs(t, err, tc.expected)
 		})
 	}

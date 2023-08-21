@@ -66,9 +66,9 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 			withNamespace(namespace),
 			withK8sClientProvider(k8sClientProvider),
 			withOktetoClientProvider(okClientProvider),
-		).Validate(ctx)
+		).validate(ctx)
 		if err != nil {
-			return fmt.Errorf("Dynamic kubernetes token cannot be requested: %w", err)
+			return fmt.Errorf("dynamic kubernetes token cannot be requested: %w", err)
 		}
 
 		err = contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{

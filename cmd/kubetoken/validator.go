@@ -102,18 +102,18 @@ func newPreReqValidator(opts ...option) *preReqValidator {
 }
 
 // Validate validates that all the pre-reqs to execute the command are met
-func (v *preReqValidator) Validate(ctx context.Context) error {
+func (v *preReqValidator) validate(ctx context.Context) error {
 	oktetoLog.Info("validating pre-reqs for kubetoken")
 
 	ctx, cancel := context.WithTimeout(ctx, validationTimeout)
 	defer cancel()
 
-	err := newCtxValidator(v.ctxName, v.k8sClientProvider).Validate(ctx)
+	err := newCtxValidator(v.ctxName, v.k8sClientProvider).validate(ctx)
 	if err != nil {
 		return fmt.Errorf("invalid context: %w", err)
 	}
 
-	err = newOktetoSupportValidator(ctx, v.ctxName, v.ns, v.k8sClientProvider, v.oktetoClientProvider).Validate(ctx)
+	err = newOktetoSupportValidator(ctx, v.ctxName, v.ns, v.k8sClientProvider, v.oktetoClientProvider).validate(ctx)
 	if err != nil {
 		return fmt.Errorf("invalid okteto support: %w", err)
 	}
@@ -154,7 +154,7 @@ func (e errIsNotOktetoCtx) Error() string {
 	return fmt.Sprintf("context '%s' is not an okteto context", e.ctxName)
 }
 
-func (v *ctxValidator) Validate(ctx context.Context) error {
+func (v *ctxValidator) validate(ctx context.Context) error {
 	oktetoLog.Debug("validating context for dynamic kubernetes token request")
 	result := make(chan error, 1)
 	go func() {
@@ -202,11 +202,11 @@ func newOktetoSupportValidator(ctx context.Context, ctxName, ns string, k8sClien
 	}
 }
 
-func (v *oktetoSupportValidator) Validate(ctx context.Context) error {
+func (v *oktetoSupportValidator) validate(ctx context.Context) error {
 	oktetoLog.Debug("validating okteto client support for kubetoken")
 	result := make(chan error, 1)
 	go func() {
-		okClient, err := v.oktetoClientProvider.Provide()
+		okClient, err := v.oktetoClientProvider.Provide(okteto.WithCtxName(v.ctxName))
 		if err != nil {
 			result <- fmt.Errorf("error creating okteto client: %w", err)
 			return

@@ -75,7 +75,7 @@ type oktetoClientCfg struct {
 	ctxName string
 }
 
-func withCtxName(ctxName string) Option {
+func WithCtxName(ctxName string) Option {
 	return func(cfg *oktetoClientCfg) {
 		cfg.ctxName = ctxName
 	}
