@@ -28,19 +28,13 @@ import (
 )
 
 var (
-	errEmptyNamespace = errors.New("namespace cannot be empty")
-	errEmptyContext   = errors.New("context name cannot be empty")
+	errEmptyContext = errors.New("context name cannot be empty")
 
-	valdationTimeout = 30000 * time.Second
+	validationTimeout = 3 * time.Second
 )
 
 type k8sClientProvider interface {
 	Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error)
-}
-
-// validator is the interface that wraps the Validate method.
-type validator interface {
-	Validate(ctx context.Context) error
 }
 
 type preReqCfg struct {
@@ -111,7 +105,7 @@ func newPreReqValidator(opts ...option) *preReqValidator {
 func (v *preReqValidator) Validate(ctx context.Context) error {
 	oktetoLog.Info("validating pre-reqs for kubetoken")
 
-	ctx, cancel := context.WithTimeout(ctx, valdationTimeout)
+	ctx, cancel := context.WithTimeout(ctx, validationTimeout)
 	defer cancel()
 
 	err := newCtxValidator(v.ctxName, v.k8sClientProvider).Validate(ctx)

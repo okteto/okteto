@@ -68,7 +68,7 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 			withOktetoClientProvider(okClientProvider),
 		).Validate(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to validate pre-reqs: %w", err)
+			return fmt.Errorf("Dynamic kubernetes token cannot be requested: %w", err)
 		}
 
 		err = contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{
