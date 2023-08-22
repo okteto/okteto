@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/internal/test/client"
-	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
@@ -33,11 +32,8 @@ type fakeK8sClientProvider struct {
 	err    error
 }
 
-func (f fakeK8sClientProvider) Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
+func (f fakeK8sClientProvider) Provide(_ *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
 	return f.client, nil, f.err
-}
-func (f fakeK8sClientProvider) GetIngressClient() (*ingresses.Client, error) {
-	return nil, nil
 }
 
 type fakeOktetoClientProvider struct {
