@@ -37,7 +37,7 @@ lint:
 
 .PHONY: test
 test:
-	go test -p 4 -race -coverprofile=coverage.txt -covermode=atomic ./...
+	go test -p 4 -race -coverprofile=coverage.txt -covermode=atomic -v ./pkg/okteto/...
 
 .PHONY: integration
 integration:
