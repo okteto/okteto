@@ -120,7 +120,7 @@ func updateCfgAuthInfoWithExec(okCtx *okteto.OktetoContext) {
 		APIVersion:         "client.authentication.k8s.io/v1",
 		Command:            "okteto",
 		Args:               []string{"kubetoken", "--context", okCtx.Name, "--namespace", okCtx.Namespace},
-		InstallHint:        "Okteto needs to be installed and in your PATH to use this context. Please visit https://www.okteto.com/docs/getting-started/ for more information.",
+		InstallHint:        "Okteto needs to be installed in your PATH and it has to be connected to your instance using the command 'okteto context use https://okteto.example.com'. Please visit https://www.okteto.com/docs/getting-started/ for more information.",
 		InteractiveMode:    "Never",
 		ProvideClusterInfo: true,
 	}
