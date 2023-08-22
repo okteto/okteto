@@ -17,11 +17,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	authenticationv1 "k8s.io/api/authentication/v1"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
+
+	authenticationv1 "k8s.io/api/authentication/v1"
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
@@ -648,7 +649,8 @@ func Test_updateDynamicTokenForNamespace(t *testing.T) {
 			name: "dynamic kubetoken not available, falling back to static token",
 			userContext: &types.UserContext{
 				User: types.User{
-					Token: "test",
+					Token:     "test",
+					Namespace: "okteto",
 				},
 				Credentials: types.Credential{
 					Token: "static",
@@ -670,7 +672,8 @@ func Test_updateDynamicTokenForNamespace(t *testing.T) {
 			name: "dynamic kubetoken returned successfully and takes priority over static token",
 			userContext: &types.UserContext{
 				User: types.User{
-					Token: "test",
+					Token:     "test",
+					Namespace: "okteto",
 				},
 				Credentials: types.Credential{
 					Token: "static",
@@ -690,6 +693,20 @@ func Test_updateDynamicTokenForNamespace(t *testing.T) {
 		},
 		{
 			name: "using feature flag does not update the token",
+			userContext: &types.UserContext{
+				User: types.User{
+					Token:     "test",
+					Namespace: "okteto",
+				},
+				Credentials: types.Credential{
+					Token: "static",
+				},
+			},
+			useStaticTokenEnv: true,
+			expectedToken:     "static",
+		},
+		{
+			name: "empty namespace does not update token",
 			userContext: &types.UserContext{
 				User: types.User{
 					Token: "test",

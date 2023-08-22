@@ -292,6 +292,11 @@ func updateDynamicTokenForNamespace(okClientProvider types.OktetoClientProvider,
 		return
 	}
 
+	if userContext.User.Namespace == "" {
+		oktetoLog.Debug("user context namespace is empty, fallback to static token")
+		return
+	}
+
 	c, err := okClientProvider.Provide()
 	if err != nil {
 		oktetoLog.Debugf("error providing the okteto client at updateDynamicTokenForNamespace: %w", err)
