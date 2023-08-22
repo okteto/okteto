@@ -299,7 +299,7 @@ func translateAPIErr(err error) error {
 				E:    err,
 				Hint: oktetoErrors.ErrX509Hint,
 			}
-		case strings.HasPrefix(err.Error(), "non-200 OK status code: 423"):
+		case isAPITrialExpiredError(err):
 			return oktetoErrors.UserError{
 				E:    oktetoErrors.ErrTrialExpired,
 				Hint: fmt.Sprintf("This command-line tool will no longer work. Please contact our sales team (sales@okteto.com) to obtain a new license key for %s", Context().Name),
@@ -310,6 +310,10 @@ func translateAPIErr(err error) error {
 		return err
 	}
 
+}
+
+func isAPITrialExpiredError(err error) bool {
+	return strings.HasPrefix(err.Error(), "non-200 OK status code: 423")
 }
 
 func isAPITransientErr(err error) bool {
