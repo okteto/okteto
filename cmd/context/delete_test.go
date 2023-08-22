@@ -28,19 +28,32 @@ func Test_deleteContext(t *testing.T) {
 	var tests = []struct {
 		name         string
 		ctxStore     *okteto.OktetoContextStore
-		toDelete     string
+		toDelete     []string
 		afterContext string
 		expectedErr  bool
 	}{
 		{
-			name: "deleting existing context",
+			name: "deleting one existing context",
 			ctxStore: &okteto.OktetoContextStore{
 				CurrentContext: "test",
 				Contexts: map[string]*okteto.OktetoContext{
 					"test": {},
 				},
 			},
-			toDelete:     "test",
+			toDelete:     []string{"test"},
+			afterContext: "",
+			expectedErr:  false,
+		},
+		{
+			name: "deleting more than one existing context",
+			ctxStore: &okteto.OktetoContextStore{
+				CurrentContext: "test1",
+				Contexts: map[string]*okteto.OktetoContext{
+					"test1": {},
+					"test2": {},
+				},
+			},
+			toDelete:     []string{"test1", "test2"},
 			afterContext: "",
 			expectedErr:  false,
 		},
@@ -52,8 +65,20 @@ func Test_deleteContext(t *testing.T) {
 					"test": {},
 				},
 			},
-			toDelete:     "non-existing-test",
+			toDelete:     []string{"non-existing-test"},
 			afterContext: "test",
+			expectedErr:  true,
+		},
+		{
+			name: "deleting one existing and one non existing context",
+			ctxStore: &okteto.OktetoContextStore{
+				CurrentContext: "test",
+				Contexts: map[string]*okteto.OktetoContext{
+					"test": {},
+				},
+			},
+			toDelete:     []string{"test", "non-existing-test"},
+			afterContext: "",
 			expectedErr:  true,
 		},
 	}

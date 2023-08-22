@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -32,43 +33,44 @@ func DeleteCMD() *cobra.Command {
 		Args:  utils.MinimumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#delete"),
 		Short: "Delete one or more contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			for _, arg := range args {
-				arg = okteto.AddSchema(arg)
-				arg = strings.TrimSuffix(arg, "/")
-				if err := Delete(arg); err != nil {
-					return err
-				}
+			for idx, arg := range args {
+				args[idx] = okteto.AddSchema(arg)
+				args[idx] = strings.TrimSuffix(arg, "/")
 			}
 			analytics.TrackContextDelete(len(args))
-			return nil
+			return Delete(args)
 		},
 	}
 	return cmd
 }
 
-func Delete(okCtx string) error {
+func Delete(okCtxs []string) error {
 	ctxStore := okteto.ContextStore()
-	if okCtx == ctxStore.CurrentContext {
-		ctxStore.CurrentContext = ""
+	var errs error
+	for _, okCtx := range okCtxs {
+		if okCtx == ctxStore.CurrentContext {
+			ctxStore.CurrentContext = ""
+		}
+
+		if _, ok := ctxStore.Contexts[okCtx]; ok {
+			delete(ctxStore.Contexts, okCtx)
+			if err := okteto.NewContextConfigWriter().Write(); err != nil {
+				return err
+			}
+			oktetoLog.Success("'%s' deleted successfully", okCtx)
+		} else {
+			validOptions := make([]string, 0)
+			for k, v := range ctxStore.Contexts {
+				if v.IsOkteto {
+					validOptions = append(validOptions, k)
+				}
+			}
+			errs = multierror.Append(errs, oktetoErrors.UserError{
+				E:    fmt.Errorf("'%s' context doesn't exist. Valid options are: [%s]", okCtx, strings.Join(validOptions, ", ")),
+				Hint: fmt.Sprintf("To delete a Kubernetes context run 'kubectl config delete-context %s'", okCtx),
+			})
+		}
 	}
 
-	if _, ok := ctxStore.Contexts[okCtx]; ok {
-		delete(ctxStore.Contexts, okCtx)
-		if err := okteto.NewContextConfigWriter().Write(); err != nil {
-			return err
-		}
-		oktetoLog.Success("'%s' deleted successfully", okCtx)
-	} else {
-		validOptions := make([]string, 0)
-		for k, v := range ctxStore.Contexts {
-			if v.IsOkteto {
-				validOptions = append(validOptions, k)
-			}
-		}
-		return oktetoErrors.UserError{
-			E:    fmt.Errorf("'%s' context doesn't exist. Valid options are: [%s]", okCtx, strings.Join(validOptions, ", ")),
-			Hint: fmt.Sprintf("To delete a Kubernetes context run 'kubectl config delete-context %s'", okCtx),
-		}
-	}
-	return nil
+	return errs
 }
