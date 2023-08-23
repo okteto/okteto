@@ -18,7 +18,7 @@ func Test_listPreview(t *testing.T) {
 	var tests = []struct {
 		name           string
 		previews       []types.Preview
-		expectedResult []PreviewOutput
+		expectedResult []previewOutput
 		expectedErr    error
 	}{
 		{
@@ -38,7 +38,7 @@ func Test_listPreview(t *testing.T) {
 					PreviewLabels: []string{"-"},
 				},
 			},
-			expectedResult: []PreviewOutput{
+			expectedResult: []previewOutput{
 				{
 					Name:     "test",
 					Scope:    "",
@@ -139,6 +139,41 @@ func Test_PreviewListOutputValidation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ValidateOutput(tt.output.output)
 			assert.Equal(t, tt.expectedErr, err)
+		})
+	}
+}
+
+func Test_getPreviewDefaultOutput(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    previewOutput
+		expected string
+	}{
+		{
+			name: "preview with no labels",
+			input: previewOutput{
+				Name:     "my-preview",
+				Scope:    "personal",
+				Sleeping: false,
+			},
+			expected: "my-preview\tpersonal\tfalse\t-\n",
+		},
+		{
+			name: "preview with labels",
+			input: previewOutput{
+				Name:     "my-preview",
+				Scope:    "personal",
+				Sleeping: false,
+				Labels:   []string{"one", "two"},
+			},
+			expected: "my-preview\tpersonal\tfalse\tone, two\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getPreviewDefaultOutput(tt.input)
+			assert.Equal(t, tt.expected, got)
 		})
 	}
 }
