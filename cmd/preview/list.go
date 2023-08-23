@@ -17,6 +17,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
+	"text/tabwriter"
+
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -24,8 +28,6 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
-	"os"
-	"text/tabwriter"
 )
 
 // ListFlags are the flags available for list commands
@@ -34,7 +36,7 @@ type ListFlags struct {
 	output string
 }
 
-type PreviewOutput struct {
+type previewOutput struct {
 	Name     string   `json:"name" yaml:"name"`
 	Scope    string   `json:"scope" yaml:"scope"`
 	Sleeping bool     `json:"sleeping" yaml:"sleeping"`
@@ -81,29 +83,18 @@ func executeListPreviews(ctx context.Context, opts ListFlags) error {
 	if err != nil {
 		return err
 	}
-	previewList, err := oktetoClient.Previews().List(ctx, opts.labels)
+	previewListOutput, err := getPreviewOutput(ctx, opts, oktetoClient)
 	if err != nil {
-		if uErr, ok := err.(oktetoErrors.UserError); ok {
-			return uErr
-		}
-		return fmt.Errorf("failed to get preview environments: %s", err)
+		return err
 	}
 	switch opts.output {
 	case "json":
-		previewListOutput, err := getPreviewOutput(ctx, opts, oktetoClient)
-		if err != nil {
-			return err
-		}
 		bytes, err := json.MarshalIndent(previewListOutput, "", " ")
 		if err != nil {
 			return err
 		}
 		oktetoLog.Println(string(bytes))
 	case "yaml":
-		previewListOutput, err := getPreviewOutput(ctx, opts, oktetoClient)
-		if err != nil {
-			return err
-		}
 		bytes, err := yaml.Marshal(previewListOutput)
 		if err != nil {
 			return err
@@ -111,18 +102,26 @@ func executeListPreviews(ctx context.Context, opts ListFlags) error {
 		oktetoLog.Println(string(bytes))
 	default:
 		w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
-		fmt.Fprintf(w, "Name\tScope\tSleeping\tLabels\n")
-		for _, preview := range previewList {
-			previewLabels := "-"
-			fmt.Fprintf(w, "%s\t%s\t%v\t%s\n", preview.ID, preview.Scope, preview.Sleeping, previewLabels)
+		fmt.Fprint(w, "Name\tScope\tSleeping\tLabels\n")
+		for _, preview := range previewListOutput {
+			output := getPreviewDefaultOutput(preview)
+			fmt.Fprint(w, output)
 		}
 		w.Flush()
 	}
 	return nil
 }
 
-func getPreviewOutput(ctx context.Context, opts ListFlags, oktetoClient types.OktetoInterface) ([]PreviewOutput, error) {
-	var previewSlice []PreviewOutput
+func getPreviewDefaultOutput(preview previewOutput) string {
+	previewLabels := "-"
+	if len(preview.Labels) > 0 {
+		previewLabels = strings.Join(preview.Labels, ", ")
+	}
+	return fmt.Sprintf("%s\t%s\t%v\t%s\n", preview.Name, preview.Scope, preview.Sleeping, previewLabels)
+}
+
+func getPreviewOutput(ctx context.Context, opts ListFlags, oktetoClient types.OktetoInterface) ([]previewOutput, error) {
+	var previewSlice []previewOutput
 	previewList, err := oktetoClient.Previews().List(ctx, opts.labels)
 	if err != nil {
 		if uErr, ok := err.(oktetoErrors.UserError); ok {
@@ -131,7 +130,7 @@ func getPreviewOutput(ctx context.Context, opts ListFlags, oktetoClient types.Ok
 		return nil, fmt.Errorf("failed to get preview environments: %s", err)
 	}
 	for _, preview := range previewList {
-		previewOutput := PreviewOutput{
+		previewOutput := previewOutput{
 			Name:     preview.ID,
 			Scope:    preview.Scope,
 			Sleeping: preview.Sleeping,
