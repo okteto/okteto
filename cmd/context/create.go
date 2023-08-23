@@ -264,7 +264,7 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 	}
 
 	// once we have namespace and user identify we are able to retrieve the dynamic token for the namespace
-	getAndUseDynamicKubetoken(c.OktetoClientProvider, userContext)
+	replaceCredentialsTokenWithDynamicKubetoken(c.OktetoClientProvider, userContext)
 
 	okteto.AddOktetoContext(ctxOptions.Context, &userContext.User, ctxOptions.Namespace, userContext.User.Namespace)
 	cfg := kubeconfig.Get(config.GetKubeconfigPath())
@@ -283,10 +283,10 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 	return nil
 }
 
-// getAndUseDynamicKubetoken retrieves a dynamic token for the given userContext and updates Credentials.Token
+// replaceCredentialsTokenWithDynamicKubetoken retrieves a dynamic token for the given userContext and updates Credentials.Token
 // if error while retrieving the dynamic token or flag OKTETO_USE_STATIC_KUBETOKEN is enabled, value is not updated
 // static token is fallback
-func getAndUseDynamicKubetoken(okClientProvider types.OktetoClientProvider, userContext *types.UserContext) {
+func replaceCredentialsTokenWithDynamicKubetoken(okClientProvider types.OktetoClientProvider, userContext *types.UserContext) {
 	if utils.LoadBoolean(oktetoUseStaticKubetokenEnvVar) {
 		oktetoLog.Warning(usingStaticKubetokenWarningMessage)
 		return
@@ -299,7 +299,7 @@ func getAndUseDynamicKubetoken(okClientProvider types.OktetoClientProvider, user
 
 	c, err := okClientProvider.Provide()
 	if err != nil {
-		oktetoLog.Debugf("error providing the okteto client at getAndUseDynamicKubetoken: %w", err)
+		oktetoLog.Debugf("error providing the okteto client at replaceCredentialsTokenWithDynamicKubetoken: %w", err)
 		return
 	}
 

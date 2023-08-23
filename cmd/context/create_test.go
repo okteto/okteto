@@ -636,7 +636,7 @@ func TestGetUserContext(t *testing.T) {
 	}
 }
 
-func Test_getAndUseDynamicKubetoken(t *testing.T) {
+func Test_replaceCredentialsTokenWithDynamicKubetoken(t *testing.T) {
 
 	tests := []struct {
 		name                  string
@@ -728,7 +728,7 @@ func Test_getAndUseDynamicKubetoken(t *testing.T) {
 				KubetokenClient: client.NewFakeKubetokenClient(tt.kubetokenMockResponse),
 			})
 
-			getAndUseDynamicKubetoken(fakeOktetoClientProvider, tt.userContext)
+			replaceCredentialsTokenWithDynamicKubetoken(fakeOktetoClientProvider, tt.userContext)
 			assert.Equal(t, tt.expectedToken, tt.userContext.Credentials.Token)
 		})
 	}
