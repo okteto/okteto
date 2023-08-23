@@ -17,18 +17,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/okteto/okteto/pkg/types"
 	"os"
+
+	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
 type Serializer struct {
 	KubeToken types.KubeTokenResponse
+}
+
+// oktetoClientProvider provides an okteto client ready to use or fail
+type oktetoClientProvider interface {
+	Provide(...okteto.Option) (types.OktetoInterface, error)
 }
 
 func (k *Serializer) ToJson() (string, error) {
@@ -54,25 +59,33 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 	cmd.RunE = func(_ *cobra.Command, args []string) error {
 		ctx := context.Background()
 
-		err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{
+		k8sClientProvider := okteto.NewK8sClientProvider()
+		okClientProvider := okteto.NewOktetoClientProvider()
+		err := newPreReqValidator(
+			withCtxName(contextName),
+			withNamespace(namespace),
+			withK8sClientProvider(k8sClientProvider),
+			withOktetoClientProvider(okClientProvider),
+		).validate(ctx)
+		if err != nil {
+			return fmt.Errorf("dynamic kubernetes token cannot be requested: %w", err)
+		}
+
+		ctxOptions := &contextCMD.ContextOptions{
 			Context:   contextName,
 			Namespace: namespace,
-		})
+		}
+		err = contextCMD.NewContextCommand().Run(ctx, ctxOptions)
 		if err != nil {
 			return err
 		}
 
-		octx := okteto.Context()
-		if !octx.IsOkteto {
-			return errors.ErrContextIsNotOktetoCluster
-		}
-
-		c, err := okteto.NewOktetoClient()
+		c, err := okClientProvider.Provide()
 		if err != nil {
-			return fmt.Errorf("failed to initialize the kubetoken client: %w", err)
+			return fmt.Errorf("failed to create okteto client: %w", err)
 		}
 
-		out, err := c.Kubetoken().GetKubeToken(octx.Name, octx.Namespace)
+		out, err := c.Kubetoken().GetKubeToken(ctxOptions.Context, ctxOptions.Namespace)
 		if err != nil {
 			return fmt.Errorf("failed to get the kubetoken: %w", err)
 		}

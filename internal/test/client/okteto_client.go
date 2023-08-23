@@ -14,6 +14,7 @@
 package client
 
 import (
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 )
 
@@ -28,7 +29,7 @@ func NewFakeOktetoClientProvider(f *FakeOktetoClient) *FakeOktetoClientProvider 
 	}
 }
 
-func (p *FakeOktetoClientProvider) Provide() (types.OktetoInterface, error) {
+func (p *FakeOktetoClientProvider) Provide(_ ...okteto.Option) (types.OktetoInterface, error) {
 	return p.c, p.err
 }
 

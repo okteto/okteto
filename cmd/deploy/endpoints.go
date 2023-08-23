@@ -27,6 +27,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/format"
+	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -46,10 +47,14 @@ type endpointGetterInterface interface {
 	List(ctx context.Context, ns string, labelSelector string) ([]externalresource.ExternalResource, error)
 }
 
+type k8sIngressClientProvider interface {
+	GetIngressClient() (*ingresses.Client, error)
+}
+
 type EndpointGetter struct {
 	GetManifest       func(path string) (*model.Manifest, error)
 	endpointControl   endpointGetterInterface
-	K8sClientProvider okteto.K8sClientProvider
+	K8sClientProvider k8sIngressClientProvider
 }
 
 func NewEndpointGetter() (EndpointGetter, error) {

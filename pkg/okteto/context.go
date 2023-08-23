@@ -191,11 +191,12 @@ func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string,
 
 	// check the namespace label
 	if k8sNamespace == "" {
-		k8sNamespace = cfg.Contexts[k8sContext].Namespace
-	}
-
-	if k8sNamespace == "" {
-		return k8sContext
+		cfgK8sNamespace, exists := cfg.Contexts[k8sContext]
+		if exists {
+			k8sNamespace = cfgK8sNamespace.Namespace
+		} else {
+			return k8sContext
+		}
 	}
 
 	n, err := c.CoreV1().Namespaces().Get(ctx, k8sNamespace, metav1.GetOptions{})
@@ -521,6 +522,9 @@ func GetSubdomain() string {
 }
 
 func GetContextCertificate() (*x509.Certificate, error) {
+	if !ContextExists() {
+		return nil, fmt.Errorf("okteto context not initialized")
+	}
 	certB64 := Context().Certificate
 	certPEM, err := base64.StdEncoding.DecodeString(certB64)
 

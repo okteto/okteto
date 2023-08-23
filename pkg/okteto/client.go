@@ -63,17 +63,63 @@ func NewOktetoClientProvider() *OktetoClientProvider {
 	return &OktetoClientProvider{}
 }
 
-func (*OktetoClientProvider) Provide() (types.OktetoInterface, error) {
-	c, err := NewOktetoClient()
+func (*OktetoClientProvider) Provide(opts ...Option) (types.OktetoInterface, error) {
+	c, err := NewOktetoClient(opts...)
 	if err != nil {
 		return nil, err
 	}
 	return c, err
 }
 
+type oktetoClientCfg struct {
+	ctxName string
+	token   string
+}
+
+func WithCtxName(ctxName string) Option {
+	return func(cfg *oktetoClientCfg) {
+		cfg.ctxName = ctxName
+	}
+}
+
+func WithToken(token string) Option {
+	return func(cfg *oktetoClientCfg) {
+		cfg.token = token
+	}
+}
+
+func defaultOktetoClientCfg() *oktetoClientCfg {
+	if CurrentStore == nil && !ContextExists() {
+		return &oktetoClientCfg{}
+	}
+	if CurrentStore != nil && CurrentStore.CurrentContext == "" {
+		return &oktetoClientCfg{}
+	}
+	return &oktetoClientCfg{
+		ctxName: Context().Name,
+		token:   Context().Token,
+	}
+
+}
+
+type Option func(*oktetoClientCfg)
+
 // NewOktetoClient creates a new client to connect with Okteto API
-func NewOktetoClient() (*OktetoClient, error) {
-	httpClient, u, err := newOktetoHttpClient(Context().Name, Context().Token, "graphql")
+func NewOktetoClient(opts ...Option) (*OktetoClient, error) {
+	cfg := defaultOktetoClientCfg()
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	if cfg.token == "" {
+		okCtx, exists := ContextStore().Contexts[cfg.ctxName]
+		if !exists {
+			return nil, fmt.Errorf("%s context doesn't exists", cfg.ctxName)
+		}
+		cfg.token = okCtx.Token
+	}
+
+	httpClient, u, err := newOktetoHttpClient(cfg.ctxName, cfg.token, "graphql")
 	if err != nil {
 		return nil, err
 	}

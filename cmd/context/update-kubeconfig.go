@@ -23,7 +23,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -59,7 +58,7 @@ func UpdateKubeconfigCMD() *cobra.Command {
 	return cmd
 }
 
-func ExecuteUpdateKubeconfig(okCtx *okteto.OktetoContext, kubeconfigPaths []string, okClientProvider types.OktetoClientProvider) error {
+func ExecuteUpdateKubeconfig(okCtx *okteto.OktetoContext, kubeconfigPaths []string, okClientProvider oktetoClientProvider) error {
 	contextName := okCtx.Name
 	if okCtx.IsOkteto {
 		contextName = okteto.UrlToKubernetesContext(contextName)

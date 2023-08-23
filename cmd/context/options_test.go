@@ -103,7 +103,7 @@ func Test_initFromContext(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			okteto.CurrentStore = tt.ctxStore
-			tt.in.initFromContext()
+			tt.in.InitFromContext()
 			if !reflect.DeepEqual(tt.in, tt.want) {
 				t.Errorf("Test '%s' failed: %+v", tt.name, tt.in)
 			}
@@ -317,7 +317,7 @@ func Test_initFromEnvVars(t *testing.T) {
 			for k, v := range tt.env {
 				t.Setenv(k, v)
 			}
-			tt.in.initFromEnvVars()
+			tt.in.InitFromEnvVars()
 			assert.Equal(t, tt.in, tt.want)
 		})
 	}

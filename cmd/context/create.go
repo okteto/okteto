@@ -36,11 +36,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// oktetoClientProvider provides an okteto client ready to use or fail
+type oktetoClientProvider interface {
+	Provide(...okteto.Option) (types.OktetoInterface, error)
+}
+
 // ContextCommand has the dependencies to run a ctxCommand
 type ContextCommand struct {
 	K8sClientProvider    okteto.K8sClientProvider
 	LoginController      login.LoginInterface
-	OktetoClientProvider types.OktetoClientProvider
+	OktetoClientProvider oktetoClientProvider
 
 	OktetoContextWriter okteto.ContextConfigWriterInterface
 }
@@ -327,7 +332,7 @@ func getLoggedUserContext(ctx context.Context, c *ContextCommand, ctxOptions *Co
 		ctxOptions.Namespace = user.Namespace
 	}
 
-	userContext, err := c.getUserContext(ctx, ctxOptions.Namespace)
+	userContext, err := c.getUserContext(ctx, okteto.Context().Name, okteto.Context().Namespace, okteto.Context().Token)
 	if err != nil {
 		return nil, err
 	}
@@ -364,8 +369,11 @@ func (*ContextCommand) initKubernetesContext(ctxOptions *ContextOptions) error {
 	return nil
 }
 
-func (c ContextCommand) getUserContext(ctx context.Context, ns string) (*types.UserContext, error) {
-	client, err := c.OktetoClientProvider.Provide()
+func (c ContextCommand) getUserContext(ctx context.Context, ctxName, ns, token string) (*types.UserContext, error) {
+	client, err := c.OktetoClientProvider.Provide(
+		okteto.WithCtxName(ctxName),
+		okteto.WithToken(token),
+	)
 	if err != nil {
 		return nil, err
 	}

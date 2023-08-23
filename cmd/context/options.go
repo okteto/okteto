@@ -38,7 +38,7 @@ type ContextOptions struct {
 	InsecureSkipTlsVerify bool
 }
 
-func (o *ContextOptions) initFromContext() {
+func (o *ContextOptions) InitFromContext() {
 	if o.IsCtxCommand {
 		return
 	}
@@ -59,7 +59,7 @@ func (o *ContextOptions) initFromContext() {
 	}
 }
 
-func (o *ContextOptions) initFromEnvVars() {
+func (o *ContextOptions) InitFromEnvVars() {
 	usedEnvVars := []string{}
 
 	if o.Context == "" && os.Getenv(model.OktetoURLEnvVar) != "" {

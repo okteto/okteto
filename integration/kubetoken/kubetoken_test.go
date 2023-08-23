@@ -18,12 +18,13 @@ package kubetoken
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
-	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 // TestKubetokenHasExpiration test that kubernetes returns a dynamic token with a set expiration
@@ -36,7 +37,7 @@ func TestKubetokenHasExpiration(t *testing.T) {
 	out, err := commands.RunOktetoKubetoken(oktetoPath, "")
 	require.NoError(t, err)
 
-	var resp *okteto.KubeTokenResponse
+	var resp *types.KubeTokenResponse
 	err = json.Unmarshal(out.Bytes(), &resp)
 	require.NoError(t, err)
 

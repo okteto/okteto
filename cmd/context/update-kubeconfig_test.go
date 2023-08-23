@@ -21,7 +21,6 @@ import (
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -32,7 +31,7 @@ func Test_ExecuteUpdateKubeconfig_DisabledKubetoken(t *testing.T) {
 		name             string
 		kubeconfigCtx    test.KubeconfigFields
 		context          *okteto.OktetoContextStore
-		okClientProvider types.OktetoClientProvider
+		okClientProvider oktetoClientProvider
 	}{
 		{
 			name: "change current ctx",
