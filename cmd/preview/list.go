@@ -102,10 +102,10 @@ func executeListPreviews(ctx context.Context, opts ListFlags) error {
 		oktetoLog.Println(string(bytes))
 	default:
 		w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
-		fmt.Fprintf(w, "Name\tScope\tSleeping\tLabels\n")
+		fmt.Fprint(w, "Name\tScope\tSleeping\tLabels\n")
 		for _, preview := range previewListOutput {
 			output := getPreviewDefaultOutput(preview)
-			fmt.Fprintf(w, output)
+			fmt.Fprint(w, output)
 		}
 		w.Flush()
 	}
@@ -115,11 +115,7 @@ func executeListPreviews(ctx context.Context, opts ListFlags) error {
 func getPreviewDefaultOutput(preview previewOutput) string {
 	previewLabels := "-"
 	if len(preview.Labels) > 0 {
-		previewLabelsList := []string{}
-		for _, label := range preview.Labels {
-			previewLabelsList = append(previewLabelsList, label)
-		}
-		previewLabels = strings.Join(previewLabelsList, ", ")
+		previewLabels = strings.Join(preview.Labels, ", ")
 	}
 	return fmt.Sprintf("%s\t%s\t%v\t%s\n", preview.Name, preview.Scope, preview.Sleeping, previewLabels)
 }
