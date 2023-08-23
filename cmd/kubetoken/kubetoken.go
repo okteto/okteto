@@ -71,10 +71,11 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 			return fmt.Errorf("dynamic kubernetes token cannot be requested: %w", err)
 		}
 
-		err = contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{
+		ctxOptions := &contextCMD.ContextOptions{
 			Context:   contextName,
 			Namespace: namespace,
-		})
+		}
+		err = contextCMD.NewContextCommand().Run(ctx, ctxOptions)
 		if err != nil {
 			return err
 		}
@@ -84,7 +85,7 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 			return fmt.Errorf("failed to create okteto client: %w", err)
 		}
 
-		out, err := c.Kubetoken().GetKubeToken(contextName, namespace)
+		out, err := c.Kubetoken().GetKubeToken(ctxOptions.Context, ctxOptions.Namespace)
 		if err != nil {
 			return fmt.Errorf("failed to get the kubetoken: %w", err)
 		}

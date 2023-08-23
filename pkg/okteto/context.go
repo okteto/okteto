@@ -522,6 +522,9 @@ func GetSubdomain() string {
 }
 
 func GetContextCertificate() (*x509.Certificate, error) {
+	if !ContextExists() {
+		return nil, fmt.Errorf("okteto context not initialized")
+	}
 	certB64 := Context().Certificate
 	certPEM, err := base64.StdEncoding.DecodeString(certB64)
 

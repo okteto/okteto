@@ -17,11 +17,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	authenticationv1 "k8s.io/api/authentication/v1"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
+
+	authenticationv1 "k8s.io/api/authentication/v1"
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
@@ -715,7 +716,7 @@ func TestGetUserContext(t *testing.T) {
 				OktetoClientProvider: client.NewFakeOktetoClientProvider(fakeOktetoClient),
 				OktetoContextWriter:  test.NewFakeOktetoContextWriter(),
 			}
-			uc, err := cmd.getUserContext(ctx, tc.input.ns)
+			uc, err := cmd.getUserContext(ctx, "", tc.input.ns, "")
 			assert.ErrorIs(t, tc.output.err, err)
 			assert.Equal(t, tc.output.uc, uc)
 		})

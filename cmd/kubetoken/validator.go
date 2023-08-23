@@ -20,6 +20,7 @@ import (
 	"net/url"
 	"time"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/client-go/kubernetes"
@@ -30,7 +31,7 @@ import (
 var (
 	errEmptyContext = errors.New("context name cannot be empty")
 
-	validationTimeout = 3 * time.Second
+	validationTimeout = 3000 * time.Second
 )
 
 type k8sClientProvider interface {
@@ -43,6 +44,7 @@ type preReqCfg struct {
 
 	k8sClientProvider    k8sClientProvider
 	oktetoClientProvider oktetoClientProvider
+	getContextStore      func() *okteto.OktetoContextStore
 }
 
 type option func(*preReqCfg)
@@ -75,6 +77,7 @@ func defaultPreReqCfg() *preReqCfg {
 	return &preReqCfg{
 		k8sClientProvider:    okteto.NewK8sClientProvider(),
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
+		getContextStore:      okteto.ContextStore,
 	}
 }
 
@@ -85,6 +88,8 @@ type preReqValidator struct {
 
 	k8sClientProvider    k8sClientProvider
 	oktetoClientProvider oktetoClientProvider
+	getContextStore      getContextStoreFunc
+	getCtxResource       initCtxOptsFunc
 }
 
 // newPreReqValidator returns a new preReqValidator
@@ -98,6 +103,8 @@ func newPreReqValidator(opts ...option) *preReqValidator {
 		ns:                   cfg.ns,
 		k8sClientProvider:    cfg.k8sClientProvider,
 		oktetoClientProvider: cfg.oktetoClientProvider,
+		getContextStore:      cfg.getContextStore,
+		getCtxResource:       getCtxResource,
 	}
 }
 
@@ -108,32 +115,49 @@ func (v *preReqValidator) validate(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, validationTimeout)
 	defer cancel()
 
-	err := newCtxValidator(v.ctxName, v.k8sClientProvider).validate(ctx)
+	ctxResource := v.getCtxResource(v.ctxName, v.ns)
+
+	err := newCtxValidator(ctxResource, v.k8sClientProvider, v.getContextStore).validate(ctx)
 	if err != nil {
 		return fmt.Errorf("invalid context: %w", err)
 	}
 
-	err = newOktetoSupportValidator(ctx, v.ctxName, v.ns, v.k8sClientProvider, v.oktetoClientProvider).validate(ctx)
+	err = newOktetoSupportValidator(ctx, ctxResource, v.k8sClientProvider, v.oktetoClientProvider).validate(ctx)
 	if err != nil {
 		return fmt.Errorf("invalid okteto support: %w", err)
 	}
 	return nil
 }
 
+func getCtxResource(ctxName, ns string) *contextCMD.ContextOptions {
+	ctxResource := &contextCMD.ContextOptions{
+		Context:   ctxName,
+		Namespace: ns,
+	}
+	if ctxResource.Context == "" {
+		ctxResource.InitFromContext()
+		ctxResource.InitFromEnvVars()
+	}
+	return ctxResource
+}
+
+type getContextStoreFunc func() *okteto.OktetoContextStore
+type initCtxOptsFunc func(string, string) *contextCMD.ContextOptions
+
 // ctxValidator checks that the ctx use to execute the command is an okteto context
 // that has already being added to your okteto context
 type ctxValidator struct {
-	ctxName           string
+	ctxResource       *contextCMD.ContextOptions
 	k8sClientProvider k8sClientProvider
-	getContextStore   func() *okteto.OktetoContextStore
+	getContextStore   getContextStoreFunc
 	k8sCtxToOktetoURL func(ctx context.Context, k8sContext string, k8sNamespace string, clientProvider okteto.K8sClientProvider) string
 }
 
-func newCtxValidator(ctxName string, k8sClientProvider k8sClientProvider) *ctxValidator {
+func newCtxValidator(ctxResource *contextCMD.ContextOptions, k8sClientProvider k8sClientProvider, getContextStore getContextStoreFunc) *ctxValidator {
 	return &ctxValidator{
-		ctxName:           ctxName,
+		ctxResource:       ctxResource,
 		k8sClientProvider: k8sClientProvider,
-		getContextStore:   okteto.ContextStore,
+		getContextStore:   getContextStore,
 		k8sCtxToOktetoURL: okteto.K8sContextToOktetoUrl,
 	}
 }
@@ -158,21 +182,24 @@ func (v *ctxValidator) validate(ctx context.Context) error {
 	oktetoLog.Debug("validating context for dynamic kubernetes token request")
 	result := make(chan error, 1)
 	go func() {
-		if v.ctxName == "" {
+		if v.ctxResource.Context == "" {
 			result <- errEmptyContext
 			return
 		}
-		if !isURL(v.ctxName) {
-			v.ctxName = v.k8sCtxToOktetoURL(ctx, v.ctxName, "", v.k8sClientProvider)
+		if !isURL(v.ctxResource.Context) {
+			v.ctxResource.Context = v.k8sCtxToOktetoURL(ctx, v.ctxResource.Context, "", v.k8sClientProvider)
 		}
-		okCtx, exists := v.getContextStore().Contexts[v.ctxName]
+		okCtx, exists := v.getContextStore().Contexts[v.ctxResource.Context]
 		if !exists {
-			result <- errOktetoContextNotFound{v.ctxName}
-			return
-		}
-		if !okCtx.IsOkteto {
-			result <- errIsNotOktetoCtx{v.ctxName}
-			return
+			if v.ctxResource.Token == "" {
+				result <- errOktetoContextNotFound{v.ctxResource.Context}
+				return
+			}
+		} else {
+			if !okCtx.IsOkteto {
+				result <- errIsNotOktetoCtx{v.ctxResource.Context}
+				return
+			}
 		}
 		result <- nil
 	}()
@@ -186,18 +213,16 @@ func (v *ctxValidator) validate(ctx context.Context) error {
 }
 
 type oktetoSupportValidator struct {
-	ctxName              string
-	ns                   string
+	ctxResource          *contextCMD.ContextOptions
 	oktetoClientProvider oktetoClientProvider
 }
 
-func newOktetoSupportValidator(ctx context.Context, ctxName, ns string, k8sClientProvider k8sClientProvider, oktetoClientProvider oktetoClientProvider) *oktetoSupportValidator {
-	if !isURL(ctxName) {
-		ctxName = okteto.K8sContextToOktetoUrl(ctx, ctxName, "", k8sClientProvider)
+func newOktetoSupportValidator(ctx context.Context, ctxResource *contextCMD.ContextOptions, k8sClientProvider k8sClientProvider, oktetoClientProvider oktetoClientProvider) *oktetoSupportValidator {
+	if !isURL(ctxResource.Context) {
+		ctxResource.Context = okteto.K8sContextToOktetoUrl(ctx, ctxResource.Context, "", k8sClientProvider)
 	}
 	return &oktetoSupportValidator{
-		ctxName:              ctxName,
-		ns:                   ns,
+		ctxResource:          ctxResource,
 		oktetoClientProvider: oktetoClientProvider,
 	}
 }
@@ -206,13 +231,16 @@ func (v *oktetoSupportValidator) validate(ctx context.Context) error {
 	oktetoLog.Debug("validating okteto client support for kubetoken")
 	result := make(chan error, 1)
 	go func() {
-		okClient, err := v.oktetoClientProvider.Provide(okteto.WithCtxName(v.ctxName))
+		okClient, err := v.oktetoClientProvider.Provide(
+			okteto.WithCtxName(v.ctxResource.Context),
+			okteto.WithToken(v.ctxResource.Token),
+		)
 		if err != nil {
 			result <- fmt.Errorf("error creating okteto client: %w", err)
 			return
 		}
 
-		result <- okClient.Kubetoken().CheckService(v.ctxName, v.ns)
+		result <- okClient.Kubetoken().CheckService(v.ctxResource.Context, v.ctxResource.Namespace)
 	}()
 
 	select {

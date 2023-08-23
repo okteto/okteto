@@ -17,6 +17,7 @@ import (
 	"context"
 	"testing"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -52,21 +53,13 @@ func TestPreReqValidator(t *testing.T) {
 		k8sClientProvider    okteto.K8sClientProvider
 		oktetoClientProvider oktetoClientProvider
 		ctx                  context.Context
+		currentStore         *okteto.OktetoContextStore
 	}
 
 	ctx := context.Background()
 	cancelledCtx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"https://okteto.com": {
-				IsOkteto: true,
-			},
-			"k8s_cluster": {},
-		},
-		CurrentContext: "https://okteto.com",
-	}
 	tt := []struct {
 		name     string
 		input    input
@@ -77,14 +70,27 @@ func TestPreReqValidator(t *testing.T) {
 			input: input{
 				ctxName: "",
 				ctx:     ctx,
+				currentStore: &okteto.OktetoContextStore{
+					Contexts:       map[string]*okteto.OktetoContext{},
+					CurrentContext: "",
+				},
 			},
 			expected: errEmptyContext,
 		},
 		{
 			name: "fail on okteto client validation",
 			input: input{
-				ctxName:           "https://okteto.com",
-				ns:                "test",
+				ctxName: "https://okteto.com",
+				ns:      "test",
+				currentStore: &okteto.OktetoContextStore{
+					Contexts: map[string]*okteto.OktetoContext{
+						"https://okteto.com": {
+							IsOkteto: true,
+						},
+						"k8s_cluster": {},
+					},
+					CurrentContext: "https://okteto.com",
+				},
 				k8sClientProvider: fakeK8sClientProvider{err: assert.AnError},
 				oktetoClientProvider: fakeOktetoClientProvider{
 					err: assert.AnError,
@@ -98,7 +104,16 @@ func TestPreReqValidator(t *testing.T) {
 			input: input{
 				ctxName: "https://okteto.com",
 				ns:      "test",
-				ctx:     cancelledCtx,
+				currentStore: &okteto.OktetoContextStore{
+					Contexts: map[string]*okteto.OktetoContext{
+						"https://okteto.com": {
+							IsOkteto: true,
+						},
+						"k8s_cluster": {},
+					},
+					CurrentContext: "https://okteto.com",
+				},
+				ctx: cancelledCtx,
 				oktetoClientProvider: fakeOktetoClientProvider{
 					err: assert.AnError,
 				},
@@ -111,6 +126,15 @@ func TestPreReqValidator(t *testing.T) {
 				ctxName: "https://okteto.com",
 				ns:      "test",
 				ctx:     ctx,
+				currentStore: &okteto.OktetoContextStore{
+					Contexts: map[string]*okteto.OktetoContext{
+						"https://okteto.com": {
+							IsOkteto: true,
+						},
+						"k8s_cluster": {},
+					},
+					CurrentContext: "https://okteto.com",
+				},
 				oktetoClientProvider: fakeOktetoClientProvider{
 					client: &client.FakeOktetoClient{
 						KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{
@@ -130,6 +154,15 @@ func TestPreReqValidator(t *testing.T) {
 				withK8sClientProvider(tc.input.k8sClientProvider),
 				withOktetoClientProvider(tc.input.oktetoClientProvider),
 			)
+			v.getContextStore = func() *okteto.OktetoContextStore {
+				return tc.input.currentStore
+			}
+			v.getCtxResource = func(s1, s2 string) *contextCMD.ContextOptions {
+				return &contextCMD.ContextOptions{
+					Context:   s1,
+					Namespace: s2,
+				}
+			}
 			err := v.validate(tc.input.ctx)
 			assert.ErrorIs(t, err, tc.expected)
 		})
@@ -215,7 +248,11 @@ func TestCtxValidator(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			v := newCtxValidator(tc.input.ctxName, tc.input.k8sClientProvider)
+			v := newCtxValidator(&contextCMD.ContextOptions{
+				Context: tc.input.ctxName,
+			}, tc.input.k8sClientProvider, func() *okteto.OktetoContextStore {
+				return okteto.CurrentStore
+			})
 			err := v.validate(tc.input.ctx)
 			assert.ErrorIs(t, err, tc.expected)
 		})
@@ -295,7 +332,11 @@ func TestOktetoKubetokenSupportValidation(t *testing.T) {
 			fakeK8sClientProvider := fakeK8sClientProvider{
 				client: tc.input.k8sClient,
 			}
-			v := newOktetoSupportValidator(tc.input.ctx, tc.input.ctxName, tc.input.ns, fakeK8sClientProvider, fakeOktetoClientProvider)
+			ctxResource := &contextCMD.ContextOptions{
+				Context:   tc.input.ctxName,
+				Namespace: tc.input.ns,
+			}
+			v := newOktetoSupportValidator(tc.input.ctx, ctxResource, fakeK8sClientProvider, fakeOktetoClientProvider)
 			err := v.validate(tc.input.ctx)
 			assert.ErrorIs(t, err, tc.expected)
 		})
