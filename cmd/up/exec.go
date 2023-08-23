@@ -282,7 +282,7 @@ func (d *devContainerEnvGetter) getEnvsFromDevContainer(ctx context.Context, spe
 		if env.ValueFrom != nil && env.ValueFrom.SecretKeyRef != nil {
 			secret, err := secrets.Get(ctx, env.ValueFrom.SecretKeyRef.Name, namespace, client)
 			if err != nil {
-				return nil, err
+				return envs, fmt.Errorf("%w: the development container didn't start successfully because the kubernetes secret '%s' was not found", err, env.ValueFrom.SecretKeyRef.Name)
 			}
 			val = string(secret.Data[env.ValueFrom.SecretKeyRef.Key])
 		}

@@ -2,6 +2,7 @@ package up
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
@@ -521,6 +522,7 @@ func TestGetEnvsFromDevContainer(t *testing.T) {
 	tests := []struct {
 		name         string
 		expectedEnvs []string
+		expectedErr  error
 		podspec      *apiv1.PodSpec
 		client       kubernetes.Interface
 	}{
@@ -591,13 +593,50 @@ func TestGetEnvsFromDevContainer(t *testing.T) {
 				"FROMPOD=VALUE1",
 			},
 		},
+		{
+			name: "dev container with env var from secret (not found)",
+			podspec: &apiv1.PodSpec{
+				Containers: []apiv1.Container{
+					{
+						Env: []apiv1.EnvVar{
+							{
+								Name:  "FROMPOD",
+								Value: "VALUE1",
+							},
+							{
+								Name: "SECRET_FROM_POD",
+								ValueFrom: &apiv1.EnvVarSource{
+									SecretKeyRef: &apiv1.SecretKeySelector{
+										Key: "name-of-test-secret",
+										LocalObjectReference: apiv1.LocalObjectReference{
+											Name: "name-of-test-secret",
+										},
+									},
+								},
+							},
+							{
+								Name:  "FROMPOD2",
+								Value: "VALUE2",
+							},
+						},
+					},
+				},
+			},
+			client: fake.NewSimpleClientset(),
+			expectedEnvs: []string{
+				"FROMPOD=VALUE1",
+			},
+			expectedErr: fmt.Errorf("error getting kubernetes secret: secrets \"name-of-test-secret\" not found: the development container didn't start successfully because the kubernetes secret 'name-of-test-secret' was not found"),
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			devContainerEnvGetter := devContainerEnvGetter{}
 			envs, err := devContainerEnvGetter.getEnvsFromDevContainer(ctx, tt.podspec, "", "ns-test", tt.client)
-			require.NoError(t, err)
+			if err != nil {
+				assert.Equal(t, tt.expectedErr.Error(), err.Error())
+			}
 			require.ElementsMatch(t, tt.expectedEnvs, envs)
 		})
 	}
