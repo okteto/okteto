@@ -636,7 +636,7 @@ func TestGetUserContext(t *testing.T) {
 	}
 }
 
-func Test_updateDynamicTokenForNamespace(t *testing.T) {
+func Test_getAndUseDynamicKubetoken(t *testing.T) {
 
 	tests := []struct {
 		name                  string
@@ -728,7 +728,7 @@ func Test_updateDynamicTokenForNamespace(t *testing.T) {
 				KubetokenClient: client.NewFakeKubetokenClient(tt.kubetokenMockResponse),
 			})
 
-			updateDynamicTokenForNamespace(fakeOktetoClientProvider, tt.userContext)
+			getAndUseDynamicKubetoken(fakeOktetoClientProvider, tt.userContext)
 			assert.Equal(t, tt.expectedToken, tt.userContext.Credentials.Token)
 		})
 	}
