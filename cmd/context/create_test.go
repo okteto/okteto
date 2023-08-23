@@ -17,11 +17,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	authenticationv1 "k8s.io/api/authentication/v1"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
+
+	authenticationv1 "k8s.io/api/authentication/v1"
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
@@ -503,11 +504,9 @@ func TestGetUserContext(t *testing.T) {
 		err error
 	}
 	tt := []struct {
-		name                  string
-		input                 input
-		output                output
-		kubetokenMockResponse client.FakeKubetokenResponse
-		useStaticToken        bool
+		name   string
+		input  input
+		output output
 	}{
 		{
 			name: "existing namespace",
@@ -609,88 +608,6 @@ func TestGetUserContext(t *testing.T) {
 				err: oktetoErrors.ErrInternalServerError,
 			},
 		},
-		{
-			name: "dynamic kubetoken not available, falling back to static token",
-			input: input{
-				ns: "test",
-			},
-			output: output{
-				uc: &types.UserContext{
-					User: types.User{
-						Token: "test",
-					},
-					Credentials: types.Credential{
-						Token: "static",
-					},
-				},
-				err: nil,
-			},
-			kubetokenMockResponse: client.FakeKubetokenResponse{
-				Token: types.KubeTokenResponse{
-					TokenRequest: authenticationv1.TokenRequest{
-						Status: authenticationv1.TokenRequestStatus{
-							Token: "",
-						},
-					},
-				},
-				Err: assert.AnError,
-			},
-		},
-		{
-			name: "dynamic kubetoken returned successfully and takes priority over static token",
-			input: input{
-				ns: "test",
-			},
-			output: output{
-				uc: &types.UserContext{
-					User: types.User{
-						Token: "test",
-					},
-					Credentials: types.Credential{
-						Token: "dynamic-token",
-					},
-				},
-				err: nil,
-			},
-			kubetokenMockResponse: client.FakeKubetokenResponse{
-				Token: types.KubeTokenResponse{
-					TokenRequest: authenticationv1.TokenRequest{
-						Status: authenticationv1.TokenRequestStatus{
-							Token: "dynamic-token",
-						},
-					},
-				},
-				Err: nil,
-			},
-		},
-		{
-			name: "static kubetoken is returned when using feature flag",
-			input: input{
-				ns: "test",
-			},
-			output: output{
-				uc: &types.UserContext{
-					User: types.User{
-						Token: "test",
-					},
-					Credentials: types.Credential{
-						Token: "static",
-					},
-				},
-				err: nil,
-			},
-			useStaticToken: true,
-			kubetokenMockResponse: client.FakeKubetokenResponse{
-				Token: types.KubeTokenResponse{
-					TokenRequest: authenticationv1.TokenRequest{
-						Status: authenticationv1.TokenRequestStatus{
-							Token: "dynamic-token",
-						},
-					},
-				},
-				Err: nil,
-			},
-		},
 	}
 	for _, tc := range tt {
 		tc := tc
@@ -704,12 +621,9 @@ func TestGetUserContext(t *testing.T) {
 				},
 			}
 
-			t.Setenv(oktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tc.useStaticToken))
-
 			fakeOktetoClient := &client.FakeOktetoClient{
-				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
-				Users:           client.NewFakeUsersClientWithContext(userCtx, tc.input.userErr...),
-				KubetokenClient: client.NewFakeKubetokenClient(tc.kubetokenMockResponse),
+				Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
+				Users:     client.NewFakeUsersClientWithContext(userCtx, tc.input.userErr...),
 			}
 			cmd := ContextCommand{
 				OktetoClientProvider: client.NewFakeOktetoClientProvider(fakeOktetoClient),
@@ -718,6 +632,104 @@ func TestGetUserContext(t *testing.T) {
 			uc, err := cmd.getUserContext(ctx, tc.input.ns)
 			assert.ErrorIs(t, tc.output.err, err)
 			assert.Equal(t, tc.output.uc, uc)
+		})
+	}
+}
+
+func Test_replaceCredentialsTokenWithDynamicKubetoken(t *testing.T) {
+
+	tests := []struct {
+		name                  string
+		userContext           *types.UserContext
+		useStaticTokenEnv     bool
+		kubetokenMockResponse client.FakeKubetokenResponse
+		expectedToken         string
+	}{
+		{
+			name: "dynamic kubetoken not available, falling back to static token",
+			userContext: &types.UserContext{
+				User: types.User{
+					Token:     "test",
+					Namespace: "okteto",
+				},
+				Credentials: types.Credential{
+					Token: "static",
+				},
+			},
+			kubetokenMockResponse: client.FakeKubetokenResponse{
+				Token: types.KubeTokenResponse{
+					TokenRequest: authenticationv1.TokenRequest{
+						Status: authenticationv1.TokenRequestStatus{
+							Token: "",
+						},
+					},
+				},
+				Err: assert.AnError,
+			},
+			expectedToken: "static",
+		},
+		{
+			name: "dynamic kubetoken returned successfully and takes priority over static token",
+			userContext: &types.UserContext{
+				User: types.User{
+					Token:     "test",
+					Namespace: "okteto",
+				},
+				Credentials: types.Credential{
+					Token: "static",
+				},
+			},
+			kubetokenMockResponse: client.FakeKubetokenResponse{
+				Token: types.KubeTokenResponse{
+					TokenRequest: authenticationv1.TokenRequest{
+						Status: authenticationv1.TokenRequestStatus{
+							Token: "dynamic-token",
+						},
+					},
+				},
+				Err: nil,
+			},
+			expectedToken: "dynamic-token",
+		},
+		{
+			name: "using feature flag does not update the token",
+			userContext: &types.UserContext{
+				User: types.User{
+					Token:     "test",
+					Namespace: "okteto",
+				},
+				Credentials: types.Credential{
+					Token: "static",
+				},
+			},
+			useStaticTokenEnv: true,
+			expectedToken:     "static",
+		},
+		{
+			name: "empty namespace does not update token",
+			userContext: &types.UserContext{
+				User: types.User{
+					Token: "test",
+				},
+				Credentials: types.Credential{
+					Token: "static",
+				},
+			},
+			useStaticTokenEnv: true,
+			expectedToken:     "static",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(oktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tt.useStaticTokenEnv))
+
+			fakeOktetoClientProvider := client.NewFakeOktetoClientProvider(&client.FakeOktetoClient{
+				KubetokenClient: client.NewFakeKubetokenClient(tt.kubetokenMockResponse),
+			})
+
+			replaceCredentialsTokenWithDynamicKubetoken(fakeOktetoClientProvider, tt.userContext)
+			assert.Equal(t, tt.expectedToken, tt.userContext.Credentials.Token)
 		})
 	}
 }

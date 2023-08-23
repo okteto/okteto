@@ -262,6 +262,10 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 	if ctxOptions.Namespace == "" {
 		ctxOptions.Namespace = userContext.User.Namespace
 	}
+
+	// once we have namespace and user identify we are able to retrieve the dynamic token for the namespace
+	replaceCredentialsTokenWithDynamicKubetoken(c.OktetoClientProvider, userContext)
+
 	okteto.AddOktetoContext(ctxOptions.Context, &userContext.User, ctxOptions.Namespace, userContext.User.Namespace)
 	cfg := kubeconfig.Get(config.GetKubeconfigPath())
 	if cfg == nil {
@@ -277,6 +281,36 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 	os.Setenv(model.OktetoUserNameEnvVar, okteto.Context().Username)
 
 	return nil
+}
+
+// replaceCredentialsTokenWithDynamicKubetoken retrieves a dynamic token for the given userContext and updates Credentials.Token
+// if error while retrieving the dynamic token or flag OKTETO_USE_STATIC_KUBETOKEN is enabled, value is not updated
+// static token is fallback
+func replaceCredentialsTokenWithDynamicKubetoken(okClientProvider types.OktetoClientProvider, userContext *types.UserContext) {
+	if utils.LoadBoolean(oktetoUseStaticKubetokenEnvVar) {
+		oktetoLog.Warning(usingStaticKubetokenWarningMessage)
+		return
+	}
+
+	if userContext.User.Namespace == "" {
+		oktetoLog.Debug("user context namespace is empty, fallback to static token")
+		return
+	}
+
+	c, err := okClientProvider.Provide()
+	if err != nil {
+		oktetoLog.Debugf("error providing the okteto client at replaceCredentialsTokenWithDynamicKubetoken: %w", err)
+		return
+	}
+
+	kubetoken, err := c.Kubetoken().GetKubeToken(okteto.Context().Name, userContext.User.Namespace)
+	if err != nil || kubetoken.Status.Token == "" {
+		oktetoLog.Debug("Dynamic kubernetes token not available: falling back to static token")
+		// TODO: when the static token feature gets removed, we must return an error here instead
+		return
+	}
+
+	userContext.Credentials.Token = kubetoken.Status.Token
 }
 
 func getLoggedUserContext(ctx context.Context, c *ContextCommand, ctxOptions *ContextOptions) (*types.UserContext, error) {
@@ -379,24 +413,6 @@ func (c ContextCommand) getUserContext(ctx context.Context, ns string) (*types.U
 				oktetoLog.Infof("error updating okteto contexts: %v", err)
 				return nil, fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
 			}
-		}
-
-		if utils.LoadBoolean(oktetoUseStaticKubetokenEnvVar) {
-			oktetoLog.Warning(usingStaticKubetokenWarningMessage)
-			return userContext, nil
-		}
-
-		kubetoken, err := client.Kubetoken().GetKubeToken(okteto.Context().Name, okteto.Context().Namespace)
-		if err != nil {
-			oktetoLog.Debug("Dynamic kubernetes token not available: falling back to static token")
-			return userContext, nil
-		}
-
-		if kubetoken.Status.Token != "" {
-			userContext.Credentials.Token = kubetoken.Status.Token
-		} else {
-			// TODO: when the static token feature gets removed, we must return an error here instead
-			oktetoLog.Debug("Dynamic kubernetes token not available: falling back to static token")
 		}
 
 		return userContext, nil
