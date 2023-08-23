@@ -286,6 +286,14 @@ func (d *devContainerEnvGetter) getEnvsFromDevContainer(ctx context.Context, spe
 			}
 			val = string(secret.Data[env.ValueFrom.SecretKeyRef.Key])
 		}
+
+		if env.ValueFrom != nil && env.ValueFrom.ConfigMapKeyRef != nil {
+			cm, err := configmaps.Get(ctx, env.ValueFrom.ConfigMapKeyRef.Name, namespace, client)
+			if err != nil {
+				return envs, fmt.Errorf("%w: the development container didn't start successfully because the kubernetes configmap '%s' was not found", err, env.ValueFrom.ConfigMapKeyRef.Name)
+			}
+			val = cm.Data[env.ValueFrom.ConfigMapKeyRef.Key]
+		}
 		envs = append(envs, fmt.Sprintf("%s=%s", env.Name, val))
 	}
 
@@ -295,7 +303,8 @@ func (d *devContainerEnvGetter) getEnvsFromDevContainer(ctx context.Context, spe
 func (cmg *configMapGetter) getEnvsFromConfigMap(ctx context.Context, name string, namespace string, client kubernetes.Interface) ([]string, error) {
 	var envs []string
 
-	devCmap, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(name), namespace, client)
+	cmName := pipeline.TranslatePipelineName(name)
+	devCmap, err := configmaps.Get(ctx, cmName, namespace, client)
 	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return nil, err
 	}

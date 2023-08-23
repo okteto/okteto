@@ -628,6 +628,65 @@ func TestGetEnvsFromDevContainer(t *testing.T) {
 			},
 			expectedErr: fmt.Errorf("error getting kubernetes secret: secrets \"name-of-test-secret\" not found: the development container didn't start successfully because the kubernetes secret 'name-of-test-secret' was not found"),
 		},
+		{
+			name: "dev container with env var from ENV, secret, and configmap",
+			podspec: &apiv1.PodSpec{
+				Containers: []apiv1.Container{
+					{
+						Env: []apiv1.EnvVar{
+							{
+								Name:  "FROMPOD",
+								Value: "VALUE1",
+							},
+							{
+								Name: "SECRET_FROM_POD",
+								ValueFrom: &apiv1.EnvVarSource{
+									SecretKeyRef: &apiv1.SecretKeySelector{
+										Key: "name-of-test-secret",
+										LocalObjectReference: apiv1.LocalObjectReference{
+											Name: "name-of-test-secret",
+										},
+									},
+								},
+							},
+							{
+								Name: "FROM_CM",
+								ValueFrom: &apiv1.EnvVarSource{
+									ConfigMapKeyRef: &apiv1.ConfigMapKeySelector{
+										Key: "name-of-test-env-from-cm",
+										LocalObjectReference: apiv1.LocalObjectReference{
+											Name: "name-of-test-env-from-cm",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			client: fake.NewSimpleClientset(&apiv1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "name-of-test-secret",
+					Namespace: "ns-test",
+				},
+				Data: map[string][]byte{
+					"name-of-test-secret": []byte("test"),
+				},
+			}, &apiv1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "name-of-test-env-from-cm",
+					Namespace: "ns-test",
+				},
+				Data: map[string]string{
+					"name-of-test-env-from-cm": "test",
+				},
+			}),
+			expectedEnvs: []string{
+				"FROMPOD=VALUE1",
+				"SECRET_FROM_POD=test",
+				"FROM_CM=test",
+			},
+		},
 	}
 
 	for _, tt := range tests {
