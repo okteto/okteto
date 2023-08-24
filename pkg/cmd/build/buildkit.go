@@ -131,7 +131,7 @@ func getSolveOpt(buildOptions *types.BuildOptions) (*client.SolveOpt, error) {
 				{
 					Type: "image",
 					Attrs: map[string]string{
-						"name": fmt.Sprintf("%s,%s", buildOptions.Tag, buildOptions.DevTag),
+						"name": strings.Join([]string{buildOptions.Tag, buildOptions.DevTag}, ","),
 						"push": "true",
 					},
 				},
