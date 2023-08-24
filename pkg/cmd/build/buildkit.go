@@ -125,15 +125,29 @@ func getSolveOpt(buildOptions *types.BuildOptions) (*client.SolveOpt, error) {
 	}
 
 	if buildOptions.Tag != "" {
-		opt.Exports = []client.ExportEntry{
-			{
-				Type: "image",
-				Attrs: map[string]string{
-					"name": buildOptions.Tag,
-					"push": "true",
+		// add additional tag if DevTag is defined
+		if buildOptions.DevTag != "" {
+			opt.Exports = []client.ExportEntry{
+				{
+					Type: "image",
+					Attrs: map[string]string{
+						"name": fmt.Sprintf("%s,%s", buildOptions.Tag, buildOptions.DevTag),
+						"push": "true",
+					},
 				},
-			},
+			}
+		} else {
+			opt.Exports = []client.ExportEntry{
+				{
+					Type: "image",
+					Attrs: map[string]string{
+						"name": buildOptions.Tag,
+						"push": "true",
+					},
+				},
+			}
 		}
+
 	}
 	for _, cacheFromImage := range buildOptions.CacheFrom {
 		opt.CacheImports = append(
