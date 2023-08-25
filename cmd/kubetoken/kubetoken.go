@@ -165,12 +165,16 @@ func (kc *KubetokenCmd) Run(ctx context.Context, flags KubetokenFlags) error {
 		return err
 	}
 
-	c, err := kc.oktetoClientProvider.Provide()
+	ctxResource := kc.initCtxFunc(flags.Context, flags.Namespace)
+	c, err := kc.oktetoClientProvider.Provide(
+		okteto.WithCtxName(ctxResource.Context),
+		okteto.WithToken(ctxResource.Token),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create okteto client: %w", err)
 	}
 
-	out, err := c.Kubetoken().GetKubeToken(flags.Context, flags.Namespace)
+	out, err := c.Kubetoken().GetKubeToken(ctxResource.Context, ctxResource.Namespace)
 	if err != nil {
 		return fmt.Errorf("failed to get the kubetoken: %w", err)
 	}
