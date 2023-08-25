@@ -76,9 +76,10 @@ ENV {{$key}} {{$val}}
 ARG {{ .GitCommitArgName }}
 ARG {{ .InvalidateCacheArgName }}
 
-RUN \
-  mkdir -p $HOME/.docker && \
-  echo '{"credsStore":"okteto"}' > $HOME/.docker/config.json
+RUN mkdir -p $HOME/.docker && \
+  touch $HOME/.docker/config.json && \
+  [ ! -s $HOME/.docker/config.json ] && (echo "{}" > $HOME/.docker/config.json);\
+  echo $(cat $HOME/.docker/config.json | jq '. + {"credsStore": "okteto"}') > $HOME/.docker/config.json
 
 RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \

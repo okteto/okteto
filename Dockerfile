@@ -45,7 +45,7 @@ COPY docker-credential-okteto /okteto/bin/docker-credential-okteto
 
 FROM alpine:3
 
-RUN apk add --no-cache bash ca-certificates
+RUN apk add --no-cache bash ca-certificates jq
 
 COPY --from=kubectl-builder /usr/local/bin/kubectl /usr/local/bin/kubectl
 COPY --from=helm-builder /usr/local/bin/helm /usr/local/bin/helm
@@ -54,6 +54,7 @@ COPY --from=kustomize-builder /usr/local/bin/kustomize /usr/local/bin/kustomize
 COPY --from=builder /okteto/bin/okteto /usr/local/bin/okteto
 COPY --from=builder /okteto/bin/docker-credential-okteto /usr/local/bin/docker-credential-okteto
 
+RUN mv $(which jq) /usr/local/bin/jq
 
 ENV OKTETO_DISABLE_SPINNER=true
 
