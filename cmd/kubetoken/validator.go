@@ -80,10 +80,12 @@ func withInitContextFunc(initCtxFunc initCtxOptsFunc) option {
 		cfg.getCtxResource = initCtxFunc
 	}
 }
+
 func defaultPreReqCfg() *preReqCfg {
 	return &preReqCfg{
 		k8sClientProvider:    okteto.NewK8sClientProvider(),
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
+		getCtxResource:       getCtxResource,
 		getContextStore:      okteto.ContextStore,
 	}
 }
