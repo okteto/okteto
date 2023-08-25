@@ -2,6 +2,7 @@ package up
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
@@ -24,6 +25,10 @@ type fakeGetter struct {
 	err  error
 }
 
+func (f *fakeGetter) getEnvsFromDevContainer(ctx context.Context, spec *apiv1.PodSpec, name string, namespace string, client kubernetes.Interface) ([]string, error) {
+	return f.envs, f.err
+}
+
 func (f *fakeGetter) getEnvsFromConfigMap(ctx context.Context, name string, namespace string, client kubernetes.Interface) ([]string, error) {
 	return f.envs, f.err
 }
@@ -39,13 +44,14 @@ func (f *fakeGetter) getEnvsFromImage(string) ([]string, error) {
 func TestGetEnvs(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
-		name                    string
-		expectedEnvs            []string
-		dev                     *model.Dev
-		client                  *fake.Clientset
-		fakeConfigMapEnvsGetter fakeGetter
-		fakeSecretEnvsGetter    fakeGetter
-		fakeImageEnvsGetter     fakeGetter
+		name                      string
+		expectedEnvs              []string
+		dev                       *model.Dev
+		client                    *fake.Clientset
+		fakeDevContainerEnvGetter fakeGetter
+		fakeConfigMapEnvsGetter   fakeGetter
+		fakeSecretEnvsGetter      fakeGetter
+		fakeImageEnvsGetter       fakeGetter
 	}{
 		{
 			name:                    "only envs from config map",
@@ -156,10 +162,11 @@ func TestGetEnvs(t *testing.T) {
 					},
 				},
 			}),
-			fakeConfigMapEnvsGetter: fakeGetter{},
-			fakeSecretEnvsGetter:    fakeGetter{},
-			fakeImageEnvsGetter:     fakeGetter{},
-			expectedEnvs:            []string{"FROMPOD=VALUE1"},
+			fakeDevContainerEnvGetter: fakeGetter{envs: []string{"FROMPOD=VALUE1"}},
+			fakeConfigMapEnvsGetter:   fakeGetter{},
+			fakeSecretEnvsGetter:      fakeGetter{},
+			fakeImageEnvsGetter:       fakeGetter{},
+			expectedEnvs:              []string{"FROMPOD=VALUE1"},
 			dev: &model.Dev{
 				Name:      "test",
 				Namespace: "test",
@@ -204,14 +211,15 @@ func TestGetEnvs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			eg := envsGetter{
-				dev:                 tt.dev,
-				name:                "test",
-				namespace:           "test",
-				client:              tt.client,
-				configMapEnvsGetter: &tt.fakeConfigMapEnvsGetter,
-				secretsEnvsGetter:   &tt.fakeSecretEnvsGetter,
-				imageEnvsGetter:     &tt.fakeImageEnvsGetter,
-				getDefaultLocalEnvs: func() []string { return []string{} },
+				dev:                   tt.dev,
+				name:                  "test",
+				namespace:             "test",
+				client:                tt.client,
+				devContainerEnvGetter: &tt.fakeDevContainerEnvGetter,
+				configMapEnvsGetter:   &tt.fakeConfigMapEnvsGetter,
+				secretsEnvsGetter:     &tt.fakeSecretEnvsGetter,
+				imageEnvsGetter:       &tt.fakeImageEnvsGetter,
+				getDefaultLocalEnvs:   func() []string { return []string{} },
 			}
 
 			envs, err := eg.getEnvs(ctx)
@@ -224,11 +232,12 @@ func TestGetEnvs(t *testing.T) {
 func TestGetEnvsError(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
-		name                    string
-		client                  *fake.Clientset
-		fakeConfigMapEnvsGetter fakeGetter
-		fakeSecretEnvsGetter    fakeGetter
-		fakeImageEnvsGetter     fakeGetter
+		name                      string
+		client                    *fake.Clientset
+		fakeDevContainerEnvGetter fakeGetter
+		fakeConfigMapEnvsGetter   fakeGetter
+		fakeSecretEnvsGetter      fakeGetter
+		fakeImageEnvsGetter       fakeGetter
 	}{
 		{
 			name:                    "error retrieving envs from config map",
@@ -327,6 +336,7 @@ func TestGetEnvsError(t *testing.T) {
 func TestGetEnvForHybridModeWithProperPriority(t *testing.T) {
 	ctx := context.Background()
 
+	fakeDevContainerEnvGetter := fakeGetter{envs: []string{"ENVFROMPOD=FROMPODVALUE"}}
 	fakeConfigMapEnvsGetter := fakeGetter{envs: []string{"ENVFROMCONFIGMAP=FROMCONFIGMAPVALUE"}}
 	fakeSecretEnvsGetter := fakeGetter{envs: []string{"ENVFROMSECRET=FROMSECRETVALUE"}}
 	fakeImageEnvsGetter := fakeGetter{envs: []string{"ENVFROMIMAGE=FROMIMAGEVALUE"}}
@@ -344,6 +354,18 @@ func TestGetEnvForHybridModeWithProperPriority(t *testing.T) {
 								{
 									Name:  "ENVFROMPOD",
 									Value: "FROMPODVALUE",
+								},
+								{
+									Name: "SECRET_FROM_POD",
+									ValueFrom: &v1.EnvVarSource{
+										SecretKeyRef: &v1.SecretKeySelector{
+											LocalObjectReference: v1.LocalObjectReference{
+												Name: "",
+											},
+											Key:      "",
+											Optional: nil,
+										},
+									},
 								},
 							},
 						},
@@ -375,14 +397,15 @@ func TestGetEnvForHybridModeWithProperPriority(t *testing.T) {
 	}
 
 	eg := envsGetter{
-		dev:                 dev,
-		name:                "test",
-		namespace:           "test",
-		client:              client,
-		configMapEnvsGetter: &fakeConfigMapEnvsGetter,
-		secretsEnvsGetter:   &fakeSecretEnvsGetter,
-		imageEnvsGetter:     &fakeImageEnvsGetter,
-		getDefaultLocalEnvs: func() []string { return []string{} },
+		dev:                   dev,
+		name:                  "test",
+		namespace:             "test",
+		client:                client,
+		devContainerEnvGetter: &fakeDevContainerEnvGetter,
+		configMapEnvsGetter:   &fakeConfigMapEnvsGetter,
+		secretsEnvsGetter:     &fakeSecretEnvsGetter,
+		imageEnvsGetter:       &fakeImageEnvsGetter,
+		getDefaultLocalEnvs:   func() []string { return []string{} },
 	}
 	envs, err := eg.getEnvs(ctx)
 	require.NoError(t, err)
@@ -489,6 +512,190 @@ func TestGetEnvsFromConfigMap(t *testing.T) {
 			configMapGetter := configMapGetter{}
 			envs, err := configMapGetter.getEnvsFromConfigMap(ctx, "test", "test", tt.client)
 			require.NoError(t, err)
+			require.ElementsMatch(t, tt.expectedEnvs, envs)
+		})
+	}
+}
+
+func TestGetEnvsFromDevContainer(t *testing.T) {
+	ctx := context.Background()
+	tests := []struct {
+		name         string
+		expectedEnvs []string
+		expectedErr  error
+		podspec      *apiv1.PodSpec
+		client       kubernetes.Interface
+	}{
+		{
+			name: "dev container without env vars",
+			podspec: &apiv1.PodSpec{
+				Containers: []apiv1.Container{
+					{
+						Env: []apiv1.EnvVar{},
+					},
+				},
+			},
+		},
+		{
+			name: "dev container with regular env var",
+			podspec: &apiv1.PodSpec{
+				Containers: []apiv1.Container{
+					{
+						Env: []apiv1.EnvVar{
+							{
+								Name:  "FROMPOD",
+								Value: "VALUE1",
+							},
+						},
+					},
+				},
+			},
+			expectedEnvs: []string{
+				"FROMPOD=VALUE1",
+			},
+		},
+		{
+			name: "dev container with env var from secret",
+			podspec: &apiv1.PodSpec{
+				Containers: []apiv1.Container{
+					{
+						Env: []apiv1.EnvVar{
+							{
+								Name: "SECRET_FROM_POD",
+								ValueFrom: &apiv1.EnvVarSource{
+									SecretKeyRef: &apiv1.SecretKeySelector{
+										Key: "name-of-test-secret",
+										LocalObjectReference: apiv1.LocalObjectReference{
+											Name: "name-of-test-secret",
+										},
+									},
+								},
+							},
+							{
+								Name:  "FROMPOD",
+								Value: "VALUE1",
+							},
+						},
+					},
+				},
+			},
+			client: fake.NewSimpleClientset(&apiv1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "name-of-test-secret",
+					Namespace: "ns-test",
+				},
+				Data: map[string][]byte{
+					"name-of-test-secret": []byte("test"),
+				},
+			}),
+			expectedEnvs: []string{
+				"SECRET_FROM_POD=test",
+				"FROMPOD=VALUE1",
+			},
+		},
+		{
+			name: "dev container with env var from secret (not found)",
+			podspec: &apiv1.PodSpec{
+				Containers: []apiv1.Container{
+					{
+						Env: []apiv1.EnvVar{
+							{
+								Name:  "FROMPOD",
+								Value: "VALUE1",
+							},
+							{
+								Name: "SECRET_FROM_POD",
+								ValueFrom: &apiv1.EnvVarSource{
+									SecretKeyRef: &apiv1.SecretKeySelector{
+										Key: "name-of-test-secret",
+										LocalObjectReference: apiv1.LocalObjectReference{
+											Name: "name-of-test-secret",
+										},
+									},
+								},
+							},
+							{
+								Name:  "FROMPOD2",
+								Value: "VALUE2",
+							},
+						},
+					},
+				},
+			},
+			client: fake.NewSimpleClientset(),
+			expectedEnvs: []string{
+				"FROMPOD=VALUE1",
+			},
+			expectedErr: fmt.Errorf("error getting kubernetes secret: secrets \"name-of-test-secret\" not found: the development container didn't start successfully because the kubernetes secret 'name-of-test-secret' was not found"),
+		},
+		{
+			name: "dev container with env var from ENV, secret, and configmap",
+			podspec: &apiv1.PodSpec{
+				Containers: []apiv1.Container{
+					{
+						Env: []apiv1.EnvVar{
+							{
+								Name:  "FROMPOD",
+								Value: "VALUE1",
+							},
+							{
+								Name: "SECRET_FROM_POD",
+								ValueFrom: &apiv1.EnvVarSource{
+									SecretKeyRef: &apiv1.SecretKeySelector{
+										Key: "name-of-test-secret",
+										LocalObjectReference: apiv1.LocalObjectReference{
+											Name: "name-of-test-secret",
+										},
+									},
+								},
+							},
+							{
+								Name: "FROM_CM",
+								ValueFrom: &apiv1.EnvVarSource{
+									ConfigMapKeyRef: &apiv1.ConfigMapKeySelector{
+										Key: "name-of-test-env-from-cm",
+										LocalObjectReference: apiv1.LocalObjectReference{
+											Name: "name-of-test-env-from-cm",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			client: fake.NewSimpleClientset(&apiv1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "name-of-test-secret",
+					Namespace: "ns-test",
+				},
+				Data: map[string][]byte{
+					"name-of-test-secret": []byte("test"),
+				},
+			}, &apiv1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "name-of-test-env-from-cm",
+					Namespace: "ns-test",
+				},
+				Data: map[string]string{
+					"name-of-test-env-from-cm": "test",
+				},
+			}),
+			expectedEnvs: []string{
+				"FROMPOD=VALUE1",
+				"SECRET_FROM_POD=test",
+				"FROM_CM=test",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			devContainerEnvGetter := devContainerEnvGetter{}
+			envs, err := devContainerEnvGetter.getEnvsFromDevContainer(ctx, tt.podspec, "", "ns-test", tt.client)
+			if err != nil {
+				assert.Equal(t, tt.expectedErr.Error(), err.Error())
+			}
 			require.ElementsMatch(t, tt.expectedEnvs, envs)
 		})
 	}

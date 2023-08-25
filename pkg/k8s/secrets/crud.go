@@ -45,10 +45,10 @@ func NewSecrets(k8sClient kubernetes.Interface) *Secrets {
 }
 
 // Get returns the value of a secret
-func Get(ctx context.Context, name, namespace string, c *kubernetes.Clientset) (*v1.Secret, error) {
+func Get(ctx context.Context, name, namespace string, c kubernetes.Interface) (*v1.Secret, error) {
 	secret, err := c.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return secret, fmt.Errorf("Error getting kubernetes secret: %s", err)
+		return secret, fmt.Errorf("error getting kubernetes secret: %s", err)
 	}
 	return secret, nil
 }
