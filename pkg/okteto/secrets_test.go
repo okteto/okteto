@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
+	dockercredentials "github.com/docker/docker-credential-helpers/credentials"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
@@ -627,8 +628,9 @@ func TestGetRegistryCredentials(t *testing.T) {
 		host   string
 	}
 	type expected struct {
-		authConfig dockertypes.AuthConfig
-		expectErr  bool
+		authConfig      dockertypes.AuthConfig
+		shouldExpectErr bool
+		expectErr       error
 	}
 	testCases := []struct {
 		name     string
@@ -662,7 +664,7 @@ func TestGetRegistryCredentials(t *testing.T) {
 			},
 		},
 		{
-			name: "doesn't fail with old backend",
+			name: "fail with docker's not found when old backend",
 			cfg: input{
 				host: "1.1.1.1",
 				client: &fakeGraphQLClient{
@@ -670,12 +672,13 @@ func TestGetRegistryCredentials(t *testing.T) {
 				},
 			},
 			expected: expected{
-				expectErr:  false,
-				authConfig: dockertypes.AuthConfig{},
+				shouldExpectErr: true,
+				expectErr:       dockercredentials.NewErrCredentialsNotFound(),
+				authConfig:      dockertypes.AuthConfig{},
 			},
 		},
 		{
-			name: "doesn't fail with not found",
+			name: "fail with docker's not found when not found",
 			cfg: input{
 				host: "1.1.1.1",
 				client: &fakeGraphQLClient{
@@ -683,8 +686,9 @@ func TestGetRegistryCredentials(t *testing.T) {
 				},
 			},
 			expected: expected{
-				expectErr:  false,
-				authConfig: dockertypes.AuthConfig{},
+				shouldExpectErr: true,
+				expectErr:       dockercredentials.NewErrCredentialsNotFound(),
+				authConfig:      dockertypes.AuthConfig{},
 			},
 		},
 		{
@@ -696,8 +700,9 @@ func TestGetRegistryCredentials(t *testing.T) {
 				},
 			},
 			expected: expected{
-				expectErr:  true,
-				authConfig: dockertypes.AuthConfig{},
+				shouldExpectErr: true,
+				expectErr:       errors.New("this is my error. There are many like it but this one is mine"),
+				authConfig:      dockertypes.AuthConfig{},
 			},
 		},
 	}
@@ -708,8 +713,11 @@ func TestGetRegistryCredentials(t *testing.T) {
 				client: tc.cfg.client,
 			}
 			result, err := uc.GetRegistryCredentials(ctx, tc.cfg.host)
-			if tc.expected.expectErr {
+			if tc.expected.shouldExpectErr {
 				assert.Error(t, err)
+				if tc.expected.expectErr != nil {
+					assert.Equal(t, tc.expected.expectErr, err)
+				}
 			} else {
 				assert.NoError(t, err)
 			}
