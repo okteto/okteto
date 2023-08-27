@@ -59,18 +59,18 @@ More info about docker credentials helpers here: https://github.com/docker/docke
 		ctx := context.Background()
 		if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 			_, _ = fmt.Fprintln(os.Stdout, err)
-			os.Exit(1)
+			os.Exit(1) // skipcq: RVV-A0003
 		}
 		conf := okteto.Config{}
 		if !conf.IsOktetoCluster() {
 			_, _ = fmt.Fprintln(os.Stdout, errors.ErrContextIsNotOktetoCluster)
-			os.Exit(1)
+			os.Exit(1) // skipcq: RVV-A0003
 		}
 		h := dockercredentials.NewOktetoClusterHelper(regCreds{conf})
 		action := args[0]
 		if err := credentials.HandleCommand(h, action, os.Stdin, os.Stdout); err != nil {
 			_, _ = fmt.Fprintln(os.Stdout, err)
-			os.Exit(1)
+			os.Exit(1) // skipcq: RVV-A0003
 		}
 	}
 
