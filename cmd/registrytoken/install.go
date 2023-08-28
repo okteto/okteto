@@ -6,6 +6,7 @@ import (
 
 	"github.com/docker/cli/cli/config"
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -30,6 +31,7 @@ func Install(ctx context.Context) *cobra.Command {
 			}
 
 			if conf.CredentialsStore == "okteto" {
+				oktetoLog.Warning("Okteto's registry credential helper is already installed, skipping ...")
 				return nil
 			}
 
@@ -39,7 +41,13 @@ func Install(ctx context.Context) *cobra.Command {
 
 			conf.CredentialsStore = "okteto"
 
-			return conf.Save()
+			if err := conf.Save(); err != nil {
+				return errors.Wrapf(err, "couldn't save docker config file at %q", confDir)
+			}
+
+			oktetoLog.Success("Okteto's registry credential helper successfully installed at %q", confDir)
+
+			return nil
 		},
 	}
 

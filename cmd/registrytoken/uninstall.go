@@ -6,6 +6,7 @@ import (
 
 	"github.com/docker/cli/cli/config"
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -30,6 +31,7 @@ func Uninstall(ctx context.Context) *cobra.Command {
 			}
 
 			if conf.CredentialsStore == "" {
+				oktetoLog.Warning("Okteto's registry credential helper is already uninstalled, skipping ...")
 				return nil
 			}
 
@@ -39,7 +41,13 @@ func Uninstall(ctx context.Context) *cobra.Command {
 
 			conf.CredentialsStore = ""
 
-			return conf.Save()
+			if err := conf.Save(); err != nil {
+				return errors.Wrapf(err, "couldn't save docker config file at %q", confDir)
+			}
+
+			oktetoLog.Success("Okteto's registry credential helper successfully uninstalled from %q", confDir)
+
+			return nil
 		},
 	}
 
