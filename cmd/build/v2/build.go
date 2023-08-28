@@ -249,9 +249,14 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	if err := bc.V1Builder.Build(ctx, buildOptions); err != nil {
 		return "", err
 	}
-	imageTagWithDigest, err := bc.Registry.GetImageTagWithDigest(buildOptions.Tag)
+	// check if the image is pushed to the dev registry if DevTag is set
+	reference := buildOptions.Tag
+	if buildOptions.DevTag != "" {
+		reference = buildOptions.DevTag
+	}
+	imageTagWithDigest, err := bc.Registry.GetImageTagWithDigest(reference)
 	if err != nil {
-		return "", fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
+		return "", fmt.Errorf("error accessing image at registry %s: %v", reference, err)
 	}
 	return imageTagWithDigest, nil
 }
