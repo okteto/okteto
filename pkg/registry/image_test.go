@@ -351,6 +351,11 @@ func Test_GetExpandedDevTagFromGlobal(t *testing.T) {
 			input:    "okteto.global/my-image:ffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
 			expected: "okteto.dev/my-image:okteto",
 		},
+		{
+			name:     "is global image with sha",
+			input:    "okteto.global/my-image@sha256:ffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
+			expected: "okteto.dev/my-image:okteto",
+		},
 	}
 
 	for _, tt := range tests {

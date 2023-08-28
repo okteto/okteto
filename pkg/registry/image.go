@@ -21,6 +21,7 @@ import (
 	containerv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -151,14 +152,17 @@ func GetDevTagFromGlobal(image string) string {
 	}
 
 	// separate image reference and tag eg: okteto.dev/image:tag
-	reference, _, found := strings.Cut(image, ":")
+	reference, _, found := strings.Cut(image, "@sha256")
 	if !found {
-		return ""
+		reference, _, found = strings.Cut(image, ":")
+		if !found {
+			return ""
+		}
 	}
 
 	devReference := strings.Replace(reference, constants.GlobalRegistry, constants.DevRegistry, 1)
 	if devReference == reference {
 		return ""
 	}
-	return fmt.Sprintf("%s:okteto", devReference)
+	return fmt.Sprintf("%s:%s", devReference, model.OktetoDefaultImageTag)
 }
