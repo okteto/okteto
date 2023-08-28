@@ -28,6 +28,10 @@ import (
 	"github.com/docker/docker-credential-helpers/credentials"
 )
 
+// TODO @jpf-okteto the following commit, included in v0.8.0 defines
+// consts for each action directly at the dependency.
+//
+// https://github.com/docker/docker-credential-helpers/commit/129017a3cdb99cd8190c525a75d4da6e1d8a9506
 const (
 	ActionStore   = "store"
 	ActionGet     = "get"
