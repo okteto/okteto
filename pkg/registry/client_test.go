@@ -18,7 +18,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"net"
 	"net/http"
 	"sync"
@@ -134,7 +133,7 @@ func (fc fakeClient) GetDescriptor(_ string) (*remote.Descriptor, error) {
 	return fc.MockGetDescriptor.Result, fc.MockGetDescriptor.Err
 }
 
-func (fc fakeClient) Write(_ name.Reference, _ v1.Image) error {
+func (fc fakeClient) Write(_ name.Reference, _ containerv1.Image) error {
 	return fc.MockWrite.Err
 }
 
@@ -535,7 +534,7 @@ func Test_GetDescriptor(t *testing.T) {
 func Test_Write(t *testing.T) {
 	type input struct {
 		ref   name.Reference
-		image v1.Image
+		image containerv1.Image
 	}
 	type writeConfig struct {
 		err error
@@ -554,7 +553,7 @@ func Test_Write(t *testing.T) {
 			name: "failed to write",
 			input: input{
 				ref:   name.Reference(nil),
-				image: v1.Image(nil),
+				image: containerv1.Image(nil),
 			},
 			expected: expected{
 				err: assert.AnError,
@@ -567,7 +566,7 @@ func Test_Write(t *testing.T) {
 			name: "success",
 			input: input{
 				ref:   name.Reference(nil),
-				image: v1.Image(nil),
+				image: containerv1.Image(nil),
 			},
 			expected: expected{
 				err: nil,
@@ -581,7 +580,7 @@ func Test_Write(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := client{
-				write: func(_ name.Reference, _ v1.Image, _ ...remote.Option) error {
+				write: func(_ name.Reference, _ containerv1.Image, _ ...remote.Option) error {
 					return tt.writeConfig.err
 				},
 			}
