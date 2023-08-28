@@ -18,6 +18,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+
 	"net"
 	"net/http"
 	"sync"
@@ -84,9 +86,11 @@ func (t *fakeTLSDial) tlsDial(network string, addr string, config *tls.Config) (
 
 // FakeClient has everything needed to set up a test faking API calls
 type fakeClient struct {
-	GetImageDigest getDigest
-	GetConfig      getConfig
-	HasPushAcces   hasPushAccess
+	GetImageDigest    getDigest
+	GetConfig         getConfig
+	MockGetDescriptor getDescriptor
+	MockWrite         write
+	HasPushAcces      hasPushAccess
 }
 
 // GetDigest has everything needed to mock a getDigest API call
@@ -99,6 +103,15 @@ type getDigest struct {
 type getConfig struct {
 	Result *containerv1.ConfigFile
 	Err    error
+}
+
+type getDescriptor struct {
+	Result *remote.Descriptor
+	Err    error
+}
+
+type write struct {
+	Err error
 }
 
 type hasPushAccess struct {
@@ -116,6 +129,13 @@ func (fc fakeClient) GetImageConfig(_ string) (*containerv1.ConfigFile, error) {
 
 func (fc fakeClient) HasPushAccess(_ string) (bool, error) {
 	return fc.HasPushAcces.Result, fc.HasPushAcces.Err
+}
+
+func (fc fakeClient) GetDescriptor(_ string) (*remote.Descriptor, error) {
+	return fc.MockGetDescriptor.Result, fc.MockGetDescriptor.Err
+}
+func (fc fakeClient) Write(_ name.Reference, _ v1.Image) error {
+	return fc.MockWrite.Err
 }
 
 type fakeClientConfig struct {
