@@ -86,6 +86,11 @@ func init() {
 func main() {
 	ctx := context.Background()
 	oktetoLog.Init(logrus.WarnLevel)
+	if registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
+		oktetoLog.SetOutput(os.Stderr)
+		oktetoLog.SetLevel(oktetoLog.InfoLevel)
+		oktetoLog.SetOutputFormat(oktetoLog.JSONFormat)
+	}
 	var logLevel string
 	var outputMode string
 	var serverNameOverride string
@@ -103,8 +108,10 @@ func main() {
 		SilenceErrors: true,
 		PersistentPreRun: func(ccmd *cobra.Command, args []string) {
 			ccmd.SilenceUsage = true
-			oktetoLog.SetLevel(logLevel)
-			oktetoLog.SetOutputFormat(outputMode)
+			if !registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
+				oktetoLog.SetLevel(logLevel)
+				oktetoLog.SetOutputFormat(outputMode)
+			}
 			okteto.SetServerNameOverride(serverNameOverride)
 			oktetoLog.Infof("started %s", strings.Join(os.Args, " "))
 		},

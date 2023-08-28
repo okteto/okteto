@@ -15,6 +15,7 @@ package registrytoken
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -25,6 +26,18 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/docker/docker-credential-helpers/credentials"
+)
+
+// TODO @jpf-okteto the following commit, included in v0.8.0 defines
+// consts for each action directly at the dependency.
+//
+// https://github.com/docker/docker-credential-helpers/commit/129017a3cdb99cd8190c525a75d4da6e1d8a9506
+const (
+	ActionStore   = "store"
+	ActionGet     = "get"
+	ActionErase   = "erase"
+	ActionList    = "list"
+	ActionVersion = "version"
 )
 
 type regCreds struct {
@@ -50,23 +63,45 @@ At this time only "get" is supported
 More info about docker credentials helpers here: https://github.com/docker/docker-credential-helpers
   `,
 		Hidden:    true,
-		ValidArgs: []string{"store", "get", "erase", "list", "version"},
+		ValidArgs: []string{ActionStore, ActionGet, ActionErase, ActionList, ActionVersion},
 		Args:      cobra.ExactValidArgs(1),
 	}
 
-	cmd.RunE = func(_ *cobra.Command, args []string) error {
-		action := args[0]
+	cmd.Run = func(_ *cobra.Command, args []string) {
 		ctx := context.Background()
 		if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
-			return err
+			_, _ = fmt.Fprintln(os.Stdout, err)
+			os.Exit(1) // skipcq: RVV-A0003
 		}
 		conf := okteto.Config{}
 		if !conf.IsOktetoCluster() {
-			return errors.ErrContextIsNotOktetoCluster
+			_, _ = fmt.Fprintln(os.Stdout, errors.ErrContextIsNotOktetoCluster)
+			os.Exit(1) // skipcq: RVV-A0003
 		}
 		h := dockercredentials.NewOktetoClusterHelper(regCreds{conf})
-		return credentials.HandleCommand(h, action, os.Stdin, os.Stdout)
+		action := args[0]
+		if err := credentials.HandleCommand(h, action, os.Stdin, os.Stdout); err != nil {
+			_, _ = fmt.Fprintln(os.Stdout, err)
+			os.Exit(1) // skipcq: RVV-A0003
+		}
 	}
 
 	return cmd
+}
+
+func IsRegistryCredentialHelperCommand(args []string) bool {
+	if len(args) != 3 {
+		return false
+	}
+
+	if args[1] != "registrytoken" {
+		return false
+	}
+
+	switch args[2] {
+	case ActionStore, ActionGet, ActionErase, ActionList, ActionVersion:
+		return true
+	default:
+		return false
+	}
 }
