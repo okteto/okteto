@@ -72,9 +72,7 @@ WORKDIR /okteto/src
 ARG {{ .GitCommitArgName }}
 ARG {{ .InvalidateCacheArgName }}
 
-RUN \
-  mkdir -p $HOME/.docker && \
-  echo '{"credsStore":"okteto"}' > $HOME/.docker/config.json
+RUN okteto registrytoken install --force --log-output=json
 
 RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
