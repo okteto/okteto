@@ -75,7 +75,6 @@ type KubetokenCmd struct {
 	oktetoCtxCmdRunner   oktetoCtxCmdRunner
 	serializer           *Serializer
 	initCtxFunc          initCtxOptsFunc
-	logger               logger
 }
 
 // KubetokenOptions represents the options for kubetoken
@@ -85,6 +84,7 @@ type KubetokenOptions struct {
 	ctxStore             *okteto.OktetoContextStore
 	oktetoCtxCmdRunner   oktetoCtxCmdRunner
 	serializer           *Serializer
+	getCtxResource       initCtxOptsFunc
 }
 
 func defaultKubetokenOptions() *KubetokenOptions {
@@ -95,6 +95,7 @@ func defaultKubetokenOptions() *KubetokenOptions {
 		oktetoCtxCmdRunner:   contextCMD.NewContextCommand(),
 		ctxStore:             ctxStore,
 		serializer:           &Serializer{},
+		getCtxResource:       getCtxResource,
 	}
 }
 
@@ -109,6 +110,10 @@ func NewKubetokenCmd(optFunc ...kubetokenOption) *KubetokenCmd {
 	return &KubetokenCmd{
 		oktetoClientProvider: opts.oktetoClientProvider,
 		serializer:           opts.serializer,
+		k8sClientProvider:    opts.k8sClientProvider,
+		ctxStore:             opts.ctxStore,
+		oktetoCtxCmdRunner:   opts.oktetoCtxCmdRunner,
+		initCtxFunc:          getCtxResource,
 	}
 }
 
@@ -139,6 +144,7 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 
 // Run executes the kubetoken command
 func (kc *KubetokenCmd) Run(ctx context.Context, flags KubetokenFlags) error {
+	oktetoLog.SetOutputFormat("silent")
 	err := newPreReqValidator(
 		withCtxName(flags.Context),
 		withNamespace(flags.Namespace),
@@ -159,12 +165,16 @@ func (kc *KubetokenCmd) Run(ctx context.Context, flags KubetokenFlags) error {
 		return err
 	}
 
-	c, err := kc.oktetoClientProvider.Provide()
+	ctxResource := kc.initCtxFunc(flags.Context, flags.Namespace)
+	c, err := kc.oktetoClientProvider.Provide(
+		okteto.WithCtxName(ctxResource.Context),
+		okteto.WithToken(ctxResource.Token),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create okteto client: %w", err)
 	}
 
-	out, err := c.Kubetoken().GetKubeToken(flags.Context, flags.Namespace)
+	out, err := c.Kubetoken().GetKubeToken(ctxResource.Context, ctxResource.Namespace)
 	if err != nil {
 		return fmt.Errorf("failed to get the kubetoken: %w", err)
 	}
@@ -174,6 +184,7 @@ func (kc *KubetokenCmd) Run(ctx context.Context, flags KubetokenFlags) error {
 		return fmt.Errorf("failed to marshal KubeTokenResponse: %w", err)
 	}
 
+	oktetoLog.SetOutputFormat("tty")
 	oktetoLog.Print(jsonStr)
 	return nil
 }
