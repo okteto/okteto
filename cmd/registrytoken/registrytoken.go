@@ -35,7 +35,7 @@ func (r regCreds) GetRegistryCredentials(host string) (string, string, error) {
 	return r.GetExternalRegistryCredentials(host)
 }
 
-func RegistryToken() *cobra.Command {
+func RegistryToken(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "registrytoken",
 		Short: "docker credentials helper for private registries registered in okteto",
@@ -67,6 +67,9 @@ More info about docker credentials helpers here: https://github.com/docker/docke
 		h := dockercredentials.NewOktetoClusterHelper(regCreds{conf})
 		return credentials.HandleCommand(h, action, os.Stdin, os.Stdout)
 	}
+
+	cmd.AddCommand(Install(ctx))
+	cmd.AddCommand(Uninstall(ctx))
 
 	return cmd
 }
