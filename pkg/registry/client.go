@@ -84,6 +84,7 @@ func newOktetoRegistryClient(config ClientConfigInterface) client {
 	}
 }
 
+// GetDescriptor returns the descriptor of an image
 func (c client) GetDescriptor(image string) (*remote.Descriptor, error) {
 	ref, err := name.ParseReference(image)
 	if err != nil {
@@ -102,6 +103,7 @@ func (c client) GetDescriptor(image string) (*remote.Descriptor, error) {
 	return descriptor, nil
 }
 
+// Write writes an image metadata to the registry
 func (c client) Write(ref name.Reference, image v1.Image) error {
 	options := c.getOptions(ref)
 	return c.write(ref, image, options...)

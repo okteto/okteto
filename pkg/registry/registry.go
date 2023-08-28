@@ -158,26 +158,28 @@ func (or OktetoRegistry) GetRepoNameAndTag(repo string) (string, string) {
 
 // CloneGlobalImageToDev clones an image from the global registry to the dev registry
 func (or OktetoRegistry) CloneGlobalImageToDev(imageWithDigest, tag string) (string, error) {
-	descriptor, err := or.client.GetDescriptor(imageWithDigest)
-	if err != nil {
-		return "", err
-	}
-
-	// parsing the image URI to extract registry and repository name
+	// parse the image URI to extract registry and repository name
 	reg, repositoryWithTag := or.imageCtrl.GetRegistryAndRepo(imageWithDigest)
 	repo, _ := or.imageCtrl.GetRepoNameAndTag(repositoryWithTag)
 
-	if !strings.HasPrefix(repo, fmt.Sprintf("%s/", or.imageCtrl.config.GetGlobalNamespace())) {
-		return "", fmt.Errorf("image %s is not in the global registry", repo)
+	globalNamespacePrefix := fmt.Sprintf("%s/", or.imageCtrl.config.GetGlobalNamespace())
+
+	// this function returns an error if invoked for an image that is not in the global registry
+	if !strings.HasPrefix(repo, globalNamespacePrefix) {
+		return "", fmt.Errorf("image repository '%s' is not in the global registry", repo)
 	}
 
 	// forging a new image URI in the dev registry, using the same repo name and tag as the global image
-	globalNamespacePrefix := fmt.Sprintf("%s/", or.imageCtrl.config.GetGlobalNamespace())
 	personalNamespacePrefix := fmt.Sprintf("%s/", or.config.GetNamespace())
 	devRepo := strings.Replace(repo, globalNamespacePrefix, personalNamespacePrefix, 1)
 	devImage := fmt.Sprintf("%s/%s:%s", reg, devRepo, tag)
 
 	newRef, err := name.ParseReference(devImage)
+	if err != nil {
+		return "", err
+	}
+
+	descriptor, err := or.client.GetDescriptor(imageWithDigest)
 	if err != nil {
 		return "", err
 	}
@@ -195,5 +197,3 @@ func (or OktetoRegistry) CloneGlobalImageToDev(imageWithDigest, tag string) (str
 
 	return devImage, nil
 }
-
-//

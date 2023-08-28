@@ -19,7 +19,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-
 	"net"
 	"net/http"
 	"sync"
@@ -88,8 +87,8 @@ func (t *fakeTLSDial) tlsDial(network string, addr string, config *tls.Config) (
 type fakeClient struct {
 	GetImageDigest    getDigest
 	GetConfig         getConfig
-	MockGetDescriptor getDescriptor
-	MockWrite         write
+	MockGetDescriptor mockGetDescriptor
+	MockWrite         mockWrite
 	HasPushAcces      hasPushAccess
 }
 
@@ -105,12 +104,12 @@ type getConfig struct {
 	Err    error
 }
 
-type getDescriptor struct {
+type mockGetDescriptor struct {
 	Result *remote.Descriptor
 	Err    error
 }
 
-type write struct {
+type mockWrite struct {
 	Err error
 }
 
@@ -134,6 +133,7 @@ func (fc fakeClient) HasPushAccess(_ string) (bool, error) {
 func (fc fakeClient) GetDescriptor(_ string) (*remote.Descriptor, error) {
 	return fc.MockGetDescriptor.Result, fc.MockGetDescriptor.Err
 }
+
 func (fc fakeClient) Write(_ name.Reference, _ v1.Image) error {
 	return fc.MockWrite.Err
 }
@@ -460,6 +460,138 @@ func TestGetTransport(t *testing.T) {
 				assert.NotNil(t, dialer.requests[0].config)
 				assert.Equal(t, e.output.config.ServerName, dialer.requests[0].config.ServerName)
 			}
+		})
+	}
+}
+
+func Test_GetDescriptor(t *testing.T) {
+	type input struct {
+		config fakeClientConfig
+		image  string
+	}
+	type getConfig struct {
+		descriptor *remote.Descriptor
+		err        error
+	}
+	type expected struct {
+		descriptor *remote.Descriptor
+		err        error
+	}
+	var tests = []struct {
+		name      string
+		input     input
+		expected  expected
+		getConfig getConfig
+	}{
+		{
+			name: "failed to parse reference",
+			input: input{
+				image: "broken image uri",
+			},
+			expected: expected{
+				descriptor: nil,
+				err:        fmt.Errorf("could not parse reference: broken image uri"),
+			},
+			getConfig: getConfig{
+				descriptor: nil,
+				err:        nil,
+			},
+		},
+		{
+			name: "not found",
+			input: input{
+				image: "okteto/test:latest",
+			},
+			expected: expected{
+				descriptor: nil,
+				err:        fmt.Errorf("error getting image descriptor: %w", oktetoErrors.ErrNotFound),
+			},
+			getConfig: getConfig{
+				descriptor: nil,
+				err:        oktetoErrors.ErrNotFound,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := client{
+				config: tt.input.config,
+				get: func(_ name.Reference, _ ...remote.Option) (*remote.Descriptor, error) {
+					return tt.getConfig.descriptor, tt.getConfig.err
+				},
+			}
+			descriptor, err := c.GetDescriptor(tt.input.image)
+			assert.Equal(t, tt.expected.descriptor, descriptor)
+			if tt.expected.err != nil {
+				assert.EqualError(t, err, tt.expected.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_Write(t *testing.T) {
+	type input struct {
+		ref   name.Reference
+		image v1.Image
+	}
+	type writeConfig struct {
+		err error
+	}
+	type expected struct {
+		err error
+	}
+	var tests = []struct {
+		name        string
+		input       input
+		expected    expected
+		client      fakeClient
+		writeConfig writeConfig
+	}{
+		{
+			name: "failed to write",
+			input: input{
+				ref:   name.Reference(nil),
+				image: v1.Image(nil),
+			},
+			expected: expected{
+				err: assert.AnError,
+			},
+			writeConfig: writeConfig{
+				err: assert.AnError,
+			},
+		},
+		{
+			name: "success",
+			input: input{
+				ref:   name.Reference(nil),
+				image: v1.Image(nil),
+			},
+			expected: expected{
+				err: nil,
+			},
+			writeConfig: writeConfig{
+				err: nil,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := client{
+				write: func(_ name.Reference, _ v1.Image, _ ...remote.Option) error {
+					return tt.writeConfig.err
+				},
+			}
+			err := c.write(tt.input.ref, tt.input.image)
+			if tt.expected.err != nil {
+				assert.EqualError(t, err, tt.expected.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+
 		})
 	}
 }
