@@ -125,7 +125,7 @@ func main() {
 	root.AddCommand(contextCMD.Context())
 	root.AddCommand(cmd.Kubeconfig())
 	root.AddCommand(kubetoken.KubeToken())
-	root.AddCommand(registrytoken.RegistryToken())
+	root.AddCommand(registrytoken.RegistryToken(ctx))
 
 	root.AddCommand(build.Build(ctx))
 
