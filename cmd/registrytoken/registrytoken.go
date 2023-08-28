@@ -28,6 +28,14 @@ import (
 	"github.com/docker/docker-credential-helpers/credentials"
 )
 
+const (
+	ActionStore   = "store"
+	ActionGet     = "get"
+	ActionErase   = "erase"
+	ActionList    = "list"
+	ActionVersion = "version"
+)
+
 type regCreds struct {
 	okteto.Config
 }
@@ -51,7 +59,7 @@ At this time only "get" is supported
 More info about docker credentials helpers here: https://github.com/docker/docker-credential-helpers
   `,
 		Hidden:    true,
-		ValidArgs: []string{"store", "get", "erase", "list", "version"},
+		ValidArgs: []string{ActionStore, ActionGet, ActionErase, ActionList, ActionVersion},
 		Args:      cobra.ExactValidArgs(1),
 	}
 
@@ -87,7 +95,7 @@ func IsRegistryCredentialHelperCommand(args []string) bool {
 	}
 
 	switch args[2] {
-	case "store", "get", "erase", "list", "version":
+	case ActionStore, ActionGet, ActionErase, ActionList, ActionVersion:
 		return true
 	default:
 		return false
