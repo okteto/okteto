@@ -2,6 +2,7 @@ package registrytoken
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/docker/cli/cli/config"
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -33,7 +34,7 @@ func Install(ctx context.Context) *cobra.Command {
 			}
 
 			if conf.CredentialsStore != "" && !options.Overwrite {
-				return errors.New("credentials store is currently set to %q, use --force to overwrite")
+				return errors.New(fmt.Sprintf("credentials store is currently set to %q, use --force to overwrite", conf.CredentialsStore))
 			}
 
 			conf.CredentialsStore = "okteto"
