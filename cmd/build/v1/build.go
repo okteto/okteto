@@ -16,8 +16,9 @@ package v1
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/model"
 	"path/filepath"
+
+	"github.com/okteto/okteto/pkg/model"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -110,7 +111,11 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		oktetoLog.Success("Build succeeded")
 		oktetoLog.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
 	} else {
-		oktetoLog.Success(fmt.Sprintf("Image '%s' successfully pushed", options.Tag))
+		displayTag := options.Tag
+		if options.DevTag != "" {
+			displayTag = options.DevTag
+		}
+		oktetoLog.Success(fmt.Sprintf("Image '%s' successfully pushed", displayTag))
 	}
 
 	analytics.TrackBuild(okteto.Context().Builder, true)
