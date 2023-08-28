@@ -37,7 +37,7 @@ func Uninstall(ctx context.Context) *cobra.Command {
 				return errors.New(fmt.Sprintf("credentials store is not 'okteto', currently set to %q, use --force to overwrite", conf.CredentialsStore))
 			}
 
-			conf.CredentialsStore = "okteto"
+			conf.CredentialsStore = ""
 
 			return conf.Save()
 		},
