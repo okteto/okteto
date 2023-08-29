@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -40,6 +41,7 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/types"
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -141,6 +143,10 @@ func newSyncExecutor(up *upContext) *syncExecutor {
 	}
 }
 
+type devContainerEnvGetterInterface interface {
+	getEnvsFromDevContainer(ctx context.Context, spec *apiv1.PodSpec, name, namespace string, client kubernetes.Interface) ([]string, error)
+}
+
 type configMapEnvsGetterInterface interface {
 	getEnvsFromConfigMap(ctx context.Context, name string, namespace string, client kubernetes.Interface) ([]string, error)
 }
@@ -161,8 +167,8 @@ type secretsGetterInterface interface {
 	GetUserSecrets(context.Context) ([]types.Secret, error)
 }
 
-type configMapGetter struct {
-}
+type devContainerEnvGetter struct{}
+type configMapGetter struct{}
 type secretsEnvsGetter struct {
 	secretsGetter secretsGetterInterface
 }
@@ -171,13 +177,14 @@ type imageEnvsGetter struct {
 }
 
 type envsGetter struct {
-	dev                 *model.Dev
-	name, namespace     string
-	client              kubernetes.Interface
-	configMapEnvsGetter configMapEnvsGetterInterface
-	secretsEnvsGetter   secretsEnvsGetterInterface
-	imageEnvsGetter     imageEnvsGetterInterface
-	getDefaultLocalEnvs func() []string
+	dev                   *model.Dev
+	name, namespace       string
+	client                kubernetes.Interface
+	devContainerEnvGetter devContainerEnvGetterInterface
+	configMapEnvsGetter   configMapEnvsGetterInterface
+	secretsEnvsGetter     secretsEnvsGetterInterface
+	imageEnvsGetter       imageEnvsGetterInterface
+	getDefaultLocalEnvs   func() []string
 }
 
 func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {
@@ -192,11 +199,12 @@ func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {
 	}
 
 	return &envsGetter{
-		dev:                 hybridCtx.Dev,
-		name:                hybridCtx.Name,
-		namespace:           hybridCtx.Namespace,
-		client:              hybridCtx.Client,
-		configMapEnvsGetter: &configMapGetter{},
+		dev:                   hybridCtx.Dev,
+		name:                  hybridCtx.Name,
+		namespace:             hybridCtx.Namespace,
+		client:                hybridCtx.Client,
+		devContainerEnvGetter: &devContainerEnvGetter{},
+		configMapEnvsGetter:   &configMapGetter{},
 		secretsEnvsGetter: &secretsEnvsGetter{
 			secretsGetter: secretsGetter,
 		},
@@ -233,9 +241,11 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 	}
 	envs = append(envs, configMapEnvs...)
 
-	for _, env := range apps.GetDevContainer(app.PodSpec(), "").Env {
-		envs = append(envs, fmt.Sprintf("%s=%s", env.Name, env.Value))
+	devContainerEnvs, err := eg.devContainerEnvGetter.getEnvsFromDevContainer(ctx, app.PodSpec(), "", eg.namespace, eg.client)
+	if err != nil {
+		return nil, err
 	}
+	envs = append(envs, devContainerEnvs...)
 
 	envs = append(envs, eg.getDefaultLocalEnvs()...)
 
@@ -262,10 +272,39 @@ func getDefaultLocalEnvs() []string {
 	return envs
 }
 
+func (d *devContainerEnvGetter) getEnvsFromDevContainer(ctx context.Context, spec *apiv1.PodSpec, name, namespace string, client kubernetes.Interface) ([]string, error) {
+	var envs []string
+
+	devContainer := apps.GetDevContainer(spec, name)
+
+	for _, env := range devContainer.Env {
+		val := env.Value
+		if env.ValueFrom != nil && env.ValueFrom.SecretKeyRef != nil {
+			secret, err := secrets.Get(ctx, env.ValueFrom.SecretKeyRef.Name, namespace, client)
+			if err != nil {
+				return envs, fmt.Errorf("%w: the development container didn't start successfully because the kubernetes secret '%s' was not found", err, env.ValueFrom.SecretKeyRef.Name)
+			}
+			val = string(secret.Data[env.ValueFrom.SecretKeyRef.Key])
+		}
+
+		if env.ValueFrom != nil && env.ValueFrom.ConfigMapKeyRef != nil {
+			cm, err := configmaps.Get(ctx, env.ValueFrom.ConfigMapKeyRef.Name, namespace, client)
+			if err != nil {
+				return envs, fmt.Errorf("%w: the development container didn't start successfully because the kubernetes configmap '%s' was not found", err, env.ValueFrom.ConfigMapKeyRef.Name)
+			}
+			val = cm.Data[env.ValueFrom.ConfigMapKeyRef.Key]
+		}
+		envs = append(envs, fmt.Sprintf("%s=%s", env.Name, val))
+	}
+
+	return envs, nil
+}
+
 func (cmg *configMapGetter) getEnvsFromConfigMap(ctx context.Context, name string, namespace string, client kubernetes.Interface) ([]string, error) {
 	var envs []string
 
-	devCmap, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(name), namespace, client)
+	cmName := pipeline.TranslatePipelineName(name)
+	devCmap, err := configmaps.Get(ctx, cmName, namespace, client)
 	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return nil, err
 	}
