@@ -177,11 +177,11 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 					if bc.Registry.IsGlobalRegistry(imageWithDigest) {
 						oktetoLog.Debugf("Copying image '%s' from global to personal registry", svcToBuild)
 						tag := bc.Config.GetBuildHash(buildSvcInfo)
-						newImage, err := bc.Registry.CloneGlobalImageToDev(imageWithDigest, tag)
+						devImage, err := bc.Registry.CloneGlobalImageToDev(imageWithDigest, tag)
 						if err != nil {
 							return err
 						}
-						imageWithDigest = newImage
+						imageWithDigest = devImage
 					}
 
 					bc.SetServiceEnvVars(svcToBuild, imageWithDigest)
