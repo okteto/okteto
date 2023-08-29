@@ -293,10 +293,16 @@ func translateAPIErr(err error) error {
 		return oktetoErrors.ErrNotFound
 
 	default:
-		if oktetoErrors.IsX509(err) {
+		switch {
+		case oktetoErrors.IsX509(err):
 			return oktetoErrors.UserError{
 				E:    err,
 				Hint: oktetoErrors.ErrX509Hint,
+			}
+		case isAPITrialExpiredError(err):
+			return oktetoErrors.UserError{
+				E:    oktetoErrors.ErrTrialExpired,
+				Hint: "The Okteto instance for your current context has an expired or missing license. Please contact your administrator for more information",
 			}
 		}
 
@@ -304,6 +310,10 @@ func translateAPIErr(err error) error {
 		return err
 	}
 
+}
+
+func isAPITrialExpiredError(err error) bool {
+	return strings.HasPrefix(err.Error(), "non-200 OK status code: 423")
 }
 
 func isAPITransientErr(err error) bool {
