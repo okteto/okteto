@@ -302,7 +302,7 @@ func translateAPIErr(err error) error {
 		case isAPITrialExpiredError(err):
 			return oktetoErrors.UserError{
 				E:    oktetoErrors.ErrTrialExpired,
-				Hint: "This command-line tool will no longer work. Please contact our sales team (sales@okteto.com) to obtain a new license key",
+				Hint: "The Okteto instance for your current context has an expired or missing license. Please contact your administrator for more information",
 			}
 		}
 
