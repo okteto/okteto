@@ -57,6 +57,8 @@ const (
 	PlainFormat string = "plain"
 	// JSONFormat represents a json logger
 	JSONFormat string = "json"
+	// SilentFormat represents a silent logger
+	SilentFormat string = "silent"
 )
 
 func (l *logger) getWriter(format string) OktetoWriter {
@@ -71,6 +73,9 @@ func (l *logger) getWriter(format string) OktetoWriter {
 		l.outputMode = JSONFormat
 		l.out.SetFormatter(&JSONLogFormat{})
 		return newJSONWriter(l.out, l.file)
+	case SilentFormat:
+		l.outputMode = SilentFormat
+		return newSilentWriter(l.out, l.file)
 	default:
 		Debugf("could not load %s. Callback to 'tty'", format)
 		l.outputMode = TTYFormat

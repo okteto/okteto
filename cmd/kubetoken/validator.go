@@ -23,9 +23,6 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 var (
@@ -34,10 +31,6 @@ var (
 	validationTimeout = 3000 * time.Second
 )
 
-type k8sClientProvider interface {
-	Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error)
-}
-
 type preReqCfg struct {
 	ctxName string
 	ns      string
@@ -45,6 +38,7 @@ type preReqCfg struct {
 	k8sClientProvider    k8sClientProvider
 	oktetoClientProvider oktetoClientProvider
 	getContextStore      func() *okteto.OktetoContextStore
+	getCtxResource       initCtxOptsFunc
 }
 
 type option func(*preReqCfg)
@@ -73,10 +67,25 @@ func withOktetoClientProvider(oktetoClientProvider oktetoClientProvider) option 
 	}
 }
 
+func withContextStore(ctxStore *okteto.OktetoContextStore) option {
+	return func(cfg *preReqCfg) {
+		cfg.getContextStore = func() *okteto.OktetoContextStore {
+			return ctxStore
+		}
+	}
+}
+
+func withInitContextFunc(initCtxFunc initCtxOptsFunc) option {
+	return func(cfg *preReqCfg) {
+		cfg.getCtxResource = initCtxFunc
+	}
+}
+
 func defaultPreReqCfg() *preReqCfg {
 	return &preReqCfg{
 		k8sClientProvider:    okteto.NewK8sClientProvider(),
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
+		getCtxResource:       getCtxResource,
 		getContextStore:      okteto.ContextStore,
 	}
 }
@@ -104,7 +113,7 @@ func newPreReqValidator(opts ...option) *preReqValidator {
 		k8sClientProvider:    cfg.k8sClientProvider,
 		oktetoClientProvider: cfg.oktetoClientProvider,
 		getContextStore:      cfg.getContextStore,
-		getCtxResource:       getCtxResource,
+		getCtxResource:       cfg.getCtxResource,
 	}
 }
 
@@ -142,7 +151,6 @@ func getCtxResource(ctxName, ns string) *contextCMD.ContextOptions {
 }
 
 type getContextStoreFunc func() *okteto.OktetoContextStore
-type initCtxOptsFunc func(string, string) *contextCMD.ContextOptions
 
 // ctxValidator checks that the ctx use to execute the command is an okteto context
 // that has already being added to your okteto context
@@ -189,7 +197,12 @@ func (v *ctxValidator) validate(ctx context.Context) error {
 		if !isURL(v.ctxResource.Context) {
 			v.ctxResource.Context = v.k8sCtxToOktetoURL(ctx, v.ctxResource.Context, "", v.k8sClientProvider)
 		}
-		okCtx, exists := v.getContextStore().Contexts[v.ctxResource.Context]
+		ctxStore := v.getContextStore()
+		if ctxStore == nil {
+			result <- errOktetoContextNotFound{v.ctxResource.Context}
+			return
+		}
+		okCtx, exists := ctxStore.Contexts[v.ctxResource.Context]
 		if !exists {
 			if v.ctxResource.Token == "" {
 				result <- errOktetoContextNotFound{v.ctxResource.Context}

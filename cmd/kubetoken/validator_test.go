@@ -24,27 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/rest"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
-
-type fakeK8sClientProvider struct {
-	client kubernetes.Interface
-	err    error
-}
-
-func (f fakeK8sClientProvider) Provide(_ *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
-	return f.client, nil, f.err
-}
-
-type fakeOktetoClientProvider struct {
-	client types.OktetoInterface
-	err    error
-}
-
-func (f fakeOktetoClientProvider) Provide(...okteto.Option) (types.OktetoInterface, error) {
-	return f.client, f.err
-}
 
 func TestPreReqValidator(t *testing.T) {
 	type input struct {
