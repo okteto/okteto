@@ -33,6 +33,8 @@ type clientInterface interface {
 	GetDigest(image string) (string, error)
 	GetImageConfig(image string) (*v1.ConfigFile, error)
 	HasPushAccess(image string) (bool, error)
+	GetDescriptor(image string) (*remote.Descriptor, error)
+	Write(ref name.Reference, image v1.Image) error
 }
 
 type ClientConfigInterface interface {
@@ -69,6 +71,7 @@ func (oh oktetoHelper) Get(_ string) (string, string, error) {
 type client struct {
 	config  ClientConfigInterface
 	get     func(ref name.Reference, options ...remote.Option) (*remote.Descriptor, error)
+	write   func(ref name.Reference, image v1.Image, options ...remote.Option) error
 	tlsDial oktetoHttp.TLSDialFunc
 }
 
@@ -76,11 +79,13 @@ func newOktetoRegistryClient(config ClientConfigInterface) client {
 	return client{
 		config:  config,
 		get:     remote.Get,
+		write:   remote.Write,
 		tlsDial: oktetoHttp.DefaultTLSDial,
 	}
 }
 
-func (c client) getDescriptor(image string) (*remote.Descriptor, error) {
+// GetDescriptor returns the descriptor of an image
+func (c client) GetDescriptor(image string) (*remote.Descriptor, error) {
 	ref, err := name.ParseReference(image)
 	if err != nil {
 		return nil, err
@@ -98,9 +103,15 @@ func (c client) getDescriptor(image string) (*remote.Descriptor, error) {
 	return descriptor, nil
 }
 
+// Write writes an image metadata to the registry
+func (c client) Write(ref name.Reference, image v1.Image) error {
+	options := c.getOptions(ref)
+	return c.write(ref, image, options...)
+}
+
 // GetDigest returns the digest of an image
 func (c client) GetDigest(image string) (string, error) {
-	descriptor, err := c.getDescriptor(image)
+	descriptor, err := c.GetDescriptor(image)
 	if err != nil {
 		return "", fmt.Errorf("error getting image digest: %w", err)
 	}
@@ -109,7 +120,7 @@ func (c client) GetDigest(image string) (string, error) {
 
 // GetImageConfig returns the config of an image
 func (c client) GetImageConfig(image string) (*v1.ConfigFile, error) {
-	descriptor, err := c.getDescriptor(image)
+	descriptor, err := c.GetDescriptor(image)
 	if err != nil {
 		return nil, fmt.Errorf("error getting image configuration: %w", err)
 	}

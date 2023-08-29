@@ -84,9 +84,11 @@ func (t *fakeTLSDial) tlsDial(network string, addr string, config *tls.Config) (
 
 // FakeClient has everything needed to set up a test faking API calls
 type fakeClient struct {
-	GetImageDigest getDigest
-	GetConfig      getConfig
-	HasPushAcces   hasPushAccess
+	GetImageDigest    getDigest
+	GetConfig         getConfig
+	MockGetDescriptor mockGetDescriptor
+	MockWrite         mockWrite
+	HasPushAcces      hasPushAccess
 }
 
 // GetDigest has everything needed to mock a getDigest API call
@@ -99,6 +101,15 @@ type getDigest struct {
 type getConfig struct {
 	Result *containerv1.ConfigFile
 	Err    error
+}
+
+type mockGetDescriptor struct {
+	Result *remote.Descriptor
+	Err    error
+}
+
+type mockWrite struct {
+	Err error
 }
 
 type hasPushAccess struct {
@@ -116,6 +127,14 @@ func (fc fakeClient) GetImageConfig(_ string) (*containerv1.ConfigFile, error) {
 
 func (fc fakeClient) HasPushAccess(_ string) (bool, error) {
 	return fc.HasPushAcces.Result, fc.HasPushAcces.Err
+}
+
+func (fc fakeClient) GetDescriptor(_ string) (*remote.Descriptor, error) {
+	return fc.MockGetDescriptor.Result, fc.MockGetDescriptor.Err
+}
+
+func (fc fakeClient) Write(_ name.Reference, _ containerv1.Image) error {
+	return fc.MockWrite.Err
 }
 
 type fakeClientConfig struct {
@@ -440,6 +459,138 @@ func TestGetTransport(t *testing.T) {
 				assert.NotNil(t, dialer.requests[0].config)
 				assert.Equal(t, e.output.config.ServerName, dialer.requests[0].config.ServerName)
 			}
+		})
+	}
+}
+
+func Test_GetDescriptor(t *testing.T) {
+	type input struct {
+		config fakeClientConfig
+		image  string
+	}
+	type getConfig struct {
+		descriptor *remote.Descriptor
+		err        error
+	}
+	type expected struct {
+		descriptor *remote.Descriptor
+		err        error
+	}
+	var tests = []struct {
+		name      string
+		input     input
+		expected  expected
+		getConfig getConfig
+	}{
+		{
+			name: "failed to parse reference",
+			input: input{
+				image: "broken image uri",
+			},
+			expected: expected{
+				descriptor: nil,
+				err:        fmt.Errorf("could not parse reference: broken image uri"),
+			},
+			getConfig: getConfig{
+				descriptor: nil,
+				err:        nil,
+			},
+		},
+		{
+			name: "not found",
+			input: input{
+				image: "okteto/test:latest",
+			},
+			expected: expected{
+				descriptor: nil,
+				err:        fmt.Errorf("error getting image descriptor: %w", oktetoErrors.ErrNotFound),
+			},
+			getConfig: getConfig{
+				descriptor: nil,
+				err:        oktetoErrors.ErrNotFound,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := client{
+				config: tt.input.config,
+				get: func(_ name.Reference, _ ...remote.Option) (*remote.Descriptor, error) {
+					return tt.getConfig.descriptor, tt.getConfig.err
+				},
+			}
+			descriptor, err := c.GetDescriptor(tt.input.image)
+			assert.Equal(t, tt.expected.descriptor, descriptor)
+			if tt.expected.err != nil {
+				assert.EqualError(t, err, tt.expected.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_Write(t *testing.T) {
+	type input struct {
+		ref   name.Reference
+		image containerv1.Image
+	}
+	type writeConfig struct {
+		err error
+	}
+	type expected struct {
+		err error
+	}
+	var tests = []struct {
+		name        string
+		input       input
+		expected    expected
+		client      fakeClient
+		writeConfig writeConfig
+	}{
+		{
+			name: "failed to write",
+			input: input{
+				ref:   name.Reference(nil),
+				image: containerv1.Image(nil),
+			},
+			expected: expected{
+				err: assert.AnError,
+			},
+			writeConfig: writeConfig{
+				err: assert.AnError,
+			},
+		},
+		{
+			name: "success",
+			input: input{
+				ref:   name.Reference(nil),
+				image: containerv1.Image(nil),
+			},
+			expected: expected{
+				err: nil,
+			},
+			writeConfig: writeConfig{
+				err: nil,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := client{
+				write: func(_ name.Reference, _ containerv1.Image, _ ...remote.Option) error {
+					return tt.writeConfig.err
+				},
+			}
+			err := c.write(tt.input.ref, tt.input.image)
+			if tt.expected.err != nil {
+				assert.EqualError(t, err, tt.expected.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+
 		})
 	}
 }

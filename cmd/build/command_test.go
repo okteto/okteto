@@ -88,6 +88,9 @@ func (fr fakeRegistry) IsGlobalRegistry(image string) bool { return false }
 
 func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string) { return "", "" }
 func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)   { return "", "" }
+func (fr fakeRegistry) CloneGlobalImageToDev(imageWithDigest, tag string) (string, error) {
+	return "", nil
+}
 
 var fakeManifestV2 *model.Manifest = &model.Manifest{
 	Build: model.ManifestBuild{
