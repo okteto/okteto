@@ -49,15 +49,9 @@ type oktetoCtxCmdRunner interface {
 	Run(ctx context.Context, ctxOptions *contextCMD.ContextOptions) error
 }
 
-type logger interface {
-	Print(string)
-}
+type Serializer struct{}
 
-type Serializer struct {
-	KubeToken types.KubeTokenResponse
-}
-
-func (k *Serializer) ToJson(kubetoken types.KubeTokenResponse) (string, error) {
+func (*Serializer) ToJson(kubetoken types.KubeTokenResponse) (string, error) {
 	bytes, err := json.MarshalIndent(kubetoken, "", "  ")
 	if err != nil {
 		return "", err
