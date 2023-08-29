@@ -86,8 +86,8 @@ More info about docker credentials helpers here: https://github.com/docker/docke
 		}
 	}
 
-	cmd.AddCommand(Install(ctx))
-	cmd.AddCommand(Uninstall(ctx))
+	cmd.AddCommand(Install())
+	cmd.AddCommand(Uninstall())
 
 	return cmd
 }
