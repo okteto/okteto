@@ -109,6 +109,7 @@ func GetExternalRegistryCredentialsWithContext(ctx context.Context, registryOrIm
 		getter:   c.User().GetRegistryCredentials,
 		cache:    &globalRegistryCredentialsCache,
 	}
+	oktetoLog.Infof("Obtaining credentials for %q ...", registryOrImage)
 	return r.read(ctx, registryOrImage)
 }
 

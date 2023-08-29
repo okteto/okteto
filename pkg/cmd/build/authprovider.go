@@ -95,6 +95,11 @@ func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRe
 	if req.Host == "registry-1.docker.io" {
 		req.Host = "https://index.docker.io/v1/"
 	}
+
+	if ap.config.CredentialsStore == "okteto" {
+		ap.config.CredentialsStore = ""
+	}
+
 	ac, err := ap.config.GetAuthConfig(req.Host)
 	if err != nil {
 		if isErrCredentialsHelperNotAccessible(err) {

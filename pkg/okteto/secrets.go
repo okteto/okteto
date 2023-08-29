@@ -26,6 +26,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
+	dockercredentials "github.com/docker/docker-credential-helpers/credentials"
 )
 
 type userClient struct {
@@ -334,10 +335,10 @@ func (c *userClient) GetRegistryCredentials(ctx context.Context, host string) (d
 
 	if err != nil {
 		if strings.Contains(err.Error(), "Cannot query field \"registryCredentials\" on type \"Query\"") {
-			return dockertypes.AuthConfig{}, nil
+			return dockertypes.AuthConfig{}, dockercredentials.NewErrCredentialsNotFound()
 		}
 		if errors.IsNotFound(err) {
-			return dockertypes.AuthConfig{}, nil
+			return dockertypes.AuthConfig{}, dockercredentials.NewErrCredentialsNotFound()
 		}
 		return dockertypes.AuthConfig{}, err
 	}
