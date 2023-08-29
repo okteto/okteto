@@ -324,3 +324,44 @@ func TestGetExposedPortsFromCfg(t *testing.T) {
 		})
 	}
 }
+
+func Test_GetExpandedDevTagFromGlobal(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "is dev image",
+			input:    "okteto.dev/my-image:okteto",
+			expected: "",
+		},
+		{
+			name:     "is dev image with sha",
+			input:    "okteto.dev/my-image@sha256:e78ad0d316485b7dbffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
+			expected: "",
+		},
+		{
+			name:     "is not okteto image",
+			input:    "mongo:okteto",
+			expected: "",
+		},
+		{
+			name:     "is global image",
+			input:    "okteto.global/my-image:ffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
+			expected: "okteto.dev/my-image:okteto",
+		},
+		{
+			name:     "is global image with sha",
+			input:    "okteto.global/my-image@sha256:ffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
+			expected: "okteto.dev/my-image:okteto",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GetDevTagFromGlobal(tt.input)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}

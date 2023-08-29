@@ -50,4 +50,5 @@ type BuildOptions struct {
 	SshSessions []BuildSshSession
 
 	Manifest *model.Manifest
+	DevTag   string
 }
