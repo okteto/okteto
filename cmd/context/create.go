@@ -293,7 +293,7 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 // if error while retrieving the dynamic token or flag OKTETO_USE_STATIC_KUBETOKEN is enabled, value is not updated
 // static token is fallback
 func replaceCredentialsTokenWithDynamicKubetoken(okClientProvider oktetoClientProvider, userContext *types.UserContext) {
-	if utils.LoadBoolean(oktetoUseStaticKubetokenEnvVar) {
+	if utils.LoadBoolean(OktetoUseStaticKubetokenEnvVar) {
 		oktetoLog.Warning(usingStaticKubetokenWarningMessage)
 		return
 	}

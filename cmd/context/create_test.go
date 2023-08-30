@@ -722,7 +722,7 @@ func Test_replaceCredentialsTokenWithDynamicKubetoken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(oktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tt.useStaticTokenEnv))
+			t.Setenv(OktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tt.useStaticTokenEnv))
 
 			fakeOktetoClientProvider := client.NewFakeOktetoClientProvider(&client.FakeOktetoClient{
 				KubetokenClient: client.NewFakeKubetokenClient(tt.kubetokenMockResponse),
