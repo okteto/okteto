@@ -37,8 +37,20 @@ func DeleteCMD() *cobra.Command {
 				args[idx] = okteto.AddSchema(arg)
 				args[idx] = strings.TrimSuffix(arg, "/")
 			}
-			analytics.TrackContextDelete(len(args))
-			return Delete(args)
+			errs := Delete(args)
+			var errLen int
+			var totalContextsDeleted int
+			if errs != nil {
+				if merr, ok := errs.(*multierror.Error); ok {
+					errLen = len(merr.Errors)
+				}
+			}
+			totalContextsDeleted = len(args) - errLen
+			if len(args) == errLen {
+				analytics.TrackContextDelete(totalContextsDeleted, false)
+			}
+			analytics.TrackContextDelete(totalContextsDeleted, true)
+			return errs
 		},
 	}
 	return cmd
