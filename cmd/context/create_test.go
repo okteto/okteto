@@ -28,7 +28,6 @@ import (
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
@@ -723,7 +722,7 @@ func Test_replaceCredentialsTokenWithDynamicKubetoken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(kubeconfig.OktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tt.useStaticTokenEnv))
+			t.Setenv(OktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tt.useStaticTokenEnv))
 
 			fakeOktetoClientProvider := client.NewFakeOktetoClientProvider(&client.FakeOktetoClient{
 				KubetokenClient: client.NewFakeKubetokenClient(tt.kubetokenMockResponse),

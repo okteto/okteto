@@ -235,7 +235,7 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(kubeconfig.OktetoUseStaticKubetokenEnvVar, "false")
+			t.Setenv(OktetoUseStaticKubetokenEnvVar, "false")
 
 			okClientProvider := client.NewFakeOktetoClientProvider(
 				&client.FakeOktetoClient{
@@ -328,7 +328,7 @@ func Test_RemoveExecFromCfg(t *testing.T) {
 }
 
 func Test_ExecuteUpdateKubeconfig_With_OktetoUseStaticKubetokenEnvVar(t *testing.T) {
-	t.Setenv(kubeconfig.OktetoUseStaticKubetokenEnvVar, "true")
+	t.Setenv(OktetoUseStaticKubetokenEnvVar, "true")
 
 	okteto.CurrentStore = &okteto.OktetoContextStore{
 		CurrentContext: "ctx-test",
