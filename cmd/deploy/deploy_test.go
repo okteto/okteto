@@ -1030,16 +1030,22 @@ func TestDeployDependencies(t *testing.T) {
 			"a": &model.Dependency{
 				Namespace: "b",
 			},
-			"b": &model.Dependency{},
+			"b": &model.Dependency{
+				Branch: "branchValueWithoutExpanding",
+			},
+			"c": &model.Dependency{
+				Branch: "${TEST_BRANCH_NAME}",
+			},
 		},
 	}
 	type config struct {
 		pipelineErr error
 	}
 	tt := []struct {
-		name     string
-		config   config
-		expected error
+		name      string
+		config    config
+		expected  error
+		variables []string
 	}{
 		{
 			name:     "error deploying dependency",
@@ -1049,6 +1055,14 @@ func TestDeployDependencies(t *testing.T) {
 		{
 			name: "successful",
 		},
+		{
+			name:      "deploy dependency expanding branch name",
+			variables: []string{"BAD_VARIABLE_FORMAT"},
+		},
+		{
+			name:      "deploy dependency expanding branch name",
+			variables: []string{"TEST_BRANCH_NAME=myBranch"},
+		},
 	}
 
 	for _, tc := range tt {
@@ -1056,7 +1070,7 @@ func TestDeployDependencies(t *testing.T) {
 			dc := &DeployCommand{
 				PipelineCMD: fakePipelineDeployer{tc.config.pipelineErr},
 			}
-			assert.ErrorIs(t, tc.expected, dc.deployDependencies(context.Background(), &Options{Manifest: fakeManifest}))
+			assert.ErrorIs(t, tc.expected, dc.deployDependencies(context.Background(), &Options{Manifest: fakeManifest, Variables: tc.variables}))
 		})
 	}
 }
