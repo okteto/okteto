@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -550,6 +551,23 @@ func (dc *DeployCommand) deployDependencies(ctx context.Context, deployOptions *
 		namespace := okteto.Context().Namespace
 		if dep.Namespace != "" {
 			namespace = dep.Namespace
+		}
+
+		branchExpMapping := func(branchValue string) string {
+			for _, v := range deployOptions.Variables {
+				kv := strings.SplitN(v, "=", 2)
+				if len(kv) != 2 {
+					continue
+				}
+				if branchValue == kv[0] {
+					return kv[1]
+				}
+			}
+			return ""
+		}
+		expandedBranch := os.Expand(dep.Branch, branchExpMapping)
+		if expandedBranch != "" {
+			dep.Branch = expandedBranch
 		}
 		pipOpts := &pipelineCMD.DeployOptions{
 			Name:         depName,
