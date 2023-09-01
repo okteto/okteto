@@ -25,6 +25,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 )
@@ -1145,6 +1146,53 @@ func Test_GetTimeout(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func Test_ExpandVarsInSection(t *testing.T) {
+	dependency := Dependency{
+		Repository:   "${REPO}",
+		Branch:       "${NOBRANCHSET-$BRANCH}",
+		ManifestPath: "${NOMPATHSET=$MPATH}",
+		Namespace:    "${FOO+$NAMESPACE}",
+		Variables: Environment{
+			EnvVar{
+				Name:  "MYVAR",
+				Value: "${AVARVALUE}",
+			},
+			EnvVar{
+				Name:  "$${ANAME}",
+				Value: "MyValue",
+			},
+		},
+	}
+	expected := Dependency{
+		Repository:   "my/repo",
+		Branch:       "myBranch",
+		ManifestPath: "api/okteto.yml",
+		Namespace:    "oktetoNs",
+		Variables: Environment{
+			EnvVar{
+				Name:  "MYVAR",
+				Value: "thisIsAValue",
+			},
+			EnvVar{
+				Name:  "${ANAME}",
+				Value: "MyValue",
+			},
+		},
+	}
+	envVariables := []string{
+		"FOO=BAR",
+		"REPO=my/repo",
+		"BRANCH=myBranch",
+		"MPATH=api/okteto.yml",
+		"NAMESPACE=oktetoNs",
+		"AVARVALUE=thisIsAValue",
+	}
+
+	err := dependency.ExpandVarsInSection(envVariables)
+	require.NoError(t, err)
+	assert.Equal(t, dependency, expected)
 }
 
 func Test_Manifest_HasDeploySection(t *testing.T) {

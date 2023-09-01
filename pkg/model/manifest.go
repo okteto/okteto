@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/a8m/envsubst"
+	"github.com/a8m/envsubst/parse"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -1018,6 +1019,70 @@ func (d *Dependency) GetTimeout(defaultTimeout time.Duration) time.Duration {
 		return d.Timeout
 	}
 	return defaultTimeout
+}
+
+// GetTimeout returns dependency.Timeout if it's set or the one passed as arg if it's not
+func (d *Dependency) ExpandVarsInSection(envKeyPairs []string) error {
+	parser := parse.New("string", envKeyPairs, &parse.Restrictions{})
+
+	expandedBranch, err := parser.Parse(d.Branch)
+	if err != nil {
+		return err
+	}
+	if expandedBranch != "" {
+		d.Branch = expandedBranch
+	}
+
+	expandedRepository, err := parser.Parse(d.Repository)
+	if err != nil {
+		return err
+	}
+	if expandedRepository != "" {
+		d.Repository = expandedRepository
+	}
+
+	expandedManifestPath, err := parser.Parse(d.ManifestPath)
+	if err != nil {
+		return err
+	}
+	if expandedManifestPath != "" {
+		d.ManifestPath = expandedManifestPath
+	}
+
+	expandedNamespace, err := parser.Parse(d.Namespace)
+	if err != nil {
+		return err
+	}
+	if expandedNamespace != "" {
+		d.Namespace = expandedNamespace
+	}
+
+	expandedVariables := Environment{}
+	for _, v := range d.Variables {
+		expandedVarName, err := parser.Parse(v.Name)
+		if err != nil {
+			return err
+		}
+		if expandedVarName != "" {
+			v.Name = expandedVarName
+		}
+
+		expandedVarValue, err := parser.Parse(v.Value)
+		if err != nil {
+			return err
+		}
+		if expandedVarValue != "" {
+			v.Value = expandedVarValue
+		}
+
+		expandedVariables = append(expandedVariables, EnvVar{
+			Name:  v.Name,
+			Value: v.Value,
+		})
+	}
+	d.Variables = expandedVariables
+
+	return nil
 }
 
 // InferFromStack infers data from a stackfile
