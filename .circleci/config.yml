@@ -81,11 +81,14 @@ jobs:
       GOPATH: /go
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - cache-golangci-lint-{{ checksum "go.sum" }}
       - run: golangci-lint run -v
       - save_cache:
           key: cache-golangci-lint-{{ checksum "go.sum" }}
           paths:
-            - /cache/go
+            - ~/.cache/go
             - /go/pkg
 
   build-binaries:
