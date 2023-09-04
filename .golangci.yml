@@ -24,7 +24,6 @@ linters:
     - unparam
     - gosimple
     - ineffassign
-  enable:
     - errcheck
 
 # Enabled by your configuration linters:
