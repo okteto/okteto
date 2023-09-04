@@ -344,9 +344,6 @@ jobs:
 
 
 workflows:
-  ci:
-    jobs:
-      - golangci-lint
   upload-static:
     jobs:
       - upload-static:
@@ -355,62 +352,70 @@ workflows:
             branches:
               only:
                 - master
-  # test:
-  #   when:
-  #     not:
-  #       equal: [scheduled_pipeline, << pipeline.trigger_source >>]
-  #   jobs:
-  #     - build-binaries:
-  #         filters:
-  #           branches:
-  #             ignore: *release-branch-regex
-  #           tags:
-  #             ignore: /.*/
-  #     - run-unit-test:
-  #         filters:
-  #           branches:
-  #             ignore: *release-branch-regex
-  #           tags:
-  #             ignore: /.*/
-  #     - run-windows-unit-test:
-  #         filters:
-  #           branches:
-  #             ignore: *release-branch-regex
-  #           tags:
-  #             ignore: /.*/
-  #     - run-windows-e2e-test:
-  #         requires:
-  #           - build-binaries
-  #         filters:
-  #           branches:
-  #             only:
-  #               - master
-  #               - /.*(windows|win)/
-  #     - test-integration:
-  #         requires:
-  #           - build-binaries
-  #         filters:
-  #           branches:
-  #             only:
-  #               - master
-  #               - /.*(e2e)/
-  #     - test-release:
-  #         context: GKE
-  #         requires:
-  #           - build-binaries
-  #         filters:
-  #           tags:
-  #             ignore: /.*/
-  #           branches:
-  #             ignore:
-  #               - master
-  #               - *release-branch-regex
-  #     - push-image-latest:
-  #         requires:
-  #           - build-binaries
-  #         filters:
-  #           branches:
-  #             only: master
+  test:
+    when:
+      not:
+        equal: [scheduled_pipeline, << pipeline.trigger_source >>]
+    jobs:
+      - golangci-lint
+      - build-binaries:
+          requires:
+            - "golangci-lint"
+          filters:
+            branches:
+              ignore: *release-branch-regex
+            tags:
+              ignore: /.*/
+          
+      - run-unit-test:
+          requires:
+            - "golangci-lint"
+          filters:
+            branches:
+              ignore: *release-branch-regex
+            tags:
+              ignore: /.*/
+      - run-windows-unit-test:
+          requires:
+            - "golangci-lint"
+          filters:
+            branches:
+              ignore: *release-branch-regex
+            tags:
+              ignore: /.*/
+      - run-windows-e2e-test:
+          requires:
+            - build-binaries
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(windows|win)/
+      - test-integration:
+          requires:
+            - build-binaries
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(e2e)/
+      - test-release:
+          context: GKE
+          requires:
+            - build-binaries
+          filters:
+            tags:
+              ignore: /.*/
+            branches:
+              ignore:
+                - master
+                - *release-branch-regex
+      - push-image-latest:
+          requires:
+            - build-binaries
+          filters:
+            branches:
+              only: master
 
   release-branch:
     jobs:
