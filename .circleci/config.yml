@@ -366,7 +366,7 @@ workflows:
             branches:
               only:
                 - master
-  test:
+  lint-build-test:
     when:
       not:
         equal: [scheduled_pipeline, << pipeline.trigger_source >>]
