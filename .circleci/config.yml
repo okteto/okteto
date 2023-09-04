@@ -76,8 +76,8 @@ jobs:
     docker:
       - image: golangci/golangci-lint:v1.54.2
     environment:
-      GOCACHE: /cache/go
-      GOLANGCI_LINT_CACHE: /cache/go
+      GOCACHE: ~/.cache/go
+      GOLANGCI_LINT_CACHE: ~/.cache/go
       GOPATH: /go
     steps:
       - checkout
