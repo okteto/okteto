@@ -1021,8 +1021,8 @@ func (d *Dependency) GetTimeout(defaultTimeout time.Duration) time.Duration {
 	return defaultTimeout
 }
 
-// ExpandVarsInSection sets dependencies values if values fits with list params
-func (d *Dependency) ExpandVarsInSection(envKeyPairs []string) error {
+// ExpandVars sets dependencies values if values fits with list params
+func (d *Dependency) ExpandVars(envKeyPairs []string) error {
 	parser := parse.New("string", envKeyPairs, &parse.Restrictions{})
 
 	expandedBranch, err := parser.Parse(d.Branch)

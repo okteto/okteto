@@ -1148,7 +1148,7 @@ func Test_GetTimeout(t *testing.T) {
 	}
 }
 
-func Test_ExpandVarsInSection(t *testing.T) {
+func Test_ExpandVars(t *testing.T) {
 	dependency := Dependency{
 		Repository:   "${REPO}",
 		Branch:       "${NOBRANCHSET-$BRANCH}",
@@ -1190,7 +1190,7 @@ func Test_ExpandVarsInSection(t *testing.T) {
 		"AVARVALUE=thisIsAValue",
 	}
 
-	err := dependency.ExpandVarsInSection(envVariables)
+	err := dependency.ExpandVars(envVariables)
 	require.NoError(t, err)
 	assert.Equal(t, dependency, expected)
 }

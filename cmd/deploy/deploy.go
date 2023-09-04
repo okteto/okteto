@@ -552,7 +552,7 @@ func (dc *DeployCommand) deployDependencies(ctx context.Context, deployOptions *
 			namespace = dep.Namespace
 		}
 
-		err := dep.ExpandVarsInSection(deployOptions.Variables)
+		err := dep.ExpandVars(deployOptions.Variables)
 		if err != nil {
 			return fmt.Errorf("could not expand variables in dependencies: %w", err)
 		}
