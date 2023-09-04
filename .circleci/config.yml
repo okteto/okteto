@@ -72,6 +72,16 @@ executors:
       - image: okteto/golang-ci:2.3.1
 
 jobs:
+  lint:
+    docker:
+      - image: golangci/golangci-lint:v1.54.2
+    steps:
+      - checkout
+      - run: golangci-lint run ./... --out-format=checkstyle --print-issued-lines=false --print-linter-name=false --issues-exit-code=0 --enable=revive > golanci-report.xml
+      - store_artifacts:
+          path: golangci-report.xml
+          destination: golangci-report.xml
+
   build-binaries:
     executor: golang-ci
     resource_class: large
@@ -94,9 +104,6 @@ jobs:
     executor: golang-ci
     steps:
       - checkout
-      - run:
-          name: Check go.mod and go.sum
-          command: go mod tidy && git diff --exit-code go.sum > /dev/null
       - run:
           name: Compile integration tests
           command: make build-integration
@@ -155,7 +162,7 @@ jobs:
             curl -L "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
-             /usr/local/bin/okteto login --token ${API_STAGING_TOKEN}
+            /usr/local/bin/okteto login --token ${API_STAGING_TOKEN}
       - integration-deploy
       - integration-up
       - integration-actions
@@ -220,7 +227,7 @@ jobs:
       - run:
           name: Prepare env
           environment:
-            - OKTETO_URL: https://staging.okteto.dev/
+            OKTETO_URL: https://staging.okteto.dev/
           command: |
             new-item $HOME\.okteto -itemtype "directory" -force
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
@@ -229,9 +236,9 @@ jobs:
       - run:
           name: Run deprecated integration tests
           environment:
-            - OKTETO_URL: https://staging.okteto.dev/
-            - OKTETO_SKIP_CLEANUP: 'true'
-            - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
+            OKTETO_URL: https://staging.okteto.dev/
+            OKTETO_SKIP_CLEANUP: 'true'
+            OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
@@ -240,18 +247,18 @@ jobs:
       - run:
           name: Run build integration tests
           environment:
-            - OKTETO_URL: https://staging.okteto.dev/
-            - OKTETO_SKIP_CLEANUP: 'true'
-            - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
+            OKTETO_URL: https://staging.okteto.dev/
+            OKTETO_SKIP_CLEANUP: 'true'
+            OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
       - run:
           name: Run deploy integration tests
           environment:
-            - OKTETO_URL: https://staging.okteto.dev/
-            - OKTETO_SKIP_CLEANUP: 'true'
-            - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
+            OKTETO_URL: https://staging.okteto.dev/
+            OKTETO_SKIP_CLEANUP: 'true'
+            OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
@@ -259,9 +266,9 @@ jobs:
       - run:
           name: Run up integration tests
           environment:
-            - OKTETO_URL: https://staging.okteto.dev/
-            - OKTETO_SKIP_CLEANUP: 'true'
-            - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
+            OKTETO_URL: https://staging.okteto.dev/
+            OKTETO_SKIP_CLEANUP: 'true'
+            OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
@@ -340,8 +347,9 @@ jobs:
 
 
 workflows:
-  version: 2
-
+  ci:
+    jobs:
+      - lint
   upload-static:
     jobs:
       - upload-static:
@@ -531,7 +539,7 @@ workflows:
       - test-integration:
           requires:
             - build-binaries
-  
+
   run-e2e-tests:
     when:
       equal: [ "run-e2e", << pipeline.parameters.GHA_Meta >>]
