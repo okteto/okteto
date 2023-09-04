@@ -13,8 +13,6 @@ coverage:
         target: 75%
         only_pulls: true
 
-    changes: false
-
 ignore:
   - '**/*_test.go'
   - integration/*
