@@ -77,6 +77,9 @@ jobs:
       - image: golangci/golangci-lint:v1.54.2
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - v4-pkg-cache-{{ checksum "go.sum" }}
       - run: golangci-lint run -v
       - persist_to_workspace:
           root: .
