@@ -77,7 +77,7 @@ jobs:
       - image: golangci/golangci-lint:v1.54.2
     steps:
       - checkout
-      - run: golangci-lint run
+      - run: golangci-lint run -v
       - persist_to_workspace:
           root: .
           paths:
