@@ -1,6 +1,11 @@
 run:
   timeout: 5m
-  go: 1.20
+  
+output:
+  format: checkstyle:golangci-report.xml
+  print-issued-lines: false
+  # print-linter-name: false
+  sort-results: true
 # All possible options can be found here https://github.com/golangci/golangci-lint/blob/master/.golangci.reference.yml
 linters-settings:
   errcheck:
@@ -13,9 +18,12 @@ linters:
     # TODO: enable when fixed
     - whitespace
     - staticcheck
-  enable:
+    - govet
+    - unused
     - errcheck
     - unparam
+    - gosimple
+    - ineffassign
 # Enabled by your configuration linters:
 # deadcode: Finds unused code [fast: false, auto-fix: false]
 # gosimple (megacheck): Linter for Go source code that specializes in simplifying code [fast: false, auto-fix: false]
