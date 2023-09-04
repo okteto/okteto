@@ -350,7 +350,7 @@ jobs:
 workflows:
   ci:
     jobs:
-      - lint
+      - golangci-lint
   upload-static:
     jobs:
       - upload-static:
