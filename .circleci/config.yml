@@ -81,6 +81,8 @@ jobs:
       GOPATH: /go
     steps:
       - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
       - restore_cache:
           keys:
             - cache-golangci-lint-{{ checksum "go.sum" }}
