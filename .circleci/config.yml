@@ -75,9 +75,18 @@ jobs:
   golangci-lint:
     docker:
       - image: golangci/golangci-lint:v1.54.2
+    environment:
+      GOCACHE: /cache/go
+      GOLANGCI_LINT_CACHE: /cache/go
+      GOPATH: /go
     steps:
       - checkout
       - run: golangci-lint run -v
+      - save_cache:
+          key: cache-golangci-lint-{{ checksum "go.sum" }}
+          paths:
+            - /cache/go
+            - /go/pkg
 
   build-binaries:
     executor: golang-ci
