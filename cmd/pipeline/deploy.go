@@ -56,6 +56,7 @@ type deployFlags struct {
 	timeout      time.Duration
 	file         string
 	variables    []string
+	labels       []string
 
 	// Deprecated fields
 	filename string
@@ -72,6 +73,7 @@ type DeployOptions struct {
 	Timeout      time.Duration
 	File         string
 	Variables    []string
+	Labels       []string
 }
 
 func deploy(ctx context.Context) *cobra.Command {
@@ -124,6 +126,7 @@ func deploy(ctx context.Context) *cobra.Command {
 	if err := cmd.Flags().MarkHidden("filename"); err != nil {
 		oktetoLog.Infof("failed to mark 'filename' flag as hidden: %s", err)
 	}
+	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "set a preview environment label (can be set more than once)")
 	return cmd
 }
 
@@ -416,6 +419,7 @@ func (f deployFlags) toOptions() *DeployOptions {
 		Timeout:      f.timeout,
 		File:         file,
 		Variables:    f.variables,
+		Labels:       f.labels,
 	}
 }
 
@@ -489,5 +493,6 @@ func (o *DeployOptions) toPipelineDeployClientOptions() (types.PipelineDeployOpt
 		Filename:   o.File,
 		Variables:  varList,
 		Namespace:  o.Namespace,
+		Labels:     o.Labels,
 	}, nil
 }
