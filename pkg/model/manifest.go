@@ -1022,8 +1022,8 @@ func (d *Dependency) GetTimeout(defaultTimeout time.Duration) time.Duration {
 }
 
 // ExpandVars sets dependencies values if values fits with list params
-func (d *Dependency) ExpandVars(envKeyPairs []string) error {
-	parser := parse.New("string", envKeyPairs, &parse.Restrictions{})
+func (d *Dependency) ExpandVars(variables []string) error {
+	parser := parse.New("string", append(os.Environ(), variables...), &parse.Restrictions{})
 
 	expandedBranch, err := parser.Parse(d.Branch)
 	if err != nil {

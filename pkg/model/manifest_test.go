@@ -1149,6 +1149,7 @@ func Test_GetTimeout(t *testing.T) {
 }
 
 func Test_ExpandVars(t *testing.T) {
+	t.Setenv("MY_CUSTOM_VAR_FROM_ENVIRON", "varValueFromEnv")
 	dependency := Dependency{
 		Repository:   "${REPO}",
 		Branch:       "${NOBRANCHSET-$BRANCH}",
@@ -1161,7 +1162,7 @@ func Test_ExpandVars(t *testing.T) {
 			},
 			EnvVar{
 				Name:  "$${ANAME}",
-				Value: "MyValue",
+				Value: "${MY_CUSTOM_VAR_FROM_ENVIRON}",
 			},
 		},
 	}
@@ -1177,7 +1178,7 @@ func Test_ExpandVars(t *testing.T) {
 			},
 			EnvVar{
 				Name:  "${ANAME}",
-				Value: "MyValue",
+				Value: "varValueFromEnv",
 			},
 		},
 	}
