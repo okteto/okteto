@@ -39,7 +39,7 @@ func (t *testHTTPHandler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	oktetoLog.Println(fmt.Sprintf("message %s", t.message))
 	_, err := w.Write([]byte(t.message))
 	if err != nil {
-		oktetoLog.Infof("error writting message %s: %s", t.message, err)
+		oktetoLog.Infof("error writing message %s: %s", t.message, err)
 	}
 }
 
