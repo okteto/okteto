@@ -380,7 +380,7 @@ workflows:
               ignore: *release-branch-regex
             tags:
               ignore: /.*/
-          
+
       - run-unit-test:
           requires:
             - "golangci-lint"
@@ -541,7 +541,7 @@ workflows:
 
   run-windows-e2e:
     when:
-      equal: [ "run-e2e-windows", << pipeline.parameters.GHA_Meta >>]
+      equal: ["run-e2e-windows", << pipeline.parameters.GHA_Meta >>]
     jobs:
       - build-binaries
       - run-windows-e2e-test:
@@ -549,7 +549,7 @@ workflows:
             - build-binaries
   run-unix-e2e-tests:
     when:
-      equal: [ "run-e2e-unix", << pipeline.parameters.GHA_Meta >>]
+      equal: ["run-e2e-unix", << pipeline.parameters.GHA_Meta >>]
     jobs:
       - build-binaries
       - test-integration:
@@ -558,7 +558,7 @@ workflows:
 
   run-e2e-tests:
     when:
-      equal: [ "run-e2e", << pipeline.parameters.GHA_Meta >>]
+      equal: ["run-e2e", << pipeline.parameters.GHA_Meta >>]
     jobs:
       - build-binaries
       - test-integration:

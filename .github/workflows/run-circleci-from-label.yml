@@ -2,7 +2,7 @@ name: Run CircleCI from label
 
 on:
   pull_request:
-    types: 
+    types:
       - opened
       - labeled
       - unlabeled
@@ -32,7 +32,7 @@ jobs:
           CCI_TOKEN: ${{ secrets.CCI_TOKEN }}
 
   run-e2e:
-    if: contains(github.event.pull_request.labels.*.name, 'run-e2e') 
+    if: contains(github.event.pull_request.labels.*.name, 'run-e2e')
     runs-on: ubuntu-latest
     steps:
       - name: Run e2e tests on CircleCI
