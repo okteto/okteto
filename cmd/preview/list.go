@@ -23,7 +23,6 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -104,13 +103,13 @@ func executeListPreviews(previews []previewOutput, outputFormat string) error {
 		if err != nil {
 			return err
 		}
-		oktetoLog.Println(string(bytes))
+		fmt.Println(string(bytes))
 	case "yaml":
 		bytes, err := yaml.Marshal(previews)
 		if err != nil {
 			return err
 		}
-		oktetoLog.Println(string(bytes))
+		fmt.Println(string(bytes))
 	default:
 		w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
 		fmt.Fprint(w, "Name\tScope\tSleeping\tLabels\n")
