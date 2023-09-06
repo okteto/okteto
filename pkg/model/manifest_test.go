@@ -1154,7 +1154,7 @@ func Test_ExpandVars(t *testing.T) {
 		Repository:   "${REPO}",
 		Branch:       "${NOBRANCHSET-$BRANCH}",
 		ManifestPath: "${NOMPATHSET=$MPATH}",
-		Namespace:    "${FOO+$NAMESPACE}",
+		Namespace:    "${FOO+$SOME_NS_DEP_EXP}",
 		Variables: Environment{
 			EnvVar{
 				Name:  "MYVAR",
@@ -1187,13 +1187,13 @@ func Test_ExpandVars(t *testing.T) {
 		"REPO=my/repo",
 		"BRANCH=myBranch",
 		"MPATH=api/okteto.yml",
-		"NAMESPACE=oktetoNs",
+		"SOME_NS_DEP_EXP=oktetoNs",
 		"AVARVALUE=thisIsAValue",
 	}
 
 	err := dependency.ExpandVars(envVariables)
 	require.NoError(t, err)
-	assert.Equal(t, dependency, expected)
+	assert.Equal(t, expected, dependency)
 }
 
 func Test_Manifest_HasDeploySection(t *testing.T) {
