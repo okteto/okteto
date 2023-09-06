@@ -64,7 +64,7 @@ func List(ctx context.Context) *cobra.Command {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			if err := ValidateOutput(flags.output); err != nil {
+			if err := validatePreviewListOutput(flags.output); err != nil {
 				return err
 			}
 
@@ -141,7 +141,8 @@ func getPreviewOutput(ctx context.Context, opts ListFlags, oktetoClient types.Ok
 	return previewSlice, nil
 }
 
-func ValidateOutput(output string) error {
+// validatePreviewListOutput returns error if output flag is not valid
+func validatePreviewListOutput(output string) error {
 	switch output {
 	case "", "json", "yaml":
 		return nil

@@ -107,37 +107,31 @@ func Test_listPreview(t *testing.T) {
 	}
 }
 
-func Test_PreviewListOutputValidation(t *testing.T) {
+func Test_validatePreviewListOutput(t *testing.T) {
 	var tests = []struct {
 		name        string
-		output      ListFlags
+		output      string
 		expectedErr error
 	}{
 		{
-			name: "output format is yaml",
-			output: ListFlags{
-				output: "yaml",
-			},
+			name:        "output format is yaml",
+			output:      "yaml",
 			expectedErr: nil,
 		},
 		{
-			name: "output format is json",
-			output: ListFlags{
-				output: "json",
-			},
+			name:        "output format is json",
+			output:      "json",
 			expectedErr: nil,
 		},
 		{
-			name: "output format is not valid",
-			output: ListFlags{
-				output: "xml",
-			},
+			name:        "output format is not valid",
+			output:      "xml",
 			expectedErr: fmt.Errorf("output format is not accepted. Value must be one of: ['json', 'yaml']"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateOutput(tt.output.output)
+			err := validatePreviewListOutput(tt.output)
 			assert.Equal(t, tt.expectedErr, err)
 		})
 	}
