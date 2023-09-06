@@ -1027,7 +1027,7 @@ func (d *Dependency) ExpandVars(variables []string) error {
 
 	expandedBranch, err := parser.Parse(d.Branch)
 	if err != nil {
-		return err
+		return fmt.Errorf("error expanding 'branch': %w", err)
 	}
 	if expandedBranch != "" {
 		d.Branch = expandedBranch
@@ -1035,7 +1035,7 @@ func (d *Dependency) ExpandVars(variables []string) error {
 
 	expandedRepository, err := parser.Parse(d.Repository)
 	if err != nil {
-		return err
+		return fmt.Errorf("error expanding 'repository': %w", err)
 	}
 	if expandedRepository != "" {
 		d.Repository = expandedRepository
@@ -1043,7 +1043,7 @@ func (d *Dependency) ExpandVars(variables []string) error {
 
 	expandedManifestPath, err := parser.Parse(d.ManifestPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("error expanding 'manifest': %w", err)
 	}
 	if expandedManifestPath != "" {
 		d.ManifestPath = expandedManifestPath
@@ -1051,7 +1051,7 @@ func (d *Dependency) ExpandVars(variables []string) error {
 
 	expandedNamespace, err := parser.Parse(d.Namespace)
 	if err != nil {
-		return err
+		return fmt.Errorf("error expanding 'namespace': %w", err)
 	}
 	if expandedNamespace != "" {
 		d.Namespace = expandedNamespace
@@ -1061,7 +1061,7 @@ func (d *Dependency) ExpandVars(variables []string) error {
 	for _, v := range d.Variables {
 		expandedVarName, err := parser.Parse(v.Name)
 		if err != nil {
-			return err
+			return fmt.Errorf("error expanding variable name: %w", err)
 		}
 		if expandedVarName != "" {
 			v.Name = expandedVarName
@@ -1069,7 +1069,7 @@ func (d *Dependency) ExpandVars(variables []string) error {
 
 		expandedVarValue, err := parser.Parse(v.Value)
 		if err != nil {
-			return err
+			return fmt.Errorf("error expanding variable value: %w", err)
 		}
 		if expandedVarValue != "" {
 			v.Value = expandedVarValue
