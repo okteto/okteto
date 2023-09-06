@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -45,11 +44,8 @@ func DeleteCMD() *cobra.Command {
 					errLen = len(merr.Errors)
 				}
 			}
-			totalContextsDeleted = len(args) - errLen
-			if len(args) == errLen {
-				analytics.TrackContextDelete(totalContextsDeleted, false)
-			}
-			analytics.TrackContextDelete(totalContextsDeleted, true)
+			success := len(args) == errLen
+			analytics.TrackContextDelete(totalContextsDeleted, success)
 			return errs
 		},
 	}
@@ -59,6 +55,7 @@ func DeleteCMD() *cobra.Command {
 func Delete(okCtxs []string) error {
 	ctxStore := okteto.ContextStore()
 	var errs error
+	validOptions := make([]string, 0)
 	for _, okCtx := range okCtxs {
 		if okCtx == ctxStore.CurrentContext {
 			ctxStore.CurrentContext = ""
@@ -71,16 +68,26 @@ func Delete(okCtxs []string) error {
 			}
 			oktetoLog.Success("'%s' deleted successfully", okCtx)
 		} else {
-			validOptions := make([]string, 0)
 			for k, v := range ctxStore.Contexts {
 				if v.IsOkteto {
 					validOptions = append(validOptions, k)
 				}
 			}
-			errs = multierror.Append(errs, oktetoErrors.UserError{
-				E:    fmt.Errorf("'%s' context doesn't exist. Valid options are: [%s]", okCtx, strings.Join(validOptions, ", ")),
-				Hint: fmt.Sprintf("To delete a Kubernetes context run 'kubectl config delete-context %s'", okCtx),
-			})
+			errs = multierror.Append(errs, fmt.Errorf("'%s' context doesn't exist.", okCtx))
+		}
+	}
+
+	if errs != nil {
+		if err, ok := errs.(*multierror.Error); ok {
+			err.ErrorFormat = func(es []error) string {
+				points := make([]string, len(es))
+				for i, err := range es {
+					points[i] = fmt.Sprintf("\t- %s", err)
+				}
+
+				hint := fmt.Sprintf("Valid options are: [%s]. To delete a Kubernetes context run 'kubectl config delete-context <k8s-context-name>'", strings.Join(validOptions, ", "))
+				return fmt.Sprintf("Following contexts couldn't be deleted:\n%s\n%s\n\n", strings.Join(points, "\n"), hint)
+			}
 		}
 	}
 
