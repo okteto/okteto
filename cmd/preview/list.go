@@ -30,8 +30,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// ListFlags are the flags available for list commands
-type ListFlags struct {
+// listFlags are the flags available for list commands
+type listFlags struct {
 	labels []string
 	output string
 }
@@ -45,7 +45,7 @@ type previewOutput struct {
 
 // List lists all the previews
 func List(ctx context.Context) *cobra.Command {
-	flags := &ListFlags{}
+	flags := &listFlags{}
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List all preview environments",
