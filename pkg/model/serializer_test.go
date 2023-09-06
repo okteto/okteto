@@ -1947,7 +1947,7 @@ reverse:
 					Enabled: true,
 				},
 				InitContainer: InitContainer{
-					Image: "okteto/bin:1.4.2",
+					Image: OktetoBinImageTag,
 				},
 			},
 		},
@@ -2013,7 +2013,7 @@ forward:
 					Enabled: true,
 				},
 				InitContainer: InitContainer{
-					Image: "okteto/bin:1.4.2",
+					Image: OktetoBinImageTag,
 				},
 			},
 		},
@@ -2072,7 +2072,7 @@ forward:
 					Enabled: true,
 				},
 				InitContainer: InitContainer{
-					Image: "okteto/bin:1.4.2",
+					Image: OktetoBinImageTag,
 				},
 			},
 		},
@@ -2132,7 +2132,7 @@ forward:
 					Enabled: true,
 				},
 				InitContainer: InitContainer{
-					Image: "okteto/bin:1.4.2",
+					Image: OktetoBinImageTag,
 				},
 			},
 		},
