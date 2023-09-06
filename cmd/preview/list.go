@@ -112,6 +112,7 @@ func executeListPreviews(ctx context.Context, opts ListFlags) error {
 	return nil
 }
 
+// getPreviewDefaultOutput returns the rows for the default list output format
 func getPreviewDefaultOutput(preview previewOutput) string {
 	previewLabels := "-"
 	if len(preview.Labels) > 0 {
