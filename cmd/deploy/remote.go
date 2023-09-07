@@ -199,7 +199,6 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	if sshSock != "" {
 		if _, err := os.Stat(sshSock); err != nil {
 			oktetoLog.Debugf("Not mounting ssh agent. Error reading socket: %s", err.Error())
-			sshSock = ""
 		} else {
 			sshSession := types.BuildSshSession{Id: "remote", Target: sshSock}
 			buildOptions.SshSessions = append(buildOptions.SshSessions, sshSession)
