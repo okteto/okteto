@@ -30,8 +30,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// ListFlags are the flags available for list commands
-type ListFlags struct {
+// listFlags are the flags available for list commands
+type listFlags struct {
 	labels []string
 	output string
 }
@@ -45,7 +45,7 @@ type previewOutput struct {
 
 // List lists all the previews
 func List(ctx context.Context) *cobra.Command {
-	flags := &ListFlags{}
+	flags := &listFlags{}
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List all preview environments",
@@ -78,7 +78,7 @@ func List(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func executeListPreviews(ctx context.Context, opts ListFlags) error {
+func executeListPreviews(ctx context.Context, opts listFlags) error {
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
 		return err
@@ -120,7 +120,7 @@ func getPreviewDefaultOutput(preview previewOutput) string {
 	return fmt.Sprintf("%s\t%s\t%v\t%s\n", preview.Name, preview.Scope, preview.Sleeping, previewLabels)
 }
 
-func getPreviewOutput(ctx context.Context, opts ListFlags, oktetoClient types.OktetoInterface) ([]previewOutput, error) {
+func getPreviewOutput(ctx context.Context, opts listFlags, oktetoClient types.OktetoInterface) ([]previewOutput, error) {
 	var previewSlice []previewOutput
 	previewList, err := oktetoClient.Previews().List(ctx, opts.labels)
 	if err != nil {

@@ -14,7 +14,7 @@ import (
 
 func Test_listPreview(t *testing.T) {
 	ctx := context.Background()
-	opts := ListFlags{}
+	opts := listFlags{}
 	var tests = []struct {
 		name           string
 		previews       []types.Preview
@@ -110,26 +110,26 @@ func Test_listPreview(t *testing.T) {
 func Test_PreviewListOutputValidation(t *testing.T) {
 	var tests = []struct {
 		name        string
-		output      ListFlags
+		output      listFlags
 		expectedErr error
 	}{
 		{
 			name: "output format is yaml",
-			output: ListFlags{
+			output: listFlags{
 				output: "yaml",
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "output format is json",
-			output: ListFlags{
+			output: listFlags{
 				output: "json",
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "output format is not valid",
-			output: ListFlags{
+			output: listFlags{
 				output: "xml",
 			},
 			expectedErr: fmt.Errorf("output format is not accepted. Value must be one of: ['json', 'yaml']"),
