@@ -107,11 +107,11 @@ func (cmd *listPreviewCommand) run(ctx context.Context) error {
 	}
 
 	previewOutput := getPreviewOutput(previewList)
-	return executeListPreviews(previewOutput, cmd.flags.output)
+	return displayListPreviews(previewOutput, cmd.flags.output)
 }
 
-// executeListPreviews prints the list of previews
-func executeListPreviews(previews []previewOutput, outputFormat string) error {
+// displayListPreviews prints the list of previews
+func displayListPreviews(previews []previewOutput, outputFormat string) error {
 	switch outputFormat {
 	case "json":
 		// json marshal return null for empty objects, returning the empty list if no previews are retrieved

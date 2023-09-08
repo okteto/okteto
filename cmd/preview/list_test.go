@@ -131,7 +131,7 @@ func Test_getPreviewDefaultOutput(t *testing.T) {
 	}
 }
 
-func Test_executeListPreviews(t *testing.T) {
+func Test_displayListPreviews(t *testing.T) {
 	tests := []struct {
 		name   string
 		format string
@@ -222,7 +222,7 @@ test2  global    true      -
 			// replace Stdout for tests
 			os.Stdout = w
 
-			err := executeListPreviews(tt.input, tt.format)
+			err := displayListPreviews(tt.input, tt.format)
 			assert.NoError(t, err)
 
 			w.Close()
