@@ -29,6 +29,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+var (
+	errInvalidOutput = fmt.Errorf("output format is not accepted. Value must be one of: ['json', 'yaml']")
+)
+
 // listFlags are the flags available for list commands
 type listFlags struct {
 	labels []string
@@ -40,6 +44,17 @@ type previewOutput struct {
 	Scope    string   `json:"scope" yaml:"scope"`
 	Sleeping bool     `json:"sleeping" yaml:"sleeping"`
 	Labels   []string `json:"labels" yaml:"labels"`
+}
+
+type listPreviewCommand struct {
+	okClient types.OktetoInterface
+	flags    *listFlags
+}
+
+func newListPreviewCommand(okClient types.OktetoInterface, flags *listFlags) *listPreviewCommand {
+	return &listPreviewCommand{
+		okClient, flags,
+	}
 }
 
 // List lists all the previews
@@ -63,32 +78,36 @@ func List(ctx context.Context) *cobra.Command {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			if err := validatePreviewListOutput(flags.output); err != nil {
-				return err
-			}
-
-			oktetoClient, err := okteto.NewOktetoClient()
+			okClient, err := okteto.NewOktetoClient()
 			if err != nil {
 				return err
 			}
-
-			previewList, err := oktetoClient.Previews().List(ctx, flags.labels)
-			if err != nil {
-				if uErr, ok := err.(oktetoErrors.UserError); ok {
-					return uErr
-				}
-				return fmt.Errorf("failed to get preview environments: %s", err)
-			}
-
-			previewOutput := getPreviewOutput(previewList)
-
-			return executeListPreviews(previewOutput, flags.output)
+			listCmd := newListPreviewCommand(okClient, flags)
+			return listCmd.run(ctx)
 		},
 	}
 	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "tag and organize preview environments using labels (multiple --label flags accepted)")
 	cmd.Flags().StringVarP(&flags.output, "output", "o", "", "output format. One of: ['json', 'yaml']")
 
 	return cmd
+}
+
+func (cmd *listPreviewCommand) run(ctx context.Context) error {
+
+	if err := validatePreviewListOutput(cmd.flags.output); err != nil {
+		return err
+	}
+
+	previewList, err := cmd.okClient.Previews().List(ctx, cmd.flags.labels)
+	if err != nil {
+		if uErr, ok := err.(oktetoErrors.UserError); ok {
+			return uErr
+		}
+		return fmt.Errorf("failed to get preview environments: %w", err)
+	}
+
+	previewOutput := getPreviewOutput(previewList)
+	return executeListPreviews(previewOutput, cmd.flags.output)
 }
 
 // executeListPreviews prints the list of previews
@@ -157,6 +176,6 @@ func validatePreviewListOutput(output string) error {
 	case "", "json", "yaml":
 		return nil
 	default:
-		return fmt.Errorf("output format is not accepted. Value must be one of: ['json', 'yaml']")
+		return errInvalidOutput
 	}
 }

@@ -1,11 +1,13 @@
 package preview
 
 import (
-	"fmt"
+	"context"
 	"io"
 	"os"
 	"testing"
 
+	"github.com/okteto/okteto/internal/test/client"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -83,7 +85,7 @@ func Test_validatePreviewListOutput(t *testing.T) {
 		{
 			name:        "output format is not valid",
 			output:      "xml",
-			expectedErr: fmt.Errorf("output format is not accepted. Value must be one of: ['json', 'yaml']"),
+			expectedErr: errInvalidOutput,
 		},
 	}
 	for _, tt := range tests {
@@ -231,6 +233,174 @@ test2  global    true      -
 			os.Stdout = initialStdout
 
 			assert.Equal(t, tt.expectedOutput, string(out))
+		})
+	}
+
+}
+
+func Test_newListPreviewCommand(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		okClient types.OktetoInterface
+		flags    *listFlags
+		expected *listPreviewCommand
+	}{
+		{
+			name:     "empty input",
+			expected: &listPreviewCommand{},
+		},
+		{
+			name:     "with input",
+			okClient: client.NewFakeOktetoClient(),
+			flags: &listFlags{
+				labels: []string{"test", "okteto"},
+				output: "json",
+			},
+			expected: &listPreviewCommand{
+				flags: &listFlags{
+					labels: []string{"test", "okteto"},
+					output: "json",
+				},
+				okClient: &client.FakeOktetoClient{},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := newListPreviewCommand(tt.okClient, tt.flags)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func Test_run(t *testing.T) {
+
+	tests := []struct {
+		name      string
+		cmd       *listPreviewCommand
+		expectErr error
+	}{
+		{
+			name: "invalid list output format",
+			cmd: &listPreviewCommand{
+				flags: &listFlags{
+					output: "xml",
+				},
+			},
+			expectErr: errInvalidOutput,
+		},
+		{
+			name: "okClient Previews list returns error",
+			cmd: &listPreviewCommand{
+				flags: &listFlags{},
+				okClient: &client.FakeOktetoClient{
+					Preview: client.NewFakePreviewClient(
+						&client.FakePreviewResponse{
+							ErrList: assert.AnError,
+						},
+					),
+				},
+			},
+			expectErr: assert.AnError,
+		},
+		{
+			name: "okClient Previews list returns user error",
+			cmd: &listPreviewCommand{
+				flags: &listFlags{},
+				okClient: &client.FakeOktetoClient{
+					Preview: client.NewFakePreviewClient(
+						&client.FakePreviewResponse{
+							ErrList: oktetoErrors.UserError{},
+						},
+					),
+				},
+			},
+			expectErr: oktetoErrors.UserError{},
+		},
+		{
+			name: "okClient Previews list returns empty list",
+			cmd: &listPreviewCommand{
+				flags: &listFlags{},
+				okClient: &client.FakeOktetoClient{
+					Preview: client.NewFakePreviewClient(
+						&client.FakePreviewResponse{
+							PreviewList: []types.Preview{},
+						},
+					),
+				},
+			},
+			expectErr: nil,
+		},
+		{
+			name: "okClient Previews list returns list",
+			cmd: &listPreviewCommand{
+				flags: &listFlags{},
+				okClient: &client.FakeOktetoClient{
+					Preview: client.NewFakePreviewClient(
+						&client.FakePreviewResponse{
+							PreviewList: []types.Preview{
+								{
+									ID: "test",
+								},
+							},
+						},
+					),
+				},
+			},
+			expectErr: nil,
+		},
+		{
+			name: "okClient Previews list returns list with output json",
+			cmd: &listPreviewCommand{
+				flags: &listFlags{
+					output: "json",
+				},
+				okClient: &client.FakeOktetoClient{
+					Preview: client.NewFakePreviewClient(
+						&client.FakePreviewResponse{
+							PreviewList: []types.Preview{
+								{
+									ID: "test",
+								},
+							},
+						},
+					),
+				},
+			},
+			expectErr: nil,
+		},
+		{
+			name: "okClient Previews list returns list with output yaml",
+			cmd: &listPreviewCommand{
+				flags: &listFlags{
+					output: "yaml",
+				},
+				okClient: &client.FakeOktetoClient{
+					Preview: client.NewFakePreviewClient(
+						&client.FakePreviewResponse{
+							PreviewList: []types.Preview{
+								{
+									ID: "test",
+								},
+							},
+						},
+					),
+				},
+			},
+			expectErr: nil,
+		},
+	}
+
+	for _, tt := range tests {
+
+		t.Run(tt.name, func(t *testing.T) {
+
+			ctx := context.TODO()
+			got := tt.cmd.run(ctx)
+
+			assert.ErrorIs(t, got, tt.expectErr)
 		})
 	}
 
