@@ -13,6 +13,9 @@ coverage:
         target: 75%
         only_pulls: true
 
+github_checks:
+  annotations: false
+
 ignore:
   - '**/*_test.go'
   - integration/*
