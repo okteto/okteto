@@ -143,6 +143,16 @@ func Test_executeListPreviews(t *testing.T) {
 			expectedOutput: "There are no previews\n",
 		},
 		{
+			name:           "empty list ",
+			format:         "json",
+			expectedOutput: "[]\n",
+		},
+		{
+			name:           "empty list ",
+			format:         "json",
+			expectedOutput: "[]\n",
+		},
+		{
 			name:   "list - default format",
 			format: "",
 			input: []previewOutput{
