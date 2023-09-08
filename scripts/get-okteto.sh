@@ -83,11 +83,11 @@
                         esac
                 fi
         fi
-        printf '> Using Release Channel: %s\n' ${OKTETO_CHANNEL}
+        printf '> Using Release Channel: %s\n' "${OKTETO_CHANNEL}"
 
         download_uri="https://downloads.okteto.com/cli"
         if [ -z "$OKTETO_VERSION" ]; then
-                OKTETO_VERSION=$(curl -fsSL $download_uri/${OKTETO_CHANNEL}/versions | tail -n1)
+                OKTETO_VERSION=$(curl -fsSL "$download_uri/${OKTETO_CHANNEL}/versions" | tail -n1)
         fi
         printf '> Using Version: %s\n' "$OKTETO_VERSION"
 

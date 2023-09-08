@@ -152,13 +152,16 @@ Before making a PR, we recommend contributors to run a lint check on their code 
 make lint
 ```
 
-This command will run `pre-commit run --all-files` and `golangci-lint run` for the repository and raise any issue that might appear.
+This command will run `golangci-lint` for the repository and raise any issue that might appear. When the branch is pushed to remote, a workflow will run also this lint tool.
 
 > You will need to download these tools in order to run the lint locally
 >
 > - [golangci-lint](https://golangci-lint.run/usage/install/#local-installation)
+>
+> We recommend to have an [integration](https://golangci-lint.run/usage/integrations/) with your IDE so that golangci-lint is used as default linter
+
+We also recommend to install `pre-commit` hooks before opening a PR.
+
 > - [pre-commit](https://pre-commit.com/#installation)
 
-We recommend to have an [integration](https://golangci-lint.run/usage/integrations/) with your IDE so that golangci-lint is used as default linter
-
-There is also a [lint workflow](.github/workflows/lint.yml) running `pre-commit` and static code analysis for Go is done by [DeepSource](https://deepsource.io/) pipeline.
+Once downloaded, run `pre-commit install` to install the hooks and before the commit is done, the checks will be run.
