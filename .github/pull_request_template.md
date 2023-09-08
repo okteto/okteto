@@ -8,9 +8,9 @@ Please include a summary of the changes and the related issue. Please also inclu
 
 Please provide step-by-step instructions to replicate your validation scenario. For bug fixes, detail how to reproduce both the bug and its fix, along with any observations.
 
-1. 
-1. 
-1. 
+1.
+1.
+1.
 
 ## CLI Quality Reminders 🔧
 
@@ -23,7 +23,7 @@ For both authors and reviewers:
 - If too broad, consider breaking into smaller PRs
 - Adhere to our [code style](https://github.com/okteto/okteto/blob/master/docs/code-style.md) and [code review](https://github.com/okteto/okteto/blob/master/docs/code-review.md) guidelines
 
-<!-- Remove comment when okteto/okteto is out of wait list for Copilot for Pull Requests 
+<!-- Remove comment when okteto/okteto is out of wait list for Copilot for Pull Requests
 ----
 
 <details>

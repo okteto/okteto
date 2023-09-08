@@ -3,8 +3,8 @@
 - [Purpose of code reviews](#purpose-of-code-reviews)
 - [Agreements](#agreements)
 - [Expectations](#expectations)
-  * [As an Author](#as-an-author)
-  * [As a Reviewer](#as-a-reviewer)
+  - [As an Author](#as-an-author)
+  - [As a Reviewer](#as-a-reviewer)
 - [What to look for in a code review?](#what-to-look-for-in-a-code-review)
   - [Code review checklist](#code-review-checklist)
   - [PR Description](#pr-description)
@@ -45,7 +45,6 @@ We believe our code review process is foundational in ensuring that:
 - **Clear Actionable Feedback**: We provide unambiguous, actionable feedback in our comments. "Nice-to-have" suggestions should lead to new issues instead of blocking PRs.
 - **Reviewers**: PRs typically require 2 approvals for merging. Use discretion: some might need more approvers, depending on the scope.
 - **PR Scope**: Keep PRs concise and focused.
-
 
 ## Expectations
 
