@@ -91,7 +91,10 @@ func TestWaitForStatus(t *testing.T) {
 
 	go func() {
 		mockCfg.Data["status"] = "fake-final-status"
-		clientset.CoreV1().ConfigMaps(ns).Update(ctx, mockCfg, metav1.UpdateOptions{})
+		_, err := clientset.CoreV1().ConfigMaps(ns).Update(ctx, mockCfg, metav1.UpdateOptions{})
+		if err != nil {
+			t.Fail()
+		}
 	}()
 
 	err := configmaps.WaitForStatus(ctx, mockCfgName, ns, "fake-final-status", ticker, 5*time.Millisecond, clientset)

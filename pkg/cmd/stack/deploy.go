@@ -239,7 +239,12 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 
 func skipIngressDeployForStackNameLabel(ctx context.Context, iClient *ingresses.Client, ingress *ingresses.Ingress) bool {
 	// err is not checked here, we just want to check if the ingress already exists for this labels
-	if old, _ := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace()); old != nil {
+	old, err := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace())
+	if err != nil {
+		oktetoLog.Infof("error getting ingress '%s': %s", ingress.GetName(), err)
+		return false
+	}
+	if old != nil {
 		if old.GetLabels()[model.StackNameLabel] == "" {
 			oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", old.GetName())
 			return true

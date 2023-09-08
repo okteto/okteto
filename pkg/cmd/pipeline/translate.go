@@ -363,7 +363,10 @@ func translateVariables(variables []string) string {
 	}
 
 	if len(v) > 0 {
-		encodedVars, _ := json.Marshal(v)
+		encodedVars, err := json.Marshal(v)
+		if err != nil {
+			return ""
+		}
 		return base64.StdEncoding.EncodeToString(encodedVars)
 	}
 

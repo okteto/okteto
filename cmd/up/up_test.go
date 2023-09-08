@@ -338,7 +338,10 @@ func TestCommandAddedToUpOptionsWhenPassedAsFlag(t *testing.T) {
 
 			cmd := Up()
 			for _, val := range tt.command {
-				cmd.Flags().Set("command", val)
+				err := cmd.Flags().Set("command", val)
+				if err != nil {
+					t.Fatalf("unexpected error in Set: %s", err)
+				}
 			}
 
 			flagValue, err := cmd.Flags().GetStringArray("command")

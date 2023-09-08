@@ -30,6 +30,7 @@ func Test_ConvertToJson(t *testing.T) {
 		stage    string
 		level    string
 		message  string
+		err      error
 		expected jsonMessage
 	}{
 		{
@@ -37,6 +38,7 @@ func Test_ConvertToJson(t *testing.T) {
 			level:   defaultLevel,
 			stage:   "",
 			message: "foobar",
+			err:     &json.SyntaxError{},
 			expected: jsonMessage{
 				Timestamp: mockedTimestamp,
 			},
@@ -46,6 +48,7 @@ func Test_ConvertToJson(t *testing.T) {
 			level:   defaultLevel,
 			stage:   defaultStage,
 			message: "",
+			err:     &json.SyntaxError{},
 			expected: jsonMessage{
 				Timestamp: mockedTimestamp,
 			},
@@ -90,7 +93,10 @@ func Test_ConvertToJson(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := convertToJSON(tt.level, tt.stage, tt.message)
 			var resultJSON jsonMessage
-			json.Unmarshal([]byte(s), &resultJSON)
+			err := json.Unmarshal([]byte(s), &resultJSON)
+			if err != nil {
+				assert.ErrorAs(t, err, &tt.err)
+			}
 			// Ignore timestamp in tests
 			resultJSON.Timestamp = mockedTimestamp
 			assert.Equal(t, tt.expected, resultJSON)

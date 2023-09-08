@@ -12,16 +12,26 @@ linters-settings:
     # Such cases aren't reported by default.
     # Default: false
     check-type-assertions: true
+    # report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`.
+    # Such cases aren't reported by default.
+    # Default: false
+    check-blank: true
+
+# All possible linters can be found here
 linters:
   disable:
-    # TODO: enable when fixed
-    - whitespace
+    - gosimple
+    - govet
+    - ineffassign
     - staticcheck
     - govet
     - unused
     - unparam
     - gosimple
     - ineffassign
+    - typecheck
+    - unused
+  enable:
     - errcheck
 # Enabled by your configuration linters:
 # deadcode: Finds unused code [fast: false, auto-fix: false]
@@ -121,3 +131,16 @@ linters:
 # whitespace: Tool for detection of leading and trailing whitespace [fast: true, auto-fix: true]
 # wrapcheck: Checks that errors returned from external packages are wrapped [fast: false, auto-fix: false]
 # wsl: Whitespace Linter - Forces you to use empty lines! [fast: true, auto-fix: false]
+
+# All possible options can be found here
+issues:
+  # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
+  max-issues-per-linter: 0
+
+  # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
+  max-same-issues: 0
+
+  exclude-rules:
+    - path: '(.+)_test\.go'
+      linters:
+        - errcheck

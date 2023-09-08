@@ -87,7 +87,8 @@ func Test_initCache(t *testing.T) {
 	}
 
 	d := &Driver{client: c, name: m.Name, namespace: m.Namespace, divert: *m.Deploy.Divert}
-	d.initCache(ctx)
+	err := d.initCache(ctx)
+	assert.NoError(t, err)
 
 	assert.Equal(t, map[string]*networkingv1.Ingress{"i1": i1}, d.cache.developerIngresses)
 	assert.Equal(t, map[string]*networkingv1.Ingress{"i3": i3}, d.cache.divertIngresses)
