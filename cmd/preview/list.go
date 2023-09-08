@@ -93,12 +93,13 @@ func List(ctx context.Context) *cobra.Command {
 
 // executeListPreviews prints the list of previews
 func executeListPreviews(previews []previewOutput, outputFormat string) error {
-	if len(previews) == 0 {
-		fmt.Println("There are no previews")
-		return nil
-	}
 	switch outputFormat {
 	case "json":
+		// json marshal return null for empty objects, returning the empty list if no previews are retrieved
+		if len(previews) == 0 {
+			fmt.Println(previews)
+			return nil
+		}
 		bytes, err := json.MarshalIndent(previews, "", " ")
 		if err != nil {
 			return err
@@ -111,6 +112,10 @@ func executeListPreviews(previews []previewOutput, outputFormat string) error {
 		}
 		fmt.Println(string(bytes))
 	default:
+		if len(previews) == 0 {
+			fmt.Println("There are no previews")
+			return nil
+		}
 		w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
 		fmt.Fprint(w, "Name\tScope\tSleeping\tLabels\n")
 		for _, preview := range previews {
