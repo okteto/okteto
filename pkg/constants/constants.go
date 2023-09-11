@@ -131,4 +131,7 @@ const (
 
 	//OktetoDependencyEnvsKey the key on the conqfig map that will store OKTETO_ENV values
 	OktetoDependencyEnvsKey = "dependencyEnvs"
+
+	// EnvironmentLabelKeyPrefix represents the prefix for the preview and pipeline labels
+	EnvironmentLabelKeyPrefix = "label.okteto.com"
 )

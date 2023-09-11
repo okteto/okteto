@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"fmt"
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -26,6 +28,8 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes"
 	"os"
 	"strings"
@@ -33,6 +37,7 @@ import (
 )
 
 type listFlags struct {
+	labels    []string
 	namespace string
 	output    string
 }
@@ -51,7 +56,7 @@ func list(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List all okteto pipelines",
-		//Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/cli/#-1"),
+		Args:  utils.NoArgsAccepted(""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if flags.namespace == "" {
 				flags.namespace = okteto.Context().Namespace
@@ -64,7 +69,10 @@ func list(ctx context.Context) *cobra.Command {
 
 			ctxOptions := &contextCMD.ContextOptions{
 				Namespace: ctxResource.Namespace,
-				Show:      true,
+				Show:      false,
+			}
+			if flags.output == "" {
+				ctxOptions.Show = true
 			}
 			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
 				return err
@@ -83,19 +91,25 @@ func list(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("failed to load okteto context '%s': %v", okteto.Context().Name, err)
 			}
 
-			return pc.executeListPipelines(cmd.Context(), *flags, configmaps.List, model.GitDeployLabel, c)
+			labelSelector, err := getLabelSelector(flags.labels)
+			if err != nil {
+				return err
+			}
+			return pc.executeListPipelines(cmd.Context(), *flags, configmaps.List, getPipelineListOutput, labelSelector, c)
 		},
 	}
 
+	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "tag and organize dev environments using labels (multiple --label flags accepted)")
 	cmd.Flags().StringVarP(&flags.namespace, "namespace", "n", "", "namespace where the pipelines are deployed (defaults to the current namespace)")
 	cmd.Flags().StringVarP(&flags.output, "output", "o", "", "output format. One of: ['json', 'yaml']")
 	return cmd
 }
 
+type getPipelineListOutputFn func(ctx context.Context, listPipelines listPipelinesFn, namespace, labelSelector string, c kubernetes.Interface) ([]pipelineListItem, error)
 type listPipelinesFn func(ctx context.Context, namespace, labelSelector string, c kubernetes.Interface) ([]apiv1.ConfigMap, error)
 
-func (pc *Command) executeListPipelines(ctx context.Context, opts listFlags, listPipelines listPipelinesFn, labelSelector string, c kubernetes.Interface) error {
-	pipelineListOutput, err := pc.getPipelineListOutput(ctx, listPipelines, opts.namespace, labelSelector, c)
+func (pc *Command) executeListPipelines(ctx context.Context, opts listFlags, listPipelines listPipelinesFn, getPipelineListOutput getPipelineListOutputFn, labelSelector string, c kubernetes.Interface) error {
+	pipelineListOutput, err := getPipelineListOutput(ctx, listPipelines, opts.namespace, labelSelector, c)
 	if err != nil {
 		return err
 	}
@@ -105,13 +119,17 @@ func (pc *Command) executeListPipelines(ctx context.Context, opts listFlags, lis
 		if err != nil {
 			return err
 		}
-		oktetoLog.Println(string(bytes))
+		jsonOutput := string(bytes)
+		if jsonOutput == "null" {
+			jsonOutput = "[]"
+		}
+		oktetoLog.Print(jsonOutput)
 	case "yaml":
 		bytes, err := yaml.Marshal(pipelineListOutput)
 		if err != nil {
 			return err
 		}
-		oktetoLog.Println(string(bytes))
+		oktetoLog.Print(string(bytes))
 	default:
 		w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
 		cols := []string{"Name", "Status", "Repository", "Branch", "Labels"}
@@ -130,7 +148,39 @@ func (pc *Command) executeListPipelines(ctx context.Context, opts listFlags, lis
 	return nil
 }
 
-func (pc *Command) getPipelineListOutput(ctx context.Context, listPipelines listPipelinesFn, namespace, labelSelector string, c kubernetes.Interface) ([]pipelineListItem, error) {
+func getLabelSelector(labels []string) (string, error) {
+	var labelSelector = []string{
+		model.GitDeployLabel,
+	}
+	for _, label := range labels {
+		if label == "" {
+			return "", fmt.Errorf("invalid label: the provided label is empty")
+		}
+		errs := validation.IsValidLabelValue(label)
+		if len(errs) > 0 {
+			return "", fmt.Errorf("invalid label '%s': %v", label, errs[0])
+		}
+		labelSelector = append(labelSelector, fmt.Sprintf("%s/%s", constants.EnvironmentLabelKeyPrefix, label))
+	}
+	return strings.Join(labelSelector, ","), nil
+}
+
+func getNamespaceStatus(ctx context.Context, namespace string, c kubernetes.Interface) (string, error) {
+	n, err := c.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	return n.Labels[constants.NamespaceStatusLabel], nil
+}
+
+func getPipelineListOutput(ctx context.Context, listPipelines listPipelinesFn, namespace, labelSelector string, c kubernetes.Interface) ([]pipelineListItem, error) {
+	// We retrieve the namespace because when the namespace is sleeping, all pipelines are sleeping
+	nsStatus, err := getNamespaceStatus(ctx, namespace, c)
+	if err != nil {
+		return nil, err
+	}
+
 	cmList, err := listPipelines(ctx, namespace, labelSelector, c)
 	if err != nil {
 		return nil, err
@@ -146,12 +196,18 @@ func (pc *Command) getPipelineListOutput(ctx context.Context, listPipelines list
 			Labels:     []string{},
 		}
 
-		// TODO: filter only actual labels
-		//for k, v := range cm.ObjectMeta.Labels {
-		//	if v == "true" {
-		//		item.Labels = append(item.Labels, k)
-		//	}
-		//}
+		// if the namespace is sleeping, all pipelines are sleeping
+		if nsStatus == "Sleeping" {
+			item.Status = nsStatus
+		}
+
+		for k, v := range cm.ObjectMeta.Labels {
+			prefix := fmt.Sprintf("%s/", constants.EnvironmentLabelKeyPrefix)
+			if strings.HasPrefix(k, prefix) && v == "true" {
+				label := strings.TrimPrefix(k, prefix)
+				item.Labels = append(item.Labels, label)
+			}
+		}
 
 		outputList = append(outputList, item)
 	}
