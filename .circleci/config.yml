@@ -73,12 +73,7 @@ executors:
 
 jobs:
   golangci-lint:
-    docker:
-      - image: golangci/golangci-lint:v1.54.2
-    environment:
-      GOCACHE: ~/.cache/go-build
-      GOLANGCI_LINT_CACHE: ~/.cache/go-build
-      GOPATH: /go
+    executor: golang-ci
     steps:
       - checkout
       - restore_cache:
