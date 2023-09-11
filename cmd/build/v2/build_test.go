@@ -69,7 +69,6 @@ var fakeManifest *model.Manifest = &model.Manifest{
 }
 
 type fakeRegistry struct {
-	err      error
 	registry map[string]fakeImage
 }
 

@@ -49,7 +49,6 @@ func (f fakeBuilder) Build(_ context.Context, opts *types.BuildOptions) error {
 func (fakeBuilder) IsV1() bool { return true }
 
 type fakeRegistry struct {
-	err      error
 	registry map[string]fakeImage
 }
 
