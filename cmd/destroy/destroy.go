@@ -188,6 +188,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				oktetoClient:      okClient,
 				buildCtrl:         newBuildCtrl(options.Name),
 				analyticsTracker:  analytics.NewAnalyticsTracker(),
+				getManifest:       model.GetManifestV2,
 			}
 
 			kubeconfigPath := getTempKubeConfigFile(options.Name)
@@ -253,7 +254,7 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 
 		oktetoLog.Info("Destroying all...")
 	} else {
-		manifest, err := model.GetManifestV2(opts.ManifestPath)
+		manifest, err := dc.getManifest(opts.ManifestPath)
 		if err != nil {
 			// Log error message but application can still be deleted
 			oktetoLog.Infof("could not find manifest file to be executed: %s", err)
