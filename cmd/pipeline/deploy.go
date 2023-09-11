@@ -126,7 +126,7 @@ func deploy(ctx context.Context) *cobra.Command {
 	if err := cmd.Flags().MarkHidden("filename"); err != nil {
 		oktetoLog.Infof("failed to mark 'filename' flag as hidden: %s", err)
 	}
-	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "set a preview environment label (can be set more than once)")
+	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "set an environment label (can be set more than once)")
 	return cmd
 }
 

@@ -28,11 +28,12 @@ import (
 )
 
 var (
-	ErrDeployPipelineLabelsFeatureNotSupported = errors.New(`deploying a preview environments with labels requires a more recent version of Okteto.
+	ErrDeployPipelineLabelsFeatureNotSupported = oktetoErrors.UserError{
+		E: errors.New(`deploying a preview environments with labels requires a more recent version of Okteto.
 
-    Consider removing the "--label" flag, or please upgrade to the latest version.
-
-    For more information and upgrade instructions, please visit our docs at https://www.okteto.com/docs or contact your system administrator.`)
+		Consider removing the "--label" flag, or please upgrade to the latest version`),
+		Hint: "For more information and upgrade instructions, please visit our docs at https://www.okteto.com/docs or contact your system administrator.",
+	}
 )
 
 type pipelineClient struct {
