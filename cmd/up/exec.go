@@ -46,10 +46,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-type devExecutor interface {
-	RunCommand(ctx context.Context, cmd []string) error
-}
-
 type hybridExecutor struct {
 	workdir string
 	envs    []string
