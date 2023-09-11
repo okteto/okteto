@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/a8m/envsubst"
+	"github.com/a8m/envsubst/parse"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -1018,6 +1019,70 @@ func (d *Dependency) GetTimeout(defaultTimeout time.Duration) time.Duration {
 		return d.Timeout
 	}
 	return defaultTimeout
+}
+
+// ExpandVars sets dependencies values if values fits with list params
+func (d *Dependency) ExpandVars(variables []string) error {
+	parser := parse.New("string", append(os.Environ(), variables...), &parse.Restrictions{})
+
+	expandedBranch, err := parser.Parse(d.Branch)
+	if err != nil {
+		return fmt.Errorf("error expanding 'branch': %w", err)
+	}
+	if expandedBranch != "" {
+		d.Branch = expandedBranch
+	}
+
+	expandedRepository, err := parser.Parse(d.Repository)
+	if err != nil {
+		return fmt.Errorf("error expanding 'repository': %w", err)
+	}
+	if expandedRepository != "" {
+		d.Repository = expandedRepository
+	}
+
+	expandedManifestPath, err := parser.Parse(d.ManifestPath)
+	if err != nil {
+		return fmt.Errorf("error expanding 'manifest': %w", err)
+	}
+	if expandedManifestPath != "" {
+		d.ManifestPath = expandedManifestPath
+	}
+
+	expandedNamespace, err := parser.Parse(d.Namespace)
+	if err != nil {
+		return fmt.Errorf("error expanding 'namespace': %w", err)
+	}
+	if expandedNamespace != "" {
+		d.Namespace = expandedNamespace
+	}
+
+	expandedVariables := Environment{}
+	for _, v := range d.Variables {
+		expandedVarName, err := parser.Parse(v.Name)
+		if err != nil {
+			return fmt.Errorf("error expanding variable name: %w", err)
+		}
+		if expandedVarName != "" {
+			v.Name = expandedVarName
+		}
+
+		expandedVarValue, err := parser.Parse(v.Value)
+		if err != nil {
+			return fmt.Errorf("error expanding variable value: %w", err)
+		}
+		if expandedVarValue != "" {
+			v.Value = expandedVarValue
+		}
+
+		expandedVariables = append(expandedVariables, EnvVar{
+			Name:  v.Name,
+			Value: v.Value,
+		})
+	}
+	d.Variables = expandedVariables
+
+	return nil
 }
 
 // InferFromStack infers data from a stackfile
