@@ -22,11 +22,11 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
+	"io"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -91,11 +91,7 @@ func list(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("failed to load okteto context '%s': %v", okteto.Context().Name, err)
 			}
 
-			labelSelector, err := getLabelSelector(flags.labels)
-			if err != nil {
-				return err
-			}
-			return pc.executeListPipelines(cmd.Context(), *flags, configmaps.List, getPipelineListOutput, labelSelector, c)
+			return pc.executeListPipelines(cmd.Context(), *flags, configmaps.List, getPipelineListOutput, c, os.Stdout)
 		},
 	}
 
@@ -108,7 +104,12 @@ func list(ctx context.Context) *cobra.Command {
 type getPipelineListOutputFn func(ctx context.Context, listPipelines listPipelinesFn, namespace, labelSelector string, c kubernetes.Interface) ([]pipelineListItem, error)
 type listPipelinesFn func(ctx context.Context, namespace, labelSelector string, c kubernetes.Interface) ([]apiv1.ConfigMap, error)
 
-func (pc *Command) executeListPipelines(ctx context.Context, opts listFlags, listPipelines listPipelinesFn, getPipelineListOutput getPipelineListOutputFn, labelSelector string, c kubernetes.Interface) error {
+func (pc *Command) executeListPipelines(ctx context.Context, opts listFlags, listPipelines listPipelinesFn, getPipelineListOutput getPipelineListOutputFn, c kubernetes.Interface, w io.Writer) error {
+	labelSelector, err := getLabelSelector(opts.labels)
+	if err != nil {
+		return err
+	}
+
 	pipelineListOutput, err := getPipelineListOutput(ctx, listPipelines, opts.namespace, labelSelector, c)
 	if err != nil {
 		return err
@@ -123,27 +124,27 @@ func (pc *Command) executeListPipelines(ctx context.Context, opts listFlags, lis
 		if jsonOutput == "null" {
 			jsonOutput = "[]"
 		}
-		oktetoLog.Print(jsonOutput)
+		fmt.Fprint(w, jsonOutput)
 	case "yaml":
 		bytes, err := yaml.Marshal(pipelineListOutput)
 		if err != nil {
 			return err
 		}
-		oktetoLog.Print(string(bytes))
+		fmt.Fprint(w, string(bytes))
 	default:
-		w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
+		tw := tabwriter.NewWriter(w, 1, 1, 2, ' ', 0)
 		cols := []string{"Name", "Status", "Repository", "Branch", "Labels"}
 		header := strings.Join(cols, "\t")
-		fmt.Fprintln(w, header)
+		fmt.Fprintln(tw, header)
 		for _, pipeline := range pipelineListOutput {
 			labels := "-"
 			if len(pipeline.Labels) > 0 {
 				labels = strings.Join(pipeline.Labels, ", ")
 			}
 			output := fmt.Sprintf("%s\t%s\t%s\t%s\t%s", pipeline.Name, pipeline.Status, pipeline.Repository, pipeline.Branch, labels)
-			fmt.Fprintln(w, output)
+			fmt.Fprintln(tw, output)
 		}
-		w.Flush()
+		tw.Flush()
 	}
 	return nil
 }
