@@ -19,16 +19,14 @@ linters-settings:
 
 # All possible linters can be found here
 linters:
-  disable:
-    - unused
-    - unparam
   enable:
     - errcheck
     - gosimple
     - typecheck
     - govet
     - ineffassign
-    - staticcheck
+    - unused
+    - unparam
 
 # Enabled by your configuration linters:
 # deadcode: Finds unused code [fast: false, auto-fix: false]
