@@ -399,7 +399,7 @@ func (c ContextCommand) getUserContext(ctx context.Context, ctxName, ns, token s
 				return nil, err
 			}
 
-			if errors.Is(err, oktetoErrors.ErrTrialExpired) {
+			if errors.Is(err, oktetoErrors.ErrInvalidLicense) {
 				return nil, err
 			}
 

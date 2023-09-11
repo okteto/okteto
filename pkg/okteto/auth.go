@@ -113,7 +113,7 @@ func (c *OktetoClient) Auth(ctx context.Context, code string) (*types.User, erro
 			return nil, err
 		}
 
-		if isAPITrialExpiredError(err) {
+		if isAPILicenseError(err) {
 			return nil, err
 		}
 
