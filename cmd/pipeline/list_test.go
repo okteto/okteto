@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/okteto/okteto/pkg/constants"
@@ -38,89 +39,251 @@ func mockPipeline(fakeName string, fakeLabels []string) *apiv1.ConfigMap {
 	}
 }
 
-//func TestExecuteListPipelines(t *testing.T) {
-//	type input struct {
-//		flags                 listFlags
-//		listPipelines         listPipelinesFn
-//		getPipelineListOutput getPipelineListOutputFn
-//		c                     kubernetes.Interface
-//	}
-//
-//	//pipelineWithLabels := mockPipeline("dev1", []string{"label-1", "label-2"})
-//
-//	mockFuncPipelines3 := func(ctx context.Context, namespace, labelSelector string, c kubernetes.Interface) ([]apiv1.ConfigMap, error) {
-//		return []apiv1.ConfigMap{
-//			mockPipeline("dev1", []string{"label-1", "label-2"}),
-//			mockPipeline("dev2", []string{}),
-//			mockPipeline("dev3", []string{}),
-//		}, nil
-//	}
-//
-//	tests := []struct {
-//		name                  string
-//		input                 input
-//		output                string
-//		expectedPrintedOutput string
-//		expectedError         error
-//	}{
-//		{
-//			name: "success - text output - 3 dev envs - no label filter",
-//			input: input{
-//				flags: listFlags{
-//					namespace: "test-ns",
-//					output:    "",
-//				},
-//				listPipelines:         mockFuncPipelines3,
-//				getPipelineListOutput: getPipelineListOutput,
-//				c: fake.NewSimpleClientset(&apiv1.Namespace{
-//					TypeMeta: metav1.TypeMeta{},
-//					ObjectMeta: metav1.ObjectMeta{
-//						Name:   "test-ns",
-//						Labels: map[string]string{constants.NamespaceStatusLabel: "true"},
-//					},
-//					Spec:   apiv1.NamespaceSpec{},
-//					Status: apiv1.NamespaceStatus{},
-//				}),
-//			},
-//			expectedError: nil,
-//			expectedPrintedOutput: `Name  Status       Repository       Branch       Labels
-//dev1  dev1-status  dev1-repository  dev1-branch  -
-//dev2  dev2-status  dev2-repository  dev2-branch  -
-//dev3  dev3-status  dev3-repository  dev3-branch  -
-//`,
-//		},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			pc := &Command{}
-//
-//			// Redirect the log output to a buffer for our test
-//			var buf bytes.Buffer
-//
-//			err := pc.executeListPipelines(context.Background(), tt.input.flags, tt.input.listPipelines, tt.input.getPipelineListOutput, tt.input.c, &buf)
-//
-//			if tt.expectedError == nil {
-//				assert.NoError(t, err)
-//			} else {
-//				// todo
-//			}
-//
-//			//if tt.expectedError != nil {
-//			//	if err == nil || err.Error() != tt.expectedError.Error() {
-//			//		t.Fatalf("expected error '%v', but got '%v'", tt.expectedError, err)
-//			//	}
-//			//} else if err != nil {
-//			//	t.Fatalf("unexpected error: %v", err)
-//			//}
-//			//
-//			assert.Equal(t, tt.expectedPrintedOutput, buf.String())
-//			//if buf.String() != tt.expectedPrintedOutput {
-//			//	t.Fatalf("unexpected output: got %v, want %v", buf.String(), tt.expectedPrintedOutput)
-//			//}
-//		})
-//	}
-//}
+func TestExecuteListPipelines(t *testing.T) {
+	type input struct {
+		flags                 listFlags
+		listPipelines         listPipelinesFn
+		getPipelineListOutput getPipelineListOutputFn
+		c                     kubernetes.Interface
+	}
+
+	listPipelinesWithError := func(ctx context.Context, namespace, labelSelector string, c kubernetes.Interface) ([]apiv1.ConfigMap, error) {
+		return nil, assert.AnError
+	}
+
+	tests := []struct {
+		name                  string
+		input                 input
+		output                string
+		expectedPrintedOutput string
+		expectedError         error
+	}{
+		{
+			name: "error - empty label",
+			input: input{
+				flags: listFlags{
+					namespace: "test-ns",
+					output:    "",
+					labels:    []string{""},
+				},
+				listPipelines:         configmaps.List,
+				getPipelineListOutput: getPipelineListOutput,
+			},
+			expectedError:         fmt.Errorf("invalid label: the provided label is empty"),
+			expectedPrintedOutput: "",
+		},
+		{
+			name: "error - invalid label",
+			input: input{
+				flags: listFlags{
+					namespace: "test-ns",
+					output:    "",
+					labels:    []string{"@@@@@"},
+				},
+				listPipelines:         configmaps.List,
+				getPipelineListOutput: getPipelineListOutput,
+			},
+			expectedError:         fmt.Errorf("invalid label '@@@@@': a valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyValue',  or 'my_value',  or '12345', regex used for validation is '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?')"),
+			expectedPrintedOutput: "",
+		},
+		{
+			name: "error - retrieving pipelines",
+			input: input{
+				flags: listFlags{
+					namespace: "test-ns",
+					output:    "",
+				},
+				listPipelines:         listPipelinesWithError,
+				getPipelineListOutput: getPipelineListOutput,
+				c: fake.NewSimpleClientset(
+					&apiv1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-ns",
+							Labels: map[string]string{
+								constants.NamespaceStatusLabel: "Deployed",
+							},
+						},
+					},
+				),
+			},
+			expectedError:         assert.AnError,
+			expectedPrintedOutput: "",
+		},
+		{
+			name: "success - text output - without label filter",
+			input: input{
+				flags: listFlags{
+					namespace: "test-ns",
+					output:    "",
+				},
+				listPipelines:         configmaps.List,
+				getPipelineListOutput: getPipelineListOutput,
+				c: fake.NewSimpleClientset(
+					&apiv1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-ns",
+							Labels: map[string]string{
+								constants.NamespaceStatusLabel: "Deployed",
+							},
+						},
+					},
+					mockPipeline("dev1", []string{}),
+					mockPipeline("dev2", []string{"fake-label-2"}),
+					mockPipeline("dev3", []string{"fake-label-3"}),
+				),
+			},
+			expectedError: nil,
+			expectedPrintedOutput: `Name  Status       Repository       Branch       Labels
+dev1  dev1-status  dev1-repository  dev1-branch  -
+dev2  dev2-status  dev2-repository  dev2-branch  fake-label-2
+dev3  dev3-status  dev3-repository  dev3-branch  fake-label-3
+`,
+		},
+		{
+			name: "success - text output - with label filter",
+			input: input{
+				flags: listFlags{
+					namespace: "test-ns",
+					output:    "",
+					labels:    []string{"fake-label-2"},
+				},
+				listPipelines:         configmaps.List,
+				getPipelineListOutput: getPipelineListOutput,
+				c: fake.NewSimpleClientset(
+					&apiv1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-ns",
+							Labels: map[string]string{
+								constants.NamespaceStatusLabel: "Deployed",
+							},
+						},
+					},
+					mockPipeline("dev1", []string{}),
+					mockPipeline("dev2", []string{"fake-label-2"}),
+					mockPipeline("dev3", []string{"fake-label-3"}),
+				),
+			},
+			expectedError: nil,
+			expectedPrintedOutput: `Name  Status       Repository       Branch       Labels
+dev2  dev2-status  dev2-repository  dev2-branch  fake-label-2
+`,
+		},
+		{
+			name: "success - JSON output",
+			input: input{
+				flags: listFlags{
+					namespace: "test-ns",
+					output:    "json",
+				},
+				listPipelines:         configmaps.List,
+				getPipelineListOutput: getPipelineListOutput,
+				c: fake.NewSimpleClientset(
+					&apiv1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-ns",
+							Labels: map[string]string{
+								constants.NamespaceStatusLabel: "Deployed",
+							},
+						},
+					},
+					mockPipeline("dev1", []string{}),
+					mockPipeline("dev2", []string{"fake-label-2"}),
+					mockPipeline("dev3", []string{"fake-label-3"}),
+				),
+			},
+			expectedError: nil,
+			expectedPrintedOutput: `[
+ {
+  "name": "dev1",
+  "status": "dev1-status",
+  "repository": "dev1-repository",
+  "branch": "dev1-branch",
+  "labels": []
+ },
+ {
+  "name": "dev2",
+  "status": "dev2-status",
+  "repository": "dev2-repository",
+  "branch": "dev2-branch",
+  "labels": [
+   "fake-label-2"
+  ]
+ },
+ {
+  "name": "dev3",
+  "status": "dev3-status",
+  "repository": "dev3-repository",
+  "branch": "dev3-branch",
+  "labels": [
+   "fake-label-3"
+  ]
+ }
+]`,
+		},
+		{
+			name: "success - YAML output",
+			input: input{
+				flags: listFlags{
+					namespace: "test-ns",
+					output:    "yaml",
+				},
+				listPipelines:         configmaps.List,
+				getPipelineListOutput: getPipelineListOutput,
+				c: fake.NewSimpleClientset(
+					&apiv1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-ns",
+							Labels: map[string]string{
+								constants.NamespaceStatusLabel: "Deployed",
+							},
+						},
+					},
+					mockPipeline("dev1", []string{}),
+					mockPipeline("dev2", []string{"fake-label-2"}),
+					mockPipeline("dev3", []string{"fake-label-3"}),
+				),
+			},
+			expectedError: nil,
+			expectedPrintedOutput: `- name: dev1
+  status: dev1-status
+  repository: dev1-repository
+  branch: dev1-branch
+  labels: []
+- name: dev2
+  status: dev2-status
+  repository: dev2-repository
+  branch: dev2-branch
+  labels:
+  - fake-label-2
+- name: dev3
+  status: dev3-status
+  repository: dev3-repository
+  branch: dev3-branch
+  labels:
+  - fake-label-3
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pc := &Command{}
+
+			// Redirect the log output to a buffer for our test
+			var buf bytes.Buffer
+
+			err := pc.executeListPipelines(context.Background(), tt.input.flags, tt.input.listPipelines, tt.input.getPipelineListOutput, tt.input.c, &buf)
+
+			if tt.expectedError == nil {
+				assert.NoError(t, err)
+			} else {
+				assert.Equal(t, tt.expectedError.Error(), err.Error())
+			}
+
+			assert.Equal(t, tt.expectedPrintedOutput, buf.String())
+		})
+	}
+}
 
 func TestGetPipelineListOutput(t *testing.T) {
 	type input struct {
