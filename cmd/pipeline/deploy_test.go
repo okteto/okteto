@@ -420,3 +420,65 @@ func TestSetEnvsFromDependencyWithError(t *testing.T) {
 	fakeClient := fake.NewSimpleClientset(cmap)
 	assert.Error(t, setEnvsFromDependency(ctx, "test", "test", fakeClient))
 }
+
+func TestFlagsToOptions(t *testing.T) {
+	tt := []struct {
+		name   string
+		flags  deployFlags
+		expect *DeployOptions
+	}{
+		{
+			name:   "no flags",
+			flags:  deployFlags{},
+			expect: &DeployOptions{},
+		},
+		{
+			name: "filename and file",
+			flags: deployFlags{
+				file:     "file",
+				filename: "filename",
+			},
+			expect: &DeployOptions{
+				File: "file",
+			},
+		},
+		{
+			name: "just filename",
+			flags: deployFlags{
+				filename: "filename",
+			},
+			expect: &DeployOptions{
+				File: "filename",
+			},
+		},
+		{
+			name: "all flags ",
+			flags: deployFlags{
+				branch:     "branch",
+				repository: "repository",
+				name:       "name",
+				namespace:  "namespace",
+				wait:       true,
+				timeout:    2 * time.Second,
+				labels:     []string{"label1", "label2"},
+				variables:  []string{"var1=1", "var2=2"},
+			},
+			expect: &DeployOptions{
+				Branch:     "branch",
+				Repository: "repository",
+				Name:       "name",
+				Namespace:  "namespace",
+				Wait:       true,
+				Timeout:    2 * time.Second,
+				Labels:     []string{"label1", "label2"},
+				Variables:  []string{"var1=1", "var2=2"},
+			},
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			opts := tc.flags.toOptions()
+			assert.Equal(t, tc.expect, opts)
+		})
+	}
+}

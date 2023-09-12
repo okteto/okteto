@@ -21,6 +21,7 @@ type PipelineDeployOptions struct {
 	Filename   string
 	Variables  []Variable
 	Namespace  string
+	Labels     []string
 }
 
 // SpaceBody top body answer

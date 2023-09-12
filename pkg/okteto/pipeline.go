@@ -15,6 +15,7 @@ package okteto
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -24,6 +25,15 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
+)
+
+var (
+	ErrDeployPipelineLabelsFeatureNotSupported = oktetoErrors.UserError{
+		E: errors.New(`deploying a preview environments with labels requires a more recent version of Okteto.
+
+		Consider removing the "--label" flag, or please upgrade to the latest version`),
+		Hint: "For more information and upgrade instructions, please visit our docs at https://www.okteto.com/docs or contact your system administrator.",
+	}
 )
 
 type pipelineClient struct {
@@ -44,6 +54,10 @@ func newPipelineClient(client graphqlClientInterface, url string) *pipelineClien
 
 type deployPipelineMutation struct {
 	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename)"`
+}
+
+type deployPipelineMutationWithLabels struct {
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, labels: $labels)"`
 }
 
 type getPipelineByNameQuery struct {
@@ -104,91 +118,83 @@ type deprecatedDestroyPipelineResponse struct {
 // Deploy creates a pipeline
 func (c *pipelineClient) Deploy(ctx context.Context, opts types.PipelineDeployOptions) (*types.GitDeployResponse, error) {
 	oktetoLog.Infof("deploying pipeline '%s' mutation on %s", opts.Name, opts.Namespace)
-	origin := config.GetDeployOrigin()
 
-	gitDeployResponse := &types.GitDeployResponse{}
-
-	if len(opts.Variables) > 0 {
-		var mutation deployPipelineMutation
-
-		variablesArg := []InputVariable{}
-		for _, v := range opts.Variables {
-			variablesArg = append(variablesArg, InputVariable{
-				Name:  graphql.String(v.Name),
-				Value: graphql.String(v.Value),
-			})
-		}
-		// if OKTETO_ORIGIN was provided don't override it
-		injectOrigin := true
-		for _, v := range variablesArg {
-			if v.Name == "OKTETO_ORIGIN" {
-				injectOrigin = false
-			}
-		}
-		if injectOrigin {
-			variablesArg = append(variablesArg, InputVariable{
-				Name:  graphql.String("OKTETO_ORIGIN"),
-				Value: graphql.String(origin),
-			})
-		}
-		queryVariables := map[string]interface{}{
-			"name":       graphql.String(opts.Name),
-			"repository": graphql.String(opts.Repository),
-			"space":      graphql.String(opts.Namespace),
-			"branch":     graphql.String(opts.Branch),
-			"variables":  variablesArg,
-			"filename":   graphql.String(opts.Filename),
-		}
-
-		err := mutate(ctx, &mutation, queryVariables, c.client)
+	mutationVariables := c.getDeployVariables(opts)
+	var response deployPipelineResponse
+	if len(opts.Labels) == 0 {
+		mutationStruct := &deployPipelineMutation{}
+		err := mutate(ctx, mutationStruct, mutationVariables, c.client)
 		if err != nil {
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
-
-		gitDeployResponse.Action = &types.Action{
-			ID:     string(mutation.Response.Action.Id),
-			Name:   string(mutation.Response.Action.Name),
-			Status: string(mutation.Response.Action.Status),
-		}
-		gitDeployResponse.GitDeploy = &types.GitDeploy{
-			ID:         string(mutation.Response.GitDeploy.Id),
-			Name:       string(mutation.Response.GitDeploy.Name),
-			Repository: string(mutation.Response.GitDeploy.Repository),
-			Status:     string(mutation.Response.GitDeploy.Status),
-		}
-
+		response = mutationStruct.Response
 	} else {
-		var mutation deployPipelineMutation
-		queryVariables := map[string]interface{}{
-			"name":       graphql.String(opts.Name),
-			"repository": graphql.String(opts.Repository),
-			"space":      graphql.String(opts.Namespace),
-			"branch":     graphql.String(opts.Branch),
-			"filename":   graphql.String(opts.Filename),
-			"variables": []InputVariable{
-				{Name: graphql.String("OKTETO_ORIGIN"), Value: graphql.String(origin)},
-			},
-		}
+		mutationStruct := &deployPipelineMutationWithLabels{}
+		err := mutate(ctx, mutationStruct, mutationVariables, c.client)
 
-		err := mutate(ctx, &mutation, queryVariables, c.client)
 		if err != nil {
+			if strings.Contains(err.Error(), "Unknown argument \"labels\" on field \"deployGitRepository\" of type \"Mutation\"") {
+				return nil, oktetoErrors.UserError{E: ErrDeployPipelineLabelsFeatureNotSupported, Hint: "Please upgrade to the latest version or ask your administrator"}
+			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
+		response = mutationStruct.Response
+	}
 
-		gitDeployResponse.Action = &types.Action{
-			ID:     string(mutation.Response.Action.Id),
-			Name:   string(mutation.Response.Action.Name),
-			Status: string(mutation.Response.Action.Status),
-		}
-		gitDeployResponse.GitDeploy = &types.GitDeploy{
-			ID:         string(mutation.Response.GitDeploy.Id),
-			Name:       string(mutation.Response.GitDeploy.Name),
-			Repository: string(mutation.Response.GitDeploy.Repository),
-			Status:     string(mutation.Response.GitDeploy.Status),
-		}
-
+	gitDeployResponse := &types.GitDeployResponse{
+		Action: &types.Action{
+			ID:     string(response.Action.Id),
+			Name:   string(response.Action.Name),
+			Status: string(response.Action.Status),
+		},
+		GitDeploy: &types.GitDeploy{
+			ID:         string(response.GitDeploy.Id),
+			Name:       string(response.GitDeploy.Name),
+			Repository: string(response.GitDeploy.Repository),
+			Status:     string(response.GitDeploy.Status),
+		},
 	}
 	return gitDeployResponse, nil
+}
+
+func (c *pipelineClient) getDeployVariables(opts types.PipelineDeployOptions) map[string]interface{} {
+	variablesVariable := make([]InputVariable, 0)
+	for _, v := range opts.Variables {
+		variablesVariable = append(variablesVariable, InputVariable{
+			Name:  graphql.String(v.Name),
+			Value: graphql.String(v.Value),
+		})
+	}
+	injectOrigin := true
+	for _, v := range variablesVariable {
+		if v.Name == "OKTETO_ORIGIN" {
+			injectOrigin = false
+		}
+	}
+	if injectOrigin {
+		origin := config.GetDeployOrigin()
+		variablesVariable = append(variablesVariable, InputVariable{
+			Name:  graphql.String("OKTETO_ORIGIN"),
+			Value: graphql.String(origin),
+		})
+	}
+	vars := map[string]interface{}{
+		"name":       graphql.String(opts.Name),
+		"space":      graphql.String(opts.Namespace),
+		"repository": graphql.String(opts.Repository),
+		"branch":     graphql.String(opts.Branch),
+		"variables":  variablesVariable,
+		"filename":   graphql.String(opts.Filename),
+	}
+
+	if len(opts.Labels) > 0 {
+		labelsVariable := make(labelList, 0)
+		for _, l := range opts.Labels {
+			labelsVariable = append(labelsVariable, graphql.String(l))
+		}
+		vars["labels"] = labelsVariable
+	}
+	return vars
 }
 
 // GetByName gets a pipeline given its name
