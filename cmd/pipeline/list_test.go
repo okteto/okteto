@@ -221,6 +221,29 @@ dev2  dev2-status  dev2-repository  dev2-branch  fake-label-2
 ]`,
 		},
 		{
+			name: "success - empty JSON output",
+			input: input{
+				flags: listFlags{
+					namespace: "test-ns",
+					output:    "json",
+				},
+				listPipelines:         configmaps.List,
+				getPipelineListOutput: getPipelineListOutput,
+				c: fake.NewSimpleClientset(
+					&apiv1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-ns",
+							Labels: map[string]string{
+								constants.NamespaceStatusLabel: "Deployed",
+							},
+						},
+					},
+				),
+			},
+			expectedError:         nil,
+			expectedPrintedOutput: `[]`,
+		},
+		{
 			name: "success - YAML output",
 			input: input{
 				flags: listFlags{
@@ -406,7 +429,7 @@ func TestGetPipelineListOutput(t *testing.T) {
 						},
 					},
 					mockPipeline("dev1", []string{}),
-					mockPipeline("dev2", []string{"fake-label-1", "fake-label-2"}),
+					mockPipeline("dev2", []string{"fake-label-2"}),
 					mockPipeline("dev3", []string{"fake-label-3"}),
 				),
 			},
@@ -425,7 +448,6 @@ func TestGetPipelineListOutput(t *testing.T) {
 						Repository: "dev2-repository",
 						Branch:     "dev2-branch",
 						Labels: []string{
-							"fake-label-1",
 							"fake-label-2",
 						},
 					},
