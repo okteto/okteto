@@ -26,7 +26,7 @@ import (
 
 func TestAuth(t *testing.T) {
 	x509err := fmt.Errorf("x509 error")
-	trialerr := fmt.Errorf("non-200 OK status code: 423")
+	licerr := fmt.Errorf("non-200 OK status code: 423")
 	type input struct {
 		client fakeGraphQLClient
 	}
@@ -107,11 +107,11 @@ func TestAuth(t *testing.T) {
 			name: "trial expired",
 			input: input{
 				client: fakeGraphQLClient{
-					err: trialerr,
+					err: licerr,
 				},
 			},
 			expected: expected{
-				err: okerrors.ErrTrialExpired,
+				err: okerrors.ErrInvalidLicense,
 			},
 		},
 	}

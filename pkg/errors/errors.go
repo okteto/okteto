@@ -211,8 +211,9 @@ var (
 	// ErrTimeout is raised when an operation has timed out
 	ErrTimeout = fmt.Errorf("operation timed out")
 
-	// ErrTrialExpired is the error returned to the user when a trial license expired
-	ErrTrialExpired = errors.New("Your trial license has expired")
+	// ErrInvalidLicense is the error returned to the user when a trial is invalid.
+	// This can be either an expired trial license or no license at all
+	ErrInvalidLicense = errors.New("Your license is invalid")
 )
 
 // IsAlreadyExists raised if the Kubernetes API returns AlreadyExists

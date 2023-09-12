@@ -299,9 +299,9 @@ func translateAPIErr(err error) error {
 				E:    err,
 				Hint: oktetoErrors.ErrX509Hint,
 			}
-		case isAPITrialExpiredError(err):
+		case isAPILicenseError(err):
 			return oktetoErrors.UserError{
-				E:    oktetoErrors.ErrTrialExpired,
+				E:    oktetoErrors.ErrInvalidLicense,
 				Hint: "The Okteto instance for your current context has an expired or missing license. Please contact your administrator for more information",
 			}
 		}
@@ -312,7 +312,7 @@ func translateAPIErr(err error) error {
 
 }
 
-func isAPITrialExpiredError(err error) bool {
+func isAPILicenseError(err error) bool {
 	return strings.HasPrefix(err.Error(), "non-200 OK status code: 423")
 }
 
