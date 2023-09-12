@@ -78,12 +78,12 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v4-pkg-cache-{{ checksum "go.sum" }}
+            - golangci-lint-cache-{{ checksum ".golangci.yaml" }}
       - run: golangci-lint run -v
       - save_cache:
-          key: v4-pkg-cache-{{ checksum "go.sum" }}
+          key: golangci-lint-cache-{{ checksum ".golangci.yaml" }}
           paths:
-            - ~/.cache/go-build
+            - ~/.cache/golangci-lint
             - /go/pkg
 
   build-binaries:

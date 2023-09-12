@@ -1,5 +1,6 @@
 run:
   timeout: 5m
+  modules-download-mode: readonly
 output:
   # format: checkstyle:golangci-report.xml
   print-issued-lines: false
