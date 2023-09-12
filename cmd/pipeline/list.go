@@ -91,7 +91,7 @@ func list(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("failed to load okteto context '%s': %v", okteto.Context().Name, err)
 			}
 
-			return pc.executeListPipelines(cmd.Context(), *flags, configmaps.List, getPipelineListOutput, c, os.Stdout)
+			return executeListPipelines(cmd.Context(), *flags, configmaps.List, getPipelineListOutput, c, os.Stdout)
 		},
 	}
 
@@ -104,7 +104,7 @@ func list(ctx context.Context) *cobra.Command {
 type getPipelineListOutputFn func(ctx context.Context, listPipelines listPipelinesFn, namespace, labelSelector string, c kubernetes.Interface) ([]pipelineListItem, error)
 type listPipelinesFn func(ctx context.Context, namespace, labelSelector string, c kubernetes.Interface) ([]apiv1.ConfigMap, error)
 
-func (pc *Command) executeListPipelines(ctx context.Context, opts listFlags, listPipelines listPipelinesFn, getPipelineListOutput getPipelineListOutputFn, c kubernetes.Interface, w io.Writer) error {
+func executeListPipelines(ctx context.Context, opts listFlags, listPipelines listPipelinesFn, getPipelineListOutput getPipelineListOutputFn, c kubernetes.Interface, w io.Writer) error {
 	labelSelector, err := getLabelSelector(opts.labels)
 	if err != nil {
 		return err

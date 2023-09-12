@@ -290,12 +290,10 @@ dev2  dev2-status  dev2-repository  dev2-branch  fake-label-2
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pc := &Command{}
-
 			// Redirect the log output to a buffer for our test
 			var buf bytes.Buffer
 
-			err := pc.executeListPipelines(context.Background(), tt.input.flags, tt.input.listPipelines, tt.input.getPipelineListOutput, tt.input.c, &buf)
+			err := executeListPipelines(context.Background(), tt.input.flags, tt.input.listPipelines, tt.input.getPipelineListOutput, tt.input.c, &buf)
 
 			if tt.expectedError == nil {
 				assert.NoError(t, err)
