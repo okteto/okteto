@@ -79,7 +79,8 @@ jobs:
       - restore_cache:
           keys:
             - golangci-lint-cache-{{ checksum ".golangci.yml" }}
-      - run: golangci-lint run -v
+      - run:
+          command: golangci-lint run -v
       - save_cache:
           key: golangci-lint-cache-{{ checksum ".golangci.yml" }}
           paths:
