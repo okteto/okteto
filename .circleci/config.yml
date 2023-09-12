@@ -78,14 +78,13 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - golangci-lint-cache-v1-{{ checksum ".golangci.yml" }}-{{ checksum "go.sum" }}
+            - golangci-lint-cache-v2-{{ checksum ".golangci.yml" }}-{{ checksum "go.sum" }}
       - run: golangci-lint run -v
       - save_cache:
-          key: golangci-lint-cache-v1-{{ checksum ".golangci.yml" }}-{{ checksum "go.sum" }}
+          key: golangci-lint-cache-v2-{{ checksum ".golangci.yml" }}-{{ checksum "go.sum" }}
           paths:
             - ~/.cache/golangci-lint
             - ~/.cache/go-build
-            - /go/pkg/mod
 
   build-binaries:
     executor: golang-ci
