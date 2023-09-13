@@ -68,6 +68,8 @@ func (d *Driver) Deploy(ctx context.Context) error {
 	return nil
 }
 
+// nolint:unparam
+// Destroy implements from the interface diver.Driver
 func (d *Driver) Destroy(_ context.Context) error {
 	oktetoLog.Success("Divert from '%s' successfully destroyed", d.divert.Namespace)
 	return nil
