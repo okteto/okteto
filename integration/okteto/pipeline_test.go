@@ -45,7 +45,7 @@ func TestPipelineCommand(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	pipelineOptions := &commands.DeployPipelineOptions{
 		Namespace:  testNamespace,
