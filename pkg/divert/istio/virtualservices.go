@@ -79,7 +79,7 @@ func (d *Driver) translateDivertHost(vs *istioV1beta1.VirtualService) *istioV1be
 		fmt.Sprintf("%s.%s.svc.cluster.local", result.Name, d.namespace),
 	}
 
-	result.Spec = d.injectDivertHeader(result.Spec)
+	d.injectDivertHeader(&result.Spec)
 
 	for i := range result.Spec.Http {
 
@@ -92,7 +92,7 @@ func (d *Driver) translateDivertHost(vs *istioV1beta1.VirtualService) *istioV1be
 	return result
 }
 
-func (d *Driver) injectDivertHeader(vsSpec istioNetworkingV1beta1.VirtualService) istioNetworkingV1beta1.VirtualService {
+func (d *Driver) injectDivertHeader(vsSpec *istioNetworkingV1beta1.VirtualService) {
 	for i := range vsSpec.Http {
 		if vsSpec.Http[i].Headers == nil {
 			vsSpec.Http[i].Headers = &istioNetworkingV1beta1.Headers{}
@@ -105,5 +105,4 @@ func (d *Driver) injectDivertHeader(vsSpec istioNetworkingV1beta1.VirtualService
 		}
 		vsSpec.Http[i].Headers.Request.Add[constants.OktetoDivertBaggageHeader] = fmt.Sprintf("%s=%s", constants.OktetoDivertHeaderName, d.namespace)
 	}
-	return vsSpec
 }

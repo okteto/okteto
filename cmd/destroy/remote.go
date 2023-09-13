@@ -202,7 +202,6 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 	if sshSock != "" {
 		if _, err := os.Stat(sshSock); err != nil {
 			oktetoLog.Debugf("Not mounting ssh agent. Error reading socket: %s", err.Error())
-			sshSock = ""
 		} else {
 			sshSession := types.BuildSshSession{Id: "remote", Target: sshSock}
 			buildOptions.SshSessions = append(buildOptions.SshSessions, sshSession)

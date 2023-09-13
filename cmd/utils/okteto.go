@@ -51,6 +51,8 @@ func HasAccessToOktetoClusterNamespace(ctx context.Context, namespace string, ok
 		}
 	}
 
+	// added possibility to point a context to a preview environment (namespace)
+	// https://github.com/okteto/okteto/pull/2018
 	previewList, err := oktetoClient.Previews().List(ctx, []string{})
 	if err != nil {
 		return false, err

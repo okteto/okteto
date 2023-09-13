@@ -33,7 +33,7 @@ type Driver interface {
 	Deploy(ctx context.Context) error
 	Destroy(ctx context.Context) error
 	UpdatePod(spec apiv1.PodSpec) apiv1.PodSpec
-	UpdateVirtualService(vs istioNetworkingV1beta1.VirtualService) istioNetworkingV1beta1.VirtualService
+	UpdateVirtualService(vs *istioNetworkingV1beta1.VirtualService)
 }
 
 func New(m *model.Manifest, c kubernetes.Interface) (Driver, error) {
