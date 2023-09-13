@@ -73,25 +73,19 @@ executors:
 
 jobs:
   golangci-lint:
-    docker:
-      - image: golangci/golangci-lint:v1.54.2
-    environment:
-      GOCACHE: /cache/go
-      GOLANGCI_LINT_CACHE: /cache/go
-      GOPATH: /go
+    executor: golang-ci
+    resource_class: large
     steps:
       - checkout
-      - setup_remote_docker:
-          docker_layer_caching: true
       - restore_cache:
           keys:
-            - cache-golangci-lint-{{ checksum "go.sum" }}
-      - run: golangci-lint run -v
+            - golangci-lint-cache-v2-{{ checksum ".golangci.yml" }}-{{ checksum "go.sum" }}
+      - run: golangci-lint run -v --timeout 5m
       - save_cache:
-          key: cache-golangci-lint-{{ checksum "go.sum" }}
+          key: golangci-lint-cache-v2-{{ checksum ".golangci.yml" }}-{{ checksum "go.sum" }}
           paths:
-            - /cache/go
-            - /go/pkg
+            - ~/.cache/golangci-lint
+            - ~/.cache/go-build
 
   build-binaries:
     executor: golang-ci

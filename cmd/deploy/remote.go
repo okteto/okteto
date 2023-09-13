@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/config"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -32,7 +33,6 @@ import (
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/cmd/build"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
@@ -199,7 +199,6 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	if sshSock != "" {
 		if _, err := os.Stat(sshSock); err != nil {
 			oktetoLog.Debugf("Not mounting ssh agent. Error reading socket: %s", err.Error())
-			sshSock = ""
 		} else {
 			sshSession := types.BuildSshSession{Id: "remote", Target: sshSock}
 			buildOptions.SshSessions = append(buildOptions.SshSessions, sshSession)

@@ -482,12 +482,12 @@ func (ph *proxyHandler) translateVirtualServiceSpec(body map[string]json.RawMess
 		return nil
 	}
 
-	var spec istioNetworkingV1beta1.VirtualService
+	var spec *istioNetworkingV1beta1.VirtualService
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
 		oktetoLog.Infof("error unmarshalling replicaset on proxy: %s", err.Error())
 		return nil
 	}
-	spec = ph.DivertDriver.UpdateVirtualService(spec)
+	ph.DivertDriver.UpdateVirtualService(spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process virtual service's spec: %s", err)

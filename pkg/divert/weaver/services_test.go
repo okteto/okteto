@@ -114,8 +114,7 @@ func Test_translateService(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := translateService("test", "cindy", tt.s)
-			assert.NoError(t, err)
+			result := translateService("test", "cindy", tt.s)
 			assert.Equal(t, result, tt.expected)
 		})
 	}

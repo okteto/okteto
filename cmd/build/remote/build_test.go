@@ -15,7 +15,6 @@ import (
 )
 
 type fakeRegistry struct {
-	err      error
 	registry map[string]fakeImage
 }
 

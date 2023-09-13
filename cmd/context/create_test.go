@@ -409,6 +409,7 @@ func TestCheckAccessToNamespace(t *testing.T) {
 	fakeOktetoClient := &client.FakeOktetoClient{
 		Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
 		Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
+		Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
 	}
 
 	fakeCtxCommand := newFakeContextCommand(fakeOktetoClient, user, []runtime.Object{
@@ -419,6 +420,7 @@ func TestCheckAccessToNamespace(t *testing.T) {
 		},
 	})
 
+	// TODO: add unit-test to cover preview environments access from context
 	var tests = []struct {
 		name           string
 		ctxOptions     *ContextOptions
@@ -459,8 +461,8 @@ func TestCheckAccessToNamespace(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 
 			currentCtxCommand := *fakeCtxCommand
 			if tt.ctxOptions.IsOkteto {

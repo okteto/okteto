@@ -34,10 +34,7 @@ func (d *Driver) divertService(ctx context.Context, name string) error {
 	}
 	s, ok := d.cache.developerServices[name]
 	if !ok {
-		newS, err := translateService(d.name, d.namespace, from)
-		if err != nil {
-			return err
-		}
+		newS := translateService(d.name, d.namespace, from)
 		oktetoLog.Infof("creating service %s/%s", newS.Namespace, newS.Name)
 		if _, err := d.client.CoreV1().Services(d.namespace).Create(ctx, newS, metav1.CreateOptions{}); err != nil {
 			if !k8sErrors.IsAlreadyExists(err) {
@@ -57,10 +54,8 @@ func (d *Driver) divertService(ctx context.Context, name string) error {
 		return nil
 	}
 
-	updatedS, err := translateService(d.name, d.namespace, from)
-	if err != nil {
-		return err
-	}
+	updatedS := translateService(d.name, d.namespace, from)
+
 	if !isEqualService(s, updatedS) {
 		oktetoLog.Infof("updating service %s/%s", updatedS.Namespace, updatedS.Name)
 		if _, err := d.client.CoreV1().Services(d.namespace).Update(ctx, updatedS, metav1.UpdateOptions{}); err != nil {
@@ -78,7 +73,7 @@ func (d *Driver) divertService(ctx context.Context, name string) error {
 	return d.divertEndpoints(ctx, name)
 }
 
-func translateService(name, namespace string, s *apiv1.Service) (*apiv1.Service, error) {
+func translateService(name, namespace string, s *apiv1.Service) *apiv1.Service {
 	result := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        s.Name,
@@ -97,7 +92,7 @@ func translateService(name, namespace string, s *apiv1.Service) (*apiv1.Service,
 		result.Annotations = map[string]string{}
 	}
 	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
-	return result, nil
+	return result
 }
 
 func isEqualService(s1 *apiv1.Service, s2 *apiv1.Service) bool {

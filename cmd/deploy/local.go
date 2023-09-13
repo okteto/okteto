@@ -47,7 +47,6 @@ type localDeployer struct {
 
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
 
-	cwd          string
 	deployWaiter DeployWaiter
 	isRemote     bool
 	Fs           afero.Fs

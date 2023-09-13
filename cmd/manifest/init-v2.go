@@ -346,9 +346,7 @@ func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, namespa
 			return err
 		}
 		setFromImageConfig(dev, configFromImage)
-		if err := initCMD.SetImage(dev, language, path); err != nil {
-			return err
-		}
+		initCMD.SetImage(dev, language, path)
 		err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, language, path)
 		if err != nil {
 			oktetoLog.Infof("could not get defaults from app: %s", err.Error())

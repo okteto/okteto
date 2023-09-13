@@ -65,7 +65,6 @@ var errorManifest *model.Manifest = &model.Manifest{
 }
 
 type fakeRegistry struct {
-	err      error
 	registry map[string]fakeImage
 }
 
@@ -869,7 +868,6 @@ type fakeExternalControl struct {
 
 type fakeExternalControlProvider struct {
 	control ExternalResourceInterface
-	err     error
 }
 
 func (f *fakeExternalControl) Deploy(_ context.Context, _ string, _ string, _ *externalresource.ExternalResource) error {
@@ -1166,6 +1164,104 @@ func TestTrackDeploy(t *testing.T) {
 			}
 
 			dc.trackDeploy(tc.manifest, tc.remoteFlag, time.Now(), tc.commandErr)
+		})
+	}
+}
+
+func TestShouldRunInRemoteDeploy(t *testing.T) {
+	var tempManifest *model.Manifest = &model.Manifest{
+		Deploy: &model.DeployInfo{
+			Remote: true,
+			Image:  "some-image",
+		},
+	}
+	var tests = []struct {
+		Name         string
+		opts         *Options
+		remoteDeploy string
+		remoteForce  string
+		expected     bool
+	}{
+		{
+			Name: "Okteto_Deploy_Remote env is set to True",
+			opts: &Options{
+				RunInRemote: false,
+			},
+			remoteDeploy: "",
+			remoteForce:  "",
+			expected:     false,
+		},
+		{
+			Name: "Remote flag is set to True",
+			opts: &Options{
+				RunInRemote: true,
+			},
+			remoteDeploy: "",
+			remoteForce:  "",
+			expected:     true,
+		},
+		{
+			Name: "Remote option set by manifest is True and Image is not nil",
+			opts: &Options{
+				Manifest: tempManifest,
+			},
+			remoteDeploy: "",
+			remoteForce:  "",
+			expected:     true,
+		},
+		{
+			Name: "Remote option set by manifest is True and Image is nil",
+			opts: &Options{
+				Manifest: &model.Manifest{
+					Deploy: &model.DeployInfo{
+						Image:  "",
+						Remote: true,
+					},
+				},
+			},
+			remoteDeploy: "",
+			remoteForce:  "",
+			expected:     true,
+		},
+		{
+			Name: "Remote option set by manifest is False and Image is nil",
+			opts: &Options{
+				Manifest: &model.Manifest{
+					Deploy: &model.DeployInfo{
+						Image:  "",
+						Remote: false,
+					},
+				},
+			},
+			remoteDeploy: "",
+			remoteForce:  "",
+			expected:     false,
+		},
+		{
+			Name: "Okteto_Force_Remote env is set to True",
+			opts: &Options{
+				RunInRemote: true,
+			},
+			remoteDeploy: "",
+			remoteForce:  "",
+			expected:     true,
+		},
+		{
+			Name: "Default case",
+			opts: &Options{
+				RunInRemote: false,
+			},
+			remoteDeploy: "",
+			remoteForce:  "",
+			expected:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			t.Setenv(constants.OktetoDeployRemote, string(tt.remoteDeploy))
+			t.Setenv(constants.OktetoForceRemote, string(tt.remoteForce))
+			result := shouldRunInRemote(tt.opts)
+			assert.Equal(t, result, tt.expected)
 		})
 	}
 }

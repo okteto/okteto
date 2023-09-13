@@ -123,8 +123,8 @@ func (d *Driver) UpdatePod(pod apiv1.PodSpec) apiv1.PodSpec {
 	return pod
 }
 
-func (d *Driver) UpdateVirtualService(vs istioNetworkingV1beta1.VirtualService) istioNetworkingV1beta1.VirtualService {
-	return d.injectDivertHeader(vs)
+func (d *Driver) UpdateVirtualService(vs *istioNetworkingV1beta1.VirtualService) {
+	d.injectDivertHeader(vs)
 }
 
 func (d *Driver) retryTranslateDivertVirtualService(ctx context.Context, divertVS model.DivertVirtualService) error {

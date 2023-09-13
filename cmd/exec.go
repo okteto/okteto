@@ -220,7 +220,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 				return err
 			}
 
-			cmd, err := executor.GetCommandToExec(ctx, args)
+			cmd, err := executor.GetCommandToExec(args)
 			if err != nil {
 				return err
 			}

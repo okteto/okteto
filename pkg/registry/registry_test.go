@@ -16,8 +16,9 @@ package registry
 import (
 	"crypto/x509"
 	"fmt"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"testing"
+
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/stretchr/testify/assert"
@@ -52,19 +53,6 @@ func (fc FakeConfig) GetServerNameOverride() string { return fc.ServerName }
 func (fc FakeConfig) GetContextName() string        { return fc.ContextName }
 func (fc FakeConfig) GetExternalRegistryCredentials(_ string) (string, string, error) {
 	return fc.externalRegistryCredentials[0], fc.externalRegistryCredentials[1], nil
-}
-
-type fakeDescriptor struct {
-	MockImage mockImageFunc
-}
-
-func (f *fakeDescriptor) Image() (v1.Image, error) {
-	return f.MockImage.Result, f.MockImage.Err
-}
-
-type mockImageFunc struct {
-	Result v1.Image
-	Err    error
 }
 
 func TestGetImageTagWithDigest(t *testing.T) {
