@@ -74,6 +74,7 @@ executors:
 jobs:
   golangci-lint:
     executor: golang-ci
+    resource_class: large
     steps:
       - checkout
       - restore_cache:
