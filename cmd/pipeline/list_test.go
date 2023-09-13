@@ -4,14 +4,18 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/pkg/constants"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/tools/clientcmd/api"
 	"testing"
 )
 
@@ -37,6 +41,86 @@ func mockPipeline(fakeName string, fakeLabels []string) *apiv1.ConfigMap {
 			"branch":     fmt.Sprintf("%s-branch", fakeName),
 		},
 	}
+}
+
+func TestPipelineListCommandHandler_OnlyOktetoCluster(t *testing.T) {
+	ctx := context.Background()
+
+	initOkCtx := func(ctx context.Context, flags *contextCMD.ContextOptions) error {
+		return nil
+	}
+
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  false,
+			},
+		},
+		CurrentContext: "test",
+	}
+
+	err := pipelineListCommandHandler(ctx, &listFlags{}, okteto.Context(), initOkCtx)
+
+	assert.ErrorIs(t, err, oktetoErrors.ErrContextIsNotOktetoCluster)
+}
+
+func TestPipelineListCommandHandler_InitOktetoContextFail(t *testing.T) {
+	ctx := context.Background()
+
+	initOkCtx := func(ctx context.Context, flags *contextCMD.ContextOptions) error {
+		return assert.AnError
+	}
+
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+			},
+		},
+		CurrentContext: "test",
+	}
+
+	err := pipelineListCommandHandler(ctx, &listFlags{}, okteto.Context(), initOkCtx)
+
+	assert.ErrorIs(t, err, assert.AnError)
+}
+
+func TestPipelineListCommandHandler_DefaultNamespace(t *testing.T) {
+	ctx := context.Background()
+
+	flags := &listFlags{
+		namespace: "",
+	}
+
+	initOkCtx := func(ctx context.Context, flags *contextCMD.ContextOptions) error {
+		return nil
+	}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+				Name:      "test",
+				Token:     "test-token",
+				Cfg: &api.Config{
+					CurrentContext: "test",
+					Contexts: map[string]*api.Context{
+						"test": {
+							Namespace: "test",
+						},
+					},
+				},
+			},
+		},
+		CurrentContext: "test",
+	}
+
+	_ = pipelineListCommandHandler(ctx, flags, okteto.Context(), initOkCtx)
+
+	fmt.Println(okteto.CurrentStore)
+	assert.Equal(t, flags.namespace, "test")
 }
 
 func TestExecuteListPipelines(t *testing.T) {

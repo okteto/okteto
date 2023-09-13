@@ -58,40 +58,7 @@ func list(ctx context.Context) *cobra.Command {
 		Short: "List all okteto pipelines",
 		Args:  utils.NoArgsAccepted(""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if flags.namespace == "" {
-				flags.namespace = okteto.Context().Namespace
-			}
-
-			ctxResource := &model.ContextResource{}
-			if err := ctxResource.UpdateNamespace(flags.namespace); err != nil {
-				return err
-			}
-
-			ctxOptions := &contextCMD.ContextOptions{
-				Namespace: ctxResource.Namespace,
-				Show:      false,
-			}
-			if flags.output == "" {
-				ctxOptions.Show = true
-			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
-				return err
-			}
-
-			if !okteto.IsOkteto() {
-				return oktetoErrors.ErrContextIsNotOktetoCluster
-			}
-
-			pc, err := NewCommand()
-			if err != nil {
-				return err
-			}
-			c, _, err := pc.k8sClientProvider.Provide(okteto.Context().Cfg)
-			if err != nil {
-				return fmt.Errorf("failed to load okteto context '%s': %v", okteto.Context().Name, err)
-			}
-
-			return executeListPipelines(cmd.Context(), *flags, configmaps.List, getPipelineListOutput, c, os.Stdout)
+			return pipelineListCommandHandler(ctx, flags, okteto.Context(), contextCMD.NewContextCommand().Run)
 		},
 	}
 
@@ -101,6 +68,44 @@ func list(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
+func pipelineListCommandHandler(ctx context.Context, flags *listFlags, okCtx *okteto.OktetoContext, initOkCtx initOkCtxFn) error {
+	if !okCtx.IsOkteto {
+		return oktetoErrors.ErrContextIsNotOktetoCluster
+	}
+
+	if flags.namespace == "" {
+		flags.namespace = okCtx.Namespace
+	}
+
+	ctxResource := &model.ContextResource{}
+	if err := ctxResource.UpdateNamespace(flags.namespace); err != nil {
+		return err
+	}
+
+	ctxOptions := &contextCMD.ContextOptions{
+		Namespace: ctxResource.Namespace,
+		Show:      false,
+	}
+	if flags.output == "" {
+		ctxOptions.Show = true
+	}
+	if err := initOkCtx(ctx, ctxOptions); err != nil {
+		return err
+	}
+
+	pc, err := NewCommand()
+	if err != nil {
+		return err
+	}
+	c, _, err := pc.k8sClientProvider.Provide(okCtx.Cfg)
+	if err != nil {
+		return fmt.Errorf("failed to load okteto context '%s': %v", okCtx.Name, err)
+	}
+
+	return executeListPipelines(ctx, *flags, configmaps.List, getPipelineListOutput, c, os.Stdout)
+}
+
+type initOkCtxFn func(ctx context.Context, ctxOptions *contextCMD.ContextOptions) error
 type getPipelineListOutputFn func(ctx context.Context, listPipelines listPipelinesFn, namespace, labelSelector string, c kubernetes.Interface) ([]pipelineListItem, error)
 type listPipelinesFn func(ctx context.Context, namespace, labelSelector string, c kubernetes.Interface) ([]apiv1.ConfigMap, error)
 
