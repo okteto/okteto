@@ -49,7 +49,9 @@ func (f fakeBuilder) Build(_ context.Context, opts *types.BuildOptions) error {
 func (fakeBuilder) IsV1() bool { return true }
 
 type fakeRegistry struct {
-	registry map[string]fakeImage
+	registry          map[string]fakeImage
+	errAddImageByName error
+	errAddImageByOpts error
 }
 
 // fakeImage represents the data from an image
@@ -78,12 +80,18 @@ func (fr fakeRegistry) GetImageTagWithDigest(imageTag string) (string, error) {
 func (fr fakeRegistry) IsOktetoRegistry(_ string) bool { return false }
 
 func (fr fakeRegistry) AddImageByName(images ...string) error {
+	if fr.errAddImageByName != nil {
+		return fr.errAddImageByName
+	}
 	for _, image := range images {
 		fr.registry[image] = fakeImage{}
 	}
 	return nil
 }
 func (fr fakeRegistry) AddImageByOpts(opts *types.BuildOptions) error {
+	if fr.errAddImageByOpts != nil {
+		return fr.errAddImageByOpts
+	}
 	fr.registry[opts.Tag] = fakeImage{Args: opts.BuildArgs}
 	return nil
 }
