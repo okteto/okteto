@@ -65,7 +65,6 @@ var errorManifest *model.Manifest = &model.Manifest{
 }
 
 type fakeRegistry struct {
-	err      error
 	registry map[string]fakeImage
 }
 
@@ -869,7 +868,6 @@ type fakeExternalControl struct {
 
 type fakeExternalControlProvider struct {
 	control ExternalResourceInterface
-	err     error
 }
 
 func (f *fakeExternalControl) Deploy(_ context.Context, _ string, _ string, _ *externalresource.ExternalResource) error {

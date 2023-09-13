@@ -105,13 +105,6 @@ func (fe *fakeExecutor) Execute(command model.DeployCommand, _ []string) error {
 }
 
 func (*fakeExecutor) CleanUp(_ error) {}
-func getManifestWithError(_ string) (*model.Manifest, error) {
-	return nil, assert.AnError
-}
-
-func getFakeManifest(_ string) (*model.Manifest, error) {
-	return fakeManifest, nil
-}
 
 func TestMain(m *testing.M) {
 	okteto.CurrentStore = &okteto.OktetoContextStore{

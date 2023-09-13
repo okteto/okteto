@@ -23,8 +23,11 @@ import (
 )
 
 type FakeK8sProvider struct {
-	objects []runtime.Object
-	client  *fake.Clientset
+	objects             []runtime.Object
+	client              *fake.Clientset
+	restConfig          *rest.Config
+	errGetIngressClient error
+	errProvide          error
 }
 
 func NewFakeK8sProvider(objects ...runtime.Object) *FakeK8sProvider {
@@ -35,6 +38,9 @@ func NewFakeK8sProvider(objects ...runtime.Object) *FakeK8sProvider {
 }
 
 func (f *FakeK8sProvider) Provide(_ *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
+	if f.errProvide != nil {
+		return nil, nil, f.errProvide
+	}
 	if f.client != nil {
 		return f.client, nil, nil
 	}
@@ -46,10 +52,14 @@ func (f *FakeK8sProvider) Provide(_ *clientcmdapi.Config) (kubernetes.Interface,
 	}
 
 	f.client = c
-	return c, nil, nil
+	return c, f.restConfig, nil
 }
 
 func (f *FakeK8sProvider) GetIngressClient() (*ingresses.Client, error) {
+	if f.errGetIngressClient != nil {
+		return nil, f.errGetIngressClient
+	}
+
 	c := fake.NewSimpleClientset(f.objects...)
 	return ingresses.NewIngressClient(c, true), nil
 }

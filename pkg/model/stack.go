@@ -525,7 +525,7 @@ type errDependsOnUndefined struct {
 }
 
 func (e *errDependsOnUndefined) Error() string {
-	return fmt.Sprintf("%s: Service '%s' depends on service '%s' which is undefined.", errDependsOn.Error(), e.svc, e.dependentSvc)
+	return fmt.Errorf("%w: Service '%s' depends on service '%s' which is undefined.", errDependsOn, e.svc, e.dependentSvc).Error()
 }
 
 func (e *errDependsOnUndefined) Unwrap() error {
@@ -543,7 +543,7 @@ func (cs ComposeServices) ValidateDependsOn(svcs []string) error {
 				return &errDependsOnItself{service: svcName}
 			}
 			if _, ok := cs[dependentSvc]; !ok {
-				return fmt.Errorf("%w: Service '%s' depends on service '%s' which is undefined.", errDependsOn, svcName, dependentSvc)
+				return &errDependsOnUndefined{svc: svcName, dependentSvc: dependentSvc}
 			}
 			if condition.Condition == DependsOnServiceCompleted && !cs[dependentSvc].IsJob() {
 				return fmt.Errorf("%w: Service '%s' is not a job. Please make sure the 'restart_policy' is not set to 'always' in service '%s' ", errDependsOn, dependentSvc, dependentSvc)
