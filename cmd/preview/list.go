@@ -23,15 +23,18 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
 
-// ListFlags are the flags available for list commands
-type ListFlags struct {
+var (
+	errInvalidOutput = fmt.Errorf("output format is not accepted. Value must be one of: ['json', 'yaml']")
+)
+
+// listFlags are the flags available for list commands
+type listFlags struct {
 	labels []string
 	output string
 }
@@ -43,9 +46,20 @@ type previewOutput struct {
 	Labels   []string `json:"labels" yaml:"labels"`
 }
 
+type listPreviewCommand struct {
+	okClient types.OktetoInterface
+	flags    *listFlags
+}
+
+func newListPreviewCommand(okClient types.OktetoInterface, flags *listFlags) *listPreviewCommand {
+	return &listPreviewCommand{
+		okClient, flags,
+	}
+}
+
 // List lists all the previews
 func List(ctx context.Context) *cobra.Command {
-	flags := &ListFlags{}
+	flags := &listFlags{}
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List all preview environments",
@@ -64,12 +78,12 @@ func List(ctx context.Context) *cobra.Command {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			if err := ValidateOutput(flags.output); err != nil {
+			okClient, err := okteto.NewOktetoClient()
+			if err != nil {
 				return err
 			}
-
-			err := executeListPreviews(ctx, *flags)
-			return err
+			listCmd := newListPreviewCommand(okClient, flags)
+			return listCmd.run(ctx)
 		},
 	}
 	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "tag and organize preview environments using labels (multiple --label flags accepted)")
@@ -78,32 +92,52 @@ func List(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func executeListPreviews(ctx context.Context, opts ListFlags) error {
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
+func (cmd *listPreviewCommand) run(ctx context.Context) error {
+
+	if err := validatePreviewListOutput(cmd.flags.output); err != nil {
 		return err
 	}
-	previewListOutput, err := getPreviewOutput(ctx, opts, oktetoClient)
+
+	previewList, err := cmd.okClient.Previews().List(ctx, cmd.flags.labels)
 	if err != nil {
-		return err
+		if uErr, ok := err.(oktetoErrors.UserError); ok {
+			return uErr
+		}
+		return fmt.Errorf("failed to get preview environments: %w", err)
 	}
-	switch opts.output {
+
+	previewOutput := getPreviewOutput(previewList)
+	return displayListPreviews(previewOutput, cmd.flags.output)
+}
+
+// displayListPreviews prints the list of previews
+func displayListPreviews(previews []previewOutput, outputFormat string) error {
+	switch outputFormat {
 	case "json":
-		bytes, err := json.MarshalIndent(previewListOutput, "", " ")
+		// json marshal return null for empty objects, returning the empty list if no previews are retrieved
+		if len(previews) == 0 {
+			fmt.Println(previews)
+			return nil
+		}
+		bytes, err := json.MarshalIndent(previews, "", " ")
 		if err != nil {
 			return err
 		}
-		oktetoLog.Println(string(bytes))
+		fmt.Println(string(bytes))
 	case "yaml":
-		bytes, err := yaml.Marshal(previewListOutput)
+		bytes, err := yaml.Marshal(previews)
 		if err != nil {
 			return err
 		}
-		oktetoLog.Println(string(bytes))
+		fmt.Println(string(bytes))
 	default:
+		if len(previews) == 0 {
+			fmt.Println("There are no previews")
+			return nil
+		}
 		w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
 		fmt.Fprint(w, "Name\tScope\tSleeping\tLabels\n")
-		for _, preview := range previewListOutput {
+		for _, preview := range previews {
 			output := getPreviewDefaultOutput(preview)
 			fmt.Fprint(w, output)
 		}
@@ -112,6 +146,7 @@ func executeListPreviews(ctx context.Context, opts ListFlags) error {
 	return nil
 }
 
+// getPreviewDefaultOutput returns the rows for the default list output format
 func getPreviewDefaultOutput(preview previewOutput) string {
 	previewLabels := "-"
 	if len(preview.Labels) > 0 {
@@ -120,32 +155,27 @@ func getPreviewDefaultOutput(preview previewOutput) string {
 	return fmt.Sprintf("%s\t%s\t%v\t%s\n", preview.Name, preview.Scope, preview.Sleeping, previewLabels)
 }
 
-func getPreviewOutput(ctx context.Context, opts ListFlags, oktetoClient types.OktetoInterface) ([]previewOutput, error) {
+// getPreviewOutput transforms type.Preview into previewOutput type
+func getPreviewOutput(previews []types.Preview) []previewOutput {
 	var previewSlice []previewOutput
-	previewList, err := oktetoClient.Previews().List(ctx, opts.labels)
-	if err != nil {
-		if uErr, ok := err.(oktetoErrors.UserError); ok {
-			return nil, uErr
-		}
-		return nil, fmt.Errorf("failed to get preview environments: %s", err)
-	}
-	for _, preview := range previewList {
+	for _, p := range previews {
 		previewOutput := previewOutput{
-			Name:     preview.ID,
-			Scope:    preview.Scope,
-			Sleeping: preview.Sleeping,
-			Labels:   preview.PreviewLabels,
+			Name:     p.ID,
+			Scope:    p.Scope,
+			Sleeping: p.Sleeping,
+			Labels:   p.PreviewLabels,
 		}
 		previewSlice = append(previewSlice, previewOutput)
 	}
-	return previewSlice, nil
+	return previewSlice
 }
 
-func ValidateOutput(output string) error {
+// validatePreviewListOutput returns error if output flag is not valid
+func validatePreviewListOutput(output string) error {
 	switch output {
 	case "", "json", "yaml":
 		return nil
 	default:
-		return fmt.Errorf("output format is not accepted. Value must be one of: ['json', 'yaml']")
+		return errInvalidOutput
 	}
 }
