@@ -984,3 +984,109 @@ func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, cfg)
 }
+
+func TestShouldRunInRemoteDestroy(t *testing.T) {
+	var tempManifest *model.Manifest = &model.Manifest{
+		Destroy: &model.DestroyInfo{
+			Remote: true,
+		},
+	}
+	var tests = []struct {
+		Name          string
+		opts          *Options
+		remoteDestroy string
+		remoteForce   string
+		expected      bool
+	}{
+		{
+			Name: "Okteto_Deploy_Remote env variable is set to True",
+			opts: &Options{
+				RunInRemote: false,
+			},
+			remoteDestroy: "True",
+			remoteForce:   "",
+			expected:      false,
+		},
+		{
+			Name: "Okteto_Force_Remote env variable is set to True",
+			opts: &Options{
+				RunInRemote: true,
+			},
+			remoteDestroy: "",
+			remoteForce:   "True",
+			expected:      true,
+		},
+		{
+			Name: "Remote flag is set to True by CLI",
+			opts: &Options{
+				RunInRemote: true,
+			},
+			remoteDestroy: "",
+			remoteForce:   "",
+			expected:      true,
+		},
+		{
+			Name: "Remote option set by manifest is True & Image is not nil",
+			opts: &Options{
+				Manifest: tempManifest,
+			},
+			remoteDestroy: "",
+			remoteForce:   "",
+			expected:      true,
+		},
+		{
+			Name: "Remote option set by manifest is True and Image is not nil",
+			opts: &Options{
+				Manifest: tempManifest,
+			},
+			remoteDestroy: "",
+			remoteForce:   "",
+			expected:      true,
+		},
+		{
+			Name: "Remote option set by manifest is True and Image is nil",
+			opts: &Options{
+				Manifest: &model.Manifest{
+					Destroy: &model.DestroyInfo{
+						Image:  "",
+						Remote: true,
+					},
+				},
+			},
+			remoteDestroy: "",
+			remoteForce:   "",
+			expected:      true,
+		},
+		{
+			Name: "Remote option set by manifest is False and Image is nil",
+			opts: &Options{
+				Manifest: &model.Manifest{
+					Destroy: &model.DestroyInfo{
+						Image:  "",
+						Remote: false,
+					},
+				},
+			},
+			remoteDestroy: "",
+			remoteForce:   "",
+			expected:      false,
+		},
+		{
+			Name: "Default case",
+			opts: &Options{
+				RunInRemote: false,
+			},
+			remoteDestroy: "",
+			remoteForce:   "",
+			expected:      false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			t.Setenv(constants.OktetoDeployRemote, string(tt.remoteDestroy))
+			t.Setenv(constants.OktetoForceRemote, string(tt.remoteForce))
+			result := shouldRunInRemote(tt.opts)
+			assert.Equal(t, result, tt.expected)
+		})
+	}
+}

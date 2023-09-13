@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/config"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -30,7 +31,6 @@ import (
 	builder "github.com/okteto/okteto/cmd/build"
 
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
-	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/remote"
