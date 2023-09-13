@@ -6,6 +6,15 @@ output:
   sort-results: true
 
 linters-settings:
+  unparam:
+    # Inspect exported functions.
+    #
+    # Set to true if no external program/library imports your code.
+    # XXX: if you enable this setting, unparam will report a lot of false-positives in text editors:
+    # if it's called for subdir of a project it can't find external interfaces. All text editor integrations
+    # with golangci-lint call it on a directory with the changed file.
+    #
+    check-exported: true
   errcheck:
     # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
     # Such cases aren't reported by default.
@@ -40,3 +49,7 @@ issues:
     - path: '(.+)_test\.go'
       linters:
         - errcheck
+    - linters:
+        - unparam
+      # exclude from linting the custom implementation for "MarshalYAML"
+      text: 'MarshalYAML()'
