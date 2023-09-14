@@ -132,8 +132,8 @@ func TestPipelineListCommandHandler_DefaultNamespace(t *testing.T) {
 
 	_ = pipelineListCommandHandler(ctx, flags, initOkCtx)
 
-	fmt.Println(okteto.CurrentStore)
 	assert.Equal(t, flags.namespace, "test")
+
 }
 
 func TestExecuteListPipelines(t *testing.T) {
@@ -381,6 +381,58 @@ dev2  dev2-status  https://dev2-repository  dev2-branch  fake-label-2
   branch: dev3-branch
   labels:
   - fake-label-3
+`,
+		},
+		{
+			name: "success - using context and namespace flags",
+			input: input{
+				flags: listFlags{
+					context:   "another-context",
+					namespace: "another-namespace",
+					output:    "",
+				},
+				listPipelines:         configmaps.List,
+				getPipelineListOutput: getPipelineListOutput,
+				c: fake.NewSimpleClientset(
+					&apiv1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-ns",
+							Labels: map[string]string{
+								constants.NamespaceStatusLabel: "Deployed",
+							},
+						},
+					},
+					&apiv1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "another-namespace",
+							Labels: map[string]string{
+								constants.NamespaceStatusLabel: "Deployed",
+							},
+						},
+					},
+					mockPipeline("dev1", []string{}),
+					mockPipeline("dev2", []string{"fake-label-2"}),
+					mockPipeline("dev3", []string{"fake-label-3"}),
+					&apiv1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "dev4",
+							Namespace: "another-namespace",
+							Labels: map[string]string{
+								model.GitDeployLabel: "true",
+							},
+						},
+						Data: map[string]string{
+							"name":       "dev4",
+							"status":     "dev4-status",
+							"repository": "https://dev4-repository",
+							"branch":     "dev4-branch",
+						},
+					},
+				),
+			},
+			expectedError: nil,
+			expectedPrintedOutput: `Name  Status       Repository               Branch       Labels
+dev4  dev4-status  https://dev4-repository  dev4-branch  -
 `,
 		},
 	}

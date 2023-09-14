@@ -61,7 +61,6 @@ func list(ctx context.Context) *cobra.Command {
 		Args:  utils.NoArgsAccepted(""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return pipelineListCommandHandler(ctx, flags, contextCMD.NewContextCommand().Run)
-			//return pipelineListCommandHandler(ctx, flags, okteto.Context(), contextCMD.NewContextCommand().Run)
 		},
 	}
 
@@ -72,7 +71,6 @@ func list(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-// func pipelineListCommandHandler(ctx context.Context, flags *listFlags, okCtx *okteto.OktetoContext, initOkCtx initOkCtxFn) error {
 // pipelineListCommandHandler prepares the right okteto context depending on the provided flags and then calls the actual function that lists pipelines
 func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx initOkCtxFn) error {
 	ctxResource := &model.ContextResource{}
