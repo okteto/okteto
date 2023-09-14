@@ -118,7 +118,9 @@ func NewDeployExternalK8sControl(cfg *rest.Config) ExternalResourceInterface {
 // Deploy deploys the okteto manifest
 func Deploy(ctx context.Context) *cobra.Command {
 	options := &Options{}
-
+	fs := &DeployCommand{
+		Fs: afero.NewOsFs(),
+	}
 	cmd := &cobra.Command{
 		Use:   "deploy [service...]",
 		Short: "Execute the list of commands specified in the 'deploy' section of your okteto manifest",
@@ -135,25 +137,10 @@ func Deploy(ctx context.Context) *cobra.Command {
 			// This is needed because the deploy command needs the original kubeconfig configuration even in the execution within another
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(constants.OktetoSkipConfigCredentialsUpdate, "false")
-			if options.ManifestPath != "" {
-				// if path is absolute, its transformed from root path to a rel path
-				initialCWD, err := os.Getwd()
-				if err != nil {
-					return fmt.Errorf("failed to get the current working directory: %w", err)
-				}
-				manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, options.ManifestPath)
-				if err != nil {
-					return err
-				}
-				// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
-				options.ManifestPathFlag = manifestPathFlag
 
-				// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
-				uptManifestPath, err := model.UpdateCWDtoManifestPath(options.ManifestPath)
-				if err != nil {
-					return err
-				}
-				options.ManifestPath = uptManifestPath
+			err := checkOktetoManifestPathFlag(options, fs.Fs)
+			if err != nil {
+				return err
 			}
 
 			// Loads, updates and uses the context from path. If not found, it creates and uses a new context
@@ -652,4 +639,33 @@ func (dc *DeployCommand) trackDeploy(manifest *model.Manifest, runInRemoteFlag b
 		HasBuildSection:        hasBuildSection,
 		IsRemote:               isRunningOnRemoteDeployer,
 	})
+}
+
+func checkOktetoManifestPathFlag(options *Options, fs afero.Fs) error {
+	if options.ManifestPath != "" {
+		// if path is absolute, its transformed from root path to a rel path
+		initialCWD, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get the current working directory: %w", err)
+		}
+		manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, options.ManifestPath)
+		if err != nil {
+			return err
+		}
+		// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
+		options.ManifestPathFlag = manifestPathFlag
+
+		// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
+		uptManifestPath, err := model.UpdateCWDtoManifestPath(options.ManifestPath)
+		if err != nil {
+			return err
+		}
+		options.ManifestPath = uptManifestPath
+
+		// check whether the manifest file provided by -f exists or not
+		if _, err := fs.Stat(options.ManifestPath); err != nil {
+			return fmt.Errorf("%s file doesn't exist", options.ManifestPath)
+		}
+	}
+	return nil
 }
