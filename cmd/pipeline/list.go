@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/repository"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 	"io"
@@ -38,6 +39,7 @@ import (
 
 type listFlags struct {
 	labels    []string
+	context   string
 	namespace string
 	output    string
 }
@@ -58,39 +60,56 @@ func list(ctx context.Context) *cobra.Command {
 		Short: "List all okteto pipelines",
 		Args:  utils.NoArgsAccepted(""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return pipelineListCommandHandler(ctx, flags, okteto.Context(), contextCMD.NewContextCommand().Run)
+			return pipelineListCommandHandler(ctx, flags, contextCMD.NewContextCommand().Run)
+			//return pipelineListCommandHandler(ctx, flags, okteto.Context(), contextCMD.NewContextCommand().Run)
 		},
 	}
 
+	cmd.Flags().StringVarP(&flags.context, "context", "c", "", "context where the pipelines are deployed (defaults to the current context)")
 	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "tag and organize dev environments using labels (multiple --label flags accepted)")
 	cmd.Flags().StringVarP(&flags.namespace, "namespace", "n", "", "namespace where the pipelines are deployed (defaults to the current namespace)")
 	cmd.Flags().StringVarP(&flags.output, "output", "o", "", "output format. One of: ['json', 'yaml']")
 	return cmd
 }
 
-func pipelineListCommandHandler(ctx context.Context, flags *listFlags, okCtx *okteto.OktetoContext, initOkCtx initOkCtxFn) error {
+// func pipelineListCommandHandler(ctx context.Context, flags *listFlags, okCtx *okteto.OktetoContext, initOkCtx initOkCtxFn) error {
+// pipelineListCommandHandler prepares the right okteto context depending on the provided flags and then calls the actual function that lists pipelines
+func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx initOkCtxFn) error {
+	ctxResource := &model.ContextResource{}
+	ctxOptions := &contextCMD.ContextOptions{
+		Show: false,
+	}
+	if flags.output == "" {
+		ctxOptions.Show = true
+	}
+
+	if flags.context != "" {
+		if err := ctxResource.UpdateContext(flags.context); err != nil {
+			return err
+		}
+	}
+
+	if flags.namespace != "" {
+		if err := ctxResource.UpdateNamespace(flags.namespace); err != nil {
+			return err
+		}
+	}
+
+	ctxOptions.Context = ctxResource.Context
+	ctxOptions.Namespace = ctxResource.Namespace
+
+	if err := initOkCtx(ctx, ctxOptions); err != nil {
+		return err
+	}
+
+	okCtx := okteto.Context()
+
 	if !okCtx.IsOkteto {
 		return oktetoErrors.ErrContextIsNotOktetoCluster
 	}
 
 	if flags.namespace == "" {
 		flags.namespace = okCtx.Namespace
-	}
-
-	ctxResource := &model.ContextResource{}
-	if err := ctxResource.UpdateNamespace(flags.namespace); err != nil {
-		return err
-	}
-
-	ctxOptions := &contextCMD.ContextOptions{
-		Namespace: ctxResource.Namespace,
-		Show:      false,
-	}
-	if flags.output == "" {
-		ctxOptions.Show = true
-	}
-	if err := initOkCtx(ctx, ctxOptions); err != nil {
-		return err
 	}
 
 	pc, err := NewCommand()
@@ -109,6 +128,7 @@ type initOkCtxFn func(ctx context.Context, ctxOptions *contextCMD.ContextOptions
 type getPipelineListOutputFn func(ctx context.Context, listPipelines listPipelinesFn, namespace, labelSelector string, c kubernetes.Interface) ([]pipelineListItem, error)
 type listPipelinesFn func(ctx context.Context, namespace, labelSelector string, c kubernetes.Interface) ([]apiv1.ConfigMap, error)
 
+// executeListPipelines is responsible for output management and calling the function that lists pipelines
 func executeListPipelines(ctx context.Context, opts listFlags, listPipelines listPipelinesFn, getPipelineListOutput getPipelineListOutputFn, c kubernetes.Interface, w io.Writer) error {
 	labelSelector, err := getLabelSelector(opts.labels)
 	if err != nil {
@@ -197,7 +217,7 @@ func getPipelineListOutput(ctx context.Context, listPipelines listPipelinesFn, n
 		item := pipelineListItem{
 			Name:       cm.Data["name"],
 			Status:     cm.Data["status"],
-			Repository: cm.Data["repository"],
+			Repository: repository.NewRepository(cm.Data["repository"]).GetAnonymizedRepo(),
 			Branch:     cm.Data["branch"],
 			Labels:     []string{},
 		}

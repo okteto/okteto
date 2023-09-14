@@ -50,7 +50,7 @@ func mockPipeline(fakeName string, fakeLabels []string) *apiv1.ConfigMap {
 		Data: map[string]string{
 			"name":       fakeName,
 			"status":     fmt.Sprintf("%s-status", fakeName),
-			"repository": fmt.Sprintf("%s-repository", fakeName),
+			"repository": fmt.Sprintf("https://%s-repository", fakeName),
 			"branch":     fmt.Sprintf("%s-branch", fakeName),
 		},
 	}
@@ -73,7 +73,7 @@ func TestPipelineListCommandHandler_OnlyOktetoCluster(t *testing.T) {
 		CurrentContext: "test",
 	}
 
-	err := pipelineListCommandHandler(ctx, &listFlags{}, okteto.Context(), initOkCtx)
+	err := pipelineListCommandHandler(ctx, &listFlags{}, initOkCtx)
 
 	assert.ErrorIs(t, err, oktetoErrors.ErrContextIsNotOktetoCluster)
 }
@@ -95,7 +95,7 @@ func TestPipelineListCommandHandler_InitOktetoContextFail(t *testing.T) {
 		CurrentContext: "test",
 	}
 
-	err := pipelineListCommandHandler(ctx, &listFlags{}, okteto.Context(), initOkCtx)
+	err := pipelineListCommandHandler(ctx, &listFlags{}, initOkCtx)
 
 	assert.ErrorIs(t, err, assert.AnError)
 }
@@ -130,7 +130,7 @@ func TestPipelineListCommandHandler_DefaultNamespace(t *testing.T) {
 		CurrentContext: "test",
 	}
 
-	_ = pipelineListCommandHandler(ctx, flags, okteto.Context(), initOkCtx)
+	_ = pipelineListCommandHandler(ctx, flags, initOkCtx)
 
 	fmt.Println(okteto.CurrentStore)
 	assert.Equal(t, flags.namespace, "test")
@@ -230,10 +230,10 @@ func TestExecuteListPipelines(t *testing.T) {
 				),
 			},
 			expectedError: nil,
-			expectedPrintedOutput: `Name  Status       Repository       Branch       Labels
-dev1  dev1-status  dev1-repository  dev1-branch  -
-dev2  dev2-status  dev2-repository  dev2-branch  fake-label-2
-dev3  dev3-status  dev3-repository  dev3-branch  fake-label-3
+			expectedPrintedOutput: `Name  Status       Repository               Branch       Labels
+dev1  dev1-status  https://dev1-repository  dev1-branch  -
+dev2  dev2-status  https://dev2-repository  dev2-branch  fake-label-2
+dev3  dev3-status  https://dev3-repository  dev3-branch  fake-label-3
 `,
 		},
 		{
@@ -261,8 +261,8 @@ dev3  dev3-status  dev3-repository  dev3-branch  fake-label-3
 				),
 			},
 			expectedError: nil,
-			expectedPrintedOutput: `Name  Status       Repository       Branch       Labels
-dev2  dev2-status  dev2-repository  dev2-branch  fake-label-2
+			expectedPrintedOutput: `Name  Status       Repository               Branch       Labels
+dev2  dev2-status  https://dev2-repository  dev2-branch  fake-label-2
 `,
 		},
 		{
@@ -293,14 +293,14 @@ dev2  dev2-status  dev2-repository  dev2-branch  fake-label-2
  {
   "name": "dev1",
   "status": "dev1-status",
-  "repository": "dev1-repository",
+  "repository": "https://dev1-repository",
   "branch": "dev1-branch",
   "labels": []
  },
  {
   "name": "dev2",
   "status": "dev2-status",
-  "repository": "dev2-repository",
+  "repository": "https://dev2-repository",
   "branch": "dev2-branch",
   "labels": [
    "fake-label-2"
@@ -309,7 +309,7 @@ dev2  dev2-status  dev2-repository  dev2-branch  fake-label-2
  {
   "name": "dev3",
   "status": "dev3-status",
-  "repository": "dev3-repository",
+  "repository": "https://dev3-repository",
   "branch": "dev3-branch",
   "labels": [
    "fake-label-3"
@@ -366,18 +366,18 @@ dev2  dev2-status  dev2-repository  dev2-branch  fake-label-2
 			expectedError: nil,
 			expectedPrintedOutput: `- name: dev1
   status: dev1-status
-  repository: dev1-repository
+  repository: https://dev1-repository
   branch: dev1-branch
   labels: []
 - name: dev2
   status: dev2-status
-  repository: dev2-repository
+  repository: https://dev2-repository
   branch: dev2-branch
   labels:
   - fake-label-2
 - name: dev3
   status: dev3-status
-  repository: dev3-repository
+  repository: https://dev3-repository
   branch: dev3-branch
   labels:
   - fake-label-3
@@ -478,14 +478,14 @@ func TestGetPipelineListOutput(t *testing.T) {
 					{
 						Name:       "dev1",
 						Status:     "dev1-status",
-						Repository: "dev1-repository",
+						Repository: "https://dev1-repository",
 						Branch:     "dev1-branch",
 						Labels:     []string{},
 					},
 					{
 						Name:       "dev2",
 						Status:     "dev2-status",
-						Repository: "dev2-repository",
+						Repository: "https://dev2-repository",
 						Branch:     "dev2-branch",
 						Labels: []string{
 							"fake-label-2",
@@ -494,7 +494,7 @@ func TestGetPipelineListOutput(t *testing.T) {
 					{
 						Name:       "dev3",
 						Status:     "dev3-status",
-						Repository: "dev3-repository",
+						Repository: "https://dev3-repository",
 						Branch:     "dev3-branch",
 						Labels: []string{
 							"fake-label-3",
@@ -533,14 +533,14 @@ func TestGetPipelineListOutput(t *testing.T) {
 					{
 						Name:       "dev1",
 						Status:     "Sleeping",
-						Repository: "dev1-repository",
+						Repository: "https://dev1-repository",
 						Branch:     "dev1-branch",
 						Labels:     []string{},
 					},
 					{
 						Name:       "dev2",
 						Status:     "Sleeping",
-						Repository: "dev2-repository",
+						Repository: "https://dev2-repository",
 						Branch:     "dev2-branch",
 						Labels: []string{
 							"fake-label-2",
@@ -549,11 +549,60 @@ func TestGetPipelineListOutput(t *testing.T) {
 					{
 						Name:       "dev3",
 						Status:     "Sleeping",
-						Repository: "dev3-repository",
+						Repository: "https://dev3-repository",
 						Branch:     "dev3-branch",
 						Labels: []string{
 							"fake-label-3",
 						},
+					},
+				},
+				err: nil,
+			},
+		},
+		{
+			name: "success - repository url gets anonymized",
+			input: input{
+				flags: listFlags{
+					namespace: "test-ns",
+					output:    "",
+				},
+				labels:        []string{},
+				namespace:     "test-ns",
+				listPipelines: configmaps.List,
+				c: fake.NewSimpleClientset(
+					&apiv1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-ns",
+							Labels: map[string]string{
+								constants.NamespaceStatusLabel: "Deployed",
+							},
+						},
+					},
+					&apiv1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "dev1",
+							Namespace: "test-ns",
+							Labels: map[string]string{
+								model.GitDeployLabel: "true",
+							},
+						},
+						Data: map[string]string{
+							"name":       "dev1",
+							"status":     "dev1-status",
+							"repository": "https://user:pass@dev1-repository",
+							"branch":     "dev1-branch",
+						},
+					},
+				),
+			},
+			output: output{
+				pipelines: []pipelineListItem{
+					{
+						Name:       "dev1",
+						Status:     "dev1-status",
+						Repository: "https://dev1-repository",
+						Branch:     "dev1-branch",
+						Labels:     []string{},
 					},
 				},
 				err: nil,
