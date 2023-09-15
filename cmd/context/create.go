@@ -72,7 +72,11 @@ func NewContextCommand(ctxCmdOption ...ctxCmdOption) *ContextCommand {
 		OktetoClientProvider: okteto.NewOktetoClientProvider(),
 		OktetoContextWriter:  okteto.NewContextConfigWriter(),
 	}
-
+	if utils.LoadBoolean(OktetoUseStaticKubetokenEnvVar) {
+		cfg.kubetokenController = newStaticKubetokenController()
+	} else {
+		cfg.kubetokenController = newDynamicKubetokenController(cfg.OktetoClientProvider)
+	}
 	for _, o := range ctxCmdOption {
 		o(cfg)
 	}
