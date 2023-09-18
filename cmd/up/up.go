@@ -973,6 +973,7 @@ func terminateChildProcess(parent int, pList []ps.Process) {
 
 func terminateProcess(pid int) error {
 	oktetoLog.Debugf("terminating process: %s", pid)
+
 	p, err := os.FindProcess(pid)
 	if err != nil {
 		oktetoLog.Debugf("error getting process %s: %v", pid, err)
@@ -985,11 +986,9 @@ func terminateProcess(pid int) error {
 		return err
 	}
 
-	oktetoLog.Debugf("requesting process termination for pid: %s", pid)
-
 	if pgid == pid {
-		// If the process id (pid) is equal to its process group id (pgid), it means that the process is a session leader (ie. bash)
-		// In that case, sending a SIGTERM will not kill the process, so we need to send a SIGKILL
+		// if the pid equals its process group id (pgid), it's a session leader process such as bash
+		// SIGTERM will not terminate it, so we need to send SIGKILL instead
 		oktetoLog.Debugf("killing session leader process %s", pid)
 		if err := p.Kill(); err != nil {
 			oktetoLog.Debugf("error terminating session leader process %s: %v", p.Pid, err)
