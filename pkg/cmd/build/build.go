@@ -437,12 +437,10 @@ func parseTempSecrets(secretTempFolder string, buildOptions *types.BuildOptions)
 	// create a new file under tempFolder with the expanded content
 	// replace the src of the secret with the tempSrc
 	for indx, s := range buildOptions.Secrets {
-		splitSecret := strings.SplitN(s, "src=", 2)
-		if len(splitSecret) <= 0 {
-			return fmt.Errorf("unable to get secret src")
+		secretId, srcFileName, err := parseSecretFromString(s)
+		if err != nil {
+			return err
 		}
-		srcFileName := strings.TrimSpace(splitSecret[1])
-
 		// read source file
 		srcFile, err := os.Open(srcFileName)
 		if err != nil {
@@ -482,7 +480,7 @@ func parseTempSecrets(secretTempFolder string, buildOptions *types.BuildOptions)
 		}
 
 		// replace src
-		buildOptions.Secrets[indx] = fmt.Sprintf("%ssrc=%s", splitSecret[0], tmpfile.Name())
+		buildOptions.Secrets[indx] = fmt.Sprintf("id=%s,src=%s", secretId, tmpfile.Name())
 	}
 
 	return nil
