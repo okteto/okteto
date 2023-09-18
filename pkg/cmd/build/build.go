@@ -405,6 +405,31 @@ func GetVolumesToInclude(volumesToInclude []model.StackVolume) []model.StackVolu
 	return result
 }
 
+// parseSecretFromString returns id and src from the given secret string
+// format should be id=<name>,src=<source file>
+// if no id or src if found, error is returned
+func parseSecretFromString(s string) (string, string, error) {
+	_, afterId, found := strings.Cut(s, "id=")
+	if !found {
+		return "", "", fmt.Errorf("secret should have an id")
+	}
+	id, _, _ := strings.Cut(afterId, ",")
+	if id == "" {
+		return "", "", fmt.Errorf("secret id can not be empty")
+	}
+
+	_, afterSrc, found := strings.Cut(s, "src=")
+	if !found {
+		return "", "", fmt.Errorf("secret should have a source")
+	}
+	srcFileName, _, _ := strings.Cut(afterSrc, ",")
+	if srcFileName == "" {
+		return "", "", fmt.Errorf("secret source should not be empty")
+	}
+
+	return id, srcFileName, nil
+}
+
 // parseTempSecrets reads the content of the src of a secret and replaces the envs to mount into dockerfile
 func parseTempSecrets(secretTempFolder string, buildOptions *types.BuildOptions) error {
 	// for each secret at buildOptions extract the src
