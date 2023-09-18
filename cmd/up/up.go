@@ -891,7 +891,7 @@ func (up *upContext) getInsufficientSpaceError(err error) error {
 
 // Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
 func (up *upContext) shutdown() {
-	if up.isTerm {
+	if !up.Dev.IsHybridModeEnabled() && up.isTerm {
 		if err := term.RestoreTerminal(up.inFd, up.stateTerm); err != nil {
 			oktetoLog.Infof("failed to restore terminal: %s", err.Error())
 		}
@@ -972,22 +972,44 @@ func terminateChildProcess(parent int, pList []ps.Process) {
 }
 
 func terminateProcess(pid int) error {
+	oktetoLog.Debugf("terminating process: %s", pid)
 	p, err := os.FindProcess(pid)
 	if err != nil {
 		oktetoLog.Debugf("error getting process %s: %v", pid, err)
 		return err
 	}
-	if err := p.Signal(syscall.SIGTERM); err != nil {
-		if errors.Is(err, os.ErrProcessDone) {
-			return nil
+
+	pgid, err := syscall.Getpgid(pid)
+	if err != nil {
+		oktetoLog.Debugf("error getting process group id %s: %v", pid, err)
+		return err
+	}
+
+	oktetoLog.Debugf("requesting process termination for pid: %s", pid)
+
+	if pgid == pid {
+		// If the process id (pid) is equal to its process group id (pgid), it means that the process is a session leader (ie. bash)
+		// In that case, sending a SIGTERM will not kill the process, so we need to send a SIGKILL
+		oktetoLog.Debugf("killing session leader process %s", pid)
+		if err := p.Kill(); err != nil {
+			oktetoLog.Debugf("error terminating session leader process %s: %v", p.Pid, err)
+			return err
 		}
-		oktetoLog.Debugf("error terminating process %s: %v", p.Pid, err)
-		return err
+	} else {
+		if err := p.Signal(syscall.SIGTERM); err != nil {
+			if errors.Is(err, os.ErrProcessDone) {
+				return nil
+			}
+			oktetoLog.Debugf("error terminating process %s: %v", p.Pid, err)
+			return err
+		}
+
+		if _, err := p.Wait(); err != nil {
+			oktetoLog.Debugf("error waiting for process to exit %s: %v", p.Pid, err)
+			return err
+		}
 	}
-	if _, err := p.Wait(); err != nil {
-		oktetoLog.Debugf("error waiting for process to exit %s: %v", p.Pid, err)
-		return err
-	}
+
 	return nil
 }
 
