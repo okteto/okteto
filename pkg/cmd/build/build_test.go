@@ -624,3 +624,78 @@ func Test_parseTempSecrets(t *testing.T) {
 	require.Contains(t, string(b), envValue)
 
 }
+func Test_parseSecretFromString(t *testing.T) {
+	type args struct {
+		s string
+	}
+	tests := []struct {
+		name        string
+		args        args
+		expectedId  string
+		expectedSrc string
+		expectedErr bool
+	}{
+		{
+			name: "valid secret format",
+			args: args{
+				s: "id=mysecret,src=/local/path",
+			},
+			expectedId:  "mysecret",
+			expectedSrc: "/local/path",
+		},
+		{
+			name: "valid secret format 2",
+			args: args{
+				s: "src=/local/path,id=mysecret",
+			},
+			expectedId:  "mysecret",
+			expectedSrc: "/local/path",
+		},
+		{
+			name: "invalid secret format",
+			args: args{
+				s: "id=mysecret",
+			},
+			expectedId:  "",
+			expectedSrc: "",
+			expectedErr: true,
+		},
+		{
+			name: "invalid secret format 2",
+			args: args{
+				s: "src=/local/path",
+			},
+			expectedId:  "",
+			expectedSrc: "",
+			expectedErr: true,
+		},
+		{
+			name: "invalid secret format 3",
+			args: args{
+				s: "id=,src=/local/path",
+			},
+			expectedId:  "",
+			expectedSrc: "",
+			expectedErr: true,
+		},
+		{
+			name: "invalid secret format 4",
+			args: args{
+				s: "id=mysecret,src=",
+			},
+			expectedId:  "",
+			expectedSrc: "",
+			expectedErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			id, src, err := parseSecretFromString(tt.args.s)
+			require.Truef(t, tt.expectedErr == (err != nil), "expected error")
+
+			require.Equal(t, tt.expectedId, id)
+			require.Equal(t, tt.expectedSrc, src)
+
+		})
+	}
+}
