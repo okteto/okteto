@@ -113,7 +113,7 @@ func (c client) Write(ref name.Reference, image v1.Image) error {
 func (c client) GetDigest(image string) (string, error) {
 	descriptor, err := c.GetDescriptor(image)
 	if err != nil {
-		return "", fmt.Errorf("error getting image digest: %w", err)
+		return "", err
 	}
 	return descriptor.Digest.String(), nil
 }

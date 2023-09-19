@@ -68,7 +68,7 @@ func (or OktetoRegistry) GetImageTagWithDigest(image string) (string, error) {
 
 	digest, err := or.client.GetDigest(expandedImage)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error getting image tag with digest: %w", err)
 	}
 
 	imageTag := fmt.Sprintf("%s/%s@%s", registry, repository, digest)
