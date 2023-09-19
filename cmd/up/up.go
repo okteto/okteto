@@ -980,15 +980,14 @@ func terminateProcess(pid int) error {
 		return err
 	}
 
-	pgid, err := syscall.Getpgid(pid)
+	isSessionLead, err := isProcessSessionLeader(pid)
 	if err != nil {
 		oktetoLog.Debugf("error getting process group id %s: %v", pid, err)
 		return err
 	}
 
-	if pgid == pid {
-		// if the pid equals its process group id (pgid), it's a session leader process such as bash
-		// SIGTERM will not terminate it, so we need to send SIGKILL instead
+	if isSessionLead {
+		// SIGTERM will not terminate session leader processes, so we need to send SIGKILL instead
 		oktetoLog.Debugf("killing session leader process %s", pid)
 		if err := p.Kill(); err != nil {
 			oktetoLog.Debugf("error terminating session leader process %s: %v", p.Pid, err)
