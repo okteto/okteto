@@ -60,5 +60,6 @@ func Pipeline(ctx context.Context) *cobra.Command {
 	}
 	cmd.AddCommand(deploy(ctx))
 	cmd.AddCommand(destroy(ctx))
+	cmd.AddCommand(list(ctx))
 	return cmd
 }
