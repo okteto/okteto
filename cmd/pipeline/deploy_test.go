@@ -15,12 +15,8 @@ package pipeline
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -36,8 +32,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 )
 
 func Test_getRepositoryURL(t *testing.T) {
@@ -357,69 +353,76 @@ func TestDeployPipelineSuccesfulWithWaitStreamError(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+type fakeEnvSetter struct {
+	envs map[string]string
+	err  error
+}
+
+func (e *fakeEnvSetter) Set(name, value string) error {
+	if e.err != nil {
+		return e.err
+	}
+	if e.envs == nil {
+		e.envs = make(map[string]string)
+	}
+	e.envs[name] = value
+	return nil
+}
+
 func TestSetEnvsFromDependencyNoError(t *testing.T) {
-	ctx := context.Background()
-	namespace := "test"
-	cmapName := "test"
 	var tests = []struct {
-		name                 string
-		dataToSetInConfigMap map[string]string
+		name            string
+		cmap            *v1.ConfigMap
+		envSetter       fakeEnvSetter
+		expectedErr     bool
+		expectedEnvsSet map[string]string
 	}{
 		{
-			name: "no envs to set",
+			name:            "nil cmap",
+			envSetter:       fakeEnvSetter{},
+			expectedErr:     false,
+			expectedEnvsSet: nil,
 		},
 		{
-			name: "setting envs",
-			dataToSetInConfigMap: map[string]string{
-				"TESTSETENVSFROMDEPEN_ONE": "an env value",
-				"TESTSETENVSFROMDEPEN_TWO": "another env value",
+			name:      "configmap has no dependency envs",
+			envSetter: fakeEnvSetter{},
+			cmap: &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-configmap",
+				},
+				Data: map[string]string{
+					"variables": "eyJURVNUU0VURU5WU0ZST01ERVBFTl9PTkUiOiJhbiBlbnYgdmFsdWUiLCJURVNUU0VURU5WU0ZST01ERVBFTl9UV08iOiJhbm90aGVyIGVudiB2YWx1ZSJ9",
+				},
+			},
+			expectedErr:     false,
+			expectedEnvsSet: nil,
+		},
+		{
+			name:      "configmap has dependency envs",
+			envSetter: fakeEnvSetter{},
+			cmap: &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-configmap",
+				},
+				Data: map[string]string{
+					constants.OktetoDependencyEnvsKey: "eyJURVNUU0VURU5WU0ZST01ERVBFTl9PTkUiOiJhbiBlbnYgdmFsdWUiLCJURVNUU0VURU5WU0ZST01ERVBFTl9UV08iOiJhbm90aGVyIGVudiB2YWx1ZSJ9",
+				},
+			},
+			expectedErr: false,
+			expectedEnvsSet: map[string]string{
+				"OKTETO_DEPENDENCY_TEST-CONFIGMAP_VARIABLE_TESTSETENVSFROMDEPEN_ONE": "an env value",
+				"OKTETO_DEPENDENCY_TEST-CONFIGMAP_VARIABLE_TESTSETENVSFROMDEPEN_TWO": "another env value",
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			configMapData := make(map[string]string)
-			if tt.dataToSetInConfigMap != nil {
-				encondedEnvs, err := json.Marshal(tt.dataToSetInConfigMap)
-				assert.NoError(t, err)
-				encondedEnvsStr := base64.StdEncoding.EncodeToString(encondedEnvs)
-				configMapData[constants.OktetoDependencyEnvsKey] = encondedEnvsStr
-			}
-
-			cmap := &apiv1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      pipeline.TranslatePipelineName(cmapName),
-					Namespace: namespace,
-					Labels:    map[string]string{},
-				},
-				Data: configMapData,
-			}
-			fakeClient := fake.NewSimpleClientset(cmap)
-			err := setEnvsFromDependency(ctx, cmapName, namespace, fakeClient)
-			assert.NoError(t, err)
-
-			if tt.dataToSetInConfigMap != nil {
-				for k := range tt.dataToSetInConfigMap {
-					envKey := fmt.Sprintf(dependencyEnvTemplate, strings.ToUpper(cmapName), k)
-					os.Unsetenv(envKey)
-				}
-			}
+			err := setEnvsFromDependency(tt.cmap, tt.envSetter.Set)
+			require.Truef(t, tt.expectedErr == (err != nil), "unexpected error")
+			require.Equal(t, tt.expectedEnvsSet, tt.envSetter.envs)
 		})
 	}
-}
-
-func TestSetEnvsFromDependencyWithError(t *testing.T) {
-	ctx := context.Background()
-	cmap := &apiv1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test",
-			Namespace: "test",
-			Labels:    map[string]string{},
-		},
-	}
-	fakeClient := fake.NewSimpleClientset(cmap)
-	assert.Error(t, setEnvsFromDependency(ctx, "test", "test", fakeClient))
 }
 
 func TestFlagsToOptions(t *testing.T) {
