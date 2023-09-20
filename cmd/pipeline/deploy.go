@@ -146,76 +146,69 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 		return fmt.Errorf("failed to load okteto context '%s': %v", okteto.Context().Name, err)
 	}
 
-	if opts.ReuseParams {
-		cfgName := pipeline.TranslatePipelineName(opts.Name)
-
-		cfg, err := configmaps.Get(ctx, cfgName, opts.Namespace, c)
-		if err != nil {
-			if oktetoErrors.IsNotFound(err) {
-				return fmt.Errorf("Dev Environment not found to reuse params. Deploy your pipeline without --reuse-params")
-			}
-			return err
+	exists := false
+	cfgName := pipeline.TranslatePipelineName(opts.Name)
+	cfg, err := configmaps.Get(ctx, cfgName, opts.Namespace, c)
+	if err != nil {
+		if opts.ReuseParams && oktetoErrors.IsNotFound(err) {
+			return fmt.Errorf("Dev Environment not found to reuse params. Deploy your pipeline without --reuse-params")
 		}
+		if opts.SkipIfExists && !oktetoErrors.IsNotFound(err) {
+			return fmt.Errorf("failed to get pipeline '%s': %w", cfgName, err)
+		}
+	}
+	exists = cfg != nil && cfg.Data != nil
 
+	if opts.ReuseParams && exists {
 		overrideOptions := cfgToDeployOptions(cfg.Labels, cfg.Data)
 		applyOverrideToOptions(opts, overrideOptions)
 	}
 
-	if opts.SkipIfExists {
-		cfgName := pipeline.TranslatePipelineName(opts.Name)
-
-		cfg, err := configmaps.Get(ctx, cfgName, opts.Namespace, c)
-		if err != nil && !oktetoErrors.IsNotFound(err) {
-			return fmt.Errorf("failed to get pipeline '%s': %w", cfgName, err)
+	if opts.SkipIfExists && exists {
+		if cfg.Data["status"] == pipeline.DeployedStatus {
+			oktetoLog.Success("Skipping repository '%s' because it's already deployed", opts.Name)
+			return nil
 		}
-		if err == nil {
-			if cfg != nil && cfg.Data != nil {
-				if cfg.Data["status"] == pipeline.DeployedStatus {
-					oktetoLog.Success("Skipping repository '%s' because it's already deployed", opts.Name)
-					return nil
-				}
 
-				if !opts.Wait && cfg.Data["status"] == pipeline.ProgressingStatus {
-					oktetoLog.Success("Repository '%s' already scheduled for deployment", opts.Name)
-					return nil
-				}
+		if !opts.Wait && cfg.Data["status"] == pipeline.ProgressingStatus {
+			oktetoLog.Success("Repository '%s' already scheduled for deployment", opts.Name)
+			return nil
+		}
 
-				canStreamPrevLogs := cfg.Data["actionLock"] != "" && cfg.Data["actionName"] != "cli"
+		canStreamPrevLogs := cfg.Data["actionLock"] != "" && cfg.Data["actionName"] != "cli"
 
-				if opts.Wait && canStreamPrevLogs {
-					oktetoLog.Spinner(fmt.Sprintf("Repository '%s' is already being deployed, waiting for it to finish...", opts.Name))
-					oktetoLog.StartSpinner()
-					defer oktetoLog.StopSpinner()
+		if opts.Wait && canStreamPrevLogs {
+			oktetoLog.Spinner(fmt.Sprintf("Repository '%s' is already being deployed, waiting for it to finish...", opts.Name))
+			oktetoLog.StartSpinner()
+			defer oktetoLog.StopSpinner()
 
-					existingAction := &types.Action{
-						ID:   cfg.Data["actionLock"],
-						Name: cfg.Data["actionName"],
-					}
-					if err := pc.waitUntilRunning(ctx, opts.Name, opts.Namespace, existingAction, opts.Timeout); err != nil {
-						return fmt.Errorf("wait for pipeline '%s' to finish failed: %w", opts.Name, err)
-					}
-					oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
-					return nil
-				}
-
-				if opts.Wait && !canStreamPrevLogs && cfg.Data["status"] == pipeline.ProgressingStatus {
-					oktetoLog.Spinner(fmt.Sprintf("Repository '%s' is already being deployed, waiting for it to finish...", opts.Name))
-					oktetoLog.StartSpinner()
-					defer oktetoLog.StopSpinner()
-
-					ticker := time.NewTicker(1 * time.Second)
-					err := configmaps.WaitForStatus(ctx, cfgName, opts.Namespace, pipeline.DeployedStatus, ticker, opts.Timeout, c)
-					if err != nil {
-						if errors.Is(err, oktetoErrors.ErrTimeout) {
-							return fmt.Errorf("timed out waiting for repository '%s' to be deployed", opts.Name)
-						}
-						return fmt.Errorf("failed to wait for repository '%s' to be deployed: %w", opts.Name, err)
-					}
-
-					oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
-					return nil
-				}
+			existingAction := &types.Action{
+				ID:   cfg.Data["actionLock"],
+				Name: cfg.Data["actionName"],
 			}
+			if err := pc.waitUntilRunning(ctx, opts.Name, opts.Namespace, existingAction, opts.Timeout); err != nil {
+				return fmt.Errorf("wait for pipeline '%s' to finish failed: %w", opts.Name, err)
+			}
+			oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
+			return nil
+		}
+
+		if opts.Wait && !canStreamPrevLogs && cfg.Data["status"] == pipeline.ProgressingStatus {
+			oktetoLog.Spinner(fmt.Sprintf("Repository '%s' is already being deployed, waiting for it to finish...", opts.Name))
+			oktetoLog.StartSpinner()
+			defer oktetoLog.StopSpinner()
+
+			ticker := time.NewTicker(1 * time.Second)
+			err := configmaps.WaitForStatus(ctx, cfgName, opts.Namespace, pipeline.DeployedStatus, ticker, opts.Timeout, c)
+			if err != nil {
+				if errors.Is(err, oktetoErrors.ErrTimeout) {
+					return fmt.Errorf("timed out waiting for repository '%s' to be deployed", opts.Name)
+				}
+				return fmt.Errorf("failed to wait for repository '%s' to be deployed: %w", opts.Name, err)
+			}
+
+			oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
+			return nil
 		}
 	}
 
