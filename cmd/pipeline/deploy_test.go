@@ -34,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -481,6 +482,145 @@ func TestFlagsToOptions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			opts := tc.flags.toOptions()
 			assert.Equal(t, tc.expect, opts)
+		})
+	}
+}
+
+func Test_applyOverrideToOptions(t *testing.T) {
+	opts := &DeployOptions{
+		Wait:    true,
+		Timeout: 1 * time.Minute,
+	}
+	override := DeployOptions{
+		Name:       "test",
+		Namespace:  "testing",
+		File:       "filename",
+		Repository: "repository",
+		Branch:     "branch",
+		Variables:  []string{"KEY=value"},
+		Labels:     []string{"testlabel"},
+	}
+
+	applyOverrideToOptions(opts, override)
+
+	require.Equal(t, &DeployOptions{
+		Name:       "test",
+		Namespace:  "testing",
+		File:       "filename",
+		Repository: "repository",
+		Branch:     "branch",
+		Variables:  []string{"KEY=value"},
+		Labels:     []string{"testlabel"},
+		Wait:       true,
+		Timeout:    1 * time.Minute,
+	}, opts)
+}
+
+func Test_cfgToDeployOptions(t *testing.T) {
+	tests := []struct {
+		name        string
+		inputLabels map[string]string
+		inputData   map[string]string
+		expected    DeployOptions
+	}{
+		{
+			name:     "empty input",
+			expected: DeployOptions{},
+		},
+		{
+			name: "complete input",
+			inputData: map[string]string{
+				"name":       "test-name",
+				"namespace":  "test-namespace",
+				"filename":   "test-filename",
+				"file":       "test-file",
+				"repository": "test-repository",
+				"branch":     "test-branch",
+				"variables":  "",
+				"other":      "not-exist",
+			},
+			inputLabels: map[string]string{
+				"label.okteto.com/testing": "true",
+				"ignored.label":            "true",
+			},
+			expected: DeployOptions{
+				Name:       "test-name",
+				Namespace:  "test-namespace",
+				File:       "test-filename",
+				Repository: "test-repository",
+				Branch:     "test-branch",
+				Labels:     []string{"testing"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := cfgToDeployOptions(tt.inputLabels, tt.inputData)
+			require.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func Test_parseVariablesListFromCfgVariablesString(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		expectedErr bool
+		expected    []string
+	}{
+		{
+			name:     "empty input",
+			input:    "",
+			expected: nil,
+		},
+		{
+			name:        "invalid input",
+			input:       "not-encoded-string",
+			expectedErr: true,
+			expected:    nil,
+		},
+		{
+			name:     "valid input",
+			input:    "W3sibmFtZSI6IktFWSIsInZhbHVlIjoidmFsdWUifV0=",
+			expected: []string{"KEY=value"},
+		},
+	}
+
+	for _, tt := range tests {
+		got, err := parseVariablesListFromCfgVariablesString(tt.input)
+		require.Truef(t, tt.expectedErr == (err != nil), fmt.Sprintf("got unexpected error %v", err))
+		require.Equal(t, tt.expected, got)
+	}
+}
+
+func Test_parseEnvironmentLabelFromLabelsMap(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    map[string]string
+		expected []string
+	}{
+		{
+			name:  "empty input",
+			input: nil,
+		},
+		{
+			name: "with environment labels input",
+			input: map[string]string{
+				"label.okteto.com":         "true",
+				"label.okteto.com/":        "true",
+				"label.okteto.com/testing": "true",
+				"dev.okteto.com":           "true",
+			},
+			expected: []string{"testing"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := parseEnvironmentLabelFromLabelsMap(tt.input)
+
+			require.Equal(t, got, tt.expected)
 		})
 	}
 }

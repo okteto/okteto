@@ -146,6 +146,21 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 		return fmt.Errorf("failed to load okteto context '%s': %v", okteto.Context().Name, err)
 	}
 
+	if opts.ReuseParams {
+		cfgName := pipeline.TranslatePipelineName(opts.Name)
+
+		cfg, err := configmaps.Get(ctx, cfgName, opts.Namespace, c)
+		if err != nil {
+			if oktetoErrors.IsNotFound(err) {
+				return fmt.Errorf("Dev Environment not found to reuse params. Deploy your pipeline without --reuse-params")
+			}
+			return err
+		}
+
+		overrideOptions := cfgToDeployOptions(cfg.Labels, cfg.Data)
+		applyOverrideToOptions(opts, overrideOptions)
+	}
+
 	if opts.SkipIfExists {
 		cfgName := pipeline.TranslatePipelineName(opts.Name)
 
@@ -500,4 +515,96 @@ func (o *DeployOptions) toPipelineDeployClientOptions() (types.PipelineDeployOpt
 		Namespace:  o.Namespace,
 		Labels:     o.Labels,
 	}, nil
+}
+
+// parseEnvironmentLabelFromLabelsMap returns a list of strings with the environment labels from the configmap
+func parseEnvironmentLabelFromLabelsMap(labels map[string]string) []string {
+	if len(labels) == 0 {
+		return nil
+	}
+
+	l := make([]string, 0)
+	for k := range labels {
+		if strings.HasPrefix(k, constants.EnvironmentLabelKeyPrefix) {
+			_, label, found := strings.Cut(k, "/")
+			if !found || label == "" {
+				continue
+			}
+			l = append(l, label)
+		}
+	}
+	return l
+}
+
+// parseVariablesListFromCfgVariablesString returns a list of strings with the variables decoded from the configmap
+func parseVariablesListFromCfgVariablesString(vEncodedString string) ([]string, error) {
+	if len(vEncodedString) == 0 {
+		return nil, nil
+	}
+
+	vListString := make([]string, 0)
+	b, err := base64.StdEncoding.DecodeString(vEncodedString)
+	if err != nil {
+		return nil, err
+	}
+
+	var vars []types.Variable
+	if err := json.Unmarshal(b, &vars); err != nil {
+		return nil, err
+	}
+	for _, v := range vars {
+		vString := fmt.Sprintf("%s=%s", v.Name, v.Value)
+		vListString = append(vListString, vString)
+	}
+	return vListString, nil
+}
+
+// cfgDataToDeployOptions translates configmap labels and data into DeployOptions
+func cfgToDeployOptions(cfgLabels map[string]string, cfgData map[string]string) DeployOptions {
+	opts := DeployOptions{}
+
+	if v, ok := cfgData["name"]; ok {
+		opts.Name = v
+	}
+
+	if v, ok := cfgData["namespace"]; ok {
+		opts.Namespace = v
+	}
+
+	if v, ok := cfgData["filename"]; ok {
+		opts.File = v
+	}
+
+	if v, ok := cfgData["repository"]; ok {
+		opts.Repository = v
+	}
+
+	if v, ok := cfgData["branch"]; ok {
+		opts.Branch = v
+	}
+
+	if v, ok := cfgData["variables"]; ok {
+		vars, err := parseVariablesListFromCfgVariablesString(v)
+		if err != nil {
+			oktetoLog.Debugf("error parsing variables %v", err)
+		}
+		opts.Variables = vars
+	}
+
+	if l := parseEnvironmentLabelFromLabelsMap(cfgLabels); l != nil {
+		opts.Labels = l
+	}
+
+	return opts
+}
+
+// applyOverrideToOptions overrides name, namespace, file, repository, branch, variables and labels from the current cfgmap options
+func applyOverrideToOptions(opts *DeployOptions, override DeployOptions) {
+	opts.Name = override.Name
+	opts.Namespace = override.Namespace
+	opts.File = override.File
+	opts.Repository = override.Repository
+	opts.Branch = override.Branch
+	opts.Variables = override.Variables
+	opts.Labels = override.Labels
 }
