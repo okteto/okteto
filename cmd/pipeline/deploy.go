@@ -57,6 +57,7 @@ type deployFlags struct {
 	file         string
 	variables    []string
 	labels       []string
+	reuseParams  bool
 
 	// Deprecated fields
 	filename string
@@ -74,6 +75,7 @@ type DeployOptions struct {
 	File         string
 	Variables    []string
 	Labels       []string
+	ReuseParams  bool
 }
 
 func deploy(ctx context.Context) *cobra.Command {
@@ -127,6 +129,8 @@ func deploy(ctx context.Context) *cobra.Command {
 		oktetoLog.Infof("failed to mark 'filename' flag as hidden: %s", err)
 	}
 	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "set an environment label (can be set more than once)")
+	cmd.Flags().BoolVar(&flags.reuseParams, "reuse-params", false, "if pipeline exist, reuse same params to redeploy")
+
 	return cmd
 }
 
@@ -420,6 +424,7 @@ func (f deployFlags) toOptions() *DeployOptions {
 		File:         file,
 		Variables:    f.variables,
 		Labels:       f.labels,
+		ReuseParams:  f.reuseParams,
 	}
 }
 
