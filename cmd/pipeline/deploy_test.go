@@ -494,7 +494,7 @@ func Test_applyOverrideToOptions(t *testing.T) {
 		Wait:    true,
 		Timeout: 1 * time.Minute,
 	}
-	override := DeployOptions{
+	override := &DeployOptions{
 		Name:       "test",
 		Namespace:  "testing",
 		File:       "filename",
@@ -521,32 +521,54 @@ func Test_applyOverrideToOptions(t *testing.T) {
 
 func Test_cfgToDeployOptions(t *testing.T) {
 	tests := []struct {
-		name        string
-		inputLabels map[string]string
-		inputData   map[string]string
-		expected    DeployOptions
+		name     string
+		input    *v1.ConfigMap
+		expected *DeployOptions
 	}{
 		{
 			name:     "empty input",
-			expected: DeployOptions{},
+			expected: nil,
 		},
 		{
-			name: "complete input",
-			inputData: map[string]string{
-				"name":       "test-name",
-				"namespace":  "test-namespace",
-				"filename":   "test-filename",
-				"file":       "test-file",
-				"repository": "test-repository",
-				"branch":     "test-branch",
-				"variables":  "",
-				"other":      "not-exist",
+			name: "empty namespace",
+			input: &v1.ConfigMap{
+				Data: map[string]string{
+					"name":       "test-name",
+					"filename":   "test-filename",
+					"file":       "test-file",
+					"repository": "test-repository",
+					"branch":     "test-branch",
+					"variables":  "",
+				},
 			},
-			inputLabels: map[string]string{
-				"label.okteto.com/testing": "true",
-				"ignored.label":            "true",
+			expected: &DeployOptions{
+				Name:       "test-name",
+				File:       "test-filename",
+				Repository: "test-repository",
+				Branch:     "test-branch",
 			},
-			expected: DeployOptions{
+		},
+		{
+			name: "with labels and namespace",
+			input: &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						"label.okteto.com/testing": "true",
+						"ignored.label":            "true",
+					},
+				},
+				Data: map[string]string{
+					"name":       "test-name",
+					"namespace":  "test-namespace",
+					"filename":   "test-filename",
+					"file":       "test-file",
+					"repository": "test-repository",
+					"branch":     "test-branch",
+					"variables":  "",
+				},
+			},
+			expected: &DeployOptions{
 				Name:       "test-name",
 				Namespace:  "test-namespace",
 				File:       "test-filename",
@@ -559,7 +581,7 @@ func Test_cfgToDeployOptions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := cfgToDeployOptions(tt.inputLabels, tt.inputData)
+			got := cfgToDeployOptions(tt.input)
 			require.Equal(t, tt.expected, got)
 		})
 	}

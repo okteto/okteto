@@ -160,8 +160,9 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 	exists = cfg != nil && cfg.Data != nil
 
 	if opts.ReuseParams && exists {
-		overrideOptions := cfgToDeployOptions(cfg.Labels, cfg.Data)
-		applyOverrideToOptions(opts, overrideOptions)
+		if overrideOptions := cfgToDeployOptions(cfg); overrideOptions != nil {
+			applyOverrideToOptions(opts, overrideOptions)
+		}
 	}
 
 	if opts.SkipIfExists && exists {
@@ -561,46 +562,41 @@ func parseVariablesListFromCfgVariablesString(vEncodedString string) ([]string, 
 }
 
 // cfgDataToDeployOptions translates configmap labels and data into DeployOptions
-func cfgToDeployOptions(cfgLabels map[string]string, cfgData map[string]string) DeployOptions {
-	opts := DeployOptions{}
+func cfgToDeployOptions(cfg *v1.ConfigMap) *DeployOptions {
+	if cfg == nil || cfg.Data == nil {
+		return nil
+	}
 
-	if v, ok := cfgData["name"]; ok {
+	opts := &DeployOptions{}
+	if v, ok := cfg.Data["name"]; ok {
 		opts.Name = v
 	}
-
-	if v, ok := cfgData["namespace"]; ok {
-		opts.Namespace = v
-	}
-
-	if v, ok := cfgData["filename"]; ok {
+	if v, ok := cfg.Data["filename"]; ok {
 		opts.File = v
 	}
-
-	if v, ok := cfgData["repository"]; ok {
+	if v, ok := cfg.Data["repository"]; ok {
 		opts.Repository = v
 	}
-
-	if v, ok := cfgData["branch"]; ok {
+	if v, ok := cfg.Data["branch"]; ok {
 		opts.Branch = v
 	}
-
-	if v, ok := cfgData["variables"]; ok {
+	if v, ok := cfg.Data["variables"]; ok {
 		vars, err := parseVariablesListFromCfgVariablesString(v)
 		if err != nil {
 			oktetoLog.Debugf("error parsing variables %v", err)
 		}
 		opts.Variables = vars
 	}
-
-	if l := parseEnvironmentLabelFromLabelsMap(cfgLabels); l != nil {
+	if l := parseEnvironmentLabelFromLabelsMap(cfg.Labels); l != nil {
 		opts.Labels = l
 	}
+	opts.Namespace = cfg.Namespace
 
 	return opts
 }
 
 // applyOverrideToOptions overrides name, namespace, file, repository, branch, variables and labels from the current cfgmap options
-func applyOverrideToOptions(opts *DeployOptions, override DeployOptions) {
+func applyOverrideToOptions(opts *DeployOptions, override *DeployOptions) {
 	opts.Name = override.Name
 	opts.Namespace = override.Namespace
 	opts.File = override.File
