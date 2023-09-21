@@ -37,7 +37,10 @@ type testSSHHandler struct{}
 
 func (t *testHTTPHandler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	oktetoLog.Println(fmt.Sprintf("message %s", t.message))
-	_, _ = w.Write([]byte(t.message))
+	_, err := w.Write([]byte(t.message))
+	if err != nil {
+		oktetoLog.Infof("error writing message %s: %s", t.message, err)
+	}
 }
 
 func (*testSSHHandler) listenAndServe(address string) {
@@ -162,7 +165,10 @@ func startServers(fm *ForwardManager) error {
 				ReadHeaderTimeout: 3 * time.Second,
 			}
 
-			_ = server.ListenAndServe()
+			err = server.ListenAndServe()
+			if err != nil {
+				oktetoLog.Infof("reverse server %d failed: %s", local, err.Error())
+			}
 		}()
 	}
 
@@ -193,7 +199,10 @@ func connectReverseForwards(fm *ForwardManager) error {
 				ReadHeaderTimeout: 3 * time.Second,
 			}
 
-			_ = server.ListenAndServe()
+			err = server.ListenAndServe()
+			if err != nil {
+				oktetoLog.Infof("reverse server %d failed: %s", local, err.Error())
+			}
 		}()
 	}
 

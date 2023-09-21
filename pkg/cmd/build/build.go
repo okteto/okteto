@@ -109,6 +109,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 
 	imageCtrl := registry.NewImageCtrl(okteto.Config{})
 	if okteto.IsOkteto() {
+		buildOptions.DevTag = imageCtrl.ExpandOktetoDevRegistry(registry.GetDevTagFromGlobal(buildOptions.Tag))
 		buildOptions.Tag = imageCtrl.ExpandOktetoDevRegistry(buildOptions.Tag)
 		buildOptions.Tag = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.Tag)
 		for i := range buildOptions.CacheFrom {
@@ -439,7 +440,10 @@ func parseTempSecrets(secretTempFolder string, buildOptions *types.BuildOptions)
 			}
 
 			// save expanded to temp file
-			_, _ = writer.Write([]byte(fmt.Sprintf("%s\n", srcContent)))
+			_, err = writer.Write([]byte(fmt.Sprintf("%s\n", srcContent)))
+			if err != nil {
+				return fmt.Errorf("unable to write to temp file: %s", err)
+			}
 			writer.Flush()
 		}
 		if err := tmpfile.Close(); err != nil {

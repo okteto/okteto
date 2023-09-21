@@ -57,6 +57,9 @@ const (
 	// OktetoDeployRemote defines if deployment is executed remotely
 	OktetoDeployRemote = "OKTETO_DEPLOY_REMOTE"
 
+	// OktetoForceRemote defines whether a deploy/destroy operation is to be executed remotely
+	OktetoForceRemote = "OKTETO_FORCE_REMOTE"
+
 	// OktetoTlsCertBase64EnvVar defines the TLS certificate in base64 for --remote
 	OktetoTlsCertBase64EnvVar = "OKTETO_TLS_CERT_BASE64"
 
@@ -131,4 +134,7 @@ const (
 
 	//OktetoDependencyEnvsKey the key on the conqfig map that will store OKTETO_ENV values
 	OktetoDependencyEnvsKey = "dependencyEnvs"
+
+	// EnvironmentLabelKeyPrefix represents the prefix for the preview and pipeline labels
+	EnvironmentLabelKeyPrefix = "label.okteto.com"
 )

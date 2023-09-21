@@ -91,7 +91,10 @@ func TestWaitForStatus(t *testing.T) {
 
 	go func() {
 		mockCfg.Data["status"] = "fake-final-status"
-		clientset.CoreV1().ConfigMaps(ns).Update(ctx, mockCfg, metav1.UpdateOptions{})
+		_, err := clientset.CoreV1().ConfigMaps(ns).Update(ctx, mockCfg, metav1.UpdateOptions{})
+		if err != nil {
+			t.Fail()
+		}
 	}()
 
 	err := configmaps.WaitForStatus(ctx, mockCfgName, ns, "fake-final-status", ticker, 5*time.Millisecond, clientset)
@@ -133,4 +136,58 @@ func TestWaitForStatus_NotFound(t *testing.T) {
 
 	err := configmaps.WaitForStatus(ctx, "fake-cfg", "fake-ns", "fake-final-status", ticker, 5*time.Second, clientset)
 	assert.ErrorIs(t, err, oktetoErrors.ErrNotFound)
+}
+
+func TestList(t *testing.T) {
+	ctx := context.Background()
+	ns := "fake-ns"
+	mockCfgStatus := "fake-status"
+	labelSelector := "app=my-app"
+
+	fakeCm1 := &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-cm-1",
+			Namespace: ns,
+			Labels:    map[string]string{"app": "my-app"},
+		},
+		Data: map[string]string{
+			"status": mockCfgStatus,
+		},
+	}
+
+	fakeCm2 := &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-cm-2",
+			Namespace: ns,
+			Labels:    map[string]string{"app": "my-app"},
+		},
+		Data: map[string]string{
+			"status": mockCfgStatus,
+		},
+	}
+
+	clientset := fake.NewSimpleClientset(fakeCm1, fakeCm2)
+
+	cfgs, err := configmaps.List(ctx, ns, labelSelector, clientset)
+
+	require.NoError(t, err)
+	assert.Len(t, cfgs, 2)
+	assert.Contains(t, cfgs, *fakeCm1)
+	assert.Contains(t, cfgs, *fakeCm2)
+}
+
+func TestList_Err(t *testing.T) {
+	ctx := context.Background()
+
+	mockErr := assert.AnError
+
+	clientset := fake.NewSimpleClientset()
+	clientset.Fake.PrependReactor("list", "configmaps", func(action k8sTesting.Action) (handled bool, ret runtime.Object, err error) {
+		return true, nil, mockErr
+	})
+
+	cfg, err := configmaps.List(ctx, "fake-cfg-name", "fake-ns", clientset)
+
+	assert.Nil(t, cfg)
+	assert.ErrorIs(t, err, mockErr)
 }

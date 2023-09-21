@@ -19,12 +19,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/okteto/okteto/pkg/k8s/secrets"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
@@ -45,10 +46,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-type devExecutor interface {
-	RunCommand(ctx context.Context, cmd []string) error
-}
-
 type hybridExecutor struct {
 	workdir string
 	envs    []string
@@ -63,7 +60,7 @@ type HybridExecCtx struct {
 }
 
 // GetCommandToExec returns the command to exec into the hybrid mode
-func (he *hybridExecutor) GetCommandToExec(ctx context.Context, cmd []string) (*exec.Cmd, error) {
+func (he *hybridExecutor) GetCommandToExec(cmd []string) (*exec.Cmd, error) {
 	var c *exec.Cmd
 	if runtime.GOOS != "windows" {
 		c = exec.Command(cmd[0], cmd[1:]...)
@@ -415,7 +412,7 @@ func (up *upContext) RunCommand(ctx context.Context, cmd []string) error {
 				return err
 			}
 
-			cmd, err := executor.GetCommandToExec(ctx, cmd)
+			cmd, err := executor.GetCommandToExec(cmd)
 			if err != nil {
 				return err
 			}

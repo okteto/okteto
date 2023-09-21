@@ -65,6 +65,7 @@ type Options struct {
 	ManifestPath        string
 	Name                string
 	Variables           []string
+	Manifest            *model.Manifest
 	Namespace           string
 	DestroyVolumes      bool
 	DestroyDependencies bool
@@ -188,6 +189,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				oktetoClient:      okClient,
 				buildCtrl:         newBuildCtrl(options.Name),
 				analyticsTracker:  analytics.NewAnalyticsTracker(),
+				getManifest:       model.GetManifestV2,
 			}
 
 			kubeconfigPath := getTempKubeConfigFile(options.Name)
@@ -236,6 +238,31 @@ func getTempKubeConfigFile(name string) string {
 	return filepath.Join(config.GetOktetoHome(), tempKubeconfigFileName)
 }
 
+func shouldRunInRemote(opts *Options) bool {
+	// already in remote so we need to deploy locally
+	if utils.LoadBoolean(constants.OktetoDeployRemote) {
+		return false
+	}
+
+	// --remote flag enabled from command line
+	if opts.RunInRemote {
+		return true
+	}
+
+	//  remote option set in the manifest via a remote destroyer image or the remote option enabled
+	if opts.Manifest != nil && opts.Manifest.Destroy != nil {
+		if opts.Manifest.Destroy.Image != "" || opts.Manifest.Destroy.Remote {
+			return true
+		}
+	}
+
+	if utils.LoadBoolean(constants.OktetoForceRemote) {
+		return true
+	}
+
+	return false
+}
+
 func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (destroyInterface, error) {
 	var (
 		destroyer destroyInterface
@@ -253,7 +280,7 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 
 		oktetoLog.Info("Destroying all...")
 	} else {
-		manifest, err := model.GetManifestV2(opts.ManifestPath)
+		manifest, err := dc.getManifest(opts.ManifestPath)
 		if err != nil {
 			// Log error message but application can still be deleted
 			oktetoLog.Infof("could not find manifest file to be executed: %s", err)
@@ -262,9 +289,6 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 			}
 		}
 
-		isRemote := utils.LoadBoolean(constants.OktetoDeployRemote)
-
-		destroyImage := ""
 		if manifest.Destroy != nil {
 			if opts.Name == "" {
 				if manifest.Name == "" {
@@ -276,14 +300,14 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 			if err := dc.buildCtrl.buildImageIfNecessary(ctx, manifest); err != nil {
 				return nil, err
 			}
-			destroyImage, err = model.ExpandEnv(manifest.Destroy.Image, false)
+			opts.Manifest = manifest
+			opts.Manifest.Destroy.Image, err = model.ExpandEnv(manifest.Destroy.Image, false)
 			if err != nil {
 				return nil, err
 			}
 		}
-		runInRemote := !isRemote && (destroyImage != "" || opts.RunInRemote)
 
-		if runInRemote {
+		if shouldRunInRemote(opts) {
 			destroyer = newRemoteDestroyer(manifest)
 			oktetoLog.Info("Destroying remotely...")
 		} else {

@@ -106,7 +106,11 @@ func WaitForDeployment(kubectlBinary string, kubectlOpts *commands.KubectlOption
 		case <-to.C:
 			return fmt.Errorf("%s didn't rollout after %s", kubectlOpts.Name, timeout.String())
 		case <-ticker.C:
-			output, _ := commands.RunKubectlRolloutDeployment(kubectlBinary, kubectlOpts, revision)
+			output, err := commands.RunKubectlRolloutDeployment(kubectlBinary, kubectlOpts, revision)
+			if err != nil {
+				continue
+			}
+
 			if retry%10 == 0 {
 				log.Printf("waitForDeployment output: %s", output)
 			}
@@ -141,7 +145,10 @@ func WaitForStatefulset(kubectlBinary string, kubectlOpts *commands.KubectlOptio
 		case <-to.C:
 			return fmt.Errorf("%s didn't rollout after %s", kubectlOpts, timeout.String())
 		case <-ticker.C:
-			output, _ := commands.RunKubectlRolloutStatefulset(kubectlBinary, kubectlOpts)
+			output, err := commands.RunKubectlRolloutStatefulset(kubectlBinary, kubectlOpts)
+			if err != nil {
+				continue
+			}
 			log.Printf("waitForStatefulset output: %s", output)
 
 			if strings.Contains(output, "is different from the running revision") {

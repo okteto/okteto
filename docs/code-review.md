@@ -1,30 +1,72 @@
 # Okteto CLI code review comments
 
-- [Okteto CLI code review comments](#okteto-cli-code-review-comments)
-  - [What to look for in a code review?](#what-to-look-for-in-a-code-review)
-    - [Code review checklist](#code-review-checklist)
-    - [PR Description](#pr-description)
-    - [PR comments](#pr-comments)
-    - [PR Scope](#pr-scope)
-    - [PR Merge](#pr-merge)
-    - [Tests](#tests)
-      - [Unit tests](#unit-tests)
-      - [E2E tests](#e2e-tests)
-    - [How to know if my PR affects other services?](#how-to-know-if-my-pr-affects-other-services)
-    - [Logs](#logs)
-    - [New dependencies](#new-dependencies)
-    - [Analytics](#analytics)
-  - [Common anti-patterns](#common-anti-patterns)
-    - [Errors](#errors)
-      - [Don't Panic](#dont-panic)
-      - [Discarded errors](#discarded-errors)
-      - [Adding context](#adding-context)
-      - [Indent Error Flow](#indent-error-flow)
-    - [Naming convention](#naming-convention)
-      - [Variable Names](#variable-names)
-      - [Receiver's name](#receivers-name)
-      - [Be consistent](#be-consistent)
-      - [Search for an element](#search-for-an-element)
+- [Purpose of code reviews](#purpose-of-code-reviews)
+- [Agreements](#agreements)
+- [Expectations](#expectations)
+  - [As an Author](#as-an-author)
+  - [As a Reviewer](#as-a-reviewer)
+- [What to look for in a code review?](#what-to-look-for-in-a-code-review)
+  - [Code review checklist](#code-review-checklist)
+  - [PR Description](#pr-description)
+  - [PR comments](#pr-comments)
+  - [PR scope](#pr-scope)
+  - [PR Merge](#pr-merge)
+  - [Tests](#tests)
+    - [Unit tests](#unit-tests)
+    - [E2E tests](#e2e-tests)
+  - [How to know if my PR affects other services?](#how-to-know-if-my-pr-affects-other-services)
+  - [Logs](#logs)
+  - [New dependencies](#new-dependencies)
+  - [Analytics](#analytics)
+- [Common anti-patterns](#common-anti-patterns)
+  - [Errors](#errors)
+    - [Don't Panic](#dont-panic)
+    - [Discarded errors](#discarded-errors)
+    - [Adding context](#adding-context)
+    - [Indent Error Flow](#indent-error-flow)
+  - [Naming convention](#naming-convention)
+    - [Variable Names](#variable-names)
+    - [Receiver's name](#receivers-name)
+    - [Be consistent](#be-consistent)
+    - [Search for an element](#search-for-an-element)
+
+## Purpose of code reviews
+
+We believe our code review process is foundational in ensuring that:
+
+- Potential Bugs are Identified: Each review acts as an added layer of validation for the implementation
+- Knowledge Sharing: It offers an opportunity for collective learning and improvement in coding practices
+- Enhanced Quality: Reviews ensure that our output is of the highest quality
+- Broader Feedback: Opening changes for review allows a wider set of contributors to provide their insights
+- Documentation & Traceability: Reviews create a historical record
+
+## Agreements
+
+- **Clear Actionable Feedback**: We provide unambiguous, actionable feedback in our comments. "Nice-to-have" suggestions should lead to new issues instead of blocking PRs.
+- **Reviewers**: PRs typically require 2 approvals for merging. Use discretion: some might need more approvers, depending on the scope.
+- **PR Scope**: Keep PRs concise and focused.
+
+## Expectations
+
+### As an Author:
+
+- **Clarity & Context**: Ensure PRs have a clear title, description, and details on any alternative approaches considered.
+- description.
+- **Drafts**: Use Draft status to signal ongoing work.
+- **Self-review**: Inspect your PR before opening it for team review.
+- **Testing**: Provide detailed testing steps.
+- **Critical** Paths: Notify if crucial parts of the system are affected, urging extra testing.
+- **Scope**: Keep PRs focused and narrow.
+- **Tests**: Always include unit and integration tests for changes.
+
+### As a Reviewer:
+
+- **Seek Clarification**: Don’t hesitate to ask if something is unclear.
+- **Hands-on Testing**: Checkout the branch, build the CLI, and test as instructed.
+- **User Experience**: Review with a focus on the end-user experience, like spotting opportunities for clearer error messages.
+- **Guard the Codebase**: Be vigilant for potential edge cases or impacts from the change.
+- **Testing Insights**: Point out untested scenarios or overlooked cases (e.g., potential issues on Windows).
+- **Scope Vigilance**: Ensure the PR's scope is relevant and isn’t overly broad or risky.
 
 ## What to look for in a code review?
 
@@ -54,6 +96,8 @@ If required, the author could be asked to provide screenshots or videos explaini
 Comments are the basis of all pull requests. In comments, the reviewers will ask questions about the code, request changes, and discuss what is the best approach to improve the CLI code.
 
 A respectful tone will be used when making comments and supporting documentation can be helpful for certain comments.
+
+We prefer giving unambiguous, actionable feedback in our comments. "Nice-to-have" suggestions should lead to new issues instead of blocking PRs, unless strictly required.
 
 ### PR scope
 

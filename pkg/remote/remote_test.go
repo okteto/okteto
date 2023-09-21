@@ -77,7 +77,8 @@ func TestCreateDockerignoreFileWithFilesystem(t *testing.T) {
 			}
 
 			err := CreateDockerignoreFileWithFilesystem(tt.config.wd, tempDir, tt.config.manifestPathFlag, fs)
-			b, _ := afero.ReadFile(fs, filepath.Join(tempDir, ".dockerignore"))
+			assert.NoError(t, err)
+			b, err := afero.ReadFile(fs, filepath.Join(tempDir, ".dockerignore"))
 			assert.Equal(t, tt.expectedContent, string(b))
 			assert.NoError(t, err)
 

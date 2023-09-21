@@ -2,24 +2,21 @@ package preview
 
 import (
 	"context"
-	"fmt"
+	"io"
+	"os"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test/client"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_listPreview(t *testing.T) {
-	ctx := context.Background()
-	opts := ListFlags{}
+func Test_getPreviewOutput(t *testing.T) {
 	var tests = []struct {
 		name           string
 		previews       []types.Preview
 		expectedResult []previewOutput
-		expectedErr    error
 	}{
 		{
 			name: "List all previews",
@@ -59,85 +56,41 @@ func Test_listPreview(t *testing.T) {
 				},
 			},
 		},
-		{
-			name:           "error retrieving preview list",
-			previews:       nil,
-			expectedResult: nil,
-			expectedErr:    fmt.Errorf("error retrieving previews"),
-		},
-		{
-			name:           "user error retrieving preview list",
-			previews:       nil,
-			expectedResult: nil,
-			expectedErr: oktetoErrors.UserError{
-				E:    fmt.Errorf("error retrieving previews"),
-				Hint: "please try again",
-			},
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			okteto.CurrentStore = &okteto.OktetoContextStore{
-				Contexts: map[string]*okteto.OktetoContext{
-					"test": {
-						Name:     "test",
-						Token:    "test",
-						IsOkteto: true,
-						UserID:   "1",
-					},
-				},
-				CurrentContext: "test",
-			}
-			usr := &types.User{
-				Token: "test",
-			}
-			fakeOktetoClient := &client.FakeOktetoClient{
-				Preview: client.NewFakePreviewClient(&client.FakePreviewResponse{PreviewList: tt.previews, ErrList: tt.expectedErr}),
-				Users:   client.NewFakeUsersClient(usr),
-			}
-			result, err := getPreviewOutput(ctx, opts, fakeOktetoClient)
-			if tt.expectedErr != nil {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.ElementsMatch(t, result, tt.expectedResult)
-			}
+			result := getPreviewOutput(tt.previews)
+			assert.ElementsMatch(t, result, tt.expectedResult)
 		})
 	}
 }
 
-func Test_PreviewListOutputValidation(t *testing.T) {
+func Test_validatePreviewListOutput(t *testing.T) {
 	var tests = []struct {
 		name        string
-		output      ListFlags
+		output      string
 		expectedErr error
 	}{
 		{
-			name: "output format is yaml",
-			output: ListFlags{
-				output: "yaml",
-			},
+			name:        "output format is yaml",
+			output:      "yaml",
 			expectedErr: nil,
 		},
 		{
-			name: "output format is json",
-			output: ListFlags{
-				output: "json",
-			},
+			name:        "output format is json",
+			output:      "json",
 			expectedErr: nil,
 		},
 		{
-			name: "output format is not valid",
-			output: ListFlags{
-				output: "xml",
-			},
-			expectedErr: fmt.Errorf("output format is not accepted. Value must be one of: ['json', 'yaml']"),
+			name:        "output format is not valid",
+			output:      "xml",
+			expectedErr: errInvalidOutput,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateOutput(tt.output.output)
+			err := validatePreviewListOutput(tt.output)
 			assert.Equal(t, tt.expectedErr, err)
 		})
 	}
@@ -176,4 +129,279 @@ func Test_getPreviewDefaultOutput(t *testing.T) {
 			assert.Equal(t, tt.expected, got)
 		})
 	}
+}
+
+func Test_displayListPreviews(t *testing.T) {
+	tests := []struct {
+		name   string
+		format string
+		input  []previewOutput
+
+		expectedOutput string
+	}{
+		{
+			name:           "empty list ",
+			format:         "",
+			expectedOutput: "There are no previews\n",
+		},
+		{
+			name:           "empty list ",
+			format:         "json",
+			expectedOutput: "[]\n",
+		},
+		{
+			name:           "empty list ",
+			format:         "json",
+			expectedOutput: "[]\n",
+		},
+		{
+			name:   "list - default format",
+			format: "",
+			input: []previewOutput{
+				{
+					Name:     "test",
+					Scope:    "personal",
+					Sleeping: true,
+					Labels:   []string{"test", "okteto"},
+				},
+				{
+					Name:     "test2",
+					Scope:    "global",
+					Sleeping: true,
+				},
+			},
+			expectedOutput: `Name   Scope     Sleeping  Labels
+test   personal  true      test, okteto
+test2  global    true      -
+`,
+		},
+		{
+			name:   "list - json format",
+			format: "json",
+			input: []previewOutput{
+				{
+					Name:     "test",
+					Scope:    "personal",
+					Sleeping: true,
+					Labels:   []string{"test", "okteto"},
+				},
+				{
+					Name:     "test2",
+					Scope:    "global",
+					Sleeping: true,
+				},
+			},
+			expectedOutput: "[\n {\n  \"name\": \"test\",\n  \"scope\": \"personal\",\n  \"sleeping\": true,\n  \"labels\": [\n   \"test\",\n   \"okteto\"\n  ]\n },\n {\n  \"name\": \"test2\",\n  \"scope\": \"global\",\n  \"sleeping\": true,\n  \"labels\": null\n }\n]\n",
+		},
+		{
+			name:   "list - yaml format",
+			format: "yaml",
+			input: []previewOutput{
+				{
+					Name:     "test",
+					Scope:    "personal",
+					Sleeping: true,
+					Labels:   []string{"test", "okteto"},
+				},
+				{
+					Name:     "test2",
+					Scope:    "global",
+					Sleeping: true,
+				},
+			},
+			expectedOutput: "- name: test\n  scope: personal\n  sleeping: true\n  labels:\n  - test\n  - okteto\n- name: test2\n  scope: global\n  sleeping: true\n  labels: []\n\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			initialStdout := os.Stdout
+			r, w, _ := os.Pipe()
+
+			// replace Stdout for tests
+			os.Stdout = w
+
+			err := displayListPreviews(tt.input, tt.format)
+			assert.NoError(t, err)
+
+			w.Close()
+			out, err := io.ReadAll(r)
+			assert.NoError(t, err)
+
+			// return back to initial
+			os.Stdout = initialStdout
+
+			assert.Equal(t, tt.expectedOutput, string(out))
+		})
+	}
+
+}
+
+func Test_newListPreviewCommand(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		okClient types.OktetoInterface
+		flags    *listFlags
+		expected *listPreviewCommand
+	}{
+		{
+			name:     "empty input",
+			expected: &listPreviewCommand{},
+		},
+		{
+			name:     "with input",
+			okClient: client.NewFakeOktetoClient(),
+			flags: &listFlags{
+				labels: []string{"test", "okteto"},
+				output: "json",
+			},
+			expected: &listPreviewCommand{
+				flags: &listFlags{
+					labels: []string{"test", "okteto"},
+					output: "json",
+				},
+				okClient: &client.FakeOktetoClient{},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := newListPreviewCommand(tt.okClient, tt.flags)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func Test_run(t *testing.T) {
+
+	tests := []struct {
+		name      string
+		cmd       *listPreviewCommand
+		expectErr error
+	}{
+		{
+			name: "invalid list output format",
+			cmd: &listPreviewCommand{
+				flags: &listFlags{
+					output: "xml",
+				},
+			},
+			expectErr: errInvalidOutput,
+		},
+		{
+			name: "okClient Previews list returns error",
+			cmd: &listPreviewCommand{
+				flags: &listFlags{},
+				okClient: &client.FakeOktetoClient{
+					Preview: client.NewFakePreviewClient(
+						&client.FakePreviewResponse{
+							ErrList: assert.AnError,
+						},
+					),
+				},
+			},
+			expectErr: assert.AnError,
+		},
+		{
+			name: "okClient Previews list returns user error",
+			cmd: &listPreviewCommand{
+				flags: &listFlags{},
+				okClient: &client.FakeOktetoClient{
+					Preview: client.NewFakePreviewClient(
+						&client.FakePreviewResponse{
+							ErrList: oktetoErrors.UserError{},
+						},
+					),
+				},
+			},
+			expectErr: oktetoErrors.UserError{},
+		},
+		{
+			name: "okClient Previews list returns empty list",
+			cmd: &listPreviewCommand{
+				flags: &listFlags{},
+				okClient: &client.FakeOktetoClient{
+					Preview: client.NewFakePreviewClient(
+						&client.FakePreviewResponse{
+							PreviewList: []types.Preview{},
+						},
+					),
+				},
+			},
+			expectErr: nil,
+		},
+		{
+			name: "okClient Previews list returns list",
+			cmd: &listPreviewCommand{
+				flags: &listFlags{},
+				okClient: &client.FakeOktetoClient{
+					Preview: client.NewFakePreviewClient(
+						&client.FakePreviewResponse{
+							PreviewList: []types.Preview{
+								{
+									ID: "test",
+								},
+							},
+						},
+					),
+				},
+			},
+			expectErr: nil,
+		},
+		{
+			name: "okClient Previews list returns list with output json",
+			cmd: &listPreviewCommand{
+				flags: &listFlags{
+					output: "json",
+				},
+				okClient: &client.FakeOktetoClient{
+					Preview: client.NewFakePreviewClient(
+						&client.FakePreviewResponse{
+							PreviewList: []types.Preview{
+								{
+									ID: "test",
+								},
+							},
+						},
+					),
+				},
+			},
+			expectErr: nil,
+		},
+		{
+			name: "okClient Previews list returns list with output yaml",
+			cmd: &listPreviewCommand{
+				flags: &listFlags{
+					output: "yaml",
+				},
+				okClient: &client.FakeOktetoClient{
+					Preview: client.NewFakePreviewClient(
+						&client.FakePreviewResponse{
+							PreviewList: []types.Preview{
+								{
+									ID: "test",
+								},
+							},
+						},
+					),
+				},
+			},
+			expectErr: nil,
+		},
+	}
+
+	for _, tt := range tests {
+
+		t.Run(tt.name, func(t *testing.T) {
+
+			ctx := context.TODO()
+			got := tt.cmd.run(ctx)
+
+			assert.ErrorIs(t, got, tt.expectErr)
+		})
+	}
+
 }

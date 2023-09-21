@@ -170,7 +170,8 @@ func Test_AddDevAnnotations(t *testing.T) {
 		},
 	}
 	AddDevAnnotations(ctx, manifest, fakeClient)
-	d, _ = fakeClient.AppsV1().Deployments("namespace").Get(ctx, "deployment", metav1.GetOptions{})
+	d, err := fakeClient.AppsV1().Deployments("namespace").Get(ctx, "deployment", metav1.GetOptions{})
+	assert.NoError(t, err)
 	assert.Equal(t,
 		d.Annotations,
 		map[string]string{

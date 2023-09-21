@@ -68,6 +68,8 @@ func (d *Driver) Deploy(ctx context.Context) error {
 	return nil
 }
 
+// nolint:unparam
+// Destroy implements from the interface diver.Driver
 func (d *Driver) Destroy(_ context.Context) error {
 	oktetoLog.Success("Divert from '%s' successfully destroyed", d.divert.Namespace)
 	return nil
@@ -86,6 +88,4 @@ func (d *Driver) UpdatePod(pod apiv1.PodSpec) apiv1.PodSpec {
 	return pod
 }
 
-func (d *Driver) UpdateVirtualService(vs istioNetworkingV1beta1.VirtualService) istioNetworkingV1beta1.VirtualService {
-	return vs
-}
+func (d *Driver) UpdateVirtualService(vs *istioNetworkingV1beta1.VirtualService) {}

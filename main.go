@@ -64,7 +64,7 @@ func init() {
 		oktetoLog.Info("cannot use cryptoRead. Fallback to timestamp seed generator")
 		seed = time.Now().UnixNano()
 	}
-	rand.Seed(seed)
+	rand.New(rand.NewSource(seed))
 
 	// override client-go error handlers to downgrade the "logging before flag.Parse" error
 	errorHandlers := []func(error){
@@ -86,6 +86,11 @@ func init() {
 func main() {
 	ctx := context.Background()
 	oktetoLog.Init(logrus.WarnLevel)
+	if registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
+		oktetoLog.SetOutput(os.Stderr)
+		oktetoLog.SetLevel(oktetoLog.InfoLevel)
+		oktetoLog.SetOutputFormat(oktetoLog.JSONFormat)
+	}
 	var logLevel string
 	var outputMode string
 	var serverNameOverride string
@@ -103,8 +108,10 @@ func main() {
 		SilenceErrors: true,
 		PersistentPreRun: func(ccmd *cobra.Command, args []string) {
 			ccmd.SilenceUsage = true
-			oktetoLog.SetLevel(logLevel)
-			oktetoLog.SetOutputFormat(outputMode)
+			if !registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
+				oktetoLog.SetLevel(logLevel)
+				oktetoLog.SetOutputFormat(outputMode)
+			}
 			okteto.SetServerNameOverride(serverNameOverride)
 			oktetoLog.Infof("started %s", strings.Join(os.Args, " "))
 		},
@@ -117,15 +124,18 @@ func main() {
 	root.PersistentFlags().StringVar(&outputMode, "log-output", oktetoLog.TTYFormat, "output format for logs (tty, plain, json)")
 
 	root.PersistentFlags().StringVarP(&serverNameOverride, "server-name", "", "", "The address and port of the Okteto Ingress server")
-	_ = root.PersistentFlags().MarkHidden("server-name")
+	err := root.PersistentFlags().MarkHidden("server-name")
+	if err != nil {
+		oktetoLog.Infof("error hiding server-name flag: %s", err)
+	}
 
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
 	root.AddCommand(cmd.Login())
 	root.AddCommand(contextCMD.Context())
 	root.AddCommand(cmd.Kubeconfig())
-	root.AddCommand(kubetoken.KubeToken())
-	root.AddCommand(registrytoken.RegistryToken())
+	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
+	root.AddCommand(registrytoken.RegistryToken(ctx))
 
 	root.AddCommand(build.Build(ctx))
 
@@ -153,7 +163,7 @@ func main() {
 	root.AddCommand(cmd.Push(ctx))
 	root.AddCommand(pipeline.Pipeline(ctx))
 
-	err := root.Execute()
+	err = root.Execute()
 
 	if err != nil {
 		message := err.Error()

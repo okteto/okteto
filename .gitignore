@@ -15,3 +15,6 @@ dist
 
 # don't add the binary created by running go build from the root of the repo
 /okteto
+
+# lint
+golangci-report.xml

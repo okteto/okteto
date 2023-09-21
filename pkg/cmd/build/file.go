@@ -83,7 +83,10 @@ func getTranslatedDockerFile(filename string) (string, error) {
 		if withCacheHandler {
 			translatedLine = translateCacheHandler(translatedLine, userID)
 		}
-		_, _ = datawriter.WriteString(translatedLine + "\n")
+		_, err = datawriter.WriteString(translatedLine + "\n")
+		if err != nil {
+			return "", fmt.Errorf("failed to write dockerfile: %s", err)
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		return "", err
@@ -165,9 +168,16 @@ func CreateDockerfileWithVolumeMounts(image string, volumes []model.StackVolume)
 	datawriter := bufio.NewWriter(tmpFile)
 	defer datawriter.Flush()
 
-	_, _ = datawriter.Write([]byte(fmt.Sprintf("FROM %s\n", image)))
+	_, err = datawriter.Write([]byte(fmt.Sprintf("FROM %s\n", image)))
+	if err != nil {
+		return build, fmt.Errorf("failed to write dockerfile: %s", err)
+	}
 	for _, volume := range volumes {
-		_, _ = datawriter.Write([]byte(fmt.Sprintf("COPY %s %s\n", filepath.ToSlash(volume.LocalPath), volume.RemotePath)))
+		_, err = datawriter.Write([]byte(fmt.Sprintf("COPY %s %s\n", filepath.ToSlash(volume.LocalPath), volume.RemotePath)))
+		if err != nil {
+			oktetoLog.Infof("failed to write volume %s: %s", volume.LocalPath, err)
+			continue
+		}
 	}
 
 	build.Dockerfile = tmpFile.Name()

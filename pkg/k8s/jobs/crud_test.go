@@ -19,6 +19,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -129,7 +130,9 @@ func TestDestroy(t *testing.T) {
 				t.Fatalf("unexpected error '%s'", err)
 			}
 
-			if list, _ := clientset.CoreV1().Pods(tt.namespace).List(ctx, metav1.ListOptions{}); tt.deleted && len(list.Items) != 0 {
+			list, err := clientset.CoreV1().Pods(tt.namespace).List(ctx, metav1.ListOptions{})
+			assert.NoError(t, err)
+			if tt.deleted && len(list.Items) != 0 {
 				t.Fatal("Not deleted job pods")
 			}
 		})

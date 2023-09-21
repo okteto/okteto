@@ -146,7 +146,6 @@ func (dev *Dev) getSourceSubPath(path string) string {
 			}
 			if filepath.IsAbs(path) {
 				oktetoLog.Info("could not retrieve subpath")
-				path = filepath.Base(path)
 			} else {
 				p, err := filepath.Abs(path)
 				if err != nil {

@@ -112,6 +112,11 @@ func (c *OktetoClient) Auth(ctx context.Context, code string) (*types.User, erro
 		if err != nil && oktetoErrors.IsX509(err) {
 			return nil, err
 		}
+
+		if isAPILicenseError(err) {
+			return nil, err
+		}
+
 		err := newAuthenticationErr(err)
 		return nil, err
 	}

@@ -172,7 +172,8 @@ func TestGetGitCommit(t *testing.T) {
 
 func TestGetTextToHash(t *testing.T) {
 	fs := afero.NewMemMapFs()
-	afero.WriteFile(fs, "secret", []byte("bar"), 0600)
+	err := afero.WriteFile(fs, "secret", []byte("bar"), 0600)
+	assert.NoError(t, err)
 	t.Setenv("BAR", "bar")
 	type input struct {
 		repo      fakeConfigRepo

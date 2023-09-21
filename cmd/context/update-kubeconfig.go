@@ -28,8 +28,8 @@ import (
 )
 
 const (
-	// oktetoUseStaticKubetokenEnvVar is used to opt in to use static kubetoken
-	oktetoUseStaticKubetokenEnvVar = "OKTETO_USE_STATIC_KUBETOKEN"
+	// OktetoUseStaticKubetokenEnvVar is used to opt in to use static kubetoken
+	OktetoUseStaticKubetokenEnvVar = "OKTETO_USE_STATIC_KUBETOKEN"
 )
 
 var (
@@ -71,7 +71,7 @@ func ExecuteUpdateKubeconfig(okCtx *okteto.OktetoContext, kubeconfigPaths []stri
 			return err
 		}
 
-		if utils.LoadBoolean(oktetoUseStaticKubetokenEnvVar) {
+		if utils.LoadBoolean(OktetoUseStaticKubetokenEnvVar) {
 			removeExecFromCfg(okCtx)
 			oktetoLog.Warning(usingStaticKubetokenWarningMessage)
 		} else {

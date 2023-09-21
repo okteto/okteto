@@ -1,13 +1,23 @@
-# prevent codecov from blocking a PR and remove comments
+comment:
+  layout: header, changes, diff, sunburst
+
 coverage:
   status:
     project:
       default:
-        informational: true
+        target: auto
+        threshold: '0%'
+
     patch:
       default:
-        informational: true
+        target: 75%
+        only_pulls: true
 
-comment: false
 github_checks:
   annotations: false
+
+ignore:
+  - '**/*_test.go'
+  - integration/*
+  - scripts/*
+  - internal/*

@@ -289,12 +289,20 @@ func translateAPIErr(err error) error {
 		return fmt.Errorf("server temporarily unavailable, please try again")
 	case "non-200 OK status code: 401 Unauthorized body: \"\"":
 		return fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")
+	case "not-found":
+		return oktetoErrors.ErrNotFound
 
 	default:
-		if oktetoErrors.IsX509(err) {
+		switch {
+		case oktetoErrors.IsX509(err):
 			return oktetoErrors.UserError{
 				E:    err,
 				Hint: oktetoErrors.ErrX509Hint,
+			}
+		case isAPILicenseError(err):
+			return oktetoErrors.UserError{
+				E:    oktetoErrors.ErrInvalidLicense,
+				Hint: "The Okteto instance for your current context has an expired or missing license. Please contact your administrator for more information",
 			}
 		}
 
@@ -302,6 +310,10 @@ func translateAPIErr(err error) error {
 		return err
 	}
 
+}
+
+func isAPILicenseError(err error) bool {
+	return strings.HasPrefix(err.Error(), "non-200 OK status code: 423")
 }
 
 func isAPITransientErr(err error) bool {

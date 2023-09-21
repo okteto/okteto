@@ -167,8 +167,10 @@ services:
 		},
 	}
 
-	marshalled1, _ := yaml.Marshal(rule1)
-	marshalled1OK, _ := yaml.Marshal(rule1OK)
+	marshalled1, err := yaml.Marshal(rule1)
+	assert.NoError(t, err)
+	marshalled1OK, err := yaml.Marshal(rule1OK)
+	assert.NoError(t, err)
 	if string(marshalled1) != string(marshalled1OK) {
 		t.Fatalf("Wrong rule1 generation.\nActual %s, \nExpected %s", string(marshalled1), string(marshalled1OK))
 	}
@@ -214,8 +216,10 @@ services:
 		Secrets: make([]Secret, 0),
 	}
 
-	marshalled2, _ := yaml.Marshal(rule2)
-	marshalled2OK, _ := yaml.Marshal(rule2OK)
+	marshalled2, err := yaml.Marshal(rule2)
+	assert.NoError(t, err)
+	marshalled2OK, err := yaml.Marshal(rule2OK)
+	assert.NoError(t, err)
 
 	if !assert.Equal(t, rule2, rule2OK) {
 		t.Fatalf("Wrong rule2 generation.\nActual %s, \nExpected %s", string(marshalled2), string(marshalled2OK))
@@ -313,8 +317,10 @@ initContainer:
 		},
 	}
 
-	marshalled, _ := yaml.Marshal(rule)
-	marshalledOK, _ := yaml.Marshal(ruleOK)
+	marshalled, err := yaml.Marshal(rule)
+	assert.NoError(t, err)
+	marshalledOK, err := yaml.Marshal(ruleOK)
+	assert.NoError(t, err)
 	if !bytes.Equal(marshalled, marshalledOK) {
 		t.Fatalf("Wrong rule generation.\nActual %s, \nExpected %s", string(marshalled), string(marshalledOK))
 	}
@@ -393,8 +399,10 @@ sync:
 		InitContainer: InitContainer{Image: OktetoBinImageTag},
 	}
 
-	marshalled, _ := yaml.Marshal(rule)
-	marshalledOK, _ := yaml.Marshal(ruleOK)
+	marshalled, err := yaml.Marshal(rule)
+	assert.NoError(t, err)
+	marshalledOK, err := yaml.Marshal(ruleOK)
+	assert.NoError(t, err)
 	if !bytes.Equal(marshalled, marshalledOK) {
 		t.Fatalf("Wrong rule generation.\nActual %s, \nExpected %s", string(marshalled), string(marshalledOK))
 	}
@@ -559,8 +567,10 @@ securityContext:
 		dev := manifest.Dev[test.name]
 
 		rule := dev.ToTranslationRule(dev, false)
-		marshalled, _ := yaml.Marshal(rule.SecurityContext)
-		marshalledOK, _ := yaml.Marshal(test.translated)
+		marshalled, err := yaml.Marshal(rule.SecurityContext)
+		assert.NoError(t, err)
+		marshalledOK, err := yaml.Marshal(test.translated)
+		assert.NoError(t, err)
 		if !bytes.Equal(marshalled, marshalledOK) {
 			t.Fatalf("Wrong rule generation for %s.\nActual %s, \nExpected %s", dev.Name, string(marshalled), string(marshalledOK))
 		}

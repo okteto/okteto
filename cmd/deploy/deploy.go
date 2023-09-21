@@ -284,7 +284,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if err != nil {
 		return err
 	}
-	dc.addEnvVars(ctx, cwd)
+	dc.addEnvVars(cwd)
 
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
 		return err
@@ -511,9 +511,34 @@ func getDefaultTimeout() time.Duration {
 	return parsed
 }
 
-func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, builder *buildv2.OktetoBuilder, cmapHandler configMapHandler) (deployerInterface, error) {
+func shouldRunInRemote(opts *Options) bool {
+	// already in remote so we need to deploy locally
+	if utils.LoadBoolean(constants.OktetoDeployRemote) {
+		return false
+	}
 
-	if isRemoteDeployer(opts.RunInRemote, opts.Manifest.Deploy.Image) {
+	// --remote flag enabled from command line
+	if opts.RunInRemote {
+		return true
+	}
+
+	// remote option set in the manifest via a remote deployer image or the remote option enabled
+	if opts.Manifest != nil && opts.Manifest.Deploy != nil {
+		if opts.Manifest.Deploy.Image != "" || opts.Manifest.Deploy.Remote {
+			return true
+		}
+	}
+
+	if utils.LoadBoolean(constants.OktetoForceRemote) {
+		return true
+	}
+
+	return false
+
+}
+
+func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, builder *buildv2.OktetoBuilder, cmapHandler configMapHandler) (deployerInterface, error) {
+	if shouldRunInRemote(opts) {
 		// run remote
 		oktetoLog.Info("Deploying remotely...")
 		return newRemoteDeployer(builder), nil
@@ -550,6 +575,11 @@ func (dc *DeployCommand) deployDependencies(ctx context.Context, deployOptions *
 		namespace := okteto.Context().Namespace
 		if dep.Namespace != "" {
 			namespace = dep.Namespace
+		}
+
+		err := dep.ExpandVars(deployOptions.Variables)
+		if err != nil {
+			return fmt.Errorf("could not expand variables in dependencies: %w", err)
 		}
 		pipOpts := &pipelineCMD.DeployOptions{
 			Name:         depName,

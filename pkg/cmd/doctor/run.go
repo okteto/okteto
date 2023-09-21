@@ -115,7 +115,10 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 }
 
 func generateSummaryFile() (string, error) {
-	tempdir, _ := os.MkdirTemp("", "")
+	tempdir, err := os.MkdirTemp("", "")
+	if err != nil {
+		return "", fmt.Errorf("error creating temp dir: %s", err)
+	}
 	summaryPath := filepath.Join(tempdir, "okteto-summary.txt")
 	fileSummary, err := os.OpenFile(summaryPath, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
@@ -296,7 +299,10 @@ func generateRemoteSyncthingLogsFile(ctx context.Context, dev *model.Dev, c *kub
 		return "", err
 	}
 
-	tempdir, _ := os.MkdirTemp("", "")
+	tempdir, err := os.MkdirTemp("", "")
+	if err != nil {
+		return "", fmt.Errorf("error creating temp dir: %s", err)
+	}
 	remoteLogsPath := filepath.Join(tempdir, "remote-syncthing.log")
 	fileRemoteLog, err := os.OpenFile(remoteLogsPath, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {

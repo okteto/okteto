@@ -16,6 +16,7 @@ package context
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -292,7 +293,7 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 // if error while retrieving the dynamic token or flag OKTETO_USE_STATIC_KUBETOKEN is enabled, value is not updated
 // static token is fallback
 func replaceCredentialsTokenWithDynamicKubetoken(okClientProvider oktetoClientProvider, userContext *types.UserContext) {
-	if utils.LoadBoolean(oktetoUseStaticKubetokenEnvVar) {
+	if utils.LoadBoolean(OktetoUseStaticKubetokenEnvVar) {
 		oktetoLog.Warning(usingStaticKubetokenWarningMessage)
 		return
 	}
@@ -395,6 +396,10 @@ func (c ContextCommand) getUserContext(ctx context.Context, ctxName, ns, token s
 
 			// If there is a TLS error, don't continue the loop and return the raw error
 			if oktetoErrors.IsX509(err) {
+				return nil, err
+			}
+
+			if errors.Is(err, oktetoErrors.ErrInvalidLicense) {
 				return nil, err
 			}
 

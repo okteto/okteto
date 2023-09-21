@@ -139,7 +139,6 @@ You'll need to set your working directory on the root of your Okteto CLI project
 pre-commit run --all-files
 ```
 
-
 ## How to run e2e tests from a PR?
 
 Use the following labels to trigger integration test on this branch:

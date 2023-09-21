@@ -53,7 +53,7 @@ func GetDevDefaultsFromImage(app apps.App) (registry.ImageMetadata, error) {
 }
 
 // SetImage sets dev defaults from a running app
-func SetImage(dev *model.Dev, language, path string) error {
+func SetImage(dev *model.Dev, language, path string) {
 	language = linguist.NormalizeLanguage(language)
 	updateImageFromPod := false
 	switch language {
@@ -67,7 +67,6 @@ func SetImage(dev *model.Dev, language, path string) error {
 	if updateImageFromPod {
 		dev.Image = nil
 	}
-	return nil
 }
 
 // SetDevDefaultsFromApp sets dev defaults from a running app

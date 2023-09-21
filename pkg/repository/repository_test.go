@@ -18,8 +18,6 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/go-git/go-git/v5"
-
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/stretchr/testify/assert"
@@ -66,19 +64,6 @@ func (fw fakeWorktree) GetRoot() string {
 
 func (fw fakeWorktree) Status(context.Context, LocalGitInterface) (oktetoGitStatus, error) {
 	return fw.status, fw.err
-}
-
-func (fs fakeStatus) Status() git.Status {
-	return fs.status
-}
-
-type fakeStatus struct {
-	isClean bool
-	status  git.Status
-}
-
-func (fs fakeStatus) IsClean() bool {
-	return fs.isClean
 }
 
 func TestNewRepo(t *testing.T) {

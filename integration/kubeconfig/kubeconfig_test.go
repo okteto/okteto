@@ -17,32 +17,56 @@ package kubeconfig
 
 import (
 	"path/filepath"
+	"strconv"
 	"testing"
 
+	"github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/stretchr/testify/require"
 )
 
-// Test_KubeconfigHasExec kubeconfig command should use exec instead of token for the user auth
+// Test_KubeconfigHasExec kubeconfig command should use exec instead of token for the user auth if feature flag enabled
 func Test_KubeconfigHasExec(t *testing.T) {
-	t.Parallel()
+	tests := []struct {
+		name           string
+		useStaticToken bool
+	}{
+		{
+			name:           "enabling static token feature flag",
+			useStaticToken: true,
+		},
+		{
+			name:           "disabling static token feature flag",
+			useStaticToken: false,
+		},
+	}
 
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
 	home := t.TempDir()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(context.OktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tt.useStaticToken))
 
-	err = commands.RunOktetoKubeconfig(oktetoPath, home)
-	require.NoError(t, err)
+			err = commands.RunOktetoKubeconfig(oktetoPath, home)
+			require.NoError(t, err)
 
-	cfg := kubeconfig.Get([]string{filepath.Join(home, ".kube", "config")})
-	require.Len(t, cfg.AuthInfos, 1)
+			cfg := kubeconfig.Get([]string{filepath.Join(home, ".kube", "config")})
+			require.Len(t, cfg.AuthInfos, 1)
 
-	for _, v := range cfg.AuthInfos {
-		require.NotNil(t, v)
-		require.Empty(t, v.Token)
-		require.NotNil(t, v.Exec)
+			for _, v := range cfg.AuthInfos {
+				require.NotNil(t, v)
+				if tt.useStaticToken {
+					require.NotEmpty(t, v.Token)
+					require.Nil(t, v.Exec)
+				} else {
+					require.Empty(t, v.Token)
+					require.NotNil(t, v.Exec)
+				}
+			}
+		})
 	}
 }

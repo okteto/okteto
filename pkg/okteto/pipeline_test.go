@@ -16,6 +16,7 @@ package okteto
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -28,6 +29,7 @@ func TestDeployPipeline(t *testing.T) {
 		client    *fakeGraphQLClient
 		name      string
 		variables []types.Variable
+		labels    []string
 	}
 	type expected struct {
 		response *types.GitDeployResponse
@@ -158,6 +160,80 @@ func TestDeployPipeline(t *testing.T) {
 				err: nil,
 			},
 		},
+		{
+			name: "with labels - error",
+			input: input{
+				client: &fakeGraphQLClient{
+					err: assert.AnError,
+				},
+				name: "test",
+				labels: []string{
+					"key",
+				},
+			},
+			expected: expected{
+				response: nil,
+				err:      assert.AnError,
+			},
+		},
+		{
+			name: "with labels - deprecation error",
+			input: input{
+				client: &fakeGraphQLClient{
+					err: fmt.Errorf("Unknown argument \"labels\" on field \"deployGitRepository\" of type \"Mutation\""),
+				},
+				name: "test",
+				labels: []string{
+					"key",
+				},
+			},
+			expected: expected{
+				response: nil,
+				err:      ErrDeployPipelineLabelsFeatureNotSupported,
+			},
+		},
+		{
+			name: "with labels - no error",
+			input: input{
+				client: &fakeGraphQLClient{
+					mutationResult: &deployPipelineMutation{
+						Response: deployPipelineResponse{
+							Action: actionStruct{
+								Id:     "test",
+								Name:   "test",
+								Status: ProgressingStatus,
+							},
+							GitDeploy: gitDeployInfoWithRepoInfo{
+								Id:         "test",
+								Name:       "test",
+								Status:     ProgressingStatus,
+								Repository: "my-repo",
+							},
+						},
+					},
+					err: nil,
+				},
+				labels: []string{
+					"key",
+				},
+				name: "test",
+			},
+			expected: expected{
+				response: &types.GitDeployResponse{
+					Action: &types.Action{
+						ID:     "test",
+						Name:   "test",
+						Status: progressingStatus,
+					},
+					GitDeploy: &types.GitDeploy{
+						ID:         "test",
+						Name:       "test",
+						Repository: "my-repo",
+						Status:     progressingStatus,
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -167,6 +243,7 @@ func TestDeployPipeline(t *testing.T) {
 			response, err := pc.Deploy(context.Background(), types.PipelineDeployOptions{
 				Name:      tc.input.name,
 				Variables: tc.input.variables,
+				Labels:    tc.input.labels,
 			})
 			assert.ErrorIs(t, err, tc.expected.err)
 			assert.Equal(t, tc.expected.response, response)
