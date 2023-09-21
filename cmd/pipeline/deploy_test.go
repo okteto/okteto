@@ -353,6 +353,76 @@ func TestDeployPipelineSuccesfulWithWaitStreamError(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func Test_DeployPipelineWithReuseParamsNotFoundError(t *testing.T) {
+	ctx := context.Background()
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {},
+		},
+	}
+	pc := &Command{
+		k8sClientProvider: test.NewFakeK8sProvider(),
+	}
+	opts := &DeployOptions{
+		Repository:  "test",
+		Name:        "test",
+		ReuseParams: true,
+	}
+	err := pc.ExecuteDeployPipeline(ctx, opts)
+	assert.ErrorIs(t, err, errUnableToReuseParams)
+}
+
+func Test_DeployPipelineWithReuseParamsSuccess(t *testing.T) {
+	ctx := context.Background()
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {},
+		},
+	}
+
+	fakePipelineDeployResponses := &client.FakePipelineResponses{}
+	fakePipelineClient := client.NewFakePipelineClient(
+		fakePipelineDeployResponses,
+	)
+	pc := &Command{
+		okClient: &client.FakeOktetoClient{
+			PipelineClient: fakePipelineClient,
+		},
+		k8sClientProvider: test.NewFakeK8sProvider(
+			&v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "okteto-git-test",
+					Namespace: "test",
+					Labels: map[string]string{
+						"label.okteto.com/labeltest": "true",
+					},
+				},
+				Data: map[string]string{
+					"branch":   "testing",
+					"filename": "file",
+				},
+			},
+		),
+	}
+	opts := &DeployOptions{
+		Repository:  "test",
+		Name:        "test",
+		Namespace:   "test",
+		ReuseParams: true,
+	}
+	err := pc.ExecuteDeployPipeline(ctx, opts)
+	assert.NoError(t, err)
+
+	assert.Equal(t, types.PipelineDeployOptions{
+		Branch:    "testing",
+		Filename:  "file",
+		Labels:    []string{"labeltest"},
+		Namespace: "test",
+	}, fakePipelineDeployResponses.DeployOpts)
+}
+
 type fakeEnvSetter struct {
 	envs map[string]string
 	err  error

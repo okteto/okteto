@@ -27,6 +27,7 @@ type FakePipelineClient struct {
 type FakePipelineResponses struct {
 	DeployResponse *types.GitDeployResponse
 	DeployErr      error
+	DeployOpts     types.PipelineDeployOptions
 
 	WaitErr error
 
@@ -45,7 +46,8 @@ func NewFakePipelineClient(responses *FakePipelineResponses) *FakePipelineClient
 }
 
 // Deploy deploys a fake pipeline
-func (fc *FakePipelineClient) Deploy(_ context.Context, _ types.PipelineDeployOptions) (*types.GitDeployResponse, error) {
+func (fc *FakePipelineClient) Deploy(_ context.Context, opts types.PipelineDeployOptions) (*types.GitDeployResponse, error) {
+	fc.responses.DeployOpts = opts
 	return fc.responses.DeployResponse, fc.responses.DeployErr
 }
 
