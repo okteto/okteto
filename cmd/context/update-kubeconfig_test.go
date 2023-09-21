@@ -143,7 +143,7 @@ func Test_ExecuteUpdateKubeconfig_DisabledKubetoken(t *testing.T) {
 			okContext := okteto.Context()
 			kubeconfigPaths := []string{file}
 
-			err = NewKubeconfigCMD(tt.okClientProvider).Execute(okContext, kubeconfigPaths)
+			err = newKubeconfigController(tt.okClientProvider).execute(okContext, kubeconfigPaths)
 			assert.NoError(t, err, "error writing kubeconfig")
 
 			cfg := kubeconfig.Get(kubeconfigPaths)
@@ -256,7 +256,7 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 			okContext := okteto.Context()
 			kubeconfigPaths := []string{file}
 
-			err = NewKubeconfigCMD(okClientProvider).Execute(okContext, kubeconfigPaths)
+			err = newKubeconfigController(okClientProvider).execute(okContext, kubeconfigPaths)
 			assert.NoError(t, err, "error writing kubeconfig")
 
 			cfg := kubeconfig.Get(kubeconfigPaths)
@@ -311,7 +311,7 @@ func Test_ExecuteUpdateKubeconfig_With_OktetoUseStaticKubetokenEnvVar(t *testing
 		},
 	)
 
-	err = NewKubeconfigCMD(okClientProvider).Execute(okContext, kubeconfigPaths)
+	err = newKubeconfigController(okClientProvider).execute(okContext, kubeconfigPaths)
 	assert.NoError(t, err, "error writing kubeconfig")
 
 	cfg := kubeconfig.Get(kubeconfigPaths)
@@ -350,7 +350,7 @@ func Test_ExecuteUpdateKubeconfig_ForNonOktetoContext(t *testing.T) {
 	okContext := okteto.Context()
 	kubeconfigPaths := []string{file}
 
-	err = NewKubeconfigCMD(nil).Execute(okContext, kubeconfigPaths)
+	err = newKubeconfigController(nil).execute(okContext, kubeconfigPaths)
 	assert.NoError(t, err, "error writing kubeconfig")
 
 	cfg := kubeconfig.Get(kubeconfigPaths)

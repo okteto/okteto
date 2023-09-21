@@ -37,8 +37,8 @@ type KubeconfigCMD struct {
 	kubetokenController kubeconfigController
 }
 
-// NewKubeconfigCMD creates a new command to update the kubeconfig stored in the okteto context
-func NewKubeconfigCMD(okClientProvider oktetoClientProvider) *KubeconfigCMD {
+// newKubeconfigController creates a new command to update the kubeconfig stored in the okteto context
+func newKubeconfigController(okClientProvider oktetoClientProvider) *KubeconfigCMD {
 	var kubetokenController kubeconfigController
 	if utils.LoadBoolean(OktetoUseStaticKubetokenEnvVar) {
 		kubetokenController = newStaticKubetokenController()
@@ -51,7 +51,8 @@ func NewKubeconfigCMD(okClientProvider oktetoClientProvider) *KubeconfigCMD {
 }
 
 // UpdateKubeconfigCMD all contexts managed by okteto
-func (kc *KubeconfigCMD) UpdateKubeconfigCMD() *cobra.Command {
+func UpdateKubeconfigCMD(okClientProvider oktetoClientProvider) *cobra.Command {
+	kc := newKubeconfigController(okClientProvider)
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "update-kubeconfig",
@@ -65,14 +66,14 @@ func (kc *KubeconfigCMD) UpdateKubeconfigCMD() *cobra.Command {
 				return err
 			}
 
-			return kc.Execute(okteto.Context(), config.GetKubeconfigPath())
+			return kc.execute(okteto.Context(), config.GetKubeconfigPath())
 		},
 	}
 
 	return cmd
 }
 
-func (k *KubeconfigCMD) Execute(okCtx *okteto.OktetoContext, kubeconfigPaths []string) error {
+func (k *KubeconfigCMD) execute(okCtx *okteto.OktetoContext, kubeconfigPaths []string) error {
 	contextName := okCtx.Name
 	if okCtx.IsOkteto {
 		contextName = okteto.UrlToKubernetesContext(contextName)

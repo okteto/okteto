@@ -45,7 +45,7 @@ func Test_NoArgsAcceptedList(t *testing.T) {
 }
 
 func Test_NoArgsAcceptedUpdateKubeConfig(t *testing.T) {
-	cmd := NewKubeconfigCMD(nil).UpdateKubeconfigCMD()
+	cmd := UpdateKubeconfigCMD(nil)
 	cmd.SetArgs([]string{"args"})
 	err := cmd.Execute()
 	if err == nil {

@@ -14,7 +14,7 @@
 package cmd
 
 import (
-	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -37,7 +37,7 @@ Generated kubeconfig file uses a credential plugin to get the cluster credential
 `,
 		Args: utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#kubeconfig"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return contextCMD.NewKubeconfigCMD(okClientProvider).UpdateKubeconfigCMD().RunE(cmd, args)
+			return context.UpdateKubeconfigCMD(okClientProvider).RunE(cmd, args)
 		},
 	}
 	return cmd
