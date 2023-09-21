@@ -45,6 +45,10 @@ const (
 	dependencyEnvTemplate = "OKTETO_DEPENDENCY_%s_VARIABLE_%s"
 )
 
+var (
+	errUnableToReuseParams = errors.New("development environment not found: unable to use --reuse-params option")
+)
+
 // deployFlags represents the user input for a pipeline deploy command
 type deployFlags struct {
 	branch       string
@@ -151,7 +155,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 	cfg, err := configmaps.Get(ctx, cfgName, opts.Namespace, c)
 	if err != nil {
 		if opts.ReuseParams && oktetoErrors.IsNotFound(err) {
-			return fmt.Errorf("Dev Environment not found to reuse params. Deploy your pipeline without --reuse-params")
+			return errUnableToReuseParams
 		}
 		if opts.SkipIfExists && !oktetoErrors.IsNotFound(err) {
 			return fmt.Errorf("failed to get pipeline '%s': %w", cfgName, err)
