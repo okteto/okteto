@@ -565,6 +565,10 @@ func isRemoteDeployer(runInRemoteFlag bool, deployImage string) bool {
 
 // deployDependencies deploy the dependencies in the manifest
 func (dc *DeployCommand) deployDependencies(ctx context.Context, deployOptions *Options) error {
+	if len(deployOptions.Manifest.Dependencies) > 0 && !okteto.Context().IsOkteto {
+		return fmt.Errorf("dependency deployment is only supported in clusters with Okteto installed")
+	}
+
 	for depName, dep := range deployOptions.Manifest.Dependencies {
 		oktetoLog.Information("Deploying dependency '%s'", depName)
 		oktetoLog.SetStage(fmt.Sprintf("Deploying dependency %s", depName))
