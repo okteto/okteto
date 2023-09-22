@@ -184,6 +184,16 @@ func TestUpAutocreateV2(t *testing.T) {
 	require.NoError(t, err)
 
 	testNamespace := integration.GetTestNamespace("TestUpAutocreateV2", user)
+
+	contextOpts := &commands.ContextOptions{
+		Workdir:       dir,
+		OktetoHome:    dir,
+		Token:         token,
+		Namespace:     testNamespace,
+		SkipTlsVerify: insecureSkipTlsVerify,
+	}
+	require.NoError(t, commands.RunOktetoContext(oktetoPath, contextOpts))
+
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

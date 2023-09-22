@@ -14,6 +14,7 @@
 package integration
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -30,6 +31,11 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+)
+
+var (
+	// InsecureSkipTLSVerify toggles TLS verification for the http client
+	InsecureSkipTLSVerify = false
 )
 
 // GetOktetoPath returns the okteto path used to run tests
@@ -96,6 +102,11 @@ func GetCurrentNamespace() string {
 
 // GetContentFromURL returns the content of the url
 func GetContentFromURL(url string, timeout time.Duration) string {
+	httpClient := http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: InsecureSkipTLSVerify},
+		},
+	}
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 	retry := 0
@@ -106,7 +117,7 @@ func GetContentFromURL(url string, timeout time.Duration) string {
 			log.Printf("endpoint %s didn't respond", url)
 			return ""
 		case <-ticker.C:
-			r, err := http.Get(url)
+			r, err := httpClient.Get(url)
 			if err != nil {
 				if retry%10 == 0 {
 					log.Printf("called %s, got %s, retrying", url, err)

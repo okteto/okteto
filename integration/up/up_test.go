@@ -34,11 +34,12 @@ import (
 )
 
 var (
-	user            = ""
-	token           = ""
-	kubectlBinary   = "kubectl"
-	appsSubdomain   = "cloud.okteto.net"
-	ErrUpNotRunning = errors.New("Up command is no longer running")
+	user                  = ""
+	token                 = ""
+	kubectlBinary         = "kubectl"
+	appsSubdomain         = "cloud.okteto.net"
+	ErrUpNotRunning       = errors.New("Up command is no longer running")
+	insecureSkipTlsVerify = false
 )
 
 const (
@@ -68,6 +69,11 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 	token = integration.GetToken()
+
+	if v := os.Getenv("OKTETO_INSECURE_SKIP_TLS_VERIFY"); v == "true" {
+		insecureSkipTlsVerify = true
+		integration.InsecureSkipTLSVerify = true
+	}
 
 	exitCode := m.Run()
 	os.Exit(exitCode)
