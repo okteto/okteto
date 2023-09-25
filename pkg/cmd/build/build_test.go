@@ -1,7 +1,6 @@
 package build
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"log"
@@ -16,7 +15,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
-	"github.com/stretchr/testify/assert"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
@@ -590,112 +589,132 @@ func removeFile(s string) error {
 	return nil
 }
 
-func Test_parseTempSecrets(t *testing.T) {
-	secretDir := t.TempDir()
-	tmpTestSecretFile, err := os.CreateTemp(secretDir, "")
+func Test_replaceSecretsSourceEnvWithTempFile(t *testing.T) {
+	t.Parallel()
+	fakeFs := afero.NewMemMapFs()
+	localSrcFile, err := afero.TempFile(fakeFs, t.TempDir(), "")
 	require.NoError(t, err)
 
-	writer := bufio.NewWriter(tmpTestSecretFile)
-	_, err = writer.Write([]byte(fmt.Sprintf("%s\n", "content for ${SECRET_ENV}")))
-	assert.NoError(t, err)
-	writer.Flush()
-
-	tempFolder := t.TempDir()
-	envValue := "secret env value"
-	t.Setenv("SECRET_ENV", envValue)
-
-	buildOpts := &types.BuildOptions{
-		Secrets: []string{
-			fmt.Sprintf("id=mysecret,src=%s", tmpTestSecretFile.Name()),
+	tests := []struct {
+		name                    string
+		fs                      afero.Fs
+		secretTempFolder        string
+		buildOptions            *types.BuildOptions
+		expectedErr             bool
+		expectedReplacedSecrets bool
+	}{
+		{
+			name:             "valid secret format",
+			fs:               fakeFs,
+			secretTempFolder: t.TempDir(),
+			buildOptions: &types.BuildOptions{
+				Secrets: []string{fmt.Sprintf("id=mysecret,src=%s", localSrcFile.Name())},
+			},
+			expectedErr:             false,
+			expectedReplacedSecrets: true,
+		},
+		{
+			name:             "valid secret format, reorder the fields",
+			fs:               fakeFs,
+			secretTempFolder: t.TempDir(),
+			buildOptions: &types.BuildOptions{
+				Secrets: []string{fmt.Sprintf("src=%s,id=mysecret", localSrcFile.Name())},
+			},
+			expectedErr:             false,
+			expectedReplacedSecrets: true,
+		},
+		{
+			name:             "valid secret format, only id",
+			fs:               fakeFs,
+			secretTempFolder: t.TempDir(),
+			buildOptions: &types.BuildOptions{
+				Secrets: []string{"id=mysecret"},
+			},
+			expectedErr: false,
+		},
+		{
+			name:             "valid secret format, only source",
+			fs:               fakeFs,
+			secretTempFolder: t.TempDir(),
+			buildOptions: &types.BuildOptions{
+				Secrets: []string{fmt.Sprintf("src=%s", localSrcFile.Name())},
+			},
+			expectedErr:             false,
+			expectedReplacedSecrets: true,
+		},
+		{
+			name:             "invalid secret, local file does not exist",
+			fs:               fakeFs,
+			secretTempFolder: t.TempDir(),
+			buildOptions: &types.BuildOptions{
+				Secrets: []string{"id=mysecret,src=/file/invalid"},
+			},
+			expectedErr:             true,
+			expectedReplacedSecrets: false,
 		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 
-	require.NoError(t, parseTempSecrets(tempFolder, buildOpts))
+			initialSecrets := make([]string, len(tt.buildOptions.Secrets))
+			copy(initialSecrets, tt.buildOptions.Secrets)
+			err := replaceSecretsSourceEnvWithTempFile(tt.fs, tt.secretTempFolder, tt.buildOptions)
+			require.Truef(t, tt.expectedErr == (err != nil), "not expected error")
 
-	require.NoError(t, tmpTestSecretFile.Close())
+			if tt.expectedReplacedSecrets {
+				require.NotEqualValues(t, initialSecrets, tt.buildOptions.Secrets)
+			} else {
+				require.EqualValues(t, initialSecrets, tt.buildOptions.Secrets)
+			}
+		})
+	}
+}
 
-	require.NotContains(t, buildOpts.Secrets[0], tmpTestSecretFile.Name())
-	require.Contains(t, buildOpts.Secrets[0], "secret-")
+func Test_createTempFileWithExpandedEnvsAtSource(t *testing.T) {
+	fakeFs := afero.NewMemMapFs()
 
-	newSecretPath := strings.SplitN(buildOpts.Secrets[0], "id=mysecret,src=", 2)
-	b, err := os.ReadFile(newSecretPath[1])
+	localSrcFile, err := afero.TempFile(fakeFs, t.TempDir(), "")
 	require.NoError(t, err)
 
-	require.Contains(t, string(b), envValue)
+	_, err = localSrcFile.Write([]byte(`localEnv: ${ENV_IN_FILE}`))
+	require.NoError(t, err)
 
-}
-func Test_parseSecretFromString(t *testing.T) {
-	type args struct {
-		s string
-	}
 	tests := []struct {
 		name        string
-		args        args
-		expectedId  string
-		expectedSrc string
+		fakeFs      afero.Fs
+		sourceFile  string
+		envValue    string
 		expectedErr bool
 	}{
 		{
-			name: "valid secret format",
-			args: args{
-				s: "id=mysecret,src=/local/path",
-			},
-			expectedId:  "mysecret",
-			expectedSrc: "/local/path",
+			name:       "no error",
+			envValue:   "value of env",
+			sourceFile: localSrcFile.Name(),
+			fakeFs:     fakeFs,
 		},
 		{
-			name: "valid secret format 2",
-			args: args{
-				s: "src=/local/path,id=mysecret",
-			},
-			expectedId:  "mysecret",
-			expectedSrc: "/local/path",
-		},
-		{
-			name: "invalid secret format",
-			args: args{
-				s: "id=mysecret",
-			},
-			expectedId:  "",
-			expectedSrc: "",
-			expectedErr: true,
-		},
-		{
-			name: "invalid secret format 2",
-			args: args{
-				s: "src=/local/path",
-			},
-			expectedId:  "",
-			expectedSrc: "",
-			expectedErr: true,
-		},
-		{
-			name: "invalid secret format 3",
-			args: args{
-				s: "id=,src=/local/path",
-			},
-			expectedId:  "",
-			expectedSrc: "",
-			expectedErr: true,
-		},
-		{
-			name: "invalid secret format 4",
-			args: args{
-				s: "id=mysecret,src=",
-			},
-			expectedId:  "",
-			expectedSrc: "",
+			name:        "error - local file not exist",
+			sourceFile:  "file",
+			fakeFs:      fakeFs,
 			expectedErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			id, src, err := parseSecretFromString(tt.args.s)
-			require.Truef(t, tt.expectedErr == (err != nil), "expected error")
+			t.Setenv("ENV_IN_FILE", tt.envValue)
 
-			require.Equal(t, tt.expectedId, id)
-			require.Equal(t, tt.expectedSrc, src)
+			file, err := createTempFileWithExpandedEnvsAtSource(tt.fakeFs, tt.sourceFile, t.TempDir())
+			if tt.expectedErr {
+				require.Error(t, err)
+				return
+			}
 
+			f, err := afero.ReadFile(tt.fakeFs, file)
+			if !tt.expectedErr {
+				require.NoError(t, err)
+			}
+
+			require.Contains(t, string(f), "value of env")
 		})
 	}
 }
