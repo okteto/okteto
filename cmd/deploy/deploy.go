@@ -15,6 +15,7 @@ package deploy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -47,6 +48,10 @@ import (
 const (
 	headerUpgrade          = "Upgrade"
 	succesfullyDeployedmsg = "Development environment '%s' successfully deployed"
+)
+
+var (
+	errDepenNotAvailableInVanilla = errors.New("dependency deployment is only supported in clusters with Okteto installed")
 )
 
 // Options represents options for deploy command
@@ -565,6 +570,10 @@ func isRemoteDeployer(runInRemoteFlag bool, deployImage string) bool {
 
 // deployDependencies deploy the dependencies in the manifest
 func (dc *DeployCommand) deployDependencies(ctx context.Context, deployOptions *Options) error {
+	if len(deployOptions.Manifest.Dependencies) > 0 && !okteto.Context().IsOkteto {
+		return errDepenNotAvailableInVanilla
+	}
+
 	for depName, dep := range deployOptions.Manifest.Dependencies {
 		oktetoLog.Information("Deploying dependency '%s'", depName)
 		oktetoLog.SetStage(fmt.Sprintf("Deploying dependency %s", depName))
