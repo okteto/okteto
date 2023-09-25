@@ -947,7 +947,9 @@ func (up *upContext) shutdownHybridMode() {
 
 	terminateChildProcess(up.hybridCommand.Process.Pid, pList)
 
-	if err := terminateProcess(up.hybridCommand.Process.Pid); err != nil {
+	p := newOktetoProcess(up.hybridCommand.Process.Pid)
+
+	if err := terminateProcess(p); err != nil {
 		oktetoLog.Debugf("error terminating process %s: %v", up.hybridCommand.Process.Pid, err)
 	}
 }
@@ -962,7 +964,8 @@ func terminateChildProcess(parent int, pList []ps.Process) {
 		// iterate over the children of the parent
 		terminateChildProcess(pR.Pid(), pList)
 
-		if err := terminateProcess(pR.Pid()); err != nil {
+		p := newOktetoProcess(pR.Pid())
+		if err := terminateProcess(p); err != nil {
 			if errors.Is(err, os.ErrProcessDone) {
 				continue
 			}
@@ -971,26 +974,26 @@ func terminateChildProcess(parent int, pList []ps.Process) {
 	}
 }
 
-func terminateProcess(pid int) error {
-	oktetoLog.Debugf("terminating process: %s", pid)
+func terminateProcess(p oktetoProcessInterface) error {
+	oktetoLog.Debugf("terminating process: %s", p.Getpid())
 
-	p, err := os.FindProcess(pid)
+	err := p.Find()
 	if err != nil {
-		oktetoLog.Debugf("error getting process %s: %v", pid, err)
+		oktetoLog.Debugf("error getting process %s: %v", p.Getpid(), err)
 		return err
 	}
 
-	isSessionLead, err := isProcessSessionLeader(pid)
+	isSessionLead, err := p.IsProcessSessionLeader()
 	if err != nil {
-		oktetoLog.Debugf("error getting process group id %s: %v", pid, err)
+		oktetoLog.Debugf("error getting process group id %s: %v", p.Getpid(), err)
 		return err
 	}
 
 	if isSessionLead {
 		// SIGTERM will not terminate session leader processes, so we need to send SIGKILL instead
-		oktetoLog.Debugf("killing session leader process %s", pid)
+		oktetoLog.Debugf("killing session leader process %s", p.Getpid())
 		if err := p.Kill(); err != nil {
-			oktetoLog.Debugf("error terminating session leader process %s: %v", p.Pid, err)
+			oktetoLog.Debugf("error terminating session leader process %s: %v", p.Getpid(), err)
 			return err
 		}
 	} else {
@@ -998,12 +1001,12 @@ func terminateProcess(pid int) error {
 			if errors.Is(err, os.ErrProcessDone) {
 				return nil
 			}
-			oktetoLog.Debugf("error terminating process %s: %v", p.Pid, err)
+			oktetoLog.Debugf("error terminating process %s: %v", p.Getpid(), err)
 			return err
 		}
 
 		if _, err := p.Wait(); err != nil {
-			oktetoLog.Debugf("error waiting for process to exit %s: %v", p.Pid, err)
+			oktetoLog.Debugf("error waiting for process to exit %s: %v", p.Getpid(), err)
 			return err
 		}
 	}

@@ -3,6 +3,6 @@
 
 package up
 
-func isProcessSessionLeader(pid int) (bool, error) {
+func (p *OktetoProcess) IsProcessSessionLeader() (bool, error) {
 	return false, nil
 }

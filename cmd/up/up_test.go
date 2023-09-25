@@ -17,6 +17,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"syscall"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test/client"
@@ -474,4 +476,89 @@ func TestSetSyncDefaultsByDevModeError(t *testing.T) {
 	err := setSyncDefaultsByDevMode(dev, getSyncTempDirFake)
 	require.Error(t, err)
 	require.Equal(t, *dev, expectedDev)
+}
+
+func Test_terminateProcess(t *testing.T) {
+	tests := []struct {
+		name                      string
+		expectedErr               error
+		expectedSignals           []os.Signal
+		isProcessSessionLeader    bool
+		isProcessSessionLeaderErr error
+		findErr                   error
+		killErr                   error
+		signalErr                 error
+		waitErr                   error
+	}{
+		{
+			name:                   "success (regular process)",
+			isProcessSessionLeader: false,
+			expectedSignals:        []os.Signal{syscall.SIGTERM},
+		},
+		{
+			name:                   "success (process already terminated)",
+			isProcessSessionLeader: false,
+			signalErr:              os.ErrProcessDone,
+			expectedSignals:        []os.Signal{syscall.SIGTERM},
+		},
+		{
+			name:                   "success (session leader process)",
+			isProcessSessionLeader: true,
+			expectedSignals:        []os.Signal{syscall.SIGKILL},
+		},
+		{
+			name:        "fail - cannot find process",
+			findErr:     assert.AnError,
+			expectedErr: assert.AnError,
+		},
+		{
+			name:                      "fail - cannot calculate if session leader",
+			isProcessSessionLeaderErr: assert.AnError,
+			expectedErr:               assert.AnError,
+		},
+		{
+			name:                   "fail - kill error",
+			isProcessSessionLeader: true,
+			killErr:                assert.AnError,
+			expectedErr:            assert.AnError,
+			expectedSignals:        []os.Signal{syscall.SIGKILL},
+		},
+		{
+			name:            "fail - signal error",
+			signalErr:       assert.AnError,
+			expectedErr:     assert.AnError,
+			expectedSignals: []os.Signal{syscall.SIGTERM},
+		},
+		{
+			name:            "fail - wait error",
+			waitErr:         assert.AnError,
+			expectedErr:     assert.AnError,
+			expectedSignals: []os.Signal{syscall.SIGTERM},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &mockOktetoProcess{
+				pid:                       1234,
+				isProcessSessionLeader:    tt.isProcessSessionLeader,
+				isProcessSessionLeaderErr: tt.isProcessSessionLeaderErr,
+				findErr:                   tt.findErr,
+				killErr:                   tt.killErr,
+				signalErr:                 tt.signalErr,
+				waitErr:                   tt.waitErr,
+			}
+			err := terminateProcess(p)
+
+			if err == nil && tt.expectedErr != nil {
+				t.Fatalf("expected error '%s', but got nil", tt.expectedErr.Error())
+			}
+
+			if err != nil && tt.expectedErr == nil {
+				t.Fatalf("expected no error, but got '%s'", err.Error())
+			}
+
+			assert.Equal(t, tt.expectedSignals, p.signalsReceived)
+		})
+	}
 }
