@@ -15,12 +15,10 @@ package up
 
 import (
 	"os"
-	"syscall"
 )
 
 type oktetoProcessInterface interface {
 	Getpid() int
-	Getpgid(pid int) (int, error)
 	Find() error
 	Signal(os.Signal) error
 	Wait() (*os.ProcessState, error)
@@ -41,10 +39,6 @@ func newOktetoProcess(pid int) oktetoProcessInterface {
 
 func (p *OktetoProcess) Getpid() int {
 	return p.pid
-}
-
-func (p *OktetoProcess) Getpgid(pid int) (int, error) {
-	return syscall.Getpgid(pid)
 }
 
 func (p *OktetoProcess) Find() error {

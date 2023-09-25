@@ -25,7 +25,6 @@ type mockOktetoProcess struct {
 
 	signalsReceived []os.Signal
 
-	getpgidErr                error
 	findErr                   error
 	signalErr                 error
 	waitProcessState          *os.ProcessState
@@ -37,10 +36,6 @@ type mockOktetoProcess struct {
 
 func (m *mockOktetoProcess) Getpid() int {
 	return m.pid
-}
-
-func (m *mockOktetoProcess) Getpgid(pid int) (int, error) {
-	return pid, m.getpgidErr
 }
 
 func (m *mockOktetoProcess) Find() error {
