@@ -133,7 +133,10 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 
 	// inject secrets to buildkit from temp folder
 	if err := replaceSecretsSourceEnvWithTempFile(afero.NewOsFs(), secretTempFolder, buildOptions); err != nil {
-		return err
+		return oktetoErrors.UserError{
+			E:    err,
+			Hint: "secret should have the format 'id=mysecret,src=/local/secret' where source exists as local file",
+		}
 	}
 
 	opt, err := getSolveOpt(buildOptions)
@@ -407,8 +410,6 @@ func GetVolumesToInclude(volumesToInclude []model.StackVolume) []model.StackVolu
 	return result
 }
 
-
-
 // replaceSecretsSourceEnvWithTempFile reads the content of the src of a secret and replaces the envs to mount into dockerfile
 func replaceSecretsSourceEnvWithTempFile(fs afero.Fs, secretTempFolder string, buildOptions *types.BuildOptions) error {
 	// for each secret at buildOptions extract the src
@@ -419,20 +420,20 @@ func replaceSecretsSourceEnvWithTempFile(fs afero.Fs, secretTempFolder string, b
 		csvReader := csv.NewReader(strings.NewReader(s))
 		fields, err := csvReader.Read()
 		if err != nil {
-			return err
+			return fmt.Errorf("error reading the csv secret, %w", err)
 		}
 
 		newFields := make([]string, len(fields))
 		for indx, field := range fields {
 			key, value, found := strings.Cut(field, "=")
 			if !found {
-				return fmt.Errorf("format error")
+				return fmt.Errorf("secret format error")
 			}
 
 			if key == "src" || key == "source" {
 				tempFileName, err := createTempFileWithExpandedEnvsAtSource(fs, value, secretTempFolder)
 				if err != nil {
-					return err
+					return fmt.Errorf("error creating the temp file with expanded values: %w", err)
 				}
 				value = tempFileName
 			}
