@@ -133,10 +133,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 
 	// inject secrets to buildkit from temp folder
 	if err := replaceSecretsSourceEnvWithTempFile(afero.NewOsFs(), secretTempFolder, buildOptions); err != nil {
-		return oktetoErrors.UserError{
-			E:    err,
-			Hint: "secret should have the format 'id=mysecret,src=/local/secret' where source exists as local file",
-		}
+		return fmt.Errorf("%w: secret should have the format 'id=mysecret,src=/local/secret'", err)
 	}
 
 	opt, err := getSolveOpt(buildOptions)
