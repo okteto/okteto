@@ -129,11 +129,15 @@ func main() {
 		oktetoLog.Infof("error hiding server-name flag: %s", err)
 	}
 
+	okClientProvider := okteto.NewOktetoClientProvider()
+
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
 	root.AddCommand(cmd.Login())
-	root.AddCommand(contextCMD.Context())
-	root.AddCommand(cmd.Kubeconfig())
+
+	root.AddCommand(contextCMD.Context(okClientProvider))
+	root.AddCommand(cmd.Kubeconfig(okClientProvider))
+
 	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
 	root.AddCommand(registrytoken.RegistryToken(ctx))
 

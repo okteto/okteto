@@ -24,12 +24,12 @@ func (*fakeK8sProvider) GetIngressClient() (*ingresses.Client, error) {
 }
 
 func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User) *contextCMD.ContextCommand {
-	return &contextCMD.ContextCommand{
-		OktetoClientProvider: client.NewFakeOktetoClientProvider(c),
-		K8sClientProvider:    test.NewFakeK8sProvider(nil),
-		LoginController:      test.NewFakeLoginController(user, nil),
-		OktetoContextWriter:  test.NewFakeOktetoContextWriter(),
-	}
+	cmd := contextCMD.NewContextCommand()
+	cmd.OktetoClientProvider = client.NewFakeOktetoClientProvider(c)
+	cmd.K8sClientProvider = test.NewFakeK8sProvider(nil)
+	cmd.LoginController = test.NewFakeLoginController(user, nil)
+	cmd.OktetoContextWriter = test.NewFakeOktetoContextWriter()
+	return cmd
 }
 
 func NewFakeNamespaceCommand(okClient *client.FakeOktetoClient, k8sClient kubernetes.Interface, user *types.User) *NamespaceCommand {

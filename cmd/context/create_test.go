@@ -42,6 +42,7 @@ func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User, fakeObj
 		LoginController:      test.NewFakeLoginController(user, nil),
 		OktetoClientProvider: client.NewFakeOktetoClientProvider(c),
 		OktetoContextWriter:  test.NewFakeOktetoContextWriter(),
+		kubetokenController:  newStaticKubetokenController(),
 	}
 }
 
@@ -639,7 +640,6 @@ func TestGetUserContext(t *testing.T) {
 }
 
 func Test_replaceCredentialsTokenWithDynamicKubetoken(t *testing.T) {
-
 	tests := []struct {
 		name                  string
 		userContext           *types.UserContext
@@ -730,7 +730,7 @@ func Test_replaceCredentialsTokenWithDynamicKubetoken(t *testing.T) {
 				KubetokenClient: client.NewFakeKubetokenClient(tt.kubetokenMockResponse),
 			})
 
-			replaceCredentialsTokenWithDynamicKubetoken(fakeOktetoClientProvider, tt.userContext)
+			newDynamicKubetokenController(fakeOktetoClientProvider).updateOktetoContextToken(tt.userContext)
 			assert.Equal(t, tt.expectedToken, tt.userContext.Credentials.Token)
 		})
 	}
