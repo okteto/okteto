@@ -39,6 +39,7 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1063,14 +1064,6 @@ func TestDeployDependencies(t *testing.T) {
 func TestDeployOnlyDependencies(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-			},
-		},
-		CurrentContext: "test",
-	}
 	deployment := &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
@@ -1110,9 +1103,40 @@ func TestDeployOnlyDependencies(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, opts)
+	tt := []struct {
+		name        string
+		expecterErr error
+		isOkteto    bool
+	}{
+		{
+			name:        "deploy dependency with no error",
+			expecterErr: nil,
+			isOkteto:    true,
+		},
+		{
+			name:        "error okteto not installed",
+			expecterErr: errDepenNotAvailableInVanilla,
+			isOkteto:    false,
+		},
+	}
 
-	assert.NoError(t, err)
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			okteto.CurrentStore = &okteto.OktetoContextStore{
+				Contexts: map[string]*okteto.OktetoContext{
+					"test": {
+						Namespace: "test",
+						IsOkteto:  tc.isOkteto,
+					},
+				},
+				CurrentContext: "test",
+			}
+
+			err := c.RunDeploy(ctx, opts)
+
+			require.ErrorIs(t, err, tc.expecterErr)
+		})
+	}
 }
 
 type fakeTracker struct{}
