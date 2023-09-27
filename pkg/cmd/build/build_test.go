@@ -762,3 +762,49 @@ func Test_translateDockerErr(t *testing.T) {
 
 	}
 }
+
+func Test_setOutputMode(t *testing.T) {
+	tests := []struct {
+		name                     string
+		input                    string
+		envBuildkitProgressValue string
+		expected                 string
+	}{
+		{
+			name:     "not empty input",
+			input:    "outputmode",
+			expected: "outputmode",
+		},
+		{
+			name:     "empty input and empty env BUILDKIT_PROGRESS  - default output",
+			input:    "",
+			expected: "tty",
+		},
+		{
+			name:                     "empty input and unknown env BUILDKIT_PROGRESS  - default output",
+			input:                    "",
+			envBuildkitProgressValue: "unknown",
+			expected:                 "tty",
+		},
+		{
+			name:                     "empty input and plain env BUILDKIT_PROGRESS  - default output",
+			input:                    "",
+			envBuildkitProgressValue: "plain",
+			expected:                 "plain",
+		},
+		{
+			name:                     "empty input and json env BUILDKIT_PROGRESS  - default output",
+			input:                    "",
+			envBuildkitProgressValue: "json",
+			expected:                 "plain",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("BUILDKIT_PROGRESS", tt.envBuildkitProgressValue)
+			got := setOutputMode(tt.input)
+			require.Equal(t, tt.expected, got)
+		})
+	}
+}
