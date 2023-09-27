@@ -652,6 +652,16 @@ func Test_replaceSecretsSourceEnvWithTempFile(t *testing.T) {
 			expectedErr:             true,
 			expectedReplacedSecrets: false,
 		},
+		{
+			name:             "invalid secret, no = found",
+			fs:               fakeFs,
+			secretTempFolder: t.TempDir(),
+			buildOptions: &types.BuildOptions{
+				Secrets: []string{"mysecret"},
+			},
+			expectedErr:             true,
+			expectedReplacedSecrets: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
