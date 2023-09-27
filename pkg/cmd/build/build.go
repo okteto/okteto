@@ -396,17 +396,6 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string) string
 	return joinPath
 }
 
-// GetVolumesToInclude checks if the path exists, if it doesn't it skip it
-func GetVolumesToInclude(volumesToInclude []model.StackVolume) []model.StackVolume {
-	var result []model.StackVolume
-	for _, p := range volumesToInclude {
-		if _, err := os.Stat(p.LocalPath); err == nil {
-			result = append(result, p)
-		}
-	}
-	return result
-}
-
 // replaceSecretsSourceEnvWithTempFile reads the content of the src of a secret and replaces the envs to mount into dockerfile
 func replaceSecretsSourceEnvWithTempFile(fs afero.Fs, secretTempFolder string, buildOptions *types.BuildOptions) error {
 	// for each secret at buildOptions extract the src
