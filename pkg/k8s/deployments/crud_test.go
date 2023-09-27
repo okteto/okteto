@@ -474,7 +474,7 @@ func TestCheckConditionErrors(t *testing.T) {
 				t.Fatalf("wrong error. Got nil, expected %s", tt.expectedErr.Error())
 			}
 			if err != nil && tt.expectedErr == nil {
-				t.Fatalf("wrong error. Got nil, expected %s", err.Error())
+				t.Fatalf("wrong error. Expected nil, but got %s", err.Error())
 			}
 		})
 	}
