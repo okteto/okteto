@@ -138,7 +138,7 @@ func (dkc *dynamicKubetokenController) updateOktetoContextToken(userContext *typ
 
 	kubetoken, err := c.Kubetoken().GetKubeToken(okteto.Context().Name, userContext.User.Namespace)
 	if err != nil || kubetoken.Status.Token == "" {
-		return errors.New("Dynamic kubernetes token not available: falling back to static token")
+		return errors.New("dynamic kubernetes token not available: falling back to static token")
 	}
 
 	userContext.Credentials.Token = kubetoken.Status.Token
