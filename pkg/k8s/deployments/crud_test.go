@@ -279,6 +279,62 @@ func TestCheckConditionErrors(t *testing.T) {
 			fmt.Errorf("The value of resources.limits.memory in your okteto manifest (5Gi) exceeds the maximum memory limit per pod (3Gi)."),
 		},
 		{
+			"Memory per pod exceeded 2",
+			&appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake",
+					Namespace: "test",
+				},
+				Status: appsv1.DeploymentStatus{
+					Conditions: []appsv1.DeploymentCondition{
+						{
+							Type:    appsv1.DeploymentReplicaFailure,
+							Reason:  "FailedCreate",
+							Status:  apiv1.ConditionTrue,
+							Message: "maximum memory usage",
+						},
+					},
+				},
+			},
+			&model.Dev{
+				Resources: model.ResourceRequirements{
+					Limits: model.ResourceList{
+						apiv1.ResourceCPU:    resource.MustParse("2"),
+						apiv1.ResourceMemory: resource.MustParse("5Gi"),
+					},
+				},
+			},
+			fmt.Errorf("The value of resources.limits.memory in your okteto manifest (5Gi) exceeds the maximum memory limit per pod (3Gi)."),
+		},
+		{
+			"Cpu per pod exceeded",
+			&appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake",
+					Namespace: "test",
+				},
+				Status: appsv1.DeploymentStatus{
+					Conditions: []appsv1.DeploymentCondition{
+						{
+							Type:    appsv1.DeploymentReplicaFailure,
+							Reason:  "FailedCreate",
+							Status:  apiv1.ConditionTrue,
+							Message: "maximum cpu usage",
+						},
+					},
+				},
+			},
+			&model.Dev{
+				Resources: model.ResourceRequirements{
+					Limits: model.ResourceList{
+						apiv1.ResourceCPU:    resource.MustParse("2"),
+						apiv1.ResourceMemory: resource.MustParse("5Gi"),
+					},
+				},
+			},
+			fmt.Errorf("The value of resources.limits.cpu in your okteto manifest (2) exceeds the maximum CPU limit per pod (1)."),
+		},
+		{
 			"Cpu per pod exceeded",
 			&appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
@@ -334,19 +390,91 @@ func TestCheckConditionErrors(t *testing.T) {
 			},
 			fmt.Errorf("The value of resources.limits.cpu in your okteto manifest (2) exceeds the maximum CPU limit per pod (1). The value of resources.limits.memory in your okteto manifest (5Gi) exceeds the maximum memory limit per pod (3Gi)."),
 		},
+		{
+			name: "exceeded storage quota",
+			deployment: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake",
+					Namespace: "test",
+				},
+				Status: appsv1.DeploymentStatus{
+					Conditions: []appsv1.DeploymentCondition{
+						{
+							Type:    appsv1.DeploymentReplicaFailure,
+							Reason:  "FailedCreate",
+							Status:  apiv1.ConditionTrue,
+							Message: "exceeded quota: requested: requests.storage=1Gi, used: requests.storage=2Gi, limited: requests.storage=3Gi",
+						},
+					},
+				},
+			},
+			dev:         &model.Dev{},
+			expectedErr: fmt.Errorf("quota exceeded, you have reached the maximum storage per namespace"),
+		},
+		{
+			name: "exceeded number of pods quota",
+			deployment: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake",
+					Namespace: "test",
+				},
+				Status: appsv1.DeploymentStatus{
+					Conditions: []appsv1.DeploymentCondition{
+						{
+							Type:    appsv1.DeploymentReplicaFailure,
+							Reason:  "FailedCreate",
+							Status:  apiv1.ConditionTrue,
+							Message: "exceeded quota: requested: pods=1, used: pods=2, limited: pods=3",
+						},
+					},
+				},
+			},
+			dev:         &model.Dev{},
+			expectedErr: fmt.Errorf("quota exceeded, you have reached the maximum number of pods per namespace"),
+		},
+		{
+			name: "another error",
+			deployment: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake",
+					Namespace: "test",
+				},
+				Status: appsv1.DeploymentStatus{
+					Conditions: []appsv1.DeploymentCondition{
+						{
+							Type:    appsv1.DeploymentReplicaFailure,
+							Reason:  "FailedCreate",
+							Status:  apiv1.ConditionTrue,
+							Message: "another error",
+						},
+					},
+				},
+			},
+			dev:         &model.Dev{},
+			expectedErr: fmt.Errorf("another error"),
+		},
+		{
+			name: "No errors",
+			deployment: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake",
+					Namespace: "test",
+				},
+			},
+			dev:         &model.Dev{},
+			expectedErr: nil,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			err := CheckConditionErrors(tt.deployment, tt.dev)
 
-			if err == nil {
-				t.Fatalf("Didn't receive any error. Expected %s", tt.expectedErr)
+			if err == nil && tt.expectedErr != nil {
+				t.Fatalf("wrong error. Got nil, expected %s", tt.expectedErr.Error())
 			}
-
-			if err.Error() != tt.expectedErr.Error() {
-				t.Fatalf("wrong error. Got %s, expected %s", err, tt.expectedErr)
+			if err != nil && tt.expectedErr == nil {
+				t.Fatalf("wrong error. Expected nil, but got %s", err.Error())
 			}
 		})
 	}
