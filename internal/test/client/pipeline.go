@@ -36,6 +36,8 @@ type FakePipelineResponses struct {
 
 	ResourcesMap map[string]string
 	ResourceErr  error
+
+	CallCount int
 }
 
 // NewFakePipelineClient creates a pipeline client to use in tests
@@ -48,6 +50,7 @@ func NewFakePipelineClient(responses *FakePipelineResponses) *FakePipelineClient
 // Deploy deploys a fake pipeline
 func (fc *FakePipelineClient) Deploy(_ context.Context, opts types.PipelineDeployOptions) (*types.GitDeployResponse, error) {
 	fc.responses.DeployOpts = opts
+	fc.responses.CallCount++
 	return fc.responses.DeployResponse, fc.responses.DeployErr
 }
 
