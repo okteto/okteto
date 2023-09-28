@@ -23,11 +23,10 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/afero"
 	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 type registryInterface interface {
@@ -44,8 +43,6 @@ type upContext struct {
 	Dev                   *model.Dev
 	Translations          map[string]*apps.Translation
 	isRetry               bool
-	Client                *kubernetes.Clientset
-	RestConfig            *rest.Config
 	Pod                   *apiv1.Pod
 	Forwarder             forwarder
 	Disconnect            chan error
@@ -63,6 +60,8 @@ type upContext struct {
 	StartTime             time.Time
 	Options               *UpOptions
 	pidController         pidController
+	tokenUpdater          tokenUpdater
+	K8sClientProvider     okteto.K8sClientProvider
 	Fs                    afero.Fs
 	hybridCommand         *exec.Cmd
 	interruptReceived     bool

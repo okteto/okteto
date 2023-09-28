@@ -223,7 +223,7 @@ func Destroy(ctx context.Context, podName, namespace string, c kubernetes.Interf
 }
 
 // GetPodUserID returns the user id running the dev pod
-func GetPodUserID(ctx context.Context, podName, containerName, namespace string, c *kubernetes.Clientset) int64 {
+func GetPodUserID(ctx context.Context, podName, containerName, namespace string, c kubernetes.Interface) int64 {
 	podLogs, err := ContainerLogs(ctx, containerName, podName, namespace, false, c)
 	if err != nil {
 		oktetoLog.Infof("failed to access development container logs: %s", err)
