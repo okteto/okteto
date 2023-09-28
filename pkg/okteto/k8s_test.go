@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -147,9 +146,8 @@ func TestKubetokenRefreshRoundTrip(t *testing.T) {
 
 func TestGetK8sClientWithApiConfig(t *testing.T) {
 	type expected struct {
-		err    error
-		cfg    *rest.Config
-		client kubernetes.Interface
+		err error
+		cfg *rest.Config
 	}
 	tt := []struct {
 		name      string
