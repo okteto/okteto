@@ -25,27 +25,6 @@ var (
 	ErrK8sUnauthorised = errors.New("k8s unauthorized error")
 )
 
-type OktetoKubernetesClient struct {
-	*kubernetes.Clientset
-}
-
-// NewCustomKubernetesClient initializes and returns a custom Kubernetes client.
-func NewCustomKubernetesClient() (*OktetoKubernetesClient, error) {
-	// Initialize the Kubernetes client
-	config, err := rest.InClusterConfig() // or use restconfig from kubeconfig file
-	if err != nil {
-		return nil, err
-	}
-	kubeClient, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	return &OktetoKubernetesClient{
-		Clientset: kubeClient,
-	}, nil
-}
-
 const (
 	// oktetoKubernetesTimeoutEnvVar defines the timeout for kubernetes operations
 	oktetoKubernetesTimeoutEnvVar = "OKTETO_KUBERNETES_TIMEOUT"
