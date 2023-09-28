@@ -721,6 +721,22 @@ func TestSetEnvsFromDependencyNoError(t *testing.T) {
 				"OKTETO_DEPENDENCY_TEST-CONFIGMAP_VARIABLE_TESTSETENVSFROMDEPEN_TWO": "another env value",
 			},
 		},
+		{
+			name: "configmap has dependency envs - return err",
+			envSetter: fakeEnvSetter{
+				err: assert.AnError,
+			},
+			cmap: &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-configmap",
+				},
+				Data: map[string]string{
+					constants.OktetoDependencyEnvsKey: "eyJURVNUU0VURU5WU0ZST01ERVBFTl9PTkUiOiJhbiBlbnYgdmFsdWUiLCJURVNUU0VURU5WU0ZST01ERVBFTl9UV08iOiJhbm90aGVyIGVudiB2YWx1ZSJ9",
+				},
+			},
+			expectedErr:     true,
+			expectedEnvsSet: nil,
+		},
 	}
 
 	for _, tt := range tests {
