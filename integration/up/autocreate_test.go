@@ -30,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 const (
@@ -203,7 +204,14 @@ func TestUpAutocreateV2(t *testing.T) {
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
-	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	config := kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")})
+	for _, authInfo := range config.AuthInfos {
+		homeEnvVar := api.ExecEnvVar{Name: constants.OktetoHomeEnvVar, Value: dir}
+		authInfo.Exec.Env = append(authInfo.Exec.Env, homeEnvVar)
+	}
+
+	c, _, err := okteto.NewK8sClientProvider().Provide(config)
+
 	require.NoError(t, err)
 
 	indexPath := filepath.Join(dir, "index.html")
