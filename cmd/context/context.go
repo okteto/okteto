@@ -23,6 +23,7 @@ import (
 // Context points okteto to a cluster.
 func Context() *cobra.Command {
 	ctxOptions := &ContextOptions{}
+	count := 0
 	cmd := &cobra.Command{
 		Use:     "context",
 		Aliases: []string{"ctx"},
@@ -44,9 +45,12 @@ This will prompt you to select one of your existing contexts or to create a new 
 			if parent := cmd.Parent(); parent != nil {
 				if parent.PersistentPreRun != nil {
 					parent.PersistentPreRun(parent, args)
+					count++
 				}
 			}
-			okteto.SetInsecureSkipTLSVerifyPolicy(ctxOptions.InsecureSkipTlsVerify)
+			if count > 1 {
+				okteto.SetInsecureSkipTLSVerifyPolicy(ctxOptions.InsecureSkipTlsVerify)
+			}
 		},
 		RunE: Use().RunE,
 	}
