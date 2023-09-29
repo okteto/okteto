@@ -993,3 +993,36 @@ func TestCheckOktetoStartError(t *testing.T) {
 		})
 	}
 }
+
+func TestCleanCommand(t *testing.T) {
+	tt := []struct {
+		name              string
+		k8sClientProvider *test.FakeK8sProvider
+		expected          string
+	}{
+		{
+			name: "error providing k8s client",
+			k8sClientProvider: &test.FakeK8sProvider{
+				ErrProvide: assert.AnError,
+			},
+			expected: "",
+		},
+	}
+	for _, tt := range tt {
+		t.Run(tt.name, func(t *testing.T) {
+			upCtx := &upContext{
+				K8sClientProvider: tt.k8sClientProvider,
+			}
+			upCtx.cleanCommand(context.Background())
+
+			var output string
+			select {
+			case out := <-upCtx.cleaned:
+				output = out
+			default:
+				output = ""
+			}
+			assert.Equal(t, tt.expected, output)
+		})
+	}
+}

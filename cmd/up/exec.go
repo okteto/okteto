@@ -56,7 +56,6 @@ type HybridExecCtx struct {
 	Dev             *model.Dev
 	Name, Namespace string
 	Client          kubernetes.Interface
-	RunOktetoExec   bool
 }
 
 // GetCommandToExec returns the command to exec into the hybrid mode
@@ -411,12 +410,11 @@ func (up *upContext) RunCommand(ctx context.Context, cmd []string) error {
 	if up.Dev.RemoteModeEnabled() {
 		if up.Dev.IsHybridModeEnabled() {
 			hybridCtx := &HybridExecCtx{
-				Dev:           up.Dev,
-				Name:          up.Manifest.Name,
-				Namespace:     up.Manifest.Namespace,
-				Client:        k8sClient,
-				Workdir:       up.Dev.Workdir,
-				RunOktetoExec: false,
+				Dev:       up.Dev,
+				Name:      up.Manifest.Name,
+				Namespace: up.Manifest.Namespace,
+				Client:    k8sClient,
+				Workdir:   up.Dev.Workdir,
 			}
 			executor, err := NewHybridExecutor(ctx, hybridCtx)
 			if err != nil {
