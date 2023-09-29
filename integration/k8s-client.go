@@ -108,6 +108,7 @@ func WaitForDeployment(kubectlBinary string, kubectlOpts *commands.KubectlOption
 		case <-ticker.C:
 			output, err := commands.RunKubectlRolloutDeployment(kubectlBinary, kubectlOpts, revision)
 			if err != nil {
+				fmt.Printf("waitForDeployment error: %s", err)
 				continue
 			}
 
