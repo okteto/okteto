@@ -16,7 +16,6 @@ package context
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
@@ -24,20 +23,36 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-const (
-	// OktetoUseStaticKubetokenEnvVar is used to opt in to use static kubetoken
-	OktetoUseStaticKubetokenEnvVar = "OKTETO_USE_STATIC_KUBETOKEN"
-)
+// kubeconfigController has all the functions that the context command needs to update the kubeconfig stored in the okteto context
+// and the ones to store in the kubeconfig file
+type kubeconfigController interface {
+	kubeconfigTokenController
 
-var (
-	usingStaticKubetokenWarningMessage = fmt.Sprintf("Using static Kubernetes token due to env var: '%s'. This feature will be removed in the future. We recommend using a dynamic kubernetes token.", OktetoUseStaticKubetokenEnvVar)
-)
+	updateOktetoContextExec(*okteto.OktetoContext) error
+}
+
+type KubeconfigCMD struct {
+	kubetokenController kubeconfigController
+}
+
+// newKubeconfigController creates a new command to update the kubeconfig stored in the okteto context
+func newKubeconfigController(okClientProvider oktetoClientProvider) *KubeconfigCMD {
+	var kubetokenController kubeconfigController
+	if utils.LoadBoolean(OktetoUseStaticKubetokenEnvVar) {
+		kubetokenController = newStaticKubetokenController()
+	} else {
+		kubetokenController = newDynamicKubetokenController(okClientProvider)
+	}
+	return &KubeconfigCMD{
+		kubetokenController: kubetokenController,
+	}
+}
 
 // UpdateKubeconfigCMD all contexts managed by okteto
-func UpdateKubeconfigCMD() *cobra.Command {
+func UpdateKubeconfigCMD(okClientProvider oktetoClientProvider) *cobra.Command {
+	kc := newKubeconfigController(okClientProvider)
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "update-kubeconfig",
@@ -47,18 +62,18 @@ func UpdateKubeconfigCMD() *cobra.Command {
 			ctx := context.Background()
 
 			// Run context command to get the Cfg into Okteto Context
-			if err := NewContextCommand().Run(ctx, &ContextOptions{}); err != nil {
+			if err := NewContextCommand(withKubeTokenController(kc.kubetokenController)).Run(ctx, &ContextOptions{}); err != nil {
 				return err
 			}
 
-			return ExecuteUpdateKubeconfig(okteto.Context(), config.GetKubeconfigPath(), okteto.NewOktetoClientProvider())
+			return kc.execute(okteto.Context(), config.GetKubeconfigPath())
 		},
 	}
 
 	return cmd
 }
 
-func ExecuteUpdateKubeconfig(okCtx *okteto.OktetoContext, kubeconfigPaths []string, okClientProvider oktetoClientProvider) error {
+func (k *KubeconfigCMD) execute(okCtx *okteto.OktetoContext, kubeconfigPaths []string) error {
 	contextName := okCtx.Name
 	if okCtx.IsOkteto {
 		contextName = okteto.UrlToKubernetesContext(contextName)
@@ -66,20 +81,9 @@ func ExecuteUpdateKubeconfig(okCtx *okteto.OktetoContext, kubeconfigPaths []stri
 			return err
 		}
 
-		okClient, err := okClientProvider.Provide()
+		err := k.kubetokenController.updateOktetoContextExec(okCtx)
 		if err != nil {
-			return err
-		}
-
-		if utils.LoadBoolean(OktetoUseStaticKubetokenEnvVar) {
-			removeExecFromCfg(okCtx)
-			oktetoLog.Warning(usingStaticKubetokenWarningMessage)
-		} else {
-			if err := okClient.Kubetoken().CheckService(okCtx.Name, okCtx.Namespace); err == nil {
-				updateCfgAuthInfoWithExec(okCtx)
-			} else {
-				oktetoLog.Debug("Error checking kubetoken service: %w", err)
-			}
+			oktetoLog.Infof("failed to update okteto kubeconfig: %s", err)
 		}
 	}
 
@@ -103,32 +107,4 @@ func updateCfgClusterCertificate(contextName string, okContext *okteto.OktetoCon
 	}
 	okContext.Cfg.Clusters[contextName].CertificateAuthorityData = certPEM
 	return nil
-}
-
-func updateCfgAuthInfoWithExec(okCtx *okteto.OktetoContext) {
-	if okCtx.Cfg.AuthInfos == nil {
-		okCtx.Cfg.AuthInfos = clientcmdapi.NewConfig().AuthInfos
-		okCtx.Cfg.AuthInfos[okCtx.UserID] = clientcmdapi.NewAuthInfo()
-	}
-
-	if token := okCtx.Cfg.AuthInfos[okCtx.UserID].Token; token != "" {
-		okCtx.Cfg.AuthInfos[okCtx.UserID].Token = ""
-	}
-
-	okCtx.Cfg.AuthInfos[okCtx.UserID].Exec = &clientcmdapi.ExecConfig{
-		APIVersion:         "client.authentication.k8s.io/v1",
-		Command:            "okteto",
-		Args:               []string{"kubetoken", "--context", okCtx.Name, "--namespace", okCtx.Namespace},
-		InstallHint:        "Okteto needs to be installed in your PATH and it has to be connected to your instance using the command 'okteto context use https://okteto.example.com'. Please visit https://www.okteto.com/docs/getting-started/ for more information.",
-		InteractiveMode:    "Never",
-		ProvideClusterInfo: true,
-	}
-}
-
-func removeExecFromCfg(okCtx *okteto.OktetoContext) {
-	if okCtx == nil || okCtx.UserID == "" || okCtx.Cfg == nil || okCtx.Cfg.AuthInfos == nil || okCtx.Cfg.AuthInfos[okCtx.UserID] == nil {
-		return
-	}
-
-	okCtx.Cfg.AuthInfos[okCtx.UserID].Exec = nil
 }

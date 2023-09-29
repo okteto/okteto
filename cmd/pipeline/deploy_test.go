@@ -15,12 +15,8 @@ package pipeline
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -34,9 +30,10 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 )
 
 func Test_getRepositoryURL(t *testing.T) {
@@ -356,69 +353,399 @@ func TestDeployPipelineSuccesfulWithWaitStreamError(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestSetEnvsFromDependencyNoError(t *testing.T) {
+func Test_DeployPipelineWithReuseParamsNotFoundError(t *testing.T) {
 	ctx := context.Background()
-	namespace := "test"
-	cmapName := "test"
-	var tests = []struct {
-		name                 string
-		dataToSetInConfigMap map[string]string
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {},
+		},
+	}
+	pc := &Command{
+		k8sClientProvider: test.NewFakeK8sProvider(),
+	}
+	opts := &DeployOptions{
+		Repository:  "test",
+		Name:        "test",
+		ReuseParams: true,
+	}
+	err := pc.ExecuteDeployPipeline(ctx, opts)
+	assert.ErrorIs(t, err, errUnableToReuseParams)
+}
+
+func Test_DeployPipelineWithReuseParamsSuccess(t *testing.T) {
+	ctx := context.Background()
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {},
+		},
+	}
+
+	fakePipelineDeployResponses := &client.FakePipelineResponses{}
+	fakePipelineClient := client.NewFakePipelineClient(
+		fakePipelineDeployResponses,
+	)
+	pc := &Command{
+		okClient: &client.FakeOktetoClient{
+			PipelineClient: fakePipelineClient,
+		},
+		k8sClientProvider: test.NewFakeK8sProvider(
+			&v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "okteto-git-test",
+					Namespace: "test",
+					Labels: map[string]string{
+						"label.okteto.com/labeltest": "true",
+					},
+				},
+				Data: map[string]string{
+					"branch":   "testing",
+					"filename": "file",
+				},
+			},
+		),
+	}
+	opts := &DeployOptions{
+		Repository:  "test",
+		Name:        "test",
+		Namespace:   "test",
+		ReuseParams: true,
+	}
+	err := pc.ExecuteDeployPipeline(ctx, opts)
+	assert.NoError(t, err)
+
+	assert.Equal(t, types.PipelineDeployOptions{
+		Branch:    "testing",
+		Filename:  "file",
+		Labels:    []string{"labeltest"},
+		Namespace: "test",
+	}, fakePipelineDeployResponses.DeployOpts)
+}
+
+func Test_DeployPipelineWithSkipIfExist(t *testing.T) {
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {},
+		},
+	}
+
+	fakePipelineClientResponses := &client.FakePipelineResponses{}
+
+	tests := []struct {
+		name string
+		cmd  *Command
+		opts *DeployOptions
 	}{
 		{
-			name: "no envs to set",
+			name: "skip because deployed status",
+			cmd: &Command{
+				okClient: &client.FakeOktetoClient{
+					PipelineClient: client.NewFakePipelineClient(
+						fakePipelineClientResponses,
+					),
+				},
+				k8sClientProvider: test.NewFakeK8sProvider(
+					&v1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "okteto-git-test",
+							Namespace: "test",
+							Labels: map[string]string{
+								"label.okteto.com/labeltest": "true",
+							},
+						},
+						Data: map[string]string{
+							"status":   pipeline.DeployedStatus,
+							"branch":   "testing",
+							"filename": "file",
+						},
+					},
+				),
+			},
+			opts: &DeployOptions{
+				Repository:   "test",
+				Name:         "test",
+				Namespace:    "test",
+				SkipIfExists: true,
+			},
 		},
 		{
-			name: "setting envs",
-			dataToSetInConfigMap: map[string]string{
-				"TESTSETENVSFROMDEPEN_ONE": "an env value",
-				"TESTSETENVSFROMDEPEN_TWO": "another env value",
+			name: "skip because deployed status",
+			cmd: &Command{
+				okClient: &client.FakeOktetoClient{
+					PipelineClient: client.NewFakePipelineClient(
+						fakePipelineClientResponses,
+					),
+				},
+				k8sClientProvider: test.NewFakeK8sProvider(
+					&v1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "okteto-git-test",
+							Namespace: "test",
+							Labels: map[string]string{
+								"label.okteto.com/labeltest": "true",
+							},
+						},
+						Data: map[string]string{
+							"status":   pipeline.ProgressingStatus,
+							"branch":   "testing",
+							"filename": "file",
+						},
+					},
+				),
+			},
+			opts: &DeployOptions{
+				Repository:   "test",
+				Name:         "test",
+				Namespace:    "test",
+				SkipIfExists: true,
 			},
 		},
 	}
 
 	for _, tt := range tests {
+		ctx := context.Background()
+
 		t.Run(tt.name, func(t *testing.T) {
-			configMapData := make(map[string]string)
-			if tt.dataToSetInConfigMap != nil {
-				encondedEnvs, err := json.Marshal(tt.dataToSetInConfigMap)
-				assert.NoError(t, err)
-				encondedEnvsStr := base64.StdEncoding.EncodeToString(encondedEnvs)
-				configMapData[constants.OktetoDependencyEnvsKey] = encondedEnvsStr
-			}
-
-			cmap := &apiv1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      pipeline.TranslatePipelineName(cmapName),
-					Namespace: namespace,
-					Labels:    map[string]string{},
-				},
-				Data: configMapData,
-			}
-			fakeClient := fake.NewSimpleClientset(cmap)
-			err := setEnvsFromDependency(ctx, cmapName, namespace, fakeClient)
-			assert.NoError(t, err)
-
-			if tt.dataToSetInConfigMap != nil {
-				for k := range tt.dataToSetInConfigMap {
-					envKey := fmt.Sprintf(dependencyEnvTemplate, strings.ToUpper(cmapName), k)
-					os.Unsetenv(envKey)
-				}
-			}
+			err := tt.cmd.ExecuteDeployPipeline(ctx, tt.opts)
+			require.NoError(t, err)
+			require.Zero(t, fakePipelineClientResponses.CallCount)
 		})
 	}
 }
 
-func TestSetEnvsFromDependencyWithError(t *testing.T) {
-	ctx := context.Background()
-	cmap := &apiv1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test",
-			Namespace: "test",
-			Labels:    map[string]string{},
+func Test_DeployPipelineWithSkipIfExistAndWait(t *testing.T) {
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {},
 		},
 	}
-	fakeClient := fake.NewSimpleClientset(cmap)
-	assert.Error(t, setEnvsFromDependency(ctx, "test", "test", fakeClient))
+
+	fakePipelineClientResponses := &client.FakePipelineResponses{}
+
+	tests := []struct {
+		name string
+		cmd  *Command
+		opts *DeployOptions
+	}{
+		{
+			name: "wait and canStreamPrevLogs",
+			cmd: &Command{
+				okClient: &client.FakeOktetoClient{
+					PipelineClient: client.NewFakePipelineClient(
+						fakePipelineClientResponses,
+					),
+					StreamClient: client.NewFakeStreamClient(
+						&client.FakeStreamResponse{},
+					),
+				},
+				k8sClientProvider: test.NewFakeK8sProvider(
+					&v1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "okteto-git-test",
+							Namespace: "test",
+							Labels: map[string]string{
+								"label.okteto.com/labeltest": "true",
+							},
+						},
+						Data: map[string]string{
+							"branch":     "testing",
+							"filename":   "file",
+							"actionLock": "lock",
+							"actionName": "not-cli",
+						},
+					},
+				),
+			},
+			opts: &DeployOptions{
+				Repository:   "test",
+				Name:         "test",
+				Namespace:    "test",
+				SkipIfExists: true,
+				Wait:         true,
+				Timeout:      1 * time.Minute,
+			},
+		},
+		{
+			name: "wait and canStreamPrevLogs with err in streaming ignore err",
+			cmd: &Command{
+				okClient: &client.FakeOktetoClient{
+					PipelineClient: client.NewFakePipelineClient(
+						fakePipelineClientResponses,
+					),
+					StreamClient: client.NewFakeStreamClient(
+						&client.FakeStreamResponse{
+							StreamErr: assert.AnError,
+						},
+					),
+				},
+				k8sClientProvider: test.NewFakeK8sProvider(
+					&v1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "okteto-git-test",
+							Namespace: "test",
+							Labels: map[string]string{
+								"label.okteto.com/labeltest": "true",
+							},
+						},
+						Data: map[string]string{
+							"branch":     "testing",
+							"filename":   "file",
+							"actionLock": "lock",
+							"actionName": "not-cli",
+						},
+					},
+				),
+			},
+			opts: &DeployOptions{
+				Repository:   "test",
+				Name:         "test",
+				Namespace:    "test",
+				SkipIfExists: true,
+				Wait:         true,
+				Timeout:      1 * time.Minute,
+			},
+		},
+		{
+			name: "wait and not canStreamPrevLogs",
+			cmd: &Command{
+				okClient: &client.FakeOktetoClient{
+					PipelineClient: client.NewFakePipelineClient(
+						fakePipelineClientResponses,
+					),
+					StreamClient: client.NewFakeStreamClient(
+						&client.FakeStreamResponse{},
+					),
+				},
+				k8sClientProvider: test.NewFakeK8sProvider(
+					&v1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "okteto-git-test",
+							Namespace: "test",
+							Labels: map[string]string{
+								"label.okteto.com/labeltest": "true",
+							},
+						},
+						Data: map[string]string{
+							"status":     pipeline.DeployedStatus,
+							"branch":     "testing",
+							"filename":   "file",
+							"actionLock": "",
+							"actionName": "",
+						},
+					},
+				),
+			},
+			opts: &DeployOptions{
+				Repository:   "test",
+				Name:         "test",
+				Namespace:    "test",
+				SkipIfExists: true,
+				Wait:         true,
+				Timeout:      1 * time.Minute,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		ctx := context.Background()
+
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.cmd.ExecuteDeployPipeline(ctx, tt.opts)
+			require.NoError(t, err)
+			require.Zero(t, fakePipelineClientResponses.CallCount)
+		})
+	}
+}
+
+type fakeEnvSetter struct {
+	envs map[string]string
+	err  error
+}
+
+func (e *fakeEnvSetter) Set(name, value string) error {
+	if e.err != nil {
+		return e.err
+	}
+	if e.envs == nil {
+		e.envs = make(map[string]string)
+	}
+	e.envs[name] = value
+	return nil
+}
+
+func TestSetEnvsFromDependencyNoError(t *testing.T) {
+	var tests = []struct {
+		name            string
+		cmap            *v1.ConfigMap
+		envSetter       fakeEnvSetter
+		expectedErr     bool
+		expectedEnvsSet map[string]string
+	}{
+		{
+			name:            "nil cmap",
+			envSetter:       fakeEnvSetter{},
+			expectedErr:     false,
+			expectedEnvsSet: nil,
+		},
+		{
+			name:      "configmap has no dependency envs",
+			envSetter: fakeEnvSetter{},
+			cmap: &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-configmap",
+				},
+				Data: map[string]string{
+					"variables": "eyJURVNUU0VURU5WU0ZST01ERVBFTl9PTkUiOiJhbiBlbnYgdmFsdWUiLCJURVNUU0VURU5WU0ZST01ERVBFTl9UV08iOiJhbm90aGVyIGVudiB2YWx1ZSJ9",
+				},
+			},
+			expectedErr:     false,
+			expectedEnvsSet: nil,
+		},
+		{
+			name:      "configmap has dependency envs",
+			envSetter: fakeEnvSetter{},
+			cmap: &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-configmap",
+				},
+				Data: map[string]string{
+					constants.OktetoDependencyEnvsKey: "eyJURVNUU0VURU5WU0ZST01ERVBFTl9PTkUiOiJhbiBlbnYgdmFsdWUiLCJURVNUU0VURU5WU0ZST01ERVBFTl9UV08iOiJhbm90aGVyIGVudiB2YWx1ZSJ9",
+				},
+			},
+			expectedErr: false,
+			expectedEnvsSet: map[string]string{
+				"OKTETO_DEPENDENCY_TEST-CONFIGMAP_VARIABLE_TESTSETENVSFROMDEPEN_ONE": "an env value",
+				"OKTETO_DEPENDENCY_TEST-CONFIGMAP_VARIABLE_TESTSETENVSFROMDEPEN_TWO": "another env value",
+			},
+		},
+		{
+			name: "configmap has dependency envs - return err",
+			envSetter: fakeEnvSetter{
+				err: assert.AnError,
+			},
+			cmap: &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-configmap",
+				},
+				Data: map[string]string{
+					constants.OktetoDependencyEnvsKey: "eyJURVNUU0VURU5WU0ZST01ERVBFTl9PTkUiOiJhbiBlbnYgdmFsdWUiLCJURVNUU0VURU5WU0ZST01ERVBFTl9UV08iOiJhbm90aGVyIGVudiB2YWx1ZSJ9",
+				},
+			},
+			expectedErr:     true,
+			expectedEnvsSet: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := setEnvsFromDependency(tt.cmap, tt.envSetter.Set)
+			require.Truef(t, tt.expectedErr == (err != nil), "unexpected error")
+			require.Equal(t, tt.expectedEnvsSet, tt.envSetter.envs)
+		})
+	}
 }
 
 func TestFlagsToOptions(t *testing.T) {
@@ -454,24 +781,26 @@ func TestFlagsToOptions(t *testing.T) {
 		{
 			name: "all flags ",
 			flags: deployFlags{
-				branch:     "branch",
-				repository: "repository",
-				name:       "name",
-				namespace:  "namespace",
-				wait:       true,
-				timeout:    2 * time.Second,
-				labels:     []string{"label1", "label2"},
-				variables:  []string{"var1=1", "var2=2"},
+				branch:      "branch",
+				repository:  "repository",
+				name:        "name",
+				namespace:   "namespace",
+				wait:        true,
+				timeout:     2 * time.Second,
+				labels:      []string{"label1", "label2"},
+				variables:   []string{"var1=1", "var2=2"},
+				reuseParams: true,
 			},
 			expect: &DeployOptions{
-				Branch:     "branch",
-				Repository: "repository",
-				Name:       "name",
-				Namespace:  "namespace",
-				Wait:       true,
-				Timeout:    2 * time.Second,
-				Labels:     []string{"label1", "label2"},
-				Variables:  []string{"var1=1", "var2=2"},
+				Branch:      "branch",
+				Repository:  "repository",
+				Name:        "name",
+				Namespace:   "namespace",
+				Wait:        true,
+				Timeout:     2 * time.Second,
+				Labels:      []string{"label1", "label2"},
+				Variables:   []string{"var1=1", "var2=2"},
+				ReuseParams: true,
 			},
 		},
 	}
@@ -479,6 +808,167 @@ func TestFlagsToOptions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			opts := tc.flags.toOptions()
 			assert.Equal(t, tc.expect, opts)
+		})
+	}
+}
+
+func Test_applyOverrideToOptions(t *testing.T) {
+	opts := &DeployOptions{
+		Wait:    true,
+		Timeout: 1 * time.Minute,
+	}
+	override := &DeployOptions{
+		Name:       "test",
+		Namespace:  "testing",
+		File:       "filename",
+		Repository: "repository",
+		Branch:     "branch",
+		Variables:  []string{"KEY=value"},
+		Labels:     []string{"testlabel"},
+	}
+
+	applyOverrideToOptions(opts, override)
+
+	require.Equal(t, &DeployOptions{
+		Name:       "test",
+		Namespace:  "testing",
+		File:       "filename",
+		Repository: "repository",
+		Branch:     "branch",
+		Variables:  []string{"KEY=value"},
+		Labels:     []string{"testlabel"},
+		Wait:       true,
+		Timeout:    1 * time.Minute,
+	}, opts)
+}
+
+func Test_cfgToDeployOptions(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *v1.ConfigMap
+		expected *DeployOptions
+	}{
+		{
+			name:     "empty input",
+			expected: nil,
+		},
+		{
+			name: "empty namespace",
+			input: &v1.ConfigMap{
+				Data: map[string]string{
+					"name":       "test-name",
+					"filename":   "test-filename",
+					"file":       "test-file",
+					"repository": "test-repository",
+					"branch":     "test-branch",
+					"variables":  "",
+				},
+			},
+			expected: &DeployOptions{
+				Name:       "test-name",
+				File:       "test-filename",
+				Repository: "test-repository",
+				Branch:     "test-branch",
+			},
+		},
+		{
+			name: "with labels and namespace",
+			input: &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						"label.okteto.com/testing": "true",
+						"ignored.label":            "true",
+					},
+				},
+				Data: map[string]string{
+					"name":       "test-name",
+					"namespace":  "test-namespace",
+					"filename":   "test-filename",
+					"file":       "test-file",
+					"repository": "test-repository",
+					"branch":     "test-branch",
+					"variables":  "",
+				},
+			},
+			expected: &DeployOptions{
+				Name:       "test-name",
+				Namespace:  "test-namespace",
+				File:       "test-filename",
+				Repository: "test-repository",
+				Branch:     "test-branch",
+				Labels:     []string{"testing"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := cfgToDeployOptions(tt.input)
+			require.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func Test_parseVariablesListFromCfgVariablesString(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		expectedErr bool
+		expected    []string
+	}{
+		{
+			name:     "empty input",
+			input:    "",
+			expected: nil,
+		},
+		{
+			name:        "invalid input",
+			input:       "not-encoded-string",
+			expectedErr: true,
+			expected:    nil,
+		},
+		{
+			name:     "valid input",
+			input:    "W3sibmFtZSI6IktFWSIsInZhbHVlIjoidmFsdWUifV0=",
+			expected: []string{"KEY=value"},
+		},
+	}
+
+	for _, tt := range tests {
+		got, err := parseVariablesListFromCfgVariablesString(tt.input)
+		require.Truef(t, tt.expectedErr == (err != nil), fmt.Sprintf("got unexpected error %v", err))
+		require.Equal(t, tt.expected, got)
+	}
+}
+
+func Test_parseEnvironmentLabelFromLabelsMap(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    map[string]string
+		expected []string
+	}{
+		{
+			name:  "empty input",
+			input: nil,
+		},
+		{
+			name: "with environment labels input",
+			input: map[string]string{
+				"label.okteto.com":         "true",
+				"label.okteto.com/":        "true",
+				"label.okteto.com/testing": "true",
+				"dev.okteto.com":           "true",
+			},
+			expected: []string{"testing"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := parseEnvironmentLabelFromLabelsMap(tt.input)
+
+			require.Equal(t, got, tt.expected)
 		})
 	}
 }

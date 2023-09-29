@@ -16,6 +16,7 @@ package build
 import (
 	"bufio"
 	"context"
+	"encoding/csv"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -35,11 +36,19 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/pkg/errors"
+	"github.com/spf13/afero"
 )
 
 const (
 	warningDockerfilePath   string = "Build '%s': Dockerfile '%s' is not in a relative path to context '%s'"
 	doubleDockerfileWarning string = "Build '%s': Two Dockerfiles discovered in both the root and context path, defaulting to '%s/%s'"
+)
+
+var (
+	errDockerDaemonConnection = oktetoErrors.UserError{
+		E:    fmt.Errorf("cannot connect to Docker Daemon"),
+		Hint: "Please start the Docker Daemon or configure a builder endpoint with 'okteto context --builder BUILDKIT_URL",
+	}
 )
 
 // OktetoBuilderInterface runs the build of an image
@@ -130,8 +139,8 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	defer os.RemoveAll(secretTempFolder)
 
 	// inject secrets to buildkit from temp folder
-	if err := parseTempSecrets(secretTempFolder, buildOptions); err != nil {
-		return err
+	if err := replaceSecretsSourceEnvWithTempFile(afero.NewOsFs(), secretTempFolder, buildOptions); err != nil {
+		return fmt.Errorf("%w: secret should have the format 'id=mysecret,src=/local/secret'", err)
 	}
 
 	opt, err := getSolveOpt(buildOptions)
@@ -233,10 +242,7 @@ func translateDockerErr(err error) error {
 		return nil
 	}
 	if strings.HasPrefix(err.Error(), "failed to dial gRPC: cannot connect to the Docker daemon") {
-		return oktetoErrors.UserError{
-			E:    fmt.Errorf("cannot connect to Docker Daemon"),
-			Hint: "Please start the Docker Daemon or configure a builder endpoint with 'okteto context --builder BUILDKIT_URL",
-		}
+		return errDockerDaemonConnection
 	}
 	return err
 }
@@ -394,71 +400,74 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string) string
 	return joinPath
 }
 
-// GetVolumesToInclude checks if the path exists, if it doesn't it skip it
-func GetVolumesToInclude(volumesToInclude []model.StackVolume) []model.StackVolume {
-	var result []model.StackVolume
-	for _, p := range volumesToInclude {
-		if _, err := os.Stat(p.LocalPath); err == nil {
-			result = append(result, p)
-		}
-	}
-	return result
-}
-
-// parseTempSecrets reads the content of the src of a secret and replaces the envs to mount into dockerfile
-func parseTempSecrets(secretTempFolder string, buildOptions *types.BuildOptions) error {
+// replaceSecretsSourceEnvWithTempFile reads the content of the src of a secret and replaces the envs to mount into dockerfile
+func replaceSecretsSourceEnvWithTempFile(fs afero.Fs, secretTempFolder string, buildOptions *types.BuildOptions) error {
 	// for each secret at buildOptions extract the src
 	// read the content of the file
-	// create a new file under tempFolder with the expanded content
+	// create a new file under secretTempFolder with the expanded content
 	// replace the src of the secret with the tempSrc
 	for indx, s := range buildOptions.Secrets {
-		splitSecret := strings.SplitN(s, "src=", 2)
-		if len(splitSecret) <= 0 {
-			return fmt.Errorf("unable to get secret src")
-		}
-		srcFileName := strings.TrimSpace(splitSecret[1])
-
-		// read source file
-		srcFile, err := os.Open(srcFileName)
+		csvReader := csv.NewReader(strings.NewReader(s))
+		fields, err := csvReader.Read()
 		if err != nil {
-			return err
+			return fmt.Errorf("error reading the csv secret, %w", err)
 		}
 
-		// create temp file
-		tmpfile, err := os.CreateTemp(secretTempFolder, "secret-")
-		if err != nil {
-			return err
-		}
-		writer := bufio.NewWriter(tmpfile)
-
-		sc := bufio.NewScanner(srcFile)
-		for sc.Scan() {
-			// expand content
-			srcContent, err := model.ExpandEnv(sc.Text(), true)
-			if err != nil {
-				return err
+		newFields := make([]string, len(fields))
+		for indx, field := range fields {
+			key, value, found := strings.Cut(field, "=")
+			if !found {
+				return fmt.Errorf("secret format error")
 			}
 
-			// save expanded to temp file
-			_, err = writer.Write([]byte(fmt.Sprintf("%s\n", srcContent)))
-			if err != nil {
-				return fmt.Errorf("unable to write to temp file: %s", err)
+			if key == "src" || key == "source" {
+				tempFileName, err := createTempFileWithExpandedEnvsAtSource(fs, value, secretTempFolder)
+				if err != nil {
+					return fmt.Errorf("error creating the temp file with expanded values: %w", err)
+				}
+				value = tempFileName
 			}
-			writer.Flush()
+			newFields[indx] = fmt.Sprintf("%s=%s", key, value)
 		}
-		if err := tmpfile.Close(); err != nil {
-			return err
-		}
-		if err := srcFile.Close(); err != nil {
-			return err
-		}
-		if sc.Err() != nil {
-			return sc.Err()
-		}
+		buildOptions.Secrets[indx] = strings.Join(newFields, ",")
+	}
+	return nil
+}
 
-		// replace src
-		buildOptions.Secrets[indx] = fmt.Sprintf("%ssrc=%s", splitSecret[0], tmpfile.Name())
+// createTempFileWithExpandedEnvsAtSource creates a temp file with the expanded values of envs in local secrets
+func createTempFileWithExpandedEnvsAtSource(fs afero.Fs, sourceFile, tempFolder string) (string, error) {
+	srcFile, err := fs.Open(sourceFile)
+	if err != nil {
+		return "", err
 	}
 
-	return nil
+	// create temp file
+	tmpfile, err := afero.TempFile(fs, tempFolder, "secret-")
+	if err != nil {
+		return "", err
+	}
+
+	writer := bufio.NewWriter(tmpfile)
+
+	sc := bufio.NewScanner(srcFile)
+	for sc.Scan() {
+		// expand content
+		srcContent, err := model.ExpandEnv(sc.Text(), true)
+		if err != nil {
+			return "", err
+		}
+
+		// save expanded to temp file
+		if _, err = writer.Write([]byte(fmt.Sprintf("%s\n", srcContent))); err != nil {
+			return "", fmt.Errorf("unable to write to temp file: %s", err)
+		}
+		writer.Flush()
+	}
+	if err := tmpfile.Close(); err != nil {
+		return "", err
+	}
+	if err := srcFile.Close(); err != nil {
+		return "", err
+	}
+	return tmpfile.Name(), sc.Err()
 }

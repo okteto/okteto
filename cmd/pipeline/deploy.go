@@ -38,11 +38,15 @@ import (
 	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
-	"k8s.io/client-go/kubernetes"
+	v1 "k8s.io/api/core/v1"
 )
 
 const (
 	dependencyEnvTemplate = "OKTETO_DEPENDENCY_%s_VARIABLE_%s"
+)
+
+var (
+	errUnableToReuseParams = errors.New("development environment not found: unable to use --reuse-params option")
 )
 
 // deployFlags represents the user input for a pipeline deploy command
@@ -57,6 +61,7 @@ type deployFlags struct {
 	file         string
 	variables    []string
 	labels       []string
+	reuseParams  bool
 
 	// Deprecated fields
 	filename string
@@ -74,6 +79,7 @@ type DeployOptions struct {
 	File         string
 	Variables    []string
 	Labels       []string
+	ReuseParams  bool
 }
 
 func deploy(ctx context.Context) *cobra.Command {
@@ -127,6 +133,8 @@ func deploy(ctx context.Context) *cobra.Command {
 		oktetoLog.Infof("failed to mark 'filename' flag as hidden: %s", err)
 	}
 	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "set an environment label (can be set more than once)")
+	cmd.Flags().BoolVar(&flags.reuseParams, "reuse-params", false, "if pipeline exist, reuse same params to redeploy")
+
 	return cmd
 }
 
@@ -142,61 +150,70 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 		return fmt.Errorf("failed to load okteto context '%s': %v", okteto.Context().Name, err)
 	}
 
-	if opts.SkipIfExists {
-		cfgName := pipeline.TranslatePipelineName(opts.Name)
-
-		cfg, err := configmaps.Get(ctx, cfgName, opts.Namespace, c)
-		if err != nil && !oktetoErrors.IsNotFound(err) {
+	exists := false
+	cfgName := pipeline.TranslatePipelineName(opts.Name)
+	cfg, err := configmaps.Get(ctx, cfgName, opts.Namespace, c)
+	if err != nil {
+		if opts.ReuseParams && oktetoErrors.IsNotFound(err) {
+			return errUnableToReuseParams
+		}
+		if opts.SkipIfExists && !oktetoErrors.IsNotFound(err) {
 			return fmt.Errorf("failed to get pipeline '%s': %w", cfgName, err)
 		}
-		if err == nil {
-			if cfg != nil && cfg.Data != nil {
-				if cfg.Data["status"] == pipeline.DeployedStatus {
-					oktetoLog.Success("Skipping repository '%s' because it's already deployed", opts.Name)
-					return nil
-				}
+	}
+	exists = cfg != nil && cfg.Data != nil
 
-				if !opts.Wait && cfg.Data["status"] == pipeline.ProgressingStatus {
-					oktetoLog.Success("Repository '%s' already scheduled for deployment", opts.Name)
-					return nil
-				}
+	if opts.ReuseParams && exists {
+		if overrideOptions := cfgToDeployOptions(cfg); overrideOptions != nil {
+			applyOverrideToOptions(opts, overrideOptions)
+		}
+	}
 
-				canStreamPrevLogs := cfg.Data["actionLock"] != "" && cfg.Data["actionName"] != "cli"
+	if opts.SkipIfExists && exists {
+		if cfg.Data["status"] == pipeline.DeployedStatus {
+			oktetoLog.Success("Skipping repository '%s' because it's already deployed", opts.Name)
+			return nil
+		}
 
-				if opts.Wait && canStreamPrevLogs {
-					oktetoLog.Spinner(fmt.Sprintf("Repository '%s' is already being deployed, waiting for it to finish...", opts.Name))
-					oktetoLog.StartSpinner()
-					defer oktetoLog.StopSpinner()
+		if !opts.Wait && cfg.Data["status"] == pipeline.ProgressingStatus {
+			oktetoLog.Success("Repository '%s' already scheduled for deployment", opts.Name)
+			return nil
+		}
 
-					existingAction := &types.Action{
-						ID:   cfg.Data["actionLock"],
-						Name: cfg.Data["actionName"],
-					}
-					if err := pc.waitUntilRunning(ctx, opts.Name, opts.Namespace, existingAction, opts.Timeout); err != nil {
-						return fmt.Errorf("wait for pipeline '%s' to finish failed: %w", opts.Name, err)
-					}
-					oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
-					return nil
-				}
+		canStreamPrevLogs := cfg.Data["actionLock"] != "" && cfg.Data["actionName"] != "cli"
 
-				if opts.Wait && !canStreamPrevLogs && cfg.Data["status"] == pipeline.ProgressingStatus {
-					oktetoLog.Spinner(fmt.Sprintf("Repository '%s' is already being deployed, waiting for it to finish...", opts.Name))
-					oktetoLog.StartSpinner()
-					defer oktetoLog.StopSpinner()
+		if opts.Wait && canStreamPrevLogs {
+			oktetoLog.Spinner(fmt.Sprintf("Repository '%s' is already being deployed, waiting for it to finish...", opts.Name))
+			oktetoLog.StartSpinner()
+			defer oktetoLog.StopSpinner()
 
-					ticker := time.NewTicker(1 * time.Second)
-					err := configmaps.WaitForStatus(ctx, cfgName, opts.Namespace, pipeline.DeployedStatus, ticker, opts.Timeout, c)
-					if err != nil {
-						if errors.Is(err, oktetoErrors.ErrTimeout) {
-							return fmt.Errorf("timed out waiting for repository '%s' to be deployed", opts.Name)
-						}
-						return fmt.Errorf("failed to wait for repository '%s' to be deployed: %w", opts.Name, err)
-					}
-
-					oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
-					return nil
-				}
+			existingAction := &types.Action{
+				ID:   cfg.Data["actionLock"],
+				Name: cfg.Data["actionName"],
 			}
+			if err := pc.waitUntilRunning(ctx, opts.Name, opts.Namespace, existingAction, opts.Timeout); err != nil {
+				return fmt.Errorf("wait for pipeline '%s' to finish failed: %w", opts.Name, err)
+			}
+			oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
+			return nil
+		}
+
+		if opts.Wait && !canStreamPrevLogs && cfg.Data["status"] == pipeline.ProgressingStatus {
+			oktetoLog.Spinner(fmt.Sprintf("Repository '%s' is already being deployed, waiting for it to finish...", opts.Name))
+			oktetoLog.StartSpinner()
+			defer oktetoLog.StopSpinner()
+
+			ticker := time.NewTicker(1 * time.Second)
+			err := configmaps.WaitForStatus(ctx, cfgName, opts.Namespace, pipeline.DeployedStatus, ticker, opts.Timeout, c)
+			if err != nil {
+				if errors.Is(err, oktetoErrors.ErrTimeout) {
+					return fmt.Errorf("timed out waiting for repository '%s' to be deployed", opts.Name)
+				}
+				return fmt.Errorf("failed to wait for repository '%s' to be deployed: %w", opts.Name, err)
+			}
+
+			oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
+			return nil
 		}
 	}
 
@@ -218,7 +235,12 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 		return fmt.Errorf("wait for pipeline '%s' to finish failed: %w", opts.Name, err)
 	}
 
-	if err := setEnvsFromDependency(ctx, opts.Name, opts.Namespace, c); err != nil {
+	cmap, err := configmaps.Get(ctx, cfgName, opts.Namespace, c)
+	if err != nil {
+		return err
+	}
+
+	if err := setEnvsFromDependency(cmap, os.Setenv); err != nil {
 		return fmt.Errorf("could not set environment variable generated by dependency '%s': %w", opts.Name, err)
 	}
 
@@ -226,30 +248,33 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 	return nil
 }
 
-func setEnvsFromDependency(ctx context.Context, name, namespace string, c kubernetes.Interface) error {
-	cmap, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(name), namespace, c)
+type envSetter func(name, value string) error
+
+// setEnvsFromDependency sets the environment variables found at configmap.Data[dependencyEnvs]
+func setEnvsFromDependency(cmap *v1.ConfigMap, envSetter envSetter) error {
+	if cmap == nil || cmap.Data == nil {
+		return nil
+	}
+
+	dependencyEnvsEncoded, ok := cmap.Data[constants.OktetoDependencyEnvsKey]
+	if !ok {
+		return nil
+	}
+
+	name := cmap.Name
+
+	decodedEnvs, err := base64.StdEncoding.DecodeString(dependencyEnvsEncoded)
 	if err != nil {
 		return err
 	}
-
-	if cmap != nil {
-		if dependencyEnvs, ok := cmap.Data[constants.OktetoDependencyEnvsKey]; ok {
-			envsToSet := make(map[string]string)
-			decodedEnvs, err := base64.StdEncoding.DecodeString(dependencyEnvs)
-			if err != nil {
-				return err
-			}
-			err = json.Unmarshal(decodedEnvs, &envsToSet)
-			if err != nil {
-				return err
-			}
-			for envKey, envValue := range envsToSet {
-				envName := fmt.Sprintf(dependencyEnvTemplate, strings.ToUpper(name), envKey)
-				err := os.Setenv(envName, envValue)
-				if err != nil {
-					return err
-				}
-			}
+	envsToSet := make(map[string]string)
+	if err = json.Unmarshal(decodedEnvs, &envsToSet); err != nil {
+		return err
+	}
+	for envKey, envValue := range envsToSet {
+		envName := fmt.Sprintf(dependencyEnvTemplate, strings.ToUpper(name), envKey)
+		if err := envSetter(envName, envValue); err != nil {
+			return err
 		}
 	}
 
@@ -420,6 +445,7 @@ func (f deployFlags) toOptions() *DeployOptions {
 		File:         file,
 		Variables:    f.variables,
 		Labels:       f.labels,
+		ReuseParams:  f.reuseParams,
 	}
 }
 
@@ -495,4 +521,91 @@ func (o *DeployOptions) toPipelineDeployClientOptions() (types.PipelineDeployOpt
 		Namespace:  o.Namespace,
 		Labels:     o.Labels,
 	}, nil
+}
+
+// parseEnvironmentLabelFromLabelsMap returns a list of strings with the environment labels from the configmap
+func parseEnvironmentLabelFromLabelsMap(labels map[string]string) []string {
+	if len(labels) == 0 {
+		return nil
+	}
+
+	l := make([]string, 0)
+	for k := range labels {
+		if strings.HasPrefix(k, constants.EnvironmentLabelKeyPrefix) {
+			_, label, found := strings.Cut(k, "/")
+			if !found || label == "" {
+				continue
+			}
+			l = append(l, label)
+		}
+	}
+	return l
+}
+
+// parseVariablesListFromCfgVariablesString returns a list of strings with the variables decoded from the configmap
+func parseVariablesListFromCfgVariablesString(vEncodedString string) ([]string, error) {
+	if len(vEncodedString) == 0 {
+		return nil, nil
+	}
+
+	vListString := make([]string, 0)
+	b, err := base64.StdEncoding.DecodeString(vEncodedString)
+	if err != nil {
+		return nil, err
+	}
+
+	var vars []types.Variable
+	if err := json.Unmarshal(b, &vars); err != nil {
+		return nil, err
+	}
+	for _, v := range vars {
+		vString := fmt.Sprintf("%s=%s", v.Name, v.Value)
+		vListString = append(vListString, vString)
+	}
+	return vListString, nil
+}
+
+// cfgDataToDeployOptions translates configmap labels and data into DeployOptions
+func cfgToDeployOptions(cfg *v1.ConfigMap) *DeployOptions {
+	if cfg == nil || cfg.Data == nil {
+		return nil
+	}
+
+	opts := &DeployOptions{}
+	if v, ok := cfg.Data["name"]; ok {
+		opts.Name = v
+	}
+	if v, ok := cfg.Data["filename"]; ok {
+		opts.File = v
+	}
+	if v, ok := cfg.Data["repository"]; ok {
+		opts.Repository = v
+	}
+	if v, ok := cfg.Data["branch"]; ok {
+		opts.Branch = v
+	}
+	if v, ok := cfg.Data["variables"]; ok {
+		vars, err := parseVariablesListFromCfgVariablesString(v)
+		if err != nil {
+			oktetoLog.Debugf("error parsing variables %v", err)
+		}
+		opts.Variables = vars
+	}
+	if l := parseEnvironmentLabelFromLabelsMap(cfg.Labels); l != nil {
+		opts.Labels = l
+	}
+	opts.Namespace = cfg.Namespace
+
+	return opts
+}
+
+// applyOverrideToOptions overrides name, namespace, file, repository, branch, variables and labels from the current cfgmap options
+func applyOverrideToOptions(opts *DeployOptions, override *DeployOptions) {
+	opts.Name = override.Name
+	opts.Namespace = override.Namespace
+	opts.File = override.File
+	opts.Repository = override.Repository
+	opts.Branch = override.Branch
+	opts.Variables = override.Variables
+	opts.Labels = override.Labels
 }

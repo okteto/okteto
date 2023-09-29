@@ -25,13 +25,16 @@ import (
 
 // DeployPipelineOptions defines the options that can be added to a deploy command
 type DeployPipelineOptions struct {
-	Workdir    string
-	Namespace  string
-	Branch     string
-	Repository string
-	Wait       bool
-	OktetoHome string
-	Token      string
+	Workdir     string
+	Namespace   string
+	Branch      string
+	Repository  string
+	Wait        bool
+	OktetoHome  string
+	Token       string
+	Name        string
+	ReuseParams bool
+	Labels      []string
 }
 
 // DestroyPipelineOptions defines the options that can be added to a deploy command
@@ -61,6 +64,18 @@ func RunOktetoDeployPipeline(oktetoPath string, deployOptions *DeployPipelineOpt
 	}
 	if deployOptions.Wait {
 		cmd.Args = append(cmd.Args, "--wait")
+	}
+
+	if deployOptions.ReuseParams {
+		cmd.Args = append(cmd.Args, "--reuse-params")
+	}
+
+	if deployOptions.Name != "" {
+		cmd.Args = append(cmd.Args, "--name", deployOptions.Name)
+	}
+
+	for _, l := range deployOptions.Labels {
+		cmd.Args = append(cmd.Args, "--label", l)
 	}
 
 	cmd.Env = os.Environ()
