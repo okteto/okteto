@@ -25,6 +25,7 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -227,6 +228,7 @@ func TestUpAutocreateV2(t *testing.T) {
 		Namespace:  testNamespace,
 		Name:       model.DevCloneName("autocreate"),
 		ConfigFile: filepath.Join(dir, ".kube", "config"),
+		EnvVars:    []string{constants.OktetoHomeEnvVar + "=" + dir},
 	}
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
 

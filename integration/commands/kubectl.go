@@ -26,6 +26,7 @@ type KubectlOptions struct {
 	Name       string
 	File       string
 	ConfigFile string
+	EnvVars    []string // environment variables to be added to the kubectl command. Follows the os/exec.Cmd.Env pattern
 }
 
 // RunKubectlApply runs kubectl apply command
@@ -40,6 +41,8 @@ func RunKubectlApply(kubectlBinary string, kubectlOpts *KubectlOptions) error {
 	}
 
 	cmd.Env = os.Environ()
+
+	cmd.Env = append(cmd.Env, kubectlOpts.EnvVars...)
 
 	if o, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("kubectl apply failed: %s", string(o))
@@ -59,6 +62,8 @@ func RunKubectlRolloutDeployment(kubectlBinary string, kubectlOpts *KubectlOptio
 	}
 
 	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, kubectlOpts.EnvVars...)
+
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("kubectl apply failed: %s", string(o))
@@ -70,7 +75,6 @@ func RunKubectlRolloutDeployment(kubectlBinary string, kubectlOpts *KubectlOptio
 func RunKubectlRolloutStatefulset(kubectlBinary string, kubectlOpts *KubectlOptions) (string, error) {
 	args := []string{"--namespace", kubectlOpts.Namespace, "rollout", "status", "statefulset", kubectlOpts.Name}
 	cmd := exec.Command(kubectlBinary, args...)
-	cmd.Env = os.Environ()
 
 	if kubectlOpts.ConfigFile != "" {
 		cmd.Args = append(cmd.Args, "--kubeconfig", kubectlOpts.ConfigFile)
@@ -80,6 +84,8 @@ func RunKubectlRolloutStatefulset(kubectlBinary string, kubectlOpts *KubectlOpti
 	}
 
 	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, kubectlOpts.EnvVars...)
+
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("kubectl apply failed: %s", string(o))
