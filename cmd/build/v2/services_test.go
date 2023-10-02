@@ -221,8 +221,7 @@ type fakeConfig struct {
 	isOkteto  bool
 }
 
-func (fc fakeConfig) HasGlobalAccess() bool                  { return fc.hasAccess }
-func (fc fakeConfig) IsCleanProject() bool                   { return fc.isClean }
-func (fc fakeConfig) GetBuildHash(_ *model.BuildInfo) string { return fc.sha }
-func (fc fakeConfig) GetGitCommit() string                   { return fc.sha }
-func (fc fakeConfig) IsOkteto() bool                         { return fc.isOkteto }
+func (fc fakeConfig) HasGlobalAccess() bool { return fc.hasAccess }
+func (fc fakeConfig) IsCleanProject() bool  { return fc.isClean }
+func (fc fakeConfig) GetGitCommit() string  { return fc.sha }
+func (fc fakeConfig) IsOkteto() bool        { return fc.isOkteto }

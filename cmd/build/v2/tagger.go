@@ -15,6 +15,7 @@ package v2
 
 import (
 	"fmt"
+
 	"github.com/okteto/okteto/pkg/okteto"
 
 	"github.com/okteto/okteto/pkg/constants"
@@ -23,7 +24,7 @@ import (
 )
 
 type imageTaggerInterface interface {
-	tag(manifestName, svcName string, b *model.BuildInfo) string
+	tag(manifestName, svcName string, b *model.BuildInfo, buildHash string) string
 	getPossibleHashImages(manifestName, svcToBuildName, sha string) []string
 	getPossibleTags(manifestName, svcToBuildName, sha string) []string
 }
@@ -54,12 +55,12 @@ func newImageTagger(cfg oktetoBuilderConfigInterface) imageTagger {
 }
 
 // tag returns the full image tag for the build
-func (i imageTagger) tag(manifestName, svcName string, b *model.BuildInfo) string {
+func (i imageTagger) tag(manifestName, svcName string, b *model.BuildInfo, buildHash string) string {
 	targetRegistry := constants.DevRegistry
 	sha := ""
 	if i.cfg.HasGlobalAccess() && i.cfg.IsCleanProject() {
 		targetRegistry = constants.GlobalRegistry
-		sha = i.cfg.GetBuildHash(b)
+		sha = buildHash
 	}
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	if shouldBuildFromDockerfile(b) && b.Image == "" {
@@ -104,14 +105,12 @@ func newImageWithVolumesTagger(cfg oktetoBuilderConfigInterface) imageWithVolume
 }
 
 // tag returns the full image tag for the build
-func (i imageWithVolumesTagger) tag(manifestName, svcName string, b *model.BuildInfo) string {
+func (i imageWithVolumesTagger) tag(manifestName, svcName string, _ *model.BuildInfo, buildHash string) string {
 	targetRegistry := constants.DevRegistry
 	sha := ""
-	buildCopy := b.Copy()
-	buildCopy.Image = ""
 	if i.cfg.HasGlobalAccess() && i.cfg.IsCleanProject() {
 		targetRegistry = constants.GlobalRegistry
-		sha = i.cfg.GetBuildHash(buildCopy)
+		sha = buildHash
 	}
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	if sha != "" {

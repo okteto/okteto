@@ -26,6 +26,7 @@ import (
 )
 
 // GetServicesToBuild returns the services it has to build if they are not already built
+// this function is called from outside the build cmd
 func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error) {
 	buildManifest := manifest.Build
 
@@ -91,14 +92,16 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 	return svcsToBuildList, nil
 }
 
+// checkServicesToBuild builds a service if is not found at the registry
 func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Manifest, ch chan string) error {
 	buildInfo := manifest.Build[service].Copy()
 	isStack := manifest.Type == model.StackType
 	if isStack && okteto.IsOkteto() && !bc.Registry.IsOktetoRegistry(buildInfo.Image) {
 		buildInfo.Image = ""
 	}
+	buildHash := getBuildHashFromCommit(buildInfo, bc.Config.GetGitCommit())
 	imageChecker := getImageChecker(buildInfo, bc.Config, bc.Registry)
-	imageWithDigest, err := imageChecker.getImageDigestFromAllPossibleTags(manifest.Name, service, buildInfo)
+	imageWithDigest, err := imageChecker.getImageDigestFromAllPossibleTags(manifest.Name, service, buildInfo, buildHash)
 	if oktetoErrors.IsNotFound(err) {
 		oktetoLog.Debug("image not found, building image")
 		ch <- service

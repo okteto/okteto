@@ -23,8 +23,8 @@ import (
 )
 
 type imageCheckerInterface interface {
-	checkIfCommitHashIsBuilt(manifestName, svcToBuild string, buildInfo *model.BuildInfo) (string, bool)
-	getImageDigestFromAllPossibleTags(manifestName, svcToBuild string, buildInfo *model.BuildInfo) (string, error)
+	checkIfBuildHashIsBuilt(manifestName, svcToBuild string, buildInfo *model.BuildInfo, commit string) (string, bool)
+	getImageDigestFromAllPossibleTags(manifestName, svcToBuild string, buildInfo *model.BuildInfo, commit string) (string, error)
 }
 
 type registryImageCheckerInterface interface {
@@ -50,12 +50,14 @@ func newImageChecker(cfg oktetoBuilderConfigInterface, registry registryImageChe
 	}
 }
 
-func (ic imageChecker) checkIfCommitHashIsBuilt(manifestName, svcToBuild string, buildInfo *model.BuildInfo) (string, bool) {
-	sha := ic.cfg.GetBuildHash(buildInfo)
-	if sha == "" {
+// checkIfBuildHashIsBuilt returns if the buildhash is already built
+// in case is built, the image with digest is also returned
+// if not, image with digest is empty
+func (ic imageChecker) checkIfBuildHashIsBuilt(manifestName, svcToBuild string, buildInfo *model.BuildInfo, buildHash string) (string, bool) {
+	if buildHash == "" {
 		return "", false
 	}
-	tagsToCheck := ic.tagger.getPossibleHashImages(manifestName, svcToBuild, sha)
+	tagsToCheck := ic.tagger.getPossibleHashImages(manifestName, svcToBuild, buildHash)
 
 	for _, tag := range tagsToCheck {
 		imageWithDigest, err := ic.getImageSHA(tag, ic.registry)
@@ -71,16 +73,15 @@ func (ic imageChecker) checkIfCommitHashIsBuilt(manifestName, svcToBuild string,
 	return "", false
 }
 
-func (ic imageChecker) getImageDigestFromAllPossibleTags(manifestName, svcToBuild string, buildInfo *model.BuildInfo) (string, error) {
-	sha := ic.cfg.GetBuildHash(buildInfo)
+func (ic imageChecker) getImageDigestFromAllPossibleTags(manifestName, svcToBuild string, buildInfo *model.BuildInfo, buildHash string) (string, error) {
 
 	var possibleTags []string
 	if !ic.cfg.IsOkteto() && shouldAddVolumeMounts(buildInfo) {
 		possibleTags = []string{buildInfo.Image}
 	} else if shouldAddVolumeMounts(buildInfo) {
-		possibleTags = ic.tagger.getPossibleTags(manifestName, svcToBuild, sha)
+		possibleTags = ic.tagger.getPossibleTags(manifestName, svcToBuild, buildHash)
 	} else if shouldBuildFromDockerfile(buildInfo) && buildInfo.Image == "" {
-		possibleTags = ic.tagger.getPossibleTags(manifestName, svcToBuild, sha)
+		possibleTags = ic.tagger.getPossibleTags(manifestName, svcToBuild, buildHash)
 	} else if buildInfo.Image != "" {
 		possibleTags = []string{buildInfo.Image}
 	}
