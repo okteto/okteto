@@ -27,6 +27,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -42,8 +43,13 @@ import (
 type Command struct {
 	GetManifest func(path string) (*model.Manifest, error)
 
-	Builder  build.OktetoBuilderInterface
-	Registry registryInterface
+	Builder          build.OktetoBuilderInterface
+	Registry         registryInterface
+	analyticsTracker analyticsTrackerInterface
+}
+
+type analyticsTrackerInterface interface {
+	TrackImageBuild(meta *analytics.ImageBuildMetadata)
 }
 
 type registryInterface interface {
@@ -59,11 +65,12 @@ type registryInterface interface {
 }
 
 // NewBuildCommand creates a struct to run all build methods
-func NewBuildCommand() *Command {
+func NewBuildCommand(analyticsTracker analyticsTrackerInterface) *Command {
 	return &Command{
-		GetManifest: model.GetManifestV2,
-		Builder:     &build.OktetoBuilder{},
-		Registry:    registry.NewOktetoRegistry(okteto.Config{}),
+		GetManifest:      model.GetManifestV2,
+		Builder:          &build.OktetoBuilder{},
+		Registry:         registry.NewOktetoRegistry(okteto.Config{}),
+		analyticsTracker: analyticsTracker,
 	}
 }
 
@@ -81,7 +88,7 @@ func Build(ctx context.Context) *cobra.Command {
 		Short: "Build and push the images defined in the 'build' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			options.CommandArgs = args
-			bc := NewBuildCommand()
+			bc := NewBuildCommand(analytics.NewAnalyticsTracker())
 			// The context must be loaded before reading manifest. Otherwise,
 			// secrets will not be resolved when GetManifest is called and
 			// the manifest will load empty values.
@@ -136,7 +143,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
 		builder = buildv1.NewBuilder(bc.Builder, bc.Registry)
 	} else {
 		if isBuildV2(manifest) {
-			builder = buildv2.NewBuilder(bc.Builder, bc.Registry)
+			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.analyticsTracker)
 		} else {
 			builder = buildv1.NewBuilder(bc.Builder, bc.Registry)
 		}

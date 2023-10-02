@@ -25,6 +25,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/okteto/okteto/cmd/build/v1"
 	"github.com/okteto/okteto/internal/test"
+	"github.com/okteto/okteto/pkg/analytics"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -148,7 +149,15 @@ func (fr fakeRegistry) CloneGlobalImageToDev(imageWithDigest, tag string) (strin
 	return "", nil
 }
 
-func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, cfg oktetoBuilderConfigInterface) *OktetoBuilder {
+type fakeAnalyticsTracker struct {
+	metaPayload *analytics.ImageBuildMetadata
+}
+
+func (a *fakeAnalyticsTracker) TrackImageBuild(meta *analytics.ImageBuildMetadata) {
+	a.metaPayload = meta
+}
+
+func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, cfg oktetoBuilderConfigInterface, analyticsTracker analyticsTrackerInterface) *OktetoBuilder {
 	return &OktetoBuilder{
 		Registry:          registry,
 		Builder:           builder,
@@ -157,7 +166,8 @@ func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInter
 			Builder:  builder,
 			Registry: registry,
 		},
-		Config: cfg,
+		Config:           cfg,
+		analyticsTracker: analyticsTracker,
 	}
 }
 
@@ -248,7 +258,7 @@ func TestOnlyInjectVolumeMountsInOkteto(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(builder, registry, fakeConfig)
+	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{
@@ -295,7 +305,7 @@ func TestTwoStepsBuild(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(builder, registry, fakeConfig)
+	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{
@@ -346,7 +356,7 @@ func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(builder, registry, fakeConfig)
+	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{
@@ -388,7 +398,7 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(builder, registry, fakeConfig)
+	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{
@@ -432,7 +442,7 @@ func TestBuildWithStack(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(builder, registry, fakeConfig)
+	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
 	manifest := &model.Manifest{
 		Name: "test",
 		Type: model.StackType,
@@ -508,7 +518,7 @@ func TestBuildWithDependsOn(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(builder, registry, fakeConfig)
+	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{

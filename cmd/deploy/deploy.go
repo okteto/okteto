@@ -81,6 +81,12 @@ type Options struct {
 	ShowCTA bool
 }
 
+type builderInterface interface {
+	Build(ctx context.Context, options *types.BuildOptions) error
+	GetServicesToBuild(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error)
+	GetBuildEnvVars() map[string]string
+}
+
 // DeployCommand defines the config for deploying an app
 type DeployCommand struct {
 	GetManifest        func(path string) (*model.Manifest, error)
@@ -88,7 +94,7 @@ type DeployCommand struct {
 	K8sClientProvider  okteto.K8sClientProvider
 	Builder            *buildv2.OktetoBuilder
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
-	GetDeployer        func(context.Context, *model.Manifest, *Options, *buildv2.OktetoBuilder, configMapHandler) (deployerInterface, error)
+	GetDeployer        func(context.Context, *model.Manifest, *Options, builderInterface, configMapHandler) (deployerInterface, error)
 	EndpointGetter     func() (EndpointGetter, error)
 	DeployWaiter       DeployWaiter
 	CfgMapHandler      configMapHandler
@@ -529,7 +535,7 @@ func shouldRunInRemote(opts *Options) bool {
 
 }
 
-func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, builder *buildv2.OktetoBuilder, cmapHandler configMapHandler) (deployerInterface, error) {
+func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, builder builderInterface, cmapHandler configMapHandler) (deployerInterface, error) {
 	if shouldRunInRemote(opts) {
 		// run remote
 		oktetoLog.Info("Deploying remotely...")
