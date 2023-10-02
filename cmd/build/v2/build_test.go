@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var fakeManifest *model.Manifest = &model.Manifest{
@@ -149,7 +150,6 @@ func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInter
 		Registry:          registry,
 		Builder:           builder,
 		buildEnvironments: make(map[string]string),
-		builtImages:       make(map[string]bool),
 		V1Builder: &v1.OktetoBuilder{
 			Builder:  builder,
 			Registry: registry,
@@ -555,4 +555,116 @@ func TestBuildWithDependsOn(t *testing.T) {
 		}
 	}
 
+}
+
+func Test_areAllServicesBuilt(t *testing.T) {
+	tests := []struct {
+		name     string
+		control  map[string]bool
+		input    []string
+		expected bool
+	}{
+		{
+			name:     "all built",
+			expected: true,
+			input:    []string{"one", "two", "three"},
+			control: map[string]bool{
+				"one":   true,
+				"two":   true,
+				"three": true,
+			},
+		},
+		{
+			name:     "none built",
+			expected: false,
+			input:    []string{"one", "two", "three"},
+			control:  map[string]bool{},
+		},
+		{
+			name:     "some built",
+			expected: false,
+			input:    []string{"one", "two", "three"},
+			control: map[string]bool{
+				"one": true,
+				"two": true,
+			},
+		},
+		{
+			name:     "nil control",
+			expected: false,
+			input:    []string{"one", "two", "three"},
+		},
+		{
+			name:     "nil input",
+			expected: true,
+			control: map[string]bool{
+				"one": true,
+				"two": true,
+			},
+		},
+		{
+			name:     "empty input",
+			expected: true,
+			input:    []string{},
+			control: map[string]bool{
+				"one": true,
+				"two": true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := areAllServicesBuilt(tt.input, tt.control)
+			require.Equal(t, tt.expected, got)
+		})
+
+	}
+}
+
+func Test_isServiceBuilt(t *testing.T) {
+	tests := []struct {
+		name     string
+		control  map[string]bool
+		input    string
+		expected bool
+	}{
+		{
+			name:     "is built",
+			expected: true,
+			input:    "one",
+			control: map[string]bool{
+				"one":   true,
+				"two":   true,
+				"three": true,
+			},
+		},
+		{
+			name:     "not built",
+			expected: false,
+			input:    "one",
+			control:  map[string]bool{},
+		},
+		{
+			name:     "nil control",
+			expected: false,
+			input:    "one",
+		},
+		{
+			name:     "empty input",
+			expected: false,
+			control: map[string]bool{
+				"one": true,
+				"two": true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isServiceBuilt(tt.input, tt.control)
+			require.Equal(t, tt.expected, got)
+		})
+
+	}
 }

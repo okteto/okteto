@@ -74,9 +74,6 @@ type OktetoBuilder struct {
 
 	// lock is a mutex to provide builEnvironments map safe concurrency
 	lock sync.RWMutex
-
-	// builtImages represents the images that have been built already
-	builtImages map[string]bool
 }
 
 // NewBuilder creates a new okteto builder
@@ -103,7 +100,6 @@ func NewBuilderFromScratch() *OktetoBuilder {
 		Registry:          registry,
 		V1Builder:         buildv1.NewBuilder(builder, registry),
 		buildEnvironments: map[string]string{},
-		builtImages:       map[string]bool{},
 		Config:            getConfig(registry, gitRepo),
 	}
 }
@@ -150,14 +146,18 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 	buildManifest := options.Manifest.Build
 
+	// builtImagesControl represents the controller for the built services
+	// when a service is built we track it here
+	builtImagesControl := make(map[string]bool)
+
 	oktetoLog.Infof("Images to build: [%s]", strings.Join(toBuildSvcs, ", "))
-	for len(bc.builtImages) != len(toBuildSvcs) {
+	for len(builtImagesControl) != len(toBuildSvcs) {
 		for _, svcToBuild := range toBuildSvcs {
-			if bc.builtImages[svcToBuild] {
+			if isServiceBuilt(svcToBuild, builtImagesControl) {
 				oktetoLog.Infof("skipping image '%s' due to being already built")
 				continue
 			}
-			if !bc.areImagesBuilt(buildManifest[svcToBuild].DependsOn) {
+			if !areAllServicesBuilt(buildManifest[svcToBuild].DependsOn, builtImagesControl) {
 				oktetoLog.Infof("image '%s' can't be deployed because at least one of its dependent images(%s) are not built", svcToBuild, strings.Join(buildManifest[svcToBuild].DependsOn, ", "))
 				continue
 			}
@@ -185,7 +185,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 					}
 
 					bc.SetServiceEnvVars(svcToBuild, imageWithDigest)
-					bc.builtImages[svcToBuild] = true
+					builtImagesControl[svcToBuild] = true
 					continue
 				}
 			}
@@ -199,7 +199,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				return fmt.Errorf("error building service '%s': %w", svcToBuild, err)
 			}
 			bc.SetServiceEnvVars(svcToBuild, imageTag)
-			bc.builtImages[svcToBuild] = true
+			builtImagesControl[svcToBuild] = true
 		}
 	}
 	if options.EnableStages {
@@ -208,13 +208,20 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	return options.Manifest.ExpandEnvVars()
 }
 
-func (bc *OktetoBuilder) areImagesBuilt(imagesToCheck []string) bool {
-	for _, imageToCheck := range imagesToCheck {
-		if _, ok := bc.builtImages[imageToCheck]; !ok {
+// areServicesBuilt compares the list of services with the built control
+// when all services are built returns true, when a service is still pending it will return false
+func areAllServicesBuilt(services []string, control map[string]bool) bool {
+	for _, service := range services {
+		if _, ok := control[service]; !ok {
 			return false
 		}
 	}
 	return true
+}
+
+// isServiceBuilt returns if a service has been built
+func isServiceBuilt(service string, control map[string]bool) bool {
+	return control[service]
 }
 
 func (bc *OktetoBuilder) buildService(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
