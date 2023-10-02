@@ -65,6 +65,10 @@ type oktetoBuilderConfigInterface interface {
 	IsOkteto() bool
 }
 
+type analyticsTrackerInterface interface {
+	TrackImageBuild(meta *analytics.ImageBuildMetadata)
+}
+
 // OktetoBuilder builds the images
 type OktetoBuilder struct {
 	Builder   OktetoBuilderInterface
@@ -76,7 +80,8 @@ type OktetoBuilder struct {
 	buildEnvironments map[string]string
 
 	// lock is a mutex to provide builEnvironments map safe concurrency
-	lock sync.RWMutex
+	lock             sync.RWMutex
+	analyticsTracker analyticsTrackerInterface
 }
 
 // NewBuilder creates a new okteto builder
@@ -171,6 +176,8 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			buildSvcInfo := buildManifest[svcToBuild]
 
 			meta := analytics.NewImageBuildMetadata()
+			defer bc.analyticsTracker.TrackImageBuild(meta)
+
 			meta.Name = svcToBuild
 
 			repoHashDurationStart := time.Now()
