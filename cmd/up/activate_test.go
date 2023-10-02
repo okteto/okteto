@@ -6,10 +6,20 @@ import (
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 func TestWaitUntilAppAwaken(t *testing.T) {
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Cfg: &api.Config{},
+			},
+		},
+		CurrentContext: "test",
+	}
 	tt := []struct {
 		name                 string
 		autocreate           bool
@@ -45,6 +55,14 @@ func TestWaitUntilAppAwaken(t *testing.T) {
 }
 
 func TestWaitUntilDevelopmentContainerIsRunning(t *testing.T) {
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Cfg: &api.Config{},
+			},
+		},
+		CurrentContext: "test",
+	}
 	tt := []struct {
 		name                 string
 		oktetoClientProvider *test.FakeK8sProvider
