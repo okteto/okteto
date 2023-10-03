@@ -34,7 +34,8 @@ type Repository struct {
 }
 
 type repositoryInterface interface {
-	isClean(ctx context.Context) (bool, error)
+	getServiceImageHash(string) string
+	isCleanContext(ctx context.Context, buildContext string) (bool, error)
 	getSHA() (string, error)
 }
 
@@ -77,9 +78,14 @@ func NewRepository(path string) Repository {
 	}
 }
 
-// IsClean checks if the repository have changes over the commit
-func (r Repository) IsClean() (bool, error) {
-	return r.control.isClean(context.TODO())
+// IsCleanContext checks if the repository have changes over the context
+func (r Repository) GetServiceImageHash(buildcontext string) string {
+	return r.control.getServiceImageHash(buildcontext)
+}
+
+// IsCleanContext checks if the repository have changes over the context
+func (r Repository) IsCleanContext(buildContext string) (bool, error) {
+	return r.control.isCleanContext(context.TODO(), buildContext)
 }
 
 // GetSHA returns the last commit sha of the repository

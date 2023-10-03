@@ -15,6 +15,7 @@ package v2
 
 import (
 	"fmt"
+
 	"github.com/okteto/okteto/pkg/okteto"
 
 	"github.com/okteto/okteto/pkg/constants"
@@ -29,11 +30,13 @@ type imageTaggerInterface interface {
 }
 
 type imageTagger struct {
-	cfg oktetoBuilderConfigInterface
+	cfg    oktetoBuilderConfigInterface
+	svcCfg serviceContextInterface
 }
 
 type imageWithVolumesTagger struct {
-	cfg oktetoBuilderConfigInterface
+	cfg    oktetoBuilderConfigInterface
+	svcCfg serviceContextInterface
 }
 
 func getTargetRegistries() []string {
@@ -47,9 +50,10 @@ func getTargetRegistries() []string {
 }
 
 // newImageTagger returns a new image tagger
-func newImageTagger(cfg oktetoBuilderConfigInterface) imageTagger {
+func newImageTagger(cfg oktetoBuilderConfigInterface, svcCfg serviceContextInterface) imageTagger {
 	return imageTagger{
-		cfg: cfg,
+		cfg:    cfg,
+		svcCfg: svcCfg,
 	}
 }
 
@@ -57,7 +61,7 @@ func newImageTagger(cfg oktetoBuilderConfigInterface) imageTagger {
 func (i imageTagger) tag(manifestName, svcName string, b *model.BuildInfo) string {
 	targetRegistry := constants.DevRegistry
 	sha := ""
-	if i.cfg.HasGlobalAccess() && i.cfg.IsCleanProject() {
+	if i.cfg.HasGlobalAccess() && i.svcCfg.isCleanContext() {
 		targetRegistry = constants.GlobalRegistry
 		sha = i.cfg.GetBuildHash(b)
 	}
@@ -97,9 +101,10 @@ func (i imageTagger) getPossibleTags(manifestName, svcToBuildName, sha string) [
 }
 
 // newImageWithVolumesTagger returns a new image tagger
-func newImageWithVolumesTagger(cfg oktetoBuilderConfigInterface) imageWithVolumesTagger {
+func newImageWithVolumesTagger(cfg oktetoBuilderConfigInterface, svcCfg serviceContextInterface) imageWithVolumesTagger {
 	return imageWithVolumesTagger{
-		cfg: cfg,
+		cfg:    cfg,
+		svcCfg: svcCfg,
 	}
 }
 
@@ -109,7 +114,7 @@ func (i imageWithVolumesTagger) tag(manifestName, svcName string, b *model.Build
 	sha := ""
 	buildCopy := b.Copy()
 	buildCopy.Image = ""
-	if i.cfg.HasGlobalAccess() && i.cfg.IsCleanProject() {
+	if i.cfg.HasGlobalAccess() && i.svcCfg.isCleanContext() {
 		targetRegistry = constants.GlobalRegistry
 		sha = i.cfg.GetBuildHash(buildCopy)
 	}

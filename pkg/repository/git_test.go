@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestIsClean(t *testing.T) {
+func TestIsCleanContext(t *testing.T) {
 	type config struct {
 		repositoryGetter *fakeRepositoryGetter
 	}
@@ -88,7 +88,7 @@ func TestIsClean(t *testing.T) {
 			},
 		},
 		{
-			name: "repository is not clean",
+			name: "context is not clean",
 			config: config{
 				repositoryGetter: &fakeRepositoryGetter{
 					repository: []*fakeRepository{
@@ -115,7 +115,7 @@ func TestIsClean(t *testing.T) {
 			},
 		},
 		{
-			name: "repository is clean",
+			name: "context is clean",
 			config: config{
 				repositoryGetter: &fakeRepositoryGetter{
 					repository: []*fakeRepository{
@@ -153,7 +153,7 @@ func TestIsClean(t *testing.T) {
 					repoGetter: tt.config.repositoryGetter,
 				},
 			}
-			isClean, err := repo.IsClean()
+			isClean, err := repo.IsCleanContext("")
 			assert.ErrorIs(t, err, tt.expected.err)
 			assert.Equal(t, tt.expected.isClean, isClean)
 		})

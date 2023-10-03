@@ -14,8 +14,9 @@
 package v2
 
 import (
-	"github.com/okteto/okteto/pkg/okteto"
 	"testing"
+
+	"github.com/okteto/okteto/pkg/okteto"
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
@@ -23,8 +24,9 @@ import (
 
 func TestInitTaggers(t *testing.T) {
 	cfg := fakeConfig{}
-	assert.Implements(t, (*imageTaggerInterface)(nil), newImageTagger(cfg))
-	assert.Implements(t, (*imageTaggerInterface)(nil), newImageWithVolumesTagger(cfg))
+	svcCfg := fakeSvcConfig{}
+	assert.Implements(t, (*imageTaggerInterface)(nil), newImageTagger(cfg, svcCfg))
+	assert.Implements(t, (*imageTaggerInterface)(nil), newImageWithVolumesTagger(cfg, svcCfg))
 }
 
 func TestImageTaggerWithoutVolumesTag(t *testing.T) {
@@ -140,7 +142,7 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageTagger(tc.cfg)
+			tagger := newImageTagger(tc.cfg, fakeSvcConfig{})
 			assert.Equal(t, tc.expectedImage, tagger.tag("test", "test", tc.b))
 		})
 	}
@@ -195,7 +197,7 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageWithVolumesTagger(tc.cfg)
+			tagger := newImageWithVolumesTagger(tc.cfg, fakeSvcConfig{})
 			assert.Equal(t, tc.expectedImage, tagger.tag("test", "test", tc.b))
 		})
 	}
@@ -223,7 +225,7 @@ func TestImageTaggerGetPossibleHashImages(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageTagger(fakeConfig{})
+			tagger := newImageTagger(fakeConfig{}, fakeSvcConfig{})
 			assert.Equal(t, tc.expectedImages, tagger.getPossibleHashImages("test", "test", tc.sha))
 		})
 	}
@@ -251,7 +253,7 @@ func TestImageTaggerWithVolumesGetPossibleHashImages(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageWithVolumesTagger(fakeConfig{})
+			tagger := newImageWithVolumesTagger(fakeConfig{}, fakeSvcConfig{})
 			assert.Equal(t, tc.expectedImages, tagger.getPossibleHashImages("test", "test", tc.sha))
 		})
 	}
@@ -284,7 +286,7 @@ func TestImageTaggerGetPossibleTags(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageTagger(fakeConfig{})
+			tagger := newImageTagger(fakeConfig{}, fakeSvcConfig{})
 			assert.Equal(t, tc.expectedImages, tagger.getPossibleTags("test", "test", tc.sha))
 		})
 	}
@@ -317,7 +319,7 @@ func TestImageTaggerWithVolumesGetPossibleTags(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageWithVolumesTagger(fakeConfig{})
+			tagger := newImageWithVolumesTagger(fakeConfig{}, fakeSvcConfig{})
 			assert.Equal(t, tc.expectedImages, tagger.getPossibleTags("test", "test", tc.sha))
 		})
 	}

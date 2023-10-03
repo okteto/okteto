@@ -226,3 +226,11 @@ func (fc fakeConfig) IsCleanProject() bool                   { return fc.isClean
 func (fc fakeConfig) GetBuildHash(_ *model.BuildInfo) string { return fc.sha }
 func (fc fakeConfig) GetGitCommit() string                   { return fc.sha }
 func (fc fakeConfig) IsOkteto() bool                         { return fc.isOkteto }
+
+type fakeSvcConfig struct {
+	isClean bool
+	sha     string
+}
+
+func (fc fakeSvcConfig) isCleanContext() bool   { return fc.isClean }
+func (fc fakeSvcConfig) getServiceHash() string { return fc.sha }

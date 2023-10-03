@@ -34,24 +34,26 @@ type registryImageCheckerInterface interface {
 type imageChecker struct {
 	tagger   imageTaggerInterface
 	cfg      oktetoBuilderConfigInterface
+	svCfg    serviceContextInterface
 	registry registryImageCheckerInterface
 
 	getImageSHA func(tag string, registry registryImageCheckerInterface) (string, error)
 }
 
 // newImageChecker returns a new image checker
-func newImageChecker(cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface, tagger imageTaggerInterface) imageChecker {
+func newImageChecker(cfg oktetoBuilderConfigInterface, svcCfg serviceContextInterface, registry registryImageCheckerInterface, tagger imageTaggerInterface) imageChecker {
 	return imageChecker{
 		tagger:   tagger,
 		cfg:      cfg,
 		registry: registry,
+		svCfg:    svcCfg,
 
 		getImageSHA: getImageSHA,
 	}
 }
 
 func (ic imageChecker) checkIfCommitHashIsBuilt(manifestName, svcToBuild string, buildInfo *model.BuildInfo) (string, bool) {
-	sha := ic.cfg.GetBuildHash(buildInfo)
+	sha := ic.svCfg.getServiceHash()
 	if sha == "" {
 		return "", false
 	}

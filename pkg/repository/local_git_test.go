@@ -189,7 +189,7 @@ func TestLocalGit_Status(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lg := NewLocalGit("git", tt.mock())
-			_, err := lg.Status(context.Background(), "/test/dir", tt.fixAttempts)
+			_, err := lg.BuildContextStatus(context.Background(), "/test/dir", tt.fixAttempts, "")
 
 			assert.ErrorIs(t, err, tt.expectedErr)
 		})

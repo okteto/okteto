@@ -27,7 +27,7 @@ import (
 
 type configRepositoryInterface interface {
 	GetSHA() (string, error)
-	IsClean() (bool, error)
+	IsCleanContext(string) (bool, error)
 }
 
 type configRegistryInterface interface {
@@ -36,7 +36,6 @@ type configRegistryInterface interface {
 
 type oktetoBuilderConfig struct {
 	hasGlobalAccess bool
-	isCleanProject  bool
 	repository      configRepositoryInterface
 	fs              afero.Fs
 	isOkteto        bool
@@ -48,14 +47,9 @@ func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterfa
 		oktetoLog.Infof("error trying to access globalPushAccess: %w", err)
 	}
 
-	isClean, err := gitRepo.IsClean()
-	if err != nil {
-		oktetoLog.Infof("error trying to get directory: %w", err)
-	}
 	return oktetoBuilderConfig{
 		repository:      gitRepo,
 		hasGlobalAccess: hasAccess,
-		isCleanProject:  isClean,
 		fs:              afero.NewOsFs(),
 		isOkteto:        okteto.Context().IsOkteto,
 	}
@@ -69,11 +63,6 @@ func (oc oktetoBuilderConfig) IsOkteto() bool {
 // HasGlobalAccess checks if the user has access to global registry
 func (oc oktetoBuilderConfig) HasGlobalAccess() bool {
 	return oc.hasGlobalAccess
-}
-
-// IsCleanProject checks if the repository is clean(no changes over the last commit)
-func (oc oktetoBuilderConfig) IsCleanProject() bool {
-	return oc.isCleanProject
 }
 
 // GetGitCommit returns the commit sha of the repository
@@ -111,6 +100,7 @@ func (oc oktetoBuilderConfig) getTextToHash(buildInfo *model.BuildInfo, sha stri
 
 	// We use a builder to avoid allocations when building the string
 	var b strings.Builder
+	// TODO: remove commit because is not take into account anymore
 	fmt.Fprintf(&b, "commit:%s;", sha)
 	fmt.Fprintf(&b, "target:%s;", buildInfo.Target)
 	fmt.Fprintf(&b, "build_args:%s;", argsText)

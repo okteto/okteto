@@ -25,6 +25,15 @@ func newOktetoRemoteRepoController(localCommit string) oktetoRemoteRepoControlle
 	}
 }
 
+func (or oktetoRemoteRepoController) getServiceImageHash(_ string) string {
+	return ""
+}
+
+func (or oktetoRemoteRepoController) isCleanContext(_ context.Context, _ string) (bool, error) {
+	// TODO: review this
+	return or.gitCommit != "", nil
+}
+
 func (or oktetoRemoteRepoController) isClean(_ context.Context) (bool, error) {
 	return or.gitCommit != "", nil
 }

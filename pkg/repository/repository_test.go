@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/stretchr/testify/assert"
 )
@@ -48,6 +49,10 @@ func (fr fakeRepository) Worktree() (gitWorktreeInterface, error) {
 	return fr.worktree, fr.err
 }
 
+func (fr fakeRepository) CommitObject(plumbing.Hash) (*object.Commit, error) {
+	return nil, nil
+}
+
 func (fr fakeRepository) Head() (*plumbing.Reference, error) {
 	return fr.head, fr.err
 }
@@ -62,7 +67,7 @@ func (fw fakeWorktree) GetRoot() string {
 	return fw.root
 }
 
-func (fw fakeWorktree) Status(context.Context, LocalGitInterface) (oktetoGitStatus, error) {
+func (fw fakeWorktree) BuildContextStatus(context.Context, LocalGitInterface, string) (oktetoGitStatus, error) {
 	return fw.status, fw.err
 }
 

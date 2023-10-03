@@ -21,8 +21,8 @@ type fakeConfigRepo struct {
 	err     error
 }
 
-func (fcr fakeConfigRepo) GetSHA() (string, error) { return fcr.sha, fcr.err }
-func (fcr fakeConfigRepo) IsClean() (bool, error)  { return fcr.isClean, fcr.err }
+func (fcr fakeConfigRepo) GetSHA() (string, error)             { return fcr.sha, fcr.err }
+func (fcr fakeConfigRepo) IsCleanContext(string) (bool, error) { return fcr.isClean, fcr.err }
 
 func TestGetConfig(t *testing.T) {
 	type input struct {
@@ -48,13 +48,8 @@ func TestGetConfig(t *testing.T) {
 			},
 			expected: oktetoBuilderConfig{
 				hasGlobalAccess: true,
-				isCleanProject:  true,
-				repository: fakeConfigRepo{
-					isClean: true,
-					err:     nil,
-				},
-				fs:       afero.NewOsFs(),
-				isOkteto: true,
+				fs:              afero.NewOsFs(),
+				isOkteto:        true,
 			},
 		},
 		{
@@ -71,13 +66,8 @@ func TestGetConfig(t *testing.T) {
 			},
 			expected: oktetoBuilderConfig{
 				hasGlobalAccess: false,
-				isCleanProject:  true,
-				repository: fakeConfigRepo{
-					isClean: true,
-					err:     nil,
-				},
-				fs:       afero.NewOsFs(),
-				isOkteto: true,
+				fs:              afero.NewOsFs(),
+				isOkteto:        true,
 			},
 		},
 		{
@@ -94,13 +84,8 @@ func TestGetConfig(t *testing.T) {
 			},
 			expected: oktetoBuilderConfig{
 				hasGlobalAccess: false,
-				isCleanProject:  true,
-				repository: fakeConfigRepo{
-					isClean: true,
-					err:     nil,
-				},
-				fs:       afero.NewOsFs(),
-				isOkteto: true,
+				fs:              afero.NewOsFs(),
+				isOkteto:        true,
 			},
 		},
 		{
@@ -117,13 +102,8 @@ func TestGetConfig(t *testing.T) {
 			},
 			expected: oktetoBuilderConfig{
 				hasGlobalAccess: false,
-				isCleanProject:  false,
-				repository: fakeConfigRepo{
-					isClean: false,
-					err:     assert.AnError,
-				},
-				fs:       afero.NewOsFs(),
-				isOkteto: true,
+				fs:              afero.NewOsFs(),
+				isOkteto:        true,
 			},
 		},
 	}

@@ -64,7 +64,7 @@ func (*LocalExec) LookPath(file string) (string, error) {
 }
 
 type LocalGitInterface interface {
-	Status(ctx context.Context, dirPath string, fixAttempt int) (git.Status, error)
+	BuildContextStatus(ctx context.Context, dirPath string, fixAttempt int, buildContext string) (git.Status, error)
 	Exists() (string, error)
 	FixDubiousOwnershipConfig(path string) error
 	parseGitStatus(string) (git.Status, error)
@@ -83,12 +83,12 @@ func NewLocalGit(gitPath string, exec CommandExecutor) *LocalGit {
 }
 
 // Status returns the status of the repository at the given path
-func (lg *LocalGit) Status(ctx context.Context, dirPath string, fixAttempt int) (git.Status, error) {
+func (lg *LocalGit) BuildContextStatus(ctx context.Context, dirPath string, fixAttempt int, buildContext string) (git.Status, error) {
 	if fixAttempt > 1 {
 		return git.Status{}, errLocalGitCannotGetStatusTooManyAttempts
 	}
 
-	output, err := lg.exec.RunCommand(ctx, dirPath, lg.gitPath, "--no-optional-locks", "status", "--porcelain", "-z")
+	output, err := lg.exec.RunCommand(ctx, dirPath, lg.gitPath, "--no-optional-locks", "status", "--porcelain", "-z", "-v", "rent")
 	if err != nil {
 		var exitError *exec.ExitError
 		errors.As(err, &exitError)
@@ -100,7 +100,7 @@ func (lg *LocalGit) Status(ctx context.Context, dirPath string, fixAttempt int) 
 					return git.Status{}, errLocalGitCannotGetStatusCannotRecover
 				}
 				fixAttempt++
-				return lg.Status(ctx, dirPath, fixAttempt)
+				return lg.BuildContextStatus(ctx, dirPath, fixAttempt, buildContext)
 			}
 		}
 		return git.Status{}, errLocalGitCannotGetStatusCannotRecover

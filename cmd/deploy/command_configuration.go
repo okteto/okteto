@@ -152,10 +152,11 @@ func (dc *DeployCommand) addEnvVars(cwd string) {
 		}
 		isClean := true
 		if !dc.isRemote {
-			isClean, err = repository.NewRepository(cwd).IsClean()
-			if err != nil {
-				oktetoLog.Infof("could not status: %s", err)
-			}
+			// TODO: check here
+			// isClean, err = repository.NewRepository(cwd).IsClean()
+			// if err != nil {
+			// 	oktetoLog.Infof("could not status: %s", err)
+			// }
 		}
 		if !isClean {
 			sha = utils.GetRandomSHA()

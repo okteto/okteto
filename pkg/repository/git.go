@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
 var (
@@ -45,7 +46,7 @@ type cleanStatus struct {
 	err     error
 }
 
-func (r gitRepoController) calculateIsClean(ctx context.Context) (bool, error) {
+func (r gitRepoController) calculateIsClean(ctx context.Context, buildContext string) (bool, error) {
 	repo, err := r.repoGetter.get(r.path)
 	if err != nil {
 		return false, fmt.Errorf("failed to analyze git repo: %w", err)
@@ -56,7 +57,7 @@ func (r gitRepoController) calculateIsClean(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("failed to infer the git repo's current branch: %w", err)
 	}
 
-	status, err := worktree.Status(ctx, NewLocalGit("git", &LocalExec{}))
+	status, err := worktree.BuildContextStatus(ctx, NewLocalGit("git", &LocalExec{}), buildContext)
 	if err != nil {
 		return false, fmt.Errorf("failed to infer the git repo's status: %w", err)
 	}
@@ -64,8 +65,8 @@ func (r gitRepoController) calculateIsClean(ctx context.Context) (bool, error) {
 	return status.IsClean(), nil
 }
 
-// isClean checks if the repository have changes over the commit
-func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
+// isClean checks if the repository have changes over the context
+func (r gitRepoController) isCleanContext(ctx context.Context, buildContext string) (bool, error) {
 	// We use context.TODO() in a few places to call isClean, so let's make sure
 	// we set proper internal timeouts to not leak goroutines
 	ctx, cancel := context.WithCancel(ctx)
@@ -84,7 +85,7 @@ func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 	}()
 
 	go func() {
-		clean, err := r.calculateIsClean(ctx)
+		clean, err := r.calculateIsClean(ctx, buildContext)
 		select {
 		case <-timeoutCh:
 		case ch <- cleanStatus{clean, err}:
@@ -100,15 +101,40 @@ func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 	return s.isClean, s.err
 }
 
+func (r gitRepoController) getServiceImageHash(buildcontext string) string {
+	repo, err := r.repoGetter.get(r.path)
+	if err != nil {
+		//TODO: hacer algo
+	}
+
+	// Get the HEAD reference
+	ref, err := repo.Head()
+	if err != nil {
+		fmt.Printf("Error getting HEAD reference: %v\n", err)
+	}
+
+	// Get the commit object from the reference
+	commit, err := repo.CommitObject(ref.Hash())
+	if err != nil {
+		fmt.Printf("Error getting HEAD reference: %v\n", err)
+	}
+
+	// List the contents of the './rent' directory in the commit tree
+	tree, err := commit.Tree()
+	if err != nil {
+		fmt.Printf("Error getting HEAD reference: %v\n", err)
+	}
+
+	svcEntry, err := tree.FindEntry(buildcontext)
+	if err != nil {
+		fmt.Printf("Error getting HEAD reference: %v\n", err)
+	}
+
+	return svcEntry.Hash.String()
+}
+
 // GetSHA returns the last commit sha of the repository
 func (r gitRepoController) getSHA() (string, error) {
-	isClean, err := r.isClean(context.TODO())
-	if err != nil {
-		return "", fmt.Errorf("%w: failed to check if repo is clean: %w", errNotCleanRepo, err)
-	}
-	if !isClean {
-		return "", errNotCleanRepo
-	}
 	repo, err := r.repoGetter.get(r.path)
 	if err != nil {
 		return "", fmt.Errorf("%w: failed to analyze git repo: %w", errNotCleanRepo, err)
@@ -150,6 +176,10 @@ func (ogr oktetoGitRepository) Head() (*plumbing.Reference, error) {
 	return ogr.repo.Head()
 }
 
+func (ogr oktetoGitRepository) CommitObject(h plumbing.Hash) (*object.Commit, error) {
+	return ogr.repo.CommitObject(h)
+}
+
 type oktetoGitWorktree struct {
 	worktree *git.Worktree
 }
@@ -166,16 +196,22 @@ func (ogs oktetoGitStatus) IsClean() bool {
 	return ogs.status.IsClean()
 }
 
+func (ogs oktetoGitStatus) IsCleanContext() bool {
+	return ogs.status.IsClean()
+}
+
 type gitRepositoryInterface interface {
 	Worktree() (gitWorktreeInterface, error)
 	Head() (*plumbing.Reference, error)
+	CommitObject(plumbing.Hash) (*object.Commit, error)
 }
+
 type gitWorktreeInterface interface {
-	Status(context.Context, LocalGitInterface) (oktetoGitStatus, error)
+	BuildContextStatus(context.Context, LocalGitInterface, string) (oktetoGitStatus, error)
 	GetRoot() string
 }
 
-func (ogr oktetoGitWorktree) Status(ctx context.Context, localGit LocalGitInterface) (oktetoGitStatus, error) {
+func (ogr oktetoGitWorktree) BuildContextStatus(ctx context.Context, localGit LocalGitInterface, buildContext string) (oktetoGitStatus, error) {
 	// using git directly is faster, so we check if it's available
 	_, err := localGit.Exists()
 	if err != nil {
@@ -189,7 +225,7 @@ func (ogr oktetoGitWorktree) Status(ctx context.Context, localGit LocalGitInterf
 		return oktetoGitStatus{status: status}, nil
 	}
 
-	status, err := localGit.Status(ctx, ogr.GetRoot(), 0)
+	status, err := localGit.BuildContextStatus(ctx, ogr.GetRoot(), 0, buildContext)
 	if err != nil {
 		return oktetoGitStatus{status: git.Status{}}, fmt.Errorf("failed to get git status: %w", err)
 	}
