@@ -23,7 +23,7 @@ import (
 )
 
 type imageCheckerInterface interface {
-	checkIfBuildHashIsBuilt(manifestName, svcToBuild string, buildInfo *model.BuildInfo, commit string) (string, bool)
+	checkIfBuildHashIsBuilt(manifestName, svcToBuild string, commit string) (string, bool)
 	getImageDigestFromAllPossibleTags(manifestName, svcToBuild string, buildInfo *model.BuildInfo, commit string) (string, error)
 }
 
@@ -53,7 +53,7 @@ func newImageChecker(cfg oktetoBuilderConfigInterface, registry registryImageChe
 // checkIfBuildHashIsBuilt returns if the buildhash is already built
 // in case is built, the image with digest is also returned
 // if not, image with digest is empty
-func (ic imageChecker) checkIfBuildHashIsBuilt(manifestName, svcToBuild string, buildInfo *model.BuildInfo, buildHash string) (string, bool) {
+func (ic imageChecker) checkIfBuildHashIsBuilt(manifestName, svcToBuild string, buildHash string) (string, bool) {
 	if buildHash == "" {
 		return "", false
 	}
