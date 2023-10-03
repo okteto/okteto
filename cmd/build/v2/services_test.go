@@ -219,9 +219,11 @@ type fakeConfig struct {
 	hasAccess bool
 	sha       string
 	isOkteto  bool
+	repoURL   string
 }
 
-func (fc fakeConfig) HasGlobalAccess() bool { return fc.hasAccess }
-func (fc fakeConfig) IsCleanProject() bool  { return fc.isClean }
-func (fc fakeConfig) GetGitCommit() string  { return fc.sha }
-func (fc fakeConfig) IsOkteto() bool        { return fc.isOkteto }
+func (fc fakeConfig) HasGlobalAccess() bool     { return fc.hasAccess }
+func (fc fakeConfig) IsCleanProject() bool      { return fc.isClean }
+func (fc fakeConfig) GetGitCommit() string      { return fc.sha }
+func (fc fakeConfig) IsOkteto() bool            { return fc.isOkteto }
+func (fc fakeConfig) GetAnonymizedRepo() string { return fc.repoURL }

@@ -63,6 +63,7 @@ type oktetoBuilderConfigInterface interface {
 	IsCleanProject() bool
 	GetGitCommit() string
 	IsOkteto() bool
+	GetAnonymizedRepo() string
 }
 
 type analyticsTrackerInterface interface {
@@ -180,6 +181,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			defer bc.analyticsTracker.TrackImageBuild(meta)
 
 			meta.Name = svcToBuild
+			meta.RepoURL = bc.Config.GetAnonymizedRepo()
 
 			repoHashDurationStart := time.Now()
 			repoCommit := bc.Config.GetGitCommit()

@@ -22,6 +22,7 @@ import (
 type configRepositoryInterface interface {
 	GetSHA() (string, error)
 	IsClean() (bool, error)
+	GetAnonymizedRepo() string
 }
 
 type configRegistryInterface interface {
@@ -77,4 +78,9 @@ func (oc oktetoBuilderConfig) GetGitCommit() string {
 		oktetoLog.Infof("could not get repository sha: %w", err)
 	}
 	return commitSHA
+}
+
+// GetAnonymizedRepo returns the repository url without credentials
+func (oc oktetoBuilderConfig) GetAnonymizedRepo() string {
+	return oc.repository.GetAnonymizedRepo()
 }
