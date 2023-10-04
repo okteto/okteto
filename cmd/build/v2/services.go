@@ -55,7 +55,7 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 		}
 	}
 	// check if images are at registry (global or dev) and set envs or send to build
-	toBuild := make(chan string, len(svcToDeployMap))
+	toBuildCh := make(chan string, len(svcToDeployMap))
 	g, _ := errgroup.WithContext(ctx)
 	for service := range buildManifest {
 		if _, ok := svcToDeployMap[service]; !ok {
@@ -65,16 +65,16 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 		svc := service
 
 		g.Go(func() error {
-			return bc.checkServicesToBuild(svc, manifest, toBuild)
+			return bc.checkServiceToBuild(svc, manifest, toBuildCh)
 		})
 	}
 
 	if err := g.Wait(); err != nil {
 		return nil, err
 	}
-	close(toBuild)
+	close(toBuildCh)
 
-	if len(toBuild) == 0 {
+	if len(toBuildCh) == 0 {
 		oktetoLog.Information("Images were already built. To rebuild your images run 'okteto build' or 'okteto deploy --build'")
 		if err := manifest.ExpandEnvVars(); err != nil {
 			return nil, err
@@ -83,7 +83,7 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 	}
 
 	svcsToBuildList := []string{}
-	for svc := range toBuild {
+	for svc := range toBuildCh {
 		if _, ok := svcToDeployMap[svc]; len(svcsToDeploy) > 0 && !ok {
 			continue
 		}
@@ -92,8 +92,8 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 	return svcsToBuildList, nil
 }
 
-// checkServicesToBuild builds a service if is not found at the registry
-func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Manifest, ch chan string) error {
+// checkServiceToBuild looks for the service image reference at the registry and adds it to the buildCh if is not found
+func (bc *OktetoBuilder) checkServiceToBuild(service string, manifest *model.Manifest, buildCh chan string) error {
 	buildInfo := manifest.Build[service].Copy()
 	isStack := manifest.Type == model.StackType
 	if isStack && okteto.IsOkteto() && !bc.Registry.IsOktetoRegistry(buildInfo.Image) {
@@ -104,7 +104,7 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 	imageWithDigest, err := imageChecker.getImageDigestReferenceForService(manifest.Name, service, buildInfo, buildHash)
 	if oktetoErrors.IsNotFound(err) {
 		oktetoLog.Debug("image not found, building image")
-		ch <- service
+		buildCh <- service
 		return nil
 	} else if err != nil {
 		return err
