@@ -361,7 +361,7 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 
 type fakeAnalyticsTracker struct{}
 
-func (a fakeAnalyticsTracker) TrackImageBuild(_ *analytics.ImageBuildMetadata) {}
+func (a fakeAnalyticsTracker) TrackImageBuild(_ ...*analytics.ImageBuildMetadata) {}
 
 func TestCreateConfigMapWithBuildError(t *testing.T) {
 	p := &fakeProxy{}

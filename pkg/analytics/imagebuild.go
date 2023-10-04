@@ -44,6 +44,8 @@ func (m *ImageBuildMetadata) toProps() map[string]interface{} {
 	return props
 }
 
-func (a *AnalyticsTracker) TrackImageBuild(meta *ImageBuildMetadata) {
-	a.trackFn(imageBuildEvent, meta.Success, meta.toProps())
+func (a *AnalyticsTracker) TrackImageBuild(metaList ...*ImageBuildMetadata) {
+	for _, m := range metaList {
+		a.trackFn(imageBuildEvent, m.Success, m.toProps())
+	}
 }

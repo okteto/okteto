@@ -150,10 +150,10 @@ func (fr fakeRegistry) CloneGlobalImageToDev(imageWithDigest, tag string) (strin
 }
 
 type fakeAnalyticsTracker struct {
-	metaPayload *analytics.ImageBuildMetadata
+	metaPayload []*analytics.ImageBuildMetadata
 }
 
-func (a *fakeAnalyticsTracker) TrackImageBuild(meta *analytics.ImageBuildMetadata) {
+func (a *fakeAnalyticsTracker) TrackImageBuild(meta ...*analytics.ImageBuildMetadata) {
 	a.metaPayload = meta
 }
 

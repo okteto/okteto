@@ -49,7 +49,7 @@ type Command struct {
 }
 
 type analyticsTrackerInterface interface {
-	TrackImageBuild(meta *analytics.ImageBuildMetadata)
+	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
 }
 
 type registryInterface interface {

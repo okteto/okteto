@@ -67,7 +67,7 @@ type oktetoBuilderConfigInterface interface {
 }
 
 type analyticsTrackerInterface interface {
-	TrackImageBuild(meta *analytics.ImageBuildMetadata)
+	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
 }
 
 // OktetoBuilder builds the images
@@ -160,6 +160,10 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	// when a service is built we track it here
 	builtImagesControl := make(map[string]bool)
 
+	// send analytics for all builds after Build
+	buildsAnalytics := make([]*analytics.ImageBuildMetadata, 0)
+	defer bc.analyticsTracker.TrackImageBuild(buildsAnalytics...)
+
 	oktetoLog.Infof("Images to build: [%s]", strings.Join(toBuildSvcs, ", "))
 	for len(builtImagesControl) != len(toBuildSvcs) {
 		for _, svcToBuild := range toBuildSvcs {
@@ -177,8 +181,9 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 			buildSvcInfo := buildManifest[svcToBuild]
 
+			// create the meta pointer and append it to the analytics slice
 			meta := analytics.NewImageBuildMetadata()
-			defer bc.analyticsTracker.TrackImageBuild(meta)
+			buildsAnalytics = append(buildsAnalytics, meta)
 
 			meta.Name = svcToBuild
 			meta.RepoURL = bc.Config.GetAnonymizedRepo()
@@ -216,6 +221,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 					bc.SetServiceEnvVars(svcToBuild, imageWithDigest)
 					builtImagesControl[svcToBuild] = true
+					meta.Success = true
 					continue
 				}
 			}
@@ -229,6 +235,8 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				return fmt.Errorf("error building service '%s': %w", svcToBuild, err)
 			}
 			meta.BuildDuration = time.Since(buildDurationStart)
+			meta.Success = true
+
 			bc.SetServiceEnvVars(svcToBuild, imageTag)
 			builtImagesControl[svcToBuild] = true
 		}
