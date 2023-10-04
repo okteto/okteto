@@ -161,6 +161,43 @@ func TestRemoteTest(t *testing.T) {
 	}
 }
 
+func TestExtraHosts(t *testing.T) {
+	ctx := context.Background()
+	fakeManifest := &model.Manifest{
+		Deploy: &model.DeployInfo{
+			Image: "test-image",
+		},
+	}
+	wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/"))
+	fs := afero.NewMemMapFs()
+	tempCreator := filesystem.NewTemporalDirectoryCtrl(fs)
+
+	rdc := remoteDeployCommand{
+		builderV1: fakeBuilder{
+			assertOptions: func(o *types.BuildOptions) {
+				require.Len(t, o.ExtraHosts, 4)
+				for _, eh := range o.ExtraHosts {
+					require.Equal(t, eh.IP, "1.2.3.4")
+				}
+			},
+		},
+		fs:                   fs,
+		workingDirectoryCtrl: wdCtrl,
+		temporalCtrl:         tempCreator,
+		clusterMetadata: func(context.Context) (*types.ClusterMetadata, error) {
+			return &types.ClusterMetadata{
+				ServerName: "1.2.3.4:443",
+			}, nil
+		},
+		getBuildEnvVars: func() map[string]string { return nil },
+	}
+
+	err := rdc.deploy(ctx, &Options{
+		Manifest: fakeManifest,
+	})
+	require.NoError(t, err)
+}
+
 func TestRemoteDeployWithSshAgent(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	socket, err := os.CreateTemp("", "okteto-test-ssh-*")
