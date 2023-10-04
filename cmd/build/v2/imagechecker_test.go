@@ -44,7 +44,7 @@ func Test_checkIfBuildHashIsBuilt(t *testing.T) {
 				tagger: imageTagger{
 					cfg: &fakeConfig{},
 				},
-				getImageSHA: func(_ string, _ registryImageCheckerInterface) (string, error) {
+				lookupReferenceWithDigest: func(_ string, _ registryImageCheckerInterface) (string, error) {
 					return "", oktetoErrors.ErrNotFound
 				},
 			},
@@ -60,7 +60,7 @@ func Test_checkIfBuildHashIsBuilt(t *testing.T) {
 				tagger: imageTagger{
 					cfg: &fakeConfig{},
 				},
-				getImageSHA: func(_ string, _ registryImageCheckerInterface) (string, error) {
+				lookupReferenceWithDigest: func(_ string, _ registryImageCheckerInterface) (string, error) {
 					return "", assert.AnError
 				},
 			},
@@ -76,7 +76,7 @@ func Test_checkIfBuildHashIsBuilt(t *testing.T) {
 				tagger: imageTagger{
 					cfg: &fakeConfig{},
 				},
-				getImageSHA: func(_ string, _ registryImageCheckerInterface) (string, error) {
+				lookupReferenceWithDigest: func(_ string, _ registryImageCheckerInterface) (string, error) {
 					return "image-tag-from-registry", nil
 				},
 			},

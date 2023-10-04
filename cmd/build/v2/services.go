@@ -101,7 +101,7 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 	}
 	buildHash := getBuildHashFromCommit(buildInfo, bc.Config.GetGitCommit())
 	imageChecker := getImageChecker(buildInfo, bc.Config, bc.Registry)
-	imageWithDigest, err := imageChecker.getImageDigestFromAllPossibleTags(manifest.Name, service, buildInfo, buildHash)
+	imageWithDigest, err := imageChecker.getImageDigestReferenceForService(manifest.Name, service, buildInfo, buildHash)
 	if oktetoErrors.IsNotFound(err) {
 		oktetoLog.Debug("image not found, building image")
 		ch <- service
