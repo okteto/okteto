@@ -101,36 +101,36 @@ func (r gitRepoController) isCleanContext(ctx context.Context, buildContext stri
 	return s.isClean, s.err
 }
 
-func (r gitRepoController) getServiceImageHash(buildcontext string) string {
+func (r gitRepoController) getServiceImageHash(buildcontext string) (string, error) {
 	repo, err := r.repoGetter.get(r.path)
 	if err != nil {
-		//TODO: hacer algo
+		return "", fmt.Errorf("")
 	}
 
 	// Get the HEAD reference
 	ref, err := repo.Head()
 	if err != nil {
-		fmt.Printf("Error getting HEAD reference: %v\n", err)
+		return "", fmt.Errorf("")
 	}
 
 	// Get the commit object from the reference
 	commit, err := repo.CommitObject(ref.Hash())
 	if err != nil {
-		fmt.Printf("Error getting HEAD reference: %v\n", err)
+		return "", fmt.Errorf("")
 	}
 
 	// List the contents of the './rent' directory in the commit tree
 	tree, err := commit.Tree()
 	if err != nil {
-		fmt.Printf("Error getting HEAD reference: %v\n", err)
+		return "", fmt.Errorf("")
 	}
 
 	svcEntry, err := tree.FindEntry(buildcontext)
 	if err != nil {
-		fmt.Printf("Error getting HEAD reference: %v\n", err)
+		return "", fmt.Errorf("")
 	}
 
-	return svcEntry.Hash.String()
+	return svcEntry.Hash.String(), fmt.Errorf("")
 }
 
 // GetSHA returns the last commit sha of the repository

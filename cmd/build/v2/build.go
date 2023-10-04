@@ -15,6 +15,8 @@ package v2
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -56,8 +58,6 @@ type oktetoRegistryInterface interface {
 // oktetoBuilderConfigInterface returns the configuration that the builder has for the registry and project
 type oktetoBuilderConfigInterface interface {
 	HasGlobalAccess() bool
-	GetBuildHash(*model.BuildInfo) string
-	GetGitCommit() string
 	IsOkteto() bool
 }
 
@@ -114,7 +114,7 @@ func (*OktetoBuilder) IsV1() bool {
 	return false
 }
 
-func (ob *OktetoBuilder) setServiceContexter(buildInfo *model.BuildInfo) {
+func getServiceContexter(buildInfo *model.BuildInfo) *serviceConfig {
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
 	wd, err := wdCtrl.Get()
 	if err != nil {
@@ -127,11 +127,17 @@ func (ob *OktetoBuilder) setServiceContexter(buildInfo *model.BuildInfo) {
 		oktetoLog.Infof("error trying to check if context is clean: %w", err)
 	}
 
-	hash := gitRepo.GetServiceImageHash(buildInfo.Context)
+	treeHash, err := gitRepo.GetServiceImageHash(buildInfo.Context)
+	if err != nil {
+		oktetoLog.Infof("error trying to get tree hash related to service '%s': %w", buildInfo.Name, err)
+	}
 
-	ob.serviceContexter = &serviceConfig{
+	text := getTextToHash(buildInfo, treeHash)
+	buildHash := sha256.Sum256([]byte(text))
+
+	return &serviceConfig{
 		isClean: isClean,
-		hash:    hash,
+		hash:    hex.EncodeToString(buildHash[:]),
 	}
 }
 
@@ -189,19 +195,18 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 			buildSvcInfo := buildManifest[svcToBuild]
 
-			bc.setServiceContexter(buildSvcInfo)
+			serviceContext := getServiceContexter(buildSvcInfo)
 
 			// We only check that the image is built in the global registry if the noCache option is not set
-			if !options.NoCache && bc.serviceContexter.isCleanContext() {
-				imageChecker := getImageChecker(buildSvcInfo, bc.Config, bc.serviceContexter, bc.Registry)
+			if !options.NoCache && serviceContext.isCleanContext() {
+				imageChecker := getImageChecker(buildSvcInfo, bc.Config, serviceContext, bc.Registry)
 				if imageWithDigest, isBuilt := imageChecker.checkIfCommitHashIsBuilt(options.Manifest.Name, svcToBuild, buildSvcInfo); isBuilt {
 					oktetoLog.Information("Skipping build of '%s' image because it's already built", svcToBuild)
 					// if the built image belongs to global registry we clone it to the dev registry
 					// so that in can be used in dev containers (i.e. okteto up)
 					if bc.Registry.IsGlobalRegistry(imageWithDigest) {
 						oktetoLog.Debugf("Copying image '%s' from global to personal registry", svcToBuild)
-						tag := bc.serviceContexter.getServiceHash()
-						//tag := bc.Config.GetBuildHash(buildSvcInfo)
+						tag := serviceContext.getServiceHash()
 						devImage, err := bc.Registry.CloneGlobalImageToDev(imageWithDigest, tag)
 						if err != nil {
 							return err

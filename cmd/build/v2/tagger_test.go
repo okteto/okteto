@@ -33,27 +33,35 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 	tt := []struct {
 		name          string
 		cfg           fakeConfig
+		svcCfg        fakeSvcConfig
 		b             *model.BuildInfo
 		expectedImage string
 	}{
 		{
 			name: "image is set without access to global",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: false,
 				sha:       "sha",
+			},
+			svcCfg: fakeSvcConfig{
+				isClean: true,
+				sha:     "sha",
 			},
 			b: &model.BuildInfo{
 				Image: "nginx",
 			},
 			expectedImage: "nginx",
 		},
+
 		{
 			name: "image is set with no clean project",
 			cfg: fakeConfig{
-				isClean:   false,
 				hasAccess: true,
 				sha:       "sha",
+			},
+			svcCfg: fakeSvcConfig{
+				isClean: false,
+				sha:     "sha",
 			},
 			b: &model.BuildInfo{
 				Image: "nginx",
@@ -63,9 +71,12 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 		{
 			name: "image is set with access to global",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: true,
 				sha:       "sha",
+			},
+			svcCfg: fakeSvcConfig{
+				isClean: true,
+				sha:     "sha",
 			},
 			b: &model.BuildInfo{
 				Image: "nginx",
@@ -75,9 +86,12 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 		{
 			name: "image is set but in okteto dev registry",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: true,
 				sha:       "sha",
+			},
+			svcCfg: fakeSvcConfig{
+				isClean: true,
+				sha:     "sha",
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -89,9 +103,12 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 		{
 			name: "image is set but in okteto global registry",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: true,
 				sha:       "sha",
+			},
+			svcCfg: fakeSvcConfig{
+				isClean: true,
+				sha:     "sha",
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -103,22 +120,12 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 		{
 			name: "image inferred without access to global",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: false,
 				sha:       "sha",
 			},
-			b: &model.BuildInfo{
-				Dockerfile: "Dockerfile",
-				Context:    ".",
-			},
-			expectedImage: "okteto.dev/test-test:okteto",
-		},
-		{
-			name: "image inferred without clean project",
-			cfg: fakeConfig{
-				isClean:   false,
-				hasAccess: true,
-				sha:       "sha",
+			svcCfg: fakeSvcConfig{
+				isClean: true,
+				sha:     "sha",
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -127,11 +134,30 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 			expectedImage: "okteto.dev/test-test:okteto",
 		},
 		{
-			name: "image inferred with clean project and has access to global registry",
+			name: "image inferred without clean svc",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: true,
 				sha:       "sha",
+			},
+			svcCfg: fakeSvcConfig{
+				isClean: false,
+				sha:     "sha",
+			},
+			b: &model.BuildInfo{
+				Dockerfile: "Dockerfile",
+				Context:    ".",
+			},
+			expectedImage: "okteto.dev/test-test:okteto",
+		},
+		{
+			name: "image inferred with clean svc and has access to global registry",
+			cfg: fakeConfig{
+				hasAccess: true,
+				sha:       "sha",
+			},
+			svcCfg: fakeSvcConfig{
+				isClean: true,
+				sha:     "sha",
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -142,7 +168,7 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageTagger(tc.cfg, fakeSvcConfig{})
+			tagger := newImageTagger(tc.cfg, tc.svcCfg)
 			assert.Equal(t, tc.expectedImage, tagger.tag("test", "test", tc.b))
 		})
 	}
@@ -152,28 +178,19 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 	tt := []struct {
 		name          string
 		cfg           fakeConfig
+		svcCfg        fakeSvcConfig
 		b             *model.BuildInfo
 		expectedImage string
 	}{
 		{
 			name: "image inferred without access to global",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: false,
 				sha:       "sha",
 			},
-			b: &model.BuildInfo{
-				Dockerfile: "Dockerfile",
-				Context:    ".",
-			},
-			expectedImage: "okteto.dev/test-test:okteto-with-volume-mounts",
-		},
-		{
-			name: "image inferred without clean project",
-			cfg: fakeConfig{
-				isClean:   false,
-				hasAccess: true,
-				sha:       "sha",
+			svcCfg: fakeSvcConfig{
+				isClean: true,
+				sha:     "sha",
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -182,11 +199,30 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 			expectedImage: "okteto.dev/test-test:okteto-with-volume-mounts",
 		},
 		{
-			name: "image inferred with clean project and has access to global registry",
+			name: "image inferred without clean svc",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: true,
 				sha:       "sha",
+			},
+			svcCfg: fakeSvcConfig{
+				isClean: false,
+				sha:     "sha",
+			},
+			b: &model.BuildInfo{
+				Dockerfile: "Dockerfile",
+				Context:    ".",
+			},
+			expectedImage: "okteto.dev/test-test:okteto-with-volume-mounts",
+		},
+		{
+			name: "image inferred with clean svc and has access to global registry",
+			cfg: fakeConfig{
+				hasAccess: true,
+				sha:       "sha",
+			},
+			svcCfg: fakeSvcConfig{
+				isClean: true,
+				sha:     "sha",
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -197,7 +233,7 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageWithVolumesTagger(tc.cfg, fakeSvcConfig{})
+			tagger := newImageWithVolumesTagger(tc.cfg, tc.svcCfg)
 			assert.Equal(t, tc.expectedImage, tagger.tag("test", "test", tc.b))
 		})
 	}

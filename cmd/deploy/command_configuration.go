@@ -26,7 +26,6 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/repository"
 	giturls "github.com/whilp/git-urls"
 	"k8s.io/client-go/kubernetes"
 )
@@ -145,24 +144,24 @@ func (dc *DeployCommand) addEnvVars(cwd string) {
 		os.Setenv(model.GithubRepositoryEnvVar, repo)
 	}
 
-	if os.Getenv(constants.OktetoGitCommitEnvVar) == "" {
-		sha, err := repository.NewRepository(cwd).GetSHA()
-		if err != nil {
-			oktetoLog.Infof("could not retrieve sha: %s", err)
-		}
-		isClean := true
-		if !dc.isRemote {
-			// TODO: check here
-			// isClean, err = repository.NewRepository(cwd).IsClean()
-			// if err != nil {
-			// 	oktetoLog.Infof("could not status: %s", err)
-			// }
-		}
-		if !isClean {
-			sha = utils.GetRandomSHA()
-		}
-		os.Setenv(constants.OktetoGitCommitEnvVar, sha)
-	}
+	// if os.Getenv(constants.OktetoGitCommitEnvVar) == "" {
+	// 	sha, err := repository.NewRepository(cwd).GetSHA()
+	// 	if err != nil {
+	// 		oktetoLog.Infof("could not retrieve sha: %s", err)
+	// 	}
+	// 	isClean := true
+	// 	if !dc.isRemote {
+	// 		// TODO: check here
+	// 		// isClean, err = repository.NewRepository(cwd).IsClean()
+	// 		// if err != nil {
+	// 		// 	oktetoLog.Infof("could not status: %s", err)
+	// 		// }
+	// 	}
+	// 	if !isClean {
+	// 		sha = utils.GetRandomSHA()
+	// 	}
+	// 	os.Setenv(constants.OktetoGitCommitEnvVar, sha)
+	// }
 	if os.Getenv(model.OktetoRegistryURLEnvVar) == "" {
 		os.Setenv(model.OktetoRegistryURLEnvVar, okteto.Context().Registry)
 	}

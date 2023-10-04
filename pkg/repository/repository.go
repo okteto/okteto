@@ -34,7 +34,7 @@ type Repository struct {
 }
 
 type repositoryInterface interface {
-	getServiceImageHash(string) string
+	getServiceImageHash(string) (string, error)
 	isCleanContext(ctx context.Context, buildContext string) (bool, error)
 	getSHA() (string, error)
 }
@@ -79,7 +79,7 @@ func NewRepository(path string) Repository {
 }
 
 // IsCleanContext checks if the repository have changes over the context
-func (r Repository) GetServiceImageHash(buildcontext string) string {
+func (r Repository) GetServiceImageHash(buildcontext string) (string, error) {
 	return r.control.getServiceImageHash(buildcontext)
 }
 

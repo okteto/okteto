@@ -63,7 +63,7 @@ func (i imageTagger) tag(manifestName, svcName string, b *model.BuildInfo) strin
 	sha := ""
 	if i.cfg.HasGlobalAccess() && i.svcCfg.isCleanContext() {
 		targetRegistry = constants.GlobalRegistry
-		sha = i.cfg.GetBuildHash(b)
+		sha = i.svcCfg.getServiceHash()
 	}
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	if shouldBuildFromDockerfile(b) && b.Image == "" {
@@ -116,7 +116,7 @@ func (i imageWithVolumesTagger) tag(manifestName, svcName string, b *model.Build
 	buildCopy.Image = ""
 	if i.cfg.HasGlobalAccess() && i.svcCfg.isCleanContext() {
 		targetRegistry = constants.GlobalRegistry
-		sha = i.cfg.GetBuildHash(buildCopy)
+		sha = i.svcCfg.getServiceHash()
 	}
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	if sha != "" {

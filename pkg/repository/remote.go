@@ -25,8 +25,8 @@ func newOktetoRemoteRepoController(localCommit string) oktetoRemoteRepoControlle
 	}
 }
 
-func (or oktetoRemoteRepoController) getServiceImageHash(_ string) string {
-	return ""
+func (or oktetoRemoteRepoController) getServiceImageHash(_ string) (string, error) {
+	return "", nil
 }
 
 func (or oktetoRemoteRepoController) isCleanContext(_ context.Context, _ string) (bool, error) {

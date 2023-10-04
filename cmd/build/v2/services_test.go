@@ -215,16 +215,13 @@ func TestNoServiceBuiltWithSubset(t *testing.T) {
 }
 
 type fakeConfig struct {
-	isClean   bool
 	hasAccess bool
 	sha       string
 	isOkteto  bool
 }
 
 func (fc fakeConfig) HasGlobalAccess() bool                  { return fc.hasAccess }
-func (fc fakeConfig) IsCleanProject() bool                   { return fc.isClean }
 func (fc fakeConfig) GetBuildHash(_ *model.BuildInfo) string { return fc.sha }
-func (fc fakeConfig) GetGitCommit() string                   { return fc.sha }
 func (fc fakeConfig) IsOkteto() bool                         { return fc.isOkteto }
 
 type fakeSvcConfig struct {

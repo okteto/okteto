@@ -33,7 +33,7 @@ type registryImageCheckerInterface interface {
 
 type imageChecker struct {
 	tagger   imageTaggerInterface
-	cfg      oktetoBuilderConfigInterface
+	isOkteto bool
 	svCfg    serviceContextInterface
 	registry registryImageCheckerInterface
 
@@ -44,7 +44,7 @@ type imageChecker struct {
 func newImageChecker(cfg oktetoBuilderConfigInterface, svcCfg serviceContextInterface, registry registryImageCheckerInterface, tagger imageTaggerInterface) imageChecker {
 	return imageChecker{
 		tagger:   tagger,
-		cfg:      cfg,
+		isOkteto: cfg.IsOkteto(),
 		registry: registry,
 		svCfg:    svcCfg,
 
@@ -74,10 +74,10 @@ func (ic imageChecker) checkIfCommitHashIsBuilt(manifestName, svcToBuild string,
 }
 
 func (ic imageChecker) getImageDigestFromAllPossibleTags(manifestName, svcToBuild string, buildInfo *model.BuildInfo) (string, error) {
-	sha := ic.cfg.GetBuildHash(buildInfo)
+	sha := ic.svCfg.getServiceHash()
 
 	var possibleTags []string
-	if !ic.cfg.IsOkteto() && shouldAddVolumeMounts(buildInfo) {
+	if !ic.isOkteto && shouldAddVolumeMounts(buildInfo) {
 		possibleTags = []string{buildInfo.Image}
 	} else if shouldAddVolumeMounts(buildInfo) {
 		possibleTags = ic.tagger.getPossibleTags(manifestName, svcToBuild, sha)
