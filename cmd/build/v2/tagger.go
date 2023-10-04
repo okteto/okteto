@@ -24,16 +24,13 @@ import (
 )
 
 type imageTaggerInterface interface {
-	tag(manifestName, svcName string, b *model.BuildInfo, buildHash string) string
-	getPossibleHashImages(manifestName, svcToBuildName, sha string) []string
-	getPossibleTags(manifestName, svcToBuildName, sha string) []string
+	getServiceImageReference(manifestName, svcName string, b *model.BuildInfo, buildHash string) string
+	getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string
+	getImageReferencesForTagWithDefaults(manifestName, svcToBuildName, tag string) []string
 }
 
+// imageTagger implements an imageTaggerInterface with no volume mounts
 type imageTagger struct {
-	cfg oktetoBuilderConfigInterface
-}
-
-type imageWithVolumesTagger struct {
 	cfg oktetoBuilderConfigInterface
 }
 
@@ -47,108 +44,122 @@ func getTargetRegistries() []string {
 	return registries
 }
 
-// newImageTagger returns a new image tagger
+// newImageTagger returns an instance of imageTagger with the given config
 func newImageTagger(cfg oktetoBuilderConfigInterface) imageTagger {
 	return imageTagger{
 		cfg: cfg,
 	}
 }
 
-// tag returns the full image tag for the build
-func (i imageTagger) tag(manifestName, svcName string, b *model.BuildInfo, buildHash string) string {
+/*
+getServiceImageReference returns the image reference [name]:[tag] for the given service.
+
+When service image is set on manifest, this is one returned.
+
+Inferred tag is constructed using the following:
+[name] is the combination of the tarjetRegistry, manifestName and serviceName
+[tag] its either the buildHash or the default okteto tag "okteto"
+*/
+func (i imageTagger) getServiceImageReference(manifestName, svcName string, b *model.BuildInfo, buildHash string) string {
+	if b.Image != "" {
+		return b.Image
+	}
+
+	// build the image reference based on context and buildInfo
 	targetRegistry := constants.DevRegistry
-	sha := ""
+	tag := ""
 	if i.cfg.HasGlobalAccess() && i.cfg.IsCleanProject() {
 		targetRegistry = constants.GlobalRegistry
-		sha = buildHash
+		tag = buildHash
 	}
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	if shouldBuildFromDockerfile(b) && b.Image == "" {
-		if sha != "" {
-			return getImageFromTmpl(targetRegistry, sanitizedName, svcName, sha)
-		}
-		return getImageFromTmpl(targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
+	if shouldBuildFromDockerfile(b) && tag != "" {
+		return useReferenceTmplate(targetRegistry, sanitizedName, svcName, tag)
 	}
-	return b.Image
+	return useReferenceTmplate(targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
 }
 
-// getPossibleHashImages returns all the possible images that can be built from a commit hash
-func (i imageTagger) getPossibleHashImages(manifestName, svcToBuildName, sha string) []string {
-	if sha == "" {
+// getPossibleImageReferenceWithTag returns all the possible images references that can be used for build with the given tag
+func (i imageTagger) getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string {
+	if tag == "" {
 		return []string{}
 	}
 
 	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	tagsToCheck := []string{}
+	referencesToCheck := []string{}
+
 	for _, targetRegistry := range getTargetRegistries() {
-		tagsToCheck = append(tagsToCheck, getImageFromTmpl(targetRegistry, sanitizedName, svcToBuildName, sha))
+		referencesToCheck = append(referencesToCheck, useReferenceTmplate(targetRegistry, sanitizedName, svcToBuildName, tag))
 	}
-	return tagsToCheck
+	return referencesToCheck
 }
 
-// getPossibleTags returns all the possible images that can be built (with and without hash)
-func (i imageTagger) getPossibleTags(manifestName, svcToBuildName, sha string) []string {
-	tags := i.getPossibleHashImages(manifestName, svcToBuildName, sha)
-	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	for _, targetRegistry := range getTargetRegistries() {
-		tags = append(tags, getImageFromTmpl(targetRegistry, sanitizedName, svcToBuildName, model.OktetoDefaultImageTag))
-	}
-	return tags
+// getPossibleImageReferences returns all the possible image references for a given service, options include the given tag and the default okteto tag
+func (i imageTagger) getImageReferencesForTagWithDefaults(manifestName, svcToBuildName, tag string) []string {
+	imageReferencesWithTag := i.getImageReferencesForTag(manifestName, svcToBuildName, tag)
+	imageReferencesWithDefault := i.getImageReferencesForTag(manifestName, svcToBuildName, model.OktetoDefaultImageTag)
+
+	return append(imageReferencesWithTag, imageReferencesWithDefault...)
+}
+
+// imageTaggerWithVolumes represent an imageTaggerInterface with an reference tag with volume mounts
+type imagerTaggerWithVolumes struct {
+	cfg oktetoBuilderConfigInterface
 }
 
 // newImageWithVolumesTagger returns a new image tagger
-func newImageWithVolumesTagger(cfg oktetoBuilderConfigInterface) imageWithVolumesTagger {
-	return imageWithVolumesTagger{
+func newImageWithVolumesTagger(cfg oktetoBuilderConfigInterface) imagerTaggerWithVolumes {
+	return imagerTaggerWithVolumes{
 		cfg: cfg,
 	}
 }
 
-// tag returns the full image tag for the build
-func (i imageWithVolumesTagger) tag(manifestName, svcName string, _ *model.BuildInfo, buildHash string) string {
+// getServiceImageReference returns the full image tag for the build
+func (i imagerTaggerWithVolumes) getServiceImageReference(manifestName, svcName string, _ *model.BuildInfo, buildHash string) string {
 	targetRegistry := constants.DevRegistry
-	sha := ""
+	tag := ""
 	if i.cfg.HasGlobalAccess() && i.cfg.IsCleanProject() {
 		targetRegistry = constants.GlobalRegistry
-		sha = buildHash
+		tag = buildHash
 	}
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	if sha != "" {
-		return getImageFromTmplWithVolumesAndSHA(targetRegistry, sanitizedName, svcName, sha)
+	if tag != "" {
+		return useReferenceTemplateWithVolumes(targetRegistry, sanitizedName, svcName, tag)
 	}
-	return getImageFromTmpl(targetRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes)
+	return useReferenceTmplate(targetRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes)
 }
 
 // getPossibleHashImages returns all the possible images that can be built from a commit hash
-func (i imageWithVolumesTagger) getPossibleHashImages(manifestName, svcToBuildName, sha string) []string {
-	if sha == "" {
+func (i imagerTaggerWithVolumes) getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string {
+	if tag == "" {
 		return []string{}
 	}
 	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	tagsToCheck := []string{}
 	for _, targetRegistry := range getTargetRegistries() {
-		tagsToCheck = append(tagsToCheck, getImageFromTmplWithVolumesAndSHA(targetRegistry, sanitizedName, svcToBuildName, sha))
+		tagsToCheck = append(tagsToCheck, useReferenceTemplateWithVolumes(targetRegistry, sanitizedName, svcToBuildName, tag))
 	}
 	return tagsToCheck
 }
 
 // getPossibleTags returns all the possible images that can be built (with and without hash)
-func (i imageWithVolumesTagger) getPossibleTags(manifestName, svcToBuildName, sha string) []string {
-	tags := i.getPossibleHashImages(manifestName, svcToBuildName, sha)
+func (i imagerTaggerWithVolumes) getImageReferencesForTagWithDefaults(manifestName, svcToBuildName, tag string) []string {
+	tags := i.getImageReferencesForTag(manifestName, svcToBuildName, tag)
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	for _, targetRegistry := range getTargetRegistries() {
-		tags = append(tags, getImageFromTmpl(targetRegistry, sanitizedName, svcToBuildName, model.OktetoImageTagWithVolumes))
+		tags = append(tags, useReferenceTmplate(targetRegistry, sanitizedName, svcToBuildName, model.OktetoImageTagWithVolumes))
 	}
 	return tags
 }
 
-// getImageFromTmpl returns the image name from the template of image tag
-func getImageFromTmpl(targetRegistry, repoName, svcName, tag string) string {
+// useReferenceTmplate returns the image reference with the given parameters [name]:[tag]
+func useReferenceTmplate(targetRegistry, repoName, svcName, tag string) string {
 	return fmt.Sprintf("%s/%s-%s:%s", targetRegistry, repoName, svcName, tag)
 }
 
-// getImageFromTmpl returns the image name from the template of image sha
-func getImageFromTmplWithVolumesAndSHA(targetRegistry, repoName, svcName, sha string) string {
-	return fmt.Sprintf("%s/%s-%s:%s-%s", targetRegistry, repoName, svcName, model.OktetoImageTagWithVolumes, sha)
+// useTmplateWithVolumes returns the image reference from the template of image with volume mounts [name]:okteto-with-volume-mounts-[tag]
+func useReferenceTemplateWithVolumes(targetRegistry, repoName, svcName, tag string) string {
+	return fmt.Sprintf("%s/%s-%s:%s-%s", targetRegistry, repoName, svcName, model.OktetoImageTagWithVolumes, tag)
 }

@@ -297,7 +297,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := bc.getBuildInfoWithoutVolumeMounts(manifest.Build[svcName], isStackManifest)
 	buildHash := getBuildHashFromCommit(buildSvcInfo, bc.Config.GetGitCommit())
-	tagToBuild := newImageTagger(bc.Config).tag(manifest.Name, svcName, buildSvcInfo, buildHash)
+	tagToBuild := newImageTagger(bc.Config).getServiceImageReference(manifest.Name, svcName, buildSvcInfo, buildHash)
 	buildSvcInfo.Image = tagToBuild
 	if err := buildSvcInfo.AddBuildArgs(bc.buildEnvironments); err != nil {
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcName, err)
@@ -332,7 +332,7 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 	buildInfoCopy.Image = ""
 	buildHash := getBuildHashFromCommit(buildInfoCopy, bc.Config.GetGitCommit())
 
-	tagToBuild := newImageWithVolumesTagger(bc.Config).tag(manifest.Name, svcName, buildInfoCopy, buildHash)
+	tagToBuild := newImageWithVolumesTagger(bc.Config).getServiceImageReference(manifest.Name, svcName, buildInfoCopy, buildHash)
 	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest)
 	svcBuild, err := build.CreateDockerfileWithVolumeMounts(fromImage, buildSvcInfo.VolumesToInclude)
 	if err != nil {

@@ -51,21 +51,22 @@ func newImageChecker(cfg oktetoBuilderConfigInterface, registry registryImageChe
 }
 
 // checkIfBuildHashIsBuilt returns if the buildhash is already built
-// in case is built, the image with digest is also returned
-// if not, image with digest is empty
+// in case is built, the image with digest ([name]@sha256:[sha]) is returned
+// if not, empty reference is returned
 func (ic imageChecker) checkIfBuildHashIsBuilt(manifestName, svcToBuild string, buildHash string) (string, bool) {
 	if buildHash == "" {
 		return "", false
 	}
-	tagsToCheck := ic.tagger.getPossibleHashImages(manifestName, svcToBuild, buildHash)
+	// [name]:[tag] being the tag the buildHash
+	referencesToCheck := ic.tagger.getImageReferencesForTag(manifestName, svcToBuild, buildHash)
 
-	for _, tag := range tagsToCheck {
-		imageWithDigest, err := ic.getImageSHA(tag, ic.registry)
+	for _, ref := range referencesToCheck {
+		imageWithDigest, err := ic.getImageSHA(ref, ic.registry)
 		if err != nil {
 			if oktetoErrors.IsNotFound(err) {
 				continue
 			}
-			oktetoLog.Infof("could not check image %s: %s", tag, err)
+			oktetoLog.Infof("could not check image %s: %s", ref, err)
 			return "", false
 		}
 		return imageWithDigest, true
@@ -73,15 +74,18 @@ func (ic imageChecker) checkIfBuildHashIsBuilt(manifestName, svcToBuild string, 
 	return "", false
 }
 
+// getImageDigestFromAllPossibleTags returns the image reference with digest for the given service
+//
+// format: [name]@sha256:[digest]
 func (ic imageChecker) getImageDigestFromAllPossibleTags(manifestName, svcToBuild string, buildInfo *model.BuildInfo, buildHash string) (string, error) {
 
 	var possibleTags []string
 	if !ic.cfg.IsOkteto() && shouldAddVolumeMounts(buildInfo) {
 		possibleTags = []string{buildInfo.Image}
 	} else if shouldAddVolumeMounts(buildInfo) {
-		possibleTags = ic.tagger.getPossibleTags(manifestName, svcToBuild, buildHash)
+		possibleTags = ic.tagger.getImageReferencesForTagWithDefaults(manifestName, svcToBuild, buildHash)
 	} else if shouldBuildFromDockerfile(buildInfo) && buildInfo.Image == "" {
-		possibleTags = ic.tagger.getPossibleTags(manifestName, svcToBuild, buildHash)
+		possibleTags = ic.tagger.getImageReferencesForTagWithDefaults(manifestName, svcToBuild, buildHash)
 	} else if buildInfo.Image != "" {
 		possibleTags = []string{buildInfo.Image}
 	}
