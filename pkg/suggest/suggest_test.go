@@ -15,27 +15,39 @@ func TestErrorSuggestion(t *testing.T) {
 
 	inputError := errors.New("line 4: field contex not found in type model.buildInfoRaw")
 
+	ruleNotFoundInBuildInfoRaw := NewRule(
+		func(e error) bool {
+			return strings.Contains(e.Error(), "not found in type model.buildInfoRaw")
+		},
+		func(e error) error {
+			return errors.New(strings.Replace(e.Error(), "not found in type model.buildInfoRaw", "does not exist in the build section of the Okteto Manifest", 1))
+		},
+	)
+
 	tests := []struct {
-		name         string
-		inputError   error
-		rules        []Rule
-		expected     string
-		expectingErr bool
+		name          string
+		inputError    error
+		rules         []Rule
+		expected      string
+		expectedError bool
 	}{
 		{
 			name:       "basic rule",
 			inputError: inputError,
+			rules:      []Rule{ruleNotFoundInBuildInfoRaw},
+			expected:   "line 4: field contex does not exist in the build section of the Okteto Manifest",
+		},
+		{
+			name:       "suggesting closest word",
+			inputError: inputError,
 			rules: []Rule{
-				NewRule(
-					func(e error) bool {
-						return strings.Contains(e.Error(), "not found in type model.buildInfoRaw")
-					},
-					func(e error) error {
-						return errors.New(strings.Replace(e.Error(), "not found in type model.buildInfoRaw", "does not exist in the build section of the Okteto Manifest", 1))
-					},
+				NewLevenshteinRule(
+					"field (.+?) not found",
+					"context",
 				),
+				ruleNotFoundInBuildInfoRaw,
 			},
-			expected: "line 4: field contex does not exist in the build section of the Okteto Manifest",
+			expected: "line 4: field contex does not exist in the build section of the Okteto Manifest. Did you mean \"context\"?",
 		},
 		{
 			name:       "multiple rules and matching regex",
@@ -43,12 +55,24 @@ func TestErrorSuggestion(t *testing.T) {
 			rules: []Rule{
 				emptyRule,
 				emptyRule,
-				NewRegexRule(`line \d+: field .+ not found in type model.buildInfoRaw`, func(e error) error {
+				NewRegexRule(`field .+ not found in type model.buildInfoRaw`, func(e error) error {
 					return errors.New(strings.Replace(e.Error(), "not found in type model.buildInfoRaw", "does not exist in the build section of the Okteto Manifest", 1))
 				}),
 				emptyRule,
 			},
 			expected: "line 4: field contex does not exist in the build section of the Okteto Manifest",
+		},
+		{
+			name:       "no matching rule",
+			inputError: inputError,
+			rules: []Rule{
+				emptyRule,
+				NewLevenshteinRule(
+					"non-matching regex",
+					"test",
+				),
+			},
+			expected: inputError.Error(),
 		},
 	}
 
