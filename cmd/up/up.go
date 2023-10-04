@@ -338,7 +338,8 @@ func Up() *cobra.Command {
 				}()
 			}
 
-			if err := setBuildEnvVars(ctx, oktetoManifest); err != nil {
+			// build images and set env vars for the services at the manifest
+			if err := buildAllServices(ctx, oktetoManifest, up.analyticsTracker); err != nil {
 				return err
 			}
 
@@ -582,7 +583,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		GetDeployer:        deploy.GetDeployer,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),
 		K8sClientProvider:  k8sClientProvider,
-		Builder:            buildv2.NewBuilderFromScratch(),
+		Builder:            buildv2.NewBuilderFromScratch(up.analyticsTracker),
 		GetExternalControl: deploy.NewDeployExternalK8sControl,
 		Fs:                 up.Fs,
 		CfgMapHandler:      deploy.NewConfigmapHandler(k8sProvider),
@@ -1058,8 +1059,9 @@ func printDisplayContext(up *upContext) {
 	oktetoLog.Println()
 }
 
-func setBuildEnvVars(ctx context.Context, m *model.Manifest) error {
-	builder := buildv2.NewBuilderFromScratch()
+// buildAllServices runs the build over the services from the manifest and this set the build envs
+func buildAllServices(ctx context.Context, m *model.Manifest, analyticsTracker *analytics.AnalyticsTracker) error {
+	builder := buildv2.NewBuilderFromScratch(analyticsTracker)
 	svcsToBuild, err := builder.GetServicesToBuild(ctx, m, []string{})
 	if err != nil {
 		return err

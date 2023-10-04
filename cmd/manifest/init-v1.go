@@ -72,7 +72,9 @@ func InitV1(opts *InitOpts) error {
 	}
 	opts.Workdir = cwd
 
-	mc := &ManifestCommand{}
+	mc := &ManifestCommand{
+		analyticsTracker: analytics.NewAnalyticsTracker(),
+	}
 	if err := mc.RunInitV1(ctx, opts); err != nil {
 		return err
 	}

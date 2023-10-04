@@ -179,7 +179,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 					return err
 				}
 			}
-
+			analyticsTracker := analytics.NewAnalyticsTracker()
 			c := &destroyCommand{
 				executor:          executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash, ""),
 				ConfigMapHandler:  NewConfigmapHandler(k8sClient),
@@ -187,8 +187,8 @@ func Destroy(ctx context.Context) *cobra.Command {
 				secrets:           secrets.NewSecrets(k8sClient),
 				k8sClientProvider: okteto.NewK8sClientProvider(),
 				oktetoClient:      okClient,
-				buildCtrl:         newBuildCtrl(options.Name),
-				analyticsTracker:  analytics.NewAnalyticsTracker(),
+				buildCtrl:         newBuildCtrl(options.Name, analyticsTracker),
+				analyticsTracker:  analyticsTracker,
 				getManifest:       model.GetManifestV2,
 			}
 

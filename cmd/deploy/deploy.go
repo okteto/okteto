@@ -188,13 +188,14 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("could not create pipeline command: %w", err)
 			}
+			analyticsTracker := analytics.NewAnalyticsTracker()
 			c := &DeployCommand{
 				GetManifest: model.GetManifestV2,
 
 				GetExternalControl: NewDeployExternalK8sControl,
 				K8sClientProvider:  k8sClientProvider,
 				GetDeployer:        GetDeployer,
-				Builder:            buildv2.NewBuilderFromScratch(),
+				Builder:            buildv2.NewBuilderFromScratch(analyticsTracker),
 				DeployWaiter:       NewDeployWaiter(k8sClientProvider),
 				EndpointGetter:     NewEndpointGetter,
 				isRemote:           utils.LoadBoolean(constants.OktetoDeployRemote),
@@ -202,7 +203,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				Fs:                 afero.NewOsFs(),
 				PipelineCMD:        pc,
 				runningInInstaller: config.RunningInInstaller(),
-				AnalyticsTracker:   analytics.NewAnalyticsTracker(),
+				AnalyticsTracker:   analyticsTracker,
 			}
 			startTime := time.Now()
 

@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/okteto/okteto/pkg/analytics"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -60,10 +61,15 @@ type StackDeployOptions struct {
 	InsidePipeline   bool
 }
 
+type analyticsTrackerInterface interface {
+	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
+}
+
 // Stack is the executor of stack commands
 type Stack struct {
-	K8sClient kubernetes.Interface
-	Config    *rest.Config
+	K8sClient        kubernetes.Interface
+	Config           *rest.Config
+	analyticsTracker analyticsTrackerInterface
 }
 
 const (
@@ -78,7 +84,7 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *StackDeplo
 	}
 
 	if !options.InsidePipeline {
-		if err := buildStackImages(ctx, s, options); err != nil {
+		if err := buildStackImages(ctx, s, options, sd.analyticsTracker); err != nil {
 			return err
 		}
 	}

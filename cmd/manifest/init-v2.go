@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/cmd/deploy"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
@@ -42,10 +43,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type analyticsTrackerInterface interface {
+	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
+}
+
 // ManifestCommand has all the namespaces subcommands
 type ManifestCommand struct {
 	manifest          *model.Manifest
 	K8sClientProvider okteto.K8sClientProvider
+	analyticsTracker  analyticsTrackerInterface
 }
 
 // InitOpts defines the option for manifest init
@@ -100,6 +106,7 @@ func Init() *cobra.Command {
 			opts.ShowCTA = oktetoLog.IsInteractive()
 			mc := &ManifestCommand{
 				K8sClientProvider: okteto.NewK8sClientProvider(),
+				analyticsTracker:  analytics.NewAnalyticsTracker(),
 			}
 			if opts.Version1 {
 				if err := mc.RunInitV1(ctx, opts); err != nil {
@@ -277,7 +284,7 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		GetManifest:        mc.getManifest,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
 		K8sClientProvider:  mc.K8sClientProvider,
-		Builder:            buildv2.NewBuilderFromScratch(),
+		Builder:            buildv2.NewBuilderFromScratch(mc.analyticsTracker),
 		GetExternalControl: deploy.NewDeployExternalK8sControl,
 		Fs:                 afero.NewOsFs(),
 		CfgMapHandler:      deploy.NewConfigmapHandler(mc.K8sClientProvider),

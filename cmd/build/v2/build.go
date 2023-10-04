@@ -87,16 +87,15 @@ type OktetoBuilder struct {
 
 // NewBuilder creates a new okteto builder
 func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, analyticsTracker analyticsTrackerInterface) *OktetoBuilder {
-	b := NewBuilderFromScratch()
+	b := NewBuilderFromScratch(analyticsTracker)
 	b.Builder = builder
 	b.Registry = registry
 	b.V1Builder = buildv1.NewBuilder(builder, registry)
-	b.analyticsTracker = analyticsTracker
 	return b
 }
 
 // NewBuilderFromScratch creates a new okteto builder
-func NewBuilderFromScratch() *OktetoBuilder {
+func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface) *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
 	registry := registry.NewOktetoRegistry(okteto.Config{})
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
@@ -111,6 +110,7 @@ func NewBuilderFromScratch() *OktetoBuilder {
 		V1Builder:         buildv1.NewBuilder(builder, registry),
 		buildEnvironments: map[string]string{},
 		Config:            getConfig(registry, gitRepo),
+		analyticsTracker:  analyticsTracker,
 	}
 }
 
