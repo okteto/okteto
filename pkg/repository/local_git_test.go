@@ -196,6 +196,94 @@ func TestLocalGit_Status(t *testing.T) {
 	}
 }
 
+func TestLocalGit_BuildContextStatus(t *testing.T) {
+	tests := []struct {
+		name        string
+		fixAttempts int
+		mock        func() *mockLocalExec
+		expectedErr error
+	}{
+		{
+			name:        "success",
+			fixAttempts: 0,
+			mock: func() *mockLocalExec {
+				return &mockLocalExec{
+					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+						return []byte("M modified-file.go"), nil
+					},
+				}
+			},
+			expectedErr: nil,
+		},
+		{
+			name:        "fail to parse git status output",
+			fixAttempts: 0,
+			mock: func() *mockLocalExec {
+				return &mockLocalExec{
+					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+						return []byte("unexpected_output_in_git_status"), nil
+					},
+				}
+			},
+			expectedErr: errLocalGitInvalidStatusOutput,
+		},
+		{
+			name:        "recover from dubious ownership",
+			fixAttempts: 0,
+			mock: func() *mockLocalExec {
+				var currentFixAttempt int
+				return &mockLocalExec{
+					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+						if currentFixAttempt == 0 {
+							currentFixAttempt++
+							return nil, &exec.ExitError{
+								Stderr: []byte("fatal: detected dubious ownership in repository at <path>"),
+							}
+						}
+
+						return []byte(""), nil
+
+					},
+				}
+			},
+			expectedErr: nil,
+		},
+		{
+			name:        "failure due to too many attempts",
+			fixAttempts: 2,
+			mock: func() *mockLocalExec {
+				return &mockLocalExec{
+					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+						return nil, assert.AnError
+					},
+				}
+			},
+			expectedErr: errLocalGitCannotGetStatusTooManyAttempts,
+		},
+		{
+			name:        "cannot recover",
+			fixAttempts: 1,
+			mock: func() *mockLocalExec {
+				return &mockLocalExec{
+					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+						return nil, assert.AnError
+					},
+				}
+			},
+			expectedErr: errLocalGitCannotGetStatusCannotRecover,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lg := NewLocalGit("git", tt.mock())
+			_, err := lg.BuildContextStatus(context.Background(), "/test/dir", tt.fixAttempts, "")
+
+			assert.ErrorIs(t, err, tt.expectedErr)
+		})
+	}
+}
+
 func Test_LocalExec_RunCommandWithContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
