@@ -154,7 +154,8 @@ func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInter
 			Builder:  builder,
 			Registry: registry,
 		},
-		Config: cfg,
+		Config:     cfg,
+		isCleanSvc: func(buildContext string) (bool, error) { return true, nil },
 	}
 }
 

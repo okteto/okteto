@@ -76,6 +76,8 @@ type OktetoBuilder struct {
 
 	// builtImages represents the images that have been built already
 	builtImages map[string]bool
+
+	isCleanSvc func(buildContext string) (bool, error)
 }
 
 // NewBuilder creates a new okteto builder
@@ -104,6 +106,7 @@ func NewBuilderFromScratch() *OktetoBuilder {
 		buildEnvironments: map[string]string{},
 		builtImages:       map[string]bool{},
 		Config:            getConfig(registry, gitRepo),
+		isCleanSvc:        gitRepo.IsBuildContextClean,
 	}
 }
 
@@ -166,10 +169,10 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 			buildSvcInfo := buildManifest[svcToBuild]
 
-			serviceContext := newSvcContextCleanlinessChecker(buildSvcInfo)
+			serviceContextChecker := newSvcContextCleanlinessChecker(buildSvcInfo, bc.isCleanSvc)
 			// We only check that the image is built in the global registry if the noCache option is not set
-			if !options.NoCache && serviceContext.IsCleanBuildContext() {
-				imageChecker := getImageChecker(buildSvcInfo, bc.Config, serviceContext, bc.Registry)
+			if !options.NoCache && serviceContextChecker.IsCleanBuildContext() {
+				imageChecker := getImageChecker(buildSvcInfo, bc.Config, serviceContextChecker, bc.Registry)
 				if imageWithDigest, isBuilt := imageChecker.checkIfCommitHashIsBuilt(options.Manifest.Name, svcToBuild, buildSvcInfo); isBuilt {
 					oktetoLog.Information("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, bc.Config.GetGitCommit())
 					// if the built image belongs to global registry we clone it to the dev registry
@@ -194,7 +197,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				return fmt.Errorf("'build.%s.image' is required if your cluster doesn't have Okteto installed", svcToBuild)
 			}
 
-			imageTag, err := bc.buildService(ctx, serviceContext, options.Manifest, svcToBuild, options)
+			imageTag, err := bc.buildService(ctx, serviceContextChecker, options.Manifest, svcToBuild, options)
 			if err != nil {
 				return fmt.Errorf("error building service '%s': %w", svcToBuild, err)
 			}
