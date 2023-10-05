@@ -35,7 +35,7 @@ type Repository struct {
 
 type repositoryInterface interface {
 	isClean(ctx context.Context) (bool, error)
-	isBuildContextClean(ctx context.Context, buildCpntext string) (bool, error)
+	isCleanDir(ctx context.Context, dir string) (bool, error)
 	getSHA() (string, error)
 }
 
@@ -85,7 +85,7 @@ func (r Repository) IsClean() (bool, error) {
 
 // IsClean checks if the repository have changes over the commit
 func (r Repository) IsBuildContextClean(buildContext string) (bool, error) {
-	return r.control.isBuildContextClean(context.TODO(), buildContext)
+	return r.control.isCleanDir(context.TODO(), buildContext)
 }
 
 // GetSHA returns the last commit sha of the repository

@@ -65,7 +65,7 @@ func (r gitRepoController) calculateIsClean(ctx context.Context) (bool, error) {
 	return status.IsClean(), nil
 }
 
-func (r gitRepoController) calculateIsCleanBuildContext(ctx context.Context, buildContext string) (bool, error) {
+func (r gitRepoController) calculateIsCleanDir(ctx context.Context, dir string) (bool, error) {
 	repo, err := r.repoGetter.get(r.path)
 	if err != nil {
 		return false, fmt.Errorf("failed to analyze git repo: %w", err)
@@ -76,7 +76,7 @@ func (r gitRepoController) calculateIsCleanBuildContext(ctx context.Context, bui
 		return false, fmt.Errorf("failed to infer the git repo's current branch: %w", err)
 	}
 
-	status, err := worktree.BuildContextStatus(ctx, NewLocalGit("git", &LocalExec{}), buildContext)
+	status, err := worktree.BuildContextStatus(ctx, NewLocalGit("git", &LocalExec{}), dir)
 	if err != nil {
 		return false, fmt.Errorf("failed to infer status from service context: %w", err)
 	}
@@ -121,7 +121,7 @@ func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 }
 
 // isClean checks if the repository have changes over the commit
-func (r gitRepoController) isBuildContextClean(ctx context.Context, buildContext string) (bool, error) {
+func (r gitRepoController) isCleanDir(ctx context.Context, buildContext string) (bool, error) {
 	// We use context.TODO() in a few places to call isClean, so let's make sure
 	// we set proper internal timeouts to not leak goroutines
 	ctx, cancel := context.WithCancel(ctx)
@@ -140,7 +140,7 @@ func (r gitRepoController) isBuildContextClean(ctx context.Context, buildContext
 	}()
 
 	go func() {
-		clean, err := r.calculateIsCleanBuildContext(ctx, buildContext)
+		clean, err := r.calculateIsCleanDir(ctx, buildContext)
 		select {
 		case <-timeoutCh:
 		case ch <- cleanStatus{clean, err}:
