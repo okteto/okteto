@@ -19,13 +19,15 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/config"
 	"math/big"
+	"net"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"text/template"
+
+	"github.com/okteto/okteto/pkg/config"
 
 	"github.com/mitchellh/go-homedir"
 	builder "github.com/okteto/okteto/cmd/build"
@@ -193,6 +195,15 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		fmt.Sprintf("%s=%s", constants.OktetoGitCommitEnvVar, os.Getenv(constants.OktetoGitCommitEnvVar)),
 		fmt.Sprintf("%s=%d", constants.OktetoInvalidateCacheEnvVar, int(randomNumber.Int64())),
 	)
+
+	registryUrl := okteto.Context().Registry
+	subdomain := strings.TrimPrefix(registryUrl, "registry.")
+
+	ip, _, _ := net.SplitHostPort(sc.ServerName)
+	buildOptions.ExtraHosts = []types.HostMap{
+		{Hostname: registryUrl, IP: ip},
+		{Hostname: fmt.Sprintf("kubernetes.%s", subdomain), IP: ip},
+	}
 
 	sshSock := os.Getenv(rd.sshAuthSockEnvvar)
 	if sshSock == "" {
