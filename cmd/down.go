@@ -87,14 +87,19 @@ func Down() *cobra.Command {
 					if !errors.Is(err, utils.ErrNoDevSelected) {
 						return err
 					}
-					selector := utils.NewOktetoSelector("Select which development container to deactivate:", "Development container")
 					options := apps.ListDevModeOn(ctx, manifest, c)
 
 					if len(options) == 0 {
 						oktetoLog.Success("All development containers are deactivated")
 						return nil
 					}
-					dev, err = utils.SelectDevFromManifest(manifest, selector, options)
+					if len(options) == 1 {
+						dev = manifest.Dev[options[0]]
+						err = nil
+					} else {
+						selector := utils.NewOktetoSelector("Select which development container to deactivate:", "Development container")
+						dev, err = utils.SelectDevFromManifest(manifest, selector, options)
+					}
 					if err != nil {
 						return err
 					}
