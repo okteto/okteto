@@ -67,7 +67,11 @@ func (up *upContext) activate() error {
 	up.cleaned = make(chan string, 1)
 	up.hardTerminate = make(chan error, 1)
 
-	app, create, err := utils.GetApp(ctx, up.Dev, up.Client, up.isRetry)
+	k8sClient, _, err := up.K8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return err
+	}
+	app, create, err := utils.GetApp(ctx, up.Dev, k8sClient, up.isRetry)
 	if err != nil {
 		return err
 	}
@@ -158,7 +162,7 @@ func (up *upContext) activate() error {
 		if err == oktetoErrors.ErrSSHConnectError {
 			err := up.checkOktetoStartError(ctx, "Failed to connect to your development container")
 			if err == oktetoErrors.ErrLostSyncthing {
-				if err := pods.Destroy(ctx, up.Pod.Name, up.Dev.Namespace, up.Client); err != nil {
+				if err := pods.Destroy(ctx, up.Pod.Name, up.Dev.Namespace, k8sClient); err != nil {
 					return fmt.Errorf("error recreating development container: %s", err.Error())
 				}
 			}
@@ -220,7 +224,7 @@ func (up *upContext) activate() error {
 
 	if up.shouldRetry(ctx, prevError) {
 		if !up.Dev.PersistentVolumeEnabled() {
-			if err := pods.Destroy(ctx, up.Pod.Name, up.Dev.Namespace, up.Client); err != nil {
+			if err := pods.Destroy(ctx, up.Pod.Name, up.Dev.Namespace, k8sClient); err != nil {
 				return err
 			}
 		}
@@ -267,14 +271,19 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 		return err
 	}
 
+	k8sClient, _, err := up.K8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return err
+	}
+
 	if up.Dev.PersistentVolumeEnabled() {
-		if err := volumes.CreateForDev(ctx, up.Dev, up.Client, up.Options.ManifestPath); err != nil {
+		if err := volumes.CreateForDev(ctx, up.Dev, k8sClient, up.Options.ManifestPath); err != nil {
 			return err
 		}
 	}
 
 	resetOnDevContainerStart := up.resetSyncthing || !up.Dev.PersistentVolumeEnabled()
-	trMap, err := apps.GetTranslations(ctx, up.Dev, app, resetOnDevContainerStart, up.Client)
+	trMap, err := apps.GetTranslations(ctx, up.Dev, app, resetOnDevContainerStart, k8sClient)
 	if err != nil {
 		return err
 	}
@@ -290,17 +299,17 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 	}
 
 	oktetoLog.Info("create deployment secrets")
-	if err := secrets.Create(ctx, up.Dev, up.Client, up.Sy); err != nil {
+	if err := secrets.Create(ctx, up.Dev, k8sClient, up.Sy); err != nil {
 		return err
 	}
 
 	var devApp apps.App
 	for _, tr := range trMap {
 		delete(tr.DevApp.ObjectMeta().Annotations, model.DeploymentRevisionAnnotation)
-		if err := tr.DevApp.Deploy(ctx, up.Client); err != nil {
+		if err := tr.DevApp.Deploy(ctx, k8sClient); err != nil {
 			return err
 		}
-		if err := tr.App.Deploy(ctx, up.Client); err != nil {
+		if err := tr.App.Deploy(ctx, k8sClient); err != nil {
 			return err
 		}
 		if tr.MainDev == tr.Dev {
@@ -309,12 +318,12 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 	}
 
 	if create {
-		if err := services.CreateDev(ctx, up.Dev, up.Client); err != nil {
+		if err := services.CreateDev(ctx, up.Dev, k8sClient); err != nil {
 			return err
 		}
 	}
 
-	pod, err := apps.GetRunningPodInLoop(ctx, up.Dev, devApp, up.Client)
+	pod, err := apps.GetRunningPodInLoop(ctx, up.Dev, devApp, k8sClient)
 	if err != nil {
 		return err
 	}
@@ -339,12 +348,17 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
+	k8sClient, _, err := up.K8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return err
+	}
+
 	optsWatchPod := metav1.ListOptions{
 		Watch:         true,
 		FieldSelector: fmt.Sprintf("metadata.name=%s", up.Pod.Name),
 	}
 
-	watcherPod, err := up.Client.CoreV1().Pods(up.Dev.Namespace).Watch(ctx, optsWatchPod)
+	watcherPod, err := k8sClient.CoreV1().Pods(up.Dev.Namespace).Watch(ctx, optsWatchPod)
 	if err != nil {
 		return err
 	}
@@ -354,7 +368,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 		FieldSelector: fmt.Sprintf("involvedObject.kind=Pod,involvedObject.name=%s", up.Pod.Name),
 	}
 
-	watcherEvents, err := up.Client.CoreV1().Events(up.Dev.Namespace).Watch(ctx, optsWatchEvents)
+	watcherEvents, err := k8sClient.CoreV1().Events(up.Dev.Namespace).Watch(ctx, optsWatchEvents)
 	if err != nil {
 		return err
 	}
@@ -383,7 +397,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 			e, ok := event.Object.(*apiv1.Event)
 			if !ok {
 				oktetoLog.Infof("failed to cast event")
-				watcherEvents, err = up.Client.CoreV1().Events(up.Dev.Namespace).Watch(ctx, optsWatchEvents)
+				watcherEvents, err = k8sClient.CoreV1().Events(up.Dev.Namespace).Watch(ctx, optsWatchEvents)
 				if err != nil {
 					oktetoLog.Infof("error watching events: %s", err.Error())
 					return err
@@ -454,7 +468,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 			pod, ok := event.Object.(*apiv1.Pod)
 			if !ok {
 				oktetoLog.Infof("failed to cast pod event")
-				watcherPod, err = up.Client.CoreV1().Pods(up.Dev.Namespace).Watch(ctx, optsWatchPod)
+				watcherPod, err = k8sClient.CoreV1().Pods(up.Dev.Namespace).Watch(ctx, optsWatchPod)
 				if err != nil {
 					oktetoLog.Infof("error watching pod events: %s", err.Error())
 					return err
@@ -499,11 +513,16 @@ func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) err
 		return nil
 	}
 
+	k8sClient, _, err := up.K8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return err
+	}
+
 	appToCheck := app
 	// If the app is already in dev mode, we need to check the cloned app to see if it is awaken
 	if apps.IsDevModeOn(app) {
 		var err error
-		appToCheck, err = app.GetDevClone(ctx, up.Client)
+		appToCheck, err = app.GetDevClone(ctx, k8sClient)
 		if err != nil {
 			return err
 		}
@@ -528,7 +547,7 @@ func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) err
 			oktetoLog.Warning("Dev environment '%s' didn't wake up after %s", appToCheck.ObjectMeta().Name, timeout.String())
 			return nil
 		case <-ticker.C:
-			if err := appToCheck.Refresh(ctx, up.Client); err != nil {
+			if err := appToCheck.Refresh(ctx, k8sClient); err != nil {
 				return err
 			}
 

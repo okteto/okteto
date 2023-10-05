@@ -54,7 +54,7 @@ func Get(ctx context.Context, name, namespace string, c kubernetes.Interface) (*
 }
 
 // Create creates the syncthing config secret
-func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, s *syncthing.Syncthing) error {
+func Create(ctx context.Context, dev *model.Dev, c kubernetes.Interface, s *syncthing.Syncthing) error {
 	secretName := GetSecretName(dev)
 
 	sct, err := Get(ctx, secretName, dev.Namespace, c)
