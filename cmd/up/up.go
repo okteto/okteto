@@ -584,7 +584,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		GetDeployer:        deploy.GetDeployer,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),
 		K8sClientProvider:  k8sClientProvider,
-		Builder:            buildv2.NewBuilderFromScratch(up.analyticsTracker),
+		Builder:            up.builder,
 		GetExternalControl: deploy.NewDeployExternalK8sControl,
 		Fs:                 up.Fs,
 		CfgMapHandler:      deploy.NewConfigmapHandler(k8sProvider),

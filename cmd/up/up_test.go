@@ -665,6 +665,10 @@ func (b *fakeBuilder) Build(_ context.Context, opts *types.BuildOptions) error {
 	return nil
 }
 
+func (b *fakeBuilder) GetBuildEnvVars() map[string]string {
+	return nil
+}
+
 func Test_buildAllServices(t *testing.T) {
 	tests := []struct {
 		name              string
