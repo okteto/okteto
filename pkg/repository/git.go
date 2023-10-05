@@ -64,6 +64,25 @@ func (r gitRepoController) calculateIsClean(ctx context.Context) (bool, error) {
 	return status.IsClean(), nil
 }
 
+func (r gitRepoController) calculateIsCleanBuildContext(ctx context.Context, buildContext string) (bool, error) {
+	repo, err := r.repoGetter.get(r.path)
+	if err != nil {
+		return false, fmt.Errorf("failed to analyze git repo: %w", err)
+	}
+
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return false, fmt.Errorf("failed to infer the git repo's current branch: %w", err)
+	}
+
+	status, err := worktree.BuildContextStatus(ctx, NewLocalGit("git", &LocalExec{}), buildContext)
+	if err != nil {
+		return false, fmt.Errorf("failed to infer the git repo's status: %w", err)
+	}
+
+	return status.IsClean(), nil
+}
+
 // isClean checks if the repository have changes over the commit
 func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 	// We use context.TODO() in a few places to call isClean, so let's make sure
@@ -85,6 +104,42 @@ func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 
 	go func() {
 		clean, err := r.calculateIsClean(ctx)
+		select {
+		case <-timeoutCh:
+		case ch <- cleanStatus{clean, err}:
+		}
+	}()
+
+	s := <-ch
+
+	if s.err == timeoutErr {
+		oktetoLog.Debug("Timeout exceeded calculating git status: assuming dirty commit")
+	}
+
+	return s.isClean, s.err
+}
+
+// isClean checks if the repository have changes over the commit
+func (r gitRepoController) isBuildContextClean(ctx context.Context, buildContext string) (bool, error) {
+	// We use context.TODO() in a few places to call isClean, so let's make sure
+	// we set proper internal timeouts to not leak goroutines
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	timeoutCh := make(chan struct{})
+	ch := make(chan cleanStatus)
+
+	timeoutErr := errors.New("timeout exceeded")
+
+	go func() {
+		time.Sleep(time.Second)
+		close(timeoutCh)
+		cancel()
+		ch <- cleanStatus{false, timeoutErr}
+	}()
+
+	go func() {
+		clean, err := r.calculateIsCleanBuildContext(ctx, buildContext)
 		select {
 		case <-timeoutCh:
 		case ch <- cleanStatus{clean, err}:
@@ -172,6 +227,7 @@ type gitRepositoryInterface interface {
 }
 type gitWorktreeInterface interface {
 	Status(context.Context, LocalGitInterface) (oktetoGitStatus, error)
+	BuildContextStatus(context.Context, LocalGitInterface, string) (oktetoGitStatus, error)
 	GetRoot() string
 }
 
@@ -190,6 +246,28 @@ func (ogr oktetoGitWorktree) Status(ctx context.Context, localGit LocalGitInterf
 	}
 
 	status, err := localGit.Status(ctx, ogr.GetRoot(), 0)
+	if err != nil {
+		return oktetoGitStatus{status: git.Status{}}, fmt.Errorf("failed to get git status: %w", err)
+	}
+
+	return oktetoGitStatus{status: status}, nil
+}
+
+func (ogr oktetoGitWorktree) BuildContextStatus(ctx context.Context, localGit LocalGitInterface, buildContext string) (oktetoGitStatus, error) {
+	// using git directly is faster, so we check if it's available
+	_, err := localGit.Exists()
+	if err != nil {
+		// git is not available, so we fall back on git-go
+		oktetoLog.Debug("Calculating git status: git is not installed, for better performances consider installing it")
+		status, err := ogr.worktree.Status()
+		if err != nil {
+			return oktetoGitStatus{status: git.Status{}}, fmt.Errorf("failed to get git status: %w", err)
+		}
+
+		return oktetoGitStatus{status: status}, nil
+	}
+
+	status, err := localGit.BuildContextStatus(ctx, ogr.GetRoot(), 0, buildContext)
 	if err != nil {
 		return oktetoGitStatus{status: git.Status{}}, fmt.Errorf("failed to get git status: %w", err)
 	}

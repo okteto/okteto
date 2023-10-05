@@ -48,7 +48,6 @@ func TestGetConfig(t *testing.T) {
 			},
 			expected: oktetoBuilderConfig{
 				hasGlobalAccess: true,
-				isCleanProject:  true,
 				repository: fakeConfigRepo{
 					isClean: true,
 					err:     nil,
@@ -71,7 +70,6 @@ func TestGetConfig(t *testing.T) {
 			},
 			expected: oktetoBuilderConfig{
 				hasGlobalAccess: false,
-				isCleanProject:  true,
 				repository: fakeConfigRepo{
 					isClean: true,
 					err:     nil,
@@ -94,7 +92,6 @@ func TestGetConfig(t *testing.T) {
 			},
 			expected: oktetoBuilderConfig{
 				hasGlobalAccess: false,
-				isCleanProject:  true,
 				repository: fakeConfigRepo{
 					isClean: true,
 					err:     nil,
@@ -117,7 +114,6 @@ func TestGetConfig(t *testing.T) {
 			},
 			expected: oktetoBuilderConfig{
 				hasGlobalAccess: false,
-				isCleanProject:  false,
 				repository: fakeConfigRepo{
 					isClean: false,
 					err:     assert.AnError,

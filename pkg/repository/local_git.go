@@ -65,6 +65,7 @@ func (*LocalExec) LookPath(file string) (string, error) {
 
 type LocalGitInterface interface {
 	Status(ctx context.Context, dirPath string, fixAttempt int) (git.Status, error)
+	BuildContextStatus(ctx context.Context, dirPath string, fixAttempt int, buildContext string) (git.Status, error)
 	Exists() (string, error)
 	FixDubiousOwnershipConfig(path string) error
 	parseGitStatus(string) (git.Status, error)
@@ -101,6 +102,38 @@ func (lg *LocalGit) Status(ctx context.Context, dirPath string, fixAttempt int) 
 				}
 				fixAttempt++
 				return lg.Status(ctx, dirPath, fixAttempt)
+			}
+		}
+		return git.Status{}, errLocalGitCannotGetStatusCannotRecover
+	}
+
+	status, err := lg.parseGitStatus(string(output))
+	if err != nil {
+		return git.Status{}, err
+	}
+
+	return status, err
+}
+
+// Status returns the status of the repository at the given path
+func (lg *LocalGit) BuildContextStatus(ctx context.Context, dirPath string, fixAttempt int, buildContext string) (git.Status, error) {
+	if fixAttempt > 1 {
+		return git.Status{}, errLocalGitCannotGetStatusTooManyAttempts
+	}
+
+	output, err := lg.exec.RunCommand(ctx, dirPath, lg.gitPath, "--no-optional-locks", "status", "--porcelain", "-z", "-v", buildContext)
+	if err != nil {
+		var exitError *exec.ExitError
+		errors.As(err, &exitError)
+		if exitError != nil {
+			exitErr := string(exitError.Stderr)
+			if strings.Contains(exitErr, "detected dubious ownership in repository") {
+				err = lg.FixDubiousOwnershipConfig(dirPath)
+				if err != nil {
+					return git.Status{}, errLocalGitCannotGetStatusCannotRecover
+				}
+				fixAttempt++
+				return lg.BuildContextStatus(ctx, dirPath, fixAttempt, buildContext)
 			}
 		}
 		return git.Status{}, errLocalGitCannotGetStatusCannotRecover

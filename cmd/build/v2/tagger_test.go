@@ -14,8 +14,9 @@
 package v2
 
 import (
-	"github.com/okteto/okteto/pkg/okteto"
 	"testing"
+
+	"github.com/okteto/okteto/pkg/okteto"
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
@@ -23,23 +24,26 @@ import (
 
 func TestInitTaggers(t *testing.T) {
 	cfg := fakeConfig{}
-	assert.Implements(t, (*imageTaggerInterface)(nil), newImageTagger(cfg))
-	assert.Implements(t, (*imageTaggerInterface)(nil), newImageWithVolumesTagger(cfg))
+	assert.Implements(t, (*imageTaggerInterface)(nil), newImageTagger(cfg, &fakeServiceContext{}))
+	assert.Implements(t, (*imageTaggerInterface)(nil), newImageWithVolumesTagger(cfg, &fakeServiceContext{}))
 }
 
 func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 	tt := []struct {
 		name          string
 		cfg           fakeConfig
+		svcCfg        fakeServiceContext
 		b             *model.BuildInfo
 		expectedImage string
 	}{
 		{
 			name: "image is set without access to global",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: false,
 				sha:       "sha",
+			},
+			svcCfg: fakeServiceContext{
+				isClean: true,
 			},
 			b: &model.BuildInfo{
 				Image: "nginx",
@@ -47,11 +51,13 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 			expectedImage: "nginx",
 		},
 		{
-			name: "image is set with no clean project",
+			name: "image is set with no clean service context",
 			cfg: fakeConfig{
-				isClean:   false,
 				hasAccess: true,
 				sha:       "sha",
+			},
+			svcCfg: fakeServiceContext{
+				isClean: false,
 			},
 			b: &model.BuildInfo{
 				Image: "nginx",
@@ -61,9 +67,11 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 		{
 			name: "image is set with access to global",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: true,
 				sha:       "sha",
+			},
+			svcCfg: fakeServiceContext{
+				isClean: false,
 			},
 			b: &model.BuildInfo{
 				Image: "nginx",
@@ -73,7 +81,6 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 		{
 			name: "image is set but in okteto dev registry",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: true,
 				sha:       "sha",
 			},
@@ -87,9 +94,11 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 		{
 			name: "image is set but in okteto global registry",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: true,
 				sha:       "sha",
+			},
+			svcCfg: fakeServiceContext{
+				isClean: true,
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -101,22 +110,11 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 		{
 			name: "image inferred without access to global",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: false,
 				sha:       "sha",
 			},
-			b: &model.BuildInfo{
-				Dockerfile: "Dockerfile",
-				Context:    ".",
-			},
-			expectedImage: "okteto.dev/test-test:okteto",
-		},
-		{
-			name: "image inferred without clean project",
-			cfg: fakeConfig{
-				isClean:   false,
-				hasAccess: true,
-				sha:       "sha",
+			svcCfg: fakeServiceContext{
+				isClean: true,
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -125,11 +123,28 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 			expectedImage: "okteto.dev/test-test:okteto",
 		},
 		{
-			name: "image inferred with clean project and has access to global registry",
+			name: "image inferred without clean service context",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: true,
 				sha:       "sha",
+			},
+			svcCfg: fakeServiceContext{
+				isClean: false,
+			},
+			b: &model.BuildInfo{
+				Dockerfile: "Dockerfile",
+				Context:    ".",
+			},
+			expectedImage: "okteto.dev/test-test:okteto",
+		},
+		{
+			name: "image inferred with clean service context and has access to global registry",
+			cfg: fakeConfig{
+				hasAccess: true,
+				sha:       "sha",
+			},
+			svcCfg: fakeServiceContext{
+				isClean: true,
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -140,7 +155,7 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageTagger(tc.cfg)
+			tagger := newImageTagger(tc.cfg, &tc.svcCfg)
 			assert.Equal(t, tc.expectedImage, tagger.tag("test", "test", tc.b))
 		})
 	}
@@ -150,28 +165,18 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 	tt := []struct {
 		name          string
 		cfg           fakeConfig
+		svcCfg        fakeServiceContext
 		b             *model.BuildInfo
 		expectedImage string
 	}{
 		{
 			name: "image inferred without access to global",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: false,
 				sha:       "sha",
 			},
-			b: &model.BuildInfo{
-				Dockerfile: "Dockerfile",
-				Context:    ".",
-			},
-			expectedImage: "okteto.dev/test-test:okteto-with-volume-mounts",
-		},
-		{
-			name: "image inferred without clean project",
-			cfg: fakeConfig{
-				isClean:   false,
-				hasAccess: true,
-				sha:       "sha",
+			svcCfg: fakeServiceContext{
+				isClean: true,
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -180,11 +185,28 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 			expectedImage: "okteto.dev/test-test:okteto-with-volume-mounts",
 		},
 		{
-			name: "image inferred with clean project and has access to global registry",
+			name: "image inferred without clean service context",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: true,
 				sha:       "sha",
+			},
+			svcCfg: fakeServiceContext{
+				isClean: false,
+			},
+			b: &model.BuildInfo{
+				Dockerfile: "Dockerfile",
+				Context:    ".",
+			},
+			expectedImage: "okteto.dev/test-test:okteto-with-volume-mounts",
+		},
+		{
+			name: "image inferred with clean service context and has access to global registry",
+			cfg: fakeConfig{
+				hasAccess: true,
+				sha:       "sha",
+			},
+			svcCfg: fakeServiceContext{
+				isClean: true,
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -195,7 +217,7 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageWithVolumesTagger(tc.cfg)
+			tagger := newImageWithVolumesTagger(tc.cfg, &tc.svcCfg)
 			assert.Equal(t, tc.expectedImage, tagger.tag("test", "test", tc.b))
 		})
 	}
@@ -223,7 +245,7 @@ func TestImageTaggerGetPossibleHashImages(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageTagger(fakeConfig{})
+			tagger := newImageTagger(fakeConfig{}, &fakeServiceContext{})
 			assert.Equal(t, tc.expectedImages, tagger.getPossibleHashImages("test", "test", tc.sha))
 		})
 	}
@@ -251,7 +273,7 @@ func TestImageTaggerWithVolumesGetPossibleHashImages(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageWithVolumesTagger(fakeConfig{})
+			tagger := newImageWithVolumesTagger(fakeConfig{}, &fakeServiceContext{})
 			assert.Equal(t, tc.expectedImages, tagger.getPossibleHashImages("test", "test", tc.sha))
 		})
 	}
@@ -284,7 +306,7 @@ func TestImageTaggerGetPossibleTags(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageTagger(fakeConfig{})
+			tagger := newImageTagger(fakeConfig{}, &fakeServiceContext{})
 			assert.Equal(t, tc.expectedImages, tagger.getPossibleTags("test", "test", tc.sha))
 		})
 	}
@@ -317,7 +339,7 @@ func TestImageTaggerWithVolumesGetPossibleTags(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageWithVolumesTagger(fakeConfig{})
+			tagger := newImageWithVolumesTagger(fakeConfig{}, &fakeServiceContext{})
 			assert.Equal(t, tc.expectedImages, tagger.getPossibleTags("test", "test", tc.sha))
 		})
 	}

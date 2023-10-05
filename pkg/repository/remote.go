@@ -29,6 +29,10 @@ func (or oktetoRemoteRepoController) isClean(_ context.Context) (bool, error) {
 	return or.gitCommit != "", nil
 }
 
+func (or oktetoRemoteRepoController) isBuildContextClean(_ context.Context, _ string) (bool, error) {
+	return or.gitCommit != "", nil
+}
+
 func (or oktetoRemoteRepoController) getSHA() (string, error) {
 	return or.gitCommit, nil
 }

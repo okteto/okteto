@@ -97,7 +97,9 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 	if isStack && okteto.IsOkteto() && !bc.Registry.IsOktetoRegistry(buildInfo.Image) {
 		buildInfo.Image = ""
 	}
-	imageChecker := getImageChecker(buildInfo, bc.Config, bc.Registry)
+
+	serviceContext := getServiceContext(buildInfo)
+	imageChecker := getImageChecker(buildInfo, bc.Config, serviceContext, bc.Registry)
 	imageWithDigest, err := imageChecker.getImageDigestFromAllPossibleTags(manifest.Name, service, buildInfo)
 	if oktetoErrors.IsNotFound(err) {
 		oktetoLog.Debug("image not found, building image")

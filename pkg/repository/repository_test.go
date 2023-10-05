@@ -66,6 +66,10 @@ func (fw fakeWorktree) Status(context.Context, LocalGitInterface) (oktetoGitStat
 	return fw.status, fw.err
 }
 
+func (fw fakeWorktree) BuildContextStatus(context.Context, LocalGitInterface, string) (oktetoGitStatus, error) {
+	return fw.status, fw.err
+}
+
 func TestNewRepo(t *testing.T) {
 	tt := []struct {
 		name            string

@@ -56,7 +56,6 @@ type oktetoRegistryInterface interface {
 // oktetoBuilderConfigInterface returns the configuration that the builder has for the registry and project
 type oktetoBuilderConfigInterface interface {
 	HasGlobalAccess() bool
-	IsCleanProject() bool
 	GetBuildHash(*model.BuildInfo) string
 	GetGitCommit() string
 	IsOkteto() bool
@@ -167,9 +166,10 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 			buildSvcInfo := buildManifest[svcToBuild]
 
+			serviceContext := getServiceContext(buildSvcInfo)
 			// We only check that the image is built in the global registry if the noCache option is not set
-			if !options.NoCache && bc.Config.IsCleanProject() {
-				imageChecker := getImageChecker(buildSvcInfo, bc.Config, bc.Registry)
+			if !options.NoCache && serviceContext.IsCleanBuildContext() {
+				imageChecker := getImageChecker(buildSvcInfo, bc.Config, serviceContext, bc.Registry)
 				if imageWithDigest, isBuilt := imageChecker.checkIfCommitHashIsBuilt(options.Manifest.Name, svcToBuild, buildSvcInfo); isBuilt {
 					oktetoLog.Information("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, bc.Config.GetGitCommit())
 					// if the built image belongs to global registry we clone it to the dev registry
@@ -194,7 +194,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				return fmt.Errorf("'build.%s.image' is required if your cluster doesn't have Okteto installed", svcToBuild)
 			}
 
-			imageTag, err := bc.buildService(ctx, options.Manifest, svcToBuild, options)
+			imageTag, err := bc.buildService(ctx, serviceContext, options.Manifest, svcToBuild, options)
 			if err != nil {
 				return fmt.Errorf("error building service '%s': %w", svcToBuild, err)
 			}
@@ -217,7 +217,7 @@ func (bc *OktetoBuilder) areImagesBuilt(imagesToCheck []string) bool {
 	return true
 }
 
-func (bc *OktetoBuilder) buildService(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
+func (bc *OktetoBuilder) buildService(ctx context.Context, svcCfg serviceContextInterface, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
 	buildSvcInfo := manifest.Build[svcName]
 
 	switch {
@@ -227,17 +227,17 @@ func (bc *OktetoBuilder) buildService(ctx context.Context, manifest *model.Manif
 			Hint: "Please connect to a okteto cluster and try again",
 		}
 	case shouldBuildFromDockerfile(buildSvcInfo) && shouldAddVolumeMounts(buildSvcInfo):
-		image, err := bc.buildSvcFromDockerfile(ctx, manifest, svcName, options)
+		image, err := bc.buildSvcFromDockerfile(ctx, svcCfg, manifest, svcName, options)
 		if err != nil {
 			return "", err
 		}
 		buildSvcInfo.Image = image
-		return bc.addVolumeMounts(ctx, manifest, svcName, options)
+		return bc.addVolumeMounts(ctx, svcCfg, manifest, svcName, options)
 	case shouldBuildFromDockerfile(buildSvcInfo):
-		return bc.buildSvcFromDockerfile(ctx, manifest, svcName, options)
+		return bc.buildSvcFromDockerfile(ctx, svcCfg, manifest, svcName, options)
 	case shouldAddVolumeMounts(buildSvcInfo):
 		if okteto.IsOkteto() {
-			return bc.addVolumeMounts(ctx, manifest, svcName, options)
+			return bc.addVolumeMounts(ctx, svcCfg, manifest, svcName, options)
 		}
 
 	default:
@@ -246,12 +246,12 @@ func (bc *OktetoBuilder) buildService(ctx context.Context, manifest *model.Manif
 	return "", nil
 }
 
-func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
+func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, svcCfg serviceContextInterface, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
 	oktetoLog.Infof("Building image for service '%s'", svcName)
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := bc.getBuildInfoWithoutVolumeMounts(manifest.Build[svcName], isStackManifest)
 
-	tagToBuild := newImageTagger(bc.Config).tag(manifest.Name, svcName, buildSvcInfo)
+	tagToBuild := newImageTagger(bc.Config, svcCfg).tag(manifest.Name, svcName, buildSvcInfo)
 	buildSvcInfo.Image = tagToBuild
 	if err := buildSvcInfo.AddBuildArgs(bc.buildEnvironments); err != nil {
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcName, err)
@@ -274,7 +274,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	return imageTagWithDigest, nil
 }
 
-func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
+func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, svcCfg serviceContextInterface, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
 	oktetoLog.Information("Including volume hosts for service '%s'", svcName)
 	isStackManifest := (manifest.Type == model.StackType) || (manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil)
 	fromImage := manifest.Build[svcName].Image
@@ -282,7 +282,7 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 		fromImage = options.Tag
 	}
 
-	tagToBuild := newImageWithVolumesTagger(bc.Config).tag(manifest.Name, svcName, manifest.Build[svcName])
+	tagToBuild := newImageWithVolumesTagger(bc.Config, svcCfg).tag(manifest.Name, svcName, manifest.Build[svcName])
 	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest)
 	svcBuild, err := build.CreateDockerfileWithVolumeMounts(fromImage, buildSvcInfo.VolumesToInclude)
 	if err != nil {
@@ -380,12 +380,12 @@ func validateServices(buildSection model.ManifestBuild, svcsToBuild []string) er
 	return nil
 }
 
-func getImageChecker(buildInfo *model.BuildInfo, cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface) imageCheckerInterface {
+func getImageChecker(buildInfo *model.BuildInfo, cfg oktetoBuilderConfigInterface, svcCfg serviceContextInterface, registry registryImageCheckerInterface) imageCheckerInterface {
 	var tagger imageTaggerInterface
 	if shouldAddVolumeMounts(buildInfo) {
-		tagger = newImageWithVolumesTagger(cfg)
+		tagger = newImageWithVolumesTagger(cfg, svcCfg)
 	} else {
-		tagger = newImageTagger(cfg)
+		tagger = newImageTagger(cfg, svcCfg)
 	}
 	return newImageChecker(cfg, registry, tagger)
 }
