@@ -77,7 +77,7 @@ func (r gitRepoController) calculateIsCleanBuildContext(ctx context.Context, bui
 
 	status, err := worktree.BuildContextStatus(ctx, NewLocalGit("git", &LocalExec{}), buildContext)
 	if err != nil {
-		return false, fmt.Errorf("failed to infer the git repo's status: %w", err)
+		return false, fmt.Errorf("failed to infer status from service context: %w", err)
 	}
 
 	return status.IsClean(), nil

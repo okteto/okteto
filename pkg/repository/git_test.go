@@ -296,3 +296,163 @@ func TestGetSHA(t *testing.T) {
 		})
 	}
 }
+
+func TestIsBuildContextClean(t *testing.T) {
+	type config struct {
+		repositoryGetter *fakeRepositoryGetter
+	}
+	type expected struct {
+		isClean bool
+		err     error
+	}
+	var tests = []struct {
+		name         string
+		config       config
+		expected     expected
+		buildContext string
+	}{
+		{
+			name: "dir is not a repository",
+			config: config{
+				repositoryGetter: &fakeRepositoryGetter{
+					repository: nil,
+					err:        []error{git.ErrRepositoryNotExists},
+				},
+			},
+			expected: expected{
+				isClean: false,
+				err:     git.ErrRepositoryNotExists,
+			},
+		},
+		{
+			name: "repository could not access worktree",
+			config: config{
+				repositoryGetter: &fakeRepositoryGetter{
+					repository: []*fakeRepository{
+						{
+							worktree: nil,
+							err:      assert.AnError,
+						},
+					},
+				},
+			},
+			expected: expected{
+				isClean: false,
+				err:     assert.AnError,
+			},
+		},
+		{
+			name: "worktree could not access status",
+			config: config{
+				repositoryGetter: &fakeRepositoryGetter{
+					repository: []*fakeRepository{
+						{
+							worktree: &fakeWorktree{
+								status: oktetoGitStatus{
+									status: git.Status{},
+								},
+								err: assert.AnError,
+							},
+							err: nil,
+						},
+					},
+				},
+			},
+			expected: expected{
+				isClean: false,
+				err:     assert.AnError,
+			},
+		},
+		{
+			name: "another service in repository is not clean",
+			config: config{
+				repositoryGetter: &fakeRepositoryGetter{
+					repository: []*fakeRepository{
+						{
+							worktree: &fakeWorktree{
+								status: oktetoGitStatus{},
+								err:    nil,
+							},
+							err: nil,
+						},
+					},
+				},
+			},
+			expected: expected{
+				isClean: true,
+				err:     nil,
+			},
+		},
+		{
+			name: "service in repository is not clean",
+			config: config{
+				repositoryGetter: &fakeRepositoryGetter{
+					repository: []*fakeRepository{
+						{
+							worktree: &fakeWorktree{
+								status: oktetoGitStatus{
+									status: git.Status{
+										"testService/test-file.go": &git.FileStatus{
+											Staging:  git.Modified,
+											Worktree: git.Unmodified,
+										},
+									},
+								},
+								err: nil,
+							},
+							err: nil,
+						},
+					},
+				},
+			},
+			buildContext: "testService",
+			expected: expected{
+				isClean: false,
+				err:     nil,
+			},
+		},
+		{
+			name: "repository is clean",
+			config: config{
+				repositoryGetter: &fakeRepositoryGetter{
+					repository: []*fakeRepository{
+						{
+							worktree: &fakeWorktree{
+								status: oktetoGitStatus{
+									status: git.Status{
+										"test-file.go": &git.FileStatus{
+											Staging:  git.Unmodified,
+											Worktree: git.Unmodified,
+										},
+										"test-file-2.go": &git.FileStatus{
+											Staging:  git.Unmodified,
+											Worktree: git.Unmodified,
+										},
+									},
+								},
+								err: nil,
+							},
+							err: nil,
+						},
+					},
+				},
+			},
+			expected: expected{
+				isClean: true,
+				err:     nil,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := Repository{
+				control: gitRepoController{
+					repoGetter: tt.config.repositoryGetter,
+				},
+			}
+			isClean, err := repo.IsBuildContextClean(tt.buildContext)
+			assert.ErrorIs(t, err, tt.expected.err)
+			assert.Equal(t, tt.expected.isClean, isClean)
+		})
+	}
+}
