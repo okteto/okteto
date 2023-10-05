@@ -19,7 +19,7 @@ func (sc *SvcContextCleanlinessChecker) IsCleanBuildContext() bool {
 	return sc.isClean
 }
 
-func getServiceContext(buildInfo *model.BuildInfo) *SvcContextCleanlinessChecker {
+func newSvcContextCleanlinessChecker(buildInfo *model.BuildInfo) *SvcContextCleanlinessChecker {
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
 	wd, err := wdCtrl.Get()
 	if err != nil {

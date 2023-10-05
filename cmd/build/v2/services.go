@@ -98,7 +98,7 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 		buildInfo.Image = ""
 	}
 
-	serviceContext := getServiceContext(buildInfo)
+	serviceContext := newSvcContextCleanlinessChecker(buildInfo)
 	imageChecker := getImageChecker(buildInfo, bc.Config, serviceContext, bc.Registry)
 	imageWithDigest, err := imageChecker.getImageDigestFromAllPossibleTags(manifest.Name, service, buildInfo)
 	if oktetoErrors.IsNotFound(err) {

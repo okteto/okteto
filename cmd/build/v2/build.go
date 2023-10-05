@@ -166,7 +166,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 			buildSvcInfo := buildManifest[svcToBuild]
 
-			serviceContext := getServiceContext(buildSvcInfo)
+			serviceContext := newSvcContextCleanlinessChecker(buildSvcInfo)
 			// We only check that the image is built in the global registry if the noCache option is not set
 			if !options.NoCache && serviceContext.IsCleanBuildContext() {
 				imageChecker := getImageChecker(buildSvcInfo, bc.Config, serviceContext, bc.Registry)
