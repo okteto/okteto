@@ -200,8 +200,6 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	buildOptions.ExtraHosts = []types.HostMap{
 		{Hostname: registryUrl, IP: ip},
 		{Hostname: fmt.Sprintf("kubernetes.%s", subdomain), IP: ip},
-		{Hostname: fmt.Sprintf("okteto.%s", subdomain), IP: ip},
-		{Hostname: fmt.Sprintf("buildkit.%s", subdomain), IP: ip},
 	}
 
 	sshSock := os.Getenv(rd.sshAuthSockEnvvar)
