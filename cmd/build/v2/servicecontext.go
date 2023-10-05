@@ -11,15 +11,15 @@ type serviceContextInterface interface {
 	IsCleanBuildContext() bool
 }
 
-type serviceContext struct {
+type SvcContextCleanlinessChecker struct {
 	isClean bool
 }
 
-func (sc *serviceContext) IsCleanBuildContext() bool {
+func (sc *SvcContextCleanlinessChecker) IsCleanBuildContext() bool {
 	return sc.isClean
 }
 
-func getServiceContext(buildInfo *model.BuildInfo) *serviceContext {
+func getServiceContext(buildInfo *model.BuildInfo) *SvcContextCleanlinessChecker {
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
 	wd, err := wdCtrl.Get()
 	if err != nil {
@@ -32,7 +32,7 @@ func getServiceContext(buildInfo *model.BuildInfo) *serviceContext {
 		oktetoLog.Infof("could not check if build context for service '%s' is clean: %w", buildInfo.Name, err)
 	}
 
-	return &serviceContext{
+	return &SvcContextCleanlinessChecker{
 		isClean: isClean,
 	}
 }
