@@ -92,7 +92,7 @@ type DeployCommand struct {
 	GetManifest        func(path string) (*model.Manifest, error)
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
-	Builder            *buildv2.OktetoBuilder
+	Builder            builderInterface
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
 	GetDeployer        func(context.Context, *model.Manifest, *Options, builderInterface, configMapHandler) (deployerInterface, error)
 	EndpointGetter     func() (EndpointGetter, error)
@@ -336,7 +336,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return nil
 	}
 
-	if err := buildImages(ctx, dc.Builder.Build, dc.Builder.GetServicesToBuild, deployOptions); err != nil {
+	if err := buildImages(ctx, dc.Builder, deployOptions); err != nil {
 		if errStatus := dc.CfgMapHandler.updateConfigMap(ctx, cfg, data, err); errStatus != nil {
 			return errStatus
 		}
@@ -398,7 +398,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	return err
 }
 
-func buildImages(ctx context.Context, build func(context.Context, *types.BuildOptions) error, getServicesToBuild func(context.Context, *model.Manifest, []string) ([]string, error), deployOptions *Options) error {
+func buildImages(ctx context.Context, builder builderInterface, deployOptions *Options) error {
 	var stackServicesWithBuild map[string]bool
 
 	if stack := deployOptions.Manifest.GetStack(); stack != nil {
@@ -421,11 +421,11 @@ func buildImages(ctx context.Context, build func(context.Context, *types.BuildOp
 			CommandArgs:  setToSlice(servicesToBuildSet),
 		}
 		oktetoLog.Debug("force build from manifest definition")
-		if errBuild := build(ctx, buildOptions); errBuild != nil {
+		if errBuild := builder.Build(ctx, buildOptions); errBuild != nil {
 			return errBuild
 		}
 	} else {
-		servicesToBuild, err := getServicesToBuild(ctx, deployOptions.Manifest, setToSlice(servicesToBuildSet))
+		servicesToBuild, err := builder.GetServicesToBuild(ctx, deployOptions.Manifest, setToSlice(servicesToBuildSet))
 		if err != nil {
 			return err
 		}
@@ -437,7 +437,7 @@ func buildImages(ctx context.Context, build func(context.Context, *types.BuildOp
 				CommandArgs:  servicesToBuild,
 			}
 
-			if errBuild := build(ctx, buildOptions); errBuild != nil {
+			if errBuild := builder.Build(ctx, buildOptions); errBuild != nil {
 				return errBuild
 			}
 		}
