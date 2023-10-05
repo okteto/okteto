@@ -61,7 +61,6 @@ func newImageTagger(cfg oktetoBuilderConfigInterface, svcCfg serviceContextInter
 func (i imageTagger) tag(manifestName, svcName string, b *model.BuildInfo) string {
 	targetRegistry := constants.DevRegistry
 	sha := ""
-	// TODO: cambiar aqui
 	if i.cfg.HasGlobalAccess() && i.svcCfg.IsCleanBuildContext() {
 		targetRegistry = constants.GlobalRegistry
 		sha = i.cfg.GetBuildHash(b)
@@ -115,7 +114,6 @@ func (i imageWithVolumesTagger) tag(manifestName, svcName string, b *model.Build
 	sha := ""
 	buildCopy := b.Copy()
 	buildCopy.Image = ""
-	// TODO: cambiar aqui
 	if i.cfg.HasGlobalAccess() && i.svcCfg.IsCleanBuildContext() {
 		targetRegistry = constants.GlobalRegistry
 		sha = i.cfg.GetBuildHash(buildCopy)
