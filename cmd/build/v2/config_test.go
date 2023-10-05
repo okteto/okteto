@@ -46,11 +46,6 @@ func TestGetConfig(t *testing.T) {
 				},
 			},
 			expected: oktetoBuilderConfig{
-				repository: fakeConfigRepo{
-					sha:     "",
-					isClean: true,
-					err:     nil,
-				},
 				hasGlobalAccess: true,
 				fs:              afero.NewOsFs(),
 				isOkteto:        true,
@@ -69,11 +64,6 @@ func TestGetConfig(t *testing.T) {
 				},
 			},
 			expected: oktetoBuilderConfig{
-				repository: fakeConfigRepo{
-					sha:     "",
-					isClean: true,
-					err:     nil,
-				},
 				hasGlobalAccess: false,
 				fs:              afero.NewOsFs(),
 				isOkteto:        true,
@@ -92,11 +82,6 @@ func TestGetConfig(t *testing.T) {
 				},
 			},
 			expected: oktetoBuilderConfig{
-				repository: fakeConfigRepo{
-					sha:     "",
-					isClean: true,
-					err:     assert.AnError,
-				},
 				hasGlobalAccess: false,
 				fs:              afero.NewOsFs(),
 				isOkteto:        true,
@@ -105,7 +90,7 @@ func TestGetConfig(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			cfg := getConfig(tc.input.reg, tc.input.repo)
+			cfg := getConfig(tc.input.reg)
 			assert.Equal(t, tc.expected, cfg)
 		})
 	}

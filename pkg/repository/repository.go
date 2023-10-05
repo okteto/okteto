@@ -36,7 +36,6 @@ type Repository struct {
 type repositoryInterface interface {
 	getServiceImageHash(string) (string, error)
 	isCleanContext(ctx context.Context, buildContext string) (bool, error)
-	getSHA() (string, error)
 }
 
 type repositoryURL struct {
@@ -86,11 +85,6 @@ func (r Repository) GetServiceImageHash(buildcontext string) (string, error) {
 // IsCleanContext checks if the repository have changes over the context
 func (r Repository) IsCleanContext(buildContext string) (bool, error) {
 	return r.control.isCleanContext(context.TODO(), buildContext)
-}
-
-// GetSHA returns the last commit sha of the repository
-func (r Repository) GetSHA() (string, error) {
-	return r.control.getSHA()
 }
 
 // IsEqual checks if another repository is the same from the one calling the function

@@ -13,31 +13,24 @@
 
 package repository
 
-import "context"
+import (
+	"context"
+)
 
 type oktetoRemoteRepoController struct {
-	gitCommit string
+	serviceTreeHash string
 }
 
-func newOktetoRemoteRepoController(localCommit string) oktetoRemoteRepoController {
+func newOktetoRemoteRepoController(serviceTreeHash string) oktetoRemoteRepoController {
 	return oktetoRemoteRepoController{
-		gitCommit: localCommit,
+		serviceTreeHash: serviceTreeHash,
 	}
 }
 
 func (or oktetoRemoteRepoController) getServiceImageHash(_ string) (string, error) {
-	return "", nil
+	return or.serviceTreeHash, nil
 }
 
 func (or oktetoRemoteRepoController) isCleanContext(_ context.Context, _ string) (bool, error) {
-	// TODO: review this
-	return or.gitCommit != "", nil
-}
-
-func (or oktetoRemoteRepoController) isClean(_ context.Context) (bool, error) {
-	return or.gitCommit != "", nil
-}
-
-func (or oktetoRemoteRepoController) getSHA() (string, error) {
-	return or.gitCommit, nil
+	return or.serviceTreeHash != "", nil
 }

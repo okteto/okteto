@@ -93,19 +93,13 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 func NewBuilderFromScratch() *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
 	registry := registry.NewOktetoRegistry(okteto.Config{})
-	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
-	wd, err := wdCtrl.Get()
-	if err != nil {
-		oktetoLog.Infof("could not get working dir: %w", err)
-	}
-	gitRepo := repository.NewRepository(wd)
 	return &OktetoBuilder{
 		Builder:           builder,
 		Registry:          registry,
 		V1Builder:         buildv1.NewBuilder(builder, registry),
 		buildEnvironments: map[string]string{},
 		builtImages:       map[string]bool{},
-		Config:            getConfig(registry, gitRepo),
+		Config:            getConfig(registry),
 	}
 }
 
@@ -114,13 +108,15 @@ func (*OktetoBuilder) IsV1() bool {
 	return false
 }
 
-func getServiceContexter(buildInfo *model.BuildInfo) *serviceConfig {
+func getServiceContext(buildInfo *model.BuildInfo) *serviceConfig {
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
 	wd, err := wdCtrl.Get()
 	if err != nil {
 		oktetoLog.Infof("could not get working dir: %w", err)
 	}
 	gitRepo := repository.NewRepository(wd)
+
+	// TODO: is es remoto coger la env y su valor por treehash  y isClean
 
 	isClean, err := gitRepo.IsCleanContext(buildInfo.Context)
 	if err != nil {
@@ -195,7 +191,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 			buildSvcInfo := buildManifest[svcToBuild]
 
-			serviceContext := getServiceContexter(buildSvcInfo)
+			serviceContext := getServiceContext(buildSvcInfo)
 
 			// We only check that the image is built in the global registry if the noCache option is not set
 			if !options.NoCache && serviceContext.isCleanContext() {

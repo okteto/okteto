@@ -404,7 +404,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	return err
 }
 
-func buildImages(ctx context.Context, build func(context.Context, *types.BuildOptions) error, getServicesToBuild func(context.Context, *model.Manifest, []string) ([]string, error), deployOptions *Options) error {
+func getServicesToBuild(deployOptions *Options) []string {
 	var stackServicesWithBuild map[string]bool
 
 	if stack := deployOptions.Manifest.GetStack(); stack != nil {
@@ -418,20 +418,24 @@ func buildImages(ctx context.Context, build func(context.Context, *types.BuildOp
 	// - All the services that have a build section defined in the *okteto* manifest
 	// - Services from *deployOptions.servicesToDeploy* that have a build section
 
-	servicesToBuildSet := setUnion(oktetoManifestServicesWithBuild, servicesToDeployWithBuild)
+	return setToSlice(setUnion(oktetoManifestServicesWithBuild, servicesToDeployWithBuild))
+}
+
+func buildImages(ctx context.Context, build func(context.Context, *types.BuildOptions) error, getServicesNotAlreadyBuilt func(context.Context, *model.Manifest, []string) ([]string, error), deployOptions *Options) error {
+	serviceToBuild := getServicesToBuild(deployOptions)
 
 	if deployOptions.Build {
 		buildOptions := &types.BuildOptions{
 			EnableStages: true,
 			Manifest:     deployOptions.Manifest,
-			CommandArgs:  setToSlice(servicesToBuildSet),
+			CommandArgs:  serviceToBuild,
 		}
 		oktetoLog.Debug("force build from manifest definition")
 		if errBuild := build(ctx, buildOptions); errBuild != nil {
 			return errBuild
 		}
 	} else {
-		servicesToBuild, err := getServicesToBuild(ctx, deployOptions.Manifest, setToSlice(servicesToBuildSet))
+		servicesToBuild, err := getServicesNotAlreadyBuilt(ctx, deployOptions.Manifest, serviceToBuild)
 		if err != nil {
 			return err
 		}

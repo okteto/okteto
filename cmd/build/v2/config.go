@@ -29,19 +29,17 @@ type configRegistryInterface interface {
 
 type oktetoBuilderConfig struct {
 	hasGlobalAccess bool
-	repository      configRepositoryInterface
 	fs              afero.Fs
 	isOkteto        bool
 }
 
-func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterface) oktetoBuilderConfig {
+func getConfig(registry configRegistryInterface) oktetoBuilderConfig {
 	hasAccess, err := registry.HasGlobalPushAccess()
 	if err != nil {
 		oktetoLog.Infof("error trying to access globalPushAccess: %w", err)
 	}
 
 	return oktetoBuilderConfig{
-		repository:      gitRepo,
 		hasGlobalAccess: hasAccess,
 		fs:              afero.NewOsFs(),
 		isOkteto:        okteto.Context().IsOkteto,
