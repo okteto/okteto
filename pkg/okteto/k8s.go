@@ -46,7 +46,7 @@ func newTokenRotationTransport(rt http.RoundTripper) *tokenRotationTransport {
 	}
 }
 
-// RoundTrip implements the RoundTripper interface
+// RoundTrip to wrap http 401 status code in response
 func (t *tokenRotationTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	resp, err := t.rt.RoundTrip(req)
 	if err != nil {

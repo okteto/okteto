@@ -735,6 +735,7 @@ func (up *upContext) activateLoop() {
 			}
 
 			if errors.Is(err, okteto.ErrK8sUnauthorised) {
+				oktetoLog.Info("updating kubeconfig token")
 				if err := up.tokenUpdater.UpdateKubeConfigToken(); err != nil {
 					up.Exit <- fmt.Errorf("error updating k8s token: %w", err)
 					return
@@ -1110,7 +1111,6 @@ func newTokenUpdaterController() *tokenUpdaterController {
 }
 
 func (tuc *tokenUpdaterController) UpdateKubeConfigToken() error {
-	oktetoLog.Info("updating kubeconfig token")
 	oktetoClient, err := tuc.oktetoClientProvider.Provide()
 	if err != nil {
 		return err
