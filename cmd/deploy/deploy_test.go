@@ -16,6 +16,8 @@ package deploy
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -1286,6 +1288,48 @@ func TestShouldRunInRemoteDeploy(t *testing.T) {
 			t.Setenv(constants.OktetoForceRemote, string(tt.remoteForce))
 			result := shouldRunInRemote(tt.opts)
 			assert.Equal(t, result, tt.expected)
+		})
+	}
+}
+
+func TestOktetoManifestPathFlag(t *testing.T) {
+	opts := &Options{}
+	var tests = []struct {
+		name        string
+		manifest    string
+		expectedErr error
+	}{
+		{
+			name:        "manifest file path exists",
+			manifest:    "okteto.yml",
+			expectedErr: nil,
+		},
+		{
+			name:        "manifest file path doesn't exist",
+			manifest:    "nonexistent.yml",
+			expectedErr: fmt.Errorf("nonexistent.yml file doesn't exist"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := afero.NewOsFs()
+			dir, err := os.Getwd()
+			assert.NoError(t, err)
+			fullpath := filepath.Join(dir, tt.manifest)
+			opts.ManifestPath = fullpath
+			if tt.manifest != "nonexistent.yml" {
+				// create the manifest file only if it's not the nonexistent scenario
+				f, err := fs.Create(fullpath)
+				assert.NoError(t, err)
+				defer func() {
+					if err := f.Close(); err != nil {
+						t.Fatalf("Error closing file %s: %s", fullpath, err)
+					}
+				}()
+			}
+			err = checkOktetoManifestPathFlag(opts, fs)
+			assert.Equal(t, tt.expectedErr, err)
 		})
 	}
 }
