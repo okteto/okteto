@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeConfigRegistry struct {
@@ -169,4 +170,14 @@ func TestGetGitCommit(t *testing.T) {
 			assert.Equal(t, tc.expected, cfg.GetGitCommit())
 		})
 	}
+}
+
+func Test_GetAnonymizedRepo(t *testing.T) {
+	cfg := oktetoBuilderConfig{
+		repository: fakeConfigRepo{
+			url: "repository url",
+		},
+	}
+
+	require.Equal(t, "repository irl", cfg.GetAnonymizedRepo())
 }
