@@ -2,10 +2,13 @@ package up
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/stretchr/testify/assert"
 )
@@ -105,6 +108,89 @@ func TestGlobalForwarderAddsProperlyPortsToForward(t *testing.T) {
 			} else {
 				assert.NotNil(t, err)
 			}
+		})
+	}
+}
+
+func TestForwards(t *testing.T) {
+	tt := []struct {
+		name                   string
+		OktetoExecuteSSHEnvVar string
+		clientProvider         okteto.K8sClientProvider
+		expected               error
+	}{
+		{
+			name:                   "fakeClientProvider error",
+			OktetoExecuteSSHEnvVar: "false",
+			clientProvider: &test.FakeK8sProvider{
+				ErrProvide: assert.AnError,
+			},
+			expected: assert.AnError,
+		},
+		{
+			name:                   "fakeClientProvider error",
+			OktetoExecuteSSHEnvVar: "false",
+			clientProvider:         test.NewFakeK8sProvider(),
+			expected:               fmt.Errorf("port %d is listed multiple times, please check your configuration", 8080),
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			up := &upContext{
+				Dev: &model.Dev{
+					Forward: []forward.Forward{
+						{
+							Local:  8080,
+							Remote: 8080,
+						},
+						{
+							Local:  8080,
+							Remote: 8080,
+						},
+					},
+				},
+				K8sClientProvider: tc.clientProvider,
+			}
+			t.Setenv(model.OktetoExecuteSSHEnvVar, tc.OktetoExecuteSSHEnvVar)
+			err := up.forwards(context.Background())
+			assert.Equal(t, tc.expected, err)
+		})
+	}
+}
+
+func TestSSHForwarss(t *testing.T) {
+	tt := []struct {
+		name           string
+		clientProvider okteto.K8sClientProvider
+		expected       error
+	}{
+		{
+			name: "fakeClientProvider error",
+			clientProvider: &test.FakeK8sProvider{
+				ErrProvide: assert.AnError,
+			},
+			expected: assert.AnError,
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			up := &upContext{
+				Dev: &model.Dev{
+					Forward: []forward.Forward{
+						{
+							Local:  8080,
+							Remote: 8080,
+						},
+						{
+							Local:  8080,
+							Remote: 8080,
+						},
+					},
+				},
+				K8sClientProvider: tc.clientProvider,
+			}
+			err := up.sshForwards(context.Background())
+			assert.ErrorIs(t, tc.expected, err)
 		})
 	}
 }

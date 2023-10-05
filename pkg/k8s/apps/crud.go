@@ -28,6 +28,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+type ErrApplicationNotFound struct {
+	Name string
+}
+
+func (e ErrApplicationNotFound) Error() string {
+	return fmt.Sprintf("the application '%s' referred by your okteto manifest doesn't exist", e.Name)
+}
 func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (App, error) {
 	d, err := deployments.GetByDev(ctx, dev, namespace, c)
 
@@ -42,7 +49,7 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 	sfs, err := statefulsets.GetByDev(ctx, dev, namespace, c)
 	if err != nil {
 		if oktetoErrors.IsNotFound(err) {
-			return nil, fmt.Errorf("the application '%s' referred by your okteto manifest doesn't exist", dev.Name)
+			return nil, ErrApplicationNotFound{Name: dev.Name}
 		}
 		return nil, err
 	}

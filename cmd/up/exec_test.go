@@ -3,9 +3,12 @@ package up
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"testing"
 
+	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -15,6 +18,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
@@ -779,4 +783,246 @@ func TestGetEnvsFromSecretsError(t *testing.T) {
 	envs, err := secretEnvsGetter.getEnvsFromSecrets(context.Background())
 	require.Error(t, err)
 	require.Nil(t, envs)
+}
+
+func TestCheckOktetoStartError(t *testing.T) {
+	msg := "test"
+	tt := []struct {
+		name        string
+		dev         *model.Dev
+		K8sProvider *test.FakeK8sProvider
+		expected    error
+	}{
+		{
+			name: "error providing k8s client",
+			K8sProvider: &test.FakeK8sProvider{
+				ErrProvide: assert.AnError,
+			},
+			expected: assert.AnError,
+		},
+		{
+			name:        "error getting app",
+			K8sProvider: test.NewFakeK8sProvider(),
+			dev: &model.Dev{
+				Name:      "test",
+				Namespace: "test",
+			},
+			expected: apps.ErrApplicationNotFound{
+				Name: "test",
+			},
+		},
+		{
+			name: "error refreshing",
+			K8sProvider: test.NewFakeK8sProvider(
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "test",
+					},
+				}),
+			dev: &model.Dev{
+				Name:      "test",
+				Namespace: "test",
+			},
+			expected: &k8sErrors.StatusError{
+				ErrStatus: metav1.Status{
+					Status:  metav1.StatusFailure,
+					Code:    http.StatusNotFound,
+					Message: "deployments.apps \"test-okteto\" not found",
+					Reason:  metav1.StatusReasonNotFound,
+					Details: &metav1.StatusDetails{
+						Name:  "test-okteto",
+						Kind:  "deployments",
+						Group: "apps",
+					},
+				},
+			},
+		},
+		{
+			name: "error getRunningPod",
+			K8sProvider: test.NewFakeK8sProvider(
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "test",
+					},
+				},
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-okteto",
+						Namespace: "test",
+					},
+				}),
+			dev: &model.Dev{
+				Name:      "test",
+				Namespace: "test",
+			},
+			expected: fmt.Errorf("not found"),
+		},
+		{
+			name: "error pv enabled",
+			K8sProvider: test.NewFakeK8sProvider(
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "test",
+					},
+				},
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-okteto",
+						Namespace: "test",
+						UID:       "1234",
+						Annotations: map[string]string{
+							model.DeploymentRevisionAnnotation: "1",
+						},
+					},
+				},
+				&appsv1.ReplicaSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-okteto-1234",
+						Namespace: "test",
+						UID:       "1234",
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Kind: "Deployment",
+								UID:  "1234",
+							},
+						},
+						Annotations: map[string]string{
+							model.DeploymentRevisionAnnotation: "1",
+						},
+					},
+				},
+				&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-okteto-1234",
+						Namespace: "test",
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Kind: "ReplicaSet",
+								UID:  "1234",
+							},
+						},
+					},
+				}),
+			dev: &model.Dev{
+				Name:      "test",
+				Namespace: "test",
+			},
+			expected: fmt.Errorf(msg),
+		},
+		{
+			name: "error pv enabled",
+			K8sProvider: test.NewFakeK8sProvider(
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "test",
+					},
+				},
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-okteto",
+						Namespace: "test",
+						UID:       "1234",
+						Annotations: map[string]string{
+							model.DeploymentRevisionAnnotation: "1",
+						},
+					},
+				},
+				&appsv1.ReplicaSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-okteto-1234",
+						Namespace: "test",
+						UID:       "1234",
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Kind: "Deployment",
+								UID:  "1234",
+							},
+						},
+						Annotations: map[string]string{
+							model.DeploymentRevisionAnnotation: "1",
+						},
+					},
+				},
+				&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-okteto-1234",
+						Namespace: "test",
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Kind: "ReplicaSet",
+								UID:  "1234",
+							},
+						},
+					},
+				}),
+			dev: &model.Dev{
+				Name:      "test",
+				Namespace: "test",
+				Secrets: []model.Secret{
+					{
+						LocalPath:  "test",
+						RemotePath: "test",
+					},
+				},
+			},
+			expected: fmt.Errorf(msg),
+		},
+	}
+
+	for _, tt := range tt {
+		t.Run(tt.name, func(t *testing.T) {
+			upCtx := &upContext{
+				Dev:               tt.dev,
+				K8sClientProvider: tt.K8sProvider,
+				Options: &UpOptions{
+					ManifestPathFlag: "test",
+				},
+				Pod: &v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-okteto-1234",
+						Namespace: "test",
+					},
+				},
+			}
+			err := upCtx.checkOktetoStartError(context.Background(), msg)
+			assert.ErrorContains(t, err, tt.expected.Error())
+		})
+	}
+}
+
+func TestCleanCommand(t *testing.T) {
+	tt := []struct {
+		name              string
+		k8sClientProvider *test.FakeK8sProvider
+		expected          string
+	}{
+		{
+			name: "error providing k8s client",
+			k8sClientProvider: &test.FakeK8sProvider{
+				ErrProvide: assert.AnError,
+			},
+			expected: "",
+		},
+	}
+	for _, tt := range tt {
+		t.Run(tt.name, func(t *testing.T) {
+			upCtx := &upContext{
+				K8sClientProvider: tt.k8sClientProvider,
+			}
+			upCtx.cleanCommand(context.Background())
+
+			var output string
+			select {
+			case out := <-upCtx.cleaned:
+				output = out
+			default:
+				output = ""
+			}
+			assert.Equal(t, tt.expected, output)
+		})
+	}
 }
