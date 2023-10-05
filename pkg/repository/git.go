@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -259,12 +260,20 @@ func (ogr oktetoGitWorktree) BuildContextStatus(ctx context.Context, localGit Lo
 	if err != nil {
 		// git is not available, so we fall back on git-go
 		oktetoLog.Debug("Calculating git status: git is not installed, for better performances consider installing it")
-		status, err := ogr.worktree.Status()
+		workTreeStatus, err := ogr.worktree.Status()
 		if err != nil {
 			return oktetoGitStatus{status: git.Status{}}, fmt.Errorf("failed to get git status: %w", err)
 		}
 
-		return oktetoGitStatus{status: status}, nil
+		buildContextTreeStatus := git.Status{}
+		for filePath, fileStatus := range workTreeStatus {
+			parts := strings.Split(filePath, "/")
+			if parts[0] == buildContext {
+				buildContextTreeStatus[filePath] = fileStatus
+			}
+		}
+
+		return oktetoGitStatus{status: buildContextTreeStatus}, nil
 	}
 
 	status, err := localGit.BuildContextStatus(ctx, ogr.GetRoot(), 0, buildContext)
