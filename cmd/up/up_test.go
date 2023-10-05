@@ -642,3 +642,103 @@ func TestUpdateKubetoken(t *testing.T) {
 		})
 	}
 }
+
+type fakeBuilder struct {
+	usedBuildOptions *types.BuildOptions
+	services         []string
+	getServicesErr   error
+	buildErr         error
+}
+
+func (b *fakeBuilder) GetServicesToBuild(_ context.Context, _ *model.Manifest, _ []string) ([]string, error) {
+	if b.getServicesErr != nil {
+		return nil, b.getServicesErr
+	}
+	return b.services, nil
+}
+
+func (b *fakeBuilder) Build(_ context.Context, opts *types.BuildOptions) error {
+	b.usedBuildOptions = opts
+	if b.buildErr != nil {
+		return b.buildErr
+	}
+	return nil
+}
+
+func Test_buildAllServices(t *testing.T) {
+	tests := []struct {
+		name              string
+		m                 *model.Manifest
+		builder           *fakeBuilder
+		expectedErr       error
+		expectedBuildOpts *types.BuildOptions
+	}{
+		{
+			name: "builder GetServicesToBuild returns error",
+			builder: &fakeBuilder{
+				getServicesErr: assert.AnError,
+			},
+			expectedErr: assert.AnError,
+		},
+		{
+			name: "builder GetServicesToBuild returns empty list",
+			builder: &fakeBuilder{
+				services: nil,
+			},
+		},
+		{
+			name: "builder GetServicesToBuild returns list, Build is called with the list and the input manifest",
+			builder: &fakeBuilder{
+				services: []string{"test", "okteto"},
+				usedBuildOptions: &types.BuildOptions{
+					CommandArgs: []string{"test", "okteto"},
+					Manifest: &model.Manifest{
+						Name: "test-okteto",
+					},
+				},
+			},
+			m: &model.Manifest{
+				Name: "test-okteto",
+			},
+			expectedBuildOpts: &types.BuildOptions{
+				CommandArgs: []string{"test", "okteto"},
+				Manifest: &model.Manifest{
+					Name: "test-okteto",
+				},
+			},
+		},
+		{
+			name: "builder GetServicesToBuild returns list, Build returns error",
+			builder: &fakeBuilder{
+				services: []string{"test", "okteto"},
+				usedBuildOptions: &types.BuildOptions{
+					CommandArgs: []string{"test", "okteto"},
+					Manifest: &model.Manifest{
+						Name: "test-okteto",
+					},
+				},
+				buildErr: assert.AnError,
+			},
+			m: &model.Manifest{
+				Name: "test-okteto",
+			},
+			expectedBuildOpts: &types.BuildOptions{
+				CommandArgs: []string{"test", "okteto"},
+				Manifest: &model.Manifest{
+					Name: "test-okteto",
+				},
+			},
+			expectedErr: assert.AnError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			got := buildAllServices(ctx, tt.m, tt.builder)
+
+			require.Equal(t, tt.expectedErr, got)
+			require.Equal(t, tt.expectedBuildOpts, tt.builder.usedBuildOptions)
+		})
+	}
+}

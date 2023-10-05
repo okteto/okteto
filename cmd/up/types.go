@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -32,6 +33,16 @@ import (
 type registryInterface interface {
 	GetImageTagWithDigest(imageTag string) (string, error)
 	GetImageTag(image, service, namespace string) string
+}
+
+type builderInterface interface {
+	GetServicesToBuild(ctx context.Context, manifest *model.Manifest, svcToDeploy []string) ([]string, error)
+	Build(ctx context.Context, options *types.BuildOptions) error
+}
+
+type analyticsTrackerInterface interface {
+	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
+	TrackDeploy(metadata analytics.DeployMetadata)
 }
 
 // upContext is the common context of all operations performed during the up command
@@ -65,8 +76,9 @@ type upContext struct {
 	Fs                    afero.Fs
 	hybridCommand         *exec.Cmd
 	interruptReceived     bool
-	analyticsTracker      *analytics.AnalyticsTracker
+	analyticsTracker      analyticsTrackerInterface
 	analyticsMeta         *analytics.UpMetricsMetadata
+	builder               builderInterface
 }
 
 // Forwarder is an interface for the port-forwarding features

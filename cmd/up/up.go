@@ -265,6 +265,7 @@ func Up() *cobra.Command {
 				analyticsMeta:     upMeta,
 				K8sClientProvider: okteto.NewK8sClientProvider(),
 				tokenUpdater:      newTokenUpdaterController(),
+				builder:           buildv2.NewBuilderFromScratch(analyticsTracker),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -339,7 +340,7 @@ func Up() *cobra.Command {
 			}
 
 			// build images and set env vars for the services at the manifest
-			if err := buildAllServices(ctx, oktetoManifest, up.analyticsTracker); err != nil {
+			if err := buildAllServices(ctx, oktetoManifest, up.builder); err != nil {
 				return err
 			}
 
@@ -1060,8 +1061,7 @@ func printDisplayContext(up *upContext) {
 }
 
 // buildAllServices runs the build over the services from the manifest and this set the build envs
-func buildAllServices(ctx context.Context, m *model.Manifest, analyticsTracker *analytics.AnalyticsTracker) error {
-	builder := buildv2.NewBuilderFromScratch(analyticsTracker)
+func buildAllServices(ctx context.Context, m *model.Manifest, builder builderInterface) error {
 	svcsToBuild, err := builder.GetServicesToBuild(ctx, m, []string{})
 	if err != nil {
 		return err
