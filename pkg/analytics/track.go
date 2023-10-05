@@ -62,6 +62,7 @@ const (
 	disableEvent             = "Disable Analytics"
 	stackNotSupportedField   = "Stack Field Not Supported"
 	buildPullErrorEvent      = "BuildPullError"
+	deleteContexts           = "Contexts Deletion"
 )
 
 var (
@@ -284,6 +285,14 @@ func TrackBuildPullError(oktetoBuilkitURL string, success bool) {
 		"oktetoBuilkitURL": oktetoBuilkitURL,
 	}
 	track(buildPullErrorEvent, success, props)
+}
+
+// TrackContextDelete sends a tracking event to mixpanel indicating one or more context have been deleted
+func TrackContextDelete(ctxs int, success bool) {
+	props := map[string]interface{}{
+		"totalContextsDeleted": ctxs,
+	}
+	track(deleteContexts, success, props)
 }
 
 func track(event string, success bool, props map[string]interface{}) {
