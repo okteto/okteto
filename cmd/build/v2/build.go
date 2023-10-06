@@ -162,7 +162,6 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 	// send analytics for all builds after Build
 	buildsAnalytics := make([]*analytics.ImageBuildMetadata, 0)
-	defer bc.analyticsTracker.TrackImageBuild(buildsAnalytics...)
 
 	oktetoLog.Infof("Images to build: [%s]", strings.Join(toBuildSvcs, ", "))
 	for len(builtImagesControl) != len(toBuildSvcs) {
@@ -214,6 +213,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 						tag := buildHash
 						devImage, err := bc.Registry.CloneGlobalImageToDev(imageWithDigest, tag)
 						if err != nil {
+							bc.analyticsTracker.TrackImageBuild(buildsAnalytics...)
 							return err
 						}
 						imageWithDigest = devImage
@@ -227,11 +227,13 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			}
 
 			if !okteto.Context().IsOkteto && buildSvcInfo.Image == "" {
+				bc.analyticsTracker.TrackImageBuild(buildsAnalytics...)
 				return fmt.Errorf("'build.%s.image' is required if your cluster doesn't have Okteto installed", svcToBuild)
 			}
 			buildDurationStart := time.Now()
 			imageTag, err := bc.buildService(ctx, options.Manifest, svcToBuild, options)
 			if err != nil {
+				bc.analyticsTracker.TrackImageBuild(buildsAnalytics...)
 				return fmt.Errorf("error building service '%s': %w", svcToBuild, err)
 			}
 			meta.BuildDuration = time.Since(buildDurationStart)
@@ -244,6 +246,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	if options.EnableStages {
 		oktetoLog.SetStage("")
 	}
+	bc.analyticsTracker.TrackImageBuild(buildsAnalytics...)
 	return options.Manifest.ExpandEnvVars()
 }
 
