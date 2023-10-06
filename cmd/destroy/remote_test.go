@@ -202,7 +202,10 @@ func TestRemoteTest(t *testing.T) {
 				destroyImage:         "",
 				registry:             newFakeRegistry(),
 				clusterMetadata: func(ctx context.Context) (*types.ClusterMetadata, error) {
-					return &types.ClusterMetadata{Certificate: []byte("cert")}, nil
+					return &types.ClusterMetadata{
+						Certificate: []byte("cert"),
+						ServerName:  "1.2.3.4:443",
+					}, nil
 				},
 			}
 			err := rdc.destroy(ctx, tt.config.options)
