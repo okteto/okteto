@@ -1326,6 +1326,9 @@ func TestOktetoManifestPathFlag(t *testing.T) {
 					if err := f.Close(); err != nil {
 						t.Fatalf("Error closing file %s: %s", fullpath, err)
 					}
+					if err := fs.RemoveAll(fullpath); err != nil {
+						t.Fatalf("Error removing the file %v", err)
+					}
 				}()
 			}
 			err = checkOktetoManifestPathFlag(opts, fs)
