@@ -179,5 +179,5 @@ func Test_GetAnonymizedRepo(t *testing.T) {
 		},
 	}
 
-	require.Equal(t, "repository irl", cfg.GetAnonymizedRepo())
+	require.Equal(t, "repository url", cfg.GetAnonymizedRepo())
 }
