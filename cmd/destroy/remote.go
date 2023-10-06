@@ -199,7 +199,10 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 	registryUrl := okteto.Context().Registry
 	subdomain := strings.TrimPrefix(registryUrl, "registry.")
 
-	ip, _, _ := net.SplitHostPort(sc.ServerName)
+	ip, _, err := net.SplitHostPort(sc.ServerName)
+	if err != nil {
+		return fmt.Errorf("failed to parse server name network address: %w", err)
+	}
 	buildOptions.ExtraHosts = []types.HostMap{
 		{Hostname: registryUrl, IP: ip},
 		{Hostname: fmt.Sprintf("kubernetes.%s", subdomain), IP: ip},
