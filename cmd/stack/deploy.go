@@ -116,8 +116,9 @@ func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *
 	}
 
 	stackDeployer := &stack.Stack{
-		K8sClient: c.K8sClient,
-		Config:    c.Config,
+		K8sClient:        c.K8sClient,
+		Config:           c.Config,
+		AnalyticsTracker: analytics.NewAnalyticsTracker(),
 	}
 	err := stackDeployer.Deploy(ctx, s, options)
 

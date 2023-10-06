@@ -69,7 +69,7 @@ type analyticsTrackerInterface interface {
 type Stack struct {
 	K8sClient        kubernetes.Interface
 	Config           *rest.Config
-	analyticsTracker analyticsTrackerInterface
+	AnalyticsTracker analyticsTrackerInterface
 }
 
 const (
@@ -84,7 +84,7 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *StackDeplo
 	}
 
 	if !options.InsidePipeline {
-		if err := buildStackImages(ctx, s, options, sd.analyticsTracker); err != nil {
+		if err := buildStackImages(ctx, s, options, sd.AnalyticsTracker); err != nil {
 			return err
 		}
 	}
