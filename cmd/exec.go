@@ -208,12 +208,11 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 			}
 
 			hybridCtx := &up.HybridExecCtx{
-				Dev:           dev,
-				Workdir:       dev.Workdir,
-				Name:          dev.Name,
-				Namespace:     dev.Namespace,
-				RunOktetoExec: true,
-				Client:        k8sClient,
+				Dev:       dev,
+				Workdir:   dev.Workdir,
+				Name:      dev.Name,
+				Namespace: dev.Namespace,
+				Client:    k8sClient,
 			}
 			executor, err := up.NewHybridExecutor(ctx, hybridCtx)
 			if err != nil {

@@ -27,7 +27,7 @@ type FakeK8sProvider struct {
 	client              *fake.Clientset
 	restConfig          *rest.Config
 	errGetIngressClient error
-	errProvide          error
+	ErrProvide          error
 }
 
 func NewFakeK8sProvider(objects ...runtime.Object) *FakeK8sProvider {
@@ -38,8 +38,8 @@ func NewFakeK8sProvider(objects ...runtime.Object) *FakeK8sProvider {
 }
 
 func (f *FakeK8sProvider) Provide(_ *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
-	if f.errProvide != nil {
-		return nil, nil, f.errProvide
+	if f.ErrProvide != nil {
+		return nil, nil, f.ErrProvide
 	}
 	if f.client != nil {
 		return f.client, nil, nil

@@ -19,22 +19,27 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 func Test_waitUntilExitOrInterrupt(t *testing.T) {
 	up := upContext{
-		Options: &UpOptions{},
+		Options:           &UpOptions{},
+		K8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	up.CommandResult = make(chan error, 1)
 	up.CommandResult <- nil
@@ -474,4 +479,166 @@ func TestSetSyncDefaultsByDevModeError(t *testing.T) {
 	err := setSyncDefaultsByDevMode(dev, getSyncTempDirFake)
 	require.Error(t, err)
 	require.Equal(t, *dev, expectedDev)
+}
+
+func TestUpdateKubetoken(t *testing.T) {
+	tt := []struct {
+		name        string
+		f           *client.FakeOktetoClient
+		context     *okteto.OktetoContextStore
+		expectedCfg *api.Config
+		expected    error
+	}{
+		{
+			name: "oktetoClientError",
+			f: &client.FakeOktetoClient{
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{
+					Err: assert.AnError,
+					Token: types.KubeTokenResponse{
+						TokenRequest: authenticationv1.TokenRequest{
+							Status: authenticationv1.TokenRequestStatus{
+								Token: "token",
+							},
+						},
+					},
+				}),
+			},
+			context: &okteto.OktetoContextStore{
+				CurrentContext: "test",
+				Contexts: map[string]*okteto.OktetoContext{
+					"test": {
+						UserID: "test",
+						Cfg: &api.Config{
+							AuthInfos: map[string]*api.AuthInfo{
+								"test": {},
+							},
+						},
+					},
+				},
+			},
+			expectedCfg: &api.Config{
+				AuthInfos: map[string]*api.AuthInfo{
+					"test": {},
+				},
+			},
+			expected: assert.AnError,
+		},
+		{
+			name: "oktetoClientCorrect",
+			f: &client.FakeOktetoClient{
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{
+					Token: types.KubeTokenResponse{
+						TokenRequest: authenticationv1.TokenRequest{
+							Status: authenticationv1.TokenRequestStatus{
+								Token: "token",
+							},
+						},
+					},
+				}),
+			},
+			context: &okteto.OktetoContextStore{
+				CurrentContext: "test",
+				Contexts: map[string]*okteto.OktetoContext{
+					"test": {
+						UserID: "test",
+						Cfg: &api.Config{
+							AuthInfos: map[string]*api.AuthInfo{
+								"test": {},
+							},
+						},
+					},
+				},
+			},
+			expectedCfg: &api.Config{
+				AuthInfos: map[string]*api.AuthInfo{
+					"test": {
+						Token: "token",
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "cfg not configured",
+			f: &client.FakeOktetoClient{
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{
+					Token: types.KubeTokenResponse{
+						TokenRequest: authenticationv1.TokenRequest{
+							Status: authenticationv1.TokenRequestStatus{
+								Token: "token",
+							},
+						},
+					},
+				}),
+			},
+			context: &okteto.OktetoContextStore{
+				CurrentContext: "123",
+				Contexts: map[string]*okteto.OktetoContext{
+					"test": {
+						UserID: "test",
+						Cfg: &api.Config{
+							AuthInfos: map[string]*api.AuthInfo{
+								"test": {},
+							},
+						},
+					},
+					"123": {},
+				},
+			},
+			expectedCfg: &api.Config{
+				AuthInfos: map[string]*api.AuthInfo{
+					"test": {},
+				},
+			},
+			expected: errConfigNotConfigured,
+		},
+		{
+			name: "incorrect authInfo",
+			f: &client.FakeOktetoClient{
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{
+					Token: types.KubeTokenResponse{
+						TokenRequest: authenticationv1.TokenRequest{
+							Status: authenticationv1.TokenRequestStatus{
+								Token: "token",
+							},
+						},
+					},
+				}),
+			},
+			context: &okteto.OktetoContextStore{
+				CurrentContext: "test",
+				Contexts: map[string]*okteto.OktetoContext{
+					"test": {
+						UserID: "test",
+						Cfg: &api.Config{
+							AuthInfos: map[string]*api.AuthInfo{
+								"123": {},
+							},
+						},
+					},
+				},
+			},
+			expectedCfg: &api.Config{
+				AuthInfos: map[string]*api.AuthInfo{
+					"123": {},
+				},
+			},
+			expected: fmt.Errorf("user %s not found in kubeconfig", "test"),
+		},
+	}
+	for _, tt := range tt {
+		t.Run(tt.name, func(t *testing.T) {
+			tokenUpdater := newTokenUpdaterController()
+			tokenUpdater.oktetoClientProvider = client.NewFakeOktetoClientProvider(tt.f)
+			okteto.CurrentStore = tt.context
+
+			err := tokenUpdater.UpdateKubeConfigToken()
+			if err != nil {
+				assert.Equal(t, tt.expected, err)
+			}
+
+			resultCFG := okteto.CurrentStore.Contexts["test"].Cfg
+			assert.Equal(t, tt.expectedCfg, resultCFG)
+		})
+	}
 }

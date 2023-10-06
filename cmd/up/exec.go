@@ -56,7 +56,6 @@ type HybridExecCtx struct {
 	Dev             *model.Dev
 	Name, Namespace string
 	Client          kubernetes.Interface
-	RunOktetoExec   bool
 }
 
 // GetCommandToExec returns the command to exec into the hybrid mode
@@ -370,10 +369,16 @@ func (up *upContext) cleanCommand(ctx context.Context) {
 
 	cmd := "cat /var/okteto/bin/version.txt; cat /proc/sys/fs/inotify/max_user_watches; /var/okteto/bin/clean >/dev/null 2>&1"
 
-	err := k8sExec.Exec(
+	k8sClient, restConfig, err := up.K8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		oktetoLog.Infof("failed to clean session: %s", err)
+		return
+	}
+
+	err = k8sExec.Exec(
 		ctx,
-		up.Client,
-		up.RestConfig,
+		k8sClient,
+		restConfig,
 		up.Dev.Namespace,
 		up.Pod.Name,
 		up.Dev.Container,
@@ -397,15 +402,19 @@ func (up *upContext) RunCommand(ctx context.Context, cmd []string) error {
 		return err
 	}
 
+	k8sClient, restConfig, err := up.K8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return err
+	}
+
 	if up.Dev.RemoteModeEnabled() {
 		if up.Dev.IsHybridModeEnabled() {
 			hybridCtx := &HybridExecCtx{
-				Dev:           up.Dev,
-				Name:          up.Manifest.Name,
-				Namespace:     up.Manifest.Namespace,
-				Client:        up.Client,
-				Workdir:       up.Dev.Workdir,
-				RunOktetoExec: false,
+				Dev:       up.Dev,
+				Name:      up.Manifest.Name,
+				Namespace: up.Manifest.Namespace,
+				Client:    k8sClient,
+				Workdir:   up.Dev.Workdir,
 			}
 			executor, err := NewHybridExecutor(ctx, hybridCtx)
 			if err != nil {
@@ -429,8 +438,8 @@ func (up *upContext) RunCommand(ctx context.Context, cmd []string) error {
 
 	return k8sExec.Exec(
 		ctx,
-		up.Client,
-		up.RestConfig,
+		k8sClient,
+		restConfig,
 		up.Dev.Namespace,
 		up.Pod.Name,
 		up.Dev.Container,
@@ -443,21 +452,26 @@ func (up *upContext) RunCommand(ctx context.Context, cmd []string) error {
 }
 
 func (up *upContext) checkOktetoStartError(ctx context.Context, msg string) error {
-	app, err := apps.Get(ctx, up.Dev, up.Dev.Namespace, up.Client)
+	k8sClient, _, err := up.K8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return err
+	}
+
+	app, err := apps.Get(ctx, up.Dev, up.Dev.Namespace, k8sClient)
 	if err != nil {
 		return err
 	}
 
 	devApp := app.DevClone()
-	if err := devApp.Refresh(ctx, up.Client); err != nil {
+	if err := devApp.Refresh(ctx, k8sClient); err != nil {
 		return err
 	}
-	pod, err := devApp.GetRunningPod(ctx, up.Client)
+	pod, err := devApp.GetRunningPod(ctx, k8sClient)
 	if err != nil {
 		return err
 	}
 
-	userID := pods.GetPodUserID(ctx, pod.Name, up.Dev.Container, up.Dev.Namespace, up.Client)
+	userID := pods.GetPodUserID(ctx, pod.Name, up.Dev.Container, up.Dev.Namespace, k8sClient)
 	if up.Dev.PersistentVolumeEnabled() {
 		if userID != -1 && userID != *up.Dev.SecurityContext.RunAsUser {
 			return oktetoErrors.UserError{

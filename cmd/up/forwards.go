@@ -23,6 +23,7 @@ import (
 	forwardk8s "github.com/okteto/okteto/pkg/k8s/forward"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
 )
@@ -40,8 +41,13 @@ func (up *upContext) forwards(ctx context.Context) error {
 		return up.sshForwards(ctx)
 	}
 
+	k8sClient, restConfig, err := up.K8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return err
+	}
+
 	oktetoLog.Infof("starting port forwards")
-	up.Forwarder = forwardk8s.NewPortForwardManager(ctx, up.Dev.Interface, up.RestConfig, up.Client, up.Dev.Namespace)
+	up.Forwarder = forwardk8s.NewPortForwardManager(ctx, up.Dev.Interface, restConfig, k8sClient, up.Dev.Namespace)
 
 	for idx, f := range up.Dev.Forward {
 		if f.Labels != nil {
@@ -65,7 +71,7 @@ func (up *upContext) forwards(ctx context.Context) error {
 		return err
 	}
 
-	err := up.Forwarder.Start(up.Pod.Name, up.Dev.Namespace)
+	err = up.Forwarder.Start(up.Pod.Name, up.Dev.Namespace)
 	if err != nil {
 		return err
 	}
@@ -79,8 +85,13 @@ func (up *upContext) forwards(ctx context.Context) error {
 }
 
 func (up *upContext) sshForwards(ctx context.Context) error {
+	k8sClient, restConfig, err := up.K8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return err
+	}
+
 	oktetoLog.Infof("starting SSH port forwards")
-	f := forwardk8s.NewPortForwardManager(ctx, up.Dev.Interface, up.RestConfig, up.Client, up.Dev.Namespace)
+	f := forwardk8s.NewPortForwardManager(ctx, up.Dev.Interface, restConfig, k8sClient, up.Dev.Namespace)
 	if err := f.Add(forward.Forward{Local: up.Dev.RemotePort, Remote: up.Dev.SSHServerPort}); err != nil {
 		return err
 	}
@@ -103,7 +114,7 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 		return fmt.Errorf("failed to add entry to your SSH config file")
 	}
 
-	err := up.Forwarder.Start(up.Pod.Name, up.Dev.Namespace)
+	err = up.Forwarder.Start(up.Pod.Name, up.Dev.Namespace)
 	if err != nil {
 		return err
 	}

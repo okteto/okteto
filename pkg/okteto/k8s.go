@@ -1,6 +1,8 @@
 package okteto
 
 import (
+	"errors"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -15,8 +17,13 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-var timeout time.Duration
-var tOnce sync.Once
+var (
+	timeout time.Duration
+	tOnce   sync.Once
+
+	// ErrK8sUnauthorised is returned when the kubernetes API call returns a 401 error
+	ErrK8sUnauthorised = errors.New("k8s unauthorized error")
+)
 
 const (
 	// oktetoKubernetesTimeoutEnvVar defines the timeout for kubernetes operations
@@ -25,6 +32,30 @@ const (
 
 type K8sClientProvider interface {
 	Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error)
+}
+
+// tokenRotationTransport updates the token of the config when the token is outdated
+type tokenRotationTransport struct {
+	rt http.RoundTripper
+}
+
+// newTokenRotationTransport implements the RoundTripper interface
+func newTokenRotationTransport(rt http.RoundTripper) *tokenRotationTransport {
+	return &tokenRotationTransport{
+		rt: rt,
+	}
+}
+
+// RoundTrip to wrap http 401 status code in response
+func (t *tokenRotationTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	resp, err := t.rt.RoundTrip(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, ErrK8sUnauthorised
+	}
+	return resp, err
 }
 
 type K8sClient struct{}
@@ -80,7 +111,13 @@ func getK8sClientWithApiConfig(clientApiConfig *clientcmdapi.Config) (*kubernete
 
 	config.Timeout = GetKubernetesTimeout()
 
-	client, err := kubernetes.NewForConfig(config)
+	var client *kubernetes.Clientset
+
+	config.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+		return newTokenRotationTransport(rt)
+	}
+
+	client, err = kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, nil, err
 	}
