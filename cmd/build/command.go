@@ -18,8 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
@@ -37,6 +35,7 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 // Command defines the build command
@@ -130,6 +129,13 @@ func Build(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 	return cmd
 }
 
+//func improveBuildErrors(err error) error {
+//
+//	builgErrSuggestion := suggest.NewErrorSuggestion().WithRule(suggest.NewStrReplaceRule("cannot unmarshal !!seq into string", "\"cannot unmarshal array to string\"")).Suggest(err)
+//
+//	return builgErrSuggestion
+//}
+
 func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
 	var builder Builder
 
@@ -186,6 +192,7 @@ func (*Command) loadContext(ctx context.Context, options *types.BuildOptions) er
 	if err := validateDockerfile(options.File); err != nil {
 		ctxResource, err := model.GetContextResource(options.File)
 		if err != nil && !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
+			//return improveBuildErrors(err)
 			return err
 		}
 
