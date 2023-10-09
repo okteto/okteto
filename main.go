@@ -18,8 +18,10 @@ import (
 	cryptoRand "crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"github.com/okteto/okteto/pkg/suggest"
 	"math/rand"
 	"os"
+	"sigs.k8s.io/kustomize/kyaml/yaml"
 	"strings"
 	"time"
 	"unicode"
@@ -81,6 +83,39 @@ func init() {
 		model.OktetoBinImageTag = bin
 		oktetoLog.Infof("using %s as the bin image", bin)
 	}
+}
+
+func improveYamlErrors(err error) error {
+	yamlErrSuggestion := suggest.NewErrorSuggestion()
+	yamlErrSuggestion.WithRule(suggest.AddYamlParseErrorHeading())
+
+	// TODO: check if we can add the anchor for each section
+	yamlErrSuggestion.WithRule(suggest.AddUrlToManifestDocs(""))
+
+	keywords := []string{"context", "build", "services", "deploy"}
+	for _, keyword := range keywords {
+		yamlErrSuggestion.WithRule(suggest.NewLevenshteinRule(`field (\w+) not found`, keyword))
+	}
+
+	yamlErrSuggestion.WithRule(suggest.FieldsNotExistingRule())
+
+	// Root level
+	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule("in type model.manifestRaw", "the okteto manifest"))
+
+	// Build section
+	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule("in type model.ManifestBuild", "the 'build' section"))
+	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule("into model.ManifestBuild", "into a 'build' object"))
+	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule("in type model.buildInfoRaw", "the 'build' object"))
+
+	// YAML data types
+	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule(yaml.NodeTagSeq, "list"))
+	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule(yaml.NodeTagString, "string"))
+	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule(yaml.NodeTagBool, "boolean"))
+	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule(yaml.NodeTagInt, "integer"))
+	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule(yaml.NodeTagFloat, "float"))
+	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule(yaml.NodeTagMap, "object"))
+
+	return yamlErrSuggestion.Suggest(err)
 }
 
 func main() {
@@ -170,6 +205,7 @@ func main() {
 	err = root.Execute()
 
 	if err != nil {
+		err := improveYamlErrors(err)
 		message := err.Error()
 		if len(message) > 0 {
 			tmp := []rune(message)
