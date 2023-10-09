@@ -92,14 +92,15 @@ func improveYamlErrors(err error) error {
 	// TODO: check if we can add the anchor for each section
 	yamlErrSuggestion.WithRule(suggest.AddUrlToManifestDocs(""))
 
-	keywords := []string{"context", "build", "services", "deploy"}
+	//keywords := []string{"context", "build", "services", "deploy"}
+	keywords := []string{"build"}
 	for _, keyword := range keywords {
-		yamlErrSuggestion.WithRule(suggest.NewLevenshteinRule(`field (\w+) not found`, keyword))
+		yamlErrSuggestion.WithRule(suggest.NewLevenshteinRule(`field (\w+) not found (in type|into) ([\w.]+)`, keyword))
 	}
 
 	yamlErrSuggestion.WithRule(suggest.FieldsNotExistingRule())
 
-	// Root level
+	//Root level
 	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule("in type model.manifestRaw", "the okteto manifest"))
 
 	// Build section
@@ -107,7 +108,7 @@ func improveYamlErrors(err error) error {
 	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule("into model.ManifestBuild", "into a 'build' object"))
 	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule("in type model.buildInfoRaw", "the 'build' object"))
 
-	// YAML data types
+	//YAML data types
 	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule(yaml.NodeTagSeq, "list"))
 	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule(yaml.NodeTagString, "string"))
 	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule(yaml.NodeTagBool, "boolean"))
