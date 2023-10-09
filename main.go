@@ -92,8 +92,8 @@ func improveYamlErrors(err error) error {
 	// TODO: check if we can add the anchor for each section
 	yamlErrSuggestion.WithRule(suggest.AddUrlToManifestDocs(""))
 
-	//keywords := []string{"context", "build", "services", "deploy"}
-	keywords := []string{"build"}
+	keywords := []string{"context", "build", "services", "deploy"}
+	//keywords := []string{"build"}
 	for _, keyword := range keywords {
 		yamlErrSuggestion.WithRule(suggest.NewLevenshteinRule(`field (\w+) not found (in type|into) ([\w.]+)`, keyword))
 	}
@@ -115,6 +115,10 @@ func improveYamlErrors(err error) error {
 	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule(yaml.NodeTagInt, "integer"))
 	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule(yaml.NodeTagFloat, "float"))
 	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule(yaml.NodeTagMap, "object"))
+
+	yamlErrSuggestion.WithRule(suggest.NewStrReplaceRule("yaml: unmarshal errors:\n", ""))
+
+	yamlErrSuggestion.WithRule(suggest.IndentNumLines())
 
 	return yamlErrSuggestion.Suggest(err)
 }

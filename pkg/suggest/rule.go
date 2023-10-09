@@ -86,7 +86,7 @@ func AddUrlToManifestDocs(docsAnchor string) Rule {
 		if docsAnchor != "" {
 			docsURL += "/#" + docsAnchor
 		}
-		errorWithUrlToDocs := fmt.Sprintf("%s.\nCheck out the okteto manifest docs at: %s", e.Error(), docsURL)
+		errorWithUrlToDocs := fmt.Sprintf("%s.\n    Check out the okteto manifest docs at: %s", e.Error(), docsURL)
 		return errors.New(errorWithUrlToDocs)
 	}
 
@@ -102,6 +102,22 @@ func NewRegexRule(pattern string, transform TransformFunc) Rule {
 	}
 
 	return NewRule(condition, transform)
+}
+
+func IndentNumLines() Rule {
+	pattern := `(?:yaml: )?line (\d+):`
+	re := regexp.MustCompile(pattern)
+
+	condition := func(e error) bool {
+		return re.MatchString(e.Error())
+	}
+
+	transformation := func(e error) error {
+		newErr := re.ReplaceAllString(e.Error(), "   - line $1:")
+		return errors.New(newErr)
+	}
+
+	return NewRule(condition, transformation)
 }
 
 // FieldsNotExistingRule replaces "not found" fields which are unknown to the Okteto manifest specification
@@ -123,53 +139,29 @@ func FieldsNotExistingRule() Rule {
 
 // NewLevenshteinRule creates a Rule that matches a regex pattern, extracts a group,
 // and computes the Levenshtein distance for that group against a target string.
-//func _NewLevenshteinRule(pattern string, target string) Rule {
-//	re := regexp.MustCompile(pattern)
-//
-//	condition := func(e error) bool {
-//		matches := re.FindStringSubmatch(e.Error())
-//		if len(matches) > 1 {
-//			distance := levenshtein.Distance(target, matches[1], nil)
-//			return distance <= 3
-//		}
-//		return false
-//	}
-//
-//	transformation := func(e error) error {
-//		return fmt.Errorf("%s. Did you mean \"%s\"?", e.Error(), target)
-//	}
-//
-//	return NewRule(condition, transformation)
-//}
-
-// NewLevenshteinRule creates a Rule that matches a regex pattern, extracts a group,
-// and computes the Levenshtein distance for that group against a target string.
 func NewLevenshteinRule(pattern string, target string) Rule {
 	re := regexp.MustCompile("(.*?)" + pattern + "(.*)") // Capture everything before and after the pattern
 
 	condition := func(e error) bool {
-		matches := re.FindStringSubmatch(e.Error())
-		if len(matches) > 3 { // matches[0] is the entire match, matches[1] and matches[3] capture before and after the pattern
-			distance := levenshtein.Distance(target, matches[2], nil)
-			return distance <= 3
+		matchingErrors := re.FindAllStringSubmatch(e.Error(), -1)
+		for _, matchingError := range matchingErrors {
+			distance := levenshtein.Distance(target, matchingError[2], nil)
+			if distance <= 3 {
+				return true
+			}
 		}
 		return false
 	}
 
 	transformation := func(e error) error {
 		errorMsg := e.Error()
-		matches := re.FindAllStringSubmatch(errorMsg, -1)
+		matchingErrors := re.FindAllStringSubmatch(e.Error(), -1)
 
-		for _, match := range matches {
-			if len(match) > 3 {
-				word := match[2]
-				distance := levenshtein.Distance(word, target, nil)
-
-				if distance <= 3 {
-					old := fmt.Sprintf("field %s not found %s %s", word, match[3], match[4])
-					replacement := fmt.Sprintf("%s. Did you mean \"%s\"?", old, target)
-					errorMsg = strings.Replace(errorMsg, old, replacement, 1)
-				}
+		for _, matchingError := range matchingErrors {
+			distance := levenshtein.Distance(target, matchingError[2], nil)
+			if distance <= 3 {
+				suggestion := fmt.Sprintf("%s. Did you mean \"%s\"?", matchingError[0], target)
+				errorMsg = strings.Replace(errorMsg, matchingError[0], suggestion, 1)
 			}
 		}
 
