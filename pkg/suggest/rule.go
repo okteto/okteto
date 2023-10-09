@@ -157,8 +157,23 @@ func NewLevenshteinRule(pattern string, target string) Rule {
 	}
 
 	transformation := func(e error) error {
-		matches := re.FindStringSubmatch(e.Error())
-		return fmt.Errorf("%s%s. Did you mean \"%s\"?%s", matches[1], matches[2], target, matches[3])
+		errorMsg := e.Error()
+		matches := re.FindAllStringSubmatch(errorMsg, -1)
+
+		for _, match := range matches {
+			if len(match) > 3 {
+				word := match[2]
+				distance := levenshtein.Distance(word, target, nil)
+
+				if distance <= 3 {
+					old := fmt.Sprintf("field %s not found %s %s", word, match[3], match[4])
+					replacement := fmt.Sprintf("%s. Did you mean \"%s\"?", old, target)
+					errorMsg = strings.Replace(errorMsg, old, replacement, 1)
+				}
+			}
+		}
+
+		return errors.New(errorMsg)
 	}
 
 	return NewRule(condition, transformation)
