@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -628,7 +629,8 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 		if errors.Is(err, oktetoErrors.ErrNotManifestContentDetected) {
 			return nil, err
 		}
-		return nil, fmt.Errorf("%w: %s", oktetoErrors.ErrInvalidManifest, err.Error())
+		//return nil, fmt.Errorf("%w: %s", oktetoErrors.ErrInvalidManifest, err.Error())
+		return nil, err
 	}
 
 	ef := externalresource.ERFilesystemManager{
@@ -675,11 +677,11 @@ func Read(bytes []byte) (*Manifest, error) {
 	if bytes != nil {
 		if err := yaml.UnmarshalStrict(bytes, manifest); err != nil {
 			return nil, err
-			//if err := yaml.Unmarshal(bytes, manifest); err == nil {
-			//	if reflect.DeepEqual(manifest, NewManifest()) {
-			//		return nil, oktetoErrors.ErrNotManifestContentDetected
-			//	}
-			//}
+			if err := yaml.Unmarshal(bytes, manifest); err == nil {
+				if reflect.DeepEqual(manifest, NewManifest()) {
+					return nil, oktetoErrors.ErrNotManifestContentDetected
+				}
+			}
 
 			//if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
 			//	var sb strings.Builder
