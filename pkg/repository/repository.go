@@ -32,8 +32,7 @@ type Repository struct {
 	path string
 	url  *repositoryURL
 
-	repoControl    controlRepositoryInterface
-	serviceControl controlRepositoryServiceInterface
+	repoControl controlRepositoryInterface
 }
 
 type RepositoryService struct {
