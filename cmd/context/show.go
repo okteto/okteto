@@ -28,6 +28,7 @@ import (
 // Show current context
 func Show() *cobra.Command {
 	var output string
+	var includeToken bool
 	cmd := &cobra.Command{
 		Use:   "show",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#show"),
@@ -43,6 +44,18 @@ func Show() *cobra.Command {
 			if err := validateOutput(output); err != nil {
 				return err
 			}
+
+			// store the token value to display to user if the flag is set
+			TokenValue := current.Token
+
+			// By default, set the token value to null since default behaviour doesn't require to show token value
+			current.Token = ""
+
+			// If the flag is set, display the token value
+			if includeToken {
+				current.Token = TokenValue
+			}
+
 			current.Certificate = ""
 			switch output {
 			case "json":
@@ -62,7 +75,7 @@ func Show() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&output, "output", "o", "json", "output format. One of: ['json', 'yaml']")
-
+	cmd.Flags().BoolVar(&includeToken, "include-token", false, "show the token value to the user")
 	return cmd
 }
 
