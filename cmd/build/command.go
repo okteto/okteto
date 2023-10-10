@@ -128,13 +128,6 @@ func Build(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-//func improveBuildErrors(err error) error {
-//
-//	builgErrSuggestion := suggest.NewErrorSuggestion().WithRule(suggest.NewStrReplaceRule("cannot unmarshal !!seq into string", "\"cannot unmarshal array to string\"")).Suggest(err)
-//
-//	return builgErrSuggestion
-//}
-
 func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
 	var builder Builder
 
