@@ -24,10 +24,12 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
 var (
 	errNotCleanRepo = errors.New("repository is not clean")
+	errNotCleanDir  = errors.New("directory is not clean")
 )
 
 type gitRepoController struct {
@@ -176,6 +178,42 @@ func (r gitRepoController) getSHA() (string, error) {
 	return head.Hash().String(), nil
 }
 
+func (r gitRepoController) getHashByDir(dir string) (string, error) {
+	isClean, err := r.isCleanDir(context.TODO(), dir)
+	if err != nil {
+		return "", fmt.Errorf("%w: failed to check if directory '%s' is clean: %w", errNotCleanRepo, dir, err)
+	}
+	if !isClean {
+		return "", errNotCleanDir
+	}
+	repo, err := r.repoGetter.get(r.path)
+	if err != nil {
+		return "", fmt.Errorf("failed to get repository: %w", err)
+	}
+
+	ref, err := repo.Head()
+	if err != nil {
+		return "", fmt.Errorf("failed to get HEAD from repo: %w", err)
+	}
+
+	commit, err := repo.CommitObject(ref.Hash())
+	if err != nil {
+		return "", fmt.Errorf("failed to get commit object from reference: %w", err)
+	}
+
+	tree, err := commit.Tree()
+	if err != nil {
+		return "", fmt.Errorf("failed to get tree from commit: %w", err)
+	}
+
+	svcEntry, err := tree.FindEntry(dir)
+	if err != nil {
+		return "", fmt.Errorf("failed to find an entry in tree: %w", err)
+	}
+
+	return svcEntry.Hash.String(), nil
+}
+
 type repositoryGetterInterface interface {
 	get(path string) (gitRepositoryInterface, error)
 }
@@ -222,9 +260,14 @@ func (ogs oktetoGitStatus) IsClean() bool {
 	return ogs.status.IsClean()
 }
 
+func (ogr oktetoGitRepository) CommitObject(h plumbing.Hash) (*object.Commit, error) {
+	return ogr.repo.CommitObject(h)
+}
+
 type gitRepositoryInterface interface {
 	Worktree() (gitWorktreeInterface, error)
 	Head() (*plumbing.Reference, error)
+	CommitObject(plumbing.Hash) (*object.Commit, error)
 }
 type gitWorktreeInterface interface {
 	Status(context.Context, LocalGitInterface) (oktetoGitStatus, error)

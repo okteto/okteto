@@ -44,6 +44,7 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 			},
 			svcCfg: fakeServiceContext{
 				isClean: true,
+				hash:    "sha",
 			},
 			b: &model.BuildInfo{
 				Image: "nginx",
@@ -58,6 +59,7 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 			},
 			svcCfg: fakeServiceContext{
 				isClean: false,
+				hash:    "sha",
 			},
 			b: &model.BuildInfo{
 				Image: "nginx",
@@ -72,6 +74,7 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 			},
 			svcCfg: fakeServiceContext{
 				isClean: false,
+				hash:    "sha",
 			},
 			b: &model.BuildInfo{
 				Image: "nginx",
@@ -99,6 +102,7 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 			},
 			svcCfg: fakeServiceContext{
 				isClean: true,
+				hash:    "sha",
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -115,6 +119,7 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 			},
 			svcCfg: fakeServiceContext{
 				isClean: true,
+				hash:    "sha",
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -130,6 +135,7 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 			},
 			svcCfg: fakeServiceContext{
 				isClean: false,
+				hash:    "sha",
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -145,6 +151,7 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 			},
 			svcCfg: fakeServiceContext{
 				isClean: true,
+				hash:    "sha",
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -177,6 +184,7 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 			},
 			svcCfg: fakeServiceContext{
 				isClean: true,
+				hash:    "sha",
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -192,6 +200,7 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 			},
 			svcCfg: fakeServiceContext{
 				isClean: false,
+				hash:    "sha",
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -207,6 +216,7 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 			},
 			svcCfg: fakeServiceContext{
 				isClean: true,
+				hash:    "sha",
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",

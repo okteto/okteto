@@ -60,15 +60,15 @@ func newImageTagger(cfg oktetoBuilderConfigInterface, svcCfg serviceContextInter
 // tag returns the full image tag for the build
 func (i imageTagger) tag(manifestName, svcName string, b *model.BuildInfo) string {
 	targetRegistry := constants.DevRegistry
-	sha := ""
+	hash := ""
 	if i.cfg.HasGlobalAccess() && i.svcCfg.IsCleanBuildContext() {
 		targetRegistry = constants.GlobalRegistry
-		sha = i.cfg.GetBuildHash(b)
+		hash = i.svcCfg.GetBuildHash()
 	}
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	if shouldBuildFromDockerfile(b) && b.Image == "" {
-		if sha != "" {
-			return getImageFromTmpl(targetRegistry, sanitizedName, svcName, sha)
+		if hash != "" {
+			return getImageFromTmpl(targetRegistry, sanitizedName, svcName, hash)
 		}
 		return getImageFromTmpl(targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
 	}
@@ -111,16 +111,16 @@ func newImageWithVolumesTagger(cfg oktetoBuilderConfigInterface, svcCfg serviceC
 // tag returns the full image tag for the build
 func (i imageWithVolumesTagger) tag(manifestName, svcName string, b *model.BuildInfo) string {
 	targetRegistry := constants.DevRegistry
-	sha := ""
+	hash := ""
 	buildCopy := b.Copy()
 	buildCopy.Image = ""
 	if i.cfg.HasGlobalAccess() && i.svcCfg.IsCleanBuildContext() {
 		targetRegistry = constants.GlobalRegistry
-		sha = i.cfg.GetBuildHash(buildCopy)
+		hash = i.svcCfg.GetBuildHash()
 	}
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	if sha != "" {
-		return getImageFromTmplWithVolumesAndSHA(targetRegistry, sanitizedName, svcName, sha)
+	if hash != "" {
+		return getImageFromTmplWithVolumesAndSHA(targetRegistry, sanitizedName, svcName, hash)
 	}
 	return getImageFromTmpl(targetRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes)
 }

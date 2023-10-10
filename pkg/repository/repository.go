@@ -15,8 +15,10 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/constants"
@@ -30,13 +32,22 @@ type Repository struct {
 	path string
 	url  *repositoryURL
 
-	control repositoryInterface
+	repoControl    controlRepositoryInterface
+	serviceControl controlRepositoryServiceInterface
 }
 
-type repositoryInterface interface {
+type RepositoryService struct {
+	serviceControl controlRepositoryServiceInterface
+}
+
+type controlRepositoryInterface interface {
 	isClean(ctx context.Context) (bool, error)
-	isCleanDir(ctx context.Context, dir string) (bool, error)
 	getSHA() (string, error)
+}
+
+type controlRepositoryServiceInterface interface {
+	isCleanDir(ctx context.Context, dir string) (bool, error)
+	getHashByDir(string) (string, error)
 }
 
 type repositoryURL struct {
@@ -65,32 +76,56 @@ func getURLFromPath(path string) repositoryURL {
 func NewRepository(path string) Repository {
 	repoURL := getURLFromPath(path)
 
-	var controller repositoryInterface = newGitRepoController()
+	var controller controlRepositoryInterface = newGitRepoController()
+
 	// check if we are inside a remote deploy
 	if v := os.Getenv(constants.OktetoDeployRemote); v != "" {
 		sha := os.Getenv(constants.OktetoGitCommitEnvVar)
 		controller = newOktetoRemoteRepoController(sha)
 	}
+
 	return Repository{
-		path:    path,
-		url:     &repoURL,
-		control: controller,
+		path:        path,
+		url:         &repoURL,
+		repoControl: controller,
+	}
+}
+
+func NewRepositoryService(service string) RepositoryService {
+	var serviceController controlRepositoryServiceInterface = newGitRepoController()
+
+	if v := os.Getenv(constants.OktetoDeployRemote); v != "" {
+		hash := os.Getenv(fmt.Sprintf(constants.OktetoServiceIsClean, service))
+		isClean, err := strconv.ParseBool(os.Getenv(fmt.Sprintf(constants.OktetoServiceIsClean, service)))
+		if err != nil {
+			oktetoLog.Infof("failed to check if service '%s' build context is clean from envs: %w", service, err)
+		}
+		serviceController = newOktetoRemoteServiceController(hash, isClean)
+	}
+
+	return RepositoryService{
+		serviceControl: serviceController,
 	}
 }
 
 // IsClean checks if the repository have changes over the commit
 func (r Repository) IsClean() (bool, error) {
-	return r.control.isClean(context.TODO())
+	return r.repoControl.isClean(context.TODO())
 }
 
-// IsClean checks if the repository have changes over the commit
-func (r Repository) IsBuildContextClean(buildContext string) (bool, error) {
-	return r.control.isCleanDir(context.TODO(), buildContext)
+// IsBuildContextClean checks if the build context have changes over the context
+func (r RepositoryService) IsBuildContextClean(buildContext string) (bool, error) {
+	return r.serviceControl.isCleanDir(context.TODO(), buildContext)
 }
 
 // GetSHA returns the last commit sha of the repository
 func (r Repository) GetSHA() (string, error) {
-	return r.control.getSHA()
+	return r.repoControl.getSHA()
+}
+
+// GetBuildHash returns the hash related to a build context
+func (r RepositoryService) GetBuildHash(buildContext string) (string, error) {
+	return r.serviceControl.getHashByDir(buildContext)
 }
 
 // IsEqual checks if another repository is the same from the one calling the function

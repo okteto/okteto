@@ -137,4 +137,10 @@ const (
 
 	// EnvironmentLabelKeyPrefix represents the prefix for the preview and pipeline labels
 	EnvironmentLabelKeyPrefix = "label.okteto.com"
+
+	// OktetoServiceBuildHash represents the template to store a build context hash related to a service
+	OktetoServiceBuildHash = "OKTETO_SERVICE_%s_BUILD_HASH"
+
+	// OktetoServiceBuildHash represents the template to store if a service is clean
+	OktetoServiceIsClean = "OKTETO_SERVICE_%s_IS_CLEAN"
 )

@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/stretchr/testify/assert"
 )
@@ -52,6 +53,10 @@ func (fr fakeRepository) Head() (*plumbing.Reference, error) {
 	return fr.head, fr.err
 }
 
+func (fr fakeRepository) CommitObject(_ plumbing.Hash) (*object.Commit, error) {
+	return nil, fr.err
+}
+
 type fakeWorktree struct {
 	status oktetoGitStatus
 	root   string
@@ -75,7 +80,7 @@ func TestNewRepo(t *testing.T) {
 		name            string
 		GitCommit       string
 		remoteDeploy    string
-		expectedControl repositoryInterface
+		expectedControl controlRepositoryInterface
 	}{
 		{
 			name:      "GitCommit is empty",
@@ -106,7 +111,7 @@ func TestNewRepo(t *testing.T) {
 			t.Setenv(constants.OktetoDeployRemote, string(tc.remoteDeploy))
 			r := NewRepository("https://my-repo/okteto/okteto")
 			assert.Equal(t, "/okteto/okteto", r.url.Path)
-			assert.IsType(t, tc.expectedControl, r.control)
+			assert.IsType(t, tc.expectedControl, r.repoControl)
 		})
 	}
 }

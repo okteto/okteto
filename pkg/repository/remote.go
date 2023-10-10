@@ -25,12 +25,28 @@ func newOktetoRemoteRepoController(localCommit string) oktetoRemoteRepoControlle
 	}
 }
 
+type oktetoRemoteServiceController struct {
+	hash    string
+	isClean bool
+}
+
+func newOktetoRemoteServiceController(hash string, isClean bool) oktetoRemoteServiceController {
+	return oktetoRemoteServiceController{
+		hash:    hash,
+		isClean: isClean,
+	}
+}
+
 func (or oktetoRemoteRepoController) isClean(_ context.Context) (bool, error) {
 	return or.gitCommit != "", nil
 }
 
-func (or oktetoRemoteRepoController) isCleanDir(_ context.Context, _ string) (bool, error) {
-	return or.gitCommit != "", nil
+func (or oktetoRemoteServiceController) isCleanDir(_ context.Context, _ string) (bool, error) {
+	return or.isClean, nil
+}
+
+func (or oktetoRemoteServiceController) getHashByDir(_ string) (string, error) {
+	return or.hash, nil
 }
 
 func (or oktetoRemoteRepoController) getSHA() (string, error) {

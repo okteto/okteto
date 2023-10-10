@@ -22,6 +22,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/repository"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -63,8 +64,10 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 		}
 		svc := service
 
+		serviceController := repository.NewRepositoryService(svc)
+
 		g.Go(func() error {
-			return bc.checkServicesToBuild(svc, manifest, toBuild)
+			return bc.checkServicesToBuild(svc, manifest, toBuild, serviceController)
 		})
 	}
 
@@ -91,14 +94,15 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 	return svcsToBuildList, nil
 }
 
-func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Manifest, ch chan string) error {
+func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Manifest, ch chan string, repoService repository.RepositoryService) error {
 	buildInfo := manifest.Build[service].Copy()
 	isStack := manifest.Type == model.StackType
 	if isStack && okteto.IsOkteto() && !bc.Registry.IsOktetoRegistry(buildInfo.Image) {
 		buildInfo.Image = ""
 	}
 
-	serviceContext := newSvcContextCleanlinessChecker(buildInfo, bc.isCleanSvc)
+	serviceContext := bc.newServiceContext(buildInfo, repoService)
+
 	imageChecker := getImageChecker(buildInfo, bc.Config, serviceContext, bc.Registry)
 	imageWithDigest, err := imageChecker.getImageDigestFromAllPossibleTags(manifest.Name, service, buildInfo)
 	if oktetoErrors.IsNotFound(err) {

@@ -149,7 +149,7 @@ func TestIsClean(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := Repository{
-				control: gitRepoController{
+				repoControl: gitRepoController{
 					repoGetter: tt.config.repositoryGetter,
 				},
 			}
@@ -286,7 +286,7 @@ func TestGetSHA(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := Repository{
-				control: gitRepoController{
+				repoControl: gitRepoController{
 					repoGetter: tt.config.repositoryGetter,
 				},
 			}
@@ -445,12 +445,12 @@ func TestIsBuildContextClean(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := Repository{
-				control: gitRepoController{
+			repoService := RepositoryService{
+				serviceControl: gitRepoController{
 					repoGetter: tt.config.repositoryGetter,
 				},
 			}
-			isClean, err := repo.IsBuildContextClean(tt.buildContext)
+			isClean, err := repoService.IsBuildContextClean(tt.buildContext)
 			assert.ErrorIs(t, err, tt.expected.err)
 			assert.Equal(t, tt.expected.isClean, isClean)
 		})
