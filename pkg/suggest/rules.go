@@ -4,29 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/agext/levenshtein"
-	"gopkg.in/yaml.v3"
 	"regexp"
+	"sigs.k8s.io/kustomize/kyaml/yaml"
 	"strings"
 )
-
-type ConditionFunc func(error) bool
-type TransformFunc func(error) error
-
-type Rule interface {
-	Translate(error) error
-}
-
-type rule struct {
-	condition      ConditionFunc
-	transformation TransformFunc
-}
-
-func NewRule(condition ConditionFunc, transform TransformFunc) Rule {
-	return &rule{
-		condition:      condition,
-		transformation: transform,
-	}
-}
 
 // NewStrReplaceRule creates a Rule that finds and replaces a string in the error message
 func NewStrReplaceRule(find, replace string) Rule {
@@ -57,18 +38,6 @@ func isYamlError(err error) bool {
 
 	return false
 }
-
-//func ConvertTypeError() Rule {
-//	cannot unmarshal !!str `todo-list` into model.ManifestBuild
-//}
-
-//func MakeStructNamesReadable() Rule {
-//	NewStrReplaceRule
-//}
-
-//func MapYamlTypes() Rule {
-//
-//}
 
 func AddYamlParseErrorHeading() Rule {
 	addUrl := func(e error) error {
@@ -171,9 +140,40 @@ func NewLevenshteinRule(pattern string, target string) Rule {
 	return NewRule(condition, transformation)
 }
 
-func (g *rule) Translate(err error) error {
-	if g.condition(err) {
-		return g.transformation(err)
+func UserFriendlyError(err error) error {
+	yamlErrSuggestion := NewErrorSuggestion()
+	yamlErrSuggestion.WithRule(AddYamlParseErrorHeading())
+
+	// TODO: check if we can add the anchor for each section
+	yamlErrSuggestion.WithRule(AddUrlToManifestDocs(""))
+
+	keywords := []string{"context", "build", "services", "deploy"}
+	//keywords := []string{"build"}
+	for _, keyword := range keywords {
+		yamlErrSuggestion.WithRule(NewLevenshteinRule(`field (\w+) not found (in type|into) ([\w.]+)`, keyword))
 	}
-	return err
+
+	yamlErrSuggestion.WithRule(FieldsNotExistingRule())
+
+	//Root level
+	yamlErrSuggestion.WithRule(NewStrReplaceRule("in type model.manifestRaw", "the okteto manifest"))
+
+	// Build section
+	yamlErrSuggestion.WithRule(NewStrReplaceRule("in type model.ManifestBuild", "the 'build' section"))
+	yamlErrSuggestion.WithRule(NewStrReplaceRule("into model.ManifestBuild", "into a 'build' object"))
+	yamlErrSuggestion.WithRule(NewStrReplaceRule("in type model.buildInfoRaw", "the 'build' object"))
+
+	//YAML data types
+	yamlErrSuggestion.WithRule(NewStrReplaceRule(yaml.NodeTagSeq, "list"))
+	yamlErrSuggestion.WithRule(NewStrReplaceRule(yaml.NodeTagString, "string"))
+	yamlErrSuggestion.WithRule(NewStrReplaceRule(yaml.NodeTagBool, "boolean"))
+	yamlErrSuggestion.WithRule(NewStrReplaceRule(yaml.NodeTagInt, "integer"))
+	yamlErrSuggestion.WithRule(NewStrReplaceRule(yaml.NodeTagFloat, "float"))
+	yamlErrSuggestion.WithRule(NewStrReplaceRule(yaml.NodeTagMap, "object"))
+
+	yamlErrSuggestion.WithRule(NewStrReplaceRule("yaml: unmarshal errors:\n", ""))
+
+	yamlErrSuggestion.WithRule(IndentNumLines())
+
+	return yamlErrSuggestion.Suggest(err)
 }

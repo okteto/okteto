@@ -5,6 +5,32 @@ type ErrorSuggestion struct {
 	rules []Rule
 }
 
+type ConditionFunc func(error) bool
+type TransformFunc func(error) error
+
+type Rule interface {
+	Translate(error) error
+}
+
+type rule struct {
+	condition      ConditionFunc
+	transformation TransformFunc
+}
+
+func NewRule(condition ConditionFunc, transform TransformFunc) Rule {
+	return &rule{
+		condition:      condition,
+		transformation: transform,
+	}
+}
+
+func (g *rule) Translate(err error) error {
+	if g.condition(err) {
+		return g.transformation(err)
+	}
+	return err
+}
+
 // NewErrorSuggestion creates a new ErrorSuggestion instance.
 func NewErrorSuggestion() *ErrorSuggestion {
 	return &ErrorSuggestion{}

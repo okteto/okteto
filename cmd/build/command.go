@@ -33,6 +33,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/suggest"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	"os"
@@ -109,7 +110,12 @@ func Build(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 				}
 			}
 
-			return builder.Build(ctx, options)
+			err = builder.Build(ctx, options)
+			if err != nil {
+				return suggest.UserFriendlyError(err)
+			}
+
+			return nil
 		},
 	}
 
