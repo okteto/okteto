@@ -22,6 +22,7 @@ import (
 
 	"github.com/okteto/okteto/internal/test"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
@@ -76,6 +77,7 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	bc := &OktetoBuilder{
 		Builder:  builder,
 		Registry: registry,
+		IoCtrl:   io.NewIOController(),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -111,6 +113,7 @@ func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 	bc := &OktetoBuilder{
 		Builder:  builder,
 		Registry: registry,
+		IoCtrl:   io.NewIOController(),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -148,6 +151,7 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 	bc := &OktetoBuilder{
 		Builder:  builder,
 		Registry: registry,
+		IoCtrl:   io.NewIOController(),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -183,6 +187,7 @@ func TestBuildWithNoErrorFromDockerfileAndNoTag(t *testing.T) {
 	bc := &OktetoBuilder{
 		Builder:  builder,
 		Registry: registry,
+		IoCtrl:   io.NewIOController(),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)

@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"golang.org/x/sync/errgroup"
@@ -31,18 +30,14 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 	buildManifest := manifest.Build
 
 	if len(buildManifest) == 0 {
-		oktetoLog.Information("Build section is not defined in your okteto manifest")
+		bc.ioCtrl.Out().Infof("Build section is not defined in your okteto manifest")
 		return nil, nil
 	}
 
 	// create a spinner to be loaded before checking if images needs to be built
-	oktetoLog.Spinner("Checking images to build...")
-
-	// start the spinner
-	oktetoLog.StartSpinner()
-
-	// stop the spinner
-	defer oktetoLog.StopSpinner()
+	sp := bc.ioCtrl.Out().Spinner("Checking images to build...")
+	sp.Start()
+	defer sp.Stop()
 
 	svcToDeployMap := map[string]bool{}
 	if len(svcsToDeploy) == 0 {
@@ -59,7 +54,7 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 	g, _ := errgroup.WithContext(ctx)
 	for service := range buildManifest {
 		if _, ok := svcToDeployMap[service]; !ok {
-			oktetoLog.Debug("Skipping service '%s' because it is not in the list of services to deploy", service)
+			bc.ioCtrl.Logger().Debug(fmt.Sprintf("Skipping service '%s' because it is not in the list of services to deploy", service))
 			continue
 		}
 		svc := service
@@ -75,7 +70,7 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 	close(toBuildCh)
 
 	if len(toBuildCh) == 0 {
-		oktetoLog.Information("Images were already built. To rebuild your images run 'okteto build' or 'okteto deploy --build'")
+		bc.ioCtrl.Out().Infof("Images were already built. To rebuild your images run 'okteto build' or 'okteto deploy --build'")
 		if err := manifest.ExpandEnvVars(); err != nil {
 			return nil, err
 		}
@@ -100,16 +95,16 @@ func (bc *OktetoBuilder) checkServiceToBuild(service string, manifest *model.Man
 		buildInfo.Image = ""
 	}
 	buildHash := getBuildHashFromCommit(buildInfo, bc.Config.GetGitCommit())
-	imageChecker := getImageChecker(buildInfo, bc.Config, bc.Registry)
+	imageChecker := getImageChecker(buildInfo, bc.Config, bc.Registry, bc.ioCtrl.Logger())
 	imageWithDigest, err := imageChecker.getImageDigestReferenceForService(manifest.Name, service, buildInfo, buildHash)
 	if oktetoErrors.IsNotFound(err) {
-		oktetoLog.Debug("image not found, building image")
+		bc.ioCtrl.Logger().Debug("image not found, building image")
 		buildCh <- service
 		return nil
 	} else if err != nil {
 		return err
 	}
-	oktetoLog.Debug("Skipping build for image for service: %s", service)
+	bc.ioCtrl.Logger().Debug(fmt.Sprintf("Skipping build for image for service: %s", service))
 
 	bc.SetServiceEnvVars(service, imageWithDigest)
 

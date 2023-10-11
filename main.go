@@ -41,6 +41,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/sirupsen/logrus"
@@ -95,6 +96,8 @@ func main() {
 	var outputMode string
 	var serverNameOverride string
 
+	ioController := io.NewIOController()
+
 	if err := analytics.Init(); err != nil {
 		oktetoLog.Infof("error initializing okteto analytics: %s", err)
 	}
@@ -111,6 +114,8 @@ func main() {
 			if !registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
 				oktetoLog.SetLevel(logLevel)
 				oktetoLog.SetOutputFormat(outputMode)
+				ioController.SetLevel(logLevel)
+				ioController.SetOutputFormat(outputMode)
 			}
 			okteto.SetServerNameOverride(serverNameOverride)
 			oktetoLog.Infof("started %s", strings.Join(os.Args, " "))
@@ -142,7 +147,7 @@ func main() {
 	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
 	root.AddCommand(registrytoken.RegistryToken(ctx))
 
-	root.AddCommand(build.Build(ctx, at))
+	root.AddCommand(build.Build(ctx, ioController, at))
 
 	root.AddCommand(namespace.Namespace(ctx))
 	root.AddCommand(cmd.Init())

@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/registry"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -418,7 +419,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 				Fs:                afero.NewMemMapFs(),
 			}, nil
 		},
-		Builder:           buildv2.NewBuilder(builder, registry, fakeTracker),
+		Builder:           buildv2.NewBuilder(builder, registry, io.NewIOController(), fakeTracker),
 		K8sClientProvider: clientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(clientProvider),
 	}
@@ -497,7 +498,8 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		K8sClientProvider: clientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(clientProvider),
 		Fs:                afero.NewMemMapFs(),
-		Builder:           &fakeV2Builder{},
+		// Builder:           buildv2.NewBuilder(nil, nil, io.NewIOController()),
+		Builder: &fakeV2Builder{},
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -642,7 +644,8 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		EndpointGetter:     getFakeEndpoint,
 		CfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
 		Fs:                 afero.NewMemMapFs(),
-		Builder:            &fakeV2Builder{},
+		// Builder:            buildv2.NewBuilder(nil, nil, io.NewIOController()),
+		Builder: &fakeV2Builder{},
 	}
 	ctx := context.Background()
 
@@ -717,6 +720,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 				Fs:                 afero.NewMemMapFs(),
 			}, nil
 		},
+		// Builder: buildv2.NewBuilder(nil, nil, io.NewIOController()),
 		Builder: &fakeV2Builder{},
 	}
 	ctx := context.Background()

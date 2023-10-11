@@ -37,15 +37,19 @@ type oktetoBuilderConfig struct {
 	isOkteto        bool
 }
 
-func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterface) oktetoBuilderConfig {
+type loggerInfo interface {
+	Info(format string, args ...interface{})
+}
+
+func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterface, l loggerInfo) oktetoBuilderConfig {
 	hasAccess, err := registry.HasGlobalPushAccess()
 	if err != nil {
-		oktetoLog.Infof("error trying to access globalPushAccess: %w", err)
+		l.Info("error trying to access globalPushAccess: %w", err)
 	}
 
 	isClean, err := gitRepo.IsClean()
 	if err != nil {
-		oktetoLog.Infof("error trying to get directory: %w", err)
+		l.Info("error trying to get directory: %w", err)
 	}
 	return oktetoBuilderConfig{
 		repository:      gitRepo,

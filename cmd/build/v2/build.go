@@ -32,7 +32,7 @@ import (
 	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -83,33 +83,37 @@ type OktetoBuilder struct {
 	// lock is a mutex to provide builEnvironments map safe concurrency
 	lock             sync.RWMutex
 	analyticsTracker analyticsTrackerInterface
+
+	ioCtrl *io.IOController
 }
 
 // NewBuilder creates a new okteto builder
-func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, analyticsTracker analyticsTrackerInterface) *OktetoBuilder {
+func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.IOController, analyticsTracker analyticsTrackerInterface) *OktetoBuilder {
 	b := NewBuilderFromScratch(analyticsTracker)
 	b.Builder = builder
 	b.Registry = registry
-	b.V1Builder = buildv1.NewBuilder(builder, registry)
+	b.ioCtrl = ioCtrl
+	b.V1Builder = buildv1.NewBuilder(builder, registry, ioCtrl)
 	return b
 }
 
 // NewBuilderFromScratch creates a new okteto builder
 func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface) *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
+	ioCtrl := io.NewIOController()
 	registry := registry.NewOktetoRegistry(okteto.Config{})
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
 	wd, err := wdCtrl.Get()
 	if err != nil {
-		oktetoLog.Infof("could not get working dir: %w", err)
+		ioCtrl.Logger().Info("could not get working dir: %w", err)
 	}
 	gitRepo := repository.NewRepository(wd)
 	return &OktetoBuilder{
 		Builder:           builder,
 		Registry:          registry,
-		V1Builder:         buildv1.NewBuilder(builder, registry),
+		V1Builder:         buildv1.NewBuilder(builder, registry, ioCtrl),
 		buildEnvironments: map[string]string{},
-		Config:            getConfig(registry, gitRepo),
+		Config:            getConfig(registry, gitRepo, ioCtrl.Logger()),
 		analyticsTracker:  analyticsTracker,
 	}
 }
@@ -150,7 +154,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	toBuildSvcs := getToBuildSvcs(options.Manifest, options)
 	if err := validateOptions(options.Manifest, toBuildSvcs, options); err != nil {
 		if errors.Is(err, oktetoErrors.ErrNoServicesToBuildDefined) {
-			oktetoLog.Infof("skipping BuildV2 due to not having any svc to build")
+			bc.ioCtrl.Logger().Info("skipping BuildV2 due to not having any svc to build")
 			return nil
 		}
 		return err
@@ -170,19 +174,19 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		bc.analyticsTracker.TrackImageBuild(buildsAnalytics...)
 	}(buildsAnalytics)
 
-	oktetoLog.Infof("Images to build: [%s]", strings.Join(toBuildSvcs, ", "))
+	bc.ioCtrl.Logger().Info(fmt.Sprintf("Images to build: [%s]", strings.Join(toBuildSvcs, ", ")))
 	for len(builtImagesControl) != len(toBuildSvcs) {
 		for _, svcToBuild := range toBuildSvcs {
 			if skipServiceBuild(svcToBuild, builtImagesControl) {
-				oktetoLog.Infof("skipping image '%s' due to being already built")
+				bc.ioCtrl.Logger().Info("skipping image '%s' due to being already built")
 				continue
 			}
 			if !areAllServicesBuilt(buildManifest[svcToBuild].DependsOn, builtImagesControl) {
-				oktetoLog.Infof("image '%s' can't be deployed because at least one of its dependent images(%s) are not built", svcToBuild, strings.Join(buildManifest[svcToBuild].DependsOn, ", "))
+				bc.ioCtrl.Logger().Info("image '%s' can't be deployed because at least one of its dependent images(%s) are not built", svcToBuild, strings.Join(buildManifest[svcToBuild].DependsOn, ", "))
 				continue
 			}
 			if options.EnableStages {
-				oktetoLog.SetStage(fmt.Sprintf("Building service %s", svcToBuild))
+				bc.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svcToBuild))
 			}
 
 			buildSvcInfo := buildManifest[svcToBuild]
@@ -204,7 +208,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			// We only check that the image is built in the global registry if the noCache option is not set
 			if !options.NoCache && bc.Config.IsCleanProject() {
 
-				imageChecker := getImageChecker(buildSvcInfo, bc.Config, bc.Registry)
+				imageChecker := getImageChecker(buildSvcInfo, bc.Config, bc.Registry, bc.ioCtrl.Logger())
 				cacheHitDurationStart := time.Now()
 				imageWithDigest, isBuilt := imageChecker.checkIfBuildHashIsBuilt(options.Manifest.Name, svcToBuild, buildHash)
 
@@ -212,11 +216,11 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				meta.CacheHitDuration = time.Since(cacheHitDurationStart)
 
 				if isBuilt {
-					oktetoLog.Information("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, repoCommit)
+					bc.ioCtrl.Out().Infof("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, repoCommit)
 					// if the built image belongs to global registry we clone it to the dev registry
 					// so that in can be used in dev containers (i.e. okteto up)
 					if bc.Registry.IsGlobalRegistry(imageWithDigest) {
-						oktetoLog.Debugf("Copying image '%s' from global to personal registry", svcToBuild)
+						bc.ioCtrl.Logger().Debug(fmt.Sprintf("Copying image '%s' from global to personal registry", svcToBuild))
 						tag := buildHash
 						devImage, err := bc.Registry.CloneGlobalImageToDev(imageWithDigest, tag)
 						if err != nil {
@@ -248,7 +252,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		}
 	}
 	if options.EnableStages {
-		oktetoLog.SetStage("")
+		bc.ioCtrl.SetStage("")
 	}
 	return options.Manifest.ExpandEnvVars()
 }
@@ -297,13 +301,13 @@ func (bc *OktetoBuilder) buildServiceImages(ctx context.Context, manifest *model
 		}
 
 	default:
-		oktetoLog.Infof("could not build service %s, due to not having Dockerfile defined or volumes to include", svcName)
+		bc.ioCtrl.Logger().Info(fmt.Sprintf("could not build service %s, due to not having Dockerfile defined or volumes to include", svcName))
 	}
 	return "", nil
 }
 
 func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
-	oktetoLog.Infof("Building image for service '%s'", svcName)
+	bc.ioCtrl.Logger().Info(fmt.Sprintf("Building service '%s' from Dockerfile", svcName))
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := bc.getBuildInfoWithoutVolumeMounts(manifest.Build[svcName], isStackManifest)
 	buildHash := getBuildHashFromCommit(buildSvcInfo, bc.Config.GetGitCommit())
@@ -331,7 +335,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 }
 
 func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
-	oktetoLog.Information("Including volume hosts for service '%s'", svcName)
+	bc.ioCtrl.Out().Infof("Including volume hosts for service '%s'", svcName)
 	isStackManifest := (manifest.Type == model.StackType) || (manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil)
 	fromImage := manifest.Build[svcName].Image
 	if options.Tag != "" {
@@ -442,14 +446,14 @@ func validateServices(buildSection model.ManifestBuild, svcsToBuild []string) er
 	return nil
 }
 
-func getImageChecker(buildInfo *model.BuildInfo, cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface) imageCheckerInterface {
+func getImageChecker(buildInfo *model.BuildInfo, cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface, logger loggerInfo) imageCheckerInterface {
 	var tagger imageTaggerInterface
 	if serviceHasVolumesToInclude(buildInfo) {
 		tagger = newImageWithVolumesTagger(cfg)
 	} else {
 		tagger = newImageTagger(cfg)
 	}
-	return newImageChecker(cfg, registry, tagger)
+	return newImageChecker(cfg, registry, tagger, logger)
 }
 
 // getBuildHashFromCommit parses buildInfo and commit into a hashed string
