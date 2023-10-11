@@ -18,7 +18,6 @@ import (
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -35,16 +34,18 @@ type imageChecker struct {
 	tagger   imageTaggerInterface
 	cfg      oktetoBuilderConfigInterface
 	registry registryImageCheckerInterface
+	logger   loggerInfo
 
 	lookupReferenceWithDigest func(tag string, registry registryImageCheckerInterface) (string, error)
 }
 
 // newImageChecker returns a new image checker
-func newImageChecker(cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface, tagger imageTaggerInterface) imageChecker {
+func newImageChecker(cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface, tagger imageTaggerInterface, logger loggerInfo) imageChecker {
 	return imageChecker{
 		tagger:   tagger,
 		cfg:      cfg,
 		registry: registry,
+		logger:   logger,
 
 		lookupReferenceWithDigest: lookupReferenceWithDigest,
 	}
@@ -66,7 +67,7 @@ func (ic imageChecker) checkIfBuildHashIsBuilt(manifestName, svcToBuild string, 
 			if oktetoErrors.IsNotFound(err) {
 				continue
 			}
-			oktetoLog.Infof("could not check image %s: %s", ref, err)
+			ic.logger.Info("could not check image %s: %s", ref, err)
 			return "", false
 		}
 		return imageWithDigest, true

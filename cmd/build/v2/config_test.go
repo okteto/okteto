@@ -26,6 +26,10 @@ func (fcr fakeConfigRepo) GetSHA() (string, error)   { return fcr.sha, fcr.err }
 func (fcr fakeConfigRepo) IsClean() (bool, error)    { return fcr.isClean, fcr.err }
 func (fcr fakeConfigRepo) GetAnonymizedRepo() string { return fcr.url }
 
+type fakeLogger struct{}
+
+func (fl fakeLogger) Info(format string, args ...interface{}) {}
+
 func TestGetConfig(t *testing.T) {
 	type input struct {
 		reg  fakeConfigRegistry
@@ -131,7 +135,7 @@ func TestGetConfig(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			cfg := getConfig(tc.input.reg, tc.input.repo)
+			cfg := getConfig(tc.input.reg, tc.input.repo, fakeLogger{})
 			assert.Equal(t, tc.expected, cfg)
 		})
 	}
