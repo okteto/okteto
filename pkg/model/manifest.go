@@ -673,31 +673,13 @@ func isEmptyManifestFile(bytes []byte) bool {
 func Read(bytes []byte) (*Manifest, error) {
 	manifest := NewManifest()
 
-	//readErrSuggestions := suggest.NewErrorSuggestion().withRule()
 	if bytes != nil {
 		if err := yaml.UnmarshalStrict(bytes, manifest); err != nil {
-			return nil, err
 			if err := yaml.Unmarshal(bytes, manifest); err == nil {
 				if reflect.DeepEqual(manifest, NewManifest()) {
 					return nil, oktetoErrors.ErrNotManifestContentDetected
 				}
 			}
-
-			//if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
-			//	var sb strings.Builder
-			//	l := strings.Split(err.Error(), "\n")
-			//	for i := 1; i < len(l); i++ {
-			//		e := strings.TrimSuffix(l[i], "in type model.Manifest")
-			//		e = strings.TrimSpace(e)
-			//		_, _ = sb.WriteString(fmt.Sprintf("    - %s\n", e))
-			//	}
-			//
-			//	_, _ = sb.WriteString(fmt.Sprintf("    See %s for details", "https://okteto.com/docs/reference/manifest/"))
-			//	return nil, fmt.Errorf("\n%s", sb.String())
-			//}
-
-			//msg := strings.TrimSuffix(err.Error(), "in type model.Manifest")
-			//return nil, fmt.Errorf("\n%s", msg)
 		}
 	}
 

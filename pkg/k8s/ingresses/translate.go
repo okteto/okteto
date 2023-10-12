@@ -9,8 +9,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// apply Endpoint to Ingress
-// apply Service to Ingress
+// Translate Endpoint to Ingress
+// Translate Service to Ingress
 
 type TranslateOptions struct {
 	Name      string
