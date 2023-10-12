@@ -1,52 +1,58 @@
+// Copyright 2023 The Okteto Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package suggest
 
-// ErrorSuggestion holds the rules and allows generating suggestions for errors.
-type ErrorSuggestion struct {
-	rules []Rule
+// errorSuggestion holds the rules and allows generating suggestions for errors.
+type errorSuggestion struct {
+	rules []ruleInterface
 }
 
-type ConditionFunc func(error) bool
-type TransformFunc func(error) error
-
-type Rule interface {
-	Translate(error) error
+// newErrorSuggestion creates a new errorSuggestion instance.
+func newErrorSuggestion() *errorSuggestion {
+	return &errorSuggestion{}
 }
 
-type rule struct {
-	condition      ConditionFunc
-	transformation TransformFunc
-}
-
-func NewRule(condition ConditionFunc, transform TransformFunc) Rule {
-	return &rule{
-		condition:      condition,
-		transformation: transform,
+// withRules adds multiple rules to the errorSuggestion.
+func (es *errorSuggestion) withRules(rules []ruleInterface) *errorSuggestion {
+	for _, r := range rules {
+		es.withRule(r)
 	}
+	return es
 }
 
-func (g *rule) Translate(err error) error {
-	if g.condition(err) {
-		return g.transformation(err)
-	}
-	return err
-}
-
-// NewErrorSuggestion creates a new ErrorSuggestion instance.
-func NewErrorSuggestion() *ErrorSuggestion {
-	return &ErrorSuggestion{}
-}
-
-// WithRule adds a new rule to the ErrorSuggestion.
-func (es *ErrorSuggestion) WithRule(rule Rule) *ErrorSuggestion {
+// withRule adds a new rule to the errorSuggestion.
+func (es *errorSuggestion) withRule(rule ruleInterface) *errorSuggestion {
 	es.rules = append(es.rules, rule)
 	return es
 }
 
-// Suggest generates a user-friendly suggestion for the given error.
-func (es *ErrorSuggestion) Suggest(err error) error {
+// suggest applies all rules and returns a user-friendly error
+func (es *errorSuggestion) suggest(err error) error {
 	newErr := err
 	for _, rule := range es.rules {
-		newErr = rule.Translate(newErr)
+		newErr = rule.apply(newErr)
 	}
 	return newErr
+}
+
+// UserFriendlyError generates a user-friendly suggestion for the given error.
+func UserFriendlyError(err error) error {
+	errSuggestion := newErrorSuggestion()
+
+	errSuggestion.withRules(
+		getManifestSuggestionRules(),
+	)
+
+	return errSuggestion.suggest(err)
 }

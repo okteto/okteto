@@ -1,3 +1,16 @@
+// Copyright 2023 The Okteto Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package suggest
 
 import (
@@ -5,12 +18,43 @@ import (
 	"fmt"
 	"github.com/agext/levenshtein"
 	"regexp"
-	"sigs.k8s.io/kustomize/kyaml/yaml"
 	"strings"
 )
 
-// NewStrReplaceRule creates a Rule that finds and replaces a string in the error message
-func NewStrReplaceRule(find, replace string) Rule {
+type rule struct {
+	condition      conditionFunc
+	transformation transformFunc
+}
+
+// conditionFunc is a function that returns true if the rule should be applied to the error.
+type conditionFunc func(error) bool
+
+// transformFunc is a function that defines how the error should be transformed.
+type transformFunc func(error) error
+
+// ruleInterface represents a suggestion rule.
+type ruleInterface interface {
+	apply(error) error
+}
+
+// newRule creates a new ruleInterface instance.
+func newRule(condition conditionFunc, transform transformFunc) ruleInterface {
+	return &rule{
+		condition:      condition,
+		transformation: transform,
+	}
+}
+
+// apply executes the rule on the error.
+func (g *rule) apply(err error) error {
+	if g.condition(err) {
+		return g.transformation(err)
+	}
+	return err
+}
+
+// newStrReplaceRule creates a ruleInterface that finds and replaces a string in the error message
+func newStrReplaceRule(find, replace string) ruleInterface {
 	condition := func(e error) bool {
 		return strings.Contains(e.Error(), find)
 	}
@@ -20,95 +64,23 @@ func NewStrReplaceRule(find, replace string) Rule {
 		return errors.New(replacedMessage)
 	}
 
-	return NewRule(condition, transformation)
+	return newRule(condition, transformation)
 }
 
-func isYamlError(err error) bool {
-	// prevents adding the URL twice
-	if strings.Contains(err.Error(), "https://www.okteto.com/docs") {
-		return false
-	}
-	// only add the URL if it's a yaml error
-	if _, ok := err.(*yaml.TypeError); ok {
-		return true
-	}
-	if strings.Contains(err.Error(), "yaml:") {
-		return true
-	}
-
-	return false
-}
-
-func AddYamlParseErrorHeading() Rule {
-	addUrl := func(e error) error {
-		errorWithUrlToDocs := fmt.Sprintf("Your okteto manifest is not valid, please check the following errors:\n%s", e.Error())
-		return errors.New(errorWithUrlToDocs)
-	}
-
-	return NewRule(isYamlError, addUrl)
-}
-
-// AddUrlToManifestDocs appends to the error the URL to the Okteto manifest ref docs
-func AddUrlToManifestDocs(docsAnchor string) Rule {
-	addUrl := func(e error) error {
-		docsURL := "https://www.okteto.com/docs/reference/manifest"
-		if docsAnchor != "" {
-			docsURL += "/#" + docsAnchor
-		}
-		errorWithUrlToDocs := fmt.Sprintf("%s.\n    Check out the okteto manifest docs at: %s", e.Error(), docsURL)
-		return errors.New(errorWithUrlToDocs)
-	}
-
-	return NewRule(isYamlError, addUrl)
-}
-
-// NewRegexRule creates a Rule based on a regex pattern.
-func NewRegexRule(pattern string, transform TransformFunc) Rule {
+// newRegexRule creates a ruleInterface based on a regex pattern.
+func newRegexRule(pattern string, transform transformFunc) ruleInterface {
 	re := regexp.MustCompile(pattern)
 
 	condition := func(e error) bool {
 		return re.MatchString(e.Error())
 	}
 
-	return NewRule(condition, transform)
+	return newRule(condition, transform)
 }
 
-func IndentNumLines() Rule {
-	pattern := `(?:yaml: )?line (\d+):`
-	re := regexp.MustCompile(pattern)
-
-	condition := func(e error) bool {
-		return re.MatchString(e.Error())
-	}
-
-	transformation := func(e error) error {
-		newErr := re.ReplaceAllString(e.Error(), "   - line $1:")
-		return errors.New(newErr)
-	}
-
-	return NewRule(condition, transformation)
-}
-
-// FieldsNotExistingRule replaces "not found" fields which are unknown to the Okteto manifest specification
-func FieldsNotExistingRule() Rule {
-	pattern := `field (\w+) not found`
-	re := regexp.MustCompile(pattern)
-
-	condition := func(e error) bool {
-		return re.MatchString(e.Error())
-	}
-
-	transform := func(e error) error {
-		newErr := re.ReplaceAllString(e.Error(), "field '$1' is not a property of")
-		return fmt.Errorf("%s", newErr)
-	}
-
-	return NewRule(condition, transform)
-}
-
-// NewLevenshteinRule creates a Rule that matches a regex pattern, extracts a group,
+// newLevenshteinRule creates a ruleInterface that matches a regex pattern, extracts a group,
 // and computes the Levenshtein distance for that group against a target string.
-func NewLevenshteinRule(pattern string, target string) Rule {
+func newLevenshteinRule(pattern string, target string) ruleInterface {
 	re := regexp.MustCompile("(.*?)" + pattern + "(.*)") // Capture everything before and after the pattern
 
 	condition := func(e error) bool {
@@ -137,43 +109,5 @@ func NewLevenshteinRule(pattern string, target string) Rule {
 		return errors.New(errorMsg)
 	}
 
-	return NewRule(condition, transformation)
-}
-
-func UserFriendlyError(err error) error {
-	yamlErrSuggestion := NewErrorSuggestion()
-	yamlErrSuggestion.WithRule(AddYamlParseErrorHeading())
-
-	// TODO: check if we can add the anchor for each section
-	yamlErrSuggestion.WithRule(AddUrlToManifestDocs(""))
-
-	keywords := []string{"context", "build", "services", "deploy"}
-	//keywords := []string{"build"}
-	for _, keyword := range keywords {
-		yamlErrSuggestion.WithRule(NewLevenshteinRule(`field (\w+) not found (in type|into) ([\w.]+)`, keyword))
-	}
-
-	yamlErrSuggestion.WithRule(FieldsNotExistingRule())
-
-	//Root level
-	yamlErrSuggestion.WithRule(NewStrReplaceRule("in type model.manifestRaw", "the okteto manifest"))
-
-	// Build section
-	yamlErrSuggestion.WithRule(NewStrReplaceRule("in type model.ManifestBuild", "the 'build' section"))
-	yamlErrSuggestion.WithRule(NewStrReplaceRule("into model.ManifestBuild", "into a 'build' object"))
-	yamlErrSuggestion.WithRule(NewStrReplaceRule("in type model.buildInfoRaw", "the 'build' object"))
-
-	//YAML data types
-	yamlErrSuggestion.WithRule(NewStrReplaceRule(yaml.NodeTagSeq, "list"))
-	yamlErrSuggestion.WithRule(NewStrReplaceRule(yaml.NodeTagString, "string"))
-	yamlErrSuggestion.WithRule(NewStrReplaceRule(yaml.NodeTagBool, "boolean"))
-	yamlErrSuggestion.WithRule(NewStrReplaceRule(yaml.NodeTagInt, "integer"))
-	yamlErrSuggestion.WithRule(NewStrReplaceRule(yaml.NodeTagFloat, "float"))
-	yamlErrSuggestion.WithRule(NewStrReplaceRule(yaml.NodeTagMap, "object"))
-
-	yamlErrSuggestion.WithRule(NewStrReplaceRule("yaml: unmarshal errors:\n", ""))
-
-	yamlErrSuggestion.WithRule(IndentNumLines())
-
-	return yamlErrSuggestion.Suggest(err)
+	return newRule(condition, transformation)
 }

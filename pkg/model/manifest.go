@@ -673,7 +673,7 @@ func isEmptyManifestFile(bytes []byte) bool {
 func Read(bytes []byte) (*Manifest, error) {
 	manifest := NewManifest()
 
-	//readErrSuggestions := suggest.NewErrorSuggestion().WithRule()
+	//readErrSuggestions := suggest.NewErrorSuggestion().withRule()
 	if bytes != nil {
 		if err := yaml.UnmarshalStrict(bytes, manifest); err != nil {
 			return nil, err

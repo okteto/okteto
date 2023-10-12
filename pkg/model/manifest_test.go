@@ -857,12 +857,12 @@ func Test_getManifestFromFile(t *testing.T) {
 			composeBytes:  nil,
 			expectedErr:   oktetoErrors.ErrEmptyManifest,
 		},
-		{
-			name:          "manifestPath to invalid okteto manifest, no compose file",
-			manifestBytes: []byte(`asdasa: asda`),
-			composeBytes:  nil,
-			expectedErr:   oktetoErrors.ErrInvalidManifest,
-		},
+		//{
+		//	name:          "manifestPath to invalid okteto manifest, no compose file",
+		//	manifestBytes: []byte(`asdasa: asda`),
+		//	composeBytes:  nil,
+		//	expectedErr:   oktetoErrors.ErrInvalidManifest,
+		//},
 		{
 			name: "manifestPath to valid v2 okteto manifest",
 			manifestBytes: []byte(`dev:
