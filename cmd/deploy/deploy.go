@@ -261,7 +261,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	manifest, err := dc.GetManifest(deployOptions.ManifestPath)
 	if err != nil {
 		return err
-		//return fmt.Errorf("failed to load manifest: %w", err)
 	}
 	deployOptions.Manifest = manifest
 	oktetoLog.Debug("found okteto manifest")

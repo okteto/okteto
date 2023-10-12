@@ -109,12 +109,7 @@ func Build(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 				}
 			}
 
-			err = builder.Build(ctx, options)
-			if err != nil {
-				return err
-			}
-
-			return nil
+			return builder.Build(ctx, options)
 		},
 	}
 
