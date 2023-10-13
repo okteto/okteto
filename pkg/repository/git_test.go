@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/stretchr/testify/assert"
@@ -453,6 +454,184 @@ func TestIsBuildContextClean(t *testing.T) {
 			isClean, err := repoService.IsBuildContextClean(tt.buildContext)
 			assert.ErrorIs(t, err, tt.expected.err)
 			assert.Equal(t, tt.expected.isClean, isClean)
+		})
+	}
+}
+
+func TestGetBuildHashWithoutError(t *testing.T) {
+	type config struct {
+		repositoryGetter *fakeRepositoryGetter
+	}
+	type expected struct {
+		sha string
+		err error
+	}
+	var tests = []struct {
+		name         string
+		config       config
+		expected     expected
+		buildContext string
+	}{
+		{
+			name: "get sha without any problem",
+			config: config{
+				repositoryGetter: &fakeRepositoryGetter{
+					repository: []*fakeRepository{
+						{
+							worktree: &fakeWorktree{
+								status: oktetoGitStatus{
+									status: git.Status{
+										"test-file.go": &git.FileStatus{
+											Staging:  git.Unmodified,
+											Worktree: git.Unmodified,
+										},
+									},
+								},
+							},
+							head: plumbing.NewHashReference("test", plumbing.NewHash("test")),
+							commitResponse: fakeCommitResponse{
+								err: nil,
+								commit: &fakeTreeResponse{
+									err: nil,
+									tree: &object.Tree{
+										Entries: []object.TreeEntry{
+											{
+												Name: "test",
+												Hash: plumbing.NewHash("test"),
+											},
+										},
+									},
+								},
+							},
+							err: nil,
+						},
+					},
+				},
+			},
+			buildContext: "test",
+			expected: expected{
+				sha: plumbing.NewHash("test").String(),
+				err: nil,
+			},
+		},
+		{
+			name: "error getting commit",
+			config: config{
+				repositoryGetter: &fakeRepositoryGetter{
+					repository: []*fakeRepository{
+						{
+							worktree: &fakeWorktree{
+								status: oktetoGitStatus{
+									status: git.Status{
+										"test-file.go": &git.FileStatus{
+											Staging:  git.Unmodified,
+											Worktree: git.Unmodified,
+										},
+									},
+								},
+							},
+							head: plumbing.NewHashReference("test", plumbing.NewHash("test")),
+							commitResponse: fakeCommitResponse{
+								err: assert.AnError,
+							},
+						},
+					},
+				},
+			},
+			expected: expected{
+				sha: "",
+				err: assert.AnError,
+			},
+		},
+		{
+			name: "error getting head",
+			config: config{
+				repositoryGetter: &fakeRepositoryGetter{
+					repository: []*fakeRepository{
+						{
+							worktree: &fakeWorktree{
+								status: oktetoGitStatus{
+									status: git.Status{
+										"test-file.go": &git.FileStatus{
+											Staging:  git.Unmodified,
+											Worktree: git.Unmodified,
+										},
+									},
+								},
+							},
+							err: assert.AnError,
+						},
+					},
+					err: []error{
+						nil,
+						assert.AnError,
+					},
+				},
+			},
+			expected: expected{
+				sha: "",
+				err: assert.AnError,
+			},
+		},
+		{
+			name: "error getting repo",
+			config: config{
+				repositoryGetter: &fakeRepositoryGetter{
+					repository: []*fakeRepository{},
+					err: []error{
+						assert.AnError,
+					},
+				},
+			},
+			expected: expected{
+				sha: "",
+				err: assert.AnError,
+			},
+		},
+		{
+			name: "error getting tree",
+			config: config{
+				repositoryGetter: &fakeRepositoryGetter{
+					repository: []*fakeRepository{
+						{
+							worktree: &fakeWorktree{
+								status: oktetoGitStatus{
+									status: git.Status{
+										"test-file.go": &git.FileStatus{
+											Staging:  git.Unmodified,
+											Worktree: git.Unmodified,
+										},
+									},
+								},
+							},
+							head: plumbing.NewHashReference("test", plumbing.NewHash("test")),
+							commitResponse: fakeCommitResponse{
+								err: nil,
+								commit: &fakeTreeResponse{
+									err: assert.AnError,
+								},
+							},
+							err: nil,
+						},
+					},
+				},
+			},
+			expected: expected{
+				sha: "",
+				err: assert.AnError,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := RepositoryService{
+				serviceControl: gitRepoController{
+					repoGetter: tt.config.repositoryGetter,
+				},
+			}
+			sha, err := repo.GetBuildHash(tt.buildContext)
+			assert.ErrorIs(t, err, tt.expected.err)
+			assert.Equal(t, tt.expected.sha, sha)
 		})
 	}
 }

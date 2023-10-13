@@ -40,9 +40,25 @@ func (frg *fakeRepositoryGetter) get(_ string) (gitRepositoryInterface, error) {
 }
 
 type fakeRepository struct {
-	worktree *fakeWorktree
-	head     *plumbing.Reference
-	err      error
+	worktree       *fakeWorktree
+	head           *plumbing.Reference
+	commitResponse fakeCommitResponse
+	tree           fakeTreeResponse
+	err            error
+}
+
+type fakeCommitResponse struct {
+	err    error
+	commit gitCommitInterface
+}
+
+type fakeTreeResponse struct {
+	err  error
+	tree *object.Tree
+}
+
+func (fr fakeTreeResponse) Tree() (*object.Tree, error) {
+	return fr.tree, fr.err
 }
 
 func (fr fakeRepository) Worktree() (gitWorktreeInterface, error) {
@@ -53,8 +69,8 @@ func (fr fakeRepository) Head() (*plumbing.Reference, error) {
 	return fr.head, fr.err
 }
 
-func (fr fakeRepository) CommitObject(_ plumbing.Hash) (*object.Commit, error) {
-	return nil, fr.err
+func (fr fakeRepository) CommitObject(_ plumbing.Hash) (gitCommitInterface, error) {
+	return fr.commitResponse.commit, fr.commitResponse.err
 }
 
 type fakeWorktree struct {

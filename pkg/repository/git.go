@@ -179,13 +179,6 @@ func (r gitRepoController) getSHA() (string, error) {
 }
 
 func (r gitRepoController) getHashByDir(dir string) (string, error) {
-	isClean, err := r.isCleanDir(context.TODO(), dir)
-	if err != nil {
-		return "", fmt.Errorf("%w: failed to check if directory '%s' is clean: %w", errNotCleanRepo, dir, err)
-	}
-	if !isClean {
-		return "", errNotCleanDir
-	}
 	repo, err := r.repoGetter.get(r.path)
 	if err != nil {
 		return "", fmt.Errorf("failed to get repository: %w", err)
@@ -260,19 +253,27 @@ func (ogs oktetoGitStatus) IsClean() bool {
 	return ogs.status.IsClean()
 }
 
-func (ogr oktetoGitRepository) CommitObject(h plumbing.Hash) (*object.Commit, error) {
+func (ogr oktetoGitRepository) CommitObject(h plumbing.Hash) (gitCommitInterface, error) {
 	return ogr.repo.CommitObject(h)
 }
 
 type gitRepositoryInterface interface {
 	Worktree() (gitWorktreeInterface, error)
 	Head() (*plumbing.Reference, error)
-	CommitObject(plumbing.Hash) (*object.Commit, error)
+	CommitObject(plumbing.Hash) (gitCommitInterface, error)
 }
 type gitWorktreeInterface interface {
 	Status(context.Context, LocalGitInterface) (oktetoGitStatus, error)
 	BuildContextStatus(context.Context, LocalGitInterface, string) (oktetoGitStatus, error)
 	GetRoot() string
+}
+
+type gitCommitInterface interface {
+	Tree() (*object.Tree, error)
+}
+
+type gitTreeInterface interface {
+	FindTree(string) (*object.TreeEntry, error)
 }
 
 func (ogr oktetoGitWorktree) Status(ctx context.Context, localGit LocalGitInterface) (oktetoGitStatus, error) {
