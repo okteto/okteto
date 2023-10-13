@@ -94,7 +94,7 @@ func NewRepositoryService(service string) RepositoryService {
 	var serviceController controlRepositoryServiceInterface = newGitRepoController()
 
 	if v := os.Getenv(constants.OktetoDeployRemote); v != "" {
-		hash := os.Getenv(fmt.Sprintf(constants.OktetoServiceIsClean, service))
+		hash := os.Getenv(fmt.Sprintf(constants.OktetoServiceBuildHash, service))
 		isClean, err := strconv.ParseBool(os.Getenv(fmt.Sprintf(constants.OktetoServiceIsClean, service)))
 		if err != nil {
 			oktetoLog.Infof("failed to check if service '%s' build context is clean from envs: %w", service, err)
