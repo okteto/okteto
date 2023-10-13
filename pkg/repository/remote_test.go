@@ -46,3 +46,30 @@ func TestRemoteGetSHA(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, remote.gitCommit, sha)
 }
+
+func TestRemoteIsCleanDirTrue(t *testing.T) {
+	remote := oktetoRemoteServiceController{
+		isClean: true,
+	}
+	isClean, err := remote.isCleanDir(context.Background(), "")
+	assert.NoError(t, err)
+	assert.True(t, isClean)
+}
+
+func TestRemoteIsCleanDirFalse(t *testing.T) {
+	remote := oktetoRemoteServiceController{
+		isClean: false,
+	}
+	isClean, err := remote.isCleanDir(context.Background(), "")
+	assert.NoError(t, err)
+	assert.False(t, isClean)
+}
+
+func TestRemoteGetBuildHash(t *testing.T) {
+	remote := oktetoRemoteServiceController{
+		hash: "abcd100",
+	}
+	sha, err := remote.getHashByDir("")
+	assert.NoError(t, err)
+	assert.Equal(t, remote.hash, sha)
+}
