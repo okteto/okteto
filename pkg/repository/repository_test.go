@@ -15,6 +15,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"testing"
 
@@ -128,6 +129,37 @@ func TestNewRepo(t *testing.T) {
 			r := NewRepository("https://my-repo/okteto/okteto")
 			assert.Equal(t, "/okteto/okteto", r.url.Path)
 			assert.IsType(t, tc.expectedControl, r.repoControl)
+		})
+	}
+}
+
+func TestNewRepoService(t *testing.T) {
+	service := "test"
+	tt := []struct {
+		name            string
+		GitCommit       string
+		remoteDeploy    string
+		expectedControl controlRepositoryServiceInterface
+		remote          bool
+	}{
+		{
+			name:            "repoService working in remote",
+			GitCommit:       "",
+			expectedControl: oktetoRemoteServiceController{},
+			remoteDeploy:    "true",
+		},
+		{
+			name:            "repoService working in local",
+			expectedControl: gitRepoController{},
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(fmt.Sprintf(constants.OktetoServiceIsClean, service), "true")
+			t.Setenv(fmt.Sprintf(constants.OktetoServiceBuildHash, service), "0000")
+			t.Setenv(constants.OktetoDeployRemote, string(tc.remoteDeploy))
+			r := NewRepositoryService("test")
+			assert.IsType(t, r.serviceControl, tc.expectedControl)
 		})
 	}
 }
