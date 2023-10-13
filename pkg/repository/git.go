@@ -272,10 +272,6 @@ type gitCommitInterface interface {
 	Tree() (*object.Tree, error)
 }
 
-type gitTreeInterface interface {
-	FindTree(string) (*object.TreeEntry, error)
-}
-
 func (ogr oktetoGitWorktree) Status(ctx context.Context, localGit LocalGitInterface) (oktetoGitStatus, error) {
 	// using git directly is faster, so we check if it's available
 	_, err := localGit.Exists()
