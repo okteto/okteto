@@ -154,13 +154,8 @@ func TestEnvVarMarshalling(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			var result EnvVar
-			if err := os.Setenv("DEV_ENV", "test_environment"); err != nil {
-				t.Fatal(err)
-			}
-
-			if err := os.Setenv("OKTETO_TEST_ENV_MARSHALLING", "true"); err != nil {
-				t.Fatal(err)
-			}
+			t.Setenv("DEV_ENV", "test_environment")
+			t.Setenv("OKTETO_TEST_ENV_MARSHALLING", "true")
 
 			if err := yaml.Unmarshal(tt.data, &result); err != nil {
 				t.Fatal(err)
@@ -400,9 +395,7 @@ func TestSecretMarshalling(t *testing.T) {
 	}
 	defer os.Remove(file.Name())
 
-	if err := os.Setenv("TEST_HOME", file.Name()); err != nil {
-		t.Fatal(err)
-	}
+	t.Setenv("TEST_HOME", file.Name())
 
 	tests := []struct {
 		name          string
@@ -729,13 +722,9 @@ func TestLabelsUnmarshalling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := make(Labels)
-			if err := os.Setenv("DEV_ENV", "test_environment"); err != nil {
-				t.Fatal(err)
-			}
 
-			if err := os.Setenv("OKTETO_TEST_ENV_MARSHALLING", "true"); err != nil {
-				t.Fatal(err)
-			}
+			t.Setenv("DEV_ENV", "test_environment")
+			t.Setenv("OKTETO_TEST_ENV_MARSHALLING", "true")
 
 			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
 				t.Fatal(err)
@@ -834,13 +823,9 @@ func TestAnnotationsUnmarshalling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := make(Annotations)
-			if err := os.Setenv("DEV_ENV", "test_environment"); err != nil {
-				t.Fatal(err)
-			}
 
-			if err := os.Setenv("OKTETO_TEST_ENV_MARSHALLING", "true"); err != nil {
-				t.Fatal(err)
-			}
+			t.Setenv("DEV_ENV", "test_environment")
+			t.Setenv("OKTETO_TEST_ENV_MARSHALLING", "true")
 
 			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
 				t.Fatal(err)
@@ -1030,7 +1015,7 @@ rescanInterval: 10`),
 }
 
 func TestSyncFoldersUnmarshalling(t *testing.T) {
-	os.Setenv("REMOTE_PATH", "/usr/src/app")
+	t.Setenv("REMOTE_PATH", "/usr/src/app")
 	tests := []struct {
 		name     string
 		data     []byte

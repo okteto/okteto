@@ -215,7 +215,7 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 
 	envvarName := fmt.Sprintf("TEST_SOCKET_%s", os.Getenv("RANDOM"))
 
-	os.Setenv(envvarName, socket.Name())
+	t.Setenv(envvarName, socket.Name())
 	defer func() {
 		t.Logf("cleaning up %s envvar", envvarName)
 		os.Unsetenv(envvarName)
@@ -253,7 +253,7 @@ func TestRemoteDeployWithBadSshAgent(t *testing.T) {
 
 	envvarName := fmt.Sprintf("TEST_SOCKET_%s", os.Getenv("RANDOM"))
 
-	os.Setenv(envvarName, "bad-socket")
+	t.Setenv(envvarName, "bad-socket")
 	defer func() {
 		t.Logf("cleaning up %s envvar", envvarName)
 		os.Unsetenv(envvarName)

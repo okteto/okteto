@@ -984,7 +984,7 @@ func TestStack_ExpandEnvsAtFileLevel(t *testing.T) {
 			defer os.RemoveAll(tmpFile.Name())
 
 			for key, value := range tt.envs {
-				os.Setenv(key, value)
+				t.Setenv(key, value)
 			}
 
 			stack, err := GetStackFromPath("test", tmpFile.Name(), false)
@@ -1147,7 +1147,7 @@ func Test_getStackName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {
-			os.Setenv(constants.OktetoNameEnvVar, tt.nameEnv)
+			t.Setenv(constants.OktetoNameEnvVar, tt.nameEnv)
 			res, err := getStackName(tt.name, tt.stackPath, tt.actualStackName)
 			resEnv := os.Getenv(constants.OktetoNameEnvVar)
 
@@ -1187,10 +1187,10 @@ func Test_translateEnvVars(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpFile2.Name())
 
-	os.Setenv("B", "2")
-	os.Setenv("ENV_PATH", tmpFile.Name())
-	os.Setenv("ENV_PATH2", tmpFile2.Name())
-	os.Setenv("OKTETO_TEST", "myvalue")
+	t.Setenv("B", "2")
+	t.Setenv("ENV_PATH", tmpFile.Name())
+	t.Setenv("ENV_PATH2", tmpFile2.Name())
+	t.Setenv("OKTETO_TEST", "myvalue")
 	stack := &Stack{
 		Name: "name",
 		Services: map[string]*Service{

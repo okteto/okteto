@@ -82,7 +82,7 @@ func Test_multipleStack(t *testing.T) {
 		t.Fatalf("Expected %v but got %v", svcResult.Image, svc.Image)
 	}
 
-	os.Setenv("OKTETO_BUILD_APP_IMAGE", "test")
+	t.Setenv("OKTETO_BUILD_APP_IMAGE", "test")
 	svcResult.Image = "test"
 
 	stack, err = model.LoadStack("", paths, true)
@@ -104,6 +104,8 @@ func Test_multipleStack(t *testing.T) {
 }
 
 func Test_overrideFileStack(t *testing.T) {
+	t.Setenv("OKTETO_BUILD_APP_IMAGE", "test")
+
 	dir := t.TempDir()
 	log.Printf("created tempdir: %s", dir)
 
