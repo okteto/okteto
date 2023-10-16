@@ -679,6 +679,7 @@ func Read(bytes []byte) (*Manifest, error) {
 					return nil, oktetoErrors.ErrNotManifestContentDetected
 				}
 			}
+			return nil, err
 		}
 	}
 
