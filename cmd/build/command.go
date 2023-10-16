@@ -178,7 +178,6 @@ func (*Command) loadContext(ctx context.Context, options *types.BuildOptions) er
 	if err := validateDockerfile(options.File); err != nil {
 		ctxResource, err := model.GetContextResource(options.File)
 		if err != nil && !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
-			//return improveBuildErrors(err)
 			return err
 		}
 

@@ -629,8 +629,7 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 		if errors.Is(err, oktetoErrors.ErrNotManifestContentDetected) {
 			return nil, err
 		}
-		//return nil, fmt.Errorf("%w: %s", oktetoErrors.ErrInvalidManifest, err.Error())
-		return nil, err
+		return nil, fmt.Errorf("%w: %s", oktetoErrors.ErrInvalidManifest, err.Error())
 	}
 
 	ef := externalresource.ERFilesystemManager{
