@@ -548,7 +548,12 @@ func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, b
 
 	deployer, err := newLocalDeployer(ctx, opts, cmapHandler)
 	if err != nil {
-		return nil, fmt.Errorf("could not initialize local deploy command: %w", err)
+		eWrapped := fmt.Errorf("could not initialize local deploy command: %w", err)
+		if uError, ok := err.(oktetoErrors.UserError); ok {
+			uError.E = eWrapped
+			return nil, uError
+		}
+		return nil, eWrapped
 	}
 	return deployer, nil
 }
