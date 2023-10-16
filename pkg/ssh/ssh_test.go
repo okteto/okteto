@@ -218,9 +218,7 @@ func Test_removeHost(t *testing.T) {
 func TestGetPort(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := os.Setenv(constants.OktetoHomeEnvVar, dir); err != nil {
-		t.Fatal(err)
-	}
+	t.Setenv(constants.OktetoHomeEnvVar, dir)
 
 	defer os.Unsetenv(constants.OktetoHomeEnvVar)
 

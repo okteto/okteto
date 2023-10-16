@@ -27,7 +27,7 @@ func TestGetFiles(t *testing.T) {
 		os.Unsetenv(constants.OktetoFolderEnvVar)
 	}()
 
-	os.Setenv(constants.OktetoFolderEnvVar, dir)
+	t.Setenv(constants.OktetoFolderEnvVar, dir)
 	log := GetLogFile("test", "application")
 	expected := filepath.Join(dir, "test", "application", "syncthing.log")
 

@@ -117,9 +117,9 @@ func executeDeployWithComposePipelineAction(namespace string) error {
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer integration.DeleteGitRepo(actionFolder)
 
-	os.Setenv(model.GithubRepositoryEnvVar, "okteto/movies-with-compose")
-	os.Setenv(model.GithubRefEnvVar, "main")
-	os.Setenv(model.GithubServerURLEnvVar, githubHTTPSURL)
+	t.Setenv(model.GithubRepositoryEnvVar, "okteto/movies-with-compose")
+	t.Setenv(model.GithubRefEnvVar, "main")
+	t.Setenv(model.GithubServerURLEnvVar, githubHTTPSURL)
 
 	log.Printf("deploying pipeline %s", namespace)
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)

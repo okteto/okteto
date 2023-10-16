@@ -328,7 +328,7 @@ services:
 				devName = "n1"
 			}
 
-			os.Setenv("value", tt.value)
+			t.Setenv("value", tt.value)
 			manifest, err := Read(manifestBytes)
 			if err != nil {
 				t.Fatal(err)
@@ -378,7 +378,7 @@ func Test_loadSelector(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dev := &Dev{Selector: tt.selector}
-			os.Setenv("value", tt.value)
+			t.Setenv("value", tt.value)
 			if err := dev.loadSelector(); err != nil {
 				t.Fatalf("couldn't load selector")
 			}
@@ -471,7 +471,7 @@ services:
 `, tt.image))
 			}
 
-			os.Setenv("tag", tt.tagValue)
+			t.Setenv("tag", tt.tagValue)
 			manifest, err := Read(manifestBytes)
 			if err != nil {
 				t.Fatal(err)
@@ -1132,12 +1132,12 @@ func TestGetTimeout(t *testing.T) {
 	}
 
 	original := os.Getenv(OktetoTimeoutEnvVar)
-	defer os.Setenv(OktetoTimeoutEnvVar, original)
+	defer t.Setenv(OktetoTimeoutEnvVar, original)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.env != "" {
-				os.Setenv(OktetoTimeoutEnvVar, tt.env)
+				t.Setenv(OktetoTimeoutEnvVar, tt.env)
 			}
 			got, err := GetTimeout()
 			if (err != nil) != tt.wantErr {
@@ -1191,7 +1191,7 @@ func Test_loadEnvFile(t *testing.T) {
 			}
 
 			for k, v := range tt.existing {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
 
 			if err := godotenv.Load(); err != nil {
@@ -1562,7 +1562,7 @@ func Test_expandEnvFiles(t *testing.T) {
 
 			tt.dev.EnvFiles = EnvFiles{file.Name()}
 
-			os.Setenv("OKTETO_TEST", "myvalue")
+			t.Setenv("OKTETO_TEST", "myvalue")
 
 			if _, err = file.Write(tt.envs); err != nil {
 				t.Fatal("Failed to write to temporary file", err)
