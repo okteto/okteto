@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -31,6 +32,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/divert"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -75,6 +77,12 @@ func NewProxy(kubeconfig *KubeConfig) (*Proxy, error) {
 	// Look for a free local port to start the proxy
 	port, err := model.GetAvailablePort("localhost")
 	if err != nil {
+		if dnsError, ok := err.(*net.DNSError); ok && dnsError.IsNotFound {
+			return nil, oktetoErrors.UserError{
+				E:    err,
+				Hint: "Review your /etc/hosts configuration, make sure there is an entry for localhost",
+			}
+		}
 		oktetoLog.Errorf("could not find a free port to start proxy server: %s", err)
 		return nil, err
 	}
