@@ -32,9 +32,10 @@ func getManifestSuggestionRules() []ruleInterface {
 
 	// add levenshtein rules to suggest similar field names
 	manifestKeys := getStructKeys(model.Manifest{})
-	if manifestKeys["model.Manifest"] != nil {
-		manifestKeys["model.manifestRaw"] = manifestKeys["model.Manifest"]
-	}
+	manifestKeys["model.manifestRaw"] = manifestKeys["model.Manifest"]
+	manifestKeys["model.buildInfoRaw"] = manifestKeys["model.BuildInfo"]
+	manifestKeys["model.DevRC"] = manifestKeys["model.Dev"]
+
 	for structName, structKeywords := range manifestKeys {
 		for _, keyword := range structKeywords {
 			rule := newLevenshteinRule(fmt.Sprintf(`field (\w+) not found (in type|into) %s`, structName), keyword)
@@ -63,6 +64,7 @@ func getManifestSuggestionRules() []ruleInterface {
 
 		// misc
 		newStrReplaceRule("yaml: unmarshal errors:\n", ""),
+		newStrReplaceRule("invalid manifest: ", ""),
 		indentNumLines(),
 	)
 
@@ -74,15 +76,13 @@ func isYamlError(err error) bool {
 	if strings.Contains(err.Error(), "https://www.okteto.com/docs") {
 		return false
 	}
-	// only add the URL if it's a yaml error
-	if _, ok := err.(*yaml.TypeError); ok {
-		return true
-	}
+	// detect yaml errors by prefix
 	if strings.Contains(err.Error(), "yaml:") {
 		return true
 	}
-
-	return false
+	// detect yaml errors by type
+	var typeError *yaml.TypeError
+	return errors.As(err, &typeError)
 }
 
 func addYamlParseErrorHeading() ruleInterface {
@@ -101,7 +101,7 @@ func addUrlToManifestDocs(docsAnchor string) ruleInterface {
 		if docsAnchor != "" {
 			docsURL += "/#" + docsAnchor
 		}
-		errorWithUrlToDocs := fmt.Sprintf("%s.\n    Check out the okteto manifest docs at: %s", e.Error(), docsURL)
+		errorWithUrlToDocs := fmt.Sprintf("%s\n    Check out the okteto manifest docs at: %s", e.Error(), docsURL)
 		return errors.New(errorWithUrlToDocs)
 	}
 

@@ -81,13 +81,21 @@ func newRegexRule(pattern string, transform transformFunc) ruleInterface {
 // newLevenshteinRule creates a ruleInterface that matches a regex pattern, extracts a group,
 // and computes the Levenshtein distance for that group against a target string.
 func newLevenshteinRule(pattern string, target string) ruleInterface {
-	re := regexp.MustCompile("(.*?)" + pattern + "(.*)") // Capture everything before and after the pattern
+	re, err := regexp.Compile("(.*?)" + pattern + "(.*)") // Capture everything before and after the pattern
+
+	threshold := 3
+	if len(target) <= threshold {
+		threshold = 1
+	}
 
 	condition := func(e error) bool {
+		if err != nil {
+			return false
+		}
 		matchingErrors := re.FindAllStringSubmatch(e.Error(), -1)
 		for _, matchingError := range matchingErrors {
 			distance := levenshtein.Distance(target, matchingError[2], nil)
-			if distance <= 3 {
+			if distance <= threshold {
 				return true
 			}
 		}
