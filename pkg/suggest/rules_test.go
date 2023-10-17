@@ -13,3 +13,16 @@
 
 package suggest
 
+import (
+	"errors"
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
+
+func TestNewLevenshteinRule_ErrWithNoPanic(t *testing.T) {
+	err := errors.New("a random test error")
+	r := newLevenshteinRule("(", "test")
+	r.apply(err)
+
+	assert.Equal(t, "a random test error", err.Error())
+}
