@@ -546,7 +546,7 @@ func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, b
 	// run local
 	oktetoLog.Info("Deploying locally...")
 
-	deployer, err := newLocalDeployer(ctx, opts, cmapHandler)
+	deployer, err := newLocalDeployer(ctx, opts, cmapHandler, okteto.NewK8sClientProvider(), NewKubeConfig(), model.GetAvailablePort)
 	if err != nil {
 		eWrapped := fmt.Errorf("could not initialize local deploy command: %w", err)
 		if uError, ok := err.(oktetoErrors.UserError); ok {
