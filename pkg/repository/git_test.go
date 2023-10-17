@@ -629,7 +629,7 @@ func TestGetBuildHashWithoutError(t *testing.T) {
 					repoGetter: tt.config.repositoryGetter,
 				},
 			}
-			sha, err := repo.GetBuildHash(tt.buildContext)
+			sha, err := repo.GetBuildContextHash(tt.buildContext)
 			assert.ErrorIs(t, err, tt.expected.err)
 			assert.Equal(t, tt.expected.sha, sha)
 		})

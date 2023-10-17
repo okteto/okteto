@@ -15,6 +15,8 @@ package v2
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -57,8 +59,6 @@ type oktetoRegistryInterface interface {
 // oktetoBuilderConfigInterface returns the configuration that the builder has for the registry and project
 type oktetoBuilderConfigInterface interface {
 	HasGlobalAccess() bool
-	GetBuildHash(*model.BuildInfo) string
-	GetGitCommit() string
 	IsOkteto() bool
 }
 
@@ -123,18 +123,49 @@ func (ob *OktetoBuilder) newServiceContext(buildInfo *model.BuildInfo, repoServi
 	ob.buildEnvironments[fmt.Sprintf(constants.OktetoServiceIsClean, service)] = strconv.FormatBool(isClean)
 	ob.lock.Unlock()
 
-	hash, err := repoService.GetBuildHash(buildInfo.Context)
+	hash, err := repoService.GetBuildContextHash(buildInfo.Context)
 	if err != nil {
 		oktetoLog.Infof("failed to get service '%s' hash: %w", service, err)
 	}
+
+	decodedBuildHash := getBuildHashToEncode(hash, buildInfo)
+	decodedBuildHashSHA256 := sha256.Sum256([]byte(decodedBuildHash))
+	encodedBuildHash := hex.EncodeToString(decodedBuildHashSHA256[:])
 	ob.lock.Lock()
-	ob.buildEnvironments[fmt.Sprintf(constants.OktetoServiceBuildHash, service)] = hash
+	ob.buildEnvironments[fmt.Sprintf(constants.OktetoServiceBuildHash, service)] = encodedBuildHash
 	ob.lock.Unlock()
 
 	return serviceContextChecker{
 		isClean: isClean,
-		hash:    hash,
+		hash:    encodedBuildHash,
 	}
+}
+
+func getBuildHashToEncode(sha string, buildInfo *model.BuildInfo) string {
+	args := []string{}
+	for _, arg := range buildInfo.Args {
+		args = append(args, arg.String())
+	}
+	argsText := strings.Join(args, ";")
+
+	secrets := []string{}
+	for key, value := range buildInfo.Secrets {
+		secrets = append(secrets, fmt.Sprintf("%s=%s", key, value))
+	}
+	secretsText := strings.Join(secrets, ";")
+
+	// We use a builder to avoid allocations when building the string
+	var b strings.Builder
+	fmt.Fprintf(&b, "context_tree_hash:%s;", sha)
+	fmt.Fprintf(&b, "target:%s;", buildInfo.Target)
+	fmt.Fprintf(&b, "build_args:%s;", argsText)
+	fmt.Fprintf(&b, "secrets:%s;", secretsText)
+	fmt.Fprintf(&b, "context:%s;", buildInfo.Context)
+	fmt.Fprintf(&b, "dockerfile:%s;", buildInfo.Dockerfile)
+	fmt.Fprintf(&b, "image:%s;", buildInfo.Image)
+
+	return b.String()
+
 }
 
 // Build builds the images defined by a manifest
@@ -198,7 +229,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			if !options.NoCache && serviceContextChecker.IsCleanBuildContext() {
 				imageChecker := getImageChecker(buildSvcInfo, bc.Config, serviceContextChecker, bc.Registry)
 				if imageWithDigest, isBuilt := imageChecker.checkIfCommitHashIsBuilt(options.Manifest.Name, svcToBuild, buildSvcInfo); isBuilt {
-					oktetoLog.Information("Skipping build of '%s' image because it's already built for that image context %s", svcToBuild, bc.Config.GetGitCommit())
+					oktetoLog.Information("Skipping build of '%s' image because it's already built for that image context", svcToBuild)
 					// if the built image belongs to global registry we clone it to the dev registry
 					// so that in can be used in dev containers (i.e. okteto up)
 					if bc.Registry.IsGlobalRegistry(imageWithDigest) {

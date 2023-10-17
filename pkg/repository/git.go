@@ -17,9 +17,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 
 	"github.com/go-git/go-git/v5"
@@ -178,7 +180,7 @@ func (r gitRepoController) getSHA() (string, error) {
 	return head.Hash().String(), nil
 }
 
-func (r gitRepoController) getHashByDir(dir string) (string, error) {
+func (r gitRepoController) getHashByDir(path string) (string, error) {
 	repo, err := r.repoGetter.get(r.path)
 	if err != nil {
 		return "", fmt.Errorf("failed to get repository: %w", err)
@@ -194,17 +196,39 @@ func (r gitRepoController) getHashByDir(dir string) (string, error) {
 		return "", fmt.Errorf("failed to get commit object from reference: %w", err)
 	}
 
+	return getTreeHashByDir(commit, path)
+}
+
+func getTreeHashByDir(commit gitCommitInterface, path string) (string, error) {
+
 	tree, err := commit.Tree()
 	if err != nil {
 		return "", fmt.Errorf("failed to get tree from commit: %w", err)
 	}
 
-	svcEntry, err := tree.FindEntry(dir)
+	if path == "." {
+		return tree.Hash.String(), nil
+	}
+
+	treeDir := getTreeDirFromRelPath(path)
+
+	svcEntry, err := tree.FindEntry(treeDir)
 	if err != nil {
 		return "", fmt.Errorf("failed to find an entry in tree: %w", err)
 	}
 
 	return svcEntry.Hash.String(), nil
+}
+
+func getTreeDirFromRelPath(relPath string) string {
+
+	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
+	wd, err := wdCtrl.Get()
+	if err != nil {
+		oktetoLog.Infof("could not get working dir: %w", err)
+	}
+
+	return filepath.Base(filepath.Join(wd, relPath))
 }
 
 type repositoryGetterInterface interface {

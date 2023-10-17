@@ -123,7 +123,7 @@ func (r Repository) GetSHA() (string, error) {
 }
 
 // GetBuildHash returns the hash related to a build context
-func (r RepositoryService) GetBuildHash(buildContext string) (string, error) {
+func (r RepositoryService) GetBuildContextHash(buildContext string) (string, error) {
 	return r.serviceControl.getHashByDir(buildContext)
 }
 

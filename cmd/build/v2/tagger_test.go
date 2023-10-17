@@ -112,7 +112,7 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 			expectedImage: "okteto.global/test-test:test",
 		},
 		{
-			name: "image inferred without access to global",
+			name: "image inferred without access to global but clean context",
 			cfg: fakeConfig{
 				hasAccess: false,
 				sha:       "sha",
@@ -125,10 +125,10 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},
-			expectedImage: "okteto.dev/test-test:okteto",
+			expectedImage: "okteto.dev/test-test:sha",
 		},
 		{
-			name: "image inferred without clean service context",
+			name: "image inferred with access to global using dirty service context",
 			cfg: fakeConfig{
 				hasAccess: true,
 				sha:       "sha",
@@ -141,7 +141,7 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},
-			expectedImage: "okteto.dev/test-test:okteto",
+			expectedImage: "okteto.global/test-test:okteto",
 		},
 		{
 			name: "image inferred with clean service context and has access to global registry",

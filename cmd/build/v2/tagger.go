@@ -61,10 +61,14 @@ func newImageTagger(cfg oktetoBuilderConfigInterface, svcCfg serviceContextInter
 func (i imageTagger) tag(manifestName, svcName string, b *model.BuildInfo) string {
 	targetRegistry := constants.DevRegistry
 	hash := ""
-	if i.cfg.HasGlobalAccess() && i.svcCfg.IsCleanBuildContext() {
+	if i.cfg.HasGlobalAccess() {
 		targetRegistry = constants.GlobalRegistry
+	}
+
+	if i.svcCfg.IsCleanBuildContext() {
 		hash = i.svcCfg.GetBuildHash()
 	}
+
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	if shouldBuildFromDockerfile(b) && b.Image == "" {
 		if hash != "" {
