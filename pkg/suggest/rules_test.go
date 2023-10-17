@@ -19,7 +19,7 @@ import (
 	"testing"
 )
 
-func TestNewLevenshteinRule_ErrWithNoPanic(t *testing.T) {
+func TestNewLevenshteinRule_ErrWithoutPanic(t *testing.T) {
 	err := errors.New("a random test error")
 	r := newLevenshteinRule("(", "test")
 	r.apply(err)
