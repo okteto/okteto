@@ -16,6 +16,7 @@ package deploy
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -322,7 +323,7 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 	}
 	c := &DeployCommand{
 		GetManifest: getManifestWithError,
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ builderInterface, _ configMapHandler) (deployerInterface, error) {
+		GetDeployer: func(context.Context, *Options, builderInterface, configMapHandler, okteto.K8sClientProvider, kubeConfigHandler, func(string) (int, error)) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:      p,
 				Executor:   e,
@@ -361,7 +362,7 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 	}
 	c := &DeployCommand{
 		GetManifest: getManifestWithNoDeployNorDependency,
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ builderInterface, _ configMapHandler) (deployerInterface, error) {
+		GetDeployer: func(context.Context, *Options, builderInterface, configMapHandler, okteto.K8sClientProvider, kubeConfigHandler, func(string) (int, error)) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:      p,
 				Executor:   e,
@@ -411,7 +412,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	fakeTracker := fakeAnalyticsTracker{}
 	c := &DeployCommand{
 		GetManifest: getErrorManifest,
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ builderInterface, _ configMapHandler) (deployerInterface, error) {
+		GetDeployer: func(context.Context, *Options, builderInterface, configMapHandler, okteto.K8sClientProvider, kubeConfigHandler, func(string) (int, error)) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:             p,
 				Executor:          e,
@@ -487,7 +488,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	}
 	c := &DeployCommand{
 		GetManifest: getFakeManifest,
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ builderInterface, _ configMapHandler) (deployerInterface, error) {
+		GetDeployer: func(context.Context, *Options, builderInterface, configMapHandler, okteto.K8sClientProvider, kubeConfigHandler, func(string) (int, error)) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:             p,
 				Executor:          e,
@@ -568,7 +569,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	clientProvider := test.NewFakeK8sProvider(cmap, deployment)
 	c := &DeployCommand{
 		GetManifest: getFakeManifest,
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ builderInterface, _ configMapHandler) (deployerInterface, error) {
+		GetDeployer: func(context.Context, *Options, builderInterface, configMapHandler, okteto.K8sClientProvider, kubeConfigHandler, func(string) (int, error)) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:             p,
 				Executor:          e,
@@ -628,7 +629,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	clientProvider := test.NewFakeK8sProvider(deployment)
 	c := &DeployCommand{
 		GetManifest: getFakeManifest,
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ builderInterface, _ configMapHandler) (deployerInterface, error) {
+		GetDeployer: func(context.Context, *Options, builderInterface, configMapHandler, okteto.K8sClientProvider, kubeConfigHandler, func(string) (int, error)) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:              p,
 				Executor:           e,
@@ -708,7 +709,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		GetExternalControl: cp.getFakeExternalControl,
 		Fs:                 afero.NewMemMapFs(),
 		CfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ builderInterface, _ configMapHandler) (deployerInterface, error) {
+		GetDeployer: func(context.Context, *Options, builderInterface, configMapHandler, okteto.K8sClientProvider, kubeConfigHandler, func(string) (int, error)) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:              p,
 				Executor:           e,
@@ -1119,12 +1120,12 @@ func TestDeployOnlyDependencies(t *testing.T) {
 		GetExternalControl: cp.getFakeExternalControl,
 		Fs:                 afero.NewMemMapFs(),
 		CfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ builderInterface, _ configMapHandler) (deployerInterface, error) {
+		GetDeployer: func(_ context.Context, _ *Options, _ builderInterface, cmapHandler configMapHandler, _ okteto.K8sClientProvider, kubeconfig kubeConfigHandler, portGetter func(string) (int, error)) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:              p,
 				Executor:           e,
-				Kubeconfig:         &fakeKubeConfig{},
-				ConfigMapHandler:   &fakeCmapHandler{},
+				Kubeconfig:         kubeconfig,
+				ConfigMapHandler:   cmapHandler,
 				K8sClientProvider:  clientProvider,
 				GetExternalControl: cp.getFakeExternalControl,
 				Fs:                 afero.NewMemMapFs(),
@@ -1372,5 +1373,56 @@ func TestOktetoManifestPathFlag(t *testing.T) {
 }
 
 func Test_GetDeployer(t *testing.T) {
+	dnsErr := &net.DNSError{
+		IsNotFound: true,
+	}
+	tests := []struct {
+		name        string
+		opts        *Options
+		portGetter  func(string) (int, error)
+		expectedErr error
+		isUserErr   bool
+	}{
+		{
+			name: "local deployer returns port user error",
+			opts: &Options{},
+			portGetter: func(_ string) (int, error) {
+				return 0, dnsErr
+			},
+			expectedErr: dnsErr,
+			isUserErr:   true,
+		},
+		{
+			name: "local deployer returns other error",
+			opts: &Options{},
+			portGetter: func(_ string) (int, error) {
+				return 0, assert.AnError
+			},
+			expectedErr: assert.AnError,
+		},
+		{
+			name: "local deployer returned",
+			opts: &Options{},
+			portGetter: func(_ string) (int, error) {
+				return 123456, nil
+			},
+		},
+	}
 
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.TODO()
+			got, err := GetDeployer(ctx, tt.opts, nil, &fakeCmapHandler{}, &fakeK8sProvider{}, &fakeKubeConfig{
+				config: &rest.Config{},
+			}, tt.portGetter)
+
+			if tt.expectedErr == nil {
+				require.NotNil(t, got)
+			}
+
+			require.ErrorIs(t, err, tt.expectedErr)
+			_, ok := err.(oktetoErrors.UserError)
+			require.True(t, tt.isUserErr == ok)
+		})
+	}
 }
