@@ -74,7 +74,7 @@ func newLocalDeployer(ctx context.Context, options *Options, cmapHandler configM
 
 	kubeconfig := NewKubeConfig()
 
-	proxy, err := NewProxy(kubeconfig)
+	proxy, err := NewProxy(kubeconfig, model.GetAvailablePort)
 	if err != nil {
 		oktetoLog.Infof("could not configure local proxy: %s", err)
 		return nil, err

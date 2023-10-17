@@ -175,7 +175,9 @@ type fakeExecutor struct {
 }
 
 type fakeKubeConfig struct {
+	config      *rest.Config
 	errOnModify error
+	errRead     error
 }
 
 type fakeCmapHandler struct {
@@ -198,14 +200,17 @@ func (f *fakeCmapHandler) updateEnvsFromCommands(context.Context, string, string
 	return f.errUpdatingWithEnvs
 }
 
-func (*fakeKubeConfig) Read() (*rest.Config, error) {
-	return nil, nil
+func (f *fakeKubeConfig) Read() (*rest.Config, error) {
+	if f.errRead != nil {
+		return nil, f.errRead
+	}
+	return f.config, nil
 }
 
 func (fc *fakeKubeConfig) Modify(_ int, _, _ string) error {
 	return fc.errOnModify
 }
-func (*fakeKubeConfig) GetModifiedCMDAPIConfig() (*clientcmdapi.Config, error) {
+func (*fakeKubeConfig) GetCMDAPIConfig() (*clientcmdapi.Config, error) {
 	return nil, nil
 }
 

@@ -43,6 +43,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 type proxyInterface interface {
@@ -72,14 +73,20 @@ type proxyHandler struct {
 	DivertDriver divert.Driver
 }
 
+type kubeconfigInterface interface {
+	GetCMDAPIConfig() (*clientcmdapi.Config, error)
+	Modify(port int, sessionToken string, destKubeconfigFile string) error
+	Read() (*rest.Config, error)
+}
+
 // NewProxy creates a new proxy
-func NewProxy(kubeconfig *KubeConfig) (*Proxy, error) {
+func NewProxy(kubeconfig kubeconfigInterface, portGetter func(iface string) (int, error)) (*Proxy, error) {
 	// Look for a free local port to start the proxy
-	port, err := model.GetAvailablePort("localhost")
+	port, err := portGetter("localhost")
 	if err != nil {
 		if dnsError, ok := err.(*net.DNSError); ok && dnsError.IsNotFound {
 			return nil, oktetoErrors.UserError{
-				E:    err,
+				E:    dnsError,
 				Hint: "Review your /etc/hosts configuration, make sure there is an entry for localhost",
 			}
 		}

@@ -2,9 +2,12 @@ package deploy
 
 import (
 	"encoding/json"
+	"net"
 	"testing"
 
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -58,4 +61,66 @@ func Test_TranslateInvalidResourceSpec(t *testing.T) {
 	assert.NoError(t, ph.translateCronJobSpec(map[string]json.RawMessage{
 		"spec": []byte(`{"schedule": 1}`),
 	}))
+}
+
+type fakePortGetter struct {
+	port int
+	err  error
+}
+
+func (pg fakePortGetter) Get(_ string) (int, error) {
+	if pg.err != nil {
+		return 0, pg.err
+	}
+	return pg.port, nil
+}
+
+func Test_NewProxy(t *testing.T) {
+	notFoundErr := &net.DNSError{
+		IsNotFound: true,
+	}
+
+	tests := []struct {
+		name           string
+		portGetter     fakePortGetter
+		fakeKubeconfig *fakeKubeConfig
+		expectedProxy  *Proxy
+		expectedErr    error
+	}{
+		{
+			name: "err getting port, DNS not found error",
+			portGetter: fakePortGetter{
+				err: notFoundErr,
+			},
+			expectedErr: oktetoErrors.UserError{
+				E:    notFoundErr,
+				Hint: "Review your /etc/hosts configuration, make sure there is an entry for localhost",
+			},
+		},
+		{
+			name: "err getting port, any error",
+			portGetter: fakePortGetter{
+				err: assert.AnError,
+			},
+			expectedErr: assert.AnError,
+		},
+		{
+			name: "err reading kubeconfig",
+			portGetter: fakePortGetter{
+				port: 12345,
+			},
+			fakeKubeconfig: &fakeKubeConfig{
+				errRead: assert.AnError,
+			},
+			expectedErr: assert.AnError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NewProxy(tt.fakeKubeconfig, tt.portGetter.Get)
+			require.Equal(t, tt.expectedProxy, got)
+			require.ErrorIs(t, err, tt.expectedErr)
+		})
+	}
 }
