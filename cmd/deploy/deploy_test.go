@@ -210,9 +210,6 @@ func (f *fakeKubeConfig) Read() (*rest.Config, error) {
 func (fc *fakeKubeConfig) Modify(_ int, _, _ string) error {
 	return fc.errOnModify
 }
-func (*fakeKubeConfig) GetCMDAPIConfig() (*clientcmdapi.Config, error) {
-	return nil, nil
-}
 
 func (fk *fakeProxy) Start() {
 	fk.started = true
@@ -1372,4 +1369,8 @@ func TestOktetoManifestPathFlag(t *testing.T) {
 			assert.Equal(t, tt.expectedErr, err)
 		})
 	}
+}
+
+func Test_GetDeployer(t *testing.T) {
+
 }
