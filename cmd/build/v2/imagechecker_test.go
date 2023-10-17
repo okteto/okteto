@@ -14,6 +14,7 @@
 package v2
 
 import (
+	"github.com/okteto/okteto/pkg/log/io"
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -57,6 +58,7 @@ func Test_checkIfBuildHashIsBuilt(t *testing.T) {
 		{
 			name: "error getting SHA from registry",
 			imageChecker: &imageChecker{
+				logger: io.NewIOController().Logger(),
 				tagger: imageTagger{
 					cfg: &fakeConfig{},
 				},

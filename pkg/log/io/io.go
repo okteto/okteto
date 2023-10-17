@@ -40,7 +40,7 @@ func (ioc *IOController) In() *InputController {
 	return ioc.in
 }
 
-// Out returns the logger for the output
+// Out returns the output writer
 func (ioc *IOController) Out() *OutputController {
 	return ioc.out
 }

@@ -387,7 +387,7 @@ type fakeAnalyticsTracker struct{}
 func (fakeAnalyticsTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
 
 func Test_NewBuildCommand(t *testing.T) {
-	got := NewBuildCommand(fakeAnalyticsTracker{})
+	got := NewBuildCommand(io.NewIOController(), fakeAnalyticsTracker{})
 	require.IsType(t, &Command{}, got)
 	require.NotNil(t, got.GetManifest)
 	require.NotNil(t, got.Builder)
