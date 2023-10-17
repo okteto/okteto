@@ -20,9 +20,9 @@ import (
 )
 
 func TestNewLevenshteinRule_ErrWithoutPanic(t *testing.T) {
-	err := errors.New("a random test error")
+	inputErr := errors.New("a random test error")
 	r := newLevenshteinRule("(", "test")
-	r.apply(err)
+	err := r.apply(inputErr)
 
 	assert.Equal(t, "a random test error", err.Error())
 }
