@@ -35,7 +35,7 @@ func NewIOController() *IOController {
 	return ioController
 }
 
-// In returns the logger for the input
+// In returns the input reader
 func (ioc *IOController) In() *InputController {
 	return ioc.in
 }
