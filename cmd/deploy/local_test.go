@@ -65,14 +65,14 @@ func Test_newLocalDeployer(t *testing.T) {
 		IsNotFound: true,
 	}
 	tests := []struct {
-		name             string
-		opts             *Options
-		fakePortGetter   func(string) (int, error)
-		fakeCmapHandler  configMapHandler
-		fakeK8sProvider  *fakeK8sProvider
-		expectedErr      error
-		isUserErr        bool
-		expectedDeployer *localDeployer
+		name            string
+		opts            *Options
+		fakePortGetter  func(string) (int, error)
+		fakeCmapHandler configMapHandler
+		fakeK8sProvider *fakeK8sProvider
+		fakeKubeConfig  *fakeKubeConfig
+		expectedErr     error
+		isUserErr       bool
 	}{
 		{
 			name: "error providing k8s client when no opts.Name",
@@ -103,13 +103,30 @@ func Test_newLocalDeployer(t *testing.T) {
 			},
 			expectedErr: assert.AnError,
 		},
+		{
+			name: "return localDeployer",
+			opts: &Options{
+				Name: "test",
+			},
+			fakeCmapHandler: &fakeCmapHandler{},
+			fakeK8sProvider: &fakeK8sProvider{},
+			fakePortGetter: func(string) (int, error) {
+				return 123456, nil
+			},
+			fakeKubeConfig: &fakeKubeConfig{
+				config: &rest.Config{},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.TODO()
-			got, err := newLocalDeployer(ctx, tt.opts, tt.fakeCmapHandler, tt.fakeK8sProvider, &fakeKubeConfig{}, tt.fakePortGetter)
-			require.Equal(t, tt.expectedDeployer, got)
+			got, err := newLocalDeployer(ctx, tt.opts, tt.fakeCmapHandler, tt.fakeK8sProvider, tt.fakeKubeConfig, tt.fakePortGetter)
+
+			if tt.expectedErr == nil {
+				require.NotNil(t, got)
+			}
 			require.ErrorIs(t, err, tt.expectedErr)
 
 			_, ok := err.(oktetoErrors.UserError)
