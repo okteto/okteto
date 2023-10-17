@@ -86,8 +86,8 @@ func NewProxy(kubeconfig kubeconfigInterface, portGetter func(iface string) (int
 	if err != nil {
 		if dnsError, ok := err.(*net.DNSError); ok && dnsError.IsNotFound {
 			return nil, oktetoErrors.UserError{
-				E:    dnsError,
-				Hint: "Review your /etc/hosts configuration, make sure there is an entry for localhost",
+				E:    fmt.Errorf("could not find available ports: %w", dnsError),
+				Hint: "Review your configuration to make sure 'localhost' is resolved correctly",
 			}
 		}
 		oktetoLog.Errorf("could not find a free port to start proxy server: %s", err)

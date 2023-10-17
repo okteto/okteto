@@ -5,7 +5,6 @@ import (
 	"net"
 	"testing"
 
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -76,7 +75,7 @@ func (pg fakePortGetter) Get(_ string) (int, error) {
 }
 
 func Test_NewProxy(t *testing.T) {
-	notFoundErr := &net.DNSError{
+	dnsErr := &net.DNSError{
 		IsNotFound: true,
 	}
 
@@ -90,12 +89,9 @@ func Test_NewProxy(t *testing.T) {
 		{
 			name: "err getting port, DNS not found error",
 			portGetter: fakePortGetter{
-				err: notFoundErr,
+				err: dnsErr,
 			},
-			expectedErr: oktetoErrors.UserError{
-				E:    notFoundErr,
-				Hint: "Review your /etc/hosts configuration, make sure there is an entry for localhost",
-			},
+			expectedErr: dnsErr,
 		},
 		{
 			name: "err getting port, any error",
