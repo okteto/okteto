@@ -42,8 +42,9 @@ type builderInterface interface {
 }
 
 type analyticsTrackerInterface interface {
-	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
-	TrackDeploy(metadata analytics.DeployMetadata)
+	TrackImageBuild(...*analytics.ImageBuildMetadata)
+	TrackDeploy(analytics.DeployMetadata)
+	TrackUp(*analytics.UpMetricsMetadata)
 }
 
 // upContext is the common context of all operations performed during the up command

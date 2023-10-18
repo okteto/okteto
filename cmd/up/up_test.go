@@ -341,7 +341,7 @@ func TestCommandAddedToUpOptionsWhenPassedAsFlag(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			cmd := Up()
+			cmd := Up(nil)
 			for _, val := range tt.command {
 				err := cmd.Flags().Set("command", val)
 				if err != nil {

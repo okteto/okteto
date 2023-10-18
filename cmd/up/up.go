@@ -90,7 +90,7 @@ type UpOptions struct {
 }
 
 // Up starts a development container
-func Up() *cobra.Command {
+func Up(at analyticsTrackerInterface) *cobra.Command {
 	upOptions := &UpOptions{}
 	cmd := &cobra.Command{
 		Use:   "up [svc]",
@@ -121,12 +121,11 @@ func Up() *cobra.Command {
 
 			ctx := context.Background()
 
-			analyticsTracker := analytics.NewAnalyticsTracker()
 			upMeta := analytics.NewUpMetricsMetadata()
 
 			// when cmd up finishes, send the event
 			// metadata retrieved during the run of the cmd
-			defer analyticsTracker.TrackUp(upMeta)
+			defer at.TrackUp(upMeta)
 
 			startOkContextConfig := time.Now()
 			if upOptions.ManifestPath != "" {
@@ -261,11 +260,11 @@ func Up() *cobra.Command {
 				Registry:          registry.NewOktetoRegistry(okteto.Config{}),
 				Options:           upOptions,
 				Fs:                afero.NewOsFs(),
-				analyticsTracker:  analyticsTracker,
+				analyticsTracker:  at,
 				analyticsMeta:     upMeta,
 				K8sClientProvider: okteto.NewK8sClientProvider(),
 				tokenUpdater:      newTokenUpdaterController(),
-				builder:           buildv2.NewBuilderFromScratch(analyticsTracker),
+				builder:           buildv2.NewBuilderFromScratch(at),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {

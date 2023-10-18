@@ -101,15 +101,16 @@ type DeployCommand struct {
 	Fs                 afero.Fs
 	DivertDriver       divert.Driver
 	PipelineCMD        pipelineCMD.PipelineDeployerInterface
-	AnalyticsTracker   DeployAnalyticsTracker
+	AnalyticsTracker   analyticsTrackerInterface
 
 	PipelineType       model.Archetype
 	isRemote           bool
 	runningInInstaller bool
 }
 
-type DeployAnalyticsTracker interface {
+type analyticsTrackerInterface interface {
 	TrackDeploy(dm analytics.DeployMetadata)
+	TrackImageBuild(...*analytics.ImageBuildMetadata)
 }
 
 type ExternalResourceInterface interface {
@@ -127,7 +128,7 @@ func NewDeployExternalK8sControl(cfg *rest.Config) ExternalResourceInterface {
 }
 
 // Deploy deploys the okteto manifest
-func Deploy(ctx context.Context) *cobra.Command {
+func Deploy(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 	options := &Options{}
 	fs := &DeployCommand{
 		Fs: afero.NewOsFs(),
@@ -188,14 +189,13 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("could not create pipeline command: %w", err)
 			}
-			analyticsTracker := analytics.NewAnalyticsTracker()
 			c := &DeployCommand{
 				GetManifest: model.GetManifestV2,
 
 				GetExternalControl: NewDeployExternalK8sControl,
 				K8sClientProvider:  k8sClientProvider,
 				GetDeployer:        GetDeployer,
-				Builder:            buildv2.NewBuilderFromScratch(analyticsTracker),
+				Builder:            buildv2.NewBuilderFromScratch(at),
 				DeployWaiter:       NewDeployWaiter(k8sClientProvider),
 				EndpointGetter:     NewEndpointGetter,
 				isRemote:           utils.LoadBoolean(constants.OktetoDeployRemote),
@@ -203,7 +203,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				Fs:                 afero.NewOsFs(),
 				PipelineCMD:        pc,
 				runningInInstaller: config.RunningInInstaller(),
-				AnalyticsTracker:   analyticsTracker,
+				AnalyticsTracker:   at,
 			}
 			startTime := time.Now()
 

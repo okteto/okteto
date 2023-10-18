@@ -80,7 +80,7 @@ const (
 )
 
 // Build build and optionally push a Docker image
-func Build(ctx context.Context) *cobra.Command {
+func Build(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 
 	options := &types.BuildOptions{}
 	cmd := &cobra.Command{
@@ -88,7 +88,7 @@ func Build(ctx context.Context) *cobra.Command {
 		Short: "Build and push the images defined in the 'build' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			options.CommandArgs = args
-			bc := NewBuildCommand(analytics.NewAnalyticsTracker())
+			bc := NewBuildCommand(at)
 			// The context must be loaded before reading manifest. Otherwise,
 			// secrets will not be resolved when GetManifest is called and
 			// the manifest will load empty values.

@@ -183,6 +183,7 @@ func TestBuildNecessaryImages(t *testing.T) {
 type fakeAnalyticsTracker struct{}
 
 func (a fakeAnalyticsTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
+func (a fakeAnalyticsTracker) TrackDestroy(analytics.DestroyMetadata)           {}
 
 func Test_newBuildCtrl(t *testing.T) {
 	got := newBuildCtrl("test-control", &fakeAnalyticsTracker{})

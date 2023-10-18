@@ -130,6 +130,7 @@ func main() {
 	}
 
 	okClientProvider := okteto.NewOktetoClientProvider()
+	at := analytics.NewAnalyticsTracker()
 
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
@@ -141,11 +142,11 @@ func main() {
 	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
 	root.AddCommand(registrytoken.RegistryToken(ctx))
 
-	root.AddCommand(build.Build(ctx))
+	root.AddCommand(build.Build(ctx, at))
 
 	root.AddCommand(namespace.Namespace(ctx))
 	root.AddCommand(cmd.Init())
-	root.AddCommand(up.Up())
+	root.AddCommand(up.Up(at))
 	root.AddCommand(cmd.Down())
 	root.AddCommand(cmd.Status())
 	root.AddCommand(cmd.Doctor())
@@ -153,8 +154,8 @@ func main() {
 	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
 	root.AddCommand(cmd.UpdateDeprecated())
-	root.AddCommand(deploy.Deploy(ctx))
-	root.AddCommand(destroy.Destroy(ctx))
+	root.AddCommand(deploy.Deploy(ctx, at))
+	root.AddCommand(destroy.Destroy(ctx, at))
 	root.AddCommand(deploy.Endpoints(ctx))
 	root.AddCommand(logs.Logs(ctx))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
@@ -163,7 +164,7 @@ func main() {
 	root.AddCommand(cmd.Create(ctx))
 	root.AddCommand(cmd.List(ctx))
 	root.AddCommand(cmd.Delete(ctx))
-	root.AddCommand(stack.Stack(ctx))
+	root.AddCommand(stack.Stack(ctx, at))
 	root.AddCommand(cmd.Push(ctx))
 	root.AddCommand(pipeline.Pipeline(ctx))
 

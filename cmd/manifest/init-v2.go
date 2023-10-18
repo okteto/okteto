@@ -72,7 +72,7 @@ type InitOpts struct {
 }
 
 // Init automatically generates the manifest
-func Init() *cobra.Command {
+func Init(at analyticsTrackerInterface) *cobra.Command {
 	opts := &InitOpts{}
 	cmd := &cobra.Command{
 		Use:   "init",
@@ -106,7 +106,7 @@ func Init() *cobra.Command {
 			opts.ShowCTA = oktetoLog.IsInteractive()
 			mc := &ManifestCommand{
 				K8sClientProvider: okteto.NewK8sClientProvider(),
-				analyticsTracker:  analytics.NewAnalyticsTracker(),
+				analyticsTracker:  at,
 			}
 			if opts.Version1 {
 				if err := mc.RunInitV1(ctx, opts); err != nil {

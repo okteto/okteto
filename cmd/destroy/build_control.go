@@ -20,15 +20,10 @@ import (
 	"strings"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
-	"github.com/okteto/okteto/pkg/analytics"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 )
-
-type analyticsTrackerInterface interface {
-	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
-}
 
 type buildCtrl struct {
 	builder builderInterface

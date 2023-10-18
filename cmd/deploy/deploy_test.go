@@ -1174,7 +1174,8 @@ func TestDeployOnlyDependencies(t *testing.T) {
 
 type fakeTracker struct{}
 
-func (*fakeTracker) TrackDeploy(dm analytics.DeployMetadata) {}
+func (*fakeTracker) TrackDeploy(analytics.DeployMetadata)             {}
+func (*fakeTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
 
 func TestTrackDeploy(t *testing.T) {
 	tt := []struct {
