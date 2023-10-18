@@ -80,11 +80,11 @@ func (ic imageChecker) getImageDigestReferenceForService(manifestName, svcToBuil
 
 	// get all possible references
 	var possibleReferences []string
-	if !ic.cfg.IsOkteto() && shouldAddVolumeMounts(buildInfo) {
+	if !ic.cfg.IsOkteto() && serviceHasVolumesToInclude(buildInfo) {
 		possibleReferences = []string{buildInfo.Image}
-	} else if shouldAddVolumeMounts(buildInfo) {
+	} else if serviceHasVolumesToInclude(buildInfo) {
 		possibleReferences = ic.tagger.getImageReferencesForTagWithDefaults(manifestName, svcToBuild, buildHash)
-	} else if shouldBuildFromDockerfile(buildInfo) && buildInfo.Image == "" {
+	} else if serviceHasDockerfile(buildInfo) && buildInfo.Image == "" {
 		possibleReferences = ic.tagger.getImageReferencesForTagWithDefaults(manifestName, svcToBuild, buildHash)
 	} else if buildInfo.Image != "" {
 		possibleReferences = []string{buildInfo.Image}

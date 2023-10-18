@@ -270,21 +270,21 @@ func (bc *OktetoBuilder) buildService(ctx context.Context, manifest *model.Manif
 	buildSvcInfo := manifest.Build[svcName]
 
 	switch {
-	case shouldAddVolumeMounts(buildSvcInfo) && !okteto.IsOkteto():
+	case serviceHasVolumesToInclude(buildSvcInfo) && !okteto.IsOkteto():
 		return "", oktetoErrors.UserError{
 			E:    fmt.Errorf("Build with volume mounts is not supported on vanilla clusters"),
 			Hint: "Please connect to a okteto cluster and try again",
 		}
-	case shouldBuildFromDockerfile(buildSvcInfo) && shouldAddVolumeMounts(buildSvcInfo):
+	case serviceHasDockerfile(buildSvcInfo) && serviceHasVolumesToInclude(buildSvcInfo):
 		image, err := bc.buildSvcFromDockerfile(ctx, manifest, svcName, options)
 		if err != nil {
 			return "", err
 		}
 		buildSvcInfo.Image = image
 		return bc.addVolumeMounts(ctx, manifest, svcName, options)
-	case shouldBuildFromDockerfile(buildSvcInfo):
+	case serviceHasDockerfile(buildSvcInfo):
 		return bc.buildSvcFromDockerfile(ctx, manifest, svcName, options)
-	case shouldAddVolumeMounts(buildSvcInfo):
+	case serviceHasVolumesToInclude(buildSvcInfo):
 		if okteto.IsOkteto() {
 			return bc.addVolumeMounts(ctx, manifest, svcName, options)
 		}
@@ -354,11 +354,13 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 	return imageTagWithDigest, nil
 }
 
-func shouldBuildFromDockerfile(buildInfo *model.BuildInfo) bool {
+// serviceHasDockerfile returns true when service BuildInfo Dockerfile is not empty
+func serviceHasDockerfile(buildInfo *model.BuildInfo) bool {
 	return buildInfo.Dockerfile != ""
 }
 
-func shouldAddVolumeMounts(buildInfo *model.BuildInfo) bool {
+// serviceHasVolumesToInclude returns true when service BuildInfo VolumesToInclude are more than 0
+func serviceHasVolumesToInclude(buildInfo *model.BuildInfo) bool {
 	return len(buildInfo.VolumesToInclude) > 0
 }
 
@@ -435,7 +437,7 @@ func validateServices(buildSection model.ManifestBuild, svcsToBuild []string) er
 
 func getImageChecker(buildInfo *model.BuildInfo, cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface) imageCheckerInterface {
 	var tagger imageTaggerInterface
-	if shouldAddVolumeMounts(buildInfo) {
+	if serviceHasVolumesToInclude(buildInfo) {
 		tagger = newImageWithVolumesTagger(cfg)
 	} else {
 		tagger = newImageTagger(cfg)

@@ -73,7 +73,7 @@ func (i imageTagger) getServiceImageReference(manifestName, svcName string, b *m
 		tag = buildHash
 	}
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	if shouldBuildFromDockerfile(b) && tag != "" {
+	if serviceHasDockerfile(b) && tag != "" {
 		return useReferenceTmplate(targetRegistry, sanitizedName, svcName, tag)
 	}
 	return useReferenceTmplate(targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
