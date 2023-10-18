@@ -172,7 +172,7 @@ func main() {
 	err = root.Execute()
 
 	if err != nil {
-		message := suggest.UserFriendlyError(err).Error()
+		message := suggest.NewUserFriendError(err).Error()
 		if len(message) > 0 {
 			tmp := []rune(message)
 			tmp[0] = unicode.ToUpper(tmp[0])

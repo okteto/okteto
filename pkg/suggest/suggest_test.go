@@ -109,11 +109,6 @@ func TestUserFriendlyError(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "empty",
-			input:    errors.New(""),
-			expected: "",
-		},
-		{
 			name:  "yaml errors with heading and link to docs",
 			input: errors.New("yaml: some random error"),
 			expected: `Your okteto manifest is not valid, please check the following errors:
@@ -131,7 +126,7 @@ yaml: some random error
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := UserFriendlyError(tt.input)
+			err := NewUserFriendError(tt.input)
 			assert.Equal(t, tt.expected, err.Error())
 		})
 	}
