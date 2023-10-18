@@ -126,7 +126,7 @@ yaml: some random error
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := NewUserFriendError(tt.input)
+			err := NewUserFriendlyError(tt.input)
 			assert.Equal(t, tt.expected, err.Error())
 		})
 	}
