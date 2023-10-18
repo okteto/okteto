@@ -27,7 +27,7 @@ import (
 func getManifestSuggestionRules() []ruleInterface {
 	rules := []ruleInterface{
 		addYamlParseErrorHeading(),
-		addUrlToManifestDocs(""),
+		addUrlToManifestDocs(),
 	}
 
 	// add levenshtein rules to suggest similar field names
@@ -43,7 +43,6 @@ func getManifestSuggestionRules() []ruleInterface {
 		}
 	}
 
-	// add fieldsNotExistingRule()
 	rules = append(rules,
 		// invalid properties
 		fieldsNotExistingRule(),
@@ -71,9 +70,18 @@ func getManifestSuggestionRules() []ruleInterface {
 	return rules
 }
 
+func isYamlErrorWithoutLinkToDocs(err error) bool {
+	return isYamlError(err) && !hasLinkToDocs(err)
+}
+
+// hasLinkToDocs checks if the error already contains a link to our docs
+func hasLinkToDocs(err error) bool {
+	return strings.Contains(err.Error(), "https://www.okteto.com/docs")
+}
+
+// isYamlError check if the error is related to YAML unmarshalling
 func isYamlError(err error) bool {
-	// prevents adding the URL twice
-	if strings.Contains(err.Error(), "https://www.okteto.com/docs") {
+	if err == nil {
 		return false
 	}
 	// detect yaml errors by prefix
@@ -91,21 +99,18 @@ func addYamlParseErrorHeading() ruleInterface {
 		return errors.New(errorWithUrlToDocs)
 	}
 
-	return newRule(isYamlError, addUrl)
+	return newRule(isYamlErrorWithoutLinkToDocs, addUrl)
 }
 
 // addUrlToManifestDocs appends to the error the URL to the Okteto manifest ref docs
-func addUrlToManifestDocs(docsAnchor string) ruleInterface {
+func addUrlToManifestDocs() ruleInterface {
 	addUrl := func(e error) error {
 		docsURL := "https://www.okteto.com/docs/reference/manifest"
-		if docsAnchor != "" {
-			docsURL += "/#" + docsAnchor
-		}
 		errorWithUrlToDocs := fmt.Sprintf("%s\n    Check out the okteto manifest docs at: %s", e.Error(), docsURL)
 		return errors.New(errorWithUrlToDocs)
 	}
 
-	return newRule(isYamlError, addUrl)
+	return newRule(isYamlErrorWithoutLinkToDocs, addUrl)
 }
 
 func indentNumLines() ruleInterface {

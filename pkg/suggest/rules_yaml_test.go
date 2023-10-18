@@ -14,6 +14,7 @@
 package suggest
 
 import (
+	"errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -180,6 +181,42 @@ func TestGetStructKeys(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			keys := getStructKeys(tt.input)
 			assert.Equal(t, tt.expected, keys)
+		})
+	}
+}
+
+func Test_isYamlErrorWithoutLinkToDocs(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    error
+		expected bool
+	}{
+		{
+			name:     "random error",
+			input:    errors.New("random error"),
+			expected: false,
+		},
+		{
+			name:     "nil",
+			input:    nil,
+			expected: false,
+		},
+		{
+			name:     "yaml error with link to docs",
+			input:    errors.New("yaml: some random error. See https://www.okteto.com/docs"),
+			expected: false,
+		},
+		{
+			name:     "yaml error without link to docs",
+			input:    errors.New("yaml: some random error"),
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := isYamlErrorWithoutLinkToDocs(tt.input)
+			assert.Equal(t, tt.expected, res)
 		})
 	}
 }

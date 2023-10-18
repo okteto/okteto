@@ -46,13 +46,28 @@ func (es *errorSuggestion) suggest(err error) error {
 	return newErr
 }
 
-// UserFriendlyError generates a user-friendly suggestion for the given error.
-func UserFriendlyError(err error) error {
-	errSuggestion := newErrorSuggestion()
+type UserFriendlyError struct {
+	suggestion *errorSuggestion
+	err        error
+}
 
-	errSuggestion.withRules(
+// Error allows UserFriendlyError to satisfy the error interface
+func (u *UserFriendlyError) Error() string {
+	if err := u.suggestion.suggest(u.err); err != nil {
+		return err.Error()
+	}
+	return ""
+}
+
+func NewUserFriendError(err error) *UserFriendlyError {
+	sug := newErrorSuggestion()
+
+	sug.withRules(
 		getManifestSuggestionRules(),
 	)
 
-	return errSuggestion.suggest(err)
+	return &UserFriendlyError{
+		suggestion: sug,
+		err:        err,
+	}
 }
