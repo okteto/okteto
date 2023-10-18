@@ -273,7 +273,7 @@ func TestOnlyInjectVolumeMountsInOkteto(t *testing.T) {
 			},
 		},
 	}
-	image, err := bc.buildService(ctx, manifest, "test", &types.BuildOptions{})
+	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
 
 	// error from the build
 	assert.NoError(t, err)
@@ -321,7 +321,7 @@ func TestTwoStepsBuild(t *testing.T) {
 			},
 		},
 	}
-	image, err := bc.buildService(ctx, manifest, "test", &types.BuildOptions{})
+	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
 
 	// error from the build
 	assert.NoError(t, err)
@@ -366,7 +366,7 @@ func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
 			},
 		},
 	}
-	image, err := bc.buildService(ctx, manifest, "test", &types.BuildOptions{})
+	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
 
 	// error from the build
 	assert.NoError(t, err)
@@ -409,7 +409,7 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 			},
 		},
 	}
-	image, err := bc.buildService(ctx, manifest, "test", &types.BuildOptions{})
+	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
 
 	// error from the build
 	assert.NoError(t, err)
@@ -454,7 +454,7 @@ func TestBuildWithStack(t *testing.T) {
 			},
 		},
 	}
-	image, err := bc.buildService(ctx, manifest, "test", &types.BuildOptions{})
+	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
 
 	// error from the build
 	assert.NoError(t, err)

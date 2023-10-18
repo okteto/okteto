@@ -231,7 +231,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				return fmt.Errorf("'build.%s.image' is required if your cluster doesn't have Okteto installed", svcToBuild)
 			}
 			buildDurationStart := time.Now()
-			imageTag, err := bc.buildService(ctx, options.Manifest, svcToBuild, options)
+			imageTag, err := bc.buildServiceImages(ctx, options.Manifest, svcToBuild, options)
 			if err != nil {
 				bc.analyticsTracker.TrackImageBuild(buildsAnalytics...)
 				return fmt.Errorf("error building service '%s': %w", svcToBuild, err)
@@ -266,7 +266,11 @@ func isServiceBuilt(service string, control map[string]bool) bool {
 	return control[service]
 }
 
-func (bc *OktetoBuilder) buildService(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
+// buildServiceImages builds the images for the given service.
+// if service has volumes to include but is not okteto, an error is returned
+// returned image reference includes the digest
+// when a service includes volumes, this is the image returned
+func (bc *OktetoBuilder) buildServiceImages(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
 	buildSvcInfo := manifest.Build[svcName]
 
 	switch {
