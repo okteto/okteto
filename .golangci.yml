@@ -41,6 +41,7 @@ linters:
     - unused
     - unparam
     - tenv
+    - tparallel
 
 issues:
   # Show only new issues created after git revision REV. Run only over the changed files

@@ -464,7 +464,7 @@ func TestCheckAccessToNamespace(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-
+			t.Parallel()
 			currentCtxCommand := *fakeCtxCommand
 			if tt.ctxOptions.IsOkteto {
 				currentCtxCommand.K8sClientProvider = nil

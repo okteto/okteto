@@ -130,6 +130,7 @@ func getFakeManifestV2(_ string) (*model.Manifest, error) {
 }
 
 func TestIsBuildV2(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name           string
 		manifest       *model.Manifest
@@ -237,6 +238,7 @@ func TestBuildErrIfInvalidManifest(t *testing.T) {
 }
 
 func TestBuilderIsProperlyGenerated(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	okteto.CurrentStore = &okteto.OktetoContextStore{
 		Contexts: map[string]*okteto.OktetoContext{

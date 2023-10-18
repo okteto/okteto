@@ -12,6 +12,7 @@ var (
 )
 
 func Test_TranslateInvalidResourceBody(t *testing.T) {
+	t.Parallel()
 	var tests = []struct {
 		name string
 		body []byte
