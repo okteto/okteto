@@ -669,7 +669,7 @@ func (b *fakeBuilder) GetBuildEnvVars() map[string]string {
 	return nil
 }
 
-func Test_buildAllServices(t *testing.T) {
+func Test_buildServicesAndSetBuildEnvs(t *testing.T) {
 	tests := []struct {
 		name              string
 		m                 *model.Manifest
@@ -739,7 +739,7 @@ func Test_buildAllServices(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			got := buildAllServices(ctx, tt.m, tt.builder)
+			got := buildServicesAndSetBuildEnvs(ctx, tt.m, tt.builder)
 
 			require.Equal(t, tt.expectedErr, got)
 			require.Equal(t, tt.expectedBuildOpts, tt.builder.usedBuildOptions)

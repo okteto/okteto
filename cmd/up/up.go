@@ -340,7 +340,7 @@ func Up() *cobra.Command {
 			}
 
 			// build images and set env vars for the services at the manifest
-			if err := buildAllServices(ctx, oktetoManifest, up.builder); err != nil {
+			if err := buildServicesAndSetBuildEnvs(ctx, oktetoManifest, up.builder); err != nil {
 				return err
 			}
 
@@ -1060,8 +1060,8 @@ func printDisplayContext(up *upContext) {
 	oktetoLog.Println()
 }
 
-// buildAllServices runs the build over the services from the manifest and this set the build envs
-func buildAllServices(ctx context.Context, m *model.Manifest, builder builderInterface) error {
+// buildServicesAndSetBuildEnvs get services to build and run build to set build envs
+func buildServicesAndSetBuildEnvs(ctx context.Context, m *model.Manifest, builder builderInterface) error {
 	svcsToBuild, err := builder.GetServicesToBuild(ctx, m, []string{})
 	if err != nil {
 		return err
