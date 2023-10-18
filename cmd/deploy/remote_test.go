@@ -173,7 +173,7 @@ func TestExtraHosts(t *testing.T) {
 	tempCreator := filesystem.NewTemporalDirectoryCtrl(fs)
 
 	rdc := remoteDeployCommand{
-		builderV1: fakeBuilder{
+		builderV1: fakeV1Builder{
 			assertOptions: func(o *types.BuildOptions) {
 				require.Len(t, o.ExtraHosts, 2)
 				for _, eh := range o.ExtraHosts {
