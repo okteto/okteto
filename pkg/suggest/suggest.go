@@ -59,7 +59,7 @@ func (u *UserFriendlyError) Error() string {
 	return ""
 }
 
-func NewUserFriendError(err error) *UserFriendlyError {
+func NewUserFriendlyError(err error) *UserFriendlyError {
 	sug := newErrorSuggestion()
 
 	sug.withRules(
