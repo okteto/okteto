@@ -527,3 +527,9 @@ func Test_getOktetoCLIVersion(t *testing.T) {
 		})
 	}
 }
+
+func Test_newRemoteDeployer(t *testing.T) {
+	got := newRemoteDeployer(&fakeV2Builder{})
+	require.IsType(t, &remoteDeployCommand{}, got)
+	require.NotNil(t, got.getBuildEnvVars)
+}
