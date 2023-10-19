@@ -14,6 +14,7 @@ import (
 )
 
 func TestGlobalForwarderStartsWhenRequired(t *testing.T) {
+	t.Parallel()
 	var tests = []struct {
 		name             string
 		globalFwdSection []forward.GlobalForward

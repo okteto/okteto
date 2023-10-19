@@ -41,10 +41,9 @@ linters:
     - unused
     - unparam
     - tenv
+    - tparallel
 
 issues:
-  # Show only new issues created after git revision REV. Run only over the changed files
-  new-from-rev: HEAD~
   # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
   max-issues-per-linter: 0
 
