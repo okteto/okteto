@@ -74,9 +74,9 @@ func (i imageTagger) getServiceImageReference(manifestName, svcName string, b *m
 	}
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	if serviceHasDockerfile(b) && tag != "" {
-		return useReferenceTmplate(targetRegistry, sanitizedName, svcName, tag)
+		return useReferenceTemplate(targetRegistry, sanitizedName, svcName, tag)
 	}
-	return useReferenceTmplate(targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
+	return useReferenceTemplate(targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
 }
 
 // getPossibleImageReferenceWithTag returns all the possible images references that can be used for build with the given tag
@@ -90,7 +90,7 @@ func (i imageTagger) getImageReferencesForTag(manifestName, svcToBuildName, tag 
 	referencesToCheck := []string{}
 
 	for _, targetRegistry := range getTargetRegistries() {
-		referencesToCheck = append(referencesToCheck, useReferenceTmplate(targetRegistry, sanitizedName, svcToBuildName, tag))
+		referencesToCheck = append(referencesToCheck, useReferenceTemplate(targetRegistry, sanitizedName, svcToBuildName, tag))
 	}
 	return referencesToCheck
 }
@@ -127,7 +127,7 @@ func (i imagerTaggerWithVolumes) getServiceImageReference(manifestName, svcName 
 	if tag != "" {
 		return useReferenceTemplateWithVolumes(targetRegistry, sanitizedName, svcName, tag)
 	}
-	return useReferenceTmplate(targetRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes)
+	return useReferenceTemplate(targetRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes)
 }
 
 // getPossibleHashImages returns all the possible images that can be built from a commit hash
@@ -149,17 +149,17 @@ func (i imagerTaggerWithVolumes) getImageReferencesForTagWithDefaults(manifestNa
 	tags := i.getImageReferencesForTag(manifestName, svcToBuildName, tag)
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	for _, targetRegistry := range getTargetRegistries() {
-		tags = append(tags, useReferenceTmplate(targetRegistry, sanitizedName, svcToBuildName, model.OktetoImageTagWithVolumes))
+		tags = append(tags, useReferenceTemplate(targetRegistry, sanitizedName, svcToBuildName, model.OktetoImageTagWithVolumes))
 	}
 	return tags
 }
 
-// useReferenceTmplate returns the image reference with the given parameters [name]:[tag]
-func useReferenceTmplate(targetRegistry, repoName, svcName, tag string) string {
+// useReferenceTemplate returns the image reference with the given parameters [name]:[tag]
+func useReferenceTemplate(targetRegistry, repoName, svcName, tag string) string {
 	return fmt.Sprintf("%s/%s-%s:%s", targetRegistry, repoName, svcName, tag)
 }
 
-// useTmplateWithVolumes returns the image reference from the template of image with volume mounts [name]:okteto-with-volume-mounts-[tag]
+// useReferenceTemplateWithVolumes returns the image reference from the template of image with volume mounts [name]:okteto-with-volume-mounts-[tag]
 func useReferenceTemplateWithVolumes(targetRegistry, repoName, svcName, tag string) string {
 	return fmt.Sprintf("%s/%s-%s:%s-%s", targetRegistry, repoName, svcName, model.OktetoImageTagWithVolumes, tag)
 }
