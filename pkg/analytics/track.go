@@ -208,19 +208,13 @@ func trackDisable(success bool) {
 }
 
 // TrackBuild sends a tracking event to mixpanel when the user builds on remote
-func TrackBuild(oktetoBuilkitURL string, success bool) {
-	props := map[string]interface{}{
-		"oktetoBuilkitURL": oktetoBuilkitURL,
-	}
-	track(buildEvent, success, props)
+func TrackBuild(success bool) {
+	track(buildEvent, success, nil)
 }
 
 // TrackBuildTransientError sends a tracking event to mixpanel when the user build fails because of a transient error
-func TrackBuildTransientError(oktetoBuilkitURL string, success bool) {
-	props := map[string]interface{}{
-		"oktetoBuilkitURL": oktetoBuilkitURL,
-	}
-	track(buildTransientErrorEvent, success, props)
+func TrackBuildTransientError(success bool) {
+	track(buildTransientErrorEvent, success, nil)
 }
 
 // TrackDeployStack sends a tracking event to mixpanel when the user deploys a stack
@@ -280,11 +274,8 @@ func TrackStackWarnings(warnings []string) {
 }
 
 // TrackBuildPullError sends a tracking event to mixpanel when the build was success but the image can't be pulled from registry
-func TrackBuildPullError(oktetoBuilkitURL string, success bool) {
-	props := map[string]interface{}{
-		"oktetoBuilkitURL": oktetoBuilkitURL,
-	}
-	track(buildPullErrorEvent, success, props)
+func TrackBuildPullError(success bool) {
+	track(buildPullErrorEvent, success, nil)
 }
 
 // TrackContextDelete sends a tracking event to mixpanel indicating one or more context have been deleted
