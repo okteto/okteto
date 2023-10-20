@@ -26,14 +26,14 @@ type analyticsTrackerInterface interface {
 }
 
 // Stack stack management commands
-func Stack(ctx context.Context, af analyticsTrackerInterface) *cobra.Command {
+func Stack(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "stack",
 		Short:  "Stack management commands",
 		Args:   utils.NoArgsAccepted("https://www.okteto.com/docs/reference/cli/#deploy"),
 		Hidden: true,
 	}
-	cmd.AddCommand(deploy(ctx, af))
+	cmd.AddCommand(deploy(ctx, at))
 	cmd.AddCommand(Destroy(ctx))
 	cmd.AddCommand(Endpoints(ctx))
 	return cmd
