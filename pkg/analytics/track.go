@@ -170,11 +170,8 @@ func TrackDownVolumes(success bool) {
 }
 
 // TrackPush sends a tracking event to mixpanel when the user pushes a development container
-func TrackPush(success bool, oktetoRegistryURL string) {
-	props := map[string]interface{}{
-		"oktetoRegistryURL": oktetoRegistryURL,
-	}
-	track(pushEvent, success, props)
+func TrackPush(success bool) {
+	track(pushEvent, success, nil)
 }
 
 // TrackRestart sends a tracking event to mixpanel when the user restarts a development environment
