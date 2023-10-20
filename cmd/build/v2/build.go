@@ -171,7 +171,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	oktetoLog.Infof("Images to build: [%s]", strings.Join(toBuildSvcs, ", "))
 	for len(builtImagesControl) != len(toBuildSvcs) {
 		for _, svcToBuild := range toBuildSvcs {
-			if isServiceBuilt(svcToBuild, builtImagesControl) {
+			if skipServiceBuild(svcToBuild, builtImagesControl) {
 				oktetoLog.Infof("skipping image '%s' due to being already built")
 				continue
 			}
@@ -262,8 +262,8 @@ func areAllServicesBuilt(services []string, control map[string]bool) bool {
 	return true
 }
 
-// isServiceBuilt returns if a service has been built
-func isServiceBuilt(service string, control map[string]bool) bool {
+// skipServiceBuild returns if a service has been built
+func skipServiceBuild(service string, control map[string]bool) bool {
 	return control[service]
 }
 

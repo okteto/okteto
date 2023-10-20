@@ -635,7 +635,7 @@ func Test_areAllServicesBuilt(t *testing.T) {
 	}
 }
 
-func Test_isServiceBuilt(t *testing.T) {
+func Test_skipServiceBuild(t *testing.T) {
 	tests := []struct {
 		name     string
 		control  map[string]bool
@@ -675,7 +675,7 @@ func Test_isServiceBuilt(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := isServiceBuilt(tt.input, tt.control)
+			got := skipServiceBuild(tt.input, tt.control)
 			require.Equal(t, tt.expected, got)
 		})
 
