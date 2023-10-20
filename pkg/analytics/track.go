@@ -320,7 +320,6 @@ func track(event string, success bool, props map[string]interface{}) {
 	}
 	props["$os"] = mpOS
 	props["version"] = config.VersionString
-	props["$referring_domain"] = okteto.Context().Name
 	props["machine_id"] = get().MachineID
 	if okteto.Context().ClusterType != "" {
 		props["clusterType"] = okteto.Context().ClusterType
@@ -331,7 +330,6 @@ func track(event string, success bool, props map[string]interface{}) {
 	props["success"] = success
 	props["contextType"] = getContextType(okteto.Context().Name)
 	props["context"] = okteto.Context().Name
-	props["cluster"] = okteto.Context().Name
 	props["isOkteto"] = okteto.Context().IsOkteto
 	if termType := os.Getenv(model.TermEnvVar); termType == "" {
 		props["term-type"] = "other"
