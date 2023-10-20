@@ -79,7 +79,7 @@ func (i imageTagger) getServiceImageReference(manifestName, svcName string, b *m
 	return useReferenceTemplate(targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
 }
 
-// getPossibleImageReferenceWithTag returns all the possible images references that can be used for build with the given tag
+// getImageReferencesForTag returns all the possible images references that can be used for build with the given tag
 func (i imageTagger) getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string {
 	if tag == "" {
 		return []string{}
