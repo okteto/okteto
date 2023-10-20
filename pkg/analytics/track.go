@@ -329,13 +329,16 @@ func track(event string, success bool, props map[string]interface{}) {
 	props["origin"] = origin
 	props["success"] = success
 	props["contextType"] = getContextType(okteto.Context().Name)
-	props["context"] = okteto.Context().Name
 	props["isOkteto"] = okteto.Context().IsOkteto
 	if termType := os.Getenv(model.TermEnvVar); termType == "" {
 		props["term-type"] = "other"
 	} else {
 		props["term-type"] = termType
 	}
+
+	// TODO: add new values for props from metadata
+	props["context"] = "metadata.companyName"
+	props["license_type"] = "metadata.licenseType"
 
 	e := &mixpanel.Event{Properties: props}
 	if err := mixpanelClient.Track(getTrackID(), event, e); err != nil {
