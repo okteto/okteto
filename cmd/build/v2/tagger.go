@@ -61,7 +61,8 @@ Inferred tag is constructed using the following:
 [tag] its either the buildHash or the default okteto tag "okteto"
 */
 func (i imageTagger) getServiceImageReference(manifestName, svcName string, b *model.BuildInfo, buildHash string) string {
-	if b.Image != "" {
+	// when b.Image is set or services does not have dockerfile then no infer reference and return what is set on the manifest
+	if b.Image != "" || !serviceHasDockerfile(b) {
 		return b.Image
 	}
 
@@ -73,7 +74,7 @@ func (i imageTagger) getServiceImageReference(manifestName, svcName string, b *m
 		tag = buildHash
 	}
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	if serviceHasDockerfile(b) && tag != "" {
+	if tag != "" {
 		return useReferenceTemplate(targetRegistry, sanitizedName, svcName, tag)
 	}
 	return useReferenceTemplate(targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
@@ -117,6 +118,7 @@ func newImageWithVolumesTagger(cfg oktetoBuilderConfigInterface) imagerTaggerWit
 
 // getServiceImageReference returns the full image tag for the build
 func (i imagerTaggerWithVolumes) getServiceImageReference(manifestName, svcName string, _ *model.BuildInfo, buildHash string) string {
+
 	targetRegistry := constants.DevRegistry
 	tag := ""
 	if i.cfg.HasGlobalAccess() && i.cfg.IsCleanProject() {
