@@ -45,15 +45,8 @@ func Show() *cobra.Command {
 				return err
 			}
 
-			// store the token value to display to user if the flag is set
-			TokenValue := current.Token
-
-			// By default, set the token value to null since default behaviour doesn't require to show token value
-			current.Token = ""
-
-			// If the flag is set, display the token value
-			if includeToken {
-				current.Token = TokenValue
+			if !includeToken {
+				current.Token = ""
 			}
 
 			current.Certificate = ""
@@ -75,8 +68,7 @@ func Show() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&output, "output", "o", "json", "output format. One of: ['json', 'yaml']")
-	cmd.Flags().BoolVar(&includeToken, "include-token", false, "show the token value to the user")
-	return cmd
+    cmd.Flags().BoolVar(&includeToken, "include-token", false, "include the token in the output")	return cmd
 }
 
 func validateOutput(output string) error {
