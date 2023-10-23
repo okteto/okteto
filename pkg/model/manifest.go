@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/suggest"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -629,7 +630,7 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 		if errors.Is(err, oktetoErrors.ErrNotManifestContentDetected) {
 			return nil, err
 		}
-		return nil, fmt.Errorf("%w: %s", oktetoErrors.ErrInvalidManifest, err.Error())
+		return nil, suggest.NewUserFriendlyError(err, Manifest{})
 	}
 
 	ef := externalresource.ERFilesystemManager{

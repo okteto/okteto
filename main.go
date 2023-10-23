@@ -18,7 +18,6 @@ import (
 	cryptoRand "crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"github.com/okteto/okteto/pkg/suggest"
 	"math/rand"
 	"os"
 	"strings"
@@ -172,7 +171,7 @@ func main() {
 	err = root.Execute()
 
 	if err != nil {
-		message := suggest.NewUserFriendlyError(err).Error()
+		message := err.Error()
 		if len(message) > 0 {
 			tmp := []rune(message)
 			tmp[0] = unicode.ToUpper(tmp[0])

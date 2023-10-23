@@ -59,11 +59,11 @@ func (u *UserFriendlyError) Error() string {
 	return ""
 }
 
-func NewUserFriendlyError(err error) *UserFriendlyError {
+func NewUserFriendlyError(err error, manifestSchema interface{}) *UserFriendlyError {
 	sug := newErrorSuggestion()
 
 	sug.withRules(
-		getManifestSuggestionRules(),
+		getManifestSuggestionRules(manifestSchema),
 	)
 
 	return &UserFriendlyError{
