@@ -81,7 +81,7 @@ func (i imageTagger) getServiceImageReference(manifestName, svcName string, b *m
 }
 
 // getImageReferencesForTag returns all the possible images references that can be used for build with the given tag
-func (i imageTagger) getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string {
+func (imageTagger) getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string {
 	if tag == "" {
 		return []string{}
 	}
@@ -96,7 +96,7 @@ func (i imageTagger) getImageReferencesForTag(manifestName, svcToBuildName, tag 
 	return referencesToCheck
 }
 
-// getPossibleImageReferences returns all the possible image references for a given service, options include the given tag and the default okteto tag
+// getImageReferencesForTagWithDefaults returns all the possible image references for a given service, options include the given tag and the default okteto tag
 func (i imageTagger) getImageReferencesForTagWithDefaults(manifestName, svcToBuildName, tag string) []string {
 	imageReferencesWithTag := i.getImageReferencesForTag(manifestName, svcToBuildName, tag)
 	imageReferencesWithDefault := i.getImageReferencesForTag(manifestName, svcToBuildName, model.OktetoDefaultImageTag)
@@ -132,8 +132,8 @@ func (i imagerTaggerWithVolumes) getServiceImageReference(manifestName, svcName 
 	return useReferenceTemplate(targetRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes)
 }
 
-// getPossibleHashImages returns all the possible images that can be built from a commit hash
-func (i imagerTaggerWithVolumes) getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string {
+// getImageReferencesForTag returns all the possible images that can be built from a commit hash
+func (imagerTaggerWithVolumes) getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string {
 	if tag == "" {
 		return []string{}
 	}
@@ -146,7 +146,7 @@ func (i imagerTaggerWithVolumes) getImageReferencesForTag(manifestName, svcToBui
 	return tagsToCheck
 }
 
-// getPossibleTags returns all the possible images that can be built (with and without hash)
+// getImageReferencesForTagWithDefaults returns all the possible images that can be built (with and without hash)
 func (i imagerTaggerWithVolumes) getImageReferencesForTagWithDefaults(manifestName, svcToBuildName, tag string) []string {
 	tags := i.getImageReferencesForTag(manifestName, svcToBuildName, tag)
 	sanitizedName := format.ResourceK8sMetaString(manifestName)

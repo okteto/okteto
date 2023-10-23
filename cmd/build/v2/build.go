@@ -123,6 +123,8 @@ func (*OktetoBuilder) IsV1() bool {
 }
 
 // Build builds the images defined by a manifest
+// TODO: Function with cyclomatic complexity higher than threshold. Refactor function in order to reduce its complexity
+// skipcq: GO-R1005
 func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
 	if utils.LoadBoolean(constants.OktetoDeployRemote) {
 		// Since the local build has already been built,
