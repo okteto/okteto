@@ -16,15 +16,17 @@ type fakeConfigRegistry struct {
 func (fcr fakeConfigRegistry) HasGlobalPushAccess() (bool, error) { return fcr.access, fcr.err }
 
 type fakeConfigRepo struct {
-	sha     string
-	isClean bool
-	url     string
-	err     error
+	sha      string
+	isClean  bool
+	url      string
+	treeHash string
+	err      error
 }
 
-func (fcr fakeConfigRepo) GetSHA() (string, error)   { return fcr.sha, fcr.err }
-func (fcr fakeConfigRepo) IsClean() (bool, error)    { return fcr.isClean, fcr.err }
-func (fcr fakeConfigRepo) GetAnonymizedRepo() string { return fcr.url }
+func (fcr fakeConfigRepo) GetSHA() (string, error)            { return fcr.sha, fcr.err }
+func (fcr fakeConfigRepo) IsClean() (bool, error)             { return fcr.isClean, fcr.err }
+func (fcr fakeConfigRepo) GetAnonymizedRepo() string          { return fcr.url }
+func (fcr fakeConfigRepo) GetTreeHash(string) (string, error) { return fcr.treeHash, fcr.err }
 
 func TestGetConfig(t *testing.T) {
 	type input struct {

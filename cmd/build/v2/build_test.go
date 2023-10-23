@@ -168,6 +168,7 @@ func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInter
 		},
 		Config:           cfg,
 		analyticsTracker: analyticsTracker,
+		repo:             fakeConfigRepo{},
 	}
 }
 

@@ -83,6 +83,8 @@ type OktetoBuilder struct {
 	// lock is a mutex to provide builEnvironments map safe concurrency
 	lock             sync.RWMutex
 	analyticsTracker analyticsTrackerInterface
+
+	repo configServiceRepositoryInterface
 }
 
 // NewBuilder creates a new okteto builder
@@ -111,6 +113,7 @@ func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface) *OktetoBu
 		buildEnvironments: map[string]string{},
 		Config:            getConfig(registry, gitRepo),
 		analyticsTracker:  analyticsTracker,
+		repo:              gitRepo,
 	}
 }
 
@@ -199,6 +202,10 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			meta.RepoHash = buildHash
 			meta.RepoHashDuration = time.Since(repoHashDurationStart)
 
+			buildContextHashDurationStart := time.Now()
+			meta.BuildContextHash = bc.calculateBuildContextHash(buildSvcInfo)
+			meta.BuildContextHashDuration = time.Since(buildContextHashDurationStart)
+
 			// We only check that the image is built in the global registry if the noCache option is not set
 			if !options.NoCache && bc.Config.IsCleanProject() {
 
@@ -249,6 +256,39 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		oktetoLog.SetStage("")
 	}
 	return options.Manifest.ExpandEnvVars()
+}
+
+func (ob *OktetoBuilder) calculateBuildContextHash(buildInfo *model.BuildInfo) string {
+	buildContext := buildInfo.Context
+	treeHash, err := ob.repo.GetTreeHash(buildContext)
+	if err != nil {
+		oktetoLog.Info("error trying to get tree hash for build context '%s': %w", buildContext, err)
+	}
+
+	args := []string{}
+	for _, arg := range buildInfo.Args {
+		args = append(args, arg.String())
+	}
+	argsText := strings.Join(args, ";")
+
+	secrets := []string{}
+	for key, value := range buildInfo.Secrets {
+		secrets = append(secrets, fmt.Sprintf("%s=%s", key, value))
+	}
+	secretsText := strings.Join(secrets, ";")
+
+	// We use a builder to avoid allocations when building the string
+	var b strings.Builder
+	fmt.Fprintf(&b, "tree_hash:%s;", treeHash)
+	fmt.Fprintf(&b, "target:%s;", buildInfo.Target)
+	fmt.Fprintf(&b, "build_args:%s;", argsText)
+	fmt.Fprintf(&b, "secrets:%s;", secretsText)
+	fmt.Fprintf(&b, "context:%s;", buildInfo.Context)
+	fmt.Fprintf(&b, "dockerfile:%s;", buildInfo.Dockerfile)
+	fmt.Fprintf(&b, "image:%s;", buildInfo.Image)
+
+	hash := sha256.Sum256([]byte(b.String()))
+	return hex.EncodeToString(hash[:])
 }
 
 // areServicesBuilt compares the list of services with the built control

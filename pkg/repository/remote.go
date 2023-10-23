@@ -32,3 +32,7 @@ func (or oktetoRemoteRepoController) isClean(_ context.Context) (bool, error) {
 func (or oktetoRemoteRepoController) getSHA() (string, error) {
 	return or.gitCommit, nil
 }
+
+func (or oktetoRemoteRepoController) getTreeSHA(string) (string, error) {
+	return "", nil
+}

@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/stretchr/testify/assert"
 )
@@ -41,6 +42,7 @@ func (frg *fakeRepositoryGetter) get(_ string) (gitRepositoryInterface, error) {
 type fakeRepository struct {
 	worktree *fakeWorktree
 	head     *plumbing.Reference
+	commit   *object.Commit
 	err      error
 }
 
@@ -50,6 +52,10 @@ func (fr fakeRepository) Worktree() (gitWorktreeInterface, error) {
 
 func (fr fakeRepository) Head() (*plumbing.Reference, error) {
 	return fr.head, fr.err
+}
+
+func (fr fakeRepository) CommitObject(plumbing.Hash) (gitCommitInterface, error) {
+	return fr.commit, fr.err
 }
 
 type fakeWorktree struct {

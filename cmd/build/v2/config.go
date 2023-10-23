@@ -25,6 +25,10 @@ type configRepositoryInterface interface {
 	GetAnonymizedRepo() string
 }
 
+type configServiceRepositoryInterface interface {
+	GetTreeHash(string) (string, error)
+}
+
 type configRegistryInterface interface {
 	HasGlobalPushAccess() (bool, error)
 }
