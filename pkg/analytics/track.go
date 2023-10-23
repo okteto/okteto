@@ -336,9 +336,8 @@ func track(event string, success bool, props map[string]interface{}) {
 		props["term-type"] = termType
 	}
 
-	// TODO: add new values for props from metadata
-	props["context"] = "metadata.companyName"
-	props["license_type"] = "metadata.licenseType"
+	props["context"] = okteto.Context().CompanyName
+	props["isTrial"] = okteto.Context().IsTrial
 
 	e := &mixpanel.Event{Properties: props}
 	if err := mixpanelClient.Track(getTrackID(), event, e); err != nil {

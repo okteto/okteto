@@ -308,6 +308,10 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 	okteto.Context().IsOkteto = true
 	okteto.Context().IsInsecure = okteto.IsInsecureSkipTLSVerifyPolicy()
 
+	// TODO: init okteto context installation
+	// okteto.Context().IsTrial = false
+	// okteto.Context().CompanyName = ""
+
 	setSecrets(userContext.Secrets)
 
 	os.Setenv(model.OktetoUserNameEnvVar, okteto.Context().Username)
