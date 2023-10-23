@@ -68,7 +68,8 @@ func Show() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&output, "output", "o", "json", "output format. One of: ['json', 'yaml']")
-    cmd.Flags().BoolVar(&includeToken, "include-token", false, "include the token in the output")	return cmd
+	cmd.Flags().BoolVar(&includeToken, "include-token", false, "include the token in the output")
+	return cmd
 }
 
 func validateOutput(output string) error {
