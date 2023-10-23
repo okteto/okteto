@@ -16,7 +16,6 @@ package suggest
 import (
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/model"
 	"reflect"
 	"regexp"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
@@ -24,17 +23,18 @@ import (
 )
 
 // getManifestSuggestionRules returns a collection of rules aiming to improve the error message for the okteto manifest.
-func getManifestSuggestionRules() []ruleInterface {
+func getManifestSuggestionRules(manifestSchema interface{}) []ruleInterface {
 	rules := []ruleInterface{
 		addYamlParseErrorHeading(),
 		addUrlToManifestDocs(),
 	}
 
 	// add levenshtein rules to suggest similar field names
-	manifestKeys := getStructKeys(model.Manifest{})
+	manifestKeys := getStructKeys(manifestSchema)
 	manifestKeys["model.manifestRaw"] = manifestKeys["model.Manifest"]
 	manifestKeys["model.buildInfoRaw"] = manifestKeys["model.BuildInfo"]
 	manifestKeys["model.DevRC"] = manifestKeys["model.Dev"]
+	manifestKeys["model.devType"] = manifestKeys["model.Dev"]
 
 	for structName, structKeywords := range manifestKeys {
 		for _, keyword := range structKeywords {
@@ -52,6 +52,8 @@ func getManifestSuggestionRules() []ruleInterface {
 		newStrReplaceRule("in type model.ManifestBuild", "the 'build' section"),
 		newStrReplaceRule("into model.ManifestBuild", "into a 'build' object"),
 		newStrReplaceRule("in type model.buildInfoRaw", "the 'build' object"),
+		newStrReplaceRule("in type model.devType", "the 'dev' object"),
+		newStrReplaceRule("into model.devType", "the 'dev' object"),
 
 		// yaml types
 		newStrReplaceRule(yaml.NodeTagSeq, "list"),
