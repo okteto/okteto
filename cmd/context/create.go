@@ -185,7 +185,11 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 	c.initEnvVars()
 
 	if ctxOptions.IsOkteto {
-		if err := c.initOktetoContext(ctx, ctxOptions); err != nil {
+		clusterMetadata, err := getClusterMetadata(ctx, ctxOptions.Namespace, c.OktetoClientProvider)
+		if err != nil {
+			return err
+		}
+		if err := c.initOktetoContext(ctx, ctxOptions, clusterMetadata); err != nil {
 			return err
 		}
 	} else {
@@ -243,6 +247,15 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 	return nil
 }
 
+// getClusterMetadata runs the user query GetClusterMetadata and returns the response
+func getClusterMetadata(ctx context.Context, namespace string, okClientProvider oktetoClientProvider) (types.ClusterMetadata, error) {
+	okClient, err := okClientProvider.Provide()
+	if err != nil {
+		oktetoLog.Infof("error providing okteto client: %v", err)
+	}
+	return okClient.User().GetClusterMetadata(ctx, namespace)
+}
+
 func hasAccessToNamespace(ctx context.Context, c *ContextCommand, ctxOptions *ContextOptions) (bool, error) {
 	if ctxOptions.IsOkteto {
 		okClient, err := c.OktetoClientProvider.Provide()
@@ -271,7 +284,7 @@ func hasAccessToNamespace(ctx context.Context, c *ContextCommand, ctxOptions *Co
 	}
 }
 
-func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
+func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *ContextOptions, clusterMetadata types.ClusterMetadata) error {
 	var userContext *types.UserContext
 	userContext, err := getLoggedUserContext(ctx, c, ctxOptions)
 	if err != nil {
@@ -308,9 +321,8 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 	okteto.Context().IsOkteto = true
 	okteto.Context().IsInsecure = okteto.IsInsecureSkipTLSVerifyPolicy()
 
-	// TODO: init okteto context installation
-	// okteto.Context().IsTrial = false
-	// okteto.Context().CompanyName = ""
+	okteto.Context().IsTrial = clusterMetadata.IsTrialLicense
+	okteto.Context().CompanyName = clusterMetadata.CompanyName
 
 	setSecrets(userContext.Secrets)
 
