@@ -12,3 +12,88 @@
 // limitations under the License.
 
 package v2
+
+import (
+	"testing"
+
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func Test_checkIfBuildHashIsBuilt(t *testing.T) {
+
+	tests := []struct {
+		name          string
+		imageChecker  *imageChecker
+		manifestName  string
+		serviceName   string
+		buildHash     string
+		expectedTag   string
+		expectedBuilt bool
+	}{
+		{
+			name:          "empty build hash",
+			imageChecker:  &imageChecker{},
+			expectedTag:   "",
+			expectedBuilt: false,
+		},
+		{
+			name: "not found hash",
+			imageChecker: &imageChecker{
+				tagger: imageTagger{
+					cfg: &fakeConfig{},
+				},
+				lookupReferenceWithDigest: func(_ string, _ registryImageCheckerInterface) (string, error) {
+					return "", oktetoErrors.ErrNotFound
+				},
+			},
+			manifestName:  "manifest",
+			serviceName:   "service",
+			buildHash:     "buildHash",
+			expectedTag:   "",
+			expectedBuilt: false,
+		},
+		{
+			name: "error getting SHA from registry",
+			imageChecker: &imageChecker{
+				tagger: imageTagger{
+					cfg: &fakeConfig{},
+				},
+				lookupReferenceWithDigest: func(_ string, _ registryImageCheckerInterface) (string, error) {
+					return "", assert.AnError
+				},
+			},
+			manifestName:  "manifest",
+			serviceName:   "service",
+			buildHash:     "buildHash",
+			expectedTag:   "",
+			expectedBuilt: false,
+		},
+		{
+			name: "found SHA from registry",
+			imageChecker: &imageChecker{
+				tagger: imageTagger{
+					cfg: &fakeConfig{},
+				},
+				lookupReferenceWithDigest: func(_ string, _ registryImageCheckerInterface) (string, error) {
+					return "image-tag-from-registry", nil
+				},
+			},
+			manifestName:  "manifest",
+			serviceName:   "service",
+			buildHash:     "buildHash",
+			expectedTag:   "image-tag-from-registry",
+			expectedBuilt: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tag, isbuilt := tt.imageChecker.checkIfBuildHashIsBuilt(tt.manifestName, tt.serviceName, tt.buildHash)
+
+			require.Equal(t, tt.expectedTag, tag)
+			require.Equal(t, tt.expectedBuilt, isbuilt)
+		})
+	}
+}

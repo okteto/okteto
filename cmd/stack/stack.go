@@ -17,18 +17,23 @@ import (
 	"context"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/spf13/cobra"
 )
 
+type analyticsTrackerInterface interface {
+	TrackImageBuild(...*analytics.ImageBuildMetadata)
+}
+
 // Stack stack management commands
-func Stack(ctx context.Context) *cobra.Command {
+func Stack(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "stack",
 		Short:  "Stack management commands",
 		Args:   utils.NoArgsAccepted("https://www.okteto.com/docs/reference/cli/#deploy"),
 		Hidden: true,
 	}
-	cmd.AddCommand(deploy(ctx))
+	cmd.AddCommand(deploy(ctx, at))
 	cmd.AddCommand(Destroy(ctx))
 	cmd.AddCommand(Endpoints(ctx))
 	return cmd

@@ -44,7 +44,7 @@ const (
 )
 
 // InitV1 automatically generates the manifest
-func InitV1(opts *InitOpts) error {
+func InitV1(opts *InitOpts, at analyticsTrackerInterface) error {
 	ctx := context.Background()
 
 	ctxResource := &model.ContextResource{}
@@ -72,7 +72,9 @@ func InitV1(opts *InitOpts) error {
 	}
 	opts.Workdir = cwd
 
-	mc := &ManifestCommand{}
+	mc := &ManifestCommand{
+		analyticsTracker: at,
+	}
 	if err := mc.RunInitV1(ctx, opts); err != nil {
 		return err
 	}

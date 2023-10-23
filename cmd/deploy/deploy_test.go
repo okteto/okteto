@@ -245,6 +245,33 @@ func (fe *fakeExecutor) Execute(command model.DeployCommand, _ []string) error {
 
 func (*fakeExecutor) CleanUp(_ error) {}
 
+type fakeV2Builder struct {
+	buildErr             error
+	buildOptionsStorage  *types.BuildOptions
+	servicesAlreadyBuilt []string
+}
+
+func (b *fakeV2Builder) Build(_ context.Context, buildOptions *types.BuildOptions) error {
+	if b.buildErr != nil {
+		return b.buildErr
+	}
+	b.buildOptionsStorage = buildOptions
+	return nil
+}
+
+func (b *fakeV2Builder) GetServicesToBuild(_ context.Context, manifest *model.Manifest, servicesToDeploy []string) ([]string, error) {
+	toBuild := make(map[string]bool, len(manifest.Build))
+	for service := range manifest.Build {
+		toBuild[service] = true
+	}
+
+	return setToSlice(setDifference(setIntersection(toBuild, sliceToSet(servicesToDeploy)), sliceToSet(b.servicesAlreadyBuilt))), nil
+}
+
+func (*fakeV2Builder) GetBuildEnvVars() map[string]string {
+	return nil
+}
+
 func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}
@@ -293,7 +320,7 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 	}
 	c := &DeployCommand{
 		GetManifest: getManifestWithError,
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ builderInterface, _ configMapHandler) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:      p,
 				Executor:   e,
@@ -332,7 +359,7 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 	}
 	c := &DeployCommand{
 		GetManifest: getManifestWithNoDeployNorDependency,
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ builderInterface, _ configMapHandler) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:      p,
 				Executor:   e,
@@ -359,6 +386,10 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 	assert.False(t, p.started)
 }
 
+type fakeAnalyticsTracker struct{}
+
+func (fakeAnalyticsTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
+
 func TestCreateConfigMapWithBuildError(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{
@@ -375,9 +406,10 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 
 	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
+	fakeTracker := fakeAnalyticsTracker{}
 	c := &DeployCommand{
 		GetManifest: getErrorManifest,
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ builderInterface, _ configMapHandler) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:             p,
 				Executor:          e,
@@ -386,7 +418,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 				Fs:                afero.NewMemMapFs(),
 			}, nil
 		},
-		Builder:           buildv2.NewBuilder(builder, registry),
+		Builder:           buildv2.NewBuilder(builder, registry, fakeTracker),
 		K8sClientProvider: clientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(clientProvider),
 	}
@@ -453,7 +485,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	}
 	c := &DeployCommand{
 		GetManifest: getFakeManifest,
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ builderInterface, _ configMapHandler) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:             p,
 				Executor:          e,
@@ -465,6 +497,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		K8sClientProvider: clientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(clientProvider),
 		Fs:                afero.NewMemMapFs(),
+		Builder:           &fakeV2Builder{},
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -533,7 +566,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	clientProvider := test.NewFakeK8sProvider(cmap, deployment)
 	c := &DeployCommand{
 		GetManifest: getFakeManifest,
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ builderInterface, _ configMapHandler) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:             p,
 				Executor:          e,
@@ -593,7 +626,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	clientProvider := test.NewFakeK8sProvider(deployment)
 	c := &DeployCommand{
 		GetManifest: getFakeManifest,
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ builderInterface, _ configMapHandler) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:              p,
 				Executor:           e,
@@ -609,6 +642,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		EndpointGetter:     getFakeEndpoint,
 		CfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
 		Fs:                 afero.NewMemMapFs(),
+		Builder:            &fakeV2Builder{},
 	}
 	ctx := context.Background()
 
@@ -672,7 +706,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		GetExternalControl: cp.getFakeExternalControl,
 		Fs:                 afero.NewMemMapFs(),
 		CfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ builderInterface, _ configMapHandler) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:              p,
 				Executor:           e,
@@ -683,6 +717,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 				Fs:                 afero.NewMemMapFs(),
 			}, nil
 		},
+		Builder: &fakeV2Builder{},
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -737,6 +772,7 @@ func getFakeManifestWithDependency(_ string) (*model.Manifest, error) {
 func TestBuildImages(t *testing.T) {
 	testCases := []struct {
 		name                 string
+		builder              *fakeV2Builder
 		build                bool
 		buildServices        []string
 		stack                *model.Stack
@@ -746,7 +782,10 @@ func TestBuildImages(t *testing.T) {
 		expectedImages       []string
 	}{
 		{
-			name:          "everything",
+			name: "everything",
+			builder: &fakeV2Builder{
+				servicesAlreadyBuilt: []string{"manifest B", "stack A"},
+			},
 			build:         false,
 			buildServices: []string{"manifest A", "manifest B", "stack A", "stack B"},
 			stack: &model.Stack{Services: map[string]*model.Service{
@@ -754,13 +793,13 @@ func TestBuildImages(t *testing.T) {
 				"stack B":             {Build: &model.BuildInfo{}},
 				"stack without build": {},
 			}},
-			servicesAlreadyBuilt: []string{"manifest B", "stack A"},
-			servicesToDeploy:     []string{"stack A", "stack without build"},
-			expectedError:        nil,
-			expectedImages:       []string{"manifest A"},
+			servicesToDeploy: []string{"stack A", "stack without build"},
+			expectedError:    nil,
+			expectedImages:   []string{"manifest A"},
 		},
 		{
 			name:             "nil stack",
+			builder:          &fakeV2Builder{},
 			build:            false,
 			buildServices:    []string{"manifest A", "manifest B"},
 			stack:            nil,
@@ -769,19 +808,22 @@ func TestBuildImages(t *testing.T) {
 			expectedImages:   []string{"manifest A", "manifest B"},
 		},
 		{
-			name:          "no services to deploy",
+			name: "no services to deploy",
+			builder: &fakeV2Builder{
+				servicesAlreadyBuilt: []string{"stack"},
+			},
 			build:         false,
 			buildServices: []string{"manifest", "stack"},
 			stack: &model.Stack{Services: map[string]*model.Service{
 				"stack": {Build: &model.BuildInfo{}},
 			}},
-			servicesAlreadyBuilt: []string{"stack"},
-			servicesToDeploy:     []string{},
-			expectedError:        nil,
-			expectedImages:       []string{"manifest"},
+			servicesToDeploy: []string{},
+			expectedError:    nil,
+			expectedImages:   []string{"manifest"},
 		},
 		{
 			name:          "no services already built",
+			builder:       &fakeV2Builder{},
 			build:         false,
 			buildServices: []string{"manifest A", "stack B", "stack C"},
 			stack: &model.Stack{Services: map[string]*model.Service{
@@ -793,20 +835,25 @@ func TestBuildImages(t *testing.T) {
 			expectedImages:   []string{"manifest A", "stack C"},
 		},
 		{
-			name:          "force build",
+			name: "force build",
+			builder: &fakeV2Builder{
+				servicesAlreadyBuilt: []string{"should be ignored since build is forced", "manifest A", "stack B"},
+			},
 			build:         true,
 			buildServices: []string{"manifest A", "manifest B", "stack A", "stack B"},
 			stack: &model.Stack{Services: map[string]*model.Service{
 				"stack A": {Build: &model.BuildInfo{}},
 				"stack B": {Build: &model.BuildInfo{}},
 			}},
-			servicesAlreadyBuilt: []string{"should be ignored since build is forced", "manifest A", "stack B"},
-			servicesToDeploy:     []string{"stack A", "stack B"},
-			expectedError:        nil,
-			expectedImages:       []string{"manifest A", "manifest B", "stack A", "stack B"},
+			servicesToDeploy: []string{"stack A", "stack B"},
+			expectedError:    nil,
+			expectedImages:   []string{"manifest A", "manifest B", "stack A", "stack B"},
 		},
 		{
-			name:          "force build specific services",
+			name: "force build specific services",
+			builder: &fakeV2Builder{
+				servicesAlreadyBuilt: []string{"should be ignored since build is forced", "manifest A", "stack B"},
+			},
 			build:         true,
 			buildServices: []string{"manifest A", "manifest B", "stack A", "stack B"},
 			stack: &model.Stack{Services: map[string]*model.Service{
@@ -814,30 +861,14 @@ func TestBuildImages(t *testing.T) {
 				"stack B":             {Build: &model.BuildInfo{}},
 				"stack without build": {},
 			}},
-			servicesAlreadyBuilt: []string{"should be ignored since build is forced", "manifest A", "stack B"},
-			servicesToDeploy:     []string{"stack A", "stack without build"},
-			expectedError:        nil,
-			expectedImages:       []string{"manifest A", "manifest B", "stack A"},
+			servicesToDeploy: []string{"stack A", "stack without build"},
+			expectedError:    nil,
+			expectedImages:   []string{"manifest A", "manifest B", "stack A"},
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			buildOptionsStorage := &types.BuildOptions{}
-
-			build := func(ctx context.Context, buildOptions *types.BuildOptions) error {
-				buildOptionsStorage = buildOptions
-				return nil
-			}
-
-			getServicesToBuild := func(ctx context.Context, manifest *model.Manifest, servicesToDeploy []string) ([]string, error) {
-				toBuild := make(map[string]bool, len(manifest.Build))
-				for service := range manifest.Build {
-					toBuild[service] = true
-				}
-
-				return setToSlice(setDifference(setIntersection(toBuild, sliceToSet(servicesToDeploy)), sliceToSet(testCase.servicesAlreadyBuilt))), nil
-			}
 
 			deployOptions := &Options{
 				Build: testCase.build,
@@ -856,9 +887,9 @@ func TestBuildImages(t *testing.T) {
 				deployOptions.Manifest.Build[service] = &model.BuildInfo{}
 			}
 
-			err := buildImages(context.Background(), build, getServicesToBuild, deployOptions)
+			err := buildImages(context.Background(), testCase.builder, deployOptions)
 			assert.Equal(t, testCase.expectedError, err)
-			assert.Equal(t, sliceToSet(testCase.expectedImages), sliceToSet(buildOptionsStorage.CommandArgs))
+			assert.Equal(t, sliceToSet(testCase.expectedImages), sliceToSet(testCase.builder.buildOptionsStorage.CommandArgs))
 		})
 	}
 
@@ -1086,7 +1117,7 @@ func TestDeployOnlyDependencies(t *testing.T) {
 		GetExternalControl: cp.getFakeExternalControl,
 		Fs:                 afero.NewMemMapFs(),
 		CfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ builderInterface, _ configMapHandler) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:              p,
 				Executor:           e,
@@ -1143,7 +1174,8 @@ func TestDeployOnlyDependencies(t *testing.T) {
 
 type fakeTracker struct{}
 
-func (*fakeTracker) TrackDeploy(dm analytics.DeployMetadata) {}
+func (*fakeTracker) TrackDeploy(analytics.DeployMetadata)             {}
+func (*fakeTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
 
 func TestTrackDeploy(t *testing.T) {
 	tt := []struct {

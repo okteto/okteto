@@ -30,9 +30,9 @@ type buildCtrl struct {
 	name    string
 }
 
-func newBuildCtrl(name string) buildCtrl {
+func newBuildCtrl(name string, analyticsTracker analyticsTrackerInterface) buildCtrl {
 	return buildCtrl{
-		builder: buildv2.NewBuilderFromScratch(),
+		builder: buildv2.NewBuilderFromScratch(analyticsTracker),
 		name:    name,
 	}
 }

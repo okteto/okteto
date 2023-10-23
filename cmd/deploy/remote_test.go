@@ -32,19 +32,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type fakeBuilder struct {
+type fakeV1Builder struct {
 	err           error
 	assertOptions func(o *types.BuildOptions)
 }
 
-func (f fakeBuilder) Build(_ context.Context, opts *types.BuildOptions) error {
+func (f fakeV1Builder) Build(_ context.Context, opts *types.BuildOptions) error {
 	if f.assertOptions != nil {
 		f.assertOptions(opts)
 	}
 	return f.err
 }
 
-func (f fakeBuilder) IsV1() bool { return true }
+func (f fakeV1Builder) IsV1() bool { return true }
 
 func TestRemoteTest(t *testing.T) {
 	ctx := context.Background()
@@ -142,7 +142,7 @@ func TestRemoteTest(t *testing.T) {
 			wdCtrl.SetErrors(tt.config.wd)
 			tempCreator.SetError(tt.config.tempFsCreator)
 			rdc := remoteDeployCommand{
-				builderV1:            fakeBuilder{err: tt.config.builderErr},
+				builderV1:            fakeV1Builder{err: tt.config.builderErr},
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,
 				temporalCtrl:         tempCreator,
@@ -173,7 +173,7 @@ func TestExtraHosts(t *testing.T) {
 	tempCreator := filesystem.NewTemporalDirectoryCtrl(fs)
 
 	rdc := remoteDeployCommand{
-		builderV1: fakeBuilder{
+		builderV1: fakeV1Builder{
 			assertOptions: func(o *types.BuildOptions) {
 				require.Len(t, o.ExtraHosts, 2)
 				for _, eh := range o.ExtraHosts {
@@ -224,7 +224,7 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 		sshAuthSockEnvvar:    envvarName,
 		getBuildEnvVars:      func() map[string]string { return nil },
 		knownHostsPath:       knowHostFile.Name(),
-		builderV1:            fakeBuilder{assertOptions: assertFn},
+		builderV1:            fakeV1Builder{assertOptions: assertFn},
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
@@ -261,7 +261,7 @@ func TestRemoteDeployWithBadSshAgent(t *testing.T) {
 	rdc := remoteDeployCommand{
 		sshAuthSockEnvvar:    envvarName,
 		knownHostsPath:       "inexistent-file",
-		builderV1:            fakeBuilder{assertOptions: assertFn},
+		builderV1:            fakeV1Builder{assertOptions: assertFn},
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
@@ -526,4 +526,10 @@ func Test_getOktetoCLIVersion(t *testing.T) {
 			require.Equal(t, version, tt.expected)
 		})
 	}
+}
+
+func Test_newRemoteDeployer(t *testing.T) {
+	got := newRemoteDeployer(&fakeV2Builder{})
+	require.IsType(t, &remoteDeployCommand{}, got)
+	require.NotNil(t, got.getBuildEnvVars)
 }

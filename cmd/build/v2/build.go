@@ -15,14 +15,18 @@ package v2
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
@@ -57,9 +61,13 @@ type oktetoRegistryInterface interface {
 type oktetoBuilderConfigInterface interface {
 	HasGlobalAccess() bool
 	IsCleanProject() bool
-	GetBuildHash(*model.BuildInfo) string
 	GetGitCommit() string
 	IsOkteto() bool
+	GetAnonymizedRepo() string
+}
+
+type analyticsTrackerInterface interface {
+	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
 }
 
 // OktetoBuilder builds the images
@@ -73,15 +81,13 @@ type OktetoBuilder struct {
 	buildEnvironments map[string]string
 
 	// lock is a mutex to provide builEnvironments map safe concurrency
-	lock sync.RWMutex
-
-	// builtImages represents the images that have been built already
-	builtImages map[string]bool
+	lock             sync.RWMutex
+	analyticsTracker analyticsTrackerInterface
 }
 
 // NewBuilder creates a new okteto builder
-func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface) *OktetoBuilder {
-	b := NewBuilderFromScratch()
+func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, analyticsTracker analyticsTrackerInterface) *OktetoBuilder {
+	b := NewBuilderFromScratch(analyticsTracker)
 	b.Builder = builder
 	b.Registry = registry
 	b.V1Builder = buildv1.NewBuilder(builder, registry)
@@ -89,7 +95,7 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 }
 
 // NewBuilderFromScratch creates a new okteto builder
-func NewBuilderFromScratch() *OktetoBuilder {
+func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface) *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
 	registry := registry.NewOktetoRegistry(okteto.Config{})
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
@@ -103,8 +109,8 @@ func NewBuilderFromScratch() *OktetoBuilder {
 		Registry:          registry,
 		V1Builder:         buildv1.NewBuilder(builder, registry),
 		buildEnvironments: map[string]string{},
-		builtImages:       map[string]bool{},
 		Config:            getConfig(registry, gitRepo),
+		analyticsTracker:  analyticsTracker,
 	}
 }
 
@@ -114,6 +120,8 @@ func (*OktetoBuilder) IsV1() bool {
 }
 
 // Build builds the images defined by a manifest
+// TODO: Function with cyclomatic complexity higher than threshold. Refactor function in order to reduce its complexity
+// skipcq: GO-R1005
 func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
 	if utils.LoadBoolean(constants.OktetoDeployRemote) {
 		// Since the local build has already been built,
@@ -150,14 +158,26 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 	buildManifest := options.Manifest.Build
 
+	// builtImagesControl represents the controller for the built services
+	// when a service is built we track it here
+	builtImagesControl := make(map[string]bool)
+
+	// send analytics for all builds after Build
+	buildsAnalytics := make([]*analytics.ImageBuildMetadata, 0)
+
+	// send all events appended on each build
+	defer func([]*analytics.ImageBuildMetadata) {
+		bc.analyticsTracker.TrackImageBuild(buildsAnalytics...)
+	}(buildsAnalytics)
+
 	oktetoLog.Infof("Images to build: [%s]", strings.Join(toBuildSvcs, ", "))
-	for len(bc.builtImages) != len(toBuildSvcs) {
+	for len(builtImagesControl) != len(toBuildSvcs) {
 		for _, svcToBuild := range toBuildSvcs {
-			if bc.builtImages[svcToBuild] {
+			if skipServiceBuild(svcToBuild, builtImagesControl) {
 				oktetoLog.Infof("skipping image '%s' due to being already built")
 				continue
 			}
-			if !bc.areImagesBuilt(buildManifest[svcToBuild].DependsOn) {
+			if !areAllServicesBuilt(buildManifest[svcToBuild].DependsOn, builtImagesControl) {
 				oktetoLog.Infof("image '%s' can't be deployed because at least one of its dependent images(%s) are not built", svcToBuild, strings.Join(buildManifest[svcToBuild].DependsOn, ", "))
 				continue
 			}
@@ -167,16 +187,37 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 			buildSvcInfo := buildManifest[svcToBuild]
 
+			// create the meta pointer and append it to the analytics slice
+			meta := analytics.NewImageBuildMetadata()
+			buildsAnalytics = append(buildsAnalytics, meta)
+
+			meta.Name = svcToBuild
+			meta.RepoURL = bc.Config.GetAnonymizedRepo()
+
+			repoHashDurationStart := time.Now()
+			repoCommit := bc.Config.GetGitCommit()
+			buildHash := getBuildHashFromCommit(buildSvcInfo, repoCommit)
+
+			meta.RepoHash = buildHash
+			meta.RepoHashDuration = time.Since(repoHashDurationStart)
+
 			// We only check that the image is built in the global registry if the noCache option is not set
 			if !options.NoCache && bc.Config.IsCleanProject() {
+
 				imageChecker := getImageChecker(buildSvcInfo, bc.Config, bc.Registry)
-				if imageWithDigest, isBuilt := imageChecker.checkIfCommitHashIsBuilt(options.Manifest.Name, svcToBuild, buildSvcInfo); isBuilt {
-					oktetoLog.Information("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, bc.Config.GetGitCommit())
+				cacheHitDurationStart := time.Now()
+				imageWithDigest, isBuilt := imageChecker.checkIfBuildHashIsBuilt(options.Manifest.Name, svcToBuild, buildHash)
+
+				meta.CacheHit = isBuilt
+				meta.CacheHitDuration = time.Since(cacheHitDurationStart)
+
+				if isBuilt {
+					oktetoLog.Information("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, repoCommit)
 					// if the built image belongs to global registry we clone it to the dev registry
 					// so that in can be used in dev containers (i.e. okteto up)
 					if bc.Registry.IsGlobalRegistry(imageWithDigest) {
 						oktetoLog.Debugf("Copying image '%s' from global to personal registry", svcToBuild)
-						tag := bc.Config.GetBuildHash(buildSvcInfo)
+						tag := buildHash
 						devImage, err := bc.Registry.CloneGlobalImageToDev(imageWithDigest, tag)
 						if err != nil {
 							return err
@@ -185,7 +226,8 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 					}
 
 					bc.SetServiceEnvVars(svcToBuild, imageWithDigest)
-					bc.builtImages[svcToBuild] = true
+					builtImagesControl[svcToBuild] = true
+					meta.Success = true
 					continue
 				}
 			}
@@ -193,13 +235,16 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			if !okteto.Context().IsOkteto && buildSvcInfo.Image == "" {
 				return fmt.Errorf("'build.%s.image' is required if your cluster doesn't have Okteto installed", svcToBuild)
 			}
-
-			imageTag, err := bc.buildService(ctx, options.Manifest, svcToBuild, options)
+			buildDurationStart := time.Now()
+			imageTag, err := bc.buildServiceImages(ctx, options.Manifest, svcToBuild, options)
 			if err != nil {
 				return fmt.Errorf("error building service '%s': %w", svcToBuild, err)
 			}
+			meta.BuildDuration = time.Since(buildDurationStart)
+			meta.Success = true
+
 			bc.SetServiceEnvVars(svcToBuild, imageTag)
-			bc.builtImages[svcToBuild] = true
+			builtImagesControl[svcToBuild] = true
 		}
 	}
 	if options.EnableStages {
@@ -208,34 +253,45 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	return options.Manifest.ExpandEnvVars()
 }
 
-func (bc *OktetoBuilder) areImagesBuilt(imagesToCheck []string) bool {
-	for _, imageToCheck := range imagesToCheck {
-		if _, ok := bc.builtImages[imageToCheck]; !ok {
+// areServicesBuilt compares the list of services with the built control
+// when all services are built returns true, when a service is still pending it will return false
+func areAllServicesBuilt(services []string, control map[string]bool) bool {
+	for _, service := range services {
+		if _, ok := control[service]; !ok {
 			return false
 		}
 	}
 	return true
 }
 
-func (bc *OktetoBuilder) buildService(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
+// skipServiceBuild returns if a service has been built
+func skipServiceBuild(service string, control map[string]bool) bool {
+	return control[service]
+}
+
+// buildServiceImages builds the images for the given service.
+// if service has volumes to include but is not okteto, an error is returned
+// returned image reference includes the digest
+// when a service includes volumes, this is the image returned
+func (bc *OktetoBuilder) buildServiceImages(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
 	buildSvcInfo := manifest.Build[svcName]
 
 	switch {
-	case shouldAddVolumeMounts(buildSvcInfo) && !okteto.IsOkteto():
+	case serviceHasVolumesToInclude(buildSvcInfo) && !okteto.IsOkteto():
 		return "", oktetoErrors.UserError{
 			E:    fmt.Errorf("Build with volume mounts is not supported on vanilla clusters"),
 			Hint: "Please connect to a okteto cluster and try again",
 		}
-	case shouldBuildFromDockerfile(buildSvcInfo) && shouldAddVolumeMounts(buildSvcInfo):
+	case serviceHasDockerfile(buildSvcInfo) && serviceHasVolumesToInclude(buildSvcInfo):
 		image, err := bc.buildSvcFromDockerfile(ctx, manifest, svcName, options)
 		if err != nil {
 			return "", err
 		}
 		buildSvcInfo.Image = image
 		return bc.addVolumeMounts(ctx, manifest, svcName, options)
-	case shouldBuildFromDockerfile(buildSvcInfo):
+	case serviceHasDockerfile(buildSvcInfo):
 		return bc.buildSvcFromDockerfile(ctx, manifest, svcName, options)
-	case shouldAddVolumeMounts(buildSvcInfo):
+	case serviceHasVolumesToInclude(buildSvcInfo):
 		if okteto.IsOkteto() {
 			return bc.addVolumeMounts(ctx, manifest, svcName, options)
 		}
@@ -250,8 +306,8 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	oktetoLog.Infof("Building image for service '%s'", svcName)
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := bc.getBuildInfoWithoutVolumeMounts(manifest.Build[svcName], isStackManifest)
-
-	tagToBuild := newImageTagger(bc.Config).tag(manifest.Name, svcName, buildSvcInfo)
+	buildHash := getBuildHashFromCommit(buildSvcInfo, bc.Config.GetGitCommit())
+	tagToBuild := newImageTagger(bc.Config).getServiceImageReference(manifest.Name, svcName, buildSvcInfo, buildHash)
 	buildSvcInfo.Image = tagToBuild
 	if err := buildSvcInfo.AddBuildArgs(bc.buildEnvironments); err != nil {
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcName, err)
@@ -282,7 +338,11 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 		fromImage = options.Tag
 	}
 
-	tagToBuild := newImageWithVolumesTagger(bc.Config).tag(manifest.Name, svcName, manifest.Build[svcName])
+	buildInfoCopy := manifest.Build[svcName].Copy()
+	buildInfoCopy.Image = ""
+	buildHash := getBuildHashFromCommit(buildInfoCopy, bc.Config.GetGitCommit())
+
+	tagToBuild := newImageWithVolumesTagger(bc.Config).getServiceImageReference(manifest.Name, svcName, buildInfoCopy, buildHash)
 	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest)
 	svcBuild, err := build.CreateDockerfileWithVolumeMounts(fromImage, buildSvcInfo.VolumesToInclude)
 	if err != nil {
@@ -301,11 +361,13 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 	return imageTagWithDigest, nil
 }
 
-func shouldBuildFromDockerfile(buildInfo *model.BuildInfo) bool {
+// serviceHasDockerfile returns true when service BuildInfo Dockerfile is not empty
+func serviceHasDockerfile(buildInfo *model.BuildInfo) bool {
 	return buildInfo.Dockerfile != ""
 }
 
-func shouldAddVolumeMounts(buildInfo *model.BuildInfo) bool {
+// serviceHasVolumesToInclude returns true when service BuildInfo VolumesToInclude are more than 0
+func serviceHasVolumesToInclude(buildInfo *model.BuildInfo) bool {
 	return len(buildInfo.VolumesToInclude) > 0
 }
 
@@ -382,10 +444,38 @@ func validateServices(buildSection model.ManifestBuild, svcsToBuild []string) er
 
 func getImageChecker(buildInfo *model.BuildInfo, cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface) imageCheckerInterface {
 	var tagger imageTaggerInterface
-	if shouldAddVolumeMounts(buildInfo) {
+	if serviceHasVolumesToInclude(buildInfo) {
 		tagger = newImageWithVolumesTagger(cfg)
 	} else {
 		tagger = newImageTagger(cfg)
 	}
 	return newImageChecker(cfg, registry, tagger)
+}
+
+// getBuildHashFromCommit parses buildInfo and commit into a hashed string
+func getBuildHashFromCommit(buildInfo *model.BuildInfo, commit string) string {
+	args := []string{}
+	for _, arg := range buildInfo.Args {
+		args = append(args, arg.String())
+	}
+	argsText := strings.Join(args, ";")
+
+	secrets := []string{}
+	for key, value := range buildInfo.Secrets {
+		secrets = append(secrets, fmt.Sprintf("%s=%s", key, value))
+	}
+	secretsText := strings.Join(secrets, ";")
+
+	// We use a builder to avoid allocations when building the string
+	var b strings.Builder
+	fmt.Fprintf(&b, "commit:%s;", commit)
+	fmt.Fprintf(&b, "target:%s;", buildInfo.Target)
+	fmt.Fprintf(&b, "build_args:%s;", argsText)
+	fmt.Fprintf(&b, "secrets:%s;", secretsText)
+	fmt.Fprintf(&b, "context:%s;", buildInfo.Context)
+	fmt.Fprintf(&b, "dockerfile:%s;", buildInfo.Dockerfile)
+	fmt.Fprintf(&b, "image:%s;", buildInfo.Image)
+
+	hash := sha256.Sum256([]byte(b.String()))
+	return hex.EncodeToString(hash[:])
 }
