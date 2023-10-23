@@ -268,7 +268,7 @@ func (b *fakeV2Builder) GetServicesToBuild(_ context.Context, manifest *model.Ma
 	return setToSlice(setDifference(setIntersection(toBuild, sliceToSet(servicesToDeploy)), sliceToSet(b.servicesAlreadyBuilt))), nil
 }
 
-func (b *fakeV2Builder) GetBuildEnvVars() map[string]string {
+func (*fakeV2Builder) GetBuildEnvVars() map[string]string {
 	return nil
 }
 
@@ -388,7 +388,7 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 
 type fakeAnalyticsTracker struct{}
 
-func (a fakeAnalyticsTracker) TrackImageBuild(_ ...*analytics.ImageBuildMetadata) {}
+func (fakeAnalyticsTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
 
 func TestCreateConfigMapWithBuildError(t *testing.T) {
 	p := &fakeProxy{}
