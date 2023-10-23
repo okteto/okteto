@@ -40,17 +40,20 @@ func (frg *fakeRepositoryGetter) get(_ string) (gitRepositoryInterface, error) {
 }
 
 type fakeRepository struct {
-	worktree *fakeWorktree
-	head     *plumbing.Reference
-	commit   *object.Commit
-	err      error
+	worktree     *fakeWorktree
+	head         *plumbing.Reference
+	commit       *fakeCommit
+	failInCommit bool
+	err          error
 }
 
 func (fr fakeRepository) Worktree() (gitWorktreeInterface, error) {
 	return fr.worktree, fr.err
 }
-
 func (fr fakeRepository) Head() (*plumbing.Reference, error) {
+	if fr.failInCommit {
+		return fr.head, nil
+	}
 	return fr.head, fr.err
 }
 
@@ -70,6 +73,15 @@ func (fw fakeWorktree) GetRoot() string {
 
 func (fw fakeWorktree) Status(context.Context, LocalGitInterface) (oktetoGitStatus, error) {
 	return fw.status, fw.err
+}
+
+type fakeCommit struct {
+	tree *object.Tree
+	err  error
+}
+
+func (fc *fakeCommit) Tree() (*object.Tree, error) {
+	return fc.tree, fc.err
 }
 
 func TestNewRepo(t *testing.T) {

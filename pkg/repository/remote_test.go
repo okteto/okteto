@@ -15,6 +15,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -45,4 +46,12 @@ func TestRemoteGetSHA(t *testing.T) {
 	sha, err := remote.getSHA()
 	assert.NoError(t, err)
 	assert.Equal(t, remote.gitCommit, sha)
+}
+
+func TestRemoteGetTreeHash(t *testing.T) {
+	remote := oktetoRemoteRepoController{
+		gitCommit: "123",
+	}
+	_, err := remote.getTreeSHA("test")
+	assert.Error(t, err, fmt.Errorf("not-implemented"))
 }
