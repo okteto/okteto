@@ -13,34 +13,34 @@
 
 package suggest
 
-// ErrorSuggestion holds the rules and allows generating suggestions for errors.
-type ErrorSuggestion struct {
+// errorSuggestion holds the rules and allows generating suggestions for errors.
+type errorSuggestion struct {
 	rules []*Rule
 }
 
-// UserFriendlyError is an error that can be used to provide user-friendly error messages
-type UserFriendlyError struct {
-	suggestion *ErrorSuggestion
-	Err        error
+// newErrorSuggestion creates a new errorSuggestion instance.
+func newErrorSuggestion() *errorSuggestion {
+	return &errorSuggestion{}
 }
 
-// NewErrorSuggestion creates a new ErrorSuggestion instance.
-func NewErrorSuggestion() *ErrorSuggestion {
-	return &ErrorSuggestion{}
-}
-
-// WithRules adds multiple rules to the ErrorSuggestion.
-func (es *ErrorSuggestion) WithRules(rules []*Rule) {
+// WithRules adds multiple rules to the errorSuggestion.
+func (es *errorSuggestion) WithRules(rules []*Rule) {
 	es.rules = append(es.rules, rules...)
 }
 
 // suggest applies all rules and returns a user-friendly error
-func (es *ErrorSuggestion) suggest(err error) error {
+func (es *errorSuggestion) suggest(err error) error {
 	newErr := err
 	for _, rule := range es.rules {
 		newErr = rule.apply(newErr)
 	}
 	return newErr
+}
+
+// UserFriendlyError is an error that can be used to provide user-friendly error messages
+type UserFriendlyError struct {
+	suggestion *errorSuggestion
+	Err        error
 }
 
 // Error allows UserFriendlyError to satisfy the error interface
@@ -51,14 +51,12 @@ func (u UserFriendlyError) Error() string {
 	if u.suggestion == nil {
 		return u.Err.Error()
 	}
-	if err := u.suggestion.suggest(u.Err); err != nil {
-		return err.Error()
-	}
-	return u.Err.Error()
+
+	return u.suggestion.suggest(u.Err).Error()
 }
 
 func NewUserFriendlyError(err error, rules []*Rule) *UserFriendlyError {
-	sug := NewErrorSuggestion()
+	sug := newErrorSuggestion()
 
 	sug.WithRules(rules)
 

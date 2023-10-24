@@ -20,7 +20,7 @@ import (
 	"testing"
 )
 
-func TestErrorSuggestion(t *testing.T) {
+func Test_errorSuggestion_suggest(t *testing.T) {
 	alwaysFalse := func(e error) bool { return false }
 	returnSameErr := func(e error) error { return e }
 	emptyRule := NewRule(alwaysFalse, returnSameErr)
@@ -79,11 +79,60 @@ func TestErrorSuggestion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			errorSuggestion := NewErrorSuggestion()
+			errorSuggestion := newErrorSuggestion()
 			errorSuggestion.WithRules(tt.rules)
 			suggestion := errorSuggestion.suggest(tt.inputError)
 
 			assert.EqualError(t, suggestion, tt.expected)
 		})
 	}
+}
+
+func Test_UserFriendlyError(t *testing.T) {
+	tests := []struct {
+		name       string
+		inputError error
+		inputRules []*Rule
+		expected   string
+	}{
+		{
+			name:     "with nil error",
+			expected: "",
+		},
+		{
+			name:       "without rules",
+			inputError: assert.AnError,
+			expected:   assert.AnError.Error(),
+		},
+		{
+			name:       "with rule",
+			inputError: assert.AnError,
+			inputRules: []*Rule{
+				NewRule(
+					func(e error) bool {
+						return true
+					},
+					func(e error) error {
+						return errors.New("new-value")
+					},
+				),
+			},
+			expected: "new-value",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := NewUserFriendlyError(tt.inputError, tt.inputRules)
+			assert.Equal(t, tt.expected, err.Error())
+		})
+	}
+}
+
+func Test_NewUserFriendlyError_withNilSuggestion(t *testing.T) {
+	err := UserFriendlyError{
+		suggestion: nil,
+		Err:        assert.AnError,
+	}
+	assert.EqualError(t, err, assert.AnError.Error())
 }
