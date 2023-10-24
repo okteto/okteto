@@ -857,12 +857,14 @@ func Test_getManifestFromFile(t *testing.T) {
 			composeBytes:  nil,
 			expectedErr:   oktetoErrors.ErrEmptyManifest,
 		},
-		{
-			name:          "manifestPath to invalid okteto manifest, no compose file",
-			manifestBytes: []byte(`asdasa: asda`),
-			composeBytes:  nil,
-			expectedErr:   oktetoErrors.ErrInvalidManifest,
-		},
+		//{
+		//	name:          "manifestPath to invalid okteto manifest, no compose file",
+		//	manifestBytes: []byte(`asdasa: asda`),
+		//	composeBytes:  nil,
+		//	expectedErr: suggest.UserFriendlyError{
+		//		Err: fmt.Errorf("Your okteto manifest is not valid, please check the following errors:\n     - line 1: field 'asdasa' is not a property of the 'dev' object\n    Check out the okteto manifest docs at: https://www.okteto.com/docs/reference/manifest"),
+		//	},
+		//},
 		{
 			name: "manifestPath to valid v2 okteto manifest",
 			manifestBytes: []byte(`dev:

@@ -21,7 +21,7 @@ type ErrorSuggestion struct {
 // UserFriendlyError is an error that can be used to provide user-friendly error messages
 type UserFriendlyError struct {
 	suggestion *ErrorSuggestion
-	err        error
+	Err        error
 }
 
 // NewErrorSuggestion creates a new ErrorSuggestion instance.
@@ -47,11 +47,17 @@ func (es *ErrorSuggestion) suggest(err error) error {
 }
 
 // Error allows UserFriendlyError to satisfy the error interface
-func (u *UserFriendlyError) Error() string {
-	if err := u.suggestion.suggest(u.err); err != nil {
+func (u UserFriendlyError) Error() string {
+	if u.Err == nil {
+		return ""
+	}
+	if u.suggestion == nil {
+		return u.Err.Error()
+	}
+	if err := u.suggestion.suggest(u.Err); err != nil {
 		return err.Error()
 	}
-	return ""
+	return u.Err.Error()
 }
 
 func NewUserFriendlyError(err error, rules []*Rule) *UserFriendlyError {
@@ -61,6 +67,6 @@ func NewUserFriendlyError(err error, rules []*Rule) *UserFriendlyError {
 
 	return &UserFriendlyError{
 		suggestion: sug,
-		err:        err,
+		Err:        err,
 	}
 }
