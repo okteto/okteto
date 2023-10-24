@@ -14,7 +14,6 @@
 package model
 
 import (
-	"github.com/okteto/okteto/pkg/suggest"
 	"os"
 
 	"github.com/okteto/okteto/pkg/discovery"
@@ -47,7 +46,7 @@ func GetContextResource(path string) (*ContextResource, error) {
 		return nil, err
 	}
 	if err := yaml.Unmarshal(bytes, ctxResource); err != nil {
-		return nil, suggest.NewUserFriendlyError(err, Manifest{})
+		return nil, newManifestFriendlyError(err)
 	}
 
 	ctxResource.Context = os.ExpandEnv(ctxResource.Context)

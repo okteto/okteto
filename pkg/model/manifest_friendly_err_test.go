@@ -11,11 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package suggest
+package model
 
 import (
 	"errors"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -69,7 +68,7 @@ func TestGetStructKeys(t *testing.T) {
 			}{
 				"key1": {"value1", 1},
 			},
-			expected: map[string][]string{"_": []string{"field1", "field2"}},
+			expected: map[string][]string{"_": {"field1", "field2"}},
 		},
 		{
 			name:     "string",
@@ -95,7 +94,7 @@ func TestGetStructKeys(t *testing.T) {
 				field1 string `yaml:"field1"`
 				field2 string
 			}{},
-			expected: map[string][]string{"_": []string{"field1"}},
+			expected: map[string][]string{"_": {"field1"}},
 		},
 		{
 			name: "anonymous struct with nested struct",
@@ -105,7 +104,7 @@ func TestGetStructKeys(t *testing.T) {
 					field2 string `yaml:"field2"`
 				}
 			}{},
-			expected: map[string][]string{"_": []string{"field1", "field2"}},
+			expected: map[string][]string{"_": {"field1", "field2"}},
 		},
 		{
 			name: "anonymous struct with nested struct with no yaml tags",
@@ -115,7 +114,7 @@ func TestGetStructKeys(t *testing.T) {
 					field2 string
 				}
 			}{},
-			expected: map[string][]string{"_": []string{"field1"}},
+			expected: map[string][]string{"_": {"field1"}},
 		},
 		{
 			name: "anonymous struct with nested struct with pointer",
@@ -126,7 +125,7 @@ func TestGetStructKeys(t *testing.T) {
 					field2 string `yaml:"field2"`
 				}
 			}{},
-			expected: map[string][]string{"_": []string{"field1", "field2"}},
+			expected: map[string][]string{"_": {"field1", "field2"}},
 		},
 		{
 			name: "anonymous struct with nested struct with pointer with no yaml tags",
@@ -136,11 +135,11 @@ func TestGetStructKeys(t *testing.T) {
 					field2 string
 				}
 			}{},
-			expected: map[string][]string{"_": []string{"field1"}},
+			expected: map[string][]string{"_": {"field1"}},
 		},
 		{
 			name:  "okteto manifest",
-			input: model.Manifest{},
+			input: Manifest{},
 			expected: map[string][]string{
 				"forward.Forward":            {"localPort", "remotePort", "name", "labels"},
 				"forward.GlobalForward":      {"localPort", "remotePort", "name", "labels"},
@@ -217,6 +216,36 @@ func Test_isYamlErrorWithoutLinkToDocs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			res := isYamlErrorWithoutLinkToDocs(tt.input)
 			assert.Equal(t, tt.expected, res)
+		})
+	}
+}
+
+func TestUserFriendlyError(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    error
+		expected string
+	}{
+		{
+			name:  "yaml errors with heading and link to docs",
+			input: errors.New("yaml: some random error"),
+			expected: `Your okteto manifest is not valid, please check the following errors:
+yaml: some random error
+    Check out the okteto manifest docs at: https://www.okteto.com/docs/reference/manifest`,
+		},
+		{
+			name:  "yaml errors with heading and link to docs",
+			input: errors.New("yaml: unmarshal errors:\n  line 4: field contex not found in type model.manifestRaw"),
+			expected: `Your okteto manifest is not valid, please check the following errors:
+     - line 4: field 'contex' is not a property of the okteto manifest. Did you mean "context"?
+    Check out the okteto manifest docs at: https://www.okteto.com/docs/reference/manifest`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := newManifestFriendlyError(tt.input)
+			assert.Equal(t, tt.expected, err.Error())
 		})
 	}
 }

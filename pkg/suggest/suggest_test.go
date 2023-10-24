@@ -23,11 +23,11 @@ import (
 func TestErrorSuggestion(t *testing.T) {
 	alwaysFalse := func(e error) bool { return false }
 	returnSameErr := func(e error) error { return e }
-	emptyRule := newRule(alwaysFalse, returnSameErr)
+	emptyRule := NewRule(alwaysFalse, returnSameErr)
 
 	inputError := errors.New("line 4: field contex not found in type model.buildInfoRaw")
 
-	ruleNotFoundInBuildInfoRaw := newRule(
+	ruleNotFoundInBuildInfoRaw := NewRule(
 		func(e error) bool {
 			return strings.Contains(e.Error(), "not found in type model.buildInfoRaw")
 		},
@@ -39,21 +39,21 @@ func TestErrorSuggestion(t *testing.T) {
 	tests := []struct {
 		name          string
 		inputError    error
-		rules         []ruleInterface
+		rules         []*Rule
 		expected      string
 		expectedError bool
 	}{
 		{
-			name:       "basic rule",
+			name:       "basic Rule",
 			inputError: inputError,
-			rules:      []ruleInterface{ruleNotFoundInBuildInfoRaw},
+			rules:      []*Rule{ruleNotFoundInBuildInfoRaw},
 			expected:   "line 4: field contex does not exist in the build section of the Okteto Manifest",
 		},
 		{
 			name:       "suggesting closest word",
 			inputError: inputError,
-			rules: []ruleInterface{
-				newLevenshteinRule(
+			rules: []*Rule{
+				NewLevenshteinRule(
 					"field (.+?) not found",
 					"context",
 				),
@@ -62,24 +62,11 @@ func TestErrorSuggestion(t *testing.T) {
 			expected: "line 4: field contex does not exist in the build section of the Okteto Manifest. Did you mean \"context\"?",
 		},
 		{
-			name:       "multiple rules and matching regex",
+			name:       "no matching Rule",
 			inputError: inputError,
-			rules: []ruleInterface{
+			rules: []*Rule{
 				emptyRule,
-				emptyRule,
-				newRegexRule(`field .+ not found in type model.buildInfoRaw`, func(e error) error {
-					return errors.New(strings.Replace(e.Error(), "not found in type model.buildInfoRaw", "does not exist in the build section of the Okteto Manifest", 1))
-				}),
-				emptyRule,
-			},
-			expected: "line 4: field contex does not exist in the build section of the Okteto Manifest",
-		},
-		{
-			name:       "no matching rule",
-			inputError: inputError,
-			rules: []ruleInterface{
-				emptyRule,
-				newLevenshteinRule(
+				NewLevenshteinRule(
 					"non-matching regex",
 					"test",
 				),
@@ -90,7 +77,7 @@ func TestErrorSuggestion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			errorSuggestion := newErrorSuggestion()
+			errorSuggestion := NewErrorSuggestion()
 			for _, rule := range tt.rules {
 				errorSuggestion.withRule(rule)
 			}
@@ -98,36 +85,6 @@ func TestErrorSuggestion(t *testing.T) {
 			suggestion := errorSuggestion.suggest(tt.inputError)
 
 			assert.EqualError(t, suggestion, tt.expected)
-		})
-	}
-}
-
-func TestUserFriendlyError(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    error
-		expected string
-	}{
-		{
-			name:  "yaml errors with heading and link to docs",
-			input: errors.New("yaml: some random error"),
-			expected: `Your okteto manifest is not valid, please check the following errors:
-yaml: some random error
-    Check out the okteto manifest docs at: https://www.okteto.com/docs/reference/manifest`,
-		},
-		{
-			name:  "yaml errors with heading and link to docs",
-			input: errors.New("yaml: unmarshal errors:\n  line 4: field contex not found in type model.manifestRaw"),
-			expected: `Your okteto manifest is not valid, please check the following errors:
-     - line 4: field 'contex' is not a property of the okteto manifest. Did you mean "context"?
-    Check out the okteto manifest docs at: https://www.okteto.com/docs/reference/manifest`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := NewUserFriendlyError(tt.input)
-			assert.Equal(t, tt.expected, err.Error())
 		})
 	}
 }

@@ -21,40 +21,35 @@ import (
 	"strings"
 )
 
-type rule struct {
+type Rule struct {
 	condition      conditionFunc
 	transformation transformFunc
 }
 
-// conditionFunc is a function that returns true if the rule should be applied to the error.
+// conditionFunc is a function that returns true if the Rule should be applied to the error.
 type conditionFunc func(error) bool
 
 // transformFunc is a function that defines how the error should be transformed.
 type transformFunc func(error) error
 
-// ruleInterface represents a suggestion rule.
-type ruleInterface interface {
-	apply(error) error
-}
-
-// newRule creates a new ruleInterface instance.
-func newRule(condition conditionFunc, transform transformFunc) ruleInterface {
-	return &rule{
+// NewRule creates an instance of Rule
+func NewRule(condition conditionFunc, transform transformFunc) *Rule {
+	return &Rule{
 		condition:      condition,
 		transformation: transform,
 	}
 }
 
-// apply executes the rule on the error.
-func (g *rule) apply(err error) error {
+// apply executes the Rule on the error.
+func (g *Rule) apply(err error) error {
 	if g.condition(err) {
 		return g.transformation(err)
 	}
 	return err
 }
 
-// newStrReplaceRule creates a ruleInterface that finds and replaces a string in the error message
-func newStrReplaceRule(find, replace string) ruleInterface {
+// NewStrReplaceRule creates a Rule that finds and replaces a string in the error message
+func NewStrReplaceRule(find, replace string) *Rule {
 	condition := func(e error) bool {
 		return strings.Contains(e.Error(), find)
 	}
@@ -64,23 +59,12 @@ func newStrReplaceRule(find, replace string) ruleInterface {
 		return errors.New(replacedMessage)
 	}
 
-	return newRule(condition, transformation)
+	return NewRule(condition, transformation)
 }
 
-// newRegexRule creates a ruleInterface based on a regex pattern.
-func newRegexRule(pattern string, transform transformFunc) ruleInterface {
-	re := regexp.MustCompile(pattern)
-
-	condition := func(e error) bool {
-		return re.MatchString(e.Error())
-	}
-
-	return newRule(condition, transform)
-}
-
-// newLevenshteinRule creates a ruleInterface that matches a regex pattern, extracts a group,
+// NewLevenshteinRule creates a Rule that matches a regex pattern, extracts a group,
 // and computes the Levenshtein distance for that group against a target string.
-func newLevenshteinRule(pattern string, target string) ruleInterface {
+func NewLevenshteinRule(pattern string, target string) *Rule {
 	re, err := regexp.Compile("(.*?)" + pattern + "(.*)") // Capture everything before and after the pattern
 
 	threshold := 3
@@ -108,7 +92,7 @@ func newLevenshteinRule(pattern string, target string) ruleInterface {
 
 		for _, matchingError := range matchingErrors {
 			distance := levenshtein.Distance(target, matchingError[2], nil)
-			if distance <= 3 {
+			if distance <= threshold {
 				suggestion := fmt.Sprintf("%s. Did you mean \"%s\"?", matchingError[0], target)
 				errorMsg = strings.Replace(errorMsg, matchingError[0], suggestion, 1)
 			}
@@ -117,5 +101,5 @@ func newLevenshteinRule(pattern string, target string) ruleInterface {
 		return errors.New(errorMsg)
 	}
 
-	return newRule(condition, transformation)
+	return NewRule(condition, transformation)
 }

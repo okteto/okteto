@@ -13,42 +13,37 @@
 
 package suggest
 
-// errorSuggestion holds the rules and allows generating suggestions for errors.
-type errorSuggestion struct {
-	rules []ruleInterface
+// ErrorSuggestion holds the rules and allows generating suggestions for errors.
+type ErrorSuggestion struct {
+	rules []*Rule
 }
 
-// newErrorSuggestion creates a new errorSuggestion instance.
-func newErrorSuggestion() *errorSuggestion {
-	return &errorSuggestion{}
+// UserFriendlyError is an error that can be used to provide user-friendly error messages
+type UserFriendlyError struct {
+	suggestion *ErrorSuggestion
+	err        error
 }
 
-// withRules adds multiple rules to the errorSuggestion.
-func (es *errorSuggestion) withRules(rules []ruleInterface) *errorSuggestion {
+// NewErrorSuggestion creates a new ErrorSuggestion instance.
+func NewErrorSuggestion() *ErrorSuggestion {
+	return &ErrorSuggestion{}
+}
+
+// WithRules adds multiple rules to the ErrorSuggestion.
+func (es *ErrorSuggestion) WithRules(rules []*Rule) *ErrorSuggestion {
 	for _, r := range rules {
-		es.withRule(r)
+		es.rules = append(es.rules, r)
 	}
 	return es
 }
 
-// withRule adds a new rule to the errorSuggestion.
-func (es *errorSuggestion) withRule(rule ruleInterface) *errorSuggestion {
-	es.rules = append(es.rules, rule)
-	return es
-}
-
 // suggest applies all rules and returns a user-friendly error
-func (es *errorSuggestion) suggest(err error) error {
+func (es *ErrorSuggestion) suggest(err error) error {
 	newErr := err
 	for _, rule := range es.rules {
 		newErr = rule.apply(newErr)
 	}
 	return newErr
-}
-
-type UserFriendlyError struct {
-	suggestion *errorSuggestion
-	err        error
 }
 
 // Error allows UserFriendlyError to satisfy the error interface
@@ -59,12 +54,10 @@ func (u *UserFriendlyError) Error() string {
 	return ""
 }
 
-func NewUserFriendlyError(err error, manifestSchema interface{}) *UserFriendlyError {
-	sug := newErrorSuggestion()
+func NewUserFriendlyError(err error, rules []*Rule) *UserFriendlyError {
+	sug := NewErrorSuggestion()
 
-	sug.withRules(
-		getManifestSuggestionRules(manifestSchema),
-	)
+	sug.WithRules(rules)
 
 	return &UserFriendlyError{
 		suggestion: sug,
