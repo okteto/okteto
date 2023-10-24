@@ -30,11 +30,8 @@ func NewErrorSuggestion() *ErrorSuggestion {
 }
 
 // WithRules adds multiple rules to the ErrorSuggestion.
-func (es *ErrorSuggestion) WithRules(rules []*Rule) *ErrorSuggestion {
-	for _, r := range rules {
-		es.rules = append(es.rules, r)
-	}
-	return es
+func (es *ErrorSuggestion) WithRules(rules []*Rule) {
+	es.rules = append(es.rules, rules...)
 }
 
 // suggest applies all rules and returns a user-friendly error
