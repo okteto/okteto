@@ -44,7 +44,17 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 
 	for structName, structKeywords := range manifestKeys {
 		for _, keyword := range structKeywords {
-			rule := suggest.NewLevenshteinRule(fmt.Sprintf(`field (\w+) not found (in type|into) %s`, structName), keyword)
+			// example: line 5: field contex not found in type model.buildInfoRaw
+			// (.*?): this excludes eerything before the keyword "field"
+			// (\w+): this captures the keyword we want to calculate the levenshtein distance with
+			// (in type|into): this ensures to match all variations of the error message
+			// (.*?): this excludes everything after the message that we want to find
+			pattern := fmt.Sprintf(`(.*?)field (\w+) not found (in type|into) %s(.*?)`, structName)
+
+			// keywordInGroup is the index of the capturing group that contains the actual mistyped keyword
+			// set to 2 because index 0 is the whole sentence and index 1 is "line 5"
+			keywordInGroup := 2
+			rule := suggest.NewLevenshteinRule(pattern, keyword, keywordInGroup)
 			rules = append(rules, rule)
 		}
 	}

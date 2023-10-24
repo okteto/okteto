@@ -62,23 +62,29 @@ func NewStrReplaceRule(find, replace string) *Rule {
 	return NewRule(condition, transformation)
 }
 
-// NewLevenshteinRule creates a Rule that matches a regex pattern, extracts a group,
-// and computes the Levenshtein distance for that group against a target string.
-func NewLevenshteinRule(pattern string, target string) *Rule {
-	re, err := regexp.Compile("(.*?)" + pattern + "(.*)") // Capture everything before and after the pattern
+// NewLevenshteinRule creates a Rule that leverages regular expressions to detect words in errors that might be mistyped.
+func NewLevenshteinRule(pattern string, target string, targetGroupIndex int) *Rule {
+	re, err := regexp.Compile(pattern)
 
 	threshold := 3
+
+	// if the target is shorter than the threshold, we set the threshold to 1
 	if len(target) <= threshold {
 		threshold = 1
 	}
 
 	condition := func(e error) bool {
+		// ensure that if the regex is invalid, we don't apply the rule
 		if err != nil {
 			return false
 		}
 		matchingErrors := re.FindAllStringSubmatch(e.Error(), -1)
 		for _, matchingError := range matchingErrors {
-			distance := levenshtein.Distance(target, matchingError[2], nil)
+			// ensure that the target group exists
+			if targetGroupIndex >= len(matchingError) {
+				return false
+			}
+			distance := levenshtein.Distance(target, matchingError[targetGroupIndex], nil)
 			if distance <= threshold {
 				return true
 			}
@@ -91,8 +97,9 @@ func NewLevenshteinRule(pattern string, target string) *Rule {
 		matchingErrors := re.FindAllStringSubmatch(e.Error(), -1)
 
 		for _, matchingError := range matchingErrors {
-			distance := levenshtein.Distance(target, matchingError[2], nil)
+			distance := levenshtein.Distance(target, matchingError[targetGroupIndex], nil)
 			if distance <= threshold {
+				// matchingError[0] is the whole string that matched the regex
 				suggestion := fmt.Sprintf("%s. Did you mean \"%s\"?", matchingError[0], target)
 				errorMsg = strings.Replace(errorMsg, matchingError[0], suggestion, 1)
 			}

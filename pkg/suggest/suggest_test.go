@@ -54,8 +54,9 @@ func TestErrorSuggestion(t *testing.T) {
 			inputError: inputError,
 			rules: []*Rule{
 				NewLevenshteinRule(
-					"field (.+?) not found",
+					"(.*?)field (\\w+) not found in type model.buildInfoRaw",
 					"context",
+					2,
 				),
 				ruleNotFoundInBuildInfoRaw,
 			},
@@ -69,6 +70,7 @@ func TestErrorSuggestion(t *testing.T) {
 				NewLevenshteinRule(
 					"non-matching regex",
 					"test",
+					2,
 				),
 			},
 			expected: inputError.Error(),
