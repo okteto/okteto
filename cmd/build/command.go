@@ -39,6 +39,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type outputFormat string
+
+const (
+	// TTYFormat is the default format for the output
+	TTYFormat outputFormat = "tty"
+)
+
 // Command defines the build command
 type Command struct {
 	GetManifest func(path string) (*model.Manifest, error)
