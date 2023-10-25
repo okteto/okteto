@@ -122,10 +122,10 @@ func main() {
 				ioController.SetOutputFormat(outputMode)
 			}
 			okteto.SetServerNameOverride(serverNameOverride)
-			ioController.Logger().Info("started %s", strings.Join(os.Args, " "))
+			ioController.Logger().Info(fmt.Sprintf("started %s", strings.Join(os.Args, " ")))
 		},
 		PersistentPostRun: func(ccmd *cobra.Command, args []string) {
-			ioController.Logger().Info("finished %s", strings.Join(os.Args, " "))
+			ioController.Logger().Info(fmt.Sprintf("finished %s", strings.Join(os.Args, " ")))
 		},
 	}
 

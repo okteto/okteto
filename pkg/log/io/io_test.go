@@ -40,16 +40,16 @@ func TestGetters(t *testing.T) {
 	require.IsType(t, &OutputController{}, l.Out())
 
 	require.NotNil(t, l.Logger())
-	require.IsType(t, &slog.Logger{}, l.Logger())
+	require.IsType(t, &oktetoLogger{}, l.Logger())
 }
 
 func TestSetLevel(t *testing.T) {
 	l := NewIOController()
-	defaultLevel := l.oktetoLogger.slogLeveler.Level()
-	assert.Equal(t, defaultLevel, slog.LevelInfo)
+	assert.Equal(t, DefaultLogLevel, slog.LevelWarn)
 
 	l.SetLevel("debug")
 	require.Equal(t, slog.LevelDebug, l.oktetoLogger.slogLeveler.Level())
+	require.Equal(t, levelMap[slog.LevelDebug], l.oktetoLogger.logrusLogger.Level)
 }
 
 func TestSetOutputFormat(t *testing.T) {
