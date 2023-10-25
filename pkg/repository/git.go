@@ -147,7 +147,11 @@ func (r gitRepoController) getTreeSHA(context string) (string, error) {
 		return tree.Hash.String(), nil
 	}
 
-	treeDir := getTreeDirFromRelPath(context)
+	treeDir, err := getTreeDirFromRelPath(context)
+	if err != nil {
+		oktetoLog.Infof("could not tree working dir: %w", err)
+		return "", err
+	}
 
 	svcEntry, err := tree.FindEntry(treeDir)
 	if err != nil {
@@ -157,15 +161,15 @@ func (r gitRepoController) getTreeSHA(context string) (string, error) {
 	return svcEntry.Hash.String(), nil
 }
 
-func getTreeDirFromRelPath(relPath string) string {
+func getTreeDirFromRelPath(relPath string) (string, error) {
 
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
 	wd, err := wdCtrl.Get()
 	if err != nil {
-		oktetoLog.Infof("could not get working dir: %w", err)
+		return "", err
 	}
 
-	return filepath.Base(filepath.Join(wd, relPath))
+	return filepath.Base(filepath.Join(wd, relPath)), nil
 }
 
 type repositoryGetterInterface interface {
