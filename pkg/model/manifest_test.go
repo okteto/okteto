@@ -829,12 +829,17 @@ func TestSetBuildDefaults(t *testing.T) {
 	}
 }
 
+func Test_getManifestFromFile_friendlyError(t *testing.T) {
+
+}
+
 func Test_getManifestFromFile(t *testing.T) {
 	tests := []struct {
-		name          string
-		manifestBytes []byte
-		composeBytes  []byte
-		expectedErr   error
+		name           string
+		manifestBytes  []byte
+		composeBytes   []byte
+		expectedErr    error
+		expectedErrMsg string
 	}{
 		{
 			name:          "manifestPath to a valid compose file",
@@ -857,14 +862,12 @@ func Test_getManifestFromFile(t *testing.T) {
 			composeBytes:  nil,
 			expectedErr:   oktetoErrors.ErrEmptyManifest,
 		},
-		//{
-		//	name:          "manifestPath to invalid okteto manifest, no compose file",
-		//	manifestBytes: []byte(`asdasa: asda`),
-		//	composeBytes:  nil,
-		//	expectedErr: suggest.UserFriendlyError{
-		//		Err: fmt.Errorf("Your okteto manifest is not valid, please check the following errors:\n     - line 1: field 'asdasa' is not a property of the 'dev' object\n    Check out the okteto manifest docs at: https://www.okteto.com/docs/reference/manifest"),
-		//	},
-		//},
+		{
+			name:           "manifestPath to invalid okteto manifest, no compose file",
+			manifestBytes:  []byte(`asdasa: asda`),
+			composeBytes:   nil,
+			expectedErrMsg: "Your okteto manifest is not valid, please check the following errors:\n     - line 1: field 'asdasa' is not a property of the 'dev' object\n    Check out the okteto manifest docs at: https://www.okteto.com/docs/reference/manifest",
+		},
 		{
 			name: "manifestPath to valid v2 okteto manifest",
 			manifestBytes: []byte(`dev:
@@ -904,8 +907,11 @@ sync:
 			}
 			_, err := getManifestFromFile(dir, file)
 
-			assert.ErrorIs(t, err, tt.expectedErr)
-
+			if tt.expectedErrMsg != "" {
+				assert.Equal(t, tt.expectedErrMsg, err.Error())
+			} else {
+				assert.ErrorIs(t, err, tt.expectedErr)
+			}
 		})
 	}
 }
