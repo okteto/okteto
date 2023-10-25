@@ -34,17 +34,22 @@ func NewIOController() *IOController {
 	return ioController
 }
 
-// In returns the input reader
+// In is utilized to collect user input for operations that require user interaction or data entry.
+// When 'in' is used, the program will pause and wait for the user to provide input.
+// This input is essential for executing specific actions, and the program proceeds once the user provides the necessary data or response.
 func (ioc *IOController) In() *InputController {
 	return ioc.in
 }
 
-// Out returns the output writer
+// Out is used for displaying information to the user regardless of the log level set.
+// It will always be shown to the user, regardless of whether the log level is 'info', 'debug', 'warning', or any other level.
 func (ioc *IOController) Out() *OutputController {
 	return ioc.out
 }
 
-// Logger returns the logger
+// Logger is used for recording and categorizing log messages at different levels (e.g., info, debug, warning).
+// These log messages can be filtered based on the log level set by the user.
+// Messages with log levels lower than the user-defined log level will not be displayed to the user.
 func (ioc *IOController) Logger() *oktetoLogger {
 	return ioc.oktetoLogger
 }
