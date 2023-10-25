@@ -45,24 +45,24 @@ func TestGetters(t *testing.T) {
 
 func TestSetLevel(t *testing.T) {
 	l := NewIOController()
-	defaultLevel := l.logger.slogLeveler.Level()
+	defaultLevel := l.oktetoLogger.slogLeveler.Level()
 	assert.Equal(t, defaultLevel, slog.LevelInfo)
 
 	l.SetLevel("debug")
-	require.Equal(t, slog.LevelDebug, l.logger.slogLeveler.Level())
+	require.Equal(t, slog.LevelDebug, l.oktetoLogger.slogLeveler.Level())
 }
 
 func TestSetOutputFormat(t *testing.T) {
 	l := NewIOController()
-	assert.IsType(t, &logrus.TextFormatter{}, l.logger.logrusFormatter)
+	assert.IsType(t, &logrus.TextFormatter{}, l.oktetoLogger.logrusFormatter)
 	assert.IsType(t, &ttyFormatter{}, l.out.formatter)
 
 	l.SetOutputFormat("plain")
-	assert.IsType(t, &logrus.TextFormatter{}, l.logger.logrusFormatter)
+	assert.IsType(t, &logrus.TextFormatter{}, l.oktetoLogger.logrusFormatter)
 	assert.IsType(t, &plainFormatter{}, l.out.formatter)
 
 	l.SetOutputFormat("json")
-	assert.IsType(t, &logrusJSONFormatter{}, l.logger.logrusFormatter)
+	assert.IsType(t, &logrusJSONFormatter{}, l.oktetoLogger.logrusFormatter)
 	assert.IsType(t, &jsonFormatter{}, l.out.formatter)
 }
 
@@ -72,5 +72,5 @@ func TestStage(t *testing.T) {
 	l.SetStage("test")
 	l.SetOutputFormat("json")
 	l.SetStage("test")
-	assert.Equal(t, "test", l.logger.logrusFormatter.(*logrusJSONFormatter).stage)
+	assert.Equal(t, "test", l.oktetoLogger.logrusFormatter.(*logrusJSONFormatter).stage)
 }

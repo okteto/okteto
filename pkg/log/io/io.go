@@ -14,23 +14,22 @@
 package io
 
 import (
-	"log/slog"
 	"os"
 )
 
 // IOController manages the input and output for the CLI
 type IOController struct {
-	in     *InputController
-	out    *OutputController
-	logger *oktetoLogger
+	in  *InputController
+	out *OutputController
+	*oktetoLogger
 }
 
 // NewIOController returns a new input/output controller
 func NewIOController() *IOController {
 	ioController := &IOController{
-		out:    newOutputController(os.Stdout),
-		in:     newInputController(os.Stdin),
-		logger: newOktetoLogger(),
+		out:          newOutputController(os.Stdout),
+		in:           newInputController(os.Stdin),
+		oktetoLogger: newOktetoLogger(),
 	}
 	return ioController
 }
@@ -46,20 +45,16 @@ func (ioc *IOController) Out() *OutputController {
 }
 
 // Logger returns the logger
-func (ioc *IOController) Logger() *slog.Logger {
-	return ioc.logger.Logger
-}
-
-func (ioc *IOController) SetLevel(lvl string) {
-	ioc.logger.SetLevel(lvl)
+func (ioc *IOController) Logger() *oktetoLogger {
+	return ioc.oktetoLogger
 }
 
 func (ioc *IOController) SetOutputFormat(output string) {
-	ioc.logger.SetOutputFormat(output)
+	ioc.oktetoLogger.SetOutputFormat(output)
 	ioc.out.SetOutputFormat(output)
 }
 
 func (ioc *IOController) SetStage(stage string) {
-	ioc.logger.SetStage(stage)
+	ioc.oktetoLogger.SetStage(stage)
 	ioc.out.SetStage(stage)
 }
