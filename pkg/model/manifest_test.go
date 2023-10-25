@@ -829,10 +829,6 @@ func TestSetBuildDefaults(t *testing.T) {
 	}
 }
 
-func Test_getManifestFromFile_friendlyError(t *testing.T) {
-
-}
-
 func Test_getManifestFromFile(t *testing.T) {
 	tests := []struct {
 		name           string
