@@ -51,7 +51,9 @@ var (
 	DefaultLogLevel = slog.LevelWarn
 )
 
-// oktetoLogger is the logger for the CLI information and debug logs
+// oktetoLogger is used for recording and categorizing log messages at different levels (e.g., info, debug, warning).
+// These log messages can be filtered based on the log level set by the user.
+// Messages with log levels lower than the user-defined log level will not be displayed to the user.
 type oktetoLogger struct {
 	*slog.Logger
 	slogLeveler *slog.LevelVar
@@ -60,7 +62,7 @@ type oktetoLogger struct {
 	logrusFormatter logrus.Formatter
 }
 
-// newOktetoLogger returns a new logger
+// newOktetoLogger returns an initialised oktetoLogger
 func newOktetoLogger() *oktetoLogger {
 	leveler := new(slog.LevelVar)
 	leveler.Set(DefaultLogLevel)
