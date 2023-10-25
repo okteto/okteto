@@ -86,17 +86,20 @@ func init() {
 
 func main() {
 	ctx := context.Background()
+	ioController := io.NewIOController()
+	ioController.Logger().SetLevel(io.WarnLevel)
 	oktetoLog.Init(logrus.WarnLevel)
 	if registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
 		oktetoLog.SetOutput(os.Stderr)
 		oktetoLog.SetLevel(oktetoLog.InfoLevel)
 		oktetoLog.SetOutputFormat(oktetoLog.JSONFormat)
+
+		ioController.Logger().SetLevel(io.InfoLevel)
+		ioController.SetOutputFormat(io.JSONFormat)
 	}
 	var logLevel string
 	var outputMode string
 	var serverNameOverride string
-
-	ioController := io.NewIOController()
 
 	if err := analytics.Init(); err != nil {
 		oktetoLog.Infof("error initializing okteto analytics: %s", err)
@@ -114,14 +117,15 @@ func main() {
 			if !registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
 				oktetoLog.SetLevel(logLevel)
 				oktetoLog.SetOutputFormat(outputMode)
+
 				ioController.Logger().SetLevel(logLevel)
 				ioController.SetOutputFormat(outputMode)
 			}
 			okteto.SetServerNameOverride(serverNameOverride)
-			oktetoLog.Infof("started %s", strings.Join(os.Args, " "))
+			ioController.Logger().Info("started %s", strings.Join(os.Args, " "))
 		},
 		PersistentPostRun: func(ccmd *cobra.Command, args []string) {
-			oktetoLog.Infof("finished %s", strings.Join(os.Args, " "))
+			ioController.Logger().Info("finished %s", strings.Join(os.Args, " "))
 		},
 	}
 
@@ -131,7 +135,7 @@ func main() {
 	root.PersistentFlags().StringVarP(&serverNameOverride, "server-name", "", "", "The address and port of the Okteto Ingress server")
 	err := root.PersistentFlags().MarkHidden("server-name")
 	if err != nil {
-		oktetoLog.Infof("error hiding server-name flag: %s", err)
+		ioController.Logger().Info("error hiding server-name flag: %s", err)
 	}
 
 	okClientProvider := okteto.NewOktetoClientProvider()

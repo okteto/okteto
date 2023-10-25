@@ -14,6 +14,7 @@
 package io
 
 import (
+	"fmt"
 	"log/slog"
 
 	sloglogrus "github.com/samber/slog-logrus"
@@ -23,12 +24,37 @@ import (
 const (
 	// JSONFormat represents a json logger
 	JSONFormat string = "json"
+
+	// DebugLevel is the debug level
+	DebugLevel = "debug"
+
+	// InfoLevel is the info level
+	InfoLevel = "info"
+
+	// WarnLevel is the warn level
+	WarnLevel = "warn"
+
+	// ErrorLevel is the error level
+	ErrorLevel = "error"
+)
+
+var (
+	// levelMap transforms a slog.Level to a logrus.Level
+	levelMap = map[slog.Level]logrus.Level{
+		slog.LevelDebug: logrus.DebugLevel,
+		slog.LevelInfo:  logrus.InfoLevel,
+		slog.LevelWarn:  logrus.WarnLevel,
+		slog.LevelError: logrus.ErrorLevel,
+	}
+
+	// DefaultLogLevel is the default log level
+	DefaultLogLevel = slog.LevelWarn
 )
 
 // oktetoLogger is the logger for the CLI information and debug logs
 type oktetoLogger struct {
 	*slog.Logger
-	slogLeveler *slogLeveler
+	slogLeveler *slog.LevelVar
 
 	logrusLogger    *logrus.Logger
 	logrusFormatter logrus.Formatter
@@ -36,8 +62,11 @@ type oktetoLogger struct {
 
 // newOktetoLogger returns a new logger
 func newOktetoLogger() *oktetoLogger {
-	leveler := newSlogLevel(slog.LevelInfo)
+	leveler := new(slog.LevelVar)
+	leveler.Set(DefaultLogLevel)
+
 	logrusLogger := logrus.New()
+	logrusLogger.SetLevel(levelMap[DefaultLogLevel])
 	logrusFormatter := &logrus.TextFormatter{}
 	logrusLogger.SetFormatter(logrusFormatter)
 
@@ -53,7 +82,11 @@ func newOktetoLogger() *oktetoLogger {
 
 // SetLevel sets the level of the logger
 func (ol *oktetoLogger) SetLevel(lvl string) {
-	ol.slogLeveler.SetLevel(lvl)
+	slogLevel, err := parseLevel(lvl)
+	if err == nil {
+		ol.slogLeveler.Set(slogLevel)
+		ol.logrusLogger.SetLevel(levelMap[slogLevel])
+	}
 }
 
 // SetOutputFormat sets the output format of the logger
@@ -70,5 +103,31 @@ func (ol *oktetoLogger) SetOutputFormat(output string) {
 func (ol *oktetoLogger) SetStage(stage string) {
 	if v, ok := ol.logrusLogger.Formatter.(*logrusJSONFormatter); ok {
 		v.SetStage(stage)
+	}
+}
+
+// InvalidLogLevelError is returned when the log level is invalid
+type InvalidLogLevelError struct {
+	Level string
+}
+
+// Error returns the error message
+func (e *InvalidLogLevelError) Error() string {
+	return fmt.Sprintf("invalid log level '%s'", e.Level)
+}
+
+// parseLevel transforms the level from a string to a slog.Level
+func parseLevel(lvl string) (slog.Level, error) {
+	switch lvl {
+	case DebugLevel:
+		return slog.LevelDebug, nil
+	case InfoLevel:
+		return slog.LevelInfo, nil
+	case WarnLevel:
+		return slog.LevelWarn, nil
+	case ErrorLevel:
+		return slog.LevelError, nil
+	default:
+		return slog.LevelInfo, &InvalidLogLevelError{Level: lvl}
 	}
 }
