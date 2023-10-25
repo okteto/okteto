@@ -225,7 +225,6 @@ require (
 
 require (
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/samber/slog-logrus v1.0.0
 	gotest.tools v2.2.0+incompatible
 	istio.io/api v0.0.0-20221013011440-bc935762d2b9
 	istio.io/client-go v1.15.3
@@ -235,6 +234,8 @@ require github.com/hashicorp/errwrap v1.0.0 // indirect
 
 require (
 	github.com/samber/lo v1.38.1 // indirect
+	github.com/samber/slog-common v0.11.0 // indirect
+	github.com/samber/slog-logrus/v2 v2.1.0 // indirect
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect
 )
 

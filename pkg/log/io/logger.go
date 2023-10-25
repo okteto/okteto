@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	sloglogrus "github.com/samber/slog-logrus"
+	sloglogrus "github.com/samber/slog-logrus/v2"
 	"github.com/sirupsen/logrus"
 )
 
