@@ -185,11 +185,7 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 	c.initEnvVars()
 
 	if ctxOptions.IsOkteto {
-		clusterMetadata, err := getClusterMetadata(ctx, ctxOptions.Namespace, c.OktetoClientProvider)
-		if err != nil {
-			return err
-		}
-		if err := c.initOktetoContext(ctx, ctxOptions, clusterMetadata); err != nil {
+		if err := c.initOktetoContext(ctx, ctxOptions); err != nil {
 			return err
 		}
 	} else {
@@ -284,7 +280,7 @@ func hasAccessToNamespace(ctx context.Context, c *ContextCommand, ctxOptions *Co
 	}
 }
 
-func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *ContextOptions, clusterMetadata types.ClusterMetadata) error {
+func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
 	var userContext *types.UserContext
 	userContext, err := getLoggedUserContext(ctx, c, ctxOptions)
 	if err != nil {
@@ -302,6 +298,11 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 
 	if ctxOptions.Namespace == "" {
 		ctxOptions.Namespace = userContext.User.Namespace
+	}
+
+	clusterMetadata, err := getClusterMetadata(ctx, ctxOptions.Namespace, c.OktetoClientProvider)
+	if err != nil {
+		return err
 	}
 
 	// once we have namespace and user identify we are able to retrieve the dynamic token for the namespace

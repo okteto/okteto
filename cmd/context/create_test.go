@@ -389,7 +389,7 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ctxController.initOktetoContext(ctx, tt.ctxOptions, types.ClusterMetadata{})
+			err := ctxController.initOktetoContext(ctx, tt.ctxOptions)
 			if err != nil {
 				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.Context().Name).Error() && tt.isAutoAuthTriggered {
 					t.Fatalf("Not expecting error but got: %s", err.Error())
