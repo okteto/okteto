@@ -114,7 +114,7 @@ func main() {
 			if !registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
 				oktetoLog.SetLevel(logLevel)
 				oktetoLog.SetOutputFormat(outputMode)
-				ioController.SetLevel(logLevel)
+				ioController.Logger().SetLevel(logLevel)
 				ioController.SetOutputFormat(outputMode)
 			}
 			okteto.SetServerNameOverride(serverNameOverride)
