@@ -57,10 +57,9 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 }
 
 // NewBuilderFromScratch creates a new okteto builder
-func NewBuilderFromScratch() *OktetoBuilder {
+func NewBuilderFromScratch(ioCtrl *io.IOController) *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
 	registry := registry.NewOktetoRegistry(okteto.Config{})
-	ioCtrl := io.NewIOController()
 	return NewBuilder(builder, registry, ioCtrl)
 }
 

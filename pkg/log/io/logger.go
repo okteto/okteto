@@ -110,12 +110,12 @@ func (ol *oktetoLogger) SetStage(stage string) {
 
 // InvalidLogLevelError is returned when the log level is invalid
 type InvalidLogLevelError struct {
-	Level string
+	level string
 }
 
 // Error returns the error message
 func (e *InvalidLogLevelError) Error() string {
-	return fmt.Sprintf("invalid log level '%s'", e.Level)
+	return fmt.Sprintf("invalid log level '%s'", e.level)
 }
 
 // parseLevel transforms the level from a string to a slog.Level
@@ -130,6 +130,6 @@ func parseLevel(lvl string) (slog.Level, error) {
 	case ErrorLevel:
 		return slog.LevelError, nil
 	default:
-		return slog.LevelInfo, &InvalidLogLevelError{Level: lvl}
+		return slog.LevelInfo, &InvalidLogLevelError{level: lvl}
 	}
 }

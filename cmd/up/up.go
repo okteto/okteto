@@ -38,6 +38,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/discovery"
+	"github.com/okteto/okteto/pkg/log/io"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -861,7 +862,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 		BuildArgs:  buildArgs,
 		OutputMode: oktetoLog.TTYFormat,
 	}
-	builder := buildv1.NewBuilderFromScratch()
+	builder := buildv1.NewBuilderFromScratch(io.NewIOController())
 	if err := builder.Build(ctx, buildOptions); err != nil {
 		return err
 	}
