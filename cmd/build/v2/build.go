@@ -64,6 +64,7 @@ type oktetoBuilderConfigInterface interface {
 	GetGitCommit() string
 	IsOkteto() bool
 	GetAnonymizedRepo() string
+	GetBuildContextHash(*model.BuildInfo) string
 }
 
 type analyticsTrackerInterface interface {
@@ -200,6 +201,10 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 			meta.RepoHash = buildHash
 			meta.RepoHashDuration = time.Since(repoHashDurationStart)
+
+			buildContextHashDurationStart := time.Now()
+			meta.BuildContextHash = bc.Config.GetBuildContextHash(buildSvcInfo)
+			meta.BuildContextHashDuration = time.Since(buildContextHashDurationStart)
 
 			// We only check that the image is built in the global registry if the noCache option is not set
 			if !options.NoCache && bc.Config.IsCleanProject() {
@@ -454,6 +459,10 @@ func getImageChecker(buildInfo *model.BuildInfo, cfg oktetoBuilderConfigInterfac
 
 // getBuildHashFromCommit parses buildInfo and commit into a hashed string
 func getBuildHashFromCommit(buildInfo *model.BuildInfo, commit string) string {
+	return getBuildHashFromGitHash(buildInfo, commit, "commit")
+}
+
+func getBuildHashFromGitHash(buildInfo *model.BuildInfo, gitHash string, hashType string) string {
 	args := []string{}
 	for _, arg := range buildInfo.Args {
 		args = append(args, arg.String())
@@ -468,7 +477,7 @@ func getBuildHashFromCommit(buildInfo *model.BuildInfo, commit string) string {
 
 	// We use a builder to avoid allocations when building the string
 	var b strings.Builder
-	fmt.Fprintf(&b, "commit:%s;", commit)
+	fmt.Fprintf(&b, "%s:%s;", hashType, gitHash)
 	fmt.Fprintf(&b, "target:%s;", buildInfo.Target)
 	fmt.Fprintf(&b, "build_args:%s;", argsText)
 	fmt.Fprintf(&b, "secrets:%s;", secretsText)
@@ -476,6 +485,7 @@ func getBuildHashFromCommit(buildInfo *model.BuildInfo, commit string) string {
 	fmt.Fprintf(&b, "dockerfile:%s;", buildInfo.Dockerfile)
 	fmt.Fprintf(&b, "image:%s;", buildInfo.Image)
 
-	hash := sha256.Sum256([]byte(b.String()))
-	return hex.EncodeToString(hash[:])
+	oktetoBuildHash := sha256.Sum256([]byte(b.String()))
+	return hex.EncodeToString(oktetoBuildHash[:])
+
 }

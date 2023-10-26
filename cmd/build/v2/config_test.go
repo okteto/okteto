@@ -3,6 +3,7 @@ package v2
 import (
 	"testing"
 
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,15 +17,17 @@ type fakeConfigRegistry struct {
 func (fcr fakeConfigRegistry) HasGlobalPushAccess() (bool, error) { return fcr.access, fcr.err }
 
 type fakeConfigRepo struct {
-	sha     string
-	isClean bool
-	url     string
-	err     error
+	sha      string
+	isClean  bool
+	url      string
+	treeHash string
+	err      error
 }
 
-func (fcr fakeConfigRepo) GetSHA() (string, error)   { return fcr.sha, fcr.err }
-func (fcr fakeConfigRepo) IsClean() (bool, error)    { return fcr.isClean, fcr.err }
-func (fcr fakeConfigRepo) GetAnonymizedRepo() string { return fcr.url }
+func (fcr fakeConfigRepo) GetSHA() (string, error)            { return fcr.sha, fcr.err }
+func (fcr fakeConfigRepo) IsClean() (bool, error)             { return fcr.isClean, fcr.err }
+func (fcr fakeConfigRepo) GetAnonymizedRepo() string          { return fcr.url }
+func (fcr fakeConfigRepo) GetTreeHash(string) (string, error) { return fcr.treeHash, fcr.err }
 
 func TestGetConfig(t *testing.T) {
 	type input struct {
@@ -180,4 +183,19 @@ func Test_GetAnonymizedRepo(t *testing.T) {
 	}
 
 	require.Equal(t, "repository url", cfg.GetAnonymizedRepo())
+}
+
+func TestGetBuildContextHash(t *testing.T) {
+	cfg := oktetoBuilderConfig{
+		repository: fakeConfigRepo{
+			treeHash: "test",
+		},
+	}
+
+	oktetoBuildHash := "9bb4ac6e28aaf8eb67e453cf9d593ac35e34c9766b92dd482b1833ff66ec49ca"
+	buildInfo := &model.BuildInfo{
+		Args:    model.BuildArgs{{Name: "testName", Value: "testValue"}},
+		Secrets: model.BuildSecrets{"testNameSecret": "testValueSecret"},
+	}
+	require.Equal(t, oktetoBuildHash, cfg.GetBuildContextHash(buildInfo))
 }

@@ -133,6 +133,7 @@ func TestExpandStackVariables(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
+
 	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
 	stack := &model.Stack{
 		Services: map[string]*model.Service{

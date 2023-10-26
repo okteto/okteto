@@ -17,12 +17,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"time"
 
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
 var (
@@ -120,6 +123,55 @@ func (r gitRepoController) getSHA() (string, error) {
 	return head.Hash().String(), nil
 }
 
+func (r gitRepoController) getTreeSHA(context string) (string, error) {
+	repo, err := r.repoGetter.get(r.path)
+	if err != nil {
+		return "", fmt.Errorf("failed to get repository: %w", err)
+	}
+
+	ref, err := repo.Head()
+	if err != nil {
+		return "", fmt.Errorf("failed to get HEAD from repo: %w", err)
+	}
+
+	commit, err := repo.CommitObject(ref.Hash())
+	if err != nil {
+		return "", fmt.Errorf("failed to get commit object from reference: %w", err)
+	}
+	tree, err := commit.Tree()
+	if err != nil {
+		return "", fmt.Errorf("failed to get tree from commit: %w", err)
+	}
+
+	if context == "." {
+		return tree.Hash.String(), nil
+	}
+
+	treeDir, err := getTreeDirFromRelPath(context)
+	if err != nil {
+		oktetoLog.Infof("could not tree working dir: %w", err)
+		return "", err
+	}
+
+	svcEntry, err := tree.FindEntry(treeDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to find an entry in tree: %w", err)
+	}
+
+	return svcEntry.Hash.String(), nil
+}
+
+func getTreeDirFromRelPath(relPath string) (string, error) {
+
+	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
+	wd, err := wdCtrl.Get()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Base(filepath.Join(wd, relPath)), nil
+}
+
 type repositoryGetterInterface interface {
 	get(path string) (gitRepositoryInterface, error)
 }
@@ -150,6 +202,10 @@ func (ogr oktetoGitRepository) Head() (*plumbing.Reference, error) {
 	return ogr.repo.Head()
 }
 
+func (ogr oktetoGitRepository) CommitObject(h plumbing.Hash) (gitCommitInterface, error) {
+	return ogr.repo.CommitObject(h)
+}
+
 type oktetoGitWorktree struct {
 	worktree *git.Worktree
 }
@@ -169,6 +225,11 @@ func (ogs oktetoGitStatus) IsClean() bool {
 type gitRepositoryInterface interface {
 	Worktree() (gitWorktreeInterface, error)
 	Head() (*plumbing.Reference, error)
+	CommitObject(plumbing.Hash) (gitCommitInterface, error)
+}
+
+type gitCommitInterface interface {
+	Tree() (*object.Tree, error)
 }
 type gitWorktreeInterface interface {
 	Status(context.Context, LocalGitInterface) (oktetoGitStatus, error)

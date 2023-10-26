@@ -9,14 +9,16 @@ const (
 )
 
 type ImageBuildMetadata struct {
-	Name             string
-	RepoURL          string
-	RepoHash         string
-	RepoHashDuration time.Duration
-	CacheHit         bool
-	CacheHitDuration time.Duration
-	BuildDuration    time.Duration
-	Success          bool
+	Name                     string
+	RepoURL                  string
+	RepoHash                 string
+	RepoHashDuration         time.Duration
+	BuildContextHash         string
+	BuildContextHashDuration time.Duration
+	CacheHit                 bool
+	CacheHitDuration         time.Duration
+	BuildDuration            time.Duration
+	Success                  bool
 }
 
 func NewImageBuildMetadata() *ImageBuildMetadata {
@@ -25,13 +27,15 @@ func NewImageBuildMetadata() *ImageBuildMetadata {
 
 func (m *ImageBuildMetadata) toProps() map[string]interface{} {
 	props := map[string]interface{}{
-		"name":                    m.Name,
-		"repoURL":                 m.RepoURL,
-		"repoHash":                m.RepoHash,
-		"repoHashDurationSeconds": m.RepoHashDuration.Seconds(),
-		"cacheHit":                m.CacheHit,
-		"cacheHitDurationSeconds": m.CacheHitDuration.Seconds(),
-		"buildDurationSeconds":    m.BuildDuration.Seconds(),
+		"name":                            m.Name,
+		"repoURL":                         m.RepoURL,
+		"repoHash":                        m.RepoHash,
+		"repoHashDurationSeconds":         m.RepoHashDuration.Seconds(),
+		"cacheHit":                        m.CacheHit,
+		"cacheHitDurationSeconds":         m.CacheHitDuration.Seconds(),
+		"buildDurationSeconds":            m.BuildDuration.Seconds(),
+		"buildContextHash":                m.BuildContextHash,
+		"buildContextHashDurationSeconds": m.BuildContextHashDuration.Seconds(),
 	}
 
 	if m.Name != "" {

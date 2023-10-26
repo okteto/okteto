@@ -518,6 +518,7 @@ func TestBuildWithDependsOn(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
+
 	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
 	manifest := &model.Manifest{
 		Name: "test",
