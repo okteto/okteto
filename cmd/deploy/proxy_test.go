@@ -62,18 +62,6 @@ func Test_TranslateInvalidResourceSpec(t *testing.T) {
 	}))
 }
 
-type fakePortGetter struct {
-	port int
-	err  error
-}
-
-func (pg fakePortGetter) Get(_ string) (int, error) {
-	if pg.err != nil {
-		return 0, pg.err
-	}
-	return pg.port, nil
-}
-
 func Test_NewProxy(t *testing.T) {
 	dnsErr := &net.DNSError{
 		IsNotFound: true,
@@ -81,40 +69,38 @@ func Test_NewProxy(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		portGetter     fakePortGetter
+		portGetter     func(string) (int, error)
 		fakeKubeconfig *fakeKubeConfig
 		expectedProxy  *Proxy
 		expectedErr    error
 	}{
 		{
-			name: "err getting port, DNS not found error",
-			portGetter: fakePortGetter{
-				err: dnsErr,
-			},
+			name:        "err getting port, DNS not found error",
+			portGetter:  func(string) (int, error) { return 0, dnsErr },
 			expectedErr: dnsErr,
 		},
 		{
-			name: "err getting port, any error",
-			portGetter: fakePortGetter{
-				err: assert.AnError,
-			},
+			name:        "err getting port, any error",
+			portGetter:  func(string) (int, error) { return 0, assert.AnError },
 			expectedErr: assert.AnError,
 		},
 		{
-			name: "err reading kubeconfig",
-			portGetter: fakePortGetter{
-				port: 12345,
-			},
+			name:       "err reading kubeconfig",
+			portGetter: func(string) (int, error) { return 0, nil },
 			fakeKubeconfig: &fakeKubeConfig{
 				errRead: assert.AnError,
 			},
 			expectedErr: assert.AnError,
 		},
+		{
+			name:        "err portGetter nil",
+			expectedErr: errNilPortGetter,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewProxy(tt.fakeKubeconfig, tt.portGetter.Get)
+			got, err := NewProxy(tt.fakeKubeconfig, tt.portGetter)
 			require.Equal(t, tt.expectedProxy, got)
 			require.ErrorIs(t, err, tt.expectedErr)
 		})
