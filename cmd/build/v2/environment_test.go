@@ -98,7 +98,7 @@ func Test_SetServiceEnvVars(t *testing.T) {
 			fakeConfig := fakeConfig{
 				isOkteto: true,
 			}
-			bc := NewFakeBuilder(nil, registry, fakeConfig)
+			bc := NewFakeBuilder(nil, registry, fakeConfig, &fakeAnalyticsTracker{})
 			bc.SetServiceEnvVars(tt.input.service, tt.input.reference)
 
 			registryEnvValue := os.Getenv(registryEnv)
@@ -133,7 +133,8 @@ func TestExpandStackVariables(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(builder, registry, fakeConfig)
+
+	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
 	stack := &model.Stack{
 		Services: map[string]*model.Service{
 			"test": {

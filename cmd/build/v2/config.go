@@ -14,11 +14,6 @@
 package v2
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
-	"strings"
-
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -28,6 +23,8 @@ import (
 type configRepositoryInterface interface {
 	GetSHA() (string, error)
 	IsClean() (bool, error)
+	GetAnonymizedRepo() string
+	GetTreeHash(string) (string, error)
 }
 
 type configRegistryInterface interface {
@@ -85,38 +82,17 @@ func (oc oktetoBuilderConfig) GetGitCommit() string {
 	return commitSHA
 }
 
-// GetBuildHash returns a sha hash of the build info and the commit sha
-func (oc oktetoBuilderConfig) GetBuildHash(buildInfo *model.BuildInfo) string {
-	commitSHA, err := oc.repository.GetSHA()
-	if err != nil {
-		return ""
-	}
-	text := oc.getTextToHash(buildInfo, commitSHA)
-	buildHash := sha256.Sum256([]byte(text))
-	return hex.EncodeToString(buildHash[:])
+// GetAnonymizedRepo returns the repository url without credentials
+func (oc oktetoBuilderConfig) GetAnonymizedRepo() string {
+	return oc.repository.GetAnonymizedRepo()
 }
 
-func (oc oktetoBuilderConfig) getTextToHash(buildInfo *model.BuildInfo, sha string) string {
-	args := []string{}
-	for _, arg := range buildInfo.Args {
-		args = append(args, arg.String())
+func (oc oktetoBuilderConfig) GetBuildContextHash(buildInfo *model.BuildInfo) string {
+	buildContext := buildInfo.Context
+	treeHash, err := oc.repository.GetTreeHash(buildInfo.Context)
+	if err != nil {
+		oktetoLog.Info("error trying to get tree hash for build context '%s': %w", buildContext, err)
 	}
-	argsText := strings.Join(args, ";")
 
-	secrets := []string{}
-	for key, value := range buildInfo.Secrets {
-		secrets = append(secrets, fmt.Sprintf("%s=%s", key, value))
-	}
-	secretsText := strings.Join(secrets, ";")
-
-	// We use a builder to avoid allocations when building the string
-	var b strings.Builder
-	fmt.Fprintf(&b, "commit:%s;", sha)
-	fmt.Fprintf(&b, "target:%s;", buildInfo.Target)
-	fmt.Fprintf(&b, "build_args:%s;", argsText)
-	fmt.Fprintf(&b, "secrets:%s;", secretsText)
-	fmt.Fprintf(&b, "context:%s;", buildInfo.Context)
-	fmt.Fprintf(&b, "dockerfile:%s;", buildInfo.Dockerfile)
-	fmt.Fprintf(&b, "image:%s;", buildInfo.Image)
-	return b.String()
+	return getBuildHashFromGitHash(buildInfo, treeHash, "tree_hash")
 }

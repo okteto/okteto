@@ -24,6 +24,11 @@ linters-settings:
     # Such cases aren't reported by default.
     # Default: false
     check-blank: true
+  tenv:
+    # The option `all` will run against whole test files (`_test.go`) regardless of method/function signatures.
+    # Otherwise, only methods that take `*testing.T`, `*testing.B`, and `testing.TB` as arguments are checked.
+    # Default: false
+    all: true
 
 # All possible linters can be found https://golangci-lint.run/usage/linters/
 linters:
@@ -35,10 +40,10 @@ linters:
     - ineffassign
     - unused
     - unparam
+    - tenv
+    - tparallel
 
 issues:
-  # Show only new issues created after git revision REV. Run only over the changed files
-  new-from-rev: HEAD~
   # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
   max-issues-per-linter: 0
 

@@ -26,7 +26,7 @@ func TestNoneOfTheServicesBuilt(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, &fakeAnalyticsTracker{})
 	alreadyBuilt := []string{}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -41,7 +41,7 @@ func TestAllServicesAlreadyBuilt(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, &fakeAnalyticsTracker{})
 	alreadyBuilt := []string{"test/test-1", "okteto.dev/test-test-2:okteto-with-volume-mounts", "okteto.dev/test-test-3:okteto", "okteto.dev/test-test-4:okteto-with-volume-mounts"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -56,7 +56,7 @@ func TestServicesNotAreAlreadyBuilt(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, &fakeAnalyticsTracker{})
 	alreadyBuilt := []string{"test/test-1"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -72,7 +72,7 @@ func TestNoServiceBuilt(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, &fakeAnalyticsTracker{})
 	alreadyBuilt := []string{"test/test-1"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -88,7 +88,7 @@ func TestServicesNotInStack(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: false,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, &fakeAnalyticsTracker{})
 	alreadyBuilt := []string{}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -132,7 +132,7 @@ func TestServicesNotOktetoWithStack(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, &fakeAnalyticsTracker{})
 	alreadyBuilt := []string{"test/test-1"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -158,7 +158,7 @@ func TestAllServicesAlreadyBuiltWithSubset(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, &fakeAnalyticsTracker{})
 	alreadyBuilt := []string{}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -173,7 +173,7 @@ func TestServicesNotAreAlreadyBuiltWithSubset(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, &fakeAnalyticsTracker{})
 	alreadyBuilt := []string{"test/test-1"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -188,7 +188,7 @@ func TestServicesBuildSection(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, &fakeAnalyticsTracker{})
 	alreadyBuilt := []string{}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -204,7 +204,7 @@ func TestNoServiceBuiltWithSubset(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, &fakeAnalyticsTracker{})
 	alreadyBuilt := []string{"test/test-1", "test/test-2"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -219,10 +219,12 @@ type fakeConfig struct {
 	hasAccess bool
 	sha       string
 	isOkteto  bool
+	repoURL   string
 }
 
-func (fc fakeConfig) HasGlobalAccess() bool                  { return fc.hasAccess }
-func (fc fakeConfig) IsCleanProject() bool                   { return fc.isClean }
-func (fc fakeConfig) GetBuildHash(_ *model.BuildInfo) string { return fc.sha }
-func (fc fakeConfig) GetGitCommit() string                   { return fc.sha }
-func (fc fakeConfig) IsOkteto() bool                         { return fc.isOkteto }
+func (fc fakeConfig) HasGlobalAccess() bool                       { return fc.hasAccess }
+func (fc fakeConfig) IsCleanProject() bool                        { return fc.isClean }
+func (fc fakeConfig) GetGitCommit() string                        { return fc.sha }
+func (fc fakeConfig) IsOkteto() bool                              { return fc.isOkteto }
+func (fc fakeConfig) GetAnonymizedRepo() string                   { return fc.repoURL }
+func (fc fakeConfig) GetBuildContextHash(*model.BuildInfo) string { return "" }

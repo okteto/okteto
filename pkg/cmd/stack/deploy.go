@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/okteto/okteto/pkg/analytics"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -60,10 +61,15 @@ type StackDeployOptions struct {
 	InsidePipeline   bool
 }
 
+type analyticsTrackerInterface interface {
+	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
+}
+
 // Stack is the executor of stack commands
 type Stack struct {
-	K8sClient kubernetes.Interface
-	Config    *rest.Config
+	K8sClient        kubernetes.Interface
+	Config           *rest.Config
+	AnalyticsTracker analyticsTrackerInterface
 }
 
 const (
@@ -78,7 +84,7 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *StackDeplo
 	}
 
 	if !options.InsidePipeline {
-		if err := buildStackImages(ctx, s, options); err != nil {
+		if err := buildStackImages(ctx, s, options, sd.AnalyticsTracker); err != nil {
 			return err
 		}
 	}
@@ -246,7 +252,7 @@ func skipIngressDeployForStackNameLabel(ctx context.Context, iClient *ingresses.
 	}
 	if old != nil {
 		if old.GetLabels()[model.StackNameLabel] == "" {
-			oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", old.GetName(), ingress.GetName())
+			oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", old.GetName(), old.GetName())
 			return true
 		}
 		if old.GetLabels()[model.StackNameLabel] != ingress.GetLabels()[model.StackNameLabel] {

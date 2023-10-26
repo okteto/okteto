@@ -493,6 +493,106 @@ func TestGetClusterMetadata(t *testing.T) {
 				expectErr: true,
 			},
 		},
+		{
+			name: "empty companyName",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &metadataQuery{
+						Metadata: []metadataQueryItem{
+							{
+								Name:  "pipelineRunnerImage",
+								Value: "installer-runner-image",
+							},
+							{
+								Name:  "companyName",
+								Value: "",
+							},
+						},
+					},
+				},
+			},
+			expected: expected{
+				metadata: types.ClusterMetadata{
+					CompanyName:         "",
+					PipelineRunnerImage: "installer-runner-image",
+				},
+			},
+		},
+		{
+			name: "has companyName",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &metadataQuery{
+						Metadata: []metadataQueryItem{
+							{
+								Name:  "pipelineRunnerImage",
+								Value: "installer-runner-image",
+							},
+							{
+								Name:  "companyName",
+								Value: "test",
+							},
+						},
+					},
+				},
+			},
+			expected: expected{
+				metadata: types.ClusterMetadata{
+					CompanyName:         "test",
+					PipelineRunnerImage: "installer-runner-image",
+				},
+			},
+		},
+		{
+			name: "false isTrial",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &metadataQuery{
+						Metadata: []metadataQueryItem{
+							{
+								Name:  "pipelineRunnerImage",
+								Value: "installer-runner-image",
+							},
+							{
+								Name:  "isTrial",
+								Value: "false",
+							},
+						},
+					},
+				},
+			},
+			expected: expected{
+				metadata: types.ClusterMetadata{
+					IsTrialLicense:      false,
+					PipelineRunnerImage: "installer-runner-image",
+				},
+			},
+		},
+		{
+			name: "true isTrial",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &metadataQuery{
+						Metadata: []metadataQueryItem{
+							{
+								Name:  "pipelineRunnerImage",
+								Value: "installer-runner-image",
+							},
+							{
+								Name:  "isTrial",
+								Value: "true",
+							},
+						},
+					},
+				},
+			},
+			expected: expected{
+				metadata: types.ClusterMetadata{
+					IsTrialLicense:      true,
+					PipelineRunnerImage: "installer-runner-image",
+				},
+			},
+		},
 	}
 	for _, tc := range testCases {
 		tc := tc
@@ -509,6 +609,9 @@ func TestGetClusterMetadata(t *testing.T) {
 			assert.Equal(t, tc.expected.metadata.Certificate, result.Certificate)
 			assert.Equal(t, tc.expected.metadata.ServerName, result.ServerName)
 			assert.Equal(t, tc.expected.metadata.PipelineRunnerImage, result.PipelineRunnerImage)
+			assert.Equal(t, tc.expected.metadata.CompanyName, result.CompanyName)
+			assert.Equal(t, tc.expected.metadata.IsTrialLicense, result.IsTrialLicense)
+
 		})
 	}
 

@@ -36,13 +36,14 @@ import (
 
 // DeployCommand has all the namespaces subcommands
 type DeployCommand struct {
-	K8sClient      kubernetes.Interface
-	Config         *rest.Config
-	IsInsideDeploy bool
+	K8sClient        kubernetes.Interface
+	Config           *rest.Config
+	IsInsideDeploy   bool
+	analyticsTracker analyticsTrackerInterface
 }
 
 // deploy deploys a stack
-func deploy(ctx context.Context) *cobra.Command {
+func deploy(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 	options := &stack.StackDeployOptions{}
 
 	cmd := &cobra.Command{
@@ -69,8 +70,9 @@ func deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 			dc := &DeployCommand{
-				K8sClient: c,
-				Config:    config,
+				K8sClient:        c,
+				Config:           config,
+				analyticsTracker: at,
 			}
 			return dc.RunDeploy(ctx, s, options)
 		},
@@ -116,8 +118,9 @@ func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *
 	}
 
 	stackDeployer := &stack.Stack{
-		K8sClient: c.K8sClient,
-		Config:    c.Config,
+		K8sClient:        c.K8sClient,
+		Config:           c.Config,
+		AnalyticsTracker: c.analyticsTracker,
 	}
 	err := stackDeployer.Deploy(ctx, s, options)
 

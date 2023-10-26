@@ -56,6 +56,10 @@ func TestPipelineActions(t *testing.T) {
 func TestPipelineActionsWithCompose(t *testing.T) {
 	integration.SkipIfWindows(t)
 
+	t.Setenv(model.GithubRepositoryEnvVar, "okteto/movies-with-compose")
+	t.Setenv(model.GithubRefEnvVar, "main")
+	t.Setenv(model.GithubServerURLEnvVar, githubHTTPSURL)
+
 	namespace := integration.GetTestNamespace("pipelinecomposeaction", user)
 	assert.NoError(t, executeCreateNamespaceAction(namespace))
 	assert.NoError(t, executeDeployWithComposePipelineAction(namespace))
@@ -116,10 +120,6 @@ func executeDeployWithComposePipelineAction(namespace string) error {
 	}
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer integration.DeleteGitRepo(actionFolder)
-
-	os.Setenv(model.GithubRepositoryEnvVar, "okteto/movies-with-compose")
-	os.Setenv(model.GithubRefEnvVar, "main")
-	os.Setenv(model.GithubServerURLEnvVar, githubHTTPSURL)
 
 	log.Printf("deploying pipeline %s", namespace)
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)

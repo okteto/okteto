@@ -163,7 +163,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 			oktetoLog.Infof("Failed to build image: %s", err.Error())
 		}
 		err = getErrorMessage(err, buildOptions.Tag)
-		analytics.TrackBuildTransientError(okteto.Context().Builder, success)
+		analytics.TrackBuildTransientError(success)
 		return err
 	}
 
@@ -179,7 +179,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 				oktetoLog.Infof("Failed to build image: %s", err.Error())
 			}
 			err = getErrorMessage(err, buildOptions.Tag)
-			analytics.TrackBuildPullError(okteto.Context().Builder, success)
+			analytics.TrackBuildPullError(success)
 			return err
 		}
 	}

@@ -77,6 +77,8 @@ type OktetoContext struct {
 	IsOkteto           bool                 `json:"isOkteto,omitempty" yaml:"isOkteto,omitempty"`
 	IsStoredAsInsecure bool                 `json:"isInsecure,omitempty" yaml:"isInsecure,omitempty"`
 	IsInsecure         bool                 `json:"-" yaml:"-"`
+	CompanyName        string               `json:"-" yaml:"-"`
+	IsTrial            bool                 `json:"-" yaml:"-"`
 }
 
 // OktetoContextViewer contains info to show

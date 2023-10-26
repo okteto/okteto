@@ -318,6 +318,10 @@ func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.C
 			metadata.ServerName = string(v.Value)
 		case "pipelineRunnerImage":
 			metadata.PipelineRunnerImage = string(v.Value)
+		case "isTrial":
+			metadata.IsTrialLicense = string(v.Value) == "true"
+		case "companyName":
+			metadata.CompanyName = string(v.Value)
 		}
 	}
 	if metadata.PipelineRunnerImage == "" {

@@ -90,7 +90,7 @@ type UpOptions struct {
 }
 
 // Up starts a development container
-func Up() *cobra.Command {
+func Up(at analyticsTrackerInterface) *cobra.Command {
 	upOptions := &UpOptions{}
 	cmd := &cobra.Command{
 		Use:   "up [svc]",
@@ -121,12 +121,11 @@ func Up() *cobra.Command {
 
 			ctx := context.Background()
 
-			analyticsTracker := analytics.NewAnalyticsTracker()
 			upMeta := analytics.NewUpMetricsMetadata()
 
 			// when cmd up finishes, send the event
 			// metadata retrieved during the run of the cmd
-			defer analyticsTracker.TrackUp(upMeta)
+			defer at.TrackUp(upMeta)
 
 			startOkContextConfig := time.Now()
 			if upOptions.ManifestPath != "" {
@@ -261,10 +260,11 @@ func Up() *cobra.Command {
 				Registry:          registry.NewOktetoRegistry(okteto.Config{}),
 				Options:           upOptions,
 				Fs:                afero.NewOsFs(),
-				analyticsTracker:  analyticsTracker,
+				analyticsTracker:  at,
 				analyticsMeta:     upMeta,
 				K8sClientProvider: okteto.NewK8sClientProvider(),
 				tokenUpdater:      newTokenUpdaterController(),
+				builder:           buildv2.NewBuilderFromScratch(at),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -338,7 +338,8 @@ func Up() *cobra.Command {
 				}()
 			}
 
-			if err := setBuildEnvVars(ctx, oktetoManifest); err != nil {
+			// build images and set env vars for the services at the manifest
+			if err := buildServicesAndSetBuildEnvs(ctx, oktetoManifest, up.builder); err != nil {
 				return err
 			}
 
@@ -582,7 +583,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		GetDeployer:        deploy.GetDeployer,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),
 		K8sClientProvider:  k8sClientProvider,
-		Builder:            buildv2.NewBuilderFromScratch(),
+		Builder:            up.builder,
 		GetExternalControl: deploy.NewDeployExternalK8sControl,
 		Fs:                 up.Fs,
 		CfgMapHandler:      deploy.NewConfigmapHandler(k8sProvider),
@@ -1058,8 +1059,8 @@ func printDisplayContext(up *upContext) {
 	oktetoLog.Println()
 }
 
-func setBuildEnvVars(ctx context.Context, m *model.Manifest) error {
-	builder := buildv2.NewBuilderFromScratch()
+// buildServicesAndSetBuildEnvs get services to build and run build to set build envs
+func buildServicesAndSetBuildEnvs(ctx context.Context, m *model.Manifest, builder builderInterface) error {
 	svcsToBuild, err := builder.GetServicesToBuild(ctx, m, []string{})
 	if err != nil {
 		return err

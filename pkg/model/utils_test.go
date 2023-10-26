@@ -136,7 +136,7 @@ func Test_snapshotEnv(t *testing.T) {
 		"TEST_2": "2",
 	}
 	for k, v := range vars {
-		assert.NoError(t, os.Setenv(k, v))
+		t.Setenv(k, v)
 	}
 
 	env := snapshotEnv()
@@ -156,7 +156,7 @@ func Test_restoreEnv(t *testing.T) {
 		"TEST_2": "2",
 	}
 	for k, v := range vars {
-		assert.NoError(t, os.Setenv(k, v))
+		t.Setenv(k, v)
 	}
 
 	env := snapshotEnv()
@@ -164,7 +164,7 @@ func Test_restoreEnv(t *testing.T) {
 
 	assert.Equal(t, os.Environ(), []string{})
 
-	assert.NoError(t, os.Setenv("TEST_3", "3"))
+	t.Setenv("TEST_3", "3")
 	assert.NoError(t, restoreEnv(env))
 
 	checks := []struct {

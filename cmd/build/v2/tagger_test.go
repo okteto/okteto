@@ -14,8 +14,9 @@
 package v2
 
 import (
-	"github.com/okteto/okteto/pkg/okteto"
 	"testing"
+
+	"github.com/okteto/okteto/pkg/okteto"
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
@@ -27,7 +28,7 @@ func TestInitTaggers(t *testing.T) {
 	assert.Implements(t, (*imageTaggerInterface)(nil), newImageWithVolumesTagger(cfg))
 }
 
-func TestImageTaggerWithoutVolumesTag(t *testing.T) {
+func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 	tt := []struct {
 		name          string
 		cfg           fakeConfig
@@ -135,13 +136,14 @@ func TestImageTaggerWithoutVolumesTag(t *testing.T) {
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},
-			expectedImage: "okteto.global/test-test:sha",
+			expectedImage: "okteto.global/test-test:b794839154e982d4df54fe7141aee87029f4099599a939b8ebd4a64d368b5c29",
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			tagger := newImageTagger(tc.cfg)
-			assert.Equal(t, tc.expectedImage, tagger.tag("test", "test", tc.b))
+			buildHash := getBuildHashFromCommit(tc.b, tc.cfg.GetGitCommit())
+			assert.Equal(t, tc.expectedImage, tagger.getServiceImageReference("test", "test", tc.b, buildHash))
 		})
 	}
 }
@@ -190,13 +192,14 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},
-			expectedImage: "okteto.global/test-test:okteto-with-volume-mounts-sha",
+			expectedImage: "okteto.global/test-test:okteto-with-volume-mounts-b794839154e982d4df54fe7141aee87029f4099599a939b8ebd4a64d368b5c29",
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			tagger := newImageWithVolumesTagger(tc.cfg)
-			assert.Equal(t, tc.expectedImage, tagger.tag("test", "test", tc.b))
+			buildHash := getBuildHashFromCommit(tc.b, tc.cfg.GetGitCommit())
+			assert.Equal(t, tc.expectedImage, tagger.getServiceImageReference("test", "test", tc.b, buildHash))
 		})
 	}
 }
@@ -224,7 +227,7 @@ func TestImageTaggerGetPossibleHashImages(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			tagger := newImageTagger(fakeConfig{})
-			assert.Equal(t, tc.expectedImages, tagger.getPossibleHashImages("test", "test", tc.sha))
+			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTag("test", "test", tc.sha))
 		})
 	}
 }
@@ -252,7 +255,7 @@ func TestImageTaggerWithVolumesGetPossibleHashImages(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			tagger := newImageWithVolumesTagger(fakeConfig{})
-			assert.Equal(t, tc.expectedImages, tagger.getPossibleHashImages("test", "test", tc.sha))
+			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTag("test", "test", tc.sha))
 		})
 	}
 }
@@ -285,7 +288,7 @@ func TestImageTaggerGetPossibleTags(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			tagger := newImageTagger(fakeConfig{})
-			assert.Equal(t, tc.expectedImages, tagger.getPossibleTags("test", "test", tc.sha))
+			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTagWithDefaults("test", "test", tc.sha))
 		})
 	}
 }
@@ -318,7 +321,7 @@ func TestImageTaggerWithVolumesGetPossibleTags(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			tagger := newImageWithVolumesTagger(fakeConfig{})
-			assert.Equal(t, tc.expectedImages, tagger.getPossibleTags("test", "test", tc.sha))
+			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTagWithDefaults("test", "test", tc.sha))
 		})
 	}
 }

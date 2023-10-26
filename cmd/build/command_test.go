@@ -21,12 +21,14 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	buildV1 "github.com/okteto/okteto/cmd/build/v1"
 	buildV2 "github.com/okteto/okteto/cmd/build/v2"
+	"github.com/okteto/okteto/pkg/analytics"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeRegistry struct {
@@ -130,6 +132,7 @@ func getFakeManifestV2(_ string) (*model.Manifest, error) {
 }
 
 func TestIsBuildV2(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name           string
 		manifest       *model.Manifest
@@ -237,6 +240,7 @@ func TestBuildErrIfInvalidManifest(t *testing.T) {
 }
 
 func TestBuilderIsProperlyGenerated(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	okteto.CurrentStore = &okteto.OktetoContextStore{
 		Contexts: map[string]*okteto.OktetoContext{
@@ -368,4 +372,17 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 		})
 	}
 
+}
+
+type fakeAnalyticsTracker struct{}
+
+func (fakeAnalyticsTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
+
+func Test_NewBuildCommand(t *testing.T) {
+	got := NewBuildCommand(fakeAnalyticsTracker{})
+	require.IsType(t, &Command{}, got)
+	require.NotNil(t, got.GetManifest)
+	require.NotNil(t, got.Builder)
+	require.NotNil(t, got.Registry)
+	require.IsType(t, fakeAnalyticsTracker{}, got.analyticsTracker)
 }
