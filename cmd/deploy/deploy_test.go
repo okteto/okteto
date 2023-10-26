@@ -501,8 +501,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		K8sClientProvider: clientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(clientProvider),
 		Fs:                afero.NewMemMapFs(),
-		// Builder:           buildv2.NewBuilder(nil, nil, io.NewIOController()),
-		Builder: &fakeV2Builder{},
+		Builder:           &fakeV2Builder{},
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -647,8 +646,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		EndpointGetter:     getFakeEndpoint,
 		CfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
 		Fs:                 afero.NewMemMapFs(),
-		// Builder:            buildv2.NewBuilder(nil, nil, io.NewIOController()),
-		Builder: &fakeV2Builder{},
+		Builder:            &fakeV2Builder{},
 	}
 	ctx := context.Background()
 
@@ -723,7 +721,6 @@ func TestDeployWithoutErrors(t *testing.T) {
 				Fs:                 afero.NewMemMapFs(),
 			}, nil
 		},
-		// Builder: buildv2.NewBuilder(nil, nil, io.NewIOController()),
 		Builder: &fakeV2Builder{},
 	}
 	ctx := context.Background()
