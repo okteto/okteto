@@ -130,14 +130,14 @@ func Push(ctx context.Context) *cobra.Command {
 			}
 
 			if err := runPush(ctx, dev, pushOpts, c); err != nil {
-				analytics.TrackPush(false, okteto.Context().Registry)
+				analytics.TrackPush(false)
 				return err
 			}
 
 			oktetoLog.Success("Source code pushed to '%s'", dev.Name)
 			oktetoLog.Println()
 
-			analytics.TrackPush(true, okteto.Context().Registry)
+			analytics.TrackPush(true)
 			return nil
 		},
 	}
