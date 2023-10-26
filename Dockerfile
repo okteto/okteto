@@ -26,7 +26,7 @@ RUN curl -sLf --retry 3 -o kustomize.tar.gz https://github.com/kubernetes-sigs/k
     && chmod +x /usr/local/bin/kustomize \
     && /usr/local/bin/kustomize version
 
-FROM golang:1.21-buster as builder
+FROM golang:1.21-bullseye as builder
 WORKDIR /okteto
 
 ENV CGO_ENABLED=0
