@@ -14,8 +14,12 @@ package dockercredentials
 
 import (
 	"errors"
+	"path"
 
+	"github.com/docker/cli/cli/config"
+	dockertypes "github.com/docker/cli/cli/config/types"
 	"github.com/docker/docker-credential-helpers/credentials"
+	okconfig "github.com/okteto/okteto/pkg/config"
 )
 
 var ErrNotImplemented = errors.New("not implemented")
@@ -25,29 +29,56 @@ type RegistryCredentialsGetter interface {
 }
 
 type OktetoClusterHelper struct {
-	getter RegistryCredentialsGetter
+	getter  RegistryCredentialsGetter
+	dirname string
 }
 
 var _ credentials.Helper = (*OktetoClusterHelper)(nil)
 
+const oktetoConfigFilename = "regcreds-tmp"
+
 func NewOktetoClusterHelper(getter RegistryCredentialsGetter) *OktetoClusterHelper {
-	return &OktetoClusterHelper{getter: getter}
+	h := okconfig.GetOktetoHome()
+	return &OktetoClusterHelper{
+		getter:  getter,
+		dirname: path.Join(h, oktetoConfigFilename),
+	}
 }
 
 // Add appends credentials to the store.
-func (*OktetoClusterHelper) Add(*credentials.Credentials) error {
-	return ErrNotImplemented
+func (o *OktetoClusterHelper) Add(reg *credentials.Credentials) error {
+	cf, err := config.Load(o.dirname)
+	if err != nil {
+		return err
+	}
+	cf.AuthConfigs[reg.ServerURL] = dockertypes.AuthConfig{
+		Username: reg.Username,
+		Password: reg.Secret,
+	}
+	return cf.Save()
 }
 
 // Delete removes credentials from the store.
-func (*OktetoClusterHelper) Delete(_ string) error {
-	return ErrNotImplemented
+func (o *OktetoClusterHelper) Delete(regHost string) error {
+	cf, err := config.Load(o.dirname)
+	if err != nil {
+		return err
+	}
+	delete(cf.AuthConfigs, regHost)
+	return cf.Save()
 }
 
 // Get retrieves credentials from the store.
 // It returns username and secret as strings.
-func (och *OktetoClusterHelper) Get(serverURL string) (string, string, error) {
-	return och.getter.GetRegistryCredentials(serverURL)
+func (o *OktetoClusterHelper) Get(serverURL string) (string, string, error) {
+	cf, err := config.Load(o.dirname)
+	if err != nil {
+		return "", "", err
+	}
+	if creds, ok := cf.AuthConfigs[serverURL]; ok {
+		return creds.Username, creds.Password, nil
+	}
+	return o.getter.GetRegistryCredentials(serverURL)
 }
 
 // List returns the stored serverURLs and their associated usernames.
