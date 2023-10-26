@@ -247,7 +247,7 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 func getClusterMetadata(ctx context.Context, namespace string, okClientProvider oktetoClientProvider) (types.ClusterMetadata, error) {
 	okClient, err := okClientProvider.Provide()
 	if err != nil {
-		oktetoLog.Infof("error providing okteto client: %v", err)
+		return types.ClusterMetadata{}, err
 	}
 	return okClient.User().GetClusterMetadata(ctx, namespace)
 }
@@ -302,6 +302,7 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 
 	clusterMetadata, err := getClusterMetadata(ctx, ctxOptions.Namespace, c.OktetoClientProvider)
 	if err != nil {
+		oktetoLog.Infof("error getting cluster metadata: %v", err)
 		return err
 	}
 
