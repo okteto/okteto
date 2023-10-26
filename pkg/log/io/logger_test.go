@@ -55,7 +55,7 @@ func TestParseLevel(t *testing.T) {
 			name:        "invalid",
 			level:       "invalid",
 			expectedLvl: slog.LevelInfo,
-			expectedErr: &InvalidLogLevelError{Level: "invalid"},
+			expectedErr: &InvalidLogLevelError{level: "invalid"},
 		},
 	}
 	for _, tc := range tt {
