@@ -73,7 +73,7 @@ type proxyHandler struct {
 }
 
 // NewProxy creates a new proxy
-func NewProxy(kubeconfig kubeConfigHandler, portGetter func(iface string) (int, error)) (*Proxy, error) {
+func NewProxy(kubeconfig kubeConfigHandler, portGetter portGetterFunc) (*Proxy, error) {
 	// Look for a free local port to start the proxy
 	port, err := portGetter("localhost")
 	if err != nil {

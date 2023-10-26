@@ -87,6 +87,17 @@ type builderInterface interface {
 	GetBuildEnvVars() map[string]string
 }
 
+type portGetterFunc func(string) (int, error)
+
+type getDeployerFunc func(
+	context.Context, *Options,
+	builderInterface,
+	configMapHandler,
+	okteto.K8sClientProvider,
+	kubeConfigHandler,
+	portGetterFunc,
+) (deployerInterface, error)
+
 // DeployCommand defines the config for deploying an app
 type DeployCommand struct {
 	GetManifest        func(path string) (*model.Manifest, error)
@@ -94,16 +105,14 @@ type DeployCommand struct {
 	K8sClientProvider  okteto.K8sClientProvider
 	Builder            builderInterface
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
-	GetDeployer        func(context.Context, *Options, builderInterface, configMapHandler, okteto.K8sClientProvider,
-		kubeConfigHandler,
-		func(string) (int, error)) (deployerInterface, error)
-	EndpointGetter   func() (EndpointGetter, error)
-	DeployWaiter     DeployWaiter
-	CfgMapHandler    configMapHandler
-	Fs               afero.Fs
-	DivertDriver     divert.Driver
-	PipelineCMD      pipelineCMD.PipelineDeployerInterface
-	AnalyticsTracker analyticsTrackerInterface
+	GetDeployer        getDeployerFunc
+	EndpointGetter     func() (EndpointGetter, error)
+	DeployWaiter       DeployWaiter
+	CfgMapHandler      configMapHandler
+	Fs                 afero.Fs
+	DivertDriver       divert.Driver
+	PipelineCMD        pipelineCMD.PipelineDeployerInterface
+	AnalyticsTracker   analyticsTrackerInterface
 
 	PipelineType       model.Archetype
 	isRemote           bool
@@ -544,7 +553,7 @@ func GetDeployer(ctx context.Context,
 	cmapHandler configMapHandler,
 	k8sProvider okteto.K8sClientProvider,
 	kubeconfig kubeConfigHandler,
-	portGetter func(string) (int, error),
+	portGetter portGetterFunc,
 ) (deployerInterface, error) {
 	if shouldRunInRemote(opts) {
 		// run remote
