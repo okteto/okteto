@@ -236,7 +236,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 				oktetoLog.StartSpinner()
 				defer oktetoLog.StopSpinner()
 
-				deployer, err := c.GetDeployer(ctx, options, nil, nil, nil, nil, nil)
+				deployer, err := c.GetDeployer(ctx, options, nil, nil, nil, nil, model.GetAvailablePort)
 				if err != nil {
 					return err
 				}
