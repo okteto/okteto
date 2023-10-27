@@ -46,7 +46,7 @@ func GetContextResource(path string) (*ContextResource, error) {
 		return nil, err
 	}
 	if err := yaml.Unmarshal(bytes, ctxResource); err != nil {
-		return nil, err
+		return nil, newManifestFriendlyError(err)
 	}
 
 	ctxResource.Context = os.ExpandEnv(ctxResource.Context)

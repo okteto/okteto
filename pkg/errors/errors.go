@@ -188,7 +188,7 @@ var (
 	ErrDevContainerNotExists = "development container '%s' doesn't exist"
 
 	// ErrInvalidManifest is raised when cannot unmarshal manifest properly
-	ErrInvalidManifest = errors.New("invalid manifest")
+	ErrInvalidManifest = errors.New("your okteto manifest is not valid, please check the following errors")
 
 	// ErrServiceEmpty is raised whenever service is empty in docker-compose
 	ErrServiceEmpty = errors.New("service cannot be empty")
