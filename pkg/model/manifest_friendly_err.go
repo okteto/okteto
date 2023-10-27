@@ -16,6 +16,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/suggest"
 	"regexp"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
@@ -25,13 +26,14 @@ import (
 // newManifestFriendlyError returns a new UserFriendlyError for the okteto manifest.
 func newManifestFriendlyError(err error) *suggest.UserFriendlyError {
 	rules := getManifestSuggestionRules(Manifest{})
-	return suggest.NewUserFriendlyError(err, rules)
+	// we wrap err with oktetoErrors.ErrInvalidManifest because in some parts of the code we check for this error type
+	manifestErr := fmt.Errorf("%w:\n%w", oktetoErrors.ErrInvalidManifest, err)
+	return suggest.NewUserFriendlyError(manifestErr, rules)
 }
 
 // getManifestSuggestionRules returns a collection of rules aiming to improve the error message for the okteto manifest.
 func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 	rules := []*suggest.Rule{
-		addYamlParseErrorHeading(),
 		addUrlToManifestDocs(),
 	}
 
@@ -81,7 +83,6 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 
 		// misc
 		suggest.NewStrReplaceRule("yaml: unmarshal errors:\n", ""),
-		suggest.NewStrReplaceRule("invalid manifest: ", ""),
 		indentNumLines(),
 	)
 
@@ -109,15 +110,6 @@ func isYamlError(err error) bool {
 	// detect yaml errors by type
 	var typeError *yaml.TypeError
 	return errors.As(err, &typeError)
-}
-
-func addYamlParseErrorHeading() *suggest.Rule {
-	addUrl := func(e error) error {
-		errorWithUrlToDocs := fmt.Sprintf("Your okteto manifest is not valid, please check the following errors:\n%s", e.Error())
-		return errors.New(errorWithUrlToDocs)
-	}
-
-	return suggest.NewRule(isYamlErrorWithoutLinkToDocs, addUrl)
 }
 
 // addUrlToManifestDocs appends to the error the URL to the Okteto manifest ref docs

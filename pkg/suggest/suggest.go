@@ -55,6 +55,10 @@ func (u UserFriendlyError) Error() string {
 	return u.suggestion.suggest(u.Err).Error()
 }
 
+func (u UserFriendlyError) Unwrap() error {
+	return u.Err
+}
+
 func NewUserFriendlyError(err error, rules []*Rule) *UserFriendlyError {
 	sug := newErrorSuggestion()
 
