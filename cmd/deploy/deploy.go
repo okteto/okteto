@@ -236,7 +236,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 				oktetoLog.StartSpinner()
 				defer oktetoLog.StopSpinner()
 
-				deployer, err := c.GetDeployer(ctx, options, nil, nil, nil, nil, model.GetAvailablePort)
+				deployer, err := c.GetDeployer(ctx, options, nil, nil, k8sClientProvider, NewKubeConfig(), model.GetAvailablePort)
 				if err != nil {
 					return err
 				}
@@ -547,6 +547,8 @@ func shouldRunInRemote(opts *Options) bool {
 
 }
 
+// GetDeployer returns a remote or a local deployer
+// k8sProvider, kubeconfig and portGetter should not be nil values
 func GetDeployer(ctx context.Context,
 	opts *Options,
 	builder builderInterface,
