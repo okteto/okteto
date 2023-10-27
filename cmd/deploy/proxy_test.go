@@ -92,10 +92,6 @@ func Test_NewProxy(t *testing.T) {
 			},
 			expectedErr: assert.AnError,
 		},
-		{
-			name:        "err portGetter nil",
-			expectedErr: errNilPortGetter,
-		},
 	}
 
 	for _, tt := range tests {

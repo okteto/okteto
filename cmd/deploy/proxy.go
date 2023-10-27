@@ -18,7 +18,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -73,17 +72,8 @@ type proxyHandler struct {
 	DivertDriver divert.Driver
 }
 
-var (
-	errNilPortGetter = errors.New("param portGetter should be a function")
-)
-
 // NewProxy creates a new proxy
 func NewProxy(kubeconfig kubeConfigHandler, portGetter portGetterFunc) (*Proxy, error) {
-	if portGetter == nil {
-		oktetoLog.Error("port getter can't be empty")
-		return nil, errNilPortGetter
-	}
-
 	// Look for a free local port to start the proxy
 	port, err := portGetter("localhost")
 	if err != nil {
