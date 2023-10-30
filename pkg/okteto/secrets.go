@@ -267,15 +267,15 @@ func (c *userClient) GetClusterCertificate(ctx context.Context, cluster, ns stri
 
 	conf, ok := file.Contexts[cluster]
 	if !ok {
-		return nil, fmt.Errorf("cluster-not-found")
+		return nil, fmt.Errorf("context-not-found")
 	}
 	if conf.Certificate == "" {
-		return nil, fmt.Errorf("cluster has no certificate")
+		return nil, fmt.Errorf("context has no certificate")
 	}
 
 	b, err := base64.StdEncoding.DecodeString(conf.Certificate)
 	if err != nil {
-		return nil, fmt.Errorf("failed to base64 decode cluster certificate: %w", err)
+		return nil, fmt.Errorf("failed to base64 decode context certificate: %w", err)
 	}
 
 	return b, nil

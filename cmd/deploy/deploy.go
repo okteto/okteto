@@ -51,7 +51,7 @@ const (
 )
 
 var (
-	errDepenNotAvailableInVanilla = errors.New("dependency deployment is only supported in clusters with Okteto installed")
+	errDepenNotAvailableInVanilla = errors.New("dependency deployment is only supported in contexts with Okteto installed")
 )
 
 // Options represents options for deploy command
@@ -141,7 +141,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// validate cmd options
 			if options.Dependencies && !okteto.IsOkteto() {
-				return fmt.Errorf("'dependencies' is only supported in clusters that have Okteto installed")
+				return fmt.Errorf("'dependencies' is only supported in contexts that have Okteto installed")
 			}
 
 			if err := validateAndSet(options.Variables, os.Setenv); err != nil {
