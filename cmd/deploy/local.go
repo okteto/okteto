@@ -54,7 +54,7 @@ type localDeployer struct {
 }
 
 // newLocalDeployer initializes a local deployer from a name and a boolean indicating if we should run with bash or not
-func newLocalDeployer(ctx context.Context, options *Options, cmapHandler configMapHandler, k8sProvider okteto.K8sClientProvider, kubeconfig kubeConfigHandler, portGetter func(string) (int, error)) (*localDeployer, error) {
+func newLocalDeployer(ctx context.Context, options *Options, cmapHandler configMapHandler, k8sProvider okteto.K8sClientProvider, kubeconfig kubeConfigHandler, portGetter portGetterFunc) (*localDeployer, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the current working directory: %w", err)
