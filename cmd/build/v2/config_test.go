@@ -10,18 +10,18 @@ import (
 )
 
 type fakeConfigRegistry struct {
-	access bool
 	err    error
+	access bool
 }
 
 func (fcr fakeConfigRegistry) HasGlobalPushAccess() (bool, error) { return fcr.access, fcr.err }
 
 type fakeConfigRepo struct {
+	err      error
 	sha      string
-	isClean  bool
 	url      string
 	treeHash string
-	err      error
+	isClean  bool
 }
 
 func (fcr fakeConfigRepo) GetSHA() (string, error)            { return fcr.sha, fcr.err }
@@ -35,9 +35,9 @@ func TestGetConfig(t *testing.T) {
 		repo fakeConfigRepo
 	}
 	tt := []struct {
+		expected oktetoBuilderConfig
 		name     string
 		input    input
-		expected oktetoBuilderConfig
 	}{
 		{
 			name: "global access clean commit",
@@ -143,8 +143,8 @@ func TestGetConfig(t *testing.T) {
 func TestGetGitCommit(t *testing.T) {
 	tt := []struct {
 		name     string
-		input    fakeConfigRepo
 		expected string
+		input    fakeConfigRepo
 	}{
 		{
 			name: "valid commit",

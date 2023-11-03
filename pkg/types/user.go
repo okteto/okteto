@@ -21,10 +21,10 @@ type User struct {
 	ExternalID      string
 	Token           string
 	ID              string
-	New             bool
 	Buildkit        string
 	Registry        string
 	Certificate     string
 	GlobalNamespace string
 	Analytics       bool
+	New             bool
 }

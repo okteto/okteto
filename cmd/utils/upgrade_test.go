@@ -35,8 +35,8 @@ func Test_shouldNotify(t *testing.T) {
 		current *semver.Version
 	}
 	tests := []struct {
-		name string
 		args args
+		name string
 		want bool
 	}{
 		{name: "equal", args: args{latest: oneOneZero, current: oneOneZero}, want: false},

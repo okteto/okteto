@@ -15,9 +15,9 @@ package types
 
 // ClusterMetadata represents the okteto cluster metadata
 type ClusterMetadata struct {
-	Certificate         []byte
 	ServerName          string
 	PipelineRunnerImage string
-	IsTrialLicense      bool
 	CompanyName         string
+	Certificate         []byte
+	IsTrialLicense      bool
 }

@@ -55,21 +55,21 @@ type proxyInterface interface {
 }
 
 type proxyConfig struct {
-	port  int
 	token string
+	port  int
 }
 
 // Proxy refers to a proxy configuration
 type Proxy struct {
 	s            *http.Server
-	proxyConfig  proxyConfig
 	proxyHandler *proxyHandler
+	proxyConfig  proxyConfig
 }
 
 type proxyHandler struct {
-	// Name is sanitized version of the pipeline name
-	Name         string
 	DivertDriver divert.Driver
+	// Name is sanitized version of the pipeline name
+	Name string
 }
 
 // NewProxy creates a new proxy

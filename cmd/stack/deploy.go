@@ -37,9 +37,9 @@ import (
 // DeployCommand has all the namespaces subcommands
 type DeployCommand struct {
 	K8sClient        kubernetes.Interface
+	analyticsTracker analyticsTrackerInterface
 	Config           *rest.Config
 	IsInsideDeploy   bool
-	analyticsTracker analyticsTrackerInterface
 }
 
 // deploy deploys a stack

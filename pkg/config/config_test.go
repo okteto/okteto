@@ -47,9 +47,9 @@ func TestGetUserHomeDir(t *testing.T) {
 
 func Test_homedirWindows(t *testing.T) {
 	var tests = []struct {
+		env      map[string]string
 		name     string
 		expected string
-		env      map[string]string
 	}{
 		{
 			name:     "home",

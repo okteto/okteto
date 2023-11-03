@@ -20,8 +20,8 @@ import (
 func Test_renderProgressBar(t *testing.T) {
 	var tests = []struct {
 		expected string
-		progress float64
 		name     string
+		progress float64
 	}{
 		{
 			expected: "[__________________________________________________]   0%",

@@ -23,9 +23,9 @@ import (
 
 func Test_RemoveExecFromCfg(t *testing.T) {
 	var tests = []struct {
-		name     string
 		input    *okteto.OktetoContext
 		expected *okteto.OktetoContext
+		name     string
 	}{
 		{
 			name:     "nil context",

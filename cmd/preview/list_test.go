@@ -68,9 +68,9 @@ func Test_getPreviewOutput(t *testing.T) {
 
 func Test_validatePreviewListOutput(t *testing.T) {
 	var tests = []struct {
+		expectedErr error
 		name        string
 		output      string
-		expectedErr error
 	}{
 		{
 			name:        "output format is yaml",
@@ -99,8 +99,8 @@ func Test_validatePreviewListOutput(t *testing.T) {
 func Test_getPreviewDefaultOutput(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    previewOutput
 		expected string
+		input    previewOutput
 	}{
 		{
 			name: "preview with no labels",
@@ -133,11 +133,10 @@ func Test_getPreviewDefaultOutput(t *testing.T) {
 
 func Test_displayListPreviews(t *testing.T) {
 	tests := []struct {
-		name   string
-		format string
-		input  []previewOutput
-
+		name           string
+		format         string
 		expectedOutput string
+		input          []previewOutput
 	}{
 		{
 			name:           "empty list ",
@@ -241,10 +240,10 @@ test2  global    true      -
 func Test_newListPreviewCommand(t *testing.T) {
 
 	tests := []struct {
-		name     string
 		okClient types.OktetoInterface
 		flags    *listFlags
 		expected *listPreviewCommand
+		name     string
 	}{
 		{
 			name:     "empty input",
@@ -278,9 +277,9 @@ func Test_newListPreviewCommand(t *testing.T) {
 func Test_run(t *testing.T) {
 
 	tests := []struct {
-		name      string
-		cmd       *listPreviewCommand
 		expectErr error
+		cmd       *listPreviewCommand
+		name      string
 	}{
 		{
 			name: "invalid list output format",

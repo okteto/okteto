@@ -122,9 +122,9 @@ func Test_getBinaryPathInDownload(t *testing.T) {
 
 func Test_parseVersionFromOutput(t *testing.T) {
 	tests := []struct {
+		want    *semver.Version
 		name    string
 		output  []byte
-		want    *semver.Version
 		wantErr bool
 	}{
 		{

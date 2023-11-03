@@ -81,8 +81,8 @@ func TestStop(t *testing.T) {
 
 func Test_active_stop(t *testing.T) {
 	tests := []struct {
-		name     string
 		stopChan chan struct{}
+		name     string
 		stop     bool
 	}{
 		{
@@ -115,8 +115,8 @@ func Test_active_stop(t *testing.T) {
 
 func Test_active_closeReady(t *testing.T) {
 	tests := []struct {
-		name      string
 		readyChan chan struct{}
+		name      string
 		close     bool
 	}{
 		{

@@ -49,15 +49,15 @@ import (
 
 // StackDeployOptions represents the different options available for stack commands
 type StackDeployOptions struct {
-	StackPaths       []string
 	Name             string
 	Namespace        string
+	Progress         string
+	StackPaths       []string
+	ServicesToDeploy []string
+	Timeout          time.Duration
 	ForceBuild       bool
 	Wait             bool
 	NoCache          bool
-	Timeout          time.Duration
-	ServicesToDeploy []string
-	Progress         string
 	InsidePipeline   bool
 }
 

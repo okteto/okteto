@@ -180,11 +180,11 @@ func NewManifestFromDev(dev *Dev) *Manifest {
 
 // DeployInfo represents what must be deployed for the app to work
 type DeployInfo struct {
-	Image          string              `json:"image,omitempty" yaml:"image,omitempty"`
-	Commands       []DeployCommand     `json:"commands,omitempty" yaml:"commands,omitempty"`
 	ComposeSection *ComposeSectionInfo `json:"compose,omitempty" yaml:"compose,omitempty"`
 	Endpoints      EndpointSpec        `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	Divert         *DivertDeploy       `json:"divert,omitempty" yaml:"divert,omitempty"`
+	Image          string              `json:"image,omitempty" yaml:"image,omitempty"`
+	Commands       []DeployCommand     `json:"commands,omitempty" yaml:"commands,omitempty"`
 	Remote         bool                `json:"remote,omitempty" yaml:"remote,omitempty"`
 }
 
@@ -200,10 +200,10 @@ type DivertDeploy struct {
 	Driver               string                 `json:"driver,omitempty" yaml:"driver,omitempty"`
 	Namespace            string                 `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	DeprecatedService    string                 `json:"service,omitempty" yaml:"service,omitempty"`
-	DeprecatedPort       int                    `json:"port,omitempty" yaml:"port,omitempty"`
 	DeprecatedDeployment string                 `json:"deployment,omitempty" yaml:"deployment,omitempty"`
 	VirtualServices      []DivertVirtualService `json:"virtualServices,omitempty" yaml:"virtualServices,omitempty"`
 	Hosts                []DivertHost           `json:"hosts,omitempty" yaml:"hosts,omitempty"`
+	DeprecatedPort       int                    `json:"port,omitempty" yaml:"port,omitempty"`
 }
 
 // DivertVirtualService represents a virtual service in a namespace to be diverted
@@ -221,8 +221,8 @@ type DivertHost struct {
 
 // ComposeSectionInfo represents information about compose file
 type ComposeSectionInfo struct {
-	ComposesInfo ComposeInfoList `json:"manifest,omitempty" yaml:"manifest,omitempty"`
 	Stack        *Stack          `json:"-" yaml:"-"`
+	ComposesInfo ComposeInfoList `json:"manifest,omitempty" yaml:"manifest,omitempty"`
 }
 
 type ComposeInfoList []ComposeInfo
@@ -1012,10 +1012,10 @@ type Dependency struct {
 	Repository   string        `json:"repository" yaml:"repository"`
 	ManifestPath string        `json:"manifest,omitempty" yaml:"manifest,omitempty"`
 	Branch       string        `json:"branch,omitempty" yaml:"branch,omitempty"`
-	Variables    Environment   `json:"variables,omitempty" yaml:"variables,omitempty"`
-	Wait         bool          `json:"wait,omitempty" yaml:"wait,omitempty"`
-	Timeout      time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	Namespace    string        `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Variables    Environment   `json:"variables,omitempty" yaml:"variables,omitempty"`
+	Timeout      time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Wait         bool          `json:"wait,omitempty" yaml:"wait,omitempty"`
 }
 
 // GetTimeout returns dependency.Timeout if it's set or the one passed as arg if it's not

@@ -24,8 +24,8 @@ import (
 func Test_getPreviousAppReplicas(t *testing.T) {
 	var twoReplica int32 = 2
 	var tests = []struct {
-		name     string
 		app      App
+		name     string
 		expected int32
 	}{
 		{

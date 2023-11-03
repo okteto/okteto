@@ -2,21 +2,22 @@ package okteto
 
 import (
 	"encoding/json"
-	"github.com/okteto/okteto/pkg/types"
-	"github.com/stretchr/testify/assert"
-	authenticationv1 "k8s.io/api/authentication/v1"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/okteto/okteto/pkg/types"
+	"github.com/stretchr/testify/assert"
+	authenticationv1 "k8s.io/api/authentication/v1"
 )
 
 func Test_GetKubeToken(t *testing.T) {
 	tests := []struct {
-		name            string
 		httpFakeHandler http.Handler
+		expectedErr     error
+		name            string
 		namespace       string
 		expectedToken   string
-		expectedErr     error
 	}{
 		{
 			name: "error request status unauthorized",
@@ -70,10 +71,10 @@ func Test_GetKubeToken(t *testing.T) {
 
 func Test_CheckService(t *testing.T) {
 	tests := []struct {
-		name            string
 		httpFakeHandler http.Handler
-		namespace       string
 		expectedErr     error
+		name            string
+		namespace       string
 	}{
 		{
 			name: "error request status unauthorized",

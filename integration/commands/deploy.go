@@ -28,15 +28,15 @@ import (
 type DeployOptions struct {
 	Workdir          string
 	ManifestPath     string
-	Build            bool
 	LogLevel         string
 	LogOutput        string
-	ServicesToDeploy []string
 	Namespace        string
 	OktetoHome       string
 	Token            string
 	Name             string
 	Variables        string
+	ServicesToDeploy []string
+	Build            bool
 	IsRemote         bool
 }
 

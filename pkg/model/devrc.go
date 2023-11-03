@@ -14,22 +14,23 @@ import (
 
 // DevRC represents the default properties for dev containers
 type DevRC struct {
+	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
 	Annotations          Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
-	Command              Command               `json:"command,omitempty" yaml:"command,omitempty"`
-	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
-	Forward              []forward.Forward     `json:"forward,omitempty" yaml:"forward,omitempty"`
-	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
+	Selector             Selector              `json:"selector,omitempty" yaml:"selector,omitempty"`
+	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
 	Labels               Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Metadata             *Metadata             `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
-	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
-	Reverse              []Reverse             `json:"reverse,omitempty" yaml:"reverse,omitempty"`
-	Selector             Selector              `json:"selector,omitempty" yaml:"selector,omitempty"`
-	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
-	Sync                 Sync                  `json:"sync,omitempty" yaml:"sync,omitempty"`
-	Timeout              Timeout               `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
+
+	Context     string            `json:"context,omitempty" yaml:"context,omitempty"`
+	Namespace   string            `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Command     Command           `json:"command,omitempty" yaml:"command,omitempty"`
+	Environment Environment       `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Forward     []forward.Forward `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Reverse     []Reverse         `json:"reverse,omitempty" yaml:"reverse,omitempty"`
+	Secrets     []Secret          `json:"secrets,omitempty" yaml:"secrets,omitempty"`
+	Sync        Sync              `json:"sync,omitempty" yaml:"sync,omitempty"`
+	Timeout     Timeout           `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 }
 
 // GetRc returns a Dev object from a given file

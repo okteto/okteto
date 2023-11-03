@@ -63,8 +63,8 @@ func Test_TranslateInvalidResourceSpec(t *testing.T) {
 }
 
 type fakePortGetter struct {
-	port int
 	err  error
+	port int
 }
 
 func (pg fakePortGetter) Get(_ string) (int, error) {
@@ -80,11 +80,11 @@ func Test_NewProxy(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
 		portGetter     fakePortGetter
+		expectedErr    error
 		fakeKubeconfig *fakeKubeConfig
 		expectedProxy  *Proxy
-		expectedErr    error
+		name           string
 	}{
 		{
 			name: "err getting port, DNS not found error",

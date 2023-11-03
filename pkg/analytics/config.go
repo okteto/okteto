@@ -34,8 +34,8 @@ var (
 
 // Analytics contains the analytics configuration
 type Analytics struct {
-	Enabled   bool   `json:"enabled"`
 	MachineID string `json:"machineID"`
+	Enabled   bool   `json:"enabled"`
 }
 
 func getContextType(oktetoContext string) string {

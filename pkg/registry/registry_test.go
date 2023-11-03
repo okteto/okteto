@@ -26,17 +26,17 @@ import (
 )
 
 type FakeConfig struct {
-	IsOktetoClusterCfg          bool
+	ContextCertificate          *x509.Certificate
+	externalRegistryCredentials [2]string
 	GlobalNamespace             string
 	Namespace                   string
 	RegistryURL                 string
 	UserID                      string
 	Token                       string
-	InsecureSkipTLSVerifyPolicy bool
-	ContextCertificate          *x509.Certificate
 	ServerName                  string
 	ContextName                 string
-	externalRegistryCredentials [2]string
+	InsecureSkipTLSVerifyPolicy bool
+	IsOktetoClusterCfg          bool
 }
 
 func (fc FakeConfig) IsOktetoCluster() bool               { return fc.IsOktetoClusterCfg }
@@ -57,22 +57,22 @@ func (fc FakeConfig) GetExternalRegistryCredentials(_ string) (string, string, e
 
 func TestGetImageTagWithDigest(t *testing.T) {
 	type expected struct {
-		imageTag string
 		err      error
+		imageTag string
 	}
 	type clientConfig struct {
-		digest string
 		err    error
+		digest string
 	}
 	type config struct {
-		input        string
 		config       configInterface
 		clientConfig clientConfig
+		input        string
 	}
 	var tests = []struct {
-		name     string
 		input    config
 		expected expected
+		name     string
 	}{
 		{
 			name: "get no error",
@@ -132,21 +132,21 @@ func TestGetImageTagWithDigest(t *testing.T) {
 
 func TestHasPushAccess(t *testing.T) {
 	type expected struct {
-		hasAccess bool
 		err       error
+		hasAccess bool
 	}
 	type clientConfig struct {
-		hasAccess bool
 		err       error
+		hasAccess bool
 	}
 	type config struct {
 		clientConfig   clientConfig
 		registryConfig FakeConfig
 	}
 	var tests = []struct {
+		expected expected
 		name     string
 		config   config
-		expected expected
 	}{
 		{
 			name: "not in okteto",
@@ -219,21 +219,21 @@ func TestHasPushAccess(t *testing.T) {
 
 func TestGetImageMetadata(t *testing.T) {
 	type expected struct {
-		metadata ImageMetadata
 		err      error
+		metadata ImageMetadata
 	}
 	type clientConfig struct {
-		getDigest getDigest
 		getConfig getConfig
+		getDigest getDigest
 	}
 	type config struct {
-		input        string
-		config       configInterface
 		clientConfig clientConfig
+		config       configInterface
+		input        string
 	}
 	var tests = []struct {
-		name     string
 		input    config
+		name     string
 		expected expected
 	}{
 		{
@@ -337,19 +337,19 @@ func TestGetImageMetadata(t *testing.T) {
 
 func Test_OktetoRegistry_CloneGlobalImageToDev(t *testing.T) {
 	type expected struct {
-		image string
 		err   error
+		image string
 	}
 	type config struct {
+		config configInterface
 		image  string
 		tag    string
-		config configInterface
 	}
 	var tests = []struct {
-		name     string
+		client   fakeClient
 		input    config
 		expected expected
-		client   fakeClient
+		name     string
 	}{
 		{
 			name: "not a global image repository returns error",
@@ -439,12 +439,12 @@ func Test_OktetoRegistry_CloneGlobalImageToDev(t *testing.T) {
 
 func Test_IsOktetoRegistry(t *testing.T) {
 	type input struct {
-		image  string
 		config configInterface
+		image  string
 	}
 	var tests = []struct {
-		name  string
 		input input
+		name  string
 		want  bool
 	}{
 		{
@@ -516,12 +516,12 @@ func Test_IsOktetoRegistry(t *testing.T) {
 
 func Test_IsGlobal(t *testing.T) {
 	type input struct {
-		image  string
 		config configInterface
+		image  string
 	}
 	var tests = []struct {
-		name  string
 		input input
+		name  string
 		want  bool
 	}{
 		{
@@ -585,10 +585,10 @@ func Test_IsGlobal(t *testing.T) {
 
 func Test_GetImageTag(t *testing.T) {
 	type input struct {
+		config    configInterface
 		image     string
 		service   string
 		namespace string
-		config    configInterface
 	}
 	var tests = []struct {
 		name     string

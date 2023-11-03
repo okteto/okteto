@@ -20,10 +20,10 @@ import (
 
 func Test_GetContextResource(t *testing.T) {
 	var tests = []struct {
-		name     string
-		manifest []byte
 		env      map[string]string
 		want     *ContextResource
+		name     string
+		manifest []byte
 	}{
 		{
 			name:     "empty",
@@ -70,10 +70,10 @@ func Test_GetContextResource(t *testing.T) {
 
 func Test_UpdateNamespace(t *testing.T) {
 	var tests = []struct {
-		name      string
 		in        *ContextResource
-		namespace string
 		out       *ContextResource
+		name      string
+		namespace string
 		wantError bool
 	}{
 		{
@@ -133,10 +133,10 @@ func Test_UpdateNamespace(t *testing.T) {
 
 func Test_UpdateContext(t *testing.T) {
 	var tests = []struct {
-		name      string
 		in        *ContextResource
-		context   string
 		out       *ContextResource
+		name      string
+		context   string
 		wantError bool
 	}{
 		{

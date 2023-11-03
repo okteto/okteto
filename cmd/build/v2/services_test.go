@@ -215,11 +215,11 @@ func TestNoServiceBuiltWithSubset(t *testing.T) {
 }
 
 type fakeConfig struct {
+	sha       string
+	repoURL   string
 	isClean   bool
 	hasAccess bool
-	sha       string
 	isOkteto  bool
-	repoURL   string
 }
 
 func (fc fakeConfig) HasGlobalAccess() bool                       { return fc.hasAccess }

@@ -9,12 +9,12 @@ func IsErrorNil(err error) bool { return err == nil }
 
 func Test_Read(t *testing.T) {
 	tests := []struct {
+		isValidErrFunc func(err error) bool
 		name           string
 		data           string
 		header         string
 		footer         string
 		want           []string
-		isValidErrFunc func(err error) bool
 	}{
 		{
 			name:           "no-blocks",

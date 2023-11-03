@@ -32,8 +32,19 @@ const (
 
 // UpMetricsMetadata defines the properties of the Up event we want to track
 type UpMetricsMetadata struct {
+	manifestType   model.Archetype
+	mode           string
+	reconnectCause string
+
+	activateDuration             time.Duration
+	initialSyncDuration          time.Duration
+	oktetoCtxConfigDuration      time.Duration
+	devContainerCreationDuration time.Duration
+	contextSyncDuration          time.Duration
+	localFoldersScanDuration     time.Duration
+	execDuration                 time.Duration
+
 	isV2                     bool
-	manifestType             model.Archetype
 	isInteractive            bool
 	isOktetoRepository       bool
 	hasDependenciesSection   bool
@@ -41,24 +52,14 @@ type UpMetricsMetadata struct {
 	hasDeploySection         bool
 	hasReverse               bool
 	isHybridDev              bool
-	mode                     string
 	failActivate             bool
-	activateDuration         time.Duration
-	initialSyncDuration      time.Duration
 	isReconnect              bool
-	reconnectCause           string
 	errSync                  bool
 	errSyncResetDatabase     bool
 	errSyncInsufficientSpace bool
 	errSyncLostSyncthing     bool
 	success                  bool
-
-	hasRunDeploy                 bool
-	oktetoCtxConfigDuration      time.Duration
-	devContainerCreationDuration time.Duration
-	contextSyncDuration          time.Duration
-	localFoldersScanDuration     time.Duration
-	execDuration                 time.Duration
+	hasRunDeploy             bool
 }
 
 // NewUpMetricsMetadata returns an empty instance of UpMetricsMetadata

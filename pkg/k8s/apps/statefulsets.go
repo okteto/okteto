@@ -33,8 +33,8 @@ import (
 )
 
 type StatefulSetApp struct {
-	kind string
 	sfs  *appsv1.StatefulSet
+	kind string
 }
 
 func NewStatefulSetApp(sfs *appsv1.StatefulSet) *StatefulSetApp {

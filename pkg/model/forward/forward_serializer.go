@@ -7,11 +7,11 @@ import (
 )
 
 type ForwardRaw struct {
+	Labels      map[string]string `json:"labels" yaml:"labels"`
+	ServiceName string            `json:"name" yaml:"name"`
 	Local       int               `json:"localPort" yaml:"localPort"`
 	Remote      int               `json:"remotePort" yaml:"remotePort"`
 	Service     bool              `json:"-" yaml:"-"`
-	ServiceName string            `json:"name" yaml:"name"`
-	Labels      map[string]string `json:"labels" yaml:"labels"`
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg for port forwards.

@@ -38,9 +38,9 @@ var (
 
 type pipelineClient struct {
 	client        graphqlClientInterface
-	url           string
 	provideTicker func(time.Duration) *time.Ticker
 	provideTimer  func(time.Duration) *time.Timer
+	url           string
 }
 
 func newPipelineClient(client graphqlClientInterface, url string) *pipelineClient {

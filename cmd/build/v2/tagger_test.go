@@ -30,10 +30,10 @@ func TestInitTaggers(t *testing.T) {
 
 func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 	tt := []struct {
-		name          string
-		cfg           fakeConfig
 		b             *model.BuildInfo
+		name          string
 		expectedImage string
+		cfg           fakeConfig
 	}{
 		{
 			name: "image is set without access to global",
@@ -150,10 +150,10 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 
 func TestImageTaggerWithVolumesTag(t *testing.T) {
 	tt := []struct {
-		name          string
-		cfg           fakeConfig
 		b             *model.BuildInfo
+		name          string
 		expectedImage string
+		cfg           fakeConfig
 	}{
 		{
 			name: "image inferred without access to global",
@@ -329,8 +329,8 @@ func TestImageTaggerWithVolumesGetPossibleTags(t *testing.T) {
 func Test_getTargetRegistries(t *testing.T) {
 	tt := []struct {
 		name     string
-		isOkteto bool
 		expected []string
+		isOkteto bool
 	}{
 		{
 			name:     "vanilla-cluster",

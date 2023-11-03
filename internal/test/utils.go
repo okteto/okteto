@@ -22,9 +22,9 @@ import (
 )
 
 type KubeconfigFields struct {
+	CurrentContext string
 	Name           []string
 	Namespace      []string
-	CurrentContext string
 }
 
 func CreateKubeconfig(kubeconfigFields KubeconfigFields) (string, error) {

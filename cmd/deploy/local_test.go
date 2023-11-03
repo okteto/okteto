@@ -65,13 +65,13 @@ func Test_newLocalDeployer(t *testing.T) {
 		IsNotFound: true,
 	}
 	tests := []struct {
-		name            string
+		fakeCmapHandler configMapHandler
+		expectedErr     error
 		opts            *Options
 		fakePortGetter  func(string) (int, error)
-		fakeCmapHandler configMapHandler
 		fakeK8sProvider *fakeK8sProvider
 		fakeKubeConfig  *fakeKubeConfig
-		expectedErr     error
+		name            string
 		isUserErr       bool
 	}{
 		{

@@ -12,12 +12,12 @@ type ImageBuildMetadata struct {
 	Name                     string
 	RepoURL                  string
 	RepoHash                 string
-	RepoHashDuration         time.Duration
 	BuildContextHash         string
+	RepoHashDuration         time.Duration
 	BuildContextHashDuration time.Duration
-	CacheHit                 bool
 	CacheHitDuration         time.Duration
 	BuildDuration            time.Duration
+	CacheHit                 bool
 	Success                  bool
 }
 

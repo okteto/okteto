@@ -29,10 +29,10 @@ import (
 func Test_ExecuteUpdateKubeconfig_DisabledKubetoken(t *testing.T) {
 
 	var tests = []struct {
+		okClientProvider oktetoClientProvider
+		context          *okteto.OktetoContextStore
 		name             string
 		kubeconfigCtx    test.KubeconfigFields
-		context          *okteto.OktetoContextStore
-		okClientProvider oktetoClientProvider
 	}{
 		{
 			name: "change current ctx",
@@ -157,9 +157,9 @@ func Test_ExecuteUpdateKubeconfig_DisabledKubetoken(t *testing.T) {
 
 func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 	var tests = []struct {
+		context       *okteto.OktetoContextStore
 		name          string
 		kubeconfigCtx test.KubeconfigFields
-		context       *okteto.OktetoContextStore
 	}{
 		{
 			name: "change current ctx",

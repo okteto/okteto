@@ -67,8 +67,8 @@ func Test_K8sContextToOktetoUrl(t *testing.T) {
 
 func Test_IsOktetoCloud(t *testing.T) {
 	var tests = []struct {
-		name    string
 		context *OktetoContext
+		name    string
 		want    bool
 	}{
 		{name: "is-cloud", context: &OktetoContext{Name: "https://cloud.okteto.com"}, want: true},

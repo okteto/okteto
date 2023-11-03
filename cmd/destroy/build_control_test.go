@@ -26,13 +26,13 @@ import (
 )
 
 type fakeBuilderV2 struct {
-	getSvcs fakeGetSvcs
 	build   error
+	getSvcs fakeGetSvcs
 }
 
 type fakeGetSvcs struct {
-	svcs []string
 	err  error
+	svcs []string
 }
 
 func (fb fakeBuilderV2) GetServicesToBuild(ctx context.Context, manifest *model.Manifest, svcToDeploy []string) ([]string, error) {
@@ -49,9 +49,9 @@ func TestBuildNecessaryImages(t *testing.T) {
 		builder  fakeBuilderV2
 	}
 	tt := []struct {
+		expected error
 		name     string
 		input    input
-		expected error
 	}{
 		{
 			name: "image is not okteto env variable",

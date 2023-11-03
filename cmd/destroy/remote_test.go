@@ -127,9 +127,9 @@ func TestRemoteTest(t *testing.T) {
 		builderErr    error
 	}
 	var tests = []struct {
-		name     string
 		config   config
 		expected error
+		name     string
 	}{
 		{
 			name: "OS can't access to the working directory",
@@ -301,13 +301,13 @@ func TestCreateDockerfile(t *testing.T) {
 		opts *Options
 	}
 	type expected struct {
-		dockerfileName string
 		err            error
+		dockerfileName string
 	}
 	var tests = []struct {
-		name     string
 		config   config
 		expected expected
+		name     string
 	}{
 		{
 			name: "OS can't access working directory",

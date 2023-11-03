@@ -82,11 +82,11 @@ type UpOptions struct {
 	K8sContext       string
 	DevName          string
 	Envs             []string
+	commandToExecute []string
 	Remote           int
 	Deploy           bool
 	ForcePull        bool
 	Reset            bool
-	commandToExecute []string
 }
 
 // Up starts a development container

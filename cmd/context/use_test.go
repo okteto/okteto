@@ -25,9 +25,9 @@ func Test_setSecrets(t *testing.T) {
 	key := "key"
 	expectedValue := "value"
 	var tests = []struct {
+		envs    map[string]string
 		name    string
 		secrets []types.Secret
-		envs    map[string]string
 	}{
 		{
 			name: "create new env var from secret",

@@ -24,9 +24,9 @@ import (
 
 func Test_translateService(t *testing.T) {
 	var tests = []struct {
-		name     string
 		s        *apiv1.Service
 		expected *apiv1.Service
+		name     string
 	}{
 		{
 			name: "ok",

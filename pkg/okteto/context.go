@@ -61,23 +61,23 @@ var (
 
 // OktetoContext contains the information related to an okteto context
 type OktetoContext struct {
+	Cfg                *clientcmdapi.Config `json:"-" yaml:"-"`
 	Name               string               `json:"name" yaml:"name,omitempty"`
 	UserID             string               `json:"id,omitempty" yaml:"id,omitempty"`
 	Username           string               `json:"username,omitempty" yaml:"username,omitempty"`
 	Token              string               `json:"token,omitempty" yaml:"token,omitempty"`
 	Namespace          string               `json:"namespace" yaml:"namespace,omitempty"`
-	Cfg                *clientcmdapi.Config `json:"-" yaml:"-"`
 	Builder            string               `json:"builder,omitempty" yaml:"builder,omitempty"`
 	Registry           string               `json:"registry,omitempty" yaml:"registry,omitempty"`
 	Certificate        string               `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	PersonalNamespace  string               `json:"personalNamespace,omitempty" yaml:"personalNamespace,omitempty"`
 	GlobalNamespace    string               `json:"-" yaml:"-"`
-	Analytics          bool                 `json:"-" yaml:"-"`
 	ClusterType        string               `json:"-" yaml:"-"`
+	CompanyName        string               `json:"-" yaml:"-"`
 	IsOkteto           bool                 `json:"isOkteto,omitempty" yaml:"isOkteto,omitempty"`
 	IsStoredAsInsecure bool                 `json:"isInsecure,omitempty" yaml:"isInsecure,omitempty"`
 	IsInsecure         bool                 `json:"-" yaml:"-"`
-	CompanyName        string               `json:"-" yaml:"-"`
+	Analytics          bool                 `json:"-" yaml:"-"`
 	IsTrial            bool                 `json:"-" yaml:"-"`
 }
 

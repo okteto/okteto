@@ -225,8 +225,8 @@ func Test_removeSensitiveDataFromGitURL(t *testing.T) {
 func Test_translateVariables(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    []string
 		expected string
+		input    []string
 	}{
 		{
 			name:     "nil input",

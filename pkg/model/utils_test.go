@@ -77,8 +77,8 @@ func Test_GetValidNameFromGitRepo(t *testing.T) {
 
 func TestGetCycles(t *testing.T) {
 	var tests = []struct {
-		name          string
 		g             graph
+		name          string
 		expectedCycle bool
 	}{
 		{

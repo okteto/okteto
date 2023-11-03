@@ -22,9 +22,9 @@ import (
 
 func TestUnmarshalExportCache(t *testing.T) {
 	tests := []struct {
+		expected *ExportCache
 		name     string
 		data     []byte
-		expected *ExportCache
 	}{
 		{
 			name: "single line",

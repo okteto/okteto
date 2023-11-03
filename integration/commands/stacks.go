@@ -27,9 +27,9 @@ import (
 type StackDeployOptions struct {
 	Workdir      string
 	ManifestPath string
-	Build        bool
 	OktetoHome   string
 	Token        string
+	Build        bool
 }
 
 // StackDestroyOptions defines the options that can be added to a deploy command
