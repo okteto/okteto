@@ -533,3 +533,54 @@ func Test_newRemoteDeployer(t *testing.T) {
 	require.IsType(t, &remoteDeployCommand{}, got)
 	require.NotNil(t, got.getBuildEnvVars)
 }
+
+func TestGetExtraHosts(t *testing.T) {
+	registryURL := "registry.test.dev.okteto.net"
+	subdomain := "test.dev.okteto.net"
+	ip := "1.2.3.4"
+
+	var tests = []struct {
+		name     string
+		metadata types.ClusterMetadata
+		expected []types.HostMap
+	}{
+		{
+			name:     "no metadata information",
+			metadata: types.ClusterMetadata{},
+			expected: []types.HostMap{
+				{Hostname: registryURL, IP: ip},
+				{Hostname: fmt.Sprintf("kubernetes.%s", subdomain), IP: ip},
+			},
+		},
+		{
+			name: "with buildkit internal ip",
+			metadata: types.ClusterMetadata{
+				BuildKitInternalIP: "4.3.2.1",
+			},
+			expected: []types.HostMap{
+				{Hostname: registryURL, IP: ip},
+				{Hostname: fmt.Sprintf("kubernetes.%s", subdomain), IP: ip},
+				{Hostname: fmt.Sprintf("buildkit.%s", subdomain), IP: "4.3.2.1"},
+			},
+		},
+		{
+			name: "with public domain",
+			metadata: types.ClusterMetadata{
+				PublicDomain: "publicdomain.dev.okteto.net",
+			},
+			expected: []types.HostMap{
+				{Hostname: registryURL, IP: ip},
+				{Hostname: fmt.Sprintf("kubernetes.%s", subdomain), IP: ip},
+				{Hostname: "publicdomain.dev.okteto.net", IP: ip},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			extraHosts := getExtraHosts(registryURL, subdomain, ip, tt.metadata)
+
+			assert.EqualValues(t, tt.expected, extraHosts)
+		})
+	}
+}

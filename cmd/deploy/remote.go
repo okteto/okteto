@@ -199,10 +199,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		if err != nil {
 			return fmt.Errorf("failed to parse server name network address: %w", err)
 		}
-		buildOptions.ExtraHosts = []types.HostMap{
-			{Hostname: registryUrl, IP: ip},
-			{Hostname: fmt.Sprintf("kubernetes.%s", subdomain), IP: ip},
-		}
+		buildOptions.ExtraHosts = getExtraHosts(registryUrl, subdomain, ip, *sc)
 	}
 
 	sshSock := os.Getenv(rd.sshAuthSockEnvvar)
@@ -387,4 +384,21 @@ func fetchRemoteServerConfig(ctx context.Context) (*types.ClusterMetadata, error
 	}
 
 	return &metadata, err
+}
+
+func getExtraHosts(registryURL, subdomain, ip string, metadata types.ClusterMetadata) []types.HostMap {
+	extraHosts := []types.HostMap{
+		{Hostname: registryURL, IP: ip},
+		{Hostname: fmt.Sprintf("kubernetes.%s", subdomain), IP: ip},
+	}
+
+	if metadata.BuildKitInternalIP != "" {
+		extraHosts = append(extraHosts, types.HostMap{Hostname: fmt.Sprintf("buildkit.%s", subdomain), IP: metadata.BuildKitInternalIP})
+	}
+
+	if metadata.PublicDomain != "" {
+		extraHosts = append(extraHosts, types.HostMap{Hostname: metadata.PublicDomain, IP: ip})
+	}
+
+	return extraHosts
 }
