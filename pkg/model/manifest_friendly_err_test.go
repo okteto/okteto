@@ -15,15 +15,16 @@ package model
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetStructKeys(t *testing.T) {
 	tests := []struct {
-		name     string
 		input    interface{}
 		expected map[string][]string
+		name     string
 	}{
 		{
 			name:     "int",
@@ -119,21 +120,20 @@ func TestGetStructKeys(t *testing.T) {
 		{
 			name: "anonymous struct with nested struct with pointer",
 			input: struct {
-				field1 string `yaml:"field1"`
-
 				nested *struct {
 					field2 string `yaml:"field2"`
 				}
+				field1 string `yaml:"field1"`
 			}{},
 			expected: map[string][]string{"_": {"field1", "field2"}},
 		},
 		{
 			name: "anonymous struct with nested struct with pointer with no yaml tags",
 			input: struct {
-				field1 string `yaml:"field1"`
 				nested *struct {
 					field2 string
 				}
+				field1 string `yaml:"field1"`
 			}{},
 			expected: map[string][]string{"_": {"field1"}},
 		},
@@ -186,8 +186,8 @@ func TestGetStructKeys(t *testing.T) {
 
 func Test_isYamlErrorWithoutLinkToDocs(t *testing.T) {
 	tests := []struct {
-		name     string
 		input    error
+		name     string
 		expected bool
 	}{
 		{
@@ -235,7 +235,7 @@ yaml: some random error
 		},
 		{
 			name:  "yaml errors with heading and link to docs",
-			input: errors.New("yaml: unmarshal errors:\n  line 4: field contex not found in type model.manifestRaw"),
+			input: errors.New("yaml: unmarshal errors:\n  line 4: field context not found in type model.manifestRaw"),
 			expected: `your okteto manifest is not valid, please check the following errors:
      - line 4: field 'contex' is not a property of the okteto manifest. Did you mean "context"?
     Check out the okteto manifest docs at: https://www.okteto.com/docs/reference/manifest`,

@@ -16,11 +16,12 @@ package model
 import (
 	"errors"
 	"fmt"
+	"regexp"
+	"strings"
+
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/suggest"
-	"regexp"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
-	"strings"
 )
 
 // newManifestFriendlyError returns a new UserFriendlyError for the okteto manifest.
@@ -46,7 +47,7 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 
 	for structName, structKeywords := range manifestKeys {
 		for _, keyword := range structKeywords {
-			// example: line 5: field contex not found in type model.buildInfoRaw
+			// example: line 5: field context not found in type model.buildInfoRaw
 			// (.*?): this excludes eerything before the keyword "field"
 			// (\w+): this captures the keyword we want to calculate the levenshtein distance with
 			// (in type|into): this ensures to match all variations of the error message

@@ -14,8 +14,9 @@
 package model
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_mergeUnique(t *testing.T) {
@@ -62,9 +63,9 @@ func Test_mergeUnique(t *testing.T) {
 
 func Test_getStructKeys(t *testing.T) {
 	tests := []struct {
-		name     string
 		input    interface{}
 		expected map[string][]string
+		name     string
 	}{
 		{
 			name:     "int",
@@ -160,21 +161,20 @@ func Test_getStructKeys(t *testing.T) {
 		{
 			name: "anonymous struct with nested struct with pointer",
 			input: struct {
-				field1 string `yaml:"field1"`
-
 				nested *struct {
 					field2 string `yaml:"field2"`
 				}
+				field1 string `yaml:"field1"`
 			}{},
 			expected: map[string][]string{"_": {"field1", "field2"}},
 		},
 		{
 			name: "anonymous struct with nested struct with pointer with no yaml tags",
 			input: struct {
-				field1 string `yaml:"field1"`
 				nested *struct {
 					field2 string
 				}
+				field1 string `yaml:"field1"`
 			}{},
 			expected: map[string][]string{"_": {"field1"}},
 		},
