@@ -62,18 +62,6 @@ func Test_TranslateInvalidResourceSpec(t *testing.T) {
 	}))
 }
 
-type fakePortGetter struct {
-	err  error
-	port int
-}
-
-func (pg fakePortGetter) Get(_ string) (int, error) {
-	if pg.err != nil {
-		return 0, pg.err
-	}
-	return pg.port, nil
-}
-
 func Test_NewProxy(t *testing.T) {
 	dnsErr := &net.DNSError{
 		IsNotFound: true,
