@@ -902,7 +902,6 @@ sync:
 			_, err := getManifestFromFile(dir, file)
 
 			assert.ErrorIs(t, err, tt.expectedErr)
-
 		})
 	}
 }

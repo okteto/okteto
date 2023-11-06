@@ -52,7 +52,7 @@ type localDeployer struct {
 }
 
 // newLocalDeployer initializes a local deployer from a name and a boolean indicating if we should run with bash or not
-func newLocalDeployer(ctx context.Context, options *Options, cmapHandler configMapHandler, k8sProvider okteto.K8sClientProvider, kubeconfig kubeConfigHandler, portGetter func(string) (int, error)) (*localDeployer, error) {
+func newLocalDeployer(ctx context.Context, options *Options, cmapHandler configMapHandler, k8sProvider okteto.K8sClientProvider, kubeconfig kubeConfigHandler, portGetter portGetterFunc) (*localDeployer, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the current working directory: %w", err)
@@ -260,7 +260,7 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 	if len(opts.Manifest.External) > 0 {
 		oktetoLog.SetStage("External configuration")
 		if !okteto.IsOkteto() {
-			oktetoLog.Warning("external resources cannot be deployed on a cluster not managed by okteto")
+			oktetoLog.Warning("external resources cannot be deployed on a context not managed by okteto")
 			return nil
 		}
 

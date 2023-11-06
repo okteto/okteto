@@ -238,7 +238,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			}
 
 			if !okteto.Context().IsOkteto && buildSvcInfo.Image == "" {
-				return fmt.Errorf("'build.%s.image' is required if your cluster doesn't have Okteto installed", svcToBuild)
+				return fmt.Errorf("'build.%s.image' is required if your context doesn't have Okteto installed", svcToBuild)
 			}
 			buildDurationStart := time.Now()
 			imageTag, err := bc.buildServiceImages(ctx, options.Manifest, svcToBuild, options)
@@ -284,8 +284,8 @@ func (bc *OktetoBuilder) buildServiceImages(ctx context.Context, manifest *model
 	switch {
 	case serviceHasVolumesToInclude(buildSvcInfo) && !okteto.IsOkteto():
 		return "", oktetoErrors.UserError{
-			E:    fmt.Errorf("Build with volume mounts is not supported on vanilla clusters"),
-			Hint: "Please connect to a okteto cluster and try again",
+			E:    fmt.Errorf("Build with volume mounts is not supported on vanilla contexts"),
+			Hint: "Please connect to a okteto context and try again",
 		}
 	case serviceHasDockerfile(buildSvcInfo) && serviceHasVolumesToInclude(buildSvcInfo):
 		image, err := bc.buildSvcFromDockerfile(ctx, manifest, svcName, options)
