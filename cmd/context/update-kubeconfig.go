@@ -16,6 +16,8 @@ package context
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
+	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
@@ -97,6 +99,11 @@ func (k *KubeconfigCMD) execute(okCtx *okteto.OktetoContext, kubeconfigPaths []s
 
 func updateCfgClusterCertificate(contextName string, okContext *okteto.OktetoContext) error {
 	if !okContext.IsStoredAsInsecure {
+		return nil
+	}
+
+	subdomain := strings.TrimPrefix(okContext.Registry, "registry.")
+	if okContext.Cfg.Clusters[contextName].Server != fmt.Sprintf("kubernetes.%s", subdomain) {
 		return nil
 	}
 

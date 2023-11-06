@@ -25,6 +25,7 @@ type KubeconfigFields struct {
 	Name           []string
 	Namespace      []string
 	CurrentContext string
+	ClusterCert    string
 }
 
 func CreateKubeconfig(kubeconfigFields KubeconfigFields) (string, error) {
@@ -42,6 +43,11 @@ func CreateKubeconfig(kubeconfigFields KubeconfigFields) (string, error) {
 	cfg := &clientcmdapi.Config{
 		Contexts:       contexts,
 		CurrentContext: kubeconfigFields.CurrentContext,
+		Clusters: map[string]*clientcmdapi.Cluster{
+			kubeconfigFields.CurrentContext: {
+				CertificateAuthorityData: []byte(kubeconfigFields.ClusterCert),
+			},
+		},
 	}
 	if err := kubeconfig.Write(cfg, dir.Name()); err != nil {
 		return "", err
