@@ -126,11 +126,26 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 			expectedImage: "okteto.dev/test-test:okteto",
 		},
 		{
-			name: "image inferred with clean project and has access to global registry",
+			name: "image inferred with clean project, has access to global registry but no feature flag enabled",
 			cfg: fakeConfig{
-				isClean:   true,
-				hasAccess: true,
-				sha:       "sha",
+				isClean:             true,
+				hasAccess:           true,
+				sha:                 "sha",
+				isSmartBuildsEnable: false,
+			},
+			b: &model.BuildInfo{
+				Dockerfile: "Dockerfile",
+				Context:    ".",
+			},
+			expectedImage: "okteto.dev/test-test:okteto",
+		},
+		{
+			name: "image inferred with clean project, has access to global registry and feature flag enabled",
+			cfg: fakeConfig{
+				isClean:             true,
+				hasAccess:           true,
+				sha:                 "sha",
+				isSmartBuildsEnable: true,
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -182,11 +197,25 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 			expectedImage: "okteto.dev/test-test:okteto-with-volume-mounts",
 		},
 		{
-			name: "image inferred with clean project and has access to global registry",
+			name: "image inferred with clean project, has access to global registry but no feature flag enabled",
 			cfg: fakeConfig{
 				isClean:   true,
 				hasAccess: true,
 				sha:       "sha",
+			},
+			b: &model.BuildInfo{
+				Dockerfile: "Dockerfile",
+				Context:    ".",
+			},
+			expectedImage: "okteto.dev/test-test:okteto-with-volume-mounts",
+		},
+		{
+			name: "image inferred with clean project, has access to global registry and feature flag enabled",
+			cfg: fakeConfig{
+				isClean:             true,
+				hasAccess:           true,
+				sha:                 "sha",
+				isSmartBuildsEnable: true,
 			},
 			b: &model.BuildInfo{
 				Dockerfile: "Dockerfile",

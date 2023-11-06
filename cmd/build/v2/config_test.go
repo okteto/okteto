@@ -31,8 +31,9 @@ func (fcr fakeConfigRepo) GetTreeHash(string) (string, error) { return fcr.treeH
 
 func TestGetConfig(t *testing.T) {
 	type input struct {
-		reg  fakeConfigRegistry
-		repo fakeConfigRepo
+		reg                         fakeConfigRegistry
+		repo                        fakeConfigRepo
+		smartBuildFeatureFlagEnable string
 	}
 	tt := []struct {
 		name     string
@@ -58,8 +59,9 @@ func TestGetConfig(t *testing.T) {
 					isClean: true,
 					err:     nil,
 				},
-				fs:       afero.NewOsFs(),
-				isOkteto: true,
+				fs:                  afero.NewOsFs(),
+				isOkteto:            true,
+				isSmartBuildsEnable: true,
 			},
 		},
 		{
@@ -81,8 +83,9 @@ func TestGetConfig(t *testing.T) {
 					isClean: true,
 					err:     nil,
 				},
-				fs:       afero.NewOsFs(),
-				isOkteto: true,
+				fs:                  afero.NewOsFs(),
+				isOkteto:            true,
+				isSmartBuildsEnable: true,
 			},
 		},
 		{
@@ -104,8 +107,9 @@ func TestGetConfig(t *testing.T) {
 					isClean: true,
 					err:     nil,
 				},
-				fs:       afero.NewOsFs(),
-				isOkteto: true,
+				fs:                  afero.NewOsFs(),
+				isOkteto:            true,
+				isSmartBuildsEnable: true,
 			},
 		},
 		{
@@ -127,13 +131,59 @@ func TestGetConfig(t *testing.T) {
 					isClean: false,
 					err:     assert.AnError,
 				},
-				fs:       afero.NewOsFs(),
-				isOkteto: true,
+				fs:                  afero.NewOsFs(),
+				isOkteto:            true,
+				isSmartBuildsEnable: true,
+			},
+		},
+		{
+			name: "no error and feature flag disable",
+			input: input{
+				reg: fakeConfigRegistry{
+					access: true,
+				},
+				repo: fakeConfigRepo{
+					isClean: true,
+				},
+				smartBuildFeatureFlagEnable: "false",
+			},
+			expected: oktetoBuilderConfig{
+				hasGlobalAccess: true,
+				isCleanProject:  true,
+				repository: fakeConfigRepo{
+					isClean: true,
+				},
+				fs:                  afero.NewOsFs(),
+				isOkteto:            true,
+				isSmartBuildsEnable: false,
+			},
+		},
+		{
+			name: "error converting feature flag, defaults true",
+			input: input{
+				reg: fakeConfigRegistry{
+					access: true,
+				},
+				repo: fakeConfigRepo{
+					isClean: true,
+				},
+				smartBuildFeatureFlagEnable: "falses",
+			},
+			expected: oktetoBuilderConfig{
+				hasGlobalAccess: true,
+				isCleanProject:  true,
+				repository: fakeConfigRepo{
+					isClean: true,
+				},
+				fs:                  afero.NewOsFs(),
+				isOkteto:            true,
+				isSmartBuildsEnable: true,
 			},
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(OktetoEnableSmartBuilds, tc.input.smartBuildFeatureFlagEnable)
 			cfg := getConfig(tc.input.reg, tc.input.repo)
 			assert.Equal(t, tc.expected, cfg)
 		})

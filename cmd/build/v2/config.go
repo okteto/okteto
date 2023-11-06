@@ -14,10 +14,18 @@
 package v2
 
 import (
+	"os"
+	"strconv"
+
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
+)
+
+const (
+	// OktetoEnableSmartBuilds key representing whether the feature flag to enable smart builds is enabled or not
+	OktetoEnableSmartBuilds = "OKTETO_SMART_BUILDS_ENABLED"
 )
 
 type configRepositoryInterface interface {
@@ -32,11 +40,12 @@ type configRegistryInterface interface {
 }
 
 type oktetoBuilderConfig struct {
-	hasGlobalAccess bool
-	isCleanProject  bool
-	repository      configRepositoryInterface
-	fs              afero.Fs
-	isOkteto        bool
+	hasGlobalAccess     bool
+	isCleanProject      bool
+	repository          configRepositoryInterface
+	fs                  afero.Fs
+	isOkteto            bool
+	isSmartBuildsEnable bool
 }
 
 func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterface) oktetoBuilderConfig {
@@ -49,12 +58,26 @@ func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterfa
 	if err != nil {
 		oktetoLog.Infof("error trying to get directory: %w", err)
 	}
+
+	enableSmartBuilds := true
+	enableSmartBuildsStr := os.Getenv(OktetoEnableSmartBuilds)
+	if enableSmartBuildsStr != "" {
+		smartBuildEnabledBool, err := strconv.ParseBool(enableSmartBuildsStr)
+		if err != nil {
+			oktetoLog.Infof("error trying to get feature flag %s: %w", OktetoEnableSmartBuilds, err)
+		} else {
+			enableSmartBuilds = smartBuildEnabledBool
+		}
+
+	}
+
 	return oktetoBuilderConfig{
-		repository:      gitRepo,
-		hasGlobalAccess: hasAccess,
-		isCleanProject:  isClean,
-		fs:              afero.NewOsFs(),
-		isOkteto:        okteto.Context().IsOkteto,
+		repository:          gitRepo,
+		hasGlobalAccess:     hasAccess,
+		isCleanProject:      isClean,
+		fs:                  afero.NewOsFs(),
+		isOkteto:            okteto.Context().IsOkteto,
+		isSmartBuildsEnable: enableSmartBuilds,
 	}
 }
 
@@ -95,4 +118,8 @@ func (oc oktetoBuilderConfig) GetBuildContextHash(buildInfo *model.BuildInfo) st
 	}
 
 	return getBuildHashFromGitHash(buildInfo, treeHash, "tree_hash")
+}
+
+func (oc oktetoBuilderConfig) IsSmartBuildsEnable() bool {
+	return oc.isSmartBuildsEnable
 }
