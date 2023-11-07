@@ -364,7 +364,7 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 		cluster = clientcmdapi.NewCluster()
 	}
 
-	// If the certificat included in the credentials is empty, it means that the server is kubernetes.subdomain.
+	// If the certificate included in the credentials is empty, it means that the server is kubernetes.subdomain.
 	// In that case, if the okteto context is insecure, we need to specify the certificate we have in our context.
 	// If it is not insecure it means that is a public CA or a private one already installed in the machine
 	cert := cred.Certificate
