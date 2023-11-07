@@ -64,7 +64,7 @@ func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterfa
 	if enableSmartBuildsStr != "" {
 		smartBuildEnabledBool, err := strconv.ParseBool(enableSmartBuildsStr)
 		if err != nil {
-			oktetoLog.Infof("error trying to get feature flag %s: %w", OktetoEnableSmartBuilds, err)
+			oktetoLog.Warning("feature flag %s received an invalid value; expected boolean. Smart builds will remain enabled by default", OktetoEnableSmartBuilds)
 		} else {
 			enableSmartBuilds = smartBuildEnabledBool
 		}
