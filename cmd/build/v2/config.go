@@ -120,6 +120,6 @@ func (oc oktetoBuilderConfig) GetBuildContextHash(buildInfo *model.BuildInfo) st
 	return getBuildHashFromGitHash(buildInfo, treeHash, "tree_hash")
 }
 
-func (oc oktetoBuilderConfig) IsSmartBuildsEnable() bool {
+func (oc oktetoBuilderConfig) IsSmartBuildsEnabled() bool {
 	return oc.isSmartBuildsEnable
 }

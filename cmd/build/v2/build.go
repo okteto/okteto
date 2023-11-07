@@ -66,7 +66,7 @@ type oktetoBuilderConfigInterface interface {
 	IsOkteto() bool
 	GetAnonymizedRepo() string
 	GetBuildContextHash(*model.BuildInfo) string
-	IsSmartBuildsEnable() bool
+	IsSmartBuildsEnabled() bool
 }
 
 type analyticsTrackerInterface interface {
@@ -214,7 +214,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			meta.BuildContextHashDuration = time.Since(buildContextHashDurationStart)
 
 			// We only check that the image is built in the global registry if the noCache option is not set
-			if !options.NoCache && bc.Config.IsCleanProject() && bc.Config.IsSmartBuildsEnable() {
+			if !options.NoCache && bc.Config.IsCleanProject() && bc.Config.IsSmartBuildsEnabled() {
 
 				imageChecker := getImageChecker(buildSvcInfo, bc.Config, bc.Registry)
 				cacheHitDurationStart := time.Now()

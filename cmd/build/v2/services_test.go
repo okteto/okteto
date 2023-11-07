@@ -229,4 +229,4 @@ func (fc fakeConfig) GetGitCommit() string                        { return fc.sh
 func (fc fakeConfig) IsOkteto() bool                              { return fc.isOkteto }
 func (fc fakeConfig) GetAnonymizedRepo() string                   { return fc.repoURL }
 func (fc fakeConfig) GetBuildContextHash(*model.BuildInfo) string { return "" }
-func (fc fakeConfig) IsSmartBuildsEnable() bool                   { return fc.isSmartBuildsEnable }
+func (fc fakeConfig) IsSmartBuildsEnabled() bool                  { return fc.isSmartBuildsEnable }

@@ -69,7 +69,7 @@ func (i imageTagger) getServiceImageReference(manifestName, svcName string, b *m
 	// build the image reference based on context and buildInfo
 	targetRegistry := constants.DevRegistry
 	tag := ""
-	if i.cfg.HasGlobalAccess() && i.cfg.IsCleanProject() && i.cfg.IsSmartBuildsEnable() {
+	if i.cfg.HasGlobalAccess() && i.cfg.IsCleanProject() && i.cfg.IsSmartBuildsEnabled() {
 		targetRegistry = constants.GlobalRegistry
 		tag = buildHash
 	}
@@ -100,7 +100,7 @@ func (imageTagger) getImageReferencesForTag(manifestName, svcToBuildName, tag st
 func (i imageTagger) getImageReferencesForTagWithDefaults(manifestName, svcToBuildName, tag string) []string {
 
 	var imageReferences []string
-	if i.cfg.IsSmartBuildsEnable() {
+	if i.cfg.IsSmartBuildsEnabled() {
 		imageReferences = append(imageReferences, i.getImageReferencesForTag(manifestName, svcToBuildName, tag)...)
 	}
 
@@ -126,7 +126,7 @@ func (i imagerTaggerWithVolumes) getServiceImageReference(manifestName, svcName 
 
 	targetRegistry := constants.DevRegistry
 	tag := ""
-	if i.cfg.HasGlobalAccess() && i.cfg.IsCleanProject() && i.cfg.IsSmartBuildsEnable() {
+	if i.cfg.HasGlobalAccess() && i.cfg.IsCleanProject() && i.cfg.IsSmartBuildsEnabled() {
 		targetRegistry = constants.GlobalRegistry
 		tag = buildHash
 	}
