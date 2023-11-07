@@ -59,6 +59,17 @@ func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterfa
 		oktetoLog.Infof("error trying to get directory: %w", err)
 	}
 
+	return oktetoBuilderConfig{
+		repository:          gitRepo,
+		hasGlobalAccess:     hasAccess,
+		isCleanProject:      isClean,
+		fs:                  afero.NewOsFs(),
+		isOkteto:            okteto.Context().IsOkteto,
+		isSmartBuildsEnable: getIsSmartBuildEnabled(),
+	}
+}
+
+func getIsSmartBuildEnabled() bool {
 	enableSmartBuilds := true
 	enableSmartBuildsStr := os.Getenv(OktetoEnableSmartBuilds)
 	if enableSmartBuildsStr != "" {
@@ -71,14 +82,7 @@ func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterfa
 
 	}
 
-	return oktetoBuilderConfig{
-		repository:          gitRepo,
-		hasGlobalAccess:     hasAccess,
-		isCleanProject:      isClean,
-		fs:                  afero.NewOsFs(),
-		isOkteto:            okteto.Context().IsOkteto,
-		isSmartBuildsEnable: enableSmartBuilds,
-	}
+	return enableSmartBuilds
 }
 
 // IsOkteto checks if the context is an okteto managed context
