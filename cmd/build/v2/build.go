@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -106,11 +107,16 @@ func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface) *OktetoBu
 		oktetoLog.Infof("could not get working dir: %w", err)
 	}
 	gitRepo := repository.NewRepository(wd)
+	config := getConfig(registry, gitRepo)
+
+	buildEnvs := map[string]string{}
+	buildEnvs[OktetoEnableSmartBuilds] = strconv.FormatBool(config.isSmartBuildsEnable)
+
 	return &OktetoBuilder{
 		Builder:           builder,
 		Registry:          registry,
 		V1Builder:         buildv1.NewBuilder(builder, registry),
-		buildEnvironments: map[string]string{},
+		buildEnvironments: buildEnvs,
 		Config:            getConfig(registry, gitRepo),
 		analyticsTracker:  analyticsTracker,
 	}

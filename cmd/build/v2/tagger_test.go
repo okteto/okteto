@@ -291,9 +291,10 @@ func TestImageTaggerWithVolumesGetPossibleHashImages(t *testing.T) {
 
 func TestImageTaggerGetPossibleTags(t *testing.T) {
 	tt := []struct {
-		name           string
-		sha            string
-		expectedImages []string
+		name                 string
+		sha                  string
+		expectedImages       []string
+		isSmartBuildsEnabled bool
 	}{
 		{
 			name: "no sha",
@@ -302,6 +303,7 @@ func TestImageTaggerGetPossibleTags(t *testing.T) {
 				"okteto.dev/test-test:okteto",
 				"okteto.global/test-test:okteto",
 			},
+			isSmartBuildsEnabled: true,
 		},
 		{
 			name: "sha",
@@ -312,11 +314,21 @@ func TestImageTaggerGetPossibleTags(t *testing.T) {
 				"okteto.dev/test-test:okteto",
 				"okteto.global/test-test:okteto",
 			},
+			isSmartBuildsEnabled: true,
+		},
+		{
+			name: "sha but smart builds not enabled",
+			sha:  "sha",
+			expectedImages: []string{
+				"okteto.dev/test-test:okteto",
+				"okteto.global/test-test:okteto",
+			},
+			isSmartBuildsEnabled: false,
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageTagger(fakeConfig{})
+			tagger := newImageTagger(fakeConfig{isSmartBuildsEnable: tc.isSmartBuildsEnabled})
 			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTagWithDefaults("test", "test", tc.sha))
 		})
 	}
