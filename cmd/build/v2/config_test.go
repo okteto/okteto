@@ -168,7 +168,7 @@ func TestGetIsSmartBuildEnabled(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv(OktetoEnableSmartBuilds, tc.input)
+			t.Setenv(OktetoEnableSmartBuildEnvVar, tc.input)
 			cfg := getIsSmartBuildEnabled()
 			assert.Equal(t, tc.expected, cfg)
 		})

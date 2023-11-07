@@ -110,7 +110,7 @@ func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface) *OktetoBu
 	config := getConfig(registry, gitRepo)
 
 	buildEnvs := map[string]string{}
-	buildEnvs[OktetoEnableSmartBuilds] = strconv.FormatBool(config.isSmartBuildsEnable)
+	buildEnvs[OktetoEnableSmartBuildEnvVar] = strconv.FormatBool(config.isSmartBuildsEnable)
 
 	return &OktetoBuilder{
 		Builder:           builder,

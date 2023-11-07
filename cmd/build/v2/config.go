@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	// OktetoEnableSmartBuilds key representing whether the feature flag to enable smart builds is enabled or not
-	OktetoEnableSmartBuilds = "OKTETO_SMART_BUILDS_ENABLED"
+	// OktetoEnableSmartBuildEnvVar represents whether the feature flag to enable smart builds is enabled or not
+	OktetoEnableSmartBuildEnvVar = "OKTETO_SMART_BUILDS_ENABLED"
 )
 
 type configRepositoryInterface interface {
@@ -71,11 +71,11 @@ func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterfa
 
 func getIsSmartBuildEnabled() bool {
 	enableSmartBuilds := true
-	enableSmartBuildsStr := os.Getenv(OktetoEnableSmartBuilds)
+	enableSmartBuildsStr := os.Getenv(OktetoEnableSmartBuildEnvVar)
 	if enableSmartBuildsStr != "" {
 		smartBuildEnabledBool, err := strconv.ParseBool(enableSmartBuildsStr)
 		if err != nil {
-			oktetoLog.Warning("feature flag %s received an invalid value; expected boolean. Smart builds will remain enabled by default", OktetoEnableSmartBuilds)
+			oktetoLog.Warning("feature flag %s received an invalid value; expected boolean. Smart builds will remain enabled by default", OktetoEnableSmartBuildEnvVar)
 		} else {
 			enableSmartBuilds = smartBuildEnabledBool
 		}
