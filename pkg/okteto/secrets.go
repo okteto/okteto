@@ -322,6 +322,10 @@ func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.C
 			metadata.IsTrialLicense = string(v.Value) == "true"
 		case "companyName":
 			metadata.CompanyName = string(v.Value)
+		case "buildkitInternalIP":
+			metadata.BuildKitInternalIP = string(v.Value)
+		case "publicDomain":
+			metadata.PublicDomain = string(v.Value)
 		}
 	}
 	if metadata.PipelineRunnerImage == "" {

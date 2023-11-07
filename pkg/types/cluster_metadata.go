@@ -20,4 +20,6 @@ type ClusterMetadata struct {
 	PipelineRunnerImage string
 	IsTrialLicense      bool
 	CompanyName         string
+	BuildKitInternalIP  string
+	PublicDomain        string
 }
