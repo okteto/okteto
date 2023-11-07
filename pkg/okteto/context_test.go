@@ -218,10 +218,62 @@ func Test_AddOktetoCredentialsToCfg(t *testing.T) {
 			err := AddOktetoCredentialsToCfg(cfg, creds, ns, userName, oktetoContext)
 
 			require.NoError(t, err)
-			require.EqualValues(t, expectedKubeconfig.Clusters, cfg.Clusters)
-			require.EqualValues(t, expectedKubeconfig.AuthInfos, cfg.AuthInfos)
-			require.EqualValues(t, expectedKubeconfig.Contexts, cfg.Contexts)
 			require.Equal(t, expectedKubeconfig, *cfg)
 		})
 	}
+}
+
+func Test_AddOktetoCredentialsToCfgWhenConfigCredentialHasntToBeDone(t *testing.T) {
+	t.Setenv(constants.OktetoSkipConfigCredentialsUpdate, "true")
+	cfg := &clientcmdapi.Config{
+		Clusters:   map[string]*clientcmdapi.Cluster{},
+		AuthInfos:  map[string]*clientcmdapi.AuthInfo{},
+		Contexts:   map[string]*clientcmdapi.Context{},
+		Extensions: nil,
+	}
+	creds := &types.Credential{
+		Certificate: "cert",
+		Server:      "k8s server",
+		Token:       "fake token",
+	}
+	oktetoContext := OktetoContext{
+		Name:               "https://test.okteto.dev",
+		Certificate:        "okteto certificate",
+		IsStoredAsInsecure: false,
+	}
+
+	expectedCfg := clientcmdapi.Config{
+		Clusters:   map[string]*clientcmdapi.Cluster{},
+		AuthInfos:  map[string]*clientcmdapi.AuthInfo{},
+		Contexts:   map[string]*clientcmdapi.Context{},
+		Extensions: nil,
+	}
+
+	result := AddOktetoCredentialsToCfg(cfg, creds, "ns", "userName", oktetoContext)
+
+	require.NoError(t, result)
+	require.Equal(t, expectedCfg, *cfg, "config should not be updated")
+}
+
+func Test_AddOktetoCredentialsToCfgWithInvalidOktetoContext(t *testing.T) {
+	cfg := &clientcmdapi.Config{
+		Clusters:   map[string]*clientcmdapi.Cluster{},
+		AuthInfos:  map[string]*clientcmdapi.AuthInfo{},
+		Contexts:   map[string]*clientcmdapi.Context{},
+		Extensions: nil,
+	}
+	creds := &types.Credential{
+		Certificate: "",
+		Server:      "k8s server",
+		Token:       "fake token",
+	}
+	oktetoContext := OktetoContext{
+		Name:               "https://test.okteto.dev",
+		Certificate:        "base64withinvalidchar%",
+		IsStoredAsInsecure: true,
+	}
+
+	result := AddOktetoCredentialsToCfg(cfg, creds, "ns", "userName", oktetoContext)
+
+	require.Error(t, result)
 }

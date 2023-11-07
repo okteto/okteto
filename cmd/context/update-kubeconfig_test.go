@@ -529,3 +529,52 @@ func Test_ExecuteUpdateKubeconfig_WithRightCertificate(t *testing.T) {
 		})
 	}
 }
+
+func Test_ExecuteUpdateKubeconfig_WithWrongOktetoCertificate(t *testing.T) {
+	okClientProvider := client.NewFakeOktetoClientProvider(
+		&client.FakeOktetoClient{
+			KubetokenClient: client.NewFakeKubetokenClient(
+				client.FakeKubetokenResponse{},
+			),
+		},
+	)
+
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		CurrentContext: "https://test.okteto.dev",
+		Contexts: map[string]*okteto.OktetoContext{
+			"https://test.okteto.dev": {
+				Name:      "https://test.okteto.dev",
+				Namespace: "fake-ns",
+				Registry:  "registry.okteto.dev",
+				Cfg: &api.Config{
+					CurrentContext: "test_okteto_dev",
+					Contexts: map[string]*api.Context{
+						"test_okteto_dev": {
+							Namespace: "fake-ns",
+						},
+					},
+					Clusters: map[string]*api.Cluster{
+						"test_okteto_dev": {
+							CertificateAuthorityData: []byte("fake-k8s-cert"),
+							Server:                   "kubernetes.okteto.dev",
+						},
+					},
+				},
+				Certificate:        "invalidcertificatebase64%",
+				IsStoredAsInsecure: true,
+				IsOkteto:           true,
+			},
+		},
+	}
+	file, err := test.CreateKubeconfig(test.KubeconfigFields{})
+	if err != nil {
+		assert.NoError(t, err, "error creating temporary kubeconfig")
+	}
+	defer os.Remove(file)
+
+	okContext := okteto.Context()
+	kubeconfigPaths := []string{file}
+
+	err = newKubeconfigController(okClientProvider).execute(okContext, kubeconfigPaths)
+	assert.Error(t, err, "should fail as the okteto certificate is not a valid base64 value")
+}
