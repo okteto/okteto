@@ -16,6 +16,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -74,10 +75,10 @@ type Service struct {
 	CapDrop    []apiv1.Capability `yaml:"cap_drop,omitempty"`
 	Entrypoint Entrypoint         `yaml:"entrypoint,omitempty"`
 	Command    Command            `yaml:"command,omitempty"`
-	EnvFiles   EnvFiles           `yaml:"env_file,omitempty"`
+	EnvFiles   env.EnvFiles       `yaml:"env_file,omitempty"`
 	DependsOn  DependsOn          `yaml:"depends_on,omitempty"`
 
-	Environment     Environment           `yaml:"environment,omitempty"`
+	Environment     env.Environment       `yaml:"environment,omitempty"`
 	Image           string                `yaml:"image,omitempty"`
 	Labels          Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations     Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
@@ -116,7 +117,7 @@ type VolumeSpec struct {
 	Class       string      `json:"class,omitempty" yaml:"class,omitempty"`
 }
 type Envs struct {
-	List Environment
+	List env.Environment
 }
 type HealthCheck struct {
 	HTTP        *HTTPHealtcheck `yaml:"http,omitempty"`
@@ -888,7 +889,7 @@ func loadEnvFiles(svc *Service, svcName string) error {
 
 func setEnvironmentFromFile(svc *Service, filename string) error {
 	var err error
-	filename, err = ExpandEnv(filename, true)
+	filename, err = env.ExpandEnv(filename, true)
 	if err != nil {
 		return err
 	}
@@ -918,7 +919,7 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 		}
 		svc.Environment = append(
 			svc.Environment,
-			EnvVar{Name: name, Value: value},
+			env.Var{Name: name, Value: value},
 		)
 	}
 

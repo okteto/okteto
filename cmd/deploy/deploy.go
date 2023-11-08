@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"os/signal"
 	"time"
@@ -596,7 +597,7 @@ func (dc *DeployCommand) deployDependencies(ctx context.Context, deployOptions *
 	for depName, dep := range deployOptions.Manifest.Dependencies {
 		oktetoLog.Information("Deploying dependency '%s'", depName)
 		oktetoLog.SetStage(fmt.Sprintf("Deploying dependency %s", depName))
-		dep.Variables = append(dep.Variables, model.EnvVar{
+		dep.Variables = append(dep.Variables, env.Var{
 			Name:  "OKTETO_ORIGIN",
 			Value: "okteto-deploy",
 		})

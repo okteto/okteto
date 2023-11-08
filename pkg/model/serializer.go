@@ -17,7 +17,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
+	"github.com/okteto/okteto/pkg/dependencies"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -32,7 +33,6 @@ import (
 	"github.com/okteto/okteto/pkg/externalresource"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
-	giturls "github.com/whilp/git-urls"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -167,42 +167,12 @@ func (e *BuildArg) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return nil
 	}
 
-	e.Name, err = ExpandEnv(parts[0], true)
+	e.Name, err = env.ExpandEnv(parts[0], true)
 	if err != nil {
 		return err
 	}
 	e.Value = parts[0]
 	return nil
-}
-
-// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var raw string
-	err := unmarshal(&raw)
-	if err != nil {
-		return err
-	}
-	parts := strings.SplitN(raw, "=", 2)
-	e.Name = parts[0]
-	if len(parts) == 2 {
-		e.Value, err = ExpandEnv(parts[1], true)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-
-	e.Name, err = ExpandEnv(parts[0], true)
-	if err != nil {
-		return err
-	}
-	e.Value = os.Getenv(e.Name)
-	return nil
-}
-
-// MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (e EnvVar) MarshalYAML() (interface{}, error) {
-	return e.Name + "=" + e.Value, nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
@@ -443,7 +413,7 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	rawExpanded, err := ExpandEnv(raw, true)
+	rawExpanded, err := env.ExpandEnv(raw, true)
 	if err != nil {
 		return err
 	}
@@ -565,7 +535,7 @@ func (v *Volume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
 		oktetoLog.Yellow("The syntax '%s' is deprecated in the 'volumes' field and will be removed in a future version. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
-		v.LocalPath, err = ExpandEnv(parts[0], true)
+		v.LocalPath, err = env.ExpandEnv(parts[0], true)
 		if err != nil {
 			return err
 		}
@@ -591,22 +561,22 @@ func (s *SyncFolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.Split(raw, ":")
 	if len(parts) == 2 {
-		s.LocalPath, err = ExpandEnv(parts[0], true)
+		s.LocalPath, err = env.ExpandEnv(parts[0], true)
 		if err != nil {
 			return err
 		}
-		s.RemotePath, err = ExpandEnv(parts[1], true)
+		s.RemotePath, err = env.ExpandEnv(parts[1], true)
 		if err != nil {
 			return err
 		}
 		return nil
 	} else if len(parts) == 3 {
 		windowsPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
-		s.LocalPath, err = ExpandEnv(windowsPath, true)
+		s.LocalPath, err = env.ExpandEnv(windowsPath, true)
 		if err != nil {
 			return err
 		}
-		s.RemotePath, err = ExpandEnv(parts[2], true)
+		s.RemotePath, err = env.ExpandEnv(parts[2], true)
 		if err != nil {
 			return err
 		}
@@ -735,7 +705,7 @@ type hybridModeInfo struct {
 	Workdir     string            `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	Selector    Selector          `json:"selector,omitempty" yaml:"selector,omitempty"`
 	Forward     []forward.Forward `json:"forward,omitempty" yaml:"forward,omitempty"`
-	Environment Environment       `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Environment env.Environment   `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Command     hybridCommand     `json:"command,omitempty" yaml:"command,omitempty"`
 	Reverse     []Reverse         `json:"reverse,omitempty" yaml:"reverse,omitempty"`
 	Mode        string            `json:"mode,omitempty" yaml:"mode,omitempty"`
@@ -885,66 +855,11 @@ type manifestRaw struct {
 	Dev           ManifestDevs                             `json:"dev,omitempty" yaml:"dev,omitempty"`
 	Destroy       *DestroyInfo                             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 	Build         ManifestBuild                            `json:"build,omitempty" yaml:"build,omitempty"`
-	Dependencies  ManifestDependencies                     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	Dependencies  dependencies.ManifestDependencies        `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	GlobalForward []forward.GlobalForward                  `json:"forward,omitempty" yaml:"forward,omitempty"`
 	External      externalresource.ExternalResourceSection `json:"external,omitempty" yaml:"external,omitempty"`
 
 	DeprecatedDevs []string `yaml:"devs"`
-}
-
-func getRepoNameFromGitURL(repo *url.URL) string {
-	repoPath := strings.Split(strings.TrimPrefix(repo.Path, "/"), "/")
-	return strings.ReplaceAll(repoPath[1], ".git", "")
-}
-
-// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (md *ManifestDependencies) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var rawList []string
-	err := unmarshal(&rawList)
-	if err == nil {
-		rawMd := ManifestDependencies{}
-		for _, repo := range rawList {
-			r, err := giturls.Parse(repo)
-			if err != nil {
-				return err
-			}
-			name := getRepoNameFromGitURL(r)
-			rawMd[name] = &Dependency{
-				Repository: r.String(),
-			}
-		}
-		*md = rawMd
-		return nil
-	}
-
-	type manifestDependencies ManifestDependencies
-	var rawMap manifestDependencies
-	err = unmarshal(&rawMap)
-	if err != nil {
-		return err
-	}
-	*md = ManifestDependencies(rawMap)
-	return nil
-}
-
-// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (d *Dependency) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var rawString string
-	err := unmarshal(&rawString)
-	if err == nil {
-		d.Repository = rawString
-		return nil
-	}
-
-	type dependencyPreventRecursionType Dependency
-	var dependencyRaw dependencyPreventRecursionType
-	err = unmarshal(&dependencyRaw)
-	if err != nil {
-		return err
-	}
-	*d = Dependency(dependencyRaw)
-
-	return nil
 }
 
 func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -961,7 +876,7 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	manifest := manifestRaw{
 		Dev:          map[string]*Dev{},
 		Build:        map[string]*BuildInfo{},
-		Dependencies: map[string]*Dependency{},
+		Dependencies: dependencies.ManifestDependencies{},
 		External:     externalresource.ExternalResourceSection{},
 	}
 	err = unmarshal(&manifest)
@@ -1382,22 +1297,6 @@ func (a *Annotations) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func (e *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	envs := make(Environment, 0)
-	result, err := getKeyValue(unmarshal)
-	if err != nil {
-		return err
-	}
-	for key, value := range result {
-		envs = append(envs, EnvVar{Name: key, Value: value})
-	}
-	sort.SliceStable(envs, func(i, j int) bool {
-		return strings.Compare(envs[i].Name, envs[j].Name) < 0
-	})
-	*e = envs
-	return nil
-}
-
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (ba *BuildArgs) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	buildArgs := make(BuildArgs, 0)
@@ -1422,7 +1321,7 @@ func getBuildArgs(unmarshal func(interface{}) error) (map[string]string, error) 
 	err := unmarshal(&rawList)
 	if err == nil {
 		for _, buildArg := range rawList {
-			value, err := ExpandEnv(buildArg.Value, false)
+			value, err := env.ExpandEnv(buildArg.Value, false)
 			if err != nil {
 				return nil, err
 			}
@@ -1436,7 +1335,7 @@ func getBuildArgs(unmarshal func(interface{}) error) (map[string]string, error) 
 		return nil, err
 	}
 	for key, value := range rawMap {
-		result[key], err = ExpandEnv(value, false)
+		result[key], err = env.ExpandEnv(value, false)
 		if err != nil {
 			return nil, err
 		}
@@ -1447,7 +1346,7 @@ func getBuildArgs(unmarshal func(interface{}) error) (map[string]string, error) 
 func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 	result := make(map[string]string)
 
-	var rawList []EnvVar
+	var rawList []env.Var
 	err := unmarshal(&rawList)
 	if err == nil {
 		for _, label := range rawList {
@@ -1461,34 +1360,13 @@ func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 		return nil, err
 	}
 	for key, value := range rawMap {
-		value, err = ExpandEnv(value, true)
+		value, err = env.ExpandEnv(value, true)
 		if err != nil {
 			return nil, err
 		}
 		result[key] = value
 	}
 	return result, nil
-}
-
-// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (envFiles *EnvFiles) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	result := make(EnvFiles, 0)
-	var single string
-	err := unmarshal(&single)
-	if err != nil {
-		var multi []string
-		err := unmarshal(&multi)
-		if err != nil {
-			return err
-		}
-		result = multi
-		*envFiles = result
-		return nil
-	}
-
-	result = append(result, single)
-	*envFiles = result
-	return nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.

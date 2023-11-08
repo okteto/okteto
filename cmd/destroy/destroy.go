@@ -16,6 +16,7 @@ package destroy
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"path/filepath"
 	"time"
@@ -301,7 +302,7 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 				return nil, err
 			}
 			opts.Manifest = manifest
-			opts.Manifest.Destroy.Image, err = model.ExpandEnv(manifest.Destroy.Image, false)
+			opts.Manifest.Destroy.Image, err = env.ExpandEnv(manifest.Destroy.Image, false)
 			if err != nil {
 				return nil, err
 			}

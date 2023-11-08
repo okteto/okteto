@@ -14,6 +14,7 @@
 package doctor
 
 import (
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"testing"
 
@@ -52,7 +53,7 @@ func Test_generateManifestFile(t *testing.T) {
 					Name:        "svc2",
 					Image:       nil,
 					Command:     model.Command{Values: []string{"bash"}},
-					Environment: []model.EnvVar{{Name: "foo", Value: "bar"}},
+					Environment: []env.Var{{Name: "foo", Value: "bar"}},
 				}},
 			},
 		},

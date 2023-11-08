@@ -15,6 +15,8 @@ package model
 
 import (
 	"fmt"
+	"github.com/okteto/okteto/pkg/dependencies"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"path/filepath"
 	"testing"
@@ -748,15 +750,15 @@ func TestHasDependencies(t *testing.T) {
 		{
 			name: "empty dependencies",
 			manifest: Manifest{
-				Dependencies: make(ManifestDependencies, 0),
+				Dependencies: make(dependencies.ManifestDependencies, 0),
 			},
 			expected: false,
 		},
 		{
 			name: "has dependencies",
 			manifest: Manifest{
-				Dependencies: ManifestDependencies{
-					"test": &Dependency{},
+				Dependencies: dependencies.ManifestDependencies{
+					"test": &dependencies.Dependency{},
 				},
 			},
 			expected: true,
@@ -1116,25 +1118,25 @@ func Test_GetTimeout(t *testing.T) {
 	tests := []struct {
 		name           string
 		defaultTimeout time.Duration
-		dependency     *Dependency
+		dependency     *dependencies.Dependency
 		expected       time.Duration
 	}{
 		{
 			name:           "default timeout set and specific not",
 			defaultTimeout: 5 * time.Minute,
-			dependency:     &Dependency{},
+			dependency:     &dependencies.Dependency{},
 			expected:       5 * time.Minute,
 		},
 		{
 			name: "default timeout unset and specific set",
-			dependency: &Dependency{
+			dependency: &dependencies.Dependency{
 				Timeout: 10 * time.Minute,
 			},
 			expected: 10 * time.Minute,
 		},
 		{
 			name:       "both unset",
-			dependency: &Dependency{},
+			dependency: &dependencies.Dependency{},
 			expected:   0,
 		},
 	}
@@ -1149,33 +1151,33 @@ func Test_GetTimeout(t *testing.T) {
 
 func Test_ExpandVars(t *testing.T) {
 	t.Setenv("MY_CUSTOM_VAR_FROM_ENVIRON", "varValueFromEnv")
-	dependency := Dependency{
+	dependency := dependencies.Dependency{
 		Repository:   "${REPO}",
 		Branch:       "${NOBRANCHSET-$BRANCH}",
 		ManifestPath: "${NOMPATHSET=$MPATH}",
 		Namespace:    "${FOO+$SOME_NS_DEP_EXP}",
-		Variables: Environment{
-			EnvVar{
+		Variables: env.Environment{
+			env.Var{
 				Name:  "MYVAR",
 				Value: "${AVARVALUE}",
 			},
-			EnvVar{
+			env.Var{
 				Name:  "$${ANAME}",
 				Value: "${MY_CUSTOM_VAR_FROM_ENVIRON}",
 			},
 		},
 	}
-	expected := Dependency{
+	expected := dependencies.Dependency{
 		Repository:   "my/repo",
 		Branch:       "myBranch",
 		ManifestPath: "api/okteto.yml",
 		Namespace:    "oktetoNs",
-		Variables: Environment{
-			EnvVar{
+		Variables: env.Environment{
+			env.Var{
 				Name:  "MYVAR",
 				Value: "thisIsAValue",
 			},
-			EnvVar{
+			env.Var{
 				Name:  "${ANAME}",
 				Value: "varValueFromEnv",
 			},
@@ -1322,8 +1324,8 @@ func Test_Manifest_HasDependenciesSection(t *testing.T) {
 			name: "m.IsV2 && m.Dependencies has items",
 			manifest: &Manifest{
 				IsV2: true,
-				Dependencies: ManifestDependencies{
-					"test": &Dependency{},
+				Dependencies: dependencies.ManifestDependencies{
+					"test": &dependencies.Dependency{},
 				},
 			},
 			expected: true,

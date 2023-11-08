@@ -17,6 +17,7 @@ import (
 	"compress/flate"
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -176,7 +177,7 @@ func generateManifestFile(devPath string) (string, error) {
 	dev := &model.Dev{
 		Image:       &model.BuildInfo{},
 		Push:        &model.BuildInfo{},
-		Environment: make([]model.EnvVar, 0),
+		Environment: make([]env.Var, 0),
 		Secrets:     make([]model.Secret, 0),
 		Forward:     make([]forward.Forward, 0),
 		Volumes:     make([]model.Volume, 0),

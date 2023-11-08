@@ -16,6 +16,7 @@ package stack
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"reflect"
 	"testing"
 	"time"
@@ -77,7 +78,7 @@ func Test_translateDeployment(t *testing.T) {
 				StopGracePeriod: 20,
 				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
 				Command:         model.Command{Values: []string{"args1", "args2"}},
-				Environment: []model.EnvVar{
+				Environment: []env.Var{
 					{
 						Name:  "env1",
 						Value: "value1",
@@ -184,7 +185,7 @@ func Test_translateStatefulSet(t *testing.T) {
 				StopGracePeriod: 20,
 				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
 				Command:         model.Command{Values: []string{"args1", "args2"}},
-				Environment: []model.EnvVar{
+				Environment: []env.Var{
 					{
 						Name:  "env1",
 						Value: "value1",
@@ -385,7 +386,7 @@ func Test_translateJobWithoutVolumes(t *testing.T) {
 				Replicas:        3,
 				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
 				Command:         model.Command{Values: []string{"args1", "args2"}},
-				Environment: []model.EnvVar{
+				Environment: []env.Var{
 					{
 						Name:  "env1",
 						Value: "value1",
@@ -523,7 +524,7 @@ func Test_translateJobWithVolumes(t *testing.T) {
 				Replicas:        3,
 				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
 				Command:         model.Command{Values: []string{"args1", "args2"}},
-				Environment: []model.EnvVar{
+				Environment: []env.Var{
 					{
 						Name:  "env1",
 						Value: "value1",
@@ -1203,15 +1204,15 @@ func Test_translateServiceEnvironment(t *testing.T) {
 		{
 			name: "none",
 			svc: &model.Service{
-				Environment: model.Environment{},
+				Environment: env.Environment{},
 			},
 			expected: []apiv1.EnvVar{},
 		},
 		{
 			name: "empty value",
 			svc: &model.Service{
-				Environment: model.Environment{
-					model.EnvVar{
+				Environment: env.Environment{
+					env.Var{
 						Name: "DEBUG",
 					},
 				},
@@ -1225,8 +1226,8 @@ func Test_translateServiceEnvironment(t *testing.T) {
 		{
 			name: "empty name",
 			svc: &model.Service{
-				Environment: model.Environment{
-					model.EnvVar{
+				Environment: env.Environment{
+					env.Var{
 						Value: "DEBUG",
 					},
 				},
@@ -1236,8 +1237,8 @@ func Test_translateServiceEnvironment(t *testing.T) {
 		{
 			name: "ok env var",
 			svc: &model.Service{
-				Environment: model.Environment{
-					model.EnvVar{
+				Environment: env.Environment{
+					env.Var{
 						Name:  "DEBUG",
 						Value: "true",
 					},
@@ -1416,7 +1417,7 @@ func Test_translateAffinity(t *testing.T) {
 		{
 			name: "none",
 			svc: &model.Service{
-				Environment: model.Environment{},
+				Environment: env.Environment{},
 			},
 			affinity: nil,
 		},

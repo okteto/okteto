@@ -14,6 +14,7 @@
 package model
 
 import (
+	"github.com/okteto/okteto/pkg/env"
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -26,7 +27,7 @@ type TranslationRule struct {
 	Image             string               `json:"image,omitempty"`
 	Labels            Labels               `json:"labels,omitempty"`
 	ImagePullPolicy   apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
-	Environment       Environment          `json:"environment,omitempty"`
+	Environment       env.Environment      `json:"environment,omitempty"`
 	Secrets           []Secret             `json:"secrets,omitempty"`
 	Command           []string             `json:"command,omitempty"`
 	Args              []string             `json:"args,omitempty"`

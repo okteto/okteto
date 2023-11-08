@@ -3,6 +3,7 @@ package preview
 import (
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"strings"
 
 	"github.com/docker/docker/pkg/namesgenerator"
@@ -83,7 +84,7 @@ func getRandomName(scope string) string {
 }
 
 func getExpandedName(name string) string {
-	expandedName, err := model.ExpandEnv(name, true)
+	expandedName, err := env.ExpandEnv(name, true)
 	if err != nil {
 		return name
 	}

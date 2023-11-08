@@ -16,6 +16,7 @@ package deploy
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/dependencies"
 	"net"
 	"os"
 	"path/filepath"
@@ -144,11 +145,11 @@ var fakeManifest *model.Manifest = &model.Manifest{
 }
 
 var fakeManifestWithDependency *model.Manifest = &model.Manifest{
-	Dependencies: model.ManifestDependencies{
-		"a": &model.Dependency{
+	Dependencies: dependencies.ManifestDependencies{
+		"a": &dependencies.Dependency{
 			Namespace: "b",
 		},
-		"b": &model.Dependency{},
+		"b": &dependencies.Dependency{},
 	},
 }
 
@@ -1062,11 +1063,11 @@ func (fd fakePipelineDeployer) ExecuteDeployPipeline(_ context.Context, _ *pipel
 
 func TestDeployDependencies(t *testing.T) {
 	fakeManifest := &model.Manifest{
-		Dependencies: model.ManifestDependencies{
-			"a": &model.Dependency{
+		Dependencies: dependencies.ManifestDependencies{
+			"a": &dependencies.Dependency{
 				Namespace: "b",
 			},
-			"b": &model.Dependency{},
+			"b": &dependencies.Dependency{},
 		},
 	}
 	type config struct {

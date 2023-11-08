@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"path/filepath"
 	"strings"
@@ -452,7 +453,7 @@ func createTempFileWithExpandedEnvsAtSource(fs afero.Fs, sourceFile, tempFolder 
 	sc := bufio.NewScanner(srcFile)
 	for sc.Scan() {
 		// expand content
-		srcContent, err := model.ExpandEnv(sc.Text(), true)
+		srcContent, err := env.ExpandEnv(sc.Text(), true)
 		if err != nil {
 			return "", err
 		}

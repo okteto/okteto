@@ -1,6 +1,7 @@
 package model
 
 import (
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"sort"
 	"strings"
@@ -15,7 +16,7 @@ type DevRC struct {
 	Annotations          Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
 	Command              Command               `json:"command,omitempty" yaml:"command,omitempty"`
-	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Environment          env.Environment       `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Forward              []forward.Forward     `json:"forward,omitempty" yaml:"forward,omitempty"`
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
 	Labels               Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
@@ -186,7 +187,7 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 	}
 }
 
-func getEnvVarIdx(environment Environment, envVar EnvVar) int {
+func getEnvVarIdx(environment env.Environment, envVar env.Var) int {
 	idx := -1
 	for aux, env := range environment {
 		if env.Name == envVar.Name {

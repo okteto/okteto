@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -72,9 +73,9 @@ type ServiceRaw struct {
 	Cpus                     Quantity              `yaml:"cpus,omitempty"`
 	Entrypoint               CommandStack          `yaml:"entrypoint,omitempty"`
 	Args                     ArgsStack             `yaml:"args,omitempty"`
-	EnvFilesSneakCase        EnvFiles              `yaml:"env_file,omitempty"`
-	EnvFiles                 EnvFiles              `yaml:"envFile,omitempty"`
-	Environment              Environment           `yaml:"environment,omitempty"`
+	EnvFilesSneakCase        env.EnvFiles          `yaml:"env_file,omitempty"`
+	EnvFiles                 env.EnvFiles          `yaml:"envFile,omitempty"`
+	Environment              env.Environment       `yaml:"environment,omitempty"`
 	Expose                   []PortRaw             `yaml:"expose,omitempty"`
 	Healthcheck              *HealthCheck          `yaml:"healthcheck,omitempty"`
 	Image                    string                `yaml:"image,omitempty"`
@@ -456,7 +457,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.EnvFiles = serviceRaw.EnvFilesSneakCase
 	}
 
-	svc.Environment = Environment{}
+	svc.Environment = env.Environment{}
 	for _, env := range serviceRaw.Environment {
 		if env.Value == "" {
 			env.Value = os.Getenv(env.Name)

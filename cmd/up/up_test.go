@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
@@ -234,7 +235,7 @@ func TestEnvVarIsAddedProperlyToDevContainerWhenIsSetFromCmd(t *testing.T) {
 		{
 			name: "Add env vars from cmd and manifest to dev container",
 			dev: &model.Dev{
-				Environment: model.Environment{
+				Environment: env.Environment{
 					{
 						Name:  "VAR_FROM_MANIFEST",
 						Value: "value",
@@ -247,7 +248,7 @@ func TestEnvVarIsAddedProperlyToDevContainerWhenIsSetFromCmd(t *testing.T) {
 		{
 			name: "Overwrite env vars when is required",
 			dev: &model.Dev{
-				Environment: model.Environment{
+				Environment: env.Environment{
 					{
 						Name:  "VAR_TO_OVERWRITE",
 						Value: "oldValue",

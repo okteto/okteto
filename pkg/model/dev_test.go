@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -160,7 +161,7 @@ func Test_LoadManifestDefaults(t *testing.T) {
 	tests := []struct {
 		name                string
 		manifest            []byte
-		expectedEnvironment Environment
+		expectedEnvironment env.Environment
 		expectedForward     []forward.Forward
 	}{
 		{
@@ -168,7 +169,7 @@ func Test_LoadManifestDefaults(t *testing.T) {
 			[]byte(`name: service
 container: core
 workdir: /app`),
-			Environment{},
+			env.Environment{},
 			[]forward.Forward{},
 		},
 		{
@@ -176,7 +177,7 @@ workdir: /app`),
 			[]byte(`name: service
 container: core
 workdir: /app`),
-			Environment{},
+			env.Environment{},
 			[]forward.Forward{},
 		},
 		{
@@ -187,7 +188,7 @@ workdir: /app
 environment:
   - ENV=production
   - name=test-node`),
-			Environment{
+			env.Environment{
 				{Name: "ENV", Value: "production"},
 				{Name: "name", Value: "test-node"},
 			},
@@ -201,7 +202,7 @@ workdir: /app
 forward:
   - 9000:8000
   - 9001:8001`),
-			Environment{},
+			env.Environment{},
 			[]forward.Forward{
 				{Local: 9000, Remote: 8000, Service: false, ServiceName: ""},
 				{Local: 9001, Remote: 8001, Service: false, ServiceName: ""},
@@ -1057,68 +1058,6 @@ func TestPersistentVolumeEnabled(t *testing.T) {
 	}
 }
 
-func Test_ExpandEnv(t *testing.T) {
-	t.Setenv("BAR", "bar")
-	tests := []struct {
-		name          string
-		value         string
-		expandIfEmpty bool
-		result        string
-		expectedErr   error
-	}{
-		{
-			name:          "broken var - missing closing curly bracket",
-			value:         "value-${BAR",
-			expandIfEmpty: true,
-			result:        "",
-			expectedErr:   fmt.Errorf("error expanding environment on 'value-${BAR': closing brace expected"),
-		},
-		{
-			name:          "no-var",
-			value:         "value",
-			expandIfEmpty: true,
-			result:        "value",
-			expectedErr:   nil,
-		},
-		{
-			name:          "var",
-			value:         "value-${BAR}-value",
-			expandIfEmpty: true,
-			result:        "value-bar-value",
-			expectedErr:   nil,
-		},
-		{
-			name:          "default",
-			value:         "value-${FOO:-foo}-value",
-			expandIfEmpty: true,
-			result:        "value-foo-value",
-			expectedErr:   nil,
-		},
-		{
-			name:          "only bar expanded",
-			value:         "${BAR}",
-			expandIfEmpty: true,
-			result:        "bar",
-			expectedErr:   nil,
-		},
-		{
-			name:          "only bar not expand if empty",
-			value:         "${FOO}",
-			expandIfEmpty: false,
-			result:        "${FOO}",
-			expectedErr:   nil,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := ExpandEnv(tt.value, tt.expandIfEmpty)
-			assert.Equal(t, err, tt.expectedErr)
-			assert.Equal(t, tt.result, result)
-		})
-	}
-}
-
 func TestGetTimeout(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -1492,17 +1431,17 @@ func Test_expandEnvFiles(t *testing.T) {
 		name     string
 		dev      *Dev
 		envs     []byte
-		expected Environment
+		expected env.Environment
 	}{
 		{
 			name: "add new envs",
 			dev: &Dev{
-				Environment: Environment{},
-				EnvFiles:    EnvFiles{},
+				Environment: env.Environment{},
+				EnvFiles:    env.EnvFiles{},
 			},
 			envs: []byte("key1=value1"),
-			expected: Environment{
-				EnvVar{
+			expected: env.Environment{
+				env.Var{
 					Name:  "key1",
 					Value: "value1",
 				},
@@ -1511,17 +1450,17 @@ func Test_expandEnvFiles(t *testing.T) {
 		{
 			name: "dont overwrite envs",
 			dev: &Dev{
-				Environment: Environment{
+				Environment: env.Environment{
 					{
 						Name:  "key1",
 						Value: "value1",
 					},
 				},
-				EnvFiles: EnvFiles{},
+				EnvFiles: env.EnvFiles{},
 			},
 			envs: []byte("key1=value100"),
-			expected: Environment{
-				EnvVar{
+			expected: env.Environment{
+				env.Var{
 					Name:  "key1",
 					Value: "value1",
 				},
@@ -1530,12 +1469,12 @@ func Test_expandEnvFiles(t *testing.T) {
 		{
 			name: "empty env - infer value",
 			dev: &Dev{
-				Environment: Environment{},
-				EnvFiles:    EnvFiles{},
+				Environment: env.Environment{},
+				EnvFiles:    env.EnvFiles{},
 			},
 			envs: []byte("OKTETO_TEST="),
-			expected: Environment{
-				EnvVar{
+			expected: env.Environment{
+				env.Var{
 					Name:  "OKTETO_TEST",
 					Value: "myvalue",
 				},
@@ -1544,11 +1483,11 @@ func Test_expandEnvFiles(t *testing.T) {
 		{
 			name: "empty env - empty value",
 			dev: &Dev{
-				Environment: Environment{},
-				EnvFiles:    EnvFiles{},
+				Environment: env.Environment{},
+				EnvFiles:    env.EnvFiles{},
 			},
 			envs:     []byte("OKTETO_TEST2="),
-			expected: Environment{},
+			expected: env.Environment{},
 		},
 	}
 	for _, tt := range tests {
@@ -1560,7 +1499,7 @@ func Test_expandEnvFiles(t *testing.T) {
 			}
 			defer os.RemoveAll(file.Name())
 
-			tt.dev.EnvFiles = EnvFiles{file.Name()}
+			tt.dev.EnvFiles = env.EnvFiles{file.Name()}
 
 			t.Setenv("OKTETO_TEST", "myvalue")
 

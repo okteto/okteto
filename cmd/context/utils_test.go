@@ -14,6 +14,7 @@
 package context
 
 import (
+	"github.com/okteto/okteto/pkg/dependencies"
 	"os"
 	"reflect"
 	"testing"
@@ -178,8 +179,8 @@ dependencies:
 				Dev:     model.ManifestDevs{},
 				Type:    model.OktetoManifestType,
 				Destroy: &model.DestroyInfo{},
-				Dependencies: model.ManifestDependencies{
-					"one": &model.Dependency{
+				Dependencies: dependencies.ManifestDependencies{
+					"one": &dependencies.Dependency{
 						Repository: "https://repo.url",
 					},
 				},

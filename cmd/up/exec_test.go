@@ -3,6 +3,7 @@ package up
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"net/http"
 	"testing"
 
@@ -202,8 +203,8 @@ func TestGetEnvs(t *testing.T) {
 			dev: &model.Dev{
 				Name:      "test",
 				Namespace: "test",
-				Environment: model.Environment{
-					model.EnvVar{
+				Environment: env.Environment{
+					env.Var{
 						Name:  "FROMENVSECTION",
 						Value: "VALUE1",
 					},
@@ -381,8 +382,8 @@ func TestGetEnvForHybridModeWithProperPriority(t *testing.T) {
 	dev := &model.Dev{
 		Name:      "test",
 		Namespace: "test",
-		Environment: model.Environment{
-			model.EnvVar{
+		Environment: env.Environment{
+			env.Var{
 				Name:  "ENVFROMMANIFEST",
 				Value: "FROMMANIFESTVALUE",
 			},

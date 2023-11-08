@@ -1,6 +1,7 @@
 package model
 
 import (
+	"github.com/okteto/okteto/pkg/env"
 	"reflect"
 	"testing"
 
@@ -44,8 +45,8 @@ resources:
 				Annotations: Annotations{"db": "mongodb"},
 				Context:     "test",
 				Namespace:   "test",
-				Environment: Environment{
-					EnvVar{
+				Environment: env.Environment{
+					env.Var{
 						Name:  "OKTETO_HOME",
 						Value: "/home/.okteto",
 					},
@@ -90,8 +91,8 @@ resources:
 				Annotations: Annotations{"db": "mongodb"},
 				Context:     "test",
 				Namespace:   "test",
-				Environment: Environment{
-					EnvVar{
+				Environment: env.Environment{
+					env.Var{
 						Name:  "OKTETO_HOME",
 						Value: "/home/.okteto",
 					},

@@ -15,6 +15,8 @@ package model
 
 import (
 	"fmt"
+	"github.com/okteto/okteto/pkg/dependencies"
+	"github.com/okteto/okteto/pkg/env"
 	"log"
 	"os"
 	"reflect"
@@ -96,64 +98,64 @@ func TestEnvVarMarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
 		data     []byte
-		expected EnvVar
+		expected env.Var
 	}{
 		{
 			"key-value",
 			[]byte(`env=production`),
-			EnvVar{Name: "env", Value: "production"},
+			env.Var{Name: "env", Value: "production"},
 		},
 		{
 			"key-value-complex",
 			[]byte(`env='production=11231231asa#$˜GADAFA'`),
-			EnvVar{Name: "env", Value: "'production=11231231asa#$˜GADAFA'"},
+			env.Var{Name: "env", Value: "'production=11231231asa#$˜GADAFA'"},
 		},
 		{
 			"key-value-with-env-var",
 			[]byte(`env=$DEV_ENV`),
-			EnvVar{Name: "env", Value: "test_environment"},
+			env.Var{Name: "env", Value: "test_environment"},
 		},
 		{
 			"key-value-with-env-var-in-string",
 			[]byte(`env=my_env;$DEV_ENV;prod`),
-			EnvVar{Name: "env", Value: "my_env;test_environment;prod"},
+			env.Var{Name: "env", Value: "my_env;test_environment;prod"},
 		},
 		{
 			"simple-key",
 			[]byte(`noenv`),
-			EnvVar{Name: "noenv", Value: ""},
+			env.Var{Name: "noenv", Value: ""},
 		},
 		{
 			"key-with-no-value",
 			[]byte(`noenv=`),
-			EnvVar{Name: "noenv", Value: ""},
+			env.Var{Name: "noenv", Value: ""},
 		},
 		{
 			"key-with-env-var-not-defined",
 			[]byte(`noenv=$UNDEFINED`),
-			EnvVar{Name: "noenv", Value: ""},
+			env.Var{Name: "noenv", Value: ""},
 		},
 		{
 			"just-env-var",
 			[]byte(`$DEV_ENV`),
-			EnvVar{Name: "test_environment", Value: ""},
+			env.Var{Name: "test_environment", Value: ""},
 		},
 		{
 			"just-env-var-undefined",
 			[]byte(`$UNDEFINED`),
-			EnvVar{Name: "", Value: ""},
+			env.Var{Name: "", Value: ""},
 		},
 		{
 			"local_env_expanded",
 			[]byte(`OKTETO_TEST_ENV_MARSHALLING`),
-			EnvVar{Name: "OKTETO_TEST_ENV_MARSHALLING", Value: "true"},
+			env.Var{Name: "OKTETO_TEST_ENV_MARSHALLING", Value: "true"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			var result EnvVar
+			var result env.Var
 			t.Setenv("DEV_ENV", "test_environment")
 			t.Setenv("OKTETO_TEST_ENV_MARSHALLING", "true")
 
@@ -838,39 +840,6 @@ func TestAnnotationsUnmarshalling(t *testing.T) {
 	}
 }
 
-func TestEnvFileUnmarshalling(t *testing.T) {
-	tests := []struct {
-		name     string
-		data     []byte
-		expected EnvFiles
-	}{
-		{
-			"single value",
-			[]byte(`.env`),
-			EnvFiles{".env"},
-		},
-		{
-			"env files list",
-			[]byte("\n  - .env\n  - .env2"),
-			EnvFiles{".env", ".env2"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := make(EnvFiles, 0)
-
-			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
-				t.Fatal(err)
-			}
-
-			if !reflect.DeepEqual(result, tt.expected) {
-				t.Errorf("didn't unmarshal correctly. Actual %+v, Expected %+v", result, tt.expected)
-			}
-		})
-	}
-}
-
 func TestDurationUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -1101,7 +1070,7 @@ deploy:
 				},
 				Destroy:      &DestroyInfo{},
 				Dev:          map[string]*Dev{},
-				Dependencies: map[string]*Dependency{},
+				Dependencies: map[string]*dependencies.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Context:      "context-to-use",
 				IsV2:         true,
@@ -1135,7 +1104,7 @@ dev:
 					},
 				},
 				Destroy:      &DestroyInfo{},
-				Dependencies: map[string]*Dependency{},
+				Dependencies: map[string]*dependencies.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Dev: map[string]*Dev{
 					"test-1": {
@@ -1201,7 +1170,7 @@ dev:
 							Labels:      Labels{},
 							Annotations: Annotations{},
 						},
-						Environment: Environment{},
+						Environment: env.Environment{},
 						Volumes:     []Volume{},
 					},
 					"test-2": {
@@ -1266,7 +1235,7 @@ dev:
 							Labels:      Labels{},
 							Annotations: Annotations{},
 						},
-						Environment: Environment{},
+						Environment: env.Environment{},
 						Volumes:     []Volume{},
 						Mode:        constants.OktetoSyncModeFieldValue,
 					},
@@ -1285,7 +1254,7 @@ sync:
 				Build:         map[string]*BuildInfo{},
 				Deploy:        &DeployInfo{},
 				Destroy:       &DestroyInfo{},
-				Dependencies:  map[string]*Dependency{},
+				Dependencies:  map[string]*dependencies.Dependency{},
 				External:      externalresource.ExternalResourceSection{},
 				GlobalForward: []forward.GlobalForward{},
 				Dev: map[string]*Dev{
@@ -1351,7 +1320,7 @@ sync:
 							Labels:      Labels{},
 							Annotations: Annotations{},
 						},
-						Environment: Environment{},
+						Environment: env.Environment{},
 						Volumes:     []Volume{},
 						Mode:        constants.OktetoSyncModeFieldValue,
 					},
@@ -1371,7 +1340,7 @@ services:
 				Build:         map[string]*BuildInfo{},
 				Deploy:        &DeployInfo{},
 				Destroy:       &DestroyInfo{},
-				Dependencies:  map[string]*Dependency{},
+				Dependencies:  map[string]*dependencies.Dependency{},
 				GlobalForward: []forward.GlobalForward{},
 				External:      externalresource.ExternalResourceSection{},
 				Dev: map[string]*Dev{
@@ -1474,7 +1443,7 @@ services:
 							Labels:      Labels{},
 							Annotations: Annotations{},
 						},
-						Environment: Environment{},
+						Environment: env.Environment{},
 						Volumes:     []Volume{},
 						Mode:        constants.OktetoSyncModeFieldValue,
 					},
@@ -1505,7 +1474,7 @@ dev:
 				Type:         OktetoManifestType,
 				IsV2:         true,
 				Build:        map[string]*BuildInfo{},
-				Dependencies: map[string]*Dependency{},
+				Dependencies: map[string]*dependencies.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Destroy:      &DestroyInfo{},
 				Dev: map[string]*Dev{
@@ -1571,7 +1540,7 @@ dev:
 							Labels:      Labels{},
 							Annotations: Annotations{},
 						},
-						Environment: Environment{},
+						Environment: env.Environment{},
 						Volumes:     []Volume{},
 						Mode:        constants.OktetoSyncModeFieldValue,
 					},
@@ -1594,7 +1563,7 @@ dev:
 				Type:         OktetoManifestType,
 				IsV2:         true,
 				Build:        map[string]*BuildInfo{},
-				Dependencies: map[string]*Dependency{},
+				Dependencies: map[string]*dependencies.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Destroy:      &DestroyInfo{},
 				Dev: map[string]*Dev{
@@ -1660,7 +1629,7 @@ dev:
 							Labels:      Labels{},
 							Annotations: Annotations{},
 						},
-						Environment: Environment{},
+						Environment: env.Environment{},
 						Volumes:     []Volume{},
 						Mode:        constants.OktetoSyncModeFieldValue,
 					},
@@ -1726,7 +1695,7 @@ dev:
 							Labels:      Labels{},
 							Annotations: Annotations{},
 						},
-						Environment: Environment{},
+						Environment: env.Environment{},
 						Volumes:     []Volume{},
 						Mode:        constants.OktetoSyncModeFieldValue,
 					},
@@ -1765,7 +1734,7 @@ deploy:
 				IsV2:         true,
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*BuildInfo{},
-				Dependencies: map[string]*Dependency{},
+				Dependencies: map[string]*dependencies.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Destroy:      &DestroyInfo{},
 				Deploy: &DeployInfo{
@@ -1793,7 +1762,7 @@ devs:
 				IsV2:         true,
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*BuildInfo{},
-				Dependencies: map[string]*Dependency{},
+				Dependencies: map[string]*dependencies.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Destroy:      &DestroyInfo{},
 				Deploy: &DeployInfo{
@@ -1921,7 +1890,7 @@ reverse:
 					Folders: []SyncFolder{},
 				},
 				Forward:     []forward.Forward{},
-				Environment: Environment{},
+				Environment: env.Environment{},
 				Volumes:     []Volume{},
 				Services:    []*Dev{},
 				Metadata: &Metadata{
@@ -1982,7 +1951,7 @@ forward:
 						Remote: 2345,
 					},
 				},
-				Environment: Environment{
+				Environment: env.Environment{
 					{
 						Name:  "LOG_FORMATTER",
 						Value: "text",
@@ -2046,7 +2015,7 @@ forward:
 						Remote: 2345,
 					},
 				},
-				Environment: Environment{},
+				Environment: env.Environment{},
 				Volumes:     []Volume{},
 				Services:    []*Dev{},
 				Metadata: &Metadata{
@@ -2106,7 +2075,7 @@ forward:
 						Remote: 2345,
 					},
 				},
-				Environment: Environment{},
+				Environment: env.Environment{},
 				Volumes:     []Volume{},
 				Services:    []*Dev{},
 				Metadata: &Metadata{
@@ -2911,12 +2880,12 @@ func TestDependencyUnmashalling(t *testing.T) {
 	tests := []struct {
 		name     string
 		data     []byte
-		expected *Dependency
+		expected *dependencies.Dependency
 	}{
 		{
 			name: "single line",
 			data: []byte(`https://github/test`),
-			expected: &Dependency{
+			expected: &dependencies.Dependency{
 				Repository: "https://github/test",
 			},
 		},
@@ -2924,7 +2893,7 @@ func TestDependencyUnmashalling(t *testing.T) {
 			name: "repository and branch",
 			data: []byte(`repository: https://github/test
 branch: main`),
-			expected: &Dependency{
+			expected: &dependencies.Dependency{
 				Repository: "https://github/test",
 				Branch:     "main",
 			},
@@ -2934,7 +2903,7 @@ branch: main`),
 			data: []byte(`repository: https://github/test
 branch: main
 manifest: okteto.yml`),
-			expected: &Dependency{
+			expected: &dependencies.Dependency{
 				Repository:   "https://github/test",
 				Branch:       "main",
 				ManifestPath: "okteto.yml",
@@ -2947,12 +2916,12 @@ branch: main
 manifest: okteto.yml
 variables:
   key: value`),
-			expected: &Dependency{
+			expected: &dependencies.Dependency{
 				Repository:   "https://github/test",
 				Branch:       "main",
 				ManifestPath: "okteto.yml",
-				Variables: Environment{
-					EnvVar{
+				Variables: env.Environment{
+					env.Var{
 						Name:  "key",
 						Value: "value",
 					},
@@ -2967,13 +2936,13 @@ manifest: okteto.yml
 variables:
   key: value
 wait: true`),
-			expected: &Dependency{
+			expected: &dependencies.Dependency{
 				Repository:   "https://github/test",
 				Branch:       "main",
 				ManifestPath: "okteto.yml",
 				Wait:         true,
-				Variables: Environment{
-					EnvVar{
+				Variables: env.Environment{
+					env.Var{
 						Name:  "key",
 						Value: "value",
 					},
@@ -2989,13 +2958,13 @@ variables:
   key: value
 wait: true
 timeout: 15m`),
-			expected: &Dependency{
+			expected: &dependencies.Dependency{
 				Repository:   "https://github/test",
 				Branch:       "main",
 				ManifestPath: "okteto.yml",
 				Wait:         true,
-				Variables: Environment{
-					EnvVar{
+				Variables: env.Environment{
+					env.Var{
 						Name:  "key",
 						Value: "value",
 					},
@@ -3007,7 +2976,7 @@ timeout: 15m`),
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var result *Dependency
+			var result *dependencies.Dependency
 
 			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
 				t.Fatal(err)

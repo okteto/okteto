@@ -16,9 +16,8 @@ package v1
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"path/filepath"
-
-	"github.com/okteto/okteto/pkg/model"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -97,7 +96,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	}
 
 	var err error
-	options.Tag, err = model.ExpandEnv(options.Tag, true)
+	options.Tag, err = env.ExpandEnv(options.Tag, true)
 	if err != nil {
 		return err
 	}
