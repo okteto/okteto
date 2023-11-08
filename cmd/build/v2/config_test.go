@@ -58,8 +58,9 @@ func TestGetConfig(t *testing.T) {
 					isClean: true,
 					err:     nil,
 				},
-				fs:       afero.NewOsFs(),
-				isOkteto: true,
+				fs:                  afero.NewOsFs(),
+				isOkteto:            true,
+				isSmartBuildsEnable: true,
 			},
 		},
 		{
@@ -81,8 +82,9 @@ func TestGetConfig(t *testing.T) {
 					isClean: true,
 					err:     nil,
 				},
-				fs:       afero.NewOsFs(),
-				isOkteto: true,
+				fs:                  afero.NewOsFs(),
+				isOkteto:            true,
+				isSmartBuildsEnable: true,
 			},
 		},
 		{
@@ -104,8 +106,9 @@ func TestGetConfig(t *testing.T) {
 					isClean: true,
 					err:     nil,
 				},
-				fs:       afero.NewOsFs(),
-				isOkteto: true,
+				fs:                  afero.NewOsFs(),
+				isOkteto:            true,
+				isSmartBuildsEnable: true,
 			},
 		},
 		{
@@ -127,14 +130,46 @@ func TestGetConfig(t *testing.T) {
 					isClean: false,
 					err:     assert.AnError,
 				},
-				fs:       afero.NewOsFs(),
-				isOkteto: true,
+				fs:                  afero.NewOsFs(),
+				isOkteto:            true,
+				isSmartBuildsEnable: true,
 			},
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := getConfig(tc.input.reg, tc.input.repo)
+			assert.Equal(t, tc.expected, cfg)
+		})
+	}
+}
+
+func TestGetIsSmartBuildEnabled(t *testing.T) {
+	tt := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{
+			name:     "enabled feature flag",
+			input:    "true",
+			expected: true,
+		},
+		{
+			name:     "disabled feature flag",
+			input:    "false",
+			expected: false,
+		},
+		{
+			name:     "wrong feature flag value default true",
+			input:    "falsess",
+			expected: true,
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(OktetoEnableSmartBuildEnvVar, tc.input)
+			cfg := getIsSmartBuildEnabled()
 			assert.Equal(t, tc.expected, cfg)
 		})
 	}
