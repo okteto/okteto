@@ -72,6 +72,7 @@ COPY . /okteto/src
 WORKDIR /okteto/src
 
 ARG {{ .GitCommitArgName }}
+ARG {{ .GitBranchArgName }}
 ARG {{ .InvalidateCacheArgName }}
 
 RUN okteto registrytoken install --force --log-output=json
@@ -93,6 +94,7 @@ type dockerfileTemplateProperties struct {
 	InternalServerName     string
 	ActionNameArgName      string
 	GitCommitArgName       string
+	GitBranchArgName       string
 	InvalidateCacheArgName string
 	DestroyFlags           string
 }
@@ -193,6 +195,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		fmt.Sprintf("%s=%s", constants.OktetoInternalServerNameEnvVar, sc.ServerName),
 		fmt.Sprintf("%s=%s", model.OktetoActionNameEnvVar, os.Getenv(model.OktetoActionNameEnvVar)),
 		fmt.Sprintf("%s=%s", constants.OktetoGitCommitEnvVar, os.Getenv(constants.OktetoGitCommitEnvVar)),
+		fmt.Sprintf("%s=%s", constants.OktetoGitBranchEnvVar, os.Getenv(constants.OktetoGitBranchEnvVar)),
 		fmt.Sprintf("%s=%d", constants.OktetoInvalidateCacheEnvVar, int(randomNumber.Int64())),
 	)
 
@@ -283,6 +286,7 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 		InternalServerName:     constants.OktetoInternalServerNameEnvVar,
 		ActionNameArgName:      model.OktetoActionNameEnvVar,
 		GitCommitArgName:       constants.OktetoGitCommitEnvVar,
+		GitBranchArgName:       constants.OktetoGitBranchEnvVar,
 		InvalidateCacheArgName: constants.OktetoInvalidateCacheEnvVar,
 		DestroyFlags:           strings.Join(getDestroyFlags(opts), " "),
 	}
