@@ -117,7 +117,7 @@ func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface) *OktetoBu
 		Registry:          registry,
 		V1Builder:         buildv1.NewBuilder(builder, registry),
 		buildEnvironments: buildEnvs,
-		Config:            getConfig(registry, gitRepo),
+		Config:            config,
 		analyticsTracker:  analyticsTracker,
 	}
 }
