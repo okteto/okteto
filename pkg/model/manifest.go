@@ -721,6 +721,29 @@ func (b *ManifestBuild) validate() error {
 	return nil
 }
 
+func (s *Secret) Validate() error {
+	if err := checkFileAndNotDirectory(s.LocalPath); err != nil {
+		return err
+	}
+
+	if !strings.HasPrefix(s.RemotePath, "/") {
+		return fmt.Errorf("Secret remote path '%s' must be an absolute path", s.RemotePath)
+	}
+
+	return nil
+}
+
+func checkFileAndNotDirectory(path string) error {
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("File '%s' not found. Please make sure the file exists", path)
+	}
+	if fileInfo.Mode().IsRegular() {
+		return nil
+	}
+	return fmt.Errorf("Secret '%s' is not a regular file", path)
+}
+
 // GetSvcsToBuildFromList returns the builds from a list and all its
 func (b *ManifestBuild) GetSvcsToBuildFromList(toBuild []string) []string {
 	initialSvcsToBuild := toBuild

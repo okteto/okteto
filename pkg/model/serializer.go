@@ -457,17 +457,9 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
-	if len(parts) < 2 || len(parts) > 3 {
-		return fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'")
-	}
 	s.LocalPath = parts[0]
-	if err := checkFileAndNotDirectory(s.LocalPath); err != nil {
-		return err
-	}
 	s.RemotePath = parts[1]
-	if !strings.HasPrefix(s.RemotePath, "/") {
-		return fmt.Errorf("Secret remote path '%s' must be an absolute path", s.RemotePath)
-	}
+
 	if len(parts) == 3 {
 		mode, err := strconv.ParseInt(parts[2], 8, 32)
 		if err != nil {
@@ -718,17 +710,6 @@ func (l Lifecycle) MarshalYAML() (interface{}, error) {
 		return true, nil
 	}
 	return lifecycleRaw(l), nil
-}
-
-func checkFileAndNotDirectory(path string) error {
-	fileInfo, err := os.Stat(path)
-	if err != nil {
-		return fmt.Errorf("File '%s' not found. Please make sure the file exists", path)
-	}
-	if fileInfo.Mode().IsRegular() {
-		return nil
-	}
-	return fmt.Errorf("Secret '%s' is not a regular file", path)
 }
 
 type hybridModeInfo struct {

@@ -593,6 +593,16 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		AnalyticsTracker:   up.analyticsTracker,
 	}
 
+	// TODO: copy to down and exex cmd?
+	// validate dev secrets
+	for _, dev := range up.Manifest.Dev {
+		for _, secret := range dev.Secrets {
+			if err := secret.Validate(); err != nil {
+				return err
+			}
+		}
+	}
+
 	startTime := time.Now()
 	err = c.RunDeploy(ctx, &deploy.Options{
 		Name:             up.Manifest.Name,
