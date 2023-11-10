@@ -721,13 +721,13 @@ func (b *ManifestBuild) validate() error {
 	return nil
 }
 
-func (s *Secret) Validate() error {
+func (s *Secret) validate() error {
 	if err := checkFileAndNotDirectory(s.LocalPath); err != nil {
 		return err
 	}
 
 	if !strings.HasPrefix(s.RemotePath, "/") {
-		return fmt.Errorf("Secret remote path '%s' must be an absolute path", s.RemotePath)
+		return fmt.Errorf("secret remote path '%s' must be an absolute path", s.RemotePath)
 	}
 
 	return nil

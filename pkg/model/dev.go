@@ -852,6 +852,10 @@ func validatePullPolicy(pullPolicy apiv1.PullPolicy) error {
 func validateSecrets(secrets []Secret) error {
 	seen := map[string]bool{}
 	for _, s := range secrets {
+		if err := s.validate(); err != nil {
+			return err
+		}
+
 		if _, ok := seen[s.GetFileName()]; ok {
 			return fmt.Errorf("Secrets with the same basename '%s' are not supported", s.GetFileName())
 		}
