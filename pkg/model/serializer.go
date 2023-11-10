@@ -457,6 +457,12 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
+	// if the secret is not formatted correctly we return an empty secret (i.e. empty LocalPath and RemotePath)
+	// and we rely on the secret validation to return the appropriate error to the user
+	if len(parts) < 2 || len(parts) > 3 {
+		return nil
+	}
+
 	s.LocalPath = parts[0]
 	s.RemotePath = parts[1]
 
@@ -469,6 +475,7 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	} else {
 		s.Mode = 420
 	}
+
 	return nil
 }
 

@@ -15,7 +15,6 @@ package model
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"reflect"
 	"strings"
@@ -390,9 +389,7 @@ func TestLifecycleMarshalling(t *testing.T) {
 
 func TestSecretMarshalling(t *testing.T) {
 	file, err := os.CreateTemp("", "okteto-secret-test")
-	if err != nil {
-		log.Fatal(err)
-	}
+	assert.NoError(t, err)
 	defer os.Remove(file.Name())
 
 	t.Setenv("TEST_HOME", file.Name())
@@ -424,26 +421,26 @@ func TestSecretMarshalling(t *testing.T) {
 		{
 			"too-short",
 			"local",
-			nil,
-			true,
+			&Secret{LocalPath: "", RemotePath: "", Mode: 0},
+			false,
 		},
 		{
 			"too-long",
 			"local:remote:mode:other",
-			nil,
-			true,
+			&Secret{LocalPath: "", RemotePath: "", Mode: 0},
+			false,
 		},
 		{
 			"wrong-local",
 			"/local:/remote:400",
-			nil,
-			true,
+			&Secret{LocalPath: "/local", RemotePath: "/remote", Mode: 256},
+			false,
 		},
 		{
 			"wrong-remote",
 			fmt.Sprintf("%s:remote", file.Name()),
-			nil,
-			true,
+			&Secret{LocalPath: file.Name(), RemotePath: "remote", Mode: 420},
+			false,
 		},
 		{
 			"wrong-mode",

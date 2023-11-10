@@ -712,7 +712,11 @@ func (b *ManifestBuild) validate() error {
 }
 
 func (s *Secret) validate() error {
-	if err := checkFileAndNotDirectory(s.LocalPath); err != nil {
+	if s.LocalPath == "" || s.RemotePath == "" {
+		return fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'")
+	}
+
+	if err := checkFileAndNotDirectory(s.LocalPath, afero.NewOsFs()); err != nil {
 		return err
 	}
 
@@ -723,15 +727,15 @@ func (s *Secret) validate() error {
 	return nil
 }
 
-func checkFileAndNotDirectory(path string) error {
-	fileInfo, err := os.Stat(path)
+func checkFileAndNotDirectory(path string, fs afero.Fs) error {
+	fileInfo, err := fs.Stat(path)
 	if err != nil {
-		return fmt.Errorf("File '%s' not found. Please make sure the file exists", path)
+		return fmt.Errorf("file '%s' not found. Please make sure the file exists", path)
 	}
 	if fileInfo.Mode().IsRegular() {
 		return nil
 	}
-	return fmt.Errorf("Secret '%s' is not a regular file", path)
+	return fmt.Errorf("secret '%s' is not a regular file", path)
 }
 
 // GetSvcsToBuildFromList returns the builds from a list and all its

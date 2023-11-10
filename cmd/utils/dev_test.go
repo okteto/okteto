@@ -384,6 +384,8 @@ func Test_SelectDevFromManifest(t *testing.T) {
 					},
 					"test-2": &model.Dev{},
 				},
+				// TODO: fix this because now this test will try to open this file
+				ManifestPath: "/some/path/to/okteto.yml",
 			},
 			selector: &FakeOktetoSelector{
 				dev: "test",

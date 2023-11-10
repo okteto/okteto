@@ -407,6 +407,9 @@ func NewDev() *Dev {
 }
 
 func (dev *Dev) LoadAbsPaths(devPath string) error {
+	if devPath == "" {
+		return fmt.Errorf("devPath cannot be empty")
+	}
 	devDir, err := filepath.Abs(filepath.Dir(devPath))
 	if err != nil {
 		return err
