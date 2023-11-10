@@ -15,9 +15,15 @@ package okteto
 
 import (
 	"context"
+	"encoding/base64"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
+	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/types"
+	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/runtime"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 func Test_UrlToKubernetesContext(t *testing.T) {
@@ -121,4 +127,153 @@ func Test_RemoveSchema(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_AddOktetoCredentialsToCfg(t *testing.T) {
+	credCert := "credential-certificate"
+	oktetoCert := "okteto-certificate"
+	oktetoCertBase64 := base64.StdEncoding.EncodeToString([]byte(oktetoCert))
+	server := "kubernetes.okteto.dev"
+	token := "fake_token"
+	ns := "test"
+	userName := "fake_username"
+
+	tests := []struct {
+		name              string
+		credentialCert    string
+		expectedCert      string
+		isInsecureContext bool
+	}{
+		{
+			name:              "with credential certificate and secure context",
+			credentialCert:    credCert,
+			isInsecureContext: false,
+			expectedCert:      credCert,
+		},
+		{
+			name:              "with credential certificate and insecure context",
+			credentialCert:    credCert,
+			isInsecureContext: true,
+			expectedCert:      credCert,
+		},
+		{
+			name:              "with empty credential certificate and secure context",
+			credentialCert:    "",
+			isInsecureContext: false,
+			expectedCert:      "",
+		},
+		{
+			name:              "with empty credential certificate and insecure context",
+			credentialCert:    "",
+			isInsecureContext: true,
+			expectedCert:      oktetoCert,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &clientcmdapi.Config{
+				Clusters:   map[string]*clientcmdapi.Cluster{},
+				AuthInfos:  map[string]*clientcmdapi.AuthInfo{},
+				Contexts:   map[string]*clientcmdapi.Context{},
+				Extensions: nil,
+			}
+			creds := &types.Credential{
+				Certificate: tt.credentialCert,
+				Server:      server,
+				Token:       token,
+			}
+			oktetoContext := OktetoContext{
+				Name:               "https://test.okteto.dev",
+				Certificate:        oktetoCertBase64,
+				IsStoredAsInsecure: tt.isInsecureContext,
+			}
+			expectedKubeconfig := clientcmdapi.Config{
+				Clusters: map[string]*clientcmdapi.Cluster{
+					"test_okteto_dev": {
+						Server:                   server,
+						CertificateAuthorityData: []byte(tt.expectedCert),
+						Extensions:               map[string]runtime.Object{},
+					},
+				},
+				AuthInfos: map[string]*clientcmdapi.AuthInfo{
+					userName: {
+						Token:                token,
+						ImpersonateUserExtra: map[string][]string{},
+						Extensions:           map[string]runtime.Object{},
+					},
+				},
+				Contexts: map[string]*clientcmdapi.Context{
+					"test_okteto_dev": {
+						Extensions: map[string]runtime.Object{
+							constants.OktetoExtension: nil,
+						},
+						Cluster:   "test_okteto_dev",
+						AuthInfo:  userName,
+						Namespace: ns,
+					},
+				},
+				CurrentContext: "test_okteto_dev",
+			}
+
+			err := AddOktetoCredentialsToCfg(cfg, creds, ns, userName, oktetoContext)
+
+			require.NoError(t, err)
+			require.Equal(t, expectedKubeconfig, *cfg)
+		})
+	}
+}
+
+func Test_AddOktetoCredentialsToCfgWhenConfigCredentialHasntToBeDone(t *testing.T) {
+	t.Setenv(constants.OktetoSkipConfigCredentialsUpdate, "true")
+	cfg := &clientcmdapi.Config{
+		Clusters:   map[string]*clientcmdapi.Cluster{},
+		AuthInfos:  map[string]*clientcmdapi.AuthInfo{},
+		Contexts:   map[string]*clientcmdapi.Context{},
+		Extensions: nil,
+	}
+	creds := &types.Credential{
+		Certificate: "cert",
+		Server:      "k8s server",
+		Token:       "fake token",
+	}
+	oktetoContext := OktetoContext{
+		Name:               "https://test.okteto.dev",
+		Certificate:        "okteto certificate",
+		IsStoredAsInsecure: false,
+	}
+
+	expectedCfg := clientcmdapi.Config{
+		Clusters:   map[string]*clientcmdapi.Cluster{},
+		AuthInfos:  map[string]*clientcmdapi.AuthInfo{},
+		Contexts:   map[string]*clientcmdapi.Context{},
+		Extensions: nil,
+	}
+
+	result := AddOktetoCredentialsToCfg(cfg, creds, "ns", "userName", oktetoContext)
+
+	require.NoError(t, result)
+	require.Equal(t, expectedCfg, *cfg, "config should not be updated")
+}
+
+func Test_AddOktetoCredentialsToCfgWithInvalidOktetoContext(t *testing.T) {
+	cfg := &clientcmdapi.Config{
+		Clusters:   map[string]*clientcmdapi.Cluster{},
+		AuthInfos:  map[string]*clientcmdapi.AuthInfo{},
+		Contexts:   map[string]*clientcmdapi.Context{},
+		Extensions: nil,
+	}
+	creds := &types.Credential{
+		Certificate: "",
+		Server:      "k8s server",
+		Token:       "fake token",
+	}
+	oktetoContext := OktetoContext{
+		Name:               "https://test.okteto.dev",
+		Certificate:        "base64withinvalidchar%",
+		IsStoredAsInsecure: true,
+	}
+
+	result := AddOktetoCredentialsToCfg(cfg, creds, "ns", "userName", oktetoContext)
+
+	require.Error(t, result)
 }

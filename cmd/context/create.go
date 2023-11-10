@@ -318,7 +318,10 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 	if cfg == nil {
 		cfg = kubeconfig.Create()
 	}
-	okteto.AddOktetoCredentialsToCfg(cfg, &userContext.Credentials, ctxOptions.Namespace, userContext.User.ID, okteto.Context().Name)
+	if err := okteto.AddOktetoCredentialsToCfg(cfg, &userContext.Credentials, ctxOptions.Namespace, userContext.User.ID, *okteto.Context()); err != nil {
+		return err
+	}
+
 	okteto.Context().Cfg = cfg
 	okteto.Context().IsOkteto = true
 	okteto.Context().IsInsecure = okteto.IsInsecureSkipTLSVerifyPolicy()

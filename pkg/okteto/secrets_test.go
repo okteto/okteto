@@ -455,6 +455,14 @@ func TestGetClusterMetadata(t *testing.T) {
 								Name:  "pipelineRunnerImage",
 								Value: "installer-runner-image",
 							},
+							{
+								Name:  "buildkitInternalIP",
+								Value: "10.10.10.10",
+							},
+							{
+								Name:  "publicDomain",
+								Value: "test.okteto.com",
+							},
 						},
 					},
 				},
@@ -464,6 +472,8 @@ func TestGetClusterMetadata(t *testing.T) {
 					Certificate:         []byte("cert"),
 					ServerName:          "1.1.1.1",
 					PipelineRunnerImage: "installer-runner-image",
+					BuildKitInternalIP:  "10.10.10.10",
+					PublicDomain:        "test.okteto.com",
 				},
 			},
 		},

@@ -75,6 +75,7 @@ ENV {{$key}} {{$val}}
 {{end}}
 
 ARG {{ .GitCommitArgName }}
+ARG {{ .GitBranchArgName }}
 ARG {{ .InvalidateCacheArgName }}
 
 RUN okteto registrytoken install --force --log-output=json
@@ -97,6 +98,7 @@ type dockerfileTemplateProperties struct {
 	InternalServerName     string
 	ActionNameArgName      string
 	GitCommitArgName       string
+	GitBranchArgName       string
 	InvalidateCacheArgName string
 	DeployFlags            string
 }
@@ -189,6 +191,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		fmt.Sprintf("%s=%s", constants.OktetoInternalServerNameEnvVar, sc.ServerName),
 		fmt.Sprintf("%s=%s", model.OktetoActionNameEnvVar, os.Getenv(model.OktetoActionNameEnvVar)),
 		fmt.Sprintf("%s=%s", constants.OktetoGitCommitEnvVar, os.Getenv(constants.OktetoGitCommitEnvVar)),
+		fmt.Sprintf("%s=%s", constants.OktetoGitBranchEnvVar, os.Getenv(constants.OktetoGitBranchEnvVar)),
 		fmt.Sprintf("%s=%d", constants.OktetoInvalidateCacheEnvVar, int(randomNumber.Int64())),
 	)
 
@@ -199,10 +202,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		if err != nil {
 			return fmt.Errorf("failed to parse server name network address: %w", err)
 		}
-		buildOptions.ExtraHosts = []types.HostMap{
-			{Hostname: registryUrl, IP: ip},
-			{Hostname: fmt.Sprintf("kubernetes.%s", subdomain), IP: ip},
-		}
+		buildOptions.ExtraHosts = getExtraHosts(registryUrl, subdomain, ip, *sc)
 	}
 
 	sshSock := os.Getenv(rd.sshAuthSockEnvvar)
@@ -286,6 +286,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 		TokenArgName:           model.OktetoTokenEnvVar,
 		ActionNameArgName:      model.OktetoActionNameEnvVar,
 		GitCommitArgName:       constants.OktetoGitCommitEnvVar,
+		GitBranchArgName:       constants.OktetoGitBranchEnvVar,
 		InvalidateCacheArgName: constants.OktetoInvalidateCacheEnvVar,
 		DeployFlags:            strings.Join(getDeployFlags(opts), " "),
 	}
@@ -387,4 +388,21 @@ func fetchRemoteServerConfig(ctx context.Context) (*types.ClusterMetadata, error
 	}
 
 	return &metadata, err
+}
+
+func getExtraHosts(registryURL, subdomain, ip string, metadata types.ClusterMetadata) []types.HostMap {
+	extraHosts := []types.HostMap{
+		{Hostname: registryURL, IP: ip},
+		{Hostname: fmt.Sprintf("kubernetes.%s", subdomain), IP: ip},
+	}
+
+	if metadata.BuildKitInternalIP != "" {
+		extraHosts = append(extraHosts, types.HostMap{Hostname: fmt.Sprintf("buildkit.%s", subdomain), IP: metadata.BuildKitInternalIP})
+	}
+
+	if metadata.PublicDomain != "" {
+		extraHosts = append(extraHosts, types.HostMap{Hostname: metadata.PublicDomain, IP: ip})
+	}
+
+	return extraHosts
 }

@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -65,6 +66,7 @@ type oktetoBuilderConfigInterface interface {
 	IsOkteto() bool
 	GetAnonymizedRepo() string
 	GetBuildContextHash(*model.BuildInfo) string
+	IsSmartBuildsEnabled() bool
 }
 
 type analyticsTrackerInterface interface {
@@ -105,12 +107,17 @@ func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface) *OktetoBu
 		oktetoLog.Infof("could not get working dir: %w", err)
 	}
 	gitRepo := repository.NewRepository(wd)
+	config := getConfig(registry, gitRepo)
+
+	buildEnvs := map[string]string{}
+	buildEnvs[OktetoEnableSmartBuildEnvVar] = strconv.FormatBool(config.isSmartBuildsEnable)
+
 	return &OktetoBuilder{
 		Builder:           builder,
 		Registry:          registry,
 		V1Builder:         buildv1.NewBuilder(builder, registry),
-		buildEnvironments: map[string]string{},
-		Config:            getConfig(registry, gitRepo),
+		buildEnvironments: buildEnvs,
+		Config:            config,
 		analyticsTracker:  analyticsTracker,
 	}
 }
@@ -207,7 +214,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			meta.BuildContextHashDuration = time.Since(buildContextHashDurationStart)
 
 			// We only check that the image is built in the global registry if the noCache option is not set
-			if !options.NoCache && bc.Config.IsCleanProject() {
+			if !options.NoCache && bc.Config.IsCleanProject() && bc.Config.IsSmartBuildsEnabled() {
 
 				imageChecker := getImageChecker(buildSvcInfo, bc.Config, bc.Registry)
 				cacheHitDurationStart := time.Now()

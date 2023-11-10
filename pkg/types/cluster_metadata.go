@@ -17,6 +17,8 @@ package types
 type ClusterMetadata struct {
 	ServerName          string
 	PipelineRunnerImage string
+	BuildKitInternalIP  string
+	PublicDomain        string
 	CompanyName         string
 	Certificate         []byte
 	IsTrialLicense      bool
