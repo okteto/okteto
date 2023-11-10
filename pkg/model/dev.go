@@ -370,15 +370,15 @@ func Get(devPath string) (*Manifest, error) {
 			return nil, err
 		}
 
-		if err := dev.loadAbsPaths(devPath); err != nil {
+		if err := dev.LoadAbsPaths(devPath); err != nil {
 			return nil, err
 		}
 
-		if err := dev.expandEnvFiles(); err != nil {
+		if err := dev.ExpandEnvFiles(); err != nil {
 			return nil, err
 		}
 
-		dev.computeParentSyncFolder()
+		dev.ComputeParentSyncFolder()
 	}
 
 	return manifest, nil
@@ -406,7 +406,7 @@ func NewDev() *Dev {
 	}
 }
 
-func (dev *Dev) loadAbsPaths(devPath string) error {
+func (dev *Dev) LoadAbsPaths(devPath string) error {
 	devDir, err := filepath.Abs(filepath.Dir(devPath))
 	if err != nil {
 		return err
@@ -699,7 +699,7 @@ func (dev *Dev) setTimeout() error {
 	return nil
 }
 
-func (dev *Dev) expandEnvFiles() error {
+func (dev *Dev) ExpandEnvFiles() error {
 	for _, envFile := range dev.EnvFiles {
 		filename, err := ExpandEnv(envFile, true)
 		if err != nil {

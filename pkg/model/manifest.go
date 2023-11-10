@@ -105,9 +105,10 @@ type Manifest struct {
 	GlobalForward []forward.GlobalForward                  `json:"forward,omitempty" yaml:"forward,omitempty"`
 	External      externalresource.ExternalResourceSection `json:"external,omitempty" yaml:"external,omitempty"`
 
-	Type     Archetype `json:"-" yaml:"-"`
-	Manifest []byte    `json:"-" yaml:"-"`
-	IsV2     bool      `json:"-" yaml:"-"`
+	Type         Archetype `json:"-" yaml:"-"`
+	Manifest     []byte    `json:"-" yaml:"-"`
+	ManifestPath string    `json:"-" yaml:"-"`
+	IsV2         bool      `json:"-" yaml:"-"`
 }
 
 // ManifestDevs defines all the dev section
@@ -645,18 +646,7 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 		}
 	}
 
-	for _, dev := range manifest.Dev {
-
-		if err := dev.loadAbsPaths(devPath); err != nil {
-			return nil, err
-		}
-
-		if err := dev.expandEnvFiles(); err != nil {
-			return nil, err
-		}
-
-		dev.computeParentSyncFolder()
-	}
+	manifest.ManifestPath = devPath
 
 	return manifest, nil
 }

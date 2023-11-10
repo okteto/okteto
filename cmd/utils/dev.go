@@ -223,6 +223,16 @@ func SelectDevFromManifest(manifest *model.Manifest, selector OktetoSelectorInte
 		return nil, err
 	}
 
+	if err := dev.LoadAbsPaths(manifest.ManifestPath); err != nil {
+		return nil, err
+	}
+
+	if err := dev.ExpandEnvFiles(); err != nil {
+		return nil, err
+	}
+
+	dev.ComputeParentSyncFolder()
+
 	return manifest.Dev[devKey], nil
 }
 
