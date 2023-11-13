@@ -529,7 +529,7 @@ func TestDevMarshalling(t *testing.T) {
 		{
 			name:     "healtcheck-not-defaults",
 			dev:      Dev{Name: "name-test", Probes: &Probes{Liveness: true}},
-			expected: "name: name-test\nprobes:\n  liveness: true\n",
+			expected: "probes:\n  liveness: true\nname: name-test\n",
 		},
 		{
 			name:     "healtcheck-all-true-by-healthchecks",
@@ -554,10 +554,7 @@ func TestDevMarshalling(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			if string(marshalled) != tt.expected {
-				t.Errorf("didn't marshal correctly. Actual %s, Expected %s", marshalled, tt.expected)
-			}
+			assert.Equal(t, tt.expected, string(marshalled))
 		})
 	}
 }

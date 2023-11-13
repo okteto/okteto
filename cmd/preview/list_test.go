@@ -190,7 +190,7 @@ test2  global    true      -
 					Sleeping: true,
 				},
 			},
-			expectedOutput: "[\n {\n  \"name\": \"test\",\n  \"scope\": \"personal\",\n  \"sleeping\": true,\n  \"labels\": [\n   \"test\",\n   \"okteto\"\n  ]\n },\n {\n  \"name\": \"test2\",\n  \"scope\": \"global\",\n  \"sleeping\": true,\n  \"labels\": null\n }\n]\n",
+			expectedOutput: "[\n {\n  \"name\": \"test\",\n  \"scope\": \"personal\",\n  \"labels\": [\n   \"test\",\n   \"okteto\"\n  ],\n  \"sleeping\": true\n },\n {\n  \"name\": \"test2\",\n  \"scope\": \"global\",\n  \"labels\": null,\n  \"sleeping\": true\n }\n]\n",
 		},
 		{
 			name:   "list - yaml format",
@@ -208,7 +208,7 @@ test2  global    true      -
 					Sleeping: true,
 				},
 			},
-			expectedOutput: "- name: test\n  scope: personal\n  sleeping: true\n  labels:\n  - test\n  - okteto\n- name: test2\n  scope: global\n  sleeping: true\n  labels: []\n\n",
+			expectedOutput: "- name: test\n  scope: personal\n  labels:\n  - test\n  - okteto\n  sleeping: true\n- name: test2\n  scope: global\n  labels: []\n  sleeping: true\n\n",
 		},
 	}
 
