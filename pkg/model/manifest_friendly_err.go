@@ -47,7 +47,7 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 
 	for structName, structKeywords := range manifestKeys {
 		for _, keyword := range structKeywords {
-			// example: line 5: field context not found in type model.buildInfoRaw
+			// example: line 5: field contest not found in type model.buildInfoRaw
 			// (.*?): this excludes eerything before the keyword "field"
 			// (\w+): this captures the keyword we want to calculate the levenshtein distance with
 			// (in type|into): this ensures to match all variations of the error message
