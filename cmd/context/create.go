@@ -243,6 +243,15 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 	return nil
 }
 
+// getClusterMetadata runs the user query GetClusterMetadata and returns the response
+func getClusterMetadata(ctx context.Context, namespace string, okClientProvider oktetoClientProvider) (types.ClusterMetadata, error) {
+	okClient, err := okClientProvider.Provide()
+	if err != nil {
+		return types.ClusterMetadata{}, err
+	}
+	return okClient.User().GetClusterMetadata(ctx, namespace)
+}
+
 func hasAccessToNamespace(ctx context.Context, c *ContextCommand, ctxOptions *ContextOptions) (bool, error) {
 	if ctxOptions.IsOkteto {
 		okClient, err := c.OktetoClientProvider.Provide()
@@ -291,6 +300,12 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 		ctxOptions.Namespace = userContext.User.Namespace
 	}
 
+	clusterMetadata, err := getClusterMetadata(ctx, ctxOptions.Namespace, c.OktetoClientProvider)
+	if err != nil {
+		oktetoLog.Infof("error getting cluster metadata: %v", err)
+		return err
+	}
+
 	// once we have namespace and user identify we are able to retrieve the dynamic token for the namespace
 	err = c.kubetokenController.updateOktetoContextToken(userContext)
 	if err != nil {
@@ -303,10 +318,16 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 	if cfg == nil {
 		cfg = kubeconfig.Create()
 	}
-	okteto.AddOktetoCredentialsToCfg(cfg, &userContext.Credentials, ctxOptions.Namespace, userContext.User.ID, okteto.Context().Name)
+	if err := okteto.AddOktetoCredentialsToCfg(cfg, &userContext.Credentials, ctxOptions.Namespace, userContext.User.ID, *okteto.Context()); err != nil {
+		return err
+	}
+
 	okteto.Context().Cfg = cfg
 	okteto.Context().IsOkteto = true
 	okteto.Context().IsInsecure = okteto.IsInsecureSkipTLSVerifyPolicy()
+
+	okteto.Context().IsTrial = clusterMetadata.IsTrialLicense
+	okteto.Context().CompanyName = clusterMetadata.CompanyName
 
 	setSecrets(userContext.Secrets)
 

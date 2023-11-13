@@ -267,15 +267,15 @@ func (c *userClient) GetClusterCertificate(ctx context.Context, cluster, ns stri
 
 	conf, ok := file.Contexts[cluster]
 	if !ok {
-		return nil, fmt.Errorf("cluster-not-found")
+		return nil, fmt.Errorf("context-not-found")
 	}
 	if conf.Certificate == "" {
-		return nil, fmt.Errorf("cluster has no certificate")
+		return nil, fmt.Errorf("context has no certificate")
 	}
 
 	b, err := base64.StdEncoding.DecodeString(conf.Certificate)
 	if err != nil {
-		return nil, fmt.Errorf("failed to base64 decode cluster certificate: %w", err)
+		return nil, fmt.Errorf("failed to base64 decode context certificate: %w", err)
 	}
 
 	return b, nil
@@ -318,6 +318,14 @@ func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.C
 			metadata.ServerName = string(v.Value)
 		case "pipelineRunnerImage":
 			metadata.PipelineRunnerImage = string(v.Value)
+		case "isTrial":
+			metadata.IsTrialLicense = string(v.Value) == "true"
+		case "companyName":
+			metadata.CompanyName = string(v.Value)
+		case "buildkitInternalIP":
+			metadata.BuildKitInternalIP = string(v.Value)
+		case "publicDomain":
+			metadata.PublicDomain = string(v.Value)
 		}
 	}
 	if metadata.PipelineRunnerImage == "" {

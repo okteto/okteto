@@ -77,7 +77,7 @@ var (
 	ErrCtxNotSet = fmt.Errorf("your context is not set. Please run 'okteto context' and select your context")
 
 	// ErrNotOktetoCluster is raised when a command is only available on an okteto cluster
-	ErrNotOktetoCluster = fmt.Errorf("user is not logged in okteto cluster. Please run 'okteto context use' and select your context")
+	ErrNotOktetoCluster = fmt.Errorf("user is not logged in okteto context. Please run 'okteto context use' and select your context")
 
 	// ErrNotFound is raised when an object is not found
 	ErrNotFound = fmt.Errorf("not found")
@@ -122,10 +122,10 @@ var (
 	ErrDevPodDeleted = fmt.Errorf("development container has been removed")
 
 	// ErrDivertNotSupported raised if the divert feature is not supported in the current cluster
-	ErrDivertNotSupported = fmt.Errorf("the 'divert' field is only supported in clusters that have Okteto installed")
+	ErrDivertNotSupported = fmt.Errorf("the 'divert' field is only supported in contexts that have Okteto installed")
 
 	// ErrContextIsNotOktetoCluster raised if the cluster connected is not managed by okteto
-	ErrContextIsNotOktetoCluster = fmt.Errorf("this command is only available in clusters where Okteto is installed.\n Follow this link to know more about configuring Okteto at your cluster: https://www.okteto.com/docs/self-hosted/")
+	ErrContextIsNotOktetoCluster = fmt.Errorf("this command is only available in contexts where Okteto is installed.\n Follow this link to know more about configuring Okteto at your context: https://www.okteto.com/docs/self-hosted/")
 
 	// ErrTokenFlagNeeded is raised when the command is executed from inside a pod from a ctx command
 	ErrTokenFlagNeeded = fmt.Errorf("this command is not supported without the '--token' flag from inside a container")
@@ -188,7 +188,7 @@ var (
 	ErrDevContainerNotExists = "development container '%s' doesn't exist"
 
 	// ErrInvalidManifest is raised when cannot unmarshal manifest properly
-	ErrInvalidManifest = errors.New("invalid manifest")
+	ErrInvalidManifest = errors.New("your okteto manifest is not valid, please check the following errors")
 
 	// ErrServiceEmpty is raised whenever service is empty in docker-compose
 	ErrServiceEmpty = errors.New("service cannot be empty")

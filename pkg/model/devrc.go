@@ -1,8 +1,6 @@
 package model
 
 import (
-	"errors"
-	"fmt"
 	"os"
 	"sort"
 	"strings"
@@ -53,23 +51,7 @@ func ReadRC(bytes []byte) (*DevRC, error) {
 
 	if bytes != nil {
 		if err := yaml.UnmarshalStrict(bytes, dev); err != nil {
-			if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
-				var sb strings.Builder
-				_, _ = sb.WriteString("Invalid developer level manifest:\n")
-				l := strings.Split(err.Error(), "\n")
-				for i := 1; i < len(l); i++ {
-					e := strings.TrimSuffix(l[i], "in type model.DevRC")
-					e = strings.TrimSpace(e)
-					_, _ = sb.WriteString(fmt.Sprintf("    - %s\n", e))
-				}
-
-				_, _ = sb.WriteString("    See https://okteto.com/docs/reference/manifest for details")
-				return nil, errors.New(sb.String())
-			}
-
-			msg := strings.Replace(err.Error(), "yaml: unmarshal errors:", "invalid developer level manifest:", 1)
-			msg = strings.TrimSuffix(msg, "in type model.DevRC")
-			return nil, errors.New(msg)
+			return nil, err
 		}
 	}
 

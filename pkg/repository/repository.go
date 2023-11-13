@@ -36,6 +36,7 @@ type Repository struct {
 type repositoryInterface interface {
 	isClean(ctx context.Context) (bool, error)
 	getSHA() (string, error)
+	getTreeSHA(string) (string, error)
 }
 
 type repositoryURL struct {
@@ -112,4 +113,8 @@ func cleanPath(path string) string {
 // GetAnonymizedRepo returns a clean repo url string without sensible information
 func (r Repository) GetAnonymizedRepo() string {
 	return r.url.String()
+}
+
+func (r Repository) GetTreeHash(buildContext string) (string, error) {
+	return r.control.getTreeSHA(buildContext)
 }

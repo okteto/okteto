@@ -51,7 +51,7 @@ const (
 )
 
 var (
-	errDepenNotAvailableInVanilla = errors.New("dependency deployment is only supported in clusters with Okteto installed")
+	errDepenNotAvailableInVanilla = errors.New("dependency deployment is only supported in contexts with Okteto installed")
 )
 
 // Options represents options for deploy command
@@ -87,6 +87,17 @@ type builderInterface interface {
 	GetBuildEnvVars() map[string]string
 }
 
+type portGetterFunc func(string) (int, error)
+
+type getDeployerFunc func(
+	context.Context, *Options,
+	builderInterface,
+	configMapHandler,
+	okteto.K8sClientProvider,
+	kubeConfigHandler,
+	portGetterFunc,
+) (deployerInterface, error)
+
 // DeployCommand defines the config for deploying an app
 type DeployCommand struct {
 	GetManifest        func(path string) (*model.Manifest, error)
@@ -94,16 +105,14 @@ type DeployCommand struct {
 	K8sClientProvider  okteto.K8sClientProvider
 	Builder            builderInterface
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
-	GetDeployer        func(context.Context, *Options, builderInterface, configMapHandler, okteto.K8sClientProvider,
-		kubeConfigHandler,
-		func(string) (int, error)) (deployerInterface, error)
-	EndpointGetter   func() (EndpointGetter, error)
-	DeployWaiter     DeployWaiter
-	CfgMapHandler    configMapHandler
-	Fs               afero.Fs
-	DivertDriver     divert.Driver
-	PipelineCMD      pipelineCMD.PipelineDeployerInterface
-	AnalyticsTracker analyticsTrackerInterface
+	GetDeployer        getDeployerFunc
+	EndpointGetter     func() (EndpointGetter, error)
+	DeployWaiter       DeployWaiter
+	CfgMapHandler      configMapHandler
+	Fs                 afero.Fs
+	DivertDriver       divert.Driver
+	PipelineCMD        pipelineCMD.PipelineDeployerInterface
+	AnalyticsTracker   analyticsTrackerInterface
 
 	PipelineType       model.Archetype
 	isRemote           bool
@@ -141,7 +150,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// validate cmd options
 			if options.Dependencies && !okteto.IsOkteto() {
-				return fmt.Errorf("'dependencies' is only supported in clusters that have Okteto installed")
+				return fmt.Errorf("'dependencies' is only supported in contexts that have Okteto installed")
 			}
 
 			if err := validateAndSet(options.Variables, os.Setenv); err != nil {
@@ -227,7 +236,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 				oktetoLog.StartSpinner()
 				defer oktetoLog.StopSpinner()
 
-				deployer, err := c.GetDeployer(ctx, options, nil, nil, nil, nil, nil)
+				deployer, err := c.GetDeployer(ctx, options, c.Builder, c.CfgMapHandler, k8sClientProvider, NewKubeConfig(), model.GetAvailablePort)
 				if err != nil {
 					return err
 				}
@@ -260,7 +269,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	oktetoLog.SetStage("Load manifest")
 	manifest, err := dc.GetManifest(deployOptions.ManifestPath)
 	if err != nil {
-		return fmt.Errorf("failed to load manifest: %w", err)
+		return err
 	}
 	deployOptions.Manifest = manifest
 	oktetoLog.Debug("found okteto manifest")
@@ -538,13 +547,15 @@ func shouldRunInRemote(opts *Options) bool {
 
 }
 
+// GetDeployer returns a remote or a local deployer
+// k8sProvider, kubeconfig and portGetter should not be nil values
 func GetDeployer(ctx context.Context,
 	opts *Options,
 	builder builderInterface,
 	cmapHandler configMapHandler,
 	k8sProvider okteto.K8sClientProvider,
 	kubeconfig kubeConfigHandler,
-	portGetter func(string) (int, error),
+	portGetter portGetterFunc,
 ) (deployerInterface, error) {
 	if shouldRunInRemote(opts) {
 		// run remote

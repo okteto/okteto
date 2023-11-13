@@ -105,7 +105,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	}
 
 	if err := bc.Builder.Run(ctx, options); err != nil {
-		analytics.TrackBuild(okteto.Context().Builder, false)
+		analytics.TrackBuild(false)
 		return err
 	}
 
@@ -120,6 +120,6 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		bc.IoCtrl.Out().Success("Image '%s' successfully pushed", displayTag)
 	}
 
-	analytics.TrackBuild(okteto.Context().Builder, true)
+	analytics.TrackBuild(true)
 	return nil
 }

@@ -13,7 +13,10 @@
 
 package repository
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 type oktetoRemoteRepoController struct {
 	gitCommit string
@@ -31,4 +34,8 @@ func (or oktetoRemoteRepoController) isClean(_ context.Context) (bool, error) {
 
 func (or oktetoRemoteRepoController) getSHA() (string, error) {
 	return or.gitCommit, nil
+}
+
+func (or oktetoRemoteRepoController) getTreeSHA(string) (string, error) {
+	return "", fmt.Errorf("not-implemented")
 }

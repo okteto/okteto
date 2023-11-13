@@ -18,4 +18,8 @@ type ClusterMetadata struct {
 	Certificate         []byte
 	ServerName          string
 	PipelineRunnerImage string
+	IsTrialLicense      bool
+	CompanyName         string
+	BuildKitInternalIP  string
+	PublicDomain        string
 }

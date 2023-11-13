@@ -77,6 +77,8 @@ type OktetoContext struct {
 	IsOkteto           bool                 `json:"isOkteto,omitempty" yaml:"isOkteto,omitempty"`
 	IsStoredAsInsecure bool                 `json:"isInsecure,omitempty" yaml:"isInsecure,omitempty"`
 	IsInsecure         bool                 `json:"-" yaml:"-"`
+	CompanyName        string               `json:"-" yaml:"-"`
+	IsTrial            bool                 `json:"-" yaml:"-"`
 }
 
 // OktetoContextViewer contains info to show
@@ -348,21 +350,35 @@ func (*ContextConfigWriter) Write() error {
 }
 
 // AddOktetoCredentialsToCfg populates the provided kubernetes config using the provided credentials obtained from the Okteto API
-func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential, namespace, userName, oktetoURL string) {
+func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential, namespace, userName string, oktetoContext OktetoContext) error {
 	// If the context is being initialized within the execution of `okteto deploy` deploy command it should not
 	// write the Okteto credentials into the kubeconfig. It would overwrite the proxy settings
 	if os.Getenv(constants.OktetoSkipConfigCredentialsUpdate) == "true" {
-		return
+		return nil
 	}
 
-	clusterName := UrlToKubernetesContext(oktetoURL)
+	clusterName := UrlToKubernetesContext(oktetoContext.Name)
 	// create cluster
 	cluster, ok := cfg.Clusters[clusterName]
 	if !ok {
 		cluster = clientcmdapi.NewCluster()
 	}
 
-	cluster.CertificateAuthorityData = []byte(cred.Certificate)
+	// If the certificate included in the credentials is empty, it means that the server is kubernetes.subdomain.
+	// In that case, if the okteto context is insecure, we need to specify the certificate we have in our context.
+	// If it is not insecure it means that is a public CA or a private one already installed in the machine
+	cert := cred.Certificate
+	if cred.Certificate == "" && oktetoContext.IsStoredAsInsecure {
+		certPEM, err := base64.StdEncoding.DecodeString(oktetoContext.Certificate)
+		if err != nil {
+			oktetoLog.Debugf("couldn't decode context certificate from base64: %s", err)
+			return fmt.Errorf("failed to decode context certificate: %w", err)
+		}
+
+		cert = string(certPEM)
+	}
+
+	cluster.CertificateAuthorityData = []byte(cert)
 	cluster.Server = cred.Server
 	cfg.Clusters[clusterName] = cluster
 
@@ -389,6 +405,8 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 	cfg.Contexts[clusterName] = context
 
 	cfg.CurrentContext = clusterName
+
+	return nil
 }
 
 func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {

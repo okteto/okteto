@@ -215,15 +215,18 @@ func TestNoServiceBuiltWithSubset(t *testing.T) {
 }
 
 type fakeConfig struct {
-	isClean   bool
-	hasAccess bool
-	sha       string
-	isOkteto  bool
-	repoURL   string
+	isClean             bool
+	hasAccess           bool
+	sha                 string
+	isOkteto            bool
+	repoURL             string
+	isSmartBuildsEnable bool
 }
 
-func (fc fakeConfig) HasGlobalAccess() bool     { return fc.hasAccess }
-func (fc fakeConfig) IsCleanProject() bool      { return fc.isClean }
-func (fc fakeConfig) GetGitCommit() string      { return fc.sha }
-func (fc fakeConfig) IsOkteto() bool            { return fc.isOkteto }
-func (fc fakeConfig) GetAnonymizedRepo() string { return fc.repoURL }
+func (fc fakeConfig) HasGlobalAccess() bool                       { return fc.hasAccess }
+func (fc fakeConfig) IsCleanProject() bool                        { return fc.isClean }
+func (fc fakeConfig) GetGitCommit() string                        { return fc.sha }
+func (fc fakeConfig) IsOkteto() bool                              { return fc.isOkteto }
+func (fc fakeConfig) GetAnonymizedRepo() string                   { return fc.repoURL }
+func (fc fakeConfig) GetBuildContextHash(*model.BuildInfo) string { return "" }
+func (fc fakeConfig) IsSmartBuildsEnabled() bool                  { return fc.isSmartBuildsEnable }

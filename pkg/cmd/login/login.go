@@ -55,7 +55,7 @@ func (*LoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoU
 		}
 		if err != nil {
 			return nil, oktetoErrors.UserError{
-				E:    fmt.Errorf("couldn't authenticate to okteto cluster: %w", err),
+				E:    fmt.Errorf("couldn't authenticate to okteto context: %w", err),
 				Hint: "Try to set the context using the 'token' flag: https://www.okteto.com/docs/reference/cli/#context",
 			}
 		}
