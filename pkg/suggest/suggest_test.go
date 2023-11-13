@@ -26,7 +26,7 @@ func Test_errorSuggestion_suggest(t *testing.T) {
 	returnSameErr := func(e error) error { return e }
 	emptyRule := NewRule(alwaysFalse, returnSameErr)
 
-	inputError := errors.New("line 4: field context not found in type model.buildInfoRaw")
+	inputError := errors.New("line 4: field contest not found in type model.buildInfoRaw")
 
 	ruleNotFoundInBuildInfoRaw := NewRule(
 		func(e error) bool {
@@ -48,7 +48,7 @@ func Test_errorSuggestion_suggest(t *testing.T) {
 			name:       "basic Rule",
 			inputError: inputError,
 			rules:      []*Rule{ruleNotFoundInBuildInfoRaw},
-			expected:   "line 4: field context does not exist in the build section of the Okteto Manifest",
+			expected:   "line 4: field contest does not exist in the build section of the Okteto Manifest",
 		},
 		{
 			name:       "suggesting closest word",
@@ -61,7 +61,7 @@ func Test_errorSuggestion_suggest(t *testing.T) {
 				),
 				ruleNotFoundInBuildInfoRaw,
 			},
-			expected: "line 4: field context does not exist in the build section of the Okteto Manifest. Did you mean \"context\"?",
+			expected: "line 4: field contest does not exist in the build section of the Okteto Manifest. Did you mean \"context\"?",
 		},
 		{
 			name:       "no matching Rule",
