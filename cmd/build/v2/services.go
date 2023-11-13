@@ -54,7 +54,7 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 	g, _ := errgroup.WithContext(ctx)
 	for service := range buildManifest {
 		if _, ok := svcToDeployMap[service]; !ok {
-			bc.ioCtrl.Logger().Debug(fmt.Sprintf("Skipping service '%s' because it is not in the list of services to deploy", service))
+			bc.ioCtrl.Logger().Debug("Skipping service '%s' because it is not in the list of services to deploy", service)
 			continue
 		}
 		svc := service
@@ -104,7 +104,7 @@ func (bc *OktetoBuilder) checkServiceToBuild(service string, manifest *model.Man
 	} else if err != nil {
 		return err
 	}
-	bc.ioCtrl.Logger().Debug(fmt.Sprintf("Skipping build for image for service: %s", service))
+	bc.ioCtrl.Logger().Debug("Skipping build for image for service: %s", service)
 
 	bc.SetServiceEnvVars(service, imageWithDigest)
 

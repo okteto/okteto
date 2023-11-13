@@ -182,11 +182,11 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		bc.analyticsTracker.TrackImageBuild(buildsAnalytics...)
 	}(buildsAnalytics)
 
-	bc.ioCtrl.Logger().Info(fmt.Sprintf("Images to build: [%s]", strings.Join(toBuildSvcs, ", ")))
+	bc.ioCtrl.Logger().Info("Images to build: [%s]", strings.Join(toBuildSvcs, ", "))
 	for len(builtImagesControl) != len(toBuildSvcs) {
 		for _, svcToBuild := range toBuildSvcs {
 			if skipServiceBuild(svcToBuild, builtImagesControl) {
-				bc.ioCtrl.Logger().Info("skipping image '%s' due to being already built")
+				bc.ioCtrl.Logger().Info("skipping image '%s' due to being already built", svcToBuild)
 				continue
 			}
 			if !areAllServicesBuilt(buildManifest[svcToBuild].DependsOn, builtImagesControl) {
@@ -232,7 +232,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 					// if the built image belongs to global registry we clone it to the dev registry
 					// so that in can be used in dev containers (i.e. okteto up)
 					if bc.Registry.IsGlobalRegistry(imageWithDigest) {
-						bc.ioCtrl.Logger().Debug(fmt.Sprintf("Copying image '%s' from global to personal registry", svcToBuild))
+						bc.ioCtrl.Logger().Debug("Copying image '%s' from global to personal registry", svcToBuild)
 						tag := buildHash
 						devImage, err := bc.Registry.CloneGlobalImageToDev(imageWithDigest, tag)
 						if err != nil {

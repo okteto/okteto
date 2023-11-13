@@ -108,6 +108,16 @@ func (ol *oktetoLogger) SetStage(stage string) {
 	}
 }
 
+// Info logs an info message
+func (ol *oktetoLogger) Info(format string, args ...any) {
+	ol.logrusLogger.Info(fmt.Sprintf(format, args...))
+}
+
+// Debug logs a debug message
+func (ol *oktetoLogger) Debug(format string, args ...any) {
+	ol.logrusLogger.Debug(fmt.Sprintf(format, args...))
+}
+
 // InvalidLogLevelError is returned when the log level is invalid
 type InvalidLogLevelError struct {
 	level string
