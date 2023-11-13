@@ -466,8 +466,8 @@ func Test_computeParentSyncFolder(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.goos == runtime.GOOS {
 				tt.dev.ComputeParentSyncFolder()
-				if tt.result != tt.dev.parentSyncFolder {
-					t.Errorf("'%s' got '%s' for '%s', expected '%s'", tt.name, tt.dev.parentSyncFolder, runtime.GOOS, tt.result)
+				if tt.result != tt.dev.ParentSyncFolder {
+					t.Errorf("'%s' got '%s' for '%s', expected '%s'", tt.name, tt.dev.ParentSyncFolder, runtime.GOOS, tt.result)
 				}
 			}
 		})
@@ -513,63 +513,63 @@ func Test_getSourceSubPath(t *testing.T) {
 	}{
 		{
 			name:   "linux-root",
-			dev:    &Dev{parentSyncFolder: "/"},
+			dev:    &Dev{ParentSyncFolder: "/"},
 			path:   "/code/func",
 			goos:   "linux",
 			result: "src/code/func",
 		},
 		{
 			name:   "darwin-root",
-			dev:    &Dev{parentSyncFolder: "/"},
+			dev:    &Dev{ParentSyncFolder: "/"},
 			path:   "/code/func",
 			goos:   "darwin",
 			result: "src/code/func",
 		},
 		{
 			name:   "windows-root",
-			dev:    &Dev{parentSyncFolder: "/"},
+			dev:    &Dev{ParentSyncFolder: "/"},
 			path:   "c:\\code\\func",
 			goos:   "windows",
 			result: "src/code/func",
 		},
 		{
 			name:   "linux-relative",
-			dev:    &Dev{parentSyncFolder: "/code"},
+			dev:    &Dev{ParentSyncFolder: "/code"},
 			path:   "/code/func",
 			goos:   "linux",
 			result: "src/func",
 		},
 		{
 			name:   "darwin-relative",
-			dev:    &Dev{parentSyncFolder: "/code"},
+			dev:    &Dev{ParentSyncFolder: "/code"},
 			path:   "/code/func",
 			goos:   "darwin",
 			result: "src/func",
 		},
 		{
 			name:   "windows-relative",
-			dev:    &Dev{parentSyncFolder: "/code"},
+			dev:    &Dev{ParentSyncFolder: "/code"},
 			path:   "c:\\code\\func",
 			goos:   "windows",
 			result: "src/func",
 		},
 		{
 			name:   "windows-non-relative",
-			dev:    &Dev{parentSyncFolder: "/code"},
+			dev:    &Dev{ParentSyncFolder: "/code"},
 			path:   "c:\\test\\func",
 			goos:   "windows",
 			result: "test/func",
 		},
 		{
 			name:   "linux-non-relative",
-			dev:    &Dev{parentSyncFolder: "/code"},
+			dev:    &Dev{ParentSyncFolder: "/code"},
 			path:   "/test/func",
 			goos:   "linux",
 			result: "test/func",
 		},
 		{
 			name:   "darwin-non-relative",
-			dev:    &Dev{parentSyncFolder: "/code"},
+			dev:    &Dev{ParentSyncFolder: "/code"},
 			path:   "/test/func",
 			goos:   "darwin",
 			result: "test/func",

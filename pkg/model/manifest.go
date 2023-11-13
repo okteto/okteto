@@ -1101,7 +1101,7 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 			return nil, err
 		}
 
-		d.parentSyncFolder = cwd
+		d.ParentSyncFolder = cwd
 
 		if _, ok := m.Dev[svcName]; !ok && len(d.Sync.Folders) > 0 {
 			m.Dev[svcName] = d

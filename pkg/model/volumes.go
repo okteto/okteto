@@ -120,12 +120,12 @@ func (dev *Dev) ComputeParentSyncFolder() {
 			}
 		}
 	}
-	dev.parentSyncFolder = "/"
+	dev.ParentSyncFolder = "/"
 	for i := 1; i <= maxIndex; i++ {
-		dev.parentSyncFolder = filepath.ToSlash(filepath.Join(dev.parentSyncFolder, pathSplits[i]))
+		dev.ParentSyncFolder = filepath.ToSlash(filepath.Join(dev.ParentSyncFolder, pathSplits[i]))
 	}
 
-	dev.parentSyncFolder = dev.parentSyncFolder[len(filepath.VolumeName(dev.parentSyncFolder)):]
+	dev.ParentSyncFolder = dev.ParentSyncFolder[len(filepath.VolumeName(dev.ParentSyncFolder)):]
 
 }
 
@@ -135,10 +135,10 @@ func getDataSubPath(path string) string {
 
 func (dev *Dev) getSourceSubPath(path string) string {
 	sourceSubPath := path[len(filepath.VolumeName(path)):]
-	if dev.parentSyncFolder == "" {
-		dev.parentSyncFolder = "."
+	if dev.ParentSyncFolder == "" {
+		dev.ParentSyncFolder = "."
 	}
-	rel, err := filepath.Rel(dev.parentSyncFolder, filepath.ToSlash(sourceSubPath))
+	rel, err := filepath.Rel(dev.ParentSyncFolder, filepath.ToSlash(sourceSubPath))
 	if filepath.IsAbs(sourceSubPath) {
 		if err != nil || strings.HasPrefix(rel, "..") {
 			if err != nil {

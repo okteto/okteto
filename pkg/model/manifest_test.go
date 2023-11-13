@@ -652,7 +652,7 @@ func TestInferFromStack(t *testing.T) {
 			result, err := tt.currentManifest.InferFromStack(filepath.Clean(dirtest))
 			if result != nil {
 				for _, d := range result.Dev {
-					d.parentSyncFolder = ""
+					d.ParentSyncFolder = ""
 				}
 			}
 			assert.NoError(t, err)

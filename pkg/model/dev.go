@@ -52,32 +52,32 @@ var (
 
 // Dev represents a development container
 type Dev struct {
-	Name                 string             `json:"name,omitempty" yaml:"name,omitempty"`
-	Username             string             `json:"-" yaml:"-"`
-	RegistryURL          string             `json:"-" yaml:"-"`
-	Selector             Selector           `json:"selector,omitempty" yaml:"selector,omitempty"`
-	Annotations          Annotations        `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Tolerations          []apiv1.Toleration `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
-	Context              string             `json:"context,omitempty" yaml:"context,omitempty"`
-	Namespace            string             `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Container            string             `json:"container,omitempty" yaml:"container,omitempty"`
-	EmptyImage           bool               `json:"-" yaml:"-"`
-	Image                *BuildInfo         `json:"image,omitempty" yaml:"image,omitempty"`
-	Push                 *BuildInfo         `json:"-" yaml:"push,omitempty"`
-	ImagePullPolicy      apiv1.PullPolicy   `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
-	Secrets              []Secret           `json:"secrets,omitempty" yaml:"secrets,omitempty"`
-	Command              Command            `json:"command,omitempty" yaml:"command,omitempty"`
-	Args                 Command            `json:"args,omitempty" yaml:"args,omitempty"`
-	Probes               *Probes            `json:"probes,omitempty" yaml:"probes,omitempty"`
-	Lifecycle            *Lifecycle         `json:"lifecycle,omitempty" yaml:"lifecycle,omitempty"`
-	Workdir              string             `json:"workdir,omitempty" yaml:"workdir,omitempty"`
-	SecurityContext      *SecurityContext   `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
-	ServiceAccount       string             `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
-	RemotePort           int                `json:"remote,omitempty" yaml:"remote,omitempty"`
-	SSHServerPort        int                `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
-	ExternalVolumes      []ExternalVolume   `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
-	Sync                 Sync               `json:"sync,omitempty" yaml:"sync,omitempty"`
-	parentSyncFolder     string
+	Name                 string                `json:"name,omitempty" yaml:"name,omitempty"`
+	Username             string                `json:"-" yaml:"-"`
+	RegistryURL          string                `json:"-" yaml:"-"`
+	Selector             Selector              `json:"selector,omitempty" yaml:"selector,omitempty"`
+	Annotations          Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Tolerations          []apiv1.Toleration    `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
+	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
+	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
+	EmptyImage           bool                  `json:"-" yaml:"-"`
+	Image                *BuildInfo            `json:"image,omitempty" yaml:"image,omitempty"`
+	Push                 *BuildInfo            `json:"-" yaml:"push,omitempty"`
+	ImagePullPolicy      apiv1.PullPolicy      `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
+	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
+	Command              Command               `json:"command,omitempty" yaml:"command,omitempty"`
+	Args                 Command               `json:"args,omitempty" yaml:"args,omitempty"`
+	Probes               *Probes               `json:"probes,omitempty" yaml:"probes,omitempty"`
+	Lifecycle            *Lifecycle            `json:"lifecycle,omitempty" yaml:"lifecycle,omitempty"`
+	Workdir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
+	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
+	ServiceAccount       string                `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
+	RemotePort           int                   `json:"remote,omitempty" yaml:"remote,omitempty"`
+	SSHServerPort        int                   `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
+	ExternalVolumes      []ExternalVolume      `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
+	Sync                 Sync                  `json:"sync,omitempty" yaml:"sync,omitempty"`
+	ParentSyncFolder     string                `json:"-" yaml:"-"`
 	Forward              []forward.Forward     `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Reverse              []Reverse             `json:"reverse,omitempty" yaml:"reverse,omitempty"`
 	Interface            string                `json:"interface,omitempty" yaml:"interface,omitempty"`
@@ -415,13 +415,18 @@ func (dev *Dev) LoadAbsPaths(devPath string) error {
 		return err
 	}
 
-	if uri, err := url.ParseRequestURI(dev.Image.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
-		dev.Image.Context = loadAbsPath(devDir, dev.Image.Context)
-		dev.Image.Dockerfile = loadAbsPath(devDir, dev.Image.Dockerfile)
+	if dev.Image != nil {
+		if uri, err := url.ParseRequestURI(dev.Image.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
+			dev.Image.Context = loadAbsPath(devDir, dev.Image.Context)
+			dev.Image.Dockerfile = loadAbsPath(devDir, dev.Image.Dockerfile)
+		}
 	}
-	if uri, err := url.ParseRequestURI(dev.Push.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
-		dev.Push.Context = loadAbsPath(devDir, dev.Push.Context)
-		dev.Push.Dockerfile = loadAbsPath(devDir, dev.Push.Dockerfile)
+
+	if dev.Push != nil {
+		if uri, err := url.ParseRequestURI(dev.Push.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
+			dev.Push.Context = loadAbsPath(devDir, dev.Push.Context)
+			dev.Push.Dockerfile = loadAbsPath(devDir, dev.Push.Dockerfile)
+		}
 	}
 
 	dev.loadVolumeAbsPaths(devDir)
@@ -1339,8 +1344,8 @@ func (service *Dev) validateForExtraFields() error {
 	if service.ExternalVolumes != nil {
 		return fmt.Errorf(errorMessage, "externalVolumes")
 	}
-	if service.parentSyncFolder != "" {
-		return fmt.Errorf(errorMessage, "parentSyncFolder")
+	if service.ParentSyncFolder != "" {
+		return fmt.Errorf(errorMessage, "ParentSyncFolder")
 	}
 	if service.Forward != nil {
 		return fmt.Errorf(errorMessage, "forward")

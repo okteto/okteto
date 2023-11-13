@@ -380,12 +380,14 @@ func Test_SelectDevFromManifest(t *testing.T) {
 							},
 						},
 						SSHServerPort: 80,
-						Image:         &model.BuildInfo{},
+						Image: &model.BuildInfo{
+
+							Dockerfile: "Dockerfile",
+						},
 					},
 					"test-2": &model.Dev{},
 				},
-				// TODO: fix this because now this test will try to open this file
-				ManifestPath: "/some/path/to/okteto.yml",
+				ManifestPath: "/path/to/okteto.yml",
 			},
 			selector: &FakeOktetoSelector{
 				dev: "test",
@@ -402,7 +404,11 @@ func Test_SelectDevFromManifest(t *testing.T) {
 					},
 				},
 				SSHServerPort: 80,
-				Image:         &model.BuildInfo{},
+				Image: &model.BuildInfo{
+					Context:    "/path/to",
+					Dockerfile: "/path/to/Dockerfile",
+				},
+				ParentSyncFolder: "/",
 			},
 		},
 		{
