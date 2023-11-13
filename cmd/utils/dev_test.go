@@ -357,6 +357,11 @@ func (s *FakeOktetoSelector) AskForOptionsOkteto(_ []SelectorItem, _ int) (strin
 }
 
 func Test_SelectDevFromManifest(t *testing.T) {
+	localAbsPath, err := filepath.Abs(".")
+	assert.NoError(t, err)
+	remoteAbsPath, err := filepath.Abs("remote")
+	assert.NoError(t, err)
+
 	tests := []struct {
 		name     string
 		manifest *model.Manifest
@@ -374,8 +379,8 @@ func Test_SelectDevFromManifest(t *testing.T) {
 						Sync: model.Sync{
 							Folders: []model.SyncFolder{
 								{
-									LocalPath:  "/",
-									RemotePath: "/remote",
+									LocalPath:  localAbsPath,
+									RemotePath: remoteAbsPath,
 								},
 							},
 						},
@@ -387,7 +392,7 @@ func Test_SelectDevFromManifest(t *testing.T) {
 					},
 					"test-2": &model.Dev{},
 				},
-				ManifestPath: "/path/to/okteto.yml",
+				ManifestPath: filepath.Join(localAbsPath, "okteto.yml"),
 			},
 			selector: &FakeOktetoSelector{
 				dev: "test",
@@ -398,17 +403,17 @@ func Test_SelectDevFromManifest(t *testing.T) {
 				Sync: model.Sync{
 					Folders: []model.SyncFolder{
 						{
-							LocalPath:  "/",
-							RemotePath: "/remote",
+							LocalPath:  localAbsPath,
+							RemotePath: remoteAbsPath,
 						},
 					},
 				},
 				SSHServerPort: 80,
 				Image: &model.BuildInfo{
-					Context:    "/path/to",
-					Dockerfile: "/path/to/Dockerfile",
+					Context:    localAbsPath,
+					Dockerfile: filepath.Join(localAbsPath, "Dockerfile"),
 				},
-				ParentSyncFolder: "/",
+				ParentSyncFolder: localAbsPath,
 			},
 		},
 		{
