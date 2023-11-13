@@ -53,7 +53,7 @@ type decorator interface {
 // TTYDecorator is the decorator for the TTY
 type TTYDecorator struct{}
 
-// NewTTYDecorator returns a new TTY decorator
+// newTTYDecorator returns a new TTY decorator
 func newTTYDecorator() *TTYDecorator {
 	return &TTYDecorator{}
 }

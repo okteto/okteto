@@ -27,14 +27,14 @@ const (
 	// OktetoDisableSpinnerEnvVar if true spinner is disabled
 	OktetoDisableSpinnerEnvVar = "OKTETO_DISABLE_SPINNER"
 
-	// SpinnerAndWhitespaceCharCount is the number of characters that the spinner and the whitespace take
-	SpinnerAndWhitespaceCharCount = 2
+	// spinnerAndWhitespaceCharCount is the number of characters that the spinner and the whitespace take
+	spinnerAndWhitespaceCharCount = 2
 
 	// minimumWidthToTrimSpinnerMsg is the minimum width to trim the spinner message
-	MinimumWidthToTrimSpinnerMsg = 4
+	minimumWidthToTrimSpinnerMsg = 4
 
-	// maxCharsToRemoveForThreeDots is the maximum number of characters to remove to add the three dots
-	CharsToRemoveForThreeDots = 5
+	// charsToRemoveForThreeDots is the maximum number of characters to remove to add the three dots
+	charsToRemoveForThreeDots = 5
 )
 
 // Spinner is the interface for the spinner
@@ -100,9 +100,9 @@ func getTerminalWidthFunc() (int, error) {
 }
 
 func (s *ttySpinner) calculateSuffix(width int) string {
-	if width > MinimumWidthToTrimSpinnerMsg &&
-		len(s.message)+SpinnerAndWhitespaceCharCount > width {
-		return s.message[:width-CharsToRemoveForThreeDots] + "..."
+	if width > minimumWidthToTrimSpinnerMsg &&
+		len(s.message)+spinnerAndWhitespaceCharCount > width {
+		return s.message[:width-charsToRemoveForThreeDots] + "..."
 	}
 	return s.message
 }
