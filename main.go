@@ -57,12 +57,12 @@ import (
 )
 
 func init() {
-	oktetoLog.SetLevel("warn")
+	oktetoLog.SetLevel("warn") // TODO: Remove when we fully move to ioController
 	var b [16]byte
 	_, err := cryptoRand.Read(b[:])
 	seed := int64(binary.LittleEndian.Uint64(b[:]))
 	if err != nil {
-		oktetoLog.Info("cannot use cryptoRead. Fallback to timestamp seed generator")
+		oktetoLog.Info("cannot use cryptoRead. Fallback to timestamp seed generator") // TODO: Remove when we fully move to ioController
 		seed = time.Now().UnixNano()
 	}
 	rand.New(rand.NewSource(seed))
@@ -88,11 +88,11 @@ func main() {
 	ctx := context.Background()
 	ioController := io.NewIOController()
 	ioController.Logger().SetLevel(io.WarnLevel)
-	oktetoLog.Init(logrus.WarnLevel)
+	oktetoLog.Init(logrus.WarnLevel) // TODO: Remove when we fully move to ioController
 	if registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
-		oktetoLog.SetOutput(os.Stderr)
-		oktetoLog.SetLevel(oktetoLog.InfoLevel)
-		oktetoLog.SetOutputFormat(oktetoLog.JSONFormat)
+		oktetoLog.SetOutput(os.Stderr)                  // TODO: Remove when we fully move to ioController
+		oktetoLog.SetLevel(oktetoLog.InfoLevel)         // TODO: Remove when we fully move to ioController
+		oktetoLog.SetOutputFormat(oktetoLog.JSONFormat) // TODO: Remove when we fully move to ioController
 
 		ioController.Logger().SetLevel(io.InfoLevel)
 		ioController.SetOutputFormat(io.JSONFormat)
@@ -115,8 +115,8 @@ func main() {
 		PersistentPreRun: func(ccmd *cobra.Command, args []string) {
 			ccmd.SilenceUsage = true
 			if !registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
-				oktetoLog.SetLevel(logLevel)
-				oktetoLog.SetOutputFormat(outputMode)
+				oktetoLog.SetLevel(logLevel)          // TODO: Remove when we fully move to ioController
+				oktetoLog.SetOutputFormat(outputMode) // TODO: Remove when we fully move to ioController
 
 				ioController.Logger().SetLevel(logLevel)
 				ioController.SetOutputFormat(outputMode)
@@ -186,7 +186,7 @@ func main() {
 			tmp[0] = unicode.ToUpper(tmp[0])
 			message = string(tmp)
 		}
-		oktetoLog.Fail(message)
+		oktetoLog.Fail(message) // TODO: Change to use ioController  when we fully move to ioController
 		if uErr, ok := err.(oktetoErrors.UserError); ok {
 			if len(uErr.Hint) > 0 {
 				oktetoLog.Hint("    %s", uErr.Hint)
