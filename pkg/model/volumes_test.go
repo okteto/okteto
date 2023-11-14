@@ -465,7 +465,7 @@ func Test_computeParentSyncFolder(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.goos == runtime.GOOS {
-				tt.dev.ComputeParentSyncFolder()
+				tt.dev.computeParentSyncFolder()
 				if tt.result != tt.dev.parentSyncFolder {
 					t.Errorf("'%s' got '%s' for '%s', expected '%s'", tt.name, tt.dev.parentSyncFolder, runtime.GOOS, tt.result)
 				}

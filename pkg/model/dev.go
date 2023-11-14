@@ -378,7 +378,7 @@ func Get(devPath string) (*Manifest, error) {
 			return nil, err
 		}
 
-		dev.ComputeParentSyncFolder()
+		dev.computeParentSyncFolder()
 	}
 
 	return manifest, nil
@@ -826,7 +826,7 @@ func (dev *Dev) Prepare(manifestPath string) error {
 		return err
 	}
 
-	dev.ComputeParentSyncFolder()
+	dev.computeParentSyncFolder()
 
 	return nil
 }
