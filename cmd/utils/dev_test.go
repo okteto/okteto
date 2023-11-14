@@ -357,8 +357,7 @@ func (s *FakeOktetoSelector) AskForOptionsOkteto(_ []SelectorItem, _ int) (strin
 }
 
 func Test_SelectDevFromManifest(t *testing.T) {
-	parentSyncFolder := "/"
-	localAbsPath, err := filepath.Abs(parentSyncFolder)
+	localAbsPath, err := filepath.Abs("/")
 	assert.NoError(t, err)
 
 	tests := []struct {
