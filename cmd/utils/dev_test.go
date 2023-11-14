@@ -357,10 +357,10 @@ func (s *FakeOktetoSelector) AskForOptionsOkteto(_ []SelectorItem, _ int) (strin
 }
 
 func Test_SelectDevFromManifest(t *testing.T) {
-	localAbsPath, err := filepath.Abs(".")
+	parentSyncFolder := "/"
+	localAbsPath, err := filepath.Abs(parentSyncFolder)
 	assert.NoError(t, err)
-	remoteAbsPath, err := filepath.Abs("remote")
-	assert.NoError(t, err)
+	remoteAbsPath := "/remote"
 
 	tests := []struct {
 		name     string
@@ -413,7 +413,7 @@ func Test_SelectDevFromManifest(t *testing.T) {
 					Context:    localAbsPath,
 					Dockerfile: filepath.Join(localAbsPath, "Dockerfile"),
 				},
-				ParentSyncFolder: localAbsPath,
+				ParentSyncFolder: parentSyncFolder,
 			},
 		},
 		{
@@ -447,7 +447,6 @@ func Test_SelectDevFromManifest(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func Test_AskYesNo(t *testing.T) {
