@@ -58,8 +58,8 @@ func (f *plainFormatter) format(msg string) ([]byte, error) {
 
 // jsonFormatter is the formatter for the json logs
 type jsonFormatter struct {
-	stage           string
 	logrusFormatter *logrusJSONFormatter
+	stage           string
 }
 
 // jsonMessage represents the json message

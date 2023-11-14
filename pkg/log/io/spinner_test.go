@@ -41,10 +41,10 @@ func TestPreUpdateFunc(t *testing.T) {
 	okSpinner := newTTYSpinner("test")
 
 	tt := []struct {
-		name     string
-		width    int
 		err      error
+		name     string
 		expected string
+		width    int
 	}{
 		{
 			name:     "width is 10",
@@ -75,8 +75,8 @@ func TestCalculateSpinnerMessage(t *testing.T) {
 	tt := []struct {
 		name     string
 		message  string
-		width    int
 		expected string
+		width    int
 	}{
 		{
 			name:     "message is empty",

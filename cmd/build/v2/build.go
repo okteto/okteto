@@ -84,10 +84,9 @@ type OktetoBuilder struct {
 	// buildEnvironments are the environment variables created by the build steps
 	buildEnvironments map[string]string
 
+	ioCtrl *io.IOController
 	// lock is a mutex to provide builEnvironments map safe concurrency
 	lock sync.RWMutex
-
-	ioCtrl *io.IOController
 }
 
 // NewBuilder creates a new okteto builder

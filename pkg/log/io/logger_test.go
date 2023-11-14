@@ -22,10 +22,10 @@ import (
 
 func TestParseLevel(t *testing.T) {
 	tt := []struct {
+		expectedErr error
 		name        string
 		level       string
 		expectedLvl slog.Level
-		expectedErr error
 	}{
 		{
 			name:        "info",

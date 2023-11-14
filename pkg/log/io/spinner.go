@@ -49,8 +49,8 @@ type OktetoSpinner interface {
 type ttySpinner struct {
 	*sp.Spinner
 
-	message          string
 	getTerminalWidth func() (int, error)
+	message          string
 }
 
 // newTTYSpinner creates a new ttySpinner

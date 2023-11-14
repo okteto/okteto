@@ -24,12 +24,12 @@ import (
 func TestLogrusFormatter(t *testing.T) {
 	formatter := newLogrusJSONFormatter()
 	tt := []struct {
+		expectedErr error
 		name        string
 		level       string
 		stage       string
 		message     string
 		expected    string
-		expectedErr error
 	}{
 		{
 			name:        "empty stage",
