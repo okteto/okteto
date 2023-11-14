@@ -75,10 +75,10 @@ type Dev struct {
 	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
 	ServiceAccount       string                `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
-	ParentSyncFolder     string
-	Interface            string           `json:"interface,omitempty" yaml:"interface,omitempty"`
-	Mode                 string           `json:"mode,omitempty" yaml:"mode,omitempty"`
-	ImagePullPolicy      apiv1.PullPolicy `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
+	ParentSyncFolder     string                `json:"-" yaml:"-"`
+	Interface            string                `json:"interface,omitempty" yaml:"interface,omitempty"`
+	Mode                 string                `json:"mode,omitempty" yaml:"mode,omitempty"`
+	ImagePullPolicy      apiv1.PullPolicy      `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 
 	Tolerations     []apiv1.Toleration `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 	Command         Command            `json:"command,omitempty" yaml:"command,omitempty"`
