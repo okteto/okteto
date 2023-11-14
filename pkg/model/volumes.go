@@ -97,6 +97,7 @@ func (dev *Dev) IsSubPathFolder(path string) (bool, error) {
 	return false, oktetoErrors.ErrNotFound
 }
 
+// ComputeParentSyncFolder calculates the parent sync folder
 func (dev *Dev) ComputeParentSyncFolder() {
 	pathSplits := map[int]string{}
 	maxIndex := -1

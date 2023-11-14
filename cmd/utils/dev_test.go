@@ -360,7 +360,6 @@ func Test_SelectDevFromManifest(t *testing.T) {
 	parentSyncFolder := "/"
 	localAbsPath, err := filepath.Abs(parentSyncFolder)
 	assert.NoError(t, err)
-	remoteAbsPath := "/remote"
 
 	tests := []struct {
 		err      error
@@ -379,16 +378,13 @@ func Test_SelectDevFromManifest(t *testing.T) {
 						Sync: model.Sync{
 							Folders: []model.SyncFolder{
 								{
-									LocalPath:  localAbsPath,
-									RemotePath: remoteAbsPath,
+									LocalPath:  "/",
+									RemotePath: "/remote",
 								},
 							},
 						},
 						SSHServerPort: 80,
-						Image: &model.BuildInfo{
-
-							Dockerfile: "Dockerfile",
-						},
+						Image:         &model.BuildInfo{},
 					},
 					"test-2": &model.Dev{},
 				},
@@ -403,17 +399,13 @@ func Test_SelectDevFromManifest(t *testing.T) {
 				Sync: model.Sync{
 					Folders: []model.SyncFolder{
 						{
-							LocalPath:  localAbsPath,
-							RemotePath: remoteAbsPath,
+							LocalPath:  "/",
+							RemotePath: "/remote",
 						},
 					},
 				},
 				SSHServerPort: 80,
-				Image: &model.BuildInfo{
-					Context:    localAbsPath,
-					Dockerfile: filepath.Join(localAbsPath, "Dockerfile"),
-				},
-				ParentSyncFolder: parentSyncFolder,
+				Image:         &model.BuildInfo{},
 			},
 		},
 		{

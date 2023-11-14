@@ -406,6 +406,7 @@ func NewDev() *Dev {
 	}
 }
 
+// LoadAbsPaths makes every path used in the dev struct an absolute paths
 func (dev *Dev) LoadAbsPaths(devPath string) error {
 	if devPath == "" {
 		return fmt.Errorf("devPath cannot be empty")
@@ -707,6 +708,7 @@ func (dev *Dev) setTimeout() error {
 	return nil
 }
 
+// ExpandEnvFiles reads each env file and append all the variables to the environment
 func (dev *Dev) ExpandEnvFiles() error {
 	for _, envFile := range dev.EnvFiles {
 		filename, err := ExpandEnv(envFile, true)
@@ -813,6 +815,21 @@ func (dev *Dev) Validate() error {
 			return err
 		}
 	}
+
+	return nil
+}
+
+// Prepare calls other methods required to have the dev ready to use
+func (dev *Dev) Prepare(manifestPath string) error {
+	if err := dev.LoadAbsPaths(manifestPath); err != nil {
+		return err
+	}
+
+	if err := dev.ExpandEnvFiles(); err != nil {
+		return err
+	}
+
+	dev.ComputeParentSyncFolder()
 
 	return nil
 }
