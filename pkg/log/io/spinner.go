@@ -37,7 +37,7 @@ const (
 	charsToRemoveForThreeDots = 5
 )
 
-// Spinner is the interface for the spinner
+// OktetoSpinner is the interface for the spinner
 type OktetoSpinner interface {
 	Start()
 	Stop()
