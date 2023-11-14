@@ -25,10 +25,10 @@ import (
 
 func TestDestroy(t *testing.T) {
 	var tests = []struct {
+		sfs       *appsv1.StatefulSet
 		name      string
 		sfsName   string
 		namespace string
-		sfs       *appsv1.StatefulSet
 		deleted   bool
 	}{
 		{

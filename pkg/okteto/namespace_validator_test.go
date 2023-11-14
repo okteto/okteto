@@ -23,8 +23,8 @@ func Test_validateNamespaceName(t *testing.T) {
 	tests := []struct {
 		name          string
 		namespace     string
-		expectedError bool
 		errorMessage  string
+		expectedError bool
 	}{
 		{
 			name:          "ok-namespace-starts-with-letter",

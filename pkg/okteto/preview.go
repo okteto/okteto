@@ -48,8 +48,8 @@ func newPreviewClient(client graphqlClientInterface) *previewClient {
 type PreviewEnv struct {
 	ID       string `json:"id" yaml:"id"`
 	Job      string `json:"job" yaml:"job"`
-	Sleeping bool   `json:"sleeping" yaml:"sleeping"`
 	Scope    string `json:"scope" yaml:"scope"`
+	Sleeping bool   `json:"sleeping" yaml:"sleeping"`
 }
 
 type InputVariable struct {
@@ -134,15 +134,15 @@ type endpointURL struct {
 
 type deprecatedPreviewEnv struct {
 	Id       graphql.String
-	Sleeping graphql.Boolean
 	Scope    graphql.String
+	Sleeping graphql.Boolean
 }
 
 type previewEnv struct {
 	Id            graphql.String
-	Sleeping      graphql.Boolean
 	Scope         graphql.String
 	PreviewLabels []graphql.String
+	Sleeping      graphql.Boolean
 }
 
 type deployPreviewResponse struct {

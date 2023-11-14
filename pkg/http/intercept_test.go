@@ -57,9 +57,9 @@ func TestInterceptAppend(t *testing.T) {
 
 func TestInterceptMatch(t *testing.T) {
 	tests := []struct {
+		expected  map[string]bool
 		name      string
 		bootstrap []string
-		expected  map[string]bool
 	}{
 		{
 			name:      "multiple items",

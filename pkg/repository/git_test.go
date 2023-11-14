@@ -28,13 +28,13 @@ func TestIsClean(t *testing.T) {
 		repositoryGetter *fakeRepositoryGetter
 	}
 	type expected struct {
-		isClean bool
 		err     error
+		isClean bool
 	}
 	var tests = []struct {
-		name     string
-		config   config
 		expected expected
+		config   config
+		name     string
 	}{
 		{
 			name: "dir is not a repository",
@@ -194,13 +194,13 @@ func TestGetSHA(t *testing.T) {
 		repositoryGetter *fakeRepositoryGetter
 	}
 	type expected struct {
-		sha string
 		err error
+		sha string
 	}
 	var tests = []struct {
-		name     string
-		config   config
 		expected expected
+		config   config
+		name     string
 	}{
 		{
 			name: "get sha without any problem",
@@ -303,14 +303,14 @@ func TestGetTreeHash(t *testing.T) {
 		repositoryGetter *fakeRepositoryGetter
 	}
 	type expected struct {
-		sha string
 		err error
+		sha string
 	}
 	var tests = []struct {
-		name         string
-		config       config
-		buildContext string
 		expected     expected
+		config       config
+		name         string
+		buildContext string
 	}{
 		{
 			name: "get tree hash without any problem",

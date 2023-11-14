@@ -14,8 +14,8 @@
 package filesystem
 
 type FakeWorkingDirectoryCtrl struct {
-	wd     string
 	errors FakeWorkingDirectoryCtrlErrors
+	wd     string
 }
 
 type FakeWorkingDirectoryCtrlErrors struct {

@@ -991,10 +991,10 @@ func Test_translateResources(t *testing.T) {
 		r model.ResourceRequirements
 	}
 	tests := []struct {
-		name             string
 		args             args
 		expectedRequests map[apiv1.ResourceName]resource.Quantity
 		expectedLimits   map[apiv1.ResourceName]resource.Quantity
+		name             string
 	}{
 		{
 			name: "no-limits-in-yaml",
@@ -1250,11 +1250,11 @@ func Test_translateSecurityContextWithParams(t *testing.T) {
 	var falseB = false
 
 	pass_tests := []struct {
-		name                             string
 		c                                *apiv1.Container
 		s                                *model.SecurityContext
 		expectedRunAsNonRoot             *bool
 		expectedAllowPrivilegeEscalation *bool
+		name                             string
 	}{
 		{
 			name: "add_nonroot",
@@ -2111,8 +2111,8 @@ func Test_translateAnnotations(t *testing.T) {
 func Test_getDevName(t *testing.T) {
 	var tests = []struct {
 		name     string
-		tr       Translation
 		expected string
+		tr       Translation
 	}{
 		{
 			name: "missing name",

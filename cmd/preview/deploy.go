@@ -46,10 +46,10 @@ type DeployOptions struct {
 	repository         string
 	scope              string
 	sourceUrl          string
-	timeout            time.Duration
 	variables          []string
-	wait               bool
 	labels             []string
+	timeout            time.Duration
+	wait               bool
 }
 
 // Deploy Deploy a preview environment

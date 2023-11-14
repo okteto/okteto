@@ -101,10 +101,10 @@ func TestTranslateHealthcheckCurlToHttp(t *testing.T) {
 
 func Test_DeployReplicasUnmarshalling(t *testing.T) {
 	tests := []struct {
-		name      string
 		deployRaw *DeployInfoRaw
 		scale     *int32
 		replicas  *int32
+		name      string
 		expected  int32
 	}{
 		{
@@ -303,9 +303,9 @@ func Test_DeployResourcesUnmarshalling(t *testing.T) {
 
 func Test_HealthcheckUnmarshalling(t *testing.T) {
 	tests := []struct {
+		expected      *HealthCheck
 		name          string
 		manifest      []byte
-		expected      *HealthCheck
 		expectedError bool
 	}{
 		{
@@ -436,9 +436,9 @@ func Test_HealthcheckUnmarshalling(t *testing.T) {
 
 func Test_NodeSelectorUnmarshalling(t *testing.T) {
 	tests := []struct {
+		expected      Selector
 		name          string
 		manifest      []byte
-		expected      Selector
 		expectedError bool
 	}{
 		{
@@ -479,9 +479,9 @@ func Test_NodeSelectorUnmarshalling(t *testing.T) {
 
 func TestComposeBuildSectionUnmarshalling(t *testing.T) {
 	tests := []struct {
+		expected *composeBuildInfo
 		name     string
 		bytes    []byte
-		expected *composeBuildInfo
 	}{
 		{
 			name:     "with depends on fail",
@@ -788,9 +788,9 @@ func Test_GroupNotSupportedFields(t *testing.T) {
 
 func TestStackResourcesUnmarshalling(t *testing.T) {
 	tests := []struct {
+		expected StackResources
 		name     string
 		data     []byte
-		expected StackResources
 	}{
 		{
 			name: "limits-requests",
@@ -872,9 +872,9 @@ func Test_validateCommandArgs(t *testing.T) {
 	tests := []struct {
 		name        string
 		manifest    []byte
-		isCompose   bool
 		Entrypoint  Entrypoint
 		Command     Command
+		isCompose   bool
 		expectedErr bool
 	}{
 		{
@@ -1105,8 +1105,8 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 	tests := []struct {
 		name     string
 		manifest []byte
-		isPublic bool
 		ports    []Port
+		isPublic bool
 	}{
 		{
 			name:     "expose-range-and-ports-range",
@@ -1218,9 +1218,9 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 
 func Test_unmarshalVolumes(t *testing.T) {
 	tests := []struct {
+		expectedVolume *VolumeSpec
 		name           string
 		manifest       []byte
-		expectedVolume *VolumeSpec
 	}{
 		{
 			name:           "simple volume",
@@ -1307,8 +1307,8 @@ func Test_sanitizeVolumeName(t *testing.T) {
 func Test_UnmarshalRestart(t *testing.T) {
 	tests := []struct {
 		name     string
-		manifest []byte
 		result   apiv1.RestartPolicy
+		manifest []byte
 		throwErr bool
 	}{
 		{
@@ -1391,8 +1391,8 @@ func Test_UnmarshalRestart(t *testing.T) {
 func Test_UnmarshalSvcName(t *testing.T) {
 	tests := []struct {
 		name            string
-		manifest        []byte
 		svcName         string
+		manifest        []byte
 		isSvcNameChange bool
 	}{
 		{
@@ -1439,10 +1439,10 @@ func Test_UnmarshalSvcName(t *testing.T) {
 
 func Test_DeployLabels(t *testing.T) {
 	tests := []struct {
-		name        string
-		manifest    []byte
 		annotations Annotations
 		labels      Labels
+		name        string
+		manifest    []byte
 		isCompose   bool
 	}{
 
@@ -1509,9 +1509,9 @@ func Test_DeployLabels(t *testing.T) {
 
 func Test_endpoints(t *testing.T) {
 	tests := []struct {
+		expected EndpointSpec
 		name     string
 		manifest []byte
-		expected EndpointSpec
 	}{
 		{
 			name: "rule with name",
@@ -1735,9 +1735,9 @@ func Test_Environment(t *testing.T) {
 
 func Test_MultipleEndpoints(t *testing.T) {
 	tests := []struct {
+		expectedStack *Stack
 		name          string
 		manifest      []byte
-		expectedStack *Stack
 		svcPublic     bool
 	}{
 		{
@@ -1883,9 +1883,9 @@ services:
 
 func Test_ExtensionUnmarshalling(t *testing.T) {
 	tests := []struct {
+		expected      *Service
 		name          string
 		manifest      []byte
-		expected      *Service
 		expectedError bool
 	}{
 		{
@@ -1937,10 +1937,10 @@ func Test_ExtensionUnmarshalling(t *testing.T) {
 
 func Test_UnmarshalStackUser(t *testing.T) {
 	tests := []struct {
+		expected      *StackSecurityContext
 		name          string
 		manifest      []byte
 		errorExpected bool
-		expected      *StackSecurityContext
 	}{
 		{
 			name:     "expanded form",

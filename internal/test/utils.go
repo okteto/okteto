@@ -22,10 +22,10 @@ import (
 )
 
 type KubeconfigFields struct {
-	Name           []string
-	Namespace      []string
 	CurrentContext string
 	ClusterCert    string
+	Name           []string
+	Namespace      []string
 }
 
 func CreateKubeconfig(kubeconfigFields KubeconfigFields) (string, error) {

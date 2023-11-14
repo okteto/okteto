@@ -35,9 +35,9 @@ type UpOptions struct {
 	Service      string
 	ManifestPath string
 	Workdir      string
-	Deploy       bool
 	OktetoHome   string
 	Token        string
+	Deploy       bool
 }
 
 // UpCommandProcessResult has the information about the command process

@@ -87,10 +87,10 @@ func TestUpdate(t *testing.T) {
 
 func TestDestroy(t *testing.T) {
 	var tests = []struct {
+		job       *batchv1.Job
 		name      string
 		jobName   string
 		namespace string
-		job       *batchv1.Job
 		deleted   bool
 	}{
 		{

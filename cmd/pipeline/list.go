@@ -17,6 +17,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
+	"strings"
+	"text/tabwriter"
+
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/constants"
@@ -27,21 +32,17 @@ import (
 	"github.com/okteto/okteto/pkg/repository"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
-	"io"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes"
-	"os"
-	"strings"
-	"text/tabwriter"
 )
 
 type listFlags struct {
-	labels    []string
 	context   string
 	namespace string
 	output    string
+	labels    []string
 }
 
 type pipelineListItem struct {

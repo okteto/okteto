@@ -19,8 +19,8 @@ import (
 
 func Test_needsDatabaseReset(t *testing.T) {
 	tests := []struct {
-		name                      string
 		wfc                       *waitForCompletion
+		name                      string
 		previousLocalGlobalBytes  int64
 		previousRemoteGlobalBytes int64
 		globalBytesRetries        int64
@@ -138,8 +138,8 @@ func Test_needsDatabaseReset(t *testing.T) {
 
 func Test_isCompleted(t *testing.T) {
 	tests := []struct {
-		name               string
 		wfc                *waitForCompletion
+		name               string
 		needDeletesRetries int64
 		want               bool
 	}{

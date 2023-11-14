@@ -62,11 +62,11 @@ func TestTransformLabelsToSelector(t *testing.T) {
 
 func TestSetInMetadata(t *testing.T) {
 	tests := []struct {
-		name     string
 		om       *metav1.ObjectMeta
+		expected map[string]string
+		name     string
 		key      string
 		value    string
-		expected map[string]string
 	}{
 		{
 			name:     "empty-labels",

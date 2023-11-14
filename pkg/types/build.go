@@ -34,28 +34,27 @@ type HostMap struct {
 
 // BuildOptions define the options available for build
 type BuildOptions struct {
-	BuildArgs     []string
-	CacheFrom     []string
-	File          string
-	NoCache       bool
-	OutputMode    string
-	Path          string
-	Secrets       []string
-	Platform      string
-	Tag           string
-	Target        string
-	Namespace     string
-	BuildToGlobal bool
-	K8sContext    string
-	ExportCache   []string
+	Manifest    *model.Manifest
+	File        string
+	OutputMode  string
+	Path        string
+	Platform    string
+	Tag         string
+	Target      string
+	Namespace   string
+	K8sContext  string
+	DevTag      string
+	BuildArgs   []string
+	CacheFrom   []string
+	Secrets     []string
+	ExportCache []string
 	// CommandArgs comes from the user input on the command
-	CommandArgs  []string
-	EnableStages bool
+	CommandArgs []string
 
 	SshSessions []BuildSshSession
+	ExtraHosts  []HostMap
 
-	Manifest *model.Manifest
-	DevTag   string
-
-	ExtraHosts []HostMap
+	BuildToGlobal bool
+	NoCache       bool
+	EnableStages  bool
 }

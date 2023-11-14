@@ -40,10 +40,10 @@ type configRegistryInterface interface {
 }
 
 type oktetoBuilderConfig struct {
-	hasGlobalAccess     bool
-	isCleanProject      bool
 	repository          configRepositoryInterface
 	fs                  afero.Fs
+	hasGlobalAccess     bool
+	isCleanProject      bool
 	isOkteto            bool
 	isSmartBuildsEnable bool
 }

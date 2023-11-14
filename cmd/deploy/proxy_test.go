@@ -68,11 +68,11 @@ func Test_NewProxy(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
+		expectedErr    error
 		portGetter     func(string) (int, error)
 		fakeKubeconfig *fakeKubeConfig
 		expectedProxy  *Proxy
-		expectedErr    error
+		name           string
 	}{
 		{
 			name:        "err getting port, DNS not found error",

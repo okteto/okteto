@@ -94,9 +94,9 @@ func Test_IsLocalHostname(t *testing.T) {
 
 func TestKubetokenRefreshRoundTrip(t *testing.T) {
 	tt := []struct {
-		name         string
 		handleFunc   http.HandlerFunc
 		expectedErr  error
+		name         string
 		expectedCode int
 	}{
 		{
@@ -150,9 +150,9 @@ func TestGetK8sClientWithApiConfig(t *testing.T) {
 		cfg *rest.Config
 	}
 	tt := []struct {
-		name      string
-		apiConfig *clientcmdapi.Config
 		expected  expected
+		apiConfig *clientcmdapi.Config
+		name      string
 	}{
 		{
 			name: "ok",

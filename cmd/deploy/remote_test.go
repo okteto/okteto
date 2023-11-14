@@ -65,9 +65,9 @@ func TestRemoteTest(t *testing.T) {
 		cert          []byte
 	}
 	var tests = []struct {
+		expected error
 		name     string
 		config   config
-		expected error
 	}{
 		{
 			name: "OS can't access to the working directory",
@@ -385,15 +385,15 @@ func TestCreateDockerfile(t *testing.T) {
 		opts *Options
 	}
 	type expected struct {
+		err               error
+		buildEnvVars      map[string]string
 		dockerfileName    string
 		dockerfileContent string
-		buildEnvVars      map[string]string
-		err               error
 	}
 	var tests = []struct {
-		name     string
-		config   config
 		expected expected
+		config   config
+		name     string
 	}{
 		{
 			name: "OS can't access working directory",
@@ -542,8 +542,8 @@ func TestGetExtraHosts(t *testing.T) {
 
 	var tests = []struct {
 		name     string
-		metadata types.ClusterMetadata
 		expected []types.HostMap
+		metadata types.ClusterMetadata
 	}{
 		{
 			name:     "no metadata information",

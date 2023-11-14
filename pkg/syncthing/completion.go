@@ -35,13 +35,13 @@ type Completion struct {
 type waitForCompletion struct {
 	localCompletion           *Completion
 	remoteCompletion          *Completion
+	sy                        *Syncthing
 	previousLocalGlobalBytes  int64
 	previousRemoteGlobalBytes int64
 	globalBytesRetries        int64
 	needDeletesRetries        int64
 	retries                   int64
 	progress                  float64
-	sy                        *Syncthing
 }
 
 // WaitForCompletion waits for the remote to be totally synched

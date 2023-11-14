@@ -36,9 +36,9 @@ func TestDeployPipeline(t *testing.T) {
 		err      error
 	}
 	testCases := []struct {
+		expected expected
 		name     string
 		input    input
-		expected expected
 	}{
 		{
 			name: "with variables - error",
@@ -261,9 +261,9 @@ func TestGetPipelineByName(t *testing.T) {
 		err      error
 	}
 	testCases := []struct {
-		name     string
-		input    input
 		expected expected
+		input    input
+		name     string
 	}{
 		{
 			name: "error",
@@ -364,9 +364,9 @@ func TestDestroyPipeline(t *testing.T) {
 		err      error
 	}
 	testCases := []struct {
+		expected expected
 		name     string
 		input    input
-		expected expected
 	}{
 		{
 			name: "destroy volumes - error",
@@ -602,9 +602,9 @@ func TestGetPipelineResourcesStatus(t *testing.T) {
 		err      error
 	}
 	testCases := []struct {
-		name     string
-		input    input
 		expected expected
+		input    input
+		name     string
 	}{
 		{
 			name: "error",

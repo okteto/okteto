@@ -23,9 +23,9 @@ import (
 
 func TestDiscardReverseIfCollision(t *testing.T) {
 	tests := []struct {
-		name      string
 		devInput  *model.Dev
 		devOutput *model.Dev
+		name      string
 	}{
 		{
 			name: "no collision",

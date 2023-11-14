@@ -30,9 +30,9 @@ type DeployPreviewOptions struct {
 	Scope      string
 	Branch     string
 	Repository string
-	Wait       bool
 	OktetoHome string
 	Token      string
+	Wait       bool
 }
 
 // DestroyPreviewOptions defines the options that can be added to a deploy command

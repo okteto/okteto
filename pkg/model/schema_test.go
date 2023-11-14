@@ -14,8 +14,9 @@
 package model
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_mergeUnique(t *testing.T) {
@@ -62,9 +63,9 @@ func Test_mergeUnique(t *testing.T) {
 
 func Test_getStructKeys(t *testing.T) {
 	tests := []struct {
-		name     string
 		input    interface{}
 		expected map[string][]string
+		name     string
 	}{
 		{
 			name:     "int",
@@ -160,21 +161,20 @@ func Test_getStructKeys(t *testing.T) {
 		{
 			name: "anonymous struct with nested struct with pointer",
 			input: struct {
-				field1 string `yaml:"field1"`
-
 				nested *struct {
 					field2 string `yaml:"field2"`
 				}
+				field1 string `yaml:"field1"`
 			}{},
-			expected: map[string][]string{"_": {"field1", "field2"}},
+			expected: map[string][]string{"_": {"field2", "field1"}},
 		},
 		{
 			name: "anonymous struct with nested struct with pointer with no yaml tags",
 			input: struct {
-				field1 string `yaml:"field1"`
 				nested *struct {
 					field2 string
 				}
+				field1 string `yaml:"field1"`
 			}{},
 			expected: map[string][]string{"_": {"field1"}},
 		},
@@ -182,17 +182,17 @@ func Test_getStructKeys(t *testing.T) {
 			name:  "okteto manifest",
 			input: Manifest{},
 			expected: map[string][]string{
-				"forward.Forward":            {"localPort", "remotePort", "name", "labels"},
-				"forward.GlobalForward":      {"localPort", "remotePort", "name", "labels"},
-				"model.BuildInfo":            {"name", "context", "dockerfile", "cache_from", "target", "image", "export_cache", "depends_on", "secrets"},
+				"forward.Forward":            {"labels", "name", "localPort", "remotePort"},
+				"forward.GlobalForward":      {"labels", "name", "localPort", "remotePort"},
+				"model.BuildInfo":            {"secrets", "name", "context", "dockerfile", "target", "image", "cache_from", "export_cache", "depends_on"},
 				"model.Capabilities":         {"add", "drop"},
 				"model.ComposeInfo":          {"file", "services"},
-				"model.Dependency":           {"repository", "manifest", "branch", "wait", "timeout", "namespace"},
+				"model.Dependency":           {"repository", "manifest", "branch", "namespace", "timeout", "wait"},
 				"model.DeployCommand":        {"name", "command"},
-				"model.DeployInfo":           {"image", "endpoints", "remote"},
+				"model.DeployInfo":           {"endpoints", "image", "remote"},
 				"model.DestroyInfo":          {"image", "remote"},
-				"model.Dev":                  {"name", "selector", "annotations", "context", "namespace", "container", "imagePullPolicy", "workdir", "serviceAccount", "remote", "sshServerPort", "interface", "services", "initFromImage", "nodeSelector", "autocreate", "envFiles", "mode", "replicas", "healthchecks", "labels"},
-				"model.DivertDeploy":         {"driver", "namespace", "service", "port", "deployment"},
+				"model.Dev":                  {"selector", "annotations", "labels", "nodeSelector", "replicas", "workdir", "name", "context", "namespace", "container", "serviceAccount", "interface", "mode", "imagePullPolicy", "envFiles", "services", "remote", "sshServerPort", "initFromImage", "autocreate", "healthchecks"},
+				"model.DivertDeploy":         {"driver", "namespace", "service", "deployment", "port"},
 				"model.DivertHost":           {"virtualService", "namespace"},
 				"model.DivertVirtualService": {"name", "namespace", "routes"},
 				"model.EnvVar":               {"name", "value"},
@@ -202,15 +202,15 @@ func Test_getStructKeys(t *testing.T) {
 				"model.Lifecycle":            {"postStart", "postStop"},
 				"model.Manifest":             {"name", "namespace", "context", "icon", "dev", "build", "dependencies", "external"},
 				"model.Metadata":             {"labels", "annotations"},
-				"model.PersistentVolumeInfo": {"enabled", "storageClass", "size"},
+				"model.PersistentVolumeInfo": {"storageClass", "size", "enabled"},
 				"model.Probes":               {"liveness", "readiness", "startup"},
 				"model.ResourceRequirements": {"limits", "requests"},
 				"model.SecurityContext":      {"runAsUser", "runAsGroup", "fsGroup", "runAsNonRoot", "allowPrivilegeEscalation"},
-				"model.Service":              {"cap_add", "cap_drop", "env_file", "depends_on", "image", "labels", "annotations", "x-node-selector", "restart", "stop_grace_period", "workdir", "max_attempts", "public", "replicas"},
-				"model.Stack":                {"name", "volumes", "namespace", "context", "services", "endpoints"},
+				"model.Service":              {"labels", "x-node-selector", "depends_on", "workdir", "image", "restart", "cap_add", "cap_drop", "env_file", "annotations", "stop_grace_period", "replicas", "max_attempts", "public"},
+				"model.Stack":                {"volumes", "services", "endpoints", "name", "namespace", "context"},
 				"model.StackSecurityContext": {"runAsUser", "runAsGroup"},
 				"model.StorageResource":      {"class"},
-				"model.Sync":                 {"compression", "verbose", "rescanInterval"},
+				"model.Sync":                 {"rescanInterval", "compression", "verbose"},
 				"model.Timeout":              {"default", "resources"},
 				"model.VolumeSpec":           {"labels", "annotations", "class"},
 			},

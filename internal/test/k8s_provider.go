@@ -23,11 +23,11 @@ import (
 )
 
 type FakeK8sProvider struct {
-	objects             []runtime.Object
-	client              *fake.Clientset
-	restConfig          *rest.Config
 	errGetIngressClient error
 	ErrProvide          error
+	client              *fake.Clientset
+	restConfig          *rest.Config
+	objects             []runtime.Object
 }
 
 func NewFakeK8sProvider(objects ...runtime.Object) *FakeK8sProvider {

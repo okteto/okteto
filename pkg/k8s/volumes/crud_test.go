@@ -33,9 +33,9 @@ import (
 func Test_checkPVCValues(t *testing.T) {
 	className := "class"
 	var tests = []struct {
-		name      string
 		pvc       *apiv1.PersistentVolumeClaim
 		dev       *model.Dev
+		name      string
 		wantError bool
 	}{
 		{
@@ -237,15 +237,15 @@ func TestCreateForDev(t *testing.T) {
 	}
 
 	type verbAndError struct {
-		verb string
 		err  error
+		verb string
 	}
 
 	testTable := []struct {
 		name               string
-		expectedError      bool
-		addErrors          []verbAndError
 		existentPvcStorage string
+		addErrors          []verbAndError
+		expectedError      bool
 	}{
 		{
 			name:               "no error",
@@ -256,13 +256,13 @@ func TestCreateForDev(t *testing.T) {
 		{
 			name:               "get error",
 			expectedError:      true,
-			addErrors:          []verbAndError{{"get", assert.AnError}},
+			addErrors:          []verbAndError{{assert.AnError, "get"}},
 			existentPvcStorage: "2Gi",
 		},
 		{
 			name:               "update error",
 			expectedError:      true,
-			addErrors:          []verbAndError{{"update", assert.AnError}},
+			addErrors:          []verbAndError{{assert.AnError, "update"}},
 			existentPvcStorage: "2Gi",
 		},
 		{
@@ -278,7 +278,7 @@ func TestCreateForDev(t *testing.T) {
 		{
 			name:               "update error handled",
 			expectedError:      false,
-			addErrors:          []verbAndError{{"update", fmt.Errorf("persistentvolumeclaims \"%s\" is forbidden: only dynamically provisioned pvc can be resized and the storageclass that provisions the pvc must support resize", "test-okteto")}},
+			addErrors:          []verbAndError{{fmt.Errorf("persistentvolumeclaims \"%s\" is forbidden: only dynamically provisioned pvc can be resized and the storageclass that provisions the pvc must support resize", "test-okteto"), "update"}},
 			existentPvcStorage: "2Gi",
 		},
 	}

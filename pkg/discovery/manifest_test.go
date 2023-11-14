@@ -24,8 +24,8 @@ import (
 func TestGetOktetoManifestPathWhenExists(t *testing.T) {
 	var tests = []struct {
 		name          string
-		filesToCreate []string
 		expected      string
+		filesToCreate []string
 	}{
 		{
 			name:          "okteto manifest file exists on wd",

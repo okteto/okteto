@@ -11,9 +11,9 @@ import (
 )
 
 type FakeExternalResourceV1 struct {
-	testing.Fake
-	tracker      testing.ObjectTracker
 	possibleErrs PossibleERErrors
+	tracker      testing.ObjectTracker
+	testing.Fake
 }
 
 type PossibleERErrors struct {
@@ -52,5 +52,12 @@ func NewFakeExternalResourceV1(errs PossibleERErrors, objects ...runtime.Object)
 }
 
 func (c *FakeExternalResourceV1) ExternalResources(namespace string) k8sexternalresource.ExternalResourceInterface {
-	return &FakeExternalResource{c, namespace, c.possibleErrs.GetErr, c.possibleErrs.CreateErr, c.possibleErrs.UpdateErr, c.possibleErrs.ListErr}
+	return &FakeExternalResource{
+		Fake:      c,
+		ns:        namespace,
+		getErr:    c.possibleErrs.GetErr,
+		createErr: c.possibleErrs.CreateErr,
+		updateErr: c.possibleErrs.UpdateErr,
+		listErr:   c.possibleErrs.ListErr,
+	}
 }

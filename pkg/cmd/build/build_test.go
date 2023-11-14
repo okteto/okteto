@@ -32,9 +32,9 @@ func Test_validateImage(t *testing.T) {
 		CurrentContext: "test",
 	}
 	tests := []struct {
+		want  error
 		name  string
 		image string
-		want  error
 	}{
 		{
 			name:  "okteto-dev-valid",
@@ -72,11 +72,11 @@ func Test_validateImage(t *testing.T) {
 }
 
 type mockRegistry struct {
-	isGlobal         bool
-	isOktetoRegistry bool
 	registry         string
 	repo             string
 	tag              string
+	isGlobal         bool
+	isOktetoRegistry bool
 }
 
 func (*mockRegistry) HasGlobalPushAccess() (bool, error) {
@@ -142,13 +142,13 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 	}()
 
 	tests := []struct {
-		name        string
-		serviceName string
 		buildInfo   *model.BuildInfo
-		isOkteto    bool
-		mr          mockRegistry
 		initialOpts *types.BuildOptions
 		expected    *types.BuildOptions
+		name        string
+		serviceName string
+		mr          mockRegistry
+		isOkteto    bool
 	}{
 		{
 			name:        "is-okteto-empty-buildInfo",
@@ -399,9 +399,9 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 
 func TestOptsFromBuildInfoForRemoteDeploy(t *testing.T) {
 	tests := []struct {
-		name      string
 		buildInfo *model.BuildInfo
 		expected  *types.BuildOptions
+		name      string
 	}{
 		{
 			name: "all fields set",
@@ -473,8 +473,8 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 		dockerfile         string
 		fileExpected       string
 		optionalContext    string
-		dockerfilesCreated []string
 		expectedError      string
+		dockerfilesCreated []string
 	}{
 		{
 			name:               "dockerfile is abs path",
@@ -597,10 +597,10 @@ func Test_replaceSecretsSourceEnvWithTempFile(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name                    string
 		fs                      afero.Fs
-		secretTempFolder        string
 		buildOptions            *types.BuildOptions
+		name                    string
+		secretTempFolder        string
 		expectedErr             bool
 		expectedReplacedSecrets bool
 	}{
@@ -734,9 +734,9 @@ func Test_createTempFileWithExpandedEnvsAtSource(t *testing.T) {
 
 func Test_translateDockerErr(t *testing.T) {
 	tests := []struct {
-		name        string
 		input       error
 		expectedErr error
+		name        string
 	}{
 		{
 			name:        "err is nil",
