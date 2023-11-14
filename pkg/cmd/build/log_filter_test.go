@@ -1,12 +1,13 @@
 package build
 
 import (
-	"github.com/moby/buildkit/client"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/moby/buildkit/client"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewBuildKitLogsFilterEmptyRules(t *testing.T) {
@@ -69,8 +70,8 @@ func TestNewBuildKitLogsFilter(t *testing.T) {
 
 func TestBuildKitMissingCacheCondition(t *testing.T) {
 	tests := []struct {
-		name     string
 		v        *client.Vertex
+		name     string
 		expected bool
 	}{
 		{

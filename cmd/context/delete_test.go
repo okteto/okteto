@@ -26,10 +26,10 @@ import (
 func Test_deleteContext(t *testing.T) {
 
 	var tests = []struct {
-		name         string
 		ctxStore     *okteto.OktetoContextStore
-		toDelete     []string
+		name         string
 		afterContext string
+		toDelete     []string
 		expectedErr  bool
 	}{
 		{

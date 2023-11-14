@@ -135,8 +135,8 @@ func getFakeManifestV2(_ string) (*model.Manifest, error) {
 func TestIsBuildV2(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name           string
 		manifest       *model.Manifest
+		name           string
 		expectedAnswer bool
 	}{
 		{
@@ -256,11 +256,11 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 	assert.NoError(t, os.WriteFile(dockerfile, []byte(`FROM alpine`), 0600))
 	assert.NoError(t, os.WriteFile(malformedDockerfile, []byte(`FROM alpine`), 0600))
 	tests := []struct {
-		name              string
 		buildCommand      *Command
-		expectedError     bool
-		isBuildV2Expected bool
 		options           *types.BuildOptions
+		name              string
+		isBuildV2Expected bool
+		expectedError     bool
 	}{
 		{
 			name: "Manifest error fallback to v1",

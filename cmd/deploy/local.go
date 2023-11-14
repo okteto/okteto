@@ -42,15 +42,13 @@ type localDeployer struct {
 	Kubeconfig         kubeConfigHandler
 	ConfigMapHandler   configMapHandler
 	Executor           executor.ManifestExecutor
-	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
-
+	deployWaiter       DeployWaiter
+	Fs                 afero.Fs
+	DivertDriver       divert.Driver
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
-
-	deployWaiter DeployWaiter
-	isRemote     bool
-	Fs           afero.Fs
-	DivertDriver divert.Driver
+	TempKubeconfigFile string
+	isRemote           bool
 }
 
 // newLocalDeployer initializes a local deployer from a name and a boolean indicating if we should run with bash or not

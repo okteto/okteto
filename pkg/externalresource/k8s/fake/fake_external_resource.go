@@ -12,9 +12,9 @@ import (
 
 // FakeExternalResource implements ExternalResourceInterface
 type FakeExternalResource struct {
+	getErr, createErr, updateErr, listErr error
 	Fake                                  *FakeExternalResourceV1
 	ns                                    string
-	getErr, createErr, updateErr, listErr error
 }
 
 var externalResourceResource = schema.GroupVersionResource{Group: k8sexternalresource.GroupName, Version: k8sexternalresource.GroupVersion, Resource: k8sexternalresource.ExternalResourceResource}

@@ -73,8 +73,8 @@ func Test_K8sContextToOktetoUrl(t *testing.T) {
 
 func Test_IsOktetoCloud(t *testing.T) {
 	var tests = []struct {
-		name    string
 		context *OktetoContext
+		name    string
 		want    bool
 	}{
 		{name: "is-cloud", context: &OktetoContext{Name: "https://cloud.okteto.com"}, want: true},
@@ -141,8 +141,8 @@ func Test_AddOktetoCredentialsToCfg(t *testing.T) {
 	tests := []struct {
 		name              string
 		credentialCert    string
-		isInsecureContext bool
 		expectedCert      string
+		isInsecureContext bool
 	}{
 		{
 			name:              "with credential certificate and secure context",

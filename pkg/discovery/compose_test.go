@@ -24,8 +24,8 @@ import (
 func TestGetComposePathWhenExists(t *testing.T) {
 	var tests = []struct {
 		name          string
-		filesToCreate []string
 		expected      string
+		filesToCreate []string
 	}{
 		{
 			name:          "docker-compose file exists on wd",

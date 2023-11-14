@@ -23,12 +23,12 @@ const deployEvent = "Deploy"
 
 // DeployMetadata contains the metadata of a deploy event
 type DeployMetadata struct {
-	Success                bool
-	IsOktetoRepo           bool
 	Err                    error
-	Duration               time.Duration
 	PipelineType           model.Archetype
 	DeployType             string
+	Duration               time.Duration
+	Success                bool
+	IsOktetoRepo           bool
 	IsPreview              bool
 	HasDependenciesSection bool
 	HasBuildSection        bool

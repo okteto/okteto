@@ -49,38 +49,38 @@ type analyticsTrackerInterface interface {
 
 // upContext is the common context of all operations performed during the up command
 type upContext struct {
-	Cancel                context.CancelFunc
-	Registry              registryInterface
-	ShutdownCompleted     chan bool
-	Manifest              *model.Manifest
-	Dev                   *model.Dev
-	Translations          map[string]*apps.Translation
-	isRetry               bool
-	Pod                   *apiv1.Pod
+	StartTime             time.Time
 	Forwarder             forwarder
+	tokenUpdater          tokenUpdater
+	builder               builderInterface
+	analyticsTracker      analyticsTrackerInterface
+	Fs                    afero.Fs
+	K8sClientProvider     okteto.K8sClientProvider
+	Registry              registryInterface
 	Disconnect            chan error
-	GlobalForwarderStatus chan error
+	hybridCommand         *exec.Cmd
+	stateTerm             *term.State
 	CommandResult         chan error
 	Exit                  chan error
 	Sy                    *syncthing.Syncthing
 	cleaned               chan string
 	hardTerminate         chan error
+	Translations          map[string]*apps.Translation
+	Manifest              *model.Manifest
+	analyticsMeta         *analytics.UpMetricsMetadata
+	Dev                   *model.Dev
+	GlobalForwarderStatus chan error
+	ShutdownCompleted     chan bool
+	Options               *UpOptions
+	Pod                   *apiv1.Pod
+	Cancel                context.CancelFunc
+	pidController         pidController
+	inFd                  uintptr
+	isRetry               bool
 	success               bool
 	resetSyncthing        bool
-	inFd                  uintptr
 	isTerm                bool
-	stateTerm             *term.State
-	StartTime             time.Time
-	Options               *UpOptions
-	pidController         pidController
-	tokenUpdater          tokenUpdater
-	K8sClientProvider     okteto.K8sClientProvider
-	Fs                    afero.Fs
-	hybridCommand         *exec.Cmd
 	interruptReceived     bool
-	analyticsTracker      analyticsTrackerInterface
-	analyticsMeta         *analytics.UpMetricsMetadata
-	builder               builderInterface
 }
 
 // Forwarder is an interface for the port-forwarding features

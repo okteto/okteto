@@ -23,8 +23,8 @@ import (
 func TestFakeTemporalDirectoryCtrl(t *testing.T) {
 	tempDirCtrl := NewTemporalDirectoryCtrl(afero.NewMemMapFs())
 	var tests = []struct {
-		name   string
 		errors error
+		name   string
 	}{
 		{
 			name:   "create with error",

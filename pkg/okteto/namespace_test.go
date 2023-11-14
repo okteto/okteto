@@ -26,13 +26,13 @@ func TestCreateNamespace(t *testing.T) {
 		client *fakeGraphQLClient
 	}
 	type expected struct {
-		id  string
 		err error
+		id  string
 	}
 	testCases := []struct {
-		name     string
-		cfg      input
 		expected expected
+		cfg      input
+		name     string
 	}{
 		{
 			name: "error in graphql",
@@ -80,13 +80,13 @@ func TestDeleteNamespace(t *testing.T) {
 		client *fakeGraphQLClient
 	}
 	type expected struct {
-		id  string
 		err error
+		id  string
 	}
 	testCases := []struct {
-		name     string
-		cfg      input
 		expected expected
+		cfg      input
+		name     string
 	}{
 		{
 			name: "error in graphql",
@@ -133,13 +133,13 @@ func TestAddMembers(t *testing.T) {
 		client *fakeGraphQLClient
 	}
 	type expected struct {
-		id  string
 		err error
+		id  string
 	}
 	testCases := []struct {
-		name     string
-		cfg      input
 		expected expected
+		cfg      input
+		name     string
 	}{
 		{
 			name: "error in graphql",
@@ -186,12 +186,12 @@ func TestListNamespaces(t *testing.T) {
 		client *fakeGraphQLClient
 	}
 	type expected struct {
-		result []types.Namespace
 		err    error
+		result []types.Namespace
 	}
 	testCases := []struct {
-		name     string
 		cfg      input
+		name     string
 		expected expected
 	}{
 		{
@@ -256,13 +256,13 @@ func TestWakeNamespace(t *testing.T) {
 		client *fakeGraphQLClient
 	}
 	type expected struct {
-		id  string
 		err error
+		id  string
 	}
 	testCases := []struct {
-		name     string
 		cfg      input
 		expected expected
+		name     string
 	}{
 		{
 			name: "error in graphql",
@@ -309,13 +309,13 @@ func TestDestroyAllNamespace(t *testing.T) {
 		client *fakeGraphQLClient
 	}
 	type expected struct {
-		id  string
 		err error
+		id  string
 	}
 	testCases := []struct {
-		name     string
 		cfg      input
 		expected expected
+		name     string
 	}{
 		{
 			name: "error in graphql",
@@ -362,13 +362,13 @@ func TestSleepNamespace(t *testing.T) {
 		client *fakeGraphQLClient
 	}
 	type expected struct {
-		id  string
 		err error
+		id  string
 	}
 	testCases := []struct {
-		name     string
-		cfg      input
 		expected expected
+		cfg      input
+		name     string
 	}{
 		{
 			name: "error in graphql",

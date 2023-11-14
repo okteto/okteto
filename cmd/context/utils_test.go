@@ -27,11 +27,11 @@ import (
 
 func Test_addKubernetesContext(t *testing.T) {
 	var tests = []struct {
-		name         string
 		cfg          *clientcmdapi.Config
 		ctxResource  *model.ContextResource
 		currentStore *okteto.OktetoContextStore
 		wantStore    *okteto.OktetoContextStore
+		name         string
 		wantError    bool
 	}{
 		{
@@ -125,11 +125,11 @@ func Test_addKubernetesContext(t *testing.T) {
 
 func Test_GetManifestV2(t *testing.T) {
 	tests := []struct {
+		expectedManifest *model.Manifest
 		name             string
 		file             string
 		manifestYAML     []byte
 		expectedErr      bool
-		expectedManifest *model.Manifest
 	}{
 		{
 			name:        "file-is-defined-option",
@@ -223,11 +223,11 @@ dependencies:
 
 func Test_GetCtxResource(t *testing.T) {
 	tests := []struct {
+		expectedErr         error
+		expectedCtxResource *model.ContextResource
 		name                string
 		manifestName        string
-		expectedErr         error
 		manifestYAML        []byte
-		expectedCtxResource *model.ContextResource
 	}{
 		{
 			name:         "valid manifest returns a initialized ctx resource",

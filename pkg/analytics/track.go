@@ -134,9 +134,9 @@ func TrackManifestHasChanged(success bool) {
 
 // TrackExecMetadata is the metadata added to execEvent
 type TrackExecMetadata struct {
+	Mode                   string
 	FirstArgIsDev          bool
 	Success                bool
-	Mode                   string
 	IsOktetoRepository     bool
 	IsInteractive          bool
 	HasBuildSection        bool

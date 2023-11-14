@@ -71,8 +71,8 @@ type LocalGitInterface interface {
 }
 
 type LocalGit struct {
-	gitPath string
 	exec    CommandExecutor
+	gitPath string
 }
 
 func NewLocalGit(gitPath string, exec CommandExecutor) *LocalGit {

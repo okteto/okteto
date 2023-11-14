@@ -36,9 +36,9 @@ func TestDeployPreview(t *testing.T) {
 		err      error
 	}
 	testCases := []struct {
+		expected expected
 		name     string
 		input    input
-		expected expected
 	}{
 		{
 			name: "namespace validator length exceeds",
@@ -240,9 +240,9 @@ func TestDestroyPreview(t *testing.T) {
 		err error
 	}
 	testCases := []struct {
-		name     string
-		input    input
 		expected expected
+		input    input
+		name     string
 	}{
 		{
 			name: "no error",
@@ -292,13 +292,13 @@ func TestListPreview(t *testing.T) {
 		labels []string
 	}
 	type expected struct {
-		response []types.Preview
 		err      error
+		response []types.Preview
 	}
 	testCases := []struct {
 		name     string
-		input    input
 		expected expected
+		input    input
 	}{
 		{
 			name: "no error",
@@ -418,12 +418,12 @@ func TestDeprecatedListPreview(t *testing.T) {
 		client *fakeGraphQLClient
 	}
 	type expected struct {
-		response []types.Preview
 		err      error
+		response []types.Preview
 	}
 	testCases := []struct {
-		name     string
 		input    input
+		name     string
 		expected expected
 	}{
 		{
@@ -484,12 +484,12 @@ func TestListEndpoints(t *testing.T) {
 		name   string
 	}
 	type expected struct {
-		response []types.Endpoint
 		err      error
+		response []types.Endpoint
 	}
 	testCases := []struct {
-		name     string
 		input    input
+		name     string
 		expected expected
 	}{
 		{
@@ -607,9 +607,9 @@ func TestGetResourcesStatus(t *testing.T) {
 		err      error
 	}
 	testCases := []struct {
-		name     string
 		input    input
 		expected expected
+		name     string
 	}{
 		{
 			name: "error",
@@ -859,9 +859,9 @@ func TestTranslatePreviewErr(t *testing.T) {
 		err error
 	}
 	testCases := []struct {
-		name     string
-		input    input
 		expected expected
+		input    input
+		name     string
 	}{
 		{
 			name: "another error",

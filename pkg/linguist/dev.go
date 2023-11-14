@@ -27,6 +27,7 @@ import (
 )
 
 type languageDefault struct {
+	securityContext *model.SecurityContext
 	image           string
 	path            string
 	command         []string
@@ -35,7 +36,6 @@ type languageDefault struct {
 	forward         []forward.Forward
 	reverse         []model.Reverse
 	remote          int
-	securityContext *model.SecurityContext
 }
 
 const (

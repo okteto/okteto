@@ -11,10 +11,10 @@ import (
 
 func TestReadDevRC(t *testing.T) {
 	var tests = []struct {
+		expected *DevRC
 		name     string
 		logLevel string
 		manifest []byte
-		expected *DevRC
 	}{
 		{
 			name:     "none",
@@ -134,10 +134,10 @@ resources:
 
 func TestDevRCSelector(t *testing.T) {
 	var tests = []struct {
-		name     string
 		dev      *Dev
 		devRC    *DevRC
 		expected Selector
+		name     string
 	}{
 		{
 			name:     "not overwrite",
@@ -218,10 +218,10 @@ func TestDevRCCommand(t *testing.T) {
 
 func TestDevRCAnnotations(t *testing.T) {
 	var tests = []struct {
-		name     string
 		dev      *Dev
 		devRC    *DevRC
 		expected Annotations
+		name     string
 	}{
 		{
 			name:     "not overwrite",

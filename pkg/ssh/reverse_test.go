@@ -22,9 +22,9 @@ import (
 
 func TestReverseManager_Add(t *testing.T) {
 	tests := []struct {
+		reverses map[int]*reverse
 		name     string
 		add      model.Reverse
-		reverses map[int]*reverse
 		wantErr  bool
 	}{
 		{

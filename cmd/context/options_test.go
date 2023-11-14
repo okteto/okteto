@@ -23,10 +23,10 @@ import (
 
 func Test_initFromContext(t *testing.T) {
 	var tests = []struct {
-		name     string
 		in       *ContextOptions
 		ctxStore *okteto.OktetoContextStore
 		want     *ContextOptions
+		name     string
 	}{
 		{
 			name:     "all-empty",
@@ -113,10 +113,10 @@ func Test_initFromContext(t *testing.T) {
 
 func Test_initFromEnvVars(t *testing.T) {
 	var tests = []struct {
-		name string
 		in   *ContextOptions
 		env  map[string]string
 		want *ContextOptions
+		name string
 	}{
 		{
 			name: "all-empty",

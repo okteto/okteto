@@ -21,11 +21,11 @@ const MalformedPortForward = "Wrong port-forward syntax '%s', must be of the for
 
 // Forward represents a port forwarding definition
 type Forward struct {
+	Labels      map[string]string `json:"labels" yaml:"labels"`
+	ServiceName string            `json:"name" yaml:"name"`
 	Local       int               `json:"localPort" yaml:"localPort"`
 	Remote      int               `json:"remotePort" yaml:"remotePort"`
 	Service     bool              `json:"-" yaml:"-"`
-	ServiceName string            `json:"name" yaml:"name"`
-	Labels      map[string]string `json:"labels" yaml:"labels"`
 	IsGlobal    bool              `json:"-" yaml:"-"`
 }
 

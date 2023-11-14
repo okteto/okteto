@@ -14,10 +14,10 @@ func Test_getErrorMessage(t *testing.T) {
 	imageTag := "example/image:latest"
 
 	tests := []struct {
-		name     string
 		err      error
-		tag      string
 		expected error
+		name     string
+		tag      string
 	}{
 		{
 			name:     "no error",
@@ -106,8 +106,8 @@ func Test_getErrorMessage(t *testing.T) {
 
 func Test_isTransientError(t *testing.T) {
 	tests := []struct {
-		name     string
 		err      error
+		name     string
 		expected bool
 	}{
 		{

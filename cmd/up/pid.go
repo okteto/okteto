@@ -30,11 +30,11 @@ const oktetoPIDFilename = "okteto.pid"
 
 // PIDController creates get and removes the info about the OktetoPID
 type pidController struct {
-	pidFilePath        string
 	filesystem         afero.Fs
 	pidProvider        pidProvider
 	pidWatcherProvider pidWatcherProvider
 	watcher            pidWatcher
+	pidFilePath        string
 }
 
 type pidProvider interface {

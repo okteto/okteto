@@ -75,17 +75,17 @@ type analyticsTrackerInterface interface {
 
 // OktetoBuilder builds the images
 type OktetoBuilder struct {
-	Builder   OktetoBuilderInterface
-	Registry  oktetoRegistryInterface
-	V1Builder *buildv1.OktetoBuilder
+	Builder          OktetoBuilderInterface
+	Registry         oktetoRegistryInterface
+	Config           oktetoBuilderConfigInterface
+	analyticsTracker analyticsTrackerInterface
+	V1Builder        *buildv1.OktetoBuilder
 
-	Config oktetoBuilderConfigInterface
 	// buildEnvironments are the environment variables created by the build steps
 	buildEnvironments map[string]string
 
 	// lock is a mutex to provide builEnvironments map safe concurrency
-	lock             sync.RWMutex
-	analyticsTracker analyticsTrackerInterface
+	lock sync.RWMutex
 
 	ioCtrl *io.IOController
 }

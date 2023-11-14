@@ -26,11 +26,11 @@ import (
 type BuildOptions struct {
 	Workdir      string
 	ManifestPath string
-	SvcsToBuild  []string
 	Tag          string
 	Namespace    string
 	OktetoHome   string
 	Token        string
+	SvcsToBuild  []string
 	NoCache      bool
 }
 

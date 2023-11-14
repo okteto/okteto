@@ -46,9 +46,9 @@ type pushOptions struct {
 	Namespace  string
 	K8sContext string
 	ImageTag   string
-	AutoDeploy bool
 	Progress   string
 	AppName    string
+	AutoDeploy bool
 	NoCache    bool
 }
 

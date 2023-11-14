@@ -52,10 +52,11 @@ type hybridExecutor struct {
 }
 
 type HybridExecCtx struct {
-	Workdir         string
-	Dev             *model.Dev
-	Name, Namespace string
-	Client          kubernetes.Interface
+	Client    kubernetes.Interface
+	Dev       *model.Dev
+	Workdir   string
+	Name      string
+	Namespace string
 }
 
 // GetCommandToExec returns the command to exec into the hybrid mode
@@ -173,14 +174,15 @@ type imageEnvsGetter struct {
 }
 
 type envsGetter struct {
-	dev                   *model.Dev
-	name, namespace       string
 	client                kubernetes.Interface
 	devContainerEnvGetter devContainerEnvGetterInterface
 	configMapEnvsGetter   configMapEnvsGetterInterface
 	secretsEnvsGetter     secretsEnvsGetterInterface
 	imageEnvsGetter       imageEnvsGetterInterface
+	dev                   *model.Dev
 	getDefaultLocalEnvs   func() []string
+	name                  string
+	namespace             string
 }
 
 func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {

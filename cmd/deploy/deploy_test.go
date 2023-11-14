@@ -165,8 +165,8 @@ var noDeployNorDependenciesManifest *model.Manifest = &model.Manifest{
 
 type fakeProxy struct {
 	errOnShutdown error
-	port          int
 	token         string
+	port          int
 	started       bool
 	shutdown      bool
 }
@@ -775,15 +775,15 @@ func getFakeManifestWithDependency(_ string) (*model.Manifest, error) {
 
 func TestBuildImages(t *testing.T) {
 	testCases := []struct {
-		name                 string
+		expectedError        error
 		builder              *fakeV2Builder
-		build                bool
-		buildServices        []string
 		stack                *model.Stack
+		name                 string
+		buildServices        []string
 		servicesToDeploy     []string
 		servicesAlreadyBuilt []string
-		expectedError        error
 		expectedImages       []string
+		build                bool
 	}{
 		{
 			name: "everything",
@@ -900,8 +900,8 @@ func TestBuildImages(t *testing.T) {
 }
 
 type fakeExternalControl struct {
-	externals []externalresource.ExternalResource
 	err       error
+	externals []externalresource.ExternalResource
 }
 
 type fakeExternalControlProvider struct {
@@ -943,10 +943,10 @@ func TestDeployExternals(t *testing.T) {
 		CurrentContext: "test",
 	}
 	testCases := []struct {
-		name        string
-		options     *Options
-		expectedErr bool
 		control     ExternalResourceInterface
+		options     *Options
+		name        string
+		expectedErr bool
 	}{
 		{
 			name: "no externals to deploy",
@@ -1074,9 +1074,9 @@ func TestDeployDependencies(t *testing.T) {
 		pipelineErr error
 	}
 	tt := []struct {
-		name     string
 		config   config
 		expected error
+		name     string
 	}{
 		{
 			name:     "error deploying dependency",
@@ -1138,8 +1138,8 @@ func TestDeployOnlyDependencies(t *testing.T) {
 	}
 
 	tt := []struct {
-		name        string
 		expecterErr error
+		name        string
 		isOkteto    bool
 	}{
 		{
@@ -1180,10 +1180,10 @@ func (*fakeTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
 
 func TestTrackDeploy(t *testing.T) {
 	tt := []struct {
-		name       string
-		manifest   *model.Manifest
-		remoteFlag bool
 		commandErr error
+		manifest   *model.Manifest
+		name       string
+		remoteFlag bool
 	}{
 		{
 			name:       "error tracking deploy",
@@ -1328,9 +1328,9 @@ func TestShouldRunInRemoteDeploy(t *testing.T) {
 func TestOktetoManifestPathFlag(t *testing.T) {
 	opts := &Options{}
 	var tests = []struct {
+		expectedErr error
 		name        string
 		manifest    string
-		expectedErr error
 	}{
 		{
 			name:        "manifest file path exists",
@@ -1375,10 +1375,10 @@ func Test_GetDeployer(t *testing.T) {
 		IsNotFound: true,
 	}
 	tests := []struct {
-		name        string
+		expectedErr error
 		opts        *Options
 		portGetter  func(string) (int, error)
-		expectedErr error
+		name        string
 		isUserErr   bool
 	}{
 		{
