@@ -14,6 +14,7 @@
 package io
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,6 +35,40 @@ func TestNoSpinner(t *testing.T) {
 	sp.Start()
 	sp.Stop()
 	assert.Equal(t, "Test", sp.getMessage())
+}
+
+func TestPreUpdateFunc(t *testing.T) {
+	okSpinner := newTTYSpinner("test")
+
+	tt := []struct {
+		name     string
+		width    int
+		err      error
+		expected string
+	}{
+		{
+			name:     "width is 10",
+			width:    10,
+			err:      nil,
+			expected: "Test",
+		},
+		{
+			name:     "error getting terminal width",
+			width:    0,
+			err:      fmt.Errorf("error getting terminal width"),
+			expected: "Test",
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			okSpinner.getTerminalWidth = func() (int, error) {
+				return tc.width, tc.err
+			}
+
+			okSpinner.preUpdateFunc()(okSpinner.Spinner)
+			assert.Equal(t, "Test", okSpinner.Spinner.Suffix)
+		})
+	}
 }
 
 func TestCalculateSpinnerMessage(t *testing.T) {
