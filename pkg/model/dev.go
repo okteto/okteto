@@ -75,10 +75,10 @@ type Dev struct {
 	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
 	ServiceAccount       string                `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
-	ParentSyncFolder     string                `json:"-" yaml:"-"`
-	Interface            string                `json:"interface,omitempty" yaml:"interface,omitempty"`
-	Mode                 string                `json:"mode,omitempty" yaml:"mode,omitempty"`
-	ImagePullPolicy      apiv1.PullPolicy      `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
+	parentSyncFolder     string
+	Interface            string           `json:"interface,omitempty" yaml:"interface,omitempty"`
+	Mode                 string           `json:"mode,omitempty" yaml:"mode,omitempty"`
+	ImagePullPolicy      apiv1.PullPolicy `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 
 	Tolerations     []apiv1.Toleration `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 	Command         Command            `json:"command,omitempty" yaml:"command,omitempty"`
@@ -1358,8 +1358,8 @@ func (service *Dev) validateForExtraFields() error {
 	if service.ExternalVolumes != nil {
 		return fmt.Errorf(errorMessage, "externalVolumes")
 	}
-	if service.ParentSyncFolder != "" {
-		return fmt.Errorf(errorMessage, "ParentSyncFolder")
+	if service.parentSyncFolder != "" {
+		return fmt.Errorf(errorMessage, "parentSyncFolder")
 	}
 	if service.Forward != nil {
 		return fmt.Errorf(errorMessage, "forward")

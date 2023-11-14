@@ -1808,7 +1808,7 @@ devs:
 			manifest, err := Read(tt.manifest)
 			if manifest != nil {
 				for _, d := range manifest.Dev {
-					d.ParentSyncFolder = ""
+					d.parentSyncFolder = ""
 				}
 			}
 			if err != nil && !tt.isErrorExpected {
