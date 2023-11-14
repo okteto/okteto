@@ -62,7 +62,11 @@ func TestParseLevel(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			lvl, err := parseLevel(tc.level)
 			require.Equal(t, tc.expectedLvl, lvl)
-			require.Equal(t, tc.expectedErr, err)
+			if tc.expectedErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.expectedErr.Error())
+			}
 		})
 	}
 }
