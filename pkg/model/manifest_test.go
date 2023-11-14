@@ -1466,9 +1466,9 @@ func TestSecretValidate(t *testing.T) {
 	defer os.Remove(tmpDir)
 
 	var tests = []struct {
-		name        string
 		s           *Secret
 		expectedErr error
+		name        string
 	}{
 		{
 			name:        "missing local path",

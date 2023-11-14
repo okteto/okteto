@@ -97,6 +97,7 @@ type Manifest struct {
 	Namespace     string                                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Context       string                                   `json:"context,omitempty" yaml:"context,omitempty"`
 	Icon          string                                   `json:"icon,omitempty" yaml:"icon,omitempty"`
+	ManifestPath  string                                   `json:"-" yaml:"-"`
 	Deploy        *DeployInfo                              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev           ManifestDevs                             `json:"dev,omitempty" yaml:"dev,omitempty"`
 	Destroy       *DestroyInfo                             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
@@ -105,10 +106,9 @@ type Manifest struct {
 	GlobalForward []forward.GlobalForward                  `json:"forward,omitempty" yaml:"forward,omitempty"`
 	External      externalresource.ExternalResourceSection `json:"external,omitempty" yaml:"external,omitempty"`
 
-	Type         Archetype `json:"-" yaml:"-"`
-	Manifest     []byte    `json:"-" yaml:"-"`
-	ManifestPath string    `json:"-" yaml:"-"`
-	IsV2         bool      `json:"-" yaml:"-"`
+	Type     Archetype `json:"-" yaml:"-"`
+	Manifest []byte    `json:"-" yaml:"-"`
+	IsV2     bool      `json:"-" yaml:"-"`
 }
 
 // ManifestDevs defines all the dev section
