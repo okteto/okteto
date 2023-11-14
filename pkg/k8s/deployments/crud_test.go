@@ -29,11 +29,11 @@ import (
 
 func TestGet(t *testing.T) {
 	tests := []struct {
-		name               string
+		expectedErr        error
 		deployments        *appsv1.DeploymentList
 		dev                *model.Dev
+		name               string
 		namespace          string
-		expectedErr        error
 		expectedFoundCount int
 	}{
 		{
@@ -217,14 +217,14 @@ func TestGet(t *testing.T) {
 
 func TestCheckConditionErrors(t *testing.T) {
 	tests := []struct {
-		name        string
+		expectedErr error
 		deployment  *appsv1.Deployment
 		dev         *model.Dev
-		expectedErr error
+		name        string
 	}{
 		{
-			"Wrong quota",
-			&appsv1.Deployment{
+			name: "Wrong quota",
+			deployment: &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake",
 					Namespace: "test",
@@ -240,7 +240,7 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			&model.Dev{
+			dev: &model.Dev{
 				Resources: model.ResourceRequirements{
 					Limits: model.ResourceList{
 						apiv1.ResourceCPU:    resource.MustParse("2"),
@@ -248,11 +248,11 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			oktetoErrors.ErrQuota,
+			expectedErr: oktetoErrors.ErrQuota,
 		},
 		{
-			"Memory per pod exceeded",
-			&appsv1.Deployment{
+			name: "Memory per pod exceeded",
+			deployment: &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake",
 					Namespace: "test",
@@ -268,7 +268,7 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			&model.Dev{
+			dev: &model.Dev{
 				Resources: model.ResourceRequirements{
 					Limits: model.ResourceList{
 						apiv1.ResourceCPU:    resource.MustParse("2"),
@@ -276,11 +276,11 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			fmt.Errorf("The value of resources.limits.memory in your okteto manifest (5Gi) exceeds the maximum memory limit per pod (3Gi)."),
+			expectedErr: fmt.Errorf("The value of resources.limits.memory in your okteto manifest (5Gi) exceeds the maximum memory limit per pod (3Gi)."),
 		},
 		{
-			"Memory per pod exceeded 2",
-			&appsv1.Deployment{
+			name: "Memory per pod exceeded 2",
+			deployment: &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake",
 					Namespace: "test",
@@ -296,7 +296,7 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			&model.Dev{
+			dev: &model.Dev{
 				Resources: model.ResourceRequirements{
 					Limits: model.ResourceList{
 						apiv1.ResourceCPU:    resource.MustParse("2"),
@@ -304,11 +304,11 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			fmt.Errorf("The value of resources.limits.memory in your okteto manifest (5Gi) exceeds the maximum memory limit per pod (3Gi)."),
+			expectedErr: fmt.Errorf("The value of resources.limits.memory in your okteto manifest (5Gi) exceeds the maximum memory limit per pod (3Gi)."),
 		},
 		{
-			"Cpu per pod exceeded",
-			&appsv1.Deployment{
+			name: "Cpu per pod exceeded",
+			deployment: &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake",
 					Namespace: "test",
@@ -324,7 +324,7 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			&model.Dev{
+			dev: &model.Dev{
 				Resources: model.ResourceRequirements{
 					Limits: model.ResourceList{
 						apiv1.ResourceCPU:    resource.MustParse("2"),
@@ -332,11 +332,11 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			fmt.Errorf("The value of resources.limits.cpu in your okteto manifest (2) exceeds the maximum CPU limit per pod (1)."),
+			expectedErr: fmt.Errorf("The value of resources.limits.cpu in your okteto manifest (2) exceeds the maximum CPU limit per pod (1)."),
 		},
 		{
-			"Cpu per pod exceeded",
-			&appsv1.Deployment{
+			name: "Cpu per pod exceeded",
+			deployment: &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake",
 					Namespace: "test",
@@ -352,7 +352,7 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			&model.Dev{
+			dev: &model.Dev{
 				Resources: model.ResourceRequirements{
 					Limits: model.ResourceList{
 						apiv1.ResourceCPU:    resource.MustParse("2"),
@@ -360,11 +360,11 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			fmt.Errorf("The value of resources.limits.cpu in your okteto manifest (2) exceeds the maximum CPU limit per pod (1)."),
+			expectedErr: fmt.Errorf("The value of resources.limits.cpu in your okteto manifest (2) exceeds the maximum CPU limit per pod (1)."),
 		},
 		{
-			"Cpu and memory per pod exceeded",
-			&appsv1.Deployment{
+			name: "Cpu and memory per pod exceeded",
+			deployment: &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake",
 					Namespace: "test",
@@ -380,7 +380,7 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			&model.Dev{
+			dev: &model.Dev{
 				Resources: model.ResourceRequirements{
 					Limits: model.ResourceList{
 						apiv1.ResourceCPU:    resource.MustParse("2"),
@@ -388,7 +388,7 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			fmt.Errorf("The value of resources.limits.cpu in your okteto manifest (2) exceeds the maximum CPU limit per pod (1). The value of resources.limits.memory in your okteto manifest (5Gi) exceeds the maximum memory limit per pod (3Gi)."),
+			expectedErr: fmt.Errorf("The value of resources.limits.cpu in your okteto manifest (2) exceeds the maximum CPU limit per pod (1). The value of resources.limits.memory in your okteto manifest (5Gi) exceeds the maximum memory limit per pod (3Gi)."),
 		},
 		{
 			name: "exceeded storage quota",

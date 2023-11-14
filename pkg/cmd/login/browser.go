@@ -29,11 +29,11 @@ import (
 // Handler handles the authentication using a browser
 type Handler struct {
 	ctx      context.Context
+	response chan *types.User
+	errChan  chan error
 	state    string
 	baseURL  string
 	port     int
-	response chan *types.User
-	errChan  chan error
 }
 
 func (h *Handler) handle() http.Handler {

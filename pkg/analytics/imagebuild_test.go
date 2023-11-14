@@ -9,9 +9,9 @@ import (
 
 func TestAnalyticsTracker_TrackImageBuild(t *testing.T) {
 	tests := []struct {
-		name          string
 		input         *ImageBuildMetadata
 		expectedEvent *mockEvent
+		name          string
 	}{
 		{
 			name: "success event",

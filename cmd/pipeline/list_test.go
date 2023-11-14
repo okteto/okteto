@@ -17,6 +17,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"testing"
+
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -29,7 +31,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd/api"
-	"testing"
 )
 
 func mockPipeline(fakeName string, fakeLabels []string) *apiv1.ConfigMap {
@@ -138,10 +139,10 @@ func TestPipelineListCommandHandler_DefaultNamespace(t *testing.T) {
 
 func TestExecuteListPipelines(t *testing.T) {
 	type input struct {
-		flags                 listFlags
+		c                     kubernetes.Interface
 		listPipelines         listPipelinesFn
 		getPipelineListOutput getPipelineListOutputFn
-		c                     kubernetes.Interface
+		flags                 listFlags
 	}
 
 	listPipelinesWithError := func(ctx context.Context, namespace, labelSelector string, c kubernetes.Interface) ([]apiv1.ConfigMap, error) {
@@ -149,11 +150,11 @@ func TestExecuteListPipelines(t *testing.T) {
 	}
 
 	tests := []struct {
+		expectedError         error
 		name                  string
-		input                 input
 		output                string
 		expectedPrintedOutput string
-		expectedError         error
+		input                 input
 	}{
 		{
 			name: "error - empty label",
@@ -457,16 +458,16 @@ dev4  dev4-status  https://dev4-repository  dev4-branch  -
 
 func TestGetPipelineListOutput(t *testing.T) {
 	type input struct {
+		c             kubernetes.Interface
+		listPipelines listPipelinesFn
 		flags         listFlags
 		namespace     string
 		labels        []string
-		listPipelines listPipelinesFn
-		c             kubernetes.Interface
 	}
 
 	type output struct {
-		pipelines []pipelineListItem
 		err       error
+		pipelines []pipelineListItem
 	}
 
 	listPipelinesWithError := func(ctx context.Context, namespace, labelSelector string, c kubernetes.Interface) ([]apiv1.ConfigMap, error) {

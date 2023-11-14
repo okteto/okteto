@@ -13,16 +13,15 @@ import (
 )
 
 func Test_addStignoreSecrets(t *testing.T) {
-
 	localPath := t.TempDir()
 
 	tests := []struct {
-		name                               string
 		dev                                *model.Dev
+		expectedAnnotation                 model.Annotations
+		name                               string
 		stignoreContent                    string
 		expectedTransformedStignoreContent string
 		expectedError                      bool
-		expectedAnnotation                 model.Annotations
 	}{
 		{
 			name: "test",

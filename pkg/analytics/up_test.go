@@ -10,9 +10,9 @@ import (
 
 func Test_UpMetricsMetadata_ManifestProps(t *testing.T) {
 	tests := []struct {
-		name     string
 		manifest *model.Manifest
 		expected *UpMetricsMetadata
+		name     string
 	}{
 		{
 			name: "manifest with build section",
@@ -83,9 +83,9 @@ func Test_UpMetricsMetadata_ManifestProps(t *testing.T) {
 
 func Test_UpMetricsMetadata_DevProps(t *testing.T) {
 	tests := []struct {
-		name     string
 		dev      *model.Dev
 		expected *UpMetricsMetadata
+		name     string
 	}{
 		{
 			name: "dev interactive sync mode",
@@ -152,9 +152,9 @@ func Test_UpMetricsMetadata_DevProps(t *testing.T) {
 
 func Test_UpMetricsMetadata_RepositoryProps(t *testing.T) {
 	tests := []struct {
+		expected           *UpMetricsMetadata
 		name               string
 		isOktetoRepository bool
-		expected           *UpMetricsMetadata
 	}{
 		{
 			name:               "is okteto repository",
@@ -221,9 +221,9 @@ func Test_UpMetricsMetadata_CommandSuccess(t *testing.T) {
 
 func Test_UpTracker(t *testing.T) {
 	tests := []struct {
+		expected mockEvent
 		name     string
 		meta     UpMetricsMetadata
-		expected mockEvent
 	}{
 		{
 			name: "empty event",

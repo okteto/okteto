@@ -55,16 +55,14 @@ type deployFlags struct {
 	repository   string
 	name         string
 	namespace    string
-	wait         bool
-	skipIfExists bool
-	timeout      time.Duration
 	file         string
+	filename     string //Deprecated field
 	variables    []string
 	labels       []string
+	timeout      time.Duration
+	wait         bool
+	skipIfExists bool
 	reuseParams  bool
-
-	// Deprecated fields
-	filename string
 }
 
 // DeployOptions represents options for deploy pipeline command
@@ -73,12 +71,12 @@ type DeployOptions struct {
 	Repository   string
 	Name         string
 	Namespace    string
-	Wait         bool
-	SkipIfExists bool
-	Timeout      time.Duration
 	File         string
 	Variables    []string
 	Labels       []string
+	Timeout      time.Duration
+	Wait         bool
+	SkipIfExists bool
 	ReuseParams  bool
 }
 

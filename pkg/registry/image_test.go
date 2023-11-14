@@ -23,9 +23,9 @@ import (
 
 type fakeImageConfig struct {
 	registryURL string
-	isOkteto    bool
 	globalNs    string
 	ns          string
+	isOkteto    bool
 }
 
 func (f fakeImageConfig) GetRegistryURL() string     { return f.registryURL }
@@ -35,13 +35,13 @@ func (f fakeImageConfig) GetNamespace() string       { return f.ns }
 
 func TestExpandRegistry(t *testing.T) {
 	type input struct {
-		config fakeImageConfig
 		image  string
+		config fakeImageConfig
 	}
 	var tests = []struct {
 		name     string
-		input    input
 		expected string
+		input    input
 	}{
 		{
 			name: "no need to expand registry - Vanilla",

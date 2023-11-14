@@ -44,9 +44,9 @@ func Test_getRepositoryURL(t *testing.T) {
 	}
 	var tests = []struct {
 		name        string
-		expectError bool
-		remotes     []remote
 		expect      string
+		remotes     []remote
+		expectError bool
 	}{
 		{
 			name:        "single origin",
@@ -125,8 +125,8 @@ func Test_getRepositoryURL(t *testing.T) {
 func TestCheckAllResourcesRunning(t *testing.T) {
 
 	var tests = []struct {
-		name           string
 		resourceStatus map[string]string
+		name           string
 		expectError    bool
 		expectResult   bool
 	}{
@@ -434,9 +434,9 @@ func Test_DeployPipelineWithSkipIfExist(t *testing.T) {
 	fakePipelineClientResponses := &client.FakePipelineResponses{}
 
 	tests := []struct {
-		name string
 		cmd  *Command
 		opts *DeployOptions
+		name string
 	}{
 		{
 			name: "skip because deployed status",
@@ -526,9 +526,9 @@ func Test_DeployPipelineWithSkipIfExistAndWait(t *testing.T) {
 	fakePipelineClientResponses := &client.FakePipelineResponses{}
 
 	tests := []struct {
-		name string
 		cmd  *Command
 		opts *DeployOptions
+		name string
 	}{
 		{
 			name: "wait and canStreamPrevLogs",
@@ -678,11 +678,11 @@ func (e *fakeEnvSetter) Set(name, value string) error {
 
 func TestSetEnvsFromDependencyNoError(t *testing.T) {
 	var tests = []struct {
-		name            string
-		cmap            *v1.ConfigMap
 		envSetter       fakeEnvSetter
-		expectedErr     bool
+		cmap            *v1.ConfigMap
 		expectedEnvsSet map[string]string
+		name            string
+		expectedErr     bool
 	}{
 		{
 			name:            "nil cmap",
@@ -750,9 +750,9 @@ func TestSetEnvsFromDependencyNoError(t *testing.T) {
 
 func TestFlagsToOptions(t *testing.T) {
 	tt := []struct {
+		expect *DeployOptions
 		name   string
 		flags  deployFlags
-		expect *DeployOptions
 	}{
 		{
 			name:   "no flags",
@@ -844,9 +844,9 @@ func Test_applyOverrideToOptions(t *testing.T) {
 
 func Test_cfgToDeployOptions(t *testing.T) {
 	tests := []struct {
-		name     string
 		input    *v1.ConfigMap
 		expected *DeployOptions
+		name     string
 	}{
 		{
 			name:     "empty input",
@@ -914,8 +914,8 @@ func Test_parseVariablesListFromCfgVariablesString(t *testing.T) {
 	tests := []struct {
 		name        string
 		input       string
-		expectedErr bool
 		expected    []string
+		expectedErr bool
 	}{
 		{
 			name:     "empty input",

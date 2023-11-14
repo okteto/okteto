@@ -32,13 +32,12 @@ var (
 )
 
 type preReqCfg struct {
-	ctxName string
-	ns      string
-
 	k8sClientProvider    k8sClientProvider
 	oktetoClientProvider oktetoClientProvider
 	getContextStore      func() *okteto.OktetoContextStore
 	getCtxResource       initCtxOptsFunc
+	ctxName              string
+	ns                   string
 }
 
 type option func(*preReqCfg)
@@ -92,13 +91,12 @@ func defaultPreReqCfg() *preReqCfg {
 
 // preReqValidator validates that all the pre-reqs to execute the command are met
 type preReqValidator struct {
-	ctxName string
-	ns      string
-
 	k8sClientProvider    k8sClientProvider
 	oktetoClientProvider oktetoClientProvider
 	getContextStore      getContextStoreFunc
 	getCtxResource       initCtxOptsFunc
+	ctxName              string
+	ns                   string
 }
 
 // newPreReqValidator returns a new preReqValidator

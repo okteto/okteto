@@ -56,10 +56,10 @@ func (f fakeCtxCmdRunner) Run(ctx context.Context, ctxOptions *contextCMD.Contex
 func TestKubetoken(t *testing.T) {
 	ctx := context.Background()
 	type input struct {
-		flags                    KubetokenFlags
-		contextStore             *okteto.OktetoContextStore
 		fakeOktetoClientProvider fakeOktetoClientProvider
 		fakeCtxCmdRunner         fakeCtxCmdRunner
+		contextStore             *okteto.OktetoContextStore
+		flags                    KubetokenFlags
 	}
 
 	fakeCtxStore := &okteto.OktetoContextStore{
@@ -72,9 +72,9 @@ func TestKubetoken(t *testing.T) {
 	}
 
 	tt := []struct {
-		name     string
-		input    input
 		expected error
+		input    input
+		name     string
 	}{
 		{
 			name: "error on validation",

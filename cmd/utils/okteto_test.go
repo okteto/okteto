@@ -27,10 +27,10 @@ func Test_createContext(t *testing.T) {
 	ctx := context.Background()
 
 	var tests = []struct {
+		err            error
 		name           string
 		namespaces     []types.Namespace
 		previews       []types.Preview
-		err            error
 		expectedErr    bool
 		expectedAccess bool
 	}{

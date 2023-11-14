@@ -82,12 +82,12 @@ type Options struct {
 }
 
 type Trip struct {
-	namespace  string
-	list       metav1.ListOptions
-	restConfig *rest.Config
 	k8s        kubernetes.Interface
 	dynamic    dynamic.Interface
+	restConfig *rest.Config
 	sem        *semaphore.Weighted
+	list       metav1.ListOptions
+	namespace  string
 	writeLock  sync.Mutex
 }
 

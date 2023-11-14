@@ -17,8 +17,8 @@ import (
 )
 
 type fakeClientProvider struct {
-	objects      []runtime.Object
 	possibleErrs errs
+	objects      []runtime.Object
 }
 
 type errs struct {
@@ -43,12 +43,12 @@ func TestDeploy(t *testing.T) {
 	ctx := context.Background()
 	namespace := "testns"
 	var tt = []struct {
-		name             string
-		expectedErr      bool
-		objects          []runtime.Object
 		possibleErrs     errs
-		externalToDeploy string
 		externalInfo     *ExternalResource
+		name             string
+		externalToDeploy string
+		objects          []runtime.Object
+		expectedErr      bool
 	}{
 		{
 			name:        "provider-error",
@@ -193,11 +193,11 @@ func TestList(t *testing.T) {
 	ctx := context.Background()
 	namespace := "testns"
 	var tt = []struct {
-		name         string
-		expectedErr  bool
 		possibleErrs errs
+		name         string
 		externals    []runtime.Object
 		len          int
+		expectedErr  bool
 	}{
 		{
 			name: "list all",

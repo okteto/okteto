@@ -689,13 +689,13 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 	assert.NoError(t, err)
 	t.Setenv("BAR", "bar")
 	type input struct {
-		repo      fakeConfigRepo
 		buildInfo *model.BuildInfo
+		repo      fakeConfigRepo
 	}
 	tt := []struct {
 		name     string
-		input    input
 		expected string
+		input    input
 	}{
 		{
 			name: "valid commit",

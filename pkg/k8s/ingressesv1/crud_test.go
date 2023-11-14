@@ -110,10 +110,10 @@ func TestList(t *testing.T) {
 
 func TestDestroy(t *testing.T) {
 	var tests = []struct {
+		ingress     *networkingv1.Ingress
 		name        string
 		ingressName string
 		namespace   string
-		ingress     *networkingv1.Ingress
 	}{
 		{
 			name:        "existent-ingress",

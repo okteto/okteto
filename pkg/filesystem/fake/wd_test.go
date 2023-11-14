@@ -37,8 +37,8 @@ func TestFakeWorkingDirectoryCtrlSetErrors(t *testing.T) {
 	wdCtrl := NewFakeWorkingDirectoryCtrl("/hola")
 
 	var tests = []struct {
-		name   string
 		errors FakeWorkingDirectoryCtrlErrors
+		name   string
 	}{
 		{
 			name: "getter error set",

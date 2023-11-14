@@ -21,10 +21,10 @@ func TestWaitUntilAppAwaken(t *testing.T) {
 		CurrentContext: "test",
 	}
 	tt := []struct {
+		expectedErr          error
+		oktetoClientProvider *test.FakeK8sProvider
 		name                 string
 		autocreate           bool
-		oktetoClientProvider *test.FakeK8sProvider
-		expectedErr          error
 	}{
 		{
 			name:        "dev is autocreate",
@@ -64,9 +64,9 @@ func TestWaitUntilDevelopmentContainerIsRunning(t *testing.T) {
 		CurrentContext: "test",
 	}
 	tt := []struct {
-		name                 string
-		oktetoClientProvider *test.FakeK8sProvider
 		expectedErr          error
+		oktetoClientProvider *test.FakeK8sProvider
+		name                 string
 	}{
 		{
 			name: "failed to provide k8s client",

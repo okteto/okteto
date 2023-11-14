@@ -93,8 +93,8 @@ func Test_getTrackID(t *testing.T) {
 
 func Test_disabledInOktetoCluster(t *testing.T) {
 	var tests = []struct {
-		name         string
 		contextStore *okteto.OktetoContextStore
+		name         string
 		expected     bool
 	}{
 		{

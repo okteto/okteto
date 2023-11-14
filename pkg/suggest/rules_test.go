@@ -15,8 +15,9 @@ package suggest
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_NewStrReplaceRule(t *testing.T) {
@@ -34,10 +35,10 @@ func Test_NewLevenshteinRule(t *testing.T) {
 	}
 
 	tests := []struct {
-		name      string
-		ruleInput ruleInput
 		inputErr  error
+		name      string
 		expected  string
+		ruleInput ruleInput
 	}{
 		{
 			name:     "no match",

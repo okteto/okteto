@@ -33,10 +33,10 @@ import (
 
 func TestManifestExpandDevEnvs(t *testing.T) {
 	tests := []struct {
-		name             string
-		envs             map[string]string
 		manifest         *Manifest
 		expectedManifest *Manifest
+		envs             map[string]string
+		name             string
 	}{
 		{
 			name: "autocreate without image but build section defined",
@@ -201,11 +201,11 @@ echo $TEST_VAR`,
 }
 func TestManifestExpandEnvs(t *testing.T) {
 	tests := []struct {
-		name            string
 		envs            map[string]string
+		name            string
+		expectedCommand string
 		manifest        []byte
 		expectedErr     bool
-		expectedCommand string
 	}{
 		{
 			name: "expand envs on command",
@@ -259,9 +259,9 @@ devs:
 
 func Test_validateDivert(t *testing.T) {
 	tests := []struct {
+		expectedErr error
 		name        string
 		divert      DivertDeploy
-		expectedErr error
 	}{
 		{
 			name: "divert-ok-with-port",
@@ -333,8 +333,8 @@ func Test_validateDivert(t *testing.T) {
 
 func Test_validateManifestBuild(t *testing.T) {
 	tests := []struct {
-		name         string
 		buildSection ManifestBuild
+		name         string
 		expectedErr  bool
 	}{
 		{
@@ -433,9 +433,9 @@ func TestInferFromStack(t *testing.T) {
 		},
 	}
 	tests := []struct {
-		name             string
 		currentManifest  *Manifest
 		expectedManifest *Manifest
+		name             string
 	}{
 		{
 			name: "infer from stack empty dev",
@@ -772,7 +772,6 @@ func TestHasDependencies(t *testing.T) {
 }
 
 func TestSetBuildDefaults(t *testing.T) {
-
 	tests := []struct {
 		name              string
 		currentBuildInfo  BuildInfo
@@ -832,10 +831,10 @@ func TestSetBuildDefaults(t *testing.T) {
 
 func Test_getManifestFromFile(t *testing.T) {
 	tests := []struct {
+		expectedErr   error
 		name          string
 		manifestBytes []byte
 		composeBytes  []byte
-		expectedErr   error
 	}{
 		{
 			name:          "manifestPath to a valid compose file",
@@ -942,10 +941,10 @@ func TestHasDev(t *testing.T) {
 
 func Test_SanitizeSvcNames(t *testing.T) {
 	tests := []struct {
-		name             string
+		expectedErr      error
 		manifest         *Manifest
 		expectedManifest *Manifest
-		expectedErr      error
+		name             string
 	}{
 		{
 			name: "keys-have-uppercase",
@@ -1115,9 +1114,9 @@ func Test_SanitizeSvcNames(t *testing.T) {
 
 func Test_GetTimeout(t *testing.T) {
 	tests := []struct {
+		dependency     *Dependency
 		name           string
 		defaultTimeout time.Duration
-		dependency     *Dependency
 		expected       time.Duration
 	}{
 		{
@@ -1198,8 +1197,8 @@ func Test_ExpandVars(t *testing.T) {
 
 func Test_Manifest_HasDeploySection(t *testing.T) {
 	tests := []struct {
-		name     string
 		manifest *Manifest
+		name     string
 		expected bool
 	}{
 		{
@@ -1299,8 +1298,8 @@ func Test_Manifest_HasDeploySection(t *testing.T) {
 
 func Test_Manifest_HasDependenciesSection(t *testing.T) {
 	tests := []struct {
-		name     string
 		manifest *Manifest
+		name     string
 		expected bool
 	}{
 		{
@@ -1342,8 +1341,8 @@ func Test_Manifest_HasDependenciesSection(t *testing.T) {
 
 func Test_Manifest_HasBuildSection(t *testing.T) {
 	tests := []struct {
-		name     string
 		manifest *Manifest
+		name     string
 		expected bool
 	}{
 		{
@@ -1416,8 +1415,8 @@ func Test_getInferredManifestFromK8sManifestFolder(t *testing.T) {
 func Test_getInferredManifestFromHelmPath(t *testing.T) {
 	var tests = []struct {
 		name          string
-		filesToCreate []string
 		expected      string
+		filesToCreate []string
 	}{
 		{
 			name:          "chart folder exists on wd",

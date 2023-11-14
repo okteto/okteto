@@ -21,8 +21,8 @@ import (
 
 // FakeOktetoBuilder emulates an okteto image builder
 type FakeOktetoBuilder struct {
-	Err      []error
 	Registry fakeOktetoRegistryInterface
+	Err      []error
 }
 
 type fakeOktetoRegistryInterface interface {

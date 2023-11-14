@@ -25,8 +25,8 @@ import (
 )
 
 type fakeGetter struct {
-	envs []string
 	err  error
+	envs []string
 }
 
 func (f *fakeGetter) getEnvsFromDevContainer(ctx context.Context, spec *apiv1.PodSpec, name string, namespace string, client kubernetes.Interface) ([]string, error) {
@@ -48,14 +48,14 @@ func (f *fakeGetter) getEnvsFromImage(string) ([]string, error) {
 func TestGetEnvs(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
-		name                      string
-		expectedEnvs              []string
-		dev                       *model.Dev
-		client                    *fake.Clientset
 		fakeDevContainerEnvGetter fakeGetter
 		fakeConfigMapEnvsGetter   fakeGetter
 		fakeSecretEnvsGetter      fakeGetter
 		fakeImageEnvsGetter       fakeGetter
+		dev                       *model.Dev
+		client                    *fake.Clientset
+		name                      string
+		expectedEnvs              []string
 	}{
 		{
 			name:                    "only envs from config map",
@@ -236,8 +236,8 @@ func TestGetEnvs(t *testing.T) {
 func TestGetEnvsError(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
-		name                      string
 		client                    *fake.Clientset
+		name                      string
 		fakeDevContainerEnvGetter fakeGetter
 		fakeConfigMapEnvsGetter   fakeGetter
 		fakeSecretEnvsGetter      fakeGetter
@@ -417,8 +417,8 @@ func TestGetEnvForHybridModeWithProperPriority(t *testing.T) {
 }
 
 type fakeImageGetter struct {
-	imageMetadata registry.ImageMetadata
 	err           error
+	imageMetadata registry.ImageMetadata
 }
 
 func (fig *fakeImageGetter) GetImageMetadata(string) (registry.ImageMetadata, error) {
@@ -479,9 +479,9 @@ func TestGetEnvsFromImageError(t *testing.T) {
 func TestGetEnvsFromConfigMap(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
+		client       kubernetes.Interface
 		name         string
 		expectedEnvs []string
-		client       kubernetes.Interface
 	}{
 		{
 			name: "config map without envs",
@@ -524,11 +524,11 @@ func TestGetEnvsFromConfigMap(t *testing.T) {
 func TestGetEnvsFromDevContainer(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
+		expectedErr  error
+		client       kubernetes.Interface
+		podspec      *apiv1.PodSpec
 		name         string
 		expectedEnvs []string
-		expectedErr  error
-		podspec      *apiv1.PodSpec
-		client       kubernetes.Interface
 	}{
 		{
 			name: "dev container without env vars",
@@ -706,8 +706,8 @@ func TestGetEnvsFromDevContainer(t *testing.T) {
 }
 
 type fakeUserSecretsGetter struct {
-	secrets []types.Secret
 	err     error
+	secrets []types.Secret
 }
 
 func (fusg fakeUserSecretsGetter) GetUserSecrets(context.Context) ([]types.Secret, error) {
@@ -718,10 +718,10 @@ func TestGetEnvsFromSecrets(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
+		fakeSecretsGetter fakeUserSecretsGetter
 		name              string
 		expectedEnvs      []string
 		isOkteto          bool
-		fakeSecretsGetter fakeUserSecretsGetter
 	}{
 		{
 			name:     "okteto not active",
@@ -788,10 +788,10 @@ func TestGetEnvsFromSecretsError(t *testing.T) {
 func TestCheckOktetoStartError(t *testing.T) {
 	msg := "test"
 	tt := []struct {
-		name        string
+		expected    error
 		dev         *model.Dev
 		K8sProvider *test.FakeK8sProvider
-		expected    error
+		name        string
 	}{
 		{
 			name: "error providing k8s client",
