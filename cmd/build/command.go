@@ -18,6 +18,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
@@ -35,7 +37,6 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 type outputFormat string
@@ -88,14 +89,14 @@ const (
 )
 
 // Build build and optionally push a Docker image
-func Build(ctx context.Context, oktetoLogger *io.IOController, at analyticsTrackerInterface) *cobra.Command {
+func Build(ctx context.Context, ioCtrl *io.IOController, at analyticsTrackerInterface) *cobra.Command {
 	options := &types.BuildOptions{}
 	cmd := &cobra.Command{
 		Use:   "build [service...]",
 		Short: "Build and push the images defined in the 'build' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			options.CommandArgs = args
-			bc := NewBuildCommand(oktetoLogger, at)
+			bc := NewBuildCommand(ioCtrl, at)
 			// The context must be loaded before reading manifest. Otherwise,
 			// secrets will not be resolved when GetManifest is called and
 			// the manifest will load empty values.
