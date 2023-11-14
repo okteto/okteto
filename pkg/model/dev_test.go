@@ -1566,7 +1566,7 @@ func Test_expandEnvFiles(t *testing.T) {
 			if _, err = file.Write(tt.envs); err != nil {
 				t.Fatal("Failed to write to temporary file", err)
 			}
-			if err := tt.dev.ExpandEnvFiles(); err != nil {
+			if err := tt.dev.expandEnvFiles(); err != nil {
 				t.Fatal(err)
 			}
 			assert.Equal(t, tt.expected, tt.dev.Environment)
@@ -1837,14 +1837,6 @@ func TestPrepare(t *testing.T) {
 				manifestPath: "okteto.yml",
 			},
 			expectedError: false,
-		},
-		{
-			name: "empty manifest path",
-			dev:  &Dev{},
-			input: input{
-				manifestPath: "",
-			},
-			expectedError: true,
 		},
 		{
 			name: "with missing envFiles",

@@ -219,7 +219,6 @@ func SelectDevFromManifest(manifest *model.Manifest, selector OktetoSelectorInte
 	if dev.Context == "" {
 		dev.Context = manifest.Context
 	}
-
 	if err := dev.Validate(); err != nil {
 		return nil, err
 	}

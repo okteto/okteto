@@ -370,11 +370,11 @@ func Get(devPath string) (*Manifest, error) {
 			return nil, err
 		}
 
-		if err := dev.LoadAbsPaths(devPath); err != nil {
+		if err := dev.loadAbsPaths(devPath); err != nil {
 			return nil, err
 		}
 
-		if err := dev.ExpandEnvFiles(); err != nil {
+		if err := dev.expandEnvFiles(); err != nil {
 			return nil, err
 		}
 
@@ -406,11 +406,8 @@ func NewDev() *Dev {
 	}
 }
 
-// LoadAbsPaths makes every path used in the dev struct an absolute paths
-func (dev *Dev) LoadAbsPaths(devPath string) error {
-	if devPath == "" {
-		return fmt.Errorf("devPath cannot be empty")
-	}
+// loadAbsPaths makes every path used in the dev struct an absolute paths
+func (dev *Dev) loadAbsPaths(devPath string) error {
 	devDir, err := filepath.Abs(filepath.Dir(devPath))
 	if err != nil {
 		return err
@@ -708,8 +705,8 @@ func (dev *Dev) setTimeout() error {
 	return nil
 }
 
-// ExpandEnvFiles reads each env file and append all the variables to the environment
-func (dev *Dev) ExpandEnvFiles() error {
+// expandEnvFiles reads each env file and append all the variables to the environment
+func (dev *Dev) expandEnvFiles() error {
 	for _, envFile := range dev.EnvFiles {
 		filename, err := ExpandEnv(envFile, true)
 		if err != nil {
@@ -821,11 +818,11 @@ func (dev *Dev) Validate() error {
 
 // Prepare calls other methods required to have the dev ready to use
 func (dev *Dev) Prepare(manifestPath string) error {
-	if err := dev.LoadAbsPaths(manifestPath); err != nil {
+	if err := dev.loadAbsPaths(manifestPath); err != nil {
 		return err
 	}
 
-	if err := dev.ExpandEnvFiles(); err != nil {
+	if err := dev.expandEnvFiles(); err != nil {
 		return err
 	}
 
