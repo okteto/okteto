@@ -654,9 +654,9 @@ func Test_getVolumesToDeployFromServicesToDeploy(t *testing.T) {
 		servicesToDeploy map[string]bool
 	}
 	tests := []struct {
-		name     string
 		args     args
 		expected map[string]bool
+		name     string
 	}{
 		{
 			name: "should return volumes from services to deploy",
@@ -726,9 +726,9 @@ func Test_getEndpointsToDeployFromServicesToDeploy(t *testing.T) {
 		servicesToDeploy map[string]bool
 	}
 	tests := []struct {
-		name     string
 		args     args
 		expected map[string]bool
+		name     string
 	}{
 		{
 			name: "multiple endpoints",
@@ -775,10 +775,10 @@ func Test_getEndpointsToDeployFromServicesToDeploy(t *testing.T) {
 
 func TestDeployK8sService(t *testing.T) {
 	tests := []struct {
-		name              string
-		k8sObjects        []runtime.Object
 		stack             *model.Stack
+		name              string
 		expectedNameLabel string
+		k8sObjects        []runtime.Object
 	}{
 		{
 			name: "skip service",
@@ -864,10 +864,10 @@ func TestDeployK8sService(t *testing.T) {
 
 func TestGetErrorDueToRestartLimit(t *testing.T) {
 	tests := []struct {
+		err        error
+		stack      *model.Stack
 		name       string
 		k8sObjects []runtime.Object
-		stack      *model.Stack
-		err        error
 	}{
 		{
 			name: "no dependent services",

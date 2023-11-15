@@ -20,8 +20,8 @@ import (
 
 // FakeNamespaceClient mocks the namespace interface
 type FakeNamespaceClient struct {
-	namespaces []types.Namespace
 	err        error
+	namespaces []types.Namespace
 
 	// WakeCalls is the number of times Wake was called
 	WakeCalls int

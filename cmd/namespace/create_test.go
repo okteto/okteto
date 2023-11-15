@@ -26,9 +26,9 @@ import (
 func Test_createNamespace(t *testing.T) {
 	ctx := context.Background()
 	var tests = []struct {
+		members *[]string
 		name    string
 		newNs   string
-		members *[]string
 	}{
 		{
 			name:    "create new ns",

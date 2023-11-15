@@ -96,59 +96,59 @@ func TestReverseMarshalling(t *testing.T) {
 
 func TestEnvVarMarshalling(t *testing.T) {
 	tests := []struct {
+		expected env.Var
 		name     string
 		data     []byte
-		expected env.Var
 	}{
 		{
-			"key-value",
-			[]byte(`env=production`),
-			env.Var{Name: "env", Value: "production"},
+			name:     "key-value",
+			data:     []byte(`env=production`),
+			expected: env.Var{Name: "env", Value: "production"},
 		},
 		{
-			"key-value-complex",
-			[]byte(`env='production=11231231asa#$˜GADAFA'`),
-			env.Var{Name: "env", Value: "'production=11231231asa#$˜GADAFA'"},
+			name:     "key-value-complex",
+			data:     []byte(`env='production=11231231asa#$˜GADAFA'`),
+			expected: env.Var{Name: "env", Value: "'production=11231231asa#$˜GADAFA'"},
 		},
 		{
-			"key-value-with-env-var",
-			[]byte(`env=$DEV_ENV`),
-			env.Var{Name: "env", Value: "test_environment"},
+			name:     "key-value-with-env-var",
+			data:     []byte(`env=$DEV_ENV`),
+			expected: env.Var{Name: "env", Value: "test_environment"},
 		},
 		{
-			"key-value-with-env-var-in-string",
-			[]byte(`env=my_env;$DEV_ENV;prod`),
-			env.Var{Name: "env", Value: "my_env;test_environment;prod"},
+			name:     "key-value-with-env-var-in-string",
+			data:     []byte(`env=my_env;$DEV_ENV;prod`),
+			expected: env.Var{Name: "env", Value: "my_env;test_environment;prod"},
 		},
 		{
-			"simple-key",
-			[]byte(`noenv`),
-			env.Var{Name: "noenv", Value: ""},
+			name:     "simple-key",
+			data:     []byte(`noenv`),
+			expected: env.Var{Name: "noenv", Value: ""},
 		},
 		{
-			"key-with-no-value",
-			[]byte(`noenv=`),
-			env.Var{Name: "noenv", Value: ""},
+			name:     "key-with-no-value",
+			data:     []byte(`noenv=`),
+			expected: env.Var{Name: "noenv", Value: ""},
 		},
 		{
-			"key-with-env-var-not-defined",
-			[]byte(`noenv=$UNDEFINED`),
-			env.Var{Name: "noenv", Value: ""},
+			name:     "key-with-env-var-not-defined",
+			data:     []byte(`noenv=$UNDEFINED`),
+			expected: env.Var{Name: "noenv", Value: ""},
 		},
 		{
-			"just-env-var",
-			[]byte(`$DEV_ENV`),
-			env.Var{Name: "test_environment", Value: ""},
+			name:     "just-env-var",
+			data:     []byte(`$DEV_ENV`),
+			expected: env.Var{Name: "test_environment", Value: ""},
 		},
 		{
-			"just-env-var-undefined",
-			[]byte(`$UNDEFINED`),
-			env.Var{Name: "", Value: ""},
+			name:     "just-env-var-undefined",
+			data:     []byte(`$UNDEFINED`),
+			expected: env.Var{Name: "", Value: ""},
 		},
 		{
-			"local_env_expanded",
-			[]byte(`OKTETO_TEST_ENV_MARSHALLING`),
-			env.Var{Name: "OKTETO_TEST_ENV_MARSHALLING", Value: "true"},
+			name:     "local_env_expanded",
+			data:     []byte(`OKTETO_TEST_ENV_MARSHALLING`),
+			expected: env.Var{Name: "OKTETO_TEST_ENV_MARSHALLING", Value: "true"},
 		},
 	}
 
@@ -260,8 +260,8 @@ func TestHybridCommandUnmarshalling(t *testing.T) {
 func TestCommandMarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
-		command  Command
 		expected string
+		command  Command
 	}{
 		{
 			name:     "single-command",
@@ -329,8 +329,8 @@ func TestImageMarshalling(t *testing.T) {
 func TestProbesMarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
-		probes   Probes
 		expected string
+		probes   Probes
 	}{
 		{
 			name:     "liveness-true-and-defaults",
@@ -361,8 +361,8 @@ func TestProbesMarshalling(t *testing.T) {
 func TestLifecycleMarshalling(t *testing.T) {
 	tests := []struct {
 		name      string
-		lifecycle Lifecycle
 		expected  string
+		lifecycle Lifecycle
 	}{
 		{
 			name:      "true-and-false",
@@ -400,58 +400,58 @@ func TestSecretMarshalling(t *testing.T) {
 	t.Setenv("TEST_HOME", file.Name())
 
 	tests := []struct {
+		expected      *Secret
 		name          string
 		data          string
-		expected      *Secret
 		expectedError bool
 	}{
 		{
-			"local:remote",
-			fmt.Sprintf("%s:/remote", file.Name()),
-			&Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 420},
-			false,
+			name:          "local:remote",
+			data:          fmt.Sprintf("%s:/remote", file.Name()),
+			expected:      &Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 420},
+			expectedError: false,
 		},
 		{
-			"local:remote:mode",
-			fmt.Sprintf("%s:/remote:400", file.Name()),
-			&Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 256},
-			false,
+			name:          "local:remote:mode",
+			data:          fmt.Sprintf("%s:/remote:400", file.Name()),
+			expected:      &Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 256},
+			expectedError: false,
 		},
 		{
-			"variables",
-			"$TEST_HOME:/remote",
-			&Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 420},
-			false,
+			name:          "variables",
+			data:          "$TEST_HOME:/remote",
+			expected:      &Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 420},
+			expectedError: false,
 		},
 		{
-			"too-short",
-			"local",
-			nil,
-			true,
+			name:          "too-short",
+			data:          "local",
+			expected:      nil,
+			expectedError: true,
 		},
 		{
-			"too-long",
-			"local:remote:mode:other",
-			nil,
-			true,
+			name:          "too-long",
+			data:          "local:remote:mode:other",
+			expected:      nil,
+			expectedError: true,
 		},
 		{
-			"wrong-local",
-			"/local:/remote:400",
-			nil,
-			true,
+			name:          "wrong-local",
+			data:          "/local:/remote:400",
+			expected:      nil,
+			expectedError: true,
 		},
 		{
-			"wrong-remote",
-			fmt.Sprintf("%s:remote", file.Name()),
-			nil,
-			true,
+			name:          "wrong-remote",
+			data:          fmt.Sprintf("%s:remote", file.Name()),
+			expected:      nil,
+			expectedError: true,
 		},
 		{
-			"wrong-mode",
-			fmt.Sprintf("%s:/remote:aaa", file.Name()),
-			nil,
-			true,
+			name:          "wrong-mode",
+			data:          fmt.Sprintf("%s:/remote:aaa", file.Name()),
+			expected:      nil,
+			expectedError: true,
 		},
 	}
 
@@ -487,19 +487,19 @@ func TestSecretMarshalling(t *testing.T) {
 
 func TestVolumeMarshalling(t *testing.T) {
 	tests := []struct {
+		expected Volume
 		name     string
 		data     []byte
-		expected Volume
 	}{
 		{
-			"global",
-			[]byte("/path"),
-			Volume{LocalPath: "", RemotePath: "/path"},
+			name:     "global",
+			data:     []byte("/path"),
+			expected: Volume{LocalPath: "", RemotePath: "/path"},
 		},
 		{
-			"relative",
-			[]byte("sub:/path"),
-			Volume{LocalPath: "sub", RemotePath: "/path"},
+			name:     "relative",
+			data:     []byte("sub:/path"),
+			expected: Volume{LocalPath: "sub", RemotePath: "/path"},
 		},
 	}
 
@@ -525,13 +525,13 @@ func TestVolumeMarshalling(t *testing.T) {
 func TestDevMarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
-		dev      Dev
 		expected string
+		dev      Dev
 	}{
 		{
 			name:     "healtcheck-not-defaults",
 			dev:      Dev{Name: "name-test", Probes: &Probes{Liveness: true}},
-			expected: "name: name-test\nprobes:\n  liveness: true\n",
+			expected: "probes:\n  liveness: true\nname: name-test\n",
 		},
 		{
 			name:     "healtcheck-all-true-by-healthchecks",
@@ -556,10 +556,7 @@ func TestDevMarshalling(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			if string(marshalled) != tt.expected {
-				t.Errorf("didn't marshal correctly. Actual %s, Expected %s", marshalled, tt.expected)
-			}
+			assert.Equal(t, tt.expected, string(marshalled))
 		})
 	}
 }
@@ -635,89 +632,89 @@ func TestEndpointUnmarshalling(t *testing.T) {
 
 func TestLabelsUnmarshalling(t *testing.T) {
 	tests := []struct {
+		expected Labels
 		name     string
 		data     []byte
-		expected Labels
 	}{
 		{
-			"key-value-with-env-var-map",
-			[]byte(`env: $DEV_ENV`),
-			Labels{"env": "test_environment"},
+			name:     "key-value-with-env-var-map",
+			data:     []byte(`env: $DEV_ENV`),
+			expected: Labels{"env": "test_environment"},
 		},
 		{
-			"key-value-list",
-			[]byte(`- env=production`),
-			Labels{"env": "production"},
+			name:     "key-value-list",
+			data:     []byte(`- env=production`),
+			expected: Labels{"env": "production"},
 		},
 		{
-			"key-value-map",
-			[]byte(`env: production`),
-			Labels{"env": "production"},
+			name:     "key-value-map",
+			data:     []byte(`env: production`),
+			expected: Labels{"env": "production"},
 		},
 		{
-			"key-value-complex-list",
-			[]byte(`- env='production=11231231asa#$˜GADAFA'`),
-			Labels{"env": "'production=11231231asa#$˜GADAFA'"},
+			name:     "key-value-complex-list",
+			data:     []byte(`- env='production=11231231asa#$˜GADAFA'`),
+			expected: Labels{"env": "'production=11231231asa#$˜GADAFA'"},
 		},
 		{
-			"key-value-with-env-var-list",
-			[]byte(`- env=$DEV_ENV`),
-			Labels{"env": "test_environment"},
+			name:     "key-value-with-env-var-list",
+			data:     []byte(`- env=$DEV_ENV`),
+			expected: Labels{"env": "test_environment"},
 		},
 		{
-			"key-value-with-env-var-map",
-			[]byte(`env: $DEV_ENV`),
-			Labels{"env": "test_environment"},
+			name:     "key-value-with-env-var-map",
+			data:     []byte(`env: $DEV_ENV`),
+			expected: Labels{"env": "test_environment"},
 		},
 		{
-			"key-value-with-env-var-in-string-list",
-			[]byte(`- env=my_env;$DEV_ENV;prod`),
-			Labels{"env": "my_env;test_environment;prod"},
+			name:     "key-value-with-env-var-in-string-list",
+			data:     []byte(`- env=my_env;$DEV_ENV;prod`),
+			expected: Labels{"env": "my_env;test_environment;prod"},
 		},
 		{
-			"key-value-with-env-var-in-string-map",
-			[]byte(`env: my_env;$DEV_ENV;prod`),
-			Labels{"env": "my_env;test_environment;prod"},
+			name:     "key-value-with-env-var-in-string-map",
+			data:     []byte(`env: my_env;$DEV_ENV;prod`),
+			expected: Labels{"env": "my_env;test_environment;prod"},
 		},
 		{
-			"simple-key-list",
-			[]byte(`- noenv`),
-			Labels{"noenv": ""},
+			name:     "simple-key-list",
+			data:     []byte(`- noenv`),
+			expected: Labels{"noenv": ""},
 		},
 		{
-			"key-with-no-value-list",
-			[]byte(`- noenv=`),
-			Labels{"noenv": ""},
+			name:     "key-with-no-value-list",
+			data:     []byte(`- noenv=`),
+			expected: Labels{"noenv": ""},
 		},
 		{
-			"key-with-no-value-map",
-			[]byte(`noenv:`),
-			Labels{"noenv": ""},
+			name:     "key-with-no-value-map",
+			data:     []byte(`noenv:`),
+			expected: Labels{"noenv": ""},
 		},
 		{
-			"key-with-env-var-not-defined-list",
-			[]byte(`- noenv=$UNDEFINED`),
-			Labels{"noenv": ""},
+			name:     "key-with-env-var-not-defined-list",
+			data:     []byte(`- noenv=$UNDEFINED`),
+			expected: Labels{"noenv": ""},
 		},
 		{
-			"key-with-env-var-not-defined-map",
-			[]byte(`noenv: $UNDEFINED`),
-			Labels{"noenv": ""},
+			name:     "key-with-env-var-not-defined-map",
+			data:     []byte(`noenv: $UNDEFINED`),
+			expected: Labels{"noenv": ""},
 		},
 		{
-			"just-env-var-list",
-			[]byte(`- $DEV_ENV`),
-			Labels{"test_environment": ""},
+			name:     "just-env-var-list",
+			data:     []byte(`- $DEV_ENV`),
+			expected: Labels{"test_environment": ""},
 		},
 		{
-			"just-env-var-undefined-list",
-			[]byte(`- $UNDEFINED`),
-			Labels{"": ""},
+			name:     "just-env-var-undefined-list",
+			data:     []byte(`- $UNDEFINED`),
+			expected: Labels{"": ""},
 		},
 		{
-			"local_env_expanded-list",
-			[]byte(`- OKTETO_TEST_ENV_MARSHALLING`),
-			Labels{"OKTETO_TEST_ENV_MARSHALLING": "true"},
+			name:     "local_env_expanded-list",
+			data:     []byte(`- OKTETO_TEST_ENV_MARSHALLING`),
+			expected: Labels{"OKTETO_TEST_ENV_MARSHALLING": "true"},
 		},
 	}
 
@@ -741,84 +738,84 @@ func TestLabelsUnmarshalling(t *testing.T) {
 
 func TestAnnotationsUnmarshalling(t *testing.T) {
 	tests := []struct {
+		expected Annotations
 		name     string
 		data     []byte
-		expected Annotations
 	}{
 		{
-			"key-value-list",
-			[]byte(`- env=production`),
-			Annotations{"env": "production"},
+			name:     "key-value-list",
+			data:     []byte(`- env=production`),
+			expected: Annotations{"env": "production"},
 		},
 		{
-			"key-value-map",
-			[]byte(`env: production`),
-			Annotations{"env": "production"},
+			name:     "key-value-map",
+			data:     []byte(`env: production`),
+			expected: Annotations{"env": "production"},
 		},
 		{
-			"key-value-complex-list",
-			[]byte(`- env='production=11231231asa#$˜GADAFA'`),
-			Annotations{"env": "'production=11231231asa#$˜GADAFA'"},
+			name:     "key-value-complex-list",
+			data:     []byte(`- env='production=11231231asa#$˜GADAFA'`),
+			expected: Annotations{"env": "'production=11231231asa#$˜GADAFA'"},
 		},
 		{
-			"key-value-with-env-var-list",
-			[]byte(`- env=$DEV_ENV`),
-			Annotations{"env": "test_environment"},
+			name:     "key-value-with-env-var-list",
+			data:     []byte(`- env=$DEV_ENV`),
+			expected: Annotations{"env": "test_environment"},
 		},
 		{
-			"key-value-with-env-var-map",
-			[]byte(`env: $DEV_ENV`),
-			Annotations{"env": "test_environment"},
+			name:     "key-value-with-env-var-map",
+			data:     []byte(`env: $DEV_ENV`),
+			expected: Annotations{"env": "test_environment"},
 		},
 		{
-			"key-value-with-env-var-in-string-list",
-			[]byte(`- env=my_env;$DEV_ENV;prod`),
-			Annotations{"env": "my_env;test_environment;prod"},
+			name:     "key-value-with-env-var-in-string-list",
+			data:     []byte(`- env=my_env;$DEV_ENV;prod`),
+			expected: Annotations{"env": "my_env;test_environment;prod"},
 		},
 		{
-			"key-value-with-env-var-in-string-map",
-			[]byte(`env: my_env;$DEV_ENV;prod`),
-			Annotations{"env": "my_env;test_environment;prod"},
+			name:     "key-value-with-env-var-in-string-map",
+			data:     []byte(`env: my_env;$DEV_ENV;prod`),
+			expected: Annotations{"env": "my_env;test_environment;prod"},
 		},
 		{
-			"simple-key-list",
-			[]byte(`- noenv`),
-			Annotations{"noenv": ""},
+			name:     "simple-key-list",
+			data:     []byte(`- noenv`),
+			expected: Annotations{"noenv": ""},
 		},
 		{
-			"key-with-no-value-list",
-			[]byte(`- noenv=`),
-			Annotations{"noenv": ""},
+			name:     "key-with-no-value-list",
+			data:     []byte(`- noenv=`),
+			expected: Annotations{"noenv": ""},
 		},
 		{
-			"key-with-no-value-map",
-			[]byte(`noenv:`),
-			Annotations{"noenv": ""},
+			name:     "key-with-no-value-map",
+			data:     []byte(`noenv:`),
+			expected: Annotations{"noenv": ""},
 		},
 		{
-			"key-with-env-var-not-defined-list",
-			[]byte(`- noenv=$UNDEFINED`),
-			Annotations{"noenv": ""},
+			name:     "key-with-env-var-not-defined-list",
+			data:     []byte(`- noenv=$UNDEFINED`),
+			expected: Annotations{"noenv": ""},
 		},
 		{
-			"key-with-env-var-not-defined-map",
-			[]byte(`noenv: $UNDEFINED`),
-			Annotations{"noenv": ""},
+			name:     "key-with-env-var-not-defined-map",
+			data:     []byte(`noenv: $UNDEFINED`),
+			expected: Annotations{"noenv": ""},
 		},
 		{
-			"just-env-var-list",
-			[]byte(`- $DEV_ENV`),
-			Annotations{"test_environment": ""},
+			name:     "just-env-var-list",
+			data:     []byte(`- $DEV_ENV`),
+			expected: Annotations{"test_environment": ""},
 		},
 		{
-			"just-env-var-undefined-list",
-			[]byte(`- $UNDEFINED`),
-			Annotations{"": ""},
+			name:     "just-env-var-undefined-list",
+			data:     []byte(`- $UNDEFINED`),
+			expected: Annotations{"": ""},
 		},
 		{
-			"local_env_expanded-list",
-			[]byte(`- OKTETO_TEST_ENV_MARSHALLING`),
-			Annotations{"OKTETO_TEST_ENV_MARSHALLING": "true"},
+			name:     "local_env_expanded-list",
+			data:     []byte(`- OKTETO_TEST_ENV_MARSHALLING`),
+			expected: Annotations{"OKTETO_TEST_ENV_MARSHALLING": "true"},
 		},
 	}
 
@@ -986,9 +983,9 @@ rescanInterval: 10`),
 func TestSyncFoldersUnmarshalling(t *testing.T) {
 	t.Setenv("REMOTE_PATH", "/usr/src/app")
 	tests := []struct {
+		expected SyncFolder
 		name     string
 		data     []byte
-		expected SyncFolder
 	}{
 		{
 			name:     "same dir",
@@ -1034,9 +1031,9 @@ func TestSyncFoldersUnmarshalling(t *testing.T) {
 
 func TestManifestUnmarshalling(t *testing.T) {
 	tests := []struct {
+		expected        *Manifest
 		name            string
 		manifest        []byte
-		expected        *Manifest
 		isErrorExpected bool
 	}{
 		{
@@ -1850,9 +1847,9 @@ func TestDevModeUnmarshalling(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
+		expected *Dev
 		name     string
 		input    []byte
-		expected *Dev
 	}{
 		{
 			name: "hybrid mode enabled",
@@ -2248,9 +2245,9 @@ func TestDestroyInfoMarshalling(t *testing.T) {
 
 func TestDestroyInfoUnmarshalling(t *testing.T) {
 	tests := []struct {
+		expected        *DestroyInfo
 		name            string
 		input           []byte
-		expected        *DestroyInfo
 		isErrorExpected bool
 	}{
 		{
@@ -2346,9 +2343,9 @@ compose:
 
 func TestDeployInfoUnmarshalling(t *testing.T) {
 	tests := []struct {
+		expected           *DeployInfo
 		name               string
 		deployInfoManifest []byte
-		expected           *DeployInfo
 		isErrorExpected    bool
 	}{
 		{
@@ -2494,9 +2491,9 @@ func TestDeployInfoMarshalling(t *testing.T) {
 
 func TestComposeSectionInfoUnmarshalling(t *testing.T) {
 	tests := []struct {
+		expected            *ComposeSectionInfo
 		name                string
 		composeInfoManifest []byte
-		expected            *ComposeSectionInfo
 	}{
 		{
 			name: "list of compose",
@@ -2610,9 +2607,9 @@ services:
 
 func TestComposeInfoUnmarshalling(t *testing.T) {
 	tests := []struct {
+		expected             *ComposeInfo
 		name                 string
 		manifestListManifest []byte
-		expected             *ComposeInfo
 	}{
 		{
 			name: "docker compose without key",
@@ -2662,9 +2659,9 @@ services: a`),
 
 func TestManifestBuildUnmarshalling(t *testing.T) {
 	tests := []struct {
+		expected        ManifestBuild
 		name            string
 		buildManifest   []byte
-		expected        ManifestBuild
 		isErrorExpected bool
 	}{
 		{
@@ -2776,10 +2773,10 @@ func TestBuildDependsOnUnmarshalling(t *testing.T) {
 
 func TestBuildArgsUnmarshalling(t *testing.T) {
 	tests := []struct {
+		env      map[string]string
 		name     string
 		data     []byte
 		expected BuildArgs
-		env      map[string]string
 	}{
 		{
 			name: "list",
@@ -2878,9 +2875,9 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 
 func TestDependencyUnmashalling(t *testing.T) {
 	tests := []struct {
+		expected *dependencies.Dependency
 		name     string
 		data     []byte
-		expected *dependencies.Dependency
 	}{
 		{
 			name: "single line",

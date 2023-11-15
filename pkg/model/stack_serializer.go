@@ -62,106 +62,101 @@ type StackRaw struct {
 
 // ServiceRaw represents an okteto stack service
 type ServiceRaw struct {
-	Deploy                   *DeployInfoRaw        `yaml:"deploy,omitempty"`
-	Build                    *composeBuildInfo     `yaml:"build,omitempty"`
-	CapAddSneakCase          []apiv1.Capability    `yaml:"cap_add,omitempty"`
-	CapAdd                   []apiv1.Capability    `yaml:"capAdd,omitempty"`
-	CapDropSneakCase         []apiv1.Capability    `yaml:"cap_drop,omitempty"`
-	CapDrop                  []apiv1.Capability    `yaml:"capDrop,omitempty"`
-	Command                  CommandStack          `yaml:"command,omitempty"`
-	CpuCount                 Quantity              `yaml:"cpu_count,omitempty"`
-	Cpus                     Quantity              `yaml:"cpus,omitempty"`
-	Entrypoint               CommandStack          `yaml:"entrypoint,omitempty"`
-	Args                     ArgsStack             `yaml:"args,omitempty"`
-	EnvFilesSneakCase        env.EnvFiles          `yaml:"env_file,omitempty"`
-	EnvFiles                 env.EnvFiles          `yaml:"envFile,omitempty"`
-	Environment              env.Environment       `yaml:"environment,omitempty"`
-	Expose                   []PortRaw             `yaml:"expose,omitempty"`
-	Healthcheck              *HealthCheck          `yaml:"healthcheck,omitempty"`
-	Image                    string                `yaml:"image,omitempty"`
-	Labels                   Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations              Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	NodeSelector             Selector              `json:"x-node-selector,omitempty" yaml:"x-node-selector,omitempty"`
-	MemLimit                 Quantity              `yaml:"mem_limit,omitempty"`
-	MemReservation           Quantity              `yaml:"mem_reservation,omitempty"`
-	Ports                    []PortRaw             `yaml:"ports,omitempty"`
-	Restart                  string                `yaml:"restart,omitempty"`
-	Scale                    *int32                `yaml:"scale"`
-	StopGracePeriodSneakCase *RawMessage           `yaml:"stop_grace_period,omitempty"`
-	StopGracePeriod          *RawMessage           `yaml:"stopGracePeriod,omitempty"`
-	User                     *StackSecurityContext `yaml:"user,omitempty"`
-	Volumes                  []StackVolume         `yaml:"volumes,omitempty"`
-	WorkingDirSneakCase      string                `yaml:"working_dir,omitempty"`
-	Workdir                  string                `yaml:"workdir,omitempty"`
-	DependsOn                DependsOn             `yaml:"depends_on,omitempty"`
-
-	Public    bool            `yaml:"public,omitempty"`
-	Replicas  *int32          `yaml:"replicas"`
-	Resources *StackResources `yaml:"resources,omitempty"`
-
-	BlkioConfig       *WarningType `yaml:"blkio_config,omitempty"`
-	CpuPercent        *WarningType `yaml:"cpu_percent,omitempty"`
-	CpuShares         *WarningType `yaml:"cpu_shares,omitempty"`
-	CpuPeriod         *WarningType `yaml:"cpu_period,omitempty"`
-	CpuQuota          *WarningType `yaml:"cpu_quota,omitempty"`
-	CpuRtRuntime      *WarningType `yaml:"cpu_rt_runtime,omitempty"`
-	CpuRtPeriod       *WarningType `yaml:"cpu_rt_period,omitempty"`
-	Cpuset            *WarningType `yaml:"cpuset,omitempty"`
-	CgroupParent      *WarningType `yaml:"cgroup_parent,omitempty"`
-	Configs           *WarningType `yaml:"configs,omitempty"`
-	ContainerName     *WarningType `yaml:"container_name,omitempty"`
-	CredentialSpec    *WarningType `yaml:"credential_spec,omitempty"`
-	DeviceCgroupRules *WarningType `yaml:"device_cgroup_rules,omitempty"`
-	Devices           *WarningType `yaml:"devices,omitempty"`
-	Dns               *WarningType `yaml:"dns,omitempty"`
-	DnsOpt            *WarningType `yaml:"dns_opt,omitempty"`
-	DnsSearch         *WarningType `yaml:"dns_search,omitempty"`
-	DomainName        *WarningType `yaml:"domainname,omitempty"`
-	Extends           *WarningType `yaml:"extends,omitempty"`
-	ExternalLinks     *WarningType `yaml:"external_links,omitempty"`
-	ExtraHosts        *WarningType `yaml:"extra_hosts,omitempty"`
-	GroupAdd          *WarningType `yaml:"group_add,omitempty"`
-	Hostname          *WarningType `yaml:"hostname,omitempty"`
-	Init              *WarningType `yaml:"init,omitempty"`
-	Ipc               *WarningType `yaml:"ipc,omitempty"`
-	Isolation         *WarningType `yaml:"isolation,omitempty"`
-	Links             *WarningType `yaml:"links,omitempty"`
-	Logging           *WarningType `yaml:"logging,omitempty"`
-	Network_mode      *WarningType `yaml:"network_mode,omitempty"`
-	Networks          *WarningType `yaml:"networks,omitempty"`
-	MacAddress        *WarningType `yaml:"mac_address,omitempty"`
-	MemSwappiness     *WarningType `yaml:"mem_swappiness,omitempty"`
-	MemswapLimit      *WarningType `yaml:"memswap_limit,omitempty"`
-	OomKillDisable    *WarningType `yaml:"oom_kill_disable,omitempty"`
-	OomScoreAdj       *WarningType `yaml:"oom_score_adj,omitempty"`
-	Pid               *WarningType `yaml:"pid,omitempty"`
-	PidLimit          *WarningType `yaml:"pid_limit,omitempty"`
-	Platform          *WarningType `yaml:"platform,omitempty"`
-	Privileged        *WarningType `yaml:"privileged,omitempty"`
-	Profiles          *WarningType `yaml:"profiles,omitempty"`
-	PullPolicy        *WarningType `yaml:"pull_policy,omitempty"`
-	ReadOnly          *WarningType `yaml:"read_only,omitempty"`
-	Runtime           *WarningType `yaml:"runtime,omitempty"`
-	Secrets           *WarningType `yaml:"secrets,omitempty"`
-	SecurityOpt       *WarningType `yaml:"security_opt,omitempty"`
-	ShmSize           *WarningType `yaml:"shm_size,omitempty"`
-	StdinOpen         *WarningType `yaml:"stdin_open,omitempty"`
-	StopSignal        *WarningType `yaml:"stop_signal,omitempty"`
-	StorageOpts       *WarningType `yaml:"storage_opts,omitempty"`
-	Sysctls           *WarningType `yaml:"sysctls,omitempty"`
-	Tmpfs             *WarningType `yaml:"tmpfs,omitempty"`
-	Tty               *WarningType `yaml:"tty,omitempty"`
-	Ulimits           *WarningType `yaml:"ulimits,omitempty"`
-	UsernsMode        *WarningType `yaml:"userns_mode,omitempty"`
-	VolumesFrom       *WarningType `yaml:"volumes_from,omitempty"`
-
-	// Extensions
-	Extensions map[string]interface{} `yaml:",inline" json:"-"`
+	MemSwappiness            *WarningType           `yaml:"mem_swappiness,omitempty"`
+	CredentialSpec           *WarningType           `yaml:"credential_spec,omitempty"`
+	Extensions               map[string]interface{} `yaml:",inline" json:"-"`
+	VolumesFrom              *WarningType           `yaml:"volumes_from,omitempty"`
+	UsernsMode               *WarningType           `yaml:"userns_mode,omitempty"`
+	Ulimits                  *WarningType           `yaml:"ulimits,omitempty"`
+	Tty                      *WarningType           `yaml:"tty,omitempty"`
+	Tmpfs                    *WarningType           `yaml:"tmpfs,omitempty"`
+	Sysctls                  *WarningType           `yaml:"sysctls,omitempty"`
+	StorageOpts              *WarningType           `yaml:"storage_opts,omitempty"`
+	StopSignal               *WarningType           `yaml:"stop_signal,omitempty"`
+	StdinOpen                *WarningType           `yaml:"stdin_open,omitempty"`
+	ShmSize                  *WarningType           `yaml:"shm_size,omitempty"`
+	SecurityOpt              *WarningType           `yaml:"security_opt,omitempty"`
+	Secrets                  *WarningType           `yaml:"secrets,omitempty"`
+	Healthcheck              *HealthCheck           `yaml:"healthcheck,omitempty"`
+	Runtime                  *WarningType           `yaml:"runtime,omitempty"`
+	Labels                   Labels                 `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations              Annotations            `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	NodeSelector             Selector               `json:"x-node-selector,omitempty" yaml:"x-node-selector,omitempty"`
+	ReadOnly                 *WarningType           `yaml:"read_only,omitempty"`
+	PullPolicy               *WarningType           `yaml:"pull_policy,omitempty"`
+	ContainerName            *WarningType           `yaml:"container_name,omitempty"`
+	Profiles                 *WarningType           `yaml:"profiles,omitempty"`
+	Scale                    *int32                 `yaml:"scale"`
+	StopGracePeriodSneakCase *RawMessage            `yaml:"stop_grace_period,omitempty"`
+	StopGracePeriod          *RawMessage            `yaml:"stopGracePeriod,omitempty"`
+	User                     *StackSecurityContext  `yaml:"user,omitempty"`
+	Privileged               *WarningType           `yaml:"privileged,omitempty"`
+	Platform                 *WarningType           `yaml:"platform,omitempty"`
+	PidLimit                 *WarningType           `yaml:"pid_limit,omitempty"`
+	DependsOn                DependsOn              `yaml:"depends_on,omitempty"`
+	Pid                      *WarningType           `yaml:"pid,omitempty"`
+	Replicas                 *int32                 `yaml:"replicas"`
+	Resources                *StackResources        `yaml:"resources,omitempty"`
+	BlkioConfig              *WarningType           `yaml:"blkio_config,omitempty"`
+	CpuPercent               *WarningType           `yaml:"cpu_percent,omitempty"`
+	CpuShares                *WarningType           `yaml:"cpu_shares,omitempty"`
+	CpuPeriod                *WarningType           `yaml:"cpu_period,omitempty"`
+	CpuQuota                 *WarningType           `yaml:"cpu_quota,omitempty"`
+	CpuRtRuntime             *WarningType           `yaml:"cpu_rt_runtime,omitempty"`
+	CpuRtPeriod              *WarningType           `yaml:"cpu_rt_period,omitempty"`
+	Cpuset                   *WarningType           `yaml:"cpuset,omitempty"`
+	CgroupParent             *WarningType           `yaml:"cgroup_parent,omitempty"`
+	Networks                 *WarningType           `yaml:"networks,omitempty"`
+	Build                    *composeBuildInfo      `yaml:"build,omitempty"`
+	OomScoreAdj              *WarningType           `yaml:"oom_score_adj,omitempty"`
+	DeviceCgroupRules        *WarningType           `yaml:"device_cgroup_rules,omitempty"`
+	Devices                  *WarningType           `yaml:"devices,omitempty"`
+	Dns                      *WarningType           `yaml:"dns,omitempty"`
+	DnsOpt                   *WarningType           `yaml:"dns_opt,omitempty"`
+	DnsSearch                *WarningType           `yaml:"dns_search,omitempty"`
+	DomainName               *WarningType           `yaml:"domainname,omitempty"`
+	Extends                  *WarningType           `yaml:"extends,omitempty"`
+	ExternalLinks            *WarningType           `yaml:"external_links,omitempty"`
+	ExtraHosts               *WarningType           `yaml:"extra_hosts,omitempty"`
+	GroupAdd                 *WarningType           `yaml:"group_add,omitempty"`
+	Hostname                 *WarningType           `yaml:"hostname,omitempty"`
+	Init                     *WarningType           `yaml:"init,omitempty"`
+	Ipc                      *WarningType           `yaml:"ipc,omitempty"`
+	Isolation                *WarningType           `yaml:"isolation,omitempty"`
+	Links                    *WarningType           `yaml:"links,omitempty"`
+	Logging                  *WarningType           `yaml:"logging,omitempty"`
+	Network_mode             *WarningType           `yaml:"network_mode,omitempty"`
+	Configs                  *WarningType           `yaml:"configs,omitempty"`
+	MacAddress               *WarningType           `yaml:"mac_address,omitempty"`
+	Deploy                   *DeployInfoRaw         `yaml:"deploy,omitempty"`
+	MemswapLimit             *WarningType           `yaml:"memswap_limit,omitempty"`
+	OomKillDisable           *WarningType           `yaml:"oom_kill_disable,omitempty"`
+	MemReservation           Quantity               `yaml:"mem_reservation,omitempty"`
+	CpuCount                 Quantity               `yaml:"cpu_count,omitempty"`
+	Cpus                     Quantity               `yaml:"cpus,omitempty"`
+	MemLimit                 Quantity               `yaml:"mem_limit,omitempty"`
+	Restart                  string                 `yaml:"restart,omitempty"`
+	Image                    string                 `yaml:"image,omitempty"`
+	Workdir                  string                 `yaml:"workdir,omitempty"`
+	WorkingDirSneakCase      string                 `yaml:"working_dir,omitempty"`
+	Command                  CommandStack           `yaml:"command,omitempty"`
+	Volumes                  []StackVolume          `yaml:"volumes,omitempty"`
+	CapAddSneakCase          []apiv1.Capability     `yaml:"cap_add,omitempty"`
+	EnvFiles                 env.EnvFiles           `yaml:"envFile,omitempty"`
+	EnvFilesSneakCase        env.EnvFiles           `yaml:"env_file,omitempty"`
+	Args                     ArgsStack              `yaml:"args,omitempty"`
+	Entrypoint               CommandStack           `yaml:"entrypoint,omitempty"`
+	Environment              env.Environment        `yaml:"environment,omitempty"`
+	Expose                   []PortRaw              `yaml:"expose,omitempty"`
+	Ports                    []PortRaw              `yaml:"ports,omitempty"`
+	CapDrop                  []apiv1.Capability     `yaml:"capDrop,omitempty"`
+	CapDropSneakCase         []apiv1.Capability     `yaml:"cap_drop,omitempty"`
+	CapAdd                   []apiv1.Capability     `yaml:"capAdd,omitempty"`
+	Public                   bool                   `yaml:"public,omitempty"`
 }
 
 type DeployInfoRaw struct {
 	Replicas      *int32            `yaml:"replicas,omitempty"`
-	Resources     ResourcesRaw      `yaml:"resources,omitempty"`
 	Labels        Labels            `yaml:"labels,omitempty"`
 	RestartPolicy *RestartPolicyRaw `yaml:"restart_policy,omitempty"`
 
@@ -173,32 +168,28 @@ type DeployInfoRaw struct {
 	RollbackConfig *WarningType `yaml:"rollback_config,omitempty"`
 	UpdateConfig   *WarningType `yaml:"update_config,omitempty"`
 
-	// Extensions
 	Extensions map[string]interface{} `yaml:",inline" json:"-"`
+
+	Resources ResourcesRaw `yaml:"resources,omitempty"`
 }
 
 type RestartPolicyRaw struct {
-	Condition   string `yaml:"condition,omitempty"`
-	MaxAttempts int32  `yaml:"max_attempts,omitempty"`
-
-	Delay  *WarningType `yaml:"delay,omitempty"`
-	Window *WarningType `yaml:"window,omitempty"`
-
-	// Extensions
-	Extensions map[string]interface{} `yaml:",inline" json:"-"`
+	Delay       *WarningType           `yaml:"delay,omitempty"`
+	Window      *WarningType           `yaml:"window,omitempty"`
+	Extensions  map[string]interface{} `yaml:",inline" json:"-"`
+	Condition   string                 `yaml:"condition,omitempty"`
+	MaxAttempts int32                  `yaml:"max_attempts,omitempty"`
 }
 
 type PortRaw struct {
+	Extensions    map[string]interface{} `yaml:",inline" json:"-"`
+	Protocol      apiv1.Protocol
 	ContainerPort int32
 	HostPort      int32
 	ContainerFrom int32
 	ContainerTo   int32
 	HostFrom      int32
 	HostTo        int32
-	Protocol      apiv1.Protocol
-
-	// Extensions
-	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 }
 
 type WarningType struct {
@@ -206,35 +197,28 @@ type WarningType struct {
 }
 
 type ResourcesRaw struct {
+	Extensions   map[string]interface{} `yaml:",inline" json:"-"`
 	Limits       DeployComposeResources `json:"limits,omitempty" yaml:"limits,omitempty"`
 	Reservations DeployComposeResources `json:"reservations,omitempty" yaml:"reservations,omitempty"`
-
-	// Extensions
-	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 }
 
 type DeployComposeResources struct {
-	Cpus    Quantity     `json:"cpus,omitempty" yaml:"cpus,omitempty"`
-	Memory  Quantity     `json:"memory,omitempty" yaml:"memory,omitempty"`
-	Devices *WarningType `json:"devices,omitempty" yaml:"devices,omitempty"`
-
-	// Extensions
+	Devices    *WarningType           `json:"devices,omitempty" yaml:"devices,omitempty"`
 	Extensions map[string]interface{} `yaml:",inline" json:"-"`
+	Cpus       Quantity               `json:"cpus,omitempty" yaml:"cpus,omitempty"`
+	Memory     Quantity               `json:"memory,omitempty" yaml:"memory,omitempty"`
 }
 
 type VolumeTopLevel struct {
-	Labels      Labels            `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations Annotations       `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Name        string            `json:"name,omitempty" yaml:"name,omitempty"`
-	Size        Quantity          `json:"size,omitempty" yaml:"size,omitempty"`
-	Class       string            `json:"class,omitempty" yaml:"class,omitempty"`
-	DriverOpts  map[string]string `json:"driver_opts,omitempty" yaml:"driver_opts,omitempty"`
-
-	Driver   *WarningType `json:"driver,omitempty" yaml:"driver,omitempty"`
-	External *WarningType `json:"external,omitempty" yaml:"external,omitempty"`
-
-	// Extensions
-	Extensions map[string]interface{} `yaml:",inline" json:"-"`
+	Labels      Labels                 `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations Annotations            `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	DriverOpts  map[string]string      `json:"driver_opts,omitempty" yaml:"driver_opts,omitempty"`
+	Driver      *WarningType           `json:"driver,omitempty" yaml:"driver,omitempty"`
+	External    *WarningType           `json:"external,omitempty" yaml:"external,omitempty"`
+	Extensions  map[string]interface{} `yaml:",inline" json:"-"`
+	Size        Quantity               `json:"size,omitempty" yaml:"size,omitempty"`
+	Name        string                 `json:"name,omitempty" yaml:"name,omitempty"`
+	Class       string                 `json:"class,omitempty" yaml:"class,omitempty"`
 }
 type RawMessage struct {
 	unmarshal func(interface{}) error
@@ -520,14 +504,14 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 
 type healthCheckunmarshaller struct {
 	HTTP        *HTTPHealtcheck `yaml:"http,omitempty"`
+	Readiness   *bool           `yaml:"x-okteto-readiness,omitempty"`
 	Test        HealtcheckTest  `yaml:"test,omitempty"`
 	Interval    time.Duration   `yaml:"interval,omitempty"`
 	Timeout     time.Duration   `yaml:"timeout,omitempty"`
-	Retries     int             `yaml:"retries,omitempty"`
 	StartPeriod time.Duration   `yaml:"start_period,omitempty"`
+	Retries     int             `yaml:"retries,omitempty"`
 	Disable     bool            `yaml:"disable,omitempty"`
 	Liveness    bool            `yaml:"x-okteto-liveness,omitempty"`
-	Readiness   *bool           `yaml:"x-okteto-readiness,omitempty"`
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.

@@ -57,6 +57,7 @@ var (
 
 // Options represents options for deploy command
 type Options struct {
+	Manifest *model.Manifest
 	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
 	// This is stored at the configmap as filename to redeploy from the ui.
 	ManifestPathFlag string
@@ -66,20 +67,17 @@ type Options struct {
 	Name             string
 	Namespace        string
 	K8sContext       string
+	Repository       string
+	Branch           string
 	Variables        []string
-	Manifest         *model.Manifest
+	servicesToDeploy []string
+	Timeout          time.Duration
 	Build            bool
 	Dependencies     bool
 	RunWithoutBash   bool
 	RunInRemote      bool
-	servicesToDeploy []string
-
-	Repository string
-	Branch     string
-	Wait       bool
-	Timeout    time.Duration
-
-	ShowCTA bool
+	Wait             bool
+	ShowCTA          bool
 }
 
 type builderInterface interface {

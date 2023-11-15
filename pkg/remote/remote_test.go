@@ -18,8 +18,8 @@ func TestCreateDockerignoreFileWithFilesystem(t *testing.T) {
 	}
 	var tests = []struct {
 		name            string
-		config          config
 		expectedContent string
+		config          config
 	}{
 		{
 			name: "dockerignore present copy .oktetodeployignore to .dockerignore without manifest",

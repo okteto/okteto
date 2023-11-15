@@ -23,8 +23,8 @@ func Test_GetContextResource(t *testing.T) {
 	var tests = []struct {
 		name     string
 		message  string
-		masked   []string
 		expected string
+		masked   []string
 	}{
 		{
 			name:     "no banned words",

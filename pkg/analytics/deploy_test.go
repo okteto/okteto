@@ -10,9 +10,9 @@ import (
 
 func TestDeployTracker(t *testing.T) {
 	tt := []struct {
+		expected mockEvent
 		name     string
 		metadata DeployMetadata
-		expected mockEvent
 	}{
 		{
 			name: "all fields set",

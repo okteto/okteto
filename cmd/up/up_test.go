@@ -69,8 +69,8 @@ func Test_waitUntilExitOrInterrupt(t *testing.T) {
 
 func Test_printDisplayContext(t *testing.T) {
 	var tests = []struct {
-		name string
 		up   *upContext
+		name string
 	}{
 		{
 			name: "basic",
@@ -209,9 +209,9 @@ func Test_printDisplayContext(t *testing.T) {
 
 func TestEnvVarIsAddedProperlyToDevContainerWhenIsSetFromCmd(t *testing.T) {
 	var tests = []struct {
-		name                    string
 		dev                     *model.Dev
 		upOptions               *UpOptions
+		name                    string
 		expectedNumManifestEnvs int
 	}{
 		{
@@ -276,9 +276,9 @@ func TestEnvVarIsAddedProperlyToDevContainerWhenIsSetFromCmd(t *testing.T) {
 
 func TestEnvVarIsNotAddedWhenHasBuiltInOktetoEnvVarsFormat(t *testing.T) {
 	var tests = []struct {
-		name                    string
 		dev                     *model.Dev
 		upOptions               *UpOptions
+		name                    string
 		expectedNumManifestEnvs int
 	}{
 		{
@@ -412,11 +412,11 @@ func TestWakeNamespaceIfAppliesWithoutErrors(t *testing.T) {
 func TestSetSyncDefaultsByDevMode(t *testing.T) {
 	fakeSyncFolderName := "test"
 	tests := []struct {
-		name           string
+		expectedError  error
 		dev            *model.Dev
 		expectedDev    *model.Dev
+		name           string
 		syncFolderName string
-		expectedError  error
 	}{
 		{
 			name: "hybrid mode not enabled: return nil",
@@ -484,11 +484,11 @@ func TestSetSyncDefaultsByDevModeError(t *testing.T) {
 
 func TestUpdateKubetoken(t *testing.T) {
 	tt := []struct {
-		name        string
+		expected    error
 		f           *client.FakeOktetoClient
 		context     *okteto.OktetoContextStore
 		expectedCfg *api.Config
-		expected    error
+		name        string
 	}{
 		{
 			name: "oktetoClientError",
@@ -645,10 +645,10 @@ func TestUpdateKubetoken(t *testing.T) {
 }
 
 type fakeBuilder struct {
-	usedBuildOptions *types.BuildOptions
-	services         []string
 	getServicesErr   error
 	buildErr         error
+	usedBuildOptions *types.BuildOptions
+	services         []string
 }
 
 func (b *fakeBuilder) GetServicesToBuild(_ context.Context, _ *model.Manifest, _ []string) ([]string, error) {
@@ -672,11 +672,11 @@ func (*fakeBuilder) GetBuildEnvVars() map[string]string {
 
 func Test_buildServicesAndSetBuildEnvs(t *testing.T) {
 	tests := []struct {
-		name              string
+		expectedErr       error
 		m                 *model.Manifest
 		builder           *fakeBuilder
-		expectedErr       error
 		expectedBuildOpts *types.BuildOptions
+		name              string
 	}{
 		{
 			name: "builder GetServicesToBuild returns error",

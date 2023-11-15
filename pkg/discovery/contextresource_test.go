@@ -23,10 +23,10 @@ import (
 
 func TestGetContextResourcePathWhenExists(t *testing.T) {
 	var tests = []struct {
-		name          string
-		filesToCreate []string
-		expected      string
 		expectErr     error
+		name          string
+		expected      string
+		filesToCreate []string
 	}{
 		{
 			name:          "manifest does not exists",

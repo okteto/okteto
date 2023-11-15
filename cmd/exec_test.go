@@ -24,12 +24,12 @@ import (
 
 func TestGetDevFromArgs(t *testing.T) {
 	tests := []struct {
-		name          string
+		expectedErr   error
 		manifest      *model.Manifest
+		expectedDev   *model.Dev
+		name          string
 		args          []string
 		activeDevMode []string
-		expectedDev   *model.Dev
-		expectedErr   error
 	}{
 		{
 			name: "first arg is on dev section",

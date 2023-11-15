@@ -39,13 +39,13 @@ func Test_WakeNamespace(t *testing.T) {
 		},
 	}
 	var tests = []struct {
-		name string
+		err           error
+		fakeOkClient  *client.FakeOktetoClient
+		fakeK8sClient *fake.Clientset
+		name          string
 		// toWakeNs the namespace to wake
 		toWakeNs                        string
 		initialNamespacesAtOktetoClient []types.Namespace
-		fakeOkClient                    *client.FakeOktetoClient
-		fakeK8sClient                   *fake.Clientset
-		err                             error
 	}{
 		{
 			name:                            "wakes existing ns, the current one",

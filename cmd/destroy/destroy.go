@@ -58,6 +58,7 @@ type secretHandler interface {
 
 // Options represents the options for destroy command
 type Options struct {
+	Manifest *model.Manifest
 	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
 	// This is stored at the configmap as filename to redeploy from the ui.
 	ManifestPathFlag string
@@ -65,13 +66,12 @@ type Options struct {
 	// This might change its value during execution
 	ManifestPath        string
 	Name                string
-	Variables           []string
-	Manifest            *model.Manifest
 	Namespace           string
+	K8sContext          string
+	Variables           []string
 	DestroyVolumes      bool
 	DestroyDependencies bool
 	ForceDestroy        bool
-	K8sContext          string
 	RunWithoutBash      bool
 	DestroyAll          bool
 	RunInRemote         bool
@@ -87,16 +87,15 @@ type analyticsTrackerInterface interface {
 }
 
 type destroyCommand struct {
-	getManifest func(path string) (*model.Manifest, error)
-
 	executor          executor.ManifestExecutor
 	nsDestroyer       destroyer
 	secrets           secretHandler
 	k8sClientProvider okteto.K8sClientProvider
 	ConfigMapHandler  configMapHandler
+	analyticsTracker  analyticsTrackerInterface
+	getManifest       func(path string) (*model.Manifest, error)
 	oktetoClient      *okteto.OktetoClient
 	buildCtrl         buildCtrl
-	analyticsTracker  analyticsTrackerInterface
 }
 
 // Destroy destroys the dev application defined by the manifest

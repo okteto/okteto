@@ -59,13 +59,12 @@ type InitOpts struct {
 	DevPath   string
 	Namespace string
 	Context   string
+	Language  string
+	Workdir   string
+
 	Overwrite bool
-
-	ShowCTA  bool
-	Version1 bool
-
-	Language string
-	Workdir  string
+	ShowCTA   bool
+	Version1  bool
 
 	AutoDeploy       bool
 	AutoConfigureDev bool

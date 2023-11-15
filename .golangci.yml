@@ -29,6 +29,9 @@ linters-settings:
     # Otherwise, only methods that take `*testing.T`, `*testing.B`, and `testing.TB` as arguments are checked.
     # Default: false
     all: true
+  govet:
+    enable:
+      - fieldalignment
 
 # All possible linters can be found https://golangci-lint.run/usage/linters/
 linters:

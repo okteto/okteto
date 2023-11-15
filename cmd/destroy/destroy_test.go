@@ -53,15 +53,15 @@ var fakeManifest *model.Manifest = &model.Manifest{
 }
 
 type fakeDestroyer struct {
-	destroyed        bool
-	destroyedVolumes bool
 	err              error
 	errOnVolumes     error
+	destroyed        bool
+	destroyedVolumes bool
 }
 
 type fakeSecretHandler struct {
-	secrets []v1.Secret
 	err     error
+	secrets []v1.Secret
 }
 
 type fakeExecutor struct {
@@ -180,8 +180,8 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 		CurrentContext: "test",
 	}
 	tests := []struct {
-		name     string
 		manifest *model.Manifest
+		name     string
 		want     int
 	}{
 		{

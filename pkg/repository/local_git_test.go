@@ -31,9 +31,9 @@ func (mle *mockLocalExec) LookPath(file string) (string, error) {
 
 func TestLocalGit_Exists(t *testing.T) {
 	tests := []struct {
-		name     string
-		mockExec func() *mockLocalExec
 		err      error
+		mockExec func() *mockLocalExec
+		name     string
 	}{
 		{
 			name: "git exists",
@@ -70,9 +70,9 @@ func TestLocalGit_Exists(t *testing.T) {
 
 func TestLocalGit_FixDubiousOwnershipConfig(t *testing.T) {
 	tests := []struct {
-		name     string
-		mockExec func() *mockLocalExec
 		err      error
+		mockExec func() *mockLocalExec
+		name     string
 	}{
 		{
 			name: "success",
@@ -110,10 +110,10 @@ func TestLocalGit_FixDubiousOwnershipConfig(t *testing.T) {
 
 func TestLocalGit_Status(t *testing.T) {
 	tests := []struct {
+		expectedErr error
+		mock        func() *mockLocalExec
 		name        string
 		fixAttempts int
-		mock        func() *mockLocalExec
-		expectedErr error
 	}{
 		{
 			name:        "success",

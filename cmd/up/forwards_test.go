@@ -50,8 +50,8 @@ func TestGlobalForwarderAddsProperlyPortsToForward(t *testing.T) {
 	f := ssh.NewForwardManager(context.Background(), ":8080", "0.0.0.0", "0.0.0.0", nil, "test")
 
 	var tests = []struct {
-		name        string
 		upContext   *upContext
+		name        string
 		expectedErr bool
 	}{
 		{
@@ -115,10 +115,10 @@ func TestGlobalForwarderAddsProperlyPortsToForward(t *testing.T) {
 
 func TestForwards(t *testing.T) {
 	tt := []struct {
-		name                   string
-		OktetoExecuteSSHEnvVar string
 		clientProvider         okteto.K8sClientProvider
 		expected               error
+		name                   string
+		OktetoExecuteSSHEnvVar string
 	}{
 		{
 			name:                   "fakeClientProvider error",
@@ -161,9 +161,9 @@ func TestForwards(t *testing.T) {
 
 func TestSSHForwarss(t *testing.T) {
 	tt := []struct {
-		name           string
 		clientProvider okteto.K8sClientProvider
 		expected       error
+		name           string
 	}{
 		{
 			name: "fakeClientProvider error",

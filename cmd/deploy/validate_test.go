@@ -23,10 +23,10 @@ import (
 
 func Test_validateAndSet(t *testing.T) {
 	var tests = []struct {
-		name          string
-		variables     []string
 		expectedError error
 		expectedEnvs  map[string]string
+		name          string
+		variables     []string
 	}{
 		{
 			name:          "correct assingnament",

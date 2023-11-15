@@ -47,15 +47,15 @@ func Test_deleteNamespace(t *testing.T) {
 	}
 
 	var tests = []struct {
-		name string
+		err           error
+		fakeOkClient  *client.FakeOktetoClient
+		fakeK8sClient *fake.Clientset
+		name          string
 		// toDeleteNs the namespace to delete
 		toDeleteNs string
 		// finalNs the namespace user should finally be
 		finalNs                         string
 		initialNamespacesAtOktetoClient []types.Namespace
-		fakeOkClient                    *client.FakeOktetoClient
-		fakeK8sClient                   *fake.Clientset
-		err                             error
 	}{
 		{
 			name:                            "delete existing ns, the current one",

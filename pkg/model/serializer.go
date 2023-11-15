@@ -46,26 +46,26 @@ var (
 
 // BuildInfoRaw represents the build info for serialization
 type buildInfoRaw struct {
+	Secrets          BuildSecrets      `yaml:"secrets,omitempty"`
 	Name             string            `yaml:"name,omitempty"`
 	Context          string            `yaml:"context,omitempty"`
 	Dockerfile       string            `yaml:"dockerfile,omitempty"`
-	CacheFrom        cache.CacheFrom   `yaml:"cache_from,omitempty"`
 	Target           string            `yaml:"target,omitempty"`
-	Args             BuildArgs         `yaml:"args,omitempty"`
 	Image            string            `yaml:"image,omitempty"`
+	CacheFrom        cache.CacheFrom   `yaml:"cache_from,omitempty"`
+	Args             BuildArgs         `yaml:"args,omitempty"`
 	VolumesToInclude []StackVolume     `yaml:"-"`
 	ExportCache      cache.ExportCache `yaml:"export_cache,omitempty"`
 	DependsOn        BuildDependsOn    `yaml:"depends_on,omitempty"`
-	Secrets          BuildSecrets      `yaml:"secrets,omitempty"`
 }
 
 type syncRaw struct {
-	Compression    bool         `json:"compression" yaml:"compression"`
-	Verbose        bool         `json:"verbose" yaml:"verbose"`
-	RescanInterval int          `json:"rescanInterval,omitempty" yaml:"rescanInterval,omitempty"`
-	Folders        []SyncFolder `json:"folders,omitempty" yaml:"folders,omitempty"`
 	LocalPath      string
 	RemotePath     string
+	Folders        []SyncFolder `json:"folders,omitempty" yaml:"folders,omitempty"`
+	RescanInterval int          `json:"rescanInterval,omitempty" yaml:"rescanInterval,omitempty"`
+	Compression    bool         `json:"compression" yaml:"compression"`
+	Verbose        bool         `json:"verbose" yaml:"verbose"`
 }
 
 type storageResourceRaw struct {
@@ -114,10 +114,10 @@ type NodeSelectorRequirement struct {
 }
 
 type PreferredSchedulingTerm struct {
-	// Weight associated with matching the corresponding nodeSelectorTerm, in the range 1-100.
-	Weight int32 `yaml:"weight" json:"weight"`
 	// A node selector term, associated with the corresponding weight.
 	Preference NodeSelectorTerm `yaml:"preference" json:"preference"`
+	// Weight associated with matching the corresponding nodeSelectorTerm, in the range 1-100.
+	Weight int32 `yaml:"weight" json:"weight"`
 }
 
 // PodAffinity describes pod affinity scheduling rules (e.g. co-locate this pod in the same node, zone, etc. as some other pod(s)).
@@ -134,8 +134,8 @@ type PodAntiAffinity struct {
 
 type PodAffinityTerm struct {
 	LabelSelector *LabelSelector `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
-	Namespaces    []string       `yaml:"namespaces,omitempty" json:"namespaces,omitempty"`
 	TopologyKey   string         `yaml:"topologyKey" json:"topologyKey"`
+	Namespaces    []string       `yaml:"namespaces,omitempty" json:"namespaces,omitempty"`
 }
 
 type LabelSelector struct {
@@ -149,8 +149,8 @@ type LabelSelectorRequirement struct {
 }
 
 type WeightedPodAffinityTerm struct {
-	Weight          int32           `yaml:"weight" json:"weight"`
 	PodAffinityTerm PodAffinityTerm `yaml:"podAffinityTerm" json:"podAffinityTerm"`
+	Weight          int32           `yaml:"weight" json:"weight"`
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
@@ -702,15 +702,14 @@ func checkFileAndNotDirectory(path string) error {
 }
 
 type hybridModeInfo struct {
-	Workdir     string            `json:"workdir,omitempty" yaml:"workdir,omitempty"`
-	Selector    Selector          `json:"selector,omitempty" yaml:"selector,omitempty"`
-	Forward     []forward.Forward `json:"forward,omitempty" yaml:"forward,omitempty"`
-	Environment env.Environment   `json:"environment,omitempty" yaml:"environment,omitempty"`
-	Command     hybridCommand     `json:"command,omitempty" yaml:"command,omitempty"`
-	Reverse     []Reverse         `json:"reverse,omitempty" yaml:"reverse,omitempty"`
-	Mode        string            `json:"mode,omitempty" yaml:"mode,omitempty"`
-
+	Selector          Selector               `json:"selector,omitempty" yaml:"selector,omitempty"`
 	UnsupportedFields map[string]interface{} `yaml:",inline" json:"-"`
+	Workdir           string                 `json:"workdir,omitempty" yaml:"workdir,omitempty"`
+	Mode              string                 `json:"mode,omitempty" yaml:"mode,omitempty"`
+	Forward           []forward.Forward      `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Environment       env.Environment        `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Command           hybridCommand          `json:"command,omitempty" yaml:"command,omitempty"`
+	Reverse           []Reverse              `json:"reverse,omitempty" yaml:"reverse,omitempty"`
 }
 
 type hybridCommand Command

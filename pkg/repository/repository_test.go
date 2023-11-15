@@ -40,11 +40,11 @@ func (frg *fakeRepositoryGetter) get(_ string) (gitRepositoryInterface, error) {
 }
 
 type fakeRepository struct {
+	err          error
 	worktree     *fakeWorktree
 	head         *plumbing.Reference
 	commit       *fakeCommit
 	failInCommit bool
-	err          error
 }
 
 func (fr fakeRepository) Worktree() (gitWorktreeInterface, error) {
@@ -62,9 +62,9 @@ func (fr fakeRepository) CommitObject(plumbing.Hash) (gitCommitInterface, error)
 }
 
 type fakeWorktree struct {
+	err    error
 	status oktetoGitStatus
 	root   string
-	err    error
 }
 
 func (fw fakeWorktree) GetRoot() string {
@@ -86,10 +86,10 @@ func (fc *fakeCommit) Tree() (*object.Tree, error) {
 
 func TestNewRepo(t *testing.T) {
 	tt := []struct {
+		expectedControl repositoryInterface
 		name            string
 		GitCommit       string
 		remoteDeploy    string
-		expectedControl repositoryInterface
 	}{
 		{
 			name:      "GitCommit is empty",

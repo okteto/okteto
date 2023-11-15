@@ -270,8 +270,8 @@ func Test_loadName(t *testing.T) {
 		name      string
 		devName   string
 		value     string
-		onService bool
 		want      string
+		onService bool
 	}{
 		{
 			name:    "no-var",
@@ -351,10 +351,10 @@ services:
 
 func Test_loadSelector(t *testing.T) {
 	tests := []struct {
-		name     string
 		selector Selector
-		value    string
 		want     Selector
+		name     string
+		value    string
 	}{
 		{
 			name:     "no-var",
@@ -563,9 +563,9 @@ func TestDev_validateReplicas(t *testing.T) {
 
 func TestDev_readImageContext(t *testing.T) {
 	tests := []struct {
+		expected *BuildInfo
 		name     string
 		manifest []byte
-		expected *BuildInfo
 	}{
 		{
 			name: "context pointing to url",
@@ -1093,11 +1093,11 @@ func TestGetTimeout(t *testing.T) {
 
 func Test_loadEnvFile(t *testing.T) {
 	tests := []struct {
-		name      string
-		expectErr bool
 		content   map[string]string
 		existing  map[string]string
 		expected  map[string]string
+		name      string
+		expectErr bool
 	}{
 		{
 			name:      "missing",
@@ -1609,10 +1609,10 @@ func Test_BuildInfoCopy(t *testing.T) {
 func TestExpandBuildArgs(t *testing.T) {
 	t.Setenv("KEY", "VALUE")
 	tests := []struct {
-		name               string
 		buildInfo          *BuildInfo
-		previousImageBuilt map[string]string
 		expected           *BuildInfo
+		previousImageBuilt map[string]string
+		name               string
 	}{
 		{
 			name:               "no build args",

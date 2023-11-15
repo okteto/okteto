@@ -23,16 +23,16 @@ import (
 )
 
 type kubeconfigFields struct {
+	CurrentContext string
 	Name           []string
 	Namespace      []string
-	CurrentContext string
 }
 
 func TestGetKubeconfig(t *testing.T) {
 	var tests = []struct {
+		expected         *clientcmdapi.Config
 		name             string
 		KubeconfigFields []kubeconfigFields
-		expected         *clientcmdapi.Config
 	}{
 		{
 			name: "only one",

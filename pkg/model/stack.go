@@ -45,16 +45,16 @@ var (
 
 // Stack represents an okteto stack
 type Stack struct {
-	Manifest  []byte                 `yaml:"-"`
-	Paths     []string               `yaml:"-"`
-	Warnings  StackWarnings          `yaml:"-"`
-	IsCompose bool                   `yaml:"-"`
-	Name      string                 `yaml:"name"`
 	Volumes   map[string]*VolumeSpec `yaml:"volumes,omitempty"`
-	Namespace string                 `yaml:"namespace,omitempty"`
-	Context   string                 `yaml:"context,omitempty"`
 	Services  ComposeServices        `yaml:"services,omitempty"`
 	Endpoints EndpointSpec           `yaml:"endpoints,omitempty"`
+	Name      string                 `yaml:"name"`
+	Namespace string                 `yaml:"namespace,omitempty"`
+	Context   string                 `yaml:"context,omitempty"`
+	Warnings  StackWarnings          `yaml:"-"`
+	Manifest  []byte                 `yaml:"-"`
+	Paths     []string               `yaml:"-"`
+	IsCompose bool                   `yaml:"-"`
 }
 
 // ComposeServices represents the services declared in the compose
@@ -70,34 +70,33 @@ func (cs ComposeServices) getNames() []string {
 
 // Service represents an okteto stack service
 type Service struct {
-	Build      *BuildInfo         `yaml:"build,omitempty"`
-	CapAdd     []apiv1.Capability `yaml:"cap_add,omitempty"`
-	CapDrop    []apiv1.Capability `yaml:"cap_drop,omitempty"`
-	Entrypoint Entrypoint         `yaml:"entrypoint,omitempty"`
-	Command    Command            `yaml:"command,omitempty"`
-	EnvFiles   env.EnvFiles       `yaml:"env_file,omitempty"`
-	DependsOn  DependsOn          `yaml:"depends_on,omitempty"`
+	Healtcheck    *HealthCheck          `yaml:"healthcheck,omitempty"`
+	Labels        Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Resources     *StackResources       `yaml:"resources,omitempty"` // For okteto stack only
+	NodeSelector  Selector              `json:"x-node-selector,omitempty" yaml:"x-node-selector,omitempty"`
+	User          *StackSecurityContext `yaml:"user,omitempty"`
+	DependsOn     DependsOn             `yaml:"depends_on,omitempty"`
+	Build         *BuildInfo            `yaml:"build,omitempty"`
+	Workdir       string                `yaml:"workdir,omitempty"`
+	Image         string                `yaml:"image,omitempty"`
+	RestartPolicy apiv1.RestartPolicy   `yaml:"restart,omitempty"`
 
-	Environment     env.Environment       `yaml:"environment,omitempty"`
-	Image           string                `yaml:"image,omitempty"`
-	Labels          Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations     Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	NodeSelector    Selector              `json:"x-node-selector,omitempty" yaml:"x-node-selector,omitempty"`
-	Ports           []Port                `yaml:"ports,omitempty"`
-	RestartPolicy   apiv1.RestartPolicy   `yaml:"restart,omitempty"`
-	StopGracePeriod int64                 `yaml:"stop_grace_period,omitempty"`
-	Volumes         []StackVolume         `yaml:"volumes,omitempty"`
-	Workdir         string                `yaml:"workdir,omitempty"`
-	BackOffLimit    int32                 `yaml:"max_attempts,omitempty"`
-	Healtcheck      *HealthCheck          `yaml:"healthcheck,omitempty"`
-	User            *StackSecurityContext `yaml:"user,omitempty"`
+	Environment     env.Environment    `yaml:"environment,omitempty"`
+	Ports           []Port             `yaml:"ports,omitempty"`
+	Volumes         []StackVolume      `yaml:"volumes,omitempty"`
+	CapAdd          []apiv1.Capability `yaml:"cap_add,omitempty"`
+	CapDrop         []apiv1.Capability `yaml:"cap_drop,omitempty"`
+	VolumeMounts    []StackVolume      `yaml:"-"`
+	EnvFiles        env.EnvFiles       `yaml:"env_file,omitempty"`
+	Command         Command            `yaml:"command,omitempty"`
+	Annotations     Annotations        `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Entrypoint      Entrypoint         `yaml:"entrypoint,omitempty"`
+	StopGracePeriod int64              `yaml:"stop_grace_period,omitempty"`
 
-	// Fields only for okteto stacks
-	Public    bool            `yaml:"public,omitempty"`
-	Replicas  int32           `yaml:"replicas,omitempty"`
-	Resources *StackResources `yaml:"resources,omitempty"`
+	Replicas     int32 `yaml:"replicas,omitempty"` // For okteto stack only
+	BackOffLimit int32 `yaml:"max_attempts,omitempty"`
 
-	VolumeMounts []StackVolume `yaml:"-"`
+	Public bool `yaml:"public,omitempty"` // For okteto stack only
 }
 
 // StackSecurityContext defines which user and group use
@@ -169,9 +168,9 @@ type PortInterface interface {
 }
 
 type Port struct {
+	Protocol      apiv1.Protocol
 	HostPort      int32
 	ContainerPort int32
-	Protocol      apiv1.Protocol
 }
 
 func (p Port) GetHostPort() int32          { return p.HostPort }

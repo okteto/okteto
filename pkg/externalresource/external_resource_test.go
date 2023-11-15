@@ -56,10 +56,10 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 	assert.NoError(t, err)
 
 	tests := []struct {
-		name                string
 		externalResourceFSM ERFilesystemManager
-		expectErr           bool
+		name                string
 		expectedResult      ExternalResource
+		expectErr           bool
 	}{
 		{
 			name: "markdown not found",
@@ -138,11 +138,11 @@ func TestExternalResource_SetURLUsingEnvironFile(t *testing.T) {
 	externalResourceName := "test"
 	newURLvalue := "/new/url/value"
 	tests := []struct {
-		name                     string
+		expectedErr              error
+		envsToSet                map[string]string
 		externalResource         *ExternalResource
 		expectedExternalResource *ExternalResource
-		envsToSet                map[string]string
-		expectedErr              error
+		name                     string
 	}{
 		{
 			name: "error - empty url value",

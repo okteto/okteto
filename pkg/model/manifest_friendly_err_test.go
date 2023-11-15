@@ -15,14 +15,15 @@ package model
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_isYamlErrorWithoutLinkToDocs(t *testing.T) {
 	tests := []struct {
-		name     string
 		input    error
+		name     string
 		expected bool
 	}{
 		{
@@ -70,9 +71,9 @@ yaml: some random error
 		},
 		{
 			name:  "yaml errors with heading and link to docs",
-			input: errors.New("yaml: unmarshal errors:\n  line 4: field contex not found in type model.manifestRaw"),
+			input: errors.New("yaml: unmarshal errors:\n  line 4: field contest not found in type model.manifestRaw"),
 			expected: `your okteto manifest is not valid, please check the following errors:
-     - line 4: field 'contex' is not a property of the okteto manifest. Did you mean "context"?
+     - line 4: field 'contest' is not a property of the okteto manifest. Did you mean "context"?
     Check out the okteto manifest docs at: https://www.okteto.com/docs/reference/manifest`,
 		},
 	}

@@ -9,8 +9,8 @@ import (
 func TestDestroyTracker(t *testing.T) {
 	tt := []struct {
 		name     string
-		metadata DestroyMetadata
 		expected mockEvent
+		metadata DestroyMetadata
 	}{
 		{
 			name: "success destroy",

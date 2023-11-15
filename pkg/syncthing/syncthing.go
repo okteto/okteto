@@ -71,34 +71,34 @@ const (
 
 // Syncthing represents the local syncthing process.
 type Syncthing struct {
+	Client           *http.Client  `yaml:"-"`
+	cmd              *exec.Cmd     `yaml:"-"`
+	Type             string        `yaml:"-"`
 	APIKey           string        `yaml:"apikey"`
+	RemoteDeviceID   string        `yaml:"-"`
+	RemoteGUIAddress string        `yaml:"remote"`
 	GUIPassword      string        `yaml:"password"`
 	GUIPasswordHash  string        `yaml:"-"`
 	binPath          string        `yaml:"-"`
-	Client           *http.Client  `yaml:"-"`
-	cmd              *exec.Cmd     `yaml:"-"`
-	Folders          []*Folder     `yaml:"folders"`
-	FileWatcherDelay int           `yaml:"-"`
-	ForceSendOnly    bool          `yaml:"-"`
-	ResetDatabase    bool          `yaml:"-"`
 	GUIAddress       string        `yaml:"local"`
 	Home             string        `yaml:"-"`
 	LogPath          string        `yaml:"-"`
 	ListenAddress    string        `yaml:"-"`
 	RemoteAddress    string        `yaml:"-"`
-	RemoteDeviceID   string        `yaml:"-"`
-	RemoteGUIAddress string        `yaml:"remote"`
+	RescanInterval   string        `yaml:"-"`
+	Compression      string        `yaml:"-"`
+	Folders          []*Folder     `yaml:"folders"`
+	timeout          time.Duration `yaml:"-"`
+	FileWatcherDelay int           `yaml:"-"`
 	RemoteGUIPort    int           `yaml:"-"`
 	RemotePort       int           `yaml:"-"`
 	LocalGUIPort     int           `yaml:"-"`
 	LocalPort        int           `yaml:"-"`
-	Type             string        `yaml:"-"`
+	pid              int           `yaml:"-"`
+	ForceSendOnly    bool          `yaml:"-"`
+	ResetDatabase    bool          `yaml:"-"`
 	IgnoreDelete     bool          `yaml:"-"`
 	Verbose          bool          `yaml:"-"`
-	pid              int           `yaml:"-"`
-	RescanInterval   string        `yaml:"-"`
-	Compression      string        `yaml:"-"`
-	timeout          time.Duration `yaml:"-"`
 }
 
 // Folder represents a sync folder
@@ -156,10 +156,10 @@ type FolderError struct {
 
 // ItemEvent represents an item event of any type in syncthing.
 type ItemEvent struct {
-	Id       int                                        `json:"id"`
-	GlobalId int                                        `json:"globalID"`
 	Time     time.Time                                  `json:"time"`
 	Data     map[string]map[string]DownloadProgressData `json:"data"`
+	Id       int                                        `json:"id"`
+	GlobalId int                                        `json:"globalID"`
 }
 
 // Connections represents syncthing connections.

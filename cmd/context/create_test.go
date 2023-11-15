@@ -50,13 +50,13 @@ func Test_createContext(t *testing.T) {
 	ctx := context.Background()
 
 	var tests = []struct {
-		name          string
 		ctxStore      *okteto.OktetoContextStore
 		ctxOptions    *ContextOptions
-		kubeconfigCtx test.KubeconfigFields
-		expectedErr   bool
 		user          *types.User
+		name          string
+		kubeconfigCtx test.KubeconfigFields
 		fakeObjects   []runtime.Object
+		expectedErr   bool
 	}{
 		{
 			name: "change namespace",
@@ -355,10 +355,10 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 	ctxController := newFakeContextCommand(fakeOktetoClient, user, nil)
 
 	var tests = []struct {
-		name                string
 		ctxOptions          *ContextOptions
 		user                *types.User
 		fakeOktetoClient    *client.FakeOktetoClient
+		name                string
 		isAutoAuthTriggered bool
 	}{
 		{
@@ -423,8 +423,8 @@ func TestCheckAccessToNamespace(t *testing.T) {
 
 	// TODO: add unit-test to cover preview environments access from context
 	var tests = []struct {
-		name           string
 		ctxOptions     *ContextOptions
+		name           string
 		expectedAccess bool
 	}{
 		{
@@ -507,9 +507,9 @@ func TestGetUserContext(t *testing.T) {
 		err error
 	}
 	tt := []struct {
+		output output
 		name   string
 		input  input
-		output output
 	}{
 		{
 			name: "existing namespace",
@@ -641,11 +641,11 @@ func TestGetUserContext(t *testing.T) {
 
 func Test_replaceCredentialsTokenWithDynamicKubetoken(t *testing.T) {
 	tests := []struct {
-		name                  string
-		userContext           *types.UserContext
-		useStaticTokenEnv     bool
 		kubetokenMockResponse client.FakeKubetokenResponse
+		userContext           *types.UserContext
+		name                  string
 		expectedToken         string
+		useStaticTokenEnv     bool
 	}{
 		{
 			name: "dynamic kubetoken not available, falling back to static token",

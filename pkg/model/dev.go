@@ -52,54 +52,54 @@ var (
 
 // Dev represents a development container
 type Dev struct {
-	Name                 string             `json:"name,omitempty" yaml:"name,omitempty"`
-	Username             string             `json:"-" yaml:"-"`
-	RegistryURL          string             `json:"-" yaml:"-"`
-	Selector             Selector           `json:"selector,omitempty" yaml:"selector,omitempty"`
-	Annotations          Annotations        `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Tolerations          []apiv1.Toleration `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
-	Context              string             `json:"context,omitempty" yaml:"context,omitempty"`
-	Namespace            string             `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Container            string             `json:"container,omitempty" yaml:"container,omitempty"`
-	EmptyImage           bool               `json:"-" yaml:"-"`
-	Image                *BuildInfo         `json:"image,omitempty" yaml:"image,omitempty"`
-	Push                 *BuildInfo         `json:"-" yaml:"push,omitempty"`
-	ImagePullPolicy      apiv1.PullPolicy   `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
-	Secrets              []Secret           `json:"secrets,omitempty" yaml:"secrets,omitempty"`
-	Command              Command            `json:"command,omitempty" yaml:"command,omitempty"`
-	Args                 Command            `json:"args,omitempty" yaml:"args,omitempty"`
-	Probes               *Probes            `json:"probes,omitempty" yaml:"probes,omitempty"`
-	Lifecycle            *Lifecycle         `json:"lifecycle,omitempty" yaml:"lifecycle,omitempty"`
-	Workdir              string             `json:"workdir,omitempty" yaml:"workdir,omitempty"`
-	SecurityContext      *SecurityContext   `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
-	ServiceAccount       string             `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
-	RemotePort           int                `json:"remote,omitempty" yaml:"remote,omitempty"`
-	SSHServerPort        int                `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
-	ExternalVolumes      []ExternalVolume   `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
-	Sync                 Sync               `json:"sync,omitempty" yaml:"sync,omitempty"`
-	parentSyncFolder     string
-	Forward              []forward.Forward     `json:"forward,omitempty" yaml:"forward,omitempty"`
-	Reverse              []Reverse             `json:"reverse,omitempty" yaml:"reverse,omitempty"`
-	Interface            string                `json:"interface,omitempty" yaml:"interface,omitempty"`
 	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
-	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
+	Selector             Selector              `json:"selector,omitempty" yaml:"selector,omitempty"`
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
-	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
-	InitFromImage        bool                  `json:"initFromImage,omitempty" yaml:"initFromImage,omitempty"`
-	Timeout              Timeout               `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
+	Annotations          Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Labels               Labels                `json:"labels,omitempty" yaml:"labels,omitempty"` // Deprecated field
+	Probes               *Probes               `json:"probes,omitempty" yaml:"probes,omitempty"`
 	NodeSelector         map[string]string     `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
-	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
 	Metadata             *Metadata             `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-	Autocreate           bool                  `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
-	EnvFiles             env.EnvFiles          `json:"envFiles,omitempty" yaml:"envFiles,omitempty"`
-	Environment          env.Environment       `json:"environment,omitempty" yaml:"environment,omitempty"`
-	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
-	Mode                 string                `json:"mode,omitempty" yaml:"mode,omitempty"`
+	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
+	Image                *BuildInfo            `json:"image,omitempty" yaml:"image,omitempty"`
+	Push                 *BuildInfo            `json:"-" yaml:"push,omitempty"`
+	Lifecycle            *Lifecycle            `json:"lifecycle,omitempty" yaml:"lifecycle,omitempty"`
+	Replicas             *int                  `json:"replicas,omitempty" yaml:"replicas,omitempty"`
+	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
+	Workdir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
+	Name                 string                `json:"name,omitempty" yaml:"name,omitempty"`
+	Username             string                `json:"-" yaml:"-"`
+	RegistryURL          string                `json:"-" yaml:"-"`
+	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
+	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
+	ServiceAccount       string                `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
+	parentSyncFolder     string
+	Interface            string           `json:"interface,omitempty" yaml:"interface,omitempty"`
+	Mode                 string           `json:"mode,omitempty" yaml:"mode,omitempty"`
+	ImagePullPolicy      apiv1.PullPolicy `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 
-	Replicas *int `json:"replicas,omitempty" yaml:"replicas,omitempty"`
-	// Deprecated fields
-	Healthchecks bool   `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
-	Labels       Labels `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Tolerations     []apiv1.Toleration `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
+	Command         Command            `json:"command,omitempty" yaml:"command,omitempty"`
+	Forward         []forward.Forward  `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Reverse         []Reverse          `json:"reverse,omitempty" yaml:"reverse,omitempty"`
+	ExternalVolumes []ExternalVolume   `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
+	Secrets         []Secret           `json:"secrets,omitempty" yaml:"secrets,omitempty"`
+	Volumes         []Volume           `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+	EnvFiles        env.EnvFiles       `json:"envFiles,omitempty" yaml:"envFiles,omitempty"`
+	Environment     env.Environment    `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Services        []*Dev             `json:"services,omitempty" yaml:"services,omitempty"`
+	Args            Command            `json:"args,omitempty" yaml:"args,omitempty"`
+	Sync            Sync               `json:"sync,omitempty" yaml:"sync,omitempty"`
+	Timeout         Timeout            `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	RemotePort      int                `json:"remote,omitempty" yaml:"remote,omitempty"`
+	SSHServerPort   int                `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
+
+	EmptyImage    bool `json:"-" yaml:"-"`
+	InitFromImage bool `json:"initFromImage,omitempty" yaml:"initFromImage,omitempty"`
+	Autocreate    bool `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
+	Healthchecks  bool `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"` // Deprecated field
 }
 
 type Affinity apiv1.Affinity
@@ -121,17 +121,17 @@ type Args struct {
 
 // BuildInfo represents the build info to generate an image
 type BuildInfo struct {
+	Secrets          BuildSecrets      `yaml:"secrets,omitempty"`
 	Name             string            `yaml:"name,omitempty"`
 	Context          string            `yaml:"context,omitempty"`
 	Dockerfile       string            `yaml:"dockerfile,omitempty"`
-	CacheFrom        cache.CacheFrom   `yaml:"cache_from,omitempty"`
 	Target           string            `yaml:"target,omitempty"`
-	Args             BuildArgs         `yaml:"args,omitempty"`
 	Image            string            `yaml:"image,omitempty"`
+	CacheFrom        cache.CacheFrom   `yaml:"cache_from,omitempty"`
+	Args             BuildArgs         `yaml:"args,omitempty"`
 	VolumesToInclude []StackVolume     `yaml:"-"`
 	ExportCache      cache.ExportCache `yaml:"export_cache,omitempty"`
 	DependsOn        BuildDependsOn    `yaml:"depends_on,omitempty"`
-	Secrets          BuildSecrets      `yaml:"secrets,omitempty"`
 }
 
 // BuildArg is an argument used on the build step.
@@ -229,12 +229,12 @@ type Volume struct {
 
 // Sync represents a sync info in the development container
 type Sync struct {
-	Compression    bool         `json:"compression" yaml:"compression"`
-	Verbose        bool         `json:"verbose" yaml:"verbose"`
-	RescanInterval int          `json:"rescanInterval,omitempty" yaml:"rescanInterval,omitempty"`
-	Folders        []SyncFolder `json:"folders,omitempty" yaml:"folders,omitempty"`
 	LocalPath      string
 	RemotePath     string
+	Folders        []SyncFolder `json:"folders,omitempty" yaml:"folders,omitempty"`
+	RescanInterval int          `json:"rescanInterval,omitempty" yaml:"rescanInterval,omitempty"`
+	Compression    bool         `json:"compression" yaml:"compression"`
+	Verbose        bool         `json:"verbose" yaml:"verbose"`
 }
 
 // SyncFolder represents a sync folder in the development container
@@ -252,15 +252,15 @@ type ExternalVolume struct {
 
 // PersistentVolumeInfo info about the persistent volume
 type PersistentVolumeInfo struct {
-	Enabled      bool   `json:"enabled,omitempty" yaml:"enabled"`
 	StorageClass string `json:"storageClass,omitempty" yaml:"storageClass,omitempty"`
 	Size         string `json:"size,omitempty" yaml:"size,omitempty"`
+	Enabled      bool   `json:"enabled,omitempty" yaml:"enabled"`
 }
 
 // InitContainer represents the initial container
 type InitContainer struct {
-	Image     string               `json:"image,omitempty" yaml:"image,omitempty"`
 	Resources ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Image     string               `json:"image,omitempty" yaml:"image,omitempty"`
 }
 
 // Timeout represents the timeout for the command

@@ -27,10 +27,10 @@ import (
 // Repository is the struct to check everything related to Git Repo
 // like checking the commit or if the project has changes over it
 type Repository struct {
-	path string
-	url  *repositoryURL
-
 	control repositoryInterface
+
+	url  *repositoryURL
+	path string
 }
 
 type repositoryInterface interface {

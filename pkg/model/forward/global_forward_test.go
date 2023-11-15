@@ -19,9 +19,9 @@ import (
 
 func TestGlobalForward_less(t *testing.T) {
 	tests := []struct {
-		name string
 		f    *GlobalForward
 		c    *GlobalForward
+		name string
 		want bool
 	}{
 		{

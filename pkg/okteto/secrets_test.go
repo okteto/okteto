@@ -39,9 +39,9 @@ func TestGetContext(t *testing.T) {
 		err         error
 	}
 	testCases := []struct {
-		name     string
-		cfg      input
 		expected expected
+		cfg      input
+		name     string
 	}{
 		{
 			name: "error in graphql",
@@ -231,12 +231,12 @@ func TestGetUserSecrets(t *testing.T) {
 		client *fakeGraphQLClient
 	}
 	type expected struct {
-		userSecrets []types.Secret
 		err         error
+		userSecrets []types.Secret
 	}
 	testCases := []struct {
-		name     string
 		cfg      input
+		name     string
 		expected expected
 	}{
 		{
@@ -302,9 +302,9 @@ func TestGetDeprecatedContext(t *testing.T) {
 		err         error
 	}
 	testCases := []struct {
-		name     string
-		cfg      input
 		expected expected
+		cfg      input
+		name     string
 	}{
 		{
 			name: "error in graphql",
@@ -741,13 +741,13 @@ func TestGetRegistryCredentials(t *testing.T) {
 		host   string
 	}
 	type expected struct {
+		expectErr       error
 		authConfig      dockertypes.AuthConfig
 		shouldExpectErr bool
-		expectErr       error
 	}
 	testCases := []struct {
-		name     string
 		cfg      input
+		name     string
 		expected expected
 	}{
 		{

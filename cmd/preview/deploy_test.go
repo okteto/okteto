@@ -19,13 +19,13 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 	errDeployPreview := errors.New("fake deploy error")
 
 	tests := []struct {
-		name              string
-		username          string
+		expectedErr       error
 		pipelineResponses *client.FakePipelineResponses
 		previewResponses  *client.FakePreviewResponse
 		streamResponses   *client.FakeStreamResponse
 		opts              *DeployOptions
-		expectedErr       error
+		name              string
+		username          string
 	}{
 		{
 			name:     "success",

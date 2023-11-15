@@ -24,8 +24,8 @@ import (
 
 func Test_generateManifestFile(t *testing.T) {
 	var tests = []struct {
-		name string
 		dev  *model.Dev
+		name string
 	}{
 		{
 			name: "empty",

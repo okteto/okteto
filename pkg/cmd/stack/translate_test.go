@@ -691,9 +691,9 @@ func Test_translateJobWithVolumes(t *testing.T) {
 func Test_translateService(t *testing.T) {
 
 	var tests = []struct {
-		name     string
 		stack    *model.Stack
 		expected *apiv1.Service
+		name     string
 	}{
 		{
 			name: "translate svc no public endpoints",
@@ -1055,9 +1055,9 @@ func Test_translateService(t *testing.T) {
 
 func Test_translateSvcProbe(t *testing.T) {
 	tests := []struct {
-		name     string
-		svc      *model.Service
 		expected healthcheckProbes
+		svc      *model.Service
+		name     string
 	}{
 		{
 			name: "nil healthcheck",
@@ -1265,9 +1265,9 @@ func Test_translateServiceEnvironment(t *testing.T) {
 
 func Test_translateResources(t *testing.T) {
 	tests := []struct {
-		name      string
-		svc       *model.Service
 		resources apiv1.ResourceRequirements
+		svc       *model.Service
+		name      string
 	}{
 		{
 			name: "svc not defined",
@@ -1410,9 +1410,9 @@ func Test_translateResources(t *testing.T) {
 
 func Test_translateAffinity(t *testing.T) {
 	tests := []struct {
-		name     string
 		svc      *model.Service
 		affinity *apiv1.Affinity
+		name     string
 	}{
 		{
 			name: "none",
@@ -1533,9 +1533,9 @@ func Test_translateAffinity(t *testing.T) {
 
 func TestGetSvcPublicPorts(t *testing.T) {
 	tests := []struct {
+		stack          *model.Stack
 		name           string
 		svcName        string
-		stack          *model.Stack
 		expectedLength int
 	}{
 		{
@@ -1619,10 +1619,10 @@ func TestGetSvcPublicPorts(t *testing.T) {
 
 func TestGetDeploymentStrategy(t *testing.T) {
 	tests := []struct {
-		name     string
+		expected appsv1.DeploymentStrategy
 		svc      *model.Service
 		envs     map[string]string
-		expected appsv1.DeploymentStrategy
+		name     string
 	}{
 		{
 			name: "default",
@@ -1734,10 +1734,10 @@ func TestGetDeploymentStrategy(t *testing.T) {
 
 func TestGetStrategyStrategy(t *testing.T) {
 	tests := []struct {
-		name     string
+		expected appsv1.StatefulSetUpdateStrategy
 		svc      *model.Service
 		envs     map[string]string
-		expected appsv1.StatefulSetUpdateStrategy
+		name     string
 	}{
 		{
 			name: "default",

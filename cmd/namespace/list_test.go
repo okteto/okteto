@@ -27,9 +27,9 @@ import (
 func Test_listNamespace(t *testing.T) {
 	ctx := context.Background()
 	var tests = []struct {
+		err               error
 		name              string
 		currentNamespaces []types.Namespace
-		err               error
 	}{
 		{
 			name: "List all ns",

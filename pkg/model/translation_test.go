@@ -468,9 +468,9 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 	var fsGroup int64 = 102
 
 	tests := []struct {
+		translated SecurityContext
 		name       string
 		manifest   []byte
-		translated SecurityContext
 	}{
 		{
 			name: "root-user-with-overrides",

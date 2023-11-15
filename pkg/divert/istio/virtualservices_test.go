@@ -30,10 +30,10 @@ import (
 
 func Test_translateDivertVirtualService(t *testing.T) {
 	tests := []struct {
-		name     string
 		vs       *istioV1beta1.VirtualService
-		routes   []string
 		expected *istioV1beta1.VirtualService
+		name     string
+		routes   []string
 	}{
 		{
 			name: "add-divert-annotation",
@@ -105,9 +105,9 @@ func Test_translateDivertVirtualService(t *testing.T) {
 
 func Test_restoreDivertVirtualService(t *testing.T) {
 	tests := []struct {
-		name     string
 		vs       *istioV1beta1.VirtualService
 		expected *istioV1beta1.VirtualService
+		name     string
 	}{
 		{
 			name: "clean-divert-annotation",
@@ -176,9 +176,9 @@ func Test_restoreDivertVirtualService(t *testing.T) {
 
 func Test_translateDivertHost(t *testing.T) {
 	tests := []struct {
-		name     string
 		vs       *istioV1beta1.VirtualService
 		expected *istioV1beta1.VirtualService
+		name     string
 	}{
 		{
 			name: "divert-host-service-same-namespace",

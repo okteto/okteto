@@ -10,9 +10,9 @@ func Test_ExpandStackEnvs(t *testing.T) {
 	t.Setenv("ENV2", "bye")
 	tests := []struct {
 		name          string
-		file          []byte
 		envValue      string
 		expectedStack string
+		file          []byte
 		expectedError bool
 	}{
 		{

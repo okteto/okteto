@@ -174,9 +174,9 @@ func Test_mergeServicesToDeployFromOptionsAndManifest(t *testing.T) {
 
 func Test_switchSSHRepoToHTTPS(t *testing.T) {
 	tests := []struct {
+		expected *url.URL
 		name     string
 		repo     string
-		expected *url.URL
 	}{
 		{
 			name: "input-ssh",
