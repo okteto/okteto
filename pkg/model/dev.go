@@ -370,15 +370,9 @@ func Get(devPath string) (*Manifest, error) {
 			return nil, err
 		}
 
-		if err := dev.loadAbsPaths(devPath); err != nil {
+		if err := dev.Prepare(devPath); err != nil {
 			return nil, err
 		}
-
-		if err := dev.expandEnvFiles(); err != nil {
-			return nil, err
-		}
-
-		dev.computeParentSyncFolder()
 	}
 
 	return manifest, nil
