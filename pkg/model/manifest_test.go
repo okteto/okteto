@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/dependencies"
-	"github.com/okteto/okteto/pkg/env"
 	"github.com/spf13/afero"
 
 	"github.com/okteto/okteto/pkg/constants"
@@ -29,7 +28,6 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 )
@@ -736,44 +734,6 @@ func TestSetManifestDefaultsFromDev(t *testing.T) {
 	}
 }
 
-func TestHasDependencies(t *testing.T) {
-	tests := []struct {
-		name     string
-		manifest Manifest
-		expected bool
-	}{
-		{
-			name: "nil dependencies",
-			manifest: Manifest{
-				Dependencies: nil,
-			},
-			expected: false,
-		},
-		{
-			name: "empty dependencies",
-			manifest: Manifest{
-				Dependencies: make(dependencies.ManifestDependencies, 0),
-			},
-			expected: false,
-		},
-		{
-			name: "has dependencies",
-			manifest: Manifest{
-				Dependencies: dependencies.ManifestDependencies{
-					"test": &dependencies.Dependency{},
-				},
-			},
-			expected: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.manifest.HasDependencies())
-		})
-	}
-}
-
 func TestSetBuildDefaults(t *testing.T) {
 	tests := []struct {
 		name              string
@@ -1113,89 +1073,6 @@ func Test_SanitizeSvcNames(t *testing.T) {
 			assert.Equal(t, tt.expectedManifest, tt.manifest)
 		})
 	}
-}
-
-func Test_GetTimeout(t *testing.T) {
-	tests := []struct {
-		dependency     *dependencies.Dependency
-		name           string
-		defaultTimeout time.Duration
-		expected       time.Duration
-	}{
-		{
-			name:           "default timeout set and specific not",
-			defaultTimeout: 5 * time.Minute,
-			dependency:     &dependencies.Dependency{},
-			expected:       5 * time.Minute,
-		},
-		{
-			name: "default timeout unset and specific set",
-			dependency: &dependencies.Dependency{
-				Timeout: 10 * time.Minute,
-			},
-			expected: 10 * time.Minute,
-		},
-		{
-			name:       "both unset",
-			dependency: &dependencies.Dependency{},
-			expected:   0,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.dependency.GetTimeout(tt.defaultTimeout)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func Test_ExpandVars(t *testing.T) {
-	t.Setenv("MY_CUSTOM_VAR_FROM_ENVIRON", "varValueFromEnv")
-	dependency := dependencies.Dependency{
-		Repository:   "${REPO}",
-		Branch:       "${NOBRANCHSET-$BRANCH}",
-		ManifestPath: "${NOMPATHSET=$MPATH}",
-		Namespace:    "${FOO+$SOME_NS_DEP_EXP}",
-		Variables: env.Environment{
-			env.Var{
-				Name:  "MYVAR",
-				Value: "${AVARVALUE}",
-			},
-			env.Var{
-				Name:  "$${ANAME}",
-				Value: "${MY_CUSTOM_VAR_FROM_ENVIRON}",
-			},
-		},
-	}
-	expected := dependencies.Dependency{
-		Repository:   "my/repo",
-		Branch:       "myBranch",
-		ManifestPath: "api/okteto.yml",
-		Namespace:    "oktetoNs",
-		Variables: env.Environment{
-			env.Var{
-				Name:  "MYVAR",
-				Value: "thisIsAValue",
-			},
-			env.Var{
-				Name:  "${ANAME}",
-				Value: "varValueFromEnv",
-			},
-		},
-	}
-	envVariables := []string{
-		"FOO=BAR",
-		"REPO=my/repo",
-		"BRANCH=myBranch",
-		"MPATH=api/okteto.yml",
-		"SOME_NS_DEP_EXP=oktetoNs",
-		"AVARVALUE=thisIsAValue",
-	}
-
-	err := dependency.ExpandVars(envVariables)
-	require.NoError(t, err)
-	assert.Equal(t, expected, dependency)
 }
 
 func Test_Manifest_HasDeploySection(t *testing.T) {

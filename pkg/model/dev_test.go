@@ -1780,7 +1780,7 @@ func TestPrepare(t *testing.T) {
 		{
 			name: "with missing envFiles",
 			dev: &Dev{
-				EnvFiles: EnvFiles{".notfound"},
+				EnvFiles: env.EnvFiles{".notfound"},
 			},
 			input: input{
 				manifestPath: "okteto.yml",
