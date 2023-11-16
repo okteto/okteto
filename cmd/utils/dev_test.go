@@ -357,6 +357,9 @@ func (s *FakeOktetoSelector) AskForOptionsOkteto(_ []SelectorItem, _ int) (strin
 }
 
 func Test_SelectDevFromManifest(t *testing.T) {
+	localAbsPath, err := filepath.Abs("/")
+	assert.NoError(t, err)
+
 	tests := []struct {
 		name     string
 		manifest *model.Manifest
@@ -384,6 +387,7 @@ func Test_SelectDevFromManifest(t *testing.T) {
 					},
 					"test-2": &model.Dev{},
 				},
+				ManifestPath: filepath.Join(localAbsPath, "okteto.yml"),
 			},
 			selector: &FakeOktetoSelector{
 				dev: "test",
@@ -434,7 +438,6 @@ func Test_SelectDevFromManifest(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func Test_AskYesNo(t *testing.T) {

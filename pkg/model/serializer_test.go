@@ -15,7 +15,6 @@ package model
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"reflect"
 	"strings"
@@ -390,9 +389,7 @@ func TestLifecycleMarshalling(t *testing.T) {
 
 func TestSecretMarshalling(t *testing.T) {
 	file, err := os.CreateTemp("", "okteto-secret-test")
-	if err != nil {
-		log.Fatal(err)
-	}
+	assert.NoError(t, err)
 	defer os.Remove(file.Name())
 
 	t.Setenv("TEST_HOME", file.Name())
