@@ -23,10 +23,10 @@ func Test_Var_UnmarshalYAML(t *testing.T) {
 	t.Setenv("DYNAMIC_VAR_VALUE", "test")
 	t.Setenv("VALUE", "test")
 	tests := []struct {
+		expected    Var
 		name        string
 		yaml        []byte
 		expectedErr bool
-		expected    Var
 	}{
 		{
 			name: "deserialized successfully",
@@ -76,10 +76,10 @@ func Test_Var_UnmarshalYAML(t *testing.T) {
 
 func Test_Var_MarshalYAML(t *testing.T) {
 	tests := []struct {
-		name        string
 		v           Var
-		expectedErr bool
+		name        string
 		expected    string
+		expectedErr bool
 	}{
 		{
 			name: "serialized successfully",

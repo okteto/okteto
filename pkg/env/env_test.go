@@ -23,11 +23,11 @@ import (
 func Test_ExpandEnv(t *testing.T) {
 	t.Setenv("BAR", "bar")
 	tests := []struct {
+		expectedErr   error
 		name          string
+		result        string
 		value         string
 		expandIfEmpty bool
-		result        string
-		expectedErr   error
 	}{
 		{
 			name:          "broken var - missing closing curly bracket",
@@ -85,10 +85,10 @@ func Test_ExpandEnv(t *testing.T) {
 func Test_Env_UnmarshalYAML(t *testing.T) {
 	t.Setenv("VALUE", "test")
 	tests := []struct {
+		expected    Environment
 		name        string
 		yaml        []byte
 		expectedErr bool
-		expected    Environment
 	}{
 		{
 			name: "deserialized successfully",

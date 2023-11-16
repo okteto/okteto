@@ -110,9 +110,12 @@ func (d *Dependency) ExpandVars(variables []string) error {
 	return nil
 }
 
-func getRepoNameFromGitURL(repo *url.URL) string {
+func getRepoNameFromGitURL(repo *url.URL) (string, error) {
 	repoPath := strings.Split(strings.TrimPrefix(repo.Path, "/"), "/")
-	return strings.ReplaceAll(repoPath[1], ".git", "")
+	if len(repoPath) < 2 || repoPath[1] == "" {
+		return "", fmt.Errorf("invalid repository url: %s", repo.String())
+	}
+	return strings.ReplaceAll(repoPath[1], ".git", ""), nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
@@ -126,7 +129,10 @@ func (md *ManifestDependencies) UnmarshalYAML(unmarshal func(interface{}) error)
 			if err != nil {
 				return err
 			}
-			name := getRepoNameFromGitURL(r)
+			name, err := getRepoNameFromGitURL(r)
+			if err != nil {
+				return err
+			}
 			rawMd[name] = &Dependency{
 				Repository: r.String(),
 			}
