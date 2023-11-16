@@ -16,6 +16,7 @@ package v1
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"path/filepath"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -85,8 +86,8 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		options.File = filepath.Join(path, "Dockerfile")
 	}
 
-	if err := utils.CheckIfRegularFile(options.File); err != nil {
-		return fmt.Errorf("%s: %s", oktetoErrors.InvalidDockerfile, err.Error())
+	if exists := filesystem.FileExistsAndNotDir(options.File); !exists {
+		return fmt.Errorf("%s: is not a regular file", oktetoErrors.InvalidDockerfile)
 	}
 
 	buildMsg := fmt.Sprintf("Building '%s'", options.File)

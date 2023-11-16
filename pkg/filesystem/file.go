@@ -81,7 +81,7 @@ func CopyFile(from, to string) error {
 	return nil
 }
 
-// FileExistsAndNotDir checks if the file exists and its not a dir
+// FileExistsAndNotDir checks if the file exists, and it's not a dir
 func FileExistsAndNotDir(filename string) bool {
 	info, err := os.Stat(filename)
 	if err != nil && os.IsNotExist(err) {
