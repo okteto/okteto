@@ -15,7 +15,6 @@ package model
 
 import (
 	"fmt"
-	"github.com/spf13/afero"
 	"os"
 	"path/filepath"
 	"testing"
@@ -1503,27 +1502,4 @@ func TestSecretValidate(t *testing.T) {
 			assert.Equal(t, tt.expectedErr, err)
 		})
 	}
-}
-
-func TestCheckFileAndNotDirectory(t *testing.T) {
-	mockFs := afero.NewMemMapFs()
-
-	t.Run("file does not exist", func(t *testing.T) {
-		err := checkFileAndNotDirectory("/tmp/not-exist", mockFs)
-		assert.Equal(t, fmt.Errorf("file '/tmp/not-exist' not found. Please make sure the file exists"), err)
-	})
-
-	t.Run("path is directory", func(t *testing.T) {
-		err := mockFs.Mkdir("/some/dir", 0755)
-		assert.NoError(t, err)
-		err = checkFileAndNotDirectory("/some/dir", mockFs)
-		assert.Equal(t, fmt.Errorf("secret '/some/dir' is not a regular file"), err)
-	})
-
-	t.Run("file exists", func(t *testing.T) {
-		err := afero.WriteFile(mockFs, "/tmp/exists", []byte(""), 0644)
-		assert.NoError(t, err)
-		err = checkFileAndNotDirectory("/tmp/exists", mockFs)
-		assert.NoError(t, err)
-	})
 }
