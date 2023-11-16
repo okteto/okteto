@@ -16,6 +16,7 @@ package env
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v2"
 	"testing"
 )
 
@@ -77,6 +78,55 @@ func Test_ExpandEnv(t *testing.T) {
 			result, err := ExpandEnv(tt.value, tt.expandIfEmpty)
 			assert.Equal(t, err, tt.expectedErr)
 			assert.Equal(t, tt.result, result)
+		})
+	}
+}
+
+func Test_Env_UnmarshalYAML(t *testing.T) {
+	t.Setenv("VALUE", "test")
+	tests := []struct {
+		name        string
+		yaml        []byte
+		expectedErr bool
+		expected    Environment
+	}{
+		{
+			name: "deserialized successfully",
+			yaml: []byte(`
+foo: bar
+unit: test`),
+			expected: Environment{
+				{Name: "foo", Value: "bar"},
+				{Name: "unit", Value: "test"},
+			},
+		},
+		{
+			name: "deserialized successfully with env var",
+			yaml: []byte(`
+foo: bar
+unit: "unit-$VALUE"`),
+			expected: Environment{
+				{Name: "foo", Value: "bar"},
+				{Name: "unit", Value: "unit-test"},
+			},
+		},
+		{
+			name:        "fail to deserialize",
+			yaml:        []byte(`foo`),
+			expectedErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var e Environment
+			err := yaml.Unmarshal(tt.yaml, &e)
+			if tt.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, e)
+			}
 		})
 	}
 }
