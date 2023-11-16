@@ -28,7 +28,7 @@ func validateAndSet(variables []string, setEnv func(key, value string) error) er
 }
 
 func parse(variables []string) ([]env.Var, error) {
-	result := []env.Var{}
+	var result []env.Var
 	for _, v := range variables {
 		kv := strings.SplitN(v, "=", 2)
 		if len(kv) != 2 {
