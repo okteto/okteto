@@ -113,7 +113,7 @@ func (d *Dependency) ExpandVars(variables []string) error {
 func getRepoNameFromGitURL(repo *url.URL) (string, error) {
 	repoPath := strings.Split(strings.TrimPrefix(repo.Path, "/"), "/")
 	if len(repoPath) < 2 || repoPath[1] == "" {
-		return "", fmt.Errorf("invalid repository url: %s", repo.String())
+		return "", fmt.Errorf("dependency has invalid repository url: %s", repo.String())
 	}
 	return strings.ReplaceAll(repoPath[1], ".git", ""), nil
 }
