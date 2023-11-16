@@ -395,58 +395,58 @@ func TestSecretMarshalling(t *testing.T) {
 	t.Setenv("TEST_HOME", file.Name())
 
 	tests := []struct {
+		expected      *Secret
 		name          string
 		data          string
-		expected      *Secret
 		expectedError bool
 	}{
 		{
-			"local:remote",
-			fmt.Sprintf("%s:/remote", file.Name()),
-			&Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 420},
-			false,
+			name:          "local:remote",
+			data:          fmt.Sprintf("%s:/remote", file.Name()),
+			expected:      &Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 420},
+			expectedError: false,
 		},
 		{
-			"local:remote:mode",
-			fmt.Sprintf("%s:/remote:400", file.Name()),
-			&Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 256},
-			false,
+			name:          "local:remote:mode",
+			data:          fmt.Sprintf("%s:/remote:400", file.Name()),
+			expected:      &Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 256},
+			expectedError: false,
 		},
 		{
-			"variables",
-			"$TEST_HOME:/remote",
-			&Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 420},
-			false,
+			name:          "variables",
+			data:          "$TEST_HOME:/remote",
+			expected:      &Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 420},
+			expectedError: false,
 		},
 		{
-			"too-short",
-			"local",
-			nil,
-			true,
+			name:          "too-short",
+			data:          "local",
+			expected:      &Secret{LocalPath: "", RemotePath: "", Mode: 0},
+			expectedError: false,
 		},
 		{
-			"too-long",
-			"local:remote:mode:other",
-			nil,
-			true,
+			name:          "too-long",
+			data:          "local:remote:mode:other",
+			expected:      &Secret{LocalPath: "", RemotePath: "", Mode: 0},
+			expectedError: false,
 		},
 		{
-			"wrong-local",
-			"/local:/remote:400",
-			nil,
-			true,
+			name:          "wrong-local",
+			data:          "/local:/remote:400",
+			expected:      &Secret{LocalPath: "/local", RemotePath: "/remote", Mode: 256},
+			expectedError: false,
 		},
 		{
-			"wrong-remote",
-			fmt.Sprintf("%s:remote", file.Name()),
-			nil,
-			true,
+			name:          "wrong-remote",
+			data:          fmt.Sprintf("%s:remote", file.Name()),
+			expected:      &Secret{LocalPath: file.Name(), RemotePath: "remote", Mode: 420},
+			expectedError: false,
 		},
 		{
-			"wrong-mode",
-			fmt.Sprintf("%s:/remote:aaa", file.Name()),
-			nil,
-			true,
+			name:          "wrong-mode",
+			data:          fmt.Sprintf("%s:/remote:aaa", file.Name()),
+			expected:      nil,
+			expectedError: true,
 		},
 	}
 
