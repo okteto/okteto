@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"github.com/spf13/afero"
 	"os"
 	"path/filepath"
 	"testing"
@@ -1454,4 +1455,75 @@ func Test_getInferredManifestWhenNoManifestExist(t *testing.T) {
 	result, err := GetInferredManifest(wd)
 	assert.Empty(t, result)
 	assert.ErrorIs(t, err, oktetoErrors.ErrCouldNotInferAnyManifest)
+}
+
+func TestSecretValidate(t *testing.T) {
+	file, err := os.CreateTemp("", "okteto-secret-test-validate")
+	assert.NoError(t, err)
+	defer os.Remove(file.Name())
+
+	tmpDir := t.TempDir()
+	defer os.Remove(tmpDir)
+
+	var tests = []struct {
+		s           *Secret
+		expectedErr error
+		name        string
+	}{
+		{
+			name:        "missing local path",
+			s:           &Secret{LocalPath: "", RemotePath: "test"},
+			expectedErr: fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'"),
+		},
+		{
+			name:        "missing remote path",
+			s:           &Secret{LocalPath: "test", RemotePath: ""},
+			expectedErr: fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'"),
+		},
+		{
+			name:        "missing both",
+			s:           &Secret{LocalPath: "", RemotePath: ""},
+			expectedErr: fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'"),
+		},
+		{
+			name:        "local path must be file not directory",
+			s:           &Secret{LocalPath: tmpDir, RemotePath: "./remote"},
+			expectedErr: fmt.Errorf("secret '%s' is not a regular file", tmpDir),
+		},
+		{
+			name:        "remote path must use absolute paths",
+			s:           &Secret{LocalPath: file.Name(), RemotePath: "./remote"},
+			expectedErr: fmt.Errorf("secret remote path './remote' must be an absolute path"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.s.validate()
+			assert.Equal(t, tt.expectedErr, err)
+		})
+	}
+}
+
+func TestCheckFileAndNotDirectory(t *testing.T) {
+	mockFs := afero.NewMemMapFs()
+
+	t.Run("file does not exist", func(t *testing.T) {
+		err := checkFileAndNotDirectory("/tmp/not-exist", mockFs)
+		assert.Equal(t, fmt.Errorf("file '/tmp/not-exist' not found. Please make sure the file exists"), err)
+	})
+
+	t.Run("path is directory", func(t *testing.T) {
+		err := mockFs.Mkdir("/some/dir", 0755)
+		assert.NoError(t, err)
+		err = checkFileAndNotDirectory("/some/dir", mockFs)
+		assert.Equal(t, fmt.Errorf("secret '/some/dir' is not a regular file"), err)
+	})
+
+	t.Run("file exists", func(t *testing.T) {
+		err := afero.WriteFile(mockFs, "/tmp/exists", []byte(""), 0644)
+		assert.NoError(t, err)
+		err = checkFileAndNotDirectory("/tmp/exists", mockFs)
+		assert.NoError(t, err)
+	})
 }
