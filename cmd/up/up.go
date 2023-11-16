@@ -316,6 +316,10 @@ func Up(at analyticsTrackerInterface) *cobra.Command {
 				dev.Command.Values = upOptions.commandToExecute
 			}
 
+			if err := dev.PreparePathsAndExpandEnvFiles(oktetoManifest.ManifestPath); err != nil {
+				return fmt.Errorf("error in 'dev' section of your manifest: %w", err)
+			}
+
 			up.Dev = dev
 			if forceAutocreate {
 				// update autocreate property if needed to be forced

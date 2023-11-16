@@ -15,14 +15,14 @@ package model
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/dependencies"
-	"github.com/okteto/okteto/pkg/env"
-	"log"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/okteto/okteto/pkg/dependencies"
+	"github.com/okteto/okteto/pkg/env"
 
 	"github.com/stretchr/testify/require"
 
@@ -392,9 +392,7 @@ func TestLifecycleMarshalling(t *testing.T) {
 
 func TestSecretMarshalling(t *testing.T) {
 	file, err := os.CreateTemp("", "okteto-secret-test")
-	if err != nil {
-		log.Fatal(err)
-	}
+	assert.NoError(t, err)
 	defer os.Remove(file.Name())
 
 	t.Setenv("TEST_HOME", file.Name())
@@ -426,26 +424,26 @@ func TestSecretMarshalling(t *testing.T) {
 		{
 			name:          "too-short",
 			data:          "local",
-			expected:      nil,
-			expectedError: true,
+			expected:      &Secret{LocalPath: "", RemotePath: "", Mode: 0},
+			expectedError: false,
 		},
 		{
 			name:          "too-long",
 			data:          "local:remote:mode:other",
-			expected:      nil,
-			expectedError: true,
+			expected:      &Secret{LocalPath: "", RemotePath: "", Mode: 0},
+			expectedError: false,
 		},
 		{
 			name:          "wrong-local",
 			data:          "/local:/remote:400",
-			expected:      nil,
-			expectedError: true,
+			expected:      &Secret{LocalPath: "/local", RemotePath: "/remote", Mode: 256},
+			expectedError: false,
 		},
 		{
 			name:          "wrong-remote",
 			data:          fmt.Sprintf("%s:remote", file.Name()),
-			expected:      nil,
-			expectedError: true,
+			expected:      &Secret{LocalPath: file.Name(), RemotePath: "remote", Mode: 420},
+			expectedError: false,
 		},
 		{
 			name:          "wrong-mode",

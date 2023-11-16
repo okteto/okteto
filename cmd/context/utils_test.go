@@ -215,6 +215,7 @@ dependencies:
 				assert.NotNil(t, err)
 			} else {
 				m.Manifest = nil
+				tt.expectedManifest.ManifestPath = filename
 				assert.EqualValues(t, tt.expectedManifest, m)
 			}
 

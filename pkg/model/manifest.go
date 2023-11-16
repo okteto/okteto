@@ -96,6 +96,7 @@ type Manifest struct {
 	Namespace     string                                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Context       string                                   `json:"context,omitempty" yaml:"context,omitempty"`
 	Icon          string                                   `json:"icon,omitempty" yaml:"icon,omitempty"`
+	ManifestPath  string                                   `json:"-" yaml:"-"`
 	Deploy        *DeployInfo                              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev           ManifestDevs                             `json:"dev,omitempty" yaml:"dev,omitempty"`
 	Destroy       *DestroyInfo                             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
@@ -641,18 +642,7 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 		}
 	}
 
-	for _, dev := range manifest.Dev {
-
-		if err := dev.loadAbsPaths(devPath); err != nil {
-			return nil, err
-		}
-
-		if err := dev.expandEnvFiles(); err != nil {
-			return nil, err
-		}
-
-		dev.computeParentSyncFolder()
-	}
+	manifest.ManifestPath = devPath
 
 	return manifest, nil
 }
@@ -715,6 +705,33 @@ func (b *ManifestBuild) validate() error {
 		return fmt.Errorf("manifest validation failed: cyclic dependendecy found between %s", svcsDependents)
 	}
 	return nil
+}
+
+func (s *Secret) validate() error {
+	if s.LocalPath == "" || s.RemotePath == "" {
+		return fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'")
+	}
+
+	if err := checkFileAndNotDirectory(s.LocalPath, afero.NewOsFs()); err != nil {
+		return err
+	}
+
+	if !strings.HasPrefix(s.RemotePath, "/") {
+		return fmt.Errorf("secret remote path '%s' must be an absolute path", s.RemotePath)
+	}
+
+	return nil
+}
+
+func checkFileAndNotDirectory(path string, fs afero.Fs) error {
+	fileInfo, err := fs.Stat(path)
+	if err != nil {
+		return fmt.Errorf("file '%s' not found. Please make sure the file exists", path)
+	}
+	if fileInfo.Mode().IsRegular() {
+		return nil
+	}
+	return fmt.Errorf("secret '%s' is not a regular file", path)
 }
 
 // GetSvcsToBuildFromList returns the builds from a list and all its

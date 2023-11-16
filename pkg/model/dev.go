@@ -354,15 +354,9 @@ func Get(devPath string) (*Manifest, error) {
 			return nil, err
 		}
 
-		if err := dev.loadAbsPaths(devPath); err != nil {
+		if err := dev.PreparePathsAndExpandEnvFiles(devPath); err != nil {
 			return nil, err
 		}
-
-		if err := dev.expandEnvFiles(); err != nil {
-			return nil, err
-		}
-
-		dev.computeParentSyncFolder()
 	}
 
 	return manifest, nil
@@ -390,19 +384,25 @@ func NewDev() *Dev {
 	}
 }
 
+// loadAbsPaths makes every path used in the dev struct an absolute paths
 func (dev *Dev) loadAbsPaths(devPath string) error {
 	devDir, err := filepath.Abs(filepath.Dir(devPath))
 	if err != nil {
 		return err
 	}
 
-	if uri, err := url.ParseRequestURI(dev.Image.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
-		dev.Image.Context = loadAbsPath(devDir, dev.Image.Context)
-		dev.Image.Dockerfile = loadAbsPath(devDir, dev.Image.Dockerfile)
+	if dev.Image != nil {
+		if uri, err := url.ParseRequestURI(dev.Image.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
+			dev.Image.Context = loadAbsPath(devDir, dev.Image.Context)
+			dev.Image.Dockerfile = loadAbsPath(devDir, dev.Image.Dockerfile)
+		}
 	}
-	if uri, err := url.ParseRequestURI(dev.Push.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
-		dev.Push.Context = loadAbsPath(devDir, dev.Push.Context)
-		dev.Push.Dockerfile = loadAbsPath(devDir, dev.Push.Dockerfile)
+
+	if dev.Push != nil {
+		if uri, err := url.ParseRequestURI(dev.Push.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
+			dev.Push.Context = loadAbsPath(devDir, dev.Push.Context)
+			dev.Push.Dockerfile = loadAbsPath(devDir, dev.Push.Dockerfile)
+		}
 	}
 
 	dev.loadVolumeAbsPaths(devDir)
@@ -683,6 +683,7 @@ func (dev *Dev) setTimeout() error {
 	return nil
 }
 
+// expandEnvFiles reads each env file and append all the variables to the environment
 func (dev *Dev) expandEnvFiles() error {
 	for _, envFile := range dev.EnvFiles {
 		filename, err := env.ExpandEnv(envFile, true)
@@ -793,6 +794,21 @@ func (dev *Dev) Validate() error {
 	return nil
 }
 
+// PreparePathsAndExpandEnvFiles calls other methods required to have the dev ready to use
+func (dev *Dev) PreparePathsAndExpandEnvFiles(manifestPath string) error {
+	if err := dev.loadAbsPaths(manifestPath); err != nil {
+		return err
+	}
+
+	if err := dev.expandEnvFiles(); err != nil {
+		return err
+	}
+
+	dev.computeParentSyncFolder()
+
+	return nil
+}
+
 func (dev *Dev) validateSync() error {
 	for _, folder := range dev.Sync.Folders {
 		validPath, err := os.Stat(folder.LocalPath)
@@ -836,6 +852,10 @@ func validatePullPolicy(pullPolicy apiv1.PullPolicy) error {
 func validateSecrets(secrets []Secret) error {
 	seen := map[string]bool{}
 	for _, s := range secrets {
+		if err := s.validate(); err != nil {
+			return err
+		}
+
 		if _, ok := seen[s.GetFileName()]; ok {
 			return fmt.Errorf("Secrets with the same basename '%s' are not supported", s.GetFileName())
 		}
