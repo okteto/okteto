@@ -1487,7 +1487,6 @@ func createEnvFile(content map[string]string) (string, error) {
 }
 
 func Test_expandEnvFiles(t *testing.T) {
-
 	tests := []struct {
 		name     string
 		dev      *Dev
@@ -1817,6 +1816,48 @@ func TestExpandBuildArgs(t *testing.T) {
 			assert.NoError(t, tt.buildInfo.AddBuildArgs(tt.previousImageBuilt))
 
 			assert.Equal(t, tt.expected, tt.buildInfo)
+		})
+	}
+}
+
+func TestPrepare(t *testing.T) {
+	type input struct {
+		manifestPath string
+	}
+	tests := []struct {
+		name          string
+		dev           *Dev
+		input         input
+		expectedError bool
+	}{
+		{
+			name: "success",
+			dev:  &Dev{},
+			input: input{
+				manifestPath: "okteto.yml",
+			},
+			expectedError: false,
+		},
+		{
+			name: "with missing envFiles",
+			dev: &Dev{
+				EnvFiles: EnvFiles{".notfound"},
+			},
+			input: input{
+				manifestPath: "okteto.yml",
+			},
+			expectedError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.dev.PreparePathsAndExpandEnvFiles(tt.input.manifestPath)
+			if tt.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
