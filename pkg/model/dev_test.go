@@ -1852,7 +1852,7 @@ func TestPrepare(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.dev.Prepare(tt.input.manifestPath)
+			err := tt.dev.PreparePathsAndExpandEnvFiles(tt.input.manifestPath)
 			if tt.expectedError {
 				assert.Error(t, err)
 			} else {

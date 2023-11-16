@@ -370,7 +370,7 @@ func Get(devPath string) (*Manifest, error) {
 			return nil, err
 		}
 
-		if err := dev.Prepare(devPath); err != nil {
+		if err := dev.PreparePathsAndExpandEnvFiles(devPath); err != nil {
 			return nil, err
 		}
 	}
@@ -810,8 +810,8 @@ func (dev *Dev) Validate() error {
 	return nil
 }
 
-// Prepare calls other methods required to have the dev ready to use
-func (dev *Dev) Prepare(manifestPath string) error {
+// PreparePathsAndExpandEnvFiles calls other methods required to have the dev ready to use
+func (dev *Dev) PreparePathsAndExpandEnvFiles(manifestPath string) error {
 	if err := dev.loadAbsPaths(manifestPath); err != nil {
 		return err
 	}
