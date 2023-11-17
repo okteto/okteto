@@ -14,6 +14,7 @@
 package model
 
 import (
+	"github.com/spf13/afero"
 	"os"
 
 	"github.com/okteto/okteto/pkg/discovery"
@@ -30,7 +31,7 @@ type ContextResource struct {
 
 // GetContextResource returns a ContextResource object from a given file
 func GetContextResource(path string) (*ContextResource, error) {
-	if !filesystem.FileExistsAndNotDir(path) {
+	if !filesystem.FileExistsAndNotDir(path, afero.NewOsFs()) {
 		cwd, err := os.Getwd()
 		if err != nil {
 			return nil, err

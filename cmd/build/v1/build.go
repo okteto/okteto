@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/okteto/okteto/pkg/filesystem"
+	"github.com/spf13/afero"
 	"path/filepath"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -86,7 +87,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		options.File = filepath.Join(path, "Dockerfile")
 	}
 
-	if exists := filesystem.FileExistsAndNotDir(options.File); !exists {
+	if exists := filesystem.FileExistsAndNotDir(options.File, afero.NewOsFs()); !exists {
 		return fmt.Errorf("%s: is not a regular file", oktetoErrors.InvalidDockerfile)
 	}
 

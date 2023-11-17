@@ -14,22 +14,25 @@
 package filesystem
 
 import (
-	"io"
-	"os"
-	"path/filepath"
-
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/afero"
+	"io"
+	"os"
 )
 
-func FileExistsWithFilesystem(name string, fs afero.Fs) bool {
-	_, err := fs.Stat(name)
+type FileSystemManager struct {
+	afero.Fs
+}
+
+// FileExistsWithFilesystem return true if the file exists
+func FileExistsWithFilesystem(path string, fs afero.Fs) bool {
+	_, err := fs.Stat(path)
 	if os.IsNotExist(err) {
 		return false
 	}
 
 	if err != nil {
-		oktetoLog.Infof("failed to check if %s exists: %s", name, err)
+		oktetoLog.Infof("failed to check if %s exists: %s", path, err)
 	}
 
 	return true
@@ -41,7 +44,6 @@ func FileExists(name string) bool {
 	if os.IsNotExist(err) {
 		return false
 	}
-
 	if err != nil {
 		oktetoLog.Infof("failed to check if %s exists: %s", name, err)
 	}
@@ -82,22 +84,10 @@ func CopyFile(from, to string) error {
 }
 
 // FileExistsAndNotDir checks if the file exists, and it's not a dir
-func FileExistsAndNotDir(filename string) bool {
-	info, err := os.Stat(filename)
-	if err != nil && os.IsNotExist(err) {
+func FileExistsAndNotDir(path string, fs afero.Fs) bool {
+	info, err := fs.Stat(path)
+	if err != nil {
 		return false
 	}
 	return !info.IsDir()
-}
-
-// GetFilePathFromWdAndFiles joins the cwd with the files and returns it if
-// one of them exists and is not a directory
-func GetFilePathFromWdAndFiles(cwd string, files []string) string {
-	for _, name := range files {
-		path := filepath.Join(cwd, name)
-		if FileExistsAndNotDir(path) {
-			return path
-		}
-	}
-	return ""
 }

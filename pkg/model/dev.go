@@ -16,6 +16,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"github.com/spf13/afero"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -162,14 +163,14 @@ func (b *BuildInfo) GetDockerfilePath() string {
 	if filepath.IsAbs(b.Dockerfile) {
 		return b.Dockerfile
 	}
-
+	fs := afero.NewOsFs()
 	joinPath := filepath.Join(b.Context, b.Dockerfile)
-	if !filesystem.FileExistsAndNotDir(joinPath) {
+	if !filesystem.FileExistsAndNotDir(joinPath, fs) {
 		oktetoLog.Infof("Dockerfile '%s' is not in a relative path to context '%s'", b.Dockerfile, b.Context)
 		return b.Dockerfile
 	}
 
-	if joinPath != filepath.Clean(b.Dockerfile) && filesystem.FileExistsAndNotDir(b.Dockerfile) {
+	if joinPath != filepath.Clean(b.Dockerfile) && filesystem.FileExistsAndNotDir(b.Dockerfile, fs) {
 		oktetoLog.Infof("Two Dockerfiles discovered in both the root and context path, defaulting to '%s/%s'", b.Context, b.Dockerfile)
 	}
 

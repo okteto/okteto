@@ -41,7 +41,7 @@ func GetOktetoManifestPath(wd string) (string, error) {
 	return "", ErrOktetoManifestNotFound
 }
 
-// GetOktetoManifestPath returns an okteto manifest file if exists, error otherwise
+// GetOktetoManifestPathWithFilesystem returns an okteto manifest file if exists, error otherwise
 func GetOktetoManifestPathWithFilesystem(wd string, fs afero.Fs) (string, error) {
 	for _, possibleOktetoManifest := range possibleOktetoManifestFiles {
 		manifestPath := filepath.Join(wd, filepath.Join(possibleOktetoManifest...))

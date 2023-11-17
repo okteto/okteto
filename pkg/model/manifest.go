@@ -275,7 +275,7 @@ func getManifestFromDevFilePath(cwd, manifestPath string) (*Manifest, error) {
 	if manifestPath != "" && !filepath.IsAbs(manifestPath) {
 		manifestPath = filepath.Join(cwd, manifestPath)
 	}
-	if manifestPath != "" && filesystem.FileExistsAndNotDir(manifestPath) {
+	if manifestPath != "" && filesystem.FileExistsAndNotDir(manifestPath, afero.NewOsFs()) {
 		return getManifestFromFile(cwd, manifestPath)
 	}
 
@@ -716,7 +716,7 @@ func (s *Secret) validate() error {
 		return fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'")
 	}
 
-	if exists := filesystem.FileExistsAndNotDir(s.LocalPath); !exists {
+	if exists := filesystem.FileExistsAndNotDir(s.LocalPath, afero.NewOsFs()); !exists {
 		return fmt.Errorf("secret '%s' is not a regular file", s.LocalPath)
 	}
 
