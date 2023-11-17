@@ -286,9 +286,10 @@ func TestGetDeployFlags(t *testing.T) {
 		opts *Options
 	}
 	var tests = []struct {
-		name     string
-		config   config
-		expected []string
+		name      string
+		config    config
+		expected  []string
+		expectErr bool
 	}{
 		{
 			name: "no extra options",
@@ -350,7 +351,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--var a=b --var c=d", "--timeout 5m0s"},
+			expected: []string{"--var a=\"b\" --var c=\"d\"", "--timeout 5m0s"},
 		},
 		{
 			name: "wait set",
@@ -362,11 +363,33 @@ func TestGetDeployFlags(t *testing.T) {
 			},
 			expected: []string{"--wait", "--timeout 5m0s"},
 		},
+		{
+			name: "multiword var value",
+			config: config{
+				opts: &Options{
+					Variables: []string{"test=multi word value"},
+				},
+			},
+			expected: []string{"--var test=\"multi word value\"", "--timeout 0s"},
+		},
+		{
+			name: "wrong multiword var value",
+			config: config{
+				opts: &Options{
+					Variables: []string{"test -> multi word value"},
+				},
+			},
+			expected:  nil,
+			expectErr: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			flags := getDeployFlags(tt.config.opts)
+			flags, err := getDeployFlags(tt.config.opts)
+			if tt.expectErr {
+				require.Error(t, err)
+			}
 			assert.Equal(t, tt.expected, flags)
 		})
 	}

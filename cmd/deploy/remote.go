@@ -274,6 +274,11 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 			Funcs(template.FuncMap{"join": strings.Join}).
 			Parse(dockerfileTemplate))
 
+	deployFlags, err := getDeployFlags(opts)
+	if err != nil {
+		return "", err
+	}
+
 	dockerfileSyntax := dockerfileTemplateProperties{
 		OktetoCLIImage:         getOktetoCLIVersion(config.VersionString),
 		UserDeployImage:        opts.Manifest.Deploy.Image,
@@ -288,7 +293,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 		GitCommitArgName:       constants.OktetoGitCommitEnvVar,
 		GitBranchArgName:       constants.OktetoGitBranchEnvVar,
 		InvalidateCacheArgName: constants.OktetoInvalidateCacheEnvVar,
-		DeployFlags:            strings.Join(getDeployFlags(opts), " "),
+		DeployFlags:            strings.Join(deployFlags, " "),
 	}
 
 	dockerfile, err := rd.fs.Create(filepath.Join(tmpDir, dockerfileTemporalName))
@@ -311,7 +316,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 	return dockerfile.Name(), nil
 }
 
-func getDeployFlags(opts *Options) []string {
+func getDeployFlags(opts *Options) ([]string, error) {
 	var deployFlags []string
 
 	if opts.Name != "" {
@@ -328,8 +333,12 @@ func getDeployFlags(opts *Options) []string {
 
 	if len(opts.Variables) > 0 {
 		var varsToAddForDeploy []string
-		for _, v := range opts.Variables {
-			varsToAddForDeploy = append(varsToAddForDeploy, fmt.Sprintf("--var %s", v))
+		variables, err := parse(opts.Variables)
+		if err != nil {
+			return nil, err
+		}
+		for _, v := range variables {
+			varsToAddForDeploy = append(varsToAddForDeploy, fmt.Sprintf("--var %s=\"%s\"", v.key, v.value))
 		}
 		deployFlags = append(deployFlags, strings.Join(varsToAddForDeploy, " "))
 	}
@@ -340,7 +349,7 @@ func getDeployFlags(opts *Options) []string {
 
 	deployFlags = append(deployFlags, fmt.Sprintf("--timeout %s", opts.Timeout))
 
-	return deployFlags
+	return deployFlags, nil
 }
 
 // getOriginalCWD returns the original cwd
