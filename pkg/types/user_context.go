@@ -14,7 +14,7 @@
 package types
 
 type UserContext struct {
+	Credentials Credential `json:"credentials,omitempty"`
 	User        User       `json:"user,omitempty"`
 	Secrets     []Secret   `json:"secrets,omitempty"`
-	Credentials Credential `json:"credentials,omitempty"`
 }

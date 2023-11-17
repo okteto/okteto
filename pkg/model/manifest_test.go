@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"github.com/spf13/afero"
 	"os"
 	"path/filepath"
 	"testing"
@@ -32,10 +33,10 @@ import (
 
 func TestManifestExpandDevEnvs(t *testing.T) {
 	tests := []struct {
-		name             string
-		envs             map[string]string
 		manifest         *Manifest
 		expectedManifest *Manifest
+		envs             map[string]string
+		name             string
 	}{
 		{
 			name: "autocreate without image but build section defined",
@@ -200,11 +201,11 @@ echo $TEST_VAR`,
 }
 func TestManifestExpandEnvs(t *testing.T) {
 	tests := []struct {
-		name            string
 		envs            map[string]string
+		name            string
+		expectedCommand string
 		manifest        []byte
 		expectedErr     bool
-		expectedCommand string
 	}{
 		{
 			name: "expand envs on command",
@@ -258,9 +259,9 @@ devs:
 
 func Test_validateDivert(t *testing.T) {
 	tests := []struct {
+		expectedErr error
 		name        string
 		divert      DivertDeploy
-		expectedErr error
 	}{
 		{
 			name: "divert-ok-with-port",
@@ -332,8 +333,8 @@ func Test_validateDivert(t *testing.T) {
 
 func Test_validateManifestBuild(t *testing.T) {
 	tests := []struct {
-		name         string
 		buildSection ManifestBuild
+		name         string
 		expectedErr  bool
 	}{
 		{
@@ -432,9 +433,9 @@ func TestInferFromStack(t *testing.T) {
 		},
 	}
 	tests := []struct {
-		name             string
 		currentManifest  *Manifest
 		expectedManifest *Manifest
+		name             string
 	}{
 		{
 			name: "infer from stack empty dev",
@@ -771,7 +772,6 @@ func TestHasDependencies(t *testing.T) {
 }
 
 func TestSetBuildDefaults(t *testing.T) {
-
 	tests := []struct {
 		name              string
 		currentBuildInfo  BuildInfo
@@ -831,10 +831,10 @@ func TestSetBuildDefaults(t *testing.T) {
 
 func Test_getManifestFromFile(t *testing.T) {
 	tests := []struct {
+		expectedErr   error
 		name          string
 		manifestBytes []byte
 		composeBytes  []byte
-		expectedErr   error
 	}{
 		{
 			name:          "manifestPath to a valid compose file",
@@ -941,10 +941,10 @@ func TestHasDev(t *testing.T) {
 
 func Test_SanitizeSvcNames(t *testing.T) {
 	tests := []struct {
-		name             string
+		expectedErr      error
 		manifest         *Manifest
 		expectedManifest *Manifest
-		expectedErr      error
+		name             string
 	}{
 		{
 			name: "keys-have-uppercase",
@@ -1114,9 +1114,9 @@ func Test_SanitizeSvcNames(t *testing.T) {
 
 func Test_GetTimeout(t *testing.T) {
 	tests := []struct {
+		dependency     *Dependency
 		name           string
 		defaultTimeout time.Duration
-		dependency     *Dependency
 		expected       time.Duration
 	}{
 		{
@@ -1197,8 +1197,8 @@ func Test_ExpandVars(t *testing.T) {
 
 func Test_Manifest_HasDeploySection(t *testing.T) {
 	tests := []struct {
-		name     string
 		manifest *Manifest
+		name     string
 		expected bool
 	}{
 		{
@@ -1298,8 +1298,8 @@ func Test_Manifest_HasDeploySection(t *testing.T) {
 
 func Test_Manifest_HasDependenciesSection(t *testing.T) {
 	tests := []struct {
-		name     string
 		manifest *Manifest
+		name     string
 		expected bool
 	}{
 		{
@@ -1341,8 +1341,8 @@ func Test_Manifest_HasDependenciesSection(t *testing.T) {
 
 func Test_Manifest_HasBuildSection(t *testing.T) {
 	tests := []struct {
-		name     string
 		manifest *Manifest
+		name     string
 		expected bool
 	}{
 		{
@@ -1415,8 +1415,8 @@ func Test_getInferredManifestFromK8sManifestFolder(t *testing.T) {
 func Test_getInferredManifestFromHelmPath(t *testing.T) {
 	var tests = []struct {
 		name          string
-		filesToCreate []string
 		expected      string
+		filesToCreate []string
 	}{
 		{
 			name:          "chart folder exists on wd",
@@ -1455,4 +1455,75 @@ func Test_getInferredManifestWhenNoManifestExist(t *testing.T) {
 	result, err := GetInferredManifest(wd)
 	assert.Empty(t, result)
 	assert.ErrorIs(t, err, oktetoErrors.ErrCouldNotInferAnyManifest)
+}
+
+func TestSecretValidate(t *testing.T) {
+	file, err := os.CreateTemp("", "okteto-secret-test-validate")
+	assert.NoError(t, err)
+	defer os.Remove(file.Name())
+
+	tmpDir := t.TempDir()
+	defer os.Remove(tmpDir)
+
+	var tests = []struct {
+		s           *Secret
+		expectedErr error
+		name        string
+	}{
+		{
+			name:        "missing local path",
+			s:           &Secret{LocalPath: "", RemotePath: "test"},
+			expectedErr: fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'"),
+		},
+		{
+			name:        "missing remote path",
+			s:           &Secret{LocalPath: "test", RemotePath: ""},
+			expectedErr: fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'"),
+		},
+		{
+			name:        "missing both",
+			s:           &Secret{LocalPath: "", RemotePath: ""},
+			expectedErr: fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'"),
+		},
+		{
+			name:        "local path must be file not directory",
+			s:           &Secret{LocalPath: tmpDir, RemotePath: "./remote"},
+			expectedErr: fmt.Errorf("secret '%s' is not a regular file", tmpDir),
+		},
+		{
+			name:        "remote path must use absolute paths",
+			s:           &Secret{LocalPath: file.Name(), RemotePath: "./remote"},
+			expectedErr: fmt.Errorf("secret remote path './remote' must be an absolute path"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.s.validate()
+			assert.Equal(t, tt.expectedErr, err)
+		})
+	}
+}
+
+func TestCheckFileAndNotDirectory(t *testing.T) {
+	mockFs := afero.NewMemMapFs()
+
+	t.Run("file does not exist", func(t *testing.T) {
+		err := checkFileAndNotDirectory("/tmp/not-exist", mockFs)
+		assert.Equal(t, fmt.Errorf("file '/tmp/not-exist' not found. Please make sure the file exists"), err)
+	})
+
+	t.Run("path is directory", func(t *testing.T) {
+		err := mockFs.Mkdir("/some/dir", 0755)
+		assert.NoError(t, err)
+		err = checkFileAndNotDirectory("/some/dir", mockFs)
+		assert.Equal(t, fmt.Errorf("secret '/some/dir' is not a regular file"), err)
+	})
+
+	t.Run("file exists", func(t *testing.T) {
+		err := afero.WriteFile(mockFs, "/tmp/exists", []byte(""), 0644)
+		assert.NoError(t, err)
+		err = checkFileAndNotDirectory("/tmp/exists", mockFs)
+		assert.NoError(t, err)
+	})
 }

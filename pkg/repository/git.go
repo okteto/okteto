@@ -33,8 +33,8 @@ var (
 )
 
 type gitRepoController struct {
-	path       string
 	repoGetter repositoryGetterInterface
+	path       string
 }
 
 func newGitRepoController() gitRepoController {
@@ -44,8 +44,8 @@ func newGitRepoController() gitRepoController {
 }
 
 type cleanStatus struct {
-	isClean bool
 	err     error
+	isClean bool
 }
 
 func (r gitRepoController) calculateIsClean(ctx context.Context) (bool, error) {
@@ -83,14 +83,14 @@ func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 		time.Sleep(time.Second)
 		close(timeoutCh)
 		cancel()
-		ch <- cleanStatus{false, timeoutErr}
+		ch <- cleanStatus{timeoutErr, false}
 	}()
 
 	go func() {
 		clean, err := r.calculateIsClean(ctx)
 		select {
 		case <-timeoutCh:
-		case ch <- cleanStatus{clean, err}:
+		case ch <- cleanStatus{err, clean}:
 		}
 	}()
 

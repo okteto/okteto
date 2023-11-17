@@ -19,9 +19,9 @@ func TestDestroySFSVolumesIfNeeded(t *testing.T) {
 	appName := "test-app"
 	tests := []struct {
 		name           string
-		includeVolumes bool
 		k8Resources    []runtime.Object
 		expectedPVCs   []apiv1.PersistentVolumeClaim
+		includeVolumes bool
 	}{
 		{
 			name:           "WithoutVolumeClaimTemplates",

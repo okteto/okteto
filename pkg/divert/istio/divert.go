@@ -33,11 +33,11 @@ const (
 
 // Driver weaver struct for the divert driver
 type Driver struct {
+	client      kubernetes.Interface
+	istioClient istioclientset.Interface
 	name        string
 	namespace   string
 	divert      model.DivertDeploy
-	client      kubernetes.Interface
-	istioClient istioclientset.Interface
 }
 
 // DivertTransformation represents the annotation for the okteto mutation webhook to divert a virtual service

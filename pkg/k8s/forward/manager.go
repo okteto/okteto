@@ -38,16 +38,16 @@ import (
 
 // PortForwardManager keeps a list of all the active port forwards
 type PortForwardManager struct {
-	stopped        bool
-	iface          string
+	ctx            context.Context
+	client         kubernetes.Interface
 	ports          map[int]forward.Forward
 	services       map[string]struct{}
 	activeDev      *active
 	activeServices map[string]*active
-	ctx            context.Context
 	restConfig     *rest.Config
-	client         kubernetes.Interface
+	iface          string
 	namespace      string
+	stopped        bool
 }
 
 type active struct {

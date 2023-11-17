@@ -21,8 +21,8 @@ import (
 )
 
 type namespaceValidator struct {
-	maxAllowedChars     int
 	nameValidationRegex *regexp.Regexp
+	maxAllowedChars     int
 }
 
 const (

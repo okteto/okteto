@@ -26,11 +26,11 @@ import (
 )
 
 type forward struct {
+	pool          *pool
 	localAddress  string
 	remoteAddress string
-	c             bool
 	lock          sync.Mutex
-	pool          *pool
+	c             bool
 }
 
 func (f *forward) connected() bool {

@@ -24,9 +24,9 @@ import (
 
 func Test_translateIngress(t *testing.T) {
 	var tests = []struct {
-		name     string
 		in       *networkingv1.Ingress
 		expected *networkingv1.Ingress
+		name     string
 	}{
 		{
 			name: "ok",

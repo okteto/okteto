@@ -25,9 +25,9 @@ import (
 
 func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 	tests := []struct {
-		name    string
 		dev     *Dev
 		result  *Dev
+		name    string
 		wantErr bool
 	}{
 		{
@@ -590,8 +590,8 @@ func Test_getSourceSubPath(t *testing.T) {
 
 func Test_validatePersistentVolume(t *testing.T) {
 	var tests = []struct {
-		name    string
 		dev     *Dev
+		name    string
 		wantErr bool
 	}{
 		{
@@ -705,8 +705,8 @@ func Test_validatePersistentVolume(t *testing.T) {
 
 func Test_validateVolumes(t *testing.T) {
 	var tests = []struct {
-		name    string
 		dev     *Dev
+		name    string
 		wantErr bool
 	}{
 		{

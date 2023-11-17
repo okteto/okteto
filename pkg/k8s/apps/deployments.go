@@ -35,8 +35,8 @@ import (
 )
 
 type DeploymentApp struct {
-	kind string
 	d    *appsv1.Deployment
+	kind string
 }
 
 func NewDeploymentApp(d *appsv1.Deployment) *DeploymentApp {

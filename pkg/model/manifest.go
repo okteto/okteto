@@ -97,6 +97,7 @@ type Manifest struct {
 	Namespace     string                                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Context       string                                   `json:"context,omitempty" yaml:"context,omitempty"`
 	Icon          string                                   `json:"icon,omitempty" yaml:"icon,omitempty"`
+	ManifestPath  string                                   `json:"-" yaml:"-"`
 	Deploy        *DeployInfo                              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev           ManifestDevs                             `json:"dev,omitempty" yaml:"dev,omitempty"`
 	Destroy       *DestroyInfo                             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
@@ -180,11 +181,11 @@ func NewManifestFromDev(dev *Dev) *Manifest {
 
 // DeployInfo represents what must be deployed for the app to work
 type DeployInfo struct {
-	Image          string              `json:"image,omitempty" yaml:"image,omitempty"`
-	Commands       []DeployCommand     `json:"commands,omitempty" yaml:"commands,omitempty"`
 	ComposeSection *ComposeSectionInfo `json:"compose,omitempty" yaml:"compose,omitempty"`
 	Endpoints      EndpointSpec        `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	Divert         *DivertDeploy       `json:"divert,omitempty" yaml:"divert,omitempty"`
+	Image          string              `json:"image,omitempty" yaml:"image,omitempty"`
+	Commands       []DeployCommand     `json:"commands,omitempty" yaml:"commands,omitempty"`
 	Remote         bool                `json:"remote,omitempty" yaml:"remote,omitempty"`
 }
 
@@ -200,10 +201,10 @@ type DivertDeploy struct {
 	Driver               string                 `json:"driver,omitempty" yaml:"driver,omitempty"`
 	Namespace            string                 `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	DeprecatedService    string                 `json:"service,omitempty" yaml:"service,omitempty"`
-	DeprecatedPort       int                    `json:"port,omitempty" yaml:"port,omitempty"`
 	DeprecatedDeployment string                 `json:"deployment,omitempty" yaml:"deployment,omitempty"`
 	VirtualServices      []DivertVirtualService `json:"virtualServices,omitempty" yaml:"virtualServices,omitempty"`
 	Hosts                []DivertHost           `json:"hosts,omitempty" yaml:"hosts,omitempty"`
+	DeprecatedPort       int                    `json:"port,omitempty" yaml:"port,omitempty"`
 }
 
 // DivertVirtualService represents a virtual service in a namespace to be diverted
@@ -221,8 +222,8 @@ type DivertHost struct {
 
 // ComposeSectionInfo represents information about compose file
 type ComposeSectionInfo struct {
-	ComposesInfo ComposeInfoList `json:"manifest,omitempty" yaml:"manifest,omitempty"`
 	Stack        *Stack          `json:"-" yaml:"-"`
+	ComposesInfo ComposeInfoList `json:"manifest,omitempty" yaml:"manifest,omitempty"`
 }
 
 type ComposeInfoList []ComposeInfo
@@ -645,18 +646,7 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 		}
 	}
 
-	for _, dev := range manifest.Dev {
-
-		if err := dev.loadAbsPaths(devPath); err != nil {
-			return nil, err
-		}
-
-		if err := dev.expandEnvFiles(); err != nil {
-			return nil, err
-		}
-
-		dev.computeParentSyncFolder()
-	}
+	manifest.ManifestPath = devPath
 
 	return manifest, nil
 }
@@ -719,6 +709,33 @@ func (b *ManifestBuild) validate() error {
 		return fmt.Errorf("manifest validation failed: cyclic dependendecy found between %s", svcsDependents)
 	}
 	return nil
+}
+
+func (s *Secret) validate() error {
+	if s.LocalPath == "" || s.RemotePath == "" {
+		return fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'")
+	}
+
+	if err := checkFileAndNotDirectory(s.LocalPath, afero.NewOsFs()); err != nil {
+		return err
+	}
+
+	if !strings.HasPrefix(s.RemotePath, "/") {
+		return fmt.Errorf("secret remote path '%s' must be an absolute path", s.RemotePath)
+	}
+
+	return nil
+}
+
+func checkFileAndNotDirectory(path string, fs afero.Fs) error {
+	fileInfo, err := fs.Stat(path)
+	if err != nil {
+		return fmt.Errorf("file '%s' not found. Please make sure the file exists", path)
+	}
+	if fileInfo.Mode().IsRegular() {
+		return nil
+	}
+	return fmt.Errorf("secret '%s' is not a regular file", path)
 }
 
 // GetSvcsToBuildFromList returns the builds from a list and all its
@@ -998,10 +1015,10 @@ type Dependency struct {
 	Repository   string        `json:"repository" yaml:"repository"`
 	ManifestPath string        `json:"manifest,omitempty" yaml:"manifest,omitempty"`
 	Branch       string        `json:"branch,omitempty" yaml:"branch,omitempty"`
-	Variables    Environment   `json:"variables,omitempty" yaml:"variables,omitempty"`
-	Wait         bool          `json:"wait,omitempty" yaml:"wait,omitempty"`
-	Timeout      time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	Namespace    string        `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Variables    Environment   `json:"variables,omitempty" yaml:"variables,omitempty"`
+	Timeout      time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Wait         bool          `json:"wait,omitempty" yaml:"wait,omitempty"`
 }
 
 // GetTimeout returns dependency.Timeout if it's set or the one passed as arg if it's not

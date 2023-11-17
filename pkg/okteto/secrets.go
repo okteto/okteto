@@ -38,9 +38,9 @@ func newUserClient(client graphqlClientInterface) *userClient {
 }
 
 type getContextQuery struct {
+	Cred    credQuery     `graphql:"credentials(space: $cred)"`
 	User    userQuery     `graphql:"user"`
 	Secrets []secretQuery `graphql:"getGitDeploySecrets"`
-	Cred    credQuery     `graphql:"credentials(space: $cred)"`
 }
 
 type getSecretsQuery struct {
@@ -53,8 +53,8 @@ type getContextFileQuery struct {
 
 type getDeprecatedContextQuery struct {
 	User    deprecatedUserQuery `graphql:"user"`
-	Secrets []secretQuery       `graphql:"getGitDeploySecrets"`
 	Cred    credQuery           `graphql:"credentials(space: $cred)"`
+	Secrets []secretQuery       `graphql:"getGitDeploySecrets"`
 }
 
 type getRegistryCredentialsQuery struct {
@@ -68,11 +68,11 @@ type userQuery struct {
 	Email           graphql.String
 	ExternalID      graphql.String `graphql:"externalID"`
 	Token           graphql.String
-	New             graphql.Boolean
 	Registry        graphql.String
 	Buildkit        graphql.String
 	Certificate     graphql.String
-	GlobalNamespace graphql.String  `graphql:"globalNamespace"`
+	GlobalNamespace graphql.String `graphql:"globalNamespace"`
+	New             graphql.Boolean
 	Analytics       graphql.Boolean `graphql:"telemetryEnabled"`
 }
 
@@ -84,10 +84,10 @@ type deprecatedUserQuery struct {
 	Email       graphql.String
 	ExternalID  graphql.String `graphql:"externalID"`
 	Token       graphql.String
-	New         graphql.Boolean
 	Registry    graphql.String
 	Buildkit    graphql.String
 	Certificate graphql.String
+	New         graphql.Boolean
 }
 
 type secretQuery struct {

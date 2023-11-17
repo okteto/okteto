@@ -19,9 +19,9 @@ import (
 
 func TestForward_less(t *testing.T) {
 	tests := []struct {
-		name string
 		f    *Forward
 		c    *Forward
+		name string
 		want bool
 	}{
 		{

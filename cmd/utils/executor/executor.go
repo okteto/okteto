@@ -32,10 +32,10 @@ type ManifestExecutor interface {
 
 // Executor implements ManifestExecutor with a executor displayer
 type Executor struct {
-	outputMode     string
 	displayer      executorDisplayer
-	runWithoutBash bool
+	outputMode     string
 	shell, dir     string
+	runWithoutBash bool
 }
 
 type executorDisplayer interface {

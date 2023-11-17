@@ -18,14 +18,14 @@ import (
 func TestInferName(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
-		name               string
 		getRepositoryURL   func(string) (string, error)
-		devEnvs            []runtime.Object
+		name               string
 		ns                 string
 		manifestPath       string
 		cwd                string
 		oktetoManifestPath string
 		expectedName       string
+		devEnvs            []runtime.Object
 	}{
 		{
 			name: "without-repository-url",
@@ -154,10 +154,10 @@ func TestInferNameFromDevEnvsAndRepository(t *testing.T) {
 	tests := []struct {
 		name          string
 		repositoryURL string
-		devEnvs       []runtime.Object
 		ns            string
 		manifestPath  string
 		expectedName  string
+		devEnvs       []runtime.Object
 	}{
 		{
 			name:          "without-dev-envs",

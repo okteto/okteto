@@ -13,6 +13,7 @@ package client
 
 import (
 	"context"
+
 	"github.com/okteto/okteto/pkg/types"
 )
 
@@ -22,19 +23,17 @@ type FakePreviewsClient struct {
 }
 
 type FakePreviewResponse struct {
-	Preview        *types.PreviewResponse
-	PreviewList    []types.Preview
-	ResourceStatus map[string]string
+	ErrList           error
+	ErrDeployPreview  error
+	ErrResources      error
+	ErrDestroyPreview error
+	ErrSleepPreview   error
+	ErrWakePreview    error
 
-	ErrList          error
-	ErrDeployPreview error
-
-	ErrResources error
-
-	ErrDestroyPreview   error
+	Preview             *types.PreviewResponse
+	ResourceStatus      map[string]string
+	PreviewList         []types.Preview
 	DestroySuccessCount int
-	ErrSleepPreview     error
-	ErrWakePreview      error
 }
 
 // NewFakePreviewClient returns a new fake preview client

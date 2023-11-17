@@ -65,20 +65,19 @@ var (
 )
 
 type logger struct {
+	writer OktetoWriter
 	out    *logrus.Logger
 	file   *logrus.Entry
-	writer OktetoWriter
+
+	buf      *bytes.Buffer
+	replacer *strings.Replacer
+	spinner  *spinnerLogger
 
 	stage      string
 	outputMode string
 
-	buf *bytes.Buffer
-
 	maskedWords []string
 	isMasked    bool
-	replacer    *strings.Replacer
-
-	spinner *spinnerLogger
 }
 
 var log = &logger{

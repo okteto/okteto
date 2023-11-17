@@ -269,8 +269,8 @@ func Test_loadName(t *testing.T) {
 		name      string
 		devName   string
 		value     string
-		onService bool
 		want      string
+		onService bool
 	}{
 		{
 			name:    "no-var",
@@ -350,10 +350,10 @@ services:
 
 func Test_loadSelector(t *testing.T) {
 	tests := []struct {
-		name     string
 		selector Selector
-		value    string
 		want     Selector
+		name     string
+		value    string
 	}{
 		{
 			name:     "no-var",
@@ -562,9 +562,9 @@ func TestDev_validateReplicas(t *testing.T) {
 
 func TestDev_readImageContext(t *testing.T) {
 	tests := []struct {
+		expected *BuildInfo
 		name     string
 		manifest []byte
-		expected *BuildInfo
 	}{
 		{
 			name: "context pointing to url",
@@ -1060,11 +1060,11 @@ func TestPersistentVolumeEnabled(t *testing.T) {
 func Test_ExpandEnv(t *testing.T) {
 	t.Setenv("BAR", "bar")
 	tests := []struct {
+		expectedErr   error
 		name          string
 		value         string
-		expandIfEmpty bool
 		result        string
-		expectedErr   error
+		expandIfEmpty bool
 	}{
 		{
 			name:          "broken var - missing closing curly bracket",
@@ -1154,11 +1154,11 @@ func TestGetTimeout(t *testing.T) {
 
 func Test_loadEnvFile(t *testing.T) {
 	tests := []struct {
-		name      string
-		expectErr bool
 		content   map[string]string
 		existing  map[string]string
 		expected  map[string]string
+		name      string
+		expectErr bool
 	}{
 		{
 			name:      "missing",
@@ -1487,7 +1487,6 @@ func createEnvFile(content map[string]string) (string, error) {
 }
 
 func Test_expandEnvFiles(t *testing.T) {
-
 	tests := []struct {
 		name     string
 		dev      *Dev
@@ -1670,10 +1669,10 @@ func Test_BuildInfoCopy(t *testing.T) {
 func TestExpandBuildArgs(t *testing.T) {
 	t.Setenv("KEY", "VALUE")
 	tests := []struct {
-		name               string
 		buildInfo          *BuildInfo
-		previousImageBuilt map[string]string
 		expected           *BuildInfo
+		previousImageBuilt map[string]string
+		name               string
 	}{
 		{
 			name:               "no build args",
@@ -1817,6 +1816,48 @@ func TestExpandBuildArgs(t *testing.T) {
 			assert.NoError(t, tt.buildInfo.AddBuildArgs(tt.previousImageBuilt))
 
 			assert.Equal(t, tt.expected, tt.buildInfo)
+		})
+	}
+}
+
+func TestPrepare(t *testing.T) {
+	type input struct {
+		manifestPath string
+	}
+	tests := []struct {
+		name          string
+		dev           *Dev
+		input         input
+		expectedError bool
+	}{
+		{
+			name: "success",
+			dev:  &Dev{},
+			input: input{
+				manifestPath: "okteto.yml",
+			},
+			expectedError: false,
+		},
+		{
+			name: "with missing envFiles",
+			dev: &Dev{
+				EnvFiles: EnvFiles{".notfound"},
+			},
+			input: input{
+				manifestPath: "okteto.yml",
+			},
+			expectedError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.dev.PreparePathsAndExpandEnvFiles(tt.input.manifestPath)
+			if tt.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }

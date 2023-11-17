@@ -36,16 +36,16 @@ import (
 
 // LogsOptions options for logs command
 type LogsOptions struct {
-	All          bool
 	ManifestPath string
 	Namespace    string
 	Context      string
 	exclude      string
 	Include      string
+	Name         string
 	Since        time.Duration
 	Tail         int64
 	Timestamps   bool
-	Name         string
+	All          bool
 }
 
 func Logs(ctx context.Context) *cobra.Command {

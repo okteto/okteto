@@ -23,9 +23,9 @@ import (
 
 func Test_UnmarshalYAML(t *testing.T) {
 	tests := []struct {
+		expected interface{}
 		name     string
 		data     []byte
-		expected interface{}
 	}{
 		{
 			name:     "empty",

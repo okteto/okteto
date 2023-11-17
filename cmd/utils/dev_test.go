@@ -28,10 +28,10 @@ import (
 
 func Test_LoadManifestOrDefault(t *testing.T) {
 	var tests = []struct {
+		dev        *model.Dev
 		name       string
 		deployment string
 		expectErr  bool
-		dev        *model.Dev
 	}{
 		{
 			name:       "default",
@@ -187,9 +187,9 @@ func Test_ParseURL(t *testing.T) {
 
 func Test_CheckIfDirectory(t *testing.T) {
 	tests := []struct {
+		want error
 		name string
 		path string
-		want error
 	}{
 		{
 			name: "directory",
@@ -225,9 +225,9 @@ func Test_CheckIfDirectory(t *testing.T) {
 
 func Test_CheckIfRegularFile(t *testing.T) {
 	tests := []struct {
+		want error
 		name string
 		path string
-		want error
 	}{
 		{
 			name: "file",
@@ -264,11 +264,11 @@ func Test_CheckIfRegularFile(t *testing.T) {
 func Test_GetDevFromManifest(t *testing.T) {
 	wrongDevName := "not-test"
 	tests := []struct {
-		name     string
-		manifest *model.Manifest
-		devName  string
-		dev      *model.Dev
 		err      error
+		manifest *model.Manifest
+		dev      *model.Dev
+		name     string
+		devName  string
 	}{
 		{
 			name:     "manifest has no dev section",
@@ -348,8 +348,8 @@ func Test_GetDevFromManifest(t *testing.T) {
 }
 
 type FakeOktetoSelector struct {
-	dev string
 	err error
+	dev string
 }
 
 func (s *FakeOktetoSelector) AskForOptionsOkteto(_ []SelectorItem, _ int) (string, error) {
@@ -357,12 +357,15 @@ func (s *FakeOktetoSelector) AskForOptionsOkteto(_ []SelectorItem, _ int) (strin
 }
 
 func Test_SelectDevFromManifest(t *testing.T) {
+	localAbsPath, err := filepath.Abs("/")
+	assert.NoError(t, err)
+
 	tests := []struct {
-		name     string
+		err      error
 		manifest *model.Manifest
 		selector *FakeOktetoSelector
 		dev      *model.Dev
-		err      error
+		name     string
 	}{
 		{
 			name: "dev-is-selected",
@@ -384,6 +387,7 @@ func Test_SelectDevFromManifest(t *testing.T) {
 					},
 					"test-2": &model.Dev{},
 				},
+				ManifestPath: filepath.Join(localAbsPath, "okteto.yml"),
 			},
 			selector: &FakeOktetoSelector{
 				dev: "test",
@@ -434,7 +438,6 @@ func Test_SelectDevFromManifest(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func Test_AskYesNo(t *testing.T) {

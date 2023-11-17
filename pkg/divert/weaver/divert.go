@@ -26,11 +26,11 @@ import (
 
 // Driver weaver struct for the divert driver
 type Driver struct {
+	client    kubernetes.Interface
+	cache     *cache
 	name      string
 	namespace string
 	divert    model.DivertDeploy
-	client    kubernetes.Interface
-	cache     *cache
 }
 
 func New(m *model.Manifest, c kubernetes.Interface) *Driver {

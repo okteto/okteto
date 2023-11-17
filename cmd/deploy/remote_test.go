@@ -65,9 +65,9 @@ func TestRemoteTest(t *testing.T) {
 		cert          []byte
 	}
 	var tests = []struct {
+		expected error
 		name     string
 		config   config
-		expected error
 	}{
 		{
 			name: "OS can't access to the working directory",
@@ -286,9 +286,10 @@ func TestGetDeployFlags(t *testing.T) {
 		opts *Options
 	}
 	var tests = []struct {
-		name     string
-		config   config
-		expected []string
+		name      string
+		config    config
+		expected  []string
+		expectErr bool
 	}{
 		{
 			name: "no extra options",
@@ -350,7 +351,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--var a=b --var c=d", "--timeout 5m0s"},
+			expected: []string{"--var a=\"b\" --var c=\"d\"", "--timeout 5m0s"},
 		},
 		{
 			name: "wait set",
@@ -362,11 +363,33 @@ func TestGetDeployFlags(t *testing.T) {
 			},
 			expected: []string{"--wait", "--timeout 5m0s"},
 		},
+		{
+			name: "multiword var value",
+			config: config{
+				opts: &Options{
+					Variables: []string{"test=multi word value"},
+				},
+			},
+			expected: []string{"--var test=\"multi word value\"", "--timeout 0s"},
+		},
+		{
+			name: "wrong multiword var value",
+			config: config{
+				opts: &Options{
+					Variables: []string{"test -> multi word value"},
+				},
+			},
+			expected:  nil,
+			expectErr: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			flags := getDeployFlags(tt.config.opts)
+			flags, err := getDeployFlags(tt.config.opts)
+			if tt.expectErr {
+				require.Error(t, err)
+			}
 			assert.Equal(t, tt.expected, flags)
 		})
 	}
@@ -385,15 +408,15 @@ func TestCreateDockerfile(t *testing.T) {
 		opts *Options
 	}
 	type expected struct {
+		err               error
+		buildEnvVars      map[string]string
 		dockerfileName    string
 		dockerfileContent string
-		buildEnvVars      map[string]string
-		err               error
 	}
 	var tests = []struct {
-		name     string
-		config   config
 		expected expected
+		config   config
+		name     string
 	}{
 		{
 			name: "OS can't access working directory",
@@ -542,8 +565,8 @@ func TestGetExtraHosts(t *testing.T) {
 
 	var tests = []struct {
 		name     string
-		metadata types.ClusterMetadata
 		expected []types.HostMap
+		metadata types.ClusterMetadata
 	}{
 		{
 			name:     "no metadata information",

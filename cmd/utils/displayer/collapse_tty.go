@@ -44,20 +44,17 @@ var (
 
 // TTYCollapseDisplayer displays with a screenbuff
 type TTYCollapseDisplayer struct {
-	stdoutScanner *bufio.Scanner
-	stderrScanner *bufio.Scanner
-	screenbuf     *screenbuf.ScreenBuf
-
-	command        string
-	err            error
-	linesToDisplay []string
-	numberOfLines  int
-
-	commandContext context.Context
-	cancel         context.CancelFunc
-
-	isBuilding            bool
+	err                   error
+	commandContext        context.Context
+	stdoutScanner         *bufio.Scanner
+	stderrScanner         *bufio.Scanner
+	screenbuf             *screenbuf.ScreenBuf
+	cancel                context.CancelFunc
+	command               string
+	linesToDisplay        []string
+	numberOfLines         int
 	buildingpreviousLines int
+	isBuilding            bool
 }
 
 // Display displays a

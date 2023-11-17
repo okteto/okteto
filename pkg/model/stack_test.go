@@ -351,8 +351,8 @@ services:
 
 func TestStack_validate(t *testing.T) {
 	tests := []struct {
-		name  string
 		stack *Stack
+		name  string
 	}{
 		{
 			name:  "empty-name",
@@ -475,9 +475,9 @@ func Test_validateStackName(t *testing.T) {
 
 func TestStack_readImageContext(t *testing.T) {
 	tests := []struct {
+		expected *BuildInfo
 		name     string
 		manifest []byte
-		expected *BuildInfo
 	}{
 		{
 			name: "context pointing to url",
@@ -517,10 +517,10 @@ func TestStack_readImageContext(t *testing.T) {
 
 func TestStack_Merge(t *testing.T) {
 	tests := []struct {
-		name       string
 		stack      *Stack
 		otherStack *Stack
 		result     *Stack
+		name       string
 	}{
 		{
 			name: "Namespace overwrite",
@@ -814,8 +814,8 @@ func TestStack_Merge(t *testing.T) {
 
 func TestStack_ResourcesIsDefault(t *testing.T) {
 	tests := []struct {
-		name      string
 		resources *StackResources
+		name      string
 		expected  bool
 	}{
 		{
@@ -860,10 +860,10 @@ func TestStack_ResourcesIsDefault(t *testing.T) {
 
 func TestStack_ExpandEnvsAtFileLevel(t *testing.T) {
 	tests := []struct {
-		name     string
-		manifest []byte
 		envs     map[string]string
 		stack    *Stack
+		name     string
+		manifest []byte
 	}{
 		{
 			name: "not expanding anything",
@@ -1001,10 +1001,10 @@ func TestStack_ExpandEnvsAtFileLevel(t *testing.T) {
 
 func Test_validateDependsOn(t *testing.T) {
 	tests := []struct {
+		dependsOn  DependsOn
 		name       string
 		manifest   []byte
 		throwError bool
-		dependsOn  DependsOn
 	}{
 		{
 			name:       "defined dependent service",
@@ -1242,9 +1242,9 @@ func Test_translateEnvVars(t *testing.T) {
 
 func TestServicesToGraph(t *testing.T) {
 	tests := []struct {
-		name          string
 		services      ComposeServices
 		expectedGraph graph
+		name          string
 	}{
 		{
 			name: "no cycle - no connections",
@@ -1339,9 +1339,9 @@ func TestServicesToGraph(t *testing.T) {
 
 func TestValidateServices(t *testing.T) {
 	tc := []struct {
-		name     string
-		services ComposeServices
 		expected error
+		services ComposeServices
+		name     string
 	}{
 		{
 			name: "no cycle - no connections",

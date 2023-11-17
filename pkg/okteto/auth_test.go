@@ -35,9 +35,9 @@ func TestAuth(t *testing.T) {
 		err  error
 	}
 	tests := []struct {
-		name     string
-		input    input
 		expected expected
+		input    input
+		name     string
 	}{
 		{
 			name: "error authenticating",
@@ -136,9 +136,9 @@ func TestAuthGQLCall(t *testing.T) {
 		err  error
 	}
 	tests := []struct {
-		name     string
 		input    input
 		expected expected
+		name     string
 	}{
 		{
 			name: "error",
@@ -212,9 +212,9 @@ func TestDeprecatedAuth(t *testing.T) {
 		err  error
 	}
 	tests := []struct {
-		name     string
-		input    input
 		expected expected
+		input    input
+		name     string
 	}{
 		{
 			name: "error",

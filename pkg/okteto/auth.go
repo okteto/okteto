@@ -72,11 +72,11 @@ type userMutation struct {
 	Email           graphql.String
 	ExternalID      graphql.String `graphql:"externalID"`
 	Token           graphql.String
-	New             graphql.Boolean
 	Registry        graphql.String
 	Buildkit        graphql.String
 	Certificate     graphql.String
-	GlobalNamespace graphql.String  `graphql:"globalNamespace"`
+	GlobalNamespace graphql.String `graphql:"globalNamespace"`
+	New             graphql.Boolean
 	Analytics       graphql.Boolean `graphql:"telemetryEnabled"`
 }
 
@@ -87,10 +87,10 @@ type deprecatedUserMutation struct {
 	Email       graphql.String
 	ExternalID  graphql.String `graphql:"externalID"`
 	Token       graphql.String
-	New         graphql.Boolean
 	Registry    graphql.String
 	Buildkit    graphql.String
 	Certificate graphql.String
+	New         graphql.Boolean
 }
 
 // Auth authenticates in okteto with an OAuth code

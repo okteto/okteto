@@ -34,8 +34,8 @@ import (
 )
 
 type fakeTLSConn struct {
-	handshake    bool
 	handshakeErr error
+	handshake    bool
 }
 
 func (c *fakeTLSConn) Handshake() error {
@@ -64,14 +64,14 @@ func (*fakeTLSConn) SetWriteDeadline(time.Time) error {
 }
 
 type fakeTLSDialArgs struct {
+	config  *tls.Config
 	network string
 	addr    string
-	config  *tls.Config
 }
 
 type fakeTLSDial struct {
-	requests []fakeTLSDialArgs
 	err      error
+	requests []fakeTLSDialArgs
 	mtx      sync.RWMutex
 }
 
@@ -93,8 +93,8 @@ type fakeClient struct {
 
 // GetDigest has everything needed to mock a getDigest API call
 type getDigest struct {
-	Result string
 	Err    error
+	Result string
 }
 
 // GetConfig has everything needed to mock a getConfig API call
@@ -113,8 +113,8 @@ type mockWrite struct {
 }
 
 type hasPushAccess struct {
-	Result bool
 	Err    error
+	Result bool
 }
 
 func (fc fakeClient) GetDigest(_ string) (string, error) {
@@ -138,14 +138,14 @@ func (fc fakeClient) Write(_ name.Reference, _ containerv1.Image) error {
 }
 
 type fakeClientConfig struct {
+	cert                        *x509.Certificate
+	externalRegistryCredentials [2]string
 	registryURL                 string
 	userID                      string
 	token                       string
-	isInsecure                  bool
-	cert                        *x509.Certificate
 	serverName                  string
 	contextName                 string
-	externalRegistryCredentials [2]string
+	isInsecure                  bool
 }
 
 func (f fakeClientConfig) GetRegistryURL() string                            { return f.registryURL }
@@ -169,22 +169,22 @@ func TestGetDigest(t *testing.T) {
 	}
 
 	type input struct {
-		config fakeClientConfig
 		image  string
+		config fakeClientConfig
 	}
 	type getConfig struct {
 		descriptor *remote.Descriptor
 		err        error
 	}
 	type expected struct {
-		image string
 		err   error
+		image string
 	}
 	var tests = []struct {
-		name      string
-		input     input
 		getConfig getConfig
 		expected  expected
+		name      string
+		input     input
 	}{
 		{
 			name: "no error",
@@ -267,8 +267,8 @@ func TestGetDigest(t *testing.T) {
 
 func TestGetOptions(t *testing.T) {
 	type input struct {
-		config fakeClientConfig
 		image  string
+		config fakeClientConfig
 	}
 	var tests = []struct {
 		name     string
@@ -465,8 +465,8 @@ func TestGetTransport(t *testing.T) {
 
 func Test_GetDescriptor(t *testing.T) {
 	type input struct {
-		config fakeClientConfig
 		image  string
+		config fakeClientConfig
 	}
 	type getConfig struct {
 		descriptor *remote.Descriptor
@@ -477,10 +477,10 @@ func Test_GetDescriptor(t *testing.T) {
 		err        error
 	}
 	var tests = []struct {
-		name      string
-		input     input
 		expected  expected
 		getConfig getConfig
+		name      string
+		input     input
 	}{
 		{
 			name: "failed to parse reference",
@@ -543,11 +543,11 @@ func Test_Write(t *testing.T) {
 		err error
 	}
 	var tests = []struct {
-		name        string
 		input       input
 		expected    expected
-		client      fakeClient
 		writeConfig writeConfig
+		client      fakeClient
+		name        string
 	}{
 		{
 			name: "failed to write",

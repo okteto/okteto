@@ -17,9 +17,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/okteto/okteto/pkg/types"
 	"strings"
 	"time"
+
+	"github.com/okteto/okteto/pkg/types"
 
 	"github.com/moby/buildkit/client"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -79,16 +80,15 @@ func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus, o *types.
 }
 
 type trace struct {
+	err           error
 	ongoing       map[string]*vertexInfo
 	stages        map[string]bool
 	showCtxAdvice bool
-
-	err error
 }
 
 type OktetoCommandErr struct {
-	Stage string
 	Err   error
+	Stage string
 }
 
 func (e OktetoCommandErr) Error() string {
@@ -217,8 +217,8 @@ func (t *trace) removeCompletedSteps() {
 
 type vertexInfo struct {
 	name                     string
+	logs                     []string
 	currentTransferedContext int64
 	totalTransferedContext   int64
 	completed                bool
-	logs                     []string
 }

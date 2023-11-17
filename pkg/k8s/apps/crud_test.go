@@ -134,9 +134,9 @@ func TestGetDeployment(t *testing.T) {
 
 func TestValidateMountPaths(t *testing.T) {
 	tests := []struct {
-		name          string
 		spec          *v1.PodSpec
 		dev           *model.Dev
+		name          string
 		expectedError bool
 	}{
 		{
@@ -308,11 +308,11 @@ func TestListDevModeOn(t *testing.T) {
 		},
 	}
 	tests := []struct {
-		name          string
+		expectedError error
 		sfs           *appsv1.StatefulSet
 		ds            *appsv1.Deployment
+		name          string
 		expectedList  []string
-		expectedError error
 	}{
 		{
 			name: "none-dev-mode",

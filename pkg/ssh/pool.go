@@ -29,8 +29,8 @@ const (
 )
 
 type pool struct {
-	ka      time.Duration
 	client  *ssh.Client
+	ka      time.Duration
 	stopped bool
 }
 

@@ -31,9 +31,9 @@ func TestGetAction(t *testing.T) {
 		err    error
 	}
 	testCases := []struct {
-		name     string
-		cfg      input
 		expected expected
+		cfg      input
+		name     string
 	}{
 		{
 			name: "error in graphql",
@@ -90,9 +90,9 @@ func TestWaitForActionToFinish(t *testing.T) {
 		err error
 	}
 	testCases := []struct {
-		name     string
-		cfg      input
 		expected expected
+		cfg      input
+		name     string
 	}{
 		{
 			name: "timeout is reached",
@@ -227,9 +227,9 @@ func TestWaitForActionProgressing(t *testing.T) {
 		err error
 	}
 	testCases := []struct {
-		name     string
-		cfg      input
 		expected expected
+		cfg      input
+		name     string
 	}{
 		{
 			name: "timeout is reached",

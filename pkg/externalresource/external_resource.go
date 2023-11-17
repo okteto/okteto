@@ -39,8 +39,8 @@ type ExternalEndpoint struct {
 
 // ERFilesystemManager represents ExternalResource information with the filesystem injected
 type ERFilesystemManager struct {
-	ExternalResource ExternalResource
 	Fs               afero.Fs
+	ExternalResource ExternalResource
 }
 
 func sanitizeForEnv(name string) string {

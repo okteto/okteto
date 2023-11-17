@@ -34,8 +34,8 @@ type ImageMetadata struct {
 }
 
 type Port struct {
-	ContainerPort int32
 	Protocol      apiv1.Protocol
+	ContainerPort int32
 }
 
 func (Port) GetHostPort() int32            { return 0 }

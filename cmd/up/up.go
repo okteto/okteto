@@ -82,11 +82,11 @@ type UpOptions struct {
 	K8sContext       string
 	DevName          string
 	Envs             []string
+	commandToExecute []string
 	Remote           int
 	Deploy           bool
 	ForcePull        bool
 	Reset            bool
-	commandToExecute []string
 }
 
 // Up starts a development container
@@ -313,6 +313,10 @@ func Up(at analyticsTrackerInterface) *cobra.Command {
 			}
 			if len(upOptions.commandToExecute) > 0 {
 				dev.Command.Values = upOptions.commandToExecute
+			}
+
+			if err := dev.PreparePathsAndExpandEnvFiles(oktetoManifest.ManifestPath); err != nil {
+				return fmt.Errorf("error in 'dev' section of your manifest: %w", err)
 			}
 
 			up.Dev = dev

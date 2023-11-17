@@ -51,9 +51,8 @@ func (rc *registryCache) Set(host, user, pass string) {
 
 type externalRegistryCredentialsReader struct {
 	getter   func(ctx context.Context, host string) (dockertypes.AuthConfig, error)
+	cache    *registryCache
 	isOkteto bool
-
-	cache *registryCache
 }
 
 func (r *externalRegistryCredentialsReader) read(ctx context.Context, registryOrImage string) (string, string, error) {

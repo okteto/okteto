@@ -19,12 +19,12 @@ func Test_optionsSetup(t *testing.T) {
 		},
 	}
 	tests := []struct {
-		name            string
 		expectError     error
 		opts            *DeployOptions
-		args            []string
 		expectedOptions *DeployOptions
+		name            string
 		expectedFile    string
+		args            []string
 	}{
 		{
 			name: "success-empty-args",
