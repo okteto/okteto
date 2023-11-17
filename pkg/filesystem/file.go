@@ -20,10 +20,6 @@ import (
 	"os"
 )
 
-type FileSystemManager struct {
-	afero.Fs
-}
-
 // FileExistsWithFilesystem return true if the file exists
 func FileExistsWithFilesystem(path string, fs afero.Fs) bool {
 	_, err := fs.Stat(path)
