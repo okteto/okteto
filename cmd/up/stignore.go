@@ -18,6 +18,7 @@ import (
 	"crypto/sha512"
 	"encoding/json"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"io"
 	"os"
 	"path"
@@ -149,7 +150,7 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 }
 
 func askIfCreateStignoreDefaults(folder, stignorePath string) error {
-	autogenerateStignore := utils.LoadBoolean(model.OktetoAutogenerateStignoreEnvVar)
+	autogenerateStignore := env.LoadBoolean(model.OktetoAutogenerateStignoreEnvVar)
 
 	oktetoLog.Information("'.stignore' doesn't exist in folder '%s'.", folder)
 

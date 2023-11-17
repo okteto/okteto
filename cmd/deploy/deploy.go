@@ -208,7 +208,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 				Builder:            buildv2.NewBuilderFromScratch(at),
 				DeployWaiter:       NewDeployWaiter(k8sClientProvider),
 				EndpointGetter:     NewEndpointGetter,
-				isRemote:           utils.LoadBoolean(constants.OktetoDeployRemote),
+				isRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
 				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider),
 				Fs:                 afero.NewOsFs(),
 				PipelineCMD:        pc,
@@ -381,7 +381,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 					return err
 				}
 			}
-			if !utils.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
+			if !env.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
 				eg, err := dc.EndpointGetter()
 				if err != nil {
 					oktetoLog.Infof("could not create endpoint getter: %s", err)
@@ -522,7 +522,7 @@ func getDefaultTimeout() time.Duration {
 
 func shouldRunInRemote(opts *Options) bool {
 	// already in remote so we need to deploy locally
-	if utils.LoadBoolean(constants.OktetoDeployRemote) {
+	if env.LoadBoolean(constants.OktetoDeployRemote) {
 		return false
 	}
 
@@ -538,7 +538,7 @@ func shouldRunInRemote(opts *Options) bool {
 		}
 	}
 
-	if utils.LoadBoolean(constants.OktetoForceRemote) {
+	if env.LoadBoolean(constants.OktetoForceRemote) {
 		return true
 	}
 
@@ -580,7 +580,7 @@ func GetDeployer(ctx context.Context,
 func isRemoteDeployer(runInRemoteFlag bool, deployImage string) bool {
 	// isDeployRemote represents whether the process is coming from a remote deploy
 	// if true it should get the local deployer
-	isDeployRemote := utils.LoadBoolean(constants.OktetoDeployRemote)
+	isDeployRemote := env.LoadBoolean(constants.OktetoDeployRemote)
 
 	// remote deployment should be done when flag RunInRemote is active OR deploy.image is fulfilled
 	return !isDeployRemote && (runInRemoteFlag || deployImage != "")

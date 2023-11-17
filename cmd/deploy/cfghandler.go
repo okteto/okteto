@@ -15,8 +15,8 @@ package deploy
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/env"
 
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -58,7 +58,7 @@ func newDefaultConfigMapHandler(provider okteto.K8sClientProvider) *defaultConfi
 }
 
 func NewConfigmapHandler(provider okteto.K8sClientProvider) configMapHandler {
-	if utils.LoadBoolean(constants.OktetoDeployRemote) {
+	if env.LoadBoolean(constants.OktetoDeployRemote) {
 		return newDeployInsideDeployConfigMapHandler(provider)
 	}
 	return newDefaultConfigMapHandler(provider)

@@ -15,8 +15,8 @@ package destroy
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/env"
 
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -55,7 +55,7 @@ func newDefaultConfigMapHandler(c kubernetes.Interface) *defaultConfigMapHandler
 }
 
 func NewConfigmapHandler(c kubernetes.Interface) configMapHandler {
-	if utils.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
+	if env.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
 		return newDestroyInsideDeployConfigMapHandler()
 	}
 	return newDefaultConfigMapHandler(c)

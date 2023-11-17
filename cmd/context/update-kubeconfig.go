@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -42,7 +43,7 @@ type KubeconfigCMD struct {
 // newKubeconfigController creates a new command to update the kubeconfig stored in the okteto context
 func newKubeconfigController(okClientProvider oktetoClientProvider) *KubeconfigCMD {
 	var kubetokenController kubeconfigController
-	if utils.LoadBoolean(OktetoUseStaticKubetokenEnvVar) {
+	if env.LoadBoolean(OktetoUseStaticKubetokenEnvVar) {
 		kubetokenController = newStaticKubetokenController()
 	} else {
 		kubetokenController = newDynamicKubetokenController(okClientProvider)

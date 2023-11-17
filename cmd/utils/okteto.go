@@ -16,11 +16,8 @@ package utils
 import (
 	"context"
 	"fmt"
-	"os"
-	"strconv"
-
 	"github.com/okteto/okteto/pkg/constants"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -67,21 +64,6 @@ func HasAccessToOktetoClusterNamespace(ctx context.Context, namespace string, ok
 	return false, nil
 }
 
-// LoadBoolean loads a boolean environment variable and returns it value
-func LoadBoolean(k string) bool {
-	v := os.Getenv(k)
-	if v == "" {
-		v = "false"
-	}
-
-	h, err := strconv.ParseBool(v)
-	if err != nil {
-		oktetoLog.Yellow("'%s' is not a valid value for environment variable %s", v, k)
-	}
-
-	return h
-}
-
 // ShouldCreateNamespace checks if the user has access to the namespace.
 // If not, ask the user if he wants to create it
 func ShouldCreateNamespace(ctx context.Context, ns string) (bool, error) {
@@ -94,7 +76,7 @@ func ShouldCreateNamespace(ctx context.Context, ns string) (bool, error) {
 		return false, err
 	}
 	if !hasAccess {
-		if LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
+		if env.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
 			return false, fmt.Errorf("cannot deploy on a namespace that doesn't exist. Please create %s and try again", ns)
 		}
 		create, err := AskYesNo(fmt.Sprintf("The namespace %s doesn't exist. Do you want to create it?", ns), YesNoDefault_Yes)

@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"net/url"
 	"os"
 	"strings"
@@ -72,7 +73,7 @@ func NewContextCommand(ctxCmdOption ...ctxCmdOption) *ContextCommand {
 		OktetoClientProvider: okteto.NewOktetoClientProvider(),
 		OktetoContextWriter:  okteto.NewContextConfigWriter(),
 	}
-	if utils.LoadBoolean(OktetoUseStaticKubetokenEnvVar) {
+	if env.LoadBoolean(OktetoUseStaticKubetokenEnvVar) {
 		cfg.kubetokenController = newStaticKubetokenController()
 	} else {
 		cfg.kubetokenController = newDynamicKubetokenController(cfg.OktetoClientProvider)

@@ -15,10 +15,10 @@ package executor
 
 import (
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"os/exec"
 
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -60,7 +60,7 @@ func NewExecutor(output string, runWithoutBash bool, dir string) *Executor {
 	}
 
 	shell := "bash"
-	if utils.LoadBoolean(constants.OktetoDeployRemote) {
+	if env.LoadBoolean(constants.OktetoDeployRemote) {
 		shell = "sh"
 	}
 
