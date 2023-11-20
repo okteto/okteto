@@ -112,7 +112,10 @@ func LoadBoolean(k string) bool {
 		v = "false"
 	}
 
-	h, _ := strconv.ParseBool(v)
+	h, err := strconv.ParseBool(v)
+	if err != nil {
+		return false
+	}
 
 	return h
 }
