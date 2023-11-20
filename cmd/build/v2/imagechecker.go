@@ -67,7 +67,7 @@ func (ic imageChecker) checkIfBuildHashIsBuilt(manifestName, svcToBuild string, 
 			if oktetoErrors.IsNotFound(err) {
 				continue
 			}
-			ic.logger.Info("could not check image %s: %s", ref, err)
+			ic.logger.Infof("could not check image %s: %s", ref, err)
 			return "", false
 		}
 		return imageWithDigest, true

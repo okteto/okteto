@@ -109,13 +109,23 @@ func (ol *oktetoLogger) SetStage(stage string) {
 }
 
 // Info logs an info message
-func (ol *oktetoLogger) Info(format string, args ...any) {
+func (ol *oktetoLogger) Infof(format string, args ...any) {
 	ol.logrusLogger.Info(fmt.Sprintf(format, args...))
 }
 
 // Debug logs a debug message
-func (ol *oktetoLogger) Debug(format string, args ...any) {
+func (ol *oktetoLogger) Debugf(format string, args ...any) {
 	ol.logrusLogger.Debug(fmt.Sprintf(format, args...))
+}
+
+// Info logs an info message
+func (ol *oktetoLogger) Info(msg string) {
+	ol.logrusLogger.Info(msg)
+}
+
+// Debug logs a debug message
+func (ol *oktetoLogger) Debug(msg string) {
+	ol.logrusLogger.Debug(msg)
 }
 
 // InvalidLogLevelError is returned when the log level is invalid

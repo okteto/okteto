@@ -25,11 +25,11 @@ import (
 func (bc *OktetoBuilder) SetServiceEnvVars(service, reference string) {
 	ref, err := bc.Registry.GetImageReference(reference)
 	if err != nil {
-		bc.ioCtrl.Logger().Debug("could not set service env vars: %w", err)
+		bc.ioCtrl.Logger().Debugf("could not set service env vars: %s", err)
 		return
 	}
 
-	bc.ioCtrl.Logger().Debug("envs registry=%s repository=%s image=%s tag=%s", ref.Registry, ref.Repo, ref.Image, ref.Tag)
+	bc.ioCtrl.Logger().Debugf("envs registry=%s repository=%s image=%s tag=%s", ref.Registry, ref.Repo, ref.Image, ref.Tag)
 
 	// Can't add env vars with -
 	sanitizedSvc := strings.ToUpper(strings.ReplaceAll(service, "-", "_"))

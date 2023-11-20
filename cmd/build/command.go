@@ -147,7 +147,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
 			return nil, err
 		}
 
-		bc.ioCtrl.Logger().Info("manifest located at %s is not v2 compatible: %s", options.File, err)
+		bc.ioCtrl.Logger().Infof("manifest located at %s is not v2 compatible: %s", options.File, err)
 		bc.ioCtrl.Logger().Info("falling back to building as a v1 manifest")
 
 		builder = buildv1.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl)

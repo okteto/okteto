@@ -122,10 +122,10 @@ func main() {
 				ioController.SetOutputFormat(outputMode)
 			}
 			okteto.SetServerNameOverride(serverNameOverride)
-			ioController.Logger().Info("started %s", strings.Join(os.Args, " "))
+			ioController.Logger().Infof("started %s", strings.Join(os.Args, " "))
 		},
 		PersistentPostRun: func(ccmd *cobra.Command, args []string) {
-			ioController.Logger().Info("finished %s", strings.Join(os.Args, " "))
+			ioController.Logger().Infof("finished %s", strings.Join(os.Args, " "))
 		},
 	}
 
@@ -135,7 +135,7 @@ func main() {
 	root.PersistentFlags().StringVarP(&serverNameOverride, "server-name", "", "", "The address and port of the Okteto Ingress server")
 	err := root.PersistentFlags().MarkHidden("server-name")
 	if err != nil {
-		ioController.Logger().Info("error hiding server-name flag: %s", err)
+		ioController.Logger().Infof("error hiding server-name flag: %s", err)
 	}
 
 	okClientProvider := okteto.NewOktetoClientProvider()

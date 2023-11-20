@@ -31,7 +31,7 @@ func (fcr fakeConfigRepo) GetTreeHash(string) (string, error) { return fcr.treeH
 
 type fakeLogger struct{}
 
-func (fl fakeLogger) Info(format string, args ...interface{}) {}
+func (fl fakeLogger) Infof(format string, args ...interface{}) {}
 
 func TestGetConfig(t *testing.T) {
 	type input struct {

@@ -14,9 +14,11 @@
 package io
 
 import (
+	"bytes"
 	"log/slog"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -67,6 +69,69 @@ func TestParseLevel(t *testing.T) {
 			} else {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			}
+		})
+	}
+}
+
+type fakeFormatter struct {
+}
+
+func (fakeFormatter) Format(entry *logrus.Entry) ([]byte, error) {
+	return []byte(entry.Message), nil
+}
+
+func TestLogger(t *testing.T) {
+	ol := newOktetoLogger()
+	var buf bytes.Buffer
+	ol.logrusLogger.Out = &buf
+
+	ol.logrusLogger.Formatter = fakeFormatter{}
+
+	ol.SetLevel(DebugLevel)
+
+	tc := []struct {
+		name     string
+		msg      string
+		expected string
+		args     []any
+	}{
+		{
+			name:     "info",
+			msg:      "info",
+			expected: "info",
+		},
+		{
+			name:     "infof",
+			msg:      "infof: %s",
+			args:     []any{"foo"},
+			expected: "infof: foo",
+		},
+		{
+			name:     "debug",
+			msg:      "debug",
+			expected: "debug",
+		},
+		{
+			name:     "debugf",
+			msg:      "debugf: %s",
+			args:     []any{"foo"},
+			expected: "debugf: foo",
+		},
+	}
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			switch tt.name {
+			case "info":
+				ol.Info(tt.msg)
+			case "infof":
+				ol.Infof(tt.msg, tt.args...)
+			case "debug":
+				ol.Debug(tt.msg)
+			case "debugf":
+				ol.Debugf(tt.msg, tt.args...)
+			}
+			require.Equal(t, tt.expected, buf.String())
+			buf.Reset()
 		})
 	}
 }
