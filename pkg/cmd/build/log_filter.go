@@ -2,9 +2,10 @@ package build
 
 import (
 	"fmt"
+	"regexp"
+
 	"github.com/moby/buildkit/client"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"regexp"
 )
 
 type ConditionFunc func(vertex *client.Vertex) bool

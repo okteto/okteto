@@ -1,10 +1,9 @@
 package build
 
 import (
+	"errors"
 	"fmt"
 	"testing"
-
-	"errors"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/stretchr/testify/assert"

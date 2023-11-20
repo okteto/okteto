@@ -45,6 +45,8 @@ linters:
     - unparam
     - tenv
     - tparallel
+    # https://golangci-lint.run/usage/linters/#gci with default options
+    - gci
 
 issues:
   # Maximum issues count per one linter. Set to 0 to disable. Default is 50.

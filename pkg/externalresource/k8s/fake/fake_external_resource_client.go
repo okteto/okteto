@@ -3,7 +3,6 @@ package fake
 import (
 	k8sexternalresource "github.com/okteto/okteto/pkg/externalresource/k8s"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/watch"

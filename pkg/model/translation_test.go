@@ -24,9 +24,8 @@ import (
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/pointer"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 func TestDevToTranslationRule(t *testing.T) {

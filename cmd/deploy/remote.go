@@ -27,13 +27,11 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/okteto/okteto/pkg/config"
-
 	"github.com/mitchellh/go-homedir"
-
 	builder "github.com/okteto/okteto/cmd/build"
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
 	"github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
