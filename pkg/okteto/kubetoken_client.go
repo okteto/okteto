@@ -61,6 +61,8 @@ func (c *kubeTokenClient) GetKubeToken(baseURL, namespace string) (types.KubeTok
 		return types.KubeTokenResponse{}, fmt.Errorf("GetKubeToken %w: %w", errRequest, err)
 	}
 
+	defer resp.Body.Close()
+
 	if resp.StatusCode == http.StatusUnauthorized {
 		return types.KubeTokenResponse{}, fmt.Errorf("GetKubeToken %w", errUnauthorized)
 	}
@@ -93,6 +95,8 @@ func (c *kubeTokenClient) CheckService(baseURL, namespace string) error {
 	if err != nil {
 		return fmt.Errorf("CheckService %w: %w", errRequest, err)
 	}
+
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("CheckService %w: %s", errKubetokenNotAvailable, baseURL)
