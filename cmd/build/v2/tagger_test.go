@@ -157,7 +157,13 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			tagger := newImageTagger(tc.cfg)
-			buildHash := getBuildHashFromCommit(tc.b, tc.cfg.GetGitCommit())
+			if tc.cfg.isSmartBuildsEnable {
+				t.Setenv(OktetoSmartBuildUsingContextEnvVar, "true")
+			}
+			buildHash := newServiceHasher(fakeConfigRepo{
+				sha:     tc.cfg.sha,
+				isClean: tc.cfg.isClean,
+			}).HashProjectCommit(tc.b)
 			assert.Equal(t, tc.expectedImage, tagger.getServiceImageReference("test", "test", tc.b, buildHash))
 		})
 	}
@@ -227,7 +233,13 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			tagger := newImageWithVolumesTagger(tc.cfg)
-			buildHash := getBuildHashFromCommit(tc.b, tc.cfg.GetGitCommit())
+			if tc.cfg.isSmartBuildsEnable {
+				t.Setenv(OktetoSmartBuildUsingContextEnvVar, "true")
+			}
+			buildHash := newServiceHasher(fakeConfigRepo{
+				sha:     tc.cfg.sha,
+				isClean: tc.cfg.isClean,
+			}).HashProjectCommit(tc.b)
 			assert.Equal(t, tc.expectedImage, tagger.getServiceImageReference("test", "test", tc.b, buildHash))
 		})
 	}

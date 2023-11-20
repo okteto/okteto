@@ -15,8 +15,6 @@ package v2
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -65,7 +63,6 @@ type oktetoBuilderConfigInterface interface {
 	GetGitCommit() string
 	IsOkteto() bool
 	GetAnonymizedRepo() string
-	GetBuildContextHash(*model.BuildInfo) string
 	IsSmartBuildsEnabled() bool
 }
 
@@ -80,6 +77,8 @@ type OktetoBuilder struct {
 	Config           oktetoBuilderConfigInterface
 	analyticsTracker analyticsTrackerInterface
 	V1Builder        *buildv1.OktetoBuilder
+
+	hasher *serviceHasher
 
 	// buildEnvironments are the environment variables created by the build steps
 	buildEnvironments map[string]string
@@ -119,6 +118,7 @@ func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface) *OktetoBu
 		buildEnvironments: buildEnvs,
 		Config:            config,
 		analyticsTracker:  analyticsTracker,
+		hasher:            newServiceHasher(gitRepo),
 	}
 }
 
@@ -204,13 +204,12 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 			repoHashDurationStart := time.Now()
 			repoCommit := bc.Config.GetGitCommit()
-			buildHash := getBuildHashFromCommit(buildSvcInfo, repoCommit)
 
-			meta.RepoHash = buildHash
+			meta.RepoHash = bc.hasher.HashProjectCommit(buildSvcInfo)
 			meta.RepoHashDuration = time.Since(repoHashDurationStart)
 
 			buildContextHashDurationStart := time.Now()
-			meta.BuildContextHash = bc.Config.GetBuildContextHash(buildSvcInfo)
+			meta.BuildContextHash = bc.hasher.HashBuildContext(buildSvcInfo)
 			meta.BuildContextHashDuration = time.Since(buildContextHashDurationStart)
 
 			// We only check that the image is built in the global registry if the noCache option is not set
@@ -218,6 +217,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 				imageChecker := getImageChecker(buildSvcInfo, bc.Config, bc.Registry)
 				cacheHitDurationStart := time.Now()
+				buildHash := bc.hasher.HashService(buildSvcInfo)
 				imageWithDigest, isBuilt := imageChecker.checkIfBuildHashIsBuilt(options.Manifest.Name, svcToBuild, buildHash)
 
 				meta.CacheHit = isBuilt
@@ -318,7 +318,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	oktetoLog.Infof("Building image for service '%s'", svcName)
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := bc.getBuildInfoWithoutVolumeMounts(manifest.Build[svcName], isStackManifest)
-	buildHash := getBuildHashFromCommit(buildSvcInfo, bc.Config.GetGitCommit())
+	buildHash := bc.hasher.HashService(buildSvcInfo)
 	tagToBuild := newImageTagger(bc.Config).getServiceImageReference(manifest.Name, svcName, buildSvcInfo, buildHash)
 	buildSvcInfo.Image = tagToBuild
 	if err := buildSvcInfo.AddBuildArgs(bc.buildEnvironments); err != nil {
@@ -352,7 +352,7 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 
 	buildInfoCopy := manifest.Build[svcName].Copy()
 	buildInfoCopy.Image = ""
-	buildHash := getBuildHashFromCommit(buildInfoCopy, bc.Config.GetGitCommit())
+	buildHash := bc.hasher.HashService(buildInfoCopy)
 
 	tagToBuild := newImageWithVolumesTagger(bc.Config).getServiceImageReference(manifest.Name, svcName, buildInfoCopy, buildHash)
 	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest)
@@ -462,37 +462,4 @@ func getImageChecker(buildInfo *model.BuildInfo, cfg oktetoBuilderConfigInterfac
 		tagger = newImageTagger(cfg)
 	}
 	return newImageChecker(cfg, registry, tagger)
-}
-
-// getBuildHashFromCommit parses buildInfo and commit into a hashed string
-func getBuildHashFromCommit(buildInfo *model.BuildInfo, commit string) string {
-	return getBuildHashFromGitHash(buildInfo, commit, "commit")
-}
-
-func getBuildHashFromGitHash(buildInfo *model.BuildInfo, gitHash string, hashType string) string {
-	args := []string{}
-	for _, arg := range buildInfo.Args {
-		args = append(args, arg.String())
-	}
-	argsText := strings.Join(args, ";")
-
-	secrets := []string{}
-	for key, value := range buildInfo.Secrets {
-		secrets = append(secrets, fmt.Sprintf("%s=%s", key, value))
-	}
-	secretsText := strings.Join(secrets, ";")
-
-	// We use a builder to avoid allocations when building the string
-	var b strings.Builder
-	fmt.Fprintf(&b, "%s:%s;", hashType, gitHash)
-	fmt.Fprintf(&b, "target:%s;", buildInfo.Target)
-	fmt.Fprintf(&b, "build_args:%s;", argsText)
-	fmt.Fprintf(&b, "secrets:%s;", secretsText)
-	fmt.Fprintf(&b, "context:%s;", buildInfo.Context)
-	fmt.Fprintf(&b, "dockerfile:%s;", buildInfo.Dockerfile)
-	fmt.Fprintf(&b, "image:%s;", buildInfo.Image)
-
-	oktetoBuildHash := sha256.Sum256([]byte(b.String()))
-	return hex.EncodeToString(oktetoBuildHash[:])
-
 }
