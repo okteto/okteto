@@ -1076,8 +1076,8 @@ func TestShouldRunInRemoteDestroy(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
-			t.Setenv(constants.OktetoDeployRemote, string(tt.remoteDestroy))
-			t.Setenv(constants.OktetoForceRemote, string(tt.remoteForce))
+			t.Setenv(constants.OktetoDeployRemote, tt.remoteDestroy)
+			t.Setenv(constants.OktetoForceRemote, tt.remoteForce)
 			result := shouldRunInRemote(tt.opts)
 			assert.Equal(t, result, tt.expected)
 		})

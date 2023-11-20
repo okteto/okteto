@@ -235,7 +235,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		Folders:          []*Folder{},
 		RescanInterval:   strconv.Itoa(dev.Sync.RescanInterval),
 		Compression:      compression,
-		timeout:          time.Duration(dev.Timeout.Default),
+		timeout:          dev.Timeout.Default,
 	}
 	index := 1
 	for _, sync := range dev.Sync.Folders {
