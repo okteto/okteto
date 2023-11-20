@@ -22,8 +22,8 @@ import (
 )
 
 type fakeRepositoryCommitRetriever struct {
-	sha string
 	err error
+	sha string
 }
 
 func (frcr fakeRepositoryCommitRetriever) GetSHA() (string, error) {
@@ -98,10 +98,10 @@ func TestServiceHasher_HashBuildContext(t *testing.T) {
 
 func TestServiceHasher_HashService(t *testing.T) {
 	tests := []struct {
-		name         string
 		repoCtrl     repositoryCommitRetriever
-		expectedHash string
 		expectedErr  error
+		name         string
+		expectedHash string
 	}{
 		{
 			name: "use_build_context",
