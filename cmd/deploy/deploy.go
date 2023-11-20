@@ -541,7 +541,7 @@ func shouldRunInRemote(opts *Options) bool {
 		return true
 	}
 
-	oktetoLog.Information("Have you tried the `--remote` option? You can run the deploy commands in your Okteto cluster. More information available here: https://www.okteto.com/docs/reference/manifest/#deploy-remotely")
+	oktetoLog.Information("Use `--remote` to run the deploy commands in your Okteto cluster.\n    More information available here: https://www.okteto.com/docs/reference/manifest/#deploy-remotely")
 	return false
 
 }
