@@ -14,11 +14,11 @@
 package model
 
 import (
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"sort"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	yaml "gopkg.in/yaml.v2"

@@ -15,8 +15,9 @@ package deploy
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"strings"
+
+	"github.com/okteto/okteto/pkg/env"
 )
 
 func validateAndSet(variables []string, setEnv func(key, value string) error) error {

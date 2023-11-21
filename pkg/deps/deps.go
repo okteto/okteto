@@ -15,13 +15,14 @@ package deps
 
 import (
 	"fmt"
-	"github.com/a8m/envsubst/parse"
-	"github.com/okteto/okteto/pkg/env"
-	giturls "github.com/whilp/git-urls"
 	"net/url"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/a8m/envsubst/parse"
+	"github.com/okteto/okteto/pkg/env"
+	giturls "github.com/whilp/git-urls"
 )
 
 // ManifestSection represents the map of dependencies at a manifest

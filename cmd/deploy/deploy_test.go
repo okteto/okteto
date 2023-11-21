@@ -16,7 +16,6 @@ package deploy
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/deps"
 	"net"
 	"os"
 	"path/filepath"
@@ -31,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"

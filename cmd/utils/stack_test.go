@@ -14,13 +14,13 @@
 package utils
 
 import (
-	"github.com/okteto/okteto/pkg/env"
 	"log"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model"
 )
 

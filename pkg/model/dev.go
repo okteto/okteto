@@ -16,7 +16,6 @@ package model
 import (
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -30,6 +29,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/pkg/cache"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"

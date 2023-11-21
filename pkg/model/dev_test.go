@@ -15,7 +15,6 @@ package model
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -23,6 +22,7 @@ import (
 	"time"
 
 	"github.com/compose-spec/godotenv"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"

@@ -14,10 +14,10 @@
 package analytics
 
 import (
-	"github.com/okteto/okteto/pkg/deps"
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 )

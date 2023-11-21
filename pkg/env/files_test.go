@@ -14,9 +14,10 @@
 package env
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
-	"testing"
 )
 
 func TestEnvFileUnmarshalling(t *testing.T) {

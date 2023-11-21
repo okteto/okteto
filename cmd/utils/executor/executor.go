@@ -15,11 +15,11 @@ package executor
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"os/exec"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )

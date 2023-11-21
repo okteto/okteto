@@ -15,12 +15,13 @@ package env
 
 import (
 	"fmt"
-	"github.com/a8m/envsubst"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/a8m/envsubst"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 type Environment []Var

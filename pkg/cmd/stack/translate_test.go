@@ -16,11 +16,11 @@ package stack
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"

@@ -17,6 +17,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"reflect"
+	"sort"
+	"strings"
+
 	"github.com/a8m/envsubst"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
@@ -30,11 +36,6 @@ import (
 	"github.com/spf13/afero"
 	yaml "gopkg.in/yaml.v2"
 	yaml3 "gopkg.in/yaml.v3"
-	"os"
-	"path/filepath"
-	"reflect"
-	"sort"
-	"strings"
 )
 
 // Archetype represents the type of manifest

@@ -14,10 +14,10 @@
 package model
 
 import (
-	"github.com/okteto/okteto/pkg/env"
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"

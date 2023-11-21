@@ -16,7 +16,6 @@ package model
 import (
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -27,6 +26,7 @@ import (
 	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/discovery"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/format"

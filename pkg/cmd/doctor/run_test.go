@@ -14,10 +14,10 @@
 package doctor
 
 import (
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model"
 	"gopkg.in/yaml.v2"
 )

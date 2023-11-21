@@ -14,12 +14,12 @@
 package model
 
 import (
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"

@@ -16,12 +16,12 @@ package up
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"net/http"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"

@@ -14,11 +14,11 @@
 package context
 
 import (
-	"github.com/okteto/okteto/pkg/deps"
 	"os"
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"

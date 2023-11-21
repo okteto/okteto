@@ -15,10 +15,10 @@ package destroy
 
 import (
 	"context"
-	"github.com/okteto/okteto/pkg/env"
 
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	apiv1 "k8s.io/api/core/v1"

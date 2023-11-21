@@ -16,6 +16,7 @@ package utils
 import (
 	"context"
 	"fmt"
+
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/okteto"

@@ -20,10 +20,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/spf13/afero"
-
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/deps"  
+	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model/forward"

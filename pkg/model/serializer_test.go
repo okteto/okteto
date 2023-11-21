@@ -15,16 +15,15 @@ package model
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/deps"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
 	"github.com/okteto/okteto/pkg/constants"
-  "github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/deps"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"

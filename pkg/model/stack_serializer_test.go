@@ -15,13 +15,13 @@ package model
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"

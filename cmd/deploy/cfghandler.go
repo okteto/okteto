@@ -15,10 +15,10 @@ package deploy
 
 import (
 	"context"
-	"github.com/okteto/okteto/pkg/env"
 
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	apiv1 "k8s.io/api/core/v1"

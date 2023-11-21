@@ -14,13 +14,14 @@
 package deps
 
 import (
+	"testing"
+	"time"
+
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	giturls "github.com/whilp/git-urls"
 	"gopkg.in/yaml.v2"
-	"testing"
-	"time"
 )
 
 func Test_GetTimeout(t *testing.T) {

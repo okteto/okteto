@@ -17,11 +17,11 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"

@@ -17,7 +17,6 @@ import (
 	"compress/flate"
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -25,6 +24,7 @@ import (
 
 	"github.com/mholt/archiver/v3"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/apps"

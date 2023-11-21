@@ -15,11 +15,11 @@ package model
 
 import (
 	"bytes"
-	"github.com/okteto/okteto/pkg/env"
 	"path"
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"

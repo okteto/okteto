@@ -15,7 +15,6 @@ package model
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/kballard/go-shellquote"
 	"github.com/okteto/okteto/pkg/cache"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/model/forward"

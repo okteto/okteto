@@ -15,9 +15,10 @@ package env
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
-	"testing"
 )
 
 func Test_ExpandEnv(t *testing.T) {

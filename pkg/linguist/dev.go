@@ -14,12 +14,12 @@
 package linguist
 
 import (
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/okteto"

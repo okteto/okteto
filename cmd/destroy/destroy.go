@@ -16,7 +16,6 @@ package destroy
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"path/filepath"
 	"time"
@@ -28,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
