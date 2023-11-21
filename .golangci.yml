@@ -52,6 +52,14 @@ linters:
     - tparallel
     # https://golangci-lint.run/usage/linters/#goheader
     - goheader
+    - unconvert
+    - predeclared
+    - asciicheck
+    - asasalint
+    - bidichk
+    - decorder
+    - exportloopref
+    - makezero
 
 issues:
   # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
