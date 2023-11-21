@@ -37,6 +37,7 @@ lint:
 
 .PHONY: lint-fix-fieldalignment
 lint-fix-fieldalignment:
+	@which fieldalignment > /dev/null || (echo "Installing fieldalignment..." && go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest)
 	fieldalignment -fix ./...
 
 .PHONY: test
