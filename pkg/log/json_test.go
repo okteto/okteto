@@ -62,7 +62,7 @@ func Test_ConvertToJson(t *testing.T) {
 				Level:     defaultLevel,
 				Stage:     defaultStage,
 				Message:   "foobar",
-				Timestamp: int64(mockedTimestamp),
+				Timestamp: mockedTimestamp,
 			},
 		}, {
 			name:    "leaving leading whitespace since it represents indentation",
@@ -73,7 +73,7 @@ func Test_ConvertToJson(t *testing.T) {
 				Level:     defaultLevel,
 				Stage:     defaultStage,
 				Message:   " \t\nsome indented line",
-				Timestamp: int64(mockedTimestamp),
+				Timestamp: mockedTimestamp,
 			},
 		}, {
 			name:    "removes trailing whitespace since each line should represent an individual line",
@@ -84,7 +84,7 @@ func Test_ConvertToJson(t *testing.T) {
 				Level:     defaultLevel,
 				Stage:     defaultStage,
 				Message:   "  some indented line",
-				Timestamp: int64(mockedTimestamp),
+				Timestamp: mockedTimestamp,
 			},
 		},
 	}

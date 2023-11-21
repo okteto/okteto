@@ -118,7 +118,7 @@ func addSyncFieldHash(dev *model.Dev) error {
 	if err != nil {
 		return err
 	}
-	dev.Metadata.Annotations[model.OktetoSyncAnnotation] = fmt.Sprintf("%x", sha512.Sum512([]byte(output)))
+	dev.Metadata.Annotations[model.OktetoSyncAnnotation] = fmt.Sprintf("%x", sha512.Sum512(output))
 	return nil
 }
 

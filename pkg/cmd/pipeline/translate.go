@@ -1,4 +1,4 @@
-// Copyright 2021 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -257,7 +257,7 @@ func translateConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
 
 	output := oktetoLog.GetOutputBuffer()
 	outputData := translateOutput(output)
-	cmap.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(outputData))
+	cmap.Data[outputField] = base64.StdEncoding.EncodeToString(outputData)
 	return cmap
 }
 
@@ -307,7 +307,7 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 
 	output := oktetoLog.GetOutputBuffer()
 	outputData := translateOutput(output)
-	cmap.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(outputData))
+	cmap.Data[outputField] = base64.StdEncoding.EncodeToString(outputData)
 	return nil
 }
 

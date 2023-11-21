@@ -200,7 +200,7 @@ dependencies:
 			if err != nil {
 				t.Fatalf("failed to create dynamic manifest file: %s", err.Error())
 			}
-			if err := os.WriteFile(tmpFile.Name(), []byte(tt.manifestYAML), 0600); err != nil {
+			if err := os.WriteFile(tmpFile.Name(), tt.manifestYAML, 0600); err != nil {
 				t.Fatalf("failed to write manifest file: %s", err.Error())
 			}
 			defer os.RemoveAll(tmpFile.Name())
@@ -260,7 +260,7 @@ context: manifest-context
 				if err != nil {
 					t.Fatalf("failed to create dynamic manifest file: %s", err.Error())
 				}
-				if err := os.WriteFile(tmpFile.Name(), []byte(tt.manifestYAML), 0600); err != nil {
+				if err := os.WriteFile(tmpFile.Name(), tt.manifestYAML, 0600); err != nil {
 					t.Fatalf("failed to write manifest file: %s", err.Error())
 				}
 				defer os.RemoveAll(tmpFile.Name())

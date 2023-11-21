@@ -20,12 +20,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/okteto/okteto/pkg/filesystem"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
-
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/okteto/okteto/pkg/filesystem"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 var (

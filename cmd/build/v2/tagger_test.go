@@ -16,9 +16,8 @@ package v2
 import (
 	"testing"
 
-	"github.com/okteto/okteto/pkg/okteto"
-
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -1968,7 +1968,7 @@ func Test_UnmarshalStackUser(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var result *StackSecurityContext
-			if err := yaml.Unmarshal([]byte(tt.manifest), &result); err != nil {
+			if err := yaml.Unmarshal(tt.manifest, &result); err != nil {
 				if !tt.errorExpected {
 					t.Fatalf("unexpected error unmarshaling %s: %s", tt.name, err.Error())
 				}
