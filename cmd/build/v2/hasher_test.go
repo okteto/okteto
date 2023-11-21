@@ -76,14 +76,14 @@ func TestServiceHasher_HashBuildContext(t *testing.T) {
 			repoCtrl: fakeRepositoryCommitRetriever{
 				sha: "testtreehash",
 			},
-			expectedHash: "9e17f6a3555569e8f63413fc86cb1eb5daedafd3f1b4702cfc82d9a22951b4bc",
+			expectedHash: "71e012767fbae26c772d966c13505eb79f093829daa6210887b5ad13a666a74c",
 		},
 		{
 			name: "error",
 			repoCtrl: fakeRepositoryCommitRetriever{
 				err: errors.New("fake error"),
 			},
-			expectedHash: "624cba95f4e2bf43aa05717d71a18d6657beb7d366defcd59e8dc7da225bbdb2",
+			expectedHash: "13c6e75356db55df9032754f1e4cc9ca58b2ccb7392d636c3e6313896a8acba7",
 		},
 	}
 

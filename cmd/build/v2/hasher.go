@@ -17,6 +17,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -27,6 +28,9 @@ import (
 
 const (
 	OktetoSmartBuildUsingContextEnvVar = "OKTETO_SMART_BUILDS_USING_BUILD_CONTEXT"
+
+	buildContextCommitType = "tree_hash"
+	projectCommitType      = "commit"
 )
 
 type repositoryCommitRetriever interface {
@@ -55,7 +59,7 @@ func (sh *serviceHasher) HashProjectCommit(buildInfo *model.BuildInfo) string {
 			oktetoLog.Infof("could not get repository sha: %w", err)
 		}
 	}
-	return sh.hash(buildInfo, "commit", sh.projectCommit)
+	return sh.hash(buildInfo, projectCommitType, sh.projectCommit)
 }
 
 func (sh serviceHasher) HashBuildContext(buildInfo *model.BuildInfo) string {
@@ -67,7 +71,7 @@ func (sh serviceHasher) HashBuildContext(buildInfo *model.BuildInfo) string {
 	if err != nil {
 		oktetoLog.Info("error trying to get tree hash for build context '%s': %w", buildContext, err)
 	}
-	return sh.hash(buildInfo, "tree_hash", treeHash)
+	return sh.hash(buildInfo, buildContextCommitType, treeHash)
 }
 
 func (sh serviceHasher) HashService(buildInfo *model.BuildInfo) string {
@@ -99,10 +103,24 @@ func (sh serviceHasher) hash(buildInfo *model.BuildInfo, commitType, commitHash 
 	fmt.Fprintf(&b, "secrets:%s;", secretsText)
 	fmt.Fprintf(&b, "context:%s;", buildInfo.Context)
 	fmt.Fprintf(&b, "dockerfile:%s;", buildInfo.Dockerfile)
+	if commitType == buildContextCommitType {
+		fmt.Fprintf(&b, "dockerfile_content:%s;", getDockerfileContent(buildInfo.Dockerfile))
+	}
 	fmt.Fprintf(&b, "image:%s;", buildInfo.Image)
 
 	oktetoBuildHash := sha256.Sum256([]byte(b.String()))
 	return hex.EncodeToString(oktetoBuildHash[:])
+}
+
+// getDockerfileContent returns the content of the Dockerfile
+func getDockerfileContent(dockerfilePath string) string {
+	content, err := ioutil.ReadFile(dockerfilePath)
+	if err != nil {
+		oktetoLog.Info("error trying to read Dockerfile: %w", err)
+		return ""
+	}
+	encodedFile := sha256.Sum256(content)
+	return hex.EncodeToString(encodedFile[:])
 }
 
 // LoadBoolean loads a boolean environment variable and returns it value
