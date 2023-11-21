@@ -618,7 +618,7 @@ func translateServicePorts(svc model.Service) []apiv1.ServicePort {
 				result,
 				apiv1.ServicePort{
 					Name:       fmt.Sprintf("p-%d-%d-%s", p.ContainerPort, p.ContainerPort, strings.ToLower(fmt.Sprintf("%v", p.Protocol))),
-					Port:       int32(p.ContainerPort),
+					Port:       p.ContainerPort,
 					TargetPort: intstr.IntOrString{IntVal: p.ContainerPort},
 					Protocol:   p.Protocol,
 				},
@@ -629,7 +629,7 @@ func translateServicePorts(svc model.Service) []apiv1.ServicePort {
 				result,
 				apiv1.ServicePort{
 					Name:       fmt.Sprintf("p-%d-%d-%s", p.HostPort, p.ContainerPort, strings.ToLower(fmt.Sprintf("%v", p.Protocol))),
-					Port:       int32(p.HostPort),
+					Port:       p.HostPort,
 					TargetPort: intstr.IntOrString{IntVal: p.ContainerPort},
 					Protocol:   p.Protocol,
 				},

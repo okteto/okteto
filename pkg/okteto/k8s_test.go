@@ -126,7 +126,7 @@ func TestKubetokenRefreshRoundTrip(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			testServer := httptest.NewServer(http.HandlerFunc(tc.handleFunc))
+			testServer := httptest.NewServer(tc.handleFunc)
 			defer testServer.Close()
 			transport := newTokenRotationTransport(http.DefaultTransport)
 			client := &http.Client{

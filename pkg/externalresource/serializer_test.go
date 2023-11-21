@@ -111,9 +111,9 @@ endpoints:
 		t.Run(tt.name, func(t *testing.T) {
 			var result ExternalResource
 			if tt.expectedErr {
-				assert.Error(t, yaml.Unmarshal([]byte(tt.data), &result))
+				assert.Error(t, yaml.Unmarshal(tt.data, &result))
 			} else {
-				assert.NoError(t, yaml.Unmarshal([]byte(tt.data), &result))
+				assert.NoError(t, yaml.Unmarshal(tt.data, &result))
 				if !reflect.DeepEqual(result, tt.expected) {
 					t.Errorf("didn't unmarshal correctly. Actual '%+v', Expected '%+v'", result, tt.expected)
 				}

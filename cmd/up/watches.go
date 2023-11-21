@@ -53,7 +53,7 @@ func checkLocalWatchesConfiguration() {
 }
 
 func isWatchesConfigurationTooLow(value string) bool {
-	value = strings.TrimSuffix(string(value), "\n")
+	value = strings.TrimSuffix(value, "\n")
 	if value == "" {
 		oktetoLog.Infof("max_user_watches is empty '%s'", value)
 		return false

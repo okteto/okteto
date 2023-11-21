@@ -45,6 +45,7 @@ linters:
     - unparam
     - tenv
     - tparallel
+    - unconvert
     - predeclared
     - asciicheck
     - asasalint

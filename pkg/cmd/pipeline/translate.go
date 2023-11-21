@@ -257,7 +257,7 @@ func translateConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
 
 	output := oktetoLog.GetOutputBuffer()
 	outputData := translateOutput(output)
-	cmap.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(outputData))
+	cmap.Data[outputField] = base64.StdEncoding.EncodeToString(outputData)
 	return cmap
 }
 
@@ -307,7 +307,7 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 
 	output := oktetoLog.GetOutputBuffer()
 	outputData := translateOutput(output)
-	cmap.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(outputData))
+	cmap.Data[outputField] = base64.StdEncoding.EncodeToString(outputData)
 	return nil
 }
 
