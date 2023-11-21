@@ -96,7 +96,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	}
 
 	var err error
-	options.Tag, err = env.ExpandEnv(options.Tag, true)
+	options.Tag, err = env.ExpandEnv(options.Tag)
 	if err != nil {
 		return err
 	}

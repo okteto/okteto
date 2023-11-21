@@ -84,7 +84,7 @@ func getRandomName(scope string) string {
 }
 
 func getExpandedName(name string) string {
-	expandedName, err := env.ExpandEnv(name, true)
+	expandedName, err := env.ExpandEnv(name)
 	if err != nil {
 		return name
 	}

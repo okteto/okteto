@@ -39,14 +39,14 @@ func (v *Var) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, "=", 2)
 	v.Name = parts[0]
 	if len(parts) == 2 {
-		v.Value, err = ExpandEnv(parts[1], true)
+		v.Value, err = ExpandEnv(parts[1])
 		if err != nil {
 			return err
 		}
 		return nil
 	}
 
-	v.Name, err = ExpandEnv(parts[0], true)
+	v.Name, err = ExpandEnv(parts[0])
 	if err != nil {
 		return err
 	}

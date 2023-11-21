@@ -167,7 +167,7 @@ func (e *BuildArg) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return nil
 	}
 
-	e.Name, err = env.ExpandEnv(parts[0], true)
+	e.Name, err = env.ExpandEnv(parts[0])
 	if err != nil {
 		return err
 	}
@@ -413,7 +413,7 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	rawExpanded, err := env.ExpandEnv(raw, true)
+	rawExpanded, err := env.ExpandEnv(raw)
 	if err != nil {
 		return err
 	}
@@ -534,7 +534,7 @@ func (v *Volume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
 		oktetoLog.Yellow("The syntax '%s' is deprecated in the 'volumes' field and will be removed in a future version. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
-		v.LocalPath, err = env.ExpandEnv(parts[0], true)
+		v.LocalPath, err = env.ExpandEnv(parts[0])
 		if err != nil {
 			return err
 		}
@@ -560,22 +560,22 @@ func (s *SyncFolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.Split(raw, ":")
 	if len(parts) == 2 {
-		s.LocalPath, err = env.ExpandEnv(parts[0], true)
+		s.LocalPath, err = env.ExpandEnv(parts[0])
 		if err != nil {
 			return err
 		}
-		s.RemotePath, err = env.ExpandEnv(parts[1], true)
+		s.RemotePath, err = env.ExpandEnv(parts[1])
 		if err != nil {
 			return err
 		}
 		return nil
 	} else if len(parts) == 3 {
 		windowsPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
-		s.LocalPath, err = env.ExpandEnv(windowsPath, true)
+		s.LocalPath, err = env.ExpandEnv(windowsPath)
 		if err != nil {
 			return err
 		}
-		s.RemotePath, err = env.ExpandEnv(parts[2], true)
+		s.RemotePath, err = env.ExpandEnv(parts[2])
 		if err != nil {
 			return err
 		}
@@ -1308,7 +1308,7 @@ func getBuildArgs(unmarshal func(interface{}) error) (map[string]string, error) 
 	err := unmarshal(&rawList)
 	if err == nil {
 		for _, buildArg := range rawList {
-			value, err := env.ExpandEnv(buildArg.Value, false)
+			value, err := env.ExpandEnvIfNotEmpty(buildArg.Value)
 			if err != nil {
 				return nil, err
 			}
@@ -1322,7 +1322,7 @@ func getBuildArgs(unmarshal func(interface{}) error) (map[string]string, error) 
 		return nil, err
 	}
 	for key, value := range rawMap {
-		result[key], err = env.ExpandEnv(value, false)
+		result[key], err = env.ExpandEnvIfNotEmpty(value)
 		if err != nil {
 			return nil, err
 		}
@@ -1347,7 +1347,7 @@ func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 		return nil, err
 	}
 	for key, value := range rawMap {
-		value, err = env.ExpandEnv(value, true)
+		value, err = env.ExpandEnv(value)
 		if err != nil {
 			return nil, err
 		}

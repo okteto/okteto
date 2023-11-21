@@ -888,7 +888,7 @@ func loadEnvFiles(svc *Service, svcName string) error {
 
 func setEnvironmentFromFile(svc *Service, filename string) error {
 	var err error
-	filename, err = env.ExpandEnv(filename, true)
+	filename, err = env.ExpandEnv(filename)
 	if err != nil {
 		return err
 	}

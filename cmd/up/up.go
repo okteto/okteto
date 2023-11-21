@@ -560,7 +560,7 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVaria
 			return nil, oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD
 		}
 
-		expandedEnv, err := env.ExpandEnv(varValueToAdd, true)
+		expandedEnv, err := env.ExpandEnv(varValueToAdd)
 		if err != nil {
 			return nil, err
 		}

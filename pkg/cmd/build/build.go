@@ -453,7 +453,7 @@ func createTempFileWithExpandedEnvsAtSource(fs afero.Fs, sourceFile, tempFolder 
 	sc := bufio.NewScanner(srcFile)
 	for sc.Scan() {
 		// expand content
-		srcContent, err := env.ExpandEnv(sc.Text(), true)
+		srcContent, err := env.ExpandEnv(sc.Text())
 		if err != nil {
 			return "", err
 		}

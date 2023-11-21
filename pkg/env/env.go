@@ -25,13 +25,23 @@ import (
 
 type Environment []Var
 
-// ExpandEnv expands the environments supporting the notation "${var:-$DEFAULT}"
-func ExpandEnv(value string, expandIfEmpty bool) (string, error) {
+// ExpandEnv expands the env vars in the given string (supporting the notation "${var:-$DEFAULT}").
+func ExpandEnv(value string) (string, error) {
 	result, err := envsubst.String(value)
 	if err != nil {
 		return "", fmt.Errorf("error expanding environment on '%s': %s", value, err.Error())
 	}
-	if result == "" && !expandIfEmpty {
+	return result, nil
+}
+
+// ExpandEnvIfNotEmpty expands the env vars in the given string (supporting the notation "${var:-$DEFAULT}").
+// If the result is an empty string, it returns the original value.
+func ExpandEnvIfNotEmpty(value string) (string, error) {
+	result, err := ExpandEnv(value)
+	if err != nil {
+		return "", err
+	}
+	if result == "" {
 		return value, nil
 	}
 	return result, nil
@@ -70,7 +80,7 @@ func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 		return nil, err
 	}
 	for key, value := range rawMap {
-		value, err = ExpandEnv(value, true)
+		value, err = ExpandEnv(value)
 		if err != nil {
 			return nil, err
 		}

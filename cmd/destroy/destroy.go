@@ -301,7 +301,7 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 				return nil, err
 			}
 			opts.Manifest = manifest
-			opts.Manifest.Destroy.Image, err = env.ExpandEnv(manifest.Destroy.Image, false)
+			opts.Manifest.Destroy.Image, err = env.ExpandEnvIfNotEmpty(manifest.Destroy.Image)
 			if err != nil {
 				return nil, err
 			}

@@ -141,7 +141,7 @@ type BuildArg struct {
 }
 
 func (v *BuildArg) String() string {
-	value, err := env.ExpandEnv(v.Value, true)
+	value, err := env.ExpandEnv(v.Value)
 	if err != nil {
 		return fmt.Sprintf("%s=%s", v.Name, v.Value)
 	}
@@ -190,7 +190,7 @@ func (b *BuildInfo) expandManifestBuildArgs(previousImageArgs map[string]string)
 			oktetoLog.Infof("overriding '%s' with the content of previous build", arg.Name)
 			arg.Value = val
 		}
-		arg.Value, err = env.ExpandEnv(arg.Value, true)
+		arg.Value, err = env.ExpandEnv(arg.Value)
 		if err != nil {
 			return err
 		}
@@ -208,7 +208,7 @@ func (b *BuildInfo) addExpandedPreviousImageArgs(previousImageArgs map[string]st
 		if _, ok := alreadyAddedArg[k]; ok {
 			continue
 		}
-		expandedValue, err := env.ExpandEnv(v, true)
+		expandedValue, err := env.ExpandEnv(v)
 		if err != nil {
 			return err
 		}
@@ -451,7 +451,7 @@ func (dev *Dev) expandEnvVars() error {
 func (dev *Dev) loadName() error {
 	var err error
 	if len(dev.Name) > 0 {
-		dev.Name, err = env.ExpandEnv(dev.Name, true)
+		dev.Name, err = env.ExpandEnv(dev.Name)
 		if err != nil {
 			return err
 		}
@@ -462,7 +462,7 @@ func (dev *Dev) loadName() error {
 func (dev *Dev) loadNamespace() error {
 	var err error
 	if len(dev.Namespace) > 0 {
-		dev.Namespace, err = env.ExpandEnv(dev.Namespace, true)
+		dev.Namespace, err = env.ExpandEnv(dev.Namespace)
 		if err != nil {
 			return err
 		}
@@ -473,7 +473,7 @@ func (dev *Dev) loadNamespace() error {
 func (dev *Dev) loadContext() error {
 	var err error
 	if len(dev.Context) > 0 {
-		dev.Context, err = env.ExpandEnv(dev.Context, true)
+		dev.Context, err = env.ExpandEnv(dev.Context)
 		if err != nil {
 			return err
 		}
@@ -484,7 +484,7 @@ func (dev *Dev) loadContext() error {
 func (dev *Dev) loadSelector() error {
 	var err error
 	for i := range dev.Selector {
-		dev.Selector[i], err = env.ExpandEnv(dev.Selector[i], true)
+		dev.Selector[i], err = env.ExpandEnv(dev.Selector[i])
 		if err != nil {
 			return err
 		}
@@ -498,7 +498,7 @@ func (dev *Dev) loadImage() error {
 		dev.Image = &BuildInfo{}
 	}
 	if len(dev.Image.Name) > 0 {
-		dev.Image.Name, err = env.ExpandEnv(dev.Image.Name, false)
+		dev.Image.Name, err = env.ExpandEnvIfNotEmpty(dev.Image.Name)
 		if err != nil {
 			return err
 		}
@@ -686,7 +686,7 @@ func (dev *Dev) setTimeout() error {
 // expandEnvFiles reads each env file and append all the variables to the environment
 func (dev *Dev) expandEnvFiles() error {
 	for _, envFile := range dev.EnvFiles {
-		filename, err := env.ExpandEnv(envFile, true)
+		filename, err := env.ExpandEnv(envFile)
 		if err != nil {
 			return err
 		}

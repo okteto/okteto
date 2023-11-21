@@ -166,7 +166,7 @@ func NewManifestFromStack(stack *Stack) *Manifest {
 // NewManifestFromDev creates a manifest from a dev
 func NewManifestFromDev(dev *Dev) *Manifest {
 	manifest := NewManifest()
-	name, err := env.ExpandEnv(dev.Name, true)
+	name, err := env.ExpandEnv(dev.Name)
 	if err != nil {
 		oktetoLog.Infof("could not expand dev name '%s'", dev.Name)
 		name = dev.Name
@@ -854,16 +854,16 @@ func (m *Manifest) setDefaults() error {
 		if m.Deploy.Divert.Driver == "" {
 			m.Deploy.Divert.Driver = constants.OktetoDivertWeaverDriver
 		}
-		m.Deploy.Divert.Namespace, err = env.ExpandEnv(m.Deploy.Divert.Namespace, false)
+		m.Deploy.Divert.Namespace, err = env.ExpandEnvIfNotEmpty(m.Deploy.Divert.Namespace)
 		if err != nil {
 			return err
 		}
 		for i := range m.Deploy.Divert.Hosts {
-			m.Deploy.Divert.Hosts[i].VirtualService, err = env.ExpandEnv(m.Deploy.Divert.Hosts[i].VirtualService, false)
+			m.Deploy.Divert.Hosts[i].VirtualService, err = env.ExpandEnvIfNotEmpty(m.Deploy.Divert.Hosts[i].VirtualService)
 			if err != nil {
 				return err
 			}
-			m.Deploy.Divert.Hosts[i].Namespace, err = env.ExpandEnv(m.Deploy.Divert.Hosts[i].Namespace, false)
+			m.Deploy.Divert.Hosts[i].Namespace, err = env.ExpandEnvIfNotEmpty(m.Deploy.Divert.Hosts[i].Namespace)
 			if err != nil {
 				return err
 			}
@@ -955,7 +955,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 					continue
 				}
 				tag := fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(svcName, "-", "_")))
-				expandedTag, err := env.ExpandEnv(tag, true)
+				expandedTag, err := env.ExpandEnv(tag)
 				if err != nil {
 					return err
 				}
@@ -982,7 +982,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 	}
 	if manifest.Destroy != nil {
 		if manifest.Destroy.Image != "" {
-			manifest.Destroy.Image, err = env.ExpandEnv(manifest.Destroy.Image, true)
+			manifest.Destroy.Image, err = env.ExpandEnv(manifest.Destroy.Image)
 			if err != nil {
 				return err
 			}
@@ -996,7 +996,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 			}
 		}
 		if devInfo.Image != nil {
-			devInfo.Image.Name, err = env.ExpandEnv(devInfo.Image.Name, false)
+			devInfo.Image.Name, err = env.ExpandEnvIfNotEmpty(devInfo.Image.Name)
 			if err != nil {
 				return err
 			}
