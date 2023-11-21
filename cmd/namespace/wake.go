@@ -16,6 +16,7 @@ package namespace
 import (
 	"context"
 	"fmt"
+
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"

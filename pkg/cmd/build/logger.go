@@ -20,10 +20,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/okteto/pkg/types"
-
 	"github.com/moby/buildkit/client"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/tonistiigi/units"
 )
 

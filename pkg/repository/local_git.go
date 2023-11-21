@@ -23,9 +23,8 @@ import (
 	"syscall"
 	"time"
 
-	oktetoLog "github.com/okteto/okteto/pkg/log"
-
 	"github.com/go-git/go-git/v5"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 var (

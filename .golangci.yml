@@ -50,8 +50,8 @@ linters:
     - unparam
     - tenv
     - tparallel
-    # https://golangci-lint.run/usage/linters/#goheader
-    - goheader
+    - gci
+    - goheader    
     - unconvert
     - predeclared
     - asciicheck

@@ -17,10 +17,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/types"
 	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/okteto/okteto/pkg/types"
 )
 
 const (

@@ -23,9 +23,8 @@ import (
 	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/rest"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 )
 
 // K8sControl represents the controller that performs the actions with k8s

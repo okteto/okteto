@@ -24,11 +24,10 @@ import (
 	"github.com/docker/cli/cli/config/types"
 	"github.com/moby/buildkit/session/auth"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	"github.com/okteto/okteto/pkg/okteto"
 )
 
 var oktetoRegistry = ""

@@ -16,9 +16,10 @@ package suggest
 import (
 	"errors"
 	"fmt"
-	"github.com/agext/levenshtein"
 	"regexp"
 	"strings"
+
+	"github.com/agext/levenshtein"
 )
 
 type Rule struct {

@@ -16,11 +16,12 @@ package commands
 import (
 	"bytes"
 	"fmt"
-	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/model"
 	"log"
 	"os"
 	"os/exec"
+
+	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/model"
 )
 
 // RunOktetoKubetoken runs okteto kubetoken command
