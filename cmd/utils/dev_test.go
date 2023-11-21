@@ -223,44 +223,6 @@ func Test_CheckIfDirectory(t *testing.T) {
 	}
 }
 
-func Test_CheckIfRegularFile(t *testing.T) {
-	tests := []struct {
-		want error
-		name string
-		path string
-	}{
-		{
-			name: "file",
-			path: "dev.go",
-			want: nil,
-		},
-		{
-			name: "directory",
-			path: ".",
-			want: fmt.Errorf("'.' is not a regular file"),
-		},
-		{
-			name: "file",
-			path: "no.go",
-			want: fmt.Errorf("'no.go' does not exist"),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := CheckIfRegularFile(tt.path)
-			if got == nil && tt.want == nil {
-				return
-			}
-			if got == nil || tt.want == nil {
-				t.Errorf("CheckIfRegularFile(%s) = %s, want %s", tt.path, got, tt.want)
-			}
-			if got.Error() != tt.want.Error() {
-				t.Errorf("CheckIfRegularFile(%s) = %s, want %s", tt.path, got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_GetDevFromManifest(t *testing.T) {
 	wrongDevName := "not-test"
 	tests := []struct {

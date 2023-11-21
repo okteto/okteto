@@ -365,19 +365,6 @@ func CheckIfDirectory(path string) error {
 	return fmt.Errorf("'%s' is not a directory", path)
 }
 
-// CheckIfRegularFile checks if a path is a regular file
-func CheckIfRegularFile(path string) error {
-	fileInfo, err := os.Stat(path)
-	if err != nil {
-		oktetoLog.Infof("error on CheckIfRegularFile: %s", err.Error())
-		return fmt.Errorf("'%s' does not exist", path)
-	}
-	if !fileInfo.IsDir() {
-		return nil
-	}
-	return fmt.Errorf("'%s' is not a regular file", path)
-}
-
 func GetDownCommand(devPath string) string {
 	okDownCommandHint := "okteto down -v"
 	if DefaultManifest != devPath && devPath != "" {

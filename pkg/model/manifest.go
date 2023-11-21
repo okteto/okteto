@@ -275,7 +275,7 @@ func getManifestFromDevFilePath(cwd, manifestPath string) (*Manifest, error) {
 	if manifestPath != "" && !filepath.IsAbs(manifestPath) {
 		manifestPath = filepath.Join(cwd, manifestPath)
 	}
-	if manifestPath != "" && filesystem.FileExistsAndNotDir(manifestPath) {
+	if manifestPath != "" && filesystem.FileExistsAndNotDir(manifestPath, afero.NewOsFs()) {
 		return getManifestFromFile(cwd, manifestPath)
 	}
 
@@ -716,8 +716,8 @@ func (s *Secret) validate() error {
 		return fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'")
 	}
 
-	if err := checkFileAndNotDirectory(s.LocalPath, afero.NewOsFs()); err != nil {
-		return err
+	if exists := filesystem.FileExistsAndNotDir(s.LocalPath, afero.NewOsFs()); !exists {
+		return fmt.Errorf("secret '%s' is not a regular file", s.LocalPath)
 	}
 
 	if !strings.HasPrefix(s.RemotePath, "/") {
@@ -725,17 +725,6 @@ func (s *Secret) validate() error {
 	}
 
 	return nil
-}
-
-func checkFileAndNotDirectory(path string, fs afero.Fs) error {
-	fileInfo, err := fs.Stat(path)
-	if err != nil {
-		return fmt.Errorf("file '%s' not found. Please make sure the file exists", path)
-	}
-	if fileInfo.Mode().IsRegular() {
-		return nil
-	}
-	return fmt.Errorf("secret '%s' is not a regular file", path)
 }
 
 // GetSvcsToBuildFromList returns the builds from a list and all its
