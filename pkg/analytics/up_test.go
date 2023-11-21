@@ -1,7 +1,7 @@
 package analytics
 
 import (
-	"github.com/okteto/okteto/pkg/dependencies"
+	"github.com/okteto/okteto/pkg/deps"
 	"testing"
 	"time"
 
@@ -34,8 +34,8 @@ func Test_UpMetricsMetadata_ManifestProps(t *testing.T) {
 			name: "manifest with dependencies section",
 			manifest: &model.Manifest{
 				IsV2: true,
-				Dependencies: dependencies.ManifestDependencies{
-					"service": &dependencies.Dependency{},
+				Dependencies: deps.ManifestDependencies{
+					"service": &deps.Dependency{},
 				},
 			},
 			expected: &UpMetricsMetadata{

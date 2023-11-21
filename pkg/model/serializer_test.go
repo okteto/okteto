@@ -15,13 +15,13 @@ package model
 
 import (
 	"fmt"
+	"github.com/okteto/okteto/pkg/deps"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/okteto/okteto/pkg/dependencies"
 	"github.com/okteto/okteto/pkg/env"
 
 	"github.com/stretchr/testify/require"
@@ -1065,7 +1065,7 @@ deploy:
 				},
 				Destroy:      &DestroyInfo{},
 				Dev:          map[string]*Dev{},
-				Dependencies: map[string]*dependencies.Dependency{},
+				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Context:      "context-to-use",
 				IsV2:         true,
@@ -1099,7 +1099,7 @@ dev:
 					},
 				},
 				Destroy:      &DestroyInfo{},
-				Dependencies: map[string]*dependencies.Dependency{},
+				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Dev: map[string]*Dev{
 					"test-1": {
@@ -1249,7 +1249,7 @@ sync:
 				Build:         map[string]*BuildInfo{},
 				Deploy:        &DeployInfo{},
 				Destroy:       &DestroyInfo{},
-				Dependencies:  map[string]*dependencies.Dependency{},
+				Dependencies:  map[string]*deps.Dependency{},
 				External:      externalresource.ExternalResourceSection{},
 				GlobalForward: []forward.GlobalForward{},
 				Dev: map[string]*Dev{
@@ -1335,7 +1335,7 @@ services:
 				Build:         map[string]*BuildInfo{},
 				Deploy:        &DeployInfo{},
 				Destroy:       &DestroyInfo{},
-				Dependencies:  map[string]*dependencies.Dependency{},
+				Dependencies:  map[string]*deps.Dependency{},
 				GlobalForward: []forward.GlobalForward{},
 				External:      externalresource.ExternalResourceSection{},
 				Dev: map[string]*Dev{
@@ -1469,7 +1469,7 @@ dev:
 				Type:         OktetoManifestType,
 				IsV2:         true,
 				Build:        map[string]*BuildInfo{},
-				Dependencies: map[string]*dependencies.Dependency{},
+				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Destroy:      &DestroyInfo{},
 				Dev: map[string]*Dev{
@@ -1558,7 +1558,7 @@ dev:
 				Type:         OktetoManifestType,
 				IsV2:         true,
 				Build:        map[string]*BuildInfo{},
-				Dependencies: map[string]*dependencies.Dependency{},
+				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Destroy:      &DestroyInfo{},
 				Dev: map[string]*Dev{
@@ -1729,7 +1729,7 @@ deploy:
 				IsV2:         true,
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*BuildInfo{},
-				Dependencies: map[string]*dependencies.Dependency{},
+				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Destroy:      &DestroyInfo{},
 				Deploy: &DeployInfo{
@@ -1757,7 +1757,7 @@ devs:
 				IsV2:         true,
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*BuildInfo{},
-				Dependencies: map[string]*dependencies.Dependency{},
+				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Destroy:      &DestroyInfo{},
 				Deploy: &DeployInfo{
@@ -2873,14 +2873,14 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 
 func TestDependencyUnmashalling(t *testing.T) {
 	tests := []struct {
-		expected *dependencies.Dependency
+		expected *deps.Dependency
 		name     string
 		data     []byte
 	}{
 		{
 			name: "single line",
 			data: []byte(`https://github/test`),
-			expected: &dependencies.Dependency{
+			expected: &deps.Dependency{
 				Repository: "https://github/test",
 			},
 		},
@@ -2888,7 +2888,7 @@ func TestDependencyUnmashalling(t *testing.T) {
 			name: "repository and branch",
 			data: []byte(`repository: https://github/test
 branch: main`),
-			expected: &dependencies.Dependency{
+			expected: &deps.Dependency{
 				Repository: "https://github/test",
 				Branch:     "main",
 			},
@@ -2898,7 +2898,7 @@ branch: main`),
 			data: []byte(`repository: https://github/test
 branch: main
 manifest: okteto.yml`),
-			expected: &dependencies.Dependency{
+			expected: &deps.Dependency{
 				Repository:   "https://github/test",
 				Branch:       "main",
 				ManifestPath: "okteto.yml",
@@ -2911,7 +2911,7 @@ branch: main
 manifest: okteto.yml
 variables:
   key: value`),
-			expected: &dependencies.Dependency{
+			expected: &deps.Dependency{
 				Repository:   "https://github/test",
 				Branch:       "main",
 				ManifestPath: "okteto.yml",
@@ -2931,7 +2931,7 @@ manifest: okteto.yml
 variables:
   key: value
 wait: true`),
-			expected: &dependencies.Dependency{
+			expected: &deps.Dependency{
 				Repository:   "https://github/test",
 				Branch:       "main",
 				ManifestPath: "okteto.yml",
@@ -2953,7 +2953,7 @@ variables:
   key: value
 wait: true
 timeout: 15m`),
-			expected: &dependencies.Dependency{
+			expected: &deps.Dependency{
 				Repository:   "https://github/test",
 				Branch:       "main",
 				ManifestPath: "okteto.yml",
@@ -2971,7 +2971,7 @@ timeout: 15m`),
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var result *dependencies.Dependency
+			var result *deps.Dependency
 
 			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
 				t.Fatal(err)

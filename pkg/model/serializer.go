@@ -17,7 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/dependencies"
+	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"path/filepath"
@@ -842,7 +842,7 @@ type manifestRaw struct {
 	Dev           ManifestDevs                             `json:"dev,omitempty" yaml:"dev,omitempty"`
 	Destroy       *DestroyInfo                             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 	Build         ManifestBuild                            `json:"build,omitempty" yaml:"build,omitempty"`
-	Dependencies  dependencies.ManifestDependencies        `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	Dependencies  deps.ManifestDependencies                `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	GlobalForward []forward.GlobalForward                  `json:"forward,omitempty" yaml:"forward,omitempty"`
 	External      externalresource.ExternalResourceSection `json:"external,omitempty" yaml:"external,omitempty"`
 
@@ -863,7 +863,7 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	manifest := manifestRaw{
 		Dev:          map[string]*Dev{},
 		Build:        map[string]*BuildInfo{},
-		Dependencies: dependencies.ManifestDependencies{},
+		Dependencies: deps.ManifestDependencies{},
 		External:     externalresource.ExternalResourceSection{},
 	}
 	err = unmarshal(&manifest)

@@ -15,12 +15,12 @@ package model
 
 import (
 	"fmt"
+	"github.com/okteto/okteto/pkg/deps"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/okteto/okteto/pkg/dependencies"
 	"github.com/spf13/afero"
 
 	"github.com/okteto/okteto/pkg/constants"
@@ -1202,8 +1202,8 @@ func Test_Manifest_HasDependenciesSection(t *testing.T) {
 			name: "m.IsV2 && m.Dependencies has items",
 			manifest: &Manifest{
 				IsV2: true,
-				Dependencies: dependencies.ManifestDependencies{
-					"test": &dependencies.Dependency{},
+				Dependencies: deps.ManifestDependencies{
+					"test": &deps.Dependency{},
 				},
 			},
 			expected: true,

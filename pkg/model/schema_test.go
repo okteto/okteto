@@ -182,7 +182,7 @@ func Test_getStructKeys(t *testing.T) {
 			name:  "okteto manifest",
 			input: Manifest{},
 			expected: map[string][]string{
-				"dependencies.Dependency":    {"repository", "manifest", "branch", "namespace", "timeout", "wait"},
+				"deps.Dependency":            {"repository", "manifest", "branch", "namespace", "timeout", "wait"},
 				"env.Var":                    {"name", "value"},
 				"forward.Forward":            {"labels", "name", "localPort", "remotePort"},
 				"forward.GlobalForward":      {"labels", "name", "localPort", "remotePort"},
