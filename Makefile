@@ -35,6 +35,10 @@ lint:
 	pre-commit run --all-files
 	golangci-lint run
 
+.PHONY: lint-fix-fieldalignment
+lint-fix-fieldalignment:
+	fieldalignment -fix ./...
+
 .PHONY: test
 test:
 	go test -p 4 -race -coverprofile=coverage.txt -covermode=atomic ./...
