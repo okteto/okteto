@@ -934,8 +934,9 @@ func (f *fakeEndpointControl) List(_ context.Context, _ string, _ string) ([]str
 
 func getFakeEndpoint() (EndpointGetter, error) {
 	return EndpointGetter{
-		K8sClientProvider: test.NewFakeK8sProvider(),
-		endpointControl:   &fakeEndpointControl{},
+		K8sClientProvider:            test.NewFakeK8sProvider(),
+		endpointControl:              &fakeEndpointControl{},
+		getEndpointsInStandaloneMode: getFakeEndpointsInStandaloneMode,
 	}, nil
 }
 
