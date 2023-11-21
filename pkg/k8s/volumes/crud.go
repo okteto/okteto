@@ -170,7 +170,8 @@ func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientse
 	oktetoLog.Infof("destroying volume '%s'", name)
 
 	ticker := time.NewTicker(1 * time.Second)
-	to := time.Now().Add(timeout * 3) // 90 seconds
+	timeoutDuration := 3 * timeout
+	to := time.Now().Add(timeoutDuration) // 90 seconds
 
 	for i := 0; ; i++ {
 		err := vClient.Delete(ctx, name, metav1.DeleteOptions{})

@@ -123,7 +123,8 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 	oktetoLog.Info("starting SSH forward manager")
 
 	ticker := time.NewTicker(200 * time.Millisecond)
-	to := time.Now().Add(10 * time.Second)
+	timeoutDuration := 10 * time.Second
+	to := time.Now().Add(timeoutDuration)
 	retries := 0
 
 	for {

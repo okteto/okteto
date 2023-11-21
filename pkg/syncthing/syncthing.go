@@ -458,7 +458,8 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 	ticker := time.NewTicker(100 * time.Millisecond)
 	oktetoLog.Infof("waiting for initial scan to complete path=%s local=%t", folder.LocalPath, local)
 
-	to := time.Now().Add(s.timeout * 10) // 5 minutes
+	timeoutDuration := s.timeout * 10
+	to := time.Now().Add(timeoutDuration) // 5 minutes
 
 	for retries := 0; ; retries++ {
 		status, err := s.GetSyncthingStatus(ctx, folder, local)
