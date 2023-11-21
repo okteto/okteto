@@ -20,7 +20,7 @@ import (
 	"os"
 )
 
-// FileExistsWithFilesystem return true if the file exists
+// FileExistsWithFilesystem return true if the file exists or if there is an error.
 func FileExistsWithFilesystem(path string, fs afero.Fs) bool {
 	_, err := fs.Stat(path)
 	if os.IsNotExist(err) {
