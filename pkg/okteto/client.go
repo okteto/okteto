@@ -44,6 +44,7 @@ type OktetoClient struct {
 	pipeline  types.PipelineInterface
 	stream    types.StreamInterface
 	kubetoken types.KubetokenInterface
+	endpoint  types.EndpointInterface
 }
 
 type OktetoClientProvider struct{}
@@ -248,6 +249,7 @@ func newOktetoClientFromGraphqlClient(url string, httpClient *http.Client) (*Okt
 	c.pipeline = newPipelineClient(c.client, url)
 	c.stream = newStreamClient(httpClient)
 	c.kubetoken = newKubeTokenClient(httpClient)
+	c.endpoint = newEndpointClient(c.client)
 	return c, nil
 }
 
@@ -401,6 +403,11 @@ func (c *OktetoClient) Stream() types.StreamInterface {
 // Kubetoken retrieves the Kubetoken client
 func (c *OktetoClient) Kubetoken() types.KubetokenInterface {
 	return c.kubetoken
+}
+
+// Endpoint retrieves the Endpoint client
+func (c *OktetoClient) Endpoint() types.EndpointInterface {
+	return c.endpoint
 }
 
 func SetInsecureSkipTLSVerifyPolicy(isInsecure bool) {

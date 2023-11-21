@@ -24,8 +24,8 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/devenvironment"
+	"github.com/okteto/okteto/pkg/endpoints"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -44,7 +44,7 @@ type EndpointsOptions struct {
 }
 
 type endpointGetterInterface interface {
-	List(ctx context.Context, ns string, labelSelector string) ([]externalresource.ExternalResource, error)
+	List(ctx context.Context, ns string, labelSelector string) ([]string, error)
 }
 
 type k8sIngressClientProvider interface {
@@ -58,17 +58,15 @@ type EndpointGetter struct {
 }
 
 func NewEndpointGetter() (EndpointGetter, error) {
-	k8sProvider := okteto.NewK8sClientProvider()
-	_, cfg, err := k8sProvider.Provide(okteto.Context().Cfg)
+	ec, err := endpoints.NewEndpointControl()
 	if err != nil {
-		return EndpointGetter{}, fmt.Errorf("error getting kubernetes client: %w", err)
+		return EndpointGetter{}, fmt.Errorf("error getting okteto client: %w", err)
 	}
 
-	ec := externalresource.NewExternalK8sControl(cfg)
 	return EndpointGetter{
 		GetManifest:       model.GetManifestV2,
 		endpointControl:   ec,
-		K8sClientProvider: k8sProvider,
+		K8sClientProvider: okteto.NewK8sClientProvider(),
 	}, nil
 
 }
@@ -180,23 +178,22 @@ func (eg *EndpointGetter) getEndpoints(ctx context.Context, opts *EndpointsOptio
 
 	sanitizedName := format.ResourceK8sMetaString(opts.Name)
 	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, sanitizedName)
-	iClient, err := eg.K8sClientProvider.GetIngressClient()
-	if err != nil {
-		return nil, err
-	}
-	eps, err := iClient.GetEndpointsBySelector(ctx, opts.Namespace, labelSelector)
-	if err != nil {
-		return nil, err
-	}
 
-	externalEps, err := eg.endpointControl.List(ctx, opts.Namespace, labelSelector)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, externalEp := range externalEps {
-		for _, ep := range externalEp.Endpoints {
-			eps = append(eps, fmt.Sprintf("%s (external)", ep.Url))
+	var eps []string
+	var err error
+	if okteto.Context().IsOkteto {
+		eps, err = eg.endpointControl.List(ctx, opts.Namespace, labelSelector)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		iClient, err := eg.K8sClientProvider.GetIngressClient()
+		if err != nil {
+			return nil, err
+		}
+		eps, err = iClient.GetEndpointsBySelector(ctx, opts.Namespace, labelSelector)
+		if err != nil {
+			return nil, err
 		}
 	}
 

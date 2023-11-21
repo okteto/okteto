@@ -85,3 +85,8 @@ type KubetokenInterface interface {
 	GetKubeToken(baseURL, namespace string) (KubeTokenResponse, error)
 	CheckService(baseURL, namespace string) error
 }
+
+// EndpointInterface represents the endpoint client
+type EndpointInterface interface {
+	List(ctx context.Context, ns, label string) ([]string, error)
+}

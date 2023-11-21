@@ -478,7 +478,7 @@ func TestDeprecatedListPreview(t *testing.T) {
 	}
 }
 
-func TestListEndpoints(t *testing.T) {
+func TestListPreviewEndpoints(t *testing.T) {
 	type input struct {
 		client *fakeGraphQLClient
 		name   string
