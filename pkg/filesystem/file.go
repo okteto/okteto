@@ -82,7 +82,7 @@ func CopyFile(from, to string) error {
 // FileExistsAndNotDir checks if the file exists, and it's not a dir
 func FileExistsAndNotDir(path string, fs afero.Fs) bool {
 	info, err := fs.Stat(path)
-	if err != nil {
+	if err != nil && os.IsNotExist(err) {
 		return false
 	}
 	return !info.IsDir()
