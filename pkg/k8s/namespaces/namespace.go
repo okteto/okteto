@@ -260,11 +260,13 @@ func NewTrip(restConfig *rest.Config, opts *Options) (*Trip, error) {
 		return nil, err
 	}
 
+	defaultMaxWeight := int64(10)
+
 	var sem *semaphore.Weighted
 	if opts.Parallelism > 0 {
 		sem = semaphore.NewWeighted(opts.Parallelism)
 	} else {
-		sem = semaphore.NewWeighted(10)
+		sem = semaphore.NewWeighted(defaultMaxWeight)
 	}
 
 	return &Trip{

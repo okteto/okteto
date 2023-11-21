@@ -55,7 +55,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, reporter chan float64
 			wfc.retries++
 			if wfc.retries%40 == 0 {
 				oktetoLog.Info("checking syncthing for error....")
-				if err := s.IsHealthy(ctx, false, 3); err != nil {
+				if err := s.IsHealthy(ctx, false, maxRetries); err != nil {
 					return err
 				}
 			}
