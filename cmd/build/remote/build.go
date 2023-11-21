@@ -67,7 +67,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	}
 
 	if exists := filesystem.FileExistsAndNotDir(options.File, afero.NewOsFs()); !exists {
-		return fmt.Errorf("%s: is not a regular file", oktetoErrors.InvalidDockerfile)
+		return fmt.Errorf("%s: '%s' is not a regular file", oktetoErrors.InvalidDockerfile, options.File)
 	}
 
 	if err := bc.Builder.Run(ctx, options); err != nil {
