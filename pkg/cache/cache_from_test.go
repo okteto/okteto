@@ -58,7 +58,7 @@ func Test_UnmarshalYAML(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var cf CacheFrom
-			err := yaml.Unmarshal([]byte(tt.data), &cf)
+			err := yaml.Unmarshal(tt.data, &cf)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, cf)
 		})
