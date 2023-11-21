@@ -122,6 +122,7 @@ func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface) *OktetoBu
 		buildEnvironments: buildEnvs,
 		Config:            config,
 		analyticsTracker:  analyticsTracker,
+		ioCtrl:            ioCtrl,
 	}
 }
 
