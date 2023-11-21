@@ -74,8 +74,8 @@ func (s *Syncthing) checkLocalAndRemotePing(ctx context.Context) bool {
 }
 
 func (s *Syncthing) checkLocalAndRemoteStatus(ctx context.Context) error {
-	if err := s.IsHealthy(ctx, true, 3); err != nil {
+	if err := s.IsHealthy(ctx, true, maxRetries); err != nil {
 		return err
 	}
-	return s.IsHealthy(ctx, false, 3)
+	return s.IsHealthy(ctx, false, maxRetries)
 }
