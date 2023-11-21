@@ -14,12 +14,12 @@
 package model
 
 import (
-	"github.com/spf13/afero"
 	"os"
 
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
+	"github.com/spf13/afero"
 	yaml "gopkg.in/yaml.v3"
 )
 
