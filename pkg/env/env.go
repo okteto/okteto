@@ -16,7 +16,10 @@ package env
 import (
 	"fmt"
 	"github.com/a8m/envsubst"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"os"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -74,4 +77,19 @@ func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 		result[key] = value
 	}
 	return result, nil
+}
+
+// LoadBoolean loads a boolean environment variable and returns it value
+func LoadBoolean(k string) bool {
+	v := os.Getenv(k)
+	if v == "" {
+		v = "false"
+	}
+
+	h, err := strconv.ParseBool(v)
+	if err != nil {
+		oktetoLog.Yellow("'%s' is not a valid value for environment variable %s", v, k)
+	}
+
+	return h
 }

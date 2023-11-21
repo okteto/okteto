@@ -130,3 +130,63 @@ unit: "unit-$VALUE"`),
 		})
 	}
 }
+
+func TestLoadBoolean(t *testing.T) {
+	tests := []struct {
+		name      string
+		mockKey   string
+		mockValue string
+		key       string
+		expected  bool
+	}{
+		{
+			name:     "empty key",
+			expected: false,
+		},
+		{
+			name:     "empty value",
+			mockKey:  "NON_EXISTING_VAR_UNIT_TEST",
+			expected: false,
+		},
+		{
+			name:      "false - string",
+			mockKey:   "VAR_UNIT_TEST",
+			mockValue: "random value",
+			expected:  false,
+		},
+		{
+			name:      "false - boolean",
+			mockKey:   "VAR_UNIT_TEST",
+			mockValue: "false",
+			expected:  false,
+		},
+		{
+			name:      "false - int",
+			mockKey:   "VAR_UNIT_TEST",
+			mockValue: "0",
+			expected:  false,
+		},
+		{
+			name:      "true - boolean",
+			mockKey:   "VAR_UNIT_TEST",
+			mockValue: "true",
+			expected:  true,
+		},
+		{
+			name:      "true - int",
+			mockKey:   "VAR_UNIT_TEST",
+			mockValue: "1",
+			expected:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.mockKey != "" {
+				t.Setenv(tt.mockKey, tt.mockValue)
+			}
+			got := LoadBoolean(tt.mockKey)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
