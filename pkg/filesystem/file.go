@@ -14,10 +14,11 @@
 package filesystem
 
 import (
-	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/spf13/afero"
 	"io"
 	"os"
+
+	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/spf13/afero"
 )
 
 // FileExistsWithFilesystem return true if the file exists or if there is an error.

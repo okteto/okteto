@@ -16,7 +16,6 @@ package model
 import (
 	"errors"
 	"fmt"
-	"github.com/spf13/afero"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -35,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/spf13/afero"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"

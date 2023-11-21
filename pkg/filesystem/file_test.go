@@ -15,11 +15,12 @@ package filesystem
 
 import (
 	"bytes"
-	"github.com/spf13/afero"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCopyFile(t *testing.T) {
