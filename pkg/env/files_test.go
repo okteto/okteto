@@ -14,8 +14,8 @@
 package env
 
 import (
+	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
-	"reflect"
 	"testing"
 )
 
@@ -41,13 +41,9 @@ func TestEnvFileUnmarshalling(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := make(EnvFiles, 0)
 
-			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
-				t.Fatal(err)
-			}
-
-			if !reflect.DeepEqual(result, tt.expected) {
-				t.Errorf("didn't unmarshal correctly. Actual %+v, Expected %+v", result, tt.expected)
-			}
+			err := yaml.UnmarshalStrict(tt.data, &result)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
