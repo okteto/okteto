@@ -145,7 +145,7 @@ var fakeManifest *model.Manifest = &model.Manifest{
 }
 
 var fakeManifestWithDependency *model.Manifest = &model.Manifest{
-	Dependencies: deps.ManifestDependencies{
+	Dependencies: deps.ManifestSection{
 		"a": &deps.Dependency{
 			Namespace: "b",
 		},
@@ -1063,7 +1063,7 @@ func (fd fakePipelineDeployer) ExecuteDeployPipeline(_ context.Context, _ *pipel
 
 func TestDeployDependencies(t *testing.T) {
 	fakeManifest := &model.Manifest{
-		Dependencies: deps.ManifestDependencies{
+		Dependencies: deps.ManifestSection{
 			"a": &deps.Dependency{
 				Namespace: "b",
 			},

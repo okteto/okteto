@@ -34,7 +34,7 @@ func Test_UpMetricsMetadata_ManifestProps(t *testing.T) {
 			name: "manifest with dependencies section",
 			manifest: &model.Manifest{
 				IsV2: true,
-				Dependencies: deps.ManifestDependencies{
+				Dependencies: deps.ManifestSection{
 					"service": &deps.Dependency{},
 				},
 			},

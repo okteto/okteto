@@ -101,7 +101,7 @@ type Manifest struct {
 	Dev           ManifestDevs                             `json:"dev,omitempty" yaml:"dev,omitempty"`
 	Destroy       *DestroyInfo                             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 	Build         ManifestBuild                            `json:"build,omitempty" yaml:"build,omitempty"`
-	Dependencies  deps.ManifestDependencies                `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	Dependencies  deps.ManifestSection                     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	GlobalForward []forward.GlobalForward                  `json:"forward,omitempty" yaml:"forward,omitempty"`
 	External      externalresource.ExternalResourceSection `json:"external,omitempty" yaml:"external,omitempty"`
 
@@ -121,7 +121,7 @@ func NewManifest() *Manifest {
 	return &Manifest{
 		Dev:           map[string]*Dev{},
 		Build:         map[string]*BuildInfo{},
-		Dependencies:  deps.ManifestDependencies{},
+		Dependencies:  deps.ManifestSection{},
 		Deploy:        &DeployInfo{},
 		GlobalForward: []forward.GlobalForward{},
 		External:      externalresource.ExternalResourceSection{},

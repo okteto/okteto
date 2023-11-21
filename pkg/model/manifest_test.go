@@ -1202,7 +1202,7 @@ func Test_Manifest_HasDependenciesSection(t *testing.T) {
 			name: "m.IsV2 && m.Dependencies has items",
 			manifest: &Manifest{
 				IsV2: true,
-				Dependencies: deps.ManifestDependencies{
+				Dependencies: deps.ManifestSection{
 					"test": &deps.Dependency{},
 				},
 			},

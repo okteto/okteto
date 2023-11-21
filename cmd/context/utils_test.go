@@ -179,7 +179,7 @@ dependencies:
 				Dev:     model.ManifestDevs{},
 				Type:    model.OktetoManifestType,
 				Destroy: &model.DestroyInfo{},
-				Dependencies: deps.ManifestDependencies{
+				Dependencies: deps.ManifestSection{
 					"one": &deps.Dependency{
 						Repository: "https://repo.url",
 					},

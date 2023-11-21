@@ -108,7 +108,7 @@ func Test_ExpandVars(t *testing.T) {
 
 func Test_ManifestDependencies_UnmarshalYAML(t *testing.T) {
 	tests := []struct {
-		expected    ManifestDependencies
+		expected    ManifestSection
 		name        string
 		yaml        []byte
 		expectedErr bool
@@ -118,7 +118,7 @@ func Test_ManifestDependencies_UnmarshalYAML(t *testing.T) {
 			yaml: []byte(`
 - https://github.com/okteto/movies-frontend
 - https://github.com/okteto/movies-api`),
-			expected: ManifestDependencies{
+			expected: ManifestSection{
 				"movies-api": &Dependency{
 					Repository: "https://github.com/okteto/movies-api",
 				},
@@ -139,7 +139,7 @@ frontend:
       ENVIROMENT: test
     wait: true
     timeout: 5m`),
-			expected: ManifestDependencies{
+			expected: ManifestSection{
 				"frontend": &Dependency{
 					Repository:   "https://github.com/okteto/movies-frontend",
 					ManifestPath: "frontend.yml",
@@ -159,7 +159,7 @@ frontend:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var deps ManifestDependencies
+			var deps ManifestSection
 			err := yaml.Unmarshal(tt.yaml, &deps)
 			if tt.expectedErr {
 				assert.Error(t, err)

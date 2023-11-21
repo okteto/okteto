@@ -24,8 +24,8 @@ import (
 	"time"
 )
 
-// ManifestDependencies represents the map of dependencies at a manifest
-type ManifestDependencies map[string]*Dependency
+// ManifestSection represents the map of dependencies at a manifest
+type ManifestSection map[string]*Dependency
 
 // Dependency represents a dependency object at the manifest
 type Dependency struct {
@@ -119,11 +119,11 @@ func getRepoNameFromGitURL(repo *url.URL) (string, error) {
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (md *ManifestDependencies) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (md *ManifestSection) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawList []string
 	err := unmarshal(&rawList)
 	if err == nil {
-		rawMd := ManifestDependencies{}
+		rawMd := ManifestSection{}
 		for _, repo := range rawList {
 			r, err := giturls.Parse(repo)
 			if err != nil {
@@ -141,13 +141,13 @@ func (md *ManifestDependencies) UnmarshalYAML(unmarshal func(interface{}) error)
 		return nil
 	}
 
-	type manifestDependencies ManifestDependencies
+	type manifestDependencies ManifestSection
 	var rawMap manifestDependencies
 	err = unmarshal(&rawMap)
 	if err != nil {
 		return err
 	}
-	*md = ManifestDependencies(rawMap)
+	*md = ManifestSection(rawMap)
 	return nil
 }
 
