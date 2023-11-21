@@ -17,7 +17,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -114,7 +113,7 @@ func (sh serviceHasher) hash(buildInfo *model.BuildInfo, commitType, commitHash 
 
 // getDockerfileContent returns the content of the Dockerfile
 func getDockerfileContent(dockerfilePath string) string {
-	content, err := ioutil.ReadFile(dockerfilePath)
+	content, err := os.ReadFile(dockerfilePath)
 	if err != nil {
 		oktetoLog.Info("error trying to read Dockerfile: %w", err)
 		return ""
