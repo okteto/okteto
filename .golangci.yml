@@ -51,7 +51,7 @@ linters:
     - tenv
     - tparallel
     - gci
-    - goheader    
+    - goheader
     - unconvert
     - predeclared
     - asciicheck
