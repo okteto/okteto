@@ -928,15 +928,13 @@ type fakeEndpointControl struct {
 	err       error
 }
 
-func (f *fakeEndpointControl) List(_ context.Context, _ string, _ string) ([]string, error) {
+func (f *fakeEndpointControl) List(_ context.Context, _ *EndpointsOptions, _ string) ([]string, error) {
 	return f.endpoints, f.err
 }
 
 func getFakeEndpoint() (EndpointGetter, error) {
 	return EndpointGetter{
-		K8sClientProvider:            test.NewFakeK8sProvider(),
-		endpointControl:              &fakeEndpointControl{},
-		getEndpointsInStandaloneMode: getFakeEndpointsInStandaloneMode,
+		endpointControl: &fakeEndpointControl{},
 	}, nil
 }
 
