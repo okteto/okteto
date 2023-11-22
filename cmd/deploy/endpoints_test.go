@@ -2,7 +2,6 @@ package deploy
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/externalresource"
@@ -45,51 +44,35 @@ func TestGetEndpoints(t *testing.T) {
 			},
 		},
 		{
-			name: "Error when retrieving ordered endpoints using okteto API",
+			name: "Error when retrieving ordered endpoints using okteto API fallback to standalone mode",
 			endpointGetter: &EndpointGetter{
 				endpointControl: &fakeEndpointControl{
 					err: assert.AnError,
 				},
-			},
-			isOkteto:    true,
-			expectedErr: true,
-		},
-		{
-			name: "Error when retrieving ordered endpoints using okteto API. API endpoint not found",
-			endpointGetter: &EndpointGetter{
-				endpointControl: &fakeEndpointControl{
-					err: errors.New("Cannot query field \"endpoints\""),
-				},
+				getEndpointsInStandaloneMode: getFakeEndpointsInStandaloneMode,
+				K8sClientProvider:            &fakeK8sProvider{},
 				externalResourceControl: &fakeExternalControl{
 					externals: []externalresource.ExternalResource{
 						{
 							Endpoints: []*externalresource.ExternalEndpoint{
 								{
-									Name: "test1",
-									Url:  "https://this.is.a.test.okteto",
-								},
-								{
-									Name: "test",
-									Url:  "https://this.is.a.test.ok",
+									Url: "https://this.is.a.test.ok",
 								},
 							},
 						},
 					},
 				},
-				getEndpointsInStandaloneMode: getFakeEndpointsInStandaloneMode,
-				K8sClientProvider:            &fakeK8sProvider{},
 			},
 			isOkteto: true,
 			expected: []string{
 				"https://this.is.a.test.ok (external)",
-				"https://this.is.a.test.okteto (external)",
 			},
 		},
 		{
 			name: "Retrieving ordered endpoints without okteto API",
 			endpointGetter: &EndpointGetter{
 				endpointControl: &fakeEndpointControl{
-					err: errors.New("Cannot query field \"endpoints\""),
+					err: assert.AnError,
 				},
 				getEndpointsInStandaloneMode: getFakeEndpointsInStandaloneMode,
 				K8sClientProvider:            &fakeK8sProvider{},

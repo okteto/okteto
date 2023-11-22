@@ -199,12 +199,8 @@ func (eg *EndpointGetter) getEndpoints(ctx context.Context, opts *EndpointsOptio
 	var eps []string
 	var err error
 	if okteto.Context().IsOkteto {
-		eps, err = eg.endpointControl.List(ctx, opts.Namespace, labelSelector)
+		eps, err = eg.endpointControl.List(ctx, opts.Namespace, sanitizedName)
 		if err != nil {
-			if !strings.Contains(err.Error(), "Cannot query field \"endpoints\"") {
-				return nil, err
-			}
-
 			eps, err = eg.getEndpointsInStandaloneMode(ctx, opts, labelSelector, eg.K8sClientProvider)
 			if err != nil {
 				return nil, err
