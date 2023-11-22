@@ -223,44 +223,6 @@ func Test_CheckIfDirectory(t *testing.T) {
 	}
 }
 
-func Test_CheckIfRegularFile(t *testing.T) {
-	tests := []struct {
-		want error
-		name string
-		path string
-	}{
-		{
-			name: "file",
-			path: "dev.go",
-			want: nil,
-		},
-		{
-			name: "directory",
-			path: ".",
-			want: fmt.Errorf("'.' is not a regular file"),
-		},
-		{
-			name: "file",
-			path: "no.go",
-			want: fmt.Errorf("'no.go' does not exist"),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := CheckIfRegularFile(tt.path)
-			if got == nil && tt.want == nil {
-				return
-			}
-			if got == nil || tt.want == nil {
-				t.Errorf("CheckIfRegularFile(%s) = %s, want %s", tt.path, got, tt.want)
-			}
-			if got.Error() != tt.want.Error() {
-				t.Errorf("CheckIfRegularFile(%s) = %s, want %s", tt.path, got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_GetDevFromManifest(t *testing.T) {
 	wrongDevName := "not-test"
 	tests := []struct {
@@ -357,6 +319,9 @@ func (s *FakeOktetoSelector) AskForOptionsOkteto(_ []SelectorItem, _ int) (strin
 }
 
 func Test_SelectDevFromManifest(t *testing.T) {
+	localAbsPath, err := filepath.Abs("/")
+	assert.NoError(t, err)
+
 	tests := []struct {
 		err      error
 		manifest *model.Manifest
@@ -384,6 +349,7 @@ func Test_SelectDevFromManifest(t *testing.T) {
 					},
 					"test-2": &model.Dev{},
 				},
+				ManifestPath: filepath.Join(localAbsPath, "okteto.yml"),
 			},
 			selector: &FakeOktetoSelector{
 				dev: "test",
@@ -434,7 +400,6 @@ func Test_SelectDevFromManifest(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func Test_AskYesNo(t *testing.T) {

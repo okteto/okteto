@@ -18,9 +18,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/google/go-containerregistry/pkg/v1/remote"
-
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 )

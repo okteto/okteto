@@ -18,6 +18,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -178,8 +179,8 @@ dependencies:
 				Dev:     model.ManifestDevs{},
 				Type:    model.OktetoManifestType,
 				Destroy: &model.DestroyInfo{},
-				Dependencies: model.ManifestDependencies{
-					"one": &model.Dependency{
+				Dependencies: deps.ManifestSection{
+					"one": &deps.Dependency{
 						Repository: "https://repo.url",
 					},
 				},
@@ -199,7 +200,7 @@ dependencies:
 			if err != nil {
 				t.Fatalf("failed to create dynamic manifest file: %s", err.Error())
 			}
-			if err := os.WriteFile(tmpFile.Name(), []byte(tt.manifestYAML), 0600); err != nil {
+			if err := os.WriteFile(tmpFile.Name(), tt.manifestYAML, 0600); err != nil {
 				t.Fatalf("failed to write manifest file: %s", err.Error())
 			}
 			defer os.RemoveAll(tmpFile.Name())
@@ -214,6 +215,7 @@ dependencies:
 				assert.NotNil(t, err)
 			} else {
 				m.Manifest = nil
+				tt.expectedManifest.ManifestPath = filename
 				assert.EqualValues(t, tt.expectedManifest, m)
 			}
 
@@ -258,7 +260,7 @@ context: manifest-context
 				if err != nil {
 					t.Fatalf("failed to create dynamic manifest file: %s", err.Error())
 				}
-				if err := os.WriteFile(tmpFile.Name(), []byte(tt.manifestYAML), 0600); err != nil {
+				if err := os.WriteFile(tmpFile.Name(), tt.manifestYAML, 0600); err != nil {
 					t.Fatalf("failed to write manifest file: %s", err.Error())
 				}
 				defer os.RemoveAll(tmpFile.Name())

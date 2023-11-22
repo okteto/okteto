@@ -21,11 +21,11 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 )
@@ -732,44 +732,6 @@ func TestSetManifestDefaultsFromDev(t *testing.T) {
 	}
 }
 
-func TestHasDependencies(t *testing.T) {
-	tests := []struct {
-		name     string
-		manifest Manifest
-		expected bool
-	}{
-		{
-			name: "nil dependencies",
-			manifest: Manifest{
-				Dependencies: nil,
-			},
-			expected: false,
-		},
-		{
-			name: "empty dependencies",
-			manifest: Manifest{
-				Dependencies: make(ManifestDependencies, 0),
-			},
-			expected: false,
-		},
-		{
-			name: "has dependencies",
-			manifest: Manifest{
-				Dependencies: ManifestDependencies{
-					"test": &Dependency{},
-				},
-			},
-			expected: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.manifest.HasDependencies())
-		})
-	}
-}
-
 func TestSetBuildDefaults(t *testing.T) {
 	tests := []struct {
 		name              string
@@ -1111,89 +1073,6 @@ func Test_SanitizeSvcNames(t *testing.T) {
 	}
 }
 
-func Test_GetTimeout(t *testing.T) {
-	tests := []struct {
-		dependency     *Dependency
-		name           string
-		defaultTimeout time.Duration
-		expected       time.Duration
-	}{
-		{
-			name:           "default timeout set and specific not",
-			defaultTimeout: 5 * time.Minute,
-			dependency:     &Dependency{},
-			expected:       5 * time.Minute,
-		},
-		{
-			name: "default timeout unset and specific set",
-			dependency: &Dependency{
-				Timeout: 10 * time.Minute,
-			},
-			expected: 10 * time.Minute,
-		},
-		{
-			name:       "both unset",
-			dependency: &Dependency{},
-			expected:   0,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.dependency.GetTimeout(tt.defaultTimeout)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func Test_ExpandVars(t *testing.T) {
-	t.Setenv("MY_CUSTOM_VAR_FROM_ENVIRON", "varValueFromEnv")
-	dependency := Dependency{
-		Repository:   "${REPO}",
-		Branch:       "${NOBRANCHSET-$BRANCH}",
-		ManifestPath: "${NOMPATHSET=$MPATH}",
-		Namespace:    "${FOO+$SOME_NS_DEP_EXP}",
-		Variables: Environment{
-			EnvVar{
-				Name:  "MYVAR",
-				Value: "${AVARVALUE}",
-			},
-			EnvVar{
-				Name:  "$${ANAME}",
-				Value: "${MY_CUSTOM_VAR_FROM_ENVIRON}",
-			},
-		},
-	}
-	expected := Dependency{
-		Repository:   "my/repo",
-		Branch:       "myBranch",
-		ManifestPath: "api/okteto.yml",
-		Namespace:    "oktetoNs",
-		Variables: Environment{
-			EnvVar{
-				Name:  "MYVAR",
-				Value: "thisIsAValue",
-			},
-			EnvVar{
-				Name:  "${ANAME}",
-				Value: "varValueFromEnv",
-			},
-		},
-	}
-	envVariables := []string{
-		"FOO=BAR",
-		"REPO=my/repo",
-		"BRANCH=myBranch",
-		"MPATH=api/okteto.yml",
-		"SOME_NS_DEP_EXP=oktetoNs",
-		"AVARVALUE=thisIsAValue",
-	}
-
-	err := dependency.ExpandVars(envVariables)
-	require.NoError(t, err)
-	assert.Equal(t, expected, dependency)
-}
-
 func Test_Manifest_HasDeploySection(t *testing.T) {
 	tests := []struct {
 		manifest *Manifest
@@ -1321,8 +1200,8 @@ func Test_Manifest_HasDependenciesSection(t *testing.T) {
 			name: "m.IsV2 && m.Dependencies has items",
 			manifest: &Manifest{
 				IsV2: true,
-				Dependencies: ManifestDependencies{
-					"test": &Dependency{},
+				Dependencies: deps.ManifestSection{
+					"test": &deps.Dependency{},
 				},
 			},
 			expected: true,
@@ -1454,4 +1333,52 @@ func Test_getInferredManifestWhenNoManifestExist(t *testing.T) {
 	result, err := GetInferredManifest(wd)
 	assert.Empty(t, result)
 	assert.ErrorIs(t, err, oktetoErrors.ErrCouldNotInferAnyManifest)
+}
+
+func TestSecretValidate(t *testing.T) {
+	file, err := os.CreateTemp("", "okteto-secret-test-validate")
+	assert.NoError(t, err)
+	defer os.Remove(file.Name())
+
+	tmpDir := t.TempDir()
+	defer os.Remove(tmpDir)
+
+	var tests = []struct {
+		s           *Secret
+		expectedErr error
+		name        string
+	}{
+		{
+			name:        "missing local path",
+			s:           &Secret{LocalPath: "", RemotePath: "test"},
+			expectedErr: fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'"),
+		},
+		{
+			name:        "missing remote path",
+			s:           &Secret{LocalPath: "test", RemotePath: ""},
+			expectedErr: fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'"),
+		},
+		{
+			name:        "missing both",
+			s:           &Secret{LocalPath: "", RemotePath: ""},
+			expectedErr: fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'"),
+		},
+		{
+			name:        "local path must be file not directory",
+			s:           &Secret{LocalPath: tmpDir, RemotePath: "./remote"},
+			expectedErr: fmt.Errorf("secret '%s' is not a regular file", tmpDir),
+		},
+		{
+			name:        "remote path must use absolute paths",
+			s:           &Secret{LocalPath: file.Name(), RemotePath: "./remote"},
+			expectedErr: fmt.Errorf("secret remote path './remote' must be an absolute path"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.s.validate()
+			assert.Equal(t, tt.expectedErr, err)
+		})
+	}
 }

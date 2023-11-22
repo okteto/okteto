@@ -33,21 +33,19 @@ import (
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/manifest"
 	"github.com/okteto/okteto/cmd/namespace"
+	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/discovery"
-	"github.com/okteto/okteto/pkg/log/io"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-
-	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
-	"github.com/okteto/okteto/pkg/cmd/pipeline"
-	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
@@ -55,9 +53,10 @@ import (
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/okteto/okteto/pkg/types"
-
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 // ReconnectingMessage is the message shown when we are trying to reconnect
@@ -316,6 +315,10 @@ func Up(at analyticsTrackerInterface) *cobra.Command {
 				dev.Command.Values = upOptions.commandToExecute
 			}
 
+			if err := dev.PreparePathsAndExpandEnvFiles(oktetoManifest.ManifestPath); err != nil {
+				return fmt.Errorf("error in 'dev' section of your manifest: %w", err)
+			}
+
 			up.Dev = dev
 			if forceAutocreate {
 				// update autocreate property if needed to be forced
@@ -536,7 +539,7 @@ func setSyncDefaultsByDevMode(dev *model.Dev, getSyncTempDir func() (string, err
 	return nil
 }
 
-func getOverridedEnvVarsFromCmd(manifestEnvVars model.Environment, commandEnvVariables []string) (*model.Environment, error) {
+func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVariables []string) (*env.Environment, error) {
 	envVarsToValues := make(map[string]string)
 	for _, manifestEnv := range manifestEnvVars {
 		envVarsToValues[manifestEnv.Name] = manifestEnv.Value
@@ -556,7 +559,7 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars model.Environment, commandEnvVar
 			return nil, oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD
 		}
 
-		expandedEnv, err := model.ExpandEnv(varValueToAdd, true)
+		expandedEnv, err := env.ExpandEnv(varValueToAdd)
 		if err != nil {
 			return nil, err
 		}
@@ -564,9 +567,9 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars model.Environment, commandEnvVar
 		envVarsToValues[varNameToAdd] = expandedEnv
 	}
 
-	overridedEnvVars := model.Environment{}
+	overridedEnvVars := env.Environment{}
 	for k, v := range envVarsToValues {
-		overridedEnvVars = append(overridedEnvVars, model.EnvVar{Name: k, Value: v})
+		overridedEnvVars = append(overridedEnvVars, env.Var{Name: k, Value: v})
 	}
 
 	return &overridedEnvVars, nil

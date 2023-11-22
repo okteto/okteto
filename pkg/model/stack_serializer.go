@@ -26,6 +26,7 @@ import (
 
 	"github.com/kballard/go-shellquote"
 	"github.com/okteto/okteto/pkg/cache"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/model/forward"
@@ -141,11 +142,11 @@ type ServiceRaw struct {
 	Command                  CommandStack           `yaml:"command,omitempty"`
 	Volumes                  []StackVolume          `yaml:"volumes,omitempty"`
 	CapAddSneakCase          []apiv1.Capability     `yaml:"cap_add,omitempty"`
-	EnvFiles                 EnvFiles               `yaml:"envFile,omitempty"`
-	EnvFilesSneakCase        EnvFiles               `yaml:"env_file,omitempty"`
+	EnvFiles                 env.EnvFiles           `yaml:"envFile,omitempty"`
+	EnvFilesSneakCase        env.EnvFiles           `yaml:"env_file,omitempty"`
 	Args                     ArgsStack              `yaml:"args,omitempty"`
 	Entrypoint               CommandStack           `yaml:"entrypoint,omitempty"`
-	Environment              Environment            `yaml:"environment,omitempty"`
+	Environment              env.Environment        `yaml:"environment,omitempty"`
 	Expose                   []PortRaw              `yaml:"expose,omitempty"`
 	Ports                    []PortRaw              `yaml:"ports,omitempty"`
 	CapDrop                  []apiv1.Capability     `yaml:"capDrop,omitempty"`
@@ -440,7 +441,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.EnvFiles = serviceRaw.EnvFilesSneakCase
 	}
 
-	svc.Environment = Environment{}
+	svc.Environment = env.Environment{}
 	for _, env := range serviceRaw.Environment {
 		if env.Value == "" {
 			env.Value = os.Getenv(env.Name)

@@ -18,14 +18,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/docker/docker-credential-helpers/credentials"
 	contextCMD "github.com/okteto/okteto/cmd/context"
-
 	"github.com/okteto/okteto/pkg/auth/dockercredentials"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
-
-	"github.com/docker/docker-credential-helpers/credentials"
 )
 
 // TODO @jpf-okteto the following commit, included in v0.8.0 defines

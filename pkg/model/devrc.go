@@ -1,3 +1,16 @@
+// Copyright 2023 The Okteto Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package model
 
 import (
@@ -5,6 +18,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	yaml "gopkg.in/yaml.v2"
@@ -23,7 +37,7 @@ type DevRC struct {
 	Context     string            `json:"context,omitempty" yaml:"context,omitempty"`
 	Namespace   string            `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Command     Command           `json:"command,omitempty" yaml:"command,omitempty"`
-	Environment Environment       `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Environment env.Environment   `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Forward     []forward.Forward `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Reverse     []Reverse         `json:"reverse,omitempty" yaml:"reverse,omitempty"`
 	Secrets     []Secret          `json:"secrets,omitempty" yaml:"secrets,omitempty"`
@@ -187,7 +201,7 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 	}
 }
 
-func getEnvVarIdx(environment Environment, envVar EnvVar) int {
+func getEnvVarIdx(environment env.Environment, envVar env.Var) int {
 	idx := -1
 	for aux, env := range environment {
 		if env.Name == envVar.Name {

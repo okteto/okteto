@@ -19,6 +19,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -31,7 +32,7 @@ type languageDefault struct {
 	image           string
 	path            string
 	command         []string
-	environment     []model.EnvVar
+	environment     []env.Var
 	volumes         []model.Volume
 	forward         []forward.Forward
 	reverse         []model.Reverse
@@ -226,7 +227,7 @@ func init() {
 		image:   "okteto/dotnetcore:3",
 		path:    "/usr/src/app",
 		command: []string{"bash"},
-		environment: []model.EnvVar{
+		environment: []env.Var{
 			{
 				Name:  "ASPNETCORE_ENVIRONMENT",
 				Value: "Development",
