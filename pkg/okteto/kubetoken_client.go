@@ -96,11 +96,9 @@ func (c *kubeTokenClient) CheckService(baseURL, namespace string) error {
 		return fmt.Errorf("CheckService %w: %w", errRequest, err)
 	}
 
-	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("CheckService %w: %s", errKubetokenNotAvailable, baseURL)
 	}
 
-	return nil
+	return resp.Body.Close()
 }
