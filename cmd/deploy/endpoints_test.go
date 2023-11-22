@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
@@ -49,24 +48,8 @@ func TestGetEndpoints(t *testing.T) {
 				endpointControl: &fakeEndpointControl{
 					err: assert.AnError,
 				},
-				getEndpointsInStandaloneMode: getFakeEndpointsInStandaloneMode,
-				K8sClientProvider:            &fakeK8sProvider{},
-				externalResourceControl: &fakeExternalControl{
-					externals: []externalresource.ExternalResource{
-						{
-							Endpoints: []*externalresource.ExternalEndpoint{
-								{
-									Url: "https://this.is.a.test.ok",
-								},
-							},
-						},
-					},
-				},
 			},
 			isOkteto: true,
-			expected: []string{
-				"https://this.is.a.test.ok (external)",
-			},
 		},
 		{
 			name: "Retrieving ordered endpoints without okteto API",

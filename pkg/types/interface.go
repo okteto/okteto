@@ -86,7 +86,7 @@ type KubetokenInterface interface {
 	CheckService(baseURL, namespace string) error
 }
 
-// EndpointInterface represents the endpoint client
-type EndpointInterface interface {
+// EndpointClientInterface represents the endpoint client
+type EndpointClientInterface interface {
 	List(ctx context.Context, ns, label string) ([]string, error)
 }

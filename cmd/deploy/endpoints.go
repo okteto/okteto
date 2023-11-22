@@ -59,7 +59,6 @@ type k8sIngressClientProvider interface {
 type EndpointGetter struct {
 	GetManifest                  func(path string) (*model.Manifest, error)
 	endpointControl              endpointGetterInterface
-	externalResourceControl      externalResourceControlInterface
 	getEndpointsInStandaloneMode func(context.Context, *EndpointsOptions, string, k8sIngressClientProvider) ([]string, error)
 	K8sClientProvider            k8sIngressClientProvider
 }
@@ -70,20 +69,11 @@ func NewEndpointGetter() (EndpointGetter, error) {
 		return EndpointGetter{}, fmt.Errorf("error getting okteto client: %w", err)
 	}
 
-	k8sProvider := okteto.NewK8sClientProvider()
-	_, cfg, err := k8sProvider.Provide(okteto.Context().Cfg)
-	if err != nil {
-		return EndpointGetter{}, fmt.Errorf("error getting kubernetes client: %w", err)
-	}
-
-	erc := externalresource.NewExternalK8sControl(cfg)
-
 	return EndpointGetter{
 		GetManifest:                  model.GetManifestV2,
 		endpointControl:              ec,
-		externalResourceControl:      erc,
 		getEndpointsInStandaloneMode: getEndpointsStandaloneMode,
-		K8sClientProvider:            k8sProvider,
+		K8sClientProvider:            okteto.NewK8sClientProvider(),
 	}, nil
 
 }
@@ -201,21 +191,7 @@ func (eg *EndpointGetter) getEndpoints(ctx context.Context, opts *EndpointsOptio
 	if okteto.Context().IsOkteto {
 		eps, err = eg.endpointControl.List(ctx, opts.Namespace, sanitizedName)
 		if err != nil {
-			eps, err = eg.getEndpointsInStandaloneMode(ctx, opts, labelSelector, eg.K8sClientProvider)
-			if err != nil {
-				return nil, err
-			}
-
-			externalEps, err := eg.externalResourceControl.List(ctx, opts.Namespace, labelSelector)
-			if err != nil {
-				return nil, err
-			}
-
-			for _, externalEp := range externalEps {
-				for _, ep := range externalEp.Endpoints {
-					eps = append(eps, fmt.Sprintf("%s (external)", ep.Url))
-				}
-			}
+			return nil, err
 		}
 
 	} else {

@@ -44,7 +44,7 @@ type OktetoClient struct {
 	pipeline  types.PipelineInterface
 	stream    types.StreamInterface
 	kubetoken types.KubetokenInterface
-	endpoint  types.EndpointInterface
+	endpoint  types.EndpointClientInterface
 }
 
 type OktetoClientProvider struct{}
@@ -406,7 +406,7 @@ func (c *OktetoClient) Kubetoken() types.KubetokenInterface {
 }
 
 // Endpoint retrieves the Endpoint client
-func (c *OktetoClient) Endpoint() types.EndpointInterface {
+func (c *OktetoClient) Endpoint() types.EndpointClientInterface {
 	return c.endpoint
 }
 
