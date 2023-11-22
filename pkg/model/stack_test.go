@@ -19,13 +19,14 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 const (
-	env = `A=hello
+	testEnv = `A=hello
 # comment
 OKTETO_TEST=
 EMPTY_VAR=
@@ -721,9 +722,9 @@ func TestStack_Merge(t *testing.T) {
 						Command: Command{
 							Values: []string{"app.py"},
 						},
-						EnvFiles: EnvFiles{".env"},
-						Environment: Environment{
-							EnvVar{
+						EnvFiles: env.EnvFiles{".env"},
+						Environment: env.Environment{
+							env.Var{
 								Name:  "test",
 								Value: "ok",
 							},
@@ -751,9 +752,9 @@ func TestStack_Merge(t *testing.T) {
 						Command: Command{
 							Values: []string{"run", "main.go"},
 						},
-						EnvFiles: EnvFiles{".env-test"},
-						Environment: Environment{
-							EnvVar{
+						EnvFiles: env.EnvFiles{".env-test"},
+						Environment: env.Environment{
+							env.Var{
 								Name:  "test",
 								Value: "overwrite",
 							},
@@ -781,9 +782,9 @@ func TestStack_Merge(t *testing.T) {
 						Command: Command{
 							Values: []string{"run", "main.go"},
 						},
-						EnvFiles: EnvFiles{".env-test"},
-						Environment: Environment{
-							EnvVar{
+						EnvFiles: env.EnvFiles{".env-test"},
+						Environment: env.Environment{
+							env.Var{
 								Name:  "test",
 								Value: "overwrite",
 							},
@@ -899,7 +900,7 @@ func TestStack_ExpandEnvsAtFileLevel(t *testing.T) {
 			},
 		},
 		{
-			name: "override env image",
+			name: "override testEnv image",
 			manifest: []byte(`services:
   app:
     image: ${IMAGE:-alpine}`),
@@ -961,7 +962,7 @@ func TestStack_ExpandEnvsAtFileLevel(t *testing.T) {
 						Image:         "test",
 						RestartPolicy: "Always",
 						Replicas:      1,
-						Environment: Environment{
+						Environment: env.Environment{
 							{
 								Name:  "TEST",
 								Value: "hello",
@@ -1116,12 +1117,12 @@ func Test_getStackName(t *testing.T) {
 			expected:        "stack2",
 		},
 		{
-			testName: "name and actualName and stackPath are empty - name env var not empty",
+			testName: "name and actualName and stackPath are empty - name testEnv var not empty",
 			nameEnv:  "stack3",
 			expected: "stack3",
 		},
 		{
-			testName:  "name and actualName are empty - name env var and stackPath not empty",
+			testName:  "name and actualName are empty - name testEnv var and stackPath not empty",
 			nameEnv:   "stack3",
 			stackPath: "path/to/stack4/compose.yaml",
 			expected:  "stack3",
@@ -1161,7 +1162,7 @@ func Test_getStackName(t *testing.T) {
 				t.Fatalf("expected %s, got %s", tt.expected, res)
 			}
 			if resEnv != tt.expected {
-				t.Fatalf("expected env OKTETO_NAME %s, got %s", tt.expected, resEnv)
+				t.Fatalf("expected testEnv OKTETO_NAME %s, got %s", tt.expected, resEnv)
 			}
 		})
 
@@ -1171,19 +1172,19 @@ func Test_getStackName(t *testing.T) {
 func Test_translateEnvVars(t *testing.T) {
 	tmpFile, err := os.CreateTemp("", ".env")
 	if err != nil {
-		t.Fatalf("failed to create dynamic env file: %s", err.Error())
+		t.Fatalf("failed to create dynamic testEnv file: %s", err.Error())
 	}
-	if err := os.WriteFile(tmpFile.Name(), []byte(env), 0600); err != nil {
-		t.Fatalf("failed to write env file: %s", err.Error())
+	if err := os.WriteFile(tmpFile.Name(), []byte(testEnv), 0600); err != nil {
+		t.Fatalf("failed to write testEnv file: %s", err.Error())
 	}
 	defer os.RemoveAll(tmpFile.Name())
 
 	tmpFile2, err := os.CreateTemp("", ".env")
 	if err != nil {
-		t.Fatalf("failed to create dynamic env file: %s", err.Error())
+		t.Fatalf("failed to create dynamic testEnv file: %s", err.Error())
 	}
 	if err := os.WriteFile(tmpFile2.Name(), []byte(envOverride), 0600); err != nil {
-		t.Fatalf("failed to write env file: %s", err.Error())
+		t.Fatalf("failed to write testEnv file: %s", err.Error())
 	}
 	defer os.RemoveAll(tmpFile2.Name())
 
@@ -1197,7 +1198,7 @@ func Test_translateEnvVars(t *testing.T) {
 			"1": {
 				Image:    "image",
 				EnvFiles: []string{"${ENV_PATH}", "${ENV_PATH2}"},
-				Environment: []EnvVar{
+				Environment: []env.Var{
 					{
 						Name:  "C",
 						Value: "original",

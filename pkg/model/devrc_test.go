@@ -17,6 +17,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -57,8 +58,8 @@ resources:
 				Annotations: Annotations{"db": "mongodb"},
 				Context:     "test",
 				Namespace:   "test",
-				Environment: Environment{
-					EnvVar{
+				Environment: env.Environment{
+					env.Var{
 						Name:  "OKTETO_HOME",
 						Value: "/home/.okteto",
 					},
@@ -103,8 +104,8 @@ resources:
 				Annotations: Annotations{"db": "mongodb"},
 				Context:     "test",
 				Namespace:   "test",
-				Environment: Environment{
-					EnvVar{
+				Environment: env.Environment{
+					env.Var{
 						Name:  "OKTETO_HOME",
 						Value: "/home/.okteto",
 					},
