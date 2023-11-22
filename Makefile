@@ -35,10 +35,21 @@ lint:
 	pre-commit run --all-files
 	golangci-lint run
 
-.PHONY: lint-fix-fieldalignment
-lint-fix-fieldalignment:
+.PHONY: install-fieldalignment
+install-fieldalignment:
 	@which fieldalignment > /dev/null || (echo "Installing fieldalignment..." && go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest)
+
+.PHONY: lint-fix-fieldalignment
+lint-fix-fieldalignment: install-fieldalignment
+lint-fix-fieldalignment:
 	fieldalignment -fix ./...
+	@echo "⚠️  Please review the changes before committing. This step might remove code comments while reordering the struct fields."
+
+.PHONY: lint-fieldalignment
+lint-fieldalignment: install-fieldalignment
+lint-fieldalignment:
+	@which fieldalignment > /dev/null || (echo "Installing fieldalignment..." && go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest)
+	fieldalignment -json ./...
 
 .PHONY: test
 test:
