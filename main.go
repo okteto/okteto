@@ -48,6 +48,7 @@ import (
 	"github.com/spf13/cobra"
 	generateFigSpec "github.com/withfig/autocomplete-tools/packages/cobra"
 	utilRuntime "k8s.io/apimachinery/pkg/util/runtime"
+
 	// Load the different library for authentication
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -153,7 +154,7 @@ func main() {
 
 	root.AddCommand(namespace.Namespace(ctx))
 	root.AddCommand(cmd.Init())
-	root.AddCommand(up.Up(at))
+	root.AddCommand(up.Up(at, ioController))
 	root.AddCommand(cmd.Down())
 	root.AddCommand(cmd.Status())
 	root.AddCommand(cmd.Doctor())
@@ -161,8 +162,8 @@ func main() {
 	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
 	root.AddCommand(cmd.UpdateDeprecated())
-	root.AddCommand(deploy.Deploy(ctx, at))
-	root.AddCommand(destroy.Destroy(ctx, at))
+	root.AddCommand(deploy.Deploy(ctx, at, ioController))
+	root.AddCommand(destroy.Destroy(ctx, at, ioController))
 	root.AddCommand(deploy.Endpoints(ctx))
 	root.AddCommand(logs.Logs(ctx))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
@@ -171,7 +172,7 @@ func main() {
 	root.AddCommand(cmd.Create(ctx))
 	root.AddCommand(cmd.List(ctx))
 	root.AddCommand(cmd.Delete(ctx))
-	root.AddCommand(stack.Stack(ctx, at))
+	root.AddCommand(stack.Stack(ctx, at, ioController))
 	root.AddCommand(cmd.Push(ctx))
 	root.AddCommand(pipeline.Pipeline(ctx))
 

@@ -91,7 +91,7 @@ type OktetoBuilder struct {
 
 // NewBuilder creates a new okteto builder
 func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.IOController, analyticsTracker analyticsTrackerInterface) *OktetoBuilder {
-	b := NewBuilderFromScratch(analyticsTracker)
+	b := NewBuilderFromScratch(analyticsTracker, ioCtrl)
 	b.Builder = builder
 	b.Registry = registry
 	b.ioCtrl = ioCtrl
@@ -100,9 +100,8 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 }
 
 // NewBuilderFromScratch creates a new okteto builder
-func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface) *OktetoBuilder {
+func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *io.IOController) *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
-	ioCtrl := io.NewIOController()
 	registry := registry.NewOktetoRegistry(okteto.Config{})
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
 	wd, err := wdCtrl.Get()

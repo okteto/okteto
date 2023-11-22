@@ -150,7 +150,8 @@ func (l *OutputController) Spinner(msg string) OktetoSpinner {
 
 	disableSpinner := loadBool(OktetoDisableSpinnerEnvVar)
 
-	if l.formatter.(*ttyFormatter) != nil && !disableSpinner {
+	_, isTTY := l.formatter.(*ttyFormatter)
+	if isTTY && !disableSpinner {
 		l.spinner = newTTYSpinner(msg)
 	} else {
 		l.spinner = newNoSpinner(msg)

@@ -90,7 +90,7 @@ type UpOptions struct {
 }
 
 // Up starts a development container
-func Up(at analyticsTrackerInterface) *cobra.Command {
+func Up(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
 	upOptions := &UpOptions{}
 	cmd := &cobra.Command{
 		Use:   "up [svc]",
@@ -264,7 +264,7 @@ func Up(at analyticsTrackerInterface) *cobra.Command {
 				analyticsMeta:     upMeta,
 				K8sClientProvider: okteto.NewK8sClientProvider(),
 				tokenUpdater:      newTokenUpdaterController(),
-				builder:           buildv2.NewBuilderFromScratch(at),
+				builder:           buildv2.NewBuilderFromScratch(at, ioCtrl),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {

@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -41,10 +42,11 @@ type DeployCommand struct {
 	analyticsTracker analyticsTrackerInterface
 	Config           *rest.Config
 	IsInsideDeploy   bool
+	ioCtrl           *io.IOController
 }
 
 // deploy deploys a stack
-func deploy(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
+func deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
 	options := &stack.StackDeployOptions{}
 
 	cmd := &cobra.Command{
@@ -74,6 +76,7 @@ func deploy(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 				K8sClient:        c,
 				Config:           config,
 				analyticsTracker: at,
+				ioCtrl:           ioCtrl,
 			}
 			return dc.RunDeploy(ctx, s, options)
 		},
@@ -122,6 +125,7 @@ func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *
 		K8sClient:        c.K8sClient,
 		Config:           c.Config,
 		AnalyticsTracker: c.analyticsTracker,
+		IoCtrl:           c.ioCtrl,
 	}
 	err := stackDeployer.Deploy(ctx, s, options)
 
