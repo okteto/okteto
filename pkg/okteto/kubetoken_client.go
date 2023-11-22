@@ -61,8 +61,6 @@ func (c *kubeTokenClient) GetKubeToken(baseURL, namespace string) (types.KubeTok
 		return types.KubeTokenResponse{}, fmt.Errorf("GetKubeToken %w: %w", errRequest, err)
 	}
 
-	defer resp.Body.Close()
-
 	if resp.StatusCode == http.StatusUnauthorized {
 		return types.KubeTokenResponse{}, fmt.Errorf("GetKubeToken %w", errUnauthorized)
 	}
@@ -82,7 +80,7 @@ func (c *kubeTokenClient) GetKubeToken(baseURL, namespace string) (types.KubeTok
 		return types.KubeTokenResponse{}, fmt.Errorf("failed to unmarshal kubetoken response: %w", err)
 	}
 
-	return kubeTokenResponse, nil
+	return kubeTokenResponse, resp.Body.Close()
 }
 
 func (c *kubeTokenClient) CheckService(baseURL, namespace string) error {
