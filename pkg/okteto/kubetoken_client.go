@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/url"
 
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
 )
 
@@ -61,6 +62,12 @@ func (c *kubeTokenClient) GetKubeToken(baseURL, namespace string) (types.KubeTok
 		return types.KubeTokenResponse{}, fmt.Errorf("GetKubeToken %w: %w", errRequest, err)
 	}
 
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			oktetoLog.Info("could not close the body: %s", err)
+		}
+	}()
+
 	if resp.StatusCode == http.StatusUnauthorized {
 		return types.KubeTokenResponse{}, fmt.Errorf("GetKubeToken %w", errUnauthorized)
 	}
@@ -80,7 +87,7 @@ func (c *kubeTokenClient) GetKubeToken(baseURL, namespace string) (types.KubeTok
 		return types.KubeTokenResponse{}, fmt.Errorf("failed to unmarshal kubetoken response: %w", err)
 	}
 
-	return kubeTokenResponse, resp.Body.Close()
+	return kubeTokenResponse, nil
 }
 
 func (c *kubeTokenClient) CheckService(baseURL, namespace string) error {
@@ -94,9 +101,15 @@ func (c *kubeTokenClient) CheckService(baseURL, namespace string) error {
 		return fmt.Errorf("CheckService %w: %w", errRequest, err)
 	}
 
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			oktetoLog.Info("could not close the body: %s", err)
+		}
+	}()
+
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("CheckService %w: %s", errKubetokenNotAvailable, baseURL)
 	}
 
-	return resp.Body.Close()
+	return nil
 }
