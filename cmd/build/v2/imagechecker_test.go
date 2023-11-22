@@ -14,10 +14,10 @@
 package v2
 
 import (
-	"github.com/okteto/okteto/pkg/log/io"
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
