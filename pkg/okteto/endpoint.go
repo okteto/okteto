@@ -2,7 +2,6 @@ package okteto
 
 import (
 	"context"
-	"fmt"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/shurcooL/graphql"
@@ -51,37 +50,23 @@ func (c *endpointClient) List(ctx context.Context, ns, deployedBy string) ([]str
 	}
 
 	endpoints := make([]string, 0)
-	for _, deployment := range queryStruct.Response.Deployments {
-		if deployment.DeployedBy == graphql.String(deployedBy) {
-			for _, endpoint := range deployment.Endpoints {
-				endpoints = append(endpoints, string(endpoint.Url))
-			}
-		}
-	}
-
-	for _, sfs := range queryStruct.Response.Statefulsets {
-		if sfs.DeployedBy == graphql.String(deployedBy) {
-			for _, endpoint := range sfs.Endpoints {
-				endpoints = append(endpoints, string(endpoint.Url))
-			}
-		}
-	}
-
-	for _, external := range queryStruct.Response.Externals {
-		if external.DeployedBy == graphql.String(deployedBy) {
-			for _, endpoint := range external.Endpoints {
-				endpoints = append(endpoints, fmt.Sprintf("%s (external)", endpoint.Url))
-			}
-		}
-	}
-
-	for _, function := range queryStruct.Response.Functions {
-		if function.DeployedBy == graphql.String(deployedBy) {
-			for _, endpoint := range function.Endpoints {
-				endpoints = append(endpoints, string(endpoint.Url))
-			}
-		}
-	}
+	endpoints = append(endpoints, filterEndpointsFromComponent(queryStruct.Response.Deployments, deployedBy)...)
+	endpoints = append(endpoints, filterEndpointsFromComponent(queryStruct.Response.Statefulsets, deployedBy)...)
+	endpoints = append(endpoints, filterEndpointsFromComponent(queryStruct.Response.Externals, deployedBy)...)
+	endpoints = append(endpoints, filterEndpointsFromComponent(queryStruct.Response.Functions, deployedBy)...)
 
 	return endpoints, nil
+}
+
+func filterEndpointsFromComponent(components []Component, deployedBy string) []string {
+	var endpoints []string
+	for _, component := range components {
+		if component.DeployedBy == graphql.String(deployedBy) {
+			for _, endpoint := range component.Endpoints {
+				endpoints = append(endpoints, string(endpoint.Url))
+			}
+		}
+	}
+
+	return endpoints
 }
