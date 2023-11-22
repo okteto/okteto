@@ -137,7 +137,7 @@ frontend:
     # ignored comment
     branch: frontend-branch
     variables:
-      ENVIROMENT: test
+      ENVIRONMENT: test
     wait: true
     timeout: 5m`),
 			expected: ManifestSection{
@@ -147,7 +147,7 @@ frontend:
 					Branch:       "frontend-branch",
 					Variables: env.Environment{
 						env.Var{
-							Name:  "ENVIROMENT",
+							Name:  "ENVIRONMENT",
 							Value: "test",
 						},
 					},
