@@ -168,7 +168,10 @@ func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInter
 		},
 		Config:           cfg,
 		analyticsTracker: analyticsTracker,
-		hasher:           &serviceHasher{gitRepoCtrl: fakeConfigRepo{}},
+		hasher: &serviceHasher{
+			gitRepoCtrl:       fakeConfigRepo{},
+			buildContextCache: map[string]string{},
+		},
 	}
 }
 
