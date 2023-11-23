@@ -10,11 +10,7 @@ type APIControl struct {
 	OktetoClient *okteto.OktetoClient
 }
 
-func NewEndpointControl() (*APIControl, error) {
-	c, err := okteto.NewOktetoClient()
-	if err != nil {
-		return nil, err
-	}
+func NewEndpointControl(c *okteto.OktetoClient) (*APIControl, error) {
 	return &APIControl{
 		OktetoClient: c,
 	}, nil

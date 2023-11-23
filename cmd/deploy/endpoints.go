@@ -62,9 +62,12 @@ type EndpointGetter struct {
 
 func NewEndpointGetter() (EndpointGetter, error) {
 	var endpointControl endpointControlInterface
-	var err error
 	if okteto.Context().IsOkteto {
-		endpointControl, err = NewEndpointGetterWithOktetoAPI()
+		c, err := okteto.NewOktetoClient()
+		if err != nil {
+			return EndpointGetter{}, err
+		}
+		endpointControl, err = NewEndpointGetterWithOktetoAPI(c)
 		if err != nil {
 			return EndpointGetter{}, err
 		}
@@ -203,8 +206,8 @@ type endpointGetterWithOktetoAPI struct {
 	endpointControl endpointGetterInterface
 }
 
-func NewEndpointGetterWithOktetoAPI() (*endpointGetterWithOktetoAPI, error) {
-	ec, err := endpoints.NewEndpointControl()
+func NewEndpointGetterWithOktetoAPI(c *okteto.OktetoClient) (*endpointGetterWithOktetoAPI, error) {
+	ec, err := endpoints.NewEndpointControl(c)
 	if err != nil {
 		return nil, fmt.Errorf("error getting okteto client: %w", err)
 	}
