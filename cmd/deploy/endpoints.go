@@ -67,10 +67,7 @@ func NewEndpointGetter() (EndpointGetter, error) {
 		if err != nil {
 			return EndpointGetter{}, err
 		}
-		endpointControl, err = NewEndpointGetterWithOktetoAPI(c)
-		if err != nil {
-			return EndpointGetter{}, err
-		}
+		endpointControl = NewEndpointGetterWithOktetoAPI(c)
 	} else {
 		endpointControl = NewEndpointGetterInStandaloneMode()
 	}
@@ -206,12 +203,10 @@ type endpointGetterWithOktetoAPI struct {
 	endpointControl endpointGetterInterface
 }
 
-func NewEndpointGetterWithOktetoAPI(c *okteto.OktetoClient) (*endpointGetterWithOktetoAPI, error) {
-	ec := endpoints.NewEndpointControl(c)
-
+func NewEndpointGetterWithOktetoAPI(c *okteto.OktetoClient) *endpointGetterWithOktetoAPI {
 	return &endpointGetterWithOktetoAPI{
-		endpointControl: ec,
-	}, nil
+		endpointControl: endpoints.NewEndpointControl(c),
+	}
 }
 
 func (eg *endpointGetterWithOktetoAPI) List(ctx context.Context, opts *EndpointsOptions, devName string) ([]string, error) {
