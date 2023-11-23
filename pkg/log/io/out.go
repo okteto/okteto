@@ -160,13 +160,13 @@ func (l *OutputController) Spinner(msg string) OktetoSpinner {
 // Write logs into the buffer but does not print anything
 func (l *OutputController) Write(p []byte) (n int, err error) {
 	msg := string(p)
+	if !strings.HasSuffix(msg, "\n") {
+		msg += "\n"
+	}
 	bytes, err := l.formatter.format(msg)
 	if err != nil {
 		return
 	}
 
-	if !strings.HasSuffix(msg, "\n") {
-		msg += "\n"
-	}
 	return l.out.Write(bytes)
 }

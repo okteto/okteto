@@ -96,8 +96,8 @@ type destroyCommand struct {
 	analyticsTracker  analyticsTrackerInterface
 	getManifest       func(path string) (*model.Manifest, error)
 	oktetoClient      *okteto.OktetoClient
-	buildCtrl         buildCtrl
 	ioCtrl            *io.IOController
+	buildCtrl         buildCtrl
 }
 
 // Destroy destroys the dev application defined by the manifest

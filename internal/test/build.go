@@ -39,7 +39,7 @@ func NewFakeOktetoBuilder(registry fakeOktetoRegistryInterface, errors ...error)
 }
 
 // Run simulates a build
-func (fb *FakeOktetoBuilder) Run(_ context.Context, opts *types.BuildOptions, ioCtrl *io.IOController) error {
+func (fb *FakeOktetoBuilder) Run(_ context.Context, opts *types.BuildOptions, _ *io.IOController) error {
 	if fb.Err != nil {
 		err := fb.Err[0]
 		fb.Err = fb.Err[1:]
