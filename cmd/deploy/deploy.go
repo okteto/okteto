@@ -96,6 +96,7 @@ type getDeployerFunc func(
 	okteto.K8sClientProvider,
 	kubeConfigHandler,
 	portGetterFunc,
+	*io.IOController,
 ) (deployerInterface, error)
 
 // DeployCommand defines the config for deploying an app
@@ -113,6 +114,7 @@ type DeployCommand struct {
 	DivertDriver       divert.Driver
 	PipelineCMD        pipelineCMD.PipelineDeployerInterface
 	AnalyticsTracker   analyticsTrackerInterface
+	ioCtrl             *io.IOController
 
 	PipelineType       model.Archetype
 	isRemote           bool
@@ -215,6 +217,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCont
 				PipelineCMD:        pc,
 				runningInInstaller: config.RunningInInstaller(),
 				AnalyticsTracker:   at,
+				ioCtrl:             ioCtrl,
 			}
 			startTime := time.Now()
 
@@ -236,7 +239,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCont
 				oktetoLog.StartSpinner()
 				defer oktetoLog.StopSpinner()
 
-				deployer, err := c.GetDeployer(ctx, options, c.Builder, c.CfgMapHandler, k8sClientProvider, NewKubeConfig(), model.GetAvailablePort)
+				deployer, err := c.GetDeployer(ctx, options, c.Builder, c.CfgMapHandler, k8sClientProvider, NewKubeConfig(), model.GetAvailablePort, ioCtrl)
 				if err != nil {
 					return err
 				}
@@ -358,7 +361,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		oktetoLog.Infof("failed to recreate failed pods: %s", err.Error())
 	}
 
-	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder, dc.CfgMapHandler, dc.K8sClientProvider, NewKubeConfig(), model.GetAvailablePort)
+	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder, dc.CfgMapHandler, dc.K8sClientProvider, NewKubeConfig(), model.GetAvailablePort, dc.ioCtrl)
 	if err != nil {
 		return err
 	}
@@ -557,11 +560,12 @@ func GetDeployer(ctx context.Context,
 	k8sProvider okteto.K8sClientProvider,
 	kubeconfig kubeConfigHandler,
 	portGetter portGetterFunc,
+	ioCtrl *io.IOController,
 ) (deployerInterface, error) {
 	if shouldRunInRemote(opts) {
 		// run remote
 		oktetoLog.Info("Deploying remotely...")
-		return newRemoteDeployer(builder), nil
+		return newRemoteDeployer(builder, ioCtrl), nil
 	}
 
 	// run local

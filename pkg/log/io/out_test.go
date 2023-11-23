@@ -203,16 +203,20 @@ func TestSuccess(t *testing.T) {
 }
 
 type fakeSpinner struct {
-	message  string
-	isActive bool
+	message string
+	on      bool
 }
 
 func (s *fakeSpinner) Start() {
-	s.isActive = true
+	s.on = true
 }
 
 func (s *fakeSpinner) Stop() {
-	s.isActive = false
+	s.on = false
+}
+
+func (s *fakeSpinner) isActive() bool {
+	return s.on
 }
 
 func (s *fakeSpinner) getMessage() string {

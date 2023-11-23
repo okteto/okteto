@@ -16,6 +16,7 @@ package test
 import (
 	"context"
 
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
 )
 
@@ -38,7 +39,7 @@ func NewFakeOktetoBuilder(registry fakeOktetoRegistryInterface, errors ...error)
 }
 
 // Run simulates a build
-func (fb *FakeOktetoBuilder) Run(_ context.Context, opts *types.BuildOptions) error {
+func (fb *FakeOktetoBuilder) Run(_ context.Context, opts *types.BuildOptions, ioCtrl *io.IOController) error {
 	if fb.Err != nil {
 		err := fb.Err[0]
 		fb.Err = fb.Err[1:]

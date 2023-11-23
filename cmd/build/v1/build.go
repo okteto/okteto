@@ -33,7 +33,7 @@ import (
 
 // OktetoBuilderInterface runs the build of an image
 type OktetoBuilderInterface interface {
-	Run(ctx context.Context, buildOptions *types.BuildOptions) error
+	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error
 }
 
 type oktetoRegistryInterface interface {
@@ -105,7 +105,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		return err
 	}
 
-	if err := bc.Builder.Run(ctx, options); err != nil {
+	if err := bc.Builder.Run(ctx, options, bc.IoCtrl); err != nil {
 		analytics.TrackBuild(false)
 		return err
 	}

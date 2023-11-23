@@ -97,6 +97,7 @@ type destroyCommand struct {
 	getManifest       func(path string) (*model.Manifest, error)
 	oktetoClient      *okteto.OktetoClient
 	buildCtrl         buildCtrl
+	ioCtrl            *io.IOController
 }
 
 // Destroy destroys the dev application defined by the manifest
@@ -191,6 +192,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCon
 				buildCtrl:         newBuildCtrl(options.Name, at, ioCtrl),
 				analyticsTracker:  at,
 				getManifest:       model.GetManifestV2,
+				ioCtrl:            ioCtrl,
 			}
 
 			kubeconfigPath := getTempKubeConfigFile(options.Name)
@@ -309,7 +311,7 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 		}
 
 		if shouldRunInRemote(opts) {
-			destroyer = newRemoteDestroyer(manifest)
+			destroyer = newRemoteDestroyer(manifest, dc.ioCtrl)
 			oktetoLog.Info("Destroying remotely...")
 		} else {
 			destroyerAll, err := newLocalDestroyerAll(dc.k8sClientProvider, dc.executor, dc.nsDestroyer, dc.oktetoClient)

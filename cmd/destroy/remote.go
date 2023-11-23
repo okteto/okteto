@@ -36,6 +36,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/remote"
@@ -113,9 +114,9 @@ type remoteDestroyCommand struct {
 	knownHostsPath string
 }
 
-func newRemoteDestroyer(manifest *model.Manifest) *remoteDestroyCommand {
+func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.IOController) *remoteDestroyCommand {
 	fs := afero.NewOsFs()
-	builder := remoteBuild.NewBuilderFromScratch()
+	builder := remoteBuild.NewBuilderFromScratch(ioCtrl)
 	if manifest.Destroy == nil {
 		manifest.Destroy = &model.DestroyInfo{}
 	}

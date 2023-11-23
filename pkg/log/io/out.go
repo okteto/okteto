@@ -16,8 +16,9 @@ package io
 import (
 	"fmt"
 	"io"
-	"os"
-	"strconv"
+	"strings"
+
+	"github.com/okteto/okteto/pkg/env"
 )
 
 // OutputController manages the output for the CLI
@@ -64,8 +65,7 @@ func (l *OutputController) Println(args ...any) {
 	if err != nil {
 		return
 	}
-
-	if l.spinner != nil {
+	if l.spinner != nil && l.spinner.isActive() {
 		l.spinner.Stop()
 		defer l.Spinner(l.spinner.getMessage()).Start()
 	}
@@ -79,7 +79,7 @@ func (l *OutputController) Print(args ...any) {
 	if err != nil {
 		return
 	}
-	if l.spinner != nil {
+	if l.spinner != nil && l.spinner.isActive() {
 		l.spinner.Stop()
 		defer l.Spinner(l.spinner.getMessage()).Start()
 	}
@@ -93,7 +93,7 @@ func (l *OutputController) Printf(format string, args ...any) {
 	if err != nil {
 		return
 	}
-	if l.spinner != nil {
+	if l.spinner != nil && l.spinner.isActive() {
 		l.spinner.Stop()
 		defer l.Spinner(l.spinner.getMessage()).Start()
 	}
@@ -108,8 +108,7 @@ func (l *OutputController) Infof(format string, args ...any) {
 	if err != nil {
 		return
 	}
-
-	if l.spinner != nil {
+	if l.spinner != nil && l.spinner.isActive() {
 		l.spinner.Stop()
 		defer l.Spinner(l.spinner.getMessage()).Start()
 	}
@@ -124,8 +123,7 @@ func (l *OutputController) Success(format string, args ...any) {
 	if err != nil {
 		return
 	}
-
-	if l.spinner != nil {
+	if l.spinner != nil && l.spinner.isActive() {
 		l.spinner.Stop()
 		defer l.Spinner(l.spinner.getMessage()).Start()
 	}
@@ -148,7 +146,7 @@ func (l *OutputController) Spinner(msg string) OktetoSpinner {
 		l.spinner.Stop()
 	}
 
-	disableSpinner := loadBool(OktetoDisableSpinnerEnvVar)
+	disableSpinner := env.LoadBoolean(OktetoDisableSpinnerEnvVar)
 
 	_, isTTY := l.formatter.(*ttyFormatter)
 	if isTTY && !disableSpinner {
@@ -159,14 +157,16 @@ func (l *OutputController) Spinner(msg string) OktetoSpinner {
 	return l.spinner
 }
 
-func loadBool(env string) bool {
-	value := os.Getenv(env)
-	if value == "" {
-		value = "false"
-	}
-	boolValue, err := strconv.ParseBool(value)
+// Write logs into the buffer but does not print anything
+func (l *OutputController) Write(p []byte) (n int, err error) {
+	msg := string(p)
+	bytes, err := l.formatter.format(msg)
 	if err != nil {
-		return false
+		return
 	}
-	return boolValue
+
+	if !strings.HasSuffix(msg, "\n") {
+		msg += "\n"
+	}
+	return l.out.Write(bytes)
 }

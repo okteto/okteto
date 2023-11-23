@@ -43,6 +43,7 @@ type OktetoSpinner interface {
 	Stop()
 
 	getMessage() string
+	isActive() bool
 }
 
 // ttySpinner is the spinner for the tty
@@ -79,6 +80,11 @@ func (s *ttySpinner) Stop() {
 // getMessage returns the spinner message
 func (s *ttySpinner) getMessage() string {
 	return s.message
+}
+
+// isActive returns true if the spinner is active
+func (s *ttySpinner) isActive() bool {
+	return s.Spinner.Active()
 }
 
 func (s *ttySpinner) preUpdateFunc() func(spinner *sp.Spinner) {
@@ -130,6 +136,11 @@ func (s *noSpinner) Stop() {}
 // getMessage returns the spinner message
 func (s *noSpinner) getMessage() string {
 	return s.msg
+}
+
+// isActive returns true if the spinner is active
+func (s *noSpinner) isActive() bool {
+	return false
 }
 
 // ucFirst returns the string with the first letter in uppercase
