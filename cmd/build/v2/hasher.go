@@ -18,9 +18,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
@@ -80,7 +80,7 @@ func (sh serviceHasher) HashBuildContext(buildInfo *model.BuildInfo) string {
 }
 
 func (sh serviceHasher) HashService(buildInfo *model.BuildInfo) string {
-	if LoadBoolean(OktetoSmartBuildUsingContextEnvVar) {
+	if env.LoadBoolean(OktetoSmartBuildUsingContextEnvVar) {
 		return sh.HashBuildContext(buildInfo)
 	}
 	return sh.HashProjectCommit(buildInfo)
@@ -126,19 +126,4 @@ func getDockerfileContent(dockerfilePath string) string {
 	}
 	encodedFile := sha256.Sum256(content)
 	return hex.EncodeToString(encodedFile[:])
-}
-
-// LoadBoolean loads a boolean environment variable and returns it value
-func LoadBoolean(k string) bool {
-	v := os.Getenv(k)
-	if v == "" {
-		v = "false"
-	}
-
-	h, err := strconv.ParseBool(v)
-	if err != nil {
-		return false
-	}
-
-	return h
 }
