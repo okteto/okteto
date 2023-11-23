@@ -22,8 +22,6 @@ import (
 	"strings"
 	"testing"
 
-	authenticationv1 "k8s.io/api/authentication/v1"
-
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/constants"
@@ -31,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

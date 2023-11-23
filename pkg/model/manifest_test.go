@@ -15,18 +15,17 @@ package model
 
 import (
 	"fmt"
-	"github.com/spf13/afero"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 )
@@ -733,44 +732,6 @@ func TestSetManifestDefaultsFromDev(t *testing.T) {
 	}
 }
 
-func TestHasDependencies(t *testing.T) {
-	tests := []struct {
-		name     string
-		manifest Manifest
-		expected bool
-	}{
-		{
-			name: "nil dependencies",
-			manifest: Manifest{
-				Dependencies: nil,
-			},
-			expected: false,
-		},
-		{
-			name: "empty dependencies",
-			manifest: Manifest{
-				Dependencies: make(ManifestDependencies, 0),
-			},
-			expected: false,
-		},
-		{
-			name: "has dependencies",
-			manifest: Manifest{
-				Dependencies: ManifestDependencies{
-					"test": &Dependency{},
-				},
-			},
-			expected: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.manifest.HasDependencies())
-		})
-	}
-}
-
 func TestSetBuildDefaults(t *testing.T) {
 	tests := []struct {
 		name              string
@@ -1112,89 +1073,6 @@ func Test_SanitizeSvcNames(t *testing.T) {
 	}
 }
 
-func Test_GetTimeout(t *testing.T) {
-	tests := []struct {
-		dependency     *Dependency
-		name           string
-		defaultTimeout time.Duration
-		expected       time.Duration
-	}{
-		{
-			name:           "default timeout set and specific not",
-			defaultTimeout: 5 * time.Minute,
-			dependency:     &Dependency{},
-			expected:       5 * time.Minute,
-		},
-		{
-			name: "default timeout unset and specific set",
-			dependency: &Dependency{
-				Timeout: 10 * time.Minute,
-			},
-			expected: 10 * time.Minute,
-		},
-		{
-			name:       "both unset",
-			dependency: &Dependency{},
-			expected:   0,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.dependency.GetTimeout(tt.defaultTimeout)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func Test_ExpandVars(t *testing.T) {
-	t.Setenv("MY_CUSTOM_VAR_FROM_ENVIRON", "varValueFromEnv")
-	dependency := Dependency{
-		Repository:   "${REPO}",
-		Branch:       "${NOBRANCHSET-$BRANCH}",
-		ManifestPath: "${NOMPATHSET=$MPATH}",
-		Namespace:    "${FOO+$SOME_NS_DEP_EXP}",
-		Variables: Environment{
-			EnvVar{
-				Name:  "MYVAR",
-				Value: "${AVARVALUE}",
-			},
-			EnvVar{
-				Name:  "$${ANAME}",
-				Value: "${MY_CUSTOM_VAR_FROM_ENVIRON}",
-			},
-		},
-	}
-	expected := Dependency{
-		Repository:   "my/repo",
-		Branch:       "myBranch",
-		ManifestPath: "api/okteto.yml",
-		Namespace:    "oktetoNs",
-		Variables: Environment{
-			EnvVar{
-				Name:  "MYVAR",
-				Value: "thisIsAValue",
-			},
-			EnvVar{
-				Name:  "${ANAME}",
-				Value: "varValueFromEnv",
-			},
-		},
-	}
-	envVariables := []string{
-		"FOO=BAR",
-		"REPO=my/repo",
-		"BRANCH=myBranch",
-		"MPATH=api/okteto.yml",
-		"SOME_NS_DEP_EXP=oktetoNs",
-		"AVARVALUE=thisIsAValue",
-	}
-
-	err := dependency.ExpandVars(envVariables)
-	require.NoError(t, err)
-	assert.Equal(t, expected, dependency)
-}
-
 func Test_Manifest_HasDeploySection(t *testing.T) {
 	tests := []struct {
 		manifest *Manifest
@@ -1322,8 +1200,8 @@ func Test_Manifest_HasDependenciesSection(t *testing.T) {
 			name: "m.IsV2 && m.Dependencies has items",
 			manifest: &Manifest{
 				IsV2: true,
-				Dependencies: ManifestDependencies{
-					"test": &Dependency{},
+				Dependencies: deps.ManifestSection{
+					"test": &deps.Dependency{},
 				},
 			},
 			expected: true,
@@ -1503,27 +1381,4 @@ func TestSecretValidate(t *testing.T) {
 			assert.Equal(t, tt.expectedErr, err)
 		})
 	}
-}
-
-func TestCheckFileAndNotDirectory(t *testing.T) {
-	mockFs := afero.NewMemMapFs()
-
-	t.Run("file does not exist", func(t *testing.T) {
-		err := checkFileAndNotDirectory("/tmp/not-exist", mockFs)
-		assert.Equal(t, fmt.Errorf("file '/tmp/not-exist' not found. Please make sure the file exists"), err)
-	})
-
-	t.Run("path is directory", func(t *testing.T) {
-		err := mockFs.Mkdir("/some/dir", 0755)
-		assert.NoError(t, err)
-		err = checkFileAndNotDirectory("/some/dir", mockFs)
-		assert.Equal(t, fmt.Errorf("secret '/some/dir' is not a regular file"), err)
-	})
-
-	t.Run("file exists", func(t *testing.T) {
-		err := afero.WriteFile(mockFs, "/tmp/exists", []byte(""), 0644)
-		assert.NoError(t, err)
-		err = checkFileAndNotDirectory("/tmp/exists", mockFs)
-		assert.NoError(t, err)
-	})
 }

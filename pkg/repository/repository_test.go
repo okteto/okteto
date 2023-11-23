@@ -117,7 +117,7 @@ func TestNewRepo(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv(constants.OktetoGitCommitEnvVar, tc.GitCommit)
-			t.Setenv(constants.OktetoDeployRemote, string(tc.remoteDeploy))
+			t.Setenv(constants.OktetoDeployRemote, tc.remoteDeploy)
 			r := NewRepository("https://my-repo/okteto/okteto")
 			assert.Equal(t, "/okteto/okteto", r.url.Path)
 			assert.IsType(t, tc.expectedControl, r.control)

@@ -109,7 +109,7 @@ func TestRunJustCreateNecessaryFields(t *testing.T) {
 	file, err := os.ReadFile(p)
 	assert.NoError(t, err)
 	var result map[string]interface{}
-	require.NoError(t, yaml.Unmarshal([]byte(file), &result))
+	require.NoError(t, yaml.Unmarshal(file, &result))
 
 	optionalFields := [...]string{"annotations", "autocreate", "container", "context", "environment",
 		"externalVolumes", "healthchecks", "interface", "imagePullPolicy", "labels", "namespace",

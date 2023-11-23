@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/format"
@@ -387,13 +388,15 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string) string
 		return dockerfile
 	}
 
+	fs := afero.NewOsFs()
+
 	joinPath := filepath.Join(context, dockerfile)
-	if !filesystem.FileExistsAndNotDir(joinPath) {
+	if !filesystem.FileExistsAndNotDir(joinPath, fs) {
 		oktetoLog.Warning(fmt.Sprintf(warningDockerfilePath, svcName, dockerfile, context))
 		return dockerfile
 	}
 
-	if joinPath != filepath.Clean(dockerfile) && filesystem.FileExistsAndNotDir(dockerfile) {
+	if joinPath != filepath.Clean(dockerfile) && filesystem.FileExistsAndNotDir(dockerfile, fs) {
 		oktetoLog.Warning(fmt.Sprintf(doubleDockerfileWarning, svcName, context, dockerfile))
 	}
 
@@ -452,7 +455,7 @@ func createTempFileWithExpandedEnvsAtSource(fs afero.Fs, sourceFile, tempFolder 
 	sc := bufio.NewScanner(srcFile)
 	for sc.Scan() {
 		// expand content
-		srcContent, err := model.ExpandEnv(sc.Text(), true)
+		srcContent, err := env.ExpandEnv(sc.Text())
 		if err != nil {
 			return "", err
 		}

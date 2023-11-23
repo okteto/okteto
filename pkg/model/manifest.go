@@ -22,12 +22,12 @@ import (
 	"reflect"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/a8m/envsubst"
-	"github.com/a8m/envsubst/parse"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/discovery"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/filesystem"
@@ -102,7 +102,7 @@ type Manifest struct {
 	Dev           ManifestDevs                             `json:"dev,omitempty" yaml:"dev,omitempty"`
 	Destroy       *DestroyInfo                             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 	Build         ManifestBuild                            `json:"build,omitempty" yaml:"build,omitempty"`
-	Dependencies  ManifestDependencies                     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	Dependencies  deps.ManifestSection                     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	GlobalForward []forward.GlobalForward                  `json:"forward,omitempty" yaml:"forward,omitempty"`
 	External      externalresource.ExternalResourceSection `json:"external,omitempty" yaml:"external,omitempty"`
 
@@ -117,15 +117,12 @@ type ManifestDevs map[string]*Dev
 // ManifestBuild defines all the build section
 type ManifestBuild map[string]*BuildInfo
 
-// ManifestDependencies represents the map of dependencies at a manifest
-type ManifestDependencies map[string]*Dependency
-
 // NewManifest creates a new empty manifest
 func NewManifest() *Manifest {
 	return &Manifest{
 		Dev:           map[string]*Dev{},
 		Build:         map[string]*BuildInfo{},
-		Dependencies:  map[string]*Dependency{},
+		Dependencies:  deps.ManifestSection{},
 		Deploy:        &DeployInfo{},
 		GlobalForward: []forward.GlobalForward{},
 		External:      externalresource.ExternalResourceSection{},
@@ -170,7 +167,7 @@ func NewManifestFromStack(stack *Stack) *Manifest {
 // NewManifestFromDev creates a manifest from a dev
 func NewManifestFromDev(dev *Dev) *Manifest {
 	manifest := NewManifest()
-	name, err := ExpandEnv(dev.Name, true)
+	name, err := env.ExpandEnv(dev.Name)
 	if err != nil {
 		oktetoLog.Infof("could not expand dev name '%s'", dev.Name)
 		name = dev.Name
@@ -275,7 +272,7 @@ func getManifestFromDevFilePath(cwd, manifestPath string) (*Manifest, error) {
 	if manifestPath != "" && !filepath.IsAbs(manifestPath) {
 		manifestPath = filepath.Join(cwd, manifestPath)
 	}
-	if manifestPath != "" && filesystem.FileExistsAndNotDir(manifestPath) {
+	if manifestPath != "" && filesystem.FileExistsAndNotDir(manifestPath, afero.NewOsFs()) {
 		return getManifestFromFile(cwd, manifestPath)
 	}
 
@@ -716,8 +713,8 @@ func (s *Secret) validate() error {
 		return fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'")
 	}
 
-	if err := checkFileAndNotDirectory(s.LocalPath, afero.NewOsFs()); err != nil {
-		return err
+	if exists := filesystem.FileExistsAndNotDir(s.LocalPath, afero.NewOsFs()); !exists {
+		return fmt.Errorf("secret '%s' is not a regular file", s.LocalPath)
 	}
 
 	if !strings.HasPrefix(s.RemotePath, "/") {
@@ -725,17 +722,6 @@ func (s *Secret) validate() error {
 	}
 
 	return nil
-}
-
-func checkFileAndNotDirectory(path string, fs afero.Fs) error {
-	fileInfo, err := fs.Stat(path)
-	if err != nil {
-		return fmt.Errorf("file '%s' not found. Please make sure the file exists", path)
-	}
-	if fileInfo.Mode().IsRegular() {
-		return nil
-	}
-	return fmt.Errorf("secret '%s' is not a regular file", path)
 }
 
 // GetSvcsToBuildFromList returns the builds from a list and all its
@@ -858,16 +844,16 @@ func (m *Manifest) setDefaults() error {
 		if m.Deploy.Divert.Driver == "" {
 			m.Deploy.Divert.Driver = constants.OktetoDivertWeaverDriver
 		}
-		m.Deploy.Divert.Namespace, err = ExpandEnv(m.Deploy.Divert.Namespace, false)
+		m.Deploy.Divert.Namespace, err = env.ExpandEnvIfNotEmpty(m.Deploy.Divert.Namespace)
 		if err != nil {
 			return err
 		}
 		for i := range m.Deploy.Divert.Hosts {
-			m.Deploy.Divert.Hosts[i].VirtualService, err = ExpandEnv(m.Deploy.Divert.Hosts[i].VirtualService, false)
+			m.Deploy.Divert.Hosts[i].VirtualService, err = env.ExpandEnvIfNotEmpty(m.Deploy.Divert.Hosts[i].VirtualService)
 			if err != nil {
 				return err
 			}
-			m.Deploy.Divert.Hosts[i].Namespace, err = ExpandEnv(m.Deploy.Divert.Hosts[i].Namespace, false)
+			m.Deploy.Divert.Hosts[i].Namespace, err = env.ExpandEnvIfNotEmpty(m.Deploy.Divert.Hosts[i].Namespace)
 			if err != nil {
 				return err
 			}
@@ -959,7 +945,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 					continue
 				}
 				tag := fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(svcName, "-", "_")))
-				expandedTag, err := ExpandEnv(tag, true)
+				expandedTag, err := env.ExpandEnv(tag)
 				if err != nil {
 					return err
 				}
@@ -986,7 +972,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 	}
 	if manifest.Destroy != nil {
 		if manifest.Destroy.Image != "" {
-			manifest.Destroy.Image, err = ExpandEnv(manifest.Destroy.Image, true)
+			manifest.Destroy.Image, err = env.ExpandEnv(manifest.Destroy.Image)
 			if err != nil {
 				return err
 			}
@@ -1000,95 +986,12 @@ func (manifest *Manifest) ExpandEnvVars() error {
 			}
 		}
 		if devInfo.Image != nil {
-			devInfo.Image.Name, err = ExpandEnv(devInfo.Image.Name, false)
+			devInfo.Image.Name, err = env.ExpandEnvIfNotEmpty(devInfo.Image.Name)
 			if err != nil {
 				return err
 			}
 		}
 	}
-
-	return nil
-}
-
-// Dependency represents a dependency object at the manifest
-type Dependency struct {
-	Repository   string        `json:"repository" yaml:"repository"`
-	ManifestPath string        `json:"manifest,omitempty" yaml:"manifest,omitempty"`
-	Branch       string        `json:"branch,omitempty" yaml:"branch,omitempty"`
-	Namespace    string        `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Variables    Environment   `json:"variables,omitempty" yaml:"variables,omitempty"`
-	Timeout      time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
-	Wait         bool          `json:"wait,omitempty" yaml:"wait,omitempty"`
-}
-
-// GetTimeout returns dependency.Timeout if it's set or the one passed as arg if it's not
-func (d *Dependency) GetTimeout(defaultTimeout time.Duration) time.Duration {
-	if d.Timeout != 0 {
-		return d.Timeout
-	}
-	return defaultTimeout
-}
-
-// ExpandVars sets dependencies values if values fits with list params
-func (d *Dependency) ExpandVars(variables []string) error {
-	parser := parse.New("string", append(os.Environ(), variables...), &parse.Restrictions{})
-
-	expandedBranch, err := parser.Parse(d.Branch)
-	if err != nil {
-		return fmt.Errorf("error expanding 'branch': %w", err)
-	}
-	if expandedBranch != "" {
-		d.Branch = expandedBranch
-	}
-
-	expandedRepository, err := parser.Parse(d.Repository)
-	if err != nil {
-		return fmt.Errorf("error expanding 'repository': %w", err)
-	}
-	if expandedRepository != "" {
-		d.Repository = expandedRepository
-	}
-
-	expandedManifestPath, err := parser.Parse(d.ManifestPath)
-	if err != nil {
-		return fmt.Errorf("error expanding 'manifest': %w", err)
-	}
-	if expandedManifestPath != "" {
-		d.ManifestPath = expandedManifestPath
-	}
-
-	expandedNamespace, err := parser.Parse(d.Namespace)
-	if err != nil {
-		return fmt.Errorf("error expanding 'namespace': %w", err)
-	}
-	if expandedNamespace != "" {
-		d.Namespace = expandedNamespace
-	}
-
-	expandedVariables := Environment{}
-	for _, v := range d.Variables {
-		expandedVarName, err := parser.Parse(v.Name)
-		if err != nil {
-			return fmt.Errorf("error expanding variable name: %w", err)
-		}
-		if expandedVarName != "" {
-			v.Name = expandedVarName
-		}
-
-		expandedVarValue, err := parser.Parse(v.Value)
-		if err != nil {
-			return fmt.Errorf("error expanding variable value: %w", err)
-		}
-		if expandedVarValue != "" {
-			v.Value = expandedVarValue
-		}
-
-		expandedVariables = append(expandedVariables, EnvVar{
-			Name:  v.Name,
-			Value: v.Value,
-		})
-	}
-	d.Variables = expandedVariables
 
 	return nil
 }

@@ -16,11 +16,10 @@ package okteto
 import (
 	"context"
 	"crypto/tls"
+	"net/http"
 	"os"
 	"reflect"
 	"testing"
-
-	"net/http"
 
 	"github.com/okteto/okteto/pkg/constants"
 	"golang.org/x/oauth2"

@@ -45,14 +45,12 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	generateFigSpec "github.com/withfig/autocomplete-tools/packages/cobra"
 	utilRuntime "k8s.io/apimachinery/pkg/util/runtime"
-
 	// Load the different library for authentication
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
-
-	generateFigSpec "github.com/withfig/autocomplete-tools/packages/cobra"
 )
 
 func init() {

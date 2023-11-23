@@ -30,15 +30,14 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/shirou/gopsutil/process"
 	"golang.org/x/crypto/bcrypt"
 	yaml "gopkg.in/yaml.v2"
-
-	"github.com/google/uuid"
-	"github.com/shirou/gopsutil/process"
 )
 
 var (
@@ -235,7 +234,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		Folders:          []*Folder{},
 		RescanInterval:   strconv.Itoa(dev.Sync.RescanInterval),
 		Compression:      compression,
-		timeout:          time.Duration(dev.Timeout.Default),
+		timeout:          dev.Timeout.Default,
 	}
 	index := 1
 	for _, sync := range dev.Sync.Folders {

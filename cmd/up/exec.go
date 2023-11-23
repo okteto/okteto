@@ -25,8 +25,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/k8s/secrets"
-
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
@@ -36,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	k8sExec "github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/k8s/pods"
+	"github.com/okteto/okteto/pkg/k8s/secrets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"

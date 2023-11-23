@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/cmd/manifest"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/linguist"
@@ -117,7 +118,7 @@ func addSyncFieldHash(dev *model.Dev) error {
 	if err != nil {
 		return err
 	}
-	dev.Metadata.Annotations[model.OktetoSyncAnnotation] = fmt.Sprintf("%x", sha512.Sum512([]byte(output)))
+	dev.Metadata.Annotations[model.OktetoSyncAnnotation] = fmt.Sprintf("%x", sha512.Sum512(output))
 	return nil
 }
 
@@ -149,7 +150,7 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 }
 
 func askIfCreateStignoreDefaults(folder, stignorePath string) error {
-	autogenerateStignore := utils.LoadBoolean(model.OktetoAutogenerateStignoreEnvVar)
+	autogenerateStignore := env.LoadBoolean(model.OktetoAutogenerateStignoreEnvVar)
 
 	oktetoLog.Information("'.stignore' doesn't exist in folder '%s'.", folder)
 

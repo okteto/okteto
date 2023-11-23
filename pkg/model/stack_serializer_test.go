@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -1645,27 +1646,27 @@ func Test_validateEnvFiles(t *testing.T) {
 	tests := []struct {
 		name     string
 		manifest []byte
-		EnvFiles EnvFiles
+		EnvFiles env.EnvFiles
 	}{
 		{
 			name:     "sneak case single file",
-			manifest: []byte("services:\n  app:\n    env_file: .env\n    public: true\n    image: okteto/vote:1"),
-			EnvFiles: EnvFiles{".env"},
+			manifest: []byte("services:\n  app:\n    env_file: .testEnv\n    public: true\n    image: okteto/vote:1"),
+			EnvFiles: env.EnvFiles{".testEnv"},
 		},
 		{
 			name:     "sneak case list",
-			manifest: []byte("services:\n  app:\n    env_file:\n    - .env\n    - .env2\n    image: okteto/vote:1"),
-			EnvFiles: EnvFiles{".env", ".env2"},
+			manifest: []byte("services:\n  app:\n    env_file:\n    - .testEnv\n    - .env2\n    image: okteto/vote:1"),
+			EnvFiles: env.EnvFiles{".testEnv", ".env2"},
 		},
 		{
 			name:     "camel case single file",
-			manifest: []byte("services:\n  app:\n    envFile: .env\n    image: okteto/vote:1"),
-			EnvFiles: EnvFiles{".env"},
+			manifest: []byte("services:\n  app:\n    envFile: .testEnv\n    image: okteto/vote:1"),
+			EnvFiles: env.EnvFiles{".testEnv"},
 		},
 		{
 			name:     "camel case list",
-			manifest: []byte("services:\n  app:\n    envFile:\n    - .env\n    - .env2\n    image: okteto/vote:1"),
-			EnvFiles: EnvFiles{".env", ".env2"},
+			manifest: []byte("services:\n  app:\n    envFile:\n    - .testEnv\n    - .env2\n    image: okteto/vote:1"),
+			EnvFiles: env.EnvFiles{".testEnv", ".env2"},
 		},
 	}
 	for _, tt := range tests {
@@ -1688,32 +1689,32 @@ func Test_Environment(t *testing.T) {
 	tests := []struct {
 		name        string
 		manifest    []byte
-		environment Environment
+		environment env.Environment
 	}{
 		{
 			name:        "envs",
 			manifest:    []byte("services:\n  app:\n    environment:\n        env: production\n    image: okteto/vote:1"),
-			environment: Environment{EnvVar{Name: "env", Value: "production"}},
+			environment: env.Environment{env.Var{Name: "env", Value: "production"}},
 		},
 		{
 			name:        "empty envs",
-			manifest:    []byte("services:\n  app:\n    environment:\n      - env\n    image: okteto/vote:1"),
-			environment: Environment{},
+			manifest:    []byte("services:\n  app:\n    environment:\n      - testEnv\n    image: okteto/vote:1"),
+			environment: env.Environment{},
 		},
 		{
 			name:        "empty envs - exists envar",
 			manifest:    []byte("services:\n  app:\n    environment:\n        OKTETO_ENVTEST:\n    image: okteto/vote:1"),
-			environment: Environment{EnvVar{Name: "OKTETO_ENVTEST", Value: "myvalue"}},
+			environment: env.Environment{env.Var{Name: "OKTETO_ENVTEST", Value: "myvalue"}},
 		},
 		{
 			name:        "empty list envs - exists envar",
 			manifest:    []byte("services:\n  app:\n    environment:\n      - OKTETO_ENVTEST\n    image: okteto/vote:1"),
-			environment: Environment{EnvVar{Name: "OKTETO_ENVTEST", Value: "myvalue"}},
+			environment: env.Environment{env.Var{Name: "OKTETO_ENVTEST", Value: "myvalue"}},
 		},
 		{
 			name:        "noenvs",
 			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1"),
-			environment: Environment{},
+			environment: env.Environment{},
 		},
 	}
 	for _, tt := range tests {
@@ -1890,10 +1891,10 @@ func Test_ExtensionUnmarshalling(t *testing.T) {
 	}{
 		{
 			name:     "test anchors expansion",
-			manifest: []byte("x-env: &env\n  environment:\n  - SOME_ENV_VAR=123\nservices:\n  app:\n    <<: *env"),
+			manifest: []byte("x-env: &testEnv\n  environment:\n  - SOME_ENV_VAR=123\nservices:\n  app:\n    <<: *testEnv"),
 			expected: &Service{
-				Environment: Environment{
-					EnvVar{
+				Environment: env.Environment{
+					env.Var{
 						Name:  "SOME_ENV_VAR",
 						Value: "123",
 					},
@@ -1908,7 +1909,7 @@ func Test_ExtensionUnmarshalling(t *testing.T) {
 				Command: Command{
 					Values: []string{"bash"},
 				},
-				Environment: Environment{},
+				Environment: env.Environment{},
 			},
 			expectedError: false,
 		},
@@ -1967,7 +1968,7 @@ func Test_UnmarshalStackUser(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var result *StackSecurityContext
-			if err := yaml.Unmarshal([]byte(tt.manifest), &result); err != nil {
+			if err := yaml.Unmarshal(tt.manifest, &result); err != nil {
 				if !tt.errorExpected {
 					t.Fatalf("unexpected error unmarshaling %s: %s", tt.name, err.Error())
 				}

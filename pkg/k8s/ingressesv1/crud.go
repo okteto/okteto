@@ -19,11 +19,9 @@ import (
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"k8s.io/client-go/kubernetes"
-
 	networkingv1 "k8s.io/api/networking/v1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 func Deploy(ctx context.Context, i *networkingv1.Ingress, c kubernetes.Interface) error {

@@ -234,7 +234,7 @@ func (d *TTYCollapseDisplayer) CleanUp(err error) {
 		}
 		lines := renderLines(d.linesToDisplay, width)
 		for _, line := range lines {
-			if _, err := d.screenbuf.Write([]byte(line)); err != nil {
+			if _, err := d.screenbuf.Write(line); err != nil {
 				oktetoLog.Infof("Error writing line: %s", err)
 			}
 		}

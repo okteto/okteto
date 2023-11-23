@@ -27,13 +27,11 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/okteto/okteto/pkg/config"
-
 	"github.com/mitchellh/go-homedir"
-
 	builder "github.com/okteto/okteto/cmd/build"
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
 	"github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
@@ -338,7 +336,7 @@ func getDeployFlags(opts *Options) ([]string, error) {
 			return nil, err
 		}
 		for _, v := range variables {
-			varsToAddForDeploy = append(varsToAddForDeploy, fmt.Sprintf("--var %s=\"%s\"", v.key, v.value))
+			varsToAddForDeploy = append(varsToAddForDeploy, fmt.Sprintf("--var %s=\"%s\"", v.Name, v.Value))
 		}
 		deployFlags = append(deployFlags, strings.Join(varsToAddForDeploy, " "))
 	}
