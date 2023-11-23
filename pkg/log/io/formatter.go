@@ -14,7 +14,6 @@
 package io
 
 import (
-	"fmt"
 	"regexp"
 
 	"github.com/sirupsen/logrus"
@@ -90,7 +89,6 @@ func (f *jsonFormatter) format(msg string) ([]byte, error) {
 		Message: msg,
 		Level:   logrus.InfoLevel,
 	}
-	fmt.Print(msg)
 	messageJSON, err := f.logrusFormatter.Format(entry)
 	if err != nil {
 		return nil, err
