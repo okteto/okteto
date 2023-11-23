@@ -40,12 +40,14 @@ type repositoryCommitRetriever interface {
 type serviceHasher struct {
 	gitRepoCtrl repositoryCommitRetriever
 
-	projectCommit string
+	projectCommit     string
+	buildContextCache map[string]string
 }
 
 func newServiceHasher(gitRepoCtrl repositoryCommitRetriever) *serviceHasher {
 	return &serviceHasher{
-		gitRepoCtrl: gitRepoCtrl,
+		gitRepoCtrl:       gitRepoCtrl,
+		buildContextCache: map[string]string{},
 	}
 }
 
@@ -66,11 +68,15 @@ func (sh serviceHasher) HashBuildContext(buildInfo *model.BuildInfo) string {
 	if buildContext == "" {
 		buildContext = "."
 	}
-	treeHash, err := sh.gitRepoCtrl.GetTreeHash(buildContext)
-	if err != nil {
-		oktetoLog.Info("error trying to get tree hash for build context '%s': %w", buildContext, err)
+	if _, ok := sh.buildContextCache[buildInfo.Context]; !ok {
+		var err error
+		sh.buildContextCache[buildContext], err = sh.gitRepoCtrl.GetTreeHash(buildContext)
+		if err != nil {
+			oktetoLog.Info("error trying to get tree hash for build context '%s': %w", buildContext, err)
+		}
 	}
-	return sh.hash(buildInfo, buildContextCommitType, treeHash)
+
+	return sh.hash(buildInfo, buildContextCommitType, sh.buildContextCache[buildContext])
 }
 
 func (sh serviceHasher) HashService(buildInfo *model.BuildInfo) string {
