@@ -207,10 +207,7 @@ type endpointGetterWithOktetoAPI struct {
 }
 
 func NewEndpointGetterWithOktetoAPI(c *okteto.OktetoClient) (*endpointGetterWithOktetoAPI, error) {
-	ec, err := endpoints.NewEndpointControl(c)
-	if err != nil {
-		return nil, fmt.Errorf("error getting okteto client: %w", err)
-	}
+	ec := endpoints.NewEndpointControl(c)
 
 	return &endpointGetterWithOktetoAPI{
 		endpointControl: ec,
