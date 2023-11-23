@@ -41,7 +41,7 @@ linters-settings:
     checks:
       - argument
       - case
-      # - condition
+      - condition
       # - operation
       # - return
       # - assign

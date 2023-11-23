@@ -23,6 +23,7 @@ import (
 )
 
 func downloadSyncthing() error {
+	maxRetries := 2
 	t := time.NewTicker(1 * time.Second)
 	var err error
 	for i := 0; i < 3; i++ {
@@ -32,7 +33,7 @@ func downloadSyncthing() error {
 			return nil
 		}
 
-		if i < 2 {
+		if i < maxRetries {
 			oktetoLog.Infof("failed to download syncthing, retrying: %s", err)
 			<-t.C
 		}

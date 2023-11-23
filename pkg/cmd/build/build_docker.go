@@ -135,8 +135,8 @@ func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions *types.Buil
 		dockerBuildOptions.Target = buildOptions.Target
 
 		for _, buildArg := range buildOptions.BuildArgs {
-			kv := strings.SplitN(buildArg, "=", 2)
-			if len(kv) != 2 {
+			kv := strings.SplitN(buildArg, "=", maxArgFormatParts)
+			if len(kv) != maxArgFormatParts {
 				return fmt.Errorf("invalid build-arg value %s", buildArg)
 			}
 			dockerBuildOptions.BuildArgs[kv[0]] = &kv[1]
@@ -400,8 +400,8 @@ func getDockerOptions(buildOptions *types.BuildOptions) (dockerTypes.ImageBuildO
 	}
 
 	for _, buildArg := range buildOptions.BuildArgs {
-		kv := strings.SplitN(buildArg, "=", 2)
-		if len(kv) != 2 {
+		kv := strings.SplitN(buildArg, "=", maxArgFormatParts)
+		if len(kv) != maxArgFormatParts {
 			return opts, fmt.Errorf("invalid build-arg value %s", buildArg)
 		}
 		opts.BuildArgs[kv[0]] = &kv[1]

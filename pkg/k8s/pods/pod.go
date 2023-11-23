@@ -249,8 +249,9 @@ func parseUserID(output string) int64 {
 		return -1
 	}
 
+	validUserLineParts := 2
 	parts := strings.Split(lines[0], ":")
-	if len(parts) != 2 {
+	if len(parts) != validUserLineParts {
 		oktetoLog.Infof("failed to parse USER entry: %s", lines[0])
 		return -1
 	}

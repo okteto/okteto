@@ -94,8 +94,8 @@ func getSolveOpt(buildOptions *types.BuildOptions) (*client.SolveOpt, error) {
 	}
 
 	for _, buildArg := range buildOptions.BuildArgs {
-		kv := strings.SplitN(buildArg, "=", 2)
-		if len(kv) != 2 {
+		kv := strings.SplitN(buildArg, "=", maxArgFormatParts)
+		if len(kv) != maxArgFormatParts {
 			return nil, fmt.Errorf("invalid build-arg value %s", buildArg)
 		}
 		frontendAttrs["build-arg:"+kv[0]] = kv[1]

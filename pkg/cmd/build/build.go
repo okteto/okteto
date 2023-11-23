@@ -43,6 +43,8 @@ import (
 const (
 	warningDockerfilePath   string = "Build '%s': Dockerfile '%s' is not in a relative path to context '%s'"
 	doubleDockerfileWarning string = "Build '%s': Two Dockerfiles discovered in both the root and context path, defaulting to '%s/%s'"
+	maxArgFormatParts              = 2
+	minArgFormatParts              = 1
 )
 
 var (
@@ -294,13 +296,14 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 	args := []model.BuildArg{}
 	optionsBuildArgs := map[string]string{}
 	for _, arg := range o.BuildArgs {
-		splittedArg := strings.SplitN(arg, "=", 2)
-		if len(splittedArg) == 1 {
+
+		splittedArg := strings.SplitN(arg, "=", maxArgFormatParts)
+		if len(splittedArg) == minArgFormatParts {
 			optionsBuildArgs[splittedArg[0]] = ""
 			args = append(args, model.BuildArg{
 				Name: splittedArg[0], Value: "",
 			})
-		} else if len(splittedArg) == 2 {
+		} else if len(splittedArg) == maxArgFormatParts {
 			optionsBuildArgs[splittedArg[0]] = splittedArg[1]
 			args = append(args, model.BuildArg{
 				Name: splittedArg[0], Value: splittedArg[1],
