@@ -40,8 +40,8 @@ type repositoryCommitRetriever interface {
 type serviceHasher struct {
 	gitRepoCtrl repositoryCommitRetriever
 
-	projectCommit     string
 	buildContextCache map[string]string
+	projectCommit     string
 }
 
 func newServiceHasher(gitRepoCtrl repositoryCommitRetriever) *serviceHasher {
