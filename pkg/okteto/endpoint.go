@@ -2,6 +2,7 @@ package okteto
 
 import (
 	"context"
+	"fmt"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/shurcooL/graphql"
@@ -52,7 +53,9 @@ func (c *endpointClient) List(ctx context.Context, ns, deployedBy string) ([]str
 	endpoints := make([]string, 0)
 	endpoints = append(endpoints, filterEndpointsFromComponent(queryStruct.Response.Deployments, deployedBy)...)
 	endpoints = append(endpoints, filterEndpointsFromComponent(queryStruct.Response.Statefulsets, deployedBy)...)
-	endpoints = append(endpoints, filterEndpointsFromComponent(queryStruct.Response.Externals, deployedBy)...)
+	for _, endpoint := range filterEndpointsFromComponent(queryStruct.Response.Externals, deployedBy) {
+		endpoints = append(endpoints, fmt.Sprintf("%s (external)", endpoint))
+	}
 	endpoints = append(endpoints, filterEndpointsFromComponent(queryStruct.Response.Functions, deployedBy)...)
 
 	return endpoints, nil
