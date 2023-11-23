@@ -26,6 +26,7 @@ import (
 )
 
 const (
+	// OktetoSmartBuildUsingContextEnvVar is the env var to enable smart builds using the build context instead of the project build
 	OktetoSmartBuildUsingContextEnvVar = "OKTETO_SMART_BUILDS_USING_BUILD_CONTEXT"
 
 	buildContextCommitType = "tree_hash"
