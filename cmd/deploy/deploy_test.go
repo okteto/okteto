@@ -924,8 +924,8 @@ func (f *fakeExternalControlProvider) getFakeExternalControl(_ *rest.Config) Ext
 }
 
 type fakeEndpointControl struct {
-	endpoints []string
 	err       error
+	endpoints []string
 }
 
 func (f *fakeEndpointControl) List(_ context.Context, _ *EndpointsOptions, _ string) ([]string, error) {
