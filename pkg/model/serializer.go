@@ -38,6 +38,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	maxVolumeParamDefinition   = 3
+	volumeParamsWithSubPath    = 3
+	volumeParamsWithoutSubpath = 2
+)
+
 var (
 
 	// errDevModeNotValid is raised when development mode in manifest is not 'sync' nor 'hybrid'
@@ -606,12 +612,12 @@ func (v *ExternalVolume) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		return err
 	}
 
-	parts := strings.SplitN(raw, ":", 3)
+	parts := strings.SplitN(raw, ":", maxVolumeParamDefinition)
 	switch len(parts) {
-	case 2:
+	case volumeParamsWithoutSubpath:
 		v.Name = parts[0]
 		v.MountPath = parts[1]
-	case 3:
+	case volumeParamsWithSubPath:
 		v.Name = parts[0]
 		v.SubPath = parts[1]
 		v.MountPath = parts[2]

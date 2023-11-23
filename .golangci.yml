@@ -40,7 +40,7 @@ linters-settings:
   gomnd:
     checks:
       - argument
-      # - case
+      - case
       # - condition
       # - operation
       # - return
