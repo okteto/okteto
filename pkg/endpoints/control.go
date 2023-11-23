@@ -10,10 +10,10 @@ type APIControl struct {
 	OktetoClient *okteto.OktetoClient
 }
 
-func NewEndpointControl(c *okteto.OktetoClient) (*APIControl, error) {
+func NewEndpointControl(c *okteto.OktetoClient) *APIControl {
 	return &APIControl{
 		OktetoClient: c,
-	}, nil
+	}
 }
 
 func (c *APIControl) List(ctx context.Context, ns string, labelSelector string) ([]string, error) {
