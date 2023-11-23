@@ -41,8 +41,8 @@ type DeployCommand struct {
 	K8sClient        kubernetes.Interface
 	analyticsTracker analyticsTrackerInterface
 	Config           *rest.Config
-	IsInsideDeploy   bool
 	ioCtrl           *io.IOController
+	IsInsideDeploy   bool
 }
 
 // deploy deploys a stack
