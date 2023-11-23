@@ -24,8 +24,8 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/devenvironment"
+	"github.com/okteto/okteto/pkg/endpoints"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -44,7 +44,11 @@ type EndpointsOptions struct {
 }
 
 type endpointGetterInterface interface {
-	List(ctx context.Context, ns string, labelSelector string) ([]externalresource.ExternalResource, error)
+	List(ctx context.Context, ns string, devName string) ([]string, error)
+}
+
+type endpointControlInterface interface {
+	List(ctx context.Context, opts *EndpointsOptions, devName string) ([]string, error)
 }
 
 type k8sIngressClientProvider interface {
@@ -52,23 +56,25 @@ type k8sIngressClientProvider interface {
 }
 
 type EndpointGetter struct {
-	GetManifest       func(path string) (*model.Manifest, error)
-	endpointControl   endpointGetterInterface
-	K8sClientProvider k8sIngressClientProvider
+	GetManifest     func(path string) (*model.Manifest, error)
+	endpointControl endpointControlInterface
 }
 
 func NewEndpointGetter() (EndpointGetter, error) {
-	k8sProvider := okteto.NewK8sClientProvider()
-	_, cfg, err := k8sProvider.Provide(okteto.Context().Cfg)
-	if err != nil {
-		return EndpointGetter{}, fmt.Errorf("error getting kubernetes client: %w", err)
+	var endpointControl endpointControlInterface
+	if okteto.Context().IsOkteto {
+		c, err := okteto.NewOktetoClient()
+		if err != nil {
+			return EndpointGetter{}, err
+		}
+		endpointControl = NewEndpointGetterWithOktetoAPI(c)
+	} else {
+		endpointControl = NewEndpointGetterInStandaloneMode()
 	}
 
-	ec := externalresource.NewExternalK8sControl(cfg)
 	return EndpointGetter{
-		GetManifest:       model.GetManifestV2,
-		endpointControl:   ec,
-		K8sClientProvider: k8sProvider,
+		GetManifest:     model.GetManifestV2,
+		endpointControl: endpointControl,
 	}, nil
 
 }
@@ -179,31 +185,65 @@ func (eg *EndpointGetter) getEndpoints(ctx context.Context, opts *EndpointsOptio
 	}
 
 	sanitizedName := format.ResourceK8sMetaString(opts.Name)
-	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, sanitizedName)
-	iClient, err := eg.K8sClientProvider.GetIngressClient()
-	if err != nil {
-		return nil, err
-	}
-	eps, err := iClient.GetEndpointsBySelector(ctx, opts.Namespace, labelSelector)
-	if err != nil {
-		return nil, err
-	}
 
-	externalEps, err := eg.endpointControl.List(ctx, opts.Namespace, labelSelector)
+	eps, err := eg.endpointControl.List(ctx, opts, sanitizedName)
 	if err != nil {
 		return nil, err
-	}
-
-	for _, externalEp := range externalEps {
-		for _, ep := range externalEp.Endpoints {
-			eps = append(eps, fmt.Sprintf("%s (external)", ep.Url))
-		}
 	}
 
 	if len(eps) > 0 {
 		sort.Slice(eps, func(i, j int) bool {
 			return len(eps[i]) < len(eps[j])
 		})
+	}
+	return eps, nil
+}
+
+type endpointGetterWithOktetoAPI struct {
+	endpointControl endpointGetterInterface
+}
+
+func NewEndpointGetterWithOktetoAPI(c *okteto.OktetoClient) *endpointGetterWithOktetoAPI {
+	return &endpointGetterWithOktetoAPI{
+		endpointControl: endpoints.NewEndpointControl(c),
+	}
+}
+
+func (eg *endpointGetterWithOktetoAPI) List(ctx context.Context, opts *EndpointsOptions, devName string) ([]string, error) {
+	return eg.endpointControl.List(ctx, opts.Namespace, devName)
+}
+
+type endpointGetterInStandaloneMode struct {
+	k8sClientProvider k8sIngressClientProvider
+	getEndpoints      func(context.Context, *EndpointsOptions, string, k8sIngressClientProvider) ([]string, error)
+}
+
+func NewEndpointGetterInStandaloneMode() *endpointGetterInStandaloneMode {
+	return &endpointGetterInStandaloneMode{
+		k8sClientProvider: okteto.NewK8sClientProvider(),
+		getEndpoints:      getEndpointsStandaloneMode,
+	}
+}
+
+func (eg *endpointGetterInStandaloneMode) List(ctx context.Context, opts *EndpointsOptions, devName string) ([]string, error) {
+	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, devName)
+	eps, err := eg.getEndpoints(ctx, opts, labelSelector, eg.k8sClientProvider)
+	if err != nil {
+		return nil, err
+	}
+
+	return eps, nil
+}
+
+func getEndpointsStandaloneMode(ctx context.Context, opts *EndpointsOptions, labelSelector string, k8sClientProvider k8sIngressClientProvider) ([]string, error) {
+	var eps []string
+	iClient, err := k8sClientProvider.GetIngressClient()
+	if err != nil {
+		return nil, err
+	}
+	eps, err = iClient.GetEndpointsBySelector(ctx, opts.Namespace, labelSelector)
+	if err != nil {
+		return nil, err
 	}
 	return eps, nil
 }

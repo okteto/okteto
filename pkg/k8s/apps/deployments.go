@@ -166,11 +166,10 @@ func (i *DeploymentApp) Watch(ctx context.Context, result chan error, c kubernet
 				}
 				continue
 			}
-			switch e.Type {
-			case watch.Deleted:
+			if e.Type == watch.Deleted {
 				result <- oktetoErrors.ErrDeleteToApp
 				return
-			case watch.Modified:
+			} else if e.Type == watch.Modified {
 				d, ok := e.Object.(*appsv1.Deployment)
 				if !ok {
 					oktetoLog.Debugf("Failed to parse deployment event: %s", e)
