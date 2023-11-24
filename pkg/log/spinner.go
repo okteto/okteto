@@ -56,8 +56,8 @@ func (sl *spinnerLogger) unhold() {
 }
 
 func newSpinner() *sp.Spinner {
-	duration := 100 * time.Millisecond
-	spinner := sp.New(sp.CharSets[14], duration, sp.WithHiddenCursor(true))
+	rotationSpeed := 100 * time.Millisecond
+	spinner := sp.New(sp.CharSets[14], rotationSpeed, sp.WithHiddenCursor(true))
 	spinner.PreUpdate = func(spinner *sp.Spinner) {
 		width, _, err := term.GetSize(int(os.Stdout.Fd()))
 		if err != nil {
