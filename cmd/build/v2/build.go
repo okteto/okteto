@@ -203,7 +203,6 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			meta.RepoURL = bc.Config.GetAnonymizedRepo()
 
 			repoHashDurationStart := time.Now()
-			repoCommit := bc.Config.GetGitCommit()
 
 			meta.RepoHash = bc.hasher.HashProjectCommit(buildSvcInfo)
 			meta.RepoHashDuration = time.Since(repoHashDurationStart)
@@ -224,7 +223,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				meta.CacheHitDuration = time.Since(cacheHitDurationStart)
 
 				if isBuilt {
-					oktetoLog.Information("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, repoCommit)
+					oktetoLog.Information("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, bc.hasher.GetCommitHash(buildSvcInfo))
 					// if the built image belongs to global registry we clone it to the dev registry
 					// so that in can be used in dev containers (i.e. okteto up)
 					if bc.Registry.IsGlobalRegistry(imageWithDigest) {

@@ -118,6 +118,21 @@ func (sh serviceHasher) hash(buildInfo *model.BuildInfo, commitType, commitHash 
 	return hex.EncodeToString(oktetoBuildHash[:])
 }
 
+func (sh serviceHasher) GetCommitHash(buildInfo *model.BuildInfo) string {
+	if env.LoadBoolean(OktetoSmartBuildUsingContextEnvVar) {
+		buildContext := buildInfo.Context
+		if buildContext == "" {
+			buildContext = "."
+		}
+		if commit, ok := sh.buildContextCache[buildContext]; ok {
+			return commit
+		}
+		oktetoLog.Infof("could not find commit for build context '%s'", buildContext)
+		return ""
+	}
+	return sh.projectCommit
+}
+
 // getDockerfileContent returns the content of the Dockerfile
 func getDockerfileContent(dockerfilePath string) string {
 	content, err := os.ReadFile(dockerfilePath)

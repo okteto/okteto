@@ -134,3 +134,53 @@ func TestServiceHasher_HashService(t *testing.T) {
 		})
 	}
 }
+
+func TestGetCommitHash(t *testing.T) {
+
+	sh := serviceHasher{
+		buildContextCache: map[string]string{
+			"test-context": "cached-commit-hash",
+		},
+		projectCommit: "project-commit-hash",
+	}
+	testCases := []struct {
+		name               string
+		oktetoEnvValue     string
+		buildContext       string
+		expectedCommitHash string
+	}{
+		{
+			name:               "OktetoSmartBuildUsingContextEnvVar true, missing build context",
+			oktetoEnvValue:     "true",
+			buildContext:       "",
+			expectedCommitHash: "",
+		},
+		{
+			name:               "OktetoSmartBuildUsingContextEnvVar false",
+			oktetoEnvValue:     "false",
+			buildContext:       "test-context",
+			expectedCommitHash: "project-commit-hash",
+		},
+		{
+			name:               "OktetoSmartBuildUsingContextEnvVar true, build context found in cache",
+			oktetoEnvValue:     "true",
+			buildContext:       "test-context",
+			expectedCommitHash: "cached-commit-hash",
+		},
+	}
+
+	// Iterate over test cases
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(OktetoSmartBuildUsingContextEnvVar, tc.oktetoEnvValue)
+
+			buildInfo := &model.BuildInfo{
+				Context: tc.buildContext,
+			}
+
+			result := sh.GetCommitHash(buildInfo)
+
+			assert.Equal(t, tc.expectedCommitHash, result)
+		})
+	}
+}
