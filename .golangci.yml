@@ -49,7 +49,6 @@ linters-settings:
       - '\.NewWriter'
       - '\.NewTabWriter'
       - '\.WriteFile'
-      - '^strings.'
       - '^time.'
       - '^os.'
       - '^bcrypt.'
