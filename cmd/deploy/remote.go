@@ -336,7 +336,7 @@ func getDeployFlags(opts *Options) ([]string, error) {
 			return nil, err
 		}
 		for _, v := range variables {
-			varsToAddForDeploy = append(varsToAddForDeploy, fmt.Sprintf("--var %s=\"%s\"", v.key, v.value))
+			varsToAddForDeploy = append(varsToAddForDeploy, fmt.Sprintf("--var %s=\"%s\"", v.Name, v.Value))
 		}
 		deployFlags = append(deployFlags, strings.Join(varsToAddForDeploy, " "))
 	}

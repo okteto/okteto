@@ -17,6 +17,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model"
 	"gopkg.in/yaml.v2"
 )
@@ -52,7 +53,7 @@ func Test_generateManifestFile(t *testing.T) {
 					Name:        "svc2",
 					Image:       nil,
 					Command:     model.Command{Values: []string{"bash"}},
-					Environment: []model.EnvVar{{Name: "foo", Value: "bar"}},
+					Environment: []env.Var{{Name: "foo", Value: "bar"}},
 				}},
 			},
 		},

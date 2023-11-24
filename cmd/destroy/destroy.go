@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
@@ -239,7 +240,7 @@ func getTempKubeConfigFile(name string) string {
 
 func shouldRunInRemote(opts *Options) bool {
 	// already in remote so we need to deploy locally
-	if utils.LoadBoolean(constants.OktetoDeployRemote) {
+	if env.LoadBoolean(constants.OktetoDeployRemote) {
 		return false
 	}
 
@@ -255,7 +256,7 @@ func shouldRunInRemote(opts *Options) bool {
 		}
 	}
 
-	if utils.LoadBoolean(constants.OktetoForceRemote) {
+	if env.LoadBoolean(constants.OktetoForceRemote) {
 		return true
 	}
 
@@ -300,7 +301,7 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 				return nil, err
 			}
 			opts.Manifest = manifest
-			opts.Manifest.Destroy.Image, err = model.ExpandEnv(manifest.Destroy.Image, false)
+			opts.Manifest.Destroy.Image, err = env.ExpandEnvIfNotEmpty(manifest.Destroy.Image)
 			if err != nil {
 				return nil, err
 			}

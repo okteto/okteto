@@ -18,6 +18,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	yaml "gopkg.in/yaml.v2"
@@ -36,7 +37,7 @@ type DevRC struct {
 	Context     string            `json:"context,omitempty" yaml:"context,omitempty"`
 	Namespace   string            `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Command     Command           `json:"command,omitempty" yaml:"command,omitempty"`
-	Environment Environment       `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Environment env.Environment   `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Forward     []forward.Forward `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Reverse     []Reverse         `json:"reverse,omitempty" yaml:"reverse,omitempty"`
 	Secrets     []Secret          `json:"secrets,omitempty" yaml:"secrets,omitempty"`
@@ -200,7 +201,7 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 	}
 }
 
-func getEnvVarIdx(environment Environment, envVar EnvVar) int {
+func getEnvVarIdx(environment env.Environment, envVar env.Var) int {
 	idx := -1
 	for aux, env := range environment {
 		if env.Name == envVar.Name {
