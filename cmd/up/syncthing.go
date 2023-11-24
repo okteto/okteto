@@ -70,14 +70,12 @@ func (up *upContext) sync(ctx context.Context) error {
 
 	elapsed := time.Since(start)
 	up.analyticsMeta.InitialSyncDuration(elapsed)
-	maxDuration := time.Duration(1) * time.Minute
-	if elapsed > maxDuration {
-		minutes := elapsed / time.Minute
-		elapsed -= minutes * time.Minute
-		seconds := elapsed / time.Second
-		oktetoLog.Warning(`File synchronization took %dm %ds
+	maxDuration := 1 * time.Minute
+	if time.Duration(elapsed.Minutes()) > maxDuration {
+		elapsedString := elapsed.String()
+		oktetoLog.Warning(`File synchronization took %s
     Consider to update your '.stignore' to optimize the file synchronization
-    More information is available here: https://okteto.com/docs/reference/file-synchronization/`, minutes, seconds)
+    More information is available here: https://okteto.com/docs/reference/file-synchronization/`, elapsedString)
 	}
 
 	up.Sy.Type = "sendreceive"
