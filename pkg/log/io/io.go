@@ -15,6 +15,8 @@ package io
 
 import (
 	"os"
+
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 // IOController manages the input and output for the CLI
@@ -65,4 +67,5 @@ func (ioc *IOController) SetOutputFormat(output string) {
 func (ioc *IOController) SetStage(stage string) {
 	ioc.oktetoLogger.SetStage(stage)
 	ioc.out.SetStage(stage)
+	oktetoLog.SetStage(stage)
 }
