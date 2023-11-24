@@ -155,11 +155,10 @@ func (i *StatefulSetApp) Watch(ctx context.Context, result chan error, c kuberne
 				}
 				continue
 			}
-			switch e.Type {
-			case watch.Deleted:
+			if e.Type == watch.Deleted {
 				result <- oktetoErrors.ErrDeleteToApp
 				return
-			case watch.Modified:
+			} else if e.Type == watch.Modified {
 				sfs, ok := e.Object.(*appsv1.StatefulSet)
 				if !ok {
 					oktetoLog.Debugf("Failed to parse statefulset event: %s", e)

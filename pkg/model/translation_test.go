@@ -19,6 +19,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
@@ -82,7 +83,7 @@ services:
 		Args:              []string{"-r"},
 		Probes:            &Probes{},
 		Lifecycle:         &Lifecycle{},
-		Environment: Environment{
+		Environment: env.Environment{
 			{
 				Name:  "OKTETO_NAMESPACE",
 				Value: "n",
@@ -192,7 +193,7 @@ services:
 		},
 		Resources:        ResourceRequirements{},
 		PersistentVolume: true,
-		Environment: Environment{
+		Environment: env.Environment{
 			{Name: "HISTSIZE", Value: "10000000"},
 			{Name: "HISTFILESIZE", Value: "10000000"},
 			{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
@@ -256,7 +257,7 @@ initContainer:
 		Args:              []string{"-r"},
 		Probes:            &Probes{},
 		Lifecycle:         &Lifecycle{},
-		Environment: Environment{
+		Environment: env.Environment{
 			{
 				Name:  "OKTETO_NAMESPACE",
 				Value: "n",
@@ -351,7 +352,7 @@ sync:
 		Args:              []string{"-r", "-v"},
 		Probes:            &Probes{},
 		Lifecycle:         &Lifecycle{},
-		Environment: Environment{
+		Environment: env.Environment{
 			{
 				Name:  "OKTETO_NAMESPACE",
 				Value: "n",
@@ -411,7 +412,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 	tests := []struct {
 		name     string
 		manifest *Dev
-		expected Environment
+		expected env.Environment
 	}{
 		{
 			name: "default",
@@ -419,7 +420,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 				Image:         &BuildInfo{},
 				SSHServerPort: oktetoDefaultSSHServerPort,
 			},
-			expected: Environment{
+			expected: env.Environment{
 				{Name: "OKTETO_NAMESPACE", Value: ""},
 				{Name: "OKTETO_NAME", Value: ""},
 				{Name: "HISTSIZE", Value: "10000000"},
@@ -436,7 +437,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 				Image:         &BuildInfo{},
 				SSHServerPort: 22220,
 			},
-			expected: Environment{
+			expected: env.Environment{
 				{Name: "OKTETO_NAMESPACE", Value: ""},
 				{Name: "OKTETO_NAME", Value: ""},
 				{Name: oktetoSSHServerPortVariable, Value: "22220"},

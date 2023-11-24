@@ -18,6 +18,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -178,8 +179,8 @@ dependencies:
 				Dev:     model.ManifestDevs{},
 				Type:    model.OktetoManifestType,
 				Destroy: &model.DestroyInfo{},
-				Dependencies: model.ManifestDependencies{
-					"one": &model.Dependency{
+				Dependencies: deps.ManifestSection{
+					"one": &deps.Dependency{
 						Repository: "https://repo.url",
 					},
 				},

@@ -30,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
@@ -143,11 +144,11 @@ var fakeManifest *model.Manifest = &model.Manifest{
 }
 
 var fakeManifestWithDependency *model.Manifest = &model.Manifest{
-	Dependencies: model.ManifestDependencies{
-		"a": &model.Dependency{
+	Dependencies: deps.ManifestSection{
+		"a": &deps.Dependency{
 			Namespace: "b",
 		},
-		"b": &model.Dependency{},
+		"b": &deps.Dependency{},
 	},
 }
 
@@ -922,10 +923,18 @@ func (f *fakeExternalControlProvider) getFakeExternalControl(_ *rest.Config) Ext
 	return f.control
 }
 
+type fakeEndpointControl struct {
+	err       error
+	endpoints []string
+}
+
+func (f *fakeEndpointControl) List(_ context.Context, _ *EndpointsOptions, _ string) ([]string, error) {
+	return f.endpoints, f.err
+}
+
 func getFakeEndpoint() (EndpointGetter, error) {
 	return EndpointGetter{
-		K8sClientProvider: test.NewFakeK8sProvider(),
-		endpointControl:   &fakeExternalControl{},
+		endpointControl: &fakeEndpointControl{},
 	}, nil
 }
 
@@ -1061,11 +1070,11 @@ func (fd fakePipelineDeployer) ExecuteDeployPipeline(_ context.Context, _ *pipel
 
 func TestDeployDependencies(t *testing.T) {
 	fakeManifest := &model.Manifest{
-		Dependencies: model.ManifestDependencies{
-			"a": &model.Dependency{
+		Dependencies: deps.ManifestSection{
+			"a": &deps.Dependency{
 				Namespace: "b",
 			},
-			"b": &model.Dependency{},
+			"b": &deps.Dependency{},
 		},
 	}
 	type config struct {

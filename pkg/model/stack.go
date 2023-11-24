@@ -26,6 +26,7 @@ import (
 	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/discovery"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/format"
@@ -80,13 +81,13 @@ type Service struct {
 	Image         string                `yaml:"image,omitempty"`
 	RestartPolicy apiv1.RestartPolicy   `yaml:"restart,omitempty"`
 
-	Environment     Environment        `yaml:"environment,omitempty"`
+	Environment     env.Environment    `yaml:"environment,omitempty"`
 	Ports           []Port             `yaml:"ports,omitempty"`
 	Volumes         []StackVolume      `yaml:"volumes,omitempty"`
 	CapAdd          []apiv1.Capability `yaml:"cap_add,omitempty"`
 	CapDrop         []apiv1.Capability `yaml:"cap_drop,omitempty"`
 	VolumeMounts    []StackVolume      `yaml:"-"`
-	EnvFiles        EnvFiles           `yaml:"env_file,omitempty"`
+	EnvFiles        env.EnvFiles       `yaml:"env_file,omitempty"`
 	Command         Command            `yaml:"command,omitempty"`
 	Annotations     Annotations        `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Entrypoint      Entrypoint         `yaml:"entrypoint,omitempty"`
@@ -115,7 +116,7 @@ type VolumeSpec struct {
 	Class       string      `json:"class,omitempty" yaml:"class,omitempty"`
 }
 type Envs struct {
-	List Environment
+	List env.Environment
 }
 type HealthCheck struct {
 	HTTP        *HTTPHealtcheck `yaml:"http,omitempty"`
@@ -887,7 +888,7 @@ func loadEnvFiles(svc *Service, svcName string) error {
 
 func setEnvironmentFromFile(svc *Service, filename string) error {
 	var err error
-	filename, err = ExpandEnv(filename, true)
+	filename, err = env.ExpandEnv(filename)
 	if err != nil {
 		return err
 	}
@@ -917,7 +918,7 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 		}
 		svc.Environment = append(
 			svc.Environment,
-			EnvVar{Name: name, Value: value},
+			env.Var{Name: name, Value: value},
 		)
 	}
 

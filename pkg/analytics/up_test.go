@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 )
@@ -46,8 +47,8 @@ func Test_UpMetricsMetadata_ManifestProps(t *testing.T) {
 			name: "manifest with dependencies section",
 			manifest: &model.Manifest{
 				IsV2: true,
-				Dependencies: model.ManifestDependencies{
-					"service": &model.Dependency{},
+				Dependencies: deps.ManifestSection{
+					"service": &deps.Dependency{},
 				},
 			},
 			expected: &UpMetricsMetadata{

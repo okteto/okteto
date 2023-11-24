@@ -24,6 +24,7 @@ import (
 
 	"github.com/mholt/archiver/v3"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/apps"
@@ -176,7 +177,7 @@ func generateManifestFile(devPath string) (string, error) {
 	dev := &model.Dev{
 		Image:       &model.BuildInfo{},
 		Push:        &model.BuildInfo{},
-		Environment: make([]model.EnvVar, 0),
+		Environment: make([]env.Var, 0),
 		Secrets:     make([]model.Secret, 0),
 		Forward:     make([]forward.Forward, 0),
 		Volumes:     make([]model.Volume, 0),
