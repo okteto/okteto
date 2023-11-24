@@ -25,6 +25,7 @@ import (
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/client"
 	"github.com/okteto/okteto/pkg/analytics"
+	buildCtx "github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
@@ -54,21 +55,28 @@ var (
 
 // OktetoBuilderInterface runs the build of an image
 type OktetoBuilderInterface interface {
+	GetBuilder() string
 	Run(ctx context.Context, buildOptions *types.BuildOptions) error
 }
 
 // OktetoBuilder runs the build of an image
-type OktetoBuilder struct{}
+type OktetoBuilder struct {
+	OktetoContext buildCtx.OktetoContextInterface
+}
 
 // OktetoRegistryInterface checks if an image is at the registry
 type OktetoRegistryInterface interface {
 	GetImageTagWithDigest(imageTag string) (string, error)
 }
 
+func (ob *OktetoBuilder) GetBuilder() string {
+	return ob.OktetoContext.GetCurrentBuilder()
+}
+
 // Run runs the build sequence
 func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions) error {
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
-	if okteto.Context().Builder == "" {
+	if ob.OktetoContext.GetCurrentBuilder() == "" {
 		if err := ob.buildWithDocker(ctx, buildOptions); err != nil {
 			return err
 		}
@@ -96,14 +104,14 @@ func setOutputMode(outputMode string) string {
 }
 
 func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) error {
-	oktetoLog.Infof("building your image on %s", okteto.Context().Builder)
-	buildkitClient, err := getBuildkitClient(ctx)
+	oktetoLog.Infof("building your image on %s", ob.OktetoContext.GetCurrentBuilder())
+	buildkitClient, err := getBuildkitClient(ctx, ob.OktetoContext)
 	if err != nil {
 		return err
 	}
 
 	if buildOptions.File != "" {
-		buildOptions.File, err = GetDockerfile(buildOptions.File)
+		buildOptions.File, err = GetDockerfile(buildOptions.File, ob.OktetoContext.GetCurrentUser(), ob.OktetoContext.GetCurrentBuilder())
 		if err != nil {
 			return err
 		}
@@ -111,14 +119,14 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	}
 
 	if buildOptions.Tag != "" {
-		err = validateImage(buildOptions.Tag)
+		err = validateImage(ob.OktetoContext.GetCurrentRegister(), buildOptions.Tag)
 		if err != nil {
 			return err
 		}
 	}
 
 	imageCtrl := registry.NewImageCtrl(okteto.Config{})
-	if okteto.IsOkteto() {
+	if ob.OktetoContext.IsOkteto() {
 		buildOptions.DevTag = imageCtrl.ExpandOktetoDevRegistry(registry.GetDevTagFromGlobal(buildOptions.Tag))
 		buildOptions.Tag = imageCtrl.ExpandOktetoDevRegistry(buildOptions.Tag)
 		buildOptions.Tag = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.Tag)
@@ -144,7 +152,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 		return fmt.Errorf("%w: secret should have the format 'id=mysecret,src=/local/secret'", err)
 	}
 
-	opt, err := getSolveOpt(buildOptions)
+	opt, err := getSolveOpt(buildOptions, ob.OktetoContext)
 	if err != nil {
 		return errors.Wrap(err, "failed to create build solver")
 	}
@@ -220,9 +228,9 @@ func (ob *OktetoBuilder) buildWithDocker(ctx context.Context, buildOptions *type
 	return nil
 }
 
-func validateImage(imageTag string) error {
+func validateImage(register, imageTag string) error {
 	reg := registry.NewOktetoRegistry(okteto.Config{})
-	if strings.HasPrefix(imageTag, okteto.Context().Registry) && strings.Count(imageTag, "/") == 2 {
+	if strings.HasPrefix(imageTag, register) && strings.Count(imageTag, "/") == 2 {
 		return nil
 	}
 	if (reg.IsOktetoRegistry(imageTag)) && strings.Count(imageTag, "/") != 1 {

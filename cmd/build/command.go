@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	buildCtx "github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -65,13 +66,16 @@ type registryInterface interface {
 }
 
 // NewBuildCommand creates a struct to run all build methods
-func NewBuildCommand(analyticsTracker analyticsTrackerInterface) *Command {
+func NewBuildCommand(ctx context.Context, analyticsTracker analyticsTrackerInterface, opts *types.BuildOptions, okCtx *buildCtx.OktetoContext) (*Command, error) {
+
 	return &Command{
-		GetManifest:      model.GetManifestV2,
-		Builder:          &build.OktetoBuilder{},
+		GetManifest: model.GetManifestV2,
+		Builder: &build.OktetoBuilder{
+			OktetoContext: okCtx,
+		},
 		Registry:         registry.NewOktetoRegistry(okteto.Config{}),
 		analyticsTracker: analyticsTracker,
-	}
+	}, nil
 }
 
 const (
@@ -88,11 +92,17 @@ func Build(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 		Short: "Build and push the images defined in the 'build' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			options.CommandArgs = args
-			bc := NewBuildCommand(at)
+
 			// The context must be loaded before reading manifest. Otherwise,
 			// secrets will not be resolved when GetManifest is called and
 			// the manifest will load empty values.
-			if err := bc.loadContext(ctx, options); err != nil {
+			oktetoContext, err := getOktetoContext(ctx, options)
+			if err != nil {
+				return err
+			}
+
+			bc, err := NewBuildCommand(ctx, at, options, oktetoContext)
+			if err != nil {
 				return err
 			}
 
@@ -173,7 +183,7 @@ func validateDockerfile(file string) error {
 	return err
 }
 
-func (*Command) loadContext(ctx context.Context, options *types.BuildOptions) error {
+func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*buildCtx.OktetoContext, error) {
 	ctxOpts := &contextCMD.ContextOptions{
 		Context:   options.K8sContext,
 		Namespace: options.Namespace,
@@ -186,7 +196,7 @@ func (*Command) loadContext(ctx context.Context, options *types.BuildOptions) er
 	if err := validateDockerfile(options.File); err != nil {
 		ctxResource, err := model.GetContextResource(options.File)
 		if err != nil && !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
-			return err
+			return nil, err
 		}
 
 		// if ctxResource == nil (we cannot obtain context and namespace from the
@@ -194,32 +204,39 @@ func (*Command) loadContext(ctx context.Context, options *types.BuildOptions) er
 		// used to obtain the current context and the namespace associated with it.
 		if ctxResource != nil {
 			if err := ctxResource.UpdateNamespace(options.Namespace); err != nil {
-				return err
+				return nil, err
 			}
 			ctxOpts.Namespace = ctxResource.Namespace
 
 			if err := ctxResource.UpdateContext(options.K8sContext); err != nil {
-				return err
+				return nil, err
 			}
 			ctxOpts.Context = ctxResource.Context
 		}
 	}
 
-	if okteto.IsOkteto() && ctxOpts.Namespace != "" {
-		create, err := utils.ShouldCreateNamespace(ctx, ctxOpts.Namespace)
+	oktetoContext, err := contextCMD.NewContextCommand().RunStateless(ctx, ctxOpts)
+
+	if oktetoContext.IsOkteto() && ctxOpts.Namespace != "" {
+		c, err := okteto.NewOktetoClientStateless(oktetoContext.GetTokenByContextName)
 		if err != nil {
-			return err
+			return nil, err
+		}
+
+		create, err := utils.ShouldCreateNamespaceStateless(ctx, ctxOpts.Namespace, c)
+		if err != nil {
+			return nil, err
 		}
 		if create {
-			nsCmd, err := namespace.NewCommand()
+			nsCmd, err := namespace.NewCommandStateless(c)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 
-	return contextCMD.NewContextCommand().Run(ctx, ctxOpts)
+	return oktetoContext, err
 }

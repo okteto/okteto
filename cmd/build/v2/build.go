@@ -27,6 +27,7 @@ import (
 
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	"github.com/okteto/okteto/pkg/analytics"
+	buildCtx "github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
@@ -43,6 +44,7 @@ import (
 
 // OktetoBuilderInterface runs the build of an image
 type OktetoBuilderInterface interface {
+	GetBuilder() string
 	Run(ctx context.Context, buildOptions *types.BuildOptions) error
 }
 
@@ -80,6 +82,7 @@ type OktetoBuilder struct {
 	Config           oktetoBuilderConfigInterface
 	analyticsTracker analyticsTrackerInterface
 	V1Builder        *buildv1.OktetoBuilder
+	oktetoContext    *buildCtx.OktetoContext
 
 	// buildEnvironments are the environment variables created by the build steps
 	buildEnvironments map[string]string
@@ -130,7 +133,7 @@ func (*OktetoBuilder) IsV1() bool {
 // Build builds the images defined by a manifest
 // TODO: Function with cyclomatic complexity higher than threshold. Refactor function in order to reduce its complexity
 // skipcq: GO-R1005
-func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
+func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
 	if env.LoadBoolean(constants.OktetoDeployRemote) {
 		// Since the local build has already been built,
 		// we have the environment variables set and we can skip this code
@@ -175,7 +178,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 	// send all events appended on each build
 	defer func([]*analytics.ImageBuildMetadata) {
-		bc.analyticsTracker.TrackImageBuild(buildsAnalytics...)
+		ob.analyticsTracker.TrackImageBuild(buildsAnalytics...)
 	}(buildsAnalytics)
 
 	oktetoLog.Infof("Images to build: [%s]", strings.Join(toBuildSvcs, ", "))
@@ -200,23 +203,23 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			buildsAnalytics = append(buildsAnalytics, meta)
 
 			meta.Name = svcToBuild
-			meta.RepoURL = bc.Config.GetAnonymizedRepo()
+			meta.RepoURL = ob.Config.GetAnonymizedRepo()
 
 			repoHashDurationStart := time.Now()
-			repoCommit := bc.Config.GetGitCommit()
+			repoCommit := ob.Config.GetGitCommit()
 			buildHash := getBuildHashFromCommit(buildSvcInfo, repoCommit)
 
 			meta.RepoHash = buildHash
 			meta.RepoHashDuration = time.Since(repoHashDurationStart)
 
 			buildContextHashDurationStart := time.Now()
-			meta.BuildContextHash = bc.Config.GetBuildContextHash(buildSvcInfo)
+			meta.BuildContextHash = ob.Config.GetBuildContextHash(buildSvcInfo)
 			meta.BuildContextHashDuration = time.Since(buildContextHashDurationStart)
 
 			// We only check that the image is built in the global registry if the noCache option is not set
-			if !options.NoCache && bc.Config.IsCleanProject() && bc.Config.IsSmartBuildsEnabled() {
+			if !options.NoCache && ob.Config.IsCleanProject() && ob.Config.IsSmartBuildsEnabled() {
 
-				imageChecker := getImageChecker(buildSvcInfo, bc.Config, bc.Registry)
+				imageChecker := getImageChecker(buildSvcInfo, ob.Config, ob.Registry)
 				cacheHitDurationStart := time.Now()
 				imageWithDigest, isBuilt := imageChecker.checkIfBuildHashIsBuilt(options.Manifest.Name, svcToBuild, buildHash)
 
@@ -227,17 +230,17 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 					oktetoLog.Information("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, repoCommit)
 					// if the built image belongs to global registry we clone it to the dev registry
 					// so that in can be used in dev containers (i.e. okteto up)
-					if bc.Registry.IsGlobalRegistry(imageWithDigest) {
+					if ob.Registry.IsGlobalRegistry(imageWithDigest) {
 						oktetoLog.Debugf("Copying image '%s' from global to personal registry", svcToBuild)
 						tag := buildHash
-						devImage, err := bc.Registry.CloneGlobalImageToDev(imageWithDigest, tag)
+						devImage, err := ob.Registry.CloneGlobalImageToDev(imageWithDigest, tag)
 						if err != nil {
 							return err
 						}
 						imageWithDigest = devImage
 					}
 
-					bc.SetServiceEnvVars(svcToBuild, imageWithDigest)
+					ob.SetServiceEnvVars(svcToBuild, imageWithDigest)
 					builtImagesControl[svcToBuild] = true
 					meta.Success = true
 					continue
@@ -248,14 +251,14 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				return fmt.Errorf("'build.%s.image' is required if your context doesn't have Okteto installed", svcToBuild)
 			}
 			buildDurationStart := time.Now()
-			imageTag, err := bc.buildServiceImages(ctx, options.Manifest, svcToBuild, options)
+			imageTag, err := ob.buildServiceImages(ctx, options.Manifest, svcToBuild, options)
 			if err != nil {
 				return fmt.Errorf("error building service '%s': %w", svcToBuild, err)
 			}
 			meta.BuildDuration = time.Since(buildDurationStart)
 			meta.Success = true
 
-			bc.SetServiceEnvVars(svcToBuild, imageTag)
+			ob.SetServiceEnvVars(svcToBuild, imageTag)
 			builtImagesControl[svcToBuild] = true
 		}
 	}

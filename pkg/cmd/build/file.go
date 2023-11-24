@@ -35,8 +35,8 @@ const (
 )
 
 // GetDockerfile returns the dockerfile with the cache and registry translations
-func GetDockerfile(dockerFile string) (string, error) {
-	file, err := getTranslatedDockerFile(dockerFile)
+func GetDockerfile(dockerFile, userId, builder string) (string, error) {
+	file, err := getTranslatedDockerFile(dockerFile, userId, builder)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create temporary build folder")
 	}
@@ -44,7 +44,7 @@ func GetDockerfile(dockerFile string) (string, error) {
 	return file, nil
 }
 
-func getTranslatedDockerFile(filename string) (string, error) {
+func getTranslatedDockerFile(filename string, userId string, builder string) (string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return "", err
@@ -70,18 +70,17 @@ func getTranslatedDockerFile(filename string) (string, error) {
 	datawriter := bufio.NewWriter(tmpFile)
 	defer datawriter.Flush()
 
-	userID := okteto.Context().UserID
-	if userID == "" {
-		userID = "anonymous"
+	if userId == "" {
+		userId = "anonymous"
 	}
 
-	withCacheHandler := okteto.Context().Builder == okteto.CloudBuildKitURL
+	withCacheHandler := builder == okteto.CloudBuildKitURL
 
 	for scanner.Scan() {
 		line := scanner.Text()
 		translatedLine := translateOktetoRegistryImage(line)
 		if withCacheHandler {
-			translatedLine = translateCacheHandler(translatedLine, userID)
+			translatedLine = translateCacheHandler(translatedLine, userId)
 		}
 		_, err = datawriter.WriteString(translatedLine + "\n")
 		if err != nil {

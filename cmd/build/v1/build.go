@@ -33,6 +33,7 @@ import (
 
 // OktetoBuilderInterface runs the build of an image
 type OktetoBuilderInterface interface {
+	GetBuilder() string
 	Run(ctx context.Context, buildOptions *types.BuildOptions) error
 }
 
@@ -68,7 +69,7 @@ func (*OktetoBuilder) IsV1() bool {
 }
 
 // Build builds the images defined by a Dockerfile
-func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
+func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
 	path := "."
 	if options.Path != "" {
 		path = options.Path
@@ -91,10 +92,11 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	}
 
 	buildMsg := fmt.Sprintf("Building '%s'", options.File)
-	if okteto.Context().Builder == "" {
+	builder := ob.Builder.GetBuilder()
+	if builder == "" {
 		oktetoLog.Information("%s using your local docker daemon", buildMsg)
 	} else {
-		oktetoLog.Information("%s in %s...", buildMsg, okteto.Context().Builder)
+		oktetoLog.Information("%s in %s...", buildMsg, builder)
 	}
 
 	var err error
@@ -103,7 +105,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		return err
 	}
 
-	if err := bc.Builder.Run(ctx, options); err != nil {
+	if err := ob.Builder.Run(ctx, options); err != nil {
 		analytics.TrackBuild(false)
 		return err
 	}

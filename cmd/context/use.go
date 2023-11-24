@@ -21,10 +21,12 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	buildCtx "github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -145,6 +147,19 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 	}
 
 	return nil
+}
+
+// RunStateless is the fn to use until the refactoring of the context command itself if you want to make use
+// of an injected context instead of using the global context variable.
+func (c *ContextCommand) RunStateless(ctx context.Context, ctxOptions *ContextOptions) (*buildCtx.OktetoContext, error) {
+	err := c.Run(ctx, ctxOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	return &buildCtx.OktetoContext{
+		Store: okteto.CurrentStore,
+	}, nil
 }
 
 func getContext(ctxOptions *ContextOptions) (string, error) {

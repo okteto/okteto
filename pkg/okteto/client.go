@@ -128,6 +128,29 @@ func NewOktetoClient(opts ...Option) (*OktetoClient, error) {
 	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
 
+// NewOktetoClient creates a new client to connect with Okteto API
+func NewOktetoClientStateless(getToken func(string) (string, error), opts ...Option) (*OktetoClient, error) {
+	cfg := defaultOktetoClientCfg()
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	if cfg.token == "" {
+		token, err := getToken(cfg.ctxName)
+		if err != nil {
+			return nil, err
+		}
+		cfg.token = token
+	}
+
+	httpClient, u, err := newOktetoHttpClient(cfg.ctxName, cfg.token, "graphql")
+	if err != nil {
+		return nil, err
+	}
+
+	return newOktetoClientFromGraphqlClient(u, httpClient)
+}
+
 func newOktetoHttpClient(contextName, token, oktetoUrlPath string) (*http.Client, string, error) {
 	if token == "" {
 		return nil, "", fmt.Errorf(oktetoErrors.ErrNotLogged, contextName)
