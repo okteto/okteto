@@ -172,6 +172,7 @@ func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientse
 	ticker := time.NewTicker(1 * time.Second)
 	timeoutDuration := 3 * timeout
 	to := time.Now().Add(timeoutDuration) // 90 seconds
+	logDebounceInterval := 5
 
 	for i := 0; ; i++ {
 		err := vClient.Delete(ctx, name, metav1.DeleteOptions{})
@@ -192,7 +193,7 @@ func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientse
 			return fmt.Errorf("volume claim '%s' wasn't destroyed after %s", name, timeout.String())
 		}
 
-		if i%10 == 5 {
+		if i%10 == logDebounceInterval {
 			oktetoLog.Infof("waiting for volume '%s' to be destroyed", name)
 		}
 
