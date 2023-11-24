@@ -49,6 +49,6 @@ jobs:
         working-directory: images/bin
         run: |
           docker buildx build \
-            --platform linux/amd64,linux/arm64,linux/arm/v7 \
+            --platform linux/amd64,linux/arm64 \
             --output "type=image,push=true" \
             --build-arg COMMIT_SHA=${{ github.sha }} -t okteto/bin:${{ github.event.inputs.tag }} .
