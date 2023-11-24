@@ -59,7 +59,7 @@ func TestServiceHasher_HashProjectCommit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sh := newServiceHasher(tt.repoCtrl)
-			hash := sh.HashProjectCommit(&model.BuildInfo{})
+			hash := sh.hashProjectCommit(&model.BuildInfo{})
 			assert.Equal(t, tt.expectedHash, hash)
 		})
 	}
@@ -90,7 +90,7 @@ func TestServiceHasher_HashBuildContext(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sh := newServiceHasher(tt.repoCtrl)
-			hash := sh.HashBuildContext(&model.BuildInfo{})
+			hash := sh.hashBuildContext(&model.BuildInfo{})
 			assert.Equal(t, tt.expectedHash, hash)
 		})
 	}
@@ -129,7 +129,7 @@ func TestServiceHasher_HashService(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sh := newServiceHasher(tt.repoCtrl)
-			hash := sh.HashService(&model.BuildInfo{})
+			hash := sh.hashService(&model.BuildInfo{})
 			assert.Equal(t, tt.expectedHash, hash)
 		})
 	}

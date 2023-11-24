@@ -815,7 +815,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 				sha:     tc.input.repo.sha,
 				isClean: tc.input.repo.isClean,
 				err:     tc.input.repo.err,
-			}).HashProjectCommit(tc.input.buildInfo)
+			}).hashProjectCommit(tc.input.buildInfo)
 			expectedHash := sha256.Sum256([]byte(tc.expected))
 			assert.Equal(t, hex.EncodeToString(expectedHash[:]), got)
 		})

@@ -204,11 +204,11 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 			repoHashDurationStart := time.Now()
 
-			meta.RepoHash = bc.hasher.HashProjectCommit(buildSvcInfo)
+			meta.RepoHash = bc.hasher.hashProjectCommit(buildSvcInfo)
 			meta.RepoHashDuration = time.Since(repoHashDurationStart)
 
 			buildContextHashDurationStart := time.Now()
-			meta.BuildContextHash = bc.hasher.HashBuildContext(buildSvcInfo)
+			meta.BuildContextHash = bc.hasher.hashBuildContext(buildSvcInfo)
 			meta.BuildContextHashDuration = time.Since(buildContextHashDurationStart)
 
 			// We only check that the image is built in the global registry if the noCache option is not set
@@ -216,7 +216,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 				imageChecker := getImageChecker(buildSvcInfo, bc.Config, bc.Registry)
 				cacheHitDurationStart := time.Now()
-				buildHash := bc.hasher.HashService(buildSvcInfo)
+				buildHash := bc.hasher.hashService(buildSvcInfo)
 				imageWithDigest, isBuilt := imageChecker.checkIfBuildHashIsBuilt(options.Manifest.Name, svcToBuild, buildHash)
 
 				meta.CacheHit = isBuilt
@@ -317,7 +317,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	oktetoLog.Infof("Building image for service '%s'", svcName)
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := bc.getBuildInfoWithoutVolumeMounts(manifest.Build[svcName], isStackManifest)
-	buildHash := bc.hasher.HashService(buildSvcInfo)
+	buildHash := bc.hasher.hashService(buildSvcInfo)
 	tagToBuild := newImageTagger(bc.Config).getServiceImageReference(manifest.Name, svcName, buildSvcInfo, buildHash)
 	buildSvcInfo.Image = tagToBuild
 	if err := buildSvcInfo.AddBuildArgs(bc.buildEnvironments); err != nil {
@@ -351,7 +351,7 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 
 	buildInfoCopy := manifest.Build[svcName].Copy()
 	buildInfoCopy.Image = ""
-	buildHash := bc.hasher.HashService(buildInfoCopy)
+	buildHash := bc.hasher.hashService(buildInfoCopy)
 
 	tagToBuild := newImageWithVolumesTagger(bc.Config).getServiceImageReference(manifest.Name, svcName, buildInfoCopy, buildHash)
 	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest)

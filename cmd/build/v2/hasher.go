@@ -52,8 +52,8 @@ func newServiceHasher(gitRepoCtrl repositoryCommitRetriever) *serviceHasher {
 	}
 }
 
-// HashProjectCommit hashes the
-func (sh *serviceHasher) HashProjectCommit(buildInfo *model.BuildInfo) string {
+// hashProjectCommit returns the hash of the repository's commit
+func (sh *serviceHasher) hashProjectCommit(buildInfo *model.BuildInfo) string {
 	if sh.projectCommit == "" {
 		var err error
 		sh.projectCommit, err = sh.gitRepoCtrl.GetSHA()
@@ -64,7 +64,8 @@ func (sh *serviceHasher) HashProjectCommit(buildInfo *model.BuildInfo) string {
 	return sh.hash(buildInfo, projectCommitType, sh.projectCommit)
 }
 
-func (sh serviceHasher) HashBuildContext(buildInfo *model.BuildInfo) string {
+// hashBuildContext returns the hash of the service using its context tree hash
+func (sh serviceHasher) hashBuildContext(buildInfo *model.BuildInfo) string {
 	buildContext := buildInfo.Context
 	if buildContext == "" {
 		buildContext = "."
@@ -80,11 +81,12 @@ func (sh serviceHasher) HashBuildContext(buildInfo *model.BuildInfo) string {
 	return sh.hash(buildInfo, buildContextCommitType, sh.buildContextCache[buildContext])
 }
 
-func (sh serviceHasher) HashService(buildInfo *model.BuildInfo) string {
+// hashService returns the hashed project commit by default. If smart-builds use the context it returns the hash of the service given its git tree hash
+func (sh serviceHasher) hashService(buildInfo *model.BuildInfo) string {
 	if env.LoadBoolean(OktetoSmartBuildUsingContextEnvVar) {
-		return sh.HashBuildContext(buildInfo)
+		return sh.hashBuildContext(buildInfo)
 	}
-	return sh.HashProjectCommit(buildInfo)
+	return sh.hashProjectCommit(buildInfo)
 }
 
 func (sh serviceHasher) hash(buildInfo *model.BuildInfo, commitType, commitHash string) string {

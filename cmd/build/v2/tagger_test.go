@@ -162,7 +162,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 			buildHash := newServiceHasher(fakeConfigRepo{
 				sha:     tc.cfg.sha,
 				isClean: tc.cfg.isClean,
-			}).HashProjectCommit(tc.b)
+			}).hashProjectCommit(tc.b)
 			assert.Equal(t, tc.expectedImage, tagger.getServiceImageReference("test", "test", tc.b, buildHash))
 		})
 	}
@@ -238,7 +238,7 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 			buildHash := newServiceHasher(fakeConfigRepo{
 				sha:     tc.cfg.sha,
 				isClean: tc.cfg.isClean,
-			}).HashProjectCommit(tc.b)
+			}).hashProjectCommit(tc.b)
 			assert.Equal(t, tc.expectedImage, tagger.getServiceImageReference("test", "test", tc.b, buildHash))
 		})
 	}
