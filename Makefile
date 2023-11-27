@@ -37,13 +37,19 @@ lint:
 
 .PHONY: install-fieldalignment
 install-fieldalignment:
-	@which fieldalignment > /dev/null || (echo "Installing fieldalignment..." && go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest)
-	$(eval FIELDALIGNMENT_BIN=$(shell which fieldalignment))
+	$(eval GOBIN=$(shell go env GOPATH)/bin)
+	$(eval FIELDALIGNMENT_BIN=$(GOBIN)/fieldalignment)
+	@if [ ! -x "$(FIELDALIGNMENT_BIN)" ]; then \
+    	echo "Installing fieldalignment..."; \
+    	go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest; \
+    fi
 
 .PHONY: lint-fix-fieldalignment
 lint-fix-fieldalignment: install-fieldalignment
-	@$(FIELDALIGNMENT_BIN) -fix ./...
-	@echo "⚠️  Please review the changes before committing. This step might remove code comments while reordering the struct fields."
+	@$(FIELDALIGNMENT_BIN) -fix ./...; \
+	if ! git diff --quiet -- '*.go'; then \
+		echo "⚠️  Please review the changes before committing. This step might remove code comments while reordering the struct fields."; \
+	fi
 
 .PHONY: lint-fieldalignment
 lint-fieldalignment: install-fieldalignment
