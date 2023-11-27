@@ -80,7 +80,8 @@ func Run(dev *model.Dev, app apps.App, trMap map[string]*apps.Translation, wait 
 		return nil
 	}
 
-	waitForDevPodsTermination(ctx, c, dev, 30)
+	devPodTerminationRetries := 30
+	waitForDevPodsTermination(ctx, c, dev, devPodTerminationRetries)
 	return nil
 }
 

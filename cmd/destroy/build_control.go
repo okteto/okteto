@@ -48,6 +48,7 @@ func (bc buildCtrl) buildImageIfNecessary(ctx context.Context, manifest *model.M
 
 	reg := regexp.MustCompile(`OKTETO_BUILD_(\w+)_`)
 	matches := reg.FindStringSubmatch(imageToBuild)
+	foundMatches := 2
 	if len(matches) == 0 {
 		oktetoLog.Debugf("image '%s' is not an okteto build variable", imageToBuild)
 		return nil
@@ -58,7 +59,7 @@ func (bc buildCtrl) buildImageIfNecessary(ctx context.Context, manifest *model.M
 		sanitizedSvc := strings.ToUpper(strings.ReplaceAll(buildSvc, "-", "_"))
 		sanitisedToUnsanitised[sanitizedSvc] = buildSvc
 	}
-	if len(matches) == 2 {
+	if len(matches) == foundMatches {
 		sanitisedName := matches[1]
 		svc, ok := sanitisedToUnsanitised[sanitisedName]
 		if !ok {

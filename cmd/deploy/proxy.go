@@ -211,7 +211,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 		expectedToken := fmt.Sprintf("Bearer %s", token)
 		// Validate token with the generated for the local kubeconfig file
 		if requestToken != expectedToken {
-			rw.WriteHeader(401)
+			rw.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
@@ -230,7 +230,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 			t, err := newProtocolTransport(clusterConfig, true)
 			if err != nil {
 				oktetoLog.Infof("could not disabled HTTP/2: %s", err)
-				rw.WriteHeader(500)
+				rw.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 			reverseProxy = httputil.NewSingleHostReverseProxy(destinationURL)
@@ -243,7 +243,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 			b, err := io.ReadAll(r.Body)
 			if err != nil {
 				oktetoLog.Infof("could not read the request body: %s", err)
-				rw.WriteHeader(500)
+				rw.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 			defer r.Body.Close()
@@ -255,7 +255,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 			b, err = ph.translateBody(b)
 			if err != nil {
 				oktetoLog.Info(err)
-				rw.WriteHeader(500)
+				rw.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 

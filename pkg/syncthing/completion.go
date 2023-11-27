@@ -21,6 +21,11 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
+const (
+	completedProgress     = 100
+	maxNeedDeletesRetries = 50
+)
+
 // Completion represents the completion of a syncthing folder.
 type Completion struct {
 	Completion  float64 `json:"completion"`
@@ -55,7 +60,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, reporter chan float64
 			wfc.retries++
 			if wfc.retries%40 == 0 {
 				oktetoLog.Info("checking syncthing for error....")
-				if err := s.IsHealthy(ctx, false, 3); err != nil {
+				if err := s.IsHealthy(ctx, false, maxRetries); err != nil {
 					return err
 				}
 			}
@@ -98,7 +103,7 @@ func (wfc *waitForCompletion) computeProgress(ctx context.Context) error {
 	wfc.localCompletion = localCompletion
 	oktetoLog.Infof("syncthing status in local: globalBytes %d, needBytes %d, globalItems %d, needItems %d, needDeletes %d", localCompletion.GlobalBytes, localCompletion.NeedBytes, localCompletion.GlobalItems, localCompletion.NeedItems, localCompletion.NeedDeletes)
 	if localCompletion.GlobalBytes == 0 {
-		wfc.progress = 100
+		wfc.progress = completedProgress
 	} else {
 		wfc.progress = (float64(localCompletion.GlobalBytes-localCompletion.NeedBytes) / float64(localCompletion.GlobalBytes)) * 100
 	}
@@ -158,7 +163,7 @@ func (wfc *waitForCompletion) isCompleted() bool {
 
 	if wfc.localCompletion.NeedDeletes > 0 {
 		wfc.needDeletesRetries++
-		if wfc.needDeletesRetries < 50 {
+		if wfc.needDeletesRetries < maxNeedDeletesRetries {
 			oktetoLog.Info("synced completed, but need deletes, retrying...")
 			return false
 		}

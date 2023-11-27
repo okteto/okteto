@@ -30,7 +30,9 @@ import (
 )
 
 const (
-	syncthingVersion = "1.24.0"
+	syncthingVersion          = "1.24.0"
+	syncthingVersionStringNew = 3
+	syncthingVersionStringOld = 2
 )
 
 var (
@@ -156,9 +158,9 @@ func parseVersionFromOutput(output []byte) (*semver.Version, error) {
 
 	v := ""
 	switch len(found) {
-	case 3:
+	case syncthingVersionStringNew:
 		v = fmt.Sprintf("%s%s", found[1], found[2])
-	case 2:
+	case syncthingVersionStringOld:
 		v = fmt.Sprint(found[1])
 	default:
 		return nil, fmt.Errorf("failed to extract the version from `%s`", output)

@@ -131,7 +131,8 @@ func WaitForDeployment(kubectlBinary string, kubectlOpts *commands.KubectlOption
 			if strings.Contains(output, "is different from the running revision") {
 				r := regexp.MustCompile(`\(\d+\)`)
 				matches := r.FindAllString(output, -1)
-				if len(matches) == 2 {
+				validMatchesLength := 2
+				if len(matches) == validMatchesLength {
 					desiredVersion := strings.ReplaceAll(strings.ReplaceAll(matches[0], "(", ""), ")", "")
 					runningVersion := strings.ReplaceAll(strings.ReplaceAll(matches[0], "(", ""), ")", "")
 					if desiredVersion <= runningVersion {
