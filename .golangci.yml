@@ -82,6 +82,8 @@ linters:
     - exportloopref
     - makezero
     - gomnd
+    - bodyclose
+    - durationcheck
     - exhaustive
 
 issues:
