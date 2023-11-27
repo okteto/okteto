@@ -7,6 +7,12 @@ aliases:
   # standard semver regex as defined in: https://semver.org/
   - &release-regex /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
   - &release-branch-regex /^release-\d+\.\d+$/
+  - &okteto-login |
+    curl https://get.okteto.com -sSfL | sh
+    mkdir -p $HOME/.okteto
+    touch $HOME/.okteto/.noanalytics
+    okteto context use ${OKTETO_URL} --token ${OKTETO_TOKEN}
+  - &docker-login echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
 version: 2.1
 
 parameters:
@@ -65,6 +71,7 @@ commands:
       - run:
           name: Run deprecated integration tests
           command: make integration-deprecated
+
 
 executors:
   golang-ci:
@@ -196,12 +203,11 @@ jobs:
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
             sha_arm=$(cat ./artifacts/bin/okteto-Darwin-arm64.sha256 | awk '{print $1}')
             ./scripts/update_homebrew_formula.sh 0.0.1 $sha $sha_arm
-      - setup_remote_docker
+      - run: *okteto-login
       - run:
           name: Build Docker container
           command: |
-            export DOCKER_BUILDKIT=1
-            docker build -t okteto --build-arg VERSION_STRING=$CIRCLE_SHA1 .
+            okteto build --platform "linux/arm64,linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile .
 
   run-windows-e2e-test:
     executor: win/default
@@ -292,15 +298,17 @@ jobs:
     executor: golang-ci
     steps:
       - checkout
-      - setup_remote_docker
-      - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG"
+      - run: *okteto-login
+      - run: *docker-login
+      - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG" "linux/amd64,linux/arm64"
 
   push-image-latest:
     executor: golang-ci
     steps:
       - checkout
-      - setup_remote_docker
-      - run: ./scripts/ci/push-image.sh latest
+      - run: *okteto-login
+      - run: *docker-login
+      - run: ./scripts/ci/push-image.sh latest "linux/amd64"
 
   upload-static:
     executor: golang-ci
@@ -316,7 +324,6 @@ jobs:
       - attach_workspace:
           at: ./artifacts
       - run: *init-gcloud
-      - setup_remote_docker
       - add_ssh_keys:
           fingerprints:
             - f7:81:9f:b4:31:3a:4d:46:ce:cf:54:a2:70:46:5a:df
@@ -374,7 +381,6 @@ workflows:
               ignore: *release-branch-regex
             tags:
               ignore: /.*/
-
       - run-unit-test:
           requires:
             - "golangci-lint"
@@ -408,7 +414,9 @@ workflows:
                 - master
                 - /.*(e2e)/
       - test-release:
-          context: GKE
+          context:
+            - GKE
+            - Product-okteto-dev
           requires:
             - build-binaries
           filters:
@@ -419,6 +427,7 @@ workflows:
                 - master
                 - *release-branch-regex
       - push-image-latest:
+          context: Product-okteto-dev
           requires:
             - build-binaries
           filters:
@@ -471,6 +480,7 @@ workflows:
       - run-unit-test
       - run-windows-unit-test
       - push-image-tag:
+          context: Product-okteto-dev
           requires:
             - build-binaries
       - release:
@@ -504,6 +514,7 @@ workflows:
             tags:
               ignore: *release-regex
       - push-image-tag:
+          context: Product-okteto-dev
           requires:
             - build-binaries
           filters:

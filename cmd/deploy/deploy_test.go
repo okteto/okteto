@@ -923,10 +923,18 @@ func (f *fakeExternalControlProvider) getFakeExternalControl(_ *rest.Config) Ext
 	return f.control
 }
 
+type fakeEndpointControl struct {
+	err       error
+	endpoints []string
+}
+
+func (f *fakeEndpointControl) List(_ context.Context, _ *EndpointsOptions, _ string) ([]string, error) {
+	return f.endpoints, f.err
+}
+
 func getFakeEndpoint() (EndpointGetter, error) {
 	return EndpointGetter{
-		K8sClientProvider: test.NewFakeK8sProvider(),
-		endpointControl:   &fakeExternalControl{},
+		endpointControl: &fakeEndpointControl{},
 	}, nil
 }
 
