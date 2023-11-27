@@ -76,7 +76,7 @@ commands:
 executors:
   golang-ci:
     docker:
-      - image: okteto/golang-ci:2.3.1
+      - image: okteto/golang-ci:2.3.3
 
 jobs:
   golangci-lint:

@@ -25,8 +25,8 @@ import (
 
 // ContextResource provides the context and namespace to operate within a manifest
 type ContextResource struct {
-	Context   string
-	Namespace string
+	Context   string `yaml:"context"`
+	Namespace string `yaml:"namespace"`
 }
 
 // GetContextResource returns a ContextResource object from a given file

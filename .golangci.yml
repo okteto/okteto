@@ -82,6 +82,7 @@ linters:
     - exportloopref
     - makezero
     - gomnd
+    - musttag
     - bodyclose
     - durationcheck
     - exhaustive
