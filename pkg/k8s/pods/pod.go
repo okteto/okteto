@@ -350,13 +350,13 @@ func waitUntilRunning(ctx context.Context, namespace, selector string, c *kubern
 
 		allRunning := true
 		for i := range pods.Items {
-			switch pods.Items[i].Status.Phase {
-			case apiv1.PodPending:
+			phase := pods.Items[i].Status.Phase
+			if phase == apiv1.PodPending {
 				allRunning = false
 				notready[pods.Items[i].GetName()] = true
-			case apiv1.PodFailed:
+			} else if phase == apiv1.PodFailed {
 				return fmt.Errorf("Pod %s failed to start", pods.Items[i].Name)
-			case apiv1.PodRunning:
+			} else if phase == apiv1.PodRunning {
 				if isRunning(&pods.Items[i]) {
 					if _, ok := notready[pods.Items[i].GetName()]; ok {
 						oktetoLog.Infof("pod/%s is ready", pods.Items[i].GetName())

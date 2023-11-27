@@ -151,6 +151,7 @@ func TestKubetokenRefreshRoundTrip(t *testing.T) {
 			resp, err := client.Do(req)
 			require.ErrorIs(t, err, tc.expectedErr)
 			if resp != nil {
+				require.NoError(t, resp.Body.Close())
 				require.Equal(t, tc.expectedCode, resp.StatusCode)
 			}
 		})
