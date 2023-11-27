@@ -201,7 +201,7 @@ func getBuildkitClient(ctx context.Context, okctx buildCtx.OktetoContextInterfac
 	builder := okctx.GetCurrentBuilder()
 	okctx.UseContextByBuilder()
 
-	ctxCert := okctx.GetCurrentCert()
+	ctxCert := okctx.GetCurrentCertStr()
 	if ctxCert != "" {
 		certBytes, err := base64.StdEncoding.DecodeString(ctxCert)
 		if err != nil {

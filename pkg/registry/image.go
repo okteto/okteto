@@ -61,6 +61,13 @@ func NewImageCtrl(config imageConfig) ImageCtrl {
 	}
 }
 
+func NewImageCtrlFromContext(config imageConfig) ImageCtrl {
+	return ImageCtrl{
+		config:           config,
+		registryReplacer: NewRegistryReplacer(config),
+	}
+}
+
 func (ic ImageCtrl) expandImageRegistries(image string) string {
 	if ic.config.IsOktetoCluster() {
 		image = ic.ExpandOktetoDevRegistry(image)

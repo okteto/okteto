@@ -19,7 +19,6 @@ import (
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
 )
 
@@ -64,7 +63,7 @@ func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterfa
 		hasGlobalAccess:     hasAccess,
 		isCleanProject:      isClean,
 		fs:                  afero.NewOsFs(),
-		isOkteto:            okteto.Context().IsOkteto,
+		isOkteto:            true,
 		isSmartBuildsEnable: getIsSmartBuildEnabled(),
 	}
 }

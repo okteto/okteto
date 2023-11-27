@@ -73,7 +73,7 @@ func NewBuildCommand(ctx context.Context, analyticsTracker analyticsTrackerInter
 		Builder: &build.OktetoBuilder{
 			OktetoContext: okCtx,
 		},
-		Registry:         registry.NewOktetoRegistry(okteto.Config{}),
+		Registry:         registry.NewOktetoRegistry(build.GetRegistryConfigFromOktetoConfig(okCtx)),
 		analyticsTracker: analyticsTracker,
 	}, nil
 }
@@ -84,7 +84,7 @@ const (
 )
 
 // Build build and optionally push a Docker image
-func Build(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
+func Build(ctx context.Context, analyticsTracker analyticsTrackerInterface) *cobra.Command {
 
 	options := &types.BuildOptions{}
 	cmd := &cobra.Command{
@@ -101,12 +101,12 @@ func Build(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 				return err
 			}
 
-			bc, err := NewBuildCommand(ctx, at, options, oktetoContext)
+			bc, err := NewBuildCommand(ctx, analyticsTracker, options, oktetoContext)
 			if err != nil {
 				return err
 			}
 
-			builder, err := bc.getBuilder(options)
+			builder, err := bc.getBuilder(options, oktetoContext)
 			if err != nil {
 				return err
 			}
@@ -140,7 +140,7 @@ func Build(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 	return cmd
 }
 
-func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
+func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *buildCtx.OktetoContext) (Builder, error) {
 	var builder Builder
 
 	manifest, err := bc.GetManifest(options.File)
@@ -153,7 +153,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
 		builder = buildv1.NewBuilder(bc.Builder, bc.Registry)
 	} else {
 		if isBuildV2(manifest) {
-			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.analyticsTracker)
+			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.analyticsTracker, okCtx)
 		} else {
 			builder = buildv1.NewBuilder(bc.Builder, bc.Registry)
 		}

@@ -103,6 +103,20 @@ func setOutputMode(outputMode string) string {
 
 }
 
+func GetRegistryConfigFromOktetoConfig(okCtx buildCtx.OktetoContextInterface) *okteto.Config {
+	return &okteto.Config{
+		Cert:                        okCtx.GetCurrentCert(),
+		IsOkteto:                    okCtx.IsOkteto(),
+		ContextName:                 okCtx.GetCurrentName(),
+		Namespace:                   okCtx.GetCurrentNamespace(),
+		RegistryUrl:                 okCtx.GetCurrentRegister(),
+		UserId:                      okCtx.GetCurrentUser(),
+		Token:                       okCtx.GetCurrentToken(),
+		GlobalNamespace:             okCtx.GetGlobalNamespace(),
+		InsecureSkipTLSVerifyPolicy: okCtx.IsInsecure(),
+	}
+}
+
 func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) error {
 	oktetoLog.Infof("building your image on %s", ob.OktetoContext.GetCurrentBuilder())
 	buildkitClient, err := getBuildkitClient(ctx, ob.OktetoContext)
@@ -125,7 +139,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 		}
 	}
 
-	imageCtrl := registry.NewImageCtrl(okteto.Config{})
+	imageCtrl := registry.NewImageCtrl(GetRegistryConfigFromOktetoConfig(ob.OktetoContext))
 	if ob.OktetoContext.IsOkteto() {
 		buildOptions.DevTag = imageCtrl.ExpandOktetoDevRegistry(registry.GetDevTagFromGlobal(buildOptions.Tag))
 		buildOptions.Tag = imageCtrl.ExpandOktetoDevRegistry(buildOptions.Tag)
@@ -266,7 +280,7 @@ type regInterface interface {
 }
 
 // OptsFromBuildInfo returns the parsed options for the build from the manifest
-func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *types.BuildOptions, reg regInterface) *types.BuildOptions {
+func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *types.BuildOptions, reg regInterface, okCtx buildCtx.OktetoContextInterface) *types.BuildOptions {
 	if o == nil {
 		o = &types.BuildOptions{}
 	}
@@ -282,7 +296,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 
 	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	if okteto.Context().IsOkteto && b.Image == "" {
+	if okCtx.IsOkteto() && b.Image == "" {
 		// if flag --global, point to global registry
 		targetRegistry := constants.DevRegistry
 		if o != nil && o.BuildToGlobal {
@@ -327,8 +341,8 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 
 	if reg.IsOktetoRegistry(b.Image) {
 		defaultBuildArgs := map[string]string{
-			model.OktetoContextEnvVar:   okteto.Context().Name,
-			model.OktetoNamespaceEnvVar: okteto.Context().Namespace,
+			model.OktetoContextEnvVar:   okCtx.GetCurrentName(),
+			model.OktetoNamespaceEnvVar: okCtx.GetCurrentNamespace(),
 		}
 
 		for _, e := range b.Args {

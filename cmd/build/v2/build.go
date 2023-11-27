@@ -82,7 +82,7 @@ type OktetoBuilder struct {
 	Config           oktetoBuilderConfigInterface
 	analyticsTracker analyticsTrackerInterface
 	V1Builder        *buildv1.OktetoBuilder
-	oktetoContext    *buildCtx.OktetoContext
+	oktetoContext    buildCtx.OktetoContextInterface
 
 	// buildEnvironments are the environment variables created by the build steps
 	buildEnvironments map[string]string
@@ -92,11 +92,12 @@ type OktetoBuilder struct {
 }
 
 // NewBuilder creates a new okteto builder
-func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, analyticsTracker analyticsTrackerInterface) *OktetoBuilder {
+func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, analyticsTracker analyticsTrackerInterface, okCtx *buildCtx.OktetoContext) *OktetoBuilder {
 	b := NewBuilderFromScratch(analyticsTracker)
 	b.Builder = builder
 	b.Registry = registry
 	b.V1Builder = buildv1.NewBuilder(builder, registry)
+	b.oktetoContext = okCtx
 	return b
 }
 
@@ -151,12 +152,12 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		if err != nil {
 			return err
 		}
-		c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+		c, _, err := okteto.NewK8sClientProvider().Provide(ob.oktetoContext.GetCurrentCfg())
 		if err != nil {
 			return err
 		}
 		inferer := devenvironment.NewNameInferer(c)
-		options.Manifest.Name = inferer.InferName(ctx, wd, okteto.Context().Namespace, options.File)
+		options.Manifest.Name = inferer.InferName(ctx, wd, ob.oktetoContext.GetCurrentNamespace(), options.File)
 	}
 	toBuildSvcs := getToBuildSvcs(options.Manifest, options)
 	if err := validateOptions(options.Manifest, toBuildSvcs, options); err != nil {
@@ -247,7 +248,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				}
 			}
 
-			if !okteto.Context().IsOkteto && buildSvcInfo.Image == "" {
+			if !ob.oktetoContext.IsOkteto() && buildSvcInfo.Image == "" {
 				return fmt.Errorf("'build.%s.image' is required if your context doesn't have Okteto installed", svcToBuild)
 			}
 			buildDurationStart := time.Now()
@@ -292,7 +293,7 @@ func (bc *OktetoBuilder) buildServiceImages(ctx context.Context, manifest *model
 	buildSvcInfo := manifest.Build[svcName]
 
 	switch {
-	case serviceHasVolumesToInclude(buildSvcInfo) && !okteto.IsOkteto():
+	case serviceHasVolumesToInclude(buildSvcInfo) && !bc.oktetoContext.IsOkteto():
 		return "", oktetoErrors.UserError{
 			E:    fmt.Errorf("Build with volume mounts is not supported on vanilla contexts"),
 			Hint: "Please connect to a okteto context and try again",
@@ -307,7 +308,7 @@ func (bc *OktetoBuilder) buildServiceImages(ctx context.Context, manifest *model
 	case serviceHasDockerfile(buildSvcInfo):
 		return bc.buildSvcFromDockerfile(ctx, manifest, svcName, options)
 	case serviceHasVolumesToInclude(buildSvcInfo):
-		if okteto.IsOkteto() {
+		if bc.oktetoContext.IsOkteto() {
 			return bc.addVolumeMounts(ctx, manifest, svcName, options)
 		}
 
@@ -328,7 +329,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcName, err)
 	}
 
-	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, options, bc.Registry)
+	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, options, bc.Registry, bc.oktetoContext)
 
 	if err := bc.V1Builder.Build(ctx, buildOptions); err != nil {
 		return "", err
@@ -358,12 +359,12 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 	buildHash := getBuildHashFromCommit(buildInfoCopy, bc.Config.GetGitCommit())
 
 	tagToBuild := newImageWithVolumesTagger(bc.Config).getServiceImageReference(manifest.Name, svcName, buildInfoCopy, buildHash)
-	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest)
+	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest, bc.oktetoContext.IsOkteto())
 	svcBuild, err := build.CreateDockerfileWithVolumeMounts(fromImage, buildSvcInfo.VolumesToInclude)
 	if err != nil {
 		return "", err
 	}
-	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, options, bc.Registry)
+	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, options, bc.Registry, bc.oktetoContext)
 	buildOptions.Tag = tagToBuild
 
 	if err := bc.V1Builder.Build(ctx, buildOptions); err != nil {
@@ -391,15 +392,15 @@ func (bc *OktetoBuilder) getBuildInfoWithoutVolumeMounts(buildInfo *model.BuildI
 	if len(result.VolumesToInclude) > 0 {
 		result.VolumesToInclude = nil
 	}
-	if isStackManifest && okteto.IsOkteto() && !bc.Registry.IsOktetoRegistry(buildInfo.Image) {
+	if isStackManifest && bc.oktetoContext.IsOkteto() && !bc.Registry.IsOktetoRegistry(buildInfo.Image) {
 		result.Image = ""
 	}
 	return result
 }
 
-func getBuildInfoWithVolumeMounts(buildInfo *model.BuildInfo, isStackManifest bool) *model.BuildInfo {
+func getBuildInfoWithVolumeMounts(buildInfo *model.BuildInfo, isStackManifest bool, isOkteto bool) *model.BuildInfo {
 	result := buildInfo.Copy()
-	if isStackManifest && okteto.IsOkteto() {
+	if isStackManifest && isOkteto {
 		result.Image = ""
 	}
 	result.VolumesToInclude = getAccessibleVolumeMounts(buildInfo)

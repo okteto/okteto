@@ -17,18 +17,34 @@ import (
 	"crypto/x509"
 )
 
-type Config struct{}
+type Config struct {
+	IsOkteto                    bool
+	GlobalNamespace             string
+	Namespace                   string
+	RegistryUrl                 string
+	UserId                      string
+	Token                       string
+	Cert                        *x509.Certificate
+	InsecureSkipTLSVerifyPolicy bool
+	ServerNameOverride          string
+	ContextName                 string
+	Credential                  struct {
+		Username string
+		Password string
+		Err      error
+	}
+}
 
-func (Config) IsOktetoCluster() bool                             { return IsOkteto() }
-func (Config) GetGlobalNamespace() string                        { return Context().GlobalNamespace }
-func (Config) GetNamespace() string                              { return Context().Namespace }
-func (Config) GetRegistryURL() string                            { return Context().Registry }
-func (Config) GetUserID() string                                 { return Context().UserID }
-func (Config) GetToken() string                                  { return Context().Token }
+func (c Config) IsOktetoCluster() bool                           { return c.IsOkteto }
+func (c Config) GetGlobalNamespace() string                      { return c.GlobalNamespace }
+func (c Config) GetNamespace() string                            { return c.Namespace }
+func (c Config) GetRegistryURL() string                          { return c.RegistryUrl }
+func (c Config) GetUserID() string                               { return c.UserId }
+func (c Config) GetToken() string                                { return c.Token }
 func (Config) GetContextCertificate() (*x509.Certificate, error) { return GetContextCertificate() }
-func (Config) IsInsecureSkipTLSVerifyPolicy() bool               { return Context().IsInsecure }
+func (c Config) IsInsecureSkipTLSVerifyPolicy() bool             { return c.InsecureSkipTLSVerifyPolicy }
 func (Config) GetServerNameOverride() string                     { return GetServerNameOverride() }
-func (Config) GetContextName() string                            { return Context().Name }
+func (c Config) GetContextName() string                          { return c.ContextName }
 func (Config) GetExternalRegistryCredentials(registryHost string) (string, string, error) {
 	return GetExternalRegistryCredentials(registryHost)
 }
