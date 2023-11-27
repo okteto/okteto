@@ -230,8 +230,8 @@ type Volume struct {
 
 // Sync represents a sync info in the development container
 type Sync struct {
-	LocalPath      string
-	RemotePath     string
+	LocalPath      string       `json:"-" yaml:"-"`
+	RemotePath     string       `json:"-" yaml:"-"`
 	Folders        []SyncFolder `json:"folders,omitempty" yaml:"folders,omitempty"`
 	RescanInterval int          `json:"rescanInterval,omitempty" yaml:"rescanInterval,omitempty"`
 	Compression    bool         `json:"compression" yaml:"compression"`
