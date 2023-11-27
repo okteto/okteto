@@ -93,6 +93,7 @@ func getSolveOpt(buildOptions *types.BuildOptions) (*client.SolveOpt, error) {
 		frontendAttrs["add-hosts"] = strings.TrimSuffix(hosts, ",")
 	}
 
+	maxArgFormatParts := 2
 	for _, buildArg := range buildOptions.BuildArgs {
 		kv := strings.SplitN(buildArg, "=", maxArgFormatParts)
 		if len(kv) != maxArgFormatParts {

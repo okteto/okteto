@@ -134,6 +134,7 @@ func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions *types.Buil
 
 		dockerBuildOptions.Target = buildOptions.Target
 
+		maxArgFormatParts := 2
 		for _, buildArg := range buildOptions.BuildArgs {
 			kv := strings.SplitN(buildArg, "=", maxArgFormatParts)
 			if len(kv) != maxArgFormatParts {
@@ -399,6 +400,7 @@ func getDockerOptions(buildOptions *types.BuildOptions) (dockerTypes.ImageBuildO
 		opts.Tags = append(opts.Tags, buildOptions.Tag)
 	}
 
+	maxArgFormatParts := 2
 	for _, buildArg := range buildOptions.BuildArgs {
 		kv := strings.SplitN(buildArg, "=", maxArgFormatParts)
 		if len(kv) != maxArgFormatParts {
