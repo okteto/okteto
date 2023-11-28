@@ -16,6 +16,7 @@ package log
 import (
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -67,6 +68,39 @@ func Test_GetContextResource(t *testing.T) {
 			DisableMasking()
 			result = redactMessage(tt.message)
 			assert.Equal(t, tt.message, result)
+		})
+	}
+}
+
+func TestSetOutputFormat(t *testing.T) {
+	Init(logrus.DebugLevel)
+	var tests = []struct {
+		name              string
+		expectedWriter    interface{}
+		hasSpinnerSupport bool
+	}{
+		{
+			name:              "tty",
+			expectedWriter:    &TTYWriter{},
+			hasSpinnerSupport: true,
+		},
+		{
+			name:              "plain",
+			expectedWriter:    &PlainWriter{},
+			hasSpinnerSupport: false,
+		},
+		{
+			name:              "json",
+			expectedWriter:    &JSONWriter{},
+			hasSpinnerSupport: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			SetOutputFormat(tt.name)
+			assert.IsType(t, tt.expectedWriter, log.writer)
+			assert.Equal(t, tt.hasSpinnerSupport, log.spinner.spinnerSupport)
 		})
 	}
 }
