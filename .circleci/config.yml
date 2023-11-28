@@ -273,6 +273,7 @@ jobs:
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
+            $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
             go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
       - run:
           name: Run up integration tests
