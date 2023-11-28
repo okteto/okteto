@@ -72,38 +72,39 @@ func (*OktetoClientProvider) Provide(opts ...Option) (types.OktetoInterface, err
 	return c, err
 }
 
-type oktetoClientCfg struct {
-	ctxName string
-	token   string
+type OktetoClientCfg struct {
+	CtxName string
+	Token   string
+	Cert    string
 }
 
 func WithCtxName(ctxName string) Option {
-	return func(cfg *oktetoClientCfg) {
-		cfg.ctxName = ctxName
+	return func(cfg *OktetoClientCfg) {
+		cfg.CtxName = ctxName
 	}
 }
 
 func WithToken(token string) Option {
-	return func(cfg *oktetoClientCfg) {
-		cfg.token = token
+	return func(cfg *OktetoClientCfg) {
+		cfg.Token = token
 	}
 }
 
-func defaultOktetoClientCfg() *oktetoClientCfg {
+func defaultOktetoClientCfg() *OktetoClientCfg {
 	if CurrentStore == nil && !ContextExists() {
-		return &oktetoClientCfg{}
+		return &OktetoClientCfg{}
 	}
 	if CurrentStore != nil && CurrentStore.CurrentContext == "" {
-		return &oktetoClientCfg{}
+		return &OktetoClientCfg{}
 	}
-	return &oktetoClientCfg{
-		ctxName: Context().Name,
-		token:   Context().Token,
+	return &OktetoClientCfg{
+		CtxName: Context().Name,
+		Token:   Context().Token,
 	}
 
 }
 
-type Option func(*oktetoClientCfg)
+type Option func(*OktetoClientCfg)
 
 // NewOktetoClient creates a new client to connect with Okteto API
 func NewOktetoClient(opts ...Option) (*OktetoClient, error) {
@@ -112,15 +113,15 @@ func NewOktetoClient(opts ...Option) (*OktetoClient, error) {
 		opt(cfg)
 	}
 
-	if cfg.token == "" {
-		okCtx, exists := ContextStore().Contexts[cfg.ctxName]
+	if cfg.Token == "" {
+		okCtx, exists := ContextStore().Contexts[cfg.CtxName]
 		if !exists {
-			return nil, fmt.Errorf("%s context doesn't exists", cfg.ctxName)
+			return nil, fmt.Errorf("%s context doesn't exists", cfg.CtxName)
 		}
-		cfg.token = okCtx.Token
+		cfg.Token = okCtx.Token
 	}
 
-	httpClient, u, err := newOktetoHttpClient(cfg.ctxName, cfg.token, "graphql")
+	httpClient, u, err := newOktetoHttpClient(cfg.CtxName, cfg.Token, "graphql")
 	if err != nil {
 		return nil, err
 	}
@@ -129,21 +130,20 @@ func NewOktetoClient(opts ...Option) (*OktetoClient, error) {
 }
 
 // NewOktetoClient creates a new client to connect with Okteto API
-func NewOktetoClientStateless(getToken func(string) (string, error), opts ...Option) (*OktetoClient, error) {
-	cfg := defaultOktetoClientCfg()
+func NewOktetoClientStateless(ocfg *OktetoClientCfg, getToken func(string) (string, error), opts ...Option) (*OktetoClient, error) {
 	for _, opt := range opts {
-		opt(cfg)
+		opt(ocfg)
 	}
 
-	if cfg.token == "" {
-		token, err := getToken(cfg.ctxName)
+	if ocfg.Token == "" {
+		token, err := getToken(ocfg.CtxName)
 		if err != nil {
 			return nil, err
 		}
-		cfg.token = token
+		ocfg.Token = token
 	}
 
-	httpClient, u, err := newOktetoHttpClient(cfg.ctxName, cfg.token, "graphql")
+	httpClient, u, err := newOktetoHttpClientStateless(ocfg.CtxName, ocfg.Token, ocfg.Cert, "graphql")
 	if err != nil {
 		return nil, err
 	}
@@ -177,6 +177,43 @@ func newOktetoHttpClient(contextName, token, oktetoUrlPath string) (*http.Client
 	if insecureSkipTLSVerify {
 		ctxHttpClient = oktetoHttp.InsecureHTTPClient()
 	} else if cert, err := GetContextCertificate(); err == nil {
+		sslTransportOption.Certs = []*x509.Certificate{cert}
+		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(sslTransportOption)
+	}
+
+	ctx := contextWithOauth2HttpClient(context.Background(), ctxHttpClient)
+
+	httpClient := oauth2.NewClient(ctx, src)
+
+	return httpClient, u, err
+}
+
+func newOktetoHttpClientStateless(contextName, token, cert, oktetoUrlPath string) (*http.Client, string, error) {
+	if token == "" {
+		return nil, "", fmt.Errorf(oktetoErrors.ErrNotLogged, contextName)
+	}
+	u, err := parseOktetoURLWithPath(contextName, oktetoUrlPath)
+	if err != nil {
+		return nil, "", err
+	}
+
+	src := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: token,
+			TokenType: "Bearer"},
+	)
+
+	sslTransportOption := &oktetoHttp.SSLTransportOption{}
+
+	if serverName != "" {
+		sslTransportOption.ServerName = serverName
+		sslTransportOption.URLsToIntercept = []string{u}
+	}
+
+	ctxHttpClient := oktetoHttp.StrictSSLHTTPClient(sslTransportOption)
+
+	if insecureSkipTLSVerify {
+		ctxHttpClient = oktetoHttp.InsecureHTTPClient()
+	} else if cert, err := GetContextCertificateStateless(cert); err == nil {
 		sslTransportOption.Certs = []*x509.Certificate{cert}
 		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(sslTransportOption)
 	}

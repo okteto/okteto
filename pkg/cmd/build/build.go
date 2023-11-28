@@ -104,8 +104,9 @@ func setOutputMode(outputMode string) string {
 }
 
 func GetRegistryConfigFromOktetoConfig(okCtx buildCtx.OktetoContextInterface) *okteto.Config {
+
 	return &okteto.Config{
-		Cert:                        okCtx.GetCurrentCert(),
+		Cert:                        okCtx.GetCurrentCertStr(),
 		IsOkteto:                    okCtx.IsOkteto(),
 		ContextName:                 okCtx.GetCurrentName(),
 		Namespace:                   okCtx.GetCurrentNamespace(),
@@ -191,7 +192,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	}
 
 	if err == nil && buildOptions.Tag != "" {
-		if _, err := registry.NewOktetoRegistry(okteto.Config{}).GetImageTagWithDigest(buildOptions.Tag); err != nil {
+		if _, err := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(ob.OktetoContext)).GetImageTagWithDigest(buildOptions.Tag); err != nil {
 			oktetoLog.Yellow(`Failed to push '%s' metadata to the registry:
 	  %s,
 	  Retrying ...`, buildOptions.Tag, err.Error())

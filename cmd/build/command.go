@@ -218,7 +218,8 @@ func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*buildC
 	oktetoContext, err := contextCMD.NewContextCommand().RunStateless(ctx, ctxOpts)
 
 	if oktetoContext.IsOkteto() && ctxOpts.Namespace != "" {
-		c, err := okteto.NewOktetoClientStateless(oktetoContext.GetTokenByContextName)
+		ocfg := defaultOktetoClientCfg(oktetoContext)
+		c, err := okteto.NewOktetoClientStateless(ocfg, oktetoContext.GetTokenByContextName)
 		if err != nil {
 			return nil, err
 		}
@@ -239,4 +240,17 @@ func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*buildC
 	}
 
 	return oktetoContext, err
+}
+
+func defaultOktetoClientCfg(octx buildCtx.OktetoContextInterface) *okteto.OktetoClientCfg {
+	if !octx.ExistsContext() {
+		return &okteto.OktetoClientCfg{}
+	}
+
+	return &okteto.OktetoClientCfg{
+		CtxName: octx.GetCurrentName(),
+		Token:   octx.GetCurrentToken(),
+		Cert:    octx.GetCurrentCertStr(),
+	}
+
 }

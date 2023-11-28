@@ -22,6 +22,7 @@ type OktetoContextInterface interface {
 	GetCurrentToken() string
 	GetCurrentUser() string
 	GetCurrentRegister() string
+	ExistsContext() bool
 	IsOkteto() bool
 	IsInsecure() bool
 	UseContextByBuilder()
@@ -71,6 +72,10 @@ func (oc *OktetoContext) GetCurrentRegister() string {
 
 func (oc *OktetoContext) IsOkteto() bool {
 	return oc.getCurrentOktetoContext().IsOkteto
+}
+
+func (oc *OktetoContext) ExistsContext() bool {
+	return oc.getCurrentOktetoContext() != nil
 }
 
 func (oc *OktetoContext) IsInsecure() bool {
