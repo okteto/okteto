@@ -26,7 +26,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
