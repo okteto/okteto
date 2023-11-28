@@ -91,7 +91,7 @@ type OktetoBuilder struct {
 }
 
 // NewBuilder creates a new okteto builder
-func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, analyticsTracker analyticsTrackerInterface, okCtx *buildCtx.OktetoContext) *OktetoBuilder {
+func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, analyticsTracker analyticsTrackerInterface, okCtx buildCtx.OktetoContextInterface) *OktetoBuilder {
 	b := NewBuilderFromScratch(analyticsTracker)
 	b.Builder = builder
 	b.Registry = registry
