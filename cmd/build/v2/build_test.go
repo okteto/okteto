@@ -180,6 +180,10 @@ func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInter
 				CurrentContext: "test",
 			},
 		},
+		hasher: &serviceHasher{
+			gitRepoCtrl:       fakeConfigRepo{},
+			buildContextCache: map[string]string{},
+		},
 	}
 }
 
