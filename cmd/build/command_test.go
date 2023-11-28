@@ -22,6 +22,7 @@ import (
 	buildV1 "github.com/okteto/okteto/cmd/build/v1"
 	buildV2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/analytics"
+	buildCtx "github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -343,7 +344,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			builder, err := tt.buildCommand.getBuilder(tt.options)
+			builder, err := tt.buildCommand.getBuilder(tt.options, nil)
 			if err != nil && !tt.expectedError {
 				t.Errorf("getBuilder() fail on '%s'. Expected nil error, got %s", tt.name, err.Error())
 			}
@@ -379,7 +380,17 @@ type fakeAnalyticsTracker struct{}
 func (fakeAnalyticsTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
 
 func Test_NewBuildCommand(t *testing.T) {
-	got := NewBuildCommand(fakeAnalyticsTracker{})
+	okCtx := &buildCtx.OktetoContext{
+		Store: &okteto.OktetoContextStore{
+			Contexts: map[string]*okteto.OktetoContext{
+				"test": {
+					Namespace: "test",
+				},
+			},
+			CurrentContext: "test",
+		},
+	}
+	got := NewBuildCommand(fakeAnalyticsTracker{}, okCtx)
 	require.IsType(t, &Command{}, got)
 	require.NotNil(t, got.GetManifest)
 	require.NotNil(t, got.Builder)

@@ -126,7 +126,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	}
 
 	if buildOptions.File != "" {
-		buildOptions.File, err = GetDockerfile(buildOptions.File, ob.OktetoContext.GetCurrentUser(), ob.OktetoContext.GetCurrentBuilder())
+		buildOptions.File, err = GetDockerfile(buildOptions.File, ob.OktetoContext)
 		if err != nil {
 			return err
 		}
@@ -134,7 +134,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	}
 
 	if buildOptions.Tag != "" {
-		err = validateImage(ob.OktetoContext.GetCurrentRegister(), buildOptions.Tag)
+		err = validateImage(ob.OktetoContext, buildOptions.Tag)
 		if err != nil {
 			return err
 		}
@@ -243,9 +243,9 @@ func (ob *OktetoBuilder) buildWithDocker(ctx context.Context, buildOptions *type
 	return nil
 }
 
-func validateImage(register, imageTag string) error {
-	reg := registry.NewOktetoRegistry(okteto.Config{})
-	if strings.HasPrefix(imageTag, register) && strings.Count(imageTag, "/") == 2 {
+func validateImage(okctx buildCtx.OktetoContextInterface, imageTag string) error {
+	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(okctx))
+	if strings.HasPrefix(imageTag, okctx.GetCurrentRegister()) && strings.Count(imageTag, "/") == 2 {
 		return nil
 	}
 	if (reg.IsOktetoRegistry(imageTag)) && strings.Count(imageTag, "/") != 1 {

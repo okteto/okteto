@@ -23,6 +23,7 @@ import (
 	"strings"
 	"testing"
 
+	buildCtx "github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -34,15 +35,17 @@ import (
 )
 
 func Test_validateImage(t *testing.T) {
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-				Registry:  "this.is.my.okteto.registry",
-				IsOkteto:  true,
+	okCtx := &buildCtx.OktetoContext{
+		Store: &okteto.OktetoContextStore{
+			Contexts: map[string]*okteto.OktetoContext{
+				"test": {
+					Namespace: "test",
+					IsOkteto:  true,
+					Registry:  "test",
+				},
 			},
+			CurrentContext: "test",
 		},
-		CurrentContext: "test",
 	}
 	tests := []struct {
 		want  error
@@ -77,7 +80,7 @@ func Test_validateImage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := validateImage(tt.image); reflect.TypeOf(got) != reflect.TypeOf(tt.want) {
+			if got := validateImage(okCtx, tt.image); reflect.TypeOf(got) != reflect.TypeOf(tt.want) {
 				t.Errorf("build.validateImage = %v, want %v", reflect.TypeOf(got), reflect.TypeOf(tt.want))
 			}
 		})
@@ -388,14 +391,16 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			okteto.CurrentStore = &okteto.OktetoContextStore{
-				Contexts: map[string]*okteto.OktetoContext{
-					"test": {
-						Namespace: "test",
-						IsOkteto:  tt.isOkteto,
+			okCtx := &buildCtx.OktetoContext{
+				Store: &okteto.OktetoContextStore{
+					Contexts: map[string]*okteto.OktetoContext{
+						"test": {
+							Namespace: "test",
+							IsOkteto:  tt.isOkteto,
+						},
 					},
+					CurrentContext: "test",
 				},
-				CurrentContext: "test",
 			}
 			manifest := &model.Manifest{
 				Name: "movies",
@@ -404,7 +409,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				},
 			}
 
-			result := OptsFromBuildInfo(manifest.Name, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts, &tt.mr)
+			result := OptsFromBuildInfo(manifest.Name, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts, &tt.mr, okCtx)
 			require.Equal(t, tt.expected, result)
 		})
 	}

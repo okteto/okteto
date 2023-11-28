@@ -28,6 +28,7 @@ import (
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/analytics"
+	buildCtx "github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
@@ -429,10 +430,21 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
 	fakeTracker := fakeAnalyticsTracker{}
+
+	okCtx := &buildCtx.OktetoContext{
+		Store: &okteto.OktetoContextStore{
+			Contexts: map[string]*okteto.OktetoContext{
+				"test": {
+					Namespace: "test",
+				},
+			},
+			CurrentContext: "test",
+		},
+	}
 	c := &DeployCommand{
 		GetManifest:       getErrorManifest,
 		GetDeployer:       fakeDeployer.Get,
-		Builder:           buildv2.NewBuilder(builder, registry, fakeTracker),
+		Builder:           buildv2.NewBuilder(builder, registry, fakeTracker, okCtx),
 		K8sClientProvider: fakeK8sClientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider),
 	}

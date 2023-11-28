@@ -26,6 +26,7 @@ import (
 	v1 "github.com/okteto/okteto/cmd/build/v1"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/analytics"
+	buildCtx "github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -168,6 +169,17 @@ func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInter
 		},
 		Config:           cfg,
 		analyticsTracker: analyticsTracker,
+		oktetoContext: &buildCtx.OktetoContext{
+			Store: &okteto.OktetoContextStore{
+				Contexts: map[string]*okteto.OktetoContext{
+					"test": {
+						Namespace: "test",
+						IsOkteto:  true,
+					},
+				},
+				CurrentContext: "test",
+			},
+		},
 	}
 }
 
@@ -242,15 +254,6 @@ func TestValidateOptions(t *testing.T) {
 
 func TestOnlyInjectVolumeMountsInOkteto(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-				IsOkteto:  true,
-			},
-		},
-		CurrentContext: "test",
-	}
 	dir := t.TempDir()
 
 	registry := newFakeRegistry()

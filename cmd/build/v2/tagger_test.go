@@ -254,7 +254,9 @@ func TestImageTaggerGetPossibleHashImages(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageTagger(fakeConfig{})
+			tagger := newImageTagger(fakeConfig{
+				isOkteto: true,
+			})
 			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTag("test", "test", tc.sha))
 		})
 	}
@@ -282,7 +284,9 @@ func TestImageTaggerWithVolumesGetPossibleHashImages(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageWithVolumesTagger(fakeConfig{})
+			tagger := newImageWithVolumesTagger(fakeConfig{
+				isOkteto: true,
+			})
 			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTag("test", "test", tc.sha))
 		})
 	}
@@ -327,7 +331,10 @@ func TestImageTaggerGetPossibleTags(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageTagger(fakeConfig{isSmartBuildsEnable: tc.isSmartBuildsEnabled})
+			tagger := newImageTagger(fakeConfig{
+				isSmartBuildsEnable: tc.isSmartBuildsEnabled,
+				isOkteto:            true,
+			})
 			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTagWithDefaults("test", "test", tc.sha))
 		})
 	}
@@ -360,7 +367,9 @@ func TestImageTaggerWithVolumesGetPossibleTags(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageWithVolumesTagger(fakeConfig{})
+			tagger := newImageWithVolumesTagger(fakeConfig{
+				isOkteto: true,
+			})
 			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTagWithDefaults("test", "test", tc.sha))
 		})
 	}
@@ -397,7 +406,7 @@ func Test_getTargetRegistries(t *testing.T) {
 				},
 				CurrentContext: "test",
 			}
-			assert.Equal(t, tc.expected, getTargetRegistries())
+			assert.Equal(t, tc.expected, getTargetRegistries(tc.isOkteto))
 		})
 	}
 }

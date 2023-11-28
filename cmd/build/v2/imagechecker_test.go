@@ -74,7 +74,9 @@ func Test_checkIfBuildHashIsBuilt(t *testing.T) {
 			name: "found SHA from registry",
 			imageChecker: &imageChecker{
 				tagger: imageTagger{
-					cfg: &fakeConfig{},
+					cfg: &fakeConfig{
+						isOkteto: true,
+					},
 				},
 				lookupReferenceWithDigest: func(_ string, _ registryImageCheckerInterface) (string, error) {
 					return "image-tag-from-registry", nil

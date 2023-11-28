@@ -47,6 +47,7 @@ func (c Config) GetContextCertificate() (*x509.Certificate, error) {
 func (c Config) IsInsecureSkipTLSVerifyPolicy() bool { return c.InsecureSkipTLSVerifyPolicy }
 func (Config) GetServerNameOverride() string         { return GetServerNameOverride() }
 func (c Config) GetContextName() string              { return c.ContextName }
-func (Config) GetExternalRegistryCredentials(registryHost string) (string, string, error) {
-	return GetExternalRegistryCredentials(registryHost)
+func (c Config) GetExternalRegistryCredentials(registryHost string) (string, string, error) {
+	return c.Credential.Username, c.Credential.Password, c.Credential.Err
+	//return GetExternalRegistryCredentials(registryHost)
 }

@@ -66,7 +66,7 @@ type registryInterface interface {
 }
 
 // NewBuildCommand creates a struct to run all build methods
-func NewBuildCommand(ctx context.Context, analyticsTracker analyticsTrackerInterface, opts *types.BuildOptions, okCtx *buildCtx.OktetoContext) (*Command, error) {
+func NewBuildCommand(analyticsTracker analyticsTrackerInterface, okCtx *buildCtx.OktetoContext) *Command {
 
 	return &Command{
 		GetManifest: model.GetManifestV2,
@@ -75,7 +75,7 @@ func NewBuildCommand(ctx context.Context, analyticsTracker analyticsTrackerInter
 		},
 		Registry:         registry.NewOktetoRegistry(build.GetRegistryConfigFromOktetoConfig(okCtx)),
 		analyticsTracker: analyticsTracker,
-	}, nil
+	}
 }
 
 const (
@@ -101,10 +101,7 @@ func Build(ctx context.Context, analyticsTracker analyticsTrackerInterface) *cob
 				return err
 			}
 
-			bc, err := NewBuildCommand(ctx, analyticsTracker, options, oktetoContext)
-			if err != nil {
-				return err
-			}
+			bc := NewBuildCommand(analyticsTracker, oktetoContext)
 
 			builder, err := bc.getBuilder(options, oktetoContext)
 			if err != nil {
