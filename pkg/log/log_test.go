@@ -75,8 +75,8 @@ func Test_GetContextResource(t *testing.T) {
 func TestSetOutputFormat(t *testing.T) {
 	Init(logrus.DebugLevel)
 	var tests = []struct {
-		name              string
 		expectedWriter    interface{}
+		name              string
 		hasSpinnerSupport bool
 	}{
 		{
