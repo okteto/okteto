@@ -52,6 +52,7 @@ func Test_RoundTrip(t *testing.T) {
 	}
 
 	testRequest := httptest.NewRequest(http.MethodGet, "https://foo.com", nil)
+	// nolint:bodyclose
 	apiKeyTransport.RoundTrip(testRequest)
 }
 

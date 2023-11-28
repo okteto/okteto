@@ -208,8 +208,9 @@ func getListDiff(l1, l2 []string) []string {
 func snapshotEnv() map[string]string {
 	env := os.Environ()
 	snapshot := make(map[string]string, len(env))
+	keyValueVarParts := 2
 	for _, e := range env {
-		pair := strings.SplitN(e, "=", 2)
+		pair := strings.SplitN(e, "=", keyValueVarParts)
 		snapshot[pair[0]] = pair[1]
 	}
 	return snapshot

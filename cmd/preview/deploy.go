@@ -129,8 +129,9 @@ func (pw *Command) deployPreview(ctx context.Context, opts *DeployOptions) (*typ
 
 	var varList []types.Variable
 	for _, v := range opts.variables {
-		kv := strings.SplitN(v, "=", 2)
-		if len(kv) != 2 {
+		variableFormatParts := 2
+		kv := strings.SplitN(v, "=", variableFormatParts)
+		if len(kv) != variableFormatParts {
 			return nil, fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
 		}
 		varList = append(varList, types.Variable{

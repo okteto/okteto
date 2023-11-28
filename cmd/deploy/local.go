@@ -140,10 +140,11 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 
 	defer ld.cleanUp(ctx, nil)
 
+	keyValueVarParts := 2
 	for _, variable := range deployOptions.Variables {
-		value := strings.SplitN(variable, "=", 2)[1]
-		if strings.TrimSpace(value) != "" {
-			oktetoLog.AddMaskedWord(value)
+		varParts := strings.SplitN(variable, "=", keyValueVarParts)
+		if len(varParts) >= keyValueVarParts && strings.TrimSpace(varParts[1]) != "" {
+			oktetoLog.AddMaskedWord(varParts[1])
 		}
 	}
 	deployOptions.Variables = append(

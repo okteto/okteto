@@ -27,6 +27,10 @@ import (
 	"github.com/okteto/okteto/pkg/syncthing"
 )
 
+const (
+	completedProgressValue = 100
+)
+
 // Run runs the "okteto status" sequence
 func Run(ctx context.Context, sy *syncthing.Syncthing) (float64, error) {
 	progressLocal, err := getCompletionProgress(ctx, sy, true)
@@ -53,21 +57,21 @@ func getCompletionProgress(ctx context.Context, s *syncthing.Syncthing, local bo
 		return 0, err
 	}
 	if completion.GlobalBytes == 0 {
-		return 100, nil
+		return completedProgressValue, nil
 	}
 	progress := (float64(completion.GlobalBytes-completion.NeedBytes) / float64(completion.GlobalBytes)) * 100
 	return progress, nil
 }
 
 func computeProgress(local, remote float64) float64 {
-	if local == 100 && remote == 100 {
-		return 100
+	if local == completedProgressValue && remote == completedProgressValue {
+		return completedProgressValue
 	}
 
-	if local == 100 {
+	if local == completedProgressValue {
 		return remote
 	}
-	if remote == 100 {
+	if remote == completedProgressValue {
 		return local
 	}
 	return (local + remote) / 2

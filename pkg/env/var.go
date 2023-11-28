@@ -36,9 +36,10 @@ func (v *Var) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err != nil {
 		return err
 	}
-	parts := strings.SplitN(raw, "=", 2)
+	maxVarStringParts := 2
+	parts := strings.SplitN(raw, "=", maxVarStringParts)
 	v.Name = parts[0]
-	if len(parts) == 2 {
+	if len(parts) == maxVarStringParts {
 		v.Value, err = ExpandEnv(parts[1])
 		if err != nil {
 			return err

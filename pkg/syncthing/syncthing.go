@@ -66,6 +66,8 @@ const (
 
 	// GUIPort is the port used by syncthing in the cluster for the http endpoint
 	GUIPort = 8384
+
+	maxRetries = 3
 )
 
 // Syncthing represents the local syncthing process.
@@ -361,7 +363,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 
 // Ping checks if syncthing is available
 func (s *Syncthing) Ping(ctx context.Context, local bool) bool {
-	_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil, false, 0)
+	_, err := s.APICall(ctx, "rest/system/ping", "GET", http.StatusOK, nil, local, nil, false, 0)
 	if err == nil {
 		return true
 	}
@@ -377,7 +379,7 @@ func (s *Syncthing) Overwrite(ctx context.Context) error {
 	for _, folder := range s.Folders {
 		oktetoLog.Infof("overriding local changes to the remote syncthing path=%s", folder.LocalPath)
 		params := getFolderParameter(folder)
-		_, err := s.APICall(ctx, "rest/db/override", "POST", 200, params, true, nil, false, 3)
+		_, err := s.APICall(ctx, "rest/db/override", "POST", http.StatusOK, params, true, nil, false, maxRetries)
 		if err != nil {
 			oktetoLog.Infof("error posting 'rest/db/override' syncthing API: %s", err)
 			if strings.Contains(err.Error(), "Client.Timeout") {
@@ -407,7 +409,7 @@ func (s *Syncthing) WaitForConnected(ctx context.Context) error {
 	to := time.Now().Add(s.timeout)
 	for retries := 0; ; retries++ {
 		connections := &Connections{}
-		body, err := s.APICall(ctx, "rest/system/connections", "GET", 200, nil, true, nil, true, 3)
+		body, err := s.APICall(ctx, "rest/system/connections", "GET", http.StatusOK, nil, true, nil, true, maxRetries)
 		if err != nil {
 			oktetoLog.Infof("error getting connections: %s", err.Error())
 			if strings.Contains(err.Error(), "Client.Timeout") {
@@ -456,7 +458,8 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 	ticker := time.NewTicker(100 * time.Millisecond)
 	oktetoLog.Infof("waiting for initial scan to complete path=%s local=%t", folder.LocalPath, local)
 
-	to := time.Now().Add(s.timeout * 10) // 5 minutes
+	timeoutDuration := s.timeout * 10
+	to := time.Now().Add(timeoutDuration) // 5 minutes
 
 	for retries := 0; ; retries++ {
 		status, err := s.GetSyncthingStatus(ctx, folder, local)
@@ -493,7 +496,7 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 func (s *Syncthing) GetCompletion(ctx context.Context, local bool, device string) (*Completion, error) {
 	params := map[string]string{"device": device}
 	completion := &Completion{}
-	body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, local, nil, true, 3)
+	body, err := s.APICall(ctx, "rest/db/completion", "GET", http.StatusOK, params, local, nil, true, maxRetries)
 	if err != nil {
 		oktetoLog.Infof("error calling 'rest/db/completion' local=%t syncthing API: %s", local, err)
 		if strings.Contains(err.Error(), "Client.Timeout") {
@@ -551,7 +554,7 @@ func (s *Syncthing) GetSyncthingStatus(ctx context.Context, folder *Folder, loca
 		"events":  "StateChanged",
 	}
 	scList := []StateChangedEvent{}
-	body, err := s.APICall(ctx, "rest/events", "GET", 200, params, local, nil, true, 3)
+	body, err := s.APICall(ctx, "rest/events", "GET", http.StatusOK, params, local, nil, true, maxRetries)
 	if err != nil {
 		oktetoLog.Infof("error getting events: %s", err.Error())
 		if strings.Contains(err.Error(), "Client.Timeout") {
@@ -577,7 +580,7 @@ func (s *Syncthing) GetSyncthingStatus(ctx context.Context, folder *Folder, loca
 	delete(params, "events")
 	delete(params, "limit")
 
-	body, err = s.APICall(ctx, "rest/events", "GET", 200, params, local, nil, true, 3)
+	body, err = s.APICall(ctx, "rest/events", "GET", http.StatusOK, params, local, nil, true, maxRetries)
 	if err != nil {
 		oktetoLog.Infof("error getting events: %s", err.Error())
 		if strings.Contains(err.Error(), "Client.Timeout") {
@@ -613,7 +616,7 @@ func (s *Syncthing) GetPullErrors(ctx context.Context, local bool) (int64, error
 		"events":  "FolderSummary",
 	}
 	fsList := []FolderSummaryEvent{}
-	body, err := s.APICall(ctx, "rest/events", "GET", 200, params, local, nil, true, 3)
+	body, err := s.APICall(ctx, "rest/events", "GET", http.StatusOK, params, local, nil, true, maxRetries)
 	if err != nil {
 		oktetoLog.Infof("error getting events: %s", err.Error())
 		if strings.Contains(err.Error(), "Client.Timeout") {
@@ -639,7 +642,7 @@ func (s *Syncthing) GetPullErrors(ctx context.Context, local bool) (int64, error
 	delete(params, "events")
 	delete(params, "limit")
 
-	body, err = s.APICall(ctx, "rest/events", "GET", 200, params, local, nil, true, 3)
+	body, err = s.APICall(ctx, "rest/events", "GET", http.StatusOK, params, local, nil, true, maxRetries)
 	if err != nil {
 		oktetoLog.Infof("error getting events: %s", err.Error())
 		if strings.Contains(err.Error(), "Client.Timeout") {
@@ -674,7 +677,7 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, local bool) error {
 		"events":  "FolderErrors",
 	}
 	folderErrorsList := []FolderErrorEvent{}
-	body, err := s.APICall(ctx, "rest/events", "GET", 200, params, local, nil, true, 3)
+	body, err := s.APICall(ctx, "rest/events", "GET", http.StatusOK, params, local, nil, true, maxRetries)
 	if err != nil {
 		oktetoLog.Infof("error getting events: %s", err.Error())
 		if strings.Contains(err.Error(), "Client.Timeout") {
@@ -701,7 +704,7 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, local bool) error {
 			delete(params, "events")
 			delete(params, "limit")
 
-			body, err = s.APICall(ctx, "rest/events", "GET", 200, params, local, nil, true, 3)
+			body, err = s.APICall(ctx, "rest/events", "GET", http.StatusOK, params, local, nil, true, maxRetries)
 			if err != nil {
 				oktetoLog.Infof("error getting events: %s", err.Error())
 				if strings.Contains(err.Error(), "Client.Timeout") {
@@ -751,7 +754,7 @@ func (s *Syncthing) GetInSynchronizationFile(ctx context.Context) string {
 		"timeout": "0",
 		"events":  "DownloadProgress",
 	}
-	body, err := s.APICall(ctx, "rest/events", "GET", 200, params, false, nil, true, 0)
+	body, err := s.APICall(ctx, "rest/events", "GET", http.StatusOK, params, false, nil, true, 0)
 	if err != nil {
 		oktetoLog.Infof("error getting GetInSynchronizationItem: %s", err.Error())
 		return ""
@@ -786,7 +789,7 @@ func getInSynchronizationLargestFile(e ItemEvent) string {
 
 // Restart restarts the syncthing process
 func (s *Syncthing) Restart(ctx context.Context) error {
-	_, err := s.APICall(ctx, "rest/system/restart", "POST", 200, nil, true, nil, false, 3)
+	_, err := s.APICall(ctx, "rest/system/restart", "POST", http.StatusOK, nil, true, nil, false, maxRetries)
 	return err
 }
 

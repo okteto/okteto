@@ -98,7 +98,7 @@ func (bc *OktetoBuilder) checkServiceToBuild(service string, manifest *model.Man
 	if isStack && bc.oktetoContext.IsOkteto() && !bc.Registry.IsOktetoRegistry(buildInfo.Image) {
 		buildInfo.Image = ""
 	}
-	buildHash := getBuildHashFromCommit(buildInfo, bc.Config.GetGitCommit())
+	buildHash := bc.hasher.hashService(buildInfo)
 	imageChecker := getImageChecker(buildInfo, bc.Config, bc.Registry)
 	imageWithDigest, err := imageChecker.getImageDigestReferenceForService(manifest.Name, service, buildInfo, buildHash)
 	if oktetoErrors.IsNotFound(err) {

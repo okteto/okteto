@@ -33,7 +33,7 @@ func (s *Syncthing) Monitor(ctx context.Context, disconnect chan error) {
 				continue
 			}
 			oktetoLog.Infof("syncthing ping error %d", retries)
-			if retries >= 3 {
+			if retries >= maxRetries {
 				oktetoLog.Infof("syncthing ping error, sending disconnect signal")
 				disconnect <- oktetoErrors.ErrLostSyncthing
 				return
@@ -74,8 +74,8 @@ func (s *Syncthing) checkLocalAndRemotePing(ctx context.Context) bool {
 }
 
 func (s *Syncthing) checkLocalAndRemoteStatus(ctx context.Context) error {
-	if err := s.IsHealthy(ctx, true, 3); err != nil {
+	if err := s.IsHealthy(ctx, true, maxRetries); err != nil {
 		return err
 	}
-	return s.IsHealthy(ctx, false, 3)
+	return s.IsHealthy(ctx, false, maxRetries)
 }
