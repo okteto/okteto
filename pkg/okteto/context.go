@@ -635,10 +635,12 @@ func GetContextCertificateStateless(certB64 string) (*x509.Certificate, error) {
 			}
 			if cert.Issuer.CommonName == config.OktetoDefaultSelfSignedIssuer {
 				hoursSinceInstall := time.Since(cert.NotBefore).Hours()
+				hoursInADay := 24
+				hoursInAWeek := 168
 				switch {
-				case hoursSinceInstall <= 24: // less than 1 day
+				case hoursSinceInstall <= float64(hoursInADay): // less than 1 day
 					oktetoLog.Information("Your Okteto installation is using selfsigned certificates. Please switch to your own certificates before production use.")
-				case hoursSinceInstall <= 168: // less than 1 week
+				case hoursSinceInstall <= float64(hoursInAWeek): // less than 1 week
 					oktetoLog.Warning("Your Okteto installation has been using selfsigned certificates for more than a day. It's important to use your own certificates before production use.")
 				default: // more than 1 week
 					oktetoLog.Fail("[PLEASE READ] Your Okteto installation has been using selfsigned certificates for more than a week. It's important to use your own certificates before production use.")
