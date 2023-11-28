@@ -25,7 +25,7 @@ import (
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/client"
 	"github.com/okteto/okteto/pkg/analytics"
-	buildCtx "github.com/okteto/okteto/pkg/build"
+	build "github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
@@ -61,7 +61,7 @@ type OktetoBuilderInterface interface {
 
 // OktetoBuilder runs the build of an image
 type OktetoBuilder struct {
-	OktetoContext buildCtx.OktetoContextInterface
+	OktetoContext build.OktetoContextInterface
 }
 
 // OktetoRegistryInterface checks if an image is at the registry
@@ -103,7 +103,7 @@ func setOutputMode(outputMode string) string {
 
 }
 
-func GetRegistryConfigFromOktetoConfig(okCtx buildCtx.OktetoContextInterface) *okteto.Config {
+func GetRegistryConfigFromOktetoConfig(okCtx build.OktetoContextInterface) *okteto.Config {
 
 	return &okteto.Config{
 		Cert:                        okCtx.GetCurrentCertStr(),
@@ -243,7 +243,7 @@ func (ob *OktetoBuilder) buildWithDocker(ctx context.Context, buildOptions *type
 	return nil
 }
 
-func validateImage(okctx buildCtx.OktetoContextInterface, imageTag string) error {
+func validateImage(okctx build.OktetoContextInterface, imageTag string) error {
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(okctx))
 	if strings.HasPrefix(imageTag, okctx.GetCurrentRegister()) && strings.Count(imageTag, "/") == 2 {
 		return nil
@@ -281,7 +281,7 @@ type regInterface interface {
 }
 
 // OptsFromBuildInfo returns the parsed options for the build from the manifest
-func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *types.BuildOptions, reg regInterface, okCtx buildCtx.OktetoContextInterface) *types.BuildOptions {
+func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *types.BuildOptions, reg regInterface, okCtx build.OktetoContextInterface) *types.BuildOptions {
 	if o == nil {
 		o = &types.BuildOptions{}
 	}

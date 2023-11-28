@@ -24,12 +24,12 @@ import (
 
 	"github.com/containerd/console"
 	"github.com/moby/buildkit/client"
-	"github.com/moby/buildkit/cmd/buildctl/build"
+	buildkit "github.com/moby/buildkit/cmd/buildctl/build"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth/authprovider"
 	"github.com/moby/buildkit/session/sshforward/sshprovider"
 	"github.com/moby/buildkit/util/progress/progressui"
-	buildCtx "github.com/okteto/okteto/pkg/build"
+	build "github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
@@ -46,7 +46,7 @@ const (
 type buildWriter struct{}
 
 // getSolveOpt returns the buildkit solve options
-func getSolveOpt(buildOptions *types.BuildOptions, okctx buildCtx.OktetoContextInterface) (*client.SolveOpt, error) {
+func getSolveOpt(buildOptions *types.BuildOptions, okctx build.OktetoContextInterface) (*client.SolveOpt, error) {
 	var localDirs map[string]string
 	var frontendAttrs map[string]string
 
@@ -123,7 +123,7 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx buildCtx.OktetoContextI
 	}
 
 	if len(buildOptions.Secrets) > 0 {
-		secretProvider, err := build.ParseSecret(buildOptions.Secrets)
+		secretProvider, err := buildkit.ParseSecret(buildOptions.Secrets)
 		if err != nil {
 			return nil, err
 		}
@@ -198,7 +198,7 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx buildCtx.OktetoContextI
 	return opt, nil
 }
 
-func getBuildkitClient(ctx context.Context, okctx buildCtx.OktetoContextInterface) (*client.Client, error) {
+func getBuildkitClient(ctx context.Context, okctx build.OktetoContextInterface) (*client.Client, error) {
 	builder := okctx.GetCurrentBuilder()
 	okctx.UseContextByBuilder()
 

@@ -28,8 +28,8 @@ import (
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	buildCtx "github.com/okteto/okteto/pkg/build"
-	"github.com/okteto/okteto/pkg/cmd/build"
+	build "github.com/okteto/okteto/pkg/build"
+	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -44,7 +44,7 @@ import (
 type Command struct {
 	GetManifest func(path string) (*model.Manifest, error)
 
-	Builder          build.OktetoBuilderInterface
+	Builder          buildCmd.OktetoBuilderInterface
 	Registry         registryInterface
 	analyticsTracker analyticsTrackerInterface
 }
@@ -66,14 +66,14 @@ type registryInterface interface {
 }
 
 // NewBuildCommand creates a struct to run all build methods
-func NewBuildCommand(analyticsTracker analyticsTrackerInterface, okCtx *buildCtx.OktetoContext) *Command {
+func NewBuildCommand(analyticsTracker analyticsTrackerInterface, okCtx *build.OktetoContext) *Command {
 
 	return &Command{
 		GetManifest: model.GetManifestV2,
-		Builder: &build.OktetoBuilder{
+		Builder: &buildCmd.OktetoBuilder{
 			OktetoContext: okCtx,
 		},
-		Registry:         registry.NewOktetoRegistry(build.GetRegistryConfigFromOktetoConfig(okCtx)),
+		Registry:         registry.NewOktetoRegistry(buildCmd.GetRegistryConfigFromOktetoConfig(okCtx)),
 		analyticsTracker: analyticsTracker,
 	}
 }
@@ -137,7 +137,7 @@ func Build(ctx context.Context, analyticsTracker analyticsTrackerInterface) *cob
 	return cmd
 }
 
-func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *buildCtx.OktetoContext) (Builder, error) {
+func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *build.OktetoContext) (Builder, error) {
 	var builder Builder
 
 	manifest, err := bc.GetManifest(options.File)
@@ -180,7 +180,7 @@ func validateDockerfile(file string) error {
 	return err
 }
 
-func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*buildCtx.OktetoContext, error) {
+func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*build.OktetoContext, error) {
 	ctxOpts := &contextCMD.ContextOptions{
 		Context:   options.K8sContext,
 		Namespace: options.Namespace,
@@ -235,7 +235,7 @@ func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*buildC
 	return oktetoContext, err
 }
 
-func defaultOktetoClientCfg(octx buildCtx.OktetoContextInterface) *okteto.OktetoClientCfg {
+func defaultOktetoClientCfg(octx build.OktetoContextInterface) *okteto.OktetoClientCfg {
 	if !octx.ExistsContext() {
 		return &okteto.OktetoClientCfg{}
 	}
