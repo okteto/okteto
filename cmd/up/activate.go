@@ -188,7 +188,8 @@ func (up *upContext) activate() error {
 
 		outByCommand := strings.Split(strings.TrimSpace(output), "\n")
 		var version, watches string
-		if len(outByCommand) >= 3 {
+		minOutCmdParts := 3
+		if len(outByCommand) >= minOutCmdParts {
 			version, watches = outByCommand[0], outByCommand[1]
 
 			if isWatchesConfigurationTooLow(watches) {

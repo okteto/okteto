@@ -22,6 +22,10 @@ import (
 	decor "github.com/vbauerster/mpb/v7/decor"
 )
 
+const (
+	totalProgressValue = 100
+)
+
 // SyncthingProgress tracks the progress of all the files syncthing
 type SyncthingProgress struct {
 	progressContainer *mpb.Progress
@@ -38,7 +42,7 @@ func NewSyncthingProgressBar(width int) *SyncthingProgress {
 
 func (s *SyncthingProgress) initProgressBar() {
 	s.progressBar = s.progressContainer.Add(
-		100,
+		totalProgressValue,
 		nil,
 		mpb.PrependDecorators(
 			decor.OnComplete(decor.Spinner(nil, decor.WCSyncSpace), "Files synchronized"),
@@ -69,7 +73,7 @@ func (s *SyncthingProgress) SetCurrent(v int64) {
 // Finish finishes the progress bar
 func (s *SyncthingProgress) Finish() {
 	if s.progressBar != nil {
-		s.progressBar.SetCurrent(100)
+		s.progressBar.SetCurrent(totalProgressValue)
 	}
 	s.progressContainer.Wait()
 }
@@ -80,7 +84,7 @@ func NewLineBarFiller(filler mpb.BarFiller) mpb.BarFiller {
 			oktetoLog.Infof("error writing to writer: %s", err)
 		}
 		filler.Fill(w, reqWidth, st)
-		percentage := Percentage(st.Total, st.Current, 100)
+		percentage := Percentage(st.Total, st.Current, totalProgressValue)
 		afterBarText := fmt.Sprintf(" %d%%\n", int(percentage))
 		if _, err := w.Write([]byte(afterBarText)); err != nil {
 			oktetoLog.Infof("error writing to writer: %s", err)

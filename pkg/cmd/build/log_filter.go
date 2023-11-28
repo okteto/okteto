@@ -68,7 +68,8 @@ var BuildKitMissingCacheTransformer TransformerFunc = func(vertex *client.Vertex
 	re := regexp.MustCompile(errorPattern)
 	matches := re.FindStringSubmatch(vertex.Error)
 
-	if len(matches) < 2 {
+	minMatches := 2
+	if len(matches) < minMatches {
 		return
 	}
 

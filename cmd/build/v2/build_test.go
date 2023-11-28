@@ -171,6 +171,10 @@ func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInter
 		Config:           cfg,
 		ioCtrl:           io.NewIOController(),
 		analyticsTracker: analyticsTracker,
+		hasher: &serviceHasher{
+			gitRepoCtrl:       fakeConfigRepo{},
+			buildContextCache: map[string]string{},
+		},
 	}
 }
 
@@ -810,7 +814,11 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			got := getBuildHashFromCommit(tc.input.buildInfo, tc.input.repo.sha)
+			got := newServiceHasher(fakeConfigRepo{
+				sha:     tc.input.repo.sha,
+				isClean: tc.input.repo.isClean,
+				err:     tc.input.repo.err,
+			}).hashProjectCommit(tc.input.buildInfo)
 			expectedHash := sha256.Sum256([]byte(tc.expected))
 			assert.Equal(t, hex.EncodeToString(expectedHash[:]), got)
 		})

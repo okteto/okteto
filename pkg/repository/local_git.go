@@ -147,9 +147,10 @@ func (*LocalGit) parseGitStatus(gitStatusOutput string) (git.Status, error) {
 		if line == "" {
 			continue
 		}
+		maxValidGitStatusParts := 2
 		// line example values can be: "M modified-file.go", "?? new-file.go", etc
-		parts := strings.SplitN(strings.TrimLeft(line, " "), " ", 2)
-		if len(parts) == 2 {
+		parts := strings.SplitN(strings.TrimLeft(line, " "), " ", maxValidGitStatusParts)
+		if len(parts) == maxValidGitStatusParts {
 			status[strings.Trim(parts[1], " ")] = &git.FileStatus{
 				Staging: git.StatusCode([]byte(parts[0])[0]),
 			}

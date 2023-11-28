@@ -568,8 +568,9 @@ func translateHealtcheckCurlToHTTP(healthcheck *HealthCheck) {
 	s := strings.Join(healthcheck.Test, " ")
 	testStrings := strings.Split(s, " ")
 
+	minTestStrings := 2
 	// There should be at least two strings, the curl binary and url.
-	if len(testStrings) < 2 {
+	if len(testStrings) < minTestStrings {
 		return
 	}
 
@@ -801,8 +802,9 @@ func (sc *StackSecurityContext) UnmarshalYAML(unmarshal func(interface{}) error)
 	err := unmarshal(&rawSecurityContext)
 	if err == nil {
 		if strings.Contains(rawSecurityContext, ":") {
+			securityContextLength := 2
 			parts := strings.Split(rawSecurityContext, ":")
-			if len(parts) != 2 {
+			if len(parts) != securityContextLength {
 				return fmt.Errorf("SecurityContext '%s' is malformed. Only 'dddd:dddd' is supported", rawSecurityContext)
 			}
 			runAsUser, err := strconv.ParseInt(parts[0], 10, 64)
@@ -907,8 +909,9 @@ func getPortWithoutMapping(p *PortRaw, portString string) error {
 
 func getRangePorts(portString string) (int32, int32, apiv1.Protocol, error) {
 	if strings.Contains(portString, "-") {
+		rangePortsLength := 2
 		rangeSplitted := strings.Split(portString, "-")
-		if len(rangeSplitted) != 2 {
+		if len(rangeSplitted) != rangePortsLength {
 			return 0, 0, "", fmt.Errorf("Can not convert '%s' to a port.", portString)
 		}
 		fromString, toString := rangeSplitted[0], rangeSplitted[1]
@@ -941,8 +944,9 @@ func getPortAndProtocol(portString, originalPortString string) (string, apiv1.Pr
 	var err error
 	protocol := apiv1.ProtocolTCP
 	if strings.Contains(portString, "/") {
+		protocolLength := 2
 		portProtocolSplitted := strings.Split(portString, "/")
-		if len(portProtocolSplitted) != 2 {
+		if len(portProtocolSplitted) != protocolLength {
 			return "", protocol, fmt.Errorf("Can not convert '%s' to a port.", originalPortString)
 		}
 		portString = portProtocolSplitted[0]
@@ -956,7 +960,8 @@ func getPortAndProtocol(portString, originalPortString string) (string, apiv1.Pr
 
 func getPortWithMapping(p *PortRaw, portString string) error {
 	localToContainer := strings.Split(portString, ":")
-	if len(localToContainer) > 3 {
+	maxLength := 3
+	if len(localToContainer) > maxLength {
 		return fmt.Errorf(forward.MalformedPortForward, portString)
 	}
 
@@ -1175,6 +1180,7 @@ func (healthcheckTest *HealtcheckTest) UnmarshalYAML(unmarshal func(interface{})
 	var rawList []string
 	err := unmarshal(&rawList)
 
+	healthCheckLength := 2
 	if err == nil {
 		if len(rawList) == 0 {
 			return fmt.Errorf("healtcheck.test can not be an empty list")
@@ -1186,7 +1192,7 @@ func (healthcheckTest *HealtcheckTest) UnmarshalYAML(unmarshal func(interface{})
 		case "CMD":
 			*healthcheckTest = rawList[1:]
 		case "CMD-SHELL":
-			if len(rawList) != 2 {
+			if len(rawList) != healthCheckLength {
 				return fmt.Errorf("'CMD-SHELL' healtcheck.test must have exactly 2 elements")
 			}
 			*healthcheckTest, err = shellquote.Split(rawList[1])
@@ -1219,9 +1225,13 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
+	stackVolumePartsOnlyRemote := 1
+	stackVolumeParts := 2
+	stackVolumeMaxParts := 3
+
 	parts := strings.Split(raw, ":")
 	if runtime.GOOS == "windows" {
-		if len(parts) >= 3 {
+		if len(parts) >= stackVolumeMaxParts {
 			localPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
 			if filepath.IsAbs(localPath) {
 				parts = append([]string{localPath}, parts[2:]...)
@@ -1229,10 +1239,10 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
-	if len(parts) == 2 {
+	if len(parts) == stackVolumeParts {
 		v.LocalPath = parts[0]
 		v.RemotePath = parts[1]
-	} else if len(parts) == 1 {
+	} else if len(parts) == stackVolumePartsOnlyRemote {
 		v.RemotePath = parts[0]
 	} else {
 		return fmt.Errorf("Syntax error volumes should be 'local_path:remote_path' or 'remote_path'")

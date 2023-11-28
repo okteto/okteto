@@ -37,6 +37,27 @@ linters-settings:
       const:
         YEAR: '2023'
     template-path: .copyright-header.tmpl
+  gomnd:
+    checks:
+      - argument
+      - case
+      - condition
+      # - operation
+      # - return
+      # - assign
+    ignored-functions:
+      - '\.NewWriter'
+      - '\.NewTabWriter'
+      - '\.WriteFile'
+      - '^time.'
+      - '^os.'
+      - '^bcrypt.'
+      - '^math.'
+      - '^big.'
+      - '\.SetIndent'
+      - int
+      - make
+      - '\.WithTimeout'
 
 # All possible linters can be found https://golangci-lint.run/usage/linters/
 linters:
@@ -60,6 +81,8 @@ linters:
     - decorder
     - exportloopref
     - makezero
+    - gomnd
+    - musttag
     - bodyclose
     - durationcheck
     - exhaustive

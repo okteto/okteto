@@ -39,8 +39,10 @@ func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return f.UnmarshalExtendedForm(unmarshal)
 	}
 
+	maxForwardParts := 3
+	minForwardParts := 2
 	parts := strings.Split(raw, ":")
-	if len(parts) < 2 || len(parts) > 3 {
+	if len(parts) < minForwardParts || len(parts) > maxForwardParts {
 		return fmt.Errorf(MalformedPortForward, raw)
 	}
 
@@ -50,7 +52,7 @@ func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 	f.Local = localPort
 
-	if len(parts) == 2 {
+	if len(parts) == minForwardParts {
 		p, err := strconv.Atoi(parts[1])
 		if err != nil {
 			return fmt.Errorf(MalformedPortForward, raw)

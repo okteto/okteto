@@ -546,8 +546,9 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVaria
 	}
 
 	for _, v := range commandEnvVariables {
-		kv := strings.SplitN(v, "=", 2)
-		if len(kv) != 2 {
+		varsLength := 2
+		kv := strings.SplitN(v, "=", varsLength)
+		if len(kv) != varsLength {
 			if kv[0] == "" {
 				return nil, fmt.Errorf("invalid variable value '%s': please review the accepted formats at https://www.okteto.com/docs/reference/manifest/#environment-string-optional ", v)
 			}

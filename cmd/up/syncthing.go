@@ -26,6 +26,11 @@ import (
 	"github.com/spf13/afero"
 )
 
+const (
+	defaultProgressBarWidth = 40
+	totalProgressValue      = 100
+)
+
 func (up *upContext) initializeSyncthing() error {
 	sy, err := syncthing.New(up.Dev)
 	if err != nil {
@@ -140,7 +145,7 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 		defer oktetoLog.StopSpinner()
 	}
 
-	progressBar := utils.NewSyncthingProgressBar(40)
+	progressBar := utils.NewSyncthingProgressBar(defaultProgressBarWidth)
 	defer progressBar.Finish()
 
 	quit := make(chan bool)
@@ -201,7 +206,7 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 		}
 	}
 
-	progressBar.SetCurrent(100)
+	progressBar.SetCurrent(totalProgressValue)
 
 	return nil
 }

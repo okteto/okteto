@@ -38,6 +38,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	maxVolumeParamDefinition   = 3
+	volumeParamsWithSubPath    = 3
+	volumeParamsWithoutSubpath = 2
+	defaultSecretMode          = 420
+)
+
 var (
 
 	// errDevModeNotValid is raised when development mode in manifest is not 'sync' nor 'hybrid'
@@ -160,9 +167,11 @@ func (e *BuildArg) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err != nil {
 		return err
 	}
-	parts := strings.SplitN(raw, "=", 2)
+	maxBuildArgsParts := 2
+
+	parts := strings.SplitN(raw, "=", maxBuildArgsParts)
 	e.Name = parts[0]
-	if len(parts) == 2 {
+	if len(parts) == maxBuildArgsParts {
 		e.Value = parts[1]
 		return nil
 	}
@@ -417,9 +426,11 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err != nil {
 		return err
 	}
+	secretWithModeLength := 3
+	secretWithoutModeLength := 2
 	parts := strings.Split(rawExpanded, ":")
 	if runtime.GOOS == "windows" {
-		if len(parts) >= 3 {
+		if len(parts) >= secretWithModeLength {
 			localPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
 			if filepath.IsAbs(localPath) {
 				parts = append([]string{localPath}, parts[2:]...)
@@ -429,21 +440,21 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	// if the secret is not formatted correctly we return an empty secret (i.e. empty LocalPath and RemotePath)
 	// and we rely on the secret validation to return the appropriate error to the user
-	if len(parts) < 2 || len(parts) > 3 {
+	if len(parts) < secretWithoutModeLength || len(parts) > secretWithModeLength {
 		return nil
 	}
 
 	s.LocalPath = parts[0]
 	s.RemotePath = parts[1]
 
-	if len(parts) == 3 {
+	if len(parts) == secretWithModeLength {
 		mode, err := strconv.ParseInt(parts[2], 8, 32)
 		if err != nil {
 			return fmt.Errorf("error parsing secret '%s' mode: %s", parts[0], err)
 		}
 		s.Mode = int32(mode)
 	} else {
-		s.Mode = 420
+		s.Mode = defaultSecretMode
 	}
 
 	return nil
@@ -451,7 +462,7 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (s Secret) MarshalYAML() (interface{}, error) {
-	if s.Mode == 420 {
+	if s.Mode == defaultSecretMode {
 		return fmt.Sprintf("%s:%s:%s", s.LocalPath, s.RemotePath, strconv.FormatInt(int64(s.Mode), 8)), nil
 	}
 	return fmt.Sprintf("%s:%s", s.LocalPath, s.RemotePath), nil
@@ -464,9 +475,9 @@ func (f *Reverse) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err != nil {
 		return err
 	}
-
-	parts := strings.SplitN(raw, ":", 2)
-	if len(parts) != 2 {
+	maxReverseParts := 2
+	parts := strings.SplitN(raw, ":", maxReverseParts)
+	if len(parts) != maxReverseParts {
 		return fmt.Errorf("Wrong port-forward syntax '%s', must be of the form 'localPort:RemotePort'", raw)
 	}
 	remotePort, err := strconv.Atoi(parts[0])
@@ -531,8 +542,9 @@ func (v *Volume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	parts := strings.SplitN(raw, ":", 2)
-	if len(parts) == 2 {
+	maxVolumeParts := 2
+	parts := strings.SplitN(raw, ":", maxVolumeParts)
+	if len(parts) == maxVolumeParts {
 		oktetoLog.Yellow("The syntax '%s' is deprecated in the 'volumes' field and will be removed in a future version. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
 		v.LocalPath, err = env.ExpandEnv(parts[0])
 		if err != nil {
@@ -558,8 +570,11 @@ func (s *SyncFolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
+	windowsSyncFolderParts := 3
+	syncFolderParts := 2
+
 	parts := strings.Split(raw, ":")
-	if len(parts) == 2 {
+	if len(parts) == syncFolderParts {
 		s.LocalPath, err = env.ExpandEnv(parts[0])
 		if err != nil {
 			return err
@@ -569,7 +584,7 @@ func (s *SyncFolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return err
 		}
 		return nil
-	} else if len(parts) == 3 {
+	} else if len(parts) == windowsSyncFolderParts {
 		windowsPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
 		s.LocalPath, err = env.ExpandEnv(windowsPath)
 		if err != nil {
@@ -606,12 +621,12 @@ func (v *ExternalVolume) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		return err
 	}
 
-	parts := strings.SplitN(raw, ":", 3)
+	parts := strings.SplitN(raw, ":", maxVolumeParamDefinition)
 	switch len(parts) {
-	case 2:
+	case volumeParamsWithoutSubpath:
 		v.Name = parts[0]
 		v.MountPath = parts[1]
-	case 3:
+	case volumeParamsWithSubPath:
 		v.Name = parts[0]
 		v.SubPath = parts[1]
 		v.MountPath = parts[2]

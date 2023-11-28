@@ -43,6 +43,7 @@ var (
 
 const (
 	defaultWorkdirPath = "/okteto"
+	maxSystemPorts     = 1024
 )
 
 // GetDevDefaultsFromImage sets dev defaults from a image
@@ -190,7 +191,7 @@ func setForwardsFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *
 	}
 	for _, port := range ports {
 		localPort := port
-		if port <= 1024 {
+		if port <= maxSystemPorts {
 			localPort = port + 8000
 		}
 		for seenPorts[localPort] {

@@ -28,6 +28,10 @@ import (
 	forwardModel "github.com/okteto/okteto/pkg/model/forward"
 )
 
+const (
+	maxSystemPorts = 1024
+)
+
 // ForwardManager handles the lifecycle of all the forwards
 type ForwardManager struct {
 	localInterface  string
@@ -75,7 +79,7 @@ func (fm *ForwardManager) canAdd(localPort int, checkAvailable bool) error {
 	}
 
 	if !model.IsPortAvailable(fm.localInterface, localPort) {
-		if localPort <= 1024 {
+		if localPort <= maxSystemPorts {
 			os := runtime.GOOS
 			switch os {
 			case "darwin":
@@ -123,7 +127,8 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 	oktetoLog.Info("starting SSH forward manager")
 
 	ticker := time.NewTicker(200 * time.Millisecond)
-	to := time.Now().Add(10 * time.Second)
+	timeoutDuration := 10 * time.Second
+	to := time.Now().Add(timeoutDuration)
 	retries := 0
 
 	for {

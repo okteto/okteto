@@ -18,7 +18,6 @@ import (
 	"strconv"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
 )
@@ -116,16 +115,6 @@ func (oc oktetoBuilderConfig) GetGitCommit() string {
 // GetAnonymizedRepo returns the repository url without credentials
 func (oc oktetoBuilderConfig) GetAnonymizedRepo() string {
 	return oc.repository.GetAnonymizedRepo()
-}
-
-func (oc oktetoBuilderConfig) GetBuildContextHash(buildInfo *model.BuildInfo) string {
-	buildContext := buildInfo.Context
-	treeHash, err := oc.repository.GetTreeHash(buildInfo.Context)
-	if err != nil {
-		oktetoLog.Info("error trying to get tree hash for build context '%s': %w", buildContext, err)
-	}
-
-	return getBuildHashFromGitHash(buildInfo, treeHash, "tree_hash")
 }
 
 func (oc oktetoBuilderConfig) IsSmartBuildsEnabled() bool {

@@ -90,7 +90,8 @@ More info about docker credentials helpers here: https://github.com/docker/docke
 }
 
 func IsRegistryCredentialHelperCommand(args []string) bool {
-	if len(args) != 3 {
+	validArgsLength := 3
+	if len(args) != validArgsLength {
 		return false
 	}
 
