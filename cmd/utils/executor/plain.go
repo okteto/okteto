@@ -25,7 +25,9 @@ type plainExecutor struct {
 }
 
 func newPlainExecutor() *plainExecutor {
-	return &plainExecutor{}
+	return &plainExecutor{
+		displayer: displayer.NewDisplayer(oktetoLog.PlainFormat, nil, nil),
+	}
 }
 
 func (e *plainExecutor) startCommand(cmd *exec.Cmd) error {
