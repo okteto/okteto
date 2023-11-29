@@ -36,17 +36,19 @@ func getContextsSelection(ctxOptions *ContextOptions) []utils.SelectorItem {
 	if len(k8sClusters) > 0 {
 		clusters = append(clusters, getK8sClusters(k8sClusters)...)
 	}
-	clusters = append(clusters, []utils.SelectorItem{
-		{
+
+	if len(clusters) > 0 {
+		clusters = append(clusters, utils.SelectorItem{
 			Label:  "",
 			Enable: false,
-		},
-		{
-			Name:   newOEOption,
-			Label:  newOEOption,
-			Enable: true,
-		},
-	}...)
+		})
+	}
+
+	clusters = append(clusters, utils.SelectorItem{
+		Name:   newOEOption,
+		Label:  newOEOption,
+		Enable: true,
+	})
 
 	return clusters
 }
