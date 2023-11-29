@@ -18,6 +18,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCopyFile(t *testing.T) {
@@ -69,4 +72,40 @@ func TestFileExists(t *testing.T) {
 	if !FileExists(p) {
 		t.Errorf("fail to detect existing file")
 	}
+}
+
+func TestFileExistsAndNotDir_NotFound(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	result := FileExistsAndNotDir("not_found.txt", fs)
+	assert.Equal(t, false, result)
+}
+
+func TestFileExistsAndNotDir_IsDir(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	err := fs.Mkdir("a_directory", 0755)
+	assert.NoError(t, err)
+
+	result := FileExistsAndNotDir("a_directory", fs)
+	assert.Equal(t, false, result)
+}
+
+func TestFileExistsAndNotDir_IsFile(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	err := afero.WriteFile(fs, "a_file.txt", []byte("content"), 0644)
+	assert.NoError(t, err)
+
+	result := FileExistsAndNotDir("a_file.txt", fs)
+	assert.Equal(t, true, result)
+}
+
+func TestFileExistsWithFilesystem(t *testing.T) {
+	fs := afero.NewMemMapFs()
+
+	exists := FileExistsWithFilesystem("random-file", fs)
+	assert.Equal(t, false, exists)
+
+	err := afero.WriteFile(fs, "random-file", []byte("content"), 0644)
+	assert.NoError(t, err)
+	exists = FileExistsWithFilesystem("random-file", fs)
+	assert.Equal(t, true, exists)
 }

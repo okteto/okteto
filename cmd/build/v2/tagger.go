@@ -16,11 +16,10 @@ package v2
 import (
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/okteto"
-
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
 type imageTaggerInterface interface {

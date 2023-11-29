@@ -32,6 +32,32 @@ linters-settings:
   govet:
     enable:
       - fieldalignment
+  goheader:
+    values:
+      const:
+        YEAR: '2023'
+    template-path: .copyright-header.tmpl
+  gomnd:
+    checks:
+      - argument
+      - case
+      - condition
+      # - operation
+      # - return
+      # - assign
+    ignored-functions:
+      - '\.NewWriter'
+      - '\.NewTabWriter'
+      - '\.WriteFile'
+      - '^time.'
+      - '^os.'
+      - '^bcrypt.'
+      - '^math.'
+      - '^big.'
+      - '\.SetIndent'
+      - int
+      - make
+      - '\.WithTimeout'
 
 # All possible linters can be found https://golangci-lint.run/usage/linters/
 linters:
@@ -45,6 +71,21 @@ linters:
     - unparam
     - tenv
     - tparallel
+    - gci
+    - goheader
+    - unconvert
+    - predeclared
+    - asciicheck
+    - asasalint
+    - bidichk
+    - decorder
+    - exportloopref
+    - makezero
+    - gomnd
+    - musttag
+    - bodyclose
+    - durationcheck
+    - exhaustive
 
 issues:
   # Maximum issues count per one linter. Set to 0 to disable. Default is 50.

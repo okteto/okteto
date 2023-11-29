@@ -24,21 +24,22 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/divert"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/registry"
-
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/internal/test"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/deps"
+	"github.com/okteto/okteto/pkg/divert"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -144,11 +145,11 @@ var fakeManifest *model.Manifest = &model.Manifest{
 }
 
 var fakeManifestWithDependency *model.Manifest = &model.Manifest{
-	Dependencies: model.ManifestDependencies{
-		"a": &model.Dependency{
+	Dependencies: deps.ManifestSection{
+		"a": &deps.Dependency{
 			Namespace: "b",
 		},
-		"b": &model.Dependency{},
+		"b": &deps.Dependency{},
 	},
 }
 
@@ -319,7 +320,7 @@ type fakeDeployer struct {
 	externalControlProvider fakeExternalControlProvider
 }
 
-func (d fakeDeployer) Get(_ context.Context, _ *Options, _ builderInterface, cmapHandler configMapHandler, _ okteto.K8sClientProvider, _ kubeConfigHandler, _ portGetterFunc) (deployerInterface, error) {
+func (d fakeDeployer) Get(_ context.Context, _ *Options, _ builderInterface, cmapHandler configMapHandler, _ okteto.K8sClientProvider, _ kubeConfigHandler, _ portGetterFunc, _ *io.IOController) (deployerInterface, error) {
 	return &localDeployer{
 		Proxy:              d.proxy,
 		Executor:           d.executor,
@@ -432,7 +433,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	c := &DeployCommand{
 		GetManifest:       getErrorManifest,
 		GetDeployer:       fakeDeployer.Get,
-		Builder:           buildv2.NewBuilder(builder, registry, fakeTracker),
+		Builder:           buildv2.NewBuilder(builder, registry, io.NewIOController(), fakeTracker),
 		K8sClientProvider: fakeK8sClientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider),
 	}
@@ -923,10 +924,18 @@ func (f *fakeExternalControlProvider) getFakeExternalControl(_ *rest.Config) Ext
 	return f.control
 }
 
+type fakeEndpointControl struct {
+	err       error
+	endpoints []string
+}
+
+func (f *fakeEndpointControl) List(_ context.Context, _ *EndpointsOptions, _ string) ([]string, error) {
+	return f.endpoints, f.err
+}
+
 func getFakeEndpoint() (EndpointGetter, error) {
 	return EndpointGetter{
-		K8sClientProvider: test.NewFakeK8sProvider(),
-		endpointControl:   &fakeExternalControl{},
+		endpointControl: &fakeEndpointControl{},
 	}, nil
 }
 
@@ -1062,11 +1071,11 @@ func (fd fakePipelineDeployer) ExecuteDeployPipeline(_ context.Context, _ *pipel
 
 func TestDeployDependencies(t *testing.T) {
 	fakeManifest := &model.Manifest{
-		Dependencies: model.ManifestDependencies{
-			"a": &model.Dependency{
+		Dependencies: deps.ManifestSection{
+			"a": &deps.Dependency{
 				Namespace: "b",
 			},
-			"b": &model.Dependency{},
+			"b": &deps.Dependency{},
 		},
 	}
 	type config struct {
@@ -1316,8 +1325,8 @@ func TestShouldRunInRemoteDeploy(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
-			t.Setenv(constants.OktetoDeployRemote, string(tt.remoteDeploy))
-			t.Setenv(constants.OktetoForceRemote, string(tt.remoteForce))
+			t.Setenv(constants.OktetoDeployRemote, tt.remoteDeploy)
+			t.Setenv(constants.OktetoForceRemote, tt.remoteForce)
 			result := shouldRunInRemote(tt.opts)
 			assert.Equal(t, result, tt.expected)
 		})
@@ -1411,7 +1420,7 @@ func Test_GetDeployer(t *testing.T) {
 			ctx := context.TODO()
 			got, err := GetDeployer(ctx, tt.opts, nil, &fakeCmapHandler{}, &fakeK8sProvider{}, &fakeKubeConfig{
 				config: &rest.Config{},
-			}, tt.portGetter)
+			}, tt.portGetter, io.NewIOController())
 
 			if tt.expectedErr == nil {
 				require.NotNil(t, got)

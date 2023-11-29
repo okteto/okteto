@@ -250,7 +250,8 @@ func destroyIngresses(ctx context.Context, s *model.Stack, c kubernetes.Interfac
 
 func waitForPodsToBeDestroyed(ctx context.Context, s *model.Stack, c *kubernetes.Clientset) error {
 	ticker := time.NewTicker(100 * time.Millisecond)
-	timeout := time.Now().Add(300 * time.Second)
+	timeoutDuration := 300 * time.Second
+	timeout := time.Now().Add(timeoutDuration)
 
 	selector := map[string]string{model.StackNameLabel: format.ResourceK8sMetaString(s.Name)}
 	for time.Now().Before(timeout) {

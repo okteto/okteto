@@ -28,7 +28,6 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
-
 	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -99,7 +98,8 @@ func (p *PortForwardManager) Add(f forward.Forward) error {
 	}
 
 	if !model.IsPortAvailable(p.iface, f.Local) {
-		if f.Local <= 1024 {
+		maxSystemPorts := 1024
+		if f.Local <= maxSystemPorts {
 			os := runtime.GOOS
 			switch os {
 			case "darwin":

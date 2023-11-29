@@ -1,3 +1,16 @@
+// Copyright 2023 The Okteto Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package remote
 
 import (
@@ -9,14 +22,17 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/spf13/afero"
 )
 
 // OktetoBuilderInterface runs the build of an image
 type oktetoBuilderInterface interface {
-	Run(ctx context.Context, buildOptions *types.BuildOptions) error
+	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error
 }
 
 type OktetoRegistryInterface interface {
@@ -33,15 +49,17 @@ type OktetoRegistryInterface interface {
 type OktetoBuilder struct {
 	Builder  oktetoBuilderInterface
 	Registry OktetoRegistryInterface
+	ioCtrl   *io.IOController
 }
 
 // NewBuilderFromScratch creates a new okteto builder
-func NewBuilderFromScratch() *OktetoBuilder {
+func NewBuilderFromScratch(ioCtrl *io.IOController) *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
 	registry := registry.NewOktetoRegistry(okteto.Config{})
 	return &OktetoBuilder{
 		Builder:  builder,
 		Registry: registry,
+		ioCtrl:   ioCtrl,
 	}
 }
 
@@ -64,11 +82,11 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		options.File = filepath.Join(path, "Dockerfile")
 	}
 
-	if err := utils.CheckIfRegularFile(options.File); err != nil {
-		return fmt.Errorf("%s: %s", oktetoErrors.InvalidDockerfile, err.Error())
+	if exists := filesystem.FileExistsAndNotDir(options.File, afero.NewOsFs()); !exists {
+		return fmt.Errorf("%s: '%s' is not a regular file", oktetoErrors.InvalidDockerfile, options.File)
 	}
 
-	if err := bc.Builder.Run(ctx, options); err != nil {
+	if err := bc.Builder.Run(ctx, options, bc.ioCtrl); err != nil {
 		analytics.TrackBuild(false)
 		return err
 	}

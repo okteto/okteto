@@ -14,18 +14,14 @@
 
         # RELEASE_TAG is the release tag that we want to release
         RELEASE_TAG="${1}"
+        # PLATFORMS is the arch's we want to release
+        PLATFORMS="${2}"
 
         if [ -z "$RELEASE_TAG" ]; then
                 commit=$(git rev-parse --short HEAD)
                 RELEASE_TAG="$commit"
         fi
 
-        name="okteto/okteto:${RELEASE_TAG}"
-
-        echo "Pushing ${name}"
-        export DOCKER_BUILDKIT=1
-        echo "$DOCKER_PASS" | docker login --username "$DOCKER_USER" --password-stdin
-        docker build -t "$name" --build-arg VERSION_STRING="${RELEASE_TAG}" .
-        docker push "$name"
+        okteto build --platform ${PLATFORMS} --build-arg VERSION_STRING="${RELEASE_TAG}" -t "okteto/okteto:${RELEASE_TAG}" -f Dockerfile .
 
 ); }

@@ -33,7 +33,6 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/ssh"
-
 	"github.com/spf13/cobra"
 )
 
@@ -146,13 +145,14 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		}
 
 		retries := 0
+		maxRetries := 10
 		ticker := time.NewTicker(500 * time.Millisecond)
 		for {
 			if apps.IsDevModeOn(app) {
 				break
 			}
 			retries++
-			if retries >= 10 {
+			if retries >= maxRetries {
 				return oktetoErrors.UserError{
 					E:    fmt.Errorf("development mode is not enabled"),
 					Hint: "Run 'okteto up' to enable it and try again",

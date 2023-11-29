@@ -1,9 +1,21 @@
+// Copyright 2023 The Okteto Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package v2
 
 import (
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,17 +29,20 @@ type fakeConfigRegistry struct {
 func (fcr fakeConfigRegistry) HasGlobalPushAccess() (bool, error) { return fcr.access, fcr.err }
 
 type fakeConfigRepo struct {
-	err      error
-	sha      string
-	url      string
-	treeHash string
-	isClean  bool
+	err     error
+	sha     string
+	url     string
+	isClean bool
 }
 
 func (fcr fakeConfigRepo) GetSHA() (string, error)            { return fcr.sha, fcr.err }
 func (fcr fakeConfigRepo) IsClean() (bool, error)             { return fcr.isClean, fcr.err }
 func (fcr fakeConfigRepo) GetAnonymizedRepo() string          { return fcr.url }
-func (fcr fakeConfigRepo) GetTreeHash(string) (string, error) { return fcr.treeHash, fcr.err }
+func (fcr fakeConfigRepo) GetTreeHash(string) (string, error) { return fcr.sha, fcr.err }
+
+type fakeLogger struct{}
+
+func (fl fakeLogger) Infof(format string, args ...interface{}) {}
 
 func TestGetConfig(t *testing.T) {
 	type input struct {
@@ -138,7 +153,7 @@ func TestGetConfig(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			cfg := getConfig(tc.input.reg, tc.input.repo)
+			cfg := getConfig(tc.input.reg, tc.input.repo, fakeLogger{})
 			assert.Equal(t, tc.expected, cfg)
 		})
 	}
@@ -218,19 +233,4 @@ func Test_GetAnonymizedRepo(t *testing.T) {
 	}
 
 	require.Equal(t, "repository url", cfg.GetAnonymizedRepo())
-}
-
-func TestGetBuildContextHash(t *testing.T) {
-	cfg := oktetoBuilderConfig{
-		repository: fakeConfigRepo{
-			treeHash: "test",
-		},
-	}
-
-	oktetoBuildHash := "9bb4ac6e28aaf8eb67e453cf9d593ac35e34c9766b92dd482b1833ff66ec49ca"
-	buildInfo := &model.BuildInfo{
-		Args:    model.BuildArgs{{Name: "testName", Value: "testValue"}},
-		Secrets: model.BuildSecrets{"testNameSecret": "testValueSecret"},
-	}
-	require.Equal(t, oktetoBuildHash, cfg.GetBuildContextHash(buildInfo))
 }

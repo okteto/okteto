@@ -23,7 +23,7 @@ import (
 )
 
 type stateBeforeSleeping struct {
-	Replicas int
+	Replicas int `json:"replicas"`
 }
 
 func getPreviousAppReplicas(app App) int32 {

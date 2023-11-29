@@ -507,7 +507,8 @@ func getActiveTemplate() string {
 }
 
 func getInactiveTemplate() string {
-	whitespaces := strings.Repeat(" ", 2)
+	numOfSpaces := 2
+	whitespaces := strings.Repeat(" ", numOfSpaces)
 	result := fmt.Sprintf("{{if .Enable}}%s{{ .Label }}{{else}}%s{{ .Label }}{{end}}", whitespaces, whitespaces)
 	result = changeColorForWindows(result)
 	return result

@@ -18,6 +18,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
@@ -29,13 +31,19 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
-	"os"
+)
+
+type outputFormat string
+
+const (
+	// TTYFormat is the default format for the output
+	TTYFormat outputFormat = "tty"
 )
 
 // Command defines the build command
@@ -45,6 +53,7 @@ type Command struct {
 	Builder          build.OktetoBuilderInterface
 	Registry         registryInterface
 	analyticsTracker analyticsTrackerInterface
+	ioCtrl           *io.IOController
 }
 
 type analyticsTrackerInterface interface {
@@ -64,11 +73,12 @@ type registryInterface interface {
 }
 
 // NewBuildCommand creates a struct to run all build methods
-func NewBuildCommand(analyticsTracker analyticsTrackerInterface) *Command {
+func NewBuildCommand(ioCtrl *io.IOController, analyticsTracker analyticsTrackerInterface) *Command {
 	return &Command{
 		GetManifest:      model.GetManifestV2,
 		Builder:          &build.OktetoBuilder{},
 		Registry:         registry.NewOktetoRegistry(okteto.Config{}),
+		ioCtrl:           ioCtrl,
 		analyticsTracker: analyticsTracker,
 	}
 }
@@ -79,22 +89,21 @@ const (
 )
 
 // Build build and optionally push a Docker image
-func Build(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
-
+func Build(ctx context.Context, ioCtrl *io.IOController, at analyticsTrackerInterface) *cobra.Command {
 	options := &types.BuildOptions{}
 	cmd := &cobra.Command{
 		Use:   "build [service...]",
 		Short: "Build and push the images defined in the 'build' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			options.CommandArgs = args
-			bc := NewBuildCommand(at)
+			bc := NewBuildCommand(ioCtrl, at)
 			// The context must be loaded before reading manifest. Otherwise,
 			// secrets will not be resolved when GetManifest is called and
 			// the manifest will load empty values.
 			if err := bc.loadContext(ctx, options); err != nil {
 				return err
 			}
-
+			bc.ioCtrl.Logger().Info("context loaded")
 			builder, err := bc.getBuilder(options)
 			if err != nil {
 				return err
@@ -120,7 +129,7 @@ func Build(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 	cmd.Flags().BoolVarP(&options.NoCache, "no-cache", "", false, "do not use cache when building the image")
 	cmd.Flags().StringArrayVar(&options.CacheFrom, "cache-from", nil, "cache source images")
 	cmd.Flags().StringArrayVar(&options.ExportCache, "export-cache", nil, "export cache images")
-	cmd.Flags().StringVarP(&options.OutputMode, "progress", "", oktetoLog.TTYFormat, "show plain/tty build output")
+	cmd.Flags().StringVarP(&options.OutputMode, "progress", "", string(TTYFormat), "show plain/tty build output")
 	cmd.Flags().StringArrayVar(&options.BuildArgs, "build-arg", nil, "set build-time variables")
 	cmd.Flags().StringArrayVar(&options.Secrets, "secret", nil, "secret files exposed to the build. Format: id=mysecret,src=/local/secret")
 	cmd.Flags().StringVar(&options.Platform, "platform", "", "set platform if server is multi-platform capable")
@@ -138,13 +147,15 @@ func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
 			return nil, err
 		}
 
-		oktetoLog.Infof("The manifest %s is not v2 compatible, falling back to building as a v1 manifest: %v", options.File, err)
-		builder = buildv1.NewBuilder(bc.Builder, bc.Registry)
+		bc.ioCtrl.Logger().Infof("manifest located at %s is not v2 compatible: %s", options.File, err)
+		bc.ioCtrl.Logger().Info("falling back to building as a v1 manifest")
+
+		builder = buildv1.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl)
 	} else {
 		if isBuildV2(manifest) {
-			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.analyticsTracker)
+			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl, bc.analyticsTracker)
 		} else {
-			builder = buildv1.NewBuilder(bc.Builder, bc.Registry)
+			builder = buildv1.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl)
 		}
 	}
 

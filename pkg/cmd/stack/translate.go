@@ -25,13 +25,13 @@ import (
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/format"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
-
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -67,9 +67,9 @@ const (
 	onDeleteUpdateStrategy updateStrategy = "on-delete"
 )
 
-func buildStackImages(ctx context.Context, s *model.Stack, options *StackDeployOptions, analyticsTracker analyticsTrackerInterface) error {
+func buildStackImages(ctx context.Context, s *model.Stack, options *StackDeployOptions, analyticsTracker analyticsTrackerInterface, ioCtrl *io.IOController) error {
 	manifest := model.NewManifestFromStack(s)
-	builder := buildv2.NewBuilderFromScratch(analyticsTracker)
+	builder := buildv2.NewBuilderFromScratch(analyticsTracker, ioCtrl)
 	if options.ForceBuild {
 		buildOptions := &types.BuildOptions{
 			Manifest:    manifest,
@@ -618,7 +618,7 @@ func translateServicePorts(svc model.Service) []apiv1.ServicePort {
 				result,
 				apiv1.ServicePort{
 					Name:       fmt.Sprintf("p-%d-%d-%s", p.ContainerPort, p.ContainerPort, strings.ToLower(fmt.Sprintf("%v", p.Protocol))),
-					Port:       int32(p.ContainerPort),
+					Port:       p.ContainerPort,
 					TargetPort: intstr.IntOrString{IntVal: p.ContainerPort},
 					Protocol:   p.Protocol,
 				},
@@ -629,7 +629,7 @@ func translateServicePorts(svc model.Service) []apiv1.ServicePort {
 				result,
 				apiv1.ServicePort{
 					Name:       fmt.Sprintf("p-%d-%d-%s", p.HostPort, p.ContainerPort, strings.ToLower(fmt.Sprintf("%v", p.Protocol))),
-					Port:       int32(p.HostPort),
+					Port:       p.HostPort,
 					TargetPort: intstr.IntOrString{IntVal: p.ContainerPort},
 					Protocol:   p.Protocol,
 				},

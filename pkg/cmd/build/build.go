@@ -27,10 +27,12 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -53,7 +55,7 @@ var (
 
 // OktetoBuilderInterface runs the build of an image
 type OktetoBuilderInterface interface {
-	Run(ctx context.Context, buildOptions *types.BuildOptions) error
+	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error
 }
 
 // OktetoBuilder runs the build of an image
@@ -65,14 +67,14 @@ type OktetoRegistryInterface interface {
 }
 
 // Run runs the build sequence
-func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions) error {
+func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error {
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
 	if okteto.Context().Builder == "" {
 		if err := ob.buildWithDocker(ctx, buildOptions); err != nil {
 			return err
 		}
 	} else {
-		if err := ob.buildWithOkteto(ctx, buildOptions); err != nil {
+		if err := ob.buildWithOkteto(ctx, buildOptions, ioCtrl); err != nil {
 			return err
 		}
 	}
@@ -94,7 +96,7 @@ func setOutputMode(outputMode string) string {
 
 }
 
-func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) error {
+func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error {
 	oktetoLog.Infof("building your image on %s", okteto.Context().Builder)
 	buildkitClient, err := getBuildkitClient(ctx)
 	if err != nil {
@@ -148,7 +150,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 		return errors.Wrap(err, "failed to create build solver")
 	}
 
-	err = solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
+	err = solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode, ioCtrl)
 	if err != nil {
 		oktetoLog.Infof("Failed to build image: %s", err.Error())
 	}
@@ -157,7 +159,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
   %s,
   Retrying ...`, buildOptions.Tag, err.Error())
 		success := true
-		err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
+		err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode, ioCtrl)
 		if err != nil {
 			success = false
 			oktetoLog.Infof("Failed to build image: %s", err.Error())
@@ -173,7 +175,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	  %s,
 	  Retrying ...`, buildOptions.Tag, err.Error())
 			success := true
-			err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
+			err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode, ioCtrl)
 			if err != nil {
 				success = false
 				oktetoLog.Infof("Failed to build image: %s", err.Error())
@@ -292,14 +294,17 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 
 	args := []model.BuildArg{}
 	optionsBuildArgs := map[string]string{}
+	minArgFormatParts := 1
+	maxArgFormatParts := 2
 	for _, arg := range o.BuildArgs {
-		splittedArg := strings.SplitN(arg, "=", 2)
-		if len(splittedArg) == 1 {
+
+		splittedArg := strings.SplitN(arg, "=", maxArgFormatParts)
+		if len(splittedArg) == minArgFormatParts {
 			optionsBuildArgs[splittedArg[0]] = ""
 			args = append(args, model.BuildArg{
 				Name: splittedArg[0], Value: "",
 			})
-		} else if len(splittedArg) == 2 {
+		} else if len(splittedArg) == maxArgFormatParts {
 			optionsBuildArgs[splittedArg[0]] = splittedArg[1]
 			args = append(args, model.BuildArg{
 				Name: splittedArg[0], Value: splittedArg[1],
@@ -387,13 +392,15 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string) string
 		return dockerfile
 	}
 
+	fs := afero.NewOsFs()
+
 	joinPath := filepath.Join(context, dockerfile)
-	if !filesystem.FileExistsAndNotDir(joinPath) {
+	if !filesystem.FileExistsAndNotDir(joinPath, fs) {
 		oktetoLog.Warning(fmt.Sprintf(warningDockerfilePath, svcName, dockerfile, context))
 		return dockerfile
 	}
 
-	if joinPath != filepath.Clean(dockerfile) && filesystem.FileExistsAndNotDir(dockerfile) {
+	if joinPath != filepath.Clean(dockerfile) && filesystem.FileExistsAndNotDir(dockerfile, fs) {
 		oktetoLog.Warning(fmt.Sprintf(doubleDockerfileWarning, svcName, context, dockerfile))
 	}
 
@@ -452,7 +459,7 @@ func createTempFileWithExpandedEnvsAtSource(fs afero.Fs, sourceFile, tempFolder 
 	sc := bufio.NewScanner(srcFile)
 	for sc.Scan() {
 		// expand content
-		srcContent, err := model.ExpandEnv(sc.Text(), true)
+		srcContent, err := env.ExpandEnv(sc.Text())
 		if err != nil {
 			return "", err
 		}

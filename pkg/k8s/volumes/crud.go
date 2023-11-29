@@ -24,11 +24,9 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -172,7 +170,9 @@ func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientse
 	oktetoLog.Infof("destroying volume '%s'", name)
 
 	ticker := time.NewTicker(1 * time.Second)
-	to := time.Now().Add(timeout * 3) // 90 seconds
+	timeoutDuration := 3 * timeout
+	to := time.Now().Add(timeoutDuration) // 90 seconds
+	logDebounceInterval := 5
 
 	for i := 0; ; i++ {
 		err := vClient.Delete(ctx, name, metav1.DeleteOptions{})
@@ -193,7 +193,7 @@ func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientse
 			return fmt.Errorf("volume claim '%s' wasn't destroyed after %s", name, timeout.String())
 		}
 
-		if i%10 == 5 {
+		if i%10 == logDebounceInterval {
 			oktetoLog.Infof("waiting for volume '%s' to be destroyed", name)
 		}
 

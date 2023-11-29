@@ -1,4 +1,4 @@
-// Copyright 2021 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -165,7 +165,8 @@ func UpdateEnvs(ctx context.Context, name, namespace string, envs []string, c ku
 		envsToSet := make(map[string]string, len(envs))
 		for _, env := range envs {
 			result := strings.Split(env, "=")
-			if len(result) != 2 {
+			envFormatParts := 2
+			if len(result) != envFormatParts {
 				return fmt.Errorf("invalid env format: '%s'", env)
 			}
 
@@ -257,7 +258,7 @@ func translateConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
 
 	output := oktetoLog.GetOutputBuffer()
 	outputData := translateOutput(output)
-	cmap.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(outputData))
+	cmap.Data[outputField] = base64.StdEncoding.EncodeToString(outputData)
 	return cmap
 }
 
@@ -307,7 +308,7 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 
 	output := oktetoLog.GetOutputBuffer()
 	outputData := translateOutput(output)
-	cmap.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(outputData))
+	cmap.Data[outputField] = base64.StdEncoding.EncodeToString(outputData)
 	return nil
 }
 
@@ -352,8 +353,9 @@ func removeSensitiveDataFromGitURL(gitURL string) string {
 func translateVariables(variables []string) string {
 	var v []types.DeployVariable
 	for _, item := range variables {
-		splitV := strings.SplitN(item, "=", 2)
-		if len(splitV) != 2 {
+		maxVariableFormatParts := 2
+		splitV := strings.SplitN(item, "=", maxVariableFormatParts)
+		if len(splitV) != maxVariableFormatParts {
 			continue
 		}
 		v = append(v, types.DeployVariable{

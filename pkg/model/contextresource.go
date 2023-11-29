@@ -19,18 +19,19 @@ import (
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
+	"github.com/spf13/afero"
 	yaml "gopkg.in/yaml.v3"
 )
 
 // ContextResource provides the context and namespace to operate within a manifest
 type ContextResource struct {
-	Context   string
-	Namespace string
+	Context   string `yaml:"context"`
+	Namespace string `yaml:"namespace"`
 }
 
 // GetContextResource returns a ContextResource object from a given file
 func GetContextResource(path string) (*ContextResource, error) {
-	if !filesystem.FileExistsAndNotDir(path) {
+	if !filesystem.FileExistsAndNotDir(path, afero.NewOsFs()) {
 		cwd, err := os.Getwd()
 		if err != nil {
 			return nil, err

@@ -32,6 +32,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	completedProgress = 100
+)
+
 // Status returns the status of the synchronization process
 func Status() *cobra.Command {
 	var devPath string
@@ -129,7 +133,7 @@ func runWithWatch(ctx context.Context, sy *syncthing.Syncthing) error {
 				oktetoLog.Infof("error accessing status: %s", err)
 				continue
 			}
-			if progress == 100 {
+			if progress == completedProgress {
 				message = "Files synchronized"
 			} else {
 				message = utils.RenderProgressBar(textSpinner, progress, pbScaling)
@@ -157,7 +161,7 @@ func runWithoutWatch(ctx context.Context, sy *syncthing.Syncthing) error {
 	if err != nil {
 		return err
 	}
-	if progress == 100 {
+	if progress == completedProgress {
 		oktetoLog.Success("Synchronization status: %.2f%%", progress)
 	} else {
 		oktetoLog.Yellow("Synchronization status: %.2f%%", progress)

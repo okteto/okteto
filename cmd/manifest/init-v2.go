@@ -36,6 +36,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/linguist"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -52,6 +53,8 @@ type ManifestCommand struct {
 	manifest          *model.Manifest
 	K8sClientProvider okteto.K8sClientProvider
 	analyticsTracker  analyticsTrackerInterface
+
+	ioCtrl *io.IOController
 }
 
 // InitOpts defines the option for manifest init
@@ -71,7 +74,7 @@ type InitOpts struct {
 }
 
 // Init automatically generates the manifest
-func Init(at analyticsTrackerInterface) *cobra.Command {
+func Init(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
 	opts := &InitOpts{}
 	cmd := &cobra.Command{
 		Use:   "init",
@@ -106,6 +109,7 @@ func Init(at analyticsTrackerInterface) *cobra.Command {
 			mc := &ManifestCommand{
 				K8sClientProvider: okteto.NewK8sClientProvider(),
 				analyticsTracker:  at,
+				ioCtrl:            ioCtrl,
 			}
 			if opts.Version1 {
 				if err := mc.RunInitV1(ctx, opts); err != nil {
@@ -283,7 +287,7 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		GetManifest:        mc.getManifest,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
 		K8sClientProvider:  mc.K8sClientProvider,
-		Builder:            buildv2.NewBuilderFromScratch(mc.analyticsTracker),
+		Builder:            buildv2.NewBuilderFromScratch(mc.analyticsTracker, mc.ioCtrl),
 		GetExternalControl: deploy.NewDeployExternalK8sControl,
 		Fs:                 afero.NewOsFs(),
 		CfgMapHandler:      deploy.NewConfigmapHandler(mc.K8sClientProvider),

@@ -25,15 +25,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a8m/envsubst"
 	"github.com/compose-spec/godotenv"
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/pkg/cache"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/spf13/afero"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -87,8 +88,8 @@ type Dev struct {
 	ExternalVolumes []ExternalVolume   `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
 	Secrets         []Secret           `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Volumes         []Volume           `json:"volumes,omitempty" yaml:"volumes,omitempty"`
-	EnvFiles        EnvFiles           `json:"envFiles,omitempty" yaml:"envFiles,omitempty"`
-	Environment     Environment        `json:"environment,omitempty" yaml:"environment,omitempty"`
+	EnvFiles        env.EnvFiles       `json:"envFiles,omitempty" yaml:"envFiles,omitempty"`
+	Environment     env.Environment    `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Services        []*Dev             `json:"services,omitempty" yaml:"services,omitempty"`
 	Args            Command            `json:"args,omitempty" yaml:"args,omitempty"`
 	Sync            Sync               `json:"sync,omitempty" yaml:"sync,omitempty"`
@@ -141,7 +142,7 @@ type BuildArg struct {
 }
 
 func (v *BuildArg) String() string {
-	value, err := ExpandEnv(v.Value, true)
+	value, err := env.ExpandEnv(v.Value)
 	if err != nil {
 		return fmt.Sprintf("%s=%s", v.Name, v.Value)
 	}
@@ -162,14 +163,14 @@ func (b *BuildInfo) GetDockerfilePath() string {
 	if filepath.IsAbs(b.Dockerfile) {
 		return b.Dockerfile
 	}
-
+	fs := afero.NewOsFs()
 	joinPath := filepath.Join(b.Context, b.Dockerfile)
-	if !filesystem.FileExistsAndNotDir(joinPath) {
+	if !filesystem.FileExistsAndNotDir(joinPath, fs) {
 		oktetoLog.Infof("Dockerfile '%s' is not in a relative path to context '%s'", b.Dockerfile, b.Context)
 		return b.Dockerfile
 	}
 
-	if joinPath != filepath.Clean(b.Dockerfile) && filesystem.FileExistsAndNotDir(b.Dockerfile) {
+	if joinPath != filepath.Clean(b.Dockerfile) && filesystem.FileExistsAndNotDir(b.Dockerfile, fs) {
 		oktetoLog.Infof("Two Dockerfiles discovered in both the root and context path, defaulting to '%s/%s'", b.Context, b.Dockerfile)
 	}
 
@@ -190,7 +191,7 @@ func (b *BuildInfo) expandManifestBuildArgs(previousImageArgs map[string]string)
 			oktetoLog.Infof("overriding '%s' with the content of previous build", arg.Name)
 			arg.Value = val
 		}
-		arg.Value, err = ExpandEnv(arg.Value, true)
+		arg.Value, err = env.ExpandEnv(arg.Value)
 		if err != nil {
 			return err
 		}
@@ -208,7 +209,7 @@ func (b *BuildInfo) addExpandedPreviousImageArgs(previousImageArgs map[string]st
 		if _, ok := alreadyAddedArg[k]; ok {
 			continue
 		}
-		expandedValue, err := ExpandEnv(v, true)
+		expandedValue, err := env.ExpandEnv(v)
 		if err != nil {
 			return err
 		}
@@ -229,8 +230,8 @@ type Volume struct {
 
 // Sync represents a sync info in the development container
 type Sync struct {
-	LocalPath      string
-	RemotePath     string
+	LocalPath      string       `json:"-" yaml:"-"`
+	RemotePath     string       `json:"-" yaml:"-"`
 	Folders        []SyncFolder `json:"folders,omitempty" yaml:"folders,omitempty"`
 	RescanInterval int          `json:"rescanInterval,omitempty" yaml:"rescanInterval,omitempty"`
 	Compression    bool         `json:"compression" yaml:"compression"`
@@ -293,16 +294,6 @@ type Capabilities struct {
 	Drop []apiv1.Capability `json:"drop,omitempty" yaml:"drop,omitempty"`
 }
 
-// EnvVar represents an environment value. When loaded, it will expand from the current env
-type EnvVar struct {
-	Name  string `json:"name,omitempty" yaml:"name,omitempty"`
-	Value string `json:"value,omitempty" yaml:"value,omitempty"`
-}
-
-func (v *EnvVar) String() string {
-	return fmt.Sprintf("%s=%s", v.Name, v.Value)
-}
-
 // Secret represents a development secret
 type Secret struct {
 	LocalPath  string
@@ -347,12 +338,6 @@ type Selector map[string]string
 // Annotations is a set of (key, value) pairs.
 type Annotations map[string]string
 
-// Environment is a list of environment variables (key, value pairs).
-type Environment []EnvVar
-
-// EnvFiles is a list of environment files
-type EnvFiles []string
-
 // Get returns a Dev object from a given file
 func Get(devPath string) (*Manifest, error) {
 	b, err := os.ReadFile(devPath)
@@ -381,7 +366,7 @@ func NewDev() *Dev {
 	return &Dev{
 		Image:       &BuildInfo{},
 		Push:        &BuildInfo{},
-		Environment: make(Environment, 0),
+		Environment: make(env.Environment, 0),
 		Secrets:     make([]Secret, 0),
 		Forward:     make([]forward.Forward, 0),
 		Volumes:     make([]Volume, 0),
@@ -467,7 +452,7 @@ func (dev *Dev) expandEnvVars() error {
 func (dev *Dev) loadName() error {
 	var err error
 	if len(dev.Name) > 0 {
-		dev.Name, err = ExpandEnv(dev.Name, true)
+		dev.Name, err = env.ExpandEnv(dev.Name)
 		if err != nil {
 			return err
 		}
@@ -478,7 +463,7 @@ func (dev *Dev) loadName() error {
 func (dev *Dev) loadNamespace() error {
 	var err error
 	if len(dev.Namespace) > 0 {
-		dev.Namespace, err = ExpandEnv(dev.Namespace, true)
+		dev.Namespace, err = env.ExpandEnv(dev.Namespace)
 		if err != nil {
 			return err
 		}
@@ -489,7 +474,7 @@ func (dev *Dev) loadNamespace() error {
 func (dev *Dev) loadContext() error {
 	var err error
 	if len(dev.Context) > 0 {
-		dev.Context, err = ExpandEnv(dev.Context, true)
+		dev.Context, err = env.ExpandEnv(dev.Context)
 		if err != nil {
 			return err
 		}
@@ -500,7 +485,7 @@ func (dev *Dev) loadContext() error {
 func (dev *Dev) loadSelector() error {
 	var err error
 	for i := range dev.Selector {
-		dev.Selector[i], err = ExpandEnv(dev.Selector[i], true)
+		dev.Selector[i], err = env.ExpandEnv(dev.Selector[i])
 		if err != nil {
 			return err
 		}
@@ -514,7 +499,7 @@ func (dev *Dev) loadImage() error {
 		dev.Image = &BuildInfo{}
 	}
 	if len(dev.Image.Name) > 0 {
-		dev.Image.Name, err = ExpandEnv(dev.Image.Name, false)
+		dev.Image.Name, err = env.ExpandEnvIfNotEmpty(dev.Image.Name)
 		if err != nil {
 			return err
 		}
@@ -702,7 +687,7 @@ func (dev *Dev) setTimeout() error {
 // expandEnvFiles reads each env file and append all the variables to the environment
 func (dev *Dev) expandEnvFiles() error {
 	for _, envFile := range dev.EnvFiles {
-		filename, err := ExpandEnv(envFile, true)
+		filename, err := env.ExpandEnv(envFile)
 		if err != nil {
 			return err
 		}
@@ -733,7 +718,7 @@ func (dev *Dev) expandEnvFiles() error {
 			if value != "" {
 				dev.Environment = append(
 					dev.Environment,
-					EnvVar{Name: name, Value: value},
+					env.Var{Name: name, Value: value},
 				)
 			}
 		}
@@ -980,7 +965,7 @@ func SerializeBuildArgs(buildArgs BuildArgs) []string {
 }
 
 // SerializeEnvironmentVars returns environment variables as a list of strings
-func SerializeEnvironmentVars(envs Environment) []string {
+func SerializeEnvironmentVars(envs env.Environment) []string {
 	result := []string{}
 	for _, e := range envs {
 		result = append(result, e.String())
@@ -1057,11 +1042,11 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		rule.OktetoBinImageTag = dev.InitContainer.Image
 		rule.Environment = append(
 			rule.Environment,
-			EnvVar{
+			env.Var{
 				Name:  "OKTETO_NAMESPACE",
 				Value: dev.Namespace,
 			},
-			EnvVar{
+			env.Var{
 				Name:  "OKTETO_NAME",
 				Value: dev.Name,
 			},
@@ -1069,7 +1054,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		if dev.Username != "" {
 			rule.Environment = append(
 				rule.Environment,
-				EnvVar{
+				env.Var{
 					Name:  "OKTETO_USERNAME",
 					Value: dev.Username,
 				},
@@ -1081,7 +1066,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		if dev.SSHServerPort != oktetoDefaultSSHServerPort {
 			rule.Environment = append(
 				rule.Environment,
-				EnvVar{
+				env.Var{
 					Name:  oktetoSSHServerPortVariable,
 					Value: strconv.Itoa(dev.SSHServerPort),
 				},
@@ -1178,27 +1163,27 @@ func enableHistoryVolume(rule *TranslationRule, main *Dev) {
 		})
 
 	rule.Environment = append(rule.Environment,
-		EnvVar{
+		env.Var{
 			Name:  "HISTSIZE",
 			Value: "10000000",
 		},
-		EnvVar{
+		env.Var{
 			Name:  "HISTFILESIZE",
 			Value: "10000000",
 		},
-		EnvVar{
+		env.Var{
 			Name:  "HISTCONTROL",
 			Value: "ignoreboth:erasedups",
 		},
-		EnvVar{
+		env.Var{
 			Name:  "HISTFILE",
 			Value: "/var/okteto/bashrc/.bash_history",
 		},
-		EnvVar{
+		env.Var{
 			Name:  "BASHOPTS",
 			Value: "histappend",
 		},
-		EnvVar{
+		env.Var{
 			Name:  "PROMPT_COMMAND",
 			Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND",
 		})
@@ -1246,18 +1231,6 @@ func (s *Secret) GetKeyName() string {
 // GetFileName returns the secret file name
 func (s *Secret) GetFileName() string {
 	return filepath.Base(s.RemotePath)
-}
-
-// ExpandEnv expands the environments supporting the notation "${var:-$DEFAULT}"
-func ExpandEnv(value string, expandIfEmpty bool) (string, error) {
-	result, err := envsubst.String(value)
-	if err != nil {
-		return "", fmt.Errorf("error expanding environment on '%s': %s", value, err.Error())
-	}
-	if result == "" && !expandIfEmpty {
-		return value, nil
-	}
-	return result, nil
 }
 
 // GetTimeout returns the timeout override

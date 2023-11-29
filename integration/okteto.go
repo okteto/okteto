@@ -50,7 +50,7 @@ func GetOktetoPath() (string, error) {
 	}
 	output, err := RunOktetoVersion(oktetoPath)
 	if err != nil {
-		return "", fmt.Errorf("okteto version failed: %s - %s", string(output), err)
+		return "", fmt.Errorf("okteto version failed: %s - %s", output, err)
 	}
 	log.Println(output)
 	return oktetoPath, nil
@@ -115,7 +115,7 @@ func GetContentFromURL(url string, timeout time.Duration) string {
 			}
 
 			defer r.Body.Close()
-			if r.StatusCode != 200 {
+			if r.StatusCode != http.StatusOK {
 				if retry%10 == 0 {
 					log.Printf("called %s, got status %d, retrying", url, r.StatusCode)
 				}

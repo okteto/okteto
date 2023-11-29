@@ -27,17 +27,16 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/okteto/okteto/pkg/config"
-
 	"github.com/mitchellh/go-homedir"
-
 	builder "github.com/okteto/okteto/cmd/build"
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
 	"github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/remote"
@@ -119,11 +118,11 @@ type remoteDeployCommand struct {
 }
 
 // newRemoteDeployer creates the remote deployer from a
-func newRemoteDeployer(builder builderInterface) *remoteDeployCommand {
+func newRemoteDeployer(builder builderInterface, ioCtrl *io.IOController) *remoteDeployCommand {
 	fs := afero.NewOsFs()
 	return &remoteDeployCommand{
 		getBuildEnvVars:      builder.GetBuildEnvVars,
-		builderV1:            remoteBuild.NewBuilderFromScratch(),
+		builderV1:            remoteBuild.NewBuilderFromScratch(ioCtrl),
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
@@ -338,7 +337,7 @@ func getDeployFlags(opts *Options) ([]string, error) {
 			return nil, err
 		}
 		for _, v := range variables {
-			varsToAddForDeploy = append(varsToAddForDeploy, fmt.Sprintf("--var %s=\"%s\"", v.key, v.value))
+			varsToAddForDeploy = append(varsToAddForDeploy, fmt.Sprintf("--var %s=\"%s\"", v.Name, v.Value))
 		}
 		deployFlags = append(deployFlags, strings.Join(varsToAddForDeploy, " "))
 	}

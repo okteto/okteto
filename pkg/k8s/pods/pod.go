@@ -249,8 +249,9 @@ func parseUserID(output string) int64 {
 		return -1
 	}
 
+	validUserLineParts := 2
 	parts := strings.Split(lines[0], ":")
-	if len(parts) != 2 {
+	if len(parts) != validUserLineParts {
 		oktetoLog.Infof("failed to parse USER entry: %s", lines[0])
 		return -1
 	}
@@ -350,13 +351,13 @@ func waitUntilRunning(ctx context.Context, namespace, selector string, c *kubern
 
 		allRunning := true
 		for i := range pods.Items {
-			switch pods.Items[i].Status.Phase {
-			case apiv1.PodPending:
+			phase := pods.Items[i].Status.Phase
+			if phase == apiv1.PodPending {
 				allRunning = false
 				notready[pods.Items[i].GetName()] = true
-			case apiv1.PodFailed:
+			} else if phase == apiv1.PodFailed {
 				return fmt.Errorf("Pod %s failed to start", pods.Items[i].Name)
-			case apiv1.PodRunning:
+			} else if phase == apiv1.PodRunning {
 				if isRunning(&pods.Items[i]) {
 					if _, ok := notready[pods.Items[i].GetName()]; ok {
 						oktetoLog.Infof("pod/%s is ready", pods.Items[i].GetName())

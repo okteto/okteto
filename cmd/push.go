@@ -26,11 +26,13 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/down"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -60,7 +62,7 @@ func Push(ctx context.Context) *cobra.Command {
 		Short:  "Build, push and redeploy source code to the target app",
 		Args:   utils.MaximumNArgsAccepted(1, "https://www.okteto.com/docs/0.10/reference/cli/#push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if !utils.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
+			if !env.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
 				oktetoLog.Warning("'okteto push' is deprecated in favor of 'okteto deploy', and will be removed in a future version")
 			}
 			ctxResource, err := utils.LoadManifestContext(pushOpts.DevPath)
@@ -302,7 +304,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageFromApp string, pushOp
 		BuildArgs:  buildArgs,
 		OutputMode: pushOpts.Progress,
 	}
-	if err := buildv1.NewBuilderFromScratch().Build(ctx, buildOptions); err != nil {
+	if err := buildv1.NewBuilderFromScratch(io.NewIOController()).Build(ctx, buildOptions); err != nil {
 		return "", err
 	}
 
