@@ -103,7 +103,7 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx build.OktetoContextInte
 	}
 	attachable := []session.Attachable{}
 	if okctx.IsOkteto() {
-		ap := newDockerAndOktetoAuthProvider(okctx.GetCurrentRegister(), okctx.GetCurrentUser(), okctx.GetCurrentToken(), os.Stderr)
+		ap := newDockerAndOktetoAuthProvider(okctx.GetCurrentRegister(), okctx.GetCurrentUser(), okctx.GetCurrentToken(), okctx.IsOkteto(), okctx.GetTokenByContextName, os.Stderr)
 		attachable = append(attachable, ap)
 	} else {
 		attachable = append(attachable, authprovider.NewDockerAuthProvider(os.Stderr))

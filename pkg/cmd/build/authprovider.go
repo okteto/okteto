@@ -32,10 +32,12 @@ import (
 
 var oktetoRegistry = ""
 
-func newDockerAndOktetoAuthProvider(registryURL, username, password string, stderr io.Writer) *authProvider {
+func newDockerAndOktetoAuthProvider(registryURL, username, password string, isOkteto bool, getToken func(string) (string, error), stderr io.Writer) *authProvider {
 	result := &authProvider{
 		config:       config.LoadDefaultConfigFile(stderr),
-		externalAuth: okteto.GetExternalRegistryCredentialsWithContext,
+		externalAuth: okteto.GetExternalRegistryCredentialsWithContextStateless,
+		isOkteto:     isOkteto,
+		getToken:     getToken,
 	}
 	oktetoRegistry = registryURL
 	result.config.AuthConfigs[registryURL] = types.AuthConfig{
@@ -46,7 +48,7 @@ func newDockerAndOktetoAuthProvider(registryURL, username, password string, stde
 	return result
 }
 
-type externalRegistryCredentialFunc func(ctx context.Context, host string) (string, string, error)
+type externalRegistryCredentialFunc func(ctx context.Context, host string, isOkteto bool, client *okteto.OktetoClient) (string, string, error)
 
 type authProvider struct {
 	config *configfile.ConfigFile
@@ -61,6 +63,10 @@ type authProvider struct {
 	// reading credentials from docker-credential-osxkeychain.
 	// See issue https://github.com/docker/cli/issues/1862
 	mu sync.Mutex
+
+	isOkteto bool
+
+	getToken func(string) (string, error)
 }
 
 func (ap *authProvider) Register(server *grpc.Server) {
@@ -121,7 +127,12 @@ func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRe
 
 	// local credentials takes precedence over cluster defined credentials
 	if res.Username == "" || res.Secret == "" {
-		if user, pass, err := ap.externalAuth(ctx, originalHost); err != nil {
+		ocfg := &okteto.OktetoClientCfg{}
+		c, err := okteto.NewOktetoClientStateless(ocfg, ap.getToken)
+		if err != nil {
+			return nil, err
+		}
+		if user, pass, err := ap.externalAuth(ctx, originalHost, ap.isOkteto, c); err != nil {
 			oktetoLog.Debugf("failed to load external auth for %s: %w", req.Host, err.Error())
 		} else {
 			res.Username = user

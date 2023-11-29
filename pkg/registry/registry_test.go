@@ -54,6 +54,10 @@ func (fc FakeConfig) GetExternalRegistryCredentials(_ string) (string, string, e
 	return fc.externalRegistryCredentials[0], fc.externalRegistryCredentials[1], nil
 }
 
+func (fc FakeConfig) GetExternalRegistryCredentialsStateless(_ string) (string, string, error) {
+	return fc.externalRegistryCredentials[0], fc.externalRegistryCredentials[1], nil
+}
+
 func TestGetImageTagWithDigest(t *testing.T) {
 	type expected struct {
 		err      error

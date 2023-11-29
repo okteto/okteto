@@ -158,6 +158,9 @@ func (f fakeClientConfig) GetContextName() string                            { r
 func (f fakeClientConfig) GetExternalRegistryCredentials(_ string) (string, string, error) {
 	return f.externalRegistryCredentials[0], f.externalRegistryCredentials[1], nil
 }
+func (f fakeClientConfig) GetExternalRegistryCredentialsStateless(_ string) (string, string, error) {
+	return f.externalRegistryCredentials[0], f.externalRegistryCredentials[1], nil
+}
 
 func TestGetDigest(t *testing.T) {
 	unautorizedErr := &transport.Error{

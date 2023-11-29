@@ -36,6 +36,7 @@ type configInterface interface {
 	GetServerNameOverride() string
 	GetContextName() string
 	GetExternalRegistryCredentials(registryHost string) (string, string, error)
+	GetExternalRegistryCredentialsStateless(registryHost string) (string, string, error)
 }
 
 // OktetoRegistry represents the registry

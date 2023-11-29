@@ -110,6 +110,27 @@ func (r *externalRegistryCredentialsReader) read(ctx context.Context, registryOr
 	return ac.Username, ac.Password, err
 }
 
+func GetExternalRegistryCredentialsWithContextStateless(ctx context.Context, registryOrImage string, isOkteto bool, c *OktetoClient) (string, string, error) {
+	r := &externalRegistryCredentialsReader{
+		isOkteto: isOkteto,
+		getter:   c.User().GetRegistryCredentials,
+		cache:    &globalRegistryCredentialsCache,
+	}
+	oktetoLog.Infof("Obtaining credentials for %q ...", registryOrImage)
+	return r.read(ctx, registryOrImage)
+}
+
+// GetExternalRegistryCredentials returns registry credentials for a registry
+// defined in okteto.
+// This function is mostly executed by internal libraries (registry, docker
+// credentials helpers, etc) and we need to respect this signature.
+// For this reason, context is managed internally by the function.
+func GetExternalRegistryCredentialsStateless(registryOrImage string, isOkteto bool, c *OktetoClient) (string, string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	return GetExternalRegistryCredentialsWithContextStateless(ctx, registryOrImage, isOkteto, c)
+}
+
 func GetExternalRegistryCredentialsWithContext(ctx context.Context, registryOrImage string) (string, string, error) {
 	c, err := NewOktetoClient()
 	if err != nil {
@@ -125,8 +146,8 @@ func GetExternalRegistryCredentialsWithContext(ctx context.Context, registryOrIm
 	return r.read(ctx, registryOrImage)
 }
 
-// GetExternalRegistryCredentials returns registry credentials for a registry
-// defined in okteto.
+// GetExternalRegistryCredentialsStateless returns registry credentials for a registry
+// defined in okteto without rely on an okteto context global var.
 // This function is mostly executed by internal libraries (registry, docker
 // credentials helpers, etc) and we need to respect this signature.
 // For this reason, context is managed internally by the function.

@@ -45,7 +45,7 @@ type ClientConfigInterface interface {
 	GetContextCertificate() (*x509.Certificate, error)
 	GetServerNameOverride() string
 	GetContextName() string
-	GetExternalRegistryCredentials(registryHost string) (string, string, error)
+	GetExternalRegistryCredentialsStateless(registryHost string) (string, string, error)
 }
 
 type oktetoHelperConfig interface {
@@ -181,7 +181,7 @@ func (c client) getAuthentication(ref name.Reference) remote.Option {
 
 	kc := authn.NewMultiKeychain(
 		authn.DefaultKeychain,
-		authn.NewKeychainFromHelper(inlineHelper(c.config.GetExternalRegistryCredentials)),
+		authn.NewKeychainFromHelper(inlineHelper(c.config.GetExternalRegistryCredentialsStateless)),
 	)
 
 	return remote.WithAuthFromKeychain(kc)

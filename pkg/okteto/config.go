@@ -15,14 +15,12 @@ package okteto
 
 import (
 	"crypto/x509"
+
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 type Config struct {
-	Credential struct {
-		Err      error
-		Username string
-		Password string
-	}
+	GetTokenFn                  func(string) (string, error)
 	GlobalNamespace             string
 	Namespace                   string
 	RegistryUrl                 string
@@ -47,6 +45,20 @@ func (c Config) GetContextCertificate() (*x509.Certificate, error) {
 func (c Config) IsInsecureSkipTLSVerifyPolicy() bool { return c.InsecureSkipTLSVerifyPolicy }
 func (Config) GetServerNameOverride() string         { return GetServerNameOverride() }
 func (c Config) GetContextName() string              { return c.ContextName }
+func (c Config) GetExternalRegistryCredentialsStateless(registryHost string) (string, string, error) {
+	ocfg := &OktetoClientCfg{
+		CtxName: c.ContextName,
+		Token:   c.Token,
+		Cert:    c.Cert,
+	}
+	client, err := NewOktetoClientStateless(ocfg, c.GetTokenFn)
+	if err != nil {
+		oktetoLog.Debugf("failed to create okteto client for getting registry credentials: %s", err.Error())
+		return "", "", err
+	}
+	return GetExternalRegistryCredentialsStateless(registryHost, c.IsOkteto, client)
+}
+
 func (c Config) GetExternalRegistryCredentials(registryHost string) (string, string, error) {
 	return GetExternalRegistryCredentials(registryHost)
 }

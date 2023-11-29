@@ -39,6 +39,7 @@ type OktetoContextInterface interface {
 	IsOkteto() bool
 	IsInsecure() bool
 	UseContextByBuilder()
+	GetTokenByContextName(name string) (string, error)
 }
 
 type OktetoContext struct {
