@@ -138,6 +138,7 @@ func (fc fakeClient) Write(_ name.Reference, _ containerv1.Image) error {
 }
 
 type fakeClientConfig struct {
+	err                         error
 	cert                        *x509.Certificate
 	externalRegistryCredentials [2]string
 	registryURL                 string
@@ -146,7 +147,6 @@ type fakeClientConfig struct {
 	serverName                  string
 	contextName                 string
 	isInsecure                  bool
-	err                         error
 }
 
 func (f fakeClientConfig) GetRegistryURL() string                            { return f.registryURL }
