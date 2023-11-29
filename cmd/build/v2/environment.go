@@ -18,7 +18,6 @@ import (
 	"os"
 	"strings"
 
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -26,11 +25,11 @@ import (
 func (bc *OktetoBuilder) SetServiceEnvVars(service, reference string) {
 	ref, err := bc.Registry.GetImageReference(reference)
 	if err != nil {
-		oktetoLog.Debugf("could not set service env vars: %w", err)
+		bc.ioCtrl.Logger().Debugf("could not set service env vars: %s", err)
 		return
 	}
 
-	oktetoLog.Debugf("envs registry=%s repository=%s image=%s tag=%s", ref.Registry, ref.Repo, ref.Image, ref.Tag)
+	bc.ioCtrl.Logger().Debugf("envs registry=%s repository=%s image=%s tag=%s", ref.Registry, ref.Repo, ref.Image, ref.Tag)
 
 	// Can't add env vars with -
 	sanitizedSvc := strings.ToUpper(strings.ReplaceAll(service, "-", "_"))
@@ -69,7 +68,7 @@ func (bc *OktetoBuilder) SetServiceEnvVars(service, reference string) {
 	os.Setenv(shaKey, sha)
 	bc.lock.Unlock()
 
-	oktetoLog.Debug("manifest env vars set")
+	bc.ioCtrl.Logger().Debug("manifest env vars set")
 }
 
 // GetBuildEnvVars gets okteto build env vars

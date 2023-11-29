@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
@@ -31,7 +32,7 @@ import (
 
 // OktetoBuilderInterface runs the build of an image
 type oktetoBuilderInterface interface {
-	Run(ctx context.Context, buildOptions *types.BuildOptions) error
+	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error
 }
 
 type OktetoRegistryInterface interface {
@@ -48,15 +49,17 @@ type OktetoRegistryInterface interface {
 type OktetoBuilder struct {
 	Builder  oktetoBuilderInterface
 	Registry OktetoRegistryInterface
+	ioCtrl   *io.IOController
 }
 
 // NewBuilderFromScratch creates a new okteto builder
-func NewBuilderFromScratch() *OktetoBuilder {
+func NewBuilderFromScratch(ioCtrl *io.IOController) *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
 	registry := registry.NewOktetoRegistry(okteto.Config{})
 	return &OktetoBuilder{
 		Builder:  builder,
 		Registry: registry,
+		ioCtrl:   ioCtrl,
 	}
 }
 
@@ -83,7 +86,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		return fmt.Errorf("%s: '%s' is not a regular file", oktetoErrors.InvalidDockerfile, options.File)
 	}
 
-	if err := bc.Builder.Run(ctx, options); err != nil {
+	if err := bc.Builder.Run(ctx, options, bc.ioCtrl); err != nil {
 		analytics.TrackBuild(false)
 		return err
 	}

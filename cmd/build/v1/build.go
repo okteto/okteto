@@ -24,7 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
@@ -34,7 +34,7 @@ import (
 // OktetoBuilderInterface runs the build of an image
 type OktetoBuilderInterface interface {
 	GetBuilder() string
-	Run(ctx context.Context, buildOptions *types.BuildOptions) error
+	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error
 }
 
 type oktetoRegistryInterface interface {
@@ -46,21 +46,23 @@ type oktetoRegistryInterface interface {
 type OktetoBuilder struct {
 	Builder  OktetoBuilderInterface
 	Registry oktetoRegistryInterface
+	IoCtrl   *io.IOController
 }
 
 // NewBuilder creates a new okteto builder
-func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface) *OktetoBuilder {
+func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.IOController) *OktetoBuilder {
 	return &OktetoBuilder{
 		Builder:  builder,
 		Registry: registry,
+		IoCtrl:   ioCtrl,
 	}
 }
 
 // NewBuilderFromScratch creates a new okteto builder
-func NewBuilderFromScratch() *OktetoBuilder {
+func NewBuilderFromScratch(ioCtrl *io.IOController) *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
 	registry := registry.NewOktetoRegistry(okteto.Config{})
-	return NewBuilder(builder, registry)
+	return NewBuilder(builder, registry, ioCtrl)
 }
 
 // IsV1 returns true since it is a builder v1
@@ -94,9 +96,9 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	buildMsg := fmt.Sprintf("Building '%s'", options.File)
 	builder := ob.Builder.GetBuilder()
 	if builder == "" {
-		oktetoLog.Information("%s using your local docker daemon", buildMsg)
+		ob.IoCtrl.Out().Infof("%s using your local docker daemon", buildMsg)
 	} else {
-		oktetoLog.Information("%s in %s...", buildMsg, builder)
+		ob.IoCtrl.Out().Infof("%s in %s...", buildMsg, builder)
 	}
 
 	var err error
@@ -105,20 +107,20 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		return err
 	}
 
-	if err := ob.Builder.Run(ctx, options); err != nil {
+	if err := ob.Builder.Run(ctx, options, ob.IoCtrl); err != nil {
 		analytics.TrackBuild(false)
 		return err
 	}
 
 	if options.Tag == "" {
-		oktetoLog.Success("Build succeeded")
-		oktetoLog.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
+		ob.IoCtrl.Out().Success("Build succeeded")
+		ob.IoCtrl.Out().Infof("Your image won't be pushed. To push your image specify the flag '-t'.")
 	} else {
 		displayTag := options.Tag
 		if options.DevTag != "" {
 			displayTag = options.DevTag
 		}
-		oktetoLog.Success(fmt.Sprintf("Image '%s' successfully pushed", displayTag))
+		ob.IoCtrl.Out().Success("Image '%s' successfully pushed", displayTag)
 	}
 
 	analytics.TrackBuild(true)

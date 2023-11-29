@@ -37,6 +37,7 @@ import (
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -320,7 +321,7 @@ type fakeDeployer struct {
 	externalControlProvider fakeExternalControlProvider
 }
 
-func (d fakeDeployer) Get(_ context.Context, _ *Options, _ builderInterface, cmapHandler configMapHandler, _ okteto.K8sClientProvider, _ kubeConfigHandler, _ portGetterFunc) (deployerInterface, error) {
+func (d fakeDeployer) Get(_ context.Context, _ *Options, _ builderInterface, cmapHandler configMapHandler, _ okteto.K8sClientProvider, _ kubeConfigHandler, _ portGetterFunc, _ *io.IOController) (deployerInterface, error) {
 	return &localDeployer{
 		Proxy:              d.proxy,
 		Executor:           d.executor,
@@ -444,7 +445,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	c := &DeployCommand{
 		GetManifest:       getErrorManifest,
 		GetDeployer:       fakeDeployer.Get,
-		Builder:           buildv2.NewBuilder(builder, registry, fakeTracker, okCtx),
+		Builder:           buildv2.NewBuilder(builder, registry, io.NewIOController(), fakeTracker, okCtx),
 		K8sClientProvider: fakeK8sClientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider),
 	}
@@ -1431,7 +1432,7 @@ func Test_GetDeployer(t *testing.T) {
 			ctx := context.TODO()
 			got, err := GetDeployer(ctx, tt.opts, nil, &fakeCmapHandler{}, &fakeK8sProvider{}, &fakeKubeConfig{
 				config: &rest.Config{},
-			}, tt.portGetter)
+			}, tt.portGetter, io.NewIOController())
 
 			if tt.expectedErr == nil {
 				require.NotNil(t, got)

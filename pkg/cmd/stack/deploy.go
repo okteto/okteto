@@ -37,6 +37,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -70,6 +71,7 @@ type Stack struct {
 	K8sClient        kubernetes.Interface
 	Config           *rest.Config
 	AnalyticsTracker analyticsTrackerInterface
+	IoCtrl           *io.IOController
 }
 
 const (
@@ -84,7 +86,7 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *StackDeplo
 	}
 
 	if !options.InsidePipeline {
-		if err := buildStackImages(ctx, s, options, sd.AnalyticsTracker); err != nil {
+		if err := buildStackImages(ctx, s, options, sd.AnalyticsTracker, sd.IoCtrl); err != nil {
 			return err
 		}
 	}

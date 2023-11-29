@@ -33,6 +33,7 @@ import (
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -56,7 +57,7 @@ var (
 // OktetoBuilderInterface runs the build of an image
 type OktetoBuilderInterface interface {
 	GetBuilder() string
-	Run(ctx context.Context, buildOptions *types.BuildOptions) error
+	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error
 }
 
 // OktetoBuilder runs the build of an image
@@ -74,14 +75,14 @@ func (ob *OktetoBuilder) GetBuilder() string {
 }
 
 // Run runs the build sequence
-func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions) error {
+func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error {
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
 	if ob.OktetoContext.GetCurrentBuilder() == "" {
 		if err := ob.buildWithDocker(ctx, buildOptions); err != nil {
 			return err
 		}
 	} else {
-		if err := ob.buildWithOkteto(ctx, buildOptions); err != nil {
+		if err := ob.buildWithOkteto(ctx, buildOptions, ioCtrl); err != nil {
 			return err
 		}
 	}
@@ -118,7 +119,7 @@ func GetRegistryConfigFromOktetoConfig(okCtx build.OktetoContextInterface) *okte
 	}
 }
 
-func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) error {
+func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error {
 	oktetoLog.Infof("building your image on %s", ob.OktetoContext.GetCurrentBuilder())
 	buildkitClient, err := getBuildkitClient(ctx, ob.OktetoContext)
 	if err != nil {
@@ -172,7 +173,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 		return errors.Wrap(err, "failed to create build solver")
 	}
 
-	err = solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
+	err = solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode, ioCtrl)
 	if err != nil {
 		oktetoLog.Infof("Failed to build image: %s", err.Error())
 	}
@@ -181,7 +182,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
   %s,
   Retrying ...`, buildOptions.Tag, err.Error())
 		success := true
-		err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
+		err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode, ioCtrl)
 		if err != nil {
 			success = false
 			oktetoLog.Infof("Failed to build image: %s", err.Error())
@@ -197,7 +198,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	  %s,
 	  Retrying ...`, buildOptions.Tag, err.Error())
 			success := true
-			err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
+			err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode, ioCtrl)
 			if err != nil {
 				success = false
 				oktetoLog.Infof("Failed to build image: %s", err.Error())

@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	appsv1 "k8s.io/api/apps/v1"
@@ -66,9 +67,9 @@ const (
 	onDeleteUpdateStrategy updateStrategy = "on-delete"
 )
 
-func buildStackImages(ctx context.Context, s *model.Stack, options *StackDeployOptions, analyticsTracker analyticsTrackerInterface) error {
+func buildStackImages(ctx context.Context, s *model.Stack, options *StackDeployOptions, analyticsTracker analyticsTrackerInterface, ioCtrl *io.IOController) error {
 	manifest := model.NewManifestFromStack(s)
-	builder := buildv2.NewBuilderFromScratch(analyticsTracker)
+	builder := buildv2.NewBuilderFromScratch(analyticsTracker, ioCtrl)
 	if options.ForceBuild {
 		buildOptions := &types.BuildOptions{
 			Manifest:    manifest,

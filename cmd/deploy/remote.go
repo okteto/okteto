@@ -36,6 +36,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/remote"
@@ -117,11 +118,11 @@ type remoteDeployCommand struct {
 }
 
 // newRemoteDeployer creates the remote deployer from a
-func newRemoteDeployer(builder builderInterface) *remoteDeployCommand {
+func newRemoteDeployer(builder builderInterface, ioCtrl *io.IOController) *remoteDeployCommand {
 	fs := afero.NewOsFs()
 	return &remoteDeployCommand{
 		getBuildEnvVars:      builder.GetBuildEnvVars,
-		builderV1:            remoteBuild.NewBuilderFromScratch(),
+		builderV1:            remoteBuild.NewBuilderFromScratch(ioCtrl),
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),

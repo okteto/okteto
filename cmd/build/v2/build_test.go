@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	build "github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -166,8 +167,10 @@ func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInter
 		V1Builder: &v1.OktetoBuilder{
 			Builder:  builder,
 			Registry: registry,
+			IoCtrl:   io.NewIOController(),
 		},
 		Config:           cfg,
+		ioCtrl:           io.NewIOController(),
 		analyticsTracker: analyticsTracker,
 		oktetoContext: &build.OktetoContext{
 			Store: &okteto.OktetoContextStore{

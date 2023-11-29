@@ -65,7 +65,10 @@ func GetOktetoDeployCmdOutput(oktetoPath string, deployOptions *DeployOptions) (
 
 // RunOktetoDeploy runs an okteto deploy command
 func RunOktetoDeploy(oktetoPath string, deployOptions *DeployOptions) error {
-	_, err := GetOktetoDeployCmdOutput(oktetoPath, deployOptions)
+	output, err := GetOktetoDeployCmdOutput(oktetoPath, deployOptions)
+	if err != nil {
+		return fmt.Errorf("okteto deploy failed: %s - %s", string(output), err)
+	}
 	return err
 }
 

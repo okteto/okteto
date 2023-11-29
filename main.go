@@ -41,6 +41,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/sirupsen/logrus"
@@ -54,12 +55,12 @@ import (
 )
 
 func init() {
-	oktetoLog.SetLevel("warn")
+	oktetoLog.SetLevel("warn") // TODO: Remove when we fully move to ioController
 	var b [16]byte
 	_, err := cryptoRand.Read(b[:])
 	seed := int64(binary.LittleEndian.Uint64(b[:]))
 	if err != nil {
-		oktetoLog.Info("cannot use cryptoRead. Fallback to timestamp seed generator")
+		oktetoLog.Info("cannot use cryptoRead. Fallback to timestamp seed generator") // TODO: Remove when we fully move to ioController
 		seed = time.Now().UnixNano()
 	}
 	rand.New(rand.NewSource(seed))
@@ -83,11 +84,16 @@ func init() {
 
 func main() {
 	ctx := context.Background()
-	oktetoLog.Init(logrus.WarnLevel)
+	ioController := io.NewIOController()
+	ioController.Logger().SetLevel(io.WarnLevel)
+	oktetoLog.Init(logrus.WarnLevel) // TODO: Remove when we fully move to ioController
 	if registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
-		oktetoLog.SetOutput(os.Stderr)
-		oktetoLog.SetLevel(oktetoLog.InfoLevel)
-		oktetoLog.SetOutputFormat(oktetoLog.JSONFormat)
+		oktetoLog.SetOutput(os.Stderr)                  // TODO: Remove when we fully move to ioController
+		oktetoLog.SetLevel(oktetoLog.InfoLevel)         // TODO: Remove when we fully move to ioController
+		oktetoLog.SetOutputFormat(oktetoLog.JSONFormat) // TODO: Remove when we fully move to ioController
+
+		ioController.Logger().SetLevel(io.InfoLevel)
+		ioController.SetOutputFormat(io.JSONFormat)
 	}
 	var logLevel string
 	var outputMode string
@@ -107,14 +113,17 @@ func main() {
 		PersistentPreRun: func(ccmd *cobra.Command, args []string) {
 			ccmd.SilenceUsage = true
 			if !registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
-				oktetoLog.SetLevel(logLevel)
-				oktetoLog.SetOutputFormat(outputMode)
+				oktetoLog.SetLevel(logLevel)          // TODO: Remove when we fully move to ioController
+				oktetoLog.SetOutputFormat(outputMode) // TODO: Remove when we fully move to ioController
+
+				ioController.Logger().SetLevel(logLevel)
+				ioController.SetOutputFormat(outputMode)
 			}
 			okteto.SetServerNameOverride(serverNameOverride)
-			oktetoLog.Infof("started %s", strings.Join(os.Args, " "))
+			ioController.Logger().Infof("started %s", strings.Join(os.Args, " "))
 		},
 		PersistentPostRun: func(ccmd *cobra.Command, args []string) {
-			oktetoLog.Infof("finished %s", strings.Join(os.Args, " "))
+			ioController.Logger().Infof("finished %s", strings.Join(os.Args, " "))
 		},
 	}
 
@@ -124,7 +133,7 @@ func main() {
 	root.PersistentFlags().StringVarP(&serverNameOverride, "server-name", "", "", "The address and port of the Okteto Ingress server")
 	err := root.PersistentFlags().MarkHidden("server-name")
 	if err != nil {
-		oktetoLog.Infof("error hiding server-name flag: %s", err)
+		ioController.Logger().Infof("error hiding server-name flag: %s", err)
 	}
 
 	okClientProvider := okteto.NewOktetoClientProvider()
@@ -140,11 +149,11 @@ func main() {
 	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
 	root.AddCommand(registrytoken.RegistryToken(ctx))
 
-	root.AddCommand(build.Build(ctx, at))
+	root.AddCommand(build.Build(ctx, ioController, at))
 
 	root.AddCommand(namespace.Namespace(ctx))
 	root.AddCommand(cmd.Init())
-	root.AddCommand(up.Up(at))
+	root.AddCommand(up.Up(at, ioController))
 	root.AddCommand(cmd.Down())
 	root.AddCommand(cmd.Status())
 	root.AddCommand(cmd.Doctor())
@@ -152,8 +161,8 @@ func main() {
 	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
 	root.AddCommand(cmd.UpdateDeprecated())
-	root.AddCommand(deploy.Deploy(ctx, at))
-	root.AddCommand(destroy.Destroy(ctx, at))
+	root.AddCommand(deploy.Deploy(ctx, at, ioController))
+	root.AddCommand(destroy.Destroy(ctx, at, ioController))
 	root.AddCommand(deploy.Endpoints(ctx))
 	root.AddCommand(logs.Logs(ctx))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
@@ -162,7 +171,7 @@ func main() {
 	root.AddCommand(cmd.Create(ctx))
 	root.AddCommand(cmd.List(ctx))
 	root.AddCommand(cmd.Delete(ctx))
-	root.AddCommand(stack.Stack(ctx, at))
+	root.AddCommand(stack.Stack(ctx, at, ioController))
 	root.AddCommand(cmd.Push(ctx))
 	root.AddCommand(pipeline.Pipeline(ctx))
 
@@ -175,7 +184,7 @@ func main() {
 			tmp[0] = unicode.ToUpper(tmp[0])
 			message = string(tmp)
 		}
-		oktetoLog.Fail(message)
+		oktetoLog.Fail(message) // TODO: Change to use ioController  when we fully move to ioController
 		if uErr, ok := err.(oktetoErrors.UserError); ok {
 			if len(uErr.Hint) > 0 {
 				oktetoLog.Hint("    %s", uErr.Hint)

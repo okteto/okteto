@@ -32,6 +32,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -303,7 +304,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageFromApp string, pushOp
 		BuildArgs:  buildArgs,
 		OutputMode: pushOpts.Progress,
 	}
-	if err := buildv1.NewBuilderFromScratch().Build(ctx, buildOptions); err != nil {
+	if err := buildv1.NewBuilderFromScratch(io.NewIOController()).Build(ctx, buildOptions); err != nil {
 		return "", err
 	}
 

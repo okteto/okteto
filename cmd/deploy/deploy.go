@@ -36,6 +36,7 @@ import (
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
@@ -95,6 +96,7 @@ type getDeployerFunc func(
 	okteto.K8sClientProvider,
 	kubeConfigHandler,
 	portGetterFunc,
+	*io.IOController,
 ) (deployerInterface, error)
 
 // DeployCommand defines the config for deploying an app
@@ -112,6 +114,7 @@ type DeployCommand struct {
 	DivertDriver       divert.Driver
 	PipelineCMD        pipelineCMD.PipelineDeployerInterface
 	AnalyticsTracker   analyticsTrackerInterface
+	ioCtrl             *io.IOController
 
 	PipelineType       model.Archetype
 	isRemote           bool
@@ -138,7 +141,7 @@ func NewDeployExternalK8sControl(cfg *rest.Config) ExternalResourceInterface {
 }
 
 // Deploy deploys the okteto manifest
-func Deploy(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
+func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
 	options := &Options{}
 	fs := &DeployCommand{
 		Fs: afero.NewOsFs(),
@@ -205,7 +208,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 				GetExternalControl: NewDeployExternalK8sControl,
 				K8sClientProvider:  k8sClientProvider,
 				GetDeployer:        GetDeployer,
-				Builder:            buildv2.NewBuilderFromScratch(at),
+				Builder:            buildv2.NewBuilderFromScratch(at, ioCtrl),
 				DeployWaiter:       NewDeployWaiter(k8sClientProvider),
 				EndpointGetter:     NewEndpointGetter,
 				isRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
@@ -214,6 +217,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 				PipelineCMD:        pc,
 				runningInInstaller: config.RunningInInstaller(),
 				AnalyticsTracker:   at,
+				ioCtrl:             ioCtrl,
 			}
 			startTime := time.Now()
 
@@ -235,7 +239,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 				oktetoLog.StartSpinner()
 				defer oktetoLog.StopSpinner()
 
-				deployer, err := c.GetDeployer(ctx, options, c.Builder, c.CfgMapHandler, k8sClientProvider, NewKubeConfig(), model.GetAvailablePort)
+				deployer, err := c.GetDeployer(ctx, options, c.Builder, c.CfgMapHandler, k8sClientProvider, NewKubeConfig(), model.GetAvailablePort, ioCtrl)
 				if err != nil {
 					return err
 				}
@@ -357,7 +361,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		oktetoLog.Infof("failed to recreate failed pods: %s", err.Error())
 	}
 
-	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder, dc.CfgMapHandler, dc.K8sClientProvider, NewKubeConfig(), model.GetAvailablePort)
+	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder, dc.CfgMapHandler, dc.K8sClientProvider, NewKubeConfig(), model.GetAvailablePort, dc.ioCtrl)
 	if err != nil {
 		return err
 	}
@@ -556,11 +560,12 @@ func GetDeployer(ctx context.Context,
 	k8sProvider okteto.K8sClientProvider,
 	kubeconfig kubeConfigHandler,
 	portGetter portGetterFunc,
+	ioCtrl *io.IOController,
 ) (deployerInterface, error) {
 	if shouldRunInRemote(opts) {
 		// run remote
 		oktetoLog.Info("Deploying remotely...")
-		return newRemoteDeployer(builder), nil
+		return newRemoteDeployer(builder, ioCtrl), nil
 	}
 
 	// run local

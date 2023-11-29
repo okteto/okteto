@@ -32,6 +32,7 @@ import (
 	build "github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
@@ -251,7 +252,7 @@ func getClientForOktetoCluster(ctx context.Context, builder string, token string
 	return c, nil
 }
 
-func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string) error {
+func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.IOController) error {
 	logFilterRules := []Rule{
 		{
 			condition:   BuildKitMissingCacheCondition,
@@ -319,7 +320,7 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			}()
 			// not using shared context to not disrupt display but let it finish reporting errors
 			// We need to wait until the tty channel is closed to avoid writing to stdout while the tty is being used
-			return progressui.DisplaySolveStatus(context.TODO(), "", c, oktetoLog.GetOutputWriter(), ttyChannel)
+			return progressui.DisplaySolveStatus(context.TODO(), "", c, ioCtrl.Out(), ttyChannel)
 		case "deploy":
 			err := deployDisplayer(context.TODO(), plainChannel, &types.BuildOptions{OutputMode: "deploy"})
 			commandFailChannel <- err
@@ -330,7 +331,7 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			return err
 		default:
 			// not using shared context to not disrupt display but let it finish reporting errors
-			return progressui.DisplaySolveStatus(context.TODO(), "", nil, oktetoLog.GetOutputWriter(), plainChannel)
+			return progressui.DisplaySolveStatus(context.TODO(), "", nil, ioCtrl.Out(), plainChannel)
 		}
 	})
 

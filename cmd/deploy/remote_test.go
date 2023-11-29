@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	filesystem "github.com/okteto/okteto/pkg/filesystem/fake"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
@@ -553,7 +554,7 @@ func Test_getOktetoCLIVersion(t *testing.T) {
 }
 
 func Test_newRemoteDeployer(t *testing.T) {
-	got := newRemoteDeployer(&fakeV2Builder{})
+	got := newRemoteDeployer(&fakeV2Builder{}, io.NewIOController())
 	require.IsType(t, &remoteDeployCommand{}, got)
 	require.NotNil(t, got.getBuildEnvVars)
 }

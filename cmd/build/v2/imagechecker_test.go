@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,8 +34,10 @@ func Test_checkIfBuildHashIsBuilt(t *testing.T) {
 		expectedBuilt bool
 	}{
 		{
-			name:          "empty build hash",
-			imageChecker:  &imageChecker{},
+			name: "empty build hash",
+			imageChecker: &imageChecker{
+				logger: io.NewIOController().Logger(),
+			},
 			expectedTag:   "",
 			expectedBuilt: false,
 		},
@@ -47,6 +50,7 @@ func Test_checkIfBuildHashIsBuilt(t *testing.T) {
 				lookupReferenceWithDigest: func(_ string, _ registryImageCheckerInterface) (string, error) {
 					return "", oktetoErrors.ErrNotFound
 				},
+				logger: io.NewIOController().Logger(),
 			},
 			manifestName:  "manifest",
 			serviceName:   "service",
@@ -57,6 +61,7 @@ func Test_checkIfBuildHashIsBuilt(t *testing.T) {
 		{
 			name: "error getting SHA from registry",
 			imageChecker: &imageChecker{
+				logger: io.NewIOController().Logger(),
 				tagger: imageTagger{
 					cfg: &fakeConfig{},
 				},
@@ -81,6 +86,7 @@ func Test_checkIfBuildHashIsBuilt(t *testing.T) {
 				lookupReferenceWithDigest: func(_ string, _ registryImageCheckerInterface) (string, error) {
 					return "image-tag-from-registry", nil
 				},
+				logger: io.NewIOController().Logger(),
 			},
 			manifestName:  "manifest",
 			serviceName:   "service",

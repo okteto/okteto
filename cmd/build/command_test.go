@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -267,6 +268,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			buildCommand: &Command{
 				GetManifest: getManifestWithInvalidManifestError,
 				Registry:    newFakeRegistry(),
+				ioCtrl:      io.NewIOController(),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -277,6 +279,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			buildCommand: &Command{
 				GetManifest: getManifestWithInvalidManifestError,
 				Registry:    newFakeRegistry(),
+				ioCtrl:      io.NewIOController(),
 			},
 			options: &types.BuildOptions{
 				File: "okteto.yml",
@@ -289,6 +292,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			buildCommand: &Command{
 				GetManifest: getManifestWithInvalidManifestError,
 				Registry:    newFakeRegistry(),
+				ioCtrl:      io.NewIOController(),
 			},
 			options: &types.BuildOptions{
 				File: malformedDockerfile,
@@ -301,6 +305,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			buildCommand: &Command{
 				GetManifest: getManifestWithInvalidManifestError,
 				Registry:    newFakeRegistry(),
+				ioCtrl:      io.NewIOController(),
 			},
 			options: &types.BuildOptions{
 				File: dockerfile,
@@ -313,6 +318,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			buildCommand: &Command{
 				GetManifest: getFakeManifestV2,
 				Registry:    newFakeRegistry(),
+				ioCtrl:      io.NewIOController(),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -323,6 +329,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			buildCommand: &Command{
 				GetManifest: getFakeManifestV1,
 				Registry:    newFakeRegistry(),
+				ioCtrl:      io.NewIOController(),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -333,6 +340,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			buildCommand: &Command{
 				GetManifest: getManifestWithError,
 				Registry:    newFakeRegistry(),
+				ioCtrl:      io.NewIOController(),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -390,7 +398,7 @@ func Test_NewBuildCommand(t *testing.T) {
 			CurrentContext: "test",
 		},
 	}
-	got := NewBuildCommand(fakeAnalyticsTracker{}, okCtx)
+	got := NewBuildCommand(io.NewIOController(), fakeAnalyticsTracker{}, okCtx)
 	require.IsType(t, &Command{}, got)
 	require.NotNil(t, got.GetManifest)
 	require.NotNil(t, got.Builder)
