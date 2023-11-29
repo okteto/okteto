@@ -14,7 +14,6 @@
 package context
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 
@@ -23,7 +22,6 @@ import (
 )
 
 var (
-	cloudOption = fmt.Sprintf("%s (Okteto Cloud)", okteto.CloudURL)
 	newOEOption = "Create new context"
 )
 
