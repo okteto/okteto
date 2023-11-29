@@ -138,6 +138,7 @@ func (fc fakeClient) Write(_ name.Reference, _ containerv1.Image) error {
 }
 
 type fakeClientConfig struct {
+	err                         error
 	cert                        *x509.Certificate
 	externalRegistryCredentials [2]string
 	registryURL                 string
@@ -152,11 +153,11 @@ func (f fakeClientConfig) GetRegistryURL() string                            { r
 func (f fakeClientConfig) GetUserID() string                                 { return f.userID }
 func (f fakeClientConfig) GetToken() string                                  { return f.token }
 func (f fakeClientConfig) IsInsecureSkipTLSVerifyPolicy() bool               { return f.isInsecure }
-func (f fakeClientConfig) GetContextCertificate() (*x509.Certificate, error) { return f.cert, nil }
+func (f fakeClientConfig) GetContextCertificate() (*x509.Certificate, error) { return f.cert, f.err }
 func (f fakeClientConfig) GetServerNameOverride() string                     { return f.serverName }
 func (f fakeClientConfig) GetContextName() string                            { return f.contextName }
 func (f fakeClientConfig) GetExternalRegistryCredentials(_ string) (string, string, error) {
-	return f.externalRegistryCredentials[0], f.externalRegistryCredentials[1], nil
+	return f.externalRegistryCredentials[0], f.externalRegistryCredentials[1], f.err
 }
 
 func TestGetDigest(t *testing.T) {
