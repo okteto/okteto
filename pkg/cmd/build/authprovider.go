@@ -58,6 +58,8 @@ type authProvider struct {
 	// going through the target config file store
 	externalAuth externalRegistryCredentialFunc
 
+	getToken func(string) (string, error)
+
 	// The need for this mutex is not well understood.
 	// Without it, the docker cli on OS X hangs when
 	// reading credentials from docker-credential-osxkeychain.
@@ -65,8 +67,6 @@ type authProvider struct {
 	mu sync.Mutex
 
 	isOkteto bool
-
-	getToken func(string) (string, error)
 }
 
 func (ap *authProvider) Register(server *grpc.Server) {
