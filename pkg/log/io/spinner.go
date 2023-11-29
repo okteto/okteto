@@ -56,7 +56,8 @@ type ttySpinner struct {
 
 // newTTYSpinner creates a new ttySpinner
 func newTTYSpinner(message string) *ttySpinner {
-	spinner := sp.New(sp.CharSets[14], 100*time.Millisecond, sp.WithHiddenCursor(true))
+	spinnerRotationSpeed := 100 * time.Millisecond
+	spinner := sp.New(sp.CharSets[14], spinnerRotationSpeed, sp.WithHiddenCursor(true))
 	okSpinner := &ttySpinner{
 		Spinner: spinner,
 		message: ucFirst(message),
