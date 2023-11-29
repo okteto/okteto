@@ -1,6 +1,6 @@
 module github.com/okteto/okteto
 
-go 1.20
+go 1.21
 
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
@@ -33,7 +33,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/shurcooL/graphql v0.0.0-20220606043923-3cf50f8a0a29
-	github.com/sirupsen/logrus v1.9.0
+	github.com/sirupsen/logrus v1.9.3
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/afero v1.9.2
 	github.com/spf13/cobra v1.5.0
@@ -225,11 +225,18 @@ require (
 
 require (
 	github.com/hashicorp/go-multierror v1.1.1
+	github.com/samber/slog-logrus/v2 v2.1.0
 	istio.io/api v0.0.0-20221013011440-bc935762d2b9
 	istio.io/client-go v1.15.3
 )
 
 require github.com/hashicorp/errwrap v1.0.0 // indirect
+
+require (
+	github.com/samber/lo v1.38.1 // indirect
+	github.com/samber/slog-common v0.11.0 // indirect
+	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect
+)
 
 replace (
 	github.com/Sirupsen/logrus => github.com/sirupsen/logrus v1.8.0

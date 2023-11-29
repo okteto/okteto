@@ -21,6 +21,7 @@ import (
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 )
@@ -30,9 +31,9 @@ type buildCtrl struct {
 	name    string
 }
 
-func newBuildCtrl(name string, analyticsTracker analyticsTrackerInterface) buildCtrl {
+func newBuildCtrl(name string, analyticsTracker analyticsTrackerInterface, ioCtrl *io.IOController) buildCtrl {
 	return buildCtrl{
-		builder: buildv2.NewBuilderFromScratch(analyticsTracker),
+		builder: buildv2.NewBuilderFromScratch(analyticsTracker, ioCtrl),
 		name:    name,
 	}
 }

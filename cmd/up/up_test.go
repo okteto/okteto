@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -342,7 +343,7 @@ func TestCommandAddedToUpOptionsWhenPassedAsFlag(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			cmd := Up(nil)
+			cmd := Up(nil, io.NewIOController())
 			for _, val := range tt.command {
 				err := cmd.Flags().Set("command", val)
 				if err != nil {

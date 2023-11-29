@@ -45,6 +45,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
@@ -89,7 +90,7 @@ type UpOptions struct {
 }
 
 // Up starts a development container
-func Up(at analyticsTrackerInterface) *cobra.Command {
+func Up(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
 	upOptions := &UpOptions{}
 	cmd := &cobra.Command{
 		Use:   "up [svc]",
@@ -263,7 +264,7 @@ func Up(at analyticsTrackerInterface) *cobra.Command {
 				analyticsMeta:     upMeta,
 				K8sClientProvider: okteto.NewK8sClientProvider(),
 				tokenUpdater:      newTokenUpdaterController(),
-				builder:           buildv2.NewBuilderFromScratch(at),
+				builder:           buildv2.NewBuilderFromScratch(at, ioCtrl),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -865,7 +866,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 		BuildArgs:  buildArgs,
 		OutputMode: oktetoLog.TTYFormat,
 	}
-	builder := buildv1.NewBuilderFromScratch()
+	builder := buildv1.NewBuilderFromScratch(io.NewIOController())
 	if err := builder.Build(ctx, buildOptions); err != nil {
 		return err
 	}

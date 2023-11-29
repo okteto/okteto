@@ -4,8 +4,8 @@ ARG KUBECTL_VERSION=1.25.11
 ARG HELM_VERSION=3.12.1
 ARG KUSTOMIZE_VERSION=5.0.0
 
+FROM golang:1.21-bullseye as kubectl-builder
 
-FROM golang:1.20-bullseye as kubectl-builder
 ARG TARGETARCH
 ARG KUBECTL_VERSION
 RUN curl -sLf --retry 3 -o kubectl https://storage.googleapis.com/kubernetes-release/release/v${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl && \
@@ -13,7 +13,8 @@ RUN curl -sLf --retry 3 -o kubectl https://storage.googleapis.com/kubernetes-rel
     chmod +x /usr/local/bin/kubectl && \
     /usr/local/bin/kubectl version --client=true
 
-FROM golang:1.20-bullseye as helm-builder
+FROM golang:1.21-bullseye as helm-builder
+
 ARG TARGETARCH
 ARG HELM_VERSION
 RUN curl -sLf --retry 3 -o helm.tar.gz https://get.helm.sh/helm-v${HELM_VERSION}-linux-${TARGETARCH}.tar.gz && \
@@ -22,7 +23,7 @@ RUN curl -sLf --retry 3 -o helm.tar.gz https://get.helm.sh/helm-v${HELM_VERSION}
     chmod +x /usr/local/bin/helm && \
     /usr/local/bin/helm version
 
-FROM golang:1.20-bullseye as kustomize-builder
+FROM golang:1.21-bullseye as kustomize-builder
 ARG TARGETARCH
 ARG KUSTOMIZE_VERSION
 RUN curl -sLf --retry 3 -o kustomize.tar.gz https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_${TARGETARCH}.tar.gz \
@@ -30,7 +31,7 @@ RUN curl -sLf --retry 3 -o kustomize.tar.gz https://github.com/kubernetes-sigs/k
     && chmod +x /usr/local/bin/kustomize \
     && /usr/local/bin/kustomize version
 
-FROM golang:1.20-buster as builder
+FROM golang:1.21-bullseye as builder
 WORKDIR /okteto
 
 ENV CGO_ENABLED=0
