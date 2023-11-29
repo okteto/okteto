@@ -163,6 +163,7 @@ func SetOutput(output io.Writer) {
 // SetOutputFormat sets the output format
 func SetOutputFormat(format string) {
 	log.writer = log.getWriter(format)
+	log.spinner.spinnerSupport = !loadBool(OktetoDisableSpinnerEnvVar) && IsInteractive()
 }
 
 // GetOutputWriter sets the output format
