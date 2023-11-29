@@ -34,7 +34,6 @@ func getContextsSelection(ctxOptions *ContextOptions) []utils.SelectorItem {
 	}
 	clusters := make([]utils.SelectorItem, 0)
 
-	clusters = append(clusters, utils.SelectorItem{Name: okteto.CloudURL, Label: cloudOption, Enable: true})
 	clusters = append(clusters, getOktetoClusters(true)...)
 	if len(k8sClusters) > 0 {
 		clusters = append(clusters, getK8sClusters(k8sClusters)...)
