@@ -296,7 +296,7 @@ services:
 					{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
 					{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
 					{Name: "BASHOPTS", Value: "histappend"},
-					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
+					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r"},
 				},
 				SecurityContext: &apiv1.SecurityContext{
 					RunAsUser:  &runAsUser,
@@ -520,7 +520,7 @@ services:
 					{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
 					{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
 					{Name: "BASHOPTS", Value: "histappend"},
-					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
+					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r"},
 				},
 				SecurityContext: &apiv1.SecurityContext{
 					RunAsUser:  pointer.Int64Ptr(0),
@@ -1467,7 +1467,7 @@ environment:
 		{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
 		{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
 		{Name: "BASHOPTS", Value: "histappend"},
-		{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
+		{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r"},
 	}
 	if !reflect.DeepEqual(envOK, tr.DevApp.PodSpec().Containers[0].Env) {
 		t.Fatalf("Wrong env generation %+v", tr.DevApp.PodSpec().Containers[0].Env)
@@ -1719,7 +1719,7 @@ services:
 					{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
 					{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
 					{Name: "BASHOPTS", Value: "histappend"},
-					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
+					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r"},
 				},
 				SecurityContext: &apiv1.SecurityContext{
 					RunAsUser:  &runAsUser,
@@ -1932,7 +1932,7 @@ services:
 					{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
 					{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
 					{Name: "BASHOPTS", Value: "histappend"},
-					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
+					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r"},
 				},
 				VolumeMounts: []apiv1.VolumeMount{
 					{
