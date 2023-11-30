@@ -25,6 +25,7 @@ import (
 )
 
 type FakeConfig struct {
+	err                         error
 	ContextCertificate          *x509.Certificate
 	externalRegistryCredentials [2]string
 	GlobalNamespace             string
@@ -36,7 +37,6 @@ type FakeConfig struct {
 	ContextName                 string
 	InsecureSkipTLSVerifyPolicy bool
 	IsOktetoClusterCfg          bool
-	err                         error
 }
 
 func (fc FakeConfig) IsOktetoCluster() bool               { return fc.IsOktetoClusterCfg }
