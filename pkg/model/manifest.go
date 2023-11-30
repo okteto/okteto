@@ -630,17 +630,8 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 		return nil, newManifestFriendlyError(err)
 	}
 
-	ef := externalresource.ERFilesystemManager{
-		Fs: afero.NewOsFs(),
-	}
-
 	for name, external := range manifest.External {
 		external.SetDefaults(name)
-		ef.ExternalResource = *external
-		err := ef.LoadMarkdownContent(devPath)
-		if err != nil {
-			oktetoLog.Infof("error loading external resource %s: %s", name, err.Error())
-		}
 	}
 
 	manifest.ManifestPath = devPath
