@@ -36,6 +36,7 @@ type FakeConfig struct {
 	ContextName                 string
 	InsecureSkipTLSVerifyPolicy bool
 	IsOktetoClusterCfg          bool
+	err                         error
 }
 
 func (fc FakeConfig) IsOktetoCluster() bool               { return fc.IsOktetoClusterCfg }
@@ -46,16 +47,12 @@ func (fc FakeConfig) GetUserID() string                   { return fc.UserID }
 func (fc FakeConfig) GetToken() string                    { return fc.Token }
 func (fc FakeConfig) IsInsecureSkipTLSVerifyPolicy() bool { return fc.InsecureSkipTLSVerifyPolicy }
 func (fc FakeConfig) GetContextCertificate() (*x509.Certificate, error) {
-	return fc.ContextCertificate, nil
+	return fc.ContextCertificate, fc.err
 }
 func (fc FakeConfig) GetServerNameOverride() string { return fc.ServerName }
 func (fc FakeConfig) GetContextName() string        { return fc.ContextName }
 func (fc FakeConfig) GetExternalRegistryCredentials(_ string) (string, string, error) {
-	return fc.externalRegistryCredentials[0], fc.externalRegistryCredentials[1], nil
-}
-
-func (fc FakeConfig) GetExternalRegistryCredentialsStateless(_ string) (string, string, error) {
-	return fc.externalRegistryCredentials[0], fc.externalRegistryCredentials[1], nil
+	return fc.externalRegistryCredentials[0], fc.externalRegistryCredentials[1], fc.err
 }
 
 func TestGetImageTagWithDigest(t *testing.T) {
