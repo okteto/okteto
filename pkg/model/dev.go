@@ -1185,7 +1185,7 @@ func enableHistoryVolume(rule *TranslationRule, main *Dev) {
 		},
 		env.Var{
 			Name:  "PROMPT_COMMAND",
-			Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND",
+			Value: "history -a ; history -c ; history -r",
 		})
 }
 
