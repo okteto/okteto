@@ -55,7 +55,7 @@ type OktetoBuilder struct {
 // NewBuilderFromScratch creates a new okteto builder
 func NewBuilderFromScratch(ioCtrl *io.IOController) *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
-	registry := registry.NewOktetoRegistry(okteto.Config{})
+	registry := registry.NewOktetoRegistry(okteto.ConfigStateless{})
 	return &OktetoBuilder{
 		Builder:  builder,
 		Registry: registry,

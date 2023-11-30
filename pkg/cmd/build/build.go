@@ -104,9 +104,9 @@ func setOutputMode(outputMode string) string {
 
 }
 
-func GetRegistryConfigFromOktetoConfig(okCtx build.OktetoContextInterface) *okteto.Config {
+func GetRegistryConfigFromOktetoConfig(okCtx build.OktetoContextInterface) *okteto.ConfigStateless {
 
-	return &okteto.Config{
+	return &okteto.ConfigStateless{
 		Cert:                        okCtx.GetCurrentCertStr(),
 		IsOkteto:                    okCtx.IsOkteto(),
 		ContextName:                 okCtx.GetCurrentName(),

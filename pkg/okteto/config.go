@@ -19,7 +19,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
-type Config struct {
+type ConfigStateless struct {
 	GetTokenFn                  func(string) (string, error)
 	GlobalNamespace             string
 	Namespace                   string
@@ -33,19 +33,19 @@ type Config struct {
 	IsOkteto                    bool
 }
 
-func (c Config) IsOktetoCluster() bool      { return c.IsOkteto }
-func (c Config) GetGlobalNamespace() string { return c.GlobalNamespace }
-func (c Config) GetNamespace() string       { return c.Namespace }
-func (c Config) GetRegistryURL() string     { return c.RegistryUrl }
-func (c Config) GetUserID() string          { return c.UserId }
-func (c Config) GetToken() string           { return c.Token }
-func (c Config) GetContextCertificate() (*x509.Certificate, error) {
+func (c ConfigStateless) IsOktetoCluster() bool      { return c.IsOkteto }
+func (c ConfigStateless) GetGlobalNamespace() string { return c.GlobalNamespace }
+func (c ConfigStateless) GetNamespace() string       { return c.Namespace }
+func (c ConfigStateless) GetRegistryURL() string     { return c.RegistryUrl }
+func (c ConfigStateless) GetUserID() string          { return c.UserId }
+func (c ConfigStateless) GetToken() string           { return c.Token }
+func (c ConfigStateless) GetContextCertificate() (*x509.Certificate, error) {
 	return GetContextCertificateStateless(c.Cert)
 }
-func (c Config) IsInsecureSkipTLSVerifyPolicy() bool { return c.InsecureSkipTLSVerifyPolicy }
-func (Config) GetServerNameOverride() string         { return GetServerNameOverride() }
-func (c Config) GetContextName() string              { return c.ContextName }
-func (c Config) GetExternalRegistryCredentialsStateless(registryHost string) (string, string, error) {
+func (c ConfigStateless) IsInsecureSkipTLSVerifyPolicy() bool { return c.InsecureSkipTLSVerifyPolicy }
+func (ConfigStateless) GetServerNameOverride() string         { return GetServerNameOverride() }
+func (c ConfigStateless) GetContextName() string              { return c.ContextName }
+func (c ConfigStateless) GetExternalRegistryCredentials(registryHost string) (string, string, error) {
 	ocfg := &OktetoClientCfg{
 		CtxName: c.ContextName,
 		Token:   c.Token,
@@ -59,6 +59,18 @@ func (c Config) GetExternalRegistryCredentialsStateless(registryHost string) (st
 	return GetExternalRegistryCredentialsStateless(registryHost, c.IsOkteto, client)
 }
 
-func (c Config) GetExternalRegistryCredentials(registryHost string) (string, string, error) {
+type Config struct{}
+
+func (Config) IsOktetoCluster() bool                             { return IsOkteto() }
+func (Config) GetGlobalNamespace() string                        { return Context().GlobalNamespace }
+func (Config) GetNamespace() string                              { return Context().Namespace }
+func (Config) GetRegistryURL() string                            { return Context().Registry }
+func (Config) GetUserID() string                                 { return Context().UserID }
+func (Config) GetToken() string                                  { return Context().Token }
+func (Config) GetContextCertificate() (*x509.Certificate, error) { return GetContextCertificate() }
+func (Config) IsInsecureSkipTLSVerifyPolicy() bool               { return Context().IsInsecure }
+func (Config) GetServerNameOverride() string                     { return GetServerNameOverride() }
+func (Config) GetContextName() string                            { return Context().Name }
+func (Config) GetExternalRegistryCredentials(registryHost string) (string, string, error) {
 	return GetExternalRegistryCredentials(registryHost)
 }

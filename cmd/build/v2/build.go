@@ -105,7 +105,7 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 // NewBuilderFromScratch creates a new okteto builder
 func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *io.IOController) *OktetoBuilder {
 	builder := &buildCmd.OktetoBuilder{}
-	registry := registry.NewOktetoRegistry(okteto.Config{})
+	registry := registry.NewOktetoRegistry(okteto.ConfigStateless{})
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
 	wd, err := wdCtrl.Get()
 	if err != nil {
