@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/divert"
+	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	kconfig "github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -350,7 +351,17 @@ func (ld *localDeployer) deployExternals(ctx context.Context, opts *Options, dyn
 			return err
 		}
 
-		err := control.Deploy(ctx, externalName, opts.Manifest.Namespace, externalInfo)
+		ef := externalresource.ERFilesystemManager{
+			Fs:               ld.Fs,
+			ExternalResource: *externalInfo,
+		}
+
+		err := ef.LoadMarkdownContent(opts.Manifest.ManifestPath)
+		if err != nil {
+			oktetoLog.Infof("error loading external resource %s: %s", externalName, err.Error())
+		}
+
+		err = control.Deploy(ctx, externalName, opts.Manifest.Namespace, externalInfo)
 		if err != nil {
 			return err
 		}
