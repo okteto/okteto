@@ -56,14 +56,14 @@ func (ioc *IOController) Logger() *oktetoLogger {
 	return ioc.oktetoLogger
 }
 
-// SetOutput format sets the output format for the CLI. We need that the logger and the output generates the same
-// type of messages so we don't end up mixing formats like json and tty.
+// SetOutputFormat sets the output format for the CLI. We need that the logger and the output generates the same
+// type of messages, so we don't end up mixing formats like json and tty.
 func (ioc *IOController) SetOutputFormat(output string) {
 	ioc.oktetoLogger.SetOutputFormat(output)
 	ioc.out.SetOutputFormat(output)
 }
 
-// Set stage sets the current stage where the CLI is performing.
+// SetStage sets the current stage where the CLI is performing.
 func (ioc *IOController) SetStage(stage string) {
 	ioc.oktetoLogger.SetStage(stage)
 	ioc.out.SetStage(stage)
