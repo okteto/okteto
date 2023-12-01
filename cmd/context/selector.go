@@ -22,10 +22,10 @@ import (
 )
 
 var (
-	newOEOption = "Create new context"
+	newOEOption = "Add new context"
 )
 
-func getContextsSelection(ctxOptions *ContextOptions) []utils.SelectorItem {
+func getAvailableContexts(ctxOptions *ContextOptions) []utils.SelectorItem {
 	k8sClusters := make([]string, 0)
 	if !ctxOptions.OnlyOkteto {
 		k8sClusters = getKubernetesContextList(true)
@@ -36,19 +36,6 @@ func getContextsSelection(ctxOptions *ContextOptions) []utils.SelectorItem {
 	if len(k8sClusters) > 0 {
 		clusters = append(clusters, getK8sClusters(k8sClusters)...)
 	}
-
-	if len(clusters) > 0 {
-		clusters = append(clusters, utils.SelectorItem{
-			Label:  "",
-			Enable: false,
-		})
-	}
-
-	clusters = append(clusters, utils.SelectorItem{
-		Name:   newOEOption,
-		Label:  newOEOption,
-		Enable: true,
-	})
 
 	return clusters
 }
