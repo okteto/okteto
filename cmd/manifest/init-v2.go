@@ -54,7 +54,7 @@ type ManifestCommand struct {
 	K8sClientProvider okteto.K8sClientProvider
 	analyticsTracker  analyticsTrackerInterface
 
-	ioCtrl *io.IOController
+	IoCtrl *io.IOController
 }
 
 // InitOpts defines the option for manifest init
@@ -284,16 +284,18 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		return err
 	}
 	c := &deploy.DeployCommand{
+		GetDeployer:        deploy.GetDeployer,
 		GetManifest:        mc.getManifest,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
 		K8sClientProvider:  mc.K8sClientProvider,
-		Builder:            buildv2.NewBuilderFromScratch(mc.analyticsTracker, mc.ioCtrl),
+		Builder:            buildv2.NewBuilderFromScratch(mc.analyticsTracker, mc.IoCtrl),
 		GetExternalControl: deploy.NewDeployExternalK8sControl,
 		Fs:                 afero.NewOsFs(),
 		CfgMapHandler:      deploy.NewConfigmapHandler(mc.K8sClientProvider),
 		PipelineCMD:        pc,
 		DeployWaiter:       deploy.NewDeployWaiter(mc.K8sClientProvider),
 		EndpointGetter:     deploy.NewEndpointGetter,
+		IoCtrl:             mc.IoCtrl,
 	}
 
 	err = c.RunDeploy(ctx, &deploy.Options{

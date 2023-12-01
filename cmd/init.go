@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/log/io"
 	"os"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -27,7 +28,7 @@ import (
 )
 
 // Init creates okteto manifest
-func Init() *cobra.Command {
+func Init(ioCtrl *io.IOController) *cobra.Command {
 	opts := &manifest.InitOpts{}
 	cmd := &cobra.Command{
 		Use:   "init",
@@ -61,7 +62,9 @@ func Init() *cobra.Command {
 			opts.ShowCTA = oktetoLog.IsInteractive()
 			mc := &manifest.ManifestCommand{
 				K8sClientProvider: okteto.NewK8sClientProvider(),
+				IoCtrl:            ioCtrl,
 			}
+
 			if opts.Version1 {
 				if err := mc.RunInitV1(ctx, opts); err != nil {
 					return err
