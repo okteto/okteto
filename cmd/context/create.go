@@ -422,7 +422,7 @@ func (c ContextCommand) getUserContext(ctx context.Context, ctxName, ns, token s
 			}
 
 			if oktetoErrors.IsNotFound(err) {
-				// fallback to personal namesapce using empty string as param
+				// fallback to personal namespace using empty string as param
 				userContext, err = client.User().GetContext(ctx, "")
 				if err != nil {
 					return nil, err

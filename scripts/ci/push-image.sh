@@ -22,6 +22,6 @@
                 RELEASE_TAG="$commit"
         fi
 
-        okteto build --platform ${PLATFORMS} --build-arg VERSION_STRING="${RELEASE_TAG}" -t "okteto/okteto:${RELEASE_TAG}" -f Dockerfile .
+        okteto build --platform "${PLATFORMS}" --build-arg VERSION_STRING="${RELEASE_TAG}" -t "okteto/okteto:${RELEASE_TAG}" -f Dockerfile .
 
 ); }
