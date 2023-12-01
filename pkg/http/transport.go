@@ -24,7 +24,7 @@ import (
 )
 
 // DefaultTransport returns an *http.Transport lifted from http.DefaultTransport
-// Main differentes vs empty &http.Client{} are http2 preference, min TLS version set to 1.2, timeouts and connection limits.
+// Main differences vs empty &http.Client{} are http2 preference, min TLS version set to 1.2, timeouts and connection limits.
 //
 // dev: reason why not doing pointer cloning is because not safe after init():
 // - https://github.com/golang/go/issues/26013

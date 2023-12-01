@@ -8,7 +8,7 @@ See example [here](https://github.com/okteto/okteto/tree/master/pkg/externalreso
 
 The CLI has a lot of `os.XXX` calls that should be testable. This can be achieved either by:
 
-- using libraries such as [afero](https://github.com/spf13/afero). We could initializate it at the beginning of the main.go and pass it through the commands and functions to be able to mock it without having to create tempdir/tempfiles
+- using libraries such as [afero](https://github.com/spf13/afero). We could initialize it at the beginning of the main.go and pass it through the commands and functions to be able to mock it without having to create tempdir/tempfiles
 
 - defining an interface for the filesystem calls used and mock it in the tests
 
