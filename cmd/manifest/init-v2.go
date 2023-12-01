@@ -71,15 +71,6 @@ type InitOpts struct {
 	AutoConfigureDev bool
 }
 
-// NewManifestCommand returns an instance of ManifestCommand
-func NewManifestCommand(k okteto.K8sClientProvider, a analyticsTrackerInterface, i *io.IOController) *ManifestCommand {
-	return &ManifestCommand{
-		K8sClientProvider: k,
-		analyticsTracker:  a,
-		IoCtrl:            i,
-	}
-}
-
 // RunInitV2 initializes a new okteto manifest
 func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manifest, error) {
 	c, _, er := mc.K8sClientProvider.Provide(okteto.Context().Cfg)
