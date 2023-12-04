@@ -20,7 +20,8 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/build"
+	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -54,7 +55,11 @@ type OktetoBuilder struct {
 
 // NewBuilderFromScratch creates a new okteto builder
 func NewBuilderFromScratch(ioCtrl *io.IOController) *OktetoBuilder {
-	builder := &build.OktetoBuilder{}
+	builder := &buildCmd.OktetoBuilder{
+		OktetoContext: &build.OktetoContext{
+			Store: okteto.ContextStore(),
+		},
+	}
 	registry := registry.NewOktetoRegistry(okteto.ConfigStateless{})
 	return &OktetoBuilder{
 		Builder:  builder,
