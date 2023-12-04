@@ -228,7 +228,7 @@ func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*build.
 
 	if oktetoContext.IsOkteto() && ctxOpts.Namespace != "" {
 		ocfg := defaultOktetoClientCfg(oktetoContext)
-		c, err := okteto.NewOktetoClientStateless(ocfg, oktetoContext.GetTokenByContextName)
+		c, err := okteto.NewOktetoClientStateless(ocfg)
 		if err != nil {
 			return nil, err
 		}

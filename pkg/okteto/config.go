@@ -51,7 +51,7 @@ func (c ConfigStateless) GetExternalRegistryCredentials(registryHost string) (st
 		Token:   c.Token,
 		Cert:    c.Cert,
 	}
-	client, err := NewOktetoClientStateless(ocfg, c.GetTokenFn)
+	client, err := NewOktetoClientStateless(ocfg)
 	if err != nil {
 		oktetoLog.Debugf("failed to create okteto client for getting registry credentials: %s", err.Error())
 		return "", "", err

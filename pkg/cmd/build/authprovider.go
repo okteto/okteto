@@ -32,12 +32,11 @@ import (
 
 var oktetoRegistry = ""
 
-func newDockerAndOktetoAuthProvider(registryURL, username, password string, isOkteto bool, getToken func(string) (string, error), stderr io.Writer) *authProvider {
+func newDockerAndOktetoAuthProvider(registryURL, username, password string, authContext authProviderContextInterface, stderr io.Writer) *authProvider {
 	result := &authProvider{
 		config:       config.LoadDefaultConfigFile(stderr),
-		externalAuth: okteto.GetExternalRegistryCredentialsWithContextStateless,
-		isOkteto:     isOkteto,
-		getToken:     getToken,
+		externalAuth: authContext.getExternalRegistryCreds,
+		authContext:  authContext,
 	}
 	oktetoRegistry = registryURL
 	result.config.AuthConfigs[registryURL] = types.AuthConfig{
@@ -48,7 +47,36 @@ func newDockerAndOktetoAuthProvider(registryURL, username, password string, isOk
 	return result
 }
 
-type externalRegistryCredentialFunc func(ctx context.Context, host string, isOkteto bool, client *okteto.OktetoClient) (string, string, error)
+type authProviderContextInterface interface {
+	isOktetoContext() bool
+	getOktetoClientCfg() *okteto.OktetoClientCfg
+	getExternalRegistryCreds(registryOrImage string, isOkteto bool, c *okteto.OktetoClient) (string, string, error)
+}
+
+type authProviderContext struct {
+	isOkteto bool
+	context  string
+	token    string
+	cert     string
+}
+
+func (apc *authProviderContext) isOktetoContext() bool {
+	return apc.isOkteto
+}
+
+func (apc *authProviderContext) getOktetoClientCfg() *okteto.OktetoClientCfg {
+	return &okteto.OktetoClientCfg{
+		CtxName: apc.context,
+		Token:   apc.token,
+		Cert:    apc.cert,
+	}
+}
+
+func (apc *authProviderContext) getExternalRegistryCreds(registryOrImage string, isOkteto bool, c *okteto.OktetoClient) (string, string, error) {
+	return okteto.GetExternalRegistryCredentialsStateless(registryOrImage, isOkteto, c)
+}
+
+type externalRegistryCredentialFunc func(host string, isOkteto bool, client *okteto.OktetoClient) (string, string, error)
 
 type authProvider struct {
 	config *configfile.ConfigFile
@@ -58,15 +86,13 @@ type authProvider struct {
 	// going through the target config file store
 	externalAuth externalRegistryCredentialFunc
 
-	getToken func(string) (string, error)
-
 	// The need for this mutex is not well understood.
 	// Without it, the docker cli on OS X hangs when
 	// reading credentials from docker-credential-osxkeychain.
 	// See issue https://github.com/docker/cli/issues/1862
 	mu sync.Mutex
 
-	isOkteto bool
+	authContext authProviderContextInterface
 }
 
 func (ap *authProvider) Register(server *grpc.Server) {
@@ -127,12 +153,12 @@ func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRe
 
 	// local credentials takes precedence over cluster defined credentials
 	if res.Username == "" || res.Secret == "" {
-		ocfg := &okteto.OktetoClientCfg{}
-		c, err := okteto.NewOktetoClientStateless(ocfg, ap.getToken)
+		ocfg := ap.authContext.getOktetoClientCfg()
+		c, err := okteto.NewOktetoClientStateless(ocfg)
 		if err != nil {
 			return nil, err
 		}
-		if user, pass, err := ap.externalAuth(ctx, originalHost, ap.isOkteto, c); err != nil {
+		if user, pass, err := ap.externalAuth(originalHost, ap.authContext.isOktetoContext(), c); err != nil {
 			oktetoLog.Debugf("failed to load external auth for %s: %w", req.Host, err.Error())
 		} else {
 			res.Username = user
