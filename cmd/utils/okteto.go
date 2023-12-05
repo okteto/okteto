@@ -72,24 +72,8 @@ func ShouldCreateNamespace(ctx context.Context, ns string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	hasAccess, err := HasAccessToOktetoClusterNamespace(ctx, ns, c)
-	if err != nil {
-		return false, err
-	}
-	if !hasAccess {
-		if env.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
-			return false, fmt.Errorf("cannot deploy on a namespace that doesn't exist. Please create %s and try again", ns)
-		}
-		create, err := AskYesNo(fmt.Sprintf("The namespace %s doesn't exist. Do you want to create it?", ns), YesNoDefault_Yes)
-		if err != nil {
-			return false, err
-		}
-		if !create {
-			return false, fmt.Errorf("cannot deploy on a namespace that doesn't exist. Please create %s and try again", ns)
-		}
-		return true, nil
-	}
-	return false, nil
+
+	return ShouldCreateNamespaceStateless(ctx, ns, c)
 }
 
 // ShouldCreateNamespace checks if the user has access to the namespace.
