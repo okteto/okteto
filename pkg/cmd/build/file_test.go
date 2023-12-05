@@ -16,7 +16,6 @@ package build
 import (
 	"testing"
 
-	build "github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -61,7 +60,7 @@ func Test_translateOktetoRegistryImage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			okCtx := &build.OktetoContext{
+			okCtx := &okteto.OktetoContextStateless{
 				Store: &okteto.OktetoContextStore{
 					Contexts: map[string]*okteto.OktetoContext{
 						"test": {

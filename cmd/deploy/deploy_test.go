@@ -28,7 +28,6 @@ import (
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/analytics"
-	build "github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
@@ -432,7 +431,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	builder := test.NewFakeOktetoBuilder(registry)
 	fakeTracker := fakeAnalyticsTracker{}
 
-	okCtx := &build.OktetoContext{
+	okCtx := &okteto.OktetoContextStateless{
 		Store: &okteto.OktetoContextStore{
 			Contexts: map[string]*okteto.OktetoContext{
 				"test": {

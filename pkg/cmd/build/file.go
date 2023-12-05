@@ -21,7 +21,6 @@ import (
 	"regexp"
 	"strings"
 
-	build "github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -36,7 +35,7 @@ const (
 )
 
 // GetDockerfile returns the dockerfile with the cache and registry translations
-func GetDockerfile(dockerFile string, okCtx build.OktetoContextInterface) (string, error) {
+func GetDockerfile(dockerFile string, okCtx okteto.OktetoContextInterface) (string, error) {
 	file, err := getTranslatedDockerFile(dockerFile, okCtx)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create temporary build folder")
@@ -45,7 +44,7 @@ func GetDockerfile(dockerFile string, okCtx build.OktetoContextInterface) (strin
 	return file, nil
 }
 
-func getTranslatedDockerFile(filename string, okCtx build.OktetoContextInterface) (string, error) {
+func getTranslatedDockerFile(filename string, okCtx okteto.OktetoContextInterface) (string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return "", err
@@ -127,7 +126,7 @@ func translateCacheHandler(input, userID string) string {
 	return input
 }
 
-func translateOktetoRegistryImage(input string, okCtx build.OktetoContextInterface) string {
+func translateOktetoRegistryImage(input string, okCtx okteto.OktetoContextInterface) string {
 	replacer := registry.NewRegistryReplacer(GetRegistryConfigFromOktetoConfig(okCtx))
 	if strings.Contains(input, constants.DevRegistry) {
 		tag := replacer.Replace(input, constants.DevRegistry, okCtx.GetCurrentNamespace())

@@ -25,7 +25,6 @@ import (
 
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	"github.com/okteto/okteto/pkg/analytics"
-	build "github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
@@ -79,7 +78,7 @@ type OktetoBuilder struct {
 	Config           oktetoBuilderConfigInterface
 	analyticsTracker analyticsTrackerInterface
 	V1Builder        *buildv1.OktetoBuilder
-	oktetoContext    build.OktetoContextInterface
+	oktetoContext    okteto.OktetoContextInterface
 
 	hasher *serviceHasher
 
@@ -92,7 +91,7 @@ type OktetoBuilder struct {
 }
 
 // NewBuilder creates a new okteto builder
-func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.IOController, analyticsTracker analyticsTrackerInterface, okCtx build.OktetoContextInterface) *OktetoBuilder {
+func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.IOController, analyticsTracker analyticsTrackerInterface, okCtx okteto.OktetoContextInterface) *OktetoBuilder {
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
 	wd, err := wdCtrl.Get()
 	if err != nil {
@@ -119,7 +118,7 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 // NewBuilderFromScratch creates a new okteto builder
 func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *io.IOController) *OktetoBuilder {
 	builder := &buildCmd.OktetoBuilder{
-		OktetoContext: &build.OktetoContext{
+		OktetoContext: &okteto.OktetoContextStateless{
 			Store: okteto.ContextStore(),
 		},
 	}
@@ -144,7 +143,7 @@ func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *i
 		analyticsTracker:  analyticsTracker,
 		ioCtrl:            ioCtrl,
 		hasher:            newServiceHasher(gitRepo),
-		oktetoContext: &build.OktetoContext{
+		oktetoContext: &okteto.OktetoContextStateless{
 			Store: okteto.ContextStore(),
 		},
 	}

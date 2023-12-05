@@ -11,16 +11,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package build
+package okteto
 
 import (
-	"crypto/x509"
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/okteto"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -31,7 +29,6 @@ type OktetoContextInterface interface {
 	GetGlobalNamespace() string
 	GetCurrentBuilder() string
 	GetCurrentCertStr() string
-	GetCurrentCert() *x509.Certificate
 	GetCurrentToken() string
 	GetCurrentUser() string
 	GetCurrentRegister() string
@@ -42,11 +39,11 @@ type OktetoContextInterface interface {
 	GetTokenByContextName(name string) (string, error)
 }
 
-type OktetoContext struct {
-	Store *okteto.OktetoContextStore
+type OktetoContextStateless struct {
+	Store *OktetoContextStore
 }
 
-func (oc *OktetoContext) UseContextByBuilder() {
+func (oc *OktetoContextStateless) UseContextByBuilder() {
 	currentBuilder := oc.GetCurrentBuilder()
 	for _, octx := range oc.Store.Contexts {
 		if octx.IsOkteto && octx.Builder == currentBuilder {
@@ -56,59 +53,55 @@ func (oc *OktetoContext) UseContextByBuilder() {
 	}
 }
 
-func (oc *OktetoContext) GetCurrentBuilder() string {
+func (oc *OktetoContextStateless) GetCurrentBuilder() string {
 	return oc.getCurrentOktetoContext().Builder
 }
 
-func (oc *OktetoContext) GetCurrentName() string {
+func (oc *OktetoContextStateless) GetCurrentName() string {
 	return oc.getCurrentOktetoContext().Name
 }
 
-func (oc *OktetoContext) GetCurrentCertStr() string {
+func (oc *OktetoContextStateless) GetCurrentCertStr() string {
 	return oc.getCurrentOktetoContext().Certificate
 }
 
-func (oc *OktetoContext) GetCurrentCert() *x509.Certificate {
-	return nil
-}
-
-func (oc *OktetoContext) GetCurrentToken() string {
+func (oc *OktetoContextStateless) GetCurrentToken() string {
 	return oc.getCurrentOktetoContext().Token
 }
 
-func (oc *OktetoContext) GetCurrentUser() string {
+func (oc *OktetoContextStateless) GetCurrentUser() string {
 	return oc.getCurrentOktetoContext().UserID
 }
 
-func (oc *OktetoContext) GetCurrentRegister() string {
+func (oc *OktetoContextStateless) GetCurrentRegister() string {
 	return oc.getCurrentOktetoContext().Registry
 }
 
-func (oc *OktetoContext) IsOkteto() bool {
+func (oc *OktetoContextStateless) IsOkteto() bool {
 	return oc.getCurrentOktetoContext().IsOkteto
 }
 
-func (oc *OktetoContext) ExistsContext() bool {
+func (oc *OktetoContextStateless) ExistsContext() bool {
 	return oc.getCurrentOktetoContext() != nil
 }
 
-func (oc *OktetoContext) IsInsecure() bool {
+func (oc *OktetoContextStateless) IsInsecure() bool {
 	return oc.getCurrentOktetoContext().IsInsecure
 }
 
-func (oc *OktetoContext) GetCurrentCfg() *clientcmdapi.Config {
+func (oc *OktetoContextStateless) GetCurrentCfg() *clientcmdapi.Config {
 	return oc.getCurrentOktetoContext().Cfg
 }
 
-func (oc *OktetoContext) GetCurrentNamespace() string {
+func (oc *OktetoContextStateless) GetCurrentNamespace() string {
 	return oc.getCurrentOktetoContext().Namespace
 }
 
-func (oc *OktetoContext) GetGlobalNamespace() string {
+func (oc *OktetoContextStateless) GetGlobalNamespace() string {
 	return oc.getCurrentOktetoContext().GlobalNamespace
 }
 
-func (oc *OktetoContext) GetTokenByContextName(name string) (string, error) {
+func (oc *OktetoContextStateless) GetTokenByContextName(name string) (string, error) {
 	ctx, ok := oc.Store.Contexts[name]
 	if !ok {
 		return "", fmt.Errorf("context '%s' not found. ", name)
@@ -117,7 +110,7 @@ func (oc *OktetoContext) GetTokenByContextName(name string) (string, error) {
 	return ctx.Token, nil
 }
 
-func (oc *OktetoContext) getCurrentOktetoContext() *okteto.OktetoContext {
+func (oc *OktetoContextStateless) getCurrentOktetoContext() *OktetoContext {
 	if oc.Store.CurrentContext == "" {
 		oktetoLog.Info("ContextStore().CurrentContext is empty")
 		oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())

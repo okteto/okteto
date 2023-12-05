@@ -23,7 +23,6 @@ import (
 	"strings"
 	"testing"
 
-	build "github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -35,7 +34,7 @@ import (
 )
 
 func Test_validateImage(t *testing.T) {
-	okCtx := &build.OktetoContext{
+	okCtx := &okteto.OktetoContextStateless{
 		Store: &okteto.OktetoContextStore{
 			Contexts: map[string]*okteto.OktetoContext{
 				"test": {
@@ -391,7 +390,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			okCtx := &build.OktetoContext{
+			okCtx := &okteto.OktetoContextStateless{
 				Store: &okteto.OktetoContextStore{
 					Contexts: map[string]*okteto.OktetoContext{
 						"test": {

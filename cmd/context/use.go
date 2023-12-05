@@ -21,7 +21,6 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	build "github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -150,14 +149,16 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 
 // RunStateless is the fn to use until the refactoring of the context command itself if you want to make use
 // of an injected context instead of using the global context variable.
-func (c *ContextCommand) RunStateless(ctx context.Context, ctxOptions *ContextOptions) (*build.OktetoContext, error) {
+func (c *ContextCommand) RunStateless(ctx context.Context, ctxOptions *ContextOptions) (*okteto.OktetoContextStateless, error) {
 	err := c.Run(ctx, ctxOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	return &build.OktetoContext{
-		Store: okteto.CurrentStore,
+	statelessContext := okteto.GetContextStoreFromStorePath()
+
+	return &okteto.OktetoContextStateless{
+		Store: statelessContext,
 	}, nil
 }
 

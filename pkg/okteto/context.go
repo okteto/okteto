@@ -234,29 +234,31 @@ func ContextStore() *OktetoContextStore {
 	}
 
 	if ContextExists() {
-		b, err := os.ReadFile(config.GetOktetoContextsStorePath())
-		if err != nil {
-			oktetoLog.Errorf("error reading okteto contexts: %v", err)
-			oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
-		}
-
-		dec := json.NewDecoder(bytes.NewReader(b))
-		dec.DisallowUnknownFields() // Force errors
-
-		ctxStore := &OktetoContextStore{}
-		if err := dec.Decode(&ctxStore); err != nil {
-			oktetoLog.Errorf("error decoding okteto contexts: %v", err)
-			oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
-		}
-		CurrentStore = ctxStore
-
-		return CurrentStore
+		return GetContextStoreFromStorePath()
 	}
 
 	CurrentStore = &OktetoContextStore{
 		Contexts: map[string]*OktetoContext{},
 	}
 	return CurrentStore
+}
+
+func GetContextStoreFromStorePath() *OktetoContextStore {
+	b, err := os.ReadFile(config.GetOktetoContextsStorePath())
+	if err != nil {
+		oktetoLog.Errorf("error reading okteto contexts: %v", err)
+		oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
+	}
+
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.DisallowUnknownFields() // Force errors
+
+	ctxStore := &OktetoContextStore{}
+	if err := dec.Decode(&ctxStore); err != nil {
+		oktetoLog.Errorf("error decoding okteto contexts: %v", err)
+		oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
+	}
+	return ctxStore
 }
 
 func Context() *OktetoContext {

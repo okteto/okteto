@@ -22,7 +22,6 @@ import (
 	buildV1 "github.com/okteto/okteto/cmd/build/v1"
 	buildV2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
@@ -244,7 +243,7 @@ func TestBuildErrIfInvalidManifest(t *testing.T) {
 func TestBuilderIsProperlyGenerated(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	okCtx := &build.OktetoContext{
+	okCtx := &okteto.OktetoContextStateless{
 		Store: &okteto.OktetoContextStore{
 			Contexts: map[string]*okteto.OktetoContext{
 				"test": {
@@ -390,7 +389,7 @@ type fakeAnalyticsTracker struct{}
 func (fakeAnalyticsTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
 
 func Test_NewBuildCommand(t *testing.T) {
-	okCtx := &build.OktetoContext{
+	okCtx := &okteto.OktetoContextStateless{
 		Store: &okteto.OktetoContextStore{
 			Contexts: map[string]*okteto.OktetoContext{
 				"test": {
