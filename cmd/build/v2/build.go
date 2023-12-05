@@ -93,13 +93,27 @@ type OktetoBuilder struct {
 
 // NewBuilder creates a new okteto builder
 func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.IOController, analyticsTracker analyticsTrackerInterface, okCtx build.OktetoContextInterface) *OktetoBuilder {
-	b := NewBuilderFromScratch(analyticsTracker, ioCtrl)
-	b.Builder = builder
-	b.Registry = registry
-	b.ioCtrl = ioCtrl
-	b.V1Builder = buildv1.NewBuilder(builder, registry, ioCtrl)
-	b.oktetoContext = okCtx
-	return b
+	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
+	wd, err := wdCtrl.Get()
+	if err != nil {
+		ioCtrl.Logger().Infof("could not get working dir: %s", err)
+	}
+	gitRepo := repository.NewRepository(wd)
+	config := getConfigStateless(registry, gitRepo, ioCtrl.Logger(), okCtx.IsOkteto())
+
+	buildEnvs := map[string]string{}
+	buildEnvs[OktetoEnableSmartBuildEnvVar] = strconv.FormatBool(config.isSmartBuildsEnable)
+	return &OktetoBuilder{
+		Builder:           builder,
+		Registry:          registry,
+		V1Builder:         buildv1.NewBuilder(builder, registry, ioCtrl),
+		buildEnvironments: buildEnvs,
+		Config:            config,
+		analyticsTracker:  analyticsTracker,
+		ioCtrl:            ioCtrl,
+		hasher:            newServiceHasher(gitRepo),
+		oktetoContext:     okCtx,
+	}
 }
 
 // NewBuilderFromScratch creates a new okteto builder

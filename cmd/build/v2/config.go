@@ -18,6 +18,7 @@ import (
 	"strconv"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
 )
 
@@ -66,7 +67,28 @@ func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterfa
 		hasGlobalAccess:     hasAccess,
 		isCleanProject:      isClean,
 		fs:                  afero.NewOsFs(),
-		isOkteto:            true,
+		isOkteto:            okteto.IsOkteto(),
+		isSmartBuildsEnable: getIsSmartBuildEnabled(),
+	}
+}
+
+func getConfigStateless(registry configRegistryInterface, gitRepo configRepositoryInterface, l loggerInfo, isOkteto bool) oktetoBuilderConfig {
+	hasAccess, err := registry.HasGlobalPushAccess()
+	if err != nil {
+		l.Infof("error trying to access globalPushAccess: %w", err)
+	}
+
+	isClean, err := gitRepo.IsClean()
+	if err != nil {
+		l.Infof("error trying to get directory: %w", err)
+	}
+
+	return oktetoBuilderConfig{
+		repository:          gitRepo,
+		hasGlobalAccess:     hasAccess,
+		isCleanProject:      isClean,
+		fs:                  afero.NewOsFs(),
+		isOkteto:            isOkteto,
 		isSmartBuildsEnable: getIsSmartBuildEnabled(),
 	}
 }
