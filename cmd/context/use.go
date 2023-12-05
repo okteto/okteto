@@ -31,9 +31,9 @@ import (
 )
 
 const (
-	personalAccessTokenURL            = "https://www.okteto.com/docs/cloud/personal-access-tokens/"
-	messageHintFirstOktetoContextInit = "To install your own instance follow these steps: https://www.okteto.com/free-trial/: "
-	messageSuggestingCurrentContext   = "Enter the URL of your Okteto instance"
+	personalAccessTokenURL          = "https://www.okteto.com/docs/cloud/personal-access-tokens/"
+	suggestInstallOktetoSH          = "Don't have an Okteto instance? Start by installing Okteto on your Kubernetes cluster: https://www.okteto.com/free-trial/"
+	messageSuggestingCurrentContext = "Enter the URL of your Okteto instance: "
 )
 
 // Use context points okteto to a cluster.
@@ -176,7 +176,7 @@ func getContext(ctxOptions *ContextOptions) (string, error) {
 			if oCtx, ok := ctxStore.Contexts[ctxStore.CurrentContext]; ok && oCtx.IsOkteto {
 				clusterURL = ctxStore.CurrentContext
 			}
-			question := fmt.Sprintf("%s [%s]: ", messageSuggestingCurrentContext, clusterURL)
+			question := fmt.Sprintf("%s[%s]: ", messageSuggestingCurrentContext, clusterURL)
 			oktetoContext, err = askForOktetoURL(question)
 			if err != nil {
 				return "", err
@@ -187,8 +187,8 @@ func getContext(ctxOptions *ContextOptions) (string, error) {
 		}
 	} else {
 		var err error
-		question := fmt.Sprintf("%s. %s", messageSuggestingCurrentContext, messageHintFirstOktetoContextInit)
-		oktetoContext, err = askForOktetoURL(question)
+		oktetoLog.Information(suggestInstallOktetoSH)
+		oktetoContext, err = askForOktetoURL(messageSuggestingCurrentContext)
 		if err != nil {
 			return "", err
 		}
