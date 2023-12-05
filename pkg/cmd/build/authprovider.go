@@ -54,10 +54,10 @@ type authProviderContextInterface interface {
 }
 
 type authProviderContext struct {
-	isOkteto bool
 	context  string
 	token    string
 	cert     string
+	isOkteto bool
 }
 
 func (apc *authProviderContext) isOktetoContext() bool {
@@ -79,7 +79,8 @@ func (apc *authProviderContext) getExternalRegistryCreds(registryOrImage string,
 type externalRegistryCredentialFunc func(host string, isOkteto bool, client *okteto.OktetoClient) (string, string, error)
 
 type authProvider struct {
-	config *configfile.ConfigFile
+	authContext authProviderContextInterface
+	config      *configfile.ConfigFile
 
 	// externalAuth is an external registry credentials getter that live
 	// outside of the configfile. It is used to load external auth data without
@@ -91,8 +92,6 @@ type authProvider struct {
 	// reading credentials from docker-credential-osxkeychain.
 	// See issue https://github.com/docker/cli/issues/1862
 	mu sync.Mutex
-
-	authContext authProviderContextInterface
 }
 
 func (ap *authProvider) Register(server *grpc.Server) {
