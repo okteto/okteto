@@ -265,56 +265,56 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 		isBuildV2Expected bool
 		expectedError     bool
 	}{
-		// {
-		// 	name: "Manifest error fallback to v1",
-		// 	buildCommand: &Command{
-		// 		GetManifest: getManifestWithInvalidManifestError,
-		// 		Registry:    newFakeRegistry(),
-		// 		ioCtrl:      io.NewIOController(),
-		// 	},
-		// 	options:           &types.BuildOptions{},
-		// 	expectedError:     false,
-		// 	isBuildV2Expected: false,
-		// },
-		// {
-		// 	name: "Manifest error",
-		// 	buildCommand: &Command{
-		// 		GetManifest: getManifestWithInvalidManifestError,
-		// 		Registry:    newFakeRegistry(),
-		// 		ioCtrl:      io.NewIOController(),
-		// 	},
-		// 	options: &types.BuildOptions{
-		// 		File: "okteto.yml",
-		// 	},
-		// 	expectedError:     true,
-		// 	isBuildV2Expected: false,
-		// },
-		// {
-		// 	name: "Builder error. Dockerfile malformed",
-		// 	buildCommand: &Command{
-		// 		GetManifest: getManifestWithInvalidManifestError,
-		// 		Registry:    newFakeRegistry(),
-		// 		ioCtrl:      io.NewIOController(),
-		// 	},
-		// 	options: &types.BuildOptions{
-		// 		File: malformedDockerfile,
-		// 	},
-		// 	expectedError:     false,
-		// 	isBuildV2Expected: false,
-		// },
-		// {
-		// 	name: "Builder error. Invalid manifest/Dockerfile correct",
-		// 	buildCommand: &Command{
-		// 		GetManifest: getManifestWithInvalidManifestError,
-		// 		Registry:    newFakeRegistry(),
-		// 		ioCtrl:      io.NewIOController(),
-		// 	},
-		// 	options: &types.BuildOptions{
-		// 		File: dockerfile,
-		// 	},
-		// 	expectedError:     false,
-		// 	isBuildV2Expected: false,
-		// },
+		{
+			name: "Manifest error fallback to v1",
+			buildCommand: &Command{
+				GetManifest: getManifestWithInvalidManifestError,
+				Registry:    newFakeRegistry(),
+				ioCtrl:      io.NewIOController(),
+			},
+			options:           &types.BuildOptions{},
+			expectedError:     false,
+			isBuildV2Expected: false,
+		},
+		{
+			name: "Manifest error",
+			buildCommand: &Command{
+				GetManifest: getManifestWithInvalidManifestError,
+				Registry:    newFakeRegistry(),
+				ioCtrl:      io.NewIOController(),
+			},
+			options: &types.BuildOptions{
+				File: "okteto.yml",
+			},
+			expectedError:     true,
+			isBuildV2Expected: false,
+		},
+		{
+			name: "Builder error. Dockerfile malformed",
+			buildCommand: &Command{
+				GetManifest: getManifestWithInvalidManifestError,
+				Registry:    newFakeRegistry(),
+				ioCtrl:      io.NewIOController(),
+			},
+			options: &types.BuildOptions{
+				File: malformedDockerfile,
+			},
+			expectedError:     false,
+			isBuildV2Expected: false,
+		},
+		{
+			name: "Builder error. Invalid manifest/Dockerfile correct",
+			buildCommand: &Command{
+				GetManifest: getManifestWithInvalidManifestError,
+				Registry:    newFakeRegistry(),
+				ioCtrl:      io.NewIOController(),
+			},
+			options: &types.BuildOptions{
+				File: dockerfile,
+			},
+			expectedError:     false,
+			isBuildV2Expected: false,
+		},
 		{
 			name: "BuilderV2 called.",
 			buildCommand: &Command{
@@ -326,28 +326,28 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			expectedError:     false,
 			isBuildV2Expected: true,
 		},
-		// {
-		// 	name: "Manifest valid but BuilderV1 fallback.",
-		// 	buildCommand: &Command{
-		// 		GetManifest: getFakeManifestV1,
-		// 		Registry:    newFakeRegistry(),
-		// 		ioCtrl:      io.NewIOController(),
-		// 	},
-		// 	options:           &types.BuildOptions{},
-		// 	expectedError:     false,
-		// 	isBuildV2Expected: false,
-		// },
-		// {
-		// 	name: "Manifest error. BuilderV1 fallback.",
-		// 	buildCommand: &Command{
-		// 		GetManifest: getManifestWithError,
-		// 		Registry:    newFakeRegistry(),
-		// 		ioCtrl:      io.NewIOController(),
-		// 	},
-		// 	options:           &types.BuildOptions{},
-		// 	expectedError:     false,
-		// 	isBuildV2Expected: false,
-		// },
+		{
+			name: "Manifest valid but BuilderV1 fallback.",
+			buildCommand: &Command{
+				GetManifest: getFakeManifestV1,
+				Registry:    newFakeRegistry(),
+				ioCtrl:      io.NewIOController(),
+			},
+			options:           &types.BuildOptions{},
+			expectedError:     false,
+			isBuildV2Expected: false,
+		},
+		{
+			name: "Manifest error. BuilderV1 fallback.",
+			buildCommand: &Command{
+				GetManifest: getManifestWithError,
+				Registry:    newFakeRegistry(),
+				ioCtrl:      io.NewIOController(),
+			},
+			options:           &types.BuildOptions{},
+			expectedError:     false,
+			isBuildV2Expected: false,
+		},
 	}
 
 	for _, tt := range tests {
