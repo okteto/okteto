@@ -15,7 +15,7 @@ package repository
 
 import (
 	"context"
-	errors "errors"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -266,7 +266,7 @@ func FindTopLevelGitDir(workingDir string, fs afero.Fs) (string, error) {
 	}
 
 	for {
-		if _, err := fs.Stat(filepath.Join(dir, ".git")); err == nil {
+		if filesystem.FileExistsWithFilesystem(filepath.Join(dir, ".git"), fs) {
 			return dir, nil
 		}
 

@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/go-git/go-git/v5"
@@ -534,15 +535,15 @@ func TestFindTopLevelGitDir(t *testing.T) {
 		{
 			name: "found",
 			input: input{
-				cwd: "/tmp/example/services/api",
+				cwd: filepath.Join("/tmp", "example", "services", "api"),
 				mockFs: func() afero.Fs {
 					fs := afero.NewMemMapFs()
-					_, err := fs.Create("/tmp/example/.git")
+					_, err := fs.Create(filepath.Join("/tmp", "example", ".git"))
 					assert.NoError(t, err)
 					return fs
 				},
 			},
-			expectedPath: "/tmp/example",
+			expectedPath: filepath.Join("/tmp", "example"),
 			expectedErr:  nil,
 		},
 	}
