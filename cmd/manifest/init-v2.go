@@ -50,7 +50,7 @@ type analyticsTrackerInterface interface {
 type ManifestCommand struct {
 	manifest          *model.Manifest
 	K8sClientProvider okteto.K8sClientProvider
-	analyticsTracker  analyticsTrackerInterface
+	AnalyticsTracker  analyticsTrackerInterface
 
 	IoCtrl *io.IOController
 }
@@ -226,7 +226,7 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		GetManifest:        mc.getManifest,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
 		K8sClientProvider:  mc.K8sClientProvider,
-		Builder:            buildv2.NewBuilderFromScratch(mc.analyticsTracker, mc.IoCtrl),
+		Builder:            buildv2.NewBuilderFromScratch(mc.AnalyticsTracker, mc.IoCtrl),
 		GetExternalControl: deploy.NewDeployExternalK8sControl,
 		Fs:                 afero.NewOsFs(),
 		CfgMapHandler:      deploy.NewConfigmapHandler(mc.K8sClientProvider),
@@ -238,10 +238,10 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 
 	err = c.RunDeploy(ctx, &deploy.Options{
 		Name:         mc.manifest.Name,
-		ManifestPath: opts.DevPath,
+		ManifestPath: filepath.Join(opts.Workdir, opts.DevPath),
 		Timeout:      5 * time.Minute,
 		Build:        false,
-		Wait:         false,
+		Wait:         true,
 	})
 	if err != nil {
 		return err
@@ -517,7 +517,8 @@ func (mc *ManifestCommand) getManifest(path string) (*model.Manifest, error) {
 		manifest.Build = b
 		d := model.NewDeployInfo()
 		if mc.manifest.Deploy != nil {
-			copy(d.Commands, mc.manifest.Deploy.Commands)
+			d.Commands = mc.manifest.Deploy.Commands
+			mc.manifest.Deploy.Commands = nil
 			d.Endpoints = mc.manifest.Deploy.Endpoints
 			d.ComposeSection = mc.manifest.Deploy.ComposeSection
 		}

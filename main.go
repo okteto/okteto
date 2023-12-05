@@ -152,7 +152,7 @@ func main() {
 	root.AddCommand(build.Build(ctx, ioController, at))
 
 	root.AddCommand(namespace.Namespace(ctx))
-	root.AddCommand(cmd.Init(ioController))
+	root.AddCommand(cmd.Init(at, ioController))
 	root.AddCommand(up.Up(at, ioController))
 	root.AddCommand(cmd.Down())
 	root.AddCommand(cmd.Status())
