@@ -153,6 +153,7 @@ func getContext(ctxOptions *ContextOptions) (string, error) {
 	ctxs := getAvailableContexts(ctxOptions)
 
 	var oktetoContext string
+	var err error
 	if len(ctxs) > 0 {
 		ctxs = append(ctxs, utils.SelectorItem{
 			Label:  "",
@@ -166,7 +167,7 @@ func getContext(ctxOptions *ContextOptions) (string, error) {
 
 		initialPosition := getInitialPosition(ctxs)
 		selector := utils.NewOktetoSelector("A context defines the default Okteto instance or cluster for any Okteto CLI command.\nSelect the context you want to use:", "Option")
-		oktetoContext, err := selector.AskForOptionsOkteto(ctxs, initialPosition)
+		oktetoContext, err = selector.AskForOptionsOkteto(ctxs, initialPosition)
 		if err != nil {
 			return "", err
 		}
@@ -186,7 +187,7 @@ func getContext(ctxOptions *ContextOptions) (string, error) {
 			ctxOptions.IsOkteto = okteto.IsOktetoContext(oktetoContext)
 		}
 	} else {
-		var err error
+
 		oktetoLog.Information(suggestInstallOktetoSH)
 		oktetoContext, err = askForOktetoURL(messageSuggestingCurrentContext)
 		if err != nil {
