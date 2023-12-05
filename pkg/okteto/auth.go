@@ -102,7 +102,7 @@ func (c *OktetoClient) Auth(ctx context.Context, code string) (*types.User, erro
 			return nil, errGitHubNotVerifiedEmail
 		}
 		// This error is sent at the mutation with Metadata. Our current client for GraphQL does not support this kind of errors,
-		// so the information regarding metada is lost here. Message is still comunicated so we can check the error
+		// so the information regarding metada is lost here. Message is still communicated so we can check the error
 		// https://github.com/okteto/okteto/issues/2926
 		if IsErrGithubMissingBusinessEmail(err) {
 			return nil, err

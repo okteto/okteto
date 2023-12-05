@@ -35,6 +35,10 @@ lint:
 	pre-commit run --all-files
 	golangci-lint run
 
+.PHONY: lint-fix
+lint-fix:
+	golangci-lint run --fix
+
 .PHONY: install-fieldalignment
 install-fieldalignment:
 	$(eval GOBIN=$(shell go env GOPATH)/bin)
