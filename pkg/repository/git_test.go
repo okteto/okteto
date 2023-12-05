@@ -504,6 +504,8 @@ func TestFindTopLevelGitDir(t *testing.T) {
 		cwd    string
 	}
 
+	rootDir := filepath.ToSlash("/tmp")
+
 	tests := []struct {
 		input        input
 		expectedErr  error
@@ -535,15 +537,15 @@ func TestFindTopLevelGitDir(t *testing.T) {
 		{
 			name: "found",
 			input: input{
-				cwd: filepath.Join("/tmp", "example", "services", "api"),
+				cwd: filepath.Join(rootDir, "example", "services", "api"),
 				mockFs: func() afero.Fs {
 					fs := afero.NewMemMapFs()
-					_, err := fs.Create(filepath.Join("/tmp", "example", ".git"))
+					_, err := fs.Create(filepath.Join(rootDir, "example", ".git"))
 					assert.NoError(t, err)
 					return fs
 				},
 			},
-			expectedPath: filepath.Join("/tmp", "example"),
+			expectedPath: filepath.Join(rootDir, "example"),
 			expectedErr:  nil,
 		},
 	}
