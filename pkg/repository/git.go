@@ -15,7 +15,7 @@ package repository
 
 import (
 	"context"
-	"errors"
+	errors "errors"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -25,10 +25,12 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/spf13/afero"
 )
 
 var (
 	errNotCleanRepo = errors.New("repository is not clean")
+	errFindingRepo  = errors.New("top level git repo directory cannot be found")
 )
 
 type gitRepoController struct {
@@ -255,4 +257,23 @@ func (ogr oktetoGitWorktree) Status(ctx context.Context, localGit LocalGitInterf
 	}
 
 	return oktetoGitStatus{status: status}, nil
+}
+
+func FindTopLevelGitDir(workingDir string, fs afero.Fs) (string, error) {
+	dir, err := filepath.Abs(workingDir)
+	if err != nil {
+		return "", fmt.Errorf("%w: invalid workind dir: %w", errFindingRepo, err)
+	}
+
+	for {
+		if _, err := fs.Stat(filepath.Join(dir, ".git")); err == nil {
+			return dir, nil
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", errFindingRepo
+		}
+		dir = parent
+	}
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -492,6 +493,72 @@ func TestGetTreeHash(t *testing.T) {
 			treeHash, err := repo.GetTreeHash(tt.buildContext)
 			assert.ErrorIs(t, err, tt.expected.err)
 			assert.Equal(t, tt.expected.sha, treeHash)
+		})
+	}
+}
+
+func TestFindTopLevelGitDir(t *testing.T) {
+	type input struct {
+		mockFs func() afero.Fs
+		cwd    string
+	}
+
+	tests := []struct {
+		input        input
+		expectedErr  error
+		name         string
+		expectedPath string
+	}{
+		{
+			name: "not found",
+			input: input{
+				cwd: "/home/user/test/service",
+				mockFs: func() afero.Fs {
+					return afero.NewMemMapFs()
+				},
+			},
+			expectedPath: "",
+			expectedErr:  errFindingRepo,
+		},
+		{
+			name: "invalid working dir",
+			input: input{
+				cwd: "@",
+				mockFs: func() afero.Fs {
+					return afero.NewMemMapFs()
+				},
+			},
+			expectedPath: "",
+			expectedErr:  errFindingRepo,
+		},
+		{
+			name: "found",
+			input: input{
+				cwd: "/tmp/example/services/api",
+				mockFs: func() afero.Fs {
+					fs := afero.NewMemMapFs()
+					_, err := fs.Create("/tmp/example/.git")
+					assert.NoError(t, err)
+					return fs
+				},
+			},
+			expectedPath: "/tmp/example",
+			expectedErr:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := tt.input.mockFs()
+			path, err := FindTopLevelGitDir(tt.input.cwd, fs)
+
+			if tt.expectedErr != nil {
+				assert.ErrorIs(t, err, tt.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assert.Equal(t, tt.expectedPath, path)
 		})
 	}
 }
