@@ -436,6 +436,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 		Builder:           buildv2.NewBuilder(builder, reg, io.NewIOController(), fakeTracker),
 		K8sClientProvider: fakeK8sClientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider),
+		Fs:                afero.NewMemMapFs(),
 	}
 
 	ctx := context.Background()
@@ -591,6 +592,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 		GetDeployer:       fakeDeployer.Get,
 		K8sClientProvider: fakeK8sClientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider),
+		Fs:                afero.NewMemMapFs(),
 	}
 	ctx := context.Background()
 
