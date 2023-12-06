@@ -299,7 +299,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return fmt.Errorf("failed to get the current working directory: %w", err)
 	}
 
-	topLevelGitDir, err := repository.FindTopLevelGitDir(cwd, afero.NewOsFs())
+	topLevelGitDir, err := repository.FindTopLevelGitDir(cwd, dc.Fs)
 	if err != nil {
 		oktetoLog.Warning("Some git env vars might not be available: %s", err.Error())
 	}
