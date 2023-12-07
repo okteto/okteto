@@ -143,7 +143,7 @@ func main() {
 	root.AddCommand(build.Build(ctx, at))
 
 	root.AddCommand(namespace.Namespace(ctx))
-	root.AddCommand(cmd.Init())
+	root.AddCommand(cmd.Init(at))
 	root.AddCommand(up.Up(at))
 	root.AddCommand(cmd.Down())
 	root.AddCommand(cmd.Status())
