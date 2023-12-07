@@ -97,7 +97,7 @@ services:
 			{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
 			{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
 			{Name: "BASHOPTS", Value: "histappend"},
-			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
+			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r"},
 		},
 		SecurityContext: &SecurityContext{
 			RunAsUser:  pointer.Int64Ptr(0),
@@ -199,7 +199,7 @@ services:
 			{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
 			{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
 			{Name: "BASHOPTS", Value: "histappend"},
-			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
+			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r"},
 		},
 		Volumes: []VolumeMount{
 			{
@@ -271,7 +271,7 @@ initContainer:
 			{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
 			{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
 			{Name: "BASHOPTS", Value: "histappend"},
-			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
+			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r"},
 		},
 		SecurityContext: &SecurityContext{
 			RunAsUser:  pointer.Int64Ptr(0),
@@ -366,7 +366,7 @@ sync:
 			{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
 			{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
 			{Name: "BASHOPTS", Value: "histappend"},
-			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
+			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r"},
 		},
 		SecurityContext: &SecurityContext{
 			RunAsUser:  pointer.Int64Ptr(0),
@@ -428,7 +428,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 				{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
 				{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
 				{Name: "BASHOPTS", Value: "histappend"},
-				{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
+				{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r"},
 			},
 		},
 		{
@@ -446,7 +446,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 				{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
 				{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
 				{Name: "BASHOPTS", Value: "histappend"},
-				{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
+				{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r"},
 			},
 		},
 	}

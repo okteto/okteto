@@ -31,7 +31,9 @@ import (
 )
 
 const (
-	personalAccessTokenURL = "https://www.okteto.com/docs/cloud/personal-access-tokens/"
+	personalAccessTokenURL          = "https://www.okteto.com/docs/cloud/personal-access-tokens/"
+	suggestInstallOktetoSH          = "Don't have an Okteto instance?\n    Start by installing Okteto on your Kubernetes cluster: https://www.okteto.com/free-trial/"
+	messageSuggestingCurrentContext = "Enter the URL of your Okteto instance: "
 )
 
 // Use context points okteto to a cluster.
@@ -163,22 +165,50 @@ func (c *ContextCommand) RunStateless(ctx context.Context, ctxOptions *ContextOp
 }
 
 func getContext(ctxOptions *ContextOptions) (string, error) {
-	ctxs := getContextsSelection(ctxOptions)
-	initialPosition := getInitialPosition(ctxs)
-	selector := utils.NewOktetoSelector("A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:", "Context")
-	oktetoContext, err := selector.AskForOptionsOkteto(ctxs, initialPosition)
-	if err != nil {
-		return "", err
-	}
+	ctxs := getAvailableContexts(ctxOptions)
 
-	if isCreateNewContextOption(oktetoContext) {
-		oktetoContext, err = askForOktetoURL()
+	var oktetoContext string
+	var err error
+	if len(ctxs) > 0 {
+		ctxs = append(ctxs, utils.SelectorItem{
+			Label:  "",
+			Enable: false,
+		})
+		ctxs = append(ctxs, utils.SelectorItem{
+			Name:   newOEOption,
+			Label:  newOEOption,
+			Enable: true,
+		})
+
+		initialPosition := getInitialPosition(ctxs)
+		selector := utils.NewOktetoSelector("A context defines the default Okteto instance or cluster for any Okteto CLI command.\nSelect the context you want to use:", "Option")
+		oktetoContext, err = selector.AskForOptionsOkteto(ctxs, initialPosition)
+		if err != nil {
+			return "", err
+		}
+		if isCreateNewContextOption(oktetoContext) {
+			ctxStore := okteto.ContextStore()
+			clusterURL := okteto.CloudURL
+			if oCtx, ok := ctxStore.Contexts[ctxStore.CurrentContext]; ok && oCtx.IsOkteto {
+				clusterURL = ctxStore.CurrentContext
+			}
+			question := fmt.Sprintf("%s[%s]: ", messageSuggestingCurrentContext, clusterURL)
+			oktetoContext, err = askForOktetoURL(question)
+			if err != nil {
+				return "", err
+			}
+			ctxOptions.IsOkteto = true
+		} else {
+			ctxOptions.IsOkteto = okteto.IsOktetoContext(oktetoContext)
+		}
+	} else {
+
+		oktetoLog.Information(suggestInstallOktetoSH)
+		oktetoContext, err = askForOktetoURL(messageSuggestingCurrentContext)
 		if err != nil {
 			return "", err
 		}
 		ctxOptions.IsOkteto = true
-	} else {
-		ctxOptions.IsOkteto = okteto.IsOktetoContext(oktetoContext)
 	}
 
 	return oktetoContext, nil
