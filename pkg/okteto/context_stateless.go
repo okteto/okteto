@@ -57,6 +57,10 @@ func (oc *OktetoContextStateless) GetCurrentBuilder() string {
 	return oc.getCurrentOktetoContext().Builder
 }
 
+func (oc *OktetoContextStateless) SetCurrentCfg(cfg *clientcmdapi.Config) {
+	oc.getCurrentOktetoContext().Cfg = cfg
+}
+
 func (oc *OktetoContextStateless) GetCurrentName() string {
 	return oc.getCurrentOktetoContext().Name
 }

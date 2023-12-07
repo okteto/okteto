@@ -157,11 +157,18 @@ func (c *ContextCommand) RunStateless(ctx context.Context, ctxOptions *ContextOp
 		return nil, err
 	}
 
-	statelessContext := okteto.GetContextStoreFromStorePath()
+	cfg := okteto.Context().Cfg.DeepCopy()
 
-	return &okteto.OktetoContextStateless{
-		Store: statelessContext,
-	}, nil
+	oktetoContextStore := okteto.GetContextStoreFromStorePath()
+
+	oktetoContextStateless := &okteto.OktetoContextStateless{
+		Store: oktetoContextStore,
+	}
+
+	oktetoContextStateless.SetCurrentCfg(cfg)
+
+	return oktetoContextStateless, nil
+
 }
 
 func getContext(ctxOptions *ContextOptions) (string, error) {
