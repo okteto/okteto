@@ -28,9 +28,6 @@ import (
 const (
 	// OktetoSmartBuildUsingContextEnvVar is the env var to enable smart builds using the build context instead of the project build
 	OktetoSmartBuildUsingContextEnvVar = "OKTETO_SMART_BUILDS_USING_BUILD_CONTEXT"
-
-	buildContextCommitType = "tree_hash"
-	projectCommitType      = "commit"
 )
 
 type repositoryCommitRetriever interface {
@@ -70,7 +67,7 @@ func (sh serviceHasher) hashBuildContext(buildInfo *model.BuildInfo) string {
 	if buildContext == "" {
 		buildContext = "."
 	}
-	if _, ok := sh.buildContextCache[buildInfo.Context]; !ok {
+	if _, ok := sh.buildContextCache[buildContext]; !ok {
 		var err error
 		sh.buildContextCache[buildContext], err = sh.gitRepoCtrl.GetLatestDirCommit(buildContext)
 		if err != nil {

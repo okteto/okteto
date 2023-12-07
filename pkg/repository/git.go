@@ -173,7 +173,7 @@ func (r gitRepoController) calculateLatestDirCommit(ctx context.Context, context
 		return "", fmt.Errorf("failed to analyze git repo: %w", err)
 	}
 
-	return repo.GetLatestCommit(ctx, contextDir, NewLocalGit("git", &LocalExec{}))
+	return repo.GetLatestCommit(ctx, r.path, contextDir, NewLocalGit("git", &LocalExec{}))
 }
 
 type repositoryGetterInterface interface {
@@ -187,11 +187,15 @@ func (gitRepositoryGetter) get(path string) (gitRepositoryInterface, error) {
 	if err != nil {
 		return nil, err
 	}
-	return oktetoGitRepository{repo: repo}, nil
+	return oktetoGitRepository{
+		repo: repo,
+		root: path,
+	}, nil
 }
 
 type oktetoGitRepository struct {
 	repo *git.Repository
+	root string
 }
 
 func (ogr oktetoGitRepository) Worktree() (gitWorktreeInterface, error) {
@@ -230,7 +234,7 @@ type gitRepositoryInterface interface {
 	Worktree() (gitWorktreeInterface, error)
 	Head() (*plumbing.Reference, error)
 	Log(o *git.LogOptions) (object.CommitIter, error)
-	GetLatestCommit(ctx context.Context, dirpath string, localGit LocalGitInterface) (string, error)
+	GetLatestCommit(ctx context.Context, repoPath, dirpath string, localGit LocalGitInterface) (string, error)
 }
 
 type gitCommitInterface interface {
@@ -263,7 +267,7 @@ func (ogr oktetoGitWorktree) Status(ctx context.Context, localGit LocalGitInterf
 	return oktetoGitStatus{status: status}, nil
 }
 
-func (ogr oktetoGitRepository) GetLatestCommit(ctx context.Context, dirpath string, localGit LocalGitInterface) (string, error) {
+func (ogr oktetoGitRepository) GetLatestCommit(ctx context.Context, repoPath, dirpath string, localGit LocalGitInterface) (string, error) {
 	// using git directly is faster, so we check if it's available
 	_, err := localGit.Exists()
 	if err != nil {
@@ -282,7 +286,7 @@ func (ogr oktetoGitRepository) GetLatestCommit(ctx context.Context, dirpath stri
 		return commit, nil
 	}
 
-	commit, err := localGit.GetLatestCommit(ctx, dirpath, 0)
+	commit, err := localGit.GetLatestCommit(ctx, ogr.root, dirpath, 0)
 	if err != nil {
 		return "", fmt.Errorf("failed to get git status: %w", err)
 	}

@@ -81,7 +81,7 @@ type LocalGitInterface interface {
 	Exists() (string, error)
 	FixDubiousOwnershipConfig(path string) error
 	parseGitStatus(string) (git.Status, error)
-	GetLatestCommit(ctx context.Context, dirPath string, fixAttempt int) (string, error)
+	GetLatestCommit(ctx context.Context, repoRoot, dirPath string, fixAttempt int) (string, error)
 }
 
 type LocalGit struct {
@@ -165,24 +165,24 @@ func (*LocalGit) parseGitStatus(gitStatusOutput string) (git.Status, error) {
 }
 
 // GetLatestCommit returns the latest commit of the repository at the given path
-func (lg *LocalGit) GetLatestCommit(ctx context.Context, dirPath string, fixAttempt int) (string, error) {
+func (lg *LocalGit) GetLatestCommit(ctx context.Context, gitPath, dirPath string, fixAttempt int) (string, error) {
 	if fixAttempt > 1 {
 		return "", errLocalGitCannotGetCommitTooManyAttempts
 	}
 
-	output, err := lg.exec.RunCommand(ctx, dirPath, lg.gitPath, "--no-optional-locks", "log", "-n", "1", "--pretty=format:%H")
+	output, err := lg.exec.RunCommand(ctx, gitPath, lg.gitPath, "--no-optional-locks", "log", "-n", "1", "--pretty=format:%H", "--", dirPath)
 	if err != nil {
 		var exitError *exec.ExitError
 		errors.As(err, &exitError)
 		if exitError != nil {
 			exitErr := string(exitError.Stderr)
 			if strings.Contains(exitErr, "detected dubious ownership in repository") {
-				err = lg.FixDubiousOwnershipConfig(dirPath)
+				err = lg.FixDubiousOwnershipConfig(gitPath)
 				if err != nil {
 					return "", errLocalGitCannotGetStatusCannotRecover
 				}
 				fixAttempt++
-				return lg.GetLatestCommit(ctx, dirPath, fixAttempt)
+				return lg.GetLatestCommit(ctx, gitPath, dirPath, fixAttempt)
 			}
 		}
 		return "", errLocalGitCannotGetStatusCannotRecover
