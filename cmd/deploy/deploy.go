@@ -114,7 +114,7 @@ type DeployCommand struct {
 	DivertDriver       divert.Driver
 	PipelineCMD        pipelineCMD.PipelineDeployerInterface
 	AnalyticsTracker   analyticsTrackerInterface
-	ioCtrl             *io.IOController
+	IoCtrl             *io.IOController
 
 	PipelineType       model.Archetype
 	isRemote           bool
@@ -217,7 +217,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCont
 				PipelineCMD:        pc,
 				runningInInstaller: config.RunningInInstaller(),
 				AnalyticsTracker:   at,
-				ioCtrl:             ioCtrl,
+				IoCtrl:             ioCtrl,
 			}
 			startTime := time.Now()
 
@@ -361,7 +361,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		oktetoLog.Infof("failed to recreate failed pods: %s", err.Error())
 	}
 
-	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder, dc.CfgMapHandler, dc.K8sClientProvider, NewKubeConfig(), model.GetAvailablePort, dc.ioCtrl)
+	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder, dc.CfgMapHandler, dc.K8sClientProvider, NewKubeConfig(), model.GetAvailablePort, dc.IoCtrl)
 	if err != nil {
 		return err
 	}

@@ -20,14 +20,20 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/manifest"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
+type analyticsTrackerInterface interface {
+	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
+}
+
 // Init creates okteto manifest
-func Init() *cobra.Command {
+func Init(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
 	opts := &manifest.InitOpts{}
 	cmd := &cobra.Command{
 		Use:   "init",
@@ -61,7 +67,10 @@ func Init() *cobra.Command {
 			opts.ShowCTA = oktetoLog.IsInteractive()
 			mc := &manifest.ManifestCommand{
 				K8sClientProvider: okteto.NewK8sClientProvider(),
+				AnalyticsTracker:  at,
+				IoCtrl:            ioCtrl,
 			}
+
 			if opts.Version1 {
 				if err := mc.RunInitV1(ctx, opts); err != nil {
 					return err
