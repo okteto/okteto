@@ -234,7 +234,9 @@ func ContextStore() *OktetoContextStore {
 	}
 
 	if ContextExists() {
-		return GetContextStoreFromStorePath()
+		ctxStore := GetContextStoreFromStorePath()
+		CurrentStore = ctxStore
+		return ctxStore
 	}
 
 	CurrentStore = &OktetoContextStore{
