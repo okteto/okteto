@@ -35,7 +35,7 @@ const (
 
 type repositoryCommitRetriever interface {
 	GetSHA() (string, error)
-	GetTreeHash(string) (string, error)
+	GetLatestDirCommit(string) (string, error)
 }
 
 type serviceHasher struct {
@@ -61,7 +61,7 @@ func (sh *serviceHasher) hashProjectCommit(buildInfo *model.BuildInfo) string {
 			oktetoLog.Infof("could not get repository sha: %w", err)
 		}
 	}
-	return sh.hash(buildInfo, projectCommitType, sh.projectCommit)
+	return sh.hash(buildInfo, sh.projectCommit)
 }
 
 // hashBuildContext returns the hash of the service using its context tree hash
@@ -72,13 +72,13 @@ func (sh serviceHasher) hashBuildContext(buildInfo *model.BuildInfo) string {
 	}
 	if _, ok := sh.buildContextCache[buildInfo.Context]; !ok {
 		var err error
-		sh.buildContextCache[buildContext], err = sh.gitRepoCtrl.GetTreeHash(buildContext)
+		sh.buildContextCache[buildContext], err = sh.gitRepoCtrl.GetLatestDirCommit(buildContext)
 		if err != nil {
 			oktetoLog.Info("error trying to get tree hash for build context '%s': %w", buildContext, err)
 		}
 	}
 
-	return sh.hash(buildInfo, buildContextCommitType, sh.buildContextCache[buildContext])
+	return sh.hash(buildInfo, sh.buildContextCache[buildContext])
 }
 
 // hashService returns the hashed project commit by default. If smart-builds use the context it returns the hash of the service given its git tree hash
@@ -89,7 +89,7 @@ func (sh serviceHasher) hashService(buildInfo *model.BuildInfo) string {
 	return sh.hashProjectCommit(buildInfo)
 }
 
-func (sh serviceHasher) hash(buildInfo *model.BuildInfo, commitType, commitHash string) string {
+func (sh serviceHasher) hash(buildInfo *model.BuildInfo, commitHash string) string {
 	args := []string{}
 	for _, arg := range buildInfo.Args {
 		args = append(args, arg.String())
@@ -105,15 +105,13 @@ func (sh serviceHasher) hash(buildInfo *model.BuildInfo, commitType, commitHash 
 	// We use a builder to avoid allocations when building the string
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "%s:%s;", commitType, commitHash)
+	fmt.Fprintf(&b, "commit:%s;", commitHash)
 	fmt.Fprintf(&b, "target:%s;", buildInfo.Target)
 	fmt.Fprintf(&b, "build_args:%s;", argsText)
 	fmt.Fprintf(&b, "secrets:%s;", secretsText)
 	fmt.Fprintf(&b, "context:%s;", buildInfo.Context)
 	fmt.Fprintf(&b, "dockerfile:%s;", buildInfo.Dockerfile)
-	if commitType == buildContextCommitType {
-		fmt.Fprintf(&b, "dockerfile_content:%s;", getDockerfileContent(buildInfo.Dockerfile))
-	}
+	fmt.Fprintf(&b, "dockerfile_content:%s;", getDockerfileContent(buildInfo.Dockerfile))
 	fmt.Fprintf(&b, "image:%s;", buildInfo.Image)
 
 	oktetoBuildHash := sha256.Sum256([]byte(b.String()))

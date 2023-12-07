@@ -150,7 +150,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},
-			expectedImage: "okteto.global/test-test:b794839154e982d4df54fe7141aee87029f4099599a939b8ebd4a64d368b5c29",
+			expectedImage: "okteto.global/test-test:4b8313e107c813315cb819d900d8c8a2ff1b04edae6aacc50313b7ebe7ae1b81",
 		},
 	}
 	for _, tc := range tt {
@@ -226,7 +226,7 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},
-			expectedImage: "okteto.global/test-test:okteto-with-volume-mounts-b794839154e982d4df54fe7141aee87029f4099599a939b8ebd4a64d368b5c29",
+			expectedImage: "okteto.global/test-test:okteto-with-volume-mounts-4b8313e107c813315cb819d900d8c8a2ff1b04edae6aacc50313b7ebe7ae1b81",
 		},
 	}
 	for _, tc := range tt {

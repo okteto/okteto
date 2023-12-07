@@ -30,7 +30,7 @@ func (frcr fakeRepositoryCommitRetriever) GetSHA() (string, error) {
 	return frcr.sha, frcr.err
 }
 
-func (frcr fakeRepositoryCommitRetriever) GetTreeHash(string) (string, error) {
+func (frcr fakeRepositoryCommitRetriever) GetLatestDirCommit(string) (string, error) {
 	return frcr.sha, frcr.err
 }
 
@@ -45,14 +45,14 @@ func TestServiceHasher_HashProjectCommit(t *testing.T) {
 			repoCtrl: fakeRepositoryCommitRetriever{
 				sha: "testsha",
 			},
-			expectedHash: "351af1ac3fe4b4f0a5550abe35e962b379b44e03b29349eb2dbf75677426393f",
+			expectedHash: "0bfcfc438afefa7bb304fb26b3e9b261f6926aebb0a773d9f2b00935da99bf84",
 		},
 		{
 			name: "error",
 			repoCtrl: fakeRepositoryCommitRetriever{
 				err: errors.New("fake error"),
 			},
-			expectedHash: "59fd822c5d8b629f00198fcca6e12053cbdc5a59675d60401dfee4f571a65538",
+			expectedHash: "6b780261e68c89eadd9173079bd45df7a98da9adb2a847896618eccd44120293",
 		},
 	}
 
@@ -76,14 +76,14 @@ func TestServiceHasher_HashBuildContext(t *testing.T) {
 			repoCtrl: fakeRepositoryCommitRetriever{
 				sha: "testtreehash",
 			},
-			expectedHash: "71e012767fbae26c772d966c13505eb79f093829daa6210887b5ad13a666a74c",
+			expectedHash: "1a75474ba1006dcd56a8adceae64d47b4e82fe0a2fd99a4ef4ca51268105bf9b",
 		},
 		{
 			name: "error",
 			repoCtrl: fakeRepositoryCommitRetriever{
 				err: errors.New("fake error"),
 			},
-			expectedHash: "13c6e75356db55df9032754f1e4cc9ca58b2ccb7392d636c3e6313896a8acba7",
+			expectedHash: "6b780261e68c89eadd9173079bd45df7a98da9adb2a847896618eccd44120293",
 		},
 	}
 
@@ -108,21 +108,21 @@ func TestServiceHasher_HashService(t *testing.T) {
 			repoCtrl: fakeRepositoryCommitRetriever{
 				sha: "testtreehash",
 			},
-			expectedHash: "ae8c29eca94ae08edaba704a0db10c8453951ca6879c87e0ea5d4daa7f5bb3b6",
+			expectedHash: "1a75474ba1006dcd56a8adceae64d47b4e82fe0a2fd99a4ef4ca51268105bf9b",
 		},
 		{
 			name: "use_project_commit",
 			repoCtrl: fakeRepositoryCommitRetriever{
 				sha: "testsha",
 			},
-			expectedHash: "351af1ac3fe4b4f0a5550abe35e962b379b44e03b29349eb2dbf75677426393f",
+			expectedHash: "0bfcfc438afefa7bb304fb26b3e9b261f6926aebb0a773d9f2b00935da99bf84",
 		},
 		{
 			name: "error",
 			repoCtrl: fakeRepositoryCommitRetriever{
 				err: errors.New("fake error"),
 			},
-			expectedHash: "59fd822c5d8b629f00198fcca6e12053cbdc5a59675d60401dfee4f571a65538",
+			expectedHash: "6b780261e68c89eadd9173079bd45df7a98da9adb2a847896618eccd44120293",
 		},
 	}
 

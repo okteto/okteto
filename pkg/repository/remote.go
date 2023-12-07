@@ -36,6 +36,6 @@ func (or oktetoRemoteRepoController) getSHA() (string, error) {
 	return or.gitCommit, nil
 }
 
-func (or oktetoRemoteRepoController) getTreeSHA(string) (string, error) {
+func (or oktetoRemoteRepoController) GeLatestDirCommit(string) (string, error) {
 	return "", fmt.Errorf("not-implemented")
 }

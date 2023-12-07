@@ -17,13 +17,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
@@ -122,53 +120,60 @@ func (r gitRepoController) getSHA() (string, error) {
 	return head.Hash().String(), nil
 }
 
-func (r gitRepoController) getTreeSHA(context string) (string, error) {
-	repo, err := r.repoGetter.get(r.path)
-	if err != nil {
-		return "", fmt.Errorf("failed to get repository: %w", err)
-	}
-
-	ref, err := repo.Head()
-	if err != nil {
-		return "", fmt.Errorf("failed to get HEAD from repo: %w", err)
-	}
-
-	commit, err := repo.CommitObject(ref.Hash())
-	if err != nil {
-		return "", fmt.Errorf("failed to get commit object from reference: %w", err)
-	}
-	tree, err := commit.Tree()
-	if err != nil {
-		return "", fmt.Errorf("failed to get tree from commit: %w", err)
-	}
-
-	if context == "." {
-		return tree.Hash.String(), nil
-	}
-
-	treeDir, err := getTreeDirFromRelPath(context)
-	if err != nil {
-		oktetoLog.Infof("could not tree working dir: %w", err)
-		return "", err
-	}
-
-	svcEntry, err := tree.FindEntry(treeDir)
-	if err != nil {
-		return "", fmt.Errorf("failed to find an entry in tree: %w", err)
-	}
-
-	return svcEntry.Hash.String(), nil
+type commitResponse struct {
+	commit string
+	err    error
 }
 
-func getTreeDirFromRelPath(relPath string) (string, error) {
+func (r gitRepoController) GeLatestDirCommit(contextDir string) (string, error) {
+	// We use context.TODO() in a few places to call isClean, so let's make sure
+	// we set proper internal timeouts to not leak goroutines
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
 
-	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
-	wd, err := wdCtrl.Get()
-	if err != nil {
-		return "", err
+	timeoutCh := make(chan struct{})
+	ch := make(chan commitResponse)
+
+	timeoutErr := errors.New("timeout exceeded")
+	timeout := 100 * time.Second
+
+	go func() {
+		time.Sleep(timeout)
+		close(timeoutCh)
+		cancel()
+		ch <- commitResponse{
+			commit: "",
+			err:    timeoutErr,
+		}
+	}()
+
+	go func() {
+		commit, err := r.calculateLatestDirCommit(ctx, contextDir)
+		select {
+		case <-timeoutCh:
+		case ch <- commitResponse{
+			commit: commit,
+			err:    err,
+		}:
+		}
+	}()
+
+	s := <-ch
+
+	if s.err == timeoutErr {
+		oktetoLog.Debugf("Timeout exceeded calculating git commit for '%s': assuming dirty commit", contextDir)
 	}
 
-	return filepath.Base(filepath.Join(wd, relPath)), nil
+	return s.commit, s.err
+}
+
+func (r gitRepoController) calculateLatestDirCommit(ctx context.Context, contextDir string) (string, error) {
+	repo, err := r.repoGetter.get(r.path)
+	if err != nil {
+		return "", fmt.Errorf("failed to analyze git repo: %w", err)
+	}
+
+	return repo.GetLatestCommit(ctx, contextDir, NewLocalGit("git", &LocalExec{}))
 }
 
 type repositoryGetterInterface interface {
@@ -201,8 +206,8 @@ func (ogr oktetoGitRepository) Head() (*plumbing.Reference, error) {
 	return ogr.repo.Head()
 }
 
-func (ogr oktetoGitRepository) CommitObject(h plumbing.Hash) (gitCommitInterface, error) {
-	return ogr.repo.CommitObject(h)
+func (ogr oktetoGitRepository) Log(o *git.LogOptions) (object.CommitIter, error) {
+	return ogr.repo.Log(o)
 }
 
 type oktetoGitWorktree struct {
@@ -224,7 +229,8 @@ func (ogs oktetoGitStatus) IsClean() bool {
 type gitRepositoryInterface interface {
 	Worktree() (gitWorktreeInterface, error)
 	Head() (*plumbing.Reference, error)
-	CommitObject(plumbing.Hash) (gitCommitInterface, error)
+	Log(o *git.LogOptions) (object.CommitIter, error)
+	GetLatestCommit(ctx context.Context, dirpath string, localGit LocalGitInterface) (string, error)
 }
 
 type gitCommitInterface interface {
@@ -255,4 +261,31 @@ func (ogr oktetoGitWorktree) Status(ctx context.Context, localGit LocalGitInterf
 	}
 
 	return oktetoGitStatus{status: status}, nil
+}
+
+func (ogr oktetoGitRepository) GetLatestCommit(ctx context.Context, dirpath string, localGit LocalGitInterface) (string, error) {
+	// using git directly is faster, so we check if it's available
+	_, err := localGit.Exists()
+	if err != nil {
+		// git is not available, so we fall back on git-go
+		oktetoLog.Debug("Calculating git latest commit: git is not installed, for better performances consider installing it")
+		cIter, _ := ogr.Log(&git.LogOptions{
+			PathFilter: func(s string) bool {
+				return s == dirpath
+			},
+		})
+		commit := ""
+		_ = cIter.ForEach(func(c *object.Commit) error {
+			commit = c.Hash.String()
+			return nil
+		})
+		return commit, nil
+	}
+
+	commit, err := localGit.GetLatestCommit(ctx, dirpath, 0)
+	if err != nil {
+		return "", fmt.Errorf("failed to get git status: %w", err)
+	}
+
+	return commit, nil
 }
