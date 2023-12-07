@@ -100,22 +100,31 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 // NewBuilderFromScratch creates a new okteto builder
 func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface) *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
-	registry := registry.NewOktetoRegistry(okteto.Config{})
+	reg := registry.NewOktetoRegistry(okteto.Config{})
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
 	wd, err := wdCtrl.Get()
 	if err != nil {
 		oktetoLog.Infof("could not get working dir: %w", err)
 	}
 	gitRepo := repository.NewRepository(wd)
+<<<<<<< HEAD
 	config := getConfig(registry, gitRepo)
+=======
+	config := getConfig(reg, gitRepo, ioCtrl.Logger())
+>>>>>>> f5462ae9 (Fix panic in `okteto init --deploy` (#4078))
 
 	buildEnvs := map[string]string{}
 	buildEnvs[OktetoEnableSmartBuildEnvVar] = strconv.FormatBool(config.isSmartBuildsEnable)
 
 	return &OktetoBuilder{
 		Builder:           builder,
+<<<<<<< HEAD
 		Registry:          registry,
 		V1Builder:         buildv1.NewBuilder(builder, registry),
+=======
+		Registry:          reg,
+		V1Builder:         buildv1.NewBuilder(builder, reg, ioCtrl),
+>>>>>>> f5462ae9 (Fix panic in `okteto init --deploy` (#4078))
 		buildEnvironments: buildEnvs,
 		Config:            config,
 		analyticsTracker:  analyticsTracker,

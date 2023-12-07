@@ -36,6 +36,7 @@ import (
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
@@ -112,6 +113,7 @@ type DeployCommand struct {
 	DivertDriver       divert.Driver
 	PipelineCMD        pipelineCMD.PipelineDeployerInterface
 	AnalyticsTracker   analyticsTrackerInterface
+	IoCtrl             *io.IOController
 
 	PipelineType       model.Archetype
 	isRemote           bool
@@ -214,6 +216,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 				PipelineCMD:        pc,
 				runningInInstaller: config.RunningInInstaller(),
 				AnalyticsTracker:   at,
+				IoCtrl:             ioCtrl,
 			}
 			startTime := time.Now()
 
@@ -357,7 +360,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		oktetoLog.Infof("failed to recreate failed pods: %s", err.Error())
 	}
 
-	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder, dc.CfgMapHandler, dc.K8sClientProvider, NewKubeConfig(), model.GetAvailablePort)
+	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder, dc.CfgMapHandler, dc.K8sClientProvider, NewKubeConfig(), model.GetAvailablePort, dc.IoCtrl)
 	if err != nil {
 		return err
 	}

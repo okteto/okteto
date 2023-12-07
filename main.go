@@ -47,6 +47,7 @@ import (
 	"github.com/spf13/cobra"
 	generateFigSpec "github.com/withfig/autocomplete-tools/packages/cobra"
 	utilRuntime "k8s.io/apimachinery/pkg/util/runtime"
+
 	// Load the different library for authentication
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -143,8 +144,8 @@ func main() {
 	root.AddCommand(build.Build(ctx, at))
 
 	root.AddCommand(namespace.Namespace(ctx))
-	root.AddCommand(cmd.Init())
-	root.AddCommand(up.Up(at))
+	root.AddCommand(cmd.Init(at, ioController))
+	root.AddCommand(up.Up(at, ioController))
 	root.AddCommand(cmd.Down())
 	root.AddCommand(cmd.Status())
 	root.AddCommand(cmd.Doctor())
