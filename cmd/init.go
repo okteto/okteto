@@ -22,7 +22,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -33,7 +32,7 @@ type analyticsTrackerInterface interface {
 }
 
 // Init creates okteto manifest
-func Init(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
+func Init(at analyticsTrackerInterface) *cobra.Command {
 	opts := &manifest.InitOpts{}
 	cmd := &cobra.Command{
 		Use:   "init",
@@ -68,7 +67,6 @@ func Init(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command 
 			mc := &manifest.ManifestCommand{
 				K8sClientProvider: okteto.NewK8sClientProvider(),
 				AnalyticsTracker:  at,
-				IoCtrl:            ioCtrl,
 			}
 
 			if opts.Version1 {

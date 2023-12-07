@@ -35,7 +35,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/linguist"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -51,8 +50,6 @@ type ManifestCommand struct {
 	manifest          *model.Manifest
 	K8sClientProvider okteto.K8sClientProvider
 	AnalyticsTracker  analyticsTrackerInterface
-
-	IoCtrl *io.IOController
 }
 
 // InitOpts defines the option for manifest init
@@ -226,14 +223,13 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		GetManifest:        mc.getManifest,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
 		K8sClientProvider:  mc.K8sClientProvider,
-		Builder:            buildv2.NewBuilderFromScratch(mc.AnalyticsTracker, mc.IoCtrl),
+		Builder:            buildv2.NewBuilderFromScratch(mc.AnalyticsTracker),
 		GetExternalControl: deploy.NewDeployExternalK8sControl,
 		Fs:                 afero.NewOsFs(),
 		CfgMapHandler:      deploy.NewConfigmapHandler(mc.K8sClientProvider),
 		PipelineCMD:        pc,
 		DeployWaiter:       deploy.NewDeployWaiter(mc.K8sClientProvider),
 		EndpointGetter:     deploy.NewEndpointGetter,
-		IoCtrl:             mc.IoCtrl,
 	}
 
 	err = c.RunDeploy(ctx, &deploy.Options{
