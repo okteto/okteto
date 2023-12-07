@@ -301,7 +301,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	topLevelGitDir, err := repository.FindTopLevelGitDir(cwd, dc.Fs)
 	if err != nil {
-		oktetoLog.Warning("Some git env vars might not be available: %s", err.Error())
+		oktetoLog.Warning("Repository not detected: the env vars 'OKTETO_GIT_BRANCH' and 'OKTETO_GIT_COMMIT' might not be available: %s.\n    For more information, check out: https://www.okteto.com/docs/cloud/okteto-cli/#built-in-environment-variables", err.Error())
 	}
 
 	if topLevelGitDir != "" {
