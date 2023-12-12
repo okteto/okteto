@@ -38,9 +38,10 @@ type gitRepoController struct {
 	path       string
 }
 
-func newGitRepoController() gitRepoController {
+func newGitRepoController(path string) gitRepoController {
 	return gitRepoController{
 		repoGetter: gitRepositoryGetter{},
+		path:       path,
 	}
 }
 
