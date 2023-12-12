@@ -39,6 +39,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
+	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -282,18 +283,28 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get the current working directory: %w", err)
-	}
-
 	// We need to create a client that doesn't go through the proxy to create
 	// the configmap without the deployedByLabel
 	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
 	if err != nil {
 		return err
 	}
-	dc.addEnvVars(cwd)
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get the current working directory: %w", err)
+	}
+
+	topLevelGitDir, err := repository.FindTopLevelGitDir(cwd, dc.Fs)
+	if err != nil {
+		oktetoLog.Warning("Repository not detected: the env vars '%s' and '%s' might not be available: %s.\n    For more information, check out: https://www.okteto.com/docs/cloud/okteto-cli/#built-in-environment-variables", constants.OktetoGitBranchEnvVar, constants.OktetoGitCommitEnvVar, err.Error())
+	}
+
+	if topLevelGitDir != "" {
+		dc.addEnvVars(topLevelGitDir)
+	} else {
+		dc.addEnvVars(cwd)
+	}
 
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
 		return err
