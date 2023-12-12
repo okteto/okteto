@@ -65,7 +65,7 @@ func getURLFromPath(path string) repositoryURL {
 func NewRepository(path string) Repository {
 	repoURL := getURLFromPath(path)
 
-	var controller repositoryInterface = newGitRepoController()
+	var controller repositoryInterface = newGitRepoController(path)
 	// check if we are inside a remote deploy
 	if v := os.Getenv(constants.OktetoDeployRemote); v != "" {
 		sha := os.Getenv(constants.OktetoGitCommitEnvVar)

@@ -37,6 +37,7 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/spf13/afero"
 )
 
 // OktetoBuilderInterface runs the build of an image
@@ -106,6 +107,13 @@ func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *i
 	wd, err := wdCtrl.Get()
 	if err != nil {
 		ioCtrl.Logger().Infof("could not get working dir: %s", err)
+	}
+	topLevelGitDir, err := repository.FindTopLevelGitDir(wd, afero.NewOsFs())
+	if err != nil {
+		ioCtrl.Logger().Infof("could not get top level git dir: %s", err)
+	}
+	if topLevelGitDir != "" {
+		wd = topLevelGitDir
 	}
 	gitRepo := repository.NewRepository(wd)
 	config := getConfig(reg, gitRepo, ioCtrl.Logger())
