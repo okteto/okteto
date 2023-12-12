@@ -109,7 +109,7 @@ func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface) *OktetoBu
 	}
 	topLevelGitDir, err := repository.FindTopLevelGitDir(wd, afero.NewOsFs())
 	if err != nil {
-		ioCtrl.Logger().Infof("could not get top level git dir: %s", err)
+		oktetoLog.Infof("could not get top level git dir: %s", err)
 	}
 	if topLevelGitDir != "" {
 		wd = topLevelGitDir
