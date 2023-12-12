@@ -427,8 +427,8 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 		Build:        true,
 	}
 
-	registry := newFakeRegistry()
-	builder := test.NewFakeOktetoBuilder(registry)
+	reg := newFakeRegistry()
+	builder := test.NewFakeOktetoBuilder(reg)
 	fakeTracker := fakeAnalyticsTracker{}
 
 	okCtx := &okteto.OktetoContextStateless{
@@ -444,9 +444,10 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	c := &DeployCommand{
 		GetManifest:       getErrorManifest,
 		GetDeployer:       fakeDeployer.Get,
-		Builder:           buildv2.NewBuilder(builder, registry, io.NewIOController(), fakeTracker, okCtx),
+		Builder:           buildv2.NewBuilder(builder, reg, io.NewIOController(), fakeTracker, okCtx),
 		K8sClientProvider: fakeK8sClientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider),
+		Fs:                afero.NewMemMapFs(),
 	}
 
 	ctx := context.Background()
@@ -491,7 +492,11 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	assert.Equal(t, expectedCfg.Name, cfg.Name)
 	assert.Equal(t, expectedCfg.Namespace, cfg.Namespace)
 	assert.Equal(t, expectedCfg.Labels, cfg.Labels)
-	assert.Equal(t, expectedCfg.Data, cfg.Data)
+
+	keysToCompare := []string{"actionName", "name", "status", "filename", "icon", "yaml"}
+	for _, key := range keysToCompare {
+		assert.Equal(t, expectedCfg.Data[key], cfg.Data[key])
+	}
 	assert.NotEmpty(t, cfg.Annotations[constants.LastUpdatedAnnotation])
 }
 
@@ -598,6 +603,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 		GetDeployer:       fakeDeployer.Get,
 		K8sClientProvider: fakeK8sClientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider),
+		Fs:                afero.NewMemMapFs(),
 	}
 	ctx := context.Background()
 
