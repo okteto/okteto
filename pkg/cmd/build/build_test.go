@@ -124,13 +124,6 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 		Name: model.OktetoNamespaceEnvVar, Value: context.Namespace,
 	}
 
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": &context,
-		},
-		CurrentContext: "test",
-	}
-
 	serviceContext := "service"
 	serviceDockerfile := "CustomDockerfile"
 
