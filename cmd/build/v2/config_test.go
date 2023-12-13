@@ -16,6 +16,7 @@ package v2
 import (
 	"testing"
 
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,7 +45,7 @@ type fakeLogger struct{}
 
 func (fl fakeLogger) Infof(format string, args ...interface{}) {}
 
-func TestGetConfig(t *testing.T) {
+func TestGetConfigStateless(t *testing.T) {
 	type input struct {
 		reg  fakeConfigRegistry
 		repo fakeConfigRepo
@@ -154,6 +155,130 @@ func TestGetConfig(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := getConfigStateless(tc.input.reg, tc.input.repo, fakeLogger{}, true)
+			assert.Equal(t, tc.expected, cfg)
+		})
+	}
+}
+
+func TestGetConfig(t *testing.T) {
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+			},
+		},
+		CurrentContext: "test",
+	}
+	type input struct {
+		reg  fakeConfigRegistry
+		repo fakeConfigRepo
+	}
+	tt := []struct {
+		expected oktetoBuilderConfig
+		name     string
+		input    input
+	}{
+		{
+			name: "global access clean commit",
+			input: input{
+				reg: fakeConfigRegistry{
+					access: true,
+					err:    nil,
+				},
+				repo: fakeConfigRepo{
+					isClean: true,
+					err:     nil,
+				},
+			},
+			expected: oktetoBuilderConfig{
+				hasGlobalAccess: true,
+				isCleanProject:  true,
+				repository: fakeConfigRepo{
+					isClean: true,
+					err:     nil,
+				},
+				fs:                  afero.NewOsFs(),
+				isOkteto:            true,
+				isSmartBuildsEnable: true,
+			},
+		},
+		{
+			name: "no global access clean commit",
+			input: input{
+				reg: fakeConfigRegistry{
+					access: false,
+					err:    nil,
+				},
+				repo: fakeConfigRepo{
+					isClean: true,
+					err:     nil,
+				},
+			},
+			expected: oktetoBuilderConfig{
+				hasGlobalAccess: false,
+				isCleanProject:  true,
+				repository: fakeConfigRepo{
+					isClean: true,
+					err:     nil,
+				},
+				fs:                  afero.NewOsFs(),
+				isOkteto:            true,
+				isSmartBuildsEnable: true,
+			},
+		},
+		{
+			name: "error on global access clean commit",
+			input: input{
+				reg: fakeConfigRegistry{
+					access: false,
+					err:    assert.AnError,
+				},
+				repo: fakeConfigRepo{
+					isClean: true,
+					err:     nil,
+				},
+			},
+			expected: oktetoBuilderConfig{
+				hasGlobalAccess: false,
+				isCleanProject:  true,
+				repository: fakeConfigRepo{
+					isClean: true,
+					err:     nil,
+				},
+				fs:                  afero.NewOsFs(),
+				isOkteto:            true,
+				isSmartBuildsEnable: true,
+			},
+		},
+		{
+			name: "error on clean commit and global access",
+			input: input{
+				reg: fakeConfigRegistry{
+					access: false,
+					err:    assert.AnError,
+				},
+				repo: fakeConfigRepo{
+					isClean: false,
+					err:     assert.AnError,
+				},
+			},
+			expected: oktetoBuilderConfig{
+				hasGlobalAccess: false,
+				isCleanProject:  false,
+				repository: fakeConfigRepo{
+					isClean: false,
+					err:     assert.AnError,
+				},
+				fs:                  afero.NewOsFs(),
+				isOkteto:            true,
+				isSmartBuildsEnable: true,
+			},
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := getConfig(tc.input.reg, tc.input.repo, fakeLogger{})
 			assert.Equal(t, tc.expected, cfg)
 		})
 	}
