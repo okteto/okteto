@@ -61,7 +61,7 @@ type OktetoBuilderInterface interface {
 
 // OktetoBuilder runs the build of an image
 type OktetoBuilder struct {
-	OktetoContext okteto.OktetoContextInterface
+	OktetoContext OktetoContextInterface
 }
 
 // OktetoRegistryInterface checks if an image is at the registry
@@ -103,7 +103,7 @@ func setOutputMode(outputMode string) string {
 
 }
 
-func GetRegistryConfigFromOktetoConfig(okCtx okteto.OktetoContextInterface) *okteto.ConfigStateless {
+func GetRegistryConfigFromOktetoConfig(okCtx OktetoContextInterface) *okteto.ConfigStateless {
 
 	return &okteto.ConfigStateless{
 		Cert:                        okCtx.GetCurrentCertStr(),
@@ -243,7 +243,7 @@ func (ob *OktetoBuilder) buildWithDocker(ctx context.Context, buildOptions *type
 	return nil
 }
 
-func validateImage(okctx okteto.OktetoContextInterface, imageTag string) error {
+func validateImage(okctx OktetoContextInterface, imageTag string) error {
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(okctx))
 	if strings.HasPrefix(imageTag, okctx.GetCurrentRegister()) && strings.Count(imageTag, "/") == 2 {
 		return nil
@@ -281,7 +281,7 @@ type regInterface interface {
 }
 
 // OptsFromBuildInfo returns the parsed options for the build from the manifest
-func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *types.BuildOptions, reg regInterface, okCtx okteto.OktetoContextInterface) *types.BuildOptions {
+func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *types.BuildOptions, reg regInterface, okCtx OktetoContextInterface) *types.BuildOptions {
 	if o == nil {
 		o = &types.BuildOptions{}
 	}

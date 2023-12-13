@@ -32,7 +32,6 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
@@ -47,7 +46,7 @@ const (
 type buildWriter struct{}
 
 // getSolveOpt returns the buildkit solve options
-func getSolveOpt(buildOptions *types.BuildOptions, okctx okteto.OktetoContextInterface) (*client.SolveOpt, error) {
+func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface) (*client.SolveOpt, error) {
 	var localDirs map[string]string
 	var frontendAttrs map[string]string
 
@@ -206,7 +205,7 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx okteto.OktetoContextInt
 	return opt, nil
 }
 
-func getBuildkitClient(ctx context.Context, okctx okteto.OktetoContextInterface) (*client.Client, error) {
+func getBuildkitClient(ctx context.Context, okctx OktetoContextInterface) (*client.Client, error) {
 	builder := okctx.GetCurrentBuilder()
 	okctx.UseContextByBuilder()
 
