@@ -153,7 +153,7 @@ func TestGetConfig(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			cfg := getConfig(tc.input.reg, tc.input.repo, fakeLogger{})
+			cfg := getConfigStateless(tc.input.reg, tc.input.repo, fakeLogger{}, true)
 			assert.Equal(t, tc.expected, cfg)
 		})
 	}
