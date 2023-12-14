@@ -246,7 +246,14 @@ func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*okteto
 	return oktetoContext, err
 }
 
-func defaultOktetoClientCfg(octx okteto.OktetoContextInterface) *okteto.OktetoClientCfg {
+type oktetoClientCfgContext interface {
+	ExistsContext() bool
+	GetCurrentName() string
+	GetCurrentToken() string
+	GetCurrentCertStr() string
+}
+
+func defaultOktetoClientCfg(octx oktetoClientCfgContext) *okteto.OktetoClientCfg {
 	if !octx.ExistsContext() {
 		return &okteto.OktetoClientCfg{}
 	}

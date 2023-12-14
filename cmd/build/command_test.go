@@ -406,3 +406,63 @@ func Test_NewBuildCommand(t *testing.T) {
 	require.NotNil(t, got.Registry)
 	require.IsType(t, fakeAnalyticsTracker{}, got.analyticsTracker)
 }
+
+type fakeClientCfgContext struct {
+	existsContext bool
+	name          string
+	token         string
+	cert          string
+}
+
+func (c *fakeClientCfgContext) ExistsContext() bool {
+	return c.existsContext
+}
+
+func (c *fakeClientCfgContext) GetCurrentName() string {
+	return c.name
+}
+
+func (c *fakeClientCfgContext) GetCurrentToken() string {
+	return c.token
+}
+
+func (c *fakeClientCfgContext) GetCurrentCertStr() string {
+	return c.cert
+}
+
+func Test_defaultOktetoClientCfg(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *fakeClientCfgContext
+		expected *okteto.OktetoClientCfg
+	}{
+		{
+			name: "context not exists",
+			input: &fakeClientCfgContext{
+				existsContext: false,
+			},
+			expected: &okteto.OktetoClientCfg{},
+		},
+		{
+			name: "context exists",
+			input: &fakeClientCfgContext{
+				existsContext: true,
+				name:          "test",
+				token:         "okteto",
+				cert:          "my-cert",
+			},
+			expected: &okteto.OktetoClientCfg{
+				CtxName: "test",
+				Token:   "okteto",
+				Cert:    "my-cert",
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			result := defaultOktetoClientCfg(tt.input)
+			require.EqualValues(t, result, tt.expected)
+		})
+	}
+}

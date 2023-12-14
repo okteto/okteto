@@ -17,8 +17,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -35,6 +37,7 @@ import (
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 var fakeManifest *model.Manifest = &model.Manifest{
@@ -335,6 +338,55 @@ func TestTwoStepsBuild(t *testing.T) {
 	image, err = bc.Registry.GetImageTagWithDigest("okteto.dev/test-test:okteto")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, image)
+}
+
+type FakeOktetoContext struct{}
+
+func (f *FakeOktetoContext) GetCurrentName() string                            { return "" }
+func (f *FakeOktetoContext) GetCurrentCfg() *clientcmdapi.Config               { return nil }
+func (f *FakeOktetoContext) GetCurrentNamespace() string                       { return "" }
+func (f *FakeOktetoContext) GetGlobalNamespace() string                        { return "" }
+func (f *FakeOktetoContext) GetCurrentBuilder() string                         { return "" }
+func (f *FakeOktetoContext) GetCurrentCertStr() string                         { return "" }
+func (f *FakeOktetoContext) GetCurrentToken() string                           { return "" }
+func (f *FakeOktetoContext) GetCurrentUser() string                            { return "" }
+func (f *FakeOktetoContext) GetCurrentRegister() string                        { return "" }
+func (f *FakeOktetoContext) ExistsContext() bool                               { return false }
+func (f *FakeOktetoContext) IsOkteto() bool                                    { return false }
+func (f *FakeOktetoContext) IsInsecure() bool                                  { return false }
+func (f *FakeOktetoContext) UseContextByBuilder()                              {}
+func (f *FakeOktetoContext) GetTokenByContextName(name string) (string, error) { return "", nil }
+
+func newFakeOktetoContextStateless() *FakeOktetoContext {
+	return &FakeOktetoContext{}
+}
+
+func isNil(value reflect.Value) bool {
+	switch value.Kind() {
+	case reflect.Ptr, reflect.Slice, reflect.Map, reflect.Chan:
+		return value.IsNil()
+	default:
+		return false
+	}
+}
+
+func TestNewBuilder(t *testing.T) {
+	ioCtrl := io.NewIOController()
+	registry := newFakeRegistry()
+	b := test.NewFakeOktetoBuilder(registry, nil)
+
+	builder := NewBuilder(b, registry, ioCtrl, &fakeAnalyticsTracker{}, newFakeOktetoContextStateless())
+
+	v := reflect.ValueOf(*builder)
+
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		fmt.Println(v.Type().Field(i).Name)
+		if isNil(field) {
+			t.Errorf("Field %s is nil", v.Type().Field(i).Name)
+		}
+	}
+
 }
 
 func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {

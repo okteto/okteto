@@ -120,7 +120,7 @@ func GetExternalRegistryCredentialsWithContextStateless(ctx context.Context, reg
 	return r.read(ctx, registryOrImage)
 }
 
-// GetExternalRegistryCredentials returns registry credentials for a registry
+// GetExternalRegistryCredentialsStateless returns registry credentials for a registry
 // defined in okteto.
 // This function is mostly executed by internal libraries (registry, docker
 // credentials helpers, etc) and we need to respect this signature.
@@ -146,7 +146,7 @@ func GetExternalRegistryCredentialsWithContext(ctx context.Context, registryOrIm
 	return r.read(ctx, registryOrImage)
 }
 
-// GetExternalRegistryCredentialsStateless returns registry credentials for a registry
+// GetExternalRegistryCredentials returns registry credentials for a registry
 // defined in okteto without rely on an okteto context global var.
 // This function is mostly executed by internal libraries (registry, docker
 // credentials helpers, etc) and we need to respect this signature.
