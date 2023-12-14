@@ -472,15 +472,6 @@ func IsOktetoCloud() bool {
 	}
 }
 
-func IsOktetoCloudStateless(name string) bool {
-	switch name {
-	case CloudURL, StagingURL:
-		return true
-	default:
-		return false
-	}
-}
-
 func RemoveSchema(uri string) string {
 	u, err := url.Parse(uri)
 	if err != nil {
