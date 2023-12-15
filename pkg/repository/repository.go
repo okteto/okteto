@@ -37,6 +37,7 @@ type repositoryInterface interface {
 	isClean(ctx context.Context) (bool, error)
 	getSHA() (string, error)
 	GeLatestDirCommit(string) (string, error)
+	GetDiffHash(string) (string, error)
 }
 
 type repositoryURL struct {
@@ -65,7 +66,7 @@ func getURLFromPath(path string) repositoryURL {
 func NewRepository(path string) Repository {
 	repoURL := getURLFromPath(path)
 
-	var controller repositoryInterface = newGitRepoController()
+	var controller repositoryInterface = newGitRepoController(path)
 	// check if we are inside a remote deploy
 	if v := os.Getenv(constants.OktetoDeployRemote); v != "" {
 		sha := os.Getenv(constants.OktetoGitCommitEnvVar)
@@ -117,4 +118,8 @@ func (r Repository) GetAnonymizedRepo() string {
 
 func (r Repository) GetLatestDirCommit(dir string) (string, error) {
 	return r.control.GeLatestDirCommit(dir)
+}
+
+func (r Repository) GetDiffHash(dir string) (string, error) {
+	return r.control.GetDiffHash(dir)
 }

@@ -39,3 +39,7 @@ func (or oktetoRemoteRepoController) getSHA() (string, error) {
 func (or oktetoRemoteRepoController) GeLatestDirCommit(string) (string, error) {
 	return "", fmt.Errorf("not-implemented")
 }
+
+func (or oktetoRemoteRepoController) GetDiffHash(string) (string, error) {
+	return "", fmt.Errorf("not-implemented")
+}

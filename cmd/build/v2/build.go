@@ -24,6 +24,7 @@ import (
 	"time"
 
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
+	"github.com/okteto/okteto/cmd/build/v2/smartbuild"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
@@ -63,7 +64,6 @@ type oktetoBuilderConfigInterface interface {
 	GetGitCommit() string
 	IsOkteto() bool
 	GetAnonymizedRepo() string
-	IsSmartBuildsEnabled() bool
 }
 
 type analyticsTrackerInterface interface {
@@ -78,7 +78,7 @@ type OktetoBuilder struct {
 	analyticsTracker analyticsTrackerInterface
 	V1Builder        *buildv1.OktetoBuilder
 
-	hasher *serviceHasher
+	smartBuildCtrl *smartbuild.SmartBuildCtrl
 
 	// buildEnvironments are the environment variables created by the build steps
 	buildEnvironments map[string]string
@@ -121,7 +121,7 @@ func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *i
 		Config:            config,
 		analyticsTracker:  analyticsTracker,
 		ioCtrl:            ioCtrl,
-		hasher:            newServiceHasher(gitRepo),
+		smartBuildCtrl:    smartbuild.NewSmartBuildCtrl(gitRepo, registry, config.fs, ioCtrl),
 	}
 }
 
@@ -207,38 +207,43 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 			repoHashDurationStart := time.Now()
 
-			meta.RepoHash = bc.hasher.hashProjectCommit(buildSvcInfo)
+			repoHash, err := bc.smartBuildCtrl.GetProjectHash(buildSvcInfo)
+			if err != nil {
+				bc.ioCtrl.Logger().Infof("error getting project commit hash: %s", err)
+			}
+			meta.RepoHash = repoHash
 			meta.RepoHashDuration = time.Since(repoHashDurationStart)
 
 			buildContextHashDurationStart := time.Now()
-			meta.BuildContextHash = bc.hasher.hashBuildContext(buildSvcInfo)
+
+			serviceHash, err := bc.smartBuildCtrl.GetServiceHash(buildSvcInfo)
+			if err != nil {
+				bc.ioCtrl.Logger().Infof("error getting service commit hash: %s", err)
+			}
+			meta.BuildContextHash = serviceHash
 			meta.BuildContextHashDuration = time.Since(buildContextHashDurationStart)
 
 			// We only check that the image is built in the global registry if the noCache option is not set
-			if !options.NoCache && bc.Config.IsCleanProject() && bc.Config.IsSmartBuildsEnabled() {
-
-				imageChecker := getImageChecker(buildSvcInfo, bc.Config, bc.Registry, bc.ioCtrl.Logger())
+			if !options.NoCache && bc.smartBuildCtrl.IsEnabled() {
+				imageChecker := getImageChecker(buildSvcInfo, bc.Config, bc.Registry, bc.smartBuildCtrl, bc.ioCtrl.Logger())
 				cacheHitDurationStart := time.Now()
-				buildHash := bc.hasher.hashService(buildSvcInfo)
+
+				buildHash, err := bc.smartBuildCtrl.GetBuildHash(buildSvcInfo)
+				if err != nil {
+					bc.ioCtrl.Logger().Infof("error getting build hash: %s", err)
+				}
 				imageWithDigest, isBuilt := imageChecker.checkIfBuildHashIsBuilt(options.Manifest.Name, svcToBuild, buildHash)
 
 				meta.CacheHit = isBuilt
 				meta.CacheHitDuration = time.Since(cacheHitDurationStart)
 
 				if isBuilt {
-					bc.ioCtrl.Out().Infof("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, bc.hasher.GetCommitHash(buildSvcInfo))
-					// if the built image belongs to global registry we clone it to the dev registry
-					// so that in can be used in dev containers (i.e. okteto up)
-					if bc.Registry.IsGlobalRegistry(imageWithDigest) {
-						bc.ioCtrl.Logger().Debugf("Copying image '%s' from global to personal registry", svcToBuild)
-						tag := buildHash
-						devImage, err := bc.Registry.CloneGlobalImageToDev(imageWithDigest, tag)
-						if err != nil {
-							return err
-						}
-						imageWithDigest = devImage
-					}
+					bc.ioCtrl.Out().Infof("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, bc.smartBuildCtrl.GetBuildCommit(buildSvcInfo))
 
+					imageWithDigest, err = bc.smartBuildCtrl.CloneGlobalImageToDev(imageWithDigest, buildHash)
+					if err != nil {
+						return err
+					}
 					bc.SetServiceEnvVars(svcToBuild, imageWithDigest)
 					builtImagesControl[svcToBuild] = true
 					meta.Success = true
@@ -320,8 +325,15 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	bc.ioCtrl.Logger().Info(fmt.Sprintf("Building service '%s' from Dockerfile", svcName))
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := bc.getBuildInfoWithoutVolumeMounts(manifest.Build[svcName], isStackManifest)
-	buildHash := bc.hasher.hashService(buildSvcInfo)
-	tagToBuild := newImageTagger(bc.Config).getServiceImageReference(manifest.Name, svcName, buildSvcInfo, buildHash)
+	var err error
+	var buildHash string
+	if bc.smartBuildCtrl.IsEnabled() {
+		buildHash, err = bc.smartBuildCtrl.GetBuildHash(buildSvcInfo)
+		if err != nil {
+			bc.ioCtrl.Logger().Infof("error getting build hash: %s", err)
+		}
+	}
+	tagToBuild := newImageTagger(bc.Config, bc.smartBuildCtrl).getServiceImageReference(manifest.Name, svcName, buildSvcInfo, buildHash)
 	buildSvcInfo.Image = tagToBuild
 	if err := buildSvcInfo.AddBuildArgs(bc.buildEnvironments); err != nil {
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcName, err)
@@ -354,9 +366,17 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 
 	buildInfoCopy := manifest.Build[svcName].Copy()
 	buildInfoCopy.Image = ""
-	buildHash := bc.hasher.hashService(buildInfoCopy)
 
-	tagToBuild := newImageWithVolumesTagger(bc.Config).getServiceImageReference(manifest.Name, svcName, buildInfoCopy, buildHash)
+	var err error
+	var buildHash string
+	if bc.smartBuildCtrl.IsEnabled() {
+		buildHash, err = bc.smartBuildCtrl.GetBuildHash(buildInfoCopy)
+		if err != nil {
+			bc.ioCtrl.Logger().Infof("error getting build hash: %s", err)
+		}
+	}
+
+	tagToBuild := newImageWithVolumesTagger(bc.Config, bc.smartBuildCtrl).getServiceImageReference(manifest.Name, svcName, buildInfoCopy, buildHash)
 	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest)
 	svcBuild, err := build.CreateDockerfileWithVolumeMounts(fromImage, buildSvcInfo.VolumesToInclude)
 	if err != nil {
@@ -456,12 +476,12 @@ func validateServices(buildSection model.ManifestBuild, svcsToBuild []string) er
 	return nil
 }
 
-func getImageChecker(buildInfo *model.BuildInfo, cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface, logger loggerInfo) imageCheckerInterface {
+func getImageChecker(buildInfo *model.BuildInfo, cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface, sbc smartBuildController, logger loggerInfo) imageCheckerInterface {
 	var tagger imageTaggerInterface
 	if serviceHasVolumesToInclude(buildInfo) {
-		tagger = newImageWithVolumesTagger(cfg)
+		tagger = newImageWithVolumesTagger(cfg, sbc)
 	} else {
-		tagger = newImageTagger(cfg)
+		tagger = newImageTagger(cfg, sbc)
 	}
 	return newImageChecker(cfg, registry, tagger, logger)
 }

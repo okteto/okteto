@@ -55,3 +55,11 @@ func TestRemoteGetLatestDirCommit(t *testing.T) {
 	_, err := remote.GeLatestDirCommit("test")
 	assert.Error(t, err, fmt.Errorf("not-implemented"))
 }
+
+func TestRemoteGetDiffHash(t *testing.T) {
+	remote := oktetoRemoteRepoController{
+		gitCommit: "123",
+	}
+	_, err := remote.GetDiffHash("test")
+	assert.Error(t, err, fmt.Errorf("not-implemented"))
+}

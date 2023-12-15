@@ -77,11 +77,12 @@ func (*LocalExec) LookPath(file string) (string, error) {
 }
 
 type LocalGitInterface interface {
-	Status(ctx context.Context, dirPath string, fixAttempt int) (git.Status, error)
+	Status(ctx context.Context, reporoot, dirPath string, fixAttempt int) (git.Status, error)
 	Exists() (string, error)
 	FixDubiousOwnershipConfig(path string) error
 	parseGitStatus(string) (git.Status, error)
 	GetLatestCommit(ctx context.Context, repoRoot, dirPath string, fixAttempt int) (string, error)
+	Diff(ctx context.Context, repoRoot, dirPath string, fixAttempt int) (string, error)
 }
 
 type LocalGit struct {
@@ -97,24 +98,28 @@ func NewLocalGit(gitPath string, exec CommandExecutor) *LocalGit {
 }
 
 // Status returns the status of the repository at the given path
-func (lg *LocalGit) Status(ctx context.Context, dirPath string, fixAttempt int) (git.Status, error) {
+func (lg *LocalGit) Status(ctx context.Context, repoRoot, dirPath string, fixAttempt int) (git.Status, error) {
 	if fixAttempt > 1 {
 		return git.Status{}, errLocalGitCannotGetStatusTooManyAttempts
 	}
 
-	output, err := lg.exec.RunCommand(ctx, dirPath, lg.gitPath, "--no-optional-locks", "status", "--porcelain", "-z")
+	args := []string{"--no-optional-locks", "status", "--porcelain"}
+	if dirPath != "" {
+		args = append(args, dirPath)
+	}
+	output, err := lg.exec.RunCommand(ctx, repoRoot, lg.gitPath, args...)
 	if err != nil {
 		var exitError *exec.ExitError
 		errors.As(err, &exitError)
 		if exitError != nil {
 			exitErr := string(exitError.Stderr)
 			if strings.Contains(exitErr, "detected dubious ownership in repository") {
-				err = lg.FixDubiousOwnershipConfig(dirPath)
+				err = lg.FixDubiousOwnershipConfig(repoRoot)
 				if err != nil {
 					return git.Status{}, errLocalGitCannotGetStatusCannotRecover
 				}
 				fixAttempt++
-				return lg.Status(ctx, dirPath, fixAttempt)
+				return lg.Status(ctx, repoRoot, dirPath, fixAttempt)
 			}
 		}
 		return git.Status{}, errLocalGitCannotGetStatusCannotRecover
@@ -142,7 +147,7 @@ func (lg *LocalGit) Exists() (string, error) {
 }
 
 func (*LocalGit) parseGitStatus(gitStatusOutput string) (git.Status, error) {
-	lines := strings.Split(gitStatusOutput, "\000")
+	lines := strings.Split(gitStatusOutput, "\n")
 	status := make(map[string]*git.FileStatus, len(lines))
 
 	for _, line := range lines {
@@ -171,6 +176,32 @@ func (lg *LocalGit) GetLatestCommit(ctx context.Context, gitPath, dirPath string
 	}
 
 	output, err := lg.exec.RunCommand(ctx, gitPath, lg.gitPath, "--no-optional-locks", "log", "-n", "1", "--pretty=format:%H", "--", dirPath)
+	if err != nil {
+		var exitError *exec.ExitError
+		errors.As(err, &exitError)
+		if exitError != nil {
+			exitErr := string(exitError.Stderr)
+			if strings.Contains(exitErr, "detected dubious ownership in repository") {
+				err = lg.FixDubiousOwnershipConfig(gitPath)
+				if err != nil {
+					return "", errLocalGitCannotGetStatusCannotRecover
+				}
+				fixAttempt++
+				return lg.GetLatestCommit(ctx, gitPath, dirPath, fixAttempt)
+			}
+		}
+		return "", errLocalGitCannotGetStatusCannotRecover
+	}
+	return string(output), nil
+}
+
+// GetLatestCommit returns the latest commit of the repository at the given path
+func (lg *LocalGit) Diff(ctx context.Context, gitPath, dirPath string, fixAttempt int) (string, error) {
+	if fixAttempt > 1 {
+		return "", errLocalGitCannotGetCommitTooManyAttempts
+	}
+
+	output, err := lg.exec.RunCommand(ctx, gitPath, lg.gitPath, "--no-optional-locks", "diff", "--no-color", "--", "HEAD", dirPath)
 	if err != nil {
 		var exitError *exec.ExitError
 		errors.As(err, &exitError)

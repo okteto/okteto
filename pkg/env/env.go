@@ -104,3 +104,19 @@ func LoadBoolean(k string) bool {
 
 	return h
 }
+
+// LoadBooleanOrDefault loads a boolean environment variable and returns it value
+// If the variable is not defined, it returns the default value
+func LoadBooleanOrDefault(k string, d bool) bool {
+	v := os.Getenv(k)
+	if v == "" {
+		return d
+	}
+
+	h, err := strconv.ParseBool(v)
+	if err != nil {
+		oktetoLog.Yellow("'%s' is not a valid value for environment variable %s", v, k)
+	}
+
+	return h
+}
