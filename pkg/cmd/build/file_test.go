@@ -59,19 +59,22 @@ func Test_translateOktetoRegistryImage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			okteto.CurrentStore = &okteto.OktetoContextStore{
-				CurrentContext: "test",
-				Contexts: map[string]*okteto.OktetoContext{
-					"test": {
-						Name:      "test",
-						Namespace: tt.namespace,
-						UserID:    "user-id",
-						Registry:  tt.registry,
+
+			okCtx := &okteto.OktetoContextStateless{
+				Store: &okteto.OktetoContextStore{
+					Contexts: map[string]*okteto.OktetoContext{
+						"test": {
+							Name:      "test",
+							Namespace: tt.namespace,
+							UserID:    "user-id",
+							Registry:  tt.registry,
+						},
 					},
+					CurrentContext: "test",
 				},
 			}
 
-			if got := translateOktetoRegistryImage(tt.input); got != tt.want {
+			if got := translateOktetoRegistryImage(tt.input, okCtx); got != tt.want {
 				t.Errorf("registry.translateOktetoRegistryImage = %v,  want %v", got, tt.want)
 			}
 		})

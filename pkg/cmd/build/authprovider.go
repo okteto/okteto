@@ -32,10 +32,11 @@ import (
 
 var oktetoRegistry = ""
 
-func newDockerAndOktetoAuthProvider(registryURL, username, password string, stderr io.Writer) *authProvider {
+func newDockerAndOktetoAuthProvider(registryURL, username, password string, authContext authProviderContextInterface, stderr io.Writer) *authProvider {
 	result := &authProvider{
 		config:       config.LoadDefaultConfigFile(stderr),
-		externalAuth: okteto.GetExternalRegistryCredentialsWithContext,
+		externalAuth: authContext.getExternalRegistryCreds,
+		authContext:  authContext,
 	}
 	oktetoRegistry = registryURL
 	result.config.AuthConfigs[registryURL] = types.AuthConfig{
@@ -46,10 +47,40 @@ func newDockerAndOktetoAuthProvider(registryURL, username, password string, stde
 	return result
 }
 
-type externalRegistryCredentialFunc func(ctx context.Context, host string) (string, string, error)
+type authProviderContextInterface interface {
+	isOktetoContext() bool
+	getOktetoClientCfg() *okteto.OktetoClientCfg
+	getExternalRegistryCreds(registryOrImage string, isOkteto bool, c *okteto.OktetoClient) (string, string, error)
+}
+
+type authProviderContext struct {
+	context  string
+	token    string
+	cert     string
+	isOkteto bool
+}
+
+func (apc *authProviderContext) isOktetoContext() bool {
+	return apc.isOkteto
+}
+
+func (apc *authProviderContext) getOktetoClientCfg() *okteto.OktetoClientCfg {
+	return &okteto.OktetoClientCfg{
+		CtxName: apc.context,
+		Token:   apc.token,
+		Cert:    apc.cert,
+	}
+}
+
+func (apc *authProviderContext) getExternalRegistryCreds(registryOrImage string, isOkteto bool, c *okteto.OktetoClient) (string, string, error) {
+	return okteto.GetExternalRegistryCredentialsStateless(registryOrImage, isOkteto, c)
+}
+
+type externalRegistryCredentialFunc func(host string, isOkteto bool, client *okteto.OktetoClient) (string, string, error)
 
 type authProvider struct {
-	config *configfile.ConfigFile
+	authContext authProviderContextInterface
+	config      *configfile.ConfigFile
 
 	// externalAuth is an external registry credentials getter that live
 	// outside of the configfile. It is used to load external auth data without
@@ -121,7 +152,12 @@ func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRe
 
 	// local credentials takes precedence over cluster defined credentials
 	if res.Username == "" || res.Secret == "" {
-		if user, pass, err := ap.externalAuth(ctx, originalHost); err != nil {
+		ocfg := ap.authContext.getOktetoClientCfg()
+		c, err := okteto.NewOktetoClientStateless(ocfg)
+		if err != nil {
+			return nil, err
+		}
+		if user, pass, err := ap.externalAuth(originalHost, ap.authContext.isOktetoContext(), c); err != nil {
 			oktetoLog.Debugf("failed to load external auth for %s: %w", req.Host, err.Error())
 		} else {
 			res.Username = user

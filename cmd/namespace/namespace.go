@@ -44,6 +44,15 @@ func NewCommand() (*NamespaceCommand, error) {
 	}, nil
 }
 
+// NewCommand creates a namespace command for use in further operations
+func NewCommandStateless(c *okteto.OktetoClient) *NamespaceCommand {
+	return &NamespaceCommand{
+		ctxCmd:            contextCMD.NewContextCommand(),
+		okClient:          c,
+		k8sClientProvider: okteto.NewK8sClientProvider(),
+	}
+}
+
 // Namespace fetch credentials for a cluster namespace
 func Namespace(ctx context.Context) *cobra.Command {
 	options := &UseOptions{}

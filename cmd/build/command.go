@@ -28,7 +28,7 @@ import (
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/cmd/build"
+	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -50,7 +50,7 @@ const (
 type Command struct {
 	GetManifest func(path string) (*model.Manifest, error)
 
-	Builder          build.OktetoBuilderInterface
+	Builder          buildCmd.OktetoBuilderInterface
 	Registry         registryInterface
 	analyticsTracker analyticsTrackerInterface
 	ioCtrl           *io.IOController
@@ -73,11 +73,14 @@ type registryInterface interface {
 }
 
 // NewBuildCommand creates a struct to run all build methods
-func NewBuildCommand(ioCtrl *io.IOController, analyticsTracker analyticsTrackerInterface) *Command {
+func NewBuildCommand(ioCtrl *io.IOController, analyticsTracker analyticsTrackerInterface, okCtx *okteto.OktetoContextStateless) *Command {
+
 	return &Command{
-		GetManifest:      model.GetManifestV2,
-		Builder:          &build.OktetoBuilder{},
-		Registry:         registry.NewOktetoRegistry(okteto.Config{}),
+		GetManifest: model.GetManifestV2,
+		Builder: &buildCmd.OktetoBuilder{
+			OktetoContext: okCtx,
+		},
+		Registry:         registry.NewOktetoRegistry(buildCmd.GetRegistryConfigFromOktetoConfig(okCtx)),
 		ioCtrl:           ioCtrl,
 		analyticsTracker: analyticsTracker,
 	}
@@ -96,15 +99,20 @@ func Build(ctx context.Context, ioCtrl *io.IOController, at analyticsTrackerInte
 		Short: "Build and push the images defined in the 'build' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			options.CommandArgs = args
-			bc := NewBuildCommand(ioCtrl, at)
 			// The context must be loaded before reading manifest. Otherwise,
 			// secrets will not be resolved when GetManifest is called and
 			// the manifest will load empty values.
-			if err := bc.loadContext(ctx, options); err != nil {
+			oktetoContext, err := getOktetoContext(ctx, options)
+			if err != nil {
 				return err
 			}
-			bc.ioCtrl.Logger().Info("context loaded")
-			builder, err := bc.getBuilder(options)
+
+			ioCtrl.Logger().Info("context loaded")
+
+			bc := NewBuildCommand(ioCtrl, at, oktetoContext)
+
+			builder, err := bc.getBuilder(options, oktetoContext)
+
 			if err != nil {
 				return err
 			}
@@ -138,7 +146,7 @@ func Build(ctx context.Context, ioCtrl *io.IOController, at analyticsTrackerInte
 	return cmd
 }
 
-func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
+func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.OktetoContextStateless) (Builder, error) {
 	var builder Builder
 
 	manifest, err := bc.GetManifest(options.File)
@@ -153,7 +161,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
 		builder = buildv1.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl)
 	} else {
 		if isBuildV2(manifest) {
-			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl, bc.analyticsTracker)
+			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl, bc.analyticsTracker, okCtx)
 		} else {
 			builder = buildv1.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl)
 		}
@@ -183,7 +191,7 @@ func validateDockerfile(file string) error {
 	return err
 }
 
-func (*Command) loadContext(ctx context.Context, options *types.BuildOptions) error {
+func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*okteto.OktetoContextStateless, error) {
 	ctxOpts := &contextCMD.ContextOptions{
 		Context:   options.K8sContext,
 		Namespace: options.Namespace,
@@ -196,7 +204,7 @@ func (*Command) loadContext(ctx context.Context, options *types.BuildOptions) er
 	if err := validateDockerfile(options.File); err != nil {
 		ctxResource, err := model.GetContextResource(options.File)
 		if err != nil && !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
-			return err
+			return nil, err
 		}
 
 		// if ctxResource == nil (we cannot obtain context and namespace from the
@@ -204,32 +212,56 @@ func (*Command) loadContext(ctx context.Context, options *types.BuildOptions) er
 		// used to obtain the current context and the namespace associated with it.
 		if ctxResource != nil {
 			if err := ctxResource.UpdateNamespace(options.Namespace); err != nil {
-				return err
+				return nil, err
 			}
 			ctxOpts.Namespace = ctxResource.Namespace
 
 			if err := ctxResource.UpdateContext(options.K8sContext); err != nil {
-				return err
+				return nil, err
 			}
 			ctxOpts.Context = ctxResource.Context
 		}
 	}
 
-	if okteto.IsOkteto() && ctxOpts.Namespace != "" {
-		create, err := utils.ShouldCreateNamespace(ctx, ctxOpts.Namespace)
+	oktetoContext, err := contextCMD.NewContextCommand().RunStateless(ctx, ctxOpts)
+
+	if oktetoContext.IsOkteto() && ctxOpts.Namespace != "" {
+		ocfg := defaultOktetoClientCfg(oktetoContext)
+		c, err := okteto.NewOktetoClientStateless(ocfg)
 		if err != nil {
-			return err
+			return nil, err
+		}
+
+		create, err := utils.ShouldCreateNamespaceStateless(ctx, ctxOpts.Namespace, c)
+		if err != nil {
+			return nil, err
 		}
 		if create {
-			nsCmd, err := namespace.NewCommand()
-			if err != nil {
-				return err
-			}
-			if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
-				return err
+			if err := namespace.NewCommandStateless(c).Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
+				return nil, err
 			}
 		}
 	}
 
-	return contextCMD.NewContextCommand().Run(ctx, ctxOpts)
+	return oktetoContext, err
+}
+
+type oktetoClientCfgContext interface {
+	ExistsContext() bool
+	GetCurrentName() string
+	GetCurrentToken() string
+	GetCurrentCertStr() string
+}
+
+func defaultOktetoClientCfg(octx oktetoClientCfgContext) *okteto.OktetoClientCfg {
+	if !octx.ExistsContext() {
+		return &okteto.OktetoClientCfg{}
+	}
+
+	return &okteto.OktetoClientCfg{
+		CtxName: octx.GetCurrentName(),
+		Token:   octx.GetCurrentToken(),
+		Cert:    octx.GetCurrentCertStr(),
+	}
+
 }
