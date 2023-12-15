@@ -337,6 +337,15 @@ func Test_validateManifestBuild(t *testing.T) {
 		expectedErr  bool
 	}{
 		{
+			name: "nil build section",
+			buildSection: ManifestBuild{
+				"a": &BuildInfo{},
+				"b": nil,
+				"c": &BuildInfo{},
+			},
+			expectedErr: true,
+		},
+		{
 			name: "no cycle - no connections",
 			buildSection: ManifestBuild{
 				"a": &BuildInfo{},
@@ -1379,6 +1388,33 @@ func TestSecretValidate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.s.validate()
 			assert.Equal(t, tt.expectedErr, err)
+		})
+	}
+}
+
+func TestRead(t *testing.T) {
+	tests := []struct {
+		name        string
+		manifest    []byte
+		expected    *Manifest
+		expectedErr bool
+	}{
+		{
+			name:     "empty manifest",
+			manifest: []byte(""),
+			expected: NewManifest(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manifest, err := Read(tt.manifest)
+			if tt.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, &tt.expected, &manifest)
 		})
 	}
 }
