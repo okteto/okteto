@@ -356,7 +356,7 @@ func Test_translateStatefulSet(t *testing.T) {
 				"storage": resource.MustParse("20Gi"),
 			},
 		},
-		StorageClassName: pointer.StringPtr("class-name"),
+		StorageClassName: pointer.String("class-name"),
 	}
 	if !reflect.DeepEqual(vct.Spec, volumeClaimTemplateSpec) {
 		t.Errorf("Wrong statefulset volume claim template: '%v'", vct.Spec)
@@ -1265,9 +1265,9 @@ func Test_translateServiceEnvironment(t *testing.T) {
 
 func Test_translateResources(t *testing.T) {
 	tests := []struct {
-		resources apiv1.ResourceRequirements
 		svc       *model.Service
 		name      string
+		resources apiv1.ResourceRequirements
 	}{
 		{
 			name: "svc not defined",

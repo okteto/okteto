@@ -127,7 +127,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 			Annotations: translateAnnotations(svc),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: pointer.Int32Ptr(svc.Replicas),
+			Replicas: pointer.Int32(svc.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: translateLabelSelector(svcName, s),
 			},
@@ -138,7 +138,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 					Annotations: translateAnnotations(svc),
 				},
 				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
+					TerminationGracePeriodSeconds: pointer.Int64(svc.StopGracePeriod),
 					NodeSelector:                  svc.NodeSelector,
 					Containers: []apiv1.Container{
 						{
@@ -198,8 +198,8 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 			Annotations: translateAnnotations(svc),
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas:             pointer.Int32Ptr(svc.Replicas),
-			RevisionHistoryLimit: pointer.Int32Ptr(2),
+			Replicas:             pointer.Int32(svc.Replicas),
+			RevisionHistoryLimit: pointer.Int32(2),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: translateLabelSelector(svcName, s),
 			},
@@ -211,7 +211,7 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 					Annotations: translateAnnotations(svc),
 				},
 				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
+					TerminationGracePeriodSeconds: pointer.Int64(svc.StopGracePeriod),
 					InitContainers:                initContainers,
 					Affinity:                      translateAffinity(svc),
 					NodeSelector:                  svc.NodeSelector,
@@ -252,8 +252,8 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 			Annotations: translateAnnotations(svc),
 		},
 		Spec: batchv1.JobSpec{
-			Completions:  pointer.Int32Ptr(svc.Replicas),
-			Parallelism:  pointer.Int32Ptr(1),
+			Completions:  pointer.Int32(svc.Replicas),
+			Parallelism:  pointer.Int32(1),
 			BackoffLimit: &svc.BackOffLimit,
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -262,7 +262,7 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 				},
 				Spec: apiv1.PodSpec{
 					RestartPolicy:                 svc.RestartPolicy,
-					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
+					TerminationGracePeriodSeconds: pointer.Int64(svc.StopGracePeriod),
 					InitContainers:                initContainers,
 					Affinity:                      translateAffinity(svc),
 					NodeSelector:                  svc.NodeSelector,

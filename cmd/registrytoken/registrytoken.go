@@ -62,7 +62,7 @@ More info about docker credentials helpers here: https://github.com/docker/docke
   `,
 		Hidden:    true,
 		ValidArgs: []string{ActionStore, ActionGet, ActionErase, ActionList, ActionVersion},
-		Args:      cobra.ExactValidArgs(1),
+		Args:      cobra.MatchAll(cobra.ExactArgs(1)),
 	}
 
 	cmd.Run = func(_ *cobra.Command, args []string) {

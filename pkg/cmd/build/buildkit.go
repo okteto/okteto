@@ -250,7 +250,9 @@ func getClientForOktetoCluster(ctx context.Context) (*client.Client, error) {
 		AccessToken: okteto.Context().Token,
 	}
 
-	rpc := client.WithRPCCreds(oauth.NewOauthAccess(oauthToken))
+	rpc := client.WithRPCCreds(oauth.TokenSource{
+		TokenSource: oauth2.StaticTokenSource(oauthToken),
+	})
 	c, err := client.New(ctx, okteto.Context().Builder, client.WithFailFast(), creds, rpc)
 	if err != nil {
 		return nil, err
