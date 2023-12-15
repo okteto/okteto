@@ -408,10 +408,10 @@ func Test_NewBuildCommand(t *testing.T) {
 }
 
 type fakeClientCfgContext struct {
-	existsContext bool
 	name          string
 	token         string
 	cert          string
+	existsContext bool
 }
 
 func (c *fakeClientCfgContext) ExistsContext() bool {
@@ -432,9 +432,9 @@ func (c *fakeClientCfgContext) GetCurrentCertStr() string {
 
 func Test_defaultOktetoClientCfg(t *testing.T) {
 	tests := []struct {
-		name     string
 		input    *fakeClientCfgContext
 		expected *okteto.OktetoClientCfg
+		name     string
 	}{
 		{
 			name: "context not exists",
