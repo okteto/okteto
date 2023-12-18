@@ -237,9 +237,6 @@ type gitRepositoryInterface interface {
 	GetLatestCommit(ctx context.Context, repoPath, dirpath string, localGit LocalGitInterface) (string, error)
 }
 
-type gitCommitInterface interface {
-	Tree() (*object.Tree, error)
-}
 type gitWorktreeInterface interface {
 	Status(context.Context, LocalGitInterface) (oktetoGitStatus, error)
 	GetRoot() string
