@@ -14,7 +14,6 @@
 package build
 
 import (
-	"github.com/okteto/okteto/pkg/suggest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -28,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/suggest"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

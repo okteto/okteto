@@ -15,8 +15,6 @@ package model
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
-	"github.com/okteto/okteto/pkg/externalresource"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,7 +23,9 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/discovery"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
@@ -1396,9 +1396,9 @@ func TestSecretValidate(t *testing.T) {
 
 func TestRead(t *testing.T) {
 	tests := []struct {
+		expected    *Manifest
 		name        string
 		manifest    []byte
-		expected    *Manifest
 		expectedErr bool
 	}{
 		{

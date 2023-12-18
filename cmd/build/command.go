@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/suggest"
 	"os"
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -36,6 +35,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/suggest"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
