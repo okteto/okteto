@@ -16,8 +16,10 @@ package v2
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/env"
@@ -108,7 +110,7 @@ func (sh serviceHasher) hash(buildInfo *model.BuildInfo, commitHash string) stri
 	fmt.Fprintf(&b, "secrets:%s;", secretsText)
 	fmt.Fprintf(&b, "context:%s;", buildInfo.Context)
 	fmt.Fprintf(&b, "dockerfile:%s;", buildInfo.Dockerfile)
-	fmt.Fprintf(&b, "dockerfile_content:%s;", getDockerfileContent(buildInfo.Dockerfile))
+	fmt.Fprintf(&b, "dockerfile_content:%s;", getDockerfileContent(buildInfo.Context, buildInfo.Dockerfile))
 	fmt.Fprintf(&b, "image:%s;", buildInfo.Image)
 
 	oktetoBuildHash := sha256.Sum256([]byte(b.String()))
@@ -131,11 +133,18 @@ func (sh serviceHasher) GetCommitHash(buildInfo *model.BuildInfo) string {
 }
 
 // getDockerfileContent returns the content of the Dockerfile
-func getDockerfileContent(dockerfilePath string) string {
+func getDockerfileContent(dockerfileContext, dockerfilePath string) string {
 	content, err := os.ReadFile(dockerfilePath)
 	if err != nil {
-		oktetoLog.Info("error trying to read Dockerfile: %w", err)
-		return ""
+		oktetoLog.Infof("error trying to read Dockerfile on path '%s': %s", dockerfilePath, err)
+		if errors.Is(err, os.ErrNotExist) {
+			dockerfilePath = filepath.Join(dockerfileContext, dockerfilePath)
+			content, err = os.ReadFile(dockerfilePath)
+			if err != nil {
+				oktetoLog.Infof("error trying to read Dockerfile: %s", err)
+				return ""
+			}
+		}
 	}
 	encodedFile := sha256.Sum256(content)
 	return hex.EncodeToString(encodedFile[:])
