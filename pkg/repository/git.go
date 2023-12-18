@@ -168,7 +168,7 @@ func (r gitRepoController) GeLatestDirCommit(contextDir string) (string, error) 
 func (r gitRepoController) calculateLatestDirCommit(ctx context.Context, contextDir string) (string, error) {
 	repo, err := r.repoGetter.get(r.path)
 	if err != nil {
-		return "", fmt.Errorf("failed to analyze git repo: %w", err)
+		return "", fmt.Errorf("failed to calculate latestDirCommit: failed to analyze git repo: %w", err)
 	}
 
 	return repo.GetLatestCommit(ctx, r.path, contextDir, NewLocalGit("git", &LocalExec{}))
