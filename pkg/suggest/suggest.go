@@ -39,7 +39,7 @@ func (es *errorSuggestion) suggest(err error) error {
 
 // UserFriendlyError is an error that can be used to provide user-friendly error messages
 type UserFriendlyError struct {
-	Suggestion *errorSuggestion
+	suggestion *errorSuggestion
 	Err        error
 }
 
@@ -48,11 +48,11 @@ func (u UserFriendlyError) Error() string {
 	if u.Err == nil {
 		return ""
 	}
-	if u.Suggestion == nil {
+	if u.suggestion == nil {
 		return u.Err.Error()
 	}
 
-	return u.Suggestion.suggest(u.Err).Error()
+	return u.suggestion.suggest(u.Err).Error()
 }
 
 func (u UserFriendlyError) Unwrap() error {
@@ -65,7 +65,7 @@ func NewUserFriendlyError(err error, rules []*Rule) *UserFriendlyError {
 	sug.WithRules(rules)
 
 	return &UserFriendlyError{
-		Suggestion: sug,
+		suggestion: sug,
 		Err:        err,
 	}
 }

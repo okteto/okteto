@@ -1481,7 +1481,7 @@ func TestRead(t *testing.T) {
 			expectedErr: true,
 		},
 		{
-			name: "with dev",
+			name: "success parsing dev",
 			manifest: []byte(`dev:
   test:
     image: test-image
