@@ -133,8 +133,7 @@ func (r gitRepoController) GeLatestDirCommit(contextDir string) (string, error) 
 	timeoutCh := make(chan struct{})
 	ch := make(chan commitResponse)
 
-	timeoutErr := errors.New("timeout exceeded")
-	timeout := 3 * time.Second
+	timeout := 1 * time.Second
 
 	go func() {
 		time.Sleep(timeout)
