@@ -61,7 +61,7 @@ func Test_NewLevenshteinRule(t *testing.T) {
 			expected: assert.AnError.Error(),
 		},
 		{
-			name:     "match with suggestion",
+			name:     "match with Suggestion",
 			inputErr: errors.New("an error occurred: unix-tests"),
 			ruleInput: ruleInput{
 				pattern:            "an error occurred: (.*)",
@@ -71,7 +71,7 @@ func Test_NewLevenshteinRule(t *testing.T) {
 			expected: "an error occurred: unix-tests. Did you mean \"unit-tests\"?",
 		},
 		{
-			name:     "match with suggestion and short target",
+			name:     "match with Suggestion and short target",
 			inputErr: errors.New("an error occurred: ui"),
 			ruleInput: ruleInput{
 				pattern:            "an error occurred: (.*)",

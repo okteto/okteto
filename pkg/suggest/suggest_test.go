@@ -132,7 +132,7 @@ func Test_UserFriendlyError(t *testing.T) {
 
 func Test_NewUserFriendlyError_withNilSuggestion(t *testing.T) {
 	err := UserFriendlyError{
-		suggestion: nil,
+		Suggestion: nil,
 		Err:        assert.AnError,
 	}
 	assert.EqualError(t, err, assert.AnError.Error())

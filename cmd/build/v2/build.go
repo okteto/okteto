@@ -217,9 +217,9 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	ob.ioCtrl.Logger().Infof("Images to build: [%s]", strings.Join(toBuildSvcs, ", "))
 	for len(builtImagesControl) != len(toBuildSvcs) {
 		for _, svcToBuild := range toBuildSvcs {
-			if buildManifest[svcToBuild] == nil {
-				continue
-			}
+			//if buildManifest[svcToBuild] == nil {
+			//	continue
+			//}
 			if skipServiceBuild(svcToBuild, builtImagesControl) {
 				ob.ioCtrl.Logger().Infof("skipping image '%s' due to being already built", svcToBuild)
 				continue

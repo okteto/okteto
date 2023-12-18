@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/suggest"
 	"os"
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -152,6 +153,11 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.OktetoC
 	manifest, err := bc.GetManifest(options.File)
 	if err != nil {
 		if options.File != "" && errors.Is(err, oktetoErrors.ErrInvalidManifest) && validateDockerfile(options.File) != nil {
+			return nil, err
+		}
+
+		var userFriendlyErr *suggest.UserFriendlyError
+		if errors.As(err, &userFriendlyErr) {
 			return nil, err
 		}
 
