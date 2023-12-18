@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/containerd/console"
+	dockerConfig "github.com/docker/cli/cli/config"
 	"github.com/moby/buildkit/client"
 	buildkit "github.com/moby/buildkit/cmd/buildctl/build"
 	"github.com/moby/buildkit/session"
@@ -113,7 +114,8 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface)
 		ap := newDockerAndOktetoAuthProvider(okctx.GetCurrentRegister(), okctx.GetCurrentUser(), okctx.GetCurrentToken(), apCtx, os.Stderr)
 		attachable = append(attachable, ap)
 	} else {
-		attachable = append(attachable, authprovider.NewDockerAuthProvider(os.Stderr))
+		dockerCfg := dockerConfig.LoadDefaultConfigFile(os.Stderr)
+		attachable = append(attachable, authprovider.NewDockerAuthProvider(dockerCfg))
 	}
 
 	for _, sess := range buildOptions.SshSessions {
@@ -320,13 +322,14 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			}
 			go func() {
 				// We use the plain channel to store the logs into a buffer and then show them in the UI
-				if err := progressui.DisplaySolveStatus(context.TODO(), "", nil, w, plainChannel); err != nil {
+				if _, err := progressui.DisplaySolveStatus(context.TODO(), "", nil, w, plainChannel); err != nil {
 					oktetoLog.Infof("could not display solve status: %s", err)
 				}
 			}()
 			// not using shared context to not disrupt display but let it finish reporting errors
 			// We need to wait until the tty channel is closed to avoid writing to stdout while the tty is being used
-			return progressui.DisplaySolveStatus(context.TODO(), "", c, ioCtrl.Out(), ttyChannel)
+			_, err := progressui.DisplaySolveStatus(context.TODO(), "", c, ioCtrl.Out(), ttyChannel)
+			return err
 		case "deploy":
 			err := deployDisplayer(context.TODO(), plainChannel, &types.BuildOptions{OutputMode: "deploy"})
 			commandFailChannel <- err
@@ -337,7 +340,8 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			return err
 		default:
 			// not using shared context to not disrupt display but let it finish reporting errors
-			return progressui.DisplaySolveStatus(context.TODO(), "", nil, ioCtrl.Out(), plainChannel)
+			_, err := progressui.DisplaySolveStatus(context.TODO(), "", nil, ioCtrl.Out(), plainChannel)
+			return err
 		}
 	})
 
