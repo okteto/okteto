@@ -149,6 +149,28 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 	return nil
 }
 
+// RunStateless is the fn to use until the refactoring of the context command itself if you want to make use
+// of an injected context instead of using the global context variable.
+func (c *ContextCommand) RunStateless(ctx context.Context, ctxOptions *ContextOptions) (*okteto.OktetoContextStateless, error) {
+	err := c.Run(ctx, ctxOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := okteto.Context().Cfg.DeepCopy()
+
+	oktetoContextStore := okteto.GetContextStoreFromStorePath()
+
+	oktetoContextStateless := &okteto.OktetoContextStateless{
+		Store: oktetoContextStore,
+	}
+
+	oktetoContextStateless.SetCurrentCfg(cfg)
+
+	return oktetoContextStateless, nil
+
+}
+
 func getContext(ctxOptions *ContextOptions) (string, error) {
 	ctxs := getAvailableContexts(ctxOptions)
 

@@ -349,14 +349,14 @@ func createTarFromPath(contextDir string) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	buildCtx, err := archive.TarWithOptions(contextDir, &archive.TarOptions{
+	build, err := archive.TarWithOptions(contextDir, &archive.TarOptions{
 		ExcludePatterns: excludes,
 		ChownOpts:       &idtools.Identity{UID: 0, GID: 0},
 	})
 	if err != nil {
 		return nil, err
 	}
-	return buildCtx, nil
+	return build, nil
 }
 
 // ReadDockerignore reads the .dockerignore file in the context directory and

@@ -16,11 +16,13 @@ package okteto
 import (
 	"context"
 	"encoding/base64"
+	"path/filepath"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -276,4 +278,36 @@ func Test_AddOktetoCredentialsToCfgWithInvalidOktetoContext(t *testing.T) {
 	result := AddOktetoCredentialsToCfg(cfg, creds, "ns", "userName", oktetoContext)
 
 	require.Error(t, result)
+}
+
+func TestGetContextStoreFromStorePath(t *testing.T) {
+	fs := afero.NewOsFs()
+	tempDir, err := afero.TempDir(fs, "", "")
+	require.NoError(t, err)
+	defer func() {
+		_ = fs.RemoveAll(tempDir)
+	}()
+
+	oktetoHome := filepath.Join(tempDir, "context")
+	err = fs.Mkdir(oktetoHome, 0755)
+	require.NoError(t, err)
+
+	file, err := fs.Create(filepath.Join(oktetoHome, "config.json"))
+	require.NoError(t, err)
+	defer func() {
+		_ = fs.RemoveAll(tempDir)
+	}()
+
+	content := `{"contexts": {}, "current-context": ""}`
+	_, err = file.WriteString(content)
+	require.NoError(t, err)
+
+	require.NoError(t, err)
+	t.Setenv(constants.OktetoFolderEnvVar, tempDir)
+	store := GetContextStoreFromStorePath()
+
+	expected := &OktetoContextStore{
+		Contexts: make(map[string]*OktetoContext),
+	}
+	require.EqualValues(t, expected, store)
 }

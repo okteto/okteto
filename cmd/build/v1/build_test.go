@@ -23,7 +23,6 @@ import (
 	"github.com/okteto/okteto/internal/test"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -63,14 +62,6 @@ func (fr fakeRegistry) HasGlobalPushAccess() (bool, error) { return false, nil }
 
 func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-			},
-		},
-		CurrentContext: "test",
-	}
 
 	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry, fmt.Errorf("failed to build error"))
@@ -99,14 +90,6 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 
 func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-			},
-		},
-		CurrentContext: "test",
-	}
 
 	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
@@ -137,14 +120,6 @@ func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 
 func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-			},
-		},
-		CurrentContext: "test",
-	}
 
 	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
@@ -173,14 +148,6 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 
 func TestBuildWithNoErrorFromDockerfileAndNoTag(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-			},
-		},
-		CurrentContext: "test",
-	}
 
 	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)

@@ -234,29 +234,33 @@ func ContextStore() *OktetoContextStore {
 	}
 
 	if ContextExists() {
-		b, err := os.ReadFile(config.GetOktetoContextsStorePath())
-		if err != nil {
-			oktetoLog.Errorf("error reading okteto contexts: %v", err)
-			oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
-		}
-
-		dec := json.NewDecoder(bytes.NewReader(b))
-		dec.DisallowUnknownFields() // Force errors
-
-		ctxStore := &OktetoContextStore{}
-		if err := dec.Decode(&ctxStore); err != nil {
-			oktetoLog.Errorf("error decoding okteto contexts: %v", err)
-			oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
-		}
+		ctxStore := GetContextStoreFromStorePath()
 		CurrentStore = ctxStore
-
-		return CurrentStore
+		return ctxStore
 	}
 
 	CurrentStore = &OktetoContextStore{
 		Contexts: map[string]*OktetoContext{},
 	}
 	return CurrentStore
+}
+
+func GetContextStoreFromStorePath() *OktetoContextStore {
+	b, err := os.ReadFile(config.GetOktetoContextsStorePath())
+	if err != nil {
+		oktetoLog.Errorf("error reading okteto contexts: %v", err)
+		oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
+	}
+
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.DisallowUnknownFields() // Force errors
+
+	ctxStore := &OktetoContextStore{}
+	if err := dec.Decode(&ctxStore); err != nil {
+		oktetoLog.Errorf("error decoding okteto contexts: %v", err)
+		oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
+	}
+	return ctxStore
 }
 
 func Context() *OktetoContext {
@@ -584,6 +588,54 @@ func GetContextCertificate() (*x509.Certificate, error) {
 				case hoursSinceInstall <= hoursInADay: // less than 1 day
 					oktetoLog.Information("Your Okteto installation is using selfsigned certificates. Please switch to your own certificates before production use.")
 				case hoursSinceInstall <= hoursInAWeek: // less than 1 week
+					oktetoLog.Warning("Your Okteto installation has been using selfsigned certificates for more than a day. It's important to use your own certificates before production use.")
+				default: // more than 1 week
+					oktetoLog.Fail("[PLEASE READ] Your Okteto installation has been using selfsigned certificates for more than a week. It's important to use your own certificates before production use.")
+				}
+			}
+		})
+	}
+
+	return cert, nil
+}
+
+func GetContextCertificateStateless(certB64 string) (*x509.Certificate, error) {
+	certPEM, err := base64.StdEncoding.DecodeString(certB64)
+
+	if err != nil {
+		oktetoLog.Debugf("couldn't decode context certificate from base64: %s", err)
+		return nil, err
+	}
+
+	block, _ := pem.Decode(certPEM)
+
+	if block == nil {
+		oktetoLog.Debugf("couldn't decode context certificate from pem: %s", err)
+		return nil, fmt.Errorf("couldn't decode pem")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+
+	if err != nil {
+		oktetoLog.Debugf("couldn't parse context certificate: %s", err)
+		return nil, err
+	}
+
+	if _, err := cert.Verify(x509.VerifyOptions{}); err != nil { // skipcq: GO-S1031
+		strictTLSOnce.Do(func() {
+			oktetoLog.Debugf("certificate issuer %s", cert.Issuer)
+			oktetoLog.Debugf("context certificate not trusted by system roots: %s", err)
+			if !Context().IsInsecure {
+				return
+			}
+			if cert.Issuer.CommonName == config.OktetoDefaultSelfSignedIssuer {
+				hoursSinceInstall := time.Since(cert.NotBefore).Hours()
+				hoursInADay := 24
+				hoursInAWeek := 168
+				switch {
+				case hoursSinceInstall <= float64(hoursInADay): // less than 1 day
+					oktetoLog.Information("Your Okteto installation is using selfsigned certificates. Please switch to your own certificates before production use.")
+				case hoursSinceInstall <= float64(hoursInAWeek): // less than 1 week
 					oktetoLog.Warning("Your Okteto installation has been using selfsigned certificates for more than a day. It's important to use your own certificates before production use.")
 				default: // more than 1 week
 					oktetoLog.Fail("[PLEASE READ] Your Okteto installation has been using selfsigned certificates for more than a week. It's important to use your own certificates before production use.")

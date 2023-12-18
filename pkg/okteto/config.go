@@ -15,7 +15,49 @@ package okteto
 
 import (
 	"crypto/x509"
+
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
+
+type ConfigStateless struct {
+	GetTokenFn                  func(string) (string, error)
+	GlobalNamespace             string
+	Namespace                   string
+	RegistryUrl                 string
+	UserId                      string
+	Token                       string
+	Cert                        string
+	ServerNameOverride          string
+	ContextName                 string
+	InsecureSkipTLSVerifyPolicy bool
+	IsOkteto                    bool
+}
+
+func (c ConfigStateless) IsOktetoCluster() bool      { return c.IsOkteto }
+func (c ConfigStateless) GetGlobalNamespace() string { return c.GlobalNamespace }
+func (c ConfigStateless) GetNamespace() string       { return c.Namespace }
+func (c ConfigStateless) GetRegistryURL() string     { return c.RegistryUrl }
+func (c ConfigStateless) GetUserID() string          { return c.UserId }
+func (c ConfigStateless) GetToken() string           { return c.Token }
+func (c ConfigStateless) GetContextCertificate() (*x509.Certificate, error) {
+	return GetContextCertificateStateless(c.Cert)
+}
+func (c ConfigStateless) IsInsecureSkipTLSVerifyPolicy() bool { return c.InsecureSkipTLSVerifyPolicy }
+func (ConfigStateless) GetServerNameOverride() string         { return GetServerNameOverride() }
+func (c ConfigStateless) GetContextName() string              { return c.ContextName }
+func (c ConfigStateless) GetExternalRegistryCredentials(registryHost string) (string, string, error) {
+	ocfg := &OktetoClientCfg{
+		CtxName: c.ContextName,
+		Token:   c.Token,
+		Cert:    c.Cert,
+	}
+	client, err := NewOktetoClientStateless(ocfg)
+	if err != nil {
+		oktetoLog.Debugf("failed to create okteto client for getting registry credentials: %s", err.Error())
+		return "", "", err
+	}
+	return GetExternalRegistryCredentialsStateless(registryHost, c.IsOkteto, client)
+}
 
 type Config struct{}
 

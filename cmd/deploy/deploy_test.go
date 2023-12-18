@@ -430,10 +430,21 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	reg := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(reg)
 	fakeTracker := fakeAnalyticsTracker{}
+
+	okCtx := &okteto.OktetoContextStateless{
+		Store: &okteto.OktetoContextStore{
+			Contexts: map[string]*okteto.OktetoContext{
+				"test": {
+					Namespace: "test",
+				},
+			},
+			CurrentContext: "test",
+		},
+	}
 	c := &DeployCommand{
 		GetManifest:       getErrorManifest,
 		GetDeployer:       fakeDeployer.Get,
-		Builder:           buildv2.NewBuilder(builder, reg, io.NewIOController(), fakeTracker),
+		Builder:           buildv2.NewBuilder(builder, reg, io.NewIOController(), fakeTracker, okCtx),
 		K8sClientProvider: fakeK8sClientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider),
 		Fs:                afero.NewMemMapFs(),
