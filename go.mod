@@ -12,7 +12,7 @@ require (
 	github.com/compose-spec/godotenv v1.1.1
 	github.com/containerd/console v1.0.3
 	github.com/denisbrodbeck/machineid v1.0.1
-	github.com/docker/cli v23.0.0-rc.1+incompatible
+	github.com/docker/cli v24.0.7+incompatible
 	github.com/docker/distribution v2.8.2+incompatible
 	github.com/docker/docker v24.0.7+incompatible
 	github.com/docker/docker-credential-helpers v0.7.0
