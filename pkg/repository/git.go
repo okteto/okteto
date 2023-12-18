@@ -120,8 +120,8 @@ func (r gitRepoController) getSHA() (string, error) {
 }
 
 type commitResponse struct {
-	commit string
 	err    error
+	commit string
 }
 
 func (r gitRepoController) GeLatestDirCommit(contextDir string) (string, error) {
@@ -268,16 +268,22 @@ func (ogr oktetoGitRepository) GetLatestCommit(ctx context.Context, repoPath, di
 	if err != nil {
 		// git is not available, so we fall back on git-go
 		oktetoLog.Debug("Calculating git latest commit: git is not installed, for better performances consider installing it")
-		cIter, _ := ogr.Log(&git.LogOptions{
+		cIter, err := ogr.Log(&git.LogOptions{
 			PathFilter: func(s string) bool {
 				return s == dirpath
 			},
 		})
+		if err != nil {
+			return "", fmt.Errorf("failed to get git log: %w", err)
+		}
 		commit := ""
-		_ = cIter.ForEach(func(c *object.Commit) error {
+		err = cIter.ForEach(func(c *object.Commit) error {
 			commit = c.Hash.String()
 			return nil
 		})
+		if err != nil {
+			return "", fmt.Errorf("failed to get git log: %w", err)
+		}
 		return commit, nil
 	}
 
