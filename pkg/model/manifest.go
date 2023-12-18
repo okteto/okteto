@@ -736,9 +736,6 @@ func (b *ManifestBuild) GetSvcsToBuildFromList(toBuild []string) []string {
 func (b ManifestBuild) toGraph() graph {
 	g := graph{}
 	for k, v := range b {
-		//if v == nil {
-		//	continue
-		//}
 		g[k] = v.DependsOn
 	}
 	return g
@@ -896,9 +893,6 @@ func (m *Manifest) setDefaults() error {
 	}
 
 	for _, b := range m.Build {
-		//if b == nil {
-		//	continue
-		//}
 		if b.Name != "" {
 			b.Context = b.Name
 			b.Name = ""
