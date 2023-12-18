@@ -173,6 +173,7 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 	} else if ctxOptions.Token == "" {
 		// this is to avoid login with the browser again if we already have a valid token
 		ctxOptions.Token = okCtx.Token
+		ctxOptions.InferredToken = true
 		if ctxOptions.Builder == "" && okCtx.Builder != "" {
 			ctxOptions.Builder = okCtx.Builder
 		}
@@ -285,6 +286,14 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 	var userContext *types.UserContext
 	userContext, err := getLoggedUserContext(ctx, c, ctxOptions)
 	if err != nil {
+		// if an expired token is explicitly used, an error informing of the situation
+		// should be returned instead of automatically generating a new token
+		if !ctxOptions.InferredToken && errors.Is(err, oktetoErrors.ErrTokenExpired) {
+			return oktetoErrors.UserError{
+				E:    err,
+				Hint: "A new token is required. More information on how to generate one here: https://www.okteto.com/docs/cloud/personal-access-tokens/",
+			}
+		}
 		if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.Context().Name).Error() && ctxOptions.IsCtxCommand {
 			oktetoLog.Warning("Your token is invalid. Generating a new one...")
 			ctxOptions.Token = ""
@@ -402,6 +411,11 @@ func (c ContextCommand) getUserContext(ctx context.Context, ctxName, ns, token s
 		userContext, err := client.User().GetContext(ctx, ns)
 
 		if err != nil {
+
+			if errors.Is(err, oktetoErrors.ErrTokenExpired) {
+				return nil, err
+			}
+
 			if oktetoErrors.IsForbidden(err) {
 				if err := c.OktetoContextWriter.Write(); err != nil {
 					oktetoLog.Infof("error updating okteto contexts: %v", err)
