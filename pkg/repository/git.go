@@ -26,7 +26,8 @@ import (
 )
 
 var (
-	errNotCleanRepo = errors.New("repository is not clean")
+	errNotCleanRepo    = errors.New("repository is not clean")
+	errTimeoutExceeded = errors.New("timeout exceeded")
 )
 
 type gitRepoController struct {
@@ -74,13 +75,11 @@ func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 	timeoutCh := make(chan struct{})
 	ch := make(chan cleanStatus)
 
-	timeoutErr := errors.New("timeout exceeded")
-
 	go func() {
 		time.Sleep(time.Second)
 		close(timeoutCh)
 		cancel()
-		ch <- cleanStatus{timeoutErr, false}
+		ch <- cleanStatus{errTimeoutExceeded, false}
 	}()
 
 	go func() {
@@ -93,7 +92,7 @@ func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 
 	s := <-ch
 
-	if s.err == timeoutErr {
+	if errors.Is(s.err, errTimeoutExceeded) {
 		oktetoLog.Debug("Timeout exceeded calculating git status: assuming dirty commit")
 	}
 
@@ -143,7 +142,7 @@ func (r gitRepoController) GeLatestDirCommit(contextDir string) (string, error) 
 		cancel()
 		ch <- commitResponse{
 			commit: "",
-			err:    timeoutErr,
+			err:    errTimeoutExceeded,
 		}
 	}()
 
@@ -160,7 +159,7 @@ func (r gitRepoController) GeLatestDirCommit(contextDir string) (string, error) 
 
 	s := <-ch
 
-	if s.err == timeoutErr {
+	if errors.Is(s.err, errTimeoutExceeded) {
 		oktetoLog.Debugf("Timeout exceeded calculating git commit for '%s': assuming dirty commit", contextDir)
 	}
 
