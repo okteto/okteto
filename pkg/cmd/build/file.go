@@ -35,8 +35,8 @@ const (
 )
 
 // GetDockerfile returns the dockerfile with the cache and registry translations
-func GetDockerfile(dockerFile string) (string, error) {
-	file, err := getTranslatedDockerFile(dockerFile)
+func GetDockerfile(dockerFile string, okCtx OktetoContextInterface) (string, error) {
+	file, err := getTranslatedDockerFile(dockerFile, okCtx)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create temporary build folder")
 	}
@@ -44,7 +44,7 @@ func GetDockerfile(dockerFile string) (string, error) {
 	return file, nil
 }
 
-func getTranslatedDockerFile(filename string) (string, error) {
+func getTranslatedDockerFile(filename string, okCtx OktetoContextInterface) (string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return "", err
@@ -70,18 +70,18 @@ func getTranslatedDockerFile(filename string) (string, error) {
 	datawriter := bufio.NewWriter(tmpFile)
 	defer datawriter.Flush()
 
-	userID := okteto.Context().UserID
-	if userID == "" {
-		userID = "anonymous"
+	userId := okCtx.GetCurrentUser()
+	if userId == "" {
+		userId = "anonymous"
 	}
 
-	withCacheHandler := okteto.Context().Builder == okteto.CloudBuildKitURL
+	withCacheHandler := okCtx.GetCurrentBuilder() == okteto.CloudBuildKitURL
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		translatedLine := translateOktetoRegistryImage(line)
+		translatedLine := translateOktetoRegistryImage(line, okCtx)
 		if withCacheHandler {
-			translatedLine = translateCacheHandler(translatedLine, userID)
+			translatedLine = translateCacheHandler(translatedLine, userId)
 		}
 		_, err = datawriter.WriteString(translatedLine + "\n")
 		if err != nil {
@@ -126,17 +126,19 @@ func translateCacheHandler(input, userID string) string {
 	return input
 }
 
-func translateOktetoRegistryImage(input string) string {
-	replacer := registry.NewRegistryReplacer(okteto.Config{})
+func translateOktetoRegistryImage(input string, okCtx OktetoContextInterface) string {
+	replacer := registry.NewRegistryReplacer(GetRegistryConfigFromOktetoConfig(okCtx))
 	if strings.Contains(input, constants.DevRegistry) {
-		tag := replacer.Replace(input, constants.DevRegistry, okteto.Context().Namespace)
+		tag := replacer.Replace(input, constants.DevRegistry, okCtx.GetCurrentNamespace())
 		return tag
 	}
 
 	if strings.Contains(input, constants.GlobalRegistry) {
 		globalNamespace := constants.DefaultGlobalNamespace
-		if okteto.Context().GlobalNamespace != "" {
-			globalNamespace = okteto.Context().GlobalNamespace
+
+		ctxGlobalNamespace := okCtx.GetGlobalNamespace()
+		if ctxGlobalNamespace != "" {
+			globalNamespace = ctxGlobalNamespace
 		}
 		tag := replacer.Replace(input, constants.GlobalRegistry, globalNamespace)
 		return tag

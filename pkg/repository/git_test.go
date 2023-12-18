@@ -14,10 +14,12 @@
 package repository
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -370,6 +372,76 @@ func TestGetLatestDirCommit(t *testing.T) {
 			commit, err := repo.GetLatestDirCommit(tt.buildContext)
 			assert.ErrorIs(t, err, tt.expected.err)
 			assert.Equal(t, tt.expected.sha, commit)
+		})
+	}
+}
+
+func TestFindTopLevelGitDir(t *testing.T) {
+	type input struct {
+		mockFs func() afero.Fs
+		cwd    string
+	}
+
+	rootDir, err := filepath.Abs(filepath.Clean("/tmp"))
+	assert.NoError(t, err)
+
+	tests := []struct {
+		input        input
+		expectedErr  error
+		name         string
+		expectedPath string
+	}{
+		{
+			name: "not found",
+			input: input{
+				cwd: filepath.Join(rootDir, "example", "services", "api"),
+				mockFs: func() afero.Fs {
+					return afero.NewMemMapFs()
+				},
+			},
+			expectedPath: "",
+			expectedErr:  errFindingRepo,
+		},
+		{
+			name: "invalid working dir",
+			input: input{
+				cwd: "@",
+				mockFs: func() afero.Fs {
+					return afero.NewMemMapFs()
+				},
+			},
+			expectedPath: "",
+			expectedErr:  errFindingRepo,
+		},
+		{
+			name: "found",
+			input: input{
+				cwd: filepath.Join(rootDir, "example", "services", "api"),
+				mockFs: func() afero.Fs {
+					fs := afero.NewMemMapFs()
+					gitDirPath := filepath.Join(rootDir, "example", ".git")
+					_, err := fs.Create(gitDirPath)
+					assert.NoError(t, err)
+					return fs
+				},
+			},
+			expectedPath: filepath.Join(rootDir, "example"),
+			expectedErr:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := tt.input.mockFs()
+			path, err := FindTopLevelGitDir(tt.input.cwd, fs)
+
+			if tt.expectedErr != nil {
+				assert.ErrorIs(t, err, tt.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assert.Equal(t, tt.expectedPath, path)
 		})
 	}
 }

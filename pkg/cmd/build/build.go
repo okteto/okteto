@@ -55,21 +55,28 @@ var (
 
 // OktetoBuilderInterface runs the build of an image
 type OktetoBuilderInterface interface {
+	GetBuilder() string
 	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error
 }
 
 // OktetoBuilder runs the build of an image
-type OktetoBuilder struct{}
+type OktetoBuilder struct {
+	OktetoContext OktetoContextInterface
+}
 
 // OktetoRegistryInterface checks if an image is at the registry
 type OktetoRegistryInterface interface {
 	GetImageTagWithDigest(imageTag string) (string, error)
 }
 
+func (ob *OktetoBuilder) GetBuilder() string {
+	return ob.OktetoContext.GetCurrentBuilder()
+}
+
 // Run runs the build sequence
 func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error {
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
-	if okteto.Context().Builder == "" {
+	if ob.OktetoContext.GetCurrentBuilder() == "" {
 		if err := ob.buildWithDocker(ctx, buildOptions); err != nil {
 			return err
 		}
@@ -96,15 +103,30 @@ func setOutputMode(outputMode string) string {
 
 }
 
+func GetRegistryConfigFromOktetoConfig(okCtx OktetoContextInterface) *okteto.ConfigStateless {
+
+	return &okteto.ConfigStateless{
+		Cert:                        okCtx.GetCurrentCertStr(),
+		IsOkteto:                    okCtx.IsOkteto(),
+		ContextName:                 okCtx.GetCurrentName(),
+		Namespace:                   okCtx.GetCurrentNamespace(),
+		RegistryUrl:                 okCtx.GetCurrentRegister(),
+		UserId:                      okCtx.GetCurrentUser(),
+		Token:                       okCtx.GetCurrentToken(),
+		GlobalNamespace:             okCtx.GetGlobalNamespace(),
+		InsecureSkipTLSVerifyPolicy: okCtx.IsInsecure(),
+	}
+}
+
 func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error {
-	oktetoLog.Infof("building your image on %s", okteto.Context().Builder)
-	buildkitClient, err := getBuildkitClient(ctx)
+	oktetoLog.Infof("building your image on %s", ob.OktetoContext.GetCurrentBuilder())
+	buildkitClient, err := getBuildkitClient(ctx, ob.OktetoContext)
 	if err != nil {
 		return err
 	}
 
 	if buildOptions.File != "" {
-		buildOptions.File, err = GetDockerfile(buildOptions.File)
+		buildOptions.File, err = GetDockerfile(buildOptions.File, ob.OktetoContext)
 		if err != nil {
 			return err
 		}
@@ -112,14 +134,14 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	}
 
 	if buildOptions.Tag != "" {
-		err = validateImage(buildOptions.Tag)
+		err = validateImage(ob.OktetoContext, buildOptions.Tag)
 		if err != nil {
 			return err
 		}
 	}
 
-	imageCtrl := registry.NewImageCtrl(okteto.Config{})
-	if okteto.IsOkteto() {
+	imageCtrl := registry.NewImageCtrl(GetRegistryConfigFromOktetoConfig(ob.OktetoContext))
+	if ob.OktetoContext.IsOkteto() {
 		buildOptions.DevTag = imageCtrl.ExpandOktetoDevRegistry(registry.GetDevTagFromGlobal(buildOptions.Tag))
 		buildOptions.Tag = imageCtrl.ExpandOktetoDevRegistry(buildOptions.Tag)
 		buildOptions.Tag = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.Tag)
@@ -145,7 +167,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 		return fmt.Errorf("%w: secret should have the format 'id=mysecret,src=/local/secret'", err)
 	}
 
-	opt, err := getSolveOpt(buildOptions)
+	opt, err := getSolveOpt(buildOptions, ob.OktetoContext)
 	if err != nil {
 		return errors.Wrap(err, "failed to create build solver")
 	}
@@ -170,7 +192,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	}
 
 	if err == nil && buildOptions.Tag != "" {
-		if _, err := registry.NewOktetoRegistry(okteto.Config{}).GetImageTagWithDigest(buildOptions.Tag); err != nil {
+		if _, err := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(ob.OktetoContext)).GetImageTagWithDigest(buildOptions.Tag); err != nil {
 			oktetoLog.Yellow(`Failed to push '%s' metadata to the registry:
 	  %s,
 	  Retrying ...`, buildOptions.Tag, err.Error())
@@ -221,9 +243,9 @@ func (ob *OktetoBuilder) buildWithDocker(ctx context.Context, buildOptions *type
 	return nil
 }
 
-func validateImage(imageTag string) error {
-	reg := registry.NewOktetoRegistry(okteto.Config{})
-	if strings.HasPrefix(imageTag, okteto.Context().Registry) && strings.Count(imageTag, "/") == 2 {
+func validateImage(okctx OktetoContextInterface, imageTag string) error {
+	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(okctx))
+	if strings.HasPrefix(imageTag, okctx.GetCurrentRegister()) && strings.Count(imageTag, "/") == 2 {
 		return nil
 	}
 	if (reg.IsOktetoRegistry(imageTag)) && strings.Count(imageTag, "/") != 1 {
@@ -259,7 +281,7 @@ type regInterface interface {
 }
 
 // OptsFromBuildInfo returns the parsed options for the build from the manifest
-func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *types.BuildOptions, reg regInterface) *types.BuildOptions {
+func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *types.BuildOptions, reg regInterface, okCtx OktetoContextInterface) *types.BuildOptions {
 	if o == nil {
 		o = &types.BuildOptions{}
 	}
@@ -275,7 +297,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 
 	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	if okteto.Context().IsOkteto && b.Image == "" {
+	if okCtx.IsOkteto() && b.Image == "" {
 		// if flag --global, point to global registry
 		targetRegistry := constants.DevRegistry
 		if o != nil && o.BuildToGlobal {
@@ -323,8 +345,8 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 
 	if reg.IsOktetoRegistry(b.Image) {
 		defaultBuildArgs := map[string]string{
-			model.OktetoContextEnvVar:   okteto.Context().Name,
-			model.OktetoNamespaceEnvVar: okteto.Context().Namespace,
+			model.OktetoContextEnvVar:   okCtx.GetCurrentName(),
+			model.OktetoNamespaceEnvVar: okCtx.GetCurrentNamespace(),
 		}
 
 		for _, e := range b.Args {

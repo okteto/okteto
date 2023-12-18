@@ -17,17 +17,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/spf13/afero"
 )
 
 var (
 	errNotCleanRepo    = errors.New("repository is not clean")
 	errTimeoutExceeded = errors.New("timeout exceeded")
+	errFindingRepo     = errors.New("top level git repo directory cannot be found")
 )
 
 type gitRepoController struct {
@@ -35,9 +39,10 @@ type gitRepoController struct {
 	path       string
 }
 
-func newGitRepoController() gitRepoController {
+func newGitRepoController(path string) gitRepoController {
 	return gitRepoController{
 		repoGetter: gitRepositoryGetter{},
+		path:       path,
 	}
 }
 
@@ -293,4 +298,23 @@ func (ogr oktetoGitRepository) GetLatestCommit(ctx context.Context, repoPath, di
 	}
 
 	return commit, nil
+}
+
+func FindTopLevelGitDir(workingDir string, fs afero.Fs) (string, error) {
+	dir, err := filepath.Abs(workingDir)
+	if err != nil {
+		return "", fmt.Errorf("%w: invalid workind dir: %w", errFindingRepo, err)
+	}
+
+	for {
+		if filesystem.FileExistsWithFilesystem(filepath.Join(dir, ".git"), fs) {
+			return dir, nil
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", errFindingRepo
+		}
+		dir = parent
+	}
 }

@@ -27,6 +27,7 @@ import (
 
 	"github.com/containerd/console"
 	"github.com/docker/cli/cli/command"
+	"github.com/docker/cli/cli/config"
 	"github.com/docker/distribution/reference"
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -36,7 +37,6 @@ import (
 	"github.com/docker/docker/pkg/progress"
 	"github.com/docker/docker/pkg/streamformatter"
 	"github.com/docker/docker/pkg/stringid"
-	"github.com/docker/docker/pkg/urlutil"
 	dockerRegistry "github.com/docker/docker/registry"
 	controlapi "github.com/moby/buildkit/api/services/control"
 	buildkitClient "github.com/moby/buildkit/client"
@@ -66,7 +66,8 @@ func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions *types.Buil
 		return buildWithDockerDaemon(ctx, buildOptions, cli)
 	}
 
-	dockerAuthProvider := authprovider.NewDockerAuthProvider(os.Stderr)
+	dockerCfg := config.LoadDefaultConfigFile(os.Stderr)
+	dockerAuthProvider := authprovider.NewDockerAuthProvider(dockerCfg)
 	s.Allow(dockerAuthProvider)
 	if len(buildOptions.Secrets) > 0 {
 		secretProvider, err := build.ParseSecret(buildOptions.Secrets)
@@ -93,16 +94,11 @@ func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions *types.Buil
 	}
 
 	if dockerfileDir != "" {
-		s.Allow(filesync.NewFSSyncProvider([]filesync.SyncedDir{
-			{
-				Name: "context",
-				Dir:  contextDir,
-			},
-			{
-				Name: "dockerfile",
-				Dir:  dockerfileDir,
-			},
-		}))
+		syncedDirs := filesync.StaticDirSource{
+			"context":    filesync.SyncedDir{Dir: contextDir},
+			"dockerfile": filesync.SyncedDir{Dir: dockerfileDir},
+		}
+		s.Allow(filesync.NewFSSyncProvider(syncedDirs))
 	}
 
 	eg, ctx := errgroup.WithContext(ctx)
@@ -231,7 +227,8 @@ func displayStatus(eg *errgroup.Group, response dockerTypes.ImageBuildResponse, 
 		}
 		// not using shared context to not disrupt display but let it finish reporting errors
 		eg.Go(func() error {
-			return progressui.DisplaySolveStatus(context.TODO(), "", c, out, displayCh)
+			_, err := progressui.DisplaySolveStatus(context.TODO(), "", c, out, displayCh)
+			return err
 		})
 		if s, ok := at.(interface {
 			SetLogger(progresswriter.Logger)
@@ -334,7 +331,7 @@ func isURL(path string) bool {
 func getBuildContext(path string) (io.ReadCloser, error) {
 	var dockerBuildContext io.ReadCloser
 	var err error
-	if urlutil.IsURL(path) {
+	if isURL(path) {
 		return nil, fmt.Errorf("Non url context is unavailable")
 	} else {
 		dockerBuildContext, err = createTarFromPath(path)
@@ -352,14 +349,14 @@ func createTarFromPath(contextDir string) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	buildCtx, err := archive.TarWithOptions(contextDir, &archive.TarOptions{
+	build, err := archive.TarWithOptions(contextDir, &archive.TarOptions{
 		ExcludePatterns: excludes,
 		ChownOpts:       &idtools.Identity{UID: 0, GID: 0},
 	})
 	if err != nil {
 		return nil, err
 	}
-	return buildCtx, nil
+	return build, nil
 }
 
 // ReadDockerignore reads the .dockerignore file in the context directory and

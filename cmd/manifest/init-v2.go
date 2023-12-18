@@ -23,7 +23,6 @@ import (
 	"time"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
-	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
@@ -41,7 +40,6 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/afero"
-	"github.com/spf13/cobra"
 )
 
 type analyticsTrackerInterface interface {
@@ -52,9 +50,9 @@ type analyticsTrackerInterface interface {
 type ManifestCommand struct {
 	manifest          *model.Manifest
 	K8sClientProvider okteto.K8sClientProvider
-	analyticsTracker  analyticsTrackerInterface
+	AnalyticsTracker  analyticsTrackerInterface
 
-	ioCtrl *io.IOController
+	IoCtrl *io.IOController
 }
 
 // InitOpts defines the option for manifest init
@@ -71,66 +69,6 @@ type InitOpts struct {
 
 	AutoDeploy       bool
 	AutoConfigureDev bool
-}
-
-// Init automatically generates the manifest
-func Init(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
-	opts := &InitOpts{}
-	cmd := &cobra.Command{
-		Use:   "init",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#init"),
-		Short: "Automatically generate your okteto manifest",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
-
-			ctxResource := &model.ContextResource{}
-			if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
-				return err
-			}
-
-			if err := ctxResource.UpdateContext(opts.Context); err != nil {
-				return err
-			}
-			ctxOptions := &contextCMD.ContextOptions{
-				Context:   ctxResource.Context,
-				Namespace: ctxResource.Namespace,
-				Show:      true,
-			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
-				return err
-			}
-
-			cwd, err := os.Getwd()
-			if err != nil {
-				return err
-			}
-			opts.Workdir = cwd
-			opts.ShowCTA = oktetoLog.IsInteractive()
-			mc := &ManifestCommand{
-				K8sClientProvider: okteto.NewK8sClientProvider(),
-				analyticsTracker:  at,
-				ioCtrl:            ioCtrl,
-			}
-			if opts.Version1 {
-				if err := mc.RunInitV1(ctx, opts); err != nil {
-					return err
-				}
-			} else {
-				_, err := mc.RunInitV2(ctx, opts)
-				return err
-			}
-			return err
-		},
-	}
-
-	cmd.Flags().StringVarP(&opts.Namespace, "namespace", "n", "", "namespace target for generating the okteto manifest")
-	cmd.Flags().StringVarP(&opts.Context, "context", "c", "", "context target for generating the okteto manifest")
-	cmd.Flags().StringVarP(&opts.DevPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
-	cmd.Flags().BoolVarP(&opts.Overwrite, "replace", "r", false, "overwrite existing manifest file")
-	cmd.Flags().BoolVarP(&opts.Version1, "v1", "", false, "create a v1 okteto manifest: https://www.okteto.com/docs/reference/manifest/")
-	cmd.Flags().BoolVarP(&opts.AutoDeploy, "deploy", "", false, "deploy the application after generate the okteto manifest if it's not running already")
-	cmd.Flags().BoolVarP(&opts.AutoConfigureDev, "configure-devs", "", false, "configure devs after deploying the application")
-	return cmd
 }
 
 // RunInitV2 initializes a new okteto manifest
@@ -284,24 +222,26 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		return err
 	}
 	c := &deploy.DeployCommand{
+		GetDeployer:        deploy.GetDeployer,
 		GetManifest:        mc.getManifest,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
 		K8sClientProvider:  mc.K8sClientProvider,
-		Builder:            buildv2.NewBuilderFromScratch(mc.analyticsTracker, mc.ioCtrl),
+		Builder:            buildv2.NewBuilderFromScratch(mc.AnalyticsTracker, mc.IoCtrl),
 		GetExternalControl: deploy.NewDeployExternalK8sControl,
 		Fs:                 afero.NewOsFs(),
 		CfgMapHandler:      deploy.NewConfigmapHandler(mc.K8sClientProvider),
 		PipelineCMD:        pc,
 		DeployWaiter:       deploy.NewDeployWaiter(mc.K8sClientProvider),
 		EndpointGetter:     deploy.NewEndpointGetter,
+		IoCtrl:             mc.IoCtrl,
 	}
 
 	err = c.RunDeploy(ctx, &deploy.Options{
 		Name:         mc.manifest.Name,
-		ManifestPath: opts.DevPath,
+		ManifestPath: filepath.Join(opts.Workdir, opts.DevPath),
 		Timeout:      5 * time.Minute,
 		Build:        false,
-		Wait:         false,
+		Wait:         true,
 	})
 	if err != nil {
 		return err
@@ -577,7 +517,8 @@ func (mc *ManifestCommand) getManifest(path string) (*model.Manifest, error) {
 		manifest.Build = b
 		d := model.NewDeployInfo()
 		if mc.manifest.Deploy != nil {
-			copy(d.Commands, mc.manifest.Deploy.Commands)
+			d.Commands = mc.manifest.Deploy.Commands
+			mc.manifest.Deploy.Commands = nil
 			d.Endpoints = mc.manifest.Deploy.Endpoints
 			d.ComposeSection = mc.manifest.Deploy.ComposeSection
 		}

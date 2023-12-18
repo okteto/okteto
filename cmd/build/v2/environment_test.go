@@ -22,7 +22,6 @@ import (
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -118,16 +117,6 @@ func Test_SetServiceEnvVars(t *testing.T) {
 
 func TestExpandStackVariables(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-				IsOkteto:  true,
-			},
-		},
-		CurrentContext: "test",
-	}
-
 	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
 	fakeConfig := fakeConfig{
