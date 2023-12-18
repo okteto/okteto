@@ -15,6 +15,8 @@ package model
 
 import (
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/externalresource"
 	"os"
 	"path/filepath"
 	"testing"
@@ -643,7 +645,7 @@ func TestInferFromStack(t *testing.T) {
 								},
 							},
 						},
-						Mode: "sync",
+						Mode: constants.OktetoSyncModeFieldValue,
 					},
 				},
 				Deploy: &DeployInfo{
@@ -1400,9 +1402,173 @@ func TestRead(t *testing.T) {
 		expectedErr bool
 	}{
 		{
-			name:     "empty manifest",
+			name:     "nil bytes return valid initialized v1 manifest",
+			manifest: nil,
+			expected: &Manifest{
+				Name:         "",
+				Namespace:    "",
+				Context:      "",
+				Icon:         "",
+				ManifestPath: "",
+				Deploy: &DeployInfo{
+					Endpoints: nil,
+					Image:     "",
+					Commands:  nil,
+					Remote:    false,
+				},
+				Dev: ManifestDevs{},
+				Destroy: &DestroyInfo{
+					Image:    "",
+					Commands: nil,
+					Remote:   false,
+				},
+				Build:         ManifestBuild{},
+				Dependencies:  deps.ManifestSection{},
+				GlobalForward: []forward.GlobalForward{},
+				External:      externalresource.ExternalResourceSection{},
+				Type:          OktetoManifestType,
+				Manifest:      nil,
+				IsV2:          false,
+			},
+		},
+
+		{
+			name:     "empty bytes return valid initialized v1 manifest",
 			manifest: []byte(""),
-			expected: NewManifest(),
+			expected: &Manifest{
+				Name:         "",
+				Namespace:    "",
+				Context:      "",
+				Icon:         "",
+				ManifestPath: "",
+				Deploy: &DeployInfo{
+					Endpoints: nil,
+					Image:     "",
+					Commands:  nil,
+					Remote:    false,
+				},
+				Dev: ManifestDevs{},
+				Destroy: &DestroyInfo{
+					Image:    "",
+					Commands: nil,
+					Remote:   false,
+				},
+				Build:         ManifestBuild{},
+				Dependencies:  deps.ManifestSection{},
+				GlobalForward: []forward.GlobalForward{},
+				External:      externalresource.ExternalResourceSection{},
+				Type:          OktetoManifestType,
+				Manifest:      []uint8{},
+				IsV2:          false,
+			},
+		},
+		{
+			name:        "invalid YAML format",
+			manifest:    []byte("{invalid yaml}"),
+			expected:    nil,
+			expectedErr: true,
+		},
+		{
+			name: "failed validation due to cyclic dependencies",
+			manifest: []byte(`build:
+  test1:
+    context: ./test1
+    depends_on: test2
+  test2:
+    context: ./test2
+    depends_on: test2`),
+			expected:    nil,
+			expectedErr: true,
+		},
+		{
+			name: "with dev",
+			manifest: []byte(`dev:
+  test:
+    image: test-image
+    context: ./test`),
+			expected: &Manifest{
+				Name:         "",
+				Namespace:    "",
+				Context:      "",
+				Icon:         "",
+				ManifestPath: "",
+				Deploy:       nil,
+				Dev: ManifestDevs{
+					"test": &Dev{
+						Name:      "test",
+						Context:   "./test",
+						Namespace: "",
+						Metadata: &Metadata{
+							Labels:      Labels{},
+							Annotations: Annotations{},
+						},
+						Selector:   Selector{},
+						EmptyImage: false,
+						Image: &BuildInfo{
+							Name:       "test-image",
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+						},
+						Push: &BuildInfo{
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+						},
+						ImagePullPolicy: apiv1.PullAlways,
+						InitContainer:   InitContainer{Image: OktetoBinImageTag},
+						Probes:          &Probes{},
+						Lifecycle:       &Lifecycle{},
+						Workdir:         "/okteto",
+						SecurityContext: &SecurityContext{
+							RunAsUser:  pointer.Int64(0),
+							RunAsGroup: pointer.Int64(0),
+							FSGroup:    pointer.Int64(0),
+						},
+						SSHServerPort: 2222,
+						Volumes:       []Volume{},
+						Timeout: Timeout{
+							Default:   60 * time.Second,
+							Resources: 120 * time.Second,
+						},
+						Command: Command{
+							Values: []string{"sh"},
+						},
+						Interface: Localhost,
+						Sync: Sync{
+							RescanInterval: 300,
+							Folders: []SyncFolder{
+								{
+									LocalPath:  ".",
+									RemotePath: "/okteto",
+								},
+							},
+						},
+						PersistentVolumeInfo: &PersistentVolumeInfo{
+							Enabled: true,
+						},
+						Mode:        constants.OktetoSyncModeFieldValue,
+						Services:    []*Dev{},
+						Forward:     []forward.Forward{},
+						Environment: env.Environment{},
+						Secrets:     []Secret{},
+					},
+				},
+				Destroy: &DestroyInfo{
+					Image:    "",
+					Commands: nil,
+					Remote:   false,
+				},
+				Build:         ManifestBuild{},
+				Dependencies:  deps.ManifestSection{},
+				GlobalForward: nil,
+				External:      externalresource.ExternalResourceSection{},
+				Type:          OktetoManifestType,
+				Manifest: []byte(`dev:
+  test:
+    image: test-image
+    context: ./test`),
+				IsV2: true,
+			},
+			expectedErr: false,
 		},
 	}
 
@@ -1414,7 +1580,7 @@ func TestRead(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-			assert.Equal(t, &tt.expected, &manifest)
+			assert.Equal(t, tt.expected, manifest)
 		})
 	}
 }
