@@ -688,7 +688,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 					Image:      "image",
 				},
 			},
-			expected: "commit:1234567890;target:target;build_args:foo=bar;key=value;secrets:secret=secret;context:context;dockerfile:dockerfile;image:image;",
+			expected: "commit:1234567890;target:target;build_args:foo=bar;key=value;secrets:secret=secret;context:context;dockerfile:dockerfile;dockerfile_content:;image:image;",
 		},
 		{
 			name: "invalid commit",
@@ -718,7 +718,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 					Image:      "image",
 				},
 			},
-			expected: "commit:;target:target;build_args:foo=bar;key=value;secrets:secret=secret;context:context;dockerfile:dockerfile;image:image;",
+			expected: "commit:;target:target;build_args:foo=bar;key=value;secrets:secret=secret;context:context;dockerfile:dockerfile;dockerfile_content:;image:image;",
 		},
 		{
 			name: "invalid commit and no args",
@@ -739,7 +739,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 					Image:      "image",
 				},
 			},
-			expected: "commit:;target:target;build_args:;secrets:secret=secret;context:context;dockerfile:dockerfile;image:image;",
+			expected: "commit:;target:target;build_args:;secrets:secret=secret;context:context;dockerfile:dockerfile;dockerfile_content:;image:image;",
 		},
 		{
 			name: "arg with expansion",
@@ -765,7 +765,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 					Image:      "image",
 				},
 			},
-			expected: "commit:;target:target;build_args:foo=bar;secrets:secret=secret;context:context;dockerfile:dockerfile;image:image;",
+			expected: "commit:;target:target;build_args:foo=bar;secrets:secret=secret;context:context;dockerfile:dockerfile;dockerfile_content:;image:image;",
 		},
 	}
 	for _, tc := range tt {

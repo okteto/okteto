@@ -19,7 +19,6 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
@@ -299,7 +298,7 @@ func TestGetSHA(t *testing.T) {
 	}
 }
 
-func TestGetTreeHash(t *testing.T) {
+func TestGetLatestDirCommit(t *testing.T) {
 	type config struct {
 		repositoryGetter *fakeRepositoryGetter
 	}
@@ -314,45 +313,25 @@ func TestGetTreeHash(t *testing.T) {
 		buildContext string
 	}{
 		{
-			name: "get tree hash without any problem",
+			name: "get hash without any problem",
 			config: config{
 				repositoryGetter: &fakeRepositoryGetter{
 					repository: []*fakeRepository{
 						{
-							worktree: &fakeWorktree{
-								status: oktetoGitStatus{
-									status: git.Status{
-										"test-file.go": &git.FileStatus{
-											Staging:  git.Unmodified,
-											Worktree: git.Unmodified,
-										},
-									},
-								},
-							},
-							head: plumbing.NewHashReference("test", plumbing.NewHash("test")),
-							commit: &fakeCommit{
-								tree: &object.Tree{
-									Entries: []object.TreeEntry{
-										{
-											Name: "test",
-											Hash: plumbing.NewHash("test"),
-										},
-									},
-								},
-							},
-							err: nil,
+							commit: "hash",
+							err:    nil,
 						},
 					},
 				},
 			},
 			buildContext: "test",
 			expected: expected{
-				sha: plumbing.NewHash("test").String(),
+				sha: "hash",
 				err: nil,
 			},
 		},
 		{
-			name: "get tree hash with error retrieving repo",
+			name: "get build context hash with error retrieving repo",
 			config: config{
 				repositoryGetter: &fakeRepositoryGetter{
 					err: []error{assert.AnError},
@@ -365,23 +344,13 @@ func TestGetTreeHash(t *testing.T) {
 			},
 		},
 		{
-			name: "get tree hash with error getting head",
+			name: "get build context hash with error getting head",
 			config: config{
 				repositoryGetter: &fakeRepositoryGetter{
 					repository: []*fakeRepository{
 						{
-							worktree: &fakeWorktree{
-								status: oktetoGitStatus{
-									status: git.Status{
-										"test-file.go": &git.FileStatus{
-											Staging:  git.Unmodified,
-											Worktree: git.Unmodified,
-										},
-									},
-								},
-							},
-							head: plumbing.NewHashReference("test", plumbing.NewHash("test")),
-							err:  assert.AnError,
+							commit: "",
+							err:    assert.AnError,
 						},
 					},
 				},
@@ -390,97 +359,6 @@ func TestGetTreeHash(t *testing.T) {
 			expected: expected{
 				sha: "",
 				err: assert.AnError,
-			},
-		},
-		{
-			name: "get tree hash with error getting commit",
-			config: config{
-				repositoryGetter: &fakeRepositoryGetter{
-					repository: []*fakeRepository{
-						{
-							worktree: &fakeWorktree{
-								status: oktetoGitStatus{
-									status: git.Status{
-										"test-file.go": &git.FileStatus{
-											Staging:  git.Unmodified,
-											Worktree: git.Unmodified,
-										},
-									},
-								},
-							},
-							head:         plumbing.NewHashReference("test", plumbing.NewHash("test")),
-							failInCommit: true,
-							err:          assert.AnError,
-						},
-					},
-				},
-			},
-			buildContext: "test",
-			expected: expected{
-				sha: "",
-				err: assert.AnError,
-			},
-		},
-		{
-			name: "get tree hash with error getting tree",
-			config: config{
-				repositoryGetter: &fakeRepositoryGetter{
-					repository: []*fakeRepository{
-						{
-							worktree: &fakeWorktree{
-								status: oktetoGitStatus{
-									status: git.Status{
-										"test-file.go": &git.FileStatus{
-											Staging:  git.Unmodified,
-											Worktree: git.Unmodified,
-										},
-									},
-								},
-							},
-							head: plumbing.NewHashReference("test", plumbing.NewHash("test")),
-							commit: &fakeCommit{
-								err: assert.AnError,
-							},
-						},
-					},
-				},
-			},
-			buildContext: "test",
-			expected: expected{
-				sha: "",
-				err: assert.AnError,
-			},
-		},
-		{
-			name: "get tree hash with context == .",
-			config: config{
-				repositoryGetter: &fakeRepositoryGetter{
-					repository: []*fakeRepository{
-						{
-							worktree: &fakeWorktree{
-								status: oktetoGitStatus{
-									status: git.Status{
-										"test-file.go": &git.FileStatus{
-											Staging:  git.Unmodified,
-											Worktree: git.Unmodified,
-										},
-									},
-								},
-							},
-							head: plumbing.NewHashReference("test", plumbing.NewHash("test")),
-							commit: &fakeCommit{
-								tree: &object.Tree{
-									Hash: plumbing.NewHash("tree"),
-								},
-							},
-						},
-					},
-				},
-			},
-			buildContext: ".",
-			expected: expected{
-				sha: plumbing.NewHash("tree").String(),
-				err: nil,
 			},
 		},
 	}
@@ -491,9 +369,9 @@ func TestGetTreeHash(t *testing.T) {
 					repoGetter: tt.config.repositoryGetter,
 				},
 			}
-			treeHash, err := repo.GetTreeHash(tt.buildContext)
+			commit, err := repo.GetLatestDirCommit(tt.buildContext)
 			assert.ErrorIs(t, err, tt.expected.err)
-			assert.Equal(t, tt.expected.sha, treeHash)
+			assert.Equal(t, tt.expected.sha, commit)
 		})
 	}
 }

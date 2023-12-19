@@ -31,6 +31,7 @@ var (
 	errLocalGitCannotGetStatusTooManyAttempts = errors.New("failed to get status: too many attempts")
 	errLocalGitCannotGetStatusCannotRecover   = errors.New("failed to get status: cannot recover")
 	errLocalGitInvalidStatusOutput            = errors.New("failed to get git status: unexpected status line")
+	errLocalGitCannotGetCommitTooManyAttempts = errors.New("failed to get latest dir commit: too many attempts")
 )
 
 type CommandExecutor interface {
@@ -80,6 +81,7 @@ type LocalGitInterface interface {
 	Exists() (string, error)
 	FixDubiousOwnershipConfig(path string) error
 	parseGitStatus(string) (git.Status, error)
+	GetLatestCommit(ctx context.Context, repoRoot, dirPath string, fixAttempt int) (string, error)
 }
 
 type LocalGit struct {
@@ -160,4 +162,30 @@ func (*LocalGit) parseGitStatus(gitStatusOutput string) (git.Status, error) {
 	}
 
 	return status, nil
+}
+
+// GetLatestCommit returns the latest commit of the repository at the given path
+func (lg *LocalGit) GetLatestCommit(ctx context.Context, gitPath, dirPath string, fixAttempt int) (string, error) {
+	if fixAttempt > 1 {
+		return "", errLocalGitCannotGetCommitTooManyAttempts
+	}
+
+	output, err := lg.exec.RunCommand(ctx, gitPath, lg.gitPath, "--no-optional-locks", "log", "-n", "1", "--pretty=format:%H", "--", dirPath)
+	if err != nil {
+		var exitError *exec.ExitError
+		errors.As(err, &exitError)
+		if exitError != nil {
+			exitErr := string(exitError.Stderr)
+			if strings.Contains(exitErr, "detected dubious ownership in repository") {
+				err = lg.FixDubiousOwnershipConfig(gitPath)
+				if err != nil {
+					return "", errLocalGitCannotGetStatusCannotRecover
+				}
+				fixAttempt++
+				return lg.GetLatestCommit(ctx, gitPath, dirPath, fixAttempt)
+			}
+		}
+		return "", errLocalGitCannotGetStatusCannotRecover
+	}
+	return string(output), nil
 }
