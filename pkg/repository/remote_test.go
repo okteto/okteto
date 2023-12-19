@@ -52,6 +52,6 @@ func TestRemoteGetLatestDirCommit(t *testing.T) {
 	remote := oktetoRemoteRepoController{
 		gitCommit: "123",
 	}
-	_, err := remote.GeLatestDirCommit("test")
+	_, err := remote.GetLatestDirCommit("test")
 	assert.Error(t, err, fmt.Errorf("not-implemented"))
 }

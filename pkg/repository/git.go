@@ -129,7 +129,7 @@ type commitResponse struct {
 	commit string
 }
 
-func (r gitRepoController) GeLatestDirCommit(contextDir string) (string, error) {
+func (r gitRepoController) GetLatestDirCommit(contextDir string) (string, error) {
 	// We use context.TODO() in a few places to call isClean, so let's make sure
 	// we set proper internal timeouts to not leak goroutines
 	ctx, cancel := context.WithCancel(context.TODO())
