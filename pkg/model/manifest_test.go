@@ -1431,7 +1431,6 @@ func TestRead(t *testing.T) {
 				IsV2:          false,
 			},
 		},
-
 		{
 			name:     "empty bytes return valid initialized v1 manifest",
 			manifest: []byte(""),
@@ -1567,6 +1566,65 @@ func TestRead(t *testing.T) {
     image: test-image
     context: ./test`),
 				IsV2: true,
+			},
+			expectedErr: false,
+		},
+		{
+			name: "empty build service returns an error",
+			manifest: []byte(`build:
+  frontend:
+  backend:
+    context: ./backend`),
+			expected:    nil,
+			expectedErr: true,
+		},
+		{
+			// Because we call setDefaults before validate, this test case helps remember that the order in which
+			// We call setDefaults before calling validate must be respected or a refactor is required. If we call
+			// validate before setDefaults, this test case fails with an error because driver is empty.
+			name: "success - divert driver set before validation",
+			manifest: []byte(`deploy:
+  divert:
+    namespace: staging
+    service: service-b`),
+			expected: &Manifest{
+				Name:         "",
+				Namespace:    "",
+				Context:      "",
+				Icon:         "",
+				ManifestPath: "",
+				Deploy: &DeployInfo{
+					ComposeSection: nil,
+					Endpoints:      nil,
+					Divert: &DivertDeploy{
+						Driver:               "weaver",
+						Namespace:            "staging",
+						DeprecatedService:    "service-b",
+						DeprecatedDeployment: "",
+						VirtualServices:      nil,
+						Hosts:                nil,
+						DeprecatedPort:       0,
+					},
+					Image:    "",
+					Commands: nil,
+					Remote:   false,
+				},
+				Dev: ManifestDevs{},
+				Destroy: &DestroyInfo{
+					Image:    "",
+					Commands: nil,
+					Remote:   false,
+				},
+				Build:         ManifestBuild{},
+				Dependencies:  deps.ManifestSection{},
+				GlobalForward: nil,
+				External:      externalresource.ExternalResourceSection{},
+				Type:          OktetoManifestType,
+				IsV2:          true,
+				Manifest: []byte(`deploy:
+  divert:
+    namespace: staging
+    service: service-b`),
 			},
 			expectedErr: false,
 		},

@@ -670,11 +670,11 @@ func Read(bytes []byte) (*Manifest, error) {
 
 	}
 
-	if err := manifest.validate(); err != nil {
+	if err := manifest.setDefaults(); err != nil {
 		return nil, err
 	}
 
-	if err := manifest.setDefaults(); err != nil {
+	if err := manifest.validate(); err != nil {
 		return nil, err
 	}
 
@@ -893,6 +893,9 @@ func (m *Manifest) setDefaults() error {
 	}
 
 	for _, b := range m.Build {
+		if b == nil {
+			continue
+		}
 		if b.Name != "" {
 			b.Context = b.Name
 			b.Name = ""
