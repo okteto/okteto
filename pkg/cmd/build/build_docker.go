@@ -30,6 +30,7 @@ import (
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/distribution/reference"
 	dockerTypes "github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
@@ -428,7 +429,7 @@ func pushImage(ctx context.Context, tag string, client *client.Client) error {
 		return err
 	}
 
-	encodedAuth, err := command.EncodeAuthToBase64(authConfig)
+	encodedAuth, err := registry.EncodeAuthConfig(authConfig)
 	if err != nil {
 		return err
 	}
@@ -446,7 +447,7 @@ func pushImage(ctx context.Context, tag string, client *client.Client) error {
 	return jsonmessage.DisplayJSONMessagesToStream(responseBody, dockerCli.Out(), nil)
 }
 
-func ResolveAuthConfig(ctx context.Context, dockerCli *command.DockerCli, cli *client.Client, repoInfo *dockerRegistry.RepositoryInfo) dockerTypes.AuthConfig {
+func ResolveAuthConfig(ctx context.Context, dockerCli *command.DockerCli, cli *client.Client, repoInfo *dockerRegistry.RepositoryInfo) registry.AuthConfig {
 	configKey := repoInfo.Index.Name
 	if repoInfo.Index.Official {
 		info, err := cli.Info(ctx)
@@ -460,5 +461,5 @@ func ResolveAuthConfig(ctx context.Context, dockerCli *command.DockerCli, cli *c
 	if err != nil {
 		oktetoLog.Infof("Error getting credentials for %s: %s", configKey, err)
 	}
-	return dockerTypes.AuthConfig(a)
+	return registry.AuthConfig(a)
 }

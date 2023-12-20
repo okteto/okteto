@@ -173,9 +173,10 @@ func Test_initFromEnvVars(t *testing.T) {
 				"OKTETO_NAMESPACE": "",
 			},
 			want: &ContextOptions{
-				Token:    "token",
-				Context:  okteto.CloudURL,
-				IsOkteto: true,
+				Token:         "token",
+				Context:       okteto.CloudURL,
+				IsOkteto:      true,
+				InferredToken: true,
 			},
 		},
 		{
@@ -262,9 +263,10 @@ func Test_initFromEnvVars(t *testing.T) {
 				"OKTETO_NAMESPACE": "",
 			},
 			want: &ContextOptions{
-				Token:    "token-envvar",
-				Context:  "okteto-url",
-				IsOkteto: true,
+				Token:         "token-envvar",
+				Context:       "okteto-url",
+				IsOkteto:      true,
+				InferredToken: true,
 			},
 		},
 		{

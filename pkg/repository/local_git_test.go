@@ -236,3 +236,58 @@ func Test_LocalExec_RunCommand(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "okteto\n", string(got))
 }
+
+func TestLocalGit_GetLatestCommit(t *testing.T) {
+	tests := []struct {
+		expectedErr error
+		mock        func() *mockLocalExec
+		name        string
+		fixAttempts int
+	}{
+		{
+			name:        "success",
+			fixAttempts: 0,
+			mock: func() *mockLocalExec {
+				return &mockLocalExec{
+					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+						return []byte("hash"), nil
+					},
+				}
+			},
+			expectedErr: nil,
+		},
+		{
+			name:        "failure due to too many attempts",
+			fixAttempts: 2,
+			mock: func() *mockLocalExec {
+				return &mockLocalExec{
+					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+						return nil, assert.AnError
+					},
+				}
+			},
+			expectedErr: errLocalGitCannotGetCommitTooManyAttempts,
+		},
+		{
+			name:        "cannot recover",
+			fixAttempts: 1,
+			mock: func() *mockLocalExec {
+				return &mockLocalExec{
+					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+						return nil, assert.AnError
+					},
+				}
+			},
+			expectedErr: errLocalGitCannotGetStatusCannotRecover,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lg := NewLocalGit("git", tt.mock())
+			_, err := lg.GetLatestCommit(context.Background(), "", "/test/dir", tt.fixAttempts)
+
+			assert.ErrorIs(t, err, tt.expectedErr)
+		})
+	}
+}
