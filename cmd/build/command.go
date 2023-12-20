@@ -35,7 +35,6 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
-	"github.com/okteto/okteto/pkg/suggest"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
@@ -153,11 +152,6 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.OktetoC
 	manifest, err := bc.GetManifest(options.File)
 	if err != nil {
 		if options.File != "" && errors.Is(err, oktetoErrors.ErrInvalidManifest) && validateDockerfile(options.File) != nil {
-			return nil, err
-		}
-
-		var userFriendlyErr *suggest.UserFriendlyError
-		if errors.As(err, &userFriendlyErr) {
 			return nil, err
 		}
 

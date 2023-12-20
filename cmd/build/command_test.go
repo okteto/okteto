@@ -27,7 +27,6 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
-	"github.com/okteto/okteto/pkg/suggest"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -346,19 +345,6 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
-			isBuildV2Expected: false,
-		},
-		{
-			name: "UserFriendlyError returned without fallback.",
-			buildCommand: &Command{
-				GetManifest: func(_ string) (*model.Manifest, error) {
-					return nil, suggest.NewUserFriendlyError(assert.AnError, []*suggest.Rule{})
-				},
-				Registry: newFakeRegistry(),
-				ioCtrl:   io.NewIOController(),
-			},
-			options:           &types.BuildOptions{},
-			expectedError:     true,
 			isBuildV2Expected: false,
 		},
 	}
