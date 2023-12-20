@@ -411,7 +411,6 @@ func (c ContextCommand) getUserContext(ctx context.Context, ctxName, ns, token s
 		userContext, err := client.User().GetContext(ctx, ns)
 
 		if err != nil {
-
 			if errors.Is(err, oktetoErrors.ErrTokenExpired) {
 				return nil, err
 			}
