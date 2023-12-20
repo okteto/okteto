@@ -82,20 +82,15 @@ func isCreateNewContextOption(option string) bool {
 	return option == newOEOption
 }
 
-func askForOktetoURL() (string, error) {
-	clusterURL := okteto.CloudURL
-	ctxStore := okteto.ContextStore()
-	if oCtx, ok := ctxStore.Contexts[ctxStore.CurrentContext]; ok && oCtx.IsOkteto {
-		clusterURL = ctxStore.CurrentContext
-	}
-
-	err := oktetoLog.Question("Enter your Okteto URL [%s]: ", clusterURL)
+func askForOktetoURL(message string) (string, error) {
+	err := oktetoLog.Question(message)
 	if err != nil {
 		return "", err
 	}
-	fmt.Scanln(&clusterURL)
+	var oktetoURL string
+	fmt.Scanln(&oktetoURL)
 
-	url, err := url.Parse(clusterURL)
+	url, err := url.Parse(oktetoURL)
 	if err != nil {
 		return "", nil
 	}

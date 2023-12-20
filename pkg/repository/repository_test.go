@@ -85,15 +85,6 @@ func (fw fakeWorktree) Status(context.Context, string, LocalGitInterface) (oktet
 	return fw.status, fw.err
 }
 
-type fakeCommit struct {
-	tree *object.Tree
-	err  error
-}
-
-func (fc *fakeCommit) Tree() (*object.Tree, error) {
-	return fc.tree, fc.err
-}
-
 func TestNewRepo(t *testing.T) {
 	tt := []struct {
 		expectedControl repositoryInterface

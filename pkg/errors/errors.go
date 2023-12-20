@@ -214,6 +214,9 @@ var (
 	// ErrInvalidLicense is the error returned to the user when a trial is invalid.
 	// This can be either an expired trial license or no license at all
 	ErrInvalidLicense = errors.New("Your license is invalid")
+
+	// ErrTokenExpired is raised when token used for API auth is expired
+	ErrTokenExpired = errors.New("your token has expired")
 )
 
 // IsAlreadyExists raised if the Kubernetes API returns AlreadyExists

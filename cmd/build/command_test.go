@@ -243,13 +243,15 @@ func TestBuildErrIfInvalidManifest(t *testing.T) {
 func TestBuilderIsProperlyGenerated(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
+	okCtx := &okteto.OktetoContextStateless{
+		Store: &okteto.OktetoContextStore{
+			Contexts: map[string]*okteto.OktetoContext{
+				"test": {
+					Namespace: "test",
+				},
 			},
+			CurrentContext: "test",
 		},
-		CurrentContext: "test",
 	}
 	malformedDockerfile := filepath.Join(dir, "malformedDockerfile")
 	dockerfile := filepath.Join(dir, "Dockerfile")
@@ -351,7 +353,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			builder, err := tt.buildCommand.getBuilder(tt.options)
+			builder, err := tt.buildCommand.getBuilder(tt.options, okCtx)
 			if err != nil && !tt.expectedError {
 				t.Errorf("getBuilder() fail on '%s'. Expected nil error, got %s", tt.name, err.Error())
 			}
@@ -387,10 +389,80 @@ type fakeAnalyticsTracker struct{}
 func (fakeAnalyticsTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
 
 func Test_NewBuildCommand(t *testing.T) {
-	got := NewBuildCommand(io.NewIOController(), fakeAnalyticsTracker{})
+	okCtx := &okteto.OktetoContextStateless{
+		Store: &okteto.OktetoContextStore{
+			Contexts: map[string]*okteto.OktetoContext{
+				"test": {
+					Namespace: "test",
+				},
+			},
+			CurrentContext: "test",
+		},
+	}
+	got := NewBuildCommand(io.NewIOController(), fakeAnalyticsTracker{}, okCtx)
 	require.IsType(t, &Command{}, got)
 	require.NotNil(t, got.GetManifest)
 	require.NotNil(t, got.Builder)
 	require.NotNil(t, got.Registry)
 	require.IsType(t, fakeAnalyticsTracker{}, got.analyticsTracker)
+}
+
+type fakeClientCfgContext struct {
+	name          string
+	token         string
+	cert          string
+	existsContext bool
+}
+
+func (c *fakeClientCfgContext) ExistsContext() bool {
+	return c.existsContext
+}
+
+func (c *fakeClientCfgContext) GetCurrentName() string {
+	return c.name
+}
+
+func (c *fakeClientCfgContext) GetCurrentToken() string {
+	return c.token
+}
+
+func (c *fakeClientCfgContext) GetCurrentCertStr() string {
+	return c.cert
+}
+
+func Test_defaultOktetoClientCfg(t *testing.T) {
+	tests := []struct {
+		input    *fakeClientCfgContext
+		expected *okteto.OktetoClientCfg
+		name     string
+	}{
+		{
+			name: "context not exists",
+			input: &fakeClientCfgContext{
+				existsContext: false,
+			},
+			expected: &okteto.OktetoClientCfg{},
+		},
+		{
+			name: "context exists",
+			input: &fakeClientCfgContext{
+				existsContext: true,
+				name:          "test",
+				token:         "okteto",
+				cert:          "my-cert",
+			},
+			expected: &okteto.OktetoClientCfg{
+				CtxName: "test",
+				Token:   "okteto",
+				Cert:    "my-cert",
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			result := defaultOktetoClientCfg(tt.input)
+			require.EqualValues(t, result, tt.expected)
+		})
+	}
 }

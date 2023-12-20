@@ -171,6 +171,18 @@ func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInter
 		ioCtrl:           io.NewIOController(),
 		analyticsTracker: analyticsTracker,
 		smartBuildCtrl:   smartbuild.NewSmartBuildCtrl(fakeConfigRepo{}, registry, afero.NewMemMapFs(), io.NewIOController()),
+		oktetoContext: &okteto.OktetoContextStateless{
+			Store: &okteto.OktetoContextStore{
+				Contexts: map[string]*okteto.OktetoContext{
+					"test": {
+						Namespace: "test",
+						IsOkteto:  true,
+						Registry:  "my-registry",
+					},
+				},
+				CurrentContext: "test",
+			},
+		},
 	}
 }
 
@@ -245,15 +257,6 @@ func TestValidateOptions(t *testing.T) {
 
 func TestOnlyInjectVolumeMountsInOkteto(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-				IsOkteto:  true,
-			},
-		},
-		CurrentContext: "test",
-	}
 	dir := t.TempDir()
 
 	registry := newFakeRegistry()
@@ -290,15 +293,6 @@ func TestOnlyInjectVolumeMountsInOkteto(t *testing.T) {
 
 func TestTwoStepsBuild(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-				IsOkteto:  true,
-			},
-		},
-		CurrentContext: "test",
-	}
 
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -341,15 +335,6 @@ func TestTwoStepsBuild(t *testing.T) {
 
 func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-				IsOkteto:  true,
-			},
-		},
-		CurrentContext: "test",
-	}
 
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -383,15 +368,6 @@ func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
 
 func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-				IsOkteto:  true,
-			},
-		},
-		CurrentContext: "test",
-	}
 
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -426,16 +402,6 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 
 func TestBuildWithStack(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-				IsOkteto:  true,
-				Registry:  "my-registry",
-			},
-		},
-		CurrentContext: "test",
-	}
 
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -500,16 +466,6 @@ func createDockerfile(t *testing.T) (string, error) {
 
 func TestBuildWithDependsOn(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-				IsOkteto:  true,
-				Registry:  "my-registry",
-			},
-		},
-		CurrentContext: "test",
-	}
 
 	firstImage := "okteto/a:test"
 	secondImage := "okteto/b:test"

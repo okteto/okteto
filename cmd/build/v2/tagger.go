@@ -19,7 +19,6 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 )
 
 type imageTaggerInterface interface {
@@ -38,10 +37,10 @@ type imageTagger struct {
 	smartBuildController smartBuildController
 }
 
-func getTargetRegistries() []string {
+func getTargetRegistries(isOkteto bool) []string {
 	registries := []string{}
 
-	if okteto.IsOkteto() {
+	if isOkteto {
 		registries = append(registries, constants.DevRegistry, constants.GlobalRegistry)
 	}
 
@@ -88,7 +87,7 @@ func (i imageTagger) getServiceImageReference(manifestName, svcName string, b *m
 }
 
 // getImageReferencesForTag returns all the possible images references that can be used for build with the given tag
-func (imageTagger) getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string {
+func (it imageTagger) getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string {
 	if tag == "" {
 		return []string{}
 	}
@@ -97,7 +96,7 @@ func (imageTagger) getImageReferencesForTag(manifestName, svcToBuildName, tag st
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	referencesToCheck := []string{}
 
-	for _, targetRegistry := range getTargetRegistries() {
+	for _, targetRegistry := range getTargetRegistries(it.cfg.IsOkteto()) {
 		referencesToCheck = append(referencesToCheck, useReferenceTemplate(targetRegistry, sanitizedName, svcToBuildName, tag))
 	}
 	return referencesToCheck
@@ -147,14 +146,14 @@ func (i imagerTaggerWithVolumes) getServiceImageReference(manifestName, svcName 
 }
 
 // getImageReferencesForTag returns all the possible images that can be built from a commit hash
-func (imagerTaggerWithVolumes) getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string {
+func (i imagerTaggerWithVolumes) getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string {
 	if tag == "" {
 		return []string{}
 	}
 	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	tagsToCheck := []string{}
-	for _, targetRegistry := range getTargetRegistries() {
+	for _, targetRegistry := range getTargetRegistries(i.cfg.IsOkteto()) {
 		tagsToCheck = append(tagsToCheck, useReferenceTemplateWithVolumes(targetRegistry, sanitizedName, svcToBuildName, tag))
 	}
 	return tagsToCheck
@@ -164,7 +163,7 @@ func (imagerTaggerWithVolumes) getImageReferencesForTag(manifestName, svcToBuild
 func (i imagerTaggerWithVolumes) getImageReferencesForTagWithDefaults(manifestName, svcToBuildName, tag string) []string {
 	tags := i.getImageReferencesForTag(manifestName, svcToBuildName, tag)
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	for _, targetRegistry := range getTargetRegistries() {
+	for _, targetRegistry := range getTargetRegistries(i.cfg.IsOkteto()) {
 		tags = append(tags, useReferenceTemplate(targetRegistry, sanitizedName, svcToBuildName, model.OktetoImageTagWithVolumes))
 	}
 	return tags

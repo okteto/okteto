@@ -554,6 +554,19 @@ func TestGetUserContext(t *testing.T) {
 			},
 		},
 		{
+			name: "token expired error",
+			input: input{
+				ns: "test",
+				userErr: []error{
+					oktetoErrors.ErrTokenExpired,
+				},
+			},
+			output: output{
+				uc:  nil,
+				err: oktetoErrors.ErrTokenExpired,
+			},
+		},
+		{
 			name: "not found + redirect to personal namespace",
 			input: input{
 				ns: "test",

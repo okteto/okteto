@@ -17,7 +17,6 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -266,7 +265,11 @@ func TestImageTaggerGetPossibleHashImages(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageTagger(fakeConfig{}, &fakeSmartBuildCtrl{})
+			tagger := newImageTagger(
+				fakeConfig{
+					isOkteto: true,
+				},
+				&fakeSmartBuildCtrl{})
 			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTag("test", "test", tc.sha))
 		})
 	}
@@ -294,7 +297,9 @@ func TestImageTaggerWithVolumesGetPossibleHashImages(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageWithVolumesTagger(fakeConfig{}, &fakeSmartBuildCtrl{})
+			tagger := newImageWithVolumesTagger(fakeConfig{
+				isOkteto: true,
+			}, &fakeSmartBuildCtrl{})
 			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTag("test", "test", tc.sha))
 		})
 	}
@@ -339,7 +344,7 @@ func TestImageTaggerGetPossibleTags(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageTagger(fakeConfig{}, &fakeSmartBuildCtrl{
+			tagger := newImageTagger(fakeConfig{isOkteto: true}, &fakeSmartBuildCtrl{
 				isEnabled: tc.isSmartBuildsEnabled,
 			})
 			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTagWithDefaults("test", "test", tc.sha))
@@ -374,7 +379,7 @@ func TestImageTaggerWithVolumesGetPossibleTags(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageWithVolumesTagger(fakeConfig{}, &fakeSmartBuildCtrl{})
+			tagger := newImageWithVolumesTagger(fakeConfig{isOkteto: true}, &fakeSmartBuildCtrl{})
 			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTagWithDefaults("test", "test", tc.sha))
 		})
 	}
@@ -402,16 +407,7 @@ func Test_getTargetRegistries(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			okteto.CurrentStore = &okteto.OktetoContextStore{
-				Contexts: map[string]*okteto.OktetoContext{
-					"test": {
-						Namespace: "test",
-						IsOkteto:  tc.isOkteto,
-					},
-				},
-				CurrentContext: "test",
-			}
-			assert.Equal(t, tc.expected, getTargetRegistries())
+			assert.Equal(t, tc.expected, getTargetRegistries(tc.isOkteto))
 		})
 	}
 }

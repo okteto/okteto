@@ -194,6 +194,10 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		fmt.Sprintf("%s=%d", constants.OktetoInvalidateCacheEnvVar, int(randomNumber.Int64())),
 	)
 
+	if buildOptions.Manifest != nil && buildOptions.Manifest.Deploy != nil {
+		buildOptions.Tag = buildOptions.Manifest.Deploy.Image
+	}
+
 	if sc.ServerName != "" {
 		registryUrl := okteto.Context().Registry
 		subdomain := strings.TrimPrefix(registryUrl, "registry.")

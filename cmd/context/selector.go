@@ -14,7 +14,6 @@
 package context
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 
@@ -23,33 +22,20 @@ import (
 )
 
 var (
-	cloudOption = fmt.Sprintf("%s (Okteto Cloud)", okteto.CloudURL)
-	newOEOption = "Create new context"
+	newOEOption = "Add new context"
 )
 
-func getContextsSelection(ctxOptions *ContextOptions) []utils.SelectorItem {
+func getAvailableContexts(ctxOptions *ContextOptions) []utils.SelectorItem {
 	k8sClusters := make([]string, 0)
 	if !ctxOptions.OnlyOkteto {
 		k8sClusters = getKubernetesContextList(true)
 	}
 	clusters := make([]utils.SelectorItem, 0)
 
-	clusters = append(clusters, utils.SelectorItem{Name: okteto.CloudURL, Label: cloudOption, Enable: true})
 	clusters = append(clusters, getOktetoClusters(true)...)
 	if len(k8sClusters) > 0 {
 		clusters = append(clusters, getK8sClusters(k8sClusters)...)
 	}
-	clusters = append(clusters, []utils.SelectorItem{
-		{
-			Label:  "",
-			Enable: false,
-		},
-		{
-			Name:   newOEOption,
-			Label:  newOEOption,
-			Enable: true,
-		},
-	}...)
 
 	return clusters
 }
