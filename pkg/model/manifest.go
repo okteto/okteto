@@ -663,10 +663,11 @@ func Read(bytes []byte) (*Manifest, error) {
 
 	hasShownWarning := false
 	for _, dev := range manifest.Dev {
-		if (dev.Image.Context != "" || dev.Image.Dockerfile != "") && !hasShownWarning {
+		if dev.Image != nil && (dev.Image.Context != "" || dev.Image.Dockerfile != "") && !hasShownWarning {
 			hasShownWarning = true
 			oktetoLog.Yellow(`The 'image' extended syntax is deprecated and will be removed in a future version. Define the images you want to build in the 'build' section of your manifest. More info at https://www.okteto.com/docs/reference/manifest/#build"`)
 		}
+
 	}
 
 	if err := manifest.setDefaults(); err != nil {
@@ -676,6 +677,7 @@ func Read(bytes []byte) (*Manifest, error) {
 	if err := manifest.validate(); err != nil {
 		return nil, err
 	}
+
 	manifest.Manifest = bytes
 	manifest.Type = OktetoManifestType
 	return manifest, nil
@@ -689,6 +691,11 @@ func (m *Manifest) validate() error {
 }
 
 func (b *ManifestBuild) validate() error {
+	for k, v := range *b {
+		if v == nil {
+			return fmt.Errorf("manifest validation failed: service '%s' build section not defined correctly", k)
+		}
+	}
 	cycle := getDependentCyclic(b.toGraph())
 	if len(cycle) == 1 { // depends on the same node
 		return fmt.Errorf("manifest build validation failed: image '%s' is referenced on its dependencies", cycle[0])
@@ -886,6 +893,9 @@ func (m *Manifest) setDefaults() error {
 	}
 
 	for _, b := range m.Build {
+		if b == nil {
+			continue
+		}
 		if b.Name != "" {
 			b.Context = b.Name
 			b.Name = ""
