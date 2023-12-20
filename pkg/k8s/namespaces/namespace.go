@@ -76,8 +76,8 @@ type Namespaces struct {
 }
 
 type Options struct {
-	Namespace   string
 	List        metav1.ListOptions
+	Namespace   string
 	Parallelism int64
 }
 
