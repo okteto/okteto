@@ -38,8 +38,8 @@ var (
 
 type gitRepoController struct {
 	repoGetter repositoryGetterInterface
-	path       string
 	fs         afero.Fs
+	path       string
 }
 
 func newGitRepoController(path string) gitRepoController {
@@ -175,13 +175,13 @@ func (r gitRepoController) GetLatestDirCommit(contextDir string) (string, error)
 }
 
 type diffResponse struct {
-	diff string
 	err  error
+	diff string
 }
 
 type untrackedFilesResponse struct {
-	untrackedFilesDiff string
 	err                error
+	untrackedFilesDiff string
 }
 
 func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {

@@ -25,10 +25,10 @@ import (
 func TestServiceHasher_HashProjectCommit(t *testing.T) {
 	fakeErr := errors.New("fake error")
 	tests := []struct {
-		name         string
 		repoCtrl     repositoryCommitRetriever
-		expectedHash string
 		expectedErr  error
+		name         string
+		expectedHash string
 	}{
 		{
 			name: "success",
@@ -61,10 +61,10 @@ func TestServiceHasher_HashProjectCommit(t *testing.T) {
 func TestServiceHasher_HashBuildContext(t *testing.T) {
 	fakeErr := errors.New("fake error")
 	tests := []struct {
-		name         string
 		repoCtrl     repositoryCommitRetriever
-		expectedHash string
 		expectedErr  error
+		name         string
+		expectedHash string
 	}{
 		{
 			name: "success",
