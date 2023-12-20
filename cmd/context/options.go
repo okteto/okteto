@@ -36,6 +36,7 @@ type ContextOptions struct {
 	IsOkteto              bool
 	raiseNotCtxError      bool
 	InsecureSkipTlsVerify bool
+	InferredToken         bool
 }
 
 func (o *ContextOptions) InitFromContext() {
@@ -86,6 +87,7 @@ func (o *ContextOptions) InitFromEnvVars() {
 			usedEnvVars = append(usedEnvVars, model.OktetoTokenEnvVar)
 		}
 		o.Token = envToken
+		o.InferredToken = true
 	}
 
 	if o.Namespace == "" && os.Getenv(model.OktetoNamespaceEnvVar) != "" {
