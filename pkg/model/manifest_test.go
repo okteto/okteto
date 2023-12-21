@@ -23,7 +23,9 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/discovery"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
@@ -337,6 +339,15 @@ func Test_validateManifestBuild(t *testing.T) {
 		expectedErr  bool
 	}{
 		{
+			name: "nil build section",
+			buildSection: ManifestBuild{
+				"a": &BuildInfo{},
+				"b": nil,
+				"c": &BuildInfo{},
+			},
+			expectedErr: true,
+		},
+		{
 			name: "no cycle - no connections",
 			buildSection: ManifestBuild{
 				"a": &BuildInfo{},
@@ -634,7 +645,7 @@ func TestInferFromStack(t *testing.T) {
 								},
 							},
 						},
-						Mode: "sync",
+						Mode: constants.OktetoSyncModeFieldValue,
 					},
 				},
 				Deploy: &DeployInfo{
@@ -1379,6 +1390,255 @@ func TestSecretValidate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.s.validate()
 			assert.Equal(t, tt.expectedErr, err)
+		})
+	}
+}
+
+func TestRead(t *testing.T) {
+	tests := []struct {
+		expected    *Manifest
+		name        string
+		manifest    []byte
+		expectedErr bool
+	}{
+		{
+			name:     "nil bytes return valid initialized v1 manifest",
+			manifest: nil,
+			expected: &Manifest{
+				Name:         "",
+				Namespace:    "",
+				Context:      "",
+				Icon:         "",
+				ManifestPath: "",
+				Deploy: &DeployInfo{
+					Endpoints: nil,
+					Image:     "",
+					Commands:  nil,
+					Remote:    false,
+				},
+				Dev: ManifestDevs{},
+				Destroy: &DestroyInfo{
+					Image:    "",
+					Commands: nil,
+					Remote:   false,
+				},
+				Build:         ManifestBuild{},
+				Dependencies:  deps.ManifestSection{},
+				GlobalForward: []forward.GlobalForward{},
+				External:      externalresource.ExternalResourceSection{},
+				Type:          OktetoManifestType,
+				Manifest:      nil,
+				IsV2:          false,
+			},
+		},
+		{
+			name:     "empty bytes return valid initialized v1 manifest",
+			manifest: []byte(""),
+			expected: &Manifest{
+				Name:         "",
+				Namespace:    "",
+				Context:      "",
+				Icon:         "",
+				ManifestPath: "",
+				Deploy: &DeployInfo{
+					Endpoints: nil,
+					Image:     "",
+					Commands:  nil,
+					Remote:    false,
+				},
+				Dev: ManifestDevs{},
+				Destroy: &DestroyInfo{
+					Image:    "",
+					Commands: nil,
+					Remote:   false,
+				},
+				Build:         ManifestBuild{},
+				Dependencies:  deps.ManifestSection{},
+				GlobalForward: []forward.GlobalForward{},
+				External:      externalresource.ExternalResourceSection{},
+				Type:          OktetoManifestType,
+				Manifest:      []uint8{},
+				IsV2:          false,
+			},
+		},
+		{
+			name:        "invalid YAML format",
+			manifest:    []byte("{invalid yaml}"),
+			expected:    nil,
+			expectedErr: true,
+		},
+		{
+			name: "failed validation due to cyclic dependencies",
+			manifest: []byte(`build:
+  test1:
+    context: ./test1
+    depends_on: test2
+  test2:
+    context: ./test2
+    depends_on: test2`),
+			expected:    nil,
+			expectedErr: true,
+		},
+		{
+			name: "success parsing dev",
+			manifest: []byte(`dev:
+  test:
+    image: test-image
+    context: ./test`),
+			expected: &Manifest{
+				Name:         "",
+				Namespace:    "",
+				Context:      "",
+				Icon:         "",
+				ManifestPath: "",
+				Deploy:       nil,
+				Dev: ManifestDevs{
+					"test": &Dev{
+						Name:      "test",
+						Context:   "./test",
+						Namespace: "",
+						Metadata: &Metadata{
+							Labels:      Labels{},
+							Annotations: Annotations{},
+						},
+						Selector:   Selector{},
+						EmptyImage: false,
+						Image: &BuildInfo{
+							Name:       "test-image",
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+						},
+						Push: &BuildInfo{
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+						},
+						ImagePullPolicy: apiv1.PullAlways,
+						InitContainer:   InitContainer{Image: OktetoBinImageTag},
+						Probes:          &Probes{},
+						Lifecycle:       &Lifecycle{},
+						Workdir:         "/okteto",
+						SecurityContext: &SecurityContext{
+							RunAsUser:  pointer.Int64(0),
+							RunAsGroup: pointer.Int64(0),
+							FSGroup:    pointer.Int64(0),
+						},
+						SSHServerPort: 2222,
+						Volumes:       []Volume{},
+						Timeout: Timeout{
+							Default:   60 * time.Second,
+							Resources: 120 * time.Second,
+						},
+						Command: Command{
+							Values: []string{"sh"},
+						},
+						Interface: Localhost,
+						Sync: Sync{
+							RescanInterval: 300,
+							Folders: []SyncFolder{
+								{
+									LocalPath:  ".",
+									RemotePath: "/okteto",
+								},
+							},
+						},
+						PersistentVolumeInfo: &PersistentVolumeInfo{
+							Enabled: true,
+						},
+						Mode:        constants.OktetoSyncModeFieldValue,
+						Services:    []*Dev{},
+						Forward:     []forward.Forward{},
+						Environment: env.Environment{},
+						Secrets:     []Secret{},
+					},
+				},
+				Destroy: &DestroyInfo{
+					Image:    "",
+					Commands: nil,
+					Remote:   false,
+				},
+				Build:         ManifestBuild{},
+				Dependencies:  deps.ManifestSection{},
+				GlobalForward: nil,
+				External:      externalresource.ExternalResourceSection{},
+				Type:          OktetoManifestType,
+				Manifest: []byte(`dev:
+  test:
+    image: test-image
+    context: ./test`),
+				IsV2: true,
+			},
+			expectedErr: false,
+		},
+		{
+			name: "empty build service returns an error",
+			manifest: []byte(`build:
+  frontend:
+  backend:
+    context: ./backend`),
+			expected:    nil,
+			expectedErr: true,
+		},
+		{
+			// Because we call setDefaults before validate, this test case helps remember that the order in which
+			// We call setDefaults before calling validate must be respected or a refactor is required. If we call
+			// validate before setDefaults, this test case fails with an error because driver is empty.
+			name: "success - divert driver set before validation",
+			manifest: []byte(`deploy:
+  divert:
+    namespace: staging
+    service: service-b`),
+			expected: &Manifest{
+				Name:         "",
+				Namespace:    "",
+				Context:      "",
+				Icon:         "",
+				ManifestPath: "",
+				Deploy: &DeployInfo{
+					ComposeSection: nil,
+					Endpoints:      nil,
+					Divert: &DivertDeploy{
+						Driver:               "weaver",
+						Namespace:            "staging",
+						DeprecatedService:    "service-b",
+						DeprecatedDeployment: "",
+						VirtualServices:      nil,
+						Hosts:                nil,
+						DeprecatedPort:       0,
+					},
+					Image:    "",
+					Commands: nil,
+					Remote:   false,
+				},
+				Dev: ManifestDevs{},
+				Destroy: &DestroyInfo{
+					Image:    "",
+					Commands: nil,
+					Remote:   false,
+				},
+				Build:         ManifestBuild{},
+				Dependencies:  deps.ManifestSection{},
+				GlobalForward: nil,
+				External:      externalresource.ExternalResourceSection{},
+				Type:          OktetoManifestType,
+				IsV2:          true,
+				Manifest: []byte(`deploy:
+  divert:
+    namespace: staging
+    service: service-b`),
+			},
+			expectedErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manifest, err := Read(tt.manifest)
+			if tt.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tt.expected, manifest)
 		})
 	}
 }
