@@ -186,7 +186,7 @@ func Test_getStructKeys(t *testing.T) {
 				"env.Var":                    {"name", "value"},
 				"forward.Forward":            {"labels", "name", "localPort", "remotePort"},
 				"forward.GlobalForward":      {"labels", "name", "localPort", "remotePort"},
-				"model.BuildInfo":            {"secrets", "name", "context", "dockerfile", "target", "image", "cache_from", "export_cache", "depends_on"},
+				"build.BuildInfo":            {"secrets", "name", "context", "dockerfile", "target", "image", "cache_from", "export_cache", "depends_on"},
 				"model.Capabilities":         {"add", "drop"},
 				"model.ComposeInfo":          {"file", "services"},
 				"model.DeployCommand":        {"name", "command"},

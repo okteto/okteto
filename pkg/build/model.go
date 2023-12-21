@@ -370,6 +370,12 @@ func (b *BuildInfo) SetBuildDefaults() {
 }
 
 func (b *ManifestBuild) Validate() error {
+	for k, v := range *b {
+		if v == nil {
+			return fmt.Errorf("manifest validation failed: service '%s' build section not defined correctly", k)
+		}
+	}
+
 	cycle := utils.GetDependentCyclic(b.toGraph())
 	if len(cycle) == 1 { // depends on the same node
 		return fmt.Errorf("manifest build validation failed: image '%s' is referenced on its dependencies", cycle[0])

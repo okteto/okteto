@@ -348,69 +348,69 @@ func Test_validateManifestBuild(t *testing.T) {
 			},
 			expectedErr: true,
 		},
-		// {
-		// 	name: "no cycle - no connections",
-		// 	buildSection: build.ManifestBuild{
-		// 		"a": &build.BuildInfo{},
-		// 		"b": &build.BuildInfo{},
-		// 		"c": &build.BuildInfo{},
-		// 	},
-		// 	expectedErr: false,
-		// },
-		// {
-		// 	name: "no cycle - connections",
-		// 	buildSection: build.ManifestBuild{
-		// 		"a": &build.BuildInfo{
-		// 			DependsOn: []string{"b"},
-		// 		},
-		// 		"b": &build.BuildInfo{
-		// 			DependsOn: []string{"c"},
-		// 		},
-		// 		"c": &build.BuildInfo{},
-		// 	},
-		// 	expectedErr: false,
-		// },
-		// {
-		// 	name: "cycle - same node dependency",
-		// 	buildSection: build.ManifestBuild{
-		// 		"a": &build.BuildInfo{
-		// 			DependsOn: []string{"a"},
-		// 		},
-		// 		"b": &build.BuildInfo{
-		// 			DependsOn: []string{},
-		// 		},
-		// 		"c": &build.BuildInfo{},
-		// 	},
-		// 	expectedErr: true,
-		// },
-		// {
-		// 	name: "cycle - direct cycle",
-		// 	buildSection: build.ManifestBuild{
-		// 		"a": &build.BuildInfo{
-		// 			DependsOn: []string{"b"},
-		// 		},
-		// 		"b": &build.BuildInfo{
-		// 			DependsOn: []string{"a"},
-		// 		},
-		// 		"c": &build.BuildInfo{},
-		// 	},
-		// 	expectedErr: true,
-		// },
-		// {
-		// 	name: "cycle - indirect cycle",
-		// 	buildSection: build.ManifestBuild{
-		// 		"a": &build.BuildInfo{
-		// 			DependsOn: []string{"b"},
-		// 		},
-		// 		"b": &build.BuildInfo{
-		// 			DependsOn: []string{"c"},
-		// 		},
-		// 		"c": &build.BuildInfo{
-		// 			DependsOn: []string{"a"},
-		// 		},
-		// 	},
-		// 	expectedErr: true,
-		// },
+		{
+			name: "no cycle - no connections",
+			buildSection: build.ManifestBuild{
+				"a": &build.BuildInfo{},
+				"b": &build.BuildInfo{},
+				"c": &build.BuildInfo{},
+			},
+			expectedErr: false,
+		},
+		{
+			name: "no cycle - connections",
+			buildSection: build.ManifestBuild{
+				"a": &build.BuildInfo{
+					DependsOn: []string{"b"},
+				},
+				"b": &build.BuildInfo{
+					DependsOn: []string{"c"},
+				},
+				"c": &build.BuildInfo{},
+			},
+			expectedErr: false,
+		},
+		{
+			name: "cycle - same node dependency",
+			buildSection: build.ManifestBuild{
+				"a": &build.BuildInfo{
+					DependsOn: []string{"a"},
+				},
+				"b": &build.BuildInfo{
+					DependsOn: []string{},
+				},
+				"c": &build.BuildInfo{},
+			},
+			expectedErr: true,
+		},
+		{
+			name: "cycle - direct cycle",
+			buildSection: build.ManifestBuild{
+				"a": &build.BuildInfo{
+					DependsOn: []string{"b"},
+				},
+				"b": &build.BuildInfo{
+					DependsOn: []string{"a"},
+				},
+				"c": &build.BuildInfo{},
+			},
+			expectedErr: true,
+		},
+		{
+			name: "cycle - indirect cycle",
+			buildSection: build.ManifestBuild{
+				"a": &build.BuildInfo{
+					DependsOn: []string{"b"},
+				},
+				"b": &build.BuildInfo{
+					DependsOn: []string{"c"},
+				},
+				"c": &build.BuildInfo{
+					DependsOn: []string{"a"},
+				},
+			},
+			expectedErr: true,
+		},
 	}
 
 	for _, tt := range tests {
