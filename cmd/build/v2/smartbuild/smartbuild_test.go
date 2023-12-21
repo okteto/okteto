@@ -33,8 +33,6 @@ type fakeConfigRepo struct {
 func (fcr fakeConfigRepo) GetSHA() (string, error)                   { return fcr.sha, fcr.err }
 func (fcr fakeConfigRepo) GetLatestDirCommit(string) (string, error) { return fcr.sha, fcr.err }
 func (fcr fakeConfigRepo) GetDiffHash(string) (string, error)        { return fcr.diff, fcr.err }
-func (fcr fakeConfigRepo) getBuildContextHashInCache(string) string  { return fcr.sha }
-func (fcr fakeConfigRepo) getProjectCommitHashInCache(string) string { return fcr.sha }
 
 type fakeRegistryController struct {
 	err              error
@@ -47,8 +45,8 @@ func (frc fakeRegistryController) CloneGlobalImageToDev(image string, _ string) 
 func (frc fakeRegistryController) IsGlobalRegistry(string) bool { return frc.isGlobalRegistry }
 
 type fakeHasher struct {
-	hash string
 	err  error
+	hash string
 }
 
 func (fh fakeHasher) hashProjectCommit(*model.BuildInfo) (string, error) { return fh.hash, fh.err }
@@ -121,12 +119,12 @@ func TestNewSmartBuildCtrl(t *testing.T) {
 
 func TestGetProjectHash(t *testing.T) {
 	type input struct {
-		hash string
 		err  error
+		hash string
 	}
 	type output struct {
-		hash string
 		err  error
+		hash string
 	}
 
 	tests := []struct {
@@ -175,18 +173,18 @@ func TestGetProjectHash(t *testing.T) {
 
 func TestGetServiceHash(t *testing.T) {
 	type input struct {
-		hash string
 		err  error
+		hash string
 	}
 	type output struct {
-		hash string
 		err  error
+		hash string
 	}
 
 	tests := []struct {
-		name   string
 		input  input
 		output output
+		name   string
 	}{
 		{
 			name: "correct hash",
@@ -229,19 +227,19 @@ func TestGetServiceHash(t *testing.T) {
 
 func TestGetBuildHash(t *testing.T) {
 	type input struct {
-		hash                string
 		err                 error
+		hash                string
 		isUsingBuildContext bool
 	}
 	type output struct {
-		hash string
 		err  error
+		hash string
 	}
 
 	tests := []struct {
+		output output
 		name   string
 		input  input
-		output output
 	}{
 		{
 			name: "project commit - correct hash",
@@ -315,14 +313,14 @@ func TestGetBuildCommit(t *testing.T) {
 		isUsingBuildContext bool
 	}
 	type output struct {
-		hash string
 		err  error
+		hash string
 	}
 
 	tests := []struct {
+		output output
 		name   string
 		input  input
-		output output
 	}{
 		{
 			name: "project commit - correct hash",
@@ -390,8 +388,8 @@ func TestCloneGlobalImageToDev(t *testing.T) {
 		isGlobal bool
 	}
 	type output struct {
-		hash string
 		err  error
+		hash string
 	}
 
 	tests := []struct {

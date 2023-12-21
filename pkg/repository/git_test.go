@@ -516,9 +516,9 @@ func TestGetUntrackedContent(t *testing.T) {
 	}
 
 	tests := []struct {
+		output output
 		name   string
 		input  input
-		output output
 	}{
 		{
 			name: "no untracked files",
