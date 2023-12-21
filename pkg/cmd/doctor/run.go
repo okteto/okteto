@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/mholt/archiver/v3"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -175,8 +176,8 @@ func generateManifestFile(devPath string) (string, error) {
 	}
 
 	dev := &model.Dev{
-		Image:       &model.BuildInfo{},
-		Push:        &model.BuildInfo{},
+		Image:       &build.BuildInfo{},
+		Push:        &build.BuildInfo{},
 		Environment: make([]env.Var, 0),
 		Secrets:     make([]model.Secret, 0),
 		Forward:     make([]forward.Forward, 0),

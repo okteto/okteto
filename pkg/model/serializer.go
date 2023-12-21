@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/kballard/go-shellquote"
-	"github.com/okteto/okteto/pkg/cache"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/env"
@@ -50,21 +50,6 @@ var (
 	// errDevModeNotValid is raised when development mode in manifest is not 'sync' nor 'hybrid'
 	errDevModeNotValid = errors.New("development mode not valid. Value must be one of: ['sync', 'hybrid']")
 )
-
-// BuildInfoRaw represents the build info for serialization
-type buildInfoRaw struct {
-	Secrets          BuildSecrets      `yaml:"secrets,omitempty"`
-	Name             string            `yaml:"name,omitempty"`
-	Context          string            `yaml:"context,omitempty"`
-	Dockerfile       string            `yaml:"dockerfile,omitempty"`
-	Target           string            `yaml:"target,omitempty"`
-	Image            string            `yaml:"image,omitempty"`
-	CacheFrom        cache.CacheFrom   `yaml:"cache_from,omitempty"`
-	Args             BuildArgs         `yaml:"args,omitempty"`
-	VolumesToInclude []StackVolume     `yaml:"-"`
-	ExportCache      cache.ExportCache `yaml:"export_cache,omitempty"`
-	DependsOn        BuildDependsOn    `yaml:"depends_on,omitempty"`
-}
 
 type syncRaw struct {
 	LocalPath      string
@@ -158,30 +143,6 @@ type LabelSelectorRequirement struct {
 type WeightedPodAffinityTerm struct {
 	PodAffinityTerm PodAffinityTerm `yaml:"podAffinityTerm" json:"podAffinityTerm"`
 	Weight          int32           `yaml:"weight" json:"weight"`
-}
-
-// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (e *BuildArg) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var raw string
-	err := unmarshal(&raw)
-	if err != nil {
-		return err
-	}
-	maxBuildArgsParts := 2
-
-	parts := strings.SplitN(raw, "=", maxBuildArgsParts)
-	e.Name = parts[0]
-	if len(parts) == maxBuildArgsParts {
-		e.Value = parts[1]
-		return nil
-	}
-
-	e.Name, err = env.ExpandEnv(parts[0])
-	if err != nil {
-		return err
-	}
-	e.Value = parts[0]
-	return nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
@@ -301,69 +262,6 @@ func (sync Sync) MarshalYAML() (interface{}, error) {
 		return sync.Folders, nil
 	}
 	return syncRaw(sync), nil
-}
-
-// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (d *BuildDependsOn) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var rawString string
-	err := unmarshal(&rawString)
-	if err == nil {
-		*d = BuildDependsOn{rawString}
-		return nil
-	}
-
-	var rawStringList []string
-	err = unmarshal(&rawStringList)
-	if err == nil {
-		*d = rawStringList
-		return nil
-	}
-	return err
-}
-
-// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var rawString string
-	err := unmarshal(&rawString)
-	if err == nil {
-		buildInfo.Name = rawString
-		return nil
-	}
-
-	var rawBuildInfo buildInfoRaw
-	err = unmarshal(&rawBuildInfo)
-	if err != nil {
-		return err
-	}
-
-	buildInfo.Name = rawBuildInfo.Name
-	buildInfo.Context = rawBuildInfo.Context
-	buildInfo.Dockerfile = rawBuildInfo.Dockerfile
-	buildInfo.Target = rawBuildInfo.Target
-	buildInfo.Args = rawBuildInfo.Args
-	buildInfo.Image = rawBuildInfo.Image
-	buildInfo.CacheFrom = rawBuildInfo.CacheFrom
-	buildInfo.ExportCache = rawBuildInfo.ExportCache
-	buildInfo.DependsOn = rawBuildInfo.DependsOn
-	buildInfo.Secrets = rawBuildInfo.Secrets
-	return nil
-}
-
-// MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (buildInfo *BuildInfo) MarshalYAML() (interface{}, error) {
-	if buildInfo.Context != "" && buildInfo.Context != "." {
-		return buildInfoRaw(*buildInfo), nil
-	}
-	if buildInfo.Dockerfile != "" && buildInfo.Dockerfile != "./Dockerfile" {
-		return buildInfoRaw(*buildInfo), nil
-	}
-	if buildInfo.Target != "" {
-		return buildInfoRaw(*buildInfo), nil
-	}
-	if buildInfo.Args != nil && len(buildInfo.Args) != 0 {
-		return buildInfoRaw(*buildInfo), nil
-	}
-	return buildInfo.Name, nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
@@ -856,7 +754,7 @@ type manifestRaw struct {
 	Deploy        *DeployInfo                              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev           ManifestDevs                             `json:"dev,omitempty" yaml:"dev,omitempty"`
 	Destroy       *DestroyInfo                             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build         ManifestBuild                            `json:"build,omitempty" yaml:"build,omitempty"`
+	Build         build.ManifestBuild                      `json:"build,omitempty" yaml:"build,omitempty"`
 	Dependencies  deps.ManifestSection                     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	GlobalForward []forward.GlobalForward                  `json:"forward,omitempty" yaml:"forward,omitempty"`
 	External      externalresource.ExternalResourceSection `json:"external,omitempty" yaml:"external,omitempty"`
@@ -877,7 +775,7 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	manifest := manifestRaw{
 		Dev:          map[string]*Dev{},
-		Build:        map[string]*BuildInfo{},
+		Build:        map[string]*build.BuildInfo{},
 		Dependencies: deps.ManifestSection{},
 		External:     externalresource.ExternalResourceSection{},
 	}
@@ -1297,52 +1195,6 @@ func (a *Annotations) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 	*a = annotations
 	return nil
-}
-
-// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (ba *BuildArgs) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	buildArgs := make(BuildArgs, 0)
-	result, err := getBuildArgs(unmarshal)
-	if err != nil {
-		return err
-	}
-	for key, value := range result {
-		buildArgs = append(buildArgs, BuildArg{Name: key, Value: value})
-	}
-	sort.SliceStable(buildArgs, func(i, j int) bool {
-		return strings.Compare(buildArgs[i].Name, buildArgs[j].Name) < 0
-	})
-	*ba = buildArgs
-	return nil
-}
-
-func getBuildArgs(unmarshal func(interface{}) error) (map[string]string, error) {
-	result := make(map[string]string)
-
-	var rawList []BuildArg
-	err := unmarshal(&rawList)
-	if err == nil {
-		for _, buildArg := range rawList {
-			value, err := env.ExpandEnvIfNotEmpty(buildArg.Value)
-			if err != nil {
-				return nil, err
-			}
-			result[buildArg.Name] = value
-		}
-		return result, nil
-	}
-	var rawMap map[string]string
-	err = unmarshal(&rawMap)
-	if err != nil {
-		return nil, err
-	}
-	for key, value := range rawMap {
-		result[key], err = env.ExpandEnvIfNotEmpty(value)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return result, nil
 }
 
 func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {

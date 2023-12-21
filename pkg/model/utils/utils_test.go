@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package utils
 
 import (
 	"os"
@@ -31,9 +31,9 @@ func Test_GetValidNameFromFolder(t *testing.T) {
 		{name: "upper case", folder: "UpperCase", expected: "UpperCase"},
 		{name: "valid symbols", folder: "getting-started.test", expected: "getting-started.test"},
 		{name: "invalid symbols", folder: "getting_$#started", expected: "getting_$#started"},
-		{name: "current folder", folder: ".", expected: "model"},
-		{name: "parent folder", folder: "..", expected: "pkg"},
-		{name: "okteto folder", folder: ".okteto", expected: "model"},
+		{name: "current folder", folder: ".", expected: "utils"},
+		{name: "parent folder", folder: "..", expected: "model"},
+		{name: "okteto folder", folder: ".okteto", expected: "utils"},
 	}
 
 	for _, tt := range tests {
@@ -77,13 +77,13 @@ func Test_GetValidNameFromGitRepo(t *testing.T) {
 
 func TestGetCycles(t *testing.T) {
 	var tests = []struct {
-		g             graph
+		g             Graph
 		name          string
 		expectedCycle bool
 	}{
 		{
 			name: "no cycle - no connections",
-			g: graph{
+			g: Graph{
 				"a": []string{},
 				"b": []string{},
 				"c": []string{},
@@ -92,7 +92,7 @@ func TestGetCycles(t *testing.T) {
 		},
 		{
 			name: "no cycle - connections",
-			g: graph{
+			g: Graph{
 				"a": []string{"b"},
 				"b": []string{"c"},
 				"c": []string{},
@@ -101,7 +101,7 @@ func TestGetCycles(t *testing.T) {
 		},
 		{
 			name: "cycle - direct cycle",
-			g: graph{
+			g: Graph{
 				"a": []string{"b"},
 				"b": []string{"a"},
 				"c": []string{},
@@ -110,7 +110,7 @@ func TestGetCycles(t *testing.T) {
 		},
 		{
 			name: "cycle - indirect cycle",
-			g: graph{
+			g: Graph{
 				"a": []string{"b"},
 				"b": []string{"c"},
 				"c": []string{"a"},
@@ -121,7 +121,7 @@ func TestGetCycles(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := getDependentCyclic(tt.g)
+			result := GetDependentCyclic(tt.g)
 			assert.Equal(t, tt.expectedCycle, len(result) > 0)
 		})
 	}

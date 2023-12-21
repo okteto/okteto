@@ -25,7 +25,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/utils"
 )
 
 var (
@@ -75,7 +75,7 @@ func IsOktetoRepo() bool {
 			oktetoLog.Infof("failed to get the current working directory in IsOktetoRepo: %v", err)
 			return
 		}
-		repoUrl, err := model.GetRepositoryURL(path)
+		repoUrl, err := utils.GetRepositoryURL(path)
 		if err != nil {
 			oktetoLog.Infof("failed to get repository url in IsOktetoRepo: %v", err)
 			return

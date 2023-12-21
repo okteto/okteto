@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
@@ -32,8 +33,8 @@ func Test_UpMetricsMetadata_ManifestProps(t *testing.T) {
 			name: "manifest with build section",
 			manifest: &model.Manifest{
 				IsV2: true,
-				Build: model.ManifestBuild{
-					"service": &model.BuildInfo{
+				Build: build.ManifestBuild{
+					"service": &build.BuildInfo{
 						Context: "service",
 					},
 				},

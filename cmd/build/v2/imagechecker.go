@@ -17,13 +17,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/model"
 )
 
 type imageCheckerInterface interface {
 	checkIfBuildHashIsBuilt(manifestName, svcToBuild string, commit string) (string, bool)
-	getImageDigestReferenceForService(manifestName, svcToBuild string, buildInfo *model.BuildInfo, commit string) (string, error)
+	getImageDigestReferenceForService(manifestName, svcToBuild string, buildInfo *build.BuildInfo, commit string) (string, error)
 }
 
 type registryImageCheckerInterface interface {
@@ -78,7 +78,7 @@ func (ic imageChecker) checkIfBuildHashIsBuilt(manifestName, svcToBuild string, 
 
 // getImageDigestReferenceForService returns the image reference with digest for the given service
 // format: [name]@sha256:[digest]
-func (ic imageChecker) getImageDigestReferenceForService(manifestName, svcToBuild string, buildInfo *model.BuildInfo, buildHash string) (string, error) {
+func (ic imageChecker) getImageDigestReferenceForService(manifestName, svcToBuild string, buildInfo *build.BuildInfo, buildHash string) (string, error) {
 
 	// get all possible references
 	var possibleReferences []string

@@ -30,7 +30,8 @@ import (
 	"github.com/mitchellh/go-homedir"
 	builder "github.com/okteto/okteto/cmd/build"
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
-	"github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/build"
+	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -165,7 +166,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		}
 	}()
 
-	buildInfo := &model.BuildInfo{
+	buildInfo := &build.BuildInfo{
 		Dockerfile: dockerfile,
 	}
 
@@ -179,7 +180,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		return err
 	}
 
-	buildOptions := build.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: "deploy"})
+	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: "deploy"})
 	buildOptions.Manifest = deployOptions.Manifest
 	buildOptions.BuildArgs = append(
 		buildOptions.BuildArgs,
@@ -238,7 +239,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	// account that we must not confuse the user with build messages since this logic is
 	// executed in the deploy command.
 	if err := rd.builderV1.Build(ctx, buildOptions); err != nil {
-		var cmdErr build.OktetoCommandErr
+		var cmdErr buildCmd.OktetoCommandErr
 		if errors.As(err, &cmdErr) {
 			oktetoLog.SetStage(cmdErr.Stage)
 			return oktetoErrors.UserError{

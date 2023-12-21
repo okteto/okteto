@@ -24,6 +24,7 @@ import (
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -554,7 +555,7 @@ func translateVolumeMounts(svc *model.Service) []apiv1.VolumeMount {
 	return result
 }
 
-func getVolumeClaimName(v *model.StackVolume) string {
+func getVolumeClaimName(v *build.VolumeMounts) string {
 	var name string
 	if v.LocalPath != "" {
 		name = v.LocalPath

@@ -17,7 +17,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -59,7 +59,7 @@ func TestServiceHasher_HashProjectCommit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sh := newServiceHasher(tt.repoCtrl)
-			hash := sh.hashProjectCommit(&model.BuildInfo{})
+			hash := sh.hashProjectCommit(&build.BuildInfo{})
 			assert.Equal(t, tt.expectedHash, hash)
 		})
 	}
@@ -90,7 +90,7 @@ func TestServiceHasher_HashBuildContext(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sh := newServiceHasher(tt.repoCtrl)
-			hash := sh.hashBuildContext(&model.BuildInfo{})
+			hash := sh.hashBuildContext(&build.BuildInfo{})
 			assert.Equal(t, tt.expectedHash, hash)
 		})
 	}
@@ -129,7 +129,7 @@ func TestServiceHasher_HashService(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sh := newServiceHasher(tt.repoCtrl)
-			hash := sh.hashService(&model.BuildInfo{})
+			hash := sh.hashService(&build.BuildInfo{})
 			assert.Equal(t, tt.expectedHash, hash)
 		})
 	}
@@ -174,7 +174,7 @@ func TestGetCommitHash(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv(OktetoSmartBuildUsingContextEnvVar, tc.oktetoEnvValue)
 
-			buildInfo := &model.BuildInfo{
+			buildInfo := &build.BuildInfo{
 				Context: tc.buildContext,
 			}
 

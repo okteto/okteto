@@ -22,6 +22,7 @@ import (
 	buildV1 "github.com/okteto/okteto/cmd/build/v1"
 	buildV2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
@@ -103,11 +104,11 @@ func (fr fakeRegistry) CloneGlobalImageToDev(imageWithDigest, tag string) (strin
 }
 
 var fakeManifestV2 *model.Manifest = &model.Manifest{
-	Build: model.ManifestBuild{
-		"test-1": &model.BuildInfo{
+	Build: build.ManifestBuild{
+		"test-1": &build.BuildInfo{
 			Image: "test/test-1",
 		},
-		"test-2": &model.BuildInfo{
+		"test-2": &build.BuildInfo{
 			Image: "test/test-2",
 		},
 	},
@@ -150,7 +151,7 @@ func TestIsBuildV2(t *testing.T) {
 			name: "manifest v2 with no build section is build v1",
 			manifest: &model.Manifest{
 				IsV2:  true,
-				Build: model.ManifestBuild{},
+				Build: build.ManifestBuild{},
 			},
 			expectedAnswer: false,
 		},
@@ -158,11 +159,11 @@ func TestIsBuildV2(t *testing.T) {
 			name: "manifest v1 with build section is build v1",
 			manifest: &model.Manifest{
 				IsV2: false,
-				Build: model.ManifestBuild{
-					"test-1": &model.BuildInfo{
+				Build: build.ManifestBuild{
+					"test-1": &build.BuildInfo{
 						Image: "test/test-1",
 					},
-					"test-2": &model.BuildInfo{
+					"test-2": &build.BuildInfo{
 						Image: "test/test-2",
 					},
 				},
@@ -173,11 +174,11 @@ func TestIsBuildV2(t *testing.T) {
 			name: "manifest v1 with build section is build v1",
 			manifest: &model.Manifest{
 				IsV2: false,
-				Build: model.ManifestBuild{
-					"test-1": &model.BuildInfo{
+				Build: build.ManifestBuild{
+					"test-1": &build.BuildInfo{
 						Image: "test/test-1",
 					},
-					"test-2": &model.BuildInfo{
+					"test-2": &build.BuildInfo{
 						Image: "test/test-2",
 					},
 				},
@@ -188,11 +189,11 @@ func TestIsBuildV2(t *testing.T) {
 			name: "manifest v2 with build section is build v2",
 			manifest: &model.Manifest{
 				IsV2: true,
-				Build: model.ManifestBuild{
-					"test-1": &model.BuildInfo{
+				Build: build.ManifestBuild{
+					"test-1": &build.BuildInfo{
 						Image: "test/test-1",
 					},
-					"test-2": &model.BuildInfo{
+					"test-2": &build.BuildInfo{
 						Image: "test/test-2",
 					},
 				},

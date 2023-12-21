@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/a8m/envsubst"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/discovery"
@@ -33,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/model/utils"
 	"github.com/spf13/afero"
 	yaml "gopkg.in/yaml.v2"
 	yaml3 "gopkg.in/yaml.v3"
@@ -101,7 +103,7 @@ type Manifest struct {
 	Deploy        *DeployInfo                              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev           ManifestDevs                             `json:"dev,omitempty" yaml:"dev,omitempty"`
 	Destroy       *DestroyInfo                             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build         ManifestBuild                            `json:"build,omitempty" yaml:"build,omitempty"`
+	Build         build.ManifestBuild                      `json:"build,omitempty" yaml:"build,omitempty"`
 	Dependencies  deps.ManifestSection                     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	GlobalForward []forward.GlobalForward                  `json:"forward,omitempty" yaml:"forward,omitempty"`
 	External      externalresource.ExternalResourceSection `json:"external,omitempty" yaml:"external,omitempty"`
@@ -114,14 +116,11 @@ type Manifest struct {
 // ManifestDevs defines all the dev section
 type ManifestDevs map[string]*Dev
 
-// ManifestBuild defines all the build section
-type ManifestBuild map[string]*BuildInfo
-
 // NewManifest creates a new empty manifest
 func NewManifest() *Manifest {
 	return &Manifest{
 		Dev:           map[string]*Dev{},
-		Build:         map[string]*BuildInfo{},
+		Build:         map[string]*build.BuildInfo{},
 		Dependencies:  deps.ManifestSection{},
 		Deploy:        &DeployInfo{},
 		GlobalForward: []forward.GlobalForward{},
@@ -148,7 +147,7 @@ func NewManifestFromStack(stack *Stack) *Manifest {
 			},
 		},
 		Dev:   ManifestDevs{},
-		Build: ManifestBuild{},
+		Build: build.ManifestBuild{},
 		IsV2:  true,
 	}
 	cwd, err := os.Getwd()
@@ -297,7 +296,7 @@ func GetManifestV1(manifestPath string) (*Manifest, error) {
 		return manifest, nil
 	}
 
-	if manifestPath != "" && pathExistsAndDir(manifestPath) {
+	if manifestPath != "" && utils.PathExistsAndDir(manifestPath) {
 		cwd = manifestPath
 	}
 
@@ -327,7 +326,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		return manifest, nil
 	}
 
-	if manifestPath != "" && pathExistsAndDir(manifestPath) {
+	if manifestPath != "" && utils.PathExistsAndDir(manifestPath) {
 		cwd = manifestPath
 	}
 
@@ -403,7 +402,7 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 				},
 			},
 			Dev:   ManifestDevs{},
-			Build: ManifestBuild{},
+			Build: build.ManifestBuild{},
 			IsV2:  true,
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
@@ -503,7 +502,7 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 				},
 			},
 			Dev:   ManifestDevs{},
-			Build: ManifestBuild{},
+			Build: build.ManifestBuild{},
 			IsV2:  true,
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
@@ -543,7 +542,7 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 				},
 			},
 			Dev:   ManifestDevs{},
-			Build: ManifestBuild{},
+			Build: build.ManifestBuild{},
 		}
 		return chartManifest, nil
 	}
@@ -567,7 +566,7 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 				},
 			},
 			Dev:   ManifestDevs{},
-			Build: ManifestBuild{},
+			Build: build.ManifestBuild{},
 		}
 		return k8sManifest, nil
 	}
@@ -684,26 +683,10 @@ func Read(bytes []byte) (*Manifest, error) {
 }
 
 func (m *Manifest) validate() error {
-	if err := m.Build.validate(); err != nil {
+	if err := m.Build.Validate(); err != nil {
 		return err
 	}
 	return m.validateDivert()
-}
-
-func (b *ManifestBuild) validate() error {
-	for k, v := range *b {
-		if v == nil {
-			return fmt.Errorf("manifest validation failed: service '%s' build section not defined correctly", k)
-		}
-	}
-	cycle := getDependentCyclic(b.toGraph())
-	if len(cycle) == 1 { // depends on the same node
-		return fmt.Errorf("manifest build validation failed: image '%s' is referenced on its dependencies", cycle[0])
-	} else if len(cycle) > 1 {
-		svcsDependents := fmt.Sprintf("%s and %s", strings.Join(cycle[:len(cycle)-1], ", "), cycle[len(cycle)-1])
-		return fmt.Errorf("manifest validation failed: cyclic dependendecy found between %s", svcsDependents)
-	}
-	return nil
 }
 
 func (s *Secret) validate() error {
@@ -720,25 +703,6 @@ func (s *Secret) validate() error {
 	}
 
 	return nil
-}
-
-// GetSvcsToBuildFromList returns the builds from a list and all its
-func (b *ManifestBuild) GetSvcsToBuildFromList(toBuild []string) []string {
-	initialSvcsToBuild := toBuild
-	svcsToBuildWithDependencies := getDependentNodes(b.toGraph(), toBuild)
-	if len(initialSvcsToBuild) != len(svcsToBuildWithDependencies) {
-		dependantBuildImages := getListDiff(initialSvcsToBuild, svcsToBuildWithDependencies)
-		oktetoLog.Warning("The following build images need to be built because of dependencies: [%s]", strings.Join(dependantBuildImages, ", "))
-	}
-	return svcsToBuildWithDependencies
-}
-
-func (b ManifestBuild) toGraph() graph {
-	g := graph{}
-	for k, v := range b {
-		g[k] = v.DependsOn
-	}
-	return g
 }
 
 // SanitizeSvcNames sanitize service names in 'dev', 'build' and 'global forward' sections
@@ -902,7 +866,7 @@ func (m *Manifest) setDefaults() error {
 		}
 
 		if !(b.Image != "" && len(b.VolumesToInclude) > 0 && b.Dockerfile == "") {
-			b.setBuildDefaults()
+			b.SetBuildDefaults()
 		}
 	}
 
@@ -982,7 +946,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 
 	for devName, devInfo := range manifest.Dev {
 		if _, ok := manifest.Build[devName]; ok && devInfo.Image == nil && devInfo.Autocreate {
-			devInfo.Image = &BuildInfo{
+			devInfo.Image = &build.BuildInfo{
 				Name: fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(devName, "-", "_"))),
 			}
 		}
@@ -1028,7 +992,7 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 				buildInfo.Image = svcInfo.Image
 			}
 		case len(svcInfo.VolumeMounts) > 0:
-			buildInfo = &BuildInfo{
+			buildInfo = &build.BuildInfo{
 				Image:            svcInfo.Image,
 				VolumesToInclude: svcInfo.VolumeMounts,
 			}
@@ -1094,7 +1058,7 @@ func (m *Manifest) WriteToFile(filePath string) error {
 		} else {
 			if v, ok := m.Build[dName]; ok {
 				if v.Image != "" {
-					d.Image = &BuildInfo{Name: v.Image}
+					d.Image = &build.BuildInfo{Name: v.Image}
 				} else {
 					d.Image = nil
 				}

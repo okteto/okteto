@@ -28,6 +28,7 @@ import (
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
@@ -53,8 +54,8 @@ import (
 
 var errorManifest *model.Manifest = &model.Manifest{
 	Name: "testManifest",
-	Build: model.ManifestBuild{
-		"service1": &model.BuildInfo{
+	Build: build.ManifestBuild{
+		"service1": &build.BuildInfo{
 			Dockerfile: "Dockerfile",
 			Image:      "testImage",
 		},
@@ -155,8 +156,8 @@ var fakeManifestWithDependency *model.Manifest = &model.Manifest{
 
 var noDeployNorDependenciesManifest *model.Manifest = &model.Manifest{
 	Name: "testManifest",
-	Build: model.ManifestBuild{
-		"service1": &model.BuildInfo{
+	Build: build.ManifestBuild{
+		"service1": &build.BuildInfo{
 			Dockerfile: "Dockerfile",
 			Image:      "testImage",
 		},
@@ -810,8 +811,8 @@ func TestBuildImages(t *testing.T) {
 			build:         false,
 			buildServices: []string{"manifest A", "manifest B", "stack A", "stack B"},
 			stack: &model.Stack{Services: map[string]*model.Service{
-				"stack A":             {Build: &model.BuildInfo{}},
-				"stack B":             {Build: &model.BuildInfo{}},
+				"stack A":             {Build: &build.BuildInfo{}},
+				"stack B":             {Build: &build.BuildInfo{}},
 				"stack without build": {},
 			}},
 			servicesToDeploy: []string{"stack A", "stack without build"},
@@ -836,7 +837,7 @@ func TestBuildImages(t *testing.T) {
 			build:         false,
 			buildServices: []string{"manifest", "stack"},
 			stack: &model.Stack{Services: map[string]*model.Service{
-				"stack": {Build: &model.BuildInfo{}},
+				"stack": {Build: &build.BuildInfo{}},
 			}},
 			servicesToDeploy: []string{},
 			expectedError:    nil,
@@ -848,8 +849,8 @@ func TestBuildImages(t *testing.T) {
 			build:         false,
 			buildServices: []string{"manifest A", "stack B", "stack C"},
 			stack: &model.Stack{Services: map[string]*model.Service{
-				"stack B": {Build: &model.BuildInfo{}},
-				"stack C": {Build: &model.BuildInfo{}},
+				"stack B": {Build: &build.BuildInfo{}},
+				"stack C": {Build: &build.BuildInfo{}},
 			}},
 			servicesToDeploy: []string{"manifest A", "stack C"},
 			expectedError:    nil,
@@ -863,8 +864,8 @@ func TestBuildImages(t *testing.T) {
 			build:         true,
 			buildServices: []string{"manifest A", "manifest B", "stack A", "stack B"},
 			stack: &model.Stack{Services: map[string]*model.Service{
-				"stack A": {Build: &model.BuildInfo{}},
-				"stack B": {Build: &model.BuildInfo{}},
+				"stack A": {Build: &build.BuildInfo{}},
+				"stack B": {Build: &build.BuildInfo{}},
 			}},
 			servicesToDeploy: []string{"stack A", "stack B"},
 			expectedError:    nil,
@@ -878,8 +879,8 @@ func TestBuildImages(t *testing.T) {
 			build:         true,
 			buildServices: []string{"manifest A", "manifest B", "stack A", "stack B"},
 			stack: &model.Stack{Services: map[string]*model.Service{
-				"stack A":             {Build: &model.BuildInfo{}},
-				"stack B":             {Build: &model.BuildInfo{}},
+				"stack A":             {Build: &build.BuildInfo{}},
+				"stack B":             {Build: &build.BuildInfo{}},
 				"stack without build": {},
 			}},
 			servicesToDeploy: []string{"stack A", "stack without build"},
@@ -894,7 +895,7 @@ func TestBuildImages(t *testing.T) {
 			deployOptions := &Options{
 				Build: testCase.build,
 				Manifest: &model.Manifest{
-					Build: model.ManifestBuild{},
+					Build: build.ManifestBuild{},
 					Deploy: &model.DeployInfo{
 						ComposeSection: &model.ComposeSectionInfo{
 							Stack: testCase.stack,
@@ -905,7 +906,7 @@ func TestBuildImages(t *testing.T) {
 			}
 
 			for _, service := range testCase.buildServices {
-				deployOptions.Manifest.Build[service] = &model.BuildInfo{}
+				deployOptions.Manifest.Build[service] = &build.BuildInfo{}
 			}
 
 			err := buildImages(context.Background(), testCase.builder, deployOptions)

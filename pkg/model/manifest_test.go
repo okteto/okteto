@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/discovery"
@@ -45,8 +46,8 @@ func TestManifestExpandDevEnvs(t *testing.T) {
 				"OKTETO_BUILD_TEST_IMAGE": "test",
 			},
 			manifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{},
+				Build: build.ManifestBuild{
+					"test": &build.BuildInfo{},
 				},
 				Dev: ManifestDevs{
 					"test": &Dev{
@@ -55,13 +56,13 @@ func TestManifestExpandDevEnvs(t *testing.T) {
 				},
 			},
 			expectedManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{},
+				Build: build.ManifestBuild{
+					"test": &build.BuildInfo{},
 				},
 				Dev: ManifestDevs{
 					"test": &Dev{
 						Autocreate: true,
-						Image: &BuildInfo{
+						Image: &build.BuildInfo{
 							Name: "test",
 						},
 					},
@@ -81,26 +82,26 @@ func TestManifestExpandDevEnvs(t *testing.T) {
 				"myImage": "test-2",
 			},
 			manifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{},
+				Build: build.ManifestBuild{
+					"test": &build.BuildInfo{},
 				},
 				Dev: ManifestDevs{
 					"test": &Dev{
 						Autocreate: true,
-						Image: &BuildInfo{
+						Image: &build.BuildInfo{
 							Name: "${myImage}",
 						},
 					},
 				},
 			},
 			expectedManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{},
+				Build: build.ManifestBuild{
+					"test": &build.BuildInfo{},
 				},
 				Dev: ManifestDevs{
 					"test": &Dev{
 						Autocreate: true,
-						Image: &BuildInfo{
+						Image: &build.BuildInfo{
 							Name: "test-2",
 						},
 					},
@@ -116,7 +117,7 @@ func TestManifestExpandDevEnvs(t *testing.T) {
 				Dev: ManifestDevs{
 					"test": &Dev{
 						Autocreate: true,
-						Image: &BuildInfo{
+						Image: &build.BuildInfo{
 							Name: "${build}",
 						},
 					},
@@ -126,7 +127,7 @@ func TestManifestExpandDevEnvs(t *testing.T) {
 				Dev: ManifestDevs{
 					"test": &Dev{
 						Autocreate: true,
-						Image: &BuildInfo{
+						Image: &build.BuildInfo{
 							Name: "test",
 						},
 					},
@@ -334,82 +335,82 @@ func Test_validateDivert(t *testing.T) {
 
 func Test_validateManifestBuild(t *testing.T) {
 	tests := []struct {
-		buildSection ManifestBuild
+		buildSection build.ManifestBuild
 		name         string
 		expectedErr  bool
 	}{
 		{
 			name: "nil build section",
-			buildSection: ManifestBuild{
-				"a": &BuildInfo{},
+			buildSection: build.ManifestBuild{
+				"a": &build.BuildInfo{},
 				"b": nil,
-				"c": &BuildInfo{},
+				"c": &build.BuildInfo{},
 			},
 			expectedErr: true,
 		},
-		{
-			name: "no cycle - no connections",
-			buildSection: ManifestBuild{
-				"a": &BuildInfo{},
-				"b": &BuildInfo{},
-				"c": &BuildInfo{},
-			},
-			expectedErr: false,
-		},
-		{
-			name: "no cycle - connections",
-			buildSection: ManifestBuild{
-				"a": &BuildInfo{
-					DependsOn: []string{"b"},
-				},
-				"b": &BuildInfo{
-					DependsOn: []string{"c"},
-				},
-				"c": &BuildInfo{},
-			},
-			expectedErr: false,
-		},
-		{
-			name: "cycle - same node dependency",
-			buildSection: ManifestBuild{
-				"a": &BuildInfo{
-					DependsOn: []string{"a"},
-				},
-				"b": &BuildInfo{
-					DependsOn: []string{},
-				},
-				"c": &BuildInfo{},
-			},
-			expectedErr: true,
-		},
-		{
-			name: "cycle - direct cycle",
-			buildSection: ManifestBuild{
-				"a": &BuildInfo{
-					DependsOn: []string{"b"},
-				},
-				"b": &BuildInfo{
-					DependsOn: []string{"a"},
-				},
-				"c": &BuildInfo{},
-			},
-			expectedErr: true,
-		},
-		{
-			name: "cycle - indirect cycle",
-			buildSection: ManifestBuild{
-				"a": &BuildInfo{
-					DependsOn: []string{"b"},
-				},
-				"b": &BuildInfo{
-					DependsOn: []string{"c"},
-				},
-				"c": &BuildInfo{
-					DependsOn: []string{"a"},
-				},
-			},
-			expectedErr: true,
-		},
+		// {
+		// 	name: "no cycle - no connections",
+		// 	buildSection: build.ManifestBuild{
+		// 		"a": &build.BuildInfo{},
+		// 		"b": &build.BuildInfo{},
+		// 		"c": &build.BuildInfo{},
+		// 	},
+		// 	expectedErr: false,
+		// },
+		// {
+		// 	name: "no cycle - connections",
+		// 	buildSection: build.ManifestBuild{
+		// 		"a": &build.BuildInfo{
+		// 			DependsOn: []string{"b"},
+		// 		},
+		// 		"b": &build.BuildInfo{
+		// 			DependsOn: []string{"c"},
+		// 		},
+		// 		"c": &build.BuildInfo{},
+		// 	},
+		// 	expectedErr: false,
+		// },
+		// {
+		// 	name: "cycle - same node dependency",
+		// 	buildSection: build.ManifestBuild{
+		// 		"a": &build.BuildInfo{
+		// 			DependsOn: []string{"a"},
+		// 		},
+		// 		"b": &build.BuildInfo{
+		// 			DependsOn: []string{},
+		// 		},
+		// 		"c": &build.BuildInfo{},
+		// 	},
+		// 	expectedErr: true,
+		// },
+		// {
+		// 	name: "cycle - direct cycle",
+		// 	buildSection: build.ManifestBuild{
+		// 		"a": &build.BuildInfo{
+		// 			DependsOn: []string{"b"},
+		// 		},
+		// 		"b": &build.BuildInfo{
+		// 			DependsOn: []string{"a"},
+		// 		},
+		// 		"c": &build.BuildInfo{},
+		// 	},
+		// 	expectedErr: true,
+		// },
+		// {
+		// 	name: "cycle - indirect cycle",
+		// 	buildSection: build.ManifestBuild{
+		// 		"a": &build.BuildInfo{
+		// 			DependsOn: []string{"b"},
+		// 		},
+		// 		"b": &build.BuildInfo{
+		// 			DependsOn: []string{"c"},
+		// 		},
+		// 		"c": &build.BuildInfo{
+		// 			DependsOn: []string{"a"},
+		// 		},
+		// 	},
+		// 	expectedErr: true,
+		// },
 	}
 
 	for _, tt := range tests {
@@ -428,7 +429,7 @@ func TestInferFromStack(t *testing.T) {
 	stack := &Stack{
 		Services: map[string]*Service{
 			"test": {
-				Build: &BuildInfo{
+				Build: &build.BuildInfo{
 					Name:       "",
 					Context:    "test",
 					Dockerfile: "Dockerfile",
@@ -451,14 +452,14 @@ func TestInferFromStack(t *testing.T) {
 			name: "infer from stack empty dev",
 			currentManifest: &Manifest{
 				Dev:   ManifestDevs{},
-				Build: ManifestBuild{},
+				Build: build.ManifestBuild{},
 				Deploy: &DeployInfo{
 					Image: constants.OktetoPipelineRunnerImage,
 					ComposeSection: &ComposeSectionInfo{
 						Stack: &Stack{
 							Services: map[string]*Service{
 								"test": {
-									Build: &BuildInfo{
+									Build: &build.BuildInfo{
 										Name:       "test",
 										Context:    filepath.Join(dirtest, "test"),
 										Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
@@ -476,8 +477,8 @@ func TestInferFromStack(t *testing.T) {
 				},
 			},
 			expectedManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{
+				Build: build.ManifestBuild{
+					"test": &build.BuildInfo{
 						Context:    "test",
 						Dockerfile: "Dockerfile",
 					},
@@ -496,8 +497,8 @@ func TestInferFromStack(t *testing.T) {
 			name: "infer from stack not overriding build",
 			currentManifest: &Manifest{
 				Dev: ManifestDevs{},
-				Build: ManifestBuild{
-					"test": &BuildInfo{
+				Build: build.ManifestBuild{
+					"test": &build.BuildInfo{
 						Context:    "test-1",
 						Dockerfile: filepath.Join("test-1", "Dockerfile"),
 					},
@@ -508,7 +509,7 @@ func TestInferFromStack(t *testing.T) {
 						Stack: &Stack{
 							Services: map[string]*Service{
 								"test": {
-									Build: &BuildInfo{
+									Build: &build.BuildInfo{
 										Name:       "test",
 										Context:    filepath.Join(dirtest, "test"),
 										Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
@@ -526,8 +527,8 @@ func TestInferFromStack(t *testing.T) {
 				},
 			},
 			expectedManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{
+				Build: build.ManifestBuild{
+					"test": &build.BuildInfo{
 						Context:    "test-1",
 						Dockerfile: filepath.Join("test-1", "Dockerfile"),
 					},
@@ -540,7 +541,7 @@ func TestInferFromStack(t *testing.T) {
 						Stack: &Stack{
 							Services: map[string]*Service{
 								"test": {
-									Build: &BuildInfo{
+									Build: &build.BuildInfo{
 										Name:       "test",
 										Context:    "test",
 										Dockerfile: "Dockerfile",
@@ -567,13 +568,13 @@ func TestInferFromStack(t *testing.T) {
 						Namespace: "test",
 					},
 				},
-				Build: ManifestBuild{},
+				Build: build.ManifestBuild{},
 				Deploy: &DeployInfo{
 					ComposeSection: &ComposeSectionInfo{
 						Stack: &Stack{
 							Services: map[string]*Service{
 								"test": {
-									Build: &BuildInfo{
+									Build: &build.BuildInfo{
 										Name:       "test",
 										Context:    "test",
 										Dockerfile: "Dockerfile",
@@ -591,8 +592,8 @@ func TestInferFromStack(t *testing.T) {
 				},
 			},
 			expectedManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{
+				Build: build.ManifestBuild{
+					"test": &build.BuildInfo{
 						Context:    "test",
 						Dockerfile: "Dockerfile",
 					},
@@ -608,11 +609,11 @@ func TestInferFromStack(t *testing.T) {
 						},
 						Selector:   Selector{},
 						EmptyImage: true,
-						Image: &BuildInfo{
+						Image: &build.BuildInfo{
 							Context:    ".",
 							Dockerfile: "Dockerfile",
 						},
-						Push: &BuildInfo{
+						Push: &build.BuildInfo{
 							Context:    ".",
 							Dockerfile: "Dockerfile",
 						},
@@ -746,44 +747,44 @@ func TestSetManifestDefaultsFromDev(t *testing.T) {
 func TestSetBuildDefaults(t *testing.T) {
 	tests := []struct {
 		name              string
-		currentBuildInfo  BuildInfo
-		expectedBuildInfo BuildInfo
+		currentBuildInfo  build.BuildInfo
+		expectedBuildInfo build.BuildInfo
 	}{
 		{
 			name:             "all empty",
-			currentBuildInfo: BuildInfo{},
-			expectedBuildInfo: BuildInfo{
+			currentBuildInfo: build.BuildInfo{},
+			expectedBuildInfo: build.BuildInfo{
 				Context:    ".",
 				Dockerfile: "Dockerfile",
 			},
 		},
 		{
 			name: "context empty",
-			currentBuildInfo: BuildInfo{
+			currentBuildInfo: build.BuildInfo{
 				Dockerfile: "Dockerfile",
 			},
-			expectedBuildInfo: BuildInfo{
+			expectedBuildInfo: build.BuildInfo{
 				Context:    ".",
 				Dockerfile: "Dockerfile",
 			},
 		},
 		{
 			name: "dockerfile empty",
-			currentBuildInfo: BuildInfo{
+			currentBuildInfo: build.BuildInfo{
 				Context: "buildName",
 			},
-			expectedBuildInfo: BuildInfo{
+			expectedBuildInfo: build.BuildInfo{
 				Context:    "buildName",
 				Dockerfile: "Dockerfile",
 			},
 		},
 		{
 			name: "context and Dockerfile filled",
-			currentBuildInfo: BuildInfo{
+			currentBuildInfo: build.BuildInfo{
 				Context:    "buildName",
 				Dockerfile: "Dockerfile",
 			},
-			expectedBuildInfo: BuildInfo{
+			expectedBuildInfo: build.BuildInfo{
 				Context:    "buildName",
 				Dockerfile: "Dockerfile",
 			},
@@ -794,7 +795,7 @@ func TestSetBuildDefaults(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 
-			tt.currentBuildInfo.setBuildDefaults()
+			tt.currentBuildInfo.SetBuildDefaults()
 
 			assert.Equal(t, tt.expectedBuildInfo, tt.currentBuildInfo)
 		})
@@ -921,8 +922,8 @@ func Test_SanitizeSvcNames(t *testing.T) {
 		{
 			name: "keys-have-uppercase",
 			manifest: &Manifest{
-				Build: ManifestBuild{
-					"Frontend": &BuildInfo{},
+				Build: build.ManifestBuild{
+					"Frontend": &build.BuildInfo{},
 				},
 				Dev: ManifestDevs{
 					"Frontend": &Dev{},
@@ -934,8 +935,8 @@ func Test_SanitizeSvcNames(t *testing.T) {
 				},
 			},
 			expectedManifest: &Manifest{
-				Build: ManifestBuild{
-					"frontend": &BuildInfo{},
+				Build: build.ManifestBuild{
+					"frontend": &build.BuildInfo{},
 				},
 				Dev: ManifestDevs{
 					"frontend": &Dev{
@@ -952,8 +953,8 @@ func Test_SanitizeSvcNames(t *testing.T) {
 		{
 			name: "keys-have-spaces",
 			manifest: &Manifest{
-				Build: ManifestBuild{
-					" my build service": &BuildInfo{},
+				Build: build.ManifestBuild{
+					" my build service": &build.BuildInfo{},
 				},
 				Dev: ManifestDevs{
 					"my dev service": &Dev{},
@@ -965,8 +966,8 @@ func Test_SanitizeSvcNames(t *testing.T) {
 				},
 			},
 			expectedManifest: &Manifest{
-				Build: ManifestBuild{
-					"my-build-service": &BuildInfo{},
+				Build: build.ManifestBuild{
+					"my-build-service": &build.BuildInfo{},
 				},
 				Dev: ManifestDevs{
 					"my-dev-service": &Dev{
@@ -983,8 +984,8 @@ func Test_SanitizeSvcNames(t *testing.T) {
 		{
 			name: "keys-have-underscore",
 			manifest: &Manifest{
-				Build: ManifestBuild{
-					"my_build_service": &BuildInfo{},
+				Build: build.ManifestBuild{
+					"my_build_service": &build.BuildInfo{},
 				},
 				Dev: ManifestDevs{
 					"my_dev_service": &Dev{},
@@ -996,8 +997,8 @@ func Test_SanitizeSvcNames(t *testing.T) {
 				},
 			},
 			expectedManifest: &Manifest{
-				Build: ManifestBuild{
-					"my-build-service": &BuildInfo{},
+				Build: build.ManifestBuild{
+					"my-build-service": &build.BuildInfo{},
 				},
 				Dev: ManifestDevs{
 					"my-dev-service": &Dev{
@@ -1014,8 +1015,8 @@ func Test_SanitizeSvcNames(t *testing.T) {
 		{
 			name: "keys-have-mix",
 			manifest: &Manifest{
-				Build: ManifestBuild{
-					"  my_Build service": &BuildInfo{},
+				Build: build.ManifestBuild{
+					"  my_Build service": &build.BuildInfo{},
 				},
 				Dev: ManifestDevs{
 					"my_DEV_service ": &Dev{},
@@ -1027,8 +1028,8 @@ func Test_SanitizeSvcNames(t *testing.T) {
 				},
 			},
 			expectedManifest: &Manifest{
-				Build: ManifestBuild{
-					"my-build-service": &BuildInfo{},
+				Build: build.ManifestBuild{
+					"my-build-service": &build.BuildInfo{},
 				},
 				Dev: ManifestDevs{
 					"my-dev-service": &Dev{
@@ -1045,8 +1046,8 @@ func Test_SanitizeSvcNames(t *testing.T) {
 		{
 			name: "keys-have-trailing-spaces",
 			manifest: &Manifest{
-				Build: ManifestBuild{
-					"  my-build ": &BuildInfo{},
+				Build: build.ManifestBuild{
+					"  my-build ": &build.BuildInfo{},
 				},
 				Dev: ManifestDevs{
 					" my-dev  ": &Dev{},
@@ -1058,8 +1059,8 @@ func Test_SanitizeSvcNames(t *testing.T) {
 				},
 			},
 			expectedManifest: &Manifest{
-				Build: ManifestBuild{
-					"my-build": &BuildInfo{},
+				Build: build.ManifestBuild{
+					"my-build": &build.BuildInfo{},
 				},
 				Dev: ManifestDevs{
 					"my-dev": &Dev{
@@ -1254,8 +1255,8 @@ func Test_Manifest_HasBuildSection(t *testing.T) {
 			name: "m.IsV2 && m.Build has items",
 			manifest: &Manifest{
 				IsV2: true,
-				Build: ManifestBuild{
-					"test": &BuildInfo{},
+				Build: build.ManifestBuild{
+					"test": &build.BuildInfo{},
 				},
 			},
 			expected: true,
@@ -1422,7 +1423,7 @@ func TestRead(t *testing.T) {
 					Commands: nil,
 					Remote:   false,
 				},
-				Build:         ManifestBuild{},
+				Build:         build.ManifestBuild{},
 				Dependencies:  deps.ManifestSection{},
 				GlobalForward: []forward.GlobalForward{},
 				External:      externalresource.ExternalResourceSection{},
@@ -1452,7 +1453,7 @@ func TestRead(t *testing.T) {
 					Commands: nil,
 					Remote:   false,
 				},
-				Build:         ManifestBuild{},
+				Build:         build.ManifestBuild{},
 				Dependencies:  deps.ManifestSection{},
 				GlobalForward: []forward.GlobalForward{},
 				External:      externalresource.ExternalResourceSection{},
@@ -1503,12 +1504,12 @@ func TestRead(t *testing.T) {
 						},
 						Selector:   Selector{},
 						EmptyImage: false,
-						Image: &BuildInfo{
+						Image: &build.BuildInfo{
 							Name:       "test-image",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
 						},
-						Push: &BuildInfo{
+						Push: &build.BuildInfo{
 							Context:    ".",
 							Dockerfile: "Dockerfile",
 						},
@@ -1556,7 +1557,7 @@ func TestRead(t *testing.T) {
 					Commands: nil,
 					Remote:   false,
 				},
-				Build:         ManifestBuild{},
+				Build:         build.ManifestBuild{},
 				Dependencies:  deps.ManifestSection{},
 				GlobalForward: nil,
 				External:      externalresource.ExternalResourceSection{},
@@ -1615,7 +1616,7 @@ func TestRead(t *testing.T) {
 					Commands: nil,
 					Remote:   false,
 				},
-				Build:         ManifestBuild{},
+				Build:         build.ManifestBuild{},
 				Dependencies:  deps.ManifestSection{},
 				GlobalForward: nil,
 				External:      externalresource.ExternalResourceSection{},

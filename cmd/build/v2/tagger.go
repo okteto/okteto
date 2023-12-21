@@ -16,13 +16,14 @@ package v2
 import (
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/model"
 )
 
 type imageTaggerInterface interface {
-	getServiceImageReference(manifestName, svcName string, b *model.BuildInfo, buildHash string) string
+	getServiceImageReference(manifestName, svcName string, b *build.BuildInfo, buildHash string) string
 	getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string
 	getImageReferencesForTagWithDefaults(manifestName, svcToBuildName, tag string) []string
 }
@@ -58,7 +59,7 @@ Inferred tag is constructed using the following:
 [name] is the combination of the tarjetRegistry, manifestName and serviceName
 [tag] its either the buildHash or the default okteto tag "okteto"
 */
-func (i imageTagger) getServiceImageReference(manifestName, svcName string, b *model.BuildInfo, buildHash string) string {
+func (i imageTagger) getServiceImageReference(manifestName, svcName string, b *build.BuildInfo, buildHash string) string {
 	// when b.Image is set or services does not have dockerfile then no infer reference and return what is set on the manifest
 	if b.Image != "" || !serviceHasDockerfile(b) {
 		return b.Image
@@ -120,7 +121,7 @@ func newImageWithVolumesTagger(cfg oktetoBuilderConfigInterface) imagerTaggerWit
 }
 
 // getServiceImageReference returns the full image tag for the build
-func (i imagerTaggerWithVolumes) getServiceImageReference(manifestName, svcName string, _ *model.BuildInfo, buildHash string) string {
+func (i imagerTaggerWithVolumes) getServiceImageReference(manifestName, svcName string, _ *build.BuildInfo, buildHash string) string {
 
 	targetRegistry := constants.DevRegistry
 	tag := ""

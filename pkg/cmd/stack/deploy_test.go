@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -81,7 +82,7 @@ func Test_deploySvc(t *testing.T) {
 					"test": {
 						Image:         "test_image",
 						RestartPolicy: apiv1.RestartPolicyAlways,
-						Volumes: []model.StackVolume{
+						Volumes: []build.VolumeMounts{
 							{
 								LocalPath:  "a",
 								RemotePath: "b",
@@ -191,7 +192,7 @@ func Test_reDeploySvc(t *testing.T) {
 					"serviceName": {
 						Image:         "test_image",
 						RestartPolicy: apiv1.RestartPolicyAlways,
-						Volumes: []model.StackVolume{
+						Volumes: []build.VolumeMounts{
 							{
 								LocalPath:  "a",
 								RemotePath: "b",
@@ -299,7 +300,7 @@ func Test_deployVolumes(t *testing.T) {
 			"test": {
 				Image:         "test_image",
 				RestartPolicy: apiv1.RestartPolicyAlways,
-				Volumes: []model.StackVolume{
+				Volumes: []build.VolumeMounts{
 					{
 						LocalPath:  "a",
 						RemotePath: "b",
@@ -333,7 +334,7 @@ func Test_deploySfs(t *testing.T) {
 			"test": {
 				Image:         "test_image",
 				RestartPolicy: apiv1.RestartPolicyAlways,
-				Volumes: []model.StackVolume{
+				Volumes: []build.VolumeMounts{
 					{
 						LocalPath:  "a",
 						RemotePath: "b",
@@ -503,7 +504,7 @@ func Test_AddSomeServices(t *testing.T) {
 				Namespace: "default",
 				Services: map[string]*model.Service{
 					"sfs-not-running": {
-						Volumes: []model.StackVolume{
+						Volumes: []build.VolumeMounts{
 							{
 								LocalPath:  "/",
 								RemotePath: "/",
@@ -589,7 +590,7 @@ func Test_AddSomeServices(t *testing.T) {
 				Namespace: "default",
 				Services: map[string]*model.Service{
 					"sfs": {
-						Volumes: []model.StackVolume{
+						Volumes: []build.VolumeMounts{
 							{
 								LocalPath:  "/",
 								RemotePath: "/",
@@ -668,7 +669,7 @@ func Test_getVolumesToDeployFromServicesToDeploy(t *testing.T) {
 				stack: &model.Stack{
 					Services: map[string]*model.Service{
 						"service ab": {
-							Volumes: []model.StackVolume{
+							Volumes: []build.VolumeMounts{
 								{
 									LocalPath: "volume a",
 								},
@@ -678,14 +679,14 @@ func Test_getVolumesToDeployFromServicesToDeploy(t *testing.T) {
 							},
 						},
 						"service b": {
-							Volumes: []model.StackVolume{
+							Volumes: []build.VolumeMounts{
 								{
 									LocalPath: "volume b",
 								},
 							},
 						},
 						"service bc": {
-							Volumes: []model.StackVolume{
+							Volumes: []build.VolumeMounts{
 								{
 									LocalPath: "volume b",
 								},

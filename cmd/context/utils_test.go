@@ -18,6 +18,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model"
@@ -157,14 +158,14 @@ dependencies:
 				IsV2:      true,
 				Namespace: "test-namespace",
 				Context:   "manifest-context",
-				Build: model.ManifestBuild{
+				Build: build.ManifestBuild{
 					"service": {
 						Name:       "",
 						Target:     "build",
 						Context:    "./service",
 						Dockerfile: "custom-dockerfile",
 						Image:      "defined-tag-image",
-						Args: []model.BuildArg{
+						Args: []build.BuildArg{
 							{
 								Name: "KEY1", Value: "Value1",
 							},

@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/env"
@@ -290,22 +291,22 @@ func TestCommandMarshalling(t *testing.T) {
 func TestImageMarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
-		image    *BuildInfo
+		image    *build.BuildInfo
 		expected string
 	}{
 		{
 			name:     "single-name",
-			image:    &BuildInfo{Name: "image-name"},
+			image:    &build.BuildInfo{Name: "image-name"},
 			expected: "image-name\n",
 		},
 		{
 			name:     "single-name-and-defaults",
-			image:    &BuildInfo{Name: "image-name", Context: "."},
+			image:    &build.BuildInfo{Name: "image-name", Context: "."},
 			expected: "image-name\n",
 		},
 		{
 			name:     "build",
-			image:    &BuildInfo{Name: "image-name", Context: "path"},
+			image:    &build.BuildInfo{Name: "image-name", Context: "path"},
 			expected: "name: image-name\ncontext: path\n",
 		},
 	}
@@ -1052,7 +1053,7 @@ deploy:
   - okteto stack deploy`),
 			expected: &Manifest{
 				Namespace: "test",
-				Build:     map[string]*BuildInfo{},
+				Build:     map[string]*build.BuildInfo{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{
@@ -1087,7 +1088,7 @@ dev:
 			expected: &Manifest{
 				IsV2:  true,
 				Type:  OktetoManifestType,
-				Build: map[string]*BuildInfo{},
+				Build: map[string]*build.BuildInfo{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{
@@ -1117,7 +1118,7 @@ dev:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &BuildInfo{
+						Image: &build.BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1127,7 +1128,7 @@ dev:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &BuildInfo{
+						Push: &build.BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1182,7 +1183,7 @@ dev:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &BuildInfo{
+						Image: &build.BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1192,7 +1193,7 @@ dev:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &BuildInfo{
+						Push: &build.BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1244,7 +1245,7 @@ sync:
   - app:/app`),
 			expected: &Manifest{
 				Type:          OktetoManifestType,
-				Build:         map[string]*BuildInfo{},
+				Build:         map[string]*build.BuildInfo{},
 				Deploy:        &DeployInfo{},
 				Destroy:       &DestroyInfo{},
 				Dependencies:  map[string]*deps.Dependency{},
@@ -1267,7 +1268,7 @@ sync:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &BuildInfo{
+						Image: &build.BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1277,7 +1278,7 @@ sync:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &BuildInfo{
+						Push: &build.BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1330,7 +1331,7 @@ services:
   - name: svc`),
 			expected: &Manifest{
 				Type:          OktetoManifestType,
-				Build:         map[string]*BuildInfo{},
+				Build:         map[string]*build.BuildInfo{},
 				Deploy:        &DeployInfo{},
 				Destroy:       &DestroyInfo{},
 				Dependencies:  map[string]*deps.Dependency{},
@@ -1353,7 +1354,7 @@ services:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &BuildInfo{
+						Image: &build.BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1363,7 +1364,7 @@ services:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &BuildInfo{
+						Push: &build.BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1393,7 +1394,7 @@ services:
 								Annotations:     Annotations{},
 								Selector:        Selector{},
 								EmptyImage:      true,
-								Image:           &BuildInfo{},
+								Image:           &build.BuildInfo{},
 								ImagePullPolicy: v1.PullAlways,
 								Secrets:         []Secret{},
 								Probes: &Probes{
@@ -1466,7 +1467,7 @@ dev:
 			expected: &Manifest{
 				Type:         OktetoManifestType,
 				IsV2:         true,
-				Build:        map[string]*BuildInfo{},
+				Build:        map[string]*build.BuildInfo{},
 				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Destroy:      &DestroyInfo{},
@@ -1487,7 +1488,7 @@ dev:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &BuildInfo{
+						Image: &build.BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1498,7 +1499,7 @@ dev:
 							Enabled: true,
 						},
 						Secrets: make([]Secret, 0),
-						Push: &BuildInfo{
+						Push: &build.BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1555,7 +1556,7 @@ dev:
 			expected: &Manifest{
 				Type:         OktetoManifestType,
 				IsV2:         true,
-				Build:        map[string]*BuildInfo{},
+				Build:        map[string]*build.BuildInfo{},
 				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Destroy:      &DestroyInfo{},
@@ -1576,7 +1577,7 @@ dev:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &BuildInfo{
+						Image: &build.BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1586,7 +1587,7 @@ dev:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &BuildInfo{
+						Push: &build.BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1642,7 +1643,7 @@ dev:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &BuildInfo{
+						Image: &build.BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1652,7 +1653,7 @@ dev:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &BuildInfo{
+						Push: &build.BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1726,7 +1727,7 @@ deploy:
 				Type:         OktetoManifestType,
 				IsV2:         true,
 				Dev:          map[string]*Dev{},
-				Build:        map[string]*BuildInfo{},
+				Build:        map[string]*build.BuildInfo{},
 				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Destroy:      &DestroyInfo{},
@@ -1754,7 +1755,7 @@ devs:
 				Type:         OktetoManifestType,
 				IsV2:         true,
 				Dev:          map[string]*Dev{},
-				Build:        map[string]*BuildInfo{},
+				Build:        map[string]*build.BuildInfo{},
 				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Destroy:      &DestroyInfo{},
@@ -1872,10 +1873,10 @@ reverse:
 						Local:  8080,
 					},
 				},
-				Image: &BuildInfo{
+				Image: &build.BuildInfo{
 					Name: "busybox",
 				},
-				Push:      &BuildInfo{},
+				Push:      &build.BuildInfo{},
 				Secrets:   []Secret{},
 				Probes:    &Probes{},
 				Lifecycle: &Lifecycle{},
@@ -1921,10 +1922,10 @@ forward:
 				Command: Command{
 					Values: []string{"sh"},
 				},
-				Image: &BuildInfo{
+				Image: &build.BuildInfo{
 					Name: "okteto/golang:1",
 				},
-				Push:      &BuildInfo{},
+				Push:      &build.BuildInfo{},
 				Secrets:   []Secret{},
 				Probes:    &Probes{},
 				Lifecycle: &Lifecycle{},
@@ -1985,10 +1986,10 @@ forward:
 				Command: Command{
 					Values: []string{"sh"},
 				},
-				Image: &BuildInfo{
+				Image: &build.BuildInfo{
 					Name: "okteto/golang:1",
 				},
-				Push:      &BuildInfo{},
+				Push:      &build.BuildInfo{},
 				Secrets:   []Secret{},
 				Probes:    &Probes{},
 				Lifecycle: &Lifecycle{},
@@ -2045,10 +2046,10 @@ forward:
 				Command: Command{
 					Values: []string{"sh"},
 				},
-				Image: &BuildInfo{
+				Image: &build.BuildInfo{
 					Name: "busybox",
 				},
-				Push:      &BuildInfo{},
+				Push:      &build.BuildInfo{},
 				Secrets:   []Secret{},
 				Probes:    &Probes{},
 				Lifecycle: &Lifecycle{},
@@ -2655,7 +2656,7 @@ services: a`),
 
 func TestManifestBuildUnmarshalling(t *testing.T) {
 	tests := []struct {
-		expected        ManifestBuild
+		expected        build.ManifestBuild
 		name            string
 		buildManifest   []byte
 		isErrorExpected bool
@@ -2663,7 +2664,7 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
 		{
 			name:          "unmarshalling-relative-path",
 			buildManifest: []byte(`service1: ./service1`),
-			expected: ManifestBuild{
+			expected: build.ManifestBuild{
 				"service1": {
 					Name:    "./service1",
 					Context: "",
@@ -2683,19 +2684,19 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
   secrets:
     mysecret: source
     othersecret: othersource`),
-			expected: ManifestBuild{
+			expected: build.ManifestBuild{
 				"service2": {
 					Context:    "./service2",
 					Dockerfile: "Dockerfile",
 					Image:      "image-tag",
-					Args: BuildArgs{
+					Args: build.BuildArgs{
 						{
 							Name:  "key1",
 							Value: "value1",
 						},
 					},
 					CacheFrom: []string{"cache-image"},
-					Secrets: BuildSecrets{
+					Secrets: build.BuildSecrets{
 						"mysecret":    "source",
 						"othersecret": "othersource",
 					},
@@ -2706,14 +2707,14 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
 			name: "invalid-fields",
 			buildManifest: []byte(`service1:
   file: Dockerfile`),
-			expected:        ManifestBuild{},
+			expected:        build.ManifestBuild{},
 			isErrorExpected: true,
 		},
 		{
 			name: "cache_from-supports-str",
 			buildManifest: []byte(`service3:
   cache_from: cache-image`),
-			expected: ManifestBuild{
+			expected: build.ManifestBuild{
 				"service3": {
 					CacheFrom: []string{"cache-image"},
 				},
@@ -2723,7 +2724,7 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var result ManifestBuild
+			var result build.ManifestBuild
 			err := yaml.UnmarshalStrict(tt.buildManifest, &result)
 			if err != nil && !tt.isErrorExpected {
 				t.Fatalf("Not expecting error but got %s", err)
@@ -2742,24 +2743,24 @@ func TestBuildDependsOnUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name          string
 		buildManifest []byte
-		expected      BuildDependsOn
+		expected      build.BuildDependsOn
 	}{
 		{
 			name:          "single string",
 			buildManifest: []byte(`a`),
-			expected:      BuildDependsOn{"a"},
+			expected:      build.BuildDependsOn{"a"},
 		},
 		{
 			name: "list",
 			buildManifest: []byte(`- a
 - b`),
-			expected: BuildDependsOn{"a", "b"},
+			expected: build.BuildDependsOn{"a", "b"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var result BuildDependsOn
+			var result build.BuildDependsOn
 			err := yaml.UnmarshalStrict(tt.buildManifest, &result)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
@@ -2772,12 +2773,12 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 		env      map[string]string
 		name     string
 		data     []byte
-		expected BuildArgs
+		expected build.BuildArgs
 	}{
 		{
 			name: "list",
 			data: []byte("- KEY=VALUE"),
-			expected: BuildArgs{
+			expected: build.BuildArgs{
 				{
 					Name:  "KEY",
 					Value: "VALUE",
@@ -2788,7 +2789,7 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 		{
 			name: "list with env var set",
 			data: []byte("- KEY=${VALUE2}"),
-			expected: BuildArgs{
+			expected: build.BuildArgs{
 				{
 					Name:  "KEY",
 					Value: "actual-value",
@@ -2799,7 +2800,7 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 		{
 			name: "list with env var unset",
 			data: []byte("- KEY=$VALUE"),
-			expected: BuildArgs{
+			expected: build.BuildArgs{
 				{
 					Name:  "KEY",
 					Value: "$VALUE",
@@ -2812,7 +2813,7 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 			data: []byte(`- KEY=$VALUE
 - KEY2=$VALUE2
 - KEY3=${VALUE3}`),
-			expected: BuildArgs{
+			expected: build.BuildArgs{
 				{
 					Name:  "KEY",
 					Value: "$VALUE",
@@ -2831,7 +2832,7 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 		{
 			name: "map",
 			data: []byte("KEY: VALUE"),
-			expected: BuildArgs{
+			expected: build.BuildArgs{
 				{
 					Name:  "KEY",
 					Value: "VALUE",
@@ -2842,7 +2843,7 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 		{
 			name: "map with env var",
 			data: []byte("KEY: $MYVAR"),
-			expected: BuildArgs{
+			expected: build.BuildArgs{
 				{
 					Name:  "KEY",
 					Value: "actual-value",
@@ -2860,7 +2861,7 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 				t.Setenv(k, v)
 			}
 
-			var buildArgs BuildArgs
+			var buildArgs build.BuildArgs
 			if err := yaml.UnmarshalStrict(tt.data, &buildArgs); err != nil {
 				t.Fatal(err)
 			}

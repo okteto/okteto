@@ -16,7 +16,7 @@ package v2
 import (
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,7 +28,7 @@ func TestInitTaggers(t *testing.T) {
 
 func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 	tt := []struct {
-		b             *model.BuildInfo
+		b             *build.BuildInfo
 		name          string
 		expectedImage string
 		cfg           fakeConfig
@@ -40,7 +40,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 				hasAccess: false,
 				sha:       "sha",
 			},
-			b: &model.BuildInfo{
+			b: &build.BuildInfo{
 				Image: "nginx",
 			},
 			expectedImage: "nginx",
@@ -52,7 +52,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 				hasAccess: true,
 				sha:       "sha",
 			},
-			b: &model.BuildInfo{
+			b: &build.BuildInfo{
 				Image: "nginx",
 			},
 			expectedImage: "nginx",
@@ -64,7 +64,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 				hasAccess: true,
 				sha:       "sha",
 			},
-			b: &model.BuildInfo{
+			b: &build.BuildInfo{
 				Image: "nginx",
 			},
 			expectedImage: "nginx",
@@ -76,7 +76,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 				hasAccess: true,
 				sha:       "sha",
 			},
-			b: &model.BuildInfo{
+			b: &build.BuildInfo{
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 				Image:      "okteto.dev/test-test:test",
@@ -90,7 +90,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 				hasAccess: true,
 				sha:       "sha",
 			},
-			b: &model.BuildInfo{
+			b: &build.BuildInfo{
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 				Image:      "okteto.global/test-test:test",
@@ -104,7 +104,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 				hasAccess: false,
 				sha:       "sha",
 			},
-			b: &model.BuildInfo{
+			b: &build.BuildInfo{
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},
@@ -117,7 +117,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 				hasAccess: true,
 				sha:       "sha",
 			},
-			b: &model.BuildInfo{
+			b: &build.BuildInfo{
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},
@@ -131,7 +131,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 				sha:                 "sha",
 				isSmartBuildsEnable: false,
 			},
-			b: &model.BuildInfo{
+			b: &build.BuildInfo{
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},
@@ -145,7 +145,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 				sha:                 "sha",
 				isSmartBuildsEnable: true,
 			},
-			b: &model.BuildInfo{
+			b: &build.BuildInfo{
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},
@@ -169,7 +169,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 
 func TestImageTaggerWithVolumesTag(t *testing.T) {
 	tt := []struct {
-		b             *model.BuildInfo
+		b             *build.BuildInfo
 		name          string
 		expectedImage string
 		cfg           fakeConfig
@@ -181,7 +181,7 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 				hasAccess: false,
 				sha:       "sha",
 			},
-			b: &model.BuildInfo{
+			b: &build.BuildInfo{
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},
@@ -194,7 +194,7 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 				hasAccess: true,
 				sha:       "sha",
 			},
-			b: &model.BuildInfo{
+			b: &build.BuildInfo{
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},
@@ -207,7 +207,7 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 				hasAccess: true,
 				sha:       "sha",
 			},
-			b: &model.BuildInfo{
+			b: &build.BuildInfo{
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},
@@ -221,7 +221,7 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 				sha:                 "sha",
 				isSmartBuildsEnable: true,
 			},
-			b: &model.BuildInfo{
+			b: &build.BuildInfo{
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},

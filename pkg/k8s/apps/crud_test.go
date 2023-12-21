@@ -18,6 +18,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -71,7 +72,7 @@ func TestGetStatefulset(t *testing.T) {
 	dev := &model.Dev{
 		Name:      "test",
 		Namespace: "test",
-		Image: &model.BuildInfo{
+		Image: &build.BuildInfo{
 			Name: "image",
 		},
 		PersistentVolumeInfo: &model.PersistentVolumeInfo{
@@ -116,7 +117,7 @@ func TestGetDeployment(t *testing.T) {
 	dev := &model.Dev{
 		Name:      "test",
 		Namespace: "test",
-		Image: &model.BuildInfo{
+		Image: &build.BuildInfo{
 			Name: "image",
 		},
 		PersistentVolumeInfo: &model.PersistentVolumeInfo{
@@ -277,7 +278,7 @@ func TestListDevModeOn(t *testing.T) {
 			"dev": &model.Dev{
 				Name:      "dev",
 				Namespace: "test",
-				Image: &model.BuildInfo{
+				Image: &build.BuildInfo{
 					Name: "image",
 				},
 				PersistentVolumeInfo: &model.PersistentVolumeInfo{
@@ -287,7 +288,7 @@ func TestListDevModeOn(t *testing.T) {
 			"sfs": &model.Dev{
 				Name:      "sfs",
 				Namespace: "test",
-				Image: &model.BuildInfo{
+				Image: &build.BuildInfo{
 					Name: "image",
 				},
 				PersistentVolumeInfo: &model.PersistentVolumeInfo{
@@ -297,7 +298,7 @@ func TestListDevModeOn(t *testing.T) {
 			"autocreate": &model.Dev{
 				Name:      "autocreate",
 				Namespace: "test",
-				Image: &model.BuildInfo{
+				Image: &build.BuildInfo{
 					Name: "image",
 				},
 				PersistentVolumeInfo: &model.PersistentVolumeInfo{

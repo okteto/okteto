@@ -23,6 +23,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -120,7 +121,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 		Registry:  "registry.okteto",
 	}
 
-	namespaceEnvVar := model.BuildArg{
+	namespaceEnvVar := build.BuildArg{
 		Name: model.OktetoNamespaceEnvVar, Value: context.Namespace,
 	}
 
@@ -150,7 +151,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 	}()
 
 	tests := []struct {
-		buildInfo   *model.BuildInfo
+		buildInfo   *build.BuildInfo
 		initialOpts *types.BuildOptions
 		expected    *types.BuildOptions
 		name        string
@@ -161,7 +162,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 		{
 			name:        "is-okteto-empty-buildInfo",
 			serviceName: "service",
-			buildInfo:   &model.BuildInfo{},
+			buildInfo:   &build.BuildInfo{},
 			mr: mockRegistry{
 				isOktetoRegistry: true,
 				registry:         "okteto.dev",
@@ -177,7 +178,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 		{
 			name:        "not-okteto-empty-buildInfo",
 			serviceName: "service",
-			buildInfo:   &model.BuildInfo{},
+			buildInfo:   &build.BuildInfo{},
 			isOkteto:    false,
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
@@ -187,12 +188,12 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 		{
 			name:        "is-okteto-missing-image-buildInfo",
 			serviceName: "service",
-			buildInfo: &model.BuildInfo{
+			buildInfo: &build.BuildInfo{
 				Context:    serviceContext,
 				Dockerfile: serviceDockerfile,
 				Target:     "build",
 				CacheFrom:  []string{"cache-image"},
-				Args: model.BuildArgs{
+				Args: build.BuildArgs{
 					{
 						Name:  "arg1",
 						Value: "value1",
@@ -221,18 +222,18 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 		{
 			name:        "is-okteto-missing-image-buildInfo-with-volumes",
 			serviceName: "service",
-			buildInfo: &model.BuildInfo{
+			buildInfo: &build.BuildInfo{
 				Context:    serviceContext,
 				Dockerfile: serviceDockerfile,
 				Target:     "build",
 				CacheFrom:  []string{"cache-image"},
-				Args: model.BuildArgs{
+				Args: build.BuildArgs{
 					{
 						Name:  "arg1",
 						Value: "value1",
 					},
 				},
-				VolumesToInclude: []model.StackVolume{
+				VolumesToInclude: []build.VolumeMounts{
 					{
 						LocalPath:  "a",
 						RemotePath: "b",
@@ -263,13 +264,13 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 		{
 			name:        "is-okteto-has-image-buildInfo",
 			serviceName: "service",
-			buildInfo: &model.BuildInfo{
+			buildInfo: &build.BuildInfo{
 				Image:      "okteto.dev/mycustomimage:dev",
 				Context:    serviceContext,
 				Dockerfile: serviceDockerfile,
 				Target:     "build",
 				CacheFrom:  []string{"cache-image"},
-				Args: model.BuildArgs{
+				Args: build.BuildArgs{
 					namespaceEnvVar,
 					{
 						Name:  "arg1",
@@ -309,7 +310,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 		{
 			name:        "has-platform-option",
 			serviceName: "service",
-			buildInfo:   &model.BuildInfo{},
+			buildInfo:   &build.BuildInfo{},
 			initialOpts: &types.BuildOptions{
 				Platform: "linux/amd64"},
 			isOkteto: true,
@@ -328,7 +329,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 		{
 			name:        "has-platform-option",
 			serviceName: "service",
-			buildInfo:   &model.BuildInfo{},
+			buildInfo:   &build.BuildInfo{},
 			initialOpts: &types.BuildOptions{
 				BuildArgs: []string{
 					"arg1=value1",
@@ -352,8 +353,8 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 		{
 			name:        "only key",
 			serviceName: "service",
-			buildInfo: &model.BuildInfo{
-				Args: model.BuildArgs{
+			buildInfo: &build.BuildInfo{
+				Args: build.BuildArgs{
 					{
 						Name:  "arg1",
 						Value: "value2",
@@ -396,7 +397,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			}
 			manifest := &model.Manifest{
 				Name: "movies",
-				Build: model.ManifestBuild{
+				Build: build.ManifestBuild{
 					tt.serviceName: tt.buildInfo,
 				},
 			}
@@ -409,13 +410,13 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 
 func TestOptsFromBuildInfoForRemoteDeploy(t *testing.T) {
 	tests := []struct {
-		buildInfo *model.BuildInfo
+		buildInfo *build.BuildInfo
 		expected  *types.BuildOptions
 		name      string
 	}{
 		{
 			name: "all fields set",
-			buildInfo: &model.BuildInfo{
+			buildInfo: &build.BuildInfo{
 				Name:        "movies-service",
 				Context:     "service",
 				Dockerfile:  "Dockerfile",
@@ -432,7 +433,7 @@ func TestOptsFromBuildInfoForRemoteDeploy(t *testing.T) {
 		},
 		{
 			name: "just the fields needed",
-			buildInfo: &model.BuildInfo{
+			buildInfo: &build.BuildInfo{
 				Name:        "movies-service",
 				Context:     "service",
 				Dockerfile:  "Dockerfile",
