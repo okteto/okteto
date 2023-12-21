@@ -142,3 +142,19 @@ func (sh *serviceHasher) getDockerfileContent(dockerfileContext, dockerfilePath 
 	encodedFile := sha256.Sum256(content)
 	return hex.EncodeToString(encodedFile[:])
 }
+
+func (sh *serviceHasher) getBuildContextHashInCache(buildContext string) string {
+	sh.lock.RLock()
+	defer sh.lock.RUnlock()
+	v, ok := sh.buildContextCache[buildContext]
+	if !ok {
+		return ""
+	}
+	return v
+}
+
+func (sh *serviceHasher) getProjectCommitHashInCache() string {
+	sh.lock.RLock()
+	defer sh.lock.RUnlock()
+	return sh.projectCommit
+}

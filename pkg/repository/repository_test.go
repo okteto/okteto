@@ -71,6 +71,10 @@ func (fr fakeRepository) GetDiff(ctx context.Context, repoPath, dirpath string, 
 	return fr.diff, fr.err
 }
 
+func (fr fakeRepository) calculateUntrackedFiles(ctx context.Context, contextDir string) ([]string, error) {
+	return []string{}, fr.err
+}
+
 type fakeWorktree struct {
 	err    error
 	status oktetoGitStatus

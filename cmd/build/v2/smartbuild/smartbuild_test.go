@@ -18,6 +18,7 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -32,6 +33,420 @@ type fakeConfigRepo struct {
 func (fcr fakeConfigRepo) GetSHA() (string, error)                   { return fcr.sha, fcr.err }
 func (fcr fakeConfigRepo) GetLatestDirCommit(string) (string, error) { return fcr.sha, fcr.err }
 func (fcr fakeConfigRepo) GetDiffHash(string) (string, error)        { return fcr.diff, fcr.err }
+func (fcr fakeConfigRepo) getBuildContextHashInCache(string) string  { return fcr.sha }
+func (fcr fakeConfigRepo) getProjectCommitHashInCache(string) string { return fcr.sha }
+
+type fakeRegistryController struct {
+	err              error
+	isGlobalRegistry bool
+}
+
+func (frc fakeRegistryController) CloneGlobalImageToDev(image string, _ string) (string, error) {
+	return image, frc.err
+}
+func (frc fakeRegistryController) IsGlobalRegistry(string) bool { return frc.isGlobalRegistry }
+
+type fakeHasher struct {
+	hash string
+	err  error
+}
+
+func (fh fakeHasher) hashProjectCommit(*model.BuildInfo) (string, error) { return fh.hash, fh.err }
+func (fh fakeHasher) hashBuildContext(*model.BuildInfo) (string, error)  { return fh.hash, fh.err }
+func (fh fakeHasher) getBuildContextHashInCache(string) string           { return fh.hash }
+func (fh fakeHasher) getProjectCommitHashInCache() string                { return fh.hash }
+
+func TestNewSmartBuildCtrl(t *testing.T) {
+	type input struct {
+		isEnabledValue  string
+		isBuildCtxValue string
+	}
+	type output struct {
+		isEnabled  bool
+		isBuildCtx bool
+	}
+
+	tests := []struct {
+		name   string
+		input  input
+		output output
+	}{
+		{
+			name: "Default Configuration",
+			input: input{
+				isEnabledValue:  "",
+				isBuildCtxValue: "",
+			},
+			output: output{
+				isEnabled:  true,
+				isBuildCtx: false,
+			},
+		},
+		{
+			name: "Environment Variable Disabled",
+			input: input{
+				isEnabledValue:  "false",
+				isBuildCtxValue: "",
+			},
+			output: output{
+				isEnabled:  false,
+				isBuildCtx: false,
+			},
+		},
+		{
+			name: "Using Build Context Enabled",
+			input: input{
+				isEnabledValue:  "true",
+				isBuildCtxValue: "true",
+			},
+			output: output{
+				isEnabled:  true,
+				isBuildCtx: true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(OktetoEnableSmartBuildEnvVar, tt.input.isEnabledValue)
+			t.Setenv(OktetoSmartBuildUsingContextEnvVar, tt.input.isBuildCtxValue)
+
+			ctrl := NewSmartBuildCtrl(&fakeConfigRepo{}, &fakeRegistryController{}, afero.NewMemMapFs(), io.NewIOController())
+
+			assert.Equal(t, tt.output.isEnabled, ctrl.IsEnabled())
+			assert.Equal(t, tt.output.isBuildCtx, ctrl.isUsingBuildContext)
+		})
+	}
+}
+
+func TestGetProjectHash(t *testing.T) {
+	type input struct {
+		hash string
+		err  error
+	}
+	type output struct {
+		hash string
+		err  error
+	}
+
+	tests := []struct {
+		name   string
+		input  input
+		output output
+	}{
+		{
+			name: "correct hash",
+			input: input{
+				hash: "hash",
+				err:  nil,
+			},
+			output: output{
+				hash: "hash",
+				err:  nil,
+			},
+		},
+		{
+			name: "error",
+			input: input{
+				hash: "",
+				err:  assert.AnError,
+			},
+			output: output{
+				hash: "",
+				err:  assert.AnError,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sbc := SmartBuildCtrl{
+				ioCtrl: io.NewIOController(),
+				hasher: fakeHasher{
+					hash: tt.input.hash,
+					err:  tt.input.err,
+				},
+			}
+			out, err := sbc.GetProjectHash(&model.BuildInfo{})
+			assert.Equal(t, tt.output.hash, out)
+			assert.ErrorIs(t, err, tt.output.err)
+		})
+	}
+}
+
+func TestGetServiceHash(t *testing.T) {
+	type input struct {
+		hash string
+		err  error
+	}
+	type output struct {
+		hash string
+		err  error
+	}
+
+	tests := []struct {
+		name   string
+		input  input
+		output output
+	}{
+		{
+			name: "correct hash",
+			input: input{
+				hash: "hash",
+				err:  nil,
+			},
+			output: output{
+				hash: "hash",
+				err:  nil,
+			},
+		},
+		{
+			name: "error",
+			input: input{
+				hash: "",
+				err:  assert.AnError,
+			},
+			output: output{
+				hash: "",
+				err:  assert.AnError,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sbc := SmartBuildCtrl{
+				ioCtrl: io.NewIOController(),
+				hasher: fakeHasher{
+					hash: tt.input.hash,
+					err:  tt.input.err,
+				},
+			}
+			out, err := sbc.GetServiceHash(&model.BuildInfo{})
+			assert.Equal(t, tt.output.hash, out)
+			assert.ErrorIs(t, err, tt.output.err)
+		})
+	}
+}
+
+func TestGetBuildHash(t *testing.T) {
+	type input struct {
+		hash                string
+		err                 error
+		isUsingBuildContext bool
+	}
+	type output struct {
+		hash string
+		err  error
+	}
+
+	tests := []struct {
+		name   string
+		input  input
+		output output
+	}{
+		{
+			name: "project commit - correct hash",
+			input: input{
+				hash:                "hash",
+				err:                 nil,
+				isUsingBuildContext: false,
+			},
+			output: output{
+				hash: "hash",
+				err:  nil,
+			},
+		},
+		{
+			name: "project commit - error",
+			input: input{
+				hash:                "",
+				err:                 assert.AnError,
+				isUsingBuildContext: false,
+			},
+			output: output{
+				hash: "",
+				err:  assert.AnError,
+			},
+		},
+		{
+			name: "build context - correct hash",
+			input: input{
+				hash:                "hash",
+				err:                 nil,
+				isUsingBuildContext: true,
+			},
+			output: output{
+				hash: "hash",
+				err:  nil,
+			},
+		},
+		{
+			name: "build context - error",
+			input: input{
+				hash:                "",
+				err:                 assert.AnError,
+				isUsingBuildContext: true,
+			},
+			output: output{
+				hash: "",
+				err:  assert.AnError,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sbc := SmartBuildCtrl{
+				ioCtrl: io.NewIOController(),
+				hasher: fakeHasher{
+					hash: tt.input.hash,
+					err:  tt.input.err,
+				},
+				isUsingBuildContext: tt.input.isUsingBuildContext,
+			}
+			out, err := sbc.GetBuildHash(&model.BuildInfo{})
+			assert.Equal(t, tt.output.hash, out)
+			assert.ErrorIs(t, err, tt.output.err)
+		})
+	}
+}
+
+func TestGetBuildCommit(t *testing.T) {
+	type input struct {
+		hash                string
+		isUsingBuildContext bool
+	}
+	type output struct {
+		hash string
+		err  error
+	}
+
+	tests := []struct {
+		name   string
+		input  input
+		output output
+	}{
+		{
+			name: "project commit - correct hash",
+			input: input{
+				hash:                "hash",
+				isUsingBuildContext: false,
+			},
+			output: output{
+				hash: "hash",
+				err:  nil,
+			},
+		},
+		{
+			name: "project commit - error",
+			input: input{
+				hash:                "",
+				isUsingBuildContext: false,
+			},
+			output: output{
+				hash: "",
+				err:  assert.AnError,
+			},
+		},
+		{
+			name: "build context - correct hash",
+			input: input{
+				hash:                "hash",
+				isUsingBuildContext: true,
+			},
+			output: output{
+				hash: "hash",
+				err:  nil,
+			},
+		},
+		{
+			name: "build context - error",
+			input: input{
+				hash:                "",
+				isUsingBuildContext: true,
+			},
+			output: output{
+				hash: "",
+				err:  assert.AnError,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sbc := SmartBuildCtrl{
+				ioCtrl: io.NewIOController(),
+				hasher: fakeHasher{
+					hash: tt.input.hash,
+				},
+				isUsingBuildContext: tt.input.isUsingBuildContext,
+			}
+			out := sbc.GetBuildCommit(&model.BuildInfo{})
+			assert.Equal(t, tt.output.hash, out)
+		})
+	}
+}
+
+func TestCloneGlobalImageToDev(t *testing.T) {
+	type input struct {
+		err      error
+		isGlobal bool
+	}
+	type output struct {
+		hash string
+		err  error
+	}
+
+	tests := []struct {
+		name   string
+		input  input
+		output output
+	}{
+		{
+			name: "isGlobal - err",
+			input: input{
+				isGlobal: true,
+				err:      assert.AnError,
+			},
+			output: output{
+				hash: "",
+				err:  assert.AnError,
+			},
+		},
+		{
+			name: "isGlobal - no error",
+			input: input{
+				isGlobal: true,
+				err:      nil,
+			},
+			output: output{
+				hash: "test",
+				err:  nil,
+			},
+		},
+		{
+			name: "not global",
+			input: input{
+				isGlobal: false,
+			},
+			output: output{
+				hash: "test",
+				err:  nil,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sbc := SmartBuildCtrl{
+				ioCtrl: io.NewIOController(),
+				registryController: fakeRegistryController{
+					err:              tt.input.err,
+					isGlobalRegistry: tt.input.isGlobal,
+				},
+			}
+			out, err := sbc.CloneGlobalImageToDev("test", "hash")
+			assert.Equal(t, tt.output.hash, out)
+			assert.ErrorIs(t, err, tt.output.err)
+		})
+	}
+}
 
 func Test_getBuildHashFromCommit(t *testing.T) {
 	fs := afero.NewMemMapFs()

@@ -43,13 +43,20 @@ type repositoryInterface interface {
 	GetDiffHash(string) (string, error)
 }
 
+type hasherController interface {
+	hashProjectCommit(*model.BuildInfo) (string, error)
+	hashBuildContext(*model.BuildInfo) (string, error)
+	getBuildContextHashInCache(string) string
+	getProjectCommitHashInCache() string
+}
+
 // SmartBuildCtrl is the controller for smart builds
 type SmartBuildCtrl struct {
 	gitRepo            repositoryInterface
 	registryController registryController
 	ioCtrl             *io.IOController
 
-	hasher *serviceHasher
+	hasher hasherController
 
 	isEnabled           bool
 	isUsingBuildContext bool
@@ -103,13 +110,13 @@ func (s *SmartBuildCtrl) GetBuildCommit(buildInfo *model.BuildInfo) string {
 		if buildContext == "" {
 			buildContext = "."
 		}
-		if commit, ok := s.hasher.buildContextCache[buildContext]; ok {
-			return commit
+		commit := s.hasher.getBuildContextHashInCache(buildContext)
+		if commit == "" {
+			s.ioCtrl.Logger().Debugf("build context '%s' not found in cache", buildContext)
 		}
-		s.ioCtrl.Logger().Debugf("build context '%s' not found in cache", buildContext)
-		return ""
+		return commit
 	}
-	return s.hasher.projectCommit
+	return s.hasher.getProjectCommitHashInCache()
 }
 
 // CloneGlobalImageToDev clones the image from the global registry to the dev registry if needed

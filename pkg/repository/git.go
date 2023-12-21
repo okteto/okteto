@@ -194,21 +194,27 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 	diffCh := make(chan diffResponse)
 	untrackedFilesCh := make(chan untrackedFilesResponse)
 
-	timeoutErr := errors.New("timeout exceeded")
-	timeout := 300 * time.Second
+	timeout := 1 * time.Second
 
+	repo, err := r.repoGetter.get(r.path)
+	if err != nil {
+		return "", fmt.Errorf("failed to analyze git repo: %w", err)
+	}
+
+	// go func that cancels the context after the timeout
 	go func() {
 		time.Sleep(timeout)
 		close(timeoutCh)
 		cancel()
 		diffCh <- diffResponse{
 			diff: "",
-			err:  timeoutErr,
+			err:  errTimeoutExceeded,
 		}
 	}()
 
+	// go func that calculates the diff using git diff
 	go func() {
-		diff, err := r.calculateDiff(ctx, contextDir)
+		diff, err := repo.GetDiff(ctx, r.path, contextDir, NewLocalGit("git", &LocalExec{}))
 		select {
 		case <-timeoutCh:
 		case diffCh <- diffResponse{
@@ -218,8 +224,9 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 		}
 	}()
 
+	// go func that calculates the diff for the untracked files
 	go func() {
-		untrackedFiles, err := r.calculateUntrackedFiles(ctx, contextDir)
+		untrackedFiles, err := repo.calculateUntrackedFiles(ctx, contextDir)
 		if err != nil {
 			select {
 			case <-timeoutCh:
@@ -256,42 +263,6 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 	return fmt.Sprintf("%x", diffHash), nil
 }
 
-func (r gitRepoController) calculateDiff(ctx context.Context, contextDir string) (string, error) {
-	repo, err := r.repoGetter.get(r.path)
-	if err != nil {
-		return "", fmt.Errorf("failed to analyze git repo: %w", err)
-	}
-
-	return repo.GetDiff(ctx, r.path, contextDir, NewLocalGit("git", &LocalExec{}))
-}
-
-func (r gitRepoController) calculateUntrackedFiles(ctx context.Context, contextDir string) ([]string, error) {
-	repo, err := r.repoGetter.get(r.path)
-	if err != nil {
-		return []string{}, fmt.Errorf("failed to analyze git repo: %w", err)
-	}
-
-	worktree, err := repo.Worktree()
-	if err != nil {
-		return []string{}, fmt.Errorf("failed to infer the git repo's current branch: %w", err)
-	}
-
-	status, err := worktree.Status(ctx, contextDir, NewLocalGit("git", &LocalExec{}))
-	if err != nil {
-		return []string{}, fmt.Errorf("failed to infer the git repo's status: %w", err)
-	}
-
-	files := []string{}
-	for k, v := range status.status {
-		if v.Staging == git.Untracked {
-			files = append(files, k)
-		}
-	}
-
-	sort.Strings(files)
-	return files, nil
-}
-
 func (r gitRepoController) getUntrackedContent(files []string) (string, error) {
 	totalContent := ""
 	for _, file := range files {
@@ -300,7 +271,7 @@ func (r gitRepoController) getUntrackedContent(files []string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("failed to read file '%s': %w", absPath, err)
 		}
-		totalContent += fmt.Sprintf("%s%s:%s\n", totalContent, file, content)
+		totalContent += fmt.Sprintf("%s:%s\n", file, content)
 	}
 	return totalContent, nil
 }
@@ -352,6 +323,28 @@ func (ogr oktetoGitRepository) Log(o *git.LogOptions) (object.CommitIter, error)
 	return ogr.repo.Log(o)
 }
 
+func (ogr oktetoGitRepository) calculateUntrackedFiles(ctx context.Context, contextDir string) ([]string, error) {
+	worktree, err := ogr.Worktree()
+	if err != nil {
+		return []string{}, fmt.Errorf("failed to infer the git repo's current branch: %w", err)
+	}
+
+	status, err := worktree.Status(ctx, contextDir, NewLocalGit("git", &LocalExec{}))
+	if err != nil {
+		return []string{}, fmt.Errorf("failed to infer the git repo's status: %w", err)
+	}
+
+	files := []string{}
+	for k, v := range status.status {
+		if v.Staging == git.Untracked {
+			files = append(files, k)
+		}
+	}
+
+	sort.Strings(files)
+	return files, nil
+}
+
 type oktetoGitWorktree struct {
 	worktree *git.Worktree
 }
@@ -374,6 +367,7 @@ type gitRepositoryInterface interface {
 	Log(o *git.LogOptions) (object.CommitIter, error)
 	GetLatestCommit(ctx context.Context, repoPath, dirpath string, localGit LocalGitInterface) (string, error)
 	GetDiff(ctx context.Context, repoPath, dirpath string, localGit LocalGitInterface) (string, error)
+	calculateUntrackedFiles(ctx context.Context, contextDir string) ([]string, error)
 }
 
 type gitWorktreeInterface interface {
