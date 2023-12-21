@@ -208,7 +208,14 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 		}
 	}
 
-	err = getErrorMessage(err, buildOptions.Tag)
+	var tag string
+	if buildOptions != nil {
+		tag = buildOptions.Tag
+		if buildOptions.Manifest != nil && buildOptions.Manifest.Deploy != nil {
+			tag = buildOptions.Manifest.Deploy.Image
+		}
+	}
+	err = getErrorMessage(err, tag)
 	return err
 }
 
