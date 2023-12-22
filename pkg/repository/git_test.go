@@ -591,7 +591,7 @@ func TestGetUntrackedContent(t *testing.T) {
 			},
 			output: output{
 				expectedErr:      nil,
-				untrackedContent: "/tmp/example/services/api/test.go:test\n/tmp/example/services/api/test2.go:test2\n",
+				untrackedContent: filepath.Clean("/tmp/example/services/api/test.go:test\n/tmp/example/services/api/test2.go:test2\n"),
 			},
 		},
 	}
