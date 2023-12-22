@@ -39,7 +39,6 @@ type serviceHasher struct {
 	fs          afero.Fs
 
 	buildContextCache map[string]string
-	diffHashCache     map[string]string
 	projectCommit     string
 
 	// lock is a mutex to provide thread safety
@@ -50,7 +49,6 @@ func newServiceHasher(gitRepoCtrl repositoryCommitRetriever, fs afero.Fs) *servi
 	return &serviceHasher{
 		gitRepoCtrl:       gitRepoCtrl,
 		buildContextCache: map[string]string{},
-		diffHashCache:     map[string]string{},
 		fs:                fs,
 	}
 }
@@ -80,19 +78,20 @@ func (sh *serviceHasher) hashBuildContext(buildInfo *model.BuildInfo) (string, e
 		buildContext = "."
 	}
 	if _, ok := sh.buildContextCache[buildContext]; !ok {
-		var err error
-		sh.buildContextCache[buildContext], err = sh.gitRepoCtrl.GetLatestDirCommit(buildContext)
+		dirCommit, err := sh.gitRepoCtrl.GetLatestDirCommit(buildContext)
 		if err != nil {
 			return "", fmt.Errorf("could not get build context sha: %w", err)
 		}
 
-		sh.diffHashCache[buildContext], err = sh.gitRepoCtrl.GetDiffHash(buildContext)
+		diffHash, err := sh.gitRepoCtrl.GetDiffHash(buildContext)
 		if err != nil {
 			return "", fmt.Errorf("could not get build context diff sha: %w", err)
 		}
+
+		sh.buildContextCache[buildContext] = sh.hash(buildInfo, dirCommit, diffHash)
 	}
 
-	return sh.hash(buildInfo, sh.buildContextCache[buildContext], sh.diffHashCache[buildContext]), nil
+	return sh.buildContextCache[buildContext], nil
 }
 
 func (sh *serviceHasher) hash(buildInfo *model.BuildInfo, commitHash string, diff string) string {

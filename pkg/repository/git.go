@@ -63,7 +63,7 @@ func (r gitRepoController) calculateIsClean(ctx context.Context) (bool, error) {
 
 	worktree, err := repo.Worktree()
 	if err != nil {
-		return false, fmt.Errorf("failed to infer the git repo's current branch: %w", err)
+		return false, fmt.Errorf("failed to infer the git repo's current worktree: %w", err)
 	}
 
 	status, err := worktree.Status(ctx, "", NewLocalGit("git", &LocalExec{}))
@@ -326,7 +326,7 @@ func (ogr oktetoGitRepository) Log(o *git.LogOptions) (object.CommitIter, error)
 func (ogr oktetoGitRepository) calculateUntrackedFiles(ctx context.Context, contextDir string) ([]string, error) {
 	worktree, err := ogr.Worktree()
 	if err != nil {
-		return []string{}, fmt.Errorf("failed to infer the git repo's current branch: %w", err)
+		return []string{}, fmt.Errorf("failed to infer the git repo's current worktree: %w", err)
 	}
 
 	status, err := worktree.Status(ctx, contextDir, NewLocalGit("git", &LocalExec{}))
@@ -375,7 +375,7 @@ type gitWorktreeInterface interface {
 	GetRoot() string
 }
 
-func (ogr oktetoGitWorktree) Status(ctx context.Context, dirpath string, localGit LocalGitInterface) (oktetoGitStatus, error) {
+func (ogr oktetoGitWorktree) Status(ctx context.Context, repoRoot string, localGit LocalGitInterface) (oktetoGitStatus, error) {
 	// using git directly is faster, so we check if it's available
 	_, err := localGit.Exists()
 	if err != nil {
@@ -389,7 +389,7 @@ func (ogr oktetoGitWorktree) Status(ctx context.Context, dirpath string, localGi
 		return oktetoGitStatus{status: status}, nil
 	}
 
-	status, err := localGit.Status(ctx, ogr.GetRoot(), dirpath, 0)
+	status, err := localGit.Status(ctx, ogr.GetRoot(), repoRoot, 0)
 	if err != nil {
 		return oktetoGitStatus{status: git.Status{}}, fmt.Errorf("failed to get git status: %w", err)
 	}

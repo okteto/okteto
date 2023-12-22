@@ -26,7 +26,7 @@ const (
 	// OktetoEnableSmartBuildEnvVar represents whether the feature flag to enable smart builds is enabled or not
 	OktetoEnableSmartBuildEnvVar = "OKTETO_SMART_BUILDS_ENABLED"
 
-	// OktetoSmartBuildUsingContextEnvVar is the env var to enable smart builds using the build context instead of the project build
+	// OktetoSmartBuildUsingContextEnvVar is the env var to enable smart builds using the build context instead of the project commit
 	OktetoSmartBuildUsingContextEnvVar = "OKTETO_SMART_BUILDS_USING_BUILD_CONTEXT"
 )
 
@@ -98,8 +98,10 @@ func (s *SmartBuildCtrl) GetServiceHash(buildInfo *model.BuildInfo) (string, err
 func (s *SmartBuildCtrl) GetBuildHash(buildInfo *model.BuildInfo) (string, error) {
 	s.ioCtrl.Logger().Debugf("getting hash based on the buildContext env var")
 	if s.isUsingBuildContext {
+		s.ioCtrl.Logger().Info("getting hash using build context due to env var")
 		return s.hasher.hashBuildContext(buildInfo)
 	}
+	s.ioCtrl.Logger().Info("getting hash using project commit")
 	return s.hasher.hashProjectCommit(buildInfo)
 }
 

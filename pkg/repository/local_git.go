@@ -77,7 +77,7 @@ func (*LocalExec) LookPath(file string) (string, error) {
 }
 
 type LocalGitInterface interface {
-	Status(ctx context.Context, reporoot, dirPath string, fixAttempt int) (git.Status, error)
+	Status(ctx context.Context, repoRoot, dirPath string, fixAttempt int) (git.Status, error)
 	Exists() (string, error)
 	FixDubiousOwnershipConfig(path string) error
 	parseGitStatus(string) (git.Status, error)
