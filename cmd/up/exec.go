@@ -220,9 +220,10 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 
-	imageEnvs, err := eg.imageEnvsGetter.getEnvsFromImage(apps.GetDevContainer(app.PodSpec(), "").Image)
+	svcImage := apps.GetDevContainer(app.PodSpec(), "").Image
+	imageEnvs, err := eg.imageEnvsGetter.getEnvsFromImage(svcImage)
 	if err != nil {
-		return nil, err
+		oktetoLog.Warning(fmt.Sprintf("Could not to retrieve environment variables from the image '%s'", svcImage))
 	}
 	envs = append(envs, imageEnvs...)
 
