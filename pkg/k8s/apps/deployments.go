@@ -62,7 +62,7 @@ func (i *DeploymentApp) Replicas() int32 {
 }
 
 func (i *DeploymentApp) SetReplicas(n int32) {
-	i.d.Spec.Replicas = pointer.Int32Ptr(n)
+	i.d.Spec.Replicas = pointer.Int32(n)
 }
 
 func (i *DeploymentApp) TemplateObjectMeta() metav1.ObjectMeta {

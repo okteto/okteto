@@ -60,7 +60,7 @@ func (i *StatefulSetApp) Replicas() int32 {
 }
 
 func (i *StatefulSetApp) SetReplicas(n int32) {
-	i.sfs.Spec.Replicas = pointer.Int32Ptr(n)
+	i.sfs.Spec.Replicas = pointer.Int32(n)
 }
 
 func (i *StatefulSetApp) TemplateObjectMeta() metav1.ObjectMeta {

@@ -103,7 +103,7 @@ func (tr *Translation) translate() error {
 		TranslatePodAffinity(tr.DevApp.PodSpec(), tr.MainDev.Name)
 	}
 
-	tr.DevApp.PodSpec().TerminationGracePeriodSeconds = pointer.Int64Ptr(0)
+	tr.DevApp.PodSpec().TerminationGracePeriodSeconds = pointer.Int64(0)
 
 	for _, rule := range tr.Rules {
 		devContainer := GetDevContainer(tr.DevApp.PodSpec(), rule.Container)
