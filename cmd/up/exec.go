@@ -220,9 +220,15 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 
-	imageEnvs, err := eg.imageEnvsGetter.getEnvsFromImage(apps.GetDevContainer(app.PodSpec(), "").Image)
+	svcImage := apps.GetDevContainer(app.PodSpec(), "").Image
+	imageEnvs, err := eg.imageEnvsGetter.getEnvsFromImage(svcImage)
 	if err != nil {
-		return nil, err
+		// we must not fail since the image may not be found because the platform
+		// of the image executed in the pod might not match the local platform used
+		// for the search.
+		reason := fmt.Sprintf("Could not to retrieve environment variables from the image '%s'", svcImage)
+		oktetoLog.Debugf("%s: %s", reason, err.Error())
+		oktetoLog.Warning(reason)
 	}
 	envs = append(envs, imageEnvs...)
 
@@ -297,7 +303,7 @@ func (d *devContainerEnvGetter) getEnvsFromDevContainer(ctx context.Context, spe
 	return envs, nil
 }
 
-func (cmg *configMapGetter) getEnvsFromConfigMap(ctx context.Context, name string, namespace string, client kubernetes.Interface) ([]string, error) {
+func (cmg *configMapGetter) getEnvsFromConfigMap(ctx context.Context, name, namespace string, client kubernetes.Interface) ([]string, error) {
 	var envs []string
 
 	cmName := pipeline.TranslatePipelineName(name)
