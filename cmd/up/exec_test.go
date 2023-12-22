@@ -43,11 +43,11 @@ type fakeGetter struct {
 	envs []string
 }
 
-func (f *fakeGetter) getEnvsFromDevContainer(ctx context.Context, spec *apiv1.PodSpec, name string, namespace string, client kubernetes.Interface) ([]string, error) {
+func (f *fakeGetter) getEnvsFromDevContainer(ctx context.Context, spec *apiv1.PodSpec, name, namespace string, client kubernetes.Interface) ([]string, error) {
 	return f.envs, f.err
 }
 
-func (f *fakeGetter) getEnvsFromConfigMap(ctx context.Context, name string, namespace string, client kubernetes.Interface) ([]string, error) {
+func (f *fakeGetter) getEnvsFromConfigMap(ctx context.Context, name, namespace string, client kubernetes.Interface) ([]string, error) {
 	return f.envs, f.err
 }
 
@@ -224,6 +224,38 @@ func TestGetEnvs(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "error retrieving envs from image",
+			client: fake.NewSimpleClientset(&appsv1.StatefulSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "test",
+				},
+				Spec: appsv1.StatefulSetSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									VolumeMounts: []v1.VolumeMount{
+										{
+											MountPath: "/data",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}),
+			fakeConfigMapEnvsGetter: fakeGetter{},
+			fakeSecretEnvsGetter:    fakeGetter{},
+			fakeImageEnvsGetter:     fakeGetter{err: assert.AnError},
+			expectedEnvs:            []string{},
+			dev: &model.Dev{
+				Name:      "test",
+				Namespace: "test",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -299,33 +331,6 @@ func TestGetEnvsError(t *testing.T) {
 					},
 				},
 			}),
-		},
-		{
-			name: "error retrieving envs from image",
-			client: fake.NewSimpleClientset(&appsv1.StatefulSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "test",
-				},
-				Spec: appsv1.StatefulSetSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								{
-									VolumeMounts: []v1.VolumeMount{
-										{
-											MountPath: "/data",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			}),
-			fakeConfigMapEnvsGetter: fakeGetter{},
-			fakeSecretEnvsGetter:    fakeGetter{},
-			fakeImageEnvsGetter:     fakeGetter{err: assert.AnError},
 		},
 	}
 
