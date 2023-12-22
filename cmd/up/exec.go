@@ -303,7 +303,7 @@ func (d *devContainerEnvGetter) getEnvsFromDevContainer(ctx context.Context, spe
 	return envs, nil
 }
 
-func (cmg *configMapGetter) getEnvsFromConfigMap(ctx context.Context, name string, namespace string, client kubernetes.Interface) ([]string, error) {
+func (cmg *configMapGetter) getEnvsFromConfigMap(ctx context.Context, name, namespace string, client kubernetes.Interface) ([]string, error) {
 	var envs []string
 
 	cmName := pipeline.TranslatePipelineName(name)

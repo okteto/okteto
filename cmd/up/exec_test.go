@@ -43,11 +43,11 @@ type fakeGetter struct {
 	envs []string
 }
 
-func (f *fakeGetter) getEnvsFromDevContainer(ctx context.Context, spec *apiv1.PodSpec, name string, namespace string, client kubernetes.Interface) ([]string, error) {
+func (f *fakeGetter) getEnvsFromDevContainer(ctx context.Context, spec *apiv1.PodSpec, name, namespace string, client kubernetes.Interface) ([]string, error) {
 	return f.envs, f.err
 }
 
-func (f *fakeGetter) getEnvsFromConfigMap(ctx context.Context, name string, namespace string, client kubernetes.Interface) ([]string, error) {
+func (f *fakeGetter) getEnvsFromConfigMap(ctx context.Context, name, namespace string, client kubernetes.Interface) ([]string, error) {
 	return f.envs, f.err
 }
 
