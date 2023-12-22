@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -515,6 +516,9 @@ func TestGetUntrackedContent(t *testing.T) {
 		untrackedContent string
 	}
 
+	testFile1 := filepath.Clean("/tmp/example/services/api/test.go")
+	testFile2 := filepath.Clean("/tmp/example/services/api/test2.go")
+
 	tests := []struct {
 		output output
 		name   string
@@ -537,7 +541,7 @@ func TestGetUntrackedContent(t *testing.T) {
 			name: "not found file",
 			input: input{
 				files: []string{
-					filepath.Clean("/tmp/example/services/api/test.go"),
+					testFile1,
 				},
 				mockFs: func() afero.Fs {
 					fs := afero.NewMemMapFs()
@@ -553,11 +557,11 @@ func TestGetUntrackedContent(t *testing.T) {
 			name: "one file",
 			input: input{
 				files: []string{
-					filepath.Clean("/tmp/example/services/api/test.go"),
+					testFile1,
 				},
 				mockFs: func() afero.Fs {
 					fs := afero.NewMemMapFs()
-					err := afero.WriteFile(fs, filepath.Clean("/tmp/example/services/api/test.go"), []byte("test"), 0644)
+					err := afero.WriteFile(fs, testFile1, []byte("test"), 0644)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -566,23 +570,23 @@ func TestGetUntrackedContent(t *testing.T) {
 			},
 			output: output{
 				expectedErr:      nil,
-				untrackedContent: filepath.Clean("/tmp/example/services/api/test.go:test\n"),
+				untrackedContent: fmt.Sprintf("%s:test\n", testFile1),
 			},
 		},
 		{
 			name: "more than one file",
 			input: input{
 				files: []string{
-					filepath.Clean("/tmp/example/services/api/test.go"),
-					filepath.Clean("/tmp/example/services/api/test2.go"),
+					testFile1,
+					testFile2,
 				},
 				mockFs: func() afero.Fs {
 					fs := afero.NewMemMapFs()
-					err := afero.WriteFile(fs, filepath.Clean("/tmp/example/services/api/test.go"), []byte("test"), 0644)
+					err := afero.WriteFile(fs, testFile1, []byte("test"), 0644)
 					if err != nil {
 						t.Fatal(err)
 					}
-					err = afero.WriteFile(fs, filepath.Clean("/tmp/example/services/api/test2.go"), []byte("test2"), 0644)
+					err = afero.WriteFile(fs, testFile2, []byte("test2"), 0644)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -591,7 +595,7 @@ func TestGetUntrackedContent(t *testing.T) {
 			},
 			output: output{
 				expectedErr:      nil,
-				untrackedContent: filepath.Clean("/tmp/example/services/api/test.go:test\n/tmp/example/services/api/test2.go:test2\n"),
+				untrackedContent: fmt.Sprintf("%s:test\n%s:test2\n", testFile1, testFile2),
 			},
 		},
 	}
