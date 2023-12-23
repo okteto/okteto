@@ -1412,8 +1412,8 @@ func Test_translateAffinity(t *testing.T) {
 	tests := []struct {
 		svc                   *model.Service
 		affinity              *apiv1.Affinity
-		disableVolumeAffinity bool
 		name                  string
+		disableVolumeAffinity bool
 	}{
 		{
 			name: "none",
