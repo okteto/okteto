@@ -34,7 +34,7 @@ func Test_UpMetricsMetadata_ManifestProps(t *testing.T) {
 			manifest: &model.Manifest{
 				IsV2: true,
 				Build: build.ManifestBuild{
-					"service": &build.BuildInfo{
+					"service": &build.Info{
 						Context: "service",
 					},
 				},

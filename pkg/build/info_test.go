@@ -21,6 +21,160 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestExpandBuildArgs(t *testing.T) {
+	t.Setenv("KEY", "VALUE")
+	tests := []struct {
+		buildInfo          *Info
+		expected           *Info
+		previousImageBuilt map[string]string
+		name               string
+	}{
+		{
+			name:               "no build args",
+			buildInfo:          &Info{},
+			previousImageBuilt: map[string]string{},
+			expected:           &Info{},
+		},
+		{
+			name: "only buildInfo without expanding",
+			buildInfo: &Info{
+				Args: Args{
+					{
+						Name:  "KEY",
+						Value: "VALUE",
+					},
+				},
+			},
+			previousImageBuilt: map[string]string{},
+			expected: &Info{
+				Args: Args{
+					{
+						Name:  "KEY",
+						Value: "VALUE",
+					},
+				},
+			},
+		},
+		{
+			name: "only buildInfo expanding",
+			buildInfo: &Info{
+				Args: Args{
+					{
+						Name:  "KEY",
+						Value: "$KEY",
+					},
+				},
+			},
+			previousImageBuilt: map[string]string{},
+			expected: &Info{
+				Args: Args{
+					{
+						Name:  "KEY",
+						Value: "VALUE",
+					},
+				},
+			},
+		},
+		{
+			name:      "only previousImageBuilt",
+			buildInfo: &Info{},
+			previousImageBuilt: map[string]string{
+				"KEY": "VALUE",
+			},
+			expected: &Info{
+				Args: Args{
+					{
+						Name:  "KEY",
+						Value: "VALUE",
+					},
+				},
+			},
+		},
+		{
+			name: "buildInfo args and previousImageBuilt without expanding",
+			buildInfo: &Info{
+				Args: Args{
+					{
+						Name:  "KEY",
+						Value: "VALUE",
+					},
+				},
+			},
+			previousImageBuilt: map[string]string{
+				"KEY2": "VALUE2",
+			},
+			expected: &Info{
+				Args: Args{
+					{
+						Name:  "KEY",
+						Value: "VALUE",
+					},
+					{
+						Name:  "KEY2",
+						Value: "VALUE2",
+					},
+				},
+			},
+		},
+		{
+			name: "buildInfo args and previousImageBuilt expanding",
+			buildInfo: &Info{
+				Args: Args{
+					{
+						Name:  "KEY",
+						Value: "$KEY",
+					},
+				},
+			},
+			previousImageBuilt: map[string]string{
+				"KEY2": "VALUE2",
+			},
+			expected: &Info{
+				Args: Args{
+					{
+						Name:  "KEY",
+						Value: "VALUE",
+					},
+					{
+						Name:  "KEY2",
+						Value: "VALUE2",
+					},
+				},
+			},
+		},
+		{
+			name: "buildInfo args only same as previousImageBuilt",
+			buildInfo: &Info{
+				Args: Args{
+					{
+						Name:  "KEY",
+						Value: "$KEY",
+					},
+				},
+			},
+			previousImageBuilt: map[string]string{
+				"KEY": "VALUE",
+			},
+			expected: &Info{
+				Args: Args{
+					{
+						Name:  "KEY",
+						Value: "VALUE",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.NoError(t, tt.buildInfo.AddBuildArgs(tt.previousImageBuilt))
+
+			assert.Equal(t, tt.expected, tt.buildInfo)
+		})
+	}
+}
+
 func TestBuildInfo_GetDockerfilePath(t *testing.T) {
 	dir := t.TempDir()
 
@@ -68,7 +222,7 @@ func TestBuildInfo_GetDockerfilePath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := &BuildInfo{
+			b := &Info{
 				Context:    tt.context,
 				Dockerfile: tt.dockerfile,
 			}
@@ -80,7 +234,7 @@ func TestBuildInfo_GetDockerfilePath(t *testing.T) {
 }
 
 func Test_BuildInfoCopy(t *testing.T) {
-	b := &BuildInfo{
+	b := &Info{
 		Name:        "test",
 		Context:     "context",
 		Dockerfile:  "dockerfile",
@@ -111,158 +265,4 @@ func Test_BuildInfoCopy(t *testing.T) {
 
 	samePointer := &copyB == &b
 	assert.False(t, samePointer)
-}
-
-func TestExpandBuildArgs(t *testing.T) {
-	t.Setenv("KEY", "VALUE")
-	tests := []struct {
-		buildInfo          *BuildInfo
-		expected           *BuildInfo
-		previousImageBuilt map[string]string
-		name               string
-	}{
-		{
-			name:               "no build args",
-			buildInfo:          &BuildInfo{},
-			previousImageBuilt: map[string]string{},
-			expected:           &BuildInfo{},
-		},
-		{
-			name: "only buildInfo without expanding",
-			buildInfo: &BuildInfo{
-				Args: Args{
-					{
-						Name:  "KEY",
-						Value: "VALUE",
-					},
-				},
-			},
-			previousImageBuilt: map[string]string{},
-			expected: &BuildInfo{
-				Args: Args{
-					{
-						Name:  "KEY",
-						Value: "VALUE",
-					},
-				},
-			},
-		},
-		{
-			name: "only buildInfo expanding",
-			buildInfo: &BuildInfo{
-				Args: Args{
-					{
-						Name:  "KEY",
-						Value: "$KEY",
-					},
-				},
-			},
-			previousImageBuilt: map[string]string{},
-			expected: &BuildInfo{
-				Args: Args{
-					{
-						Name:  "KEY",
-						Value: "VALUE",
-					},
-				},
-			},
-		},
-		{
-			name:      "only previousImageBuilt",
-			buildInfo: &BuildInfo{},
-			previousImageBuilt: map[string]string{
-				"KEY": "VALUE",
-			},
-			expected: &BuildInfo{
-				Args: Args{
-					{
-						Name:  "KEY",
-						Value: "VALUE",
-					},
-				},
-			},
-		},
-		{
-			name: "buildInfo args and previousImageBuilt without expanding",
-			buildInfo: &BuildInfo{
-				Args: Args{
-					{
-						Name:  "KEY",
-						Value: "VALUE",
-					},
-				},
-			},
-			previousImageBuilt: map[string]string{
-				"KEY2": "VALUE2",
-			},
-			expected: &BuildInfo{
-				Args: Args{
-					{
-						Name:  "KEY",
-						Value: "VALUE",
-					},
-					{
-						Name:  "KEY2",
-						Value: "VALUE2",
-					},
-				},
-			},
-		},
-		{
-			name: "buildInfo args and previousImageBuilt expanding",
-			buildInfo: &BuildInfo{
-				Args: Args{
-					{
-						Name:  "KEY",
-						Value: "$KEY",
-					},
-				},
-			},
-			previousImageBuilt: map[string]string{
-				"KEY2": "VALUE2",
-			},
-			expected: &BuildInfo{
-				Args: Args{
-					{
-						Name:  "KEY",
-						Value: "VALUE",
-					},
-					{
-						Name:  "KEY2",
-						Value: "VALUE2",
-					},
-				},
-			},
-		},
-		{
-			name: "buildInfo args only same as previousImageBuilt",
-			buildInfo: &BuildInfo{
-				Args: Args{
-					{
-						Name:  "KEY",
-						Value: "$KEY",
-					},
-				},
-			},
-			previousImageBuilt: map[string]string{
-				"KEY": "VALUE",
-			},
-			expected: &BuildInfo{
-				Args: Args{
-					{
-						Name:  "KEY",
-						Value: "VALUE",
-					},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.NoError(t, tt.buildInfo.AddBuildArgs(tt.previousImageBuilt))
-
-			assert.Equal(t, tt.expected, tt.buildInfo)
-		})
-	}
 }

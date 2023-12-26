@@ -236,11 +236,11 @@ type composeBuildInfo struct {
 	ExportCache      cache.ExportCache    `yaml:"export_cache,omitempty"`
 }
 
-func (c *composeBuildInfo) toBuildInfo() *build.BuildInfo {
+func (c *composeBuildInfo) toBuildInfo() *build.Info {
 	if c == nil {
 		return nil
 	}
-	return &build.BuildInfo{
+	return &build.Info{
 		Name:             c.Name,
 		Context:          c.Context,
 		Dockerfile:       c.Dockerfile,

@@ -72,7 +72,7 @@ func TestGetStatefulset(t *testing.T) {
 	dev := &model.Dev{
 		Name:      "test",
 		Namespace: "test",
-		Image: &build.BuildInfo{
+		Image: &build.Info{
 			Name: "image",
 		},
 		PersistentVolumeInfo: &model.PersistentVolumeInfo{
@@ -117,7 +117,7 @@ func TestGetDeployment(t *testing.T) {
 	dev := &model.Dev{
 		Name:      "test",
 		Namespace: "test",
-		Image: &build.BuildInfo{
+		Image: &build.Info{
 			Name: "image",
 		},
 		PersistentVolumeInfo: &model.PersistentVolumeInfo{
@@ -278,7 +278,7 @@ func TestListDevModeOn(t *testing.T) {
 			"dev": &model.Dev{
 				Name:      "dev",
 				Namespace: "test",
-				Image: &build.BuildInfo{
+				Image: &build.Info{
 					Name: "image",
 				},
 				PersistentVolumeInfo: &model.PersistentVolumeInfo{
@@ -288,7 +288,7 @@ func TestListDevModeOn(t *testing.T) {
 			"sfs": &model.Dev{
 				Name:      "sfs",
 				Namespace: "test",
-				Image: &build.BuildInfo{
+				Image: &build.Info{
 					Name: "image",
 				},
 				PersistentVolumeInfo: &model.PersistentVolumeInfo{
@@ -298,7 +298,7 @@ func TestListDevModeOn(t *testing.T) {
 			"autocreate": &model.Dev{
 				Name:      "autocreate",
 				Namespace: "test",
-				Image: &build.BuildInfo{
+				Image: &build.Info{
 					Name: "image",
 				},
 				PersistentVolumeInfo: &model.PersistentVolumeInfo{

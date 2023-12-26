@@ -169,7 +169,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		}
 	}()
 
-	buildInfo := &build.BuildInfo{
+	buildInfo := &build.Info{
 		Dockerfile: dockerfile,
 	}
 

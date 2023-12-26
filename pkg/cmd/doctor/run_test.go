@@ -36,7 +36,7 @@ func Test_generateManifestFile(t *testing.T) {
 			name: "basic",
 			dev: &model.Dev{
 				Name:    "dev",
-				Image:   &build.BuildInfo{Name: "okteto/dev"},
+				Image:   &build.Info{Name: "okteto/dev"},
 				Command: model.Command{Values: []string{"bash"}},
 			},
 		},
@@ -44,11 +44,11 @@ func Test_generateManifestFile(t *testing.T) {
 			name: "with-services",
 			dev: &model.Dev{
 				Name:    "dev",
-				Image:   &build.BuildInfo{Name: "okteto/dev"},
+				Image:   &build.Info{Name: "okteto/dev"},
 				Command: model.Command{Values: []string{"bash"}},
 				Services: []*model.Dev{{
 					Name:    "svc",
-					Image:   &build.BuildInfo{Name: "okteto/svc"},
+					Image:   &build.Info{Name: "okteto/svc"},
 					Command: model.Command{Values: []string{"bash"}},
 				}, {
 					Name:        "svc2",

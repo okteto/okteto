@@ -775,7 +775,7 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	manifest := manifestRaw{
 		Dev:          map[string]*Dev{},
-		Build:        map[string]*build.BuildInfo{},
+		Build:        map[string]*build.Info{},
 		Dependencies: deps.ManifestSection{},
 		External:     externalresource.ExternalResourceSection{},
 	}

@@ -96,13 +96,13 @@ func TestServicesNotInStack(t *testing.T) {
 	stack := &model.Stack{
 		Services: map[string]*model.Service{
 			"test-not-stack": {
-				Build: &build.BuildInfo{
+				Build: &build.Info{
 					Image:   "test",
 					Context: ".",
 				},
 			},
 			"test-1": {
-				Build: &build.BuildInfo{
+				Build: &build.Info{
 					Image:   "test-2",
 					Context: ".",
 					VolumesToInclude: []build.VolumeMounts{
@@ -193,7 +193,7 @@ func TestServicesBuildSection(t *testing.T) {
 	alreadyBuilt := []string{}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
-	fakeManifest.Build = map[string]*build.BuildInfo{}
+	fakeManifest.Build = map[string]*build.Info{}
 	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{})
 	// should not throw error
 	require.NoError(t, err)
@@ -224,10 +224,10 @@ type fakeConfig struct {
 	isSmartBuildsEnable bool
 }
 
-func (fc fakeConfig) HasGlobalAccess() bool                       { return fc.hasAccess }
-func (fc fakeConfig) IsCleanProject() bool                        { return fc.isClean }
-func (fc fakeConfig) GetGitCommit() string                        { return fc.sha }
-func (fc fakeConfig) IsOkteto() bool                              { return fc.isOkteto }
-func (fc fakeConfig) GetAnonymizedRepo() string                   { return fc.repoURL }
-func (fc fakeConfig) GetBuildContextHash(*build.BuildInfo) string { return "" }
-func (fc fakeConfig) IsSmartBuildsEnabled() bool                  { return fc.isSmartBuildsEnable }
+func (fc fakeConfig) HasGlobalAccess() bool                  { return fc.hasAccess }
+func (fc fakeConfig) IsCleanProject() bool                   { return fc.isClean }
+func (fc fakeConfig) GetGitCommit() string                   { return fc.sha }
+func (fc fakeConfig) IsOkteto() bool                         { return fc.isOkteto }
+func (fc fakeConfig) GetAnonymizedRepo() string              { return fc.repoURL }
+func (fc fakeConfig) GetBuildContextHash(*build.Info) string { return "" }
+func (fc fakeConfig) IsSmartBuildsEnabled() bool             { return fc.isSmartBuildsEnable }

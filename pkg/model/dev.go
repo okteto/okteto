@@ -61,8 +61,8 @@ type Dev struct {
 	NodeSelector         map[string]string     `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 	Metadata             *Metadata             `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
-	Image                *build.BuildInfo      `json:"image,omitempty" yaml:"image,omitempty"`
-	Push                 *build.BuildInfo      `json:"-" yaml:"push,omitempty"`
+	Image                *build.Info           `json:"image,omitempty" yaml:"image,omitempty"`
+	Push                 *build.Info           `json:"-" yaml:"push,omitempty"`
 	Lifecycle            *Lifecycle            `json:"lifecycle,omitempty" yaml:"lifecycle,omitempty"`
 	Replicas             *int                  `json:"replicas,omitempty" yaml:"replicas,omitempty"`
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
@@ -260,8 +260,8 @@ func Get(devPath string) (*Manifest, error) {
 }
 func NewDev() *Dev {
 	return &Dev{
-		Image:       &build.BuildInfo{},
-		Push:        &build.BuildInfo{},
+		Image:       &build.Info{},
+		Push:        &build.Info{},
 		Environment: make(env.Environment, 0),
 		Secrets:     make([]Secret, 0),
 		Forward:     make([]forward.Forward, 0),
@@ -392,7 +392,7 @@ func (dev *Dev) loadSelector() error {
 func (dev *Dev) loadImage() error {
 	var err error
 	if dev.Image == nil {
-		dev.Image = &build.BuildInfo{}
+		dev.Image = &build.Info{}
 	}
 	if len(dev.Image.Name) > 0 {
 		dev.Image.Name, err = env.ExpandEnvIfNotEmpty(dev.Image.Name)
@@ -420,11 +420,11 @@ func (dev *Dev) SetDefaults() error {
 		})
 	}
 	if dev.Image == nil {
-		dev.Image = &build.BuildInfo{}
+		dev.Image = &build.Info{}
 	}
 	dev.Image.SetBuildDefaults()
 	if dev.Push == nil {
-		dev.Push = &build.BuildInfo{}
+		dev.Push = &build.Info{}
 	}
 	dev.Push.SetBuildDefaults()
 
@@ -619,7 +619,7 @@ func (dev *Dev) Validate() error {
 	}
 
 	if dev.Image == nil {
-		dev.Image = &build.BuildInfo{}
+		dev.Image = &build.Info{}
 	}
 
 	if dev.Replicas != nil {

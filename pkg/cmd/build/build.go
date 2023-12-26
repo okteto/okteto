@@ -282,7 +282,7 @@ type regInterface interface {
 }
 
 // OptsFromBuildInfo returns the parsed options for the build from the manifest
-func OptsFromBuildInfo(manifestName, svcName string, b *build.BuildInfo, o *types.BuildOptions, reg regInterface, okCtx OktetoContextInterface) *types.BuildOptions {
+func OptsFromBuildInfo(manifestName, svcName string, b *build.Info, o *types.BuildOptions, reg regInterface, okCtx OktetoContextInterface) *types.BuildOptions {
 	if o == nil {
 		o = &types.BuildOptions{}
 	}
@@ -400,7 +400,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *build.BuildInfo, o *type
 }
 
 // OptsFromBuildInfoForRemoteDeploy returns the options for the remote deploy
-func OptsFromBuildInfoForRemoteDeploy(b *build.BuildInfo, o *types.BuildOptions) *types.BuildOptions {
+func OptsFromBuildInfoForRemoteDeploy(b *build.Info, o *types.BuildOptions) *types.BuildOptions {
 	opts := &types.BuildOptions{
 		Path:       b.Context,
 		OutputMode: o.OutputMode,

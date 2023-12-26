@@ -431,7 +431,7 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (build.M
 	manifestBuild := build.ManifestBuild{}
 	for _, dockerfile := range dockerfiles {
 		var name string
-		var buildInfo *build.BuildInfo
+		var buildInfo *build.Info
 		if dockerfile == dockerfileName {
 			c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
 			if err != nil {
@@ -440,13 +440,13 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (build.M
 			inferer := devenvironment.NewNameInferer(c)
 			// In this case, the path is empty because we are inferring the names from Dockerfiles, so no manifest
 			name = inferer.InferName(context.Background(), cwd, okteto.Context().Namespace, "")
-			buildInfo = &build.BuildInfo{
+			buildInfo = &build.Info{
 				Context:    ".",
 				Dockerfile: dockerfile,
 			}
 		} else {
 			name = filepath.Dir(dockerfile)
-			buildInfo = &build.BuildInfo{
+			buildInfo = &build.Info{
 				Context:    filepath.Dir(dockerfile),
 				Dockerfile: dockerfile,
 			}

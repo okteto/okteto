@@ -55,7 +55,7 @@ import (
 var errorManifest *model.Manifest = &model.Manifest{
 	Name: "testManifest",
 	Build: build.ManifestBuild{
-		"service1": &build.BuildInfo{
+		"service1": &build.Info{
 			Dockerfile: "Dockerfile",
 			Image:      "testImage",
 		},
@@ -157,7 +157,7 @@ var fakeManifestWithDependency *model.Manifest = &model.Manifest{
 var noDeployNorDependenciesManifest *model.Manifest = &model.Manifest{
 	Name: "testManifest",
 	Build: build.ManifestBuild{
-		"service1": &build.BuildInfo{
+		"service1": &build.Info{
 			Dockerfile: "Dockerfile",
 			Image:      "testImage",
 		},
@@ -811,8 +811,8 @@ func TestBuildImages(t *testing.T) {
 			build:         false,
 			buildServices: []string{"manifest A", "manifest B", "stack A", "stack B"},
 			stack: &model.Stack{Services: map[string]*model.Service{
-				"stack A":             {Build: &build.BuildInfo{}},
-				"stack B":             {Build: &build.BuildInfo{}},
+				"stack A":             {Build: &build.Info{}},
+				"stack B":             {Build: &build.Info{}},
 				"stack without build": {},
 			}},
 			servicesToDeploy: []string{"stack A", "stack without build"},
@@ -837,7 +837,7 @@ func TestBuildImages(t *testing.T) {
 			build:         false,
 			buildServices: []string{"manifest", "stack"},
 			stack: &model.Stack{Services: map[string]*model.Service{
-				"stack": {Build: &build.BuildInfo{}},
+				"stack": {Build: &build.Info{}},
 			}},
 			servicesToDeploy: []string{},
 			expectedError:    nil,
@@ -849,8 +849,8 @@ func TestBuildImages(t *testing.T) {
 			build:         false,
 			buildServices: []string{"manifest A", "stack B", "stack C"},
 			stack: &model.Stack{Services: map[string]*model.Service{
-				"stack B": {Build: &build.BuildInfo{}},
-				"stack C": {Build: &build.BuildInfo{}},
+				"stack B": {Build: &build.Info{}},
+				"stack C": {Build: &build.Info{}},
 			}},
 			servicesToDeploy: []string{"manifest A", "stack C"},
 			expectedError:    nil,
@@ -864,8 +864,8 @@ func TestBuildImages(t *testing.T) {
 			build:         true,
 			buildServices: []string{"manifest A", "manifest B", "stack A", "stack B"},
 			stack: &model.Stack{Services: map[string]*model.Service{
-				"stack A": {Build: &build.BuildInfo{}},
-				"stack B": {Build: &build.BuildInfo{}},
+				"stack A": {Build: &build.Info{}},
+				"stack B": {Build: &build.Info{}},
 			}},
 			servicesToDeploy: []string{"stack A", "stack B"},
 			expectedError:    nil,
@@ -879,8 +879,8 @@ func TestBuildImages(t *testing.T) {
 			build:         true,
 			buildServices: []string{"manifest A", "manifest B", "stack A", "stack B"},
 			stack: &model.Stack{Services: map[string]*model.Service{
-				"stack A":             {Build: &build.BuildInfo{}},
-				"stack B":             {Build: &build.BuildInfo{}},
+				"stack A":             {Build: &build.Info{}},
+				"stack B":             {Build: &build.Info{}},
 				"stack without build": {},
 			}},
 			servicesToDeploy: []string{"stack A", "stack without build"},
@@ -906,7 +906,7 @@ func TestBuildImages(t *testing.T) {
 			}
 
 			for _, service := range testCase.buildServices {
-				deployOptions.Manifest.Build[service] = &build.BuildInfo{}
+				deployOptions.Manifest.Build[service] = &build.Info{}
 			}
 
 			err := buildImages(context.Background(), testCase.builder, deployOptions)

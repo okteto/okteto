@@ -105,10 +105,10 @@ func (fr fakeRegistry) CloneGlobalImageToDev(imageWithDigest, tag string) (strin
 
 var fakeManifestV2 *model.Manifest = &model.Manifest{
 	Build: build.ManifestBuild{
-		"test-1": &build.BuildInfo{
+		"test-1": &build.Info{
 			Image: "test/test-1",
 		},
-		"test-2": &build.BuildInfo{
+		"test-2": &build.Info{
 			Image: "test/test-2",
 		},
 	},
@@ -160,10 +160,10 @@ func TestIsBuildV2(t *testing.T) {
 			manifest: &model.Manifest{
 				IsV2: false,
 				Build: build.ManifestBuild{
-					"test-1": &build.BuildInfo{
+					"test-1": &build.Info{
 						Image: "test/test-1",
 					},
-					"test-2": &build.BuildInfo{
+					"test-2": &build.Info{
 						Image: "test/test-2",
 					},
 				},
@@ -175,10 +175,10 @@ func TestIsBuildV2(t *testing.T) {
 			manifest: &model.Manifest{
 				IsV2: false,
 				Build: build.ManifestBuild{
-					"test-1": &build.BuildInfo{
+					"test-1": &build.Info{
 						Image: "test/test-1",
 					},
-					"test-2": &build.BuildInfo{
+					"test-2": &build.Info{
 						Image: "test/test-2",
 					},
 				},
@@ -190,10 +190,10 @@ func TestIsBuildV2(t *testing.T) {
 			manifest: &model.Manifest{
 				IsV2: true,
 				Build: build.ManifestBuild{
-					"test-1": &build.BuildInfo{
+					"test-1": &build.Info{
 						Image: "test/test-1",
 					},
-					"test-2": &build.BuildInfo{
+					"test-2": &build.Info{
 						Image: "test/test-2",
 					},
 				},

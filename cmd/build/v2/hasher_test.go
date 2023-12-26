@@ -59,7 +59,7 @@ func TestServiceHasher_HashProjectCommit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sh := newServiceHasher(tt.repoCtrl)
-			hash := sh.hashProjectCommit(&build.BuildInfo{})
+			hash := sh.hashProjectCommit(&build.Info{})
 			assert.Equal(t, tt.expectedHash, hash)
 		})
 	}
@@ -90,7 +90,7 @@ func TestServiceHasher_HashBuildContext(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sh := newServiceHasher(tt.repoCtrl)
-			hash := sh.hashBuildContext(&build.BuildInfo{})
+			hash := sh.hashBuildContext(&build.Info{})
 			assert.Equal(t, tt.expectedHash, hash)
 		})
 	}
@@ -129,7 +129,7 @@ func TestServiceHasher_HashService(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sh := newServiceHasher(tt.repoCtrl)
-			hash := sh.hashService(&build.BuildInfo{})
+			hash := sh.hashService(&build.Info{})
 			assert.Equal(t, tt.expectedHash, hash)
 		})
 	}
@@ -174,7 +174,7 @@ func TestGetCommitHash(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv(OktetoSmartBuildUsingContextEnvVar, tc.oktetoEnvValue)
 
-			buildInfo := &build.BuildInfo{
+			buildInfo := &build.Info{
 				Context: tc.buildContext,
 			}
 

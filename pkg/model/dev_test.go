@@ -510,8 +510,8 @@ func TestDev_validateName(t *testing.T) {
 			dev := &Dev{
 				Name:            tt.devName,
 				ImagePullPolicy: apiv1.PullAlways,
-				Image:           &build.BuildInfo{},
-				Push:            &build.BuildInfo{},
+				Image:           &build.Info{},
+				Push:            &build.Info{},
 				Sync: Sync{
 					Folders: []SyncFolder{
 						{
@@ -538,8 +538,8 @@ func TestDev_validateReplicas(t *testing.T) {
 	dev := &Dev{
 		Name:            "test",
 		ImagePullPolicy: apiv1.PullAlways,
-		Image:           &build.BuildInfo{},
-		Push:            &build.BuildInfo{},
+		Image:           &build.Info{},
+		Push:            &build.Info{},
 		Replicas:        &replicasNumber,
 		Sync: Sync{
 			Folders: []SyncFolder{
@@ -563,7 +563,7 @@ func TestDev_validateReplicas(t *testing.T) {
 
 func TestDev_readImageContext(t *testing.T) {
 	tests := []struct {
-		expected *build.BuildInfo
+		expected *build.Info
 		name     string
 		manifest []byte
 	}{
@@ -573,7 +573,7 @@ func TestDev_readImageContext(t *testing.T) {
 image:
   context: https://github.com/okteto/okteto.git
 `),
-			expected: &build.BuildInfo{
+			expected: &build.Info{
 				Context: "https://github.com/okteto/okteto.git",
 			},
 		},
@@ -583,7 +583,7 @@ image:
 image:
   context: .
 `),
-			expected: &build.BuildInfo{
+			expected: &build.Info{
 				Context:    ".",
 				Dockerfile: "Dockerfile",
 			},

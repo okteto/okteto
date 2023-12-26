@@ -120,7 +120,7 @@ type ManifestDevs map[string]*Dev
 func NewManifest() *Manifest {
 	return &Manifest{
 		Dev:           map[string]*Dev{},
-		Build:         map[string]*build.BuildInfo{},
+		Build:         map[string]*build.Info{},
 		Dependencies:  deps.ManifestSection{},
 		Deploy:        &DeployInfo{},
 		GlobalForward: []forward.GlobalForward{},
@@ -946,7 +946,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 
 	for devName, devInfo := range manifest.Dev {
 		if _, ok := manifest.Build[devName]; ok && devInfo.Image == nil && devInfo.Autocreate {
-			devInfo.Image = &build.BuildInfo{
+			devInfo.Image = &build.Info{
 				Name: fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(devName, "-", "_"))),
 			}
 		}
@@ -992,7 +992,7 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 				buildInfo.Image = svcInfo.Image
 			}
 		case len(svcInfo.VolumeMounts) > 0:
-			buildInfo = &build.BuildInfo{
+			buildInfo = &build.Info{
 				Image:            svcInfo.Image,
 				VolumesToInclude: svcInfo.VolumeMounts,
 			}
@@ -1058,7 +1058,7 @@ func (m *Manifest) WriteToFile(filePath string) error {
 		} else {
 			if v, ok := m.Build[dName]; ok {
 				if v.Image != "" {
-					d.Image = &build.BuildInfo{Name: v.Image}
+					d.Image = &build.Info{Name: v.Image}
 				} else {
 					d.Image = nil
 				}

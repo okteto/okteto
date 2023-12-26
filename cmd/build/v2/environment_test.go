@@ -136,7 +136,7 @@ func TestExpandStackVariables(t *testing.T) {
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: build.ManifestBuild{
-			"test": &build.BuildInfo{
+			"test": &build.Info{
 				Image: "nginx",
 				VolumesToInclude: []build.VolumeMounts{
 					{

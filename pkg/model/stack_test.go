@@ -478,7 +478,7 @@ func Test_validateStackName(t *testing.T) {
 
 func TestStack_readImageContext(t *testing.T) {
 	tests := []struct {
-		expected *build.BuildInfo
+		expected *build.Info
 		name     string
 		manifest []byte
 	}{
@@ -489,7 +489,7 @@ func TestStack_readImageContext(t *testing.T) {
     build:
       context: https://github.com/okteto/okteto.git
 `),
-			expected: &build.BuildInfo{
+			expected: &build.Info{
 				Context: "https://github.com/okteto/okteto.git",
 			},
 		},
@@ -500,7 +500,7 @@ func TestStack_readImageContext(t *testing.T) {
     build:
       context: .
 `),
-			expected: &build.BuildInfo{
+			expected: &build.Info{
 				Context:    ".",
 				Dockerfile: "Dockerfile",
 			},
@@ -662,7 +662,7 @@ func TestStack_Merge(t *testing.T) {
 			stack: &Stack{
 				Services: map[string]*Service{
 					"app": {
-						Build: &build.BuildInfo{
+						Build: &build.Info{
 							Name:       "test",
 							Context:    "test",
 							Dockerfile: "test-Dockerfile",
@@ -679,7 +679,7 @@ func TestStack_Merge(t *testing.T) {
 			otherStack: &Stack{
 				Services: map[string]*Service{
 					"app": {
-						Build: &build.BuildInfo{
+						Build: &build.Info{
 							Name:       "test-overwrite",
 							Context:    "test-overwrite",
 							Dockerfile: "test-overwrite-Dockerfile",
@@ -696,7 +696,7 @@ func TestStack_Merge(t *testing.T) {
 			result: &Stack{
 				Services: map[string]*Service{
 					"app": {
-						Build: &build.BuildInfo{
+						Build: &build.Info{
 							Name:       "test-overwrite",
 							Context:    "test-overwrite",
 							Dockerfile: "test-overwrite-Dockerfile",

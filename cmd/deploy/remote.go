@@ -166,7 +166,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		}
 	}()
 
-	buildInfo := &build.BuildInfo{
+	buildInfo := &build.Info{
 		Dockerfile: dockerfile,
 	}
 

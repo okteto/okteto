@@ -41,12 +41,12 @@ import (
 var fakeManifest *model.Manifest = &model.Manifest{
 	Name: "test",
 	Build: build.ManifestBuild{
-		"test-1": &build.BuildInfo{
+		"test-1": &build.Info{
 			Image:      "test/test-1",
 			Context:    ".",
 			Dockerfile: ".",
 		},
-		"test-2": &build.BuildInfo{
+		"test-2": &build.Info{
 			Image:      "test/test-2",
 			Context:    ".",
 			Dockerfile: ".",
@@ -57,11 +57,11 @@ var fakeManifest *model.Manifest = &model.Manifest{
 				},
 			},
 		},
-		"test-3": &build.BuildInfo{
+		"test-3": &build.Info{
 			Context:    ".",
 			Dockerfile: ".",
 		},
-		"test-4": &build.BuildInfo{
+		"test-4": &build.Info{
 			Context:    ".",
 			Dockerfile: ".",
 			VolumesToInclude: []build.VolumeMounts{
@@ -216,8 +216,8 @@ func TestValidateOptions(t *testing.T) {
 		{
 			name: "several services but with flag",
 			buildSection: build.ManifestBuild{
-				"test":   &build.BuildInfo{},
-				"test-2": &build.BuildInfo{},
+				"test":   &build.Info{},
+				"test-2": &build.Info{},
 			},
 			svcsToBuild: []string{"test", "test-2"},
 			options: types.BuildOptions{
@@ -228,7 +228,7 @@ func TestValidateOptions(t *testing.T) {
 		{
 			name: "only one service without flags",
 			buildSection: build.ManifestBuild{
-				"test": &build.BuildInfo{},
+				"test": &build.Info{},
 			},
 			svcsToBuild: []string{"test"},
 			options:     types.BuildOptions{},
@@ -237,7 +237,7 @@ func TestValidateOptions(t *testing.T) {
 		{
 			name: "only one service with flags",
 			buildSection: build.ManifestBuild{
-				"test": &build.BuildInfo{},
+				"test": &build.Info{},
 			},
 			svcsToBuild: []string{"test"},
 			options: types.BuildOptions{
@@ -273,7 +273,7 @@ func TestOnlyInjectVolumeMountsInOkteto(t *testing.T) {
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: build.ManifestBuild{
-			"test": &build.BuildInfo{
+			"test": &build.Info{
 				Image: "nginx",
 				VolumesToInclude: []build.VolumeMounts{
 					{
@@ -311,7 +311,7 @@ func TestTwoStepsBuild(t *testing.T) {
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: build.ManifestBuild{
-			"test": &build.BuildInfo{
+			"test": &build.Info{
 				Context:    dir,
 				Dockerfile: filepath.Join(dir, "Dockerfile"),
 				VolumesToInclude: []build.VolumeMounts{
@@ -353,7 +353,7 @@ func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: build.ManifestBuild{
-			"test": &build.BuildInfo{
+			"test": &build.Info{
 				Context:    dir,
 				Dockerfile: filepath.Join(dir, "Dockerfile"),
 			},
@@ -386,7 +386,7 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: build.ManifestBuild{
-			"test": &build.BuildInfo{
+			"test": &build.Info{
 				Context:    dir,
 				Dockerfile: filepath.Join(dir, "Dockerfile"),
 				Image:      "okteto/test",
@@ -421,7 +421,7 @@ func TestBuildWithStack(t *testing.T) {
 		Name: "test",
 		Type: model.StackType,
 		Build: build.ManifestBuild{
-			"test": &build.BuildInfo{
+			"test": &build.Info{
 				Context:    dir,
 				Dockerfile: filepath.Join(dir, "Dockerfile"),
 				Image:      "okteto/test:q",
@@ -443,7 +443,7 @@ func TestBuildWithStack(t *testing.T) {
 func Test_getAccessibleVolumeMounts(t *testing.T) {
 	existingPath := "./existing-folder"
 	missingPath := "./missing-folder"
-	buildInfo := &build.BuildInfo{
+	buildInfo := &build.Info{
 		VolumesToInclude: []build.VolumeMounts{
 			{LocalPath: existingPath, RemotePath: "/data/logs"},
 			{LocalPath: missingPath, RemotePath: "/data/logs"},
@@ -487,12 +487,12 @@ func TestBuildWithDependsOn(t *testing.T) {
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: build.ManifestBuild{
-			"a": &build.BuildInfo{
+			"a": &build.Info{
 				Context:    dir,
 				Dockerfile: filepath.Join(dir, "Dockerfile"),
 				Image:      firstImage,
 			},
-			"b": &build.BuildInfo{
+			"b": &build.Info{
 				Context:    dir,
 				Dockerfile: filepath.Join(dir, "Dockerfile"),
 				Image:      secondImage,
@@ -653,7 +653,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 	assert.NoError(t, err)
 	t.Setenv("BAR", "bar")
 	type input struct {
-		buildInfo *build.BuildInfo
+		buildInfo *build.Info
 		repo      fakeConfigRepo
 	}
 	tt := []struct {
@@ -669,7 +669,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 					isClean: true,
 					err:     nil,
 				},
-				buildInfo: &build.BuildInfo{
+				buildInfo: &build.Info{
 					Args: build.Args{
 						{
 							Name:  "foo",
@@ -699,7 +699,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 					isClean: true,
 					err:     assert.AnError,
 				},
-				buildInfo: &build.BuildInfo{
+				buildInfo: &build.Info{
 					Args: build.Args{
 						{
 							Name:  "foo",
@@ -729,7 +729,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 					isClean: true,
 					err:     assert.AnError,
 				},
-				buildInfo: &build.BuildInfo{
+				buildInfo: &build.Info{
 					Args:   build.Args{},
 					Target: "target",
 					Secrets: build.BuildSecrets{
@@ -750,7 +750,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 					isClean: true,
 					err:     assert.AnError,
 				},
-				buildInfo: &build.BuildInfo{
+				buildInfo: &build.Info{
 					Args: build.Args{
 						{
 							Name:  "foo",

@@ -78,7 +78,7 @@ type Service struct {
 	NodeSelector  Selector              `json:"x-node-selector,omitempty" yaml:"x-node-selector,omitempty"`
 	User          *StackSecurityContext `yaml:"user,omitempty"`
 	DependsOn     DependsOn             `yaml:"depends_on,omitempty"`
-	Build         *build.BuildInfo      `yaml:"build,omitempty"`
+	Build         *build.Info           `yaml:"build,omitempty"`
 	Workdir       string                `yaml:"workdir,omitempty"`
 	Image         string                `yaml:"image,omitempty"`
 	RestartPolicy apiv1.RestartPolicy   `yaml:"restart,omitempty"`

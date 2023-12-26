@@ -52,7 +52,7 @@ func newServiceHasher(gitRepoCtrl repositoryCommitRetriever) *serviceHasher {
 }
 
 // hashProjectCommit returns the hash of the repository's commit
-func (sh *serviceHasher) hashProjectCommit(buildInfo *build.BuildInfo) string {
+func (sh *serviceHasher) hashProjectCommit(buildInfo *build.Info) string {
 	if sh.projectCommit == "" {
 		var err error
 		sh.projectCommit, err = sh.gitRepoCtrl.GetSHA()
@@ -64,7 +64,7 @@ func (sh *serviceHasher) hashProjectCommit(buildInfo *build.BuildInfo) string {
 }
 
 // hashBuildContext returns the hash of the service using its context tree hash
-func (sh serviceHasher) hashBuildContext(buildInfo *build.BuildInfo) string {
+func (sh serviceHasher) hashBuildContext(buildInfo *build.Info) string {
 	buildContext := buildInfo.Context
 	if buildContext == "" {
 		buildContext = "."
@@ -81,14 +81,14 @@ func (sh serviceHasher) hashBuildContext(buildInfo *build.BuildInfo) string {
 }
 
 // hashService returns the hashed project commit by default. If smart-builds use the context it returns the hash of the service given its git tree hash
-func (sh serviceHasher) hashService(buildInfo *build.BuildInfo) string {
+func (sh serviceHasher) hashService(buildInfo *build.Info) string {
 	if env.LoadBoolean(OktetoSmartBuildUsingContextEnvVar) {
 		return sh.hashBuildContext(buildInfo)
 	}
 	return sh.hashProjectCommit(buildInfo)
 }
 
-func (sh serviceHasher) hash(buildInfo *build.BuildInfo, commitHash string) string {
+func (sh serviceHasher) hash(buildInfo *build.Info, commitHash string) string {
 	args := []string{}
 	for _, arg := range buildInfo.Args {
 		args = append(args, arg.String())
@@ -117,7 +117,7 @@ func (sh serviceHasher) hash(buildInfo *build.BuildInfo, commitHash string) stri
 	return hex.EncodeToString(oktetoBuildHash[:])
 }
 
-func (sh serviceHasher) GetCommitHash(buildInfo *build.BuildInfo) string {
+func (sh serviceHasher) GetCommitHash(buildInfo *build.Info) string {
 	if env.LoadBoolean(OktetoSmartBuildUsingContextEnvVar) {
 		buildContext := buildInfo.Context
 		if buildContext == "" {

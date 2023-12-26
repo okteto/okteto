@@ -326,7 +326,7 @@ func GetDevDefaults(language, workdir string, imageConfig registry.ImageMetadata
 	}
 
 	dev := &model.Dev{
-		Image: &build.BuildInfo{
+		Image: &build.Info{
 			Name: vals.image,
 		},
 		Command: model.Command{

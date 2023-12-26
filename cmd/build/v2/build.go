@@ -409,16 +409,16 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 }
 
 // serviceHasDockerfile returns true when service BuildInfo Dockerfile is not empty
-func serviceHasDockerfile(buildInfo *build.BuildInfo) bool {
+func serviceHasDockerfile(buildInfo *build.Info) bool {
 	return buildInfo.Dockerfile != ""
 }
 
 // serviceHasVolumesToInclude returns true when service BuildInfo VolumesToInclude are more than 0
-func serviceHasVolumesToInclude(buildInfo *build.BuildInfo) bool {
+func serviceHasVolumesToInclude(buildInfo *build.Info) bool {
 	return len(buildInfo.VolumesToInclude) > 0
 }
 
-func (bc *OktetoBuilder) getBuildInfoWithoutVolumeMounts(buildInfo *build.BuildInfo, isStackManifest bool) *build.BuildInfo {
+func (bc *OktetoBuilder) getBuildInfoWithoutVolumeMounts(buildInfo *build.Info, isStackManifest bool) *build.Info {
 	result := buildInfo.Copy()
 	if len(result.VolumesToInclude) > 0 {
 		result.VolumesToInclude = nil
@@ -429,7 +429,7 @@ func (bc *OktetoBuilder) getBuildInfoWithoutVolumeMounts(buildInfo *build.BuildI
 	return result
 }
 
-func getBuildInfoWithVolumeMounts(buildInfo *build.BuildInfo, isStackManifest bool, isOkteto bool) *build.BuildInfo {
+func getBuildInfoWithVolumeMounts(buildInfo *build.Info, isStackManifest bool, isOkteto bool) *build.Info {
 	result := buildInfo.Copy()
 	if isStackManifest && isOkteto {
 		result.Image = ""
@@ -438,7 +438,7 @@ func getBuildInfoWithVolumeMounts(buildInfo *build.BuildInfo, isStackManifest bo
 	return result
 }
 
-func getAccessibleVolumeMounts(buildInfo *build.BuildInfo) []build.VolumeMounts {
+func getAccessibleVolumeMounts(buildInfo *build.Info) []build.VolumeMounts {
 	accessibleVolumeMounts := make([]build.VolumeMounts, 0)
 	for _, volume := range buildInfo.VolumesToInclude {
 		if _, err := os.Stat(volume.LocalPath); !os.IsNotExist(err) {
@@ -489,7 +489,7 @@ func validateServices(buildSection build.ManifestBuild, svcsToBuild []string) er
 	return nil
 }
 
-func getImageChecker(buildInfo *build.BuildInfo, cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface, logger loggerInfo) imageCheckerInterface {
+func getImageChecker(buildInfo *build.Info, cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface, logger loggerInfo) imageCheckerInterface {
 	var tagger imageTaggerInterface
 	if serviceHasVolumesToInclude(buildInfo) {
 		tagger = newImageWithVolumesTagger(cfg)

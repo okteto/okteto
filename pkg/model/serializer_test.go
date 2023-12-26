@@ -291,22 +291,22 @@ func TestCommandMarshalling(t *testing.T) {
 func TestImageMarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
-		image    *build.BuildInfo
+		image    *build.Info
 		expected string
 	}{
 		{
 			name:     "single-name",
-			image:    &build.BuildInfo{Name: "image-name"},
+			image:    &build.Info{Name: "image-name"},
 			expected: "image-name\n",
 		},
 		{
 			name:     "single-name-and-defaults",
-			image:    &build.BuildInfo{Name: "image-name", Context: "."},
+			image:    &build.Info{Name: "image-name", Context: "."},
 			expected: "image-name\n",
 		},
 		{
 			name:     "build",
-			image:    &build.BuildInfo{Name: "image-name", Context: "path"},
+			image:    &build.Info{Name: "image-name", Context: "path"},
 			expected: "name: image-name\ncontext: path\n",
 		},
 	}
@@ -1053,7 +1053,7 @@ deploy:
   - okteto stack deploy`),
 			expected: &Manifest{
 				Namespace: "test",
-				Build:     map[string]*build.BuildInfo{},
+				Build:     map[string]*build.Info{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{
@@ -1088,7 +1088,7 @@ dev:
 			expected: &Manifest{
 				IsV2:  true,
 				Type:  OktetoManifestType,
-				Build: map[string]*build.BuildInfo{},
+				Build: map[string]*build.Info{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{
@@ -1118,7 +1118,7 @@ dev:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &build.BuildInfo{
+						Image: &build.Info{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1128,7 +1128,7 @@ dev:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &build.BuildInfo{
+						Push: &build.Info{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1183,7 +1183,7 @@ dev:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &build.BuildInfo{
+						Image: &build.Info{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1193,7 +1193,7 @@ dev:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &build.BuildInfo{
+						Push: &build.Info{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1245,7 +1245,7 @@ sync:
   - app:/app`),
 			expected: &Manifest{
 				Type:          OktetoManifestType,
-				Build:         map[string]*build.BuildInfo{},
+				Build:         map[string]*build.Info{},
 				Deploy:        &DeployInfo{},
 				Destroy:       &DestroyInfo{},
 				Dependencies:  map[string]*deps.Dependency{},
@@ -1268,7 +1268,7 @@ sync:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &build.BuildInfo{
+						Image: &build.Info{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1278,7 +1278,7 @@ sync:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &build.BuildInfo{
+						Push: &build.Info{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1331,7 +1331,7 @@ services:
   - name: svc`),
 			expected: &Manifest{
 				Type:          OktetoManifestType,
-				Build:         map[string]*build.BuildInfo{},
+				Build:         map[string]*build.Info{},
 				Deploy:        &DeployInfo{},
 				Destroy:       &DestroyInfo{},
 				Dependencies:  map[string]*deps.Dependency{},
@@ -1354,7 +1354,7 @@ services:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &build.BuildInfo{
+						Image: &build.Info{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1364,7 +1364,7 @@ services:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &build.BuildInfo{
+						Push: &build.Info{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1394,7 +1394,7 @@ services:
 								Annotations:     Annotations{},
 								Selector:        Selector{},
 								EmptyImage:      true,
-								Image:           &build.BuildInfo{},
+								Image:           &build.Info{},
 								ImagePullPolicy: v1.PullAlways,
 								Secrets:         []Secret{},
 								Probes: &Probes{
@@ -1467,7 +1467,7 @@ dev:
 			expected: &Manifest{
 				Type:         OktetoManifestType,
 				IsV2:         true,
-				Build:        map[string]*build.BuildInfo{},
+				Build:        map[string]*build.Info{},
 				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Destroy:      &DestroyInfo{},
@@ -1488,7 +1488,7 @@ dev:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &build.BuildInfo{
+						Image: &build.Info{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1499,7 +1499,7 @@ dev:
 							Enabled: true,
 						},
 						Secrets: make([]Secret, 0),
-						Push: &build.BuildInfo{
+						Push: &build.Info{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1556,7 +1556,7 @@ dev:
 			expected: &Manifest{
 				Type:         OktetoManifestType,
 				IsV2:         true,
-				Build:        map[string]*build.BuildInfo{},
+				Build:        map[string]*build.Info{},
 				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Destroy:      &DestroyInfo{},
@@ -1577,7 +1577,7 @@ dev:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &build.BuildInfo{
+						Image: &build.Info{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1587,7 +1587,7 @@ dev:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &build.BuildInfo{
+						Push: &build.Info{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1643,7 +1643,7 @@ dev:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &build.BuildInfo{
+						Image: &build.Info{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1653,7 +1653,7 @@ dev:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &build.BuildInfo{
+						Push: &build.Info{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1727,7 +1727,7 @@ deploy:
 				Type:         OktetoManifestType,
 				IsV2:         true,
 				Dev:          map[string]*Dev{},
-				Build:        map[string]*build.BuildInfo{},
+				Build:        map[string]*build.Info{},
 				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Destroy:      &DestroyInfo{},
@@ -1755,7 +1755,7 @@ devs:
 				Type:         OktetoManifestType,
 				IsV2:         true,
 				Dev:          map[string]*Dev{},
-				Build:        map[string]*build.BuildInfo{},
+				Build:        map[string]*build.Info{},
 				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Destroy:      &DestroyInfo{},
@@ -1873,10 +1873,10 @@ reverse:
 						Local:  8080,
 					},
 				},
-				Image: &build.BuildInfo{
+				Image: &build.Info{
 					Name: "busybox",
 				},
-				Push:      &build.BuildInfo{},
+				Push:      &build.Info{},
 				Secrets:   []Secret{},
 				Probes:    &Probes{},
 				Lifecycle: &Lifecycle{},
@@ -1922,10 +1922,10 @@ forward:
 				Command: Command{
 					Values: []string{"sh"},
 				},
-				Image: &build.BuildInfo{
+				Image: &build.Info{
 					Name: "okteto/golang:1",
 				},
-				Push:      &build.BuildInfo{},
+				Push:      &build.Info{},
 				Secrets:   []Secret{},
 				Probes:    &Probes{},
 				Lifecycle: &Lifecycle{},
@@ -1986,10 +1986,10 @@ forward:
 				Command: Command{
 					Values: []string{"sh"},
 				},
-				Image: &build.BuildInfo{
+				Image: &build.Info{
 					Name: "okteto/golang:1",
 				},
-				Push:      &build.BuildInfo{},
+				Push:      &build.Info{},
 				Secrets:   []Secret{},
 				Probes:    &Probes{},
 				Lifecycle: &Lifecycle{},
@@ -2046,10 +2046,10 @@ forward:
 				Command: Command{
 					Values: []string{"sh"},
 				},
-				Image: &build.BuildInfo{
+				Image: &build.Info{
 					Name: "busybox",
 				},
-				Push:      &build.BuildInfo{},
+				Push:      &build.Info{},
 				Secrets:   []Secret{},
 				Probes:    &Probes{},
 				Lifecycle: &Lifecycle{},

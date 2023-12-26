@@ -149,8 +149,8 @@ func translateOktetoRegistryImage(input string, okCtx OktetoContextInterface) st
 }
 
 // CreateDockerfileWithVolumeMounts creates the Dockerfile with volume mounts and returns the BuildInfo
-func CreateDockerfileWithVolumeMounts(image string, volumes []build.VolumeMounts) (*build.BuildInfo, error) {
-	build := &build.BuildInfo{}
+func CreateDockerfileWithVolumeMounts(image string, volumes []build.VolumeMounts) (*build.Info, error) {
+	build := &build.Info{}
 
 	ctx, err := filepath.Abs(".")
 	if err != nil {
