@@ -681,7 +681,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 						},
 					},
 					Target: "target",
-					Secrets: build.BuildSecrets{
+					Secrets: build.Secrets{
 						"secret": "secret",
 					},
 					Context:    "context",
@@ -711,7 +711,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 						},
 					},
 					Target: "target",
-					Secrets: build.BuildSecrets{
+					Secrets: build.Secrets{
 						"secret": "secret",
 					},
 					Context:    "context",
@@ -732,7 +732,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 				buildInfo: &build.Info{
 					Args:   build.Args{},
 					Target: "target",
-					Secrets: build.BuildSecrets{
+					Secrets: build.Secrets{
 						"secret": "secret",
 					},
 					Context:    "context",
@@ -758,7 +758,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 						},
 					},
 					Target: "target",
-					Secrets: build.BuildSecrets{
+					Secrets: build.Secrets{
 						"secret": "secret",
 					},
 					Context:    "context",

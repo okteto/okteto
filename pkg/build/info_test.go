@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -168,7 +169,7 @@ func TestExpandBuildArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.NoError(t, tt.buildInfo.AddBuildArgs(tt.previousImageBuilt))
+			assert.NoError(t, tt.buildInfo.AddArgs(tt.previousImageBuilt))
 
 			assert.Equal(t, tt.expected, tt.buildInfo)
 		})
@@ -226,8 +227,8 @@ func TestBuildInfo_GetDockerfilePath(t *testing.T) {
 				Context:    tt.context,
 				Dockerfile: tt.dockerfile,
 			}
-			if got := b.GetDockerfilePath(); got != tt.want {
-				t.Errorf("BuildInfo.GetDockerfilePath() = %v, want %v", got, tt.want)
+			if got := b.GetDockerfilePath(afero.NewOsFs()); got != tt.want {
+				t.Errorf("Info.GetDockerfilePath() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -248,7 +249,7 @@ func Test_BuildInfoCopy(t *testing.T) {
 				Value: "test",
 			},
 		},
-		Secrets: BuildSecrets{
+		Secrets: Secrets{
 			"sec": "test",
 		},
 		VolumesToInclude: []VolumeMounts{
@@ -257,7 +258,7 @@ func Test_BuildInfoCopy(t *testing.T) {
 				RemotePath: "remote",
 			},
 		},
-		DependsOn: BuildDependsOn{"other"},
+		DependsOn: DependsOn{"other"},
 	}
 
 	copyB := b.Copy()

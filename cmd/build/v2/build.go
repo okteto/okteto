@@ -356,7 +356,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	buildHash := bc.hasher.hashService(buildSvcInfo)
 	tagToBuild := newImageTagger(bc.Config).getServiceImageReference(manifest.Name, svcName, buildSvcInfo, buildHash)
 	buildSvcInfo.Image = tagToBuild
-	if err := buildSvcInfo.AddBuildArgs(bc.buildEnvironments); err != nil {
+	if err := buildSvcInfo.AddArgs(bc.buildEnvironments); err != nil {
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcName, err)
 	}
 

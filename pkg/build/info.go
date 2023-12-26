@@ -26,7 +26,7 @@ import (
 
 // Info represents the build info to generate an image
 type Info struct {
-	Secrets          BuildSecrets      `yaml:"secrets,omitempty"`
+	Secrets          Secrets           `yaml:"secrets,omitempty"`
 	Name             string            `yaml:"name,omitempty"`
 	Context          string            `yaml:"context,omitempty"`
 	Dockerfile       string            `yaml:"dockerfile,omitempty"`
@@ -36,15 +36,15 @@ type Info struct {
 	Args             Args              `yaml:"args,omitempty"`
 	VolumesToInclude []VolumeMounts    `yaml:"-"`
 	ExportCache      cache.ExportCache `yaml:"export_cache,omitempty"`
-	DependsOn        BuildDependsOn    `yaml:"depends_on,omitempty"`
+	DependsOn        DependsOn         `yaml:"depends_on,omitempty"`
 }
 
-// BuildSecrets represents the secrets to be injected to the build of the image
-type BuildSecrets map[string]string
+// Secrets represents the secrets to be injected to the build of the image
+type Secrets map[string]string
 
 // infoRaw represents the build info for serialization
 type infoRaw struct {
-	Secrets          BuildSecrets      `yaml:"secrets,omitempty"`
+	Secrets          Secrets           `yaml:"secrets,omitempty"`
 	Name             string            `yaml:"name,omitempty"`
 	Context          string            `yaml:"context,omitempty"`
 	Dockerfile       string            `yaml:"dockerfile,omitempty"`
@@ -54,7 +54,7 @@ type infoRaw struct {
 	Args             Args              `yaml:"args,omitempty"`
 	VolumesToInclude []VolumeMounts    `yaml:"-"`
 	ExportCache      cache.ExportCache `yaml:"export_cache,omitempty"`
-	DependsOn        BuildDependsOn    `yaml:"depends_on,omitempty"`
+	DependsOn        DependsOn         `yaml:"depends_on,omitempty"`
 }
 
 func (b *Info) addExpandedPreviousImageArgs(previousImageArgs map[string]string) error {
@@ -159,7 +159,7 @@ func (b *Info) Copy() *Info {
 	args = append(args, b.Args...)
 	result.Args = args
 
-	secrets := BuildSecrets{}
+	secrets := Secrets{}
 	for k, v := range b.Secrets {
 		secrets[k] = v
 	}
@@ -169,7 +169,7 @@ func (b *Info) Copy() *Info {
 	volumesToMount = append(volumesToMount, b.VolumesToInclude...)
 	result.VolumesToInclude = volumesToMount
 
-	dependsOn := BuildDependsOn{}
+	dependsOn := DependsOn{}
 	dependsOn = append(dependsOn, b.DependsOn...)
 	result.DependsOn = dependsOn
 
@@ -187,12 +187,19 @@ func (b *Info) SetBuildDefaults() {
 
 }
 
+// AddArgs add a set of args to the build information
+func (b *Info) AddArgs(previousImageArgs map[string]string) error {
+	if err := b.expandManifestBuildArgs(previousImageArgs); err != nil {
+		return err
+	}
+	return b.addExpandedPreviousImageArgs(previousImageArgs)
+}
+
 // GetDockerfilePath returns the path to the Dockerfile
-func (b *Info) GetDockerfilePath() string {
+func (b *Info) GetDockerfilePath(fs afero.Fs) string {
 	if filepath.IsAbs(b.Dockerfile) {
 		return b.Dockerfile
 	}
-	fs := afero.NewOsFs()
 	joinPath := filepath.Join(b.Context, b.Dockerfile)
 	if !filesystem.FileExistsAndNotDir(joinPath, fs) {
 		oktetoLog.Infof("Dockerfile '%s' is not in a relative path to context '%s'", b.Dockerfile, b.Context)

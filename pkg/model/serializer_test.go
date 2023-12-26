@@ -2696,7 +2696,7 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
 						},
 					},
 					CacheFrom: []string{"cache-image"},
-					Secrets: build.BuildSecrets{
+					Secrets: build.Secrets{
 						"mysecret":    "source",
 						"othersecret": "othersource",
 					},
@@ -2743,24 +2743,24 @@ func TestBuildDependsOnUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name          string
 		buildManifest []byte
-		expected      build.BuildDependsOn
+		expected      build.DependsOn
 	}{
 		{
 			name:          "single string",
 			buildManifest: []byte(`a`),
-			expected:      build.BuildDependsOn{"a"},
+			expected:      build.DependsOn{"a"},
 		},
 		{
 			name: "list",
 			buildManifest: []byte(`- a
 - b`),
-			expected: build.BuildDependsOn{"a", "b"},
+			expected: build.DependsOn{"a", "b"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var result build.BuildDependsOn
+			var result build.DependsOn
 			err := yaml.UnmarshalStrict(tt.buildManifest, &result)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
