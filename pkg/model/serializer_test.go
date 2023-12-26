@@ -2689,7 +2689,7 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
 					Context:    "./service2",
 					Dockerfile: "Dockerfile",
 					Image:      "image-tag",
-					Args: build.BuildArgs{
+					Args: build.Args{
 						{
 							Name:  "key1",
 							Value: "value1",
@@ -2764,108 +2764,6 @@ func TestBuildDependsOnUnmarshalling(t *testing.T) {
 			err := yaml.UnmarshalStrict(tt.buildManifest, &result)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestBuildArgsUnmarshalling(t *testing.T) {
-	tests := []struct {
-		env      map[string]string
-		name     string
-		data     []byte
-		expected build.BuildArgs
-	}{
-		{
-			name: "list",
-			data: []byte("- KEY=VALUE"),
-			expected: build.BuildArgs{
-				{
-					Name:  "KEY",
-					Value: "VALUE",
-				},
-			},
-			env: map[string]string{},
-		},
-		{
-			name: "list with env var set",
-			data: []byte("- KEY=${VALUE2}"),
-			expected: build.BuildArgs{
-				{
-					Name:  "KEY",
-					Value: "actual-value",
-				},
-			},
-			env: map[string]string{"VALUE2": "actual-value"},
-		},
-		{
-			name: "list with env var unset",
-			data: []byte("- KEY=$VALUE"),
-			expected: build.BuildArgs{
-				{
-					Name:  "KEY",
-					Value: "$VALUE",
-				},
-			},
-			env: map[string]string{},
-		},
-		{
-			name: "list with multiple env vars",
-			data: []byte(`- KEY=$VALUE
-- KEY2=$VALUE2
-- KEY3=${VALUE3}`),
-			expected: build.BuildArgs{
-				{
-					Name:  "KEY",
-					Value: "$VALUE",
-				},
-				{
-					Name:  "KEY2",
-					Value: "actual-value-2",
-				},
-				{
-					Name:  "KEY3",
-					Value: "actual-value-3",
-				},
-			},
-			env: map[string]string{"VALUE2": "actual-value-2", "VALUE3": "actual-value-3"},
-		},
-		{
-			name: "map",
-			data: []byte("KEY: VALUE"),
-			expected: build.BuildArgs{
-				{
-					Name:  "KEY",
-					Value: "VALUE",
-				},
-			},
-			env: map[string]string{},
-		},
-		{
-			name: "map with env var",
-			data: []byte("KEY: $MYVAR"),
-			expected: build.BuildArgs{
-				{
-					Name:  "KEY",
-					Value: "actual-value",
-				},
-			},
-			env: map[string]string{
-				"MYVAR": "actual-value",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			for k, v := range tt.env {
-				t.Setenv(k, v)
-			}
-
-			var buildArgs build.BuildArgs
-			if err := yaml.UnmarshalStrict(tt.data, &buildArgs); err != nil {
-				t.Fatal(err)
-			}
-			assert.Equal(t, tt.expected, buildArgs)
 		})
 	}
 }

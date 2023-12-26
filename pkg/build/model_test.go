@@ -88,8 +88,8 @@ func Test_BuildInfoCopy(t *testing.T) {
 		Image:       "image",
 		CacheFrom:   []string{"cache"},
 		ExportCache: []string{"export"},
-		Args: BuildArgs{
-			BuildArg{
+		Args: Args{
+			Arg{
 				Name:  "env",
 				Value: "test",
 			},
@@ -130,7 +130,7 @@ func TestExpandBuildArgs(t *testing.T) {
 		{
 			name: "only buildInfo without expanding",
 			buildInfo: &BuildInfo{
-				Args: BuildArgs{
+				Args: Args{
 					{
 						Name:  "KEY",
 						Value: "VALUE",
@@ -139,7 +139,7 @@ func TestExpandBuildArgs(t *testing.T) {
 			},
 			previousImageBuilt: map[string]string{},
 			expected: &BuildInfo{
-				Args: BuildArgs{
+				Args: Args{
 					{
 						Name:  "KEY",
 						Value: "VALUE",
@@ -150,7 +150,7 @@ func TestExpandBuildArgs(t *testing.T) {
 		{
 			name: "only buildInfo expanding",
 			buildInfo: &BuildInfo{
-				Args: BuildArgs{
+				Args: Args{
 					{
 						Name:  "KEY",
 						Value: "$KEY",
@@ -159,7 +159,7 @@ func TestExpandBuildArgs(t *testing.T) {
 			},
 			previousImageBuilt: map[string]string{},
 			expected: &BuildInfo{
-				Args: BuildArgs{
+				Args: Args{
 					{
 						Name:  "KEY",
 						Value: "VALUE",
@@ -174,7 +174,7 @@ func TestExpandBuildArgs(t *testing.T) {
 				"KEY": "VALUE",
 			},
 			expected: &BuildInfo{
-				Args: BuildArgs{
+				Args: Args{
 					{
 						Name:  "KEY",
 						Value: "VALUE",
@@ -185,7 +185,7 @@ func TestExpandBuildArgs(t *testing.T) {
 		{
 			name: "buildInfo args and previousImageBuilt without expanding",
 			buildInfo: &BuildInfo{
-				Args: BuildArgs{
+				Args: Args{
 					{
 						Name:  "KEY",
 						Value: "VALUE",
@@ -196,7 +196,7 @@ func TestExpandBuildArgs(t *testing.T) {
 				"KEY2": "VALUE2",
 			},
 			expected: &BuildInfo{
-				Args: BuildArgs{
+				Args: Args{
 					{
 						Name:  "KEY",
 						Value: "VALUE",
@@ -211,7 +211,7 @@ func TestExpandBuildArgs(t *testing.T) {
 		{
 			name: "buildInfo args and previousImageBuilt expanding",
 			buildInfo: &BuildInfo{
-				Args: BuildArgs{
+				Args: Args{
 					{
 						Name:  "KEY",
 						Value: "$KEY",
@@ -222,7 +222,7 @@ func TestExpandBuildArgs(t *testing.T) {
 				"KEY2": "VALUE2",
 			},
 			expected: &BuildInfo{
-				Args: BuildArgs{
+				Args: Args{
 					{
 						Name:  "KEY",
 						Value: "VALUE",
@@ -237,7 +237,7 @@ func TestExpandBuildArgs(t *testing.T) {
 		{
 			name: "buildInfo args only same as previousImageBuilt",
 			buildInfo: &BuildInfo{
-				Args: BuildArgs{
+				Args: Args{
 					{
 						Name:  "KEY",
 						Value: "$KEY",
@@ -248,7 +248,7 @@ func TestExpandBuildArgs(t *testing.T) {
 				"KEY": "VALUE",
 			},
 			expected: &BuildInfo{
-				Args: BuildArgs{
+				Args: Args{
 					{
 						Name:  "KEY",
 						Value: "VALUE",

@@ -670,7 +670,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 					err:     nil,
 				},
 				buildInfo: &build.BuildInfo{
-					Args: build.BuildArgs{
+					Args: build.Args{
 						{
 							Name:  "foo",
 							Value: "bar",
@@ -700,7 +700,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 					err:     assert.AnError,
 				},
 				buildInfo: &build.BuildInfo{
-					Args: build.BuildArgs{
+					Args: build.Args{
 						{
 							Name:  "foo",
 							Value: "bar",
@@ -730,7 +730,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 					err:     assert.AnError,
 				},
 				buildInfo: &build.BuildInfo{
-					Args:   build.BuildArgs{},
+					Args:   build.Args{},
 					Target: "target",
 					Secrets: build.BuildSecrets{
 						"secret": "secret",
@@ -751,7 +751,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 					err:     assert.AnError,
 				},
 				buildInfo: &build.BuildInfo{
-					Args: build.BuildArgs{
+					Args: build.Args{
 						{
 							Name:  "foo",
 							Value: "$BAR",

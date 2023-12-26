@@ -230,7 +230,7 @@ type composeBuildInfo struct {
 	Dockerfile       string               `yaml:"dockerfile,omitempty"`
 	CacheFrom        cache.CacheFrom      `yaml:"cache_from,omitempty"`
 	Target           string               `yaml:"target,omitempty"`
-	Args             build.BuildArgs      `yaml:"args,omitempty"`
+	Args             build.Args           `yaml:"args,omitempty"`
 	Image            string               `yaml:"image,omitempty"`
 	VolumesToInclude []build.VolumeMounts `yaml:"-"`
 	ExportCache      cache.ExportCache    `yaml:"export_cache,omitempty"`

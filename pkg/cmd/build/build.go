@@ -315,7 +315,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *build.BuildInfo, o *type
 		file = extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName)
 	}
 
-	args := []build.BuildArg{}
+	args := []build.Arg{}
 	optionsBuildArgs := map[string]string{}
 	minArgFormatParts := 1
 	maxArgFormatParts := 2
@@ -324,12 +324,12 @@ func OptsFromBuildInfo(manifestName, svcName string, b *build.BuildInfo, o *type
 		splittedArg := strings.SplitN(arg, "=", maxArgFormatParts)
 		if len(splittedArg) == minArgFormatParts {
 			optionsBuildArgs[splittedArg[0]] = ""
-			args = append(args, build.BuildArg{
+			args = append(args, build.Arg{
 				Name: splittedArg[0], Value: "",
 			})
 		} else if len(splittedArg) == maxArgFormatParts {
 			optionsBuildArgs[splittedArg[0]] = splittedArg[1]
-			args = append(args, build.BuildArg{
+			args = append(args, build.Arg{
 				Name: splittedArg[0], Value: splittedArg[1],
 			})
 		} else {
@@ -363,7 +363,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *build.BuildInfo, o *type
 				continue
 			}
 
-			args = append(args, build.BuildArg{
+			args = append(args, build.Arg{
 				Name: key, Value: val,
 			})
 		}
@@ -375,7 +375,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *build.BuildInfo, o *type
 		Path:        b.Context,
 		Tag:         b.Image,
 		File:        file,
-		BuildArgs:   model.SerializeBuildArgs(args),
+		BuildArgs:   build.SerializeArgs(args),
 		NoCache:     o.NoCache,
 		ExportCache: b.ExportCache,
 		Platform:    o.Platform,

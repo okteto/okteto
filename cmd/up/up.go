@@ -36,6 +36,7 @@ import (
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
@@ -855,7 +856,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 	imageTag := up.Registry.GetImageTag(image, up.Dev.Name, up.Dev.Namespace)
 	oktetoLog.Infof("building dev image tag %s", imageTag)
 
-	buildArgs := model.SerializeBuildArgs(args)
+	buildArgs := build.SerializeArgs(args)
 
 	buildOptions := &types.BuildOptions{
 		Path:       context,

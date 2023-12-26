@@ -165,7 +165,7 @@ dependencies:
 						Context:    "./service",
 						Dockerfile: "custom-dockerfile",
 						Image:      "defined-tag-image",
-						Args: []build.BuildArg{
+						Args: []build.Arg{
 							{
 								Name: "KEY1", Value: "Value1",
 							},

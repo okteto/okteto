@@ -838,17 +838,6 @@ func (dev *Dev) Save(path string) error {
 	return nil
 }
 
-// SerializeBuildArgs returns build  args as a list of strings
-func SerializeBuildArgs(buildArgs build.BuildArgs) []string {
-	result := []string{}
-	for _, e := range buildArgs {
-		result = append(result, e.String())
-	}
-	// // stable serialization
-	sort.Strings(result)
-	return result
-}
-
 // SerializeEnvironmentVars returns environment variables as a list of strings
 func SerializeEnvironmentVars(envs env.Environment) []string {
 	result := []string{}

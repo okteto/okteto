@@ -18,7 +18,6 @@ import (
 	"net/url"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/cache"
@@ -38,7 +37,7 @@ type BuildInfo struct {
 	Target           string            `yaml:"target,omitempty"`
 	Image            string            `yaml:"image,omitempty"`
 	CacheFrom        cache.CacheFrom   `yaml:"cache_from,omitempty"`
-	Args             BuildArgs         `yaml:"args,omitempty"`
+	Args             Args              `yaml:"args,omitempty"`
 	VolumesToInclude []VolumeMounts    `yaml:"-"`
 	ExportCache      cache.ExportCache `yaml:"export_cache,omitempty"`
 	DependsOn        BuildDependsOn    `yaml:"depends_on,omitempty"`
@@ -48,23 +47,6 @@ type VolumeMounts struct {
 	LocalPath  string
 	RemotePath string
 }
-
-// BuildArg is an argument used on the build step.
-type BuildArg struct {
-	Name  string
-	Value string
-}
-
-func (v *BuildArg) String() string {
-	value, err := env.ExpandEnv(v.Value)
-	if err != nil {
-		return fmt.Sprintf("%s=%s", v.Name, v.Value)
-	}
-	return fmt.Sprintf("%s=%s", v.Name, value)
-}
-
-// BuildArgs is a list of arguments used on the build step.
-type BuildArgs []BuildArg
 
 // BuildDependsOn represents the images that needs to be built before
 type BuildDependsOn []string
@@ -130,36 +112,12 @@ func (b *BuildInfo) addExpandedPreviousImageArgs(previousImageArgs map[string]st
 		if err != nil {
 			return err
 		}
-		b.Args = append(b.Args, BuildArg{
+		b.Args = append(b.Args, Arg{
 			Name:  k,
 			Value: expandedValue,
 		})
 		oktetoLog.Infof("Added '%s' to build args", k)
 	}
-	return nil
-}
-
-// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (e *BuildArg) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var raw string
-	err := unmarshal(&raw)
-	if err != nil {
-		return err
-	}
-	maxBuildArgsParts := 2
-
-	parts := strings.SplitN(raw, "=", maxBuildArgsParts)
-	e.Name = parts[0]
-	if len(parts) == maxBuildArgsParts {
-		e.Value = parts[1]
-		return nil
-	}
-
-	e.Name, err = env.ExpandEnv(parts[0])
-	if err != nil {
-		return err
-	}
-	e.Value = parts[0]
 	return nil
 }
 
@@ -218,7 +176,7 @@ type buildInfoRaw struct {
 	Target           string            `yaml:"target,omitempty"`
 	Image            string            `yaml:"image,omitempty"`
 	CacheFrom        cache.CacheFrom   `yaml:"cache_from,omitempty"`
-	Args             BuildArgs         `yaml:"args,omitempty"`
+	Args             Args              `yaml:"args,omitempty"`
 	VolumesToInclude []VolumeMounts    `yaml:"-"`
 	ExportCache      cache.ExportCache `yaml:"export_cache,omitempty"`
 	DependsOn        BuildDependsOn    `yaml:"depends_on,omitempty"`
@@ -239,23 +197,6 @@ func (buildInfo *BuildInfo) MarshalYAML() (interface{}, error) {
 		return buildInfoRaw(*buildInfo), nil
 	}
 	return buildInfo.Name, nil
-}
-
-// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (ba *BuildArgs) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	buildArgs := make(BuildArgs, 0)
-	result, err := getBuildArgs(unmarshal)
-	if err != nil {
-		return err
-	}
-	for key, value := range result {
-		buildArgs = append(buildArgs, BuildArg{Name: key, Value: value})
-	}
-	sort.SliceStable(buildArgs, func(i, j int) bool {
-		return strings.Compare(buildArgs[i].Name, buildArgs[j].Name) < 0
-	})
-	*ba = buildArgs
-	return nil
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
@@ -305,35 +246,6 @@ func (v VolumeMounts) ToString() string {
 	return v.RemotePath
 }
 
-func getBuildArgs(unmarshal func(interface{}) error) (map[string]string, error) {
-	result := make(map[string]string)
-
-	var rawList []BuildArg
-	err := unmarshal(&rawList)
-	if err == nil {
-		for _, buildArg := range rawList {
-			value, err := env.ExpandEnvIfNotEmpty(buildArg.Value)
-			if err != nil {
-				return nil, err
-			}
-			result[buildArg.Name] = value
-		}
-		return result, nil
-	}
-	var rawMap map[string]string
-	err = unmarshal(&rawMap)
-	if err != nil {
-		return nil, err
-	}
-	for key, value := range rawMap {
-		result[key], err = env.ExpandEnvIfNotEmpty(value)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return result, nil
-}
-
 // Copy clones the buildInfo without the pointers
 func (b *BuildInfo) Copy() *BuildInfo {
 	result := &BuildInfo{
@@ -350,7 +262,7 @@ func (b *BuildInfo) Copy() *BuildInfo {
 	cacheFrom = append(cacheFrom, b.CacheFrom...)
 	result.CacheFrom = cacheFrom
 
-	args := BuildArgs{}
+	args := Args{}
 	args = append(args, b.Args...)
 	result.Args = args
 
