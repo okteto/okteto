@@ -115,3 +115,21 @@ func Test_optionsSetup(t *testing.T) {
 	}
 
 }
+
+func Test_getPreviewURL(t *testing.T) {
+	ctxName := "https://my.okteto.instance"
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Name: ctxName,
+			},
+		},
+	}
+
+	t.Run("full-previews-url", func(t *testing.T) {
+		expected := "https://my.okteto.instance/previews/foo-bar"
+		actual := getPreviewURL("foo-bar")
+		assert.Equal(t, expected, actual)
+	})
+}
