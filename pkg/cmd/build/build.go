@@ -77,15 +77,10 @@ func (ob *OktetoBuilder) GetBuilder() string {
 func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error {
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
 	if ob.OktetoContext.GetCurrentBuilder() == "" {
-		if err := ob.buildWithDocker(ctx, buildOptions); err != nil {
-			return err
-		}
+		return ob.buildWithDocker(ctx, buildOptions)
 	} else {
-		if err := ob.buildWithOkteto(ctx, buildOptions, ioCtrl); err != nil {
-			return err
-		}
+		return ob.buildWithOkteto(ctx, buildOptions, ioCtrl)
 	}
-	return nil
 }
 
 func setOutputMode(outputMode string) string {
