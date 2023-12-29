@@ -72,5 +72,5 @@ func newDepotBuilder(ctx context.Context, tag string) (*depotBuilder, error) {
 func (db *depotBuilder) release() {
 	db.build.Finish(db.err)
 	// ignore error releasing depot's machine
-	db.machine.Release()
+	_ = db.machine.Release()
 }
