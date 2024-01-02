@@ -239,3 +239,52 @@ func TestLoadBoolean(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadBooleanOrDefault(t *testing.T) {
+	type tc struct {
+		Name           string
+		EnvKey         string
+		EnvValue       string
+		DefaultValue   bool
+		ExpectedResult bool
+	}
+
+	testCases := []tc{
+		{
+			Name:           "Environment variable is 'true'",
+			EnvKey:         "TEST_KEY",
+			EnvValue:       "true",
+			DefaultValue:   false,
+			ExpectedResult: true,
+		},
+		{
+			Name:           "Environment variable is 'false'",
+			EnvKey:         "TEST_KEY",
+			EnvValue:       "false",
+			DefaultValue:   true,
+			ExpectedResult: false,
+		},
+		{
+			Name:           "Environment variable is not defined",
+			EnvKey:         "TEST_KEY",
+			EnvValue:       "",
+			DefaultValue:   true,
+			ExpectedResult: true,
+		},
+		{
+			Name:           "Environment variable has an invalid value",
+			EnvKey:         "TEST_KEY",
+			EnvValue:       "invalid",
+			DefaultValue:   false,
+			ExpectedResult: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			t.Setenv(tc.EnvKey, tc.EnvValue)
+			result := LoadBooleanOrDefault(tc.EnvKey, tc.DefaultValue)
+			assert.Equal(t, tc.ExpectedResult, result)
+		})
+	}
+}

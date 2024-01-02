@@ -14,6 +14,8 @@
 package repository
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -376,6 +378,63 @@ func TestGetLatestDirCommit(t *testing.T) {
 	}
 }
 
+func TestGetDiffHash(t *testing.T) {
+	type config struct {
+		repositoryGetter *fakeRepositoryGetter
+	}
+	type expected struct {
+		err error
+		sha string
+	}
+	var tests = []struct {
+		expected     expected
+		config       config
+		name         string
+		buildContext string
+	}{
+		{
+			name: "get hash without any problem",
+			config: config{
+				repositoryGetter: &fakeRepositoryGetter{
+					repository: []*fakeRepository{
+						{
+							worktree: &fakeWorktree{
+								status: oktetoGitStatus{
+									status: git.Status{
+										"test-file.go": &git.FileStatus{
+											Staging:  git.Unmodified,
+											Worktree: git.Unmodified,
+										},
+									},
+								},
+							},
+							commit: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+							err:    nil,
+						},
+					},
+				},
+			},
+			buildContext: "test",
+			expected: expected{
+				sha: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+				err: nil,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := Repository{
+				control: gitRepoController{
+					repoGetter: tt.config.repositoryGetter,
+				},
+			}
+			commit, err := repo.GetDiffHash(tt.buildContext)
+			assert.ErrorIs(t, err, tt.expected.err)
+			assert.Equal(t, tt.expected.sha, commit)
+		})
+	}
+}
+
 func TestFindTopLevelGitDir(t *testing.T) {
 	type input struct {
 		mockFs func() afero.Fs
@@ -442,6 +501,114 @@ func TestFindTopLevelGitDir(t *testing.T) {
 			}
 
 			assert.Equal(t, tt.expectedPath, path)
+		})
+	}
+}
+
+func TestGetUntrackedContent(t *testing.T) {
+	type input struct {
+		mockFs func() afero.Fs
+		files  []string
+	}
+
+	type output struct {
+		expectedErr      error
+		untrackedContent string
+	}
+
+	testFile1 := filepath.Clean("/tmp/example/services/api/test.go")
+	testFile2 := filepath.Clean("/tmp/example/services/api/test2.go")
+
+	tests := []struct {
+		output output
+		name   string
+		input  input
+	}{
+		{
+			name: "no untracked files",
+			input: input{
+				files: []string{},
+				mockFs: func() afero.Fs {
+					return afero.NewMemMapFs()
+				},
+			},
+			output: output{
+				expectedErr:      nil,
+				untrackedContent: "",
+			},
+		},
+		{
+			name: "not found file",
+			input: input{
+				files: []string{
+					testFile1,
+				},
+				mockFs: func() afero.Fs {
+					fs := afero.NewMemMapFs()
+					return fs
+				},
+			},
+			output: output{
+				expectedErr:      os.ErrNotExist,
+				untrackedContent: "",
+			},
+		},
+		{
+			name: "one file",
+			input: input{
+				files: []string{
+					testFile1,
+				},
+				mockFs: func() afero.Fs {
+					fs := afero.NewMemMapFs()
+					err := afero.WriteFile(fs, testFile1, []byte("test"), 0644)
+					if err != nil {
+						t.Fatal(err)
+					}
+					return fs
+				},
+			},
+			output: output{
+				expectedErr:      nil,
+				untrackedContent: fmt.Sprintf("%s:test\n", testFile1),
+			},
+		},
+		{
+			name: "more than one file",
+			input: input{
+				files: []string{
+					testFile1,
+					testFile2,
+				},
+				mockFs: func() afero.Fs {
+					fs := afero.NewMemMapFs()
+					err := afero.WriteFile(fs, testFile1, []byte("test"), 0644)
+					if err != nil {
+						t.Fatal(err)
+					}
+					err = afero.WriteFile(fs, testFile2, []byte("test2"), 0644)
+					if err != nil {
+						t.Fatal(err)
+					}
+					return fs
+				},
+			},
+			output: output{
+				expectedErr:      nil,
+				untrackedContent: fmt.Sprintf("%s:test\n%s:test2\n", testFile1, testFile2),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := tt.input.mockFs()
+			gitRepoController := gitRepoController{
+				fs: fs,
+			}
+			content, err := gitRepoController.getUntrackedContent(tt.input.files)
+			assert.Equal(t, tt.output.untrackedContent, content)
+			assert.ErrorIs(t, err, tt.output.expectedErr)
 		})
 	}
 }

@@ -45,6 +45,7 @@ type fakeRepository struct {
 	worktree     *fakeWorktree
 	head         *plumbing.Reference
 	commit       string
+	diff         string
 	failInCommit bool
 }
 
@@ -66,6 +67,14 @@ func (fr fakeRepository) Log(logOpts *git.LogOptions) (object.CommitIter, error)
 	return nil, nil
 }
 
+func (fr fakeRepository) GetDiff(ctx context.Context, repoPath, dirpath string, localGit LocalGitInterface) (string, error) {
+	return fr.diff, fr.err
+}
+
+func (fr fakeRepository) calculateUntrackedFiles(ctx context.Context, contextDir string) ([]string, error) {
+	return []string{}, fr.err
+}
+
 type fakeWorktree struct {
 	err    error
 	status oktetoGitStatus
@@ -76,7 +85,7 @@ func (fw fakeWorktree) GetRoot() string {
 	return fw.root
 }
 
-func (fw fakeWorktree) Status(context.Context, LocalGitInterface) (oktetoGitStatus, error) {
+func (fw fakeWorktree) Status(context.Context, string, LocalGitInterface) (oktetoGitStatus, error) {
 	return fw.status, fw.err
 }
 
