@@ -213,7 +213,7 @@ func Destroy(ctx context.Context, podName, namespace string, c kubernetes.Interf
 		ctx,
 		podName,
 		metav1.DeleteOptions{
-			GracePeriodSeconds: pointer.Int64Ptr(0),
+			GracePeriodSeconds: pointer.Int64(0),
 		},
 	)
 	if err != nil && !oktetoErrors.IsNotFound(err) {
@@ -313,7 +313,7 @@ func Restart(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, sn st
 			continue
 		}
 		found = true
-		err := c.CoreV1().Pods(dev.Namespace).Delete(ctx, pods.Items[i].Name, metav1.DeleteOptions{GracePeriodSeconds: pointer.Int64Ptr(0)})
+		err := c.CoreV1().Pods(dev.Namespace).Delete(ctx, pods.Items[i].Name, metav1.DeleteOptions{GracePeriodSeconds: pointer.Int64(0)})
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				return nil

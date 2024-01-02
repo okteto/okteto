@@ -101,7 +101,7 @@ func getSternConfig(manifest *model.Manifest, o *LogsOptions, kubeconfigFile str
 		Location:            location,
 		LabelSelector:       labelSelector,
 		FieldSelector:       fieldSelector,
-		TailLines:           pointer.Int64Ptr(o.Tail),
+		TailLines:           pointer.Int64(o.Tail),
 		Follow:              true,
 		Timestamps:          o.Timestamps,
 		AllNamespaces:       false,

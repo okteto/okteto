@@ -20,10 +20,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type fakeSmartBuildCtrl struct {
+	isEnabled bool
+}
+
+func (fsc *fakeSmartBuildCtrl) IsEnabled() bool {
+	return fsc.isEnabled
+}
+
 func TestInitTaggers(t *testing.T) {
 	cfg := fakeConfig{}
-	assert.Implements(t, (*imageTaggerInterface)(nil), newImageTagger(cfg))
-	assert.Implements(t, (*imageTaggerInterface)(nil), newImageWithVolumesTagger(cfg))
+	assert.Implements(t, (*imageTaggerInterface)(nil), newImageTagger(cfg, &fakeSmartBuildCtrl{}))
+	assert.Implements(t, (*imageTaggerInterface)(nil), newImageWithVolumesTagger(cfg, &fakeSmartBuildCtrl{}))
 }
 
 func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
@@ -149,19 +157,15 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},
-			expectedImage: "okteto.global/test-test:4b8313e107c813315cb819d900d8c8a2ff1b04edae6aacc50313b7ebe7ae1b81",
+			expectedImage: "okteto.global/test-test:sha",
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageTagger(tc.cfg)
-			if tc.cfg.isSmartBuildsEnable {
-				t.Setenv(OktetoSmartBuildUsingContextEnvVar, "true")
-			}
-			buildHash := newServiceHasher(fakeConfigRepo{
-				sha:     tc.cfg.sha,
-				isClean: tc.cfg.isClean,
-			}).hashProjectCommit(tc.b)
+			tagger := newImageTagger(tc.cfg, &fakeSmartBuildCtrl{
+				isEnabled: tc.cfg.isSmartBuildsEnable,
+			})
+			buildHash := tc.cfg.sha
 			assert.Equal(t, tc.expectedImage, tagger.getServiceImageReference("test", "test", tc.b, buildHash))
 		})
 	}
@@ -225,19 +229,15 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},
-			expectedImage: "okteto.global/test-test:okteto-with-volume-mounts-4b8313e107c813315cb819d900d8c8a2ff1b04edae6aacc50313b7ebe7ae1b81",
+			expectedImage: "okteto.global/test-test:okteto-with-volume-mounts-sha",
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageWithVolumesTagger(tc.cfg)
-			if tc.cfg.isSmartBuildsEnable {
-				t.Setenv(OktetoSmartBuildUsingContextEnvVar, "true")
-			}
-			buildHash := newServiceHasher(fakeConfigRepo{
-				sha:     tc.cfg.sha,
-				isClean: tc.cfg.isClean,
-			}).hashProjectCommit(tc.b)
+			tagger := newImageWithVolumesTagger(tc.cfg, &fakeSmartBuildCtrl{
+				isEnabled: tc.cfg.isSmartBuildsEnable,
+			})
+			buildHash := tc.cfg.sha
 			assert.Equal(t, tc.expectedImage, tagger.getServiceImageReference("test", "test", tc.b, buildHash))
 		})
 	}
@@ -265,9 +265,11 @@ func TestImageTaggerGetPossibleHashImages(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageTagger(fakeConfig{
-				isOkteto: true,
-			})
+			tagger := newImageTagger(
+				fakeConfig{
+					isOkteto: true,
+				},
+				&fakeSmartBuildCtrl{})
 			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTag("test", "test", tc.sha))
 		})
 	}
@@ -297,7 +299,7 @@ func TestImageTaggerWithVolumesGetPossibleHashImages(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tagger := newImageWithVolumesTagger(fakeConfig{
 				isOkteto: true,
-			})
+			}, &fakeSmartBuildCtrl{})
 			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTag("test", "test", tc.sha))
 		})
 	}
@@ -342,9 +344,8 @@ func TestImageTaggerGetPossibleTags(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageTagger(fakeConfig{
-				isSmartBuildsEnable: tc.isSmartBuildsEnabled,
-				isOkteto:            true,
+			tagger := newImageTagger(fakeConfig{isOkteto: true}, &fakeSmartBuildCtrl{
+				isEnabled: tc.isSmartBuildsEnabled,
 			})
 			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTagWithDefaults("test", "test", tc.sha))
 		})
@@ -378,9 +379,7 @@ func TestImageTaggerWithVolumesGetPossibleTags(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageWithVolumesTagger(fakeConfig{
-				isOkteto: true,
-			})
+			tagger := newImageWithVolumesTagger(fakeConfig{isOkteto: true}, &fakeSmartBuildCtrl{})
 			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTagWithDefaults("test", "test", tc.sha))
 		})
 	}

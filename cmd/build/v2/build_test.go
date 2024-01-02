@@ -15,8 +15,6 @@ package v2
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,6 +22,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/okteto/okteto/cmd/build/v1"
+	"github.com/okteto/okteto/cmd/build/v2/smartbuild"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/build"
@@ -172,6 +171,7 @@ func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInter
 		Config:           cfg,
 		ioCtrl:           io.NewIOController(),
 		analyticsTracker: analyticsTracker,
+		smartBuildCtrl:   smartbuild.NewSmartBuildCtrl(fakeConfigRepo{}, registry, afero.NewMemMapFs(), io.NewIOController()),
 		oktetoContext: &okteto.OktetoContextStateless{
 			Store: &okteto.OktetoContextStore{
 				Contexts: map[string]*okteto.OktetoContext{
@@ -183,10 +183,6 @@ func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInter
 				},
 				CurrentContext: "test",
 			},
-		},
-		hasher: &serviceHasher{
-			gitRepoCtrl:       fakeConfigRepo{},
-			buildContextCache: map[string]string{},
 		},
 	}
 }
@@ -645,140 +641,4 @@ func Test_skipServiceBuild(t *testing.T) {
 		})
 
 	}
-}
-
-func Test_getBuildHashFromCommit(t *testing.T) {
-	fs := afero.NewMemMapFs()
-	err := afero.WriteFile(fs, "secret", []byte("bar"), 0600)
-	assert.NoError(t, err)
-	t.Setenv("BAR", "bar")
-	type input struct {
-		buildInfo *build.Info
-		repo      fakeConfigRepo
-	}
-	tt := []struct {
-		name     string
-		expected string
-		input    input
-	}{
-		{
-			name: "valid commit",
-			input: input{
-				repo: fakeConfigRepo{
-					sha:     "1234567890",
-					isClean: true,
-					err:     nil,
-				},
-				buildInfo: &build.Info{
-					Args: build.Args{
-						{
-							Name:  "foo",
-							Value: "bar",
-						},
-						{
-							Name:  "key",
-							Value: "value",
-						},
-					},
-					Target: "target",
-					Secrets: build.Secrets{
-						"secret": "secret",
-					},
-					Context:    "context",
-					Dockerfile: "dockerfile",
-					Image:      "image",
-				},
-			},
-			expected: "commit:1234567890;target:target;build_args:foo=bar;key=value;secrets:secret=secret;context:context;dockerfile:dockerfile;dockerfile_content:;image:image;",
-		},
-		{
-			name: "invalid commit",
-			input: input{
-				repo: fakeConfigRepo{
-					sha:     "",
-					isClean: true,
-					err:     assert.AnError,
-				},
-				buildInfo: &build.Info{
-					Args: build.Args{
-						{
-							Name:  "foo",
-							Value: "bar",
-						},
-						{
-							Name:  "key",
-							Value: "value",
-						},
-					},
-					Target: "target",
-					Secrets: build.Secrets{
-						"secret": "secret",
-					},
-					Context:    "context",
-					Dockerfile: "dockerfile",
-					Image:      "image",
-				},
-			},
-			expected: "commit:;target:target;build_args:foo=bar;key=value;secrets:secret=secret;context:context;dockerfile:dockerfile;dockerfile_content:;image:image;",
-		},
-		{
-			name: "invalid commit and no args",
-			input: input{
-				repo: fakeConfigRepo{
-					sha:     "",
-					isClean: true,
-					err:     assert.AnError,
-				},
-				buildInfo: &build.Info{
-					Args:   build.Args{},
-					Target: "target",
-					Secrets: build.Secrets{
-						"secret": "secret",
-					},
-					Context:    "context",
-					Dockerfile: "dockerfile",
-					Image:      "image",
-				},
-			},
-			expected: "commit:;target:target;build_args:;secrets:secret=secret;context:context;dockerfile:dockerfile;dockerfile_content:;image:image;",
-		},
-		{
-			name: "arg with expansion",
-			input: input{
-				repo: fakeConfigRepo{
-					sha:     "",
-					isClean: true,
-					err:     assert.AnError,
-				},
-				buildInfo: &build.Info{
-					Args: build.Args{
-						{
-							Name:  "foo",
-							Value: "$BAR",
-						},
-					},
-					Target: "target",
-					Secrets: build.Secrets{
-						"secret": "secret",
-					},
-					Context:    "context",
-					Dockerfile: "dockerfile",
-					Image:      "image",
-				},
-			},
-			expected: "commit:;target:target;build_args:foo=bar;secrets:secret=secret;context:context;dockerfile:dockerfile;dockerfile_content:;image:image;",
-		},
-	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			got := newServiceHasher(fakeConfigRepo{
-				sha:     tc.input.repo.sha,
-				isClean: tc.input.repo.isClean,
-				err:     tc.input.repo.err,
-			}).hashProjectCommit(tc.input.buildInfo)
-			expectedHash := sha256.Sum256([]byte(tc.expected))
-			assert.Equal(t, hex.EncodeToString(expectedHash[:]), got)
-		})
-	}
-
 }

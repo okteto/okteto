@@ -101,9 +101,9 @@ services:
 			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r"},
 		},
 		SecurityContext: &SecurityContext{
-			RunAsUser:  pointer.Int64Ptr(0),
-			RunAsGroup: pointer.Int64Ptr(0),
-			FSGroup:    pointer.Int64Ptr(0),
+			RunAsUser:  pointer.Int64(0),
+			RunAsGroup: pointer.Int64(0),
+			FSGroup:    pointer.Int64(0),
 		},
 		Resources: ResourceRequirements{
 			Limits: ResourceList{
@@ -188,9 +188,9 @@ services:
 		Probes:          &Probes{},
 		Lifecycle:       &Lifecycle{},
 		SecurityContext: &SecurityContext{
-			RunAsUser:  pointer.Int64Ptr(0),
-			RunAsGroup: pointer.Int64Ptr(0),
-			FSGroup:    pointer.Int64Ptr(0),
+			RunAsUser:  pointer.Int64(0),
+			RunAsGroup: pointer.Int64(0),
+			FSGroup:    pointer.Int64(0),
 		},
 		Resources:        ResourceRequirements{},
 		PersistentVolume: true,
@@ -275,9 +275,9 @@ initContainer:
 			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r"},
 		},
 		SecurityContext: &SecurityContext{
-			RunAsUser:  pointer.Int64Ptr(0),
-			RunAsGroup: pointer.Int64Ptr(0),
-			FSGroup:    pointer.Int64Ptr(0),
+			RunAsUser:  pointer.Int64(0),
+			RunAsGroup: pointer.Int64(0),
+			FSGroup:    pointer.Int64(0),
 		},
 		Resources:        ResourceRequirements{},
 		PersistentVolume: true,
@@ -370,9 +370,9 @@ sync:
 			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r"},
 		},
 		SecurityContext: &SecurityContext{
-			RunAsUser:  pointer.Int64Ptr(0),
-			RunAsGroup: pointer.Int64Ptr(0),
-			FSGroup:    pointer.Int64Ptr(0),
+			RunAsUser:  pointer.Int64(0),
+			RunAsGroup: pointer.Int64(0),
+			FSGroup:    pointer.Int64(0),
 		},
 		PersistentVolume: true,
 		Volumes: []VolumeMount{
@@ -508,9 +508,9 @@ namespace: n
 securityContext:
    runAsNonRoot: false`),
 			translated: SecurityContext{
-				RunAsUser:    pointer.Int64Ptr(0),
-				RunAsGroup:   pointer.Int64Ptr(0),
-				FSGroup:      pointer.Int64Ptr(0),
+				RunAsUser:    pointer.Int64(0),
+				RunAsGroup:   pointer.Int64(0),
+				FSGroup:      pointer.Int64(0),
 				RunAsNonRoot: &falseBoolean,
 			},
 		},
@@ -537,9 +537,9 @@ securityContext:
 image: worker:latest
 namespace: n`),
 			translated: SecurityContext{
-				RunAsUser:  pointer.Int64Ptr(0),
-				RunAsGroup: pointer.Int64Ptr(0),
-				FSGroup:    pointer.Int64Ptr(0),
+				RunAsUser:  pointer.Int64(0),
+				RunAsGroup: pointer.Int64(0),
+				FSGroup:    pointer.Int64(0),
 			},
 		},
 		{

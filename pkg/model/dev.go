@@ -542,7 +542,7 @@ func (dev *Dev) setRunAsUserDefaults(main *Dev) {
 		dev.SecurityContext = &SecurityContext{}
 	}
 	if dev.SecurityContext.RunAsUser == nil {
-		dev.SecurityContext.RunAsUser = pointer.Int64Ptr(0)
+		dev.SecurityContext.RunAsUser = pointer.Int64(0)
 	}
 	if dev.SecurityContext.RunAsGroup == nil {
 		dev.SecurityContext.RunAsGroup = dev.SecurityContext.RunAsUser
