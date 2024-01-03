@@ -71,7 +71,7 @@ func (d *Driver) divertIngress(ctx context.Context, name string) error {
 	for _, rule := range in.Spec.Rules {
 		for _, path := range rule.IngressRuleValue.HTTP.Paths {
 			if err := d.divertService(ctx, path.Backend.Service.Name); err != nil {
-				return fmt.Errorf("error diverting ingress '%s/%s' service '%s': %v", in.Namespace, in.Name, path.Backend.Service.Name, err)
+				return fmt.Errorf("error diverting ingress '%s/%s' service '%s': %w", in.Namespace, in.Name, path.Backend.Service.Name, err)
 			}
 		}
 	}

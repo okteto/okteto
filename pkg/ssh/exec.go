@@ -36,7 +36,7 @@ import (
 func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Reader, outW, errW io.Writer, command []string) error {
 	sshConfig, err := getSSHClientConfig()
 	if err != nil {
-		return fmt.Errorf("failed to get SSH configuration: %s", err)
+		return fmt.Errorf("failed to get SSH configuration: %w", err)
 	}
 
 	// dockerterm.StdStreams() configures the terminal on windows
@@ -54,7 +54,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	}
 
 	if err != nil {
-		return fmt.Errorf("failed to connect to SSH server: %s", err)
+		return fmt.Errorf("failed to connect to SSH server: %w", err)
 	}
 	defer func() {
 		if err := connection.Close(); err != nil {
@@ -75,7 +75,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 
 	session, err := connection.NewSession()
 	if err != nil {
-		return fmt.Errorf("failed to create SSH session: %s", err)
+		return fmt.Errorf("failed to create SSH session: %w", err)
 	}
 	defer func() {
 		if err := session.Close(); err != nil {
@@ -121,7 +121,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 		}()
 
 		if err := session.RequestPty("xterm-256color", height, width, modes); err != nil {
-			return fmt.Errorf("request for pseudo terminal failed: %s", err)
+			return fmt.Errorf("request for pseudo terminal failed: %w", err)
 		}
 	}
 
@@ -139,13 +139,13 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 
 	stdin, err := session.StdinPipe()
 	if err != nil {
-		return fmt.Errorf("unable to setup stdin for session: %v", err)
+		return fmt.Errorf("unable to setup stdin for session: %w", err)
 	}
 	Copy(inR, stdin)
 
 	stdout, err := session.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("unable to setup stdout for session: %v", err)
+		return fmt.Errorf("unable to setup stdout for session: %w", err)
 	}
 
 	go func() {
@@ -156,7 +156,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 
 	stderr, err := session.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("unable to setup stderr for session: %v", err)
+		return fmt.Errorf("unable to setup stderr for session: %w", err)
 	}
 
 	go func() {

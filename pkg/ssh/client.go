@@ -32,12 +32,12 @@ func getPrivateKey() (ssh.Signer, error) {
 	_, private := getKeyPaths()
 	buf, err := os.ReadFile(private)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load private key: %s", err)
+		return nil, fmt.Errorf("failed to load private key: %w", err)
 	}
 
 	key, err := ssh.ParsePrivateKey(buf)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse private key: %s", err)
+		return nil, fmt.Errorf("failed to parse private key: %w", err)
 	}
 
 	return key, nil
