@@ -28,7 +28,7 @@ import (
 func GetReplicaSetByDeployment(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) (*appsv1.ReplicaSet, error) {
 	rsList, err := c.AppsV1().ReplicaSets(d.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get replicasets: %v", err)
+		return nil, fmt.Errorf("failed to get replicasets: %w", err)
 	}
 
 	for i := range rsList.Items {

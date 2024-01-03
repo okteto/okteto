@@ -30,7 +30,7 @@ type graph map[string][]string
 func GetValidNameFromFolder(folder string) (string, error) {
 	dir, err := filepath.Abs(folder)
 	if err != nil {
-		return "", fmt.Errorf("error inferring name: %s", err)
+		return "", fmt.Errorf("error inferring name: %w", err)
 	}
 	if folder == ".okteto" {
 		dir = filepath.Dir(dir)

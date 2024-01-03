@@ -56,7 +56,7 @@ func List(ctx context.Context) *cobra.Command {
 func (nc *NamespaceCommand) executeListNamespaces(ctx context.Context) error {
 	spaces, err := nc.okClient.Namespaces().List(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get namespaces: %s", err)
+		return fmt.Errorf("failed to get namespaces: %w", err)
 	}
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
 	fmt.Fprintf(w, "Namespace\tStatus\n")

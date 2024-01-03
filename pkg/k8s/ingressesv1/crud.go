@@ -27,14 +27,14 @@ import (
 func Deploy(ctx context.Context, i *networkingv1.Ingress, c kubernetes.Interface) error {
 	old, err := Get(ctx, i.Name, i.Namespace, c)
 	if err != nil && !oktetoErrors.IsNotFound(err) {
-		return fmt.Errorf("error getting kubernetes ingress: %s", err)
+		return fmt.Errorf("error getting kubernetes ingress: %w", err)
 	}
 
 	if old == nil || old.Name == "" {
 		oktetoLog.Infof("creating ingress '%s'", i.Name)
 		_, err = c.NetworkingV1().Ingresses(i.Namespace).Create(ctx, i, metav1.CreateOptions{})
 		if err != nil {
-			return fmt.Errorf("error creating kubernetes ingress: %s", err)
+			return fmt.Errorf("error creating kubernetes ingress: %w", err)
 		}
 		oktetoLog.Infof("created ingress '%s'", i.Name)
 	} else {
@@ -44,7 +44,7 @@ func Deploy(ctx context.Context, i *networkingv1.Ingress, c kubernetes.Interface
 		old.Spec = i.Spec
 		_, err = c.NetworkingV1().Ingresses(i.Namespace).Update(ctx, old, metav1.UpdateOptions{})
 		if err != nil {
-			return fmt.Errorf("error updating kubernetes ingress: %s", err)
+			return fmt.Errorf("error updating kubernetes ingress: %w", err)
 		}
 		oktetoLog.Infof("updated ingress '%s'.", i.Name)
 	}
@@ -77,7 +77,7 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 		if oktetoErrors.IsNotFound(err) {
 			return nil
 		}
-		return fmt.Errorf("error deleting kubernetes ingress: %s", err)
+		return fmt.Errorf("error deleting kubernetes ingress: %w", err)
 	}
 	oktetoLog.Infof("Ingress '%s' deleted", name)
 	return nil

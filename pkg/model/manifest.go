@@ -862,19 +862,19 @@ func (m *Manifest) setDefaults() error {
 			d.Name = dName
 		}
 		if err := d.expandEnvVars(); err != nil {
-			return fmt.Errorf("Error on dev '%s': %s", d.Name, err)
+			return fmt.Errorf("error on dev '%s': %w", d.Name, err)
 		}
 		for _, s := range d.Services {
 			if err := s.expandEnvVars(); err != nil {
-				return fmt.Errorf("Error on dev '%s': %s", d.Name, err)
+				return fmt.Errorf("error on dev '%s': %w", d.Name, err)
 			}
 			if err := s.validateForExtraFields(); err != nil {
-				return fmt.Errorf("Error on dev '%s': %s", d.Name, err)
+				return fmt.Errorf("error on dev '%s': %w", d.Name, err)
 			}
 		}
 
 		if err := d.SetDefaults(); err != nil {
-			return fmt.Errorf("Error on dev '%s': %s", d.Name, err)
+			return fmt.Errorf("error on dev '%s': %w", d.Name, err)
 		}
 
 		d.translateDeprecatedMetadataFields()

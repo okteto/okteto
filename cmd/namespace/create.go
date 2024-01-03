@@ -77,7 +77,7 @@ func (nc *NamespaceCommand) Create(ctx context.Context, opts *CreateOptions) err
 
 	if opts.Members != nil && len(*opts.Members) > 0 {
 		if err := nc.okClient.Namespaces().AddMembers(ctx, opts.Namespace, *opts.Members); err != nil {
-			return fmt.Errorf("failed to invite %s to the namespace: %s", strings.Join(*opts.Members, ", "), err)
+			return fmt.Errorf("failed to invite %s to the namespace: %w", strings.Join(*opts.Members, ", "), err)
 		}
 	}
 
@@ -98,7 +98,7 @@ func (nc *NamespaceCommand) Create(ctx context.Context, opts *CreateOptions) err
 	}
 
 	if err := nc.ctxCmd.Run(ctx, ctxOptions); err != nil {
-		return fmt.Errorf("failed to activate your new namespace %s: %s", oktetoNS, err)
+		return fmt.Errorf("failed to activate your new namespace %s: %w", oktetoNS, err)
 	}
 
 	return nil

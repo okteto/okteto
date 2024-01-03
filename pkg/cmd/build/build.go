@@ -158,7 +158,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	// create a temp folder - this will be remove once the build has finished
 	secretTempFolder := filepath.Join(config.GetOktetoHome(), ".secret")
 	if err := os.MkdirAll(secretTempFolder, 0700); err != nil {
-		return fmt.Errorf("failed to create %s: %s", secretTempFolder, err)
+		return fmt.Errorf("failed to create %s: %w", secretTempFolder, err)
 	}
 	defer os.RemoveAll(secretTempFolder)
 
@@ -488,7 +488,7 @@ func createTempFileWithExpandedEnvsAtSource(fs afero.Fs, sourceFile, tempFolder 
 
 		// save expanded to temp file
 		if _, err = writer.Write([]byte(fmt.Sprintf("%s\n", srcContent))); err != nil {
-			return "", fmt.Errorf("unable to write to temp file: %s", err)
+			return "", fmt.Errorf("unable to write to temp file: %w", err)
 		}
 		writer.Flush()
 	}

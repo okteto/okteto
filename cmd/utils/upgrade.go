@@ -58,7 +58,7 @@ func GetLatestVersionFromGithub() (string, error) {
 	ctx := context.Background()
 	releases, _, err := client.Repositories.ListReleases(ctx, "okteto", "okteto", &github.ListOptions{PerPage: 10})
 	if err != nil {
-		return "", fmt.Errorf("fail to get releases from github: %s", err)
+		return "", fmt.Errorf("fail to get releases from github: %w", err)
 	}
 
 	for _, r := range releases {

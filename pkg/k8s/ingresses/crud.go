@@ -122,14 +122,14 @@ func (iClient *Client) Destroy(ctx context.Context, name, namespace string) erro
 	if iClient.isV1 {
 		err := iClient.c.NetworkingV1().Ingresses(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 		if err != nil && !oktetoErrors.IsNotFound(err) {
-			return fmt.Errorf("error deleting kubernetes ingress: %s", err)
+			return fmt.Errorf("error deleting kubernetes ingress: %w", err)
 		}
 		return nil
 	}
 
 	err := iClient.c.NetworkingV1beta1().Ingresses(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil && !oktetoErrors.IsNotFound(err) {
-		return fmt.Errorf("error deleting kubernetes ingress: %s", err)
+		return fmt.Errorf("error deleting kubernetes ingress: %w", err)
 	}
 	return nil
 }
@@ -204,7 +204,7 @@ func (i Ingress) GetAnnotations() map[string]string {
 func (iClient *Client) Deploy(ctx context.Context, ingress *Ingress) error {
 	if _, err := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace()); err != nil {
 		if !oktetoErrors.IsNotFound(err) {
-			return fmt.Errorf("error getting ingress '%s': %v", ingress.GetName(), err)
+			return fmt.Errorf("error getting ingress '%s': %w", ingress.GetName(), err)
 		}
 		if err := iClient.Create(ctx, ingress); err != nil {
 			return err

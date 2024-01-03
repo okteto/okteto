@@ -344,12 +344,12 @@ func (*ContextConfigWriter) Write() error {
 	if _, err := os.Stat(contextConfigPath); err == nil {
 		err = os.Chmod(contextConfigPath, 0600)
 		if err != nil {
-			return fmt.Errorf("couldn't change context permissions: %s", err)
+			return fmt.Errorf("couldn't change context permissions: %w", err)
 		}
 	}
 
 	if err := os.WriteFile(contextConfigPath, marshalled, 0600); err != nil {
-		return fmt.Errorf("couldn't save context: %s", err)
+		return fmt.Errorf("couldn't save context: %w", err)
 	}
 
 	return nil

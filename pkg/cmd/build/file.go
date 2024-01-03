@@ -59,7 +59,7 @@ func getTranslatedDockerFile(filename string, okCtx OktetoContextInterface) (str
 
 	dockerfileTmpFolder := filepath.Join(config.GetOktetoHome(), ".dockerfile")
 	if err := os.MkdirAll(dockerfileTmpFolder, 0700); err != nil {
-		return "", fmt.Errorf("failed to create %s: %s", dockerfileTmpFolder, err)
+		return "", fmt.Errorf("failed to create %s: %w", dockerfileTmpFolder, err)
 	}
 
 	tmpFile, err := os.CreateTemp(dockerfileTmpFolder, "buildkit-")
@@ -85,7 +85,7 @@ func getTranslatedDockerFile(filename string, okCtx OktetoContextInterface) (str
 		}
 		_, err = datawriter.WriteString(translatedLine + "\n")
 		if err != nil {
-			return "", fmt.Errorf("failed to write dockerfile: %s", err)
+			return "", fmt.Errorf("failed to write dockerfile: %w", err)
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -159,7 +159,7 @@ func CreateDockerfileWithVolumeMounts(image string, volumes []model.StackVolume)
 	build.Context = ctx
 	dockerfileTmpFolder := filepath.Join(config.GetOktetoHome(), ".dockerfile")
 	if err := os.MkdirAll(dockerfileTmpFolder, 0700); err != nil {
-		return build, fmt.Errorf("failed to create %s: %s", dockerfileTmpFolder, err)
+		return build, fmt.Errorf("failed to create %s: %w", dockerfileTmpFolder, err)
 	}
 
 	tmpFile, err := os.CreateTemp(dockerfileTmpFolder, "buildkit-")
@@ -172,7 +172,7 @@ func CreateDockerfileWithVolumeMounts(image string, volumes []model.StackVolume)
 
 	_, err = datawriter.Write([]byte(fmt.Sprintf("FROM %s\n", image)))
 	if err != nil {
-		return build, fmt.Errorf("failed to write dockerfile: %s", err)
+		return build, fmt.Errorf("failed to write dockerfile: %w", err)
 	}
 	for _, volume := range volumes {
 		_, err = datawriter.Write([]byte(fmt.Sprintf("COPY %s %s\n", filepath.ToSlash(volume.LocalPath), volume.RemotePath)))

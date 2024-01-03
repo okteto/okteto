@@ -30,7 +30,7 @@ type Environment []Var
 func ExpandEnv(value string) (string, error) {
 	result, err := envsubst.String(value)
 	if err != nil {
-		return "", fmt.Errorf("error expanding environment on '%s': %s", value, err.Error())
+		return "", fmt.Errorf("error expanding environment on '%s': %w", value, err)
 	}
 	return result, nil
 }

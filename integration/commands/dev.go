@@ -60,7 +60,7 @@ func RunOktetoUp(oktetoPath string, upOptions *UpOptions) (*UpCommandProcessResu
 
 	log.Printf("Running up command: %s", cmd.String())
 	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("okteto up failed to start: %s", err)
+		return nil, fmt.Errorf("okteto up failed to start: %w", err)
 	}
 
 	wg.Add(1)
@@ -69,8 +69,8 @@ func RunOktetoUp(oktetoPath string, upOptions *UpOptions) (*UpCommandProcessResu
 		defer wg.Done()
 		if err := cmd.Wait(); err != nil {
 			if err != nil {
-				log.Printf("okteto up exited: %s.\nOutput:\n%s", err, out.String())
-				upErrorChannel <- fmt.Errorf("Okteto up exited before completion")
+				log.Printf("okteto up exited: %w.\nOutput:\n%s", err, out.String())
+				upErrorChannel <- fmt.Errorf("okteto up exited before completion")
 			}
 		}
 	}()
@@ -95,7 +95,7 @@ func RunOktetoUpAndWaitWithOutput(oktetoPath string, upOptions *UpOptions) (byte
 
 	log.Printf("Running up command: %s", cmd.String())
 	if err := cmd.Start(); err != nil {
-		return out, fmt.Errorf("okteto up failed to start: %s", err)
+		return out, fmt.Errorf("okteto up failed to start: %w", err)
 	}
 
 	err := cmd.Wait()
@@ -180,10 +180,10 @@ func RunOktetoDown(oktetoPath string, downOpts *DownOptions) error {
 	if err != nil {
 		m, err := os.ReadFile(downOpts.ManifestPath)
 		if err != nil {
-			return fmt.Errorf("okteto down failed: %s", err)
+			return fmt.Errorf("okteto down failed: %w", err)
 		}
 		log.Printf("manifest: \n%s\n", string(m))
-		return fmt.Errorf("okteto down failed: %s", err)
+		return fmt.Errorf("okteto down failed: %w", err)
 	}
 
 	return nil
@@ -207,7 +207,7 @@ func HasUpCommandFinished(pid int) bool {
 			}
 
 			if err != nil {
-				err = fmt.Errorf("error when finding process: %s", err)
+				err = fmt.Errorf("error when finding process: %w", err)
 			} else if found != nil {
 				err = fmt.Errorf("okteto up didn't exit after down")
 			}

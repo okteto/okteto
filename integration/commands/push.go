@@ -38,7 +38,7 @@ func RunOktetoPush(oktetoPath, workdir string) error {
 
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("okteto stack deploy failed: %s - %s", string(o), err)
+		return fmt.Errorf("okteto stack deploy failed: %s - %w", string(o), err)
 	}
 	log.Printf("okteto stack deploy success")
 	return nil

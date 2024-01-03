@@ -68,7 +68,7 @@ func RunOktetoStackDeploy(oktetoPath string, deployOptions *StackDeployOptions) 
 
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("okteto stack deploy failed: %s - %s", string(o), err)
+		return fmt.Errorf("okteto stack deploy failed: %s - %w", string(o), err)
 	}
 	log.Printf("okteto stack deploy success")
 	return nil
@@ -98,7 +98,7 @@ func RunOktetoStackDestroy(oktetoPath string, deployOptions *StackDestroyOptions
 
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("okteto stack destroy failed: %s - %s", string(o), err)
+		return fmt.Errorf("okteto stack destroy failed: %s - %w", string(o), err)
 	}
 	log.Printf("okteto stack destroy success")
 	return nil

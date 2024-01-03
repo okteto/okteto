@@ -28,7 +28,7 @@ import (
 func ListEndpoints(ctx context.Context, stack *model.Stack) error {
 	c, _, err := okteto.GetK8sClient()
 	if err != nil {
-		return fmt.Errorf("failed to load your local Kubeconfig: %s", err)
+		return fmt.Errorf("failed to load your local Kubeconfig: %w", err)
 	}
 	iClient, err := ingresses.GetClient(c)
 	if err != nil {

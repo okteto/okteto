@@ -368,7 +368,7 @@ func fetchClusterMetadata(ctx context.Context) (*types.ClusterMetadata, error) {
 	cp := okteto.NewOktetoClientProvider()
 	c, err := cp.Provide()
 	if err != nil {
-		return nil, fmt.Errorf("failed to provide okteto client for fetching certs: %s", err)
+		return nil, fmt.Errorf("failed to provide okteto client for fetching certs: %w", err)
 	}
 	uc := c.User()
 

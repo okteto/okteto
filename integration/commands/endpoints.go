@@ -48,7 +48,7 @@ func RunOktetoEndpoints(oktetoPath string, endpointsOptions *EndpointOptions) ([
 
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return o, fmt.Errorf("okteto deploy failed: %s - %s", string(o), err)
+		return o, fmt.Errorf("okteto deploy failed: %s - %w", string(o), err)
 	}
 	log.Printf("okteto deploy success")
 	return o, nil

@@ -358,7 +358,7 @@ func (ph *proxyHandler) translateMetadata(body map[string]json.RawMessage) error
 
 	metadataAsByte, err := json.Marshal(metadata)
 	if err != nil {
-		return fmt.Errorf("could not process resource's metadata: %s", err)
+		return fmt.Errorf("could not process resource's metadata: %w", err)
 	}
 
 	body["metadata"] = metadataAsByte
@@ -376,7 +376,7 @@ func (ph *proxyHandler) translateDeploymentSpec(body map[string]json.RawMessage)
 	spec.Template.Spec = ph.applyDivertToPod(spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
-		return fmt.Errorf("could not process deployment's spec: %s", err)
+		return fmt.Errorf("could not process deployment's spec: %w", err)
 	}
 	body["spec"] = specAsByte
 	return nil
@@ -392,7 +392,7 @@ func (ph *proxyHandler) translateStatefulSetSpec(body map[string]json.RawMessage
 	spec.Template.Spec = ph.applyDivertToPod(spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
-		return fmt.Errorf("could not process statefulset's spec: %s", err)
+		return fmt.Errorf("could not process statefulset's spec: %w", err)
 	}
 	body["spec"] = specAsByte
 	return nil
@@ -408,7 +408,7 @@ func (ph *proxyHandler) translateJobSpec(body map[string]json.RawMessage) error 
 	spec.Template.Spec = ph.applyDivertToPod(spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
-		return fmt.Errorf("could not process job's spec: %s", err)
+		return fmt.Errorf("could not process job's spec: %w", err)
 	}
 	body["spec"] = specAsByte
 	return nil
@@ -424,7 +424,7 @@ func (ph *proxyHandler) translateCronJobSpec(body map[string]json.RawMessage) er
 	spec.JobTemplate.Spec.Template.Spec = ph.applyDivertToPod(spec.JobTemplate.Spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
-		return fmt.Errorf("could not process cronjob's spec: %s", err)
+		return fmt.Errorf("could not process cronjob's spec: %w", err)
 	}
 	body["spec"] = specAsByte
 	return nil
@@ -440,7 +440,7 @@ func (ph *proxyHandler) translateDaemonSetSpec(body map[string]json.RawMessage) 
 	spec.Template.Spec = ph.applyDivertToPod(spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
-		return fmt.Errorf("could not process daemonset's spec: %s", err)
+		return fmt.Errorf("could not process daemonset's spec: %w", err)
 	}
 	body["spec"] = specAsByte
 	return nil
@@ -456,7 +456,7 @@ func (ph *proxyHandler) translateReplicationControllerSpec(body map[string]json.
 	spec.Template.Spec = ph.applyDivertToPod(spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
-		return fmt.Errorf("could not process replicationcontroller's spec: %s", err)
+		return fmt.Errorf("could not process replicationcontroller's spec: %w", err)
 	}
 	body["spec"] = specAsByte
 	return nil
@@ -472,7 +472,7 @@ func (ph *proxyHandler) translateReplicaSetSpec(body map[string]json.RawMessage)
 	spec.Template.Spec = ph.applyDivertToPod(spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
-		return fmt.Errorf("could not process replicaset's spec: %s", err)
+		return fmt.Errorf("could not process replicaset's spec: %w", err)
 	}
 	body["spec"] = specAsByte
 	return nil
@@ -498,7 +498,7 @@ func (ph *proxyHandler) translateVirtualServiceSpec(body map[string]json.RawMess
 	ph.DivertDriver.UpdateVirtualService(spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
-		return fmt.Errorf("could not process virtual service's spec: %s", err)
+		return fmt.Errorf("could not process virtual service's spec: %w", err)
 	}
 	body["spec"] = specAsByte
 	return nil

@@ -314,7 +314,7 @@ func (ld *localDeployer) deployEndpoints(ctx context.Context, opts *Options) err
 
 	iClient, err := ingresses.GetClient(c)
 	if err != nil {
-		return fmt.Errorf("error getting ingress client: %s", err.Error())
+		return fmt.Errorf("error getting ingress client: %w", err)
 	}
 
 	translateOptions := &ingresses.TranslateOptions{

@@ -61,7 +61,7 @@ func (nc *NamespaceCommand) ExecuteWakeNamespace(ctx context.Context, namespace 
 
 	// trigger namespace to sleep
 	if err := nc.okClient.Namespaces().Wake(ctx, namespace); err != nil {
-		return fmt.Errorf("%w: %v", errFailedWakeNamespace, err)
+		return fmt.Errorf("%w: %w", errFailedWakeNamespace, err)
 	}
 
 	oktetoLog.Success("Namespace '%s' is awake now", namespace)

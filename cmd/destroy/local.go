@@ -173,7 +173,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 			oktetoLog.Information("Running '%s'", command.Name)
 			oktetoLog.SetStage(command.Name)
 			if err := ld.executor.Execute(command, opts.Variables); err != nil {
-				err = fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
+				err = fmt.Errorf("error executing command '%s': %w", command.Name, err)
 				if !opts.ForceDestroy {
 					if err := ld.ConfigMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
 						exit <- err

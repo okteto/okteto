@@ -384,7 +384,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	}
 	imageTagWithDigest, err := bc.Registry.GetImageTagWithDigest(reference)
 	if err != nil {
-		return "", fmt.Errorf("error accessing image at registry %s: %v", reference, err)
+		return "", fmt.Errorf("error accessing image at registry %s: %w", reference, err)
 	}
 	return imageTagWithDigest, nil
 }
@@ -423,7 +423,7 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 	}
 	imageTagWithDigest, err := bc.Registry.GetImageTagWithDigest(buildOptions.Tag)
 	if err != nil {
-		return "", fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
+		return "", fmt.Errorf("error accessing image at registry %s: %w", options.Tag, err)
 	}
 	return imageTagWithDigest, nil
 }

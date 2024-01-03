@@ -450,7 +450,7 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if len(parts) == secretWithModeLength {
 		mode, err := strconv.ParseInt(parts[2], 8, 32)
 		if err != nil {
-			return fmt.Errorf("error parsing secret '%s' mode: %s", parts[0], err)
+			return fmt.Errorf("error parsing secret '%s' mode: %w", parts[0], err)
 		}
 		s.Mode = int32(mode)
 	} else {
@@ -478,16 +478,16 @@ func (f *Reverse) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	maxReverseParts := 2
 	parts := strings.SplitN(raw, ":", maxReverseParts)
 	if len(parts) != maxReverseParts {
-		return fmt.Errorf("Wrong port-forward syntax '%s', must be of the form 'localPort:RemotePort'", raw)
+		return fmt.Errorf("wrong port-forward syntax '%s', must be of the form 'localPort:RemotePort'", raw)
 	}
 	remotePort, err := strconv.Atoi(parts[0])
 	if err != nil {
-		return fmt.Errorf("Cannot convert remote port '%s' in reverse '%s'", parts[0], raw)
+		return fmt.Errorf("cannot convert remote port '%s' in reverse '%s'", parts[0], raw)
 	}
 
 	localPort, err := strconv.Atoi(parts[1])
 	if err != nil {
-		return fmt.Errorf("Cannot convert local port '%s' in reverse '%s'", parts[1], raw)
+		return fmt.Errorf("cannot convert local port '%s' in reverse '%s'", parts[1], raw)
 	}
 
 	f.Local = localPort

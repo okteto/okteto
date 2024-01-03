@@ -60,7 +60,7 @@ func (pr *Command) ExecuteSleepPreview(ctx context.Context, preview string) erro
 
 	// trigger preview environment to sleep
 	if err := pr.okClient.Namespaces().Sleep(ctx, preview); err != nil {
-		return fmt.Errorf("%w: %v", errFailedSleepPreview, err)
+		return fmt.Errorf("%w: %w", errFailedSleepPreview, err)
 	}
 
 	oktetoLog.Success("Preview environment '%s' is sleeping", preview)
