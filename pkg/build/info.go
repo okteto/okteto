@@ -57,9 +57,9 @@ type infoRaw struct {
 	DependsOn        DependsOn         `yaml:"depends_on,omitempty"`
 }
 
-func (b *Info) addExpandedPreviousImageArgs(previousImageArgs map[string]string) error {
+func (i *Info) addExpandedPreviousImageArgs(previousImageArgs map[string]string) error {
 	alreadyAddedArg := map[string]bool{}
-	for _, arg := range b.Args {
+	for _, arg := range i.Args {
 		alreadyAddedArg[arg.Name] = true
 	}
 	for k, v := range previousImageArgs {
@@ -70,7 +70,7 @@ func (b *Info) addExpandedPreviousImageArgs(previousImageArgs map[string]string)
 		if err != nil {
 			return err
 		}
-		b.Args = append(b.Args, Arg{
+		i.Args = append(i.Args, Arg{
 			Name:  k,
 			Value: expandedValue,
 		})
@@ -79,8 +79,8 @@ func (b *Info) addExpandedPreviousImageArgs(previousImageArgs map[string]string)
 	return nil
 }
 
-func (b *Info) expandManifestBuildArgs(previousImageArgs map[string]string) (err error) {
-	for idx, arg := range b.Args {
+func (i *Info) expandManifestBuildArgs(previousImageArgs map[string]string) (err error) {
+	for idx, arg := range i.Args {
 		if val, ok := previousImageArgs[arg.Name]; ok {
 			oktetoLog.Infof("overriding '%s' with the content of previous build", arg.Name)
 			arg.Value = val
@@ -89,17 +89,17 @@ func (b *Info) expandManifestBuildArgs(previousImageArgs map[string]string) (err
 		if err != nil {
 			return err
 		}
-		b.Args[idx] = arg
+		i.Args[idx] = arg
 	}
 	return nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (info *Info) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (i *Info) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawString string
 	err := unmarshal(&rawString)
 	if err == nil {
-		info.Name = rawString
+		i.Name = rawString
 		return nil
 	}
 
@@ -109,105 +109,105 @@ func (info *Info) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	info.Name = rawBuildInfo.Name
-	info.Context = rawBuildInfo.Context
-	info.Dockerfile = rawBuildInfo.Dockerfile
-	info.Target = rawBuildInfo.Target
-	info.Args = rawBuildInfo.Args
-	info.Image = rawBuildInfo.Image
-	info.CacheFrom = rawBuildInfo.CacheFrom
-	info.ExportCache = rawBuildInfo.ExportCache
-	info.DependsOn = rawBuildInfo.DependsOn
-	info.Secrets = rawBuildInfo.Secrets
+	i.Name = rawBuildInfo.Name
+	i.Context = rawBuildInfo.Context
+	i.Dockerfile = rawBuildInfo.Dockerfile
+	i.Target = rawBuildInfo.Target
+	i.Args = rawBuildInfo.Args
+	i.Image = rawBuildInfo.Image
+	i.CacheFrom = rawBuildInfo.CacheFrom
+	i.ExportCache = rawBuildInfo.ExportCache
+	i.DependsOn = rawBuildInfo.DependsOn
+	i.Secrets = rawBuildInfo.Secrets
 	return nil
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (info *Info) MarshalYAML() (interface{}, error) {
-	if info.Context != "" && info.Context != "." {
-		return infoRaw(*info), nil
+func (i *Info) MarshalYAML() (interface{}, error) {
+	if i.Context != "" && i.Context != "." {
+		return infoRaw(*i), nil
 	}
-	if info.Dockerfile != "" && info.Dockerfile != "./Dockerfile" {
-		return infoRaw(*info), nil
+	if i.Dockerfile != "" && i.Dockerfile != "./Dockerfile" {
+		return infoRaw(*i), nil
 	}
-	if info.Target != "" {
-		return infoRaw(*info), nil
+	if i.Target != "" {
+		return infoRaw(*i), nil
 	}
-	if info.Args != nil && len(info.Args) != 0 {
-		return infoRaw(*info), nil
+	if i.Args != nil && len(i.Args) != 0 {
+		return infoRaw(*i), nil
 	}
-	return info.Name, nil
+	return i.Name, nil
 }
 
 // Copy clones the buildInfo without the pointers
-func (b *Info) Copy() *Info {
+func (i *Info) Copy() *Info {
 	result := &Info{
-		Name:        b.Name,
-		Context:     b.Context,
-		Dockerfile:  b.Dockerfile,
-		Target:      b.Target,
-		Image:       b.Image,
-		ExportCache: b.ExportCache,
+		Name:        i.Name,
+		Context:     i.Context,
+		Dockerfile:  i.Dockerfile,
+		Target:      i.Target,
+		Image:       i.Image,
+		ExportCache: i.ExportCache,
 	}
 
 	// copy to new pointers
 	cacheFrom := []string{}
-	cacheFrom = append(cacheFrom, b.CacheFrom...)
+	cacheFrom = append(cacheFrom, i.CacheFrom...)
 	result.CacheFrom = cacheFrom
 
 	args := Args{}
-	args = append(args, b.Args...)
+	args = append(args, i.Args...)
 	result.Args = args
 
 	secrets := Secrets{}
-	for k, v := range b.Secrets {
+	for k, v := range i.Secrets {
 		secrets[k] = v
 	}
 	result.Secrets = secrets
 
 	volumesToMount := []VolumeMounts{}
-	volumesToMount = append(volumesToMount, b.VolumesToInclude...)
+	volumesToMount = append(volumesToMount, i.VolumesToInclude...)
 	result.VolumesToInclude = volumesToMount
 
 	dependsOn := DependsOn{}
-	dependsOn = append(dependsOn, b.DependsOn...)
+	dependsOn = append(dependsOn, i.DependsOn...)
 	result.DependsOn = dependsOn
 
 	return result
 }
 
-func (b *Info) SetBuildDefaults() {
-	if b.Context == "" {
-		b.Context = "."
+func (i *Info) SetBuildDefaults() {
+	if i.Context == "" {
+		i.Context = "."
 	}
 
-	if _, err := url.ParseRequestURI(b.Context); err != nil && b.Dockerfile == "" {
-		b.Dockerfile = "Dockerfile"
+	if _, err := url.ParseRequestURI(i.Context); err != nil && i.Dockerfile == "" {
+		i.Dockerfile = "Dockerfile"
 	}
 
 }
 
 // AddArgs add a set of args to the build information
-func (b *Info) AddArgs(previousImageArgs map[string]string) error {
-	if err := b.expandManifestBuildArgs(previousImageArgs); err != nil {
+func (i *Info) AddArgs(previousImageArgs map[string]string) error {
+	if err := i.expandManifestBuildArgs(previousImageArgs); err != nil {
 		return err
 	}
-	return b.addExpandedPreviousImageArgs(previousImageArgs)
+	return i.addExpandedPreviousImageArgs(previousImageArgs)
 }
 
 // GetDockerfilePath returns the path to the Dockerfile
-func (b *Info) GetDockerfilePath(fs afero.Fs) string {
-	if filepath.IsAbs(b.Dockerfile) {
-		return b.Dockerfile
+func (i *Info) GetDockerfilePath(fs afero.Fs) string {
+	if filepath.IsAbs(i.Dockerfile) {
+		return i.Dockerfile
 	}
-	joinPath := filepath.Join(b.Context, b.Dockerfile)
+	joinPath := filepath.Join(i.Context, i.Dockerfile)
 	if !filesystem.FileExistsAndNotDir(joinPath, fs) {
-		oktetoLog.Infof("Dockerfile '%s' is not in a relative path to context '%s'", b.Dockerfile, b.Context)
-		return b.Dockerfile
+		oktetoLog.Infof("Dockerfile '%s' is not in a relative path to context '%s'", i.Dockerfile, i.Context)
+		return i.Dockerfile
 	}
 
-	if joinPath != filepath.Clean(b.Dockerfile) && filesystem.FileExistsAndNotDir(b.Dockerfile, fs) {
-		oktetoLog.Infof("Two Dockerfiles discovered in both the root and context path, defaulting to '%s/%s'", b.Context, b.Dockerfile)
+	if joinPath != filepath.Clean(i.Dockerfile) && filesystem.FileExistsAndNotDir(i.Dockerfile, fs) {
+		oktetoLog.Infof("Two Dockerfiles discovered in both the root and context path, defaulting to '%s/%s'", i.Context, i.Dockerfile)
 	}
 
 	return joinPath

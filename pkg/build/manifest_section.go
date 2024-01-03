@@ -24,6 +24,7 @@ import (
 // ManifestBuild defines all the build section
 type ManifestBuild map[string]*Info
 
+// Validate validates the build section of the manifest
 func (b *ManifestBuild) Validate() error {
 	for k, v := range *b {
 		if v == nil {

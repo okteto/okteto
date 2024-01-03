@@ -27,19 +27,19 @@ type Arg struct {
 	Value string
 }
 
-// BuildArgs is a list of arguments used on the build step.
+// Args is a list of arguments used on the build step.
 type Args []Arg
 
-func (v *Arg) String() string {
-	value, err := env.ExpandEnv(v.Value)
+func (a *Arg) String() string {
+	value, err := env.ExpandEnv(a.Value)
 	if err != nil {
-		return fmt.Sprintf("%s=%s", v.Name, v.Value)
+		return fmt.Sprintf("%s=%s", a.Name, a.Value)
 	}
-	return fmt.Sprintf("%s=%s", v.Name, value)
+	return fmt.Sprintf("%s=%s", a.Name, value)
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (e *Arg) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (a *Arg) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw string
 	err := unmarshal(&raw)
 	if err != nil {
@@ -48,22 +48,22 @@ func (e *Arg) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	maxBuildArgsParts := 2
 
 	parts := strings.SplitN(raw, "=", maxBuildArgsParts)
-	e.Name = parts[0]
+	a.Name = parts[0]
 	if len(parts) == maxBuildArgsParts {
-		e.Value = parts[1]
+		a.Value = parts[1]
 		return nil
 	}
 
-	e.Name, err = env.ExpandEnv(parts[0])
+	a.Name, err = env.ExpandEnv(parts[0])
 	if err != nil {
 		return err
 	}
-	e.Value = parts[0]
+	a.Value = parts[0]
 	return nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (ba *Args) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (a *Args) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	buildArgs := make(Args, 0)
 	result, err := getArgs(unmarshal)
 	if err != nil {
@@ -75,7 +75,7 @@ func (ba *Args) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	sort.SliceStable(buildArgs, func(i, j int) bool {
 		return strings.Compare(buildArgs[i].Name, buildArgs[j].Name) < 0
 	})
-	*ba = buildArgs
+	*a = buildArgs
 	return nil
 }
 
@@ -108,7 +108,7 @@ func getArgs(unmarshal func(interface{}) error) (map[string]string, error) {
 	return result, nil
 }
 
-// SerializeBuildArgs returns build args as a list of strings
+// SerializeArgs returns build args as a list of strings
 func SerializeArgs(buildArgs Args) []string {
 	result := []string{}
 	for _, e := range buildArgs {
