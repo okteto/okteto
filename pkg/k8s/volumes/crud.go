@@ -50,13 +50,13 @@ func CreateForDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface, d
 	pvcForDev := translate(dev)
 	k8Volume, err := vClient.Get(ctx, pvcForDev.Name, metav1.GetOptions{})
 	if err != nil && !strings.Contains(err.Error(), "not found") {
-		return fmt.Errorf("error getting kubernetes volume claim: %s", err)
+		return fmt.Errorf("error getting kubernetes volume claim: %w", err)
 	}
 	if k8Volume.Name == "" {
 		oktetoLog.Infof("creating volume claim '%s'", pvcForDev.Name)
 		_, err = vClient.Create(ctx, pvcForDev, metav1.CreateOptions{})
 		if err != nil {
-			return fmt.Errorf("error creating kubernetes volume claim: %s", err)
+			return fmt.Errorf("error creating kubernetes volume claim: %w", err)
 		}
 	} else {
 		if err := checkPVCValues(k8Volume, dev, devPath); err != nil {
@@ -216,7 +216,7 @@ func DestroyWithoutTimeout(ctx context.Context, name, namespace string, c kubern
 	err := vClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		if !oktetoErrors.IsNotFound(err) {
-			return fmt.Errorf("error deleting kubernetes volume: %s", err)
+			return fmt.Errorf("error deleting kubernetes volume: %w", err)
 		}
 	}
 

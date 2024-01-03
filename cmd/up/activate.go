@@ -114,7 +114,7 @@ func (up *upContext) activate() error {
 
 	if !up.isRetry && buildDevImage {
 		if err := up.buildDevImage(ctx, app); err != nil {
-			return fmt.Errorf("error building dev image: %s", err)
+			return fmt.Errorf("error building dev image: %w", err)
 		}
 	}
 
@@ -145,7 +145,7 @@ func (up *upContext) activate() error {
 		if _, ok := err.(oktetoErrors.UserError); ok {
 			return err
 		}
-		return fmt.Errorf("couldn't activate your development container\n    %s", err.Error())
+		return fmt.Errorf("couldn't activate your development container\n    %w", err)
 	}
 
 	if up.isRetry {
@@ -163,12 +163,12 @@ func (up *upContext) activate() error {
 			err := up.checkOktetoStartError(ctx, "Failed to connect to your development container")
 			if err == oktetoErrors.ErrLostSyncthing {
 				if err := pods.Destroy(ctx, up.Pod.Name, up.Dev.Namespace, k8sClient); err != nil {
-					return fmt.Errorf("error recreating development container: %s", err.Error())
+					return fmt.Errorf("error recreating development container: %w", err)
 				}
 			}
 			return err
 		}
-		return fmt.Errorf("couldn't connect to your development container: %s", err.Error())
+		return fmt.Errorf("couldn't connect to your development container: %w", err)
 	}
 	go up.cleanCommand(ctx)
 

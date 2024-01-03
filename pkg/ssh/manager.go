@@ -144,7 +144,7 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 
 		c, err := getSSHClientConfig()
 		if err != nil {
-			return fmt.Errorf("failed to get SSH configuration: %s", err)
+			return fmt.Errorf("failed to get SSH configuration: %w", err)
 		}
 
 		oktetoLog.Infof("starting SSH connection pool on %s", fm.sshAddr)

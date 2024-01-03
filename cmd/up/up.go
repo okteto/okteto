@@ -279,7 +279,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
 
 			k8sClient, _, err := okteto.GetK8sClient()
 			if err != nil {
-				return fmt.Errorf("failed to load k8s client: %v", err)
+				return fmt.Errorf("failed to load k8s client: %w", err)
 			}
 
 			// if manifest v1 - either set autocreate: true or pass --deploy (okteto forces autocreate: true)
