@@ -138,7 +138,7 @@ func getConfig(path string) (*sshConfig, error) {
 			}, nil
 		}
 
-		return nil, fmt.Errorf("can't open %s: %s", path, err)
+		return nil, fmt.Errorf("can't open %s: %w", path, err)
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
@@ -148,7 +148,7 @@ func getConfig(path string) (*sshConfig, error) {
 
 	cfg, err := parse(f)
 	if err != nil {
-		return nil, fmt.Errorf("fail to decode %s: %s", path, err)
+		return nil, fmt.Errorf("fail to decode %s: %w", path, err)
 	}
 
 	return cfg, nil
