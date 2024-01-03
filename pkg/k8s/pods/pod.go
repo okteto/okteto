@@ -318,7 +318,7 @@ func Restart(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, sn st
 			if strings.Contains(err.Error(), "not found") {
 				return nil
 			}
-			return fmt.Errorf("error deleting kubernetes service: %s", err)
+			return fmt.Errorf("error deleting kubernetes service: %w", err)
 		}
 	}
 
@@ -356,7 +356,7 @@ func waitUntilRunning(ctx context.Context, namespace, selector string, c *kubern
 				allRunning = false
 				notready[pods.Items[i].GetName()] = true
 			} else if phase == apiv1.PodFailed {
-				return fmt.Errorf("Pod %s failed to start", pods.Items[i].Name)
+				return fmt.Errorf("pod %s failed to start", pods.Items[i].Name)
 			} else if phase == apiv1.PodRunning {
 				if isRunning(&pods.Items[i]) {
 					if _, ok := notready[pods.Items[i].GetName()]; ok {
@@ -386,7 +386,7 @@ func waitUntilRunning(ctx context.Context, namespace, selector string, c *kubern
 		pods = append(pods, k)
 	}
 
-	return fmt.Errorf("Pod(s) %s didn't restart after 60 seconds", strings.Join(pods, ","))
+	return fmt.Errorf("pod(s) %s didn't restart after 60 seconds", strings.Join(pods, ","))
 }
 
 func isRunning(p *apiv1.Pod) bool {

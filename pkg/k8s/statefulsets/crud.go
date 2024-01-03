@@ -154,7 +154,7 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 		if oktetoErrors.IsNotFound(err) {
 			return nil
 		}
-		return fmt.Errorf("error deleting kubernetes job: %s", err)
+		return fmt.Errorf("error deleting kubernetes job: %w", err)
 	}
 	oktetoLog.Infof("statefulset '%s' deleted", name)
 	return nil
