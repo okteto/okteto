@@ -218,8 +218,8 @@ require (
 	cloud.google.com/go/compute v1.19.1 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v0.13.0 // indirect
-	github.com/bufbuild/connect-go v1.7.0 // indirect
 	dario.cat/mergo v1.0.0 // indirect
+	github.com/bufbuild/connect-go v1.7.0 // indirect
 	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
