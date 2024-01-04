@@ -127,7 +127,7 @@ func (i *DeploymentApp) RestoreOriginal() error {
 	oktetoLog.Info("deprecated devmodeoff behavior")
 	dOrig := &appsv1.Deployment{}
 	if err := json.Unmarshal([]byte(manifest), dOrig); err != nil {
-		return fmt.Errorf("malformed manifest: %v", err)
+		return fmt.Errorf("malformed manifest: %w", err)
 	}
 	i.d = dOrig
 	return nil

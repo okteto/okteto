@@ -1410,9 +1410,10 @@ func Test_translateResources(t *testing.T) {
 
 func Test_translateAffinity(t *testing.T) {
 	tests := []struct {
-		svc      *model.Service
-		affinity *apiv1.Affinity
-		name     string
+		svc                   *model.Service
+		affinity              *apiv1.Affinity
+		name                  string
+		disableVolumeAffinity bool
 	}{
 		{
 			name: "none",
@@ -1519,14 +1520,36 @@ func Test_translateAffinity(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "multiple volumes with volume affinity disabled",
+			svc: &model.Service{
+				Volumes: []model.StackVolume{
+					{
+						LocalPath:  "test-1",
+						RemotePath: "/var",
+					},
+					{
+						LocalPath:  "test-2",
+						RemotePath: "/var",
+					},
+					{
+						LocalPath:  "test-3",
+						RemotePath: "/var",
+					},
+				},
+			},
+			disableVolumeAffinity: true,
+			affinity:              nil,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			aff := translateAffinity(tt.svc)
-			if !reflect.DeepEqual(tt.affinity, aff) {
-				t.Fatal("Wrong translation")
+			if tt.disableVolumeAffinity {
+				t.Setenv(oktetoComposeVolumeAffinityEnabledEnvVar, "false")
 			}
+			aff := translateAffinity(tt.svc)
+			assert.Equal(t, tt.affinity, aff)
 		})
 	}
 }

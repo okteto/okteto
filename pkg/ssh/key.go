@@ -62,22 +62,22 @@ func GenerateKeys() error {
 func generate(public, private string, bitSize int) error {
 	privateKey, err := generatePrivateKey(bitSize)
 	if err != nil {
-		return fmt.Errorf("failed to generate private SSH key: %s", err)
+		return fmt.Errorf("failed to generate private SSH key: %w", err)
 	}
 
 	publicKeyBytes, err := generatePublicKey(&privateKey.PublicKey)
 	if err != nil {
-		return fmt.Errorf("failed to generate public SSH key: %s", err)
+		return fmt.Errorf("failed to generate public SSH key: %w", err)
 	}
 
 	privateKeyBytes := encodePrivateKeyToPEM(privateKey)
 
 	if err := os.WriteFile(public, publicKeyBytes, 0600); err != nil {
-		return fmt.Errorf("failed to write public SSH key: %s", err)
+		return fmt.Errorf("failed to write public SSH key: %w", err)
 	}
 
 	if err := os.WriteFile(private, privateKeyBytes, 0600); err != nil {
-		return fmt.Errorf("failed to write private SSH key: %s", err)
+		return fmt.Errorf("failed to write private SSH key: %w", err)
 	}
 
 	oktetoLog.Infof("created ssh keypair at  %s and %s", public, private)

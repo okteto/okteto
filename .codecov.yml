@@ -6,7 +6,7 @@ coverage:
     project:
       default:
         target: auto
-        threshold: '0%'
+        threshold: '1%' # Not set to 0% to avoid failues due to -0.0X% deltas
 
     patch:
       default:

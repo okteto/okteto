@@ -24,6 +24,7 @@ import (
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -51,6 +52,9 @@ const (
 	destroyingStatus  = "destroying"
 
 	pvcName = "pvc"
+
+	// oktetoComposeVolumeAffinityEnabledEnvVar represents whether the feature flag to enable volume affinity is enabled or not
+	oktetoComposeVolumeAffinityEnabledEnvVar = "OKTETO_COMPOSE_VOLUME_AFFINITY_ENABLED"
 )
 
 // +enum
@@ -461,6 +465,10 @@ func translateVolumeLabels(volumeName string, s *model.Stack) map[string]string 
 }
 
 func translateAffinity(svc *model.Service) *apiv1.Affinity {
+	if !env.LoadBooleanOrDefault(oktetoComposeVolumeAffinityEnabledEnvVar, true) {
+		return nil
+	}
+
 	requirements := make([]apiv1.PodAffinityTerm, 0)
 	for _, volume := range svc.Volumes {
 		if volume.LocalPath == "" {

@@ -27,9 +27,14 @@ type imageTaggerInterface interface {
 	getImageReferencesForTagWithDefaults(manifestName, svcToBuildName, tag string) []string
 }
 
+type smartBuildController interface {
+	IsEnabled() bool
+}
+
 // imageTagger implements an imageTaggerInterface with no volume mounts
 type imageTagger struct {
-	cfg oktetoBuilderConfigInterface
+	cfg                  oktetoBuilderConfigInterface
+	smartBuildController smartBuildController
 }
 
 func getTargetRegistries(isOkteto bool) []string {
@@ -43,9 +48,10 @@ func getTargetRegistries(isOkteto bool) []string {
 }
 
 // newImageTagger returns an instance of imageTagger with the given config
-func newImageTagger(cfg oktetoBuilderConfigInterface) imageTagger {
+func newImageTagger(cfg oktetoBuilderConfigInterface, sbc smartBuildController) imageTagger {
 	return imageTagger{
-		cfg: cfg,
+		cfg:                  cfg,
+		smartBuildController: sbc,
 	}
 }
 
@@ -67,8 +73,10 @@ func (i imageTagger) getServiceImageReference(manifestName, svcName string, b *m
 	// build the image reference based on context and buildInfo
 	targetRegistry := constants.DevRegistry
 	tag := ""
-	if i.cfg.HasGlobalAccess() && i.cfg.IsCleanProject() && i.cfg.IsSmartBuildsEnabled() {
-		targetRegistry = constants.GlobalRegistry
+	if i.cfg.HasGlobalAccess() && i.smartBuildController.IsEnabled() {
+		if i.cfg.IsCleanProject() {
+			targetRegistry = constants.GlobalRegistry
+		}
 		tag = buildHash
 	}
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
@@ -96,9 +104,8 @@ func (it imageTagger) getImageReferencesForTag(manifestName, svcToBuildName, tag
 
 // getImageReferencesForTagWithDefaults returns all the possible image references for a given service, options include the given tag and the default okteto tag
 func (i imageTagger) getImageReferencesForTagWithDefaults(manifestName, svcToBuildName, tag string) []string {
-
 	var imageReferences []string
-	if i.cfg.IsSmartBuildsEnabled() {
+	if i.smartBuildController.IsEnabled() {
 		imageReferences = append(imageReferences, i.getImageReferencesForTag(manifestName, svcToBuildName, tag)...)
 	}
 
@@ -109,23 +116,26 @@ func (i imageTagger) getImageReferencesForTagWithDefaults(manifestName, svcToBui
 
 // imageTaggerWithVolumes represent an imageTaggerInterface with an reference tag with volume mounts
 type imagerTaggerWithVolumes struct {
-	cfg oktetoBuilderConfigInterface
+	cfg                  oktetoBuilderConfigInterface
+	smartBuildController smartBuildController
 }
 
 // newImageWithVolumesTagger returns a new image tagger
-func newImageWithVolumesTagger(cfg oktetoBuilderConfigInterface) imagerTaggerWithVolumes {
+func newImageWithVolumesTagger(cfg oktetoBuilderConfigInterface, sbc smartBuildController) imagerTaggerWithVolumes {
 	return imagerTaggerWithVolumes{
-		cfg: cfg,
+		cfg:                  cfg,
+		smartBuildController: sbc,
 	}
 }
 
 // getServiceImageReference returns the full image tag for the build
 func (i imagerTaggerWithVolumes) getServiceImageReference(manifestName, svcName string, _ *model.BuildInfo, buildHash string) string {
-
 	targetRegistry := constants.DevRegistry
 	tag := ""
-	if i.cfg.HasGlobalAccess() && i.cfg.IsCleanProject() && i.cfg.IsSmartBuildsEnabled() {
-		targetRegistry = constants.GlobalRegistry
+	if i.cfg.HasGlobalAccess() && i.smartBuildController.IsEnabled() {
+		if i.cfg.IsCleanProject() {
+			targetRegistry = constants.GlobalRegistry
+		}
 		tag = buildHash
 	}
 	sanitizedName := format.ResourceK8sMetaString(manifestName)

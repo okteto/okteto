@@ -33,6 +33,7 @@ type fakeConfigRepo struct {
 	err     error
 	sha     string
 	url     string
+	diff    string
 	isClean bool
 }
 
@@ -40,6 +41,7 @@ func (fcr fakeConfigRepo) GetSHA() (string, error)                   { return fc
 func (fcr fakeConfigRepo) IsClean() (bool, error)                    { return fcr.isClean, fcr.err }
 func (fcr fakeConfigRepo) GetAnonymizedRepo() string                 { return fcr.url }
 func (fcr fakeConfigRepo) GetLatestDirCommit(string) (string, error) { return fcr.sha, fcr.err }
+func (fcr fakeConfigRepo) GetDiffHash(string) (string, error)        { return fcr.diff, fcr.err }
 
 type fakeLogger struct{}
 

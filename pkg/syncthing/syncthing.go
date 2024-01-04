@@ -262,7 +262,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 
 func (s *Syncthing) initConfig() error {
 	if err := os.MkdirAll(s.Home, 0700); err != nil {
-		return fmt.Errorf("failed to create %s: %s", s.Home, err)
+		return fmt.Errorf("failed to create %s: %w", s.Home, err)
 	}
 
 	if err := s.UpdateConfig(); err != nil {
@@ -852,11 +852,11 @@ func (s *Syncthing) SoftTerminate() error {
 	}
 	p, err := process.NewProcess(int32(s.pid))
 	if err != nil {
-		return fmt.Errorf("error getting syncthing process %d: %s", s.pid, err.Error())
+		return fmt.Errorf("error getting syncthing process %d: %w", s.pid, err)
 	}
 	oktetoLog.Infof("terminating syncthing %d without wait", s.pid)
 	if err := terminate(p, false); err != nil {
-		return fmt.Errorf("error terminating syncthing %d without wait: %s", p.Pid, err.Error())
+		return fmt.Errorf("error terminating syncthing %d without wait: %w", p.Pid, err)
 	}
 	oktetoLog.Infof("terminated syncthing %d without wait", s.pid)
 	return nil

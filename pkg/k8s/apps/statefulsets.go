@@ -116,7 +116,7 @@ func (i *StatefulSetApp) RestoreOriginal() error {
 	oktetoLog.Info("depreccated devmodeoff behavior")
 	sfsOrig := &appsv1.StatefulSet{}
 	if err := json.Unmarshal([]byte(manifest), sfsOrig); err != nil {
-		return fmt.Errorf("malformed manifest: %v", err)
+		return fmt.Errorf("malformed manifest: %w", err)
 	}
 	i.sfs = sfsOrig
 	return nil
