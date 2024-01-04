@@ -31,7 +31,7 @@ func translate(dev *model.Dev) *apiv1.PersistentVolumeClaim {
 		},
 		Spec: apiv1.PersistentVolumeClaimSpec{
 			AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
-			Resources: apiv1.ResourceRequirements{
+			Resources: apiv1.VolumeResourceRequirements{
 				Requests: apiv1.ResourceList{
 					"storage": resource.MustParse(dev.PersistentVolumeSize()),
 				},

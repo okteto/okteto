@@ -177,7 +177,7 @@ func translatePersistentVolumeClaim(volumeName string, s *model.Stack) apiv1.Per
 		},
 		Spec: apiv1.PersistentVolumeClaimSpec{
 			AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
-			Resources: apiv1.ResourceRequirements{
+			Resources: apiv1.VolumeResourceRequirements{
 				Requests: apiv1.ResourceList{
 					"storage": volumeSpec.Size.Value,
 				},
@@ -393,7 +393,7 @@ func translateVolumeClaimTemplates(svcName string, s *model.Stack) []apiv1.Persi
 					},
 					Spec: apiv1.PersistentVolumeClaimSpec{
 						AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
-						Resources: apiv1.ResourceRequirements{
+						Resources: apiv1.VolumeResourceRequirements{
 							Requests: apiv1.ResourceList{
 								"storage": svc.Resources.Requests.Storage.Size.Value,
 							},
