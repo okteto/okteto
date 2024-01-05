@@ -36,8 +36,9 @@ type depotBuilder struct {
 	err     error
 }
 
-func depotBuilderEnabled() bool {
-	return os.Getenv(depotToken) != "" && os.Getenv(depotProject) != ""
+// isDepotEnabled returns true if depot env vars are set
+func isDepotEnabled(depotToken, depotProject string) bool {
+	return depotToken != "" && depotProject != ""
 }
 
 func newDepotBuilder(ctx context.Context, tag string) (*depotBuilder, error) {

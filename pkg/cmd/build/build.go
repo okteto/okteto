@@ -75,8 +75,10 @@ func (ob *OktetoBuilder) GetBuilder() string {
 // Run runs the build sequence
 func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error {
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
+	depotToken := os.Getenv("DEPOT_TOKEN")
+	depotProject := os.Getenv("DEPOT_PROJECT")
 
-	if depotBuilderEnabled() {
+	if isDepotEnabled(depotToken, depotProject) {
 		return ob.buildWithDepot(ctx, buildOptions, ioCtrl, newDepotBuilder)
 	}
 
