@@ -75,16 +75,16 @@ func (ob *OktetoBuilder) GetBuilder() string {
 // Run runs the build sequence
 func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error {
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
-	depotToken := os.Getenv("DEPOT_TOKEN")
-	depotProject := os.Getenv("DEPOT_PROJECT")
+	depotToken := os.Getenv(depotTokenEnvVar)
+	depotProject := os.Getenv(depotProjectEnvVar)
 
-	if isDepotEnabled(depotToken, depotProject) {
-		return ob.buildWithDepot(ctx, buildOptions, ioCtrl, newDepotBuilder)
-	}
-
-	if ob.OktetoContext.GetCurrentBuilder() == "" {
+	switch {
+	case isDepotEnabled(depotProject, depotToken):
+		depotManager := newDepotBuilder(ctx, depotProject, depotToken, ob.OktetoContext, ioCtrl)
+		return depotManager.Run(ctx, buildOptions)
+	case ob.OktetoContext.GetCurrentBuilder() == "":
 		return ob.buildWithDocker(ctx, buildOptions)
-	} else {
+	default:
 		return ob.buildWithOkteto(ctx, buildOptions, ioCtrl)
 	}
 }
@@ -119,42 +119,6 @@ func GetRegistryConfigFromOktetoConfig(okCtx OktetoContextInterface) *okteto.Con
 	}
 }
 
-func (ob *OktetoBuilder) buildWithDepot(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController, builderGetter func(context.Context, string) (*depotBuilder, error)) error {
-	oktetoLog.Info("building your image on depot's machine")
-
-	var err error
-	if buildOptions.File != "" {
-		buildOptions.File, err = GetDockerfile(buildOptions.File, ob.OktetoContext)
-		if err != nil {
-			return err
-		}
-		defer os.Remove(buildOptions.File)
-	}
-
-	// create a temp folder - this will be remove once the build has finished
-	secretTempFolder, err := createSecretTempFolder()
-	if err != nil {
-		return err
-	}
-
-	defer os.RemoveAll(secretTempFolder)
-
-	opt, err := getSolveOpt(buildOptions, ob.OktetoContext, secretTempFolder)
-	if err != nil {
-		return errors.Wrap(err, "failed to create build solver")
-	}
-
-	oktetoLog.Info("Acquiring a depot's machine..")
-	depotBuilder, err := builderGetter(ctx, buildOptions.Tag)
-	if err != nil {
-		return err
-	}
-	defer depotBuilder.release()
-
-	oktetoLog.Infof("building '%s' on depot's machine..", buildOptions.Tag)
-	return ob.runAndHandleBuild(ctx, depotBuilder.client, opt, buildOptions, ioCtrl)
-}
-
 func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error {
 	oktetoLog.Infof("building your image on %s", ob.OktetoContext.GetCurrentBuilder())
 
@@ -184,7 +148,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 		return err
 	}
 
-	return ob.runAndHandleBuild(ctx, buildkitClient, opt, buildOptions, ioCtrl)
+	return runAndHandleBuild(ctx, buildkitClient, opt, buildOptions, ob.OktetoContext, ioCtrl)
 }
 
 // https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build.go#L209

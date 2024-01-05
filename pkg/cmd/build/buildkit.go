@@ -88,7 +88,7 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 			buildOptions.File = filepath.Join(buildOptions.Path, "Dockerfile")
 		}
 		if _, err := os.Stat(buildOptions.File); os.IsNotExist(err) {
-			return nil, fmt.Errorf("Dockerfile '%s' does not exist", buildOptions.File)
+			return nil, fmt.Errorf("file '%s' not found: %w", buildOptions.File, err)
 		}
 		localDirs = map[string]string{
 			"context":    buildOptions.Path,
@@ -395,7 +395,7 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 	return nil
 }
 
-func (ob *OktetoBuilder) runAndHandleBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error {
+func runAndHandleBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, buildOptions *types.BuildOptions, okCtx OktetoContextInterface, ioCtrl *io.IOController) error {
 	err := solveBuild(ctx, c, opt, buildOptions.OutputMode, ioCtrl)
 	if err != nil {
 		oktetoLog.Infof("Failed to build image: %s", err.Error())
@@ -416,7 +416,7 @@ func (ob *OktetoBuilder) runAndHandleBuild(ctx context.Context, c *client.Client
 	}
 
 	if err == nil && buildOptions.Tag != "" {
-		if _, err := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(ob.OktetoContext)).GetImageTagWithDigest(buildOptions.Tag); err != nil {
+		if _, err := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(okCtx)).GetImageTagWithDigest(buildOptions.Tag); err != nil {
 			oktetoLog.Yellow(`Failed to push '%s' metadata to the registry:
 	  %s,
 	  Retrying ...`, buildOptions.Tag, err.Error())
