@@ -17,7 +17,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_GetValidNameFromFolder(t *testing.T) {
@@ -179,5 +181,53 @@ func Test_restoreEnv(t *testing.T) {
 	for _, c := range checks {
 		_, has := os.LookupEnv(c.key)
 		assert.Equal(t, has, c.exists)
+	}
+}
+
+func TestGetListDiff(t *testing.T) {
+	listA := []string{"a", "b"}
+	listB := []string{"c", "d", "a", "b", "f"}
+
+	expected := []string{"a", "b"}
+	result := GetListDiff(listA, listB)
+	require.ElementsMatch(t, result, expected)
+}
+
+func TestPathExistsAndDir(t *testing.T) {
+	fs := afero.NewOsFs()
+	path, err := afero.TempDir(fs, "", "")
+	require.NoError(t, err)
+	require.Equal(t, PathExistsAndDir(path), true)
+}
+
+func TestPathExistsAndDirError(t *testing.T) {
+	tests := []struct {
+		name       string
+		createFile bool
+		expected   bool
+	}{
+		{
+			name:       "error: path doesn't exits",
+			createFile: false,
+			expected:   false,
+		},
+		{
+			name:       "error: path is not a dir",
+			createFile: true,
+			expected:   false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var path string
+			if tt.createFile {
+				fs := afero.NewMemMapFs()
+				file, err := afero.TempFile(fs, "", "")
+				require.NoError(t, err)
+				path = file.Name()
+			}
+			require.Equal(t, PathExistsAndDir(path), tt.expected)
+
+		})
 	}
 }
