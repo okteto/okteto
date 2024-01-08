@@ -78,13 +78,12 @@ func Test_isDepotEnabled(t *testing.T) {
 	}
 }
 func Test_newDepotBuilder(t *testing.T) {
-	ctx := context.TODO()
 	projectId := "test-project"
 	token := "test-token"
 	okCtx := &okteto.OktetoContextStateless{}
 	ioCtrl := &io.IOController{}
 
-	builder := newDepotBuilder(ctx, projectId, token, okCtx, ioCtrl)
+	builder := newDepotBuilder(projectId, token, okCtx, ioCtrl)
 
 	assert.NotNil(t, builder)
 	assert.Equal(t, ioCtrl, builder.ioCtrl)
@@ -93,7 +92,7 @@ func Test_newDepotBuilder(t *testing.T) {
 	assert.Equal(t, okCtx, builder.okCtx)
 }
 
-func Test_depotBuilder_release(t *testing.T) {
+func Test_depotBuilder_release(_ *testing.T) {
 	mockErr := errors.New("mock error")
 	mockMachine := &fakeDepotMachine{
 		err: mockErr,
@@ -113,11 +112,11 @@ func Test_depotBuilder_release(t *testing.T) {
 
 func TestDepotRun(t *testing.T) {
 	tests := []struct {
-		name              string
 		newDepotBuildErr  error
 		acquireMachineErr error
 		machineConnectErr error
 		expected          error
+		name              string
 	}{
 		{
 			name:             "error depot build",

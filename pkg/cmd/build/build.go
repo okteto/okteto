@@ -80,7 +80,7 @@ func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptio
 
 	switch {
 	case isDepotEnabled(depotProject, depotToken):
-		depotManager := newDepotBuilder(ctx, depotProject, depotToken, ob.OktetoContext, ioCtrl)
+		depotManager := newDepotBuilder(depotProject, depotToken, ob.OktetoContext, ioCtrl)
 		return depotManager.Run(ctx, buildOptions)
 	case ob.OktetoContext.GetCurrentBuilder() == "":
 		return ob.buildWithDocker(ctx, buildOptions)

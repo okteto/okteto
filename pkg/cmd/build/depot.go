@@ -40,18 +40,15 @@ type depotMachineConnector interface {
 }
 
 type depotBuilder struct {
-	token   string
-	project string
-
-	ioCtrl *io.IOController
-	okCtx  OktetoContextInterface
-	fs     afero.Fs
-
+	okCtx          OktetoContextInterface
+	fs             afero.Fs
+	machine        depotMachineConnector
+	err            error
+	ioCtrl         *io.IOController
 	newDepotBuild  func(ctx context.Context, req *cliv1.CreateBuildRequest, token string) (build.Build, error)
 	acquireMachine func(ctx context.Context, buildId, token, platform string) (depotMachineConnector, error)
-
-	machine depotMachineConnector
-	err     error
+	token          string
+	project        string
 }
 
 // isDepotEnabled returns true if depot env vars are set
@@ -60,7 +57,7 @@ func isDepotEnabled(depotProject, depotToken string) bool {
 }
 
 // newDepotBuilder creates a new instance of DepotBuilder.
-func newDepotBuilder(ctx context.Context, projectId, token string, okCtx OktetoContextInterface, ioCtrl *io.IOController) *depotBuilder {
+func newDepotBuilder(projectId, token string, okCtx OktetoContextInterface, ioCtrl *io.IOController) *depotBuilder {
 	return &depotBuilder{
 		ioCtrl:  ioCtrl,
 		token:   token,
@@ -114,7 +111,7 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 		return err
 	}
 
-	client, err := db.getBuildkitClient(ctx, build, buildOptions.Platform)
+	client, err := db.getBuildkitClient(ctx, buildOptions.Platform)
 	if err != nil {
 		return err
 	}
@@ -148,7 +145,7 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 }
 
 // getBuildkitClient returns a buildkit client connected to the depot's machine.
-func (db *depotBuilder) getBuildkitClient(ctx context.Context, build build.Build, platform string) (*buildkitClient.Client, error) {
+func (db *depotBuilder) getBuildkitClient(ctx context.Context, platform string) (*buildkitClient.Client, error) {
 	// Check buildkitd readiness. When the buildkitd starts, it may take
 	// quite a while to be ready to accept connections when it loads a large boltdb.
 	connectCtx, cancelConnect := context.WithTimeout(ctx, 1*time.Second)
