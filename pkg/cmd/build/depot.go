@@ -111,7 +111,7 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 		return err
 	}
 
-	client, err := db.getBuildkitClient(ctx, buildOptions.Platform)
+	client, err := db.getBuildkitClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,12 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 		if err != nil {
 			return err
 		}
-		defer db.fs.Remove(buildOptions.File)
+		defer func() {
+			err := db.fs.Remove(buildOptions.File)
+			if err != nil {
+				db.ioCtrl.Logger().Infof("failed to remove file after build process: %s", err)
+			}
+		}()
 	}
 
 	// create a temp folder - this will be remove once the build has finished
@@ -129,7 +134,12 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 	if err != nil {
 		return err
 	}
-	defer db.fs.RemoveAll(secretTempFolder)
+	defer func() {
+		err := db.fs.RemoveAll(secretTempFolder)
+		if err != nil {
+			db.ioCtrl.Logger().Infof("failed to remove temp secrets folder after build process: %s", err)
+		}
+	}()
 
 	opt, err := getSolveOpt(buildOptions, db.okCtx, secretTempFolder)
 	if err != nil {
@@ -145,7 +155,7 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 }
 
 // getBuildkitClient returns a buildkit client connected to the depot's machine.
-func (db *depotBuilder) getBuildkitClient(ctx context.Context, platform string) (*buildkitClient.Client, error) {
+func (db *depotBuilder) getBuildkitClient(ctx context.Context) (*buildkitClient.Client, error) {
 	// Check buildkitd readiness. When the buildkitd starts, it may take
 	// quite a while to be ready to accept connections when it loads a large boltdb.
 	connectCtx, cancelConnect := context.WithTimeout(ctx, 1*time.Second)
