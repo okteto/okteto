@@ -231,3 +231,15 @@ func TestPathExistsAndDirError(t *testing.T) {
 		})
 	}
 }
+
+func TestGetDependentNodes(t *testing.T) {
+	expected := []string{"node1", "node3", "neighbor1", "neighbor2"}
+	graph := Graph{
+		"node1": {"neighbor1", "neighbor2"},
+		"node2": {"neighbor3"},
+		"node3": {},
+	}
+
+	startingNodes := []string{"node1", "node3"}
+	require.ElementsMatch(t, GetDependentNodes(graph, startingNodes), expected)
+}
