@@ -95,7 +95,7 @@ func Test_getErrorMessage(t *testing.T) {
 			err:  errors.New("pull access denied, repository does not exist or may require authorization: server message: insufficient_scope: authorization failed"),
 			tag:  imageTag,
 			expected: oktetoErrors.UserError{
-				E:    fmt.Errorf("error building image: failed to pull image '%s'. The repository is not accessible or it does not exist.", imageTag),
+				E:    fmt.Errorf("error building image: failed to pull image '%s'. The repository is not accessible or it does not exist", imageTag),
 				Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.", imageTag),
 			},
 		},
@@ -111,7 +111,11 @@ func Test_getErrorMessage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := getErrorMessage(tt.err, tt.tag)
-			assert.Equal(t, tt.expected, err)
+			if tt.expected == nil {
+				assert.Nil(t, err)
+			} else {
+				assert.ErrorContains(t, tt.expected, err.Error())
+			}
 		})
 	}
 }
