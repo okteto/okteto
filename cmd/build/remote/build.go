@@ -58,6 +58,7 @@ func NewBuilderFromScratch(ioCtrl *io.IOController) *OktetoBuilder {
 		OktetoContext: &okteto.OktetoContextStateless{
 			Store: okteto.ContextStore(),
 		},
+		Fs: afero.NewOsFs(),
 	}
 	registry := registry.NewOktetoRegistry(okteto.Config{})
 	return &OktetoBuilder{

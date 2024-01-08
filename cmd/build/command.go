@@ -36,6 +36,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -79,6 +80,7 @@ func NewBuildCommand(ioCtrl *io.IOController, analyticsTracker analyticsTrackerI
 		GetManifest: model.GetManifestV2,
 		Builder: &buildCmd.OktetoBuilder{
 			OktetoContext: okCtx,
+			Fs:            afero.NewOsFs(),
 		},
 		Registry:         registry.NewOktetoRegistry(buildCmd.GetRegistryConfigFromOktetoConfig(okCtx)),
 		ioCtrl:           ioCtrl,

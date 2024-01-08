@@ -18,16 +18,19 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/depot/depot-go/build"
 	cliv1 "github.com/depot/depot-go/proto/depot/cli/v1"
+	"github.com/moby/buildkit/client"
 	buildkitClient "github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeDepotMachine struct {
@@ -111,6 +114,8 @@ func Test_depotBuilder_release(_ *testing.T) {
 }
 
 func TestDepotRun(t *testing.T) {
+	fakeFs := afero.NewMemMapFs()
+
 	tests := []struct {
 		newDepotBuildErr  error
 		acquireMachineErr error
@@ -137,30 +142,68 @@ func TestDepotRun(t *testing.T) {
 			name:     "dockerfile does not exist",
 			expected: os.ErrNotExist,
 		},
+		{
+			name: "successful build",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var tempDir string
+			if tt.expected == nil {
+				tempDir = t.TempDir()
+				filePath := filepath.Join(tempDir, "Dockerfile")
+				err := afero.WriteFile(fakeFs, filePath, []byte("FROM scratch"), 0600)
+				require.NoError(t, err)
+			}
+
 			db := &depotBuilder{
 				ioCtrl: io.NewIOController(),
 				newDepotBuild: func(context.Context, *cliv1.CreateBuildRequest, string) (build.Build, error) {
-					return build.Build{}, tt.newDepotBuildErr
+					return build.Build{
+						Finish: func(err error) {},
+					}, tt.newDepotBuildErr
 				},
 				acquireMachine: func(context.Context, string, string, string) (depotMachineConnector, error) {
 					return &fakeDepotMachine{
 						err: tt.machineConnectErr,
 					}, tt.acquireMachineErr
 				},
-				fs: afero.NewMemMapFs(),
+				fs: fakeFs,
 				okCtx: &okteto.OktetoContextStateless{
 					Store: &okteto.OktetoContextStore{
 						Contexts: map[string]*okteto.OktetoContext{
-							"test": {},
+							"test": {
+								IsOkteto: true,
+							},
 						},
 						CurrentContext: "test",
 					},
 				},
 			}
-			err := db.Run(context.Background(), &types.BuildOptions{})
+
+			opts := &types.BuildOptions{
+				Path: tempDir,
+				ExportCache: []string{
+					"export-image",
+					"another-export-image",
+				},
+				CacheFrom: []string{
+					"from-image",
+				},
+				Target:  "testTarget",
+				NoCache: true,
+				ExtraHosts: []types.HostMap{
+					{Hostname: "test", IP: "testIP"},
+					{Hostname: fmt.Sprintf("kubernetes.%s", "subdomain"), IP: "testIP"},
+				},
+				BuildArgs: []string{"arg1=value1"},
+				Tag:       "okteto.dev/test:okteto",
+				DevTag:    "okteto.dev/test:okteto",
+			}
+			runAndHandle := func(ctx context.Context, c *client.Client, opt *client.SolveOpt, buildOptions *types.BuildOptions, okCtx OktetoContextInterface, ioCtrl *io.IOController) error {
+				return nil
+			}
+			err := db.Run(context.Background(), opts, runAndHandle)
 			assert.ErrorIs(t, err, tt.expected)
 		})
 	}

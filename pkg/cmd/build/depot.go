@@ -21,6 +21,7 @@ import (
 	"github.com/depot/depot-go/build"
 	"github.com/depot/depot-go/machine"
 	cliv1 "github.com/depot/depot-go/proto/depot/cli/v1"
+	"github.com/moby/buildkit/client"
 	buildkitClient "github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
@@ -82,7 +83,9 @@ func (db *depotBuilder) release(build build.Build) {
 	}
 }
 
-func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions) error {
+type runAndHandleBuildFn func(ctx context.Context, c *client.Client, opt *client.SolveOpt, buildOptions *types.BuildOptions, okCtx OktetoContextInterface, ioCtrl *io.IOController) error
+
+func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, run runAndHandleBuildFn) error {
 	db.ioCtrl.Logger().Info("building your image on depot's machine")
 
 	// Register a new build.
@@ -141,7 +144,7 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 		}
 	}()
 
-	opt, err := getSolveOpt(buildOptions, db.okCtx, secretTempFolder)
+	opt, err := getSolveOpt(buildOptions, db.okCtx, secretTempFolder, db.fs)
 	if err != nil {
 		return fmt.Errorf("failed to create build solver: %w", err)
 	}
@@ -151,7 +154,7 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 	defer db.release(build)
 	db.ioCtrl.Logger().Infof("building '%s' on depot's machine..", buildOptions.Tag)
 
-	return runAndHandleBuild(ctx, client, opt, buildOptions, db.okCtx, db.ioCtrl)
+	return run(ctx, client, opt, buildOptions, db.okCtx, db.ioCtrl)
 }
 
 // getBuildkitClient returns a buildkit client connected to the depot's machine.

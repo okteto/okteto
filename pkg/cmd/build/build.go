@@ -61,6 +61,7 @@ type OktetoBuilderInterface interface {
 // OktetoBuilder runs the build of an image
 type OktetoBuilder struct {
 	OktetoContext OktetoContextInterface
+	Fs            afero.Fs
 }
 
 // OktetoRegistryInterface checks if an image is at the registry
@@ -81,11 +82,11 @@ func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptio
 	switch {
 	case isDepotEnabled(depotProject, depotToken):
 		depotManager := newDepotBuilder(depotProject, depotToken, ob.OktetoContext, ioCtrl)
-		return depotManager.Run(ctx, buildOptions)
+		return depotManager.Run(ctx, buildOptions, runAndHandleBuild)
 	case ob.OktetoContext.GetCurrentBuilder() == "":
 		return ob.buildWithDocker(ctx, buildOptions)
 	default:
-		return ob.buildWithOkteto(ctx, buildOptions, ioCtrl)
+		return ob.buildWithOkteto(ctx, buildOptions, ioCtrl, runAndHandleBuild)
 	}
 }
 
@@ -119,7 +120,7 @@ func GetRegistryConfigFromOktetoConfig(okCtx OktetoContextInterface) *okteto.Con
 	}
 }
 
-func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error {
+func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController, run runAndHandleBuildFn) error {
 	oktetoLog.Infof("building your image on %s", ob.OktetoContext.GetCurrentBuilder())
 
 	var err error
@@ -138,7 +139,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	}
 	defer os.RemoveAll(secretTempFolder)
 
-	opt, err := getSolveOpt(buildOptions, ob.OktetoContext, secretTempFolder)
+	opt, err := getSolveOpt(buildOptions, ob.OktetoContext, secretTempFolder, ob.Fs)
 	if err != nil {
 		return errors.Wrap(err, "failed to create build solver")
 	}
@@ -148,7 +149,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 		return err
 	}
 
-	return runAndHandleBuild(ctx, buildkitClient, opt, buildOptions, ob.OktetoContext, ioCtrl)
+	return run(ctx, buildkitClient, opt, buildOptions, ob.OktetoContext, ioCtrl)
 }
 
 // https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build.go#L209

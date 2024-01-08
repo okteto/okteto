@@ -50,7 +50,7 @@ const (
 type buildWriter struct{}
 
 // getSolveOpt returns the buildkit solve options
-func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface, secretTempFolder string) (*client.SolveOpt, error) {
+func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface, secretTempFolder string, fs afero.Fs) (*client.SolveOpt, error) {
 
 	if buildOptions.Tag != "" {
 		err := validateImage(okctx, buildOptions.Tag)
@@ -87,7 +87,7 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 		if buildOptions.File == "" {
 			buildOptions.File = filepath.Join(buildOptions.Path, "Dockerfile")
 		}
-		if _, err := os.Stat(buildOptions.File); os.IsNotExist(err) {
+		if _, err := fs.Stat(buildOptions.File); os.IsNotExist(err) {
 			return nil, fmt.Errorf("file '%s' not found: %w", buildOptions.File, err)
 		}
 		localDirs = map[string]string{
