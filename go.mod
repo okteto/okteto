@@ -219,7 +219,7 @@ require (
 	cloud.google.com/go/iam v1.1.1 // indirect
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/Microsoft/hcsshim v0.9.10 // indirect
-	github.com/cloudflare/circl v1.3.3 // indirect
+	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
