@@ -69,7 +69,7 @@ func RunOktetoUp(oktetoPath string, upOptions *UpOptions) (*UpCommandProcessResu
 		defer wg.Done()
 		if err := cmd.Wait(); err != nil {
 			if err != nil {
-				log.Printf("okteto up exited: %w.\nOutput:\n%s", err, out.String())
+				log.Printf("okteto up exited: %s.\nOutput:\n%s", err.Error(), out.String())
 				upErrorChannel <- fmt.Errorf("okteto up exited before completion")
 			}
 		}
