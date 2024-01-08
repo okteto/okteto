@@ -16,6 +16,7 @@ package forward
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -65,18 +66,6 @@ func (a *active) stop() {
 
 func (a *active) closeReady() {
 	if a != nil && a.readyChan != nil {
-		// This recover() is a defensive approach needed to prevent panics in "okteto up".
-		// After the update of k8s dependencies (PR: https://github.com/okteto/okteto/pull/4087)
-		// The CLI started to panic when closing a.readyChan because already closed.
-		// After investigating, it seems that the dependency under the hood is also closing the channel, however
-		// this is not a new behavior, that part of the library was already like this. An alternative approach
-		// would be removing the call to close() but it's less risky to use recover.
-		defer func() {
-			if r := recover(); r != nil {
-				oktetoLog.Debugf("Recovering from already closed channel: %s", r)
-			}
-		}()
-
 		close(a.readyChan)
 		a.readyChan = nil
 	}
@@ -154,7 +143,9 @@ func (p *PortForwardManager) Start(devPod, namespace string) error {
 		err := devPF.ForwardPorts()
 		if err != nil {
 			oktetoLog.Infof("k8s forwarding to dev pod finished with errors: %s", err)
-			p.activeDev.closeReady()
+			if !errors.Is(err, portforward.ErrLostConnectionToPod) {
+				p.activeDev.closeReady()
+			}
 			p.activeDev.err = err
 		}
 	}()
