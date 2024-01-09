@@ -88,7 +88,7 @@ type OktetoBuilder struct {
 	buildEnvironments map[string]string
 
 	ioCtrl *io.IOController
-	// lock is a mutex to provide builEnvironments map safe concurrency
+	// lock is a mutex to provide buildEnvironments map safe concurrency
 	lock sync.RWMutex
 }
 

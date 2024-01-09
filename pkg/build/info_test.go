@@ -407,6 +407,82 @@ func TestMarshalInfo(t *testing.T) {
 			out, err := yaml.Marshal(tt.input)
 			require.NoError(t, err)
 			require.Equal(t, tt.expected, string(out))
+
+		})
+	}
+}
+
+func Test_expandSecrets(t *testing.T) {
+	t.Setenv("HOME", "/home/testuser")
+
+	tests := []struct {
+		name        string
+		input       *Info
+		expected    *Info
+		expectedErr bool
+	}{
+		{
+			name:     "no secrets",
+			input:    &Info{},
+			expected: &Info{},
+		},
+		{
+			name: "successfully expand home directory",
+			input: &Info{Secrets: map[string]string{
+				"path": "~/secret",
+			}},
+			expected: &Info{Secrets: map[string]string{
+				"path": "/home/testuser/secret",
+			}},
+		},
+		{
+			name: "only replace initial tilde-slash",
+			input: &Info{Secrets: map[string]string{
+				"path": "~/test/~/secret",
+			}},
+			expected: &Info{Secrets: map[string]string{
+				"path": "/home/testuser/test/~/secret",
+			}},
+		},
+		{
+			name: "no expansion needed",
+			input: &Info{Secrets: map[string]string{
+				"path": "/var/log",
+			}},
+			expected: &Info{Secrets: map[string]string{
+				"path": "/var/log",
+			}},
+		},
+		{
+			name: "expand HOME env var",
+			input: &Info{Secrets: map[string]string{
+				"path": "$HOME/secrets",
+			}},
+			expected: &Info{Secrets: map[string]string{
+				"path": "/home/testuser/secrets",
+			}},
+		},
+		{
+			name: "expand unset VAR env var",
+			input: &Info{Secrets: map[string]string{
+				"path": "$TEST_RANDOM_DIR/secrets",
+			}},
+			expected: &Info{Secrets: map[string]string{
+				"path": "/home/testuser/secrets",
+			}},
+			expectedErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.input.expandSecrets()
+			if tc.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tc.expected, tc.input)
 		})
 	}
 }
