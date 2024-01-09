@@ -63,3 +63,19 @@ func TestUnmarshalVolumeMounts(t *testing.T) {
 		})
 	}
 }
+
+func TestVolumeMountsToString(t *testing.T) {
+	vm1 := &VolumeMounts{
+		LocalPath: "test",
+	}
+	result1 := vm1.ToString()
+	require.Equal(t, "test:", result1)
+
+	vm2 := &VolumeMounts{
+		LocalPath:  "",
+		RemotePath: "test",
+	}
+
+	result2 := vm2.ToString()
+	require.Equal(t, "test", result2)
+}
