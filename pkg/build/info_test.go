@@ -18,9 +18,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/cache"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestExpandBuildArgs(t *testing.T) {
@@ -279,4 +281,76 @@ func TestSetBuildDefaults(t *testing.T) {
 	}
 	info.SetBuildDefaults()
 	require.Equal(t, info, expected)
+}
+
+func TestUnmarshalInfo(t *testing.T) {
+	tests := []struct {
+		input       string
+		expected    *Info
+		name        string
+		expectedErr bool
+	}{
+		{
+			name:  "unmarshal string",
+			input: "an string value",
+			expected: &Info{
+				Name: "an string value",
+			},
+		},
+		{
+			name: "unmarshal struct",
+			input: `
+name: default
+context: testContext
+dockerfile: dockerfile
+target: testTarget
+image: testImage
+cache_from:
+  - test_cache_from
+export_cache:
+  - test_export_cache
+depends_on:
+  - test_depends_on
+secrets:
+  secretName: secretValue`,
+			expected: &Info{
+				Name:       "default",
+				Context:    "testContext",
+				Dockerfile: "dockerfile",
+				Target:     "testTarget",
+				Image:      "testImage",
+				CacheFrom: cache.CacheFrom{
+					"test_cache_from",
+				},
+				ExportCache: cache.ExportCache{
+					"test_export_cache",
+				},
+				DependsOn: DependsOn{
+					"test_depends_on",
+				},
+				Secrets: Secrets{
+					"secretName": "secretValue",
+				},
+			},
+		},
+
+		{
+			name:        "error unmarshal string nor struct",
+			input:       "- an string value as list",
+			expectedErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out := &Info{}
+			err := yaml.Unmarshal([]byte(tt.input), out)
+			if tt.expectedErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, out)
+			}
+
+		})
+	}
 }
