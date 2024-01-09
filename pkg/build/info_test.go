@@ -354,3 +354,59 @@ secrets:
 		})
 	}
 }
+
+func TestMarshalInfo(t *testing.T) {
+	tests := []struct {
+		expected string
+		input    *Info
+		name     string
+	}{
+		{
+			name:     "unmarshal string",
+			expected: "an string value\n",
+			input: &Info{
+				Name: "an string value",
+			},
+		},
+		{
+			name:     "unmarshal info with context",
+			expected: "context: an string value\n",
+			input: &Info{
+				Context: "an string value",
+			},
+		},
+		{
+			name:     "unmarshal info with dockerfile",
+			expected: "dockerfile: an string value\n",
+			input: &Info{
+				Dockerfile: "an string value",
+			},
+		},
+		{
+			name:     "unmarshal info with target",
+			expected: "target: an string value\n",
+			input: &Info{
+				Target: "an string value",
+			},
+		},
+		{
+			name:     "unmarshal info with args",
+			expected: "args:\n    - name: testName\n      value: testValue\n",
+			input: &Info{
+				Args: Args{
+					{
+						Name:  "testName",
+						Value: "testValue",
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out, err := yaml.Marshal(tt.input)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, string(out))
+		})
+	}
+}
