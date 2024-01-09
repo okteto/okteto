@@ -391,7 +391,7 @@ func TestMarshalInfo(t *testing.T) {
 		},
 		{
 			name:     "unmarshal info with args",
-			expected: "args:\n    - name: testName\n      value: testValue\n",
+			expected: "args:\n- name: testName\n  value: testValue\n",
 			input: &Info{
 				Args: Args{
 					{

@@ -21,8 +21,8 @@ import (
 )
 
 type VolumeMounts struct {
-	LocalPath  string
-	RemotePath string
+	LocalPath  string `yaml:"local_path,omitempty"`
+	RemotePath string `yaml:"remote_path,omitempty"`
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
