@@ -27,8 +27,8 @@ import (
 type Environment []Var
 
 type EnvVarExpansionErr struct {
-	value string
 	err   error
+	value string
 }
 
 func (e EnvVarExpansionErr) Error() string {
@@ -39,7 +39,7 @@ func (e EnvVarExpansionErr) Error() string {
 func ExpandEnv(value string) (string, error) {
 	result, err := envsubst.String(value)
 	if err != nil {
-		return "", EnvVarExpansionErr{value, err}
+		return "", EnvVarExpansionErr{err, value}
 	}
 	return result, nil
 }
