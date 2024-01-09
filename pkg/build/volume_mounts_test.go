@@ -64,6 +64,16 @@ func TestUnmarshalVolumeMounts(t *testing.T) {
 	}
 }
 
+func TestMarshalVolumeMounts(t *testing.T) {
+	input := &VolumeMounts{
+		LocalPath:  "testLocal",
+		RemotePath: "testRemote",
+	}
+	out, err := yaml.Marshal(input)
+	require.NoError(t, err)
+	require.Equal(t, "testRemote\n", string(out))
+}
+
 func TestVolumeMountsToString(t *testing.T) {
 	vm1 := &VolumeMounts{
 		LocalPath: "test",
