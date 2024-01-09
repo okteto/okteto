@@ -14,10 +14,8 @@
 package utils
 
 import (
-	"os"
 	"testing"
 
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -130,60 +128,6 @@ func TestGetCycles(t *testing.T) {
 
 }
 
-func Test_snapshotEnv(t *testing.T) {
-	os.Clearenv()
-
-	vars := map[string]string{
-		"TEST_1": "1",
-		"TEST_2": "2",
-	}
-	for k, v := range vars {
-		t.Setenv(k, v)
-	}
-
-	env := snapshotEnv()
-
-	expected := map[string]string{
-		"TEST_1": "1",
-		"TEST_2": "2",
-	}
-	assert.Equal(t, expected, env)
-}
-
-func Test_restoreEnv(t *testing.T) {
-	os.Clearenv()
-
-	vars := map[string]string{
-		"TEST_1": "1",
-		"TEST_2": "2",
-	}
-	for k, v := range vars {
-		t.Setenv(k, v)
-	}
-
-	env := snapshotEnv()
-	os.Clearenv()
-
-	assert.Equal(t, os.Environ(), []string{})
-
-	t.Setenv("TEST_3", "3")
-	assert.NoError(t, restoreEnv(env))
-
-	checks := []struct {
-		key    string
-		exists bool
-	}{
-		{"TEST_1", true},
-		{"TEST_2", true},
-		{"TEST_3", false},
-	}
-
-	for _, c := range checks {
-		_, has := os.LookupEnv(c.key)
-		assert.Equal(t, has, c.exists)
-	}
-}
-
 func TestGetListDiff(t *testing.T) {
 	listA := []string{"a", "b"}
 	listB := []string{"c", "d", "a", "b", "f"}
@@ -191,45 +135,6 @@ func TestGetListDiff(t *testing.T) {
 	expected := []string{"a", "b"}
 	result := GetListDiff(listA, listB)
 	require.ElementsMatch(t, result, expected)
-}
-
-func TestPathExistsAndDir(t *testing.T) {
-	fs := afero.NewOsFs()
-	path, err := afero.TempDir(fs, "", "")
-	require.NoError(t, err)
-	require.Equal(t, PathExistsAndDir(path), true)
-}
-
-func TestPathExistsAndDirError(t *testing.T) {
-	tests := []struct {
-		name       string
-		createFile bool
-		expected   bool
-	}{
-		{
-			name:       "error: path doesn't exits",
-			createFile: false,
-			expected:   false,
-		},
-		{
-			name:       "error: path is not a dir",
-			createFile: true,
-			expected:   false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var path string
-			if tt.createFile {
-				fs := afero.NewMemMapFs()
-				file, err := afero.TempFile(fs, "", "")
-				require.NoError(t, err)
-				path = file.Name()
-			}
-			require.Equal(t, PathExistsAndDir(path), tt.expected)
-
-		})
-	}
 }
 
 func TestGetDependentNodes(t *testing.T) {

@@ -34,7 +34,6 @@ import (
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
-	"github.com/okteto/okteto/pkg/model/utils"
 	"github.com/spf13/afero"
 	yaml "gopkg.in/yaml.v2"
 	yaml3 "gopkg.in/yaml.v3"
@@ -296,7 +295,7 @@ func GetManifestV1(manifestPath string) (*Manifest, error) {
 		return manifest, nil
 	}
 
-	if manifestPath != "" && utils.PathExistsAndDir(manifestPath) {
+	if manifestPath != "" && pathExistsAndDir(manifestPath) {
 		cwd = manifestPath
 	}
 
@@ -306,6 +305,14 @@ func GetManifestV1(manifestPath string) (*Manifest, error) {
 	}
 
 	return manifest, nil
+}
+
+func pathExistsAndDir(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil && os.IsNotExist(err) {
+		return false
+	}
+	return info.IsDir()
 }
 
 // GetManifestV2 gets a manifest from a path or search for the files to generate it
@@ -326,7 +333,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		return manifest, nil
 	}
 
-	if manifestPath != "" && utils.PathExistsAndDir(manifestPath) {
+	if manifestPath != "" && pathExistsAndDir(manifestPath) {
 		cwd = manifestPath
 	}
 

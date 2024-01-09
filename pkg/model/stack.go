@@ -310,7 +310,7 @@ func getStackName(name, stackPath, actualStackName string) (string, error) {
 			// this name could be not sanitized when running at pipeline installer
 			return nameEnvVar, nil
 		}
-		name, err := utils.GetValidNameFromGitRepo(filepath.Dir(stackPath))
+		name, err := getValidNameFromGitRepo(filepath.Dir(stackPath))
 		if err != nil {
 			name, err = utils.GetValidNameFromFolder(filepath.Dir(stackPath))
 			if err != nil {
@@ -326,6 +326,16 @@ func getStackName(name, stackPath, actualStackName string) (string, error) {
 		return "", err
 	}
 	return actualStackName, nil
+}
+
+// getValidNameFromGitRepo returns a name from a repository url
+func getValidNameFromGitRepo(folder string) (string, error) {
+	repo, err := utils.GetRepositoryURL(folder)
+	if err != nil {
+		return "", err
+	}
+	name := utils.TranslateURLToName(repo)
+	return name, nil
 }
 
 // ReadStack reads an okteto stack
@@ -427,7 +437,7 @@ func (svc *Service) ToDev(svcName string) (*Dev, error) {
 		}
 	}
 	for _, v := range svc.VolumeMounts {
-		if utils.PathExistsAndDir(v.LocalPath) {
+		if pathExistsAndDir(v.LocalPath) {
 			d.Sync.Folders = append(d.Sync.Folders, SyncFolder(v))
 		}
 	}

@@ -28,7 +28,9 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 )
@@ -1640,6 +1642,45 @@ func TestRead(t *testing.T) {
 				assert.NoError(t, err)
 			}
 			assert.Equal(t, tt.expected, manifest)
+		})
+	}
+}
+
+func TestPathExistsAndDir(t *testing.T) {
+	fs := afero.NewOsFs()
+	path, err := afero.TempDir(fs, "", "")
+	require.NoError(t, err)
+	require.Equal(t, pathExistsAndDir(path), true)
+}
+
+func TestPathExistsAndDirError(t *testing.T) {
+	tests := []struct {
+		name       string
+		createFile bool
+		expected   bool
+	}{
+		{
+			name:       "error: path doesn't exits",
+			createFile: false,
+			expected:   false,
+		},
+		{
+			name:       "error: path is not a dir",
+			createFile: true,
+			expected:   false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var path string
+			if tt.createFile {
+				fs := afero.NewMemMapFs()
+				file, err := afero.TempFile(fs, "", "")
+				require.NoError(t, err)
+				path = file.Name()
+			}
+			require.Equal(t, pathExistsAndDir(path), tt.expected)
+
 		})
 	}
 }

@@ -45,12 +45,60 @@ func (b *ManifestBuild) Validate() error {
 // GetSvcsToBuildFromList returns the builds from a list and all its
 func (b *ManifestBuild) GetSvcsToBuildFromList(toBuild []string) []string {
 	initialSvcsToBuild := toBuild
-	svcsToBuildWithDependencies := utils.GetDependentNodes(b.toGraph(), toBuild)
+	svcsToBuildWithDependencies := getDependentNodes(b.toGraph(), toBuild)
 	if len(initialSvcsToBuild) != len(svcsToBuildWithDependencies) {
-		dependantBuildImages := utils.GetListDiff(initialSvcsToBuild, svcsToBuildWithDependencies)
+		dependantBuildImages := getListDiff(initialSvcsToBuild, svcsToBuildWithDependencies)
 		oktetoLog.Warning("The following build images need to be built because of dependencies: [%s]", strings.Join(dependantBuildImages, ", "))
 	}
 	return svcsToBuildWithDependencies
+}
+
+func getListDiff(l1, l2 []string) []string {
+	var (
+		longerList  []string
+		shorterList []string
+	)
+	if len(l1) < len(l2) {
+		shorterList = l1
+		longerList = l2
+
+	} else {
+		shorterList = l2
+		longerList = l1
+	}
+
+	shorterListSet := map[string]bool{}
+	for _, svc := range shorterList {
+		shorterListSet[svc] = true
+	}
+	added := []string{}
+	for _, svcName := range longerList {
+		if _, ok := shorterListSet[svcName]; ok {
+			added = append(added, svcName)
+		}
+	}
+	return added
+}
+
+func getDependentNodes(g utils.Graph, startingNodes []string) []string {
+	initialLength := len(startingNodes)
+	svcsToDeploySet := map[string]bool{}
+	for _, svc := range startingNodes {
+		svcsToDeploySet[svc] = true
+	}
+	for _, svcToDeploy := range startingNodes {
+		for _, dependentSvc := range g[svcToDeploy] {
+			if _, ok := svcsToDeploySet[dependentSvc]; ok {
+				continue
+			}
+			startingNodes = append(startingNodes, dependentSvc)
+			svcsToDeploySet[dependentSvc] = true
+		}
+	}
+	if initialLength != len(startingNodes) {
+		return getDependentNodes(g, startingNodes)
+	}
+	return startingNodes
 }
 
 func (b ManifestBuild) toGraph() utils.Graph {
