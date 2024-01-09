@@ -20,6 +20,7 @@ import (
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExpandBuildArgs(t *testing.T) {
@@ -266,4 +267,16 @@ func Test_BuildInfoCopy(t *testing.T) {
 
 	samePointer := &copyB == &b
 	assert.False(t, samePointer)
+}
+
+func TestSetBuildDefaults(t *testing.T) {
+	info := &Info{
+		Context: "",
+	}
+	expected := &Info{
+		Context:    ".",
+		Dockerfile: "Dockerfile",
+	}
+	info.SetBuildDefaults()
+	require.Equal(t, info, expected)
 }
