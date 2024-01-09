@@ -15,7 +15,9 @@ package build
 
 import (
 	"net/url"
+	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/cache"
 	"github.com/okteto/okteto/pkg/env"
@@ -90,6 +92,24 @@ func (i *Info) expandManifestBuildArgs(previousImageArgs map[string]string) (err
 			return err
 		}
 		i.Args[idx] = arg
+	}
+	return nil
+}
+
+func (i *Info) expandSecrets() (err error) {
+	for k, v := range i.Secrets {
+		val := v
+		if strings.HasPrefix(v, "~/") {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return err
+			}
+			val = filepath.Join(home, val[2:])
+		}
+		i.Secrets[k], err = env.ExpandEnv(val)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -190,6 +210,9 @@ func (i *Info) SetBuildDefaults() {
 // AddArgs add a set of args to the build information
 func (i *Info) AddArgs(previousImageArgs map[string]string) error {
 	if err := i.expandManifestBuildArgs(previousImageArgs); err != nil {
+		return err
+	}
+	if err := i.expandSecrets(); err != nil {
 		return err
 	}
 	return i.addExpandedPreviousImageArgs(previousImageArgs)
