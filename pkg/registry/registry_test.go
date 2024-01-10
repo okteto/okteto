@@ -571,6 +571,18 @@ func Test_IsGlobal(t *testing.T) {
 			},
 			want: false,
 		},
+		{
+			name: "avoid false positives when global namespace is same as dev namespace prefix",
+			input: input{
+				image: "this.is.my.okteto.registry/test-user000/image",
+				config: FakeConfig{
+					RegistryURL:        "this.is.my.okteto.registry",
+					GlobalNamespace:    "test",
+					IsOktetoClusterCfg: true,
+				},
+			},
+			want: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
