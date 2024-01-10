@@ -132,7 +132,7 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 		}()
 	}
 
-	// create a temp folder - this will be remove once the build has finished
+	// create a temp folder - this will be removed once the build has finished
 	secretTempFolder, err := createSecretTempFolder()
 	if err != nil {
 		return err
