@@ -407,7 +407,6 @@ func TestMarshalInfo(t *testing.T) {
 			out, err := yaml.Marshal(tt.input)
 			require.NoError(t, err)
 			require.Equal(t, tt.expected, string(out))
-
 		})
 	}
 }
@@ -416,9 +415,10 @@ func Test_expandSecrets(t *testing.T) {
 	t.Setenv("HOME", "/home/testuser")
 
 	tests := []struct {
-		name        string
 		input       *Info
 		expected    *Info
+		setEnvFunc  func(t *testing.T)
+		name        string
 		expectedErr bool
 	}{
 		{
@@ -461,14 +461,35 @@ func Test_expandSecrets(t *testing.T) {
 			expected: &Info{Secrets: map[string]string{
 				"path": "/home/testuser/secrets",
 			}},
+			setEnvFunc: func(t *testing.T) {
+				t.Setenv("TEST_RANDOM_DIR", "/home/testuser")
+			},
 		},
 		{
-			name: "expand unset VAR env var",
+			name: "expand unset env var",
 			input: &Info{Secrets: map[string]string{
 				"path": "$TEST_RANDOM_DIR/secrets",
 			}},
 			expected: &Info{Secrets: map[string]string{
-				"path": "/home/testuser/secrets",
+				"path": "/secrets",
+			}},
+		},
+		{
+			name: "empty - unset env var",
+			input: &Info{Secrets: map[string]string{
+				"path": "$TEST_RANDOM_DIR",
+			}},
+			expected: &Info{Secrets: map[string]string{
+				"path": "",
+			}},
+		},
+		{
+			name: "broken env var",
+			input: &Info{Secrets: map[string]string{
+				"path": "${TEST_RANDOM_DIR/secrets",
+			}},
+			expected: &Info{Secrets: map[string]string{
+				"path": "",
 			}},
 			expectedErr: true,
 		},
@@ -476,6 +497,9 @@ func Test_expandSecrets(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			if tc.setEnvFunc != nil {
+				tc.setEnvFunc(t)
+			}
 			err := tc.input.expandSecrets()
 			if tc.expectedErr {
 				assert.Error(t, err)

@@ -60,7 +60,7 @@ func TestValidate(t *testing.T) {
 			expectErr: true,
 		},
 		{
-			name: "succesfull valdation",
+			name: "successful validation",
 			input: &ManifestBuild{
 				"testSvc": &Info{
 					DependsOn: DependsOn{
