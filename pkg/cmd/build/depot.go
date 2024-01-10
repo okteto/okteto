@@ -109,10 +109,13 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 		buildOptions.Platform = defaultPlatform
 	}
 
+	db.ioCtrl.Logger().Info("Acquiring a depot's machine..")
 	db.machine, err = db.acquireMachine(ctx, build.ID, build.Token, buildOptions.Platform)
 	if err != nil {
 		return err
 	}
+
+	defer db.release(build)
 
 	client, err := db.getBuildkitClient(ctx)
 	if err != nil {
@@ -149,9 +152,6 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 		return fmt.Errorf("failed to create build solver: %w", err)
 	}
 
-	db.ioCtrl.Logger().Info("Acquiring a depot's machine..")
-
-	defer db.release(build)
 	db.ioCtrl.Logger().Infof("building '%s' on depot's machine..", buildOptions.Tag)
 
 	return run(ctx, client, opt, buildOptions, db.okCtx, db.ioCtrl)
