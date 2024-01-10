@@ -103,7 +103,7 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 
 	build, err := db.newDepotBuild(ctx, req, db.token)
 	if err != nil {
-		return err
+		return fmt.Errorf("depot build failed: %w", err)
 	}
 	if buildOptions.Platform == "" {
 		buildOptions.Platform = defaultPlatform
