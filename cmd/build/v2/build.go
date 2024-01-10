@@ -26,7 +26,7 @@ import (
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	"github.com/okteto/okteto/cmd/build/v2/smartbuild"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
@@ -80,7 +80,7 @@ type OktetoBuilder struct {
 	Config           oktetoBuilderConfigInterface
 	analyticsTracker analyticsTrackerInterface
 	V1Builder        *buildv1.OktetoBuilder
-	oktetoContext    build.OktetoContextInterface
+	oktetoContext    buildCmd.OktetoContextInterface
 
 	smartBuildCtrl *smartbuild.SmartBuildCtrl
 
@@ -368,7 +368,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	}
 	tagToBuild := newImageTagger(bc.Config, bc.smartBuildCtrl).getServiceImageReference(manifest.Name, svcName, buildSvcInfo, buildHash)
 	buildSvcInfo.Image = tagToBuild
-	if err := buildSvcInfo.AddBuildArgs(bc.buildEnvironments); err != nil {
+	if err := buildSvcInfo.AddArgs(bc.buildEnvironments); err != nil {
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcName, err)
 	}
 
@@ -411,7 +411,7 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 
 	tagToBuild := newImageWithVolumesTagger(bc.Config, bc.smartBuildCtrl).getServiceImageReference(manifest.Name, svcName, buildInfoCopy, buildHash)
 	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest, bc.oktetoContext.IsOkteto())
-	svcBuild, err := build.CreateDockerfileWithVolumeMounts(fromImage, buildSvcInfo.VolumesToInclude)
+	svcBuild, err := buildCmd.CreateDockerfileWithVolumeMounts(fromImage, buildSvcInfo.VolumesToInclude)
 	if err != nil {
 		return "", err
 	}
@@ -429,16 +429,16 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 }
 
 // serviceHasDockerfile returns true when service BuildInfo Dockerfile is not empty
-func serviceHasDockerfile(buildInfo *model.BuildInfo) bool {
+func serviceHasDockerfile(buildInfo *build.Info) bool {
 	return buildInfo.Dockerfile != ""
 }
 
 // serviceHasVolumesToInclude returns true when service BuildInfo VolumesToInclude are more than 0
-func serviceHasVolumesToInclude(buildInfo *model.BuildInfo) bool {
+func serviceHasVolumesToInclude(buildInfo *build.Info) bool {
 	return len(buildInfo.VolumesToInclude) > 0
 }
 
-func (bc *OktetoBuilder) getBuildInfoWithoutVolumeMounts(buildInfo *model.BuildInfo, isStackManifest bool) *model.BuildInfo {
+func (bc *OktetoBuilder) getBuildInfoWithoutVolumeMounts(buildInfo *build.Info, isStackManifest bool) *build.Info {
 	result := buildInfo.Copy()
 	if len(result.VolumesToInclude) > 0 {
 		result.VolumesToInclude = nil
@@ -449,7 +449,7 @@ func (bc *OktetoBuilder) getBuildInfoWithoutVolumeMounts(buildInfo *model.BuildI
 	return result
 }
 
-func getBuildInfoWithVolumeMounts(buildInfo *model.BuildInfo, isStackManifest bool, isOkteto bool) *model.BuildInfo {
+func getBuildInfoWithVolumeMounts(buildInfo *build.Info, isStackManifest bool, isOkteto bool) *build.Info {
 	result := buildInfo.Copy()
 	if isStackManifest && isOkteto {
 		result.Image = ""
@@ -458,8 +458,8 @@ func getBuildInfoWithVolumeMounts(buildInfo *model.BuildInfo, isStackManifest bo
 	return result
 }
 
-func getAccessibleVolumeMounts(buildInfo *model.BuildInfo) []model.StackVolume {
-	accessibleVolumeMounts := make([]model.StackVolume, 0)
+func getAccessibleVolumeMounts(buildInfo *build.Info) []build.VolumeMounts {
+	accessibleVolumeMounts := make([]build.VolumeMounts, 0)
 	for _, volume := range buildInfo.VolumesToInclude {
 		if _, err := os.Stat(volume.LocalPath); !os.IsNotExist(err) {
 			accessibleVolumeMounts = append(accessibleVolumeMounts, volume)
@@ -496,7 +496,7 @@ func validateOptions(manifest *model.Manifest, svcsToBuild []string, options *ty
 	return nil
 }
 
-func validateServices(buildSection model.ManifestBuild, svcsToBuild []string) error {
+func validateServices(buildSection build.ManifestBuild, svcsToBuild []string) error {
 	invalid := []string{}
 	for _, service := range svcsToBuild {
 		if _, ok := buildSection[service]; !ok {
@@ -509,7 +509,7 @@ func validateServices(buildSection model.ManifestBuild, svcsToBuild []string) er
 	return nil
 }
 
-func getImageChecker(buildInfo *model.BuildInfo, cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface, sbc smartBuildController, logger loggerInfo) imageCheckerInterface {
+func getImageChecker(buildInfo *build.Info, cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface, sbc smartBuildController, logger loggerInfo) imageCheckerInterface {
 	var tagger imageTaggerInterface
 	if serviceHasVolumesToInclude(buildInfo) {
 		tagger = newImageWithVolumesTagger(cfg, sbc)

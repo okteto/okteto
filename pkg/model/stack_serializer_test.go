@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
@@ -1003,44 +1004,44 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name                 string
 		manifest             []byte
-		expectedVolumes      []StackVolume
-		expectedVolumesMount []StackVolume
+		expectedVolumes      []build.VolumeMounts
+		expectedVolumesMount []build.VolumeMounts
 		expectedError        bool
 	}{
 		{
 			name:     "volume-relative-path-found",
 			manifest: []byte("services:\n  app:\n    volumes: \n    - test_volume_relative_path_found:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
-			expectedVolumesMount: []StackVolume{
+			expectedVolumesMount: []build.VolumeMounts{
 				{
 					LocalPath:  relativePathExpanded,
 					RemotePath: "/var/lib/redpanda/data",
 				},
 			},
-			expectedVolumes: []StackVolume{},
+			expectedVolumes: []build.VolumeMounts{},
 			expectedError:   false,
 		},
 		{
 			name:     "volume-absolute-path",
 			manifest: []byte(fmt.Sprintf("services:\n  app:\n    volumes: \n    - %s:/var/lib/redpanda/data\n    image: okteto/vote:1\n", relativePathExpanded)),
-			expectedVolumesMount: []StackVolume{
+			expectedVolumesMount: []build.VolumeMounts{
 				{
 					LocalPath:  relativePathExpanded,
 					RemotePath: "/var/lib/redpanda/data",
 				},
 			},
-			expectedVolumes: []StackVolume{},
+			expectedVolumes: []build.VolumeMounts{},
 			expectedError:   false,
 		},
 		{
 			name:     "correct-volume",
 			manifest: []byte("services:\n  app:\n    volumes: \n    - redpanda:/var/lib/redpanda/data\n    image: okteto/vote:1\nvolumes:\n  redpanda:\n"),
-			expectedVolumes: []StackVolume{
+			expectedVolumes: []build.VolumeMounts{
 				{
 					LocalPath:  "redpanda",
 					RemotePath: "/var/lib/redpanda/data",
 				},
 			},
-			expectedVolumesMount: []StackVolume{},
+			expectedVolumesMount: []build.VolumeMounts{},
 			expectedError:        false,
 		},
 		{
@@ -1051,13 +1052,13 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 		{
 			name:     "absolute path",
 			manifest: []byte(fmt.Sprintf("services:\n  app:\n    image: okteto/vote:1\n    volumes:\n      - %s:/var/run/docker.sock", relativePathExpandedFile)),
-			expectedVolumesMount: []StackVolume{
+			expectedVolumesMount: []build.VolumeMounts{
 				{
 					LocalPath:  relativePathExpandedFile,
 					RemotePath: "/var/run/docker.sock",
 				},
 			},
-			expectedVolumes: []StackVolume{},
+			expectedVolumes: []build.VolumeMounts{},
 			expectedError:   false,
 		},
 		{
@@ -1068,8 +1069,8 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 		{
 			name:                 "pv",
 			manifest:             []byte("services:\n  app:\n    volumes: \n    - /var/lib/redpanda/data\n    image: okteto/vote:1\n"),
-			expectedVolumesMount: []StackVolume{},
-			expectedVolumes: []StackVolume{
+			expectedVolumesMount: []build.VolumeMounts{},
+			expectedVolumes: []build.VolumeMounts{
 				{
 					RemotePath: "/var/lib/redpanda/data",
 				},
@@ -1079,13 +1080,13 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 		{
 			name:     "volume-with-underscores",
 			manifest: []byte("services:\n  app:\n    volumes: \n    - redpanda_a:/var/lib/redpanda/data\n    image: okteto/vote:1\nvolumes:\n  redpanda_a:\n"),
-			expectedVolumes: []StackVolume{
+			expectedVolumes: []build.VolumeMounts{
 				{
 					LocalPath:  "redpanda-a",
 					RemotePath: "/var/lib/redpanda/data",
 				},
 			},
-			expectedVolumesMount: []StackVolume{},
+			expectedVolumesMount: []build.VolumeMounts{},
 			expectedError:        false,
 		},
 	}

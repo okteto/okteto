@@ -17,6 +17,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/require"
 )
@@ -95,16 +96,16 @@ func TestServicesNotInStack(t *testing.T) {
 	stack := &model.Stack{
 		Services: map[string]*model.Service{
 			"test-not-stack": {
-				Build: &model.BuildInfo{
+				Build: &build.Info{
 					Image:   "test",
 					Context: ".",
 				},
 			},
 			"test-1": {
-				Build: &model.BuildInfo{
+				Build: &build.Info{
 					Image:   "test-2",
 					Context: ".",
-					VolumesToInclude: []model.StackVolume{
+					VolumesToInclude: []build.VolumeMounts{
 						{
 							LocalPath:  "test",
 							RemotePath: "test",
@@ -192,7 +193,7 @@ func TestServicesBuildSection(t *testing.T) {
 	alreadyBuilt := []string{}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
-	fakeManifest.Build = map[string]*model.BuildInfo{}
+	fakeManifest.Build = map[string]*build.Info{}
 	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{})
 	// should not throw error
 	require.NoError(t, err)
@@ -223,10 +224,10 @@ type fakeConfig struct {
 	isSmartBuildsEnable bool
 }
 
-func (fc fakeConfig) HasGlobalAccess() bool                       { return fc.hasAccess }
-func (fc fakeConfig) IsCleanProject() bool                        { return fc.isClean }
-func (fc fakeConfig) GetGitCommit() string                        { return fc.sha }
-func (fc fakeConfig) IsOkteto() bool                              { return fc.isOkteto }
-func (fc fakeConfig) GetAnonymizedRepo() string                   { return fc.repoURL }
-func (fc fakeConfig) GetBuildContextHash(*model.BuildInfo) string { return "" }
-func (fc fakeConfig) IsSmartBuildsEnabled() bool                  { return fc.isSmartBuildsEnable }
+func (fc fakeConfig) HasGlobalAccess() bool                  { return fc.hasAccess }
+func (fc fakeConfig) IsCleanProject() bool                   { return fc.isClean }
+func (fc fakeConfig) GetGitCommit() string                   { return fc.sha }
+func (fc fakeConfig) IsOkteto() bool                         { return fc.isOkteto }
+func (fc fakeConfig) GetAnonymizedRepo() string              { return fc.repoURL }
+func (fc fakeConfig) GetBuildContextHash(*build.Info) string { return "" }
+func (fc fakeConfig) IsSmartBuildsEnabled() bool             { return fc.isSmartBuildsEnable }

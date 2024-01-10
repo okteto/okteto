@@ -11,13 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package utils
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_GetValidNameFromFolder(t *testing.T) {
@@ -31,9 +31,9 @@ func Test_GetValidNameFromFolder(t *testing.T) {
 		{name: "upper case", folder: "UpperCase", expected: "UpperCase"},
 		{name: "valid symbols", folder: "getting-started.test", expected: "getting-started.test"},
 		{name: "invalid symbols", folder: "getting_$#started", expected: "getting_$#started"},
-		{name: "current folder", folder: ".", expected: "model"},
-		{name: "parent folder", folder: "..", expected: "pkg"},
-		{name: "okteto folder", folder: ".okteto", expected: "model"},
+		{name: "current folder", folder: ".", expected: "utils"},
+		{name: "parent folder", folder: "..", expected: "model"},
+		{name: "okteto folder", folder: ".okteto", expected: "utils"},
 	}
 
 	for _, tt := range tests {
@@ -77,13 +77,13 @@ func Test_GetValidNameFromGitRepo(t *testing.T) {
 
 func TestGetCycles(t *testing.T) {
 	var tests = []struct {
-		g             graph
+		g             Graph
 		name          string
 		expectedCycle bool
 	}{
 		{
 			name: "no cycle - no connections",
-			g: graph{
+			g: Graph{
 				"a": []string{},
 				"b": []string{},
 				"c": []string{},
@@ -92,7 +92,7 @@ func TestGetCycles(t *testing.T) {
 		},
 		{
 			name: "no cycle - connections",
-			g: graph{
+			g: Graph{
 				"a": []string{"b"},
 				"b": []string{"c"},
 				"c": []string{},
@@ -101,7 +101,7 @@ func TestGetCycles(t *testing.T) {
 		},
 		{
 			name: "cycle - direct cycle",
-			g: graph{
+			g: Graph{
 				"a": []string{"b"},
 				"b": []string{"a"},
 				"c": []string{},
@@ -110,7 +110,7 @@ func TestGetCycles(t *testing.T) {
 		},
 		{
 			name: "cycle - indirect cycle",
-			g: graph{
+			g: Graph{
 				"a": []string{"b"},
 				"b": []string{"c"},
 				"c": []string{"a"},
@@ -121,63 +121,30 @@ func TestGetCycles(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := getDependentCyclic(tt.g)
+			result := GetDependentCyclic(tt.g)
 			assert.Equal(t, tt.expectedCycle, len(result) > 0)
 		})
 	}
 
 }
 
-func Test_snapshotEnv(t *testing.T) {
-	os.Clearenv()
+func TestGetListDiff(t *testing.T) {
+	listA := []string{"a", "b"}
+	listB := []string{"c", "d", "a", "b", "f"}
 
-	vars := map[string]string{
-		"TEST_1": "1",
-		"TEST_2": "2",
-	}
-	for k, v := range vars {
-		t.Setenv(k, v)
-	}
-
-	env := snapshotEnv()
-
-	expected := map[string]string{
-		"TEST_1": "1",
-		"TEST_2": "2",
-	}
-	assert.Equal(t, expected, env)
+	expected := []string{"a", "b"}
+	result := GetListDiff(listA, listB)
+	require.ElementsMatch(t, result, expected)
 }
 
-func Test_restoreEnv(t *testing.T) {
-	os.Clearenv()
-
-	vars := map[string]string{
-		"TEST_1": "1",
-		"TEST_2": "2",
-	}
-	for k, v := range vars {
-		t.Setenv(k, v)
+func TestGetDependentNodes(t *testing.T) {
+	expected := []string{"node1", "node3", "neighbor1", "neighbor2"}
+	graph := Graph{
+		"node1": {"neighbor1", "neighbor2"},
+		"node2": {"neighbor3"},
+		"node3": {},
 	}
 
-	env := snapshotEnv()
-	os.Clearenv()
-
-	assert.Equal(t, os.Environ(), []string{})
-
-	t.Setenv("TEST_3", "3")
-	assert.NoError(t, restoreEnv(env))
-
-	checks := []struct {
-		key    string
-		exists bool
-	}{
-		{"TEST_1", true},
-		{"TEST_2", true},
-		{"TEST_3", false},
-	}
-
-	for _, c := range checks {
-		_, has := os.LookupEnv(c.key)
-		assert.Equal(t, has, c.exists)
-	}
+	startingNodes := []string{"node1", "node3"}
+	require.ElementsMatch(t, GetDependentNodes(graph, startingNodes), expected)
 }

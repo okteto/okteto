@@ -16,9 +16,9 @@ package smartbuild
 import (
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/log/io"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/afero"
 )
 
@@ -44,8 +44,8 @@ type repositoryInterface interface {
 }
 
 type hasherController interface {
-	hashProjectCommit(*model.BuildInfo) (string, error)
-	hashBuildContext(*model.BuildInfo) (string, error)
+	hashProjectCommit(*build.Info) (string, error)
+	hashBuildContext(*build.Info) (string, error)
 	getBuildContextHashInCache(string) string
 	getProjectCommitHashInCache() string
 }
@@ -83,19 +83,19 @@ func (s *SmartBuildCtrl) IsEnabled() bool {
 }
 
 // GetProjectHash returns the commit hash of the project
-func (s *SmartBuildCtrl) GetProjectHash(buildInfo *model.BuildInfo) (string, error) {
+func (s *SmartBuildCtrl) GetProjectHash(buildInfo *build.Info) (string, error) {
 	s.ioCtrl.Logger().Debugf("getting project hash")
 	return s.hasher.hashProjectCommit(buildInfo)
 }
 
 // GetServiceHash returns the hash of the service
-func (s *SmartBuildCtrl) GetServiceHash(buildInfo *model.BuildInfo) (string, error) {
+func (s *SmartBuildCtrl) GetServiceHash(buildInfo *build.Info) (string, error) {
 	s.ioCtrl.Logger().Debugf("getting service hash")
 	return s.hasher.hashBuildContext(buildInfo)
 }
 
 // GetBuildHash returns the hash of the build based on the env vars
-func (s *SmartBuildCtrl) GetBuildHash(buildInfo *model.BuildInfo) (string, error) {
+func (s *SmartBuildCtrl) GetBuildHash(buildInfo *build.Info) (string, error) {
 	s.ioCtrl.Logger().Debugf("getting hash based on the buildContext env var")
 	if s.isUsingBuildContext {
 		s.ioCtrl.Logger().Info("getting hash using build context due to env var")
@@ -106,7 +106,7 @@ func (s *SmartBuildCtrl) GetBuildHash(buildInfo *model.BuildInfo) (string, error
 }
 
 // GetBuildCommit returns the commit that generated the smart build
-func (s *SmartBuildCtrl) GetBuildCommit(buildInfo *model.BuildInfo) string {
+func (s *SmartBuildCtrl) GetBuildCommit(buildInfo *build.Info) string {
 	if s.isUsingBuildContext {
 		buildContext := buildInfo.Context
 		if buildContext == "" {

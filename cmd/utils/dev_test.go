@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -49,7 +50,7 @@ func Test_LoadManifestOrDefault(t *testing.T) {
 			expectErr:  false,
 			dev: &model.Dev{
 				Name: "loaded",
-				Image: &model.BuildInfo{
+				Image: &build.Info{
 					Name: "okteto/test:1.0",
 				},
 				Sync: model.Sync{
@@ -345,7 +346,7 @@ func Test_SelectDevFromManifest(t *testing.T) {
 							},
 						},
 						SSHServerPort: 80,
-						Image:         &model.BuildInfo{},
+						Image:         &build.Info{},
 					},
 					"test-2": &model.Dev{},
 				},
@@ -366,7 +367,7 @@ func Test_SelectDevFromManifest(t *testing.T) {
 					},
 				},
 				SSHServerPort: 80,
-				Image:         &model.BuildInfo{},
+				Image:         &build.Info{},
 			},
 		},
 		{

@@ -23,8 +23,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/okteto/okteto/pkg/build"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/afero"
 )
 
@@ -54,7 +54,7 @@ func newServiceHasher(gitRepoCtrl repositoryCommitRetriever, fs afero.Fs) *servi
 }
 
 // hashProjectCommit returns the hash of the repository's commit
-func (sh *serviceHasher) hashProjectCommit(buildInfo *model.BuildInfo) (string, error) {
+func (sh *serviceHasher) hashProjectCommit(buildInfo *build.Info) (string, error) {
 	sh.lock.Lock()
 	projectCommit := sh.projectCommit
 	sh.lock.Unlock()
@@ -72,7 +72,7 @@ func (sh *serviceHasher) hashProjectCommit(buildInfo *model.BuildInfo) (string, 
 }
 
 // hashBuildContext returns the hash of the service using its context tree hash
-func (sh *serviceHasher) hashBuildContext(buildInfo *model.BuildInfo) (string, error) {
+func (sh *serviceHasher) hashBuildContext(buildInfo *build.Info) (string, error) {
 	buildContext := buildInfo.Context
 	if buildContext == "" {
 		buildContext = "."
@@ -94,7 +94,7 @@ func (sh *serviceHasher) hashBuildContext(buildInfo *model.BuildInfo) (string, e
 	return sh.buildContextCache[buildContext], nil
 }
 
-func (sh *serviceHasher) hash(buildInfo *model.BuildInfo, commitHash string, diff string) string {
+func (sh *serviceHasher) hash(buildInfo *build.Info, commitHash string, diff string) string {
 	args := []string{}
 	for _, arg := range buildInfo.Args {
 		args = append(args, arg.String())
