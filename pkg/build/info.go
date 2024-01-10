@@ -99,7 +99,7 @@ func (i *Info) expandManifestBuildArgs(previousImageArgs map[string]string) (err
 func (i *Info) expandSecrets() (err error) {
 	for k, v := range i.Secrets {
 		val := v
-		if strings.HasPrefix(v, "~/") {
+		if strings.HasPrefix(val, "~/") {
 			home, err := os.UserHomeDir()
 			if err != nil {
 				return err
