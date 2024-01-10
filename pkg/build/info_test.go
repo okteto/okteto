@@ -14,8 +14,10 @@
 package build
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/cache"
@@ -412,7 +414,11 @@ func TestMarshalInfo(t *testing.T) {
 }
 
 func Test_expandSecrets(t *testing.T) {
-	t.Setenv("HOME", "/home/testuser")
+	homeEnvVar := "HOME"
+	if runtime.GOOS == "windows" {
+		homeEnvVar = "USERPROFILE"
+	}
+	t.Setenv(homeEnvVar, filepath.Clean("/home/testuser"))
 
 	tests := []struct {
 		input       *Info
@@ -432,7 +438,7 @@ func Test_expandSecrets(t *testing.T) {
 				"path": "~/secret",
 			}},
 			expected: &Info{Secrets: map[string]string{
-				"path": "/home/testuser/secret",
+				"path": filepath.Clean("/home/testuser/secret"),
 			}},
 		},
 		{
@@ -441,7 +447,7 @@ func Test_expandSecrets(t *testing.T) {
 				"path": "~/test/~/secret",
 			}},
 			expected: &Info{Secrets: map[string]string{
-				"path": "/home/testuser/test/~/secret",
+				"path": filepath.Clean("/home/testuser/test/~/secret"),
 			}},
 		},
 		{
@@ -456,10 +462,10 @@ func Test_expandSecrets(t *testing.T) {
 		{
 			name: "expand HOME env var",
 			input: &Info{Secrets: map[string]string{
-				"path": "$HOME/secrets",
+				"path": filepath.Join(fmt.Sprintf("$%s", homeEnvVar), "secrets"),
 			}},
 			expected: &Info{Secrets: map[string]string{
-				"path": "/home/testuser/secrets",
+				"path": filepath.Clean("/home/testuser/secrets"),
 			}},
 			setEnvFunc: func(t *testing.T) {
 				t.Setenv("TEST_RANDOM_DIR", "/home/testuser")
