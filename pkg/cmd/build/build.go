@@ -79,6 +79,17 @@ func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptio
 	depotToken := os.Getenv(depotTokenEnvVar)
 	depotProject := os.Getenv(depotProjectEnvVar)
 
+	builder := ob.GetBuilder()
+	buildMsg := fmt.Sprintf("Building '%s'", buildOptions.File)
+	depotEnabled := isDepotEnabled(depotProject, depotToken)
+	if depotEnabled {
+		ioCtrl.Out().Infof("%s on depot's machine...", buildMsg)
+	} else if builder == "" {
+		ioCtrl.Out().Infof("%s using your local docker daemon", buildMsg)
+	} else {
+		ioCtrl.Out().Infof("%s in %s...", buildMsg, builder)
+	}
+
 	switch {
 	case isDepotEnabled(depotProject, depotToken):
 		depotManager := newDepotBuilder(depotProject, depotToken, ob.OktetoContext, ioCtrl)
