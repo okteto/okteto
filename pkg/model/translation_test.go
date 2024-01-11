@@ -19,6 +19,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/stretchr/testify/assert"
@@ -417,7 +418,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 		{
 			name: "default",
 			manifest: &Dev{
-				Image:         &BuildInfo{},
+				Image:         &build.Info{},
 				SSHServerPort: oktetoDefaultSSHServerPort,
 			},
 			expected: env.Environment{
@@ -434,7 +435,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 		{
 			name: "custom port",
 			manifest: &Dev{
-				Image:         &BuildInfo{},
+				Image:         &build.Info{},
 				SSHServerPort: 22220,
 			},
 			expected: env.Environment{

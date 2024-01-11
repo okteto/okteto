@@ -26,14 +26,14 @@ func Test_errorSuggestion_suggest(t *testing.T) {
 	returnSameErr := func(e error) error { return e }
 	emptyRule := NewRule(alwaysFalse, returnSameErr)
 
-	inputError := errors.New("line 4: field contest not found in type model.buildInfoRaw")
+	inputError := errors.New("line 4: field contest not found in type build.buildInfoRaw")
 
 	ruleNotFoundInBuildInfoRaw := NewRule(
 		func(e error) bool {
-			return strings.Contains(e.Error(), "not found in type model.buildInfoRaw")
+			return strings.Contains(e.Error(), "not found in type build.buildInfoRaw")
 		},
 		func(e error) error {
-			return errors.New(strings.Replace(e.Error(), "not found in type model.buildInfoRaw", "does not exist in the build section of the Okteto Manifest", 1))
+			return errors.New(strings.Replace(e.Error(), "not found in type build.buildInfoRaw", "does not exist in the build section of the Okteto Manifest", 1))
 		},
 	)
 
@@ -55,7 +55,7 @@ func Test_errorSuggestion_suggest(t *testing.T) {
 			inputError: inputError,
 			rules: []*Rule{
 				NewLevenshteinRule(
-					"(.*?)field (\\w+) not found in type model.buildInfoRaw",
+					"(.*?)field (\\w+) not found in type build.buildInfoRaw",
 					"context",
 					2,
 				),

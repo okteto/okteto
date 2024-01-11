@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
@@ -134,10 +135,10 @@ func TestExpandStackVariables(t *testing.T) {
 
 	manifest := &model.Manifest{
 		Name: "test",
-		Build: model.ManifestBuild{
-			"test": &model.BuildInfo{
+		Build: build.ManifestBuild{
+			"test": &build.Info{
 				Image: "nginx",
-				VolumesToInclude: []model.StackVolume{
+				VolumesToInclude: []build.VolumeMounts{
 					{
 						LocalPath:  "test",
 						RemotePath: "test",

@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/repository"
 	"github.com/spf13/afero"
 	"k8s.io/client-go/kubernetes"
@@ -32,14 +33,14 @@ import (
 // It is deprecated as it doesn't take into account deployed dev environments to get the non-sanitized name.
 // This is only being effectively used in push command, which will be deleted in the next major version
 func DeprecatedInferName(cwd string) string {
-	repoURL, err := model.GetRepositoryURL(cwd)
+	repoURL, err := utils.GetRepositoryURL(cwd)
 	if err != nil {
 		oktetoLog.Info("inferring name from folder")
 		return filepath.Base(cwd)
 	}
 
 	oktetoLog.Info("inferring name from git repository URL")
-	return model.TranslateURLToName(repoURL)
+	return utils.TranslateURLToName(repoURL)
 }
 
 // NameInferer Allows to infer the name for a dev environment
@@ -53,7 +54,7 @@ type NameInferer struct {
 func NewNameInferer(k8s kubernetes.Interface) NameInferer {
 	return NameInferer{
 		k8s:              k8s,
-		getRepositoryURL: model.GetRepositoryURL,
+		getRepositoryURL: utils.GetRepositoryURL,
 		fs:               afero.NewOsFs(),
 	}
 }
@@ -68,7 +69,7 @@ func (n NameInferer) InferNameFromDevEnvsAndRepository(ctx context.Context, repo
 	cfList, err := configmaps.List(ctx, namespace, labelSelector, n.k8s)
 	if err != nil {
 		oktetoLog.Info("could not get deployed dev environments: %v. Inferring dev environment name from the repository URL", err)
-		return model.TranslateURLToName(repoURL)
+		return utils.TranslateURLToName(repoURL)
 	}
 
 	oktetoLog.Infof("found '%d' configmaps in the namespace %s", len(cfList), namespace)
@@ -113,7 +114,7 @@ func (n NameInferer) InferNameFromDevEnvsAndRepository(ctx context.Context, repo
 	// if no names were found we infer the name from the repository URL
 	if len(possibleNames) == 0 {
 		oktetoLog.Info("inferring name from git repository URL")
-		return model.TranslateURLToName(repoURL)
+		return utils.TranslateURLToName(repoURL)
 	}
 
 	// If more than 1 name is found, we print a message to the user know the name that was inferred

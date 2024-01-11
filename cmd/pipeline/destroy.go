@@ -27,6 +27,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	modelUtils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -225,7 +226,7 @@ func (o *DestroyOptions) setDefaults() error {
 		if err != nil {
 			return fmt.Errorf("failed to get the current working directory: %w", err)
 		}
-		repo, err := model.GetRepositoryURL(cwd)
+		repo, err := modelUtils.GetRepositoryURL(cwd)
 		if err != nil {
 			return err
 		}

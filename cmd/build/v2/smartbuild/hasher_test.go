@@ -17,7 +17,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
@@ -51,7 +51,7 @@ func TestServiceHasher_HashProjectCommit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sh := newServiceHasher(tt.repoCtrl, afero.NewMemMapFs())
-			hash, err := sh.hashProjectCommit(&model.BuildInfo{})
+			hash, err := sh.hashProjectCommit(&build.Info{})
 			assert.Equal(t, tt.expectedHash, hash)
 			assert.ErrorIs(t, err, tt.expectedErr)
 		})
@@ -87,7 +87,7 @@ func TestServiceHasher_HashBuildContext(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sh := newServiceHasher(tt.repoCtrl, afero.NewMemMapFs())
-			hash, err := sh.hashBuildContext(&model.BuildInfo{})
+			hash, err := sh.hashBuildContext(&build.Info{})
 			assert.Equal(t, tt.expectedHash, hash)
 			assert.ErrorIs(t, err, tt.expectedErr)
 		})

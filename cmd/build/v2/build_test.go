@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/cmd/build/v2/smartbuild"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
@@ -38,31 +39,31 @@ import (
 
 var fakeManifest *model.Manifest = &model.Manifest{
 	Name: "test",
-	Build: model.ManifestBuild{
-		"test-1": &model.BuildInfo{
+	Build: build.ManifestBuild{
+		"test-1": &build.Info{
 			Image:      "test/test-1",
 			Context:    ".",
 			Dockerfile: ".",
 		},
-		"test-2": &model.BuildInfo{
+		"test-2": &build.Info{
 			Image:      "test/test-2",
 			Context:    ".",
 			Dockerfile: ".",
-			VolumesToInclude: []model.StackVolume{
+			VolumesToInclude: []build.VolumeMounts{
 				{
 					LocalPath:  "/tmp",
 					RemotePath: "/tmp",
 				},
 			},
 		},
-		"test-3": &model.BuildInfo{
+		"test-3": &build.Info{
 			Context:    ".",
 			Dockerfile: ".",
 		},
-		"test-4": &model.BuildInfo{
+		"test-4": &build.Info{
 			Context:    ".",
 			Dockerfile: ".",
-			VolumesToInclude: []model.StackVolume{
+			VolumesToInclude: []build.VolumeMounts{
 				{
 					LocalPath:  "/tmp",
 					RemotePath: "/tmp",
@@ -189,30 +190,30 @@ func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInter
 func TestValidateOptions(t *testing.T) {
 	var tests = []struct {
 		name         string
-		buildSection model.ManifestBuild
+		buildSection build.ManifestBuild
 		svcsToBuild  []string
 		options      types.BuildOptions
 		expectedErr  bool
 	}{
 		{
 			name:         "no services to build",
-			buildSection: model.ManifestBuild{},
+			buildSection: build.ManifestBuild{},
 			svcsToBuild:  []string{},
 			options:      types.BuildOptions{},
 			expectedErr:  true,
 		},
 		{
 			name:         "svc not defined on manifest build section",
-			buildSection: model.ManifestBuild{},
+			buildSection: build.ManifestBuild{},
 			svcsToBuild:  []string{"test"},
 			options:      types.BuildOptions{},
 			expectedErr:  true,
 		},
 		{
 			name: "several services but with flag",
-			buildSection: model.ManifestBuild{
-				"test":   &model.BuildInfo{},
-				"test-2": &model.BuildInfo{},
+			buildSection: build.ManifestBuild{
+				"test":   &build.Info{},
+				"test-2": &build.Info{},
 			},
 			svcsToBuild: []string{"test", "test-2"},
 			options: types.BuildOptions{
@@ -222,8 +223,8 @@ func TestValidateOptions(t *testing.T) {
 		},
 		{
 			name: "only one service without flags",
-			buildSection: model.ManifestBuild{
-				"test": &model.BuildInfo{},
+			buildSection: build.ManifestBuild{
+				"test": &build.Info{},
 			},
 			svcsToBuild: []string{"test"},
 			options:     types.BuildOptions{},
@@ -231,8 +232,8 @@ func TestValidateOptions(t *testing.T) {
 		},
 		{
 			name: "only one service with flags",
-			buildSection: model.ManifestBuild{
-				"test": &model.BuildInfo{},
+			buildSection: build.ManifestBuild{
+				"test": &build.Info{},
 			},
 			svcsToBuild: []string{"test"},
 			options: types.BuildOptions{
@@ -267,10 +268,10 @@ func TestOnlyInjectVolumeMountsInOkteto(t *testing.T) {
 	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
 	manifest := &model.Manifest{
 		Name: "test",
-		Build: model.ManifestBuild{
-			"test": &model.BuildInfo{
+		Build: build.ManifestBuild{
+			"test": &build.Info{
 				Image: "nginx",
-				VolumesToInclude: []model.StackVolume{
+				VolumesToInclude: []build.VolumeMounts{
 					{
 						LocalPath:  dir,
 						RemotePath: "test",
@@ -305,11 +306,11 @@ func TestTwoStepsBuild(t *testing.T) {
 	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
 	manifest := &model.Manifest{
 		Name: "test",
-		Build: model.ManifestBuild{
-			"test": &model.BuildInfo{
+		Build: build.ManifestBuild{
+			"test": &build.Info{
 				Context:    dir,
 				Dockerfile: filepath.Join(dir, "Dockerfile"),
-				VolumesToInclude: []model.StackVolume{
+				VolumesToInclude: []build.VolumeMounts{
 					{
 						LocalPath:  dir,
 						RemotePath: "test",
@@ -347,8 +348,8 @@ func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
 	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
 	manifest := &model.Manifest{
 		Name: "test",
-		Build: model.ManifestBuild{
-			"test": &model.BuildInfo{
+		Build: build.ManifestBuild{
+			"test": &build.Info{
 				Context:    dir,
 				Dockerfile: filepath.Join(dir, "Dockerfile"),
 			},
@@ -380,8 +381,8 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
 	manifest := &model.Manifest{
 		Name: "test",
-		Build: model.ManifestBuild{
-			"test": &model.BuildInfo{
+		Build: build.ManifestBuild{
+			"test": &build.Info{
 				Context:    dir,
 				Dockerfile: filepath.Join(dir, "Dockerfile"),
 				Image:      "okteto/test",
@@ -415,8 +416,8 @@ func TestBuildWithStack(t *testing.T) {
 	manifest := &model.Manifest{
 		Name: "test",
 		Type: model.StackType,
-		Build: model.ManifestBuild{
-			"test": &model.BuildInfo{
+		Build: build.ManifestBuild{
+			"test": &build.Info{
 				Context:    dir,
 				Dockerfile: filepath.Join(dir, "Dockerfile"),
 				Image:      "okteto/test:q",
@@ -438,8 +439,8 @@ func TestBuildWithStack(t *testing.T) {
 func Test_getAccessibleVolumeMounts(t *testing.T) {
 	existingPath := "./existing-folder"
 	missingPath := "./missing-folder"
-	buildInfo := &model.BuildInfo{
-		VolumesToInclude: []model.StackVolume{
+	buildInfo := &build.Info{
+		VolumesToInclude: []build.VolumeMounts{
 			{LocalPath: existingPath, RemotePath: "/data/logs"},
 			{LocalPath: missingPath, RemotePath: "/data/logs"},
 		},
@@ -481,13 +482,13 @@ func TestBuildWithDependsOn(t *testing.T) {
 	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
 	manifest := &model.Manifest{
 		Name: "test",
-		Build: model.ManifestBuild{
-			"a": &model.BuildInfo{
+		Build: build.ManifestBuild{
+			"a": &build.Info{
 				Context:    dir,
 				Dockerfile: filepath.Join(dir, "Dockerfile"),
 				Image:      firstImage,
 			},
-			"b": &model.BuildInfo{
+			"b": &build.Info{
 				Context:    dir,
 				Dockerfile: filepath.Join(dir, "Dockerfile"),
 				Image:      secondImage,

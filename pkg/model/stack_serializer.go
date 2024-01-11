@@ -18,13 +18,13 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
 
 	"github.com/kballard/go-shellquote"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/cache"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -140,7 +140,7 @@ type ServiceRaw struct {
 	Workdir                  string                 `yaml:"workdir,omitempty"`
 	WorkingDirSneakCase      string                 `yaml:"working_dir,omitempty"`
 	Command                  CommandStack           `yaml:"command,omitempty"`
-	Volumes                  []StackVolume          `yaml:"volumes,omitempty"`
+	Volumes                  []build.VolumeMounts   `yaml:"volumes,omitempty"`
 	CapAddSneakCase          []apiv1.Capability     `yaml:"cap_add,omitempty"`
 	EnvFiles                 env.EnvFiles           `yaml:"envFile,omitempty"`
 	EnvFilesSneakCase        env.EnvFiles           `yaml:"env_file,omitempty"`
@@ -225,22 +225,22 @@ type RawMessage struct {
 }
 
 type composeBuildInfo struct {
-	Name             string            `yaml:"name,omitempty"`
-	Context          string            `yaml:"context,omitempty"`
-	Dockerfile       string            `yaml:"dockerfile,omitempty"`
-	CacheFrom        cache.CacheFrom   `yaml:"cache_from,omitempty"`
-	Target           string            `yaml:"target,omitempty"`
-	Args             BuildArgs         `yaml:"args,omitempty"`
-	Image            string            `yaml:"image,omitempty"`
-	VolumesToInclude []StackVolume     `yaml:"-"`
-	ExportCache      cache.ExportCache `yaml:"export_cache,omitempty"`
+	Name             string               `yaml:"name,omitempty"`
+	Context          string               `yaml:"context,omitempty"`
+	Dockerfile       string               `yaml:"dockerfile,omitempty"`
+	CacheFrom        cache.CacheFrom      `yaml:"cache_from,omitempty"`
+	Target           string               `yaml:"target,omitempty"`
+	Args             build.Args           `yaml:"args,omitempty"`
+	Image            string               `yaml:"image,omitempty"`
+	VolumesToInclude []build.VolumeMounts `yaml:"-"`
+	ExportCache      cache.ExportCache    `yaml:"export_cache,omitempty"`
 }
 
-func (c *composeBuildInfo) toBuildInfo() *BuildInfo {
+func (c *composeBuildInfo) toBuildInfo() *build.Info {
 	if c == nil {
 		return nil
 	}
-	return &BuildInfo{
+	return &build.Info{
 		Name:             c.Name,
 		Context:          c.Context,
 		Dockerfile:       c.Dockerfile,
@@ -724,7 +724,7 @@ func validatePort(newPort PortRaw, ports []Port) error {
 	return nil
 }
 
-func isNamedVolumeDeclared(volume StackVolume) bool {
+func isNamedVolumeDeclared(volume build.VolumeMounts) bool {
 	if volume.LocalPath != "" {
 		wd, err := os.Getwd()
 		if err != nil {
@@ -749,9 +749,9 @@ func isNamedVolumeDeclared(volume StackVolume) bool {
 	return false
 }
 
-func splitVolumesByType(volumes []StackVolume, s *Stack) ([]StackVolume, []StackVolume) {
-	topLevelVolumes := make([]StackVolume, 0)
-	mountedVolumes := make([]StackVolume, 0)
+func splitVolumesByType(volumes []build.VolumeMounts, s *Stack) ([]build.VolumeMounts, []build.VolumeMounts) {
+	topLevelVolumes := make([]build.VolumeMounts, 0)
+	mountedVolumes := make([]build.VolumeMounts, 0)
 	for _, volume := range volumes {
 		if volume.LocalPath == "" || isInVolumesTopLevelSection(sanitizeName(volume.LocalPath), s) {
 			volume.LocalPath = sanitizeName(volume.LocalPath)
@@ -1215,53 +1215,6 @@ func (healthcheckTest *HealtcheckTest) UnmarshalYAML(unmarshal func(interface{})
 		return err
 	}
 	return nil
-}
-
-// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var raw string
-	err := unmarshal(&raw)
-	if err != nil {
-		return err
-	}
-
-	stackVolumePartsOnlyRemote := 1
-	stackVolumeParts := 2
-	stackVolumeMaxParts := 3
-
-	parts := strings.Split(raw, ":")
-	if runtime.GOOS == "windows" {
-		if len(parts) >= stackVolumeMaxParts {
-			localPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
-			if filepath.IsAbs(localPath) {
-				parts = append([]string{localPath}, parts[2:]...)
-			}
-		}
-	}
-
-	if len(parts) == stackVolumeParts {
-		v.LocalPath = parts[0]
-		v.RemotePath = parts[1]
-	} else if len(parts) == stackVolumePartsOnlyRemote {
-		v.RemotePath = parts[0]
-	} else {
-		return fmt.Errorf("Syntax error volumes should be 'local_path:remote_path' or 'remote_path'")
-	}
-
-	return nil
-}
-
-// MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (v StackVolume) MarshalYAML() (interface{}, error) {
-	return v.RemotePath, nil
-}
-
-// ToString returns volume as string
-func (v StackVolume) ToString() string {
-	if v.LocalPath != "" {
-		return fmt.Sprintf("%s:%s", v.LocalPath, v.RemotePath)
-	}
-	return v.RemotePath
 }
 
 func getProtocol(protocolName string) (apiv1.Protocol, error) {

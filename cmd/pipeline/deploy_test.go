@@ -26,7 +26,7 @@ import (
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
@@ -85,7 +85,7 @@ func Test_getRepositoryURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := t.TempDir()
 
-			if _, err := model.GetRepositoryURL(dir); err == nil {
+			if _, err := utils.GetRepositoryURL(dir); err == nil {
 
 				t.Fatal("expected error when there's no github repo")
 			}
@@ -101,7 +101,7 @@ func Test_getRepositoryURL(t *testing.T) {
 				}
 			}
 
-			url, err := model.GetRepositoryURL(dir)
+			url, err := utils.GetRepositoryURL(dir)
 
 			if tt.expectError {
 				if err == nil {

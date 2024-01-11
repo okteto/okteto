@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
@@ -199,7 +200,7 @@ func Test_translateStatefulSet(t *testing.T) {
 				CapAdd:  []apiv1.Capability{apiv1.Capability("CAP_ADD")},
 				CapDrop: []apiv1.Capability{apiv1.Capability("CAP_DROP")},
 
-				Volumes: []model.StackVolume{{RemotePath: "/volume1"}, {RemotePath: "/volume2"}},
+				Volumes: []build.VolumeMounts{{RemotePath: "/volume1"}, {RemotePath: "/volume2"}},
 				Resources: &model.StackResources{
 					Limits: model.ServiceResources{
 						CPU:    model.Quantity{Value: resource.MustParse("100m")},
@@ -539,7 +540,7 @@ func Test_translateJobWithVolumes(t *testing.T) {
 				CapDrop:       []apiv1.Capability{apiv1.Capability("CAP_DROP")},
 				RestartPolicy: apiv1.RestartPolicyNever,
 				BackOffLimit:  5,
-				Volumes:       []model.StackVolume{{RemotePath: "/volume1"}, {RemotePath: "/volume2"}},
+				Volumes:       []build.VolumeMounts{{RemotePath: "/volume1"}, {RemotePath: "/volume2"}},
 				Resources: &model.StackResources{
 					Limits: model.ServiceResources{
 						CPU:    model.Quantity{Value: resource.MustParse("100m")},
@@ -1425,7 +1426,7 @@ func Test_translateAffinity(t *testing.T) {
 		{
 			name: "only volume mounts",
 			svc: &model.Service{
-				VolumeMounts: []model.StackVolume{
+				VolumeMounts: []build.VolumeMounts{
 					{
 						LocalPath:  "",
 						RemotePath: "/var",
@@ -1437,7 +1438,7 @@ func Test_translateAffinity(t *testing.T) {
 		{
 			name: "one volume",
 			svc: &model.Service{
-				Volumes: []model.StackVolume{
+				Volumes: []build.VolumeMounts{
 					{
 						LocalPath:  "test",
 						RemotePath: "/var",
@@ -1465,7 +1466,7 @@ func Test_translateAffinity(t *testing.T) {
 		{
 			name: "multiple volumes",
 			svc: &model.Service{
-				Volumes: []model.StackVolume{
+				Volumes: []build.VolumeMounts{
 					{
 						LocalPath:  "test-1",
 						RemotePath: "/var",
@@ -1523,7 +1524,7 @@ func Test_translateAffinity(t *testing.T) {
 		{
 			name: "multiple volumes with volume affinity disabled",
 			svc: &model.Service{
-				Volumes: []model.StackVolume{
+				Volumes: []build.VolumeMounts{
 					{
 						LocalPath:  "test-1",
 						RemotePath: "/var",

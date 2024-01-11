@@ -19,6 +19,7 @@ import (
 
 	v2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
@@ -58,7 +59,7 @@ func TestBuildNecessaryImages(t *testing.T) {
 			name: "image is not okteto env variable",
 			input: input{
 				manifest: &model.Manifest{
-					Build: model.ManifestBuild{},
+					Build: build.ManifestBuild{},
 					Destroy: &model.DestroyInfo{
 						Image: "image",
 					},
@@ -75,7 +76,7 @@ func TestBuildNecessaryImages(t *testing.T) {
 			name: "image is okteto variable but not defined in build section",
 			input: input{
 				manifest: &model.Manifest{
-					Build: model.ManifestBuild{
+					Build: build.ManifestBuild{
 						"okteto": {},
 					},
 					Destroy: &model.DestroyInfo{
@@ -94,7 +95,7 @@ func TestBuildNecessaryImages(t *testing.T) {
 			name: "image is okteto variable/fails to get services",
 			input: input{
 				manifest: &model.Manifest{
-					Build: model.ManifestBuild{
+					Build: build.ManifestBuild{
 						"test": {},
 					},
 					Destroy: &model.DestroyInfo{
@@ -113,7 +114,7 @@ func TestBuildNecessaryImages(t *testing.T) {
 			name: "image is okteto variable/is already build",
 			input: input{
 				manifest: &model.Manifest{
-					Build: model.ManifestBuild{
+					Build: build.ManifestBuild{
 						"test": {},
 					},
 					Destroy: &model.DestroyInfo{
@@ -132,7 +133,7 @@ func TestBuildNecessaryImages(t *testing.T) {
 			name: "image is okteto variable/build fails",
 			input: input{
 				manifest: &model.Manifest{
-					Build: model.ManifestBuild{
+					Build: build.ManifestBuild{
 						"test": {},
 					},
 					Destroy: &model.DestroyInfo{
@@ -152,7 +153,7 @@ func TestBuildNecessaryImages(t *testing.T) {
 			name: "image is okteto variable/build succeeds",
 			input: input{
 				manifest: &model.Manifest{
-					Build: model.ManifestBuild{
+					Build: build.ManifestBuild{
 						"test": {},
 					},
 					Destroy: &model.DestroyInfo{
