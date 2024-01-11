@@ -195,7 +195,7 @@ func (n *Namespaces) DestroySFSVolumes(ctx context.Context, ns string, opts Dele
 
 	ssList, err := statefulsets.List(ctx, ns, opts.LabelSelector, n.k8sClient)
 	if err != nil {
-		return fmt.Errorf("error getting statefulsets: %s", err)
+		return fmt.Errorf("error getting statefulsets: %w", err)
 	}
 	for _, ss := range ssList {
 		for _, pvcTemplate := range ss.Spec.VolumeClaimTemplates {
@@ -220,7 +220,7 @@ func (n *Namespaces) DestroySFSVolumes(ctx context.Context, ns string, opts Dele
 	deployedByNotExistSelector := labels.NewSelector().Add(*deployedByNotExist).String()
 	vList, err := volumes.List(ctx, ns, deployedByNotExistSelector, n.k8sClient)
 	if err != nil {
-		return fmt.Errorf("error getting volumes: %s", err)
+		return fmt.Errorf("error getting volumes: %w", err)
 	}
 	for _, v := range vList {
 		if v.Annotations[resourcePolicyAnnotation] == keepPolicy {

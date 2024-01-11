@@ -114,12 +114,12 @@ func LoadManifestRc(dev *model.Dev) error {
 	if filesystem.FileExists(defaultDevRcPath) {
 		devRc, err = model.GetRc(defaultDevRcPath)
 		if err != nil {
-			return fmt.Errorf("error while reading %s file: %s", defaultDevRcPath, err.Error())
+			return fmt.Errorf("error while reading %s file: %w", defaultDevRcPath, err)
 		}
 	} else if filesystem.FileExists(secondaryDevRcPath) {
 		devRc, err = model.GetRc(secondaryDevRcPath)
 		if err != nil {
-			return fmt.Errorf("error while reading %s file: %s", defaultDevRcPath, err.Error())
+			return fmt.Errorf("error while reading %s file: %w", defaultDevRcPath, err)
 		}
 	}
 

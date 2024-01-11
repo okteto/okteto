@@ -1392,16 +1392,11 @@ services:
         cpu: "500m"
     workdir: /app
     %s`, tt.value))
-			expected := fmt.Sprintf("Error on dev 'deployment': %q is not supported in Services. Please visit https://www.okteto.com/docs/reference/manifest/#services-object-optional for documentation", tt.name)
+			expected := fmt.Sprintf("error on dev 'deployment': %q is not supported in Services. Please visit https://www.okteto.com/docs/reference/manifest/#services-object-optional for documentation", tt.name)
 
 			_, err := Read(manifest)
-			if err == nil {
-				t.Fatal("Expected to receive error from validateForExtraFields but got none")
-			}
-
-			if err.Error() != expected {
-				t.Errorf("Received error from validateForExtraFields is invalid: got %s, expected %s", err.Error(), expected)
-			}
+			assert.NotNil(t, err)
+			assert.ErrorContains(t, err, expected)
 		})
 	}
 }

@@ -455,17 +455,17 @@ func (svc *Service) ToDev(svcName string) (*Dev, error) {
 func (s *Stack) Validate() error {
 	// in case name is coming from option "name" at deploy this could not be sanitized
 	if err := validateStackName(format.ResourceK8sMetaString(s.Name)); err != nil {
-		return fmt.Errorf("Invalid compose name: %s", err)
+		return fmt.Errorf("invalid compose name: %w", err)
 	}
 	if len(s.Services) == 0 {
-		return fmt.Errorf("Invalid stack: 'services' cannot be empty")
+		return fmt.Errorf("invalid stack: 'services' cannot be empty")
 	}
 
 	for endpointName, endpoint := range s.Endpoints {
 		for _, endpointRule := range endpoint.Rules {
 			if service, ok := s.Services[endpointRule.Service]; ok {
 				if !IsPortInService(endpointRule.Port, service.Ports) {
-					return fmt.Errorf("Invalid endpoint '%s': service '%s' does not have port '%d'.", endpointName, endpointRule.Service, endpointRule.Port)
+					return fmt.Errorf("invalid endpoint '%s': service '%s' does not have port '%d'", endpointName, endpointRule.Service, endpointRule.Port)
 				}
 			}
 		}
@@ -477,11 +477,11 @@ func (s *Stack) Validate() error {
 	}
 	for name, svc := range s.Services {
 		if err := validateStackName(name); err != nil {
-			return fmt.Errorf("Invalid service name '%s': %s", name, err)
+			return fmt.Errorf("invalid service name '%s': %s", name, err)
 		}
 
 		if svc.Image == "" && svc.Build == nil {
-			return fmt.Errorf(fmt.Sprintf("Invalid service '%s': image cannot be empty", name))
+			return fmt.Errorf("invalid service '%s': image cannot be empty", name)
 		}
 
 		for _, v := range svc.VolumeMounts {
@@ -492,7 +492,7 @@ func (s *Stack) Validate() error {
 				s.Warnings.VolumeMountWarnings = append(s.Warnings.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/#up", name, v.LocalPath, v.RemotePath))
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
-				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v.ToString(), name))
+				return fmt.Errorf("invalid volume '%s' in service '%s': must be an absolute path", v.ToString(), name)
 			}
 		}
 		svc.ignoreSyncVolumes()
@@ -533,7 +533,7 @@ type errDependsOnUndefined struct {
 }
 
 func (e *errDependsOnUndefined) Error() string {
-	return fmt.Errorf("%w: Service '%s' depends on service '%s' which is undefined.", errDependsOn, e.svc, e.dependentSvc).Error()
+	return fmt.Errorf("%w: Service '%s' depends on service '%s' which is undefined", errDependsOn, e.svc, e.dependentSvc).Error()
 }
 
 func (e *errDependsOnUndefined) Unwrap() error {
@@ -562,7 +562,7 @@ func (cs ComposeServices) ValidateDependsOn(svcs []string) error {
 	dependencyCycle := utils.GetDependentCyclic(cs.toGraph())
 	if len(dependencyCycle) > 0 {
 		svcsDependents := fmt.Sprintf("%s and %s", strings.Join(dependencyCycle[:len(dependencyCycle)-1], ", "), dependencyCycle[len(dependencyCycle)-1])
-		return fmt.Errorf("%w: There was a cyclic dependendecy between %s.", errDependsOn, svcsDependents)
+		return fmt.Errorf("%w: There was a cyclic dependendecy between %s", errDependsOn, svcsDependents)
 	}
 	return nil
 }
@@ -913,7 +913,7 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 
 	envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
 	if err != nil {
-		return fmt.Errorf("error parsing env_file %s: %s", filename, err.Error())
+		return fmt.Errorf("error parsing env_file %s: %w", filename, err)
 	}
 
 	for _, e := range svc.Environment {

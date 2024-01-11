@@ -135,7 +135,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 
 		iClient, err := ingresses.GetClient(c)
 		if err != nil {
-			exit <- fmt.Errorf("error getting ingress client: %s", err.Error())
+			exit <- fmt.Errorf("error getting ingress client: %w", err)
 			return
 		}
 
@@ -559,7 +559,7 @@ func isAnyPortAvailable(ctx context.Context, svc *model.Service, stack *model.St
 		}
 	}
 	if err := forwarder.Start(podName, stack.Namespace); err != nil {
-		oktetoLog.Infof("could not start port-forward: %s", err)
+		oktetoLog.Infof("could not start port-forward: %w", err)
 	}
 	defer forwarder.Stop()
 	for _, port := range portsToTest {
@@ -610,7 +610,7 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 	d := translateDeployment(svcName, s)
 	old, err := c.AppsV1().Deployments(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil && !oktetoErrors.IsNotFound(err) {
-		return false, fmt.Errorf("error getting deployment of service '%s': %s", svcName, err.Error())
+		return false, fmt.Errorf("error getting deployment of service '%s': %w", svcName, err)
 	}
 	isNewDeployment := old == nil || old.Name == ""
 	if !isNewDeployment {
@@ -635,19 +635,19 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 
 	if !isNewDeployment && old.Labels[model.StackNameLabel] == "okteto" {
 		if err := deployments.Destroy(ctx, old.Name, old.Namespace, c); err != nil {
-			return false, fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
+			return false, fmt.Errorf("error updating deployment of service '%s': %w", svcName, err)
 		}
 		if _, err := deployments.Deploy(ctx, d, c); err != nil {
-			return false, fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
+			return false, fmt.Errorf("error updating deployment of service '%s': %w", svcName, err)
 		}
 		return isNewDeployment, nil
 	}
 
 	if _, err := deployments.Deploy(ctx, d, c); err != nil {
 		if isNewDeployment {
-			return false, fmt.Errorf("error creating deployment of service '%s': %s", svcName, err.Error())
+			return false, fmt.Errorf("error creating deployment of service '%s': %w", svcName, err)
 		}
-		return false, fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
+		return false, fmt.Errorf("error updating deployment of service '%s': %w", svcName, err)
 	}
 
 	return isNewDeployment, nil
@@ -657,11 +657,11 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 	sfs := translateStatefulSet(svcName, s)
 	old, err := c.AppsV1().StatefulSets(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil && !oktetoErrors.IsNotFound(err) {
-		return false, fmt.Errorf("error getting statefulset of service '%s': %s", svcName, err.Error())
+		return false, fmt.Errorf("error getting statefulset of service '%s': %w", svcName, err)
 	}
 	if old == nil || old.Name == "" {
 		if _, err := statefulsets.Deploy(ctx, sfs, c); err != nil {
-			return false, fmt.Errorf("error creating statefulset of service '%s': %s", svcName, err.Error())
+			return false, fmt.Errorf("error creating statefulset of service '%s': %w", svcName, err)
 		}
 		return true, nil
 	}
@@ -680,13 +680,13 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 	}
 	if _, err := statefulsets.Deploy(ctx, sfs, c); err != nil {
 		if !strings.Contains(err.Error(), "Forbidden: updates to statefulset spec") {
-			return false, fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
+			return false, fmt.Errorf("error updating statefulset of service '%s': %w", svcName, err)
 		}
 		if err := statefulsets.Destroy(ctx, sfs.Name, sfs.Namespace, c); err != nil {
-			return false, fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
+			return false, fmt.Errorf("error updating statefulset of service '%s': %w", svcName, err)
 		}
 		if _, err := statefulsets.Deploy(ctx, sfs, c); err != nil {
-			return false, fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
+			return false, fmt.Errorf("error updating statefulset of service '%s': %w", svcName, err)
 		}
 	}
 
@@ -697,7 +697,7 @@ func deployJob(ctx context.Context, svcName string, s *model.Stack, c kubernetes
 	job := translateJob(svcName, s)
 	old, err := c.BatchV1().Jobs(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil && !oktetoErrors.IsNotFound(err) {
-		return false, fmt.Errorf("error getting job of service '%s': %s", svcName, err.Error())
+		return false, fmt.Errorf("error getting job of service '%s': %w", svcName, err)
 	}
 	isNewJob := old == nil || old.Name == ""
 	if !isNewJob {
@@ -711,11 +711,11 @@ func deployJob(ctx context.Context, svcName string, s *model.Stack, c kubernetes
 
 	if isNewJob {
 		if err := jobs.Create(ctx, job, c); err != nil {
-			return false, fmt.Errorf("error creating job of service '%s': %s", svcName, err.Error())
+			return false, fmt.Errorf("error creating job of service '%s': %w", svcName, err)
 		}
 	} else {
 		if err := jobs.Update(ctx, job, c); err != nil {
-			return false, fmt.Errorf("error updating job of service '%s': %s", svcName, err.Error())
+			return false, fmt.Errorf("error updating job of service '%s': %w", svcName, err)
 		}
 	}
 	return isNewJob, nil
@@ -726,11 +726,11 @@ func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c kube
 
 	old, err := c.CoreV1().PersistentVolumeClaims(s.Namespace).Get(ctx, pvc.Name, metav1.GetOptions{})
 	if err != nil && !oktetoErrors.IsNotFound(err) {
-		return fmt.Errorf("error getting volume '%s': %s", pvc.Name, err.Error())
+		return fmt.Errorf("error getting volume '%s': %w", pvc.Name, err)
 	}
 	if old == nil || old.Name == "" {
 		if err := volumes.Create(ctx, &pvc, c); err != nil {
-			return fmt.Errorf("error creating volume '%s': %s", pvc.Name, err.Error())
+			return fmt.Errorf("error creating volume '%s': %w", pvc.Name, err)
 		}
 		oktetoLog.Success("Volume '%s' created", volumeName)
 	} else {
@@ -758,7 +758,7 @@ func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c kube
 			if strings.Contains(err.Error(), "spec.resources.requests.storage: Forbidden: field can not be less than previous value") {
 				return fmt.Errorf("error updating volume '%s': Volume size can not be less than previous value", old.Name)
 			}
-			return fmt.Errorf("error updating volume '%s': %s", old.Name, err.Error())
+			return fmt.Errorf("error updating volume '%s': %w", old.Name, err)
 		}
 		oktetoLog.Success("Volume '%s' updated", volumeName)
 	}

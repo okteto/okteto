@@ -146,7 +146,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 
 	c, _, err := pc.k8sClientProvider.Provide(okteto.Context().Cfg)
 	if err != nil {
-		return fmt.Errorf("failed to load okteto context '%s': %v", okteto.Context().Name, err)
+		return fmt.Errorf("failed to load okteto context '%s': %w", okteto.Context().Name, err)
 	}
 
 	exists := false

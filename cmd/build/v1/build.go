@@ -85,7 +85,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	}
 
 	if err := utils.CheckIfDirectory(path); err != nil {
-		return fmt.Errorf("invalid build context: %s", err.Error())
+		return fmt.Errorf("invalid build context: %w", err)
 	}
 	options.Path = path
 

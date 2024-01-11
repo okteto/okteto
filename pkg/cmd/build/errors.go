@@ -49,7 +49,7 @@ func getErrorMessage(err error, tag string) error {
 		}
 	case isPullAccessDenied(err):
 		err = oktetoErrors.UserError{
-			E:    fmt.Errorf("error building image: failed to pull image '%s'. The repository is not accessible or it does not exist.", imageTag),
+			E:    fmt.Errorf("error building image: failed to pull image '%s'. The repository is not accessible or it does not exist", imageTag),
 			Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.", imageTag),
 		}
 	default:
@@ -58,7 +58,7 @@ func getErrorMessage(err error, tag string) error {
 			return cmdErr
 		}
 		err = oktetoErrors.UserError{
-			E: fmt.Errorf("error building image '%s': %s", tag, err.Error()),
+			E: fmt.Errorf("error building image '%s': %w", tag, err),
 		}
 	}
 	return err

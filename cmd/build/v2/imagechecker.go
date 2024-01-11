@@ -99,7 +99,7 @@ func (ic imageChecker) getImageDigestReferenceForService(manifestName, svcToBuil
 				continue
 			}
 			// return error if the registry doesn't send a not found error
-			return "", fmt.Errorf("error checking image at registry %s: %v", ref, err)
+			return "", fmt.Errorf("error checking image at registry %s: %w", ref, err)
 		}
 		return imageWithDigest, nil
 	}

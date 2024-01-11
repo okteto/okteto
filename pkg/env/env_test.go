@@ -14,7 +14,6 @@
 package env
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,7 +32,7 @@ func Test_ExpandEnv(t *testing.T) {
 			name:        "broken var - missing closing curly bracket",
 			value:       "value-${BAR",
 			result:      "",
-			expectedErr: fmt.Errorf("error expanding environment on 'value-${BAR': closing brace expected"),
+			expectedErr: &EnvVarExpansionErr{},
 		},
 		{
 			name:        "no-var",
@@ -70,8 +69,12 @@ func Test_ExpandEnv(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := ExpandEnv(tt.value)
-			assert.Equal(t, err, tt.expectedErr)
 			assert.Equal(t, tt.result, result)
+			if tt.expectedErr != nil {
+				assert.ErrorAs(t, err, tt.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
@@ -88,7 +91,7 @@ func Test_ExpandEnvIfNotEmpty(t *testing.T) {
 			name:        "broken var - missing closing curly bracket",
 			value:       "value-${BAR",
 			result:      "",
-			expectedErr: fmt.Errorf("error expanding environment on 'value-${BAR': closing brace expected"),
+			expectedErr: &EnvVarExpansionErr{},
 		},
 		{
 			name:        "no-var",
@@ -125,8 +128,12 @@ func Test_ExpandEnvIfNotEmpty(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := ExpandEnvIfNotEmpty(tt.value)
-			assert.Equal(t, err, tt.expectedErr)
 			assert.Equal(t, tt.result, result)
+			if tt.expectedErr != nil {
+				assert.ErrorAs(t, err, tt.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }

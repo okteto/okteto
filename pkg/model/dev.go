@@ -475,7 +475,7 @@ func (dev *Dev) SetDefaults() error {
 	if os.Getenv(OktetoRescanIntervalEnvVar) != "" {
 		rescanInterval, err := strconv.Atoi(os.Getenv(OktetoRescanIntervalEnvVar))
 		if err != nil {
-			return fmt.Errorf("cannot parse 'OKTETO_RESCAN_INTERVAL' into an integer: %s", err.Error())
+			return fmt.Errorf("cannot parse 'OKTETO_RESCAN_INTERVAL' into an integer: %w", err)
 		}
 		dev.Sync.RescanInterval = rescanInterval
 	} else if dev.Sync.RescanInterval == 0 {
@@ -589,7 +589,7 @@ func (dev *Dev) expandEnvFiles() error {
 
 		envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
 		if err != nil {
-			return fmt.Errorf("error parsing env_file %s: %s", filename, err.Error())
+			return fmt.Errorf("error parsing env_file %s: %w", filename, err)
 		}
 
 		for _, e := range dev.Environment {
@@ -743,7 +743,7 @@ func validateSecrets(secrets []Secret) error {
 		}
 
 		if _, ok := seen[s.GetFileName()]; ok {
-			return fmt.Errorf("Secrets with the same basename '%s' are not supported", s.GetFileName())
+			return fmt.Errorf("secrets with the same basename '%s' are not supported", s.GetFileName())
 		}
 		seen[s.GetFileName()] = true
 	}

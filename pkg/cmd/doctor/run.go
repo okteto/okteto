@@ -110,7 +110,7 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 	}
 	if err := z.Archive(files, archiveName); err != nil {
 		oktetoLog.Infof("error while archiving: %s", err)
-		return "", fmt.Errorf("couldn't create archive '%s', please try again: %s", archiveName, err)
+		return "", fmt.Errorf("couldn't create archive '%s', please try again: %w", archiveName, err)
 	}
 
 	return archiveName, nil
@@ -119,7 +119,7 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 func generateSummaryFile() (string, error) {
 	tempdir, err := os.MkdirTemp("", "")
 	if err != nil {
-		return "", fmt.Errorf("error creating temp dir: %s", err)
+		return "", fmt.Errorf("error creating temp dir: %w", err)
 	}
 	summaryPath := filepath.Join(tempdir, "okteto-summary.txt")
 	fileSummary, err := os.OpenFile(summaryPath, os.O_RDWR|os.O_CREATE, 0600)
@@ -303,7 +303,7 @@ func generateRemoteSyncthingLogsFile(ctx context.Context, dev *model.Dev, c *kub
 
 	tempdir, err := os.MkdirTemp("", "")
 	if err != nil {
-		return "", fmt.Errorf("error creating temp dir: %s", err)
+		return "", fmt.Errorf("error creating temp dir: %w", err)
 	}
 	remoteLogsPath := filepath.Join(tempdir, "remote-syncthing.log")
 	fileRemoteLog, err := os.OpenFile(remoteLogsPath, os.O_RDWR|os.O_CREATE, 0600)

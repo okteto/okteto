@@ -16,6 +16,7 @@ package pipeline
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -117,7 +118,7 @@ func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx
 	}
 	c, _, err := pc.k8sClientProvider.Provide(okCtx.Cfg)
 	if err != nil {
-		return fmt.Errorf("failed to load okteto context '%s': %v", okCtx.Name, err)
+		return fmt.Errorf("failed to load okteto context '%s': %w", okCtx.Name, err)
 	}
 
 	return executeListPipelines(ctx, *flags, configmaps.List, getPipelineListOutput, c, os.Stdout)
@@ -183,7 +184,7 @@ func getLabelSelector(labels []string) (string, error) {
 		}
 		errs := validation.IsValidLabelValue(label)
 		if len(errs) > 0 {
-			return "", fmt.Errorf("invalid label '%s': %v", label, errs[0])
+			return "", fmt.Errorf("invalid label '%s': %w", label, errors.New(errs[0]))
 		}
 		labelSelector = append(labelSelector, fmt.Sprintf("%s/%s", constants.EnvironmentLabelKeyPrefix, label))
 	}

@@ -71,7 +71,7 @@ func RunOktetoBuild(oktetoPath string, buildOptions *BuildOptions) error {
 
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("okteto build failed: \nerror: %s \noutput:\n %s", err.Error(), string(o))
+		return fmt.Errorf("okteto build failed: \nerror: %w \noutput:\n %s", err, string(o))
 	}
 	return nil
 }

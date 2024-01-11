@@ -151,7 +151,7 @@ func fieldsNotExistingRule() *suggest.Rule {
 
 	transform := func(e error) error {
 		newErr := re.ReplaceAllString(e.Error(), "field '$1' is not a property of")
-		return fmt.Errorf("%s", newErr)
+		return errors.New(newErr)
 	}
 
 	return suggest.NewRule(condition, transform)

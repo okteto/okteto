@@ -128,7 +128,7 @@ func getNamespacesSelection(ctx context.Context) ([]utils.SelectorItem, error) {
 	}
 	spaces, err := oktetoClient.Namespaces().List(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get namespaces: %s", err)
+		return nil, fmt.Errorf("failed to get namespaces: %w", err)
 	}
 
 	namespaces := []utils.SelectorItem{}
