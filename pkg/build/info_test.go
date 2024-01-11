@@ -14,8 +14,10 @@
 package build
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/cache"
@@ -407,6 +409,110 @@ func TestMarshalInfo(t *testing.T) {
 			out, err := yaml.Marshal(tt.input)
 			require.NoError(t, err)
 			require.Equal(t, tt.expected, string(out))
+		})
+	}
+}
+
+func Test_expandSecrets(t *testing.T) {
+	homeEnvVar := "HOME"
+	if runtime.GOOS == "windows" {
+		homeEnvVar = "USERPROFILE"
+	}
+	t.Setenv(homeEnvVar, filepath.Clean("/home/testuser"))
+
+	tests := []struct {
+		input       *Info
+		expected    *Info
+		setEnvFunc  func(t *testing.T)
+		name        string
+		expectedErr bool
+	}{
+		{
+			name:     "no secrets",
+			input:    &Info{},
+			expected: &Info{},
+		},
+		{
+			name: "successfully expand home directory",
+			input: &Info{Secrets: map[string]string{
+				"path": "~/secret",
+			}},
+			expected: &Info{Secrets: map[string]string{
+				"path": filepath.Clean("/home/testuser/secret"),
+			}},
+		},
+		{
+			name: "only replace initial tilde-slash",
+			input: &Info{Secrets: map[string]string{
+				"path": "~/test/~/secret",
+			}},
+			expected: &Info{Secrets: map[string]string{
+				"path": filepath.Clean("/home/testuser/test/~/secret"),
+			}},
+		},
+		{
+			name: "no expansion needed",
+			input: &Info{Secrets: map[string]string{
+				"path": "/var/log",
+			}},
+			expected: &Info{Secrets: map[string]string{
+				"path": "/var/log",
+			}},
+		},
+		{
+			name: "expand HOME env var",
+			input: &Info{Secrets: map[string]string{
+				"path": filepath.Join(fmt.Sprintf("$%s", homeEnvVar), "secrets"),
+			}},
+			expected: &Info{Secrets: map[string]string{
+				"path": filepath.Clean("/home/testuser/secrets"),
+			}},
+			setEnvFunc: func(t *testing.T) {
+				t.Setenv("TEST_RANDOM_DIR", "/home/testuser")
+			},
+		},
+		{
+			name: "expand unset env var",
+			input: &Info{Secrets: map[string]string{
+				"path": "$TEST_RANDOM_DIR/secrets",
+			}},
+			expected: &Info{Secrets: map[string]string{
+				"path": "/secrets",
+			}},
+		},
+		{
+			name: "empty - unset env var",
+			input: &Info{Secrets: map[string]string{
+				"path": "$TEST_RANDOM_DIR",
+			}},
+			expected: &Info{Secrets: map[string]string{
+				"path": "",
+			}},
+		},
+		{
+			name: "broken env var",
+			input: &Info{Secrets: map[string]string{
+				"path": "${TEST_RANDOM_DIR/secrets",
+			}},
+			expected: &Info{Secrets: map[string]string{
+				"path": "",
+			}},
+			expectedErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.setEnvFunc != nil {
+				tc.setEnvFunc(t)
+			}
+			err := tc.input.expandSecrets()
+			if tc.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tc.expected, tc.input)
 		})
 	}
 }
