@@ -48,6 +48,7 @@ import (
 	"github.com/spf13/cobra"
 	generateFigSpec "github.com/withfig/autocomplete-tools/packages/cobra"
 	utilRuntime "k8s.io/apimachinery/pkg/util/runtime"
+
 	// Load the different library for authentication
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -137,7 +138,12 @@ func main() {
 	}
 
 	okClientProvider := okteto.NewOktetoClientProvider()
+	k8sClientProvider := okteto.NewK8sClientProvider()
 	at := analytics.NewAnalyticsTracker()
+	projectRoot, err := os.Getwd()
+	if err != nil {
+		ioController.Logger().Infof("error getting the current working directory: %s", err)
+	}
 
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
@@ -161,7 +167,7 @@ func main() {
 	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
 	root.AddCommand(cmd.UpdateDeprecated())
-	root.AddCommand(deploy.Deploy(ctx, at, ioController))
+	root.AddCommand(deploy.Deploy(ctx, projectRoot, k8sClientProvider, okClientProvider, at, ioController))
 	root.AddCommand(destroy.Destroy(ctx, at, ioController))
 	root.AddCommand(deploy.Endpoints(ctx))
 	root.AddCommand(logs.Logs(ctx))

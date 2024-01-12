@@ -38,6 +38,7 @@ type repositoryInterface interface {
 	getSHA() (string, error)
 	GetLatestDirCommit(string) (string, error)
 	GetDiffHash(string) (string, error)
+	getBranch() (string, error)
 }
 
 type repositoryURL struct {
@@ -87,6 +88,10 @@ func (r Repository) IsClean() (bool, error) {
 // GetSHA returns the last commit sha of the repository
 func (r Repository) GetSHA() (string, error) {
 	return r.control.getSHA()
+}
+
+func (r Repository) GetBranch() (string, error) {
+	return r.control.getBranch()
 }
 
 // IsEqual checks if another repository is the same from the one calling the function

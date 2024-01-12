@@ -17,6 +17,7 @@ import (
 	"crypto/x509"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 type ConfigStateless struct {
@@ -71,6 +72,7 @@ func (Config) GetContextCertificate() (*x509.Certificate, error) { return GetCon
 func (Config) IsInsecureSkipTLSVerifyPolicy() bool               { return Context().IsInsecure }
 func (Config) GetServerNameOverride() string                     { return GetServerNameOverride() }
 func (Config) GetContextName() string                            { return Context().Name }
+func (Config) GetK8sConfig() *api.Config                         { return Context().Cfg }
 func (Config) GetExternalRegistryCredentials(registryHost string) (string, string, error) {
 	return GetExternalRegistryCredentials(registryHost)
 }

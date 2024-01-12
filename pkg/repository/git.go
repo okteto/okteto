@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/go-git/go-git/v5"
@@ -34,6 +35,7 @@ var (
 	errNotCleanRepo    = errors.New("repository is not clean")
 	errTimeoutExceeded = errors.New("timeout exceeded")
 	errFindingRepo     = errors.New("top level git repo directory cannot be found")
+	errInvalidBranch   = errors.New("git repo is not on a valid branch")
 )
 
 type gitRepoController struct {
@@ -72,6 +74,27 @@ func (r gitRepoController) calculateIsClean(ctx context.Context) (bool, error) {
 	}
 
 	return status.IsClean(), nil
+}
+
+// GetBranch returns the branch from a .git directory
+func (r gitRepoController) getBranch() (string, error) {
+	repo, err := r.repoGetter.get(r.path)
+	if err != nil {
+		return "", fmt.Errorf("failed to analyze git repo: %w", err)
+	}
+
+	head, err := repo.Head()
+	if err != nil {
+		return "", fmt.Errorf("failed to infer the git repo's current branch: %w", err)
+	}
+
+	branch := head.Name()
+	if !branch.IsBranch() {
+		return "", errInvalidBranch
+	}
+
+	name := strings.TrimPrefix(branch.String(), "refs/heads/")
+	return name, nil
 }
 
 // isClean checks if the repository have changes over the commit

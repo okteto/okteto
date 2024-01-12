@@ -130,6 +130,21 @@ func (l *OutputController) Success(format string, args ...any) {
 	fmt.Fprint(l.out, string(bytes))
 }
 
+// Success prints a success message to the user
+func (l *OutputController) Warning(format string, args ...any) {
+	msg := fmt.Sprintf(format, args...)
+	msg = l.decorator.Warning(msg)
+	bytes, err := l.formatter.format(msg)
+	if err != nil {
+		return
+	}
+	if l.spinner != nil && l.spinner.isActive() {
+		l.spinner.Stop()
+		defer l.Spinner(l.spinner.getMessage()).Start()
+	}
+	fmt.Fprint(l.out, string(bytes))
+}
+
 // SetStage sets the stage of the logger if it's json
 func (l *OutputController) SetStage(stage string) {
 	if v, ok := l.formatter.(*jsonFormatter); ok {

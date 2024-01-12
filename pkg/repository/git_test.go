@@ -612,3 +612,77 @@ func TestGetUntrackedContent(t *testing.T) {
 		})
 	}
 }
+
+func TestGetBranch(t *testing.T) {
+	type config struct {
+		repositoryGetter *fakeRepositoryGetter
+	}
+	type expected struct {
+		err    error
+		branch string
+	}
+	var tests = []struct {
+		expected expected
+		config   config
+		name     string
+	}{
+		{
+			name: "get branch without any problem",
+			config: config{
+				repositoryGetter: &fakeRepositoryGetter{
+					repository: []*fakeRepository{
+						{
+							head: plumbing.NewHashReference("refs/heads/test", plumbing.NewHash("refs/heads/test")),
+							err:  nil,
+						},
+					},
+				},
+			},
+			expected: expected{
+				branch: "test",
+				err:    nil,
+			},
+		},
+		{
+			name: "error on getting repo",
+			config: config{
+				repositoryGetter: &fakeRepositoryGetter{
+					err: []error{assert.AnError},
+				},
+			},
+			expected: expected{
+				branch: "",
+				err:    assert.AnError,
+			},
+		},
+		{
+			name: "not a branch",
+			config: config{
+				repositoryGetter: &fakeRepositoryGetter{
+					repository: []*fakeRepository{
+						{
+							head: plumbing.NewHashReference("test", plumbing.NewHash("test")),
+							err:  nil,
+						},
+					},
+				},
+			},
+			expected: expected{
+				branch: "",
+				err:    errInvalidBranch,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := Repository{
+				control: gitRepoController{
+					repoGetter: tt.config.repositoryGetter,
+				},
+			}
+			sha, err := repo.GetBranch()
+			assert.ErrorIs(t, err, tt.expected.err)
+			assert.Equal(t, tt.expected.branch, sha)
+		})
+	}
+}

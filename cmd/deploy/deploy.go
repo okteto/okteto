@@ -23,6 +23,7 @@ import (
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	pipelinectrl "github.com/okteto/okteto/cmd/deploy/pipeline"
 	"github.com/okteto/okteto/cmd/namespace"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
@@ -45,7 +46,9 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 const (
@@ -80,6 +83,9 @@ type Options struct {
 	RunInRemote      bool
 	Wait             bool
 	ShowCTA          bool
+	skipIfExists     bool
+	reuseParams      bool
+	labels           []string
 }
 
 type builderInterface interface {
@@ -141,8 +147,17 @@ func NewDeployExternalK8sControl(cfg *rest.Config) ExternalResourceInterface {
 	return externalresource.NewExternalK8sControl(cfg)
 }
 
+// oktetoClientProvider provides an okteto client ready to use or fail
+type oktetoClientProvider interface {
+	Provide(...okteto.Option) (types.OktetoInterface, error)
+}
+
+type K8sClientProvider interface {
+	Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error)
+}
+
 // Deploy deploys the okteto manifest
-func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
+func Deploy(ctx context.Context, projectRoot string, k8sClientProvider K8sClientProvider, okClientProvider oktetoClientProvider, at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
 	options := &Options{}
 	fs := &DeployCommand{
 		Fs: afero.NewOsFs(),
@@ -195,10 +210,35 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCont
 				}
 			}
 
+			if shouldRunInPipeline(options) {
+				pipelineCtrl, err := pipelinectrl.NewPipelineDeployer(
+					pipelinectrl.WithBranch(options.Branch),
+					pipelinectrl.WithRepository(options.Repository),
+					pipelinectrl.WithFile(options.ManifestPathFlag),
+					pipelinectrl.WithName(options.Name),
+					pipelinectrl.WithNamespace(options.Namespace),
+					pipelinectrl.WithTimeout(options.Timeout),
+					pipelinectrl.WithVariables(options.Variables),
+					pipelinectrl.WithWait(options.Wait),
+					pipelinectrl.WithLabels(options.labels),
+					pipelinectrl.WithReuseParams(options.reuseParams),
+					pipelinectrl.WithSkipIfExists(options.skipIfExists),
+
+					pipelinectrl.WithIO(ioCtrl),
+					pipelinectrl.WithK8sProvider(k8sClientProvider),
+					pipelinectrl.WithOkCtxController(okteto.Config{}),
+					pipelinectrl.WithProjectRootPath(projectRoot),
+					pipelinectrl.WithOktetoAPICtrl(okClientProvider),
+				)
+				if err != nil {
+					return err
+				}
+				return pipelineCtrl.Deploy(ctx)
+			}
+
 			options.ShowCTA = oktetoLog.IsInteractive()
 			options.servicesToDeploy = args
 
-			k8sClientProvider := okteto.NewK8sClientProvider()
 			pc, err := pipelineCMD.NewCommand()
 			if err != nil {
 				return fmt.Errorf("could not create pipeline command: %w", err)
@@ -261,6 +301,12 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCont
 	cmd.Flags().BoolVarP(&options.Dependencies, "dependencies", "", false, "deploy the dependencies from manifest")
 	cmd.Flags().BoolVarP(&options.RunWithoutBash, "no-bash", "", false, "execute commands without bash")
 	cmd.Flags().BoolVarP(&options.RunInRemote, "remote", "", false, "force run deploy commands in remote")
+
+	cmd.Flags().StringVarP(&options.Repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
+	cmd.Flags().StringVarP(&options.Branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
+	cmd.Flags().BoolVarP(&options.skipIfExists, "skip-if-exists", "", false, "skip the pipeline deployment if the pipeline already exists in the namespace (defaults to false)")
+	cmd.Flags().StringArrayVarP(&options.labels, "label", "", []string{}, "set an environment label (can be set more than once)")
+	cmd.Flags().BoolVar(&options.reuseParams, "reuse-params", false, "if pipeline exist, reuse same params to redeploy")
 
 	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", false, "wait until the development environment is deployed (defaults to false)")
 	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
@@ -533,6 +579,10 @@ func getDefaultTimeout() time.Duration {
 	}
 
 	return parsed
+}
+
+func shouldRunInPipeline(opts *Options) bool {
+	return opts.Branch != "" || opts.Repository != ""
 }
 
 func shouldRunInRemote(opts *Options) bool {

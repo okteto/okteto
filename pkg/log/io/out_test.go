@@ -202,6 +202,39 @@ func TestSuccess(t *testing.T) {
 	require.Equal(t, "", buffer.String())
 }
 
+func TestWarning(t *testing.T) {
+	buffer := bytes.NewBuffer([]byte{})
+	l := newOutputController(buffer)
+
+	l.spinner = newNoSpinner("test")
+
+	l.SetOutputFormat("tty")
+	l.Warning("%s", "test")
+	require.Equal(t, " !  test\n", buffer.String())
+	buffer.Reset()
+
+	l.SetOutputFormat("plain")
+	l.Warning("%s", "test")
+	require.Equal(t, "WARNING: test\n", buffer.String())
+	buffer.Reset()
+
+	l.SetOutputFormat("json")
+	l.SetStage("test")
+	l.Warning("%s", "test")
+	jsonMessage := &jsonMessage{}
+	err := json.Unmarshal(buffer.Bytes(), jsonMessage)
+	require.NoError(t, err)
+	require.Equal(t, "Warning: test\n", jsonMessage.Message)
+	require.Equal(t, "test", jsonMessage.Stage)
+	require.Equal(t, "info", jsonMessage.Level)
+	require.NotEmpty(t, jsonMessage.Timestamp)
+	buffer.Reset()
+
+	l.SetStage("")
+	l.Warning("%s", "test")
+	require.Equal(t, "", buffer.String())
+}
+
 type fakeSpinner struct {
 	message string
 	on      bool
