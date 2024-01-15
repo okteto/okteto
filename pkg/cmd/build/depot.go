@@ -152,6 +152,7 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 		return fmt.Errorf("failed to create build solver: %w", err)
 	}
 
+	db.ioCtrl.Logger().Infof("depot build URL: %s", build.BuildURL)
 	return run(ctx, client, opt, buildOptions, db.okCtx, db.ioCtrl)
 }
 
