@@ -44,6 +44,9 @@ commands:
     steps:
       - run:
           name: Run build integration tests
+          environment:
+              DEPOT_PROJECT_ID: $DEPOT_PROJECT_ID
+              DEPOT_TOKEN: $DEPOT_TOKEN
           command: make integration-build
 
   integration-deploy:
@@ -156,9 +159,7 @@ jobs:
     environment:
       OKTETO_URL: https://staging.okteto.dev/
       OKTETO_USER: cindylopez
-      OKTETO_APPS_SUBDOMAIN: staging.okteto.net
-      DEPOT_PROJECT_ID: $DEPOT_PROJECT_ID
-      DEPOT_TOKEN: $DEPOT_TOKEN
+      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
       - checkout
       - restore_cache:
@@ -215,8 +216,6 @@ jobs:
     executor: win/default
     environment:
       OKTETO_USER: cindylopez
-      DEPOT_PROJECT_ID: $DEPOT_PROJECT_ID
-      DEPOT_TOKEN: $DEPOT_TOKEN
     steps:
       - checkout
       - run:
@@ -253,7 +252,7 @@ jobs:
           environment:
             OKTETO_URL: https://staging.okteto.dev/
             OKTETO_SKIP_CLEANUP: 'true'
-            OKTETO_APPS_SUBDOMAIN: staging.okteto.net
+            OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
@@ -264,7 +263,9 @@ jobs:
           environment:
             OKTETO_URL: https://staging.okteto.dev/
             OKTETO_SKIP_CLEANUP: 'true'
-            OKTETO_APPS_SUBDOMAIN: staging.okteto.net
+            OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
+            DEPOT_PROJECT_ID: $DEPOT_PROJECT_ID
+            DEPOT_TOKEN: $DEPOT_TOKEN
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
@@ -273,7 +274,7 @@ jobs:
           environment:
             OKTETO_URL: https://staging.okteto.dev/
             OKTETO_SKIP_CLEANUP: 'true'
-            OKTETO_APPS_SUBDOMAIN: staging.okteto.net
+            OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
@@ -284,7 +285,7 @@ jobs:
           environment:
             OKTETO_URL: https://staging.okteto.dev/
             OKTETO_SKIP_CLEANUP: 'true'
-            OKTETO_APPS_SUBDOMAIN: staging.okteto.net
+            OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
