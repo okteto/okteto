@@ -26,6 +26,7 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -58,7 +59,7 @@ services:
     - Dockerfile:/root/Dockerfile
 `
 	dockerfileName    = "Dockerfile"
-	dockerfileContent = "FROM alpine"
+	dockerfileContent = "FROM busybox"
 
 	dockerfileContentSecrets = `FROM alpine
 RUN --mount=type=secret,id=mysecret cat /run/secrets/mysecret
@@ -178,6 +179,50 @@ func TestBuildCommandV2(t *testing.T) {
 	require.NoError(t, err)
 
 	testNamespace := integration.GetTestNamespace("TestBuildV2", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+
+	expectedAppImage := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
+	require.False(t, isImageBuilt(expectedAppImage))
+
+	expectedApiImage := fmt.Sprintf("%s/%s/%s-api:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
+	require.False(t, isImageBuilt(expectedApiImage))
+
+	options := &commands.BuildOptions{
+		Workdir:      dir,
+		ManifestPath: filepath.Join(dir, manifestName),
+		Namespace:    testNamespace,
+		Token:        token,
+		OktetoHome:   dir,
+	}
+	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
+	require.True(t, isImageBuilt(expectedAppImage))
+	require.True(t, isImageBuilt(expectedApiImage))
+}
+
+func TestBuildCommandV2UsingDepot(t *testing.T) {
+	depotToken := os.Getenv("DEPOT_TOKEN")
+	depotProjectId := os.Getenv("DEPOT_PROJECT_ID")
+
+	if depotProjectId != "" && depotToken != "" {
+		os.Setenv(build.DepotProjectEnvVar, depotProjectId)
+		os.Setenv(build.DepotTokenEnvVar, depotToken)
+	}
+
+	t.Parallel()
+	dir := t.TempDir()
+	require.NoError(t, createDockerfile(dir))
+	require.NoError(t, createManifestV2(dir))
+
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	testNamespace := integration.GetTestNamespace("TestBuildCommandV2UsingDepot", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

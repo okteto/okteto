@@ -18,6 +18,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 )
@@ -52,6 +53,13 @@ func RunOktetoBuild(oktetoPath string, buildOptions *BuildOptions) error {
 	}
 	if len(buildOptions.SvcsToBuild) > 0 {
 		cmd.Args = append(cmd.Args, buildOptions.SvcsToBuild...)
+	}
+
+	if v := os.Getenv(build.DepotTokenEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", build.DepotTokenEnvVar, v))
+	}
+	if v := os.Getenv(build.DepotProjectEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", build.DepotProjectEnvVar, v))
 	}
 
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {

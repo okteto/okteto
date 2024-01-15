@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	depotTokenEnvVar   = "OKTETO_DEPOT_TOKEN"
-	depotProjectEnvVar = "OKTETO_DEPOT_PROJECT_ID"
+	DepotTokenEnvVar   = "OKTETO_DEPOT_TOKEN"
+	DepotProjectEnvVar = "OKTETO_DEPOT_PROJECT_ID"
 
 	defaultPlatform = "amd64"
 )
