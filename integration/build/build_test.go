@@ -205,15 +205,10 @@ func TestBuildCommandV2(t *testing.T) {
 	require.True(t, isImageBuilt(expectedApiImage))
 }
 
+// TestBuildCommandV2UsingDepot tests the following scenario:
+// - use depot.dev as builder
+// - building having a manifest v2 with build section
 func TestBuildCommandV2UsingDepot(t *testing.T) {
-	depotToken := os.Getenv("DEPOT_TOKEN")
-	depotProjectId := os.Getenv("DEPOT_PROJECT_ID")
-
-	if depotProjectId != "" && depotToken != "" {
-		os.Setenv(build.DepotProjectEnvVar, depotProjectId)
-		os.Setenv(build.DepotTokenEnvVar, depotToken)
-	}
-
 	t.Parallel()
 	dir := t.TempDir()
 	require.NoError(t, createDockerfile(dir))
@@ -244,7 +239,22 @@ func TestBuildCommandV2UsingDepot(t *testing.T) {
 		Token:        token,
 		OktetoHome:   dir,
 	}
-	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
+
+	cmd := commands.GetOktetoBuildCmd(oktetoPath, options)
+	depotToken := os.Getenv("DEPOT_TOKEN")
+	depotProjectId := os.Getenv("DEPOT_PROJECT_ID")
+
+	if depotProjectId != "" && depotToken != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", build.DepotProjectEnvVar, depotProjectId))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", build.DepotTokenEnvVar, depotToken))
+	} else {
+		// if the environment variables needed to run the test using depot.dev
+		// are not available, skip it as the resulting e2e test would be similar
+		// to TestBuildCommandV2.
+		t.Skip()
+	}
+
+	require.NoError(t, commands.ExecOktetoBuildCmd(cmd))
 	require.True(t, isImageBuilt(expectedAppImage))
 	require.True(t, isImageBuilt(expectedApiImage))
 }
