@@ -256,7 +256,7 @@ func getBuildkitClient(ctx context.Context, okctx OktetoContextInterface) (*clie
 		c, err := getClientForOktetoCluster(ctx, builder, okctx.GetCurrentToken())
 		if err != nil {
 			oktetoLog.Infof("failed to create okteto build client: %s", err)
-			return nil, fmt.Errorf("failed to create the builder client: %v", err)
+			return nil, fmt.Errorf("failed to create the builder client: %w", err)
 		}
 
 		return c, nil

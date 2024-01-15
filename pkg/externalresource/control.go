@@ -43,7 +43,7 @@ func NewExternalK8sControl(cfg *rest.Config) *K8sControl {
 func (c *K8sControl) Deploy(ctx context.Context, name, ns string, er *ExternalResource) error {
 	k8sclient, err := c.ClientProvider(c.Cfg)
 	if err != nil {
-		return fmt.Errorf("error creating external CRD client: %s", err.Error())
+		return fmt.Errorf("error creating external CRD client: %w", err)
 	}
 
 	externalResourceCRD := translate(name, ns, er, time.Now())

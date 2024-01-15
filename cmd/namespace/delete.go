@@ -72,7 +72,7 @@ func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespac
 
 	// trigger namespace deletion
 	if err := nc.okClient.Namespaces().Delete(ctx, namespace); err != nil {
-		return fmt.Errorf("%w: %v", errFailedDeleteNamespace, err)
+		return fmt.Errorf("%w: %w", errFailedDeleteNamespace, err)
 	}
 
 	if err := nc.watchDelete(ctx, namespace); err != nil {

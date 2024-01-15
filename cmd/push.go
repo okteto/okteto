@@ -24,6 +24,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/cmd/down"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
@@ -293,7 +294,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageFromApp string, pushOp
 	}
 	oktetoLog.Infof("pushing with image tag %s", buildTag)
 
-	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
+	buildArgs := build.SerializeArgs(dev.Push.Args)
 	buildOptions := &types.BuildOptions{
 		Path:       dev.Push.Context,
 		File:       dev.Push.Dockerfile,

@@ -338,7 +338,7 @@ For example:
 return nil, fmt.Errorf("get cache %s: %w", f.Name, err)
 
 // Just add context
-return nil, fmt.Errorf("saving cache %s: %v", f.Name, err)
+return nil, fmt.Errorf("saving cache %s: %s", f.Name, err)
 ```
 
 A few things to keep in mind when adding context:

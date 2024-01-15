@@ -60,7 +60,7 @@ func (pr *Command) ExecuteWakePreview(ctx context.Context, preview string) error
 
 	// trigger preview environment to wake
 	if err := pr.okClient.Namespaces().Wake(ctx, preview); err != nil {
-		return fmt.Errorf("%w: %v", errFailedWakePreview, err)
+		return fmt.Errorf("%w: %w", errFailedWakePreview, err)
 	}
 
 	oktetoLog.Success("Preview environment '%s' is awake now", preview)

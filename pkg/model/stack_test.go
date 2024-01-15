@@ -18,8 +18,10 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/model/utils"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -404,7 +406,7 @@ func TestStack_validate(t *testing.T) {
 				Name: "name",
 				Services: map[string]*Service{
 					"name": {
-						Volumes: []StackVolume{{RemotePath: "relative"}},
+						Volumes: []build.VolumeMounts{{RemotePath: "relative"}},
 					},
 				},
 			},
@@ -415,7 +417,7 @@ func TestStack_validate(t *testing.T) {
 				Name: "name",
 				Services: map[string]*Service{
 					"name": {
-						Volumes: []StackVolume{{LocalPath: "/source", RemotePath: "/dest"}},
+						Volumes: []build.VolumeMounts{{LocalPath: "/source", RemotePath: "/dest"}},
 					},
 				},
 			},
@@ -476,7 +478,7 @@ func Test_validateStackName(t *testing.T) {
 
 func TestStack_readImageContext(t *testing.T) {
 	tests := []struct {
-		expected *BuildInfo
+		expected *build.Info
 		name     string
 		manifest []byte
 	}{
@@ -487,7 +489,7 @@ func TestStack_readImageContext(t *testing.T) {
     build:
       context: https://github.com/okteto/okteto.git
 `),
-			expected: &BuildInfo{
+			expected: &build.Info{
 				Context: "https://github.com/okteto/okteto.git",
 			},
 		},
@@ -498,7 +500,7 @@ func TestStack_readImageContext(t *testing.T) {
     build:
       context: .
 `),
-			expected: &BuildInfo{
+			expected: &build.Info{
 				Context:    ".",
 				Dockerfile: "Dockerfile",
 			},
@@ -540,13 +542,13 @@ func TestStack_Merge(t *testing.T) {
 			stack: &Stack{
 				Services: map[string]*Service{
 					"app": {
-						Volumes: []StackVolume{
+						Volumes: []build.VolumeMounts{
 							{
 								LocalPath:  "/app",
 								RemotePath: "/app",
 							},
 						},
-						VolumeMounts: []StackVolume{
+						VolumeMounts: []build.VolumeMounts{
 							{
 								LocalPath:  "/data",
 								RemotePath: "/data",
@@ -558,13 +560,13 @@ func TestStack_Merge(t *testing.T) {
 			otherStack: &Stack{
 				Services: map[string]*Service{
 					"app": {
-						Volumes: []StackVolume{
+						Volumes: []build.VolumeMounts{
 							{
 								LocalPath:  "/app-test",
 								RemotePath: "/app-test",
 							},
 						},
-						VolumeMounts: []StackVolume{
+						VolumeMounts: []build.VolumeMounts{
 							{
 								LocalPath:  "/data-test",
 								RemotePath: "/data",
@@ -576,13 +578,13 @@ func TestStack_Merge(t *testing.T) {
 			result: &Stack{
 				Services: map[string]*Service{
 					"app": {
-						Volumes: []StackVolume{
+						Volumes: []build.VolumeMounts{
 							{
 								LocalPath:  "/app-test",
 								RemotePath: "/app-test",
 							},
 						},
-						VolumeMounts: []StackVolume{
+						VolumeMounts: []build.VolumeMounts{
 							{
 								LocalPath:  "/data-test",
 								RemotePath: "/data",
@@ -660,7 +662,7 @@ func TestStack_Merge(t *testing.T) {
 			stack: &Stack{
 				Services: map[string]*Service{
 					"app": {
-						Build: &BuildInfo{
+						Build: &build.Info{
 							Name:       "test",
 							Context:    "test",
 							Dockerfile: "test-Dockerfile",
@@ -677,7 +679,7 @@ func TestStack_Merge(t *testing.T) {
 			otherStack: &Stack{
 				Services: map[string]*Service{
 					"app": {
-						Build: &BuildInfo{
+						Build: &build.Info{
 							Name:       "test-overwrite",
 							Context:    "test-overwrite",
 							Dockerfile: "test-overwrite-Dockerfile",
@@ -694,7 +696,7 @@ func TestStack_Merge(t *testing.T) {
 			result: &Stack{
 				Services: map[string]*Service{
 					"app": {
-						Build: &BuildInfo{
+						Build: &build.Info{
 							Name:       "test-overwrite",
 							Context:    "test-overwrite",
 							Dockerfile: "test-overwrite-Dockerfile",
@@ -1244,7 +1246,7 @@ func Test_translateEnvVars(t *testing.T) {
 func TestServicesToGraph(t *testing.T) {
 	tests := []struct {
 		services      ComposeServices
-		expectedGraph graph
+		expectedGraph utils.Graph
 		name          string
 	}{
 		{
@@ -1254,7 +1256,7 @@ func TestServicesToGraph(t *testing.T) {
 				"b": &Service{},
 				"c": &Service{},
 			},
-			expectedGraph: graph{
+			expectedGraph: utils.Graph{
 				"a": []string{},
 				"b": []string{},
 				"c": []string{},
@@ -1275,7 +1277,7 @@ func TestServicesToGraph(t *testing.T) {
 				},
 				"c": &Service{},
 			},
-			expectedGraph: graph{
+			expectedGraph: utils.Graph{
 				"a": []string{"b"},
 				"b": []string{"c"},
 				"c": []string{},
@@ -1296,7 +1298,7 @@ func TestServicesToGraph(t *testing.T) {
 				},
 				"c": &Service{},
 			},
-			expectedGraph: graph{
+			expectedGraph: utils.Graph{
 				"a": []string{"b"},
 				"b": []string{"a"},
 				"c": []string{},
@@ -1321,7 +1323,7 @@ func TestServicesToGraph(t *testing.T) {
 					},
 				},
 			},
-			expectedGraph: graph{
+			expectedGraph: utils.Graph{
 				"a": []string{"b"},
 				"b": []string{"c"},
 				"c": []string{"a"},

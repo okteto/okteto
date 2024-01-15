@@ -18,13 +18,13 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
 
 	"github.com/kballard/go-shellquote"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/cache"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -140,7 +140,7 @@ type ServiceRaw struct {
 	Workdir                  string                 `yaml:"workdir,omitempty"`
 	WorkingDirSneakCase      string                 `yaml:"working_dir,omitempty"`
 	Command                  CommandStack           `yaml:"command,omitempty"`
-	Volumes                  []StackVolume          `yaml:"volumes,omitempty"`
+	Volumes                  []build.VolumeMounts   `yaml:"volumes,omitempty"`
 	CapAddSneakCase          []apiv1.Capability     `yaml:"cap_add,omitempty"`
 	EnvFiles                 env.EnvFiles           `yaml:"envFile,omitempty"`
 	EnvFilesSneakCase        env.EnvFiles           `yaml:"env_file,omitempty"`
@@ -225,22 +225,22 @@ type RawMessage struct {
 }
 
 type composeBuildInfo struct {
-	Name             string            `yaml:"name,omitempty"`
-	Context          string            `yaml:"context,omitempty"`
-	Dockerfile       string            `yaml:"dockerfile,omitempty"`
-	CacheFrom        cache.CacheFrom   `yaml:"cache_from,omitempty"`
-	Target           string            `yaml:"target,omitempty"`
-	Args             BuildArgs         `yaml:"args,omitempty"`
-	Image            string            `yaml:"image,omitempty"`
-	VolumesToInclude []StackVolume     `yaml:"-"`
-	ExportCache      cache.ExportCache `yaml:"export_cache,omitempty"`
+	Name             string               `yaml:"name,omitempty"`
+	Context          string               `yaml:"context,omitempty"`
+	Dockerfile       string               `yaml:"dockerfile,omitempty"`
+	CacheFrom        cache.CacheFrom      `yaml:"cache_from,omitempty"`
+	Target           string               `yaml:"target,omitempty"`
+	Args             build.Args           `yaml:"args,omitempty"`
+	Image            string               `yaml:"image,omitempty"`
+	VolumesToInclude []build.VolumeMounts `yaml:"-"`
+	ExportCache      cache.ExportCache    `yaml:"export_cache,omitempty"`
 }
 
-func (c *composeBuildInfo) toBuildInfo() *BuildInfo {
+func (c *composeBuildInfo) toBuildInfo() *build.Info {
 	if c == nil {
 		return nil
 	}
-	return &BuildInfo{
+	return &build.Info{
 		Name:             c.Name,
 		Context:          c.Context,
 		Dockerfile:       c.Dockerfile,
@@ -407,7 +407,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 
 	if stack.IsCompose {
 		if len(serviceRaw.Args.Values) > 0 {
-			return nil, fmt.Errorf("Unsupported field for services.%s: 'args'", svcName)
+			return nil, fmt.Errorf("unsupported field for services.%s: 'args'", svcName)
 		}
 		svc.Entrypoint.Values = serviceRaw.Entrypoint.Values
 		svc.Command.Values = serviceRaw.Command.Values
@@ -418,7 +418,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 
 	} else { // isOktetoStack
 		if len(serviceRaw.Entrypoint.Values) > 0 {
-			return nil, fmt.Errorf("Unsupported field for services.%s: 'entrypoint'", svcName)
+			return nil, fmt.Errorf("unsupported field for services.%s: 'entrypoint'", svcName)
 		}
 		svc.Entrypoint.Values = serviceRaw.Command.Values
 		if len(serviceRaw.Command.Values) == 1 {
@@ -711,20 +711,20 @@ func expandRangePorts(ports []PortRaw) []PortRaw {
 func validatePort(newPort PortRaw, ports []Port) error {
 	for _, p := range ports {
 		if newPort.ContainerPort == p.HostPort {
-			return fmt.Errorf("Container port '%d' is already declared as host port in port '%d:%d'", newPort.ContainerPort, p.HostPort, p.ContainerPort)
+			return fmt.Errorf("container port '%d' is already declared as host port in port '%d:%d'", newPort.ContainerPort, p.HostPort, p.ContainerPort)
 		}
 		if newPort.HostPort == p.ContainerPort {
 			if p.HostPort == 0 {
-				return fmt.Errorf("Host port '%d' is already declared as container port in port '%d'", newPort.HostPort, p.ContainerPort)
+				return fmt.Errorf("host port '%d' is already declared as container port in port '%d'", newPort.HostPort, p.ContainerPort)
 			} else {
-				return fmt.Errorf("Host port '%d' is already declared as container port in port '%d:%d'", newPort.HostPort, p.HostPort, p.ContainerPort)
+				return fmt.Errorf("host port '%d' is already declared as container port in port '%d:%d'", newPort.HostPort, p.HostPort, p.ContainerPort)
 			}
 		}
 	}
 	return nil
 }
 
-func isNamedVolumeDeclared(volume StackVolume) bool {
+func isNamedVolumeDeclared(volume build.VolumeMounts) bool {
 	if volume.LocalPath != "" {
 		wd, err := os.Getwd()
 		if err != nil {
@@ -749,9 +749,9 @@ func isNamedVolumeDeclared(volume StackVolume) bool {
 	return false
 }
 
-func splitVolumesByType(volumes []StackVolume, s *Stack) ([]StackVolume, []StackVolume) {
-	topLevelVolumes := make([]StackVolume, 0)
-	mountedVolumes := make([]StackVolume, 0)
+func splitVolumesByType(volumes []build.VolumeMounts, s *Stack) ([]build.VolumeMounts, []build.VolumeMounts) {
+	topLevelVolumes := make([]build.VolumeMounts, 0)
+	mountedVolumes := make([]build.VolumeMounts, 0)
 	for _, volume := range volumes {
 		if volume.LocalPath == "" || isInVolumesTopLevelSection(sanitizeName(volume.LocalPath), s) {
 			volume.LocalPath = sanitizeName(volume.LocalPath)
@@ -805,22 +805,22 @@ func (sc *StackSecurityContext) UnmarshalYAML(unmarshal func(interface{}) error)
 			securityContextLength := 2
 			parts := strings.Split(rawSecurityContext, ":")
 			if len(parts) != securityContextLength {
-				return fmt.Errorf("SecurityContext '%s' is malformed. Only 'dddd:dddd' is supported", rawSecurityContext)
+				return fmt.Errorf("securityContext '%s' is malformed. Only 'dddd:dddd' is supported", rawSecurityContext)
 			}
 			runAsUser, err := strconv.ParseInt(parts[0], 10, 64)
 			if err != nil {
-				return fmt.Errorf("Can not obtain UID from '%s'", parts[0])
+				return fmt.Errorf("cannot obtain UID from '%s'", parts[0])
 			}
 			runAsGroup, err := strconv.ParseInt(parts[1], 10, 64)
 			if err != nil {
-				return fmt.Errorf("Can not obtain GID from '%s'", parts[1])
+				return fmt.Errorf("cannot obtain GID from '%s'", parts[1])
 			}
 			sc.RunAsUser = &runAsUser
 			sc.RunAsGroup = &runAsGroup
 		} else {
 			runAsUser, err := strconv.ParseInt(rawSecurityContext, 10, 64)
 			if err != nil {
-				return fmt.Errorf("Can not obtain UID from '%s'", rawSecurityContext)
+				return fmt.Errorf("cannot obtain UID from '%s'", rawSecurityContext)
 			}
 			sc.RunAsUser = &runAsUser
 		}
@@ -912,7 +912,7 @@ func getRangePorts(portString string) (int32, int32, apiv1.Protocol, error) {
 		rangePortsLength := 2
 		rangeSplitted := strings.Split(portString, "-")
 		if len(rangeSplitted) != rangePortsLength {
-			return 0, 0, "", fmt.Errorf("Can not convert '%s' to a port.", portString)
+			return 0, 0, "", fmt.Errorf("cannot convert '%s' to a port.", portString)
 		}
 		fromString, toString := rangeSplitted[0], rangeSplitted[1]
 		toString, protocol, err := getPortAndProtocol(toString, portString)
@@ -935,7 +935,7 @@ func getRangePorts(portString string) (int32, int32, apiv1.Protocol, error) {
 func getPortFromString(portString, originalPortString string) (int32, error) {
 	port, err := strconv.ParseInt(portString, 10, 32)
 	if err != nil {
-		return 0, fmt.Errorf("Can not convert '%s' to a port: %s is not a number", originalPortString, portString)
+		return 0, fmt.Errorf("cannot convert '%s' to a port: %s is not a number", originalPortString, portString)
 	}
 	return int32(port), nil
 }
@@ -947,12 +947,12 @@ func getPortAndProtocol(portString, originalPortString string) (string, apiv1.Pr
 		protocolLength := 2
 		portProtocolSplitted := strings.Split(portString, "/")
 		if len(portProtocolSplitted) != protocolLength {
-			return "", protocol, fmt.Errorf("Can not convert '%s' to a port.", originalPortString)
+			return "", protocol, fmt.Errorf("cannot convert '%s' to a port", originalPortString)
 		}
 		portString = portProtocolSplitted[0]
 		protocol, err = getProtocol(portProtocolSplitted[1])
 		if err != nil {
-			return "", protocol, fmt.Errorf("Can not convert '%s' to a port: %s", originalPortString, err.Error())
+			return "", protocol, fmt.Errorf("cannot convert '%s' to a port: %w", originalPortString, err)
 		}
 	}
 	return portString, protocol, nil
@@ -977,12 +977,12 @@ func getPortWithMapping(p *PortRaw, portString string) error {
 		return err
 	}
 	if (p.ContainerFrom - p.ContainerTo) != (p.HostFrom - p.HostTo) {
-		return fmt.Errorf("Can not convert '%s' to a port: Ranges must be of the same length", portString)
+		return fmt.Errorf("cannot convert '%s' to a port: Ranges must be of the same length", portString)
 	}
 
 	if p.ContainerFrom == 0 {
 		if strings.Contains(hostPortString, ":") {
-			return fmt.Errorf("Can not convert '%s' to a port: Host IP is not allowed", portString)
+			return fmt.Errorf("cannot convert '%s' to a port: Host IP is not allowed", portString)
 		}
 
 		p.HostPort, err = getPortFromString(hostPortString, portString)
@@ -1039,7 +1039,7 @@ func getRestartPolicy(svcName string, deployInfo *DeployInfoRaw, restartPolicy s
 	case "on-failure":
 		return apiv1.RestartPolicyOnFailure, nil
 	default:
-		return apiv1.RestartPolicyAlways, fmt.Errorf("Cannot create container for service %s: invalid restart policy '%s'", svcName, restart)
+		return apiv1.RestartPolicyAlways, fmt.Errorf("cannot create container for service %s: invalid restart policy '%s'", svcName, restart)
 	}
 }
 func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResources, cpuCount, cpus, memLimit, memReservation Quantity) *StackResources {
@@ -1215,53 +1215,6 @@ func (healthcheckTest *HealtcheckTest) UnmarshalYAML(unmarshal func(interface{})
 		return err
 	}
 	return nil
-}
-
-// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var raw string
-	err := unmarshal(&raw)
-	if err != nil {
-		return err
-	}
-
-	stackVolumePartsOnlyRemote := 1
-	stackVolumeParts := 2
-	stackVolumeMaxParts := 3
-
-	parts := strings.Split(raw, ":")
-	if runtime.GOOS == "windows" {
-		if len(parts) >= stackVolumeMaxParts {
-			localPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
-			if filepath.IsAbs(localPath) {
-				parts = append([]string{localPath}, parts[2:]...)
-			}
-		}
-	}
-
-	if len(parts) == stackVolumeParts {
-		v.LocalPath = parts[0]
-		v.RemotePath = parts[1]
-	} else if len(parts) == stackVolumePartsOnlyRemote {
-		v.RemotePath = parts[0]
-	} else {
-		return fmt.Errorf("Syntax error volumes should be 'local_path:remote_path' or 'remote_path'")
-	}
-
-	return nil
-}
-
-// MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (v StackVolume) MarshalYAML() (interface{}, error) {
-	return v.RemotePath, nil
-}
-
-// ToString returns volume as string
-func (v StackVolume) ToString() string {
-	if v.LocalPath != "" {
-		return fmt.Sprintf("%s:%s", v.LocalPath, v.RemotePath)
-	}
-	return v.RemotePath
 }
 
 func getProtocol(protocolName string) (apiv1.Protocol, error) {
@@ -1624,7 +1577,7 @@ func validateExtensions(stack StackRaw) error {
 
 	for svcName, svc := range stack.Services {
 		if svc == nil {
-			return fmt.Errorf("%s: %w", oktetoErrors.ErrInvalidManifest, oktetoErrors.ErrServiceEmpty)
+			return fmt.Errorf("%w: %w", oktetoErrors.ErrInvalidManifest, oktetoErrors.ErrServiceEmpty)
 		}
 		for extension := range svc.Extensions {
 			nonValidFields = append(nonValidFields, fmt.Sprintf("services[%s].%s", svcName, extension))
@@ -1636,9 +1589,9 @@ func validateExtensions(stack StackRaw) error {
 		}
 	}
 	if len(nonValidFields) == 1 {
-		return fmt.Errorf("Invalid compose manifest: Field '%s' is not supported.\n    More information is available here: https://okteto.com/docs/reference/compose/", nonValidFields[0])
+		return fmt.Errorf("invalid compose manifest: Field '%s' is not supported.\n    More information is available here: https://okteto.com/docs/reference/compose/", nonValidFields[0])
 	} else if len(nonValidFields) > 1 {
-		return fmt.Errorf(`Invalid compose manifest: The following fields are not supported.
+		return fmt.Errorf(`invalid compose manifest: The following fields are not supported.
     - %s
     More information is available here: https://okteto.com/docs/reference/compose/`, strings.Join(nonValidFields, "\n    - "))
 	}

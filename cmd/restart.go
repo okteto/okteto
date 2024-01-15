@@ -77,7 +77,7 @@ func Restart() *cobra.Command {
 			}
 			err = executeRestart(ctx, dev, serviceName)
 			if err != nil {
-				return fmt.Errorf("failed to restart your deployments: %s", err)
+				return fmt.Errorf("failed to restart your deployments: %w", err)
 			}
 			analytics.TrackRestart(err == nil)
 

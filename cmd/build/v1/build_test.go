@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
@@ -110,8 +111,7 @@ func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 	}
 	err = bc.Build(ctx, options)
 	// error from the build
-	expectedErr := fmt.Errorf("error expanding environment on 'okteto.dev/test:${TEST_VAR': closing brace expected")
-	assert.Equal(t, err, expectedErr)
+	assert.ErrorAs(t, err, &env.EnvVarExpansionErr{})
 	// the image is not at the fake registry
 	image, err := bc.Registry.GetImageTagWithDigest(options.Tag)
 	assert.ErrorIs(t, err, oktetoErrors.ErrNotFound)

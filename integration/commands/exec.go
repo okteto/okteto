@@ -61,7 +61,7 @@ func RunExecCommand(oktetoPath string, execOptions *ExecOptions) (string, error)
 	bytes, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("okteto exec failed: %v - %s", err, string(bytes))
-		return "", fmt.Errorf("okteto exec failed: %v - %s", err, string(bytes))
+		return "", fmt.Errorf("okteto exec failed: %w - %s", err, string(bytes))
 	}
 	return string(bytes), nil
 }

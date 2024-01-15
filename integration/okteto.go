@@ -50,7 +50,7 @@ func GetOktetoPath() (string, error) {
 	}
 	output, err := RunOktetoVersion(oktetoPath)
 	if err != nil {
-		return "", fmt.Errorf("okteto version failed: %s - %s", output, err)
+		return "", fmt.Errorf("okteto version failed: %s - %w", output, err)
 	}
 	log.Println(output)
 	return oktetoPath, nil
@@ -74,7 +74,7 @@ func RunOktetoVersion(oktetoPath string) (string, error) {
 
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("okteto version failed: %s - %s", string(o), err)
+		return "", fmt.Errorf("okteto version failed: %s - %w", string(o), err)
 	}
 	return string(o), nil
 }

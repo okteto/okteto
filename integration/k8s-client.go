@@ -183,7 +183,7 @@ func DestroyPod(ctx context.Context, ns, labelSelector string, c kubernetes.Inte
 
 	pods, err := c.CoreV1().Pods(ns).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
-		return fmt.Errorf("failed to retrieve deployment %s pods: %s", labelSelector, err.Error())
+		return fmt.Errorf("failed to retrieve deployment %s pods: %w", labelSelector, err)
 	}
 	var zero int64 = 0
 	if len(pods.Items) == 0 {
@@ -197,7 +197,7 @@ func DestroyPod(ctx context.Context, ns, labelSelector string, c kubernetes.Inte
 			metav1.DeleteOptions{GracePeriodSeconds: &zero},
 		)
 		if err != nil {
-			return fmt.Errorf("error deleting pod %s: %s", pods.Items[idx].Name, err.Error())
+			return fmt.Errorf("error deleting pod %s: %w", pods.Items[idx].Name, err)
 		}
 	}
 

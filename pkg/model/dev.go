@@ -27,14 +27,12 @@ import (
 
 	"github.com/compose-spec/godotenv"
 	"github.com/google/uuid"
-	"github.com/okteto/okteto/pkg/cache"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
-	"github.com/spf13/afero"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -63,8 +61,8 @@ type Dev struct {
 	NodeSelector         map[string]string     `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 	Metadata             *Metadata             `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
-	Image                *BuildInfo            `json:"image,omitempty" yaml:"image,omitempty"`
-	Push                 *BuildInfo            `json:"-" yaml:"push,omitempty"`
+	Image                *build.Info           `json:"image,omitempty" yaml:"image,omitempty"`
+	Push                 *build.Info           `json:"-" yaml:"push,omitempty"`
 	Lifecycle            *Lifecycle            `json:"lifecycle,omitempty" yaml:"lifecycle,omitempty"`
 	Replicas             *int                  `json:"replicas,omitempty" yaml:"replicas,omitempty"`
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
@@ -118,108 +116,6 @@ type Command struct {
 // Args represents the args of a development container
 type Args struct {
 	Values []string
-}
-
-// BuildInfo represents the build info to generate an image
-type BuildInfo struct {
-	Secrets          BuildSecrets      `yaml:"secrets,omitempty"`
-	Name             string            `yaml:"name,omitempty"`
-	Context          string            `yaml:"context,omitempty"`
-	Dockerfile       string            `yaml:"dockerfile,omitempty"`
-	Target           string            `yaml:"target,omitempty"`
-	Image            string            `yaml:"image,omitempty"`
-	CacheFrom        cache.CacheFrom   `yaml:"cache_from,omitempty"`
-	Args             BuildArgs         `yaml:"args,omitempty"`
-	VolumesToInclude []StackVolume     `yaml:"-"`
-	ExportCache      cache.ExportCache `yaml:"export_cache,omitempty"`
-	DependsOn        BuildDependsOn    `yaml:"depends_on,omitempty"`
-}
-
-// BuildArg is an argument used on the build step.
-type BuildArg struct {
-	Name  string
-	Value string
-}
-
-func (v *BuildArg) String() string {
-	value, err := env.ExpandEnv(v.Value)
-	if err != nil {
-		return fmt.Sprintf("%s=%s", v.Name, v.Value)
-	}
-	return fmt.Sprintf("%s=%s", v.Name, value)
-}
-
-// BuildArgs is a list of arguments used on the build step.
-type BuildArgs []BuildArg
-
-// BuildDependsOn represents the images that needs to be built before
-type BuildDependsOn []string
-
-// BuildSecrets represents the secrets to be injected to the build of the image
-type BuildSecrets map[string]string
-
-// GetDockerfilePath returns the path to the Dockerfile
-func (b *BuildInfo) GetDockerfilePath() string {
-	if filepath.IsAbs(b.Dockerfile) {
-		return b.Dockerfile
-	}
-	fs := afero.NewOsFs()
-	joinPath := filepath.Join(b.Context, b.Dockerfile)
-	if !filesystem.FileExistsAndNotDir(joinPath, fs) {
-		oktetoLog.Infof("Dockerfile '%s' is not in a relative path to context '%s'", b.Dockerfile, b.Context)
-		return b.Dockerfile
-	}
-
-	if joinPath != filepath.Clean(b.Dockerfile) && filesystem.FileExistsAndNotDir(b.Dockerfile, fs) {
-		oktetoLog.Infof("Two Dockerfiles discovered in both the root and context path, defaulting to '%s/%s'", b.Context, b.Dockerfile)
-	}
-
-	return joinPath
-}
-
-// AddBuildArgs add a set of args to the build information
-func (b *BuildInfo) AddBuildArgs(previousImageArgs map[string]string) error {
-	if err := b.expandManifestBuildArgs(previousImageArgs); err != nil {
-		return err
-	}
-	return b.addExpandedPreviousImageArgs(previousImageArgs)
-}
-
-func (b *BuildInfo) expandManifestBuildArgs(previousImageArgs map[string]string) (err error) {
-	for idx, arg := range b.Args {
-		if val, ok := previousImageArgs[arg.Name]; ok {
-			oktetoLog.Infof("overriding '%s' with the content of previous build", arg.Name)
-			arg.Value = val
-		}
-		arg.Value, err = env.ExpandEnv(arg.Value)
-		if err != nil {
-			return err
-		}
-		b.Args[idx] = arg
-	}
-	return nil
-}
-
-func (b *BuildInfo) addExpandedPreviousImageArgs(previousImageArgs map[string]string) error {
-	alreadyAddedArg := map[string]bool{}
-	for _, arg := range b.Args {
-		alreadyAddedArg[arg.Name] = true
-	}
-	for k, v := range previousImageArgs {
-		if _, ok := alreadyAddedArg[k]; ok {
-			continue
-		}
-		expandedValue, err := env.ExpandEnv(v)
-		if err != nil {
-			return err
-		}
-		b.Args = append(b.Args, BuildArg{
-			Name:  k,
-			Value: expandedValue,
-		})
-		oktetoLog.Infof("Added '%s' to build args", k)
-	}
-	return nil
 }
 
 // Volume represents a volume in the development container
@@ -364,8 +260,8 @@ func Get(devPath string) (*Manifest, error) {
 }
 func NewDev() *Dev {
 	return &Dev{
-		Image:       &BuildInfo{},
-		Push:        &BuildInfo{},
+		Image:       &build.Info{},
+		Push:        &build.Info{},
 		Environment: make(env.Environment, 0),
 		Secrets:     make([]Secret, 0),
 		Forward:     make([]forward.Forward, 0),
@@ -496,7 +392,7 @@ func (dev *Dev) loadSelector() error {
 func (dev *Dev) loadImage() error {
 	var err error
 	if dev.Image == nil {
-		dev.Image = &BuildInfo{}
+		dev.Image = &build.Info{}
 	}
 	if len(dev.Image.Name) > 0 {
 		dev.Image.Name, err = env.ExpandEnvIfNotEmpty(dev.Image.Name)
@@ -524,13 +420,13 @@ func (dev *Dev) SetDefaults() error {
 		})
 	}
 	if dev.Image == nil {
-		dev.Image = &BuildInfo{}
+		dev.Image = &build.Info{}
 	}
-	dev.Image.setBuildDefaults()
+	dev.Image.SetBuildDefaults()
 	if dev.Push == nil {
-		dev.Push = &BuildInfo{}
+		dev.Push = &build.Info{}
 	}
-	dev.Push.setBuildDefaults()
+	dev.Push.SetBuildDefaults()
 
 	if err := dev.setTimeout(); err != nil {
 		return err
@@ -579,7 +475,7 @@ func (dev *Dev) SetDefaults() error {
 	if os.Getenv(OktetoRescanIntervalEnvVar) != "" {
 		rescanInterval, err := strconv.Atoi(os.Getenv(OktetoRescanIntervalEnvVar))
 		if err != nil {
-			return fmt.Errorf("cannot parse 'OKTETO_RESCAN_INTERVAL' into an integer: %s", err.Error())
+			return fmt.Errorf("cannot parse 'OKTETO_RESCAN_INTERVAL' into an integer: %w", err)
 		}
 		dev.Sync.RescanInterval = rescanInterval
 	} else if dev.Sync.RescanInterval == 0 {
@@ -633,17 +529,6 @@ func (dev *Dev) SetDefaults() error {
 	}
 
 	return nil
-}
-
-func (b *BuildInfo) setBuildDefaults() {
-	if b.Context == "" {
-		b.Context = "."
-	}
-
-	if _, err := url.ParseRequestURI(b.Context); err != nil && b.Dockerfile == "" {
-		b.Dockerfile = "Dockerfile"
-	}
-
 }
 
 func (dev *Dev) setRunAsUserDefaults(main *Dev) {
@@ -704,7 +589,7 @@ func (dev *Dev) expandEnvFiles() error {
 
 		envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
 		if err != nil {
-			return fmt.Errorf("error parsing env_file %s: %s", filename, err.Error())
+			return fmt.Errorf("error parsing env_file %s: %w", filename, err)
 		}
 
 		for _, e := range dev.Environment {
@@ -734,7 +619,7 @@ func (dev *Dev) Validate() error {
 	}
 
 	if dev.Image == nil {
-		dev.Image = &BuildInfo{}
+		dev.Image = &build.Info{}
 	}
 
 	if dev.Replicas != nil {
@@ -858,7 +743,7 @@ func validateSecrets(secrets []Secret) error {
 		}
 
 		if _, ok := seen[s.GetFileName()]; ok {
-			return fmt.Errorf("Secrets with the same basename '%s' are not supported", s.GetFileName())
+			return fmt.Errorf("secrets with the same basename '%s' are not supported", s.GetFileName())
 		}
 		seen[s.GetFileName()] = true
 	}
@@ -951,17 +836,6 @@ func (dev *Dev) Save(path string) error {
 	}
 
 	return nil
-}
-
-// SerializeBuildArgs returns build  args as a list of strings
-func SerializeBuildArgs(buildArgs BuildArgs) []string {
-	result := []string{}
-	for _, e := range buildArgs {
-		result = append(result, e.String())
-	}
-	// // stable serialization
-	sort.Strings(result)
-	return result
 }
 
 // SerializeEnvironmentVars returns environment variables as a list of strings
@@ -1358,43 +1232,6 @@ func (service *Dev) validateForExtraFields() error {
 // DevCloneName returns the name of the mirrored version of a given resource
 func DevCloneName(name string) string {
 	return fmt.Sprintf("%s-okteto", name)
-}
-
-// Copy clones the buildInfo without the pointers
-func (b *BuildInfo) Copy() *BuildInfo {
-	result := &BuildInfo{
-		Name:        b.Name,
-		Context:     b.Context,
-		Dockerfile:  b.Dockerfile,
-		Target:      b.Target,
-		Image:       b.Image,
-		ExportCache: b.ExportCache,
-	}
-
-	// copy to new pointers
-	cacheFrom := []string{}
-	cacheFrom = append(cacheFrom, b.CacheFrom...)
-	result.CacheFrom = cacheFrom
-
-	args := BuildArgs{}
-	args = append(args, b.Args...)
-	result.Args = args
-
-	secrets := BuildSecrets{}
-	for k, v := range b.Secrets {
-		secrets[k] = v
-	}
-	result.Secrets = secrets
-
-	volumesToMount := []StackVolume{}
-	volumesToMount = append(volumesToMount, b.VolumesToInclude...)
-	result.VolumesToInclude = volumesToMount
-
-	dependsOn := BuildDependsOn{}
-	dependsOn = append(dependsOn, b.DependsOn...)
-	result.DependsOn = dependsOn
-
-	return result
 }
 
 func (dev *Dev) IsInteractive() bool {

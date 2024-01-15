@@ -41,13 +41,13 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 	// add levenshtein rules to suggest similar field names
 	manifestKeys := getStructKeys(manifestSchema)
 	manifestKeys["model.manifestRaw"] = manifestKeys["model.Manifest"]
-	manifestKeys["model.buildInfoRaw"] = manifestKeys["model.BuildInfo"]
+	manifestKeys["build.buildInfoRaw"] = manifestKeys["build.BuildInfo"]
 	manifestKeys["model.DevRC"] = manifestKeys["model.Dev"]
 	manifestKeys["model.devType"] = manifestKeys["model.Dev"]
 
 	for structName, structKeywords := range manifestKeys {
 		for _, keyword := range structKeywords {
-			// example: line 5: field contest not found in type model.buildInfoRaw
+			// example: line 5: field contest not found in type build.buildInfoRaw
 			// (.*?): this excludes eerything before the keyword "field"
 			// (\w+): this captures the keyword we want to calculate the levenshtein distance with
 			// (in type|into): this ensures to match all variations of the error message
@@ -70,7 +70,7 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 		suggest.NewStrReplaceRule("in type model.manifestRaw", "the okteto manifest"),
 		suggest.NewStrReplaceRule("in type model.ManifestBuild", "the 'build' section"),
 		suggest.NewStrReplaceRule("into model.ManifestBuild", "into a 'build' object"),
-		suggest.NewStrReplaceRule("in type model.buildInfoRaw", "the 'build' object"),
+		suggest.NewStrReplaceRule("in type build.buildInfoRaw", "the 'build' object"),
 		suggest.NewStrReplaceRule("in type model.devType", "the 'dev' object"),
 		suggest.NewStrReplaceRule("into model.devType", "the 'dev' object"),
 
@@ -151,7 +151,7 @@ func fieldsNotExistingRule() *suggest.Rule {
 
 	transform := func(e error) error {
 		newErr := re.ReplaceAllString(e.Error(), "field '$1' is not a property of")
-		return fmt.Errorf("%s", newErr)
+		return errors.New(newErr)
 	}
 
 	return suggest.NewRule(condition, transform)

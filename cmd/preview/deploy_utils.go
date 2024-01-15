@@ -22,7 +22,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	modelUtils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -75,7 +75,7 @@ func getRepository(cwd string, repository string) (string, error) {
 	}
 
 	oktetoLog.Info("inferring git repository URL")
-	return model.GetRepositoryURL(cwd)
+	return modelUtils.GetRepositoryURL(cwd)
 }
 
 func getBranch(cwd, branch string) (string, error) {

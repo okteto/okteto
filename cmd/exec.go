@@ -49,7 +49,7 @@ func Exec() *cobra.Command {
 	execFlags := &execFlags{}
 
 	cmd := &cobra.Command{
-		Use:   "exec <command>",
+		Use:   "exec [service] <command>",
 		Short: "Execute a command in your development container",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx, cancel := context.WithCancel(context.Background())

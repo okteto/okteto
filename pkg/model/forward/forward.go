@@ -17,7 +17,7 @@ import (
 	"fmt"
 )
 
-const MalformedPortForward = "Wrong port-forward syntax '%s', must be of the form 'localPort:remotePort' or 'localPort:serviceName:remotePort'"
+const MalformedPortForward = "wrong port-forward syntax '%s', must be of the form 'localPort:remotePort' or 'localPort:serviceName:remotePort'"
 
 // Forward represents a port forwarding definition
 type Forward struct {

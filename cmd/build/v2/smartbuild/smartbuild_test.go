@@ -18,8 +18,8 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/log/io"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
@@ -49,10 +49,10 @@ type fakeHasher struct {
 	hash string
 }
 
-func (fh fakeHasher) hashProjectCommit(*model.BuildInfo) (string, error) { return fh.hash, fh.err }
-func (fh fakeHasher) hashBuildContext(*model.BuildInfo) (string, error)  { return fh.hash, fh.err }
-func (fh fakeHasher) getBuildContextHashInCache(string) string           { return fh.hash }
-func (fh fakeHasher) getProjectCommitHashInCache() string                { return fh.hash }
+func (fh fakeHasher) hashProjectCommit(*build.Info) (string, error) { return fh.hash, fh.err }
+func (fh fakeHasher) hashBuildContext(*build.Info) (string, error)  { return fh.hash, fh.err }
+func (fh fakeHasher) getBuildContextHashInCache(string) string      { return fh.hash }
+func (fh fakeHasher) getProjectCommitHashInCache() string           { return fh.hash }
 
 func TestNewSmartBuildCtrl(t *testing.T) {
 	type input struct {
@@ -164,7 +164,7 @@ func TestGetProjectHash(t *testing.T) {
 					err:  tt.input.err,
 				},
 			}
-			out, err := sbc.GetProjectHash(&model.BuildInfo{})
+			out, err := sbc.GetProjectHash(&build.Info{})
 			assert.Equal(t, tt.output.hash, out)
 			assert.ErrorIs(t, err, tt.output.err)
 		})
@@ -218,7 +218,7 @@ func TestGetServiceHash(t *testing.T) {
 					err:  tt.input.err,
 				},
 			}
-			out, err := sbc.GetServiceHash(&model.BuildInfo{})
+			out, err := sbc.GetServiceHash(&build.Info{})
 			assert.Equal(t, tt.output.hash, out)
 			assert.ErrorIs(t, err, tt.output.err)
 		})
@@ -300,7 +300,7 @@ func TestGetBuildHash(t *testing.T) {
 				},
 				isUsingBuildContext: tt.input.isUsingBuildContext,
 			}
-			out, err := sbc.GetBuildHash(&model.BuildInfo{})
+			out, err := sbc.GetBuildHash(&build.Info{})
 			assert.Equal(t, tt.output.hash, out)
 			assert.ErrorIs(t, err, tt.output.err)
 		})
@@ -376,7 +376,7 @@ func TestGetBuildCommit(t *testing.T) {
 				},
 				isUsingBuildContext: tt.input.isUsingBuildContext,
 			}
-			out := sbc.GetBuildCommit(&model.BuildInfo{})
+			out := sbc.GetBuildCommit(&build.Info{})
 			assert.Equal(t, tt.output.hash, out)
 		})
 	}
@@ -452,7 +452,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 	assert.NoError(t, err)
 	t.Setenv("BAR", "bar")
 	type input struct {
-		buildInfo *model.BuildInfo
+		buildInfo *build.Info
 		repo      fakeConfigRepo
 	}
 	tt := []struct {
@@ -468,8 +468,8 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 					sha: "1234567890",
 					err: nil,
 				},
-				buildInfo: &model.BuildInfo{
-					Args: model.BuildArgs{
+				buildInfo: &build.Info{
+					Args: build.Args{
 						{
 							Name:  "foo",
 							Value: "bar",
@@ -480,7 +480,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 						},
 					},
 					Target: "target",
-					Secrets: model.BuildSecrets{
+					Secrets: build.Secrets{
 						"secret": "secret",
 					},
 					Context:    "context",
@@ -497,8 +497,8 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 					sha: "",
 					err: assert.AnError,
 				},
-				buildInfo: &model.BuildInfo{
-					Args: model.BuildArgs{
+				buildInfo: &build.Info{
+					Args: build.Args{
 						{
 							Name:  "foo",
 							Value: "bar",
@@ -509,7 +509,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 						},
 					},
 					Target: "target",
-					Secrets: model.BuildSecrets{
+					Secrets: build.Secrets{
 						"secret": "secret",
 					},
 					Context:    "context",
@@ -527,10 +527,10 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 					sha: "",
 					err: assert.AnError,
 				},
-				buildInfo: &model.BuildInfo{
-					Args:   model.BuildArgs{},
+				buildInfo: &build.Info{
+					Args:   build.Args{},
 					Target: "target",
-					Secrets: model.BuildSecrets{
+					Secrets: build.Secrets{
 						"secret": "secret",
 					},
 					Context:    "context",
@@ -547,15 +547,15 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 				repo: fakeConfigRepo{
 					sha: "123",
 				},
-				buildInfo: &model.BuildInfo{
-					Args: model.BuildArgs{
+				buildInfo: &build.Info{
+					Args: build.Args{
 						{
 							Name:  "foo",
 							Value: "$BAR",
 						},
 					},
 					Target: "target",
-					Secrets: model.BuildSecrets{
+					Secrets: build.Secrets{
 						"secret": "secret",
 					},
 					Context:    "context",

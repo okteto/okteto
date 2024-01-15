@@ -16,12 +16,12 @@ package model
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/compose-spec/godotenv"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
@@ -510,8 +510,8 @@ func TestDev_validateName(t *testing.T) {
 			dev := &Dev{
 				Name:            tt.devName,
 				ImagePullPolicy: apiv1.PullAlways,
-				Image:           &BuildInfo{},
-				Push:            &BuildInfo{},
+				Image:           &build.Info{},
+				Push:            &build.Info{},
 				Sync: Sync{
 					Folders: []SyncFolder{
 						{
@@ -538,8 +538,8 @@ func TestDev_validateReplicas(t *testing.T) {
 	dev := &Dev{
 		Name:            "test",
 		ImagePullPolicy: apiv1.PullAlways,
-		Image:           &BuildInfo{},
-		Push:            &BuildInfo{},
+		Image:           &build.Info{},
+		Push:            &build.Info{},
 		Replicas:        &replicasNumber,
 		Sync: Sync{
 			Folders: []SyncFolder{
@@ -563,7 +563,7 @@ func TestDev_validateReplicas(t *testing.T) {
 
 func TestDev_readImageContext(t *testing.T) {
 	tests := []struct {
-		expected *BuildInfo
+		expected *build.Info
 		name     string
 		manifest []byte
 	}{
@@ -573,7 +573,7 @@ func TestDev_readImageContext(t *testing.T) {
 image:
   context: https://github.com/okteto/okteto.git
 `),
-			expected: &BuildInfo{
+			expected: &build.Info{
 				Context: "https://github.com/okteto/okteto.git",
 			},
 		},
@@ -583,7 +583,7 @@ image:
 image:
   context: .
 `),
-			expected: &BuildInfo{
+			expected: &build.Info{
 				Context:    ".",
 				Dockerfile: "Dockerfile",
 			},
@@ -1392,16 +1392,11 @@ services:
         cpu: "500m"
     workdir: /app
     %s`, tt.value))
-			expected := fmt.Sprintf("Error on dev 'deployment': %q is not supported in Services. Please visit https://www.okteto.com/docs/reference/manifest/#services-object-optional for documentation", tt.name)
+			expected := fmt.Sprintf("error on dev 'deployment': %q is not supported in Services. Please visit https://www.okteto.com/docs/reference/manifest/#services-object-optional for documentation", tt.name)
 
 			_, err := Read(manifest)
-			if err == nil {
-				t.Fatal("Expected to receive error from validateForExtraFields but got none")
-			}
-
-			if err.Error() != expected {
-				t.Errorf("Received error from validateForExtraFields is invalid: got %s, expected %s", err.Error(), expected)
-			}
+			assert.NotNil(t, err)
+			assert.ErrorContains(t, err, expected)
 		})
 	}
 }
@@ -1509,252 +1504,6 @@ func Test_expandEnvFiles(t *testing.T) {
 				t.Fatal(err)
 			}
 			assert.Equal(t, tt.expected, tt.dev.Environment)
-		})
-	}
-}
-
-func TestBuildInfo_GetDockerfilePath(t *testing.T) {
-	dir := t.TempDir()
-
-	dockerfilePath := filepath.Join(dir, "Dockerfile")
-	dockerfiledevPath := filepath.Join(dir, "Dockerfile.dev")
-	assert.NoError(t, os.WriteFile(dockerfilePath, []byte(`FROM alpine`), 0600))
-	assert.NoError(t, os.WriteFile(dockerfiledevPath, []byte(`FROM alpine`), 0600))
-	tests := []struct {
-		name       string
-		context    string
-		dockerfile string
-		want       string
-	}{
-		{
-			name:       "with-context",
-			context:    dir,
-			dockerfile: "Dockerfile",
-			want:       filepath.Join(dir, "Dockerfile"),
-		},
-		{
-			name:       "with-context-and-non-dockerfile",
-			context:    dir,
-			dockerfile: "Dockerfile.dev",
-			want:       filepath.Join(dir, "Dockerfile.dev"),
-		},
-		{
-			name:       "empty",
-			context:    "",
-			dockerfile: "",
-			want:       "",
-		},
-		{
-			name:       "default",
-			context:    "",
-			dockerfile: "Dockerfile",
-			want:       "Dockerfile",
-		},
-
-		{
-			name:       "with-context-and-dockerfile-expanded",
-			context:    "api",
-			dockerfile: "api/Dockerfile.dev",
-			want:       "api/Dockerfile.dev",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			b := &BuildInfo{
-				Context:    tt.context,
-				Dockerfile: tt.dockerfile,
-			}
-			if got := b.GetDockerfilePath(); got != tt.want {
-				t.Errorf("BuildInfo.GetDockerfilePath() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_BuildInfoCopy(t *testing.T) {
-	b := &BuildInfo{
-		Name:        "test",
-		Context:     "context",
-		Dockerfile:  "dockerfile",
-		Target:      "target",
-		Image:       "image",
-		CacheFrom:   []string{"cache"},
-		ExportCache: []string{"export"},
-		Args: BuildArgs{
-			BuildArg{
-				Name:  "env",
-				Value: "test",
-			},
-		},
-		Secrets: BuildSecrets{
-			"sec": "test",
-		},
-		VolumesToInclude: []StackVolume{
-			{
-				LocalPath:  "local",
-				RemotePath: "remote",
-			},
-		},
-		DependsOn: BuildDependsOn{"other"},
-	}
-
-	copyB := b.Copy()
-	assert.EqualValues(t, b, copyB)
-
-	samePointer := &copyB == &b
-	assert.False(t, samePointer)
-}
-
-func TestExpandBuildArgs(t *testing.T) {
-	t.Setenv("KEY", "VALUE")
-	tests := []struct {
-		buildInfo          *BuildInfo
-		expected           *BuildInfo
-		previousImageBuilt map[string]string
-		name               string
-	}{
-		{
-			name:               "no build args",
-			buildInfo:          &BuildInfo{},
-			previousImageBuilt: map[string]string{},
-			expected:           &BuildInfo{},
-		},
-		{
-			name: "only buildInfo without expanding",
-			buildInfo: &BuildInfo{
-				Args: BuildArgs{
-					{
-						Name:  "KEY",
-						Value: "VALUE",
-					},
-				},
-			},
-			previousImageBuilt: map[string]string{},
-			expected: &BuildInfo{
-				Args: BuildArgs{
-					{
-						Name:  "KEY",
-						Value: "VALUE",
-					},
-				},
-			},
-		},
-		{
-			name: "only buildInfo expanding",
-			buildInfo: &BuildInfo{
-				Args: BuildArgs{
-					{
-						Name:  "KEY",
-						Value: "$KEY",
-					},
-				},
-			},
-			previousImageBuilt: map[string]string{},
-			expected: &BuildInfo{
-				Args: BuildArgs{
-					{
-						Name:  "KEY",
-						Value: "VALUE",
-					},
-				},
-			},
-		},
-		{
-			name:      "only previousImageBuilt",
-			buildInfo: &BuildInfo{},
-			previousImageBuilt: map[string]string{
-				"KEY": "VALUE",
-			},
-			expected: &BuildInfo{
-				Args: BuildArgs{
-					{
-						Name:  "KEY",
-						Value: "VALUE",
-					},
-				},
-			},
-		},
-		{
-			name: "buildInfo args and previousImageBuilt without expanding",
-			buildInfo: &BuildInfo{
-				Args: BuildArgs{
-					{
-						Name:  "KEY",
-						Value: "VALUE",
-					},
-				},
-			},
-			previousImageBuilt: map[string]string{
-				"KEY2": "VALUE2",
-			},
-			expected: &BuildInfo{
-				Args: BuildArgs{
-					{
-						Name:  "KEY",
-						Value: "VALUE",
-					},
-					{
-						Name:  "KEY2",
-						Value: "VALUE2",
-					},
-				},
-			},
-		},
-		{
-			name: "buildInfo args and previousImageBuilt expanding",
-			buildInfo: &BuildInfo{
-				Args: BuildArgs{
-					{
-						Name:  "KEY",
-						Value: "$KEY",
-					},
-				},
-			},
-			previousImageBuilt: map[string]string{
-				"KEY2": "VALUE2",
-			},
-			expected: &BuildInfo{
-				Args: BuildArgs{
-					{
-						Name:  "KEY",
-						Value: "VALUE",
-					},
-					{
-						Name:  "KEY2",
-						Value: "VALUE2",
-					},
-				},
-			},
-		},
-		{
-			name: "buildInfo args only same as previousImageBuilt",
-			buildInfo: &BuildInfo{
-				Args: BuildArgs{
-					{
-						Name:  "KEY",
-						Value: "$KEY",
-					},
-				},
-			},
-			previousImageBuilt: map[string]string{
-				"KEY": "VALUE",
-			},
-			expected: &BuildInfo{
-				Args: BuildArgs{
-					{
-						Name:  "KEY",
-						Value: "VALUE",
-					},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.NoError(t, tt.buildInfo.AddBuildArgs(tt.previousImageBuilt))
-
-			assert.Equal(t, tt.expected, tt.buildInfo)
 		})
 	}
 }

@@ -233,7 +233,7 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 		if oktetoErrors.IsNotFound(err) {
 			return nil
 		}
-		return fmt.Errorf("error deleting kubernetes deployment: %s", err)
+		return fmt.Errorf("error deleting kubernetes deployment: %w", err)
 	}
 	oktetoLog.Infof("deployment '%s' deleted", name)
 	return nil

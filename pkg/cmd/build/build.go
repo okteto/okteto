@@ -24,6 +24,7 @@ import (
 
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/client"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
@@ -225,7 +226,7 @@ type regInterface interface {
 }
 
 // OptsFromBuildInfo returns the parsed options for the build from the manifest
-func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *types.BuildOptions, reg regInterface, okCtx OktetoContextInterface) *types.BuildOptions {
+func OptsFromBuildInfo(manifestName, svcName string, b *build.Info, o *types.BuildOptions, reg regInterface, okCtx OktetoContextInterface) *types.BuildOptions {
 	if o == nil {
 		o = &types.BuildOptions{}
 	}
@@ -258,7 +259,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		file = extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName)
 	}
 
-	args := []model.BuildArg{}
+	args := []build.Arg{}
 	optionsBuildArgs := map[string]string{}
 	minArgFormatParts := 1
 	maxArgFormatParts := 2
@@ -267,12 +268,12 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		splittedArg := strings.SplitN(arg, "=", maxArgFormatParts)
 		if len(splittedArg) == minArgFormatParts {
 			optionsBuildArgs[splittedArg[0]] = ""
-			args = append(args, model.BuildArg{
+			args = append(args, build.Arg{
 				Name: splittedArg[0], Value: "",
 			})
 		} else if len(splittedArg) == maxArgFormatParts {
 			optionsBuildArgs[splittedArg[0]] = splittedArg[1]
-			args = append(args, model.BuildArg{
+			args = append(args, build.Arg{
 				Name: splittedArg[0], Value: splittedArg[1],
 			})
 		} else {
@@ -306,7 +307,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 				continue
 			}
 
-			args = append(args, model.BuildArg{
+			args = append(args, build.Arg{
 				Name: key, Value: val,
 			})
 		}
@@ -318,7 +319,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		Path:        b.Context,
 		Tag:         b.Image,
 		File:        file,
-		BuildArgs:   model.SerializeBuildArgs(args),
+		BuildArgs:   build.SerializeArgs(args),
 		NoCache:     o.NoCache,
 		ExportCache: b.ExportCache,
 		Platform:    o.Platform,
@@ -343,7 +344,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 }
 
 // OptsFromBuildInfoForRemoteDeploy returns the options for the remote deploy
-func OptsFromBuildInfoForRemoteDeploy(b *model.BuildInfo, o *types.BuildOptions) *types.BuildOptions {
+func OptsFromBuildInfoForRemoteDeploy(b *build.Info, o *types.BuildOptions) *types.BuildOptions {
 	opts := &types.BuildOptions{
 		Path:       b.Context,
 		OutputMode: o.OutputMode,
@@ -441,7 +442,7 @@ func createTempFileWithExpandedEnvsAtSource(fs afero.Fs, sourceFile, tempFolder 
 
 		// save expanded to temp file
 		if _, err = writer.Write([]byte(fmt.Sprintf("%s\n", srcContent))); err != nil {
-			return "", fmt.Errorf("unable to write to temp file: %s", err)
+			return "", fmt.Errorf("unable to write to temp file: %w", err)
 		}
 		writer.Flush()
 	}

@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	modelUtils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/repository"
 	giturls "github.com/whilp/git-urls"
@@ -128,7 +129,7 @@ func (dc *DeployCommand) addEnvVars(cwd string) {
 	}
 
 	if os.Getenv(model.GithubRepositoryEnvVar) == "" {
-		repo, err := model.GetRepositoryURL(cwd)
+		repo, err := modelUtils.GetRepositoryURL(cwd)
 		if err != nil {
 			oktetoLog.Infof("could not retrieve repo name: %s", err)
 		}

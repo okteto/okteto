@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/compose-spec/godotenv"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/discovery"
 	"github.com/okteto/okteto/pkg/env"
@@ -32,6 +33,7 @@ import (
 	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/model/utils"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -76,22 +78,22 @@ type Service struct {
 	NodeSelector  Selector              `json:"x-node-selector,omitempty" yaml:"x-node-selector,omitempty"`
 	User          *StackSecurityContext `yaml:"user,omitempty"`
 	DependsOn     DependsOn             `yaml:"depends_on,omitempty"`
-	Build         *BuildInfo            `yaml:"build,omitempty"`
+	Build         *build.Info           `yaml:"build,omitempty"`
 	Workdir       string                `yaml:"workdir,omitempty"`
 	Image         string                `yaml:"image,omitempty"`
 	RestartPolicy apiv1.RestartPolicy   `yaml:"restart,omitempty"`
 
-	Environment     env.Environment    `yaml:"environment,omitempty"`
-	Ports           []Port             `yaml:"ports,omitempty"`
-	Volumes         []StackVolume      `yaml:"volumes,omitempty"`
-	CapAdd          []apiv1.Capability `yaml:"cap_add,omitempty"`
-	CapDrop         []apiv1.Capability `yaml:"cap_drop,omitempty"`
-	VolumeMounts    []StackVolume      `yaml:"-"`
-	EnvFiles        env.EnvFiles       `yaml:"env_file,omitempty"`
-	Command         Command            `yaml:"command,omitempty"`
-	Annotations     Annotations        `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Entrypoint      Entrypoint         `yaml:"entrypoint,omitempty"`
-	StopGracePeriod int64              `yaml:"stop_grace_period,omitempty"`
+	Environment     env.Environment      `yaml:"environment,omitempty"`
+	Ports           []Port               `yaml:"ports,omitempty"`
+	Volumes         []build.VolumeMounts `yaml:"volumes,omitempty"`
+	CapAdd          []apiv1.Capability   `yaml:"cap_add,omitempty"`
+	CapDrop         []apiv1.Capability   `yaml:"cap_drop,omitempty"`
+	VolumeMounts    []build.VolumeMounts `yaml:"-"`
+	EnvFiles        env.EnvFiles         `yaml:"env_file,omitempty"`
+	Command         Command              `yaml:"command,omitempty"`
+	Annotations     Annotations          `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Entrypoint      Entrypoint           `yaml:"entrypoint,omitempty"`
+	StopGracePeriod int64                `yaml:"stop_grace_period,omitempty"`
 
 	Replicas     int32 `yaml:"replicas,omitempty"` // For okteto stack only
 	BackOffLimit int32 `yaml:"max_attempts,omitempty"`
@@ -103,10 +105,6 @@ type Service struct {
 type StackSecurityContext struct {
 	RunAsUser  *int64 `json:"runAsUser,omitempty" yaml:"runAsUser,omitempty"`
 	RunAsGroup *int64 `json:"runAsGroup,omitempty" yaml:"runAsGroup,omitempty"`
-}
-type StackVolume struct {
-	LocalPath  string
-	RemotePath string
 }
 
 type VolumeSpec struct {
@@ -312,9 +310,9 @@ func getStackName(name, stackPath, actualStackName string) (string, error) {
 			// this name could be not sanitized when running at pipeline installer
 			return nameEnvVar, nil
 		}
-		name, err := GetValidNameFromGitRepo(filepath.Dir(stackPath))
+		name, err := getValidNameFromGitRepo(filepath.Dir(stackPath))
 		if err != nil {
-			name, err = GetValidNameFromFolder(filepath.Dir(stackPath))
+			name, err = utils.GetValidNameFromFolder(filepath.Dir(stackPath))
 			if err != nil {
 				return "", err
 			}
@@ -328,6 +326,16 @@ func getStackName(name, stackPath, actualStackName string) (string, error) {
 		return "", err
 	}
 	return actualStackName, nil
+}
+
+// getValidNameFromGitRepo returns a name from a repository url
+func getValidNameFromGitRepo(folder string) (string, error) {
+	repo, err := utils.GetRepositoryURL(folder)
+	if err != nil {
+		return "", err
+	}
+	name := utils.TranslateURLToName(repo)
+	return name, nil
 }
 
 // ReadStack reads an okteto stack
@@ -369,7 +377,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 				svc.Build.Context = svc.Build.Name
 				svc.Build.Name = ""
 			}
-			svc.Build.setBuildDefaults()
+			svc.Build.SetBuildDefaults()
 		}
 		if svc.Resources.Requests.Storage.Size.Value.Cmp(resource.MustParse("0")) == 0 {
 			svc.Resources.Requests.Storage.Size.Value = resource.MustParse("1Gi")
@@ -396,7 +404,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 }
 
 func (svc *Service) ignoreSyncVolumes() {
-	notIgnoredVolumes := make([]StackVolume, 0)
+	notIgnoredVolumes := make([]build.VolumeMounts, 0)
 	wd, err := os.Getwd()
 	if err != nil {
 		oktetoLog.Info("could not get wd to ignore secrets")
@@ -447,17 +455,17 @@ func (svc *Service) ToDev(svcName string) (*Dev, error) {
 func (s *Stack) Validate() error {
 	// in case name is coming from option "name" at deploy this could not be sanitized
 	if err := validateStackName(format.ResourceK8sMetaString(s.Name)); err != nil {
-		return fmt.Errorf("Invalid compose name: %s", err)
+		return fmt.Errorf("invalid compose name: %w", err)
 	}
 	if len(s.Services) == 0 {
-		return fmt.Errorf("Invalid stack: 'services' cannot be empty")
+		return fmt.Errorf("invalid stack: 'services' cannot be empty")
 	}
 
 	for endpointName, endpoint := range s.Endpoints {
 		for _, endpointRule := range endpoint.Rules {
 			if service, ok := s.Services[endpointRule.Service]; ok {
 				if !IsPortInService(endpointRule.Port, service.Ports) {
-					return fmt.Errorf("Invalid endpoint '%s': service '%s' does not have port '%d'.", endpointName, endpointRule.Service, endpointRule.Port)
+					return fmt.Errorf("invalid endpoint '%s': service '%s' does not have port '%d'", endpointName, endpointRule.Service, endpointRule.Port)
 				}
 			}
 		}
@@ -469,11 +477,11 @@ func (s *Stack) Validate() error {
 	}
 	for name, svc := range s.Services {
 		if err := validateStackName(name); err != nil {
-			return fmt.Errorf("Invalid service name '%s': %s", name, err)
+			return fmt.Errorf("invalid service name '%s': %s", name, err)
 		}
 
 		if svc.Image == "" && svc.Build == nil {
-			return fmt.Errorf(fmt.Sprintf("Invalid service '%s': image cannot be empty", name))
+			return fmt.Errorf("invalid service '%s': image cannot be empty", name)
 		}
 
 		for _, v := range svc.VolumeMounts {
@@ -484,7 +492,7 @@ func (s *Stack) Validate() error {
 				s.Warnings.VolumeMountWarnings = append(s.Warnings.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/#up", name, v.LocalPath, v.RemotePath))
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
-				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v.ToString(), name))
+				return fmt.Errorf("invalid volume '%s' in service '%s': must be an absolute path", v.ToString(), name)
 			}
 		}
 		svc.ignoreSyncVolumes()
@@ -525,7 +533,7 @@ type errDependsOnUndefined struct {
 }
 
 func (e *errDependsOnUndefined) Error() string {
-	return fmt.Errorf("%w: Service '%s' depends on service '%s' which is undefined.", errDependsOn, e.svc, e.dependentSvc).Error()
+	return fmt.Errorf("%w: Service '%s' depends on service '%s' which is undefined", errDependsOn, e.svc, e.dependentSvc).Error()
 }
 
 func (e *errDependsOnUndefined) Unwrap() error {
@@ -551,10 +559,10 @@ func (cs ComposeServices) ValidateDependsOn(svcs []string) error {
 		}
 	}
 
-	dependencyCycle := getDependentCyclic(cs.toGraph())
+	dependencyCycle := utils.GetDependentCyclic(cs.toGraph())
 	if len(dependencyCycle) > 0 {
 		svcsDependents := fmt.Sprintf("%s and %s", strings.Join(dependencyCycle[:len(dependencyCycle)-1], ", "), dependencyCycle[len(dependencyCycle)-1])
-		return fmt.Errorf("%w: There was a cyclic dependendecy between %s.", errDependsOn, svcsDependents)
+		return fmt.Errorf("%w: There was a cyclic dependendecy between %s", errDependsOn, svcsDependents)
 	}
 	return nil
 }
@@ -905,7 +913,7 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 
 	envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
 	if err != nil {
-		return fmt.Errorf("error parsing env_file %s: %s", filename, err.Error())
+		return fmt.Errorf("error parsing env_file %s: %w", filename, err)
 	}
 
 	for _, e := range svc.Environment {
@@ -925,8 +933,8 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 	return nil
 }
 
-func (s ComposeServices) toGraph() graph {
-	g := graph{}
+func (s ComposeServices) toGraph() utils.Graph {
+	g := utils.Graph{}
 	for svcName, svcInfo := range s {
 		dependsOnList := []string{}
 		for dependantSvc := range svcInfo.DependsOn {

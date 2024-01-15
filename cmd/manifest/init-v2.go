@@ -27,6 +27,7 @@ import (
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/build"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
@@ -369,7 +370,7 @@ func createFromCompose(composePath string) (*model.Manifest, error) {
 			},
 		},
 		Dev:   model.ManifestDevs{},
-		Build: model.ManifestBuild{},
+		Build: build.ManifestBuild{},
 		IsV2:  true,
 	}
 	cwd, err := os.Getwd()
@@ -426,11 +427,11 @@ func createFromKubernetes(cwd string) (*model.Manifest, error) {
 	return manifest, nil
 }
 
-func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (model.ManifestBuild, error) {
-	manifestBuild := model.ManifestBuild{}
+func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (build.ManifestBuild, error) {
+	manifestBuild := build.ManifestBuild{}
 	for _, dockerfile := range dockerfiles {
 		var name string
-		var buildInfo *model.BuildInfo
+		var buildInfo *build.Info
 		if dockerfile == dockerfileName {
 			c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
 			if err != nil {
@@ -439,13 +440,13 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (model.M
 			inferer := devenvironment.NewNameInferer(c)
 			// In this case, the path is empty because we are inferring the names from Dockerfiles, so no manifest
 			name = inferer.InferName(context.Background(), cwd, okteto.Context().Namespace, "")
-			buildInfo = &model.BuildInfo{
+			buildInfo = &build.Info{
 				Context:    ".",
 				Dockerfile: dockerfile,
 			}
 		} else {
 			name = filepath.Dir(dockerfile)
-			buildInfo = &model.BuildInfo{
+			buildInfo = &build.Info{
 				Context:    filepath.Dir(dockerfile),
 				Dockerfile: dockerfile,
 			}
@@ -509,7 +510,7 @@ func (mc *ManifestCommand) getManifest(path string) (*model.Manifest, error) {
 	if mc.manifest != nil {
 		// Deepcopy so it does not get overwritten these changes
 		manifest := *mc.manifest
-		b := model.ManifestBuild{}
+		b := build.ManifestBuild{}
 		for k, v := range mc.manifest.Build {
 			info := *v
 			b[k] = &info

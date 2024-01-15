@@ -30,7 +30,8 @@ import (
 	"github.com/mitchellh/go-homedir"
 	builder "github.com/okteto/okteto/cmd/build"
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
-	"github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/build"
+	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -168,7 +169,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		}
 	}()
 
-	buildInfo := &model.BuildInfo{
+	buildInfo := &build.Info{
 		Dockerfile: dockerfile,
 	}
 
@@ -182,7 +183,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		return err
 	}
 
-	buildOptions := build.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "destroy"})
+	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "destroy"})
 	buildOptions.Manifest = rd.manifest
 	buildOptions.BuildArgs = append(
 		buildOptions.BuildArgs,
@@ -242,7 +243,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 	// account that we must not confuse the user with build messages since this logic is
 	// executed in the deploy command.
 	if err := rd.builder.Build(ctx, buildOptions); err != nil {
-		var cmdErr build.OktetoCommandErr
+		var cmdErr buildCmd.OktetoCommandErr
 		if errors.As(err, &cmdErr) {
 			oktetoLog.SetStage(cmdErr.Stage)
 			return oktetoErrors.UserError{
@@ -368,7 +369,7 @@ func fetchClusterMetadata(ctx context.Context) (*types.ClusterMetadata, error) {
 	cp := okteto.NewOktetoClientProvider()
 	c, err := cp.Provide()
 	if err != nil {
-		return nil, fmt.Errorf("failed to provide okteto client for fetching certs: %s", err)
+		return nil, fmt.Errorf("failed to provide okteto client for fetching certs: %w", err)
 	}
 	uc := c.User()
 

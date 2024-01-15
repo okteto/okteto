@@ -36,6 +36,7 @@ import (
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
@@ -93,7 +94,7 @@ type UpOptions struct {
 func Up(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
 	upOptions := &UpOptions{}
 	cmd := &cobra.Command{
-		Use:   "up [svc]",
+		Use:   "up [service]",
 		Short: "Launch your development environment",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -830,7 +831,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 		}
 	}
 
-	if _, err := os.Stat(up.Dev.Image.GetDockerfilePath()); err != nil {
+	if _, err := os.Stat(up.Dev.Image.GetDockerfilePath(up.Fs)); err != nil {
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("'--build' argument given but there is no Dockerfile"),
 			Hint: "Try creating a Dockerfile file or specify the 'context' and 'dockerfile' fields in your okteto manifest.",
@@ -855,7 +856,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 	imageTag := up.Registry.GetImageTag(image, up.Dev.Name, up.Dev.Namespace)
 	oktetoLog.Infof("building dev image tag %s", imageTag)
 
-	buildArgs := model.SerializeBuildArgs(args)
+	buildArgs := build.SerializeArgs(args)
 
 	buildOptions := &types.BuildOptions{
 		Path:       context,

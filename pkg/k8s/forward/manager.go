@@ -16,6 +16,7 @@ package forward
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -142,7 +143,9 @@ func (p *PortForwardManager) Start(devPod, namespace string) error {
 		err := devPF.ForwardPorts()
 		if err != nil {
 			oktetoLog.Infof("k8s forwarding to dev pod finished with errors: %s", err)
-			p.activeDev.closeReady()
+			if !errors.Is(err, portforward.ErrLostConnectionToPod) {
+				p.activeDev.closeReady()
+			}
 			p.activeDev.err = err
 		}
 	}()

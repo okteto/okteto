@@ -105,7 +105,7 @@ func RunOktetoPreviewDestroy(oktetoPath string, destroyOptions *DestroyPreviewOp
 	}
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("okteto deploy failed: %s - %s", string(o), err)
+		return fmt.Errorf("okteto deploy failed: %s - %w", string(o), err)
 	}
 	log.Printf("okteto destroy success")
 	return nil

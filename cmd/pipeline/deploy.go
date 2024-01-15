@@ -34,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	modelUtils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
@@ -145,7 +146,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 
 	c, _, err := pc.k8sClientProvider.Provide(okteto.Context().Cfg)
 	if err != nil {
-		return fmt.Errorf("failed to load okteto context '%s': %v", okteto.Context().Name, err)
+		return fmt.Errorf("failed to load okteto context '%s': %w", okteto.Context().Name, err)
 	}
 
 	exists := false
@@ -456,7 +457,7 @@ func (o *DeployOptions) setDefaults() error {
 	if o.Repository == "" {
 		oktetoLog.Info("inferring git repository URL")
 
-		o.Repository, err = model.GetRepositoryURL(cwd)
+		o.Repository, err = modelUtils.GetRepositoryURL(cwd)
 		if err != nil {
 			return fmt.Errorf("could not get repository url: %w", err)
 		}
@@ -473,7 +474,7 @@ func (o *DeployOptions) setDefaults() error {
 		o.Name = inferer.InferNameFromDevEnvsAndRepository(context.Background(), o.Repository, okteto.Context().Namespace, o.File, "")
 	}
 
-	currentRepoURL, err := model.GetRepositoryURL(cwd)
+	currentRepoURL, err := modelUtils.GetRepositoryURL(cwd)
 	if err != nil {
 		oktetoLog.Debug("cwd does not have .git folder")
 	}
