@@ -157,8 +157,8 @@ jobs:
       OKTETO_URL: https://staging.okteto.dev/
       OKTETO_USER: cindylopez
       OKTETO_APPS_SUBDOMAIN: staging.okteto.net
-      DEPOT_PROJECT_ID: ${DEPOT_PROJECT_ID}
-      DEPOT_TOKEN: ${DEPOT_TOKEN}
+      DEPOT_PROJECT_ID: $DEPOT_PROJECT_ID
+      DEPOT_TOKEN: $DEPOT_TOKEN
     steps:
       - checkout
       - restore_cache:
@@ -215,8 +215,8 @@ jobs:
     executor: win/default
     environment:
       OKTETO_USER: cindylopez
-      DEPOT_PROJECT_ID: ${DEPOT_PROJECT_ID}
-      DEPOT_TOKEN: ${DEPOT_TOKEN}
+      DEPOT_PROJECT_ID: $DEPOT_PROJECT_ID
+      DEPOT_TOKEN: $DEPOT_TOKEN
     steps:
       - checkout
       - run:
