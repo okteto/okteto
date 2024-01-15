@@ -22,6 +22,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	ioCtrl "github.com/okteto/okteto/pkg/log/io"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -49,13 +50,15 @@ type K8sClientProvider interface {
 
 // tokenRotationTransport updates the token of the config when the token is outdated
 type tokenRotationTransport struct {
-	rt http.RoundTripper
+	rt        http.RoundTripper
+	k8sLogger *ioCtrl.IOController
 }
 
 // newTokenRotationTransport implements the RoundTripper interface
-func newTokenRotationTransport(rt http.RoundTripper) *tokenRotationTransport {
+func newTokenRotationTransport(rt http.RoundTripper, k8sLogger *ioCtrl.IOController) *tokenRotationTransport {
 	return &tokenRotationTransport{
-		rt: rt,
+		rt:        rt,
+		k8sLogger: k8sLogger,
 	}
 }
 
@@ -68,17 +71,34 @@ func (t *tokenRotationTransport) RoundTrip(req *http.Request) (*http.Response, e
 	if resp.StatusCode == http.StatusUnauthorized {
 		return nil, ErrK8sUnauthorised
 	}
+	if t.k8sLogger != nil {
+		t.k8sLogger.Debugf("[K8S] %d %s %s %s", resp.StatusCode, time.Now(), req.Method, req.URL.String())
+	}
 	return resp, err
 }
 
-type K8sClient struct{}
+type K8sClient struct {
+	oktetoK8sLogger *ioCtrl.IOController
+}
 
+// Deprecated: use NewK8sClientProviderWithLogger instead
 func NewK8sClientProvider() *K8sClient {
 	return &K8sClient{}
 }
 
+// NewK8sClientProviderWithLogger returna new K8sClient that logs all requests to k8s
+func NewK8sClientProviderWithLogger(oktetoK8sLogger *ioCtrl.IOController) *K8sClient {
+	return &K8sClient{
+		oktetoK8sLogger: oktetoK8sLogger,
+	}
+}
+
 func (*K8sClient) Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
-	return getK8sClientWithApiConfig(clientApiConfig)
+	return getK8sClientWithApiConfig(clientApiConfig, nil)
+}
+
+func (*K8sClient) ProvideWithLogger(clientApiConfig *clientcmdapi.Config, k8sLogger *ioCtrl.IOController) (kubernetes.Interface, *rest.Config, error) {
+	return getK8sClientWithApiConfig(clientApiConfig, k8sLogger)
 }
 
 func (*K8sClient) GetIngressClient() (*ingresses.Client, error) {
@@ -114,7 +134,7 @@ func GetKubernetesTimeout() time.Duration {
 	return timeout
 }
 
-func getK8sClientWithApiConfig(clientApiConfig *clientcmdapi.Config) (*kubernetes.Clientset, *rest.Config, error) {
+func getK8sClientWithApiConfig(clientApiConfig *clientcmdapi.Config, k8sLogger *ioCtrl.IOController) (*kubernetes.Clientset, *rest.Config, error) {
 	clientConfig := clientcmd.NewDefaultClientConfig(*clientApiConfig, nil)
 	config, err := clientConfig.ClientConfig()
 	if err != nil {
@@ -127,7 +147,7 @@ func getK8sClientWithApiConfig(clientApiConfig *clientcmdapi.Config) (*kubernete
 	var client *kubernetes.Clientset
 
 	config.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
-		return newTokenRotationTransport(rt)
+		return newTokenRotationTransport(rt, k8sLogger)
 	}
 
 	client, err = kubernetes.NewForConfig(config)

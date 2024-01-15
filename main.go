@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 	"unicode"
@@ -95,6 +96,7 @@ func main() {
 		ioController.Logger().SetLevel(io.InfoLevel)
 		ioController.SetOutputFormat(io.JSONFormat)
 	}
+
 	var logLevel string
 	var outputMode string
 	var serverNameOverride string
@@ -139,6 +141,15 @@ func main() {
 	okClientProvider := okteto.NewOktetoClientProvider()
 	at := analytics.NewAnalyticsTracker()
 
+	k8sLogsTempDir, err := os.MkdirTemp("", "okteto-k8s-logs")
+	if err != nil {
+		ioController.Logger().Infof("error creating k8s logs temp dir: %s", err)
+	}
+	logPath := filepath.Join(k8sLogsTempDir, "okteto-k8s.log")
+	ioController.Logger().Debugf("okteto k8s log file: %s", logPath)
+	k8sLogger := io.NewIOController()
+	k8sLogger.ConfigureFileLogger(logPath)
+
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
 	root.AddCommand(cmd.Login())
@@ -153,7 +164,7 @@ func main() {
 
 	root.AddCommand(namespace.Namespace(ctx))
 	root.AddCommand(cmd.Init(at, ioController))
-	root.AddCommand(up.Up(at, ioController))
+	root.AddCommand(up.Up(at, ioController, k8sLogger))
 	root.AddCommand(cmd.Down())
 	root.AddCommand(cmd.Status())
 	root.AddCommand(cmd.Doctor())

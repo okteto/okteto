@@ -91,7 +91,7 @@ type UpOptions struct {
 }
 
 // Up starts a development container
-func Up(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
+func Up(at analyticsTrackerInterface, ioCtrl *io.IOController, k8sLogsCtrl *io.IOController) *cobra.Command {
 	upOptions := &UpOptions{}
 	cmd := &cobra.Command{
 		Use:   "up [service]",
@@ -197,7 +197,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
 			}
 			if oktetoManifest.Name == "" {
 				oktetoLog.Info("okteto manifest doesn't have a name, inferring it...")
-				c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+				c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogsCtrl).Provide(okteto.Context().Cfg)
 				if err != nil {
 					return err
 				}
@@ -217,7 +217,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
 				}
 				if answer {
 					mc := &manifest.ManifestCommand{
-						K8sClientProvider: okteto.NewK8sClientProvider(),
+						K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogsCtrl),
 					}
 					if upOptions.ManifestPath == "" {
 						upOptions.ManifestPath = utils.DefaultManifest
@@ -263,7 +263,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
 				Fs:                afero.NewOsFs(),
 				analyticsTracker:  at,
 				analyticsMeta:     upMeta,
-				K8sClientProvider: okteto.NewK8sClientProvider(),
+				K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogsCtrl),
 				tokenUpdater:      newTokenUpdaterController(),
 				builder:           buildv2.NewBuilderFromScratch(at, ioCtrl),
 			}

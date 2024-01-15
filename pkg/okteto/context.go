@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"github.com/okteto/okteto/pkg/log/io"
 	"net"
 	"net/url"
 	"os"
@@ -419,7 +420,7 @@ func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 	if Context().Cfg == nil {
 		return nil, nil, fmt.Errorf("okteto context not initialized")
 	}
-	c, config, err := getK8sClientWithApiConfig(Context().Cfg)
+	c, config, err := getK8sClientWithApiConfig(Context().Cfg, io.NewIOController())
 	if err == nil {
 		Context().SetClusterType(config.Host)
 	}
