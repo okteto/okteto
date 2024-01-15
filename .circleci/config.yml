@@ -156,7 +156,7 @@ jobs:
     environment:
       OKTETO_URL: https://staging.okteto.dev/
       OKTETO_USER: cindylopez
-      OKTETO_APPS_SUBDOMAIN: staging.okteto.net
+      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
       - checkout
       - restore_cache:
@@ -249,7 +249,7 @@ jobs:
           environment:
             OKTETO_URL: https://staging.okteto.dev/
             OKTETO_SKIP_CLEANUP: 'true'
-            OKTETO_APPS_SUBDOMAIN: staging.okteto.net
+            OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
@@ -260,7 +260,7 @@ jobs:
           environment:
             OKTETO_URL: https://staging.okteto.dev/
             OKTETO_SKIP_CLEANUP: 'true'
-            OKTETO_APPS_SUBDOMAIN: staging.okteto.net
+            OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
@@ -269,7 +269,7 @@ jobs:
           environment:
             OKTETO_URL: https://staging.okteto.dev/
             OKTETO_SKIP_CLEANUP: 'true'
-            OKTETO_APPS_SUBDOMAIN: staging.okteto.net
+            OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
@@ -280,7 +280,7 @@ jobs:
           environment:
             OKTETO_URL: https://staging.okteto.dev/
             OKTETO_SKIP_CLEANUP: 'true'
-            OKTETO_APPS_SUBDOMAIN: staging.okteto.net
+            OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
