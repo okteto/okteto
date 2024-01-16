@@ -15,7 +15,9 @@ package okteto
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"sync"
 	"time"
@@ -72,7 +74,16 @@ func (t *tokenRotationTransport) RoundTrip(req *http.Request) (*http.Response, e
 		return nil, ErrK8sUnauthorised
 	}
 	if t.k8sLogger != nil {
-		t.k8sLogger.Debugf("[K8S] %d %s %s %s", resp.StatusCode, time.Now(), req.Method, req.URL.String())
+		cleanUrl := req.URL.String()
+		decodedUrl, err := url.QueryUnescape(cleanUrl)
+		if err != nil {
+			oktetoLog.Infof("cannot decode url '%s', ignoring", cleanUrl)
+		} else {
+			cleanUrl = decodedUrl
+		}
+		t.k8sLogger.Debugf("[K8S] %d %s %s", resp.StatusCode, req.Method, cleanUrl)
+	} else {
+		fmt.Println("LOGGER NIL!")
 	}
 	return resp, err
 }
@@ -93,8 +104,8 @@ func NewK8sClientProviderWithLogger(oktetoK8sLogger *ioCtrl.IOController) *K8sCl
 	}
 }
 
-func (*K8sClient) Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
-	return getK8sClientWithApiConfig(clientApiConfig, nil)
+func (k *K8sClient) Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
+	return getK8sClientWithApiConfig(clientApiConfig, k.oktetoK8sLogger)
 }
 
 func (*K8sClient) ProvideWithLogger(clientApiConfig *clientcmdapi.Config, k8sLogger *ioCtrl.IOController) (kubernetes.Interface, *rest.Config, error) {

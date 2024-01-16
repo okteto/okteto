@@ -98,7 +98,7 @@ func newFileLogger(logPath string) *oktetoLogger {
 	rolling := &lumberjack.Logger{
 		Filename:   logPath,
 		MaxSize:    1, // megabytes
-		MaxBackups: 10,
+		MaxBackups: 3,
 		MaxAge:     28, // days
 		Compress:   true,
 	}

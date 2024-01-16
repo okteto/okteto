@@ -278,7 +278,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.IOController, k8sLogsCtrl *io.I
 				oktetoLog.Infof("Terminal: %v", up.stateTerm)
 			}
 
-			k8sClient, _, err := okteto.GetK8sClient()
+			k8sClient, _, err := okteto.GetK8sClientWithLogger(k8sLogsCtrl)
 			if err != nil {
 				return fmt.Errorf("failed to load k8s client: %w", err)
 			}

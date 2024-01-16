@@ -416,11 +416,24 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 	return nil
 }
 
+// Deprecated: Use GetK8sClient instead
 func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 	if Context().Cfg == nil {
 		return nil, nil, fmt.Errorf("okteto context not initialized")
 	}
 	c, config, err := getK8sClientWithApiConfig(Context().Cfg, io.NewIOController())
+	if err == nil {
+		Context().SetClusterType(config.Host)
+	}
+	return c, config, err
+}
+
+// GetK8sClientWithLogger reutrns a kubernetes client for the current okteto context and a kubernetes config object
+func GetK8sClientWithLogger(oktetoK8sLogger *io.IOController) (*kubernetes.Clientset, *rest.Config, error) {
+	if Context().Cfg == nil {
+		return nil, nil, fmt.Errorf("okteto context not initialized")
+	}
+	c, config, err := getK8sClientWithApiConfig(Context().Cfg, oktetoK8sLogger)
 	if err == nil {
 		Context().SetClusterType(config.Host)
 	}

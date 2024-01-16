@@ -107,6 +107,8 @@ func main() {
 
 	okteto.InitContextWithDeprecatedToken()
 
+	k8sLogger := io.NewIOController()
+
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
 		Short:         "Okteto - Remote Development Environments powered by Kubernetes",
@@ -114,6 +116,7 @@ func main() {
 		SilenceErrors: true,
 		PersistentPreRun: func(ccmd *cobra.Command, args []string) {
 			ccmd.SilenceUsage = true
+			fmt.Printf("Called: %s\n", ccmd.CalledAs())
 			if !registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
 				oktetoLog.SetLevel(logLevel)          // TODO: Remove when we fully move to ioController
 				oktetoLog.SetOutputFormat(outputMode) // TODO: Remove when we fully move to ioController
@@ -123,6 +126,10 @@ func main() {
 			}
 			okteto.SetServerNameOverride(serverNameOverride)
 			ioController.Logger().Infof("started %s", strings.Join(os.Args, " "))
+
+			k8sLogsFilename := fmt.Sprintf("%s-%s.log", ccmd.CalledAs(), time.Now().Format(time.RFC3339))
+			k8sLogsFilepath := filepath.Join(config.GetK8sLoggerDir(), k8sLogsFilename)
+			k8sLogger.ConfigureFileLogger(k8sLogsFilepath)
 		},
 		PersistentPostRun: func(ccmd *cobra.Command, args []string) {
 			ioController.Logger().Infof("finished %s", strings.Join(os.Args, " "))
@@ -141,14 +148,15 @@ func main() {
 	okClientProvider := okteto.NewOktetoClientProvider()
 	at := analytics.NewAnalyticsTracker()
 
-	k8sLogsTempDir, err := os.MkdirTemp("", "okteto-k8s-logs")
-	if err != nil {
-		ioController.Logger().Infof("error creating k8s logs temp dir: %s", err)
-	}
-	logPath := filepath.Join(k8sLogsTempDir, "okteto-k8s.log")
-	ioController.Logger().Debugf("okteto k8s log file: %s", logPath)
-	k8sLogger := io.NewIOController()
-	k8sLogger.ConfigureFileLogger(logPath)
+	//k8sLogsTempDir, err := os.MkdirTemp("", "okteto-k8s-logs")
+	//if err != nil {
+	//	ioController.Logger().Infof("error creating k8s logs temp dir: %s", err)
+	//}
+	//logPath := filepath.Join(k8sLogsTempDir, "okteto-k8s.log")
+	//ioController.Logger().Debugf("okteto k8s log file: %s", logPath)
+	//fmt.Printf("okteto k8s log file: %s\n", logPath)
+
+	//k8sLogger.ConfigureFileLogger(logPath)
 
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
