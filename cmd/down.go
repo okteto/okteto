@@ -45,7 +45,7 @@ func Down() *cobra.Command {
 	var all bool
 
 	cmd := &cobra.Command{
-		Use:   "down [svc]",
+		Use:   "down [service]",
 		Short: "Deactivate your development container",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#down"),
 		RunE: func(cmd *cobra.Command, args []string) error {
