@@ -141,7 +141,7 @@ func TestKubetokenRefreshRoundTrip(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			testServer := httptest.NewServer(tc.handleFunc)
 			defer testServer.Close()
-			transport := newTokenRotationTransport(http.DefaultTransport)
+			transport := newTokenRotationTransport(http.DefaultTransport, nil)
 			client := &http.Client{
 				Transport: transport,
 			}
@@ -201,7 +201,7 @@ func TestGetK8sClientWithApiConfig(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			client, cfg, err := getK8sClientWithApiConfig(tc.apiConfig)
+			client, cfg, err := getK8sClientWithApiConfig(tc.apiConfig, nil)
 			require.ErrorIs(t, err, tc.expected.err)
 			require.NotNil(t, client)
 			require.NotNil(t, cfg)
