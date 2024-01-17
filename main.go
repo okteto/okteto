@@ -18,9 +18,9 @@ import (
 	cryptoRand "crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"math/rand"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 	"unicode"
@@ -127,9 +127,11 @@ func main() {
 			okteto.SetServerNameOverride(serverNameOverride)
 			ioController.Logger().Infof("started %s", strings.Join(os.Args, " "))
 
-			k8sLogsFilename := fmt.Sprintf("%s-%s.log", ccmd.CalledAs(), time.Now().Format(time.RFC3339))
-			k8sLogsFilepath := filepath.Join(config.GetK8sLoggerDir(), k8sLogsFilename)
-			k8sLogger.ConfigureFileLogger(k8sLogsFilepath)
+			if env.LoadBooleanOrDefault(io.OktetoK8sLoggerEnvVar, false) {
+				k8sLogsFilepath := config.GetK8sLogsFilePath()
+				k8sLogger.ConfigureFileLogger(k8sLogsFilepath)
+				ioController.Logger().Debugf("okteto k8s log file: %s", k8sLogsFilepath)
+			}
 		},
 		PersistentPostRun: func(ccmd *cobra.Command, args []string) {
 			ioController.Logger().Infof("finished %s", strings.Join(os.Args, " "))

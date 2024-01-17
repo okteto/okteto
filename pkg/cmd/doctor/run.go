@@ -108,6 +108,12 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 	if remoteLogsPath != "" {
 		files = append(files, remoteLogsPath)
 	}
+
+	k8sLogsPath := config.GetK8sLogsFilePath()
+	if filesystem.FileExists(k8sLogsPath) {
+		files = append(files, k8sLogsPath)
+	}
+
 	if err := z.Archive(files, archiveName); err != nil {
 		oktetoLog.Infof("error while archiving: %s", err)
 		return "", fmt.Errorf("couldn't create archive '%s', please try again: %w", archiveName, err)

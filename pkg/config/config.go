@@ -123,16 +123,12 @@ func GetAppHome(namespace, name string) string {
 	return d
 }
 
-// GetK8sLoggerDir returns the path of the k8s logger directory
-func GetK8sLoggerDir() string {
+// GetK8sLogsFilePath returns the path of the okteto k8s logs file
+func GetK8sLogsFilePath() string {
 	okHome := GetOktetoHome()
-	d := filepath.Join(okHome, "okteto-k8s-logs")
+	k8sLogsFilepath := filepath.Join(okHome, "okteto-k8s.log")
 
-	if err := os.MkdirAll(d, 0700); err != nil {
-		oktetoLog.Fatalf("failed to create %s: %s", d, err)
-	}
-
-	return d
+	return k8sLogsFilepath
 }
 
 // UpdateStateFile updates the state file of a given dev environment

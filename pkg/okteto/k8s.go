@@ -81,7 +81,7 @@ func (t *tokenRotationTransport) RoundTrip(req *http.Request) (*http.Response, e
 		} else {
 			cleanUrl = decodedUrl
 		}
-		t.k8sLogger.Debugf("[K8S] %d %s %s", resp.StatusCode, req.Method, cleanUrl)
+		t.k8sLogger.Debugf("%d %s %s", resp.StatusCode, req.Method, cleanUrl)
 	} else {
 		fmt.Println("LOGGER NIL!")
 	}
