@@ -15,6 +15,7 @@ package deploy
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/log/io"
 
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
@@ -36,36 +37,40 @@ type configMapHandler interface {
 // deployInsideDeployConfigMapHandler is the runner used when the okteto is executed
 // inside an okteto deploy command
 type deployInsideDeployConfigMapHandler struct {
-	k8sClientProvider okteto.K8sClientProvider
+	k8sClientProvider okteto.K8sClientProviderWithLogger
+	k8slogger         *io.K8sLogger
 }
 
-func newDeployInsideDeployConfigMapHandler(provider okteto.K8sClientProvider) *deployInsideDeployConfigMapHandler {
+func newDeployInsideDeployConfigMapHandler(provider okteto.K8sClientProviderWithLogger, k8slogger *io.K8sLogger) *deployInsideDeployConfigMapHandler {
 	return &deployInsideDeployConfigMapHandler{
 		k8sClientProvider: provider,
+		k8slogger:         k8slogger,
 	}
 }
 
 // oktetoDefaultConfigMapHandler is the runner used when the okteto is executed
 // directly
 type defaultConfigMapHandler struct {
-	k8sClientProvider okteto.K8sClientProvider
+	k8sClientProvider okteto.K8sClientProviderWithLogger
+	k8slogger         *io.K8sLogger
 }
 
-func newDefaultConfigMapHandler(provider okteto.K8sClientProvider) *defaultConfigMapHandler {
+func newDefaultConfigMapHandler(provider okteto.K8sClientProviderWithLogger, k8slogger *io.K8sLogger) *defaultConfigMapHandler {
 	return &defaultConfigMapHandler{
 		k8sClientProvider: provider,
+		k8slogger:         k8slogger,
 	}
 }
 
-func NewConfigmapHandler(provider okteto.K8sClientProvider) configMapHandler {
+func NewConfigmapHandler(provider okteto.K8sClientProviderWithLogger, k8slogger *io.K8sLogger) configMapHandler {
 	if env.LoadBoolean(constants.OktetoDeployRemote) {
-		return newDeployInsideDeployConfigMapHandler(provider)
+		return newDeployInsideDeployConfigMapHandler(provider, k8slogger)
 	}
-	return newDefaultConfigMapHandler(provider)
+	return newDefaultConfigMapHandler(provider, k8slogger)
 }
 
 func (ch *defaultConfigMapHandler) translateConfigMapAndDeploy(ctx context.Context, data *pipeline.CfgData) (*apiv1.ConfigMap, error) {
-	c, _, err := ch.k8sClientProvider.Provide(okteto.Context().Cfg)
+	c, _, err := ch.k8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, ch.k8slogger)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +78,7 @@ func (ch *defaultConfigMapHandler) translateConfigMapAndDeploy(ctx context.Conte
 }
 
 func (ch *defaultConfigMapHandler) getConfigmapVariablesEncoded(ctx context.Context, name, namespace string) (string, error) {
-	c, _, err := ch.k8sClientProvider.Provide(okteto.Context().Cfg)
+	c, _, err := ch.k8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, ch.k8slogger)
 	if err != nil {
 		return "", err
 	}
@@ -81,7 +86,7 @@ func (ch *defaultConfigMapHandler) getConfigmapVariablesEncoded(ctx context.Cont
 }
 
 func (ch *defaultConfigMapHandler) updateConfigMap(ctx context.Context, cfg *apiv1.ConfigMap, data *pipeline.CfgData, errMain error) error {
-	c, _, err := ch.k8sClientProvider.Provide(okteto.Context().Cfg)
+	c, _, err := ch.k8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, ch.k8slogger)
 	if err != nil {
 		return err
 	}
@@ -96,8 +101,8 @@ func (ch *defaultConfigMapHandler) updateConfigMap(ctx context.Context, cfg *api
 }
 
 // updateEnvsFromCommands update config map by adding envs generated in OKTETO_ENV as data fields
-func (h *defaultConfigMapHandler) updateEnvsFromCommands(ctx context.Context, name, namespace string, envs []string) error {
-	c, _, err := h.k8sClientProvider.Provide(okteto.Context().Cfg)
+func (ch *defaultConfigMapHandler) updateEnvsFromCommands(ctx context.Context, name, namespace string, envs []string) error {
+	c, _, err := ch.k8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, ch.k8slogger)
 	if err != nil {
 		return err
 	}
@@ -116,7 +121,7 @@ func (*deployInsideDeployConfigMapHandler) translateConfigMapAndDeploy(_ context
 }
 
 func (ch *deployInsideDeployConfigMapHandler) getConfigmapVariablesEncoded(ctx context.Context, name, namespace string) (string, error) {
-	c, _, err := ch.k8sClientProvider.Provide(okteto.Context().Cfg)
+	c, _, err := ch.k8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, ch.k8slogger)
 	if err != nil {
 		return "", err
 	}

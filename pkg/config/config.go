@@ -123,14 +123,6 @@ func GetAppHome(namespace, name string) string {
 	return d
 }
 
-// GetK8sLogsFilePath returns the path of the okteto k8s logs file
-func GetK8sLogsFilePath() string {
-	okHome := GetOktetoHome()
-	k8sLogsFilepath := filepath.Join(okHome, "okteto-k8s.log")
-
-	return k8sLogsFilepath
-}
-
 // UpdateStateFile updates the state file of a given dev environment
 func UpdateStateFile(devName, devNamespace string, state UpState) error {
 	if devNamespace == "" {

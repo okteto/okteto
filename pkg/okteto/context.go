@@ -421,7 +421,7 @@ func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 	if Context().Cfg == nil {
 		return nil, nil, fmt.Errorf("okteto context not initialized")
 	}
-	c, config, err := getK8sClientWithApiConfig(Context().Cfg, io.NewIOController())
+	c, config, err := getK8sClientWithApiConfig(Context().Cfg, nil)
 	if err == nil {
 		Context().SetClusterType(config.Host)
 	}
@@ -429,7 +429,7 @@ func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 }
 
 // GetK8sClientWithLogger reutrns a kubernetes client for the current okteto context and a kubernetes config object
-func GetK8sClientWithLogger(oktetoK8sLogger *io.IOController) (*kubernetes.Clientset, *rest.Config, error) {
+func GetK8sClientWithLogger(oktetoK8sLogger *io.K8sLogger) (*kubernetes.Clientset, *rest.Config, error) {
 	if Context().Cfg == nil {
 		return nil, nil, fmt.Errorf("okteto context not initialized")
 	}

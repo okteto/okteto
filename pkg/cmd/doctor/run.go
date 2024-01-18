@@ -17,6 +17,7 @@ import (
 	"compress/flate"
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/log/io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -109,7 +110,7 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 		files = append(files, remoteLogsPath)
 	}
 
-	k8sLogsPath := config.GetK8sLogsFilePath()
+	k8sLogsPath := io.GetK8sLoggerFilePath()
 	if filesystem.FileExists(k8sLogsPath) {
 		files = append(files, k8sLogsPath)
 	}

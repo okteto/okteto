@@ -36,8 +36,6 @@ const (
 
 	// ErrorLevel is the error level
 	ErrorLevel = "error"
-
-	OktetoK8sLoggerEnabledEnvVar = "OKTETO_K8S_REQUESTS_LOGGER_ENABLED"
 )
 
 var (

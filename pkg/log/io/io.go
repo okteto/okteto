@@ -69,9 +69,3 @@ func (ioc *IOController) SetStage(stage string) {
 	ioc.out.SetStage(stage)
 	oktetoLog.SetStage(stage)
 }
-
-// ConfigureFileLogger configured the logger to log to a file
-func (ioc *IOController) ConfigureFileLogger(logPath string) {
-	ioc.oktetoLogger = newFileLogger(logPath)
-	ioc.oktetoLogger.Logger.Info("test")
-}

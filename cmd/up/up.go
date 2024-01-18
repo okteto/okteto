@@ -91,7 +91,7 @@ type UpOptions struct {
 }
 
 // Up starts a development container
-func Up(at analyticsTrackerInterface, ioCtrl *io.IOController, k8sLogsCtrl *io.IOController) *cobra.Command {
+func Up(at analyticsTrackerInterface, ioCtrl *io.IOController, k8sLogger *io.K8sLogger) *cobra.Command {
 	upOptions := &UpOptions{}
 	cmd := &cobra.Command{
 		Use:   "up [service]",
@@ -197,7 +197,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.IOController, k8sLogsCtrl *io.I
 			}
 			if oktetoManifest.Name == "" {
 				oktetoLog.Info("okteto manifest doesn't have a name, inferring it...")
-				c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogsCtrl).Provide(okteto.Context().Cfg)
+				c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okteto.Context().Cfg)
 				if err != nil {
 					return err
 				}
@@ -217,7 +217,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.IOController, k8sLogsCtrl *io.I
 				}
 				if answer {
 					mc := &manifest.ManifestCommand{
-						K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogsCtrl),
+						K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
 					}
 					if upOptions.ManifestPath == "" {
 						upOptions.ManifestPath = utils.DefaultManifest
@@ -263,7 +263,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.IOController, k8sLogsCtrl *io.I
 				Fs:                afero.NewOsFs(),
 				analyticsTracker:  at,
 				analyticsMeta:     upMeta,
-				K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogsCtrl),
+				K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
 				tokenUpdater:      newTokenUpdaterController(),
 				builder:           buildv2.NewBuilderFromScratch(at, ioCtrl),
 			}
@@ -278,7 +278,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.IOController, k8sLogsCtrl *io.I
 				oktetoLog.Infof("Terminal: %v", up.stateTerm)
 			}
 
-			k8sClient, _, err := okteto.GetK8sClientWithLogger(k8sLogsCtrl)
+			k8sClient, _, err := okteto.GetK8sClientWithLogger(k8sLogger)
 			if err != nil {
 				return fmt.Errorf("failed to load k8s client: %w", err)
 			}
@@ -290,7 +290,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.IOController, k8sLogsCtrl *io.I
 				// the autocreate property is forced to be true
 				forceAutocreate = true
 			} else if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, k8sClient)) {
-				err := up.deployApp(ctx)
+				err := up.deployApp(ctx, k8sLogger)
 
 				// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
 				if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands) {
@@ -577,24 +577,23 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVaria
 	return &overridedEnvVars, nil
 }
 
-func (up *upContext) deployApp(ctx context.Context) error {
-	k8sProvider := okteto.NewK8sClientProvider()
+func (up *upContext) deployApp(ctx context.Context, k8slogger *io.K8sLogger) error {
+	k8sProvider := okteto.NewK8sClientProviderWithLogger(k8slogger)
 	pc, err := pipelineCMD.NewCommand()
 	if err != nil {
 		return err
 	}
-	k8sClientProvider := okteto.NewK8sClientProvider()
 	c := &deploy.DeployCommand{
 		GetManifest:        up.getManifest,
 		GetDeployer:        deploy.GetDeployer,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),
-		K8sClientProvider:  k8sClientProvider,
+		K8sClientProvider:  k8sProvider,
 		Builder:            up.builder,
 		GetExternalControl: deploy.NewDeployExternalK8sControl,
 		Fs:                 up.Fs,
-		CfgMapHandler:      deploy.NewConfigmapHandler(k8sProvider),
+		CfgMapHandler:      deploy.NewConfigmapHandler(k8sProvider, k8slogger),
 		PipelineCMD:        pc,
-		DeployWaiter:       deploy.NewDeployWaiter(k8sClientProvider),
+		DeployWaiter:       deploy.NewDeployWaiter(k8sProvider, k8slogger),
 		EndpointGetter:     deploy.NewEndpointGetter,
 		AnalyticsTracker:   up.analyticsTracker,
 	}

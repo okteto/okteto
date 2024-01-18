@@ -18,7 +18,7 @@ import (
 	cryptoRand "crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
+	"github.com/spf13/pflag"
 	"math/rand"
 	"os"
 	"strings"
@@ -107,7 +107,7 @@ func main() {
 
 	okteto.InitContextWithDeprecatedToken()
 
-	k8sLogger := io.NewIOController()
+	k8sLogger := io.NewK8sLogger()
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
@@ -116,7 +116,6 @@ func main() {
 		SilenceErrors: true,
 		PersistentPreRun: func(ccmd *cobra.Command, args []string) {
 			ccmd.SilenceUsage = true
-			fmt.Printf("Called: %s\n", ccmd.CalledAs())
 			if !registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
 				oktetoLog.SetLevel(logLevel)          // TODO: Remove when we fully move to ioController
 				oktetoLog.SetOutputFormat(outputMode) // TODO: Remove when we fully move to ioController
@@ -127,10 +126,10 @@ func main() {
 			okteto.SetServerNameOverride(serverNameOverride)
 			ioController.Logger().Infof("started %s", strings.Join(os.Args, " "))
 
-			if env.LoadBooleanOrDefault(io.OktetoK8sLoggerEnabledEnvVar, false) {
-				k8sLogsFilepath := config.GetK8sLogsFilePath()
-				k8sLogger.ConfigureFileLogger(k8sLogsFilepath)
-				ioController.Logger().Debugf("okteto k8s log file: %s", k8sLogsFilepath)
+			if k8sLogger.IsEnabled() {
+				cmdName, flags := getCurrentCmdWithUsedFlags(ccmd)
+				k8sLogger.Start(cmdName, flags)
+				ioController.Logger().Debugf("okteto k8s log file: %s", io.GetK8sLoggerFilePath())
 			}
 		},
 		PersistentPostRun: func(ccmd *cobra.Command, args []string) {
@@ -160,7 +159,7 @@ func main() {
 	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
 	root.AddCommand(registrytoken.RegistryToken(ctx))
 
-	root.AddCommand(build.Build(ctx, ioController, at))
+	root.AddCommand(build.Build(ctx, ioController, at, k8sLogger))
 
 	root.AddCommand(namespace.Namespace(ctx))
 	root.AddCommand(cmd.Init(at, ioController))
@@ -172,8 +171,8 @@ func main() {
 	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
 	root.AddCommand(cmd.UpdateDeprecated())
-	root.AddCommand(deploy.Deploy(ctx, at, ioController))
-	root.AddCommand(destroy.Destroy(ctx, at, ioController))
+	root.AddCommand(deploy.Deploy(ctx, at, ioController, k8sLogger))
+	root.AddCommand(destroy.Destroy(ctx, at, ioController, k8sLogger))
 	root.AddCommand(deploy.Endpoints(ctx))
 	root.AddCommand(logs.Logs(ctx))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
@@ -203,4 +202,15 @@ func main() {
 		}
 		os.Exit(1)
 	}
+}
+
+func getCurrentCmdWithUsedFlags(cmd *cobra.Command) (string, string) {
+	var flags []string
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		if f.Changed {
+			flags = append(flags, fmt.Sprintf("--%s=%s", f.Name, f.Value))
+		}
+	})
+
+	return cmd.CalledAs(), strings.Join(flags, " ")
 }

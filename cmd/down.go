@@ -39,7 +39,7 @@ import (
 )
 
 // Down deactivates the development container
-func Down(k8sLogsCtrl *io.IOController) *cobra.Command {
+func Down(k8sLogsCtrl *io.K8sLogger) *cobra.Command {
 	var devPath string
 	var namespace string
 	var k8sContext string

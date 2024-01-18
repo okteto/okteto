@@ -143,7 +143,9 @@ func TestUpWithDeploy(t *testing.T) {
 	require.True(t, commands.HasUpCommandFinished(upResult.Pid.Pid))
 
 	// Test that the k8s logs have been written successfully
-	require.FileExists(t, filepath.Join(dir, config.GetK8sLogsFilePath()))
+	require.FileExists(t, filepath.Join(dir, config.K8sLogsFile))
+	// Expect a string contained in the file
+	require.FileContains(t, filepath.Join(dir, config.K8sLogsFile), "running: okteto up")
 
 }
 
