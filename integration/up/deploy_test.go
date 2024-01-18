@@ -19,7 +19,9 @@ package up
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/config"
 	"log"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -52,7 +54,10 @@ dev:
 
 func TestUpWithDeploy(t *testing.T) {
 	t.Parallel()
+	//t.Setenv(io.OktetoK8sLoggerEnabledEnvVar, "true")
+	//t.Setenv("OKTETO_HOME", "/var/folders/nt/ggnw9z4d1712sftc8606lj7r0000gn/T/tmp.fP3AdaLMnV")
 	// Prepare environment
+
 	dir := t.TempDir()
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
@@ -96,6 +101,9 @@ func TestUpWithDeploy(t *testing.T) {
 	}
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
 
+	home := os.Getenv("OKTETO_HOME")
+	fmt.Println(home)
+
 	// Test that the app image has been created correctly
 	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, model.DevCloneName("e2etest"), c)
 	require.NoError(t, err)
@@ -133,6 +141,9 @@ func TestUpWithDeploy(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDown(oktetoPath, downOpts))
 
 	require.True(t, commands.HasUpCommandFinished(upResult.Pid.Pid))
+
+	// Test that the k8s logs have been written successfully
+	require.FileExists(t, filepath.Join(dir, config.GetK8sLogsFilePath()))
 
 }
 

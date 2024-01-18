@@ -127,7 +127,7 @@ func main() {
 			okteto.SetServerNameOverride(serverNameOverride)
 			ioController.Logger().Infof("started %s", strings.Join(os.Args, " "))
 
-			if env.LoadBooleanOrDefault(io.OktetoK8sLoggerEnvVar, false) {
+			if env.LoadBooleanOrDefault(io.OktetoK8sLoggerEnabledEnvVar, false) {
 				k8sLogsFilepath := config.GetK8sLogsFilePath()
 				k8sLogger.ConfigureFileLogger(k8sLogsFilepath)
 				ioController.Logger().Debugf("okteto k8s log file: %s", k8sLogsFilepath)
@@ -150,16 +150,6 @@ func main() {
 	okClientProvider := okteto.NewOktetoClientProvider()
 	at := analytics.NewAnalyticsTracker()
 
-	//k8sLogsTempDir, err := os.MkdirTemp("", "okteto-k8s-logs")
-	//if err != nil {
-	//	ioController.Logger().Infof("error creating k8s logs temp dir: %s", err)
-	//}
-	//logPath := filepath.Join(k8sLogsTempDir, "okteto-k8s.log")
-	//ioController.Logger().Debugf("okteto k8s log file: %s", logPath)
-	//fmt.Printf("okteto k8s log file: %s\n", logPath)
-
-	//k8sLogger.ConfigureFileLogger(logPath)
-
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
 	root.AddCommand(cmd.Login())
@@ -175,7 +165,7 @@ func main() {
 	root.AddCommand(namespace.Namespace(ctx))
 	root.AddCommand(cmd.Init(at, ioController))
 	root.AddCommand(up.Up(at, ioController, k8sLogger))
-	root.AddCommand(cmd.Down())
+	root.AddCommand(cmd.Down(k8sLogger))
 	root.AddCommand(cmd.Status())
 	root.AddCommand(cmd.Doctor())
 	root.AddCommand(cmd.Exec())

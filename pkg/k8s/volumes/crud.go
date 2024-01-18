@@ -160,12 +160,12 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev, devPath st
 }
 
 // DestroyDev destroys the persistent volume claim for a given development container
-func DestroyDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
+func DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	return Destroy(ctx, dev.GetVolumeName(), dev.Namespace, c, dev.Timeout.Default)
 }
 
 // Destroy destroys a persistent volume claim
-func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientset, timeout time.Duration) error {
+func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface, timeout time.Duration) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(namespace)
 	oktetoLog.Infof("destroying volume '%s'", name)
 
@@ -223,7 +223,7 @@ func DestroyWithoutTimeout(ctx context.Context, name, namespace string, c kubern
 	return nil
 }
 
-func checkIfAttached(ctx context.Context, name, namespace string, c *kubernetes.Clientset) error {
+func checkIfAttached(ctx context.Context, name, namespace string, c kubernetes.Interface) error {
 	pods, err := c.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		oktetoLog.Infof("failed to get available pods: %s", err)
