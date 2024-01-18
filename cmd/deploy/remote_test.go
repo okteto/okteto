@@ -336,6 +336,7 @@ func TestGetDeployFlags(t *testing.T) {
 			config: config{
 				opts: &Options{
 					ManifestPathFlag: "/hello/this/is/a/test",
+					ManifestPath:     "/hello/this/is/a/test",
 					Timeout:          5 * time.Minute,
 				},
 			},

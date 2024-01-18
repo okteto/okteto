@@ -168,6 +168,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 
 	buildInfo := &build.Info{
 		Dockerfile: dockerfile,
+		Context:    cwd,
 	}
 
 	// undo modification of CWD for Build command
@@ -328,7 +329,7 @@ func getDeployFlags(opts *Options) ([]string, error) {
 	}
 
 	if opts.ManifestPathFlag != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", opts.ManifestPathFlag))
+		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", opts.ManifestPath))
 	}
 
 	if len(opts.Variables) > 0 {
