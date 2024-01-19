@@ -59,7 +59,7 @@ func Push(ctx context.Context) *cobra.Command {
 	pushOpts := &pushOptions{}
 	cmd := &cobra.Command{
 		Hidden: true,
-		Use:    "push [svc]",
+		Use:    "push [service]",
 		Short:  "Build, push and redeploy source code to the target app",
 		Args:   utils.MaximumNArgsAccepted(1, "https://www.okteto.com/docs/0.10/reference/cli/#push"),
 		RunE: func(cmd *cobra.Command, args []string) error {

@@ -94,7 +94,7 @@ type UpOptions struct {
 func Up(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
 	upOptions := &UpOptions{}
 	cmd := &cobra.Command{
-		Use:   "up [svc]",
+		Use:   "up [service]",
 		Short: "Launch your development environment",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -735,18 +735,16 @@ func (up *upContext) activateLoop() {
 		if err != nil {
 			oktetoLog.Infof("activate failed with: %s", err)
 
-			if err == oktetoErrors.ErrLostSyncthing {
-				isTransientError = false
-				iter = 0
+			oktetoLog.Info("updating kubeconfig token")
+			if err := up.tokenUpdater.UpdateKubeConfigToken(); err != nil {
+				oktetoLog.Infof("error updating k8s token: %w", err)
+				isTransientError = true
 				continue
 			}
 
-			if errors.Is(err, okteto.ErrK8sUnauthorised) {
-				oktetoLog.Info("updating kubeconfig token")
-				if err := up.tokenUpdater.UpdateKubeConfigToken(); err != nil {
-					up.Exit <- fmt.Errorf("error updating k8s token: %w", err)
-					return
-				}
+			if err == oktetoErrors.ErrLostSyncthing {
+				isTransientError = false
+				iter = 0
 				continue
 			}
 
