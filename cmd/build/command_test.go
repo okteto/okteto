@@ -400,7 +400,7 @@ func Test_NewBuildCommand(t *testing.T) {
 			CurrentContext: "test",
 		},
 	}
-	got := NewBuildCommand(io.NewIOController(), fakeAnalyticsTracker{}, okCtx)
+	got := NewBuildCommand(io.NewIOController(), fakeAnalyticsTracker{}, okCtx, nil)
 	require.IsType(t, &Command{}, got)
 	require.NotNil(t, got.GetManifest)
 	require.NotNil(t, got.Builder)

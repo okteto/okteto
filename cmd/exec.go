@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/log/io"
 	"os"
 	"time"
 
@@ -31,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/ssh"

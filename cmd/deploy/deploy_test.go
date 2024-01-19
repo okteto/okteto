@@ -321,7 +321,7 @@ type fakeDeployer struct {
 	externalControlProvider fakeExternalControlProvider
 }
 
-func (d fakeDeployer) Get(_ context.Context, _ *Options, _ builderInterface, cmapHandler configMapHandler, _ okteto.K8sClientProvider, _ kubeConfigHandler, _ portGetterFunc, _ *io.IOController) (deployerInterface, error) {
+func (d fakeDeployer) Get(_ context.Context, _ *Options, _ builderInterface, cmapHandler configMapHandler, _ okteto.K8sClientProviderWithLogger, _ kubeConfigHandler, _ portGetterFunc, _ *io.IOController, _ *io.K8sLogger) (deployerInterface, error) {
 	return &localDeployer{
 		Proxy:              d.proxy,
 		Executor:           d.executor,
@@ -445,9 +445,9 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	c := &DeployCommand{
 		GetManifest:       getErrorManifest,
 		GetDeployer:       fakeDeployer.Get,
-		Builder:           buildv2.NewBuilder(builder, reg, io.NewIOController(), fakeTracker, okCtx),
+		Builder:           buildv2.NewBuilder(builder, reg, io.NewIOController(), fakeTracker, okCtx, nil),
 		K8sClientProvider: fakeK8sClientProvider,
-		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                afero.NewMemMapFs(),
 	}
 
@@ -458,7 +458,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	// we should get a build error because Dockerfile does not exist
 	assert.True(t, strings.Contains(err.Error(), oktetoErrors.InvalidDockerfile))
 
-	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
+	fakeClient, _, err := c.K8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
@@ -525,7 +525,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		GetManifest:       getFakeManifest,
 		GetDeployer:       fakeDeployer.Get,
 		K8sClientProvider: fakeK8sClientProvider,
-		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                fakeOs,
 		Builder:           &fakeV2Builder{},
 	}
@@ -549,7 +549,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	assert.True(t, fakeDeployer.proxy.shutdown)
 
 	// check if configmap has been created
-	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
+	fakeClient, _, err := c.K8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
@@ -603,7 +603,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 		GetManifest:       getFakeManifest,
 		GetDeployer:       fakeDeployer.Get,
 		K8sClientProvider: fakeK8sClientProvider,
-		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                afero.NewMemMapFs(),
 	}
 	ctx := context.Background()
@@ -617,7 +617,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	assert.False(t, fakeDeployer.proxy.started)
 
 	// check if configmap has been created
-	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
+	fakeClient, _, err := c.K8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
@@ -665,7 +665,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		GetExternalControl: fakeExternalControlProvider.getFakeExternalControl,
 		K8sClientProvider:  fakeK8sClientProvider,
 		EndpointGetter:     getFakeEndpoint,
-		CfgMapHandler:      newDefaultConfigMapHandler(fakeK8sClientProvider),
+		CfgMapHandler:      newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                 fakeOs,
 		Builder:            &fakeV2Builder{},
 	}
@@ -690,7 +690,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	assert.False(t, fakeDeployer.proxy.shutdown)
 
 	// check if configmap has been created
-	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
+	fakeClient, _, err := c.K8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
@@ -737,7 +737,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		EndpointGetter:     getFakeEndpoint,
 		GetExternalControl: fakeExternalControlProvider.getFakeExternalControl,
 		Fs:                 fakeOs,
-		CfgMapHandler:      newDefaultConfigMapHandler(fakeK8sClientProvider),
+		CfgMapHandler:      newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		GetDeployer:        fakeDeployer.Get,
 		Builder:            &fakeV2Builder{},
 	}
@@ -761,7 +761,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 	assert.True(t, fakeDeployer.proxy.shutdown)
 
 	// check if configmap has been created
-	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
+	fakeClient, _, err := c.K8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
@@ -951,7 +951,7 @@ func (f *fakeEndpointControl) List(_ context.Context, _ *EndpointsOptions, _ str
 	return f.endpoints, f.err
 }
 
-func getFakeEndpoint() (EndpointGetter, error) {
+func getFakeEndpoint(_ *io.K8sLogger) (EndpointGetter, error) {
 	return EndpointGetter{
 		endpointControl: &fakeEndpointControl{},
 	}, nil
@@ -1153,7 +1153,7 @@ func TestDeployOnlyDependencies(t *testing.T) {
 		K8sClientProvider:  fakeK8sClientProvider,
 		GetExternalControl: fakeExternalControlProvider.getFakeExternalControl,
 		Fs:                 fakeOs,
-		CfgMapHandler:      newDefaultConfigMapHandler(fakeK8sClientProvider),
+		CfgMapHandler:      newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		GetDeployer:        fakeDeployer.Get,
 	}
 	ctx := context.Background()
@@ -1438,7 +1438,7 @@ func Test_GetDeployer(t *testing.T) {
 			ctx := context.TODO()
 			got, err := GetDeployer(ctx, tt.opts, nil, &fakeCmapHandler{}, &fakeK8sProvider{}, &fakeKubeConfig{
 				config: &rest.Config{},
-			}, tt.portGetter, io.NewIOController())
+			}, tt.portGetter, io.NewIOController(), nil)
 
 			if tt.expectedErr == nil {
 				require.NotNil(t, got)

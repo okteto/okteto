@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"github.com/okteto/okteto/pkg/log/io"
 	"net"
 	"net/url"
 	"os"
@@ -35,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -416,7 +416,7 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 	return nil
 }
 
-// Deprecated: Use GetK8sClient instead
+// GetK8sClient returns a kubernetes client for the current okteto context and a kubernetes config object
 func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 	if Context().Cfg == nil {
 		return nil, nil, fmt.Errorf("okteto context not initialized")
@@ -428,7 +428,7 @@ func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 	return c, config, err
 }
 
-// GetK8sClientWithLogger reutrns a kubernetes client for the current okteto context and a kubernetes config object
+// GetK8sClientWithLogger returns a kubernetes client for the current okteto context and a kubernetes config object
 func GetK8sClientWithLogger(oktetoK8sLogger *io.K8sLogger) (*kubernetes.Clientset, *rest.Config, error) {
 	if Context().Cfg == nil {
 		return nil, nil, fmt.Errorf("okteto context not initialized")

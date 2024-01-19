@@ -15,10 +15,11 @@ package io
 
 import (
 	"fmt"
+	"log/slog"
+
 	sloglogrus "github.com/samber/slog-logrus/v2"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
-	"log/slog"
 )
 
 const (

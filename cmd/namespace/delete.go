@@ -16,7 +16,6 @@ package namespace
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/log/io"
 	"os"
 	"os/signal"
 	"sync"
@@ -28,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"

@@ -18,7 +18,6 @@ import (
 	cryptoRand "crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"github.com/spf13/pflag"
 	"math/rand"
 	"os"
 	"strings"
@@ -47,6 +46,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	generateFigSpec "github.com/withfig/autocomplete-tools/packages/cobra"
 	utilRuntime "k8s.io/apimachinery/pkg/util/runtime"
 	// Load the different library for authentication
@@ -206,11 +206,11 @@ func main() {
 
 func getCurrentCmdWithUsedFlags(cmd *cobra.Command) (string, string) {
 	var flags []string
-	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+	cmd.Flags().Visit(func(f *pflag.Flag) {
 		if f.Changed {
 			flags = append(flags, fmt.Sprintf("--%s=%s", f.Name, f.Value))
 		}
 	})
 
-	return cmd.CalledAs(), strings.Join(flags, " ")
+	return cmd.Name(), strings.Join(flags, " ")
 }

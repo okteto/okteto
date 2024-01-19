@@ -16,7 +16,6 @@ package cmd
 import (
 	"context"
 	"errors"
-	"github.com/okteto/okteto/pkg/log/io"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -24,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/doctor"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )

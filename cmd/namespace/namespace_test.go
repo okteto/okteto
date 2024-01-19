@@ -18,6 +18,7 @@ import (
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -30,6 +31,10 @@ type fakeK8sProvider struct {
 
 func (p *fakeK8sProvider) Provide(_ *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
 	return p.k8sClient, nil, nil
+}
+
+func (f *fakeK8sProvider) ProvideWithLogger(c *clientcmdapi.Config, _ *io.K8sLogger) (kubernetes.Interface, *rest.Config, error) {
+	return f.Provide(c)
 }
 
 func (*fakeK8sProvider) GetIngressClient() (*ingresses.Client, error) {

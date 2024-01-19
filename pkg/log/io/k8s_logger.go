@@ -15,10 +15,11 @@ package io
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/env"
 	"net/url"
 	"path/filepath"
+
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/env"
 )
 
 const (

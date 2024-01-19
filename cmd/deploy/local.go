@@ -16,7 +16,6 @@ package deploy
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/log/io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,6 +32,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	kconfig "github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
@@ -40,19 +40,18 @@ import (
 )
 
 type localDeployer struct {
+	deployWaiter       DeployWaiter
 	Proxy              proxyInterface
 	Kubeconfig         kubeConfigHandler
 	ConfigMapHandler   configMapHandler
 	Executor           executor.ManifestExecutor
 	K8sClientProvider  okteto.K8sClientProviderWithLogger
-	deployWaiter       DeployWaiter
 	Fs                 afero.Fs
 	DivertDriver       divert.Driver
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
+	k8sLogger          *io.K8sLogger
 	TempKubeconfigFile string
 	isRemote           bool
-
-	k8sLogger *io.K8sLogger
 }
 
 // newLocalDeployer initializes a local deployer from a name and a boolean indicating if we should run with bash or not

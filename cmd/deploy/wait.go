@@ -16,7 +16,6 @@ package deploy
 import (
 	"context"
 	"fmt"
-	ioCtrl "github.com/okteto/okteto/pkg/log/io"
 	"os"
 	"os/signal"
 	"time"
@@ -26,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	ioCtrl "github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 

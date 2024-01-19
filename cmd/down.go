@@ -17,8 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/log/io"
-	"k8s.io/client-go/kubernetes"
 	"os"
 	"os/signal"
 
@@ -32,10 +30,12 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
+	"k8s.io/client-go/kubernetes"
 )
 
 // Down deactivates the development container

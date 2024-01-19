@@ -85,7 +85,7 @@ type K8sClient struct {
 	oktetoK8sLogger *ioCtrl.K8sLogger
 }
 
-// Deprecated: use NewK8sClientProviderWithLogger instead
+// NewK8sClientProvider returns new K8sClient
 func NewK8sClientProvider() *K8sClient {
 	return &K8sClient{}
 }

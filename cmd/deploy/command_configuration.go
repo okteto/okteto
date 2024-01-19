@@ -15,7 +15,6 @@ package deploy
 
 import (
 	"context"
-	ioCtrl "github.com/okteto/okteto/pkg/log/io"
 	"net/url"
 	"os"
 	"reflect"
@@ -25,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	ioCtrl "github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	modelUtils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
