@@ -93,7 +93,7 @@ func NewK8sClientProvider() *K8sClient {
 	return &K8sClient{}
 }
 
-// NewK8sClientProviderWithLogger returna new K8sClient that logs all requests to k8s
+// NewK8sClientProviderWithLogger returns new K8sClient that logs all requests to k8s
 func NewK8sClientProviderWithLogger(oktetoK8sLogger *ioCtrl.K8sLogger) *K8sClient {
 	return &K8sClient{
 		oktetoK8sLogger: oktetoK8sLogger,

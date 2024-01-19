@@ -161,20 +161,20 @@ func main() {
 
 	root.AddCommand(build.Build(ctx, ioController, at, k8sLogger))
 
-	root.AddCommand(namespace.Namespace(ctx))
+	root.AddCommand(namespace.Namespace(ctx, k8sLogger))
 	root.AddCommand(cmd.Init(at, ioController))
 	root.AddCommand(up.Up(at, ioController, k8sLogger))
 	root.AddCommand(cmd.Down(k8sLogger))
 	root.AddCommand(cmd.Status())
-	root.AddCommand(cmd.Doctor())
-	root.AddCommand(cmd.Exec())
+	root.AddCommand(cmd.Doctor(k8sLogger))
+	root.AddCommand(cmd.Exec(k8sLogger))
 	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
 	root.AddCommand(cmd.UpdateDeprecated())
 	root.AddCommand(deploy.Deploy(ctx, at, ioController, k8sLogger))
 	root.AddCommand(destroy.Destroy(ctx, at, ioController, k8sLogger))
-	root.AddCommand(deploy.Endpoints(ctx))
-	root.AddCommand(logs.Logs(ctx))
+	root.AddCommand(deploy.Endpoints(ctx, k8sLogger))
+	root.AddCommand(logs.Logs(ctx, k8sLogger))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
 
 	// deprecated

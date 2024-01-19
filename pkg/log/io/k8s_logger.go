@@ -68,5 +68,5 @@ func (k *K8sLogger) Log(respStatusCode int, reqMethod, reqUrl string) {
 	if err == nil {
 		reqUrl = decodedUrl
 	}
-	k.Debugf("%d %s %s", respStatusCode, reqMethod, reqUrl)
+	k.Debugf("%d %7s %s", respStatusCode, reqMethod, reqUrl)
 }

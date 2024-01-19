@@ -15,6 +15,7 @@ package namespace
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/log/io"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -27,7 +28,7 @@ import (
 type NamespaceCommand struct {
 	ctxCmd            *contextCMD.ContextCommand
 	okClient          types.OktetoInterface
-	k8sClientProvider okteto.K8sClientProvider
+	k8sClientProvider okteto.K8sClientProviderWithLogger
 }
 
 // NewCommand creates a namespace command for use in further operations
@@ -40,21 +41,21 @@ func NewCommand() (*NamespaceCommand, error) {
 	return &NamespaceCommand{
 		ctxCmd:            contextCMD.NewContextCommand(),
 		okClient:          c,
-		k8sClientProvider: okteto.NewK8sClientProvider(),
+		k8sClientProvider: okteto.NewK8sClientProviderWithLogger(nil),
 	}, nil
 }
 
-// NewCommand creates a namespace command for use in further operations
+// NewCommandStateless creates a namespace command for use in further operations
 func NewCommandStateless(c *okteto.OktetoClient) *NamespaceCommand {
 	return &NamespaceCommand{
 		ctxCmd:            contextCMD.NewContextCommand(),
 		okClient:          c,
-		k8sClientProvider: okteto.NewK8sClientProvider(),
+		k8sClientProvider: okteto.NewK8sClientProviderWithLogger(nil),
 	}
 }
 
 // Namespace fetch credentials for a cluster namespace
-func Namespace(ctx context.Context) *cobra.Command {
+func Namespace(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &UseOptions{}
 	cmd := &cobra.Command{
 		Use:     "namespace",
@@ -68,7 +69,7 @@ func Namespace(ctx context.Context) *cobra.Command {
 	cmd.AddCommand(Use(ctx))
 	cmd.AddCommand(List(ctx))
 	cmd.AddCommand(Create(ctx))
-	cmd.AddCommand(Delete(ctx))
+	cmd.AddCommand(Delete(ctx, k8sLogger))
 	cmd.AddCommand(Sleep(ctx))
 	cmd.AddCommand(Wake(ctx))
 	return cmd

@@ -16,6 +16,7 @@ package namespace
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/log/io"
 	"os"
 	"os/signal"
 	"sync"
@@ -34,7 +35,7 @@ import (
 )
 
 // Delete deletes a namespace
-func Delete(ctx context.Context) *cobra.Command {
+func Delete(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete <name>",
 		Short: "Delete a namespace",
@@ -57,7 +58,7 @@ func Delete(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = nsCmd.ExecuteDeleteNamespace(ctx, nsToDelete)
+			err = nsCmd.ExecuteDeleteNamespace(ctx, nsToDelete, k8sLogger)
 			analytics.TrackDeleteNamespace(err == nil)
 			return err
 		},
@@ -65,7 +66,7 @@ func Delete(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespace string) error {
+func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
 	oktetoLog.Spinner(fmt.Sprintf("Deleting %s namespace", namespace))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -75,7 +76,7 @@ func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespac
 		return fmt.Errorf("%w: %w", errFailedDeleteNamespace, err)
 	}
 
-	if err := nc.watchDelete(ctx, namespace); err != nil {
+	if err := nc.watchDelete(ctx, namespace, k8sLogger); err != nil {
 		return err
 	}
 
@@ -96,7 +97,7 @@ func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespac
 	return nil
 }
 
-func (nc *NamespaceCommand) watchDelete(ctx context.Context, namespace string) error {
+func (nc *NamespaceCommand) watchDelete(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
 	waitCtx, ctxCancel := context.WithCancel(ctx)
 	defer ctxCancel()
 
@@ -112,7 +113,7 @@ func (nc *NamespaceCommand) watchDelete(ctx context.Context, namespace string) e
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		exit <- nc.waitForNamespaceDeleted(waitCtx, namespace)
+		exit <- nc.waitForNamespaceDeleted(waitCtx, namespace, k8sLogger)
 	}(&wg)
 
 	wg.Add(1)
@@ -137,13 +138,13 @@ func (nc *NamespaceCommand) watchDelete(ctx context.Context, namespace string) e
 	}
 }
 
-func (nc *NamespaceCommand) waitForNamespaceDeleted(ctx context.Context, namespace string) error {
+func (nc *NamespaceCommand) waitForNamespaceDeleted(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
 	timeout := 5 * time.Minute
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 
 	// provide k8s
-	c, _, err := nc.k8sClientProvider.Provide(okteto.Context().Cfg)
+	c, _, err := nc.k8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, k8sLogger)
 	if err != nil {
 		return err
 	}

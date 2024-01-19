@@ -56,7 +56,7 @@ func deprecatedDeleteNamespace(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = nsCmd.ExecuteDeleteNamespace(ctx, args[0])
+			err = nsCmd.ExecuteDeleteNamespace(ctx, args[0], nil)
 			analytics.TrackDeleteNamespace(err == nil)
 			return err
 		},

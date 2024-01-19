@@ -16,6 +16,7 @@ package logs
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/log/io"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -53,7 +54,7 @@ type LogsOptions struct {
 	All          bool
 }
 
-func Logs(ctx context.Context) *cobra.Command {
+func Logs(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &LogsOptions{}
 
 	cmd := &cobra.Command{
@@ -77,7 +78,7 @@ func Logs(ctx context.Context) *cobra.Command {
 				manifest.Name = options.Name
 			}
 			if manifest.Name == "" {
-				c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+				c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okteto.Context().Cfg)
 				if err != nil {
 					return err
 				}

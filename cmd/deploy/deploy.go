@@ -109,7 +109,7 @@ type DeployCommand struct {
 	Builder            builderInterface
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
 	GetDeployer        getDeployerFunc
-	EndpointGetter     func() (EndpointGetter, error)
+	EndpointGetter     func(k8sLogger *io.K8sLogger) (EndpointGetter, error)
 	DeployWaiter       DeployWaiter
 	CfgMapHandler      configMapHandler
 	Fs                 afero.Fs
@@ -400,7 +400,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 				}
 			}
 			if !env.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
-				eg, err := dc.EndpointGetter()
+				eg, err := dc.EndpointGetter(dc.K8sLogger)
 				if err != nil {
 					oktetoLog.Infof("could not create endpoint getter: %s", err)
 				}
