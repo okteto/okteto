@@ -15,7 +15,6 @@ package okteto
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"sync"
@@ -78,8 +77,6 @@ func (t *tokenRotationTransport) RoundTrip(req *http.Request) (*http.Response, e
 	}
 	if t.k8sLogger != nil && t.k8sLogger.IsEnabled() {
 		t.k8sLogger.Log(resp.StatusCode, req.Method, req.URL.String())
-	} else {
-		fmt.Println("LOGGER NIL!")
 	}
 	return resp, err
 }

@@ -203,11 +203,6 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string, k8sLogger *
 		dev.LoadRemote(ssh.GetPublicKey())
 		oktetoLog.StopSpinner()
 		if dev.IsHybridModeEnabled() {
-			//k8sClient, _, err := okteto.GetK8sClient()
-			//if err != nil {
-			//	return err
-			//}
-
 			hybridCtx := &up.HybridExecCtx{
 				Dev:       dev,
 				Workdir:   dev.Workdir,

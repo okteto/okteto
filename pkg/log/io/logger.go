@@ -160,11 +160,6 @@ func (ol *oktetoLogger) Debug(msg string) {
 	ol.logrusLogger.Debug(msg)
 }
 
-//// ConfigureFileLogger configured the logger to log to a file
-//func (ol *oktetoLogger) ConfigureFileLogger() {
-//	ol.Set
-//}
-
 // InvalidLogLevelError is returned when the log level is invalid
 type InvalidLogLevelError struct {
 	level string

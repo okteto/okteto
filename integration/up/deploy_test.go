@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"github.com/okteto/okteto/pkg/config"
 	"log"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -54,8 +53,6 @@ dev:
 
 func TestUpWithDeploy(t *testing.T) {
 	t.Parallel()
-	//t.Setenv(io.OktetoK8sLoggerEnabledEnvVar, "true")
-	//t.Setenv("OKTETO_HOME", "/var/folders/nt/ggnw9z4d1712sftc8606lj7r0000gn/T/tmp.fP3AdaLMnV")
 	// Prepare environment
 
 	dir := t.TempDir()
@@ -100,9 +97,6 @@ func TestUpWithDeploy(t *testing.T) {
 		ConfigFile: filepath.Join(dir, ".kube", "config"),
 	}
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
-
-	home := os.Getenv("OKTETO_HOME")
-	fmt.Println(home)
 
 	// Test that the app image has been created correctly
 	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, model.DevCloneName("e2etest"), c)
