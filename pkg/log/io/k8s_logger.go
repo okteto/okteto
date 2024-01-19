@@ -24,7 +24,7 @@ import (
 
 const (
 	OktetoK8sLoggerEnabledEnvVar = "OKTETO_K8S_REQUESTS_LOGGER_ENABLED"
-	K8sLogsFile                  = "okteto-k8s.log"
+	K8sLogsFileName              = "okteto-k8s.log"
 )
 
 type K8sLogger struct {
@@ -58,7 +58,7 @@ func (k *K8sLogger) Start(cmdName, flags string) {
 // GetK8sLoggerFilePath returns the path of the okteto k8s logs file
 func GetK8sLoggerFilePath() string {
 	okHome := config.GetOktetoHome()
-	k8sLogsFilepath := filepath.Join(okHome, K8sLogsFile)
+	k8sLogsFilepath := filepath.Join(okHome, K8sLogsFileName)
 
 	return k8sLogsFilepath
 }

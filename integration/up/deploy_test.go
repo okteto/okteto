@@ -19,8 +19,8 @@ package up
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/config"
 	"log"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -136,10 +136,11 @@ func TestUpWithDeploy(t *testing.T) {
 
 	require.True(t, commands.HasUpCommandFinished(upResult.Pid.Pid))
 
-	// Test that the k8s logs have been written successfully
-	require.FileExists(t, filepath.Join(dir, config.K8sLogsFile))
-	// Expect a string contained in the file
-	require.FileContains(t, filepath.Join(dir, config.K8sLogsFile), "running: okteto up")
+	k8sLogsFilePath := filepath.Join(dir, ".okteto", "okteto-k8s.log")
+	require.FileExists(t, k8sLogsFilePath)
+	k8sLogs, err := os.ReadFile(k8sLogsFilePath)
+	require.NoError(t, err)
+	require.Contains(t, string(k8sLogs), fmt.Sprintf("running cmd: up --deploy=true --namespace=%s", testNamespace))
 
 }
 
