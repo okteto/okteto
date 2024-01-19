@@ -38,7 +38,7 @@ func Restart() *cobra.Command {
 	var devPath string
 
 	cmd := &cobra.Command{
-		Use:    "restart [svc]",
+		Use:    "restart [service]",
 		Short:  "Restart the deployments listed in the services field of a development container",
 		Args:   utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#restart"),
 		Hidden: true,

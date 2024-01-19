@@ -39,7 +39,7 @@ type doctorOptions struct {
 func Doctor() *cobra.Command {
 	doctorOpts := &doctorOptions{}
 	cmd := &cobra.Command{
-		Use:   "doctor [svc]",
+		Use:   "doctor [service]",
 		Short: "Generate a zip file with the okteto logs",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#doctor"),
 		RunE: func(cmd *cobra.Command, args []string) error {
