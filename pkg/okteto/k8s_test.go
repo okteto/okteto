@@ -14,11 +14,11 @@
 package okteto
 
 import (
-	"github.com/okteto/okteto/pkg/log/io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
