@@ -128,8 +128,8 @@ func main() {
 
 			if k8sLogger.IsEnabled() {
 				cmdName, flags := getCurrentCmdWithUsedFlags(ccmd)
-				k8sLogger.Start(cmdName, flags)
-				ioController.Logger().Debugf("okteto k8s log file: %s", io.GetK8sLoggerFilePath())
+				k8sLogger.Start(config.GetOktetoHome(), cmdName, flags)
+				ioController.Logger().Debugf("okteto k8s log file: %s", io.GetK8sLoggerFilePath(config.GetOktetoHome()))
 			}
 		},
 		PersistentPostRun: func(ccmd *cobra.Command, args []string) {

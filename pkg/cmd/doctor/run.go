@@ -110,7 +110,7 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 		files = append(files, remoteLogsPath)
 	}
 
-	k8sLogsPath := io.GetK8sLoggerFilePath()
+	k8sLogsPath := io.GetK8sLoggerFilePath(config.GetOktetoHome())
 	if filesystem.FileExists(k8sLogsPath) {
 		files = append(files, k8sLogsPath)
 	}

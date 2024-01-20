@@ -19,6 +19,7 @@ package up
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/log/io"
 	"log"
 	"os"
 	"path/filepath"
@@ -136,7 +137,7 @@ func TestUpWithDeploy(t *testing.T) {
 
 	require.True(t, commands.HasUpCommandFinished(upResult.Pid.Pid))
 
-	k8sLogsFilePath := filepath.Join(dir, ".okteto", "okteto-k8s.log")
+	k8sLogsFilePath := filepath.Join(dir, ".okteto", io.K8sLogsFileName)
 	require.FileExists(t, k8sLogsFilePath)
 	k8sLogs, err := os.ReadFile(k8sLogsFilePath)
 	require.NoError(t, err)

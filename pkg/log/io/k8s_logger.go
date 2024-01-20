@@ -18,7 +18,6 @@ import (
 	"net/url"
 	"path/filepath"
 
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/env"
 )
 
@@ -45,8 +44,8 @@ func (k *K8sLogger) IsEnabled() bool {
 }
 
 // Start configures the k8s logger to write to file
-func (k *K8sLogger) Start(cmdName, flags string) {
-	k8sLogsFilepath := GetK8sLoggerFilePath()
+func (k *K8sLogger) Start(okHome, cmdName, flags string) {
+	k8sLogsFilepath := GetK8sLoggerFilePath(okHome)
 	k.oktetoLogger = newFileLogger(k8sLogsFilepath)
 	cmdExecuted := cmdName
 	if flags != "" {
@@ -56,8 +55,7 @@ func (k *K8sLogger) Start(cmdName, flags string) {
 }
 
 // GetK8sLoggerFilePath returns the path of the okteto k8s logs file
-func GetK8sLoggerFilePath() string {
-	okHome := config.GetOktetoHome()
+func GetK8sLoggerFilePath(okHome string) string {
 	k8sLogsFilepath := filepath.Join(okHome, K8sLogsFileName)
 
 	return k8sLogsFilepath
