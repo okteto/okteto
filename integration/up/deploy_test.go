@@ -53,7 +53,7 @@ dev:
 )
 
 func TestUpWithDeploy(t *testing.T) {
-	t.Parallel()
+	t.Setenv("OKTETO_K8S_REQUESTS_LOGGER_ENABLED", "true")
 	// Prepare environment
 
 	dir := t.TempDir()
@@ -142,7 +142,6 @@ func TestUpWithDeploy(t *testing.T) {
 	k8sLogs, err := os.ReadFile(k8sLogsFilePath)
 	require.NoError(t, err)
 	require.Contains(t, string(k8sLogs), fmt.Sprintf("running cmd: up --deploy=true --namespace=%s", testNamespace))
-
 }
 
 func getImageWithSHA(devImage string) string {

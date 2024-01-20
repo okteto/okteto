@@ -95,7 +95,6 @@ const (
 
 // Build build and optionally push a Docker image
 func Build(ctx context.Context, ioCtrl *io.IOController, at analyticsTrackerInterface, k8slogger *io.K8sLogger) *cobra.Command {
-	fmt.Println(k8slogger)
 	options := &types.BuildOptions{}
 	cmd := &cobra.Command{
 		Use:   "build [service...]",

@@ -14,6 +14,7 @@
 package okteto
 
 import (
+	"github.com/okteto/okteto/pkg/log/io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -141,7 +142,7 @@ func TestKubetokenRefreshRoundTrip(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			testServer := httptest.NewServer(tc.handleFunc)
 			defer testServer.Close()
-			transport := newTokenRotationTransport(http.DefaultTransport, nil)
+			transport := newTokenRotationTransport(http.DefaultTransport, io.NewK8sLogger())
 			client := &http.Client{
 				Transport: transport,
 			}
