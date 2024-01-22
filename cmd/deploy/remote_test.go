@@ -351,7 +351,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout:          5 * time.Minute,
 				},
 			},
-			expected: []string{"--file .okteto/test", "--timeout 5m0s"},
+			expected: []string{fmt.Sprintf("--file %s", filepath.Clean(".okteto/test")), "--timeout 5m0s"},
 		},
 		{
 			name: "variables set",
