@@ -34,8 +34,8 @@ linters-settings:
       - fieldalignment
   goheader:
     values:
-      const:
-        YEAR: '2023'
+      regexp:
+        YEAR: 2023|2024
     template-path: .copyright-header.tmpl
   gomnd:
     checks:
