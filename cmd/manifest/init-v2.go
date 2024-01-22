@@ -138,7 +138,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 		isDeployed := pipeline.IsDeployed(ctx, manifest.Name, namespace, c)
 		deployAnswer := false
 		if !isDeployed && !opts.AutoDeploy {
-			deployAnswer, err = utils.AskYesNo("Do you want to launch your development environment?", utils.YesNoDefault_Yes)
+			deployAnswer, err = utils.AskYesNo("Do you want to deploy your development environment?", utils.YesNoDefault_Yes)
 			if err != nil {
 				return nil, err
 			}

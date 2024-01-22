@@ -70,7 +70,7 @@ func Exec() *cobra.Command {
 			if len(activeDevMode) == 0 {
 				return oktetoErrors.UserError{
 					E:    fmt.Errorf("development containers not found in namespace '%s'", manifest.Namespace),
-					Hint: "Run 'okteto up' to launch your development container or use 'okteto context' to change your current context",
+					Hint: "Run 'okteto up' to deploy your development container or use 'okteto context' to change your current context",
 				}
 			}
 
@@ -107,7 +107,7 @@ func Exec() *cobra.Command {
 			if oktetoErrors.IsNotFound(err) {
 				return oktetoErrors.UserError{
 					E:    fmt.Errorf("development container not found in namespace '%s'", dev.Namespace),
-					Hint: "Run 'okteto up' to launch your development container or use 'okteto context' to change your current context",
+					Hint: "Run 'okteto up' to deploy your development container or use 'okteto context' to change your current context",
 				}
 			}
 
