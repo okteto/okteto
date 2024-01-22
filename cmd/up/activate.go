@@ -52,12 +52,7 @@ func (up *upContext) activate() error {
 	up.Sy = nil
 	up.Forwarder = nil
 	defer func() {
-		if up.Dev.IsHybridModeEnabled() {
-			// interrupt signal handler already performs a graceful shutdown
-			if !up.interruptReceived {
-				up.shutdown()
-			}
-		} else {
+		if !up.interruptReceived {
 			up.shutdown()
 		}
 	}()
