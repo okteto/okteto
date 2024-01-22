@@ -340,7 +340,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout:          5 * time.Minute,
 				},
 			},
-			expected: []string{"--file /hello/this/is/a/test", "--timeout 5m0s"},
+			expected: []string{"--file test", "--timeout 5m0s"},
 		},
 		{
 			name: "variables set",
