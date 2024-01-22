@@ -168,7 +168,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 
 	buildInfo := &build.Info{
 		Dockerfile: dockerfile,
-		Context:    cwd,
+		Context:    rd.getContextPath(cwd, deployOptions.ManifestPathFlag),
 	}
 
 	// undo modification of CWD for Build command
@@ -329,7 +329,7 @@ func getDeployFlags(opts *Options) ([]string, error) {
 	}
 
 	if opts.ManifestPathFlag != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", opts.ManifestPath))
+		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filepath.Base(opts.ManifestPathFlag)))
 	}
 
 	if len(opts.Variables) > 0 {
@@ -415,4 +415,25 @@ func getExtraHosts(registryURL, subdomain, ip string, metadata types.ClusterMeta
 	}
 
 	return extraHosts
+}
+
+func (rd *remoteDeployCommand) getContextPath(cwd, manifestPath string) string {
+	if manifestPath == "" {
+		return cwd
+	}
+
+	path := manifestPath
+	if !filepath.IsAbs(manifestPath) {
+		path = filepath.Join(cwd, manifestPath)
+	}
+	fInfo, err := rd.fs.Stat(path)
+	if err != nil {
+		oktetoLog.Infof("error getting file info: %s", err)
+		return cwd
+
+	}
+	if fInfo.IsDir() {
+		return path
+	}
+	return filepath.Dir(path)
 }

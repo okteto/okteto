@@ -610,3 +610,41 @@ func TestGetExtraHosts(t *testing.T) {
 		})
 	}
 }
+func TestGetContextPath(t *testing.T) {
+	cwd := "/path/to/current/directory"
+
+	rd := remoteDeployCommand{
+		fs: afero.NewMemMapFs(),
+	}
+
+	t.Run("Manifest path is empty", func(t *testing.T) {
+		expected := cwd
+		result := rd.getContextPath(cwd, "")
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path is a absolute path and directory", func(t *testing.T) {
+		manifestPath := "/path/to/current/directory"
+		expected := manifestPath
+		rd.fs = afero.NewMemMapFs()
+		rd.fs.MkdirAll(manifestPath, 0755)
+		result := rd.getContextPath(cwd, manifestPath)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path is a file and absolute path", func(t *testing.T) {
+		manifestPath := "/path/to/current/directory/file.yaml"
+		expected := "/path/to/current/directory"
+		rd.fs = afero.NewMemMapFs()
+		rd.fs.MkdirAll(expected, 0755)
+		rd.fs.Create(manifestPath)
+		result := rd.getContextPath(cwd, manifestPath)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path does not exist", func(t *testing.T) {
+		expected := cwd
+		result := rd.getContextPath(cwd, "nonexistent.yaml")
+		assert.Equal(t, expected, result)
+	})
+}
