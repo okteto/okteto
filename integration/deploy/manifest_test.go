@@ -400,7 +400,7 @@ func TestDeployRemoteOktetoManifestFromParentFolder(t *testing.T) {
 	require.NoError(t, err)
 
 	dir := t.TempDir()
-	parentFolder := filepath.Join(dir, "app")
+	parentFolder := filepath.Join(dir, "test-parent")
 
 	testNamespace := integration.GetTestNamespace("TestDeployRemoteParent", user)
 	namespaceOpts := &commands.NamespaceOptions{
