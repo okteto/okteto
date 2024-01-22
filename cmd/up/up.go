@@ -95,7 +95,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
 	upOptions := &UpOptions{}
 	cmd := &cobra.Command{
 		Use:   "up [service]",
-		Short: "Launch your development environment",
+		Short: "Deploy your development environment",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
