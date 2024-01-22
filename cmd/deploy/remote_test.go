@@ -343,6 +343,17 @@ func TestGetDeployFlags(t *testing.T) {
 			expected: []string{"--file test", "--timeout 5m0s"},
 		},
 		{
+			name: "manifest path set on .okteto",
+			config: config{
+				opts: &Options{
+					ManifestPathFlag: "/hello/this/is/a/.okteto/test",
+					ManifestPath:     "/hello/this/is/a/.okteto/test",
+					Timeout:          5 * time.Minute,
+				},
+			},
+			expected: []string{"--file .okteto/test", "--timeout 5m0s"},
+		},
+		{
 			name: "variables set",
 			config: config{
 				opts: &Options{
@@ -611,7 +622,7 @@ func TestGetExtraHosts(t *testing.T) {
 	}
 }
 func TestGetContextPath(t *testing.T) {
-	cwd := "/path/to/current/directory"
+	cwd := filepath.Clean("/path/to/current/directory")
 
 	rd := remoteDeployCommand{
 		fs: afero.NewMemMapFs(),
@@ -624,7 +635,7 @@ func TestGetContextPath(t *testing.T) {
 	})
 
 	t.Run("Manifest path is a absolute path and directory", func(t *testing.T) {
-		manifestPath := "/path/to/current/directory"
+		manifestPath := filepath.Clean("/path/to/current/directory")
 		expected := manifestPath
 		rd.fs = afero.NewMemMapFs()
 		rd.fs.MkdirAll(manifestPath, 0755)
@@ -633,8 +644,18 @@ func TestGetContextPath(t *testing.T) {
 	})
 
 	t.Run("Manifest path is a file and absolute path", func(t *testing.T) {
-		manifestPath := "/path/to/current/directory/file.yaml"
-		expected := "/path/to/current/directory"
+		manifestPath := filepath.Clean("/path/to/current/directory/file.yaml")
+		expected := filepath.Clean("/path/to/current/directory")
+		rd.fs = afero.NewMemMapFs()
+		rd.fs.MkdirAll(expected, 0755)
+		rd.fs.Create(manifestPath)
+		result := rd.getContextPath(cwd, manifestPath)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path is pointing to a file in the .okteto folder and absolute path", func(t *testing.T) {
+		manifestPath := filepath.Clean("/path/to/current/directory/.okteto/file.yaml")
+		expected := filepath.Clean("/path/to/current/directory")
 		rd.fs = afero.NewMemMapFs()
 		rd.fs.MkdirAll(expected, 0755)
 		rd.fs.Create(manifestPath)

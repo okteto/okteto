@@ -329,7 +329,15 @@ func getDeployFlags(opts *Options) ([]string, error) {
 	}
 
 	if opts.ManifestPathFlag != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filepath.Base(opts.ManifestPathFlag)))
+		lastFolder := filepath.Base(filepath.Dir(opts.ManifestPathFlag))
+		if lastFolder == ".okteto" {
+			path := filepath.Clean(opts.ManifestPathFlag)
+			parts := strings.Split(path, string(filepath.Separator))
+
+			deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filepath.Join(parts[len(parts)-2:]...)))
+		} else {
+			deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filepath.Base(opts.ManifestPathFlag)))
+		}
 	}
 
 	if len(opts.Variables) > 0 {
@@ -435,5 +443,10 @@ func (rd *remoteDeployCommand) getContextPath(cwd, manifestPath string) string {
 	if fInfo.IsDir() {
 		return path
 	}
-	return filepath.Dir(path)
+
+	possibleCtx := filepath.Dir(path)
+	if strings.HasSuffix(possibleCtx, ".okteto") {
+		return filepath.Dir(possibleCtx)
+	}
+	return possibleCtx
 }
