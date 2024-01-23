@@ -34,8 +34,8 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// OktetoClient implementation to connect to Okteto API
-type OktetoClient struct {
+// Client implementation to connect to Okteto API
+type Client struct {
 	client graphqlClientInterface
 
 	namespace types.NamespaceInterface
@@ -47,7 +47,7 @@ type OktetoClient struct {
 	endpoint  types.EndpointClientInterface
 }
 
-type OktetoClientProvider struct{}
+type ClientProvider struct{}
 
 var insecureSkipTLSVerify bool
 var serverName string
@@ -60,11 +60,11 @@ type graphqlClientInterface interface {
 	Mutate(ctx context.Context, m interface{}, variables map[string]interface{}) error
 }
 
-func NewOktetoClientProvider() *OktetoClientProvider {
-	return &OktetoClientProvider{}
+func NewOktetoClientProvider() *ClientProvider {
+	return &ClientProvider{}
 }
 
-func (*OktetoClientProvider) Provide(opts ...Option) (types.OktetoInterface, error) {
+func (*ClientProvider) Provide(opts ...Option) (types.OktetoInterface, error) {
 	c, err := NewOktetoClient(opts...)
 	if err != nil {
 		return nil, err
@@ -72,42 +72,42 @@ func (*OktetoClientProvider) Provide(opts ...Option) (types.OktetoInterface, err
 	return c, err
 }
 
-type OktetoClientCfg struct {
+type ClientCfg struct {
 	CtxName string
 	Token   string
 	Cert    string
 }
 
 func WithCtxName(ctxName string) Option {
-	return func(cfg *OktetoClientCfg) {
+	return func(cfg *ClientCfg) {
 		cfg.CtxName = ctxName
 	}
 }
 
 func WithToken(token string) Option {
-	return func(cfg *OktetoClientCfg) {
+	return func(cfg *ClientCfg) {
 		cfg.Token = token
 	}
 }
 
-func defaultOktetoClientCfg() *OktetoClientCfg {
+func defaultOktetoClientCfg() *ClientCfg {
 	if CurrentStore == nil && !ContextExists() {
-		return &OktetoClientCfg{}
+		return &ClientCfg{}
 	}
 	if CurrentStore != nil && CurrentStore.CurrentContext == "" {
-		return &OktetoClientCfg{}
+		return &ClientCfg{}
 	}
-	return &OktetoClientCfg{
+	return &ClientCfg{
 		CtxName: GetContext().Name,
 		Token:   GetContext().Token,
 	}
 
 }
 
-type Option func(*OktetoClientCfg)
+type Option func(*ClientCfg)
 
 // NewOktetoClient creates a new client to connect with Okteto API
-func NewOktetoClient(opts ...Option) (*OktetoClient, error) {
+func NewOktetoClient(opts ...Option) (*Client, error) {
 	cfg := defaultOktetoClientCfg()
 	for _, opt := range opts {
 		opt(cfg)
@@ -130,7 +130,7 @@ func NewOktetoClient(opts ...Option) (*OktetoClient, error) {
 }
 
 // NewOktetoClientStateless creates a new client to connect with Okteto API
-func NewOktetoClientStateless(ocfg *OktetoClientCfg, opts ...Option) (*OktetoClient, error) {
+func NewOktetoClientStateless(ocfg *ClientCfg, opts ...Option) (*Client, error) {
 	for _, opt := range opts {
 		opt(ocfg)
 	}
@@ -218,7 +218,7 @@ func newOktetoHttpClientStateless(contextName, token, cert, oktetoUrlPath string
 }
 
 // NewOktetoClientFromUrlAndToken creates a new client to connect with Okteto API provided url and token
-func NewOktetoClientFromUrlAndToken(url, token string) (*OktetoClient, error) {
+func NewOktetoClientFromUrlAndToken(url, token string) (*Client, error) {
 	u, err := parseOktetoURL(url)
 	if err != nil {
 		return nil, fmt.Errorf("could not create okteto client: %w", err)
@@ -253,7 +253,7 @@ func NewOktetoClientFromUrlAndToken(url, token string) (*OktetoClient, error) {
 }
 
 // NewOktetoClientFromUrl creates a new client to connect with Okteto API provided an url
-func NewOktetoClientFromUrl(url string) (*OktetoClient, error) {
+func NewOktetoClientFromUrl(url string) (*Client, error) {
 	u, err := parseOktetoURL(url)
 	if err != nil {
 		return nil, err
@@ -291,8 +291,8 @@ func contextWithOauth2HttpClient(ctx context.Context, httpClient *http.Client) c
 	)
 }
 
-func newOktetoClientFromGraphqlClient(url string, httpClient *http.Client) (*OktetoClient, error) {
-	c := &OktetoClient{
+func newOktetoClientFromGraphqlClient(url string, httpClient *http.Client) (*Client, error) {
+	c := &Client{
 		client: graphql.NewClient(url, httpClient),
 	}
 	c.namespace = newNamespaceClient(c.client)
@@ -430,37 +430,37 @@ func mutate(ctx context.Context, mutation interface{}, variables map[string]inte
 }
 
 // Namespaces retrieves the NamespaceClient
-func (c *OktetoClient) Namespaces() types.NamespaceInterface {
+func (c *Client) Namespaces() types.NamespaceInterface {
 	return c.namespace
 }
 
 // Previews retrieves the Previews client
-func (c *OktetoClient) Previews() types.PreviewInterface {
+func (c *Client) Previews() types.PreviewInterface {
 	return c.preview
 }
 
 // Pipeline retrieves the Pipeline client
-func (c *OktetoClient) Pipeline() types.PipelineInterface {
+func (c *Client) Pipeline() types.PipelineInterface {
 	return c.pipeline
 }
 
 // User retrieves the UserClient
-func (c *OktetoClient) User() types.UserInterface {
+func (c *Client) User() types.UserInterface {
 	return c.user
 }
 
 // Stream retrieves the Stream client
-func (c *OktetoClient) Stream() types.StreamInterface {
+func (c *Client) Stream() types.StreamInterface {
 	return c.stream
 }
 
 // Kubetoken retrieves the Kubetoken client
-func (c *OktetoClient) Kubetoken() types.KubetokenInterface {
+func (c *Client) Kubetoken() types.KubetokenInterface {
 	return c.kubetoken
 }
 
 // Endpoint retrieves the Endpoint client
-func (c *OktetoClient) Endpoint() types.EndpointClientInterface {
+func (c *Client) Endpoint() types.EndpointClientInterface {
 	return c.endpoint
 }
 

@@ -78,7 +78,7 @@ func ShouldCreateNamespace(ctx context.Context, ns string) (bool, error) {
 
 // ShouldCreateNamespaceStateless checks if the user has access to the namespace.
 // If not, ask the user if he wants to create it
-func ShouldCreateNamespaceStateless(ctx context.Context, ns string, c *okteto.OktetoClient) (bool, error) {
+func ShouldCreateNamespaceStateless(ctx context.Context, ns string, c *okteto.Client) (bool, error) {
 	hasAccess, err := HasAccessToOktetoClusterNamespace(ctx, ns, c)
 	if err != nil {
 		return false, err

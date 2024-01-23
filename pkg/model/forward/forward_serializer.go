@@ -19,7 +19,7 @@ import (
 	"strings"
 )
 
-type ForwardRaw struct {
+type Raw struct {
 	Labels      map[string]string `json:"labels" yaml:"labels"`
 	ServiceName string            `json:"name" yaml:"name"`
 	Local       int               `json:"localPort" yaml:"localPort"`
@@ -79,7 +79,7 @@ func (f Forward) MarshalYAML() (interface{}, error) {
 }
 
 func (f *Forward) UnmarshalExtendedForm(unmarshal func(interface{}) error) error {
-	var rawForward ForwardRaw
+	var rawForward Raw
 	err := unmarshal(&rawForward)
 	if err != nil {
 		return err

@@ -258,12 +258,12 @@ type oktetoClientCfgContext interface {
 	GetCurrentCertStr() string
 }
 
-func defaultOktetoClientCfg(octx oktetoClientCfgContext) *okteto.OktetoClientCfg {
+func defaultOktetoClientCfg(octx oktetoClientCfgContext) *okteto.ClientCfg {
 	if !octx.ExistsContext() {
-		return &okteto.OktetoClientCfg{}
+		return &okteto.ClientCfg{}
 	}
 
-	return &okteto.OktetoClientCfg{
+	return &okteto.ClientCfg{
 		CtxName: octx.GetCurrentName(),
 		Token:   octx.GetCurrentToken(),
 		Cert:    octx.GetCurrentCertStr(),

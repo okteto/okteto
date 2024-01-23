@@ -95,7 +95,7 @@ type destroyCommand struct {
 	ConfigMapHandler  configMapHandler
 	analyticsTracker  analyticsTrackerInterface
 	getManifest       func(path string) (*model.Manifest, error)
-	oktetoClient      *okteto.OktetoClient
+	oktetoClient      *okteto.Client
 	ioCtrl            *io.IOController
 	buildCtrl         buildCtrl
 }
@@ -175,7 +175,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCon
 				options.Namespace = okteto.GetContext().Namespace
 			}
 
-			var okClient = &okteto.OktetoClient{}
+			var okClient = &okteto.Client{}
 			if okteto.GetContext().IsOkteto {
 				okClient, err = okteto.NewOktetoClient()
 				if err != nil {

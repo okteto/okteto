@@ -204,7 +204,7 @@ type endpointGetterWithOktetoAPI struct {
 	endpointControl endpointGetterInterface
 }
 
-func NewEndpointGetterWithOktetoAPI(c *okteto.OktetoClient) *endpointGetterWithOktetoAPI {
+func NewEndpointGetterWithOktetoAPI(c *okteto.Client) *endpointGetterWithOktetoAPI {
 	return &endpointGetterWithOktetoAPI{
 		endpointControl: endpoints.NewEndpointControl(c),
 	}

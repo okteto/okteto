@@ -434,7 +434,7 @@ func (c *fakeClientCfgContext) GetCurrentCertStr() string {
 func Test_defaultOktetoClientCfg(t *testing.T) {
 	tests := []struct {
 		input    *fakeClientCfgContext
-		expected *okteto.OktetoClientCfg
+		expected *okteto.ClientCfg
 		name     string
 	}{
 		{
@@ -442,7 +442,7 @@ func Test_defaultOktetoClientCfg(t *testing.T) {
 			input: &fakeClientCfgContext{
 				existsContext: false,
 			},
-			expected: &okteto.OktetoClientCfg{},
+			expected: &okteto.ClientCfg{},
 		},
 		{
 			name: "context exists",
@@ -452,7 +452,7 @@ func Test_defaultOktetoClientCfg(t *testing.T) {
 				token:         "okteto",
 				cert:          "my-cert",
 			},
-			expected: &okteto.OktetoClientCfg{
+			expected: &okteto.ClientCfg{
 				CtxName: "test",
 				Token:   "okteto",
 				Cert:    "my-cert",

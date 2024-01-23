@@ -37,7 +37,7 @@ type Command struct {
 
 // NewCommand creates a namespace command to
 func NewCommand() (*Command, error) {
-	var okClient = &okteto.OktetoClient{}
+	var okClient = &okteto.Client{}
 	if okteto.IsOkteto() {
 		c, err := okteto.NewOktetoClient()
 		if err != nil {

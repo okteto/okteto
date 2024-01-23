@@ -49,8 +49,8 @@ func newDockerAndOktetoAuthProvider(registryURL, username, password string, auth
 
 type authProviderContextInterface interface {
 	isOktetoContext() bool
-	getOktetoClientCfg() *okteto.OktetoClientCfg
-	getExternalRegistryCreds(registryOrImage string, isOkteto bool, c *okteto.OktetoClient) (string, string, error)
+	getOktetoClientCfg() *okteto.ClientCfg
+	getExternalRegistryCreds(registryOrImage string, isOkteto bool, c *okteto.Client) (string, string, error)
 }
 
 type authProviderContext struct {
@@ -64,19 +64,19 @@ func (apc *authProviderContext) isOktetoContext() bool {
 	return apc.isOkteto
 }
 
-func (apc *authProviderContext) getOktetoClientCfg() *okteto.OktetoClientCfg {
-	return &okteto.OktetoClientCfg{
+func (apc *authProviderContext) getOktetoClientCfg() *okteto.ClientCfg {
+	return &okteto.ClientCfg{
 		CtxName: apc.context,
 		Token:   apc.token,
 		Cert:    apc.cert,
 	}
 }
 
-func (apc *authProviderContext) getExternalRegistryCreds(registryOrImage string, isOkteto bool, c *okteto.OktetoClient) (string, string, error) {
+func (apc *authProviderContext) getExternalRegistryCreds(registryOrImage string, isOkteto bool, c *okteto.Client) (string, string, error) {
 	return okteto.GetExternalRegistryCredentialsStateless(registryOrImage, isOkteto, c)
 }
 
-type externalRegistryCredentialFunc func(host string, isOkteto bool, client *okteto.OktetoClient) (string, string, error)
+type externalRegistryCredentialFunc func(host string, isOkteto bool, client *okteto.Client) (string, string, error)
 
 type authProvider struct {
 	authContext authProviderContextInterface

@@ -46,7 +46,7 @@ func NewCommand() (*NamespaceCommand, error) {
 }
 
 // NewCommandStateless creates a namespace command for use in further operations
-func NewCommandStateless(c *okteto.OktetoClient) *NamespaceCommand {
+func NewCommandStateless(c *okteto.Client) *NamespaceCommand {
 	return &NamespaceCommand{
 		ctxCmd:            contextCMD.NewContextCommand(),
 		okClient:          c,

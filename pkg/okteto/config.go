@@ -46,7 +46,7 @@ func (c ConfigStateless) IsInsecureSkipTLSVerifyPolicy() bool { return c.Insecur
 func (ConfigStateless) GetServerNameOverride() string         { return GetServerNameOverride() }
 func (c ConfigStateless) GetContextName() string              { return c.ContextName }
 func (c ConfigStateless) GetExternalRegistryCredentials(registryHost string) (string, string, error) {
-	ocfg := &OktetoClientCfg{
+	ocfg := &ClientCfg{
 		CtxName: c.ContextName,
 		Token:   c.Token,
 		Cert:    c.Cert,
