@@ -24,20 +24,20 @@ import (
 func Test_initFromContext(t *testing.T) {
 	var tests = []struct {
 		in       *ContextOptions
-		ctxStore *okteto.OktetoContextStore
+		ctxStore *okteto.ContextStore
 		want     *ContextOptions
 		name     string
 	}{
 		{
 			name:     "all-empty",
 			in:       &ContextOptions{},
-			ctxStore: &okteto.OktetoContextStore{},
+			ctxStore: &okteto.ContextStore{},
 			want:     &ContextOptions{},
 		},
 		{
 			name: "all-empty-and-wrong-current-context",
 			in:   &ContextOptions{},
-			ctxStore: &okteto.OktetoContextStore{
+			ctxStore: &okteto.ContextStore{
 				CurrentContext: "bad",
 			},
 			want: &ContextOptions{},
@@ -48,9 +48,9 @@ func Test_initFromContext(t *testing.T) {
 				Context:   "ctx-from-opts",
 				Namespace: "ns-from-opts",
 			},
-			ctxStore: &okteto.OktetoContextStore{
+			ctxStore: &okteto.ContextStore{
 				CurrentContext: "context",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"context": {
 						Name:      "context",
 						Namespace: "namespace",
@@ -65,9 +65,9 @@ func Test_initFromContext(t *testing.T) {
 		{
 			name: "from-context",
 			in:   &ContextOptions{},
-			ctxStore: &okteto.OktetoContextStore{
+			ctxStore: &okteto.ContextStore{
 				CurrentContext: "context",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"context": {
 						Name:      "context",
 						Namespace: "namespace",
@@ -84,9 +84,9 @@ func Test_initFromContext(t *testing.T) {
 			in: &ContextOptions{
 				Namespace: "ns-from-opts",
 			},
-			ctxStore: &okteto.OktetoContextStore{
+			ctxStore: &okteto.ContextStore{
 				CurrentContext: "context",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"context": {
 						Name:      "context",
 						Namespace: "namespace",

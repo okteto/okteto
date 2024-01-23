@@ -42,22 +42,22 @@ const (
 func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface, k8sLogger *ioCtrl.K8sLogger) error {
 
 	if deployOptions.Manifest.Context == "" {
-		deployOptions.Manifest.Context = okteto.Context().Name
+		deployOptions.Manifest.Context = okteto.GetContext().Name
 	}
 	if deployOptions.Manifest.Namespace == "" {
-		deployOptions.Manifest.Namespace = okteto.Context().Namespace
+		deployOptions.Manifest.Namespace = okteto.GetContext().Namespace
 	}
 
 	if deployOptions.Name == "" {
 		if deployOptions.Manifest.Name != "" {
 			deployOptions.Name = deployOptions.Manifest.Name
 		} else {
-			c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okteto.Context().Cfg)
+			c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okteto.GetContext().Cfg)
 			if err != nil {
 				return err
 			}
 			inferer := devenvironment.NewNameInferer(c)
-			deployOptions.Name = inferer.InferName(ctx, cwd, okteto.Context().Namespace, deployOptions.ManifestPathFlag)
+			deployOptions.Name = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, deployOptions.ManifestPathFlag)
 			deployOptions.Manifest.Name = deployOptions.Name
 		}
 
@@ -165,13 +165,13 @@ func (dc *DeployCommand) addEnvVars(cwd string) {
 		os.Setenv(constants.OktetoGitCommitEnvVar, sha)
 	}
 	if os.Getenv(model.OktetoRegistryURLEnvVar) == "" {
-		os.Setenv(model.OktetoRegistryURLEnvVar, okteto.Context().Registry)
+		os.Setenv(model.OktetoRegistryURLEnvVar, okteto.GetContext().Registry)
 	}
 	if os.Getenv(model.OktetoBuildkitHostURLEnvVar) == "" {
-		os.Setenv(model.OktetoBuildkitHostURLEnvVar, okteto.Context().Builder)
+		os.Setenv(model.OktetoBuildkitHostURLEnvVar, okteto.GetContext().Builder)
 	}
 	if os.Getenv(model.OktetoTokenEnvVar) == "" {
-		os.Setenv(model.OktetoTokenEnvVar, okteto.Context().Token)
+		os.Setenv(model.OktetoTokenEnvVar, okteto.GetContext().Token)
 	}
 	oktetoLog.AddMaskedWord(os.Getenv(model.OktetoTokenEnvVar))
 }

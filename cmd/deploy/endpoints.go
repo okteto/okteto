@@ -63,7 +63,7 @@ type EndpointGetter struct {
 
 func NewEndpointGetter(k8sLogger *io.K8sLogger) (EndpointGetter, error) {
 	var endpointControl endpointControlInterface
-	if okteto.Context().IsOkteto {
+	if okteto.GetContext().IsOkteto {
 		c, err := okteto.NewOktetoClient()
 		if err != nil {
 			return EndpointGetter{}, err
@@ -138,19 +138,19 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 				if manifest.Name != "" {
 					options.Name = manifest.Name
 				} else {
-					c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okteto.Context().Cfg)
+					c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okteto.GetContext().Cfg)
 					if err != nil {
 						return err
 					}
 					inferer := devenvironment.NewNameInferer(c)
-					options.Name = inferer.InferName(ctx, cwd, okteto.Context().Namespace, options.ManifestPath)
+					options.Name = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, options.ManifestPath)
 				}
 				if options.Namespace == "" {
 					options.Namespace = manifest.Namespace
 				}
 			}
 			if options.Namespace == "" {
-				options.Namespace = okteto.Context().Namespace
+				options.Namespace = okteto.GetContext().Namespace
 			}
 
 			if err := validateOutput(options.Output); err != nil {

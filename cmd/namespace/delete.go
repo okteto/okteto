@@ -45,7 +45,7 @@ func Delete(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 				return err
 			}
 
-			nsToDelete := okteto.Context().Namespace
+			nsToDelete := okteto.GetContext().Namespace
 			if len(args) > 0 {
 				nsToDelete = args[0]
 			}
@@ -81,14 +81,14 @@ func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespac
 	}
 
 	oktetoLog.Success("Namespace '%s' deleted", namespace)
-	if okteto.Context().Namespace == namespace {
-		personalNamespace := okteto.Context().PersonalNamespace
+	if okteto.GetContext().Namespace == namespace {
+		personalNamespace := okteto.GetContext().PersonalNamespace
 		if personalNamespace == "" {
 			personalNamespace = okteto.GetSanitizedUsername()
 		}
 		ctxOptions := &contextCMD.ContextOptions{
 			Namespace:    personalNamespace,
-			Context:      okteto.Context().Name,
+			Context:      okteto.GetContext().Name,
 			Save:         true,
 			IsCtxCommand: true,
 		}
@@ -144,7 +144,7 @@ func (nc *NamespaceCommand) waitForNamespaceDeleted(ctx context.Context, namespa
 	to := time.NewTicker(timeout)
 
 	// provide k8s
-	c, _, err := nc.k8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, k8sLogger)
+	c, _, err := nc.k8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, k8sLogger)
 	if err != nil {
 		return err
 	}

@@ -182,7 +182,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCont
 			}
 
 			if okteto.IsOkteto() {
-				create, err := utils.ShouldCreateNamespace(ctx, okteto.Context().Namespace)
+				create, err := utils.ShouldCreateNamespace(ctx, okteto.GetContext().Namespace)
 				if err != nil {
 					return err
 				}
@@ -191,7 +191,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCont
 					if err != nil {
 						return err
 					}
-					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.Context().Namespace}); err != nil {
+					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.GetContext().Namespace}); err != nil {
 						return err
 					}
 				}
@@ -292,7 +292,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	// We need to create a client that doesn't go through the proxy to create
 	// the configmap without the deployedByLabel
-	c, _, err := dc.K8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, dc.K8sLogger)
+	c, _, err := dc.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, dc.K8sLogger)
 	if err != nil {
 		return err
 	}
@@ -609,7 +609,7 @@ func isRemoteDeployer(runInRemoteFlag bool, deployImage string) bool {
 
 // deployDependencies deploy the dependencies in the manifest
 func (dc *DeployCommand) deployDependencies(ctx context.Context, deployOptions *Options) error {
-	if len(deployOptions.Manifest.Dependencies) > 0 && !okteto.Context().IsOkteto {
+	if len(deployOptions.Manifest.Dependencies) > 0 && !okteto.GetContext().IsOkteto {
 		return errDepenNotAvailableInVanilla
 	}
 
@@ -620,7 +620,7 @@ func (dc *DeployCommand) deployDependencies(ctx context.Context, deployOptions *
 			Name:  "OKTETO_ORIGIN",
 			Value: "okteto-deploy",
 		})
-		namespace := okteto.Context().Namespace
+		namespace := okteto.GetContext().Namespace
 		if dep.Namespace != "" {
 			namespace = dep.Namespace
 		}
@@ -650,18 +650,18 @@ func (dc *DeployCommand) deployDependencies(ctx context.Context, deployOptions *
 }
 
 func (dc *DeployCommand) recreateFailedPods(ctx context.Context, name string) error {
-	c, _, err := dc.K8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, dc.K8sLogger)
+	c, _, err := dc.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, dc.K8sLogger)
 	if err != nil {
 		return fmt.Errorf("could not get kubernetes client: %w", err)
 	}
 
-	pods, err := c.CoreV1().Pods(okteto.Context().Namespace).List(ctx, metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", model.DeployedByLabel, format.ResourceK8sMetaString(name))})
+	pods, err := c.CoreV1().Pods(okteto.GetContext().Namespace).List(ctx, metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", model.DeployedByLabel, format.ResourceK8sMetaString(name))})
 	if err != nil {
 		return fmt.Errorf("could not list pods: %w", err)
 	}
 	for _, pod := range pods.Items {
 		if pod.Status.Phase == "Failed" {
-			err := c.CoreV1().Pods(okteto.Context().Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+			err := c.CoreV1().Pods(okteto.GetContext().Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
 			if err != nil {
 				return fmt.Errorf("could not delete pod %s: %w", pod.Name, err)
 			}

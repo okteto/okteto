@@ -36,7 +36,7 @@ func Sleep(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			nsToSleep := okteto.Context().Namespace
+			nsToSleep := okteto.GetContext().Namespace
 			if len(args) > 0 {
 				nsToSleep = args[0]
 			}

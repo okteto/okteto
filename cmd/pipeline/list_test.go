@@ -64,8 +64,8 @@ func TestPipelineListCommandHandler_OnlyOktetoCluster(t *testing.T) {
 		return nil
 	}
 
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 				IsOkteto:  false,
@@ -86,8 +86,8 @@ func TestPipelineListCommandHandler_InitOktetoContextFail(t *testing.T) {
 		return assert.AnError
 	}
 
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 				IsOkteto:  true,
@@ -111,8 +111,8 @@ func TestPipelineListCommandHandler_DefaultNamespace(t *testing.T) {
 	initOkCtx := func(ctx context.Context, flags *contextCMD.ContextOptions) error {
 		return nil
 	}
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 				IsOkteto:  true,

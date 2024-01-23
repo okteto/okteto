@@ -280,8 +280,8 @@ func (*fakeV2Builder) GetBuildEnvVars() map[string]string {
 func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 			},
@@ -334,8 +334,8 @@ func (d fakeDeployer) Get(_ context.Context, _ *Options, _ builderInterface, cma
 }
 
 func TestDeployWithErrorReadingManifestFile(t *testing.T) {
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 			},
@@ -376,8 +376,8 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 		kubeconfig: &fakeKubeConfig{},
 		fs:         afero.NewMemMapFs(),
 	}
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 			},
@@ -432,9 +432,9 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	builder := test.NewFakeOktetoBuilder(reg)
 	fakeTracker := fakeAnalyticsTracker{}
 
-	okCtx := &okteto.OktetoContextStateless{
-		Store: &okteto.OktetoContextStore{
-			Contexts: map[string]*okteto.OktetoContext{
+	okCtx := &okteto.ContextStateless{
+		Store: &okteto.ContextStore{
+			Contexts: map[string]*okteto.Context{
 				"test": {
 					Namespace: "test",
 				},
@@ -466,13 +466,13 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	// sanitizeName is needed to check the CFGmap - this sanitization is done at RunDeploy, labels and cfg name
 	sanitizedName := format.ResourceK8sMetaString(opts.Name)
 
-	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(sanitizedName), okteto.Context().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(sanitizedName), okteto.GetContext().Namespace, fakeClient)
 	assert.NoError(t, err)
 
 	expectedCfg := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("okteto-git-%s", sanitizedName),
-			Namespace: okteto.Context().Namespace,
+			Namespace: okteto.GetContext().Namespace,
 			Labels:    map[string]string{"dev.okteto.com/git-deploy": "true"},
 		},
 		Data: map[string]string{
@@ -513,8 +513,8 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		fs:                fakeOs,
 		k8sClientProvider: fakeK8sClientProvider,
 	}
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 			},
@@ -553,7 +553,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.GetContext().Namespace, fakeClient)
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
 	assert.Equal(t, pipeline.ErrorStatus, cfg.Data["status"])
@@ -590,8 +590,8 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 		k8sClientProvider: fakeK8sClientProvider,
 	}
 
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 			},
@@ -621,7 +621,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.GetContext().Namespace, fakeClient)
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
 }
@@ -650,8 +650,8 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		externalControlProvider: fakeExternalControlProvider,
 	}
 
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 				Cfg:       clientcmdapi.NewConfig(),
@@ -694,7 +694,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.GetContext().Namespace, fakeClient)
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
 	assert.Equal(t, pipeline.DeployedStatus, cfg.Data["status"])
@@ -722,8 +722,8 @@ func TestDeployWithoutErrors(t *testing.T) {
 		externalControlProvider: fakeExternalControlProvider,
 	}
 
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 			},
@@ -765,7 +765,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.GetContext().Namespace, fakeClient)
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
 	assert.Equal(t, pipeline.DeployedStatus, cfg.Data["status"])
@@ -959,8 +959,8 @@ func getFakeEndpoint(_ *io.K8sLogger) (EndpointGetter, error) {
 
 func TestDeployExternals(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 				IsOkteto:  true,
@@ -1182,8 +1182,8 @@ func TestDeployOnlyDependencies(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			okteto.CurrentStore = &okteto.OktetoContextStore{
-				Contexts: map[string]*okteto.OktetoContext{
+			okteto.CurrentStore = &okteto.ContextStore{
+				Contexts: map[string]*okteto.Context{
 					"test": {
 						Namespace: "test",
 						IsOkteto:  tc.isOkteto,

@@ -75,12 +75,12 @@ type InitOpts struct {
 
 // RunInitV2 initializes a new okteto manifest
 func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manifest, error) {
-	c, _, er := mc.K8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, mc.K8sLogger)
+	c, _, er := mc.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, mc.K8sLogger)
 	if er != nil {
 		return nil, er
 	}
 	inferer := devenvironment.NewNameInferer(c)
-	name := inferer.InferName(ctx, opts.Workdir, okteto.Context().Namespace, opts.DevPath)
+	name := inferer.InferName(ctx, opts.Workdir, okteto.GetContext().Namespace, opts.DevPath)
 	os.Setenv(constants.OktetoNameEnvVar, name)
 	manifest := model.NewManifest()
 	var err error
@@ -128,13 +128,13 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 		}
 		oktetoLog.Success("Okteto manifest (%s) deploy and build configured successfully", opts.DevPath)
 
-		c, _, err := mc.K8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, mc.K8sLogger)
+		c, _, err := mc.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, mc.K8sLogger)
 		if err != nil {
 			return nil, err
 		}
 		namespace := manifest.Namespace
 		if namespace == "" {
-			namespace = okteto.Context().Namespace
+			namespace = okteto.GetContext().Namespace
 		}
 		isDeployed := pipeline.IsDeployed(ctx, manifest.Name, namespace, c)
 		deployAnswer := false
@@ -382,8 +382,8 @@ func createFromCompose(composePath string) (*model.Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	manifest.Context = okteto.Context().Name
-	manifest.Namespace = okteto.Context().Namespace
+	manifest.Context = okteto.GetContext().Name
+	manifest.Namespace = okteto.GetContext().Namespace
 
 	for _, build := range manifest.Build {
 		context, err := filepath.Abs(build.Context)
@@ -434,13 +434,13 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (build.M
 		var name string
 		var buildInfo *build.Info
 		if dockerfile == dockerfileName {
-			c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+			c, _, err := okteto.NewK8sClientProvider().Provide(okteto.GetContext().Cfg)
 			if err != nil {
 				return nil, err
 			}
 			inferer := devenvironment.NewNameInferer(c)
 			// In this case, the path is empty because we are inferring the names from Dockerfiles, so no manifest
-			name = inferer.InferName(context.Background(), cwd, okteto.Context().Namespace, "")
+			name = inferer.InferName(context.Background(), cwd, okteto.GetContext().Namespace, "")
 			buildInfo = &build.Info{
 				Context:    ".",
 				Dockerfile: dockerfile,

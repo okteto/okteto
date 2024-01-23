@@ -38,8 +38,8 @@ deploy:
 devs:
     - api/okteto.yml
     - frontend/okteto.yml`)
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 			},

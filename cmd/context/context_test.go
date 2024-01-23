@@ -66,7 +66,7 @@ func Test_initFromDeprecatedToken(t *testing.T) {
 			}
 			defer os.Remove(kubepath)
 			okteto.InitContextWithDeprecatedToken()
-			if okteto.ContextStore().CurrentContext == "" {
+			if okteto.GetContextStore().CurrentContext == "" {
 				t.Fatal("Not initialized")
 			}
 		})

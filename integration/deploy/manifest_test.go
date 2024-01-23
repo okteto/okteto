@@ -150,7 +150,7 @@ func TestDeployOktetoManifest(t *testing.T) {
 
 	// Test that image has been built
 
-	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
+	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.NotEmpty(t, getImageWithSHA(appImageDev))
 
 	destroyOptions := &commands.DestroyOptions{
@@ -191,7 +191,7 @@ func TestRedeployOktetoManifestForImages(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test that image is not built before running okteto deploy
-	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
+	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.False(t, isImageBuilt(appImageDev))
 
 	deployOptions := &commands.DeployOptions{
@@ -263,7 +263,7 @@ func TestDeployOktetoManifestWithDestroy(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test that image is not built before running okteto deploy
-	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
+	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.False(t, isImageBuilt(appImageDev))
 
 	deployOptions := &commands.DeployOptions{
@@ -333,7 +333,7 @@ func TestDeployOktetoManifestExportCache(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
 	// Test that image has been built
-	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okteto.Context().Registry, testNamespace)))
+	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okteto.GetContext().Registry, testNamespace)))
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
@@ -379,7 +379,7 @@ func TestDeployRemoteOktetoManifest(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
 	// Test that image has been built
-	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okteto.Context().Registry, testNamespace)))
+	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okteto.GetContext().Registry, testNamespace)))
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
@@ -444,7 +444,7 @@ func expectForceBuild(output string) error {
 
 func createK8sManifestWithCache(dir, ns string) error {
 	dockerfilePath := filepath.Join(dir, k8sManifestName)
-	appImageDev := fmt.Sprintf("%s/%s/app:dev", okteto.Context().Registry, ns)
+	appImageDev := fmt.Sprintf("%s/%s/app:dev", okteto.GetContext().Registry, ns)
 
 	dockerfileContent := []byte(fmt.Sprintf(k8sManifestTemplateWithCache, appImageDev))
 	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {

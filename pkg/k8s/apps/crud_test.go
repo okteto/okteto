@@ -30,9 +30,9 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	okteto.CurrentStore = &okteto.OktetoContextStore{
+	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
-		Contexts: map[string]*okteto.OktetoContext{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Name:      "test",
 				Namespace: "namespace",

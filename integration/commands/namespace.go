@@ -86,7 +86,7 @@ func RunOktetoNamespace(oktetoPath string, namespaceOpts *NamespaceOptions) erro
 
 	log.Printf("namespace output: \n%s\n", string(o))
 
-	n := okteto.Context().Namespace
+	n := okteto.GetContext().Namespace
 	if namespaceOpts.Namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespaceOpts.Namespace)
 	}

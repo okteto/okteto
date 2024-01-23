@@ -69,7 +69,7 @@ func (dw *DeployWaiter) wait(ctx context.Context, opts *Options) error {
 func (dw *DeployWaiter) waitForResourcesToBeRunning(ctx context.Context, opts *Options) error {
 	ticker := time.NewTicker(5 * time.Second)
 	to := time.NewTicker(opts.Timeout)
-	c, _, err := dw.K8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, dw.K8sLogger)
+	c, _, err := dw.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, dw.K8sLogger)
 	if err != nil {
 		return err
 	}

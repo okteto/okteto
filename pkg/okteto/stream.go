@@ -49,7 +49,7 @@ type destroyAllLogFormat struct {
 
 // PipelineLogs retrieves logs from the pipeline provided and prints them, returns error
 func (c *streamClient) PipelineLogs(ctx context.Context, name, namespace, actionName string) error {
-	streamURL := fmt.Sprintf(gitDeployUrlTemplate, Context().Name, namespace, name, actionName)
+	streamURL := fmt.Sprintf(gitDeployUrlTemplate, GetContext().Name, namespace, name, actionName)
 	url, err := url.Parse(streamURL)
 	if err != nil {
 		return err
@@ -86,8 +86,8 @@ func handlerPipelineLogLine(line string) bool {
 
 // DestroyAllLogs retrieves logs from the pipeline provided and prints them, returns error
 func (c *streamClient) DestroyAllLogs(ctx context.Context, namespace string) error {
-	// Context().Name represents baseURL for SSE subscription endpoints
-	streamURL := fmt.Sprintf(destroyAllUrlTempleate, Context().Name, namespace)
+	// GetContext().Name represents baseURL for SSE subscription endpoints
+	streamURL := fmt.Sprintf(destroyAllUrlTempleate, GetContext().Name, namespace)
 	url, err := url.Parse(streamURL)
 	if err != nil {
 		return err

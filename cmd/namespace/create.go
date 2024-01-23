@@ -84,9 +84,9 @@ func (nc *NamespaceCommand) Create(ctx context.Context, opts *CreateOptions) err
 	ctxOptions := &contextCMD.ContextOptions{
 		IsCtxCommand: opts.Show,
 		IsOkteto:     true,
-		Token:        okteto.Context().Token,
+		Token:        okteto.GetContext().Token,
 		Namespace:    oktetoNS,
-		Context:      okteto.Context().Name,
+		Context:      okteto.GetContext().Name,
 	}
 
 	if opts.SetCurrentNs {

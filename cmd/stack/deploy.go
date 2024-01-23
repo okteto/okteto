@@ -68,7 +68,7 @@ func deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCont
 			if err != nil {
 				return err
 			}
-			c, config, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+			c, config, err := okteto.NewK8sClientProvider().Provide(okteto.GetContext().Cfg)
 			if err != nil {
 				return err
 			}

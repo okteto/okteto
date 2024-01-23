@@ -54,7 +54,7 @@ func Use(ctx context.Context) *cobra.Command {
 			}
 
 			if options.personal {
-				namespace = okteto.Context().PersonalNamespace
+				namespace = okteto.GetContext().PersonalNamespace
 			}
 
 			nsCmd, err := NewCommand()
@@ -84,7 +84,7 @@ func (nc *NamespaceCommand) Use(ctx context.Context, namespace string) error {
 	return nc.ctxCmd.Run(
 		ctx,
 		&contextCMD.ContextOptions{
-			Context:              okteto.Context().Name,
+			Context:              okteto.GetContext().Name,
 			Namespace:            namespace,
 			Save:                 true,
 			Show:                 false,
@@ -166,7 +166,7 @@ func askForOktetoNamespace() (string, error) {
 }
 
 func getInitialPosition(options []utils.SelectorItem) int {
-	currentNamespace := okteto.Context().Namespace
+	currentNamespace := okteto.GetContext().Namespace
 	for indx, ns := range options {
 		if ns.Label == currentNamespace {
 			return indx

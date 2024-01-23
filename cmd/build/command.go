@@ -74,7 +74,7 @@ type registryInterface interface {
 }
 
 // NewBuildCommand creates a struct to run all build methods
-func NewBuildCommand(ioCtrl *io.IOController, analyticsTracker analyticsTrackerInterface, okCtx *okteto.OktetoContextStateless, k8slogger *io.K8sLogger) *Command {
+func NewBuildCommand(ioCtrl *io.IOController, analyticsTracker analyticsTrackerInterface, okCtx *okteto.ContextStateless, k8slogger *io.K8sLogger) *Command {
 
 	return &Command{
 		GetManifest: model.GetManifestV2,
@@ -148,7 +148,7 @@ func Build(ctx context.Context, ioCtrl *io.IOController, at analyticsTrackerInte
 	return cmd
 }
 
-func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.OktetoContextStateless) (Builder, error) {
+func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.ContextStateless) (Builder, error) {
 	var builder Builder
 
 	manifest, err := bc.GetManifest(options.File)
@@ -193,7 +193,7 @@ func validateDockerfile(file string) error {
 	return err
 }
 
-func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*okteto.OktetoContextStateless, error) {
+func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*okteto.ContextStateless, error) {
 	ctxOpts := &contextCMD.ContextOptions{
 		Context:   options.K8sContext,
 		Namespace: options.Namespace,

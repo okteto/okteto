@@ -31,8 +31,8 @@ func Test_addKubernetesContext(t *testing.T) {
 	var tests = []struct {
 		cfg          *clientcmdapi.Config
 		ctxResource  *model.ContextResource
-		currentStore *okteto.OktetoContextStore
-		wantStore    *okteto.OktetoContextStore
+		currentStore *okteto.ContextStore
+		wantStore    *okteto.ContextStore
 		name         string
 		wantError    bool
 	}{
@@ -55,13 +55,13 @@ func Test_addKubernetesContext(t *testing.T) {
 				Contexts: map[string]*clientcmdapi.Context{"context": {Namespace: "n-cfg"}},
 			},
 			ctxResource: &model.ContextResource{Context: "context", Namespace: "n-ctx"},
-			currentStore: &okteto.OktetoContextStore{
+			currentStore: &okteto.ContextStore{
 				CurrentContext: "",
-				Contexts:       map[string]*okteto.OktetoContext{},
+				Contexts:       map[string]*okteto.Context{},
 			},
-			wantStore: &okteto.OktetoContextStore{
+			wantStore: &okteto.ContextStore{
 				CurrentContext: "context",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"context": {Name: "context", Namespace: "n-ctx", Analytics: true},
 				},
 			},
@@ -73,13 +73,13 @@ func Test_addKubernetesContext(t *testing.T) {
 				Contexts: map[string]*clientcmdapi.Context{"context": {Namespace: "n-cfg"}},
 			},
 			ctxResource: &model.ContextResource{Context: "context"},
-			currentStore: &okteto.OktetoContextStore{
+			currentStore: &okteto.ContextStore{
 				CurrentContext: "",
-				Contexts:       map[string]*okteto.OktetoContext{},
+				Contexts:       map[string]*okteto.Context{},
 			},
-			wantStore: &okteto.OktetoContextStore{
+			wantStore: &okteto.ContextStore{
 				CurrentContext: "context",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"context": {Name: "context", Namespace: "n-cfg", Analytics: true},
 				},
 			},
@@ -91,13 +91,13 @@ func Test_addKubernetesContext(t *testing.T) {
 				Contexts: map[string]*clientcmdapi.Context{"context": {}},
 			},
 			ctxResource: &model.ContextResource{Context: "context"},
-			currentStore: &okteto.OktetoContextStore{
+			currentStore: &okteto.ContextStore{
 				CurrentContext: "",
-				Contexts:       map[string]*okteto.OktetoContext{},
+				Contexts:       map[string]*okteto.Context{},
 			},
-			wantStore: &okteto.OktetoContextStore{
+			wantStore: &okteto.ContextStore{
 				CurrentContext: "context",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"context": {Name: "context", Namespace: "default", Analytics: true},
 				},
 			},

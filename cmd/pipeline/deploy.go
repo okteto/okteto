@@ -144,9 +144,9 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 		return fmt.Errorf("could not set default values for options: %w", err)
 	}
 
-	c, _, err := pc.k8sClientProvider.Provide(okteto.Context().Cfg)
+	c, _, err := pc.k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
-		return fmt.Errorf("failed to load okteto context '%s': %w", okteto.Context().Name, err)
+		return fmt.Errorf("failed to load okteto context '%s': %w", okteto.GetContext().Name, err)
 	}
 
 	exists := false
@@ -466,12 +466,12 @@ func (o *DeployOptions) setDefaults() error {
 	if o.Name == "" {
 
 		// in case of inferring the name, o.Name is not sanitized
-		c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+		c, _, err := okteto.NewK8sClientProvider().Provide(okteto.GetContext().Cfg)
 		if err != nil {
 			return err
 		}
 		inferer := devenvironment.NewNameInferer(c)
-		o.Name = inferer.InferNameFromDevEnvsAndRepository(context.Background(), o.Repository, okteto.Context().Namespace, o.File, "")
+		o.Name = inferer.InferNameFromDevEnvsAndRepository(context.Background(), o.Repository, okteto.GetContext().Namespace, o.File, "")
 	}
 
 	currentRepoURL, err := modelUtils.GetRepositoryURL(cwd)
@@ -494,7 +494,7 @@ func (o *DeployOptions) setDefaults() error {
 	}
 
 	if o.Namespace == "" {
-		o.Namespace = okteto.Context().Namespace
+		o.Namespace = okteto.GetContext().Namespace
 	}
 	return nil
 }

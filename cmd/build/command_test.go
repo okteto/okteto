@@ -244,9 +244,9 @@ func TestBuildErrIfInvalidManifest(t *testing.T) {
 func TestBuilderIsProperlyGenerated(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	okCtx := &okteto.OktetoContextStateless{
-		Store: &okteto.OktetoContextStore{
-			Contexts: map[string]*okteto.OktetoContext{
+	okCtx := &okteto.ContextStateless{
+		Store: &okteto.ContextStore{
+			Contexts: map[string]*okteto.Context{
 				"test": {
 					Namespace: "test",
 				},
@@ -390,9 +390,9 @@ type fakeAnalyticsTracker struct{}
 func (fakeAnalyticsTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
 
 func Test_NewBuildCommand(t *testing.T) {
-	okCtx := &okteto.OktetoContextStateless{
-		Store: &okteto.OktetoContextStore{
-			Contexts: map[string]*okteto.OktetoContext{
+	okCtx := &okteto.ContextStateless{
+		Store: &okteto.ContextStore{
+			Contexts: map[string]*okteto.Context{
 				"test": {
 					Namespace: "test",
 				},

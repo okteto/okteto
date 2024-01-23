@@ -218,7 +218,7 @@ func askForLanguage() (string, error) {
 }
 
 func askForRunningApp(ctx context.Context, c kubernetes.Interface) (apps.App, error) {
-	namespace := okteto.Context().Namespace
+	namespace := okteto.GetContext().Namespace
 	dList, err := deployments.List(ctx, namespace, "", c)
 	if err != nil {
 		oktetoLog.Yellow("Failed to list deployments: %s", err)

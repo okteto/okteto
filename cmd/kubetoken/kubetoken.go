@@ -65,7 +65,7 @@ type initCtxOptsFunc func(string, string) *contextCMD.ContextOptions
 type KubetokenCmd struct {
 	k8sClientProvider    k8sClientProvider
 	oktetoClientProvider oktetoClientProvider
-	ctxStore             *okteto.OktetoContextStore
+	ctxStore             *okteto.ContextStore
 	oktetoCtxCmdRunner   oktetoCtxCmdRunner
 	serializer           *Serializer
 	initCtxFunc          initCtxOptsFunc
@@ -75,14 +75,14 @@ type KubetokenCmd struct {
 type KubetokenOptions struct {
 	oktetoClientProvider oktetoClientProvider
 	k8sClientProvider    k8sClientProvider
-	ctxStore             *okteto.OktetoContextStore
+	ctxStore             *okteto.ContextStore
 	oktetoCtxCmdRunner   oktetoCtxCmdRunner
 	serializer           *Serializer
 	getCtxResource       initCtxOptsFunc
 }
 
 func defaultKubetokenOptions() *KubetokenOptions {
-	ctxStore := okteto.ContextStore()
+	ctxStore := okteto.GetContextStore()
 	return &KubetokenOptions{
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
 		k8sClientProvider:    okteto.NewK8sClientProvider(),

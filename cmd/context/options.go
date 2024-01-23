@@ -46,7 +46,7 @@ func (o *ContextOptions) InitFromContext() {
 	if o.Context != "" {
 		return
 	}
-	ctxStore := okteto.ContextStore()
+	ctxStore := okteto.GetContextStore()
 	if ctxStore.CurrentContext == "" {
 		return
 	}
@@ -83,7 +83,7 @@ func (o *ContextOptions) InitFromEnvVars() {
 	}
 
 	if o.Token == "" && envToken != "" {
-		if !okteto.HasBeenLogged(o.Context) || okteto.Context().Token != envToken {
+		if !okteto.HasBeenLogged(o.Context) || okteto.GetContext().Token != envToken {
 			usedEnvVars = append(usedEnvVars, model.OktetoTokenEnvVar)
 		}
 		o.Token = envToken

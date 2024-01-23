@@ -282,7 +282,7 @@ func runPush(ctx context.Context, dev *model.Dev, pushOpts *pushOptions, c *kube
 }
 
 func buildImage(ctx context.Context, dev *model.Dev, imageFromApp string, pushOpts *pushOptions) (string, error) {
-	oktetoLog.Information("Running your build in %s...", okteto.Context().Builder)
+	oktetoLog.Information("Running your build in %s...", okteto.GetContext().Builder)
 
 	reg := registry.NewOktetoRegistry(okteto.Config{})
 	if pushOpts.ImageTag == "" {

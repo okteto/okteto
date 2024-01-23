@@ -87,7 +87,7 @@ func getSternConfig(manifest *model.Manifest, o *LogsOptions, kubeconfigFile str
 
 	return &stern.Config{
 		KubeConfig:          kubeconfigFile,
-		ContextName:         okteto.UrlToKubernetesContext(okteto.Context().Name),
+		ContextName:         okteto.UrlToKubernetesContext(okteto.GetContext().Name),
 		Namespaces:          []string{manifest.Namespace},
 		PodQuery:            includePodQuery,
 		ExcludePodQuery:     excludePodQuery,

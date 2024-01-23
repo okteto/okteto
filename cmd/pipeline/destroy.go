@@ -231,17 +231,17 @@ func (o *DestroyOptions) setDefaults() error {
 			return err
 		}
 
-		c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+		c, _, err := okteto.NewK8sClientProvider().Provide(okteto.GetContext().Cfg)
 		if err != nil {
 			return err
 		}
 		inferer := devenvironment.NewNameInferer(c)
 		// okteto pipeline destroy doesn't have a -f flag to specify the path, so we pass empty string
-		o.Name = inferer.InferNameFromDevEnvsAndRepository(context.Background(), repo, okteto.Context().Namespace, "", "")
+		o.Name = inferer.InferNameFromDevEnvsAndRepository(context.Background(), repo, okteto.GetContext().Namespace, "", "")
 	}
 
 	if o.Namespace == "" {
-		o.Namespace = okteto.Context().Namespace
+		o.Namespace = okteto.GetContext().Namespace
 	}
 	return nil
 }

@@ -62,15 +62,15 @@ func (c ConfigStateless) GetExternalRegistryCredentials(registryHost string) (st
 type Config struct{}
 
 func (Config) IsOktetoCluster() bool                             { return IsOkteto() }
-func (Config) GetGlobalNamespace() string                        { return Context().GlobalNamespace }
-func (Config) GetNamespace() string                              { return Context().Namespace }
-func (Config) GetRegistryURL() string                            { return Context().Registry }
-func (Config) GetUserID() string                                 { return Context().UserID }
-func (Config) GetToken() string                                  { return Context().Token }
+func (Config) GetGlobalNamespace() string                        { return GetContext().GlobalNamespace }
+func (Config) GetNamespace() string                              { return GetContext().Namespace }
+func (Config) GetRegistryURL() string                            { return GetContext().Registry }
+func (Config) GetUserID() string                                 { return GetContext().UserID }
+func (Config) GetToken() string                                  { return GetContext().Token }
 func (Config) GetContextCertificate() (*x509.Certificate, error) { return GetContextCertificate() }
-func (Config) IsInsecureSkipTLSVerifyPolicy() bool               { return Context().IsInsecure }
+func (Config) IsInsecureSkipTLSVerifyPolicy() bool               { return GetContext().IsInsecure }
 func (Config) GetServerNameOverride() string                     { return GetServerNameOverride() }
-func (Config) GetContextName() string                            { return Context().Name }
+func (Config) GetContextName() string                            { return GetContext().Name }
 func (Config) GetExternalRegistryCredentials(registryHost string) (string, string, error) {
 	return GetExternalRegistryCredentials(registryHost)
 }

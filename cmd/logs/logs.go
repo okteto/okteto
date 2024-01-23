@@ -78,12 +78,12 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 				manifest.Name = options.Name
 			}
 			if manifest.Name == "" {
-				c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okteto.Context().Cfg)
+				c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okteto.GetContext().Cfg)
 				if err != nil {
 					return err
 				}
 				inferer := devenvironment.NewNameInferer(c)
-				manifest.Name = inferer.InferName(ctx, wd, okteto.Context().Namespace, options.ManifestPath)
+				manifest.Name = inferer.InferName(ctx, wd, okteto.GetContext().Namespace, options.ManifestPath)
 			}
 
 			if len(args) > 0 {
@@ -93,7 +93,7 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 			}
 
 			tmpKubeconfigFile := GetTempKubeConfigFile(manifest.Name)
-			if err := kubeconfig.Write(okteto.Context().Cfg, tmpKubeconfigFile); err != nil {
+			if err := kubeconfig.Write(okteto.GetContext().Cfg, tmpKubeconfigFile); err != nil {
 				return err
 			}
 			defer os.Remove(tmpKubeconfigFile)

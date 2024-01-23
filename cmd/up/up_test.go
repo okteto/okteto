@@ -487,7 +487,7 @@ func TestUpdateKubetoken(t *testing.T) {
 	tt := []struct {
 		expected    error
 		f           *client.FakeOktetoClient
-		context     *okteto.OktetoContextStore
+		context     *okteto.ContextStore
 		expectedCfg *api.Config
 		name        string
 	}{
@@ -505,9 +505,9 @@ func TestUpdateKubetoken(t *testing.T) {
 					},
 				}),
 			},
-			context: &okteto.OktetoContextStore{
+			context: &okteto.ContextStore{
 				CurrentContext: "test",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"test": {
 						UserID: "test",
 						Cfg: &api.Config{
@@ -538,9 +538,9 @@ func TestUpdateKubetoken(t *testing.T) {
 					},
 				}),
 			},
-			context: &okteto.OktetoContextStore{
+			context: &okteto.ContextStore{
 				CurrentContext: "test",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"test": {
 						UserID: "test",
 						Cfg: &api.Config{
@@ -573,9 +573,9 @@ func TestUpdateKubetoken(t *testing.T) {
 					},
 				}),
 			},
-			context: &okteto.OktetoContextStore{
+			context: &okteto.ContextStore{
 				CurrentContext: "123",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"test": {
 						UserID: "test",
 						Cfg: &api.Config{
@@ -607,9 +607,9 @@ func TestUpdateKubetoken(t *testing.T) {
 					},
 				}),
 			},
-			context: &okteto.OktetoContextStore{
+			context: &okteto.ContextStore{
 				CurrentContext: "test",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"test": {
 						UserID: "test",
 						Cfg: &api.Config{

@@ -57,8 +57,8 @@ const (
 	previewDestroyEvent      = "DestroyPreview"
 	execEvent                = "Exec"
 	signupEvent              = "Signup"
-	contextEvent             = "Context"
-	contextUseNamespaceEvent = "Context Use-namespace"
+	contextEvent             = "GetContext"
+	contextUseNamespaceEvent = "GetContext Use-namespace"
 	disableEvent             = "Disable Analytics"
 	stackNotSupportedField   = "Stack Field Not Supported"
 	buildPullErrorEvent      = "BuildPullError"
@@ -321,23 +321,23 @@ func track(event string, success bool, props map[string]interface{}) {
 	props["$os"] = mpOS
 	props["version"] = config.VersionString
 	props["machine_id"] = get().MachineID
-	if okteto.Context().ClusterType != "" {
-		props["clusterType"] = okteto.Context().ClusterType
+	if okteto.GetContext().ClusterType != "" {
+		props["clusterType"] = okteto.GetContext().ClusterType
 	}
 
 	props["source"] = origin
 	props["origin"] = origin
 	props["success"] = success
-	props["contextType"] = getContextType(okteto.Context().Name)
-	props["isOkteto"] = okteto.Context().IsOkteto
+	props["contextType"] = getContextType(okteto.GetContext().Name)
+	props["isOkteto"] = okteto.GetContext().IsOkteto
 	if termType := os.Getenv(model.TermEnvVar); termType == "" {
 		props["term-type"] = "other"
 	} else {
 		props["term-type"] = termType
 	}
 
-	props["context"] = okteto.Context().CompanyName
-	props["isTrial"] = okteto.Context().IsTrial
+	props["context"] = okteto.GetContext().CompanyName
+	props["isTrial"] = okteto.GetContext().IsTrial
 
 	e := &mixpanel.Event{Properties: props}
 	if err := mixpanelClient.Track(getTrackID(), event, e); err != nil {
@@ -349,5 +349,5 @@ func disabledByOktetoAdmin() bool {
 	if okteto.IsOktetoCloud() {
 		return false
 	}
-	return !okteto.Context().Analytics
+	return !okteto.GetContext().Analytics
 }

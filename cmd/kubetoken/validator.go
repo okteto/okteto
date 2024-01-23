@@ -34,7 +34,7 @@ var (
 type preReqCfg struct {
 	k8sClientProvider    k8sClientProvider
 	oktetoClientProvider oktetoClientProvider
-	getContextStore      func() *okteto.OktetoContextStore
+	getContextStore      func() *okteto.ContextStore
 	getCtxResource       initCtxOptsFunc
 	ctxName              string
 	ns                   string
@@ -66,9 +66,9 @@ func withOktetoClientProvider(oktetoClientProvider oktetoClientProvider) option 
 	}
 }
 
-func withContextStore(ctxStore *okteto.OktetoContextStore) option {
+func withContextStore(ctxStore *okteto.ContextStore) option {
 	return func(cfg *preReqCfg) {
-		cfg.getContextStore = func() *okteto.OktetoContextStore {
+		cfg.getContextStore = func() *okteto.ContextStore {
 			return ctxStore
 		}
 	}
@@ -85,7 +85,7 @@ func defaultPreReqCfg() *preReqCfg {
 		k8sClientProvider:    okteto.NewK8sClientProvider(),
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
 		getCtxResource:       getCtxResource,
-		getContextStore:      okteto.ContextStore,
+		getContextStore:      okteto.GetContextStore,
 	}
 }
 
@@ -148,7 +148,7 @@ func getCtxResource(ctxName, ns string) *contextCMD.ContextOptions {
 	return ctxResource
 }
 
-type getContextStoreFunc func() *okteto.OktetoContextStore
+type getContextStoreFunc func() *okteto.ContextStore
 
 // ctxValidator checks that the ctx use to execute the command is an okteto context
 // that has already being added to your okteto context

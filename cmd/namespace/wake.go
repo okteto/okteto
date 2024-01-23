@@ -31,7 +31,7 @@ func Wake(ctx context.Context) *cobra.Command {
 		Short: "Wakes a namespace",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			nsToWake := okteto.Context().Namespace
+			nsToWake := okteto.GetContext().Namespace
 			if len(args) > 0 {
 				nsToWake = args[0]
 			}

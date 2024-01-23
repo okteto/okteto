@@ -95,7 +95,7 @@ type OktetoBuilder struct {
 }
 
 // NewBuilder creates a new okteto builder
-func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.IOController, analyticsTracker analyticsTrackerInterface, okCtx okteto.OktetoContextInterface, k8sLogger *io.K8sLogger) *OktetoBuilder {
+func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.IOController, analyticsTracker analyticsTrackerInterface, okCtx okteto.ContextInterface, k8sLogger *io.K8sLogger) *OktetoBuilder {
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
 	wd, err := wdCtrl.Get()
 	if err != nil {
@@ -123,8 +123,8 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 // NewBuilderFromScratch creates a new okteto builder
 func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *io.IOController) *OktetoBuilder {
 	builder := &buildCmd.OktetoBuilder{
-		OktetoContext: &okteto.OktetoContextStateless{
-			Store: okteto.ContextStore(),
+		OktetoContext: &okteto.ContextStateless{
+			Store: okteto.GetContextStore(),
 		},
 	}
 	reg := registry.NewOktetoRegistry(okteto.Config{})
@@ -155,8 +155,8 @@ func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *i
 		analyticsTracker:  analyticsTracker,
 		ioCtrl:            ioCtrl,
 		smartBuildCtrl:    smartbuild.NewSmartBuildCtrl(gitRepo, reg, config.fs, ioCtrl),
-		oktetoContext: &okteto.OktetoContextStateless{
-			Store: okteto.ContextStore(),
+		oktetoContext: &okteto.ContextStateless{
+			Store: okteto.GetContextStore(),
 		},
 	}
 }

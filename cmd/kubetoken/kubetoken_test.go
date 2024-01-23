@@ -58,13 +58,13 @@ func TestKubetoken(t *testing.T) {
 	type input struct {
 		fakeOktetoClientProvider fakeOktetoClientProvider
 		fakeCtxCmdRunner         fakeCtxCmdRunner
-		contextStore             *okteto.OktetoContextStore
+		contextStore             *okteto.ContextStore
 		flags                    KubetokenFlags
 	}
 
-	fakeCtxStore := &okteto.OktetoContextStore{
+	fakeCtxStore := &okteto.ContextStore{
 		CurrentContext: "https://okteto.dev",
-		Contexts: map[string]*okteto.OktetoContext{
+		Contexts: map[string]*okteto.Context{
 			"https://okteto.dev": {
 				IsOkteto: true,
 			},

@@ -203,9 +203,9 @@ func TestCheckAllResourcesRunning(t *testing.T) {
 
 func TestDeployPipelineSuccesful(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
+	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
-		Contexts: map[string]*okteto.OktetoContext{
+		Contexts: map[string]*okteto.Context{
 			"test": {},
 		},
 	}
@@ -233,9 +233,9 @@ func TestDeployPipelineSuccesful(t *testing.T) {
 
 func TestDeployPipelineSuccesfulWithWait(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
+	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
-		Contexts: map[string]*okteto.OktetoContext{
+		Contexts: map[string]*okteto.Context{
 			"test": {},
 		},
 	}
@@ -281,9 +281,9 @@ func TestDeployPipelineSuccesfulWithWait(t *testing.T) {
 
 func TestDeployWithError(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
+	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
-		Contexts: map[string]*okteto.OktetoContext{
+		Contexts: map[string]*okteto.Context{
 			"test": {},
 		},
 	}
@@ -307,9 +307,9 @@ func TestDeployWithError(t *testing.T) {
 
 func TestDeployPipelineSuccesfulWithWaitStreamError(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
+	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
-		Contexts: map[string]*okteto.OktetoContext{
+		Contexts: map[string]*okteto.Context{
 			"test": {},
 		},
 	}
@@ -355,9 +355,9 @@ func TestDeployPipelineSuccesfulWithWaitStreamError(t *testing.T) {
 
 func Test_DeployPipelineWithReuseParamsNotFoundError(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
+	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
-		Contexts: map[string]*okteto.OktetoContext{
+		Contexts: map[string]*okteto.Context{
 			"test": {},
 		},
 	}
@@ -375,9 +375,9 @@ func Test_DeployPipelineWithReuseParamsNotFoundError(t *testing.T) {
 
 func Test_DeployPipelineWithReuseParamsSuccess(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
+	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
-		Contexts: map[string]*okteto.OktetoContext{
+		Contexts: map[string]*okteto.Context{
 			"test": {},
 		},
 	}
@@ -424,9 +424,9 @@ func Test_DeployPipelineWithReuseParamsSuccess(t *testing.T) {
 }
 
 func Test_DeployPipelineWithSkipIfExist(t *testing.T) {
-	okteto.CurrentStore = &okteto.OktetoContextStore{
+	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
-		Contexts: map[string]*okteto.OktetoContext{
+		Contexts: map[string]*okteto.Context{
 			"test": {},
 		},
 	}
@@ -516,9 +516,9 @@ func Test_DeployPipelineWithSkipIfExist(t *testing.T) {
 }
 
 func Test_DeployPipelineWithSkipIfExistAndWait(t *testing.T) {
-	okteto.CurrentStore = &okteto.OktetoContextStore{
+	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
-		Contexts: map[string]*okteto.OktetoContext{
+		Contexts: map[string]*okteto.Context{
 			"test": {},
 		},
 	}

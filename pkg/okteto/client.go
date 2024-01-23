@@ -98,8 +98,8 @@ func defaultOktetoClientCfg() *OktetoClientCfg {
 		return &OktetoClientCfg{}
 	}
 	return &OktetoClientCfg{
-		CtxName: Context().Name,
-		Token:   Context().Token,
+		CtxName: GetContext().Name,
+		Token:   GetContext().Token,
 	}
 
 }
@@ -114,7 +114,7 @@ func NewOktetoClient(opts ...Option) (*OktetoClient, error) {
 	}
 
 	if cfg.Token == "" {
-		okCtx, exists := ContextStore().Contexts[cfg.CtxName]
+		okCtx, exists := GetContextStore().Contexts[cfg.CtxName]
 		if !exists {
 			return nil, fmt.Errorf("%s context doesn't exists", cfg.CtxName)
 		}
@@ -282,7 +282,7 @@ func NewOktetoClientFromUrl(url string) (*OktetoClient, error) {
 	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
 
-// contextWithOauth2HttpClient returns a context.Context with a value of type oauth2.HTTPClient so oauth2.NewClient() can be bootstrapped with a custom http.Client
+// contextWithOauth2HttpClient returns a context.GetContext with a value of type oauth2.HTTPClient so oauth2.NewClient() can be bootstrapped with a custom http.Client
 func contextWithOauth2HttpClient(ctx context.Context, httpClient *http.Client) context.Context {
 	return context.WithValue(
 		ctx,
@@ -332,7 +332,7 @@ func translateAPIErr(err error) error {
 	e := strings.TrimPrefix(err.Error(), "graphql: ")
 	switch e {
 	case "not-authorized":
-		return fmt.Errorf(oktetoErrors.ErrNotLogged, Context().Name)
+		return fmt.Errorf(oktetoErrors.ErrNotLogged, GetContext().Name)
 	case "namespace-quota-exceeded":
 		return fmt.Errorf("you have exceeded your namespace quota. Contact us at hello@okteto.com to learn more")
 	case "namespace-quota-exceeded-onpremises":
