@@ -59,7 +59,7 @@ services:
     - Dockerfile:/root/Dockerfile
 `
 	dockerfileName    = "Dockerfile"
-	dockerfileContent = "FROM busybox"
+	dockerfileContent = "FROM alpine"
 
 	dockerfileContentSecrets = `FROM alpine
 RUN --mount=type=secret,id=mysecret cat /run/secrets/mysecret
