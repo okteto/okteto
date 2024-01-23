@@ -146,7 +146,9 @@ func (p *PortForwardManager) Start(devPod, namespace string) error {
 			if !errors.Is(err, portforward.ErrLostConnectionToPod) {
 				p.activeDev.closeReady()
 			}
-			p.activeDev.err = err
+			if p.activeDev != nil {
+				p.activeDev.err = err
+			}
 		}
 	}()
 
