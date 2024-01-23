@@ -42,7 +42,7 @@ func GetHelmChartPath(cwd string) (string, error) {
 	return "", ErrHelmChartNotFound
 }
 
-// GetHelmChartPath returns a helm chart directory if exists, error otherwise
+// GetHelmChartPathWithFilesystem returns a helm chart directory if exists, error otherwise
 func GetHelmChartPathWithFilesystem(cwd string, fs afero.Fs) (string, error) {
 	// Files will be checked in the order defined in the list
 	for _, chartDir := range possibleHelmChartsSubPaths {

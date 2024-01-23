@@ -129,7 +129,7 @@ func NewOktetoClient(opts ...Option) (*OktetoClient, error) {
 	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
 
-// NewOktetoClient creates a new client to connect with Okteto API
+// NewOktetoClientStateless creates a new client to connect with Okteto API
 func NewOktetoClientStateless(ocfg *OktetoClientCfg, opts ...Option) (*OktetoClient, error) {
 	for _, opt := range opts {
 		opt(ocfg)

@@ -55,7 +55,7 @@ func GetComposePath(wd string) (string, error) {
 	return "", ErrComposeFileNotFound
 }
 
-// GetComposePath returns a compose file if exists, error otherwise
+// GetComposePathWithFilesystem returns a compose file if exists, error otherwise
 func GetComposePathWithFilesystem(wd string, fs afero.Fs) (string, error) {
 	for _, possibleStackManifest := range possibleComposeManifests {
 		manifestPath := filepath.Join(wd, filepath.Join(possibleStackManifest...))

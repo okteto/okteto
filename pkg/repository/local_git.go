@@ -195,7 +195,7 @@ func (lg *LocalGit) GetLatestCommit(ctx context.Context, gitPath, dirPath string
 	return string(output), nil
 }
 
-// GetLatestCommit returns the latest commit of the repository at the given path
+// Diff returns the diff of the repository at the given path
 func (lg *LocalGit) Diff(ctx context.Context, gitPath, dirPath string, fixAttempt int) (string, error) {
 	if fixAttempt > 1 {
 		return "", errLocalGitCannotGetCommitTooManyAttempts

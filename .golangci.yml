@@ -58,6 +58,11 @@ linters-settings:
       - int
       - make
       - '\.WithTimeout'
+  revive:
+    rules:
+      - name: exported
+        arguments:
+          - disableStutteringCheck
 
 # All possible linters can be found https://golangci-lint.run/usage/linters/
 linters:
@@ -86,8 +91,12 @@ linters:
     - bodyclose
     - durationcheck
     - exhaustive
+    - revive
 
 issues:
+  include:
+    - EXC0014 # EXC0014 revive: comment on exported (.+) should be of the form "(.+)..."
+
   # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
   max-issues-per-linter: 0
 
