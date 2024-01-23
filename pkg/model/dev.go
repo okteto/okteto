@@ -86,7 +86,7 @@ type Dev struct {
 	ExternalVolumes []ExternalVolume   `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
 	Secrets         []Secret           `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Volumes         []Volume           `json:"volumes,omitempty" yaml:"volumes,omitempty"`
-	EnvFiles        env.EnvFiles       `json:"envFiles,omitempty" yaml:"envFiles,omitempty"`
+	EnvFiles        env.Files          `json:"envFiles,omitempty" yaml:"envFiles,omitempty"`
 	Environment     env.Environment    `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Services        []*Dev             `json:"services,omitempty" yaml:"services,omitempty"`
 	Args            Command            `json:"args,omitempty" yaml:"args,omitempty"`

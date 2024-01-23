@@ -724,7 +724,7 @@ func TestStack_Merge(t *testing.T) {
 						Command: Command{
 							Values: []string{"app.py"},
 						},
-						EnvFiles: env.EnvFiles{".env"},
+						EnvFiles: env.Files{".env"},
 						Environment: env.Environment{
 							env.Var{
 								Name:  "test",
@@ -754,7 +754,7 @@ func TestStack_Merge(t *testing.T) {
 						Command: Command{
 							Values: []string{"run", "main.go"},
 						},
-						EnvFiles: env.EnvFiles{".env-test"},
+						EnvFiles: env.Files{".env-test"},
 						Environment: env.Environment{
 							env.Var{
 								Name:  "test",
@@ -784,7 +784,7 @@ func TestStack_Merge(t *testing.T) {
 						Command: Command{
 							Values: []string{"run", "main.go"},
 						},
-						EnvFiles: env.EnvFiles{".env-test"},
+						EnvFiles: env.Files{".env-test"},
 						Environment: env.Environment{
 							env.Var{
 								Name:  "test",

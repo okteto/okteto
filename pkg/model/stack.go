@@ -89,7 +89,7 @@ type Service struct {
 	CapAdd          []apiv1.Capability   `yaml:"cap_add,omitempty"`
 	CapDrop         []apiv1.Capability   `yaml:"cap_drop,omitempty"`
 	VolumeMounts    []build.VolumeMounts `yaml:"-"`
-	EnvFiles        env.EnvFiles         `yaml:"env_file,omitempty"`
+	EnvFiles        env.Files            `yaml:"env_file,omitempty"`
 	Command         Command              `yaml:"command,omitempty"`
 	Annotations     Annotations          `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Entrypoint      Entrypoint           `yaml:"entrypoint,omitempty"`

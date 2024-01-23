@@ -142,8 +142,8 @@ type ServiceRaw struct {
 	Command                  CommandStack           `yaml:"command,omitempty"`
 	Volumes                  []build.VolumeMounts   `yaml:"volumes,omitempty"`
 	CapAddSneakCase          []apiv1.Capability     `yaml:"cap_add,omitempty"`
-	EnvFiles                 env.EnvFiles           `yaml:"envFile,omitempty"`
-	EnvFilesSneakCase        env.EnvFiles           `yaml:"env_file,omitempty"`
+	EnvFiles                 env.Files              `yaml:"envFile,omitempty"`
+	EnvFilesSneakCase        env.Files              `yaml:"env_file,omitempty"`
 	Args                     ArgsStack              `yaml:"args,omitempty"`
 	Entrypoint               CommandStack           `yaml:"entrypoint,omitempty"`
 	Environment              env.Environment        `yaml:"environment,omitempty"`
