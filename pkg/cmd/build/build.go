@@ -57,7 +57,7 @@ var (
 // OktetoBuilderInterface runs the build of an image
 type OktetoBuilderInterface interface {
 	GetBuilder() string
-	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error
+	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error
 }
 
 // OktetoBuilder runs the build of an image
@@ -75,7 +75,7 @@ func (ob *OktetoBuilder) GetBuilder() string {
 }
 
 // Run runs the build sequence
-func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error {
+func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error {
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
 	if ob.OktetoContext.GetCurrentBuilder() == "" {
 		if err := ob.buildWithDocker(ctx, buildOptions); err != nil {
@@ -119,7 +119,7 @@ func GetRegistryConfigFromOktetoConfig(okCtx OktetoContextInterface) *okteto.Con
 	}
 }
 
-func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error {
+func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error {
 	oktetoLog.Infof("building your image on %s", ob.OktetoContext.GetCurrentBuilder())
 	buildkitClient, err := getBuildkitClient(ctx, ob.OktetoContext)
 	if err != nil {

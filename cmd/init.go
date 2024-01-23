@@ -33,7 +33,7 @@ type analyticsTrackerInterface interface {
 }
 
 // Init creates okteto manifest
-func Init(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
+func Init(at analyticsTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
 	opts := &manifest.InitOpts{}
 	cmd := &cobra.Command{
 		Use:   "init",

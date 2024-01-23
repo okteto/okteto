@@ -41,12 +41,12 @@ type DeployCommand struct {
 	K8sClient        kubernetes.Interface
 	analyticsTracker analyticsTrackerInterface
 	Config           *rest.Config
-	ioCtrl           *io.IOController
+	ioCtrl           *io.Controller
 	IsInsideDeploy   bool
 }
 
 // deploy deploys a stack
-func deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
+func deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
 	options := &stack.StackDeployOptions{}
 
 	cmd := &cobra.Command{

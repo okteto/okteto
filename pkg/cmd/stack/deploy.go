@@ -71,7 +71,7 @@ type Stack struct {
 	K8sClient        kubernetes.Interface
 	Config           *rest.Config
 	AnalyticsTracker analyticsTrackerInterface
-	IoCtrl           *io.IOController
+	IoCtrl           *io.Controller
 }
 
 const (

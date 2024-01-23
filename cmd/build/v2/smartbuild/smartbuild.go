@@ -54,7 +54,7 @@ type hasherController interface {
 type Ctrl struct {
 	gitRepo            repositoryInterface
 	registryController registryController
-	ioCtrl             *io.IOController
+	ioCtrl             *io.Controller
 
 	hasher hasherController
 
@@ -63,7 +63,7 @@ type Ctrl struct {
 }
 
 // NewSmartBuildCtrl creates a new smart build controller
-func NewSmartBuildCtrl(repo repositoryInterface, registry registryController, fs afero.Fs, ioCtrl *io.IOController) *Ctrl {
+func NewSmartBuildCtrl(repo repositoryInterface, registry registryController, fs afero.Fs, ioCtrl *io.Controller) *Ctrl {
 	isEnabled := env.LoadBooleanOrDefault(OktetoEnableSmartBuildEnvVar, true)
 	isUsingBuildCtx := env.LoadBoolean(OktetoSmartBuildUsingContextEnvVar)
 

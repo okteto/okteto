@@ -97,7 +97,7 @@ type getDeployerFunc func(
 	okteto.K8sClientProviderWithLogger,
 	kubeConfigHandler,
 	portGetterFunc,
-	*io.IOController,
+	*io.Controller,
 	*io.K8sLogger,
 ) (deployerInterface, error)
 
@@ -116,7 +116,7 @@ type DeployCommand struct {
 	DivertDriver       divert.Driver
 	PipelineCMD        pipelineCMD.PipelineDeployerInterface
 	AnalyticsTracker   analyticsTrackerInterface
-	IoCtrl             *io.IOController
+	IoCtrl             *io.Controller
 	K8sLogger          *io.K8sLogger
 
 	PipelineType       model.Archetype
@@ -144,7 +144,7 @@ func NewDeployExternalK8sControl(cfg *rest.Config) ExternalResourceInterface {
 }
 
 // Deploy deploys the okteto manifest
-func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOController, k8sLogger *io.K8sLogger) *cobra.Command {
+func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &Options{}
 	fs := &DeployCommand{
 		Fs: afero.NewOsFs(),
@@ -574,7 +574,7 @@ func GetDeployer(ctx context.Context,
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	kubeconfig kubeConfigHandler,
 	portGetter portGetterFunc,
-	ioCtrl *io.IOController,
+	ioCtrl *io.Controller,
 	k8Logger *io.K8sLogger,
 ) (deployerInterface, error) {
 	if shouldRunInRemote(opts) {

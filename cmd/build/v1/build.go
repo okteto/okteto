@@ -35,7 +35,7 @@ import (
 // OktetoBuilderInterface runs the build of an image
 type OktetoBuilderInterface interface {
 	GetBuilder() string
-	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error
+	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error
 }
 
 type oktetoRegistryInterface interface {
@@ -47,11 +47,11 @@ type oktetoRegistryInterface interface {
 type OktetoBuilder struct {
 	Builder  OktetoBuilderInterface
 	Registry oktetoRegistryInterface
-	IoCtrl   *io.IOController
+	IoCtrl   *io.Controller
 }
 
 // NewBuilder creates a new okteto builder
-func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.IOController) *OktetoBuilder {
+func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.Controller) *OktetoBuilder {
 	return &OktetoBuilder{
 		Builder:  builder,
 		Registry: registry,
@@ -60,7 +60,7 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 }
 
 // NewBuilderFromScratch creates a new okteto builder
-func NewBuilderFromScratch(ioCtrl *io.IOController) *OktetoBuilder {
+func NewBuilderFromScratch(ioCtrl *io.Controller) *OktetoBuilder {
 	builder := &buildCmd.OktetoBuilder{
 		OktetoContext: &okteto.ContextStateless{
 			Store: okteto.GetContextStore(),

@@ -31,7 +31,7 @@ type buildCtrl struct {
 	name    string
 }
 
-func newBuildCtrl(name string, analyticsTracker analyticsTrackerInterface, ioCtrl *io.IOController) buildCtrl {
+func newBuildCtrl(name string, analyticsTracker analyticsTrackerInterface, ioCtrl *io.Controller) buildCtrl {
 	return buildCtrl{
 		builder: buildv2.NewBuilderFromScratch(analyticsTracker, ioCtrl),
 		name:    name,

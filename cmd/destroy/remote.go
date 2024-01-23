@@ -115,7 +115,7 @@ type remoteDestroyCommand struct {
 	knownHostsPath string
 }
 
-func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.IOController) *remoteDestroyCommand {
+func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remoteDestroyCommand {
 	fs := afero.NewOsFs()
 	builder := remoteBuild.NewBuilderFromScratch(ioCtrl)
 	if manifest.Destroy == nil {

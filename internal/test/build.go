@@ -43,7 +43,7 @@ func (fb *FakeOktetoBuilder) GetBuilder() string {
 }
 
 // Run simulates a build
-func (fb *FakeOktetoBuilder) Run(_ context.Context, opts *types.BuildOptions, _ *io.IOController) error {
+func (fb *FakeOktetoBuilder) Run(_ context.Context, opts *types.BuildOptions, _ *io.Controller) error {
 	if fb.Err != nil {
 		err := fb.Err[0]
 		fb.Err = fb.Err[1:]

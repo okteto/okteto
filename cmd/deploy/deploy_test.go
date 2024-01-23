@@ -321,7 +321,7 @@ type fakeDeployer struct {
 	externalControlProvider fakeExternalControlProvider
 }
 
-func (d fakeDeployer) Get(_ context.Context, _ *Options, _ builderInterface, cmapHandler configMapHandler, _ okteto.K8sClientProviderWithLogger, _ kubeConfigHandler, _ portGetterFunc, _ *io.IOController, _ *io.K8sLogger) (deployerInterface, error) {
+func (d fakeDeployer) Get(_ context.Context, _ *Options, _ builderInterface, cmapHandler configMapHandler, _ okteto.K8sClientProviderWithLogger, _ kubeConfigHandler, _ portGetterFunc, _ *io.Controller, _ *io.K8sLogger) (deployerInterface, error) {
 	return &localDeployer{
 		Proxy:              d.proxy,
 		Executor:           d.executor,

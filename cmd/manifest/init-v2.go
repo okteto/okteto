@@ -53,7 +53,7 @@ type ManifestCommand struct {
 	K8sClientProvider okteto.K8sClientProviderWithLogger
 	AnalyticsTracker  analyticsTrackerInterface
 
-	IoCtrl    *io.IOController
+	IoCtrl    *io.Controller
 	K8sLogger *io.K8sLogger
 }
 
