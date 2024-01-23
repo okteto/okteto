@@ -35,8 +35,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User, fakeObjects []runtime.Object) *ContextCommand {
-	return &ContextCommand{
+func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User, fakeObjects []runtime.Object) *Command {
+	return &Command{
 		K8sClientProvider:    test.NewFakeK8sProvider(fakeObjects...),
 		LoginController:      test.NewFakeLoginController(user, nil),
 		OktetoClientProvider: client.NewFakeOktetoClientProvider(c),
@@ -640,7 +640,7 @@ func TestGetUserContext(t *testing.T) {
 				Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
 				Users:     client.NewFakeUsersClientWithContext(userCtx, tc.input.userErr...),
 			}
-			cmd := ContextCommand{
+			cmd := Command{
 				OktetoClientProvider: client.NewFakeOktetoClientProvider(fakeOktetoClient),
 				OktetoContextWriter:  test.NewFakeOktetoContextWriter(),
 			}

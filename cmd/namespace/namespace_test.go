@@ -41,7 +41,7 @@ func (*fakeK8sProvider) GetIngressClient() (*ingresses.Client, error) {
 	return nil, nil
 }
 
-func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User) *contextCMD.ContextCommand {
+func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User) *contextCMD.Command {
 	cmd := contextCMD.NewContextCommand()
 	cmd.OktetoClientProvider = client.NewFakeOktetoClientProvider(c)
 	cmd.K8sClientProvider = test.NewFakeK8sProvider(nil)

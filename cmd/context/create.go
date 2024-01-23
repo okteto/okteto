@@ -47,8 +47,8 @@ type kubeconfigTokenController interface {
 	updateOktetoContextToken(*types.UserContext) error
 }
 
-// ContextCommand has the dependencies to run a ctxCommand
-type ContextCommand struct {
+// Command has the dependencies to run a ctxCommand
+type Command struct {
 	K8sClientProvider    okteto.K8sClientProvider
 	LoginController      login.LoginInterface
 	OktetoClientProvider oktetoClientProvider
@@ -57,17 +57,17 @@ type ContextCommand struct {
 	OktetoContextWriter okteto.ContextConfigWriterInterface
 }
 
-type ctxCmdOption func(*ContextCommand)
+type ctxCmdOption func(*Command)
 
 func withKubeTokenController(k kubeconfigTokenController) ctxCmdOption {
-	return func(c *ContextCommand) {
+	return func(c *Command) {
 		c.kubetokenController = k
 	}
 }
 
-// NewContextCommand creates a new ContextCommand
-func NewContextCommand(ctxCmdOption ...ctxCmdOption) *ContextCommand {
-	cfg := &ContextCommand{
+// NewContextCommand creates a new Command
+func NewContextCommand(ctxCmdOption ...ctxCmdOption) *Command {
+	cfg := &Command{
 		K8sClientProvider:    okteto.NewK8sClientProvider(),
 		LoginController:      login.NewLoginController(),
 		OktetoClientProvider: okteto.NewOktetoClientProvider(),
@@ -132,7 +132,7 @@ If you need to automate authentication or if you don't want to use browser-based
 	return cmd
 }
 
-func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
+func (c *Command) UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
 	created := false
 
 	ctxStore := okteto.GetContextStore()
@@ -254,7 +254,7 @@ func getClusterMetadata(ctx context.Context, namespace string, okClientProvider 
 	return okClient.User().GetClusterMetadata(ctx, namespace)
 }
 
-func hasAccessToNamespace(ctx context.Context, c *ContextCommand, ctxOptions *ContextOptions) (bool, error) {
+func hasAccessToNamespace(ctx context.Context, c *Command, ctxOptions *ContextOptions) (bool, error) {
 	if ctxOptions.IsOkteto {
 		okClient, err := c.OktetoClientProvider.Provide()
 		if err != nil {
@@ -282,7 +282,7 @@ func hasAccessToNamespace(ctx context.Context, c *ContextCommand, ctxOptions *Co
 	}
 }
 
-func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
+func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
 	var userContext *types.UserContext
 	userContext, err := getLoggedUserContext(ctx, c, ctxOptions)
 	if err != nil {
@@ -346,7 +346,7 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 	return nil
 }
 
-func getLoggedUserContext(ctx context.Context, c *ContextCommand, ctxOptions *ContextOptions) (*types.UserContext, error) {
+func getLoggedUserContext(ctx context.Context, c *Command, ctxOptions *ContextOptions) (*types.UserContext, error) {
 	user, err := c.LoginController.AuthenticateToOktetoCluster(ctx, ctxOptions.Context, ctxOptions.Token)
 	if err != nil {
 		return nil, err
@@ -368,7 +368,7 @@ func getLoggedUserContext(ctx context.Context, c *ContextCommand, ctxOptions *Co
 	return userContext, nil
 }
 
-func (*ContextCommand) initKubernetesContext(ctxOptions *ContextOptions) error {
+func (*Command) initKubernetesContext(ctxOptions *ContextOptions) error {
 	cfg := kubeconfig.Get(config.GetKubeconfigPath())
 	if cfg == nil {
 		return fmt.Errorf(oktetoErrors.ErrKubernetesContextNotFound, ctxOptions.Context, config.GetKubeconfigPath())
@@ -397,7 +397,7 @@ func (*ContextCommand) initKubernetesContext(ctxOptions *ContextOptions) error {
 	return nil
 }
 
-func (c ContextCommand) getUserContext(ctx context.Context, ctxName, ns, token string) (*types.UserContext, error) {
+func (c Command) getUserContext(ctx context.Context, ctxName, ns, token string) (*types.UserContext, error) {
 	client, err := c.OktetoClientProvider.Provide(
 		okteto.WithCtxName(ctxName),
 		okteto.WithToken(token),
@@ -464,7 +464,7 @@ func (c ContextCommand) getUserContext(ctx context.Context, ctxName, ns, token s
 	return nil, oktetoErrors.ErrInternalServerError
 }
 
-func (*ContextCommand) initEnvVars() {
+func (*Command) initEnvVars() {
 	if filesystem.FileExists(".env") {
 		if err := godotenv.Load(); err != nil {
 			oktetoLog.Infof("error loading .env file: %s", err.Error())

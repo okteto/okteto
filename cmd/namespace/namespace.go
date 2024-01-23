@@ -26,7 +26,7 @@ import (
 
 // NamespaceCommand has all the namespaces subcommands
 type NamespaceCommand struct {
-	ctxCmd            *contextCMD.ContextCommand
+	ctxCmd            *contextCMD.Command
 	okClient          types.OktetoInterface
 	k8sClientProvider okteto.K8sClientProviderWithLogger
 }

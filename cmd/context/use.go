@@ -93,7 +93,7 @@ Or a Kubernetes context:
 	return cmd
 }
 
-func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) error {
+func (c *Command) Run(ctx context.Context, ctxOptions *ContextOptions) error {
 	ctxStore := okteto.GetContextStore()
 	if len(ctxStore.Contexts) == 0 {
 		// if the context store has no context stored, set flag to save the
@@ -151,7 +151,7 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 
 // RunStateless is the fn to use until the refactoring of the context command itself if you want to make use
 // of an injected context instead of using the global context variable.
-func (c *ContextCommand) RunStateless(ctx context.Context, ctxOptions *ContextOptions) (*okteto.ContextStateless, error) {
+func (c *Command) RunStateless(ctx context.Context, ctxOptions *ContextOptions) (*okteto.ContextStateless, error) {
 	err := c.Run(ctx, ctxOptions)
 	if err != nil {
 		return nil, err
