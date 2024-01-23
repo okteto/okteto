@@ -32,7 +32,7 @@ func Test_ExpandEnv(t *testing.T) {
 			name:        "broken var - missing closing curly bracket",
 			value:       "value-${BAR",
 			result:      "",
-			expectedErr: &EnvVarExpansionErr{},
+			expectedErr: &VarExpansionErr{},
 		},
 		{
 			name:        "no-var",
@@ -91,7 +91,7 @@ func Test_ExpandEnvIfNotEmpty(t *testing.T) {
 			name:        "broken var - missing closing curly bracket",
 			value:       "value-${BAR",
 			result:      "",
-			expectedErr: &EnvVarExpansionErr{},
+			expectedErr: &VarExpansionErr{},
 		},
 		{
 			name:        "no-var",

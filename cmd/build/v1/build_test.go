@@ -111,7 +111,7 @@ func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 	}
 	err = bc.Build(ctx, options)
 	// error from the build
-	assert.ErrorAs(t, err, &env.EnvVarExpansionErr{})
+	assert.ErrorAs(t, err, &env.VarExpansionErr{})
 	// the image is not at the fake registry
 	image, err := bc.Registry.GetImageTagWithDigest(options.Tag)
 	assert.ErrorIs(t, err, oktetoErrors.ErrNotFound)
