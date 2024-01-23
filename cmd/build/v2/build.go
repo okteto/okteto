@@ -82,7 +82,7 @@ type OktetoBuilder struct {
 	V1Builder        *buildv1.OktetoBuilder
 	oktetoContext    buildCmd.OktetoContextInterface
 
-	smartBuildCtrl *smartbuild.SmartBuildCtrl
+	smartBuildCtrl *smartbuild.Ctrl
 
 	// buildEnvironments are the environment variables created by the build steps
 	buildEnvironments map[string]string
