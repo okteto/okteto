@@ -19,7 +19,9 @@ package up
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/log/io"
 	"log"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -51,8 +53,9 @@ dev:
 )
 
 func TestUpWithDeploy(t *testing.T) {
-	t.Parallel()
+	t.Setenv("OKTETO_K8S_REQUESTS_LOGGER_ENABLED", "true")
 	// Prepare environment
+
 	dir := t.TempDir()
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
@@ -134,6 +137,11 @@ func TestUpWithDeploy(t *testing.T) {
 
 	require.True(t, commands.HasUpCommandFinished(upResult.Pid.Pid))
 
+	k8sLogsFilePath := filepath.Join(dir, ".okteto", io.K8sLogsFileName)
+	require.FileExists(t, k8sLogsFilePath)
+	k8sLogs, err := os.ReadFile(k8sLogsFilePath)
+	require.NoError(t, err)
+	require.Contains(t, string(k8sLogs), fmt.Sprintf("running cmd: up --deploy=true --namespace=%s", testNamespace))
 }
 
 func getImageWithSHA(devImage string) string {

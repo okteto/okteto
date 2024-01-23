@@ -87,13 +87,15 @@ type OktetoBuilder struct {
 	// buildEnvironments are the environment variables created by the build steps
 	buildEnvironments map[string]string
 
-	ioCtrl *io.IOController
+	ioCtrl    *io.IOController
+	k8sLogger *io.K8sLogger
+
 	// lock is a mutex to provide buildEnvironments map safe concurrency
 	lock sync.RWMutex
 }
 
 // NewBuilder creates a new okteto builder
-func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.IOController, analyticsTracker analyticsTrackerInterface, okCtx okteto.OktetoContextInterface) *OktetoBuilder {
+func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.IOController, analyticsTracker analyticsTrackerInterface, okCtx okteto.OktetoContextInterface, k8sLogger *io.K8sLogger) *OktetoBuilder {
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
 	wd, err := wdCtrl.Get()
 	if err != nil {
@@ -114,6 +116,7 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 		ioCtrl:            ioCtrl,
 		smartBuildCtrl:    smartbuild.NewSmartBuildCtrl(gitRepo, registry, config.fs, ioCtrl),
 		oktetoContext:     okCtx,
+		k8sLogger:         k8sLogger,
 	}
 }
 
@@ -184,7 +187,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		if err != nil {
 			return err
 		}
-		c, _, err := okteto.NewK8sClientProvider().Provide(ob.oktetoContext.GetCurrentCfg())
+		c, _, err := okteto.NewK8sClientProviderWithLogger(ob.k8sLogger).Provide(ob.oktetoContext.GetCurrentCfg())
 		if err != nil {
 			return err
 		}

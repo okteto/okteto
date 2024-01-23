@@ -30,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/ssh"
@@ -45,7 +46,7 @@ type execFlags struct {
 }
 
 // Exec executes a command on the CND container
-func Exec() *cobra.Command {
+func Exec(k8sLogger *io.K8sLogger) *cobra.Command {
 	execFlags := &execFlags{}
 
 	cmd := &cobra.Command{
@@ -61,7 +62,7 @@ func Exec() *cobra.Command {
 				return err
 			}
 
-			c, _, err := okteto.GetK8sClient()
+			c, _, err := okteto.GetK8sClientWithLogger(k8sLogger)
 			if err != nil {
 				return err
 			}
@@ -82,7 +83,7 @@ func Exec() *cobra.Command {
 
 			t := time.NewTicker(1 * time.Second)
 			iter := 0
-			err = executeExec(ctx, dev, execFlags.commandToExecute)
+			err = executeExec(ctx, dev, execFlags.commandToExecute, k8sLogger)
 			for oktetoErrors.IsTransient(err) {
 				if iter == 0 {
 					oktetoLog.Yellow("Connection lost to your development container, reconnecting...")
@@ -90,7 +91,7 @@ func Exec() *cobra.Command {
 				iter++
 				iter = iter % 10
 				<-t.C
-				err = executeExec(ctx, dev, execFlags.commandToExecute)
+				err = executeExec(ctx, dev, execFlags.commandToExecute, k8sLogger)
 			}
 
 			analytics.TrackExec(&analytics.TrackExecMetadata{
@@ -123,7 +124,7 @@ func Exec() *cobra.Command {
 	return cmd
 }
 
-func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
+func executeExec(ctx context.Context, dev *model.Dev, args []string, k8sLogger *io.K8sLogger) error {
 	oktetoLog.Spinner("Preparing your container")
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -131,7 +132,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 	wrapped := []string{"sh", "-c"}
 	wrapped = append(wrapped, args...)
 
-	c, cfg, err := okteto.GetK8sClient()
+	c, cfg, err := okteto.GetK8sClientWithLogger(k8sLogger)
 	if err != nil {
 		return err
 	}
@@ -202,17 +203,12 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		dev.LoadRemote(ssh.GetPublicKey())
 		oktetoLog.StopSpinner()
 		if dev.IsHybridModeEnabled() {
-			k8sClient, _, err := okteto.GetK8sClient()
-			if err != nil {
-				return err
-			}
-
 			hybridCtx := &up.HybridExecCtx{
 				Dev:       dev,
 				Workdir:   dev.Workdir,
 				Name:      dev.Name,
 				Namespace: dev.Namespace,
-				Client:    k8sClient,
+				Client:    c,
 			}
 			executor, err := up.NewHybridExecutor(ctx, hybridCtx)
 			if err != nil {

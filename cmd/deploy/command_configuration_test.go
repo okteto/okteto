@@ -61,7 +61,7 @@ devs:
 	dc := &DeployCommand{
 		GetManifest:       getFakeManifest,
 		K8sClientProvider: fakeK8sProvider,
-		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sProvider),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sProvider, nil),
 	}
 
 	ctx := context.Background()

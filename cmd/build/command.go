@@ -54,6 +54,7 @@ type Command struct {
 	Registry         registryInterface
 	analyticsTracker analyticsTrackerInterface
 	ioCtrl           *io.IOController
+	k8slogger        *io.K8sLogger
 }
 
 type analyticsTrackerInterface interface {
@@ -73,7 +74,7 @@ type registryInterface interface {
 }
 
 // NewBuildCommand creates a struct to run all build methods
-func NewBuildCommand(ioCtrl *io.IOController, analyticsTracker analyticsTrackerInterface, okCtx *okteto.OktetoContextStateless) *Command {
+func NewBuildCommand(ioCtrl *io.IOController, analyticsTracker analyticsTrackerInterface, okCtx *okteto.OktetoContextStateless, k8slogger *io.K8sLogger) *Command {
 
 	return &Command{
 		GetManifest: model.GetManifestV2,
@@ -82,6 +83,7 @@ func NewBuildCommand(ioCtrl *io.IOController, analyticsTracker analyticsTrackerI
 		},
 		Registry:         registry.NewOktetoRegistry(buildCmd.GetRegistryConfigFromOktetoConfig(okCtx)),
 		ioCtrl:           ioCtrl,
+		k8slogger:        k8slogger,
 		analyticsTracker: analyticsTracker,
 	}
 }
@@ -92,7 +94,7 @@ const (
 )
 
 // Build build and optionally push a Docker image
-func Build(ctx context.Context, ioCtrl *io.IOController, at analyticsTrackerInterface) *cobra.Command {
+func Build(ctx context.Context, ioCtrl *io.IOController, at analyticsTrackerInterface, k8slogger *io.K8sLogger) *cobra.Command {
 	options := &types.BuildOptions{}
 	cmd := &cobra.Command{
 		Use:   "build [service...]",
@@ -109,7 +111,7 @@ func Build(ctx context.Context, ioCtrl *io.IOController, at analyticsTrackerInte
 
 			ioCtrl.Logger().Info("context loaded")
 
-			bc := NewBuildCommand(ioCtrl, at, oktetoContext)
+			bc := NewBuildCommand(ioCtrl, at, oktetoContext, k8slogger)
 
 			builder, err := bc.getBuilder(options, oktetoContext)
 
@@ -161,7 +163,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.OktetoC
 		builder = buildv1.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl)
 	} else {
 		if isBuildV2(manifest) {
-			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl, bc.analyticsTracker, okCtx)
+			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl, bc.analyticsTracker, okCtx, bc.k8slogger)
 		} else {
 			builder = buildv1.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl)
 		}

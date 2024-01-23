@@ -15,6 +15,7 @@ package test
 
 import (
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
+	"github.com/okteto/okteto/pkg/log/io"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
@@ -53,6 +54,10 @@ func (f *FakeK8sProvider) Provide(_ *clientcmdapi.Config) (kubernetes.Interface,
 
 	f.client = c
 	return c, f.restConfig, nil
+}
+
+func (f *FakeK8sProvider) ProvideWithLogger(c *clientcmdapi.Config, _ *io.K8sLogger) (kubernetes.Interface, *rest.Config, error) {
+	return f.Provide(c)
 }
 
 func (f *FakeK8sProvider) GetIngressClient() (*ingresses.Client, error) {

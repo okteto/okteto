@@ -94,21 +94,22 @@ type getDeployerFunc func(
 	context.Context, *Options,
 	builderInterface,
 	configMapHandler,
-	okteto.K8sClientProvider,
+	okteto.K8sClientProviderWithLogger,
 	kubeConfigHandler,
 	portGetterFunc,
 	*io.IOController,
+	*io.K8sLogger,
 ) (deployerInterface, error)
 
 // DeployCommand defines the config for deploying an app
 type DeployCommand struct {
 	GetManifest        func(path string) (*model.Manifest, error)
 	TempKubeconfigFile string
-	K8sClientProvider  okteto.K8sClientProvider
+	K8sClientProvider  okteto.K8sClientProviderWithLogger
 	Builder            builderInterface
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
 	GetDeployer        getDeployerFunc
-	EndpointGetter     func() (EndpointGetter, error)
+	EndpointGetter     func(k8sLogger *io.K8sLogger) (EndpointGetter, error)
 	DeployWaiter       DeployWaiter
 	CfgMapHandler      configMapHandler
 	Fs                 afero.Fs
@@ -116,6 +117,7 @@ type DeployCommand struct {
 	PipelineCMD        pipelineCMD.PipelineDeployerInterface
 	AnalyticsTracker   analyticsTrackerInterface
 	IoCtrl             *io.IOController
+	K8sLogger          *io.K8sLogger
 
 	PipelineType       model.Archetype
 	isRemote           bool
@@ -142,7 +144,7 @@ func NewDeployExternalK8sControl(cfg *rest.Config) ExternalResourceInterface {
 }
 
 // Deploy deploys the okteto manifest
-func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
+func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOController, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &Options{}
 	fs := &DeployCommand{
 		Fs: afero.NewOsFs(),
@@ -198,7 +200,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCont
 			options.ShowCTA = oktetoLog.IsInteractive()
 			options.servicesToDeploy = args
 
-			k8sClientProvider := okteto.NewK8sClientProvider()
+			k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
 			pc, err := pipelineCMD.NewCommand()
 			if err != nil {
 				return fmt.Errorf("could not create pipeline command: %w", err)
@@ -210,15 +212,16 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCont
 				K8sClientProvider:  k8sClientProvider,
 				GetDeployer:        GetDeployer,
 				Builder:            buildv2.NewBuilderFromScratch(at, ioCtrl),
-				DeployWaiter:       NewDeployWaiter(k8sClientProvider),
+				DeployWaiter:       NewDeployWaiter(k8sClientProvider, k8sLogger),
 				EndpointGetter:     NewEndpointGetter,
 				isRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
-				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider),
+				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider, k8sLogger),
 				Fs:                 afero.NewOsFs(),
 				PipelineCMD:        pc,
 				runningInInstaller: config.RunningInInstaller(),
 				AnalyticsTracker:   at,
 				IoCtrl:             ioCtrl,
+				K8sLogger:          k8sLogger,
 			}
 			startTime := time.Now()
 
@@ -240,7 +243,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCont
 				oktetoLog.StartSpinner()
 				defer oktetoLog.StopSpinner()
 
-				deployer, err := c.GetDeployer(ctx, options, c.Builder, c.CfgMapHandler, k8sClientProvider, NewKubeConfig(), model.GetAvailablePort, ioCtrl)
+				deployer, err := c.GetDeployer(ctx, options, c.Builder, c.CfgMapHandler, k8sClientProvider, NewKubeConfig(), model.GetAvailablePort, ioCtrl, k8sLogger)
 				if err != nil {
 					return err
 				}
@@ -289,7 +292,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	// We need to create a client that doesn't go through the proxy to create
 	// the configmap without the deployedByLabel
-	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
+	c, _, err := dc.K8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, dc.K8sLogger)
 	if err != nil {
 		return err
 	}
@@ -310,7 +313,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		dc.addEnvVars(cwd)
 	}
 
-	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
+	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c, dc.K8sLogger); err != nil {
 		return err
 	}
 
@@ -372,7 +375,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		oktetoLog.Infof("failed to recreate failed pods: %s", err.Error())
 	}
 
-	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder, dc.CfgMapHandler, dc.K8sClientProvider, NewKubeConfig(), model.GetAvailablePort, dc.IoCtrl)
+	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder, dc.CfgMapHandler, dc.K8sClientProvider, NewKubeConfig(), model.GetAvailablePort, dc.IoCtrl, dc.K8sLogger)
 	if err != nil {
 		return err
 	}
@@ -397,7 +400,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 				}
 			}
 			if !env.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
-				eg, err := dc.EndpointGetter()
+				eg, err := dc.EndpointGetter(dc.K8sLogger)
 				if err != nil {
 					oktetoLog.Infof("could not create endpoint getter: %s", err)
 				}
@@ -568,10 +571,11 @@ func GetDeployer(ctx context.Context,
 	opts *Options,
 	builder builderInterface,
 	cmapHandler configMapHandler,
-	k8sProvider okteto.K8sClientProvider,
+	k8sProvider okteto.K8sClientProviderWithLogger,
 	kubeconfig kubeConfigHandler,
 	portGetter portGetterFunc,
 	ioCtrl *io.IOController,
+	k8Logger *io.K8sLogger,
 ) (deployerInterface, error) {
 	if shouldRunInRemote(opts) {
 		// run remote
@@ -582,7 +586,7 @@ func GetDeployer(ctx context.Context,
 	// run local
 	oktetoLog.Info("Deploying locally...")
 
-	deployer, err := newLocalDeployer(ctx, opts, cmapHandler, k8sProvider, kubeconfig, portGetter)
+	deployer, err := newLocalDeployer(ctx, opts, cmapHandler, k8sProvider, kubeconfig, portGetter, k8Logger)
 	if err != nil {
 		eWrapped := fmt.Errorf("could not initialize local deploy command: %w", err)
 		if uError, ok := err.(oktetoErrors.UserError); ok {
@@ -646,7 +650,7 @@ func (dc *DeployCommand) deployDependencies(ctx context.Context, deployOptions *
 }
 
 func (dc *DeployCommand) recreateFailedPods(ctx context.Context, name string) error {
-	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
+	c, _, err := dc.K8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, dc.K8sLogger)
 	if err != nil {
 		return fmt.Errorf("could not get kubernetes client: %w", err)
 	}

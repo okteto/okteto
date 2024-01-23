@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -53,7 +54,15 @@ type fakeK8sProvider struct {
 	err error
 }
 
+//nolint:unparam
 func (f *fakeK8sProvider) Provide(_ *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
+	if f.err != nil {
+		return nil, nil, f.err
+	}
+	return nil, nil, nil
+}
+
+func (f *fakeK8sProvider) ProvideWithLogger(_ *clientcmdapi.Config, _ *io.K8sLogger) (kubernetes.Interface, *rest.Config, error) {
 	if f.err != nil {
 		return nil, nil, f.err
 	}
@@ -122,7 +131,7 @@ func Test_newLocalDeployer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.TODO()
-			got, err := newLocalDeployer(ctx, tt.opts, tt.fakeCmapHandler, tt.fakeK8sProvider, tt.fakeKubeConfig, tt.fakePortGetter)
+			got, err := newLocalDeployer(ctx, tt.opts, tt.fakeCmapHandler, tt.fakeK8sProvider, tt.fakeKubeConfig, tt.fakePortGetter, nil)
 
 			if tt.expectedErr == nil {
 				require.NotNil(t, got)

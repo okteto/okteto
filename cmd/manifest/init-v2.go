@@ -50,10 +50,11 @@ type analyticsTrackerInterface interface {
 // ManifestCommand has all the namespaces subcommands
 type ManifestCommand struct {
 	manifest          *model.Manifest
-	K8sClientProvider okteto.K8sClientProvider
+	K8sClientProvider okteto.K8sClientProviderWithLogger
 	AnalyticsTracker  analyticsTrackerInterface
 
-	IoCtrl *io.IOController
+	IoCtrl    *io.IOController
+	K8sLogger *io.K8sLogger
 }
 
 // InitOpts defines the option for manifest init
@@ -74,7 +75,7 @@ type InitOpts struct {
 
 // RunInitV2 initializes a new okteto manifest
 func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manifest, error) {
-	c, _, er := mc.K8sClientProvider.Provide(okteto.Context().Cfg)
+	c, _, er := mc.K8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, mc.K8sLogger)
 	if er != nil {
 		return nil, er
 	}
@@ -127,7 +128,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 		}
 		oktetoLog.Success("Okteto manifest (%s) deploy and build configured successfully", opts.DevPath)
 
-		c, _, err := mc.K8sClientProvider.Provide(okteto.Context().Cfg)
+		c, _, err := mc.K8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, mc.K8sLogger)
 		if err != nil {
 			return nil, err
 		}
@@ -230,9 +231,9 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		Builder:            buildv2.NewBuilderFromScratch(mc.AnalyticsTracker, mc.IoCtrl),
 		GetExternalControl: deploy.NewDeployExternalK8sControl,
 		Fs:                 afero.NewOsFs(),
-		CfgMapHandler:      deploy.NewConfigmapHandler(mc.K8sClientProvider),
+		CfgMapHandler:      deploy.NewConfigmapHandler(mc.K8sClientProvider, mc.K8sLogger),
 		PipelineCMD:        pc,
-		DeployWaiter:       deploy.NewDeployWaiter(mc.K8sClientProvider),
+		DeployWaiter:       deploy.NewDeployWaiter(mc.K8sClientProvider, mc.K8sLogger),
 		EndpointGetter:     deploy.NewEndpointGetter,
 		IoCtrl:             mc.IoCtrl,
 	}
