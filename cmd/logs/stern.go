@@ -31,7 +31,7 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-func getSternConfig(manifest *model.Manifest, o *LogsOptions, kubeconfigFile string) (*stern.Config, error) {
+func getSternConfig(manifest *model.Manifest, o *Options, kubeconfigFile string) (*stern.Config, error) {
 	location, err := time.LoadLocation("Local")
 	if err != nil {
 		return nil, err

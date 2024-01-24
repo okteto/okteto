@@ -40,8 +40,8 @@ const (
 	defaultSinceOptionHoursValue = 48
 )
 
-// LogsOptions options for logs command
-type LogsOptions struct {
+// Options for logs command
+type Options struct {
 	ManifestPath string
 	Namespace    string
 	Context      string
@@ -55,7 +55,7 @@ type LogsOptions struct {
 }
 
 func Logs(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
-	options := &LogsOptions{}
+	options := &Options{}
 
 	cmd := &cobra.Command{
 		Use:   "logs",
