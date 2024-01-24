@@ -470,7 +470,7 @@ func Test_UpTracker(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			eventMeta := &mockEvent{}
-			tracker := AnalyticsTracker{
+			tracker := Tracker{
 				trackFn: func(event string, success bool, props map[string]interface{}) {
 					eventMeta = &mockEvent{
 						event:   event,

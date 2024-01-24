@@ -13,12 +13,12 @@
 
 package analytics
 
-type AnalyticsTracker struct {
+type Tracker struct {
 	trackFn func(event string, success bool, props map[string]interface{})
 }
 
-func NewAnalyticsTracker() *AnalyticsTracker {
-	return &AnalyticsTracker{
+func NewAnalyticsTracker() *Tracker {
+	return &Tracker{
 		trackFn: track,
 	}
 }

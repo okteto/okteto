@@ -74,7 +74,7 @@ func TestDestroyTracker(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			eventReceived := &mockEvent{}
-			tracker := AnalyticsTracker{
+			tracker := Tracker{
 				trackFn: func(event string, success bool, props map[string]any) {
 					eventReceived = &mockEvent{
 						event:   event,
