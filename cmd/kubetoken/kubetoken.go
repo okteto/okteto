@@ -61,8 +61,8 @@ func (*Serializer) ToJson(kubetoken types.KubeTokenResponse) (string, error) {
 
 type initCtxOptsFunc func(string, string) *contextCMD.Options
 
-// KubetokenCmd generates a kubernetes token for a given namespace
-type KubetokenCmd struct {
+// Cmd generates a kubernetes token for a given namespace
+type Cmd struct {
 	k8sClientProvider    k8sClientProvider
 	oktetoClientProvider oktetoClientProvider
 	ctxStore             *okteto.ContextStore
@@ -71,8 +71,8 @@ type KubetokenCmd struct {
 	initCtxFunc          initCtxOptsFunc
 }
 
-// KubetokenOptions represents the options for kubetoken
-type KubetokenOptions struct {
+// Options represents the options for kubetoken
+type Options struct {
 	oktetoClientProvider oktetoClientProvider
 	k8sClientProvider    k8sClientProvider
 	ctxStore             *okteto.ContextStore
@@ -81,9 +81,9 @@ type KubetokenOptions struct {
 	getCtxResource       initCtxOptsFunc
 }
 
-func defaultKubetokenOptions() *KubetokenOptions {
+func defaultKubetokenOptions() *Options {
 	ctxStore := okteto.GetContextStore()
-	return &KubetokenOptions{
+	return &Options{
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
 		k8sClientProvider:    okteto.NewK8sClientProvider(),
 		oktetoCtxCmdRunner:   contextCMD.NewContextCommand(),
@@ -93,15 +93,15 @@ func defaultKubetokenOptions() *KubetokenOptions {
 	}
 }
 
-type kubetokenOption func(*KubetokenOptions)
+type kubetokenOption func(*Options)
 
 // NewKubetokenCmd returns a new cobra command
-func NewKubetokenCmd(optFunc ...kubetokenOption) *KubetokenCmd {
+func NewKubetokenCmd(optFunc ...kubetokenOption) *Cmd {
 	opts := defaultKubetokenOptions()
 	for _, o := range optFunc {
 		o(opts)
 	}
-	return &KubetokenCmd{
+	return &Cmd{
 		oktetoClientProvider: opts.oktetoClientProvider,
 		serializer:           opts.serializer,
 		k8sClientProvider:    opts.k8sClientProvider,
@@ -111,7 +111,7 @@ func NewKubetokenCmd(optFunc ...kubetokenOption) *KubetokenCmd {
 	}
 }
 
-func (kc *KubetokenCmd) Cmd() *cobra.Command {
+func (kc *Cmd) Cmd() *cobra.Command {
 	var namespace string
 	var contextName string
 
@@ -137,7 +137,7 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 }
 
 // Run executes the kubetoken command
-func (kc *KubetokenCmd) Run(ctx context.Context, flags Flags) error {
+func (kc *Cmd) Run(ctx context.Context, flags Flags) error {
 	oktetoLog.SetOutputFormat("silent")
 	err := newPreReqValidator(
 		withCtxName(flags.Context),
