@@ -59,7 +59,7 @@ func TestKubetoken(t *testing.T) {
 		fakeOktetoClientProvider fakeOktetoClientProvider
 		fakeCtxCmdRunner         fakeCtxCmdRunner
 		contextStore             *okteto.ContextStore
-		flags                    KubetokenFlags
+		flags                    Flags
 	}
 
 	fakeCtxStore := &okteto.ContextStore{
@@ -79,7 +79,7 @@ func TestKubetoken(t *testing.T) {
 		{
 			name: "error on validation",
 			input: input{
-				flags: KubetokenFlags{
+				flags: Flags{
 					Context: "",
 				},
 			},
@@ -88,7 +88,7 @@ func TestKubetoken(t *testing.T) {
 		{
 			name: "error on context command Run",
 			input: input{
-				flags: KubetokenFlags{
+				flags: Flags{
 					Context: "https://okteto.dev",
 				},
 				contextStore: fakeCtxStore,
@@ -108,7 +108,7 @@ func TestKubetoken(t *testing.T) {
 		{
 			name: "error getting kubetoken",
 			input: input{
-				flags: KubetokenFlags{
+				flags: Flags{
 					Context: "https://okteto.dev",
 				},
 				contextStore: fakeCtxStore,
@@ -128,7 +128,7 @@ func TestKubetoken(t *testing.T) {
 		{
 			name: "successful",
 			input: input{
-				flags: KubetokenFlags{
+				flags: Flags{
 					Context:   "https://okteto.dev",
 					Namespace: "namespace",
 				},

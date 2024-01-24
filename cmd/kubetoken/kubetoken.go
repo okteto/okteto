@@ -28,8 +28,8 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-// KubetokenFlags represents the flags available for kubetoken
-type KubetokenFlags struct {
+// Flags represents the flags available for kubetoken
+type Flags struct {
 	Namespace string
 	Context   string
 }
@@ -124,7 +124,7 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 		Args:   cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			flags := KubetokenFlags{
+			flags := Flags{
 				Namespace: namespace,
 				Context:   contextName,
 			}
@@ -137,7 +137,7 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 }
 
 // Run executes the kubetoken command
-func (kc *KubetokenCmd) Run(ctx context.Context, flags KubetokenFlags) error {
+func (kc *KubetokenCmd) Run(ctx context.Context, flags Flags) error {
 	oktetoLog.SetOutputFormat("silent")
 	err := newPreReqValidator(
 		withCtxName(flags.Context),
