@@ -57,7 +57,7 @@ const (
 	previewDestroyEvent      = "DestroyPreview"
 	execEvent                = "Exec"
 	signupEvent              = "Signup"
-	contextEvent             = "GetContext"
+	contextEvent             = "Context"
 	contextUseNamespaceEvent = "GetContext Use-namespace"
 	disableEvent             = "Disable Analytics"
 	stackNotSupportedField   = "Stack Field Not Supported"
