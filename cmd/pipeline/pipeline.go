@@ -22,11 +22,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type PipelineDeployerInterface interface {
+type DeployerInterface interface {
 	ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error
 }
-type PipelineInterface interface {
-	PipelineDeployerInterface
+type Interface interface {
+	DeployerInterface
 }
 
 // Command has all the pipeline subcommands

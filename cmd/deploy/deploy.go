@@ -114,7 +114,7 @@ type Command struct {
 	CfgMapHandler      configMapHandler
 	Fs                 afero.Fs
 	DivertDriver       divert.Driver
-	PipelineCMD        pipelineCMD.PipelineDeployerInterface
+	PipelineCMD        pipelineCMD.DeployerInterface
 	AnalyticsTracker   analyticsTrackerInterface
 	IoCtrl             *io.Controller
 	K8sLogger          *io.K8sLogger
