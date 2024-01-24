@@ -28,8 +28,8 @@ const (
 	urlEnvFormat = "OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL"
 )
 
-// ExternalResourceSection represents the map of external resources at a manifest
-type ExternalResourceSection map[string]*ExternalResource
+// Section represents the map of external resources at a manifest
+type Section map[string]*ExternalResource
 
 // ExternalResource represents information on an external resource
 type ExternalResource struct {

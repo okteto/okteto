@@ -47,7 +47,7 @@ type DeployCommand struct {
 
 // deploy deploys a stack
 func deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
-	options := &stack.StackDeployOptions{}
+	options := &stack.DeployOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "deploy [service...]",
@@ -93,7 +93,7 @@ func deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 }
 
 // RunDeploy runs the deploy command sequence
-func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *stack.StackDeployOptions) error {
+func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *stack.DeployOptions) error {
 
 	if okteto.IsOkteto() {
 		create, err := utils.ShouldCreateNamespace(ctx, s.Namespace)

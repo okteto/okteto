@@ -1065,7 +1065,7 @@ deploy:
 				Destroy:      &DestroyInfo{},
 				Dev:          map[string]*Dev{},
 				Dependencies: map[string]*deps.Dependency{},
-				External:     externalresource.ExternalResourceSection{},
+				External:     externalresource.Section{},
 				Context:      "context-to-use",
 				IsV2:         true,
 				Type:         OktetoManifestType,
@@ -1099,7 +1099,7 @@ dev:
 				},
 				Destroy:      &DestroyInfo{},
 				Dependencies: map[string]*deps.Dependency{},
-				External:     externalresource.ExternalResourceSection{},
+				External:     externalresource.Section{},
 				Dev: map[string]*Dev{
 					"test-1": {
 						Mode: constants.OktetoSyncModeFieldValue,
@@ -1249,7 +1249,7 @@ sync:
 				Deploy:        &DeployInfo{},
 				Destroy:       &DestroyInfo{},
 				Dependencies:  map[string]*deps.Dependency{},
-				External:      externalresource.ExternalResourceSection{},
+				External:      externalresource.Section{},
 				GlobalForward: []forward.GlobalForward{},
 				Dev: map[string]*Dev{
 					"test": {
@@ -1336,7 +1336,7 @@ services:
 				Destroy:       &DestroyInfo{},
 				Dependencies:  map[string]*deps.Dependency{},
 				GlobalForward: []forward.GlobalForward{},
-				External:      externalresource.ExternalResourceSection{},
+				External:      externalresource.Section{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1469,7 +1469,7 @@ dev:
 				IsV2:         true,
 				Build:        map[string]*build.Info{},
 				Dependencies: map[string]*deps.Dependency{},
-				External:     externalresource.ExternalResourceSection{},
+				External:     externalresource.Section{},
 				Destroy:      &DestroyInfo{},
 				Dev: map[string]*Dev{
 					"test": {
@@ -1558,7 +1558,7 @@ dev:
 				IsV2:         true,
 				Build:        map[string]*build.Info{},
 				Dependencies: map[string]*deps.Dependency{},
-				External:     externalresource.ExternalResourceSection{},
+				External:     externalresource.Section{},
 				Destroy:      &DestroyInfo{},
 				Dev: map[string]*Dev{
 					"test-1": {
@@ -1729,7 +1729,7 @@ deploy:
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*build.Info{},
 				Dependencies: map[string]*deps.Dependency{},
-				External:     externalresource.ExternalResourceSection{},
+				External:     externalresource.Section{},
 				Destroy:      &DestroyInfo{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
@@ -1757,7 +1757,7 @@ devs:
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*build.Info{},
 				Dependencies: map[string]*deps.Dependency{},
-				External:     externalresource.ExternalResourceSection{},
+				External:     externalresource.Section{},
 				Destroy:      &DestroyInfo{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{

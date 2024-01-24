@@ -22,10 +22,10 @@ import (
 	"k8s.io/client-go/testing"
 )
 
-// FakeExternalResource implements ExternalResourceInterface
-type FakeExternalResource struct {
+// ExternalResource implements ExternalResourceInterface
+type ExternalResource struct {
 	getErr, createErr, updateErr, listErr error
-	Fake                                  *FakeExternalResourceV1
+	Fake                                  *V1
 	ns                                    string
 }
 
@@ -33,7 +33,7 @@ var externalResourceResource = schema.GroupVersionResource{Group: k8sexternalres
 
 var externalResourceKind = schema.GroupVersionKind{Group: k8sexternalresource.GroupName, Version: k8sexternalresource.GroupVersion, Kind: k8sexternalresource.ExternalResourceKind}
 
-func (c *FakeExternalResource) Create(_ context.Context, external *k8sexternalresource.External, _ metav1.CreateOptions) (*k8sexternalresource.External, error) {
+func (c *ExternalResource) Create(_ context.Context, external *k8sexternalresource.External, _ metav1.CreateOptions) (*k8sexternalresource.External, error) {
 	if c.createErr != nil {
 		return nil, c.createErr
 	}
@@ -47,7 +47,7 @@ func (c *FakeExternalResource) Create(_ context.Context, external *k8sexternalre
 	return obj.(*k8sexternalresource.External), err
 }
 
-func (c *FakeExternalResource) Update(_ context.Context, external *k8sexternalresource.External) (*k8sexternalresource.External, error) {
+func (c *ExternalResource) Update(_ context.Context, external *k8sexternalresource.External) (*k8sexternalresource.External, error) {
 	if c.updateErr != nil {
 		return nil, c.updateErr
 	}
@@ -61,7 +61,7 @@ func (c *FakeExternalResource) Update(_ context.Context, external *k8sexternalre
 	return obj.(*k8sexternalresource.External), err
 }
 
-func (c *FakeExternalResource) Get(_ context.Context, name string, _ metav1.GetOptions) (*k8sexternalresource.External, error) {
+func (c *ExternalResource) Get(_ context.Context, name string, _ metav1.GetOptions) (*k8sexternalresource.External, error) {
 	if c.getErr != nil {
 		return nil, c.getErr
 	}
@@ -75,7 +75,7 @@ func (c *FakeExternalResource) Get(_ context.Context, name string, _ metav1.GetO
 	return obj.(*k8sexternalresource.External), err
 }
 
-func (c *FakeExternalResource) List(ctx context.Context, opts metav1.ListOptions) (*k8sexternalresource.ExternalList, error) {
+func (c *ExternalResource) List(ctx context.Context, opts metav1.ListOptions) (*k8sexternalresource.ExternalList, error) {
 	if c.listErr != nil {
 		return nil, c.listErr
 	}

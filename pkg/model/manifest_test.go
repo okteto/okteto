@@ -1428,7 +1428,7 @@ func TestRead(t *testing.T) {
 				Build:         build.ManifestBuild{},
 				Dependencies:  deps.ManifestSection{},
 				GlobalForward: []forward.GlobalForward{},
-				External:      externalresource.ExternalResourceSection{},
+				External:      externalresource.Section{},
 				Type:          OktetoManifestType,
 				Manifest:      nil,
 				IsV2:          false,
@@ -1458,7 +1458,7 @@ func TestRead(t *testing.T) {
 				Build:         build.ManifestBuild{},
 				Dependencies:  deps.ManifestSection{},
 				GlobalForward: []forward.GlobalForward{},
-				External:      externalresource.ExternalResourceSection{},
+				External:      externalresource.Section{},
 				Type:          OktetoManifestType,
 				Manifest:      []uint8{},
 				IsV2:          false,
@@ -1562,7 +1562,7 @@ func TestRead(t *testing.T) {
 				Build:         build.ManifestBuild{},
 				Dependencies:  deps.ManifestSection{},
 				GlobalForward: nil,
-				External:      externalresource.ExternalResourceSection{},
+				External:      externalresource.Section{},
 				Type:          OktetoManifestType,
 				Manifest: []byte(`dev:
   test:
@@ -1621,7 +1621,7 @@ func TestRead(t *testing.T) {
 				Build:         build.ManifestBuild{},
 				Dependencies:  deps.ManifestSection{},
 				GlobalForward: nil,
-				External:      externalresource.ExternalResourceSection{},
+				External:      externalresource.Section{},
 				Type:          OktetoManifestType,
 				IsV2:          true,
 				Manifest: []byte(`deploy:

@@ -989,7 +989,7 @@ func TestDeployExternals(t *testing.T) {
 			options: &Options{
 				Manifest: &model.Manifest{
 					Deploy: &model.DeployInfo{},
-					External: externalresource.ExternalResourceSection{
+					External: externalresource.Section{
 						"test": &externalresource.ExternalResource{
 							Icon: "myIcon",
 							Notes: &externalresource.Notes{
@@ -1007,7 +1007,7 @@ func TestDeployExternals(t *testing.T) {
 			options: &Options{
 				Manifest: &model.Manifest{
 					Deploy: &model.DeployInfo{},
-					External: externalresource.ExternalResourceSection{
+					External: externalresource.Section{
 						"test": &externalresource.ExternalResource{
 							Icon: "myIcon",
 							Notes: &externalresource.Notes{

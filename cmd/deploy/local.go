@@ -287,7 +287,7 @@ func (ld *localDeployer) deployStack(ctx context.Context, opts *Options) error {
 	for _, composeInfo := range composeSectionInfo.ComposesInfo {
 		composeFiles = append(composeFiles, composeInfo.File)
 	}
-	stackOpts := &stack.StackDeployOptions{
+	stackOpts := &stack.DeployOptions{
 		StackPaths:       composeFiles,
 		ForceBuild:       false,
 		Wait:             opts.Wait,
