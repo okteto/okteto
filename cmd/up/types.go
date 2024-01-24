@@ -71,7 +71,7 @@ type upContext struct {
 	Dev                   *model.Dev
 	GlobalForwarderStatus chan error
 	ShutdownCompleted     chan bool
-	Options               *UpOptions
+	Options               *Options
 	Pod                   *apiv1.Pod
 	Cancel                context.CancelFunc
 	pidController         pidController

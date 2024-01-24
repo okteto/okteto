@@ -71,8 +71,8 @@ var (
 	errConfigNotConfigured = fmt.Errorf("kubeconfig not found")
 )
 
-// UpOptions represents the options available on up command
-type UpOptions struct {
+// Options represents the options available on up command
+type Options struct {
 	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
 	// This is stored at the configmap as filename to redeploy from the ui.
 	ManifestPathFlag string
@@ -92,7 +92,7 @@ type UpOptions struct {
 
 // Up starts a development container
 func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
-	upOptions := &UpOptions{}
+	upOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:   "up [service]",
 		Short: "Deploy your development environment",
@@ -429,7 +429,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 }
 
 // AddArgs sets the args as options and return err if it's not compatible
-func (o *UpOptions) AddArgs(cmd *cobra.Command, args []string) error {
+func (o *Options) AddArgs(cmd *cobra.Command, args []string) error {
 
 	maxV1Args := 1
 	docsURL := "https://okteto.com/docs/reference/cli/#up"
@@ -490,7 +490,7 @@ func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath st
 	return manifest, nil
 }
 
-func loadManifestOverrides(dev *model.Dev, upOptions *UpOptions) error {
+func loadManifestOverrides(dev *model.Dev, upOptions *Options) error {
 	if upOptions.Remote > 0 {
 		dev.RemotePort = upOptions.Remote
 	}

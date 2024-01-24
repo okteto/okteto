@@ -997,7 +997,7 @@ func TestCheckOktetoStartError(t *testing.T) {
 			upCtx := &upContext{
 				Dev:               tt.dev,
 				K8sClientProvider: tt.K8sProvider,
-				Options: &UpOptions{
+				Options: &Options{
 					ManifestPathFlag: "test",
 				},
 				Pod: &v1.Pod{
