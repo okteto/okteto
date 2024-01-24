@@ -282,7 +282,7 @@ func NewOktetoClientFromUrl(url string) (*Client, error) {
 	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
 
-// contextWithOauth2HttpClient returns a context.GetContext with a value of type oauth2.HTTPClient so oauth2.NewClient() can be bootstrapped with a custom http.Client
+// contextWithOauth2HttpClient returns a context.Context with a value of type oauth2.HTTPClient so oauth2.NewClient() can be bootstrapped with a custom http.Client
 func contextWithOauth2HttpClient(ctx context.Context, httpClient *http.Client) context.Context {
 	return context.WithValue(
 		ctx,
