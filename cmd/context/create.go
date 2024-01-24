@@ -50,7 +50,7 @@ type kubeconfigTokenController interface {
 // Command has the dependencies to run a ctxCommand
 type Command struct {
 	K8sClientProvider    okteto.K8sClientProvider
-	LoginController      login.LoginInterface
+	LoginController      login.Interface
 	OktetoClientProvider oktetoClientProvider
 
 	kubetokenController kubeconfigTokenController
