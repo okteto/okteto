@@ -58,7 +58,7 @@ const (
 	execEvent                = "Exec"
 	signupEvent              = "Signup"
 	contextEvent             = "Context"
-	contextUseNamespaceEvent = "GetContext Use-namespace"
+	contextUseNamespaceEvent = "Context Use-namespace"
 	disableEvent             = "Disable Analytics"
 	stackNotSupportedField   = "Stack Field Not Supported"
 	buildPullErrorEvent      = "BuildPullError"
