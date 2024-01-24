@@ -29,17 +29,17 @@ type Rule struct {
 	transformer TransformerFunc
 }
 
-type BuildKitLogsFilter struct {
+type LogsFilter struct {
 	rules []Rule
 }
 
-func NewBuildKitLogsFilter(rules []Rule) *BuildKitLogsFilter {
-	return &BuildKitLogsFilter{
+func NewBuildKitLogsFilter(rules []Rule) *LogsFilter {
+	return &LogsFilter{
 		rules: rules,
 	}
 }
 
-func (lf *BuildKitLogsFilter) Run(ss *client.SolveStatus, progress string) {
+func (lf *LogsFilter) Run(ss *client.SolveStatus, progress string) {
 	for _, vertex := range ss.Vertexes {
 		for _, rule := range lf.rules {
 			if rule.condition(vertex) {
