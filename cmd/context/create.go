@@ -230,7 +230,7 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 	}
 
 	if created && ctxOptions.IsOkteto {
-		oktetoLog.Success("GetContext '%s' created", okteto.RemoveSchema(ctxOptions.Context))
+		oktetoLog.Success("Context '%s' created", okteto.RemoveSchema(ctxOptions.Context))
 	}
 
 	if ctxOptions.IsCtxCommand {
