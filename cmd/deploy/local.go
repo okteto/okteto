@@ -40,7 +40,7 @@ import (
 )
 
 type localDeployer struct {
-	deployWaiter       DeployWaiter
+	deployWaiter       Waiter
 	Proxy              proxyInterface
 	Kubeconfig         kubeConfigHandler
 	ConfigMapHandler   configMapHandler

@@ -110,7 +110,7 @@ type Command struct {
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
 	GetDeployer        getDeployerFunc
 	EndpointGetter     func(k8sLogger *io.K8sLogger) (EndpointGetter, error)
-	DeployWaiter       DeployWaiter
+	DeployWaiter       Waiter
 	CfgMapHandler      configMapHandler
 	Fs                 afero.Fs
 	DivertDriver       divert.Driver
