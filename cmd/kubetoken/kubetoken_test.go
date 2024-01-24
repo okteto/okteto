@@ -49,7 +49,7 @@ type fakeCtxCmdRunner struct {
 	err error
 }
 
-func (f fakeCtxCmdRunner) Run(ctx context.Context, ctxOptions *contextCMD.ContextOptions) error {
+func (f fakeCtxCmdRunner) Run(ctx context.Context, ctxOptions *contextCMD.Options) error {
 	return f.err
 }
 
@@ -152,8 +152,8 @@ func TestKubetoken(t *testing.T) {
 			cmd.oktetoClientProvider = tc.input.fakeOktetoClientProvider
 			cmd.oktetoCtxCmdRunner = tc.input.fakeCtxCmdRunner
 			cmd.ctxStore = tc.input.contextStore
-			cmd.initCtxFunc = func(string, string) *contextCMD.ContextOptions {
-				return &contextCMD.ContextOptions{
+			cmd.initCtxFunc = func(string, string) *contextCMD.Options {
+				return &contextCMD.Options{
 					Context:   tc.input.flags.Context,
 					Namespace: tc.input.flags.Namespace,
 				}

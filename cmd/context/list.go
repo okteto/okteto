@@ -37,7 +37,7 @@ func List() *cobra.Command {
 		Short:   "List available contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			if err := NewContextCommand().Run(ctx, &ContextOptions{raiseNotCtxError: true}); err != nil {
+			if err := NewContextCommand().Run(ctx, &Options{raiseNotCtxError: true}); err != nil {
 				return err
 			}
 			return executeListContext()

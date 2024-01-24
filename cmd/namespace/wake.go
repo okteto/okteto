@@ -35,7 +35,7 @@ func Wake(ctx context.Context) *cobra.Command {
 			if len(args) > 0 {
 				nsToWake = args[0]
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{Namespace: nsToWake, Show: true}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: nsToWake, Show: true}); err != nil {
 				return err
 			}
 

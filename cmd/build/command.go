@@ -194,7 +194,7 @@ func validateDockerfile(file string) error {
 }
 
 func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*okteto.ContextStateless, error) {
-	ctxOpts := &contextCMD.ContextOptions{
+	ctxOpts := &contextCMD.Options{
 		Context:   options.K8sContext,
 		Namespace: options.Namespace,
 		Show:      true,

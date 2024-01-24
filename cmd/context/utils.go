@@ -153,7 +153,7 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 		return nil, err
 	}
 
-	ctxOptions := &ContextOptions{
+	ctxOptions := &Options{
 		Context:   ctxResource.Context,
 		Namespace: ctxResource.Namespace,
 		Show:      true,
@@ -202,7 +202,7 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 		return nil, err
 	}
 
-	ctxOptions := &ContextOptions{
+	ctxOptions := &Options{
 		Context:   ctxResource.Context,
 		Namespace: ctxResource.Namespace,
 		Show:      true,
@@ -238,7 +238,7 @@ func LoadContextFromPath(ctx context.Context, namespace, k8sContext, path string
 		return err
 	}
 
-	ctxOptions := &ContextOptions{
+	ctxOptions := &Options{
 		Context:   ctxResource.Context,
 		Namespace: ctxResource.Namespace,
 		Show:      true,

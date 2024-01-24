@@ -50,7 +50,7 @@ func Init(at analyticsTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
 			if err := ctxResource.UpdateContext(opts.Context); err != nil {
 				return err
 			}
-			ctxOptions := &contextCMD.ContextOptions{
+			ctxOptions := &contextCMD.Options{
 				Context:   ctxResource.Context,
 				Namespace: ctxResource.Namespace,
 				Show:      true,

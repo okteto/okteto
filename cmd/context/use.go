@@ -38,7 +38,7 @@ const (
 
 // Use context points okteto to a cluster.
 func Use() *cobra.Command {
-	ctxOptions := &ContextOptions{}
+	ctxOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:   "use [<url>|Kubernetes context]",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#use"),
@@ -93,7 +93,7 @@ Or a Kubernetes context:
 	return cmd
 }
 
-func (c *Command) Run(ctx context.Context, ctxOptions *ContextOptions) error {
+func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 	ctxStore := okteto.GetContextStore()
 	if len(ctxStore.Contexts) == 0 {
 		// if the context store has no context stored, set flag to save the
@@ -151,7 +151,7 @@ func (c *Command) Run(ctx context.Context, ctxOptions *ContextOptions) error {
 
 // RunStateless is the fn to use until the refactoring of the context command itself if you want to make use
 // of an injected context instead of using the global context variable.
-func (c *Command) RunStateless(ctx context.Context, ctxOptions *ContextOptions) (*okteto.ContextStateless, error) {
+func (c *Command) RunStateless(ctx context.Context, ctxOptions *Options) (*okteto.ContextStateless, error) {
 	err := c.Run(ctx, ctxOptions)
 	if err != nil {
 		return nil, err
@@ -171,7 +171,7 @@ func (c *Command) RunStateless(ctx context.Context, ctxOptions *ContextOptions) 
 
 }
 
-func getContext(ctxOptions *ContextOptions) (string, error) {
+func getContext(ctxOptions *Options) (string, error) {
 	ctxs := getAvailableContexts(ctxOptions)
 
 	var oktetoContext string

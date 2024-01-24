@@ -25,7 +25,7 @@ var (
 	newOEOption = "Add new context"
 )
 
-func getAvailableContexts(ctxOptions *ContextOptions) []utils.SelectorItem {
+func getAvailableContexts(ctxOptions *Options) []utils.SelectorItem {
 	k8sClusters := make([]string, 0)
 	if !ctxOptions.OnlyOkteto {
 		k8sClusters = getKubernetesContextList(true)

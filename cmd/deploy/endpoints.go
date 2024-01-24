@@ -110,7 +110,7 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 				return err
 			}
 
-			ctxOptions := &contextCMD.ContextOptions{
+			ctxOptions := &contextCMD.Options{
 				Context:   ctxResource.Context,
 				Namespace: ctxResource.Namespace,
 			}

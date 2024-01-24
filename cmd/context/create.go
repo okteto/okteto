@@ -86,7 +86,7 @@ func NewContextCommand(ctxCmdOption ...ctxCmdOption) *Command {
 
 // CreateCMD adds a new cluster to okteto context
 func CreateCMD() *cobra.Command {
-	ctxOptions := &ContextOptions{}
+	ctxOptions := &Options{}
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "create [cluster-url]",
@@ -132,7 +132,7 @@ If you need to automate authentication or if you don't want to use browser-based
 	return cmd
 }
 
-func (c *Command) UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
+func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 	created := false
 
 	ctxStore := okteto.GetContextStore()
@@ -254,7 +254,7 @@ func getClusterMetadata(ctx context.Context, namespace string, okClientProvider 
 	return okClient.User().GetClusterMetadata(ctx, namespace)
 }
 
-func hasAccessToNamespace(ctx context.Context, c *Command, ctxOptions *ContextOptions) (bool, error) {
+func hasAccessToNamespace(ctx context.Context, c *Command, ctxOptions *Options) (bool, error) {
 	if ctxOptions.IsOkteto {
 		okClient, err := c.OktetoClientProvider.Provide()
 		if err != nil {
@@ -282,7 +282,7 @@ func hasAccessToNamespace(ctx context.Context, c *Command, ctxOptions *ContextOp
 	}
 }
 
-func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
+func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) error {
 	var userContext *types.UserContext
 	userContext, err := getLoggedUserContext(ctx, c, ctxOptions)
 	if err != nil {
@@ -346,7 +346,7 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *ContextOpti
 	return nil
 }
 
-func getLoggedUserContext(ctx context.Context, c *Command, ctxOptions *ContextOptions) (*types.UserContext, error) {
+func getLoggedUserContext(ctx context.Context, c *Command, ctxOptions *Options) (*types.UserContext, error) {
 	user, err := c.LoginController.AuthenticateToOktetoCluster(ctx, ctxOptions.Context, ctxOptions.Token)
 	if err != nil {
 		return nil, err
@@ -368,7 +368,7 @@ func getLoggedUserContext(ctx context.Context, c *Command, ctxOptions *ContextOp
 	return userContext, nil
 }
 
-func (*Command) initKubernetesContext(ctxOptions *ContextOptions) error {
+func (*Command) initKubernetesContext(ctxOptions *Options) error {
 	cfg := kubeconfig.Get(config.GetKubeconfigPath())
 	if cfg == nil {
 		return fmt.Errorf(oktetoErrors.ErrKubernetesContextNotFound, ctxOptions.Context, config.GetKubeconfigPath())

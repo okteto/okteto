@@ -41,7 +41,7 @@ func Delete(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 		Short: "Delete a namespace",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
 				return err
 			}
 
@@ -86,7 +86,7 @@ func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespac
 		if personalNamespace == "" {
 			personalNamespace = okteto.GetSanitizedUsername()
 		}
-		ctxOptions := &contextCMD.ContextOptions{
+		ctxOptions := &contextCMD.Options{
 			Namespace:    personalNamespace,
 			Context:      okteto.GetContext().Name,
 			Save:         true,

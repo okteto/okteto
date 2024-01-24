@@ -50,7 +50,7 @@ func Test_createContext(t *testing.T) {
 
 	var tests = []struct {
 		ctxStore      *okteto.ContextStore
-		ctxOptions    *ContextOptions
+		ctxOptions    *Options
 		user          *types.User
 		name          string
 		kubeconfigCtx test.KubeconfigFields
@@ -65,7 +65,7 @@ func Test_createContext(t *testing.T) {
 				},
 				CurrentContext: "https://okteto.cloud.com",
 			},
-			ctxOptions: &ContextOptions{
+			ctxOptions: &Options{
 				IsOkteto:  true,
 				Save:      true,
 				Context:   "https://okteto.cloud.com",
@@ -88,7 +88,7 @@ func Test_createContext(t *testing.T) {
 				},
 				CurrentContext: "https://okteto.cloud.com",
 			},
-			ctxOptions: &ContextOptions{
+			ctxOptions: &Options{
 				IsOkteto:             true,
 				Save:                 true,
 				Context:              "https://okteto.cloud.com",
@@ -113,7 +113,7 @@ func Test_createContext(t *testing.T) {
 				},
 				CurrentContext: "https://okteto.cloud.com",
 			},
-			ctxOptions: &ContextOptions{
+			ctxOptions: &Options{
 				IsOkteto:  true,
 				Save:      true,
 				Context:   "https://okteto.cloud.com",
@@ -134,7 +134,7 @@ func Test_createContext(t *testing.T) {
 			ctxStore: &okteto.ContextStore{
 				Contexts: map[string]*okteto.Context{},
 			},
-			ctxOptions: &ContextOptions{
+			ctxOptions: &Options{
 				IsOkteto: false,
 				Context:  "cloud_okteto_com",
 			},
@@ -165,7 +165,7 @@ func Test_createContext(t *testing.T) {
 			ctxStore: &okteto.ContextStore{
 				Contexts: map[string]*okteto.Context{},
 			},
-			ctxOptions: &ContextOptions{
+			ctxOptions: &Options{
 				IsOkteto: false,
 				Context:  "cloud_okteto_com",
 			},
@@ -183,7 +183,7 @@ func Test_createContext(t *testing.T) {
 			ctxStore: &okteto.ContextStore{
 				Contexts: map[string]*okteto.Context{},
 			},
-			ctxOptions: &ContextOptions{
+			ctxOptions: &Options{
 				IsOkteto: false,
 				Context:  "cloud_okteto_com",
 			},
@@ -202,7 +202,7 @@ func Test_createContext(t *testing.T) {
 			ctxStore: &okteto.ContextStore{
 				Contexts: map[string]*okteto.Context{},
 			},
-			ctxOptions: &ContextOptions{
+			ctxOptions: &Options{
 				IsOkteto: false,
 				Context:  "cloud_okteto_com",
 			},
@@ -228,7 +228,7 @@ func Test_createContext(t *testing.T) {
 			user: &types.User{
 				Token: "test",
 			},
-			ctxOptions: &ContextOptions{
+			ctxOptions: &Options{
 				IsOkteto: false,
 				Context:  "cloud_okteto_com",
 			},
@@ -252,7 +252,7 @@ func Test_createContext(t *testing.T) {
 			user: &types.User{
 				Token: "test",
 			},
-			ctxOptions: &ContextOptions{
+			ctxOptions: &Options{
 				IsOkteto: true,
 				Context:  "cloud.okteto.com",
 			},
@@ -277,7 +277,7 @@ func Test_createContext(t *testing.T) {
 			user: &types.User{
 				Token: "test",
 			},
-			ctxOptions: &ContextOptions{
+			ctxOptions: &Options{
 				IsOkteto: true,
 				Context:  "https://cloud.okteto.com",
 			},
@@ -293,7 +293,7 @@ func Test_createContext(t *testing.T) {
 			ctxStore: &okteto.ContextStore{
 				Contexts: make(map[string]*okteto.Context),
 			},
-			ctxOptions: &ContextOptions{
+			ctxOptions: &Options{
 				IsOkteto: true,
 				Context:  "https://okteto.cloud.com",
 				Token:    "this is a token",
@@ -354,7 +354,7 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 	ctxController := newFakeContextCommand(fakeOktetoClient, user, nil)
 
 	var tests = []struct {
-		ctxOptions          *ContextOptions
+		ctxOptions          *Options
 		user                *types.User
 		fakeOktetoClient    *client.FakeOktetoClient
 		name                string
@@ -362,7 +362,7 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 	}{
 		{
 			name: "okteto context triggers auto auth",
-			ctxOptions: &ContextOptions{
+			ctxOptions: &Options{
 				IsOkteto:     true,
 				Context:      "https://okteto.cloud.com",
 				Token:        "this is a invalid token",
@@ -374,7 +374,7 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 		},
 		{
 			name: "non okteto context command gives unauthorized message",
-			ctxOptions: &ContextOptions{
+			ctxOptions: &Options{
 				IsOkteto:     true,
 				Context:      "https://okteto.cloud.com",
 				Token:        "this is a invalid token",
@@ -422,13 +422,13 @@ func TestCheckAccessToNamespace(t *testing.T) {
 
 	// TODO: add unit-test to cover preview environments access from context
 	var tests = []struct {
-		ctxOptions     *ContextOptions
+		ctxOptions     *Options
 		name           string
 		expectedAccess bool
 	}{
 		{
 			name: "okteto client can access to namespace",
-			ctxOptions: &ContextOptions{
+			ctxOptions: &Options{
 				IsOkteto:  true,
 				Namespace: "test",
 			},
@@ -436,7 +436,7 @@ func TestCheckAccessToNamespace(t *testing.T) {
 		},
 		{
 			name: "okteto client cannot access to namespace",
-			ctxOptions: &ContextOptions{
+			ctxOptions: &Options{
 				IsOkteto:  true,
 				Namespace: "non-ccessible-ns",
 			},
@@ -444,7 +444,7 @@ func TestCheckAccessToNamespace(t *testing.T) {
 		},
 		{
 			name: "non okteto client can access to namespace",
-			ctxOptions: &ContextOptions{
+			ctxOptions: &Options{
 				IsOkteto:  false,
 				Namespace: "test",
 			},
@@ -452,7 +452,7 @@ func TestCheckAccessToNamespace(t *testing.T) {
 		},
 		{
 			name: "non okteto client cannot access to namespace",
-			ctxOptions: &ContextOptions{
+			ctxOptions: &Options{
 				IsOkteto:  false,
 				Namespace: "test",
 			},

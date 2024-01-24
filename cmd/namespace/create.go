@@ -44,7 +44,7 @@ func Create(ctx context.Context) *cobra.Command {
 		Use:   "create <name>",
 		Short: "Create a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
 				return err
 			}
 			options.Namespace = args[0]
@@ -81,7 +81,7 @@ func (nc *NamespaceCommand) Create(ctx context.Context, opts *CreateOptions) err
 		}
 	}
 
-	ctxOptions := &contextCMD.ContextOptions{
+	ctxOptions := &contextCMD.Options{
 		IsCtxCommand: opts.Show,
 		IsOkteto:     true,
 		Token:        okteto.GetContext().Token,

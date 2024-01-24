@@ -22,7 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
-type ContextOptions struct {
+type Options struct {
 	Token                 string
 	Context               string
 	Namespace             string
@@ -39,7 +39,7 @@ type ContextOptions struct {
 	InferredToken         bool
 }
 
-func (o *ContextOptions) InitFromContext() {
+func (o *Options) InitFromContext() {
 	if o.IsCtxCommand {
 		return
 	}
@@ -60,7 +60,7 @@ func (o *ContextOptions) InitFromContext() {
 	}
 }
 
-func (o *ContextOptions) InitFromEnvVars() {
+func (o *Options) InitFromEnvVars() {
 	usedEnvVars := []string{}
 
 	if o.Context == "" && os.Getenv(model.OktetoURLEnvVar) != "" {

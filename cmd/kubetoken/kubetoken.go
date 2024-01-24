@@ -46,7 +46,7 @@ type k8sClientProvider interface {
 
 // oktetoCtxCmdRunner runs the okteto context command
 type oktetoCtxCmdRunner interface {
-	Run(ctx context.Context, ctxOptions *contextCMD.ContextOptions) error
+	Run(ctx context.Context, ctxOptions *contextCMD.Options) error
 }
 
 type Serializer struct{}
@@ -59,7 +59,7 @@ func (*Serializer) ToJson(kubetoken types.KubeTokenResponse) (string, error) {
 	return string(bytes), nil
 }
 
-type initCtxOptsFunc func(string, string) *contextCMD.ContextOptions
+type initCtxOptsFunc func(string, string) *contextCMD.Options
 
 // KubetokenCmd generates a kubernetes token for a given namespace
 type KubetokenCmd struct {
@@ -151,7 +151,7 @@ func (kc *KubetokenCmd) Run(ctx context.Context, flags KubetokenFlags) error {
 		return fmt.Errorf("dynamic kubernetes token cannot be requested: %w", err)
 	}
 
-	err = kc.oktetoCtxCmdRunner.Run(ctx, &contextCMD.ContextOptions{
+	err = kc.oktetoCtxCmdRunner.Run(ctx, &contextCMD.Options{
 		Context:   flags.Context,
 		Namespace: flags.Namespace,
 	})

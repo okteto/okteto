@@ -83,7 +83,7 @@ func Push(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			ctxOptions := &contextCMD.ContextOptions{
+			ctxOptions := &contextCMD.Options{
 				Context:   ctxResource.Context,
 				Namespace: ctxResource.Namespace,
 				Show:      true,

@@ -454,7 +454,7 @@ func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath st
 	if err != nil {
 		return nil, err
 	}
-	ctxOptions := &contextCMD.ContextOptions{
+	ctxOptions := &contextCMD.Options{
 		Context:   k8sContext,
 		Namespace: namespace,
 		Show:      true,

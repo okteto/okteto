@@ -25,7 +25,7 @@ import (
 
 // UseNamespace changes your current context namespace.
 func UseNamespace() *cobra.Command {
-	ctxOptions := &ContextOptions{}
+	ctxOptions := &Options{}
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "use-namespace [name]",

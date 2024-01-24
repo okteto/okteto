@@ -64,7 +64,7 @@ func destroy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			ctxOptions := &contextCMD.ContextOptions{
+			ctxOptions := &contextCMD.Options{
 				Namespace: ctxResource.Namespace,
 				Show:      true,
 			}
