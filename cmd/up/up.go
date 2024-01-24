@@ -583,7 +583,7 @@ func (up *upContext) deployApp(ctx context.Context, k8slogger *io.K8sLogger) err
 	if err != nil {
 		return err
 	}
-	c := &deploy.DeployCommand{
+	c := &deploy.Command{
 		GetManifest:        up.getManifest,
 		GetDeployer:        deploy.GetDeployer,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),

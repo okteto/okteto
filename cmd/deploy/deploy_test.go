@@ -348,7 +348,7 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 		kubeconfig: &fakeKubeConfig{},
 		fs:         afero.NewMemMapFs(),
 	}
-	c := &DeployCommand{
+	c := &Command{
 		GetManifest:       getManifestWithError,
 		GetDeployer:       fakeDeployer.Get,
 		K8sClientProvider: test.NewFakeK8sProvider(),
@@ -384,7 +384,7 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &DeployCommand{
+	c := &Command{
 		GetManifest:       getManifestWithNoDeployNorDependency,
 		GetDeployer:       fakeDeployer.Get,
 		K8sClientProvider: test.NewFakeK8sProvider(),
@@ -442,7 +442,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 			CurrentContext: "test",
 		},
 	}
-	c := &DeployCommand{
+	c := &Command{
 		GetManifest:       getErrorManifest,
 		GetDeployer:       fakeDeployer.Get,
 		Builder:           buildv2.NewBuilder(builder, reg, io.NewIOController(), fakeTracker, okCtx, nil),
@@ -521,7 +521,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &DeployCommand{
+	c := &Command{
 		GetManifest:       getFakeManifest,
 		GetDeployer:       fakeDeployer.Get,
 		K8sClientProvider: fakeK8sClientProvider,
@@ -599,7 +599,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 		CurrentContext: "test",
 	}
 
-	c := &DeployCommand{
+	c := &Command{
 		GetManifest:       getFakeManifest,
 		GetDeployer:       fakeDeployer.Get,
 		K8sClientProvider: fakeK8sClientProvider,
@@ -659,7 +659,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &DeployCommand{
+	c := &Command{
 		GetManifest:        getFakeManifest,
 		GetDeployer:        fakeDeployer.Get,
 		GetExternalControl: fakeExternalControlProvider.getFakeExternalControl,
@@ -731,7 +731,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		CurrentContext: "test",
 	}
 
-	c := &DeployCommand{
+	c := &Command{
 		GetManifest:        getFakeManifest,
 		K8sClientProvider:  fakeK8sClientProvider,
 		EndpointGetter:     getFakeEndpoint,
@@ -1116,7 +1116,7 @@ func TestDeployDependencies(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			dc := &DeployCommand{
+			dc := &Command{
 				PipelineCMD: fakePipelineDeployer{tc.config.pipelineErr},
 			}
 			assert.ErrorIs(t, tc.expected, dc.deployDependencies(context.Background(), &Options{Manifest: fakeManifest}))
@@ -1147,7 +1147,7 @@ func TestDeployOnlyDependencies(t *testing.T) {
 		externalControlProvider: fakeExternalControlProvider,
 	}
 
-	c := &DeployCommand{
+	c := &Command{
 		PipelineCMD:        fakePipelineDeployer{nil},
 		GetManifest:        getFakeManifestWithDependency,
 		K8sClientProvider:  fakeK8sClientProvider,
@@ -1244,7 +1244,7 @@ func TestTrackDeploy(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			dc := &DeployCommand{
+			dc := &Command{
 				AnalyticsTracker: &fakeTracker{},
 			}
 

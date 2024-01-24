@@ -101,8 +101,8 @@ type getDeployerFunc func(
 	*io.K8sLogger,
 ) (deployerInterface, error)
 
-// DeployCommand defines the config for deploying an app
-type DeployCommand struct {
+// Command defines the config for deploying an app
+type Command struct {
 	GetManifest        func(path string) (*model.Manifest, error)
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProviderWithLogger
@@ -146,7 +146,7 @@ func NewDeployExternalK8sControl(cfg *rest.Config) ExternalResourceInterface {
 // Deploy deploys the okteto manifest
 func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &Options{}
-	fs := &DeployCommand{
+	fs := &Command{
 		Fs: afero.NewOsFs(),
 	}
 	cmd := &cobra.Command{
@@ -205,7 +205,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 			if err != nil {
 				return fmt.Errorf("could not create pipeline command: %w", err)
 			}
-			c := &DeployCommand{
+			c := &Command{
 				GetManifest: model.GetManifestV2,
 
 				GetExternalControl: NewDeployExternalK8sControl,
@@ -272,7 +272,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 }
 
 // RunDeploy runs the deploy sequence
-func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) error {
+func (dc *Command) RunDeploy(ctx context.Context, deployOptions *Options) error {
 	oktetoLog.SetStage("Load manifest")
 	manifest, err := dc.GetManifest(deployOptions.ManifestPath)
 	if err != nil {
@@ -608,7 +608,7 @@ func isRemoteDeployer(runInRemoteFlag bool, deployImage string) bool {
 }
 
 // deployDependencies deploy the dependencies in the manifest
-func (dc *DeployCommand) deployDependencies(ctx context.Context, deployOptions *Options) error {
+func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Options) error {
 	if len(deployOptions.Manifest.Dependencies) > 0 && !okteto.GetContext().IsOkteto {
 		return errDepenNotAvailableInVanilla
 	}
@@ -649,7 +649,7 @@ func (dc *DeployCommand) deployDependencies(ctx context.Context, deployOptions *
 	return nil
 }
 
-func (dc *DeployCommand) recreateFailedPods(ctx context.Context, name string) error {
+func (dc *Command) recreateFailedPods(ctx context.Context, name string) error {
 	c, _, err := dc.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, dc.K8sLogger)
 	if err != nil {
 		return fmt.Errorf("could not get kubernetes client: %w", err)
@@ -670,7 +670,7 @@ func (dc *DeployCommand) recreateFailedPods(ctx context.Context, name string) er
 	return nil
 }
 
-func (dc *DeployCommand) trackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error) {
+func (dc *Command) trackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error) {
 	deployType := "custom"
 	hasDependencySection := false
 	hasBuildSection := false

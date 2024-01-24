@@ -223,7 +223,7 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 	if err != nil {
 		return err
 	}
-	c := &deploy.DeployCommand{
+	c := &deploy.Command{
 		GetDeployer:        deploy.GetDeployer,
 		GetManifest:        mc.getManifest,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),

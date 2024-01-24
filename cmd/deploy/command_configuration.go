@@ -120,7 +120,7 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 	}
 }
 
-func (dc *DeployCommand) addEnvVars(cwd string) {
+func (dc *Command) addEnvVars(cwd string) {
 	if os.Getenv(constants.OktetoGitBranchEnvVar) == "" {
 		branch, err := utils.GetBranch(cwd)
 		if err != nil {

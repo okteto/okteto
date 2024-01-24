@@ -58,7 +58,7 @@ devs:
 	}
 
 	fakeK8sProvider := test.NewFakeK8sProvider()
-	dc := &DeployCommand{
+	dc := &Command{
 		GetManifest:       getFakeManifest,
 		K8sClientProvider: fakeK8sProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sProvider, nil),
