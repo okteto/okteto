@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -120,11 +121,14 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		ob.IoCtrl.Out().Success("Build succeeded")
 		ob.IoCtrl.Out().Infof("Your image won't be pushed. To push your image specify the flag '-t'.")
 	} else {
-		displayTag := options.Tag
-		if options.DevTag != "" {
-			displayTag = options.DevTag
+		tags := strings.Split(options.Tag, ",")
+		for _, tag := range tags {
+			displayTag := tag
+			if options.DevTag != "" {
+				displayTag = options.DevTag
+			}
+			ob.IoCtrl.Out().Success("Image '%s' successfully pushed", displayTag)
 		}
-		ob.IoCtrl.Out().Success("Image '%s' successfully pushed", displayTag)
 	}
 
 	analytics.TrackBuild(true)

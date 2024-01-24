@@ -52,12 +52,7 @@ func (up *upContext) activate() error {
 	up.Sy = nil
 	up.Forwarder = nil
 	defer func() {
-		if up.Dev.IsHybridModeEnabled() {
-			// interrupt signal handler already performs a graceful shutdown
-			if !up.interruptReceived {
-				up.shutdown()
-			}
-		} else {
+		if !up.interruptReceived {
 			up.shutdown()
 		}
 	}()
@@ -440,6 +435,10 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
     Increase your persistent volume size, run '%s' and try 'okteto up' again.
     More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`, utils.GetDownCommand(up.Options.ManifestPathFlag)),
 					}
+				}
+				if e.Type == "Warning" && strings.Contains(e.Message, "container veth name provided (eth0) already exists") {
+					oktetoLog.Infof("pod event: %s:%s:%s", e.Reason, e.Type, e.Message)
+					continue
 				}
 				return fmt.Errorf(e.Message)
 			case "SuccessfulAttachVolume":

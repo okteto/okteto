@@ -50,7 +50,7 @@ func GetK8sManifestPath(cwd string) (string, error) {
 	return "", ErrK8sManifestNotFound
 }
 
-// GetK8sManifestPath returns a k8s manifest file if exists, error otherwise
+// GetK8sManifestPathWithFilesystem returns a k8s manifest file if exists, error otherwise
 func GetK8sManifestPathWithFilesystem(cwd string, fs afero.Fs) (string, error) {
 	// Files will be checked in the order defined in the list
 	for _, name := range possibleK8sManifestSubPaths {

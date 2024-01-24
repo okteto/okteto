@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 	"github.com/stern/stern/stern"
@@ -53,7 +54,7 @@ type LogsOptions struct {
 	All          bool
 }
 
-func Logs(ctx context.Context) *cobra.Command {
+func Logs(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &LogsOptions{}
 
 	cmd := &cobra.Command{
@@ -77,7 +78,7 @@ func Logs(ctx context.Context) *cobra.Command {
 				manifest.Name = options.Name
 			}
 			if manifest.Name == "" {
-				c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+				c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okteto.Context().Cfg)
 				if err != nil {
 					return err
 				}

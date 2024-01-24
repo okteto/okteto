@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -108,6 +109,12 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 	if remoteLogsPath != "" {
 		files = append(files, remoteLogsPath)
 	}
+
+	k8sLogsPath := io.GetK8sLoggerFilePath(config.GetOktetoHome())
+	if filesystem.FileExists(k8sLogsPath) {
+		files = append(files, k8sLogsPath)
+	}
+
 	if err := z.Archive(files, archiveName); err != nil {
 		oktetoLog.Infof("error while archiving: %s", err)
 		return "", fmt.Errorf("couldn't create archive '%s', please try again: %w", archiveName, err)

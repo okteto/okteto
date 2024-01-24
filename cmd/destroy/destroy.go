@@ -101,7 +101,7 @@ type destroyCommand struct {
 }
 
 // Destroy destroys the dev application defined by the manifest
-func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
+func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOController, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &Options{
 		Variables: []string{},
 	}
@@ -147,7 +147,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCon
 			}
 
 			if options.Name == "" {
-				c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+				c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).ProvideWithLogger(okteto.Context().Cfg, k8sLogger)
 				if err != nil {
 					return err
 				}
@@ -166,7 +166,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCon
 			if err != nil {
 				return err
 			}
-			k8sClient, cfg, err := okteto.GetK8sClient()
+			k8sClient, cfg, err := okteto.GetK8sClientWithLogger(k8sLogger)
 			if err != nil {
 				return err
 			}
@@ -187,7 +187,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCon
 				ConfigMapHandler:  NewConfigmapHandler(k8sClient),
 				nsDestroyer:       namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
 				secrets:           secrets.NewSecrets(k8sClient),
-				k8sClientProvider: okteto.NewK8sClientProvider(),
+				k8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
 				oktetoClient:      okClient,
 				buildCtrl:         newBuildCtrl(options.Name, at, ioCtrl),
 				analyticsTracker:  at,

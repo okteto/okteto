@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/doctor"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -36,10 +37,10 @@ type doctorOptions struct {
 }
 
 // Doctor generates a zip file with all okteto-related log files
-func Doctor() *cobra.Command {
+func Doctor(k8sLogger *io.K8sLogger) *cobra.Command {
 	doctorOpts := &doctorOptions{}
 	cmd := &cobra.Command{
-		Use:   "doctor [svc]",
+		Use:   "doctor [service]",
 		Short: "Generate a zip file with the okteto logs",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#doctor"),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -55,7 +56,7 @@ func Doctor() *cobra.Command {
 				return err
 			}
 
-			c, _, err := okteto.GetK8sClient()
+			c, _, err := okteto.GetK8sClientWithLogger(k8sLogger)
 			if err != nil {
 				return err
 			}
