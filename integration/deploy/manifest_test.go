@@ -392,6 +392,55 @@ func TestDeployRemoteOktetoManifest(t *testing.T) {
 	require.True(t, k8sErrors.IsNotFound(err))
 }
 
+// TestDeployRemoteOktetoManifest tests the following scenario:
+// - Deploying a okteto manifest in remote with a build locally
+func TestDeployRemoteOktetoManifestFromParentFolder(t *testing.T) {
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	parentFolder := filepath.Join(dir, "test-parent")
+
+	testNamespace := integration.GetTestNamespace("TestDeployRemoteParent", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
+
+	require.NoError(t, createOktetoManifestWithDeployRemote(dir))
+	require.NoError(t, createAppDockerfileWithCache(dir))
+	require.NoError(t, os.Mkdir(parentFolder, 0700))
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:      parentFolder,
+		Namespace:    testNamespace,
+		OktetoHome:   dir,
+		Token:        token,
+		ManifestPath: filepath.Clean("../okteto.yml"),
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	// Test that image has been built
+	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okteto.Context().Registry, testNamespace)))
+
+	destroyOptions := &commands.DestroyOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoDestroyRemote(oktetoPath, destroyOptions))
+
+	_, err = integration.GetDeployment(context.Background(), testNamespace, "my-dep", c)
+	require.True(t, k8sErrors.IsNotFound(err))
+}
+
 func isImageBuilt(image string) bool {
 	reg := registry.NewOktetoRegistry(okteto.Config{})
 	if _, err := reg.GetImageTagWithDigest(image); err == nil {

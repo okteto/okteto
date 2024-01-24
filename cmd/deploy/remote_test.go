@@ -336,10 +336,22 @@ func TestGetDeployFlags(t *testing.T) {
 			config: config{
 				opts: &Options{
 					ManifestPathFlag: "/hello/this/is/a/test",
+					ManifestPath:     "/hello/this/is/a/test",
 					Timeout:          5 * time.Minute,
 				},
 			},
-			expected: []string{"--file /hello/this/is/a/test", "--timeout 5m0s"},
+			expected: []string{"--file test", "--timeout 5m0s"},
+		},
+		{
+			name: "manifest path set on .okteto",
+			config: config{
+				opts: &Options{
+					ManifestPathFlag: "/hello/this/is/a/.okteto/test",
+					ManifestPath:     "/hello/this/is/a/.okteto/test",
+					Timeout:          5 * time.Minute,
+				},
+			},
+			expected: []string{fmt.Sprintf("--file %s", filepath.Clean(".okteto/test")), "--timeout 5m0s"},
 		},
 		{
 			name: "variables set",
@@ -608,4 +620,52 @@ func TestGetExtraHosts(t *testing.T) {
 			assert.EqualValues(t, tt.expected, extraHosts)
 		})
 	}
+}
+func TestGetContextPath(t *testing.T) {
+	cwd := filepath.Clean("/path/to/current/directory")
+
+	rd := remoteDeployCommand{
+		fs: afero.NewMemMapFs(),
+	}
+
+	t.Run("Manifest path is empty", func(t *testing.T) {
+		expected := cwd
+		result := rd.getContextPath(cwd, "")
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path is a absolute path and directory", func(t *testing.T) {
+		manifestPath := filepath.Clean("/path/to/current/directory")
+		expected := manifestPath
+		rd.fs = afero.NewMemMapFs()
+		rd.fs.MkdirAll(manifestPath, 0755)
+		result := rd.getContextPath(cwd, manifestPath)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path is a file and absolute path", func(t *testing.T) {
+		manifestPath := filepath.Clean("/path/to/current/directory/file.yaml")
+		expected := filepath.Clean("/path/to/current/directory")
+		rd.fs = afero.NewMemMapFs()
+		rd.fs.MkdirAll(expected, 0755)
+		rd.fs.Create(manifestPath)
+		result := rd.getContextPath(cwd, manifestPath)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path is pointing to a file in the .okteto folder and absolute path", func(t *testing.T) {
+		manifestPath := filepath.Clean("/path/to/current/directory/.okteto/file.yaml")
+		expected := filepath.Clean("/path/to/current/directory")
+		rd.fs = afero.NewMemMapFs()
+		rd.fs.MkdirAll(expected, 0755)
+		rd.fs.Create(manifestPath)
+		result := rd.getContextPath(cwd, manifestPath)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path does not exist", func(t *testing.T) {
+		expected := cwd
+		result := rd.getContextPath(cwd, "nonexistent.yaml")
+		assert.Equal(t, expected, result)
+	})
 }
