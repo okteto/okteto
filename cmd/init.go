@@ -65,7 +65,7 @@ func Init(at analyticsTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
 			}
 			opts.Workdir = cwd
 			opts.ShowCTA = oktetoLog.IsInteractive()
-			mc := &manifest.ManifestCommand{
+			mc := &manifest.Command{
 				K8sClientProvider: okteto.NewK8sClientProvider(),
 				AnalyticsTracker:  at,
 				IoCtrl:            ioCtrl,

@@ -48,7 +48,7 @@ func TestRun(t *testing.T) {
 
 	p := filepath.Join(dir, fmt.Sprintf("okteto-%s", uuid.New().String()))
 
-	mc := &ManifestCommand{}
+	mc := &Command{}
 	opts := &InitOpts{
 		DevPath:  p,
 		Language: "golang",
@@ -97,7 +97,7 @@ func TestRunJustCreateNecessaryFields(t *testing.T) {
 	dir := t.TempDir()
 	ctx := context.Background()
 
-	mc := &ManifestCommand{}
+	mc := &Command{}
 	p := filepath.Join(dir, fmt.Sprintf("okteto-%s", uuid.New().String()))
 	opts := &InitOpts{
 		DevPath:  p,

@@ -66,7 +66,7 @@ func Delete(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 	return cmd
 }
 
-func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
+func (nc *Command) ExecuteDeleteNamespace(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
 	oktetoLog.Spinner(fmt.Sprintf("Deleting %s namespace", namespace))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -97,7 +97,7 @@ func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespac
 	return nil
 }
 
-func (nc *NamespaceCommand) watchDelete(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
+func (nc *Command) watchDelete(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
 	waitCtx, ctxCancel := context.WithCancel(ctx)
 	defer ctxCancel()
 
@@ -138,7 +138,7 @@ func (nc *NamespaceCommand) watchDelete(ctx context.Context, namespace string, k
 	}
 }
 
-func (nc *NamespaceCommand) waitForNamespaceDeleted(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
+func (nc *Command) waitForNamespaceDeleted(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
 	timeout := 5 * time.Minute
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)

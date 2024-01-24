@@ -57,7 +57,7 @@ func Sleep(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (nc *NamespaceCommand) ExecuteSleepNamespace(ctx context.Context, namespace string) error {
+func (nc *Command) ExecuteSleepNamespace(ctx context.Context, namespace string) error {
 	// Spinner to be loaded before sleeping a namespace
 	oktetoLog.Spinner(fmt.Sprintf("Sleeping %s namespace", namespace))
 	oktetoLog.StartSpinner()

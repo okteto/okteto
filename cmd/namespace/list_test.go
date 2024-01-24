@@ -69,7 +69,7 @@ func Test_listNamespace(t *testing.T) {
 				Namespace: client.NewFakeNamespaceClient(tt.currentNamespaces, tt.err),
 				Users:     client.NewFakeUsersClient(usr),
 			}
-			nsCmd := &NamespaceCommand{
+			nsCmd := &Command{
 				okClient: fakeOktetoClient,
 				ctxCmd:   newFakeContextCommand(fakeOktetoClient, usr),
 			}

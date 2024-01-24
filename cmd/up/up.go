@@ -216,7 +216,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 					return err
 				}
 				if answer {
-					mc := &manifest.ManifestCommand{
+					mc := &manifest.Command{
 						K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
 					}
 					if upOptions.ManifestPath == "" {
@@ -463,7 +463,7 @@ func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath st
 		return nil, err
 	}
 
-	mc := &manifest.ManifestCommand{
+	mc := &manifest.Command{
 		K8sClientProvider: okteto.NewK8sClientProvider(),
 	}
 	manifest, err := mc.RunInitV2(ctx, &manifest.InitOpts{DevPath: devPath, ShowCTA: false, Workdir: dir})

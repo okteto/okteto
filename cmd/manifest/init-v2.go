@@ -47,8 +47,8 @@ type analyticsTrackerInterface interface {
 	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
 }
 
-// ManifestCommand has all the namespaces subcommands
-type ManifestCommand struct {
+// Command has all the namespaces subcommands
+type Command struct {
 	manifest          *model.Manifest
 	K8sClientProvider okteto.K8sClientProviderWithLogger
 	AnalyticsTracker  analyticsTrackerInterface
@@ -74,7 +74,7 @@ type InitOpts struct {
 }
 
 // RunInitV2 initializes a new okteto manifest
-func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manifest, error) {
+func (mc *Command) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manifest, error) {
 	c, _, er := mc.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, mc.K8sLogger)
 	if er != nil {
 		return nil, er
@@ -181,7 +181,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 	return manifest, nil
 }
 
-func (*ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.Manifest, error) {
+func (*Command) configureManifestDeployAndBuild(cwd string) (*model.Manifest, error) {
 
 	composeFiles := utils.GetStackFiles(cwd)
 	if len(composeFiles) > 0 {
@@ -218,7 +218,7 @@ func (*ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.Mani
 
 }
 
-func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
+func (mc *Command) deploy(ctx context.Context, opts *InitOpts) error {
 	pc, err := pipelineCMD.NewCommand()
 	if err != nil {
 		return err
@@ -251,7 +251,7 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 	return nil
 }
 
-func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, namespace string) error {
+func (mc *Command) configureDevsByResources(ctx context.Context, namespace string) error {
 	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
@@ -507,7 +507,7 @@ func inferDevsSection(cwd string) (model.ManifestDevs, error) {
 	return devs, nil
 }
 
-func (mc *ManifestCommand) getManifest(path string) (*model.Manifest, error) {
+func (mc *Command) getManifest(path string) (*model.Manifest, error) {
 	if mc.manifest != nil {
 		// Deepcopy so it does not get overwritten these changes
 		manifest := *mc.manifest

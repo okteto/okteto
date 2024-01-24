@@ -53,7 +53,7 @@ func Wake(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (nc *NamespaceCommand) ExecuteWakeNamespace(ctx context.Context, namespace string) error {
+func (nc *Command) ExecuteWakeNamespace(ctx context.Context, namespace string) error {
 	// Spinner to be loaded before waking a namespace
 	oktetoLog.Spinner(fmt.Sprintf("Waking %s namespace", namespace))
 	oktetoLog.StartSpinner()
