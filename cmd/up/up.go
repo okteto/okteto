@@ -1016,7 +1016,7 @@ func terminateProcess(pid int) error {
 }
 
 func printDisplayContext(up *upContext) {
-	oktetoLog.Println(fmt.Sprintf("    %s   %s", oktetoLog.BlueString("GetContext:"), okteto.RemoveSchema(up.Dev.Context)))
+	oktetoLog.Println(fmt.Sprintf("    %s   %s", oktetoLog.BlueString("Context:"), okteto.RemoveSchema(up.Dev.Context)))
 	oktetoLog.Println(fmt.Sprintf("    %s %s", oktetoLog.BlueString("Namespace:"), up.Dev.Namespace))
 	oktetoLog.Println(fmt.Sprintf("    %s      %s", oktetoLog.BlueString("Name:"), up.Dev.Name))
 
