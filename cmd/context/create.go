@@ -291,7 +291,7 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 		if !ctxOptions.InferredToken && errors.Is(err, oktetoErrors.ErrTokenExpired) {
 			return oktetoErrors.UserError{
 				E:    err,
-				Hint: "A new token is required. More information on how to generate one here: https://www.okteto.com/docs/cloud/personal-access-tokens/",
+				Hint: "A new token is required. More information on how to generate one here: https://www.okteto.com/docs/core/credentials/personal-access-tokens/",
 			}
 		}
 		if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.GetContext().Name).Error() && ctxOptions.IsCtxCommand {
