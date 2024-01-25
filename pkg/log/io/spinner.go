@@ -14,7 +14,6 @@
 package io
 
 import (
-	"fmt"
 	"os"
 	"time"
 	"unicode"
@@ -116,19 +115,21 @@ func (s *ttySpinner) calculateSuffix(width int) string {
 
 // noSpinner is the spinner for the no tty modes
 type noSpinner struct {
-	msg string
+	msg              string
+	OutputController *OutputController
 }
 
 // newNoSpinner creates a new noSpinner
-func newNoSpinner(msg string) *noSpinner {
+func newNoSpinner(msg string, l *OutputController) *noSpinner {
 	return &noSpinner{
-		msg: ucFirst(msg),
+		msg:              ucFirst(msg),
+		OutputController: l,
 	}
 }
 
 // Start starts the spinner
 func (s *noSpinner) Start() {
-	fmt.Println(s.msg)
+	s.OutputController.Println(s.msg)
 }
 
 // Stop stops the spinner

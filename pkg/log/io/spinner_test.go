@@ -30,7 +30,8 @@ func TestTTYSpinner(t *testing.T) {
 }
 
 func TestNoSpinner(t *testing.T) {
-	sp := newNoSpinner("test")
+	oc := newOutputController(nil)
+	sp := newNoSpinner("test", oc)
 
 	sp.Start()
 	sp.Stop()

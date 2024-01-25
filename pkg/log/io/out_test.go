@@ -42,7 +42,7 @@ func TestSetOutputFormatOutput(t *testing.T) {
 func TestPrintln(t *testing.T) {
 	buffer := bytes.NewBuffer([]byte{})
 	l := newOutputController(buffer)
-	l.spinner = newNoSpinner("test")
+	l.spinner = newNoSpinner("test", l)
 
 	l.SetOutputFormat("tty")
 	l.Println("test")
@@ -74,7 +74,7 @@ func TestPrintln(t *testing.T) {
 func TestPrint(t *testing.T) {
 	buffer := bytes.NewBuffer([]byte{})
 	l := newOutputController(buffer)
-	l.spinner = newNoSpinner("test")
+	l.spinner = newNoSpinner("test", l)
 
 	l.SetOutputFormat("tty")
 	l.Print("test")
@@ -107,7 +107,7 @@ func TestPrintf(t *testing.T) {
 	buffer := bytes.NewBuffer([]byte{})
 	l := newOutputController(buffer)
 
-	l.spinner = newNoSpinner("test")
+	l.spinner = newNoSpinner("test", l)
 
 	l.SetOutputFormat("tty")
 	l.Printf("%s", "test")
@@ -140,7 +140,7 @@ func TestInfof(t *testing.T) {
 	buffer := bytes.NewBuffer([]byte{})
 	l := newOutputController(buffer)
 
-	l.spinner = newNoSpinner("test")
+	l.spinner = newNoSpinner("test", l)
 
 	l.SetOutputFormat("tty")
 	l.Infof("%s", "test")
@@ -173,7 +173,7 @@ func TestSuccess(t *testing.T) {
 	buffer := bytes.NewBuffer([]byte{})
 	l := newOutputController(buffer)
 
-	l.spinner = newNoSpinner("test")
+	l.spinner = newNoSpinner("test", l)
 
 	l.SetOutputFormat("tty")
 	l.Success("%s", "test")
@@ -242,4 +242,8 @@ func TestSpinner(t *testing.T) {
 	t.Setenv(OktetoDisableSpinnerEnvVar, "test")
 	sp = l.Spinner("enabled")
 	require.IsType(t, &ttySpinner{}, sp)
+
+	l.formatter = &jsonFormatter{}
+	sp = l.Spinner("json")
+	require.Nil(t, sp)
 }

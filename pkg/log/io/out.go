@@ -152,7 +152,7 @@ func (l *OutputController) Spinner(msg string) OktetoSpinner {
 	if isTTY && !disableSpinner {
 		l.spinner = newTTYSpinner(msg)
 	} else {
-		l.spinner = newNoSpinner(msg)
+		l.spinner = newNoSpinner(msg, l)
 	}
 	return l.spinner
 }
