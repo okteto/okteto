@@ -19,6 +19,7 @@ import (
 	"os"
 	"reflect"
 
+	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/constants"
@@ -29,7 +30,6 @@ import (
 	modelUtils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/repository"
-	giturls "github.com/whilp/git-urls"
 	"k8s.io/client-go/kubernetes"
 )
 

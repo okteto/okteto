@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/a8m/envsubst/parse"
+	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/pkg/env"
-	giturls "github.com/whilp/git-urls"
 )
 
 // ManifestSection represents the map of dependencies at a manifest
