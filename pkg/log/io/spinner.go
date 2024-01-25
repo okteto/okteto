@@ -115,8 +115,8 @@ func (s *ttySpinner) calculateSuffix(width int) string {
 
 // noSpinner is the spinner for the no tty modes
 type noSpinner struct {
-	msg              string
 	OutputController *OutputController
+	msg              string
 }
 
 // newNoSpinner creates a new noSpinner
