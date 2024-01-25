@@ -50,13 +50,13 @@ func TestPreUpdateFunc(t *testing.T) {
 			name:     "width is 10",
 			width:    10,
 			err:      nil,
-			expected: "Test",
+			expected: " Test",
 		},
 		{
 			name:     "error getting terminal width",
 			width:    0,
 			err:      fmt.Errorf("error getting terminal width"),
-			expected: "Test",
+			expected: " Test",
 		},
 	}
 	for _, tc := range tt {
@@ -66,7 +66,7 @@ func TestPreUpdateFunc(t *testing.T) {
 			}
 
 			okSpinner.preUpdateFunc()(okSpinner.Spinner)
-			assert.Equal(t, "Test", okSpinner.Spinner.Suffix)
+			assert.Equal(t, tc.expected, okSpinner.Spinner.Suffix)
 		})
 	}
 }

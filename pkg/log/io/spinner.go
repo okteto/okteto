@@ -94,7 +94,7 @@ func (s *ttySpinner) preUpdateFunc() func(spinner *sp.Spinner) {
 		if err != nil {
 			return
 		}
-		spinner.Suffix = s.calculateSuffix(width)
+		spinner.Suffix = " " + s.calculateSuffix(width)
 	}
 }
 
