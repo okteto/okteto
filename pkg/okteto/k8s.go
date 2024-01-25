@@ -69,14 +69,14 @@ func newTokenRotationTransport(rt http.RoundTripper, k8sLogger *ioCtrl.K8sLogger
 // RoundTrip to wrap http 401 status code in response
 func (t *tokenRotationTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	resp, err := t.rt.RoundTrip(req)
+	if t.k8sLogger != nil && t.k8sLogger.IsEnabled() {
+		t.k8sLogger.Log(resp.StatusCode, req.Method, req.URL.String())
+	}
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode == http.StatusUnauthorized {
 		return nil, ErrK8sUnauthorised
-	}
-	if t.k8sLogger != nil && t.k8sLogger.IsEnabled() {
-		t.k8sLogger.Log(resp.StatusCode, req.Method, req.URL.String())
 	}
 	return resp, err
 }
