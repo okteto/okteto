@@ -33,7 +33,7 @@ func Kubeconfig(okClientProvider oktetoClientProvider) *cobra.Command {
 		Short: "Download credentials for the Kubernetes cluster selected via 'okteto context'",
 		Long: `Download credentials for the Kubernetes cluster selected via 'okteto context'.
 
-Generated kubeconfig file uses a credential plugin to get the cluster credentials via Okteto backend that requires the Okteto CLI to be in the PATH. Learn more about how to use the Kubernetes credentials at https://www.okteto.com/docs/cloud/credentials/#using-your-kubernetes-credentials.
+Generated kubeconfig file uses a credential plugin to get the cluster credentials via Okteto backend that requires the Okteto CLI to be in the PATH. Learn more about how to use the Kubernetes credentials at https://www.okteto.com/docs/core/credentials/kubernetes-credentials#using-your-kubernetes-credentials.
 `,
 		Args: utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#kubeconfig"),
 		RunE: func(cmd *cobra.Command, args []string) error {

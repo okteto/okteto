@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	personalAccessTokenURL          = "https://www.okteto.com/docs/cloud/personal-access-tokens/"
+	personalAccessTokenURL          = "https://www.okteto.com/docs/core/credentials/personal-access-tokens/"
 	suggestInstallOktetoSH          = "Don't have an Okteto instance?\n    Start by installing Okteto on your Kubernetes cluster: https://www.okteto.com/free-trial/"
 	messageSuggestingCurrentContext = "Enter the URL of your Okteto instance: "
 )
