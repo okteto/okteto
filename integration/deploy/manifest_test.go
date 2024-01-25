@@ -428,7 +428,7 @@ func TestDeployRemoteOktetoManifestFromParentFolder(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
 	// Test that image has been built
-	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okteto.Context().Registry, testNamespace)))
+	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okteto.GetContext().Registry, testNamespace)))
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
