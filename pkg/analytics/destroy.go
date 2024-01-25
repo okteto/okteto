@@ -21,7 +21,7 @@ type DestroyMetadata struct {
 }
 
 // TrackDestroy sends a tracking event to mixpanel when the user destroys a pipeline from local
-func (a *AnalyticsTracker) TrackDestroy(metadata DestroyMetadata) {
+func (a *Tracker) TrackDestroy(metadata DestroyMetadata) {
 	props := map[string]any{
 		"isDestroyAll": metadata.IsDestroyAll,
 		"isRemote":     metadata.IsRemote,

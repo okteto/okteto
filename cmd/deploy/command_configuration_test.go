@@ -38,8 +38,8 @@ deploy:
 devs:
     - api/okteto.yml
     - frontend/okteto.yml`)
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 			},
@@ -58,7 +58,7 @@ devs:
 	}
 
 	fakeK8sProvider := test.NewFakeK8sProvider()
-	dc := &DeployCommand{
+	dc := &Command{
 		GetManifest:       getFakeManifest,
 		K8sClientProvider: fakeK8sProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sProvider, nil),

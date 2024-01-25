@@ -95,13 +95,13 @@ type destroyCommand struct {
 	ConfigMapHandler  configMapHandler
 	analyticsTracker  analyticsTrackerInterface
 	getManifest       func(path string) (*model.Manifest, error)
-	oktetoClient      *okteto.OktetoClient
-	ioCtrl            *io.IOController
+	oktetoClient      *okteto.Client
+	ioCtrl            *io.Controller
 	buildCtrl         buildCtrl
 }
 
 // Destroy destroys the dev application defined by the manifest
-func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOController, k8sLogger *io.K8sLogger) *cobra.Command {
+func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &Options{
 		Variables: []string{},
 	}
@@ -136,7 +136,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCon
 				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
 					return err
 				}
-				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{Namespace: options.Namespace}); err != nil {
+				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
 					return err
 				}
 			}
@@ -147,12 +147,12 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCon
 			}
 
 			if options.Name == "" {
-				c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).ProvideWithLogger(okteto.Context().Cfg, k8sLogger)
+				c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).ProvideWithLogger(okteto.GetContext().Cfg, k8sLogger)
 				if err != nil {
 					return err
 				}
 				inferer := devenvironment.NewNameInferer(c)
-				options.Name = inferer.InferName(ctx, cwd, okteto.Context().Namespace, options.ManifestPathFlag)
+				options.Name = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, options.ManifestPathFlag)
 				if err != nil {
 					return fmt.Errorf("could not infer environment name")
 				}
@@ -172,11 +172,11 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCon
 			}
 
 			if options.Namespace == "" {
-				options.Namespace = okteto.Context().Namespace
+				options.Namespace = okteto.GetContext().Namespace
 			}
 
-			var okClient = &okteto.OktetoClient{}
-			if okteto.Context().IsOkteto {
+			var okClient = &okteto.Client{}
+			if okteto.GetContext().IsOkteto {
 				okClient, err = okteto.NewOktetoClient()
 				if err != nil {
 					return err
@@ -196,7 +196,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCon
 			}
 
 			kubeconfigPath := getTempKubeConfigFile(options.Name)
-			if err := kubeconfig.Write(okteto.Context().Cfg, kubeconfigPath); err != nil {
+			if err := kubeconfig.Write(okteto.GetContext().Cfg, kubeconfigPath); err != nil {
 				return err
 			}
 			os.Setenv("KUBECONFIG", kubeconfigPath)
@@ -273,7 +273,7 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 	)
 
 	if opts.DestroyAll {
-		if !okteto.Context().IsOkteto {
+		if !okteto.GetContext().IsOkteto {
 			return nil, oktetoErrors.ErrContextIsNotOktetoCluster
 		}
 		destroyer, err = newLocalDestroyerAll(dc.k8sClientProvider, dc.executor, dc.nsDestroyer, dc.oktetoClient)

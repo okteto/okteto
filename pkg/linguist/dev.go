@@ -354,8 +354,8 @@ func GetDevDefaults(language, workdir string, imageConfig registry.ImageMetadata
 		return nil, err
 	}
 	dev.Name = name
-	dev.Context = okteto.Context().Name
-	dev.Namespace = okteto.Context().Namespace
+	dev.Context = okteto.GetContext().Name
+	dev.Namespace = okteto.GetContext().Namespace
 	return dev, nil
 }
 

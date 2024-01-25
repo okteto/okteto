@@ -40,7 +40,7 @@ import (
 )
 
 type localDeployer struct {
-	deployWaiter       DeployWaiter
+	deployWaiter       Waiter
 	Proxy              proxyInterface
 	Kubeconfig         kubeConfigHandler
 	ConfigMapHandler   configMapHandler
@@ -62,12 +62,12 @@ func newLocalDeployer(ctx context.Context, options *Options, cmapHandler configM
 	}
 	tempKubeconfigName := options.Name
 	if tempKubeconfigName == "" {
-		c, _, err := k8sProvider.ProvideWithLogger(okteto.Context().Cfg, k8sLogger)
+		c, _, err := k8sProvider.ProvideWithLogger(okteto.GetContext().Cfg, k8sLogger)
 		if err != nil {
 			return nil, err
 		}
 		inferer := devenvironment.NewNameInferer(c)
-		tempKubeconfigName = inferer.InferName(ctx, cwd, okteto.Context().Namespace, options.ManifestPathFlag)
+		tempKubeconfigName = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, options.ManifestPathFlag)
 		if err != nil {
 			return nil, fmt.Errorf("could not infer environment name")
 		}
@@ -102,7 +102,7 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 
 	// We need to create a client that doesn't go through the proxy to create
 	// the configmap without the deployedByLabel
-	c, _, err := ld.K8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, ld.k8sLogger)
+	c, _, err := ld.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, ld.k8sLogger)
 	if err != nil {
 		return err
 	}
@@ -164,7 +164,7 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 		// Set OKTETO_DISABLE_SPINNER=true env variable, so all the Okteto commands disable spinner which leads to errors
 		fmt.Sprintf("%s=true", oktetoLog.OktetoDisableSpinnerEnvVar),
 		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
-		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
+		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.GetContext().Namespace),
 		// Set OKTETO_AUTODISCOVERY_RELEASE_NAME=sanitized name, so the release name in case of autodiscovery of helm is valid
 		fmt.Sprintf("%s=%s", constants.OktetoAutodiscoveryReleaseName, format.ResourceK8sMetaString(deployOptions.Name)),
 	)
@@ -281,13 +281,13 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 
 func (ld *localDeployer) deployStack(ctx context.Context, opts *Options) error {
 	composeSectionInfo := opts.Manifest.Deploy.ComposeSection
-	composeSectionInfo.Stack.Namespace = okteto.Context().Namespace
+	composeSectionInfo.Stack.Namespace = okteto.GetContext().Namespace
 
 	var composeFiles []string
 	for _, composeInfo := range composeSectionInfo.ComposesInfo {
 		composeFiles = append(composeFiles, composeInfo.File)
 	}
-	stackOpts := &stack.StackDeployOptions{
+	stackOpts := &stack.DeployOptions{
 		StackPaths:       composeFiles,
 		ForceBuild:       false,
 		Wait:             opts.Wait,
@@ -310,7 +310,7 @@ func (ld *localDeployer) deployStack(ctx context.Context, opts *Options) error {
 
 func (ld *localDeployer) deployEndpoints(ctx context.Context, opts *Options) error {
 
-	c, _, err := ld.K8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, ld.k8sLogger)
+	c, _, err := ld.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, ld.k8sLogger)
 	if err != nil {
 		return err
 	}

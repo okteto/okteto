@@ -48,8 +48,8 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-// StackDeployOptions represents the different options available for stack commands
-type StackDeployOptions struct {
+// DeployOptions represents the different options available for stack commands
+type DeployOptions struct {
 	Name             string
 	Namespace        string
 	Progress         string
@@ -71,7 +71,7 @@ type Stack struct {
 	K8sClient        kubernetes.Interface
 	Config           *rest.Config
 	AnalyticsTracker analyticsTrackerInterface
-	IoCtrl           *io.IOController
+	IoCtrl           *io.Controller
 }
 
 const (
@@ -79,7 +79,7 @@ const (
 )
 
 // Deploy deploys a stack
-func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
+func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *DeployOptions) error {
 
 	if err := validateServicesToDeploy(ctx, s, options, sd.K8sClient); err != nil {
 		return err
@@ -118,7 +118,7 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *StackDeplo
 }
 
 // deploy deploys a stack to kubernetes
-func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config *rest.Config, options *StackDeployOptions) error {
+func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config *rest.Config, options *DeployOptions) error {
 	DisplayWarnings(s)
 
 	oktetoLog.Spinner(fmt.Sprintf("Deploying compose '%s'...", s.Name))
@@ -305,7 +305,7 @@ func getEndpointsToDeployFromServicesToDeploy(endpoints model.EndpointSpec, serv
 	return endpointsToDeploy
 }
 
-func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernetes.Interface, config *rest.Config, options *StackDeployOptions) error {
+func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernetes.Interface, config *rest.Config, options *DeployOptions) error {
 	deployedSvcs := make(map[string]bool)
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(options.Timeout)
@@ -828,7 +828,7 @@ func DisplaySanitizedServicesWarnings(previousToNewNameMap map[string]string) {
 	}
 }
 
-func addImageMetadataToStack(s *model.Stack, options *StackDeployOptions) {
+func addImageMetadataToStack(s *model.Stack, options *DeployOptions) {
 	for _, svcName := range options.ServicesToDeploy {
 		svc := s.Services[svcName]
 		addImageMetadataToSvc(svc)
@@ -856,7 +856,7 @@ func addImageMetadataToSvc(svc *model.Service) {
 	}
 }
 
-func validateServicesToDeploy(ctx context.Context, s *model.Stack, options *StackDeployOptions, c kubernetes.Interface) error {
+func validateServicesToDeploy(ctx context.Context, s *model.Stack, options *DeployOptions, c kubernetes.Interface) error {
 	if err := ValidateDefinedServices(s, options.ServicesToDeploy); err != nil {
 		return err
 	}

@@ -64,7 +64,7 @@ func List(ctx context.Context) *cobra.Command {
 		Use:   "list",
 		Short: "List all preview environments",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctxOptions := &contextCMD.ContextOptions{}
+			ctxOptions := &contextCMD.Options{}
 
 			if flags.output == "" {
 				ctxOptions.Show = true

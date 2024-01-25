@@ -71,7 +71,7 @@ func executeCreateNamespaceAction(namespace string) error {
 	}
 
 	log.Printf("create namespace output: \n%s\n", string(o))
-	n := okteto.Context().Namespace
+	n := okteto.GetContext().Namespace
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
@@ -104,7 +104,7 @@ func executeChangeNamespaceAction(namespace string) error {
 	}
 
 	log.Printf("changing namespace output: \n%s\n", string(o))
-	n := okteto.Context().Namespace
+	n := okteto.GetContext().Namespace
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}

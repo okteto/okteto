@@ -33,7 +33,7 @@ import (
 type kubeconfigController interface {
 	kubeconfigTokenController
 
-	updateOktetoContextExec(*okteto.OktetoContext) error
+	updateOktetoContextExec(*okteto.Context) error
 }
 
 type KubeconfigCMD struct {
@@ -64,19 +64,19 @@ func UpdateKubeconfigCMD(okClientProvider oktetoClientProvider) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			// Run context command to get the Cfg into Okteto Context
-			if err := NewContextCommand(withKubeTokenController(kc.kubetokenController)).Run(ctx, &ContextOptions{}); err != nil {
+			// Run context command to get the Cfg into Okteto GetContext
+			if err := NewContextCommand(withKubeTokenController(kc.kubetokenController)).Run(ctx, &Options{}); err != nil {
 				return err
 			}
 
-			return kc.execute(okteto.Context(), config.GetKubeconfigPath())
+			return kc.execute(okteto.GetContext(), config.GetKubeconfigPath())
 		},
 	}
 
 	return cmd
 }
 
-func (k *KubeconfigCMD) execute(okCtx *okteto.OktetoContext, kubeconfigPaths []string) error {
+func (k *KubeconfigCMD) execute(okCtx *okteto.Context, kubeconfigPaths []string) error {
 	contextName := okCtx.Name
 	if okCtx.IsOkteto {
 		contextName = okteto.UrlToKubernetesContext(contextName)
@@ -98,7 +98,7 @@ func (k *KubeconfigCMD) execute(okCtx *okteto.OktetoContext, kubeconfigPaths []s
 	return nil
 }
 
-func updateCfgClusterCertificate(contextName string, okContext *okteto.OktetoContext) error {
+func updateCfgClusterCertificate(contextName string, okContext *okteto.Context) error {
 	if !okContext.IsStoredAsInsecure {
 		return nil
 	}

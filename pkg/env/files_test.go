@@ -24,23 +24,23 @@ func TestEnvFileUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
 		data     []byte
-		expected EnvFiles
+		expected Files
 	}{
 		{
 			"single value",
 			[]byte(`.testEnv`),
-			EnvFiles{".testEnv"},
+			Files{".testEnv"},
 		},
 		{
 			"testEnv files list",
 			[]byte("\n  - .testEnv\n  - .env2"),
-			EnvFiles{".testEnv", ".env2"},
+			Files{".testEnv", ".env2"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := make(EnvFiles, 0)
+			result := make(Files, 0)
 
 			err := yaml.UnmarshalStrict(tt.data, &result)
 			assert.NoError(t, err)

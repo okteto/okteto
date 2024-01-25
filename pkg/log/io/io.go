@@ -19,16 +19,16 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
-// IOController manages the input and output for the CLI
-type IOController struct {
+// Controller manages the input and output for the CLI
+type Controller struct {
 	in  *InputController
 	out *OutputController
 	*oktetoLogger
 }
 
 // NewIOController returns a new input/output controller
-func NewIOController() *IOController {
-	ioController := &IOController{
+func NewIOController() *Controller {
+	ioController := &Controller{
 		out:          newOutputController(os.Stdout),
 		in:           newInputController(os.Stdin),
 		oktetoLogger: newOktetoLogger(),
@@ -39,32 +39,32 @@ func NewIOController() *IOController {
 // In is utilized to collect user input for operations that require user interaction or data entry.
 // When 'in' is used, the program will pause and wait for the user to provide input.
 // This input is essential for executing specific actions, and the program proceeds once the user provides the necessary data or response.
-func (ioc *IOController) In() *InputController {
+func (ioc *Controller) In() *InputController {
 	return ioc.in
 }
 
 // Out is used for displaying information to the user regardless of the log level set.
 // It will always be shown to the user, regardless of whether the log level is 'info', 'debug', 'warning', or any other level.
-func (ioc *IOController) Out() *OutputController {
+func (ioc *Controller) Out() *OutputController {
 	return ioc.out
 }
 
 // Logger is used for recording and categorizing log messages at different levels (e.g., info, debug, warning).
 // These log messages can be filtered based on the log level set by the user.
 // Messages with log levels lower than the user-defined log level will not be displayed to the user.
-func (ioc *IOController) Logger() *oktetoLogger {
+func (ioc *Controller) Logger() *oktetoLogger {
 	return ioc.oktetoLogger
 }
 
 // SetOutputFormat sets the output format for the CLI. We need that the logger and the output generates the same
 // type of messages, so we don't end up mixing formats like json and tty.
-func (ioc *IOController) SetOutputFormat(output string) {
+func (ioc *Controller) SetOutputFormat(output string) {
 	ioc.oktetoLogger.SetOutputFormat(output)
 	ioc.out.SetOutputFormat(output)
 }
 
 // SetStage sets the current stage where the CLI is performing.
-func (ioc *IOController) SetStage(stage string) {
+func (ioc *Controller) SetStage(stage string) {
 	ioc.oktetoLogger.SetStage(stage)
 	ioc.out.SetStage(stage)
 	oktetoLog.SetStage(stage)

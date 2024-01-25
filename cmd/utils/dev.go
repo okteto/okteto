@@ -87,11 +87,11 @@ func DeprecatedLoadManifest(devPath string) (*model.Manifest, error) {
 		manifest.Name = devenvironment.DeprecatedInferName(cwd)
 	}
 	if manifest.Namespace == "" {
-		manifest.Namespace = okteto.Context().Namespace
+		manifest.Namespace = okteto.GetContext().Namespace
 	}
 
 	if manifest.Context == "" {
-		manifest.Context = okteto.Context().Name
+		manifest.Context = okteto.GetContext().Name
 	}
 
 	for _, dev := range manifest.Dev {
@@ -99,8 +99,8 @@ func DeprecatedLoadManifest(devPath string) (*model.Manifest, error) {
 			return nil, err
 		}
 
-		dev.Namespace = okteto.Context().Namespace
-		dev.Context = okteto.Context().Name
+		dev.Namespace = okteto.GetContext().Namespace
+		dev.Context = okteto.GetContext().Name
 	}
 
 	return manifest, nil
@@ -144,8 +144,8 @@ func DeprecatedLoadManifestOrDefault(devPath, name string) (*model.Manifest, err
 		}
 		manifest.Dev[name] = model.NewDev()
 		manifest.Dev[name].Name = name
-		manifest.Dev[name].Namespace = okteto.Context().Namespace
-		manifest.Dev[name].Context = okteto.Context().Name
+		manifest.Dev[name].Namespace = okteto.GetContext().Namespace
+		manifest.Dev[name].Context = okteto.GetContext().Name
 		if err := manifest.Dev[name].SetDefaults(); err != nil {
 			return nil, err
 		}

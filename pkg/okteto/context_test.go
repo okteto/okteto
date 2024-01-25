@@ -59,8 +59,8 @@ func Test_K8sContextToOktetoUrl(t *testing.T) {
 		{name: "is-k8scontext", in: "minikube", want: "minikube"},
 	}
 
-	CurrentStore = &OktetoContextStore{
-		Contexts: map[string]*OktetoContext{CloudURL: {IsOkteto: true}},
+	CurrentStore = &ContextStore{
+		Contexts: map[string]*Context{CloudURL: {IsOkteto: true}},
 	}
 	ctx := context.Background()
 	for _, tt := range tests {
@@ -75,20 +75,20 @@ func Test_K8sContextToOktetoUrl(t *testing.T) {
 
 func Test_IsOktetoCloud(t *testing.T) {
 	var tests = []struct {
-		context *OktetoContext
+		context *Context
 		name    string
 		want    bool
 	}{
-		{name: "is-cloud", context: &OktetoContext{Name: "https://cloud.okteto.com"}, want: true},
-		{name: "is-staging", context: &OktetoContext{Name: "https://staging.okteto.dev"}, want: true},
-		{name: "is-not-cloud", context: &OktetoContext{Name: "https://cindy.okteto.dev"}, want: false},
+		{name: "is-cloud", context: &Context{Name: "https://cloud.okteto.com"}, want: true},
+		{name: "is-staging", context: &Context{Name: "https://staging.okteto.dev"}, want: true},
+		{name: "is-not-cloud", context: &Context{Name: "https://cindy.okteto.dev"}, want: false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			CurrentStore = &OktetoContextStore{
+			CurrentStore = &ContextStore{
 				CurrentContext: "test",
-				Contexts: map[string]*OktetoContext{
+				Contexts: map[string]*Context{
 					"test": tt.context,
 				},
 			}
@@ -184,7 +184,7 @@ func Test_AddOktetoCredentialsToCfg(t *testing.T) {
 				Server:      server,
 				Token:       token,
 			}
-			oktetoContext := OktetoContext{
+			oktetoContext := Context{
 				Name:               "https://test.okteto.dev",
 				Certificate:        oktetoCertBase64,
 				IsStoredAsInsecure: tt.isInsecureContext,
@@ -238,7 +238,7 @@ func Test_AddOktetoCredentialsToCfgWhenConfigCredentialHasntToBeDone(t *testing.
 		Server:      "k8s server",
 		Token:       "fake token",
 	}
-	oktetoContext := OktetoContext{
+	oktetoContext := Context{
 		Name:               "https://test.okteto.dev",
 		Certificate:        "okteto certificate",
 		IsStoredAsInsecure: false,
@@ -269,7 +269,7 @@ func Test_AddOktetoCredentialsToCfgWithInvalidOktetoContext(t *testing.T) {
 		Server:      "k8s server",
 		Token:       "fake token",
 	}
-	oktetoContext := OktetoContext{
+	oktetoContext := Context{
 		Name:               "https://test.okteto.dev",
 		Certificate:        "base64withinvalidchar%",
 		IsStoredAsInsecure: true,
@@ -306,8 +306,8 @@ func TestGetContextStoreFromStorePath(t *testing.T) {
 	t.Setenv(constants.OktetoFolderEnvVar, tempDir)
 	store := GetContextStoreFromStorePath()
 
-	expected := &OktetoContextStore{
-		Contexts: make(map[string]*OktetoContext),
+	expected := &ContextStore{
+		Contexts: make(map[string]*Context),
 	}
 	require.EqualValues(t, expected, store)
 }

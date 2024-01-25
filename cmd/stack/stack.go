@@ -27,7 +27,7 @@ type analyticsTrackerInterface interface {
 }
 
 // Stack stack management commands
-func Stack(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
+func Stack(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "stack",
 		Short:  "Stack management commands",

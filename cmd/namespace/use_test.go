@@ -67,8 +67,8 @@ func Test_useNamespace(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			okteto.CurrentStore = &okteto.OktetoContextStore{
-				Contexts: map[string]*okteto.OktetoContext{
+			okteto.CurrentStore = &okteto.ContextStore{
+				Contexts: map[string]*okteto.Context{
 					"test": {
 						Name:     "test",
 						Token:    "test",
@@ -87,7 +87,7 @@ func Test_useNamespace(t *testing.T) {
 				Users:           client.NewFakeUsersClient(usr),
 				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			}
-			nsCmd := &NamespaceCommand{
+			nsCmd := &Command{
 				okClient: fakeOktetoClient,
 				ctxCmd:   newFakeContextCommand(fakeOktetoClient, usr),
 			}
@@ -97,7 +97,7 @@ func Test_useNamespace(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 
-				assert.Equal(t, tt.changeToNs, okteto.Context().Namespace)
+				assert.Equal(t, tt.changeToNs, okteto.GetContext().Namespace)
 			}
 
 		})

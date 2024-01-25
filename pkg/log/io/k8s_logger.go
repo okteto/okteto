@@ -27,13 +27,13 @@ const (
 )
 
 type K8sLogger struct {
-	*IOController
+	*Controller
 }
 
 // NewK8sLogger creates a new k8s logger
 func NewK8sLogger() *K8sLogger {
 	k8sLogger := &K8sLogger{
-		IOController: NewIOController(),
+		Controller: NewIOController(),
 	}
 	return k8sLogger
 }

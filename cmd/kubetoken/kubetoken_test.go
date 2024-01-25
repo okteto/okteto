@@ -49,7 +49,7 @@ type fakeCtxCmdRunner struct {
 	err error
 }
 
-func (f fakeCtxCmdRunner) Run(ctx context.Context, ctxOptions *contextCMD.ContextOptions) error {
+func (f fakeCtxCmdRunner) Run(ctx context.Context, ctxOptions *contextCMD.Options) error {
 	return f.err
 }
 
@@ -58,13 +58,13 @@ func TestKubetoken(t *testing.T) {
 	type input struct {
 		fakeOktetoClientProvider fakeOktetoClientProvider
 		fakeCtxCmdRunner         fakeCtxCmdRunner
-		contextStore             *okteto.OktetoContextStore
-		flags                    KubetokenFlags
+		contextStore             *okteto.ContextStore
+		flags                    Flags
 	}
 
-	fakeCtxStore := &okteto.OktetoContextStore{
+	fakeCtxStore := &okteto.ContextStore{
 		CurrentContext: "https://okteto.dev",
-		Contexts: map[string]*okteto.OktetoContext{
+		Contexts: map[string]*okteto.Context{
 			"https://okteto.dev": {
 				IsOkteto: true,
 			},
@@ -79,7 +79,7 @@ func TestKubetoken(t *testing.T) {
 		{
 			name: "error on validation",
 			input: input{
-				flags: KubetokenFlags{
+				flags: Flags{
 					Context: "",
 				},
 			},
@@ -88,7 +88,7 @@ func TestKubetoken(t *testing.T) {
 		{
 			name: "error on context command Run",
 			input: input{
-				flags: KubetokenFlags{
+				flags: Flags{
 					Context: "https://okteto.dev",
 				},
 				contextStore: fakeCtxStore,
@@ -108,7 +108,7 @@ func TestKubetoken(t *testing.T) {
 		{
 			name: "error getting kubetoken",
 			input: input{
-				flags: KubetokenFlags{
+				flags: Flags{
 					Context: "https://okteto.dev",
 				},
 				contextStore: fakeCtxStore,
@@ -128,7 +128,7 @@ func TestKubetoken(t *testing.T) {
 		{
 			name: "successful",
 			input: input{
-				flags: KubetokenFlags{
+				flags: Flags{
 					Context:   "https://okteto.dev",
 					Namespace: "namespace",
 				},
@@ -152,8 +152,8 @@ func TestKubetoken(t *testing.T) {
 			cmd.oktetoClientProvider = tc.input.fakeOktetoClientProvider
 			cmd.oktetoCtxCmdRunner = tc.input.fakeCtxCmdRunner
 			cmd.ctxStore = tc.input.contextStore
-			cmd.initCtxFunc = func(string, string) *contextCMD.ContextOptions {
-				return &contextCMD.ContextOptions{
+			cmd.initCtxFunc = func(string, string) *contextCMD.Options {
+				return &contextCMD.Options{
 					Context:   tc.input.flags.Context,
 					Namespace: tc.input.flags.Namespace,
 				}

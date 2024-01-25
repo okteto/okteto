@@ -41,13 +41,13 @@ type DeployCommand struct {
 	K8sClient        kubernetes.Interface
 	analyticsTracker analyticsTrackerInterface
 	Config           *rest.Config
-	ioCtrl           *io.IOController
+	ioCtrl           *io.Controller
 	IsInsideDeploy   bool
 }
 
 // deploy deploys a stack
-func deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
-	options := &stack.StackDeployOptions{}
+func deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
+	options := &stack.DeployOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "deploy [service...]",
@@ -68,7 +68,7 @@ func deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCont
 			if err != nil {
 				return err
 			}
-			c, config, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+			c, config, err := okteto.NewK8sClientProvider().Provide(okteto.GetContext().Cfg)
 			if err != nil {
 				return err
 			}
@@ -93,7 +93,7 @@ func deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.IOCont
 }
 
 // RunDeploy runs the deploy command sequence
-func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *stack.StackDeployOptions) error {
+func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *stack.DeployOptions) error {
 
 	if okteto.IsOkteto() {
 		create, err := utils.ShouldCreateNamespace(ctx, s.Namespace)

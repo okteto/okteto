@@ -34,7 +34,7 @@ type Info struct {
 	Dockerfile       string            `yaml:"dockerfile,omitempty"`
 	Target           string            `yaml:"target,omitempty"`
 	Image            string            `yaml:"image,omitempty"`
-	CacheFrom        cache.CacheFrom   `yaml:"cache_from,omitempty"`
+	CacheFrom        cache.From        `yaml:"cache_from,omitempty"`
 	Args             Args              `yaml:"args,omitempty"`
 	VolumesToInclude []VolumeMounts    `yaml:"-"`
 	ExportCache      cache.ExportCache `yaml:"export_cache,omitempty"`
@@ -52,7 +52,7 @@ type infoRaw struct {
 	Dockerfile       string            `yaml:"dockerfile,omitempty"`
 	Target           string            `yaml:"target,omitempty"`
 	Image            string            `yaml:"image,omitempty"`
-	CacheFrom        cache.CacheFrom   `yaml:"cache_from,omitempty"`
+	CacheFrom        cache.From        `yaml:"cache_from,omitempty"`
 	Args             Args              `yaml:"args,omitempty"`
 	VolumesToInclude []VolumeMounts    `yaml:"-"`
 	ExportCache      cache.ExportCache `yaml:"export_cache,omitempty"`

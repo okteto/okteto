@@ -36,7 +36,7 @@ type localDestroyAllCommand struct {
 	ConfigMapHandler  configMapHandler
 	nsDestroyer       destroyer
 	executor          executor.ManifestExecutor
-	oktetoClient      *okteto.OktetoClient
+	oktetoClient      *okteto.Client
 	secrets           secretHandler
 	k8sClientProvider okteto.K8sClientProvider
 }
@@ -45,9 +45,9 @@ func newLocalDestroyerAll(
 	k8sClientProvider okteto.K8sClientProvider,
 	executor executor.ManifestExecutor,
 	nsDestroyer destroyer,
-	oktetoClient *okteto.OktetoClient,
+	oktetoClient *okteto.Client,
 ) (*localDestroyAllCommand, error) {
-	k8sClient, _, err := k8sClientProvider.Provide(okteto.Context().Cfg)
+	k8sClient, _, err := k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (ld *localDestroyAllCommand) waitForNamespaceDestroyAllToComplete(ctx conte
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 
-	c, _, err := ld.k8sClientProvider.Provide(okteto.Context().Cfg)
+	c, _, err := ld.k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		return err
 	}

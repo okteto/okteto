@@ -60,9 +60,9 @@ func Test_translateOktetoRegistryImage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			okCtx := &okteto.OktetoContextStateless{
-				Store: &okteto.OktetoContextStore{
-					Contexts: map[string]*okteto.OktetoContext{
+			okCtx := &okteto.ContextStateless{
+				Store: &okteto.ContextStore{
+					Contexts: map[string]*okteto.Context{
 						"test": {
 							Name:      "test",
 							Namespace: tt.namespace,

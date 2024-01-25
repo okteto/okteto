@@ -76,7 +76,7 @@ func list(ctx context.Context) *cobra.Command {
 // pipelineListCommandHandler prepares the right okteto context depending on the provided flags and then calls the actual function that lists pipelines
 func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx initOkCtxFn) error {
 	ctxResource := &model.ContextResource{}
-	ctxOptions := &contextCMD.ContextOptions{
+	ctxOptions := &contextCMD.Options{
 		Show: false,
 	}
 	if flags.output == "" {
@@ -102,7 +102,7 @@ func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx
 		return err
 	}
 
-	okCtx := okteto.Context()
+	okCtx := okteto.GetContext()
 
 	if !okCtx.IsOkteto {
 		return oktetoErrors.ErrContextIsNotOktetoCluster
@@ -124,7 +124,7 @@ func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx
 	return executeListPipelines(ctx, *flags, configmaps.List, getPipelineListOutput, c, os.Stdout)
 }
 
-type initOkCtxFn func(ctx context.Context, ctxOptions *contextCMD.ContextOptions) error
+type initOkCtxFn func(ctx context.Context, ctxOptions *contextCMD.Options) error
 type getPipelineListOutputFn func(ctx context.Context, listPipelines listPipelinesFn, namespace, labelSelector string, c kubernetes.Interface) ([]pipelineListItem, error)
 type listPipelinesFn func(ctx context.Context, namespace, labelSelector string, c kubernetes.Interface) ([]apiv1.ConfigMap, error)
 

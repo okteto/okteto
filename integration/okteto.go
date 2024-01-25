@@ -62,7 +62,7 @@ func GetToken() string {
 	if v := os.Getenv(model.OktetoTokenEnvVar); v != "" {
 		token = v
 	} else {
-		token = okteto.Context().Token
+		token = okteto.GetContext().Token
 	}
 	return token
 }
@@ -149,7 +149,7 @@ func SkipIfWindows(t *testing.T) {
 
 // SkipIfNotOktetoCluster skips a tests if is not on an okteto cluster
 func SkipIfNotOktetoCluster(t *testing.T) {
-	if !okteto.Context().IsOkteto {
+	if !okteto.GetContext().IsOkteto {
 		t.Skip("Skipping because is not on an okteto cluster")
 	}
 }

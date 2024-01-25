@@ -774,8 +774,8 @@ func TestGetEnvsFromSecrets(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			okteto.CurrentStore = &okteto.OktetoContextStore{
-				Contexts: map[string]*okteto.OktetoContext{
+			okteto.CurrentStore = &okteto.ContextStore{
+				Contexts: map[string]*okteto.Context{
 					"test": {
 						Namespace: "test",
 						IsOkteto:  tt.isOkteto,
@@ -997,7 +997,7 @@ func TestCheckOktetoStartError(t *testing.T) {
 			upCtx := &upContext{
 				Dev:               tt.dev,
 				K8sClientProvider: tt.K8sProvider,
-				Options: &UpOptions{
+				Options: &Options{
 					ManifestPathFlag: "test",
 				},
 				Pod: &v1.Pod{

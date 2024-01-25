@@ -43,7 +43,7 @@ const (
 )
 
 // RunInitV1 runs the sequence to generate okteto.yml
-func (*ManifestCommand) RunInitV1(ctx context.Context, opts *InitOpts) error {
+func (*Command) RunInitV1(ctx context.Context, opts *InitOpts) error {
 	oktetoLog.Println("This command walks you through creating an okteto manifest.")
 	oktetoLog.Println("It only covers the most common items, and tries to guess sensible defaults.")
 	oktetoLog.Println("See https://okteto.com/docs/reference/manifest/ for the official documentation about the okteto manifest.")
@@ -218,7 +218,7 @@ func askForLanguage() (string, error) {
 }
 
 func askForRunningApp(ctx context.Context, c kubernetes.Interface) (apps.App, error) {
-	namespace := okteto.Context().Namespace
+	namespace := okteto.GetContext().Namespace
 	dList, err := deployments.List(ctx, namespace, "", c)
 	if err != nil {
 		oktetoLog.Yellow("Failed to list deployments: %s", err)

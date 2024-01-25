@@ -53,7 +53,7 @@ type Command struct {
 	Builder          buildCmd.OktetoBuilderInterface
 	Registry         registryInterface
 	analyticsTracker analyticsTrackerInterface
-	ioCtrl           *io.IOController
+	ioCtrl           *io.Controller
 	k8slogger        *io.K8sLogger
 }
 
@@ -74,7 +74,7 @@ type registryInterface interface {
 }
 
 // NewBuildCommand creates a struct to run all build methods
-func NewBuildCommand(ioCtrl *io.IOController, analyticsTracker analyticsTrackerInterface, okCtx *okteto.OktetoContextStateless, k8slogger *io.K8sLogger) *Command {
+func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker analyticsTrackerInterface, okCtx *okteto.ContextStateless, k8slogger *io.K8sLogger) *Command {
 
 	return &Command{
 		GetManifest: model.GetManifestV2,
@@ -94,7 +94,7 @@ const (
 )
 
 // Build build and optionally push a Docker image
-func Build(ctx context.Context, ioCtrl *io.IOController, at analyticsTrackerInterface, k8slogger *io.K8sLogger) *cobra.Command {
+func Build(ctx context.Context, ioCtrl *io.Controller, at analyticsTrackerInterface, k8slogger *io.K8sLogger) *cobra.Command {
 	options := &types.BuildOptions{}
 	cmd := &cobra.Command{
 		Use:   "build [service...]",
@@ -148,7 +148,7 @@ func Build(ctx context.Context, ioCtrl *io.IOController, at analyticsTrackerInte
 	return cmd
 }
 
-func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.OktetoContextStateless) (Builder, error) {
+func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.ContextStateless) (Builder, error) {
 	var builder Builder
 
 	manifest, err := bc.GetManifest(options.File)
@@ -193,8 +193,8 @@ func validateDockerfile(file string) error {
 	return err
 }
 
-func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*okteto.OktetoContextStateless, error) {
-	ctxOpts := &contextCMD.ContextOptions{
+func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*okteto.ContextStateless, error) {
+	ctxOpts := &contextCMD.Options{
 		Context:   options.K8sContext,
 		Namespace: options.Namespace,
 		Show:      true,
@@ -258,12 +258,12 @@ type oktetoClientCfgContext interface {
 	GetCurrentCertStr() string
 }
 
-func defaultOktetoClientCfg(octx oktetoClientCfgContext) *okteto.OktetoClientCfg {
+func defaultOktetoClientCfg(octx oktetoClientCfgContext) *okteto.ClientCfg {
 	if !octx.ExistsContext() {
-		return &okteto.OktetoClientCfg{}
+		return &okteto.ClientCfg{}
 	}
 
-	return &okteto.OktetoClientCfg{
+	return &okteto.ClientCfg{
 		CtxName: octx.GetCurrentName(),
 		Token:   octx.GetCurrentToken(),
 		Cert:    octx.GetCurrentCertStr(),

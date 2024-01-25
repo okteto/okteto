@@ -61,8 +61,6 @@ linters-settings:
   revive:
     rules:
       - name: exported
-        arguments:
-          - disableStutteringCheck
 
 # All possible linters can be found https://golangci-lint.run/usage/linters/
 linters:

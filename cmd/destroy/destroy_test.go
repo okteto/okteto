@@ -107,9 +107,9 @@ func (fe *fakeExecutor) Execute(command model.DeployCommand, _ []string) error {
 func (*fakeExecutor) CleanUp(_ error) {}
 
 func TestMain(m *testing.M) {
-	okteto.CurrentStore = &okteto.OktetoContextStore{
+	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
-		Contexts: map[string]*okteto.OktetoContext{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Name:      "test",
 				Namespace: "namespace",
@@ -134,8 +134,8 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 	destroyer := &fakeDestroyer{
 		errOnVolumes: assert.AnError,
 	}
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 			},
@@ -161,7 +161,7 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 	assert.False(t, destroyer.destroyedVolumes)
 
 	// check if configmap has been created
-	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.GetContext().Namespace, fakeClient)
 	assert.NoError(t, err)
 	assert.NotNil(t, cfg)
 }
@@ -171,8 +171,8 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 	secretHandler := fakeSecretHandler{
 		err: assert.AnError,
 	}
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 			},
@@ -227,7 +227,7 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 			assert.Equal(t, tt.want, len(executor.executed))
 
 			// check if configmap has been created
-			cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+			cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.GetContext().Namespace, fakeClient)
 			assert.NoError(t, err)
 			assert.NotNil(t, cfg)
 		})
@@ -236,8 +236,8 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 
 func TestDestroyWithError(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 			},
@@ -373,7 +373,7 @@ func TestDestroyWithError(t *testing.T) {
 			assert.True(t, destroyer.destroyedVolumes)
 
 			// check if configmap has been created
-			cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+			cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.GetContext().Namespace, fakeClient)
 			assert.NoError(t, err)
 			assert.NotNil(t, cfg)
 		})
@@ -382,8 +382,8 @@ func TestDestroyWithError(t *testing.T) {
 
 func TestDestroyWithoutError(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 			},
@@ -617,7 +617,7 @@ func TestDestroyWithoutError(t *testing.T) {
 			assert.True(t, destroyer.destroyedVolumes)
 
 			// check if configmap has been created
-			cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+			cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.GetContext().Namespace, fakeClient)
 			assert.Error(t, err)
 			assert.Nil(t, cfg)
 		})
@@ -626,8 +626,8 @@ func TestDestroyWithoutError(t *testing.T) {
 
 func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 			},
@@ -869,7 +869,7 @@ func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
 			if err != nil {
 				t.Fatal("could not create fake k8s client")
 			}
-			cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+			cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.GetContext().Namespace, fakeClient)
 			assert.True(t, k8sErrors.IsNotFound(err))
 			assert.Nil(t, cfg)
 		})
@@ -878,8 +878,8 @@ func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
 
 func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 			},
@@ -922,15 +922,15 @@ func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 	assert.False(t, destroyer.destroyedVolumes)
 
 	// check if configmap has been created
-	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.GetContext().Namespace, fakeClient)
 	assert.NoError(t, err)
 	assert.NotNil(t, cfg)
 }
 
 func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 			},
@@ -973,7 +973,7 @@ func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 	assert.True(t, destroyer.destroyedVolumes)
 
 	// check if configmap has been created
-	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.GetContext().Namespace, fakeClient)
 	assert.Error(t, err)
 	assert.Nil(t, cfg)
 }

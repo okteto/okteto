@@ -41,11 +41,11 @@ func Delete(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 		Short: "Delete a namespace",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
 				return err
 			}
 
-			nsToDelete := okteto.Context().Namespace
+			nsToDelete := okteto.GetContext().Namespace
 			if len(args) > 0 {
 				nsToDelete = args[0]
 			}
@@ -66,7 +66,7 @@ func Delete(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 	return cmd
 }
 
-func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
+func (nc *Command) ExecuteDeleteNamespace(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
 	oktetoLog.Spinner(fmt.Sprintf("Deleting %s namespace", namespace))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -81,14 +81,14 @@ func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespac
 	}
 
 	oktetoLog.Success("Namespace '%s' deleted", namespace)
-	if okteto.Context().Namespace == namespace {
-		personalNamespace := okteto.Context().PersonalNamespace
+	if okteto.GetContext().Namespace == namespace {
+		personalNamespace := okteto.GetContext().PersonalNamespace
 		if personalNamespace == "" {
 			personalNamespace = okteto.GetSanitizedUsername()
 		}
-		ctxOptions := &contextCMD.ContextOptions{
+		ctxOptions := &contextCMD.Options{
 			Namespace:    personalNamespace,
-			Context:      okteto.Context().Name,
+			Context:      okteto.GetContext().Name,
 			Save:         true,
 			IsCtxCommand: true,
 		}
@@ -97,7 +97,7 @@ func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespac
 	return nil
 }
 
-func (nc *NamespaceCommand) watchDelete(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
+func (nc *Command) watchDelete(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
 	waitCtx, ctxCancel := context.WithCancel(ctx)
 	defer ctxCancel()
 
@@ -138,13 +138,13 @@ func (nc *NamespaceCommand) watchDelete(ctx context.Context, namespace string, k
 	}
 }
 
-func (nc *NamespaceCommand) waitForNamespaceDeleted(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
+func (nc *Command) waitForNamespaceDeleted(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
 	timeout := 5 * time.Minute
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 
 	// provide k8s
-	c, _, err := nc.k8sClientProvider.ProvideWithLogger(okteto.Context().Cfg, k8sLogger)
+	c, _, err := nc.k8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, k8sLogger)
 	if err != nil {
 		return err
 	}

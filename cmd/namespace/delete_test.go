@@ -136,8 +136,8 @@ func Test_deleteNamespace(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// init ctx current store with initial values
-			okteto.CurrentStore = &okteto.OktetoContextStore{
-				Contexts: map[string]*okteto.OktetoContext{
+			okteto.CurrentStore = &okteto.ContextStore{
+				Contexts: map[string]*okteto.Context{
 					"test-context": {
 						Name:              "test-context",
 						Token:             "test-token",
@@ -153,7 +153,7 @@ func Test_deleteNamespace(t *testing.T) {
 			nsFakeCommand := NewFakeNamespaceCommand(tt.fakeOkClient, tt.fakeK8sClient, usr)
 			err := nsFakeCommand.ExecuteDeleteNamespace(ctx, tt.toDeleteNs, nil)
 			assert.ErrorIs(t, err, tt.err)
-			assert.Equal(t, tt.finalNs, okteto.Context().Namespace)
+			assert.Equal(t, tt.finalNs, okteto.GetContext().Namespace)
 
 			// check namespace has been deleted from list
 			ns, err := tt.fakeOkClient.Namespaces().List(ctx)

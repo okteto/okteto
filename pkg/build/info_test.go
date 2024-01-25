@@ -321,7 +321,7 @@ secrets:
 				Dockerfile: "dockerfile",
 				Target:     "testTarget",
 				Image:      "testImage",
-				CacheFrom: cache.CacheFrom{
+				CacheFrom: cache.From{
 					"test_cache_from",
 				},
 				ExportCache: cache.ExportCache{

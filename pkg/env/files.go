@@ -13,12 +13,12 @@
 
 package env
 
-// EnvFiles is a list of environment files
-type EnvFiles []string
+// Files is a list of environment files
+type Files []string
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (envFiles *EnvFiles) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	result := make(EnvFiles, 0)
+func (envFiles *Files) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	result := make(Files, 0)
 	var single string
 	err := unmarshal(&single)
 	if err != nil {

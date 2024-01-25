@@ -20,7 +20,7 @@ import (
 
 // GetIstioClient returns a client for istio
 func GetIstioClient() (*istioclientset.Clientset, error) {
-	_, config, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+	_, config, err := okteto.NewK8sClientProvider().Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		return nil, err
 	}

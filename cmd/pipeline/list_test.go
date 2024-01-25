@@ -60,12 +60,12 @@ func mockPipeline(fakeName string, fakeLabels []string) *apiv1.ConfigMap {
 func TestPipelineListCommandHandler_OnlyOktetoCluster(t *testing.T) {
 	ctx := context.Background()
 
-	initOkCtx := func(ctx context.Context, flags *contextCMD.ContextOptions) error {
+	initOkCtx := func(ctx context.Context, flags *contextCMD.Options) error {
 		return nil
 	}
 
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 				IsOkteto:  false,
@@ -82,12 +82,12 @@ func TestPipelineListCommandHandler_OnlyOktetoCluster(t *testing.T) {
 func TestPipelineListCommandHandler_InitOktetoContextFail(t *testing.T) {
 	ctx := context.Background()
 
-	initOkCtx := func(ctx context.Context, flags *contextCMD.ContextOptions) error {
+	initOkCtx := func(ctx context.Context, flags *contextCMD.Options) error {
 		return assert.AnError
 	}
 
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 				IsOkteto:  true,
@@ -108,11 +108,11 @@ func TestPipelineListCommandHandler_DefaultNamespace(t *testing.T) {
 		namespace: "",
 	}
 
-	initOkCtx := func(ctx context.Context, flags *contextCMD.ContextOptions) error {
+	initOkCtx := func(ctx context.Context, flags *contextCMD.Options) error {
 		return nil
 	}
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
 				IsOkteto:  true,

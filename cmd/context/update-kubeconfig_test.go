@@ -31,7 +31,7 @@ func Test_ExecuteUpdateKubeconfig_DisabledKubetoken(t *testing.T) {
 
 	var tests = []struct {
 		okClientProvider oktetoClientProvider
-		context          *okteto.OktetoContextStore
+		context          *okteto.ContextStore
 		name             string
 		kubeconfigCtx    test.KubeconfigFields
 	}{
@@ -42,9 +42,9 @@ func Test_ExecuteUpdateKubeconfig_DisabledKubetoken(t *testing.T) {
 				Namespace:      []string{"test", "test"},
 				CurrentContext: "test",
 			},
-			context: &okteto.OktetoContextStore{
+			context: &okteto.ContextStore{
 				CurrentContext: "to-change",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"to-change": {
 						Namespace: "test",
 						Cfg: &api.Config{
@@ -75,9 +75,9 @@ func Test_ExecuteUpdateKubeconfig_DisabledKubetoken(t *testing.T) {
 				Namespace:      []string{"test"},
 				CurrentContext: "to-change",
 			},
-			context: &okteto.OktetoContextStore{
+			context: &okteto.ContextStore{
 				CurrentContext: "to-change",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"to-change": {
 						Namespace: "to-change",
 						Cfg: &api.Config{
@@ -104,9 +104,9 @@ func Test_ExecuteUpdateKubeconfig_DisabledKubetoken(t *testing.T) {
 		{
 			name:          "create if it doesn't exist",
 			kubeconfigCtx: test.KubeconfigFields{},
-			context: &okteto.OktetoContextStore{
+			context: &okteto.ContextStore{
 				CurrentContext: "to-change",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"to-change": {
 						Namespace: "to-change",
 						Cfg: &api.Config{
@@ -141,7 +141,7 @@ func Test_ExecuteUpdateKubeconfig_DisabledKubetoken(t *testing.T) {
 			}
 			defer os.Remove(file)
 
-			okContext := okteto.Context()
+			okContext := okteto.GetContext()
 			kubeconfigPaths := []string{file}
 
 			err = newKubeconfigController(tt.okClientProvider).execute(okContext, kubeconfigPaths)
@@ -158,7 +158,7 @@ func Test_ExecuteUpdateKubeconfig_DisabledKubetoken(t *testing.T) {
 
 func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 	var tests = []struct {
-		context       *okteto.OktetoContextStore
+		context       *okteto.ContextStore
 		name          string
 		kubeconfigCtx test.KubeconfigFields
 	}{
@@ -169,9 +169,9 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 				Namespace:      []string{"test", "test"},
 				CurrentContext: "test",
 			},
-			context: &okteto.OktetoContextStore{
+			context: &okteto.ContextStore{
 				CurrentContext: "to-change",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"to-change": {
 						Namespace: "test",
 						Cfg: &api.Config{
@@ -194,9 +194,9 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 				Namespace:      []string{"test"},
 				CurrentContext: "to-change",
 			},
-			context: &okteto.OktetoContextStore{
+			context: &okteto.ContextStore{
 				CurrentContext: "to-change",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"to-change": {
 						Namespace: "to-change",
 						Cfg: &api.Config{
@@ -215,9 +215,9 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 		{
 			name:          "create if it doesn't exist",
 			kubeconfigCtx: test.KubeconfigFields{},
-			context: &okteto.OktetoContextStore{
+			context: &okteto.ContextStore{
 				CurrentContext: "to-change",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"to-change": {
 						Namespace: "to-change",
 						Cfg: &api.Config{
@@ -254,7 +254,7 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 			}
 			defer os.Remove(file)
 
-			okContext := okteto.Context()
+			okContext := okteto.GetContext()
 			kubeconfigPaths := []string{file}
 
 			err = newKubeconfigController(okClientProvider).execute(okContext, kubeconfigPaths)
@@ -275,9 +275,9 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 func Test_ExecuteUpdateKubeconfig_With_OktetoUseStaticKubetokenEnvVar(t *testing.T) {
 	t.Setenv(OktetoUseStaticKubetokenEnvVar, "true")
 
-	okteto.CurrentStore = &okteto.OktetoContextStore{
+	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "ctx-test",
-		Contexts: map[string]*okteto.OktetoContext{
+		Contexts: map[string]*okteto.Context{
 			"ctx-test": {
 				UserID:    "test-user",
 				Namespace: "ns-text",
@@ -302,7 +302,7 @@ func Test_ExecuteUpdateKubeconfig_With_OktetoUseStaticKubetokenEnvVar(t *testing
 	}
 	defer os.Remove(file)
 
-	okContext := okteto.Context()
+	okContext := okteto.GetContext()
 	kubeconfigPaths := []string{file}
 	okClientProvider := client.NewFakeOktetoClientProvider(
 		&client.FakeOktetoClient{
@@ -321,9 +321,9 @@ func Test_ExecuteUpdateKubeconfig_With_OktetoUseStaticKubetokenEnvVar(t *testing
 }
 
 func Test_ExecuteUpdateKubeconfig_ForNonOktetoContext(t *testing.T) {
-	okteto.CurrentStore = &okteto.OktetoContextStore{
+	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "ctx-test",
-		Contexts: map[string]*okteto.OktetoContext{
+		Contexts: map[string]*okteto.Context{
 			"ctx-test": {
 				UserID:    "test-user",
 				Namespace: "ns-text",
@@ -348,7 +348,7 @@ func Test_ExecuteUpdateKubeconfig_ForNonOktetoContext(t *testing.T) {
 	}
 	defer os.Remove(file)
 
-	okContext := okteto.Context()
+	okContext := okteto.GetContext()
 	kubeconfigPaths := []string{file}
 
 	err = newKubeconfigController(nil).execute(okContext, kubeconfigPaths)
@@ -366,14 +366,14 @@ func Test_ExecuteUpdateKubeconfig_WithRightCertificate(t *testing.T) {
 	k8sContextName := "test_okteto_dev"
 	var tests = []struct {
 		name         string
-		context      *okteto.OktetoContextStore
+		context      *okteto.ContextStore
 		expectedCert string
 	}{
 		{
 			name: "use cluster certificate when insecure and kubernetes api is not exposed behind our ingress controller",
-			context: &okteto.OktetoContextStore{
+			context: &okteto.ContextStore{
 				CurrentContext: ctxName,
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					ctxName: {
 						Name:      ctxName,
 						Registry:  "registry.okteto.dev",
@@ -402,9 +402,9 @@ func Test_ExecuteUpdateKubeconfig_WithRightCertificate(t *testing.T) {
 		},
 		{
 			name: "use cluster certificate when not insecure and kubernetes api is not exposed behind our ingress controller",
-			context: &okteto.OktetoContextStore{
+			context: &okteto.ContextStore{
 				CurrentContext: ctxName,
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					ctxName: {
 						Name:      ctxName,
 						Registry:  "registry.okteto.dev",
@@ -433,9 +433,9 @@ func Test_ExecuteUpdateKubeconfig_WithRightCertificate(t *testing.T) {
 		},
 		{
 			name: "use cluster certificate when not insecure and kubernetes api is exposed behind our ingress controller",
-			context: &okteto.OktetoContextStore{
+			context: &okteto.ContextStore{
 				CurrentContext: ctxName,
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					ctxName: {
 						Name:      ctxName,
 						Registry:  "registry.okteto.dev",
@@ -464,9 +464,9 @@ func Test_ExecuteUpdateKubeconfig_WithRightCertificate(t *testing.T) {
 		},
 		{
 			name: "use okteto certificate when insecure and kubernetes api exposed behind our ingress controller",
-			context: &okteto.OktetoContextStore{
+			context: &okteto.ContextStore{
 				CurrentContext: ctxName,
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					ctxName: {
 						Name:      ctxName,
 						Registry:  "registry.okteto.dev",
@@ -516,7 +516,7 @@ func Test_ExecuteUpdateKubeconfig_WithRightCertificate(t *testing.T) {
 			}
 			defer os.Remove(file)
 
-			okContext := okteto.Context()
+			okContext := okteto.GetContext()
 			kubeconfigPaths := []string{file}
 
 			err = newKubeconfigController(okClientProvider).execute(okContext, kubeconfigPaths)
@@ -539,9 +539,9 @@ func Test_ExecuteUpdateKubeconfig_WithWrongOktetoCertificate(t *testing.T) {
 		},
 	)
 
-	okteto.CurrentStore = &okteto.OktetoContextStore{
+	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "https://test.okteto.dev",
-		Contexts: map[string]*okteto.OktetoContext{
+		Contexts: map[string]*okteto.Context{
 			"https://test.okteto.dev": {
 				Name:      "https://test.okteto.dev",
 				Namespace: "fake-ns",
@@ -572,7 +572,7 @@ func Test_ExecuteUpdateKubeconfig_WithWrongOktetoCertificate(t *testing.T) {
 	}
 	defer os.Remove(file)
 
-	okContext := okteto.Context()
+	okContext := okteto.GetContext()
 	kubeconfigPaths := []string{file}
 
 	err = newKubeconfigController(okClientProvider).execute(okContext, kubeconfigPaths)

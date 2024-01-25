@@ -59,7 +59,7 @@ func newStaticKubetokenController() *staticKubetokenController {
 
 // updateOktetoContext when the dynamic kubetoken is disabled removes the exec from the kubeconfig stored in the okteto context
 // so okteto can still use the old kubeconfig auth method (by static token) to connect to the cluster.
-func (kc *staticKubetokenController) updateOktetoContextExec(okCtx *okteto.OktetoContext) error {
+func (kc *staticKubetokenController) updateOktetoContextExec(okCtx *okteto.Context) error {
 	kc.staticKubetokenWarner.warn()
 
 	if okCtx == nil || okCtx.UserID == "" || okCtx.Cfg == nil || okCtx.Cfg.AuthInfos == nil || okCtx.Cfg.AuthInfos[okCtx.UserID] == nil {
@@ -91,7 +91,7 @@ func newDynamicKubetokenController(okClientProvider oktetoClientProvider) *dynam
 
 // updateOktetoContext when the dynamic kubetoken is enabled configures the kubeconfig auth method to be executed by okteto kubetoken
 // which returns a dynamic token to connect to the cluster.
-func (dkc *dynamicKubetokenController) updateOktetoContextExec(okCtx *okteto.OktetoContext) error {
+func (dkc *dynamicKubetokenController) updateOktetoContextExec(okCtx *okteto.Context) error {
 	okClient, err := dkc.oktetoClientProvider.Provide()
 	if err != nil {
 		return err
@@ -136,7 +136,7 @@ func (dkc *dynamicKubetokenController) updateOktetoContextToken(userContext *typ
 		return fmt.Errorf("error providing the okteto client while updating okteto context token: %w", err)
 	}
 
-	kubetoken, err := c.Kubetoken().GetKubeToken(okteto.Context().Name, userContext.User.Namespace)
+	kubetoken, err := c.Kubetoken().GetKubeToken(okteto.GetContext().Name, userContext.User.Namespace)
 	if err != nil || kubetoken.Status.Token == "" {
 		return errors.New("dynamic kubernetes token not available: falling back to static token")
 	}

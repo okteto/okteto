@@ -263,7 +263,7 @@ func getClientForOktetoCluster(ctx context.Context, builder string, token string
 	return c, nil
 }
 
-func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.IOController) error {
+func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error {
 	logFilterRules := []Rule{
 		{
 			condition:   BuildKitMissingCacheCondition,

@@ -22,7 +22,7 @@ import (
 
 // Context points okteto to a cluster.
 func Context(okClientProvider oktetoClientProvider) *cobra.Command {
-	ctxOptions := &ContextOptions{}
+	ctxOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:     "context",
 		Aliases: []string{"ctx"},

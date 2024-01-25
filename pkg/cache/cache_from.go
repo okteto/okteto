@@ -13,15 +13,15 @@
 
 package cache
 
-// CacheFrom is a list of images to import cache from.
-type CacheFrom []string
+// From is a list of images to import cache from.
+type From []string
 
 // UnmarshalYAML implements the Unmarshaler interface of the yaml pkg.
-func (cf *CacheFrom) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (cf *From) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var single string
 	err := unmarshal(&single)
 	if err == nil {
-		*cf = CacheFrom{single}
+		*cf = From{single}
 		return nil
 	}
 
@@ -36,7 +36,7 @@ func (cf *CacheFrom) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 // MarshalYAML implements the marshaler interface of the yaml pkg.
-func (cf *CacheFrom) MarshalYAML() (interface{}, error) {
+func (cf *From) MarshalYAML() (interface{}, error) {
 	if len(*cf) == 1 {
 		return (*cf)[0], nil
 	}

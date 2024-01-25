@@ -25,7 +25,7 @@ import (
 
 // UseNamespace changes your current context namespace.
 func UseNamespace() *cobra.Command {
-	ctxOptions := &ContextOptions{}
+	ctxOptions := &Options{}
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "use-namespace [name]",
@@ -35,7 +35,7 @@ func UseNamespace() *cobra.Command {
 			oktetoLog.Warning("'okteto context use-namespace' is deprecated in favor of 'okteto namespace', and will be removed in a future version")
 			ctx := context.Background()
 			ctxOptions.Namespace = args[0]
-			ctxOptions.Context = okteto.Context().Name
+			ctxOptions.Context = okteto.GetContext().Name
 			ctxOptions.Show = false
 			ctxOptions.Save = true
 			ctxOptions.IsCtxCommand = true

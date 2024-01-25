@@ -36,7 +36,7 @@ type DeployMetadata struct {
 }
 
 // TrackDeploy sends a tracking event to mixpanel when the user deploys from command okteto deploy
-func (a *AnalyticsTracker) TrackDeploy(metadata DeployMetadata) {
+func (a *Tracker) TrackDeploy(metadata DeployMetadata) {
 	if metadata.PipelineType == "" {
 		metadata.PipelineType = "pipeline"
 	}
