@@ -244,6 +244,7 @@ func TestBuildCommandV2UsingDepot(t *testing.T) {
 	depotToken := os.Getenv("DEPOT_TOKEN")
 	depotProjectId := os.Getenv("DEPOT_PROJECT_ID")
 
+	cmd.Args = append(cmd.Args, "--log-level", "debug")
 	if depotProjectId != "" && depotToken != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", build.DepotProjectEnvVar, depotProjectId))
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", build.DepotTokenEnvVar, depotToken))
