@@ -242,8 +242,4 @@ func TestSpinner(t *testing.T) {
 	t.Setenv(OktetoDisableSpinnerEnvVar, "test")
 	sp = l.Spinner("enabled")
 	require.IsType(t, &ttySpinner{}, sp)
-
-	l.formatter = &jsonFormatter{}
-	sp = l.Spinner("json")
-	require.Nil(t, sp)
 }

@@ -14,6 +14,7 @@
 package io
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 
@@ -30,7 +31,7 @@ func TestTTYSpinner(t *testing.T) {
 }
 
 func TestNoSpinner(t *testing.T) {
-	oc := newOutputController(nil)
+	oc := newOutputController(bytes.NewBuffer([]byte{}))
 	sp := newNoSpinner("test", oc)
 
 	sp.Start()
