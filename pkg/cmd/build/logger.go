@@ -163,6 +163,10 @@ func (t *trace) display(progress string) {
 					oktetoLog.Infof("could not parse %s: %w", log, err)
 					continue
 				}
+				if text.Stage == "" {
+					oktetoLog.Infof("received log without stage: %s", text.Message)
+					continue
+				}
 				oktetoLog.SetStage(text.Stage)
 				switch text.Stage {
 				case "done":
