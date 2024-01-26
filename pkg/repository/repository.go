@@ -19,9 +19,9 @@ import (
 	"os"
 	"strings"
 
+	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	giturls "github.com/whilp/git-urls"
 )
 
 // Repository is the struct to check everything related to Git Repo
