@@ -44,10 +44,10 @@ commands:
     steps:
       - run:
           name: Run build integration tests
-          environment:
-              DEPOT_PROJECT_ID: $DEPOT_PROJECT_ID
-              DEPOT_TOKEN: $DEPOT_TOKEN
-          command: make integration-build
+          command: |
+            export DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
+            export DEPOT_TOKEN=$DEPOT_TOKEN
+            make integration-build
 
   integration-deploy:
     steps:
@@ -264,9 +264,9 @@ jobs:
             OKTETO_URL: https://staging.okteto.dev/
             OKTETO_SKIP_CLEANUP: 'true'
             OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
-            DEPOT_PROJECT_ID: $DEPOT_PROJECT_ID
-            DEPOT_TOKEN: $DEPOT_TOKEN
           command: |
+            $env:DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
+            $env:DEPOT_TOKEN=$DEPOT_TOKEN
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
       - run:
