@@ -17,10 +17,10 @@ import (
 	"testing"
 	"time"
 
+	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	giturls "github.com/whilp/git-urls"
 	"gopkg.in/yaml.v2"
 )
 
