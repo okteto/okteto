@@ -1,7 +1,7 @@
 # syntax = docker/dockerfile:experimental
 
 ARG KUBECTL_VERSION=1.28.4
-ARG HELM_VERSION=3.14.0
+ARG HELM_VERSION=3.13.3
 ARG KUSTOMIZE_VERSION=5.3.0
 
 
