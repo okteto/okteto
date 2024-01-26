@@ -285,8 +285,7 @@ func IsTransient(err error) bool {
 		strings.Contains(err.Error(), "closing remote connection: EOF"),
 		strings.Contains(err.Error(), "request for pseudo terminal failed: eof"),
 		strings.Contains(err.Error(), "unable to upgrade connection"),
-		strings.Contains(err.Error(), "command execution failed: eof"),
-		strings.Contains(err.Error(), "syncthing local=false didn't respond after"):
+		strings.Contains(err.Error(), "command execution failed: eof"):
 		return true
 	default:
 		return false

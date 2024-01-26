@@ -164,7 +164,7 @@ func TestIsTransient(t *testing.T) {
 		{
 			name:     "syncthing local=false didn't respond after",
 			err:      errors.New("syncthing local=false didn't respond after 1m0s"),
-			expected: true,
+			expected: false,
 		},
 	}
 

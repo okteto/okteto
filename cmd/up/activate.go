@@ -134,7 +134,7 @@ func (up *upContext) activate() error {
 	}
 
 	if err := up.devMode(ctx, app, create); err != nil {
-		if oktetoErrors.IsTransient(err) {
+		if up.isTransient(err) {
 			return err
 		}
 		if _, ok := err.(oktetoErrors.UserError); ok {
