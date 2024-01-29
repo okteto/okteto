@@ -18,43 +18,44 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
 
-// NamespaceCommand has all the namespaces subcommands
-type NamespaceCommand struct {
-	ctxCmd            *contextCMD.ContextCommand
+// Command has all the namespaces subcommands
+type Command struct {
+	ctxCmd            *contextCMD.Command
 	okClient          types.OktetoInterface
-	k8sClientProvider okteto.K8sClientProvider
+	k8sClientProvider okteto.K8sClientProviderWithLogger
 }
 
 // NewCommand creates a namespace command for use in further operations
-func NewCommand() (*NamespaceCommand, error) {
+func NewCommand() (*Command, error) {
 	c, err := okteto.NewOktetoClient()
 	if err != nil {
 		return nil, err
 	}
 
-	return &NamespaceCommand{
+	return &Command{
 		ctxCmd:            contextCMD.NewContextCommand(),
 		okClient:          c,
-		k8sClientProvider: okteto.NewK8sClientProvider(),
+		k8sClientProvider: okteto.NewK8sClientProviderWithLogger(nil),
 	}, nil
 }
 
-// NewCommand creates a namespace command for use in further operations
-func NewCommandStateless(c *okteto.OktetoClient) *NamespaceCommand {
-	return &NamespaceCommand{
+// NewCommandStateless creates a namespace command for use in further operations
+func NewCommandStateless(c *okteto.Client) *Command {
+	return &Command{
 		ctxCmd:            contextCMD.NewContextCommand(),
 		okClient:          c,
-		k8sClientProvider: okteto.NewK8sClientProvider(),
+		k8sClientProvider: okteto.NewK8sClientProviderWithLogger(nil),
 	}
 }
 
 // Namespace fetch credentials for a cluster namespace
-func Namespace(ctx context.Context) *cobra.Command {
+func Namespace(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &UseOptions{}
 	cmd := &cobra.Command{
 		Use:     "namespace",
@@ -68,7 +69,7 @@ func Namespace(ctx context.Context) *cobra.Command {
 	cmd.AddCommand(Use(ctx))
 	cmd.AddCommand(List(ctx))
 	cmd.AddCommand(Create(ctx))
-	cmd.AddCommand(Delete(ctx))
+	cmd.AddCommand(Delete(ctx, k8sLogger))
 	cmd.AddCommand(Sleep(ctx))
 	cmd.AddCommand(Wake(ctx))
 	return cmd

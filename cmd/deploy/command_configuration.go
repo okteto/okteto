@@ -19,16 +19,17 @@ import (
 	"os"
 	"reflect"
 
+	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	ioCtrl "github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	modelUtils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/repository"
-	giturls "github.com/whilp/git-urls"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -38,25 +39,25 @@ const (
 	httpsScheme = "https"
 )
 
-func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) error {
+func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface, k8sLogger *ioCtrl.K8sLogger) error {
 
 	if deployOptions.Manifest.Context == "" {
-		deployOptions.Manifest.Context = okteto.Context().Name
+		deployOptions.Manifest.Context = okteto.GetContext().Name
 	}
 	if deployOptions.Manifest.Namespace == "" {
-		deployOptions.Manifest.Namespace = okteto.Context().Namespace
+		deployOptions.Manifest.Namespace = okteto.GetContext().Namespace
 	}
 
 	if deployOptions.Name == "" {
 		if deployOptions.Manifest.Name != "" {
 			deployOptions.Name = deployOptions.Manifest.Name
 		} else {
-			c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+			c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okteto.GetContext().Cfg)
 			if err != nil {
 				return err
 			}
 			inferer := devenvironment.NewNameInferer(c)
-			deployOptions.Name = inferer.InferName(ctx, cwd, okteto.Context().Namespace, deployOptions.ManifestPathFlag)
+			deployOptions.Name = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, deployOptions.ManifestPathFlag)
 			deployOptions.Manifest.Name = deployOptions.Name
 		}
 
@@ -119,7 +120,7 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 	}
 }
 
-func (dc *DeployCommand) addEnvVars(cwd string) {
+func (dc *Command) addEnvVars(cwd string) {
 	if os.Getenv(constants.OktetoGitBranchEnvVar) == "" {
 		branch, err := utils.GetBranch(cwd)
 		if err != nil {
@@ -164,13 +165,13 @@ func (dc *DeployCommand) addEnvVars(cwd string) {
 		os.Setenv(constants.OktetoGitCommitEnvVar, sha)
 	}
 	if os.Getenv(model.OktetoRegistryURLEnvVar) == "" {
-		os.Setenv(model.OktetoRegistryURLEnvVar, okteto.Context().Registry)
+		os.Setenv(model.OktetoRegistryURLEnvVar, okteto.GetContext().Registry)
 	}
 	if os.Getenv(model.OktetoBuildkitHostURLEnvVar) == "" {
-		os.Setenv(model.OktetoBuildkitHostURLEnvVar, okteto.Context().Builder)
+		os.Setenv(model.OktetoBuildkitHostURLEnvVar, okteto.GetContext().Builder)
 	}
 	if os.Getenv(model.OktetoTokenEnvVar) == "" {
-		os.Setenv(model.OktetoTokenEnvVar, okteto.Context().Token)
+		os.Setenv(model.OktetoTokenEnvVar, okteto.GetContext().Token)
 	}
 	oktetoLog.AddMaskedWord(os.Getenv(model.OktetoTokenEnvVar))
 }

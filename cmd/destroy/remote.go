@@ -115,7 +115,7 @@ type remoteDestroyCommand struct {
 	knownHostsPath string
 }
 
-func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.IOController) *remoteDestroyCommand {
+func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remoteDestroyCommand {
 	fs := afero.NewOsFs()
 	builder := remoteBuild.NewBuilderFromScratch(ioCtrl)
 	if manifest.Destroy == nil {
@@ -187,9 +187,9 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 	buildOptions.Manifest = rd.manifest
 	buildOptions.BuildArgs = append(
 		buildOptions.BuildArgs,
-		fmt.Sprintf("%s=%s", model.OktetoContextEnvVar, okteto.Context().Name),
-		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
-		fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, okteto.Context().Token),
+		fmt.Sprintf("%s=%s", model.OktetoContextEnvVar, okteto.GetContext().Name),
+		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.GetContext().Namespace),
+		fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, okteto.GetContext().Token),
 		fmt.Sprintf("%s=%s", constants.OktetoTlsCertBase64EnvVar, base64.StdEncoding.EncodeToString(sc.Certificate)),
 		fmt.Sprintf("%s=%s", constants.OktetoInternalServerNameEnvVar, sc.ServerName),
 		fmt.Sprintf("%s=%s", model.OktetoActionNameEnvVar, os.Getenv(model.OktetoActionNameEnvVar)),
@@ -199,7 +199,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 	)
 
 	if sc.ServerName != "" {
-		registryUrl := okteto.Context().Registry
+		registryUrl := okteto.GetContext().Registry
 		subdomain := strings.TrimPrefix(registryUrl, "registry.")
 		ip, _, err := net.SplitHostPort(sc.ServerName)
 		if err != nil {
@@ -373,13 +373,13 @@ func fetchClusterMetadata(ctx context.Context) (*types.ClusterMetadata, error) {
 	}
 	uc := c.User()
 
-	metadata, err := uc.GetClusterMetadata(ctx, okteto.Context().Namespace)
+	metadata, err := uc.GetClusterMetadata(ctx, okteto.GetContext().Namespace)
 	if err != nil {
 		return nil, err
 	}
 
 	if metadata.Certificate == nil {
-		metadata.Certificate, err = uc.GetClusterCertificate(ctx, okteto.Context().Name, okteto.Context().Namespace)
+		metadata.Certificate, err = uc.GetClusterCertificate(ctx, okteto.GetContext().Name, okteto.GetContext().Namespace)
 	}
 
 	return &metadata, err

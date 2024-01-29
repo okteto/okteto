@@ -100,7 +100,7 @@ func (l *OutputController) Printf(format string, args ...any) {
 	fmt.Fprint(l.out, string(bytes))
 }
 
-// Info prints a information message to the user
+// Infof prints a information message to the user
 func (l *OutputController) Infof(format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
 	msg = l.decorator.Information(msg)
@@ -152,7 +152,7 @@ func (l *OutputController) Spinner(msg string) OktetoSpinner {
 	if isTTY && !disableSpinner {
 		l.spinner = newTTYSpinner(msg)
 	} else {
-		l.spinner = newNoSpinner(msg)
+		l.spinner = newNoSpinner(msg, l)
 	}
 	return l.spinner
 }

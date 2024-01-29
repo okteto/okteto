@@ -66,7 +66,7 @@ More info about docker credentials helpers here: https://github.com/docker/docke
 	}
 
 	cmd.Run = func(_ *cobra.Command, args []string) {
-		if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+		if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
 			_, _ = fmt.Fprintln(os.Stdout, err)
 			os.Exit(1) // skipcq: RVV-A0003
 		}

@@ -28,8 +28,8 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-// KubetokenFlags represents the flags available for kubetoken
-type KubetokenFlags struct {
+// Flags represents the flags available for kubetoken
+type Flags struct {
 	Namespace string
 	Context   string
 }
@@ -46,7 +46,7 @@ type k8sClientProvider interface {
 
 // oktetoCtxCmdRunner runs the okteto context command
 type oktetoCtxCmdRunner interface {
-	Run(ctx context.Context, ctxOptions *contextCMD.ContextOptions) error
+	Run(ctx context.Context, ctxOptions *contextCMD.Options) error
 }
 
 type Serializer struct{}
@@ -59,31 +59,31 @@ func (*Serializer) ToJson(kubetoken types.KubeTokenResponse) (string, error) {
 	return string(bytes), nil
 }
 
-type initCtxOptsFunc func(string, string) *contextCMD.ContextOptions
+type initCtxOptsFunc func(string, string) *contextCMD.Options
 
-// KubetokenCmd generates a kubernetes token for a given namespace
-type KubetokenCmd struct {
+// Cmd generates a kubernetes token for a given namespace
+type Cmd struct {
 	k8sClientProvider    k8sClientProvider
 	oktetoClientProvider oktetoClientProvider
-	ctxStore             *okteto.OktetoContextStore
+	ctxStore             *okteto.ContextStore
 	oktetoCtxCmdRunner   oktetoCtxCmdRunner
 	serializer           *Serializer
 	initCtxFunc          initCtxOptsFunc
 }
 
-// KubetokenOptions represents the options for kubetoken
-type KubetokenOptions struct {
+// Options represents the options for kubetoken
+type Options struct {
 	oktetoClientProvider oktetoClientProvider
 	k8sClientProvider    k8sClientProvider
-	ctxStore             *okteto.OktetoContextStore
+	ctxStore             *okteto.ContextStore
 	oktetoCtxCmdRunner   oktetoCtxCmdRunner
 	serializer           *Serializer
 	getCtxResource       initCtxOptsFunc
 }
 
-func defaultKubetokenOptions() *KubetokenOptions {
-	ctxStore := okteto.ContextStore()
-	return &KubetokenOptions{
+func defaultKubetokenOptions() *Options {
+	ctxStore := okteto.GetContextStore()
+	return &Options{
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
 		k8sClientProvider:    okteto.NewK8sClientProvider(),
 		oktetoCtxCmdRunner:   contextCMD.NewContextCommand(),
@@ -93,15 +93,15 @@ func defaultKubetokenOptions() *KubetokenOptions {
 	}
 }
 
-type kubetokenOption func(*KubetokenOptions)
+type kubetokenOption func(*Options)
 
 // NewKubetokenCmd returns a new cobra command
-func NewKubetokenCmd(optFunc ...kubetokenOption) *KubetokenCmd {
+func NewKubetokenCmd(optFunc ...kubetokenOption) *Cmd {
 	opts := defaultKubetokenOptions()
 	for _, o := range optFunc {
 		o(opts)
 	}
-	return &KubetokenCmd{
+	return &Cmd{
 		oktetoClientProvider: opts.oktetoClientProvider,
 		serializer:           opts.serializer,
 		k8sClientProvider:    opts.k8sClientProvider,
@@ -111,7 +111,7 @@ func NewKubetokenCmd(optFunc ...kubetokenOption) *KubetokenCmd {
 	}
 }
 
-func (kc *KubetokenCmd) Cmd() *cobra.Command {
+func (kc *Cmd) Cmd() *cobra.Command {
 	var namespace string
 	var contextName string
 
@@ -124,7 +124,7 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 		Args:   cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			flags := KubetokenFlags{
+			flags := Flags{
 				Namespace: namespace,
 				Context:   contextName,
 			}
@@ -137,7 +137,7 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 }
 
 // Run executes the kubetoken command
-func (kc *KubetokenCmd) Run(ctx context.Context, flags KubetokenFlags) error {
+func (kc *Cmd) Run(ctx context.Context, flags Flags) error {
 	oktetoLog.SetOutputFormat("silent")
 	err := newPreReqValidator(
 		withCtxName(flags.Context),
@@ -151,7 +151,7 @@ func (kc *KubetokenCmd) Run(ctx context.Context, flags KubetokenFlags) error {
 		return fmt.Errorf("dynamic kubernetes token cannot be requested: %w", err)
 	}
 
-	err = kc.oktetoCtxCmdRunner.Run(ctx, &contextCMD.ContextOptions{
+	err = kc.oktetoCtxCmdRunner.Run(ctx, &contextCMD.Options{
 		Context:   flags.Context,
 		Namespace: flags.Namespace,
 	})

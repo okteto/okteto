@@ -34,7 +34,7 @@ var (
 type preReqCfg struct {
 	k8sClientProvider    k8sClientProvider
 	oktetoClientProvider oktetoClientProvider
-	getContextStore      func() *okteto.OktetoContextStore
+	getContextStore      func() *okteto.ContextStore
 	getCtxResource       initCtxOptsFunc
 	ctxName              string
 	ns                   string
@@ -66,9 +66,9 @@ func withOktetoClientProvider(oktetoClientProvider oktetoClientProvider) option 
 	}
 }
 
-func withContextStore(ctxStore *okteto.OktetoContextStore) option {
+func withContextStore(ctxStore *okteto.ContextStore) option {
 	return func(cfg *preReqCfg) {
-		cfg.getContextStore = func() *okteto.OktetoContextStore {
+		cfg.getContextStore = func() *okteto.ContextStore {
 			return ctxStore
 		}
 	}
@@ -85,7 +85,7 @@ func defaultPreReqCfg() *preReqCfg {
 		k8sClientProvider:    okteto.NewK8sClientProvider(),
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
 		getCtxResource:       getCtxResource,
-		getContextStore:      okteto.ContextStore,
+		getContextStore:      okteto.GetContextStore,
 	}
 }
 
@@ -136,8 +136,8 @@ func (v *preReqValidator) validate(ctx context.Context) error {
 	return nil
 }
 
-func getCtxResource(ctxName, ns string) *contextCMD.ContextOptions {
-	ctxResource := &contextCMD.ContextOptions{
+func getCtxResource(ctxName, ns string) *contextCMD.Options {
+	ctxResource := &contextCMD.Options{
 		Context:   ctxName,
 		Namespace: ns,
 	}
@@ -148,18 +148,18 @@ func getCtxResource(ctxName, ns string) *contextCMD.ContextOptions {
 	return ctxResource
 }
 
-type getContextStoreFunc func() *okteto.OktetoContextStore
+type getContextStoreFunc func() *okteto.ContextStore
 
 // ctxValidator checks that the ctx use to execute the command is an okteto context
 // that has already being added to your okteto context
 type ctxValidator struct {
-	ctxResource       *contextCMD.ContextOptions
+	ctxResource       *contextCMD.Options
 	k8sClientProvider k8sClientProvider
 	getContextStore   getContextStoreFunc
 	k8sCtxToOktetoURL func(ctx context.Context, k8sContext string, k8sNamespace string, clientProvider okteto.K8sClientProvider) string
 }
 
-func newCtxValidator(ctxResource *contextCMD.ContextOptions, k8sClientProvider k8sClientProvider, getContextStore getContextStoreFunc) *ctxValidator {
+func newCtxValidator(ctxResource *contextCMD.Options, k8sClientProvider k8sClientProvider, getContextStore getContextStoreFunc) *ctxValidator {
 	return &ctxValidator{
 		ctxResource:       ctxResource,
 		k8sClientProvider: k8sClientProvider,
@@ -224,11 +224,11 @@ func (v *ctxValidator) validate(ctx context.Context) error {
 }
 
 type oktetoSupportValidator struct {
-	ctxResource          *contextCMD.ContextOptions
+	ctxResource          *contextCMD.Options
 	oktetoClientProvider oktetoClientProvider
 }
 
-func newOktetoSupportValidator(ctx context.Context, ctxResource *contextCMD.ContextOptions, k8sClientProvider k8sClientProvider, oktetoClientProvider oktetoClientProvider) *oktetoSupportValidator {
+func newOktetoSupportValidator(ctx context.Context, ctxResource *contextCMD.Options, k8sClientProvider k8sClientProvider, oktetoClientProvider oktetoClientProvider) *oktetoSupportValidator {
 	if !isURL(ctxResource.Context) {
 		ctxResource.Context = okteto.K8sContextToOktetoUrl(ctx, ctxResource.Context, "", k8sClientProvider)
 	}

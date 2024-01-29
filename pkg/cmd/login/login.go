@@ -31,18 +31,18 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
-type LoginInterface interface {
+type Interface interface {
 	AuthenticateToOktetoCluster(context.Context, string, string) (*types.User, error)
 }
 
-type LoginController struct {
+type Controller struct {
 }
 
-func NewLoginController() *LoginController {
-	return &LoginController{}
+func NewLoginController() *Controller {
+	return &Controller{}
 }
 
-func (*LoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*types.User, error) {
+func (*Controller) AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*types.User, error) {
 	if token == "" {
 		oktetoLog.Infof("authenticating with browser code")
 		user, err := WithBrowser(ctx, oktetoURL)

@@ -28,7 +28,6 @@ func TestIOControllerInitialisation(t *testing.T) {
 	require.NotNil(t, l)
 	require.Equal(t, os.Stdout, l.out.out)
 	require.Equal(t, os.Stdin, l.in.in)
-
 }
 
 func TestGetters(t *testing.T) {

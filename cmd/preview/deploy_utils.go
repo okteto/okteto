@@ -105,7 +105,7 @@ func getExpandedName(name string) string {
 }
 
 func getPreviewURL(name string) string {
-	oktetoURL := okteto.Context().Name
+	oktetoURL := okteto.GetContext().Name
 	previewURL := fmt.Sprintf("%s/previews/%s", oktetoURL, name)
 	return previewURL
 }

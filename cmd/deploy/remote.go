@@ -119,7 +119,7 @@ type remoteDeployCommand struct {
 }
 
 // newRemoteDeployer creates the remote deployer from a
-func newRemoteDeployer(builder builderInterface, ioCtrl *io.IOController) *remoteDeployCommand {
+func newRemoteDeployer(builder builderInterface, ioCtrl *io.Controller) *remoteDeployCommand {
 	fs := afero.NewOsFs()
 	return &remoteDeployCommand{
 		getBuildEnvVars:      builder.GetBuildEnvVars,
@@ -168,6 +168,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 
 	buildInfo := &build.Info{
 		Dockerfile: dockerfile,
+		Context:    rd.getContextPath(cwd, deployOptions.ManifestPathFlag),
 	}
 
 	// undo modification of CWD for Build command
@@ -184,9 +185,9 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	buildOptions.Manifest = deployOptions.Manifest
 	buildOptions.BuildArgs = append(
 		buildOptions.BuildArgs,
-		fmt.Sprintf("%s=%s", model.OktetoContextEnvVar, okteto.Context().Name),
-		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
-		fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, okteto.Context().Token),
+		fmt.Sprintf("%s=%s", model.OktetoContextEnvVar, okteto.GetContext().Name),
+		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.GetContext().Namespace),
+		fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, okteto.GetContext().Token),
 		fmt.Sprintf("%s=%s", constants.OktetoTlsCertBase64EnvVar, base64.StdEncoding.EncodeToString(sc.Certificate)),
 		fmt.Sprintf("%s=%s", constants.OktetoInternalServerNameEnvVar, sc.ServerName),
 		fmt.Sprintf("%s=%s", model.OktetoActionNameEnvVar, os.Getenv(model.OktetoActionNameEnvVar)),
@@ -196,7 +197,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	)
 
 	if sc.ServerName != "" {
-		registryUrl := okteto.Context().Registry
+		registryUrl := okteto.GetContext().Registry
 		subdomain := strings.TrimPrefix(registryUrl, "registry.")
 		ip, _, err := net.SplitHostPort(sc.ServerName)
 		if err != nil {
@@ -328,7 +329,15 @@ func getDeployFlags(opts *Options) ([]string, error) {
 	}
 
 	if opts.ManifestPathFlag != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", opts.ManifestPathFlag))
+		lastFolder := filepath.Base(filepath.Dir(opts.ManifestPathFlag))
+		if lastFolder == ".okteto" {
+			path := filepath.Clean(opts.ManifestPathFlag)
+			parts := strings.Split(path, string(filepath.Separator))
+
+			deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filepath.Join(parts[len(parts)-2:]...)))
+		} else {
+			deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filepath.Base(opts.ManifestPathFlag)))
+		}
 	}
 
 	if len(opts.Variables) > 0 {
@@ -387,13 +396,13 @@ func fetchRemoteServerConfig(ctx context.Context) (*types.ClusterMetadata, error
 	}
 	uc := c.User()
 
-	metadata, err := uc.GetClusterMetadata(ctx, okteto.Context().Namespace)
+	metadata, err := uc.GetClusterMetadata(ctx, okteto.GetContext().Namespace)
 	if err != nil {
 		return nil, err
 	}
 
 	if metadata.Certificate == nil {
-		metadata.Certificate, err = uc.GetClusterCertificate(ctx, okteto.Context().Name, okteto.Context().Namespace)
+		metadata.Certificate, err = uc.GetClusterCertificate(ctx, okteto.GetContext().Name, okteto.GetContext().Namespace)
 	}
 
 	return &metadata, err
@@ -414,4 +423,30 @@ func getExtraHosts(registryURL, subdomain, ip string, metadata types.ClusterMeta
 	}
 
 	return extraHosts
+}
+
+func (rd *remoteDeployCommand) getContextPath(cwd, manifestPath string) string {
+	if manifestPath == "" {
+		return cwd
+	}
+
+	path := manifestPath
+	if !filepath.IsAbs(manifestPath) {
+		path = filepath.Join(cwd, manifestPath)
+	}
+	fInfo, err := rd.fs.Stat(path)
+	if err != nil {
+		oktetoLog.Infof("error getting file info: %s", err)
+		return cwd
+
+	}
+	if fInfo.IsDir() {
+		return path
+	}
+
+	possibleCtx := filepath.Dir(path)
+	if strings.HasSuffix(possibleCtx, ".okteto") {
+		return filepath.Dir(possibleCtx)
+	}
+	return possibleCtx
 }

@@ -35,9 +35,9 @@ import (
 )
 
 func Test_validateImage(t *testing.T) {
-	okCtx := &okteto.OktetoContextStateless{
-		Store: &okteto.OktetoContextStore{
-			Contexts: map[string]*okteto.OktetoContext{
+	okCtx := &okteto.ContextStateless{
+		Store: &okteto.ContextStore{
+			Contexts: map[string]*okteto.Context{
 				"test": {
 					Namespace: "test",
 					IsOkteto:  true,
@@ -116,7 +116,7 @@ func (mr *mockRegistry) GetRepoNameAndTag(_ string) (string, string) {
 }
 
 func Test_OptsFromBuildInfo(t *testing.T) {
-	context := okteto.OktetoContext{
+	context := okteto.Context{
 		Namespace: "test",
 		Registry:  "registry.okteto",
 	}
@@ -384,9 +384,9 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			okCtx := &okteto.OktetoContextStateless{
-				Store: &okteto.OktetoContextStore{
-					Contexts: map[string]*okteto.OktetoContext{
+			okCtx := &okteto.ContextStateless{
+				Store: &okteto.ContextStore{
+					Contexts: map[string]*okteto.Context{
 						"test": {
 							Namespace: "test",
 							IsOkteto:  tt.isOkteto,

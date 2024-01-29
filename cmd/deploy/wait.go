@@ -25,20 +25,23 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	ioCtrl "github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
-type DeployWaiter struct {
-	K8sClientProvider okteto.K8sClientProvider
+type Waiter struct {
+	K8sClientProvider okteto.K8sClientProviderWithLogger
+	K8sLogger         *ioCtrl.K8sLogger
 }
 
-func NewDeployWaiter(k8sClientProvider okteto.K8sClientProvider) DeployWaiter {
-	return DeployWaiter{
+func NewDeployWaiter(k8sClientProvider okteto.K8sClientProviderWithLogger, k8slogger *ioCtrl.K8sLogger) Waiter {
+	return Waiter{
 		K8sClientProvider: k8sClientProvider,
+		K8sLogger:         k8slogger,
 	}
 }
 
-func (dw *DeployWaiter) wait(ctx context.Context, opts *Options) error {
+func (dw *Waiter) wait(ctx context.Context, opts *Options) error {
 	oktetoLog.Spinner(fmt.Sprintf("Waiting for %s to be deployed...", opts.Name))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -63,10 +66,10 @@ func (dw *DeployWaiter) wait(ctx context.Context, opts *Options) error {
 	return nil
 }
 
-func (dw *DeployWaiter) waitForResourcesToBeRunning(ctx context.Context, opts *Options) error {
+func (dw *Waiter) waitForResourcesToBeRunning(ctx context.Context, opts *Options) error {
 	ticker := time.NewTicker(5 * time.Second)
 	to := time.NewTicker(opts.Timeout)
-	c, _, err := dw.K8sClientProvider.Provide(okteto.Context().Cfg)
+	c, _, err := dw.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, dw.K8sLogger)
 	if err != nil {
 		return err
 	}

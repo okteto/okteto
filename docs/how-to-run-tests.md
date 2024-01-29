@@ -61,9 +61,11 @@ Unit tests will run against a okteto cluster that you must be logged in
 
 You will need to set some environment variables to start running e2e tests
 
+- `OKTETO_URL`: This is the url of your okteto cluster. For example: `https://product.okteto.dev`
 - `OKTETO_USER`: This is your okteto username. For example: `cindylopez`
 - `OKTETO_PATH`: The path of the okteto binary (It will default to `/usr/bin/okteto`).
-- `OKTETO_APPS_SUBDOMAIN`: The subdomain of the okteto cluster. For example: `cloud.okteto.net`
+- `OKTETO_APPS_SUBDOMAIN`: The subdomain of the okteto cluster. For example: `product.okteto.dev`
+- `OKTETO_TOKEN`: The token of your okteto user. You can get it from the okteto UI.
 
 ### Run all e2e tests
 

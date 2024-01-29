@@ -53,7 +53,7 @@ func DeleteCMD() *cobra.Command {
 }
 
 func Delete(okCtxs []string) error {
-	ctxStore := okteto.ContextStore()
+	ctxStore := okteto.GetContextStore()
 	var errs error
 	validOptions := make([]string, 0)
 	for _, okCtx := range okCtxs {

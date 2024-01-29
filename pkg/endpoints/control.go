@@ -20,10 +20,10 @@ import (
 )
 
 type APIControl struct {
-	OktetoClient *okteto.OktetoClient
+	OktetoClient *okteto.Client
 }
 
-func NewEndpointControl(c *okteto.OktetoClient) *APIControl {
+func NewEndpointControl(c *okteto.Client) *APIControl {
 	return &APIControl{
 		OktetoClient: c,
 	}

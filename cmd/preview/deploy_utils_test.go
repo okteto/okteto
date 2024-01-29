@@ -23,9 +23,9 @@ import (
 
 func Test_optionsSetup(t *testing.T) {
 	ctxUsername := "username"
-	okteto.CurrentStore = &okteto.OktetoContextStore{
+	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
-		Contexts: map[string]*okteto.OktetoContext{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Username: ctxUsername,
 			},
@@ -118,9 +118,9 @@ func Test_optionsSetup(t *testing.T) {
 
 func Test_getPreviewURL(t *testing.T) {
 	ctxName := "https://my.okteto.instance"
-	okteto.CurrentStore = &okteto.OktetoContextStore{
+	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
-		Contexts: map[string]*okteto.OktetoContext{
+		Contexts: map[string]*okteto.Context{
 			"test": {
 				Name: ctxName,
 			},

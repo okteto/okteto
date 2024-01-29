@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -60,16 +61,16 @@ type EndpointGetter struct {
 	endpointControl endpointControlInterface
 }
 
-func NewEndpointGetter() (EndpointGetter, error) {
+func NewEndpointGetter(k8sLogger *io.K8sLogger) (EndpointGetter, error) {
 	var endpointControl endpointControlInterface
-	if okteto.Context().IsOkteto {
+	if okteto.GetContext().IsOkteto {
 		c, err := okteto.NewOktetoClient()
 		if err != nil {
 			return EndpointGetter{}, err
 		}
 		endpointControl = NewEndpointGetterWithOktetoAPI(c)
 	} else {
-		endpointControl = NewEndpointGetterInStandaloneMode()
+		endpointControl = NewEndpointGetterInStandaloneMode(k8sLogger)
 	}
 
 	return EndpointGetter{
@@ -80,7 +81,7 @@ func NewEndpointGetter() (EndpointGetter, error) {
 }
 
 // Endpoints deploys the okteto manifest
-func Endpoints(ctx context.Context) *cobra.Command {
+func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &EndpointsOptions{}
 	cmd := &cobra.Command{
 		Use:   "endpoints",
@@ -109,7 +110,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			ctxOptions := &contextCMD.ContextOptions{
+			ctxOptions := &contextCMD.Options{
 				Context:   ctxResource.Context,
 				Namespace: ctxResource.Namespace,
 			}
@@ -120,7 +121,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			eg, err := NewEndpointGetter()
+			eg, err := NewEndpointGetter(k8sLogger)
 			if err != nil {
 				return err
 			}
@@ -137,19 +138,19 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				if manifest.Name != "" {
 					options.Name = manifest.Name
 				} else {
-					c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+					c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okteto.GetContext().Cfg)
 					if err != nil {
 						return err
 					}
 					inferer := devenvironment.NewNameInferer(c)
-					options.Name = inferer.InferName(ctx, cwd, okteto.Context().Namespace, options.ManifestPath)
+					options.Name = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, options.ManifestPath)
 				}
 				if options.Namespace == "" {
 					options.Namespace = manifest.Namespace
 				}
 			}
 			if options.Namespace == "" {
-				options.Namespace = okteto.Context().Namespace
+				options.Namespace = okteto.GetContext().Namespace
 			}
 
 			if err := validateOutput(options.Output); err != nil {
@@ -203,7 +204,7 @@ type endpointGetterWithOktetoAPI struct {
 	endpointControl endpointGetterInterface
 }
 
-func NewEndpointGetterWithOktetoAPI(c *okteto.OktetoClient) *endpointGetterWithOktetoAPI {
+func NewEndpointGetterWithOktetoAPI(c *okteto.Client) *endpointGetterWithOktetoAPI {
 	return &endpointGetterWithOktetoAPI{
 		endpointControl: endpoints.NewEndpointControl(c),
 	}
@@ -218,9 +219,9 @@ type endpointGetterInStandaloneMode struct {
 	getEndpoints      func(context.Context, *EndpointsOptions, string, k8sIngressClientProvider) ([]string, error)
 }
 
-func NewEndpointGetterInStandaloneMode() *endpointGetterInStandaloneMode {
+func NewEndpointGetterInStandaloneMode(k8sLogger *io.K8sLogger) *endpointGetterInStandaloneMode {
 	return &endpointGetterInStandaloneMode{
-		k8sClientProvider: okteto.NewK8sClientProvider(),
+		k8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
 		getEndpoints:      getEndpointsStandaloneMode,
 	}
 }
@@ -272,7 +273,7 @@ func (dc *EndpointGetter) showEndpoints(ctx context.Context, opts *EndpointsOpti
 		}
 	default:
 		if len(eps) == 0 {
-			oktetoLog.Information("There are no available endpoints for '%s'.\n    Follow this link to know more about how to create public endpoints for your application:\n    https://www.okteto.com/docs/cloud/ssl/", opts.Name)
+			oktetoLog.Information("There are no available endpoints for '%s'.\n    Follow this link to know more about how to create public endpoints for your application:\n    https://www.okteto.com/docs/core/ingress/automatic-ssl", opts.Name)
 		} else {
 			oktetoLog.Information("Endpoints available:")
 			oktetoLog.Printf("  - %s\n", strings.Join(eps, "\n  - "))

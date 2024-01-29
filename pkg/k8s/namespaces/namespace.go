@@ -117,7 +117,7 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns string, opts Delet
 		LabelSelector: opts.LabelSelector,
 	}
 
-	trip, err := NewTrip(n.restConfig, &Options{
+	trip, err := newTrip(n.restConfig, &Options{
 		Namespace:   ns,
 		Parallelism: parallelism,
 		List:        listOptions,
@@ -141,7 +141,7 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns string, opts Delet
 		logrus.SetLevel(prevLevel)
 	}()
 
-	return trip.Wander(ctx, TravelerFunc(func(obj runtime.Object) error {
+	return trip.wander(ctx, TravelerFunc(func(obj runtime.Object) error {
 		m, err := meta.Accessor(obj)
 		if err != nil {
 			return err
@@ -241,7 +241,7 @@ func (n *Namespaces) DestroySFSVolumes(ctx context.Context, ns string, opts Dele
 }
 
 // Below functions were added to remove "github.com/ibuildthecloud/finalizers" as a dependency
-func NewTrip(restConfig *rest.Config, opts *Options) (*Trip, error) {
+func newTrip(restConfig *rest.Config, opts *Options) (*Trip, error) {
 	if opts == nil {
 		opts = &Options{}
 	}
@@ -279,7 +279,7 @@ func NewTrip(restConfig *rest.Config, opts *Options) (*Trip, error) {
 	}, nil
 }
 
-func (t *Trip) Wander(ctx context.Context, traveler Traveler) error {
+func (t *Trip) wander(ctx context.Context, traveler Traveler) error {
 	_, apis, err := t.k8s.Discovery().ServerGroupsAndResources()
 	if err != nil {
 		return err

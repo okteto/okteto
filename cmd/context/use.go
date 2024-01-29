@@ -31,14 +31,14 @@ import (
 )
 
 const (
-	personalAccessTokenURL          = "https://www.okteto.com/docs/cloud/personal-access-tokens/"
+	personalAccessTokenURL          = "https://www.okteto.com/docs/core/credentials/personal-access-tokens/"
 	suggestInstallOktetoSH          = "Don't have an Okteto instance?\n    Start by installing Okteto on your Kubernetes cluster: https://www.okteto.com/free-trial/"
 	messageSuggestingCurrentContext = "Enter the URL of your Okteto instance: "
 )
 
 // Use context points okteto to a cluster.
 func Use() *cobra.Command {
-	ctxOptions := &ContextOptions{}
+	ctxOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:   "use [<url>|Kubernetes context]",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#use"),
@@ -93,8 +93,8 @@ Or a Kubernetes context:
 	return cmd
 }
 
-func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) error {
-	ctxStore := okteto.ContextStore()
+func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
+	ctxStore := okteto.GetContextStore()
 	if len(ctxStore.Contexts) == 0 {
 		// if the context store has no context stored, set flag to save the
 		// new one generated. This is necessary for any command other than
@@ -140,10 +140,10 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 		return err
 	}
 
-	os.Setenv(model.OktetoNamespaceEnvVar, okteto.Context().Namespace)
+	os.Setenv(model.OktetoNamespaceEnvVar, okteto.GetContext().Namespace)
 
 	if ctxOptions.Show {
-		oktetoLog.Information("Using %s @ %s as context", okteto.Context().Namespace, okteto.RemoveSchema(okteto.Context().Name))
+		oktetoLog.Information("Using %s @ %s as context", okteto.GetContext().Namespace, okteto.RemoveSchema(okteto.GetContext().Name))
 	}
 
 	return nil
@@ -151,17 +151,17 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 
 // RunStateless is the fn to use until the refactoring of the context command itself if you want to make use
 // of an injected context instead of using the global context variable.
-func (c *ContextCommand) RunStateless(ctx context.Context, ctxOptions *ContextOptions) (*okteto.OktetoContextStateless, error) {
+func (c *Command) RunStateless(ctx context.Context, ctxOptions *Options) (*okteto.ContextStateless, error) {
 	err := c.Run(ctx, ctxOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	cfg := okteto.Context().Cfg.DeepCopy()
+	cfg := okteto.GetContext().Cfg.DeepCopy()
 
 	oktetoContextStore := okteto.GetContextStoreFromStorePath()
 
-	oktetoContextStateless := &okteto.OktetoContextStateless{
+	oktetoContextStateless := &okteto.ContextStateless{
 		Store: oktetoContextStore,
 	}
 
@@ -171,7 +171,7 @@ func (c *ContextCommand) RunStateless(ctx context.Context, ctxOptions *ContextOp
 
 }
 
-func getContext(ctxOptions *ContextOptions) (string, error) {
+func getContext(ctxOptions *Options) (string, error) {
 	ctxs := getAvailableContexts(ctxOptions)
 
 	var oktetoContext string
@@ -194,7 +194,7 @@ func getContext(ctxOptions *ContextOptions) (string, error) {
 			return "", err
 		}
 		if isCreateNewContextOption(oktetoContext) {
-			ctxStore := okteto.ContextStore()
+			ctxStore := okteto.GetContextStore()
 			clusterURL := okteto.CloudURL
 			if oCtx, ok := ctxStore.Contexts[ctxStore.CurrentContext]; ok && oCtx.IsOkteto {
 				clusterURL = ctxStore.CurrentContext

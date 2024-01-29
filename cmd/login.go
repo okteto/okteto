@@ -50,7 +50,7 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 			oktetoLog.Warning(`'okteto login' is deprecated in favor of 'okteto context', and will be removed in a future version.
     Learn more about okteto context at https://okteto.com/docs/reference/cli/#context`)
 
-			ctxOptions := contextCMD.ContextOptions{
+			ctxOptions := contextCMD.Options{
 				IsCtxCommand: true,
 				IsOkteto:     true,
 				Save:         true,

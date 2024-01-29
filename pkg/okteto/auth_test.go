@@ -117,7 +117,7 @@ func TestAuth(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := OktetoClient{
+			c := Client{
 				client: tt.input.client,
 			}
 			u, err := c.Auth(context.Background(), "")
@@ -193,7 +193,7 @@ func TestAuthGQLCall(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := OktetoClient{
+			c := Client{
 				client: tt.input.client,
 			}
 			u, err := c.authUser(context.Background(), "")
@@ -267,7 +267,7 @@ func TestDeprecatedAuth(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := OktetoClient{
+			c := Client{
 				client: tt.input.client,
 			}
 			u, err := c.deprecatedAuthUser(context.Background(), "")

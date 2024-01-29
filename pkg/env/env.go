@@ -26,12 +26,12 @@ import (
 
 type Environment []Var
 
-type EnvVarExpansionErr struct {
+type VarExpansionErr struct {
 	err   error
 	value string
 }
 
-func (e EnvVarExpansionErr) Error() string {
+func (e VarExpansionErr) Error() string {
 	return fmt.Sprintf("error expanding environment on '%s': %s", e.value, e.err)
 }
 
@@ -39,7 +39,7 @@ func (e EnvVarExpansionErr) Error() string {
 func ExpandEnv(value string) (string, error) {
 	result, err := envsubst.String(value)
 	if err != nil {
-		return "", EnvVarExpansionErr{err, value}
+		return "", VarExpansionErr{err, value}
 	}
 	return result, nil
 }

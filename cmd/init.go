@@ -33,7 +33,7 @@ type analyticsTrackerInterface interface {
 }
 
 // Init creates okteto manifest
-func Init(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command {
+func Init(at analyticsTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
 	opts := &manifest.InitOpts{}
 	cmd := &cobra.Command{
 		Use:   "init",
@@ -50,7 +50,7 @@ func Init(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command 
 			if err := ctxResource.UpdateContext(opts.Context); err != nil {
 				return err
 			}
-			ctxOptions := &contextCMD.ContextOptions{
+			ctxOptions := &contextCMD.Options{
 				Context:   ctxResource.Context,
 				Namespace: ctxResource.Namespace,
 				Show:      true,
@@ -65,7 +65,7 @@ func Init(at analyticsTrackerInterface, ioCtrl *io.IOController) *cobra.Command 
 			}
 			opts.Workdir = cwd
 			opts.ShowCTA = oktetoLog.IsInteractive()
-			mc := &manifest.ManifestCommand{
+			mc := &manifest.Command{
 				K8sClientProvider: okteto.NewK8sClientProvider(),
 				AnalyticsTracker:  at,
 				IoCtrl:            ioCtrl,

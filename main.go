@@ -46,6 +46,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	generateFigSpec "github.com/withfig/autocomplete-tools/packages/cobra"
 	utilRuntime "k8s.io/apimachinery/pkg/util/runtime"
 	// Load the different library for authentication
@@ -95,6 +96,7 @@ func main() {
 		ioController.Logger().SetLevel(io.InfoLevel)
 		ioController.SetOutputFormat(io.JSONFormat)
 	}
+
 	var logLevel string
 	var outputMode string
 	var serverNameOverride string
@@ -104,6 +106,8 @@ func main() {
 	}
 
 	okteto.InitContextWithDeprecatedToken()
+
+	k8sLogger := io.NewK8sLogger()
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
@@ -121,6 +125,12 @@ func main() {
 			}
 			okteto.SetServerNameOverride(serverNameOverride)
 			ioController.Logger().Infof("started %s", strings.Join(os.Args, " "))
+
+			if k8sLogger.IsEnabled() {
+				cmdName, flags := getCurrentCmdWithUsedFlags(ccmd)
+				k8sLogger.Start(config.GetOktetoHome(), cmdName, flags)
+				ioController.Logger().Debugf("okteto k8s log file: %s", io.GetK8sLoggerFilePath(config.GetOktetoHome()))
+			}
 		},
 		PersistentPostRun: func(ccmd *cobra.Command, args []string) {
 			ioController.Logger().Infof("finished %s", strings.Join(os.Args, " "))
@@ -149,22 +159,22 @@ func main() {
 	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
 	root.AddCommand(registrytoken.RegistryToken(ctx))
 
-	root.AddCommand(build.Build(ctx, ioController, at))
+	root.AddCommand(build.Build(ctx, ioController, at, k8sLogger))
 
-	root.AddCommand(namespace.Namespace(ctx))
+	root.AddCommand(namespace.Namespace(ctx, k8sLogger))
 	root.AddCommand(cmd.Init(at, ioController))
-	root.AddCommand(up.Up(at, ioController))
-	root.AddCommand(cmd.Down())
+	root.AddCommand(up.Up(at, ioController, k8sLogger))
+	root.AddCommand(cmd.Down(k8sLogger))
 	root.AddCommand(cmd.Status())
-	root.AddCommand(cmd.Doctor())
-	root.AddCommand(cmd.Exec())
+	root.AddCommand(cmd.Doctor(k8sLogger))
+	root.AddCommand(cmd.Exec(k8sLogger))
 	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
 	root.AddCommand(cmd.UpdateDeprecated())
-	root.AddCommand(deploy.Deploy(ctx, at, ioController))
-	root.AddCommand(destroy.Destroy(ctx, at, ioController))
-	root.AddCommand(deploy.Endpoints(ctx))
-	root.AddCommand(logs.Logs(ctx))
+	root.AddCommand(deploy.Deploy(ctx, at, ioController, k8sLogger))
+	root.AddCommand(destroy.Destroy(ctx, at, ioController, k8sLogger))
+	root.AddCommand(deploy.Endpoints(ctx, k8sLogger))
+	root.AddCommand(logs.Logs(ctx, k8sLogger))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
 
 	// deprecated
@@ -192,4 +202,15 @@ func main() {
 		}
 		os.Exit(1)
 	}
+}
+
+func getCurrentCmdWithUsedFlags(cmd *cobra.Command) (string, string) {
+	var flags []string
+	cmd.Flags().Visit(func(f *pflag.Flag) {
+		if f.Changed {
+			flags = append(flags, fmt.Sprintf("--%s=%s", f.Name, f.Value))
+		}
+	})
+
+	return cmd.Name(), strings.Join(flags, " ")
 }

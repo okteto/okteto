@@ -23,8 +23,8 @@ import (
 
 func Test_RemoveExecFromCfg(t *testing.T) {
 	var tests = []struct {
-		input    *okteto.OktetoContext
-		expected *okteto.OktetoContext
+		input    *okteto.Context
+		expected *okteto.Context
 		name     string
 	}{
 		{
@@ -34,33 +34,33 @@ func Test_RemoveExecFromCfg(t *testing.T) {
 		},
 		{
 			name:     "empty UserID",
-			input:    &okteto.OktetoContext{},
-			expected: &okteto.OktetoContext{},
+			input:    &okteto.Context{},
+			expected: &okteto.Context{},
 		},
 		{
 			name:     "nil config",
-			input:    &okteto.OktetoContext{UserID: "test-user"},
-			expected: &okteto.OktetoContext{UserID: "test-user"},
+			input:    &okteto.Context{UserID: "test-user"},
+			expected: &okteto.Context{UserID: "test-user"},
 		},
 		{
 			name:     "nil AuthInfos",
-			input:    &okteto.OktetoContext{UserID: "test-user", Cfg: &api.Config{}},
-			expected: &okteto.OktetoContext{UserID: "test-user", Cfg: &api.Config{}},
+			input:    &okteto.Context{UserID: "test-user", Cfg: &api.Config{}},
+			expected: &okteto.Context{UserID: "test-user", Cfg: &api.Config{}},
 		},
 		{
 			name:     "missing user in AuthInfos",
-			input:    &okteto.OktetoContext{UserID: "test-user", Cfg: &api.Config{AuthInfos: make(map[string]*api.AuthInfo)}},
-			expected: &okteto.OktetoContext{UserID: "test-user", Cfg: &api.Config{AuthInfos: make(map[string]*api.AuthInfo)}},
+			input:    &okteto.Context{UserID: "test-user", Cfg: &api.Config{AuthInfos: make(map[string]*api.AuthInfo)}},
+			expected: &okteto.Context{UserID: "test-user", Cfg: &api.Config{AuthInfos: make(map[string]*api.AuthInfo)}},
 		},
 		{
 			name: "Exec removed successfully",
-			input: &okteto.OktetoContext{
+			input: &okteto.Context{
 				UserID: "test-user",
 				Cfg: &api.Config{AuthInfos: map[string]*api.AuthInfo{
 					"test-user": {Token: "test-token", Exec: &api.ExecConfig{Command: "test-cmd"}},
 				}},
 			},
-			expected: &okteto.OktetoContext{
+			expected: &okteto.Context{
 				UserID: "test-user",
 				Cfg: &api.Config{AuthInfos: map[string]*api.AuthInfo{
 					"test-user": {Token: "test-token", Exec: nil},

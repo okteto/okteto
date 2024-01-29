@@ -78,7 +78,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 
 	namespace := opts.Namespace
 	if namespace == "" {
-		namespace = okteto.Context().Namespace
+		namespace = okteto.GetContext().Namespace
 	}
 
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destroying...")
@@ -111,7 +111,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 	}
 
 	if ld.manifest.Context == "" {
-		ld.manifest.Context = okteto.Context().Name
+		ld.manifest.Context = okteto.GetContext().Name
 	}
 	if ld.manifest.Namespace == "" {
 		ld.manifest.Namespace = namespace
@@ -122,7 +122,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 		for depName, depInfo := range ld.manifest.Dependencies {
 			oktetoLog.SetStage(fmt.Sprintf("Destroying dependency '%s'", depName))
 
-			namespace := okteto.Context().Namespace
+			namespace := okteto.GetContext().Namespace
 			if depInfo.Namespace != "" {
 				namespace = depInfo.Namespace
 			}
@@ -302,7 +302,7 @@ func (dc *localDestroyCommand) destroyHelmReleasesIfPresent(ctx context.Context,
 }
 
 func (ld *localDestroyCommand) destroyDivert(ctx context.Context, manifest *model.Manifest) error {
-	c, _, err := ld.k8sClientProvider.Provide(okteto.Context().Cfg)
+	c, _, err := ld.k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		return err
 	}

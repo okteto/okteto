@@ -244,9 +244,9 @@ func TestBuildErrIfInvalidManifest(t *testing.T) {
 func TestBuilderIsProperlyGenerated(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	okCtx := &okteto.OktetoContextStateless{
-		Store: &okteto.OktetoContextStore{
-			Contexts: map[string]*okteto.OktetoContext{
+	okCtx := &okteto.ContextStateless{
+		Store: &okteto.ContextStore{
+			Contexts: map[string]*okteto.Context{
 				"test": {
 					Namespace: "test",
 				},
@@ -390,9 +390,9 @@ type fakeAnalyticsTracker struct{}
 func (fakeAnalyticsTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
 
 func Test_NewBuildCommand(t *testing.T) {
-	okCtx := &okteto.OktetoContextStateless{
-		Store: &okteto.OktetoContextStore{
-			Contexts: map[string]*okteto.OktetoContext{
+	okCtx := &okteto.ContextStateless{
+		Store: &okteto.ContextStore{
+			Contexts: map[string]*okteto.Context{
 				"test": {
 					Namespace: "test",
 				},
@@ -400,7 +400,7 @@ func Test_NewBuildCommand(t *testing.T) {
 			CurrentContext: "test",
 		},
 	}
-	got := NewBuildCommand(io.NewIOController(), fakeAnalyticsTracker{}, okCtx)
+	got := NewBuildCommand(io.NewIOController(), fakeAnalyticsTracker{}, okCtx, nil)
 	require.IsType(t, &Command{}, got)
 	require.NotNil(t, got.GetManifest)
 	require.NotNil(t, got.Builder)
@@ -434,7 +434,7 @@ func (c *fakeClientCfgContext) GetCurrentCertStr() string {
 func Test_defaultOktetoClientCfg(t *testing.T) {
 	tests := []struct {
 		input    *fakeClientCfgContext
-		expected *okteto.OktetoClientCfg
+		expected *okteto.ClientCfg
 		name     string
 	}{
 		{
@@ -442,7 +442,7 @@ func Test_defaultOktetoClientCfg(t *testing.T) {
 			input: &fakeClientCfgContext{
 				existsContext: false,
 			},
-			expected: &okteto.OktetoClientCfg{},
+			expected: &okteto.ClientCfg{},
 		},
 		{
 			name: "context exists",
@@ -452,7 +452,7 @@ func Test_defaultOktetoClientCfg(t *testing.T) {
 				token:         "okteto",
 				cert:          "my-cert",
 			},
-			expected: &okteto.OktetoClientCfg{
+			expected: &okteto.ClientCfg{
 				CtxName: "test",
 				Token:   "okteto",
 				Cert:    "my-cert",

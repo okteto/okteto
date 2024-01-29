@@ -50,7 +50,7 @@ func TestLoginActionPipeline(t *testing.T) {
 func executeLoginAction() error {
 	token := os.Getenv(model.OktetoTokenEnvVar)
 	if token == "" {
-		token = okteto.Context().Token
+		token = okteto.GetContext().Token
 	}
 
 	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, loginPath)

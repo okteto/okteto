@@ -22,7 +22,7 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-type OktetoContextInterface interface {
+type ContextInterface interface {
 	GetCurrentName() string
 	GetCurrentCfg() *clientcmdapi.Config
 	GetCurrentNamespace() string
@@ -39,11 +39,11 @@ type OktetoContextInterface interface {
 	GetTokenByContextName(name string) (string, error)
 }
 
-type OktetoContextStateless struct {
-	Store *OktetoContextStore
+type ContextStateless struct {
+	Store *ContextStore
 }
 
-func (oc *OktetoContextStateless) UseContextByBuilder() {
+func (oc *ContextStateless) UseContextByBuilder() {
 	currentBuilder := oc.GetCurrentBuilder()
 	for _, octx := range oc.Store.Contexts {
 		if octx.IsOkteto && octx.Builder == currentBuilder {
@@ -53,59 +53,59 @@ func (oc *OktetoContextStateless) UseContextByBuilder() {
 	}
 }
 
-func (oc *OktetoContextStateless) GetCurrentBuilder() string {
+func (oc *ContextStateless) GetCurrentBuilder() string {
 	return oc.getCurrentOktetoContext().Builder
 }
 
-func (oc *OktetoContextStateless) SetCurrentCfg(cfg *clientcmdapi.Config) {
+func (oc *ContextStateless) SetCurrentCfg(cfg *clientcmdapi.Config) {
 	oc.getCurrentOktetoContext().Cfg = cfg
 }
 
-func (oc *OktetoContextStateless) GetCurrentName() string {
+func (oc *ContextStateless) GetCurrentName() string {
 	return oc.getCurrentOktetoContext().Name
 }
 
-func (oc *OktetoContextStateless) GetCurrentCertStr() string {
+func (oc *ContextStateless) GetCurrentCertStr() string {
 	return oc.getCurrentOktetoContext().Certificate
 }
 
-func (oc *OktetoContextStateless) GetCurrentToken() string {
+func (oc *ContextStateless) GetCurrentToken() string {
 	return oc.getCurrentOktetoContext().Token
 }
 
-func (oc *OktetoContextStateless) GetCurrentUser() string {
+func (oc *ContextStateless) GetCurrentUser() string {
 	return oc.getCurrentOktetoContext().UserID
 }
 
-func (oc *OktetoContextStateless) GetCurrentRegister() string {
+func (oc *ContextStateless) GetCurrentRegister() string {
 	return oc.getCurrentOktetoContext().Registry
 }
 
-func (oc *OktetoContextStateless) IsOkteto() bool {
+func (oc *ContextStateless) IsOkteto() bool {
 	return oc.getCurrentOktetoContext().IsOkteto
 }
 
-func (oc *OktetoContextStateless) ExistsContext() bool {
+func (oc *ContextStateless) ExistsContext() bool {
 	return oc.getCurrentOktetoContext() != nil
 }
 
-func (oc *OktetoContextStateless) IsInsecure() bool {
+func (oc *ContextStateless) IsInsecure() bool {
 	return oc.getCurrentOktetoContext().IsInsecure
 }
 
-func (oc *OktetoContextStateless) GetCurrentCfg() *clientcmdapi.Config {
+func (oc *ContextStateless) GetCurrentCfg() *clientcmdapi.Config {
 	return oc.getCurrentOktetoContext().Cfg
 }
 
-func (oc *OktetoContextStateless) GetCurrentNamespace() string {
+func (oc *ContextStateless) GetCurrentNamespace() string {
 	return oc.getCurrentOktetoContext().Namespace
 }
 
-func (oc *OktetoContextStateless) GetGlobalNamespace() string {
+func (oc *ContextStateless) GetGlobalNamespace() string {
 	return oc.getCurrentOktetoContext().GlobalNamespace
 }
 
-func (oc *OktetoContextStateless) GetTokenByContextName(name string) (string, error) {
+func (oc *ContextStateless) GetTokenByContextName(name string) (string, error) {
 	ctx, ok := oc.Store.Contexts[name]
 	if !ok {
 		return "", fmt.Errorf("context '%s' not found. ", name)
@@ -114,14 +114,14 @@ func (oc *OktetoContextStateless) GetTokenByContextName(name string) (string, er
 	return ctx.Token, nil
 }
 
-func (oc *OktetoContextStateless) getCurrentOktetoContext() *OktetoContext {
+func (oc *ContextStateless) getCurrentOktetoContext() *Context {
 	if oc.Store.CurrentContext == "" {
-		oktetoLog.Info("ContextStore().CurrentContext is empty")
+		oktetoLog.Info("GetContextStore().CurrentContext is empty")
 		oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
 	}
 	octx, ok := oc.Store.Contexts[oc.Store.CurrentContext]
 	if !ok {
-		oktetoLog.Info("ContextStore().CurrentContext not in ContextStore().Contexts")
+		oktetoLog.Info("GetContextStore().CurrentContext not in GetContextStore().Contexts")
 		oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
 	}
 	return octx

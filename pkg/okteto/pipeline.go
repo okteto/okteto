@@ -255,7 +255,7 @@ func (c *pipelineClient) Destroy(ctx context.Context, name, namespace string, de
 		var mutation destroyPipelineWithoutVolumesMutation
 		queryVariables := map[string]interface{}{
 			"name":  graphql.String(name),
-			"space": graphql.String(Context().Namespace),
+			"space": graphql.String(GetContext().Namespace),
 		}
 		err := mutate(ctx, &mutation, queryVariables, c.client)
 		if err != nil {
@@ -331,7 +331,7 @@ func (c *pipelineClient) GetResourcesStatus(ctx context.Context, name, namespace
 
 	if err := query(ctx, &queryStruct, variables, c.client); err != nil {
 		if oktetoErrors.IsNotFound(err) {
-			okClient, err := NewOktetoClientFromUrlAndToken(c.url, Context().Token)
+			okClient, err := NewOktetoClientFromUrlAndToken(c.url, GetContext().Token)
 			if err != nil {
 				return nil, err
 			}

@@ -31,7 +31,7 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-func getSternConfig(manifest *model.Manifest, o *LogsOptions, kubeconfigFile string) (*stern.Config, error) {
+func getSternConfig(manifest *model.Manifest, o *Options, kubeconfigFile string) (*stern.Config, error) {
 	location, err := time.LoadLocation("Local")
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func getSternConfig(manifest *model.Manifest, o *LogsOptions, kubeconfigFile str
 
 	return &stern.Config{
 		KubeConfig:          kubeconfigFile,
-		ContextName:         okteto.UrlToKubernetesContext(okteto.Context().Name),
+		ContextName:         okteto.UrlToKubernetesContext(okteto.GetContext().Name),
 		Namespaces:          []string{manifest.Namespace},
 		PodQuery:            includePodQuery,
 		ExcludePodQuery:     excludePodQuery,

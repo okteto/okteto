@@ -1647,27 +1647,27 @@ func Test_validateEnvFiles(t *testing.T) {
 	tests := []struct {
 		name     string
 		manifest []byte
-		EnvFiles env.EnvFiles
+		EnvFiles env.Files
 	}{
 		{
 			name:     "sneak case single file",
 			manifest: []byte("services:\n  app:\n    env_file: .testEnv\n    public: true\n    image: okteto/vote:1"),
-			EnvFiles: env.EnvFiles{".testEnv"},
+			EnvFiles: env.Files{".testEnv"},
 		},
 		{
 			name:     "sneak case list",
 			manifest: []byte("services:\n  app:\n    env_file:\n    - .testEnv\n    - .env2\n    image: okteto/vote:1"),
-			EnvFiles: env.EnvFiles{".testEnv", ".env2"},
+			EnvFiles: env.Files{".testEnv", ".env2"},
 		},
 		{
 			name:     "camel case single file",
 			manifest: []byte("services:\n  app:\n    envFile: .testEnv\n    image: okteto/vote:1"),
-			EnvFiles: env.EnvFiles{".testEnv"},
+			EnvFiles: env.Files{".testEnv"},
 		},
 		{
 			name:     "camel case list",
 			manifest: []byte("services:\n  app:\n    envFile:\n    - .testEnv\n    - .env2\n    image: okteto/vote:1"),
-			EnvFiles: env.EnvFiles{".testEnv", ".env2"},
+			EnvFiles: env.Files{".testEnv", ".env2"},
 		},
 	}
 	for _, tt := range tests {

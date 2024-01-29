@@ -51,7 +51,7 @@ func (k *KubeConfig) Modify(port int, sessionToken, destKubeconfigFile string) e
 	if err != nil {
 		return err
 	}
-	// We should change only the config for the proxy, not the one in Context.Cfg
+	// We should change only the config for the proxy, not the one in GetContext.Cfg
 	proxyCfg := clientCfg.DeepCopy()
 
 	// Retrieve the auth info for the current context and change the bearer token to validate the request in our proxy
@@ -80,11 +80,11 @@ func (k *KubeConfig) Modify(port int, sessionToken, destKubeconfigFile string) e
 }
 
 func (*KubeConfig) GetCMDAPIConfig() (*clientcmdapi.Config, error) {
-	if okteto.Context().Cfg == nil {
+	if okteto.GetContext().Cfg == nil {
 		return nil, fmt.Errorf("okteto context not initialized")
 	}
 
-	return okteto.Context().Cfg, nil
+	return okteto.GetContext().Cfg, nil
 }
 
 // GetTempKubeConfigFile returns where the temp kubeConfigFile for deploy should be stored

@@ -94,7 +94,7 @@ type deprecatedUserMutation struct {
 }
 
 // Auth authenticates in okteto with an OAuth code
-func (c *OktetoClient) Auth(ctx context.Context, code string) (*types.User, error) {
+func (c *Client) Auth(ctx context.Context, code string) (*types.User, error) {
 	user, err := c.authUser(ctx, code)
 	if err != nil {
 		oktetoLog.Infof("authentication error: %s", err)
@@ -124,7 +124,7 @@ func (c *OktetoClient) Auth(ctx context.Context, code string) (*types.User, erro
 	return user, nil
 }
 
-func (c *OktetoClient) authUser(ctx context.Context, code string) (*types.User, error) {
+func (c *Client) authUser(ctx context.Context, code string) (*types.User, error) {
 	var mutation authMutationStruct
 
 	queryVariables := map[string]interface{}{
@@ -165,7 +165,7 @@ func (c *OktetoClient) authUser(ctx context.Context, code string) (*types.User, 
 }
 
 // TODO: Remove this code when okteto char 0.10.8 is deprecated
-func (c *OktetoClient) deprecatedAuthUser(ctx context.Context, code string) (*types.User, error) {
+func (c *Client) deprecatedAuthUser(ctx context.Context, code string) (*types.User, error) {
 	var mutation deprecatedAuthMutationStruct
 	queryVariables := map[string]interface{}{
 		"code":   graphql.String(code),

@@ -376,7 +376,7 @@ func (up *upContext) cleanCommand(ctx context.Context) {
 
 	cmd := "cat /var/okteto/bin/version.txt; cat /proc/sys/fs/inotify/max_user_watches; /var/okteto/bin/clean >/dev/null 2>&1"
 
-	k8sClient, restConfig, err := up.K8sClientProvider.Provide(okteto.Context().Cfg)
+	k8sClient, restConfig, err := up.K8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		oktetoLog.Infof("failed to clean session: %s", err)
 		return
@@ -409,7 +409,7 @@ func (up *upContext) RunCommand(ctx context.Context, cmd []string) error {
 		return err
 	}
 
-	k8sClient, restConfig, err := up.K8sClientProvider.Provide(okteto.Context().Cfg)
+	k8sClient, restConfig, err := up.K8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		return err
 	}
@@ -459,7 +459,7 @@ func (up *upContext) RunCommand(ctx context.Context, cmd []string) error {
 }
 
 func (up *upContext) checkOktetoStartError(ctx context.Context, msg string) error {
-	k8sClient, _, err := up.K8sClientProvider.Provide(okteto.Context().Cfg)
+	k8sClient, _, err := up.K8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		return err
 	}

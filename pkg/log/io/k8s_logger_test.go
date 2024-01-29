@@ -11,40 +11,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package env
+package io
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v2"
+	"github.com/stretchr/testify/require"
 )
 
-func TestEnvFileUnmarshalling(t *testing.T) {
-	tests := []struct {
-		name     string
-		data     []byte
-		expected Files
-	}{
-		{
-			"single value",
-			[]byte(`.testEnv`),
-			Files{".testEnv"},
-		},
-		{
-			"testEnv files list",
-			[]byte("\n  - .testEnv\n  - .env2"),
-			Files{".testEnv", ".env2"},
-		},
-	}
+func TestK8sLoggerInitialisation(t *testing.T) {
+	k := NewK8sLogger()
+	require.NotNil(t, k)
+	require.Equal(t, os.Stdout, k.out.out)
+	require.Equal(t, os.Stdin, k.in.in)
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := make(Files, 0)
+func Test_IsEnabled(t *testing.T) {
+	k := NewK8sLogger()
+	require.False(t, k.IsEnabled())
 
-			err := yaml.UnmarshalStrict(tt.data, &result)
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
+	t.Setenv(OktetoK8sLoggerEnabledEnvVar, "true")
+	require.True(t, k.IsEnabled())
+}
+
+func Test_GetK8sLoggerFilePath(t *testing.T) {
+	okHome := filepath.Clean("test-okteto-home")
+	k8sLogsFilepath := GetK8sLoggerFilePath(okHome)
+	assert.Equal(t, filepath.Join(okHome, K8sLogsFileName), k8sLogsFilepath)
 }

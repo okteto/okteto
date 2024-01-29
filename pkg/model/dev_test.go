@@ -1431,7 +1431,7 @@ func Test_expandEnvFiles(t *testing.T) {
 			name: "add new envs",
 			dev: &Dev{
 				Environment: env.Environment{},
-				EnvFiles:    env.EnvFiles{},
+				EnvFiles:    env.Files{},
 			},
 			envs: []byte("key1=value1"),
 			expected: env.Environment{
@@ -1450,7 +1450,7 @@ func Test_expandEnvFiles(t *testing.T) {
 						Value: "value1",
 					},
 				},
-				EnvFiles: env.EnvFiles{},
+				EnvFiles: env.Files{},
 			},
 			envs: []byte("key1=value100"),
 			expected: env.Environment{
@@ -1464,7 +1464,7 @@ func Test_expandEnvFiles(t *testing.T) {
 			name: "empty env - infer value",
 			dev: &Dev{
 				Environment: env.Environment{},
-				EnvFiles:    env.EnvFiles{},
+				EnvFiles:    env.Files{},
 			},
 			envs: []byte("OKTETO_TEST="),
 			expected: env.Environment{
@@ -1478,7 +1478,7 @@ func Test_expandEnvFiles(t *testing.T) {
 			name: "empty env - empty value",
 			dev: &Dev{
 				Environment: env.Environment{},
-				EnvFiles:    env.EnvFiles{},
+				EnvFiles:    env.Files{},
 			},
 			envs:     []byte("OKTETO_TEST2="),
 			expected: env.Environment{},
@@ -1493,7 +1493,7 @@ func Test_expandEnvFiles(t *testing.T) {
 			}
 			defer os.RemoveAll(file.Name())
 
-			tt.dev.EnvFiles = env.EnvFiles{file.Name()}
+			tt.dev.EnvFiles = env.Files{file.Name()}
 
 			t.Setenv("OKTETO_TEST", "myvalue")
 
@@ -1529,7 +1529,7 @@ func TestPrepare(t *testing.T) {
 		{
 			name: "with missing envFiles",
 			dev: &Dev{
-				EnvFiles: env.EnvFiles{".notfound"},
+				EnvFiles: env.Files{".notfound"},
 			},
 			input: input{
 				manifestPath: "okteto.yml",

@@ -187,9 +187,9 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			okteto.CurrentStore = &okteto.OktetoContextStore{
+			okteto.CurrentStore = &okteto.ContextStore{
 				CurrentContext: "test",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"test": {
 						Username: tt.username,
 					},

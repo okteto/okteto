@@ -47,13 +47,14 @@ type analyticsTrackerInterface interface {
 	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
 }
 
-// ManifestCommand has all the namespaces subcommands
-type ManifestCommand struct {
+// Command has all the namespaces subcommands
+type Command struct {
 	manifest          *model.Manifest
-	K8sClientProvider okteto.K8sClientProvider
+	K8sClientProvider okteto.K8sClientProviderWithLogger
 	AnalyticsTracker  analyticsTrackerInterface
 
-	IoCtrl *io.IOController
+	IoCtrl    *io.Controller
+	K8sLogger *io.K8sLogger
 }
 
 // InitOpts defines the option for manifest init
@@ -73,13 +74,13 @@ type InitOpts struct {
 }
 
 // RunInitV2 initializes a new okteto manifest
-func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manifest, error) {
-	c, _, er := mc.K8sClientProvider.Provide(okteto.Context().Cfg)
+func (mc *Command) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manifest, error) {
+	c, _, er := mc.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, mc.K8sLogger)
 	if er != nil {
 		return nil, er
 	}
 	inferer := devenvironment.NewNameInferer(c)
-	name := inferer.InferName(ctx, opts.Workdir, okteto.Context().Namespace, opts.DevPath)
+	name := inferer.InferName(ctx, opts.Workdir, okteto.GetContext().Namespace, opts.DevPath)
 	os.Setenv(constants.OktetoNameEnvVar, name)
 	manifest := model.NewManifest()
 	var err error
@@ -127,18 +128,18 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 		}
 		oktetoLog.Success("Okteto manifest (%s) deploy and build configured successfully", opts.DevPath)
 
-		c, _, err := mc.K8sClientProvider.Provide(okteto.Context().Cfg)
+		c, _, err := mc.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, mc.K8sLogger)
 		if err != nil {
 			return nil, err
 		}
 		namespace := manifest.Namespace
 		if namespace == "" {
-			namespace = okteto.Context().Namespace
+			namespace = okteto.GetContext().Namespace
 		}
 		isDeployed := pipeline.IsDeployed(ctx, manifest.Name, namespace, c)
 		deployAnswer := false
 		if !isDeployed && !opts.AutoDeploy {
-			deployAnswer, err = utils.AskYesNo("Do you want to launch your development environment?", utils.YesNoDefault_Yes)
+			deployAnswer, err = utils.AskYesNo("Do you want to deploy your development environment?", utils.YesNoDefault_Yes)
 			if err != nil {
 				return nil, err
 			}
@@ -180,7 +181,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 	return manifest, nil
 }
 
-func (*ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.Manifest, error) {
+func (*Command) configureManifestDeployAndBuild(cwd string) (*model.Manifest, error) {
 
 	composeFiles := utils.GetStackFiles(cwd)
 	if len(composeFiles) > 0 {
@@ -217,12 +218,12 @@ func (*ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.Mani
 
 }
 
-func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
+func (mc *Command) deploy(ctx context.Context, opts *InitOpts) error {
 	pc, err := pipelineCMD.NewCommand()
 	if err != nil {
 		return err
 	}
-	c := &deploy.DeployCommand{
+	c := &deploy.Command{
 		GetDeployer:        deploy.GetDeployer,
 		GetManifest:        mc.getManifest,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
@@ -230,9 +231,9 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		Builder:            buildv2.NewBuilderFromScratch(mc.AnalyticsTracker, mc.IoCtrl),
 		GetExternalControl: deploy.NewDeployExternalK8sControl,
 		Fs:                 afero.NewOsFs(),
-		CfgMapHandler:      deploy.NewConfigmapHandler(mc.K8sClientProvider),
+		CfgMapHandler:      deploy.NewConfigmapHandler(mc.K8sClientProvider, mc.K8sLogger),
 		PipelineCMD:        pc,
-		DeployWaiter:       deploy.NewDeployWaiter(mc.K8sClientProvider),
+		DeployWaiter:       deploy.NewDeployWaiter(mc.K8sClientProvider, mc.K8sLogger),
 		EndpointGetter:     deploy.NewEndpointGetter,
 		IoCtrl:             mc.IoCtrl,
 	}
@@ -250,7 +251,7 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 	return nil
 }
 
-func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, namespace string) error {
+func (mc *Command) configureDevsByResources(ctx context.Context, namespace string) error {
 	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
@@ -381,8 +382,8 @@ func createFromCompose(composePath string) (*model.Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	manifest.Context = okteto.Context().Name
-	manifest.Namespace = okteto.Context().Namespace
+	manifest.Context = okteto.GetContext().Name
+	manifest.Namespace = okteto.GetContext().Namespace
 
 	for _, build := range manifest.Build {
 		context, err := filepath.Abs(build.Context)
@@ -433,13 +434,13 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (build.M
 		var name string
 		var buildInfo *build.Info
 		if dockerfile == dockerfileName {
-			c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+			c, _, err := okteto.NewK8sClientProvider().Provide(okteto.GetContext().Cfg)
 			if err != nil {
 				return nil, err
 			}
 			inferer := devenvironment.NewNameInferer(c)
 			// In this case, the path is empty because we are inferring the names from Dockerfiles, so no manifest
-			name = inferer.InferName(context.Background(), cwd, okteto.Context().Namespace, "")
+			name = inferer.InferName(context.Background(), cwd, okteto.GetContext().Namespace, "")
 			buildInfo = &build.Info{
 				Context:    ".",
 				Dockerfile: dockerfile,
@@ -506,7 +507,7 @@ func inferDevsSection(cwd string) (model.ManifestDevs, error) {
 	return devs, nil
 }
 
-func (mc *ManifestCommand) getManifest(path string) (*model.Manifest, error) {
+func (mc *Command) getManifest(path string) (*model.Manifest, error) {
 	if mc.manifest != nil {
 		// Deepcopy so it does not get overwritten these changes
 		manifest := *mc.manifest

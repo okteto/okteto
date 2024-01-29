@@ -150,17 +150,17 @@ func (u *UpMetricsMetadata) ErrSync() {
 	u.errSync = true
 }
 
-// ErrResetDatabase sets to true the property errResetDatabase
+// ErrSyncResetDatabase sets to true the property errResetDatabase
 func (u *UpMetricsMetadata) ErrSyncResetDatabase() {
 	u.errSyncResetDatabase = true
 }
 
-// ErrResetDatabase sets to true the property errResetDatabase
+// ErrSyncInsufficientSpace sets to true the property errResetDatabase
 func (u *UpMetricsMetadata) ErrSyncInsufficientSpace() {
 	u.errSyncInsufficientSpace = true
 }
 
-// ErrResetDatabase sets to true the property errResetDatabase
+// ErrSyncLostSyncthing sets to true the property errResetDatabase
 func (u *UpMetricsMetadata) ErrSyncLostSyncthing() {
 	u.errSyncLostSyncthing = true
 }
@@ -195,6 +195,6 @@ func (u *UpMetricsMetadata) ExecDuration(duration time.Duration) {
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
-func (a *AnalyticsTracker) TrackUp(m *UpMetricsMetadata) {
+func (a *Tracker) TrackUp(m *UpMetricsMetadata) {
 	a.trackFn(upEvent, m.success, m.toProps())
 }

@@ -172,9 +172,9 @@ func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInter
 		ioCtrl:           io.NewIOController(),
 		analyticsTracker: analyticsTracker,
 		smartBuildCtrl:   smartbuild.NewSmartBuildCtrl(fakeConfigRepo{}, registry, afero.NewMemMapFs(), io.NewIOController()),
-		oktetoContext: &okteto.OktetoContextStateless{
-			Store: &okteto.OktetoContextStore{
-				Contexts: map[string]*okteto.OktetoContext{
+		oktetoContext: &okteto.ContextStateless{
+			Store: &okteto.ContextStore{
+				Contexts: map[string]*okteto.Context{
 					"test": {
 						Namespace: "test",
 						IsOkteto:  true,

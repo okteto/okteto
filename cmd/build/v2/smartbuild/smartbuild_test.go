@@ -157,7 +157,7 @@ func TestGetProjectHash(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sbc := SmartBuildCtrl{
+			sbc := Ctrl{
 				ioCtrl: io.NewIOController(),
 				hasher: fakeHasher{
 					hash: tt.input.hash,
@@ -211,7 +211,7 @@ func TestGetServiceHash(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sbc := SmartBuildCtrl{
+			sbc := Ctrl{
 				ioCtrl: io.NewIOController(),
 				hasher: fakeHasher{
 					hash: tt.input.hash,
@@ -292,7 +292,7 @@ func TestGetBuildHash(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sbc := SmartBuildCtrl{
+			sbc := Ctrl{
 				ioCtrl: io.NewIOController(),
 				hasher: fakeHasher{
 					hash: tt.input.hash,
@@ -369,7 +369,7 @@ func TestGetBuildCommit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sbc := SmartBuildCtrl{
+			sbc := Ctrl{
 				ioCtrl: io.NewIOController(),
 				hasher: fakeHasher{
 					hash: tt.input.hash,
@@ -432,7 +432,7 @@ func TestCloneGlobalImageToDev(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sbc := SmartBuildCtrl{
+			sbc := Ctrl{
 				ioCtrl: io.NewIOController(),
 				registryController: fakeRegistryController{
 					err:              tt.input.err,

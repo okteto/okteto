@@ -40,7 +40,7 @@ import (
 
 func Test_waitUntilExitOrInterrupt(t *testing.T) {
 	up := upContext{
-		Options:           &UpOptions{},
+		Options:           &Options{},
 		K8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	up.CommandResult = make(chan error, 1)
@@ -211,26 +211,26 @@ func Test_printDisplayContext(t *testing.T) {
 func TestEnvVarIsAddedProperlyToDevContainerWhenIsSetFromCmd(t *testing.T) {
 	var tests = []struct {
 		dev                     *model.Dev
-		upOptions               *UpOptions
+		upOptions               *Options
 		name                    string
 		expectedNumManifestEnvs int
 	}{
 		{
 			name:                    "Add only env vars from cmd to dev container",
 			dev:                     &model.Dev{},
-			upOptions:               &UpOptions{Envs: []string{"VAR1=value1", "VAR2=value2"}},
+			upOptions:               &Options{Envs: []string{"VAR1=value1", "VAR2=value2"}},
 			expectedNumManifestEnvs: 2,
 		},
 		{
 			name:                    "Add only env vars from cmd to dev container using envsubst format",
 			dev:                     &model.Dev{},
-			upOptions:               &UpOptions{Envs: []string{"VAR1=value1", "VAR2=${var=$USER}"}},
+			upOptions:               &Options{Envs: []string{"VAR1=value1", "VAR2=${var=$USER}"}},
 			expectedNumManifestEnvs: 2,
 		},
 		{
 			name:                    "Add only env vars from cmd to dev container using non ascii characters",
 			dev:                     &model.Dev{},
-			upOptions:               &UpOptions{Envs: []string{"PASS=~$#@"}},
+			upOptions:               &Options{Envs: []string{"PASS=~$#@"}},
 			expectedNumManifestEnvs: 1,
 		},
 		{
@@ -243,7 +243,7 @@ func TestEnvVarIsAddedProperlyToDevContainerWhenIsSetFromCmd(t *testing.T) {
 					},
 				},
 			},
-			upOptions:               &UpOptions{Envs: []string{"VAR1=value1", "VAR2=value2"}},
+			upOptions:               &Options{Envs: []string{"VAR1=value1", "VAR2=value2"}},
 			expectedNumManifestEnvs: 3,
 		},
 		{
@@ -256,7 +256,7 @@ func TestEnvVarIsAddedProperlyToDevContainerWhenIsSetFromCmd(t *testing.T) {
 					},
 				},
 			},
-			upOptions:               &UpOptions{Envs: []string{"VAR_TO_OVERWRITE=newValue", "VAR2=value2"}},
+			upOptions:               &Options{Envs: []string{"VAR_TO_OVERWRITE=newValue", "VAR2=value2"}},
 			expectedNumManifestEnvs: 2,
 		},
 	}
@@ -278,38 +278,38 @@ func TestEnvVarIsAddedProperlyToDevContainerWhenIsSetFromCmd(t *testing.T) {
 func TestEnvVarIsNotAddedWhenHasBuiltInOktetoEnvVarsFormat(t *testing.T) {
 	var tests = []struct {
 		dev                     *model.Dev
-		upOptions               *UpOptions
+		upOptions               *Options
 		name                    string
 		expectedNumManifestEnvs int
 	}{
 		{
 			name:                    "Unable to set built-in okteto environment variable OKTETO_NAMESPACE",
 			dev:                     &model.Dev{},
-			upOptions:               &UpOptions{Envs: []string{"OKTETO_NAMESPACE=value"}},
+			upOptions:               &Options{Envs: []string{"OKTETO_NAMESPACE=value"}},
 			expectedNumManifestEnvs: 2,
 		},
 		{
 			name:                    "Unable to set built-in okteto environment variable OKTETO_GIT_BRANCH",
 			dev:                     &model.Dev{},
-			upOptions:               &UpOptions{Envs: []string{"OKTETO_GIT_BRANCH=value"}},
+			upOptions:               &Options{Envs: []string{"OKTETO_GIT_BRANCH=value"}},
 			expectedNumManifestEnvs: 2,
 		},
 		{
 			name:                    "Unable to set built-in okteto environment variable OKTETO_GIT_COMMIT",
 			dev:                     &model.Dev{},
-			upOptions:               &UpOptions{Envs: []string{"OKTETO_GIT_COMMIT=value"}},
+			upOptions:               &Options{Envs: []string{"OKTETO_GIT_COMMIT=value"}},
 			expectedNumManifestEnvs: 2,
 		},
 		{
 			name:                    "Unable to set built-in okteto environment variable OKTETO_REGISTRY_URL",
 			dev:                     &model.Dev{},
-			upOptions:               &UpOptions{Envs: []string{"OKTETO_REGISTRY_URL=value"}},
+			upOptions:               &Options{Envs: []string{"OKTETO_REGISTRY_URL=value"}},
 			expectedNumManifestEnvs: 2,
 		},
 		{
 			name:                    "Unable to set built-in okteto environment variable BUILDKIT_HOST",
 			dev:                     &model.Dev{},
-			upOptions:               &UpOptions{Envs: []string{"BUILDKIT_HOST=value"}},
+			upOptions:               &Options{Envs: []string{"BUILDKIT_HOST=value"}},
 			expectedNumManifestEnvs: 2,
 		},
 	}
@@ -343,7 +343,7 @@ func TestCommandAddedToUpOptionsWhenPassedAsFlag(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			cmd := Up(nil, io.NewIOController())
+			cmd := Up(nil, io.NewIOController(), nil)
 			for _, val := range tt.command {
 				err := cmd.Flags().Set("command", val)
 				if err != nil {
@@ -487,7 +487,7 @@ func TestUpdateKubetoken(t *testing.T) {
 	tt := []struct {
 		expected    error
 		f           *client.FakeOktetoClient
-		context     *okteto.OktetoContextStore
+		context     *okteto.ContextStore
 		expectedCfg *api.Config
 		name        string
 	}{
@@ -505,9 +505,9 @@ func TestUpdateKubetoken(t *testing.T) {
 					},
 				}),
 			},
-			context: &okteto.OktetoContextStore{
+			context: &okteto.ContextStore{
 				CurrentContext: "test",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"test": {
 						UserID: "test",
 						Cfg: &api.Config{
@@ -538,9 +538,9 @@ func TestUpdateKubetoken(t *testing.T) {
 					},
 				}),
 			},
-			context: &okteto.OktetoContextStore{
+			context: &okteto.ContextStore{
 				CurrentContext: "test",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"test": {
 						UserID: "test",
 						Cfg: &api.Config{
@@ -573,9 +573,9 @@ func TestUpdateKubetoken(t *testing.T) {
 					},
 				}),
 			},
-			context: &okteto.OktetoContextStore{
+			context: &okteto.ContextStore{
 				CurrentContext: "123",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"test": {
 						UserID: "test",
 						Cfg: &api.Config{
@@ -607,9 +607,9 @@ func TestUpdateKubetoken(t *testing.T) {
 					},
 				}),
 			},
-			context: &okteto.OktetoContextStore{
+			context: &okteto.ContextStore{
 				CurrentContext: "test",
-				Contexts: map[string]*okteto.OktetoContext{
+				Contexts: map[string]*okteto.Context{
 					"test": {
 						UserID: "test",
 						Cfg: &api.Config{

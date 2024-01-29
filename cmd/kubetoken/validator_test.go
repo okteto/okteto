@@ -31,7 +31,7 @@ func TestPreReqValidator(t *testing.T) {
 		k8sClientProvider    okteto.K8sClientProvider
 		oktetoClientProvider oktetoClientProvider
 		ctx                  context.Context
-		currentStore         *okteto.OktetoContextStore
+		currentStore         *okteto.ContextStore
 		ctxName              string
 		ns                   string
 	}
@@ -50,8 +50,8 @@ func TestPreReqValidator(t *testing.T) {
 			input: input{
 				ctxName: "",
 				ctx:     ctx,
-				currentStore: &okteto.OktetoContextStore{
-					Contexts:       map[string]*okteto.OktetoContext{},
+				currentStore: &okteto.ContextStore{
+					Contexts:       map[string]*okteto.Context{},
 					CurrentContext: "",
 				},
 			},
@@ -62,8 +62,8 @@ func TestPreReqValidator(t *testing.T) {
 			input: input{
 				ctxName: "https://okteto.com",
 				ns:      "test",
-				currentStore: &okteto.OktetoContextStore{
-					Contexts: map[string]*okteto.OktetoContext{
+				currentStore: &okteto.ContextStore{
+					Contexts: map[string]*okteto.Context{
 						"https://okteto.com": {
 							IsOkteto: true,
 						},
@@ -84,8 +84,8 @@ func TestPreReqValidator(t *testing.T) {
 			input: input{
 				ctxName: "https://okteto.com",
 				ns:      "test",
-				currentStore: &okteto.OktetoContextStore{
-					Contexts: map[string]*okteto.OktetoContext{
+				currentStore: &okteto.ContextStore{
+					Contexts: map[string]*okteto.Context{
 						"https://okteto.com": {
 							IsOkteto: true,
 						},
@@ -106,8 +106,8 @@ func TestPreReqValidator(t *testing.T) {
 				ctxName: "https://okteto.com",
 				ns:      "test",
 				ctx:     ctx,
-				currentStore: &okteto.OktetoContextStore{
-					Contexts: map[string]*okteto.OktetoContext{
+				currentStore: &okteto.ContextStore{
+					Contexts: map[string]*okteto.Context{
 						"https://okteto.com": {
 							IsOkteto: true,
 						},
@@ -135,11 +135,11 @@ func TestPreReqValidator(t *testing.T) {
 				withK8sClientProvider(tc.input.k8sClientProvider),
 				withOktetoClientProvider(tc.input.oktetoClientProvider),
 			)
-			v.getContextStore = func() *okteto.OktetoContextStore {
+			v.getContextStore = func() *okteto.ContextStore {
 				return tc.input.currentStore
 			}
-			v.getCtxResource = func(s1, s2 string) *contextCMD.ContextOptions {
-				return &contextCMD.ContextOptions{
+			v.getCtxResource = func(s1, s2 string) *contextCMD.Options {
+				return &contextCMD.Options{
 					Context:   s1,
 					Namespace: s2,
 				}
@@ -161,8 +161,8 @@ func TestCtxValidator(t *testing.T) {
 	cancelledCtx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
 			"https://okteto.com": {
 				IsOkteto: true,
 			},
@@ -229,9 +229,9 @@ func TestCtxValidator(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			v := newCtxValidator(&contextCMD.ContextOptions{
+			v := newCtxValidator(&contextCMD.Options{
 				Context: tc.input.ctxName,
-			}, tc.input.k8sClientProvider, func() *okteto.OktetoContextStore {
+			}, tc.input.k8sClientProvider, func() *okteto.ContextStore {
 				return okteto.CurrentStore
 			})
 			err := v.validate(tc.input.ctx)
@@ -313,7 +313,7 @@ func TestOktetoKubetokenSupportValidation(t *testing.T) {
 			fakeK8sClientProvider := fakeK8sClientProvider{
 				client: tc.input.k8sClient,
 			}
-			ctxResource := &contextCMD.ContextOptions{
+			ctxResource := &contextCMD.Options{
 				Context:   tc.input.ctxName,
 				Namespace: tc.input.ns,
 			}

@@ -19,6 +19,7 @@ import (
 
 	sloglogrus "github.com/samber/slog-logrus/v2"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 const (
@@ -82,6 +83,38 @@ func newOktetoLogger() *oktetoLogger {
 	}
 }
 
+// newFileLogger returns an initialised oktetoLogger that logs to file
+func newFileLogger(logPath string) *oktetoLogger {
+	leveler := new(slog.LevelVar)
+	leveler.Set(slog.LevelDebug)
+
+	logrusLogger := logrus.New()
+	logrusLogger.SetLevel(levelMap[slog.LevelDebug])
+	logrusFormatter := &logrus.TextFormatter{
+		DisableColors: true,
+		FullTimestamp: true,
+	}
+	logrusLogger.SetFormatter(logrusFormatter)
+
+	rolling := &lumberjack.Logger{
+		Filename:   logPath,
+		MaxSize:    1, // megabytes
+		MaxBackups: 3,
+		MaxAge:     28, // days
+		Compress:   true,
+	}
+	logrusLogger.SetOutput(rolling)
+
+	logger := slog.New(sloglogrus.Option{Level: leveler, Logger: logrusLogger}.NewLogrusHandler())
+	return &oktetoLogger{
+		slogLeveler: leveler,
+		Logger:      logger,
+
+		logrusLogger:    logrusLogger,
+		logrusFormatter: logrusFormatter,
+	}
+}
+
 // SetLevel sets the level of the logger
 func (ol *oktetoLogger) SetLevel(lvl string) {
 	slogLevel, err := parseLevel(lvl)
@@ -108,12 +141,12 @@ func (ol *oktetoLogger) SetStage(stage string) {
 	}
 }
 
-// Info logs an info message
+// Infof logs an info message
 func (ol *oktetoLogger) Infof(format string, args ...any) {
 	ol.logrusLogger.Info(fmt.Sprintf(format, args...))
 }
 
-// Debug logs a debug message
+// Debugf logs a debug message
 func (ol *oktetoLogger) Debugf(format string, args ...any) {
 	ol.logrusLogger.Debug(fmt.Sprintf(format, args...))
 }

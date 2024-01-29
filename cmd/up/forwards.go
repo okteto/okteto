@@ -41,7 +41,7 @@ func (up *upContext) forwards(ctx context.Context) error {
 		return up.sshForwards(ctx)
 	}
 
-	k8sClient, restConfig, err := up.K8sClientProvider.Provide(okteto.Context().Cfg)
+	k8sClient, restConfig, err := up.K8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func (up *upContext) forwards(ctx context.Context) error {
 }
 
 func (up *upContext) sshForwards(ctx context.Context) error {
-	k8sClient, restConfig, err := up.K8sClientProvider.Provide(okteto.Context().Cfg)
+	k8sClient, restConfig, err := up.K8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		return err
 	}

@@ -45,7 +45,7 @@ import (
 // OktetoBuilderInterface runs the build of an image
 type OktetoBuilderInterface interface {
 	GetBuilder() string
-	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.IOController) error
+	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error
 }
 
 type oktetoRegistryInterface interface {
@@ -82,18 +82,20 @@ type OktetoBuilder struct {
 	V1Builder        *buildv1.OktetoBuilder
 	oktetoContext    buildCmd.OktetoContextInterface
 
-	smartBuildCtrl *smartbuild.SmartBuildCtrl
+	smartBuildCtrl *smartbuild.Ctrl
 
 	// buildEnvironments are the environment variables created by the build steps
 	buildEnvironments map[string]string
 
-	ioCtrl *io.IOController
+	ioCtrl    *io.Controller
+	k8sLogger *io.K8sLogger
+
 	// lock is a mutex to provide buildEnvironments map safe concurrency
 	lock sync.RWMutex
 }
 
 // NewBuilder creates a new okteto builder
-func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.IOController, analyticsTracker analyticsTrackerInterface, okCtx okteto.OktetoContextInterface) *OktetoBuilder {
+func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.Controller, analyticsTracker analyticsTrackerInterface, okCtx okteto.ContextInterface, k8sLogger *io.K8sLogger) *OktetoBuilder {
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
 	wd, err := wdCtrl.Get()
 	if err != nil {
@@ -114,14 +116,15 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 		ioCtrl:            ioCtrl,
 		smartBuildCtrl:    smartbuild.NewSmartBuildCtrl(gitRepo, registry, config.fs, ioCtrl),
 		oktetoContext:     okCtx,
+		k8sLogger:         k8sLogger,
 	}
 }
 
 // NewBuilderFromScratch creates a new okteto builder
-func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *io.IOController) *OktetoBuilder {
+func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *io.Controller) *OktetoBuilder {
 	builder := &buildCmd.OktetoBuilder{
-		OktetoContext: &okteto.OktetoContextStateless{
-			Store: okteto.ContextStore(),
+		OktetoContext: &okteto.ContextStateless{
+			Store: okteto.GetContextStore(),
 		},
 		Fs: afero.NewOsFs(),
 	}
@@ -153,8 +156,8 @@ func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *i
 		analyticsTracker:  analyticsTracker,
 		ioCtrl:            ioCtrl,
 		smartBuildCtrl:    smartbuild.NewSmartBuildCtrl(gitRepo, reg, config.fs, ioCtrl),
-		oktetoContext: &okteto.OktetoContextStateless{
-			Store: okteto.ContextStore(),
+		oktetoContext: &okteto.ContextStateless{
+			Store: okteto.GetContextStore(),
 		},
 	}
 }
@@ -185,7 +188,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		if err != nil {
 			return err
 		}
-		c, _, err := okteto.NewK8sClientProvider().Provide(ob.oktetoContext.GetCurrentCfg())
+		c, _, err := okteto.NewK8sClientProviderWithLogger(ob.k8sLogger).Provide(ob.oktetoContext.GetCurrentCfg())
 		if err != nil {
 			return err
 		}
