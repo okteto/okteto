@@ -30,11 +30,14 @@ import (
 	"github.com/moby/buildkit/session/auth/authprovider"
 	"github.com/moby/buildkit/session/sshforward/sshprovider"
 	"github.com/moby/buildkit/util/progress/progressui"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/pkg/errors"
+	"github.com/spf13/afero"
 	"golang.org/x/oauth2"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/credentials/oauth"
@@ -47,7 +50,35 @@ const (
 type buildWriter struct{}
 
 // getSolveOpt returns the buildkit solve options
-func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface) (*client.SolveOpt, error) {
+func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface, secretTempFolder string, fs afero.Fs) (*client.SolveOpt, error) {
+
+	if buildOptions.Tag != "" {
+		err := validateImage(okctx, buildOptions.Tag)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	imageCtrl := registry.NewImageCtrl(GetRegistryConfigFromOktetoConfig(okctx))
+	if okctx.IsOkteto() {
+		buildOptions.DevTag = imageCtrl.ExpandOktetoDevRegistry(registry.GetDevTagFromGlobal(buildOptions.Tag))
+		buildOptions.Tag = imageCtrl.ExpandOktetoDevRegistry(buildOptions.Tag)
+		buildOptions.Tag = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.Tag)
+		for i := range buildOptions.CacheFrom {
+			buildOptions.CacheFrom[i] = imageCtrl.ExpandOktetoDevRegistry(buildOptions.CacheFrom[i])
+			buildOptions.CacheFrom[i] = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.CacheFrom[i])
+		}
+		for i := range buildOptions.ExportCache {
+			buildOptions.ExportCache[i] = imageCtrl.ExpandOktetoDevRegistry(buildOptions.ExportCache[i])
+			buildOptions.ExportCache[i] = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.ExportCache[i])
+		}
+	}
+
+	// inject secrets to buildkit from temp folder
+	if err := replaceSecretsSourceEnvWithTempFile(afero.NewOsFs(), secretTempFolder, buildOptions); err != nil {
+		return nil, fmt.Errorf("%w: secret should have the format 'id=mysecret,src=/local/secret'", err)
+	}
+
 	var localDirs map[string]string
 	var frontendAttrs map[string]string
 
@@ -56,8 +87,8 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface)
 		if buildOptions.File == "" {
 			buildOptions.File = filepath.Join(buildOptions.Path, "Dockerfile")
 		}
-		if _, err := os.Stat(buildOptions.File); os.IsNotExist(err) {
-			return nil, fmt.Errorf("Dockerfile '%s' does not exist", buildOptions.File)
+		if _, err := fs.Stat(buildOptions.File); os.IsNotExist(err) {
+			return nil, fmt.Errorf("file '%s' not found: %w", buildOptions.File, err)
 		}
 		localDirs = map[string]string{
 			"context":    buildOptions.Path,
@@ -362,6 +393,58 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 		}
 	}
 	return nil
+}
+
+func runAndHandleBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, buildOptions *types.BuildOptions, okCtx OktetoContextInterface, ioCtrl *io.Controller) error {
+	err := solveBuild(ctx, c, opt, buildOptions.OutputMode, ioCtrl)
+	if err != nil {
+		oktetoLog.Infof("Failed to build image: %s", err.Error())
+	}
+	if isTransientError(err) {
+		oktetoLog.Yellow(`Failed to push '%s' to the registry:
+  %s,
+  Retrying ...`, buildOptions.Tag, err.Error())
+		success := true
+		err := solveBuild(ctx, c, opt, buildOptions.OutputMode, ioCtrl)
+		if err != nil {
+			success = false
+			oktetoLog.Infof("Failed to build image: %s", err.Error())
+		}
+		err = getErrorMessage(err, buildOptions.Tag)
+		analytics.TrackBuildTransientError(success)
+		return err
+	}
+
+	if err == nil && buildOptions.Tag != "" {
+		tags := strings.Split(buildOptions.Tag, ",")
+		reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(okCtx))
+		for _, tag := range tags {
+			if _, err := reg.GetImageTagWithDigest(tag); err != nil {
+				oktetoLog.Yellow(`Failed to push '%s' metadata to the registry:
+	  %s,
+	  Retrying ...`, buildOptions.Tag, err.Error())
+				success := true
+				err := solveBuild(ctx, c, opt, buildOptions.OutputMode, ioCtrl)
+				if err != nil {
+					success = false
+					oktetoLog.Infof("Failed to build image: %s", err.Error())
+				}
+				err = getErrorMessage(err, buildOptions.Tag)
+				analytics.TrackBuildPullError(success)
+				return err
+			}
+		}
+	}
+
+	var tag string
+	if buildOptions != nil {
+		tag = buildOptions.Tag
+		if buildOptions.Manifest != nil && buildOptions.Manifest.Deploy != nil {
+			tag = buildOptions.Manifest.Deploy.Image
+		}
+	}
+	err = getErrorMessage(err, tag)
+	return err
 }
 
 func (*buildWriter) Write(p []byte) (int, error) {

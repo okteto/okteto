@@ -44,7 +44,10 @@ commands:
     steps:
       - run:
           name: Run build integration tests
-          command: make integration-build
+          command: |
+            export DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
+            export DEPOT_TOKEN=$DEPOT_TOKEN
+            make integration-build
 
   integration-deploy:
     steps:
@@ -175,12 +178,12 @@ jobs:
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
             /usr/local/bin/okteto login --token ${API_STAGING_TOKEN}
+      - integration-build
       - integration-deploy
       - integration-up
       - integration-actions
       - integration-okteto
       - integration-deprecated
-      - integration-build
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
@@ -262,6 +265,8 @@ jobs:
             OKTETO_SKIP_CLEANUP: 'true'
             OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
           command: |
+            $env:DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
+            $env:DEPOT_TOKEN=$DEPOT_TOKEN
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
       - run:

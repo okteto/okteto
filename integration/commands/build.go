@@ -18,6 +18,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 )
@@ -36,6 +37,12 @@ type BuildOptions struct {
 
 // RunOktetoBuild runs an okteto build command
 func RunOktetoBuild(oktetoPath string, buildOptions *BuildOptions) error {
+	cmd := GetOktetoBuildCmd(oktetoPath, buildOptions)
+	return ExecOktetoBuildCmd(cmd)
+}
+
+// GetOktetoBuildCmd returns an exec.Cmd with the needed values given buildOpts
+func GetOktetoBuildCmd(oktetoPath string, buildOptions *BuildOptions) *exec.Cmd {
 	cmd := exec.Command(oktetoPath)
 	cmd.Args = append(cmd.Args, "build")
 	if buildOptions.ManifestPath != "" {
@@ -54,6 +61,13 @@ func RunOktetoBuild(oktetoPath string, buildOptions *BuildOptions) error {
 		cmd.Args = append(cmd.Args, buildOptions.SvcsToBuild...)
 	}
 
+	if v := os.Getenv(build.DepotTokenEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", build.DepotTokenEnvVar, v))
+	}
+	if v := os.Getenv(build.DepotProjectEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", build.DepotProjectEnvVar, v))
+	}
+
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
 	}
@@ -69,6 +83,11 @@ func RunOktetoBuild(oktetoPath string, buildOptions *BuildOptions) error {
 		cmd.Args = append(cmd.Args, "--no-cache")
 	}
 
+	return cmd
+}
+
+// ExecOktetoBuildCmd runs an okteto build command
+func ExecOktetoBuildCmd(cmd *exec.Cmd) error {
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("okteto build failed: \nerror: %w \noutput:\n %s", err, string(o))
