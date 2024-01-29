@@ -88,8 +88,6 @@ type runAndHandleBuildFn func(ctx context.Context, c *client.Client, opt *client
 func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, run runAndHandleBuildFn) error {
 	db.ioCtrl.Logger().Info("building your image on depot's machine")
 
-	db.ioCtrl.Logger().Infof("depot token length: %d", len(db.token))
-	db.ioCtrl.Logger().Infof("depot token last 6 chars: %s", db.token[len(db.token)-6:])
 	db.ioCtrl.Logger().Infof("depot project: %s", db.project)
 
 	// Register a new build.
