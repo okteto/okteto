@@ -226,10 +226,10 @@ func TestBuildCommandV2UsingDepot(t *testing.T) {
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
-	expectedAppImage := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
+	expectedAppImage := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.False(t, isImageBuilt(expectedAppImage))
 
-	expectedApiImage := fmt.Sprintf("%s/%s/%s-api:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
+	expectedApiImage := fmt.Sprintf("%s/%s/%s-api:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.False(t, isImageBuilt(expectedApiImage))
 
 	options := &commands.BuildOptions{
