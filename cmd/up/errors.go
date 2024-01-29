@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 // isTransient is an extension of the oktetoErrors.IsTransient, this variant is used to add transient errors dynamically
@@ -33,6 +34,7 @@ func (up *upContext) isTransient(err error) bool {
 			return true
 		}
 		if !isTransientErr && up.unhandledTransientRetryCount < up.unhandledTransientMaxRetries {
+			oktetoLog.Debugf("handling error as transient because okteto up was successfully running before, but it's now failing with: %v (%d of %d)", err, up.unhandledTransientRetryCount, up.unhandledTransientMaxRetries)
 			up.unhandledTransientRetryCount++
 			return true
 		}
