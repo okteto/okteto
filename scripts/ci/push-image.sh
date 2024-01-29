@@ -22,6 +22,22 @@
                 RELEASE_TAG="$commit"
         fi
 
-        okteto build --platform "${PLATFORMS}" --build-arg VERSION_STRING="${RELEASE_TAG}" -t "okteto/okteto:${RELEASE_TAG}" -f Dockerfile .
+        
+        beta_prerel_regex="^beta\.[0-9]+"
+        prerel="$(semver get prerel "${RELEASE_TAG}")"
+
+        tags="okteto/okteto:${RELEASE_TAG},okteto/okteto:dev"
+        
+        # if release tag is  not empty, push the stable image
+        if [ -n "$RELEASE_TAG" ]; then
+                if [ -z "$prerel" ]; then 
+                        tags="${tags},okteto/okteto:stable"
+                elif [[ $prerel =~ $beta_prerel_regex ]]; then
+                        tags="${tags},okteto/okteto:beta"
+                fi
+        fi
+
+        echo "Pushing ${tags} to Docker Hub"
+        okteto build --platform "${PLATFORMS}" --build-arg VERSION_STRING="${RELEASE_TAG}" -t ${tags} -f Dockerfile .
 
 ); }
