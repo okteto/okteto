@@ -82,8 +82,8 @@ type upContext struct {
 	isTerm                bool
 	interruptReceived     bool
 
-	transientMaxRetries int
-	transientRetryCount int
+	unhandledTransientMaxRetries int
+	unhandledTransientRetryCount int
 }
 
 // Forwarder is an interface for the port-forwarding features

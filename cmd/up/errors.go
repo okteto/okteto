@@ -14,9 +14,8 @@
 package up
 
 import (
-	"strings"
-
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"strings"
 )
 
 // isTransient is an extension of the oktetoErrors.IsTransient, this variant is used to add transient errors dynamically
@@ -26,16 +25,17 @@ func (up *upContext) isTransient(err error) bool {
 		return false
 	}
 
+	isTransientErr := oktetoErrors.IsTransient(err)
+
 	if up.success {
 		if strings.Contains(err.Error(), "syncthing local=false didn't respond after") {
 			return true
 		}
-		if up.transientRetryCount < up.transientMaxRetries {
-			up.transientRetryCount++
+		if !isTransientErr && up.unhandledTransientRetryCount < up.unhandledTransientMaxRetries {
+			up.unhandledTransientRetryCount++
 			return true
 		}
 	}
 
-	up.transientRetryCount = 0
-	return oktetoErrors.IsTransient(err)
+	return isTransientErr
 }

@@ -25,10 +25,14 @@ func Test_isTransient(t *testing.T) {
 		up  *upContext
 		err error
 	}
+	type expected struct {
+		isTransient         bool
+		transientRetryCount int
+	}
 	tests := []struct {
 		input    input
 		name     string
-		expected bool
+		expected expected
 	}{
 		{
 			name: "nil error",
@@ -36,7 +40,9 @@ func Test_isTransient(t *testing.T) {
 				err: nil,
 				up:  &upContext{},
 			},
-			expected: false,
+			expected: expected{
+				isTransient: false,
+			},
 		},
 		{
 			name: "non transient error",
@@ -44,7 +50,9 @@ func Test_isTransient(t *testing.T) {
 				err: assert.AnError,
 				up:  &upContext{},
 			},
-			expected: false,
+			expected: expected{
+				isTransient: false,
+			},
 		},
 		{
 			name: "success false - syncthing local=false didn't respond after",
@@ -54,7 +62,9 @@ func Test_isTransient(t *testing.T) {
 					success: false,
 				},
 			},
-			expected: false,
+			expected: expected{
+				isTransient: false,
+			},
 		},
 		{
 			name: "success true - syncthing local=false didn't respond after",
@@ -64,38 +74,48 @@ func Test_isTransient(t *testing.T) {
 					success: true,
 				},
 			},
-			expected: true,
+			expected: expected{
+				isTransient:         true,
+				transientRetryCount: 0,
+			},
 		},
 		{
 			name: "success true - retry any error",
 			input: input{
 				err: assert.AnError,
 				up: &upContext{
-					success:             true,
-					transientMaxRetries: 5,
-					transientRetryCount: 0,
+					success:                      true,
+					unhandledTransientMaxRetries: 5,
+					unhandledTransientRetryCount: 3,
 				},
 			},
-			expected: true,
+			expected: expected{
+				isTransient:         true,
+				transientRetryCount: 4,
+			},
 		},
 		{
 			name: "success false - max retries exceeded",
 			input: input{
 				err: assert.AnError,
 				up: &upContext{
-					success:             true,
-					transientMaxRetries: 5,
-					transientRetryCount: 5,
+					success:                      true,
+					unhandledTransientMaxRetries: 5,
+					unhandledTransientRetryCount: 5,
 				},
 			},
-			expected: false,
+			expected: expected{
+				isTransient:         false,
+				transientRetryCount: 5,
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.input.up.isTransient(tt.input.err)
-			assert.Equal(t, tt.expected, got)
+			isTransientErr := tt.input.up.isTransient(tt.input.err)
+			assert.Equal(t, tt.expected.isTransient, isTransientErr)
+			assert.Equal(t, tt.expected.transientRetryCount, tt.input.up.unhandledTransientRetryCount)
 		})
 	}
 }
