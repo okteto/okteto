@@ -30,7 +30,12 @@ func (up *upContext) isTransient(err error) bool {
 		if strings.Contains(err.Error(), "syncthing local=false didn't respond after") {
 			return true
 		}
+		if up.transientRetryCount < up.transientMaxRetries {
+			up.transientRetryCount++
+			return true
+		}
 	}
 
+	up.transientRetryCount = 0
 	return oktetoErrors.IsTransient(err)
 }

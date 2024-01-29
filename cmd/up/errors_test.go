@@ -66,6 +66,30 @@ func Test_isTransient(t *testing.T) {
 			},
 			expected: true,
 		},
+		{
+			name: "success true - retry any error",
+			input: input{
+				err: assert.AnError,
+				up: &upContext{
+					success:             true,
+					transientMaxRetries: 5,
+					transientRetryCount: 0,
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "success false - max retries exceeded",
+			input: input{
+				err: assert.AnError,
+				up: &upContext{
+					success:             true,
+					transientMaxRetries: 5,
+					transientRetryCount: 5,
+				},
+			},
+			expected: false,
+		},
 	}
 
 	for _, tt := range tests {
