@@ -14,8 +14,9 @@
 package up
 
 import (
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"strings"
+
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 )
 
 // isTransient is an extension of the oktetoErrors.IsTransient, this variant is used to add transient errors dynamically
