@@ -83,8 +83,8 @@ func Test_isDepotEnabled(t *testing.T) {
 func Test_newDepotBuilder(t *testing.T) {
 	projectId := "test-project"
 	token := "test-token"
-	okCtx := &okteto.OktetoContextStateless{}
-	ioCtrl := &io.IOController{}
+	okCtx := &okteto.ContextStateless{}
+	ioCtrl := &io.Controller{}
 
 	builder := newDepotBuilder(projectId, token, okCtx, ioCtrl)
 
@@ -169,9 +169,9 @@ func TestDepotRun(t *testing.T) {
 					}, tt.acquireMachineErr
 				},
 				fs: fakeFs,
-				okCtx: &okteto.OktetoContextStateless{
-					Store: &okteto.OktetoContextStore{
-						Contexts: map[string]*okteto.OktetoContext{
+				okCtx: &okteto.ContextStateless{
+					Store: &okteto.ContextStore{
+						Contexts: map[string]*okteto.Context{
 							"test": {
 								IsOkteto: true,
 							},
@@ -200,7 +200,7 @@ func TestDepotRun(t *testing.T) {
 				Tag:       "okteto.dev/test:okteto",
 				DevTag:    "okteto.dev/test:okteto",
 			}
-			runAndHandle := func(ctx context.Context, c *client.Client, opt *client.SolveOpt, buildOptions *types.BuildOptions, okCtx OktetoContextInterface, ioCtrl *io.IOController) error {
+			runAndHandle := func(ctx context.Context, c *client.Client, opt *client.SolveOpt, buildOptions *types.BuildOptions, okCtx OktetoContextInterface, ioCtrl *io.Controller) error {
 				return nil
 			}
 			err := db.Run(context.Background(), opts, runAndHandle)

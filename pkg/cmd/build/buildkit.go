@@ -395,7 +395,7 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 	return nil
 }
 
-func runAndHandleBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, buildOptions *types.BuildOptions, okCtx OktetoContextInterface, ioCtrl *io.IOController) error {
+func runAndHandleBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, buildOptions *types.BuildOptions, okCtx OktetoContextInterface, ioCtrl *io.Controller) error {
 	err := solveBuild(ctx, c, opt, buildOptions.OutputMode, ioCtrl)
 	if err != nil {
 		oktetoLog.Infof("Failed to build image: %s", err.Error())

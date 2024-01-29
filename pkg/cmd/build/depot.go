@@ -45,7 +45,7 @@ type depotBuilder struct {
 	fs             afero.Fs
 	machine        depotMachineConnector
 	err            error
-	ioCtrl         *io.IOController
+	ioCtrl         *io.Controller
 	newDepotBuild  func(ctx context.Context, req *cliv1.CreateBuildRequest, token string) (build.Build, error)
 	acquireMachine func(ctx context.Context, buildId, token, platform string) (depotMachineConnector, error)
 	token          string
@@ -58,7 +58,7 @@ func isDepotEnabled(depotProject, depotToken string) bool {
 }
 
 // newDepotBuilder creates a new instance of DepotBuilder.
-func newDepotBuilder(projectId, token string, okCtx OktetoContextInterface, ioCtrl *io.IOController) *depotBuilder {
+func newDepotBuilder(projectId, token string, okCtx OktetoContextInterface, ioCtrl *io.Controller) *depotBuilder {
 	return &depotBuilder{
 		ioCtrl:  ioCtrl,
 		token:   token,
@@ -83,7 +83,7 @@ func (db *depotBuilder) release(build build.Build) {
 	}
 }
 
-type runAndHandleBuildFn func(ctx context.Context, c *client.Client, opt *client.SolveOpt, buildOptions *types.BuildOptions, okCtx OktetoContextInterface, ioCtrl *io.IOController) error
+type runAndHandleBuildFn func(ctx context.Context, c *client.Client, opt *client.SolveOpt, buildOptions *types.BuildOptions, okCtx OktetoContextInterface, ioCtrl *io.Controller) error
 
 func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, run runAndHandleBuildFn) error {
 	db.ioCtrl.Logger().Info("building your image on depot's machine")
