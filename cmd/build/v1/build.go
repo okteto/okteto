@@ -65,6 +65,7 @@ func NewBuilderFromScratch(ioCtrl *io.IOController) *OktetoBuilder {
 		OktetoContext: &okteto.OktetoContextStateless{
 			Store: okteto.ContextStore(),
 		},
+		Fs: afero.NewOsFs(),
 	}
 	registry := registry.NewOktetoRegistry(okteto.Config{})
 	return NewBuilder(builder, registry, ioCtrl)
@@ -96,14 +97,6 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 	if exists := filesystem.FileExistsAndNotDir(options.File, afero.NewOsFs()); !exists {
 		return fmt.Errorf("%s: '%s' is not a regular file", oktetoErrors.InvalidDockerfile, options.File)
-	}
-
-	buildMsg := fmt.Sprintf("Building '%s'", options.File)
-	builder := ob.Builder.GetBuilder()
-	if builder == "" {
-		ob.IoCtrl.Out().Infof("%s using your local docker daemon", buildMsg)
-	} else {
-		ob.IoCtrl.Out().Infof("%s in %s...", buildMsg, builder)
 	}
 
 	var err error
