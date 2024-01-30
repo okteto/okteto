@@ -134,7 +134,7 @@ func (up *upContext) activate() error {
 	}
 
 	if err := up.devMode(ctx, app, create); err != nil {
-		if oktetoErrors.IsTransient(err) {
+		if up.isTransient(err) {
 			return err
 		}
 		if _, ok := err.(oktetoErrors.UserError); ok {
@@ -176,6 +176,7 @@ func (up *upContext) activate() error {
 
 	// success means all context is ready to run the activation
 	up.success = true
+	up.unhandledTransientRetryCount = 0
 
 	go func() {
 		output := <-up.cleaned
