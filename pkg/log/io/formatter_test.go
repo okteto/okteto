@@ -59,7 +59,7 @@ func TestPlainFormatter(t *testing.T) {
 
 func TestJSONFormatter(t *testing.T) {
 	formatter := newJSONFormatter()
-	msg := "text message"
+	msg := "text message\n"
 	stage := "stage"
 	formatter.SetStage(stage)
 
@@ -69,7 +69,7 @@ func TestJSONFormatter(t *testing.T) {
 	jsonMessage := &jsonMessage{}
 	json.Unmarshal(output, jsonMessage)
 
-	assert.Equal(t, msg, jsonMessage.Message)
+	assert.Equal(t, "text message", jsonMessage.Message)
 	assert.Equal(t, stage, jsonMessage.Stage)
 	assert.Equal(t, "info", jsonMessage.Level)
 	assert.NotEmpty(t, jsonMessage.Timestamp)

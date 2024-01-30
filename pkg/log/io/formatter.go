@@ -15,6 +15,8 @@ package io
 
 import (
 	"regexp"
+	"strings"
+	"unicode"
 
 	"github.com/sirupsen/logrus"
 )
@@ -85,6 +87,7 @@ func (f *jsonFormatter) SetStage(stage string) {
 
 // Format formats the message for the json
 func (f *jsonFormatter) format(msg string) ([]byte, error) {
+	msg = strings.TrimRightFunc(msg, unicode.IsSpace)
 	entry := &logrus.Entry{
 		Message: msg,
 		Level:   logrus.InfoLevel,

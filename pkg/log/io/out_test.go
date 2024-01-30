@@ -158,7 +158,7 @@ func TestInfof(t *testing.T) {
 	jsonMessage := &jsonMessage{}
 	err := json.Unmarshal(buffer.Bytes(), jsonMessage)
 	require.NoError(t, err)
-	require.Equal(t, "INFO: test\n", jsonMessage.Message)
+	require.Equal(t, "INFO: test", jsonMessage.Message)
 	require.Equal(t, "test", jsonMessage.Stage)
 	require.Equal(t, "info", jsonMessage.Level)
 	require.NotEmpty(t, jsonMessage.Timestamp)
@@ -191,7 +191,7 @@ func TestSuccess(t *testing.T) {
 	jsonMessage := &jsonMessage{}
 	err := json.Unmarshal(buffer.Bytes(), jsonMessage)
 	require.NoError(t, err)
-	require.Equal(t, "SUCCESS: test\n", jsonMessage.Message)
+	require.Equal(t, "SUCCESS: test", jsonMessage.Message)
 	require.Equal(t, "test", jsonMessage.Stage)
 	require.Equal(t, "info", jsonMessage.Level)
 	require.NotEmpty(t, jsonMessage.Timestamp)
