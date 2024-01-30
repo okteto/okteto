@@ -24,13 +24,12 @@
 
         
         beta_prerel_regex="^beta\.[0-9]+"
-        prerel="$(semver get prerel "${RELEASE_TAG}")"
-
+        prerel="$(semver get prerel "${RELEASE_TAG}" || true)"
         tags="okteto/okteto:${RELEASE_TAG},okteto/okteto:dev"
         
         # if release tag is  not empty, push the stable image
         if [ -n "$RELEASE_TAG" ]; then
-                if [ -z "$prerel" ]; then 
+                if [ -n "$prerel" ]; then 
                         tags="${tags},okteto/okteto:stable"
                 elif [[ $prerel =~ $beta_prerel_regex ]]; then
                         tags="${tags},okteto/okteto:beta"
