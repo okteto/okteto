@@ -126,6 +126,7 @@ func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *i
 		OktetoContext: &okteto.OktetoContextStateless{
 			Store: okteto.ContextStore(),
 		},
+		Fs: afero.NewOsFs(),
 	}
 	reg := registry.NewOktetoRegistry(okteto.Config{})
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
