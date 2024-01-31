@@ -1090,7 +1090,9 @@ func wakeNamespaceIfApplies(ctx context.Context, ns string, k8sClient kubernetes
 		return nil
 	}
 
+	oktetoLog.StopSpinner()
 	oktetoLog.Information("Namespace '%s' is sleeping, waking it up...", ns)
+	oktetoLog.StartSpinner()
 	return okClient.Namespaces().Wake(ctx, ns)
 }
 
