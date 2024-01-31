@@ -253,21 +253,19 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 			}
 
 			up := &upContext{
-				Manifest:                     oktetoManifest,
-				Dev:                          nil,
-				Exit:                         make(chan error, 1),
-				resetSyncthing:               upOptions.Reset,
-				StartTime:                    time.Now(),
-				Registry:                     registry.NewOktetoRegistry(okteto.Config{}),
-				Options:                      upOptions,
-				Fs:                           afero.NewOsFs(),
-				analyticsTracker:             at,
-				analyticsMeta:                upMeta,
-				K8sClientProvider:            okteto.NewK8sClientProviderWithLogger(k8sLogger),
-				tokenUpdater:                 newTokenUpdaterController(),
-				builder:                      buildv2.NewBuilderFromScratch(at, ioCtrl),
-				unhandledTransientMaxRetries: 100,
-				unhandledTransientRetryCount: 0,
+				Manifest:          oktetoManifest,
+				Dev:               nil,
+				Exit:              make(chan error, 1),
+				resetSyncthing:    upOptions.Reset,
+				StartTime:         time.Now(),
+				Registry:          registry.NewOktetoRegistry(okteto.Config{}),
+				Options:           upOptions,
+				Fs:                afero.NewOsFs(),
+				analyticsTracker:  at,
+				analyticsMeta:     upMeta,
+				K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
+				tokenUpdater:      newTokenUpdaterController(),
+				builder:           buildv2.NewBuilderFromScratch(at, ioCtrl),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -749,7 +747,7 @@ func (up *upContext) activateLoop() {
 				continue
 			}
 
-			if up.isTransient(err) {
+			if oktetoErrors.IsTransient(err) {
 				isTransientError = true
 				continue
 			}
@@ -770,7 +768,7 @@ func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error 
 			oktetoLog.Println()
 			if err != nil {
 				oktetoLog.Infof("command failed: %s", err)
-				if up.isTransient(err) {
+				if oktetoErrors.IsTransient(err) {
 					return err
 				}
 				return oktetoErrors.CommandError{
