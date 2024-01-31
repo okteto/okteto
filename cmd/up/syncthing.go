@@ -116,7 +116,7 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 
 	if err := up.Sy.WaitForPing(ctx, false); err != nil {
 		oktetoLog.Infof("failed to ping syncthing: %s", err.Error())
-		if up.isTransient(err) {
+		if oktetoErrors.IsTransient(err) {
 			return err
 		}
 		return up.checkOktetoStartError(ctx, "Failed to connect to the synchronization service")
