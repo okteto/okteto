@@ -410,9 +410,6 @@ func (dc *Command) RunDeploy(ctx context.Context, deployOptions *Options) error 
 			}
 			if deployOptions.ShowCTA {
 				oktetoLog.Success(succesfullyDeployedmsg, deployOptions.Name)
-				if oktetoLog.IsInteractive() {
-					oktetoLog.Information("Run 'okteto up' to activate your development container")
-				}
 			}
 			pipeline.AddDevAnnotations(ctx, deployOptions.Manifest, c)
 		}
