@@ -80,7 +80,7 @@ func init() {
 		},
 	}
 
-	mixpanelClient = mixpanel.NewFromClient(c, mixpanelToken, "")
+	mixpanelClient = mixpanel.NewFromClient(c, mixpanelToken, "https://analytics.okteto.com")
 }
 
 // TrackInit sends a tracking event to mixpanel when the user creates a manifest
