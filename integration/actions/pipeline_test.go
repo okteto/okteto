@@ -57,7 +57,7 @@ func TestPipelineActionsWithCompose(t *testing.T) {
 	integration.SkipIfWindows(t)
 
 	t.Setenv(model.GithubRepositoryEnvVar, "okteto/movies-with-compose")
-	t.Setenv(model.GithubRefEnvVar, "main")
+	t.Setenv(model.GithubRefEnvVar, "cli-e2e")
 	t.Setenv(model.GithubServerURLEnvVar, githubHTTPSURL)
 
 	namespace := integration.GetTestNamespace("pipelinecomposeaction", user)
