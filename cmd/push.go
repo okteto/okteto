@@ -61,7 +61,7 @@ func Push(ctx context.Context) *cobra.Command {
 		Hidden: true,
 		Use:    "push [service]",
 		Short:  "Build, push and redeploy source code to the target app",
-		Args:   utils.MaximumNArgsAccepted(1, "https://www.okteto.com/docs/0.10/reference/cli/#push"),
+		Args:   utils.MaximumNArgsAccepted(1, "https://www.okteto.com/docs/reference/okteto-cli/"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !env.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
 				oktetoLog.Warning("'okteto push' is deprecated in favor of 'okteto deploy', and will be removed in a future version")
