@@ -393,7 +393,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 			if up.Manifest.Type == model.OktetoManifestType && !up.Manifest.IsV2 {
 				oktetoLog.Warning("okteto manifest v1 is deprecated and will be removed in okteto 3.0")
 				oktetoLog.Println(oktetoLog.BlueString(`    Follow this guide to upgrade to the new okteto manifest schema:
-    https://www.okteto.com/docs/1.15/reference/manifest-migration/`))
+    https://www.okteto.com/docs/reference/manifest-migration/`))
 			}
 
 			if err = up.start(); err != nil {
