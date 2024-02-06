@@ -81,6 +81,9 @@ type upContext struct {
 	resetSyncthing        bool
 	isTerm                bool
 	interruptReceived     bool
+
+	unhandledTransientMaxRetries int
+	unhandledTransientRetryCount int
 }
 
 // Forwarder is an interface for the port-forwarding features

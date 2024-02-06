@@ -344,6 +344,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 		select {
 		case <-ticker.C:
 			if s.Ping(ctx, local) {
+				oktetoLog.Infof("syncthing local=%t is ready", local)
 				return nil
 			}
 			if retries%5 == 0 {
