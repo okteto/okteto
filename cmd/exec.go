@@ -215,7 +215,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string, k8sLogger *
 				return err
 			}
 
-			cmd, err := executor.GetCommandToExec(args)
+			cmd, err := executor.GetCommandToExec(ctx, args)
 			if err != nil {
 				return err
 			}

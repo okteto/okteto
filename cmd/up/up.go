@@ -762,6 +762,8 @@ func (up *upContext) activateLoop() {
 
 // waitUntilExitOrInterruptOrApply blocks execution until a stop signal is sent, a disconnect event or an error or the app is modify
 func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error {
+	ttySignals := make(chan os.Signal, 1)
+	signal.Notify(ttySignals, syscall.SIGTTIN, syscall.SIGTTOU)
 	for {
 		select {
 		case err := <-up.CommandResult:
@@ -789,7 +791,12 @@ func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error 
 		case err := <-up.GlobalForwarderStatus:
 			oktetoLog.Infof("exiting by error in global forward checker: %v", err)
 			return err
-
+		case <-ttySignals:
+			oktetoLog.Infof("SIGTTOU/SIGTTIN received, starting shutdown sequence preventing it to background the process")
+			return oktetoErrors.UserError{
+				E:    fmt.Errorf("terminal disconnect detected"),
+				Hint: "Try re-running 'okteto up' to reconnect",
+			}
 		case err := <-up.applyToApps(ctx):
 			oktetoLog.Infof("exiting by applyToAppsChan: %v", err)
 			return err
@@ -963,6 +970,9 @@ func (up *upContext) shutdownHybridMode() {
 		return
 	}
 
+	if err := up.hybridCommand.Cancel(); err != nil {
+		oktetoLog.Infof("error canceling process %s: %v", up.hybridCommand)
+	}
 	pList, err := ps.Processes()
 	if err != nil {
 		oktetoLog.Warning("error getting list of processes %v", err)
