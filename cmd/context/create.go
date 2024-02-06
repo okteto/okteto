@@ -355,6 +355,7 @@ func getLoggedUserContext(ctx context.Context, c *Command, ctxOptions *Options) 
 	ctxOptions.Token = user.Token
 
 	okteto.GetContext().Token = user.Token
+	okteto.SetInsecureSkipTLSVerifyPolicy(okteto.GetContext().IsStoredAsInsecure)
 
 	if ctxOptions.Namespace == "" {
 		ctxOptions.Namespace = user.Namespace
