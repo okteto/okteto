@@ -131,7 +131,7 @@ func installOktetoChart(ctx context.Context, flags installFlags) error {
 	oktetoLog.Infof("Config file created at %s", configYAML.Name())
 
 	oktetoLog.Info("installing okteto chart")
-	cmd = exec.CommandContext(ctx, "helm", "install", "okteto", "okteto/okteto", "-f", configYAML.Name(), "--namespace=okteto", "--create-namespace")
+	cmd = exec.CommandContext(ctx, "helm", "upgrade", "--install", "okteto", "okteto/okteto", "-f", configYAML.Name(), "--namespace=okteto", "--create-namespace", "--debug")
 	if flags.kubeContext != "" {
 		cmd.Args = append(cmd.Args, "--kube-context", flags.kubeContext)
 	}
