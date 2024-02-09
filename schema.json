@@ -1,0 +1,382 @@
+{
+  "$id": "https://okteto.com/schemas/okteto-manifest.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "build": {
+      "additionalProperties": false,
+      "description": "A list of images to build as part of your development environment.",
+      "patternProperties": {
+        ".*": {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "patternProperties": {
+                ".*": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "context": {
+              "description": "The build context. Relative paths are relative to the location of the Okteto Manifest (default: .)",
+              "title": "context",
+              "type": "string"
+            },
+            "depends_on": {
+              "description": "The name of the service that the current service depends on. The service will be built after the service it depends on is built. If the service it depends on is not defined in the Okteto Manifest, the build will fail.",
+              "title": "depends_on",
+              "type": "string"
+            },
+            "dockerfile": {
+              "description": "The path to the Dockerfile. Relative paths are relative to the location of the Okteto Manifest (default: Dockerfile)",
+              "title": "dockerfile",
+              "type": "string"
+            },
+            "secrets": {
+              "patternProperties": {
+                ".*": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "target": {
+              "description": "The target build stage in the Dockerfile. If not specified, the default target is used.",
+              "title": "target",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "title": "build",
+      "type": "object"
+    },
+    "context": {
+      "description": "The build context. Relative paths are relative to the location of the Okteto Manifest (default: .)",
+      "examples": [
+        "api"
+      ],
+      "title": "context",
+      "type": "string"
+    },
+    "deploy": {
+      "additionalProperties": false,
+      "description": "The deployment configuration for your development environment. This feature is only supported in clusters that have Okteto installed. https://www.okteto.com/docs/reference/okteto-manifest/#deploy-string-optional",
+      "oneOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "items": {
+            "properties": {
+              "command": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "commands": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "compose": {
+              "additionalProperties": false,
+              "properties": {
+                "manifest": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "file": {
+                        "type": "string"
+                      },
+                      "services": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "title": "compose",
+              "type": "object"
+            },
+            "divert": {
+              "additionalProperties": false,
+              "description": "The divert section defines how to divert traffic from your development environment to another service. This feature is only supported in clusters that have Okteto installed.",
+              "properties": {
+                "deployment": {
+                  "type": "string"
+                },
+                "driver": {
+                  "default": "istio",
+                  "description": "the backend for divert. Currently the only supported driver is 'istio'",
+                  "enum": [
+                    "istio"
+                  ],
+                  "title": "driver",
+                  "type": "string"
+                },
+                "hosts": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "namespace": {
+                        "type": "string"
+                      },
+                      "virtualService": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "namespace": {
+                  "description": "The namespace where the development environment is deployed",
+                  "title": "namespace",
+                  "type": "string"
+                },
+                "port": {
+                  "type": "integer"
+                },
+                "service": {
+                  "type": "string"
+                },
+                "virtualServices": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "namespace": {
+                        "type": "string"
+                      },
+                      "routes": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "title": "divert",
+              "type": "object"
+            },
+            "endpoints": {
+              "additionalProperties": {
+                "additionalProperties": false,
+                "properties": {
+                  "Rules": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "Path": {
+                          "type": "string"
+                        },
+                        "Port": {
+                          "type": "integer"
+                        },
+                        "Service": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "Path",
+                        "Service",
+                        "Port"
+                      ],
+                      "type": "object"
+                    },
+                    "title": "rules",
+                    "type": "array"
+                  },
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "title": "annotations",
+                    "type": "object"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "title": "labels",
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "Rules"
+                ],
+                "type": "object"
+              },
+              "title": "endpoints",
+              "type": "object"
+            },
+            "image": {
+              "title": "image",
+              "type": "string"
+            },
+            "remote": {
+              "title": "remote",
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        }
+      ],
+      "title": "deploy",
+      "type": [
+        "array",
+        "object"
+      ]
+    },
+    "destroy": {
+      "description": "Allows destroying resources created by your development environment. Can be either a list of commands or an object (destroy.image",
+      "oneOf": [
+        {
+          "type": "object"
+        },
+        {
+          "type": "array"
+        }
+      ],
+      "title": "destroy"
+    },
+    "dev": {
+      "additionalProperties": false,
+      "description": "A list of development containers to define the behavior of okteto up and synchronize your code in your development environment.",
+      "patternProperties": {
+        ".*": {
+          "additionalProperties": false,
+          "properties": {
+            "command": {
+              "description": "The command of your development container. If empty, it defaults to sh. The command can also be a list",
+              "oneOf": [
+                {
+                  "default": "sh",
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ],
+              "title": "command",
+              "type": [
+                "array",
+                "string"
+              ]
+            },
+            "forward": {
+              "oneOf": [
+                {
+                  "items": {
+                    "pattern": "^[0-9]+:[0-9]+$",
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ],
+              "title": "forward",
+              "type": "array"
+            },
+            "mode": {
+              "default": "sync",
+              "description": "Container mode (sync, hybrid)",
+              "enum": [
+                "sync",
+                "hybrid"
+              ],
+              "title": "mode",
+              "type": "string"
+            },
+            "sync": {
+              "oneOf": [
+                {
+                  "items": {
+                    "pattern": "^.*:.*$",
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ],
+              "title": "sync",
+              "type": "array"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "title": "dev",
+      "type": "object"
+    },
+    "icon": {
+      "description": "Sets the icon that will be shown in the Okteto UI. The supported values for icons are listed below.",
+      "oneOf": [
+        {
+          "default": "default",
+          "enum": [
+            "default",
+            "container",
+            "dashboard",
+            "database",
+            "function",
+            "graph",
+            "storage",
+            "launchdarkly",
+            "mongodb",
+            "gcp",
+            "aws",
+            "okteto"
+          ],
+          "type": "string"
+        },
+        {
+          "pattern": "[-a-zA-Z0-9@:%._+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_+.~#?\u0026/=]*)",
+          "type": "string"
+        }
+      ],
+      "title": "icon",
+      "type": "string"
+    },
+    "image": {
+      "description": "The name of the image to build and push. In clusters that have Okteto installed",
+      "title": "image",
+      "type": "string"
+    },
+    "namespace": {
+      "description": "The namespace where the development environment is deployed. By default",
+      "title": "namespace",
+      "type": "string"
+    }
+  },
+  "title": "Okteto Manifest",
+  "type": "object"
+}
