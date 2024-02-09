@@ -50,21 +50,23 @@ func NewCreateCommand(ctx context.Context) *cobra.Command {
 			}
 
 			if flags.provider == "gcp" {
-				installFlags.kubePath = filepath.Join(okHome, "clusters", "hackatontest")
-				if err := createGCPFiles(installFlags.kubePath); err != nil {
+				tfFolder := filepath.Join(okHome, "clusters", "hackatontest")
+				if err := createGCPFiles(tfFolder); err != nil {
 					return err
 				}
+				installFlags.kubePath = filepath.Join(tfFolder, "config")
 			} else {
-				installFlags.kubePath = filepath.Join(okHome, "clusters", "nevadito")
-				if err := os.MkdirAll(installFlags.kubePath, 0700); err != nil {
+				tfFolder := filepath.Join(okHome, "clusters", "nevadito")
+				if err := os.MkdirAll(tfFolder, 0700); err != nil {
 					return err
 				}
-				if err := createMinikubeFiles(installFlags.kubePath); err != nil {
+				if err := createMinikubeFiles(tfFolder); err != nil {
 					return err
 				}
 				installFlags.kubeContext = "nevadito"
+				installFlags.kubePath = filepath.Join(tfFolder, "config")
 			}
-			if err := create(installFlags.kubePath); err != nil {
+			if err := create(filepath.Dir(installFlags.kubePath)); err != nil {
 				return err
 			}
 
