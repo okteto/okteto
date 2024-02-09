@@ -36,11 +36,7 @@ func GetContextResource(path string) (*ContextResource, error) {
 		if err != nil {
 			return nil, err
 		}
-		path, err = discovery.GetContextResourcePath(cwd)
-		if err != nil {
-			//TODO: handle if manifest doesn't exist on remore
-			// return nil, err
-		}
+		path, _ = discovery.GetContextResourcePath(cwd)
 	}
 	ctxResource := &ContextResource{}
 	if path != "" {
