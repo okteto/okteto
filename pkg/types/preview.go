@@ -22,6 +22,7 @@ type Preview struct {
 	Deployments   []Deployment  `json:"deployments"`
 	PreviewLabels []string      `json:"previewLabels" yaml:"previewLabels"`
 	Sleeping      bool          `json:"sleeping" yaml:"sleeping"`
+	Branch        string        `json:"branch" yaml:"branch"`
 }
 
 // PreviewResponse represents the response of a deployPreview

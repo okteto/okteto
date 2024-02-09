@@ -143,6 +143,7 @@ type previewEnv struct {
 	Scope         graphql.String
 	PreviewLabels []graphql.String
 	Sleeping      graphql.Boolean
+	Branch        graphql.String
 }
 
 type deployPreviewResponse struct {
@@ -279,6 +280,7 @@ func (c *previewClient) List(ctx context.Context, labels []string) ([]types.Prev
 			Sleeping:      bool(previewEnv.Sleeping),
 			Scope:         string(previewEnv.Scope),
 			PreviewLabels: labels,
+			Branch:        string(previewEnv.Branch),
 		})
 	}
 
