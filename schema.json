@@ -372,8 +372,13 @@
       "type": "string"
     },
     "namespace": {
-      "description": "The namespace where the development environment is deployed. By default",
+      "description": "The namespace where the development environment is deployed. https://www.okteto.com/docs/reference/okteto-manifest/#namespace-string-optional",
       "title": "namespace",
+      "type": "string"
+    },
+    "name": {
+      "description": "The name of your development environment. It defaults to the name of your git repository. https://www.okteto.com/docs/reference/okteto-manifest/#name-string-optional",
+      "title": "name",
       "type": "string"
     }
   },
