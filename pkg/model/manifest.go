@@ -680,9 +680,9 @@ func Read(bytes []byte) (*Manifest, error) {
 		return nil, err
 	}
 
-	if err := manifest.validate(); err != nil {
-		return nil, err
-	}
+	// if err := manifest.validate(); err != nil {
+	// 	return nil, err
+	// }
 
 	manifest.Manifest = bytes
 	manifest.Type = OktetoManifestType

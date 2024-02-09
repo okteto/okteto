@@ -722,22 +722,7 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	if dev.Mode == constants.OktetoHybridModeFieldValue {
-		localDir, err := filepath.Abs(dev.Workdir)
-		if err != nil {
-			return err
-		}
-		info, err := os.Stat(localDir)
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			return fmt.Errorf("dev workdir is not a dir")
-		}
-		dev.Workdir = localDir
-		dev.Image.Name = "busybox"
-
-	} else {
+	if dev.Mode != constants.OktetoHybridModeFieldValue {
 		dev.Mode = constants.OktetoSyncModeFieldValue
 	}
 
