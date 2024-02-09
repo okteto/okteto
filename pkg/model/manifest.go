@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"os"
 	"path/filepath"
 	"sort"
@@ -34,7 +35,6 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/spf13/afero"
-	"gopkg.in/yaml.v2"
 	yaml3 "gopkg.in/yaml.v3"
 )
 
@@ -167,13 +167,13 @@ func NewManifestFromStack(stack *Stack) *Manifest {
 
 // DeployInfo represents what must be deployed for the app to work
 type DeployInfo struct {
-	ComposeSection *ComposeSectionInfo `json:"compose,omitempty" yaml:"compose,omitempty"`
-	Endpoints      EndpointSpec        `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
-	Divert         *DivertDeploy       `json:"divert,omitempty" yaml:"divert,omitempty"`
-	Remote         *bool               `json:"remote,omitempty" yaml:"remote,omitempty"`
-	Image          string              `json:"image,omitempty" yaml:"image,omitempty"`
-	Context        string              `yaml:"context,omitempty"`
-	Commands       []DeployCommand     `json:"commands,omitempty" yaml:"commands,omitempty"`
+	ComposeSection *ComposeSectionInfo `json:"compose,omitempty" yaml:"compose,omitempty" jsonschema:"title=compose"`
+	Endpoints      EndpointSpec        `json:"endpoints,omitempty" yaml:"endpoints,omitempty" jsonschema:"title=endpoints"`
+	Divert         *DivertDeploy       `json:"divert,omitempty" yaml:"divert,omitempty" jsonschema:"title=divert,description=The divert section defines how to divert traffic from your development environment to another service. This feature is only supported in clusters that have Okteto installed."`
+	Remote         *bool               `json:"remote,omitempty" yaml:"remote,omitempty" jsonschema:"title=remote"`
+	Image          string              `json:"image,omitempty" yaml:"image,omitempty" jsonschema:"title=image"`
+	Context        string              `yaml:"context,omitempty" jsonschema:"title=context"`
+	Commands       []DeployCommand     `json:"commands,omitempty" yaml:"commands,omitempty" jsonschema:"title=commands"`
 }
 
 // DestroyInfo represents what must be destroyed for the app
@@ -186,8 +186,8 @@ type DestroyInfo struct {
 
 // DivertDeploy represents information about the deploy divert configuration
 type DivertDeploy struct {
-	Driver               string                 `json:"driver,omitempty" yaml:"driver,omitempty"`
-	Namespace            string                 `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Driver               string                 `json:"driver,omitempty" yaml:"driver,omitempty"  jsonschema:"title=driver,description=the backend for divert. Currently the only supported driver is 'istio',default=istio,enum=istio"`
+	Namespace            string                 `json:"namespace,omitempty" yaml:"namespace,omitempty" jsonschema:"title=namespace,description=The namespace where the development environment is deployed"`
 	DeprecatedService    string                 `json:"service,omitempty" yaml:"service,omitempty"`
 	DeprecatedDeployment string                 `json:"deployment,omitempty" yaml:"deployment,omitempty"`
 	VirtualServices      []DivertVirtualService `json:"virtualServices,omitempty" yaml:"virtualServices,omitempty"`

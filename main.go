@@ -179,6 +179,8 @@ func main() {
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
 	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger))
 	root.AddCommand(test.Test(ctx, ioController, k8sLogger, at))
+	root.AddCommand(cmd.GenerateSchema())
+	root.AddCommand(cmd.Validate())
 
 	root.AddCommand(pipeline.Pipeline(ctx))
 

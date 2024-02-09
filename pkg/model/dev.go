@@ -16,6 +16,8 @@ package model
 import (
 	"errors"
 	"fmt"
+	"github.com/invopop/jsonschema"
+	"gopkg.in/yaml.v2"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -33,7 +35,6 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/spf13/afero"
-	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,6 +50,8 @@ var (
 	// ValidKubeNameRegex is the regex to validate a kubernetes resource name
 	ValidKubeNameRegex = regexp.MustCompile(`[^a-z0-9\-]+`)
 )
+
+type Services []*Dev
 
 // Dev represents a development container
 type Dev struct {
@@ -83,7 +86,7 @@ type Dev struct {
 	Volumes         []Volume           `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	EnvFiles        env.Files          `json:"envFiles,omitempty" yaml:"envFiles,omitempty"`
 	Environment     env.Environment    `json:"environment,omitempty" yaml:"environment,omitempty"`
-	Services        []*Dev             `json:"services,omitempty" yaml:"services,omitempty"`
+	Services        Services           `json:"services,omitempty" yaml:"services,omitempty"`
 	Args            Command            `json:"args,omitempty" yaml:"args,omitempty"`
 	Sync            Sync               `json:"sync,omitempty" yaml:"sync,omitempty"`
 	Timeout         Timeout            `json:"timeout,omitempty" yaml:"timeout,omitempty"`
@@ -255,6 +258,69 @@ func NewDev() *Dev {
 			Annotations: Annotations{},
 		},
 	}
+}
+
+func (Services) JSONSchema() *jsonschema.Schema {
+	fmt.Println("JSONSchema")
+	return &jsonschema.Schema{
+		Type:        "string",
+		Title:       "Compact Date",
+		Description: "Short date that only includes year and month",
+		Pattern:     "^[0-9]{4}-[0-1][0-9]$",
+	}
+}
+
+func (Services) JSONSchemaExtend(schema *jsonschema.Schema) {
+	fmt.Println("JSONSchemaExtend", schema)
+}
+
+//	func (Services) JSONSchemaAlias() any {
+//		fmt.Println("JSONSchemaAlias")
+//		return Dev{}
+//	}
+func (Services) JSONSchemaProperty(prop string) {
+	fmt.Println("JSONSchemaProperty:", prop)
+}
+
+func (DeployInfo) JSONSchemaExtend(schema *jsonschema.Schema) {
+	// Note: this is changes to [array, object] later
+	schema.Type = "object"
+
+	arrayOfString := &jsonschema.Schema{
+		Type: "array",
+		Items: &jsonschema.Schema{
+			Type: "string",
+		},
+	}
+
+	arrayOfCommandsProps := jsonschema.NewProperties()
+	arrayOfCommandsProps.Set("name", &jsonschema.Schema{
+		Type: "string",
+	})
+	arrayOfCommandsProps.Set("command", &jsonschema.Schema{
+		Type: "string",
+	})
+	arrayOfCommands := &jsonschema.Schema{
+		Type: "array",
+		Items: &jsonschema.Schema{
+			Type:       "object",
+			Properties: arrayOfCommandsProps,
+		},
+	}
+
+	schema.Properties.Set("commands", arrayOfString)
+
+	schema.OneOf = []*jsonschema.Schema{
+		arrayOfString,
+		arrayOfCommands,
+		{
+			Type:                 "object",
+			Properties:           schema.Properties,
+			AdditionalProperties: jsonschema.FalseSchema,
+		},
+	}
+
+	schema.Properties = nil
 }
 
 // loadAbsPaths makes every path used in the dev struct an absolute paths
