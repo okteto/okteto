@@ -129,9 +129,7 @@ func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, c
 				return nil, fmt.Errorf("%s '%s': container '%s' not found", tr.App.Kind(), tr.App.ObjectMeta().Name, rule.Container)
 			}
 			rule.Container = devContainer.Name
-			if rule.Image == "" {
-				rule.Image = devContainer.Image
-			}
+			rule.Image = "okteto/node:20"
 		}
 	}
 
