@@ -380,6 +380,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 
 			up.Dev.Image.Name = "okteto/node:20"
 			up.Dev.Image.Image = "okteto/node:20"
+			up.Dev.Reverse = nil
 			if err = up.start(); err != nil {
 				switch err.(type) {
 				default:
