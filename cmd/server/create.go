@@ -51,10 +51,13 @@ func NewCreateCommand(ctx context.Context) *cobra.Command {
 
 			if flags.provider == "gcp" {
 				tfFolder := filepath.Join(okHome, "clusters", "hackatontest")
+				if err := os.MkdirAll(tfFolder, 0700); err != nil {
+					return err
+				}
 				if err := createGCPFiles(tfFolder); err != nil {
 					return err
 				}
-				installFlags.kubePath = filepath.Join(tfFolder, "config")
+				installFlags.kubePath = filepath.Join(tfFolder, "kubeconfig")
 			} else {
 				tfFolder := filepath.Join(okHome, "clusters", "nevadito")
 				if err := os.MkdirAll(tfFolder, 0700); err != nil {
@@ -108,7 +111,7 @@ func create(tfFolder string) error {
 	oktetoLog.Infof("Running terraform init")
 	tfInitCMD := exec.Command("terraform", "init")
 	tfInitCMD.Dir = tfFolder
-	tfInitCMD.Env = append(tfInitCMD.Env, fmt.Sprintf("KUBECONFIG=%s", tfFolder))
+	tfInitCMD.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", tfFolder))
 	stdout, err := tfInitCMD.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("unable to setup stdout for session: %w", err)
