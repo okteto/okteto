@@ -49,6 +49,7 @@ import (
 	"github.com/spf13/pflag"
 	generateFigSpec "github.com/withfig/autocomplete-tools/packages/cobra"
 	utilRuntime "k8s.io/apimachinery/pkg/util/runtime"
+
 	// Load the different library for authentication
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -168,6 +169,7 @@ func main() {
 	root.AddCommand(cmd.Status())
 	root.AddCommand(cmd.Doctor(k8sLogger))
 	root.AddCommand(cmd.Exec(k8sLogger))
+	root.AddCommand(cmd.GetManifest(k8sLogger))
 	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
 	root.AddCommand(cmd.UpdateDeprecated())

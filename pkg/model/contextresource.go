@@ -14,6 +14,7 @@
 package model
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/okteto/okteto/pkg/discovery"
@@ -38,16 +39,20 @@ func GetContextResource(path string) (*ContextResource, error) {
 		}
 		path, err = discovery.GetContextResourcePath(cwd)
 		if err != nil {
-			return nil, err
+			//TODO: handle if manifest doesn't exist on remore
+			// return nil, err
+			fmt.Println("Reading manifest from remote")
 		}
 	}
 	ctxResource := &ContextResource{}
-	bytes, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	if err := yaml.Unmarshal(bytes, ctxResource); err != nil {
-		return nil, newManifestFriendlyError(err)
+	if path != "" {
+		bytes, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		if err := yaml.Unmarshal(bytes, ctxResource); err != nil {
+			return nil, newManifestFriendlyError(err)
+		}
 	}
 
 	ctxResource.Context = os.ExpandEnv(ctxResource.Context)

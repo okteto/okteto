@@ -15,6 +15,7 @@ package context
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/url"
@@ -25,8 +26,10 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -38,10 +41,12 @@ type SelectItem struct {
 }
 
 type ManifestOptions struct {
+	DevName    string
 	Name       string
 	Namespace  string
 	Filename   string
 	K8sContext string
+	K8sLogger  *io.K8sLogger
 }
 
 func getKubernetesContextList(filterOkteto bool) []string {
@@ -163,12 +168,36 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 		return nil, err
 	}
 
-	manifest, err := model.GetManifestV1(opts.Filename)
-	if err != nil {
-		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
+	manifest := &model.Manifest{}
+	if opts.DevName == "" {
+		manifest, err = model.GetManifestV1(opts.Filename)
+		if err != nil {
+			if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
+				return nil, err
+			}
+			manifest, err = model.GetManifestV2(opts.Filename)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		c, _, err := okteto.GetK8sClientWithLogger(opts.K8sLogger)
+		if err != nil {
 			return nil, err
 		}
-		manifest, err = model.GetManifestV2(opts.Filename)
+
+		cfmapName := fmt.Sprintf("okteto-git-%s", opts.DevName)
+		cfmap, err := configmaps.Get(ctx, cfmapName, okteto.GetContext().Namespace, c)
+		if err != nil {
+			return nil, err
+		}
+
+		manifestBytes, err := base64.StdEncoding.DecodeString(cfmap.Data["yaml"])
+		if err != nil {
+			return nil, err
+		}
+
+		manifest, err = model.Read(manifestBytes)
 		if err != nil {
 			return nil, err
 		}
