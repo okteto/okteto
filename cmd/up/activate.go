@@ -213,6 +213,9 @@ func (up *upContext) activate() error {
 		startRunCommand := time.Now()
 		if up.Dev.RemoteName != "" {
 			fmt.Printf("Connect to your development container with 'ssh %s.okteto'\n", up.Dev.Name)
+			if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Ready); err != nil {
+				up.CommandResult <- err
+			}
 		} else {
 			up.CommandResult <- up.RunCommand(ctx, up.Dev.Command.Values)
 		}
