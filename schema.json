@@ -151,7 +151,7 @@
                   "type": "array"
                 },
                 "namespace": {
-                  "description": "The namespace where the development environment is deployed",
+                  "description": "The namespace where the development environment is deployed https://www.okteto.com/docs/reference/okteto-manifest/#namespace-string-optional",
                   "title": "namespace",
                   "type": "string"
                 },
@@ -338,7 +338,7 @@
       "type": "object"
     },
     "icon": {
-      "description": "Sets the icon that will be shown in the Okteto UI. The supported values for icons are listed below.",
+      "description": "Sets the icon that will be shown in the Okteto UI. The supported values for icons are listed below. https://www.okteto.com/docs/reference/okteto-manifest/#icon-string-optional-1",
       "oneOf": [
         {
           "default": "default",
