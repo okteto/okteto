@@ -82,6 +82,7 @@ type Options struct {
 	Namespace        string
 	K8sContext       string
 	DevName          string
+	RemoteName       string
 	Envs             []string
 	commandToExecute []string
 	Remote           int
@@ -149,7 +150,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 				}
 				upOptions.ManifestPath = uptManifestPath
 			}
-			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.ManifestPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
+			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.ManifestPath, DevName: upOptions.RemoteName, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
 			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
 				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
@@ -286,7 +287,9 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 			// if manifest v1 - either set autocreate: true or pass --deploy (okteto forces autocreate: true)
 			// if manifest v2 - either set autocreate: true or pass --deploy with a deploy section at the manifest
 			forceAutocreate := false
-			if upOptions.Deploy && !up.Manifest.IsV2 {
+			if upOptions.RemoteName != "" {
+				oktetoLog.Information("Remote development container")
+			} else if upOptions.Deploy && !up.Manifest.IsV2 {
 				// the autocreate property is forced to be true
 				forceAutocreate = true
 			} else if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, k8sClient)) {
@@ -302,6 +305,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 			}
 
 			dev, err := utils.GetDevFromManifest(oktetoManifest, upOptions.DevName)
+			dev.RemoteName = upOptions.RemoteName
 			if err != nil {
 				if !errors.Is(err, utils.ErrNoDevSelected) {
 					return err
@@ -343,11 +347,6 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 				}()
 			}
 
-			// build images and set env vars for the services at the manifest
-			if err := buildServicesAndSetBuildEnvs(ctx, oktetoManifest, up.builder); err != nil {
-				return err
-			}
-
 			if err := loadManifestOverrides(dev, upOptions); err != nil {
 				return err
 			}
@@ -369,23 +368,6 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 			}
 
 			oktetoLog.ConfigureFileLogger(config.GetAppHome(dev.Namespace, dev.Name), config.VersionString)
-
-			if err := checkStignoreConfiguration(dev); err != nil {
-				oktetoLog.Infof("failed to check '.stignore' configuration: %s", err.Error())
-			}
-
-			if err := addStignoreSecrets(dev); err != nil {
-				return err
-			}
-
-			if err := addSyncFieldHash(dev); err != nil {
-				return err
-			}
-
-			if err := setSyncDefaultsByDevMode(dev, up.getSyncTempDir); err != nil {
-				return err
-			}
-
 			if _, ok := os.LookupEnv(model.OktetoAutoDeployEnvVar); ok {
 				upOptions.Deploy = true
 			}
@@ -414,6 +396,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 	}
 
 	cmd.Flags().StringVarP(&upOptions.ManifestPath, "file", "f", "", "path to the manifest file")
+	cmd.Flags().StringVarP(&upOptions.RemoteName, "devname", "", "", "development environment name")
 	cmd.Flags().StringVarP(&upOptions.Namespace, "namespace", "n", "", "namespace where the up command is executed")
 	cmd.Flags().StringVarP(&upOptions.K8sContext, "context", "c", "", "context where the up command is executed")
 	cmd.Flags().StringArrayVarP(&upOptions.Envs, "env", "e", []string{}, "envs to add to the development container")

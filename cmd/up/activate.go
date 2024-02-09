@@ -211,7 +211,11 @@ func (up *upContext) activate() error {
 		up.analyticsMeta.ActivateDuration(durationActivateUp)
 
 		startRunCommand := time.Now()
-		up.CommandResult <- up.RunCommand(ctx, up.Dev.Command.Values)
+		if up.Dev.RemoteName != "" {
+			fmt.Printf("Connect to your development container with 'ssh %s.okteto'\n", up.Dev.Name)
+		} else {
+			up.CommandResult <- up.RunCommand(ctx, up.Dev.Command.Values)
+		}
 		up.analyticsMeta.ExecDuration(time.Since(startRunCommand))
 
 	}()
@@ -255,7 +259,7 @@ func (up *upContext) devMode(ctx context.Context, app apps.App, create bool) err
 }
 
 func (up *upContext) createDevContainer(ctx context.Context, app apps.App, create bool) error {
-	msg := "Preparing development environment..."
+	msg := "Preparing development container..."
 	if !up.Dev.IsHybridModeEnabled() {
 		msg = "Activating your development container..."
 	}
@@ -330,7 +334,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 }
 
 func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context, app apps.App) error {
-	msg := "Preparing development environment..."
+	msg := "Preparing development container..."
 	if !up.Dev.IsHybridModeEnabled() {
 		msg = "Pulling images..."
 		if up.Dev.PersistentVolumeEnabled() {

@@ -31,7 +31,7 @@ import (
 func (up *upContext) forwards(ctx context.Context) error {
 	msg := "Configuring SSH tunnel to your development container..."
 	if up.Dev.IsHybridModeEnabled() {
-		msg = "Configuring reverse tunnel to your development environment..."
+		msg = "Configuring reverse tunnel to your development container..."
 	}
 	oktetoLog.Spinner(msg)
 	oktetoLog.StartSpinner()

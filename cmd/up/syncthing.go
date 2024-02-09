@@ -61,11 +61,11 @@ func (up *upContext) sync(ctx context.Context) error {
 		return err
 	}
 
-	startSyncFiles := time.Now()
-	if err := up.synchronizeFiles(ctx); err != nil {
-		return err
-	}
-	up.analyticsMeta.ContextSync(time.Since(startSyncFiles))
+	// startSyncFiles := time.Now()
+	// if err := up.synchronizeFiles(ctx); err != nil {
+	// 	return err
+	// }
+	// up.analyticsMeta.ContextSync(time.Since(startSyncFiles))
 
 	msg := "Files synchronized"
 	if up.Dev.IsHybridModeEnabled() {
@@ -124,7 +124,10 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 
 	if !up.Dev.IsHybridModeEnabled() {
 		oktetoLog.Spinner("Scanning file system...")
+	} else {
+		return nil
 	}
+
 	startLocalScan := time.Now()
 	if err := up.Sy.WaitForScanning(ctx, true); err != nil {
 		return err

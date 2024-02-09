@@ -201,6 +201,7 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 		if err != nil {
 			return nil, err
 		}
+		manifest.IsV2 = true
 	}
 
 	manifest.Namespace = okteto.GetContext().Namespace

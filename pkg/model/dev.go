@@ -51,6 +51,7 @@ var (
 
 // Dev represents a development container
 type Dev struct {
+	RemoteName           string
 	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
 	Selector             Selector              `json:"selector,omitempty" yaml:"selector,omitempty"`
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
@@ -407,6 +408,9 @@ func (dev *Dev) loadImage() error {
 }
 
 func (dev *Dev) IsHybridModeEnabled() bool {
+	if dev.RemoteName != "" {
+		return true
+	}
 	return dev.Mode == constants.OktetoHybridModeFieldValue
 }
 

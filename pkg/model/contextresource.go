@@ -14,7 +14,6 @@
 package model
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/okteto/okteto/pkg/discovery"
@@ -41,7 +40,6 @@ func GetContextResource(path string) (*ContextResource, error) {
 		if err != nil {
 			//TODO: handle if manifest doesn't exist on remore
 			// return nil, err
-			fmt.Println("Reading manifest from remote")
 		}
 	}
 	ctxResource := &ContextResource{}
