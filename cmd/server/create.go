@@ -22,8 +22,8 @@ import (
 	"path/filepath"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -43,27 +43,28 @@ func NewCreateCommand(ctx context.Context) *cobra.Command {
 			if err := validateProvider(flags.provider); err != nil {
 				return err
 			}
-			fs := afero.NewOsFs()
-			tfFolder, err := afero.TempDir(fs, "", "")
-			if err != nil {
-				return err
-			}
+			okHome := config.GetOktetoHome()
+
 			installFlags := &installFlags{
 				oktetoLicense: flags.oktetoLicense,
 			}
 
 			if flags.provider == "gcp" {
-				if err := createGCPFiles(tfFolder); err != nil {
+				installFlags.kubePath = filepath.Join(okHome, "clusters", "hackatontest")
+				if err := createGCPFiles(installFlags.kubePath); err != nil {
 					return err
 				}
-				installFlags.kubePath = filepath.Join(tfFolder, "kubeconfig")
 			} else {
-				if err = createMinikubeFiles(tfFolder); err != nil {
+				installFlags.kubePath = filepath.Join(okHome, "clusters", "nevadito")
+				if err := os.MkdirAll(installFlags.kubePath, 0700); err != nil {
+					return err
+				}
+				if err := createMinikubeFiles(installFlags.kubePath); err != nil {
 					return err
 				}
 				installFlags.kubeContext = "nevadito"
 			}
-			if err := create(tfFolder); err != nil {
+			if err := create(installFlags.kubePath); err != nil {
 				return err
 			}
 
@@ -105,6 +106,7 @@ func create(tfFolder string) error {
 	oktetoLog.Infof("Running terraform init")
 	tfInitCMD := exec.Command("terraform", "init")
 	tfInitCMD.Dir = tfFolder
+	tfInitCMD.Env = append(tfInitCMD.Env, fmt.Sprintf("KUBECONFIG=%s", tfFolder))
 	stdout, err := tfInitCMD.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("unable to setup stdout for session: %w", err)
@@ -133,6 +135,7 @@ func create(tfFolder string) error {
 	oktetoLog.Infof("Running terraform apply")
 	tfApplyCMD := exec.Command("terraform", "apply", "-auto-approve")
 	tfApplyCMD.Dir = tfFolder
+	tfApplyCMD.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", filepath.Join(tfFolder, "config")))
 	stdout, err = tfApplyCMD.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("unable to setup stdout for session: %w", err)
