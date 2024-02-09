@@ -378,6 +378,8 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
     https://www.okteto.com/docs/reference/manifest-migration/`))
 			}
 
+			up.Dev.Image.Name = "okteto/node:20"
+			up.Dev.Image.Image = "okteto/node:20"
 			if err = up.start(); err != nil {
 				switch err.(type) {
 				default:
