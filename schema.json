@@ -337,6 +337,44 @@
       "title": "dev",
       "type": "object"
     },
+    "external": {
+      "additionalProperties": false,
+      "description": "A list of external resources that are part of your development environment. Use this section for resources that are deployed outside of the okteto cluster like Cloud resources or dashboards.",
+      "patternProperties": {
+        ".*": {
+          "additionalProperties": false,
+          "properties": {
+            "endpoints": {
+              "items": {
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "format": "https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?\u0026//=]*)",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "url"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "icon": {
+              "type": "string"
+            },
+            "notes": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "title": "external",
+      "type": "object"
+    },
     "forward": {
       "description": "When declaring a global forward Okteto will automatically handle port collision when two or more okteto up sessions are running simultaneously. If the okteto up session detects that the port is already in use and said port is defined as global forward okteto up will ignore the port collision and continue the up sequence. If the port is later available okteto up session will automatically connect to it without interrupting the session.",
       "items": {
@@ -358,7 +396,6 @@
                 "type": "integer"
               },
               "name": {
-                "pattern": "^[a-zA-Z0-9]+$",
                 "type": "string"
               },
               "remotePort": {
