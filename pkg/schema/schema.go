@@ -22,12 +22,14 @@ import (
 
 type manifest struct {
 	Build     build            `json:"build" jsonschema:"title=build,description=A list of images to build as part of your development environment."`
-	Icon      icon             `json:"icon" jsonschema:"title=icon,description=Sets the icon that will be shown in the Okteto UI. The supported values for icons are listed below."`
+	Icon      icon             `json:"icon" jsonschema:"title=icon,description=Sets the icon that will be shown in the Okteto UI."`
 	Dev       dev              `json:"dev" jsonschema:"title=dev,description=A list of development containers to define the behavior of okteto up and synchronize your code in your development environment."`
 	Destroy   interface{}      `json:"destroy" jsonschema:"title=destroy,oneof_type=object;array,description=Allows destroying resources created by your development environment. Can be either a list of commands or an object (destroy.image, destroy.commands) which in this case will execute remotely."`
 	Context   string           `json:"context" jsonschema:"title=context,description=The build context. Relative paths are relative to the location of the Okteto Manifest (default: .),example=api"`
 	Namespace string           `json:"namespace" jsonschema:"title=namespace,description=The namespace where the development environment is deployed. By default, it takes the current okteto context namespace. You can use an environment variable to replace the namespace field, or any part of it: namespace: $DEV_NAMESPACE"`
 	Image     string           `json:"image" jsonschema:"title=image,description=The name of the image to build and push. In clusters that have Okteto installed, this is optional (if not specified, the Okteto Registry is used)."`
+	Name      string           `json:"name" jsonschema:"title=name,description=The name of your development environment. It defaults to the name of your git repository."`
+	Forward   forward          `json:"forward" jsonschema:"title=forward,description=When declaring a global forward Okteto will automatically handle port collision when two or more okteto up sessions are running simultaneously. If the okteto up session detects that the port is already in use and said port is defined as global forward okteto up will ignore the port collision and continue the up sequence. If the port is later available okteto up session will automatically connect to it without interrupting the session."`
 	Deploy    model.DeployInfo `json:"deploy" jsonschema:"title=deploy,description=The deployment configuration for your development environment. This feature is only supported in clusters that have Okteto installed. https://www.okteto.com/docs/reference/okteto-manifest/#deploy-string-optional"`
 }
 
@@ -215,5 +217,51 @@ func (dev) JSONSchema() *jsonschema.Schema {
 				AdditionalProperties: jsonschema.FalseSchema,
 			},
 		},
+	}
+}
+
+type forward struct{}
+
+func (forward) JSONSchema() *jsonschema.Schema {
+	shorthandPattern := &jsonschema.Schema{
+		Type:    "string",
+		Pattern: "^[0-9]+:([a-zA-Z0-9]+:)?[0-9]+$",
+	}
+
+	// Define the properties for the detailed object notation
+	objectProps := jsonschema.NewProperties()
+	objectProps.Set("localPort", &jsonschema.Schema{
+		Type: "integer",
+	})
+	objectProps.Set("remotePort", &jsonschema.Schema{
+		Type: "integer",
+	})
+	objectProps.Set("name", &jsonschema.Schema{
+		Type: "string",
+	})
+	objectProps.Set("labels", &jsonschema.Schema{
+		Type: "object",
+		AdditionalProperties: &jsonschema.Schema{
+			Type: "string",
+		},
+	})
+
+	detailedObjectWithOptionalName := &jsonschema.Schema{
+		Type:                 "object",
+		Properties:           objectProps,
+		Required:             []string{"localPort", "remotePort"},
+		AdditionalProperties: jsonschema.FalseSchema,
+	}
+
+	itemsSchema := &jsonschema.Schema{
+		AnyOf: []*jsonschema.Schema{
+			shorthandPattern,
+			detailedObjectWithOptionalName,
+		},
+	}
+
+	return &jsonschema.Schema{
+		Type:  "array",
+		Items: itemsSchema,
 	}
 }
