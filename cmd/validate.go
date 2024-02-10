@@ -16,12 +16,12 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	schema2 "github.com/okteto/okteto/pkg/schema"
+	"os"
+
+	"github.com/okteto/okteto/pkg/schema"
 	"github.com/spf13/cobra"
 	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
-	"os"
 )
 
 // Validate validates a Okteto Manifest file
@@ -45,107 +45,43 @@ func Validate() *cobra.Command {
 				}
 			}
 
-			manifest, err := ioutil.ReadFile(manifestFile)
+			manifest, err := os.ReadFile(manifestFile)
 			if err != nil {
 				return err
 			}
 
 			var obj interface{}
-			_ = yaml.Unmarshal(manifest, &obj)
-			// IGNORE
-			//if err != nil {
-			//	return err
-			//}
+			// TODO: evaluate if returning a friendly err here?
+			_ = yaml.Unmarshal(manifest, &obj) //nolint:errcheck
 
-			schema, err := schema2.FixAndMarshal(schema2.GenerateJsonSchema())
+			s := schema.NewJsonSchema()
+			json, err := s.ToJSON()
 			if err != nil {
 				return err
 			}
 
 			// Load JSON schema
-			jsonLoader := gojsonschema.NewStringLoader(string(schema))
+			jsonLoader := gojsonschema.NewStringLoader(string(json))
 
-			// Load JSON document
+			// Load Okteto Manifest
 			documentLoader := gojsonschema.NewGoLoader(obj)
 
-			// Validate JSON document
+			// Validate Okteto Manifest
 			result, err := gojsonschema.Validate(jsonLoader, documentLoader)
 			if err != nil {
 				return err
 			}
 
 			if !result.Valid() {
-				fmt.Printf("The document is not valid. See errors :\n")
+				fmt.Printf("The Okteto Manifest contains the following errors:\n")
 				for _, desc := range result.Errors() {
 					fmt.Printf("- %s\n", desc)
 				}
-			} else {
-				fmt.Printf("The document is valid.\n")
 			}
 
 			return nil
-
-			//manifest, err := ioutil.ReadFile(manifestFile)
-			//if err != nil {
-			//	return err
-			//}
-			//
-			//var obj interface{}
-			//err = yaml.Unmarshal(manifest, &obj)
-			//if err != nil {
-			//	return err
-			//}
-			//s, err := schema.FixAndMarshal(schema.GenerateJsonSchema())
-			//if err != nil {
-			//	return err
-			//}
-
-			//manifest, err := os.Open(manifestFile)
-			//if err != nil {
-			//	return err
-			//}
-			//dec := yaml.NewDecoder(manifest)
-			//_ = manifest.Close()
-			//
-			//var v interface{}
-			//if err := dec.Decode(&v); err != nil {
-			//	return err
-			//}
-			//
-			//compiler := jsonschema.NewCompiler()
-			//
-			//schema, err := compiler.Compile("/Users/andrea/dev/okteto/okteto/schema.json")
-			//if err != nil {
-			//	return err
-			//}
-			//
-			//schema.Validate(v)
-			// Load JSON schema
-			//schemaLoader := gojsonschema.NewReferenceLoader("file:///Users/andrea/dev/okteto/okteto/schema.json")
-			//jsonLoader := gojsonschema.NewGoLoader(s)
-
-			// Load JSON document
-			//documentLoader := gojsonschema.NewGoLoader(obj)
-
-			// Validate JSON document
-			//result, err := gojsonschema.Validate(jsonLoader, documentLoader)
-			//if err != nil {
-			//	return err
-			//}
-			//
-			//if !result.Valid() {
-			//	fmt.Printf("The document is not valid. See errors :\n")
-			//	for _, desc := range result.Errors() {
-			//		fmt.Printf("- %s\n", desc)
-			//	}
-			//} else {
-			//	fmt.Printf("The document is valid.\n")
-			//}
-			//
-			//return nil
 		},
 	}
 
-	cmd.Flags().StringVarP(&output, "output", "o", "", "Path to the file where the json schema will be stored")
 	return cmd
 }

@@ -55,9 +55,7 @@
     },
     "context": {
       "description": "The build context. Relative paths are relative to the location of the Okteto Manifest (default: .)",
-      "examples": [
-        "api"
-      ],
+      "examples": ["api"],
       "title": "context",
       "type": "string"
     },
@@ -129,9 +127,7 @@
                 "driver": {
                   "default": "istio",
                   "description": "the backend for divert. Currently the only supported driver is 'istio'",
-                  "enum": [
-                    "istio"
-                  ],
+                  "enum": ["istio"],
                   "title": "driver",
                   "type": "string"
                 },
@@ -151,7 +147,7 @@
                   "type": "array"
                 },
                 "namespace": {
-                  "description": "The namespace where the development environment is deployed https://www.okteto.com/docs/reference/okteto-manifest/#namespace-string-optional",
+                  "description": "The namespace where the development environment is deployed",
                   "title": "namespace",
                   "type": "string"
                 },
@@ -204,11 +200,7 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "Path",
-                        "Service",
-                        "Port"
-                      ],
+                      "required": ["Path", "Service", "Port"],
                       "type": "object"
                     },
                     "title": "rules",
@@ -229,9 +221,7 @@
                     "type": "object"
                   }
                 },
-                "required": [
-                  "Rules"
-                ],
+                "required": ["Rules"],
                 "type": "object"
               },
               "title": "endpoints",
@@ -250,10 +240,7 @@
         }
       ],
       "title": "deploy",
-      "type": [
-        "array",
-        "object"
-      ]
+      "type": ["array", "object"]
     },
     "destroy": {
       "description": "Allows destroying resources created by your development environment. Can be either a list of commands or an object (destroy.image",
@@ -289,10 +276,7 @@
                 }
               ],
               "title": "command",
-              "type": [
-                "array",
-                "string"
-              ]
+              "type": ["array", "string"]
             },
             "forward": {
               "oneOf": [
@@ -310,10 +294,7 @@
             "mode": {
               "default": "sync",
               "description": "Container mode (sync, hybrid)",
-              "enum": [
-                "sync",
-                "hybrid"
-              ],
+              "enum": ["sync", "hybrid"],
               "title": "mode",
               "type": "string"
             },
@@ -338,7 +319,7 @@
       "type": "object"
     },
     "icon": {
-      "description": "Sets the icon that will be shown in the Okteto UI. The supported values for icons are listed below. https://www.okteto.com/docs/reference/okteto-manifest/#icon-string-optional-1",
+      "description": "Sets the icon that will be shown in the Okteto UI. The supported values for icons are listed below.",
       "oneOf": [
         {
           "default": "default",
@@ -372,13 +353,8 @@
       "type": "string"
     },
     "namespace": {
-      "description": "The namespace where the development environment is deployed. https://www.okteto.com/docs/reference/okteto-manifest/#namespace-string-optional",
+      "description": "The namespace where the development environment is deployed. By default",
       "title": "namespace",
-      "type": "string"
-    },
-    "name": {
-      "description": "The name of your development environment. It defaults to the name of your git repository. https://www.okteto.com/docs/reference/okteto-manifest/#name-string-optional",
-      "title": "name",
       "type": "string"
     }
   },

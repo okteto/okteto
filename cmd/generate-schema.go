@@ -14,12 +14,25 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/okteto/okteto/cmd/utils"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/schema"
 	"github.com/spf13/cobra"
 )
 
-var output string
+var outputFilePath string
+
+func toFile(schemaBytes []byte, outputFilePath string) error {
+	err := os.WriteFile(outputFilePath, schemaBytes, 0644)
+	if err != nil {
+		return err
+	}
+	oktetoLog.Success("okteto json schema has been generated and stored in %s", schemaBytes)
+
+	return nil
+}
 
 // GenerateSchema create the json schema for the okteto manifest
 func GenerateSchema() *cobra.Command {
@@ -29,16 +42,18 @@ func GenerateSchema() *cobra.Command {
 		Use:    "generate-schema",
 		Short:  "Generates the json schema for the okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			s, err := schema.FixAndMarshal(schema.GenerateJsonSchema())
+			s := schema.NewJsonSchema()
+
+			json, err := s.ToJSON()
 			if err != nil {
 				return err
 			}
-			err = schema.SaveSchema(s, output)
+			err = toFile(json, outputFilePath)
 
 			return err
 		},
 	}
 
-	cmd.Flags().StringVarP(&output, "output", "o", "", "Path to the file where the json schema will be stored")
+	cmd.Flags().StringVarP(&outputFilePath, "output", "o", "", "Path to the file where the json schema will be stored")
 	return cmd
 }
