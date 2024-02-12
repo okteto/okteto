@@ -82,14 +82,18 @@ func TestUpWithDeployRemote(t *testing.T) {
 	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
 	require.NoError(t, createAppDockerfile(dir))
 
+	appName := "e2e"
 	upOptions := &commands.UpOptions{
-		Name:       "e2etest",
+		Name:       appName,
 		Namespace:  testNamespace,
 		Workdir:    dir,
 		Deploy:     true,
 		OktetoHome: dir,
 		Token:      token,
 	}
+
+	require.LessOrEqual(t, len(testNamespace+appName), 63)
+
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
 
