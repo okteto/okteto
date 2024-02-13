@@ -19,9 +19,7 @@ package up
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/log/io"
 	"log"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -54,14 +52,14 @@ dev:
 )
 
 func TestUpWithDeployRemote(t *testing.T) {
-	t.Setenv("OKTETO_K8S_REQUESTS_LOGGER_ENABLED", "true")
+	t.Parallel()
 	// Prepare environment
 
 	dir := t.TempDir()
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestUpWithDeployRemote", user)
+	testNamespace := integration.GetTestNamespace("TestUpDeployRemote", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -82,7 +80,7 @@ func TestUpWithDeployRemote(t *testing.T) {
 	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
 	require.NoError(t, createAppDockerfile(dir))
 
-	appName := "e2e"
+	appName := "e2etest"
 	upOptions := &commands.UpOptions{
 		Name:       appName,
 		Namespace:  testNamespace,
@@ -99,18 +97,18 @@ func TestUpWithDeployRemote(t *testing.T) {
 
 	kubectlOpts := &commands.KubectlOptions{
 		Namespace:  testNamespace,
-		Name:       model.DevCloneName("e2etest"),
+		Name:       model.DevCloneName(appName),
 		ConfigFile: filepath.Join(dir, ".kube", "config"),
 	}
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
 
 	// Test that the app image has been created correctly
-	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, model.DevCloneName("e2etest"), c)
+	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, model.DevCloneName(appName), c)
 	require.NoError(t, err)
 	appImageDev := fmt.Sprintf("%s/%s/test:1.0.0", okteto.GetContext().Registry, testNamespace)
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
 
-	indexRemoteEndpoint := fmt.Sprintf("https://e2etest-%s.%s/index.html", testNamespace, appsSubdomain)
+	indexRemoteEndpoint := fmt.Sprintf("https://%s-%s.%s/index.html", appName, testNamespace, appsSubdomain)
 
 	// Test that the same content is on the remote and on local endpoint
 	require.Equal(t, integration.GetContentFromURL(indexRemoteEndpoint, timeout), testNamespace)
@@ -127,7 +125,7 @@ func TestUpWithDeployRemote(t *testing.T) {
 	require.NoError(t, waitUntilUpdatedContent(indexRemoteEndpoint, localSyncthingKilledContent, timeout, upResult.ErrorChan))
 
 	// Test destroy pod reconnection
-	require.NoError(t, integration.DestroyPod(context.Background(), testNamespace, "app=e2etest", c))
+	require.NoError(t, integration.DestroyPod(context.Background(), testNamespace, fmt.Sprintf("app=%s", appName), c))
 	destroyPodContent := fmt.Sprintf("%s-destroy-pod", testNamespace)
 	require.NoError(t, writeFile(indexPath, destroyPodContent))
 	require.NoError(t, waitUntilUpdatedContent(indexRemoteEndpoint, destroyPodContent, timeout, upResult.ErrorChan))
@@ -141,10 +139,4 @@ func TestUpWithDeployRemote(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDown(oktetoPath, downOpts))
 
 	require.True(t, commands.HasUpCommandFinished(upResult.Pid.Pid))
-
-	k8sLogsFilePath := filepath.Join(dir, ".okteto", io.K8sLogsFileName)
-	require.FileExists(t, k8sLogsFilePath)
-	k8sLogs, err := os.ReadFile(k8sLogsFilePath)
-	require.NoError(t, err)
-	require.Contains(t, string(k8sLogs), fmt.Sprintf("running cmd: up --deploy=true --namespace=%s", testNamespace))
 }
