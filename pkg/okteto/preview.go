@@ -141,6 +141,7 @@ type deprecatedPreviewEnv struct {
 type previewEnv struct {
 	Id            graphql.String
 	Scope         graphql.String
+	Branch        graphql.String
 	PreviewLabels []graphql.String
 	Sleeping      graphql.Boolean
 }
@@ -279,6 +280,7 @@ func (c *previewClient) List(ctx context.Context, labels []string) ([]types.Prev
 			Sleeping:      bool(previewEnv.Sleeping),
 			Scope:         string(previewEnv.Scope),
 			PreviewLabels: labels,
+			Branch:        string(previewEnv.Branch),
 		})
 	}
 
