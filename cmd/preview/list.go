@@ -42,9 +42,9 @@ type listFlags struct {
 type previewOutput struct {
 	Name     string   `json:"name" yaml:"name"`
 	Scope    string   `json:"scope" yaml:"scope"`
+	Branch   string   `json:"branch" yaml:"branch"`
 	Labels   []string `json:"labels" yaml:"labels"`
 	Sleeping bool     `json:"sleeping" yaml:"sleeping"`
-	Branch   string   `json:"branch" yaml:"branch"`
 }
 
 type listPreviewCommand struct {

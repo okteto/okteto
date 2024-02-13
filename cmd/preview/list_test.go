@@ -209,7 +209,7 @@ test2  global    true      test-branch-2  -
 					Branch:   "test-branch-2",
 				},
 			},
-			expectedOutput: "[\n {\n  \"name\": \"test\",\n  \"scope\": \"personal\",\n  \"labels\": [\n   \"test\",\n   \"okteto\"\n  ],\n  \"sleeping\": true,\n  \"branch\": \"test-branch-1\"\n },\n {\n  \"name\": \"test2\",\n  \"scope\": \"global\",\n  \"labels\": null,\n  \"sleeping\": true,\n  \"branch\": \"test-branch-2\"\n }\n]\n",
+			expectedOutput: "[\n {\n  \"name\": \"test\",\n  \"scope\": \"personal\",\n  \"branch\": \"test-branch-1\",\n  \"labels\": [\n   \"test\",\n   \"okteto\"\n  ],\n  \"sleeping\": true\n },\n {\n  \"name\": \"test2\",\n  \"scope\": \"global\",\n  \"branch\": \"test-branch-2\",\n  \"labels\": null,\n  \"sleeping\": true\n }\n]\n",
 		},
 		{
 			name:   "list - yaml format",
@@ -229,7 +229,7 @@ test2  global    true      test-branch-2  -
 					Branch:   "test-branch-2",
 				},
 			},
-			expectedOutput: "- name: test\n  scope: personal\n  labels:\n  - test\n  - okteto\n  sleeping: true\n  branch: test-branch-1\n- name: test2\n  scope: global\n  labels: []\n  sleeping: true\n  branch: test-branch-2\n\n",
+			expectedOutput: "- name: test\n  scope: personal\n  branch: test-branch-1\n  labels:\n  - test\n  - okteto\n  sleeping: true\n- name: test2\n  scope: global\n  branch: test-branch-2\n  labels: []\n  sleeping: true\n\n",
 		},
 	}
 

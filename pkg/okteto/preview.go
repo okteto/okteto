@@ -141,9 +141,9 @@ type deprecatedPreviewEnv struct {
 type previewEnv struct {
 	Id            graphql.String
 	Scope         graphql.String
+	Branch        graphql.String
 	PreviewLabels []graphql.String
 	Sleeping      graphql.Boolean
-	Branch        graphql.String
 }
 
 type deployPreviewResponse struct {
