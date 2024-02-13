@@ -89,7 +89,7 @@ func TestDeployDevEnvFromK8s(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createK8sManifest(dir))
 
-	testNamespace := integration.GetTestNamespace("TestDeployK8sFile", user)
+	testNamespace := integration.GetTestNamespace("DeployK8sFile", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

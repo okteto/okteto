@@ -97,7 +97,7 @@ func TestUpGlobalForwarding(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestGlobalFwd", user)
+	testNamespace := integration.GetTestNamespace("GlobalFwd", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

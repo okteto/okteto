@@ -57,7 +57,7 @@ func TestDeployAndDestroyOktetoManifestWithEnv(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createOktetoManifestwithEnv(dir))
 
-	testNamespace := integration.GetTestNamespace("TestDeployDestroyVars", user)
+	testNamespace := integration.GetTestNamespace("DeployDestroyVars", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

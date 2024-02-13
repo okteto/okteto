@@ -111,7 +111,7 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createComposeScenario(dir))
 
-	testNamespace := integration.GetTestNamespace("TestPipeCompose", user)
+	testNamespace := integration.GetTestNamespace("PipeCompose", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -177,7 +177,7 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createStacksScenario(dir))
 
-	testNamespace := integration.GetTestNamespace("TestPipeStacks", user)
+	testNamespace := integration.GetTestNamespace("PipeStacks", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

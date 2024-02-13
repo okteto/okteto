@@ -92,7 +92,7 @@ func TestPush(t *testing.T) {
 	require.NoError(t, err)
 	dir := t.TempDir()
 
-	testNamespace := integration.GetTestNamespace("TestPush", user)
+	testNamespace := integration.GetTestNamespace("Push", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

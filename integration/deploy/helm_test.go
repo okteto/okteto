@@ -103,7 +103,7 @@ func TestDeployPipelineFromHelm(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createHelmChart(dir))
 
-	testNamespace := integration.GetTestNamespace("TestDeployHelm", user)
+	testNamespace := integration.GetTestNamespace("DeployHelm", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -147,7 +147,7 @@ func TestDeployFromHelmNameOK(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createHelmChart(dir))
 
-	testNamespace := integration.GetTestNamespace("TestDeployFromHelmNameOK", user)
+	testNamespace := integration.GetTestNamespace("DeployFromHelmNameOK", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

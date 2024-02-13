@@ -45,7 +45,7 @@ func TestDependencies(t *testing.T) {
 	require.NoError(t, err)
 
 	dir := t.TempDir()
-	testDeployNamespace := integration.GetTestNamespace("TestDeployDep", user)
+	testDeployNamespace := integration.GetTestNamespace("DeployDep", user)
 	namespaceDeployOpts := &commands.NamespaceOptions{
 		Namespace:  testDeployNamespace,
 		OktetoHome: dir,
@@ -54,7 +54,7 @@ func TestDependencies(t *testing.T) {
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceDeployOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceDeployOpts)
 
-	testNamespace := integration.GetTestNamespace("TestDependency", user)
+	testNamespace := integration.GetTestNamespace("Dependency", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

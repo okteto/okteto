@@ -103,7 +103,7 @@ func TestUpUsingHybridMode(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestHybridMode", user)
+	testNamespace := integration.GetTestNamespace("HybridMode", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

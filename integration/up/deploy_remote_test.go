@@ -59,7 +59,7 @@ func TestUpWithDeployRemote(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestUpDeployRemote", user)
+	testNamespace := integration.GetTestNamespace("UpDeployRemote", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
