@@ -95,7 +95,7 @@ func TestDeploySuccessOutput(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createComposeScenario(dir))
 
-	testNamespace := integration.GetTestNamespace("TestSuccessOutput", user)
+	testNamespace := integration.GetTestNamespace("SuccessOutput", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -161,7 +161,7 @@ func TestDeployWithNonSanitizedOK(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createComposeScenario(dir))
 
-	testNamespace := integration.GetTestNamespace("TestDeployWithNonSanitizedOK", user)
+	testNamespace := integration.GetTestNamespace("DeployWithNonSanitizedOK", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -196,7 +196,7 @@ func TestCmdFailOutput(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createCommandFailureManifest(dir))
 
-	testNamespace := integration.GetTestNamespace("TestCmdFailOutput", user)
+	testNamespace := integration.GetTestNamespace("CmdFailOutput", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -261,7 +261,7 @@ func TestRemoteMaskVariables(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createCommandWitMaskValuesManifest(dir))
 
-	testNamespace := integration.GetTestNamespace("TestRemoteMaskVariables", user)
+	testNamespace := integration.GetTestNamespace("RemoteMaskVariables", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -368,7 +368,7 @@ func TestComposeFailOutput(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createFailCompose(dir))
 
-	testNamespace := integration.GetTestNamespace("TestComposeFailOutput", user)
+	testNamespace := integration.GetTestNamespace("ComposeFailOutput", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

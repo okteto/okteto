@@ -115,7 +115,7 @@ func TestUpStatefulsetV1(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestUpStatefulsetV1", user)
+	testNamespace := integration.GetTestNamespace("UpStatefulsetV1", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -228,7 +228,7 @@ func TestUpStatefulsetV2(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestUpStatefulsetV2", user)
+	testNamespace := integration.GetTestNamespace("UpStatefulsetV2", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

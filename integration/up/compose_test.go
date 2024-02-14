@@ -78,7 +78,7 @@ func TestUpCompose(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestUpCompose", user)
+	testNamespace := integration.GetTestNamespace("UpCompose", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
