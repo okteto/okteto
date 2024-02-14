@@ -88,7 +88,9 @@ func (sh *serviceHasher) hashBuildContext(buildInfo *build.Info) (string, error)
 			return "", fmt.Errorf("could not get build context diff sha: %w", err)
 		}
 
+		sh.lock.Lock()
 		sh.buildContextCache[buildContext] = sh.hash(buildInfo, dirCommit, diffHash)
+		sh.lock.Unlock()
 	}
 
 	return sh.buildContextCache[buildContext], nil
