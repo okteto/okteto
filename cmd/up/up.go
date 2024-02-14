@@ -577,7 +577,7 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVaria
 	return &overridedEnvVars, nil
 }
 
-func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slogger *io.K8sLogger) error {
+func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.IOController, k8slogger *io.K8sLogger) error {
 	k8sProvider := okteto.NewK8sClientProviderWithLogger(k8slogger)
 	pc, err := pipelineCMD.NewCommand()
 	if err != nil {
