@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -106,6 +107,7 @@ type Manifest struct {
 	Icon         string                   `json:"icon,omitempty" yaml:"icon,omitempty"`
 	ManifestPath string                   `json:"-" yaml:"-"`
 	Destroy      *DestroyInfo             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Variables    vars.Vars                `json:"variables,omitempty" yaml:"variables,omitempty"`
 
 	Type          Archetype               `json:"-" yaml:"-"`
 	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
@@ -126,6 +128,7 @@ func NewManifest() *Manifest {
 		GlobalForward: []forward.GlobalForward{},
 		External:      externalresource.Section{},
 		Fs:            afero.NewOsFs(),
+		Variables:     vars.Vars{},
 	}
 }
 
@@ -340,7 +343,28 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 		cwd = manifestPath
 	}
 
+	manifestPathx, err := discovery.GetOktetoManifestPath(cwd)
+	if err != nil {
+		return nil, err
+	}
+
+	manifestVars, err := vars.GetManifestVars(manifestPathx)
+	if err != nil {
+		return nil, err
+	}
+	err = manifestVars.Expand()
+	if err != nil {
+		return nil, err
+	}
+	err = manifestVars.Export(os.Setenv)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println(manifestVars)
+
 	manifest, err = getManifestFromOktetoFile(cwd, fs)
+
 	if err != nil {
 		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err

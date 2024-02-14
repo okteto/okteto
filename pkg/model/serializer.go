@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -758,6 +759,7 @@ type manifestRaw struct {
 	Dependencies  deps.ManifestSection     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	GlobalForward []forward.GlobalForward  `json:"forward,omitempty" yaml:"forward,omitempty"`
 	External      externalresource.Section `json:"external,omitempty" yaml:"external,omitempty"`
+	Variables     vars.Vars                `json:"variables,omitempty" yaml:"variables,omitempty"`
 
 	DeprecatedDevs []string `yaml:"devs"`
 }
@@ -778,6 +780,7 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		Build:        map[string]*build.Info{},
 		Dependencies: deps.ManifestSection{},
 		External:     externalresource.Section{},
+		Variables:    vars.Vars{},
 	}
 	err = unmarshal(&manifest)
 	if err != nil {
@@ -795,6 +798,7 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	m.Name = manifest.Name
 	m.GlobalForward = manifest.GlobalForward
 	m.External = manifest.External
+	m.Variables = manifest.Variables
 
 	err = m.SanitizeSvcNames()
 	if err != nil {
