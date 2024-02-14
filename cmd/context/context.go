@@ -15,13 +15,14 @@ package context
 
 import (
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
 // Context points okteto to a cluster.
-func Context(okClientProvider oktetoClientProvider) *cobra.Command {
+func Context(okClientProvider oktetoClientProvider, envManager *env.Manager) *cobra.Command {
 	ctxOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:     "context",
@@ -42,17 +43,17 @@ This will prompt you to select one of your existing contexts or to create a new 
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			okteto.SetInsecureSkipTLSVerifyPolicy(ctxOptions.InsecureSkipTlsVerify)
 		},
-		RunE: Use().RunE,
+		RunE: Use(envManager).RunE,
 	}
-	cmd.AddCommand(Show())
-	cmd.AddCommand(Use())
-	cmd.AddCommand(List())
+	cmd.AddCommand(Show(envManager))
+	cmd.AddCommand(Use(envManager))
+	cmd.AddCommand(List(envManager))
 	cmd.AddCommand(DeleteCMD())
 
 	// deprecated
-	cmd.AddCommand(CreateCMD())
-	cmd.AddCommand(UpdateKubeconfigCMD(okClientProvider))
-	cmd.AddCommand(UseNamespace())
+	cmd.AddCommand(CreateCMD(envManager))
+	cmd.AddCommand(UpdateKubeconfigCMD(okClientProvider, envManager))
+	cmd.AddCommand(UseNamespace(envManager))
 
 	cmd.PersistentFlags().BoolVarP(&ctxOptions.InsecureSkipTlsVerify, "insecure-skip-tls-verify", "", false, " If enabled, the server's certificate will not be checked for validity. This will make your connections insecure")
 	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication")

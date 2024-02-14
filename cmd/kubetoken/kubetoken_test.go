@@ -147,7 +147,7 @@ func TestKubetoken(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			cmd := NewKubetokenCmd()
+			cmd := NewKubetokenCmd(nil)
 			cmd.ctxStore = tc.input.contextStore
 			cmd.oktetoClientProvider = tc.input.fakeOktetoClientProvider
 			cmd.oktetoCtxCmdRunner = tc.input.fakeCtxCmdRunner

@@ -24,6 +24,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/endpoints"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
@@ -57,7 +58,7 @@ type k8sIngressClientProvider interface {
 }
 
 type EndpointGetter struct {
-	GetManifest     func(path string, fs afero.Fs) (*model.Manifest, error)
+	GetManifest     func(path string, fs afero.Fs, envManager *env.Manager) (*model.Manifest, error)
 	endpointControl endpointControlInterface
 }
 
@@ -81,7 +82,7 @@ func NewEndpointGetter(k8sLogger *io.K8sLogger) (EndpointGetter, error) {
 }
 
 // Endpoints deploys the okteto manifest
-func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger, envManager *env.Manager) *cobra.Command {
 	options := &EndpointsOptions{}
 	fs := afero.NewOsFs()
 	cmd := &cobra.Command{
@@ -106,8 +107,8 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 			// false for 'json' and 'md' to avoid breaking their syntax
 			showCtxHeader := options.Output == ""
 			// Loads, updates and uses the context from path. If not found, it creates and uses a new context
-			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: showCtxHeader}); err != nil {
-				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace, Show: showCtxHeader}); err != nil {
+			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: showCtxHeader}, envManager); err != nil {
+				if err := contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).Run(ctx, &contextCMD.Options{Namespace: options.Namespace, Show: showCtxHeader}); err != nil {
 					return err
 				}
 			}
@@ -122,7 +123,7 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 			}
 
 			if options.Name == "" {
-				manifest, err := eg.GetManifest(options.ManifestPath, afero.NewOsFs())
+				manifest, err := eg.GetManifest(options.ManifestPath, afero.NewOsFs(), envManager)
 				if err != nil {
 					return err
 				}

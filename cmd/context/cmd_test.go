@@ -18,7 +18,7 @@ import (
 )
 
 func Test_NoArgsAcceptedCtx(t *testing.T) {
-	cmd := Show()
+	cmd := Show(nil)
 	cmd.SetArgs([]string{"args"})
 	err := cmd.Execute()
 	if err == nil {
@@ -27,7 +27,7 @@ func Test_NoArgsAcceptedCtx(t *testing.T) {
 }
 
 func Test_NoArgsAcceptedShow(t *testing.T) {
-	cmd := Context(nil)
+	cmd := Context(nil, nil)
 	cmd.SetArgs([]string{"args"})
 	err := cmd.Execute()
 	if err == nil {
@@ -36,7 +36,7 @@ func Test_NoArgsAcceptedShow(t *testing.T) {
 }
 
 func Test_NoArgsAcceptedList(t *testing.T) {
-	cmd := List()
+	cmd := List(nil)
 	cmd.SetArgs([]string{"args"})
 	err := cmd.Execute()
 	if err == nil {
@@ -45,7 +45,7 @@ func Test_NoArgsAcceptedList(t *testing.T) {
 }
 
 func Test_NoArgsAcceptedUpdateKubeConfig(t *testing.T) {
-	cmd := UpdateKubeconfigCMD(nil)
+	cmd := UpdateKubeconfigCMD(nil, nil)
 	cmd.SetArgs([]string{"args"})
 	err := cmd.Execute()
 	if err == nil {
@@ -54,7 +54,7 @@ func Test_NoArgsAcceptedUpdateKubeConfig(t *testing.T) {
 }
 
 func Test_MaxArgsCreate(t *testing.T) {
-	cmd := CreateCMD()
+	cmd := CreateCMD(nil)
 	cmd.SetArgs([]string{"args", "args"})
 	err := cmd.Execute()
 	if err == nil {
@@ -63,7 +63,7 @@ func Test_MaxArgsCreate(t *testing.T) {
 }
 
 func Test_MaxArgsUse(t *testing.T) {
-	cmd := Use()
+	cmd := Use(nil)
 	cmd.SetArgs([]string{"args", "args"})
 	err := cmd.Execute()
 	if err == nil {

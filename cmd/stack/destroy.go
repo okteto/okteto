@@ -21,6 +21,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/stack"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/afero"
@@ -28,7 +29,7 @@ import (
 )
 
 // Destroy destroys a stack
-func Destroy(ctx context.Context) *cobra.Command {
+func Destroy(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	var stackPath []string
 	var name string
 	var namespace string
@@ -46,7 +47,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				}
 				stackPath[0] = model.GetManifestPathFromWorkdir(stackPath[0], workdir)
 			}
-			s, err := contextCMD.LoadStackWithContext(ctx, name, namespace, stackPath, afero.NewOsFs())
+			s, err := contextCMD.LoadStackWithContext(ctx, name, namespace, stackPath, afero.NewOsFs(), envManager)
 			if err != nil {
 				return err
 			}

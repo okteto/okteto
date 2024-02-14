@@ -17,6 +17,7 @@ import (
 	"context"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/types"
 )
 
@@ -24,7 +25,7 @@ import (
 type FakeUserClient struct {
 	errGetUserSecrets error
 	userCtx           *types.UserContext
-	userSecrets       []types.Secret
+	userSecrets       []env.Var
 	err               []error
 }
 
@@ -48,7 +49,7 @@ func (c *FakeUserClient) GetContext(_ context.Context, _ string) (*types.UserCon
 	return c.userCtx, nil
 }
 
-func (c *FakeUserClient) GetUserSecrets(_ context.Context) ([]types.Secret, error) {
+func (c *FakeUserClient) GetUserSecrets(_ context.Context) ([]env.Var, error) {
 	if c.errGetUserSecrets != nil {
 		return nil, c.errGetUserSecrets
 	}

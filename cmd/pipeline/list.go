@@ -26,6 +26,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/model"
@@ -54,7 +55,7 @@ type pipelineListItem struct {
 	Labels     []string `json:"labels" yaml:"labels"`
 }
 
-func list(ctx context.Context) *cobra.Command {
+func list(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	flags := &listFlags{}
 
 	cmd := &cobra.Command{
@@ -62,7 +63,7 @@ func list(ctx context.Context) *cobra.Command {
 		Short: "List all okteto pipelines",
 		Args:  utils.NoArgsAccepted(""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return pipelineListCommandHandler(ctx, flags, contextCMD.NewContextCommand().Run)
+			return pipelineListCommandHandler(ctx, flags, contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).Run)
 		},
 	}
 

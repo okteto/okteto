@@ -19,6 +19,7 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -26,14 +27,14 @@ import (
 )
 
 // Wake wakes a preview environment
-func Wake(ctx context.Context) *cobra.Command {
+func Wake(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "wake <name>",
 		Short: "Wakes a preview environment",
 		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prToWake := args[0]
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).Run(ctx, &contextCMD.Options{}); err != nil {
 				return err
 			}
 

@@ -95,14 +95,14 @@ type destroyCommand struct {
 	k8sClientProvider okteto.K8sClientProvider
 	ConfigMapHandler  configMapHandler
 	analyticsTracker  analyticsTrackerInterface
-	getManifest       func(path string, fs afero.Fs) (*model.Manifest, error)
+	getManifest       func(path string, fs afero.Fs, envManager *env.Manager) (*model.Manifest, error)
 	oktetoClient      *okteto.Client
 	ioCtrl            *io.Controller
 	buildCtrl         buildCtrl
 }
 
 // Destroy destroys the dev application defined by the manifest
-func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, envManager *env.Manager) *cobra.Command {
 	options := &Options{
 		Variables: []string{},
 	}
@@ -133,11 +133,11 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contr
 				}
 				options.ManifestPath = uptManifestPath
 			}
-			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: true}); err != nil {
+			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: true}, envManager); err != nil {
 				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
 					return err
 				}
-				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
+				if err := contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
 					return err
 				}
 			}
@@ -203,10 +203,12 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contr
 			os.Setenv("KUBECONFIG", kubeconfigPath)
 			defer os.Remove(kubeconfigPath)
 
-			destroyer, err := c.getDestroyer(ctx, options)
+			destroyer, err := c.getDestroyer(ctx, options, envManager)
 			if err != nil {
 				return err
 			}
+
+			envManager.WarnVarsPrecedence()
 
 			err = destroyer.destroy(ctx, options)
 
@@ -267,7 +269,7 @@ func shouldRunInRemote(opts *Options) bool {
 	return false
 }
 
-func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (destroyInterface, error) {
+func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options, envManager *env.Manager) (destroyInterface, error) {
 	var (
 		destroyer destroyInterface
 		err       error
@@ -284,7 +286,7 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 
 		oktetoLog.Info("Destroying all...")
 	} else {
-		manifest, err := dc.getManifest(opts.ManifestPath, afero.NewOsFs())
+		manifest, err := dc.getManifest(opts.ManifestPath, afero.NewOsFs(), envManager)
 		if err != nil {
 			// Log error message but application can still be deleted
 			oktetoLog.Infof("could not find manifest file to be executed: %s", err)

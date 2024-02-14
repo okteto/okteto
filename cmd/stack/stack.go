@@ -18,6 +18,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/spf13/cobra"
 )
@@ -27,15 +28,15 @@ type analyticsTrackerInterface interface {
 }
 
 // Stack stack management commands
-func Stack(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
+func Stack(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller, envManager *env.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "stack",
 		Short:  "Stack management commands",
 		Args:   utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#deploy"),
 		Hidden: true,
 	}
-	cmd.AddCommand(deploy(ctx, at, ioCtrl))
-	cmd.AddCommand(Destroy(ctx))
-	cmd.AddCommand(Endpoints(ctx))
+	cmd.AddCommand(deploy(ctx, at, ioCtrl, envManager))
+	cmd.AddCommand(Destroy(ctx, envManager))
+	cmd.AddCommand(Endpoints(ctx, envManager))
 	return cmd
 }

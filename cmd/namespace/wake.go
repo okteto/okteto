@@ -19,13 +19,14 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
-func Wake(ctx context.Context) *cobra.Command {
+func Wake(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "wake <name>",
 		Short: "Wakes a namespace",
@@ -35,14 +36,14 @@ func Wake(ctx context.Context) *cobra.Command {
 			if len(args) > 0 {
 				nsToWake = args[0]
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: nsToWake, Show: true}); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).Run(ctx, &contextCMD.Options{Namespace: nsToWake, Show: true}); err != nil {
 				return err
 			}
 
 			if !okteto.IsOkteto() {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
-			nsCmd, err := NewCommand()
+			nsCmd, err := NewCommand(envManager)
 			if err != nil {
 				return err
 			}

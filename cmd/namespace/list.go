@@ -21,20 +21,21 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
 // List all namespace in current context
-func List(ctx context.Context) *cobra.Command {
+func List(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	return &cobra.Command{
 		Use:     "list",
 		Short:   "List namespaces managed by Okteto in your current context",
 		Aliases: []string{"ls"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).Run(ctx, &contextCMD.Options{}); err != nil {
 				return err
 			}
 
@@ -42,7 +43,7 @@ func List(ctx context.Context) *cobra.Command {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			nsCmd, err := NewCommand()
+			nsCmd, err := NewCommand(envManager)
 			if err != nil {
 				return err
 			}

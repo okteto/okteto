@@ -109,6 +109,47 @@ spec:
   selector:
     app: e2etest
 `
+	oktetoManifestWithVars = `variables:
+  CLI_TEST_MY_VAR1: manifest-value-1
+  CLI_TEST_MY_VAR2: $LOCAL_VAR
+  CLI_TEST_MY_VAR3: ${LOCAL_VAR}-with-suffix
+  CLI_TEST_MY_VAR4: manifest-value-4
+  CLI_TEST_MY_VAR5: manifest-value-5 # this is also defined in the Okteto Platform (cluster or user level)
+
+deploy:
+  commands:
+  - echo MY_VAR1=$CLI_TEST_MY_VAR1
+  - echo MY_VAR1=$CLI_TEST_MY_VAR1 > deploy-var1.txt
+
+  - echo MY_VAR2=$CLI_TEST_MY_VAR2
+  - echo MY_VAR2=$CLI_TEST_MY_VAR2 > deploy-var2.txt
+
+  - echo MY_VAR3=$CLI_TEST_MY_VAR3
+  - echo MY_VAR3=$CLI_TEST_MY_VAR3 > deploy-var3.txt
+
+  - echo MY_VAR4=$CLI_TEST_MY_VAR4
+  - echo MY_VAR4=$CLI_TEST_MY_VAR4 > deploy-var4.txt
+
+  - echo MY_VAR5=$CLI_TEST_MY_VAR5
+  - echo MY_VAR5=$CLI_TEST_MY_VAR5 > deploy-var5.txt
+
+destroy:
+  commands:
+  - echo MY_VAR1=$CLI_TEST_MY_VAR1
+  - echo MY_VAR1=$CLI_TEST_MY_VAR1 > destroy-var1.txt
+
+  - echo MY_VAR2=$CLI_TEST_MY_VAR2
+  - echo MY_VAR2=$CLI_TEST_MY_VAR2 > destroy-var2.txt
+
+  - echo MY_VAR3=$CLI_TEST_MY_VAR3
+  - echo MY_VAR3=$CLI_TEST_MY_VAR3 > destroy-var3.txt
+
+  - echo MY_VAR4=$CLI_TEST_MY_VAR4
+  - echo MY_VAR4=$CLI_TEST_MY_VAR4 > destroy-var4.txt
+
+  - echo MY_VAR5=$CLI_TEST_MY_VAR5
+  - echo MY_VAR5=$CLI_TEST_MY_VAR5 > destroy-var5.txt
+`
 )
 
 // TestDeployOktetoManifest tests the following scenario:
@@ -442,6 +483,91 @@ func TestDeployRemoteOktetoManifestFromParentFolder(t *testing.T) {
 	require.True(t, k8sErrors.IsNotFound(err))
 }
 
+// TestDeployOktetoManifestWithVariables tests the following scenario:
+// - Validate that the top-property "variables" of the okteto manifest works correctly with the deploy and destroy commands
+// - Validate that local variables have priority over manifest variables
+// - Validate that the manifest variables are expanded correctly
+// - Validate that the manifest variables are obfuscated in the logs
+// - Validate the order in which variables are exported (--var flags > Local > Catalog > Manifest > Okteto Platform)
+// Note: this test requires a variable configured in the Okteto Platform: MY_VAR5=platform-value-5 (value can be anything because it gets overridden by the manifest variable)
+func TestDeployOktetoManifestWithVariables(t *testing.T) {
+	// LOCAL_VAR is used to validate the scenario that manifest vars can be expanded
+	t.Setenv("LOCAL_VAR", "local-value-2")
+
+	// MY_VAR4 is used to validate the scenario that the local variable takes precedence over the manifest's definition
+	t.Setenv("CLI_TEST_MY_VAR4", "local-value-4")
+
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+
+	testNamespace := integration.GetTestNamespace("DeployWithManifestVars", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+
+	require.NoError(t, createOktetoManifestWithVars(dir))
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+
+	deployOutput, deployErr := commands.RunOktetoDeployAndGetOutput(oktetoPath, deployOptions)
+
+	require.NoError(t, deployErr)
+	require.Contains(t, deployOutput, "MY_VAR1=***")
+	require.Contains(t, deployOutput, "MY_VAR2=***")
+	require.Contains(t, deployOutput, "MY_VAR3=***")
+	require.Contains(t, deployOutput, "MY_VAR4=local-value-4") // we do not obfuscate local variables at the moment
+	require.Contains(t, deployOutput, "Variable 'CLI_TEST_MY_VAR4' defined locally or in the catalog takes precedence over the same variable defined in the manifest, which will be ignored")
+	require.Contains(t, deployOutput, "Variable 'CLI_TEST_MY_VAR5' defined in the manifest takes precedence over the same variable defined in the Okteto Platform, which will be ignored")
+
+	destroyOptions := &commands.DestroyOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	destroyOutput, destroyErr := commands.RunOktetoDestroyAndGetOutput(oktetoPath, destroyOptions)
+	require.NoError(t, destroyErr)
+	require.Contains(t, destroyOutput, "MY_VAR1=***")
+	require.Contains(t, destroyOutput, "MY_VAR2=***")
+	require.Contains(t, destroyOutput, "MY_VAR3=***")
+	require.Contains(t, destroyOutput, "MY_VAR4=local-value-4") // we do not obfuscate local variables at the moment
+	require.Contains(t, destroyOutput, "Variable 'CLI_TEST_MY_VAR4' defined locally or in the catalog takes precedence over the same variable defined in the manifest, which will be ignored")
+	require.Contains(t, destroyOutput, "Variable 'CLI_TEST_MY_VAR5' defined in the manifest takes precedence over the same variable defined in the Okteto Platform, which will be ignored")
+
+	expected := []struct {
+		fileName    string
+		expectedVar string
+	}{
+		{"deploy-var1.txt", "MY_VAR1=manifest-value-1"},
+		{"deploy-var2.txt", "MY_VAR2=local-value-2"},
+		{"deploy-var3.txt", "MY_VAR3=local-value-2-with-suffix"},
+		{"deploy-var4.txt", "MY_VAR4=local-value-4"},
+		{"deploy-var5.txt", "MY_VAR5=manifest-value-5"},
+
+		{"destroy-var1.txt", "MY_VAR1=manifest-value-1"},
+		{"destroy-var2.txt", "MY_VAR2=local-value-2"},
+		{"destroy-var3.txt", "MY_VAR3=local-value-2-with-suffix"},
+		{"destroy-var4.txt", "MY_VAR4=local-value-4"},
+		{"destroy-var5.txt", "MY_VAR5=manifest-value-5"},
+	}
+
+	for _, e := range expected {
+		content, err := os.ReadFile(filepath.Join(dir, e.fileName))
+		require.NoError(t, err)
+		require.Contains(t, string(content), e.expectedVar)
+	}
+}
+
 func isImageBuilt(image string) bool {
 	reg := registry.NewOktetoRegistry(okteto.Config{})
 	if _, err := reg.GetImageTagWithDigest(image); err == nil {
@@ -472,6 +598,15 @@ func createOktetoManifest(dir string) error {
 	dockerfilePath := filepath.Join(dir, oktetoManifestName)
 	dockerfileContent := []byte(oktetoManifestContent)
 	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
+		return err
+	}
+	return nil
+}
+
+func createOktetoManifestWithVars(dir string) error {
+	manifestPath := filepath.Join(dir, oktetoManifestName)
+	manifestContent := []byte(oktetoManifestWithVars)
+	if err := os.WriteFile(manifestPath, manifestContent, 0600); err != nil {
 		return err
 	}
 	return nil

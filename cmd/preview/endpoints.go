@@ -24,6 +24,7 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -32,7 +33,7 @@ import (
 )
 
 // Endpoints show all the endpoints of a preview environment
-func Endpoints(ctx context.Context) *cobra.Command {
+func Endpoints(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	var output string
 
 	cmd := &cobra.Command{
@@ -53,7 +54,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				oktetoLog.SetOutput(jsonContextBuffer)
 			}
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).Run(ctx, &contextCMD.Options{}); err != nil {
 				return err
 			}
 			if output != "json" {

@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -186,8 +187,9 @@ dependencies:
 						Repository: "https://repo.url",
 					},
 				},
-				External: externalresource.Section{},
-				Fs:       afero.NewOsFs(),
+				External:  externalresource.Section{},
+				Fs:        afero.NewOsFs(),
+				Variables: vars.Vars{},
 			},
 		},
 		{
@@ -213,7 +215,7 @@ dependencies:
 				filename = ""
 			}
 
-			m, err := model.GetManifestV2(filename, afero.NewMemMapFs())
+			m, err := model.GetManifestV2(filename, afero.NewMemMapFs(), nil)
 			if tt.expectedErr {
 				assert.NotNil(t, err)
 			} else {

@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -40,7 +41,6 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
-	"github.com/okteto/okteto/pkg/types"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -160,7 +160,7 @@ type imageGetterInterface interface {
 }
 
 type secretsGetterInterface interface {
-	GetUserSecrets(context.Context) ([]types.Secret, error)
+	GetUserSecrets(context.Context) ([]env.Var, error)
 }
 
 type devContainerEnvGetter struct{}
@@ -220,6 +220,7 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 
+	fmt.Println("DEBUG!!! GET ENV")
 	svcImage := apps.GetDevContainer(app.PodSpec(), "").Image
 	imageEnvs, err := eg.imageEnvsGetter.getEnvsFromImage(svcImage)
 	if err != nil {

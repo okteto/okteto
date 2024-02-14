@@ -30,6 +30,8 @@ var (
 		E:    errors.New("could not detect any okteto manifest"),
 		Hint: "If you have an okteto manifest file, use the flag '--file' to point to your okteto manifest file",
 	}
+	// ErrOktetoManifestNotV1 is returned by GetManiestV1 when the manifest is not a v1 manifest
+	ErrOktetoManifestNotV1 = errors.New("okteto manifest is not a v1 manifest")
 	// ErrOktetoPipelineManifestNotFound is raised when discovery package could not found any okteto pipeline manifest
 	ErrOktetoPipelineManifestNotFound = errors.New("could not detect any okteto pipeline manifest")
 	// ErrHelmChartNotFound is raised when discovery package could not found any helm chart
