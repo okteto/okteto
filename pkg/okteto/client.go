@@ -50,6 +50,7 @@ type Client struct {
 type ClientProvider struct{}
 
 var insecureSkipTLSVerify bool
+var onceInsecureWarning *sync.Once = &sync.Once{}
 var serverName string
 var strictTLSOnce sync.Once
 var errURLNotSet = errors.New("the okteto URL is not set")
@@ -465,11 +466,13 @@ func (c *Client) Endpoint() types.EndpointClientInterface {
 }
 
 func SetInsecureSkipTLSVerifyPolicy(isInsecure bool) {
-	oktetoLog.Debugf("insecure mode: %t", isInsecure)
-	if isInsecure {
-		oktetoLog.Warning("Insecure mode enabled")
-	}
-	insecureSkipTLSVerify = isInsecure
+	onceInsecureWarning.Do(func() {
+		oktetoLog.Debugf("insecure mode: %t", isInsecure)
+		if isInsecure {
+			oktetoLog.Warning("Insecure mode enabled")
+		}
+		insecureSkipTLSVerify = isInsecure
+	})
 }
 
 func IsInsecureSkipTLSVerifyPolicy() bool {
