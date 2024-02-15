@@ -794,8 +794,8 @@ func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error 
 		case <-ttySignals:
 			oktetoLog.Infof("SIGTTOU/SIGTTIN received, starting shutdown sequence preventing it to background the process")
 			return oktetoErrors.UserError{
-				E:    fmt.Errorf("terminal disconnect detected"),
-				Hint: "Try re-running 'okteto up' to reconnect",
+				E:    fmt.Errorf("connection lost to your development container"),
+				Hint: "Use 'okteto up' to reconnect",
 			}
 		case err := <-up.applyToApps(ctx):
 			oktetoLog.Infof("exiting by applyToAppsChan: %v", err)
