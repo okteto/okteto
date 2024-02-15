@@ -176,7 +176,6 @@ func (up *upContext) activate() error {
 
 	// success means all context is ready to run the activation
 	up.success = true
-	up.unhandledTransientRetryCount = 0
 
 	go func() {
 		output := <-up.cleaned

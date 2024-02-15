@@ -110,28 +110,11 @@ func Test_isTransient(t *testing.T) {
 			},
 		},
 		{
-			name: "up.success true - retry any error",
-			input: input{
-				err: assert.AnError,
-				up: &upContext{
-					success:                      true,
-					unhandledTransientMaxRetries: 5,
-					unhandledTransientRetryCount: 3,
-				},
-			},
-			expected: expected{
-				isTransient:         true,
-				transientRetryCount: 4,
-			},
-		},
-		{
 			name: "up.success false - max retries exceeded",
 			input: input{
 				err: assert.AnError,
 				up: &upContext{
-					success:                      true,
-					unhandledTransientMaxRetries: 5,
-					unhandledTransientRetryCount: 5,
+					success: true,
 				},
 			},
 			expected: expected{
@@ -145,48 +128,6 @@ func Test_isTransient(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			isTransientErr := tt.input.up.isTransient(tt.input.err)
 			assert.Equal(t, tt.expected.isTransient, isTransientErr)
-			assert.Equal(t, tt.expected.transientRetryCount, tt.input.up.unhandledTransientRetryCount)
-		})
-	}
-}
-
-func Test_isFatalAfterSuccessError(t *testing.T) {
-	tests := []struct {
-		err      error
-		name     string
-		expected bool
-	}{
-		{
-			name:     "nil error",
-			err:      nil,
-			expected: false,
-		},
-		{
-			name:     "recoverable error",
-			err:      errors.New("some transient error"),
-			expected: false,
-		},
-		{
-			name:     "non-recoverable error - deleted namespace",
-			err:      errors.New("application \"test\" not found in namespace \"testns\""),
-			expected: true,
-		},
-		{
-			name:     "non-recoverable error - deleted role binding",
-			err:      errors.New("cannot get resource \"deployments\" in API group \"apps\" in the namespace \"testns\": no matching resources found"),
-			expected: true,
-		},
-		{
-			name:     "non-recoverable error - okteto down while okteto up is running",
-			err:      errors.New("development container has been deactivated"),
-			expected: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			isFatalErr := isFatalAfterSuccessError(tt.err)
-			assert.Equal(t, tt.expected, isFatalErr)
 		})
 	}
 }

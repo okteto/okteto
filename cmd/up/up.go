@@ -253,21 +253,19 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 			}
 
 			up := &upContext{
-				Manifest:                     oktetoManifest,
-				Dev:                          nil,
-				Exit:                         make(chan error, 1),
-				resetSyncthing:               upOptions.Reset,
-				StartTime:                    time.Now(),
-				Registry:                     registry.NewOktetoRegistry(okteto.Config{}),
-				Options:                      upOptions,
-				Fs:                           afero.NewOsFs(),
-				analyticsTracker:             at,
-				analyticsMeta:                upMeta,
-				K8sClientProvider:            okteto.NewK8sClientProviderWithLogger(k8sLogger),
-				tokenUpdater:                 newTokenUpdaterController(),
-				builder:                      buildv2.NewBuilderFromScratch(at, ioCtrl),
-				unhandledTransientMaxRetries: 100,
-				unhandledTransientRetryCount: 0,
+				Manifest:          oktetoManifest,
+				Dev:               nil,
+				Exit:              make(chan error, 1),
+				resetSyncthing:    upOptions.Reset,
+				StartTime:         time.Now(),
+				Registry:          registry.NewOktetoRegistry(okteto.Config{}),
+				Options:           upOptions,
+				Fs:                afero.NewOsFs(),
+				analyticsTracker:  at,
+				analyticsMeta:     upMeta,
+				K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
+				tokenUpdater:      newTokenUpdaterController(),
+				builder:           buildv2.NewBuilderFromScratch(at, ioCtrl),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
