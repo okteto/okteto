@@ -121,8 +121,9 @@ func Test_getPreviewDefaultOutput(t *testing.T) {
 				Name:     "my-preview",
 				Scope:    "personal",
 				Sleeping: false,
+				Branch:   "test-branch",
 			},
-			expected: "my-preview\tpersonal\tfalse\t-\n",
+			expected: "my-preview\tpersonal\tfalse\ttest-branch\t-\n",
 		},
 		{
 			name: "preview with labels",
@@ -131,8 +132,9 @@ func Test_getPreviewDefaultOutput(t *testing.T) {
 				Scope:    "personal",
 				Sleeping: false,
 				Labels:   []string{"one", "two"},
+				Branch:   "test-branch",
 			},
-			expected: "my-preview\tpersonal\tfalse\tone, two\n",
+			expected: "my-preview\tpersonal\tfalse\ttest-branch\tone, two\n",
 		},
 	}
 
@@ -175,16 +177,18 @@ func Test_displayListPreviews(t *testing.T) {
 					Scope:    "personal",
 					Sleeping: true,
 					Labels:   []string{"test", "okteto"},
+					Branch:   "test-branch-1",
 				},
 				{
 					Name:     "test2",
 					Scope:    "global",
 					Sleeping: true,
+					Branch:   "test-branch-2",
 				},
 			},
-			expectedOutput: `Name   Scope     Sleeping  Labels
-test   personal  true      test, okteto
-test2  global    true      -
+			expectedOutput: `Name   Scope     Sleeping  Branch         Labels
+test   personal  true      test-branch-1  test, okteto
+test2  global    true      test-branch-2  -
 `,
 		},
 		{
@@ -196,14 +200,16 @@ test2  global    true      -
 					Scope:    "personal",
 					Sleeping: true,
 					Labels:   []string{"test", "okteto"},
+					Branch:   "test-branch-1",
 				},
 				{
 					Name:     "test2",
 					Scope:    "global",
 					Sleeping: true,
+					Branch:   "test-branch-2",
 				},
 			},
-			expectedOutput: "[\n {\n  \"name\": \"test\",\n  \"scope\": \"personal\",\n  \"labels\": [\n   \"test\",\n   \"okteto\"\n  ],\n  \"sleeping\": true\n },\n {\n  \"name\": \"test2\",\n  \"scope\": \"global\",\n  \"labels\": null,\n  \"sleeping\": true\n }\n]\n",
+			expectedOutput: "[\n {\n  \"name\": \"test\",\n  \"scope\": \"personal\",\n  \"branch\": \"test-branch-1\",\n  \"labels\": [\n   \"test\",\n   \"okteto\"\n  ],\n  \"sleeping\": true\n },\n {\n  \"name\": \"test2\",\n  \"scope\": \"global\",\n  \"branch\": \"test-branch-2\",\n  \"labels\": null,\n  \"sleeping\": true\n }\n]\n",
 		},
 		{
 			name:   "list - yaml format",
@@ -214,14 +220,16 @@ test2  global    true      -
 					Scope:    "personal",
 					Sleeping: true,
 					Labels:   []string{"test", "okteto"},
+					Branch:   "test-branch-1",
 				},
 				{
 					Name:     "test2",
 					Scope:    "global",
 					Sleeping: true,
+					Branch:   "test-branch-2",
 				},
 			},
-			expectedOutput: "- name: test\n  scope: personal\n  labels:\n  - test\n  - okteto\n  sleeping: true\n- name: test2\n  scope: global\n  labels: []\n  sleeping: true\n\n",
+			expectedOutput: "- name: test\n  scope: personal\n  branch: test-branch-1\n  labels:\n  - test\n  - okteto\n  sleeping: true\n- name: test2\n  scope: global\n  branch: test-branch-2\n  labels: []\n  sleeping: true\n\n",
 		},
 	}
 

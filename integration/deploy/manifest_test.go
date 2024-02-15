@@ -124,7 +124,7 @@ func TestDeployOktetoManifest(t *testing.T) {
 	require.NoError(t, createAppDockerfile(dir))
 	require.NoError(t, createK8sManifest(dir))
 
-	testNamespace := integration.GetTestNamespace("TestDeployManifestV2", user)
+	testNamespace := integration.GetTestNamespace("DeployManifestV2", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -178,7 +178,7 @@ func TestRedeployOktetoManifestForImages(t *testing.T) {
 	require.NoError(t, createAppDockerfile(dir))
 	require.NoError(t, createK8sManifest(dir))
 
-	testNamespace := integration.GetTestNamespace("TestReDeploy", user)
+	testNamespace := integration.GetTestNamespace("ReDeploy", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -250,7 +250,7 @@ func TestDeployOktetoManifestWithDestroy(t *testing.T) {
 	require.NoError(t, createAppDockerfile(dir))
 	require.NoError(t, createK8sManifest(dir))
 
-	testNamespace := integration.GetTestNamespace("TestDeployDestroy", user)
+	testNamespace := integration.GetTestNamespace("DeployDestroy", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -308,7 +308,7 @@ func TestDeployOktetoManifestExportCache(t *testing.T) {
 
 	dir := t.TempDir()
 
-	testNamespace := integration.GetTestNamespace("TestDeployExportCache", user)
+	testNamespace := integration.GetTestNamespace("DeployExportCache", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -355,7 +355,7 @@ func TestDeployRemoteOktetoManifest(t *testing.T) {
 
 	dir := t.TempDir()
 
-	testNamespace := integration.GetTestNamespace("TestDeployRemote", user)
+	testNamespace := integration.GetTestNamespace("DeployRemote", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -402,7 +402,7 @@ func TestDeployRemoteOktetoManifestFromParentFolder(t *testing.T) {
 	dir := t.TempDir()
 	parentFolder := filepath.Join(dir, "test-parent")
 
-	testNamespace := integration.GetTestNamespace("TestDeployRemoteParent", user)
+	testNamespace := integration.GetTestNamespace("DeployRemoteParent", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

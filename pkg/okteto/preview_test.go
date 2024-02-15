@@ -310,6 +310,7 @@ func TestListPreview(t *testing.T) {
 								Id:       "test",
 								Sleeping: false,
 								Scope:    "test",
+								Branch:   "test-branch",
 							},
 						},
 					},
@@ -323,6 +324,7 @@ func TestListPreview(t *testing.T) {
 						Sleeping:      false,
 						Scope:         "test",
 						PreviewLabels: []string{},
+						Branch:        "test-branch",
 					},
 				},
 				err: nil,
@@ -342,6 +344,7 @@ func TestListPreview(t *testing.T) {
 								PreviewLabels: []graphql.String{
 									"value",
 								},
+								Branch: "test-branch",
 							},
 						},
 					},
@@ -357,6 +360,7 @@ func TestListPreview(t *testing.T) {
 						PreviewLabels: []string{
 							"value",
 						},
+						Branch: "test-branch",
 					},
 				},
 				err: nil,

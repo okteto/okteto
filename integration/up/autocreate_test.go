@@ -95,7 +95,7 @@ func TestUpAutocreate(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestUpAutocreateV1", user)
+	testNamespace := integration.GetTestNamespace("UpAutocreateV1", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -183,7 +183,7 @@ func TestUpAutocreateV2(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestUpAutocreateV2", user)
+	testNamespace := integration.GetTestNamespace("UpAutocreateV2", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -271,7 +271,7 @@ func TestUpAutocreateV2WithBuild(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestUpAutocreateV2Build", user)
+	testNamespace := integration.GetTestNamespace("UpAutocreateV2Build", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

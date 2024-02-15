@@ -116,7 +116,7 @@ func TestUpDeploymentV1(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestUpDeploymentV1", user)
+	testNamespace := integration.GetTestNamespace("UpDeploymentV1", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -230,7 +230,7 @@ func TestUpDeploymentV2(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestUpDeploymentV2", user)
+	testNamespace := integration.GetTestNamespace("UpDeploymentV2", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

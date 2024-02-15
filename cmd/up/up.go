@@ -290,7 +290,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 				// the autocreate property is forced to be true
 				forceAutocreate = true
 			} else if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, k8sClient)) {
-				err := up.deployApp(ctx, k8sLogger)
+				err := up.deployApp(ctx, ioCtrl, k8sLogger)
 
 				// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
 				if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands) {
@@ -577,7 +577,7 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVaria
 	return &overridedEnvVars, nil
 }
 
-func (up *upContext) deployApp(ctx context.Context, k8slogger *io.K8sLogger) error {
+func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slogger *io.K8sLogger) error {
 	k8sProvider := okteto.NewK8sClientProviderWithLogger(k8slogger)
 	pc, err := pipelineCMD.NewCommand()
 	if err != nil {
@@ -596,6 +596,7 @@ func (up *upContext) deployApp(ctx context.Context, k8slogger *io.K8sLogger) err
 		DeployWaiter:       deploy.NewDeployWaiter(k8sProvider, k8slogger),
 		EndpointGetter:     deploy.NewEndpointGetter,
 		AnalyticsTracker:   up.analyticsTracker,
+		IoCtrl:             ioCtrl,
 	}
 
 	startTime := time.Now()
