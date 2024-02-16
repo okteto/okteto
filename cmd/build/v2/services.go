@@ -16,8 +16,11 @@ package v2
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/sync/errgroup"
@@ -88,34 +91,62 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 
 // checkServiceToBuild looks for the service image reference at the registry and adds it to the buildCh if is not found
 func (bc *OktetoBuilder) checkServiceToBuild(service string, manifest *model.Manifest, buildCh chan string) error {
-	buildInfo := manifest.Build[service].Copy()
-	isStack := manifest.Type == model.StackType
-	if isStack && bc.oktetoContext.IsOkteto() && !bc.Registry.IsOktetoRegistry(buildInfo.Image) {
-		buildInfo.Image = ""
-	}
+	if env.LoadBoolean(constants.OktetoDeployRemote) {
+		sanitizedSvc := strings.ToUpper(strings.ReplaceAll(service, "-", "_"))
 
-	var err error
-	var buildHash string
-	if bc.smartBuildCtrl.IsEnabled() {
-		buildHash, err = bc.smartBuildCtrl.GetBuildHash(buildInfo)
-		if err != nil {
-			bc.ioCtrl.Logger().Infof("error getting build hash: %s", err)
+		imageKey := fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", sanitizedSvc)
+		if os.Getenv(imageKey) == "" {
+			return fmt.Errorf("remote image not found for service %s", service)
 		}
+		os.Setenv(imageKey, os.Getenv(imageKey))
+
+		registryKey := fmt.Sprintf("OKTETO_BUILD_%s_REGISTRY", sanitizedSvc)
+		if os.Getenv(registryKey) == "" {
+			return fmt.Errorf("remote image not found for service %s", service)
+		}
+		os.Setenv(registryKey, os.Getenv(registryKey))
+
+		repositoryKey := fmt.Sprintf("OKTETO_BUILD_%s_REPOSITORY", sanitizedSvc)
+		if os.Getenv(repositoryKey) == "" {
+			return fmt.Errorf("remote image not found for service %s", service)
+		}
+		os.Setenv(repositoryKey, os.Getenv(repositoryKey))
+
+		tagKey := fmt.Sprintf("OKTETO_BUILD_%s_TAG", sanitizedSvc)
+		if os.Getenv(tagKey) == "" {
+			return fmt.Errorf("remote image not found for service %s", service)
+		}
+
+	} else {
+		buildInfo := manifest.Build[service].Copy()
+		isStack := manifest.Type == model.StackType
+		if isStack && bc.oktetoContext.IsOkteto() && !bc.Registry.IsOktetoRegistry(buildInfo.Image) {
+			buildInfo.Image = ""
+		}
+
+		var err error
+		var buildHash string
+		if bc.smartBuildCtrl.IsEnabled() {
+			buildHash, err = bc.smartBuildCtrl.GetBuildHash(buildInfo)
+			if err != nil {
+				bc.ioCtrl.Logger().Infof("error getting build hash: %s", err)
+			}
 			bc.ioCtrl.Logger().Debugf("build hash: %s", buildHash)
-	}
+		}
 
-	imageChecker := getImageChecker(buildInfo, bc.Config, bc.Registry, bc.smartBuildCtrl, bc.ioCtrl.Logger())
-	imageWithDigest, err := imageChecker.getImageDigestReferenceForService(manifest.Name, service, buildInfo, buildHash)
-	if oktetoErrors.IsNotFound(err) {
-		bc.ioCtrl.Logger().Debug("image not found, building image")
-		buildCh <- service
-		return nil
-	} else if err != nil {
-		return err
-	}
-	bc.ioCtrl.Logger().Debugf("Skipping build for image for service: %s", service)
+		imageChecker := getImageChecker(buildInfo, bc.Config, bc.Registry, bc.smartBuildCtrl, bc.ioCtrl.Logger())
+		imageWithDigest, err := imageChecker.getImageDigestReferenceForService(manifest.Name, service, buildInfo, buildHash)
+		if oktetoErrors.IsNotFound(err) {
+			bc.ioCtrl.Logger().Debug("image not found, building image")
+			buildCh <- service
+			return nil
+		} else if err != nil {
+			return err
+		}
+		bc.ioCtrl.Logger().Debugf("Skipping build for image for service: %s", service)
 
-	bc.SetServiceEnvVars(service, imageWithDigest)
+		bc.SetServiceEnvVars(service, imageWithDigest)
+	}
 
 	if manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
 		stack := manifest.Deploy.ComposeSection.Stack
