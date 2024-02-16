@@ -210,6 +210,10 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 			diff: "",
 			err:  errTimeoutExceeded,
 		}
+		untrackedFilesCh <- untrackedFilesResponse{
+			untrackedFilesDiff: "",
+			err:                errTimeoutExceeded,
+		}
 	}()
 
 	// go func that calculates the diff using git diff
