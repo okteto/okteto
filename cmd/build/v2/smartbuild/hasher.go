@@ -80,11 +80,13 @@ func (sh *serviceHasher) hashBuildContext(buildInfo *build.Info) (string, error)
 	if _, ok := sh.buildContextCache[buildContext]; !ok {
 		dirCommit, err := sh.gitRepoCtrl.GetLatestDirCommit(buildContext)
 		if err != nil {
+			oktetoLog.Infof("could not get build context sha: %s", err)
 			return "", fmt.Errorf("could not get build context sha: %w", err)
 		}
 
 		diffHash, err := sh.gitRepoCtrl.GetDiffHash(buildContext)
 		if err != nil {
+			oktetoLog.Infof("could not get build context diff sha: %s", err)
 			return "", fmt.Errorf("could not get build context diff sha: %w", err)
 		}
 
@@ -122,7 +124,9 @@ func (sh *serviceHasher) hash(buildInfo *build.Info, commitHash string, diff str
 	fmt.Fprintf(&b, "diff:%s;", diff)
 	fmt.Fprintf(&b, "image:%s;", buildInfo.Image)
 
-	oktetoBuildHash := sha256.Sum256([]byte(b.String()))
+	hashFrom := b.String()
+	oktetoLog.Infof("hashing build info: %s", hashFrom)
+	oktetoBuildHash := sha256.Sum256([]byte(hashFrom))
 	return hex.EncodeToString(oktetoBuildHash[:])
 }
 

@@ -101,6 +101,7 @@ func (bc *OktetoBuilder) checkServiceToBuild(service string, manifest *model.Man
 		if err != nil {
 			bc.ioCtrl.Logger().Infof("error getting build hash: %s", err)
 		}
+			bc.ioCtrl.Logger().Debugf("build hash: %s", buildHash)
 	}
 
 	imageChecker := getImageChecker(buildInfo, bc.Config, bc.Registry, bc.smartBuildCtrl, bc.ioCtrl.Logger())
