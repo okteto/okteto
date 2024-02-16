@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -1540,7 +1541,7 @@ func TestPrepare(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.dev.PreparePathsAndExpandEnvFiles(tt.input.manifestPath)
+			err := tt.dev.PreparePathsAndExpandEnvFiles(tt.input.manifestPath, afero.NewMemMapFs())
 			if tt.expectedError {
 				assert.Error(t, err)
 			} else {

@@ -34,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 )
@@ -61,7 +62,7 @@ func Down(k8sLogsCtrl *io.K8sLogger) *cobra.Command {
 				}
 				devPath = model.GetManifestPathFromWorkdir(devPath, workdir)
 			}
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs())
 			if err != nil {
 				return err
 			}

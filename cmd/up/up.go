@@ -150,7 +150,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 				upOptions.ManifestPath = uptManifestPath
 			}
 			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.ManifestPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
-			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
+			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs())
 			if err != nil {
 				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
 					return err
@@ -316,7 +316,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 				dev.Command.Values = upOptions.commandToExecute
 			}
 
-			if err := dev.PreparePathsAndExpandEnvFiles(oktetoManifest.ManifestPath); err != nil {
+			if err := dev.PreparePathsAndExpandEnvFiles(oktetoManifest.ManifestPath, up.Fs); err != nil {
 				return fmt.Errorf("error in 'dev' section of your manifest: %w", err)
 			}
 
@@ -630,11 +630,11 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 	return err
 }
 
-func (up *upContext) getManifest(path string) (*model.Manifest, error) {
+func (up *upContext) getManifest(path string, fs afero.Fs) (*model.Manifest, error) {
 	if up.Manifest != nil {
 		return up.Manifest, nil
 	}
-	return model.GetManifestV2(path)
+	return model.GetManifestV2(path, fs)
 }
 
 func (up *upContext) start() error {

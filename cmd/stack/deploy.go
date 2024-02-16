@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -64,7 +65,7 @@ func deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 				}
 				options.StackPaths[0] = model.GetManifestPathFromWorkdir(options.StackPaths[0], workdir)
 			}
-			s, err := contextCMD.LoadStackWithContext(ctx, options.Name, options.Namespace, options.StackPaths)
+			s, err := contextCMD.LoadStackWithContext(ctx, options.Name, options.Namespace, options.StackPaths, afero.NewOsFs())
 			if err != nil {
 				return err
 			}

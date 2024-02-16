@@ -38,6 +38,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 )
@@ -92,7 +93,7 @@ func Push(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			manifest, err := utils.DeprecatedLoadManifestOrDefault(pushOpts.DevPath, pushOpts.AppName)
+			manifest, err := utils.DeprecatedLoadManifestOrDefault(pushOpts.DevPath, pushOpts.AppName, afero.NewOsFs())
 			if err != nil {
 				return err
 			}

@@ -34,6 +34,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/model/utils"
+	"github.com/spf13/afero"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -223,7 +224,7 @@ const (
 )
 
 // GetStackFromPath returns an okteto stack object from a given file
-func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
+func GetStackFromPath(name, stackPath string, isCompose bool, fs afero.Fs) (*Stack, error) {
 	b, err := os.ReadFile(stackPath)
 	if err != nil {
 		return nil, err
@@ -281,8 +282,8 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 		if uri, err := url.ParseRequestURI(svc.Build.Context); err == nil || (uri != nil && (uri.Scheme != "" || uri.Host != "")) {
 			svc.Build.Dockerfile = ""
 		} else {
-			svc.Build.Context = loadAbsPath(stackDir, svc.Build.Context)
-			svc.Build.Dockerfile = loadAbsPath(svc.Build.Context, svc.Build.Dockerfile)
+			svc.Build.Context = loadAbsPath(stackDir, svc.Build.Context, fs)
+			svc.Build.Dockerfile = loadAbsPath(svc.Build.Context, svc.Build.Dockerfile, fs)
 		}
 		copy(svc.Build.VolumesToInclude, svc.Volumes)
 	}
@@ -782,7 +783,7 @@ func isPathAComposeFile(path string) bool {
 }
 
 // LoadStack loads an okteto stack manifest checking "yml" and "yaml"
-func LoadStack(name string, stackPaths []string, validate bool) (*Stack, error) {
+func LoadStack(name string, stackPaths []string, validate bool, fs afero.Fs) (*Stack, error) {
 	var resultStack *Stack
 
 	if len(stackPaths) == 0 {
@@ -790,7 +791,7 @@ func LoadStack(name string, stackPaths []string, validate bool) (*Stack, error) 
 		if err != nil {
 			return nil, err
 		}
-		stack, err := inferStack(dir, name)
+		stack, err := inferStack(dir, name, fs)
 		if err != nil {
 			return nil, err
 		}
@@ -799,7 +800,7 @@ func LoadStack(name string, stackPaths []string, validate bool) (*Stack, error) 
 	} else {
 		for _, stackPath := range stackPaths {
 			if filesystem.FileExists(stackPath) {
-				stack, err := getStack(name, stackPath)
+				stack, err := getStack(name, stackPath, fs)
 				if err != nil {
 					return nil, err
 				}
@@ -819,15 +820,15 @@ func LoadStack(name string, stackPaths []string, validate bool) (*Stack, error) 
 	return resultStack, nil
 }
 
-func inferStack(wd, name string) (*Stack, error) {
+func inferStack(wd, name string, fs afero.Fs) (*Stack, error) {
 	composePath, err := discovery.GetComposePath(wd)
 	if err != nil {
 		return nil, err
 	}
-	return getStack(name, composePath)
+	return getStack(name, composePath, fs)
 }
 
-func getStack(name, manifestPath string) (*Stack, error) {
+func getStack(name, manifestPath string, fs afero.Fs) (*Stack, error) {
 	var isCompose bool
 	if isDeprecatedExtension(manifestPath) {
 		deprecatedFile := filepath.Base(manifestPath)
@@ -836,11 +837,11 @@ func getStack(name, manifestPath string) (*Stack, error) {
 	if isPathAComposeFile(manifestPath) {
 		isCompose = true
 	}
-	stack, err := GetStackFromPath(name, manifestPath, isCompose)
+	stack, err := GetStackFromPath(name, manifestPath, isCompose, fs)
 	if err != nil {
 		return nil, err
 	}
-	overrideStack, err := getOverrideFile(manifestPath)
+	overrideStack, err := getOverrideFile(manifestPath, fs)
 	if err == nil {
 		oktetoLog.Info("override file detected. Merging it")
 		stack = stack.Merge(overrideStack)
@@ -858,7 +859,7 @@ func isDeprecatedExtension(stackPath string) bool {
 	return false
 }
 
-func getOverrideFile(stackPath string) (*Stack, error) {
+func getOverrideFile(stackPath string, fs afero.Fs) (*Stack, error) {
 	extension := filepath.Ext(stackPath)
 	fileName := strings.TrimSuffix(stackPath, extension)
 	overridePath := fmt.Sprintf("%s.override%s", fileName, extension)
@@ -867,7 +868,7 @@ func getOverrideFile(stackPath string) (*Stack, error) {
 		if isPathAComposeFile(stackPath) {
 			isCompose = true
 		}
-		stack, err := GetStackFromPath("", overridePath, isCompose)
+		stack, err := GetStackFromPath("", overridePath, isCompose, fs)
 		if err != nil {
 			return nil, err
 		}

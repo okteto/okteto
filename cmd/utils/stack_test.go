@@ -22,6 +22,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/spf13/afero"
 )
 
 const (
@@ -55,7 +56,7 @@ func Test_multipleStack(t *testing.T) {
 	}
 	paths = append(paths, path)
 
-	stack, err := model.LoadStack("", paths, false)
+	stack, err := model.LoadStack("", paths, false, afero.NewMemMapFs())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +87,7 @@ func Test_multipleStack(t *testing.T) {
 	t.Setenv("OKTETO_BUILD_APP_IMAGE", "test")
 	svcResult.Image = "test"
 
-	stack, err = model.LoadStack("", paths, true)
+	stack, err = model.LoadStack("", paths, true, afero.NewMemMapFs())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +122,7 @@ func Test_overrideFileStack(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stack, err := model.LoadStack("", paths, true)
+	stack, err := model.LoadStack("", paths, true, afero.NewMemMapFs())
 	if err != nil {
 		t.Fatal(err)
 	}

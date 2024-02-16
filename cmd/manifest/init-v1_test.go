@@ -23,6 +23,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
@@ -61,7 +62,7 @@ func TestRun(t *testing.T) {
 	_, err := os.Stat(stignorePath)
 	require.NoError(t, err)
 
-	manifest, err := utils.DeprecatedLoadManifest(p)
+	manifest, err := utils.DeprecatedLoadManifest(p, afero.NewMemMapFs())
 	require.NoError(t, err)
 
 	dev, err := utils.GetDevFromManifest(manifest, "")
@@ -82,7 +83,7 @@ func TestRun(t *testing.T) {
 		t.Fatalf("manifest wasn't overwritten: %s", err)
 	}
 
-	manifest, err = utils.DeprecatedLoadManifest(p)
+	manifest, err = utils.DeprecatedLoadManifest(p, afero.NewMemMapFs())
 	require.NoError(t, err)
 
 	dev, err = utils.GetDevFromManifest(manifest, "")
