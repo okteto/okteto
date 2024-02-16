@@ -259,8 +259,10 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 		return "", untrackedFilesResponse.err
 	}
 
-	diffHash := sha256.Sum256([]byte(fmt.Sprintf("%s%s", diffResponse.diff, untrackedFilesResponse.untrackedFilesDiff)))
-	return fmt.Sprintf("%x", diffHash), nil
+	hashFrom := fmt.Sprintf("%s-%s", diffResponse.diff, untrackedFilesResponse.untrackedFilesDiff)
+	oktetoLog.Infof("hashing diff: %s", hashFrom)
+	diffHash := sha256.Sum256([]byte(hashFrom))
+	return hex.EncodeToString(diffHash[:]), nil
 }
 
 func (r gitRepoController) getUntrackedContent(files []string) (string, error) {
