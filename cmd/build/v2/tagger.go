@@ -110,8 +110,9 @@ func (i imageTagger) getImageReferencesForTagWithDefaults(manifestName, svcToBui
 		imageReferences = append(imageReferences, i.getImageReferencesForTag(manifestName, svcToBuildName, tag)...)
 	}
 
-	imageReferences = append(imageReferences, i.getImageReferencesForTag(manifestName, svcToBuildName, model.OktetoDefaultImageTag)...)
-
+	if len(imageReferences) == 0 {
+		imageReferences = append(imageReferences, i.getImageReferencesForTag(manifestName, svcToBuildName, model.OktetoDefaultImageTag)...)
+	}
 	return imageReferences
 }
 
