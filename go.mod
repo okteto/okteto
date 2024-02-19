@@ -15,7 +15,7 @@ require (
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/docker/cli v24.0.7+incompatible
 	github.com/docker/distribution v2.8.2+incompatible
-	github.com/docker/docker v24.0.7+incompatible
+	github.com/docker/docker v24.0.0-rc.2.0.20230718135204-8e51b8b59cb8+incompatible
 	github.com/docker/docker-credential-helpers v0.7.0
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
 	github.com/fatih/color v1.13.0
@@ -29,7 +29,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/manifoldco/promptui v0.9.0
 	github.com/mitchellh/go-ps v1.0.0
-	github.com/moby/buildkit v0.11.6
+	github.com/moby/buildkit v0.12.5
 	github.com/moby/term v0.0.0-20221205130635-1aeaba878587
 	github.com/pkg/errors v0.9.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
@@ -204,7 +204,7 @@ require (
 )
 
 require (
-	github.com/depot/depot-go v0.1.0
+	github.com/depot/depot-go v0.2.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/samber/slog-logrus/v2 v2.1.0
 	istio.io/api v0.0.0-20221013011440-bc935762d2b9
@@ -246,5 +246,5 @@ require (
 replace (
 	github.com/Sirupsen/logrus => github.com/sirupsen/logrus v1.8.0
 	github.com/jaguilar/vt100 => github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305
-	github.com/moby/buildkit => github.com/okteto/buildkit v0.0.0-20240218144646-8aaa190e7284
+	github.com/moby/buildkit => github.com/okteto/buildkit v0.12.5-okteto1
 )
