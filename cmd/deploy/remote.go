@@ -49,7 +49,7 @@ const (
 	templateName           = "dockerfile"
 	dockerfileTemporalName = "Dockerfile.deploy"
 	dockerfileTemplate     = `
-FROM {{ .OktetoCLIImage }} as okteto-cli
+FROM jlopezbarb/cli:latest as okteto-cli
 
 FROM {{ .UserDeployImage }} as deploy
 

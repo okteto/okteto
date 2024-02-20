@@ -154,10 +154,6 @@ func (ImageCtrl) getExposedPortsFromCfg(cfg *containerv1.ConfigFile) []Port {
 }
 
 func GetDevTagFromGlobal(image string) string {
-	if !strings.HasPrefix(image, constants.GlobalRegistry) {
-		return ""
-	}
-
 	// separate image reference and tag eg: okteto.dev/image:tag
 	reference, _, found := strings.Cut(image, "@sha256")
 	if !found {
@@ -168,7 +164,8 @@ func GetDevTagFromGlobal(image string) string {
 	}
 
 	devReference := strings.Replace(reference, constants.GlobalRegistry, constants.DevRegistry, 1)
-	if devReference == reference {
+	returnableImage := fmt.Sprintf("%s:%s", devReference, model.OktetoDefaultImageTag)
+	if image == returnableImage {
 		return ""
 	}
 	return fmt.Sprintf("%s:%s", devReference, model.OktetoDefaultImageTag)

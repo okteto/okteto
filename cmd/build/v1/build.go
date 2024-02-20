@@ -117,9 +117,6 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		tags := strings.Split(options.Tag, ",")
 		for _, tag := range tags {
 			displayTag := tag
-			if options.DevTag != "" {
-				displayTag = options.DevTag
-			}
 			ob.IoCtrl.Out().Success("Image '%s' successfully pushed", displayTag)
 		}
 	}

@@ -332,14 +332,19 @@ func Test_GetExpandedDevTagFromGlobal(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "is dev image",
+			name:     "is dev image with okteto tag",
 			input:    "okteto.dev/my-image:okteto",
 			expected: "",
 		},
 		{
+			name:     "is dev image with non okteto tag",
+			input:    "okteto.dev/my-image:thisisahash",
+			expected: "okteto.dev/my-image:okteto",
+		},
+		{
 			name:     "is dev image with sha",
 			input:    "okteto.dev/my-image@sha256:e78ad0d316485b7dbffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
-			expected: "",
+			expected: "okteto.dev/my-image:okteto",
 		},
 		{
 			name:     "is not okteto image",
