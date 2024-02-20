@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"os"
 	"sort"
 	"strings"
@@ -95,7 +96,10 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 				options.ManifestPath = model.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
 				// check whether the manifest file provided by -f exists or not
 				if _, err := fs.Stat(options.ManifestPath); err != nil {
-					return fmt.Errorf("%s file doesn't exist", options.ManifestPath)
+					return oktetoErrors.UserError{
+						E:    fmt.Errorf("the okteto manifest file '%s' does not exist", options.ManifestPath),
+						Hint: "Check the path to the okteto manifest file",
+					}
 				}
 			}
 
