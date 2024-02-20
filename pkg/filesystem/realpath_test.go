@@ -14,6 +14,7 @@
 package filesystem
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/spf13/afero"
@@ -23,7 +24,7 @@ import (
 
 func TestRealpath(t *testing.T) {
 	fs := afero.NewMemMapFs()
-	testFilePath := "/path/to/TestFile"
+	testFilePath := filepath.Clean("/path/to/TestFile")
 	err := fs.MkdirAll(testFilePath, 0755)
 	require.NoError(t, err)
 
@@ -35,19 +36,19 @@ func TestRealpath(t *testing.T) {
 	}{
 		{
 			name:        "case insensitive match",
-			path:        "/patH/to/testfile",
-			expected:    "/path/to/TestFile",
+			path:        filepath.Clean("/patH/to/testfile"),
+			expected:    filepath.Clean("/path/to/TestFile"),
 			expectedErr: nil,
 		},
 		{
 			name:        "exact match",
-			path:        "/path/to/TestFile",
-			expected:    "/path/to/TestFile",
+			path:        filepath.Clean("/path/to/TestFile"),
+			expected:    filepath.Clean("/path/to/TestFile"),
 			expectedErr: nil,
 		},
 		{
 			name:        "not found",
-			path:        "/path/to/NotFound",
+			path:        filepath.Clean("/path/to/NotFound"),
 			expected:    "",
 			expectedErr: errRealPathNotFound,
 		},
