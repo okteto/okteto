@@ -319,9 +319,7 @@ func (dev *Dev) loadVolumeAbsPaths(folder string, fs afero.Fs) {
 		dev.Volumes[i].LocalPath = loadAbsPath(folder, dev.Volumes[i].LocalPath, fs)
 	}
 	for i := range dev.Sync.Folders {
-		oktetoLog.Println("folder", dev.Sync.Folders[i].LocalPath)
 		dev.Sync.Folders[i].LocalPath = loadAbsPath(folder, dev.Sync.Folders[i].LocalPath, fs)
-		oktetoLog.Println("folder", dev.Sync.Folders[i].LocalPath)
 	}
 }
 
