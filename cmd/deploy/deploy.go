@@ -182,9 +182,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 			}
 
 			if okteto.IsOkteto() {
-				okCtx := okteto.GetContext()
-				ns := okCtx.Namespace
-				create, err := utils.ShouldCreateNamespace(ctx, ns)
+				create, err := utils.ShouldCreateNamespace(ctx, okteto.GetContext().Namespace)
 				if err != nil {
 					return err
 				}
