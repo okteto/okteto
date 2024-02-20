@@ -748,7 +748,7 @@ func (up *upContext) activateLoop() {
 				continue
 			}
 
-			if oktetoErrors.IsTransient(err) {
+			if up.isTransient(err) {
 				isTransientError = true
 				continue
 			}
@@ -769,7 +769,7 @@ func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error 
 			oktetoLog.Println()
 			if err != nil {
 				oktetoLog.Infof("command failed: %s", err)
-				if oktetoErrors.IsTransient(err) {
+				if up.isTransient(err) {
 					return err
 				}
 				return oktetoErrors.CommandError{
