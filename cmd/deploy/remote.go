@@ -243,14 +243,14 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		var cmdErr buildCmd.OktetoCommandErr
 		if errors.As(err, &cmdErr) {
 			oktetoLog.SetStage(cmdErr.Stage)
-			return fmt.Errorf("error deploying application")
+			return fmt.Errorf("error deploying application: %w", cmdErr.Err)
 		}
 		oktetoLog.SetStage("remote deploy")
 		var userErr oktetoErrors.UserError
 		if errors.As(err, &userErr) {
 			return userErr
 		}
-		return fmt.Errorf("error deploying application")
+		return fmt.Errorf("error deploying application: %w", err)
 	}
 	oktetoLog.SetStage("done")
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")

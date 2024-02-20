@@ -154,7 +154,7 @@ func TestRemoteTest(t *testing.T) {
 			}
 			err := rdc.deploy(ctx, tt.config.options)
 			if tt.expected != nil {
-				assert.EqualError(t, err, tt.expected.Error())
+				assert.ErrorContains(t, err, tt.expected.Error())
 			} else {
 				assert.NoError(t, err)
 			}
