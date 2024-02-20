@@ -94,23 +94,23 @@ var (
 
 // Manifest represents an okteto manifest
 type Manifest struct {
-	Name          string                   `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace     string                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context       string                   `json:"context,omitempty" yaml:"context,omitempty"`
-	Icon          string                   `json:"icon,omitempty" yaml:"icon,omitempty"`
-	ManifestPath  string                   `json:"-" yaml:"-"`
-	Deploy        *DeployInfo              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev           ManifestDevs             `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy       *DestroyInfo             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build         build.ManifestBuild      `json:"build,omitempty" yaml:"build,omitempty"`
-	Dependencies  deps.ManifestSection     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
-	GlobalForward []forward.GlobalForward  `json:"forward,omitempty" yaml:"forward,omitempty"`
-	External      externalresource.Section `json:"external,omitempty" yaml:"external,omitempty"`
+	Fs           afero.Fs                 `json:"-" yaml:"-"`
+	External     externalresource.Section `json:"external,omitempty" yaml:"external,omitempty"`
+	Dependencies deps.ManifestSection     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	Build        build.ManifestBuild      `json:"build,omitempty" yaml:"build,omitempty"`
+	Deploy       *DeployInfo              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev          ManifestDevs             `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Name         string                   `json:"name,omitempty" yaml:"name,omitempty"`
+	Namespace    string                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context      string                   `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon         string                   `json:"icon,omitempty" yaml:"icon,omitempty"`
+	ManifestPath string                   `json:"-" yaml:"-"`
+	Destroy      *DestroyInfo             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 
-	Type     Archetype `json:"-" yaml:"-"`
-	Manifest []byte    `json:"-" yaml:"-"`
-	IsV2     bool      `json:"-" yaml:"-"`
-	Fs       afero.Fs  `json:"-" yaml:"-"`
+	Type          Archetype               `json:"-" yaml:"-"`
+	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Manifest      []byte                  `json:"-" yaml:"-"`
+	IsV2          bool                    `json:"-" yaml:"-"`
 }
 
 // ManifestDevs defines all the dev section

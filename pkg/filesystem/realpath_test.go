@@ -28,10 +28,10 @@ func TestRealpath(t *testing.T) {
 	require.NoError(t, err)
 
 	tt := []struct {
+		expectedErr error
 		name        string
 		path        string
 		expected    string
-		expectedErr error
 	}{
 		{
 			name:        "case insensitive match",
