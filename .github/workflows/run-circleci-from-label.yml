@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run Windows e2e tests on CircleCI
-        uses: CircleCI-Public/trigger-circleci-pipeline-action@v1.1.0
+        uses: CircleCI-Public/trigger-circleci-pipeline-action@v1.2.0
         with:
           GHA_Meta: "run-e2e-windows"
         env:
@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run UNIX e2e tests on CircleCI
-        uses: CircleCI-Public/trigger-circleci-pipeline-action@v1.1.0
+        uses: CircleCI-Public/trigger-circleci-pipeline-action@v1.2.0
         with:
           GHA_Meta: "run-e2e-unix"
         env:
@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run e2e tests on CircleCI
-        uses: CircleCI-Public/trigger-circleci-pipeline-action@v1.1.0
+        uses: CircleCI-Public/trigger-circleci-pipeline-action@v1.2.0
         with:
           GHA_Meta: "run-e2e"
         env:
