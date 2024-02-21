@@ -125,6 +125,7 @@ func NewManifest() *Manifest {
 		Deploy:        &DeployInfo{},
 		GlobalForward: []forward.GlobalForward{},
 		External:      externalresource.Section{},
+		Fs:            afero.NewOsFs(),
 	}
 }
 
@@ -413,6 +414,7 @@ func getManifestFromFile(cwd, manifestPath string, fs afero.Fs) (*Manifest, erro
 			Dev:   ManifestDevs{},
 			Build: build.ManifestBuild{},
 			IsV2:  true,
+			Fs:    fs,
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
 
@@ -513,6 +515,7 @@ func GetInferredManifest(cwd string, fs afero.Fs) (*Manifest, error) {
 			Dev:   ManifestDevs{},
 			Build: build.ManifestBuild{},
 			IsV2:  true,
+			Fs:    fs,
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
 		var stackFiles []string
@@ -552,6 +555,7 @@ func GetInferredManifest(cwd string, fs afero.Fs) (*Manifest, error) {
 			},
 			Dev:   ManifestDevs{},
 			Build: build.ManifestBuild{},
+			Fs:    fs,
 		}
 		return chartManifest, nil
 	}
@@ -576,6 +580,7 @@ func GetInferredManifest(cwd string, fs afero.Fs) (*Manifest, error) {
 			},
 			Dev:   ManifestDevs{},
 			Build: build.ManifestBuild{},
+			Fs:    fs,
 		}
 		return k8sManifest, nil
 	}

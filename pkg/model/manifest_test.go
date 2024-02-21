@@ -1432,6 +1432,7 @@ func TestRead(t *testing.T) {
 				Type:          OktetoManifestType,
 				Manifest:      nil,
 				IsV2:          false,
+				Fs:            afero.NewOsFs(),
 			},
 		},
 		{
@@ -1462,6 +1463,7 @@ func TestRead(t *testing.T) {
 				Type:          OktetoManifestType,
 				Manifest:      []uint8{},
 				IsV2:          false,
+				Fs:            afero.NewOsFs(),
 			},
 		},
 		{
@@ -1569,6 +1571,7 @@ func TestRead(t *testing.T) {
     image: test-image
     context: ./test`),
 				IsV2: true,
+				Fs:   afero.NewOsFs(),
 			},
 			expectedErr: false,
 		},
@@ -1624,6 +1627,7 @@ func TestRead(t *testing.T) {
 				External:      externalresource.Section{},
 				Type:          OktetoManifestType,
 				IsV2:          true,
+				Fs:            afero.NewOsFs(),
 				Manifest: []byte(`deploy:
   divert:
     namespace: staging

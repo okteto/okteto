@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"github.com/spf13/afero"
 	"os"
 	"reflect"
 	"strings"
@@ -1069,6 +1070,7 @@ deploy:
 				Context:      "context-to-use",
 				IsV2:         true,
 				Type:         OktetoManifestType,
+				Fs:           afero.NewOsFs(),
 			},
 			isErrorExpected: false,
 		},
@@ -1234,6 +1236,7 @@ dev:
 						Mode:        constants.OktetoSyncModeFieldValue,
 					},
 				},
+				Fs: afero.NewOsFs(),
 			},
 
 			isErrorExpected: false,
@@ -1319,6 +1322,7 @@ sync:
 						Mode:        constants.OktetoSyncModeFieldValue,
 					},
 				},
+				Fs: afero.NewOsFs(),
 			},
 			isErrorExpected: false,
 		},
@@ -1442,6 +1446,7 @@ services:
 						Mode:        constants.OktetoSyncModeFieldValue,
 					},
 				},
+				Fs: afero.NewOsFs(),
 			},
 			isErrorExpected: false,
 		},
@@ -1539,6 +1544,7 @@ dev:
 						Mode:        constants.OktetoSyncModeFieldValue,
 					},
 				},
+				Fs: afero.NewOsFs(),
 			},
 			isErrorExpected: false,
 		},
@@ -1694,6 +1700,7 @@ dev:
 						Mode:        constants.OktetoSyncModeFieldValue,
 					},
 				},
+				Fs: afero.NewOsFs(),
 			},
 			isErrorExpected: false,
 		},
@@ -1739,6 +1746,7 @@ deploy:
 						},
 					},
 				},
+				Fs: afero.NewOsFs(),
 			},
 			isErrorExpected: false,
 		},
@@ -1767,6 +1775,7 @@ devs:
 						},
 					},
 				},
+				Fs: afero.NewOsFs(),
 			},
 			isErrorExpected: false,
 		},

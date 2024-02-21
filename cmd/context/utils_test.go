@@ -187,6 +187,7 @@ dependencies:
 					},
 				},
 				External: externalresource.Section{},
+				Fs:       afero.NewOsFs(),
 			},
 		},
 		{
