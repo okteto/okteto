@@ -24,8 +24,9 @@ import (
 
 func TestRealpath(t *testing.T) {
 	fs := afero.NewMemMapFs()
-	testFilePath := filepath.Clean("/path/to/TestFile")
-	err := fs.MkdirAll(testFilePath, 0755)
+	testFilePath, err := filepath.Abs("/path/to/TestFile")
+	require.NoError(t, err)
+	err = fs.MkdirAll(testFilePath, 0755)
 	require.NoError(t, err)
 
 	tt := []struct {
@@ -56,9 +57,18 @@ func TestRealpath(t *testing.T) {
 
 	for _, test := range tt {
 		t.Run(test.name, func(t *testing.T) {
-			realPath, err := Realpath(fs, test.path)
+			absInputPath, err := filepath.Abs(test.path)
+			require.NoError(t, err)
+
+			var absExpectedPath string
+			if test.expected != "" {
+				absExpectedPath, err = filepath.Abs(test.expected)
+				require.NoError(t, err)
+			}
+
+			realPath, err := Realpath(fs, absInputPath)
 			require.ErrorIs(t, err, test.expectedErr)
-			assert.Equal(t, test.expected, realPath)
+			assert.Equal(t, absExpectedPath, realPath)
 		})
 	}
 }

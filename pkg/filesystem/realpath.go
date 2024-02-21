@@ -17,6 +17,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/spf13/afero"
@@ -39,6 +40,14 @@ func Realpath(fs afero.Fs, fname string) (string, error) {
 		currentRealPath = string(os.PathSeparator)
 		components = components[1:]
 	}
+	if runtime.GOOS == "windows" {
+		currentRealPath, err = filepath.Abs(string(os.PathSeparator))
+		if err != nil {
+			return "", err
+		}
+		components = components[1:]
+	}
+
 	for _, component := range components {
 		root := currentRealPath
 		var found bool
