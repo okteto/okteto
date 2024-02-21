@@ -149,6 +149,7 @@ func NewManifestFromStack(stack *Stack) *Manifest {
 		Dev:   ManifestDevs{},
 		Build: build.ManifestBuild{},
 		IsV2:  true,
+		Fs:    afero.NewOsFs(),
 	}
 	cwd, err := os.Getwd()
 	if err != nil {
