@@ -50,6 +50,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
+	"github.com/okteto/okteto/pkg/process"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -763,6 +764,8 @@ func (up *upContext) activateLoop() {
 
 // waitUntilExitOrInterruptOrApply blocks execution until a stop signal is sent, a disconnect event or an error or the app is modify
 func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error {
+	// only for unix because Windows does not support SIGTTIN and SIGTTOU
+	goToBackground := getSendToBackgroundSignals()
 	for {
 		select {
 		case err := <-up.CommandResult:
@@ -790,6 +793,13 @@ func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error 
 		case err := <-up.GlobalForwarderStatus:
 			oktetoLog.Infof("exiting by error in global forward checker: %v", err)
 			return err
+
+		case <-goToBackground:
+			oktetoLog.Infof("SIGTTOU/SIGTTIN received, starting shutdown sequence preventing it to background the process")
+			return oktetoErrors.UserError{
+				E:    fmt.Errorf("connection lost to your development container"),
+				Hint: "Use 'okteto up' to reconnect",
+			}
 
 		case err := <-up.applyToApps(ctx):
 			oktetoLog.Infof("exiting by applyToAppsChan: %v", err)
@@ -972,8 +982,9 @@ func (up *upContext) shutdownHybridMode() {
 
 	terminateChildProcess(up.hybridCommand.Process.Pid, pList)
 
-	if err := terminateProcess(up.hybridCommand.Process.Pid); err != nil {
-		oktetoLog.Debugf("error terminating process %s: %v", up.hybridCommand.Process.Pid, err)
+	p := process.New(up.hybridCommand.Process.Pid)
+	if err := terminateProcess(p); err != nil {
+		oktetoLog.Debugf("error terminating process %d: %v", up.hybridCommand.Process.Pid, err)
 	}
 }
 
@@ -987,30 +998,24 @@ func terminateChildProcess(parent int, pList []ps.Process) {
 		// iterate over the children of the parent
 		terminateChildProcess(pR.Pid(), pList)
 
-		if err := terminateProcess(pR.Pid()); err != nil {
+		p := process.New(pR.Pid())
+		if err := terminateProcess(p); err != nil {
 			if errors.Is(err, os.ErrProcessDone) {
 				continue
 			}
-			oktetoLog.Debugf("error terminating process %s: %v", pR.Pid(), err)
+			oktetoLog.Debugf("error terminating process %d: %v", pR.Pid(), err)
 		}
 	}
 }
 
-func terminateProcess(pid int) error {
-	p, err := os.FindProcess(pid)
-	if err != nil {
-		oktetoLog.Debugf("error getting process %s: %v", pid, err)
-		return err
-	}
-	if err := p.Signal(syscall.SIGTERM); err != nil {
+func terminateProcess(p process.Interface) error {
+	oktetoLog.Debugf("terminating process: %d", p.Getpid())
+
+	if err := p.Kill(); err != nil {
 		if errors.Is(err, os.ErrProcessDone) {
 			return nil
 		}
-		oktetoLog.Debugf("error terminating process %s: %v", p.Pid, err)
-		return err
-	}
-	if _, err := p.Wait(); err != nil {
-		oktetoLog.Debugf("error waiting for process to exit %s: %v", p.Pid, err)
+		oktetoLog.Debugf("error terminating process %d: %v", p.Getpid(), err)
 		return err
 	}
 	return nil
