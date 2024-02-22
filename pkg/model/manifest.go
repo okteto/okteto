@@ -17,7 +17,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -35,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	yaml "gopkg.in/yaml.v2"
 	yaml3 "gopkg.in/yaml.v3"
@@ -343,12 +343,12 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 		cwd = manifestPath
 	}
 
-	manifestPathx, err := discovery.GetOktetoManifestPath(cwd)
+	discoveredManifestPath, err := discovery.GetOktetoManifestPath(cwd)
 	if err != nil {
 		return nil, err
 	}
 
-	manifestVars, err := vars.GetManifestVars(manifestPathx)
+	manifestVars, err := vars.GetManifestVars(discoveredManifestPath)
 	if err != nil {
 		return nil, err
 	}
@@ -356,15 +356,12 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = manifestVars.Export(os.Setenv)
+	err = manifestVars.Export(os.LookupEnv, os.Setenv, oktetoLog.Yellow)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println(manifestVars)
-
 	manifest, err = getManifestFromOktetoFile(cwd, fs)
-
 	if err != nil {
 		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err

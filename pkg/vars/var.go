@@ -27,26 +27,7 @@ func (v *Var) String() string {
 	return fmt.Sprintf("%s=%s", v.Name, v.Value)
 }
 
-//// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-//func (v *Var) UnmarshalYAML(unmarshal func(interface{}) error) error {
-//	var raw string
-//	err := unmarshal(&raw)
-//	if err != nil {
-//		return err
-//	}
-//
-//	maxVarParts := 2
-//	parts := strings.SplitN(raw, "=", maxVarParts)
-//	v.Name = parts[0]
-//	if len(parts) == maxVarParts {
-//		v.Value = parts[1]
-//		return nil
-//	}
-//
-//	return nil
-//}
-//
-//// MarshalYAML Implements the marshaler interface of the yaml pkg.
-//func (v Var) MarshalYAML() (interface{}, error) {
-//	return v.Name + "=" + v.Value, nil
-//}
+func (v *Var) ExistsLocally(lookupEnv func(key string) (string, bool)) bool {
+	_, exists := lookupEnv(v.Name)
+	return exists
+}

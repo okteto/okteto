@@ -111,10 +111,20 @@ spec:
 `
 	oktetoManifestWithVars = `variables:
   MY_VAR: my-value
+  MY_VAR2: $LOCAL_VAR
+  MY_VAR3: ${LOCAL_VAR}
 
-  deploy:
-    commands:
-      - echo $MY_VAR
+deploy:
+  commands:
+  - echo MY_VAR=$MY_VAR
+  - echo MY_VAR2=$MY_VAR2
+  - echo MY_VAR3=${MY_VAR3}
+
+destroy:
+  commands:
+  - echo $MY_VAR
+  - echo $MY_VAR2
+  - echo ${MY_VAR3}
 `
 )
 
@@ -452,12 +462,11 @@ func TestDeployRemoteOktetoManifestFromParentFolder(t *testing.T) {
 // TestDeployOktetoManifestWithVariables tests the following scenario:
 // - Deploying a service using a manifest that uses the top-level propertiy "variables"
 func TestDeployOktetoManifestWithVariables(t *testing.T) {
-	t.Parallel()
+	t.Setenv("LOCAL_VAR", "my-value-2-and-3")
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
 	dir := t.TempDir()
-	parentFolder := filepath.Join(dir, "test-parent")
 
 	testNamespace := integration.GetTestNamespace("DeployWithManifestVars", user)
 	namespaceOpts := &commands.NamespaceOptions{
@@ -467,35 +476,28 @@ func TestDeployOktetoManifestWithVariables(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
-	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
-	require.NoError(t, err)
+	//require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	//c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	//require.NoError(t, err)
 
 	require.NoError(t, createOktetoManifestWithVars(dir))
-	require.NoError(t, os.Mkdir(parentFolder, 0700))
 
 	deployOptions := &commands.DeployOptions{
-		Workdir:      parentFolder,
-		Namespace:    testNamespace,
-		OktetoHome:   dir,
-		Token:        token,
-		ManifestPath: filepath.Clean("../okteto.yml"),
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
 	}
-	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
-	fmt.Println(c)
-	// Test that image has been built
-	//require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okteto.GetContext().Registry, testNamespace)))
-	//
-	//destroyOptions := &commands.DestroyOptions{
-	//	Workdir:    dir,
-	//	Namespace:  testNamespace,
-	//	OktetoHome: dir,
-	//}
-	//require.NoError(t, commands.RunOktetoDestroyRemote(oktetoPath, destroyOptions))
-	//
-	//_, err = integration.GetDeployment(context.Background(), testNamespace, "my-dep", c)
-	//require.True(t, k8sErrors.IsNotFound(err))
+	deployOutput, deployErr := commands.RunOktetoDeployWithOutput(oktetoPath, deployOptions)
+
+	require.NoError(t, deployErr)
+	require.Contains(t, string(deployOutput), "MY_VAR=my-value")
+	require.Contains(t, string(deployOutput), "MY_VAR2=my-value-2-and-3")
+	require.Contains(t, string(deployOutput), "MY_VAR3=my-value-2-and-3")
+
+	// TODO: implement the same for destroy
+	// TODO: check for warning: The local variable 'VAR1' takes precedence over the manifest's definition, which will be ignored.
 }
 
 func isImageBuilt(image string) bool {

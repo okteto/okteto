@@ -64,12 +64,19 @@ func GetOktetoDeployCmdOutput(oktetoPath string, deployOptions *DeployOptions) (
 }
 
 // RunOktetoDeploy runs an okteto deploy command
+// Deprecated: use RunOktetoDeployWithOutput instead
 func RunOktetoDeploy(oktetoPath string, deployOptions *DeployOptions) error {
+	_, err := RunOktetoDeployWithOutput(oktetoPath, deployOptions)
+	return err
+}
+
+// RunOktetoDeployWithOutput runs an okteto deploy command and returns the output and error
+func RunOktetoDeployWithOutput(oktetoPath string, deployOptions *DeployOptions) ([]byte, error) {
 	output, err := GetOktetoDeployCmdOutput(oktetoPath, deployOptions)
 	if err != nil {
-		return fmt.Errorf("okteto deploy failed: %s - %w", string(output), err)
+		return output, fmt.Errorf("okteto deploy failed: %s - %w", string(output), err)
 	}
-	return err
+	return output, err
 }
 
 // RunOktetoDeployAndGetOutput runs an okteto deploy command and returns the output

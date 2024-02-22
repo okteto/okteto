@@ -14,9 +14,10 @@
 package vars
 
 import (
+	"os"
+
 	"github.com/okteto/okteto/pkg/env"
 	"gopkg.in/yaml.v2"
-	"os"
 )
 
 type ManifestVars struct {
@@ -27,11 +28,6 @@ type Vars []Var
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (v Vars) MarshalYAML() (interface{}, error) {
-	//rawVars := make(map[string]string)
-	//for key, val := range v {
-	//	rawVars[key] = val.Value
-	//}
-	//return rawVars, nil
 	rawVars := make([]Var, 0)
 	for _, val := range v {
 		rawVars = append(rawVars, val)
@@ -81,8 +77,11 @@ func (vars *Vars) Expand() error {
 	return nil
 }
 
-func (vars *Vars) Export(setEnv func(key, value string) error) error {
+func (vars *Vars) Export(lookupEnv func(key string) (string, bool), setEnv func(key, value string) error, warningLog func(format string, args ...interface{})) error {
 	for _, v := range *vars {
+		if v.ExistsLocally(lookupEnv) {
+			warningLog("The local variable '%s' takes precedence over the manifest's definition, which will be ignored", v.Name)
+		}
 		if err := setEnv(v.Name, v.Value); err != nil {
 			return err
 		}
