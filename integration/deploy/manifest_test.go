@@ -109,6 +109,13 @@ spec:
   selector:
     app: e2etest
 `
+	oktetoManifestWithVars = `variables:
+  MY_VAR: my-value
+
+  deploy:
+    commands:
+      - echo $MY_VAR
+`
 )
 
 // TestDeployOktetoManifest tests the following scenario:
@@ -442,6 +449,55 @@ func TestDeployRemoteOktetoManifestFromParentFolder(t *testing.T) {
 	require.True(t, k8sErrors.IsNotFound(err))
 }
 
+// TestDeployOktetoManifestWithVariables tests the following scenario:
+// - Deploying a service using a manifest that uses the top-level propertiy "variables"
+func TestDeployOktetoManifestWithVariables(t *testing.T) {
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	parentFolder := filepath.Join(dir, "test-parent")
+
+	testNamespace := integration.GetTestNamespace("DeployWithManifestVars", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
+
+	require.NoError(t, createOktetoManifestWithVars(dir))
+	require.NoError(t, os.Mkdir(parentFolder, 0700))
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:      parentFolder,
+		Namespace:    testNamespace,
+		OktetoHome:   dir,
+		Token:        token,
+		ManifestPath: filepath.Clean("../okteto.yml"),
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	fmt.Println(c)
+	// Test that image has been built
+	//require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okteto.GetContext().Registry, testNamespace)))
+	//
+	//destroyOptions := &commands.DestroyOptions{
+	//	Workdir:    dir,
+	//	Namespace:  testNamespace,
+	//	OktetoHome: dir,
+	//}
+	//require.NoError(t, commands.RunOktetoDestroyRemote(oktetoPath, destroyOptions))
+	//
+	//_, err = integration.GetDeployment(context.Background(), testNamespace, "my-dep", c)
+	//require.True(t, k8sErrors.IsNotFound(err))
+}
+
 func isImageBuilt(image string) bool {
 	reg := registry.NewOktetoRegistry(okteto.Config{})
 	if _, err := reg.GetImageTagWithDigest(image); err == nil {
@@ -472,6 +528,15 @@ func createOktetoManifest(dir string) error {
 	dockerfilePath := filepath.Join(dir, oktetoManifestName)
 	dockerfileContent := []byte(oktetoManifestContent)
 	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
+		return err
+	}
+	return nil
+}
+
+func createOktetoManifestWithVars(dir string) error {
+	manifestPath := filepath.Join(dir, oktetoManifestName)
+	manifestContent := []byte(oktetoManifestWithVars)
+	if err := os.WriteFile(manifestPath, manifestContent, 0600); err != nil {
 		return err
 	}
 	return nil
