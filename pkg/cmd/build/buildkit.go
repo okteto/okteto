@@ -276,7 +276,7 @@ func getClientForOktetoCluster(ctx context.Context, builder string, token string
 		return nil, errors.Wrapf(err, "invalid buildkit host %s", builder)
 	}
 
-	creds := client.WithCredentialsAndSystemRoots(b.Hostname(), config.GetCertificatePath(), "", "")
+	creds := client.WithCAAndSystemRoot(b.Hostname(), config.GetCertificatePath())
 
 	oauthToken := &oauth2.Token{
 		AccessToken: token,
@@ -356,13 +356,13 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			}
 			go func() {
 				// We use the plain channel to store the logs into a buffer and then show them in the UI
-				if _, err := progressui.DisplaySolveStatus(context.TODO(), "", nil, w, plainChannel); err != nil {
+				if _, err := progressui.DisplaySolveStatus(context.TODO(), nil, w, plainChannel); err != nil {
 					oktetoLog.Infof("could not display solve status: %s", err)
 				}
 			}()
 			// not using shared context to not disrupt display but let it finish reporting errors
 			// We need to wait until the tty channel is closed to avoid writing to stdout while the tty is being used
-			_, err := progressui.DisplaySolveStatus(context.TODO(), "", c, ioCtrl.Out(), ttyChannel)
+			_, err := progressui.DisplaySolveStatus(context.TODO(), c, ioCtrl.Out(), ttyChannel)
 			return err
 		case "deploy":
 			err := deployDisplayer(context.TODO(), plainChannel, &types.BuildOptions{OutputMode: "deploy"})
@@ -374,7 +374,7 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			return err
 		default:
 			// not using shared context to not disrupt display but let it finish reporting errors
-			_, err := progressui.DisplaySolveStatus(context.TODO(), "", nil, ioCtrl.Out(), plainChannel)
+			_, err := progressui.DisplaySolveStatus(context.TODO(), nil, ioCtrl.Out(), plainChannel)
 			return err
 		}
 	})
