@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -115,21 +116,21 @@ var fakeManifestV2 *model.Manifest = &model.Manifest{
 	IsV2: true,
 }
 
-func getManifestWithError(_ string) (*model.Manifest, error) {
+func getManifestWithError(_ string, _ afero.Fs) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getManifestWithInvalidManifestError(_ string) (*model.Manifest, error) {
+func getManifestWithInvalidManifestError(_ string, _ afero.Fs) (*model.Manifest, error) {
 	return nil, oktetoErrors.ErrInvalidManifest
 }
 
-func getFakeManifestV1(_ string) (*model.Manifest, error) {
+func getFakeManifestV1(_ string, _ afero.Fs) (*model.Manifest, error) {
 	manifestV1 := *fakeManifestV2
 	manifestV1.IsV2 = false
 	return &manifestV1, nil
 }
 
-func getFakeManifestV2(_ string) (*model.Manifest, error) {
+func getFakeManifestV2(_ string, _ afero.Fs) (*model.Manifest, error) {
 	return fakeManifestV2, nil
 }
 
@@ -216,7 +217,7 @@ func TestBuildIsManifestV2(t *testing.T) {
 		GetManifest: getFakeManifestV2,
 	}
 
-	manifest, err := bc.GetManifest("")
+	manifest, err := bc.GetManifest("", afero.NewMemMapFs())
 	assert.Nil(t, err)
 	assert.Equal(t, manifest, fakeManifestV2)
 }
@@ -226,7 +227,7 @@ func TestBuildFromDockerfile(t *testing.T) {
 		GetManifest: getManifestWithError,
 	}
 
-	manifest, err := bc.GetManifest("")
+	manifest, err := bc.GetManifest("", afero.NewMemMapFs())
 	assert.NotNil(t, err)
 	assert.Nil(t, manifest)
 }
@@ -236,7 +237,7 @@ func TestBuildErrIfInvalidManifest(t *testing.T) {
 		GetManifest: getManifestWithInvalidManifestError,
 	}
 
-	manifest, err := bc.GetManifest("")
+	manifest, err := bc.GetManifest("", afero.NewMemMapFs())
 	assert.NotNil(t, err)
 	assert.Nil(t, manifest)
 }

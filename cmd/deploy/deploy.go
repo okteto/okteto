@@ -103,7 +103,7 @@ type getDeployerFunc func(
 
 // Command defines the config for deploying an app
 type Command struct {
-	GetManifest        func(path string) (*model.Manifest, error)
+	GetManifest        func(path string, fs afero.Fs) (*model.Manifest, error)
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProviderWithLogger
 	Builder            builderInterface
@@ -274,7 +274,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 // RunDeploy runs the deploy sequence
 func (dc *Command) RunDeploy(ctx context.Context, deployOptions *Options) error {
 	oktetoLog.SetStage("Load manifest")
-	manifest, err := dc.GetManifest(deployOptions.ManifestPath)
+	manifest, err := dc.GetManifest(deployOptions.ManifestPath, dc.Fs)
 	if err != nil {
 		return err
 	}

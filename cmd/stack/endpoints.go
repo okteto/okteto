@@ -22,6 +22,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +39,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 		Short: "Show endpoints for a stack",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Warning("'okteto stack endpoints' is deprecated and will be removed in a future version")
-			s, err := contextCMD.LoadStackWithContext(ctx, name, namespace, stackPath)
+			s, err := contextCMD.LoadStackWithContext(ctx, name, namespace, stackPath, afero.NewOsFs())
 			if err != nil {
 				return err
 			}

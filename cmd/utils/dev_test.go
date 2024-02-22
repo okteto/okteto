@@ -24,6 +24,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -77,7 +78,7 @@ func Test_LoadManifestOrDefault(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			def, err := DeprecatedLoadManifestOrDefault("/tmp/a-path", tt.deployment)
+			def, err := DeprecatedLoadManifestOrDefault("/tmp/a-path", tt.deployment, afero.NewMemMapFs())
 			if tt.expectErr {
 				if err == nil {
 					t.Fatal("expected error when loading")
@@ -113,7 +114,7 @@ func Test_LoadManifestOrDefault(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			loaded, err := DeprecatedLoadManifestOrDefault(f.Name(), "foo")
+			loaded, err := DeprecatedLoadManifestOrDefault(f.Name(), "foo", afero.NewMemMapFs())
 			if err != nil {
 				t.Fatalf("unexpected error when loading existing manifest: %s", err.Error())
 			}
@@ -129,7 +130,7 @@ func Test_LoadManifestOrDefault(t *testing.T) {
 		})
 	}
 	name := "demo-deployment"
-	def, err := DeprecatedLoadManifestOrDefault("/tmp/bad-path", name)
+	def, err := DeprecatedLoadManifestOrDefault("/tmp/bad-path", name, afero.NewMemMapFs())
 	if err != nil {
 		t.Fatal("default dev was not returned")
 	}
@@ -138,7 +139,7 @@ func Test_LoadManifestOrDefault(t *testing.T) {
 		t.Errorf("expected %s, got %s", name, def.Dev[name].Name)
 	}
 
-	_, err = DeprecatedLoadManifestOrDefault("/tmp/bad-path", "")
+	_, err = DeprecatedLoadManifestOrDefault("/tmp/bad-path", "", afero.NewMemMapFs())
 	if err == nil {
 		t.Error("expected error with empty deployment name")
 	}

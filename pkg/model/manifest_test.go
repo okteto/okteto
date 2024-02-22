@@ -875,7 +875,7 @@ sync:
 				}
 				assert.NoError(t, os.WriteFile(filepath.Join(dir, "docker-compose.yml"), tt.composeBytes, 0600))
 			}
-			_, err := getManifestFromFile(dir, file)
+			_, err := getManifestFromFile(dir, file, afero.NewMemMapFs())
 
 			assert.ErrorIs(t, err, tt.expectedErr)
 		})
@@ -1284,7 +1284,7 @@ func Test_getInferredManifestFromK8sManifestFile(t *testing.T) {
 			t.Fatalf("Error closing file %s: %s", fullpath, err)
 		}
 	}()
-	_, err = GetInferredManifest(wd)
+	_, err = GetInferredManifest(wd, afero.NewMemMapFs())
 	assert.NoError(t, err)
 }
 
@@ -1300,7 +1300,7 @@ func Test_getInferredManifestFromK8sManifestFolder(t *testing.T) {
 		}
 	}()
 
-	_, err = GetInferredManifest(wd)
+	_, err = GetInferredManifest(wd, afero.NewMemMapFs())
 	assert.NoError(t, err)
 }
 
@@ -1336,7 +1336,7 @@ func Test_getInferredManifestFromHelmPath(t *testing.T) {
 					}
 				}()
 			}
-			_, err := GetInferredManifest(wd)
+			_, err := GetInferredManifest(wd, afero.NewMemMapFs())
 			assert.NoError(t, err)
 		})
 	}
@@ -1344,7 +1344,7 @@ func Test_getInferredManifestFromHelmPath(t *testing.T) {
 
 func Test_getInferredManifestWhenNoManifestExist(t *testing.T) {
 	wd := t.TempDir()
-	result, err := GetInferredManifest(wd)
+	result, err := GetInferredManifest(wd, afero.NewMemMapFs())
 	assert.Empty(t, result)
 	assert.ErrorIs(t, err, oktetoErrors.ErrCouldNotInferAnyManifest)
 }
@@ -1432,6 +1432,7 @@ func TestRead(t *testing.T) {
 				Type:          OktetoManifestType,
 				Manifest:      nil,
 				IsV2:          false,
+				Fs:            afero.NewOsFs(),
 			},
 		},
 		{
@@ -1462,6 +1463,7 @@ func TestRead(t *testing.T) {
 				Type:          OktetoManifestType,
 				Manifest:      []uint8{},
 				IsV2:          false,
+				Fs:            afero.NewOsFs(),
 			},
 		},
 		{
@@ -1569,6 +1571,7 @@ func TestRead(t *testing.T) {
     image: test-image
     context: ./test`),
 				IsV2: true,
+				Fs:   afero.NewOsFs(),
 			},
 			expectedErr: false,
 		},
@@ -1624,6 +1627,7 @@ func TestRead(t *testing.T) {
 				External:      externalresource.Section{},
 				Type:          OktetoManifestType,
 				IsV2:          true,
+				Fs:            afero.NewOsFs(),
 				Manifest: []byte(`deploy:
   divert:
     namespace: staging

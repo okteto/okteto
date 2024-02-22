@@ -37,6 +37,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
 )
@@ -94,7 +95,7 @@ type destroyCommand struct {
 	k8sClientProvider okteto.K8sClientProvider
 	ConfigMapHandler  configMapHandler
 	analyticsTracker  analyticsTrackerInterface
-	getManifest       func(path string) (*model.Manifest, error)
+	getManifest       func(path string, fs afero.Fs) (*model.Manifest, error)
 	oktetoClient      *okteto.Client
 	ioCtrl            *io.Controller
 	buildCtrl         buildCtrl
@@ -283,7 +284,7 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 
 		oktetoLog.Info("Destroying all...")
 	} else {
-		manifest, err := dc.getManifest(opts.ManifestPath)
+		manifest, err := dc.getManifest(opts.ManifestPath, afero.NewOsFs())
 		if err != nil {
 			// Log error message but application can still be deleted
 			oktetoLog.Infof("could not find manifest file to be executed: %s", err)

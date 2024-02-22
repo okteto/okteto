@@ -29,6 +29,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/spf13/afero"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -140,7 +141,7 @@ func getCtxResource(path string) (*model.ContextResource, error) {
 }
 
 // LoadManifestWithContext loads context and then loads a manifest
-func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.Manifest, error) {
+func LoadManifestWithContext(ctx context.Context, opts ManifestOptions, fs afero.Fs) (*model.Manifest, error) {
 	ctxResource, err := model.GetContextResource(opts.Filename)
 	if err != nil {
 		return nil, err
@@ -163,12 +164,12 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 		return nil, err
 	}
 
-	manifest, err := model.GetManifestV1(opts.Filename)
+	manifest, err := model.GetManifestV1(opts.Filename, fs)
 	if err != nil {
 		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
 		}
-		manifest, err = model.GetManifestV2(opts.Filename)
+		manifest, err = model.GetManifestV2(opts.Filename, fs)
 		if err != nil {
 			return nil, err
 		}
@@ -189,7 +190,7 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 	return manifest, nil
 }
 
-func LoadStackWithContext(ctx context.Context, name, namespace string, stackPaths []string) (*model.Stack, error) {
+func LoadStackWithContext(ctx context.Context, name, namespace string, stackPaths []string, fs afero.Fs) (*model.Stack, error) {
 	ctxResource, err := utils.LoadStackContext(stackPaths)
 	if err != nil {
 		if name == "" {
@@ -212,7 +213,7 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 		return nil, err
 	}
 
-	s, err := model.LoadStack(name, stackPaths, true)
+	s, err := model.LoadStack(name, stackPaths, true, fs)
 	if err != nil {
 		if name == "" {
 			return nil, err

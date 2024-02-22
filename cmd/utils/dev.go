@@ -34,6 +34,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/spf13/afero"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -63,18 +64,18 @@ func LoadManifestContext(devPath string) (*model.ContextResource, error) {
 
 // DeprecatedLoadManifest loads an okteto manifest checking "yml" and "yaml".
 // Deprecated: use model.GetManifestV2 instead
-func DeprecatedLoadManifest(devPath string) (*model.Manifest, error) {
+func DeprecatedLoadManifest(devPath string, fs afero.Fs) (*model.Manifest, error) {
 	if !filesystem.FileExists(devPath) {
 		if devPath == DefaultManifest {
 			if filesystem.FileExists(secondaryManifest) {
-				return DeprecatedLoadManifest(secondaryManifest)
+				return DeprecatedLoadManifest(secondaryManifest, fs)
 			}
 		}
 
 		return nil, fmt.Errorf("'%s' does not exist. Generate it by executing 'okteto init'", devPath)
 	}
 
-	manifest, err := model.Get(devPath)
+	manifest, err := model.Get(devPath, fs)
 	if err != nil {
 		return nil, err
 	}
@@ -131,8 +132,8 @@ func LoadManifestRc(dev *model.Dev) error {
 
 // DeprecatedLoadManifestOrDefault loads an okteto manifest or a default one if does not exist
 // Deprecatd. It should only be used by `push` command that will be deleted on next major version. No new usages should be added
-func DeprecatedLoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
-	dev, err := DeprecatedLoadManifest(devPath)
+func DeprecatedLoadManifestOrDefault(devPath, name string, fs afero.Fs) (*model.Manifest, error) {
+	dev, err := DeprecatedLoadManifest(devPath, fs)
 	if err == nil {
 		return dev, nil
 	}

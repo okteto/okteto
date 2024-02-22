@@ -94,22 +94,23 @@ var (
 
 // Manifest represents an okteto manifest
 type Manifest struct {
-	Name          string                   `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace     string                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context       string                   `json:"context,omitempty" yaml:"context,omitempty"`
-	Icon          string                   `json:"icon,omitempty" yaml:"icon,omitempty"`
-	ManifestPath  string                   `json:"-" yaml:"-"`
-	Deploy        *DeployInfo              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev           ManifestDevs             `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy       *DestroyInfo             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build         build.ManifestBuild      `json:"build,omitempty" yaml:"build,omitempty"`
-	Dependencies  deps.ManifestSection     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
-	GlobalForward []forward.GlobalForward  `json:"forward,omitempty" yaml:"forward,omitempty"`
-	External      externalresource.Section `json:"external,omitempty" yaml:"external,omitempty"`
+	Fs           afero.Fs                 `json:"-" yaml:"-"`
+	External     externalresource.Section `json:"external,omitempty" yaml:"external,omitempty"`
+	Dependencies deps.ManifestSection     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	Build        build.ManifestBuild      `json:"build,omitempty" yaml:"build,omitempty"`
+	Deploy       *DeployInfo              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev          ManifestDevs             `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Name         string                   `json:"name,omitempty" yaml:"name,omitempty"`
+	Namespace    string                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context      string                   `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon         string                   `json:"icon,omitempty" yaml:"icon,omitempty"`
+	ManifestPath string                   `json:"-" yaml:"-"`
+	Destroy      *DestroyInfo             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 
-	Type     Archetype `json:"-" yaml:"-"`
-	Manifest []byte    `json:"-" yaml:"-"`
-	IsV2     bool      `json:"-" yaml:"-"`
+	Type          Archetype               `json:"-" yaml:"-"`
+	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Manifest      []byte                  `json:"-" yaml:"-"`
+	IsV2          bool                    `json:"-" yaml:"-"`
 }
 
 // ManifestDevs defines all the dev section
@@ -124,6 +125,7 @@ func NewManifest() *Manifest {
 		Deploy:        &DeployInfo{},
 		GlobalForward: []forward.GlobalForward{},
 		External:      externalresource.Section{},
+		Fs:            afero.NewOsFs(),
 	}
 }
 
@@ -148,6 +150,7 @@ func NewManifestFromStack(stack *Stack) *Manifest {
 		Dev:   ManifestDevs{},
 		Build: build.ManifestBuild{},
 		IsV2:  true,
+		Fs:    afero.NewOsFs(),
 	}
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -250,7 +253,7 @@ func NewDestroyInfo() *DestroyInfo {
 	}
 }
 
-func getManifestFromOktetoFile(cwd string) (*Manifest, error) {
+func getManifestFromOktetoFile(cwd string, fs afero.Fs) (*Manifest, error) {
 	manifestPath, err := discovery.GetOktetoManifestPath(cwd)
 	if err != nil {
 		return nil, err
@@ -258,7 +261,7 @@ func getManifestFromOktetoFile(cwd string) (*Manifest, error) {
 	oktetoLog.Infof("Found okteto manifest file on path: %s", manifestPath)
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto manifest on %s", manifestPath)
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling manifest...")
-	devManifest, err := getManifestFromFile(cwd, manifestPath)
+	devManifest, err := getManifestFromFile(cwd, manifestPath, fs)
 	if err != nil {
 		return nil, err
 	}
@@ -266,25 +269,25 @@ func getManifestFromOktetoFile(cwd string) (*Manifest, error) {
 	return devManifest, nil
 }
 
-func getManifestFromDevFilePath(cwd, manifestPath string) (*Manifest, error) {
+func getManifestFromDevFilePath(cwd, manifestPath string, fs afero.Fs) (*Manifest, error) {
 	if manifestPath != "" && !filepath.IsAbs(manifestPath) {
 		manifestPath = filepath.Join(cwd, manifestPath)
 	}
 	if manifestPath != "" && filesystem.FileExistsAndNotDir(manifestPath, afero.NewOsFs()) {
-		return getManifestFromFile(cwd, manifestPath)
+		return getManifestFromFile(cwd, manifestPath, fs)
 	}
 
 	return nil, discovery.ErrOktetoManifestNotFound
 }
 
 // GetManifestV1 gets a manifest from a path or search for the files to generate it
-func GetManifestV1(manifestPath string) (*Manifest, error) {
+func GetManifestV1(manifestPath string, fs afero.Fs) (*Manifest, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
 
-	manifest, err := getManifestFromDevFilePath(cwd, manifestPath)
+	manifest, err := getManifestFromDevFilePath(cwd, manifestPath, fs)
 	if err != nil {
 		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
@@ -299,7 +302,7 @@ func GetManifestV1(manifestPath string) (*Manifest, error) {
 		cwd = manifestPath
 	}
 
-	manifest, err = getManifestFromOktetoFile(cwd)
+	manifest, err = getManifestFromOktetoFile(cwd, fs)
 	if err != nil {
 		return nil, err
 	}
@@ -316,13 +319,13 @@ func pathExistsAndDir(path string) bool {
 }
 
 // GetManifestV2 gets a manifest from a path or search for the files to generate it
-func GetManifestV2(manifestPath string) (*Manifest, error) {
+func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
 
-	manifest, err := getManifestFromDevFilePath(cwd, manifestPath)
+	manifest, err := getManifestFromDevFilePath(cwd, manifestPath, fs)
 	if err != nil {
 		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
@@ -337,7 +340,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		cwd = manifestPath
 	}
 
-	manifest, err = getManifestFromOktetoFile(cwd)
+	manifest, err = getManifestFromOktetoFile(cwd, fs)
 	if err != nil {
 		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
@@ -348,7 +351,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		return manifest, nil
 	}
 
-	inferredManifest, err := GetInferredManifest(cwd)
+	inferredManifest, err := GetInferredManifest(cwd, fs)
 	if err != nil {
 		return nil, err
 	}
@@ -395,7 +398,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 }
 
 // getManifestFromFile retrieves the manifest from a given file, okteto manifest or docker-compose
-func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
+func getManifestFromFile(cwd, manifestPath string, fs afero.Fs) (*Manifest, error) {
 	devManifest, err := getOktetoManifest(manifestPath)
 	if err != nil {
 		oktetoLog.Info("devManifest err, fallback to stack unmarshall")
@@ -411,6 +414,7 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 			Dev:   ManifestDevs{},
 			Build: build.ManifestBuild{},
 			IsV2:  true,
+			Fs:    fs,
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
 
@@ -419,7 +423,7 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 			composeFiles = append(composeFiles, composeInfo.File)
 		}
 		// We need to ensure that LoadStack has false because we don't want to expand env vars
-		s, stackErr := LoadStack("", composeFiles, false)
+		s, stackErr := LoadStack("", composeFiles, false, fs)
 		if stackErr != nil {
 			// if err is from validation, then return the stackErr
 			if errors.Is(stackErr, errDependsOn) {
@@ -454,7 +458,7 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 			}
 			// LoadStack should perform validation of the stack read from the file on compose section
 			// We need to ensure that LoadStack has false because we don't want to expand env vars
-			s, err := LoadStack("", stackFiles, false)
+			s, err := LoadStack("", stackFiles, false, fs)
 			if err != nil {
 				return nil, err
 			}
@@ -476,13 +480,13 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 }
 
 // GetInferredManifest infers the manifest from a directory
-func GetInferredManifest(cwd string) (*Manifest, error) {
+func GetInferredManifest(cwd string, fs afero.Fs) (*Manifest, error) {
 	pipelinePath, err := discovery.GetOktetoPipelinePath(cwd)
 	if err == nil {
 		oktetoLog.Infof("Found pipeline on: %s", pipelinePath)
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto pipeline manifest on %s", pipelinePath)
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling pipeline manifest...")
-		pipelineManifest, err := GetManifestV2(pipelinePath)
+		pipelineManifest, err := GetManifestV2(pipelinePath, fs)
 		if err != nil {
 			return nil, err
 		}
@@ -511,13 +515,14 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 			Dev:   ManifestDevs{},
 			Build: build.ManifestBuild{},
 			IsV2:  true,
+			Fs:    fs,
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
 		var stackFiles []string
 		for _, composeInfo := range stackManifest.Deploy.ComposeSection.ComposesInfo {
 			stackFiles = append(stackFiles, composeInfo.File)
 		}
-		s, err := LoadStack("", stackFiles, true)
+		s, err := LoadStack("", stackFiles, true, fs)
 		if err != nil {
 			return nil, err
 		}
@@ -550,6 +555,7 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 			},
 			Dev:   ManifestDevs{},
 			Build: build.ManifestBuild{},
+			Fs:    fs,
 		}
 		return chartManifest, nil
 	}
@@ -574,6 +580,7 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 			},
 			Dev:   ManifestDevs{},
 			Build: build.ManifestBuild{},
+			Fs:    fs,
 		}
 		return k8sManifest, nil
 	}
@@ -905,7 +912,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 			for _, composeInfo := range manifest.Deploy.ComposeSection.ComposesInfo {
 				stackFiles = append(stackFiles, composeInfo.File)
 			}
-			s, err := LoadStack("", stackFiles, true)
+			s, err := LoadStack("", stackFiles, true, manifest.Fs)
 			if err != nil {
 				oktetoLog.Infof("Could not reload stack manifest: %s", err)
 				s = manifest.Deploy.ComposeSection.Stack

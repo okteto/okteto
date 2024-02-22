@@ -85,7 +85,7 @@ func (mc *Command) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manife
 	manifest := model.NewManifest()
 	var err error
 	if !opts.Overwrite {
-		manifest, err = model.GetManifestV2(opts.DevPath)
+		manifest, err = model.GetManifestV2(opts.DevPath, afero.NewOsFs())
 		if err != nil && !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
 		}
@@ -356,7 +356,7 @@ func getPathFromApp(wd, appName string) string {
 }
 
 func createFromCompose(composePath string) (*model.Manifest, error) {
-	stack, err := model.LoadStack("", []string{composePath}, true)
+	stack, err := model.LoadStack("", []string{composePath}, true, afero.NewOsFs())
 	if err != nil {
 		return nil, err
 	}
@@ -465,7 +465,7 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (build.M
 }
 
 func inferDeploySection(cwd string) (*model.DeployInfo, error) {
-	m, err := model.GetInferredManifest(cwd)
+	m, err := model.GetInferredManifest(cwd, afero.NewOsFs())
 	if err != nil {
 		return nil, err
 	}
@@ -493,7 +493,7 @@ func inferDevsSection(cwd string) (model.ManifestDevs, error) {
 		if !f.IsDir() {
 			continue
 		}
-		dev, err := model.GetManifestV2(f.Name())
+		dev, err := model.GetManifestV2(f.Name(), afero.NewOsFs())
 		if err != nil {
 			oktetoLog.Debugf("could not detect any okteto manifest on %s", f.Name())
 			continue
@@ -507,7 +507,7 @@ func inferDevsSection(cwd string) (model.ManifestDevs, error) {
 	return devs, nil
 }
 
-func (mc *Command) getManifest(path string) (*model.Manifest, error) {
+func (mc *Command) getManifest(path string, fs afero.Fs) (*model.Manifest, error) {
 	if mc.manifest != nil {
 		// Deepcopy so it does not get overwritten these changes
 		manifest := *mc.manifest
@@ -527,7 +527,7 @@ func (mc *Command) getManifest(path string) (*model.Manifest, error) {
 		manifest.Deploy = d
 		return &manifest, nil
 	}
-	return model.GetManifestV2(path)
+	return model.GetManifestV2(path, fs)
 }
 
 func configureAutoCreateDev(manifest *model.Manifest) error {

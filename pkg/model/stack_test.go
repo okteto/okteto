@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model/utils"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -990,7 +991,7 @@ func TestStack_ExpandEnvsAtFileLevel(t *testing.T) {
 				t.Setenv(key, value)
 			}
 
-			stack, err := GetStackFromPath("test", tmpFile.Name(), false)
+			stack, err := GetStackFromPath("test", tmpFile.Name(), false, afero.NewMemMapFs())
 			if err != nil {
 				t.Fatalf("Error detected: %s", err.Error())
 			}

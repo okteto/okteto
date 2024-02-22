@@ -32,6 +32,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -57,7 +58,7 @@ type k8sIngressClientProvider interface {
 }
 
 type EndpointGetter struct {
-	GetManifest     func(path string) (*model.Manifest, error)
+	GetManifest     func(path string, fs afero.Fs) (*model.Manifest, error)
 	endpointControl endpointControlInterface
 }
 
@@ -131,7 +132,7 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 			}
 
 			if options.Name == "" {
-				manifest, err := eg.GetManifest(options.ManifestPath)
+				manifest, err := eg.GetManifest(options.ManifestPath, afero.NewOsFs())
 				if err != nil {
 					return err
 				}
