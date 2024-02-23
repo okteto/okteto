@@ -105,8 +105,7 @@ type remoteDestroyCommand struct {
 	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
 	temporalCtrl         filesystem.TemporalDirectoryInterface
 	manifest             *model.Manifest
-	// registry             remoteBuild.OktetoRegistryInterface
-	clusterMetadata func(context.Context) (*types.ClusterMetadata, error)
+	clusterMetadata      func(context.Context) (*types.ClusterMetadata, error)
 
 	// sshAuthSockEnvvar is the default for SSH_AUTH_SOCK. Provided mostly for testing
 	sshAuthSockEnvvar string
@@ -128,8 +127,7 @@ func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remote
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 		manifest:             manifest,
-		// registry:             builder.Registry,
-		clusterMetadata: fetchClusterMetadata,
+		clusterMetadata:      fetchClusterMetadata,
 	}
 }
 
