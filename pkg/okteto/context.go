@@ -479,7 +479,7 @@ func (okctx *Context) ToUser() *types.User {
 func IsOktetoCloud() bool {
 	octx := GetContext()
 	switch octx.Name {
-	case CloudURL, StagingURL:
+	case StagingURL:
 		return true
 	default:
 		return false

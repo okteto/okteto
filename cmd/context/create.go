@@ -145,10 +145,6 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 		ctxOptions.IsOkteto = true
 	}
 
-	if ctxOptions.Context == okteto.CloudURL {
-		ctxOptions.IsOkteto = true
-	}
-
 	if !ctxOptions.IsOkteto {
 
 		if isUrl(ctxOptions.Context) {

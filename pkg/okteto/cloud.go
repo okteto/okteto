@@ -14,11 +14,7 @@
 package okteto
 
 const (
-	// CloudURL is the default URL of okteto
 	CloudURL = "https://cloud.okteto.com"
-
-	// CloudRegistryURL is the default URL of okteto registry
-	CloudRegistryURL = "registry.cloud.okteto.net"
 
 	// CloudBuildKitURL is the default URL of okteto buildkit
 	CloudBuildKitURL = "tcp://buildkit.cloud.okteto.net:1234"

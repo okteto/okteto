@@ -142,7 +142,7 @@ func Test_initFromEnvVars(t *testing.T) {
 			},
 			want: &Options{
 				Token:    "token",
-				Context:  okteto.CloudURL,
+				Context:  "",
 				IsOkteto: true,
 			},
 		},
@@ -159,7 +159,7 @@ func Test_initFromEnvVars(t *testing.T) {
 			},
 			want: &Options{
 				Token:    "token",
-				Context:  okteto.CloudURL,
+				Context:  "",
 				IsOkteto: true,
 			},
 		},
@@ -174,7 +174,7 @@ func Test_initFromEnvVars(t *testing.T) {
 			},
 			want: &Options{
 				Token:         "token",
-				Context:       okteto.CloudURL,
+				Context:       "",
 				IsOkteto:      true,
 				InferredToken: true,
 			},

@@ -53,8 +53,8 @@ func Test_K8sContextToOktetoUrl(t *testing.T) {
 		in   string
 		want string
 	}{
-		{name: "is-url", in: CloudURL, want: CloudURL},
-		{name: "is-okteto-context", in: "cloud_okteto_com", want: CloudURL},
+		{name: "is-url", in: "https://cluster.example.com", want: "https://cluster.example.com"},
+		{name: "is-okteto-context", in: "cloud_okteto_com", want: "https://cluster.example.com"},
 		{name: "is-empty", in: "", want: ""},
 		{name: "is-k8scontext", in: "minikube", want: "minikube"},
 	}

@@ -77,9 +77,6 @@ func (o *Options) InitFromEnvVars() {
 	envToken := os.Getenv(model.OktetoTokenEnvVar)
 	if o.Token != "" || envToken != "" {
 		o.IsOkteto = true
-		if o.Context == "" {
-			o.Context = okteto.CloudURL
-		}
 	}
 
 	if o.Token == "" && envToken != "" {

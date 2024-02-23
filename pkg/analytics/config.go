@@ -25,7 +25,6 @@ import (
 )
 
 var (
-	CloudContext      = "Cloud"
 	StagingContext    = "Staging"
 	EnterpriseContext = "Enterprise"
 	KubernetesContext = "Kubernetes"
@@ -41,8 +40,6 @@ type Analytics struct {
 func getContextType(oktetoContext string) string {
 	if okteto.IsOkteto() {
 		switch oktetoContext {
-		case okteto.CloudURL:
-			return CloudContext
 		case okteto.StagingURL:
 			return StagingContext
 		default:
