@@ -133,7 +133,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contr
 				}
 				options.ManifestPath = uptManifestPath
 			}
-			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath); err != nil {
+			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: true}); err != nil {
 				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
 					return err
 				}

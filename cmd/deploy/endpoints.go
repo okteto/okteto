@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/endpoints"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -84,6 +83,7 @@ func NewEndpointGetter(k8sLogger *io.K8sLogger) (EndpointGetter, error) {
 // Endpoints deploys the okteto manifest
 func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &EndpointsOptions{}
+	fs := afero.NewOsFs()
 	cmd := &cobra.Command{
 		Use:   "endpoints",
 		Short: "Show endpoints for an environment",
@@ -94,32 +94,22 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 					return err
 				}
 				options.ManifestPath = model.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
-			}
-
-			ctxResource, err := utils.LoadManifestContext(options.ManifestPath)
-			if err != nil {
-				if oktetoErrors.IsNotExist(err) {
-					ctxResource = &model.ContextResource{}
+				// check whether the manifest file provided by -f exists or not
+				if _, err := fs.Stat(options.ManifestPath); err != nil {
+					return oktetoErrors.UserError{
+						E:    fmt.Errorf("the okteto manifest file '%s' does not exist", options.ManifestPath),
+						Hint: "Check the path to the okteto manifest file",
+					}
 				}
 			}
 
-			if err := ctxResource.UpdateNamespace(options.Namespace); err != nil {
-				return err
-			}
-
-			if err := ctxResource.UpdateContext(options.K8sContext); err != nil {
-				return err
-			}
-
-			ctxOptions := &contextCMD.Options{
-				Context:   ctxResource.Context,
-				Namespace: ctxResource.Namespace,
-			}
-			if options.Output == "" {
-				ctxOptions.Show = true
-			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
-				return err
+			// false for 'json' and 'md' to avoid breaking their syntax
+			showCtxHeader := options.Output == ""
+			// Loads, updates and uses the context from path. If not found, it creates and uses a new context
+			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: showCtxHeader}); err != nil {
+				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace, Show: showCtxHeader}); err != nil {
+					return err
+				}
 			}
 
 			eg, err := NewEndpointGetter(k8sLogger)
