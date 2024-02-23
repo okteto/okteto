@@ -290,6 +290,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 		return "", err
 	}
 
+	// TODO: revert this change. Only used for testing purposes
 	oktetoCliImage := getOktetoCLIVersion(config.VersionString)
 	if os.Getenv("OKTETO_CLI_IMAGE") != "" {
 		oktetoCliImage = os.Getenv("OKTETO_CLI_IMAGE")

@@ -352,6 +352,7 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
+	manifestVars.Mask(oktetoLog.AddMaskedWord)
 	err = manifestVars.Expand()
 	if err != nil {
 		return nil, err

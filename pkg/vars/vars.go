@@ -88,3 +88,9 @@ func (vars *Vars) Export(lookupEnv func(key string) (string, bool), setEnv func(
 	}
 	return nil
 }
+
+func (vars *Vars) Mask(maskFn func(string)) {
+	for _, v := range *vars {
+		maskFn(v.Value)
+	}
+}
