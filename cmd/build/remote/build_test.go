@@ -13,20 +13,7 @@
 
 package remote
 
-import (
-	"context"
-	"fmt"
-	"os"
-	"path/filepath"
-	"testing"
-
-	"github.com/okteto/okteto/internal/test"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/types"
-	"github.com/stretchr/testify/assert"
-)
-
-type fakeRegistry struct {
+/*type fakeRegistry struct {
 	registry map[string]fakeImage
 }
 
@@ -149,4 +136,4 @@ func createDockerfile(t *testing.T) (string, error) {
 		return "", err
 	}
 	return dir, nil
-}
+}*/

@@ -29,7 +29,7 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 	builder "github.com/okteto/okteto/cmd/build"
-	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
+	basicBuilder "github.com/okteto/okteto/cmd/build/basic"
 	"github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
@@ -105,8 +105,8 @@ type remoteDestroyCommand struct {
 	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
 	temporalCtrl         filesystem.TemporalDirectoryInterface
 	manifest             *model.Manifest
-	registry             remoteBuild.OktetoRegistryInterface
-	clusterMetadata      func(context.Context) (*types.ClusterMetadata, error)
+	// registry             remoteBuild.OktetoRegistryInterface
+	clusterMetadata func(context.Context) (*types.ClusterMetadata, error)
 
 	// sshAuthSockEnvvar is the default for SSH_AUTH_SOCK. Provided mostly for testing
 	sshAuthSockEnvvar string
@@ -117,7 +117,7 @@ type remoteDestroyCommand struct {
 
 func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remoteDestroyCommand {
 	fs := afero.NewOsFs()
-	builder := remoteBuild.NewBuilderFromScratch(ioCtrl)
+	builder := basicBuilder.NewBuilderFromScratch(ioCtrl)
 	if manifest.Destroy == nil {
 		manifest.Destroy = &model.DestroyInfo{}
 	}
@@ -128,8 +128,8 @@ func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remote
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 		manifest:             manifest,
-		registry:             builder.Registry,
-		clusterMetadata:      fetchClusterMetadata,
+		// registry:             builder.Registry,
+		clusterMetadata: fetchClusterMetadata,
 	}
 }
 

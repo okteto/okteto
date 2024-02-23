@@ -29,7 +29,7 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 	builder "github.com/okteto/okteto/cmd/build"
-	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
+	basicBuilder "github.com/okteto/okteto/cmd/build/basic"
 	"github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
@@ -123,7 +123,7 @@ func newRemoteDeployer(builder builderInterface, ioCtrl *io.Controller) *remoteD
 	fs := afero.NewOsFs()
 	return &remoteDeployCommand{
 		getBuildEnvVars:      builder.GetBuildEnvVars,
-		builderV1:            remoteBuild.NewBuilderFromScratch(ioCtrl),
+		builderV1:            basicBuilder.NewBuilderFromScratch(ioCtrl),
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
