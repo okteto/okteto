@@ -788,14 +788,14 @@ func getUpdateStrategy(svc *model.Service, strategy updateStrategyGetter) update
 		if err == nil {
 			return result
 		}
-		oktetoLog.Debugf("invalid strategy: %w", err)
+		oktetoLog.Debugf("invalid strategy: %s", err)
 	}
 	if result := getUpdateStrategyByEnvVar(); result != "" {
 		err := strategy.validate(result)
 		if err == nil {
 			return result
 		}
-		oktetoLog.Debugf("invalid strategy: %w", err)
+		oktetoLog.Debugf("invalid strategy: %s", err)
 	}
 	return strategy.getDefault()
 }

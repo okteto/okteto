@@ -54,12 +54,12 @@ type loggerInfo interface {
 func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterface, l loggerInfo) oktetoBuilderConfig {
 	hasAccess, err := registry.HasGlobalPushAccess()
 	if err != nil {
-		l.Infof("error trying to access globalPushAccess: %w", err)
+		l.Infof("error trying to access globalPushAccess: %s", err)
 	}
 
 	isClean, err := gitRepo.IsClean()
 	if err != nil {
-		l.Infof("error trying to get directory: %w", err)
+		l.Infof("error trying to get directory: %s", err)
 	}
 
 	return oktetoBuilderConfig{
@@ -75,12 +75,12 @@ func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterfa
 func getConfigStateless(registry configRegistryInterface, gitRepo configRepositoryInterface, l loggerInfo, isOkteto bool) oktetoBuilderConfig {
 	hasAccess, err := registry.HasGlobalPushAccess()
 	if err != nil {
-		l.Infof("error trying to access globalPushAccess: %w", err)
+		l.Infof("error trying to access globalPushAccess: %s", err)
 	}
 
 	isClean, err := gitRepo.IsClean()
 	if err != nil {
-		l.Infof("error trying to get directory: %w", err)
+		l.Infof("error trying to get directory: %s", err)
 	}
 
 	return oktetoBuilderConfig{
@@ -128,7 +128,7 @@ func (oc oktetoBuilderConfig) IsCleanProject() bool {
 func (oc oktetoBuilderConfig) GetGitCommit() string {
 	commitSHA, err := oc.repository.GetSHA()
 	if err != nil {
-		oktetoLog.Infof("could not get repository sha: %w", err)
+		oktetoLog.Infof("could not get repository sha: %s", err)
 	}
 	return commitSHA
 }

@@ -144,7 +144,7 @@ func (ImageCtrl) getExposedPortsFromCfg(cfg *containerv1.ConfigFile) []Port {
 			port = port[:slashIndx]
 			portInt, err := strconv.ParseInt(port, 10, 32)
 			if err != nil {
-				oktetoLog.Debugf("could not parse exposed port %s: %w", port, err)
+				oktetoLog.Debugf("could not parse exposed port %s: %s", port, err)
 				continue
 			}
 			result = append(result, Port{ContainerPort: int32(portInt), Protocol: apiv1.ProtocolTCP})

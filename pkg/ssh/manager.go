@@ -92,7 +92,6 @@ func (fm *ForwardManager) canAdd(localPort int, checkAvailable bool) error {
 		}
 
 		return fmt.Errorf("local port %d is already in-use in your local machine: %w", localPort, oktetoErrors.ErrPortAlreadyAllocated)
-		// return fmt.Errorf("local port %d is already in-use in your local machine", localPort)
 	}
 
 	return nil

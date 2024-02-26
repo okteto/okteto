@@ -163,7 +163,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 
 	defer func() {
 		if err := rd.fs.Remove(dockerfile); err != nil {
-			oktetoLog.Infof("error removing dockerfile: %w", err)
+			oktetoLog.Infof("error removing dockerfile: %s", err)
 		}
 	}()
 
