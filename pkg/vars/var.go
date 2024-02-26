@@ -23,11 +23,16 @@ type Var struct {
 	Value string `json:"value,omitempty" yaml:"value,omitempty"`
 }
 
-func (v *Var) String() string {
-	return fmt.Sprintf("%s=%s", v.Name, v.Value)
+func (v Var) String() string {
+	return fmt.Sprintf("%s: %s", v.Name, v.Value)
 }
 
 func (v *Var) ExistsLocally(lookupEnv func(key string) (string, bool)) bool {
 	_, exists := lookupEnv(v.Name)
 	return exists
+}
+
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
+func (v Var) MarshalYAML() (interface{}, error) {
+	return v.String(), nil
 }

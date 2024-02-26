@@ -26,31 +26,6 @@ type ManifestVars struct {
 
 type Vars []Var
 
-// MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (v Vars) MarshalYAML() (interface{}, error) {
-	rawVars := make([]Var, 0)
-	for _, val := range v {
-		rawVars = append(rawVars, val)
-
-	}
-	return rawVars, nil
-}
-
-// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (v *Vars) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var rawVars map[string]string
-	if err := unmarshal(&rawVars); err != nil {
-		return err
-	}
-
-	for key, val := range rawVars {
-		//(*v)[key] = &Var{Name: key, Value: val}
-		*v = append(*v, Var{Name: key, Value: val})
-	}
-
-	return nil
-}
-
 func GetManifestVars(manifestPath string) (Vars, error) {
 	b, err := os.ReadFile(manifestPath)
 	if err != nil {
@@ -64,6 +39,26 @@ func GetManifestVars(manifestPath string) (Vars, error) {
 	}
 
 	return vars.Variables, nil
+}
+
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
+func (vars *Vars) MarshalYAML() (interface{}, error) {
+	return vars, nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (vars *Vars) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawVars map[string]string
+	if err := unmarshal(&rawVars); err != nil {
+		return err
+	}
+
+	for key, val := range rawVars {
+		//(*v)[key] = &Var{Name: key, Value: val}
+		*vars = append(*vars, Var{Name: key, Value: val})
+	}
+
+	return nil
 }
 
 func (vars *Vars) Expand() error {
@@ -80,7 +75,7 @@ func (vars *Vars) Expand() error {
 func (vars *Vars) Export(lookupEnv func(key string) (string, bool), setEnv func(key, value string) error, warningLog func(format string, args ...interface{})) error {
 	for _, v := range *vars {
 		if v.ExistsLocally(lookupEnv) {
-			warningLog("The local variable '%s' takes precedence over the manifest's definition, which will be ignored", v.Name)
+			warningLog("Local variable '%s' takes precedence over the manifest's definition, which will be ignored", v.Name)
 		}
 		if err := setEnv(v.Name, v.Value); err != nil {
 			return err

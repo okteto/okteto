@@ -226,7 +226,7 @@ func setSecrets(secrets []types.Secret) {
 		value, exists := os.LookupEnv(secret.Name)
 		if exists {
 			if value != secret.Value {
-				oktetoLog.Warning("$%s secret is being overridden by a local environment variable by the same name.", secret.Name)
+				oktetoLog.Warning("Local variable '%s' takes precedence over the same variable defined in the Okteto Dashboard, which will be ignored.", secret.Name)
 			}
 			oktetoLog.AddMaskedWord(value)
 			continue
