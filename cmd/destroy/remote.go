@@ -17,6 +17,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -182,6 +183,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 
 	buildInfo := &build.Info{
 		Dockerfile: dockerfile,
+		Context:    rd.getContextPath(cwd, opts.ManifestPathFlag),
 	}
 
 	// undo modification of CWD for Build command
@@ -247,6 +249,11 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 
 	} else {
 		oktetoLog.Debug("no ssh agent found. Not mouting ssh-agent for build")
+	}
+
+	b, err := json.Marshal(buildOptions)
+	if err == nil {
+		oktetoLog.Infof("####### %s", string(b))
 	}
 
 	// we need to call Run() method using a remote builder. This Builder will have
@@ -363,8 +370,11 @@ func getOktetoCLIVersion(versionString string) string {
 	if match, err := regexp.MatchString(`\d+\.\d+\.\d+`, versionString); match {
 		version = fmt.Sprintf(constants.OktetoCLIImageForRemoteTemplate, versionString)
 	} else {
-		oktetoLog.Infof("invalid okteto CLI version %s: %s", versionString, err)
-		oktetoLog.Info("using latest okteto CLI image")
+		if err != nil {
+			oktetoLog.Infof("invalid okteto CLI version %s: %s. Using latest", versionString, err)
+		} else {
+			oktetoLog.Infof("invalid okteto CLI version %s. Using latest")
+		}
 		remoteOktetoImage := os.Getenv(constants.OktetoDeployRemoteImage)
 		if remoteOktetoImage != "" {
 			version = remoteOktetoImage
@@ -394,4 +404,30 @@ func fetchClusterMetadata(ctx context.Context) (*types.ClusterMetadata, error) {
 	}
 
 	return &metadata, err
+}
+
+func (rd *remoteDestroyCommand) getContextPath(cwd, manifestPath string) string {
+	if manifestPath == "" {
+		return cwd
+	}
+
+	path := manifestPath
+	if !filepath.IsAbs(manifestPath) {
+		path = filepath.Join(cwd, manifestPath)
+	}
+	fInfo, err := rd.fs.Stat(path)
+	if err != nil {
+		oktetoLog.Infof("error getting file info: %s", err)
+		return cwd
+
+	}
+	if fInfo.IsDir() {
+		return path
+	}
+
+	possibleCtx := filepath.Dir(path)
+	if strings.HasSuffix(possibleCtx, ".okteto") {
+		return filepath.Dir(possibleCtx)
+	}
+	return possibleCtx
 }

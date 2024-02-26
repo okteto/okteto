@@ -275,9 +275,9 @@ func TestCreateDockerfile(t *testing.T) {
 			assert.Equal(t, tt.expected.dockerfileName, dockerfileName)
 
 			if tt.expected.err == nil {
-				_, err = rdc.fs.Stat(filepath.Join("test", dockerfileTemporalNane))
+				_, err = rdc.fs.Stat(filepath.Join("/test", dockerfileTemporalNane))
 				assert.NoError(t, err)
-				content, err := afero.ReadFile(rdc.fs, filepath.Join("test", dockerfileTemporalNane))
+				content, err := afero.ReadFile(rdc.fs, filepath.Join("/test", dockerfileTemporalNane))
 				assert.NoError(t, err)
 				assert.True(t, strings.Contains(string(content), fmt.Sprintf("ARG %s", model.OktetoActionNameEnvVar)))
 			}
@@ -444,4 +444,53 @@ func TestGetExtraHosts(t *testing.T) {
 			assert.EqualValues(t, tt.expected, extraHosts)
 		})
 	}
+}
+
+func TestGetContextPath(t *testing.T) {
+	cwd := filepath.Clean("/path/to/current/directory")
+
+	rd := remoteDestroyCommand{
+		fs: afero.NewMemMapFs(),
+	}
+
+	t.Run("Manifest path is empty", func(t *testing.T) {
+		expected := cwd
+		result := rd.getContextPath(cwd, "")
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path is a absolute path and directory", func(t *testing.T) {
+		manifestPath := filepath.Clean("/path/to/current/directory")
+		expected := manifestPath
+		rd.fs = afero.NewMemMapFs()
+		rd.fs.MkdirAll(manifestPath, 0755)
+		result := rd.getContextPath(cwd, manifestPath)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path is a file and absolute path", func(t *testing.T) {
+		manifestPath := filepath.Clean("/path/to/current/directory/file.yaml")
+		expected := filepath.Clean("/path/to/current/directory")
+		rd.fs = afero.NewMemMapFs()
+		rd.fs.MkdirAll(expected, 0755)
+		rd.fs.Create(manifestPath)
+		result := rd.getContextPath(cwd, manifestPath)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path is pointing to a file in the .okteto folder and absolute path", func(t *testing.T) {
+		manifestPath := filepath.Clean("/path/to/current/directory/.okteto/file.yaml")
+		expected := filepath.Clean("/path/to/current/directory")
+		rd.fs = afero.NewMemMapFs()
+		rd.fs.MkdirAll(expected, 0755)
+		rd.fs.Create(manifestPath)
+		result := rd.getContextPath(cwd, manifestPath)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path does not exist", func(t *testing.T) {
+		expected := cwd
+		result := rd.getContextPath(cwd, "nonexistent.yaml")
+		assert.Equal(t, expected, result)
+	})
 }
