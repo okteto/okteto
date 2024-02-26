@@ -489,12 +489,12 @@ func TestDeployOktetoManifestWithVariables(t *testing.T) {
 		Token:      token,
 	}
 
-	deployOutput, deployErr := commands.RunOktetoDeployWithOutput(oktetoPath, deployOptions)
+	deployOutput, deployErr := commands.RunOktetoDeployAndGetOutput(oktetoPath, deployOptions)
 
 	require.NoError(t, deployErr)
-	require.Contains(t, string(deployOutput), "MY_VAR=my-value")
-	require.Contains(t, string(deployOutput), "MY_VAR2=my-value-2-and-3")
-	require.Contains(t, string(deployOutput), "MY_VAR3=my-value-2-and-3")
+	require.Contains(t, deployOutput, "MY_VAR=my-value")
+	require.Contains(t, deployOutput, "MY_VAR2=my-value-2-and-3")
+	require.Contains(t, deployOutput, "MY_VAR3=my-value-2-and-3")
 
 	// TODO: implement the same for destroy
 	// TODO: check for warning: The local variable 'VAR1' takes precedence over the manifest's definition, which will be ignored.

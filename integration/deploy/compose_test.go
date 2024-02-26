@@ -534,7 +534,7 @@ services:
 		OktetoHome: dir,
 		Token:      token,
 	}
-	output, err := commands.GetOktetoDeployCmdOutput(oktetoPath, deployOptions)
+	output, err := commands.RunOktetoDestroyAndGetOutput(oktetoPath, deployOptions)
 	require.Error(t, err)
 	require.Contains(t, strings.ToLower(string(output)), "invalid depends_on: service 'app' depends on service 'nginx' which is undefined")
 
@@ -545,7 +545,7 @@ services:
 		Token:        token,
 		ManifestPath: "docker-compose.yml",
 	}
-	output, err = commands.GetOktetoDeployCmdOutput(oktetoPath, deployOptionsWithFile)
+	output, err = commands.RunOktetoDestroyAndGetOutput(oktetoPath, deployOptionsWithFile)
 	require.Error(t, err)
 	require.Contains(t, strings.ToLower(string(output)), "invalid depends_on: service 'app' depends on service 'nginx' which is undefined")
 }
