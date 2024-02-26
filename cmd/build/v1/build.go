@@ -15,11 +15,9 @@ package v1
 
 import (
 	"context"
-	"strings"
 
 	"github.com/okteto/okteto/cmd/build/basic"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
-	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -61,31 +59,5 @@ func (*OktetoBuilder) IsV1() bool {
 
 // Build builds the images defined by a Dockerfile
 func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
-	// Image tag is expanded with the variables in the environment
-	var err error
-	options.Tag, err = env.ExpandEnv(options.Tag)
-	if err != nil {
-		return err
-	}
-
-	if err := ob.Builder.Build(ctx, options); err != nil {
-		return err
-	}
-
-	// The success message is printed
-	if options.Tag == "" {
-		ob.IoCtrl.Out().Success("Build succeeded")
-		ob.IoCtrl.Out().Infof("Your image won't be pushed. To push your image specify the flag '-t'.")
-	} else {
-		tags := strings.Split(options.Tag, ",")
-		for _, tag := range tags {
-			displayTag := tag
-			if options.DevTag != "" {
-				displayTag = options.DevTag
-			}
-			ob.IoCtrl.Out().Success("Image '%s' successfully pushed", displayTag)
-		}
-	}
-
-	return nil
+	return ob.Builder.Build(ctx, options)
 }

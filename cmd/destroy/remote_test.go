@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	filesystem "github.com/okteto/okteto/pkg/filesystem/fake"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
@@ -32,19 +33,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type fakeBuilder struct {
+type fakeRunner struct {
 	err           error
 	assertOptions func(o *types.BuildOptions)
 }
 
-func (f fakeBuilder) Build(_ context.Context, opts *types.BuildOptions) error {
+func (f fakeRunner) Run(_ context.Context, opts *types.BuildOptions, _ *io.Controller) error {
 	if f.assertOptions != nil {
 		f.assertOptions(opts)
 	}
 	return f.err
 }
-
-func (fakeBuilder) IsV1() bool { return true }
 
 func TestRemoteTest(t *testing.T) {
 	ctx := context.Background()
@@ -127,7 +126,7 @@ func TestRemoteTest(t *testing.T) {
 			wdCtrl.SetErrors(tt.config.wd)
 			tempCreator.SetError(tt.config.tempFsCreator)
 			rdc := remoteDestroyCommand{
-				builder:              fakeBuilder{err: tt.config.builderErr},
+				runner:               fakeRunner{err: tt.config.builderErr},
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,
 				temporalCtrl:         tempCreator,
@@ -353,7 +352,7 @@ func TestRemoteDestroyWithSshAgent(t *testing.T) {
 	rdc := remoteDestroyCommand{
 		sshAuthSockEnvvar:    envvarName,
 		knownHostsPath:       knowHostFile.Name(),
-		builder:              fakeBuilder{assertOptions: assertFn},
+		runner:               fakeRunner{assertOptions: assertFn},
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
@@ -384,7 +383,7 @@ func TestRemoteDestroyWithBadSshAgent(t *testing.T) {
 	rdc := remoteDestroyCommand{
 		sshAuthSockEnvvar:    envvarName,
 		knownHostsPath:       "inexistent-file",
-		builder:              fakeBuilder{assertOptions: assertFn},
+		runner:               fakeRunner{assertOptions: assertFn},
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),

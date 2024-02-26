@@ -28,8 +28,6 @@ import (
 	"text/template"
 
 	"github.com/mitchellh/go-homedir"
-	builder "github.com/okteto/okteto/cmd/build"
-	basicBuilder "github.com/okteto/okteto/cmd/build/basic"
 	"github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
@@ -82,6 +80,12 @@ RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
 `
 )
 
+// remoteRunner is the interface to run the destroy command remotely. The implementation is using
+// an image builder like BuildKit
+type remoteRunner interface {
+	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error
+}
+
 type dockerfileTemplateProperties struct {
 	OktetoCLIImage         string
 	UserDestroyImage       string
@@ -99,7 +103,7 @@ type dockerfileTemplateProperties struct {
 }
 
 type remoteDestroyCommand struct {
-	builder              builder.Builder
+	runner               remoteRunner
 	destroyImage         string
 	fs                   afero.Fs
 	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
@@ -112,22 +116,31 @@ type remoteDestroyCommand struct {
 
 	// knownHostsPath  is the default known_hosts file path. Provided mostly for testing
 	knownHostsPath string
+
+	// ioCtrl is the controller for the output of the Build logs
+	ioCtrl *io.Controller
 }
 
 func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remoteDestroyCommand {
 	fs := afero.NewOsFs()
-	builder := basicBuilder.NewBuilderFromScratch(ioCtrl)
+	runner := &buildCmd.OktetoBuilder{
+		OktetoContext: &okteto.ContextStateless{
+			Store: okteto.GetContextStore(),
+		},
+		Fs: fs,
+	}
 	if manifest.Destroy == nil {
 		manifest.Destroy = &model.DestroyInfo{}
 	}
 	return &remoteDestroyCommand{
-		builder:              builder,
+		runner:               runner,
 		destroyImage:         manifest.Destroy.Image,
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 		manifest:             manifest,
 		clusterMetadata:      fetchClusterMetadata,
+		ioCtrl:               ioCtrl,
 	}
 }
 
@@ -236,11 +249,11 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		oktetoLog.Debug("no ssh agent found. Not mouting ssh-agent for build")
 	}
 
-	// we need to call Build() method using a remote builder. This Builder will have
+	// we need to call Run() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
 	// account that we must not confuse the user with build messages since this logic is
 	// executed in the deploy command.
-	if err := rd.builder.Build(ctx, buildOptions); err != nil {
+	if err := rd.runner.Run(ctx, buildOptions, rd.ioCtrl); err != nil {
 		var cmdErr buildCmd.OktetoCommandErr
 		if errors.As(err, &cmdErr) {
 			oktetoLog.SetStage(cmdErr.Stage)

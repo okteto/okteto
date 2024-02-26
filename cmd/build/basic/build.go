@@ -17,10 +17,12 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -80,15 +82,31 @@ func (ob *Builder) Build(ctx context.Context, options *types.BuildOptions) error
 		return fmt.Errorf("%s: '%s' is not a regular file", oktetoErrors.InvalidDockerfile, options.File)
 	}
 
+	var err error
+	options.Tag, err = env.ExpandEnv(options.Tag)
+	if err != nil {
+		return err
+	}
+
 	if err := ob.BuildRunner.Run(ctx, options, ob.IoCtrl); err != nil {
 		analytics.TrackBuild(false)
 		return err
 	}
 
+	if options.Tag == "" {
+		ob.IoCtrl.Out().Success("Build succeeded")
+		ob.IoCtrl.Out().Infof("Your image won't be pushed. To push your image specify the flag '-t'.")
+	} else {
+		tags := strings.Split(options.Tag, ",")
+		for _, tag := range tags {
+			displayTag := tag
+			if options.DevTag != "" {
+				displayTag = options.DevTag
+			}
+			ob.IoCtrl.Out().Success("Image '%s' successfully pushed", displayTag)
+		}
+	}
+
 	analytics.TrackBuild(true)
 	return nil
-}
-
-func (bc *Builder) IsV1() bool {
-	return false
 }

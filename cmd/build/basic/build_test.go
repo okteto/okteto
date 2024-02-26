@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
@@ -40,6 +41,7 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	buildRunner := &fakeBuildRunner{}
 	bc := &Builder{
 		BuildRunner: buildRunner,
+		IoCtrl:      io.NewIOController(),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -71,6 +73,7 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 	buildRunner := &fakeBuildRunner{}
 	bc := &Builder{
 		BuildRunner: buildRunner,
+		IoCtrl:      io.NewIOController(),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -102,6 +105,7 @@ func TestBuildWithNoErrorFromDockerfileAndNoTag(t *testing.T) {
 	buildRunner := &fakeBuildRunner{}
 	bc := &Builder{
 		BuildRunner: buildRunner,
+		IoCtrl:      io.NewIOController(),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -130,6 +134,7 @@ func TestBuildWithErrorWithPathToFile(t *testing.T) {
 	buildRunner := &fakeBuildRunner{}
 	bc := &Builder{
 		BuildRunner: buildRunner,
+		IoCtrl:      io.NewIOController(),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -151,6 +156,7 @@ func TestBuildWithErrorWithFileToDir(t *testing.T) {
 	buildRunner := &fakeBuildRunner{}
 	bc := &Builder{
 		BuildRunner: buildRunner,
+		IoCtrl:      io.NewIOController(),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -164,6 +170,31 @@ func TestBuildWithErrorWithFileToDir(t *testing.T) {
 	err = bc.Build(ctx, options)
 	// expected error from the build
 	assert.Error(t, err)
+
+	buildRunner.AssertNotCalled(t, "Run", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestBuildWithErrorFromImageExpansion(t *testing.T) {
+	ctx := context.Background()
+
+	buildRunner := &fakeBuildRunner{}
+	bc := &Builder{
+		BuildRunner: buildRunner,
+		IoCtrl:      io.NewIOController(),
+	}
+	dir, err := createDockerfile(t)
+	assert.NoError(t, err)
+
+	t.Setenv("TEST_VAR", "unit-test")
+	// The missing closing brace breaks the var expansion
+	tag := "okteto.dev/test:${TEST_VAR"
+	options := &types.BuildOptions{
+		CommandArgs: []string{dir},
+		Tag:         tag,
+	}
+	err = bc.Build(ctx, options)
+	// error from the build
+	assert.ErrorAs(t, err, &env.VarExpansionErr{})
 
 	buildRunner.AssertNotCalled(t, "Run", mock.Anything, mock.Anything, mock.Anything)
 }

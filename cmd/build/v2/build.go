@@ -370,7 +370,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 
 	buildOptions := buildCmd.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, options, bc.Registry, bc.oktetoContext)
 
-	if err := bc.build(ctx, buildOptions); err != nil {
+	if err := bc.Builder.Build(ctx, buildOptions); err != nil {
 		return "", err
 	}
 	var imageTagWithDigest string
@@ -418,7 +418,7 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 	buildOptions := buildCmd.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, options, bc.Registry, bc.oktetoContext)
 	buildOptions.Tag = tagToBuild
 
-	if err := bc.build(ctx, buildOptions); err != nil {
+	if err := bc.Builder.Build(ctx, buildOptions); err != nil {
 		return "", err
 	}
 	imageTagWithDigest, err := bc.Registry.GetImageTagWithDigest(buildOptions.Tag)
@@ -447,35 +447,6 @@ func (bc *OktetoBuilder) getBuildInfoWithoutVolumeMounts(buildInfo *build.Info, 
 		result.Image = ""
 	}
 	return result
-}
-
-func (bc *OktetoBuilder) build(ctx context.Context, options *types.BuildOptions) error {
-	// Image tag is expanded with the variables in the environment
-	var err error
-	options.Tag, err = env.ExpandEnv(options.Tag)
-	if err != nil {
-		return err
-	}
-
-	if err := bc.Builder.Build(ctx, options); err != nil {
-		return err
-	}
-
-	// The success message is printed
-	if options.Tag == "" {
-		bc.IoCtrl.Out().Success("Build succeeded")
-		bc.IoCtrl.Out().Infof("Your image won't be pushed. To push your image specify the flag '-t'.")
-	} else {
-		tags := strings.Split(options.Tag, ",")
-		for _, tag := range tags {
-			displayTag := tag
-			if options.DevTag != "" {
-				displayTag = options.DevTag
-			}
-			bc.IoCtrl.Out().Success("Image '%s' successfully pushed", displayTag)
-		}
-	}
-	return nil
 }
 
 func getBuildInfoWithVolumeMounts(buildInfo *build.Info, isStackManifest bool, isOkteto bool) *build.Info {
