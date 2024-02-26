@@ -17,7 +17,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -251,11 +250,6 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		oktetoLog.Debug("no ssh agent found. Not mouting ssh-agent for build")
 	}
 
-	b, err := json.Marshal(buildOptions)
-	if err == nil {
-		oktetoLog.Infof("####### %s", string(b))
-	}
-
 	// we need to call Run() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
 	// account that we must not confuse the user with build messages since this logic is
@@ -373,7 +367,7 @@ func getOktetoCLIVersion(versionString string) string {
 		if err != nil {
 			oktetoLog.Infof("invalid okteto CLI version %s: %s. Using latest", versionString, err)
 		} else {
-			oktetoLog.Infof("invalid okteto CLI version %s. Using latest")
+			oktetoLog.Infof("invalid okteto CLI version %s. Using latest", versionString)
 		}
 		remoteOktetoImage := os.Getenv(constants.OktetoDeployRemoteImage)
 		if remoteOktetoImage != "" {
