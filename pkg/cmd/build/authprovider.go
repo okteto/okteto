@@ -158,7 +158,7 @@ func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRe
 			return nil, err
 		}
 		if user, pass, err := ap.externalAuth(originalHost, ap.authContext.isOktetoContext(), c); err != nil {
-			oktetoLog.Debugf("failed to load external auth for %s: %w", req.Host, err.Error())
+			oktetoLog.Debugf("failed to load external auth for %s: %s", req.Host, err.Error())
 		} else {
 			res.Username = user
 			res.Secret = pass

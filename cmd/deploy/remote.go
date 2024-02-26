@@ -162,7 +162,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 
 	defer func() {
 		if err := rd.fs.Remove(dockerfile); err != nil {
-			oktetoLog.Infof("error removing dockerfile: %w", err)
+			oktetoLog.Infof("error removing dockerfile: %s", err)
 		}
 	}()
 

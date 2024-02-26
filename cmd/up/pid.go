@@ -121,7 +121,7 @@ func (pc pidController) delete() {
 	}
 
 	if err := pc.watcher.Close(); err != nil {
-		oktetoLog.Infof("could not close watcher: %w", err)
+		oktetoLog.Infof("could not close watcher: %s", err)
 	}
 
 	if strconv.Itoa(pid) != filePID {

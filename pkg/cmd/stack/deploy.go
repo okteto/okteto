@@ -559,7 +559,7 @@ func isAnyPortAvailable(ctx context.Context, svc *model.Service, stack *model.St
 		}
 	}
 	if err := forwarder.Start(podName, stack.Namespace); err != nil {
-		oktetoLog.Infof("could not start port-forward: %w", err)
+		oktetoLog.Infof("could not start port-forward: %s", err)
 	}
 	defer forwarder.Stop()
 	for _, port := range portsToTest {
@@ -841,7 +841,7 @@ func addImageMetadataToSvc(svc *model.Service) {
 		reg := registry.NewOktetoRegistry(okteto.Config{})
 		imageMetadata, err := reg.GetImageMetadata(svc.Image)
 		if err != nil {
-			oktetoLog.Infof("could not add image metadata: %w", err)
+			oktetoLog.Infof("could not add image metadata: %s", err)
 			return
 		}
 
