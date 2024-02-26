@@ -191,9 +191,20 @@ func TestGetDestroyFlags(t *testing.T) {
 			config: config{
 				opts: &Options{
 					ManifestPathFlag: "/hello/this/is/a/test",
+					ManifestPath:     "/hello/this/is/a/test",
 				},
 			},
-			expected: []string{"--file /hello/this/is/a/test"},
+			expected: []string{"--file test"},
+		},
+		{
+			name: "manifest path set on .okteto",
+			config: config{
+				opts: &Options{
+					ManifestPathFlag: "/hello/this/is/a/.okteto/test",
+					ManifestPath:     "/hello/this/is/a/.okteto/test",
+				},
+			},
+			expected: []string{fmt.Sprintf("--file %s", filepath.Clean(".okteto/test"))},
 		},
 		{
 			name: "destroy volumes set",
