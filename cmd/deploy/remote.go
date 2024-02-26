@@ -162,7 +162,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 
 	defer func() {
 		if err := rd.fs.Remove(dockerfile); err != nil {
-			oktetoLog.Infof("error removing dockerfile: %w", err)
+			oktetoLog.Infof("error removing dockerfile: %s", err)
 		}
 	}()
 
@@ -372,7 +372,11 @@ func getOktetoCLIVersion(versionString string) string {
 	if match, err := regexp.MatchString(`\d+\.\d+\.\d+`, versionString); match {
 		version = fmt.Sprintf(constants.OktetoCLIImageForRemoteTemplate, versionString)
 	} else {
-		oktetoLog.Infof("invalid version string: %s, using latest: %s", versionString, err)
+		if err != nil {
+			oktetoLog.Infof("invalid version string: %s. Error: %s, using latest", versionString, err)
+		} else {
+			oktetoLog.Infof("invalid version string: %s, using latest", versionString)
+		}
 		remoteOktetoImage := os.Getenv(constants.OktetoDeployRemoteImage)
 		if remoteOktetoImage != "" {
 			version = remoteOktetoImage

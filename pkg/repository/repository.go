@@ -54,7 +54,7 @@ func (r repositoryURL) String() string {
 func getURLFromPath(path string) repositoryURL {
 	url, err := giturls.Parse(path)
 	if err != nil {
-		oktetoLog.Infof("could not parse url: %w", err)
+		oktetoLog.Infof("could not parse url: %s", err)
 	}
 
 	return repositoryURL{

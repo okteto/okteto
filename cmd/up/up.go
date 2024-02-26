@@ -710,7 +710,7 @@ func (up *upContext) activateLoop() {
 			<-up.ShutdownCompleted
 			pidFromFile, err := up.pidController.get()
 			if err != nil {
-				oktetoLog.Infof("error getting pid: %w")
+				oktetoLog.Infof("error getting pid: %s", err)
 			}
 			if pidFromFile != strconv.Itoa(os.Getpid()) {
 				if up.Dev.IsHybridModeEnabled() {
@@ -738,7 +738,7 @@ func (up *upContext) activateLoop() {
 
 			oktetoLog.Info("updating kubeconfig token")
 			if err := up.tokenUpdater.UpdateKubeConfigToken(); err != nil {
-				oktetoLog.Infof("error updating k8s token: %w", err)
+				oktetoLog.Infof("error updating k8s token: %s", err)
 				isTransientError = true
 				continue
 			}
