@@ -530,8 +530,9 @@ func TestGetOriginalCWD(t *testing.T) {
 
 		result, err := deployCommand.getOriginalCWD("")
 
+		expected := filepath.Clean("/tmp/test")
 		require.NoError(t, err)
-		require.Equal(t, "/tmp/test", result)
+		require.Equal(t, expected, result)
 	})
 
 	t.Run("with manifest path to a dir", func(t *testing.T) {
@@ -540,10 +541,12 @@ func TestGetOriginalCWD(t *testing.T) {
 			workingDirectoryCtrl: wdCtrl,
 		}
 
-		result, err := deployCommand.getOriginalCWD("test/.okteto")
+		path := filepath.Join("test", ".okteto")
+		result, err := deployCommand.getOriginalCWD(path)
 
+		expected := filepath.Clean("/tmp")
 		require.NoError(t, err)
-		require.Equal(t, "/tmp", result)
+		require.Equal(t, expected, result)
 	})
 
 	t.Run("with manifest path to a file", func(t *testing.T) {
@@ -552,10 +555,12 @@ func TestGetOriginalCWD(t *testing.T) {
 			workingDirectoryCtrl: wdCtrl,
 		}
 
-		result, err := deployCommand.getOriginalCWD("test/okteto.yml")
+		path := filepath.Join("test", "okteto.yml")
+		result, err := deployCommand.getOriginalCWD(path)
 
+		expected := filepath.Clean("/tmp")
 		require.NoError(t, err)
-		require.Equal(t, "/tmp", result)
+		require.Equal(t, expected, result)
 	})
 
 }
