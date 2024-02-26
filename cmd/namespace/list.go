@@ -16,6 +16,7 @@ package namespace
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"text/tabwriter"
 
@@ -27,14 +28,14 @@ import (
 )
 
 // List all namespace in current context
-func List(ctx context.Context) *cobra.Command {
+func List(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	return &cobra.Command{
 		Use:     "list",
 		Short:   "List namespaces managed by Okteto in your current context",
 		Aliases: []string{"ls"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}, envManager); err != nil {
 				return err
 			}
 

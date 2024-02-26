@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"math/big"
 	"net"
 	"os"
@@ -145,7 +146,7 @@ func newRemoteDeployer(builder builderInterface, ioCtrl *io.Controller) *remoteD
 	}
 }
 
-func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Options) error {
+func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Options, envManager *env.Manager) error {
 	home, err := homedir.Dir()
 	if err != nil {
 		return err

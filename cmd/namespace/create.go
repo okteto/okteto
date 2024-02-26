@@ -16,6 +16,7 @@ package namespace
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"strings"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -36,7 +37,7 @@ type CreateOptions struct {
 }
 
 // Create creates a namespace
-func Create(ctx context.Context) *cobra.Command {
+func Create(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	options := &CreateOptions{
 		Show: false,
 	}
@@ -44,7 +45,7 @@ func Create(ctx context.Context) *cobra.Command {
 		Use:   "create <name>",
 		Short: "Create a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}, envManager); err != nil {
 				return err
 			}
 			options.Namespace = args[0]
@@ -55,7 +56,7 @@ func Create(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = nsCmd.Create(ctx, options)
+			err = nsCmd.Create(ctx, options, envManager)
 			analytics.TrackCreateNamespace(err == nil)
 			return err
 		},
@@ -67,7 +68,7 @@ func Create(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (nc *Command) Create(ctx context.Context, opts *CreateOptions) error {
+func (nc *Command) Create(ctx context.Context, opts *CreateOptions, envManager *env.Manager) error {
 	oktetoNS, err := nc.okClient.Namespaces().Create(ctx, opts.Namespace)
 	if err != nil {
 		return err
@@ -97,7 +98,7 @@ func (nc *Command) Create(ctx context.Context, opts *CreateOptions) error {
 		ctxOptions.Show = false
 	}
 
-	if err := nc.ctxCmd.Run(ctx, ctxOptions); err != nil {
+	if err := nc.ctxCmd.Run(ctx, ctxOptions, envManager); err != nil {
 		return fmt.Errorf("failed to activate your new namespace %s: %w", oktetoNS, err)
 	}
 

@@ -16,6 +16,7 @@ package preview
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"os/signal"
 	"sync"
@@ -54,7 +55,7 @@ type DestroyOptions struct {
 }
 
 // Destroy destroy a preview
-func Destroy(ctx context.Context) *cobra.Command {
+func Destroy(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	opts := &DestroyOptions{}
 	cmd := &cobra.Command{
 		Use:   "destroy <name>",
@@ -68,7 +69,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}, envManager); err != nil {
 				return err
 			}
 			oktetoLog.Information("Using %s @ %s as context", opts.name, okteto.RemoveSchema(okteto.GetContext().Name))

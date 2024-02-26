@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 
 	"github.com/okteto/okteto/cmd/utils"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -26,7 +27,7 @@ import (
 )
 
 // Show current context
-func Show() *cobra.Command {
+func Show(envManager *env.Manager) *cobra.Command {
 	var output string
 	var includeToken bool
 	cmd := &cobra.Command{
@@ -36,7 +37,7 @@ func Show() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			if err := NewContextCommand().Run(ctx, &Options{raiseNotCtxError: true}); err != nil {
+			if err := NewContextCommand().Run(ctx, &Options{raiseNotCtxError: true}, envManager); err != nil {
 				return err
 			}
 			ctxStore := okteto.GetContextStore()

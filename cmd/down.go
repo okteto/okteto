@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"os/signal"
 
@@ -40,7 +41,7 @@ import (
 )
 
 // Down deactivates the development container
-func Down(k8sLogsCtrl *io.K8sLogger) *cobra.Command {
+func Down(k8sLogsCtrl *io.K8sLogger, envManager *env.Manager) *cobra.Command {
 	var devPath string
 	var namespace string
 	var k8sContext string
@@ -62,7 +63,7 @@ func Down(k8sLogsCtrl *io.K8sLogger) *cobra.Command {
 				}
 				devPath = model.GetManifestPathFromWorkdir(devPath, workdir)
 			}
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs())
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs(), envManager)
 			if err != nil {
 				return err
 			}

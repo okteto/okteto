@@ -18,6 +18,7 @@ import (
 	cryptoRand "crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"math/rand"
 	"os"
 	"strings"
@@ -109,6 +110,8 @@ func main() {
 
 	k8sLogger := io.NewK8sLogger()
 
+	envManager := env.NewEnvManager(os.LookupEnv, os.Setenv, oktetoLog.AddMaskedWord, oktetoLog.Warning)
+
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
 		Short:         "Okteto - Remote Development Environments powered by Kubernetes",
@@ -151,39 +154,39 @@ func main() {
 
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
-	root.AddCommand(cmd.Login())
+	root.AddCommand(cmd.Login(envManager))
 
-	root.AddCommand(contextCMD.Context(okClientProvider))
-	root.AddCommand(cmd.Kubeconfig(okClientProvider))
+	root.AddCommand(contextCMD.Context(okClientProvider, envManager))
+	root.AddCommand(cmd.Kubeconfig(okClientProvider, envManager))
 
-	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
-	root.AddCommand(registrytoken.RegistryToken(ctx))
+	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd(envManager))
+	root.AddCommand(registrytoken.RegistryToken(ctx, envManager))
 
-	root.AddCommand(build.Build(ctx, ioController, at, k8sLogger))
+	root.AddCommand(build.Build(ctx, ioController, at, k8sLogger, envManager))
 
-	root.AddCommand(namespace.Namespace(ctx, k8sLogger))
-	root.AddCommand(cmd.Init(at, ioController))
-	root.AddCommand(up.Up(at, ioController, k8sLogger))
-	root.AddCommand(cmd.Down(k8sLogger))
-	root.AddCommand(cmd.Status())
-	root.AddCommand(cmd.Doctor(k8sLogger))
-	root.AddCommand(cmd.Exec(k8sLogger))
-	root.AddCommand(preview.Preview(ctx))
-	root.AddCommand(cmd.Restart())
+	root.AddCommand(namespace.Namespace(ctx, k8sLogger, envManager))
+	root.AddCommand(cmd.Init(at, ioController, envManager))
+	root.AddCommand(up.Up(at, ioController, k8sLogger, envManager))
+	root.AddCommand(cmd.Down(k8sLogger, envManager))
+	root.AddCommand(cmd.Status(envManager))
+	root.AddCommand(cmd.Doctor(k8sLogger, envManager))
+	root.AddCommand(cmd.Exec(k8sLogger, envManager))
+	root.AddCommand(preview.Preview(ctx, envManager))
+	root.AddCommand(cmd.Restart(envManager))
 	root.AddCommand(cmd.UpdateDeprecated())
-	root.AddCommand(deploy.Deploy(ctx, at, ioController, k8sLogger))
-	root.AddCommand(destroy.Destroy(ctx, at, ioController, k8sLogger))
-	root.AddCommand(deploy.Endpoints(ctx, k8sLogger))
-	root.AddCommand(logs.Logs(ctx, k8sLogger))
+	root.AddCommand(deploy.Deploy(ctx, at, ioController, k8sLogger, envManager))
+	root.AddCommand(destroy.Destroy(ctx, at, ioController, k8sLogger, envManager))
+	root.AddCommand(deploy.Endpoints(ctx, k8sLogger, envManager))
+	root.AddCommand(logs.Logs(ctx, k8sLogger, envManager))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
 
 	// deprecated
-	root.AddCommand(cmd.Create(ctx))
-	root.AddCommand(cmd.List(ctx))
-	root.AddCommand(cmd.Delete(ctx))
-	root.AddCommand(stack.Stack(ctx, at, ioController))
-	root.AddCommand(cmd.Push(ctx))
-	root.AddCommand(pipeline.Pipeline(ctx))
+	root.AddCommand(cmd.Create(ctx, envManager))
+	root.AddCommand(cmd.List(ctx, envManager))
+	root.AddCommand(cmd.Delete(ctx, envManager))
+	root.AddCommand(stack.Stack(ctx, at, ioController, envManager))
+	root.AddCommand(cmd.Push(ctx, envManager))
+	root.AddCommand(pipeline.Pipeline(ctx, envManager))
 
 	err = root.Execute()
 

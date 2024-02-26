@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -93,7 +94,7 @@ const (
 )
 
 // Build build and optionally push a Docker image
-func Build(ctx context.Context, ioCtrl *io.Controller, at analyticsTrackerInterface, k8slogger *io.K8sLogger) *cobra.Command {
+func Build(ctx context.Context, ioCtrl *io.Controller, at analyticsTrackerInterface, k8slogger *io.K8sLogger, envManager *env.Manager) *cobra.Command {
 	options := &types.BuildOptions{}
 	cmd := &cobra.Command{
 		Use:   "build [service...]",
@@ -103,7 +104,7 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at analyticsTrackerInterf
 			// The context must be loaded before reading manifest. Otherwise,
 			// secrets will not be resolved when GetManifest is called and
 			// the manifest will load empty values.
-			oktetoContext, err := getOktetoContext(ctx, options)
+			oktetoContext, err := getOktetoContext(ctx, options, envManager)
 			if err != nil {
 				return err
 			}
@@ -197,7 +198,7 @@ func validateDockerfile(file string) error {
 	return err
 }
 
-func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*okteto.ContextStateless, error) {
+func getOktetoContext(ctx context.Context, options *types.BuildOptions, envManager *env.Manager) (*okteto.ContextStateless, error) {
 	ctxOpts := &contextCMD.Options{
 		Context:   options.K8sContext,
 		Namespace: options.Namespace,
@@ -229,7 +230,7 @@ func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*okteto
 		}
 	}
 
-	oktetoContext, err := contextCMD.NewContextCommand().RunStateless(ctx, ctxOpts)
+	oktetoContext, err := contextCMD.NewContextCommand().RunStateless(ctx, ctxOpts, envManager)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +247,7 @@ func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*okteto
 			return nil, err
 		}
 		if create {
-			if err := namespace.NewCommandStateless(c).Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
+			if err := namespace.NewCommandStateless(c).Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}, envManager); err != nil {
 				return nil, err
 			}
 		}

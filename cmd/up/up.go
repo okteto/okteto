@@ -92,7 +92,7 @@ type Options struct {
 }
 
 // Up starts a development container
-func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, envManager *env.Manager) *cobra.Command {
 	upOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:   "up [service]",
@@ -151,7 +151,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 				upOptions.ManifestPath = uptManifestPath
 			}
 			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.ManifestPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
-			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs())
+			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs(), envManager)
 			if err != nil {
 				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
 					return err
@@ -169,7 +169,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 					return err
 				}
 
-				oktetoManifest, err = LoadManifestWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.ManifestPath)
+				oktetoManifest, err = LoadManifestWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.ManifestPath, envManager)
 				if err != nil {
 					return err
 				}
@@ -186,7 +186,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 					if err != nil {
 						return err
 					}
-					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.GetContext().Namespace}); err != nil {
+					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.GetContext().Namespace}, envManager); err != nil {
 						return err
 					}
 				}
@@ -231,7 +231,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 						Workdir:          wd,
 						AutoDeploy:       true,
 						AutoConfigureDev: true,
-					})
+					}, envManager)
 					if err != nil {
 						return err
 					}
@@ -291,7 +291,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 				// the autocreate property is forced to be true
 				forceAutocreate = true
 			} else if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, k8sClient)) {
-				err := up.deployApp(ctx, ioCtrl, k8sLogger)
+				err := up.deployApp(ctx, ioCtrl, k8sLogger, envManager)
 
 				// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
 				if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands) {
@@ -450,7 +450,7 @@ func (o *Options) AddArgs(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath string) (*model.Manifest, error) {
+func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath string, envManager *env.Manager) (*model.Manifest, error) {
 	dir, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -460,14 +460,14 @@ func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath st
 		Namespace: namespace,
 		Show:      true,
 	}
-	if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
+	if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions, envManager); err != nil {
 		return nil, err
 	}
 
 	mc := &manifest.Command{
 		K8sClientProvider: okteto.NewK8sClientProvider(),
 	}
-	manifest, err := mc.RunInitV2(ctx, &manifest.InitOpts{DevPath: devPath, ShowCTA: false, Workdir: dir})
+	manifest, err := mc.RunInitV2(ctx, &manifest.InitOpts{DevPath: devPath, ShowCTA: false, Workdir: dir}, envManager)
 	if err != nil {
 		return nil, err
 	}
@@ -578,7 +578,7 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVaria
 	return &overridedEnvVars, nil
 }
 
-func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slogger *io.K8sLogger) error {
+func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slogger *io.K8sLogger, envManager *env.Manager) error {
 	k8sProvider := okteto.NewK8sClientProviderWithLogger(k8slogger)
 	pc, err := pipelineCMD.NewCommand()
 	if err != nil {
@@ -607,7 +607,7 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 		ManifestPath:     up.Options.ManifestPath,
 		Timeout:          5 * time.Minute,
 		Build:            false,
-	})
+	}, envManager)
 	up.analyticsMeta.HasRunDeploy()
 
 	isRemote := false

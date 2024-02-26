@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -46,7 +47,7 @@ type k8sClientProvider interface {
 
 // oktetoCtxCmdRunner runs the okteto context command
 type oktetoCtxCmdRunner interface {
-	Run(ctx context.Context, ctxOptions *contextCMD.Options) error
+	Run(ctx context.Context, ctxOptions *contextCMD.Options, envManager *env.Manager) error
 }
 
 type Serializer struct{}
@@ -111,7 +112,7 @@ func NewKubetokenCmd(optFunc ...kubetokenOption) *Cmd {
 	}
 }
 
-func (kc *Cmd) Cmd() *cobra.Command {
+func (kc *Cmd) Cmd(envManager *env.Manager) *cobra.Command {
 	var namespace string
 	var contextName string
 
@@ -128,7 +129,7 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 				Namespace: namespace,
 				Context:   contextName,
 			}
-			return kc.Run(ctx, flags)
+			return kc.Run(ctx, flags, envManager)
 		},
 	}
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "okteto context's namespace")
@@ -137,7 +138,7 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 }
 
 // Run executes the kubetoken command
-func (kc *Cmd) Run(ctx context.Context, flags Flags) error {
+func (kc *Cmd) Run(ctx context.Context, flags Flags, envManager *env.Manager) error {
 	oktetoLog.SetOutputFormat("silent")
 	err := newPreReqValidator(
 		withCtxName(flags.Context),
@@ -154,7 +155,7 @@ func (kc *Cmd) Run(ctx context.Context, flags Flags) error {
 	err = kc.oktetoCtxCmdRunner.Run(ctx, &contextCMD.Options{
 		Context:   flags.Context,
 		Namespace: flags.Namespace,
-	})
+	}, envManager)
 	if err != nil {
 		return err
 	}

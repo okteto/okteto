@@ -16,6 +16,7 @@ package namespace
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -25,7 +26,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func Wake(ctx context.Context) *cobra.Command {
+func Wake(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "wake <name>",
 		Short: "Wakes a namespace",
@@ -35,7 +36,7 @@ func Wake(ctx context.Context) *cobra.Command {
 			if len(args) > 0 {
 				nsToWake = args[0]
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: nsToWake, Show: true}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: nsToWake, Show: true}, envManager); err != nil {
 				return err
 			}
 

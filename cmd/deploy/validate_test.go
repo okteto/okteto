@@ -65,7 +65,7 @@ func Test_validateAndSet(t *testing.T) {
 				return nil
 			}
 
-			err := validateAndSet(tt.variables, setEnvStorage)
+			err := validateAndSetVarsFromFlag(tt.variables, setEnvStorage)
 
 			assert.Equal(t, tt.expectedError, err)
 			assert.True(t, reflect.DeepEqual(tt.expectedEnvs, envVarStorage))

@@ -55,6 +55,7 @@ type Command struct {
 
 	kubetokenController kubeconfigTokenController
 	OktetoContextWriter okteto.ContextConfigWriterInterface
+	EnvManager          *env.Manager
 }
 
 type ctxCmdOption func(*Command)
@@ -85,7 +86,7 @@ func NewContextCommand(ctxCmdOption ...ctxCmdOption) *Command {
 }
 
 // CreateCMD adds a new cluster to okteto context
-func CreateCMD() *cobra.Command {
+func CreateCMD(envManager *env.Manager) *cobra.Command {
 	ctxOptions := &Options{}
 	cmd := &cobra.Command{
 		Hidden: true,
@@ -121,7 +122,7 @@ If you need to automate authentication or if you don't want to use browser-based
 			ctxOptions.Show = false
 			ctxOptions.Save = true
 
-			err := NewContextCommand().UseContext(ctx, ctxOptions)
+			err := NewContextCommand().UseContext(ctx, ctxOptions, envManager)
 			analytics.TrackContext(err == nil)
 			return err
 		},
@@ -132,7 +133,7 @@ If you need to automate authentication or if you don't want to use browser-based
 	return cmd
 }
 
-func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
+func (c *Command) UseContext(ctx context.Context, ctxOptions *Options, envManager *env.Manager) error {
 	created := false
 
 	ctxStore := okteto.GetContextStore()
@@ -187,7 +188,7 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 	c.initEnvVars()
 
 	if ctxOptions.IsOkteto {
-		if err := c.initOktetoContext(ctx, ctxOptions); err != nil {
+		if err := c.initOktetoContext(ctx, ctxOptions, envManager); err != nil {
 			return err
 		}
 	} else {
@@ -282,7 +283,7 @@ func hasAccessToNamespace(ctx context.Context, c *Command, ctxOptions *Options) 
 	}
 }
 
-func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) error {
+func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options, envManager *env.Manager) error {
 	var userContext *types.UserContext
 	userContext, err := getLoggedUserContext(ctx, c, ctxOptions)
 	if err != nil {
@@ -339,9 +340,16 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 	okteto.GetContext().IsTrial = clusterMetadata.IsTrialLicense
 	okteto.GetContext().CompanyName = clusterMetadata.CompanyName
 
-	setSecrets(userContext.Secrets)
+	envManager.AddGroup(userContext.Secrets, env.PRIORITY_VAR_FROM_DASHBOARD_USER)
+	err = envManager.Export()
+	if err != nil {
+		return err
+	}
 
-	os.Setenv(model.OktetoUserNameEnvVar, okteto.GetContext().Username)
+	err = os.Setenv(model.OktetoUserNameEnvVar, okteto.GetContext().Username)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

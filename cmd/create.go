@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/env"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
@@ -27,24 +28,24 @@ import (
 )
 
 // Create creates resources
-func Create(ctx context.Context) *cobra.Command {
+func Create(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "create",
 		Short:  "Create resources",
 		Args:   utils.NoArgsAccepted(""),
 	}
-	cmd.AddCommand(deprecatedCreateNamespace(ctx))
+	cmd.AddCommand(deprecatedCreateNamespace(ctx, envManager))
 	return cmd
 }
 
-func deprecatedCreateNamespace(ctx context.Context) *cobra.Command {
+func deprecatedCreateNamespace(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "namespace <name>",
 		Short: "Create a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Warning("'okteto create namespace' is deprecated in favor of 'okteto namespace create', and will be removed in a future version")
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}, envManager); err != nil {
 				return err
 			}
 
@@ -57,7 +58,7 @@ func deprecatedCreateNamespace(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: ns})
+			err = nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: ns}, envManager)
 			analytics.TrackCreateNamespace(err == nil)
 			return err
 		},

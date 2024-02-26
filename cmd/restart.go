@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"os/signal"
 
@@ -33,7 +34,7 @@ import (
 )
 
 // Restart restarts the pods of a given dev mode deployment
-func Restart() *cobra.Command {
+func Restart(envManager *env.Manager) *cobra.Command {
 	var namespace string
 	var k8sContext string
 	var devPath string
@@ -47,7 +48,7 @@ func Restart() *cobra.Command {
 			ctx := context.Background()
 
 			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs())
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs(), envManager)
 			if err != nil {
 				return err
 			}

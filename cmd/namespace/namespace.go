@@ -15,6 +15,7 @@ package namespace
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/env"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -55,22 +56,22 @@ func NewCommandStateless(c *okteto.Client) *Command {
 }
 
 // Namespace fetch credentials for a cluster namespace
-func Namespace(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Namespace(ctx context.Context, k8sLogger *io.K8sLogger, envManager *env.Manager) *cobra.Command {
 	options := &UseOptions{}
 	cmd := &cobra.Command{
 		Use:     "namespace",
 		Short:   "Configure the current namespace of the okteto context",
 		Aliases: []string{"ns"},
 		Args:    utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#namespace"),
-		RunE:    Use(ctx).RunE,
+		RunE:    Use(ctx, envManager).RunE,
 	}
 	cmd.Flags().BoolVarP(&options.personal, "personal", "", false, "Load personal account")
 
-	cmd.AddCommand(Use(ctx))
-	cmd.AddCommand(List(ctx))
-	cmd.AddCommand(Create(ctx))
-	cmd.AddCommand(Delete(ctx, k8sLogger))
-	cmd.AddCommand(Sleep(ctx))
-	cmd.AddCommand(Wake(ctx))
+	cmd.AddCommand(Use(ctx, envManager))
+	cmd.AddCommand(List(ctx, envManager))
+	cmd.AddCommand(Create(ctx, envManager))
+	cmd.AddCommand(Delete(ctx, k8sLogger, envManager))
+	cmd.AddCommand(Sleep(ctx, envManager))
+	cmd.AddCommand(Wake(ctx, envManager))
 	return cmd
 }

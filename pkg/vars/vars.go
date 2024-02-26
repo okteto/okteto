@@ -14,8 +14,10 @@
 package vars
 
 import (
+	"fmt"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v2"
+	"os"
 )
 
 type ManifestVars struct {
@@ -78,6 +80,7 @@ func (vars *Vars) Export(lookupEnv func(key string) (string, bool), setEnv func(
 	for _, v := range *vars {
 		if v.ExistsLocally(lookupEnv) {
 			warningLog("Local variable '%s' takes precedence over the manifest's definition, which will be ignored", v.Name)
+			fmt.Printf("--->DEBUG ... %s = %s\n", v.Name, os.Getenv(v.Name))
 			continue
 		}
 		if err := setEnv(v.Name, v.Value); err != nil {

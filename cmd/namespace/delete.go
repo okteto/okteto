@@ -16,6 +16,7 @@ package namespace
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"os/signal"
 	"sync"
@@ -35,13 +36,13 @@ import (
 )
 
 // Delete deletes a namespace
-func Delete(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Delete(ctx context.Context, k8sLogger *io.K8sLogger, envManager *env.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete <name>",
 		Short: "Delete a namespace",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}, envManager); err != nil {
 				return err
 			}
 
@@ -58,7 +59,7 @@ func Delete(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = nsCmd.ExecuteDeleteNamespace(ctx, nsToDelete, k8sLogger)
+			err = nsCmd.ExecuteDeleteNamespace(ctx, nsToDelete, k8sLogger, envManager)
 			analytics.TrackDeleteNamespace(err == nil)
 			return err
 		},
@@ -66,7 +67,7 @@ func Delete(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 	return cmd
 }
 
-func (nc *Command) ExecuteDeleteNamespace(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
+func (nc *Command) ExecuteDeleteNamespace(ctx context.Context, namespace string, k8sLogger *io.K8sLogger, envManager *env.Manager) error {
 	oktetoLog.Spinner(fmt.Sprintf("Deleting %s namespace", namespace))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -92,7 +93,7 @@ func (nc *Command) ExecuteDeleteNamespace(ctx context.Context, namespace string,
 			Save:         true,
 			IsCtxCommand: true,
 		}
-		return nc.ctxCmd.Run(ctx, ctxOptions)
+		return nc.ctxCmd.Run(ctx, ctxOptions, envManager)
 	}
 	return nil
 }

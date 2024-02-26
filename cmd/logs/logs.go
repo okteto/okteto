@@ -16,6 +16,7 @@ package logs
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -55,7 +56,7 @@ type Options struct {
 	All          bool
 }
 
-func Logs(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Logs(ctx context.Context, k8sLogger *io.K8sLogger, envManager *env.Manager) *cobra.Command {
 	options := &Options{}
 
 	cmd := &cobra.Command{
@@ -65,7 +66,7 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, contextCMD.ManifestOptions{Filename: options.ManifestPath, Namespace: options.Namespace, K8sContext: options.Context}, afero.NewOsFs())
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, contextCMD.ManifestOptions{Filename: options.ManifestPath, Namespace: options.Namespace, K8sContext: options.Context}, afero.NewOsFs(), envManager)
 			if err != nil {
 				return err
 			}

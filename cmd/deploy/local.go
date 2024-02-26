@@ -16,6 +16,7 @@ package deploy
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"path/filepath"
 	"strings"
@@ -94,7 +95,7 @@ func newLocalDeployer(ctx context.Context, options *Options, cmapHandler configM
 	}, nil
 }
 
-func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) error {
+func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options, envManager *env.Manager) error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get the current working directory: %w", err)
@@ -176,14 +177,14 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 		)
 	}
 	oktetoLog.EnableMasking()
-	err = ld.runDeploySection(ctx, deployOptions)
+	err = ld.runDeploySection(ctx, deployOptions, envManager)
 	oktetoLog.DisableMasking()
 	oktetoLog.SetStage("done")
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
 	return err
 }
 
-func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) error {
+func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options, envManager *env.Manager) error {
 	oktetoEnvFile, err := ld.createTempOktetoEnvFile()
 	if err != nil {
 		return err
@@ -235,7 +236,7 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 	// deploy compose if any
 	if opts.Manifest.Deploy.ComposeSection != nil {
 		oktetoLog.SetStage("Deploying compose")
-		if err := ld.deployStack(ctx, opts); err != nil {
+		if err := ld.deployStack(ctx, opts, envManager); err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying compose: %s", err.Error())
 			return err
 		}
@@ -279,7 +280,7 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 	return nil
 }
 
-func (ld *localDeployer) deployStack(ctx context.Context, opts *Options) error {
+func (ld *localDeployer) deployStack(ctx context.Context, opts *Options, envManager *env.Manager) error {
 	composeSectionInfo := opts.Manifest.Deploy.ComposeSection
 	composeSectionInfo.Stack.Namespace = okteto.GetContext().Namespace
 
@@ -305,7 +306,7 @@ func (ld *localDeployer) deployStack(ctx context.Context, opts *Options) error {
 		Config:         cfg,
 		IsInsideDeploy: true,
 	}
-	return stackCommand.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)
+	return stackCommand.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts, envManager)
 }
 
 func (ld *localDeployer) deployEndpoints(ctx context.Context, opts *Options) error {

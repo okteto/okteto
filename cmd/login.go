@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/env"
 	"strings"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -26,7 +27,7 @@ import (
 )
 
 // Login starts the login handshake with GitHub and okteto
-func Login() *cobra.Command {
+func Login(envManager *env.Manager) *cobra.Command {
 	token := ""
 	cmd := &cobra.Command{
 		Hidden: true,
@@ -63,7 +64,7 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 			}
 
 			ctx := context.Background()
-			err := contextCMD.NewContextCommand().Run(ctx, &ctxOptions)
+			err := contextCMD.NewContextCommand().Run(ctx, &ctxOptions, envManager)
 			if err != nil {
 				analytics.TrackLogin(false)
 			} else {

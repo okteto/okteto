@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"sort"
 	"strings"
@@ -81,7 +82,7 @@ func NewEndpointGetter(k8sLogger *io.K8sLogger) (EndpointGetter, error) {
 }
 
 // Endpoints deploys the okteto manifest
-func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger, envManager *env.Manager) *cobra.Command {
 	options := &EndpointsOptions{}
 	fs := afero.NewOsFs()
 	cmd := &cobra.Command{
@@ -106,8 +107,8 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 			// false for 'json' and 'md' to avoid breaking their syntax
 			showCtxHeader := options.Output == ""
 			// Loads, updates and uses the context from path. If not found, it creates and uses a new context
-			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: showCtxHeader}); err != nil {
-				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace, Show: showCtxHeader}); err != nil {
+			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: showCtxHeader}, envManager); err != nil {
+				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace, Show: showCtxHeader}, envManager); err != nil {
 					return err
 				}
 			}

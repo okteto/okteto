@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"net/url"
 	"strings"
 
@@ -141,7 +142,7 @@ func getCtxResource(path string) (*model.ContextResource, error) {
 }
 
 // LoadManifestWithContext loads context and then loads a manifest
-func LoadManifestWithContext(ctx context.Context, opts ManifestOptions, fs afero.Fs) (*model.Manifest, error) {
+func LoadManifestWithContext(ctx context.Context, opts ManifestOptions, fs afero.Fs, envManager *env.Manager) (*model.Manifest, error) {
 	ctxResource, err := model.GetContextResource(opts.Filename)
 	if err != nil {
 		return nil, err
@@ -160,7 +161,7 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions, fs afero
 		Show:      true,
 	}
 
-	if err := NewContextCommand().Run(ctx, ctxOptions); err != nil {
+	if err := NewContextCommand().Run(ctx, ctxOptions, envManager); err != nil {
 		return nil, err
 	}
 
@@ -190,7 +191,7 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions, fs afero
 	return manifest, nil
 }
 
-func LoadStackWithContext(ctx context.Context, name, namespace string, stackPaths []string, fs afero.Fs) (*model.Stack, error) {
+func LoadStackWithContext(ctx context.Context, name, namespace string, stackPaths []string, fs afero.Fs, envManager *env.Manager) (*model.Stack, error) {
 	ctxResource, err := utils.LoadStackContext(stackPaths)
 	if err != nil {
 		if name == "" {
@@ -209,7 +210,7 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 		Show:      true,
 	}
 
-	if err := NewContextCommand().Run(ctx, ctxOptions); err != nil {
+	if err := NewContextCommand().Run(ctx, ctxOptions, envManager); err != nil {
 		return nil, err
 	}
 
@@ -225,7 +226,7 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 }
 
 // LoadContextFromPath initializes the okteto context taking into account command flags and manifest namespace/context fields
-func LoadContextFromPath(ctx context.Context, namespace, k8sContext, path string, defaultCtxOpts Options) error {
+func LoadContextFromPath(ctx context.Context, namespace, k8sContext, path string, defaultCtxOpts Options, envManager *env.Manager) error {
 	ctxResource, err := getCtxResource(path)
 	if err != nil {
 		return err
@@ -243,5 +244,5 @@ func LoadContextFromPath(ctx context.Context, namespace, k8sContext, path string
 	ctxOptions.Context = ctxResource.Context
 	ctxOptions.Namespace = ctxResource.Namespace
 
-	return NewContextCommand().Run(ctx, &ctxOptions)
+	return NewContextCommand().Run(ctx, &ctxOptions, envManager)
 }

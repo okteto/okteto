@@ -16,6 +16,7 @@ package namespace
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -36,7 +37,7 @@ type UseOptions struct {
 }
 
 // Use sets the namespace of current context
-func Use(ctx context.Context) *cobra.Command {
+func Use(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	options := &UseOptions{}
 	cmd := &cobra.Command{
 		Use:     "use [namespace]",
@@ -61,7 +62,7 @@ func Use(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = nsCmd.Use(ctx, namespace)
+			err = nsCmd.Use(ctx, namespace, envManager)
 
 			analytics.TrackNamespace(err == nil, len(args) > 0)
 			return err
@@ -72,10 +73,10 @@ func Use(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (nc *Command) Use(ctx context.Context, namespace string) error {
+func (nc *Command) Use(ctx context.Context, namespace string, envManager *env.Manager) error {
 	var err error
 	if namespace == "" {
-		namespace, err = nc.getNamespaceFromSelector(ctx)
+		namespace, err = nc.getNamespaceFromSelector(ctx, envManager)
 		if err != nil {
 			return err
 		}
@@ -91,11 +92,12 @@ func (nc *Command) Use(ctx context.Context, namespace string) error {
 			IsCtxCommand:         true,
 			CheckNamespaceAccess: true,
 		},
+		envManager,
 	)
 
 }
 
-func (nc *Command) getNamespaceFromSelector(ctx context.Context) (string, error) {
+func (nc *Command) getNamespaceFromSelector(ctx context.Context, envManager *env.Manager) (string, error) {
 	namespaces, err := getNamespacesSelection(ctx)
 	if err != nil {
 		return "", err
@@ -114,7 +116,7 @@ func (nc *Command) getNamespaceFromSelector(ctx context.Context) (string, error)
 			Namespace: ns,
 			Show:      false,
 		}
-		if err := nc.Create(ctx, createOptions); err != nil {
+		if err := nc.Create(ctx, createOptions, envManager); err != nil {
 			return "", err
 		}
 	}

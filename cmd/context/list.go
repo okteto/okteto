@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"text/tabwriter"
 
@@ -29,7 +30,7 @@ import (
 var output string
 
 // List returns all contexts managed by okteto
-func List() *cobra.Command {
+func List(envManager *env.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
@@ -37,7 +38,7 @@ func List() *cobra.Command {
 		Short:   "List available contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			if err := NewContextCommand().Run(ctx, &Options{raiseNotCtxError: true}); err != nil {
+			if err := NewContextCommand().Run(ctx, &Options{raiseNotCtxError: true}, envManager); err != nil {
 				return err
 			}
 			return executeListContext()

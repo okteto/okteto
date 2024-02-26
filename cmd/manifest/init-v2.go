@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"path/filepath"
 	"strings"
@@ -74,7 +75,7 @@ type InitOpts struct {
 }
 
 // RunInitV2 initializes a new okteto manifest
-func (mc *Command) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manifest, error) {
+func (mc *Command) RunInitV2(ctx context.Context, opts *InitOpts, envManager *env.Manager) (*model.Manifest, error) {
 	c, _, er := mc.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, mc.K8sLogger)
 	if er != nil {
 		return nil, er
@@ -145,7 +146,7 @@ func (mc *Command) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manife
 			}
 		}
 		if deployAnswer || (!isDeployed && opts.AutoDeploy) {
-			if err := mc.deploy(ctx, opts); err != nil {
+			if err := mc.deploy(ctx, opts, envManager); err != nil {
 				return nil, err
 			}
 			isDeployed = true
@@ -218,7 +219,7 @@ func (*Command) configureManifestDeployAndBuild(cwd string) (*model.Manifest, er
 
 }
 
-func (mc *Command) deploy(ctx context.Context, opts *InitOpts) error {
+func (mc *Command) deploy(ctx context.Context, opts *InitOpts, envManager *env.Manager) error {
 	pc, err := pipelineCMD.NewCommand()
 	if err != nil {
 		return err
@@ -244,7 +245,8 @@ func (mc *Command) deploy(ctx context.Context, opts *InitOpts) error {
 		Timeout:      5 * time.Minute,
 		Build:        false,
 		Wait:         true,
-	})
+	},
+		envManager)
 	if err != nil {
 		return err
 	}

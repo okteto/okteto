@@ -116,9 +116,9 @@ spec:
 
 deploy:
   commands:
-  - echo MY_VAR=$MY_VAR
-  - echo MY_VAR2=$MY_VAR2
-  - echo MY_VAR3=${MY_VAR3}
+  - echo MY_VAR=$MY_VAR > var1.txt
+  - echo MY_VAR2=$MY_VAR2 > var2.txt
+  - echo MY_VAR3=${MY_VAR3} > var3.txt
 
 destroy:
   commands:
@@ -460,7 +460,7 @@ func TestDeployRemoteOktetoManifestFromParentFolder(t *testing.T) {
 }
 
 // TestDeployOktetoManifestWithVariables tests the following scenario:
-// - Deploying a service using a manifest that uses the top-level propertiy "variables"
+// - Deploying a service using a manifest that uses the top-level propertiy "variables" in the deploy commands
 func TestDeployOktetoManifestWithVariables(t *testing.T) {
 	t.Setenv("LOCAL_VAR", "my-value-2-and-3")
 	oktetoPath, err := integration.GetOktetoPath()

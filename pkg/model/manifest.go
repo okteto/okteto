@@ -357,7 +357,7 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = manifestVars.Export(os.LookupEnv, os.Setenv, oktetoLog.Yellow)
+	err = manifestVars.Export(os.LookupEnv, os.Setenv, oktetoLog.Warning)
 	if err != nil {
 		return nil, err
 	}

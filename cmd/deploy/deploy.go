@@ -135,7 +135,7 @@ type ExternalResourceInterface interface {
 }
 
 type deployerInterface interface {
-	deploy(context.Context, *Options) error
+	deploy(context.Context, *Options, *env.Manager) error
 	cleanUp(context.Context, error)
 }
 
@@ -144,7 +144,7 @@ func NewDeployExternalK8sControl(cfg *rest.Config) ExternalResourceInterface {
 }
 
 // Deploy deploys the okteto manifest
-func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, envManager *env.Manager) *cobra.Command {
 	options := &Options{}
 	fs := &Command{
 		Fs: afero.NewOsFs(),
@@ -158,7 +158,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 				return fmt.Errorf("'dependencies' is only supported in contexts that have Okteto installed")
 			}
 
-			if err := validateAndSet(options.Variables, os.Setenv); err != nil {
+			if err := validateAndSetVarsFromFlag(options.Variables, envManager); err != nil {
 				return err
 			}
 
@@ -172,11 +172,11 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 			}
 
 			// Loads, updates and uses the context from path. If not found, it creates and uses a new context
-			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: true}); err != nil {
+			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: true}, envManager); err != nil {
 				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
 					return err
 				}
-				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
+				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace}, envManager); err != nil {
 					return err
 				}
 			}
@@ -191,7 +191,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 					if err != nil {
 						return err
 					}
-					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.GetContext().Namespace}); err != nil {
+					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.GetContext().Namespace}, envManager); err != nil {
 						return err
 					}
 				}
@@ -230,7 +230,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 			exit := make(chan error, 1)
 
 			go func() {
-				err := c.RunDeploy(ctx, options)
+				err := c.RunDeploy(ctx, options, envManager)
 
 				c.trackDeploy(options.Manifest, options.RunInRemote, startTime, err)
 				exit <- err
@@ -272,7 +272,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 }
 
 // RunDeploy runs the deploy sequence
-func (dc *Command) RunDeploy(ctx context.Context, deployOptions *Options) error {
+func (dc *Command) RunDeploy(ctx context.Context, deployOptions *Options, envManager *env.Manager) error {
 	oktetoLog.SetStage("Load manifest")
 	manifest, err := dc.GetManifest(deployOptions.ManifestPath, dc.Fs)
 	if err != nil {
@@ -380,7 +380,7 @@ func (dc *Command) RunDeploy(ctx context.Context, deployOptions *Options) error 
 		return err
 	}
 
-	err = deployer.deploy(ctx, deployOptions)
+	err = deployer.deploy(ctx, deployOptions, envManager)
 	if err != nil {
 		if err == oktetoErrors.ErrIntSig {
 			return nil

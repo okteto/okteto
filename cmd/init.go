@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -33,7 +34,7 @@ type analyticsTrackerInterface interface {
 }
 
 // Init creates okteto manifest
-func Init(at analyticsTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
+func Init(at analyticsTrackerInterface, ioCtrl *io.Controller, envManager *env.Manager) *cobra.Command {
 	opts := &manifest.InitOpts{}
 	cmd := &cobra.Command{
 		Use:   "init",
@@ -55,7 +56,7 @@ func Init(at analyticsTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
 				Namespace: ctxResource.Namespace,
 				Show:      true,
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions, envManager); err != nil {
 				return err
 			}
 
@@ -76,7 +77,7 @@ func Init(at analyticsTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
 					return err
 				}
 			} else {
-				_, err := mc.RunInitV2(ctx, opts)
+				_, err := mc.RunInitV2(ctx, opts, envManager)
 				return err
 			}
 			return nil

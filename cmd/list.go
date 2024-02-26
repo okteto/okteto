@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/env"
 
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
@@ -23,24 +24,24 @@ import (
 )
 
 // List lists resources
-func List(ctx context.Context) *cobra.Command {
+func List(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "list",
 		Short:  "List resources",
 		Args:   utils.NoArgsAccepted(""),
 	}
-	cmd.AddCommand(deprecatedListNamespace(ctx))
+	cmd.AddCommand(deprecatedListNamespace(ctx, envManager))
 	return cmd
 }
 
-func deprecatedListNamespace(ctx context.Context) *cobra.Command {
+func deprecatedListNamespace(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "namespace <name>",
 		Short: "List namespaces",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Warning("'okteto list namespace' is deprecated in favor of 'okteto namespace list', and will be removed in a future version")
-			return cmd.RunE(namespace.List(ctx), args)
+			return cmd.RunE(namespace.List(ctx, envManager), args)
 		},
 		Args: utils.NoArgsAccepted(""),
 	}

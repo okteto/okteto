@@ -20,12 +20,13 @@ import (
 	"github.com/okteto/okteto/pkg/env"
 )
 
-func validateAndSet(variables []string, setEnv func(key, value string) error) error {
+func validateAndSetVarsFromFlag(variables []string, envManager *env.Manager) error {
 	envVars, err := parse(variables)
 	if err != nil {
 		return err
 	}
-	return setOptionVarsAsEnvs(envVars, setEnv)
+	envManager.AddGroup(envVars, env.PRIORITY_VAR_FROM_FLAG)
+	return envManager.Export()
 }
 
 func parse(variables []string) ([]env.Var, error) {
@@ -39,13 +40,4 @@ func parse(variables []string) ([]env.Var, error) {
 		result = append(result, env.Var{Name: kv[0], Value: kv[1]})
 	}
 	return result, nil
-}
-
-func setOptionVarsAsEnvs(variables []env.Var, setEnv func(key, value string) error) error {
-	for _, v := range variables {
-		if err := setEnv(v.Name, v.Value); err != nil {
-			return err
-		}
-	}
-	return nil
 }

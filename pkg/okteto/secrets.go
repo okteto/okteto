@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"strings"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
@@ -125,7 +126,7 @@ type contextFileJSON struct {
 	} `yaml:"contexts"`
 }
 
-// GetSecrets returns the secrets from Okteto API
+// GetContext returns the user context, credentials and secrets from Okteto API
 func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserContext, error) {
 	var queryStruct getContextQuery
 	variables := map[string]interface{}{
@@ -142,10 +143,10 @@ func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserCont
 		return nil, err
 	}
 
-	secrets := make([]types.Secret, 0)
+	secrets := make([]env.Var, 0)
 	for _, secret := range queryStruct.Secrets {
 		if !strings.Contains(string(secret.Name), ".") {
-			secrets = append(secrets, types.Secret{
+			secrets = append(secrets, env.Var{
 				Name:  string(secret.Name),
 				Value: string(secret.Value),
 			})
@@ -181,18 +182,18 @@ func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserCont
 	return result, nil
 }
 
-// GetSecrets returns the secrets from Okteto API
-func (c *userClient) GetUserSecrets(ctx context.Context) ([]types.Secret, error) {
+// GetUserSecrets returns the secrets from Okteto API
+func (c *userClient) GetUserSecrets(ctx context.Context) ([]env.Var, error) {
 	var queryStruct getSecretsQuery
 	err := query(ctx, &queryStruct, nil, c.client)
 	if err != nil {
 		return nil, err
 	}
 
-	secrets := make([]types.Secret, 0)
+	secrets := make([]env.Var, 0)
 	for _, secret := range queryStruct.Secrets {
 		if !strings.Contains(string(secret.Name), ".") {
-			secrets = append(secrets, types.Secret{
+			secrets = append(secrets, env.Var{
 				Name:  string(secret.Name),
 				Value: string(secret.Value),
 			})
@@ -213,10 +214,10 @@ func (c *userClient) deprecatedGetUserContext(ctx context.Context) (*types.UserC
 		return nil, err
 	}
 
-	secrets := make([]types.Secret, 0)
+	secrets := make([]env.Var, 0)
 	for _, secret := range queryStruct.Secrets {
 		if !strings.Contains(string(secret.Name), ".") {
-			secrets = append(secrets, types.Secret{
+			secrets = append(secrets, env.Var{
 				Name:  string(secret.Name),
 				Value: string(secret.Value),
 			})

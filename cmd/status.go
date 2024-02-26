@@ -16,6 +16,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"os/signal"
 	"time"
@@ -38,7 +39,7 @@ const (
 )
 
 // Status returns the status of the synchronization process
-func Status() *cobra.Command {
+func Status(envManager *env.Manager) *cobra.Command {
 	var devPath string
 	var namespace string
 	var k8sContext string
@@ -57,7 +58,7 @@ func Status() *cobra.Command {
 			ctx := context.Background()
 
 			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs())
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs(), envManager)
 			if err != nil {
 				return err
 			}

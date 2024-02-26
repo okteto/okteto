@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"time"
 
@@ -47,7 +48,7 @@ type execFlags struct {
 }
 
 // Exec executes a command on the CND container
-func Exec(k8sLogger *io.K8sLogger) *cobra.Command {
+func Exec(k8sLogger *io.K8sLogger, envManager *env.Manager) *cobra.Command {
 	execFlags := &execFlags{}
 
 	cmd := &cobra.Command{
@@ -58,7 +59,7 @@ func Exec(k8sLogger *io.K8sLogger) *cobra.Command {
 			defer cancel()
 
 			manifestOpts := contextCMD.ManifestOptions{Filename: execFlags.manifestPath, Namespace: execFlags.namespace, K8sContext: execFlags.k8sContext}
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs())
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs(), envManager)
 			if err != nil {
 				return err
 			}

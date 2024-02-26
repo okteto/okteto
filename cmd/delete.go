@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/env"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
@@ -27,24 +28,24 @@ import (
 )
 
 // Delete creates resources
-func Delete(ctx context.Context) *cobra.Command {
+func Delete(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "delete",
 		Short:  "Delete resources",
 		Args:   utils.NoArgsAccepted(""),
 	}
-	cmd.AddCommand(deprecatedDeleteNamespace(ctx))
+	cmd.AddCommand(deprecatedDeleteNamespace(ctx, envManager))
 	return cmd
 }
 
-func deprecatedDeleteNamespace(ctx context.Context) *cobra.Command {
+func deprecatedDeleteNamespace(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "namespace <name>",
 		Short: "Delete a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Warning("'okteto delete namespace' is deprecated in favor of 'okteto namespace delete', and will be removed in a future version")
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}, envManager); err != nil {
 				return err
 			}
 
@@ -56,7 +57,7 @@ func deprecatedDeleteNamespace(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = nsCmd.ExecuteDeleteNamespace(ctx, args[0], nil)
+			err = nsCmd.ExecuteDeleteNamespace(ctx, args[0], nil, envManager)
 			analytics.TrackDeleteNamespace(err == nil)
 			return err
 		},
