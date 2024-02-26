@@ -431,9 +431,10 @@ func TestDeployRemoteOktetoManifestFromParentFolder(t *testing.T) {
 	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okteto.GetContext().Registry, testNamespace)))
 
 	destroyOptions := &commands.DestroyOptions{
-		Workdir:    dir,
-		Namespace:  testNamespace,
-		OktetoHome: dir,
+		Workdir:      parentFolder,
+		Namespace:    testNamespace,
+		OktetoHome:   dir,
+		ManifestPath: filepath.Clean("../okteto.yml"),
 	}
 	require.NoError(t, commands.RunOktetoDestroyRemote(oktetoPath, destroyOptions))
 

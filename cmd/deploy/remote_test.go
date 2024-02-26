@@ -667,3 +667,57 @@ func TestGetContextPath(t *testing.T) {
 		assert.Equal(t, expected, result)
 	})
 }
+
+func TestGetOriginalCWD(t *testing.T) {
+
+	t.Run("error getting the working directory", func(t *testing.T) {
+		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/"))
+		wdCtrl.SetErrors(filesystem.FakeWorkingDirectoryCtrlErrors{
+			Getter: assert.AnError,
+		})
+		deployCommand := &remoteDeployCommand{
+			workingDirectoryCtrl: wdCtrl,
+		}
+
+		_, err := deployCommand.getOriginalCWD("")
+
+		require.Error(t, err)
+	})
+
+	t.Run("with empty manifest path", func(t *testing.T) {
+		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/tmp/test"))
+		deployCommand := &remoteDeployCommand{
+			workingDirectoryCtrl: wdCtrl,
+		}
+
+		result, err := deployCommand.getOriginalCWD("")
+
+		require.NoError(t, err)
+		require.Equal(t, "/tmp/test", result)
+	})
+
+	t.Run("with manifest path to a dir", func(t *testing.T) {
+		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/tmp/test"))
+		deployCommand := &remoteDeployCommand{
+			workingDirectoryCtrl: wdCtrl,
+		}
+
+		result, err := deployCommand.getOriginalCWD("test/.okteto")
+
+		require.NoError(t, err)
+		require.Equal(t, "/tmp", result)
+	})
+
+	t.Run("with manifest path to a file", func(t *testing.T) {
+		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/tmp/test"))
+		deployCommand := &remoteDeployCommand{
+			workingDirectoryCtrl: wdCtrl,
+		}
+
+		result, err := deployCommand.getOriginalCWD("test/okteto.yml")
+
+		require.NoError(t, err)
+		require.Equal(t, "/tmp", result)
+	})
+
+}

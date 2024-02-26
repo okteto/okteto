@@ -159,7 +159,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		rd.destroyImage = sc.PipelineRunnerImage
 	}
 
-	cwd, err := rd.workingDirectoryCtrl.Get()
+	cwd, err := rd.getOriginalCWD(opts.ManifestPathFlag)
 	if err != nil {
 		return err
 	}
@@ -345,7 +345,15 @@ func getDestroyFlags(opts *Options) []string {
 	}
 
 	if opts.ManifestPathFlag != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", opts.ManifestPathFlag))
+		lastFolder := filepath.Base(filepath.Dir(opts.ManifestPathFlag))
+		if lastFolder == ".okteto" {
+			path := filepath.Clean(opts.ManifestPathFlag)
+			parts := strings.Split(path, string(filepath.Separator))
+
+			deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filepath.Join(parts[len(parts)-2:]...)))
+		} else {
+			deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filepath.Base(opts.ManifestPathFlag)))
+		}
 	}
 
 	if opts.DestroyVolumes {
@@ -424,4 +432,14 @@ func (rd *remoteDestroyCommand) getContextPath(cwd, manifestPath string) string 
 		return filepath.Dir(possibleCtx)
 	}
 	return possibleCtx
+}
+
+// getOriginalCWD returns the original cwd
+func (rd *remoteDestroyCommand) getOriginalCWD(manifestPath string) (string, error) {
+	cwd, err := rd.workingDirectoryCtrl.Get()
+	if err != nil {
+		return "", err
+	}
+	manifestPathDir := filepath.Dir(filepath.Clean(fmt.Sprintf("/%s", manifestPath)))
+	return strings.TrimSuffix(cwd, manifestPathDir), nil
 }
