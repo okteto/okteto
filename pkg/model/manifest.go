@@ -322,7 +322,7 @@ func pathExistsAndDir(path string) bool {
 }
 
 // GetManifestV2 gets a manifest from a path or search for the files to generate it
-func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
+func GetManifestV2(manifestPath string, fs afero.Fs, envManager *env.Manager) (*Manifest, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -352,15 +352,26 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	manifestVars.Mask(oktetoLog.AddMaskedWord)
 	err = manifestVars.Expand(env.ExpandEnvIfNotEmpty)
 	if err != nil {
 		return nil, err
 	}
-	err = manifestVars.Export(os.LookupEnv, os.Setenv, oktetoLog.Warning)
+
+	var group []env.Var
+	for _, v := range manifestVars {
+		group = append(group, env.Var{Name: v.Name, Value: v.Value})
+	}
+	envManager.AddGroup(group, env.PriorityVarFromManifest)
+	err = envManager.Export()
 	if err != nil {
 		return nil, err
 	}
+
+	//manifestVars.Mask(oktetoLog.AddMaskedWord)
+	//err = manifestVars.Export(os.LookupEnv, os.Setenv, oktetoLog.Warning)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	manifest, err = getManifestFromOktetoFile(cwd, fs)
 	if err != nil {
@@ -373,7 +384,7 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 		return manifest, nil
 	}
 
-	inferredManifest, err := GetInferredManifest(cwd, fs)
+	inferredManifest, err := GetInferredManifest(cwd, fs, envManager)
 	if err != nil {
 		return nil, err
 	}
@@ -502,13 +513,13 @@ func getManifestFromFile(cwd, manifestPath string, fs afero.Fs) (*Manifest, erro
 }
 
 // GetInferredManifest infers the manifest from a directory
-func GetInferredManifest(cwd string, fs afero.Fs) (*Manifest, error) {
+func GetInferredManifest(cwd string, fs afero.Fs, envManager *env.Manager) (*Manifest, error) {
 	pipelinePath, err := discovery.GetOktetoPipelinePath(cwd)
 	if err == nil {
 		oktetoLog.Infof("Found pipeline on: %s", pipelinePath)
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto pipeline manifest on %s", pipelinePath)
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling pipeline manifest...")
-		pipelineManifest, err := GetManifestV2(pipelinePath, fs)
+		pipelineManifest, err := GetManifestV2(pipelinePath, fs, envManager)
 		if err != nil {
 			return nil, err
 		}

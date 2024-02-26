@@ -170,7 +170,7 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions, fs afero
 		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
 		}
-		manifest, err = model.GetManifestV2(opts.Filename, fs)
+		manifest, err = model.GetManifestV2(opts.Filename, fs, envManager)
 		if err != nil {
 			return nil, err
 		}

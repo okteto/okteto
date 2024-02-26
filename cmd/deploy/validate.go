@@ -25,7 +25,7 @@ func validateAndSetVarsFromFlag(variables []string, envManager *env.Manager) err
 	if err != nil {
 		return err
 	}
-	envManager.AddGroup(envVars, env.PRIORITY_VAR_FROM_FLAG)
+	envManager.AddGroup(envVars, env.PriorityVarFromFlag)
 	return envManager.Export()
 }
 

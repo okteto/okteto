@@ -50,7 +50,7 @@ const (
 
 // Command defines the build command
 type Command struct {
-	GetManifest func(path string, fs afero.Fs) (*model.Manifest, error)
+	GetManifest func(path string, fs afero.Fs, envManager *env.Manager) (*model.Manifest, error)
 
 	Builder          buildCmd.OktetoBuilderInterface
 	Registry         registryInterface
@@ -113,7 +113,7 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at analyticsTrackerInterf
 
 			bc := NewBuildCommand(ioCtrl, at, oktetoContext, k8slogger)
 
-			builder, err := bc.getBuilder(options, oktetoContext)
+			builder, err := bc.getBuilder(options, oktetoContext, envManager)
 
 			if err != nil {
 				return err
@@ -152,10 +152,10 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at analyticsTrackerInterf
 //   - If the manifest is not found or there is any error getting the manifest, the builder fallsback to V1
 //   - If the manifest is found and it is a V2 manifest and the build section has some image, the builder is V2
 //   - If the manifest is found and it is a V1 manifest or the build section is empty, the builder fallsback to V1
-func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.ContextStateless) (Builder, error) {
+func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.ContextStateless, envManager *env.Manager) (Builder, error) {
 	var builder Builder
 
-	manifest, err := bc.GetManifest(options.File, afero.NewOsFs())
+	manifest, err := bc.GetManifest(options.File, afero.NewOsFs(), envManager)
 	if err != nil {
 		if options.File != "" && errors.Is(err, oktetoErrors.ErrInvalidManifest) && validateDockerfile(options.File) != nil {
 			return nil, err

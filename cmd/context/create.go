@@ -340,7 +340,7 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options, en
 	okteto.GetContext().IsTrial = clusterMetadata.IsTrialLicense
 	okteto.GetContext().CompanyName = clusterMetadata.CompanyName
 
-	envManager.AddGroup(userContext.Secrets, env.PRIORITY_VAR_FROM_DASHBOARD_USER)
+	envManager.AddGroup(userContext.Secrets, env.PriorityVarFromDashboard)
 	err = envManager.Export()
 	if err != nil {
 		return err

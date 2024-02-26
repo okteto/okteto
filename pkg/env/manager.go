@@ -15,17 +15,17 @@ package env
 
 import (
 	"sort"
+	"strings"
 	"sync"
 )
 
 // Vars in groups with higher priority override those with lower priority
 const (
-	PRIORITY_VAR_FROM_FLAG            = 1
-	PRIORITY_VAR_FROM_LOCAL           = 2
-	PRIORITY_VAR_FROM_CATALOG         = 3
-	PRIORITY_VAR_FROM_MANIFEST        = 4
-	PRIORITY_VAR_FROM_DASHBOARD_USER  = 5
-	PRIORITY_VAR_FROM_DASHBOARD_ADMIN = 6
+	PriorityVarFromFlag      = 1
+	PriorityVarFromLocal     = 2
+	PriorityVarFromCatalog   = 3
+	PriorityVarFromManifest  = 4
+	PriorityVarFromDashboard = 5
 )
 
 type ConfigItem struct {
@@ -34,12 +34,11 @@ type ConfigItem struct {
 }
 
 var config = map[int]ConfigItem{
-	PRIORITY_VAR_FROM_FLAG:            {Name: "Flag", Masked: false},
-	PRIORITY_VAR_FROM_LOCAL:           {Name: "Local", Masked: true},
-	PRIORITY_VAR_FROM_CATALOG:         {Name: "Catalog", Masked: false},
-	PRIORITY_VAR_FROM_MANIFEST:        {Name: "Manifest", Masked: true},
-	PRIORITY_VAR_FROM_DASHBOARD_USER:  {Name: "Dashboard User", Masked: false},
-	PRIORITY_VAR_FROM_DASHBOARD_ADMIN: {Name: "Dashboard Admin", Masked: true},
+	PriorityVarFromFlag:      {Name: "Flag", Masked: true},
+	PriorityVarFromLocal:     {Name: "Local", Masked: true},
+	PriorityVarFromCatalog:   {Name: "Catalog", Masked: true},
+	PriorityVarFromManifest:  {Name: "Manifest", Masked: true},
+	PriorityVarFromDashboard: {Name: "Dashboard", Masked: true},
 }
 
 type LookupEnvFunc func(key string) (string, bool)
@@ -52,7 +51,7 @@ type Group struct {
 	Priority int
 }
 type Manager struct {
-	batches    []Group
+	groups     []Group
 	lookupEnv  LookupEnvFunc
 	setEnv     SetEnvFunc
 	warningLog WarningLogFunc
@@ -74,39 +73,39 @@ func (m *Manager) AddGroup(vars []Var, priority int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	batch := Group{
+	g := Group{
 		Vars:     vars,
 		Priority: priority,
 	}
-	m.batches = append(m.batches, batch)
+	m.groups = append(m.groups, g)
 
 	m.mask()
 	m.sort()
 }
 
 func (m *Manager) mask() {
-	for _, group := range m.batches {
+	for _, group := range m.groups {
 		isGroupMasked := config[group.Priority].Masked
 		if !isGroupMasked {
 			continue
 		}
 		for _, v := range group.Vars {
-			m.maskVar(v.Name)
+			m.maskVar(v.Value)
 		}
 	}
 }
 
-// sort sorts the batches by priority descending, so higher priority variables override lower priority ones.
+// sort sorts the groups by priority descending, so higher priority variables override lower priority ones.
 func (m *Manager) sort() {
-	sort.Slice(m.batches, func(i, j int) bool {
-		return m.batches[i].Priority > m.batches[j].Priority
+	sort.Slice(m.groups, func(i, j int) bool {
+		return m.groups[i].Priority > m.groups[j].Priority
 	})
 }
 
 // Export exports the environment variables to the current process
 func (m *Manager) Export() error {
-	for _, batch := range m.batches {
-		for _, v := range batch.Vars {
+	for _, g := range m.groups {
+		for _, v := range g.Vars {
 			err := m.setEnv(v.Name, v.Value)
 			if err != nil {
 				return err
@@ -114,4 +113,19 @@ func (m *Manager) Export() error {
 		}
 	}
 	return nil
+}
+
+func CreateGroupLocalVars(environ func() []string) []Var {
+	envVars := environ()
+	vars := make([]Var, 0, len(envVars))
+
+	for _, envVar := range envVars {
+		variableFormatParts := 2
+		parts := strings.SplitN(envVar, "=", variableFormatParts)
+		if len(parts) == 2 {
+			vars = append(vars, Var{Name: parts[0], Value: parts[1]})
+		}
+	}
+
+	return vars
 }

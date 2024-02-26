@@ -111,6 +111,8 @@ func main() {
 	k8sLogger := io.NewK8sLogger()
 
 	envManager := env.NewEnvManager(os.LookupEnv, os.Setenv, oktetoLog.AddMaskedWord, oktetoLog.Warning)
+	localVarsGroup := env.CreateGroupLocalVars(os.Environ)
+	envManager.AddGroup(localVarsGroup, env.PriorityVarFromLocal)
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),

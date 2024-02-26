@@ -95,7 +95,7 @@ type destroyCommand struct {
 	k8sClientProvider okteto.K8sClientProvider
 	ConfigMapHandler  configMapHandler
 	analyticsTracker  analyticsTrackerInterface
-	getManifest       func(path string, fs afero.Fs) (*model.Manifest, error)
+	getManifest       func(path string, fs afero.Fs, envManager *env.Manager) (*model.Manifest, error)
 	oktetoClient      *okteto.Client
 	ioCtrl            *io.Controller
 	buildCtrl         buildCtrl
@@ -203,7 +203,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contr
 			os.Setenv("KUBECONFIG", kubeconfigPath)
 			defer os.Remove(kubeconfigPath)
 
-			destroyer, err := c.getDestroyer(ctx, options)
+			destroyer, err := c.getDestroyer(ctx, options, envManager)
 			if err != nil {
 				return err
 			}
@@ -267,7 +267,7 @@ func shouldRunInRemote(opts *Options) bool {
 	return false
 }
 
-func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (destroyInterface, error) {
+func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options, envManager *env.Manager) (destroyInterface, error) {
 	var (
 		destroyer destroyInterface
 		err       error
@@ -284,7 +284,7 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 
 		oktetoLog.Info("Destroying all...")
 	} else {
-		manifest, err := dc.getManifest(opts.ManifestPath, afero.NewOsFs())
+		manifest, err := dc.getManifest(opts.ManifestPath, afero.NewOsFs(), envManager)
 		if err != nil {
 			// Log error message but application can still be deleted
 			oktetoLog.Infof("could not find manifest file to be executed: %s", err)

@@ -631,11 +631,11 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 	return err
 }
 
-func (up *upContext) getManifest(path string, fs afero.Fs) (*model.Manifest, error) {
+func (up *upContext) getManifest(path string, fs afero.Fs, envManager *env.Manager) (*model.Manifest, error) {
 	if up.Manifest != nil {
 		return up.Manifest, nil
 	}
-	return model.GetManifestV2(path, fs)
+	return model.GetManifestV2(path, fs, envManager)
 }
 
 func (up *upContext) start() error {

@@ -86,14 +86,14 @@ func (mc *Command) RunInitV2(ctx context.Context, opts *InitOpts, envManager *en
 	manifest := model.NewManifest()
 	var err error
 	if !opts.Overwrite {
-		manifest, err = model.GetManifestV2(opts.DevPath, afero.NewOsFs())
+		manifest, err = model.GetManifestV2(opts.DevPath, afero.NewOsFs(), envManager)
 		if err != nil && !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
 		}
 	}
 
 	if manifest == nil || len(manifest.Build) == 0 || manifest.Deploy == nil {
-		manifest, err = mc.configureManifestDeployAndBuild(opts.Workdir)
+		manifest, err = mc.configureManifestDeployAndBuild(opts.Workdir, envManager)
 		if err != nil {
 			return nil, err
 		}
@@ -182,7 +182,7 @@ func (mc *Command) RunInitV2(ctx context.Context, opts *InitOpts, envManager *en
 	return manifest, nil
 }
 
-func (*Command) configureManifestDeployAndBuild(cwd string) (*model.Manifest, error) {
+func (*Command) configureManifestDeployAndBuild(cwd string, envManager *env.Manager) (*model.Manifest, error) {
 
 	composeFiles := utils.GetStackFiles(cwd)
 	if len(composeFiles) > 0 {
@@ -204,14 +204,14 @@ func (*Command) configureManifestDeployAndBuild(cwd string) (*model.Manifest, er
 			}
 			return manifest, nil
 		}
-		manifest, err := createFromKubernetes(cwd)
+		manifest, err := createFromKubernetes(cwd, envManager)
 		if err != nil {
 			return nil, err
 		}
 		return manifest, nil
 
 	}
-	manifest, err := createFromKubernetes(cwd)
+	manifest, err := createFromKubernetes(cwd, envManager)
 	if err != nil {
 		return nil, err
 	}
@@ -408,7 +408,7 @@ func createFromCompose(composePath string) (*model.Manifest, error) {
 	return manifest, err
 }
 
-func createFromKubernetes(cwd string) (*model.Manifest, error) {
+func createFromKubernetes(cwd string, envManager *env.Manager) (*model.Manifest, error) {
 	manifest := model.NewManifest()
 	dockerfiles, err := selectDockerfiles(cwd)
 	if err != nil {
@@ -418,11 +418,11 @@ func createFromKubernetes(cwd string) (*model.Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	manifest.Deploy, err = inferDeploySection(cwd)
+	manifest.Deploy, err = inferDeploySection(cwd, envManager)
 	if err != nil {
 		return nil, err
 	}
-	manifest.Dev, err = inferDevsSection(cwd)
+	manifest.Dev, err = inferDevsSection(cwd, envManager)
 	if err != nil {
 		return nil, err
 	}
@@ -466,8 +466,8 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (build.M
 	return manifestBuild, nil
 }
 
-func inferDeploySection(cwd string) (*model.DeployInfo, error) {
-	m, err := model.GetInferredManifest(cwd, afero.NewOsFs())
+func inferDeploySection(cwd string, envManager *env.Manager) (*model.DeployInfo, error) {
+	m, err := model.GetInferredManifest(cwd, afero.NewOsFs(), envManager)
 	if err != nil {
 		return nil, err
 	}
@@ -484,7 +484,7 @@ func inferDeploySection(cwd string) (*model.DeployInfo, error) {
 	}, nil
 }
 
-func inferDevsSection(cwd string) (model.ManifestDevs, error) {
+func inferDevsSection(cwd string, envManager *env.Manager) (model.ManifestDevs, error) {
 	files, err := os.ReadDir(cwd)
 	if err != nil {
 		return nil, err
@@ -495,7 +495,7 @@ func inferDevsSection(cwd string) (model.ManifestDevs, error) {
 		if !f.IsDir() {
 			continue
 		}
-		dev, err := model.GetManifestV2(f.Name(), afero.NewOsFs())
+		dev, err := model.GetManifestV2(f.Name(), afero.NewOsFs(), envManager)
 		if err != nil {
 			oktetoLog.Debugf("could not detect any okteto manifest on %s", f.Name())
 			continue
@@ -509,7 +509,7 @@ func inferDevsSection(cwd string) (model.ManifestDevs, error) {
 	return devs, nil
 }
 
-func (mc *Command) getManifest(path string, fs afero.Fs) (*model.Manifest, error) {
+func (mc *Command) getManifest(path string, fs afero.Fs, envManager *env.Manager) (*model.Manifest, error) {
 	if mc.manifest != nil {
 		// Deepcopy so it does not get overwritten these changes
 		manifest := *mc.manifest
@@ -529,7 +529,7 @@ func (mc *Command) getManifest(path string, fs afero.Fs) (*model.Manifest, error
 		manifest.Deploy = d
 		return &manifest, nil
 	}
-	return model.GetManifestV2(path, fs)
+	return model.GetManifestV2(path, fs, envManager)
 }
 
 func configureAutoCreateDev(manifest *model.Manifest) error {
