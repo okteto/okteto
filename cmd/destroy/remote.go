@@ -111,14 +111,14 @@ type remoteDestroyCommand struct {
 	manifest             *model.Manifest
 	clusterMetadata      func(context.Context) (*types.ClusterMetadata, error)
 
+	// ioCtrl is the controller for the output of the Build logs
+	ioCtrl *io.Controller
+
 	// sshAuthSockEnvvar is the default for SSH_AUTH_SOCK. Provided mostly for testing
 	sshAuthSockEnvvar string
 
 	// knownHostsPath  is the default known_hosts file path. Provided mostly for testing
 	knownHostsPath string
-
-	// ioCtrl is the controller for the output of the Build logs
-	ioCtrl *io.Controller
 }
 
 func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remoteDestroyCommand {
