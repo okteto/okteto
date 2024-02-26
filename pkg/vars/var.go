@@ -13,9 +13,7 @@
 
 package vars
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // Var represents a manifest variable
 type Var struct {

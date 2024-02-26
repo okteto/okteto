@@ -14,9 +14,7 @@
 package vars
 
 import (
-	"os"
-
-	"github.com/okteto/okteto/pkg/env"
+	"github.com/spf13/afero"
 	"gopkg.in/yaml.v2"
 )
 
@@ -26,8 +24,8 @@ type ManifestVars struct {
 
 type Vars []Var
 
-func GetManifestVars(manifestPath string) (Vars, error) {
-	b, err := os.ReadFile(manifestPath)
+func GetManifestVars(manifestPath string, fs afero.Fs) (Vars, error) {
+	b, err := afero.ReadFile(fs, manifestPath)
 	if err != nil {
 		return nil, err
 	}
@@ -42,8 +40,12 @@ func GetManifestVars(manifestPath string) (Vars, error) {
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (vars *Vars) MarshalYAML() (interface{}, error) {
-	return vars, nil
+func (vars Vars) MarshalYAML() (interface{}, error) {
+	vMap := make(map[string]string)
+	for _, v := range vars {
+		vMap[v.Name] = v.Value
+	}
+	return vMap, nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
@@ -61,9 +63,9 @@ func (vars *Vars) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func (vars *Vars) Expand() error {
+func (vars *Vars) Expand(expandEnv func(string) (string, error)) error {
 	for i := range *vars {
-		expanded, err := env.ExpandEnvIfNotEmpty((*vars)[i].Value)
+		expanded, err := expandEnv((*vars)[i].Value)
 		if err != nil {
 			return err
 		}
@@ -76,6 +78,7 @@ func (vars *Vars) Export(lookupEnv func(key string) (string, bool), setEnv func(
 	for _, v := range *vars {
 		if v.ExistsLocally(lookupEnv) {
 			warningLog("Local variable '%s' takes precedence over the manifest's definition, which will be ignored", v.Name)
+			continue
 		}
 		if err := setEnv(v.Name, v.Value); err != nil {
 			return err

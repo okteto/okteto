@@ -14,9 +14,10 @@
 package vars
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
-	"testing"
 )
 
 func Test_Var_MarshalYAML(t *testing.T) {
