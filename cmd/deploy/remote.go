@@ -369,10 +369,10 @@ func (rd *remoteDeployCommand) getOriginalCWD(manifestPath string) (string, erro
 
 func getOktetoCLIVersion(versionString string) string {
 	var version string
-	if match, err := regexp.MatchString(`\d+\.\d+\.\d+`, versionString); match {
+	if match, _ := regexp.MatchString(`\d+\.\d+\.\d+`, versionString); match {
 		version = fmt.Sprintf(constants.OktetoCLIImageForRemoteTemplate, versionString)
 	} else {
-		oktetoLog.Infof("invalid version string: %s, using latest: %s", versionString, err)
+		oktetoLog.Infof("invalid version string: %s, using latest", versionString)
 		remoteOktetoImage := os.Getenv(constants.OktetoDeployRemoteImage)
 		if remoteOktetoImage != "" {
 			version = remoteOktetoImage
