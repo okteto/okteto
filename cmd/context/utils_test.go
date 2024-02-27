@@ -215,7 +215,7 @@ dependencies:
 				filename = ""
 			}
 
-			m, err := model.GetManifestV2(filename, afero.NewMemMapFs())
+			m, err := model.GetManifestV2(filename, afero.NewMemMapFs(), nil)
 			if tt.expectedErr {
 				assert.NotNil(t, err)
 			} else {

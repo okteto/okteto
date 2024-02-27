@@ -17,6 +17,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"os"
 	"strconv"
 	"strings"
@@ -34,6 +36,10 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
+
+func newFakeEnvManager() *env.Manager {
+	return env.NewEnvManager(os.LookupEnv, os.Setenv, oktetoLog.AddMaskedWord, oktetoLog.Warning)
+}
 
 func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User, fakeObjects []runtime.Object) *Command {
 	return &Command{
@@ -328,7 +334,7 @@ func Test_createContext(t *testing.T) {
 			ctxController := newFakeContextCommand(fakeOktetoClient, tt.user, tt.fakeObjects)
 			okteto.CurrentStore = tt.ctxStore
 
-			if err := ctxController.UseContext(ctx, tt.ctxOptions); err != nil && !tt.expectedErr {
+			if err := ctxController.UseContext(ctx, tt.ctxOptions, newFakeEnvManager()); err != nil && !tt.expectedErr {
 				t.Fatalf("Not expecting error but got: %s", err.Error())
 			} else if tt.expectedErr && err == nil {
 				t.Fatal("Not thrown error")
@@ -388,7 +394,7 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ctxController.initOktetoContext(ctx, tt.ctxOptions)
+			err := ctxController.initOktetoContext(ctx, tt.ctxOptions, nil)
 			if err != nil {
 				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.GetContext().Name).Error() && tt.isAutoAuthTriggered {
 					t.Fatalf("Not expecting error but got: %s", err.Error())

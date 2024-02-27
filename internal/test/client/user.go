@@ -15,9 +15,9 @@ package client
 
 import (
 	"context"
-	"github.com/okteto/okteto/pkg/env"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/types"
 )
 

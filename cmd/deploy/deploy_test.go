@@ -16,6 +16,7 @@ package deploy
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"net"
 	"os"
 	"path/filepath"
@@ -303,7 +304,7 @@ func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.deploy(ctx, opts)
+	err := c.deploy(ctx, opts, nil)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -360,7 +361,7 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, opts)
+	err := c.RunDeploy(ctx, opts, nil)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -396,7 +397,7 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, opts)
+	err := c.RunDeploy(ctx, opts, nil)
 
 	assert.ErrorIs(t, err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands)
 
@@ -453,7 +454,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 
 	ctx := context.Background()
 
-	err := c.RunDeploy(ctx, opts)
+	err := c.RunDeploy(ctx, opts, nil)
 
 	// we should get a build error because Dockerfile does not exist
 	assert.True(t, strings.Contains(err.Error(), oktetoErrors.InvalidDockerfile))
@@ -536,7 +537,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, opts)
+	err := c.RunDeploy(ctx, opts, nil)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -608,7 +609,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	err := c.RunDeploy(ctx, opts)
+	err := c.RunDeploy(ctx, opts, nil)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -677,7 +678,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, opts)
+	err := c.RunDeploy(ctx, opts, nil)
 
 	assert.NoError(t, err)
 	// No command was executed
@@ -748,7 +749,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, opts)
+	err := c.RunDeploy(ctx, opts, nil)
 
 	assert.NoError(t, err)
 	// No command was executed
@@ -771,23 +772,23 @@ func TestDeployWithoutErrors(t *testing.T) {
 	assert.Equal(t, pipeline.DeployedStatus, cfg.Data["status"])
 }
 
-func getManifestWithError(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getManifestWithError(_ string, _ afero.Fs, _ *env.Manager) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getFakeManifest(_ string, _ afero.Fs, _ *env.Manager) (*model.Manifest, error) {
 	return fakeManifest, nil
 }
 
-func getErrorManifest(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getErrorManifest(_ string, _ afero.Fs, _ *env.Manager) (*model.Manifest, error) {
 	return errorManifest, nil
 }
 
-func getManifestWithNoDeployNorDependency(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getManifestWithNoDeployNorDependency(_ string, _ afero.Fs, _ *env.Manager) (*model.Manifest, error) {
 	return noDeployNorDependenciesManifest, nil
 }
 
-func getFakeManifestWithDependency(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getFakeManifestWithDependency(_ string, _ afero.Fs, _ *env.Manager) (*model.Manifest, error) {
 	return fakeManifestWithDependency, nil
 }
 
@@ -1040,9 +1041,9 @@ func TestDeployExternals(t *testing.T) {
 			}
 
 			if tc.expectedErr {
-				assert.Error(t, ld.runDeploySection(ctx, tc.options))
+				assert.Error(t, ld.runDeploySection(ctx, tc.options, nil))
 			} else {
-				assert.NoError(t, ld.runDeploySection(ctx, tc.options))
+				assert.NoError(t, ld.runDeploySection(ctx, tc.options, nil))
 			}
 		})
 	}
@@ -1192,7 +1193,7 @@ func TestDeployOnlyDependencies(t *testing.T) {
 				CurrentContext: "test",
 			}
 
-			err := c.RunDeploy(ctx, opts)
+			err := c.RunDeploy(ctx, opts, nil)
 
 			require.ErrorIs(t, err, tc.expecterErr)
 		})

@@ -14,7 +14,6 @@
 package env
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 	"sync"
@@ -24,9 +23,8 @@ import (
 const (
 	PriorityVarFromFlag      = 1
 	PriorityVarFromLocal     = 2
-	PriorityVarFromCatalog   = 3
-	PriorityVarFromManifest  = 4
-	PriorityVarFromDashboard = 5
+	PriorityVarFromManifest  = 3
+	PriorityVarFromDashboard = 4
 )
 
 type ConfigItem struct {
@@ -35,11 +33,10 @@ type ConfigItem struct {
 }
 
 var config = map[int]ConfigItem{
-	PriorityVarFromFlag:      {Name: "Flag", Masked: true},
-	PriorityVarFromLocal:     {Name: "Local", Masked: true},
-	PriorityVarFromCatalog:   {Name: "Catalog", Masked: true},
-	PriorityVarFromManifest:  {Name: "Manifest", Masked: true},
-	PriorityVarFromDashboard: {Name: "Dashboard", Masked: true},
+	PriorityVarFromFlag:      {Name: "as --var", Masked: false}, // true
+	PriorityVarFromLocal:     {Name: "locally or in the catalog", Masked: false},
+	PriorityVarFromManifest:  {Name: "in the manifest", Masked: false},  // true
+	PriorityVarFromDashboard: {Name: "in the dashboard", Masked: false}, // true
 }
 
 type LookupEnvFunc func(key string) (string, bool)
@@ -112,16 +109,13 @@ func (m *Manager) Export() error {
 
 	for _, g := range m.groups {
 		for _, v := range g.Vars {
-			if v.Name == "VAR_FROM_MANIFEST" {
-				fmt.Println("debug")
-			}
 			minGroupsToLog := 4
 			if len(m.groups) >= minGroupsToLog {
 				if priority, exported := exportedVars[v.Name]; exported {
 					if priority > g.Priority {
 						prevGroupName := config[priority].Name
 						currentGroupName := config[g.Priority].Name
-						m.warningLog("Variable '%s' was already set with a lower priority (%s), overriding it with higher priority value (%s)", v.Name, prevGroupName, currentGroupName)
+						m.warningLog("Variable '%s' defined %s takes precedence over the same variable defined %s, which will be ignored", v.Name, currentGroupName, prevGroupName)
 					}
 				}
 			}

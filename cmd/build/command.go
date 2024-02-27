@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -31,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/discovery"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"

@@ -14,7 +14,6 @@
 package build
 
 import (
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,6 +23,7 @@ import (
 	buildV2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/build"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
