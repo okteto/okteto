@@ -15,9 +15,10 @@ package vars
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v2"
-	"os"
 )
 
 type ManifestVars struct {

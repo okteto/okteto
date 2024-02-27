@@ -16,7 +16,6 @@ package cmd
 import (
 	"context"
 	"errors"
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"os/signal"
 	"time"
@@ -26,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/status"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"

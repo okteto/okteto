@@ -15,8 +15,8 @@ package preview
 
 import (
 	"context"
-	"github.com/okteto/okteto/pkg/env"
 
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"

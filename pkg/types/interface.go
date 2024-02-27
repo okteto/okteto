@@ -15,10 +15,10 @@ package types
 
 import (
 	"context"
-	"github.com/okteto/okteto/pkg/env"
 	"time"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
+	"github.com/okteto/okteto/pkg/env"
 )
 
 // OktetoInterface represents the client that connects to the backend to create API calls

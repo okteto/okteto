@@ -18,7 +18,6 @@ import (
 	cryptoRand "crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"math/rand"
 	"os"
 	"strings"
@@ -40,6 +39,7 @@ import (
 	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -111,7 +111,7 @@ func main() {
 	k8sLogger := io.NewK8sLogger()
 
 	envManager := env.NewEnvManager(os.LookupEnv, os.Setenv, oktetoLog.AddMaskedWord, oktetoLog.Warning)
-	localVarsGroup := env.CreateGroupLocalVars(os.Environ)
+	localVarsGroup := env.CreateGroupFromLocalVars(os.Environ)
 	envManager.AddGroup(localVarsGroup, env.PriorityVarFromLocal)
 
 	root := &cobra.Command{

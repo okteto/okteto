@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"os/signal"
 
@@ -26,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/down"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"

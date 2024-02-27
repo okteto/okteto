@@ -14,6 +14,7 @@
 package build
 
 import (
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"path/filepath"
 	"testing"
@@ -116,21 +117,21 @@ var fakeManifestV2 *model.Manifest = &model.Manifest{
 	IsV2: true,
 }
 
-func getManifestWithError(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getManifestWithError(_ string, _ afero.Fs, _ *env.Manager) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getManifestWithInvalidManifestError(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getManifestWithInvalidManifestError(_ string, _ afero.Fs, _ *env.Manager) (*model.Manifest, error) {
 	return nil, oktetoErrors.ErrInvalidManifest
 }
 
-func getFakeManifestV1(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getFakeManifestV1(_ string, _ afero.Fs, _ *env.Manager) (*model.Manifest, error) {
 	manifestV1 := *fakeManifestV2
 	manifestV1.IsV2 = false
 	return &manifestV1, nil
 }
 
-func getFakeManifestV2(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getFakeManifestV2(_ string, _ afero.Fs, _ *env.Manager) (*model.Manifest, error) {
 	return fakeManifestV2, nil
 }
 
@@ -217,7 +218,7 @@ func TestBuildIsManifestV2(t *testing.T) {
 		GetManifest: getFakeManifestV2,
 	}
 
-	manifest, err := bc.GetManifest("", afero.NewMemMapFs())
+	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), nil)
 	assert.Nil(t, err)
 	assert.Equal(t, manifest, fakeManifestV2)
 }
@@ -227,7 +228,7 @@ func TestBuildFromDockerfile(t *testing.T) {
 		GetManifest: getManifestWithError,
 	}
 
-	manifest, err := bc.GetManifest("", afero.NewMemMapFs())
+	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), nil)
 	assert.NotNil(t, err)
 	assert.Nil(t, manifest)
 }
@@ -237,7 +238,7 @@ func TestBuildErrIfInvalidManifest(t *testing.T) {
 		GetManifest: getManifestWithInvalidManifestError,
 	}
 
-	manifest, err := bc.GetManifest("", afero.NewMemMapFs())
+	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), nil)
 	assert.NotNil(t, err)
 	assert.Nil(t, manifest)
 }
@@ -355,7 +356,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			builder, err := tt.buildCommand.getBuilder(tt.options, okCtx)
+			builder, err := tt.buildCommand.getBuilder(tt.options, okCtx, nil)
 			if err != nil && !tt.expectedError {
 				t.Errorf("getBuilder() fail on '%s'. Expected nil error, got %s", tt.name, err.Error())
 			}

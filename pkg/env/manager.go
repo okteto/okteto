@@ -14,6 +14,7 @@
 package env
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 	"sync"
@@ -104,25 +105,46 @@ func (m *Manager) sort() {
 
 // Export exports the environment variables to the current process
 func (m *Manager) Export() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	exportedVars := make(map[string]int) // Track existing vars and their batch priority
+
 	for _, g := range m.groups {
 		for _, v := range g.Vars {
+			if v.Name == "VAR_FROM_MANIFEST" {
+				fmt.Println("debug")
+			}
+			minGroupsToLog := 4
+			if len(m.groups) >= minGroupsToLog {
+				if priority, exported := exportedVars[v.Name]; exported {
+					if priority > g.Priority {
+						prevGroupName := config[priority].Name
+						currentGroupName := config[g.Priority].Name
+						m.warningLog("Variable '%s' was already set with a lower priority (%s), overriding it with higher priority value (%s)", v.Name, prevGroupName, currentGroupName)
+					}
+				}
+			}
+
 			err := m.setEnv(v.Name, v.Value)
 			if err != nil {
 				return err
 			}
+			exportedVars[v.Name] = g.Priority
+
 		}
 	}
 	return nil
 }
 
-func CreateGroupLocalVars(environ func() []string) []Var {
+func CreateGroupFromLocalVars(environ func() []string) []Var {
 	envVars := environ()
 	vars := make([]Var, 0, len(envVars))
 
 	for _, envVar := range envVars {
 		variableFormatParts := 2
 		parts := strings.SplitN(envVar, "=", variableFormatParts)
-		if len(parts) == 2 {
+		if len(parts) == variableFormatParts {
 			vars = append(vars, Var{Name: parts[0], Value: parts[1]})
 		}
 	}

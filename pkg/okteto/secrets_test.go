@@ -18,6 +18,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"testing"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
@@ -107,7 +108,7 @@ func TestGetContext(t *testing.T) {
 						GlobalNamespace: "globalNs",
 						Analytics:       false,
 					},
-					Secrets: []types.Secret{
+					Secrets: []env.Var{
 						{
 							Name:  "name",
 							Value: "value",
@@ -173,7 +174,7 @@ func TestGetContext(t *testing.T) {
 						GlobalNamespace: constants.DefaultGlobalNamespace,
 						Analytics:       false,
 					},
-					Secrets: []types.Secret{
+					Secrets: []env.Var{
 						{
 							Name:  "name",
 							Value: "value",
@@ -247,7 +248,7 @@ func TestGetUserSecrets(t *testing.T) {
 	}
 	type expected struct {
 		err         error
-		userSecrets []types.Secret
+		userSecrets []env.Var
 	}
 	testCases := []struct {
 		cfg      input
@@ -285,7 +286,7 @@ func TestGetUserSecrets(t *testing.T) {
 				},
 			},
 			expected: expected{
-				userSecrets: []types.Secret{
+				userSecrets: []env.Var{
 					{
 						Name:  "password",
 						Value: "test",
@@ -381,7 +382,7 @@ func TestGetDeprecatedContext(t *testing.T) {
 						GlobalNamespace: constants.DefaultGlobalNamespace,
 						Analytics:       true,
 					},
-					Secrets: []types.Secret{
+					Secrets: []env.Var{
 						{
 							Name:  "name",
 							Value: "value",

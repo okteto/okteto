@@ -16,7 +16,6 @@ package logs
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -28,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/devenvironment"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log/io"
