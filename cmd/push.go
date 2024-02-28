@@ -126,7 +126,7 @@ func Push(ctx context.Context) *cobra.Command {
 			if pushOpts.AutoDeploy {
 				oktetoLog.Warning(`The 'deploy' flag is deprecated and will be removed in a future version.
     Set the 'autocreate' field in your okteto manifest to get the same behavior.
-    More information is available here: https://okteto.com/docs/reference/cli#up`)
+    More information is available here: https://okteto.com/docs/reference/okteto-cli#up`)
 			}
 
 			if !dev.Autocreate {
@@ -171,7 +171,7 @@ func runPush(ctx context.Context, dev *model.Dev, pushOpts *pushOptions, c *kube
 				E: fmt.Errorf("application '%s' not found in namespace '%s'", dev.Name, dev.Namespace),
 				Hint: `Verify that your application is running and your okteto context is pointing to the right namespace
     Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
-    More information is available here: https://okteto.com/docs/reference/cli#up`,
+    More information is available here: https://okteto.com/docs/reference/okteto-cli#up`,
 			}
 		}
 

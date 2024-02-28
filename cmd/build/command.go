@@ -92,7 +92,7 @@ func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker analyticsTrackerInt
 
 const (
 	maxV1CommandArgs = 1
-	docsURL          = "https://okteto.com/docs/reference/cli/#build"
+	docsURL          = "https://okteto.com/docs/reference/okteto-cli/#build"
 )
 
 // Build build and optionally push a Docker image

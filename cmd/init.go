@@ -37,7 +37,7 @@ func Init(at analyticsTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
 	opts := &manifest.InitOpts{}
 	cmd := &cobra.Command{
 		Use:   "init",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#init"),
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#init"),
 		Short: "Automatically generate your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()

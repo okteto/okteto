@@ -50,7 +50,7 @@ func Down(k8sLogsCtrl *io.K8sLogger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "down [service]",
 		Short: "Deactivate your development container",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#down"),
+		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#down"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 

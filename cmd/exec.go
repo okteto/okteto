@@ -115,7 +115,7 @@ func Exec(k8sLogger *io.K8sLogger) *cobra.Command {
 
 			return err
 		},
-		Args: utils.MinimumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#exec"),
+		Args: utils.MinimumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#exec"),
 	}
 
 	cmd.Flags().StringVarP(&execFlags.manifestPath, "file", "f", utils.DefaultManifest, "path to the manifest file")

@@ -17,7 +17,7 @@ Today, most developers try to either run parts of the infrastructure locally or 
 
 ## How it works
 
-Okteto allows you to develop inside a container. When you run `okteto up` your Kubernetes deployment is replaced by a development container that contains your development tools (e.g. maven and jdk, or npm, python, go compiler, debuggers, etc). This development container can be any [docker image](https://okteto.com/docs/reference/development-environments/). The development container inherits the same secrets, configmaps, volumes or any other configuration value of the original Kubernetes deployment.
+Okteto allows you to develop inside a container. When you run `okteto up` your Kubernetes deployment is replaced by a development container that contains your development tools (e.g. maven and jdk, or npm, python, go compiler, debuggers, etc). This development container can use any [docker image](https://okteto.com/docs/development/images/). The development container inherits the same secrets, configmaps, volumes or any other configuration value of the original Kubernetes deployment.
 
 In addition to that, `okteto up` will:
 
@@ -25,7 +25,7 @@ In addition to that, `okteto up` will:
 1. Automatic local and remote port forwarding using [SSH](https://okteto.com/docs/reference/ssh-server/), so you can access your cluster services via `localhost` or connect a remote debugger.
 1. Give you an interactive terminal to your development container, so you can build, test, and run your application as you would from a local terminal.
 
-All of this (and more) can be configured via a [simple YAML manifest](https://okteto.com/docs/reference/manifest/).
+All of this (and more) can be configured via a [simple YAML manifest](https://okteto.com/docs/reference/okteto-manifest/).
 
 The end result is that the remote cluster is seen by your IDE and tools as a local filesystem/environment. You keep writing your code on your local IDE and as soon as you save a file, the change goes to the development container, and your application instantly updates (taking advantage of any hot-reload mechanism you already have). This whole process happens in an instant. No docker images need to be created and no Kubernetes manifests need to be applied to the cluster.
 
@@ -44,9 +44,9 @@ The end result is that the remote cluster is seen by your IDE and tools as a loc
 
 ## Getting started
 
-All you need to get started is to [install the Okteto CLI](https://www.okteto.com/docs/getting-started/#installing-okteto-cli) and have access to a Kubernetes cluster.
+All you need to get started is to [install the Okteto CLI](https://www.okteto.com/docs/get-started/install-okteto-cli/) and have access to a Kubernetes cluster.
 
-Okteto CLI works with **any** Kubernetes cluster. If it's your first time using it, we'd recommend you [try it](https://www.okteto.com/docs/getting-started/) with the [Okteto Platform](https://cloud.okteto.com/) for a complete holistic developer experience. If you want to try it out with any other K8s cluster, you can also check out [this article](https://www.okteto.com/blog/developing-microservices-by-hot-reloading-on-kubernetes-clusters/) as a guide.
+Okteto CLI works with **any** Kubernetes cluster. If it's your first time using it, we'd recommend you [try it](https://www.okteto.com/docs/get-started/install-okteto-cli/) with the [Okteto Platform](https://www.okteto.com/docs) for a complete holistic developer experience. If you want to try it out with any other K8s cluster, you can also check out [this article](https://www.okteto.com/blog/developing-microservices-by-hot-reloading-on-kubernetes-clusters/) as a guide.
 
 We created a [few guides to help you get started](https://github.com/okteto/samples) with `okteto` and your favorite programming language.
 
@@ -56,9 +56,9 @@ Okteto is released into three channels: stable, beta, and dev. By default when o
 
 ## Useful links
 
-- [Getting started](https://www.okteto.com/docs/getting-started/)
-- [CLI reference](https://okteto.com/docs/reference/cli)
-- [Okteto manifest reference](https://okteto.com/docs/reference/manifest/)
+- [Getting started](https://www.okteto.com/docs/get-started/install-okteto-cli/)
+- [CLI reference](https://okteto.com/docs/reference/okteto-cli)
+- [Okteto manifest reference](https://okteto.com/docs/reference/okteto-manifest/)
 - [Samples](https://github.com/okteto/samples)
 - Frequently asked questions ([FAQs](https://okteto.com/docs/reference/faqs/))
 - [Known issues](https://okteto.com/docs/reference/known-issues/)

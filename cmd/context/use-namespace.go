@@ -29,7 +29,7 @@ func UseNamespace() *cobra.Command {
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "use-namespace [name]",
-		Args:   utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#use-1"),
+		Args:   utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#use-1"),
 		Short:  "Set the namespace of the okteto context",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Warning("'okteto context use-namespace' is deprecated in favor of 'okteto namespace', and will be removed in a future version")
