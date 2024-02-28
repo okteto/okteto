@@ -43,7 +43,7 @@ func Doctor(k8sLogger *io.K8sLogger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "doctor [service]",
 		Short: "Generate a zip file with the okteto logs",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#doctor"),
+		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#doctor"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Info("starting doctor command")
 			ctx := context.Background()

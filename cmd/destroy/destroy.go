@@ -111,7 +111,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contr
 		Use:   "destroy",
 		Short: `Destroy everything created by the 'okteto deploy' command`,
 		Long:  `Destroy everything created by the 'okteto deploy' command. You can also include a 'destroy' section in your okteto manifest with a list of custom commands to be executed on destroy`,
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#destroy"),
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if options.ManifestPath != "" {
 				// if path is absolute, its transformed to rel from root

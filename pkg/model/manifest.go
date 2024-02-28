@@ -58,17 +58,17 @@ var (
 )
 
 const (
-	buildHeadComment = "The build section defines how to build the images of your development environment\nMore info: https://www.okteto.com/docs/reference/manifest/#build"
+	buildHeadComment = "The build section defines how to build the images of your development environment\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#build"
 	buildExample     = `build:
   my-service:
     context: .`
 	buildSvcEnvVars   = "You can use the following env vars to refer to this image in your deploy commands:\n - OKTETO_BUILD_%s_REGISTRY: image registry\n - OKTETO_BUILD_%s_REPOSITORY: image repo\n - OKTETO_BUILD_%s_IMAGE: image name\n - OKTETO_BUILD_%s_SHA: image tag sha256"
-	deployHeadComment = "The deploy section defines how to deploy your development environment\nMore info: https://www.okteto.com/docs/reference/manifest/#deploy"
+	deployHeadComment = "The deploy section defines how to deploy your development environment\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#deploy"
 	deployExample     = `deploy:
   commands:
   - name: Deploy
     command: echo 'Replace this line with the proper 'helm' or 'kubectl' commands to deploy your development environment'`
-	devHeadComment = "The dev section defines how to activate a development container\nMore info: https://www.okteto.com/docs/reference/manifest/#dev"
+	devHeadComment = "The dev section defines how to activate a development container\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#dev"
 	devExample     = `dev:
   sample:
     image: okteto/dev:latest
@@ -80,7 +80,7 @@ const (
       - name=$USER
     forward:
       - 8080:80`
-	dependenciesHeadComment = "The dependencies section defines other git repositories to be deployed as part of your development environment\nMore info: https://www.okteto.com/docs/reference/manifest/#dependencies"
+	dependenciesHeadComment = "The dependencies section defines other git repositories to be deployed as part of your development environment\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#dependencies"
 	dependenciesExample     = `dependencies:
   - https://github.com/okteto/sample`
 
@@ -678,7 +678,7 @@ func Read(bytes []byte) (*Manifest, error) {
 	for _, dev := range manifest.Dev {
 		if dev.Image != nil && (dev.Image.Context != "" || dev.Image.Dockerfile != "") && !hasShownWarning {
 			hasShownWarning = true
-			oktetoLog.Yellow(`The 'image' extended syntax is deprecated and will be removed in a future version. Define the images you want to build in the 'build' section of your manifest. More info at https://www.okteto.com/docs/reference/manifest/#build"`)
+			oktetoLog.Yellow(`The 'image' extended syntax is deprecated and will be removed in a future version. Define the images you want to build in the 'build' section of your manifest. More info at https://www.okteto.com/docs/reference/okteto-manifest/#build"`)
 		}
 
 	}

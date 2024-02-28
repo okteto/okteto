@@ -86,7 +86,7 @@ func deploy(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy an okteto pipeline",
-		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/cli/#deploy-1"),
+		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#deploy-1"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctxResource := &model.ContextResource{}
 			if err := ctxResource.UpdateNamespace(flags.namespace); err != nil {

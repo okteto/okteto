@@ -46,7 +46,7 @@ const (
 func (*Command) RunInitV1(ctx context.Context, opts *InitOpts) error {
 	oktetoLog.Println("This command walks you through creating an okteto manifest.")
 	oktetoLog.Println("It only covers the most common items, and tries to guess sensible defaults.")
-	oktetoLog.Println("See https://okteto.com/docs/reference/manifest/ for the official documentation about the okteto manifest.")
+	oktetoLog.Println("See https://okteto.com/docs/reference/okteto-manifest/ for the official documentation about the okteto manifest.")
 
 	if err := validateDevPath(opts.DevPath, opts.Overwrite); err != nil {
 		return err

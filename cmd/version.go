@@ -28,7 +28,7 @@ func Version() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",
 		Short: "View the version of the okteto binary",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#version"),
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#version"),
 		RunE:  Show().RunE,
 	}
 	cmd.AddCommand(Update())

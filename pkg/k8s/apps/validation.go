@@ -34,7 +34,7 @@ func ValidateMountPaths(spec *apiv1.PodSpec, dev *model.Dev) error {
 			if vm.MountPath == syncVolume.RemotePath {
 				return oktetoErrors.UserError{
 					E:    fmt.Errorf("'%s' is already defined as volume in %s", vm.MountPath, dev.Name),
-					Hint: `Disable the okteto persistent volume (https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional) and try again`}
+					Hint: `Disable the okteto persistent volume (https://okteto.com/docs/reference/okteto-manifest/#persistentvolume-object-optional) and try again`}
 			}
 		}
 	}

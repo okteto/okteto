@@ -67,14 +67,14 @@ func TestUserFriendlyError(t *testing.T) {
 			input: errors.New("yaml: some random error"),
 			expected: `your okteto manifest is not valid, please check the following errors:
 yaml: some random error
-    Check out the okteto manifest docs at: https://www.okteto.com/docs/reference/manifest`,
+    Check out the okteto manifest docs at: https://www.okteto.com/docs/reference/okteto-manifest`,
 		},
 		{
 			name:  "yaml errors with heading and link to docs",
 			input: errors.New("yaml: unmarshal errors:\n  line 4: field contest not found in type model.manifestRaw"),
 			expected: `your okteto manifest is not valid, please check the following errors:
      - line 4: field 'contest' is not a property of the okteto manifest. Did you mean "context"?
-    Check out the okteto manifest docs at: https://www.okteto.com/docs/reference/manifest`,
+    Check out the okteto manifest docs at: https://www.okteto.com/docs/reference/okteto-manifest`,
 		},
 	}
 

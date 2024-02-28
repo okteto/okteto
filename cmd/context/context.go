@@ -26,7 +26,7 @@ func Context(okClientProvider oktetoClientProvider) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "context",
 		Aliases: []string{"ctx"},
-		Args:    utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#context"),
+		Args:    utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#context"),
 		Short:   "Set the default context",
 		Long: `Set the default context
 

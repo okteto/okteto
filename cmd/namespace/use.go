@@ -42,7 +42,7 @@ func Use(ctx context.Context) *cobra.Command {
 		Use:     "use [namespace]",
 		Short:   "Configure the current namespace of the okteto context",
 		Aliases: []string{"ns"},
-		Args:    utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#use-1"),
+		Args:    utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#use-1"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			namespace := ""
 			if len(args) > 0 {

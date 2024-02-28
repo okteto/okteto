@@ -378,7 +378,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 			// this provides 2 min for "FailedScheduling" to resolve by themselves
 			if strings.Contains(failedSchedulingEvent.Message, "Insufficient cpu") || strings.Contains(failedSchedulingEvent.Message, "Insufficient memory") {
 				return oktetoErrors.UserError{E: fmt.Errorf("insufficient resources"),
-					Hint: "Increase cluster resources or timeout of resources. More information is available here: https://okteto.com/docs/reference/manifest/#timeout-time-optional"}
+					Hint: "Increase cluster resources or timeout of resources. More information is available here: https://okteto.com/docs/reference/okteto-manifest/#timeout-time-optional"}
 			}
 			return fmt.Errorf(failedSchedulingEvent.Message)
 		}
@@ -433,7 +433,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 						E: fmt.Errorf("there is no space left in persistent volume"),
 						Hint: fmt.Sprintf(`Okteto volume is full.
     Increase your persistent volume size, run '%s' and try 'okteto up' again.
-    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`, utils.GetDownCommand(up.Options.ManifestPathFlag)),
+    More information about configuring your persistent volume at https://okteto.com/docs/reference/okteto-manifest/#persistentvolume-object-optional`, utils.GetDownCommand(up.Options.ManifestPathFlag)),
 					}
 				}
 				if e.Type == "Warning" && strings.Contains(e.Message, "container veth name provided (eth0) already exists") {

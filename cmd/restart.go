@@ -41,7 +41,7 @@ func Restart() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "restart [service]",
 		Short:  "Restart the deployments listed in the services field of a development container",
-		Args:   utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#restart"),
+		Args:   utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#restart"),
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
