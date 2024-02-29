@@ -65,7 +65,7 @@ func UpdateKubeconfigCMD(okClientProvider oktetoClientProvider, envManager *env.
 			ctx := context.Background()
 
 			// Run context command to get the Cfg into Okteto GetContext
-			if err := NewContextCommand(withKubeTokenController(kc.kubetokenController)).Run(ctx, &Options{}, envManager); err != nil {
+			if err := NewContextCommand(WithEnvManger(envManager), withKubeTokenController(kc.kubetokenController)).Run(ctx, &Options{}); err != nil {
 				return err
 			}
 

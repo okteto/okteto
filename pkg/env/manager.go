@@ -49,11 +49,11 @@ type Group struct {
 	Priority int
 }
 type Manager struct {
-	groups     []Group
 	lookupEnv  LookupEnvFunc
 	setEnv     SetEnvFunc
 	warningLog WarningLogFunc
 	maskVar    MaskVarFunc
+	groups     []Group
 	mu         sync.Mutex
 }
 

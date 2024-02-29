@@ -230,7 +230,7 @@ func getOktetoContext(ctx context.Context, options *types.BuildOptions, envManag
 		}
 	}
 
-	oktetoContext, err := contextCMD.NewContextCommand().RunStateless(ctx, ctxOpts, envManager)
+	oktetoContext, err := contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).RunStateless(ctx, ctxOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +247,7 @@ func getOktetoContext(ctx context.Context, options *types.BuildOptions, envManag
 			return nil, err
 		}
 		if create {
-			if err := namespace.NewCommandStateless(c).Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}, envManager); err != nil {
+			if err := namespace.NewCommandStateless(c).Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
 				return nil, err
 			}
 		}

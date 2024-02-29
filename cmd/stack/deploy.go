@@ -102,11 +102,11 @@ func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *
 			return err
 		}
 		if create {
-			nsCmd, err := namespace.NewCommand()
+			nsCmd, err := namespace.NewCommand(envManager)
 			if err != nil {
 				return err
 			}
-			if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: s.Namespace}, envManager); err != nil {
+			if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: s.Namespace}); err != nil {
 				return err
 			}
 		}

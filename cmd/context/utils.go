@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"net/url"
 	"strings"
 
@@ -25,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/discovery"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -161,7 +161,7 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions, fs afero
 		Show:      true,
 	}
 
-	if err := NewContextCommand().Run(ctx, ctxOptions, envManager); err != nil {
+	if err := NewContextCommand(WithEnvManger(envManager)).Run(ctx, ctxOptions); err != nil {
 		return nil, err
 	}
 
@@ -210,7 +210,7 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 		Show:      true,
 	}
 
-	if err := NewContextCommand().Run(ctx, ctxOptions, envManager); err != nil {
+	if err := NewContextCommand(WithEnvManger(envManager)).Run(ctx, ctxOptions); err != nil {
 		return nil, err
 	}
 
@@ -244,5 +244,5 @@ func LoadContextFromPath(ctx context.Context, namespace, k8sContext, path string
 	ctxOptions.Context = ctxResource.Context
 	ctxOptions.Namespace = ctxResource.Namespace
 
-	return NewContextCommand().Run(ctx, &ctxOptions, envManager)
+	return NewContextCommand(WithEnvManger(envManager)).Run(ctx, &ctxOptions)
 }

@@ -45,7 +45,7 @@ func deprecatedCreateNamespace(ctx context.Context, envManager *env.Manager) *co
 		Short: "Create a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Warning("'okteto create namespace' is deprecated in favor of 'okteto namespace create', and will be removed in a future version")
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}, envManager); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).Run(ctx, &contextCMD.Options{}); err != nil {
 				return err
 			}
 
@@ -54,11 +54,11 @@ func deprecatedCreateNamespace(ctx context.Context, envManager *env.Manager) *co
 				return errors.ErrContextIsNotOktetoCluster
 			}
 
-			nsCmd, err := namespace.NewCommand()
+			nsCmd, err := namespace.NewCommand(envManager)
 			if err != nil {
 				return err
 			}
-			err = nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: ns}, envManager)
+			err = nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: ns})
 			analytics.TrackCreateNamespace(err == nil)
 			return err
 		},

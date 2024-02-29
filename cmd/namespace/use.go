@@ -16,11 +16,11 @@ package namespace
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -58,11 +58,11 @@ func Use(ctx context.Context, envManager *env.Manager) *cobra.Command {
 				namespace = okteto.GetContext().PersonalNamespace
 			}
 
-			nsCmd, err := NewCommand()
+			nsCmd, err := NewCommand(envManager)
 			if err != nil {
 				return err
 			}
-			err = nsCmd.Use(ctx, namespace, envManager)
+			err = nsCmd.Use(ctx, namespace)
 
 			analytics.TrackNamespace(err == nil, len(args) > 0)
 			return err
@@ -73,10 +73,10 @@ func Use(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	return cmd
 }
 
-func (nc *Command) Use(ctx context.Context, namespace string, envManager *env.Manager) error {
+func (nc *Command) Use(ctx context.Context, namespace string) error {
 	var err error
 	if namespace == "" {
-		namespace, err = nc.getNamespaceFromSelector(ctx, envManager)
+		namespace, err = nc.getNamespaceFromSelector(ctx)
 		if err != nil {
 			return err
 		}
@@ -92,12 +92,11 @@ func (nc *Command) Use(ctx context.Context, namespace string, envManager *env.Ma
 			IsCtxCommand:         true,
 			CheckNamespaceAccess: true,
 		},
-		envManager,
 	)
 
 }
 
-func (nc *Command) getNamespaceFromSelector(ctx context.Context, envManager *env.Manager) (string, error) {
+func (nc *Command) getNamespaceFromSelector(ctx context.Context) (string, error) {
 	namespaces, err := getNamespacesSelection(ctx)
 	if err != nil {
 		return "", err
@@ -116,7 +115,7 @@ func (nc *Command) getNamespaceFromSelector(ctx context.Context, envManager *env
 			Namespace: ns,
 			Show:      false,
 		}
-		if err := nc.Create(ctx, createOptions, envManager); err != nil {
+		if err := nc.Create(ctx, createOptions); err != nil {
 			return "", err
 		}
 	}

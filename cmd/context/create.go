@@ -58,16 +58,22 @@ type Command struct {
 	EnvManager          *env.Manager
 }
 
-type ctxCmdOption func(*Command)
+type CtxCmdOption func(*Command)
 
-func withKubeTokenController(k kubeconfigTokenController) ctxCmdOption {
+func withKubeTokenController(k kubeconfigTokenController) CtxCmdOption {
 	return func(c *Command) {
 		c.kubetokenController = k
 	}
 }
 
+func WithEnvManger(envManager *env.Manager) CtxCmdOption {
+	return func(c *Command) {
+		c.EnvManager = envManager
+	}
+}
+
 // NewContextCommand creates a new Command
-func NewContextCommand(ctxCmdOption ...ctxCmdOption) *Command {
+func NewContextCommand(ctxCmdOption ...CtxCmdOption) *Command {
 	cfg := &Command{
 		K8sClientProvider:    okteto.NewK8sClientProvider(),
 		LoginController:      login.NewLoginController(),
@@ -122,7 +128,7 @@ If you need to automate authentication or if you don't want to use browser-based
 			ctxOptions.Show = false
 			ctxOptions.Save = true
 
-			err := NewContextCommand().UseContext(ctx, ctxOptions, envManager)
+			err := NewContextCommand(WithEnvManger(envManager)).UseContext(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			return err
 		},
@@ -133,7 +139,7 @@ If you need to automate authentication or if you don't want to use browser-based
 	return cmd
 }
 
-func (c *Command) UseContext(ctx context.Context, ctxOptions *Options, envManager *env.Manager) error {
+func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 	created := false
 
 	ctxStore := okteto.GetContextStore()
@@ -188,7 +194,7 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options, envManage
 	c.initEnvVars()
 
 	if ctxOptions.IsOkteto {
-		if err := c.initOktetoContext(ctx, ctxOptions, envManager); err != nil {
+		if err := c.initOktetoContext(ctx, ctxOptions); err != nil {
 			return err
 		}
 	} else {
@@ -283,7 +289,7 @@ func hasAccessToNamespace(ctx context.Context, c *Command, ctxOptions *Options) 
 	}
 }
 
-func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options, envManager *env.Manager) error {
+func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) error {
 	var userContext *types.UserContext
 	userContext, err := getLoggedUserContext(ctx, c, ctxOptions)
 	if err != nil {
@@ -340,8 +346,8 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options, en
 	okteto.GetContext().IsTrial = clusterMetadata.IsTrialLicense
 	okteto.GetContext().CompanyName = clusterMetadata.CompanyName
 
-	envManager.AddGroup(userContext.Secrets, env.PriorityVarFromDashboard)
-	err = envManager.Export()
+	c.EnvManager.AddGroup(userContext.Secrets, env.PriorityVarFromDashboard)
+	err = c.EnvManager.Export()
 	if err != nil {
 		return err
 	}

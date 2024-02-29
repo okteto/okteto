@@ -150,7 +150,7 @@ func TestRemoteTest(t *testing.T) {
 				},
 				getBuildEnvVars: func() map[string]string { return nil },
 			}
-			err := rdc.deploy(ctx, tt.config.options)
+			err := rdc.deploy(ctx, tt.config.options, nil)
 			if tt.expected != nil {
 				assert.ErrorContains(t, err, tt.expected.Error())
 			} else {
@@ -193,7 +193,7 @@ func TestExtraHosts(t *testing.T) {
 
 	err := rdc.deploy(ctx, &Options{
 		Manifest: fakeManifest,
-	})
+	}, nil)
 	require.NoError(t, err)
 }
 
@@ -238,7 +238,7 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 				Image: "test-image",
 			},
 		},
-	})
+	}, nil)
 	assert.NoError(t, err)
 }
 
@@ -276,7 +276,7 @@ func TestRemoteDeployWithBadSshAgent(t *testing.T) {
 				Image: "test-image",
 			},
 		},
-	})
+	}, nil)
 	assert.NoError(t, err)
 }
 

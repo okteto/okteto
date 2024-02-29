@@ -56,7 +56,7 @@ func Init(at analyticsTrackerInterface, ioCtrl *io.Controller, envManager *env.M
 				Namespace: ctxResource.Namespace,
 				Show:      true,
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions, envManager); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).Run(ctx, ctxOptions); err != nil {
 				return err
 			}
 

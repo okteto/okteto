@@ -16,10 +16,10 @@ package namespace
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -36,14 +36,14 @@ func Wake(ctx context.Context, envManager *env.Manager) *cobra.Command {
 			if len(args) > 0 {
 				nsToWake = args[0]
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: nsToWake, Show: true}, envManager); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).Run(ctx, &contextCMD.Options{Namespace: nsToWake, Show: true}); err != nil {
 				return err
 			}
 
 			if !okteto.IsOkteto() {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
-			nsCmd, err := NewCommand()
+			nsCmd, err := NewCommand(envManager)
 			if err != nil {
 				return err
 			}

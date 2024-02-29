@@ -17,11 +17,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"text/tabwriter"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -38,7 +38,7 @@ func List(envManager *env.Manager) *cobra.Command {
 		Short:   "List available contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			if err := NewContextCommand().Run(ctx, &Options{raiseNotCtxError: true}, envManager); err != nil {
+			if err := NewContextCommand(WithEnvManger(envManager)).Run(ctx, &Options{raiseNotCtxError: true}); err != nil {
 				return err
 			}
 			return executeListContext()

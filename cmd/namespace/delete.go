@@ -16,7 +16,6 @@ package namespace
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"os/signal"
 	"sync"
@@ -26,6 +25,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -42,7 +42,7 @@ func Delete(ctx context.Context, k8sLogger *io.K8sLogger, envManager *env.Manage
 		Short: "Delete a namespace",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}, envManager); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).Run(ctx, &contextCMD.Options{}); err != nil {
 				return err
 			}
 
@@ -55,11 +55,11 @@ func Delete(ctx context.Context, k8sLogger *io.K8sLogger, envManager *env.Manage
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			nsCmd, err := NewCommand()
+			nsCmd, err := NewCommand(envManager)
 			if err != nil {
 				return err
 			}
-			err = nsCmd.ExecuteDeleteNamespace(ctx, nsToDelete, k8sLogger, envManager)
+			err = nsCmd.ExecuteDeleteNamespace(ctx, nsToDelete, k8sLogger)
 			analytics.TrackDeleteNamespace(err == nil)
 			return err
 		},
@@ -67,7 +67,7 @@ func Delete(ctx context.Context, k8sLogger *io.K8sLogger, envManager *env.Manage
 	return cmd
 }
 
-func (nc *Command) ExecuteDeleteNamespace(ctx context.Context, namespace string, k8sLogger *io.K8sLogger, envManager *env.Manager) error {
+func (nc *Command) ExecuteDeleteNamespace(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
 	oktetoLog.Spinner(fmt.Sprintf("Deleting %s namespace", namespace))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -93,7 +93,7 @@ func (nc *Command) ExecuteDeleteNamespace(ctx context.Context, namespace string,
 			Save:         true,
 			IsCtxCommand: true,
 		}
-		return nc.ctxCmd.Run(ctx, ctxOptions, envManager)
+		return nc.ctxCmd.Run(ctx, ctxOptions)
 	}
 	return nil
 }

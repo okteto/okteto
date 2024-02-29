@@ -161,7 +161,7 @@ func main() {
 	root.AddCommand(contextCMD.Context(okClientProvider, envManager))
 	root.AddCommand(cmd.Kubeconfig(okClientProvider, envManager))
 
-	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd(envManager))
+	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
 	root.AddCommand(registrytoken.RegistryToken(ctx, envManager))
 
 	root.AddCommand(build.Build(ctx, ioController, at, k8sLogger, envManager))

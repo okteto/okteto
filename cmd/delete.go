@@ -45,7 +45,7 @@ func deprecatedDeleteNamespace(ctx context.Context, envManager *env.Manager) *co
 		Short: "Delete a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Warning("'okteto delete namespace' is deprecated in favor of 'okteto namespace delete', and will be removed in a future version")
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}, envManager); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).Run(ctx, &contextCMD.Options{}); err != nil {
 				return err
 			}
 
@@ -53,11 +53,11 @@ func deprecatedDeleteNamespace(ctx context.Context, envManager *env.Manager) *co
 				return errors.ErrContextIsNotOktetoCluster
 			}
 
-			nsCmd, err := namespace.NewCommand()
+			nsCmd, err := namespace.NewCommand(envManager)
 			if err != nil {
 				return err
 			}
-			err = nsCmd.ExecuteDeleteNamespace(ctx, args[0], nil, envManager)
+			err = nsCmd.ExecuteDeleteNamespace(ctx, args[0], nil)
 			analytics.TrackDeleteNamespace(err == nil)
 			return err
 		},

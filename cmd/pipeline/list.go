@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"io"
 	"os"
 	"strings"
@@ -27,6 +26,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/model"
@@ -63,7 +63,7 @@ func list(ctx context.Context, envManager *env.Manager) *cobra.Command {
 		Short: "List all okteto pipelines",
 		Args:  utils.NoArgsAccepted(""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return pipelineListCommandHandler(ctx, flags, contextCMD.NewContextCommand().Run, envManager)
+			return pipelineListCommandHandler(ctx, flags, contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).Run)
 		},
 	}
 
@@ -75,7 +75,7 @@ func list(ctx context.Context, envManager *env.Manager) *cobra.Command {
 }
 
 // pipelineListCommandHandler prepares the right okteto context depending on the provided flags and then calls the actual function that lists pipelines
-func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx initOkCtxFn, envManager *env.Manager) error {
+func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx initOkCtxFn) error {
 	ctxResource := &model.ContextResource{}
 	ctxOptions := &contextCMD.Options{
 		Show: false,
@@ -99,7 +99,7 @@ func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx
 	ctxOptions.Context = ctxResource.Context
 	ctxOptions.Namespace = ctxResource.Namespace
 
-	if err := initOkCtx(ctx, ctxOptions, envManager); err != nil {
+	if err := initOkCtx(ctx, ctxOptions); err != nil {
 		return err
 	}
 
@@ -125,7 +125,7 @@ func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx
 	return executeListPipelines(ctx, *flags, configmaps.List, getPipelineListOutput, c, os.Stdout)
 }
 
-type initOkCtxFn func(ctx context.Context, ctxOptions *contextCMD.Options, envManager *env.Manager) error
+type initOkCtxFn func(ctx context.Context, ctxOptions *contextCMD.Options) error
 type getPipelineListOutputFn func(ctx context.Context, listPipelines listPipelinesFn, namespace, labelSelector string, c kubernetes.Interface) ([]pipelineListItem, error)
 type listPipelinesFn func(ctx context.Context, namespace, labelSelector string, c kubernetes.Interface) ([]apiv1.ConfigMap, error)
 

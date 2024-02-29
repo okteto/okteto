@@ -1285,7 +1285,7 @@ func Test_getInferredManifestFromK8sManifestFile(t *testing.T) {
 			t.Fatalf("Error closing file %s: %s", fullpath, err)
 		}
 	}()
-	_, err = GetInferredManifest(wd, afero.NewMemMapFs())
+	_, err = GetInferredManifest(wd, afero.NewMemMapFs(), nil)
 	assert.NoError(t, err)
 }
 
@@ -1301,7 +1301,7 @@ func Test_getInferredManifestFromK8sManifestFolder(t *testing.T) {
 		}
 	}()
 
-	_, err = GetInferredManifest(wd, afero.NewMemMapFs())
+	_, err = GetInferredManifest(wd, afero.NewMemMapFs(), nil)
 	assert.NoError(t, err)
 }
 
@@ -1337,7 +1337,7 @@ func Test_getInferredManifestFromHelmPath(t *testing.T) {
 					}
 				}()
 			}
-			_, err := GetInferredManifest(wd, afero.NewMemMapFs())
+			_, err := GetInferredManifest(wd, afero.NewMemMapFs(), nil)
 			assert.NoError(t, err)
 		})
 	}
@@ -1345,7 +1345,7 @@ func Test_getInferredManifestFromHelmPath(t *testing.T) {
 
 func Test_getInferredManifestWhenNoManifestExist(t *testing.T) {
 	wd := t.TempDir()
-	result, err := GetInferredManifest(wd, afero.NewMemMapFs())
+	result, err := GetInferredManifest(wd, afero.NewMemMapFs(), nil)
 	assert.Empty(t, result)
 	assert.ErrorIs(t, err, oktetoErrors.ErrCouldNotInferAnyManifest)
 }

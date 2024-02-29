@@ -182,11 +182,11 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 					return err
 				}
 				if create {
-					nsCmd, err := namespace.NewCommand()
+					nsCmd, err := namespace.NewCommand(envManager)
 					if err != nil {
 						return err
 					}
-					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.GetContext().Namespace}, envManager); err != nil {
+					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.GetContext().Namespace}); err != nil {
 						return err
 					}
 				}
@@ -460,7 +460,7 @@ func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath st
 		Namespace: namespace,
 		Show:      true,
 	}
-	if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions, envManager); err != nil {
+	if err := contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).Run(ctx, ctxOptions); err != nil {
 		return nil, err
 	}
 

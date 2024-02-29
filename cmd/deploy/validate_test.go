@@ -59,16 +59,10 @@ func Test_validateAndSet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			envVarStorage := make(map[string]string)
-			setEnvStorage := func(key, value string) error {
-				envVarStorage[key] = value
-				return nil
-			}
-
-			err := validateAndSetVarsFromFlag(tt.variables, setEnvStorage)
+			err := validateAndSetVarsFromFlag(tt.variables, nil)
 
 			assert.Equal(t, tt.expectedError, err)
-			assert.True(t, reflect.DeepEqual(tt.expectedEnvs, envVarStorage))
+			assert.True(t, reflect.DeepEqual(tt.expectedEnvs, nil))
 		})
 	}
 }

@@ -15,10 +15,10 @@ package namespace
 
 import (
 	"context"
-	"github.com/okteto/okteto/pkg/env"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -33,14 +33,14 @@ type Command struct {
 }
 
 // NewCommand creates a namespace command for use in further operations
-func NewCommand() (*Command, error) {
+func NewCommand(envManager *env.Manager) (*Command, error) {
 	c, err := okteto.NewOktetoClient()
 	if err != nil {
 		return nil, err
 	}
 
 	return &Command{
-		ctxCmd:            contextCMD.NewContextCommand(),
+		ctxCmd:            contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)),
 		okClient:          c,
 		k8sClientProvider: okteto.NewK8sClientProviderWithLogger(nil),
 	}, nil

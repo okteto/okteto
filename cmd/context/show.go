@@ -17,9 +17,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -37,7 +37,7 @@ func Show(envManager *env.Manager) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			if err := NewContextCommand().Run(ctx, &Options{raiseNotCtxError: true}, envManager); err != nil {
+			if err := NewContextCommand(WithEnvManger(envManager)).Run(ctx, &Options{raiseNotCtxError: true}); err != nil {
 				return err
 			}
 			ctxStore := okteto.GetContextStore()

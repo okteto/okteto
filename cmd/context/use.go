@@ -16,12 +16,12 @@ package context
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -72,7 +72,7 @@ Or a Kubernetes context:
 			ctxOptions.Save = true
 			ctxOptions.CheckNamespaceAccess = ctxOptions.Namespace != ""
 
-			err := NewContextCommand().Run(ctx, ctxOptions, envManager)
+			err := NewContextCommand(WithEnvManger(envManager)).Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			if err != nil {
 				cmd.SilenceUsage = true
@@ -93,7 +93,7 @@ Or a Kubernetes context:
 	return cmd
 }
 
-func (c *Command) Run(ctx context.Context, ctxOptions *Options, envManager *env.Manager) error {
+func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 	ctxStore := okteto.GetContextStore()
 	if len(ctxStore.Contexts) == 0 {
 		// if the context store has no context stored, set flag to save the
@@ -136,7 +136,7 @@ func (c *Command) Run(ctx context.Context, ctxOptions *Options, envManager *env.
 		ctxOptions.Save = true
 	}
 
-	if err := c.UseContext(ctx, ctxOptions, envManager); err != nil {
+	if err := c.UseContext(ctx, ctxOptions); err != nil {
 		return err
 	}
 
@@ -151,8 +151,8 @@ func (c *Command) Run(ctx context.Context, ctxOptions *Options, envManager *env.
 
 // RunStateless is the fn to use until the refactoring of the context command itself if you want to make use
 // of an injected context instead of using the global context variable.
-func (c *Command) RunStateless(ctx context.Context, ctxOptions *Options, envManager *env.Manager) (*okteto.ContextStateless, error) {
-	err := c.Run(ctx, ctxOptions, envManager)
+func (c *Command) RunStateless(ctx context.Context, ctxOptions *Options) (*okteto.ContextStateless, error) {
+	err := c.Run(ctx, ctxOptions)
 	if err != nil {
 		return nil, err
 	}
