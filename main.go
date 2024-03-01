@@ -84,6 +84,21 @@ func init() {
 	}
 }
 
+type osEnvManager struct{}
+
+func (e *osEnvManager) LookupEnv(key string) (string, bool) {
+	return os.LookupEnv(key)
+}
+func (e *osEnvManager) SetEnv(key, value string) error {
+	return os.Setenv(key, value)
+}
+func (e *osEnvManager) MaskVar(value string) {
+	oktetoLog.AddMaskedWord(value)
+}
+func (e *osEnvManager) WarningLog(format string, args ...interface{}) {
+	oktetoLog.Warning(format, args...)
+}
+
 func main() {
 	ctx := context.Background()
 	ioController := io.NewIOController()
@@ -110,7 +125,7 @@ func main() {
 
 	k8sLogger := io.NewK8sLogger()
 
-	envManager := env.NewEnvManager(os.LookupEnv, os.Setenv, oktetoLog.AddMaskedWord, oktetoLog.Warning)
+	envManager := env.NewEnvManager(&osEnvManager{})
 	localVarsGroup := env.CreateGroupFromLocalVars(os.Environ)
 	envManager.AddGroup(localVarsGroup, env.PriorityVarFromLocal)
 

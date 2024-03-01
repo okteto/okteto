@@ -47,6 +47,7 @@ func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User) *contex
 	cmd.K8sClientProvider = test.NewFakeK8sProvider(nil)
 	cmd.LoginController = test.NewFakeLoginController(user, nil)
 	cmd.OktetoContextWriter = test.NewFakeOktetoContextWriter()
+	//cmd.EnvManager = test.NewFakeEnvManager()
 	return cmd
 }
 

@@ -27,7 +27,6 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
@@ -37,8 +36,20 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func newFakeEnvManager() *env.Manager {
-	return env.NewEnvManager(os.LookupEnv, os.Setenv, oktetoLog.AddMaskedWord, oktetoLog.Warning)
+type fakeEnvManager struct{}
+
+func (e *fakeEnvManager) LookupEnv(key string) (string, bool) {
+	return os.LookupEnv(key)
+}
+func (e *fakeEnvManager) SetEnv(_, _ string) error {
+	return nil
+}
+func (e *fakeEnvManager) MaskVar(_ string) {}
+func (e *fakeEnvManager) WarningLog(_ string, _ ...interface{}) {
+}
+
+func newFakeEnvManager() *fakeEnvManager {
+	return &fakeEnvManager{}
 }
 
 func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User, fakeObjects []runtime.Object) *Command {
@@ -48,7 +59,7 @@ func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User, fakeObj
 		OktetoClientProvider: client.NewFakeOktetoClientProvider(c),
 		OktetoContextWriter:  test.NewFakeOktetoContextWriter(),
 		kubetokenController:  newStaticKubetokenController(),
-		EnvManager:           newFakeEnvManager(),
+		EnvManager:           env.NewEnvManager(newFakeEnvManager()),
 	}
 }
 
