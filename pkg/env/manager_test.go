@@ -105,7 +105,7 @@ func Test_EnvManager(t *testing.T) {
 		assert.Equal(t, false, varExists("TEST_VAR_3"))
 
 		envManager := NewEnvManager(fakeEnvManager)
-		envManager.AddGroup(fakeGroupVarsFromPlatform, PriorityVarFromDashboard)
+		envManager.AddGroup(fakeGroupVarsFromPlatform, PriorityVarFromPlatform)
 		assert.NoError(t, envManager.Export())
 		assert.Equal(t, "platform-value1", os.Getenv("TEST_VAR_1"))
 

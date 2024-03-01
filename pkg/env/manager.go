@@ -21,10 +21,10 @@ import (
 
 // Vars in groups with higher priority override those with lower priority
 const (
-	PriorityVarFromFlag      = 1
-	PriorityVarFromLocal     = 2
-	PriorityVarFromManifest  = 3
-	PriorityVarFromDashboard = 4
+	PriorityVarFromFlag     = 1
+	PriorityVarFromLocal    = 2
+	PriorityVarFromManifest = 3
+	PriorityVarFromPlatform = 4
 )
 
 type ConfigItem struct {
@@ -33,10 +33,10 @@ type ConfigItem struct {
 }
 
 var config = map[int]ConfigItem{
-	PriorityVarFromFlag:      {Name: "as --var", Masked: true},
-	PriorityVarFromLocal:     {Name: "locally or in the catalog", Masked: false},
-	PriorityVarFromManifest:  {Name: "in the manifest", Masked: true},
-	PriorityVarFromDashboard: {Name: "in the dashboard", Masked: true},
+	PriorityVarFromFlag:     {Name: "as --var", Masked: true},
+	PriorityVarFromLocal:    {Name: "locally or in the catalog", Masked: false},
+	PriorityVarFromManifest: {Name: "in the manifest", Masked: true},
+	PriorityVarFromPlatform: {Name: "in the Okteto Platform", Masked: true},
 }
 
 type LookupEnvFunc func(key string) (string, bool)
