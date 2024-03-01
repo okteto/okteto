@@ -366,13 +366,7 @@ func GetManifestV2(manifestPath string, fs afero.Fs, envManager *env.Manager) (*
 	if err != nil {
 		return nil, err
 	}
-
-	//manifestVars.Mask(oktetoLog.AddMaskedWord)
-	//err = manifestVars.Export(os.LookupEnv, os.Setenv, oktetoLog.Warning)
-	//if err != nil {
-	//	return nil, err
-	//}
-
+	
 	manifest, err = getManifestFromOktetoFile(cwd, fs)
 	if err != nil {
 		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {

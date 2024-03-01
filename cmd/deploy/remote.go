@@ -291,13 +291,8 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 		return "", err
 	}
 
-	// TODO: revert this change. Only used for testing purposes
-	oktetoCliImage := getOktetoCLIVersion(config.VersionString)
-	if os.Getenv("OKTETO_CLI_IMAGE") != "" {
-		oktetoCliImage = os.Getenv("OKTETO_CLI_IMAGE")
-	}
 	dockerfileSyntax := dockerfileTemplateProperties{
-		OktetoCLIImage:         oktetoCliImage,
+		OktetoCLIImage:         getOktetoCLIVersion(config.VersionString),
 		UserDeployImage:        opts.Manifest.Deploy.Image,
 		RemoteDeployEnvVar:     constants.OktetoDeployRemote,
 		ContextArgName:         model.OktetoContextEnvVar,
