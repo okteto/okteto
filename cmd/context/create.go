@@ -352,10 +352,7 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 		return err
 	}
 
-	err = os.Setenv(model.OktetoUserNameEnvVar, okteto.GetContext().Username)
-	if err != nil {
-		return err
-	}
+	os.Setenv(model.OktetoUserNameEnvVar, okteto.GetContext().Username)
 
 	return nil
 }
