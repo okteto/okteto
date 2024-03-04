@@ -380,6 +380,8 @@ func (dc *Command) RunDeploy(ctx context.Context, deployOptions *Options, envMan
 		return err
 	}
 
+	envManager.WarnVarsPrecedence()
+
 	err = deployer.deploy(ctx, deployOptions, envManager)
 	if err != nil {
 		if err == oktetoErrors.ErrIntSig {

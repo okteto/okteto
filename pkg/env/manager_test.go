@@ -39,6 +39,7 @@ func (e *fakeEnvManager) MaskVar(value string) {
 func (e *fakeEnvManager) WarningLogf(msg string, _ ...interface{}) {
 	e.logs = append(e.logs, msg)
 }
+func (*fakeEnvManager) WarnVarsPrecedence() {}
 
 func newFakeEnvManager(t *testing.T) *fakeEnvManager {
 	return &fakeEnvManager{

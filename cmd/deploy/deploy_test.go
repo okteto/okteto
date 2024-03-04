@@ -361,7 +361,9 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, opts, nil)
+	envManager := env.NewEnvManager(newFakeEnvManager(make(map[string]string)))
+
+	err := c.RunDeploy(ctx, opts, envManager)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -397,7 +399,9 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, opts, nil)
+	envManager := env.NewEnvManager(newFakeEnvManager(make(map[string]string)))
+
+	err := c.RunDeploy(ctx, opts, envManager)
 
 	assert.ErrorIs(t, err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands)
 
@@ -454,7 +458,9 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 
 	ctx := context.Background()
 
-	err := c.RunDeploy(ctx, opts, nil)
+	envManager := env.NewEnvManager(newFakeEnvManager(make(map[string]string)))
+
+	err := c.RunDeploy(ctx, opts, envManager)
 
 	// we should get a build error because Dockerfile does not exist
 	assert.True(t, strings.Contains(err.Error(), oktetoErrors.InvalidDockerfile))
@@ -537,7 +543,9 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, opts, nil)
+	envManager := env.NewEnvManager(newFakeEnvManager(make(map[string]string)))
+
+	err := c.RunDeploy(ctx, opts, envManager)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -609,7 +617,9 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	err := c.RunDeploy(ctx, opts, nil)
+	envManager := env.NewEnvManager(newFakeEnvManager(make(map[string]string)))
+
+	err := c.RunDeploy(ctx, opts, envManager)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -678,7 +688,9 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, opts, nil)
+	envManager := env.NewEnvManager(newFakeEnvManager(make(map[string]string)))
+
+	err := c.RunDeploy(ctx, opts, envManager)
 
 	assert.NoError(t, err)
 	// No command was executed
@@ -749,7 +761,9 @@ func TestDeployWithoutErrors(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, opts, nil)
+	envManager := env.NewEnvManager(newFakeEnvManager(make(map[string]string)))
+
+	err := c.RunDeploy(ctx, opts, envManager)
 
 	assert.NoError(t, err)
 	// No command was executed
@@ -1193,7 +1207,9 @@ func TestDeployOnlyDependencies(t *testing.T) {
 				CurrentContext: "test",
 			}
 
-			err := c.RunDeploy(ctx, opts, nil)
+			envManager := env.NewEnvManager(newFakeEnvManager(make(map[string]string)))
+
+			err := c.RunDeploy(ctx, opts, envManager)
 
 			require.ErrorIs(t, err, tc.expecterErr)
 		})

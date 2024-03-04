@@ -37,7 +37,7 @@ func (e *fakeEnvManager) SetEnv(key, value string) error {
 func (*fakeEnvManager) MaskVar(string) {}
 func (*fakeEnvManager) WarningLogf(string, ...interface{}) {
 }
-
+func (*fakeEnvManager) WarnVarsPrecedence() {}
 func newFakeEnvManager(envVarStorage map[string]string) *fakeEnvManager {
 	return &fakeEnvManager{
 		envVarStorage: envVarStorage,

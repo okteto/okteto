@@ -14,6 +14,7 @@
 package env
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 	"sync"
@@ -32,7 +33,9 @@ type ConfigItem struct {
 	Masked bool
 }
 
-var config = map[int]ConfigItem{
+type Priority int
+
+var config = map[Priority]ConfigItem{
 	PriorityVarFromFlag:     {Name: "as --var", Masked: true},
 	PriorityVarFromLocal:    {Name: "locally or in the catalog", Masked: false},
 	PriorityVarFromManifest: {Name: "in the manifest", Masked: true},
@@ -46,7 +49,7 @@ type WarningLogFunc func(format string, args ...interface{})
 
 type group struct {
 	Vars     []Var
-	Priority int
+	Priority Priority
 }
 
 type ManagerInterface interface {
@@ -60,16 +63,18 @@ type Manager struct {
 	envManager ManagerInterface
 	groups     []group
 	mu         sync.Mutex
+	//exportedVars map[string]Priority
 }
 
 // NewEnvManager creates a new environment variables manager
 func NewEnvManager(m ManagerInterface) *Manager {
 	return &Manager{
 		envManager: m,
+		//exportedVars: make(map[string]Priority),
 	}
 }
 
-func (m *Manager) AddGroup(vars []Var, priority int) {
+func (m *Manager) AddGroup(vars []Var, priority Priority) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -85,11 +90,11 @@ func (m *Manager) AddGroup(vars []Var, priority int) {
 		}
 	}
 
-	m.sort()
+	m.sortGroupsByPriorityDesc()
 }
 
-// sort sorts the groups by priority descending, so higher priority variables override lower priority ones.
-func (m *Manager) sort() {
+// sortGroupsByPriorityDesc sorts the groups by priority descending, so higher priority variables override lower priority ones.
+func (m *Manager) sortGroupsByPriorityDesc() {
 	sort.Slice(m.groups, func(i, j int) bool {
 		return m.groups[i].Priority > m.groups[j].Priority
 	})
@@ -100,30 +105,38 @@ func (m *Manager) Export() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	exportedVars := make(map[string]int) // Track existing vars and their batch priority
-
 	for _, g := range m.groups {
 		for _, v := range g.Vars {
-			minGroupsToLog := 4
-			if len(m.groups) >= minGroupsToLog {
-				if priority, exported := exportedVars[v.Name]; exported {
-					if priority > g.Priority {
-						prevGroupName := config[priority].Name
-						currentGroupName := config[g.Priority].Name
-						m.envManager.WarningLogf("Variable '%s' defined %s takes precedence over the same variable defined %s, which will be ignored", v.Name, currentGroupName, prevGroupName)
-					}
-				}
-			}
-
 			err := m.envManager.SetEnv(v.Name, v.Value)
 			if err != nil {
 				return err
 			}
-			exportedVars[v.Name] = g.Priority
-
 		}
 	}
 	return nil
+}
+
+// WarnVarsPrecedence prints out a warning message clarifying which variables take precedence over others in case a variables has been defined in multiple groups
+func (m *Manager) WarnVarsPrecedence() {
+	warnings := make(map[string]string)
+	exportedVars := make(map[string]Priority)
+
+	for _, g := range m.groups {
+		for _, v := range g.Vars {
+			if priority, exported := exportedVars[v.Name]; exported {
+				if priority > g.Priority {
+					prevGroupName := config[priority].Name
+					currentGroupName := config[g.Priority].Name
+					warnings[v.Name] = fmt.Sprintf("Variable '%s' defined %s takes precedence over the same variable defined %s, which will be ignored", v.Name, currentGroupName, prevGroupName)
+				}
+			}
+			exportedVars[v.Name] = g.Priority
+		}
+	}
+
+	for _, w := range warnings {
+		m.envManager.WarningLogf(w)
+	}
 }
 
 func CreateGroupFromLocalVars(environ func() []string) []Var {

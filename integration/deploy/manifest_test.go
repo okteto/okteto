@@ -110,21 +110,38 @@ spec:
     app: e2etest
 `
 	oktetoManifestWithVars = `variables:
-  MY_VAR: my-value
+  MY_VAR1: manifest-value-1
   MY_VAR2: $LOCAL_VAR
-  MY_VAR3: ${LOCAL_VAR}
+  MY_VAR3: ${LOCAL_VAR}-with-suffix
+  MY_VAR4: manifest-value-4
 
 deploy:
   commands:
-  - echo MY_VAR=$MY_VAR > var1.txt
-  - echo MY_VAR2=$MY_VAR2 > var2.txt
-  - echo MY_VAR3=${MY_VAR3} > var3.txt
+  - echo MY_VAR1=$MY_VAR1
+  - echo MY_VAR1=$MY_VAR1 > deploy-var1.txt
+  
+  - echo MY_VAR2=$MY_VAR2
+  - echo MY_VAR2=$MY_VAR2 > deploy-var2.txt
+
+  - echo MY_VAR3=$MY_VAR3
+  - echo MY_VAR3=$MY_VAR3 > deploy-var3.txt
+
+  - echo MY_VAR4=$MY_VAR4
+  - echo MY_VAR4=$MY_VAR4 > deploy-var4.txt
 
 destroy:
   commands:
-  - echo $MY_VAR
-  - echo $MY_VAR2
-  - echo ${MY_VAR3}
+  - echo MY_VAR1=$MY_VAR1
+  - echo MY_VAR1=$MY_VAR1 > destroy-var1.txt
+  
+  - echo MY_VAR2=$MY_VAR2
+  - echo MY_VAR2=$MY_VAR2 > destroy-var2.txt
+
+  - echo MY_VAR3=$MY_VAR3
+  - echo MY_VAR3=$MY_VAR3 > destroy-var3.txt
+
+  - echo MY_VAR4=$MY_VAR4
+  - echo MY_VAR4=$MY_VAR4 > destroy-var4.txt
 `
 )
 
@@ -462,7 +479,12 @@ func TestDeployRemoteOktetoManifestFromParentFolder(t *testing.T) {
 // TestDeployOktetoManifestWithVariables tests the following scenario:
 // - Deploying a service using a manifest that uses the top-level propertiy "variables" in the deploy commands
 func TestDeployOktetoManifestWithVariables(t *testing.T) {
-	t.Setenv("LOCAL_VAR", "my-value-2-and-3")
+	// LOCAL_VAR is used to validate the scenario that manifest vars can be expanded
+	t.Setenv("LOCAL_VAR", "local-value-2")
+
+	// MY_VAR4 is used to validate the scenario that the local variable takes precedence over the manifest's definition
+	t.Setenv("MY_VAR4", "local-value-4")
+
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
@@ -492,12 +514,62 @@ func TestDeployOktetoManifestWithVariables(t *testing.T) {
 	deployOutput, deployErr := commands.RunOktetoDeployAndGetOutput(oktetoPath, deployOptions)
 
 	require.NoError(t, deployErr)
-	require.Contains(t, deployOutput, "MY_VAR=my-value")
-	require.Contains(t, deployOutput, "MY_VAR2=my-value-2-and-3")
-	require.Contains(t, deployOutput, "MY_VAR3=my-value-2-and-3")
+	require.Contains(t, deployOutput, "MY_VAR1=***")
+	require.Contains(t, deployOutput, "MY_VAR2=***")
+	require.Contains(t, deployOutput, "MY_VAR3=***")
+	require.Contains(t, deployOutput, "MY_VAR4=local") // we do not obfuscate local variables at the moment
+	require.Contains(t, deployOutput, "Variable 'MY_VAR4' defined locally or in the catalog takes precedence over the same variable defined in the manifest, which will be ignored")
 
-	// TODO: implement the same for destroy
-	// TODO: check for warning: The local variable 'VAR1' takes precedence over the manifest's definition, which will be ignored.
+	//deployVar1, err := os.ReadFile(filepath.Join(dir, "deploy-var1.txt"))
+	//require.NoError(t, err)
+	//require.Contains(t, string(deployVar1), "MY_VAR1=manifest-value-1")
+	//
+	//deployVar2, err := os.ReadFile(filepath.Join(dir, "deploy-var2.txt"))
+	//require.NoError(t, err)
+	//require.Contains(t, string(deployVar2), "MY_VAR2=local-value-2")
+	//
+	//deployVar3, err := os.ReadFile(filepath.Join(dir, "deploy-var3.txt"))
+	//require.NoError(t, err)
+	//require.Contains(t, string(deployVar3), "MY_VAR3=local-value-2-with-suffix")
+	//
+	//deployVar4, err := os.ReadFile(filepath.Join(dir, "deploy-var4.txt"))
+	//require.NoError(t, err)
+	//require.Contains(t, string(deployVar4), "MY_VAR4=local-value-4")
+
+	destroyOptions := &commands.DestroyOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	destroyOutput, destroyErr := commands.RunOktetoDestroyAndGetOutput(oktetoPath, destroyOptions)
+	require.NoError(t, destroyErr)
+	require.Contains(t, destroyOutput, "MY_VAR1=***")
+	require.Contains(t, destroyOutput, "MY_VAR2=***")
+	require.Contains(t, destroyOutput, "MY_VAR3=***")
+	require.Contains(t, destroyOutput, "MY_VAR4=local") // we do not obfuscate local variables at the moment
+	require.Contains(t, destroyOutput, "Variable 'MY_VAR4' defined locally or in the catalog takes precedence over the same variable defined in the manifest, which will be ignored")
+
+	expected := []struct {
+		fileName    string
+		expectedVar string
+	}{
+		{"deploy-var1.txt", "MY_VAR1=manifest-value-1"},
+		{"deploy-var2.txt", "MY_VAR2=local-value-2"},
+		{"deploy-var3.txt", "MY_VAR3=local-value-2-with-suffix"},
+		{"deploy-var4.txt", "MY_VAR4=local-value-4"},
+
+		{"destroy-var1.txt", "MY_VAR1=manifest-value-1"},
+		{"destroy-var2.txt", "MY_VAR2=local-value-2"},
+		{"destroy-var3.txt", "MY_VAR3=local-value-2-with-suffix"},
+		{"destroy-var4.txt", "MY_VAR4=local-value-4"},
+	}
+
+	for _, e := range expected {
+		content, err := os.ReadFile(filepath.Join(dir, e.fileName))
+		require.NoError(t, err)
+		require.Contains(t, string(content), e.expectedVar)
+	}
+
 }
 
 func isImageBuilt(image string) bool {

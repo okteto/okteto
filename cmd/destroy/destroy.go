@@ -208,6 +208,8 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contr
 				return err
 			}
 
+			envManager.WarnVarsPrecedence()
+
 			err = destroyer.destroy(ctx, options)
 
 			metadata := &analytics.DestroyMetadata{
