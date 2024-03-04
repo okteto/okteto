@@ -36,7 +36,7 @@ func (e *fakeEnvManager) SetEnv(key, value string) error {
 func (e *fakeEnvManager) MaskVar(value string) {
 	e.maskedWords = append(e.maskedWords, value)
 }
-func (e *fakeEnvManager) WarningLog(msg string, _ ...interface{}) {
+func (e *fakeEnvManager) WarningLogf(msg string, _ ...interface{}) {
 	e.logs = append(e.logs, msg)
 }
 

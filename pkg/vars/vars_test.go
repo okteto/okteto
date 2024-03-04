@@ -14,8 +14,6 @@
 package vars
 
 import (
-	"fmt"
-	"os"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/env"
@@ -127,78 +125,6 @@ func Test_Vars_MarshalYAML(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestMask(t *testing.T) {
-	vars := Vars{
-		Var{Name: "UNIT_TEST_VAR1", Value: "value-1"},
-		Var{Name: "UNIT_TEST_VAR2", Value: "value-2"},
-		Var{Name: "UNIT_TEST_VAR3", Value: "value-3"},
-	}
-
-	var maskedValues []string
-
-	maskFunction := func(s string) {
-		maskedValues = append(maskedValues, s)
-	}
-
-	vars.Mask(maskFunction)
-
-	assert.Equal(t, len(vars), len(maskedValues))
-
-	for i := range vars {
-		assert.Equal(t, vars[i].Value, maskedValues[i])
-	}
-}
-
-func Test_ExportSuccess(t *testing.T) {
-	t.Setenv("UNIT_TEST_VAR1", "local-value-1")
-
-	vars := Vars{
-		Var{Name: "UNIT_TEST_VAR1", Value: "value-1"},
-		Var{Name: "UNIT_TEST_VAR2", Value: "value-2"},
-		Var{Name: "UNIT_TEST_VAR3", Value: "value-3"},
-	}
-
-	lookupFunction := os.LookupEnv
-	exportFunction := func(key, value string) error {
-		t.Setenv(key, value)
-		return nil
-	}
-	var logOutput string
-	warningLog := func(format string, args ...interface{}) {
-		logOutput = fmt.Sprintf(format, args...)
-	}
-
-	err := vars.Export(lookupFunction, exportFunction, warningLog)
-	assert.NoError(t, err)
-
-	assert.Equal(t, "local-value-1", os.Getenv("UNIT_TEST_VAR1"))
-	assert.Equal(t, "value-2", os.Getenv("UNIT_TEST_VAR2"))
-	assert.Equal(t, "value-3", os.Getenv("UNIT_TEST_VAR3"))
-
-	assert.Equal(t, "Local variable 'UNIT_TEST_VAR1' takes precedence over the manifest's definition, which will be ignored", logOutput)
-}
-
-func Test_ExportFail(t *testing.T) {
-	vars := Vars{
-		Var{Name: "UNIT_TEST_VAR1", Value: "value-1"},
-		Var{Name: "UNIT_TEST_VAR2", Value: "value-2"},
-		Var{Name: "UNIT_TEST_VAR3", Value: "value-3"},
-	}
-
-	lookupFunction := os.LookupEnv
-	exportFunction := func(key, value string) error {
-		return assert.AnError
-	}
-	var logOutput string
-	warningLog := func(format string, args ...interface{}) {
-		logOutput = fmt.Sprintf(format, args...)
-	}
-
-	err := vars.Export(lookupFunction, exportFunction, warningLog)
-	assert.ErrorIs(t, err, assert.AnError)
-	assert.Equal(t, "", logOutput)
 }
 
 func Test_ExpandSuccess(t *testing.T) {

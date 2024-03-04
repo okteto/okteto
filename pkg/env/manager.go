@@ -53,7 +53,7 @@ type ManagerInterface interface {
 	LookupEnv(key string) (string, bool)
 	SetEnv(key, value string) error
 	MaskVar(value string)
-	WarningLog(format string, args ...interface{})
+	WarningLogf(format string, args ...interface{})
 }
 
 type Manager struct {
@@ -110,7 +110,7 @@ func (m *Manager) Export() error {
 					if priority > g.Priority {
 						prevGroupName := config[priority].Name
 						currentGroupName := config[g.Priority].Name
-						m.envManager.WarningLog("Variable '%s' defined %s takes precedence over the same variable defined %s, which will be ignored", v.Name, currentGroupName, prevGroupName)
+						m.envManager.WarningLogf("Variable '%s' defined %s takes precedence over the same variable defined %s, which will be ignored", v.Name, currentGroupName, prevGroupName)
 					}
 				}
 			}

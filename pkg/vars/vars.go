@@ -14,9 +14,6 @@
 package vars
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v2"
 )
@@ -59,7 +56,6 @@ func (vars *Vars) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	for key, val := range rawVars {
-		//(*v)[key] = &Var{Name: key, Value: val}
 		*vars = append(*vars, Var{Name: key, Value: val})
 	}
 
@@ -75,24 +71,4 @@ func (vars *Vars) Expand(expandEnv func(string) (string, error)) error {
 		(*vars)[i].Value = expanded
 	}
 	return nil
-}
-
-func (vars *Vars) Export(lookupEnv func(key string) (string, bool), setEnv func(key, value string) error, warningLog func(format string, args ...interface{})) error {
-	for _, v := range *vars {
-		if v.ExistsLocally(lookupEnv) {
-			warningLog("Local variable '%s' takes precedence over the manifest's definition, which will be ignored", v.Name)
-			fmt.Printf("--->DEBUG ... %s = %s\n", v.Name, os.Getenv(v.Name))
-			continue
-		}
-		if err := setEnv(v.Name, v.Value); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (vars *Vars) Mask(maskFn func(string)) {
-	for _, v := range *vars {
-		maskFn(v.Value)
-	}
 }

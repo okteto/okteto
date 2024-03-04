@@ -95,7 +95,7 @@ func (e *osEnvManager) SetEnv(key, value string) error {
 func (e *osEnvManager) MaskVar(value string) {
 	oktetoLog.AddMaskedWord(value)
 }
-func (e *osEnvManager) WarningLog(format string, args ...interface{}) {
+func (e *osEnvManager) WarningLogf(format string, args ...interface{}) {
 	oktetoLog.Warning(format, args...)
 }
 

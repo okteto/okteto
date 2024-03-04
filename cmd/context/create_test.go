@@ -45,7 +45,7 @@ func (e *fakeEnvManager) SetEnv(_, _ string) error {
 	return nil
 }
 func (e *fakeEnvManager) MaskVar(_ string) {}
-func (e *fakeEnvManager) WarningLog(_ string, _ ...interface{}) {
+func (e *fakeEnvManager) WarningLogf(_ string, _ ...interface{}) {
 }
 
 func newFakeEnvManager() *fakeEnvManager {
