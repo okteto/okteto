@@ -26,7 +26,7 @@ type fakeEnvManager struct {
 	logs        []string
 }
 
-func (e *fakeEnvManager) LookupEnv(key string) (string, bool) {
+func (*fakeEnvManager) LookupEnv(key string) (string, bool) {
 	return os.LookupEnv(key)
 }
 func (e *fakeEnvManager) SetEnv(key, value string) error {

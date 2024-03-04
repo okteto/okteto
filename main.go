@@ -86,16 +86,16 @@ func init() {
 
 type osEnvManager struct{}
 
-func (e *osEnvManager) LookupEnv(key string) (string, bool) {
+func (*osEnvManager) LookupEnv(key string) (string, bool) {
 	return os.LookupEnv(key)
 }
-func (e *osEnvManager) SetEnv(key, value string) error {
+func (*osEnvManager) SetEnv(key, value string) error {
 	return os.Setenv(key, value)
 }
-func (e *osEnvManager) MaskVar(value string) {
+func (*osEnvManager) MaskVar(value string) {
 	oktetoLog.AddMaskedWord(value)
 }
-func (e *osEnvManager) WarningLogf(format string, args ...interface{}) {
+func (*osEnvManager) WarningLogf(format string, args ...interface{}) {
 	oktetoLog.Warning(format, args...)
 }
 

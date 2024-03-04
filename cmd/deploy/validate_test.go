@@ -27,15 +27,15 @@ type fakeEnvManager struct {
 	envVarStorage map[string]string
 }
 
-func (e *fakeEnvManager) LookupEnv(key string) (string, bool) {
+func (*fakeEnvManager) LookupEnv(key string) (string, bool) {
 	return os.LookupEnv(key)
 }
 func (e *fakeEnvManager) SetEnv(key, value string) error {
 	e.envVarStorage[key] = value
 	return nil
 }
-func (e *fakeEnvManager) MaskVar(_ string) {}
-func (e *fakeEnvManager) WarningLogf(_ string, _ ...interface{}) {
+func (*fakeEnvManager) MaskVar(string) {}
+func (*fakeEnvManager) WarningLogf(string, ...interface{}) {
 }
 
 func newFakeEnvManager(envVarStorage map[string]string) *fakeEnvManager {

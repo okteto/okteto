@@ -38,14 +38,14 @@ import (
 
 type fakeEnvManager struct{}
 
-func (e *fakeEnvManager) LookupEnv(key string) (string, bool) {
+func (*fakeEnvManager) LookupEnv(key string) (string, bool) {
 	return os.LookupEnv(key)
 }
-func (e *fakeEnvManager) SetEnv(_, _ string) error {
+func (*fakeEnvManager) SetEnv(string, string) error {
 	return nil
 }
-func (e *fakeEnvManager) MaskVar(_ string) {}
-func (e *fakeEnvManager) WarningLogf(_ string, _ ...interface{}) {
+func (*fakeEnvManager) MaskVar(string) {}
+func (*fakeEnvManager) WarningLogf(string, ...interface{}) {
 }
 
 func newFakeEnvManager() *fakeEnvManager {
