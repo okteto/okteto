@@ -63,14 +63,12 @@ type Manager struct {
 	envManager ManagerInterface
 	groups     []group
 	mu         sync.Mutex
-	//exportedVars map[string]Priority
 }
 
 // NewEnvManager creates a new environment variables manager
 func NewEnvManager(m ManagerInterface) *Manager {
 	return &Manager{
 		envManager: m,
-		//exportedVars: make(map[string]Priority),
 	}
 }
 
