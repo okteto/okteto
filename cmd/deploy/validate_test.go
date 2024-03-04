@@ -15,11 +15,11 @@ package deploy
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/stretchr/testify/assert"
 )
 
