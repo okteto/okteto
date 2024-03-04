@@ -710,6 +710,108 @@ func TestGetEnvsFromDevContainer(t *testing.T) {
 				"FROM_CM=test",
 			},
 		},
+		{
+			name: "dev container with env var from secret source",
+			podspec: &apiv1.PodSpec{
+				Containers: []apiv1.Container{
+					{
+						EnvFrom: []apiv1.EnvFromSource{
+							{
+								SecretRef: &v1.SecretEnvSource{
+									LocalObjectReference: v1.LocalObjectReference{
+										Name: "name-of-test-secret",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			client: fake.NewSimpleClientset(&apiv1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "name-of-test-secret",
+					Namespace: "ns-test",
+				},
+				Data: map[string][]byte{
+					"name-of-test-secret": []byte("test"),
+				},
+			}),
+			expectedEnvs: []string{
+				"name-of-test-secret=test",
+			},
+		},
+		{
+			name: "dev container with env var from secret not found",
+			podspec: &apiv1.PodSpec{
+				Containers: []apiv1.Container{
+					{
+						EnvFrom: []apiv1.EnvFromSource{
+							{
+								SecretRef: &v1.SecretEnvSource{
+									LocalObjectReference: v1.LocalObjectReference{
+										Name: "not-found-secret",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			client:       fake.NewSimpleClientset(),
+			expectedEnvs: []string{},
+			expectedErr:  fmt.Errorf("error getting kubernetes secret: secrets \"not-found-secret\" not found: the development container didn't start successfully because the kubernetes secret 'not-found-secret' was not found"),
+		},
+		{
+			name: "dev container with env var from cm",
+			podspec: &apiv1.PodSpec{
+				Containers: []apiv1.Container{
+					{
+						EnvFrom: []apiv1.EnvFromSource{
+							{
+								ConfigMapRef: &v1.ConfigMapEnvSource{
+									LocalObjectReference: v1.LocalObjectReference{
+										Name: "name-of-test-env-from-cm",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			client: fake.NewSimpleClientset(&apiv1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "name-of-test-env-from-cm",
+					Namespace: "ns-test",
+				},
+				Data: map[string]string{
+					"name-of-test-env-from-cm": "test",
+				},
+			}),
+			expectedEnvs: []string{
+				"name-of-test-env-from-cm=test",
+			},
+		},
+		{
+			name: "dev container with env var from cm not found",
+			podspec: &apiv1.PodSpec{
+				Containers: []apiv1.Container{
+					{
+						EnvFrom: []apiv1.EnvFromSource{
+							{
+								ConfigMapRef: &v1.ConfigMapEnvSource{
+									LocalObjectReference: v1.LocalObjectReference{
+										Name: "not-found",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			client:       fake.NewSimpleClientset(),
+			expectedEnvs: []string{},
+			expectedErr:  fmt.Errorf("configmaps \"not-found\" not found: the development container didn't start successfully because the kubernetes configmap 'not-found' was not found"),
+		},
 	}
 
 	for _, tt := range tests {
