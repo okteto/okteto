@@ -17,13 +17,31 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"os"
 )
+
+type fakeEnvManager struct{}
+
+func (e *fakeEnvManager) LookupEnv(key string) (string, bool) {
+	return os.LookupEnv(key)
+}
+func (e *fakeEnvManager) SetEnv(_, _ string) error {
+	return nil
+}
+func (e *fakeEnvManager) MaskVar(_ string) {}
+func (e *fakeEnvManager) WarningLog(_ string, _ ...interface{}) {
+}
+
+func newFakeEnvManager() *fakeEnvManager {
+	return &fakeEnvManager{}
+}
 
 type fakeK8sProvider struct {
 	k8sClient kubernetes.Interface
@@ -42,12 +60,12 @@ func (*fakeK8sProvider) GetIngressClient() (*ingresses.Client, error) {
 }
 
 func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User) *contextCMD.Command {
-	cmd := contextCMD.NewContextCommand()
+	envManager := env.NewEnvManager(newFakeEnvManager())
+	cmd := contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager))
 	cmd.OktetoClientProvider = client.NewFakeOktetoClientProvider(c)
 	cmd.K8sClientProvider = test.NewFakeK8sProvider(nil)
 	cmd.LoginController = test.NewFakeLoginController(user, nil)
 	cmd.OktetoContextWriter = test.NewFakeOktetoContextWriter()
-	//cmd.EnvManager = test.NewFakeEnvManager()
 	return cmd
 }
 

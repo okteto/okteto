@@ -15,11 +15,34 @@ package deploy
 
 import (
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
+	"os"
 	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+type fakeEnvManager struct {
+	envVarStorage map[string]string
+}
+
+func (e *fakeEnvManager) LookupEnv(key string) (string, bool) {
+	return os.LookupEnv(key)
+}
+func (e *fakeEnvManager) SetEnv(key, value string) error {
+	e.envVarStorage[key] = value
+	return nil
+}
+func (e *fakeEnvManager) MaskVar(_ string) {}
+func (e *fakeEnvManager) WarningLog(_ string, _ ...interface{}) {
+}
+
+func newFakeEnvManager(envVarStorage map[string]string) *fakeEnvManager {
+	return &fakeEnvManager{
+		envVarStorage: envVarStorage,
+	}
+}
 
 func Test_validateAndSet(t *testing.T) {
 	var tests = []struct {
@@ -29,13 +52,13 @@ func Test_validateAndSet(t *testing.T) {
 		variables     []string
 	}{
 		{
-			name:          "correct assingnament",
+			name:          "correct assignment",
 			variables:     []string{"NAME=test"},
 			expectedError: nil,
 			expectedEnvs:  map[string]string{"NAME": "test"},
 		},
 		{
-			name:          "bas assingnament",
+			name:          "bad assignment",
 			variables:     []string{"NAME:test"},
 			expectedError: fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", "NAME:test"),
 			expectedEnvs:  map[string]string{},
@@ -59,10 +82,12 @@ func Test_validateAndSet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateAndSetVarsFromFlag(tt.variables, nil)
+			envVarStorage := make(map[string]string)
+			envManager := env.NewEnvManager(newFakeEnvManager(envVarStorage))
+			err := validateAndSetVarsFromFlag(tt.variables, envManager)
 
 			assert.Equal(t, tt.expectedError, err)
-			assert.True(t, reflect.DeepEqual(tt.expectedEnvs, nil))
+			assert.True(t, reflect.DeepEqual(tt.expectedEnvs, envVarStorage))
 		})
 	}
 }
