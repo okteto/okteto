@@ -498,9 +498,6 @@ func TestDeployOktetoManifestWithVariables(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
-	//require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
-	//c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
-	//require.NoError(t, err)
 
 	require.NoError(t, createOktetoManifestWithVars(dir))
 
@@ -519,22 +516,6 @@ func TestDeployOktetoManifestWithVariables(t *testing.T) {
 	require.Contains(t, deployOutput, "MY_VAR3=***")
 	require.Contains(t, deployOutput, "MY_VAR4=local") // we do not obfuscate local variables at the moment
 	require.Contains(t, deployOutput, "Variable 'MY_VAR4' defined locally or in the catalog takes precedence over the same variable defined in the manifest, which will be ignored")
-
-	//deployVar1, err := os.ReadFile(filepath.Join(dir, "deploy-var1.txt"))
-	//require.NoError(t, err)
-	//require.Contains(t, string(deployVar1), "MY_VAR1=manifest-value-1")
-	//
-	//deployVar2, err := os.ReadFile(filepath.Join(dir, "deploy-var2.txt"))
-	//require.NoError(t, err)
-	//require.Contains(t, string(deployVar2), "MY_VAR2=local-value-2")
-	//
-	//deployVar3, err := os.ReadFile(filepath.Join(dir, "deploy-var3.txt"))
-	//require.NoError(t, err)
-	//require.Contains(t, string(deployVar3), "MY_VAR3=local-value-2-with-suffix")
-	//
-	//deployVar4, err := os.ReadFile(filepath.Join(dir, "deploy-var4.txt"))
-	//require.NoError(t, err)
-	//require.Contains(t, string(deployVar4), "MY_VAR4=local-value-4")
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
