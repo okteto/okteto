@@ -52,9 +52,9 @@ func RunOktetoDestroyAndGetOutput(oktetoPath string, destroyOptions *DestroyOpti
 	log.Printf("Running '%s'", cmd.String())
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return string(o), fmt.Errorf("okteto deploy failed: %s - %w", string(o), err)
+		return string(o), fmt.Errorf("okteto destroy failed: %s - %w", string(o), err)
 	}
-	log.Printf("okteto deploy success")
+	log.Printf("okteto destroy success")
 	return string(o), nil
 }
 
