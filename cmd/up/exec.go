@@ -300,6 +300,27 @@ func (d *devContainerEnvGetter) getEnvsFromDevContainer(ctx context.Context, spe
 		envs = append(envs, fmt.Sprintf("%s=%s", env.Name, val))
 	}
 
+	for _, envFromSource := range devContainer.EnvFrom {
+		if envFromSource.ConfigMapRef != nil {
+			cm, err := configmaps.Get(ctx, envFromSource.ConfigMapRef.Name, namespace, client)
+			if err != nil {
+				return envs, fmt.Errorf("%w: the development container didn't start successfully because the kubernetes configmap '%s' was not found", err, envFromSource.ConfigMapRef.Name)
+			}
+			for k, v := range cm.Data {
+				envs = append(envs, fmt.Sprintf("%s=%s", k, v))
+			}
+		}
+		if envFromSource.SecretRef != nil {
+			secret, err := secrets.Get(ctx, envFromSource.SecretRef.Name, namespace, client)
+			if err != nil {
+				return envs, fmt.Errorf("%w: the development container didn't start successfully because the kubernetes secret '%s' was not found", err, envFromSource.SecretRef.Name)
+			}
+			for k, v := range secret.Data {
+				envs = append(envs, fmt.Sprintf("%s=%s", k, string(v)))
+			}
+		}
+	}
+
 	return envs, nil
 }
 
