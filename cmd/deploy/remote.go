@@ -146,7 +146,7 @@ func newRemoteDeployer(builder builderInterface, ioCtrl *io.Controller) *remoteD
 	}
 }
 
-func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Options, envManager *env.Manager) error {
+func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Options, _ *env.Manager) error {
 	home, err := homedir.Dir()
 	if err != nil {
 		return err
