@@ -56,7 +56,7 @@ func (*Controller) AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, t
 		if err != nil {
 			return nil, oktetoErrors.UserError{
 				E:    fmt.Errorf("couldn't authenticate to okteto context: %w", err),
-				Hint: "Try to set the context using the 'token' flag: https://www.okteto.com/docs/reference/cli/#context",
+				Hint: "Try to set the context using the 'token' flag: https://www.okteto.com/docs/reference/okteto-cli/#context",
 			}
 		}
 		if user.New {
@@ -85,7 +85,7 @@ func WithBrowser(ctx context.Context, oktetoURL string) (*types.User, error) {
 		if strings.Contains(err.Error(), "executable file not found in $PATH") {
 			return nil, oktetoErrors.UserError{
 				E:    fmt.Errorf("no browser could be found"),
-				Hint: "Use the '--token' flag to run this command in server mode. More information can be found here: https://www.okteto.com/docs/reference/cli/#context",
+				Hint: "Use the '--token' flag to run this command in server mode. More information can be found here: https://www.okteto.com/docs/reference/okteto-cli/#context",
 			}
 		}
 		oktetoLog.Errorf("Something went wrong opening your browser: %s\n", err)

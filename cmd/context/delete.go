@@ -29,7 +29,7 @@ import (
 func DeleteCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
-		Args:  utils.MinimumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#delete"),
+		Args:  utils.MinimumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#delete"),
 		Short: "Delete one or more contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			for idx, arg := range args {

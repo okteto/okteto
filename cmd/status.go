@@ -47,7 +47,7 @@ func Status() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "Status of the synchronization process",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#status"),
+		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#status"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if okteto.InDevContainer() {

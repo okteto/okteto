@@ -398,7 +398,7 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry
 			E: fmt.Errorf("application '%s' not found in namespace '%s'", dev.Name, dev.Namespace),
 			Hint: `Verify that your application is running and your okteto context is pointing to the right namespace
     Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
-    More information is available here: https://okteto.com/docs/reference/cli/#up`,
+    More information is available here: https://okteto.com/docs/reference/okteto-cli/#up`,
 		}
 	}
 	return app, false, nil

@@ -16,7 +16,6 @@ package model
 import (
 	"os"
 	"sort"
-	"strings"
 
 	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -75,7 +74,7 @@ func ReadRC(bytes []byte) (*DevRC, error) {
 
 func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 	if len(devRc.Annotations) > 0 {
-		oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in a future version. Use the field 'metadata.Annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)")
+		oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in a future version. Use the field 'metadata.Annotations' instead (https://okteto.com/docs/reference/okteto-manifest/#metadata)")
 		for annotationKey, annotationValue := range devRc.Annotations {
 			dev.Metadata.Annotations[annotationKey] = annotationValue
 		}
@@ -99,7 +98,7 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 
 	}
 	sort.SliceStable(dev.Environment, func(i, j int) bool {
-		return strings.Compare(dev.Environment[i].Name, dev.Environment[j].Name) < 0
+		return dev.Environment[i].Name < dev.Environment[j].Name
 	})
 
 	for _, fwd := range devRc.Forward {
@@ -126,7 +125,7 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 	}
 
 	if len(devRc.Labels) > 0 {
-		oktetoLog.Warning("The field 'labels' is deprecated and will be removed in a future version. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)")
+		oktetoLog.Warning("The field 'labels' is deprecated and will be removed in a future version. Use the field 'selector' instead (https://okteto.com/docs/reference/okteto-manifest/#selector)")
 		for labelKey, labelValue := range devRc.Labels {
 			dev.Selector[labelKey] = labelValue
 		}

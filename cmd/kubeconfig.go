@@ -35,7 +35,7 @@ func Kubeconfig(okClientProvider oktetoClientProvider) *cobra.Command {
 
 Generated kubeconfig file uses a credential plugin to get the cluster credentials via Okteto backend that requires the Okteto CLI to be in the PATH. Learn more about how to use the Kubernetes credentials at https://www.okteto.com/docs/core/credentials/kubernetes-credentials#using-your-kubernetes-credentials.
 `,
-		Args: utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#kubeconfig"),
+		Args: utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#kubeconfig"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return context.UpdateKubeconfigCMD(okClientProvider).RunE(cmd, args)
 		},

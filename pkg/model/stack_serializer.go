@@ -1589,11 +1589,11 @@ func validateExtensions(stack StackRaw) error {
 		}
 	}
 	if len(nonValidFields) == 1 {
-		return fmt.Errorf("invalid compose manifest: Field '%s' is not supported.\n    More information is available here: https://okteto.com/docs/reference/compose/", nonValidFields[0])
+		return fmt.Errorf("invalid compose manifest: Field '%s' is not supported.\n    More information is available here: https://okteto.com/docs/reference/docker-compose/", nonValidFields[0])
 	} else if len(nonValidFields) > 1 {
 		return fmt.Errorf(`invalid compose manifest: The following fields are not supported.
     - %s
-    More information is available here: https://okteto.com/docs/reference/compose/`, strings.Join(nonValidFields, "\n    - "))
+    More information is available here: https://okteto.com/docs/reference/docker-compose/`, strings.Join(nonValidFields, "\n    - "))
 	}
 	return nil
 }
