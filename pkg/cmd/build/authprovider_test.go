@@ -19,6 +19,9 @@ import (
 
 	"github.com/docker/cli/cli/config/configfile"
 	"github.com/docker/cli/cli/config/types"
+	"github.com/moby/buildkit/session/auth"
+	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -72,4 +75,51 @@ func Test_GetAuthConfig_OmisionIfNeeded(t *testing.T) {
 	require.Error(t, err)
 	t.Logf("error is: %q", err)
 	require.True(t, isErrCredentialsHelperNotAccessible(err))
+}
+
+type fakeContext struct{}
+
+func (fakeContext) isOktetoContext() bool                 { return true }
+func (fakeContext) getOktetoClientCfg() *okteto.ClientCfg { return nil }
+func (fakeContext) getExternalRegistryCreds(registryOrImage string, isOkteto bool, c *okteto.Client) (string, string, error) {
+	return "", "", nil
+}
+
+func TestGetOktetoCredentials(t *testing.T) {
+	tt := []struct {
+		name     string
+		user     string
+		pass     string
+		err      error
+		expected *auth.CredentialsResponse
+	}{
+		{
+			name: "okteto credentials",
+			user: "test",
+			pass: "test",
+			err:  nil,
+			expected: &auth.CredentialsResponse{
+				Username: "test",
+				Secret:   "test",
+			},
+		},
+		{
+			name:     "error getting okteto credentials",
+			err:      assert.AnError,
+			expected: nil,
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			ap := &authProvider{
+				externalAuth: func(string, bool, *okteto.Client) (string, string, error) {
+					return tc.user, tc.pass, tc.err
+				},
+				authContext: &fakeContext{},
+			}
+			creds, err := ap.getOktetoCredentials("", nil)
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, creds)
+		})
+	}
 }
