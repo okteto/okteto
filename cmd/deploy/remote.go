@@ -317,7 +317,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 	// build the services) so we would create a remote executor without certain files
 	// necessary for the later deployment which would cause an error when deploying
 	// remotely due to the lack of these files.
-	if err := remote.CreateDockerignoreFileWithFilesystem(cwd, tmpDir, opts.ManifestPathFlag, rd.fs); err != nil {
+	if err := remote.CreateDockerignoreFileWithFilesystem(cwd, tmpDir, cleanManifestPath(opts.ManifestPathFlag), rd.fs); err != nil {
 		return "", err
 	}
 
@@ -325,6 +325,19 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 		return "", err
 	}
 	return dockerfile.Name(), nil
+}
+
+// cleanManifestPath removes the path to the manifest file, in case the command was executed from a parent or child folder
+func cleanManifestPath(manifestPath string) string {
+	lastFolder := filepath.Base(filepath.Dir(manifestPath))
+	if lastFolder == ".okteto" {
+		path := filepath.Clean(manifestPath)
+		parts := strings.Split(path, string(filepath.Separator))
+
+		return filepath.Join(parts[len(parts)-2:]...)
+	} else {
+		return filepath.Base(manifestPath)
+	}
 }
 
 func getDeployFlags(opts *Options) ([]string, error) {
@@ -339,15 +352,7 @@ func getDeployFlags(opts *Options) ([]string, error) {
 	}
 
 	if opts.ManifestPathFlag != "" {
-		lastFolder := filepath.Base(filepath.Dir(opts.ManifestPathFlag))
-		if lastFolder == ".okteto" {
-			path := filepath.Clean(opts.ManifestPathFlag)
-			parts := strings.Split(path, string(filepath.Separator))
-
-			deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filepath.Join(parts[len(parts)-2:]...)))
-		} else {
-			deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filepath.Base(opts.ManifestPathFlag)))
-		}
+		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", cleanManifestPath(opts.ManifestPathFlag)))
 	}
 
 	if len(opts.Variables) > 0 {
