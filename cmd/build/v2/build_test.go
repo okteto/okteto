@@ -161,8 +161,7 @@ func (a *fakeAnalyticsTracker) TrackImageBuild(meta ...*analytics.ImageBuildMeta
 
 func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistryInterface, cfg oktetoBuilderConfigInterface, analyticsTracker analyticsTrackerInterface) *OktetoBuilder {
 	return &OktetoBuilder{
-		Registry: registry,
-		// Builder:           builder,
+		Registry:          registry,
 		buildEnvironments: make(map[string]string),
 		Builder: basic.Builder{
 			BuildRunner: builder,

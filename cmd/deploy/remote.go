@@ -128,12 +128,12 @@ type remoteDeployCommand struct {
 // newRemoteDeployer creates the remote deployer from a
 func newRemoteDeployer(builder builderInterface, ioCtrl *io.Controller) *remoteDeployCommand {
 	fs := afero.NewOsFs()
-	runner := &buildCmd.OktetoBuilder{
-		OktetoContext: &okteto.ContextStateless{
+	runner := buildCmd.NewOktetoBuilder(
+		&okteto.ContextStateless{
 			Store: okteto.GetContextStore(),
 		},
-		Fs: fs,
-	}
+		fs,
+	)
 	return &remoteDeployCommand{
 		getBuildEnvVars:      builder.GetBuildEnvVars,
 		runner:               runner,

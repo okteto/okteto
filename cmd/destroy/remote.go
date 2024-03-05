@@ -123,12 +123,12 @@ type remoteDestroyCommand struct {
 
 func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remoteDestroyCommand {
 	fs := afero.NewOsFs()
-	runner := &buildCmd.OktetoBuilder{
-		OktetoContext: &okteto.ContextStateless{
+	runner := buildCmd.NewOktetoBuilder(
+		&okteto.ContextStateless{
 			Store: okteto.GetContextStore(),
 		},
-		Fs: fs,
-	}
+		fs,
+	)
 	if manifest.Destroy == nil {
 		manifest.Destroy = &model.DestroyInfo{}
 	}

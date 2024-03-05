@@ -43,12 +43,12 @@ func NewBuilder(builder basic.BuildRunner, ioCtrl *io.Controller) *OktetoBuilder
 
 // NewBuilderFromScratch creates a new okteto builder
 func NewBuilderFromScratch(ioCtrl *io.Controller) *OktetoBuilder {
-	builder := &buildCmd.OktetoBuilder{
-		OktetoContext: &okteto.ContextStateless{
+	builder := buildCmd.NewOktetoBuilder(
+		&okteto.ContextStateless{
 			Store: okteto.GetContextStore(),
 		},
-		Fs: afero.NewOsFs(),
-	}
+		afero.NewOsFs(),
+	)
 	return NewBuilder(builder, ioCtrl)
 }
 

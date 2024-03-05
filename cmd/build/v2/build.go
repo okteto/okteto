@@ -115,12 +115,12 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistry
 
 // NewBuilderFromScratch creates a new okteto builder
 func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *io.Controller) *OktetoBuilder {
-	builder := &buildCmd.OktetoBuilder{
-		OktetoContext: &okteto.ContextStateless{
+	builder := buildCmd.NewOktetoBuilder(
+		&okteto.ContextStateless{
 			Store: okteto.GetContextStore(),
 		},
-		Fs: afero.NewOsFs(),
-	}
+		afero.NewOsFs(),
+	)
 	reg := registry.NewOktetoRegistry(okteto.Config{})
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
 	wd, err := wdCtrl.Get()
