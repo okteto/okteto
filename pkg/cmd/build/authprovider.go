@@ -15,7 +15,6 @@ package build
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -144,10 +143,7 @@ func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRe
 		return nil, err
 	}
 
-	credentials, err := ap.getOktetoCredentials(originalHost, c)
-	if err != nil {
-		return nil, fmt.Errorf("error getting credentials from okteto - %s", err)
-	}
+	credentials := ap.getOktetoCredentials(originalHost, c)
 
 	retrieveFromLocal := env.LoadBooleanOrDefault(oktetoLocalRegistryStoreEnabledEnvVarKey, true)
 	if !retrieveFromLocal {
@@ -177,7 +173,7 @@ func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRe
 	return credentials, nil
 }
 
-func (ap *authProvider) getOktetoCredentials(host string, c *okteto.Client) (*auth.CredentialsResponse, error) {
+func (ap *authProvider) getOktetoCredentials(host string, c *okteto.Client) *auth.CredentialsResponse {
 	res := &auth.CredentialsResponse{}
 	if user, pass, err := ap.externalAuth(host, ap.authContext.isOktetoContext(), c); err != nil {
 		oktetoLog.Debugf("failed to load external auth for %s: %w", host, err.Error())
@@ -185,7 +181,7 @@ func (ap *authProvider) getOktetoCredentials(host string, c *okteto.Client) (*au
 		res.Username = user
 		res.Secret = pass
 	}
-	return res, nil
+	return res
 }
 
 func isErrCredentialsHelperNotAccessible(err error) bool {

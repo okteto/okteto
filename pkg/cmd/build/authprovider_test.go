@@ -87,11 +87,11 @@ func (fakeContext) getExternalRegistryCreds(registryOrImage string, isOkteto boo
 
 func TestGetOktetoCredentials(t *testing.T) {
 	tt := []struct {
+		err      error
+		expected *auth.CredentialsResponse
 		name     string
 		user     string
 		pass     string
-		err      error
-		expected *auth.CredentialsResponse
 	}{
 		{
 			name: "okteto credentials",
@@ -117,8 +117,7 @@ func TestGetOktetoCredentials(t *testing.T) {
 				},
 				authContext: &fakeContext{},
 			}
-			creds, err := ap.getOktetoCredentials("", nil)
-			require.NoError(t, err)
+			creds := ap.getOktetoCredentials("", nil)
 			require.Equal(t, tc.expected, creds)
 		})
 	}
