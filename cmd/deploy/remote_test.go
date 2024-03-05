@@ -750,7 +750,7 @@ func Test_cleanManifestPath(t *testing.T) {
 		{
 			name:     "manifest within .okteto",
 			manifest: "/path/to/service/.okteto/okteto.yml",
-			expected: ".okteto/okteto.yml",
+			expected: filepath.Clean(".okteto/okteto.yml"),
 		},
 	}
 
