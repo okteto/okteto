@@ -21,98 +21,29 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	filesystem "github.com/okteto/okteto/pkg/filesystem/fake"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-type fakeBuilder struct {
+type fakeRunner struct {
 	err           error
 	assertOptions func(o *types.BuildOptions)
 }
 
-func (f fakeBuilder) Build(_ context.Context, opts *types.BuildOptions) error {
+func (f fakeRunner) Run(_ context.Context, opts *types.BuildOptions, _ *io.Controller) error {
 	if f.assertOptions != nil {
 		f.assertOptions(opts)
 	}
 	return f.err
 }
-
-func (fakeBuilder) IsV1() bool { return true }
-
-type fakeRegistry struct {
-	registry          map[string]fakeImage
-	errAddImageByName error
-	errAddImageByOpts error
-}
-
-// fakeImage represents the data from an image
-type fakeImage struct {
-	Registry string
-	Repo     string
-	Tag      string
-	ImageRef string
-	Args     []string
-}
-
-func newFakeRegistry() fakeRegistry {
-	return fakeRegistry{
-		registry: map[string]fakeImage{},
-	}
-}
-
-func (fr fakeRegistry) HasGlobalPushAccess() (bool, error) { return false, nil }
-
-func (fr fakeRegistry) GetImageTagWithDigest(imageTag string) (string, error) {
-	if _, ok := fr.registry[imageTag]; !ok {
-		return "", oktetoErrors.ErrNotFound
-	}
-	return imageTag, nil
-}
-func (fr fakeRegistry) IsOktetoRegistry(_ string) bool { return false }
-
-func (fr fakeRegistry) AddImageByName(images ...string) error {
-	if fr.errAddImageByName != nil {
-		return fr.errAddImageByName
-	}
-	for _, image := range images {
-		fr.registry[image] = fakeImage{}
-	}
-	return nil
-}
-func (fr fakeRegistry) AddImageByOpts(opts *types.BuildOptions) error {
-	if fr.errAddImageByOpts != nil {
-		return fr.errAddImageByOpts
-	}
-	fr.registry[opts.Tag] = fakeImage{Args: opts.BuildArgs}
-	return nil
-}
-
-func (fr fakeRegistry) GetImageReference(image string) (registry.OktetoImageReference, error) {
-	ref, err := name.ParseReference(image)
-	if err != nil {
-		return registry.OktetoImageReference{}, err
-	}
-	return registry.OktetoImageReference{
-		Registry: ref.Context().RegistryStr(),
-		Repo:     ref.Context().RepositoryStr(),
-		Tag:      ref.Identifier(),
-		Image:    image,
-	}, nil
-}
-
-func (fr fakeRegistry) IsGlobalRegistry(image string) bool { return false }
-
-func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string) { return "", "" }
-func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)   { return "", "" }
 
 func TestRemoteTest(t *testing.T) {
 	ctx := context.Background()
@@ -195,12 +126,11 @@ func TestRemoteTest(t *testing.T) {
 			wdCtrl.SetErrors(tt.config.wd)
 			tempCreator.SetError(tt.config.tempFsCreator)
 			rdc := remoteDestroyCommand{
-				builder:              fakeBuilder{err: tt.config.builderErr},
+				runner:               fakeRunner{err: tt.config.builderErr},
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,
 				temporalCtrl:         tempCreator,
 				destroyImage:         "",
-				registry:             newFakeRegistry(),
 				clusterMetadata: func(ctx context.Context) (*types.ClusterMetadata, error) {
 					return &types.ClusterMetadata{
 						Certificate: []byte("cert"),
@@ -261,9 +191,20 @@ func TestGetDestroyFlags(t *testing.T) {
 			config: config{
 				opts: &Options{
 					ManifestPathFlag: "/hello/this/is/a/test",
+					ManifestPath:     "/hello/this/is/a/test",
 				},
 			},
-			expected: []string{"--file /hello/this/is/a/test"},
+			expected: []string{"--file test"},
+		},
+		{
+			name: "manifest path set on .okteto",
+			config: config{
+				opts: &Options{
+					ManifestPathFlag: "/hello/this/is/a/.okteto/test",
+					ManifestPath:     "/hello/this/is/a/.okteto/test",
+				},
+			},
+			expected: []string{fmt.Sprintf("--file %s", filepath.Clean(".okteto/test"))},
 		},
 		{
 			name: "destroy volumes set",
@@ -339,16 +280,15 @@ func TestCreateDockerfile(t *testing.T) {
 				fs:                   fs,
 				destroyImage:         "test-image",
 				workingDirectoryCtrl: wdCtrl,
-				registry:             newFakeRegistry(),
 			}
 			dockerfileName, err := rdc.createDockerfile("/test", tt.config.opts)
 			assert.ErrorIs(t, err, tt.expected.err)
 			assert.Equal(t, tt.expected.dockerfileName, dockerfileName)
 
 			if tt.expected.err == nil {
-				_, err = rdc.fs.Stat(filepath.Join("/test", dockerfileTemporalNane))
+				_, err = rdc.fs.Stat(filepath.Join("/", "test", dockerfileTemporalNane))
 				assert.NoError(t, err)
-				content, err := afero.ReadFile(rdc.fs, filepath.Join("/test", dockerfileTemporalNane))
+				content, err := afero.ReadFile(rdc.fs, filepath.Join("/", "test", dockerfileTemporalNane))
 				assert.NoError(t, err)
 				assert.True(t, strings.Contains(string(content), fmt.Sprintf("ARG %s", model.OktetoActionNameEnvVar)))
 			}
@@ -423,7 +363,7 @@ func TestRemoteDestroyWithSshAgent(t *testing.T) {
 	rdc := remoteDestroyCommand{
 		sshAuthSockEnvvar:    envvarName,
 		knownHostsPath:       knowHostFile.Name(),
-		builder:              fakeBuilder{assertOptions: assertFn},
+		runner:               fakeRunner{assertOptions: assertFn},
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
@@ -454,7 +394,7 @@ func TestRemoteDestroyWithBadSshAgent(t *testing.T) {
 	rdc := remoteDestroyCommand{
 		sshAuthSockEnvvar:    envvarName,
 		knownHostsPath:       "inexistent-file",
-		builder:              fakeBuilder{assertOptions: assertFn},
+		runner:               fakeRunner{assertOptions: assertFn},
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
@@ -515,4 +455,112 @@ func TestGetExtraHosts(t *testing.T) {
 			assert.EqualValues(t, tt.expected, extraHosts)
 		})
 	}
+}
+
+func TestGetContextPath(t *testing.T) {
+	cwd := filepath.Clean("/path/to/current/directory")
+
+	rd := remoteDestroyCommand{
+		fs: afero.NewMemMapFs(),
+	}
+
+	t.Run("Manifest path is empty", func(t *testing.T) {
+		expected := cwd
+		result := rd.getContextPath(cwd, "")
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path is a absolute path and directory", func(t *testing.T) {
+		manifestPath := filepath.Clean("/path/to/current/directory")
+		expected := manifestPath
+		rd.fs = afero.NewMemMapFs()
+		rd.fs.MkdirAll(manifestPath, 0755)
+		result := rd.getContextPath(cwd, manifestPath)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path is a file and absolute path", func(t *testing.T) {
+		manifestPath := filepath.Clean("/path/to/current/directory/file.yaml")
+		expected := filepath.Clean("/path/to/current/directory")
+		rd.fs = afero.NewMemMapFs()
+		rd.fs.MkdirAll(expected, 0755)
+		rd.fs.Create(manifestPath)
+		result := rd.getContextPath(cwd, manifestPath)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path is pointing to a file in the .okteto folder and absolute path", func(t *testing.T) {
+		manifestPath := filepath.Clean("/path/to/current/directory/.okteto/file.yaml")
+		expected := filepath.Clean("/path/to/current/directory")
+		rd.fs = afero.NewMemMapFs()
+		rd.fs.MkdirAll(expected, 0755)
+		rd.fs.Create(manifestPath)
+		result := rd.getContextPath(cwd, manifestPath)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path does not exist", func(t *testing.T) {
+		expected := cwd
+		result := rd.getContextPath(cwd, "nonexistent.yaml")
+		assert.Equal(t, expected, result)
+	})
+}
+
+func TestGetOriginalCWD(t *testing.T) {
+
+	t.Run("error getting the working directory", func(t *testing.T) {
+		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/"))
+		wdCtrl.SetErrors(filesystem.FakeWorkingDirectoryCtrlErrors{
+			Getter: assert.AnError,
+		})
+		deployCommand := &remoteDestroyCommand{
+			workingDirectoryCtrl: wdCtrl,
+		}
+
+		_, err := deployCommand.getOriginalCWD("")
+
+		require.Error(t, err)
+	})
+
+	t.Run("with empty manifest path", func(t *testing.T) {
+		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/tmp/test"))
+		deployCommand := &remoteDestroyCommand{
+			workingDirectoryCtrl: wdCtrl,
+		}
+
+		result, err := deployCommand.getOriginalCWD("")
+
+		expected := filepath.Clean("/tmp/test")
+		require.NoError(t, err)
+		require.Equal(t, expected, result)
+	})
+
+	t.Run("with manifest path to a dir", func(t *testing.T) {
+		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/tmp/test"))
+		deployCommand := &remoteDestroyCommand{
+			workingDirectoryCtrl: wdCtrl,
+		}
+
+		path := filepath.Join("test", ".okteto")
+		result, err := deployCommand.getOriginalCWD(path)
+
+		expected := filepath.Clean("/tmp")
+		require.NoError(t, err)
+		require.Equal(t, expected, result)
+	})
+
+	t.Run("with manifest path to a file", func(t *testing.T) {
+		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/tmp/test"))
+		deployCommand := &remoteDestroyCommand{
+			workingDirectoryCtrl: wdCtrl,
+		}
+
+		path := filepath.Join("test", "okteto.yml")
+		result, err := deployCommand.getOriginalCWD(path)
+
+		expected := filepath.Clean("/tmp")
+		require.NoError(t, err)
+		require.Equal(t, expected, result)
+	})
+
 }

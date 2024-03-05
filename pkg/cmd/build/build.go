@@ -70,6 +70,15 @@ type OktetoRegistryInterface interface {
 	GetImageTagWithDigest(imageTag string) (string, error)
 }
 
+// NewOktetoBuilder creates a new instance of OktetoBuilder.
+// It takes an OktetoContextInterface and afero.Fs as parameters and returns a pointer to OktetoBuilder.
+func NewOktetoBuilder(context OktetoContextInterface, fs afero.Fs) *OktetoBuilder {
+	return &OktetoBuilder{
+		OktetoContext: context,
+		Fs:            fs,
+	}
+}
+
 func (ob *OktetoBuilder) GetBuilder() string {
 	return ob.OktetoContext.GetCurrentBuilder()
 }

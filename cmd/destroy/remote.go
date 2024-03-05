@@ -28,8 +28,6 @@ import (
 	"text/template"
 
 	"github.com/mitchellh/go-homedir"
-	builder "github.com/okteto/okteto/cmd/build"
-	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
 	"github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
@@ -82,6 +80,12 @@ RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
 `
 )
 
+// remoteRunner is the interface to run the destroy command remotely. The implementation is using
+// an image builder like BuildKit
+type remoteRunner interface {
+	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error
+}
+
 type dockerfileTemplateProperties struct {
 	OktetoCLIImage         string
 	UserDestroyImage       string
@@ -99,14 +103,16 @@ type dockerfileTemplateProperties struct {
 }
 
 type remoteDestroyCommand struct {
-	builder              builder.Builder
+	runner               remoteRunner
 	destroyImage         string
 	fs                   afero.Fs
 	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
 	temporalCtrl         filesystem.TemporalDirectoryInterface
 	manifest             *model.Manifest
-	registry             remoteBuild.OktetoRegistryInterface
 	clusterMetadata      func(context.Context) (*types.ClusterMetadata, error)
+
+	// ioCtrl is the controller for the output of the Build logs
+	ioCtrl *io.Controller
 
 	// sshAuthSockEnvvar is the default for SSH_AUTH_SOCK. Provided mostly for testing
 	sshAuthSockEnvvar string
@@ -117,19 +123,24 @@ type remoteDestroyCommand struct {
 
 func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remoteDestroyCommand {
 	fs := afero.NewOsFs()
-	builder := remoteBuild.NewBuilderFromScratch(ioCtrl)
+	runner := buildCmd.NewOktetoBuilder(
+		&okteto.ContextStateless{
+			Store: okteto.GetContextStore(),
+		},
+		fs,
+	)
 	if manifest.Destroy == nil {
 		manifest.Destroy = &model.DestroyInfo{}
 	}
 	return &remoteDestroyCommand{
-		builder:              builder,
+		runner:               runner,
 		destroyImage:         manifest.Destroy.Image,
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 		manifest:             manifest,
-		registry:             builder.Registry,
 		clusterMetadata:      fetchClusterMetadata,
+		ioCtrl:               ioCtrl,
 	}
 }
 
@@ -148,7 +159,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		rd.destroyImage = sc.PipelineRunnerImage
 	}
 
-	cwd, err := rd.workingDirectoryCtrl.Get()
+	cwd, err := rd.getOriginalCWD(opts.ManifestPathFlag)
 	if err != nil {
 		return err
 	}
@@ -171,6 +182,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 
 	buildInfo := &build.Info{
 		Dockerfile: dockerfile,
+		Context:    rd.getContextPath(cwd, opts.ManifestPathFlag),
 	}
 
 	// undo modification of CWD for Build command
@@ -238,11 +250,11 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		oktetoLog.Debug("no ssh agent found. Not mouting ssh-agent for build")
 	}
 
-	// we need to call Build() method using a remote builder. This Builder will have
+	// we need to call Run() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
 	// account that we must not confuse the user with build messages since this logic is
 	// executed in the deploy command.
-	if err := rd.builder.Build(ctx, buildOptions); err != nil {
+	if err := rd.runner.Run(ctx, buildOptions, rd.ioCtrl); err != nil {
 		var cmdErr buildCmd.OktetoCommandErr
 		if errors.As(err, &cmdErr) {
 			oktetoLog.SetStage(cmdErr.Stage)
@@ -333,7 +345,15 @@ func getDestroyFlags(opts *Options) []string {
 	}
 
 	if opts.ManifestPathFlag != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", opts.ManifestPathFlag))
+		lastFolder := filepath.Base(filepath.Dir(opts.ManifestPathFlag))
+		if lastFolder == ".okteto" {
+			path := filepath.Clean(opts.ManifestPathFlag)
+			parts := strings.Split(path, string(filepath.Separator))
+
+			deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filepath.Join(parts[len(parts)-2:]...)))
+		} else {
+			deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filepath.Base(opts.ManifestPathFlag)))
+		}
 	}
 
 	if opts.DestroyVolumes {
@@ -352,8 +372,11 @@ func getOktetoCLIVersion(versionString string) string {
 	if match, err := regexp.MatchString(`\d+\.\d+\.\d+`, versionString); match {
 		version = fmt.Sprintf(constants.OktetoCLIImageForRemoteTemplate, versionString)
 	} else {
-		oktetoLog.Infof("invalid okteto CLI version %s: %s", versionString, err)
-		oktetoLog.Info("using latest okteto CLI image")
+		if err != nil {
+			oktetoLog.Infof("invalid okteto CLI version %s: %s. Using latest", versionString, err)
+		} else {
+			oktetoLog.Infof("invalid okteto CLI version %s. Using latest", versionString)
+		}
 		remoteOktetoImage := os.Getenv(constants.OktetoDeployRemoteImage)
 		if remoteOktetoImage != "" {
 			version = remoteOktetoImage
@@ -383,4 +406,40 @@ func fetchClusterMetadata(ctx context.Context) (*types.ClusterMetadata, error) {
 	}
 
 	return &metadata, err
+}
+
+func (rd *remoteDestroyCommand) getContextPath(cwd, manifestPath string) string {
+	if manifestPath == "" {
+		return cwd
+	}
+
+	path := manifestPath
+	if !filepath.IsAbs(manifestPath) {
+		path = filepath.Join(cwd, manifestPath)
+	}
+	fInfo, err := rd.fs.Stat(path)
+	if err != nil {
+		oktetoLog.Infof("error getting file info: %s", err)
+		return cwd
+
+	}
+	if fInfo.IsDir() {
+		return path
+	}
+
+	possibleCtx := filepath.Dir(path)
+	if strings.HasSuffix(possibleCtx, ".okteto") {
+		return filepath.Dir(possibleCtx)
+	}
+	return possibleCtx
+}
+
+// getOriginalCWD returns the original cwd
+func (rd *remoteDestroyCommand) getOriginalCWD(manifestPath string) (string, error) {
+	cwd, err := rd.workingDirectoryCtrl.Get()
+	if err != nil {
+		return "", err
+	}
+	manifestPathDir := filepath.Dir(filepath.Clean(fmt.Sprintf("/%s", manifestPath)))
+	return strings.TrimSuffix(cwd, manifestPathDir), nil
 }

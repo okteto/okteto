@@ -28,8 +28,6 @@ import (
 	"text/template"
 
 	"github.com/mitchellh/go-homedir"
-	builder "github.com/okteto/okteto/cmd/build"
-	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
 	"github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
@@ -86,6 +84,12 @@ RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
 `
 )
 
+// remoteRunner is the interface to run the deploy command remotely. The implementation is using
+// an image builder like BuildKit
+type remoteRunner interface {
+	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error
+}
+
 type dockerfileTemplateProperties struct {
 	OktetoCLIImage         string
 	UserDeployImage        string
@@ -105,11 +109,14 @@ type dockerfileTemplateProperties struct {
 
 type remoteDeployCommand struct {
 	getBuildEnvVars      func() map[string]string
-	builderV1            builder.Builder
+	runner               remoteRunner
 	fs                   afero.Fs
 	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
 	temporalCtrl         filesystem.TemporalDirectoryInterface
 	clusterMetadata      func(context.Context) (*types.ClusterMetadata, error)
+
+	// ioCtrl is the controller for the output of the Build logs
+	ioCtrl *io.Controller
 
 	// sshAuthSockEnvvar is the default for SSH_AUTH_SOCK. Provided mostly for testing
 	sshAuthSockEnvvar string
@@ -121,13 +128,20 @@ type remoteDeployCommand struct {
 // newRemoteDeployer creates the remote deployer from a
 func newRemoteDeployer(builder builderInterface, ioCtrl *io.Controller) *remoteDeployCommand {
 	fs := afero.NewOsFs()
+	runner := buildCmd.NewOktetoBuilder(
+		&okteto.ContextStateless{
+			Store: okteto.GetContextStore(),
+		},
+		fs,
+	)
 	return &remoteDeployCommand{
 		getBuildEnvVars:      builder.GetBuildEnvVars,
-		builderV1:            remoteBuild.NewBuilderFromScratch(ioCtrl),
+		runner:               runner,
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 		clusterMetadata:      fetchRemoteServerConfig,
+		ioCtrl:               ioCtrl,
 	}
 }
 
@@ -235,11 +249,11 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		oktetoLog.Debug("no ssh agent found. Not mouting ssh-agent for build")
 	}
 
-	// we need to call Build() method using a remote builder. This Builder will have
+	// we need to call Run() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
 	// account that we must not confuse the user with build messages since this logic is
 	// executed in the deploy command.
-	if err := rd.builderV1.Build(ctx, buildOptions); err != nil {
+	if err := rd.runner.Run(ctx, buildOptions, rd.ioCtrl); err != nil {
 		var cmdErr buildCmd.OktetoCommandErr
 		if errors.As(err, &cmdErr) {
 			oktetoLog.SetStage(cmdErr.Stage)

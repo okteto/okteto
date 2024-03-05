@@ -33,19 +33,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type fakeV1Builder struct {
+type fakeRunner struct {
 	err           error
 	assertOptions func(o *types.BuildOptions)
 }
 
-func (f fakeV1Builder) Build(_ context.Context, opts *types.BuildOptions) error {
+func (f fakeRunner) Run(_ context.Context, opts *types.BuildOptions, _ *io.Controller) error {
 	if f.assertOptions != nil {
 		f.assertOptions(opts)
 	}
 	return f.err
 }
-
-func (f fakeV1Builder) IsV1() bool { return true }
 
 func TestRemoteTest(t *testing.T) {
 	ctx := context.Background()
@@ -143,7 +141,7 @@ func TestRemoteTest(t *testing.T) {
 			wdCtrl.SetErrors(tt.config.wd)
 			tempCreator.SetError(tt.config.tempFsCreator)
 			rdc := remoteDeployCommand{
-				builderV1:            fakeV1Builder{err: tt.config.builderErr},
+				runner:               fakeRunner{err: tt.config.builderErr},
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,
 				temporalCtrl:         tempCreator,
@@ -174,7 +172,7 @@ func TestExtraHosts(t *testing.T) {
 	tempCreator := filesystem.NewTemporalDirectoryCtrl(fs)
 
 	rdc := remoteDeployCommand{
-		builderV1: fakeV1Builder{
+		runner: fakeRunner{
 			assertOptions: func(o *types.BuildOptions) {
 				require.Len(t, o.ExtraHosts, 2)
 				for _, eh := range o.ExtraHosts {
@@ -225,7 +223,7 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 		sshAuthSockEnvvar:    envvarName,
 		getBuildEnvVars:      func() map[string]string { return nil },
 		knownHostsPath:       knowHostFile.Name(),
-		builderV1:            fakeV1Builder{assertOptions: assertFn},
+		runner:               fakeRunner{assertOptions: assertFn},
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
@@ -262,7 +260,7 @@ func TestRemoteDeployWithBadSshAgent(t *testing.T) {
 	rdc := remoteDeployCommand{
 		sshAuthSockEnvvar:    envvarName,
 		knownHostsPath:       "inexistent-file",
-		builderV1:            fakeV1Builder{assertOptions: assertFn},
+		runner:               fakeRunner{assertOptions: assertFn},
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
@@ -668,4 +666,63 @@ func TestGetContextPath(t *testing.T) {
 		result := rd.getContextPath(cwd, "nonexistent.yaml")
 		assert.Equal(t, expected, result)
 	})
+}
+
+func TestGetOriginalCWD(t *testing.T) {
+
+	t.Run("error getting the working directory", func(t *testing.T) {
+		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/"))
+		wdCtrl.SetErrors(filesystem.FakeWorkingDirectoryCtrlErrors{
+			Getter: assert.AnError,
+		})
+		deployCommand := &remoteDeployCommand{
+			workingDirectoryCtrl: wdCtrl,
+		}
+
+		_, err := deployCommand.getOriginalCWD("")
+
+		require.Error(t, err)
+	})
+
+	t.Run("with empty manifest path", func(t *testing.T) {
+		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/tmp/test"))
+		deployCommand := &remoteDeployCommand{
+			workingDirectoryCtrl: wdCtrl,
+		}
+
+		result, err := deployCommand.getOriginalCWD("")
+		expected := filepath.Clean("/tmp/test")
+
+		require.NoError(t, err)
+		require.Equal(t, expected, result)
+	})
+
+	t.Run("with manifest path to a dir", func(t *testing.T) {
+		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/tmp/test"))
+		deployCommand := &remoteDeployCommand{
+			workingDirectoryCtrl: wdCtrl,
+		}
+
+		path := filepath.Join("test", ".okteto")
+		result, err := deployCommand.getOriginalCWD(path)
+
+		expected := filepath.Clean("/tmp")
+		require.NoError(t, err)
+		require.Equal(t, expected, result)
+	})
+
+	t.Run("with manifest path to a file", func(t *testing.T) {
+		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/tmp/test"))
+		deployCommand := &remoteDeployCommand{
+			workingDirectoryCtrl: wdCtrl,
+		}
+
+		path := filepath.Join("test", "okteto.yml")
+		result, err := deployCommand.getOriginalCWD(path)
+
+		expected := filepath.Clean("/tmp")
+		require.NoError(t, err)
+		require.Equal(t, expected, result)
+	})
+
 }

@@ -15,60 +15,41 @@ package v1
 
 import (
 	"context"
-	"fmt"
-	"path/filepath"
-	"strings"
 
-	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/cmd/build/basic"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
-	"github.com/okteto/okteto/pkg/env"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 )
 
-// OktetoBuilderInterface runs the build of an image
-type OktetoBuilderInterface interface {
-	GetBuilder() string
-	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error
-}
-
-type oktetoRegistryInterface interface {
-	GetImageTagWithDigest(imageTag string) (string, error)
-	HasGlobalPushAccess() (bool, error)
-}
-
-// OktetoBuilder builds the images
+// OktetoBuilder It is a wrapper of basic.Builder to build an image specificied by a Dockerfile. a.k.a. Builder v1
+// It mainly extends the basic.Builder with the ability to expand the image tag with the environment variables and
+// printing the corresponding output when the build finishes.
 type OktetoBuilder struct {
-	Builder  OktetoBuilderInterface
-	Registry oktetoRegistryInterface
-	IoCtrl   *io.Controller
+	basic.Builder
 }
 
-// NewBuilder creates a new okteto builder
-func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.Controller) *OktetoBuilder {
+// NewBuilder creates a new builder wrapping basic.Builder to build images directly from a Dockerfile
+func NewBuilder(builder basic.BuildRunner, ioCtrl *io.Controller) *OktetoBuilder {
 	return &OktetoBuilder{
-		Builder:  builder,
-		Registry: registry,
-		IoCtrl:   ioCtrl,
+		Builder: basic.Builder{
+			BuildRunner: builder,
+			IoCtrl:      ioCtrl,
+		},
 	}
 }
 
 // NewBuilderFromScratch creates a new okteto builder
 func NewBuilderFromScratch(ioCtrl *io.Controller) *OktetoBuilder {
-	builder := &buildCmd.OktetoBuilder{
-		OktetoContext: &okteto.ContextStateless{
+	builder := buildCmd.NewOktetoBuilder(
+		&okteto.ContextStateless{
 			Store: okteto.GetContextStore(),
 		},
-		Fs: afero.NewOsFs(),
-	}
-	registry := registry.NewOktetoRegistry(okteto.Config{})
-	return NewBuilder(builder, registry, ioCtrl)
+		afero.NewOsFs(),
+	)
+	return NewBuilder(builder, ioCtrl)
 }
 
 // IsV1 returns true since it is a builder v1
@@ -78,52 +59,5 @@ func (*OktetoBuilder) IsV1() bool {
 
 // Build builds the images defined by a Dockerfile
 func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
-	path := "."
-	if options.Path != "" {
-		path = options.Path
-	}
-	if len(options.CommandArgs) == 1 {
-		path = options.CommandArgs[0]
-	}
-
-	if err := utils.CheckIfDirectory(path); err != nil {
-		return fmt.Errorf("invalid build context: %w", err)
-	}
-	options.Path = path
-
-	if options.File == "" {
-		options.File = filepath.Join(path, "Dockerfile")
-	}
-
-	if exists := filesystem.FileExistsAndNotDir(options.File, afero.NewOsFs()); !exists {
-		return fmt.Errorf("%s: '%s' is not a regular file", oktetoErrors.InvalidDockerfile, options.File)
-	}
-
-	var err error
-	options.Tag, err = env.ExpandEnv(options.Tag)
-	if err != nil {
-		return err
-	}
-
-	if err := ob.Builder.Run(ctx, options, ob.IoCtrl); err != nil {
-		analytics.TrackBuild(false)
-		return err
-	}
-
-	if options.Tag == "" {
-		ob.IoCtrl.Out().Success("Build succeeded")
-		ob.IoCtrl.Out().Infof("Your image won't be pushed. To push your image specify the flag '-t'.")
-	} else {
-		tags := strings.Split(options.Tag, ",")
-		for _, tag := range tags {
-			displayTag := tag
-			if options.DevTag != "" {
-				displayTag = options.DevTag
-			}
-			ob.IoCtrl.Out().Success("Image '%s' successfully pushed", displayTag)
-		}
-	}
-
-	analytics.TrackBuild(true)
-	return nil
+	return ob.Builder.Build(ctx, options)
 }

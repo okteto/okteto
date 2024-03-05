@@ -78,11 +78,8 @@ type registryInterface interface {
 func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker analyticsTrackerInterface, okCtx *okteto.ContextStateless, k8slogger *io.K8sLogger) *Command {
 
 	return &Command{
-		GetManifest: model.GetManifestV2,
-		Builder: &buildCmd.OktetoBuilder{
-			OktetoContext: okCtx,
-			Fs:            afero.NewOsFs(),
-		},
+		GetManifest:      model.GetManifestV2,
+		Builder:          buildCmd.NewOktetoBuilder(okCtx, afero.NewOsFs()),
 		Registry:         registry.NewOktetoRegistry(buildCmd.GetRegistryConfigFromOktetoConfig(okCtx)),
 		ioCtrl:           ioCtrl,
 		k8slogger:        k8slogger,
@@ -150,6 +147,10 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at analyticsTrackerInterf
 	return cmd
 }
 
+// getBuilder returns the proper builder (V1 or V2) based on the manifest. The following rules are applied:
+//   - If the manifest is not found or there is any error getting the manifest, the builder fallsback to V1
+//   - If the manifest is found and it is a V2 manifest and the build section has some image, the builder is V2
+//   - If the manifest is found and it is a V1 manifest or the build section is empty, the builder fallsback to V1
 func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.ContextStateless) (Builder, error) {
 	var builder Builder
 
@@ -162,12 +163,12 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 		bc.ioCtrl.Logger().Infof("manifest located at %s is not v2 compatible: %s", options.File, err)
 		bc.ioCtrl.Logger().Info("falling back to building as a v1 manifest")
 
-		builder = buildv1.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl)
+		builder = buildv1.NewBuilder(bc.Builder, bc.ioCtrl)
 	} else {
 		if isBuildV2(manifest) {
 			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl, bc.analyticsTracker, okCtx, bc.k8slogger)
 		} else {
-			builder = buildv1.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl)
+			builder = buildv1.NewBuilder(bc.Builder, bc.ioCtrl)
 		}
 	}
 
@@ -177,6 +178,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 }
 
 func isBuildV2(m *model.Manifest) bool {
+	// A manifest has the isV2 set to true if the manifest is parsed as a V2 manifest or in case of stacks and/or compose files
 	return m.IsV2 && len(m.Build) != 0
 }
 

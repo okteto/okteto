@@ -21,11 +21,12 @@ import (
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/okteto/okteto/cmd/build/v1"
+	"github.com/okteto/okteto/cmd/build/basic"
 	"github.com/okteto/okteto/cmd/build/v2/smartbuild"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/build"
+	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
@@ -158,15 +159,13 @@ func (a *fakeAnalyticsTracker) TrackImageBuild(meta ...*analytics.ImageBuildMeta
 	a.metaPayload = meta
 }
 
-func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, cfg oktetoBuilderConfigInterface, analyticsTracker analyticsTrackerInterface) *OktetoBuilder {
+func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistryInterface, cfg oktetoBuilderConfigInterface, analyticsTracker analyticsTrackerInterface) *OktetoBuilder {
 	return &OktetoBuilder{
 		Registry:          registry,
-		Builder:           builder,
 		buildEnvironments: make(map[string]string),
-		V1Builder: &v1.OktetoBuilder{
-			Builder:  builder,
-			Registry: registry,
-			IoCtrl:   io.NewIOController(),
+		Builder: basic.Builder{
+			BuildRunner: builder,
+			IoCtrl:      io.NewIOController(),
 		},
 		Config:           cfg,
 		ioCtrl:           io.NewIOController(),

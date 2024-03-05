@@ -1,4 +1,4 @@
-// Copyright 2023 The Okteto Authors
+// Copyright 2024 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,65 +11,56 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package remote
+package basic
 
 import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 )
 
-// OktetoBuilderInterface runs the build of an image
-type oktetoBuilderInterface interface {
+// BuildRunner runs the build of an image
+type BuildRunner interface {
 	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error
 }
 
-type OktetoRegistryInterface interface {
-	GetImageTagWithDigest(imageTag string) (string, error)
-	IsOktetoRegistry(image string) bool
-	HasGlobalPushAccess() (bool, error)
-	IsGlobalRegistry(image string) bool
-
-	GetRegistryAndRepo(image string) (string, string)
-	GetRepoNameAndTag(repo string) (string, string)
-}
-
-// OktetoBuilder builds the images
-type OktetoBuilder struct {
-	Builder  oktetoBuilderInterface
-	Registry OktetoRegistryInterface
-	ioCtrl   *io.Controller
+// Builder It provides basic functionality to build images.
+// This might be used as a base for more complex builders (e.g. v1, v2)
+type Builder struct {
+	BuildRunner BuildRunner
+	IoCtrl      *io.Controller
 }
 
 // NewBuilderFromScratch creates a new okteto builder
-func NewBuilderFromScratch(ioCtrl *io.Controller) *OktetoBuilder {
-	builder := &buildCmd.OktetoBuilder{
-		OktetoContext: &okteto.ContextStateless{
+func NewBuilderFromScratch(ioCtrl *io.Controller) *Builder {
+	builder := buildCmd.NewOktetoBuilder(
+		&okteto.ContextStateless{
 			Store: okteto.GetContextStore(),
 		},
-		Fs: afero.NewOsFs(),
-	}
-	registry := registry.NewOktetoRegistry(okteto.Config{})
-	return &OktetoBuilder{
-		Builder:  builder,
-		Registry: registry,
-		ioCtrl:   ioCtrl,
+		afero.NewOsFs(),
+	)
+
+	return &Builder{
+		BuildRunner: builder,
+		IoCtrl:      ioCtrl,
 	}
 }
 
-// Build builds the images defined by a Dockerfile
-func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
+// Build builds the image defined by the BuildOptions used the BuildRunner passed as dependency
+// of the builder
+func (ob *Builder) Build(ctx context.Context, options *types.BuildOptions) error {
 	path := "."
 	if options.Path != "" {
 		path = options.Path
@@ -91,15 +82,31 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		return fmt.Errorf("%s: '%s' is not a regular file", oktetoErrors.InvalidDockerfile, options.File)
 	}
 
-	if err := bc.Builder.Run(ctx, options, bc.ioCtrl); err != nil {
+	var err error
+	options.Tag, err = env.ExpandEnv(options.Tag)
+	if err != nil {
+		return err
+	}
+
+	if err := ob.BuildRunner.Run(ctx, options, ob.IoCtrl); err != nil {
 		analytics.TrackBuild(false)
 		return err
 	}
 
+	if options.Tag == "" {
+		ob.IoCtrl.Out().Success("Build succeeded")
+		ob.IoCtrl.Out().Infof("Your image won't be pushed. To push your image specify the flag '-t'.")
+	} else {
+		tags := strings.Split(options.Tag, ",")
+		for _, tag := range tags {
+			displayTag := tag
+			if options.DevTag != "" {
+				displayTag = options.DevTag
+			}
+			ob.IoCtrl.Out().Success("Image '%s' successfully pushed", displayTag)
+		}
+	}
+
 	analytics.TrackBuild(true)
 	return nil
-}
-
-func (bc *OktetoBuilder) IsV1() bool {
-	return true
 }

@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	buildv1 "github.com/okteto/okteto/cmd/build/v1"
+	"github.com/okteto/okteto/cmd/build/basic"
 	"github.com/okteto/okteto/cmd/build/v2/smartbuild"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/build"
@@ -41,12 +41,6 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 )
-
-// OktetoBuilderInterface runs the build of an image
-type OktetoBuilderInterface interface {
-	GetBuilder() string
-	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error
-}
 
 type oktetoRegistryInterface interface {
 	GetImageTagWithDigest(imageTag string) (string, error)
@@ -75,11 +69,11 @@ type analyticsTrackerInterface interface {
 
 // OktetoBuilder builds the images
 type OktetoBuilder struct {
-	Builder          OktetoBuilderInterface
+	basic.Builder
+
 	Registry         oktetoRegistryInterface
 	Config           oktetoBuilderConfigInterface
 	analyticsTracker analyticsTrackerInterface
-	V1Builder        *buildv1.OktetoBuilder
 	oktetoContext    buildCmd.OktetoContextInterface
 
 	smartBuildCtrl *smartbuild.Ctrl
@@ -95,7 +89,7 @@ type OktetoBuilder struct {
 }
 
 // NewBuilder creates a new okteto builder
-func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.Controller, analyticsTracker analyticsTrackerInterface, okCtx okteto.ContextInterface, k8sLogger *io.K8sLogger) *OktetoBuilder {
+func NewBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.Controller, analyticsTracker analyticsTrackerInterface, okCtx okteto.ContextInterface, k8sLogger *io.K8sLogger) *OktetoBuilder {
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
 	wd, err := wdCtrl.Get()
 	if err != nil {
@@ -107,9 +101,8 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 	buildEnvs := map[string]string{}
 	buildEnvs[OktetoEnableSmartBuildEnvVar] = strconv.FormatBool(config.isSmartBuildsEnable)
 	return &OktetoBuilder{
-		Builder:           builder,
+		Builder:           basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl},
 		Registry:          registry,
-		V1Builder:         buildv1.NewBuilder(builder, registry, ioCtrl),
 		buildEnvironments: buildEnvs,
 		Config:            config,
 		analyticsTracker:  analyticsTracker,
@@ -122,12 +115,12 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 
 // NewBuilderFromScratch creates a new okteto builder
 func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *io.Controller) *OktetoBuilder {
-	builder := &buildCmd.OktetoBuilder{
-		OktetoContext: &okteto.ContextStateless{
+	builder := buildCmd.NewOktetoBuilder(
+		&okteto.ContextStateless{
 			Store: okteto.GetContextStore(),
 		},
-		Fs: afero.NewOsFs(),
-	}
+		afero.NewOsFs(),
+	)
 	reg := registry.NewOktetoRegistry(okteto.Config{})
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
 	wd, err := wdCtrl.Get()
@@ -148,9 +141,8 @@ func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *i
 	buildEnvs[OktetoEnableSmartBuildEnvVar] = strconv.FormatBool(config.isSmartBuildsEnable)
 
 	return &OktetoBuilder{
-		Builder:           builder,
+		Builder:           basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl},
 		Registry:          reg,
-		V1Builder:         buildv1.NewBuilder(builder, reg, ioCtrl),
 		buildEnvironments: buildEnvs,
 		Config:            config,
 		analyticsTracker:  analyticsTracker,
@@ -378,7 +370,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 
 	buildOptions := buildCmd.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, options, bc.Registry, bc.oktetoContext)
 
-	if err := bc.V1Builder.Build(ctx, buildOptions); err != nil {
+	if err := bc.Builder.Build(ctx, buildOptions); err != nil {
 		return "", err
 	}
 	var imageTagWithDigest string
@@ -426,7 +418,7 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 	buildOptions := buildCmd.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, options, bc.Registry, bc.oktetoContext)
 	buildOptions.Tag = tagToBuild
 
-	if err := bc.V1Builder.Build(ctx, buildOptions); err != nil {
+	if err := bc.Builder.Build(ctx, buildOptions); err != nil {
 		return "", err
 	}
 	imageTagWithDigest, err := bc.Registry.GetImageTagWithDigest(buildOptions.Tag)

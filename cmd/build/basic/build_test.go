@@ -1,4 +1,4 @@
-// Copyright 2023 The Okteto Authors
+// Copyright 2024 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1
+package basic
 
 import (
 	"context"
@@ -39,7 +39,10 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	ctx := context.Background()
 
 	buildRunner := &fakeBuildRunner{}
-	bc := NewBuilder(buildRunner, io.NewIOController())
+	bc := &Builder{
+		BuildRunner: buildRunner,
+		IoCtrl:      io.NewIOController(),
+	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
 
@@ -61,42 +64,21 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 
 	// error from the build
 	assert.Error(t, err)
-
 	buildRunner.AssertExpectations(t)
-}
-
-func TestBuildWithErrorFromImageExpansion(t *testing.T) {
-	ctx := context.Background()
-
-	buildRunner := &fakeBuildRunner{}
-	bc := NewBuilder(buildRunner, io.NewIOController())
-	dir, err := createDockerfile(t)
-	assert.NoError(t, err)
-
-	t.Setenv("TEST_VAR", "unit-test")
-	// The missing closing brace breaks the var expansion
-	tag := "okteto.dev/test:${TEST_VAR"
-	options := &types.BuildOptions{
-		CommandArgs: []string{dir},
-		Tag:         tag,
-	}
-	err = bc.Build(ctx, options)
-	// error from the build
-	assert.ErrorAs(t, err, &env.VarExpansionErr{})
-
-	buildRunner.AssertNotCalled(t, "Run", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 	ctx := context.Background()
 
 	buildRunner := &fakeBuildRunner{}
-	bc := NewBuilder(buildRunner, io.NewIOController())
+	bc := &Builder{
+		BuildRunner: buildRunner,
+		IoCtrl:      io.NewIOController(),
+	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
 
-	t.Setenv("TEST_VAR", "unit-test")
-	tag := "okteto.dev/test:${TEST_VAR}"
+	tag := "okteto.dev/test"
 	options := &types.BuildOptions{
 		CommandArgs: []string{dir},
 		Tag:         tag,
@@ -105,7 +87,7 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 	expectedOptions := &types.BuildOptions{
 		Path:        dir,
 		File:        filepath.Join(dir, "Dockerfile"),
-		Tag:         "okteto.dev/test:unit-test",
+		Tag:         tag,
 		CommandArgs: []string{dir},
 	}
 	buildRunner.On("Run", mock.Anything, expectedOptions, mock.Anything).Return(nil)
@@ -121,7 +103,10 @@ func TestBuildWithNoErrorFromDockerfileAndNoTag(t *testing.T) {
 	ctx := context.Background()
 
 	buildRunner := &fakeBuildRunner{}
-	bc := NewBuilder(buildRunner, io.NewIOController())
+	bc := &Builder{
+		BuildRunner: buildRunner,
+		IoCtrl:      io.NewIOController(),
+	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
 
@@ -143,9 +128,75 @@ func TestBuildWithNoErrorFromDockerfileAndNoTag(t *testing.T) {
 	buildRunner.AssertExpectations(t)
 }
 
-func TestIsV1(t *testing.T) {
-	bc := &OktetoBuilder{}
-	assert.True(t, bc.IsV1())
+func TestBuildWithErrorWithPathToFile(t *testing.T) {
+	ctx := context.Background()
+
+	buildRunner := &fakeBuildRunner{}
+	bc := &Builder{
+		BuildRunner: buildRunner,
+		IoCtrl:      io.NewIOController(),
+	}
+	dir, err := createDockerfile(t)
+	assert.NoError(t, err)
+
+	options := &types.BuildOptions{
+		Path: filepath.Join(dir, "Dockerfile"),
+	}
+
+	err = bc.Build(ctx, options)
+	// expected error from the build
+	assert.Error(t, err)
+
+	buildRunner.AssertNotCalled(t, "Run", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestBuildWithErrorWithFileToDir(t *testing.T) {
+	ctx := context.Background()
+
+	buildRunner := &fakeBuildRunner{}
+	bc := &Builder{
+		BuildRunner: buildRunner,
+		IoCtrl:      io.NewIOController(),
+	}
+	dir, err := createDockerfile(t)
+	assert.NoError(t, err)
+
+	options := &types.BuildOptions{
+		CommandArgs: []string{dir},
+		Path:        dir,
+		File:        dir,
+	}
+
+	err = bc.Build(ctx, options)
+	// expected error from the build
+	assert.Error(t, err)
+
+	buildRunner.AssertNotCalled(t, "Run", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestBuildWithErrorFromImageExpansion(t *testing.T) {
+	ctx := context.Background()
+
+	buildRunner := &fakeBuildRunner{}
+	bc := &Builder{
+		BuildRunner: buildRunner,
+		IoCtrl:      io.NewIOController(),
+	}
+	dir, err := createDockerfile(t)
+	assert.NoError(t, err)
+
+	t.Setenv("TEST_VAR", "unit-test")
+	// The missing closing brace breaks the var expansion
+	tag := "okteto.dev/test:${TEST_VAR"
+	options := &types.BuildOptions{
+		CommandArgs: []string{dir},
+		Tag:         tag,
+	}
+	err = bc.Build(ctx, options)
+	// error from the build
+	assert.ErrorAs(t, err, &env.VarExpansionErr{})
+
+	buildRunner.AssertNotCalled(t, "Run", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func createDockerfile(t *testing.T) (string, error) {
