@@ -131,7 +131,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 
 			startOkContextConfig := time.Now()
 			if upOptions.ManifestPath != "" {
-				// if path is absolute, its transformed to rel from root
+				// if path is absolute, it's transformed to rel from root
 				initialCWD, err := os.Getwd()
 				if err != nil {
 					return fmt.Errorf("failed to get the current working directory: %w", err)

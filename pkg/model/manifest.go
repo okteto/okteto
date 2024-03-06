@@ -310,6 +310,12 @@ func GetManifestV1(manifestPath string, fs afero.Fs) (*Manifest, error) {
 		return nil, err
 	}
 
+	// if the manifest is v2, we should return an error, as we need to call model.GetManifestV2
+	// therefore we force an error here, just to avoid handling the manifest as v1 when it is v2
+	if manifest.IsV2 {
+		return nil, discovery.ErrOktetoManifestNotV1
+	}
+
 	return manifest, nil
 }
 
