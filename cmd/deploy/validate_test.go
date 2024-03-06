@@ -15,7 +15,6 @@ package deploy
 
 import (
 	"fmt"
-	"os"
 	"reflect"
 	"testing"
 
@@ -27,8 +26,10 @@ type fakeEnvManager struct {
 	envVarStorage map[string]string
 }
 
-func (*fakeEnvManager) LookupEnv(key string) (string, bool) {
-	return os.LookupEnv(key)
+func (e *fakeEnvManager) LookupEnv(key string) (string, bool) {
+	value, exists := e.envVarStorage[key]
+	return value, exists
+
 }
 func (e *fakeEnvManager) SetEnv(key, value string) error {
 	e.envVarStorage[key] = value

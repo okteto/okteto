@@ -14,8 +14,6 @@
 package namespace
 
 import (
-	"os"
-
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
@@ -30,14 +28,14 @@ import (
 
 type fakeEnvManager struct{}
 
-func (*fakeEnvManager) LookupEnv(key string) (string, bool) {
-	return os.LookupEnv(key)
+func (*fakeEnvManager) LookupEnv(string) (string, bool) {
+	return "", false
 }
-func (*fakeEnvManager) SetEnv(_, _ string) error {
+func (*fakeEnvManager) SetEnv(string, string) error {
 	return nil
 }
-func (*fakeEnvManager) MaskVar(_ string) {}
-func (*fakeEnvManager) WarningLogf(_ string, _ ...interface{}) {
+func (*fakeEnvManager) MaskVar(string) {}
+func (*fakeEnvManager) WarningLogf(string, ...interface{}) {
 }
 
 func newFakeEnvManager() *fakeEnvManager {

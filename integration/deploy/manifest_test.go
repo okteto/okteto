@@ -110,45 +110,45 @@ spec:
     app: e2etest
 `
 	oktetoManifestWithVars = `variables:
-  MY_VAR1: manifest-value-1
-  MY_VAR2: $LOCAL_VAR
-  MY_VAR3: ${LOCAL_VAR}-with-suffix
-  MY_VAR4: manifest-value-4
-  MY_VAR5: manifest-value-5
+  CLI_TESTS_MY_VAR1: manifest-value-1
+  CLI_TESTS_MY_VAR2: $LOCAL_VAR
+  CLI_TESTS_MY_VAR3: ${LOCAL_VAR}-with-suffix
+  CLI_TESTS_MY_VAR4: manifest-value-4
+  CLI_TESTS_MY_VAR5: manifest-value-5 # this is also defined in the Okteto Platform (cluster or user level)
 
 deploy:
   commands:
-  - echo MY_VAR1=$MY_VAR1
-  - echo MY_VAR1=$MY_VAR1 > deploy-var1.txt
+  - echo MY_VAR1=$CLI_TESTS_MY_VAR1
+  - echo MY_VAR1=$CLI_TESTS_MY_VAR1 > deploy-var1.txt
 
-  - echo MY_VAR2=$MY_VAR2
-  - echo MY_VAR2=$MY_VAR2 > deploy-var2.txt
+  - echo MY_VAR2=$CLI_TESTS_MY_VAR2
+  - echo MY_VAR2=$CLI_TESTS_MY_VAR2 > deploy-var2.txt
 
-  - echo MY_VAR3=$MY_VAR3
-  - echo MY_VAR3=$MY_VAR3 > deploy-var3.txt
+  - echo MY_VAR3=$CLI_TESTS_MY_VAR3
+  - echo MY_VAR3=$CLI_TESTS_MY_VAR3 > deploy-var3.txt
 
-  - echo MY_VAR4=$MY_VAR4
-  - echo MY_VAR4=$MY_VAR4 > deploy-var4.txt
+  - echo MY_VAR4=$CLI_TESTS_MY_VAR4
+  - echo MY_VAR4=$CLI_TESTS_MY_VAR4 > deploy-var4.txt
 
-  - echo MY_VAR5=$MY_VAR5
-  - echo MY_VAR5=$MY_VAR5 > deploy-var5.txt
+  - echo MY_VAR5=$CLI_TESTS_MY_VAR5
+  - echo MY_VAR5=$CLI_TESTS_MY_VAR5 > deploy-var5.txt
 
 destroy:
   commands:
-  - echo MY_VAR1=$MY_VAR1
-  - echo MY_VAR1=$MY_VAR1 > destroy-var1.txt
+  - echo MY_VAR1=$CLI_TESTS_MY_VAR1
+  - echo MY_VAR1=$CLI_TESTS_MY_VAR1 > destroy-var1.txt
 
-  - echo MY_VAR2=$MY_VAR2
-  - echo MY_VAR2=$MY_VAR2 > destroy-var2.txt
+  - echo MY_VAR2=$CLI_TESTS_MY_VAR2
+  - echo MY_VAR2=$CLI_TESTS_MY_VAR2 > destroy-var2.txt
 
-  - echo MY_VAR3=$MY_VAR3
-  - echo MY_VAR3=$MY_VAR3 > destroy-var3.txt
+  - echo MY_VAR3=$CLI_TESTS_MY_VAR3
+  - echo MY_VAR3=$CLI_TESTS_MY_VAR3 > destroy-var3.txt
 
-  - echo MY_VAR4=$MY_VAR4
-  - echo MY_VAR4=$MY_VAR4 > destroy-var4.txt
+  - echo MY_VAR4=$CLI_TESTS_MY_VAR4
+  - echo MY_VAR4=$CLI_TESTS_MY_VAR4 > destroy-var4.txt
 
-  - echo MY_VAR5=$MY_VAR5
-  - echo MY_VAR5=$MY_VAR5 > destroy-var5.txt
+  - echo MY_VAR5=$CLI_TESTS_MY_VAR5
+  - echo MY_VAR5=$CLI_TESTS_MY_VAR5 > destroy-var5.txt
 `
 )
 
@@ -495,7 +495,7 @@ func TestDeployOktetoManifestWithVariables(t *testing.T) {
 	t.Setenv("LOCAL_VAR", "local-value-2")
 
 	// MY_VAR4 is used to validate the scenario that the local variable takes precedence over the manifest's definition
-	t.Setenv("MY_VAR4", "local-value-4")
+	t.Setenv("CLI_TESTS_MY_VAR4", "local-value-4")
 
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
@@ -526,9 +526,9 @@ func TestDeployOktetoManifestWithVariables(t *testing.T) {
 	require.Contains(t, deployOutput, "MY_VAR1=***")
 	require.Contains(t, deployOutput, "MY_VAR2=***")
 	require.Contains(t, deployOutput, "MY_VAR3=***")
-	require.Contains(t, deployOutput, "MY_VAR4=local") // we do not obfuscate local variables at the moment
-	require.Contains(t, deployOutput, "Variable 'MY_VAR4' defined locally or in the catalog takes precedence over the same variable defined in the manifest, which will be ignored")
-	require.Contains(t, deployOutput, "Variable 'MY_VAR5' defined in the manifest takes precedence over the same variable defined in the Okteto Platform, which will be ignored")
+	require.Contains(t, deployOutput, "MY_VAR4=local-value-4") // we do not obfuscate local variables at the moment
+	require.Contains(t, deployOutput, "Variable 'CLI_TESTS_MY_VAR4' defined locally or in the catalog takes precedence over the same variable defined in the manifest, which will be ignored")
+	require.Contains(t, deployOutput, "Variable 'CLI_TESTS_MY_VAR5' defined in the manifest takes precedence over the same variable defined in the Okteto Platform, which will be ignored")
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
@@ -540,9 +540,9 @@ func TestDeployOktetoManifestWithVariables(t *testing.T) {
 	require.Contains(t, destroyOutput, "MY_VAR1=***")
 	require.Contains(t, destroyOutput, "MY_VAR2=***")
 	require.Contains(t, destroyOutput, "MY_VAR3=***")
-	require.Contains(t, destroyOutput, "MY_VAR4=local") // we do not obfuscate local variables at the moment
-	require.Contains(t, destroyOutput, "Variable 'MY_VAR4' defined locally or in the catalog takes precedence over the same variable defined in the manifest, which will be ignored")
-	require.Contains(t, destroyOutput, "Variable 'MY_VAR5' defined in the manifest takes precedence over the same variable defined in the Okteto Platform, which will be ignored")
+	require.Contains(t, destroyOutput, "MY_VAR4=local-value-4") // we do not obfuscate local variables at the moment
+	require.Contains(t, destroyOutput, "Variable 'CLI_TESTS_MY_VAR4' defined locally or in the catalog takes precedence over the same variable defined in the manifest, which will be ignored")
+	require.Contains(t, destroyOutput, "Variable 'CLI_TESTS_MY_VAR5' defined in the manifest takes precedence over the same variable defined in the Okteto Platform, which will be ignored")
 
 	expected := []struct {
 		fileName    string

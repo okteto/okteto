@@ -38,8 +38,8 @@ import (
 
 type fakeEnvManager struct{}
 
-func (*fakeEnvManager) LookupEnv(key string) (string, bool) {
-	return os.LookupEnv(key)
+func (*fakeEnvManager) LookupEnv(string) (string, bool) {
+	return "", false
 }
 func (*fakeEnvManager) SetEnv(string, string) error {
 	return nil

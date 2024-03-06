@@ -95,7 +95,7 @@ const (
 	docsURL          = "https://okteto.com/docs/reference/okteto-cli/#build"
 )
 
-// Build builds and optionally push a Docker image
+// Build build and optionally push a Docker image
 func Build(ctx context.Context, ioCtrl *io.Controller, at analyticsTrackerInterface, k8slogger *io.K8sLogger, envManager *env.Manager) *cobra.Command {
 	options := &types.BuildOptions{}
 	cmd := &cobra.Command{
