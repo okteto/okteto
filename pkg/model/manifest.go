@@ -345,26 +345,30 @@ func GetManifestV2(manifestPath string, fs afero.Fs, envManager *env.Manager) (*
 
 	discoveredManifestPath, err := discovery.GetOktetoManifestPath(cwd)
 	if err != nil {
-		return nil, err
+		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
+			return nil, err
+		}
 	}
 
-	manifestVars, err := vars.GetManifestVars(discoveredManifestPath, fs)
-	if err != nil {
-		return nil, err
-	}
-	err = manifestVars.Expand(env.ExpandEnv)
-	if err != nil {
-		return nil, err
-	}
+	if discoveredManifestPath != "" {
+		manifestVars, err := vars.GetManifestVars(discoveredManifestPath, fs)
+		if err != nil {
+			return nil, err
+		}
+		err = manifestVars.Expand(env.ExpandEnv)
+		if err != nil {
+			return nil, err
+		}
 
-	var group []env.Var
-	for _, v := range manifestVars {
-		group = append(group, env.Var{Name: v.Name, Value: v.Value})
-	}
-	envManager.AddGroup(group, env.PriorityVarFromManifest)
-	err = envManager.Export()
-	if err != nil {
-		return nil, err
+		var group []env.Var
+		for _, v := range manifestVars {
+			group = append(group, env.Var{Name: v.Name, Value: v.Value})
+		}
+		envManager.AddGroup(group, env.PriorityVarFromManifest)
+		err = envManager.Export()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	manifest, err = getManifestFromOktetoFile(cwd, fs)
