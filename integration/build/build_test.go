@@ -75,6 +75,19 @@ build:
       secrets:
         mysecret: mysecret.txt
 `
+
+	dockerfileContentWithArgs = `FROM alpine
+ARG TEST_ARG
+RUN echo TEST_ARG=$TEST_ARG`
+	manifestContentWithVars = `
+variables:
+  CLI_TEST_MY_VAR5: manifest-arg-value
+build:
+    test:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        TEST_ARG: $CLI_TEST_MY_VAR5`
 )
 
 func TestMain(m *testing.M) {
@@ -410,6 +423,41 @@ func TestBuildCommandV2Secrets(t *testing.T) {
 	require.True(t, isImageBuilt(expectedBuildImage), "%s not found", expectedBuildImage)
 }
 
+//	TestBuildCommandV2WithManifestVars tests the following scenario:
+//
+// - Validate that build args are correctly passed to the build
+// - Validate that build args are expanded
+// - Validate that manifest vars work as expected with the build section
+func TestBuildCommandV2WithManifestVars(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	require.NoError(t, createDockerfileWithArgs(dir))
+	require.NoError(t, createManifestV2WithVars(dir))
+
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	testNamespace := integration.GetTestNamespace("BuildArgsV2", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+
+	options := &commands.BuildOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		Token:      token,
+		OktetoHome: dir,
+	}
+	output, err := commands.RunOktetoBuildWithOutput(oktetoPath, options)
+	require.NoError(t, err)
+	require.Contains(t, output, "TEST_ARG=manifest-arg-value")
+	require.Contains(t, output, "Variable 'CLI_TEST_MY_VAR5' defined in the manifest takes precedence over the same variable defined in the Okteto Platform, which will be ignored")
+}
+
 func createDockerfile(dir string) error {
 	dockerfilePath := filepath.Join(dir, dockerfileName)
 	dockerfileContent := []byte(dockerfileContent)
@@ -422,6 +470,15 @@ func createDockerfile(dir string) error {
 func createDockerfileWithSecretMount(dir string) error {
 	dockerfilePath := filepath.Join(dir, dockerfileName)
 	dockerfileContent := []byte(dockerfileContentSecrets)
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
+		return err
+	}
+	return nil
+}
+
+func createDockerfileWithArgs(dir string) error {
+	dockerfilePath := filepath.Join(dir, dockerfileName)
+	dockerfileContent := []byte(dockerfileContentWithArgs)
 	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
 		return err
 	}
@@ -449,6 +506,15 @@ func createManifestV2(dir string) error {
 func createManifestV2Secrets(dir string) error {
 	manifestPath := filepath.Join(dir, manifestName)
 	manifestBytes := []byte(manifestContentSecrets)
+	if err := os.WriteFile(manifestPath, manifestBytes, 0600); err != nil {
+		return err
+	}
+	return nil
+}
+
+func createManifestV2WithVars(dir string) error {
+	manifestPath := filepath.Join(dir, manifestName)
+	manifestBytes := []byte(manifestContentWithVars)
 	if err := os.WriteFile(manifestPath, manifestBytes, 0600); err != nil {
 		return err
 	}
