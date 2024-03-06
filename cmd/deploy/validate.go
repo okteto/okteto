@@ -20,6 +20,8 @@ import (
 	"github.com/okteto/okteto/pkg/env"
 )
 
+// validateAndSetVarsFromFlag validates the --var flag of the deploy command by parsing them as KEY=VALUE pairs
+// and sets them as environment variables
 func validateAndSetVarsFromFlag(variables []string, envManager *env.Manager) error {
 	envVars, err := parse(variables)
 	if err != nil {

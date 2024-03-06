@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -81,26 +82,21 @@ type Options struct {
 	getCtxResource       initCtxOptsFunc
 }
 
-func defaultKubetokenOptions() *Options {
+func defaultKubetokenOptions(envManager *env.Manager) *Options {
 	ctxStore := okteto.GetContextStore()
 	return &Options{
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
 		k8sClientProvider:    okteto.NewK8sClientProvider(),
-		oktetoCtxCmdRunner:   contextCMD.NewContextCommand(),
+		oktetoCtxCmdRunner:   contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)),
 		ctxStore:             ctxStore,
 		serializer:           &Serializer{},
 		getCtxResource:       getCtxResource,
 	}
 }
 
-type kubetokenOption func(*Options)
-
 // NewKubetokenCmd returns a new cobra command
-func NewKubetokenCmd(optFunc ...kubetokenOption) *Cmd {
-	opts := defaultKubetokenOptions()
-	for _, o := range optFunc {
-		o(opts)
-	}
+func NewKubetokenCmd(envManager *env.Manager) *Cmd {
+	opts := defaultKubetokenOptions(envManager)
 	return &Cmd{
 		oktetoClientProvider: opts.oktetoClientProvider,
 		serializer:           opts.serializer,

@@ -47,9 +47,9 @@ func NewCommand(envManager *env.Manager) (*Command, error) {
 }
 
 // NewCommandStateless creates a namespace command for use in further operations
-func NewCommandStateless(c *okteto.Client) *Command {
+func NewCommandStateless(c *okteto.Client, envManager *env.Manager) *Command {
 	return &Command{
-		ctxCmd:            contextCMD.NewContextCommand(),
+		ctxCmd:            contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)),
 		okClient:          c,
 		k8sClientProvider: okteto.NewK8sClientProviderWithLogger(nil),
 	}

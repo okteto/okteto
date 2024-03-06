@@ -247,7 +247,7 @@ func getOktetoContext(ctx context.Context, options *types.BuildOptions, envManag
 			return nil, err
 		}
 		if create {
-			if err := namespace.NewCommandStateless(c).Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
+			if err := namespace.NewCommandStateless(c, envManager).Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
 				return nil, err
 			}
 		}
