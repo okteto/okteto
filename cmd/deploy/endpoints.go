@@ -17,7 +17,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/okteto/okteto/pkg/config"
 	"os"
+	"os/exec"
 	"sort"
 	"strings"
 
@@ -88,6 +90,25 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 		Use:   "endpoints",
 		Short: "Show endpoints for an environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			currentVersion := config.VersionString
+			clusterVersion := os.Getenv("OKTETO_CLUSTER_VERSION")
+			bin := fmt.Sprintf("/Users/andrea/.okteto/bin/%s/okteto", clusterVersion)
+			if currentVersion != clusterVersion {
+
+				// redirect command to bin:
+				// newArgs should contain the cmd name plus all args
+				newArgs := []string{"endpoints"}
+				newArgs = append(newArgs, args...)
+
+				ncmd := exec.Command(bin, newArgs...)
+				fmt.Printf("Executing: '%s %s'\n", bin, newArgs)
+				ncmd.Stdout = os.Stdout
+				ncmd.Stderr = os.Stderr
+				ncmd.Stdin = os.Stdin
+				ncmd.Env = os.Environ()
+				return ncmd.Run()
+			}
+
 			if options.ManifestPath != "" {
 				workdir := model.GetWorkdirFromManifestPath(options.ManifestPath)
 				if err := os.Chdir(workdir); err != nil {

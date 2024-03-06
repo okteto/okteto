@@ -15,12 +15,13 @@ package cmd
 
 import (
 	"fmt"
-
 	"github.com/Masterminds/semver/v3"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
+	"os"
+	"os/exec"
 )
 
 // Version returns information about the binary
@@ -30,6 +31,34 @@ func Version() *cobra.Command {
 		Short: "View the version of the okteto binary",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#version"),
 		RunE:  Show().RunE,
+		//PreRun: func(ccmd *cobra.Command, args []string) {
+		//// check what version the cluster is running
+		//// if the version is different from the current version
+		//// invoke the CLI for that version
+		//currentVersion := "2.25.2"
+		//clusterVersion := os.Getenv("OKTETO_CLUSTER_VERSION")
+		//bin := fmt.Sprintf("/Users/andrea/.okteto/bin/%s/okteto", clusterVersion)
+		//if currentVersion != clusterVersion {
+		//	fmt.Printf("Calling version: '%s %s %s'\n", bin, ccmd.Name(), args)
+		//	// redirect command to bin:
+		//	// newArgs should contain the cmd name plus all args
+		//	newArgs := []string{ccmd.Name()}
+		//	newArgs = append(newArgs, args...)
+		//
+		//	ncmd := &exec.Cmd{
+		//		Path: bin,
+		//		Args: newArgs,
+		//	}
+		//	ncmd.Stdout = os.Stdout
+		//	ncmd.Stderr = os.Stderr
+		//	ncmd.Stdin = os.Stdin
+		//	ncmd.Env = os.Environ()
+		//	err := ncmd.Run()
+		//	if err != nil {
+		//		oktetoLog.Infof("error running the command: %s", err)
+		//	}
+		//}
+		//},
 	}
 	cmd.AddCommand(Update())
 	cmd.AddCommand(Show())
@@ -64,6 +93,31 @@ func Show() *cobra.Command {
 		Use:   "show",
 		Short: "Show Okteto CLI version",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// check what version the cluster is running
+			// if the version is different from the current version
+			// invoke the CLI for that version
+			currentVersion := config.VersionString
+			clusterVersion := os.Getenv("OKTETO_CLUSTER_VERSION")
+			bin := fmt.Sprintf("/Users/andrea/.okteto/bin/%s/okteto", clusterVersion)
+			if currentVersion != clusterVersion {
+
+				// redirect command to bin:
+				// newArgs should contain the cmd name plus all args
+				newArgs := []string{"version", "show"}
+				newArgs = append(newArgs, args...)
+
+				ncmd := &exec.Cmd{
+					Path: bin,
+					Args: newArgs,
+				}
+				fmt.Printf("Executing: '%s %s'\n", bin, newArgs)
+				ncmd.Stdout = os.Stdout
+				ncmd.Stderr = os.Stderr
+				ncmd.Stdin = os.Stdin
+				ncmd.Env = os.Environ()
+				return ncmd.Run()
+			}
+
 			oktetoLog.Printf("okteto version %s \n", config.VersionString)
 			return nil
 		},

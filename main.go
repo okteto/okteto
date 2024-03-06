@@ -18,6 +18,7 @@ import (
 	cryptoRand "crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"github.com/okteto/okteto/cmd/download"
 	"math/rand"
 	"os"
 	"strings"
@@ -176,6 +177,7 @@ func main() {
 	root.AddCommand(deploy.Endpoints(ctx, k8sLogger))
 	root.AddCommand(logs.Logs(ctx, k8sLogger))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
+	root.AddCommand(download.Cmd)
 
 	// deprecated
 	root.AddCommand(cmd.Create(ctx))
