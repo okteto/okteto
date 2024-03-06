@@ -106,7 +106,7 @@ func TestGetOktetoCredentials(t *testing.T) {
 		{
 			name:     "error getting okteto credentials",
 			err:      assert.AnError,
-			expected: nil,
+			expected: &auth.CredentialsResponse{},
 		},
 	}
 	for _, tc := range tt {
