@@ -273,6 +273,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				GetManifest: getManifestWithInvalidManifestError,
 				Registry:    newFakeRegistry(),
 				ioCtrl:      io.NewIOController(),
+				envManager:  env.NewEnvManager(newFakeEnvManager()),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -284,6 +285,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				GetManifest: getManifestWithInvalidManifestError,
 				Registry:    newFakeRegistry(),
 				ioCtrl:      io.NewIOController(),
+				envManager:  env.NewEnvManager(newFakeEnvManager()),
 			},
 			options: &types.BuildOptions{
 				File: "okteto.yml",
@@ -297,6 +299,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				GetManifest: getManifestWithInvalidManifestError,
 				Registry:    newFakeRegistry(),
 				ioCtrl:      io.NewIOController(),
+				envManager:  env.NewEnvManager(newFakeEnvManager()),
 			},
 			options: &types.BuildOptions{
 				File: malformedDockerfile,
@@ -310,6 +313,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				GetManifest: getManifestWithInvalidManifestError,
 				Registry:    newFakeRegistry(),
 				ioCtrl:      io.NewIOController(),
+				envManager:  env.NewEnvManager(newFakeEnvManager()),
 			},
 			options: &types.BuildOptions{
 				File: dockerfile,
@@ -323,6 +327,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				GetManifest: getFakeManifestV2,
 				Registry:    newFakeRegistry(),
 				ioCtrl:      io.NewIOController(),
+				envManager:  env.NewEnvManager(newFakeEnvManager()),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -334,6 +339,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				GetManifest: getFakeManifestV1,
 				Registry:    newFakeRegistry(),
 				ioCtrl:      io.NewIOController(),
+				envManager:  env.NewEnvManager(newFakeEnvManager()),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -345,6 +351,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				GetManifest: getManifestWithError,
 				Registry:    newFakeRegistry(),
 				ioCtrl:      io.NewIOController(),
+				envManager:  env.NewEnvManager(newFakeEnvManager()),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -356,7 +363,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			builder, err := tt.buildCommand.getBuilder(tt.options, okCtx, nil)
+			builder, err := tt.buildCommand.getBuilder(tt.options, okCtx)
 			if err != nil && !tt.expectedError {
 				t.Errorf("getBuilder() fail on '%s'. Expected nil error, got %s", tt.name, err.Error())
 			}
@@ -391,6 +398,22 @@ type fakeAnalyticsTracker struct{}
 
 func (fakeAnalyticsTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
 
+type fakeEnvManager struct{}
+
+func (*fakeEnvManager) LookupEnv(_ string) (string, bool) {
+	return "", false
+}
+func (*fakeEnvManager) SetEnv(_, _ string) error {
+	return nil
+}
+func (*fakeEnvManager) MaskVar(_ string) {}
+func (*fakeEnvManager) WarningLogf(_ string, _ ...interface{}) {
+}
+
+func newFakeEnvManager() *fakeEnvManager {
+	return &fakeEnvManager{}
+}
+
 func Test_NewBuildCommand(t *testing.T) {
 	okCtx := &okteto.ContextStateless{
 		Store: &okteto.ContextStore{
@@ -402,7 +425,7 @@ func Test_NewBuildCommand(t *testing.T) {
 			CurrentContext: "test",
 		},
 	}
-	got := NewBuildCommand(io.NewIOController(), fakeAnalyticsTracker{}, okCtx, nil)
+	got := NewBuildCommand(io.NewIOController(), fakeAnalyticsTracker{}, okCtx, nil, env.NewEnvManager(newFakeEnvManager()))
 	require.IsType(t, &Command{}, got)
 	require.NotNil(t, got.GetManifest)
 	require.NotNil(t, got.Builder)

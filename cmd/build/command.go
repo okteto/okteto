@@ -57,6 +57,7 @@ type Command struct {
 	analyticsTracker analyticsTrackerInterface
 	ioCtrl           *io.Controller
 	k8slogger        *io.K8sLogger
+	envManager       *env.Manager
 }
 
 type analyticsTrackerInterface interface {
@@ -76,7 +77,7 @@ type registryInterface interface {
 }
 
 // NewBuildCommand creates a struct to run all build methods
-func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker analyticsTrackerInterface, okCtx *okteto.ContextStateless, k8slogger *io.K8sLogger) *Command {
+func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker analyticsTrackerInterface, okCtx *okteto.ContextStateless, k8slogger *io.K8sLogger, envManager *env.Manager) *Command {
 
 	return &Command{
 		GetManifest:      model.GetManifestV2,
@@ -85,6 +86,7 @@ func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker analyticsTrackerInt
 		ioCtrl:           ioCtrl,
 		k8slogger:        k8slogger,
 		analyticsTracker: analyticsTracker,
+		envManager:       envManager,
 	}
 }
 
@@ -93,7 +95,7 @@ const (
 	docsURL          = "https://okteto.com/docs/reference/okteto-cli/#build"
 )
 
-// Build build and optionally push a Docker image
+// Build builds and optionally push a Docker image
 func Build(ctx context.Context, ioCtrl *io.Controller, at analyticsTrackerInterface, k8slogger *io.K8sLogger, envManager *env.Manager) *cobra.Command {
 	options := &types.BuildOptions{}
 	cmd := &cobra.Command{
@@ -111,9 +113,9 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at analyticsTrackerInterf
 
 			ioCtrl.Logger().Info("context loaded")
 
-			bc := NewBuildCommand(ioCtrl, at, oktetoContext, k8slogger)
+			bc := NewBuildCommand(ioCtrl, at, oktetoContext, k8slogger, envManager)
 
-			builder, err := bc.getBuilder(options, oktetoContext, envManager)
+			builder, err := bc.getBuilder(options, oktetoContext)
 
 			if err != nil {
 				return err
@@ -149,13 +151,13 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at analyticsTrackerInterf
 }
 
 // getBuilder returns the proper builder (V1 or V2) based on the manifest. The following rules are applied:
-//   - If the manifest is not found or there is any error getting the manifest, the builder fallsback to V1
-//   - If the manifest is found and it is a V2 manifest and the build section has some image, the builder is V2
-//   - If the manifest is found and it is a V1 manifest or the build section is empty, the builder fallsback to V1
-func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.ContextStateless, envManager *env.Manager) (Builder, error) {
+//   - If the manifest is not found or there is any error getting the manifest, the builder falls back to V1
+//   - If the manifest is found and, it is a V2 manifest and the build section has some image, the builder is V2
+//   - If the manifest is found and, it is a V1 manifest or the build section is empty, the builder falls back to V1
+func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.ContextStateless) (Builder, error) {
 	var builder Builder
 
-	manifest, err := bc.GetManifest(options.File, afero.NewOsFs(), envManager)
+	manifest, err := bc.GetManifest(options.File, afero.NewOsFs(), bc.envManager)
 	if err != nil {
 		if options.File != "" && errors.Is(err, oktetoErrors.ErrInvalidManifest) && validateDockerfile(options.File) != nil {
 			return nil, err
@@ -174,6 +176,8 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 	}
 
 	options.Manifest = manifest
+
+	bc.envManager.WarnVarsPrecedence()
 
 	return builder, nil
 }
