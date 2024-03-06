@@ -114,6 +114,7 @@ spec:
   MY_VAR2: $LOCAL_VAR
   MY_VAR3: ${LOCAL_VAR}-with-suffix
   MY_VAR4: manifest-value-4
+  MY_VAR5: manifest-value-5
 
 deploy:
   commands:
@@ -129,6 +130,9 @@ deploy:
   - echo MY_VAR4=$MY_VAR4
   - echo MY_VAR4=$MY_VAR4 > deploy-var4.txt
 
+  - echo MY_VAR5=$MY_VAR5
+  - echo MY_VAR5=$MY_VAR5 > deploy-var5.txt
+
 destroy:
   commands:
   - echo MY_VAR1=$MY_VAR1
@@ -142,6 +146,9 @@ destroy:
 
   - echo MY_VAR4=$MY_VAR4
   - echo MY_VAR4=$MY_VAR4 > destroy-var4.txt
+
+  - echo MY_VAR5=$MY_VAR5
+  - echo MY_VAR5=$MY_VAR5 > destroy-var5.txt
 `
 )
 
@@ -477,7 +484,12 @@ func TestDeployRemoteOktetoManifestFromParentFolder(t *testing.T) {
 }
 
 // TestDeployOktetoManifestWithVariables tests the following scenario:
-// - Deploying a service using a manifest that uses the top-level propertiy "variables" in the deploy commands
+// - Validate that the top-property "variables" of the okteto manifest works correctly with the deploy and destroy commands
+// - Validate that local variables have priority over manifest variables
+// - Validate that the manifest variables are expanded correctly
+// - Validate that the manifest variables are obfuscated in the logs
+// - Validate the order in which variables are exported (--var flags > Local > Catalog > Manifest > Okteto Platform)
+// Note: this test requires a variable configured in the Okteto Platform: MY_VAR5=platform-value-5 (value can be anything because it gets overridden by the manifest variable)
 func TestDeployOktetoManifestWithVariables(t *testing.T) {
 	// LOCAL_VAR is used to validate the scenario that manifest vars can be expanded
 	t.Setenv("LOCAL_VAR", "local-value-2")
@@ -516,6 +528,7 @@ func TestDeployOktetoManifestWithVariables(t *testing.T) {
 	require.Contains(t, deployOutput, "MY_VAR3=***")
 	require.Contains(t, deployOutput, "MY_VAR4=local") // we do not obfuscate local variables at the moment
 	require.Contains(t, deployOutput, "Variable 'MY_VAR4' defined locally or in the catalog takes precedence over the same variable defined in the manifest, which will be ignored")
+	require.Contains(t, deployOutput, "Variable 'MY_VAR5' defined in the manifest takes precedence over the same variable defined in the Okteto Platform, which will be ignored")
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
@@ -529,6 +542,7 @@ func TestDeployOktetoManifestWithVariables(t *testing.T) {
 	require.Contains(t, destroyOutput, "MY_VAR3=***")
 	require.Contains(t, destroyOutput, "MY_VAR4=local") // we do not obfuscate local variables at the moment
 	require.Contains(t, destroyOutput, "Variable 'MY_VAR4' defined locally or in the catalog takes precedence over the same variable defined in the manifest, which will be ignored")
+	require.Contains(t, destroyOutput, "Variable 'MY_VAR5' defined in the manifest takes precedence over the same variable defined in the Okteto Platform, which will be ignored")
 
 	expected := []struct {
 		fileName    string
@@ -538,11 +552,13 @@ func TestDeployOktetoManifestWithVariables(t *testing.T) {
 		{"deploy-var2.txt", "MY_VAR2=local-value-2"},
 		{"deploy-var3.txt", "MY_VAR3=local-value-2-with-suffix"},
 		{"deploy-var4.txt", "MY_VAR4=local-value-4"},
+		{"deploy-var5.txt", "MY_VAR5=manifest-value-5"},
 
 		{"destroy-var1.txt", "MY_VAR1=manifest-value-1"},
 		{"destroy-var2.txt", "MY_VAR2=local-value-2"},
 		{"destroy-var3.txt", "MY_VAR3=local-value-2-with-suffix"},
 		{"destroy-var4.txt", "MY_VAR4=local-value-4"},
+		{"destroy-var5.txt", "MY_VAR5=manifest-value-5"},
 	}
 
 	for _, e := range expected {
@@ -550,7 +566,6 @@ func TestDeployOktetoManifestWithVariables(t *testing.T) {
 		require.NoError(t, err)
 		require.Contains(t, string(content), e.expectedVar)
 	}
-
 }
 
 func isImageBuilt(image string) bool {
