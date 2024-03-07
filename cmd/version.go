@@ -14,13 +14,16 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"github.com/Masterminds/semver/v3"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/discovery"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/resolve"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 // Version returns information about the binary
@@ -92,10 +95,20 @@ func Show() *cobra.Command {
 		Use:   "show",
 		Short: "Show Okteto CLI version",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if resolve.ShouldRedirect() {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			discoveredManifestPath, err := discovery.GetOktetoManifestPath(cwd)
+			if err != nil {
+				if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
+					return err
+				}
+			}
+			if resolve.ShouldRedirect("", "", discoveredManifestPath) {
 				return resolve.RedirectCmd(cmd, args)
 			}
-			fmt.Println("CIAO")
+
 			oktetoLog.Printf("okteto version %s \n", config.VersionString)
 			return nil
 		},

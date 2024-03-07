@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/discovery"
 	"github.com/okteto/okteto/pkg/resolve"
 	"os"
 	"os/signal"
@@ -154,7 +155,17 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 		Use:   "deploy [service...]",
 		Short: "Execute the list of commands specified in the 'deploy' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if resolve.ShouldRedirect() {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			discoveredManifestPath, err := discovery.GetOktetoManifestPath(cwd)
+			if err != nil {
+				if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
+					return err
+				}
+			}
+			if resolve.ShouldRedirect(options.Namespace, options.K8sContext, discoveredManifestPath) {
 				return resolve.RedirectCmd(cmd, args)
 			}
 
@@ -171,7 +182,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(constants.OktetoSkipConfigCredentialsUpdate, "false")
 
-			err := checkOktetoManifestPathFlag(options, fs.Fs)
+			err = checkOktetoManifestPathFlag(options, fs.Fs)
 			if err != nil {
 				return err
 			}

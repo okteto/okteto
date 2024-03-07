@@ -106,6 +106,8 @@ func main() {
 		oktetoLog.Infof("error initializing okteto analytics: %s", err)
 	}
 
+	fmt.Println("VERSION: 2.25")
+
 	okteto.InitContextWithDeprecatedToken()
 
 	k8sLogger := io.NewK8sLogger()
