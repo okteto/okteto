@@ -725,39 +725,3 @@ func TestGetOriginalCWD(t *testing.T) {
 		require.Equal(t, expected, result)
 	})
 }
-
-func Test_cleanManifestPath(t *testing.T) {
-	var tests = []struct {
-		name     string
-		manifest string
-		expected string
-	}{
-		{
-			name:     "empty manifest",
-			manifest: "",
-			expected: ".",
-		},
-		{
-			name:     "absolute path to manifest file",
-			manifest: "/path/to/service/okteto.yml",
-			expected: "okteto.yml",
-		},
-		{
-			name:     "relative path to manifest file",
-			manifest: "./service/okteto.yml",
-			expected: "okteto.yml",
-		},
-		{
-			name:     "manifest within .okteto",
-			manifest: "/path/to/service/.okteto/okteto.yml",
-			expected: filepath.Clean(".okteto/okteto.yml"),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := cleanManifestPath(tt.manifest)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
