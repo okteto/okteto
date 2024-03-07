@@ -105,8 +105,9 @@ func Show() *cobra.Command {
 					return err
 				}
 			}
-			if resolve.ShouldRedirect("", "", discoveredManifestPath) {
-				return resolve.RedirectCmd(cmd, args)
+			redirect := resolve.NewRedirect(config.VersionString)
+			if redirect.ShouldRedirect("", discoveredManifestPath) {
+				return redirect.RedirectCmd(cmd, args)
 			}
 
 			oktetoLog.Printf("okteto version %s \n", config.VersionString)

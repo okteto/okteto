@@ -165,8 +165,10 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 					return err
 				}
 			}
-			if resolve.ShouldRedirect(options.Namespace, options.K8sContext, discoveredManifestPath) {
-				return resolve.RedirectCmd(cmd, args)
+
+			redirect := resolve.NewRedirect(config.VersionString)
+			if redirect.ShouldRedirect(options.K8sContext, discoveredManifestPath) {
+				return redirect.RedirectCmd(cmd, args)
 			}
 
 			// validate cmd options

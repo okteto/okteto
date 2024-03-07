@@ -1,11 +1,7 @@
 package resolve
 
 import (
-	"context"
 	"fmt"
-	contextCMD "github.com/okteto/okteto/cmd/context"
-	"github.com/okteto/okteto/pkg/config"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -13,48 +9,71 @@ import (
 	"os/exec"
 )
 
-func ShouldRedirect(flagContext, flagNamespace, manifestFilePath string) bool {
-	currentVersion := config.VersionString
-	clusterVersion := os.Getenv("OKTETO_CLUSTER_VERSION")
+type Redirect struct {
+	currentVersion string
+	clusterVersion string
+}
 
-	fmt.Printf("Get context: (context=%s) (namespace=%s) (manifest=%s)\n", flagContext, flagNamespace, manifestFilePath)
-	ctxStr, err := getContext(flagContext, flagNamespace, manifestFilePath)
+func NewRedirect(currentVersion string) *Redirect {
+	// POC
+	if currentVersion == "" {
+		currentVersion = "2.25.2"
+	}
+	return &Redirect{
+		currentVersion: currentVersion,
+	}
+}
+
+func (r *Redirect) ShouldRedirect(flagContext, manifestFilePath string) bool {
+	if r.clusterVersion == "" {
+		r.clusterVersion = r.getClusterVersion(flagContext, manifestFilePath)
+	}
+
+	return r.currentVersion != r.clusterVersion
+}
+
+func (r *Redirect) getClusterVersion(flagContext, manifestFilePath string) string {
+	contextsToVersion := map[string]string{
+		"https://product.okteto.dev":                   "2.25.2",
+		"https://okteto.andreafalzetti.dev.okteto.net": "2.22.0",
+		"http://staging.okteto.dev":                    "2.23.0",
+	}
+
+	ctxStr, err := getContext(flagContext, manifestFilePath)
 	if err != nil {
-		panic(err)
+		fmt.Println("error getting context: ", err)
 	}
 
-	if clusterVersion == "" {
-		return false
-	}
+	fmt.Printf("Context: %s\n", ctxStr)
+	clusterVersion, _ := contextsToVersion[ctxStr]
 
-	fmt.Println("CONTEXT:", ctxStr)
-
-	return currentVersion != clusterVersion
+	return clusterVersion
 }
 
-func getContext(flagContext, flagNamespace, manifestFilePath string) (string, error) {
+func getContext(flagContext, manifestFilePath string) (string, error) {
+	if flagContext != "" {
+		return flagContext, nil
+	}
+	// get context from manifest
 	ctxResource, err := model.GetContextResource(manifestFilePath)
-	fmt.Println(ctxResource.Context, err)
-
-	ctx := context.Background()
-	// Loads, updates and uses the context from path. If not found, it creates and uses a new context
-	if err := contextCMD.LoadContextFromPath(ctx, flagNamespace, flagContext, manifestFilePath, contextCMD.Options{Show: true}); err != nil {
-		if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
-			return "", err
-		}
-		if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: flagNamespace}); err != nil {
-			return "", err
-		}
+	if err != nil {
+		return "", err
 	}
-	return ctxResource.Context, nil
+
+	if ctxResource.Context != "" {
+		return ctxResource.Context, nil
+	}
+
+	ctxStore := okteto.GetContextStore()
+
+	return ctxStore.CurrentContext, nil
 }
 
-func RedirectCmd(cmd *cobra.Command, args []string) error {
-	clusterVersion := os.Getenv("OKTETO_CLUSTER_VERSION")
-	bin := fmt.Sprintf("/Users/andrea/.okteto/bin/%s/okteto", clusterVersion)
+func (r *Redirect) RedirectCmd(cmd *cobra.Command, args []string) error {
+	bin := fmt.Sprintf("/Users/andrea/.okteto/bin/%s/okteto", r.clusterVersion)
 
 	var newArgs []string
-	if cmd.Parent() != nil {
+	if cmd.Parent() != nil && cmd.Parent().Name() != "okteto" {
 		newArgs = append(newArgs, cmd.Parent().Name())
 	} else {
 		newArgs = append(newArgs, cmd.Name())
