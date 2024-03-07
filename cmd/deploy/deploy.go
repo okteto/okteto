@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/resolve"
 	"os"
 	"os/signal"
 	"time"
@@ -153,6 +154,10 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 		Use:   "deploy [service...]",
 		Short: "Execute the list of commands specified in the 'deploy' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if resolve.ShouldRedirect() {
+				return resolve.RedirectCmd(cmd, args)
+			}
+
 			// validate cmd options
 			if options.Dependencies && !okteto.IsOkteto() {
 				return fmt.Errorf("'dependencies' is only supported in contexts that have Okteto installed")

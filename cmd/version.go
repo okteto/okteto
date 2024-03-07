@@ -19,9 +19,8 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/resolve"
 	"github.com/spf13/cobra"
-	"os"
-	"os/exec"
 )
 
 // Version returns information about the binary
@@ -93,31 +92,10 @@ func Show() *cobra.Command {
 		Use:   "show",
 		Short: "Show Okteto CLI version",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// check what version the cluster is running
-			// if the version is different from the current version
-			// invoke the CLI for that version
-			currentVersion := config.VersionString
-			clusterVersion := os.Getenv("OKTETO_CLUSTER_VERSION")
-			bin := fmt.Sprintf("/Users/andrea/.okteto/bin/%s/okteto", clusterVersion)
-			if currentVersion != clusterVersion {
-
-				// redirect command to bin:
-				// newArgs should contain the cmd name plus all args
-				newArgs := []string{"version", "show"}
-				newArgs = append(newArgs, args...)
-
-				ncmd := &exec.Cmd{
-					Path: bin,
-					Args: newArgs,
-				}
-				fmt.Printf("Executing: '%s %s'\n", bin, newArgs)
-				ncmd.Stdout = os.Stdout
-				ncmd.Stderr = os.Stderr
-				ncmd.Stdin = os.Stdin
-				ncmd.Env = os.Environ()
-				return ncmd.Run()
+			if resolve.ShouldRedirect() {
+				return resolve.RedirectCmd(cmd, args)
 			}
-
+			fmt.Println("CIAO")
 			oktetoLog.Printf("okteto version %s \n", config.VersionString)
 			return nil
 		},
