@@ -82,7 +82,7 @@ type fakeContext struct{}
 
 func (fakeContext) isOktetoContext() bool                 { return true }
 func (fakeContext) getOktetoClientCfg() *okteto.ClientCfg { return nil }
-func (fakeContext) getExternalRegistryCreds(registryOrImage string, isOkteto bool, c *okteto.Client) (string, string, error) {
+func (fakeContext) getExternalRegistryCreds(string, bool, *okteto.Client) (string, string, error) {
 	return "", "", nil
 }
 
@@ -128,13 +128,13 @@ func TestCredentials(t *testing.T) {
 	oktetoRegistry = "okteto.registry.com"
 
 	tt := []struct {
-		name              string
 		credRequest       *auth.CredentialsRequest
-		envVarSet         bool
+		expected          *auth.CredentialsResponse
+		name              string
 		envVarValue       string
+		envVarSet         bool
 		localCredentials  bool
 		oktetoCredentials bool
-		expected          *auth.CredentialsResponse
 	}{
 		{
 			name: "okteto registry",
