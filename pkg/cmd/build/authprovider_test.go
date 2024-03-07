@@ -14,6 +14,7 @@
 package build
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -118,6 +119,239 @@ func TestGetOktetoCredentials(t *testing.T) {
 				authContext: &fakeContext{},
 			}
 			creds := ap.getOktetoCredentials("", nil)
+			require.Equal(t, tc.expected, creds)
+		})
+	}
+}
+
+func TestCredentials(t *testing.T) {
+	oktetoRegistry = "okteto.registry.com"
+
+	tt := []struct {
+		name              string
+		credRequest       *auth.CredentialsRequest
+		envVarSet         bool
+		envVarValue       string
+		localCredentials  bool
+		oktetoCredentials bool
+		expected          *auth.CredentialsResponse
+	}{
+		{
+			name: "okteto registry",
+			credRequest: &auth.CredentialsRequest{
+				Host: "okteto.registry.com",
+			},
+			expected: &auth.CredentialsResponse{
+				Username: "okteto-registry",
+				Secret:   "okteto-registry",
+			},
+		},
+
+		{
+			name: "local env var: true / local credentials: true / okteto credentials: false",
+			credRequest: &auth.CredentialsRequest{
+				Host: "registry-1.docker.io",
+			},
+			envVarSet:         true,
+			envVarValue:       "true",
+			localCredentials:  true,
+			oktetoCredentials: false,
+			expected: &auth.CredentialsResponse{
+				Username: "local",
+				Secret:   "local",
+			},
+		},
+		{
+			name: "local env var: true / local credentials: false / okteto credentials: true",
+			credRequest: &auth.CredentialsRequest{
+				Host: "registry-1.docker.io",
+			},
+			envVarSet:         true,
+			envVarValue:       "true",
+			localCredentials:  false,
+			oktetoCredentials: true,
+			expected: &auth.CredentialsResponse{
+				Username: "okteto",
+				Secret:   "okteto",
+			},
+		},
+		{
+			name: "local env var: true / local credentials: true / okteto credentials: true",
+			credRequest: &auth.CredentialsRequest{
+				Host: "registry-1.docker.io",
+			},
+			envVarSet:         true,
+			envVarValue:       "true",
+			localCredentials:  true,
+			oktetoCredentials: true,
+			expected: &auth.CredentialsResponse{
+				Username: "local",
+				Secret:   "local",
+			},
+		},
+		{
+			name: "local env var: true / local credentials: false / okteto credentials: false",
+			credRequest: &auth.CredentialsRequest{
+				Host: "registry-1.docker.io",
+			},
+			envVarSet:         true,
+			envVarValue:       "true",
+			localCredentials:  false,
+			oktetoCredentials: false,
+			expected: &auth.CredentialsResponse{
+				Username: "",
+				Secret:   "",
+			},
+		},
+
+		{
+			name: "local env var: false / local credentials: true / okteto credentials: false",
+			credRequest: &auth.CredentialsRequest{
+				Host: "registry-1.docker.io",
+			},
+			envVarSet:         true,
+			envVarValue:       "false",
+			localCredentials:  true,
+			oktetoCredentials: false,
+			expected: &auth.CredentialsResponse{
+				Username: "",
+				Secret:   "",
+			},
+		},
+		{
+			name: "local env var: false / local credentials: false / okteto credentials: true",
+			credRequest: &auth.CredentialsRequest{
+				Host: "registry-1.docker.io",
+			},
+			envVarSet:         true,
+			envVarValue:       "false",
+			localCredentials:  false,
+			oktetoCredentials: true,
+			expected: &auth.CredentialsResponse{
+				Username: "okteto",
+				Secret:   "okteto",
+			},
+		},
+		{
+			name: "local env var: false / local credentials: true / okteto credentials: true",
+			credRequest: &auth.CredentialsRequest{
+				Host: "registry-1.docker.io",
+			},
+			envVarSet:         true,
+			envVarValue:       "false",
+			localCredentials:  true,
+			oktetoCredentials: true,
+			expected: &auth.CredentialsResponse{
+				Username: "okteto",
+				Secret:   "okteto",
+			},
+		},
+		{
+			name: "local env var: false / local credentials: false / okteto credentials: false",
+			credRequest: &auth.CredentialsRequest{
+				Host: "registry-1.docker.io",
+			},
+			envVarSet:         true,
+			envVarValue:       "false",
+			localCredentials:  false,
+			oktetoCredentials: false,
+			expected: &auth.CredentialsResponse{
+				Username: "",
+				Secret:   "",
+			},
+		},
+
+		{
+			name: "local env var: unset / local credentials: true / okteto credentials: false",
+			credRequest: &auth.CredentialsRequest{
+				Host: "registry-1.docker.io",
+			},
+			envVarSet:         false,
+			localCredentials:  true,
+			oktetoCredentials: false,
+			expected: &auth.CredentialsResponse{
+				Username: "local",
+				Secret:   "local",
+			},
+		},
+		{
+			name: "local env var: unset / local credentials: false / okteto credentials: true",
+			credRequest: &auth.CredentialsRequest{
+				Host: "registry-1.docker.io",
+			},
+			envVarSet:         false,
+			localCredentials:  false,
+			oktetoCredentials: true,
+			expected: &auth.CredentialsResponse{
+				Username: "okteto",
+				Secret:   "okteto",
+			},
+		},
+		{
+			name: "local env var: unset / local credentials: true / okteto credentials: true",
+			credRequest: &auth.CredentialsRequest{
+				Host: "registry-1.docker.io",
+			},
+			envVarSet:         false,
+			localCredentials:  true,
+			oktetoCredentials: true,
+			expected: &auth.CredentialsResponse{
+				Username: "local",
+				Secret:   "local",
+			},
+		},
+		{
+			name: "local env var: unset / local credentials: false / okteto credentials: false",
+			credRequest: &auth.CredentialsRequest{
+				Host: "registry-1.docker.io",
+			},
+			envVarSet:         false,
+			localCredentials:  false,
+			oktetoCredentials: false,
+			expected: &auth.CredentialsResponse{
+				Username: "",
+				Secret:   "",
+			},
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			ap := &authProvider{
+				config: &configfile.ConfigFile{
+					AuthConfigs: map[string]types.AuthConfig{
+						"okteto.registry.com": {
+							Username: "okteto-registry",
+							Password: "okteto-registry",
+						},
+					},
+				},
+				externalAuth: func(string, bool, *okteto.Client) (string, string, error) {
+					return "", "", nil
+				},
+				newOktetoClient: func(cfg *okteto.ClientCfg, opts ...okteto.Option) (*okteto.Client, error) {
+					return &okteto.Client{}, nil
+				},
+				authContext: &fakeContext{},
+			}
+			if tc.envVarSet {
+				t.Setenv(oktetoLocalRegistryStoreEnabledEnvVarKey, tc.envVarValue)
+			}
+
+			if tc.localCredentials {
+				ap.config.AuthConfigs["https://index.docker.io/v1/"] = types.AuthConfig{
+					Username: "local",
+					Password: "local",
+				}
+			}
+
+			if tc.oktetoCredentials {
+				ap.externalAuth = func(string, bool, *okteto.Client) (string, string, error) {
+					return "okteto", "okteto", nil
+				}
+			}
+
+			creds, err := ap.Credentials(context.Background(), tc.credRequest)
+			require.NoError(t, err)
 			require.Equal(t, tc.expected, creds)
 		})
 	}

@@ -37,9 +37,10 @@ var oktetoRegistry = ""
 
 func newDockerAndOktetoAuthProvider(registryURL, username, password string, authContext authProviderContextInterface, stderr io.Writer) *authProvider {
 	result := &authProvider{
-		config:       config.LoadDefaultConfigFile(stderr),
-		externalAuth: authContext.getExternalRegistryCreds,
-		authContext:  authContext,
+		config:          config.LoadDefaultConfigFile(stderr),
+		externalAuth:    authContext.getExternalRegistryCreds,
+		newOktetoClient: okteto.NewOktetoClientStateless,
+		authContext:     authContext,
 	}
 	oktetoRegistry = registryURL
 	result.config.AuthConfigs[registryURL] = types.AuthConfig{
@@ -81,6 +82,8 @@ func (apc *authProviderContext) getExternalRegistryCreds(registryOrImage string,
 
 type externalRegistryCredentialFunc func(host string, isOkteto bool, client *okteto.Client) (string, string, error)
 
+type newOktetoClientFunc func(cfg *okteto.ClientCfg, opts ...okteto.Option) (*okteto.Client, error)
+
 type authProvider struct {
 	authContext authProviderContextInterface
 	config      *configfile.ConfigFile
@@ -89,6 +92,8 @@ type authProvider struct {
 	// outside of the configfile. It is used to load external auth data without
 	// going through the target config file store
 	externalAuth externalRegistryCredentialFunc
+
+	newOktetoClient newOktetoClientFunc
 
 	// The need for this mutex is not well understood.
 	// Without it, the docker cli on OS X hangs when
@@ -138,7 +143,7 @@ func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRe
 	}
 
 	ocfg := ap.authContext.getOktetoClientCfg()
-	c, err := okteto.NewOktetoClientStateless(ocfg)
+	c, err := ap.newOktetoClient(ocfg)
 	if err != nil {
 		return nil, err
 	}
@@ -165,9 +170,11 @@ func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRe
 		}, nil
 	}
 
-	credentials = &auth.CredentialsResponse{
-		Username: ac.Username,
-		Secret:   ac.Password,
+	if ac.Username != "" && ac.Password != "" {
+		credentials = &auth.CredentialsResponse{
+			Username: ac.Username,
+			Secret:   ac.Password,
+		}
 	}
 
 	return credentials, nil
