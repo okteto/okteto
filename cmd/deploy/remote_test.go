@@ -281,8 +281,18 @@ func TestRemoteDeployWithBadSshAgent(t *testing.T) {
 }
 
 func TestGetDeployFlags(t *testing.T) {
+	fakeCwd, _ := filepath.Abs("/")
+	fakeFsFn := func() afero.Fs {
+		fs := afero.NewMemMapFs()
+		rootPath, _ := filepath.Abs("/")
+		_ = fs.MkdirAll(rootPath, 0755)
+		return fs
+	}
+
 	type config struct {
-		opts *Options
+		opts   *Options
+		fakeFs func() afero.Fs
+		cwd    string
 	}
 	var tests = []struct {
 		name      string
@@ -296,6 +306,8 @@ func TestGetDeployFlags(t *testing.T) {
 				opts: &Options{
 					Timeout: 2 * time.Minute,
 				},
+				cwd:    fakeCwd,
+				fakeFs: fakeFsFn,
 			},
 			expected: []string{"--timeout 2m0s"},
 		},
@@ -306,6 +318,8 @@ func TestGetDeployFlags(t *testing.T) {
 					Name:    "test",
 					Timeout: 5 * time.Minute,
 				},
+				cwd:    fakeCwd,
+				fakeFs: fakeFsFn,
 			},
 			expected: []string{"--name \"test\"", "--timeout 5m0s"},
 		},
@@ -316,6 +330,8 @@ func TestGetDeployFlags(t *testing.T) {
 					Name:    "this is a test",
 					Timeout: 5 * time.Minute,
 				},
+				cwd:    fakeCwd,
+				fakeFs: fakeFsFn,
 			},
 			expected: []string{"--name \"this is a test\"", "--timeout 5m0s"},
 		},
@@ -326,6 +342,8 @@ func TestGetDeployFlags(t *testing.T) {
 					Namespace: "test",
 					Timeout:   5 * time.Minute,
 				},
+				cwd:    fakeCwd,
+				fakeFs: fakeFsFn,
 			},
 			expected: []string{"--namespace test", "--timeout 5m0s"},
 		},
@@ -336,6 +354,13 @@ func TestGetDeployFlags(t *testing.T) {
 					ManifestPathFlag: "/hello/this/is/a/test",
 					ManifestPath:     "/hello/this/is/a/test",
 					Timeout:          5 * time.Minute,
+				},
+				cwd: fakeCwd,
+				fakeFs: func() afero.Fs {
+					fs := afero.NewMemMapFs()
+					path, _ := filepath.Abs("/hello/this/is/a/test")
+					_ = afero.WriteFile(fs, path, []byte{}, 0644)
+					return fs
 				},
 			},
 			expected: []string{"--file test", "--timeout 5m0s"},
@@ -348,8 +373,34 @@ func TestGetDeployFlags(t *testing.T) {
 					ManifestPath:     "/hello/this/is/a/.okteto/test",
 					Timeout:          5 * time.Minute,
 				},
+				cwd: fakeCwd,
+				fakeFs: func() afero.Fs {
+					fs := afero.NewMemMapFs()
+					path, _ := filepath.Abs("/hello/this/is/a/.okteto/test")
+					_ = afero.WriteFile(fs, path, []byte{}, 0644)
+					return fs
+				},
 			},
 			expected: []string{fmt.Sprintf("--file %s", filepath.Clean(".okteto/test")), "--timeout 5m0s"},
+		},
+		{
+			name: "manifest path set as directory",
+			config: config{
+				opts: &Options{
+					Name:             "test",
+					ManifestPathFlag: "/hello/this/is/a/folder",
+					ManifestPath:     "/hello/this/is/a/folder",
+					Timeout:          5 * time.Minute,
+				},
+				cwd: fakeCwd,
+				fakeFs: func() afero.Fs {
+					fs := afero.NewMemMapFs()
+					path, _ := filepath.Abs("/hello/this/is/a/folder")
+					_ = fs.MkdirAll(path, 0755)
+					return fs
+				},
+			},
+			expected: []string{"--name \"test\"", "--timeout 5m0s"},
 		},
 		{
 			name: "variables set",
@@ -361,6 +412,8 @@ func TestGetDeployFlags(t *testing.T) {
 					},
 					Timeout: 5 * time.Minute,
 				},
+				cwd:    fakeCwd,
+				fakeFs: fakeFsFn,
 			},
 			expected: []string{"--var a=\"b\" --var c=\"d\"", "--timeout 5m0s"},
 		},
@@ -371,6 +424,8 @@ func TestGetDeployFlags(t *testing.T) {
 					Wait:    true,
 					Timeout: 5 * time.Minute,
 				},
+				cwd:    fakeCwd,
+				fakeFs: fakeFsFn,
 			},
 			expected: []string{"--wait", "--timeout 5m0s"},
 		},
@@ -380,6 +435,8 @@ func TestGetDeployFlags(t *testing.T) {
 				opts: &Options{
 					Variables: []string{"test=multi word value"},
 				},
+				cwd:    fakeCwd,
+				fakeFs: fakeFsFn,
 			},
 			expected: []string{"--var test=\"multi word value\"", "--timeout 0s"},
 		},
@@ -389,6 +446,8 @@ func TestGetDeployFlags(t *testing.T) {
 				opts: &Options{
 					Variables: []string{"test -> multi word value"},
 				},
+				cwd:    fakeCwd,
+				fakeFs: fakeFsFn,
 			},
 			expected:  nil,
 			expectErr: true,
@@ -397,9 +456,11 @@ func TestGetDeployFlags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			flags, err := getDeployFlags(tt.config.opts)
+			flags, err := getDeployFlags(tt.config.opts, tt.config.cwd, tt.config.fakeFs())
 			if tt.expectErr {
 				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
 			assert.Equal(t, tt.expected, flags)
 		})
@@ -432,6 +493,7 @@ func TestCreateDockerfile(t *testing.T) {
 		{
 			name: "OS can't access working directory",
 			config: config{
+				opts: &Options{},
 				wd: filesystem.FakeWorkingDirectoryCtrlErrors{
 					Getter: assert.AnError,
 				},
@@ -620,7 +682,7 @@ func TestGetExtraHosts(t *testing.T) {
 	}
 }
 func TestGetContextPath(t *testing.T) {
-	cwd := filepath.Clean("/path/to/current/directory")
+	cwd, _ := filepath.Abs("/path/to/current/directory")
 
 	rd := remoteDeployCommand{
 		fs: afero.NewMemMapFs(),
@@ -633,7 +695,7 @@ func TestGetContextPath(t *testing.T) {
 	})
 
 	t.Run("Manifest path is a absolute path and directory", func(t *testing.T) {
-		manifestPath := filepath.Clean("/path/to/current/directory")
+		manifestPath, _ := filepath.Abs("/path/to/current/directory")
 		expected := manifestPath
 		rd.fs = afero.NewMemMapFs()
 		rd.fs.MkdirAll(manifestPath, 0755)
@@ -642,8 +704,8 @@ func TestGetContextPath(t *testing.T) {
 	})
 
 	t.Run("Manifest path is a file and absolute path", func(t *testing.T) {
-		manifestPath := filepath.Clean("/path/to/current/directory/file.yaml")
-		expected := filepath.Clean("/path/to/current/directory")
+		manifestPath, _ := filepath.Abs("/path/to/current/directory/file.yaml")
+		expected, _ := filepath.Abs("/path/to/current/directory")
 		rd.fs = afero.NewMemMapFs()
 		rd.fs.MkdirAll(expected, 0755)
 		rd.fs.Create(manifestPath)
@@ -652,8 +714,8 @@ func TestGetContextPath(t *testing.T) {
 	})
 
 	t.Run("Manifest path is pointing to a file in the .okteto folder and absolute path", func(t *testing.T) {
-		manifestPath := filepath.Clean("/path/to/current/directory/.okteto/file.yaml")
-		expected := filepath.Clean("/path/to/current/directory")
+		manifestPath, _ := filepath.Abs("/path/to/current/directory/.okteto/file.yaml")
+		expected, _ := filepath.Abs("/path/to/current/directory")
 		rd.fs = afero.NewMemMapFs()
 		rd.fs.MkdirAll(expected, 0755)
 		rd.fs.Create(manifestPath)

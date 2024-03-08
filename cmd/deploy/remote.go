@@ -285,7 +285,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 			Funcs(template.FuncMap{"join": strings.Join}).
 			Parse(dockerfileTemplate))
 
-	deployFlags, err := getDeployFlags(opts)
+	deployFlags, err := getDeployFlags(opts, cwd, rd.fs)
 	if err != nil {
 		return "", err
 	}
@@ -317,7 +317,9 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 	// build the services) so we would create a remote executor without certain files
 	// necessary for the later deployment which would cause an error when deploying
 	// remotely due to the lack of these files.
-	if err := remote.CreateDockerignoreFileWithFilesystem(cwd, tmpDir, filesystem.CleanManifestPath(opts.ManifestPathFlag), rd.fs); err != nil {
+	cleanManifestPath := filesystem.CleanManifestPath(opts.ManifestPathFlag)
+
+	if err := remote.CreateDockerignoreFileWithFilesystem(cwd, tmpDir, cleanManifestPath, rd.fs); err != nil {
 		return "", err
 	}
 
@@ -327,7 +329,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 	return dockerfile.Name(), nil
 }
 
-func getDeployFlags(opts *Options) ([]string, error) {
+func getDeployFlags(opts *Options, cwd string, fs afero.Fs) ([]string, error) {
 	var deployFlags []string
 
 	if opts.Name != "" {
@@ -338,8 +340,16 @@ func getDeployFlags(opts *Options) ([]string, error) {
 		deployFlags = append(deployFlags, fmt.Sprintf("--namespace %s", opts.Namespace))
 	}
 
-	if opts.ManifestPathFlag != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filesystem.CleanManifestPath(opts.ManifestPathFlag)))
+	// we calculate the absolute path of the manifest file to be able to check whether the provided path is a directory
+	// in that case, the --file (or -f) flag can be omitted as the autodiscovery will take place
+	absManifestFilePath := filepath.Join(cwd, filepath.Clean(opts.ManifestPath))
+	isManifestFilePathDir, err := afero.IsDir(fs, absManifestFilePath)
+	if err != nil {
+		return nil, err
+	}
+	if opts.ManifestPathFlag != "" && !isManifestFilePathDir {
+		cleanManifestPath := filesystem.CleanManifestPath(opts.ManifestPathFlag)
+		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", cleanManifestPath))
 	}
 
 	if len(opts.Variables) > 0 {

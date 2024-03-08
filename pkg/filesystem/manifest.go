@@ -24,7 +24,10 @@ func CleanManifestPath(manifestPath string) string {
 	if lastFolder == ".okteto" {
 		path := filepath.Clean(manifestPath)
 		parts := strings.Split(path, string(filepath.Separator))
-
+		minParts := 2
+		if len(parts) < minParts {
+			return parts[0]
+		}
 		return filepath.Join(parts[len(parts)-2:]...)
 	} else {
 		return filepath.Base(manifestPath)

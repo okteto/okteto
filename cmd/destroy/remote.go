@@ -277,8 +277,13 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 	return nil
 }
 
-func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) (string, error) {
+func (rd *remoteDestroyCommand) createDockerfile(tmpDir string, opts *Options) (string, error) {
 	cwd, err := rd.workingDirectoryCtrl.Get()
+	if err != nil {
+		return "", err
+	}
+
+	destroyFlags, err := getDestroyFlags(opts, cwd, rd.fs)
 	if err != nil {
 		return "", err
 	}
@@ -297,15 +302,16 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 		GitCommitArgName:       constants.OktetoGitCommitEnvVar,
 		GitBranchArgName:       constants.OktetoGitBranchEnvVar,
 		InvalidateCacheArgName: constants.OktetoInvalidateCacheEnvVar,
-		DestroyFlags:           strings.Join(getDestroyFlags(opts), " "),
+		DestroyFlags:           strings.Join(destroyFlags, " "),
 	}
 
-	dockerfile, err := rd.fs.Create(filepath.Join(tempDir, dockerfileTemporalNane))
+	dockerfile, err := rd.fs.Create(filepath.Join(tmpDir, dockerfileTemporalNane))
 	if err != nil {
 		return "", err
 	}
 
-	if err = remote.CreateDockerignoreFileWithFilesystem(cwd, tempDir, filesystem.CleanManifestPath(opts.ManifestPathFlag), rd.fs); err != nil {
+	cleanManifestPath := filesystem.CleanManifestPath(opts.ManifestPathFlag)
+	if err = remote.CreateDockerignoreFileWithFilesystem(cwd, tmpDir, cleanManifestPath, rd.fs); err != nil {
 		return "", err
 	}
 
@@ -333,30 +339,38 @@ func getExtraHosts(registryURL, subdomain, ip string, metadata types.ClusterMeta
 	return extraHosts
 }
 
-func getDestroyFlags(opts *Options) []string {
-	var deployFlags []string
+func getDestroyFlags(opts *Options, cwd string, fs afero.Fs) ([]string, error) {
+	var destroyFlags []string
 
 	if opts.Name != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--name \"%s\"", opts.Name))
+		destroyFlags = append(destroyFlags, fmt.Sprintf("--name \"%s\"", opts.Name))
 	}
 
 	if opts.Namespace != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--namespace %s", opts.Namespace))
+		destroyFlags = append(destroyFlags, fmt.Sprintf("--namespace %s", opts.Namespace))
 	}
 
-	if opts.ManifestPathFlag != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filesystem.CleanManifestPath(opts.ManifestPathFlag)))
+	// we calculate the absolute path of the manifest file to be able to check whether the provided path is a directory
+	// in that case, the --file (or -f) flag can be omitted as the autodiscovery will take place
+	absManifestFilePath := filepath.Join(cwd, filepath.Clean(opts.ManifestPath))
+	isManifestFilePathDir, err := afero.IsDir(fs, absManifestFilePath)
+	if err != nil {
+		return nil, err
+	}
+	if opts.ManifestPathFlag != "" && !isManifestFilePathDir {
+		cleanManifestPath := filesystem.CleanManifestPath(opts.ManifestPathFlag)
+		destroyFlags = append(destroyFlags, fmt.Sprintf("--file %s", cleanManifestPath))
 	}
 
 	if opts.DestroyVolumes {
-		deployFlags = append(deployFlags, "--volumes")
+		destroyFlags = append(destroyFlags, "--volumes")
 	}
 
 	if opts.ForceDestroy {
-		deployFlags = append(deployFlags, "--force-destroy")
+		destroyFlags = append(destroyFlags, "--force-destroy")
 	}
 
-	return deployFlags
+	return destroyFlags, nil
 }
 
 func getOktetoCLIVersion(versionString string) string {

@@ -145,18 +145,31 @@ func TestRemoteTest(t *testing.T) {
 }
 
 func TestGetDestroyFlags(t *testing.T) {
+	fakeCwd, _ := filepath.Abs("/")
+	fakeFsFn := func() afero.Fs {
+		fs := afero.NewMemMapFs()
+		rootPath, _ := filepath.Abs("/")
+		_ = fs.MkdirAll(rootPath, 0755)
+		return fs
+	}
+
 	type config struct {
-		opts *Options
+		opts   *Options
+		fakeFs func() afero.Fs
+		cwd    string
 	}
 	var tests = []struct {
-		name     string
-		config   config
-		expected []string
+		name      string
+		config    config
+		expected  []string
+		expectErr bool
 	}{
 		{
 			name: "no extra options",
 			config: config{
-				opts: &Options{},
+				opts:   &Options{},
+				cwd:    fakeCwd,
+				fakeFs: fakeFsFn,
 			},
 		},
 		{
@@ -165,6 +178,8 @@ func TestGetDestroyFlags(t *testing.T) {
 				opts: &Options{
 					Name: "test",
 				},
+				cwd:    fakeCwd,
+				fakeFs: fakeFsFn,
 			},
 			expected: []string{"--name \"test\""},
 		},
@@ -174,6 +189,8 @@ func TestGetDestroyFlags(t *testing.T) {
 				opts: &Options{
 					Name: "this is a test",
 				},
+				cwd:    fakeCwd,
+				fakeFs: fakeFsFn,
 			},
 			expected: []string{"--name \"this is a test\""},
 		},
@@ -183,8 +200,23 @@ func TestGetDestroyFlags(t *testing.T) {
 				opts: &Options{
 					Namespace: "test",
 				},
+				cwd:    fakeCwd,
+				fakeFs: fakeFsFn,
 			},
 			expected: []string{"--namespace test"},
+		},
+		{
+			name: "manifest path set does not exist",
+			config: config{
+				opts: &Options{
+					ManifestPathFlag: "/hello/this/is/a/test",
+					ManifestPath:     "/hello/this/is/a/test",
+				},
+				cwd:    fakeCwd,
+				fakeFs: fakeFsFn,
+			},
+			expected:  nil,
+			expectErr: true,
 		},
 		{
 			name: "manifest path set",
@@ -192,6 +224,13 @@ func TestGetDestroyFlags(t *testing.T) {
 				opts: &Options{
 					ManifestPathFlag: "/hello/this/is/a/test",
 					ManifestPath:     "/hello/this/is/a/test",
+				},
+				cwd: fakeCwd,
+				fakeFs: func() afero.Fs {
+					fs := afero.NewMemMapFs()
+					path, _ := filepath.Abs("/hello/this/is/a/test")
+					_ = afero.WriteFile(fs, path, []byte{}, 0644)
+					return fs
 				},
 			},
 			expected: []string{"--file test"},
@@ -203,8 +242,33 @@ func TestGetDestroyFlags(t *testing.T) {
 					ManifestPathFlag: "/hello/this/is/a/.okteto/test",
 					ManifestPath:     "/hello/this/is/a/.okteto/test",
 				},
+				cwd: fakeCwd,
+				fakeFs: func() afero.Fs {
+					fs := afero.NewMemMapFs()
+					path, _ := filepath.Abs("/hello/this/is/a/.okteto/test")
+					_ = afero.WriteFile(fs, path, []byte{}, 0644)
+					return fs
+				},
 			},
 			expected: []string{fmt.Sprintf("--file %s", filepath.Clean(".okteto/test"))},
+		},
+		{
+			name: "manifest path set as directory",
+			config: config{
+				opts: &Options{
+					Name:             "test",
+					ManifestPathFlag: "/hello/this/is/a/folder",
+					ManifestPath:     "/hello/this/is/a/folder",
+				},
+				cwd: fakeCwd,
+				fakeFs: func() afero.Fs {
+					fs := afero.NewMemMapFs()
+					path, _ := filepath.Abs("/hello/this/is/a/folder")
+					_ = fs.MkdirAll(path, 0755)
+					return fs
+				},
+			},
+			expected: []string{"--name \"test\""},
 		},
 		{
 			name: "destroy volumes set",
@@ -212,6 +276,8 @@ func TestGetDestroyFlags(t *testing.T) {
 				opts: &Options{
 					DestroyVolumes: true,
 				},
+				cwd:    fakeCwd,
+				fakeFs: fakeFsFn,
 			},
 			expected: []string{"--volumes"},
 		},
@@ -221,6 +287,8 @@ func TestGetDestroyFlags(t *testing.T) {
 				opts: &Options{
 					ForceDestroy: true,
 				},
+				cwd:    fakeCwd,
+				fakeFs: fakeFsFn,
 			},
 			expected: []string{"--force-destroy"},
 		},
@@ -228,7 +296,12 @@ func TestGetDestroyFlags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			flags := getDestroyFlags(tt.config.opts)
+			flags, err := getDestroyFlags(tt.config.opts, tt.config.cwd, tt.config.fakeFs())
+			if tt.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
 			assert.Equal(t, tt.expected, flags)
 		})
 	}
@@ -253,6 +326,7 @@ func TestCreateDockerfile(t *testing.T) {
 		{
 			name: "OS can't access working directory",
 			config: config{
+				opts: &Options{},
 				wd: filesystem.FakeWorkingDirectoryCtrlErrors{
 					Getter: assert.AnError,
 				},
@@ -458,7 +532,7 @@ func TestGetExtraHosts(t *testing.T) {
 }
 
 func TestGetContextPath(t *testing.T) {
-	cwd := filepath.Clean("/path/to/current/directory")
+	cwd, _ := filepath.Abs("/path/to/current/directory")
 
 	rd := remoteDestroyCommand{
 		fs: afero.NewMemMapFs(),
@@ -471,7 +545,7 @@ func TestGetContextPath(t *testing.T) {
 	})
 
 	t.Run("Manifest path is a absolute path and directory", func(t *testing.T) {
-		manifestPath := filepath.Clean("/path/to/current/directory")
+		manifestPath, _ := filepath.Abs("/path/to/current")
 		expected := manifestPath
 		rd.fs = afero.NewMemMapFs()
 		rd.fs.MkdirAll(manifestPath, 0755)
@@ -480,8 +554,8 @@ func TestGetContextPath(t *testing.T) {
 	})
 
 	t.Run("Manifest path is a file and absolute path", func(t *testing.T) {
-		manifestPath := filepath.Clean("/path/to/current/directory/file.yaml")
-		expected := filepath.Clean("/path/to/current/directory")
+		manifestPath, _ := filepath.Abs("/path/to/current/directory/file.yaml")
+		expected, _ := filepath.Abs("/path/to/current/directory")
 		rd.fs = afero.NewMemMapFs()
 		rd.fs.MkdirAll(expected, 0755)
 		rd.fs.Create(manifestPath)
@@ -490,8 +564,8 @@ func TestGetContextPath(t *testing.T) {
 	})
 
 	t.Run("Manifest path is pointing to a file in the .okteto folder and absolute path", func(t *testing.T) {
-		manifestPath := filepath.Clean("/path/to/current/directory/.okteto/file.yaml")
-		expected := filepath.Clean("/path/to/current/directory")
+		manifestPath, _ := filepath.Abs("/path/to/current/directory/.okteto/file.yaml")
+		expected, _ := filepath.Abs("/path/to/current/directory")
 		rd.fs = afero.NewMemMapFs()
 		rd.fs.MkdirAll(expected, 0755)
 		rd.fs.Create(manifestPath)
