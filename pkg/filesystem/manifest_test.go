@@ -46,6 +46,11 @@ func Test_cleanManifestPath(t *testing.T) {
 			manifest: "/path/to/service/.okteto/okteto.yml",
 			expected: filepath.Clean(".okteto/okteto.yml"),
 		},
+		{
+			name:     "manifest within .okteto/",
+			manifest: ".okteto/",
+			expected: filepath.Clean(".okteto"),
+		},
 	}
 
 	for _, tt := range tests {
