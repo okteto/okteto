@@ -294,7 +294,7 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 		return "", err
 	}
 
-	if err = remote.CreateDockerignoreFileWithFilesystem(cwd, tempDir, opts.ManifestPathFlag, rd.fs); err != nil {
+	if err = remote.CreateDockerignoreFileWithFilesystem(cwd, tempDir, filesystem.CleanManifestPath(opts.ManifestPathFlag), rd.fs); err != nil {
 		return "", err
 	}
 
@@ -334,7 +334,7 @@ func getDestroyFlags(opts *Options) []string {
 	}
 
 	if opts.ManifestPathFlag != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", opts.ManifestPathFlag))
+		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filesystem.CleanManifestPath(opts.ManifestPathFlag)))
 	}
 
 	if opts.DestroyVolumes {
