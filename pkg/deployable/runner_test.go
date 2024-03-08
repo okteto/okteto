@@ -222,6 +222,15 @@ func TestRunDeployWithEmptyDeployable(t *testing.T) {
 }
 
 func TestRunCommandsSectionWithCommands(t *testing.T) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+			},
+		},
+		CurrentContext: "test",
+	}
 	executor := &fakeExecutor{}
 	r := runner{
 		TempKubeconfigFile: "temp-kubeconfig",
@@ -271,6 +280,15 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 }
 
 func TestRunCommandsSectionWithErrorInCommands(t *testing.T) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+			},
+		},
+		CurrentContext: "test",
+	}
 	executor := &fakeExecutor{}
 	r := runner{
 		TempKubeconfigFile: "temp-kubeconfig",
@@ -320,6 +338,15 @@ func TestRunCommandsSectionWithErrorInCommands(t *testing.T) {
 }
 
 func TestRunCommandsSectionWithDivert(t *testing.T) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+			},
+		},
+		CurrentContext: "test",
+	}
 	executor := &fakeExecutor{}
 	divertDeployer := &fakeDivert{}
 	r := runner{
@@ -355,6 +382,15 @@ func TestRunCommandsSectionWithDivert(t *testing.T) {
 }
 
 func TestRunCommandsSectionWithErrorDeployingDivert(t *testing.T) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+			},
+		},
+		CurrentContext: "test",
+	}
 	executor := &fakeExecutor{}
 	divertDeployer := &fakeDivert{}
 	r := runner{
@@ -390,6 +426,15 @@ func TestRunCommandsSectionWithErrorDeployingDivert(t *testing.T) {
 }
 
 func TestRunCommandsSectionWithExternal(t *testing.T) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+			},
+		},
+		CurrentContext: "test",
+	}
 	k8sProvider := test.NewFakeK8sProvider()
 	executor := &fakeExecutor{}
 	divertDeployer := &fakeDivert{}
@@ -445,6 +490,15 @@ func TestRunCommandsSectionWithExternal(t *testing.T) {
 }
 
 func TestRunCommandsSectionWithErrorDeployingExternal(t *testing.T) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+			},
+		},
+		CurrentContext: "test",
+	}
 	k8sProvider := test.NewFakeK8sProvider()
 	executor := &fakeExecutor{}
 	divertDeployer := &fakeDivert{}
@@ -500,6 +554,15 @@ func TestRunCommandsSectionWithErrorDeployingExternal(t *testing.T) {
 }
 
 func TestDeployExternalWithErrorGettingClient(t *testing.T) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+			},
+		},
+		CurrentContext: "test",
+	}
 	k8sProvider := test.NewFakeK8sProvider()
 	k8sProvider.ErrProvide = assert.AnError
 
