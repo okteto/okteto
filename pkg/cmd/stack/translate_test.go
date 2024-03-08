@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -31,6 +32,15 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 )
+
+type fakeDivert struct {
+	called bool
+}
+
+func (f *fakeDivert) UpdatePod(spec apiv1.PodSpec) apiv1.PodSpec {
+	f.called = true
+	return spec
+}
 
 func Test_translateConfigMap(t *testing.T) {
 	s := &model.Stack{
@@ -58,6 +68,7 @@ func Test_translateConfigMap(t *testing.T) {
 }
 
 func Test_translateDeployment(t *testing.T) {
+	divert := &fakeDivert{}
 	s := &model.Stack{
 		Name: "stackName",
 		Services: map[string]*model.Service{
@@ -93,7 +104,7 @@ func Test_translateDeployment(t *testing.T) {
 			},
 		},
 	}
-	result := translateDeployment("svcName", s)
+	result := translateDeployment("svcName", s, divert)
 	if result.Name != "svcName" {
 		t.Errorf("Wrong deployment name: '%s'", result.Name)
 	}
@@ -102,6 +113,7 @@ func Test_translateDeployment(t *testing.T) {
 		"label2":                    "value2",
 		model.StackNameLabel:        "stackname",
 		model.StackServiceNameLabel: "svcName",
+		model.DeployedByLabel:       "stackname",
 	}
 	assert.Equal(t, result.Labels, labels)
 	annotations := map[string]string{
@@ -162,9 +174,12 @@ func Test_translateDeployment(t *testing.T) {
 		t.Errorf("Wrong container.resources: '%v'", c.Resources)
 	}
 
+	require.True(t, divert.called)
+
 }
 
 func Test_translateStatefulSet(t *testing.T) {
+	divert := &fakeDivert{}
 	s := &model.Stack{
 		Name: "stackName",
 		Services: map[string]*model.Service{
@@ -216,7 +231,7 @@ func Test_translateStatefulSet(t *testing.T) {
 			},
 		},
 	}
-	result := translateStatefulSet("svcName", s)
+	result := translateStatefulSet("svcName", s, divert)
 	if result.Name != "svcName" {
 		t.Errorf("Wrong statefulset name: '%s'", result.Name)
 	}
@@ -225,6 +240,7 @@ func Test_translateStatefulSet(t *testing.T) {
 		"label2":                    "value2",
 		model.StackNameLabel:        "stackname",
 		model.StackServiceNameLabel: "svcName",
+		model.DeployedByLabel:       "stackname",
 	}
 	assert.Equal(t, labels, result.Labels)
 	annotations := map[string]string{
@@ -363,9 +379,12 @@ func Test_translateStatefulSet(t *testing.T) {
 		t.Errorf("Wrong statefulset volume claim template: '%v'", vct.Spec)
 	}
 
+	require.True(t, divert.called)
+
 }
 
 func Test_translateJobWithoutVolumes(t *testing.T) {
+	divert := &fakeDivert{}
 	s := &model.Stack{
 		Name: "stackName",
 		Services: map[string]*model.Service{
@@ -417,7 +436,7 @@ func Test_translateJobWithoutVolumes(t *testing.T) {
 			},
 		},
 	}
-	result := translateJob("svcName", s)
+	result := translateJob("svcName", s, divert)
 	if result.Name != "svcName" {
 		t.Errorf("Wrong job name: '%s'", result.Name)
 	}
@@ -426,6 +445,7 @@ func Test_translateJobWithoutVolumes(t *testing.T) {
 		"label2":                    "value2",
 		model.StackNameLabel:        "stackname",
 		model.StackServiceNameLabel: "svcName",
+		model.DeployedByLabel:       "stackname",
 	}
 	assert.Equal(t, labels, result.Labels)
 	annotations := map[string]string{
@@ -501,9 +521,12 @@ func Test_translateJobWithoutVolumes(t *testing.T) {
 	if len(c.VolumeMounts) > 0 {
 		t.Errorf("Wrong c.VolumeMounts: '%d'", len(c.VolumeMounts))
 	}
+
+	require.True(t, divert.called)
 }
 
 func Test_translateJobWithVolumes(t *testing.T) {
+	divert := &fakeDivert{}
 	s := &model.Stack{
 		Name: "stackName",
 		Services: map[string]*model.Service{
@@ -556,7 +579,7 @@ func Test_translateJobWithVolumes(t *testing.T) {
 			},
 		},
 	}
-	result := translateJob("svcName", s)
+	result := translateJob("svcName", s, divert)
 	if result.Name != "svcName" {
 		t.Errorf("Wrong job name: '%s'", result.Name)
 	}
@@ -565,6 +588,7 @@ func Test_translateJobWithVolumes(t *testing.T) {
 		"label2":                    "value2",
 		model.StackNameLabel:        "stackname",
 		model.StackServiceNameLabel: "svcName",
+		model.DeployedByLabel:       "stackname",
 	}
 	assert.Equal(t, labels, result.Labels)
 	annotations := map[string]string{
@@ -687,6 +711,8 @@ func Test_translateJobWithVolumes(t *testing.T) {
 	if !reflect.DeepEqual(c.VolumeMounts, volumeMounts) {
 		t.Errorf("Wrong container.volume_mounts: '%v'", c.VolumeMounts)
 	}
+
+	require.True(t, divert.called)
 }
 
 func Test_translateService(t *testing.T) {
@@ -732,6 +758,7 @@ func Test_translateService(t *testing.T) {
 						"label2":                    "value2",
 						model.StackNameLabel:        "stackname",
 						model.StackServiceNameLabel: "svcName",
+						model.DeployedByLabel:       "stackname",
 					},
 					Annotations: map[string]string{
 						"annotation1": "value1",
@@ -806,6 +833,7 @@ func Test_translateService(t *testing.T) {
 						"label2":                    "value2",
 						model.StackNameLabel:        "stackname",
 						model.StackServiceNameLabel: "svcName",
+						model.DeployedByLabel:       "stackname",
 					},
 					Annotations: map[string]string{
 						"annotation1":                     "value1",
@@ -879,6 +907,7 @@ func Test_translateService(t *testing.T) {
 						"label2":                    "value2",
 						model.StackNameLabel:        "stackname",
 						model.StackServiceNameLabel: "svcName",
+						model.DeployedByLabel:       "stackname",
 					},
 					Annotations: map[string]string{
 						"annotation1":                     "value1",
@@ -952,6 +981,7 @@ func Test_translateService(t *testing.T) {
 						"label2":                    "value2",
 						model.StackNameLabel:        "stackname",
 						model.StackServiceNameLabel: "svcName",
+						model.DeployedByLabel:       "stackname",
 					},
 					Annotations: map[string]string{
 						"annotation1":                    "value1",
@@ -1020,6 +1050,7 @@ func Test_translateService(t *testing.T) {
 						"label2":                    "value2",
 						model.StackNameLabel:        "stackname",
 						model.StackServiceNameLabel: "svcName",
+						model.DeployedByLabel:       "stackname",
 					},
 					Annotations: map[string]string{
 						"annotation1": "value1",

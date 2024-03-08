@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deploy
+package deployable
 
 var cert = []byte(`-----BEGIN CERTIFICATE-----
 MIIBcjCB+aADAgECAgkAyfJ4PZLPnlEwCQYHKoZIzj0EATAUMRIwEAYDVQQDDAls

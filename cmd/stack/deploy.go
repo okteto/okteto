@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/divert"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -44,6 +45,7 @@ type DeployCommand struct {
 	Config           *rest.Config
 	ioCtrl           *io.Controller
 	IsInsideDeploy   bool
+	DivertDriver     divert.Driver
 }
 
 // deploy deploys a stack
@@ -78,6 +80,7 @@ func deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 				Config:           config,
 				analyticsTracker: at,
 				ioCtrl:           ioCtrl,
+				DivertDriver:     divert.NewNoop(),
 			}
 			return dc.RunDeploy(ctx, s, options)
 		},
@@ -127,6 +130,7 @@ func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *
 		Config:           c.Config,
 		AnalyticsTracker: c.analyticsTracker,
 		IoCtrl:           c.ioCtrl,
+		Divert:           c.DivertDriver,
 	}
 	err := stackDeployer.Deploy(ctx, s, options)
 

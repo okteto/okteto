@@ -33,12 +33,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type fakeRunner struct {
+type fakeRemoteRunner struct {
 	err           error
 	assertOptions func(o *types.BuildOptions)
 }
 
-func (f fakeRunner) Run(_ context.Context, opts *types.BuildOptions, _ *io.Controller) error {
+func (f fakeRemoteRunner) Run(_ context.Context, opts *types.BuildOptions, _ *io.Controller) error {
 	if f.assertOptions != nil {
 		f.assertOptions(opts)
 	}
@@ -140,8 +140,8 @@ func TestRemoteTest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			wdCtrl.SetErrors(tt.config.wd)
 			tempCreator.SetError(tt.config.tempFsCreator)
-			rdc := remoteDeployCommand{
-				runner:               fakeRunner{err: tt.config.builderErr},
+			rdc := remoteDeployer{
+				runner:               fakeRemoteRunner{err: tt.config.builderErr},
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,
 				temporalCtrl:         tempCreator,
@@ -150,7 +150,7 @@ func TestRemoteTest(t *testing.T) {
 				},
 				getBuildEnvVars: func() map[string]string { return nil },
 			}
-			err := rdc.deploy(ctx, tt.config.options)
+			err := rdc.Deploy(ctx, tt.config.options)
 			if tt.expected != nil {
 				assert.ErrorContains(t, err, tt.expected.Error())
 			} else {
@@ -171,8 +171,8 @@ func TestExtraHosts(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	tempCreator := filesystem.NewTemporalDirectoryCtrl(fs)
 
-	rdc := remoteDeployCommand{
-		runner: fakeRunner{
+	rdc := remoteDeployer{
+		runner: fakeRemoteRunner{
 			assertOptions: func(o *types.BuildOptions) {
 				require.Len(t, o.ExtraHosts, 2)
 				for _, eh := range o.ExtraHosts {
@@ -191,7 +191,7 @@ func TestExtraHosts(t *testing.T) {
 		getBuildEnvVars: func() map[string]string { return nil },
 	}
 
-	err := rdc.deploy(ctx, &Options{
+	err := rdc.Deploy(ctx, &Options{
 		Manifest: fakeManifest,
 	})
 	require.NoError(t, err)
@@ -219,11 +219,11 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 		t.Logf("cleaning up %s envvar", envvarName)
 		os.Unsetenv(envvarName)
 	}()
-	rdc := remoteDeployCommand{
+	rdc := remoteDeployer{
 		sshAuthSockEnvvar:    envvarName,
 		getBuildEnvVars:      func() map[string]string { return nil },
 		knownHostsPath:       knowHostFile.Name(),
-		runner:               fakeRunner{assertOptions: assertFn},
+		runner:               fakeRemoteRunner{assertOptions: assertFn},
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
@@ -232,7 +232,7 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 		},
 	}
 
-	err = rdc.deploy(context.Background(), &Options{
+	err = rdc.Deploy(context.Background(), &Options{
 		Manifest: &model.Manifest{
 			Deploy: &model.DeployInfo{
 				Image: "test-image",
@@ -257,10 +257,10 @@ func TestRemoteDeployWithBadSshAgent(t *testing.T) {
 		t.Logf("cleaning up %s envvar", envvarName)
 		os.Unsetenv(envvarName)
 	}()
-	rdc := remoteDeployCommand{
+	rdc := remoteDeployer{
 		sshAuthSockEnvvar:    envvarName,
 		knownHostsPath:       "inexistent-file",
-		runner:               fakeRunner{assertOptions: assertFn},
+		runner:               fakeRemoteRunner{assertOptions: assertFn},
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
@@ -270,7 +270,7 @@ func TestRemoteDeployWithBadSshAgent(t *testing.T) {
 		getBuildEnvVars: func() map[string]string { return nil },
 	}
 
-	err := rdc.deploy(context.Background(), &Options{
+	err := rdc.Deploy(context.Background(), &Options{
 		Manifest: &model.Manifest{
 			Deploy: &model.DeployInfo{
 				Image: "test-image",
@@ -280,7 +280,7 @@ func TestRemoteDeployWithBadSshAgent(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestGetDeployFlags(t *testing.T) {
+func TestGetCommandFlags(t *testing.T) {
 	type config struct {
 		opts *Options
 	}
@@ -295,9 +295,10 @@ func TestGetDeployFlags(t *testing.T) {
 			config: config{
 				opts: &Options{
 					Timeout: 2 * time.Minute,
+					Name:    "test",
 				},
 			},
-			expected: []string{"--timeout 2m0s"},
+			expected: []string{"--name \"test\""},
 		},
 		{
 			name: "name set",
@@ -307,7 +308,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--name \"test\"", "--timeout 5m0s"},
+			expected: []string{"--name \"test\""},
 		},
 		{
 			name: "name multiple words",
@@ -317,44 +318,36 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--name \"this is a test\"", "--timeout 5m0s"},
+			expected: []string{"--name \"this is a test\""},
 		},
 		{
-			name: "namespace set",
+			name: "namespace is not set",
 			config: config{
 				opts: &Options{
+					Name:      "test",
 					Namespace: "test",
 					Timeout:   5 * time.Minute,
 				},
 			},
-			expected: []string{"--namespace test", "--timeout 5m0s"},
+			expected: []string{"--name \"test\""},
 		},
 		{
-			name: "manifest path set",
+			name: "manifest path is not set",
 			config: config{
 				opts: &Options{
+					Name:             "test",
 					ManifestPathFlag: "/hello/this/is/a/test",
 					ManifestPath:     "/hello/this/is/a/test",
 					Timeout:          5 * time.Minute,
 				},
 			},
-			expected: []string{"--file test", "--timeout 5m0s"},
-		},
-		{
-			name: "manifest path set on .okteto",
-			config: config{
-				opts: &Options{
-					ManifestPathFlag: "/hello/this/is/a/.okteto/test",
-					ManifestPath:     "/hello/this/is/a/.okteto/test",
-					Timeout:          5 * time.Minute,
-				},
-			},
-			expected: []string{fmt.Sprintf("--file %s", filepath.Clean(".okteto/test")), "--timeout 5m0s"},
+			expected: []string{"--name \"test\""},
 		},
 		{
 			name: "variables set",
 			config: config{
 				opts: &Options{
+					Name: "test",
 					Variables: []string{
 						"a=b",
 						"c=d",
@@ -362,31 +355,34 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--var a=\"b\" --var c=\"d\"", "--timeout 5m0s"},
+			expected: []string{"--name \"test\"", "--var a=\"b\" --var c=\"d\""},
 		},
 		{
-			name: "wait set",
+			name: "wait is not set",
 			config: config{
 				opts: &Options{
+					Name:    "test",
 					Wait:    true,
 					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--wait", "--timeout 5m0s"},
+			expected: []string{"--name \"test\""},
 		},
 		{
 			name: "multiword var value",
 			config: config{
 				opts: &Options{
+					Name:      "test",
 					Variables: []string{"test=multi word value"},
 				},
 			},
-			expected: []string{"--var test=\"multi word value\"", "--timeout 0s"},
+			expected: []string{"--name \"test\"", "--var test=\"multi word value\""},
 		},
 		{
 			name: "wrong multiword var value",
 			config: config{
 				opts: &Options{
+					Name:      "test",
 					Variables: []string{"test -> multi word value"},
 				},
 			},
@@ -397,7 +393,7 @@ func TestGetDeployFlags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			flags, err := getDeployFlags(tt.config.opts)
+			flags, err := getCommandFlags(tt.config.opts)
 			if tt.expectErr {
 				require.Error(t, err)
 			}
@@ -445,6 +441,7 @@ func TestCreateDockerfile(t *testing.T) {
 			name: "with dockerignore",
 			config: config{
 				opts: &Options{
+					Name:     "test",
 					Manifest: fakeManifest,
 				},
 			},
@@ -466,6 +463,10 @@ ARG OKTETO_TOKEN
 ARG OKTETO_ACTION_NAME
 ARG OKTETO_TLS_CERT_BASE64
 ARG INTERNAL_SERVER_NAME
+ARG OKTETO_DEPLOYABLE
+ARG GITHUB_REPOSITORY
+ARG BUILDKIT_HOST
+ARG OKTETO_REGISTRY_URL
 RUN mkdir -p /etc/ssl/certs/
 RUN echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /etc/ssl/certs/okteto.crt
 
@@ -486,7 +487,7 @@ RUN okteto registrytoken install --force --log-output=json
 
 RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
-  okteto deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --timeout 0s
+  /okteto/bin/okteto remote-run --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test"
 `,
 				buildEnvVars: map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUIL_SVC2_IMAGE": "TWO_VALUE"},
 			},
@@ -496,7 +497,7 @@ RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			wdCtrl.SetErrors(tt.config.wd)
-			rdc := remoteDeployCommand{
+			rdc := remoteDeployer{
 				getBuildEnvVars: func() map[string]string {
 					return tt.expected.buildEnvVars
 				},
@@ -564,8 +565,9 @@ func Test_getOktetoCLIVersion(t *testing.T) {
 }
 
 func Test_newRemoteDeployer(t *testing.T) {
-	got := newRemoteDeployer(&fakeV2Builder{}, io.NewIOController())
-	require.IsType(t, &remoteDeployCommand{}, got)
+	getbuildEnvVars := func() map[string]string { return nil }
+	got := newRemoteDeployer(getbuildEnvVars, io.NewIOController())
+	require.IsType(t, &remoteDeployer{}, got)
 	require.NotNil(t, got.getBuildEnvVars)
 }
 
@@ -619,10 +621,11 @@ func TestGetExtraHosts(t *testing.T) {
 		})
 	}
 }
+
 func TestGetContextPath(t *testing.T) {
 	cwd := filepath.Clean("/path/to/current/directory")
 
-	rd := remoteDeployCommand{
+	rd := remoteDeployer{
 		fs: afero.NewMemMapFs(),
 	}
 
@@ -675,7 +678,7 @@ func TestGetOriginalCWD(t *testing.T) {
 		wdCtrl.SetErrors(filesystem.FakeWorkingDirectoryCtrlErrors{
 			Getter: assert.AnError,
 		})
-		deployCommand := &remoteDeployCommand{
+		deployCommand := &remoteDeployer{
 			workingDirectoryCtrl: wdCtrl,
 		}
 
@@ -686,7 +689,7 @@ func TestGetOriginalCWD(t *testing.T) {
 
 	t.Run("with empty manifest path", func(t *testing.T) {
 		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/tmp/test"))
-		deployCommand := &remoteDeployCommand{
+		deployCommand := &remoteDeployer{
 			workingDirectoryCtrl: wdCtrl,
 		}
 
@@ -699,7 +702,7 @@ func TestGetOriginalCWD(t *testing.T) {
 
 	t.Run("with manifest path to a dir", func(t *testing.T) {
 		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/tmp/test"))
-		deployCommand := &remoteDeployCommand{
+		deployCommand := &remoteDeployer{
 			workingDirectoryCtrl: wdCtrl,
 		}
 
@@ -713,7 +716,7 @@ func TestGetOriginalCWD(t *testing.T) {
 
 	t.Run("with manifest path to a file", func(t *testing.T) {
 		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/tmp/test"))
-		deployCommand := &remoteDeployCommand{
+		deployCommand := &remoteDeployer{
 			workingDirectoryCtrl: wdCtrl,
 		}
 

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deploy
+package deployable
 
 import (
 	"encoding/json"
@@ -20,11 +20,29 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/rest"
 )
 
 var (
 	ph = &proxyHandler{}
 )
+
+type fakeKubeConfig struct {
+	config      *rest.Config
+	errOnModify error
+	errRead     error
+}
+
+func (f *fakeKubeConfig) Read() (*rest.Config, error) {
+	if f.errRead != nil {
+		return nil, f.errRead
+	}
+	return f.config, nil
+}
+
+func (fc *fakeKubeConfig) Modify(_ int, _, _ string) error {
+	return fc.errOnModify
+}
 
 func Test_TranslateInvalidResourceBody(t *testing.T) {
 	t.Parallel()

@@ -75,3 +75,7 @@ func (er *ExternalResource) UnmarshalYAML(unmarshal func(interface{}) error) err
 
 	return nil
 }
+
+func (notes *Notes) MarshalYAML() (interface{}, error) {
+	return notes.Path, nil
+}

@@ -585,23 +585,21 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 		return err
 	}
 	c := &deploy.Command{
-		GetManifest:        up.getManifest,
-		GetDeployer:        deploy.GetDeployer,
-		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),
-		K8sClientProvider:  k8sProvider,
-		Builder:            up.builder,
-		GetExternalControl: deploy.NewDeployExternalK8sControl,
-		Fs:                 up.Fs,
-		CfgMapHandler:      deploy.NewConfigmapHandler(k8sProvider, k8slogger),
-		PipelineCMD:        pc,
-		DeployWaiter:       deploy.NewDeployWaiter(k8sProvider, k8slogger),
-		EndpointGetter:     deploy.NewEndpointGetter,
-		AnalyticsTracker:   up.analyticsTracker,
-		IoCtrl:             ioCtrl,
+		GetManifest:       up.getManifest,
+		GetDeployer:       deploy.GetDeployer,
+		K8sClientProvider: k8sProvider,
+		Builder:           up.builder,
+		Fs:                up.Fs,
+		CfgMapHandler:     deploy.NewConfigmapHandler(k8sProvider, k8slogger),
+		PipelineCMD:       pc,
+		DeployWaiter:      deploy.NewDeployWaiter(k8sProvider, k8slogger),
+		EndpointGetter:    deploy.NewEndpointGetter,
+		AnalyticsTracker:  up.analyticsTracker,
+		IoCtrl:            ioCtrl,
 	}
 
 	startTime := time.Now()
-	err = c.RunDeploy(ctx, &deploy.Options{
+	err = c.Run(ctx, &deploy.Options{
 		Name:             up.Manifest.Name,
 		ManifestPathFlag: up.Options.ManifestPathFlag,
 		ManifestPath:     up.Options.ManifestPath,

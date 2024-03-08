@@ -32,6 +32,7 @@ import (
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/deployable"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -41,6 +42,7 @@ import (
 	"github.com/okteto/okteto/pkg/remote"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -62,6 +64,10 @@ ARG {{ .TokenArgName }}
 ARG {{ .ActionNameArgName }}
 ARG {{ .TlsCertBase64ArgName }}
 ARG {{ .InternalServerName }}
+ARG {{ .OktetoDeployable }}
+ARG {{ .GitHubRepositoryArgName }}
+ARG {{ .BuildKitHostArgName }}
+ARG {{ .OktetoRegistryURLArgName }}
 RUN mkdir -p /etc/ssl/certs/
 RUN echo "${{ .TlsCertBase64ArgName }}" | base64 -d > /etc/ssl/certs/okteto.crt
 
@@ -80,7 +86,7 @@ RUN okteto registrytoken install --force --log-output=json
 
 RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
-  okteto deploy --log-output=json --server-name="${{ .InternalServerName }}" {{ .DeployFlags }}
+  /okteto/bin/okteto remote-run --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}
 `
 )
 
@@ -91,24 +97,30 @@ type remoteRunner interface {
 }
 
 type dockerfileTemplateProperties struct {
-	OktetoCLIImage         string
-	UserDeployImage        string
-	RemoteDeployEnvVar     string
-	OktetoBuildEnvVars     map[string]string
-	ContextArgName         string
-	NamespaceArgName       string
-	TokenArgName           string
-	TlsCertBase64ArgName   string
-	InternalServerName     string
-	ActionNameArgName      string
-	GitCommitArgName       string
-	GitBranchArgName       string
-	InvalidateCacheArgName string
-	DeployFlags            string
+	OktetoCLIImage           string
+	UserDeployImage          string
+	RemoteDeployEnvVar       string
+	OktetoBuildEnvVars       map[string]string
+	ContextArgName           string
+	NamespaceArgName         string
+	TokenArgName             string
+	TlsCertBase64ArgName     string
+	InternalServerName       string
+	ActionNameArgName        string
+	GitCommitArgName         string
+	GitBranchArgName         string
+	InvalidateCacheArgName   string
+	CommandFlags             string
+	OktetoDeployable         string
+	GitHubRepositoryArgName  string
+	BuildKitHostArgName      string
+	OktetoRegistryURLArgName string
 }
 
-type remoteDeployCommand struct {
-	getBuildEnvVars      func() map[string]string
+type buildEnvVarsGetter func() map[string]string
+
+type remoteDeployer struct {
+	getBuildEnvVars      buildEnvVarsGetter
 	runner               remoteRunner
 	fs                   afero.Fs
 	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
@@ -126,7 +138,7 @@ type remoteDeployCommand struct {
 }
 
 // newRemoteDeployer creates the remote deployer from a
-func newRemoteDeployer(builder builderInterface, ioCtrl *io.Controller) *remoteDeployCommand {
+func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller) *remoteDeployer {
 	fs := afero.NewOsFs()
 	runner := buildCmd.NewOktetoBuilder(
 		&okteto.ContextStateless{
@@ -134,8 +146,8 @@ func newRemoteDeployer(builder builderInterface, ioCtrl *io.Controller) *remoteD
 		},
 		fs,
 	)
-	return &remoteDeployCommand{
-		getBuildEnvVars:      builder.GetBuildEnvVars,
+	return &remoteDeployer{
+		getBuildEnvVars:      buildVarsGetter,
 		runner:               runner,
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
@@ -145,7 +157,7 @@ func newRemoteDeployer(builder builderInterface, ioCtrl *io.Controller) *remoteD
 	}
 }
 
-func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Options) error {
+func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) error {
 	home, err := homedir.Dir()
 	if err != nil {
 		return err
@@ -195,6 +207,17 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		return err
 	}
 
+	deployable := deployable.Entity{
+		Divert:   deployOptions.Manifest.Deploy.Divert,
+		Commands: deployOptions.Manifest.Deploy.Commands,
+		External: deployOptions.Manifest.External,
+	}
+
+	b, err := yaml.Marshal(deployable)
+	if err != nil {
+		return err
+	}
+
 	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: "deploy"})
 	buildOptions.Manifest = deployOptions.Manifest
 	buildOptions.BuildArgs = append(
@@ -208,6 +231,10 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		fmt.Sprintf("%s=%s", constants.OktetoGitCommitEnvVar, os.Getenv(constants.OktetoGitCommitEnvVar)),
 		fmt.Sprintf("%s=%s", constants.OktetoGitBranchEnvVar, os.Getenv(constants.OktetoGitBranchEnvVar)),
 		fmt.Sprintf("%s=%d", constants.OktetoInvalidateCacheEnvVar, int(randomNumber.Int64())),
+		fmt.Sprintf("%s=%s", constants.OktetoDeployableEnvVar, base64.StdEncoding.EncodeToString(b)),
+		fmt.Sprintf("%s=%s", model.GithubRepositoryEnvVar, os.Getenv(model.GithubRepositoryEnvVar)),
+		fmt.Sprintf("%s=%s", model.OktetoRegistryURLEnvVar, os.Getenv(model.OktetoRegistryURLEnvVar)),
+		fmt.Sprintf("%s=%s", model.OktetoBuildkitHostURLEnvVar, os.Getenv(model.OktetoBuildkitHostURLEnvVar)),
 	)
 
 	if sc.ServerName != "" {
@@ -266,15 +293,11 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		}
 		return fmt.Errorf("error deploying application: %w", err)
 	}
-	oktetoLog.SetStage("done")
-	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
 
 	return nil
 }
 
-func (rd *remoteDeployCommand) cleanUp(ctx context.Context, err error) {}
-
-func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (string, error) {
+func (rd *remoteDeployer) createDockerfile(tmpDir string, opts *Options) (string, error) {
 	cwd, err := rd.workingDirectoryCtrl.Get()
 	if err != nil {
 		return "", err
@@ -285,26 +308,30 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 			Funcs(template.FuncMap{"join": strings.Join}).
 			Parse(dockerfileTemplate))
 
-	deployFlags, err := getDeployFlags(opts)
+	commandFlags, err := getCommandFlags(opts)
 	if err != nil {
 		return "", err
 	}
 
 	dockerfileSyntax := dockerfileTemplateProperties{
-		OktetoCLIImage:         getOktetoCLIVersion(config.VersionString),
-		UserDeployImage:        opts.Manifest.Deploy.Image,
-		RemoteDeployEnvVar:     constants.OktetoDeployRemote,
-		ContextArgName:         model.OktetoContextEnvVar,
-		OktetoBuildEnvVars:     rd.getBuildEnvVars(),
-		NamespaceArgName:       model.OktetoNamespaceEnvVar,
-		TlsCertBase64ArgName:   constants.OktetoTlsCertBase64EnvVar,
-		InternalServerName:     constants.OktetoInternalServerNameEnvVar,
-		TokenArgName:           model.OktetoTokenEnvVar,
-		ActionNameArgName:      model.OktetoActionNameEnvVar,
-		GitCommitArgName:       constants.OktetoGitCommitEnvVar,
-		GitBranchArgName:       constants.OktetoGitBranchEnvVar,
-		InvalidateCacheArgName: constants.OktetoInvalidateCacheEnvVar,
-		DeployFlags:            strings.Join(deployFlags, " "),
+		OktetoCLIImage:           getOktetoCLIVersion(config.VersionString),
+		UserDeployImage:          opts.Manifest.Deploy.Image,
+		RemoteDeployEnvVar:       constants.OktetoDeployRemote,
+		ContextArgName:           model.OktetoContextEnvVar,
+		OktetoBuildEnvVars:       rd.getBuildEnvVars(),
+		NamespaceArgName:         model.OktetoNamespaceEnvVar,
+		TlsCertBase64ArgName:     constants.OktetoTlsCertBase64EnvVar,
+		InternalServerName:       constants.OktetoInternalServerNameEnvVar,
+		TokenArgName:             model.OktetoTokenEnvVar,
+		ActionNameArgName:        model.OktetoActionNameEnvVar,
+		GitCommitArgName:         constants.OktetoGitCommitEnvVar,
+		GitBranchArgName:         constants.OktetoGitBranchEnvVar,
+		InvalidateCacheArgName:   constants.OktetoInvalidateCacheEnvVar,
+		CommandFlags:             strings.Join(commandFlags, " "),
+		OktetoDeployable:         constants.OktetoDeployableEnvVar,
+		GitHubRepositoryArgName:  model.GithubRepositoryEnvVar,
+		BuildKitHostArgName:      model.OktetoBuildkitHostURLEnvVar,
+		OktetoRegistryURLArgName: model.OktetoRegistryURLEnvVar,
 	}
 
 	dockerfile, err := rd.fs.Create(filepath.Join(tmpDir, dockerfileTemporalName))
@@ -327,29 +354,9 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 	return dockerfile.Name(), nil
 }
 
-func getDeployFlags(opts *Options) ([]string, error) {
-	var deployFlags []string
-
-	if opts.Name != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--name \"%s\"", opts.Name))
-	}
-
-	if opts.Namespace != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--namespace %s", opts.Namespace))
-	}
-
-	if opts.ManifestPathFlag != "" {
-		lastFolder := filepath.Base(filepath.Dir(opts.ManifestPathFlag))
-		if lastFolder == ".okteto" {
-			path := filepath.Clean(opts.ManifestPathFlag)
-			parts := strings.Split(path, string(filepath.Separator))
-
-			deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filepath.Join(parts[len(parts)-2:]...)))
-		} else {
-			deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filepath.Base(opts.ManifestPathFlag)))
-		}
-	}
-
+func getCommandFlags(opts *Options) ([]string, error) {
+	var commandFlags []string
+	commandFlags = append(commandFlags, fmt.Sprintf("--name \"%s\"", opts.Name))
 	if len(opts.Variables) > 0 {
 		var varsToAddForDeploy []string
 		variables, err := parse(opts.Variables)
@@ -359,20 +366,14 @@ func getDeployFlags(opts *Options) ([]string, error) {
 		for _, v := range variables {
 			varsToAddForDeploy = append(varsToAddForDeploy, fmt.Sprintf("--var %s=\"%s\"", v.Name, v.Value))
 		}
-		deployFlags = append(deployFlags, strings.Join(varsToAddForDeploy, " "))
+		commandFlags = append(commandFlags, strings.Join(varsToAddForDeploy, " "))
 	}
 
-	if opts.Wait {
-		deployFlags = append(deployFlags, "--wait")
-	}
-
-	deployFlags = append(deployFlags, fmt.Sprintf("--timeout %s", opts.Timeout))
-
-	return deployFlags, nil
+	return commandFlags, nil
 }
 
 // getOriginalCWD returns the original cwd
-func (rd *remoteDeployCommand) getOriginalCWD(manifestPath string) (string, error) {
+func (rd *remoteDeployer) getOriginalCWD(manifestPath string) (string, error) {
 	cwd, err := rd.workingDirectoryCtrl.Get()
 	if err != nil {
 		return "", err
@@ -439,7 +440,7 @@ func getExtraHosts(registryURL, subdomain, ip string, metadata types.ClusterMeta
 	return extraHosts
 }
 
-func (rd *remoteDeployCommand) getContextPath(cwd, manifestPath string) string {
+func (rd *remoteDeployer) getContextPath(cwd, manifestPath string) string {
 	if manifestPath == "" {
 		return cwd
 	}
@@ -463,4 +464,8 @@ func (rd *remoteDeployCommand) getContextPath(cwd, manifestPath string) string {
 		return filepath.Dir(possibleCtx)
 	}
 	return possibleCtx
+}
+
+func (rd *remoteDeployer) CleanUp(_ context.Context, _ error) {
+	// Do nothing
 }

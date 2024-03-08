@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/build"
+	"github.com/okteto/okteto/pkg/divert"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -111,9 +112,10 @@ func Test_deploySvc(t *testing.T) {
 		},
 	}
 
+	divertDriver := divert.NewNoop()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := deploySvc(ctx, tt.stack, tt.svcName, client)
+			err := deploySvc(ctx, tt.stack, tt.svcName, client, divertDriver)
 			if err != nil {
 				t.Fatal("Not deployed correctly")
 			}
@@ -222,9 +224,10 @@ func Test_reDeploySvc(t *testing.T) {
 		},
 	}
 
+	divertDriver := divert.NewNoop()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := deploySvc(ctx, tt.stack, tt.svcName, fakeClient)
+			err := deploySvc(ctx, tt.stack, tt.svcName, fakeClient, divertDriver)
 			if err != nil {
 				t.Fatal("Not re-deployed correctly")
 			}
@@ -280,7 +283,8 @@ func Test_deployDeployment(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset()
 
-	_, err := deployDeployment(ctx, "test", stack, client)
+	divertDriver := divert.NewNoop()
+	_, err := deployDeployment(ctx, "test", stack, client, divertDriver)
 	if err != nil {
 		t.Fatal("Not deployed correctly")
 	}
@@ -348,7 +352,8 @@ func Test_deploySfs(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset()
 
-	_, err := deployStatefulSet(ctx, "test", stack, client)
+	divertDriver := divert.NewNoop()
+	_, err := deployStatefulSet(ctx, "test", stack, client, divertDriver)
 	if err != nil {
 		t.Fatal("Not deployed correctly")
 	}
@@ -373,7 +378,8 @@ func Test_deployJob(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset()
 
-	_, err := deployJob(ctx, "test", stack, client)
+	divertDriver := divert.NewNoop()
+	_, err := deployJob(ctx, "test", stack, client, divertDriver)
 	if err != nil {
 		t.Fatal("Not deployed correctly")
 	}

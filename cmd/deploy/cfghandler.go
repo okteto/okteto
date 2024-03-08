@@ -30,7 +30,7 @@ import (
 type configMapHandler interface {
 	translateConfigMapAndDeploy(context.Context, *pipeline.CfgData) (*apiv1.ConfigMap, error)
 	updateConfigMap(context.Context, *apiv1.ConfigMap, *pipeline.CfgData, error) error
-	updateEnvsFromCommands(context.Context, string, string, []string) error
+	UpdateEnvsFromCommands(context.Context, string, string, []string) error
 	getConfigmapVariablesEncoded(ctx context.Context, name, namespace string) (string, error)
 }
 
@@ -101,7 +101,7 @@ func (ch *defaultConfigMapHandler) updateConfigMap(ctx context.Context, cfg *api
 }
 
 // updateEnvsFromCommands update config map by adding envs generated in OKTETO_ENV as data fields
-func (ch *defaultConfigMapHandler) updateEnvsFromCommands(ctx context.Context, name, namespace string, envs []string) error {
+func (ch *defaultConfigMapHandler) UpdateEnvsFromCommands(ctx context.Context, name, namespace string, envs []string) error {
 	c, _, err := ch.k8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, ch.k8slogger)
 	if err != nil {
 		return err
@@ -138,6 +138,6 @@ func (*deployInsideDeployConfigMapHandler) updateConfigMap(_ context.Context, _ 
 // updateEnvs with the receiver deployInsideDeployConfigMapHandler doesn't do anything
 // because we have to  control the cfmap in the main execution. If both handled the configmap we will be
 // overwritten the cfmap and leave it in a inconsistent status
-func (*deployInsideDeployConfigMapHandler) updateEnvsFromCommands(_ context.Context, _ string, _ string, _ []string) error {
+func (*deployInsideDeployConfigMapHandler) UpdateEnvsFromCommands(_ context.Context, _ string, _ string, _ []string) error {
 	return nil
 }
