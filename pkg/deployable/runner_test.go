@@ -109,7 +109,7 @@ type fakeExternalResource struct {
 	mock.Mock
 }
 
-func (f *fakeExternalResource) Deploy(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error {
+func (f *fakeExternalResource) Deploy(ctx context.Context, name, ns string, externalInfo *externalresource.ExternalResource) error {
 	args := f.Called(ctx, name, ns, externalInfo)
 	return args.Error(0)
 }
@@ -120,7 +120,7 @@ func TestDeployNotRemovingEnvFile(t *testing.T) {
 	_, err := fs.Create(".env")
 	require.NoError(t, err)
 	params := DeployParameters{}
-	r := runner{
+	r := Runner{
 		ConfigMapHandler: &fakeCmapHandler{},
 		Fs:               fs,
 	}
@@ -132,10 +132,19 @@ func TestDeployNotRemovingEnvFile(t *testing.T) {
 }
 
 func TestRunDeployWithErrorGettingClient(t *testing.T) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+			},
+		},
+		CurrentContext: "test",
+	}
 	k8sProvider := test.NewFakeK8sProvider()
 	k8sProvider.ErrProvide = assert.AnError
 
-	r := runner{
+	r := Runner{
 		K8sClientProvider: k8sProvider,
 	}
 
@@ -145,6 +154,15 @@ func TestRunDeployWithErrorGettingClient(t *testing.T) {
 }
 
 func TestRunDeployWithErrorModifyingKubeconfig(t *testing.T) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+			},
+		},
+		CurrentContext: "test",
+	}
 	k8sProvider := test.NewFakeK8sProvider()
 	proxy := &fakeProxy{}
 	kubeconfigHandler := &fakeKubeconfigHandler{}
@@ -154,7 +172,7 @@ func TestRunDeployWithErrorModifyingKubeconfig(t *testing.T) {
 
 	kubeconfigHandler.On("Modify", 80, "fake-token", "temp-kubeconfig").Return(assert.AnError)
 
-	r := runner{
+	r := Runner{
 		K8sClientProvider:  k8sProvider,
 		Proxy:              proxy,
 		Kubeconfig:         kubeconfigHandler,
@@ -192,7 +210,7 @@ func TestRunDeployWithEmptyDeployable(t *testing.T) {
 
 	kubeconfigHandler.On("Modify", 80, "fake-token", "temp-kubeconfig").Return(nil)
 
-	r := runner{
+	r := Runner{
 		K8sClientProvider:  k8sProvider,
 		Proxy:              proxy,
 		Kubeconfig:         kubeconfigHandler,
@@ -232,7 +250,7 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 		CurrentContext: "test",
 	}
 	executor := &fakeExecutor{}
-	r := runner{
+	r := Runner{
 		TempKubeconfigFile: "temp-kubeconfig",
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
@@ -290,7 +308,7 @@ func TestRunCommandsSectionWithErrorInCommands(t *testing.T) {
 		CurrentContext: "test",
 	}
 	executor := &fakeExecutor{}
-	r := runner{
+	r := Runner{
 		TempKubeconfigFile: "temp-kubeconfig",
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
@@ -349,7 +367,7 @@ func TestRunCommandsSectionWithDivert(t *testing.T) {
 	}
 	executor := &fakeExecutor{}
 	divertDeployer := &fakeDivert{}
-	r := runner{
+	r := Runner{
 		TempKubeconfigFile: "temp-kubeconfig",
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
@@ -393,7 +411,7 @@ func TestRunCommandsSectionWithErrorDeployingDivert(t *testing.T) {
 	}
 	executor := &fakeExecutor{}
 	divertDeployer := &fakeDivert{}
-	r := runner{
+	r := Runner{
 		TempKubeconfigFile: "temp-kubeconfig",
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
@@ -439,7 +457,7 @@ func TestRunCommandsSectionWithExternal(t *testing.T) {
 	executor := &fakeExecutor{}
 	divertDeployer := &fakeDivert{}
 	externalResource := &fakeExternalResource{}
-	r := runner{
+	r := Runner{
 		TempKubeconfigFile: "temp-kubeconfig",
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
@@ -503,7 +521,7 @@ func TestRunCommandsSectionWithErrorDeployingExternal(t *testing.T) {
 	executor := &fakeExecutor{}
 	divertDeployer := &fakeDivert{}
 	externalResource := &fakeExternalResource{}
-	r := runner{
+	r := Runner{
 		TempKubeconfigFile: "temp-kubeconfig",
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
@@ -566,7 +584,7 @@ func TestDeployExternalWithErrorGettingClient(t *testing.T) {
 	k8sProvider := test.NewFakeK8sProvider()
 	k8sProvider.ErrProvide = assert.AnError
 
-	r := runner{
+	r := Runner{
 		K8sClientProvider: k8sProvider,
 	}
 
@@ -595,7 +613,7 @@ func TestDeployExternalWithErrorGettingClient(t *testing.T) {
 func TestCleaUp(t *testing.T) {
 	executor := &fakeExecutor{}
 	proxy := &fakeProxy{}
-	r := runner{
+	r := Runner{
 		Executor:           executor,
 		Proxy:              proxy,
 		TempKubeconfigFile: "temp-kubeconfig",

@@ -818,7 +818,7 @@ func TestTrackDeploy(t *testing.T) {
 }
 
 func TestShouldRunInRemoteDeploy(t *testing.T) {
-	var tempManifest *model.Manifest = &model.Manifest{
+	tempManifest := &model.Manifest{
 		Deploy: &model.DeployInfo{
 			Remote: true,
 			Image:  "some-image",

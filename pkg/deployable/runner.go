@@ -69,12 +69,12 @@ type ExternalResourceInterface interface {
 	Deploy(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
 }
 
-// runner is responsible for running the commands defined in a manifest, deploy the divert
+// Runner is responsible for running the commands defined in a manifest, deploy the divert
 // information and deploy external resources.
-// This runner has the common functionality to deal with the mentioned resources when deploy is
+// This Runner has the common functionality to deal with the mentioned resources when deploy is
 // run locally or remotely. As this runs also in the remote, it should NEVER build any kind of image
 // or execute some logic that might differ from local.
-type runner struct {
+type Runner struct {
 	Proxy              ProxyInterface
 	Kubeconfig         KubeConfigHandler
 	ConfigMapHandler   ConfigMapHandler
@@ -119,7 +119,7 @@ func NewRunnerForRemote(
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	portGetter PortGetterFunc,
 	k8sLogger *io.K8sLogger,
-) (*runner, error) {
+) (*Runner, error) {
 	kubeconfig := NewKubeConfig()
 	tempKubeconfigName := name
 
@@ -129,7 +129,7 @@ func NewRunnerForRemote(
 		return nil, err
 	}
 
-	return &runner{
+	return &Runner{
 		Kubeconfig:         kubeconfig,
 		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash, ""),
 		ConfigMapHandler:   cmapHandler,
@@ -153,7 +153,7 @@ func NewRunnerForLocal(
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	portGetter PortGetterFunc,
 	k8sLogger *io.K8sLogger,
-) (*runner, error) {
+) (*Runner, error) {
 	kubeconfig := NewKubeConfig()
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -175,7 +175,7 @@ func NewRunnerForLocal(
 		return nil, err
 	}
 
-	return &runner{
+	return &Runner{
 		Kubeconfig:         kubeconfig,
 		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash, ""),
 		ConfigMapHandler:   cmapHandler,
@@ -189,7 +189,7 @@ func NewRunnerForLocal(
 }
 
 // RunDeploy deploys the deployable received with DeployParameters
-func (r *runner) RunDeploy(ctx context.Context, params DeployParameters) error {
+func (r *Runner) RunDeploy(ctx context.Context, params DeployParameters) error {
 	// We need to create a client that doesn't go through the proxy to create
 	// the configmap without the deployedByLabel
 	c, _, err := r.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, r.k8sLogger)
@@ -266,7 +266,7 @@ func (r *runner) RunDeploy(ctx context.Context, params DeployParameters) error {
 }
 
 // runCommandsSection runs the commands defined in the command section of the deployable entity
-func (r *runner) runCommandsSection(ctx context.Context, params DeployParameters) error {
+func (r *Runner) runCommandsSection(ctx context.Context, params DeployParameters) error {
 	oktetoEnvFile, err := r.createTempOktetoEnvFile()
 	if err != nil {
 		return err
@@ -344,7 +344,7 @@ func (r *runner) runCommandsSection(ctx context.Context, params DeployParameters
 }
 
 // deployExternals deploys the external resources defined in the deployable entity
-func (r *runner) deployExternals(ctx context.Context, params DeployParameters, dynamicEnvs map[string]string) error {
+func (r *Runner) deployExternals(ctx context.Context, params DeployParameters, dynamicEnvs map[string]string) error {
 	_, cfg, err := r.K8sClientProvider.ProvideWithLogger(kconfig.Get([]string{r.TempKubeconfigFile}), r.k8sLogger)
 	if err != nil {
 		return fmt.Errorf("error getting kubernetes client: %w", err)
@@ -379,7 +379,7 @@ func (r *runner) deployExternals(ctx context.Context, params DeployParameters, d
 }
 
 // CleanUp cleans up the resources created by the runner to avoid to leave any temporal resource
-func (r *runner) CleanUp(ctx context.Context, err error) {
+func (r *Runner) CleanUp(ctx context.Context, err error) {
 	oktetoLog.Debugf("removing temporal kubeconfig file '%s'", r.TempKubeconfigFile)
 	if err := os.Remove(r.TempKubeconfigFile); err != nil {
 		oktetoLog.Infof("could not remove temporal kubeconfig file: %s", err)
@@ -397,7 +397,7 @@ func (r *runner) CleanUp(ctx context.Context, err error) {
 }
 
 // createTempOktetoEnvFile creates a temporal file use to store the environment variables
-func (r *runner) createTempOktetoEnvFile() (afero.File, error) {
+func (r *Runner) createTempOktetoEnvFile() (afero.File, error) {
 	oktetoEnvFileDir, err := afero.TempDir(r.Fs, "", "")
 	if err != nil {
 		return nil, err

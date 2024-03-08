@@ -356,7 +356,7 @@ func (rd *remoteDeployer) createDockerfile(tmpDir string, opts *Options) (string
 
 func getCommandFlags(opts *Options) ([]string, error) {
 	var commandFlags []string
-	commandFlags = append(commandFlags, fmt.Sprintf("--name \"%s\"", opts.Name))
+	commandFlags = append(commandFlags, fmt.Sprintf("--name %q", opts.Name))
 	if len(opts.Variables) > 0 {
 		var varsToAddForDeploy []string
 		variables, err := parse(opts.Variables)
@@ -364,7 +364,7 @@ func getCommandFlags(opts *Options) ([]string, error) {
 			return nil, err
 		}
 		for _, v := range variables {
-			varsToAddForDeploy = append(varsToAddForDeploy, fmt.Sprintf("--var %s=\"%s\"", v.Name, v.Value))
+			varsToAddForDeploy = append(varsToAddForDeploy, fmt.Sprintf("--var %s=%q", v.Name, v.Value))
 		}
 		commandFlags = append(commandFlags, strings.Join(varsToAddForDeploy, " "))
 	}
@@ -466,6 +466,6 @@ func (rd *remoteDeployer) getContextPath(cwd, manifestPath string) string {
 	return possibleCtx
 }
 
-func (rd *remoteDeployer) CleanUp(_ context.Context, _ error) {
+func (*remoteDeployer) CleanUp(_ context.Context, _ error) {
 	// Do nothing
 }

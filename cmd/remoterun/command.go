@@ -96,7 +96,7 @@ It is important that this command does the minimum and must not do calculations 
 
 			dep, err := getDeployable()
 			if err != nil {
-				return fmt.Errorf("")
+				return fmt.Errorf("could not read information to be deployed: %w", err)
 			}
 
 			// Set the default values for the external resources environment variables (endpoints)
