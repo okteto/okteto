@@ -727,5 +727,4 @@ func TestGetOriginalCWD(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, expected, result)
 	})
-
 }

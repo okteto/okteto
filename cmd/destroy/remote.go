@@ -305,7 +305,7 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 		return "", err
 	}
 
-	if err = remote.CreateDockerignoreFileWithFilesystem(cwd, tempDir, opts.ManifestPathFlag, rd.fs); err != nil {
+	if err = remote.CreateDockerignoreFileWithFilesystem(cwd, tempDir, filesystem.CleanManifestPath(opts.ManifestPathFlag), rd.fs); err != nil {
 		return "", err
 	}
 
@@ -345,15 +345,7 @@ func getDestroyFlags(opts *Options) []string {
 	}
 
 	if opts.ManifestPathFlag != "" {
-		lastFolder := filepath.Base(filepath.Dir(opts.ManifestPathFlag))
-		if lastFolder == ".okteto" {
-			path := filepath.Clean(opts.ManifestPathFlag)
-			parts := strings.Split(path, string(filepath.Separator))
-
-			deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filepath.Join(parts[len(parts)-2:]...)))
-		} else {
-			deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filepath.Base(opts.ManifestPathFlag)))
-		}
+		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filesystem.CleanManifestPath(opts.ManifestPathFlag)))
 	}
 
 	if opts.DestroyVolumes {
