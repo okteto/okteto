@@ -37,8 +37,8 @@ type runner interface {
 
 type Options struct {
 	Name           string
-	RunWithoutBash bool
 	Variables      []string
+	RunWithoutBash bool
 }
 
 type Command struct {
@@ -85,8 +85,6 @@ It is important that this command does the minimum and must not do calculations 
 		Hidden:       true,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
-
 			if options.Name == "" {
 				return fmt.Errorf("--name is required")
 			}
@@ -110,7 +108,6 @@ It is important that this command does the minimum and must not do calculations 
 			cmapHandler := deployCMD.NewConfigmapHandler(k8sClientProvider, k8sLogger)
 
 			runner, err := deployable.NewRunnerForRemote(
-				ctx,
 				options.Name,
 				false,
 				cmapHandler,

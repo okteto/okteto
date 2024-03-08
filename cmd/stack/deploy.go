@@ -44,8 +44,8 @@ type DeployCommand struct {
 	analyticsTracker analyticsTrackerInterface
 	Config           *rest.Config
 	ioCtrl           *io.Controller
-	IsInsideDeploy   bool
 	DivertDriver     divert.Driver
+	IsInsideDeploy   bool
 }
 
 // deploy deploys a stack

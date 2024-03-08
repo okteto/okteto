@@ -89,9 +89,9 @@ type runner struct {
 
 // Entity represents a set of resources that can be deployed by the runner
 type Entity struct {
+	External externalresource.Section
 	Divert   *model.DivertDeploy
 	Commands []model.DeployCommand
-	External externalresource.Section
 }
 
 // DeployParameters represents the parameters for deploying a remote entity
@@ -113,7 +113,6 @@ func newDeployExternalK8sControl(cfg *rest.Config) ExternalResourceInterface {
 
 // NewRunnerForRemote initializes a runner for a remote environment
 func NewRunnerForRemote(
-	ctx context.Context,
 	name string,
 	runWithoutBash bool,
 	cmapHandler ConfigMapHandler,

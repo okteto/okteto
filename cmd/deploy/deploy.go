@@ -116,14 +116,14 @@ type Command struct {
 	IoCtrl            *io.Controller
 	K8sLogger         *io.K8sLogger
 
-	PipelineType       model.Archetype
-	isRemote           bool
-	runningInInstaller bool
-
+	PipelineType model.Archetype
 	// onCleanUp is a list of functions to be executed when the execution is interrupted. This is a hack
 	// to be able to call to deployer's cleanUp function as the deployer is gotten at runtime.
 	// This can probably be improved using context cancellation
 	onCleanUp []cleanUpFunc
+
+	isRemote           bool
+	runningInInstaller bool
 }
 
 type analyticsTrackerInterface interface {
@@ -260,7 +260,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 	return cmd
 }
 
-// RunDeploy runs the deploy sequence
+// Run runs the deploy sequence
 func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	oktetoLog.SetStage("Load manifest")
 	manifest, err := dc.GetManifest(deployOptions.ManifestPath, dc.Fs)

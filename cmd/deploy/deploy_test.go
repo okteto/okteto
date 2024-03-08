@@ -31,7 +31,6 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
-	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -47,7 +46,6 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -162,92 +160,6 @@ var noDeployNorDependenciesManifest *model.Manifest = &model.Manifest{
 		},
 	},
 }
-
-type fakeProxy struct {
-	errOnShutdown error
-	token         string
-	port          int
-	started       bool
-	shutdown      bool
-}
-
-type fakeExecutor struct {
-	err      error
-	executed []model.DeployCommand
-}
-
-type fakeKubeConfig struct {
-	config      *rest.Config
-	errOnModify error
-	errRead     error
-}
-
-type fakeCmapHandler struct {
-	errUpdatingWithEnvs error
-}
-
-func (*fakeCmapHandler) translateConfigMapAndDeploy(context.Context, *pipeline.CfgData) (*apiv1.ConfigMap, error) {
-	return nil, nil
-}
-
-func (f *fakeCmapHandler) getConfigmapVariablesEncoded(context.Context, string, string) (string, error) {
-	return "", nil
-}
-
-func (f *fakeCmapHandler) updateConfigMap(context.Context, *apiv1.ConfigMap, *pipeline.CfgData, error) error {
-	return nil
-}
-
-func (f *fakeCmapHandler) UpdateEnvsFromCommands(context.Context, string, string, []string) error {
-	return f.errUpdatingWithEnvs
-}
-
-func (f *fakeKubeConfig) Read() (*rest.Config, error) {
-	if f.errRead != nil {
-		return nil, f.errRead
-	}
-	return f.config, nil
-}
-
-func (fc *fakeKubeConfig) Modify(_ int, _, _ string) error {
-	return fc.errOnModify
-}
-
-func (fk *fakeProxy) Start() {
-	fk.started = true
-}
-
-func (*fakeProxy) SetName(_ string) {}
-
-func (*fakeProxy) SetDivert(_ divert.Driver) {}
-
-func (fk *fakeProxy) Shutdown(_ context.Context) error {
-	if fk.errOnShutdown != nil {
-		return fk.errOnShutdown
-	}
-
-	fk.shutdown = true
-	return nil
-}
-
-func (fk *fakeProxy) GetPort() int {
-	return fk.port
-}
-
-func (fk *fakeProxy) GetToken() string {
-	return fk.token
-}
-
-func (fe *fakeExecutor) Execute(command model.DeployCommand, _ []string) error {
-	fe.executed = append(fe.executed, command)
-	if fe.err != nil {
-		return fe.err
-	}
-
-	return nil
-}
-
-func (*fakeExecutor) CleanUp(_ error) {}
 
 type fakeV2Builder struct {
 	buildErr             error
