@@ -367,6 +367,9 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	oktetoLog.EnableMasking()
 	err = dc.deploy(ctx, deployOptions, cwd, c)
 	oktetoLog.DisableMasking()
+	oktetoLog.SetStage("done")
+	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
+	oktetoLog.SetStage("")
 
 	if err != nil {
 		if err == oktetoErrors.ErrIntSig {
@@ -375,12 +378,6 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		err = oktetoErrors.UserError{E: err}
 		data.Status = pipeline.ErrorStatus
 	} else {
-		// This has to be done only when the deployment is successful to make sure nothing else is displayed in the UI
-		// When the deploy has any error, the final stage is different and set internally by "updateConfigMap" function.
-		// This can be revisited when we improve the logs
-		oktetoLog.SetStage("done")
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
-		oktetoLog.SetStage("")
 		hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, c)
 		if err != nil {
 			return err

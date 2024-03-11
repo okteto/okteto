@@ -273,7 +273,7 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		}
 
 	} else {
-		oktetoLog.Debug("no ssh agent found. Not mouting ssh-agent for build")
+		oktetoLog.Debug("no ssh agent found. Not mounting ssh-agent for build")
 	}
 
 	// we need to call Run() method using a remote builder. This Builder will have
@@ -284,6 +284,7 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		var cmdErr buildCmd.OktetoCommandErr
 		if errors.As(err, &cmdErr) {
 			oktetoLog.SetStage(cmdErr.Stage)
+			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying application: %s", cmdErr.Err.Error())
 			return fmt.Errorf("error deploying application: %w", cmdErr.Err)
 		}
 		oktetoLog.SetStage("remote deploy")

@@ -243,7 +243,7 @@ func TestCmdFailOutput(t *testing.T) {
 		}
 	}
 
-	require.Equal(t, 3, numErrors)
+	require.Equal(t, 1, numErrors)
 	stagesToTest := []string{"Load manifest", "Failed command", "done"}
 	for _, ss := range stagesToTest {
 		if _, ok := stageLines[ss]; !ok {
@@ -415,7 +415,7 @@ func TestComposeFailOutput(t *testing.T) {
 		}
 	}
 
-	require.Equal(t, 3, numErrors)
+	require.Equal(t, 1, numErrors)
 	stagesToTest := []string{"Load manifest", "Deploying compose", "done"}
 	for _, ss := range stagesToTest {
 		if _, ok := stageLines[ss]; !ok {
