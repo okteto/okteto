@@ -448,7 +448,7 @@ func TestCreateDockerfile(t *testing.T) {
 			expected: expected{
 				dockerfileName: filepath.Clean("/test/Dockerfile.deploy"),
 				dockerfileContent: `
-FROM okteto/okteto:latest as okteto-cli
+FROM registry.staging.okteto.dev/ifbyol/cli:test as okteto-cli
 
 FROM test-image as deploy
 
