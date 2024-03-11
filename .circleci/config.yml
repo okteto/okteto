@@ -187,7 +187,7 @@ jobs:
           # which run the deploy, we set the env var OKTETO_REMOTE_CLI_IMAGE to the one we are building
           name: Build CLI image
           command: |
-            okteto build --platform "linux/arm64,linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.dev/cli:${CIRCLE_SHA1}
+            okteto build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.dev/cli:${CIRCLE_SHA1}
       - integration-build
       - integration-deploy
       - integration-up
@@ -263,7 +263,7 @@ jobs:
           # which run the deploy, we set the env var OKTETO_REMOTE_CLI_IMAGE to the one we are building
           name: Build CLI image windows
           command: |
-            "$($HOME)\project\artifacts\bin\okteto.exe" build --platform "linux/arm64,linux/amd64" --build-arg VERSION_STRING=$env:CIRCLE_SHA1 -f Dockerfile . -t okteto.dev/cli:$env:CIRCLE_SHA1
+            & "$($HOME)\project\artifacts\bin\okteto.exe" build --platform "linux/amd64" --build-arg VERSION_STRING=$env:CIRCLE_SHA1 -f Dockerfile . -t okteto.dev/cli:$env:CIRCLE_SHA1
       - run:
           name: Run deprecated integration tests
           environment:
