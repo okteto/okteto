@@ -35,7 +35,9 @@ const (
 	secondStack = `services:
   app:
     labels:
-      a: b
+      label-a: value-label-a
+    annotations:
+      annotation-a: value-annotation-a
     image: ${OKTETO_BUILD_APP_IMAGE}
 `
 )
@@ -68,7 +70,10 @@ func Test_multipleStack(t *testing.T) {
 			},
 		},
 		Labels: model.Labels{
-			"a": "b",
+			"label-a": "value-label-a",
+		},
+		Annotations: model.Annotations{
+			"annotation-a": "value-annotation-a",
 		},
 		Image: "",
 	}
@@ -79,6 +84,9 @@ func Test_multipleStack(t *testing.T) {
 	}
 	if !reflect.DeepEqual(svc.Labels, svcResult.Labels) {
 		t.Fatalf("Expected %v but got %v", svcResult.Labels, svc.Labels)
+	}
+	if !reflect.DeepEqual(svc.Annotations, svcResult.Annotations) {
+		t.Fatalf("Expected %v but got %v", svcResult.Annotations, svc.Annotations)
 	}
 	if svc.Image != svcResult.Image {
 		t.Fatalf("Expected %v but got %v", svcResult.Image, svc.Image)
@@ -134,8 +142,11 @@ func Test_overrideFileStack(t *testing.T) {
 				Value: "b",
 			},
 		},
+		Labels: model.Labels{
+			"label-a": "value-label-a",
+		},
 		Annotations: model.Annotations{
-			"a": "b",
+			"annotation-a": "value-annotation-a",
 		},
 		Image: "test",
 	}
@@ -145,8 +156,11 @@ func Test_overrideFileStack(t *testing.T) {
 	if !reflect.DeepEqual(svc.Environment, svcResult.Environment) {
 		t.Fatalf("Expected %v but got %v", svcResult.Environment, svc.Environment)
 	}
-	if !reflect.DeepEqual(svc.Annotations, svcResult.Annotations) {
+	if !reflect.DeepEqual(svc.Labels, svcResult.Labels) {
 		t.Fatalf("Expected %v but got %v", svcResult.Labels, svc.Labels)
+	}
+	if !reflect.DeepEqual(svc.Annotations, svcResult.Annotations) {
+		t.Fatalf("Expected %v but got %v", svcResult.Annotations, svc.Annotations)
 	}
 	if svc.Image != svcResult.Image {
 		t.Fatalf("Expected %v but got %v", svcResult.Image, svc.Image)

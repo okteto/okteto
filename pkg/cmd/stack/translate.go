@@ -181,7 +181,7 @@ func translatePersistentVolumeClaim(volumeName string, s *model.Stack) apiv1.Per
 			Name:        volumeName,
 			Namespace:   s.Namespace,
 			Labels:      labels,
-			Annotations: volumeSpec.Annotations,
+			Annotations: volumeSpec.Labels,
 		},
 		Spec: apiv1.PersistentVolumeClaimSpec{
 			AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
@@ -479,8 +479,8 @@ func translateVolumeLabels(volumeName string, s *model.Stack) map[string]string 
 		model.StackVolumeNameLabel: volumeName,
 		model.DeployedByLabel:      format.ResourceK8sMetaString(s.Name),
 	}
-	for k := range volume.Labels {
-		labels[k] = volume.Labels[k]
+	for k := range volume.Annotations {
+		labels[k] = volume.Annotations[k]
 	}
 	return labels
 }
@@ -526,8 +526,8 @@ func translateLabels(svcName string, s *model.Stack) map[string]string {
 		model.StackServiceNameLabel: svcName,
 		model.DeployedByLabel:       format.ResourceK8sMetaString(s.Name),
 	}
-	for k := range svc.Labels {
-		labels[k] = svc.Labels[k]
+	for k, v := range svc.Annotations {
+		labels[k] = v
 	}
 
 	for _, volume := range svc.Volumes {
@@ -547,15 +547,15 @@ func translateLabelSelector(svcName string, s *model.Stack) map[string]string {
 }
 
 func translateAnnotations(svc *model.Service) map[string]string {
+	result := getOktetoAnnotations()
 
-	result := getAnnotations()
-	for k, v := range svc.Annotations {
+	for k, v := range svc.Labels {
 		result[k] = v
 	}
 	return result
 }
 
-func getAnnotations() map[string]string {
+func getOktetoAnnotations() map[string]string {
 	annotations := map[string]string{}
 	if utils.IsOktetoRepo() {
 		annotations[model.OktetoSampleAnnotation] = "true"

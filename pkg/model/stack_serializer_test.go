@@ -1252,12 +1252,17 @@ func Test_unmarshalVolumes(t *testing.T) {
 		{
 			name:           "volume with labels",
 			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  apiv1:\n    labels:\n      env: test"),
-			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Labels: Labels{}, Annotations: Annotations{"env": "test"}},
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Labels: Labels{"env": "test"}, Annotations: Annotations{}},
 		},
 		{
 			name:           "volume with annotations",
 			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  apiv1:\n    annotations:\n      env: test"),
 			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Annotations: map[string]string{"env": "test"}, Labels: make(map[string]string)},
+		},
+		{
+			name:           "volume with labels and annotations",
+			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  apiv1:\n    labels:\n      dev.okteto.test: label-1 \n    annotations:\n      dev.okteto.test: annotation-1"),
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Annotations: map[string]string{"dev.okteto.test": "annotation-1"}, Labels: map[string]string{"dev.okteto.test": "label-1"}},
 		},
 	}
 	for _, tt := range tests {
@@ -1451,8 +1456,8 @@ func Test_DeployLabels(t *testing.T) {
 		{
 			name:        "deploy labels",
 			manifest:    []byte("services:\n  app:\n    deploy:\n      labels:\n        env: production\n    image: okteto/vote:1"),
-			annotations: Annotations{"env": "production"},
-			labels:      Labels{},
+			annotations: Annotations{},
+			labels:      Labels{"env": "production"},
 			isCompose:   true,
 		},
 		{
@@ -1463,20 +1468,26 @@ func Test_DeployLabels(t *testing.T) {
 			isCompose:   true,
 		},
 		{
+			name:        "labels and annotations on service",
+			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1\n    labels:\n      env: production\n    annotations:\n      com.example.foo: bar"),
+			annotations: Annotations{"com.example.foo": "bar"},
+			labels:      Labels{"env": "production"},
+			isCompose:   true,
+		},
+		{
 			name:        "labels on service",
 			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1\n    labels:\n      env: production"),
-			annotations: Annotations{"env": "production"},
-			labels:      Labels{},
+			annotations: Annotations{},
+			labels:      Labels{"env": "production"},
 			isCompose:   true,
 		},
 		{
 			name:        "labels on deploy and service",
 			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1\n    labels:\n      app: main\n    deploy:\n      labels:\n        env: production\n"),
-			annotations: Annotations{"env": "production", "app": "main"},
-			labels:      Labels{},
+			annotations: Annotations{},
+			labels:      Labels{"env": "production", "app": "main"},
 			isCompose:   true,
 		},
-
 		{
 			name:        "labels on deploy and service",
 			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1\n    labels:\n      app: main\n    deploy:\n      labels:\n        env: production\n"),
@@ -1496,9 +1507,7 @@ func Test_DeployLabels(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			s, err := ReadStack(tt.manifest, tt.isCompose)
-			if err != nil {
-				t.Fatal(err)
-			}
+			assert.NoError(t, err)
 			if len(s.Services["app"].Annotations) != len(tt.annotations) {
 				t.Fatalf("Bad deployment annotations")
 			}

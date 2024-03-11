@@ -298,15 +298,15 @@ services:
 	if storage.Cmp(resource.MustParse("1Gi")) != 0 {
 		t.Errorf("'vote.resources.storage' was not parsed: %+v", s)
 	}
-	for key, value := range s.Services["vote"].Annotations {
+	for key, value := range s.Services["vote"].Labels {
 		if key == "traeffick.routes" && value == `Path("/")` {
 			continue
 		}
 		t.Errorf("'vote.annotations' was not parsed correctly: %+v", s.Services["vote"].Annotations)
 	}
 
-	if len(s.Services["vote"].Labels) > 0 {
-		t.Errorf("'vote.labels' has labels inside")
+	if len(s.Services["vote"].Annotations) > 0 {
+		t.Errorf("'vote.annotations' should be empty")
 	}
 	if _, ok := s.Services["db"]; !ok {
 		t.Errorf("'db' was not parsed: %+v", s)

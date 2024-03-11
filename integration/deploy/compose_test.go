@@ -44,10 +44,15 @@ const (
       - 8913
     labels:
       dev.okteto.com/policy: keep
+      dev.okteto.com/label-1: value-label-1
+      dev.okteto.com/label-2: value-label-2
+    annotations:
+      dev.okteto.com/annotation-1: value-annotation-1
+      dev.okteto.com/annotation-2: value-annotation-2
   nginx:
     image: nginx
     volumes:
-      - ./nginx/nginx.conf:/tmp/nginx.conf
+      - ./nginx/nginx.conf:/tmp/nginx.conf 
     entrypoint: /bin/bash -c "envsubst < /tmp/nginx.conf > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
     environment:
       - FLASK_SERVER_ADDR=app:8080
@@ -62,7 +67,20 @@ const (
       interval: 45s
       timeout: 5m
       retries: 5
-      start_period: 30s`
+      start_period: 30s
+  api:
+    image: alpine
+    volumes:
+      - data:/data
+volumes:
+  data:
+    labels:
+      dev.okteto.com/label-1: volume-label-1
+      dev.okteto.com/label-2: volume-label-2
+    annotations:
+      dev.okteto.com/annotation-1: volume-annotation-1
+      dev.okteto.com/annotation-2: volume-annotation-2
+`
 
 	stacksTemplate = `services:
   app:
@@ -182,6 +200,17 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	require.NoError(t, err)
 	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
+	require.Equal(t, appDeployment.ObjectMeta.Labels["dev.okteto.com/annotation-1"], "value-annotation-1")
+	require.Equal(t, appDeployment.ObjectMeta.Labels["dev.okteto.com/annotation-2"], "value-annotation-2")
+	require.Equal(t, appDeployment.ObjectMeta.Annotations["dev.okteto.com/label-1"], "value-label-1")
+	require.Equal(t, appDeployment.ObjectMeta.Annotations["dev.okteto.com/label-2"], "value-label-2")
+
+	appVolume, err := integration.GetVolume(context.Background(), testNamespace, "data", c)
+	require.NoError(t, err)
+	require.Equal(t, appVolume.ObjectMeta.Labels["dev.okteto.com/annotation-1"], "volume-annotation-1")
+	require.Equal(t, appVolume.ObjectMeta.Labels["dev.okteto.com/annotation-2"], "volume-annotation-2")
+	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/label-1"], "volume-label-1")
+	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/label-2"], "volume-label-2")
 
 	// Test that the k8s services has been created correctly
 	appService, err := integration.GetService(context.Background(), testNamespace, "app", c)
