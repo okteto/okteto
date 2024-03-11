@@ -72,7 +72,9 @@ commands:
     steps:
       - run:
           name: Run okteto integration tests
-          command: make integration-okteto
+          command: |
+            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+            make integration-okteto
 
   integration-deprecated:
     steps:
