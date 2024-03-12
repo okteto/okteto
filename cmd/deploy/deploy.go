@@ -369,7 +369,6 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	oktetoLog.DisableMasking()
 	oktetoLog.SetStage("done")
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
-	oktetoLog.SetStage("")
 
 	if err != nil {
 		if err == oktetoErrors.ErrIntSig {
@@ -378,6 +377,11 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		err = oktetoErrors.UserError{E: err}
 		data.Status = pipeline.ErrorStatus
 	} else {
+		// This has to be set only when the command succeeds for the case in which the deploy is executed within an
+		// installer. When running in installer, if the command fails, and we set an empty stage, we would display
+		// a stage with "Internal Server Error" duplicating the message we already display on error. For that reason,
+		// we should not set empty stage on error.
+		oktetoLog.SetStage("")
 		hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, c)
 		if err != nil {
 			return err
