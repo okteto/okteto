@@ -33,12 +33,15 @@ import (
 	"k8s.io/utils/pointer"
 )
 
+const modifiedHostName = "modified.test.hostname"
+
 type fakeDivert struct {
 	called bool
 }
 
 func (f *fakeDivert) UpdatePod(spec apiv1.PodSpec) apiv1.PodSpec {
 	f.called = true
+	spec.Hostname = modifiedHostName
 	return spec
 }
 
@@ -174,6 +177,7 @@ func Test_translateDeployment(t *testing.T) {
 		t.Errorf("Wrong container.resources: '%v'", c.Resources)
 	}
 
+	require.Equal(t, modifiedHostName, result.Spec.Template.Spec.Hostname)
 	require.True(t, divert.called)
 
 }
@@ -379,6 +383,7 @@ func Test_translateStatefulSet(t *testing.T) {
 		t.Errorf("Wrong statefulset volume claim template: '%v'", vct.Spec)
 	}
 
+	require.Equal(t, modifiedHostName, result.Spec.Template.Spec.Hostname)
 	require.True(t, divert.called)
 
 }
@@ -522,6 +527,7 @@ func Test_translateJobWithoutVolumes(t *testing.T) {
 		t.Errorf("Wrong c.VolumeMounts: '%d'", len(c.VolumeMounts))
 	}
 
+	require.Equal(t, modifiedHostName, result.Spec.Template.Spec.Hostname)
 	require.True(t, divert.called)
 }
 
@@ -712,6 +718,7 @@ func Test_translateJobWithVolumes(t *testing.T) {
 		t.Errorf("Wrong container.volume_mounts: '%v'", c.VolumeMounts)
 	}
 
+	require.Equal(t, modifiedHostName, result.Spec.Template.Spec.Hostname)
 	require.True(t, divert.called)
 }
 

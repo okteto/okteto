@@ -146,7 +146,7 @@ func translateDeployment(svcName string, s *model.Stack, divert Divert) *appsv1.
 	}
 
 	if divert != nil {
-		divert.UpdatePod(podSpec)
+		podSpec = divert.UpdatePod(podSpec)
 	}
 
 	return &appsv1.Deployment{
@@ -227,7 +227,7 @@ func translateStatefulSet(svcName string, s *model.Stack, divert Divert) *appsv1
 	}
 
 	if divert != nil {
-		divert.UpdatePod(podSpec)
+		podSpec = divert.UpdatePod(podSpec)
 	}
 
 	return &appsv1.StatefulSet{
@@ -288,7 +288,7 @@ func translateJob(svcName string, s *model.Stack, divert Divert) *batchv1.Job {
 	}
 
 	if divert != nil {
-		divert.UpdatePod(podSpec)
+		podSpec = divert.UpdatePod(podSpec)
 	}
 
 	return &batchv1.Job{

@@ -676,7 +676,7 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 
 	divertDriver := divert.NewNoop()
 	if opts.Manifest.Deploy.Divert != nil {
-		divertDriver, err = divert.New(opts.Manifest.Deploy.Divert, "", "", c)
+		divertDriver, err = divert.New(opts.Manifest.Deploy.Divert, opts.Manifest.Name, opts.Manifest.Namespace, c)
 		if err != nil {
 			return err
 		}
