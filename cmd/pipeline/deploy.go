@@ -260,7 +260,8 @@ func setEnvsFromDependency(cmap *v1.ConfigMap, envSetter envSetter) error {
 		return nil
 	}
 
-	name := cmap.Name
+	name := strings.TrimPrefix(cmap.Name, pipeline.ConfigmapNamePrefix)
+	sanitizedName := strings.ToUpper(strings.ReplaceAll(name, "-", "_"))
 
 	decodedEnvs, err := base64.StdEncoding.DecodeString(dependencyEnvsEncoded)
 	if err != nil {
@@ -271,7 +272,7 @@ func setEnvsFromDependency(cmap *v1.ConfigMap, envSetter envSetter) error {
 		return err
 	}
 	for envKey, envValue := range envsToSet {
-		envName := fmt.Sprintf(dependencyEnvTemplate, strings.ToUpper(name), envKey)
+		envName := fmt.Sprintf(dependencyEnvTemplate, strings.ToUpper(sanitizedName), envKey)
 		if err := envSetter(envName, envValue); err != nil {
 			return err
 		}

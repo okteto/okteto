@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/okteto/okteto/integration"
@@ -29,13 +30,15 @@ import (
 
 const manifestWithDependencies = `
 deploy:
-  - echo hola
+  - echo "dependency variable ${OKTETO_DEPENDENCY_POSTGRESQL_VARIABLE_TEST_VARIABLE}"
 dependencies:
   postgresql:
     repository: https://github.com/okteto/movies
     branch: cli-e2e
     wait: true
     namespace: %s
+    variables:
+      TEST_VARIABLE: test-value
 `
 
 func TestDependencies(t *testing.T) {
@@ -72,7 +75,12 @@ func TestDependencies(t *testing.T) {
 		OktetoHome: dir,
 		Token:      token,
 	}
-	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	output, err := commands.GetOktetoDeployCmdOutput(oktetoPath, deployOptions)
+	require.NoError(t, err)
+
+	expectedOutputCommand := "dependency variable test-value"
+	require.Contains(t, strings.ToLower(string(output)), expectedOutputCommand)
 
 	contentURL := fmt.Sprintf("https://movies-%s.%s", testDeployNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(contentURL, timeout))
