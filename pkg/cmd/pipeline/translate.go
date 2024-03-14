@@ -71,6 +71,9 @@ const (
 	// Note that the is the limit after encoding the logs to base64 which is how
 	// the logs are stored in the configmap.
 	maxLogOutput = 800 << (10 * 1)
+
+	// ConfigmapNamePrefix prefix used by the configmaps created by okteto to handle dev environments information
+	ConfigmapNamePrefix = "okteto-git-"
 )
 
 // maxLogOutputRaw is the maximum size we allow to allocate for logs before
@@ -188,7 +191,7 @@ func UpdateEnvs(ctx context.Context, name, namespace string, envs []string, c ku
 
 // TranslatePipelineName translate the name into the configmap name
 func TranslatePipelineName(name string) string {
-	return fmt.Sprintf("okteto-git-%s", format.ResourceK8sMetaString(name))
+	return fmt.Sprintf("%s%s", ConfigmapNamePrefix, format.ResourceK8sMetaString(name))
 }
 
 func translateOutput(output *bytes.Buffer) []byte {

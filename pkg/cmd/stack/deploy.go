@@ -66,12 +66,18 @@ type analyticsTrackerInterface interface {
 	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
 }
 
+// Divert is the interface for the divert operations needed for stacks command
+type Divert interface {
+	UpdatePod(spec apiv1.PodSpec) apiv1.PodSpec
+}
+
 // Stack is the executor of stack commands
 type Stack struct {
 	K8sClient        kubernetes.Interface
 	Config           *rest.Config
 	AnalyticsTracker analyticsTrackerInterface
 	IoCtrl           *io.Controller
+	Divert           Divert
 }
 
 const (
@@ -99,7 +105,7 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *DeployOpti
 		return err
 	}
 
-	err := deploy(ctx, s, sd.K8sClient, sd.Config, options)
+	err := deploy(ctx, s, sd.K8sClient, sd.Config, options, sd.Divert)
 	if err != nil {
 		output = fmt.Sprintf("%s\nCompose '%s' deployment failed: %s", output, s.Name, err.Error())
 		cfg.Data[statusField] = errorStatus
@@ -118,7 +124,7 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *DeployOpti
 }
 
 // deploy deploys a stack to kubernetes
-func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config *rest.Config, options *DeployOptions) error {
+func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config *rest.Config, options *DeployOptions, divert Divert) error {
 	DisplayWarnings(s)
 
 	oktetoLog.Spinner(fmt.Sprintf("Deploying compose '%s'...", s.Name))
@@ -176,7 +182,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			}
 		}
 
-		if err := deployServices(ctx, s, c, config, options); err != nil {
+		if err := deployServices(ctx, s, c, config, options, divert); err != nil {
 			exit <- err
 			return
 		}
@@ -305,7 +311,7 @@ func getEndpointsToDeployFromServicesToDeploy(endpoints model.EndpointSpec, serv
 	return endpointsToDeploy
 }
 
-func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernetes.Interface, config *rest.Config, options *DeployOptions) error {
+func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernetes.Interface, config *rest.Config, options *DeployOptions, divert Divert) error {
 	deployedSvcs := make(map[string]bool)
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(options.Timeout)
@@ -339,7 +345,7 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 						continue
 					}
 					oktetoLog.Spinner(fmt.Sprintf("Deploying service '%s'...", svcName))
-					err := deploySvc(ctx, stack, svcName, k8sClient)
+					err := deploySvc(ctx, stack, svcName, k8sClient, divert)
 					if err != nil {
 						return err
 					}
@@ -352,15 +358,15 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 	}
 }
 
-func deploySvc(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface) error {
+func deploySvc(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, divert Divert) error {
 	isNew := false
 	var err error
 	if stack.Services[svcName].IsJob() {
-		isNew, err = deployJob(ctx, svcName, stack, client)
+		isNew, err = deployJob(ctx, svcName, stack, client, divert)
 	} else if len(stack.Services[svcName].Volumes) == 0 {
-		isNew, err = deployDeployment(ctx, svcName, stack, client)
+		isNew, err = deployDeployment(ctx, svcName, stack, client, divert)
 	} else {
-		isNew, err = deployStatefulSet(ctx, svcName, stack, client)
+		isNew, err = deployStatefulSet(ctx, svcName, stack, client, divert)
 	}
 
 	if err != nil {
@@ -606,8 +612,8 @@ func deployK8sService(ctx context.Context, svcName string, s *model.Stack, c kub
 	return nil
 }
 
-func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface) (bool, error) {
-	d := translateDeployment(svcName, s)
+func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface, divert Divert) (bool, error) {
+	d := translateDeployment(svcName, s, divert)
 	old, err := c.AppsV1().Deployments(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return false, fmt.Errorf("error getting deployment of service '%s': %w", svcName, err)
@@ -653,8 +659,8 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 	return isNewDeployment, nil
 }
 
-func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface) (bool, error) {
-	sfs := translateStatefulSet(svcName, s)
+func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface, divert Divert) (bool, error) {
+	sfs := translateStatefulSet(svcName, s, divert)
 	old, err := c.AppsV1().StatefulSets(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return false, fmt.Errorf("error getting statefulset of service '%s': %w", svcName, err)
@@ -693,8 +699,8 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 	return false, nil
 }
 
-func deployJob(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface) (bool, error) {
-	job := translateJob(svcName, s)
+func deployJob(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface, divert Divert) (bool, error) {
+	job := translateJob(svcName, s, divert)
 	old, err := c.BatchV1().Jobs(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return false, fmt.Errorf("error getting job of service '%s': %w", svcName, err)

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deploy
+package deployable
 
 import (
 	"bytes"
@@ -45,14 +45,9 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-type proxyInterface interface {
-	Start()
-	Shutdown(ctx context.Context) error
-	GetPort() int
-	GetToken() string
-	SetName(name string)
-	SetDivert(driver divert.Driver)
-}
+const (
+	headerUpgrade = "Upgrade"
+)
 
 type proxyConfig struct {
 	token string
@@ -73,7 +68,7 @@ type proxyHandler struct {
 }
 
 // NewProxy creates a new proxy
-func NewProxy(kubeconfig kubeConfigHandler, portGetter portGetterFunc) (*Proxy, error) {
+func NewProxy(kubeconfig KubeConfigHandler, portGetter PortGetterFunc) (*Proxy, error) {
 	// Look for a free local port to start the proxy
 	port, err := portGetter("localhost")
 	if err != nil {

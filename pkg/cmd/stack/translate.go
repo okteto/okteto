@@ -108,7 +108,8 @@ func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: model.GetStackConfigMapName(s.Name),
 			Labels: map[string]string{
-				model.StackLabel: "true",
+				model.StackLabel:      "true",
+				model.DeployedByLabel: format.ResourceK8sMetaString(s.Name),
 			},
 		},
 		Data: map[string]string{
@@ -119,10 +120,34 @@ func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
 	}
 }
 
-func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
+func translateDeployment(svcName string, s *model.Stack, divert Divert) *appsv1.Deployment {
 	svc := s.Services[svcName]
 
 	svcHealthchecks := getSvcHealthProbe(svc)
+
+	podSpec := apiv1.PodSpec{
+		TerminationGracePeriodSeconds: pointer.Int64(svc.StopGracePeriod),
+		NodeSelector:                  svc.NodeSelector,
+		Containers: []apiv1.Container{
+			{
+				Name:            svcName,
+				Image:           svc.Image,
+				Command:         svc.Entrypoint.Values,
+				Args:            svc.Command.Values,
+				Env:             translateServiceEnvironment(svc),
+				Ports:           translateContainerPorts(svc),
+				SecurityContext: translateSecurityContext(svc),
+				Resources:       translateResources(svc),
+				WorkingDir:      svc.Workdir,
+				ReadinessProbe:  svcHealthchecks.readiness,
+				LivenessProbe:   svcHealthchecks.liveness,
+			},
+		},
+	}
+
+	if divert != nil {
+		podSpec = divert.UpdatePod(podSpec)
+	}
 
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -142,25 +167,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 					Labels:      translateLabels(svcName, s),
 					Annotations: translateAnnotations(svc),
 				},
-				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: pointer.Int64(svc.StopGracePeriod),
-					NodeSelector:                  svc.NodeSelector,
-					Containers: []apiv1.Container{
-						{
-							Name:            svcName,
-							Image:           svc.Image,
-							Command:         svc.Entrypoint.Values,
-							Args:            svc.Command.Values,
-							Env:             translateServiceEnvironment(svc),
-							Ports:           translateContainerPorts(svc),
-							SecurityContext: translateSecurityContext(svc),
-							Resources:       translateResources(svc),
-							WorkingDir:      svc.Workdir,
-							ReadinessProbe:  svcHealthchecks.readiness,
-							LivenessProbe:   svcHealthchecks.liveness,
-						},
-					},
-				},
+				Spec: podSpec,
 			},
 		},
 	}
@@ -189,11 +196,39 @@ func translatePersistentVolumeClaim(volumeName string, s *model.Stack) apiv1.Per
 	return pvc
 }
 
-func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
+func translateStatefulSet(svcName string, s *model.Stack, divert Divert) *appsv1.StatefulSet {
 	svc := s.Services[svcName]
 
 	initContainers := getInitContainers(svcName, s)
 	svcHealthchecks := getSvcHealthProbe(svc)
+
+	podSpec := apiv1.PodSpec{
+		TerminationGracePeriodSeconds: pointer.Int64(svc.StopGracePeriod),
+		InitContainers:                initContainers,
+		Affinity:                      translateAffinity(svc),
+		NodeSelector:                  svc.NodeSelector,
+		Volumes:                       translateVolumes(svc),
+		Containers: []apiv1.Container{
+			{
+				Name:            svcName,
+				Image:           svc.Image,
+				Command:         svc.Entrypoint.Values,
+				Args:            svc.Command.Values,
+				Env:             translateServiceEnvironment(svc),
+				Ports:           translateContainerPorts(svc),
+				SecurityContext: translateSecurityContext(svc),
+				VolumeMounts:    translateVolumeMounts(svc),
+				Resources:       translateResources(svc),
+				WorkingDir:      svc.Workdir,
+				ReadinessProbe:  svcHealthchecks.readiness,
+				LivenessProbe:   svcHealthchecks.liveness,
+			},
+		},
+	}
+
+	if divert != nil {
+		podSpec = divert.UpdatePod(podSpec)
+	}
 
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -215,40 +250,47 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 					Labels:      translateLabels(svcName, s),
 					Annotations: translateAnnotations(svc),
 				},
-				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: pointer.Int64(svc.StopGracePeriod),
-					InitContainers:                initContainers,
-					Affinity:                      translateAffinity(svc),
-					NodeSelector:                  svc.NodeSelector,
-					Volumes:                       translateVolumes(svc),
-					Containers: []apiv1.Container{
-						{
-							Name:            svcName,
-							Image:           svc.Image,
-							Command:         svc.Entrypoint.Values,
-							Args:            svc.Command.Values,
-							Env:             translateServiceEnvironment(svc),
-							Ports:           translateContainerPorts(svc),
-							SecurityContext: translateSecurityContext(svc),
-							VolumeMounts:    translateVolumeMounts(svc),
-							Resources:       translateResources(svc),
-							WorkingDir:      svc.Workdir,
-							ReadinessProbe:  svcHealthchecks.readiness,
-							LivenessProbe:   svcHealthchecks.liveness,
-						},
-					},
-				},
+				Spec: podSpec,
 			},
 			VolumeClaimTemplates: translateVolumeClaimTemplates(svcName, s),
 		},
 	}
 }
 
-func translateJob(svcName string, s *model.Stack) *batchv1.Job {
+func translateJob(svcName string, s *model.Stack, divert Divert) *batchv1.Job {
 	svc := s.Services[svcName]
 
 	initContainers := getInitContainers(svcName, s)
 	svcHealthchecks := getSvcHealthProbe(svc)
+	podSpec := apiv1.PodSpec{
+		RestartPolicy:                 svc.RestartPolicy,
+		TerminationGracePeriodSeconds: pointer.Int64(svc.StopGracePeriod),
+		InitContainers:                initContainers,
+		Affinity:                      translateAffinity(svc),
+		NodeSelector:                  svc.NodeSelector,
+		Containers: []apiv1.Container{
+			{
+				Name:            svcName,
+				Image:           svc.Image,
+				Command:         svc.Entrypoint.Values,
+				Args:            svc.Command.Values,
+				Env:             translateServiceEnvironment(svc),
+				Ports:           translateContainerPorts(svc),
+				SecurityContext: translateSecurityContext(svc),
+				VolumeMounts:    translateVolumeMounts(svc),
+				Resources:       translateResources(svc),
+				WorkingDir:      svc.Workdir,
+				ReadinessProbe:  svcHealthchecks.readiness,
+				LivenessProbe:   svcHealthchecks.liveness,
+			},
+		},
+		Volumes: translateVolumes(svc),
+	}
+
+	if divert != nil {
+		podSpec = divert.UpdatePod(podSpec)
+	}
+
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -265,30 +307,7 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 					Labels:      translateLabels(svcName, s),
 					Annotations: translateAnnotations(svc),
 				},
-				Spec: apiv1.PodSpec{
-					RestartPolicy:                 svc.RestartPolicy,
-					TerminationGracePeriodSeconds: pointer.Int64(svc.StopGracePeriod),
-					InitContainers:                initContainers,
-					Affinity:                      translateAffinity(svc),
-					NodeSelector:                  svc.NodeSelector,
-					Containers: []apiv1.Container{
-						{
-							Name:            svcName,
-							Image:           svc.Image,
-							Command:         svc.Entrypoint.Values,
-							Args:            svc.Command.Values,
-							Env:             translateServiceEnvironment(svc),
-							Ports:           translateContainerPorts(svc),
-							SecurityContext: translateSecurityContext(svc),
-							VolumeMounts:    translateVolumeMounts(svc),
-							Resources:       translateResources(svc),
-							WorkingDir:      svc.Workdir,
-							ReadinessProbe:  svcHealthchecks.readiness,
-							LivenessProbe:   svcHealthchecks.liveness,
-						},
-					},
-					Volumes: translateVolumes(svc),
-				},
+				Spec: podSpec,
 			},
 		},
 	}
@@ -458,6 +477,7 @@ func translateVolumeLabels(volumeName string, s *model.Stack) map[string]string 
 	labels := map[string]string{
 		model.StackNameLabel:       format.ResourceK8sMetaString(s.Name),
 		model.StackVolumeNameLabel: volumeName,
+		model.DeployedByLabel:      format.ResourceK8sMetaString(s.Name),
 	}
 	for k := range volume.Labels {
 		labels[k] = volume.Labels[k]
@@ -504,6 +524,7 @@ func translateLabels(svcName string, s *model.Stack) map[string]string {
 	labels := map[string]string{
 		model.StackNameLabel:        format.ResourceK8sMetaString(s.Name),
 		model.StackServiceNameLabel: svcName,
+		model.DeployedByLabel:       format.ResourceK8sMetaString(s.Name),
 	}
 	for k := range svc.Labels {
 		labels[k] = svc.Labels[k]

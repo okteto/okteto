@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deploy
+package deployable
 
 import (
 	"fmt"
@@ -26,11 +26,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
-
-type kubeConfigHandler interface {
-	Read() (*rest.Config, error)
-	Modify(port int, sessionToken, destKubeconfigFile string) error
-}
 
 // KubeConfig refers to a KubeConfig object
 type KubeConfig struct{}

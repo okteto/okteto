@@ -35,6 +35,7 @@ import (
 	"github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/preview"
 	"github.com/okteto/okteto/cmd/registrytoken"
+	"github.com/okteto/okteto/cmd/remoterun"
 	"github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -176,6 +177,7 @@ func main() {
 	root.AddCommand(deploy.Endpoints(ctx, k8sLogger))
 	root.AddCommand(logs.Logs(ctx, k8sLogger))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
+	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger))
 
 	// deprecated
 	root.AddCommand(cmd.Create(ctx))

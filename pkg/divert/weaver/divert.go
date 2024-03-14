@@ -33,11 +33,11 @@ type Driver struct {
 	divert    model.DivertDeploy
 }
 
-func New(m *model.Manifest, c kubernetes.Interface) *Driver {
+func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interface) *Driver {
 	return &Driver{
-		name:      m.Name,
-		namespace: m.Namespace,
-		divert:    *m.Deploy.Divert,
+		name:      name,
+		namespace: namespace,
+		divert:    *divert,
 		client:    c,
 	}
 }

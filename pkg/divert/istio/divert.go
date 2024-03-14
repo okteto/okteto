@@ -46,11 +46,11 @@ type DivertTransformation struct {
 	Routes    []string `json:"routes,omitempty"`
 }
 
-func New(m *model.Manifest, c kubernetes.Interface, ic istioclientset.Interface) *Driver {
+func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interface, ic istioclientset.Interface) *Driver {
 	return &Driver{
-		name:        m.Name,
-		namespace:   m.Namespace,
-		divert:      *m.Deploy.Divert,
+		name:        name,
+		namespace:   namespace,
+		divert:      *divert,
 		client:      c,
 		istioClient: ic,
 	}

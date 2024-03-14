@@ -24,9 +24,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
@@ -80,7 +80,7 @@ func Test_ExternalsFromOktetoManifestWithNotesContent(t *testing.T) {
 	_, cfg, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
 
-	externalControl := deploy.NewDeployExternalK8sControl(cfg)
+	externalControl := externalresource.NewExternalK8sControl(cfg)
 
 	externals, err := externalControl.List(ctx, namespaceOpts.Namespace, "")
 

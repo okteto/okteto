@@ -306,7 +306,7 @@ func (ld *localDestroyCommand) destroyDivert(ctx context.Context, manifest *mode
 	if err != nil {
 		return err
 	}
-	driver, err := divert.New(manifest, c)
+	driver, err := divert.New(manifest.Deploy.Divert, manifest.Name, manifest.Namespace, c)
 	if err != nil {
 		return err
 	}

@@ -53,13 +53,18 @@ commands:
     steps:
       - run:
           name: Run deploy integration tests
-          command: make integration-deploy
+          # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
+          command: |
+            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+            make integration-deploy
 
   integration-up:
     steps:
       - run:
           name: Run up integration tests
-          command: make integration-up
+          command: |
+            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+            make integration-up
           environment:
             OKTETO_SKIP_CLEANUP: 'true'
 
@@ -67,7 +72,9 @@ commands:
     steps:
       - run:
           name: Run okteto integration tests
-          command: make integration-okteto
+          command: |
+            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+            make integration-okteto
 
   integration-deprecated:
     steps:
@@ -178,6 +185,13 @@ jobs:
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
             /usr/local/bin/okteto login --token ${API_STAGING_TOKEN}
+      - run:
+          # As the integration test running the okteto deploy needs the CLI which we are testing, we build the current
+          # CLI to the okteto.dev registry, so it is available for the user running the tests. Then, in the step
+          # which run the deploy, we set the env var OKTETO_REMOTE_CLI_IMAGE to the one we are building
+          name: Build CLI image
+          command: |
+            okteto build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
       - integration-build
       - integration-deploy
       - integration-up
@@ -248,6 +262,13 @@ jobs:
             & "$($HOME)\project\artifacts\bin\okteto.exe" login --token $env:API_STAGING_TOKEN
             & "$($HOME)\project\artifacts\bin\okteto.exe" kubeconfig
       - run:
+          # As the integration test running the okteto deploy needs the CLI which we are testing, we build the current
+          # CLI to the okteto.dev registry, so it is available for the user running the tests. Then, in the step
+          # which run the deploy, we set the env var OKTETO_REMOTE_CLI_IMAGE to the one we are building
+          name: Build CLI image windows
+          command: |
+            & "$($HOME)\project\artifacts\bin\okteto.exe" build --platform "linux/amd64" --build-arg VERSION_STRING=$env:CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-win:$env:CIRCLE_SHA1
+      - run:
           name: Run deprecated integration tests
           environment:
             OKTETO_URL: https://staging.okteto.dev/
@@ -275,10 +296,12 @@ jobs:
             OKTETO_URL: https://staging.okteto.dev/
             OKTETO_SKIP_CLEANUP: 'true'
             OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
+          # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
             $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
+            $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e-win:$env:CIRCLE_SHA1"
             go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
       - run:
           name: Run up integration tests
@@ -290,6 +313,7 @@ jobs:
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
             $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
+            $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e-win:$env:CIRCLE_SHA1"
             go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
       - store_artifacts:
           path: C:\Users\circleci\.okteto

@@ -137,4 +137,7 @@ const (
 
 	// EnvironmentLabelKeyPrefix represents the prefix for the preview and pipeline labels
 	EnvironmentLabelKeyPrefix = "label.okteto.com"
+
+	// OktetoDeployableEnvVar Env variable containing the piece of Okteto manifest which is deployable in remote or local deploys
+	OktetoDeployableEnvVar = "OKTETO_DEPLOYABLE"
 )

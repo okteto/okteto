@@ -224,21 +224,19 @@ func (mc *Command) deploy(ctx context.Context, opts *InitOpts) error {
 		return err
 	}
 	c := &deploy.Command{
-		GetDeployer:        deploy.GetDeployer,
-		GetManifest:        mc.getManifest,
-		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
-		K8sClientProvider:  mc.K8sClientProvider,
-		Builder:            buildv2.NewBuilderFromScratch(mc.AnalyticsTracker, mc.IoCtrl),
-		GetExternalControl: deploy.NewDeployExternalK8sControl,
-		Fs:                 afero.NewOsFs(),
-		CfgMapHandler:      deploy.NewConfigmapHandler(mc.K8sClientProvider, mc.K8sLogger),
-		PipelineCMD:        pc,
-		DeployWaiter:       deploy.NewDeployWaiter(mc.K8sClientProvider, mc.K8sLogger),
-		EndpointGetter:     deploy.NewEndpointGetter,
-		IoCtrl:             mc.IoCtrl,
+		GetDeployer:       deploy.GetDeployer,
+		GetManifest:       mc.getManifest,
+		K8sClientProvider: mc.K8sClientProvider,
+		Builder:           buildv2.NewBuilderFromScratch(mc.AnalyticsTracker, mc.IoCtrl),
+		Fs:                afero.NewOsFs(),
+		CfgMapHandler:     deploy.NewConfigmapHandler(mc.K8sClientProvider, mc.K8sLogger),
+		PipelineCMD:       pc,
+		DeployWaiter:      deploy.NewDeployWaiter(mc.K8sClientProvider, mc.K8sLogger),
+		EndpointGetter:    deploy.NewEndpointGetter,
+		IoCtrl:            mc.IoCtrl,
 	}
 
-	err = c.RunDeploy(ctx, &deploy.Options{
+	err = c.Run(ctx, &deploy.Options{
 		Name:         mc.manifest.Name,
 		ManifestPath: filepath.Join(opts.Workdir, opts.DevPath),
 		Timeout:      5 * time.Minute,
