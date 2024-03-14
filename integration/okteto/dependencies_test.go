@@ -41,6 +41,21 @@ dependencies:
       TEST_VARIABLE: test-value
 `
 
+const remoteManifestWithDependencies = `
+deploy:
+  remote: true
+  commands:
+    - echo "dependency variable ${OKTETO_DEPENDENCY_POSTGRESQL_VARIABLE_TEST_VARIABLE}"
+dependencies:
+  postgresql:
+    repository: https://github.com/okteto/movies
+    branch: cli-e2e
+    wait: true
+    namespace: %s
+    variables:
+      TEST_VARIABLE: test-value
+`
+
 func TestDependencies(t *testing.T) {
 	integration.SkipIfNotOktetoCluster(t)
 	t.Parallel()
@@ -68,7 +83,7 @@ func TestDependencies(t *testing.T) {
 
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 
-	require.NoError(t, createDependenciesManifest(dir, testDeployNamespace))
+	require.NoError(t, createDependenciesManifest(dir, testDeployNamespace, manifestWithDependencies))
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
 		Namespace:  testNamespace,
@@ -87,13 +102,59 @@ func TestDependencies(t *testing.T) {
 
 }
 
-func createDependenciesManifest(dir, namespace string) error {
+func TestDependenciesOnRemote(t *testing.T) {
+	integration.SkipIfNotOktetoCluster(t)
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	testDeployNamespace := integration.GetTestNamespace("RemoteDeployDep", user)
+	namespaceDeployOpts := &commands.NamespaceOptions{
+		Namespace:  testDeployNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceDeployOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceDeployOpts)
+
+	testNamespace := integration.GetTestNamespace("Dependency", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+
+	require.NoError(t, createDependenciesManifest(dir, testDeployNamespace, remoteManifestWithDependencies))
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+
+	output, err := commands.GetOktetoDeployCmdOutput(oktetoPath, deployOptions)
+	require.NoError(t, err)
+
+	expectedOutputCommand := "dependency variable test-value"
+	require.Contains(t, strings.ToLower(string(output)), expectedOutputCommand)
+
+	contentURL := fmt.Sprintf("https://movies-%s.%s", testDeployNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(contentURL, timeout))
+
+}
+
+func createDependenciesManifest(dir, namespace, manifest string) error {
 	if err := os.Mkdir(filepath.Join(dir, "nginx"), 0700); err != nil {
 		return err
 	}
 
 	manifestPath := filepath.Join(dir, "okteto.yml")
-	manifestContent := []byte(fmt.Sprintf(manifestWithDependencies, namespace))
+	manifestContent := []byte(fmt.Sprintf(manifest, namespace))
 	if err := os.WriteFile(manifestPath, manifestContent, 0600); err != nil {
 		return err
 	}

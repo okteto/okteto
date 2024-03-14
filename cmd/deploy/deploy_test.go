@@ -234,8 +234,9 @@ func (f *fakeDeployer) Get(ctx context.Context,
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	ioCtrl *io.Controller,
 	k8Logger *io.K8sLogger,
+	dependencyEnvVarsGetter dependencyEnvVarsGetter,
 ) (Deployer, error) {
-	args := f.Called(ctx, opts, buildEnvVarsGetter, cmapHandler, k8sProvider, ioCtrl, k8Logger)
+	args := f.Called(ctx, opts, buildEnvVarsGetter, cmapHandler, k8sProvider, ioCtrl, k8Logger, dependencyEnvVarsGetter)
 	return args.Get(0).(Deployer), args.Error(1)
 }
 
@@ -457,6 +458,7 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
+		mock.Anything,
 	).Return(fakeDeployer, nil)
 
 	expectedOpts := &Options{
@@ -581,6 +583,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 
 	fakeDeployer.On(
 		"Get",
+		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -956,6 +959,75 @@ func TestOktetoManifestPathFlag(t *testing.T) {
 			}
 			err = checkOktetoManifestPathFlag(opts, fs)
 			assert.Equal(t, tt.expectedErr, err)
+		})
+	}
+}
+
+func TestGetDependencyEnvVars(t *testing.T) {
+	tt := []struct {
+		name          string
+		environGetter environGetter
+		expected      map[string]string
+	}{
+		{
+			name: "WithEmptyEnvironment",
+			environGetter: func() []string {
+				return []string{}
+			},
+			expected: map[string]string{},
+		},
+		{
+			name: "WithEnvironmentWithoutDependencyVars",
+			environGetter: func() []string {
+				return []string{
+					"OKTETO_NAMESPACE=test",
+					"OKTETO_USER=cindy",
+					"MYVAR=foo",
+				}
+			},
+			expected: map[string]string{},
+		},
+		{
+			name: "WithEnvironmentOnlyWithDependencyVars",
+			environGetter: func() []string {
+				return []string{
+					"OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME=dbuser",
+					"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD=mystrongpassword",
+					"OKTETO_DEPENDENCY_API_VARIABLE_HOST=apihost",
+				}
+			},
+			expected: map[string]string{
+				"OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dbuser",
+				"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "mystrongpassword",
+				"OKTETO_DEPENDENCY_API_VARIABLE_HOST":          "apihost",
+			},
+		},
+		{
+			name: "WithEnvironmentMixingVars",
+			environGetter: func() []string {
+				return []string{
+					"OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME=dbuser",
+					"OKTETO_NAMESPACE=test",
+					"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD=mystrongpassword",
+					"OKTETO_USER=cindy",
+					"OKTETO_DEPENDENCY_API_VARIABLE_HOST=apihost",
+					"MYVAR=foo",
+				}
+			},
+			expected: map[string]string{
+				"OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dbuser",
+				"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "mystrongpassword",
+				"OKTETO_DEPENDENCY_API_VARIABLE_HOST":          "apihost",
+			},
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			dc := &Command{}
+
+			result := dc.getDependencyEnvVars(tc.environGetter)
+
+			require.Equal(t, tc.expected, result)
 		})
 	}
 }

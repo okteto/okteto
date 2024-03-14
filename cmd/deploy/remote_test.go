@@ -148,7 +148,8 @@ func TestRemoteTest(t *testing.T) {
 				clusterMetadata: func(context.Context) (*types.ClusterMetadata, error) {
 					return &types.ClusterMetadata{Certificate: tt.config.cert}, nil
 				},
-				getBuildEnvVars: func() map[string]string { return nil },
+				getBuildEnvVars:      func() map[string]string { return nil },
+				getDependencyEnvVars: func(_ environGetter) map[string]string { return nil },
 			}
 			err := rdc.Deploy(ctx, tt.config.options)
 			if tt.expected != nil {
@@ -188,7 +189,8 @@ func TestExtraHosts(t *testing.T) {
 				ServerName: "1.2.3.4:443",
 			}, nil
 		},
-		getBuildEnvVars: func() map[string]string { return nil },
+		getBuildEnvVars:      func() map[string]string { return nil },
+		getDependencyEnvVars: func(_ environGetter) map[string]string { return nil },
 	}
 
 	err := rdc.Deploy(ctx, &Options{
@@ -230,6 +232,7 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 		clusterMetadata: func(context.Context) (*types.ClusterMetadata, error) {
 			return &types.ClusterMetadata{}, nil
 		},
+		getDependencyEnvVars: func(_ environGetter) map[string]string { return nil },
 	}
 
 	err = rdc.Deploy(context.Background(), &Options{
@@ -267,7 +270,8 @@ func TestRemoteDeployWithBadSshAgent(t *testing.T) {
 		clusterMetadata: func(context.Context) (*types.ClusterMetadata, error) {
 			return &types.ClusterMetadata{}, nil
 		},
-		getBuildEnvVars: func() map[string]string { return nil },
+		getBuildEnvVars:      func() map[string]string { return nil },
+		getDependencyEnvVars: func(_ environGetter) map[string]string { return nil },
 	}
 
 	err := rdc.Deploy(context.Background(), &Options{
@@ -419,6 +423,7 @@ func TestCreateDockerfile(t *testing.T) {
 		buildEnvVars      map[string]string
 		dockerfileName    string
 		dockerfileContent string
+		dependencyEnvVars map[string]string
 	}
 	var tests = []struct {
 		expected expected
@@ -479,6 +484,12 @@ ENV OKTETO_BUIL_SVC2_IMAGE TWO_VALUE
 ENV OKTETO_BUIL_SVC_IMAGE ONE_VALUE
 
 
+
+ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD dependency_pass
+
+ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME dependency_user
+
+
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
@@ -489,7 +500,8 @@ RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
   /okteto/bin/okteto remote-run --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test"
 `,
-				buildEnvVars: map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUIL_SVC2_IMAGE": "TWO_VALUE"},
+				buildEnvVars:      map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUIL_SVC2_IMAGE": "TWO_VALUE"},
+				dependencyEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
 			},
 		},
 	}
@@ -503,6 +515,9 @@ RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
 				},
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,
+				getDependencyEnvVars: func(_ environGetter) map[string]string {
+					return tt.expected.dependencyEnvVars
+				},
 			}
 			dockerfileName, err := rdc.createDockerfile("/test", tt.config.opts)
 			assert.ErrorIs(t, err, tt.expected.err)
@@ -565,8 +580,9 @@ func Test_getOktetoCLIVersion(t *testing.T) {
 }
 
 func Test_newRemoteDeployer(t *testing.T) {
-	getbuildEnvVars := func() map[string]string { return nil }
-	got := newRemoteDeployer(getbuildEnvVars, io.NewIOController())
+	getBuildEnvVars := func() map[string]string { return nil }
+	getDependencyEnvVars := func(_ environGetter) map[string]string { return nil }
+	got := newRemoteDeployer(getBuildEnvVars, io.NewIOController(), getDependencyEnvVars)
 	require.IsType(t, &remoteDeployer{}, got)
 	require.NotNil(t, got.getBuildEnvVars)
 }

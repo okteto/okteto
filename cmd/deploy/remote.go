@@ -78,6 +78,10 @@ WORKDIR /okteto/src
 ENV {{$key}} {{$val}}
 {{end}}
 
+{{range $key, $val := .OktetoDependencyEnvVars }}
+ENV {{$key}} {{$val}}
+{{end}}
+
 ARG {{ .GitCommitArgName }}
 ARG {{ .GitBranchArgName }}
 ARG {{ .InvalidateCacheArgName }}
@@ -115,9 +119,14 @@ type dockerfileTemplateProperties struct {
 	GitHubRepositoryArgName  string
 	BuildKitHostArgName      string
 	OktetoRegistryURLArgName string
+	OktetoDependencyEnvVars  map[string]string
 }
 
+type environGetter func() []string
+
 type buildEnvVarsGetter func() map[string]string
+
+type dependencyEnvVarsGetter func(environGetter environGetter) map[string]string
 
 type remoteDeployer struct {
 	getBuildEnvVars      buildEnvVarsGetter
@@ -130,6 +139,8 @@ type remoteDeployer struct {
 	// ioCtrl is the controller for the output of the Build logs
 	ioCtrl *io.Controller
 
+	getDependencyEnvVars dependencyEnvVarsGetter
+
 	// sshAuthSockEnvvar is the default for SSH_AUTH_SOCK. Provided mostly for testing
 	sshAuthSockEnvvar string
 
@@ -138,7 +149,7 @@ type remoteDeployer struct {
 }
 
 // newRemoteDeployer creates the remote deployer from a
-func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller) *remoteDeployer {
+func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller, getDependencyEnvVars dependencyEnvVarsGetter) *remoteDeployer {
 	fs := afero.NewOsFs()
 	runner := buildCmd.NewOktetoBuilder(
 		&okteto.ContextStateless{
@@ -154,6 +165,7 @@ func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 		clusterMetadata:      fetchRemoteServerConfig,
 		ioCtrl:               ioCtrl,
+		getDependencyEnvVars: getDependencyEnvVars,
 	}
 }
 
@@ -333,6 +345,7 @@ func (rd *remoteDeployer) createDockerfile(tmpDir string, opts *Options) (string
 		GitHubRepositoryArgName:  model.GithubRepositoryEnvVar,
 		BuildKitHostArgName:      model.OktetoBuildkitHostURLEnvVar,
 		OktetoRegistryURLArgName: model.OktetoRegistryURLEnvVar,
+		OktetoDependencyEnvVars:  rd.getDependencyEnvVars(os.Environ),
 	}
 
 	dockerfile, err := rd.fs.Create(filepath.Join(tmpDir, dockerfileTemporalName))

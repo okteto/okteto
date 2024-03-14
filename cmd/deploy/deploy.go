@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -53,6 +54,7 @@ import (
 
 const (
 	succesfullyDeployedmsg = "Development environment '%s' successfully deployed"
+	dependencyEnvVarPrefix = "OKTETO_DEPENDENCY_"
 )
 
 var (
@@ -97,6 +99,7 @@ type getDeployerFunc func(
 	okteto.K8sClientProviderWithLogger,
 	*io.Controller,
 	*io.K8sLogger,
+	dependencyEnvVarsGetter,
 ) (Deployer, error)
 
 type cleanUpFunc func(context.Context, error)
@@ -418,7 +421,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 
 func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) error {
 	// If the command is configured to execute things remotely (--remote, deploy.image or deploy.remote) it should be executed in the remote. If not, it should be executed locally
-	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder.GetBuildEnvVars, dc.CfgMapHandler, dc.K8sClientProvider, dc.IoCtrl, dc.K8sLogger)
+	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder.GetBuildEnvVars, dc.CfgMapHandler, dc.K8sClientProvider, dc.IoCtrl, dc.K8sLogger, dc.getDependencyEnvVars)
 	if err != nil {
 		return err
 	}
@@ -516,10 +519,11 @@ func GetDeployer(ctx context.Context,
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	ioCtrl *io.Controller,
 	k8Logger *io.K8sLogger,
+	dependencyEnvVarsGetter dependencyEnvVarsGetter,
 ) (Deployer, error) {
 	if shouldRunInRemote(opts) {
 		oktetoLog.Info("Deploying remotely...")
-		return newRemoteDeployer(buildEnvVarsGetter, ioCtrl), nil
+		return newRemoteDeployer(buildEnvVarsGetter, ioCtrl, dependencyEnvVarsGetter), nil
 	}
 
 	oktetoLog.Info("Deploying locally...")
@@ -717,6 +721,27 @@ func (dc *Command) deployEndpoints(ctx context.Context, opts *Options) error {
 	}
 
 	return nil
+}
+
+// getDependencyEnvVars This function gets the variables defined by the dependencies (OKTETO_DEPENDENCY_XXXX)
+// deployed before the deploy phase from the environment. This function is here as the command is the one in charge
+// of deploying dependencies and trigger the rest of the deploy phase.
+func (*Command) getDependencyEnvVars(environGetter environGetter) map[string]string {
+	varsParts := 2
+	result := map[string]string{}
+	for _, e := range environGetter() {
+		pair := strings.SplitN(e, "=", 2)
+		if len(pair) != varsParts {
+			// If a variables doesn't have left and right side we just skip it
+			continue
+		}
+
+		if strings.HasPrefix(pair[0], dependencyEnvVarPrefix) {
+			result[pair[0]] = pair[1]
+		}
+	}
+
+	return result
 }
 
 func checkOktetoManifestPathFlag(options *Options, fs afero.Fs) error {
