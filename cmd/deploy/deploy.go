@@ -730,7 +730,7 @@ func (*Command) getDependencyEnvVars(environGetter environGetter) map[string]str
 	varsParts := 2
 	result := map[string]string{}
 	for _, e := range environGetter() {
-		pair := strings.SplitN(e, "=", 2)
+		pair := strings.SplitN(e, "=", varsParts)
 		if len(pair) != varsParts {
 			// If a variables doesn't have left and right side we just skip it
 			continue

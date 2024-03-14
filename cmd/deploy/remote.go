@@ -105,6 +105,7 @@ type dockerfileTemplateProperties struct {
 	UserDeployImage          string
 	RemoteDeployEnvVar       string
 	OktetoBuildEnvVars       map[string]string
+	OktetoDependencyEnvVars  map[string]string
 	ContextArgName           string
 	NamespaceArgName         string
 	TokenArgName             string
@@ -119,7 +120,6 @@ type dockerfileTemplateProperties struct {
 	GitHubRepositoryArgName  string
 	BuildKitHostArgName      string
 	OktetoRegistryURLArgName string
-	OktetoDependencyEnvVars  map[string]string
 }
 
 type environGetter func() []string

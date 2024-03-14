@@ -421,9 +421,9 @@ func TestCreateDockerfile(t *testing.T) {
 	type expected struct {
 		err               error
 		buildEnvVars      map[string]string
+		dependencyEnvVars map[string]string
 		dockerfileName    string
 		dockerfileContent string
-		dependencyEnvVars map[string]string
 	}
 	var tests = []struct {
 		expected expected

@@ -965,9 +965,9 @@ func TestOktetoManifestPathFlag(t *testing.T) {
 
 func TestGetDependencyEnvVars(t *testing.T) {
 	tt := []struct {
-		name          string
 		environGetter environGetter
 		expected      map[string]string
+		name          string
 	}{
 		{
 			name: "WithEmptyEnvironment",
