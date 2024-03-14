@@ -148,7 +148,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		rd.destroyImage = sc.PipelineRunnerImage
 	}
 
-	cwd, err := rd.workingDirectoryCtrl.Get()
+	cwd, err := rd.getOriginalCWD(opts.ManifestPathFlag)
 	if err != nil {
 		return err
 	}
@@ -171,6 +171,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 
 	buildInfo := &build.Info{
 		Dockerfile: dockerfile,
+		Context:    rd.getContextPath(cwd, opts.ManifestPathFlag),
 	}
 
 	// undo modification of CWD for Build command
@@ -383,4 +384,40 @@ func fetchClusterMetadata(ctx context.Context) (*types.ClusterMetadata, error) {
 	}
 
 	return &metadata, err
+}
+
+func (rd *remoteDestroyCommand) getContextPath(cwd, manifestPath string) string {
+	if manifestPath == "" {
+		return cwd
+	}
+
+	path := manifestPath
+	if !filepath.IsAbs(manifestPath) {
+		path = filepath.Join(cwd, manifestPath)
+	}
+	fInfo, err := rd.fs.Stat(path)
+	if err != nil {
+		oktetoLog.Infof("error getting file info: %s", err)
+		return cwd
+
+	}
+	if fInfo.IsDir() {
+		return path
+	}
+
+	possibleCtx := filepath.Dir(path)
+	if strings.HasSuffix(possibleCtx, ".okteto") {
+		return filepath.Dir(possibleCtx)
+	}
+	return possibleCtx
+}
+
+// getOriginalCWD returns the original cwd
+func (rd *remoteDestroyCommand) getOriginalCWD(manifestPath string) (string, error) {
+	cwd, err := rd.workingDirectoryCtrl.Get()
+	if err != nil {
+		return "", err
+	}
+	manifestPathDir := filepath.Dir(filepath.Clean(fmt.Sprintf("/%s", manifestPath)))
+	return strings.TrimSuffix(cwd, manifestPathDir), nil
 }

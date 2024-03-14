@@ -516,3 +516,111 @@ func TestGetExtraHosts(t *testing.T) {
 		})
 	}
 }
+
+func TestGetContextPath(t *testing.T) {
+	cwd := filepath.Clean("/path/to/current/directory")
+
+	rd := remoteDestroyCommand{
+		fs: afero.NewMemMapFs(),
+	}
+
+	t.Run("Manifest path is empty", func(t *testing.T) {
+		expected := cwd
+		result := rd.getContextPath(cwd, "")
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path is a absolute path and directory", func(t *testing.T) {
+		manifestPath := filepath.Clean("/path/to/current/directory")
+		expected := manifestPath
+		rd.fs = afero.NewMemMapFs()
+		rd.fs.MkdirAll(manifestPath, 0755)
+		result := rd.getContextPath(cwd, manifestPath)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path is a file and absolute path", func(t *testing.T) {
+		manifestPath := filepath.Clean("/path/to/current/directory/file.yaml")
+		expected := filepath.Clean("/path/to/current/directory")
+		rd.fs = afero.NewMemMapFs()
+		rd.fs.MkdirAll(expected, 0755)
+		rd.fs.Create(manifestPath)
+		result := rd.getContextPath(cwd, manifestPath)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path is pointing to a file in the .okteto folder and absolute path", func(t *testing.T) {
+		manifestPath := filepath.Clean("/path/to/current/directory/.okteto/file.yaml")
+		expected := filepath.Clean("/path/to/current/directory")
+		rd.fs = afero.NewMemMapFs()
+		rd.fs.MkdirAll(expected, 0755)
+		rd.fs.Create(manifestPath)
+		result := rd.getContextPath(cwd, manifestPath)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Manifest path does not exist", func(t *testing.T) {
+		expected := cwd
+		result := rd.getContextPath(cwd, "nonexistent.yaml")
+		assert.Equal(t, expected, result)
+	})
+}
+
+func TestGetOriginalCWD(t *testing.T) {
+
+	t.Run("error getting the working directory", func(t *testing.T) {
+		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/"))
+		wdCtrl.SetErrors(filesystem.FakeWorkingDirectoryCtrlErrors{
+			Getter: assert.AnError,
+		})
+		deployCommand := &remoteDestroyCommand{
+			workingDirectoryCtrl: wdCtrl,
+		}
+
+		_, err := deployCommand.getOriginalCWD("")
+
+		require.Error(t, err)
+	})
+
+	t.Run("with empty manifest path", func(t *testing.T) {
+		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/tmp/test"))
+		deployCommand := &remoteDestroyCommand{
+			workingDirectoryCtrl: wdCtrl,
+		}
+
+		result, err := deployCommand.getOriginalCWD("")
+
+		expected := filepath.Clean("/tmp/test")
+		require.NoError(t, err)
+		require.Equal(t, expected, result)
+	})
+
+	t.Run("with manifest path to a dir", func(t *testing.T) {
+		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/tmp/test"))
+		deployCommand := &remoteDestroyCommand{
+			workingDirectoryCtrl: wdCtrl,
+		}
+
+		path := filepath.Join("test", ".okteto")
+		result, err := deployCommand.getOriginalCWD(path)
+
+		expected := filepath.Clean("/tmp")
+		require.NoError(t, err)
+		require.Equal(t, expected, result)
+	})
+
+	t.Run("with manifest path to a file", func(t *testing.T) {
+		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/tmp/test"))
+		deployCommand := &remoteDestroyCommand{
+			workingDirectoryCtrl: wdCtrl,
+		}
+
+		path := filepath.Join("test", "okteto.yml")
+		result, err := deployCommand.getOriginalCWD(path)
+
+		expected := filepath.Clean("/tmp")
+		require.NoError(t, err)
+		require.Equal(t, expected, result)
+	})
+
+}
