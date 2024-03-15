@@ -32,6 +32,11 @@ func Test_cleanManifestPath(t *testing.T) {
 			expected: "",
 		},
 		{
+			name:     "curent dir",
+			manifest: ".",
+			expected: "",
+		},
+		{
 			name:     "absolute path to manifest file",
 			manifest: "/path/to/service/okteto.yml",
 			expected: "okteto.yml",

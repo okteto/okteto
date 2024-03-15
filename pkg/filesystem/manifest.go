@@ -20,7 +20,7 @@ import (
 
 // CleanManifestPath removes the path to the manifest file, in case the command was executed from a parent or child folder
 func CleanManifestPath(manifestPath string) string {
-	if manifestPath == "" {
+	if manifestPath == "" || manifestPath == "." {
 		return ""
 	}
 	lastFolder := filepath.Base(filepath.Dir(manifestPath))

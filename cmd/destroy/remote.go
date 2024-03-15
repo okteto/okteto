@@ -299,7 +299,7 @@ func (rd *remoteDestroyCommand) createDockerfile(tmpDir string, opts *Options) (
 		return "", err
 	}
 
-	cleanManifestPath := filesystem.CleanManifestPath(opts.ManifestPathFlag)
+	cleanManifestPath := filesystem.CleanManifestPath(opts.ManifestPath)
 	if err = remote.CreateDockerignoreFileWithFilesystem(cwd, tmpDir, cleanManifestPath, rd.fs); err != nil {
 		return "", err
 	}

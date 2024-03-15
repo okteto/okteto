@@ -307,7 +307,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 	// build the services) so we would create a remote executor without certain files
 	// necessary for the later deployment which would cause an error when deploying
 	// remotely due to the lack of these files.
-	cleanManifestPath := filesystem.CleanManifestPath(opts.ManifestPathFlag)
+	cleanManifestPath := filesystem.CleanManifestPath(opts.ManifestPath)
 
 	if err := remote.CreateDockerignoreFileWithFilesystem(cwd, tmpDir, cleanManifestPath, rd.fs); err != nil {
 		return "", err
