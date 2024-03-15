@@ -436,19 +436,24 @@ func (rd *remoteDeployCommand) getContextPath(cwd, manifestPath string) string {
 	if !filepath.IsAbs(manifestPath) {
 		path = filepath.Join(cwd, manifestPath)
 	}
+
+	if strings.HasSuffix(strings.TrimSuffix(path, string(filepath.Separator)), ".okteto") {
+		return filepath.Dir(path)
+	}
+
+	possibleCtx := filepath.Dir(path)
+
+	if strings.HasSuffix(possibleCtx, ".okteto") {
+		return filepath.Dir(possibleCtx)
+	}
+
 	fInfo, err := rd.fs.Stat(path)
 	if err != nil {
 		oktetoLog.Infof("error getting file info: %s", err)
 		return cwd
-
 	}
 	if fInfo.IsDir() {
 		return path
-	}
-
-	possibleCtx := filepath.Dir(path)
-	if strings.HasSuffix(possibleCtx, ".okteto") {
-		return filepath.Dir(possibleCtx)
 	}
 	return possibleCtx
 }

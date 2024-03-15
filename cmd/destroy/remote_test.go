@@ -644,6 +644,16 @@ func TestGetContextPath(t *testing.T) {
 		assert.Equal(t, expected, result)
 	})
 
+	t.Run("Manifest path is pointing to the .okteto folder", func(t *testing.T) {
+		manifestPath, _ := filepath.Abs("/path/to/current/directory/.okteto")
+		expected, _ := filepath.Abs("/path/to/current/directory")
+		rd.fs = afero.NewMemMapFs()
+		rd.fs.MkdirAll(expected, 0755)
+		rd.fs.Create(manifestPath)
+		result := rd.getContextPath(cwd, manifestPath)
+		assert.Equal(t, expected, result)
+	})
+
 	t.Run("Manifest path does not exist", func(t *testing.T) {
 		expected := cwd
 		result := rd.getContextPath(cwd, "nonexistent.yaml")
