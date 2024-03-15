@@ -148,7 +148,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		rd.destroyImage = sc.PipelineRunnerImage
 	}
 
-	cwd, err := rd.getOriginalCWD(opts.ManifestPathFlag)
+	cwd, err := rd.workingDirectoryCtrl.Get()
 	if err != nil {
 		return err
 	}
@@ -428,14 +428,4 @@ func (rd *remoteDestroyCommand) getContextPath(cwd, manifestPath string) string 
 		return path
 	}
 	return possibleCtx
-}
-
-// getOriginalCWD returns the original cwd
-func (rd *remoteDestroyCommand) getOriginalCWD(manifestPath string) (string, error) {
-	cwd, err := rd.workingDirectoryCtrl.Get()
-	if err != nil {
-		return "", err
-	}
-	manifestPathDir := filepath.Dir(filepath.Clean(fmt.Sprintf("/%s", manifestPath)))
-	return strings.TrimSuffix(cwd, manifestPathDir), nil
 }

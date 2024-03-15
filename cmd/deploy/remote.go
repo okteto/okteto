@@ -145,7 +145,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		deployOptions.Manifest.Deploy.Image = sc.PipelineRunnerImage
 	}
 
-	cwd, err := rd.getOriginalCWD(deployOptions.ManifestPathFlag)
+	cwd, err := rd.workingDirectoryCtrl.Get()
 	if err != nil {
 		return err
 	}
@@ -361,16 +361,6 @@ func getDeployFlags(opts *Options, cwd string, fs afero.Fs) ([]string, error) {
 	deployFlags = append(deployFlags, fmt.Sprintf("--timeout %s", opts.Timeout))
 
 	return deployFlags, nil
-}
-
-// getOriginalCWD returns the original cwd
-func (rd *remoteDeployCommand) getOriginalCWD(manifestPath string) (string, error) {
-	cwd, err := rd.workingDirectoryCtrl.Get()
-	if err != nil {
-		return "", err
-	}
-	manifestPathDir := filepath.Dir(filepath.Clean(fmt.Sprintf("/%s", manifestPath)))
-	return strings.TrimSuffix(cwd, manifestPathDir), nil
 }
 
 func getOktetoCLIVersion(versionString string) string {
