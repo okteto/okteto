@@ -29,7 +29,7 @@ func Test_cleanManifestPath(t *testing.T) {
 		{
 			name:     "empty manifest",
 			manifest: "",
-			expected: ".",
+			expected: "",
 		},
 		{
 			name:     "absolute path to manifest file",
