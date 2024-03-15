@@ -97,7 +97,7 @@ func (bc *OktetoBuilder) checkServiceToBuild(service string, manifest *model.Man
 	var err error
 	var buildHash string
 	if bc.smartBuildCtrl.IsEnabled() {
-		buildHash, err = bc.smartBuildCtrl.GetBuildHash(buildInfo)
+		buildHash, err = bc.smartBuildCtrl.GetBuildHash(buildInfo, service)
 		if err != nil {
 			bc.ioCtrl.Logger().Infof("error getting build hash: %s", err)
 		}
@@ -110,7 +110,9 @@ func (bc *OktetoBuilder) checkServiceToBuild(service string, manifest *model.Man
 		buildCh <- service
 		return nil
 	} else if err != nil {
-		return err
+		bc.ioCtrl.Logger().Debugf("unexpected error checking if the images exist: %s", err)
+		buildCh <- service
+		return nil
 	}
 	bc.ioCtrl.Logger().Debugf("Skipping build for image for service: %s", service)
 

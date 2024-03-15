@@ -45,8 +45,8 @@ type repositoryInterface interface {
 
 type hasherController interface {
 	hashProjectCommit(*build.Info) (string, error)
-	hashBuildContext(*build.Info) (string, error)
-	getBuildContextHashInCache(string) string
+	hashWithBuildContext(*build.Info, string) string
+	getServiceShaInCache(string) string
 	getProjectCommitHashInCache() string
 }
 
@@ -89,17 +89,17 @@ func (s *Ctrl) GetProjectHash(buildInfo *build.Info) (string, error) {
 }
 
 // GetServiceHash returns the hash of the service
-func (s *Ctrl) GetServiceHash(buildInfo *build.Info) (string, error) {
+func (s *Ctrl) GetServiceHash(buildInfo *build.Info, service string) string {
 	s.ioCtrl.Logger().Debugf("getting service hash")
-	return s.hasher.hashBuildContext(buildInfo)
+	return s.hasher.hashWithBuildContext(buildInfo, service)
 }
 
 // GetBuildHash returns the hash of the build based on the env vars
-func (s *Ctrl) GetBuildHash(buildInfo *build.Info) (string, error) {
+func (s *Ctrl) GetBuildHash(buildInfo *build.Info, service string) (string, error) {
 	s.ioCtrl.Logger().Debugf("getting hash based on the buildContext env var")
 	if s.isUsingBuildContext {
 		s.ioCtrl.Logger().Info("getting hash using build context due to env var")
-		return s.hasher.hashBuildContext(buildInfo)
+		return s.hasher.hashWithBuildContext(buildInfo, service), nil
 	}
 	s.ioCtrl.Logger().Info("getting hash using project commit")
 	return s.hasher.hashProjectCommit(buildInfo)
@@ -112,7 +112,7 @@ func (s *Ctrl) GetBuildCommit(buildInfo *build.Info) string {
 		if buildContext == "" {
 			buildContext = "."
 		}
-		commit := s.hasher.getBuildContextHashInCache(buildContext)
+		commit := s.hasher.getServiceShaInCache(buildContext)
 		if commit == "" {
 			s.ioCtrl.Logger().Debugf("build context '%s' not found in cache", buildContext)
 		}

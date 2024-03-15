@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/okteto/okteto/pkg/build"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -38,18 +39,21 @@ type serviceHasher struct {
 	gitRepoCtrl repositoryCommitRetriever
 	fs          afero.Fs
 
-	buildContextCache map[string]string
-	projectCommit     string
+	serviceShaCache map[string]string
+	projectCommit   string
 
 	// lock is a mutex to provide thread safety
 	lock sync.RWMutex
+
+	getCurrentTimestampNano func() int64
 }
 
 func newServiceHasher(gitRepoCtrl repositoryCommitRetriever, fs afero.Fs) *serviceHasher {
 	return &serviceHasher{
-		gitRepoCtrl:       gitRepoCtrl,
-		buildContextCache: map[string]string{},
-		fs:                fs,
+		gitRepoCtrl:             gitRepoCtrl,
+		serviceShaCache:         map[string]string{},
+		fs:                      fs,
+		getCurrentTimestampNano: time.Now().UnixNano,
 	}
 }
 
@@ -72,28 +76,48 @@ func (sh *serviceHasher) hashProjectCommit(buildInfo *build.Info) (string, error
 }
 
 // hashBuildContext returns the hash of the service using its context tree hash
-func (sh *serviceHasher) hashBuildContext(buildInfo *build.Info) (string, error) {
+func (sh *serviceHasher) hashWithBuildContext(buildInfo *build.Info, service string) string {
 	buildContext := buildInfo.Context
 	if buildContext == "" {
 		buildContext = "."
 	}
-	if _, ok := sh.buildContextCache[buildContext]; !ok {
+	if _, ok := sh.serviceShaCache[service]; !ok {
 		dirCommit, err := sh.gitRepoCtrl.GetLatestDirCommit(buildContext)
 		if err != nil {
-			return "", fmt.Errorf("could not get build context sha: %w", err)
+			oktetoLog.Infof("could not get build context sha: %s, generating a random one", err)
+			// In case of error getting the dir commit, we just generate a random one, and it will rebuild the image
+			dirCommit = sh.calculateRandomShaForService(service)
 		}
+		oktetoLog.Debugf("############ Dir commit %q", dirCommit)
 
 		diffHash, err := sh.gitRepoCtrl.GetDiffHash(buildContext)
 		if err != nil {
-			return "", fmt.Errorf("could not get build context diff sha: %w", err)
+			oktetoLog.Infof("could not get build context diff sha: %s, generating a random one", err)
+			// In case of error getting the diff hash, we just generate a random one, and it will rebuild the image
+			diffHash = sh.calculateRandomShaForService(service)
 		}
 
+		oktetoLog.Debugf("############## Diff hash %q", diffHash)
+
 		sh.lock.Lock()
-		sh.buildContextCache[buildContext] = sh.hash(buildInfo, dirCommit, diffHash)
+		hash := sh.hash(buildInfo, dirCommit, diffHash)
+		oktetoLog.Debugf("############## Image hash %q", hash)
+		sh.serviceShaCache[service] = hash
 		sh.lock.Unlock()
+	} else {
+		oktetoLog.Debugf("############ getting the build context for service %q from the cache: %q", buildInfo.Name, sh.serviceShaCache[service])
 	}
 
-	return sh.buildContextCache[buildContext], nil
+	return sh.serviceShaCache[service]
+}
+
+// calculateRandomShaForService generates a random sha for the given service taking into account current timestamp
+// in nanoseconds
+func (sh *serviceHasher) calculateRandomShaForService(service string) string {
+	key := fmt.Sprintf("%s-%d", service, sh.getCurrentTimestampNano())
+
+	sha := sha256.Sum256([]byte(key))
+	return hex.EncodeToString(sha[:])
 }
 
 func (sh *serviceHasher) hash(buildInfo *build.Info, commitHash string, diff string) string {
@@ -122,7 +146,9 @@ func (sh *serviceHasher) hash(buildInfo *build.Info, commitHash string, diff str
 	fmt.Fprintf(&b, "diff:%s;", diff)
 	fmt.Fprintf(&b, "image:%s;", buildInfo.Image)
 
-	oktetoBuildHash := sha256.Sum256([]byte(b.String()))
+	hashFrom := b.String()
+	oktetoLog.Infof("hashing build info: %s", hashFrom)
+	oktetoBuildHash := sha256.Sum256([]byte(hashFrom))
 	return hex.EncodeToString(oktetoBuildHash[:])
 }
 
@@ -144,10 +170,10 @@ func (sh *serviceHasher) getDockerfileContent(dockerfileContext, dockerfilePath 
 	return hex.EncodeToString(encodedFile[:])
 }
 
-func (sh *serviceHasher) getBuildContextHashInCache(buildContext string) string {
+func (sh *serviceHasher) getServiceShaInCache(service string) string {
 	sh.lock.RLock()
 	defer sh.lock.RUnlock()
-	v, ok := sh.buildContextCache[buildContext]
+	v, ok := sh.serviceShaCache[service]
 	if !ok {
 		return ""
 	}

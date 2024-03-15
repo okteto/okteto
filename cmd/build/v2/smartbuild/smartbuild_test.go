@@ -50,9 +50,11 @@ type fakeHasher struct {
 }
 
 func (fh fakeHasher) hashProjectCommit(*build.Info) (string, error) { return fh.hash, fh.err }
-func (fh fakeHasher) hashBuildContext(*build.Info) (string, error)  { return fh.hash, fh.err }
-func (fh fakeHasher) getBuildContextHashInCache(string) string      { return fh.hash }
-func (fh fakeHasher) getProjectCommitHashInCache() string           { return fh.hash }
+func (fh fakeHasher) hashWithBuildContext(*build.Info, string) string {
+	return fh.hash
+}
+func (fh fakeHasher) getServiceShaInCache(string) string  { return fh.hash }
+func (fh fakeHasher) getProjectCommitHashInCache() string { return fh.hash }
 
 func TestNewSmartBuildCtrl(t *testing.T) {
 	type input struct {
@@ -172,57 +174,15 @@ func TestGetProjectHash(t *testing.T) {
 }
 
 func TestGetServiceHash(t *testing.T) {
-	type input struct {
-		err  error
-		hash string
-	}
-	type output struct {
-		err  error
-		hash string
-	}
-
-	tests := []struct {
-		input  input
-		output output
-		name   string
-	}{
-		{
-			name: "correct hash",
-			input: input{
-				hash: "hash",
-				err:  nil,
-			},
-			output: output{
-				hash: "hash",
-				err:  nil,
-			},
-		},
-		{
-			name: "error",
-			input: input{
-				hash: "",
-				err:  assert.AnError,
-			},
-			output: output{
-				hash: "",
-				err:  assert.AnError,
-			},
+	service := "fake-service"
+	sbc := Ctrl{
+		ioCtrl: io.NewIOController(),
+		hasher: fakeHasher{
+			hash: "hash",
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			sbc := Ctrl{
-				ioCtrl: io.NewIOController(),
-				hasher: fakeHasher{
-					hash: tt.input.hash,
-					err:  tt.input.err,
-				},
-			}
-			out, err := sbc.GetServiceHash(&build.Info{})
-			assert.Equal(t, tt.output.hash, out)
-			assert.ErrorIs(t, err, tt.output.err)
-		})
-	}
+	out := sbc.GetServiceHash(&build.Info{}, service)
+	assert.Equal(t, "hash", out)
 }
 
 func TestGetBuildHash(t *testing.T) {
@@ -236,6 +196,7 @@ func TestGetBuildHash(t *testing.T) {
 		hash string
 	}
 
+	service := "fake-service"
 	tests := []struct {
 		output output
 		name   string
@@ -300,7 +261,7 @@ func TestGetBuildHash(t *testing.T) {
 				},
 				isUsingBuildContext: tt.input.isUsingBuildContext,
 			}
-			out, err := sbc.GetBuildHash(&build.Info{})
+			out, err := sbc.GetBuildHash(&build.Info{}, service)
 			assert.Equal(t, tt.output.hash, out)
 			assert.ErrorIs(t, err, tt.output.err)
 		})

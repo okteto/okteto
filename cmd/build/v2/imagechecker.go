@@ -51,7 +51,7 @@ func newImageChecker(cfg oktetoBuilderConfigInterface, registry registryImageChe
 	}
 }
 
-// checkIfBuildHashIsBuilt returns if the buildhash is already built
+// checkIfBuildHashIsBuilt returns if the buildHash is already built
 // in case is built, the image with digest ([name]@sha256:[sha]) is returned
 // if not, empty reference is returned
 func (ic imageChecker) checkIfBuildHashIsBuilt(manifestName, svcToBuild string, buildHash string) (string, bool) {
@@ -68,7 +68,8 @@ func (ic imageChecker) checkIfBuildHashIsBuilt(manifestName, svcToBuild string, 
 				continue
 			}
 			ic.logger.Infof("could not check image %s: %s", ref, err)
-			return "", false
+			// If trying to get access to the image, it fails unexpectedly, we try with any other image (if any)
+			continue
 		}
 		ic.logger.Infof("image %s found", ref)
 		return imageWithDigest, true

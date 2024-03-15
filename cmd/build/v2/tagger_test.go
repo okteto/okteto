@@ -159,6 +159,20 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 			},
 			expectedImage: "okteto.global/test-test:sha",
 		},
+		{
+			name: "image inferred with clean project, has access to global registry, feature flag enabled and empty build hash",
+			cfg: fakeConfig{
+				isClean:             true,
+				hasAccess:           true,
+				sha:                 "",
+				isSmartBuildsEnable: true,
+			},
+			b: &build.Info{
+				Dockerfile: "Dockerfile",
+				Context:    ".",
+			},
+			expectedImage: "okteto.dev/test-test:okteto",
+		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
@@ -317,7 +331,6 @@ func TestImageTaggerGetPossibleTags(t *testing.T) {
 			sha:  "",
 			expectedImages: []string{
 				"okteto.dev/test-test:okteto",
-				"okteto.global/test-test:okteto",
 			},
 			isSmartBuildsEnabled: true,
 		},
@@ -328,7 +341,6 @@ func TestImageTaggerGetPossibleTags(t *testing.T) {
 				"okteto.dev/test-test:sha",
 				"okteto.global/test-test:sha",
 				"okteto.dev/test-test:okteto",
-				"okteto.global/test-test:okteto",
 			},
 			isSmartBuildsEnabled: true,
 		},
@@ -337,7 +349,6 @@ func TestImageTaggerGetPossibleTags(t *testing.T) {
 			sha:  "sha",
 			expectedImages: []string{
 				"okteto.dev/test-test:okteto",
-				"okteto.global/test-test:okteto",
 			},
 			isSmartBuildsEnabled: false,
 		},

@@ -16,6 +16,7 @@ package repository
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -142,7 +143,7 @@ func (r gitRepoController) GetLatestDirCommit(contextDir string) (string, error)
 	timeoutCh := make(chan struct{})
 	ch := make(chan commitResponse)
 
-	timeout := 1 * time.Second
+	timeout := 5 * time.Second
 
 	go func() {
 		time.Sleep(timeout)
@@ -194,7 +195,7 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 	diffCh := make(chan diffResponse)
 	untrackedFilesCh := make(chan untrackedFilesResponse)
 
-	timeout := 1 * time.Second
+	timeout := 5 * time.Second
 
 	repo, err := r.repoGetter.get(r.path)
 	if err != nil {
@@ -209,6 +210,10 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 		diffCh <- diffResponse{
 			diff: "",
 			err:  errTimeoutExceeded,
+		}
+		untrackedFilesCh <- untrackedFilesResponse{
+			untrackedFilesDiff: "",
+			err:                errTimeoutExceeded,
 		}
 	}()
 
@@ -259,8 +264,10 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 		return "", untrackedFilesResponse.err
 	}
 
-	diffHash := sha256.Sum256([]byte(fmt.Sprintf("%s%s", diffResponse.diff, untrackedFilesResponse.untrackedFilesDiff)))
-	return fmt.Sprintf("%x", diffHash), nil
+	hashFrom := fmt.Sprintf("%s-%s", diffResponse.diff, untrackedFilesResponse.untrackedFilesDiff)
+	oktetoLog.Infof("hashing diff: %s", hashFrom)
+	diffHash := sha256.Sum256([]byte(hashFrom))
+	return hex.EncodeToString(diffHash[:]), nil
 }
 
 func (r gitRepoController) getUntrackedContent(files []string) (string, error) {
