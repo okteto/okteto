@@ -37,15 +37,16 @@ type repositoryCommitRetriever interface {
 
 type serviceHasher struct {
 	gitRepoCtrl repositoryCommitRetriever
-	fs          afero.Fs
+
+	fs afero.Fs
 
 	serviceShaCache map[string]string
-	projectCommit   string
+
+	getCurrentTimestampNano func() int64
+	projectCommit           string
 
 	// lock is a mutex to provide thread safety
 	lock sync.RWMutex
-
-	getCurrentTimestampNano func() int64
 }
 
 func newServiceHasher(gitRepoCtrl repositoryCommitRetriever, fs afero.Fs) *serviceHasher {
