@@ -79,7 +79,7 @@ func TestNewSmartBuildCtrl(t *testing.T) {
 			},
 			output: output{
 				isEnabled:  true,
-				isBuildCtx: false,
+				isBuildCtx: true,
 			},
 		},
 		{
@@ -102,6 +102,17 @@ func TestNewSmartBuildCtrl(t *testing.T) {
 			output: output{
 				isEnabled:  true,
 				isBuildCtx: true,
+			},
+		},
+		{
+			name: "Smart builds enabled but build context disabled",
+			input: input{
+				isEnabledValue:  "true",
+				isBuildCtxValue: "false",
+			},
+			output: output{
+				isEnabled:  true,
+				isBuildCtx: false,
 			},
 		},
 	}

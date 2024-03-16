@@ -65,7 +65,8 @@ type Ctrl struct {
 // NewSmartBuildCtrl creates a new smart build controller
 func NewSmartBuildCtrl(repo repositoryInterface, registry registryController, fs afero.Fs, ioCtrl *io.Controller) *Ctrl {
 	isEnabled := env.LoadBooleanOrDefault(OktetoEnableSmartBuildEnvVar, true)
-	isUsingBuildCtx := env.LoadBoolean(OktetoSmartBuildUsingContextEnvVar)
+	// If using build context is not explicitly set, we use the value of smart builds
+	isUsingBuildCtx := env.LoadBooleanOrDefault(OktetoSmartBuildUsingContextEnvVar, isEnabled)
 
 	return &Ctrl{
 		gitRepo:             repo,
