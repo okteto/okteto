@@ -264,8 +264,8 @@ func TestGetBuildCommit(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		input    input
 		expected string
+		input    input
 	}{
 		{
 			name: "project commit - correct hash",
