@@ -1068,7 +1068,7 @@ func printDisplayContext(up *upContext) {
 
 // buildServicesAndSetBuildEnvs get services to build and run build to set build envs
 func buildServicesAndSetBuildEnvs(ctx context.Context, m *model.Manifest, builder builderInterface) error {
-	svcsToBuild, err := builder.GetServicesToBuild(ctx, m, []string{})
+	svcsToBuild, err := builder.GetServicesToBuildDuringDeploy(ctx, m, []string{})
 	if err != nil {
 		return err
 	}

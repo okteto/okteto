@@ -88,7 +88,7 @@ type Options struct {
 
 type builderInterface interface {
 	Build(ctx context.Context, options *types.BuildOptions) error
-	GetServicesToBuild(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error)
+	GetServicesToBuildDuringDeploy(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error)
 	GetBuildEnvVars() map[string]string
 }
 

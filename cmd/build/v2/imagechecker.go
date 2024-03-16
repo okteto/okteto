@@ -23,7 +23,7 @@ import (
 
 type imageCheckerInterface interface {
 	checkIfBuildHashIsBuilt(manifestName, svcToBuild string, commit string) (string, bool)
-	getImageDigestReferenceForService(manifestName, svcToBuild string, buildInfo *build.Info, commit string) (string, error)
+	getImageDigestReferenceForServiceDeploy(manifestName, svcToBuild string, buildInfo *build.Info) (string, error)
 }
 
 type registryImageCheckerInterface interface {
@@ -77,18 +77,19 @@ func (ic imageChecker) checkIfBuildHashIsBuilt(manifestName, svcToBuild string, 
 	return "", false
 }
 
-// getImageDigestReferenceForService returns the image reference with digest for the given service
-// format: [name]@sha256:[digest]
-func (ic imageChecker) getImageDigestReferenceForService(manifestName, svcToBuild string, buildInfo *build.Info, buildHash string) (string, error) {
+// getImageDigestReferenceForServiceDeploy returns the image reference with digest for the given service
+// format: [name]@sha256:[digest]. This is to being called during deploy operations (up, deploy, destroy, compose)
+// and it only checks the "okteto" tag
+func (ic imageChecker) getImageDigestReferenceForServiceDeploy(manifestName, svcToBuild string, buildInfo *build.Info) (string, error) {
 
 	// get all possible references
 	var possibleReferences []string
 	if !ic.cfg.IsOkteto() && serviceHasVolumesToInclude(buildInfo) {
 		possibleReferences = []string{buildInfo.Image}
 	} else if serviceHasVolumesToInclude(buildInfo) {
-		possibleReferences = ic.tagger.getImageReferencesForTagWithDefaults(manifestName, svcToBuild, buildHash)
+		possibleReferences = ic.tagger.getImageReferencesForDeploy(manifestName, svcToBuild)
 	} else if serviceHasDockerfile(buildInfo) && buildInfo.Image == "" {
-		possibleReferences = ic.tagger.getImageReferencesForTagWithDefaults(manifestName, svcToBuild, buildHash)
+		possibleReferences = ic.tagger.getImageReferencesForDeploy(manifestName, svcToBuild)
 	} else if buildInfo.Image != "" {
 		possibleReferences = []string{buildInfo.Image}
 	}

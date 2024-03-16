@@ -18,6 +18,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeSmartBuildCtrl struct {
@@ -426,4 +427,22 @@ func Test_getTargetRegistries(t *testing.T) {
 			assert.Equal(t, tc.expected, getTargetRegistries(tc.isOkteto))
 		})
 	}
+}
+
+func TestImageTaggerWithoutVolumesGetImageReferenceForDeploy(t *testing.T) {
+	imageTagger := &imageTagger{}
+	expected := []string{"okteto.dev/test-repository-service-a:okteto"}
+
+	result := imageTagger.getImageReferencesForDeploy("test repository", "service-a")
+
+	require.Equal(t, expected, result)
+}
+
+func TestImageTaggerWithVolumesGetImageReferenceForDeploy(t *testing.T) {
+	imageTagger := &imagerTaggerWithVolumes{}
+	expected := []string{"okteto.dev/test-repository-service-a:okteto-with-volume-mounts"}
+
+	result := imageTagger.getImageReferencesForDeploy("test repository", "service-a")
+
+	require.Equal(t, expected, result)
 }

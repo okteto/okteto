@@ -49,7 +49,7 @@ type oktetoRegistryInterface interface {
 
 	GetRegistryAndRepo(image string) (string, string)
 	GetRepoNameAndTag(repo string) (string, string)
-	CloneGlobalImageToDev(imageWithDigest, tag string) (string, error)
+	CloneGlobalImageToDev(imageWithDigest string) (string, error)
 }
 
 // oktetoBuilderConfigInterface returns the configuration that the builder has for the registry and project
@@ -266,7 +266,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				if isBuilt {
 					ob.ioCtrl.Out().Infof("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, ob.smartBuildCtrl.GetBuildCommit(svcToBuild))
 
-					imageWithDigest, err = ob.smartBuildCtrl.CloneGlobalImageToDev(imageWithDigest, buildHash)
+					imageWithDigest, err = ob.smartBuildCtrl.CloneGlobalImageToDev(imageWithDigest)
 					if err != nil {
 						return err
 					}

@@ -26,6 +26,7 @@ type imageTaggerInterface interface {
 	getServiceImageReference(manifestName, svcName string, b *build.Info, buildHash string) string
 	getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string
 	getImageReferencesForTagWithDefaults(manifestName, svcToBuildName, tag string) []string
+	getImageReferencesForDeploy(manifestName, svcToBuildName string) []string
 }
 
 type smartBuildController interface {
@@ -126,6 +127,16 @@ func (it imageTagger) getImageReferencesForTagWithDefaults(manifestName, svcToBu
 	return imageReferences
 }
 
+// getImageReferencesForDeploy returns the list of images references for a service when deploying it. In case of deploy,
+// we only have to check if the image is present with the okteto tag. We don't check anything related to the hash
+func (imageTagger) getImageReferencesForDeploy(manifestName, svcToBuildName string) []string {
+	var imageReferences []string
+	sanitizedName := format.ResourceK8sMetaString(manifestName)
+	imageReferences = append(imageReferences, useReferenceTemplate(constants.DevRegistry, sanitizedName, svcToBuildName, model.OktetoDefaultImageTag))
+
+	return imageReferences
+}
+
 // imageTaggerWithVolumes represent an imageTaggerInterface with a reference tag with volume mounts
 type imagerTaggerWithVolumes struct {
 	cfg                  oktetoBuilderConfigInterface
@@ -180,6 +191,15 @@ func (i imagerTaggerWithVolumes) getImageReferencesForTagWithDefaults(manifestNa
 	for _, targetRegistry := range getTargetRegistries(i.cfg.IsOkteto()) {
 		tags = append(tags, useReferenceTemplate(targetRegistry, sanitizedName, svcToBuildName, model.OktetoImageTagWithVolumes))
 	}
+	return tags
+}
+
+// getImageReferencesForDeploy returns the list of images references for a service when deploying it. In case of deploy,
+// we only have to check if the image is present with the okteto tag. We don't check anything related to the hash
+func (i imagerTaggerWithVolumes) getImageReferencesForDeploy(manifestName, svcToBuildName string) []string {
+	var tags []string
+	sanitizedName := format.ResourceK8sMetaString(manifestName)
+	tags = append(tags, useReferenceTemplate(constants.DevRegistry, sanitizedName, svcToBuildName, model.OktetoImageTagWithVolumes))
 	return tags
 }
 
