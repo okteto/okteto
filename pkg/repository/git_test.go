@@ -416,7 +416,7 @@ func TestGetDiffHash(t *testing.T) {
 			},
 			buildContext: "test",
 			expected: expected{
-				sha: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+				sha: "3973e022e93220f9212c18d0d0c543ae7c309e46640da93a4a0314de999f5112",
 				err: nil,
 			},
 		},

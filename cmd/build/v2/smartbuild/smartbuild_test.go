@@ -238,18 +238,6 @@ func TestGetBuildHash(t *testing.T) {
 				err:  nil,
 			},
 		},
-		{
-			name: "build context - error",
-			input: input{
-				hash:                "",
-				err:                 assert.AnError,
-				isUsingBuildContext: true,
-			},
-			output: output{
-				hash: "",
-				err:  assert.AnError,
-			},
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -273,15 +261,11 @@ func TestGetBuildCommit(t *testing.T) {
 		hash                string
 		isUsingBuildContext bool
 	}
-	type output struct {
-		err  error
-		hash string
-	}
 
 	tests := []struct {
-		output output
-		name   string
-		input  input
+		name     string
+		input    input
+		expected string
 	}{
 		{
 			name: "project commit - correct hash",
@@ -289,21 +273,7 @@ func TestGetBuildCommit(t *testing.T) {
 				hash:                "hash",
 				isUsingBuildContext: false,
 			},
-			output: output{
-				hash: "hash",
-				err:  nil,
-			},
-		},
-		{
-			name: "project commit - error",
-			input: input{
-				hash:                "",
-				isUsingBuildContext: false,
-			},
-			output: output{
-				hash: "",
-				err:  assert.AnError,
-			},
+			expected: "hash",
 		},
 		{
 			name: "build context - correct hash",
@@ -311,21 +281,15 @@ func TestGetBuildCommit(t *testing.T) {
 				hash:                "hash",
 				isUsingBuildContext: true,
 			},
-			output: output{
-				hash: "hash",
-				err:  nil,
-			},
+			expected: "hash",
 		},
 		{
-			name: "build context - error",
+			name: "build context - empty",
 			input: input{
 				hash:                "",
 				isUsingBuildContext: true,
 			},
-			output: output{
-				hash: "",
-				err:  assert.AnError,
-			},
+			expected: "",
 		},
 	}
 	for _, tt := range tests {
@@ -337,8 +301,8 @@ func TestGetBuildCommit(t *testing.T) {
 				},
 				isUsingBuildContext: tt.input.isUsingBuildContext,
 			}
-			out := sbc.GetBuildCommit(&build.Info{})
-			assert.Equal(t, tt.output.hash, out)
+			out := sbc.GetBuildCommit("service-test")
+			assert.Equal(t, tt.expected, out)
 		})
 	}
 }

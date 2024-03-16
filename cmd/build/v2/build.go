@@ -264,7 +264,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				meta.CacheHitDuration = time.Since(cacheHitDurationStart)
 
 				if isBuilt {
-					ob.ioCtrl.Out().Infof("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, ob.smartBuildCtrl.GetBuildCommit(buildSvcInfo))
+					ob.ioCtrl.Out().Infof("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, ob.smartBuildCtrl.GetBuildCommit(svcToBuild))
 
 					imageWithDigest, err = ob.smartBuildCtrl.CloneGlobalImageToDev(imageWithDigest, buildHash)
 					if err != nil {

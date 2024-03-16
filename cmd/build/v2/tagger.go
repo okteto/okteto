@@ -30,6 +30,7 @@ type imageTaggerInterface interface {
 
 type smartBuildController interface {
 	IsEnabled() bool
+	IsBuildContextEnabled() bool
 }
 
 // imageTagger implements an imageTaggerInterface with no volume mounts
@@ -76,9 +77,10 @@ func (it imageTagger) getServiceImageReference(manifestName, svcName string, b *
 	targetRegistry := constants.DevRegistry
 	tag := ""
 	if it.cfg.HasGlobalAccess() && it.smartBuildController.IsEnabled() {
-		// if it.cfg.IsCleanProject() {
-		targetRegistry = constants.GlobalRegistry
-		//}
+		// With build context enabled, we should always use global registry
+		if it.smartBuildController.IsBuildContextEnabled() || it.cfg.IsCleanProject() {
+			targetRegistry = constants.GlobalRegistry
+		}
 		tag = buildHash
 	}
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
@@ -144,9 +146,10 @@ func (i imagerTaggerWithVolumes) getServiceImageReference(manifestName, svcName 
 	targetRegistry := constants.DevRegistry
 	tag := ""
 	if i.cfg.HasGlobalAccess() && i.smartBuildController.IsEnabled() {
-		//if i.cfg.IsCleanProject() {
-		targetRegistry = constants.GlobalRegistry
-		//}
+		// With build context enabled, we should always use global registry
+		if i.smartBuildController.IsBuildContextEnabled() || i.cfg.IsCleanProject() {
+			targetRegistry = constants.GlobalRegistry
+		}
 		tag = buildHash
 	}
 	sanitizedName := format.ResourceK8sMetaString(manifestName)

@@ -21,11 +21,16 @@ import (
 )
 
 type fakeSmartBuildCtrl struct {
-	isEnabled bool
+	isEnabled             bool
+	isBuildContextEnabled bool
 }
 
 func (fsc *fakeSmartBuildCtrl) IsEnabled() bool {
 	return fsc.isEnabled
+}
+
+func (fsc *fakeSmartBuildCtrl) IsBuildContextEnabled() bool {
+	return fsc.isBuildContextEnabled
 }
 
 func TestInitTaggers(t *testing.T) {

@@ -82,6 +82,12 @@ func (s *Ctrl) IsEnabled() bool {
 	return s.isEnabled
 }
 
+// IsBuildContextEnabled returns true if the build context implementation of smart builds is enabled.
+// This could be temporal until we remove the project commit implementation
+func (s *Ctrl) IsBuildContextEnabled() bool {
+	return s.isUsingBuildContext
+}
+
 // GetProjectHash returns the commit hash of the project
 func (s *Ctrl) GetProjectHash(buildInfo *build.Info) (string, error) {
 	s.ioCtrl.Logger().Debugf("getting project hash")
@@ -106,15 +112,11 @@ func (s *Ctrl) GetBuildHash(buildInfo *build.Info, service string) (string, erro
 }
 
 // GetBuildCommit returns the commit that generated the smart build
-func (s *Ctrl) GetBuildCommit(buildInfo *build.Info) string {
+func (s *Ctrl) GetBuildCommit(serviceName string) string {
 	if s.isUsingBuildContext {
-		buildContext := buildInfo.Context
-		if buildContext == "" {
-			buildContext = "."
-		}
-		commit := s.hasher.getServiceShaInCache(buildContext)
+		commit := s.hasher.getServiceShaInCache(serviceName)
 		if commit == "" {
-			s.ioCtrl.Logger().Debugf("build context '%s' not found in cache", buildContext)
+			s.ioCtrl.Logger().Debugf("image sha for service '%s' not found in cache", serviceName)
 		}
 		return commit
 	}
