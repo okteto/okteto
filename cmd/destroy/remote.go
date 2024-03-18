@@ -171,7 +171,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 
 	buildInfo := &build.Info{
 		Dockerfile: dockerfile,
-		Context:    rd.getContextPath(cwd, opts.ManifestPathFlag),
+		Context:    rd.getContextPath(cwd, opts.ManifestPath),
 	}
 
 	// undo modification of CWD for Build command

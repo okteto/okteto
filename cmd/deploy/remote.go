@@ -168,7 +168,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 
 	buildInfo := &build.Info{
 		Dockerfile: dockerfile,
-		Context:    rd.getContextPath(cwd, deployOptions.ManifestPathFlag),
+		Context:    rd.getContextPath(cwd, deployOptions.ManifestPath),
 	}
 
 	// undo modification of CWD for Build command
