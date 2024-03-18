@@ -145,7 +145,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		deployOptions.Manifest.Deploy.Image = sc.PipelineRunnerImage
 	}
 
-	cwd, err := rd.getOriginalCWD(deployOptions.ManifestPathFlag)
+	cwd, err := rd.workingDirectoryCtrl.Get()
 	if err != nil {
 		return err
 	}
@@ -168,7 +168,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 
 	buildInfo := &build.Info{
 		Dockerfile: dockerfile,
-		Context:    rd.getContextPath(cwd, deployOptions.ManifestPathFlag),
+		Context:    rd.getContextPath(cwd, deployOptions.ManifestPath),
 	}
 
 	// undo modification of CWD for Build command
@@ -275,7 +275,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 			Funcs(template.FuncMap{"join": strings.Join}).
 			Parse(dockerfileTemplate))
 
-	deployFlags, err := getDeployFlags(opts)
+	deployFlags, err := getDeployFlags(opts, cwd, rd.fs)
 	if err != nil {
 		return "", err
 	}
@@ -307,7 +307,9 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 	// build the services) so we would create a remote executor without certain files
 	// necessary for the later deployment which would cause an error when deploying
 	// remotely due to the lack of these files.
-	if err := remote.CreateDockerignoreFileWithFilesystem(cwd, tmpDir, opts.ManifestPathFlag, rd.fs); err != nil {
+	cleanManifestPath := filesystem.CleanManifestPath(opts.ManifestPath)
+
+	if err := remote.CreateDockerignoreFileWithFilesystem(cwd, tmpDir, cleanManifestPath, rd.fs); err != nil {
 		return "", err
 	}
 
@@ -317,7 +319,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 	return dockerfile.Name(), nil
 }
 
-func getDeployFlags(opts *Options) ([]string, error) {
+func getDeployFlags(opts *Options, cwd string, fs afero.Fs) ([]string, error) {
 	var deployFlags []string
 
 	if opts.Name != "" {
@@ -328,16 +330,16 @@ func getDeployFlags(opts *Options) ([]string, error) {
 		deployFlags = append(deployFlags, fmt.Sprintf("--namespace %s", opts.Namespace))
 	}
 
-	if opts.ManifestPathFlag != "" {
-		lastFolder := filepath.Base(filepath.Dir(opts.ManifestPathFlag))
-		if lastFolder == ".okteto" {
-			path := filepath.Clean(opts.ManifestPathFlag)
-			parts := strings.Split(path, string(filepath.Separator))
-
-			deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filepath.Join(parts[len(parts)-2:]...)))
-		} else {
-			deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filepath.Base(opts.ManifestPathFlag)))
-		}
+	// we calculate the absolute path of the manifest file to be able to check whether the provided path is a directory
+	// in that case, the --file (or -f) flag can be omitted as the autodiscovery will take place
+	absManifestFilePath := filepath.Join(cwd, filepath.Clean(opts.ManifestPath))
+	isManifestFilePathDir, err := afero.IsDir(fs, absManifestFilePath)
+	if err != nil {
+		return nil, err
+	}
+	if opts.ManifestPathFlag != "" && !isManifestFilePathDir {
+		cleanManifestPath := filesystem.CleanManifestPath(opts.ManifestPathFlag)
+		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", cleanManifestPath))
 	}
 
 	if len(opts.Variables) > 0 {
@@ -359,16 +361,6 @@ func getDeployFlags(opts *Options) ([]string, error) {
 	deployFlags = append(deployFlags, fmt.Sprintf("--timeout %s", opts.Timeout))
 
 	return deployFlags, nil
-}
-
-// getOriginalCWD returns the original cwd
-func (rd *remoteDeployCommand) getOriginalCWD(manifestPath string) (string, error) {
-	cwd, err := rd.workingDirectoryCtrl.Get()
-	if err != nil {
-		return "", err
-	}
-	manifestPathDir := filepath.Dir(filepath.Clean(fmt.Sprintf("/%s", manifestPath)))
-	return strings.TrimSuffix(cwd, manifestPathDir), nil
 }
 
 func getOktetoCLIVersion(versionString string) string {
@@ -434,19 +426,24 @@ func (rd *remoteDeployCommand) getContextPath(cwd, manifestPath string) string {
 	if !filepath.IsAbs(manifestPath) {
 		path = filepath.Join(cwd, manifestPath)
 	}
+
+	if strings.HasSuffix(strings.TrimSuffix(path, string(filepath.Separator)), ".okteto") {
+		return filepath.Dir(path)
+	}
+
+	possibleCtx := filepath.Dir(path)
+
+	if strings.HasSuffix(possibleCtx, ".okteto") {
+		return filepath.Dir(possibleCtx)
+	}
+
 	fInfo, err := rd.fs.Stat(path)
 	if err != nil {
 		oktetoLog.Infof("error getting file info: %s", err)
 		return cwd
-
 	}
 	if fInfo.IsDir() {
 		return path
-	}
-
-	possibleCtx := filepath.Dir(path)
-	if strings.HasSuffix(possibleCtx, ".okteto") {
-		return filepath.Dir(possibleCtx)
 	}
 	return possibleCtx
 }
