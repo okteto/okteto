@@ -85,19 +85,22 @@ func (ob *OktetoBuilder) GetBuilder() string {
 
 // Run runs the build sequence
 func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error {
+	isDeployOrDestroy := buildOptions.OutputMode == DeployOutputModeOnBuild || buildOptions.OutputMode == DestroyOutputModeOnBuild
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
 	depotToken := os.Getenv(DepotTokenEnvVar)
 	depotProject := os.Getenv(DepotProjectEnvVar)
 
-	builder := ob.GetBuilder()
-	buildMsg := fmt.Sprintf("Building '%s'", buildOptions.File)
-	depotEnabled := isDepotEnabled(depotProject, depotToken)
-	if depotEnabled {
-		ioCtrl.Out().Infof("%s on depot's machine...", buildMsg)
-	} else if builder == "" {
-		ioCtrl.Out().Infof("%s using your local docker daemon", buildMsg)
-	} else {
-		ioCtrl.Out().Infof("%s in %s...", buildMsg, builder)
+	if !isDeployOrDestroy {
+		builder := ob.GetBuilder()
+		buildMsg := fmt.Sprintf("Building '%s'", buildOptions.File)
+		depotEnabled := isDepotEnabled(depotProject, depotToken)
+		if depotEnabled {
+			ioCtrl.Out().Infof("%s on depot's machine...", buildMsg)
+		} else if builder == "" {
+			ioCtrl.Out().Infof("%s using your local docker daemon", buildMsg)
+		} else {
+			ioCtrl.Out().Infof("%s in %s...", buildMsg, builder)
+		}
 	}
 
 	switch {

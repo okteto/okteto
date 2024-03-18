@@ -230,7 +230,7 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		return err
 	}
 
-	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: "deploy"})
+	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: buildCmd.DeployOutputModeOnBuild})
 	buildOptions.Manifest = deployOptions.Manifest
 	buildOptions.BuildArgs = append(
 		buildOptions.BuildArgs,
