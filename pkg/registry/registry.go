@@ -14,12 +14,12 @@
 package registry
 
 import (
-    "crypto/x509"
-    "fmt"
-    "strings"
+	"crypto/x509"
+	"fmt"
+	"strings"
 
-    "github.com/google/go-containerregistry/pkg/name"
-    oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/google/go-containerregistry/pkg/name"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 const globalTestImage = "okteto.global/test"
