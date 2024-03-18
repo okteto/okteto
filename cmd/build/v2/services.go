@@ -103,6 +103,7 @@ func (bc *OktetoBuilder) checkServiceToBuildDuringDeploy(service string, manifes
 		buildCh <- service
 		return nil
 	} else if err != nil {
+		// If there is an error trying to get the image from the registry, we just rebuild that image
 		bc.ioCtrl.Logger().Debugf("unexpected error checking if the images exist: %s", err)
 		buildCh <- service
 		return nil

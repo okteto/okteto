@@ -197,7 +197,6 @@ func (or OktetoRegistry) CloneGlobalImageToDev(imageWithDigest string) (string, 
 		return "", err
 	}
 
-	// TODO: Could we assume that the sha256 of the global image would be the same than the dev registry one?
 	// To return always the sha256 os the dev image
 	r, err := or.GetImageTagWithDigest(devImage)
 	if err != nil {

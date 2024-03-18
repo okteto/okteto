@@ -28,7 +28,9 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -161,11 +163,11 @@ func (*OktetoBuilder) IsV1() bool {
 // TODO: Function with cyclomatic complexity higher than threshold. Refactor function in order to reduce its complexity
 // skipcq: GO-R1005
 func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
-	/*if env.LoadBoolean(constants.OktetoDeployRemote) {
+	if env.LoadBoolean(constants.OktetoDeployRemote) {
 		// Since the local build has already been built,
 		// we have the environment variables set and we can skip this code
 		return nil
-	}*/
+	}
 	if options.File != "" {
 		workdir := model.GetWorkdirFromManifestPath(options.File)
 		if err := os.Chdir(workdir); err != nil {
@@ -216,7 +218,6 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				ob.ioCtrl.Logger().Infof("skipping image '%s' due to being already built", svcToBuild)
 				continue
 			}
-			// How do we build the image when all the dependencies are built?
 			if !areAllServicesBuilt(buildManifest[svcToBuild].DependsOn, builtImagesControl) {
 				ob.ioCtrl.Logger().Infof("image '%s' can't be deployed because at least one of its dependent images(%s) are not built", svcToBuild, strings.Join(buildManifest[svcToBuild].DependsOn, ", "))
 				continue

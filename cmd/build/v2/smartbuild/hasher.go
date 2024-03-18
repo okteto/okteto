@@ -89,7 +89,6 @@ func (sh *serviceHasher) hashWithBuildContext(buildInfo *build.Info, service str
 			// In case of error getting the dir commit, we just generate a random one, and it will rebuild the image
 			dirCommit = sh.calculateRandomShaForService(service)
 		}
-		oktetoLog.Debugf("############ Dir commit %q", dirCommit)
 
 		diffHash, err := sh.gitRepoCtrl.GetDiffHash(buildContext)
 		if err != nil {
@@ -98,15 +97,10 @@ func (sh *serviceHasher) hashWithBuildContext(buildInfo *build.Info, service str
 			diffHash = sh.calculateRandomShaForService(service)
 		}
 
-		oktetoLog.Debugf("############## Diff hash %q", diffHash)
-
 		sh.lock.Lock()
 		hash := sh.hash(buildInfo, dirCommit, diffHash)
-		oktetoLog.Debugf("############## Image hash %q", hash)
 		sh.serviceShaCache[service] = hash
 		sh.lock.Unlock()
-	} else {
-		oktetoLog.Debugf("############ getting the build context for service %q from the cache: %q", buildInfo.Name, sh.serviceShaCache[service])
 	}
 
 	return sh.serviceShaCache[service]
