@@ -24,10 +24,13 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoHttp "github.com/okteto/okteto/pkg/http"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
+
+const oktetoLocalRegistryStoreEnabledEnvVarKey = "OKTETO_LOCAL_REGISTRY_STORE_ENABLED"
 
 type clientInterface interface {
 	GetDigest(image string) (string, error)
@@ -183,6 +186,12 @@ func (c client) getAuthentication(ref name.Reference) remote.Option {
 		authn.DefaultKeychain,
 		authn.NewKeychainFromHelper(inlineHelper(c.config.GetExternalRegistryCredentials)),
 	)
+	if !env.LoadBooleanOrDefault(oktetoLocalRegistryStoreEnabledEnvVarKey, true) {
+		kc = authn.NewMultiKeychain(
+			authn.NewKeychainFromHelper(inlineHelper(c.config.GetExternalRegistryCredentials)),
+			authn.DefaultKeychain,
+		)
+	}
 
 	return remote.WithAuthFromKeychain(kc)
 }
