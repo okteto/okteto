@@ -46,7 +46,7 @@ func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus, o *types.
 	var outputMode string
 
 	if o.OutputMode == DestroyOutputModeOnBuild {
-		outputMode = DeployOutputModeOnBuild
+		outputMode = DestroyOutputModeOnBuild
 	} else {
 		outputMode = DeployOutputModeOnBuild
 	}
