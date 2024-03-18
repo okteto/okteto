@@ -39,7 +39,7 @@ type fakeRegistryController struct {
 	isGlobalRegistry bool
 }
 
-func (frc fakeRegistryController) CloneGlobalImageToDev(image string) (string, error) {
+func (frc fakeRegistryController) CloneGlobalImageToDev(image, _ string) (string, error) {
 	return image, frc.err
 }
 func (frc fakeRegistryController) IsGlobalRegistry(string) bool { return frc.isGlobalRegistry }
@@ -375,7 +375,7 @@ func TestCloneGlobalImageToDev(t *testing.T) {
 					isGlobalRegistry: tt.input.isGlobal,
 				},
 			}
-			out, err := sbc.CloneGlobalImageToDev("test")
+			out, err := sbc.CloneGlobalImageToDev("test", "default-tag")
 			assert.Equal(t, tt.output.hash, out)
 			assert.ErrorIs(t, err, tt.output.err)
 		})

@@ -444,7 +444,7 @@ func Test_OktetoRegistry_CloneGlobalImageToDev(t *testing.T) {
 				},
 			},
 			expected: expected{
-				image: "this.is.my.okteto.registry/test-ns/test-repo:okteto",
+				image: "this.is.my.okteto.registry/test-ns/test-repo:default-tag",
 				err:   nil,
 			},
 		},
@@ -457,7 +457,7 @@ func Test_OktetoRegistry_CloneGlobalImageToDev(t *testing.T) {
 				client:    tt.client,
 			}
 
-			result, err := or.CloneGlobalImageToDev(tt.input.image)
+			result, err := or.CloneGlobalImageToDev(tt.input.image, "default-tag")
 			assert.Equal(t, tt.expected.image, result)
 			if tt.expected.err != nil && err != nil {
 				assert.Equal(t, err.Error(), tt.expected.err.Error())
