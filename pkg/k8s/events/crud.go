@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	apiv1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -53,4 +54,9 @@ func GetUnhealthyEventFailure(ctx context.Context, namespace, podName string, c 
 		}
 	}
 	return ""
+}
+
+func Create(ctx context.Context, event *eventsv1.Event, c kubernetes.Interface) error {
+	_, err := c.EventsV1().Events(event.Namespace).Create(ctx, event, metav1.CreateOptions{})
+	return err
 }

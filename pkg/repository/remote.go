@@ -43,3 +43,7 @@ func (or oktetoRemoteRepoController) GetLatestDirCommit(string) (string, error) 
 func (or oktetoRemoteRepoController) GetDiffHash(string) (string, error) {
 	return "", fmt.Errorf("not-implemented")
 }
+
+func (or oktetoRemoteRepoController) getRepoURL() (string, error) {
+	return "", fmt.Errorf("not-implemented")
+}

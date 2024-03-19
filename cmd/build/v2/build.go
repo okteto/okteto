@@ -74,6 +74,7 @@ type OktetoBuilder struct {
 	Registry         oktetoRegistryInterface
 	Config           oktetoBuilderConfigInterface
 	analyticsTracker analyticsTrackerInterface
+	eventTracker     *eventTracker
 	oktetoContext    buildCmd.OktetoContextInterface
 
 	smartBuildCtrl *smartbuild.Ctrl
@@ -100,6 +101,11 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistry
 
 	buildEnvs := map[string]string{}
 	buildEnvs[OktetoEnableSmartBuildEnvVar] = strconv.FormatBool(config.isSmartBuildsEnable)
+	k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
+	c, _, err := k8sClientProvider.Provide(okCtx.GetCurrentCfg())
+	if err != nil {
+		ioCtrl.Logger().Infof("could not get k8s client: %s", err)
+	}
 	return &OktetoBuilder{
 		Builder:           basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl},
 		Registry:          registry,
@@ -110,6 +116,7 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistry
 		smartBuildCtrl:    smartbuild.NewSmartBuildCtrl(gitRepo, registry, config.fs, ioCtrl),
 		oktetoContext:     okCtx,
 		k8sLogger:         k8sLogger,
+		eventTracker:      newEventTracker(c, ioCtrl),
 	}
 }
 
@@ -139,6 +146,15 @@ func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *i
 
 	buildEnvs := map[string]string{}
 	buildEnvs[OktetoEnableSmartBuildEnvVar] = strconv.FormatBool(config.isSmartBuildsEnable)
+	okCtx := &okteto.ContextStateless{
+		Store: okteto.GetContextStore(),
+	}
+
+	k8sClientProvider := okteto.NewK8sClientProvider()
+	c, _, err := k8sClientProvider.Provide(okCtx.GetCurrentCfg())
+	if err != nil {
+		ioCtrl.Logger().Infof("could not get k8s client: %s", err)
+	}
 
 	return &OktetoBuilder{
 		Builder:           basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl},
@@ -148,9 +164,8 @@ func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *i
 		analyticsTracker:  analyticsTracker,
 		ioCtrl:            ioCtrl,
 		smartBuildCtrl:    smartbuild.NewSmartBuildCtrl(gitRepo, reg, config.fs, ioCtrl),
-		oktetoContext: &okteto.ContextStateless{
-			Store: okteto.GetContextStore(),
-		},
+		oktetoContext:     okCtx,
+		eventTracker:      newEventTracker(c, ioCtrl),
 	}
 }
 
@@ -208,6 +223,12 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	// send all events appended on each build
 	defer func([]*analytics.ImageBuildMetadata) {
 		ob.analyticsTracker.TrackImageBuild(buildsAnalytics...)
+		for _, meta := range buildsAnalytics {
+			m := meta
+			if err := ob.eventTracker.track(ctx, m); err != nil {
+				ob.ioCtrl.Logger().Infof("error tracking build event: %s", err)
+			}
+		}
 	}(buildsAnalytics)
 
 	ob.ioCtrl.Logger().Infof("Images to build: [%s]", strings.Join(toBuildSvcs, ", "))
@@ -232,6 +253,8 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			buildsAnalytics = append(buildsAnalytics, meta)
 
 			meta.Name = svcToBuild
+			meta.Namespace = ob.oktetoContext.GetCurrentNamespace()
+			meta.DevenvName = options.Manifest.Name
 			meta.RepoURL = ob.Config.GetAnonymizedRepo()
 
 			repoHashDurationStart := time.Now()
