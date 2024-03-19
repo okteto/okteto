@@ -147,7 +147,7 @@ func (fr fakeRegistry) IsGlobalRegistry(image string) bool { return false }
 
 func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string) { return "", "" }
 func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)   { return "", "" }
-func (fr fakeRegistry) CloneGlobalImageToDev(_, _ string) (string, error) {
+func (fr fakeRegistry) CloneGlobalImageToDev(_ string) (string, error) {
 	return "", nil
 }
 
@@ -255,42 +255,6 @@ func TestValidateOptions(t *testing.T) {
 	}
 }
 
-func TestOnlyInjectVolumeMountsInOkteto(t *testing.T) {
-	ctx := context.Background()
-	dir := t.TempDir()
-
-	registry := newFakeRegistry()
-	builder := test.NewFakeOktetoBuilder(registry)
-	fakeConfig := fakeConfig{
-		isOkteto: true,
-	}
-	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
-	manifest := &model.Manifest{
-		Name: "test",
-		Build: build.ManifestBuild{
-			"test": &build.Info{
-				Image: "nginx",
-				VolumesToInclude: []build.VolumeMounts{
-					{
-						LocalPath:  dir,
-						RemotePath: "test",
-					},
-				},
-			},
-		},
-	}
-	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
-
-	// error from the build
-	assert.NoError(t, err)
-	// assert that the name of the image is the dev one
-	assert.Equal(t, "okteto.dev/test-test:okteto-with-volume-mounts", image)
-	// the image is at the fake registry
-	image, err = bc.Registry.GetImageTagWithDigest(image)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, image)
-}
-
 func TestTwoStepsBuild(t *testing.T) {
 	ctx := context.Background()
 
@@ -323,11 +287,6 @@ func TestTwoStepsBuild(t *testing.T) {
 	// error from the build
 	assert.NoError(t, err)
 	// assert that the name of the image is the dev one
-	assert.Equal(t, "okteto.dev/test-test:okteto-with-volume-mounts", image)
-	// the image is at the fake registry
-	image, err = bc.Registry.GetImageTagWithDigest(image)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, image)
 	image, err = bc.Registry.GetImageTagWithDigest("okteto.dev/test-test:okteto")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, image)
@@ -433,25 +392,6 @@ func TestBuildWithStack(t *testing.T) {
 	image, err = bc.Registry.GetImageTagWithDigest(image)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, image)
-}
-
-func Test_getAccessibleVolumeMounts(t *testing.T) {
-	existingPath := "./existing-folder"
-	missingPath := "./missing-folder"
-	buildInfo := &build.Info{
-		VolumesToInclude: []build.VolumeMounts{
-			{LocalPath: existingPath, RemotePath: "/data/logs"},
-			{LocalPath: missingPath, RemotePath: "/data/logs"},
-		},
-	}
-	err := os.Mkdir(existingPath, 0750)
-	if err != nil {
-		t.Fatal(err)
-	}
-	volumes := getAccessibleVolumeMounts(buildInfo)
-	err = os.Remove(existingPath)
-	assert.NoError(t, err)
-	assert.Len(t, volumes, 1)
 }
 
 func createDockerfile(t *testing.T) (string, error) {

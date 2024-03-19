@@ -251,7 +251,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			isOkteto: true,
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
-				Tag:        "okteto.dev/movies-service:okteto-with-volume-mounts",
+				Tag:        "okteto.dev/movies-service:okteto",
 				File:       filepath.Join(serviceContext, serviceDockerfile),
 				Target:     "build",
 				Path:       "service",

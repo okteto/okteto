@@ -37,7 +37,6 @@ func (fsc *fakeSmartBuildCtrl) IsBuildContextEnabled() bool {
 func TestInitTaggers(t *testing.T) {
 	cfg := fakeConfig{}
 	assert.Implements(t, (*imageTaggerInterface)(nil), newImageTagger(cfg, &fakeSmartBuildCtrl{}))
-	assert.Implements(t, (*imageTaggerInterface)(nil), newImageWithVolumesTagger(cfg, &fakeSmartBuildCtrl{}))
 }
 
 func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
@@ -191,78 +190,6 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 	}
 }
 
-func TestImageTaggerWithVolumesTag(t *testing.T) {
-	tt := []struct {
-		b             *build.Info
-		name          string
-		expectedImage string
-		cfg           fakeConfig
-	}{
-		{
-			name: "image inferred without access to global",
-			cfg: fakeConfig{
-				isClean:   true,
-				hasAccess: false,
-				sha:       "sha",
-			},
-			b: &build.Info{
-				Dockerfile: "Dockerfile",
-				Context:    ".",
-			},
-			expectedImage: "okteto.dev/test-test:okteto-with-volume-mounts",
-		},
-		{
-			name: "image inferred without clean project",
-			cfg: fakeConfig{
-				isClean:   false,
-				hasAccess: true,
-				sha:       "sha",
-			},
-			b: &build.Info{
-				Dockerfile: "Dockerfile",
-				Context:    ".",
-			},
-			expectedImage: "okteto.dev/test-test:okteto-with-volume-mounts",
-		},
-		{
-			name: "image inferred with clean project, has access to global registry but no feature flag enabled",
-			cfg: fakeConfig{
-				isClean:   true,
-				hasAccess: true,
-				sha:       "sha",
-			},
-			b: &build.Info{
-				Dockerfile: "Dockerfile",
-				Context:    ".",
-			},
-			expectedImage: "okteto.dev/test-test:okteto-with-volume-mounts",
-		},
-		{
-			name: "image inferred with clean project, has access to global registry and feature flag enabled",
-			cfg: fakeConfig{
-				isClean:             true,
-				hasAccess:           true,
-				sha:                 "sha",
-				isSmartBuildsEnable: true,
-			},
-			b: &build.Info{
-				Dockerfile: "Dockerfile",
-				Context:    ".",
-			},
-			expectedImage: "okteto.global/test-test:okteto-with-volume-mounts-sha",
-		},
-	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageWithVolumesTagger(tc.cfg, &fakeSmartBuildCtrl{
-				isEnabled: tc.cfg.isSmartBuildsEnable,
-			})
-			buildHash := tc.cfg.sha
-			assert.Equal(t, tc.expectedImage, tagger.getServiceImageReference("test", "test", tc.b, buildHash))
-		})
-	}
-}
-
 func TestImageTaggerGetPossibleHashImages(t *testing.T) {
 	tt := []struct {
 		name           string
@@ -290,36 +217,6 @@ func TestImageTaggerGetPossibleHashImages(t *testing.T) {
 					isOkteto: true,
 				},
 				&fakeSmartBuildCtrl{})
-			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTag("test", "test", tc.sha))
-		})
-	}
-}
-
-func TestImageTaggerWithVolumesGetPossibleHashImages(t *testing.T) {
-	tt := []struct {
-		name           string
-		sha            string
-		expectedImages []string
-	}{
-		{
-			name:           "no sha",
-			sha:            "",
-			expectedImages: []string{},
-		},
-		{
-			name: "sha",
-			sha:  "sha",
-			expectedImages: []string{
-				"okteto.dev/test-test:okteto-with-volume-mounts-sha",
-				"okteto.global/test-test:okteto-with-volume-mounts-sha",
-			},
-		},
-	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageWithVolumesTagger(fakeConfig{
-				isOkteto: true,
-			}, &fakeSmartBuildCtrl{})
 			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTag("test", "test", tc.sha))
 		})
 	}
@@ -369,39 +266,6 @@ func TestImageTaggerGetPossibleTags(t *testing.T) {
 	}
 }
 
-func TestImageTaggerWithVolumesGetPossibleTags(t *testing.T) {
-	tt := []struct {
-		name           string
-		sha            string
-		expectedImages []string
-	}{
-		{
-			name: "no sha",
-			sha:  "",
-			expectedImages: []string{
-				"okteto.dev/test-test:okteto-with-volume-mounts",
-				"okteto.global/test-test:okteto-with-volume-mounts",
-			},
-		},
-		{
-			name: "sha",
-			sha:  "sha",
-			expectedImages: []string{
-				"okteto.dev/test-test:okteto-with-volume-mounts-sha",
-				"okteto.global/test-test:okteto-with-volume-mounts-sha",
-				"okteto.dev/test-test:okteto-with-volume-mounts",
-				"okteto.global/test-test:okteto-with-volume-mounts",
-			},
-		},
-	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageWithVolumesTagger(fakeConfig{isOkteto: true}, &fakeSmartBuildCtrl{})
-			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTagWithDefaults("test", "test", tc.sha))
-		})
-	}
-}
-
 func Test_getTargetRegistries(t *testing.T) {
 	tt := []struct {
 		name     string
@@ -432,15 +296,6 @@ func Test_getTargetRegistries(t *testing.T) {
 func TestImageTaggerWithoutVolumesGetImageReferenceForDeploy(t *testing.T) {
 	imageTagger := &imageTagger{}
 	expected := []string{"okteto.dev/test-repository-service-a:okteto"}
-
-	result := imageTagger.getImageReferencesForDeploy("test repository", "service-a")
-
-	require.Equal(t, expected, result)
-}
-
-func TestImageTaggerWithVolumesGetImageReferenceForDeploy(t *testing.T) {
-	imageTagger := &imagerTaggerWithVolumes{}
-	expected := []string{"okteto.dev/test-repository-service-a:okteto-with-volume-mounts"}
 
 	result := imageTagger.getImageReferencesForDeploy("test repository", "service-a")
 

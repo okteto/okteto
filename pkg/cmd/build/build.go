@@ -261,9 +261,6 @@ func OptsFromBuildInfo(manifestName, svcName string, b *build.Info, o *types.Bui
 			targetRegistry = constants.GlobalRegistry
 		}
 		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
-		if len(b.VolumesToInclude) > 0 {
-			b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes)
-		}
 	}
 
 	file := b.Dockerfile
