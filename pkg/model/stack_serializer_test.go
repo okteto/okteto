@@ -1439,7 +1439,7 @@ func Test_UnmarshalSvcName(t *testing.T) {
 	}
 }
 
-func Test_DeployLabels(t *testing.T) {
+func Test_DeployLabelsAndAnnotations(t *testing.T) {
 	tests := []struct {
 		annotations Annotations
 		labels      Labels
@@ -1447,48 +1447,158 @@ func Test_DeployLabels(t *testing.T) {
 		manifest    []byte
 		isCompose   bool
 	}{
-
 		{
-			name:        "deploy labels",
-			manifest:    []byte("services:\n  app:\n    deploy:\n      labels:\n        env: production\n    image: okteto/vote:1"),
-			annotations: Annotations{"env": "production"},
-			labels:      Labels{},
-			isCompose:   true,
-		},
-		{
-			name:        "no labels",
-			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1"),
+			name: "compose - no labels or annotations",
+			manifest: []byte(`
+services:
+  app:
+    image: okteto/vote:1
+`),
 			annotations: Annotations{},
 			labels:      Labels{},
 			isCompose:   true,
 		},
 		{
-			name:        "labels on service",
-			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1\n    labels:\n      env: production"),
+			name: "compose - deploy labels",
+			manifest: []byte(`
+services:
+  app:
+    deploy:
+      labels:
+        env: production
+    image: okteto/vote:1
+`),
 			annotations: Annotations{"env": "production"},
 			labels:      Labels{},
 			isCompose:   true,
 		},
 		{
-			name:        "labels on deploy and service",
-			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1\n    labels:\n      app: main\n    deploy:\n      labels:\n        env: production\n"),
-			annotations: Annotations{"env": "production", "app": "main"},
+			name: "compose - labels on service",
+			manifest: []byte(`
+services:
+  app:
+    image: okteto/vote:1
+    labels:
+      env: production
+`),
+			annotations: Annotations{"env": "production"},
 			labels:      Labels{},
 			isCompose:   true,
 		},
-
 		{
-			name:        "labels on deploy and service",
-			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1\n    labels:\n      app: main\n    deploy:\n      labels:\n        env: production\n"),
+			name: "compose - annotations on service",
+			manifest: []byte(`
+services:
+  app:
+    image: okteto/vote:1
+    annotations:
+      env: production
+`),
+			annotations: Annotations{},
+			labels:      Labels{"env": "production"},
+			isCompose:   true,
+		},
+		{
+			name: "compose - labels on deploy and service and annotations",
+			manifest: []byte(`
+services:
+  app:
+    deploy:
+      labels:
+        env: production
+    image: okteto/vote:1
+    labels:
+      app: main
+    annotations:
+      annotation: test
+`),
+			annotations: Annotations{"env": "production", "app": "main"},
+			labels:      Labels{"annotation": "test"},
+			isCompose:   true,
+		},
+		{
+			name: "stack - no labels or annotations",
+			manifest: []byte(`
+services:
+  app:
+    image: okteto/vote:1
+`),
+			annotations: Annotations{},
+			labels:      Labels{},
+			isCompose:   false,
+		},
+		{
+			name: "stack - deploy labels",
+			manifest: []byte(`
+services:
+  app:
+    deploy:
+      labels:
+        env: production
+    image: okteto/vote:1
+`),
+			annotations: Annotations{},
+			labels:      Labels{"env": "production"},
+			isCompose:   false,
+		},
+		{
+			name: "stack - labels on deploy and service",
+			manifest: []byte(`
+services:
+  app:
+    deploy:
+      labels:
+        env: production
+    image: okteto/vote:1
+    labels:
+      app: main
+`),
 			annotations: Annotations{},
 			labels:      Labels{"app": "main", "env": "production"},
 			isCompose:   false,
 		},
 		{
-			name:        "labels on service",
-			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1\n    labels:\n      env: production"),
+			name: "stack - labels on service",
+			manifest: []byte(`
+services:
+  app:
+    image: okteto/vote:1
+    labels:
+      env: production
+`),
 			annotations: Annotations{},
 			labels:      Labels{"env": "production"},
+			isCompose:   false,
+		},
+		{
+			name: "stack - annotations on service",
+			manifest: []byte(`
+services:
+  app:
+    image: okteto/vote:1
+    annotations:
+      env: production
+`),
+			annotations: Annotations{"env": "production"},
+			labels:      Labels{},
+			isCompose:   false,
+		},
+		{
+			name: "stack - labels on deploy and service and annotations",
+			manifest: []byte(`
+services:
+  app:
+    deploy:
+      labels:
+        env: production
+    image: okteto/vote:1
+    labels:
+      app: main
+    annotations:
+      annotation: test
+`),
+			annotations: Annotations{"annotation": "test"},
+			labels:      Labels{"env": "production", "app": "main"},
 			isCompose:   false,
 		},
 	}

@@ -547,7 +547,6 @@ func translateLabelSelector(svcName string, s *model.Stack) map[string]string {
 }
 
 func translateAnnotations(svc *model.Service) map[string]string {
-
 	result := getAnnotations()
 	for k, v := range svc.Annotations {
 		result[k] = v

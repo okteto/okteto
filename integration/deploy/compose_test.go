@@ -204,8 +204,8 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	// Test that the nginx image has been created correctly
 	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
-	require.Equal(t, appDeployment.ObjectMeta.Annotations["dev.okteto.com/annotation-1"], "value-annotation-1")
-	require.Equal(t, appDeployment.ObjectMeta.Annotations["dev.okteto.com/annotation-2"], "value-annotation-2")
+	require.Equal(t, appDeployment.ObjectMeta.Labels["dev.okteto.com/annotation-1"], "value-annotation-1")
+	require.Equal(t, appDeployment.ObjectMeta.Labels["dev.okteto.com/annotation-2"], "value-annotation-2")
 	require.Equal(t, appDeployment.ObjectMeta.Annotations["dev.okteto.com/label-1"], "value-label-1")
 	require.Equal(t, appDeployment.ObjectMeta.Annotations["dev.okteto.com/label-2"], "value-label-2")
 

@@ -399,11 +399,14 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		translateHealtcheckCurlToHTTP(svc.Healtcheck)
 	}
 
-	svc.Annotations = serviceRaw.Annotations
+	svc.NodeSelector = serviceRaw.NodeSelector
+
+	if svc.Labels == nil {
+		svc.Labels = make(Labels)
+	}
 	if svc.Annotations == nil {
 		svc.Annotations = make(Annotations)
 	}
-	svc.NodeSelector = serviceRaw.NodeSelector
 
 	if stack.IsCompose {
 		if len(serviceRaw.Args.Values) > 0 {
@@ -415,7 +418,9 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		for key, value := range unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy) {
 			svc.Annotations[key] = value
 		}
-
+		for key, value := range serviceRaw.Annotations {
+			svc.Labels[key] = value
+		}
 	} else { // isOktetoStack
 		if len(serviceRaw.Entrypoint.Values) > 0 {
 			return nil, fmt.Errorf("unsupported field for services.%s: 'entrypoint'", svcName)
@@ -428,12 +433,10 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		}
 		svc.Command.Values = serviceRaw.Args.Values
 
-		if svc.Labels == nil {
-			svc.Labels = make(Labels)
-		}
 		for key, value := range unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy) {
 			svc.Labels[key] = value
 		}
+		svc.Annotations = serviceRaw.Annotations
 	}
 
 	svc.EnvFiles = serviceRaw.EnvFiles
