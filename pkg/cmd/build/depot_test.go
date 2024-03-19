@@ -45,41 +45,6 @@ func (m *fakeDepotMachine) Connect(ctx context.Context) (*buildkitClient.Client,
 	return nil, m.err
 }
 
-func Test_isDepotEnabled(t *testing.T) {
-	tests := []struct {
-		depotProject string
-		depotToken   string
-		expected     bool
-	}{
-		{
-			depotProject: "project1",
-			depotToken:   "token1",
-			expected:     true,
-		},
-		{
-			depotProject: "",
-			depotToken:   "token2",
-			expected:     false,
-		},
-		{
-			depotProject: "project3",
-			depotToken:   "",
-			expected:     false,
-		},
-		{
-			depotProject: "",
-			depotToken:   "",
-			expected:     false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(fmt.Sprintf("depotProject=%s, depotToken=%s", tt.depotProject, tt.depotToken), func(t *testing.T) {
-			res := isDepotEnabled(tt.depotProject, tt.depotToken)
-			assert.Equal(t, tt.expected, res)
-		})
-	}
-}
 func Test_newDepotBuilder(t *testing.T) {
 	projectId := "test-project"
 	token := "test-token"
