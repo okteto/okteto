@@ -290,7 +290,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	s.Volumes = make(map[string]*VolumeSpec)
 	for volumeName, volume := range stackRaw.Volumes {
-		volumeSpec, err := unmarshalVolume(volume)
+		volumeSpec, err := unmarshalVolume(volume, s.IsCompose)
 		if err != nil {
 			return err
 		}
@@ -317,22 +317,27 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func unmarshalVolume(volume *VolumeTopLevel) (*VolumeSpec, error) {
+func unmarshalVolume(volume *VolumeTopLevel, isCompose bool) (*VolumeSpec, error) {
+	result := &VolumeSpec{
+		Labels:      make(Labels),
+		Annotations: make(Annotations),
+	}
 
-	result := &VolumeSpec{}
-	if volume == nil {
-		result.Labels = make(Labels)
-		result.Annotations = make(Annotations)
-	} else {
-		result.Labels = make(Labels)
-		if volume.Annotations == nil {
-			result.Annotations = make(Annotations)
-		} else {
-			result.Annotations = volume.Annotations
-		}
-
-		for key, value := range volume.Labels {
-			result.Annotations[key] = value
+	if volume != nil {
+		if isCompose {
+			for key, value := range volume.Annotations {
+				result.Labels[key] = value
+			}
+			for key, value := range volume.Labels {
+				result.Annotations[key] = value
+			}
+		} else { // stack
+			for key, value := range volume.Annotations {
+				result.Annotations[key] = value
+			}
+			for key, value := range volume.Labels {
+				result.Annotations[key] = value
+			}
 		}
 
 		if volume.Size.Value.Cmp(resource.MustParse("0")) > 0 {

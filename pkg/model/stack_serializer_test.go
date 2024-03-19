@@ -1223,52 +1223,163 @@ func Test_unmarshalVolumes(t *testing.T) {
 		expectedVolume *VolumeSpec
 		name           string
 		manifest       []byte
+		isCompose      bool
 	}{
 		{
-			name:           "simple volume",
-			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  apiv1:\n"),
-			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Labels: make(map[string]string), Annotations: make(map[string]string)},
+			name: "simple volume",
+			manifest: []byte(`
+services:
+  app:
+    image: okteto/vote:1
+volumes:
+  apiv1:
+`),
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Labels: Labels{}, Annotations: Annotations{}},
 		},
 		{
-			name:           "volume with size",
-			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  apiv1:\n    size: 2Gi"),
-			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("2Gi")}, Labels: make(map[string]string), Annotations: make(map[string]string)},
+			name: "volume with size",
+			manifest: []byte(`
+services:
+  app:
+    image: okteto/vote:1
+volumes:
+  apiv1:
+    size: 2Gi
+`),
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("2Gi")}, Labels: Labels{}, Annotations: Annotations{}},
 		},
 		{
-			name:           "volume with driver_opts.size",
-			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  apiv1:\n    driver_opts:\n      size: 2Gi"),
-			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("2Gi")}, Labels: make(map[string]string), Annotations: make(map[string]string)},
+			name: "volume with driver_opts.size",
+			manifest: []byte(`
+services:
+  app:
+    image: okteto/vote:1
+volumes:
+  apiv1:
+    driver_opts:
+      size: 2Gi
+`),
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("2Gi")}, Labels: Labels{}, Annotations: Annotations{}},
 		},
 		{
-			name:           "volume with driver_opts.class",
-			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  apiv1:\n    driver_opts:\n      class: standard"),
-			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Class: "standard", Labels: make(map[string]string), Annotations: make(map[string]string)},
+			name: "volume with driver_opts.class",
+			manifest: []byte(`
+services:
+  app:
+    image: okteto/vote:1
+volumes:
+  apiv1:
+    driver_opts:
+      class: standard
+`),
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Class: "standard", Labels: Labels{}, Annotations: Annotations{}},
 		},
 		{
-			name:           "volume with class",
-			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  apiv1:\n    class: standard"),
-			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Class: "standard", Labels: make(map[string]string), Annotations: make(map[string]string)},
+			name: "volume with class",
+			manifest: []byte(`
+services:
+  app:
+    image: okteto/vote:1
+volumes:
+  apiv1:
+    class: standard
+`),
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Class: "standard", Labels: Labels{}, Annotations: Annotations{}},
 		},
 		{
-			name:           "volume with labels",
-			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  apiv1:\n    labels:\n      env: test"),
+			name:      "compose - volume with labels",
+			isCompose: true,
+			manifest: []byte(`
+services:
+  app:
+    image: okteto/vote:1
+volumes:
+  apiv1:
+    labels:
+      env: test
+`),
 			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Labels: Labels{}, Annotations: Annotations{"env": "test"}},
 		},
 		{
-			name:           "volume with annotations",
-			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  apiv1:\n    annotations:\n      env: test"),
-			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Annotations: map[string]string{"env": "test"}, Labels: make(map[string]string)},
+			name:      "compose - volume with annotations",
+			isCompose: true,
+			manifest: []byte(`
+services:
+  app:
+    image: okteto/vote:1
+volumes:
+  apiv1:
+    annotations:
+      env: test
+`),
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Labels: Labels{"env": "test"}, Annotations: Annotations{}},
+		},
+		{
+			name:      "compose - volume with labels and annotations",
+			isCompose: true,
+			manifest: []byte(`
+services:
+  app:
+    image: okteto/vote:1
+volumes:
+  apiv1:
+    labels:
+      label-env: label-test
+    annotations:
+      annotation-env: annotation-test
+`),
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Labels: Labels{"annotation-env": "annotation-test"}, Annotations: Annotations{"label-env": "label-test"}},
+		},
+		{
+			name:      "stack - volume with labels",
+			isCompose: false,
+			manifest: []byte(`
+services:
+  app:
+    image: okteto/vote:1
+volumes:
+  apiv1:
+    labels:
+      env: test
+`),
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Labels: Labels{}, Annotations: Annotations{"env": "test"}},
+		},
+		{
+			name:      "stack - volume with annotations",
+			isCompose: false,
+			manifest: []byte(`
+services:
+  app:
+    image: okteto/vote:1
+volumes:
+  apiv1:
+    annotations:
+      env: test
+`),
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Annotations: Annotations{"env": "test"}, Labels: Labels{}},
+		},
+		{
+			name:      "stack - volume with labels and annotations",
+			isCompose: false,
+			manifest: []byte(`
+services:
+  app:
+    image: okteto/vote:1
+volumes:
+  apiv1:
+    labels:
+      label-env: label-test
+    annotations:
+      annotation-env: annotation-test
+`),
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Labels: Labels{}, Annotations: Annotations{"annotation-env": "annotation-test", "label-env": "label-test"}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := ReadStack(tt.manifest, false)
-			if err != nil {
-				t.Fatalf("Unmarshal failed: %s", err.Error())
-			}
-			if !reflect.DeepEqual(s.Volumes["apiv1"], tt.expectedVolume) {
-				t.Fatalf("Expected %v but got %v", tt.expectedVolume, s.Volumes["apiv1"])
-			}
+			s, err := ReadStack(tt.manifest, tt.isCompose)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedVolume, s.Volumes["apiv1"])
 		})
 	}
 }

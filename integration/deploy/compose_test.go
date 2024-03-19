@@ -214,8 +214,8 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 
 	appVolume, err := integration.GetVolume(context.Background(), testNamespace, "data", c)
 	require.NoError(t, err)
-	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/annotation-1"], "volume-annotation-1")
-	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/annotation-2"], "volume-annotation-2")
+	require.Equal(t, appVolume.ObjectMeta.Labels["dev.okteto.com/annotation-1"], "volume-annotation-1")
+	require.Equal(t, appVolume.ObjectMeta.Labels["dev.okteto.com/annotation-2"], "volume-annotation-2")
 	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/label-1"], "volume-label-1")
 	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/label-2"], "volume-label-2")
 
