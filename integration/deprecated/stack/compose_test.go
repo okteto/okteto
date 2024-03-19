@@ -270,9 +270,9 @@ func createAppDockerfile(dir string) error {
 }
 
 func createNginxDockerfile(dir string) error {
-	appDockerfilePath := filepath.Join(dir, "nginx", "Dockerfile")
-	appDockerfileContent := []byte(nginxDockerfile)
-	if err := os.WriteFile(appDockerfilePath, appDockerfileContent, 0600); err != nil {
+	nginxDockerfilePath := filepath.Join(dir, "nginx", "Dockerfile")
+	nginxDockerfileContent := []byte(nginxDockerfile)
+	if err := os.WriteFile(nginxDockerfilePath, nginxDockerfileContent, 0600); err != nil {
 		return err
 	}
 	return nil
