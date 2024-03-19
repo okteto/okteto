@@ -92,7 +92,7 @@ func TestDependencies(t *testing.T) {
 	}
 
 	output, err := commands.GetOktetoDeployCmdOutput(oktetoPath, deployOptions)
-	require.NoError(t, err)
+	require.NoError(t, err, "there was an error executing the command, output is: %s", string(output))
 
 	expectedOutputCommand := "dependency variable test-value"
 	require.Contains(t, strings.ToLower(string(output)), expectedOutputCommand)
@@ -138,7 +138,7 @@ func TestDependenciesOnRemote(t *testing.T) {
 	}
 
 	output, err := commands.GetOktetoDeployCmdOutput(oktetoPath, deployOptions)
-	require.NoError(t, err)
+	require.NoError(t, err, "there was an error executing the command, output is: %s", string(output))
 
 	expectedOutputCommand := "dependency variable test-value"
 	require.Contains(t, strings.ToLower(string(output)), expectedOutputCommand)
