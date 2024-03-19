@@ -174,9 +174,3 @@ func (sh *serviceHasher) getServiceShaInCache(service string) string {
 	}
 	return v
 }
-
-func (sh *serviceHasher) getProjectCommitHashInCache() string {
-	sh.lock.RLock()
-	defer sh.lock.RUnlock()
-	return sh.projectCommit
-}

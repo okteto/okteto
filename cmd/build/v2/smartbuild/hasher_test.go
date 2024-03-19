@@ -129,12 +129,3 @@ func TestGetBuildContextHashInCache(t *testing.T) {
 		})
 	}
 }
-
-func TestGetProjectCommitHashInCache(t *testing.T) {
-	sh := newServiceHasher(nil, afero.NewMemMapFs())
-	result := sh.getProjectCommitHashInCache()
-	assert.Equal(t, "", result)
-	sh.projectCommit = "hash123"
-	result = sh.getProjectCommitHashInCache()
-	assert.Equal(t, "hash123", result)
-}

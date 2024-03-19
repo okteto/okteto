@@ -25,9 +25,6 @@ import (
 const (
 	// OktetoEnableSmartBuildEnvVar represents whether the feature flag to enable smart builds is enabled or not
 	OktetoEnableSmartBuildEnvVar = "OKTETO_SMART_BUILDS_ENABLED"
-
-	// OktetoSmartBuildUsingContextEnvVar is the env var to enable smart builds using the build context instead of the project commit
-	OktetoSmartBuildUsingContextEnvVar = "OKTETO_SMART_BUILDS_USING_BUILD_CONTEXT"
 )
 
 // registryController is the interface to interact with registries
@@ -47,7 +44,6 @@ type hasherController interface {
 	hashProjectCommit(*build.Info) (string, error)
 	hashWithBuildContext(*build.Info, string) string
 	getServiceShaInCache(string) string
-	getProjectCommitHashInCache() string
 }
 
 // Ctrl is the controller for smart builds
@@ -58,35 +54,25 @@ type Ctrl struct {
 
 	hasher hasherController
 
-	isEnabled           bool
-	isUsingBuildContext bool
+	isEnabled bool
 }
 
 // NewSmartBuildCtrl creates a new smart build controller
 func NewSmartBuildCtrl(repo repositoryInterface, registry registryController, fs afero.Fs, ioCtrl *io.Controller) *Ctrl {
 	isEnabled := env.LoadBooleanOrDefault(OktetoEnableSmartBuildEnvVar, true)
-	// If using build context is not explicitly set, we use the value of smart builds
-	isUsingBuildCtx := env.LoadBooleanOrDefault(OktetoSmartBuildUsingContextEnvVar, isEnabled)
 
 	return &Ctrl{
-		gitRepo:             repo,
-		isEnabled:           isEnabled,
-		isUsingBuildContext: isUsingBuildCtx,
-		hasher:              newServiceHasher(repo, fs),
-		registryController:  registry,
-		ioCtrl:              ioCtrl,
+		gitRepo:            repo,
+		isEnabled:          isEnabled,
+		hasher:             newServiceHasher(repo, fs),
+		registryController: registry,
+		ioCtrl:             ioCtrl,
 	}
 }
 
 // IsEnabled returns true if smart builds are enabled, false otherwise
 func (s *Ctrl) IsEnabled() bool {
 	return s.isEnabled
-}
-
-// IsBuildContextEnabled returns true if the build context implementation of smart builds is enabled.
-// This could be temporal until we remove the project commit implementation
-func (s *Ctrl) IsBuildContextEnabled() bool {
-	return s.isUsingBuildContext
 }
 
 // GetProjectHash returns the commit hash of the project
@@ -102,26 +88,19 @@ func (s *Ctrl) GetServiceHash(buildInfo *build.Info, service string) string {
 }
 
 // GetBuildHash returns the hash of the build based on the env vars
-func (s *Ctrl) GetBuildHash(buildInfo *build.Info, service string) (string, error) {
+func (s *Ctrl) GetBuildHash(buildInfo *build.Info, service string) string {
 	s.ioCtrl.Logger().Debugf("getting hash based on the buildContext env var")
-	if s.isUsingBuildContext {
-		s.ioCtrl.Logger().Info("getting hash using build context due to env var")
-		return s.hasher.hashWithBuildContext(buildInfo, service), nil
-	}
-	s.ioCtrl.Logger().Info("getting hash using project commit")
-	return s.hasher.hashProjectCommit(buildInfo)
+	s.ioCtrl.Logger().Info("getting hash using build context due to env var")
+	return s.hasher.hashWithBuildContext(buildInfo, service)
 }
 
 // GetBuildCommit returns the commit that generated the smart build
 func (s *Ctrl) GetBuildCommit(serviceName string) string {
-	if s.isUsingBuildContext {
-		commit := s.hasher.getServiceShaInCache(serviceName)
-		if commit == "" {
-			s.ioCtrl.Logger().Debugf("image sha for service '%s' not found in cache", serviceName)
-		}
-		return commit
+	commit := s.hasher.getServiceShaInCache(serviceName)
+	if commit == "" {
+		s.ioCtrl.Logger().Debugf("image sha for service '%s' not found in cache", serviceName)
 	}
-	return s.hasher.getProjectCommitHashInCache()
+	return commit
 }
 
 // CloneGlobalImageToDev clones the image from the global registry to the dev registry if needed

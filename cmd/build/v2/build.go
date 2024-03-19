@@ -255,10 +255,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				imageChecker := getImageChecker(ob.Config, ob.Registry, ob.smartBuildCtrl, ob.ioCtrl.Logger())
 				cacheHitDurationStart := time.Now()
 
-				buildHash, err := ob.smartBuildCtrl.GetBuildHash(buildSvcInfo, svcToBuild)
-				if err != nil {
-					ob.ioCtrl.Logger().Infof("error getting build hash: %s", err)
-				}
+				buildHash := ob.smartBuildCtrl.GetBuildHash(buildSvcInfo, svcToBuild)
 				imageWithDigest, isBuilt := imageChecker.checkIfBuildHashIsBuilt(options.Manifest.Name, svcToBuild, buildHash)
 
 				meta.CacheHit = isBuilt
@@ -338,10 +335,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	var err error
 	var buildHash string
 	if bc.smartBuildCtrl.IsEnabled() {
-		buildHash, err = bc.smartBuildCtrl.GetBuildHash(buildSvcInfo, svcName)
-		if err != nil {
-			bc.ioCtrl.Logger().Infof("error getting build hash: %s", err)
-		}
+		buildHash = bc.smartBuildCtrl.GetBuildHash(buildSvcInfo, svcName)
 	}
 	tagToBuild := newImageTagger(bc.Config, bc.smartBuildCtrl).getServiceImageReference(manifest.Name, svcName, buildSvcInfo, buildHash)
 	buildSvcInfo.Image = tagToBuild

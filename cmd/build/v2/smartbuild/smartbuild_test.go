@@ -53,17 +53,14 @@ func (fh fakeHasher) hashProjectCommit(*build.Info) (string, error) { return fh.
 func (fh fakeHasher) hashWithBuildContext(*build.Info, string) string {
 	return fh.hash
 }
-func (fh fakeHasher) getServiceShaInCache(string) string  { return fh.hash }
-func (fh fakeHasher) getProjectCommitHashInCache() string { return fh.hash }
+func (fh fakeHasher) getServiceShaInCache(string) string { return fh.hash }
 
 func TestNewSmartBuildCtrl(t *testing.T) {
 	type input struct {
-		isEnabledValue  string
-		isBuildCtxValue string
+		isEnabledValue string
 	}
 	type output struct {
-		isEnabled  bool
-		isBuildCtx bool
+		isEnabled bool
 	}
 
 	tests := []struct {
@@ -74,45 +71,28 @@ func TestNewSmartBuildCtrl(t *testing.T) {
 		{
 			name: "Default Configuration",
 			input: input{
-				isEnabledValue:  "",
-				isBuildCtxValue: "",
+				isEnabledValue: "",
 			},
 			output: output{
-				isEnabled:  true,
-				isBuildCtx: true,
+				isEnabled: true,
 			},
 		},
 		{
 			name: "Environment Variable Disabled",
 			input: input{
-				isEnabledValue:  "false",
-				isBuildCtxValue: "",
+				isEnabledValue: "false",
 			},
 			output: output{
-				isEnabled:  false,
-				isBuildCtx: false,
+				isEnabled: false,
 			},
 		},
 		{
-			name: "Using Build Context Enabled",
+			name: "Environment variable Enabled",
 			input: input{
-				isEnabledValue:  "true",
-				isBuildCtxValue: "true",
+				isEnabledValue: "true",
 			},
 			output: output{
-				isEnabled:  true,
-				isBuildCtx: true,
-			},
-		},
-		{
-			name: "Smart builds enabled but build context disabled",
-			input: input{
-				isEnabledValue:  "true",
-				isBuildCtxValue: "false",
-			},
-			output: output{
-				isEnabled:  true,
-				isBuildCtx: false,
+				isEnabled: true,
 			},
 		},
 	}
@@ -120,12 +100,10 @@ func TestNewSmartBuildCtrl(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(OktetoEnableSmartBuildEnvVar, tt.input.isEnabledValue)
-			t.Setenv(OktetoSmartBuildUsingContextEnvVar, tt.input.isBuildCtxValue)
 
 			ctrl := NewSmartBuildCtrl(&fakeConfigRepo{}, &fakeRegistryController{}, afero.NewMemMapFs(), io.NewIOController())
 
 			assert.Equal(t, tt.output.isEnabled, ctrl.IsEnabled())
-			assert.Equal(t, tt.output.isBuildCtx, ctrl.isUsingBuildContext)
 		})
 	}
 }
@@ -197,109 +175,31 @@ func TestGetServiceHash(t *testing.T) {
 }
 
 func TestGetBuildHash(t *testing.T) {
-	type input struct {
-		err                 error
-		hash                string
-		isUsingBuildContext bool
-	}
-	type output struct {
-		err  error
-		hash string
-	}
-
 	service := "fake-service"
-	tests := []struct {
-		output output
-		name   string
-		input  input
-	}{
-		{
-			name: "project commit - correct hash",
-			input: input{
-				hash:                "hash",
-				err:                 nil,
-				isUsingBuildContext: false,
-			},
-			output: output{
-				hash: "hash",
-				err:  nil,
-			},
-		},
-		{
-			name: "project commit - error",
-			input: input{
-				hash:                "",
-				err:                 assert.AnError,
-				isUsingBuildContext: false,
-			},
-			output: output{
-				hash: "",
-				err:  assert.AnError,
-			},
-		},
-		{
-			name: "build context - correct hash",
-			input: input{
-				hash:                "hash",
-				err:                 nil,
-				isUsingBuildContext: true,
-			},
-			output: output{
-				hash: "hash",
-				err:  nil,
-			},
+	sbc := Ctrl{
+		ioCtrl: io.NewIOController(),
+		hasher: fakeHasher{
+			hash: "hash",
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			sbc := Ctrl{
-				ioCtrl: io.NewIOController(),
-				hasher: fakeHasher{
-					hash: tt.input.hash,
-					err:  tt.input.err,
-				},
-				isUsingBuildContext: tt.input.isUsingBuildContext,
-			}
-			out, err := sbc.GetBuildHash(&build.Info{}, service)
-			assert.Equal(t, tt.output.hash, out)
-			assert.ErrorIs(t, err, tt.output.err)
-		})
-	}
+	out := sbc.GetBuildHash(&build.Info{}, service)
+	assert.Equal(t, "hash", out)
 }
 
 func TestGetBuildCommit(t *testing.T) {
-	type input struct {
-		hash                string
-		isUsingBuildContext bool
-	}
-
 	tests := []struct {
 		name     string
+		hash     string
 		expected string
-		input    input
 	}{
 		{
-			name: "project commit - correct hash",
-			input: input{
-				hash:                "hash",
-				isUsingBuildContext: false,
-			},
+			name:     "correct hash",
+			hash:     "hash",
 			expected: "hash",
 		},
 		{
-			name: "build context - correct hash",
-			input: input{
-				hash:                "hash",
-				isUsingBuildContext: true,
-			},
-			expected: "hash",
-		},
-		{
-			name: "build context - empty",
-			input: input{
-				hash:                "",
-				isUsingBuildContext: true,
-			},
+			name:     "empty",
+			hash:     "",
 			expected: "",
 		},
 	}
@@ -308,9 +208,8 @@ func TestGetBuildCommit(t *testing.T) {
 			sbc := Ctrl{
 				ioCtrl: io.NewIOController(),
 				hasher: fakeHasher{
-					hash: tt.input.hash,
+					hash: tt.hash,
 				},
-				isUsingBuildContext: tt.input.isUsingBuildContext,
 			}
 			out := sbc.GetBuildCommit("service-test")
 			assert.Equal(t, tt.expected, out)
