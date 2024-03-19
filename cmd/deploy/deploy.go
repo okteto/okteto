@@ -118,6 +118,7 @@ type Command struct {
 	AnalyticsTracker  analyticsTrackerInterface
 	IoCtrl            *io.Controller
 	K8sLogger         *io.K8sLogger
+	eventTracker      *eventTracker
 
 	PipelineType model.Archetype
 	// onCleanUp is a list of functions to be executed when the execution is interrupted. This is a hack
@@ -217,7 +218,8 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 				IoCtrl:             ioCtrl,
 				K8sLogger:          k8sLogger,
 
-				onCleanUp: []cleanUpFunc{},
+				onCleanUp:    []cleanUpFunc{},
+				eventTracker: newEventTracker(k8sClientProvider, ioCtrl),
 			}
 			startTime := time.Now()
 
@@ -227,7 +229,9 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 
 			go func() {
 				err := c.Run(ctx, options)
-
+				if err := c.eventTracker.track(ctx, options.Name, options.Manifest.Namespace, err == nil); err != nil {
+					oktetoLog.Infof("error tracking deploy event: %s", err)
+				}
 				c.trackDeploy(options.Manifest, options.RunInRemote, startTime, err)
 				exit <- err
 			}()
@@ -391,7 +395,13 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		}
 		if hasDeployed {
 			if deployOptions.Wait {
-				if err := dc.DeployWaiter.wait(ctx, deployOptions); err != nil {
+				startTime := time.Now()
+				err := dc.DeployWaiter.wait(ctx, deployOptions)
+				elapsedTime := time.Since(startTime)
+				if err := dc.CfgMapHandler.AddPhase(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, "wait", elapsedTime); err != nil {
+					oktetoLog.Info("error adding phase to configmap: %s", err)
+				}
+				if err != nil {
 					return err
 				}
 			}
@@ -445,7 +455,13 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		stage := "Deploying compose"
 		oktetoLog.SetStage(stage)
 		oktetoLog.Information("Running stage '%s'", stage)
-		if err := dc.deployStack(ctx, deployOptions); err != nil {
+		startTime := time.Now()
+		err := dc.deployStack(ctx, deployOptions)
+		elapsedTime := time.Since(startTime)
+		if err := dc.CfgMapHandler.AddPhase(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, "compose", elapsedTime); err != nil {
+			oktetoLog.Info("error adding phase to configmap: %s", err)
+		}
+		if err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying compose: %s", err.Error())
 			return err
 		}
@@ -456,7 +472,13 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		stage := "Endpoints configuration"
 		oktetoLog.SetStage(stage)
 		oktetoLog.Information("Running stage '%s'", stage)
-		if err := dc.deployEndpoints(ctx, deployOptions); err != nil {
+		startTime := time.Now()
+		err := dc.deployEndpoints(ctx, deployOptions)
+		elapsedTime := time.Since(startTime)
+		if err := dc.CfgMapHandler.AddPhase(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, "endpoints", elapsedTime); err != nil {
+			oktetoLog.Info("error adding phase to configmap: %s", err)
+		}
+		if err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error generating endpoints: %s", err.Error())
 			return err
 		}

@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/cmd/utils/executor"
@@ -62,6 +63,7 @@ type KubeConfigHandler interface {
 // information related to the development environment
 type ConfigMapHandler interface {
 	UpdateEnvsFromCommands(context.Context, string, string, []string) error
+	AddPhase(context.Context, string, string, string, time.Duration) error
 }
 
 // ExternalResourceInterface defines the operations to work with external resources
@@ -280,12 +282,18 @@ func (r *Runner) runCommandsSection(ctx context.Context, params DeployParameters
 
 	var envMapFromOktetoEnvFile map[string]string
 	// deploy commands if any
-	for _, command := range params.Deployable.Commands {
+	for idx, command := range params.Deployable.Commands {
 		oktetoLog.Information("Running '%s'", command.Name)
 		oktetoLog.SetStage(command.Name)
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Executing command '%s'...", command.Name)
 
-		if err := r.Executor.Execute(command, params.Variables); err != nil {
+		startTime := time.Now()
+		err := r.Executor.Execute(command, params.Variables)
+		elapsedTime := time.Since(startTime)
+		if err := r.ConfigMapHandler.AddPhase(ctx, params.Name, params.Namespace, string(idx), elapsedTime); err != nil {
+			oktetoLog.Info("error adding phase to configmap: %s", err)
+		}
+		if err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
 			return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 		}
