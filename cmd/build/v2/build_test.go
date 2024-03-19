@@ -284,10 +284,10 @@ func TestTwoStepsBuild(t *testing.T) {
 	}
 	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
 
-	// error from the build
-	assert.NoError(t, err)
-	// assert that the name of the image is the dev one
-	image, err = bc.Registry.GetImageTagWithDigest("okteto.dev/test-test:okteto")
+	require.NoError(t, err)
+	require.Equal(t, "okteto.dev/test-test:okteto", image)
+	// the image is at the fake registry
+	image, err = bc.Registry.GetImageTagWithDigest(image)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, image)
 }
