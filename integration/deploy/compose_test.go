@@ -44,6 +44,11 @@ const (
       - 8913
     labels:
       dev.okteto.com/policy: keep
+      dev.okteto.com/label-1: value-label-1
+      dev.okteto.com/label-2: value-label-2
+    annotations:
+      dev.okteto.com/annotation-1: value-annotation-1
+      dev.okteto.com/annotation-2: value-annotation-2
   nginx:
     build: nginx
     volumes:
@@ -62,7 +67,25 @@ const (
       interval: 45s
       timeout: 5m
       retries: 5
-      start_period: 30s`
+      start_period: 30s
+  db:
+    image: alpine
+    volumes:
+      - data:/data
+    labels:
+      dev.okteto.com/label-1: statefulset-label-1
+      dev.okteto.com/label-2: statefulset-label-2
+    annotations:
+      dev.okteto.com/annotation-1: statefulset-annotation-1
+      dev.okteto.com/annotation-2: statefulset-annotation-2
+volumes:
+  data:
+    labels:
+      dev.okteto.com/label-1: volume-label-1
+      dev.okteto.com/label-2: volume-label-2
+    annotations:
+      dev.okteto.com/annotation-1: volume-annotation-1
+      dev.okteto.com/annotation-2: volume-annotation-2`
 
 	stacksTemplate = `services:
   app:
@@ -86,12 +109,36 @@ const (
       app:
         condition: service_started
     container_name: web-svc
+    labels:
+      dev.okteto.com/label-1: value-label-1
+      dev.okteto.com/label-2: value-label-2
+    annotations:
+      dev.okteto.com/annotation-1: value-annotation-1
+      dev.okteto.com/annotation-2: value-annotation-2
     healthcheck:
       test: service nginx status || exit 1
       interval: 45s
       timeout: 5m
       retries: 5
-      start_period: 30s`
+      start_period: 30s
+  db:
+    image: alpine
+    volumes:
+      - data:/data
+    labels:
+      dev.okteto.com/label-1: statefulset-label-1
+      dev.okteto.com/label-2: statefulset-label-2
+    annotations:
+      dev.okteto.com/annotation-1: statefulset-annotation-1
+      dev.okteto.com/annotation-2: statefulset-annotation-2
+volumes:
+  data:
+    labels:
+      dev.okteto.com/label-1: volume-label-1
+      dev.okteto.com/label-2: volume-label-2
+    annotations:
+      dev.okteto.com/annotation-1: volume-annotation-1
+      dev.okteto.com/annotation-2: volume-annotation-2`
 	appDockerfile = `FROM python:alpine
 EXPOSE 2931`
 	nginxConf = `server {
@@ -157,8 +204,20 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	// Test that the nginx image has been created correctly
 	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
+	require.Equal(t, appDeployment.ObjectMeta.Annotations["dev.okteto.com/annotation-1"], "value-annotation-1")
+	require.Equal(t, appDeployment.ObjectMeta.Annotations["dev.okteto.com/annotation-2"], "value-annotation-2")
+	require.Equal(t, appDeployment.ObjectMeta.Annotations["dev.okteto.com/label-1"], "value-label-1")
+	require.Equal(t, appDeployment.ObjectMeta.Annotations["dev.okteto.com/label-2"], "value-label-2")
+
 	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
+
+	appVolume, err := integration.GetVolume(context.Background(), testNamespace, "data", c)
+	require.NoError(t, err)
+	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/annotation-1"], "volume-annotation-1")
+	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/annotation-2"], "volume-annotation-2")
+	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/label-1"], "volume-label-1")
+	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/label-2"], "volume-label-2")
 
 	// Test that the k8s services has been created correctly
 	appService, err := integration.GetService(context.Background(), testNamespace, "app", c)
@@ -193,7 +252,7 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	require.True(t, k8sErrors.IsNotFound(err))
 }
 
-// TestDeployPipelineFromCompose tests the following scenario:
+// TestReDeployPipelineFromCompose tests the following scenario:
 // - Deploying a pipeline manifest locally from a compose file
 // - The endpoints generated are accessible
 // - Depends on
@@ -373,9 +432,20 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	// Test that the nginx image has been created correctly
 	nginxDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "nginx", c)
 	require.NoError(t, err)
+	require.Equal(t, nginxDeployment.ObjectMeta.Labels["dev.okteto.com/label-1"], "value-label-1")
+	require.Equal(t, nginxDeployment.ObjectMeta.Labels["dev.okteto.com/label-2"], "value-label-2")
+	require.Equal(t, nginxDeployment.ObjectMeta.Annotations["dev.okteto.com/annotation-1"], "value-annotation-1")
+	require.Equal(t, nginxDeployment.ObjectMeta.Annotations["dev.okteto.com/annotation-2"], "value-annotation-2")
 
 	nginxImageDev := fmt.Sprintf("%s/%s/%s-nginx:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(nginxImageDev), nginxDeployment.Spec.Template.Spec.Containers[0].Image)
+
+	appVolume, err := integration.GetVolume(context.Background(), testNamespace, "data", c)
+	require.NoError(t, err)
+	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/annotation-1"], "volume-annotation-1")
+	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/annotation-2"], "volume-annotation-2")
+	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/label-1"], "volume-label-1")
+	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/label-2"], "volume-label-2")
 
 	// Test that the app image has been created correctly
 	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app", c)
