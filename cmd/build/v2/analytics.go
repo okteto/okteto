@@ -61,10 +61,10 @@ type eventJSON struct {
 	ImageName     string  `json:"image_name"`
 	Namespace     string  `json:"namespace"`
 	Repository    string  `json:"repository"`
-	SmartBuildHit bool    `json:"smartBuildHit"`
-	Success       bool    `json:"success"`
 	SchemaVersion string  `json:"schemaVersion"`
 	Duration      float64 `json:"duration"`
+	SmartBuildHit bool    `json:"smartBuildHit"`
+	Success       bool    `json:"success"`
 }
 
 func (e *eventTracker) track(ctx context.Context, metadata *analytics.ImageBuildMetadata) error {
