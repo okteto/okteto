@@ -61,7 +61,7 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 
 	imageCtrl := registry.NewImageCtrl(GetRegistryConfigFromOktetoConfig(okctx))
 	if okctx.IsOkteto() {
-		buildOptions.DevTag = imageCtrl.ExpandOktetoDevRegistry(registry.GetDevTagFromGlobal(buildOptions.Tag))
+		buildOptions.DevTag = imageCtrl.ExpandOktetoDevRegistry(imageCtrl.GetDevTagFromGlobal(buildOptions.Tag))
 		buildOptions.Tag = imageCtrl.ExpandOktetoDevRegistry(buildOptions.Tag)
 		buildOptions.Tag = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.Tag)
 		for i := range buildOptions.CacheFrom {

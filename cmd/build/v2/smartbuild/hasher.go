@@ -83,8 +83,11 @@ func (sh *serviceHasher) hashWithBuildContext(buildInfo *build.Info, service str
 		buildContext = "."
 	}
 	if _, ok := sh.serviceShaCache[service]; !ok {
+		errorGettingGitInfo := false
 		dirCommit, err := sh.gitRepoCtrl.GetLatestDirCommit(buildContext)
 		if err != nil {
+			errorGettingGitInfo = true
+
 			oktetoLog.Infof("could not get build context sha: %s, generating a random one", err)
 			// In case of error getting the dir commit, we just generate a random one, and it will rebuild the image
 			dirCommit = sh.calculateRandomShaForService(service)
@@ -92,9 +95,16 @@ func (sh *serviceHasher) hashWithBuildContext(buildInfo *build.Info, service str
 
 		diffHash, err := sh.gitRepoCtrl.GetDiffHash(buildContext)
 		if err != nil {
+			errorGettingGitInfo = true
 			oktetoLog.Infof("could not get build context diff sha: %s, generating a random one", err)
 			// In case of error getting the diff hash, we just generate a random one, and it will rebuild the image
 			diffHash = sh.calculateRandomShaForService(service)
+		}
+
+		// This is to display just one single warning if any of the git operation fails. As we generate random sha
+		// it will imply a new build of image, and we want to warn users
+		if errorGettingGitInfo {
+			oktetoLog.Warning("smart builds cannot access git metadata, building image...", service)
 		}
 
 		sh.lock.Lock()
