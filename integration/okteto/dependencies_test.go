@@ -118,7 +118,7 @@ func TestDependenciesOnRemote(t *testing.T) {
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceDeployOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceDeployOpts)
 
-	testNamespace := integration.GetTestNamespace("Dependency", user)
+	testNamespace := integration.GetTestNamespace("RemoteDep", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
