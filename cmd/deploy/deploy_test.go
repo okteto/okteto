@@ -46,6 +46,7 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/clientcmd/api"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -253,11 +254,20 @@ type fakeAnalyticsTracker struct{}
 
 func (fakeAnalyticsTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
 
+type fakeEventTracker struct {
+	err error
+}
+
+func (f *fakeEventTracker) Track(context.Context, *analytics.ImageBuildMetadata) error {
+	return f.err
+}
+
 func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 	okteto.CurrentStore = &okteto.ContextStore{
 		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
+				Cfg:       &api.Config{},
 			},
 		},
 		CurrentContext: "test",
@@ -288,6 +298,7 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
+				Cfg:       &api.Config{},
 			},
 		},
 		CurrentContext: "test",
@@ -317,6 +328,7 @@ func TestDeployWithServicesToBuildWithoutComposeSection(t *testing.T) {
 		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
+				Cfg:       &api.Config{},
 			},
 		},
 		CurrentContext: "test",
@@ -359,14 +371,18 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 			Contexts: map[string]*okteto.Context{
 				"test": {
 					Namespace: "test",
+					Cfg:       &api.Config{},
 				},
 			},
 			CurrentContext: "test",
 		},
 	}
+
+	builderV2 := buildv2.NewBuilder(builder, reg, io.NewIOController(), fakeTracker, okCtx, io.NewK8sLogger())
+	builderV2.EventTracker = &fakeEventTracker{}
 	c := &Command{
 		GetManifest:       getErrorManifest,
-		Builder:           buildv2.NewBuilder(builder, reg, io.NewIOController(), fakeTracker, okCtx, nil),
+		Builder:           builderV2,
 		K8sClientProvider: fakeK8sClientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                afero.NewMemMapFs(),
@@ -430,6 +446,7 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
+				Cfg:       &api.Config{},
 			},
 		},
 		CurrentContext: "test",
@@ -513,6 +530,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
+				Cfg:       &api.Config{},
 			},
 		},
 		CurrentContext: "test",
@@ -560,6 +578,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
+				Cfg:       &api.Config{},
 			},
 		},
 		CurrentContext: "test",
@@ -670,6 +689,7 @@ func TestDeployDependencies(t *testing.T) {
 			"test": {
 				Namespace: "test",
 				IsOkteto:  true,
+				Cfg:       &api.Config{},
 			},
 		},
 		CurrentContext: "test",
@@ -754,6 +774,7 @@ func TestDeployOnlyDependencies(t *testing.T) {
 					"test": {
 						Namespace: "test",
 						IsOkteto:  tc.isOkteto,
+						Cfg:       &api.Config{},
 					},
 				},
 				CurrentContext: "test",

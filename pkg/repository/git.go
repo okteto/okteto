@@ -22,6 +22,7 @@ import (
 	"sort"
 	"time"
 
+	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -75,6 +76,14 @@ func (r gitRepoController) calculateIsClean(ctx context.Context) (bool, error) {
 }
 
 func (r gitRepoController) getRepoURL() (string, error) {
+	url, err := giturls.Parse(r.path)
+	if err != nil {
+		oktetoLog.Infof("could not parse url: %s", err)
+	}
+	if url.Scheme != "file" {
+		return url.String(), nil
+	}
+
 	repo, err := git.PlainOpen(r.path)
 	if err != nil {
 		return "", fmt.Errorf("failed to analyze git repo: %w", err)

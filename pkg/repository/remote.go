@@ -20,11 +20,13 @@ import (
 
 type oktetoRemoteRepoController struct {
 	gitCommit string
+	url       string
 }
 
-func newOktetoRemoteRepoController(localCommit string) oktetoRemoteRepoController {
+func newOktetoRemoteRepoController(localCommit string, url string) oktetoRemoteRepoController {
 	return oktetoRemoteRepoController{
 		gitCommit: localCommit,
+		url:       url,
 	}
 }
 
@@ -45,5 +47,5 @@ func (or oktetoRemoteRepoController) GetDiffHash(string) (string, error) {
 }
 
 func (or oktetoRemoteRepoController) getRepoURL() (string, error) {
-	return "", fmt.Errorf("not-implemented")
+	return or.url, nil
 }
