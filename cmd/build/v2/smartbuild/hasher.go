@@ -104,7 +104,7 @@ func (sh *serviceHasher) hashWithBuildContext(buildInfo *build.Info, service str
 		// This is to display just one single warning if any of the git operation fails. As we generate random sha
 		// it will imply a new build of image, and we want to warn users
 		if errorGettingGitInfo {
-			oktetoLog.Warning("smart builds cannot access git metadata, building image for service %s...", service)
+			oktetoLog.Warning("smart builds cannot access git metadata, building image %q...", service)
 		}
 
 		sh.lock.Lock()
