@@ -32,6 +32,7 @@ import (
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 type fakeRegistry struct {
@@ -250,6 +251,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			Contexts: map[string]*okteto.Context{
 				"test": {
 					Namespace: "test",
+					Cfg:       &api.Config{},
 				},
 			},
 			CurrentContext: "test",

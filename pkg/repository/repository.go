@@ -69,7 +69,7 @@ func NewRepository(path string) Repository {
 	// check if we are inside a remote deploy
 	if v := os.Getenv(constants.OktetoDeployRemote); v != "" {
 		sha := os.Getenv(constants.OktetoGitCommitEnvVar)
-		controller = newOktetoRemoteRepoController(sha)
+		controller = newOktetoRemoteRepoController(sha, path)
 	}
 	repoURL, err := controller.getRepoURL()
 	if err != nil {

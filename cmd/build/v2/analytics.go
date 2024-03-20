@@ -20,9 +20,11 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/analytics"
+	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/events"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/okteto"
 	v1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,7 +47,12 @@ type eventTracker struct {
 	ioCtrl             *io.Controller
 }
 
-func newEventTracker(c kubernetes.Interface, ioCtrl *io.Controller) *eventTracker {
+func newEventTracker(ioCtrl *io.Controller, okCtx buildCmd.OktetoContextInterface) *eventTracker {
+	k8sClientProvider := okteto.NewK8sClientProvider()
+	c, _, err := k8sClientProvider.Provide(okCtx.GetCurrentCfg())
+	if err != nil {
+		ioCtrl.Logger().Infof("could not get k8s client: %s", err)
+	}
 	return &eventTracker{
 		eventTypeConverter: map[bool]EventType{
 			true:  normalEventType,
@@ -61,19 +68,19 @@ type eventJSON struct {
 	ImageName     string  `json:"image_name"`
 	Namespace     string  `json:"namespace"`
 	Repository    string  `json:"repository"`
-	SmartBuildHit bool    `json:"smartBuildHit"`
-	Success       bool    `json:"success"`
 	SchemaVersion string  `json:"schemaVersion"`
 	Duration      float64 `json:"duration"`
+	SmartBuildHit bool    `json:"smartBuildHit"`
+	Success       bool    `json:"success"`
 }
 
-func (e *eventTracker) track(ctx context.Context, metadata *analytics.ImageBuildMetadata) error {
+func (e *eventTracker) Track(ctx context.Context, metadata *analytics.ImageBuildMetadata) error {
 	if e.k8sClient == nil {
 		return fmt.Errorf("k8s client is not available")
 	}
 	eventType := e.eventTypeConverter[metadata.Success]
 
-	eventJSON, err := json.Marshal(convertImageBuildMetadataToEvent(metadata))
+	eventJSON, err := json.Marshal(e.convertImageBuildMetadataToEvent(metadata))
 	if err != nil {
 		return fmt.Errorf("failed to marshal event metadata: %s", err)
 	}
@@ -98,7 +105,7 @@ func (e *eventTracker) track(ctx context.Context, metadata *analytics.ImageBuild
 
 }
 
-func convertImageBuildMetadataToEvent(metadata *analytics.ImageBuildMetadata) eventJSON {
+func (*eventTracker) convertImageBuildMetadataToEvent(metadata *analytics.ImageBuildMetadata) eventJSON {
 	return eventJSON{
 		DevenvName:    metadata.DevenvName,
 		ImageName:     metadata.Name,
