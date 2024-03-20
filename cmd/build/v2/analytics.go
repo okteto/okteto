@@ -80,7 +80,7 @@ func (e *eventTracker) Track(ctx context.Context, metadata *analytics.ImageBuild
 	}
 	eventType := e.eventTypeConverter[metadata.Success]
 
-	eventJSON, err := json.Marshal(convertImageBuildMetadataToEvent(metadata))
+	eventJSON, err := json.Marshal(e.convertImageBuildMetadataToEvent(metadata))
 	if err != nil {
 		return fmt.Errorf("failed to marshal event metadata: %s", err)
 	}
@@ -105,7 +105,7 @@ func (e *eventTracker) Track(ctx context.Context, metadata *analytics.ImageBuild
 
 }
 
-func convertImageBuildMetadataToEvent(metadata *analytics.ImageBuildMetadata) eventJSON {
+func (*eventTracker) convertImageBuildMetadataToEvent(metadata *analytics.ImageBuildMetadata) eventJSON {
 	return eventJSON{
 		DevenvName:    metadata.DevenvName,
 		ImageName:     metadata.Name,
