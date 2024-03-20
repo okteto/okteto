@@ -60,9 +60,9 @@ type eventJSON struct {
 	DevenvName    string      `json:"devenv_name"`
 	Repository    string      `json:"repository"`
 	Namespace     string      `json:"namespace"`
-	SchemaVersion string      `json:"schemaVersion"`
 	Phase         []phaseJSON `json:"phase"`
 	Success       bool        `json:"success"`
+	SchemaVersion string      `json:"schemaVersion"`
 }
 
 type phaseJSON struct {
