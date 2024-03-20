@@ -191,6 +191,7 @@ func TestExtraHosts(t *testing.T) {
 		},
 		getBuildEnvVars:      func() map[string]string { return nil },
 		getDependencyEnvVars: func(_ environGetter) map[string]string { return nil },
+		useInternalNetwork:   true,
 	}
 
 	err := rdc.Deploy(ctx, &Options{

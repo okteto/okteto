@@ -119,6 +119,8 @@ type remoteDestroyCommand struct {
 
 	// knownHostsPath  is the default known_hosts file path. Provided mostly for testing
 	knownHostsPath string
+
+	useInternalNetwork bool
 }
 
 func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remoteDestroyCommand {
@@ -141,6 +143,7 @@ func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remote
 		manifest:             manifest,
 		clusterMetadata:      fetchClusterMetadata,
 		ioCtrl:               ioCtrl,
+		useInternalNetwork:   !buildCmd.IsDepotEnabled(),
 	}
 }
 
@@ -203,22 +206,26 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.GetContext().Namespace),
 		fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, okteto.GetContext().Token),
 		fmt.Sprintf("%s=%s", constants.OktetoTlsCertBase64EnvVar, base64.StdEncoding.EncodeToString(sc.Certificate)),
-		fmt.Sprintf("%s=%s", constants.OktetoInternalServerNameEnvVar, sc.ServerName),
 		fmt.Sprintf("%s=%s", model.OktetoActionNameEnvVar, os.Getenv(model.OktetoActionNameEnvVar)),
 		fmt.Sprintf("%s=%s", constants.OktetoGitCommitEnvVar, os.Getenv(constants.OktetoGitCommitEnvVar)),
 		fmt.Sprintf("%s=%s", constants.OktetoGitBranchEnvVar, os.Getenv(constants.OktetoGitBranchEnvVar)),
 		fmt.Sprintf("%s=%d", constants.OktetoInvalidateCacheEnvVar, int(randomNumber.Int64())),
 	)
 
-	if sc.ServerName != "" {
-		registryUrl := okteto.GetContext().Registry
-		subdomain := strings.TrimPrefix(registryUrl, "registry.")
-		ip, _, err := net.SplitHostPort(sc.ServerName)
-		if err != nil {
-			return fmt.Errorf("failed to parse server name network address: %w", err)
+	if rd.useInternalNetwork {
+		buildOptions.BuildArgs = append(
+			buildOptions.BuildArgs,
+			fmt.Sprintf("%s=%s", constants.OktetoInternalServerNameEnvVar, sc.ServerName),
+		)
+		if sc.ServerName != "" {
+			registryUrl := okteto.GetContext().Registry
+			subdomain := strings.TrimPrefix(registryUrl, "registry.")
+			ip, _, err := net.SplitHostPort(sc.ServerName)
+			if err != nil {
+				return fmt.Errorf("failed to parse server name network address: %w", err)
+			}
+			buildOptions.ExtraHosts = getExtraHosts(registryUrl, subdomain, ip, *sc)
 		}
-
-		buildOptions.ExtraHosts = getExtraHosts(registryUrl, subdomain, ip, *sc)
 	}
 
 	sshSock := os.Getenv(rd.sshAuthSockEnvvar)

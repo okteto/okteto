@@ -93,7 +93,7 @@ func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptio
 	if !isDeployOrDestroy {
 		builder := ob.GetBuilder()
 		buildMsg := fmt.Sprintf("Building '%s'", buildOptions.File)
-		depotEnabled := isDepotEnabled(depotProject, depotToken)
+		depotEnabled := IsDepotEnabled()
 		if depotEnabled {
 			ioCtrl.Out().Infof("%s on depot's machine...", buildMsg)
 		} else if builder == "" {
@@ -104,7 +104,7 @@ func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptio
 	}
 
 	switch {
-	case isDepotEnabled(depotProject, depotToken):
+	case IsDepotEnabled():
 		depotManager := newDepotBuilder(depotProject, depotToken, ob.OktetoContext, ioCtrl)
 		return depotManager.Run(ctx, buildOptions, runAndHandleBuild)
 	case ob.OktetoContext.GetCurrentBuilder() == "":
