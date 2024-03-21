@@ -43,6 +43,11 @@ func TestGetComposePathWhenExists(t *testing.T) {
 			expected:      filepath.Join(".okteto", "docker-compose.yml"),
 		},
 		{
+			name:          "compose file exists on .okteto",
+			filesToCreate: []string{filepath.Join(".okteto", "docker-compose.yml")},
+			expected:      filepath.Join(".okteto", "compose.yml"),
+		},
+		{
 			name:          "okteto-stack file exists on wd",
 			filesToCreate: []string{"okteto-stack.yml"},
 			expected:      "okteto-stack.yml",
