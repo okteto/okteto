@@ -22,9 +22,11 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 func TestNewEventTracker(t *testing.T) {
@@ -61,6 +63,14 @@ func TestEventTracker_track(t *testing.T) {
 
 	k8sClienProvider := test.NewFakeK8sProvider(cfg)
 
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Cfg: &api.Config{},
+			},
+		},
+		CurrentContext: "test",
+	}
 	tracker := &eventTracker{
 		k8sClientProvider: k8sClienProvider,
 		eventTypeConverter: map[bool]EventType{
