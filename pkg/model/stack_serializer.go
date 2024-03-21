@@ -323,43 +323,45 @@ func unmarshalVolume(volume *VolumeTopLevel, isCompose bool) (*VolumeSpec, error
 		Annotations: make(Annotations),
 	}
 
-	if volume != nil {
-		if isCompose {
-			for key, value := range volume.Annotations {
-				result.Labels[key] = value
-			}
-			for key, value := range volume.Labels {
-				result.Annotations[key] = value
-			}
-		} else { // stack
-			for key, value := range volume.Annotations {
-				result.Annotations[key] = value
-			}
-			for key, value := range volume.Labels {
-				result.Annotations[key] = value
-			}
-		}
+	if volume == nil {
+		return result, nil
+	}
 
-		if volume.Size.Value.Cmp(resource.MustParse("0")) > 0 {
-			result.Size = volume.Size
+	if isCompose {
+		for key, value := range volume.Annotations {
+			result.Labels[key] = value
 		}
-		if volume.DriverOpts != nil {
-			for key, value := range volume.DriverOpts {
-				if key == "size" {
-					qK8s, err := resource.ParseQuantity(value)
-					if err != nil {
-						return nil, err
-					}
-					result.Size.Value = qK8s
+		for key, value := range volume.Labels {
+			result.Annotations[key] = value
+		}
+	} else { // stack
+		for key, value := range volume.Annotations {
+			result.Annotations[key] = value
+		}
+		for key, value := range volume.Labels {
+			result.Annotations[key] = value
+		}
+	}
+
+	if volume.Size.Value.Cmp(resource.MustParse("0")) > 0 {
+		result.Size = volume.Size
+	}
+	if volume.DriverOpts != nil {
+		for key, value := range volume.DriverOpts {
+			if key == "size" {
+				qK8s, err := resource.ParseQuantity(value)
+				if err != nil {
+					return nil, err
 				}
-				if key == "class" {
-					result.Class = value
-				}
+				result.Size.Value = qK8s
+			}
+			if key == "class" {
+				result.Class = value
 			}
 		}
-		if result.Class == "" {
-			result.Class = volume.Class
-		}
+	}
+	if result.Class == "" {
+		result.Class = volume.Class
 	}
 
 	return result, nil
