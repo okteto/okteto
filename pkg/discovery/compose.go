@@ -37,6 +37,8 @@ var (
 		{".okteto", "okteto-compose.yml"},
 		{".okteto", "okteto-compose.yaml"},
 
+		{"compose.yml"},
+		{"compose.yaml"},
 		{"docker-compose.yml"},
 		{"docker-compose.yaml"},
 		{".okteto", "docker-compose.yml"},
