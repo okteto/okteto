@@ -528,7 +528,7 @@ func GetDeployer(ctx context.Context,
 
 	oktetoLog.Info("Deploying locally...")
 	// In case the command has to run locally, we need the "local" runner
-	runner, err := deployable.NewRunnerForLocal(
+	runner, err := deployable.NewDeployRunnerForLocal(
 		ctx,
 		opts.Name,
 		opts.RunWithoutBash,

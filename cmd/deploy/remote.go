@@ -90,7 +90,7 @@ RUN okteto registrytoken install --force --log-output=json
 
 RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
-  /okteto/bin/okteto remote-run --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}
+  /okteto/bin/okteto remote-run deploy --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}
 `
 )
 

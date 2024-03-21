@@ -32,6 +32,7 @@ import (
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/deployable"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -41,6 +42,7 @@ import (
 	"github.com/okteto/okteto/pkg/remote"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -62,6 +64,7 @@ ARG {{ .TokenArgName }}
 ARG {{ .ActionNameArgName }}
 ARG {{ .TlsCertBase64ArgName }}
 ARG {{ .InternalServerName }}
+ARG {{ .OktetoDeployable }}
 RUN mkdir -p /etc/ssl/certs/
 RUN echo "${{ .TlsCertBase64ArgName }}" | base64 -d > /etc/ssl/certs/okteto.crt
 
@@ -76,7 +79,7 @@ RUN okteto registrytoken install --force --log-output=json
 
 RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
-  okteto destroy --log-output=json --server-name="${{ .InternalServerName }}" {{ .DestroyFlags }}
+  /okteto/bin/okteto remote-run destroy --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}
 `
 )
 
@@ -99,7 +102,8 @@ type dockerfileTemplateProperties struct {
 	GitCommitArgName       string
 	GitBranchArgName       string
 	InvalidateCacheArgName string
-	DestroyFlags           string
+	CommandFlags           string
+	OktetoDeployable       string
 }
 
 type remoteDestroyCommand struct {
@@ -147,7 +151,7 @@ func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remote
 	}
 }
 
-func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) error {
+func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) error {
 	home, err := homedir.Dir()
 	if err != nil {
 		return err
@@ -198,6 +202,26 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		return err
 	}
 
+	if opts.Manifest == nil {
+		opts.Manifest = &model.Manifest{}
+	}
+
+	if opts.Manifest.Destroy == nil {
+		opts.Manifest.Destroy = &model.DestroyInfo{}
+	}
+
+	deployable := deployable.Entity{
+		Commands: opts.Manifest.Destroy.Commands,
+		// Added this for backward compatibility. Before the refactor we were having the env variables for the external
+		// resources in the environment, so including it to set the env vars in the remote-run
+		External: opts.Manifest.External,
+	}
+
+	b, err := yaml.Marshal(deployable)
+	if err != nil {
+		return err
+	}
+
 	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{Path: cwd, OutputMode: buildCmd.DestroyOutputModeOnBuild})
 	buildOptions.Manifest = rd.manifest
 	buildOptions.BuildArgs = append(
@@ -210,6 +234,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		fmt.Sprintf("%s=%s", constants.OktetoGitCommitEnvVar, os.Getenv(constants.OktetoGitCommitEnvVar)),
 		fmt.Sprintf("%s=%s", constants.OktetoGitBranchEnvVar, os.Getenv(constants.OktetoGitBranchEnvVar)),
 		fmt.Sprintf("%s=%d", constants.OktetoInvalidateCacheEnvVar, int(randomNumber.Int64())),
+		fmt.Sprintf("%s=%s", constants.OktetoDeployableEnvVar, base64.StdEncoding.EncodeToString(b)),
 	)
 
 	if rd.useInternalNetwork {
@@ -304,7 +329,8 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 		GitCommitArgName:       constants.OktetoGitCommitEnvVar,
 		GitBranchArgName:       constants.OktetoGitBranchEnvVar,
 		InvalidateCacheArgName: constants.OktetoInvalidateCacheEnvVar,
-		DestroyFlags:           strings.Join(getDestroyFlags(opts), " "),
+		CommandFlags:           strings.Join(getCommandFlags(opts), " "),
+		OktetoDeployable:       constants.OktetoDeployableEnvVar,
 	}
 
 	dockerfile, err := rd.fs.Create(filepath.Join(tempDir, dockerfileTemporalNane))
@@ -340,30 +366,16 @@ func getExtraHosts(registryURL, subdomain, ip string, metadata types.ClusterMeta
 	return extraHosts
 }
 
-func getDestroyFlags(opts *Options) []string {
-	var deployFlags []string
-
-	if opts.Name != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--name \"%s\"", opts.Name))
-	}
-
-	if opts.Namespace != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--namespace %s", opts.Namespace))
-	}
-
-	if opts.ManifestPathFlag != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", filesystem.CleanManifestPath(opts.ManifestPathFlag)))
-	}
-
-	if opts.DestroyVolumes {
-		deployFlags = append(deployFlags, "--volumes")
+func getCommandFlags(opts *Options) []string {
+	commandFlags := []string{
+		fmt.Sprintf("--name \"%s\"", opts.Name),
 	}
 
 	if opts.ForceDestroy {
-		deployFlags = append(deployFlags, "--force-destroy")
+		commandFlags = append(commandFlags, "--force-destroy")
 	}
 
-	return deployFlags
+	return commandFlags
 }
 
 func getOktetoCLIVersion(versionString string) string {

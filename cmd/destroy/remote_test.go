@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/cmd/build"
@@ -26,7 +25,6 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	filesystem "github.com/okteto/okteto/pkg/filesystem/fake"
 	"github.com/okteto/okteto/pkg/log/io"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -138,13 +136,13 @@ func TestRemoteTest(t *testing.T) {
 					}, nil
 				},
 			}
-			err := rdc.destroy(ctx, tt.config.options)
+			err := rdc.Destroy(ctx, tt.config.options)
 			assert.Equal(t, tt.expected, err)
 		})
 	}
 }
 
-func TestGetDestroyFlags(t *testing.T) {
+func TestGetCommandFlags(t *testing.T) {
 	type config struct {
 		opts *Options
 	}
@@ -153,12 +151,6 @@ func TestGetDestroyFlags(t *testing.T) {
 		config   config
 		expected []string
 	}{
-		{
-			name: "no extra options",
-			config: config{
-				opts: &Options{},
-			},
-		},
 		{
 			name: "name set",
 			config: config{
@@ -178,57 +170,20 @@ func TestGetDestroyFlags(t *testing.T) {
 			expected: []string{"--name \"this is a test\""},
 		},
 		{
-			name: "namespace set",
-			config: config{
-				opts: &Options{
-					Namespace: "test",
-				},
-			},
-			expected: []string{"--namespace test"},
-		},
-		{
-			name: "manifest path set",
-			config: config{
-				opts: &Options{
-					ManifestPathFlag: "/hello/this/is/a/test",
-					ManifestPath:     "/hello/this/is/a/test",
-				},
-			},
-			expected: []string{"--file test"},
-		},
-		{
-			name: "manifest path set on .okteto",
-			config: config{
-				opts: &Options{
-					ManifestPathFlag: "/hello/this/is/a/.okteto/test",
-					ManifestPath:     "/hello/this/is/a/.okteto/test",
-				},
-			},
-			expected: []string{fmt.Sprintf("--file %s", filepath.Clean(".okteto/test"))},
-		},
-		{
-			name: "destroy volumes set",
-			config: config{
-				opts: &Options{
-					DestroyVolumes: true,
-				},
-			},
-			expected: []string{"--volumes"},
-		},
-		{
 			name: "force destroy set",
 			config: config{
 				opts: &Options{
+					Name:         "test",
 					ForceDestroy: true,
 				},
 			},
-			expected: []string{"--force-destroy"},
+			expected: []string{"--name \"test\"", "--force-destroy"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			flags := getDestroyFlags(tt.config.opts)
+			flags := getCommandFlags(tt.config.opts)
 			assert.Equal(t, tt.expected, flags)
 		})
 	}
@@ -242,8 +197,9 @@ func TestCreateDockerfile(t *testing.T) {
 		opts *Options
 	}
 	type expected struct {
-		err            error
-		dockerfileName string
+		err               error
+		dockerfileName    string
+		dockerFileContent string
 	}
 	var tests = []struct {
 		config   config
@@ -258,17 +214,53 @@ func TestCreateDockerfile(t *testing.T) {
 				},
 			},
 			expected: expected{
-				dockerfileName: "",
-				err:            assert.AnError,
+				dockerfileName:    "",
+				err:               assert.AnError,
+				dockerFileContent: "",
 			},
 		},
 		{
 			name: "with dockerignore",
 			config: config{
-				opts: &Options{},
+				opts: &Options{
+					Name: "test",
+				},
 			},
 			expected: expected{
 				dockerfileName: filepath.Clean("/test/Dockerfile.destroy"),
+				dockerFileContent: `
+FROM okteto/okteto:latest as okteto-cli
+
+FROM test-image as deploy
+
+ENV PATH="${PATH}:/okteto/bin"
+COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
+
+ENV OKTETO_DEPLOY_REMOTE true
+
+ARG OKTETO_NAMESPACE
+ARG OKTETO_CONTEXT
+ARG OKTETO_TOKEN
+ARG OKTETO_ACTION_NAME
+ARG OKTETO_TLS_CERT_BASE64
+ARG INTERNAL_SERVER_NAME
+ARG OKTETO_DEPLOYABLE
+RUN mkdir -p /etc/ssl/certs/
+RUN echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /etc/ssl/certs/okteto.crt
+
+COPY . /okteto/src
+WORKDIR /okteto/src
+
+ARG OKTETO_GIT_COMMIT
+ARG OKTETO_GIT_BRANCH
+ARG OKTETO_INVALIDATE_CACHE
+
+RUN okteto registrytoken install --force --log-output=json
+
+RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
+  mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
+  /okteto/bin/okteto remote-run destroy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test"
+`,
 			},
 		},
 	}
@@ -290,7 +282,7 @@ func TestCreateDockerfile(t *testing.T) {
 				assert.NoError(t, err)
 				content, err := afero.ReadFile(rdc.fs, filepath.Join("/", "test", dockerfileTemporalNane))
 				assert.NoError(t, err)
-				assert.True(t, strings.Contains(string(content), fmt.Sprintf("ARG %s", model.OktetoActionNameEnvVar)))
+				assert.Equal(t, tt.expected.dockerFileContent, string(content))
 			}
 
 		})
@@ -372,7 +364,7 @@ func TestRemoteDestroyWithSshAgent(t *testing.T) {
 		},
 	}
 
-	assert.NoError(t, rdc.destroy(context.Background(), &Options{}))
+	assert.NoError(t, rdc.Destroy(context.Background(), &Options{}))
 }
 
 func TestRemoteDestroyWithBadSshAgent(t *testing.T) {
@@ -403,7 +395,7 @@ func TestRemoteDestroyWithBadSshAgent(t *testing.T) {
 		},
 	}
 
-	assert.NoError(t, rdc.destroy(context.Background(), &Options{}))
+	assert.NoError(t, rdc.Destroy(context.Background(), &Options{}))
 }
 
 func TestGetExtraHosts(t *testing.T) {
