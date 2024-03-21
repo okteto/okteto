@@ -29,7 +29,6 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 	buildManifest := manifest.Build
 
 	if len(buildManifest) == 0 {
-		bc.ioCtrl.Out().Infof("Build section is not defined in your okteto manifest")
 		return nil, nil
 	}
 
