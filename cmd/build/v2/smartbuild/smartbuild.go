@@ -94,15 +94,6 @@ func (s *Ctrl) GetBuildHash(buildInfo *build.Info, service string) string {
 	return s.hasher.hashWithBuildContext(buildInfo, service)
 }
 
-// GetBuildCommit returns the commit that generated the smart build
-func (s *Ctrl) GetBuildCommit(serviceName string) string {
-	commit := s.hasher.getServiceShaInCache(serviceName)
-	if commit == "" {
-		s.ioCtrl.Logger().Debugf("image sha for service '%s' not found in cache", serviceName)
-	}
-	return commit
-}
-
 // CloneGlobalImageToDev clones the image from the global registry to the dev registry if needed
 // if the built image belongs to global registry we clone it to the dev registry
 // so that in can be used in dev containers (i.e. okteto up)

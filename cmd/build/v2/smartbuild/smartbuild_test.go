@@ -186,37 +186,6 @@ func TestGetBuildHash(t *testing.T) {
 	assert.Equal(t, "hash", out)
 }
 
-func TestGetBuildCommit(t *testing.T) {
-	tests := []struct {
-		name     string
-		hash     string
-		expected string
-	}{
-		{
-			name:     "correct hash",
-			hash:     "hash",
-			expected: "hash",
-		},
-		{
-			name:     "empty",
-			hash:     "",
-			expected: "",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			sbc := Ctrl{
-				ioCtrl: io.NewIOController(),
-				hasher: fakeHasher{
-					hash: tt.hash,
-				},
-			}
-			out := sbc.GetBuildCommit("service-test")
-			assert.Equal(t, tt.expected, out)
-		})
-	}
-}
-
 func TestCloneGlobalImageToDev(t *testing.T) {
 	type input struct {
 		err      error
