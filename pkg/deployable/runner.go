@@ -290,14 +290,14 @@ func (r *Runner) runCommandsSection(ctx context.Context, params DeployParameters
 		startTime := time.Now()
 		err := r.Executor.Execute(command, params.Variables)
 		elapsedTime := time.Since(startTime)
-		if err := r.ConfigMapHandler.AddPhase(ctx, params.Name, params.Namespace, string(idx), elapsedTime); err != nil {
+		if err := r.ConfigMapHandler.AddPhase(ctx, params.Name, params.Namespace, fmt.Sprint(idx), elapsedTime); err != nil {
 			oktetoLog.Info("error adding phase to configmap: %s", err)
 		}
 		if err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
 			return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 		}
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Command '%s' successfully executed", command.Name)
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Command '%s' successfully executed")
 
 		envMapFromOktetoEnvFile, err = godotenv.Read(oktetoEnvFile.Name())
 		if err != nil {
