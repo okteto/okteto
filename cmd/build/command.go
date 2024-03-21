@@ -166,7 +166,8 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 		builder = buildv1.NewBuilder(bc.Builder, bc.ioCtrl)
 	} else {
 		if isBuildV2(manifest) {
-			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl, bc.analyticsTracker, okCtx, bc.k8slogger)
+			eventTracker := buildv2.NewEventTracker(bc.ioCtrl, okCtx)
+			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl, bc.analyticsTracker, okCtx, bc.k8slogger, eventTracker)
 		} else {
 			builder = buildv1.NewBuilder(bc.Builder, bc.ioCtrl)
 		}

@@ -253,6 +253,10 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 				}
 			}
 
+			okCtx := &okteto.ContextStateless{
+				Store: okteto.GetContextStore(),
+			}
+			eventTracker := buildv2.NewEventTracker(ioCtrl, okCtx)
 			up := &upContext{
 				Manifest:          oktetoManifest,
 				Dev:               nil,
@@ -266,7 +270,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 				analyticsMeta:     upMeta,
 				K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
 				tokenUpdater:      newTokenUpdaterController(),
-				builder:           buildv2.NewBuilderFromScratch(at, ioCtrl),
+				builder:           buildv2.NewBuilderFromScratch(at, ioCtrl, eventTracker),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {

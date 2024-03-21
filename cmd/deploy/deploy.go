@@ -200,12 +200,17 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 			if err != nil {
 				return fmt.Errorf("could not create pipeline command: %w", err)
 			}
+			okCtx := &okteto.ContextStateless{
+				Store: okteto.GetContextStore(),
+			}
+			eventTracker := buildv2.NewEventTracker(ioCtrl, okCtx)
+
 			c := &Command{
 				GetManifest: model.GetManifestV2,
 
 				K8sClientProvider:  k8sClientProvider,
 				GetDeployer:        GetDeployer,
-				Builder:            buildv2.NewBuilderFromScratch(at, ioCtrl),
+				Builder:            buildv2.NewBuilderFromScratch(at, ioCtrl, eventTracker),
 				DeployWaiter:       NewDeployWaiter(k8sClientProvider, k8sLogger),
 				EndpointGetter:     NewEndpointGetter,
 				isRemote:           env.LoadBoolean(constants.OktetoDeployRemote),

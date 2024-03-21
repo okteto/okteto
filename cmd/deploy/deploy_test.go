@@ -353,6 +353,12 @@ func TestDeployWithServicesToBuildWithoutComposeSection(t *testing.T) {
 	fakeDeployer.AssertNotCalled(t, "Get")
 }
 
+type fakeBuildEventTracker struct{}
+
+func (f *fakeBuildEventTracker) Track(context.Context, *analytics.ImageBuildMetadata) error {
+	return nil
+}
+
 func TestCreateConfigMapWithBuildError(t *testing.T) {
 	fakeK8sClientProvider := test.NewFakeK8sProvider()
 	opts := &Options{
@@ -378,7 +384,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 		},
 	}
 
-	builderV2 := buildv2.NewBuilder(builder, reg, io.NewIOController(), fakeTracker, okCtx, io.NewK8sLogger())
+	builderV2 := buildv2.NewBuilder(builder, reg, io.NewIOController(), fakeTracker, okCtx, io.NewK8sLogger(), &fakeBuildEventTracker{})
 	builderV2.EventTracker = &fakeEventTracker{}
 	c := &Command{
 		GetManifest:       getErrorManifest,

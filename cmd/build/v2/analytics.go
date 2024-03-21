@@ -47,7 +47,7 @@ type eventTracker struct {
 	ioCtrl             *io.Controller
 }
 
-func newEventTracker(ioCtrl *io.Controller, okCtx buildCmd.OktetoContextInterface) *eventTracker {
+func NewEventTracker(ioCtrl *io.Controller, okCtx buildCmd.OktetoContextInterface) *eventTracker {
 	k8sClientProvider := okteto.NewK8sClientProvider()
 	c, _, err := k8sClientProvider.Provide(okCtx.GetCurrentCfg())
 	if err != nil {

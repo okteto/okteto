@@ -41,7 +41,7 @@ func TestNewEventTracker(t *testing.T) {
 			CurrentContext: "test",
 		},
 	}
-	tracker := newEventTracker(io.NewIOController(), okCtx)
+	tracker := NewEventTracker(io.NewIOController(), okCtx)
 	assert.NotNil(t, tracker)
 	assert.Equal(t, normalEventType, tracker.eventTypeConverter[true])
 	assert.Equal(t, warningEventType, tracker.eventTypeConverter[false])

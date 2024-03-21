@@ -223,11 +223,15 @@ func (mc *Command) deploy(ctx context.Context, opts *InitOpts) error {
 	if err != nil {
 		return err
 	}
+	okCtx := &okteto.ContextStateless{
+		Store: okteto.GetContextStore(),
+	}
+	eventTracker := buildv2.NewEventTracker(mc.IoCtrl, okCtx)
 	c := &deploy.Command{
 		GetDeployer:       deploy.GetDeployer,
 		GetManifest:       mc.getManifest,
 		K8sClientProvider: mc.K8sClientProvider,
-		Builder:           buildv2.NewBuilderFromScratch(mc.AnalyticsTracker, mc.IoCtrl),
+		Builder:           buildv2.NewBuilderFromScratch(mc.AnalyticsTracker, mc.IoCtrl, eventTracker),
 		Fs:                afero.NewOsFs(),
 		CfgMapHandler:     deploy.NewConfigmapHandler(mc.K8sClientProvider, mc.K8sLogger),
 		PipelineCMD:       pc,
