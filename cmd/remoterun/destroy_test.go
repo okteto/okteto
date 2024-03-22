@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/deployable"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -55,6 +56,14 @@ func TestRun_DestroyCommand(t *testing.T) {
 		},
 	}
 
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Token: "token",
+			},
+		},
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			runner := &fakeDestroyRunner{}
