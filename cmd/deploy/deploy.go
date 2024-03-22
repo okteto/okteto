@@ -636,13 +636,17 @@ func (dc *Command) trackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 		hasBuildSection = manifest.HasBuildSection()
 	}
 
+	// We keep DeprecatedOktetoCurrentDeployBelongsToPreview for backward compatibility in case an old version of the backend
+	// is being used
+	isPreview := os.Getenv(model.DeprecatedOktetoCurrentDeployBelongsToPreview) == "true" ||
+		os.Getenv(constants.OktetoIsPreviewEnvVar) == "true"
 	dc.AnalyticsTracker.TrackDeploy(analytics.DeployMetadata{
 		Success:                err == nil,
 		IsOktetoRepo:           utils.IsOktetoRepo(),
 		Duration:               time.Since(startTime),
 		PipelineType:           dc.PipelineType,
 		DeployType:             deployType,
-		IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
+		IsPreview:              isPreview,
 		HasDependenciesSection: hasDependencySection,
 		HasBuildSection:        hasBuildSection,
 		IsRemote:               isRunningOnRemoteDeployer,

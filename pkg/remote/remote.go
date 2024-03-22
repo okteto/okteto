@@ -66,6 +66,7 @@ ARG {{ .OktetoDeployable }}
 ARG {{ .GitHubRepositoryArgName }}
 ARG {{ .BuildKitHostArgName }}
 ARG {{ .OktetoRegistryURLArgName }}
+ARG {{ .OktetoIsPreviewEnv }}
 RUN mkdir -p /etc/ssl/certs/
 RUN echo "${{ .TlsCertBase64ArgName }}" | base64 -d > /etc/ssl/certs/okteto.crt
 
@@ -154,6 +155,7 @@ type dockerfileTemplateProperties struct {
 	BuildKitHostArgName      string
 	OktetoRegistryURLArgName string
 	Command                  string
+	OktetoIsPreviewEnv       string
 }
 
 // NewRunner creates a new Runner for remote
@@ -244,6 +246,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		fmt.Sprintf("%s=%s", model.GithubRepositoryEnvVar, os.Getenv(model.GithubRepositoryEnvVar)),
 		fmt.Sprintf("%s=%s", model.OktetoRegistryURLEnvVar, os.Getenv(model.OktetoRegistryURLEnvVar)),
 		fmt.Sprintf("%s=%s", model.OktetoBuildkitHostURLEnvVar, os.Getenv(model.OktetoBuildkitHostURLEnvVar)),
+		fmt.Sprintf("%s=%s", constants.OktetoIsPreviewEnvVar, os.Getenv(constants.OktetoIsPreviewEnvVar)),
 	)
 
 	if r.useInternalNetwork {
@@ -341,6 +344,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		OktetoRegistryURLArgName: model.OktetoRegistryURLEnvVar,
 		OktetoDependencyEnvVars:  params.DependenciesEnvVars,
 		Command:                  params.Command,
+		OktetoIsPreviewEnv:       constants.OktetoIsPreviewEnvVar,
 	}
 
 	dockerfile, err := r.fs.Create(filepath.Join(tmpDir, params.DockerfileName))

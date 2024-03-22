@@ -613,6 +613,10 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 		isRemote = up.Manifest.Deploy.Image != ""
 	}
 
+	// We keep DeprecatedOktetoCurrentDeployBelongsToPreview for backward compatibility in case an old version of the backend
+	// is being used
+	isPreview := os.Getenv(model.DeprecatedOktetoCurrentDeployBelongsToPreview) == "true" ||
+		os.Getenv(constants.OktetoIsPreviewEnvVar) == "true"
 	// tracking deploy either its been successful or not
 	c.AnalyticsTracker.TrackDeploy(analytics.DeployMetadata{
 		Success:                err == nil,
@@ -620,7 +624,7 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 		Duration:               time.Since(startTime),
 		PipelineType:           up.Manifest.Type,
 		DeployType:             "automatic",
-		IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
+		IsPreview:              isPreview,
 		HasDependenciesSection: up.Manifest.HasDependenciesSection(),
 		HasBuildSection:        up.Manifest.HasBuildSection(),
 		Err:                    err,
