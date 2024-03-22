@@ -868,15 +868,11 @@ func TestDestroyHelmReleasesIfPresentWithErrorExecutingCommand(t *testing.T) {
 	err := dc.destroyHelmReleasesIfPresent(ctx, opts, labelSelector)
 
 	require.ErrorIs(t, err, assert.AnError)
-	// As there is an error in the command execution and there is no force flag,
-	// the second command should not be executed
-	expectedExecutedCommands := []model.DeployCommand{
-		{
-			Name:    fmt.Sprintf(helmUninstallCommand, "helm-app"),
-			Command: fmt.Sprintf(helmUninstallCommand, "helm-app"),
-		},
-	}
-	require.ElementsMatch(t, executor.executed, expectedExecutedCommands)
+	// Ideally we should check if the executed command is the expected one to delete one helm release, but as the function
+	// internally uses a map, the order of helm releases is not the same as the one in the secrets list, and it provokes
+	// random failures. As it is not critical the order of helm destruction, we are just checking that just one command
+	// is executed
+	require.True(t, len(executor.executed) == 1)
 }
 
 func TestDestroyHelmReleasesIfPresentWithErrorExecutingCommandWithForceDestroy(t *testing.T) {

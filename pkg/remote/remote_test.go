@@ -26,6 +26,7 @@ import (
 	filesystem "github.com/okteto/okteto/pkg/filesystem/fake"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -116,6 +117,15 @@ func TestRemoteTest(t *testing.T) {
 				params: &Params{
 					Manifest: fakeManifest,
 				},
+			},
+		},
+	}
+
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "namespace",
 			},
 		},
 	}
