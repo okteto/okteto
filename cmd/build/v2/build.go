@@ -262,7 +262,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				meta.CacheHitDuration = time.Since(cacheHitDurationStart)
 
 				if isBuilt {
-					ob.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of '%s' because it's already built from cache. To force a rebuild use okteto build --no-cache", svcToBuild)
+					ob.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of '%s' because it's already built from cache.", svcToBuild)
 
 					imageWithDigest, err = ob.smartBuildCtrl.CloneGlobalImageToDev(imageWithDigest)
 					if err != nil {
