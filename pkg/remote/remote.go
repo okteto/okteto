@@ -33,7 +33,6 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
-	"github.com/okteto/okteto/pkg/discovery"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -357,7 +356,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 	// build the services) so we would create a remote executor without certain files
 	// necessary for the later deployment which would cause an error when deploying
 	// remotely due to the lack of these files.
-	if err := CreateDockerignoreFileWithFilesystem(cwd, tmpDir, filesystem.CleanManifestPath(params.ManifestPathFlag), r.fs); err != nil {
+	if err := CreateDockerignoreFileWithFilesystem(cwd, tmpDir, r.fs); err != nil {
 		return "", err
 	}
 
@@ -414,7 +413,7 @@ func (r *Runner) fetchClusterMetadata(ctx context.Context) (*types.ClusterMetada
 
 // CreateDockerignoreFileWithFilesystem creates a .dockerignore file in the tmpDir with the content of the
 // .dockerignore file in the cwd
-func CreateDockerignoreFileWithFilesystem(cwd, tmpDir, manifestPathFlag string, fs afero.Fs) error {
+func CreateDockerignoreFileWithFilesystem(cwd, tmpDir string, fs afero.Fs) error {
 	dockerignoreContent := []byte(``)
 	dockerignoreFilePath := filepath.Join(cwd, oktetoDockerignoreName)
 	if _, err := fs.Stat(dockerignoreFilePath); err != nil {
@@ -432,23 +431,7 @@ func CreateDockerignoreFileWithFilesystem(cwd, tmpDir, manifestPathFlag string, 
 	// write the content into the .dockerignore used for building the remote image
 	filename := fmt.Sprintf("%s/%s", tmpDir, ".dockerignore")
 
-	// in order to always sync the okteto manifest
-	// we force to be excluded of the dockerignore file
-	currentOktetoManifestFileName := manifestPathFlag
-	if currentOktetoManifestFileName == "" {
-		currentOktetoManifestFileName = discovery.FindManifestNameWithFilesystem(cwd, fs)
-	}
-
-	// update the content of dockerignore if we find the okteto manifest
-	content := ""
-	if string(dockerignoreContent) != "" {
-		content = string(dockerignoreContent) + "\n"
-	}
-	if currentOktetoManifestFileName != "" {
-		content = content + fmt.Sprintf("!%s", currentOktetoManifestFileName) + "\n"
-	}
-
-	return afero.WriteFile(fs, filename, []byte(content), 0600)
+	return afero.WriteFile(fs, filename, dockerignoreContent, 0600)
 }
 
 // getOktetoCLIVersion gets the CLI version to be used in the Dockerfile to extract the CLI binaries

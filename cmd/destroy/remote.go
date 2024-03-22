@@ -33,7 +33,7 @@ import (
 
 const (
 	templateName           = "destroy-dockerfile"
-	dockerfileTemporalNane = "Dockerfile.destroy"
+	dockerfileTemporalName = "Dockerfile.destroy"
 	destroyCMD             = "destroy"
 )
 
@@ -99,12 +99,12 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 
 	runParams := remote.Params{
 		BaseImage:           baseImage,
-		ManifestPathFlag:    "",
+		ManifestPathFlag:    opts.ManifestPathFlag,
 		TemplateName:        templateName,
 		CommandFlags:        commandFlags,
 		BuildEnvVars:        make(map[string]string),
 		DependenciesEnvVars: make(map[string]string),
-		DockerfileName:      dockerfileTemporalNane,
+		DockerfileName:      dockerfileTemporalName,
 		Deployable:          dep,
 		Manifest:            opts.Manifest,
 		Command:             destroyCMD,

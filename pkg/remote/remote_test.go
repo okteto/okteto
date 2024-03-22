@@ -613,9 +613,7 @@ func TestCreateDockerignoreFileWithFilesystem(t *testing.T) {
 	dockerignoreWd := "/test/"
 
 	type config struct {
-		wd               string
-		manifestPathFlag string
-		hasManifest      bool
+		wd string
 	}
 	var tests = []struct {
 		name            string
@@ -627,40 +625,17 @@ func TestCreateDockerignoreFileWithFilesystem(t *testing.T) {
 			config: config{
 				wd: dockerignoreWd,
 			},
-			expectedContent: "FROM alpine\n",
+			expectedContent: "FROM alpine",
 		},
 		{
-			name: "dockerignore present copy .oktetodeployignore to .dockerignore with manifest",
+			name: "dockerignore present copy .oktetodeployignore to .dockerignore",
 			config: config{
-				wd:          dockerignoreWd,
-				hasManifest: true,
+				wd: dockerignoreWd,
 			},
-			expectedContent: "FROM alpine\n!okteto.yaml\n",
+			expectedContent: "FROM alpine",
 		},
 		{
-			name: "dockerignore present copy .oktetodeployignore to .dockerignore with manifestPath not empty",
-			config: config{
-				wd:               dockerignoreWd,
-				manifestPathFlag: "file-flag-okteto.yaml",
-			},
-			expectedContent: "FROM alpine\n!file-flag-okteto.yaml\n",
-		},
-		{
-			name: "without dockerignore, with manifest file flag, generate with ignore file content",
-			config: config{
-				manifestPathFlag: "file-flag-okteto.yaml",
-			},
-			expectedContent: "!file-flag-okteto.yaml\n",
-		},
-		{
-			name: "without dockerignore, with manifest, generate with ignore manifest content",
-			config: config{
-				hasManifest: true,
-			},
-			expectedContent: "!okteto.yaml\n",
-		},
-		{
-			name:            "without dockerignore, without manifest generate empty dockerignore",
+			name:            "without dockerignore",
 			config:          config{},
 			expectedContent: "",
 		},
@@ -673,11 +648,8 @@ func TestCreateDockerignoreFileWithFilesystem(t *testing.T) {
 
 			assert.NoError(t, fs.MkdirAll(dockerignoreWd, 0755))
 			assert.NoError(t, afero.WriteFile(fs, filepath.Join(dockerignoreWd, ".oktetodeployignore"), []byte("FROM alpine"), 0644))
-			if tt.config.hasManifest {
-				assert.NoError(t, afero.WriteFile(fs, filepath.Join(tt.config.wd, "okteto.yaml"), []byte("hola"), 0644))
-			}
 
-			err := CreateDockerignoreFileWithFilesystem(tt.config.wd, tempDir, tt.config.manifestPathFlag, fs)
+			err := CreateDockerignoreFileWithFilesystem(tt.config.wd, tempDir, fs)
 			assert.NoError(t, err)
 			b, err := afero.ReadFile(fs, filepath.Join(tempDir, ".dockerignore"))
 			assert.Equal(t, tt.expectedContent, string(b))

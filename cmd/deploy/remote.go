@@ -99,7 +99,7 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		// This is the base image provided by the deploy operation. If it is empty, the runner is the one in charge of
 		// providing the default one
 		BaseImage:           baseImage,
-		ManifestPathFlag:    "manifest",
+		ManifestPathFlag:    deployOptions.ManifestPathFlag,
 		TemplateName:        templateName,
 		CommandFlags:        commandsFlags,
 		BuildEnvVars:        rd.getBuildEnvVars(),

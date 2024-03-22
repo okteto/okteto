@@ -14,13 +14,31 @@
 package deploy
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
 
+	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/deployable"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/remote"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
+
+type fakeRemoteRunner struct {
+	mock.Mock
+}
+
+func (f *fakeRemoteRunner) Run(ctx context.Context, params *remote.Params) error {
+	args := f.Called(ctx, params)
+	return args.Error(0)
+}
 
 func TestGetCommandFlags(t *testing.T) {
 	type config struct {
@@ -150,4 +168,160 @@ func Test_newRemoteDeployer(t *testing.T) {
 	got := newRemoteDeployer(getBuildEnvVars, io.NewIOController(), getDependencyEnvVars)
 	require.IsType(t, &remoteDeployer{}, got)
 	require.NotNil(t, got.getBuildEnvVars)
+}
+
+func TestDeployRemote(t *testing.T) {
+	manifest := &model.Manifest{
+		Deploy: &model.DeployInfo{
+			Image: "test-image",
+			Divert: &model.DivertDeploy{
+				Namespace: "test-divert",
+				Driver:    "divert-driver",
+			},
+			Commands: []model.DeployCommand{
+				{
+					Name:    "command 1",
+					Command: "test-command",
+				},
+			},
+		},
+		External: map[string]*externalresource.ExternalResource{
+			"test": {
+				Icon: "database",
+			},
+		},
+	}
+
+	expectedParams := &remote.Params{
+		BaseImage:           manifest.Deploy.Image,
+		ManifestPathFlag:    "/path/to/manifest",
+		TemplateName:        templateName,
+		CommandFlags:        []string{"--name \"test\""},
+		BuildEnvVars:        map[string]string{"BUILD_VAR_1": "value"},
+		DependenciesEnvVars: map[string]string{"DEP_VAR_1": "value"},
+		DockerfileName:      dockerfileTemporalName,
+		Deployable: deployable.Entity{
+			Divert:   manifest.Deploy.Divert,
+			Commands: manifest.Deploy.Commands,
+			External: manifest.External,
+		},
+		Manifest: manifest,
+		Command:  deployCommand,
+	}
+	runner := &fakeRemoteRunner{}
+	runner.On("Run", mock.Anything, expectedParams).Return(nil)
+	rd := &remoteDeployer{
+		runner: runner,
+		getBuildEnvVars: func() map[string]string {
+			return map[string]string{"BUILD_VAR_1": "value"}
+		},
+		getDependencyEnvVars: func(environGetter) map[string]string {
+			return map[string]string{"DEP_VAR_1": "value"}
+		},
+	}
+	opts := &Options{
+		Name:             "test",
+		Manifest:         manifest,
+		ManifestPathFlag: "/path/to/manifest",
+	}
+	err := rd.Deploy(context.Background(), opts)
+	require.NoError(t, err)
+	runner.AssertExpectations(t)
+}
+
+func TestDeployRemoteWithError(t *testing.T) {
+	manifest := &model.Manifest{
+		Deploy: &model.DeployInfo{
+			Image: "test-image",
+			Divert: &model.DivertDeploy{
+				Namespace: "test-divert",
+				Driver:    "divert-driver",
+			},
+			Commands: []model.DeployCommand{
+				{
+					Name:    "command 1",
+					Command: "test-command",
+				},
+			},
+		},
+		External: map[string]*externalresource.ExternalResource{
+			"test": {
+				Icon: "database",
+			},
+		},
+	}
+
+	expectedParams := &remote.Params{
+		BaseImage:           manifest.Deploy.Image,
+		ManifestPathFlag:    "/path/to/manifest",
+		TemplateName:        templateName,
+		CommandFlags:        []string{"--name \"test\""},
+		BuildEnvVars:        map[string]string{"BUILD_VAR_1": "value"},
+		DependenciesEnvVars: map[string]string{"DEP_VAR_1": "value"},
+		DockerfileName:      dockerfileTemporalName,
+		Deployable: deployable.Entity{
+			Divert:   manifest.Deploy.Divert,
+			Commands: manifest.Deploy.Commands,
+			External: manifest.External,
+		},
+		Manifest: manifest,
+		Command:  deployCommand,
+	}
+
+	tests := []struct {
+		err           error
+		expectedCheck func(err error) bool
+		name          string
+	}{
+		{
+			name: "WithOktetoCommandErr",
+			err: buildCmd.OktetoCommandErr{
+				Stage: "test",
+				Err:   assert.AnError,
+			},
+			expectedCheck: func(err error) bool {
+				return errors.Is(err, assert.AnError)
+			},
+		},
+		{
+			name: "WithUserError",
+			err: oktetoErrors.UserError{
+				E: assert.AnError,
+			},
+			expectedCheck: func(err error) bool {
+				return errors.As(err, &oktetoErrors.UserError{})
+			},
+		},
+		{
+			name: "WithOtherError",
+			err:  assert.AnError,
+			expectedCheck: func(err error) bool {
+				return errors.Is(err, assert.AnError)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runner := &fakeRemoteRunner{}
+			runner.On("Run", mock.Anything, expectedParams).Return(tt.err)
+			rd := &remoteDeployer{
+				runner: runner,
+				getBuildEnvVars: func() map[string]string {
+					return map[string]string{"BUILD_VAR_1": "value"}
+				},
+				getDependencyEnvVars: func(environGetter) map[string]string {
+					return map[string]string{"DEP_VAR_1": "value"}
+				},
+			}
+			opts := &Options{
+				Name:             "test",
+				Manifest:         manifest,
+				ManifestPathFlag: "/path/to/manifest",
+			}
+			err := rd.Deploy(context.Background(), opts)
+			require.True(t, tt.expectedCheck(err))
+			runner.AssertExpectations(t)
+		})
+	}
 }
