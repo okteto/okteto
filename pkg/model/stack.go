@@ -779,7 +779,7 @@ func (svcResources *ServiceResources) IsDefaultValue() bool {
 
 func isPathAComposeFile(path string) bool {
 	base := filepath.Base(path)
-	return strings.HasPrefix(base, "docker-compose") || strings.HasPrefix(base, "okteto-compose")
+	return strings.HasPrefix(base, "compose") || strings.HasPrefix(base, "docker-compose") || strings.HasPrefix(base, "okteto-compose")
 }
 
 // LoadStack loads an okteto stack manifest checking "yml" and "yaml"
