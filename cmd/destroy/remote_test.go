@@ -140,7 +140,7 @@ func TestDestroyRemote(t *testing.T) {
 		BuildEnvVars:        make(map[string]string),
 		DependenciesEnvVars: make(map[string]string),
 		Manifest:            manifest,
-		Command:             destroyCMD,
+		Command:             remote.DestroyCommand,
 	}
 	runner := &fakeRemoteRunner{}
 	runner.On("Run", mock.Anything, expectedParams).Return(nil)
@@ -188,7 +188,7 @@ func TestDestroyRemoteWithError(t *testing.T) {
 		BuildEnvVars:        make(map[string]string),
 		DependenciesEnvVars: make(map[string]string),
 		Manifest:            manifest,
-		Command:             destroyCMD,
+		Command:             remote.DestroyCommand,
 	}
 
 	tests := []struct {

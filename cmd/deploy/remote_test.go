@@ -206,7 +206,7 @@ func TestDeployRemote(t *testing.T) {
 			External: manifest.External,
 		},
 		Manifest: manifest,
-		Command:  deployCommand,
+		Command:  remote.DeployCommand,
 	}
 	runner := &fakeRemoteRunner{}
 	runner.On("Run", mock.Anything, expectedParams).Return(nil)
@@ -265,7 +265,7 @@ func TestDeployRemoteWithError(t *testing.T) {
 			External: manifest.External,
 		},
 		Manifest: manifest,
-		Command:  deployCommand,
+		Command:  remote.DeployCommand,
 	}
 
 	tests := []struct {

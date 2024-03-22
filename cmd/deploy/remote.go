@@ -34,7 +34,6 @@ import (
 const (
 	templateName           = "dockerfile"
 	dockerfileTemporalName = "Dockerfile.deploy"
-	deployCommand          = "deploy"
 )
 
 // remoteRunner is the interface to run the deploy command remotely. The implementation is using
@@ -107,7 +106,7 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		DockerfileName:      dockerfileTemporalName,
 		Deployable:          dep,
 		Manifest:            deployOptions.Manifest,
-		Command:             deployCommand,
+		Command:             remote.DeployCommand,
 	}
 
 	if err := rd.runner.Run(ctx, &runParams); err != nil {

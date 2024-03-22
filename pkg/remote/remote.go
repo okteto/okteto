@@ -44,6 +44,10 @@ import (
 )
 
 const (
+	// DeployCommand is the command to deploy a dev environment remotely
+	DeployCommand = "deploy"
+	// DestroyCommand is the command to destroy a dev environment remotely
+	DestroyCommand         = "destroy"
 	oktetoDockerignoreName = ".oktetodeployignore"
 	dockerfileTemplate     = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
@@ -229,7 +233,12 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		return err
 	}
 
-	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: buildCmd.DeployOutputModeOnBuild})
+	outputMode := buildCmd.DeployOutputModeOnBuild
+	if params.Command == DestroyCommand {
+		outputMode = buildCmd.DestroyOutputModeOnBuild
+
+	}
+	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: outputMode})
 	buildOptions.Manifest = params.Manifest
 	buildOptions.BuildArgs = append(
 		buildOptions.BuildArgs,

@@ -34,7 +34,6 @@ import (
 const (
 	templateName           = "destroy-dockerfile"
 	dockerfileTemporalName = "Dockerfile.destroy"
-	destroyCMD             = "destroy"
 )
 
 // remoteRunner is the interface to run the destroy command remotely. The implementation is using
@@ -107,7 +106,7 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 		DockerfileName:      dockerfileTemporalName,
 		Deployable:          dep,
 		Manifest:            opts.Manifest,
-		Command:             destroyCMD,
+		Command:             remote.DestroyCommand,
 	}
 
 	// we need to call Run() method using a remote builder. This Builder will have
