@@ -22,9 +22,11 @@ import (
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 type fakeBuilderV2 struct {
@@ -188,6 +190,14 @@ func (fakeAnalyticsTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
 func (fakeAnalyticsTracker) TrackDestroy(analytics.DestroyMetadata)           {}
 
 func Test_newBuildCtrl(t *testing.T) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Cfg: &api.Config{},
+			},
+		},
+		CurrentContext: "test",
+	}
 	got := newBuildCtrl("test-control", &fakeAnalyticsTracker{}, io.NewIOController())
 
 	require.Equal(t, "test-control", got.name)

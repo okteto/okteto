@@ -159,6 +159,14 @@ func (a *fakeAnalyticsTracker) TrackImageBuild(meta ...*analytics.ImageBuildMeta
 	a.metaPayload = meta
 }
 
+type fakeEventTracker struct {
+	err error
+}
+
+func (f *fakeEventTracker) Track(context.Context, *analytics.ImageBuildMetadata) error {
+	return f.err
+}
+
 func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistryInterface, cfg oktetoBuilderConfigInterface, analyticsTracker analyticsTrackerInterface) *OktetoBuilder {
 	return &OktetoBuilder{
 		Registry:          registry,
@@ -183,6 +191,7 @@ func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegi
 				CurrentContext: "test",
 			},
 		},
+		EventTracker: &fakeEventTracker{},
 	}
 }
 

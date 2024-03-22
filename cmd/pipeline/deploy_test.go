@@ -224,7 +224,7 @@ func TestDeployPipelineSuccesful(t *testing.T) {
 		k8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	opts := &DeployOptions{
-		Repository: "test",
+		Repository: "http://stest",
 		Name:       "test",
 	}
 	err := pc.ExecuteDeployPipeline(ctx, opts)
@@ -269,7 +269,7 @@ func TestDeployPipelineSuccesfulWithWait(t *testing.T) {
 		k8sClientProvider: test.NewFakeK8sProvider(cmap),
 	}
 	opts := &DeployOptions{
-		Repository: "test",
+		Repository: "https://test",
 		Name:       "test",
 		Namespace:  "test",
 		Wait:       true,
@@ -298,7 +298,7 @@ func TestDeployWithError(t *testing.T) {
 		k8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	opts := &DeployOptions{
-		Repository: "test",
+		Repository: "https://test",
 		Name:       "test",
 	}
 	err := pc.ExecuteDeployPipeline(ctx, opts)
@@ -343,7 +343,7 @@ func TestDeployPipelineSuccesfulWithWaitStreamError(t *testing.T) {
 		k8sClientProvider: test.NewFakeK8sProvider(cmap),
 	}
 	opts := &DeployOptions{
-		Repository: "test",
+		Repository: "https://test",
 		Name:       "test",
 		Namespace:  "test",
 		Wait:       true,
@@ -365,7 +365,7 @@ func Test_DeployPipelineWithReuseParamsNotFoundError(t *testing.T) {
 		k8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	opts := &DeployOptions{
-		Repository:  "test",
+		Repository:  "https://test",
 		Name:        "test",
 		ReuseParams: true,
 	}
@@ -407,7 +407,7 @@ func Test_DeployPipelineWithReuseParamsSuccess(t *testing.T) {
 		),
 	}
 	opts := &DeployOptions{
-		Repository:  "test",
+		Repository:  "https://test",
 		Name:        "test",
 		Namespace:   "test",
 		ReuseParams: true,
@@ -464,7 +464,7 @@ func Test_DeployPipelineWithSkipIfExist(t *testing.T) {
 				),
 			},
 			opts: &DeployOptions{
-				Repository:   "test",
+				Repository:   "https://test",
 				Name:         "test",
 				Namespace:    "test",
 				SkipIfExists: true,
@@ -496,7 +496,7 @@ func Test_DeployPipelineWithSkipIfExist(t *testing.T) {
 				),
 			},
 			opts: &DeployOptions{
-				Repository:   "test",
+				Repository:   "https://test",
 				Name:         "test",
 				Namespace:    "test",
 				SkipIfExists: true,
@@ -560,7 +560,7 @@ func Test_DeployPipelineWithSkipIfExistAndWait(t *testing.T) {
 				),
 			},
 			opts: &DeployOptions{
-				Repository:   "test",
+				Repository:   "https://test",
 				Name:         "test",
 				Namespace:    "test",
 				SkipIfExists: true,
@@ -600,7 +600,7 @@ func Test_DeployPipelineWithSkipIfExistAndWait(t *testing.T) {
 				),
 			},
 			opts: &DeployOptions{
-				Repository:   "test",
+				Repository:   "https://test",
 				Name:         "test",
 				Namespace:    "test",
 				SkipIfExists: true,
@@ -639,7 +639,7 @@ func Test_DeployPipelineWithSkipIfExistAndWait(t *testing.T) {
 				),
 			},
 			opts: &DeployOptions{
-				Repository:   "test",
+				Repository:   "https://test",
 				Name:         "test",
 				Namespace:    "test",
 				SkipIfExists: true,

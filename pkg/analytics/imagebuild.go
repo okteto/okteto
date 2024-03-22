@@ -23,6 +23,8 @@ const (
 
 type ImageBuildMetadata struct {
 	Name                     string
+	Namespace                string
+	DevenvName               string
 	RepoURL                  string
 	RepoHash                 string
 	BuildContextHash         string
