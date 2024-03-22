@@ -31,6 +31,10 @@ import (
 	"github.com/spf13/afero"
 )
 
+const (
+	gitOperationTimeout = 5 * time.Second
+)
+
 var (
 	errNotCleanRepo    = errors.New("repository is not clean")
 	errTimeoutExceeded = errors.New("timeout exceeded")
@@ -143,10 +147,8 @@ func (r gitRepoController) GetLatestDirCommit(contextDir string) (string, error)
 	timeoutCh := make(chan struct{})
 	ch := make(chan commitResponse)
 
-	timeout := 5 * time.Second
-
 	go func() {
-		time.Sleep(timeout)
+		time.Sleep(gitOperationTimeout)
 		close(timeoutCh)
 		cancel()
 		ch <- commitResponse{
@@ -195,8 +197,6 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 	diffCh := make(chan diffResponse)
 	untrackedFilesCh := make(chan untrackedFilesResponse)
 
-	timeout := 5 * time.Second
-
 	repo, err := r.repoGetter.get(r.path)
 	if err != nil {
 		return "", fmt.Errorf("failed to analyze git repo: %w", err)
@@ -204,7 +204,7 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 
 	// go func that cancels the context after the timeout
 	go func() {
-		time.Sleep(timeout)
+		time.Sleep(gitOperationTimeout)
 		close(timeoutCh)
 		cancel()
 		diffCh <- diffResponse{

@@ -119,7 +119,7 @@ func (fr fakeRegistry) IsGlobalRegistry(image string) bool { return false }
 
 func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string) { return "", "" }
 func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)   { return "", "" }
-func (fr fakeRegistry) CloneGlobalImageToDev(_ string) (string, error) {
+func (fr fakeRegistry) CloneGlobalImageToDev(string) (string, error) {
 	return "", nil
 }
 
