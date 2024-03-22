@@ -106,7 +106,7 @@ type cleanUpFunc func(context.Context, error)
 
 // Command defines the config for deploying an app
 type Command struct {
-	GetManifest       func(path string, fs afero.Fs) (*model.Manifest, error)
+	GetManifest       func(path string, fs afero.Fs, envManager *env.Manager) (*model.Manifest, error)
 	K8sClientProvider okteto.K8sClientProviderWithLogger
 	Builder           builderInterface
 	GetDeployer       getDeployerFunc
@@ -142,7 +142,7 @@ type Deployer interface {
 }
 
 // Deploy deploys the okteto manifest
-func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, envManager *env.Manager) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
 		Use:   "deploy [service...]",
@@ -153,7 +153,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 				return fmt.Errorf("'dependencies' is only supported in contexts that have Okteto installed")
 			}
 
-			if err := validateAndSet(options.Variables, os.Setenv); err != nil {
+			if err := validateAndSetVarsFromFlag(options.Variables, envManager); err != nil {
 				return err
 			}
 
@@ -167,11 +167,11 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 			}
 
 			// Loads, updates and uses the context from path. If not found, it creates and uses a new context
-			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: true}); err != nil {
+			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: true}, envManager); err != nil {
 				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
 					return err
 				}
-				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
+				if err := contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
 					return err
 				}
 			}
@@ -182,7 +182,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 					return err
 				}
 				if create {
-					nsCmd, err := namespace.NewCommand()
+					nsCmd, err := namespace.NewCommand(envManager)
 					if err != nil {
 						return err
 					}
@@ -226,7 +226,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 			exit := make(chan error, 1)
 
 			go func() {
-				err := c.Run(ctx, options)
+				err := c.Run(ctx, options, envManager)
 
 				c.trackDeploy(options.Manifest, options.RunInRemote, startTime, err)
 				exit <- err
@@ -264,9 +264,9 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 }
 
 // Run runs the deploy sequence
-func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
+func (dc *Command) Run(ctx context.Context, deployOptions *Options, envManager *env.Manager) error {
 	oktetoLog.SetStage("Load manifest")
-	manifest, err := dc.GetManifest(deployOptions.ManifestPath, dc.Fs)
+	manifest, err := dc.GetManifest(deployOptions.ManifestPath, dc.Fs, envManager)
 	if err != nil {
 		return err
 	}
@@ -366,6 +366,8 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	if err := dc.recreateFailedPods(ctx, deployOptions.Name); err != nil {
 		oktetoLog.Infof("failed to recreate failed pods: %s", err.Error())
 	}
+
+	envManager.WarnVarsPrecedence()
 
 	oktetoLog.EnableMasking()
 	err = dc.deploy(ctx, deployOptions, cwd, c)
@@ -692,7 +694,7 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 		IsInsideDeploy: true,
 		DivertDriver:   divertDriver,
 	}
-	return stackCommand.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)
+	return stackCommand.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts, nil) // TODO: pass envManager
 }
 
 // deployEndpoints deploys the endpoints defined in the Okteto manifest

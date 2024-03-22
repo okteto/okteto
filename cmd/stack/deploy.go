@@ -49,7 +49,7 @@ type DeployCommand struct {
 }
 
 // deploy deploys a stack
-func deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
+func deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller, envManager *env.Manager) *cobra.Command {
 	options := &stack.DeployOptions{}
 
 	cmd := &cobra.Command{
@@ -67,7 +67,7 @@ func deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 				}
 				options.StackPaths[0] = model.GetManifestPathFromWorkdir(options.StackPaths[0], workdir)
 			}
-			s, err := contextCMD.LoadStackWithContext(ctx, options.Name, options.Namespace, options.StackPaths, afero.NewOsFs())
+			s, err := contextCMD.LoadStackWithContext(ctx, options.Name, options.Namespace, options.StackPaths, afero.NewOsFs(), envManager)
 			if err != nil {
 				return err
 			}
@@ -82,7 +82,7 @@ func deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 				ioCtrl:           ioCtrl,
 				DivertDriver:     divert.NewNoop(),
 			}
-			return dc.RunDeploy(ctx, s, options)
+			return dc.RunDeploy(ctx, s, options, envManager)
 		},
 	}
 	cmd.Flags().StringArrayVarP(&options.StackPaths, "file", "f", []string{}, "path to the compose manifest files. If more than one is passed the latest will overwrite the fields from the previous")
@@ -97,7 +97,7 @@ func deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 }
 
 // RunDeploy runs the deploy command sequence
-func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *stack.DeployOptions) error {
+func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *stack.DeployOptions, envManager *env.Manager) error {
 
 	if okteto.IsOkteto() {
 		create, err := utils.ShouldCreateNamespace(ctx, s.Namespace)
@@ -105,7 +105,7 @@ func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *
 			return err
 		}
 		if create {
-			nsCmd, err := namespace.NewCommand()
+			nsCmd, err := namespace.NewCommand(envManager)
 			if err != nil {
 				return err
 			}

@@ -1,4 +1,4 @@
-// Copyright 2023 The Okteto Authors
+// Copyright 2024 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,55 +11,57 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package context
+package vars
 
 import (
-	"os"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v2"
 )
 
-func Test_setSecrets(t *testing.T) {
-	key := "key"
-	expectedValue := "value"
-	var tests = []struct {
-		envs    map[string]string
-		name    string
-		secrets []types.Secret
+func Test_Var_MarshalYAML(t *testing.T) {
+	tests := []struct {
+		v           Var
+		name        string
+		expected    string
+		expectedErr bool
 	}{
 		{
-			name: "create new env var from secret",
-			secrets: []types.Secret{
-				{
-					Name:  key,
-					Value: expectedValue,
-				},
+			name: "serialized successfully",
+			v: Var{
+				Name:  "foo",
+				Value: "bar",
 			},
-			envs: map[string]string{},
+			expected: "'foo: bar'\n",
 		},
 		{
-			name: "not overwrite env var from secret",
-			secrets: []types.Secret{
-				{
-					Name:  key,
-					Value: "random-value",
-				},
+			name: "empty name - serialized successfully",
+			v: Var{
+				Name:  "",
+				Value: "bar",
 			},
-			envs: map[string]string{
-				key: expectedValue,
+			expected: "': bar'\n",
+		},
+		{
+			name: "empty - serialized successfully",
+			v: Var{
+				Name:  "foo",
+				Value: "",
 			},
+			expected: "'foo: '\n",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			for k, v := range tt.envs {
-				t.Setenv(k, v)
+			b, err := yaml.Marshal(tt.v)
+			if tt.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, string(b))
 			}
-			setSecrets(tt.secrets)
-			assert.Equal(t, expectedValue, os.Getenv(key))
 		})
 	}
 }

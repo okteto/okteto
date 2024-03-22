@@ -22,6 +22,7 @@ import (
 	"text/tabwriter"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -59,7 +60,7 @@ func newListPreviewCommand(okClient types.OktetoInterface, flags *listFlags) *li
 }
 
 // List lists all the previews
-func List(ctx context.Context) *cobra.Command {
+func List(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	flags := &listFlags{}
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -71,7 +72,7 @@ func List(ctx context.Context) *cobra.Command {
 				ctxOptions.Show = true
 			}
 
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).Run(ctx, ctxOptions); err != nil {
 				return err
 			}
 

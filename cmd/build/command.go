@@ -30,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/discovery"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
@@ -49,13 +50,14 @@ const (
 
 // Command defines the build command
 type Command struct {
-	GetManifest func(path string, fs afero.Fs) (*model.Manifest, error)
+	GetManifest func(path string, fs afero.Fs, envManager *env.Manager) (*model.Manifest, error)
 
 	Builder          buildCmd.OktetoBuilderInterface
 	Registry         registryInterface
 	analyticsTracker analyticsTrackerInterface
 	ioCtrl           *io.Controller
 	k8slogger        *io.K8sLogger
+	envManager       *env.Manager
 }
 
 type analyticsTrackerInterface interface {
@@ -75,7 +77,7 @@ type registryInterface interface {
 }
 
 // NewBuildCommand creates a struct to run all build methods
-func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker analyticsTrackerInterface, okCtx *okteto.ContextStateless, k8slogger *io.K8sLogger) *Command {
+func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker analyticsTrackerInterface, okCtx *okteto.ContextStateless, k8slogger *io.K8sLogger, envManager *env.Manager) *Command {
 
 	return &Command{
 		GetManifest:      model.GetManifestV2,
@@ -84,6 +86,7 @@ func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker analyticsTrackerInt
 		ioCtrl:           ioCtrl,
 		k8slogger:        k8slogger,
 		analyticsTracker: analyticsTracker,
+		envManager:       envManager,
 	}
 }
 
@@ -93,7 +96,7 @@ const (
 )
 
 // Build build and optionally push a Docker image
-func Build(ctx context.Context, ioCtrl *io.Controller, at analyticsTrackerInterface, k8slogger *io.K8sLogger) *cobra.Command {
+func Build(ctx context.Context, ioCtrl *io.Controller, at analyticsTrackerInterface, k8slogger *io.K8sLogger, envManager *env.Manager) *cobra.Command {
 	options := &types.BuildOptions{}
 	cmd := &cobra.Command{
 		Use:   "build [service...]",
@@ -103,14 +106,14 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at analyticsTrackerInterf
 			// The context must be loaded before reading manifest. Otherwise,
 			// secrets will not be resolved when GetManifest is called and
 			// the manifest will load empty values.
-			oktetoContext, err := getOktetoContext(ctx, options)
+			oktetoContext, err := getOktetoContext(ctx, options, envManager)
 			if err != nil {
 				return err
 			}
 
 			ioCtrl.Logger().Info("context loaded")
 
-			bc := NewBuildCommand(ioCtrl, at, oktetoContext, k8slogger)
+			bc := NewBuildCommand(ioCtrl, at, oktetoContext, k8slogger, envManager)
 
 			builder, err := bc.getBuilder(options, oktetoContext)
 
@@ -148,13 +151,13 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at analyticsTrackerInterf
 }
 
 // getBuilder returns the proper builder (V1 or V2) based on the manifest. The following rules are applied:
-//   - If the manifest is not found or there is any error getting the manifest, the builder fallsback to V1
-//   - If the manifest is found and it is a V2 manifest and the build section has some image, the builder is V2
-//   - If the manifest is found and it is a V1 manifest or the build section is empty, the builder fallsback to V1
+//   - If the manifest is not found or there is any error getting the manifest, the builder falls back to V1
+//   - If the manifest is found and, it is a V2 manifest and the build section has some image, the builder is V2
+//   - If the manifest is found and, it is a V1 manifest or the build section is empty, the builder falls back to V1
 func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.ContextStateless) (Builder, error) {
 	var builder Builder
 
-	manifest, err := bc.GetManifest(options.File, afero.NewOsFs())
+	manifest, err := bc.GetManifest(options.File, afero.NewOsFs(), bc.envManager)
 	if err != nil {
 		if options.File != "" && errors.Is(err, oktetoErrors.ErrInvalidManifest) && validateDockerfile(options.File) != nil {
 			return nil, err
@@ -173,6 +176,8 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 	}
 
 	options.Manifest = manifest
+
+	bc.envManager.WarnVarsPrecedence()
 
 	return builder, nil
 }
@@ -197,7 +202,7 @@ func validateDockerfile(file string) error {
 	return err
 }
 
-func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*okteto.ContextStateless, error) {
+func getOktetoContext(ctx context.Context, options *types.BuildOptions, envManager *env.Manager) (*okteto.ContextStateless, error) {
 	ctxOpts := &contextCMD.Options{
 		Context:   options.K8sContext,
 		Namespace: options.Namespace,
@@ -229,7 +234,7 @@ func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*okteto
 		}
 	}
 
-	oktetoContext, err := contextCMD.NewContextCommand().RunStateless(ctx, ctxOpts)
+	oktetoContext, err := contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).RunStateless(ctx, ctxOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +251,7 @@ func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*okteto
 			return nil, err
 		}
 		if create {
-			if err := namespace.NewCommandStateless(c).Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
+			if err := namespace.NewCommandStateless(c, envManager).Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
 				return nil, err
 			}
 		}

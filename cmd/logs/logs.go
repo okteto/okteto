@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/devenvironment"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -55,7 +56,7 @@ type Options struct {
 	All          bool
 }
 
-func Logs(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Logs(ctx context.Context, k8sLogger *io.K8sLogger, envManager *env.Manager) *cobra.Command {
 	options := &Options{}
 
 	cmd := &cobra.Command{
@@ -65,7 +66,7 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, contextCMD.ManifestOptions{Filename: options.ManifestPath, Namespace: options.Namespace, K8sContext: options.Context}, afero.NewOsFs())
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, contextCMD.ManifestOptions{Filename: options.ManifestPath, Namespace: options.Namespace, K8sContext: options.Context}, afero.NewOsFs(), envManager)
 			if err != nil {
 				return err
 			}

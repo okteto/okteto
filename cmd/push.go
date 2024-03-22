@@ -56,7 +56,7 @@ type pushOptions struct {
 }
 
 // Push builds, pushes and redeploys the target app
-func Push(ctx context.Context) *cobra.Command {
+func Push(ctx context.Context, envManager *env.Manager) *cobra.Command {
 	pushOpts := &pushOptions{}
 	cmd := &cobra.Command{
 		Hidden: true,
@@ -89,7 +89,7 @@ func Push(ctx context.Context) *cobra.Command {
 				Namespace: ctxResource.Namespace,
 				Show:      true,
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithEnvManger(envManager)).Run(ctx, ctxOptions); err != nil {
 				return err
 			}
 

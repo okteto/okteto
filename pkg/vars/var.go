@@ -1,4 +1,4 @@
-// Copyright 2023 The Okteto Authors
+// Copyright 2024 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,10 +11,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package vars
 
-// Secret represents a secret
-type Secret struct {
-	Name  string `json:"name,omitempty"`
-	Value string `json:"value,omitempty"`
+import "fmt"
+
+// Var represents a manifest variable
+type Var struct {
+	Name  string `json:"name,omitempty" yaml:"name,omitempty"`
+	Value string `json:"value,omitempty" yaml:"value,omitempty"`
+}
+
+func (v Var) String() string {
+	return fmt.Sprintf("%s: %s", v.Name, v.Value)
+}
+
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
+func (v Var) MarshalYAML() (interface{}, error) {
+	return v.String(), nil
 }

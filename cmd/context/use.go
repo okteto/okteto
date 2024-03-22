@@ -21,12 +21,12 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +37,7 @@ const (
 )
 
 // Use context points okteto to a cluster.
-func Use() *cobra.Command {
+func Use(envManager *env.Manager) *cobra.Command {
 	ctxOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:   "use [<url>|Kubernetes context]",
@@ -72,7 +72,7 @@ Or a Kubernetes context:
 			ctxOptions.Save = true
 			ctxOptions.CheckNamespaceAccess = ctxOptions.Namespace != ""
 
-			err := NewContextCommand().Run(ctx, ctxOptions)
+			err := NewContextCommand(WithEnvManger(envManager)).Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			if err != nil {
 				cmd.SilenceUsage = true
@@ -219,19 +219,4 @@ func getContext(ctxOptions *Options) (string, error) {
 	}
 
 	return oktetoContext, nil
-}
-
-func setSecrets(secrets []types.Secret) {
-	for _, secret := range secrets {
-		value, exists := os.LookupEnv(secret.Name)
-		if exists {
-			if value != secret.Value {
-				oktetoLog.Warning("$%s secret is being overridden by a local environment variable by the same name.", secret.Name)
-			}
-			oktetoLog.AddMaskedWord(value)
-			continue
-		}
-		os.Setenv(secret.Name, secret.Value)
-		oktetoLog.AddMaskedWord(secret.Value)
-	}
 }

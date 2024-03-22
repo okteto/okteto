@@ -28,6 +28,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1284,7 +1285,7 @@ func Test_getInferredManifestFromK8sManifestFile(t *testing.T) {
 			t.Fatalf("Error closing file %s: %s", fullpath, err)
 		}
 	}()
-	_, err = GetInferredManifest(wd, afero.NewMemMapFs())
+	_, err = GetInferredManifest(wd, afero.NewMemMapFs(), nil)
 	assert.NoError(t, err)
 }
 
@@ -1300,7 +1301,7 @@ func Test_getInferredManifestFromK8sManifestFolder(t *testing.T) {
 		}
 	}()
 
-	_, err = GetInferredManifest(wd, afero.NewMemMapFs())
+	_, err = GetInferredManifest(wd, afero.NewMemMapFs(), nil)
 	assert.NoError(t, err)
 }
 
@@ -1336,7 +1337,7 @@ func Test_getInferredManifestFromHelmPath(t *testing.T) {
 					}
 				}()
 			}
-			_, err := GetInferredManifest(wd, afero.NewMemMapFs())
+			_, err := GetInferredManifest(wd, afero.NewMemMapFs(), nil)
 			assert.NoError(t, err)
 		})
 	}
@@ -1344,7 +1345,7 @@ func Test_getInferredManifestFromHelmPath(t *testing.T) {
 
 func Test_getInferredManifestWhenNoManifestExist(t *testing.T) {
 	wd := t.TempDir()
-	result, err := GetInferredManifest(wd, afero.NewMemMapFs())
+	result, err := GetInferredManifest(wd, afero.NewMemMapFs(), nil)
 	assert.Empty(t, result)
 	assert.ErrorIs(t, err, oktetoErrors.ErrCouldNotInferAnyManifest)
 }
@@ -1433,6 +1434,7 @@ func TestRead(t *testing.T) {
 				Manifest:      nil,
 				IsV2:          false,
 				Fs:            afero.NewOsFs(),
+				Variables:     vars.Vars{},
 			},
 		},
 		{
@@ -1464,6 +1466,7 @@ func TestRead(t *testing.T) {
 				Manifest:      []uint8{},
 				IsV2:          false,
 				Fs:            afero.NewOsFs(),
+				Variables:     vars.Vars{},
 			},
 		},
 		{
@@ -1570,8 +1573,9 @@ func TestRead(t *testing.T) {
   test:
     image: test-image
     context: ./test`),
-				IsV2: true,
-				Fs:   afero.NewOsFs(),
+				IsV2:      true,
+				Fs:        afero.NewOsFs(),
+				Variables: vars.Vars{},
 			},
 			expectedErr: false,
 		},
@@ -1628,6 +1632,7 @@ func TestRead(t *testing.T) {
 				Type:          OktetoManifestType,
 				IsV2:          true,
 				Fs:            afero.NewOsFs(),
+				Variables:     vars.Vars{},
 				Manifest: []byte(`deploy:
   divert:
     namespace: staging

@@ -41,6 +41,13 @@ func RunOktetoBuild(oktetoPath string, buildOptions *BuildOptions) error {
 	return ExecOktetoBuildCmd(cmd)
 }
 
+// RunOktetoBuildWithOutput runs an okteto build command and returns the output of the command
+func RunOktetoBuildWithOutput(oktetoPath string, buildOptions *BuildOptions) (string, error) {
+	cmd := GetOktetoBuildCmd(oktetoPath, buildOptions)
+	o, err := cmd.CombinedOutput()
+	return string(o), err
+}
+
 // GetOktetoBuildCmd returns an exec.Cmd with the needed values given buildOpts
 func GetOktetoBuildCmd(oktetoPath string, buildOptions *BuildOptions) *exec.Cmd {
 	cmd := exec.Command(oktetoPath)

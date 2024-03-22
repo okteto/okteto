@@ -47,8 +47,8 @@ const (
 )
 
 // TestDeployAndDestroyOktetoManifestWithEnv tests the following scenario:
-// - Deploying a okteto manifest locally with masked variables
-// - Destroying a okteto manifest locally with masked variables
+// - Deploying an okteto manifest locally with masked variables
+// - Destroying an okteto manifest locally with masked variables
 func TestDeployAndDestroyOktetoManifestWithEnv(t *testing.T) {
 	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()

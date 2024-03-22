@@ -55,18 +55,25 @@ type Command struct {
 
 	kubetokenController kubeconfigTokenController
 	OktetoContextWriter okteto.ContextConfigWriterInterface
+	EnvManager          *env.Manager
 }
 
-type ctxCmdOption func(*Command)
+type CtxCmdOption func(*Command)
 
-func withKubeTokenController(k kubeconfigTokenController) ctxCmdOption {
+func withKubeTokenController(k kubeconfigTokenController) CtxCmdOption {
 	return func(c *Command) {
 		c.kubetokenController = k
 	}
 }
 
+func WithEnvManger(envManager *env.Manager) CtxCmdOption {
+	return func(c *Command) {
+		c.EnvManager = envManager
+	}
+}
+
 // NewContextCommand creates a new Command
-func NewContextCommand(ctxCmdOption ...ctxCmdOption) *Command {
+func NewContextCommand(ctxCmdOption ...CtxCmdOption) *Command {
 	cfg := &Command{
 		K8sClientProvider:    okteto.NewK8sClientProvider(),
 		LoginController:      login.NewLoginController(),
@@ -85,7 +92,7 @@ func NewContextCommand(ctxCmdOption ...ctxCmdOption) *Command {
 }
 
 // CreateCMD adds a new cluster to okteto context
-func CreateCMD() *cobra.Command {
+func CreateCMD(envManager *env.Manager) *cobra.Command {
 	ctxOptions := &Options{}
 	cmd := &cobra.Command{
 		Hidden: true,
@@ -121,7 +128,7 @@ If you need to automate authentication or if you don't want to use browser-based
 			ctxOptions.Show = false
 			ctxOptions.Save = true
 
-			err := NewContextCommand().UseContext(ctx, ctxOptions)
+			err := NewContextCommand(WithEnvManger(envManager)).UseContext(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			return err
 		},
@@ -339,7 +346,11 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 	okteto.GetContext().IsTrial = clusterMetadata.IsTrialLicense
 	okteto.GetContext().CompanyName = clusterMetadata.CompanyName
 
-	setSecrets(userContext.Secrets)
+	c.EnvManager.AddGroup(userContext.Secrets, env.PriorityVarFromPlatform)
+	err = c.EnvManager.Export()
+	if err != nil {
+		return err
+	}
 
 	os.Setenv(model.OktetoUserNameEnvVar, okteto.GetContext().Username)
 

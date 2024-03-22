@@ -18,13 +18,14 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
 // UseNamespace changes your current context namespace.
-func UseNamespace() *cobra.Command {
+func UseNamespace(envManager *env.Manager) *cobra.Command {
 	ctxOptions := &Options{}
 	cmd := &cobra.Command{
 		Hidden: true,
@@ -40,7 +41,7 @@ func UseNamespace() *cobra.Command {
 			ctxOptions.Save = true
 			ctxOptions.IsCtxCommand = true
 
-			err := NewContextCommand().Run(ctx, ctxOptions)
+			err := NewContextCommand(WithEnvManger(envManager)).Run(ctx, ctxOptions)
 			analytics.TrackContextUseNamespace(err == nil)
 			if err != nil {
 				return err
