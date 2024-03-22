@@ -59,3 +59,18 @@ func (v *Var) UnmarshalYAML(unmarshal func(interface{}) error) error {
 func (v Var) MarshalYAML() (interface{}, error) {
 	return v.Name + "=" + v.Value, nil
 }
+
+// Parse converts a list of variables of type VAR=VALUE into a list of Var. If some variable
+// doesn't follow the format, it returns an error.
+func Parse(variables []string) ([]Var, error) {
+	var result []Var
+	for _, v := range variables {
+		variableFormatParts := 2
+		kv := strings.SplitN(v, "=", variableFormatParts)
+		if len(kv) != variableFormatParts {
+			return nil, fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
+		}
+		result = append(result, Var{Name: kv[0], Value: kv[1]})
+	}
+	return result, nil
+}

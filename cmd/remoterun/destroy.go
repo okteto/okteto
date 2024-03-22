@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -27,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
@@ -126,6 +128,17 @@ It is important that this command does the minimum and must not do calculations 
 }
 
 func (c *DestroyCommand) Run(params deployable.DestroyParameters) error {
+	// Token should be always masked from the logs
+	oktetoLog.AddMaskedWord(okteto.GetContext().Token)
+	keyValueVarParts := 2
+	// We mask all the variables received in the command
+	for _, variable := range params.Variables {
+		varParts := strings.SplitN(variable, "=", keyValueVarParts)
+		if len(varParts) >= keyValueVarParts && strings.TrimSpace(varParts[1]) != "" {
+			oktetoLog.AddMaskedWord(varParts[1])
+		}
+	}
+
 	return c.runner.RunDestroy(params)
 }
 
