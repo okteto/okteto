@@ -39,7 +39,7 @@ func newBuildCtrl(name string, analyticsTracker analyticsTrackerInterface, ioCtr
 }
 
 type builderInterface interface {
-	GetServicesToBuild(ctx context.Context, manifest *model.Manifest, svcToDeploy []string) ([]string, error)
+	GetServicesToBuildDuringDeploy(ctx context.Context, manifest *model.Manifest, svcToDeploy []string) ([]string, error)
 	Build(ctx context.Context, options *types.BuildOptions) error
 }
 
@@ -67,7 +67,7 @@ func (bc buildCtrl) buildImageIfNecessary(ctx context.Context, manifest *model.M
 			oktetoLog.Infof("image is not defined in build section: %s", imageToBuild)
 			return nil
 		}
-		svcsToBuild, err := bc.builder.GetServicesToBuild(ctx, manifest, []string{svc})
+		svcsToBuild, err := bc.builder.GetServicesToBuildDuringDeploy(ctx, manifest, []string{svc})
 		if err != nil {
 			return fmt.Errorf("error getting services to build: %w", err)
 		}

@@ -260,7 +260,4 @@ const (
 
 	// OktetoDefaultImageTag default tag assigned to image to build
 	OktetoDefaultImageTag = "okteto"
-
-	// OktetoImageTagWithVolumes is the tag assigned to an image with volume mounts
-	OktetoImageTagWithVolumes = "okteto-with-volume-mounts"
 )

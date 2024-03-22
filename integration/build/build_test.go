@@ -336,10 +336,9 @@ func TestBuildCommandV2SpecifyingServices(t *testing.T) {
 	require.True(t, isImageBuilt(expectedApiImage))
 }
 
-// TestBuildCommandV2VolumeMounts tests the following scenario:
+// TestBuildCommandV2FromCompose tests the following scenario:
 // - building having a compose file
-// - building an image that needs to mount local volumes
-func TestBuildCommandV2VolumeMounts(t *testing.T) {
+func TestBuildCommandV2FromCompose(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	require.NoError(t, createDockerfile(dir))
@@ -360,9 +359,6 @@ func TestBuildCommandV2VolumeMounts(t *testing.T) {
 	expectedBuildImage := fmt.Sprintf("%s/%s/%s-vols:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.False(t, isImageBuilt(expectedBuildImage))
 
-	expectedImageWithVolumes := fmt.Sprintf("%s/%s/%s-vols:okteto-with-volume-mounts", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
-	require.False(t, isImageBuilt(expectedImageWithVolumes))
-
 	options := &commands.BuildOptions{
 		Workdir:    dir,
 		Namespace:  testNamespace,
@@ -371,7 +367,6 @@ func TestBuildCommandV2VolumeMounts(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedBuildImage), "%s not found", expectedBuildImage)
-	require.True(t, isImageBuilt(expectedImageWithVolumes), "%s not found", expectedImageWithVolumes)
 }
 
 // TestTestBuildCommandV2Secrets tests the following scenario:

@@ -119,7 +119,7 @@ func (fr fakeRegistry) IsGlobalRegistry(image string) bool { return false }
 
 func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string) { return "", "" }
 func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)   { return "", "" }
-func (fr fakeRegistry) CloneGlobalImageToDev(imageWithDigest, tag string) (string, error) {
+func (fr fakeRegistry) CloneGlobalImageToDev(string) (string, error) {
 	return "", nil
 }
 
@@ -175,7 +175,7 @@ func (b *fakeV2Builder) Build(_ context.Context, buildOptions *types.BuildOption
 	return nil
 }
 
-func (b *fakeV2Builder) GetServicesToBuild(_ context.Context, manifest *model.Manifest, servicesToDeploy []string) ([]string, error) {
+func (b *fakeV2Builder) GetServicesToBuildDuringDeploy(_ context.Context, manifest *model.Manifest, servicesToDeploy []string) ([]string, error) {
 	toBuild := make(map[string]bool, len(manifest.Build))
 	for service := range manifest.Build {
 		toBuild[service] = true

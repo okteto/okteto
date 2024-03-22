@@ -198,7 +198,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		return err
 	}
 
-	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "destroy"})
+	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{Path: cwd, OutputMode: buildCmd.DestroyOutputModeOnBuild})
 	buildOptions.Manifest = rd.manifest
 	buildOptions.BuildArgs = append(
 		buildOptions.BuildArgs,

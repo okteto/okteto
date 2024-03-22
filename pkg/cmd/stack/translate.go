@@ -84,7 +84,7 @@ func buildStackImages(ctx context.Context, s *model.Stack, options *DeployOption
 			return err
 		}
 	} else {
-		svcsToBuild, err := builder.GetServicesToBuild(ctx, manifest, options.ServicesToDeploy)
+		svcsToBuild, err := builder.GetServicesToBuildDuringDeploy(ctx, manifest, options.ServicesToDeploy)
 		if err != nil {
 			return err
 		}

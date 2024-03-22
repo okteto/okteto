@@ -37,7 +37,7 @@ type fakeGetSvcs struct {
 	svcs []string
 }
 
-func (fb fakeBuilderV2) GetServicesToBuild(ctx context.Context, manifest *model.Manifest, svcToDeploy []string) ([]string, error) {
+func (fb fakeBuilderV2) GetServicesToBuildDuringDeploy(ctx context.Context, manifest *model.Manifest, svcToDeploy []string) ([]string, error) {
 	return fb.getSvcs.svcs, fb.getSvcs.err
 }
 
