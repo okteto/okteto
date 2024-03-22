@@ -364,12 +364,8 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			// We need to wait until the tty channel is closed to avoid writing to stdout while the tty is being used
 			_, err := progressui.DisplaySolveStatus(context.TODO(), c, ioCtrl.Out(), ttyChannel)
 			return err
-		case DeployOutputModeOnBuild:
-			err := deployDisplayer(context.TODO(), plainChannel, &types.BuildOptions{OutputMode: DeployOutputModeOnBuild})
-			commandFailChannel <- err
-			return err
-		case DestroyOutputModeOnBuild:
-			err := deployDisplayer(context.TODO(), plainChannel, &types.BuildOptions{OutputMode: DestroyOutputModeOnBuild})
+		case DeployOutputModeOnBuild, DestroyOutputModeOnBuild:
+			err := deployDisplayer(context.TODO(), plainChannel, &types.BuildOptions{OutputMode: progress})
 			commandFailChannel <- err
 			return err
 		default:

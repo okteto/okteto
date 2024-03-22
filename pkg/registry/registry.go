@@ -200,6 +200,7 @@ func (or OktetoRegistry) CloneGlobalImageToDev(imageWithDigest string) (string, 
 	// To return always the sha256 os the dev image
 	r, err := or.GetImageTagWithDigest(devImage)
 	if err != nil {
+		oktetoLog.Debugf("error getting the tag with digest for dev image: %s", err)
 		// If there is an error getting the tag with digest we just return the dev image
 		return devImage, nil
 	}
