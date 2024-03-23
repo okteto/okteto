@@ -230,7 +230,7 @@ func getFakeEndpoint(_ *io.K8sLogger) (EndpointGetter, error) {
 func (f *fakeDeployer) Get(ctx context.Context,
 	opts *Options,
 	buildEnvVarsGetter buildEnvVarsGetter,
-	cmapHandler configMapHandler,
+	cmapHandler ConfigMapHandler,
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	ioCtrl *io.Controller,
 	k8Logger *io.K8sLogger,
@@ -331,7 +331,7 @@ func TestDeployWithServicesToBuildWithoutComposeSection(t *testing.T) {
 		Name:             "movies",
 		ManifestPath:     "",
 		Variables:        []string{},
-		servicesToDeploy: []string{"service1"},
+		ServicesToDeploy: []string{"service1"},
 	}
 
 	err := c.Run(ctx, opts)

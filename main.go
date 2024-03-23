@@ -37,6 +37,7 @@ import (
 	"github.com/okteto/okteto/cmd/registrytoken"
 	"github.com/okteto/okteto/cmd/remoterun"
 	"github.com/okteto/okteto/cmd/stack"
+	"github.com/okteto/okteto/cmd/test"
 	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
@@ -50,6 +51,7 @@ import (
 	"github.com/spf13/pflag"
 	generateFigSpec "github.com/withfig/autocomplete-tools/packages/cobra"
 	utilRuntime "k8s.io/apimachinery/pkg/util/runtime"
+
 	// Load the different library for authentication
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -178,6 +180,7 @@ func main() {
 	root.AddCommand(logs.Logs(ctx, k8sLogger))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
 	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger))
+	root.AddCommand(test.Test(ctx, ioController, k8sLogger, at))
 
 	// deprecated
 	root.AddCommand(cmd.Create(ctx))

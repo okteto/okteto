@@ -73,10 +73,8 @@ type Options struct {
 	Name             string
 	Namespace        string
 	K8sContext       string
-	Repository       string
-	Branch           string
 	Variables        []string
-	servicesToDeploy []string
+	ServicesToDeploy []string
 	Timeout          time.Duration
 	Build            bool
 	Dependencies     bool
@@ -95,7 +93,7 @@ type builderInterface interface {
 type getDeployerFunc func(
 	context.Context, *Options,
 	buildEnvVarsGetter,
-	configMapHandler,
+	ConfigMapHandler,
 	okteto.K8sClientProviderWithLogger,
 	*io.Controller,
 	*io.K8sLogger,
@@ -112,10 +110,10 @@ type Command struct {
 	GetDeployer       getDeployerFunc
 	EndpointGetter    func(k8sLogger *io.K8sLogger) (EndpointGetter, error)
 	DeployWaiter      Waiter
-	CfgMapHandler     configMapHandler
+	CfgMapHandler     ConfigMapHandler
 	Fs                afero.Fs
 	PipelineCMD       pipelineCMD.DeployerInterface
-	AnalyticsTracker  analyticsTrackerInterface
+	AnalyticsTracker  AnalyticsTrackerInterface
 	IoCtrl            *io.Controller
 	K8sLogger         *io.K8sLogger
 
@@ -125,11 +123,11 @@ type Command struct {
 	// This can probably be improved using context cancellation
 	onCleanUp []cleanUpFunc
 
-	isRemote           bool
-	runningInInstaller bool
+	IsRemote           bool
+	RunningInInstaller bool
 }
 
-type analyticsTrackerInterface interface {
+type AnalyticsTrackerInterface interface {
 	TrackDeploy(dm analytics.DeployMetadata)
 	TrackImageBuild(...*analytics.ImageBuildMetadata)
 }
@@ -142,7 +140,7 @@ type Deployer interface {
 }
 
 // Deploy deploys the okteto manifest
-func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Deploy(ctx context.Context, at AnalyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
 		Use:   "deploy [service...]",
@@ -193,7 +191,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 			}
 
 			options.ShowCTA = oktetoLog.IsInteractive()
-			options.servicesToDeploy = args
+			options.ServicesToDeploy = args
 
 			k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
 			pc, err := pipelineCMD.NewCommand()
@@ -208,11 +206,11 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 				Builder:            buildv2.NewBuilderFromScratch(at, ioCtrl),
 				DeployWaiter:       NewDeployWaiter(k8sClientProvider, k8sLogger),
 				EndpointGetter:     NewEndpointGetter,
-				isRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
+				IsRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
 				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider, k8sLogger),
 				Fs:                 afero.NewOsFs(),
 				PipelineCMD:        pc,
-				runningInInstaller: config.RunningInInstaller(),
+				RunningInInstaller: config.RunningInInstaller(),
 				AnalyticsTracker:   at,
 				IoCtrl:             ioCtrl,
 				K8sLogger:          k8sLogger,
@@ -278,7 +276,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		return oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands
 	}
 
-	if len(deployOptions.servicesToDeploy) > 0 && deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection == nil {
+	if len(deployOptions.ServicesToDeploy) > 0 && deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection == nil {
 		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
 
@@ -309,8 +307,8 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		return err
 	}
 
-	if dc.isRemote || dc.runningInInstaller {
-		currentVars, err := dc.CfgMapHandler.getConfigmapVariablesEncoded(ctx, deployOptions.Name, deployOptions.Manifest.Namespace)
+	if dc.IsRemote || dc.RunningInInstaller {
+		currentVars, err := dc.CfgMapHandler.GetConfigmapVariablesEncoded(ctx, deployOptions.Name, deployOptions.Manifest.Namespace)
 		if err != nil {
 			return err
 		}
@@ -338,7 +336,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
 	}
 
-	cfg, err := dc.CfgMapHandler.translateConfigMapAndDeploy(ctx, data)
+	cfg, err := dc.CfgMapHandler.TranslateConfigMapAndDeploy(ctx, data)
 	if err != nil {
 		return err
 	}
@@ -346,7 +344,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	os.Setenv(constants.OktetoNameEnvVar, deployOptions.Name)
 
 	if err := dc.deployDependencies(ctx, deployOptions); err != nil {
-		if errStatus := dc.CfgMapHandler.updateConfigMap(ctx, cfg, data, err); errStatus != nil {
+		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
 			return errStatus
 		}
 		return err
@@ -357,7 +355,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	}
 
 	if err := buildImages(ctx, dc.Builder, deployOptions); err != nil {
-		if errStatus := dc.CfgMapHandler.updateConfigMap(ctx, cfg, data, err); errStatus != nil {
+		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
 			return errStatus
 		}
 		return err
@@ -412,7 +410,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		data.Status = pipeline.DeployedStatus
 	}
 
-	if errStatus := dc.CfgMapHandler.updateConfigMap(ctx, cfg, data, err); errStatus != nil {
+	if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
 		return errStatus
 	}
 
@@ -515,7 +513,7 @@ func shouldRunInRemote(opts *Options) bool {
 func GetDeployer(ctx context.Context,
 	opts *Options,
 	buildEnvVarsGetter buildEnvVarsGetter,
-	cmapHandler configMapHandler,
+	cmapHandler ConfigMapHandler,
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	ioCtrl *io.Controller,
 	k8Logger *io.K8sLogger,
@@ -673,7 +671,7 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 		ForceBuild:       false,
 		Wait:             opts.Wait,
 		Timeout:          opts.Timeout,
-		ServicesToDeploy: opts.servicesToDeploy,
+		ServicesToDeploy: opts.ServicesToDeploy,
 		InsidePipeline:   true,
 	}
 
