@@ -153,7 +153,7 @@ func TestGetCommandFlags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			flags, err := getCommandFlags(tt.config.opts)
+			flags, err := GetCommandFlags(tt.config.opts.Name, tt.config.opts.Variables)
 			if tt.expectErr {
 				require.Error(t, err)
 			}

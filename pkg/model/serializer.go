@@ -753,6 +753,7 @@ type manifestRaw struct {
 	Icon          string                   `json:"icon,omitempty" yaml:"icon,omitempty"`
 	Deploy        *DeployInfo              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev           ManifestDevs             `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Test          ManifestTests            `json:"test,omitempty" yaml:"test,omitempty"`
 	Destroy       *DestroyInfo             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 	Build         build.ManifestBuild      `json:"build,omitempty" yaml:"build,omitempty"`
 	Dependencies  deps.ManifestSection     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
@@ -795,6 +796,7 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	m.Name = manifest.Name
 	m.GlobalForward = manifest.GlobalForward
 	m.External = manifest.External
+	m.Test = manifest.Test
 
 	err = m.SanitizeSvcNames()
 	if err != nil {

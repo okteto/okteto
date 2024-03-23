@@ -55,3 +55,12 @@ func From(nodes ...Node) (*Tree, error) {
 	}
 	return tree, nil
 }
+
+// Ordered returns a list of node ids ordered by dependsOn starting by the root
+// (nodes with no dependencies) and traversing the whole tree
+func (tree *Tree) Ordered() (s []string) {
+	tree.Traverse(func(n Node) {
+		s = append(s, n.ID())
+	})
+	return
+}
