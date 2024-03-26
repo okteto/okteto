@@ -2,9 +2,9 @@
 
 This tutorial will show you how to develop and debug a Python application using Okteto
 
-## Step 1: Deploy the ASP.NET Sample App
+## Step 1: Deploy the Python Sample App
 
-Run the following command to deploy the ASP.NET Sample App:
+Run the following command to deploy the Python Sample App:
 
 ```bash
 kubectl apply -f k8s.yml
@@ -15,27 +15,11 @@ deployment.apps/hello-world created
 service/hello-world created
 ```
 
-Create a port-forward to access the ASP.NET Sample App on localhost:
-
-```bash
-kubectl port-forward service/hello-world 8080:8080
-```
-
-In a different terminal, access you application by executing:
-
-```bash
-curl localhost:8080
-```
-
-```bash
-Hello World!
-```
-
 ## Step 2: Activate your development container
 
-The [dev](reference/okteto-manifest.mdx#dev-object-optional) section defines how to activate a development container for the Python Sample App:
+The [dev section](https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional) of the Okteto Manifest defines how to activate a development container for the Python Sample App:
 
-```yaml title="okteto.yml"
+```yaml
 dev:
   hello-world:
     command: bash
@@ -43,6 +27,8 @@ dev:
       - FLASK_ENV=development
     sync:
       - .:/usr/src/app
+    forward:
+      - 8080:8080
     reverse:
       - 9000:9000
     volumes:
@@ -53,7 +39,8 @@ The `hello-world` key matches the name of the hello world Deployment. The meanin
 
 - `command`: the start command of the development container.
 - `sync`: the folders that will be synchronized between your local machine and the development container.
-- `reverse`: a list of ports to reverse forward from your development container to your local machine
+- `forward`: a list of ports to forward from your development container to localhost in your machine. This is needed to access the port 8080 of your application on localhost.
+- `reverse`: a list of ports to reverse forward from your development container to your local machine. This is needed by the Python remote debugger.
 - `volumes`: a list of paths in your development container to be mounted as persistent volumes. This is useful to persist the pip cache.
 
 Also, note that there is a `.stignore` file to indicate which files shouldn't be synchronized to your development container.
@@ -62,15 +49,15 @@ This is useful to avoid virtual environments, build artifacts, or git metadata.
 Next, execute the following command to activate your development container:
 
 ```bash
-$ okteto up
+okteto up
 ```
 
 ```bash
- ✓  Persistent volume successfully attached
  ✓  Images successfully pulled
  ✓  Files synchronized
     Namespace: cindy
     Name:      hello-world
+    Forward:   8080 -> 8080
     Reverse:   9000 <- 9000
 
 Welcome to your development container. Happy coding!
@@ -84,7 +71,7 @@ Start the application in development mode by running the following command:
 cindy:hello-world app> python app.py
 ```
 
-```
+```bash
 Starting hello-world server...
  * Serving Flask app "app" (lazy loading)
  * Environment: development
@@ -92,17 +79,22 @@ Starting hello-world server...
  * Running on http://0.0.0.0:8080/ (Press CTRL+C to quit)
 ```
 
-Go back to the browser and reload the page to test that your application is running.
+Open your browser and load the page `http://localhost:8080` to test that your application is running.
+You should see the message:
+
+```bash
+Hello world!
+```
 
 ## Step 3: Remote Development with Okteto
 
-Open the `app.py` file in your favorite local IDE and modify the response message on line 7 to be _Hello world from the cluster!_.
+Open the `app.py` file in your favorite local IDE and modify the response message on line 7 to be _Hello world from Okteto!_.
 Save your changes.
 
 ```python
 @app.route('/')
 def hello_world():
-    return 'Hello World from the cluster!'
+    return 'Hello World from Okteto!'
 }
 ```
 
@@ -124,11 +116,7 @@ Go back to the browser and reload the page. Your code changes were instantly app
 Okteto enables you to debug your applications directly from your favorite IDE.
 Let's take a look at how that works in one of python's most popular IDE's, [PyCharm](https://www.jetbrains.com/pycharm/).
 
-:::note
-
-For VS Code users, this [document](https://code.visualstudio.com/docs/python/debugging#_debugging-by-attaching-over-a-network-connection) explains how to configure the debugger with `debugpy`.
-
-:::
+> For VS Code users, this [document](https://code.visualstudio.com/docs/python/debugging#_debugging-by-attaching-over-a-network-connection) explains how to configure the debugger with `debugpy`.
 
 First, open the project in PyCharm and remove the comments on `app.py` line `20`.
 
