@@ -17,19 +17,11 @@ Today, most developers try to either run parts of the infrastructure locally or 
 
 ## How it works
 
-Okteto allows you to develop inside a container. When you run `okteto up` your Kubernetes deployment is replaced by a development container that contains your development tools (e.g. maven and jdk, or npm, python, go compiler, debuggers, etc). This development container can use any [docker image](https://okteto.com/docs/development/images/). The development container inherits the same secrets, configmaps, volumes or any other configuration value of the original Kubernetes deployment.
+Okteto allows you to develop inside a container. When you run `okteto up` your Kubernetes deployment is replaced by a Development Container that contains your development tools (e.g. maven and jdk, or npm, python, go compiler, debuggers, etc). This development container can use any [docker image](https://okteto.com/docs/development/images/). The development container inherits the same secrets, configmaps, volumes or any other configuration value of the original Kubernetes deployment.
 
-In addition to that, `okteto up` will:
-
-1. Create a bidirectional file [synchronization service](https://okteto.com/docs/reference/file-synchronization/) to keep your changes up to date between your local filesystem and your development container.
-1. Automatic local and remote port forwarding using [SSH](https://okteto.com/docs/reference/ssh-server/), so you can access your cluster services via `localhost` or connect a remote debugger.
-1. Give you an interactive terminal to your development container, so you can build, test, and run your application as you would from a local terminal.
-
-All of this (and more) can be configured via a [simple YAML manifest](https://okteto.com/docs/reference/okteto-manifest/).
+<img align="left" src="images/how-does-it-work.png">
 
 The end result is that the remote cluster is seen by your IDE and tools as a local filesystem/environment. You keep writing your code on your local IDE and as soon as you save a file, the change goes to the development container, and your application instantly updates (taking advantage of any hot-reload mechanism you already have). This whole process happens in an instant. No docker images need to be created and no Kubernetes manifests need to be applied to the cluster.
-
-![Okteto](docs/okteto-architecture.png)
 
 ## Why Okteto
 
@@ -46,32 +38,60 @@ The end result is that the remote cluster is seen by your IDE and tools as a loc
 
 All you need to get started is to [install the Okteto CLI](https://www.okteto.com/docs/get-started/install-okteto-cli/) and have access to a Kubernetes cluster.
 
-Okteto CLI works with **any** Kubernetes cluster. If it's your first time using it, we'd recommend you [try it](https://www.okteto.com/docs/get-started/install-okteto-cli/) with the [Okteto Platform](https://www.okteto.com/docs) for a complete holistic developer experience. If you want to try it out with any other K8s cluster, you can also check out [this article](https://www.okteto.com/blog/developing-microservices-by-hot-reloading-on-kubernetes-clusters/) as a guide.
+The Okteto CLI has two operational: CLI-Only and Okteto Platform.
 
-We created a [few guides to help you get started](https://github.com/okteto/samples) with `okteto` and your favorite programming language.
+### CLI-Only
 
-### Releases
+CLI-Only requires access to a Kubernetes cluster. It's designed to support Development Containers in any Kubernetes cluster. It doesn't come with features to support multiple developers working on the same cluster. That's the goal of the [Okteto Platform](https://okteto.com/docs)
 
-Okteto is released into three channels: stable, beta, and dev. By default when okteto is installed the stable channel is used. If you need to access features not yet widely available you can install from the beta or dev channel. More info in the [release documentation](docs/RELEASE.md).
+CLI-Only support the following commands:
+
+- `okteto context`
+- `okteto up`
+- `okteto down`
+
+CLI-Only supports the [dev section](https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional) of the Okteto Manifest.
+
+We have getting started guides for the CLI-Only mode following languages:
+
+- [ASP.NET](samples/aspnetcore)
+- [Golang](samples/golang)
+- [Java Gradle](samples/java-gradle)
+- [Java Maven](samples/java-maven)
+- [Node.js](samples/node.js)
+- [PHP](samples/php)
+- [Python](samples/python)
+- [Ruby](samples/ruby)
+
+
+### Okteto Platform
+
+The Okteto Platform requires to install the [Okteto Helm Chart](https://www.okteto.com/docs/get-started/overview/) in your Kubernetes cluster. In this mode, all the Okteto CLI commands are available (`build`, `deploy`, `up`,  `down`, `destroy`, etc). The Okteto Platform comes with more features like:
+
+- User authentication and access control to Kubernetes using your own Identity provider
+- A Build service to build your container images on remote
+- Preview environments on every pull request
+- Automatically scale down and up your environments if they aren't used
+- Secrets manager for your development environments
+- Okteto Insights to provide observability on your development environments
+
+And much more! Refer to the [Okteto Platform docs](https://www.okteto.com/docs) to know more.
 
 ## Useful links
 
 - [Getting started](https://www.okteto.com/docs/get-started/install-okteto-cli/)
 - [CLI reference](https://okteto.com/docs/reference/okteto-cli)
 - [Okteto manifest reference](https://okteto.com/docs/reference/okteto-manifest/)
-- [Samples](https://github.com/okteto/samples)
-- Frequently asked questions ([FAQs](https://okteto.com/docs/reference/faqs/))
-- [Known issues](https://okteto.com/docs/reference/known-issues/)
+
+## Releases
+
+Okteto is monthly released into three channels: stable, beta, and dev. By default when okteto is installed the stable channel is used. If you need to access features not yet widely available you can install from the beta or dev channel. More info in the [release documentation](docs/RELEASE.md).
 
 ## Support and Community
 
-Got questions? Have feedback? Join the conversation in our [#okteto](https://kubernetes.slack.com/messages/CM1QMQGS0/) Slack channel! If you don't already have a Kubernetes Slack account, [sign up here](https://slack.k8s.io/).
+Got questions? Have feedback? Join the conversation in our [Community Forum](https://community.okteto.com/). You can also join us in the [#okteto](https://kubernetes.slack.com/messages/CM1QMQGS0/) Slack channel! If you don't already have a Kubernetes Slack account, [sign up here](https://slack.k8s.io/).
 
 Follow [@OktetoHQ](https://twitter.com/oktetohq) on Twitter for important announcements.
-
-## Roadmap
-
-We use GitHub [issues](https://github.com/okteto/okteto/issues) to track our roadmap. A [milestone](https://github.com/okteto/okteto/milestones) is created every month to track the work scheduled for that time period. Feedback and help are always appreciated!
 
 ## ✨ Contributions
 
