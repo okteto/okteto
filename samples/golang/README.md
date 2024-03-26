@@ -2,9 +2,9 @@
 
 This tutorial will show you how to develop and debug a Golang application using Okteto
 
-## Step 1: Deploy the ASP.NET Sample App
+## Step 1: Deploy the Golang Sample App
 
-Run the following command to deploy the ASP.NET Sample App:
+Run the following command to deploy the Golang Sample App:
 
 ```bash
 kubectl apply -f k8s.yml
@@ -17,7 +17,7 @@ service/hello-world created
 
 ## Step 2: Activate your development container
 
-The [dev](reference/okteto-manifest.mdx#dev-object-optional) section defines how to activate a development container for the Go Sample App:
+The [dev section](https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional) of the Okteto Manifest defines how to activate a development container for the Golang Sample App:
 
 ```yaml
 dev:
@@ -45,7 +45,7 @@ The `hello-world` key matches the name of the hello world Deployment. The meanin
 - `sync`: the folders that will be synchronized between your local machine and the development container.
 - `volumes`: a list of paths in your development container to be mounted as persistent volumes. For example, this can be used to persist the Go cache.
 - `securityContext`: `SYS_PTRACE` is a capability required by the Go debugger.
-- `forward`: a list of ports to forward from your development container to locahost in your machine. This is needed to access the port 8080 of your application on localhost and to configure the Go debugger.
+- `forward`: a list of ports to forward from your development container to locahost in your machine. This is needed to access the port 8080 of your application on localhost and to configure the Go remote debugger.
 
 Also, note that there is a `.stignore` file to indicate which files shouldn't be synchronized to your development container.
 This is useful to avoid synchronizing binaries, build artifacts, git metadata, or dependencies like the `vendor` folder.
