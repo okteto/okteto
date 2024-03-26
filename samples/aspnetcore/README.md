@@ -24,11 +24,13 @@ dev:
   hello-world:
     image: okteto/aspnetcore-getting-started:dev
     command: bash
+    sync: 
+      - .:/src
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
     remote: 2222
-    sync: 
-      - .:/src
+    forward:
+      - 5000:5000
 ```
 
 The `hello-world` key matches the name of the hello world Deployment. The meaning of the rest of fields is:

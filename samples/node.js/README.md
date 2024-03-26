@@ -2,9 +2,9 @@
 
 This tutorial will show you how to develop and debug a Node.js application using Okteto
 
-## Step 1: Deploy the ASP.NET Sample App
+## Step 1: Deploy the Node.js Sample App
 
-Run the following command to deploy the ASP.NET Sample App:
+Run the following command to deploy the Node.js Sample App:
 
 ```bash
 kubectl apply -f k8s.yml
@@ -15,33 +15,19 @@ deployment.apps/hello-world created
 service/hello-world created
 ```
 
-Create a port-forward to access the ASP.NET Sample App on localhost:
-
-```bash
-kubectl port-forward service/hello-world 8080:8080
-```
-
-In a different terminal, access you application by executing:
-
-```bash
-curl localhost:8080
-```
-
-```bash
-Hello World!
-```
-
 ## Step 2: Activate your development container
 
-The [dev](reference/okteto-manifest.mdx#dev-object-optional) section defines how to activate a development container for the Node Sample App:
+The [dev section](https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional) of the Okteto Manifest defines how to activate a development container for the Node.js Sample App:
 
-```yaml title="okteto.yml"
+
+```yaml
 dev:
   hello-world:
     command: bash
     sync:
       - .:/usr/src/app
     forward:
+      - 3000:3000
       - 9229:9229
 ```
 
@@ -49,7 +35,7 @@ The `hello-world` key matches the name of the hello world Deployment. The meanin
 
 - `command`: the start command of the development container.
 - `sync`: the folders that will be synchronized between your local machine and the development container.
-- `forward`: a list of ports to forward from your development container to localhost in your machine. This is needed to configure the Node debugger.
+- `forward`: a list of ports to forward from your development container to localhost in your machine. This is needed to access the port 3000 of your application on localhost and to configure the Node.js remote debugger.
 
 Also, note that there is a `.stignore` file to indicate which files shouldn't be synchronized to your development container.
 This is useful to avoid synchronizing binaries, build artifacts, git metadata, or dependencies like the `node_modules` folder.
@@ -57,16 +43,16 @@ This is useful to avoid synchronizing binaries, build artifacts, git metadata, o
 Next, execute the following command to activate your development container:
 
 ```bash
-$ okteto up
+okteto up
 ```
 
 ```bash
- ✓  Persistent volume successfully attached
  ✓  Images successfully pulled
  ✓  Files synchronized
     Namespace: cindy
     Name:      hello-world
-    Forward:   9229 -> 9229
+    Forward:   3000 -> 3000
+               9229 -> 9229
 
 
 Welcome to your development container. Happy coding!
@@ -92,11 +78,16 @@ cindy:hello-world app> npm run start
 Starting hello-world server...
 ```
 
-Go back to the browser and reload the page to test that your application is running.
+Open your browser and load the page `http://localhost:8080` to test that your application is running.
+You should see the message:
+
+```bash
+Hello world!
+```
 
 ## Step 3: Remote Development with Okteto
 
-Open the `index.js` file in your favorite local IDE and modify the response message on line 5 to be _Hello world from the cluster!_. Save your changes.
+Open the `index.js` file in your favorite local IDE and modify the response message on line 5 to be _Hello world from Okteto!_. Save your changes.
 
 ```javascript
 res.send("Hello world from the cluster!");
@@ -151,11 +142,7 @@ Open the _Debug_ extension and run the _Connect to okteto_ debug configuration (
 }
 ```
 
-:::note
-
-You should be replacing the value of `remoteRoot` with wherever your application code is.
-
-:::
+> You should be replacing the value of `remoteRoot` with wherever your application code is.
 
 Add a breakpoint on `index.js`, line 5. Go back to the browser and reload the page.
 The execution will halt at your breakpoint. You can then inspect the request, the available variables, etc...
