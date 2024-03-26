@@ -123,16 +123,16 @@ const (
 	// OktetoDeprecatedDivertAnnotationTemplate annotation for the okteto mutation webhook to divert a virtual service
 	OktetoDeprecatedDivertAnnotationTemplate = "divert.okteto.com/%s-%s"
 
-	//OktetoHybridModeFieldValue represents the hybrid mode field value
+	// OktetoHybridModeFieldValue represents the hybrid mode field value
 	OktetoHybridModeFieldValue = "hybrid"
 
 	// OktetoSyncModeFieldValue represents the sync mode field value
 	OktetoSyncModeFieldValue = "sync"
 
-	//OktetoConfigMapVariablesField represents the field name related to variables seetion in config map
+	// OktetoConfigMapVariablesField represents the field name related to variables seetion in config map
 	OktetoConfigMapVariablesField = "variables"
 
-	//OktetoDependencyEnvsKey the key on the conqfig map that will store OKTETO_ENV values
+	// OktetoDependencyEnvsKey the key on the conqfig map that will store OKTETO_ENV values
 	OktetoDependencyEnvsKey = "dependencyEnvs"
 
 	// EnvironmentLabelKeyPrefix represents the prefix for the preview and pipeline labels
@@ -140,4 +140,7 @@ const (
 
 	// OktetoDeployableEnvVar Env variable containing the piece of Okteto manifest which is deployable in remote or local deploys
 	OktetoDeployableEnvVar = "OKTETO_DEPLOYABLE"
+
+	// OktetoIsPreviewEnvVar Env variable containing a boolean indicating if the environment is a preview environment
+	OktetoIsPreviewEnvVar = "OKTETO_IS_PREVIEW_ENVIRONMENT"
 )

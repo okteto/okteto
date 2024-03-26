@@ -22,10 +22,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/secrets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -33,40 +31,26 @@ import (
 )
 
 type localDestroyAllCommand struct {
-	ConfigMapHandler  configMapHandler
-	nsDestroyer       destroyer
-	executor          executor.ManifestExecutor
 	oktetoClient      *okteto.Client
-	secrets           secretHandler
 	k8sClientProvider okteto.K8sClientProvider
 }
 
 func newLocalDestroyerAll(
 	k8sClientProvider okteto.K8sClientProvider,
-	executor executor.ManifestExecutor,
-	nsDestroyer destroyer,
 	oktetoClient *okteto.Client,
-) (*localDestroyAllCommand, error) {
-	k8sClient, _, err := k8sClientProvider.Provide(okteto.GetContext().Cfg)
-	if err != nil {
-		return nil, err
-	}
+) *localDestroyAllCommand {
 	return &localDestroyAllCommand{
-		ConfigMapHandler:  NewConfigmapHandler(k8sClient),
-		secrets:           secrets.NewSecrets(k8sClient),
 		k8sClientProvider: k8sClientProvider,
 		oktetoClient:      oktetoClient,
-		nsDestroyer:       nsDestroyer,
-		executor:          executor,
-	}, nil
+	}
 }
 
-func (dc *localDestroyAllCommand) destroy(ctx context.Context, opts *Options) error {
+func (lda *localDestroyAllCommand) destroy(ctx context.Context, opts *Options) error {
 	oktetoLog.Spinner(fmt.Sprintf("Deleting all in %s namespace", opts.Namespace))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
-	if err := dc.oktetoClient.Namespaces().DestroyAll(ctx, opts.Namespace, opts.DestroyVolumes); err != nil {
+	if err := lda.oktetoClient.Namespaces().DestroyAll(ctx, opts.Namespace, opts.DestroyVolumes); err != nil {
 		return err
 	}
 
@@ -85,13 +69,13 @@ func (dc *localDestroyAllCommand) destroy(ctx context.Context, opts *Options) er
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		exit <- dc.waitForNamespaceDestroyAllToComplete(waitCtx, opts.Namespace)
+		exit <- lda.waitForNamespaceDestroyAllToComplete(waitCtx, opts.Namespace)
 	}(&wg)
 
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := dc.oktetoClient.Stream().DestroyAllLogs(waitCtx, opts.Namespace)
+		err := lda.oktetoClient.Stream().DestroyAllLogs(waitCtx, opts.Namespace)
 		if err != nil {
 			oktetoLog.Warning("destroy all logs cannot be streamed due to connectivity issues")
 			oktetoLog.Infof("destroy all logs cannot be streamed due to connectivity issues: %v", err)
@@ -110,12 +94,12 @@ func (dc *localDestroyAllCommand) destroy(ctx context.Context, opts *Options) er
 	}
 }
 
-func (ld *localDestroyAllCommand) waitForNamespaceDestroyAllToComplete(ctx context.Context, namespace string) error {
+func (lda *localDestroyAllCommand) waitForNamespaceDestroyAllToComplete(ctx context.Context, namespace string) error {
 	timeout := 5 * time.Minute
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 
-	c, _, err := ld.k8sClientProvider.Provide(okteto.GetContext().Cfg)
+	c, _, err := lda.k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		return err
 	}

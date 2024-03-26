@@ -19,135 +19,27 @@ import (
 	"fmt"
 	"os"
 
-	contextCMD "github.com/okteto/okteto/cmd/context"
-	deployCMD "github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
 
-type runner interface {
-	RunDeploy(ctx context.Context, params deployable.DeployParameters) error
-}
-
-type Options struct {
-	Name           string
-	Variables      []string
-	RunWithoutBash bool
-}
-
-type Command struct {
-	runner runner
-}
-
 // RemoteRun starts the remote run command. This is the command executed in the
 // remote environment when okteto deploy is executed with the remote flag
 func RemoteRun(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
-	options := &Options{}
 	cmd := &cobra.Command{
-		Use:   "remote-run",
-		Short: "This command is the one in charge of deploying a deployable entity in the remote environment when okteto deploy is executed with remote flag",
-		Long: `This command is the one in charge of deploying a deployable entity in the remote environment when okteto deploy is executed with remote flag.
-
-The deployable entity is received as a base64 encoded string in the OKTETO_DEPLOYABLE environment variable. The deployable entity is a yaml file that contains the following fields:
-
-commands:
-- name: Echo deploy variable
-  command: echo "This is a deploy variable ${DEPLOY_VARIABLE}"
-...
-external:
-  fake:
-    icon: dashboard
-    notes: docs/fake.md
-    endpoints:
-    - name: api
-      url: https://fake-service
-...
-divert:
-  driver: istio
-  namespace: ns-1
-  service: service-b
-  virtualService: service-b
-  hosts:
-    - virtualService: service-a
-	  namespace: ns-a
-    - virtualService: service-b
-	  namespace: ${OKTETO_NAMESPACE}
-...
-
-It is important that this command does the minimum and must not do calculations that the deploy triggering it already does. For example, this command must not build any image to be used during the deployment
-`,
+		Use:          "remote-run",
+		Short:        "Remote run management commands. These are the commands to be run remotely",
 		Hidden:       true,
 		SilenceUsage: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if options.Name == "" {
-				return fmt.Errorf("--name is required")
-			}
-
-			oktetoContext, err := contextCMD.NewContextCommand().RunStateless(ctx, &contextCMD.Options{})
-			if err != nil {
-				return err
-			}
-
-			dep, err := getDeployable()
-			if err != nil {
-				return fmt.Errorf("could not read information to be deployed: %w", err)
-			}
-
-			// Set the default values for the external resources environment variables (endpoints)
-			for name, external := range dep.External {
-				external.SetDefaults(name)
-			}
-
-			k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
-			cmapHandler := deployCMD.NewConfigmapHandler(k8sClientProvider, k8sLogger)
-
-			runner, err := deployable.NewRunnerForRemote(
-				options.Name,
-				false,
-				cmapHandler,
-				k8sClientProvider,
-				model.GetAvailablePort,
-				k8sLogger,
-			)
-			if err != nil {
-				return fmt.Errorf("could not initialize the command properly: %w", err)
-			}
-
-			params := deployable.DeployParameters{
-				Name:      options.Name,
-				Namespace: oktetoContext.GetCurrentNamespace(),
-				// For the remote command, the manifest path is the current directory
-				ManifestPath: ".",
-				Deployable:   dep,
-				Variables:    options.Variables,
-			}
-
-			c := &Command{
-				runner: runner,
-			}
-
-			return c.Run(ctx, params)
-		},
 	}
 
-	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
-	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
+	cmd.AddCommand(Deploy(ctx, k8sLogger))
+	cmd.AddCommand(Destroy(ctx))
 	return cmd
-}
-
-func (c *Command) Run(ctx context.Context, params deployable.DeployParameters) error {
-	err := c.runner.RunDeploy(ctx, params)
-	oktetoLog.DisableMasking()
-	oktetoLog.SetStage("done")
-	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
-
-	return err
 }
 
 // getDeployable get the deployable entity from the OKTETO_DEPLOYABLE environment variable
