@@ -1,0 +1,10 @@
+dev:
+  hello-world:
+    image: okteto/php-getting-started:dev
+    command: bash
+    sync:
+      - .:/app
+    reverse:
+      - 9000:9000
+    volumes:
+      - /root/.composer/cache
