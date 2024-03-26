@@ -39,7 +39,7 @@ The `hello-world` key matches the name of the hello world Deployment. The meanin
 - `command`: the start command of the development container.
 - `sync`: the folders that will be synchronized between your local machine and the development container.
 - `forward`: a list of ports to forward from your development container. This is needed to access the port 8080 of your application on localhost and to configure the Java remote debugger.
-- `volumes`: a list of paths in your development container to be mounted as persistent volumes. This is useful to persist the maven/gradle caches.
+- `volumes`: a list of paths in your development container to be mounted as persistent volumes. This is useful to persist the gradle caches.
 
 Also, note that there is a `.stignore` file to indicate which files shouldn't be synchronized to your development container.
 This is useful to avoid synchronizing binaries, build artifacts, or git metadata.
@@ -108,7 +108,7 @@ Go back to the browser and reload the page. Your code changes were instantly app
 
 Okteto enables you to debug your applications directly from your favorite IDE. Let's take a look at how that works in IntelliJ, one of the most popular IDEs for Java development.
 
-> Add the following JVM arguments in the Gradle/Maven configuration files to enable remote debugging in your Java application:
+> Add the following JVM arguments in the Gradle configuration files to enable remote debugging in your Java application:
 >
 > `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005`
 

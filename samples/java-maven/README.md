@@ -2,9 +2,9 @@
 
 This tutorial will show you how to develop and debug a Java (Maven) application using Okteto
 
-## Step 1: Deploy the ASP.NET Sample App
+## Step 1: Deploy the Java (Maven) Sample App
 
-Run the following command to deploy the ASP.NET Sample App:
+Run the following command to deploy the Java (Maven) Sample App:
 
 ```bash
 kubectl apply -f k8s.yml
@@ -15,29 +15,11 @@ deployment.apps/hello-world created
 service/hello-world created
 ```
 
-Create a port-forward to access the ASP.NET Sample App on localhost:
-
-```bash
-kubectl port-forward service/hello-world 8080:8080
-```
-
-In a different terminal, access you application by executing:
-
-```bash
-curl localhost:8080
-```
-
-```bash
-Hello World!
-```
-
 ## Step 2: Activate your development container
 
-The [dev](reference/okteto-manifest.mdx#dev-object-optional) section defines how to activate a development container for the Java Sample App
+The [dev section](https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional) of the Okteto Manifest defines how to activate a development container for the Java (Maven) Sample App:
 
-#### Maven
-
-```yaml title="okteto.yml"
+```yaml
 dev:
   hello-world:
     image: okteto/maven:3
@@ -45,38 +27,21 @@ dev:
     sync:
       - .:/usr/src/app
     forward:
+      - 8080:8080
       - 5005:5005
     volumes:
       - /root/.m2
 ```
-
-#### Gradle
-
-```yaml title="okteto.yml"
-dev:
-  hello-world:
-    image: okteto/gradle:6.5
-    command: bash
-    sync:
-      - .:/usr/src/app
-    forward:
-      - 5005:5005
-    volumes:
-      - /home/gradle/.gradle
-```
-
 The `hello-world` key matches the name of the hello world Deployment. The meaning of the rest of fields is:
 
 - `image`: the image used by the development container.
 - `command`: the start command of the development container.
 - `sync`: the folders that will be synchronized between your local machine and the development container.
-- `forward`: a list of ports to forward from your development container.
-- `volumes`: a list of paths in your development container to be mounted as persistent volumes. This is useful to persist the maven/gradle caches.
+- `forward`: a list of ports to forward from your development container. This is needed to access the port 8080 of your application on localhost and to configure the Java remote debugger.
+- `volumes`: a list of paths in your development container to be mounted as persistent volumes. This is useful to persist the maven caches.
 
 Also, note that there is a `.stignore` file to indicate which files shouldn't be synchronized to your development container.
 This is useful to avoid synchronizing binaries, build artifacts, or git metadata.
-
-## Step 3: Activate your development container
 
 Next, execute the following command to activate your development container:
 
@@ -85,12 +50,12 @@ $ okteto up
 ```
 
 ```bash
- ✓  Persistent volume successfully attached
  ✓  Images successfully pulled
  ✓  Files synchronized
     Namespace: cindy
     Name:      hello-world
-    Forward:   5005 -> 5005
+    Forward:   8080 -> 8080
+               5005 -> 5005
 
 Welcome to your development container. Happy coding!
 cindy:hello-world app>
@@ -99,23 +64,20 @@ cindy:hello-world app>
 Working in your development container is the same as working on your local machine.
 Start the application by running the following command:
 
-#### Maven
-
 ```bash
 default:hello-world app> mvn spring-boot:run
 ```
 
-#### Gradle
+The first time you run the application, Maven will compile your application. Wait for this process to finish.
+
+Open your browser and load the page `http://localhost:8080` to test that your application is running.
+You should see the message:
 
 ```bash
-default:hello-world app> gradle bootRun
+Hello world!
 ```
 
-The first time you run the application, Maven/Gradle will compile your application. Wait for this process to finish.
-
-Go back to the browser and reload the page to test that your application is running.
-
-## Step 4: Remote Development with Okteto
+## Step 3: Remote Development with Okteto
 
 Open `src/main/java/com/okteto/helloworld/RestHelloWorld.java` in your favorite local IDE and modify the response message on line 11 to be _Hello world from Okteto!_. Save your changes.
 
@@ -137,19 +99,15 @@ public class RestHelloWorld {
 
 Your IDE will auto compile only the necessary `*.class` files which will be synchronized by Okteto to your remote environment. Take a look at the development container shell and notice how the changes are detected by Spring Boot and automatically hot reloaded.
 
-:::tip
-
-Import the `spring-boot-devtools` dependency to automatically restart your Java application whenever a file is changed.
-
-:::
+> Import the `spring-boot-devtools` dependency to automatically restart your Java application whenever a file is changed.
 
 Go back to the browser and reload the page. Your code changes were instantly applied. No commit, build, or push required 😎!
 
-## Step 5: Remote debugging with Okteto
+## Step 4: Remote debugging with Okteto
 
 Okteto enables you to debug your applications directly from your favorite IDE. Let's take a look at how that works in IntelliJ, one of the most popular IDEs for Java development.
 
-> Add the following JVM arguments in the Gradle/Maven configuration files to enable remote debugging in your Java application:
+> Add the following JVM arguments in the Maven configuration files to enable remote debugging in your Java application:
 >
 > `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005`
 
