@@ -15,27 +15,11 @@ deployment.apps/hello-world created
 service/hello-world created
 ```
 
-Create a port-forward to access the ASP.NET Sample App on localhost:
-
-```bash
-kubectl port-forward service/hello-world 8080:8080
-```
-
-In a different terminal, access you application by executing:
-
-```bash
-curl localhost:8080
-```
-
-```bash
-Hello World!
-```
-
 ## Step 2: Activate your development container
 
 The [dev](reference/okteto-manifest.mdx#dev-object-optional) section defines how to activate a development container for the Go Sample App:
 
-```yaml title="okteto.yml"
+```yaml
 dev:
   hello-world:
     image: okteto/golang:1
@@ -50,6 +34,7 @@ dev:
         add:
           - SYS_PTRACE
     forward:
+      - 8080:8080
       - 2345:2345
 ```
 
@@ -60,7 +45,7 @@ The `hello-world` key matches the name of the hello world Deployment. The meanin
 - `sync`: the folders that will be synchronized between your local machine and the development container.
 - `volumes`: a list of paths in your development container to be mounted as persistent volumes. For example, this can be used to persist the Go cache.
 - `securityContext`: `SYS_PTRACE` is a capability required by the Go debugger.
-- `forward`: a list of ports to forward from your development container to locahost in your machine. This is needed to configure the Go debugger.
+- `forward`: a list of ports to forward from your development container to locahost in your machine. This is needed to access the port 8080 of your application on localhost and to configure the Go debugger.
 
 Also, note that there is a `.stignore` file to indicate which files shouldn't be synchronized to your development container.
 This is useful to avoid synchronizing binaries, build artifacts, git metadata, or dependencies like the `vendor` folder.
@@ -68,18 +53,16 @@ This is useful to avoid synchronizing binaries, build artifacts, git metadata, o
 Next, execute the following command to activate your development container:
 
 ```bash
-$ okteto up
+okteto up
 ```
 
 ```bash
- i  Using cindy @ okteto.example.com as context
- i  Development environment 'go-getting-started' already deployed.
  ✓  Images successfully pulled
  ✓  Files synchronized
-    Context:   okteto.example.com
     Namespace: cindy
     Name:      hello-world
-    Forward:   2345 -> 2345
+    Forward:   8080 -> 8080
+               2345 -> 2345
 
 Welcome to your development container. Happy coding!
 cindy:hello-world app>
@@ -96,9 +79,14 @@ cindy:hello-world app> go run main.go
 Starting hello-world server...
 ```
 
-Go back to the browser, and reload the page to test that your application is running.
+Open your browser and load the page `http://localhost:8080` to test that your application is running.
+You should see the message:
 
-## Step 4: Remote Development with Okteto
+```bash
+Hello world!
+```
+
+## Step 3: Remote Development with Okteto
 
 Open the file `main.go` in your favorite local IDE and modify the response message on line 17 to be _Hello world from Okteto!_. Save your changes.
 
@@ -122,7 +110,7 @@ Starting hello-world server...
 
 Go back to the browser and reload the page. Your code changes were instantly applied. No commit, build, or push required 😎!
 
-## Step 5: Remote debugging wtih Okteto
+## Step 4: Remote debugging wtih Okteto
 
 Okteto enables you to debug your applications directly from your favorite IDE.
 Let's take a look at how that works in VS Code, one of the most popular IDEs for Go development.

@@ -33,10 +33,10 @@ dev:
 
 The `hello-world` key matches the name of the hello world Deployment. The meaning of the rest of fields is:
 
-- `image`: the image used by the development container (built from this [Dockerfile](https://github.com/okteto/aspnetcore-getting-started/blob/main/Dockerfile)).
+- `image`: the image used by the development container (built from this [Dockerfile](Dockerfile).
+- `command`: the start command of the development container.
 - `sync`: the folders that will be synchronized between your local machine and the development container.
 - `environment`: the environment variables added or overwritten in your development container.
-- `command`: the start command of the development container.
 - `remote`: the local port to use for SSH communication with your development environment.
 - `forward`: a list of ports to forward from your development container to locahost in your machine. This is needed to access the port 5000 of your application on localhost.
 
@@ -54,6 +54,7 @@ okteto up
  ✓  Files synchronized
     Namespace: cindy
     Name:      hello-world
+    Forward:   5000 -> 5000
 
 Welcome to your development container. Happy coding!
 cindy:hello-world src>
