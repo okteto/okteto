@@ -2,9 +2,9 @@
 
 This tutorial will show you how to develop and debug a PHP application using Okteto
 
-## Step 1: Deploy the ASP.NET Sample App
+## Step 1: Deploy the PHP Sample App
 
-Run the following command to deploy the ASP.NET Sample App:
+Run the following command to deploy the PHP Sample App:
 
 ```bash
 kubectl apply -f k8s.yml
@@ -15,33 +15,19 @@ deployment.apps/hello-world created
 service/hello-world created
 ```
 
-Create a port-forward to access the ASP.NET Sample App on localhost:
-
-```bash
-kubectl port-forward service/hello-world 8080:8080
-```
-
-In a different terminal, access you application by executing:
-
-```bash
-curl localhost:8080
-```
-
-```bash
-Hello World!
-```
-
 ## Step 2: Activate your development container
 
-The [dev](reference/okteto-manifest.mdx#dev-object-optional) section defines how to activate a development container for the Php Sample App:
+The [dev section](https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional) of the Okteto Manifest defines how to activate a development container for the PHP Sample App:
 
-```yaml title="okteto.yml"
+```yaml
 dev:
   hello-world:
     image: okteto/php-getting-started:dev
     command: bash
     sync:
       - .:/app
+    forward:
+      - 8080:8080
     reverse:
       - 9000:9000
     volumes:
@@ -50,10 +36,11 @@ dev:
 
 The `hello-world` key matches the name of the hello world Deployment. The meaning of the rest of fields is:
 
-- `image`: the image used by the development container (built from this [Dockerfile](https://github.com/okteto/php-getting-started/blob/main/Dockerfile)).
+- `image`: the image used by the development container (built from this [Dockerfile](Dockerfile)).
 - `command`: the start command of the development container.
 - `sync`: the folders that will be synchronized between your local machine and the development container.
-- `reverse`: a list of ports to reverse forward from your development container to your local machine
+- `forward`: a list of ports to forward from your development container to localhost in your machine. This is needed to access the port 8080 of your application on localhost.
+- `reverse`: a list of ports to reverse forward from your development container to your local machine. This is needed by the PHP remote debugger.
 - `volumes`: a list of paths in your development container to be mounted as persistent volumes. For example, this is useful to persist the Composer cache.
 
 Also, note that there is a `.stignore` file to indicate which files shouldn't be synchronized to your development container.
@@ -62,15 +49,15 @@ This is useful to avoid synchronizing binaries, build artifacts, or git metadata
 Next, execute the following command to activate your development container:
 
 ```bash
-$ okteto up
+okteto up
 ```
 
 ```bash
- ✓  Persistent volume successfully attached
  ✓  Images successfully pulled
  ✓  Files synchronized
     Namespace: cindy
     Name:      hello-world
+    Forward:   8080 -> 8080
     Reverse:   9000 <- 9000
 
 Welcome to your development container. Happy coding!
@@ -88,15 +75,20 @@ cindy:hello-world app> php -S 0.0.0.0:8080
 [Tue Jul  5 21:04:55 2022] PHP 8.2.0 Development Server (http://0.0.0.0:8080) started
 ```
 
-Go back to the browser, and reload the page to test that your application is running.
+Open your browser and load the page `http://localhost:8080` to test that your application is running.
+You should see the message:
+
+```bash
+Hello world!
+```
 
 ## Step 3: Remote Development with Okteto
 
-Open the `index.php` file in your favorite local IDE and modify the response message on line 2 to be _Hello world from the cluster!_. Save your changes.
+Open the `index.php` file in your favorite local IDE and modify the response message on line 2 to be _Hello world from Okteto!_. Save your changes.
 
 ```php
 <?php
-$message = "Hello World from the cluster!";
+$message = "Hello World from Okteto!";
 echo($message);
 ```
 

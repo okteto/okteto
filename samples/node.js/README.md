@@ -78,7 +78,7 @@ cindy:hello-world app> npm run start
 Starting hello-world server...
 ```
 
-Open your browser and load the page `http://localhost:8080` to test that your application is running.
+Open your browser and load the page `http://localhost:3000` to test that your application is running.
 You should see the message:
 
 ```bash
@@ -90,7 +90,7 @@ Hello world!
 Open the `index.js` file in your favorite local IDE and modify the response message on line 5 to be _Hello world from Okteto!_. Save your changes.
 
 ```javascript
-res.send("Hello world from the cluster!");
+res.send("Hello world from Okteto!");
 ```
 
 Okteto will synchronize your changes to your development container.

@@ -35,7 +35,7 @@ dev:
 
 The `hello-world` key matches the name of the hello world Deployment. The meaning of the rest of fields is:
 
-- `image`: the image used by the development container (built from this [Dockerfile](Dockerfile).
+- `image`: the image used by the development container (built from this [Dockerfile](Dockerfile)).
 - `command`: the start command of the development container.
 - `sync`: the folders that will be synchronized between your local machine and the development container.
 - `environment`: the environment variables added or overwritten in your development container.
