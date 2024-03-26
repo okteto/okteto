@@ -1,9 +1,11 @@
 dev:
   hello-world:
     image: okteto/aspnetcore-getting-started:dev
-    command: bash
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-    remote: 2222
     sync: 
       - .:/src
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    command: bash
+    remote: 2222
+    forward:
+      - 5000:5000

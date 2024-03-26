@@ -15,27 +15,11 @@ deployment.apps/hello-world created
 service/hello-world created
 ```
 
-Create a port-forward to access the ASP.NET Sample App on localhost:
-
-```bash
-kubectl port-forward service/hello-world 8080:8080
-```
-
-In a different terminal, access you application by executing:
-
-```bash
-curl localhost:8080
-```
-
-```bash
-Hello World!
-```
-
 ## Step 2: Activate your development container
 
 The [dev section](https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional) of the Okteto Manifest defines how to activate a development container for the ASP.NET Sample App:
 
-```yaml title="okteto.yml"
+```yaml
 dev:
   hello-world:
     image: okteto/aspnetcore-getting-started:dev
@@ -50,10 +34,11 @@ dev:
 The `hello-world` key matches the name of the hello world Deployment. The meaning of the rest of fields is:
 
 - `image`: the image used by the development container (built from this [Dockerfile](https://github.com/okteto/aspnetcore-getting-started/blob/main/Dockerfile)).
-- `command`: the start command of the development container.
-- `environment`: the environment variables added or overwritten in your development container.
-- `remote`: the local port to use for SSH communication with your development environment.
 - `sync`: the folders that will be synchronized between your local machine and the development container.
+- `environment`: the environment variables added or overwritten in your development container.
+- `command`: the start command of the development container.
+- `remote`: the local port to use for SSH communication with your development environment.
+- `forward`: a list of ports to forward from your development container to locahost in your machine. This is needed to access the port 5000 of your application on localhost.
 
 Also, note that there is a `.stignore` file to indicate which files shouldn't be synchronized to your development container.
 This is useful to avoid synchronizing binaries, build artifacts, or git metadata.
@@ -65,7 +50,6 @@ okteto up
 ```
 
 ```bash
- ✓  Persistent volume successfully attached
  ✓  Images successfully pulled
  ✓  Files synchronized
     Namespace: cindy
@@ -79,7 +63,7 @@ Working in your development container is the same as working on your local machi
 Start the application by running the following command:
 
 ```bash
-default:hello-world src> dotnet watch run
+cindy:hello-world src> dotnet watch run
 ```
 
 ```bash
@@ -104,7 +88,12 @@ info: Microsoft.Hosting.Lifetime[0]
       Content root path: /src
 ```
 
-Go back to the browser and reload the page to test that your application is running.
+Open your browser and load the page `http://localhost:5000` to test that your application is running.
+You should see the message:
+
+```bash
+Hello world!
+```
 
 ## Step 3: Remote Development with Okteto
 
