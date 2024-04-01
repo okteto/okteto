@@ -104,7 +104,7 @@ func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptio
 	}
 
 	switch {
-	case IsDepotEnabled():
+	case IsDepotEnabled() && !isDeployOrDestroy:
 		depotManager := newDepotBuilder(depotProject, depotToken, ob.OktetoContext, ioCtrl)
 		return depotManager.Run(ctx, buildOptions, runAndHandleBuild)
 	case ob.OktetoContext.GetCurrentBuilder() == "":
