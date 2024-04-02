@@ -42,8 +42,8 @@ type DestroyParameters struct {
 func (dr *DestroyRunner) RunDestroy(params DestroyParameters) error {
 	var commandErr error
 	for _, command := range params.Deployable.Commands {
-		oktetoLog.Information("Running '%s'", command.Name)
 		oktetoLog.SetStage(command.Name)
+		oktetoLog.Information("Running '%s'", command.Name)
 		if err := dr.Executor.Execute(command, params.Variables); err != nil {
 			err = fmt.Errorf("error executing command '%s': %w", command.Name, err)
 			// In case of force destroy, we have to execute all commands even if a single one fails
