@@ -221,9 +221,9 @@ const (
 	// OktetoRescanIntervalEnvVar defines the time between scans for syncthing
 	OktetoRescanIntervalEnvVar = "OKTETO_RESCAN_INTERVAL"
 
-	// DeprecatedOktetoCurrentDeployBelongsToPreview if set the current okteto deploy belongs
+	// DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar if set the current okteto deploy belongs
 	// to a preview environment
-	DeprecatedOktetoCurrentDeployBelongsToPreview = "OKTETO_CURRENT_DEPLOY_BELONGS_TO_PREVIEW"
+	DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar = "OKTETO_CURRENT_DEPLOY_BELONGS_TO_PREVIEW"
 
 	// OktetoTimeoutEnvVar defines the timeout for okteto commands
 	OktetoTimeoutEnvVar = "OKTETO_TIMEOUT"

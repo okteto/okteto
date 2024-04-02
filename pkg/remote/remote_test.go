@@ -332,7 +332,7 @@ func TestCreateDockerfile(t *testing.T) {
 				dockerfileContent: `
 FROM okteto/okteto:latest as okteto-cli
 
-FROM test-image as deploy
+FROM test-image as runner
 
 ENV PATH="${PATH}:/okteto/bin"
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/

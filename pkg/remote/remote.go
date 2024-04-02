@@ -52,7 +52,7 @@ const (
 	dockerfileTemplate     = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
 
-FROM {{ .UserDeployImage }} as deploy
+FROM {{ .UserRunnerImage }} as runner
 
 ENV PATH="${PATH}:/okteto/bin"
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
@@ -139,7 +139,7 @@ type Params struct {
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
 type dockerfileTemplateProperties struct {
 	OktetoCLIImage           string
-	UserDeployImage          string
+	UserRunnerImage          string
 	RemoteDeployEnvVar       string
 	OktetoBuildEnvVars       map[string]string
 	OktetoDependencyEnvVars  map[string]string
@@ -333,7 +333,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 
 	dockerfileSyntax := dockerfileTemplateProperties{
 		OktetoCLIImage:           getOktetoCLIVersion(config.VersionString),
-		UserDeployImage:          params.BaseImage,
+		UserRunnerImage:          params.BaseImage,
 		RemoteDeployEnvVar:       constants.OktetoDeployRemote,
 		ContextArgName:           model.OktetoContextEnvVar,
 		OktetoBuildEnvVars:       params.BuildEnvVars,
