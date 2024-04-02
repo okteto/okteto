@@ -107,10 +107,11 @@ It is important that this command does the minimum and must not do calculations 
 			os.Setenv(constants.OktetoNameEnvVar, options.Name)
 
 			params := deployable.DestroyParameters{
-				Name:       options.Name,
-				Namespace:  oktetoContext.GetCurrentNamespace(),
-				Deployable: dep,
-				Variables:  options.Variables,
+				Name:         options.Name,
+				Namespace:    oktetoContext.GetCurrentNamespace(),
+				Deployable:   dep,
+				Variables:    options.Variables,
+				ForceDestroy: options.ForceDestroy,
 			}
 
 			c := &DestroyCommand{
