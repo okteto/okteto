@@ -41,9 +41,11 @@ type DestroyParameters struct {
 // RunDestroy executes the custom commands received as part of DestroyParameters
 func (dr *DestroyRunner) RunDestroy(params DestroyParameters) error {
 	var commandErr error
+	lastCommandName := ""
 	for _, command := range params.Deployable.Commands {
-		oktetoLog.SetStage(command.Name)
 		oktetoLog.Information("Running '%s'", command.Name)
+		lastCommandName = command.Name
+		oktetoLog.SetStage(command.Name)
 		if err := dr.Executor.Execute(command, params.Variables); err != nil {
 			err = fmt.Errorf("error executing command '%s': %w", command.Name, err)
 			// In case of force destroy, we have to execute all commands even if a single one fails
@@ -54,7 +56,13 @@ func (dr *DestroyRunner) RunDestroy(params DestroyParameters) error {
 			// Store the error to return if the force destroy option is set
 			commandErr = err
 		}
+		oktetoLog.SetStage("")
 	}
+
+	// This is a hack for improving the logs until we refactor all that. The oktetoLog.Information('Running '%s'')
+	// should not appear under any stage, that is why we clear the stage after each execution. To keep backward compatibility
+	// in case of failure of command, we end up the function setting the stage to the last command executed.
+	oktetoLog.SetStage(lastCommandName)
 
 	return commandErr
 }
