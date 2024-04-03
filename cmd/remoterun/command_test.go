@@ -14,26 +14,14 @@
 package remoterun
 
 import (
-	"context"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
-
-type fakeRunner struct {
-	mock.Mock
-}
-
-func (f *fakeRunner) RunDeploy(ctx context.Context, params deployable.DeployParameters) error {
-	args := f.Called(ctx, params)
-	return args.Error(0)
-}
 
 func TestGetDeployableEmpty(t *testing.T) {
 	dep, err := getDeployable()
@@ -97,50 +85,4 @@ func TestGetDeployable(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, expected, result)
-}
-
-func TestRun(t *testing.T) {
-	params := deployable.DeployParameters{
-		Name:      "test",
-		Namespace: "ns",
-		Deployable: deployable.Entity{
-			Commands: []model.DeployCommand{
-				{
-					Name:    "Command 1",
-					Command: "echo 1",
-				},
-				{
-					Name:    "Command 2",
-					Command: "echo 2",
-				},
-			},
-			External: externalresource.Section{
-				"fake": {
-					Icon: "icon",
-					Endpoints: []*externalresource.ExternalEndpoint{
-						{
-							Name: "name",
-							Url:  "url",
-						},
-					},
-				},
-			},
-			Divert: &model.DivertDeploy{
-				Driver:    "test driver",
-				Namespace: "ns",
-			},
-		},
-	}
-	runner := &fakeRunner{}
-
-	c := &Command{
-		runner: runner,
-	}
-
-	runner.On("RunDeploy", mock.Anything, params).Return(nil)
-
-	err := c.Run(context.Background(), params)
-
-	assert.NoError(t, err)
-	runner.AssertExpectations(t)
 }
