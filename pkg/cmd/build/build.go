@@ -104,7 +104,10 @@ func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptio
 	}
 
 	switch {
-	case IsDepotEnabled():
+	// When depot is available we only go to depot if it's not a deploy or a destroy.
+	// On depot the workload id is not working correctly and the users would not be able to
+	// use the internal cluster ip as if they were running their scripts on the k8s cluster
+	case IsDepotEnabled() && !isDeployOrDestroy:
 		depotManager := newDepotBuilder(depotProject, depotToken, ob.OktetoContext, ioCtrl)
 		return depotManager.Run(ctx, buildOptions, runAndHandleBuild)
 	case ob.OktetoContext.GetCurrentBuilder() == "":
