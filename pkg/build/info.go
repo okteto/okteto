@@ -130,8 +130,14 @@ func (i *Info) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	i.Name = rawBuildInfo.Name
-	i.Context = rawBuildInfo.Context
-	i.Dockerfile = rawBuildInfo.Dockerfile
+	i.Context, err = env.ExpandEnvIfNotEmpty(rawBuildInfo.Context)
+	if err != nil {
+		return err
+	}
+	i.Dockerfile, err = env.ExpandEnvIfNotEmpty(rawBuildInfo.Dockerfile)
+	if err != nil {
+		return err
+	}
 	i.Target = rawBuildInfo.Target
 	i.Args = rawBuildInfo.Args
 	i.Image = rawBuildInfo.Image
