@@ -14,6 +14,7 @@
 package analytics
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -79,7 +80,7 @@ func TestAnalyticsTracker_TrackImageBuild(t *testing.T) {
 					}
 				},
 			}
-			tracker.TrackImageBuild(tt.input)
+			tracker.TrackImageBuild(context.Background(), tt.input)
 
 			require.Equal(t, tt.expectedEvent.event, eventMeta.event)
 			require.Equal(t, tt.expectedEvent.success, eventMeta.success)

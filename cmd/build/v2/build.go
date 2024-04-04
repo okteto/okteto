@@ -67,19 +67,13 @@ type analyticsTrackerInterface interface {
 	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
 }
 
-type EventTrackerInterface interface {
-	Track(ctx context.Context, meta *analytics.ImageBuildMetadata) error
-}
-
 // OktetoBuilder builds the images
 type OktetoBuilder struct {
 	basic.Builder
 
-	Registry         oktetoRegistryInterface
-	Config           oktetoBuilderConfigInterface
-	analyticsTracker analyticsTrackerInterface
-	EventTracker     EventTrackerInterface
-	oktetoContext    buildCmd.OktetoContextInterface
+	Registry      oktetoRegistryInterface
+	Config        oktetoBuilderConfigInterface
+	oktetoContext buildCmd.OktetoContextInterface
 
 	smartBuildCtrl *smartbuild.Ctrl
 
@@ -91,10 +85,14 @@ type OktetoBuilder struct {
 
 	// lock is a mutex to provide buildEnvironments map safe concurrency
 	lock sync.RWMutex
+
+	onBuildFinish []OnBuildFinish
 }
 
+type OnBuildFinish func(ctx context.Context, meta *analytics.ImageBuildMetadata)
+
 // NewBuilder creates a new okteto builder
-func NewBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.Controller, analyticsTracker analyticsTrackerInterface, okCtx okteto.ContextInterface, k8sLogger *io.K8sLogger, eventTracker EventTrackerInterface) *OktetoBuilder {
+func NewBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.Controller, okCtx okteto.ContextInterface, k8sLogger *io.K8sLogger, onBuildFinish []OnBuildFinish) *OktetoBuilder {
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
 	wd, err := wdCtrl.Get()
 	if err != nil {
@@ -110,17 +108,16 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistry
 		Registry:          registry,
 		buildEnvironments: buildEnvs,
 		Config:            config,
-		analyticsTracker:  analyticsTracker,
 		ioCtrl:            ioCtrl,
 		smartBuildCtrl:    smartbuild.NewSmartBuildCtrl(gitRepo, registry, config.fs, ioCtrl),
 		oktetoContext:     okCtx,
 		k8sLogger:         k8sLogger,
-		EventTracker:      eventTracker,
+		onBuildFinish:     onBuildFinish,
 	}
 }
 
 // NewBuilderFromScratch creates a new okteto builder
-func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *io.Controller, eventTracker EventTrackerInterface) *OktetoBuilder {
+func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish) *OktetoBuilder {
 	builder := buildCmd.NewOktetoBuilder(
 		&okteto.ContextStateless{
 			Store: okteto.GetContextStore(),
@@ -154,11 +151,11 @@ func NewBuilderFromScratch(analyticsTracker analyticsTrackerInterface, ioCtrl *i
 		Registry:          reg,
 		buildEnvironments: buildEnvs,
 		Config:            config,
-		analyticsTracker:  analyticsTracker,
 		ioCtrl:            ioCtrl,
 		smartBuildCtrl:    smartbuild.NewSmartBuildCtrl(gitRepo, reg, config.fs, ioCtrl),
 		oktetoContext:     okCtx,
-		EventTracker:      eventTracker,
+
+		onBuildFinish: onBuildFinish,
 	}
 }
 
@@ -215,11 +212,10 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 	// send all events appended on each build
 	defer func([]*analytics.ImageBuildMetadata) {
-		ob.analyticsTracker.TrackImageBuild(buildsAnalytics...)
 		for _, meta := range buildsAnalytics {
 			m := meta
-			if err := ob.EventTracker.Track(ctx, m); err != nil {
-				ob.ioCtrl.Logger().Infof("error tracking build event: %s", err)
+			for _, fn := range ob.onBuildFinish {
+				fn(ctx, m)
 			}
 		}
 	}(buildsAnalytics)

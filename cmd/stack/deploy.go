@@ -41,7 +41,7 @@ import (
 // DeployCommand has all the namespaces subcommands
 type DeployCommand struct {
 	K8sClient        kubernetes.Interface
-	analyticsTracker analyticsTrackerInterface
+	analyticsTracker buildTrackerInterface
 	Config           *rest.Config
 	ioCtrl           *io.Controller
 	DivertDriver     divert.Driver
@@ -49,7 +49,7 @@ type DeployCommand struct {
 }
 
 // deploy deploys a stack
-func deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
+func deploy(ctx context.Context, at buildTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
 	options := &stack.DeployOptions{}
 
 	cmd := &cobra.Command{

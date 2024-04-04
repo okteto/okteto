@@ -186,8 +186,8 @@ func TestBuildNecessaryImages(t *testing.T) {
 
 type fakeAnalyticsTracker struct{}
 
-func (fakeAnalyticsTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
-func (fakeAnalyticsTracker) TrackDestroy(analytics.DestroyMetadata)           {}
+func (fakeAnalyticsTracker) TrackImageBuild(context.Context, *analytics.ImageBuildMetadata) {}
+func (fakeAnalyticsTracker) TrackDestroy(analytics.DestroyMetadata)                         {}
 
 func Test_newBuildCtrl(t *testing.T) {
 	okteto.CurrentStore = &okteto.ContextStore{
@@ -198,7 +198,7 @@ func Test_newBuildCtrl(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	got := newBuildCtrl("test-control", &fakeAnalyticsTracker{}, io.NewIOController())
+	got := newBuildCtrl("test-control", &fakeAnalyticsTracker{}, &fakeAnalyticsTracker{}, io.NewIOController())
 
 	require.Equal(t, "test-control", got.name)
 	require.IsType(t, got.builder, &v2.OktetoBuilder{})

@@ -30,7 +30,6 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -73,14 +72,14 @@ const (
 	onDeleteUpdateStrategy updateStrategy = "on-delete"
 )
 
-func buildStackImages(ctx context.Context, s *model.Stack, options *DeployOptions, analyticsTracker analyticsTrackerInterface, ioCtrl *io.Controller) error {
+func buildStackImages(ctx context.Context, s *model.Stack, options *DeployOptions, analyticsTracker, insights buildTrackerInterface, ioCtrl *io.Controller) error {
 	manifest := model.NewManifestFromStack(s)
 
-	okCtx := &okteto.ContextStateless{
-		Store: okteto.GetContextStore(),
+	onBuildFinish := []buildv2.OnBuildFinish{
+		analyticsTracker.TrackImageBuild,
+		insights.TrackImageBuild,
 	}
-	eventTracker := buildv2.NewEventTracker(ioCtrl, okCtx)
-	builder := buildv2.NewBuilderFromScratch(analyticsTracker, ioCtrl, eventTracker)
+	builder := buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish)
 	if options.ForceBuild {
 		buildOptions := &types.BuildOptions{
 			Manifest:    manifest,

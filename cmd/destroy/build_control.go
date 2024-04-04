@@ -23,7 +23,6 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 )
 
@@ -32,13 +31,13 @@ type buildCtrl struct {
 	name    string
 }
 
-func newBuildCtrl(name string, analyticsTracker analyticsTrackerInterface, ioCtrl *io.Controller) buildCtrl {
-	okCtx := &okteto.ContextStateless{
-		Store: okteto.GetContextStore(),
+func newBuildCtrl(name string, analyticsTracker, insights buildTrackerInterface, ioCtrl *io.Controller) buildCtrl {
+	onBuildFinish := []buildv2.OnBuildFinish{
+		analyticsTracker.TrackImageBuild,
+		insights.TrackImageBuild,
 	}
-	eventTracker := buildv2.NewEventTracker(ioCtrl, okCtx)
 	return buildCtrl{
-		builder: buildv2.NewBuilderFromScratch(analyticsTracker, ioCtrl, eventTracker),
+		builder: buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish),
 		name:    name,
 	}
 }

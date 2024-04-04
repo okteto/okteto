@@ -14,6 +14,7 @@
 package analytics
 
 import (
+	"context"
 	"time"
 )
 
@@ -63,8 +64,6 @@ func (m *ImageBuildMetadata) toProps() map[string]interface{} {
 	return props
 }
 
-func (a *Tracker) TrackImageBuild(metaList ...*ImageBuildMetadata) {
-	for _, m := range metaList {
-		a.trackFn(imageBuildEvent, m.Success, m.toProps())
-	}
+func (a *Tracker) TrackImageBuild(ctx context.Context, m *ImageBuildMetadata) {
+	a.trackFn(imageBuildEvent, m.Success, m.toProps())
 }

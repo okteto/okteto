@@ -370,8 +370,6 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 
 	reg := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(reg)
-	fakeTracker := fakeAnalyticsTracker{}
-
 	okCtx := &okteto.ContextStateless{
 		Store: &okteto.ContextStore{
 			Contexts: map[string]*okteto.Context{
@@ -384,8 +382,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 		},
 	}
 
-	builderV2 := buildv2.NewBuilder(builder, reg, io.NewIOController(), fakeTracker, okCtx, io.NewK8sLogger(), &fakeBuildEventTracker{})
-	builderV2.EventTracker = &fakeEventTracker{}
+	builderV2 := buildv2.NewBuilder(builder, reg, io.NewIOController(), okCtx, io.NewK8sLogger(), []buildv2.OnBuildFinish{})
 	c := &Command{
 		GetManifest:       getErrorManifest,
 		Builder:           builderV2,
@@ -795,8 +792,8 @@ func TestDeployOnlyDependencies(t *testing.T) {
 
 type fakeTracker struct{}
 
-func (*fakeTracker) TrackDeploy(analytics.DeployMetadata)             {}
-func (*fakeTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
+func (*fakeTracker) TrackImageBuild(context.Context, *analytics.ImageBuildMetadata) {}
+func (*fakeTracker) TrackDeploy(analytics.DeployMetadata)                           {}
 
 func TestTrackDeploy(t *testing.T) {
 	tt := []struct {

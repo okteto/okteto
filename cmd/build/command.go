@@ -53,13 +53,14 @@ type Command struct {
 
 	Builder          buildCmd.OktetoBuilderInterface
 	Registry         registryInterface
-	analyticsTracker analyticsTrackerInterface
+	analyticsTracker buildTrackerInterface
+	insights         buildTrackerInterface
 	ioCtrl           *io.Controller
 	k8slogger        *io.K8sLogger
 }
 
-type analyticsTrackerInterface interface {
-	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
+type buildTrackerInterface interface {
+	TrackImageBuild(ctx context.Context, meta *analytics.ImageBuildMetadata)
 }
 
 type registryInterface interface {
@@ -75,7 +76,7 @@ type registryInterface interface {
 }
 
 // NewBuildCommand creates a struct to run all build methods
-func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker analyticsTrackerInterface, okCtx *okteto.ContextStateless, k8slogger *io.K8sLogger) *Command {
+func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker, insights buildTrackerInterface, okCtx *okteto.ContextStateless, k8slogger *io.K8sLogger) *Command {
 
 	return &Command{
 		GetManifest:      model.GetManifestV2,
@@ -84,6 +85,7 @@ func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker analyticsTrackerInt
 		ioCtrl:           ioCtrl,
 		k8slogger:        k8slogger,
 		analyticsTracker: analyticsTracker,
+		insights:         insights,
 	}
 }
 
@@ -93,7 +95,7 @@ const (
 )
 
 // Build build and optionally push a Docker image
-func Build(ctx context.Context, ioCtrl *io.Controller, at analyticsTrackerInterface, k8slogger *io.K8sLogger) *cobra.Command {
+func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTrackerInterface, k8slogger *io.K8sLogger) *cobra.Command {
 	options := &types.BuildOptions{}
 	cmd := &cobra.Command{
 		Use:   "build [service...]",
@@ -110,7 +112,7 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at analyticsTrackerInterf
 
 			ioCtrl.Logger().Info("context loaded")
 
-			bc := NewBuildCommand(ioCtrl, at, oktetoContext, k8slogger)
+			bc := NewBuildCommand(ioCtrl, at, insights, oktetoContext, k8slogger)
 
 			builder, err := bc.getBuilder(options, oktetoContext)
 
@@ -166,8 +168,11 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 		builder = buildv1.NewBuilder(bc.Builder, bc.ioCtrl)
 	} else {
 		if isBuildV2(manifest) {
-			eventTracker := buildv2.NewEventTracker(bc.ioCtrl, okCtx)
-			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl, bc.analyticsTracker, okCtx, bc.k8slogger, eventTracker)
+			callbacks := []buildv2.OnBuildFinish{
+				bc.analyticsTracker.TrackImageBuild,
+				bc.insights.TrackImageBuild,
+			}
+			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl, okCtx, bc.k8slogger, callbacks)
 		} else {
 			builder = buildv1.NewBuilder(bc.Builder, bc.ioCtrl)
 		}

@@ -43,15 +43,16 @@ import (
 	"github.com/spf13/afero"
 )
 
-type analyticsTrackerInterface interface {
-	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
+type buildTrackerInterface interface {
+	TrackImageBuild(ctx context.Context, meta *analytics.ImageBuildMetadata)
 }
 
 // Command has all the namespaces subcommands
 type Command struct {
 	manifest          *model.Manifest
 	K8sClientProvider okteto.K8sClientProviderWithLogger
-	AnalyticsTracker  analyticsTrackerInterface
+	AnalyticsTracker  buildTrackerInterface
+	InsightsTracker   buildTrackerInterface
 
 	IoCtrl    *io.Controller
 	K8sLogger *io.K8sLogger
@@ -223,15 +224,16 @@ func (mc *Command) deploy(ctx context.Context, opts *InitOpts) error {
 	if err != nil {
 		return err
 	}
-	okCtx := &okteto.ContextStateless{
-		Store: okteto.GetContextStore(),
+
+	onBuildFinish := []buildv2.OnBuildFinish{
+		mc.AnalyticsTracker.TrackImageBuild,
+		mc.InsightsTracker.TrackImageBuild,
 	}
-	eventTracker := buildv2.NewEventTracker(mc.IoCtrl, okCtx)
 	c := &deploy.Command{
 		GetDeployer:       deploy.GetDeployer,
 		GetManifest:       mc.getManifest,
 		K8sClientProvider: mc.K8sClientProvider,
-		Builder:           buildv2.NewBuilderFromScratch(mc.AnalyticsTracker, mc.IoCtrl, eventTracker),
+		Builder:           buildv2.NewBuilderFromScratch(mc.IoCtrl, onBuildFinish),
 		Fs:                afero.NewOsFs(),
 		CfgMapHandler:     deploy.NewConfigmapHandler(mc.K8sClientProvider, mc.K8sLogger),
 		PipelineCMD:       pc,

@@ -84,8 +84,12 @@ type destroyInterface interface {
 }
 
 type analyticsTrackerInterface interface {
+	buildTrackerInterface
 	TrackDestroy(metadta analytics.DestroyMetadata)
-	TrackImageBuild(...*analytics.ImageBuildMetadata)
+}
+
+type buildTrackerInterface interface {
+	TrackImageBuild(context.Context, *analytics.ImageBuildMetadata)
 }
 
 type destroyCommand struct {
@@ -102,7 +106,7 @@ type destroyCommand struct {
 }
 
 // Destroy destroys the dev application defined by the manifest
-func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &Options{
 		Variables: []string{},
 	}
@@ -190,7 +194,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contr
 				secrets:           secrets.NewSecrets(k8sClient),
 				k8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
 				oktetoClient:      okClient,
-				buildCtrl:         newBuildCtrl(options.Name, at, ioCtrl),
+				buildCtrl:         newBuildCtrl(options.Name, at, insights, ioCtrl),
 				analyticsTracker:  at,
 				getManifest:       model.GetManifestV2,
 				ioCtrl:            ioCtrl,
