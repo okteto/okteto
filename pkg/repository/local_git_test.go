@@ -24,8 +24,9 @@ import (
 )
 
 type mockLocalExec struct {
-	runCommand func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error)
-	lookPath   func(file string) (string, error)
+	runCommand  func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error)
+	pipeCommand func(ctx context.Context, dir string, cmd1 string, cmd1Args []string, cmd2 string, cmd2Args []string) ([]byte, error)
+	lookPath    func(file string) (string, error)
 }
 
 func (mle *mockLocalExec) RunCommand(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
@@ -40,6 +41,14 @@ func (mle *mockLocalExec) LookPath(file string) (string, error) {
 		return mle.lookPath(file)
 	}
 	return "", assert.AnError
+}
+
+func (mle *mockLocalExec) RunPipeCommands(ctx context.Context, dir string, cmd1 string, cmd1Args []string, cmd2 string, cmd2Args []string) ([]byte, error) {
+	if mle.pipeCommand != nil {
+		return mle.pipeCommand(ctx, dir, cmd1, cmd1Args, cmd2, cmd2Args)
+	}
+
+	return nil, assert.AnError
 }
 
 func TestLocalGit_Exists(t *testing.T) {
@@ -249,7 +258,7 @@ func TestLocalGit_GetLatestCommit(t *testing.T) {
 			fixAttempts: 0,
 			mock: func() *mockLocalExec {
 				return &mockLocalExec{
-					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+					pipeCommand: func(ctx context.Context, dir string, cmd1 string, cmd1Args []string, cmd2 string, cmd2Args []string) ([]byte, error) {
 						return []byte("hash"), nil
 					},
 				}
@@ -261,7 +270,7 @@ func TestLocalGit_GetLatestCommit(t *testing.T) {
 			fixAttempts: 2,
 			mock: func() *mockLocalExec {
 				return &mockLocalExec{
-					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+					pipeCommand: func(ctx context.Context, dir string, cmd1 string, cmd1Args []string, cmd2 string, cmd2Args []string) ([]byte, error) {
 						return nil, assert.AnError
 					},
 				}
@@ -273,7 +282,7 @@ func TestLocalGit_GetLatestCommit(t *testing.T) {
 			fixAttempts: 1,
 			mock: func() *mockLocalExec {
 				return &mockLocalExec{
-					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+					pipeCommand: func(ctx context.Context, dir string, cmd1 string, cmd1Args []string, cmd2 string, cmd2Args []string) ([]byte, error) {
 						return nil, assert.AnError
 					},
 				}
