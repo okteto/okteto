@@ -423,21 +423,25 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 	}
 
 	var commandErr error
-	// call to specific Destroy logic
-	destroyer := dc.getDestroyer(opts)
-	if err := destroyer.Destroy(ctx, opts); err != nil {
-		// If there was an interruption in the execution, or it was an error, but it wasn't a force Destroy
-		// we have to change the status to err
-		if errors.Is(err, oktetoErrors.ErrIntSig) || !opts.ForceDestroy {
-			if err := dc.ConfigMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
+	// As the destroy only execute the commands within the destroy section, if there are no commands,
+	// it should be executed
+	if opts.Manifest.Destroy != nil && len(opts.Manifest.Destroy.Commands) > 0 {
+		// call to specific Destroy logic
+		destroyer := dc.getDestroyer(opts)
+		if err := destroyer.Destroy(ctx, opts); err != nil {
+			// If there was an interruption in the execution, or it was an error, but it wasn't a force Destroy
+			// we have to change the status to err
+			if errors.Is(err, oktetoErrors.ErrIntSig) || !opts.ForceDestroy {
+				if err := dc.ConfigMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
+					return err
+				}
+
 				return err
 			}
 
-			return err
+			// We store the error returned by the execution if it is a force Destroy to return it at the end
+			commandErr = err
 		}
-
-		// We store the error returned by the execution if it is a force Destroy to return it at the end
-		commandErr = err
 	}
 
 	oktetoLog.SetStage("")
