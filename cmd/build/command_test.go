@@ -14,6 +14,7 @@
 package build
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -390,7 +391,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 
 type fakeAnalyticsTracker struct{}
 
-func (fakeAnalyticsTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
+func (fakeAnalyticsTracker) TrackImageBuild(context.Context, *analytics.ImageBuildMetadata) {}
 
 func Test_NewBuildCommand(t *testing.T) {
 	okCtx := &okteto.ContextStateless{
@@ -403,7 +404,7 @@ func Test_NewBuildCommand(t *testing.T) {
 			CurrentContext: "test",
 		},
 	}
-	got := NewBuildCommand(io.NewIOController(), fakeAnalyticsTracker{}, okCtx, nil)
+	got := NewBuildCommand(io.NewIOController(), fakeAnalyticsTracker{}, fakeAnalyticsTracker{}, okCtx, nil)
 	require.IsType(t, &Command{}, got)
 	require.NotNil(t, got.GetManifest)
 	require.NotNil(t, got.Builder)

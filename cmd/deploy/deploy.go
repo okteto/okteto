@@ -132,7 +132,11 @@ type Command struct {
 
 type analyticsTrackerInterface interface {
 	TrackDeploy(dm analytics.DeployMetadata)
-	TrackImageBuild(...*analytics.ImageBuildMetadata)
+	buildTrackerInterface
+}
+
+type buildTrackerInterface interface {
+	TrackImageBuild(context.Context, *analytics.ImageBuildMetadata)
 }
 
 // Deployer defines the operations to deploy the custom commands, divert and external resources
@@ -143,7 +147,7 @@ type Deployer interface {
 }
 
 // Deploy deploys the okteto manifest
-func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Deploy(ctx context.Context, at analyticsTrackerInterface, insightsTracker buildTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
 		Use:   "deploy [service...]",
@@ -201,12 +205,18 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Contro
 			if err != nil {
 				return fmt.Errorf("could not create pipeline command: %w", err)
 			}
+
+			onBuildFinish := []buildv2.OnBuildFinish{
+				at.TrackImageBuild,
+				insightsTracker.TrackImageBuild,
+			}
+
 			c := &Command{
 				GetManifest: model.GetManifestV2,
 
 				K8sClientProvider:  k8sClientProvider,
 				GetDeployer:        GetDeployer,
-				Builder:            buildv2.NewBuilderFromScratch(at, ioCtrl),
+				Builder:            buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish),
 				DeployWaiter:       NewDeployWaiter(k8sClientProvider, k8sLogger),
 				EndpointGetter:     NewEndpointGetter,
 				isRemote:           env.LoadBoolean(constants.OktetoDeployRemote),

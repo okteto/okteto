@@ -167,7 +167,7 @@ func (f *fakeEventTracker) Track(context.Context, *analytics.ImageBuildMetadata)
 	return f.err
 }
 
-func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistryInterface, cfg oktetoBuilderConfigInterface, analyticsTracker analyticsTrackerInterface) *OktetoBuilder {
+func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistryInterface, cfg oktetoBuilderConfigInterface) *OktetoBuilder {
 	return &OktetoBuilder{
 		Registry:          registry,
 		buildEnvironments: make(map[string]string),
@@ -175,10 +175,9 @@ func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegi
 			BuildRunner: builder,
 			IoCtrl:      io.NewIOController(),
 		},
-		Config:           cfg,
-		ioCtrl:           io.NewIOController(),
-		analyticsTracker: analyticsTracker,
-		smartBuildCtrl:   smartbuild.NewSmartBuildCtrl(fakeConfigRepo{}, registry, afero.NewMemMapFs(), io.NewIOController()),
+		Config:         cfg,
+		ioCtrl:         io.NewIOController(),
+		smartBuildCtrl: smartbuild.NewSmartBuildCtrl(fakeConfigRepo{}, registry, afero.NewMemMapFs(), io.NewIOController()),
 		oktetoContext: &okteto.ContextStateless{
 			Store: &okteto.ContextStore{
 				Contexts: map[string]*okteto.Context{
@@ -191,7 +190,6 @@ func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegi
 				CurrentContext: "test",
 			},
 		},
-		EventTracker: &fakeEventTracker{},
 	}
 }
 
@@ -273,7 +271,7 @@ func TestOnlyInjectVolumeMountsInOkteto(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
+	bc := NewFakeBuilder(builder, registry, fakeConfig)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: build.ManifestBuild{
@@ -311,7 +309,7 @@ func TestTwoStepsBuild(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
+	bc := NewFakeBuilder(builder, registry, fakeConfig)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: build.ManifestBuild{
@@ -353,7 +351,7 @@ func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
+	bc := NewFakeBuilder(builder, registry, fakeConfig)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: build.ManifestBuild{
@@ -386,7 +384,7 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
+	bc := NewFakeBuilder(builder, registry, fakeConfig)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: build.ManifestBuild{
@@ -420,7 +418,7 @@ func TestBuildWithStack(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
+	bc := NewFakeBuilder(builder, registry, fakeConfig)
 	manifest := &model.Manifest{
 		Name: "test",
 		Type: model.StackType,
@@ -487,7 +485,7 @@ func TestBuildWithDependsOn(t *testing.T) {
 		isOkteto: true,
 	}
 
-	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
+	bc := NewFakeBuilder(builder, registry, fakeConfig)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: build.ManifestBuild{

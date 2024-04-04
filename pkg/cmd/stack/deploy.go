@@ -62,8 +62,8 @@ type DeployOptions struct {
 	InsidePipeline   bool
 }
 
-type analyticsTrackerInterface interface {
-	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
+type buildTrackerInterface interface {
+	TrackImageBuild(context.Context, *analytics.ImageBuildMetadata)
 }
 
 // Divert is the interface for the divert operations needed for stacks command
@@ -75,7 +75,8 @@ type Divert interface {
 type Stack struct {
 	K8sClient        kubernetes.Interface
 	Config           *rest.Config
-	AnalyticsTracker analyticsTrackerInterface
+	AnalyticsTracker buildTrackerInterface
+	Insights         buildTrackerInterface
 	IoCtrl           *io.Controller
 	Divert           Divert
 }
@@ -92,7 +93,7 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *DeployOpti
 	}
 
 	if !options.InsidePipeline {
-		if err := buildStackImages(ctx, s, options, sd.AnalyticsTracker, sd.IoCtrl); err != nil {
+		if err := buildStackImages(ctx, s, options, sd.AnalyticsTracker, sd.Insights, sd.IoCtrl); err != nil {
 			return err
 		}
 	}
