@@ -33,7 +33,7 @@ type configMapHandler interface {
 	updateConfigMap(context.Context, *apiv1.ConfigMap, *pipeline.CfgData, error) error
 	UpdateEnvsFromCommands(context.Context, string, string, []string) error
 	getConfigmapVariablesEncoded(ctx context.Context, name, namespace string) (string, error)
-	AddPhase(context.Context, string, string, string, time.Duration) error
+	AddPhaseDuration(context.Context, string, string, string, time.Duration) error
 }
 
 // deployInsideDeployConfigMapHandler is the runner used when the okteto is executed
@@ -115,12 +115,12 @@ func (ch *defaultConfigMapHandler) UpdateEnvsFromCommands(ctx context.Context, n
 	return nil
 }
 
-func (ch *defaultConfigMapHandler) AddPhase(ctx context.Context, name, namespace, phase string, duration time.Duration) error {
+func (ch *defaultConfigMapHandler) AddPhaseDuration(ctx context.Context, name, namespace, phase string, duration time.Duration) error {
 	c, _, err := ch.k8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, ch.k8slogger)
 	if err != nil {
 		return err
 	}
-	return pipeline.AddPhase(ctx, name, namespace, phase, duration, c)
+	return pipeline.AddPhaseDuration(ctx, name, namespace, phase, duration, c)
 }
 
 // translateConfigMapAndDeploy with the receiver deployInsideDeployConfigMapHandler doesn't do anything
@@ -152,10 +152,10 @@ func (*deployInsideDeployConfigMapHandler) UpdateEnvsFromCommands(_ context.Cont
 	return nil
 }
 
-func (ch *deployInsideDeployConfigMapHandler) AddPhase(ctx context.Context, name, namespace, phase string, duration time.Duration) error {
+func (ch *deployInsideDeployConfigMapHandler) AddPhaseDuration(ctx context.Context, name, namespace, phase string, duration time.Duration) error {
 	c, _, err := ch.k8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, ch.k8slogger)
 	if err != nil {
 		return err
 	}
-	return pipeline.AddPhase(ctx, name, namespace, phase, duration, c)
+	return pipeline.AddPhaseDuration(ctx, name, namespace, phase, duration, c)
 }

@@ -118,7 +118,7 @@ type Command struct {
 	AnalyticsTracker  analyticsTrackerInterface
 	IoCtrl            *io.Controller
 	K8sLogger         *io.K8sLogger
-	eventTracker      *eventTracker
+	insightsTracker   buildDeployTrackerInterface
 
 	PipelineType model.Archetype
 	// onCleanUp is a list of functions to be executed when the execution is interrupted. This is a hack
@@ -139,6 +139,15 @@ type buildTrackerInterface interface {
 	TrackImageBuild(context.Context, *analytics.ImageBuildMetadata)
 }
 
+type deployTrackerInterface interface {
+	TrackDeploy(ctx context.Context, name, namespace string, success bool)
+}
+
+type buildDeployTrackerInterface interface {
+	buildTrackerInterface
+	deployTrackerInterface
+}
+
 // Deployer defines the operations to deploy the custom commands, divert and external resources
 // defined in an Okteto manifest
 type Deployer interface {
@@ -147,7 +156,7 @@ type Deployer interface {
 }
 
 // Deploy deploys the okteto manifest
-func Deploy(ctx context.Context, at analyticsTrackerInterface, insightsTracker buildTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Deploy(ctx context.Context, at analyticsTrackerInterface, insightsTracker buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
 		Use:   "deploy [service...]",
@@ -228,8 +237,8 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, insightsTracker b
 				IoCtrl:             ioCtrl,
 				K8sLogger:          k8sLogger,
 
-				onCleanUp:    []cleanUpFunc{},
-				eventTracker: newEventTracker(k8sClientProvider, ioCtrl),
+				onCleanUp:       []cleanUpFunc{},
+				insightsTracker: insightsTracker,
 			}
 			startTime := time.Now()
 
@@ -239,9 +248,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, insightsTracker b
 
 			go func() {
 				err := c.Run(ctx, options)
-				if err := c.eventTracker.track(ctx, options.Name, options.Manifest.Namespace, err == nil); err != nil {
-					oktetoLog.Infof("error tracking deploy event: %s", err)
-				}
+				c.insightsTracker.TrackDeploy(ctx, options.Name, options.Manifest.Namespace, err == nil)
 				c.trackDeploy(options.Manifest, options.RunInRemote, startTime, err)
 				exit <- err
 			}()
@@ -405,12 +412,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		}
 		if hasDeployed {
 			if deployOptions.Wait {
-				startTime := time.Now()
 				err := dc.DeployWaiter.wait(ctx, deployOptions)
-				elapsedTime := time.Since(startTime)
-				if err := dc.CfgMapHandler.AddPhase(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, "wait", elapsedTime); err != nil {
-					oktetoLog.Info("error adding phase to configmap: %s", err)
-				}
 				if err != nil {
 					return err
 				}
@@ -465,12 +467,7 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		stage := "Deploying compose"
 		oktetoLog.SetStage(stage)
 		oktetoLog.Information("Running stage '%s'", stage)
-		startTime := time.Now()
 		err := dc.deployStack(ctx, deployOptions)
-		elapsedTime := time.Since(startTime)
-		if err := dc.CfgMapHandler.AddPhase(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, "compose", elapsedTime); err != nil {
-			oktetoLog.Info("error adding phase to configmap: %s", err)
-		}
 		if err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying compose: %s", err.Error())
 			return err
@@ -482,12 +479,7 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		stage := "Endpoints configuration"
 		oktetoLog.SetStage(stage)
 		oktetoLog.Information("Running stage '%s'", stage)
-		startTime := time.Now()
 		err := dc.deployEndpoints(ctx, deployOptions)
-		elapsedTime := time.Since(startTime)
-		if err := dc.CfgMapHandler.AddPhase(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, "endpoints", elapsedTime); err != nil {
-			oktetoLog.Info("error adding phase to configmap: %s", err)
-		}
 		if err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error generating endpoints: %s", err.Error())
 			return err

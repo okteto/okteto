@@ -32,8 +32,17 @@ type buildTrackerInterface interface {
 	TrackImageBuild(ctx context.Context, meta *analytics.ImageBuildMetadata)
 }
 
+type deployTrackerInterface interface {
+	TrackDeploy(ctx context.Context, name, namespace string, success bool)
+}
+
+type buildDeployTrackerInterface interface {
+	buildTrackerInterface
+	deployTrackerInterface
+}
+
 // Init creates okteto manifest
-func Init(at, insights buildTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
+func Init(at buildTrackerInterface, insights buildDeployTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
 	opts := &manifest.InitOpts{}
 	cmd := &cobra.Command{
 		Use:   "init",

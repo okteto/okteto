@@ -47,12 +47,21 @@ type buildTrackerInterface interface {
 	TrackImageBuild(ctx context.Context, meta *analytics.ImageBuildMetadata)
 }
 
+type deployTrackerInterface interface {
+	TrackDeploy(ctx context.Context, name, namespace string, success bool)
+}
+
+type buildDeployTrackerInterface interface {
+	buildTrackerInterface
+	deployTrackerInterface
+}
+
 // Command has all the namespaces subcommands
 type Command struct {
 	manifest          *model.Manifest
 	K8sClientProvider okteto.K8sClientProviderWithLogger
 	AnalyticsTracker  buildTrackerInterface
-	InsightsTracker   buildTrackerInterface
+	InsightsTracker   buildDeployTrackerInterface
 
 	IoCtrl    *io.Controller
 	K8sLogger *io.K8sLogger
