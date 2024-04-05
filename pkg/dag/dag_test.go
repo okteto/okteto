@@ -144,7 +144,7 @@ func TestTraverse(t *testing.T) {
 			tree, err := From(tc.nodes...)
 			require.NoError(t, err)
 
-			result := []string{}
+			var result []string
 			tree.Traverse(func(n Node) {
 				result = append(result, n.ID())
 			})
