@@ -39,7 +39,7 @@ func (ip *InsightsPublisher) TrackImageBuild(ctx context.Context, meta *analytic
 		ip.ioCtrl.Logger().Infof("failed to marshal event metadata: %s", err)
 	}
 
-	ip.TrackEvent(ctx, meta.Namespace, "build", string(eventJSON))
+	ip.trackEvent(ctx, meta.Namespace, "build", string(eventJSON))
 }
 
 // convertImageBuildMetadataToEvent converts an ImageBuildMetadata to a buildEventJSON

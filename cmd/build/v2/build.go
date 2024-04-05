@@ -83,10 +83,10 @@ type OktetoBuilder struct {
 	ioCtrl    *io.Controller
 	k8sLogger *io.K8sLogger
 
+	onBuildFinish []OnBuildFinish
+
 	// lock is a mutex to provide buildEnvironments map safe concurrency
 	lock sync.RWMutex
-
-	onBuildFinish []OnBuildFinish
 }
 
 type OnBuildFinish func(ctx context.Context, meta *analytics.ImageBuildMetadata)

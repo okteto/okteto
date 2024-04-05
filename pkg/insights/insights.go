@@ -46,11 +46,11 @@ func NewInsightsPublisher(k8sClientProvider okteto.K8sClientProvider, ioCtrl io.
 	}
 }
 
-// TrackEvent tracks an event in the cluster
+// trackEvent tracks an event in the cluster
 // namespace: the namespace where the event is happening
 // insightType: the type of the event (for example: build, deploy, etc.)
 // data: the data of the event as JSON string
-func (ip *InsightsPublisher) TrackEvent(ctx context.Context, namespace, insightType, data string) {
+func (ip *InsightsPublisher) trackEvent(ctx context.Context, namespace, insightType, data string) {
 	k8sClient, _, err := ip.k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		ip.ioCtrl.Logger().Infof("could not get k8s client: %s", err)
