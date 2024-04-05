@@ -229,7 +229,7 @@ func (lg *LocalGit) GetDirContentSHA(ctx context.Context, gitPath, dirPath strin
 	}
 
 	lsFilesCmdArgs := []string{"--no-optional-locks", "ls-files", "-s", dirPath}
-	hashObjectCmdArgs := []string{"--no-optional-locks", "hash-objectasd", "--stdin"}
+	hashObjectCmdArgs := []string{"--no-optional-locks", "hash-object", "--stdin"}
 
 	output, err := lg.exec.RunPipeCommands(ctx, gitPath, lg.gitPath, lsFilesCmdArgs, lg.gitPath, hashObjectCmdArgs)
 	if err != nil {
