@@ -37,7 +37,7 @@ type deployEventJSON struct {
 	Repository    string      `json:"repository"`
 	Namespace     string      `json:"namespace"`
 	SchemaVersion string      `json:"schemaVersion"`
-	Phase         []phaseJSON `json:"phase"`
+	Phase         []phaseJSON `json:"phases"`
 	Success       bool        `json:"success"`
 }
 
