@@ -195,7 +195,8 @@ func UpdateEnvs(ctx context.Context, name, namespace string, envs []string, c ku
 	return nil
 }
 
-func AddPhase(ctx context.Context, name, namespace, phase string, duration time.Duration, c kubernetes.Interface) error {
+// AddPhaseDuration adds a new phase to the configmap with the duration in seconds
+func AddPhaseDuration(ctx context.Context, name, namespace, phase string, duration time.Duration, c kubernetes.Interface) error {
 	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
 	if err != nil {
 		return err

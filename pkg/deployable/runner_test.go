@@ -40,7 +40,7 @@ func (f *fakeCmapHandler) UpdateEnvsFromCommands(context.Context, string, string
 	return f.errUpdatingWithEnvs
 }
 
-func (f *fakeCmapHandler) AddPhase(context.Context, string, string, string, time.Duration) error {
+func (f *fakeCmapHandler) AddPhaseDuration(context.Context, string, string, string, time.Duration) error {
 	return f.errAddingPhase
 }
 
