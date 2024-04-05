@@ -36,7 +36,7 @@ type registryController interface {
 // repositoryInterface is the interface to interact with git repositories
 type repositoryInterface interface {
 	GetSHA() (string, error)
-	GetLatestDirCommit(string) (string, error)
+	GetLatestDirSHA(string) (string, error)
 	GetDiffHash(string) (string, error)
 }
 

@@ -246,7 +246,7 @@ func Test_LocalExec_RunCommand(t *testing.T) {
 	assert.Equal(t, "okteto\n", string(got))
 }
 
-func TestLocalGit_GetLatestCommit(t *testing.T) {
+func TestLocalGit_GetDirContentSHA(t *testing.T) {
 	tests := []struct {
 		expectedErr error
 		mock        func() *mockLocalExec
@@ -294,7 +294,7 @@ func TestLocalGit_GetLatestCommit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lg := NewLocalGit("git", tt.mock())
-			_, err := lg.GetLatestCommit(context.Background(), "", "/test/dir", tt.fixAttempts)
+			_, err := lg.GetDirContentSHA(context.Background(), "", "/test/dir", tt.fixAttempts)
 
 			assert.ErrorIs(t, err, tt.expectedErr)
 		})

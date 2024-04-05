@@ -36,7 +36,7 @@ type Repository struct {
 type repositoryInterface interface {
 	isClean(ctx context.Context) (bool, error)
 	getSHA() (string, error)
-	GetLatestDirCommit(string) (string, error)
+	GetLatestDirSHA(string) (string, error)
 	GetDiffHash(string) (string, error)
 }
 
@@ -116,8 +116,8 @@ func (r Repository) GetAnonymizedRepo() string {
 	return r.url.String()
 }
 
-func (r Repository) GetLatestDirCommit(dir string) (string, error) {
-	return r.control.GetLatestDirCommit(dir)
+func (r Repository) GetLatestDirSHA(dir string) (string, error) {
+	return r.control.GetLatestDirSHA(dir)
 }
 
 func (r Repository) GetDiffHash(dir string) (string, error) {

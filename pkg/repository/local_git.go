@@ -126,7 +126,7 @@ type LocalGitInterface interface {
 	Exists() (string, error)
 	FixDubiousOwnershipConfig(path string) error
 	parseGitStatus(string) (git.Status, error)
-	GetLatestCommit(ctx context.Context, repoRoot, dirPath string, fixAttempt int) (string, error)
+	GetDirContentSHA(ctx context.Context, repoRoot, dirPath string, fixAttempt int) (string, error)
 	Diff(ctx context.Context, repoRoot, dirPath string, fixAttempt int) (string, error)
 }
 
@@ -214,8 +214,9 @@ func (*LocalGit) parseGitStatus(gitStatusOutput string) (git.Status, error) {
 	return status, nil
 }
 
-// GetLatestCommit returns the latest commit of the repository at the given path
-func (lg *LocalGit) GetLatestCommit(ctx context.Context, gitPath, dirPath string, fixAttempt int) (string, error) {
+// GetDirContentSHA calculates the SHA of the content of the given directory using git ls-files and git hash-object
+// commands
+func (lg *LocalGit) GetDirContentSHA(ctx context.Context, gitPath, dirPath string, fixAttempt int) (string, error) {
 	if fixAttempt > 1 {
 		return "", errLocalGitCannotGetCommitTooManyAttempts
 	}
@@ -235,7 +236,7 @@ func (lg *LocalGit) GetLatestCommit(ctx context.Context, gitPath, dirPath string
 					return "", errLocalGitCannotGetStatusCannotRecover
 				}
 				fixAttempt++
-				return lg.GetLatestCommit(ctx, gitPath, dirPath, fixAttempt)
+				return lg.GetDirContentSHA(ctx, gitPath, dirPath, fixAttempt)
 			}
 		}
 		return "", errLocalGitCannotGetStatusCannotRecover
@@ -261,7 +262,7 @@ func (lg *LocalGit) Diff(ctx context.Context, gitPath, dirPath string, fixAttemp
 					return "", errLocalGitCannotGetStatusCannotRecover
 				}
 				fixAttempt++
-				return lg.GetLatestCommit(ctx, gitPath, dirPath, fixAttempt)
+				return lg.GetDirContentSHA(ctx, gitPath, dirPath, fixAttempt)
 			}
 		}
 		return "", errLocalGitCannotGetStatusCannotRecover
