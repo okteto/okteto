@@ -282,47 +282,48 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 
 	var envMapFromOktetoEnvFile map[string]string
 
-	startTime := time.Now()
-	// deploy commands if any
-	for _, command := range params.Deployable.Commands {
-		oktetoLog.Information("Running '%s'", command.Name)
-		oktetoLog.SetStage(command.Name)
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Executing command '%s'...", command.Name)
+	if len(params.Deployable.Commands) != 0 {
+		startTime := time.Now()
+		// deploy commands if any
+		for _, command := range params.Deployable.Commands {
+			oktetoLog.Information("Running '%s'", command.Name)
+			oktetoLog.SetStage(command.Name)
+			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Executing command '%s'...", command.Name)
 
-		err := r.Executor.Execute(command, params.Variables)
-		if err != nil {
-			elapsedTime := time.Since(startTime)
-			if err := r.ConfigMapHandler.AddPhaseDuration(ctx, params.Name, params.Namespace, "commands", elapsedTime); err != nil {
-				oktetoLog.Info("error adding phase to configmap: %s", err)
+			err := r.Executor.Execute(command, params.Variables)
+			if err != nil {
+				elapsedTime := time.Since(startTime)
+				if err := r.ConfigMapHandler.AddPhaseDuration(ctx, params.Name, params.Namespace, "commands", elapsedTime); err != nil {
+					oktetoLog.Info("error adding phase to configmap: %s", err)
+				}
+				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
+				return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 			}
-			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
-			return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
-		}
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Command '%s' successfully executed")
+			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Command '%s' successfully executed")
 
-		envMapFromOktetoEnvFile, err = godotenv.Read(oktetoEnvFile.Name())
-		if err != nil {
-			oktetoLog.Warning("no valid format used in the okteto env file: %s", err.Error())
-		}
+			envMapFromOktetoEnvFile, err = godotenv.Read(oktetoEnvFile.Name())
+			if err != nil {
+				oktetoLog.Warning("no valid format used in the okteto env file: %s", err.Error())
+			}
 
-		envsFromOktetoEnvFile := make([]string, 0, len(envMapFromOktetoEnvFile))
-		for k, v := range envMapFromOktetoEnvFile {
-			envsFromOktetoEnvFile = append(envsFromOktetoEnvFile, fmt.Sprintf("%s=%s", k, v))
-		}
+			envsFromOktetoEnvFile := make([]string, 0, len(envMapFromOktetoEnvFile))
+			for k, v := range envMapFromOktetoEnvFile {
+				envsFromOktetoEnvFile = append(envsFromOktetoEnvFile, fmt.Sprintf("%s=%s", k, v))
+			}
 
-		// the variables in the $OKTETO_ENV file are added as environment variables
-		// to the executor. If there is already a previously set value for that
-		// variable, the executor will use in next command the last one added which
-		// corresponds to those coming from $OKTETO_ENV.
-		params.Variables = append(params.Variables, envsFromOktetoEnvFile...)
-		oktetoLog.SetStage("")
-		oktetoLog.SetLevel("")
+			// the variables in the $OKTETO_ENV file are added as environment variables
+			// to the executor. If there is already a previously set value for that
+			// variable, the executor will use in next command the last one added which
+			// corresponds to those coming from $OKTETO_ENV.
+			params.Variables = append(params.Variables, envsFromOktetoEnvFile...)
+			oktetoLog.SetStage("")
+			oktetoLog.SetLevel("")
+		}
+		elapsedTime := time.Since(startTime)
+		if err := r.ConfigMapHandler.AddPhaseDuration(ctx, params.Name, params.Namespace, "commands", elapsedTime); err != nil {
+			oktetoLog.Info("error adding phase to configmap: %s", err)
+		}
 	}
-	elapsedTime := time.Since(startTime)
-	if err := r.ConfigMapHandler.AddPhaseDuration(ctx, params.Name, params.Namespace, "commands", elapsedTime); err != nil {
-		oktetoLog.Info("error adding phase to configmap: %s", err)
-	}
-
 	err = r.ConfigMapHandler.UpdateEnvsFromCommands(ctx, params.Name, params.Namespace, params.Variables)
 	if err != nil {
 		return fmt.Errorf("could not update config map with environment variables: %w", err)

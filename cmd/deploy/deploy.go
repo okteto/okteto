@@ -470,7 +470,7 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		startTime := time.Now()
 		err := dc.deployStack(ctx, deployOptions)
 		elapsedTime := time.Since(startTime)
-		if addPhaseErr := dc.CfgMapHandler.AddPhaseDuration(ctx, deployOptions.Name, deployOptions.Namespace, "compose", elapsedTime); addPhaseErr != nil {
+		if addPhaseErr := dc.CfgMapHandler.AddPhaseDuration(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, "compose", elapsedTime); addPhaseErr != nil {
 			oktetoLog.Info("error adding phase to configmap: %s", err)
 		}
 		if err != nil {
