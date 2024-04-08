@@ -20,6 +20,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 )
 
 const globalTestImage = "okteto.global/test"
@@ -157,7 +158,7 @@ func (or OktetoRegistry) GetRepoNameAndTag(repo string) (string, string) {
 }
 
 // CloneGlobalImageToDev clones an image from the global registry to the dev registry
-func (or OktetoRegistry) CloneGlobalImageToDev(imageWithDigest, tag string) (string, error) {
+func (or OktetoRegistry) CloneGlobalImageToDev(imageWithDigest string) (string, error) {
 	// parse the image URI to extract registry and repository name
 	reg, repositoryWithTag := or.imageCtrl.GetRegistryAndRepo(imageWithDigest)
 	repo, _ := or.imageCtrl.GetRepoNameAndTag(repositoryWithTag)
@@ -172,7 +173,8 @@ func (or OktetoRegistry) CloneGlobalImageToDev(imageWithDigest, tag string) (str
 	// forging a new image URI in the dev registry, using the same repo name and tag as the global image
 	personalNamespacePrefix := fmt.Sprintf("%s/", or.config.GetNamespace())
 	devRepo := strings.Replace(repo, globalNamespacePrefix, personalNamespacePrefix, 1)
-	devImage := fmt.Sprintf("%s/%s:%s", reg, devRepo, tag)
+	// When cloning an image from global to dev, we should do it to the "okteto" tag
+	devImage := fmt.Sprintf("%s/%s:%s", reg, devRepo, model.OktetoDefaultImageTag)
 
 	newRef, err := name.ParseReference(devImage)
 	if err != nil {
@@ -195,5 +197,13 @@ func (or OktetoRegistry) CloneGlobalImageToDev(imageWithDigest, tag string) (str
 		return "", err
 	}
 
-	return devImage, nil
+	// To return always the sha256 os the dev image
+	r, err := or.GetImageTagWithDigest(devImage)
+	if err != nil {
+		oktetoLog.Debugf("error getting the tag with digest for dev image: %s", err)
+		// If there is an error getting the tag with digest we just return the dev image
+		return devImage, nil
+	}
+
+	return r, nil
 }

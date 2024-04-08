@@ -16,6 +16,7 @@ package build
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/depot/depot-go/build"
@@ -52,9 +53,8 @@ type depotBuilder struct {
 	project        string
 }
 
-// isDepotEnabled returns true if depot env vars are set
-func isDepotEnabled(depotProject, depotToken string) bool {
-	return depotToken != "" && depotProject != ""
+func IsDepotEnabled() bool {
+	return os.Getenv(DepotTokenEnvVar) != "" && os.Getenv(DepotProjectEnvVar) != ""
 }
 
 // newDepotBuilder creates a new instance of DepotBuilder.

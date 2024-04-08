@@ -105,6 +105,10 @@ func (oc *ContextStateless) GetGlobalNamespace() string {
 	return oc.getCurrentOktetoContext().GlobalNamespace
 }
 
+func (oc *ContextStateless) SetGlobalNamespace(globalNamespace string) {
+	oc.getCurrentOktetoContext().GlobalNamespace = globalNamespace
+}
+
 func (oc *ContextStateless) GetTokenByContextName(name string) (string, error) {
 	ctx, ok := oc.Store.Contexts[name]
 	if !ok {

@@ -64,6 +64,6 @@ func (m *ImageBuildMetadata) toProps() map[string]interface{} {
 	return props
 }
 
-func (a *Tracker) TrackImageBuild(ctx context.Context, m *ImageBuildMetadata) {
+func (a *Tracker) TrackImageBuild(_ context.Context, m *ImageBuildMetadata) {
 	a.trackFn(imageBuildEvent, m.Success, m.toProps())
 }

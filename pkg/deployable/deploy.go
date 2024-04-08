@@ -71,12 +71,12 @@ type ExternalResourceInterface interface {
 	Deploy(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
 }
 
-// Runner is responsible for running the commands defined in a manifest, deploy the divert
+// DeployRunner is responsible for running the commands defined in a manifest, deploy the divert
 // information and deploy external resources.
-// This Runner has the common functionality to deal with the mentioned resources when deploy is
+// This DeployRunner has the common functionality to deal with the mentioned resources when deploy is
 // run locally or remotely. As this runs also in the remote, it should NEVER build any kind of image
 // or execute some logic that might differ from local.
-type Runner struct {
+type DeployRunner struct {
 	Proxy              ProxyInterface
 	Kubeconfig         KubeConfigHandler
 	ConfigMapHandler   ConfigMapHandler
@@ -113,15 +113,15 @@ func newDeployExternalK8sControl(cfg *rest.Config) ExternalResourceInterface {
 	return externalresource.NewExternalK8sControl(cfg)
 }
 
-// NewRunnerForRemote initializes a runner for a remote environment
-func NewRunnerForRemote(
+// NewDeployRunnerForRemote initializes a runner for a remote environment
+func NewDeployRunnerForRemote(
 	name string,
 	runWithoutBash bool,
 	cmapHandler ConfigMapHandler,
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	portGetter PortGetterFunc,
 	k8sLogger *io.K8sLogger,
-) (*Runner, error) {
+) (*DeployRunner, error) {
 	kubeconfig := NewKubeConfig()
 	tempKubeconfigName := name
 
@@ -131,7 +131,7 @@ func NewRunnerForRemote(
 		return nil, err
 	}
 
-	return &Runner{
+	return &DeployRunner{
 		Kubeconfig:         kubeconfig,
 		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash, ""),
 		ConfigMapHandler:   cmapHandler,
@@ -144,9 +144,9 @@ func NewRunnerForRemote(
 	}, nil
 }
 
-// NewRunnerForLocal initializes a runner for a local environment. The main difference with the remote
+// NewDeployRunnerForLocal initializes a runner for a local environment. The main difference with the remote
 // initialization is that the name might be empty in the local runner and it has to be inferred.
-func NewRunnerForLocal(
+func NewDeployRunnerForLocal(
 	ctx context.Context,
 	name string,
 	runWithoutBash bool,
@@ -155,7 +155,7 @@ func NewRunnerForLocal(
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	portGetter PortGetterFunc,
 	k8sLogger *io.K8sLogger,
-) (*Runner, error) {
+) (*DeployRunner, error) {
 	kubeconfig := NewKubeConfig()
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -177,7 +177,7 @@ func NewRunnerForLocal(
 		return nil, err
 	}
 
-	return &Runner{
+	return &DeployRunner{
 		Kubeconfig:         kubeconfig,
 		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash, ""),
 		ConfigMapHandler:   cmapHandler,
@@ -191,7 +191,7 @@ func NewRunnerForLocal(
 }
 
 // RunDeploy deploys the deployable received with DeployParameters
-func (r *Runner) RunDeploy(ctx context.Context, params DeployParameters) error {
+func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) error {
 	// We need to create a client that doesn't go through the proxy to create
 	// the configmap without the deployedByLabel
 	c, _, err := r.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, r.k8sLogger)
@@ -268,7 +268,7 @@ func (r *Runner) RunDeploy(ctx context.Context, params DeployParameters) error {
 }
 
 // runCommandsSection runs the commands defined in the command section of the deployable entity
-func (r *Runner) runCommandsSection(ctx context.Context, params DeployParameters) error {
+func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployParameters) error {
 	oktetoEnvFile, err := r.createTempOktetoEnvFile()
 	if err != nil {
 		return err
@@ -357,7 +357,7 @@ func (r *Runner) runCommandsSection(ctx context.Context, params DeployParameters
 }
 
 // deployExternals deploys the external resources defined in the deployable entity
-func (r *Runner) deployExternals(ctx context.Context, params DeployParameters, dynamicEnvs map[string]string) error {
+func (r *DeployRunner) deployExternals(ctx context.Context, params DeployParameters, dynamicEnvs map[string]string) error {
 	_, cfg, err := r.K8sClientProvider.ProvideWithLogger(kconfig.Get([]string{r.TempKubeconfigFile}), r.k8sLogger)
 	if err != nil {
 		return fmt.Errorf("error getting kubernetes client: %w", err)
@@ -392,7 +392,7 @@ func (r *Runner) deployExternals(ctx context.Context, params DeployParameters, d
 }
 
 // CleanUp cleans up the resources created by the runner to avoid to leave any temporal resource
-func (r *Runner) CleanUp(ctx context.Context, err error) {
+func (r *DeployRunner) CleanUp(ctx context.Context, err error) {
 	oktetoLog.Debugf("removing temporal kubeconfig file '%s'", r.TempKubeconfigFile)
 	if err := os.Remove(r.TempKubeconfigFile); err != nil {
 		oktetoLog.Infof("could not remove temporal kubeconfig file: %s", err)
@@ -410,7 +410,7 @@ func (r *Runner) CleanUp(ctx context.Context, err error) {
 }
 
 // createTempOktetoEnvFile creates a temporal file use to store the environment variables
-func (r *Runner) createTempOktetoEnvFile() (afero.File, error) {
+func (r *DeployRunner) createTempOktetoEnvFile() (afero.File, error) {
 	oktetoEnvFileDir, err := afero.TempDir(r.Fs, "", "")
 	if err != nil {
 		return nil, err

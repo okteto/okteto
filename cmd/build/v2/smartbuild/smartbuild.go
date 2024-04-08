@@ -25,14 +25,11 @@ import (
 const (
 	// OktetoEnableSmartBuildEnvVar represents whether the feature flag to enable smart builds is enabled or not
 	OktetoEnableSmartBuildEnvVar = "OKTETO_SMART_BUILDS_ENABLED"
-
-	// OktetoSmartBuildUsingContextEnvVar is the env var to enable smart builds using the build context instead of the project commit
-	OktetoSmartBuildUsingContextEnvVar = "OKTETO_SMART_BUILDS_USING_BUILD_CONTEXT"
 )
 
 // registryController is the interface to interact with registries
 type registryController interface {
-	CloneGlobalImageToDev(string, string) (string, error)
+	CloneGlobalImageToDev(string) (string, error)
 	IsGlobalRegistry(string) bool
 }
 
@@ -45,9 +42,8 @@ type repositoryInterface interface {
 
 type hasherController interface {
 	hashProjectCommit(*build.Info) (string, error)
-	hashBuildContext(*build.Info) (string, error)
-	getBuildContextHashInCache(string) string
-	getProjectCommitHashInCache() string
+	hashWithBuildContext(*build.Info, string) string
+	getServiceShaInCache(string) string
 }
 
 // Ctrl is the controller for smart builds
@@ -58,22 +54,19 @@ type Ctrl struct {
 
 	hasher hasherController
 
-	isEnabled           bool
-	isUsingBuildContext bool
+	isEnabled bool
 }
 
 // NewSmartBuildCtrl creates a new smart build controller
 func NewSmartBuildCtrl(repo repositoryInterface, registry registryController, fs afero.Fs, ioCtrl *io.Controller) *Ctrl {
 	isEnabled := env.LoadBooleanOrDefault(OktetoEnableSmartBuildEnvVar, true)
-	isUsingBuildCtx := env.LoadBoolean(OktetoSmartBuildUsingContextEnvVar)
 
 	return &Ctrl{
-		gitRepo:             repo,
-		isEnabled:           isEnabled,
-		isUsingBuildContext: isUsingBuildCtx,
-		hasher:              newServiceHasher(repo, fs),
-		registryController:  registry,
-		ioCtrl:              ioCtrl,
+		gitRepo:            repo,
+		isEnabled:          isEnabled,
+		hasher:             newServiceHasher(repo, fs),
+		registryController: registry,
+		ioCtrl:             ioCtrl,
 	}
 }
 
@@ -89,45 +82,25 @@ func (s *Ctrl) GetProjectHash(buildInfo *build.Info) (string, error) {
 }
 
 // GetServiceHash returns the hash of the service
-func (s *Ctrl) GetServiceHash(buildInfo *build.Info) (string, error) {
+func (s *Ctrl) GetServiceHash(buildInfo *build.Info, service string) string {
 	s.ioCtrl.Logger().Debugf("getting service hash")
-	return s.hasher.hashBuildContext(buildInfo)
+	return s.hasher.hashWithBuildContext(buildInfo, service)
 }
 
 // GetBuildHash returns the hash of the build based on the env vars
-func (s *Ctrl) GetBuildHash(buildInfo *build.Info) (string, error) {
+func (s *Ctrl) GetBuildHash(buildInfo *build.Info, service string) string {
 	s.ioCtrl.Logger().Debugf("getting hash based on the buildContext env var")
-	if s.isUsingBuildContext {
-		s.ioCtrl.Logger().Info("getting hash using build context due to env var")
-		return s.hasher.hashBuildContext(buildInfo)
-	}
-	s.ioCtrl.Logger().Info("getting hash using project commit")
-	return s.hasher.hashProjectCommit(buildInfo)
-}
-
-// GetBuildCommit returns the commit that generated the smart build
-func (s *Ctrl) GetBuildCommit(buildInfo *build.Info) string {
-	if s.isUsingBuildContext {
-		buildContext := buildInfo.Context
-		if buildContext == "" {
-			buildContext = "."
-		}
-		commit := s.hasher.getBuildContextHashInCache(buildContext)
-		if commit == "" {
-			s.ioCtrl.Logger().Debugf("build context '%s' not found in cache", buildContext)
-		}
-		return commit
-	}
-	return s.hasher.getProjectCommitHashInCache()
+	s.ioCtrl.Logger().Info("getting hash using build context due to env var")
+	return s.hasher.hashWithBuildContext(buildInfo, service)
 }
 
 // CloneGlobalImageToDev clones the image from the global registry to the dev registry if needed
 // if the built image belongs to global registry we clone it to the dev registry
 // so that in can be used in dev containers (i.e. okteto up)
-func (s *Ctrl) CloneGlobalImageToDev(image, buildHash string) (string, error) {
+func (s *Ctrl) CloneGlobalImageToDev(image string) (string, error) {
 	if s.registryController.IsGlobalRegistry(image) {
 		s.ioCtrl.Logger().Debugf("Copying image '%s' from global to personal registry", image)
-		devImage, err := s.registryController.CloneGlobalImageToDev(image, buildHash)
+		devImage, err := s.registryController.CloneGlobalImageToDev(image)
 		if err != nil {
 			return "", fmt.Errorf("error cloning image '%s': %w", image, err)
 		}

@@ -61,7 +61,7 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 
 	imageCtrl := registry.NewImageCtrl(GetRegistryConfigFromOktetoConfig(okctx))
 	if okctx.IsOkteto() {
-		buildOptions.DevTag = imageCtrl.ExpandOktetoDevRegistry(registry.GetDevTagFromGlobal(buildOptions.Tag))
+		buildOptions.DevTag = imageCtrl.ExpandOktetoDevRegistry(imageCtrl.GetDevTagFromGlobal(buildOptions.Tag))
 		buildOptions.Tag = imageCtrl.ExpandOktetoDevRegistry(buildOptions.Tag)
 		buildOptions.Tag = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.Tag)
 		for i := range buildOptions.CacheFrom {
@@ -364,12 +364,8 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			// We need to wait until the tty channel is closed to avoid writing to stdout while the tty is being used
 			_, err := progressui.DisplaySolveStatus(context.TODO(), c, ioCtrl.Out(), ttyChannel)
 			return err
-		case "deploy":
-			err := deployDisplayer(context.TODO(), plainChannel, &types.BuildOptions{OutputMode: "deploy"})
-			commandFailChannel <- err
-			return err
-		case "destroy":
-			err := deployDisplayer(context.TODO(), plainChannel, &types.BuildOptions{OutputMode: "destroy"})
+		case DeployOutputModeOnBuild, DestroyOutputModeOnBuild:
+			err := deployDisplayer(context.TODO(), plainChannel, &types.BuildOptions{OutputMode: progress})
 			commandFailChannel <- err
 			return err
 		default:

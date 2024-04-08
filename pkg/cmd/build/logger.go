@@ -45,10 +45,10 @@ func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus, o *types.
 	var done bool
 	var outputMode string
 
-	if o.OutputMode == "destroy" {
-		outputMode = "destroy"
+	if o.OutputMode == DestroyOutputModeOnBuild {
+		outputMode = DestroyOutputModeOnBuild
 	} else {
-		outputMode = "deploy"
+		outputMode = DeployOutputModeOnBuild
 	}
 	for {
 		select {
@@ -152,7 +152,7 @@ func (t *trace) display(progress string) {
 			}
 		}
 		if t.hasCommandLogs(v) {
-			if progress == "deploy" {
+			if progress == DeployOutputModeOnBuild {
 				oktetoLog.Spinner("Deploying your development environment...")
 			} else {
 				oktetoLog.Spinner("Destroying your development environment...")

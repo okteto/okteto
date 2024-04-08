@@ -16,6 +16,7 @@ package repository
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -29,6 +30,10 @@ import (
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/afero"
+)
+
+const (
+	gitOperationTimeout = 5 * time.Second
 )
 
 var (
@@ -179,10 +184,8 @@ func (r gitRepoController) GetLatestDirCommit(contextDir string) (string, error)
 	timeoutCh := make(chan struct{})
 	ch := make(chan commitResponse)
 
-	timeout := 1 * time.Second
-
 	go func() {
-		time.Sleep(timeout)
+		time.Sleep(gitOperationTimeout)
 		close(timeoutCh)
 		cancel()
 		ch <- commitResponse{
@@ -231,8 +234,6 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 	diffCh := make(chan diffResponse)
 	untrackedFilesCh := make(chan untrackedFilesResponse)
 
-	timeout := 1 * time.Second
-
 	repo, err := r.repoGetter.get(r.path)
 	if err != nil {
 		return "", fmt.Errorf("failed to analyze git repo: %w", err)
@@ -240,12 +241,16 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 
 	// go func that cancels the context after the timeout
 	go func() {
-		time.Sleep(timeout)
+		time.Sleep(gitOperationTimeout)
 		close(timeoutCh)
 		cancel()
 		diffCh <- diffResponse{
 			diff: "",
 			err:  errTimeoutExceeded,
+		}
+		untrackedFilesCh <- untrackedFilesResponse{
+			untrackedFilesDiff: "",
+			err:                errTimeoutExceeded,
 		}
 	}()
 
@@ -296,8 +301,10 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 		return "", untrackedFilesResponse.err
 	}
 
-	diffHash := sha256.Sum256([]byte(fmt.Sprintf("%s%s", diffResponse.diff, untrackedFilesResponse.untrackedFilesDiff)))
-	return fmt.Sprintf("%x", diffHash), nil
+	hashFrom := fmt.Sprintf("%s-%s", diffResponse.diff, untrackedFilesResponse.untrackedFilesDiff)
+	oktetoLog.Infof("hashing diff: %s", hashFrom)
+	diffHash := sha256.Sum256([]byte(hashFrom))
+	return hex.EncodeToString(diffHash[:]), nil
 }
 
 func (r gitRepoController) getUntrackedContent(files []string) (string, error) {

@@ -43,7 +43,7 @@ const (
     volumes:
     - .:/usr/src/app
   nginx:
-    image: nginx
+    build: nginx
     volumes:
       - ./nginx/nginx.conf:/tmp/nginx.conf
     command: /bin/bash -c "envsubst < /tmp/nginx.conf > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
@@ -69,6 +69,10 @@ const (
     proxy_pass http://$SERVER;
   }
 }`
+
+	nginxDockerfile = `FROM nginx
+COPY ./nginx.conf /tmp/nginx.conf
+`
 )
 
 func TestUpCompose(t *testing.T) {
@@ -188,6 +192,12 @@ func createNginxDir(dir string) error {
 	nginxPath := filepath.Join(dir, "nginx", "nginx.conf")
 	nginxContent := []byte(nginxConf)
 	if err := os.WriteFile(nginxPath, nginxContent, 0600); err != nil {
+		return err
+	}
+
+	nginxDockerfilePath := filepath.Join(dir, "nginx", "Dockerfile")
+	nginxDockerfileContent := []byte(nginxDockerfile)
+	if err := os.WriteFile(nginxDockerfilePath, nginxDockerfileContent, 0600); err != nil {
 		return err
 	}
 	return nil

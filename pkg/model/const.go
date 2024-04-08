@@ -221,9 +221,9 @@ const (
 	// OktetoRescanIntervalEnvVar defines the time between scans for syncthing
 	OktetoRescanIntervalEnvVar = "OKTETO_RESCAN_INTERVAL"
 
-	// OktetoCurrentDeployBelongsToPreview if set the current okteto deploy belongs
+	// DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar if set the current okteto deploy belongs
 	// to a preview environment
-	OktetoCurrentDeployBelongsToPreview = "OKTETO_CURRENT_DEPLOY_BELONGS_TO_PREVIEW"
+	DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar = "OKTETO_CURRENT_DEPLOY_BELONGS_TO_PREVIEW"
 
 	// OktetoTimeoutEnvVar defines the timeout for okteto commands
 	OktetoTimeoutEnvVar = "OKTETO_TIMEOUT"
@@ -260,7 +260,4 @@ const (
 
 	// OktetoDefaultImageTag default tag assigned to image to build
 	OktetoDefaultImageTag = "okteto"
-
-	// OktetoImageTagWithVolumes is the tag assigned to an image with volume mounts
-	OktetoImageTagWithVolumes = "okteto-with-volume-mounts"
 )

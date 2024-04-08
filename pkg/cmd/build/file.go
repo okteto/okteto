@@ -21,7 +21,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -146,45 +145,6 @@ func translateOktetoRegistryImage(input string, okCtx OktetoContextInterface) st
 
 	return input
 
-}
-
-// CreateDockerfileWithVolumeMounts creates the Dockerfile with volume mounts and returns the BuildInfo
-func CreateDockerfileWithVolumeMounts(image string, volumes []build.VolumeMounts) (*build.Info, error) {
-	build := &build.Info{}
-
-	ctx, err := filepath.Abs(".")
-	if err != nil {
-		return build, nil
-	}
-	build.Context = ctx
-	dockerfileTmpFolder := filepath.Join(config.GetOktetoHome(), ".dockerfile")
-	if err := os.MkdirAll(dockerfileTmpFolder, 0700); err != nil {
-		return build, fmt.Errorf("failed to create %s: %w", dockerfileTmpFolder, err)
-	}
-
-	tmpFile, err := os.CreateTemp(dockerfileTmpFolder, "buildkit-")
-	if err != nil {
-		return build, err
-	}
-
-	datawriter := bufio.NewWriter(tmpFile)
-	defer datawriter.Flush()
-
-	_, err = datawriter.Write([]byte(fmt.Sprintf("FROM %s\n", image)))
-	if err != nil {
-		return build, fmt.Errorf("failed to write dockerfile: %w", err)
-	}
-	for _, volume := range volumes {
-		_, err = datawriter.Write([]byte(fmt.Sprintf("COPY %s %s\n", filepath.ToSlash(volume.LocalPath), volume.RemotePath)))
-		if err != nil {
-			oktetoLog.Infof("failed to write volume %s: %s", volume.LocalPath, err)
-			continue
-		}
-	}
-
-	build.Dockerfile = tmpFile.Name()
-	build.VolumesToInclude = volumes
-	return build, nil
 }
 
 func copyDockerIgnore(originalPath, translatedPath string) error {

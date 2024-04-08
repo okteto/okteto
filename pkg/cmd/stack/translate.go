@@ -89,7 +89,7 @@ func buildStackImages(ctx context.Context, s *model.Stack, options *DeployOption
 			return err
 		}
 	} else {
-		svcsToBuild, err := builder.GetServicesToBuild(ctx, manifest, options.ServicesToDeploy)
+		svcsToBuild, err := builder.GetServicesToBuildDuringDeploy(ctx, manifest, options.ServicesToDeploy)
 		if err != nil {
 			return err
 		}
@@ -552,7 +552,6 @@ func translateLabelSelector(svcName string, s *model.Stack) map[string]string {
 }
 
 func translateAnnotations(svc *model.Service) map[string]string {
-
 	result := getAnnotations()
 	for k, v := range svc.Annotations {
 		result[k] = v

@@ -102,7 +102,7 @@ func (fr fakeRegistry) IsGlobalRegistry(image string) bool { return false }
 
 func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string) { return "", "" }
 func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)   { return "", "" }
-func (fr fakeRegistry) CloneGlobalImageToDev(imageWithDigest, tag string) (string, error) {
+func (fr fakeRegistry) CloneGlobalImageToDev(_ string) (string, error) {
 	return "", nil
 }
 
@@ -272,9 +272,11 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 		{
 			name: "Manifest error fallback to v1",
 			buildCommand: &Command{
-				GetManifest: getManifestWithInvalidManifestError,
-				Registry:    newFakeRegistry(),
-				ioCtrl:      io.NewIOController(),
+				GetManifest:      getManifestWithInvalidManifestError,
+				Registry:         newFakeRegistry(),
+				ioCtrl:           io.NewIOController(),
+				analyticsTracker: fakeAnalyticsTracker{},
+				insights:         fakeAnalyticsTracker{},
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -283,9 +285,11 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 		{
 			name: "Manifest error",
 			buildCommand: &Command{
-				GetManifest: getManifestWithInvalidManifestError,
-				Registry:    newFakeRegistry(),
-				ioCtrl:      io.NewIOController(),
+				GetManifest:      getManifestWithInvalidManifestError,
+				Registry:         newFakeRegistry(),
+				ioCtrl:           io.NewIOController(),
+				analyticsTracker: fakeAnalyticsTracker{},
+				insights:         fakeAnalyticsTracker{},
 			},
 			options: &types.BuildOptions{
 				File: "okteto.yml",
@@ -296,9 +300,11 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 		{
 			name: "Builder error. Dockerfile malformed",
 			buildCommand: &Command{
-				GetManifest: getManifestWithInvalidManifestError,
-				Registry:    newFakeRegistry(),
-				ioCtrl:      io.NewIOController(),
+				GetManifest:      getManifestWithInvalidManifestError,
+				Registry:         newFakeRegistry(),
+				ioCtrl:           io.NewIOController(),
+				analyticsTracker: fakeAnalyticsTracker{},
+				insights:         fakeAnalyticsTracker{},
 			},
 			options: &types.BuildOptions{
 				File: malformedDockerfile,
@@ -309,9 +315,11 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 		{
 			name: "Builder error. Invalid manifest/Dockerfile correct",
 			buildCommand: &Command{
-				GetManifest: getManifestWithInvalidManifestError,
-				Registry:    newFakeRegistry(),
-				ioCtrl:      io.NewIOController(),
+				GetManifest:      getManifestWithInvalidManifestError,
+				Registry:         newFakeRegistry(),
+				ioCtrl:           io.NewIOController(),
+				analyticsTracker: fakeAnalyticsTracker{},
+				insights:         fakeAnalyticsTracker{},
 			},
 			options: &types.BuildOptions{
 				File: dockerfile,
@@ -322,9 +330,11 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 		{
 			name: "BuilderV2 called.",
 			buildCommand: &Command{
-				GetManifest: getFakeManifestV2,
-				Registry:    newFakeRegistry(),
-				ioCtrl:      io.NewIOController(),
+				GetManifest:      getFakeManifestV2,
+				Registry:         newFakeRegistry(),
+				ioCtrl:           io.NewIOController(),
+				analyticsTracker: fakeAnalyticsTracker{},
+				insights:         fakeAnalyticsTracker{},
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -333,9 +343,11 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 		{
 			name: "Manifest valid but BuilderV1 fallback.",
 			buildCommand: &Command{
-				GetManifest: getFakeManifestV1,
-				Registry:    newFakeRegistry(),
-				ioCtrl:      io.NewIOController(),
+				GetManifest:      getFakeManifestV1,
+				Registry:         newFakeRegistry(),
+				ioCtrl:           io.NewIOController(),
+				analyticsTracker: fakeAnalyticsTracker{},
+				insights:         fakeAnalyticsTracker{},
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -344,9 +356,11 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 		{
 			name: "Manifest error. BuilderV1 fallback.",
 			buildCommand: &Command{
-				GetManifest: getManifestWithError,
-				Registry:    newFakeRegistry(),
-				ioCtrl:      io.NewIOController(),
+				GetManifest:      getManifestWithError,
+				Registry:         newFakeRegistry(),
+				ioCtrl:           io.NewIOController(),
+				analyticsTracker: fakeAnalyticsTracker{},
+				insights:         fakeAnalyticsTracker{},
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,

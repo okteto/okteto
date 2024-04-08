@@ -59,114 +59,129 @@ func (oc *OutputController) SetOutputFormat(output string) {
 }
 
 // Println prints a line into stdout
-func (l *OutputController) Println(args ...any) {
+func (oc *OutputController) Println(args ...any) {
 	msg := fmt.Sprint(args...)
-	bytes, err := l.formatter.format(msg)
+	bytes, err := oc.formatter.format(msg)
 	if err != nil {
 		return
 	}
-	if l.spinner != nil && l.spinner.isActive() {
-		l.spinner.Stop()
-		defer l.Spinner(l.spinner.getMessage()).Start()
+	if oc.spinner != nil && oc.spinner.isActive() {
+		oc.spinner.Stop()
+		defer oc.Spinner(oc.spinner.getMessage()).Start()
 	}
-	fmt.Fprintln(l.out, string(bytes))
+	fmt.Fprintln(oc.out, string(bytes))
 }
 
 // Print prints a line into stdout without a new line at the end
-func (l *OutputController) Print(args ...any) {
+func (oc *OutputController) Print(args ...any) {
 	msg := fmt.Sprint(args...)
-	bytes, err := l.formatter.format(msg)
+	bytes, err := oc.formatter.format(msg)
 	if err != nil {
 		return
 	}
-	if l.spinner != nil && l.spinner.isActive() {
-		l.spinner.Stop()
-		defer l.Spinner(l.spinner.getMessage()).Start()
+	if oc.spinner != nil && oc.spinner.isActive() {
+		oc.spinner.Stop()
+		defer oc.Spinner(oc.spinner.getMessage()).Start()
 	}
-	fmt.Fprint(l.out, string(bytes))
+	fmt.Fprint(oc.out, string(bytes))
 }
 
 // Printf prints a line into stdout with a format
-func (l *OutputController) Printf(format string, args ...any) {
+func (oc *OutputController) Printf(format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
-	bytes, err := l.formatter.format(msg)
+	bytes, err := oc.formatter.format(msg)
 	if err != nil {
 		return
 	}
-	if l.spinner != nil && l.spinner.isActive() {
-		l.spinner.Stop()
-		defer l.Spinner(l.spinner.getMessage()).Start()
+	if oc.spinner != nil && oc.spinner.isActive() {
+		oc.spinner.Stop()
+		defer oc.Spinner(oc.spinner.getMessage()).Start()
 	}
-	fmt.Fprint(l.out, string(bytes))
+	fmt.Fprint(oc.out, string(bytes))
 }
 
 // Infof prints a information message to the user
-func (l *OutputController) Infof(format string, args ...any) {
+func (oc *OutputController) Infof(format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
-	msg = l.decorator.Information(msg)
-	bytes, err := l.formatter.format(msg)
+	msg = oc.decorator.Information(msg)
+	bytes, err := oc.formatter.format(msg)
 	if err != nil {
 		return
 	}
-	if l.spinner != nil && l.spinner.isActive() {
-		l.spinner.Stop()
-		defer l.Spinner(l.spinner.getMessage()).Start()
+	if oc.spinner != nil && oc.spinner.isActive() {
+		oc.spinner.Stop()
+		defer oc.Spinner(oc.spinner.getMessage()).Start()
 	}
-	fmt.Fprint(l.out, string(bytes))
+	fmt.Fprint(oc.out, string(bytes))
 }
 
 // Success prints a success message to the user
-func (l *OutputController) Success(format string, args ...any) {
+func (oc *OutputController) Success(format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
-	msg = l.decorator.Success(msg)
-	bytes, err := l.formatter.format(msg)
+	msg = oc.decorator.Success(msg)
+	bytes, err := oc.formatter.format(msg)
 	if err != nil {
 		return
 	}
-	if l.spinner != nil && l.spinner.isActive() {
-		l.spinner.Stop()
-		defer l.Spinner(l.spinner.getMessage()).Start()
+	if oc.spinner != nil && oc.spinner.isActive() {
+		oc.spinner.Stop()
+		defer oc.Spinner(oc.spinner.getMessage()).Start()
 	}
-	fmt.Fprint(l.out, string(bytes))
+	fmt.Fprint(oc.out, string(bytes))
+}
+
+// Warning prints a warning message to the user
+func (oc *OutputController) Warning(format string, args ...any) {
+	msg := fmt.Sprintf(format, args...)
+	msg = oc.decorator.Warning(msg)
+	bytes, err := oc.formatter.format(msg)
+	if err != nil {
+		return
+	}
+	if oc.spinner != nil && oc.spinner.isActive() {
+		oc.spinner.Stop()
+		defer oc.Spinner(oc.spinner.getMessage()).Start()
+	}
+	fmt.Fprint(oc.out, string(bytes))
 }
 
 // SetStage sets the stage of the logger if it's json
-func (l *OutputController) SetStage(stage string) {
-	if v, ok := l.formatter.(*jsonFormatter); ok {
+func (oc *OutputController) SetStage(stage string) {
+	if v, ok := oc.formatter.(*jsonFormatter); ok {
 		v.SetStage(stage)
 	}
 }
 
 // Spinner returns a spinner
-func (l *OutputController) Spinner(msg string) OktetoSpinner {
-	if l.spinner != nil {
-		if l.spinner.getMessage() == msg {
-			return l.spinner
+func (oc *OutputController) Spinner(msg string) OktetoSpinner {
+	if oc.spinner != nil {
+		if oc.spinner.getMessage() == msg {
+			return oc.spinner
 		}
-		l.spinner.Stop()
+		oc.spinner.Stop()
 	}
 
 	disableSpinner := env.LoadBoolean(OktetoDisableSpinnerEnvVar)
 
-	_, isTTY := l.formatter.(*ttyFormatter)
+	_, isTTY := oc.formatter.(*ttyFormatter)
 	if isTTY && !disableSpinner {
-		l.spinner = newTTYSpinner(msg)
+		oc.spinner = newTTYSpinner(msg)
 	} else {
-		l.spinner = newNoSpinner(msg, l)
+		oc.spinner = newNoSpinner(msg, oc)
 	}
-	return l.spinner
+	return oc.spinner
 }
 
 // Write logs into the buffer but does not print anything
-func (l *OutputController) Write(p []byte) (n int, err error) {
+func (oc *OutputController) Write(p []byte) (n int, err error) {
 	msg := string(p)
 	if !strings.HasSuffix(msg, "\n") {
 		msg += "\n"
 	}
-	bytes, err := l.formatter.format(msg)
+	bytes, err := oc.formatter.format(msg)
 	if err != nil {
 		return
 	}
 
-	return l.out.Write(bytes)
+	return oc.out.Write(bytes)
 }

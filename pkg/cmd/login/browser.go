@@ -38,6 +38,19 @@ type Handler struct {
 
 func (h *Handler) handle() http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			w.Header().Add("Access-Control-Allow-Origin", h.baseURL)
+			w.Header().Add("Access-Control-Allow-Methods", "GET")
+			w.Header().Add("Access-Control-Allow-Private-Network", "true")
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
 		code := r.URL.Query().Get("code")
 		s := r.URL.Query().Get("state")
 

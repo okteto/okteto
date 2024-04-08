@@ -120,7 +120,7 @@ func (fr fakeRegistry) IsGlobalRegistry(image string) bool { return false }
 
 func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string) { return "", "" }
 func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)   { return "", "" }
-func (fr fakeRegistry) CloneGlobalImageToDev(imageWithDigest, tag string) (string, error) {
+func (fr fakeRegistry) CloneGlobalImageToDev(string) (string, error) {
 	return "", nil
 }
 
@@ -176,7 +176,7 @@ func (b *fakeV2Builder) Build(_ context.Context, buildOptions *types.BuildOption
 	return nil
 }
 
-func (b *fakeV2Builder) GetServicesToBuild(_ context.Context, manifest *model.Manifest, servicesToDeploy []string) ([]string, error) {
+func (b *fakeV2Builder) GetServicesToBuildDuringDeploy(_ context.Context, manifest *model.Manifest, servicesToDeploy []string) ([]string, error) {
 	toBuild := make(map[string]bool, len(manifest.Build))
 	for service := range manifest.Build {
 		toBuild[service] = true
@@ -248,18 +248,6 @@ func (f *fakeDeployer) Deploy(ctx context.Context, opts *Options) error {
 
 func (f *fakeDeployer) CleanUp(ctx context.Context, err error) {
 	f.Called(ctx, err)
-}
-
-type fakeAnalyticsTracker struct{}
-
-func (fakeAnalyticsTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
-
-type fakeEventTracker struct {
-	err error
-}
-
-func (f *fakeEventTracker) Track(context.Context, *analytics.ImageBuildMetadata) error {
-	return f.err
 }
 
 func TestDeployWithErrorReadingManifestFile(t *testing.T) {
@@ -351,12 +339,6 @@ func TestDeployWithServicesToBuildWithoutComposeSection(t *testing.T) {
 	assert.ErrorIs(t, err, oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose)
 	// Verify the deploy phase is not even reached
 	fakeDeployer.AssertNotCalled(t, "Get")
-}
-
-type fakeBuildEventTracker struct{}
-
-func (f *fakeBuildEventTracker) Track(context.Context, *analytics.ImageBuildMetadata) error {
-	return nil
 }
 
 func TestCreateConfigMapWithBuildError(t *testing.T) {

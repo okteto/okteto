@@ -51,7 +51,7 @@ type oktetoRegistryInterface interface {
 
 	GetRegistryAndRepo(image string) (string, string)
 	GetRepoNameAndTag(repo string) (string, string)
-	CloneGlobalImageToDev(imageWithDigest, tag string) (string, error)
+	CloneGlobalImageToDev(imageWithDigest string) (string, error)
 }
 
 // oktetoBuilderConfigInterface returns the configuration that the builder has for the registry and project
@@ -61,10 +61,6 @@ type oktetoBuilderConfigInterface interface {
 	GetGitCommit() string
 	IsOkteto() bool
 	GetAnonymizedRepo() string
-}
-
-type analyticsTrackerInterface interface {
-	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
 }
 
 // OktetoBuilder builds the images
@@ -83,10 +79,10 @@ type OktetoBuilder struct {
 	ioCtrl    *io.Controller
 	k8sLogger *io.K8sLogger
 
+	onBuildFinish []OnBuildFinish
+
 	// lock is a mutex to provide buildEnvironments map safe concurrency
 	lock sync.RWMutex
-
-	onBuildFinish []OnBuildFinish
 }
 
 type OnBuildFinish func(ctx context.Context, meta *analytics.ImageBuildMetadata)
@@ -223,6 +219,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	ob.ioCtrl.Logger().Infof("Images to build: [%s]", strings.Join(toBuildSvcs, ", "))
 	for len(builtImagesControl) != len(toBuildSvcs) {
 		for _, svcToBuild := range toBuildSvcs {
+			// This verifies if the image was already built in this iteration, not checking if it is in the "cache" (global registry)
 			if skipServiceBuild(svcToBuild, builtImagesControl) {
 				ob.ioCtrl.Logger().Infof("skipping image '%s' due to being already built", svcToBuild)
 				continue
@@ -257,31 +254,25 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 			buildContextHashDurationStart := time.Now()
 
-			serviceHash, err := ob.smartBuildCtrl.GetServiceHash(buildSvcInfo)
-			if err != nil {
-				ob.ioCtrl.Logger().Infof("error getting service commit hash: %s", err)
-			}
+			serviceHash := ob.smartBuildCtrl.GetServiceHash(buildSvcInfo, svcToBuild)
 			meta.BuildContextHash = serviceHash
 			meta.BuildContextHashDuration = time.Since(buildContextHashDurationStart)
 
 			// We only check that the image is built in the global registry if the noCache option is not set
 			if !options.NoCache && ob.smartBuildCtrl.IsEnabled() {
-				imageChecker := getImageChecker(buildSvcInfo, ob.Config, ob.Registry, ob.smartBuildCtrl, ob.ioCtrl.Logger())
+				imageChecker := getImageChecker(ob.Config, ob.Registry, ob.smartBuildCtrl, ob.ioCtrl.Logger())
 				cacheHitDurationStart := time.Now()
 
-				buildHash, err := ob.smartBuildCtrl.GetBuildHash(buildSvcInfo)
-				if err != nil {
-					ob.ioCtrl.Logger().Infof("error getting build hash: %s", err)
-				}
+				buildHash := ob.smartBuildCtrl.GetBuildHash(buildSvcInfo, svcToBuild)
 				imageWithDigest, isBuilt := imageChecker.checkIfBuildHashIsBuilt(options.Manifest.Name, svcToBuild, buildHash)
 
 				meta.CacheHit = isBuilt
 				meta.CacheHitDuration = time.Since(cacheHitDurationStart)
 
 				if isBuilt {
-					ob.ioCtrl.Out().Infof("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, ob.smartBuildCtrl.GetBuildCommit(buildSvcInfo))
+					ob.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of '%s' because it's already built from cache.", svcToBuild)
 
-					imageWithDigest, err = ob.smartBuildCtrl.CloneGlobalImageToDev(imageWithDigest, buildHash)
+					imageWithDigest, err = ob.smartBuildCtrl.CloneGlobalImageToDev(imageWithDigest)
 					if err != nil {
 						return err
 					}
@@ -330,31 +321,14 @@ func skipServiceBuild(service string, control map[string]bool) bool {
 }
 
 // buildServiceImages builds the images for the given service.
-// if service has volumes to include but is not okteto, an error is returned
-// returned image reference includes the digest
-// when a service includes volumes, this is the image returned
+// if service has volumes to include but is not okteto, an error is returned.
+// Returned image reference includes the digest
 func (bc *OktetoBuilder) buildServiceImages(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
 	buildSvcInfo := manifest.Build[svcName]
 
 	switch {
-	case serviceHasVolumesToInclude(buildSvcInfo) && !bc.oktetoContext.IsOkteto():
-		return "", oktetoErrors.UserError{
-			E:    fmt.Errorf("Build with volume mounts is not supported on vanilla contexts"),
-			Hint: "Please connect to a okteto context and try again",
-		}
-	case serviceHasDockerfile(buildSvcInfo) && serviceHasVolumesToInclude(buildSvcInfo):
-		image, err := bc.buildSvcFromDockerfile(ctx, manifest, svcName, options)
-		if err != nil {
-			return "", err
-		}
-		buildSvcInfo.Image = image
-		return bc.addVolumeMounts(ctx, manifest, svcName, options)
 	case serviceHasDockerfile(buildSvcInfo):
 		return bc.buildSvcFromDockerfile(ctx, manifest, svcName, options)
-	case serviceHasVolumesToInclude(buildSvcInfo):
-		if bc.oktetoContext.IsOkteto() {
-			return bc.addVolumeMounts(ctx, manifest, svcName, options)
-		}
 
 	default:
 		bc.ioCtrl.Logger().Info(fmt.Sprintf("could not build service %s, due to not having Dockerfile defined or volumes to include", svcName))
@@ -369,10 +343,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	var err error
 	var buildHash string
 	if bc.smartBuildCtrl.IsEnabled() {
-		buildHash, err = bc.smartBuildCtrl.GetBuildHash(buildSvcInfo)
-		if err != nil {
-			bc.ioCtrl.Logger().Infof("error getting build hash: %s", err)
-		}
+		buildHash = bc.smartBuildCtrl.GetBuildHash(buildSvcInfo, svcName)
 	}
 	tagToBuild := newImageTagger(bc.Config, bc.smartBuildCtrl).getServiceImageReference(manifest.Name, svcName, buildSvcInfo, buildHash)
 	buildSvcInfo.Image = tagToBuild
@@ -401,53 +372,9 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	return imageTagWithDigest, nil
 }
 
-func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
-	bc.ioCtrl.Out().Infof("Including volume hosts for service '%s'", svcName)
-	isStackManifest := (manifest.Type == model.StackType) || (manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil)
-	fromImage := manifest.Build[svcName].Image
-	if options.Tag != "" {
-		fromImage = options.Tag
-	}
-
-	buildInfoCopy := manifest.Build[svcName].Copy()
-	buildInfoCopy.Image = ""
-
-	var err error
-	var buildHash string
-	if bc.smartBuildCtrl.IsEnabled() {
-		buildHash, err = bc.smartBuildCtrl.GetBuildHash(buildInfoCopy)
-		if err != nil {
-			bc.ioCtrl.Logger().Infof("error getting build hash: %s", err)
-		}
-	}
-
-	tagToBuild := newImageWithVolumesTagger(bc.Config, bc.smartBuildCtrl).getServiceImageReference(manifest.Name, svcName, buildInfoCopy, buildHash)
-	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest, bc.oktetoContext.IsOkteto())
-	svcBuild, err := buildCmd.CreateDockerfileWithVolumeMounts(fromImage, buildSvcInfo.VolumesToInclude)
-	if err != nil {
-		return "", err
-	}
-	buildOptions := buildCmd.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, options, bc.Registry, bc.oktetoContext)
-	buildOptions.Tag = tagToBuild
-
-	if err := bc.Builder.Build(ctx, buildOptions); err != nil {
-		return "", err
-	}
-	imageTagWithDigest, err := bc.Registry.GetImageTagWithDigest(buildOptions.Tag)
-	if err != nil {
-		return "", fmt.Errorf("error accessing image at registry %s: %w", options.Tag, err)
-	}
-	return imageTagWithDigest, nil
-}
-
 // serviceHasDockerfile returns true when service BuildInfo Dockerfile is not empty
 func serviceHasDockerfile(buildInfo *build.Info) bool {
 	return buildInfo.Dockerfile != ""
-}
-
-// serviceHasVolumesToInclude returns true when service BuildInfo VolumesToInclude are more than 0
-func serviceHasVolumesToInclude(buildInfo *build.Info) bool {
-	return len(buildInfo.VolumesToInclude) > 0
 }
 
 func (bc *OktetoBuilder) getBuildInfoWithoutVolumeMounts(buildInfo *build.Info, isStackManifest bool) *build.Info {
@@ -461,25 +388,8 @@ func (bc *OktetoBuilder) getBuildInfoWithoutVolumeMounts(buildInfo *build.Info, 
 	return result
 }
 
-func getBuildInfoWithVolumeMounts(buildInfo *build.Info, isStackManifest bool, isOkteto bool) *build.Info {
-	result := buildInfo.Copy()
-	if isStackManifest && isOkteto {
-		result.Image = ""
-	}
-	result.VolumesToInclude = getAccessibleVolumeMounts(buildInfo)
-	return result
-}
-
-func getAccessibleVolumeMounts(buildInfo *build.Info) []build.VolumeMounts {
-	accessibleVolumeMounts := make([]build.VolumeMounts, 0)
-	for _, volume := range buildInfo.VolumesToInclude {
-		if _, err := os.Stat(volume.LocalPath); !os.IsNotExist(err) {
-			accessibleVolumeMounts = append(accessibleVolumeMounts, volume)
-		}
-	}
-	return accessibleVolumeMounts
-}
-
+// getToBuildSvcs returns a list of services to be built. It gets the list from the command args if specified, if not,
+// it returns the list of services from the manifest
 func getToBuildSvcs(manifest *model.Manifest, options *types.BuildOptions) []string {
 	toBuild := []string{}
 	if len(options.CommandArgs) != 0 {
@@ -521,12 +431,7 @@ func validateServices(buildSection build.ManifestBuild, svcsToBuild []string) er
 	return nil
 }
 
-func getImageChecker(buildInfo *build.Info, cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface, sbc smartBuildController, logger loggerInfo) imageCheckerInterface {
-	var tagger imageTaggerInterface
-	if serviceHasVolumesToInclude(buildInfo) {
-		tagger = newImageWithVolumesTagger(cfg, sbc)
-	} else {
-		tagger = newImageTagger(cfg, sbc)
-	}
+func getImageChecker(cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface, sbc smartBuildController, logger loggerInfo) imageCheckerInterface {
+	tagger := newImageTagger(cfg, sbc)
 	return newImageChecker(cfg, registry, tagger, logger)
 }

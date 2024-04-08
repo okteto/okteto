@@ -109,16 +109,26 @@ func GetStatefulsetList(ctx context.Context, ns string, client kubernetes.Interf
 	return sfsList.Items, err
 }
 
+// GetVolume returns a volume given a namespace and name
+func GetVolume(ctx context.Context, ns, name string, client kubernetes.Interface) (*corev1.PersistentVolumeClaim, error) {
+	return client.CoreV1().PersistentVolumeClaims(ns).Get(ctx, name, metav1.GetOptions{})
+}
+
 // WaitForDeployment waits until a deployment is rollout correctly
 func WaitForDeployment(kubectlBinary string, kubectlOpts *commands.KubectlOptions, revision int, timeout time.Duration) error {
 	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
 	to := time.NewTicker(timeout)
+	defer to.Stop()
+
 	retry := 0
 	for {
 		select {
 		case <-to.C:
 			return fmt.Errorf("%s didn't rollout after %s", kubectlOpts.Name, timeout.String())
 		case <-ticker.C:
+			retry++
 			output, err := commands.RunKubectlRolloutDeployment(kubectlBinary, kubectlOpts, revision)
 			if err != nil {
 				continue

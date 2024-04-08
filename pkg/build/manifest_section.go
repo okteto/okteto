@@ -42,7 +42,7 @@ func (b *ManifestBuild) Validate() error {
 	return nil
 }
 
-// GetSvcsToBuildFromList returns the builds from a list and all its
+// GetSvcsToBuildFromList returns the builds from a list and all its dependencies
 func (b *ManifestBuild) GetSvcsToBuildFromList(toBuild []string) []string {
 	initialSvcsToBuild := toBuild
 	svcsToBuildWithDependencies := getDependentNodes(b.toGraph(), toBuild)

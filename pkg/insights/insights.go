@@ -32,25 +32,25 @@ const (
 	reportingController = "cli"
 )
 
-// InsightsPublisher is a struct that represents the insights publisher
-type InsightsPublisher struct {
+// Publisher is a struct that represents the insights publisher
+type Publisher struct {
 	k8sClientProvider okteto.K8sClientProvider
 	ioCtrl            io.Controller
 }
 
 // NewInsightsPublisher creates a new insights publisher
-func NewInsightsPublisher(k8sClientProvider okteto.K8sClientProvider, ioCtrl io.Controller) *InsightsPublisher {
-	return &InsightsPublisher{
+func NewInsightsPublisher(k8sClientProvider okteto.K8sClientProvider, ioCtrl io.Controller) *Publisher {
+	return &Publisher{
 		k8sClientProvider: k8sClientProvider,
 		ioCtrl:            ioCtrl,
 	}
 }
 
-// TrackEvent tracks an event in the cluster
+// trackEvent tracks an event in the cluster
 // namespace: the namespace where the event is happening
 // insightType: the type of the event (for example: build, deploy, etc.)
 // data: the data of the event as JSON string
-func (ip *InsightsPublisher) TrackEvent(ctx context.Context, namespace, insightType, data string) {
+func (ip *Publisher) trackEvent(ctx context.Context, namespace, insightType, data string) {
 	k8sClient, _, err := ip.k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		ip.ioCtrl.Logger().Infof("could not get k8s client: %s", err)
@@ -66,7 +66,7 @@ func (ip *InsightsPublisher) TrackEvent(ctx context.Context, namespace, insightT
 		ReportingController: reportingController,
 		ReportingInstance:   config.VersionString,
 		Type:                "Normal",
-		Note:                string(data),
+		Note:                data,
 		Action:              insightType,
 		Regarding: corev1.ObjectReference{
 			Namespace: namespace,
