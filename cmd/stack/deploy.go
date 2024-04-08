@@ -42,6 +42,7 @@ import (
 type DeployCommand struct {
 	K8sClient        kubernetes.Interface
 	analyticsTracker buildTrackerInterface
+	insights         buildTrackerInterface
 	Config           *rest.Config
 	ioCtrl           *io.Controller
 	DivertDriver     divert.Driver
@@ -49,7 +50,7 @@ type DeployCommand struct {
 }
 
 // deploy deploys a stack
-func deploy(ctx context.Context, at buildTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
+func deploy(ctx context.Context, at, insights buildTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
 	options := &stack.DeployOptions{}
 
 	cmd := &cobra.Command{
@@ -79,6 +80,7 @@ func deploy(ctx context.Context, at buildTrackerInterface, ioCtrl *io.Controller
 				K8sClient:        c,
 				Config:           config,
 				analyticsTracker: at,
+				insights:         insights,
 				ioCtrl:           ioCtrl,
 				DivertDriver:     divert.NewNoop(),
 			}
@@ -131,6 +133,7 @@ func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *
 		AnalyticsTracker: c.analyticsTracker,
 		IoCtrl:           c.ioCtrl,
 		Divert:           c.DivertDriver,
+		Insights:         c.insights,
 	}
 	err := stackDeployer.Deploy(ctx, s, options)
 
