@@ -37,11 +37,11 @@ type fakeConfigRepo struct {
 	isClean bool
 }
 
-func (fcr fakeConfigRepo) GetSHA() (string, error)                   { return fcr.sha, fcr.err }
-func (fcr fakeConfigRepo) IsClean() (bool, error)                    { return fcr.isClean, fcr.err }
-func (fcr fakeConfigRepo) GetAnonymizedRepo() string                 { return fcr.url }
-func (fcr fakeConfigRepo) GetLatestDirCommit(string) (string, error) { return fcr.sha, fcr.err }
-func (fcr fakeConfigRepo) GetDiffHash(string) (string, error)        { return fcr.diff, fcr.err }
+func (fcr fakeConfigRepo) GetSHA() (string, error)                { return fcr.sha, fcr.err }
+func (fcr fakeConfigRepo) IsClean() (bool, error)                 { return fcr.isClean, fcr.err }
+func (fcr fakeConfigRepo) GetAnonymizedRepo() string              { return fcr.url }
+func (fcr fakeConfigRepo) GetLatestDirSHA(string) (string, error) { return fcr.sha, fcr.err }
+func (fcr fakeConfigRepo) GetDiffHash(string) (string, error)     { return fcr.diff, fcr.err }
 
 type fakeLogger struct{}
 

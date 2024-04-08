@@ -31,7 +31,7 @@ type configRepositoryInterface interface {
 	GetSHA() (string, error)
 	IsClean() (bool, error)
 	GetAnonymizedRepo() string
-	GetLatestDirCommit(string) (string, error)
+	GetLatestDirSHA(string) (string, error)
 }
 
 type configRegistryInterface interface {

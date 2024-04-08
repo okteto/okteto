@@ -30,9 +30,9 @@ type fakeConfigRepo struct {
 	diff string
 }
 
-func (fcr fakeConfigRepo) GetSHA() (string, error)                   { return fcr.sha, fcr.err }
-func (fcr fakeConfigRepo) GetLatestDirCommit(string) (string, error) { return fcr.sha, fcr.err }
-func (fcr fakeConfigRepo) GetDiffHash(string) (string, error)        { return fcr.diff, fcr.err }
+func (fcr fakeConfigRepo) GetSHA() (string, error)                { return fcr.sha, fcr.err }
+func (fcr fakeConfigRepo) GetLatestDirSHA(string) (string, error) { return fcr.sha, fcr.err }
+func (fcr fakeConfigRepo) GetDiffHash(string) (string, error)     { return fcr.diff, fcr.err }
 
 type fakeRegistryController struct {
 	err              error

@@ -31,7 +31,7 @@ import (
 
 type repositoryCommitRetriever interface {
 	GetSHA() (string, error)
-	GetLatestDirCommit(string) (string, error)
+	GetLatestDirSHA(string) (string, error)
 	GetDiffHash(string) (string, error)
 }
 
@@ -84,7 +84,7 @@ func (sh *serviceHasher) hashWithBuildContext(buildInfo *build.Info, service str
 	}
 	if _, ok := sh.serviceShaCache[service]; !ok {
 		errorGettingGitInfo := false
-		dirCommit, err := sh.gitRepoCtrl.GetLatestDirCommit(buildContext)
+		dirCommit, err := sh.gitRepoCtrl.GetLatestDirSHA(buildContext)
 		if err != nil {
 			errorGettingGitInfo = true
 

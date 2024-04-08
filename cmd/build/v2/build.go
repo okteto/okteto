@@ -237,6 +237,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 			repoHashDurationStart := time.Now()
 
+			ob.ioCtrl.Logger().Debugf("getting project hash for analytics")
 			repoHash, err := ob.smartBuildCtrl.GetProjectHash(buildSvcInfo)
 			if err != nil {
 				ob.ioCtrl.Logger().Infof("error getting project commit hash: %s", err)

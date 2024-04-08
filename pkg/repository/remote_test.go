@@ -48,11 +48,11 @@ func TestRemoteGetSHA(t *testing.T) {
 	assert.Equal(t, remote.gitCommit, sha)
 }
 
-func TestRemoteGetLatestDirCommit(t *testing.T) {
+func TestRemoteGetLatestDirSHA(t *testing.T) {
 	remote := oktetoRemoteRepoController{
 		gitCommit: "123",
 	}
-	_, err := remote.GetLatestDirCommit("test")
+	_, err := remote.GetLatestDirSHA("test")
 	assert.Error(t, err, fmt.Errorf("not-implemented"))
 }
 
