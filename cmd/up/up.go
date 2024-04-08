@@ -618,6 +618,10 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 		isRemote = up.Manifest.Deploy.Image != ""
 	}
 
+	// We keep DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar for backward compatibility in case an old version of the backend
+	// is being used
+	isPreview := os.Getenv(model.DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar) == "true" ||
+		os.Getenv(constants.OktetoIsPreviewEnvVar) == "true"
 	// tracking deploy either its been successful or not
 	c.AnalyticsTracker.TrackDeploy(analytics.DeployMetadata{
 		Success:                err == nil,
@@ -625,7 +629,7 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 		Duration:               time.Since(startTime),
 		PipelineType:           up.Manifest.Type,
 		DeployType:             "automatic",
-		IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
+		IsPreview:              isPreview,
 		HasDependenciesSection: up.Manifest.HasDependenciesSection(),
 		HasBuildSection:        up.Manifest.HasBuildSection(),
 		Err:                    err,
@@ -1073,7 +1077,7 @@ func printDisplayContext(up *upContext) {
 
 // buildServicesAndSetBuildEnvs get services to build and run build to set build envs
 func buildServicesAndSetBuildEnvs(ctx context.Context, m *model.Manifest, builder builderInterface) error {
-	svcsToBuild, err := builder.GetServicesToBuild(ctx, m, []string{})
+	svcsToBuild, err := builder.GetServicesToBuildDuringDeploy(ctx, m, []string{})
 	if err != nil {
 		return err
 	}

@@ -251,7 +251,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			isOkteto: true,
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
-				Tag:        "okteto.dev/movies-service:okteto-with-volume-mounts",
+				Tag:        "okteto.dev/movies-service:okteto",
 				File:       filepath.Join(serviceContext, serviceDockerfile),
 				Target:     "build",
 				Path:       "service",
@@ -427,7 +427,7 @@ func TestOptsFromBuildInfoForRemoteDeploy(t *testing.T) {
 			},
 			expected: &types.BuildOptions{
 				File:       "Dockerfile",
-				OutputMode: "deploy",
+				OutputMode: DeployOutputModeOnBuild,
 				Path:       "service",
 			},
 		},
@@ -444,14 +444,14 @@ func TestOptsFromBuildInfoForRemoteDeploy(t *testing.T) {
 			},
 			expected: &types.BuildOptions{
 				File:       "Dockerfile",
-				OutputMode: "deploy",
+				OutputMode: DeployOutputModeOnBuild,
 				Path:       "service",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := OptsFromBuildInfoForRemoteDeploy(tt.buildInfo, &types.BuildOptions{OutputMode: "deploy"})
+			result := OptsFromBuildInfoForRemoteDeploy(tt.buildInfo, &types.BuildOptions{OutputMode: DeployOutputModeOnBuild})
 			require.Equal(t, tt.expected, result)
 		})
 	}

@@ -23,13 +23,12 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// GetServicesToBuild returns the services it has to build if they are not already built
-// this function is called from outside the build cmd
-func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error) {
+// GetServicesToBuildDuringDeploy returns the services it has to build if they are not already built
+// this function is called from outside the build cmd and during a "deploy operation" (up, deploy, destroy, compose).
+func (bc *OktetoBuilder) GetServicesToBuildDuringDeploy(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error) {
 	buildManifest := manifest.Build
 
 	if len(buildManifest) == 0 {
-		bc.ioCtrl.Out().Infof("Build section is not defined in your okteto manifest")
 		return nil, nil
 	}
 
@@ -59,7 +58,7 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 		svc := service
 
 		g.Go(func() error {
-			return bc.checkServiceToBuild(svc, manifest, toBuildCh)
+			return bc.checkServiceToBuildDuringDeploy(svc, manifest, toBuildCh)
 		})
 	}
 
@@ -86,31 +85,28 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 	return svcsToBuildList, nil
 }
 
-// checkServiceToBuild looks for the service image reference at the registry and adds it to the buildCh if is not found
-func (bc *OktetoBuilder) checkServiceToBuild(service string, manifest *model.Manifest, buildCh chan string) error {
+// checkServiceToBuildDuringDeploy looks for the service image reference at the registry and adds it to the buildCh
+// if is not found. This function is called during deploy operations (up, deploy, destroy and compose) to check if
+// images have to be built or not. In that case, we only check the existence of "okteto" tag in the dev registry
+func (bc *OktetoBuilder) checkServiceToBuildDuringDeploy(service string, manifest *model.Manifest, buildCh chan string) error {
 	buildInfo := manifest.Build[service].Copy()
 	isStack := manifest.Type == model.StackType
 	if isStack && bc.oktetoContext.IsOkteto() && !bc.Registry.IsOktetoRegistry(buildInfo.Image) {
 		buildInfo.Image = ""
 	}
 
-	var err error
-	var buildHash string
-	if bc.smartBuildCtrl.IsEnabled() {
-		buildHash, err = bc.smartBuildCtrl.GetBuildHash(buildInfo)
-		if err != nil {
-			bc.ioCtrl.Logger().Infof("error getting build hash: %s", err)
-		}
-	}
-
-	imageChecker := getImageChecker(buildInfo, bc.Config, bc.Registry, bc.smartBuildCtrl, bc.ioCtrl.Logger())
-	imageWithDigest, err := imageChecker.getImageDigestReferenceForService(manifest.Name, service, buildInfo, buildHash)
+	imageChecker := getImageChecker(bc.Config, bc.Registry, bc.smartBuildCtrl, bc.ioCtrl.Logger())
+	imageWithDigest, err := imageChecker.getImageDigestReferenceForServiceDeploy(manifest.Name, service, buildInfo)
 	if oktetoErrors.IsNotFound(err) {
 		bc.ioCtrl.Logger().Debug("image not found, building image")
 		buildCh <- service
 		return nil
 	} else if err != nil {
-		return err
+		bc.ioCtrl.Out().Warning("could not verify if image for service %q is already in the registry. Building image...", service)
+		// If there is an error trying to get the image from the registry, we just rebuild that image
+		bc.ioCtrl.Logger().Debugf("unexpected error checking if the images exist: %s", err)
+		buildCh <- service
+		return nil
 	}
 	bc.ioCtrl.Logger().Debugf("Skipping build for image for service: %s", service)
 

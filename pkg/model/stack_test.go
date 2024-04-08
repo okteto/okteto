@@ -1425,3 +1425,39 @@ func TestValidateServices(t *testing.T) {
 	}
 
 }
+func Test_isPathAComposeFile(t *testing.T) {
+	tests := []struct {
+		path     string
+		expected bool
+	}{
+		{
+			path:     "compose.yml",
+			expected: true,
+		},
+		{
+			path:     "docker-compose.yaml",
+			expected: true,
+		},
+		{
+			path:     "okteto-compose.yml",
+			expected: true,
+		},
+		{
+			path:     "docker-compose-dev.yml",
+			expected: true,
+		},
+		{
+			path:     "okteto-stack.yml",
+			expected: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.path, func(t *testing.T) {
+			result := isPathAComposeFile(test.path)
+			if result != test.expected {
+				t.Errorf("Expected %v but got %v", test.expected, result)
+			}
+		})
+	}
+}

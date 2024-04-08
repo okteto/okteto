@@ -343,7 +343,6 @@ func Test_OktetoRegistry_CloneGlobalImageToDev(t *testing.T) {
 	type config struct {
 		config configInterface
 		image  string
-		tag    string
 	}
 	var tests = []struct {
 		client   fakeClient
@@ -355,7 +354,6 @@ func Test_OktetoRegistry_CloneGlobalImageToDev(t *testing.T) {
 			name: "not a global image repository returns error",
 			input: config{
 				image: "this.is.my.okteto.registry/test-ns/test-repo@sha-256:123456789",
-				tag:   "test-tag",
 				config: FakeConfig{
 					RegistryURL:        "this.is.my.okteto.registry",
 					GlobalNamespace:    "test-global",
@@ -372,7 +370,6 @@ func Test_OktetoRegistry_CloneGlobalImageToDev(t *testing.T) {
 			name: "fail to get global image descriptor",
 			input: config{
 				image: "this.is.my.okteto.registry/test-global/test-repo@sha256:123",
-				tag:   "test-tag",
 				config: FakeConfig{
 					RegistryURL:        "this.is.my.okteto.registry",
 					GlobalNamespace:    "test-global",
@@ -395,7 +392,6 @@ func Test_OktetoRegistry_CloneGlobalImageToDev(t *testing.T) {
 			name: "success",
 			input: config{
 				image: "this.is.my.okteto.registry/test-global/test-repo@sha256:123",
-				tag:   "test-tag",
 				config: FakeConfig{
 					RegistryURL:        "this.is.my.okteto.registry",
 					GlobalNamespace:    "test-global",
@@ -404,6 +400,9 @@ func Test_OktetoRegistry_CloneGlobalImageToDev(t *testing.T) {
 				},
 			},
 			client: fakeClient{
+				GetImageDigest: getDigest{
+					Result: "sha256:123456789",
+				},
 				MockGetDescriptor: mockGetDescriptor{
 					Result: &remote.Descriptor{
 						Descriptor: v1.Descriptor{},
@@ -415,7 +414,37 @@ func Test_OktetoRegistry_CloneGlobalImageToDev(t *testing.T) {
 				},
 			},
 			expected: expected{
-				image: "this.is.my.okteto.registry/test-ns/test-repo:test-tag",
+				image: "this.is.my.okteto.registry/test-ns/test-repo@sha256:123456789",
+				err:   nil,
+			},
+		},
+		{
+			name: "withErrorGettingDevImageDigest",
+			input: config{
+				image: "this.is.my.okteto.registry/test-global/test-repo@sha256:123",
+				config: FakeConfig{
+					RegistryURL:        "this.is.my.okteto.registry",
+					GlobalNamespace:    "test-global",
+					IsOktetoClusterCfg: true,
+					Namespace:          "test-ns",
+				},
+			},
+			client: fakeClient{
+				GetImageDigest: getDigest{
+					Err: assert.AnError,
+				},
+				MockGetDescriptor: mockGetDescriptor{
+					Result: &remote.Descriptor{
+						Descriptor: v1.Descriptor{},
+						Manifest:   nil,
+					},
+				},
+				MockWrite: mockWrite{
+					Err: nil,
+				},
+			},
+			expected: expected{
+				image: "this.is.my.okteto.registry/test-ns/test-repo:okteto",
 				err:   nil,
 			},
 		},
@@ -428,7 +457,7 @@ func Test_OktetoRegistry_CloneGlobalImageToDev(t *testing.T) {
 				client:    tt.client,
 			}
 
-			result, err := or.CloneGlobalImageToDev(tt.input.image, tt.input.tag)
+			result, err := or.CloneGlobalImageToDev(tt.input.image)
 			assert.Equal(t, tt.expected.image, result)
 			if tt.expected.err != nil && err != nil {
 				assert.Equal(t, err.Error(), tt.expected.err.Error())

@@ -356,11 +356,39 @@ func Test_GetExpandedDevTagFromGlobal(t *testing.T) {
 			input:    "okteto.global/my-image@sha256:ffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
 			expected: "okteto.dev/my-image:okteto",
 		},
+		{
+			name:     "is expanded global image with sha",
+			input:    "registry.test.dev.okteto.net/okteto/my-image@sha256:ffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
+			expected: "okteto.dev/my-image:okteto",
+		},
+		{
+			name:     "is expanded global image with tag",
+			input:    "registry.test.dev.okteto.net/okteto/my-image:ffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
+			expected: "okteto.dev/my-image:okteto",
+		},
+		{
+			name:     "is expanded dev image with tag",
+			input:    "registry.test.dev.okteto.net/my-ns/my-image:ffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
+			expected: "",
+		},
+		{
+			name:     "is expanded dev image with sha",
+			input:    "registry.test.dev.okteto.net/my-ns/my-image@sha256:ffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
+			expected: "",
+		},
 	}
 
 	for _, tt := range tests {
+		config := fakeImageConfig{
+			registryURL: "registry.test.dev.okteto.net",
+			globalNs:    "okteto",
+		}
 		t.Run(tt.name, func(t *testing.T) {
-			got := GetDevTagFromGlobal(tt.input)
+			imageCtrl := ImageCtrl{
+				config:           config,
+				registryReplacer: NewRegistryReplacer(config),
+			}
+			got := imageCtrl.GetDevTagFromGlobal(tt.input)
 			assert.Equal(t, tt.expected, got)
 		})
 	}

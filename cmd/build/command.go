@@ -72,7 +72,7 @@ type registryInterface interface {
 
 	GetRegistryAndRepo(image string) (string, string)
 	GetRepoNameAndTag(repo string) (string, string)
-	CloneGlobalImageToDev(imageWithDigest, tag string) (string, error)
+	CloneGlobalImageToDev(imageWithDigest string) (string, error)
 }
 
 // NewBuildCommand creates a struct to run all build methods

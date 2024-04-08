@@ -70,7 +70,7 @@ services:
     environment:
     - RABBITMQ_PASS
   nginx:
-    image: nginx
+    build: nginx
     volumes:
     - ./nginx/nginx.conf:/tmp/nginx.conf
     command: /bin/bash -c "envsubst < /tmp/nginx.conf > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
@@ -103,7 +103,7 @@ services:
     environment:
     - RABBITMQ_PASS
   nginx:
-    image: nginx
+    build: nginx
     volumes:
     - ./nginx/nginx.conf:/tmp/nginx.conf
     command: /bin/bash -c "envsubst < /tmp/nginx.conf > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
@@ -309,6 +309,10 @@ func createStackWithEndpointsInferredNameScenario(dir string) error {
 		return err
 	}
 
+	if err := createNginxDockerfile(dir); err != nil {
+		return err
+	}
+
 	if err := createAppDockerfile(dir); err != nil {
 		return err
 	}
@@ -371,6 +375,10 @@ func createStackWithEndpointsNameScenario(dir string) error {
 	nginxPath := filepath.Join(dir, "nginx", "nginx.conf")
 	nginxContent := []byte(nginxConf)
 	if err := os.WriteFile(nginxPath, nginxContent, 0600); err != nil {
+		return err
+	}
+
+	if err := createNginxDockerfile(dir); err != nil {
 		return err
 	}
 

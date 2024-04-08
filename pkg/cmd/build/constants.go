@@ -1,4 +1,4 @@
-// Copyright 2023 The Okteto Authors
+// Copyright 2024 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,25 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deploy
+package build
 
-import (
-	"github.com/okteto/okteto/pkg/env"
+const (
+	// DeployOutputModeOnBuild Defines the output mode set to BuildOptions when running a remote deploy
+	DeployOutputModeOnBuild = "deploy"
+	// DestroyOutputModeOnBuild Defines the output mode set to BuildOptions when running a remote destroy
+	DestroyOutputModeOnBuild = "destroy"
 )
-
-func validateAndSet(variables []string, setEnv func(key, value string) error) error {
-	envVars, err := env.Parse(variables)
-	if err != nil {
-		return err
-	}
-	return setOptionVarsAsEnvs(envVars, setEnv)
-}
-
-func setOptionVarsAsEnvs(variables []env.Var, setEnv func(key, value string) error) error {
-	for _, v := range variables {
-		if err := setEnv(v.Name, v.Value); err != nil {
-			return err
-		}
-	}
-	return nil
-}

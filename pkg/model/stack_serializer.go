@@ -290,7 +290,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	s.Volumes = make(map[string]*VolumeSpec)
 	for volumeName, volume := range stackRaw.Volumes {
-		volumeSpec, err := unmarshalVolume(volume)
+		volumeSpec, err := unmarshalVolume(volume, s.IsCompose)
 		if err != nil {
 			return err
 		}
@@ -317,44 +317,51 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func unmarshalVolume(volume *VolumeTopLevel) (*VolumeSpec, error) {
+func unmarshalVolume(volume *VolumeTopLevel, isCompose bool) (*VolumeSpec, error) {
+	result := &VolumeSpec{
+		Labels:      make(Labels),
+		Annotations: make(Annotations),
+	}
 
-	result := &VolumeSpec{}
 	if volume == nil {
-		result.Labels = make(Labels)
-		result.Annotations = make(Annotations)
-	} else {
-		result.Labels = make(Labels)
-		if volume.Annotations == nil {
-			result.Annotations = make(Annotations)
-		} else {
-			result.Annotations = volume.Annotations
-		}
+		return result, nil
+	}
 
+	if isCompose {
+		for key, value := range volume.Annotations {
+			result.Labels[key] = value
+		}
 		for key, value := range volume.Labels {
 			result.Annotations[key] = value
 		}
-
-		if volume.Size.Value.Cmp(resource.MustParse("0")) > 0 {
-			result.Size = volume.Size
+	} else { // stack
+		for key, value := range volume.Annotations {
+			result.Annotations[key] = value
 		}
-		if volume.DriverOpts != nil {
-			for key, value := range volume.DriverOpts {
-				if key == "size" {
-					qK8s, err := resource.ParseQuantity(value)
-					if err != nil {
-						return nil, err
-					}
-					result.Size.Value = qK8s
+		for key, value := range volume.Labels {
+			result.Annotations[key] = value
+		}
+	}
+
+	if volume.Size.Value.Cmp(resource.MustParse("0")) > 0 {
+		result.Size = volume.Size
+	}
+	if volume.DriverOpts != nil {
+		for key, value := range volume.DriverOpts {
+			if key == "size" {
+				qK8s, err := resource.ParseQuantity(value)
+				if err != nil {
+					return nil, err
 				}
-				if key == "class" {
-					result.Class = value
-				}
+				result.Size.Value = qK8s
+			}
+			if key == "class" {
+				result.Class = value
 			}
 		}
-		if result.Class == "" {
-			result.Class = volume.Class
-		}
+	}
+	if result.Class == "" {
+		result.Class = volume.Class
 	}
 
 	return result, nil
@@ -399,11 +406,14 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		translateHealtcheckCurlToHTTP(svc.Healtcheck)
 	}
 
-	svc.Annotations = serviceRaw.Annotations
+	svc.NodeSelector = serviceRaw.NodeSelector
+
+	if svc.Labels == nil {
+		svc.Labels = make(Labels)
+	}
 	if svc.Annotations == nil {
 		svc.Annotations = make(Annotations)
 	}
-	svc.NodeSelector = serviceRaw.NodeSelector
 
 	if stack.IsCompose {
 		if len(serviceRaw.Args.Values) > 0 {
@@ -415,7 +425,9 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		for key, value := range unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy) {
 			svc.Annotations[key] = value
 		}
-
+		for key, value := range serviceRaw.Annotations {
+			svc.Labels[key] = value
+		}
 	} else { // isOktetoStack
 		if len(serviceRaw.Entrypoint.Values) > 0 {
 			return nil, fmt.Errorf("unsupported field for services.%s: 'entrypoint'", svcName)
@@ -428,12 +440,10 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		}
 		svc.Command.Values = serviceRaw.Args.Values
 
-		if svc.Labels == nil {
-			svc.Labels = make(Labels)
-		}
 		for key, value := range unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy) {
 			svc.Labels[key] = value
 		}
+		svc.Annotations = serviceRaw.Annotations
 	}
 
 	svc.EnvFiles = serviceRaw.EnvFiles

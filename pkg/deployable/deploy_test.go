@@ -120,7 +120,7 @@ func TestDeployNotRemovingEnvFile(t *testing.T) {
 	_, err := fs.Create(".env")
 	require.NoError(t, err)
 	params := DeployParameters{}
-	r := Runner{
+	r := DeployRunner{
 		ConfigMapHandler: &fakeCmapHandler{},
 		Fs:               fs,
 	}
@@ -144,7 +144,7 @@ func TestRunDeployWithErrorGettingClient(t *testing.T) {
 	k8sProvider := test.NewFakeK8sProvider()
 	k8sProvider.ErrProvide = assert.AnError
 
-	r := Runner{
+	r := DeployRunner{
 		K8sClientProvider: k8sProvider,
 	}
 
@@ -172,7 +172,7 @@ func TestRunDeployWithErrorModifyingKubeconfig(t *testing.T) {
 
 	kubeconfigHandler.On("Modify", 80, "fake-token", "temp-kubeconfig").Return(assert.AnError)
 
-	r := Runner{
+	r := DeployRunner{
 		K8sClientProvider:  k8sProvider,
 		Proxy:              proxy,
 		Kubeconfig:         kubeconfigHandler,
@@ -210,7 +210,7 @@ func TestRunDeployWithEmptyDeployable(t *testing.T) {
 
 	kubeconfigHandler.On("Modify", 80, "fake-token", "temp-kubeconfig").Return(nil)
 
-	r := Runner{
+	r := DeployRunner{
 		K8sClientProvider:  k8sProvider,
 		Proxy:              proxy,
 		Kubeconfig:         kubeconfigHandler,
@@ -250,7 +250,7 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 		CurrentContext: "test",
 	}
 	executor := &fakeExecutor{}
-	r := Runner{
+	r := DeployRunner{
 		TempKubeconfigFile: "temp-kubeconfig",
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
@@ -308,7 +308,7 @@ func TestRunCommandsSectionWithErrorInCommands(t *testing.T) {
 		CurrentContext: "test",
 	}
 	executor := &fakeExecutor{}
-	r := Runner{
+	r := DeployRunner{
 		TempKubeconfigFile: "temp-kubeconfig",
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
@@ -367,7 +367,7 @@ func TestRunCommandsSectionWithDivert(t *testing.T) {
 	}
 	executor := &fakeExecutor{}
 	divertDeployer := &fakeDivert{}
-	r := Runner{
+	r := DeployRunner{
 		TempKubeconfigFile: "temp-kubeconfig",
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
@@ -411,7 +411,7 @@ func TestRunCommandsSectionWithErrorDeployingDivert(t *testing.T) {
 	}
 	executor := &fakeExecutor{}
 	divertDeployer := &fakeDivert{}
-	r := Runner{
+	r := DeployRunner{
 		TempKubeconfigFile: "temp-kubeconfig",
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
@@ -457,7 +457,7 @@ func TestRunCommandsSectionWithExternal(t *testing.T) {
 	executor := &fakeExecutor{}
 	divertDeployer := &fakeDivert{}
 	externalResource := &fakeExternalResource{}
-	r := Runner{
+	r := DeployRunner{
 		TempKubeconfigFile: "temp-kubeconfig",
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
@@ -521,7 +521,7 @@ func TestRunCommandsSectionWithErrorDeployingExternal(t *testing.T) {
 	executor := &fakeExecutor{}
 	divertDeployer := &fakeDivert{}
 	externalResource := &fakeExternalResource{}
-	r := Runner{
+	r := DeployRunner{
 		TempKubeconfigFile: "temp-kubeconfig",
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
@@ -584,7 +584,7 @@ func TestDeployExternalWithErrorGettingClient(t *testing.T) {
 	k8sProvider := test.NewFakeK8sProvider()
 	k8sProvider.ErrProvide = assert.AnError
 
-	r := Runner{
+	r := DeployRunner{
 		K8sClientProvider: k8sProvider,
 	}
 
@@ -613,7 +613,7 @@ func TestDeployExternalWithErrorGettingClient(t *testing.T) {
 func TestCleaUp(t *testing.T) {
 	executor := &fakeExecutor{}
 	proxy := &fakeProxy{}
-	r := Runner{
+	r := DeployRunner{
 		Executor:           executor,
 		Proxy:              proxy,
 		TempKubeconfigFile: "temp-kubeconfig",
