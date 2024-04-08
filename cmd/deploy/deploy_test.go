@@ -250,18 +250,6 @@ func (f *fakeDeployer) CleanUp(ctx context.Context, err error) {
 	f.Called(ctx, err)
 }
 
-type fakeAnalyticsTracker struct{}
-
-func (fakeAnalyticsTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
-
-type fakeEventTracker struct {
-	err error
-}
-
-func (f *fakeEventTracker) Track(context.Context, *analytics.ImageBuildMetadata) error {
-	return f.err
-}
-
 func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 	okteto.CurrentStore = &okteto.ContextStore{
 		Contexts: map[string]*okteto.Context{
@@ -351,12 +339,6 @@ func TestDeployWithServicesToBuildWithoutComposeSection(t *testing.T) {
 	assert.ErrorIs(t, err, oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose)
 	// Verify the deploy phase is not even reached
 	fakeDeployer.AssertNotCalled(t, "Get")
-}
-
-type fakeBuildEventTracker struct{}
-
-func (f *fakeBuildEventTracker) Track(context.Context, *analytics.ImageBuildMetadata) error {
-	return nil
 }
 
 func TestCreateConfigMapWithBuildError(t *testing.T) {

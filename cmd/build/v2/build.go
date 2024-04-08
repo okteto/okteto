@@ -63,10 +63,6 @@ type oktetoBuilderConfigInterface interface {
 	GetAnonymizedRepo() string
 }
 
-type analyticsTrackerInterface interface {
-	TrackImageBuild(meta ...*analytics.ImageBuildMetadata)
-}
-
 // OktetoBuilder builds the images
 type OktetoBuilder struct {
 	basic.Builder

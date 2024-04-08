@@ -39,7 +39,7 @@ func TestConvertImageBuildMetadataToEvent(t *testing.T) {
 		BuildDuration: time.Duration(5) * time.Second,
 	}
 
-	publisher := &InsightsPublisher{}
+	publisher := &Publisher{}
 	expectedEvent := buildEventJSON{
 		DevenvName:    "test-devenv",
 		ImageName:     "test-image",
@@ -67,7 +67,7 @@ func TestTrackImageBuild(t *testing.T) {
 		},
 	}
 
-	ip := &InsightsPublisher{
+	ip := &Publisher{
 		ioCtrl:            *io.NewIOController(),
 		k8sClientProvider: test.NewFakeK8sProvider(),
 	}

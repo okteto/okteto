@@ -33,7 +33,7 @@ type buildEventJSON struct {
 }
 
 // TrackImageBuild tracks an image build event
-func (ip *InsightsPublisher) TrackImageBuild(ctx context.Context, meta *analytics.ImageBuildMetadata) {
+func (ip *Publisher) TrackImageBuild(ctx context.Context, meta *analytics.ImageBuildMetadata) {
 	eventJSON, err := json.Marshal(ip.convertImageBuildMetadataToEvent(meta))
 	if err != nil {
 		ip.ioCtrl.Logger().Infof("failed to marshal event metadata: %s", err)
@@ -43,7 +43,7 @@ func (ip *InsightsPublisher) TrackImageBuild(ctx context.Context, meta *analytic
 }
 
 // convertImageBuildMetadataToEvent converts an ImageBuildMetadata to a buildEventJSON
-func (*InsightsPublisher) convertImageBuildMetadataToEvent(metadata *analytics.ImageBuildMetadata) buildEventJSON {
+func (*Publisher) convertImageBuildMetadataToEvent(metadata *analytics.ImageBuildMetadata) buildEventJSON {
 	return buildEventJSON{
 		DevenvName:    metadata.DevenvName,
 		ImageName:     metadata.Name,

@@ -24,7 +24,6 @@ import (
 	"github.com/okteto/okteto/cmd/build/basic"
 	"github.com/okteto/okteto/cmd/build/v2/smartbuild"
 	"github.com/okteto/okteto/internal/test"
-	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -149,22 +148,6 @@ func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string) { retur
 func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)   { return "", "" }
 func (fr fakeRegistry) CloneGlobalImageToDev(_ string) (string, error) {
 	return "", nil
-}
-
-type fakeAnalyticsTracker struct {
-	metaPayload []*analytics.ImageBuildMetadata
-}
-
-func (a *fakeAnalyticsTracker) TrackImageBuild(meta ...*analytics.ImageBuildMetadata) {
-	a.metaPayload = meta
-}
-
-type fakeEventTracker struct {
-	err error
-}
-
-func (f *fakeEventTracker) Track(context.Context, *analytics.ImageBuildMetadata) error {
-	return f.err
 }
 
 func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistryInterface, cfg oktetoBuilderConfigInterface) *OktetoBuilder {

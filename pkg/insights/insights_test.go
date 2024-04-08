@@ -49,7 +49,7 @@ func TestInsightsPublisher_trackEvent(t *testing.T) {
 			},
 		},
 	}
-	ip := &InsightsPublisher{
+	ip := &Publisher{
 		k8sClientProvider: test.NewFakeK8sProvider(),
 		ioCtrl:            io.Controller{},
 	}
