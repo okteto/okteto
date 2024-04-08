@@ -1413,6 +1413,7 @@ func TestRead(t *testing.T) {
 				Context:      "",
 				Icon:         "",
 				ManifestPath: "",
+				Test:         ManifestTests{},
 				Deploy: &DeployInfo{
 					Endpoints: nil,
 					Image:     "",
@@ -1444,6 +1445,7 @@ func TestRead(t *testing.T) {
 				Context:      "",
 				Icon:         "",
 				ManifestPath: "",
+				Test:         ManifestTests{},
 				Deploy: &DeployInfo{
 					Endpoints: nil,
 					Image:     "",

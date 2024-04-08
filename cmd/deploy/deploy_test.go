@@ -231,7 +231,7 @@ func getFakeEndpoint(_ *io.K8sLogger) (EndpointGetter, error) {
 func (f *fakeDeployer) Get(ctx context.Context,
 	opts *Options,
 	buildEnvVarsGetter buildEnvVarsGetter,
-	cmapHandler configMapHandler,
+	cmapHandler ConfigMapHandler,
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	ioCtrl *io.Controller,
 	k8Logger *io.K8sLogger,
@@ -331,7 +331,7 @@ func TestDeployWithServicesToBuildWithoutComposeSection(t *testing.T) {
 		Name:             "movies",
 		ManifestPath:     "",
 		Variables:        []string{},
-		servicesToDeploy: []string{"service1"},
+		ServicesToDeploy: []string{"service1"},
 	}
 
 	err := c.Run(ctx, opts)
@@ -1029,9 +1029,7 @@ func TestGetDependencyEnvVars(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			dc := &Command{}
-
-			result := dc.getDependencyEnvVars(tc.environGetter)
+			result := GetDependencyEnvVars(tc.environGetter)
 
 			require.Equal(t, tc.expected, result)
 		})

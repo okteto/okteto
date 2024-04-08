@@ -1254,6 +1254,7 @@ sync:
 				Dependencies:  map[string]*deps.Dependency{},
 				External:      externalresource.Section{},
 				GlobalForward: []forward.GlobalForward{},
+				Test:          ManifestTests{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1341,6 +1342,7 @@ services:
 				Dependencies:  map[string]*deps.Dependency{},
 				GlobalForward: []forward.GlobalForward{},
 				External:      externalresource.Section{},
+				Test:          ManifestTests{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
