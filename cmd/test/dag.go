@@ -15,8 +15,8 @@ package test
 import "github.com/okteto/okteto/pkg/model"
 
 type Node struct {
-	Name string
 	Test *model.Test
+	Name string
 }
 
 func (n Node) ID() string          { return n.Name }

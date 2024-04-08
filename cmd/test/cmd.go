@@ -19,9 +19,6 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/spf13/afero"
-	"github.com/spf13/cobra"
-
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	deployCMD "github.com/okteto/okteto/cmd/deploy"
@@ -41,6 +38,8 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/remote"
+	"github.com/spf13/afero"
+	"github.com/spf13/cobra"
 )
 
 type Options struct {
@@ -48,10 +47,9 @@ type Options struct {
 	ManifestPathFlag string
 	Namespace        string
 	K8sContext       string
+	Name             string
 	Variables        []string
 	Timeout          time.Duration
-
-	Name string
 }
 
 func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at deployCMD.AnalyticsTrackerInterface) *cobra.Command {
@@ -199,7 +197,7 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 	var nodes []dag.Node
 
 	for name, test := range manifest.Test {
-		nodes = append(nodes, Node{name, test})
+		nodes = append(nodes, Node{test, name})
 	}
 
 	tree, err := dag.From(nodes...)
