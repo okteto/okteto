@@ -43,7 +43,7 @@ func TestAllServicesAlreadyBuilt(t *testing.T) {
 		isOkteto: true,
 	}
 	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
-	alreadyBuilt := []string{"test/test-1", "okteto.dev/test-test-2:okteto-with-volume-mounts", "okteto.dev/test-test-3:okteto", "okteto.dev/test-test-4:okteto-with-volume-mounts"}
+	alreadyBuilt := []string{"test/test-1", "test/test-2", "okteto.dev/test-test-3:okteto", "okteto.dev/test-test-4:okteto"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
 	toBuild, err := bc.GetServicesToBuildDuringDeploy(ctx, fakeManifest, []string{})

@@ -236,6 +236,7 @@ func TestDestroyWithErrorDestroyingDependencies(t *testing.T) {
 	err = dc.destroy(ctx, &Options{
 		DestroyDependencies: true,
 		Name:                fakeManifestWithDependencies.Name,
+		Namespace:           "namespace",
 	})
 
 	require.Error(t, err)
@@ -302,7 +303,8 @@ func TestDestroyWithErrorOnCommands(t *testing.T) {
 	}
 
 	err = dc.destroy(ctx, &Options{
-		Name: fakeManifest.Name,
+		Name:      fakeManifest.Name,
+		Namespace: "namespace",
 	})
 
 	require.Error(t, err)
@@ -339,6 +341,7 @@ func TestDestroyWithErrorOnCommandsForcingDestroy(t *testing.T) {
 	err = dc.destroy(ctx, &Options{
 		Name:         fakeManifest.Name,
 		ForceDestroy: true,
+		Namespace:    "namespace",
 	})
 
 	require.ErrorContains(t, err, "error executing command")
@@ -372,7 +375,8 @@ func TestDestroyWithErrorDestroyingK8sResources(t *testing.T) {
 	}
 
 	err = dc.destroy(ctx, &Options{
-		Name: fakeManifest.Name,
+		Name:      fakeManifest.Name,
+		Namespace: "namespace",
 	})
 
 	require.Error(t, err)
