@@ -48,7 +48,7 @@ type phaseJSON struct {
 }
 
 // TrackImageBuild tracks an image build event
-func (ip *InsightsPublisher) TrackDeploy(ctx context.Context, name, namespace string, success bool) {
+func (ip *Publisher) TrackDeploy(ctx context.Context, name, namespace string, success bool) {
 	k8sClient, _, err := ip.k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		ip.ioCtrl.Logger().Infof("could not get k8s client: %s", err)
@@ -84,5 +84,5 @@ func (ip *InsightsPublisher) TrackDeploy(ctx context.Context, name, namespace st
 		ip.ioCtrl.Logger().Infof("could not marshal deploy event: %s", err)
 	}
 
-	ip.TrackEvent(ctx, namespace, deployInsightType, string(eventJSON))
+	ip.trackEvent(ctx, namespace, deployInsightType, string(eventJSON))
 }

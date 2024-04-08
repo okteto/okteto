@@ -467,7 +467,12 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		stage := "Deploying compose"
 		oktetoLog.SetStage(stage)
 		oktetoLog.Information("Running stage '%s'", stage)
+		startTime := time.Now()
 		err := dc.deployStack(ctx, deployOptions)
+		elapsedTime := time.Since(startTime)
+		if addPhaseErr := dc.CfgMapHandler.AddPhaseDuration(ctx, deployOptions.Name, deployOptions.Namespace, "compose", elapsedTime); addPhaseErr != nil {
+			oktetoLog.Info("error adding phase to configmap: %s", err)
+		}
 		if err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying compose: %s", err.Error())
 			return err

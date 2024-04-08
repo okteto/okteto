@@ -208,10 +208,22 @@ func AddPhaseDuration(ctx context.Context, name, namespace, phase string, durati
 			return err
 		}
 	}
-	phases = append(phases, phaseJSON{
-		Name:     phase,
-		Duration: duration.Seconds(),
-	})
+	// If the phase already exists, update the duration
+	updatedPhase := false
+	for idx, p := range phases {
+		if p.Name == phase {
+			phases[idx].Duration = duration.Seconds()
+			updatedPhase = true
+			break
+		}
+	}
+	// If the phase doesn't exist, add it
+	if !updatedPhase {
+		phases = append(phases, phaseJSON{
+			Name:     phase,
+			Duration: duration.Seconds(),
+		})
+	}
 	encodedPhases, err := json.Marshal(phases)
 	if err != nil {
 		return err
