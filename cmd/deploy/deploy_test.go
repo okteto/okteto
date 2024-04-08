@@ -46,6 +46,7 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/clientcmd/api"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -249,15 +250,12 @@ func (f *fakeDeployer) CleanUp(ctx context.Context, err error) {
 	f.Called(ctx, err)
 }
 
-type fakeAnalyticsTracker struct{}
-
-func (fakeAnalyticsTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
-
 func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 	okteto.CurrentStore = &okteto.ContextStore{
 		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
+				Cfg:       &api.Config{},
 			},
 		},
 		CurrentContext: "test",
@@ -288,6 +286,7 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
+				Cfg:       &api.Config{},
 			},
 		},
 		CurrentContext: "test",
@@ -317,6 +316,7 @@ func TestDeployWithServicesToBuildWithoutComposeSection(t *testing.T) {
 		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
+				Cfg:       &api.Config{},
 			},
 		},
 		CurrentContext: "test",
@@ -352,21 +352,22 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 
 	reg := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(reg)
-	fakeTracker := fakeAnalyticsTracker{}
-
 	okCtx := &okteto.ContextStateless{
 		Store: &okteto.ContextStore{
 			Contexts: map[string]*okteto.Context{
 				"test": {
 					Namespace: "test",
+					Cfg:       &api.Config{},
 				},
 			},
 			CurrentContext: "test",
 		},
 	}
+
+	builderV2 := buildv2.NewBuilder(builder, reg, io.NewIOController(), okCtx, io.NewK8sLogger(), []buildv2.OnBuildFinish{})
 	c := &Command{
 		GetManifest:       getErrorManifest,
-		Builder:           buildv2.NewBuilder(builder, reg, io.NewIOController(), fakeTracker, okCtx, nil),
+		Builder:           builderV2,
 		K8sClientProvider: fakeK8sClientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                afero.NewMemMapFs(),
@@ -430,6 +431,7 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
+				Cfg:       &api.Config{},
 			},
 		},
 		CurrentContext: "test",
@@ -513,6 +515,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
+				Cfg:       &api.Config{},
 			},
 		},
 		CurrentContext: "test",
@@ -560,6 +563,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		Contexts: map[string]*okteto.Context{
 			"test": {
 				Namespace: "test",
+				Cfg:       &api.Config{},
 			},
 		},
 		CurrentContext: "test",
@@ -670,6 +674,7 @@ func TestDeployDependencies(t *testing.T) {
 			"test": {
 				Namespace: "test",
 				IsOkteto:  true,
+				Cfg:       &api.Config{},
 			},
 		},
 		CurrentContext: "test",
@@ -754,6 +759,7 @@ func TestDeployOnlyDependencies(t *testing.T) {
 					"test": {
 						Namespace: "test",
 						IsOkteto:  tc.isOkteto,
+						Cfg:       &api.Config{},
 					},
 				},
 				CurrentContext: "test",
@@ -768,8 +774,8 @@ func TestDeployOnlyDependencies(t *testing.T) {
 
 type fakeTracker struct{}
 
-func (*fakeTracker) TrackDeploy(analytics.DeployMetadata)             {}
-func (*fakeTracker) TrackImageBuild(...*analytics.ImageBuildMetadata) {}
+func (*fakeTracker) TrackImageBuild(context.Context, *analytics.ImageBuildMetadata) {}
+func (*fakeTracker) TrackDeploy(analytics.DeployMetadata)                           {}
 
 func TestTrackDeploy(t *testing.T) {
 	tt := []struct {

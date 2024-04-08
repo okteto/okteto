@@ -72,9 +72,14 @@ const (
 	onDeleteUpdateStrategy updateStrategy = "on-delete"
 )
 
-func buildStackImages(ctx context.Context, s *model.Stack, options *DeployOptions, analyticsTracker analyticsTrackerInterface, ioCtrl *io.Controller) error {
+func buildStackImages(ctx context.Context, s *model.Stack, options *DeployOptions, analyticsTracker, insights buildTrackerInterface, ioCtrl *io.Controller) error {
 	manifest := model.NewManifestFromStack(s)
-	builder := buildv2.NewBuilderFromScratch(analyticsTracker, ioCtrl)
+
+	onBuildFinish := []buildv2.OnBuildFinish{
+		analyticsTracker.TrackImageBuild,
+		insights.TrackImageBuild,
+	}
+	builder := buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish)
 	if options.ForceBuild {
 		buildOptions := &types.BuildOptions{
 			Manifest:    manifest,

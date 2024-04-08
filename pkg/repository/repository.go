@@ -38,6 +38,7 @@ type repositoryInterface interface {
 	getSHA() (string, error)
 	GetLatestDirSHA(string) (string, error)
 	GetDiffHash(string) (string, error)
+	getRepoURL() (string, error)
 }
 
 type repositoryURL struct {
@@ -51,7 +52,7 @@ func (r repositoryURL) String() string {
 	return repo.String()
 }
 
-func getURLFromPath(path string) repositoryURL {
+func newGitURL(path string) repositoryURL {
 	url, err := giturls.Parse(path)
 	if err != nil {
 		oktetoLog.Infof("could not parse url: %s", err)
@@ -64,17 +65,20 @@ func getURLFromPath(path string) repositoryURL {
 
 // NewRepository creates a repository controller
 func NewRepository(path string) Repository {
-	repoURL := getURLFromPath(path)
-
 	var controller repositoryInterface = newGitRepoController(path)
 	// check if we are inside a remote deploy
 	if v := os.Getenv(constants.OktetoDeployRemote); v != "" {
 		sha := os.Getenv(constants.OktetoGitCommitEnvVar)
-		controller = newOktetoRemoteRepoController(sha)
+		controller = newOktetoRemoteRepoController(sha, path)
 	}
+	repoURL, err := controller.getRepoURL()
+	if err != nil {
+		oktetoLog.Infof("could not get repo url: %s", err)
+	}
+	url := newGitURL(repoURL)
 	return Repository{
 		path:    path,
-		url:     &repoURL,
+		url:     &url,
 		control: controller,
 	}
 }

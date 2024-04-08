@@ -22,12 +22,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type analyticsTrackerInterface interface {
-	TrackImageBuild(...*analytics.ImageBuildMetadata)
+type buildTrackerInterface interface {
+	TrackImageBuild(context.Context, *analytics.ImageBuildMetadata)
 }
 
 // Stack stack management commands
-func Stack(ctx context.Context, at analyticsTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
+func Stack(ctx context.Context, at buildTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "stack",
 		Short:  "Stack management commands",

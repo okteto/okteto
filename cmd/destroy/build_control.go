@@ -31,9 +31,13 @@ type buildCtrl struct {
 	name    string
 }
 
-func newBuildCtrl(name string, analyticsTracker analyticsTrackerInterface, ioCtrl *io.Controller) buildCtrl {
+func newBuildCtrl(name string, analyticsTracker, insights buildTrackerInterface, ioCtrl *io.Controller) buildCtrl {
+	onBuildFinish := []buildv2.OnBuildFinish{
+		analyticsTracker.TrackImageBuild,
+		insights.TrackImageBuild,
+	}
 	return buildCtrl{
-		builder: buildv2.NewBuilderFromScratch(analyticsTracker, ioCtrl),
+		builder: buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish),
 		name:    name,
 	}
 }

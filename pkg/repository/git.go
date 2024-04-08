@@ -23,6 +23,7 @@ import (
 	"sort"
 	"time"
 
+	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -77,6 +78,42 @@ func (r gitRepoController) calculateIsClean(ctx context.Context) (bool, error) {
 	}
 
 	return status.IsClean(), nil
+}
+
+func (r gitRepoController) getRepoURL() (string, error) {
+	url, err := giturls.Parse(r.path)
+	if err != nil {
+		oktetoLog.Infof("could not parse url: %s", err)
+	}
+	if url.Scheme != "file" {
+		return url.String(), nil
+	}
+
+	repo, err := git.PlainOpen(r.path)
+	if err != nil {
+		return "", fmt.Errorf("failed to analyze git repo: %w", err)
+	}
+	origin, err := repo.Remote("origin")
+	if err != nil {
+		if err != git.ErrRemoteNotFound {
+			return "", fmt.Errorf("failed to get the git repo's remote configuration: %w", err)
+		}
+	}
+
+	if origin != nil {
+		return origin.Config().URLs[0], nil
+	}
+
+	remotes, err := repo.Remotes()
+	if err != nil {
+		return "", fmt.Errorf("failed to get git repo's remote information: %w", err)
+	}
+
+	if len(remotes) == 0 {
+		return "", fmt.Errorf("git repo doesn't have any remote")
+	}
+
+	return remotes[0].Config().URLs[0], nil
 }
 
 // isClean checks if the repository have changes over the commit

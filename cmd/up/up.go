@@ -92,7 +92,7 @@ type Options struct {
 }
 
 // Up starts a development container
-func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Up(at analyticsTrackerInterface, insights buildTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
 	upOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:   "up [service]",
@@ -253,6 +253,11 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 				}
 			}
 
+			onBuildFinish := []buildv2.OnBuildFinish{
+				at.TrackImageBuild,
+				insights.TrackImageBuild,
+			}
+
 			up := &upContext{
 				Manifest:          oktetoManifest,
 				Dev:               nil,
@@ -266,7 +271,7 @@ func Up(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLo
 				analyticsMeta:     upMeta,
 				K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
 				tokenUpdater:      newTokenUpdaterController(),
-				builder:           buildv2.NewBuilderFromScratch(at, ioCtrl),
+				builder:           buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {

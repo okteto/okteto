@@ -99,7 +99,7 @@ func Test_SetServiceEnvVars(t *testing.T) {
 			fakeConfig := fakeConfig{
 				isOkteto: true,
 			}
-			bc := NewFakeBuilder(nil, registry, fakeConfig, &fakeAnalyticsTracker{})
+			bc := NewFakeBuilder(nil, registry, fakeConfig)
 			bc.SetServiceEnvVars(tt.input.service, tt.input.reference)
 
 			registryEnvValue := os.Getenv(registryEnv)
@@ -127,7 +127,7 @@ func TestExpandStackVariables(t *testing.T) {
 
 	err := registry.AddImageByName("okteto.global/test-test:5f2d51f7ce48b2d3396d2a38c8e7f2010234d3e6c2c17566f93f9c27532037d5")
 	require.NoError(t, err)
-	bc := NewFakeBuilder(builder, registry, fakeConfig, &fakeAnalyticsTracker{})
+	bc := NewFakeBuilder(builder, registry, fakeConfig)
 	stack := &model.Stack{
 		Services: map[string]*model.Service{
 			"test": {

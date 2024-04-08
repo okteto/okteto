@@ -41,6 +41,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/insights"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
@@ -50,10 +51,9 @@ import (
 	"github.com/spf13/pflag"
 	generateFigSpec "github.com/withfig/autocomplete-tools/packages/cobra"
 	utilRuntime "k8s.io/apimachinery/pkg/util/runtime"
-	// Load the different library for authentication
-	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/azure" // Load the different library for authentication
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"   // Load the different library for authentication
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"  // Load the different library for authentication
 )
 
 func init() {
@@ -148,6 +148,9 @@ func main() {
 	}
 
 	okClientProvider := okteto.NewOktetoClientProvider()
+	k8sClientProvider := okteto.NewK8sClientProvider()
+
+	insights := insights.NewInsightsPublisher(k8sClientProvider, *ioController)
 	at := analytics.NewAnalyticsTracker()
 
 	root.AddCommand(cmd.Analytics())
@@ -160,11 +163,11 @@ func main() {
 	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
 	root.AddCommand(registrytoken.RegistryToken(ctx))
 
-	root.AddCommand(build.Build(ctx, ioController, at, k8sLogger))
+	root.AddCommand(build.Build(ctx, ioController, at, insights, k8sLogger))
 
 	root.AddCommand(namespace.Namespace(ctx, k8sLogger))
-	root.AddCommand(cmd.Init(at, ioController))
-	root.AddCommand(up.Up(at, ioController, k8sLogger))
+	root.AddCommand(cmd.Init(at, insights, ioController))
+	root.AddCommand(up.Up(at, insights, ioController, k8sLogger))
 	root.AddCommand(cmd.Down(k8sLogger))
 	root.AddCommand(cmd.Status())
 	root.AddCommand(cmd.Doctor(k8sLogger))
@@ -172,8 +175,8 @@ func main() {
 	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
 	root.AddCommand(cmd.UpdateDeprecated())
-	root.AddCommand(deploy.Deploy(ctx, at, ioController, k8sLogger))
-	root.AddCommand(destroy.Destroy(ctx, at, ioController, k8sLogger))
+	root.AddCommand(deploy.Deploy(ctx, at, insights, ioController, k8sLogger))
+	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger))
 	root.AddCommand(deploy.Endpoints(ctx, k8sLogger))
 	root.AddCommand(logs.Logs(ctx, k8sLogger))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
