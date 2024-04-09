@@ -26,9 +26,9 @@ type buildEventJSON struct {
 	ImageName     string  `json:"image_name"`
 	Namespace     string  `json:"namespace"`
 	Repository    string  `json:"repository"`
-	SchemaVersion string  `json:"schemaVersion"`
+	SchemaVersion string  `json:"schema_version"`
 	Duration      float64 `json:"duration"`
-	SmartBuildHit bool    `json:"smartBuildHit"`
+	SmartBuildHit bool    `json:"smart_build_hit"`
 	Success       bool    `json:"success"`
 }
 
