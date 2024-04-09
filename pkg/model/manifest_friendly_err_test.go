@@ -71,9 +71,9 @@ yaml: some random error
 		},
 		{
 			name:  "yaml errors with heading and link to docs",
-			input: errors.New("yaml: unmarshal errors:\n  line 4: field contest not found in type model.manifestRaw"),
+			input: errors.New("yaml: unmarshal errors:\n  line 4: field kontext not found in type model.manifestRaw"),
 			expected: `your okteto manifest is not valid, please check the following errors:
-     - line 4: field 'contest' is not a property of the okteto manifest. Did you mean "context"?
+     - line 4: field 'kontext' is not a property of the okteto manifest. Did you mean "context"?
     Check out the okteto manifest docs at: https://www.okteto.com/docs/reference/okteto-manifest`,
 		},
 	}

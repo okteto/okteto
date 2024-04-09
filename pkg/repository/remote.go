@@ -38,7 +38,7 @@ func (or oktetoRemoteRepoController) getSHA() (string, error) {
 	return or.gitCommit, nil
 }
 
-func (or oktetoRemoteRepoController) GetLatestDirCommit(string) (string, error) {
+func (or oktetoRemoteRepoController) GetLatestDirSHA(string) (string, error) {
 	return "", fmt.Errorf("not-implemented")
 }
 

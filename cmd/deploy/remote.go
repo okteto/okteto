@@ -89,7 +89,7 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		External: deployOptions.Manifest.External,
 	}
 
-	commandsFlags, err := getCommandFlags(deployOptions)
+	commandsFlags, err := GetCommandFlags(deployOptions.Name, deployOptions.Variables)
 	if err != nil {
 		return err
 	}
@@ -127,12 +127,12 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 	return nil
 }
 
-func getCommandFlags(opts *Options) ([]string, error) {
+func GetCommandFlags(name string, vars []string) ([]string, error) {
 	var commandFlags []string
-	commandFlags = append(commandFlags, fmt.Sprintf("--name %q", opts.Name))
-	if len(opts.Variables) > 0 {
+	commandFlags = append(commandFlags, fmt.Sprintf("--name %q", name))
+	if len(vars) > 0 {
 		var varsToAddForDeploy []string
-		variables, err := env.Parse(opts.Variables)
+		variables, err := env.Parse(vars)
 		if err != nil {
 			return nil, err
 		}

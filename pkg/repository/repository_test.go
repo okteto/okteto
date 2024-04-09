@@ -59,7 +59,7 @@ func (fr fakeRepository) Head() (*plumbing.Reference, error) {
 	return fr.head, fr.err
 }
 
-func (fr fakeRepository) GetLatestCommit(context.Context, string, string, LocalGitInterface) (string, error) {
+func (fr fakeRepository) GetLatestSHA(context.Context, string, string, LocalGitInterface) (string, error) {
 	return fr.commit, fr.err
 }
 

@@ -106,6 +106,7 @@ type Manifest struct {
 	Icon         string                   `json:"icon,omitempty" yaml:"icon,omitempty"`
 	ManifestPath string                   `json:"-" yaml:"-"`
 	Destroy      *DestroyInfo             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Test         ManifestTests            `json:"test,omitempty" yaml:"test,omitempty"`
 
 	Type          Archetype               `json:"-" yaml:"-"`
 	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
@@ -116,10 +117,14 @@ type Manifest struct {
 // ManifestDevs defines all the dev section
 type ManifestDevs map[string]*Dev
 
+// ManifestTests defines all the test sections
+type ManifestTests map[string]*Test
+
 // NewManifest creates a new empty manifest
 func NewManifest() *Manifest {
 	return &Manifest{
 		Dev:           map[string]*Dev{},
+		Test:          map[string]*Test{},
 		Build:         map[string]*build.Info{},
 		Dependencies:  deps.ManifestSection{},
 		Deploy:        &DeployInfo{},
@@ -412,6 +417,7 @@ func getManifestFromFile(cwd, manifestPath string, fs afero.Fs) (*Manifest, erro
 				},
 			},
 			Dev:   ManifestDevs{},
+			Test:  ManifestTests{},
 			Build: build.ManifestBuild{},
 			IsV2:  true,
 			Fs:    fs,
@@ -513,6 +519,7 @@ func GetInferredManifest(cwd string, fs afero.Fs) (*Manifest, error) {
 				},
 			},
 			Dev:   ManifestDevs{},
+			Test:  ManifestTests{},
 			Build: build.ManifestBuild{},
 			IsV2:  true,
 			Fs:    fs,
@@ -554,6 +561,7 @@ func GetInferredManifest(cwd string, fs afero.Fs) (*Manifest, error) {
 				},
 			},
 			Dev:   ManifestDevs{},
+			Test:  ManifestTests{},
 			Build: build.ManifestBuild{},
 			Fs:    fs,
 		}
@@ -579,6 +587,7 @@ func GetInferredManifest(cwd string, fs afero.Fs) (*Manifest, error) {
 				},
 			},
 			Dev:   ManifestDevs{},
+			Test:  ManifestTests{},
 			Build: build.ManifestBuild{},
 			Fs:    fs,
 		}
@@ -969,6 +978,12 @@ func (manifest *Manifest) ExpandEnvVars() error {
 			if err != nil {
 				return err
 			}
+		}
+	}
+
+	for _, mf := range manifest.Test {
+		if mf.expandEnvVars() != nil {
+			return err
 		}
 	}
 

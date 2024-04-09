@@ -300,7 +300,7 @@ func TestGetSHA(t *testing.T) {
 	}
 }
 
-func TestGetLatestDirCommit(t *testing.T) {
+func TestGetLatestDirSHA(t *testing.T) {
 	type config struct {
 		repositoryGetter *fakeRepositoryGetter
 	}
@@ -371,7 +371,7 @@ func TestGetLatestDirCommit(t *testing.T) {
 					repoGetter: tt.config.repositoryGetter,
 				},
 			}
-			commit, err := repo.GetLatestDirCommit(tt.buildContext)
+			commit, err := repo.GetLatestDirSHA(tt.buildContext)
 			assert.ErrorIs(t, err, tt.expected.err)
 			assert.Equal(t, tt.expected.sha, commit)
 		})

@@ -73,10 +73,8 @@ type Options struct {
 	Name             string
 	Namespace        string
 	K8sContext       string
-	Repository       string
-	Branch           string
 	Variables        []string
-	servicesToDeploy []string
+	ServicesToDeploy []string
 	Timeout          time.Duration
 	Build            bool
 	Dependencies     bool
@@ -95,7 +93,7 @@ type builderInterface interface {
 type getDeployerFunc func(
 	context.Context, *Options,
 	buildEnvVarsGetter,
-	configMapHandler,
+	ConfigMapHandler,
 	okteto.K8sClientProviderWithLogger,
 	*io.Controller,
 	*io.K8sLogger,
@@ -112,10 +110,10 @@ type Command struct {
 	GetDeployer       getDeployerFunc
 	EndpointGetter    func(k8sLogger *io.K8sLogger) (EndpointGetter, error)
 	DeployWaiter      Waiter
-	CfgMapHandler     configMapHandler
+	CfgMapHandler     ConfigMapHandler
 	Fs                afero.Fs
 	PipelineCMD       pipelineCMD.DeployerInterface
-	AnalyticsTracker  analyticsTrackerInterface
+	AnalyticsTracker  AnalyticsTrackerInterface
 	IoCtrl            *io.Controller
 	K8sLogger         *io.K8sLogger
 	insightsTracker   buildDeployTrackerInterface
@@ -126,11 +124,11 @@ type Command struct {
 	// This can probably be improved using context cancellation
 	onCleanUp []cleanUpFunc
 
-	isRemote           bool
-	runningInInstaller bool
+	IsRemote           bool
+	RunningInInstaller bool
 }
 
-type analyticsTrackerInterface interface {
+type AnalyticsTrackerInterface interface {
 	TrackDeploy(dm analytics.DeployMetadata)
 	buildTrackerInterface
 }
@@ -156,7 +154,7 @@ type Deployer interface {
 }
 
 // Deploy deploys the okteto manifest
-func Deploy(ctx context.Context, at analyticsTrackerInterface, insightsTracker buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
 		Use:   "deploy [service...]",
@@ -207,7 +205,7 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, insightsTracker b
 			}
 
 			options.ShowCTA = oktetoLog.IsInteractive()
-			options.servicesToDeploy = args
+			options.ServicesToDeploy = args
 
 			k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
 			pc, err := pipelineCMD.NewCommand()
@@ -228,11 +226,11 @@ func Deploy(ctx context.Context, at analyticsTrackerInterface, insightsTracker b
 				Builder:            buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish),
 				DeployWaiter:       NewDeployWaiter(k8sClientProvider, k8sLogger),
 				EndpointGetter:     NewEndpointGetter,
-				isRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
+				IsRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
 				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider, k8sLogger),
 				Fs:                 afero.NewOsFs(),
 				PipelineCMD:        pc,
-				runningInInstaller: config.RunningInInstaller(),
+				RunningInInstaller: config.RunningInInstaller(),
 				AnalyticsTracker:   at,
 				IoCtrl:             ioCtrl,
 				K8sLogger:          k8sLogger,
@@ -299,7 +297,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		return oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands
 	}
 
-	if len(deployOptions.servicesToDeploy) > 0 && deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection == nil {
+	if len(deployOptions.ServicesToDeploy) > 0 && deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection == nil {
 		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
 
@@ -330,8 +328,8 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		return err
 	}
 
-	if dc.isRemote || dc.runningInInstaller {
-		currentVars, err := dc.CfgMapHandler.getConfigmapVariablesEncoded(ctx, deployOptions.Name, deployOptions.Manifest.Namespace)
+	if dc.IsRemote || dc.RunningInInstaller {
+		currentVars, err := dc.CfgMapHandler.GetConfigmapVariablesEncoded(ctx, deployOptions.Name, deployOptions.Manifest.Namespace)
 		if err != nil {
 			return err
 		}
@@ -359,7 +357,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
 	}
 
-	cfg, err := dc.CfgMapHandler.translateConfigMapAndDeploy(ctx, data)
+	cfg, err := dc.CfgMapHandler.TranslateConfigMapAndDeploy(ctx, data)
 	if err != nil {
 		return err
 	}
@@ -367,7 +365,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	os.Setenv(constants.OktetoNameEnvVar, deployOptions.Name)
 
 	if err := dc.deployDependencies(ctx, deployOptions); err != nil {
-		if errStatus := dc.CfgMapHandler.updateConfigMap(ctx, cfg, data, err); errStatus != nil {
+		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
 			return errStatus
 		}
 		return err
@@ -378,7 +376,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	}
 
 	if err := buildImages(ctx, dc.Builder, deployOptions); err != nil {
-		if errStatus := dc.CfgMapHandler.updateConfigMap(ctx, cfg, data, err); errStatus != nil {
+		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
 			return errStatus
 		}
 		return err
@@ -434,7 +432,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		data.Status = pipeline.DeployedStatus
 	}
 
-	if errStatus := dc.CfgMapHandler.updateConfigMap(ctx, cfg, data, err); errStatus != nil {
+	if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
 		return errStatus
 	}
 
@@ -443,7 +441,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 
 func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) error {
 	// If the command is configured to execute things remotely (--remote, deploy.image or deploy.remote) it should be executed in the remote. If not, it should be executed locally
-	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder.GetBuildEnvVars, dc.CfgMapHandler, dc.K8sClientProvider, dc.IoCtrl, dc.K8sLogger, dc.getDependencyEnvVars)
+	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder.GetBuildEnvVars, dc.CfgMapHandler, dc.K8sClientProvider, dc.IoCtrl, dc.K8sLogger, GetDependencyEnvVars)
 	if err != nil {
 		return err
 	}
@@ -544,7 +542,7 @@ func shouldRunInRemote(opts *Options) bool {
 func GetDeployer(ctx context.Context,
 	opts *Options,
 	buildEnvVarsGetter buildEnvVarsGetter,
-	cmapHandler configMapHandler,
+	cmapHandler ConfigMapHandler,
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	ioCtrl *io.Controller,
 	k8Logger *io.K8sLogger,
@@ -702,7 +700,7 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 		ForceBuild:       false,
 		Wait:             opts.Wait,
 		Timeout:          opts.Timeout,
-		ServicesToDeploy: opts.servicesToDeploy,
+		ServicesToDeploy: opts.ServicesToDeploy,
 		InsidePipeline:   true,
 	}
 
@@ -756,10 +754,10 @@ func (dc *Command) deployEndpoints(ctx context.Context, opts *Options) error {
 	return nil
 }
 
-// getDependencyEnvVars This function gets the variables defined by the dependencies (OKTETO_DEPENDENCY_XXXX)
+// GetDependencyEnvVars This function gets the variables defined by the dependencies (OKTETO_DEPENDENCY_XXXX)
 // deployed before the deploy phase from the environment. This function is here as the command is the one in charge
 // of deploying dependencies and trigger the rest of the deploy phase.
-func (*Command) getDependencyEnvVars(environGetter environGetter) map[string]string {
+func GetDependencyEnvVars(environGetter environGetter) map[string]string {
 	varsParts := 2
 	result := map[string]string{}
 	for _, e := range environGetter() {

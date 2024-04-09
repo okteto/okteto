@@ -201,7 +201,7 @@ func Test_getStructKeys(t *testing.T) {
 				"model.HealthCheck":          {"test", "interval", "timeout", "retries", "start_period", "disable", "x-okteto-liveness", "x-okteto-readiness"},
 				"model.InitContainer":        {"image"},
 				"model.Lifecycle":            {"postStart", "postStop"},
-				"model.Manifest":             {"name", "namespace", "context", "icon", "dev", "build", "dependencies", "external"},
+				"model.Manifest":             {"name", "namespace", "context", "icon", "dev", "build", "dependencies", "external", "test"},
 				"model.Metadata":             {"labels", "annotations"},
 				"model.PersistentVolumeInfo": {"storageClass", "size", "enabled"},
 				"model.Probes":               {"liveness", "readiness", "startup"},
@@ -214,6 +214,7 @@ func Test_getStructKeys(t *testing.T) {
 				"model.Sync":                 {"rescanInterval", "compression", "verbose"},
 				"model.Timeout":              {"default", "resources"},
 				"model.VolumeSpec":           {"labels", "annotations", "class"},
+				"model.Test":                 {"image", "depends_on"},
 			},
 		},
 	}

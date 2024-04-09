@@ -85,7 +85,7 @@ devs:
 		},
 	}
 
-	currentCfg, err := dc.CfgMapHandler.translateConfigMapAndDeploy(ctx, data)
+	currentCfg, err := dc.CfgMapHandler.TranslateConfigMapAndDeploy(ctx, data)
 	if err != nil {
 		t.Fatal("error trying to get configmap from data object")
 	}
@@ -106,7 +106,7 @@ func Test_mergeServicesToDeployFromOptionsAndManifest(t *testing.T) {
 		{
 			name: "no manifest services to deploy",
 			options: &Options{
-				servicesToDeploy: []string{"a", "b"},
+				ServicesToDeploy: []string{"a", "b"},
 				Manifest: &model.Manifest{
 					Deploy: &model.DeployInfo{
 						ComposeSection: &model.ComposeSectionInfo{
@@ -136,7 +136,7 @@ func Test_mergeServicesToDeployFromOptionsAndManifest(t *testing.T) {
 		{
 			name: "both",
 			options: &Options{
-				servicesToDeploy: []string{"from command a", "from command b"},
+				ServicesToDeploy: []string{"from command a", "from command b"},
 				Manifest: &model.Manifest{
 					Deploy: &model.DeployInfo{
 						ComposeSection: &model.ComposeSectionInfo{
@@ -161,7 +161,7 @@ func Test_mergeServicesToDeployFromOptionsAndManifest(t *testing.T) {
 			}
 
 			got := map[string]bool{}
-			for _, service := range test.options.servicesToDeploy {
+			for _, service := range test.options.ServicesToDeploy {
 				got[service] = true
 			}
 

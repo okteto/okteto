@@ -139,7 +139,6 @@ func deploy(ctx context.Context) *cobra.Command {
 
 // ExecuteDeployPipeline executes deploy pipeline given a set of options
 func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
-
 	if err := opts.setDefaults(); err != nil {
 		return fmt.Errorf("could not set default values for options: %w", err)
 	}
