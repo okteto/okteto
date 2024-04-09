@@ -246,7 +246,11 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 
 			go func() {
 				err := c.Run(ctx, options)
-				c.insightsTracker.TrackDeploy(ctx, options.Name, options.Manifest.Namespace, err == nil)
+				namespace := okteto.GetContext().Namespace
+				if options.Manifest != nil {
+					namespace = options.Manifest.Namespace
+				}
+				c.insightsTracker.TrackDeploy(ctx, options.Name, namespace, err == nil)
 				c.trackDeploy(options.Manifest, options.RunInRemote, startTime, err)
 				exit <- err
 			}()
