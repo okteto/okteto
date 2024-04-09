@@ -286,6 +286,8 @@ func TestSetBuildDefaults(t *testing.T) {
 }
 
 func TestUnmarshalInfo(t *testing.T) {
+	t.Setenv("CONTEXT", "testContext")
+	t.Setenv("DOCKERFILE", "dockerfile")
 	tests := []struct {
 		input       string
 		expected    *Info
@@ -335,7 +337,42 @@ secrets:
 				},
 			},
 		},
-
+		{
+			name: "unmarshal struct with expansion",
+			input: `
+name: default
+context: $CONTEXT
+dockerfile: $DOCKERFILE
+target: testTarget
+image: testImage
+cache_from:
+  - test_cache_from
+export_cache:
+  - test_export_cache
+depends_on:
+  - test_depends_on
+secrets:
+  secretName: secretValue`,
+			expected: &Info{
+				Name:       "default",
+				Context:    "testContext",
+				Dockerfile: "dockerfile",
+				Target:     "testTarget",
+				Image:      "testImage",
+				CacheFrom: cache.From{
+					"test_cache_from",
+				},
+				ExportCache: cache.ExportCache{
+					"test_export_cache",
+				},
+				DependsOn: DependsOn{
+					"test_depends_on",
+				},
+				Secrets: Secrets{
+					"secretName": "secretValue",
+				},
+			},
+		},
 		{
 			name:        "error unmarshal string nor struct",
 			input:       "- an string value as list",
