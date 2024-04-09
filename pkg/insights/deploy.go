@@ -47,7 +47,7 @@ type phaseJSON struct {
 	Duration float64 `json:"duration"`
 }
 
-// TrackImageBuild tracks an image build event
+// TrackDeploy tracks an image build event
 func (ip *Publisher) TrackDeploy(ctx context.Context, name, namespace string, success bool) {
 	k8sClient, _, err := ip.k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
