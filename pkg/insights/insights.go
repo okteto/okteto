@@ -54,6 +54,7 @@ func (ip *Publisher) trackEvent(ctx context.Context, namespace, insightType, dat
 	k8sClient, _, err := ip.k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		ip.ioCtrl.Logger().Infof("could not get k8s client: %s", err)
+		return
 	}
 
 	event := &eventsv1.Event{

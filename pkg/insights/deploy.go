@@ -36,7 +36,7 @@ type deployEventJSON struct {
 	DevenvName    string      `json:"devenv_name"`
 	Repository    string      `json:"repository"`
 	Namespace     string      `json:"namespace"`
-	SchemaVersion string      `json:"schemaVersion"`
+	SchemaVersion string      `json:"schema_version"`
 	Phase         []phaseJSON `json:"phases"`
 	Success       bool        `json:"success"`
 }
@@ -52,22 +52,26 @@ func (ip *Publisher) TrackDeploy(ctx context.Context, name, namespace string, su
 	k8sClient, _, err := ip.k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		ip.ioCtrl.Logger().Infof("could not get k8s client: %s", err)
+		return
 	}
 	cfgName := pipeline.TranslatePipelineName(name)
 	cmap, err := configmaps.Get(ctx, cfgName, namespace, k8sClient)
 	if err != nil {
 		ip.ioCtrl.Logger().Infof("could not get pipeline configmap: %s", err)
+		return
 	}
 
 	val, ok := cmap.Data["phases"]
 	// If there is no phases, we don't track the event
 	if !ok {
 		ip.ioCtrl.Logger().Infof("no phases found in pipeline configmap. Skipping event tracking")
+		return
 	}
 
 	var phases []phaseJSON
 	if err := json.Unmarshal([]byte(val), &phases); err != nil {
 		ip.ioCtrl.Logger().Infof("could not unmarshal phases from cmap: %s", err)
+		return
 	}
 
 	deployEvent := &deployEventJSON{
