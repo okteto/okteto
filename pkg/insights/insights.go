@@ -30,6 +30,9 @@ import (
 const (
 	// reportingController represents the controller that is reporting the event
 	reportingController = "cli"
+
+	// insightLabel represents the label used to identify the insights events
+	insightLabel = "events.okteto.com"
 )
 
 // Publisher is a struct that represents the insights publisher
@@ -54,12 +57,16 @@ func (ip *Publisher) trackEvent(ctx context.Context, namespace, insightType, dat
 	k8sClient, _, err := ip.k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		ip.ioCtrl.Logger().Infof("could not get k8s client: %s", err)
+		return
 	}
 
 	event := &eventsv1.Event{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("okteto-%s-", insightType),
 			Namespace:    namespace,
+			Labels: map[string]string{
+				insightLabel: "true",
+			},
 		},
 		EventTime:           metav1.NewMicroTime(time.Now().UTC()),
 		Reason:              fmt.Sprintf("okteto_insights_%s", insightType),

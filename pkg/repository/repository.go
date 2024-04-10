@@ -45,10 +45,19 @@ type repositoryURL struct {
 	url.URL
 }
 
-// String is a custom implementation for the url where User is removed
+// String is a custom implementation for the url where User is removed and the schema is forced to https
 func (r repositoryURL) String() string {
 	repo := r.URL
 	repo.User = nil
+
+	switch repo.Scheme {
+	case "ssh", "http":
+		repo.Scheme = "https"
+	case "https":
+	default:
+		oktetoLog.Infof("retrieved schema for %s - %s", repo, r.Scheme)
+	}
+	repo.Path = strings.TrimSuffix(repo.Path, ".git")
 	return repo.String()
 }
 
