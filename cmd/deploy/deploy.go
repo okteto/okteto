@@ -55,6 +55,7 @@ import (
 const (
 	succesfullyDeployedmsg = "Development environment '%s' successfully deployed"
 	dependencyEnvVarPrefix = "OKTETO_DEPENDENCY_"
+	deployComposePhaseName = "compose"
 )
 
 var (
@@ -414,8 +415,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		}
 		if hasDeployed {
 			if deployOptions.Wait {
-				err := dc.DeployWaiter.wait(ctx, deployOptions)
-				if err != nil {
+				if err := dc.DeployWaiter.wait(ctx, deployOptions); err != nil {
 					return err
 				}
 			}
@@ -472,7 +472,7 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		startTime := time.Now()
 		err := dc.deployStack(ctx, deployOptions)
 		elapsedTime := time.Since(startTime)
-		if addPhaseErr := dc.CfgMapHandler.AddPhaseDuration(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, "compose", elapsedTime); addPhaseErr != nil {
+		if addPhaseErr := dc.CfgMapHandler.AddPhaseDuration(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, deployComposePhaseName, elapsedTime); addPhaseErr != nil {
 			oktetoLog.Info("error adding phase to configmap: %s", err)
 		}
 		if err != nil {
@@ -486,8 +486,7 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		stage := "Endpoints configuration"
 		oktetoLog.SetStage(stage)
 		oktetoLog.Information("Running stage '%s'", stage)
-		err := dc.deployEndpoints(ctx, deployOptions)
-		if err != nil {
+		if err := dc.deployEndpoints(ctx, deployOptions); err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error generating endpoints: %s", err.Error())
 			return err
 		}
