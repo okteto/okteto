@@ -16,6 +16,7 @@ package deployable
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/constants"
@@ -32,10 +33,15 @@ import (
 
 type fakeCmapHandler struct {
 	errUpdatingWithEnvs error
+	errAddingPhase      error
 }
 
 func (f *fakeCmapHandler) UpdateEnvsFromCommands(context.Context, string, string, []string) error {
 	return f.errUpdatingWithEnvs
+}
+
+func (f *fakeCmapHandler) AddPhaseDuration(context.Context, string, string, string, time.Duration) error {
+	return f.errAddingPhase
 }
 
 type fakeKubeconfigHandler struct {
