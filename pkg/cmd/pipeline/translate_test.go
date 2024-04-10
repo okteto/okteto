@@ -285,7 +285,7 @@ func Test_AddPhaseDuration(t *testing.T) {
 			Namespace: namespace,
 		},
 		Data: map[string]string{
-			phasesField: encodePhases(existingPhases),
+			PhasesField: encodePhases(existingPhases),
 		},
 	}
 	_, err := c.CoreV1().ConfigMaps(namespace).Create(ctx, existingCmap, metav1.CreateOptions{})
@@ -297,7 +297,7 @@ func Test_AddPhaseDuration(t *testing.T) {
 	// Verify that the phase duration is updated
 	updatedCmap, err := c.CoreV1().ConfigMaps(namespace).Get(ctx, TranslatePipelineName(name), metav1.GetOptions{})
 	assert.NoError(t, err)
-	updatedPhases := decodePhases(updatedCmap.Data[phasesField])
+	updatedPhases := decodePhases(updatedCmap.Data[PhasesField])
 	assert.Equal(t, len(existingPhases), len(updatedPhases))
 	for _, p := range updatedPhases {
 		if p.Name == phase {
@@ -313,7 +313,7 @@ func Test_AddPhaseDuration(t *testing.T) {
 
 	updatedCmap, err = c.CoreV1().ConfigMaps(namespace).Get(ctx, TranslatePipelineName(name), metav1.GetOptions{})
 	assert.NoError(t, err)
-	updatedPhases = decodePhases(updatedCmap.Data[phasesField])
+	updatedPhases = decodePhases(updatedCmap.Data[PhasesField])
 	assert.Equal(t, len(existingPhases)+1, len(updatedPhases))
 	found := false
 	for _, p := range updatedPhases {

@@ -20,6 +20,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/repository"
 )
 
 const (
@@ -61,7 +62,7 @@ func (ip *Publisher) TrackDeploy(ctx context.Context, name, namespace string, su
 		return
 	}
 
-	val, ok := cmap.Data["phases"]
+	val, ok := cmap.Data[pipeline.PhasesField]
 	// If there is no phases, we don't track the event
 	if !ok {
 		ip.ioCtrl.Logger().Infof("no phases found in pipeline configmap. Skipping event tracking")
@@ -74,9 +75,11 @@ func (ip *Publisher) TrackDeploy(ctx context.Context, name, namespace string, su
 		return
 	}
 
+	repo := cmap.Data["repository"]
+
 	deployEvent := &deployEventJSON{
 		DevenvName:    name,
-		Repository:    cmap.Data["repository"],
+		Repository:    repository.NewRepository(repo).GetAnonymizedRepo(),
 		Namespace:     namespace,
 		Phase:         phases,
 		Success:       success,

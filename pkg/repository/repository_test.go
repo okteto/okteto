@@ -257,7 +257,7 @@ func Test_GetAnonymizedRepo(t *testing.T) {
 						User:   url.User("git"),
 					},
 				}},
-			expected: "ssh://github.com/okteto/okteto.git",
+			expected: "https://github.com/okteto/okteto",
 		},
 		{
 			name: "https repo with credentials",
@@ -282,19 +282,65 @@ func Test_GetAnonymizedRepo(t *testing.T) {
 	}
 }
 
-func Test_String(t *testing.T) {
-	r := &repositoryURL{
-		url.URL{
-			Scheme: "http",
-			Host:   "okteto.com",
-			Path:   "docs",
-			User:   url.UserPassword("test", "password"),
+func TestRepositoryURL_String(t *testing.T) {
+	tests := []struct {
+		name     string
+		url      repositoryURL
+		expected string
+	}{
+		{
+			name: "http scheme",
+			url: repositoryURL{
+				URL: url.URL{
+					Scheme: "http",
+					Host:   "okteto.com",
+					Path:   "docs",
+					User:   url.UserPassword("test", "password"),
+				},
+			},
+			expected: "https://okteto.com/docs",
+		},
+		{
+			name: "https scheme",
+			url: repositoryURL{
+				URL: url.URL{
+					Scheme: "https",
+					Host:   "okteto.com",
+					Path:   "docs",
+					User:   url.UserPassword("test", "password"),
+				},
+			},
+			expected: "https://okteto.com/docs",
+		},
+		{
+			name: "ssh scheme",
+			url: repositoryURL{
+				URL: url.URL{
+					Scheme: "ssh",
+					Host:   "okteto.com",
+					Path:   "docs",
+					User:   url.UserPassword("test", "password"),
+				},
+			},
+			expected: "https://okteto.com/docs",
+		},
+		{
+			name: "git scheme",
+			url: repositoryURL{
+				URL: url.URL{
+					Scheme: "ssh",
+					Host:   "okteto.com",
+					Path:   "okteto/okteto.git",
+				},
+			},
+			expected: "https://okteto.com/okteto/okteto",
 		},
 	}
 
-	expected := "http://okteto.com/docs"
-	got := r.String()
-
-	assert.Equal(t, expected, got)
-	assert.NotNil(t, r.URL.User)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.url.String()
+			assert.Equal(t, tt.expected, got)
+		})
+	}
 }

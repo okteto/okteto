@@ -84,7 +84,8 @@ func TestTrackDeploy(t *testing.T) {
 						Namespace: "test-namespace",
 					},
 					Data: map[string]string{
-						"phases": "[{\"name\":\"commands\",\"duration\":1.0},{\"name\":\"build\",\"duration\":2.0}]",
+						"phases":     "[{\"name\":\"commands\",\"duration\":1.0},{\"name\":\"build\",\"duration\":2.0}]",
+						"repository": "https://test-repo.com",
 					},
 				},
 			},
@@ -119,7 +120,7 @@ func TestTrackDeploy(t *testing.T) {
 				require.Equal(t, "deploy", e.Action)
 				require.Equal(t, "Normal", e.Type)
 				require.Equal(t, "okteto_insights_deploy", e.Reason)
-				require.Equal(t, `{"devenv_name":"test","repository":"","namespace":"test-namespace","schema_version":"1.0","phases":[{"name":"commands","duration":1},{"name":"build","duration":2}],"success":true}`, e.Note)
+				require.Equal(t, `{"devenv_name":"test","repository":"https://test-repo.com","namespace":"test-namespace","schema_version":"1.0","phases":[{"name":"commands","duration":1},{"name":"build","duration":2}],"success":true}`, e.Note)
 				require.Equal(t, "test-namespace", e.Namespace)
 				require.Equal(t, "cli", e.ReportingController)
 			}

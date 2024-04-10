@@ -37,6 +37,10 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+const (
+	deployCommandsPhaseName = "commands"
+)
+
 // DivertDeployer defines the operations to deploy the divert section of a deployable
 type DivertDeployer interface {
 	Deploy(ctx context.Context) error
@@ -293,7 +297,7 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 			err := r.Executor.Execute(command, params.Variables)
 			if err != nil {
 				elapsedTime := time.Since(startTime)
-				if err := r.ConfigMapHandler.AddPhaseDuration(ctx, params.Name, params.Namespace, "commands", elapsedTime); err != nil {
+				if err := r.ConfigMapHandler.AddPhaseDuration(ctx, params.Name, params.Namespace, deployCommandsPhaseName, elapsedTime); err != nil {
 					oktetoLog.Info("error adding phase to configmap: %s", err)
 				}
 				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
@@ -320,7 +324,7 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 			oktetoLog.SetLevel("")
 		}
 		elapsedTime := time.Since(startTime)
-		if err := r.ConfigMapHandler.AddPhaseDuration(ctx, params.Name, params.Namespace, "commands", elapsedTime); err != nil {
+		if err := r.ConfigMapHandler.AddPhaseDuration(ctx, params.Name, params.Namespace, deployCommandsPhaseName, elapsedTime); err != nil {
 			oktetoLog.Info("error adding phase to configmap: %s", err)
 		}
 	}

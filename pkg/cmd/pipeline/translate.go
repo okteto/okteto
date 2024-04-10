@@ -53,7 +53,7 @@ const (
 	actionLockField = "actionLock"
 	actionNameField = "actionName"
 	variablesField  = "variables"
-	phasesField     = "phases"
+	PhasesField     = "phases"
 
 	actionDefaultName = "cli"
 
@@ -201,7 +201,7 @@ func AddPhaseDuration(ctx context.Context, name, namespace, phase string, durati
 	if err != nil {
 		return err
 	}
-	val, ok := cmap.Data[phasesField]
+	val, ok := cmap.Data[PhasesField]
 	phases := []phaseJSON{}
 	if ok {
 		if err := json.Unmarshal([]byte(val), &phases); err != nil {
@@ -228,7 +228,7 @@ func AddPhaseDuration(ctx context.Context, name, namespace, phase string, durati
 	if err != nil {
 		return err
 	}
-	cmap.Data[phasesField] = string(encodedPhases)
+	cmap.Data[PhasesField] = string(encodedPhases)
 	return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
 }
 
