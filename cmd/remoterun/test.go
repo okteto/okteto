@@ -17,13 +17,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
-	"time"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils/executor"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -32,39 +29,36 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// destroyRunner interface with the operations needed to execute the destroy operations
-type destroyRunner interface {
-	RunDestroy(params deployable.DestroyParameters) error
+// testRunner interface with the operations needed to execute the test operations
+type testRunner interface {
+	RunTest(params deployable.TestParameters) error
 }
 
-// DestroyOptions flags accepted by the remote-run destroy command
-type DestroyOptions struct {
-	Name         string
-	Variables    []string
-	ForceDestroy bool
+// TestOptions flags accepted by the remote-run test command
+type TestOptions struct {
+	Name      string
+	Variables []string
 }
 
-// DestroyCommand struct with the dependencies needed to run the destroy operation
-type DestroyCommand struct {
-	runner destroyRunner
+// TestCommand struct with the dependencies needed to run the test operation
+type TestCommand struct {
+	runner testRunner
 }
 
-// Destroy starts the destroy command remotely. This is the command executed in the
-// remote environment when destroy deploy is executed with the remote flag
-func Destroy(ctx context.Context) *cobra.Command {
-	options := &DestroyOptions{}
+// Test starts the test command remotely. This is the command executed in the
+// remote environment when running okteto test
+func Test(ctx context.Context) *cobra.Command {
+	options := &TestOptions{}
 	cmd := &cobra.Command{
-		Use:   "destroy",
-		Short: "This command is the one in charge of executing the custom commands for the destroy operation when okteto destroy is executed remotely",
-		Long: `This command is the one in charge of executing the custom commands for the destroy operation when okteto destroy is executed remotely.
+		Use:   "test",
+		Short: "This command is the one in charge of executing the custom commands for the test operation for okteto test",
+		Long: `This command is the one in charge of executing the custom commands for the test operation for okteto test.
 
 The deployable entity is received as a base64 encoded string in the OKTETO_DEPLOYABLE environment variable. The deployable entity is a yaml file that contains the following fields:
 
 commands:
 - name: Echo deploy variable
   command: echo "This is a deploy variable ${DEPLOY_VARIABLE}"
-
-It is important that this command does the minimum and must not do calculations that the destroy triggering it already does.
 `,
 		Hidden:       true,
 		SilenceUsage: true,
@@ -80,7 +74,7 @@ It is important that this command does the minimum and must not do calculations 
 
 			// We need to store the kubeconfig of the current Okteto context locally, so commands
 			// would use the expected
-			kubeconfigPath := getTempKubeConfigFile("destroy", options.Name)
+			kubeconfigPath := getTempKubeConfigFile("test", options.Name)
 			if err := kubeconfig.Write(oktetoContext.GetCurrentCfg(), kubeconfigPath); err != nil {
 				return err
 			}
@@ -89,7 +83,7 @@ It is important that this command does the minimum and must not do calculations 
 
 			dep, err := getDeployable()
 			if err != nil {
-				return fmt.Errorf("could not read information to be destroyed: %w", err)
+				return fmt.Errorf("could not read information for tests: %w", err)
 			}
 
 			// Set the default values for the external resources environment variables (endpoints)
@@ -97,7 +91,7 @@ It is important that this command does the minimum and must not do calculations 
 				external.SetDefaults(name)
 			}
 
-			runner := &deployable.DestroyRunner{
+			runner := &deployable.TestRunner{
 				Executor: executor.NewExecutor(oktetoLog.GetOutputFormat(), false, ""),
 			}
 			if err != nil {
@@ -106,15 +100,14 @@ It is important that this command does the minimum and must not do calculations 
 
 			os.Setenv(constants.OktetoNameEnvVar, options.Name)
 
-			params := deployable.DestroyParameters{
-				Name:         options.Name,
-				Namespace:    oktetoContext.GetCurrentNamespace(),
-				Deployable:   dep,
-				Variables:    options.Variables,
-				ForceDestroy: options.ForceDestroy,
+			params := deployable.TestParameters{
+				Name:       options.Name,
+				Namespace:  oktetoContext.GetCurrentNamespace(),
+				Deployable: dep,
+				Variables:  options.Variables,
 			}
 
-			c := &DestroyCommand{
+			c := &TestCommand{
 				runner: runner,
 			}
 
@@ -124,11 +117,10 @@ It is important that this command does the minimum and must not do calculations 
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
-	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the development environment to be destroyed even if there is an error executing the custom destroy commands")
 	return cmd
 }
 
-func (c *DestroyCommand) Run(params deployable.DestroyParameters) error {
+func (c *TestCommand) Run(params deployable.TestParameters) error {
 	// Token should be always masked from the logs
 	oktetoLog.AddMaskedWord(okteto.GetContext().Token)
 	keyValueVarParts := 2
@@ -140,10 +132,5 @@ func (c *DestroyCommand) Run(params deployable.DestroyParameters) error {
 		}
 	}
 
-	return c.runner.RunDestroy(params)
-}
-
-func getTempKubeConfigFile(operation string, name string) string {
-	tempKubeconfigFileName := fmt.Sprintf("kubeconfig-%s-%s-%d", operation, name, time.Now().UnixMilli())
-	return filepath.Join(config.GetOktetoHome(), tempKubeconfigFileName)
+	return c.runner.RunTest(params)
 }

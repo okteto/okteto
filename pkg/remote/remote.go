@@ -44,6 +44,8 @@ import (
 )
 
 const (
+	// TestCommand is the command to run test remotely
+	TestCommand = "test"
 	// DeployCommand is the command to deploy a dev environment remotely
 	DeployCommand = "deploy"
 	// DestroyCommand is the command to destroy a dev environment remotely
