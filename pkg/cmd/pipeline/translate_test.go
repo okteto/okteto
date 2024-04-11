@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/base64"
 	"testing"
+	"time"
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
@@ -24,6 +25,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -257,4 +259,80 @@ func Test_translateVariables(t *testing.T) {
 		})
 
 	}
+}
+func Test_AddPhaseDuration(t *testing.T) {
+	ctx := context.Background()
+	name := "test"
+	namespace := "test-namespace"
+	phase := "phase1"
+	duration := time.Second * 10
+	c := fake.NewSimpleClientset()
+
+	// Create a config map with existing phases
+	existingPhases := []phaseJSON{
+		{
+			Name:     "phase1",
+			Duration: 5,
+		},
+		{
+			Name:     "phase2",
+			Duration: 8,
+		},
+	}
+	existingCmap := &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      TranslatePipelineName(name),
+			Namespace: namespace,
+		},
+		Data: map[string]string{
+			PhasesField: encodePhases(existingPhases),
+		},
+	}
+	_, err := c.CoreV1().ConfigMaps(namespace).Create(ctx, existingCmap, metav1.CreateOptions{})
+	assert.NoError(t, err)
+
+	err = AddPhaseDuration(ctx, name, namespace, phase, duration, c)
+	assert.NoError(t, err)
+
+	// Verify that the phase duration is updated
+	updatedCmap, err := c.CoreV1().ConfigMaps(namespace).Get(ctx, TranslatePipelineName(name), metav1.GetOptions{})
+	assert.NoError(t, err)
+	updatedPhases := decodePhases(updatedCmap.Data[PhasesField])
+	assert.Equal(t, len(existingPhases), len(updatedPhases))
+	for _, p := range updatedPhases {
+		if p.Name == phase {
+			assert.Equal(t, duration.Seconds(), p.Duration)
+		}
+	}
+
+	// Verify that a new phase is added if it doesn't exist
+	newPhase := "new-phase"
+	newDuration := time.Second * 15
+	err = AddPhaseDuration(ctx, name, namespace, newPhase, newDuration, c)
+	assert.NoError(t, err)
+
+	updatedCmap, err = c.CoreV1().ConfigMaps(namespace).Get(ctx, TranslatePipelineName(name), metav1.GetOptions{})
+	assert.NoError(t, err)
+	updatedPhases = decodePhases(updatedCmap.Data[PhasesField])
+	assert.Equal(t, len(existingPhases)+1, len(updatedPhases))
+	found := false
+	for _, p := range updatedPhases {
+		if p.Name == newPhase {
+			assert.Equal(t, newDuration.Seconds(), p.Duration)
+			found = true
+			break
+		}
+	}
+	assert.True(t, found)
+}
+
+func encodePhases(phases []phaseJSON) string {
+	encodedPhases, _ := json.Marshal(phases)
+	return string(encodedPhases)
+}
+
+func decodePhases(encodedPhases string) []phaseJSON {
+	var phases []phaseJSON
+	_ = json.Unmarshal([]byte(encodedPhases), &phases)
+	return phases
 }

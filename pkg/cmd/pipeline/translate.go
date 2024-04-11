@@ -53,6 +53,7 @@ const (
 	actionLockField = "actionLock"
 	actionNameField = "actionName"
 	variablesField  = "variables"
+	PhasesField     = "phases"
 
 	actionDefaultName = "cli"
 
@@ -93,6 +94,11 @@ type CfgData struct {
 	Manifest   []byte
 	Icon       string
 	Variables  []string
+}
+
+type phaseJSON struct {
+	Name     string  `json:"name"`
+	Duration float64 `json:"duration"`
 }
 
 // GetConfigmapVariablesEncoded returns Data["variables"] content from Configmap
@@ -187,6 +193,43 @@ func UpdateEnvs(ctx context.Context, name, namespace string, envs []string, c ku
 
 	}
 	return nil
+}
+
+// AddPhaseDuration adds a new phase to the configmap with the duration in seconds
+func AddPhaseDuration(ctx context.Context, name, namespace, phase string, duration time.Duration, c kubernetes.Interface) error {
+	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
+	if err != nil {
+		return err
+	}
+	val, ok := cmap.Data[PhasesField]
+	phases := []phaseJSON{}
+	if ok {
+		if err := json.Unmarshal([]byte(val), &phases); err != nil {
+			return err
+		}
+	}
+	// If the phase already exists, update the duration
+	updatedPhase := false
+	for idx, p := range phases {
+		if p.Name == phase {
+			phases[idx].Duration = duration.Seconds()
+			updatedPhase = true
+			break
+		}
+	}
+	// If the phase doesn't exist, add it
+	if !updatedPhase {
+		phases = append(phases, phaseJSON{
+			Name:     phase,
+			Duration: duration.Seconds(),
+		})
+	}
+	encodedPhases, err := json.Marshal(phases)
+	if err != nil {
+		return err
+	}
+	cmap.Data[PhasesField] = string(encodedPhases)
+	return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
 }
 
 // TranslatePipelineName translate the name into the configmap name

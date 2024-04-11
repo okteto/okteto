@@ -55,6 +55,7 @@ import (
 const (
 	succesfullyDeployedmsg = "Development environment '%s' successfully deployed"
 	dependencyEnvVarPrefix = "OKTETO_DEPENDENCY_"
+	deployComposePhaseName = "compose"
 )
 
 var (
@@ -116,6 +117,7 @@ type Command struct {
 	AnalyticsTracker  AnalyticsTrackerInterface
 	IoCtrl            *io.Controller
 	K8sLogger         *io.K8sLogger
+	insightsTracker   buildDeployTrackerInterface
 
 	PipelineType model.Archetype
 	// onCleanUp is a list of functions to be executed when the execution is interrupted. This is a hack
@@ -136,6 +138,15 @@ type buildTrackerInterface interface {
 	TrackImageBuild(context.Context, *analytics.ImageBuildMetadata)
 }
 
+type deployTrackerInterface interface {
+	TrackDeploy(ctx context.Context, name, namespace string, success bool)
+}
+
+type buildDeployTrackerInterface interface {
+	buildTrackerInterface
+	deployTrackerInterface
+}
+
 // Deployer defines the operations to deploy the custom commands, divert and external resources
 // defined in an Okteto manifest
 type Deployer interface {
@@ -144,7 +155,7 @@ type Deployer interface {
 }
 
 // Deploy deploys the okteto manifest
-func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker buildTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
 		Use:   "deploy [service...]",
@@ -225,7 +236,8 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 				IoCtrl:             ioCtrl,
 				K8sLogger:          k8sLogger,
 
-				onCleanUp: []cleanUpFunc{},
+				onCleanUp:       []cleanUpFunc{},
+				insightsTracker: insightsTracker,
 			}
 			startTime := time.Now()
 
@@ -235,7 +247,11 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 
 			go func() {
 				err := c.Run(ctx, options)
-
+				namespace := okteto.GetContext().Namespace
+				if options.Manifest != nil {
+					namespace = options.Manifest.Namespace
+				}
+				c.insightsTracker.TrackDeploy(ctx, options.Name, namespace, err == nil)
 				c.trackDeploy(options.Manifest, options.RunInRemote, startTime, err)
 				exit <- err
 			}()
@@ -453,7 +469,13 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		stage := "Deploying compose"
 		oktetoLog.SetStage(stage)
 		oktetoLog.Information("Running stage '%s'", stage)
-		if err := dc.deployStack(ctx, deployOptions); err != nil {
+		startTime := time.Now()
+		err := dc.deployStack(ctx, deployOptions)
+		elapsedTime := time.Since(startTime)
+		if addPhaseErr := dc.CfgMapHandler.AddPhaseDuration(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, deployComposePhaseName, elapsedTime); addPhaseErr != nil {
+			oktetoLog.Info("error adding phase to configmap: %s", err)
+		}
+		if err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying compose: %s", err.Error())
 			return err
 		}

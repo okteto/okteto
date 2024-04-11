@@ -37,6 +37,7 @@ func (ip *Publisher) TrackImageBuild(ctx context.Context, meta *analytics.ImageB
 	eventJSON, err := json.Marshal(ip.convertImageBuildMetadataToEvent(meta))
 	if err != nil {
 		ip.ioCtrl.Logger().Infof("failed to marshal event metadata: %s", err)
+		return
 	}
 
 	ip.trackEvent(ctx, meta.Namespace, "build", string(eventJSON))

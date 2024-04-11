@@ -15,6 +15,7 @@ package insights
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
@@ -70,4 +71,12 @@ func TestInsightsPublisher_trackEvent(t *testing.T) {
 	events, err = c.EventsV1().Events(namespace).List(ctx, v1.ListOptions{})
 	require.NoError(t, err)
 	require.Len(t, events.Items, 1)
+
+	e := events.Items[0]
+	require.Equal(t, fmt.Sprintf("okteto-%s-", insightType), e.ObjectMeta.GenerateName)
+	require.Equal(t, namespace, e.ObjectMeta.Namespace)
+	require.Equal(t, "true", e.ObjectMeta.Labels["events.okteto.com"])
+	require.Equal(t, fmt.Sprintf("okteto_insights_%s", insightType), e.Reason)
+	require.Equal(t, reportingController, e.ReportingController)
+
 }
