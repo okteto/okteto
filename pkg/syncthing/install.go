@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	syncthingVersion          = "1.27.1"
+	syncthingVersion          = "1.27.6"
 	syncthingVersionStringNew = 3
 	syncthingVersionStringOld = 2
 )
