@@ -39,6 +39,21 @@ const (
 	httpsScheme = "https"
 )
 
+type Namer struct {
+	Workdir      string
+	KubeClient   kubernetes.Interface
+	ManifestName string
+	ManifestPath string
+}
+
+func (na Namer) ResolveName(ctx context.Context) string {
+	if na.ManifestName != "" {
+		return na.ManifestName
+	}
+	inferer := devenvironment.NewNameInferer(na.KubeClient)
+	return inferer.InferName(ctx, na.Workdir, okteto.GetContext().Namespace, na.ManifestPath)
+}
+
 func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface, k8sLogger *ioCtrl.K8sLogger) error {
 
 	if deployOptions.Manifest.Context == "" {
@@ -49,18 +64,18 @@ func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Opti
 	}
 
 	if deployOptions.Name == "" {
-		if deployOptions.Manifest.Name != "" {
-			deployOptions.Name = deployOptions.Manifest.Name
-		} else {
-			c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okteto.GetContext().Cfg)
-			if err != nil {
-				return err
-			}
-			inferer := devenvironment.NewNameInferer(c)
-			deployOptions.Name = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, deployOptions.ManifestPathFlag)
-			deployOptions.Manifest.Name = deployOptions.Name
+		c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okteto.GetContext().Cfg)
+		if err != nil {
+			return err
 		}
 
+		n := Namer{
+			Workdir:      cwd,
+			KubeClient:   c,
+			ManifestName: deployOptions.Manifest.Name,
+			ManifestPath: deployOptions.ManifestPathFlag,
+		}
+		deployOptions.Name = n.ResolveName(ctx)
 	} else {
 		if deployOptions.Manifest != nil {
 			deployOptions.Manifest.Name = deployOptions.Name

@@ -26,6 +26,7 @@ import (
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/dag"
@@ -118,13 +119,13 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 			return err
 		}
 	}
+	// if path is absolute, its transformed to rel from root
+	initialCWD, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get the current working directory: %w", err)
+	}
 
 	if options.ManifestPath != "" {
-		// if path is absolute, its transformed to rel from root
-		initialCWD, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("failed to get the current working directory: %w", err)
-		}
 		manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, options.ManifestPath)
 		if err != nil {
 			return err
@@ -156,42 +157,73 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 
 	builder := buildv2.NewBuilderFromScratch(ioCtrl, nil)
 
-	c := deployCMD.Command{
-		GetManifest: func(path string, fs afero.Fs) (*model.Manifest, error) {
-			return manifest, nil
-		},
-		K8sClientProvider:  k8sClientProvider,
-		Builder:            builder,
-		GetDeployer:        deployCMD.GetDeployer,
-		EndpointGetter:     deployCMD.NewEndpointGetter,
-		DeployWaiter:       deployCMD.NewDeployWaiter(k8sClientProvider, k8sLogger),
-		CfgMapHandler:      configmapHandler,
-		Fs:                 fs,
-		PipelineCMD:        pc,
-		AnalyticsTracker:   at,
-		IoCtrl:             ioCtrl,
-		K8sLogger:          k8sLogger,
-		IsRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
-		RunningInInstaller: config.RunningInInstaller(),
+	kubeClient, _, err := k8sClientProvider.Provide(okteto.GetContext().Cfg)
+	if err != nil {
+		return fmt.Errorf("could not instantiate kuberentes client: %w", err)
 	}
-	if err = c.Run(ctx, &deployCMD.Options{
-		Manifest:         manifest,
-		ManifestPathFlag: options.ManifestPathFlag,
-		ManifestPath:     options.ManifestPath,
-		Name:             options.Name,
-		Namespace:        options.Namespace,
-		K8sContext:       options.K8sContext,
-		Variables:        options.Variables,
-		Build:            false,
-		Dependencies:     false,
-		Timeout:          options.Timeout,
-		RunWithoutBash:   false,
-		RunInRemote:      manifest.Deploy.Remote,
-		Wait:             true,
-		ShowCTA:          false,
-	}); err != nil {
-		oktetoLog.Error("deploy failed: %s", err.Error())
-		return err
+
+	namer := deployCMD.Namer{
+		KubeClient:   kubeClient,
+		Workdir:      initialCWD,
+		ManifestPath: options.ManifestPathFlag,
+		ManifestName: options.Name,
+	}
+
+	name := options.Name
+	if name == "" {
+		name = namer.ResolveName(ctx)
+	}
+
+	namespace := manifest.Namespace
+	if namespace == "" {
+		namespace = okteto.GetContext().Namespace
+	}
+
+	if !pipeline.IsDeployed(ctx, name, namespace, kubeClient) {
+		c := deployCMD.Command{
+			GetManifest: func(path string, fs afero.Fs) (*model.Manifest, error) {
+				return manifest, nil
+			},
+			K8sClientProvider:  k8sClientProvider,
+			Builder:            builder,
+			GetDeployer:        deployCMD.GetDeployer,
+			EndpointGetter:     deployCMD.NewEndpointGetter,
+			DeployWaiter:       deployCMD.NewDeployWaiter(k8sClientProvider, k8sLogger),
+			CfgMapHandler:      configmapHandler,
+			Fs:                 fs,
+			PipelineCMD:        pc,
+			AnalyticsTracker:   at,
+			IoCtrl:             ioCtrl,
+			K8sLogger:          k8sLogger,
+			IsRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
+			RunningInInstaller: config.RunningInInstaller(),
+		}
+		if err = c.Run(ctx, &deployCMD.Options{
+			Manifest:         manifest,
+			ManifestPathFlag: options.ManifestPathFlag,
+			ManifestPath:     options.ManifestPath,
+			Name:             options.Name,
+			Namespace:        options.Namespace,
+			K8sContext:       options.K8sContext,
+			Variables:        options.Variables,
+			Build:            false,
+			Dependencies:     false,
+			Timeout:          options.Timeout,
+			RunWithoutBash:   false,
+			RunInRemote:      manifest.Deploy.Remote,
+			Wait:             true,
+			ShowCTA:          false,
+		}); err != nil {
+			oktetoLog.Error("deploy failed: %s", err.Error())
+			return err
+		}
+	} else {
+		// The deploy operation expand environment variables in the manifest. If
+		// we don't deploy, make sure to expand the envvars
+		if err := manifest.ExpandEnvVars(); err != nil {
+			return fmt.Errorf("failed to expand manifest environment variables.: %w", err)
+		}
+		oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy'", name)
 	}
 
 	var nodes []dag.Node
