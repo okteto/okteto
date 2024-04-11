@@ -35,6 +35,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -184,7 +185,10 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 	}
 
 	ctxStore.CurrentContext = ctxOptions.Context
-	c.initEnvVars()
+	err := c.loadDotEnv(afero.NewOsFs(), os.Setenv)
+	if err != nil {
+		oktetoLog.Warning("Failed to load .env file: %s", err)
+	}
 
 	if ctxOptions.IsOkteto {
 		if err := c.initOktetoContext(ctx, ctxOptions); err != nil {
@@ -465,12 +469,29 @@ func (c Command) getUserContext(ctx context.Context, ctxName, ns, token string) 
 	return nil, oktetoErrors.ErrInternalServerError
 }
 
-func (*Command) initEnvVars() {
-	if filesystem.FileExists(".env") {
-		if err := godotenv.Load(); err != nil {
-			oktetoLog.Infof("error loading .env file: %s", err.Error())
+func (*Command) loadDotEnv(fs afero.Fs, setEnvFunc func(key, value string) error) error {
+	dotEnvFile := ".env"
+	if filesystem.FileExistsWithFilesystem(dotEnvFile, fs) {
+		content, err := afero.ReadFile(fs, dotEnvFile)
+		if err != nil {
+			return fmt.Errorf("error reading file: %w", err)
+		}
+		expanded, err := env.ExpandEnv(string(content))
+		if err != nil {
+			return fmt.Errorf("error expanding dot env file: %w", err)
+		}
+		vars, err := godotenv.UnmarshalBytes([]byte(expanded))
+		if err != nil {
+			return fmt.Errorf("error parsing dot env file: %w", err)
+		}
+		for k, v := range vars {
+			err := setEnvFunc(k, v)
+			if err != nil {
+				return fmt.Errorf("error setting env var: %w", err)
+			}
 		}
 	}
+	return nil
 }
 
 func isUrl(u string) bool {

@@ -169,7 +169,7 @@ func (c *Command) RunStateless(ctx context.Context, ctxOptions *Options) (*oktet
 	}
 
 	oktetoContextStateless.SetCurrentCfg(cfg)
-	// Setting the global namespace becuase it is missing after reading again the context from the store path
+	// Setting the global namespace because it is missing after reading again the context from the store path
 	oktetoContextStateless.SetGlobalNamespace(globalNamespace)
 
 	return oktetoContextStateless, nil
