@@ -235,9 +235,12 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 			DockerfileName:      "Dockerfile.test",
 			Deployable: deployable.Entity{
 				Commands: commands,
+				// Added this for backward compatibility. Before the refactor we were having the env variables for the external
+				// resources in the environment, so including it to set the env vars in the remote-run
+				External: manifest.External,
 			},
 			Manifest: manifest,
-			Command:  remote.DeployCommand, // TODO: use test?
+			Command:  remote.TestCommand,
 		}
 
 		ioCtrl.Logger().Infof("Executing test for: %s", name)
