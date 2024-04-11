@@ -218,7 +218,7 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 			return err
 		}
 	} else {
-		// The deploy operation expand environment variables in the manifest. If
+		// The deploy operation expands environment variables in the manifest. If
 		// we don't deploy, make sure to expand the envvars
 		if err := manifest.ExpandEnvVars(); err != nil {
 			return fmt.Errorf("failed to expand manifest environment variables.: %w", err)
