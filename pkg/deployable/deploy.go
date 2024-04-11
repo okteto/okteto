@@ -303,7 +303,7 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
 				return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 			}
-			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Command '%s' successfully executed")
+			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Command '%s' successfully executed", command.Name)
 
 			envMapFromOktetoEnvFile, err = godotenv.Read(oktetoEnvFile.Name())
 			if err != nil {
