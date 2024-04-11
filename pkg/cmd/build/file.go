@@ -67,11 +67,6 @@ func getTranslatedDockerFile(filename string, okCtx OktetoContextInterface) (str
 	datawriter := bufio.NewWriter(tmpFile)
 	defer datawriter.Flush()
 
-	userId := okCtx.GetCurrentUser()
-	if userId == "" {
-		userId = "anonymous"
-	}
-
 	for scanner.Scan() {
 		line := scanner.Text()
 		translatedLine := translateOktetoRegistryImage(line, okCtx)
