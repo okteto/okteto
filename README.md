@@ -17,7 +17,7 @@ Today, most developers try to either run parts of the infrastructure locally or 
 
 ## How it works
 
-Okteto allows you to develop inside a container. When you run `okteto up` your Kubernetes deployment is replaced by a Development Container that contains your development tools (e.g. maven and jdk, or npm, python, go compiler, debuggers, etc). This development container can use any [docker image](https://okteto.com/docs/development/images/). The development container inherits the same secrets, configmaps, volumes or any other configuration value of the original Kubernetes deployment.
+Okteto enables development inside a container, providing a seamless IDE and tool integration as if you were working locally but with the resources of a remote cluster. When you run `okteto up` your Kubernetes deployment is replaced by a Development Container that contains your development tools (e.g. maven and jdk, or npm, python, go compiler, debuggers, etc). This development container can use any [docker image](https://okteto.com/docs/development/images/). The development container inherits the same secrets, configmaps, volumes or any other configuration value of the original Kubernetes deployment.
 
 <img align="left" src="images/how-does-it-work.png">
 
@@ -28,7 +28,7 @@ The end result is a remote cluster that is seen by your IDE and tools as a local
 `okteto` has several advantages when compared to more traditional development approaches:
 
 - **Fast inner loop development**: build and run your application using your favorite tools directly from your development container. Native builds are always faster than the _docker build/redeploy_ cycle.
-- **Realistic development environment**: your development container reuses the same variables, secrets, sidecars, volumes, etc... as your original Kubernetes deployment. Realistic environments eliminate integration issues.
+- **Realistic development environment**: your development container reuses the same variables, secrets, sidecars, volumes as your original Kubernetes deployment. Realistic environments eliminate integration issues.
 - **Replicability**: development containers eliminate the need to install your dependencies locally, everything is pre-configured in your development image.
 - **Unlimited resources**: get access to the hardware and network of your cluster when developing your application.
 - **Deployment independent**: `okteto` decouples deployment from development. You can deploy your application with kubectl, Helm, a serverless framework, or even a CI pipeline and use `okteto up` to develop it. This is especially useful for cloud-native applications where deployment pipelines are not trivial.
@@ -38,21 +38,23 @@ The end result is a remote cluster that is seen by your IDE and tools as a local
 
 All you need to get started is to [install the Okteto CLI](https://www.okteto.com/docs/get-started/install-okteto-cli/) and have access to a Kubernetes cluster. You can follow our [guide for setting up a Kubernetes cluster on AWS here](https://www.okteto.com/docs/get-started/install/amazon-eks/#deploy-a-kubernetes-cluster).
 
-The Okteto CLI has two operational modes: CLI-Only and Okteto Platform.
+The Okteto CLI has two operational modes: 
+* Okteto Open Source CLI
+* Okteto Platform CLI
 
-### CLI-Only
+### Okteto Open Source CLI Features
 
-CLI-Only requires access to a Kubernetes cluster. It's designed to support Development Containers in any Kubernetes cluster. It doesn't come with features that support multiple developers working on the same cluster. That's the goal of the [Okteto Platform](https://okteto.com/docs)
+Okteto Open Source requires access to a Kubernetes cluster. It's designed to support Development Containers in any Kubernetes cluster. It doesn't come with features that support multiple developers working on the same cluster. That's the goal of the [Okteto Platform](https://okteto.com/docs)
 
-CLI-Only supports the following commands:
+Okteto Open Source supports the following commands:
 
 - `okteto context`
 - `okteto up`
 - `okteto down`
 
-CLI-Only supports the [dev section](https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional) of the Okteto Manifest.
+For reference, our Open Source CLI supports the [dev section](https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional) of the Okteto Manifest.
 
-We have getting started guides for the CLI-Only mode for the following languages:
+We have getting started guides for the Open Source mode for the following languages:
 
 - [ASP.NET](samples/aspnetcore)
 - [Golang](samples/golang)
@@ -64,18 +66,35 @@ We have getting started guides for the CLI-Only mode for the following languages
 - [Ruby](samples/ruby)
 
 
-### Okteto Platform
+### Okteto Platform CLI Features
 
-The Okteto Platform requires installation of the [Okteto Helm Chart](https://www.okteto.com/docs/get-started/overview/) in your Kubernetes cluster. In this mode, all of the Okteto CLI commands are available (`build`, `deploy`, `up`,  `down`, `destroy`, etc). The Okteto Platform comes with additional features like:
+The Okteto Platform CLI requires installation of the [Okteto Helm Chart](https://www.okteto.com/docs/get-started/overview/) in your Kubernetes cluster. In this mode, all of the Okteto CLI commands are available (`build`, `deploy`, `up`,  `down`, `destroy`, etc). The Okteto Platform comes with additional features like:
 
 - User authentication and access control to Kubernetes using your own Identity provider
-- A Build service to build your container images on remote
+- Build service for remote container image creation
 - Preview environments for every pull request
-- Automatically scale down and up your environments depending on usage
+- Dynamic scaling of environments based on usage
 - Secrets manager for your development environments
 - Okteto Insights to provide observability on your development environments
 
 And much more! Refer to the [Okteto Platform docs](https://www.okteto.com/docs) to learn more.
+
+## Features Comparison
+
+| Feature                           | Okteto Open Source CLI | Okteto Platform CLI |
+|-----------------------------------|------------------------|---------------------|
+| **Activation**                    | `okteto up`            | `okteto up`         |
+| **Deactivation**                  | `okteto down`          | `okteto down`       |
+| **Kubernetes Manifest Support**   | Yes                    | Yes                 |
+| **Build Service**                 | Not Available          | Available           |
+| **User Management**               | Not Available          | Available           |
+| **Access Control**                | Not Available          | Available           |
+| **Automated Scaling**             | Not Available          | Available           |
+| **Secrets Management**            | Not Available          | Available           |
+| **Observability Tools**           | Not Available          | Available           |
+| **Support**                       | Community Support      | Professional Support|
+| **Documentation**                 | [Open Source Docs](https://www.okteto.com/docs/get-started/install-okteto-cli/) | [Platform Docs](https://www.okteto.com/docs/) |
+
 
 ## Useful links
 
