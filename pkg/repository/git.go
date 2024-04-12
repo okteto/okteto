@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	giturls "github.com/chainguard-dev/git-urls"
@@ -86,7 +87,7 @@ func (r gitRepoController) getRepoURL() (string, error) {
 		oktetoLog.Infof("could not parse url: %s", err)
 	}
 	if url.Scheme != "file" {
-		return url.String(), nil
+		return r.sanitiseURL(url.String()), nil
 	}
 
 	repo, err := git.PlainOpen(r.path)
@@ -101,7 +102,7 @@ func (r gitRepoController) getRepoURL() (string, error) {
 	}
 
 	if origin != nil {
-		return origin.Config().URLs[0], nil
+		return r.sanitiseURL(origin.Config().URLs[0]), nil
 	}
 
 	remotes, err := repo.Remotes()
@@ -113,7 +114,17 @@ func (r gitRepoController) getRepoURL() (string, error) {
 		return "", fmt.Errorf("git repo doesn't have any remote")
 	}
 
-	return remotes[0].Config().URLs[0], nil
+	return r.sanitiseURL(remotes[0].Config().URLs[0]), nil
+}
+
+func (r gitRepoController) sanitiseURL(u string) string {
+	url, err := giturls.Parse(u)
+	if err != nil {
+		oktetoLog.Infof("could not parse url: %s", err)
+		return u
+	}
+	url.Path = strings.Replace(url.Path, "//", "/", -1)
+	return url.String()
 }
 
 // isClean checks if the repository have changes over the commit
