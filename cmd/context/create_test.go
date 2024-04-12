@@ -750,6 +750,7 @@ func Test_replaceCredentialsTokenWithDynamicKubetoken(t *testing.T) {
 }
 
 func Test_loadDotEnv(t *testing.T) {
+	t.Setenv("VALUE4", "VALUE4")
 	type expected struct {
 		vars map[string]string
 		err  error
@@ -758,7 +759,7 @@ func Test_loadDotEnv(t *testing.T) {
 
 	setEnvFunc := func(k, v string) error {
 		var err error
-		if k != "" {
+		if k == "" {
 			err = assert.AnError
 		}
 		t.Setenv(k, v)
@@ -828,6 +829,23 @@ func Test_loadDotEnv(t *testing.T) {
 				vars: map[string]string{
 					"TEST":  "VALUE",
 					"TEST2": "VALUE2",
+				},
+				err: nil,
+			},
+		},
+		{
+			name: "valid .env with multiple vars",
+			mockfs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				_ = afero.WriteFile(fs, ".env", []byte("VAR1=VALUE1\nVAR2=VALUE2\nVAR3=${VALUE3:-defaultValue3}\nVAR4=${VALUE4:-defaultValue4}"), 0644)
+				return fs
+			},
+			expected: expected{
+				vars: map[string]string{
+					"VAR1": "VALUE1",
+					"VAR2": "VALUE2",
+					"VAR3": "defaultValue3",
+					"VAR4": "VALUE4",
 				},
 				err: nil,
 			},
