@@ -612,3 +612,40 @@ func TestGetUntrackedContent(t *testing.T) {
 		})
 	}
 }
+
+func Test_gitRepoController_sanitiseURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "valid URL",
+			input:    "https://github.com/okteto/test.git",
+			expected: "https://github.com/okteto/test.git",
+		},
+		{
+			name:     "URL with double slashes",
+			input:    "https://github.com//okteto//test.git",
+			expected: "https://github.com/okteto/test.git",
+		},
+		{
+			name:     "URL with multiple double slashes",
+			input:    "https://github.com//okteto//test//.git",
+			expected: "https://github.com/okteto/test/.git",
+		},
+		{
+			name:     "URL with no double slashes",
+			input:    "https://github.com/okteto/test/.git",
+			expected: "https://github.com/okteto/test/.git",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := gitRepoController{}
+			result := r.sanitiseURL(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
