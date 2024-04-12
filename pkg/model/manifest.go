@@ -1004,29 +1004,14 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 			m.Dev[svcName] = d
 		}
 
-		if svcInfo.Build == nil && len(svcInfo.VolumeMounts) == 0 {
+		if svcInfo.Build == nil {
 			continue
 		}
 
 		buildInfo := svcInfo.Build
 
-		switch {
-		case buildInfo != nil && len(svcInfo.VolumeMounts) > 0:
-			if svcInfo.Image != "" {
-				buildInfo.Image = svcInfo.Image
-			}
-			buildInfo.VolumesToInclude = svcInfo.VolumeMounts
-		case buildInfo != nil:
-			if svcInfo.Image != "" {
-				buildInfo.Image = svcInfo.Image
-			}
-		case len(svcInfo.VolumeMounts) > 0:
-			buildInfo = &build.Info{
-				Image:            svcInfo.Image,
-				VolumesToInclude: svcInfo.VolumeMounts,
-			}
-		default:
-			oktetoLog.Infof("could not build service %s, due to not having Dockerfile defined or volumes to include", svcName)
+		if svcInfo.Image != "" {
+			buildInfo.Image = svcInfo.Image
 		}
 
 		for idx, volume := range buildInfo.VolumesToInclude {
