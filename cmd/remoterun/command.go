@@ -39,7 +39,7 @@ func RemoteRun(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 
 	cmd.AddCommand(Deploy(ctx, k8sLogger))
 	cmd.AddCommand(Destroy(ctx))
-	cmd.AddCommand(Test(ctx))
+	cmd.AddCommand(Test(ctx, k8sLogger))
 	return cmd
 }
 

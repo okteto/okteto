@@ -16,23 +16,15 @@ package remoterun
 import (
 	"context"
 	"fmt"
-	"os"
-	"strings"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
-	"github.com/okteto/okteto/cmd/utils/executor"
-	"github.com/okteto/okteto/pkg/constants"
+	deployCMD "github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/pkg/deployable"
-	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
-
-// testRunner interface with the operations needed to execute the test operations
-type testRunner interface {
-	RunTest(params deployable.TestParameters) error
-}
 
 // TestOptions flags accepted by the remote-run test command
 type TestOptions struct {
@@ -40,14 +32,9 @@ type TestOptions struct {
 	Variables []string
 }
 
-// TestCommand struct with the dependencies needed to run the test operation
-type TestCommand struct {
-	runner testRunner
-}
-
 // Test starts the test command remotely. This is the command executed in the
 // remote environment when running okteto test
-func Test(ctx context.Context) *cobra.Command {
+func Test(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &TestOptions{}
 	cmd := &cobra.Command{
 		Use:   "test",
@@ -72,18 +59,9 @@ commands:
 				return err
 			}
 
-			// We need to store the kubeconfig of the current Okteto context locally, so commands
-			// would use the expected
-			kubeconfigPath := getTempKubeConfigFile("test", options.Name)
-			if err := kubeconfig.Write(oktetoContext.GetCurrentCfg(), kubeconfigPath); err != nil {
-				return err
-			}
-			os.Setenv("KUBECONFIG", kubeconfigPath)
-			defer os.Remove(kubeconfigPath)
-
 			dep, err := getDeployable()
 			if err != nil {
-				return fmt.Errorf("could not read information for tests: %w", err)
+				return fmt.Errorf("could not read information to be deployed: %w", err)
 			}
 
 			// Set the default values for the external resources environment variables (endpoints)
@@ -91,46 +69,39 @@ commands:
 				external.SetDefaults(name)
 			}
 
-			runner := &deployable.TestRunner{
-				Executor: executor.NewExecutor(oktetoLog.GetOutputFormat(), false, ""),
-			}
+			k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
+			cmapHandler := deployCMD.NewConfigmapHandler(k8sClientProvider, k8sLogger)
+
+			runner, err := deployable.NewDeployRunnerForRemote(
+				options.Name,
+				false,
+				cmapHandler,
+				k8sClientProvider,
+				model.GetAvailablePort,
+				k8sLogger,
+			)
 			if err != nil {
 				return fmt.Errorf("could not initialize the command properly: %w", err)
 			}
 
-			os.Setenv(constants.OktetoNameEnvVar, options.Name)
-
-			params := deployable.TestParameters{
-				Name:       options.Name,
-				Namespace:  oktetoContext.GetCurrentNamespace(),
-				Deployable: dep,
-				Variables:  options.Variables,
+			params := deployable.DeployParameters{
+				Name:      options.Name,
+				Namespace: oktetoContext.GetCurrentNamespace(),
+				// For the remote command, the manifest path is the current directory
+				ManifestPath: ".",
+				Deployable:   dep,
+				Variables:    options.Variables,
 			}
 
-			c := &TestCommand{
+			c := &DeployCommand{
 				runner: runner,
 			}
 
-			return c.Run(params)
+			return c.Run(ctx, params)
 		},
 	}
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 	return cmd
-}
-
-func (c *TestCommand) Run(params deployable.TestParameters) error {
-	// Token should be always masked from the logs
-	oktetoLog.AddMaskedWord(okteto.GetContext().Token)
-	keyValueVarParts := 2
-	// We mask all the variables received in the command
-	for _, variable := range params.Variables {
-		varParts := strings.SplitN(variable, "=", keyValueVarParts)
-		if len(varParts) >= keyValueVarParts && strings.TrimSpace(varParts[1]) != "" {
-			oktetoLog.AddMaskedWord(varParts[1])
-		}
-	}
-
-	return c.runner.RunTest(params)
 }

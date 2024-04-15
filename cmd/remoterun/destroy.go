@@ -100,11 +100,12 @@ It is important that this command does the minimum and must not do calculations 
 			runner := &deployable.DestroyRunner{
 				Executor: executor.NewExecutor(oktetoLog.GetOutputFormat(), false, ""),
 			}
+
+			err = os.Setenv(constants.OktetoNameEnvVar, options.Name)
+
 			if err != nil {
 				return fmt.Errorf("could not initialize the command properly: %w", err)
 			}
-
-			os.Setenv(constants.OktetoNameEnvVar, options.Name)
 
 			params := deployable.DestroyParameters{
 				Name:         options.Name,
