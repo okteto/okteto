@@ -333,6 +333,12 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		return err
 	}
 
+	if manifest != nil {
+		if manifest.Context != "" || manifest.Namespace != "" {
+			oktetoLog.Warning("Compose fields: 'context' and 'namespace' are deprecated. Use 'OKTETO_CONTEXT' and 'OKTETO_NAMESPACE' env vars instead.")
+		}
+	}
+
 	if dc.IsRemote || dc.RunningInInstaller {
 		currentVars, err := dc.CfgMapHandler.GetConfigmapVariablesEncoded(ctx, deployOptions.Name, deployOptions.Manifest.Namespace)
 		if err != nil {
