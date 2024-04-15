@@ -18,13 +18,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/pkg/errors"
 )
@@ -69,19 +67,9 @@ func getTranslatedDockerFile(filename string, okCtx OktetoContextInterface) (str
 	datawriter := bufio.NewWriter(tmpFile)
 	defer datawriter.Flush()
 
-	userId := okCtx.GetCurrentUser()
-	if userId == "" {
-		userId = "anonymous"
-	}
-
-	withCacheHandler := okCtx.GetCurrentBuilder() == okteto.CloudBuildKitURL
-
 	for scanner.Scan() {
 		line := scanner.Text()
 		translatedLine := translateOktetoRegistryImage(line, okCtx)
-		if withCacheHandler {
-			translatedLine = translateCacheHandler(translatedLine, userId)
-		}
 		_, err = datawriter.WriteString(translatedLine + "\n")
 		if err != nil {
 			return "", fmt.Errorf("failed to write dockerfile: %w", err)
@@ -96,33 +84,6 @@ func getTranslatedDockerFile(filename string, okCtx OktetoContextInterface) (str
 	}
 
 	return tmpFile.Name(), nil
-}
-
-func translateCacheHandler(input, userID string) string {
-	matched, err := regexp.MatchString(`^RUN.*--mount=.*type=cache`, input)
-	if err != nil {
-		return input
-	}
-
-	if matched {
-		matched, err = regexp.MatchString(`^RUN.*--mount=id=`, input)
-		if err != nil {
-			return input
-		}
-		if matched {
-			return strings.ReplaceAll(input, "--mount=id=", fmt.Sprintf("--mount=id=%s-", userID))
-		}
-		matched, err = regexp.MatchString(`^RUN.*--mount=[^ ]+,id=`, input)
-		if err != nil {
-			return input
-		}
-		if matched {
-			return strings.ReplaceAll(input, ",id=", fmt.Sprintf(",id=%s-", userID))
-		}
-		return strings.ReplaceAll(input, "--mount=", fmt.Sprintf("--mount=id=%s,", userID))
-	}
-
-	return input
 }
 
 func translateOktetoRegistryImage(input string, okCtx OktetoContextInterface) string {
