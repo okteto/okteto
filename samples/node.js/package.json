@@ -12,7 +12,7 @@
         "url": "git+https://github.com/okteto/node-getting-started.git"
     },
     "dependencies": {
-        "express": "^4.17.1",
+        "express": "^4.19.2",
         "nodemon": "^2.0.18"
     }
 }
