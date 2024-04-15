@@ -99,6 +99,7 @@ And much more! Refer to the [Okteto Platform docs](https://www.okteto.com/docs) 
 - [Getting started](https://www.okteto.com/docs/get-started/install-okteto-cli/)
 - [CLI reference](https://okteto.com/docs/reference/okteto-cli)
 - [Okteto manifest reference](https://okteto.com/docs/reference/okteto-manifest/)
+- [Okteto Open Source Samples](samples/README.md)
 
 ## Releases
 
