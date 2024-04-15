@@ -28,6 +28,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -744,6 +745,126 @@ func Test_replaceCredentialsTokenWithDynamicKubetoken(t *testing.T) {
 
 			newDynamicKubetokenController(fakeOktetoClientProvider).updateOktetoContextToken(tt.userContext)
 			assert.Equal(t, tt.expectedToken, tt.userContext.Credentials.Token)
+		})
+	}
+}
+
+func Test_loadDotEnv(t *testing.T) {
+	t.Setenv("VALUE4", "VALUE4")
+	type expected struct {
+		vars map[string]string
+		err  error
+	}
+	cmd := Command{}
+
+	setEnvFunc := func(k, v string) error {
+		var err error
+		if k == "" {
+			err = assert.AnError
+		}
+		t.Setenv(k, v)
+		return err
+	}
+
+	tests := []struct {
+		expected expected
+		mockfs   func() afero.Fs
+		name     string
+	}{
+		{
+			name: "missing .env",
+			mockfs: func() afero.Fs {
+				return afero.NewMemMapFs()
+			},
+			expected: expected{
+				vars: map[string]string{},
+				err:  nil,
+			},
+		},
+		{
+			name: "empty .env",
+			mockfs: func() afero.Fs {
+				_ = afero.WriteFile(afero.NewMemMapFs(), ".env", []byte(""), 0644)
+				return afero.NewMemMapFs()
+			},
+			expected: expected{
+				vars: map[string]string{},
+				err:  nil,
+			},
+		},
+		{
+			name: "syntax errors in .env",
+			mockfs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				_ = afero.WriteFile(fs, ".env", []byte("@"), 0)
+				return fs
+			},
+			expected: expected{
+				vars: map[string]string{},
+				err:  fmt.Errorf("error parsing dot env file: unexpected character \"@\" in variable name near \"@\""),
+			},
+		},
+		{
+			name: "valid .env with a single var",
+			mockfs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				_ = afero.WriteFile(fs, ".env", []byte("TEST=VALUE"), 0644)
+				return fs
+			},
+			expected: expected{
+				vars: map[string]string{
+					"TEST": "VALUE",
+				},
+				err: nil,
+			},
+		},
+		{
+			name: "valid .env with multiple vars",
+			mockfs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				_ = afero.WriteFile(fs, ".env", []byte("TEST=VALUE\nTEST2=VALUE2"), 0644)
+				return fs
+			},
+			expected: expected{
+				vars: map[string]string{
+					"TEST":  "VALUE",
+					"TEST2": "VALUE2",
+				},
+				err: nil,
+			},
+		},
+		{
+			name: "valid .env with multiple vars",
+			mockfs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				_ = afero.WriteFile(fs, ".env", []byte("VAR1=VALUE1\nVAR2=VALUE2\nVAR3=${VALUE3:-defaultValue3}\nVAR4=${VALUE4:-defaultValue4}"), 0644)
+				return fs
+			},
+			expected: expected{
+				vars: map[string]string{
+					"VAR1": "VALUE1",
+					"VAR2": "VALUE2",
+					"VAR3": "defaultValue3",
+					"VAR4": "VALUE4",
+				},
+				err: nil,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := tt.mockfs()
+			err := cmd.loadDotEnv(fs, setEnvFunc)
+			if tt.expected.err != nil {
+				assert.Equal(t, tt.expected.err.Error(), err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+
+			for k, v := range tt.expected.vars {
+				assert.Equal(t, v, os.Getenv(k))
+			}
 		})
 	}
 }
