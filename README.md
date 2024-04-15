@@ -56,14 +56,14 @@ For reference, our Open Source CLI supports the [dev section](https://www.okteto
 
 We have getting started guides for the Open Source mode for the following languages:
 
-- [ASP.NET](samples/aspnetcore)
-- [Golang](samples/golang)
-- [Java Gradle](samples/java-gradle)
-- [Java Maven](samples/java-maven)
-- [Node.js](samples/node.js)
-- [PHP](samples/php)
-- [Python](samples/python)
-- [Ruby](samples/ruby)
+- [ASP.NET](samples/aspnetcore/README.md)
+- [Golang](samples/golang/README.md)
+- [Java Gradle](samples/java-gradle/README.md)
+- [Java Maven](samples/java-maven/README.md)
+- [Node.js](samples/node.js/README.md)
+- [PHP](samples/php/README.md)
+- [Python](samples/python/README.md)
+- [Ruby](samples/ruby/README.md)
 
 
 ### Okteto Platform CLI Features
@@ -83,9 +83,7 @@ And much more! Refer to the [Okteto Platform docs](https://www.okteto.com/docs) 
 
 | Feature                           | Okteto Open Source CLI | Okteto Platform CLI |
 |-----------------------------------|------------------------|---------------------|
-| **Activation**                    | `okteto up`            | `okteto up`         |
-| **Deactivation**                  | `okteto down`          | `okteto down`       |
-| **Kubernetes Manifest Support**   | Yes                    | Yes                 |
+| **Development Containers**        | Available              | Available           |
 | **Build Service**                 | Not Available          | Available           |
 | **User Management**               | Not Available          | Available           |
 | **Access Control**                | Not Available          | Available           |
@@ -93,7 +91,7 @@ And much more! Refer to the [Okteto Platform docs](https://www.okteto.com/docs) 
 | **Secrets Management**            | Not Available          | Available           |
 | **Observability Tools**           | Not Available          | Available           |
 | **Support**                       | Community Support      | Professional Support|
-| **Documentation**                 | [Open Source Docs](https://www.okteto.com/docs/get-started/install-okteto-cli/) | [Platform Docs](https://www.okteto.com/docs/) |
+| **Documentation**                 | [Open Source Samples](samples/README.md) | [Platform Docs](https://www.okteto.com/docs/) |
 
 
 ## Useful links
