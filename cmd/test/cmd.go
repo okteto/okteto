@@ -119,13 +119,13 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 			return err
 		}
 	}
-	// if path is absolute, its transformed to rel from root
-	initialCWD, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get the current working directory: %w", err)
-	}
 
 	if options.ManifestPath != "" {
+		// if path is absolute, its transformed to rel from root
+		initialCWD, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get the current working directory: %w", err)
+		}
 		manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, options.ManifestPath)
 		if err != nil {
 			return err
@@ -162,9 +162,14 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 		return fmt.Errorf("could not instantiate kuberentes client: %w", err)
 	}
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get the current working directory to resolve name: %w", err)
+	}
+
 	namer := deployCMD.Namer{
 		KubeClient:   kubeClient,
-		Workdir:      initialCWD,
+		Workdir:      cwd,
 		ManifestPath: options.ManifestPathFlag,
 		ManifestName: options.Name,
 	}
@@ -221,7 +226,7 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 		// The deploy operation expands environment variables in the manifest. If
 		// we don't deploy, make sure to expand the envvars
 		if err := manifest.ExpandEnvVars(); err != nil {
-			return fmt.Errorf("failed to expand manifest environment variables.: %w", err)
+			return fmt.Errorf("failed to expand manifest environment variables: %w", err)
 		}
 		oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy'", name)
 	}

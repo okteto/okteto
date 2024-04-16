@@ -75,7 +75,10 @@ func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Opti
 			ManifestName: deployOptions.Manifest.Name,
 			ManifestPath: deployOptions.ManifestPathFlag,
 		}
-		deployOptions.Name = n.ResolveName(ctx)
+		name := n.ResolveName(ctx)
+		deployOptions.Name = name
+		deployOptions.Manifest.Name = name
+
 	} else {
 		if deployOptions.Manifest != nil {
 			deployOptions.Manifest.Name = deployOptions.Name
