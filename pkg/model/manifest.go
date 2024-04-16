@@ -353,9 +353,6 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 	}
 
 	if manifest != nil && manifest.IsV2 {
-		if manifest.Context != "" || manifest.Namespace != "" {
-			oktetoLog.Warning("Manifest fields: 'context' and 'namespace' are deprecated. Use 'OKTETO_CONTEXT' and 'OKTETO_NAMESPACE' env vars instead.")
-		}
 		return manifest, nil
 	}
 

@@ -14,6 +14,7 @@
 package model
 
 import (
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"os"
 
 	"github.com/okteto/okteto/pkg/discovery"
@@ -48,6 +49,10 @@ func GetContextResource(path string) (*ContextResource, error) {
 	}
 	if err := yaml.Unmarshal(bytes, ctxResource); err != nil {
 		return nil, newManifestFriendlyError(err)
+	}
+
+	if ctxResource.Context != "" || ctxResource.Namespace != "" {
+		oktetoLog.Warning("Manifest fields: 'context' and 'namespace' are deprecated. Use 'OKTETO_CONTEXT' and 'OKTETO_NAMESPACE' env vars instead.")
 	}
 
 	ctxResource.Context = os.ExpandEnv(ctxResource.Context)
