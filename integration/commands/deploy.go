@@ -34,7 +34,7 @@ type DeployOptions struct {
 	OktetoHome       string
 	Token            string
 	Name             string
-	Variables        string
+	Variables        []string
 	ServicesToDeploy []string
 	Build            bool
 	IsRemote         bool
@@ -179,8 +179,8 @@ func getDeployCmd(oktetoPath string, deployOptions *DeployOptions) *exec.Cmd {
 	if deployOptions.Name != "" {
 		cmd.Args = append(cmd.Args, "--name", deployOptions.Name)
 	}
-	if deployOptions.Variables != "" {
-		cmd.Args = append(cmd.Args, "--var", deployOptions.Variables)
+	for _, v := range deployOptions.Variables {
+		cmd.Args = append(cmd.Args, "--var", v)
 	}
 	if deployOptions.IsRemote {
 		cmd.Args = append(cmd.Args, "--remote")

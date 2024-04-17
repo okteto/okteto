@@ -18,9 +18,6 @@ package deploy
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,14 +28,16 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
 )
 
 var (
-	oktetoManifestWithEnvContent = `deploy:
-  - echo "%s ${EXTERNAL_VARIABLE}"
+	oktetoManifestWithEnvContent = `
+deploy:
+  - echo "DEPLOY_MASKED_VAR=${EXTERNAL_VARIABLE}"
+  - echo "DEPLOY_UNMASKED_SHORT_VAR=${EXTERNAL_BOOL_VARIABLE}"
 destroy:
-- echo "%s ${EXTERNAL_VARIABLE}"`
+  - echo "DESTROY_MASKED_VAR=${EXTERNAL_VARIABLE}"
+  - echo "DESTROY_UNMASKED_SHORT_VAR=${EXTERNAL_BOOL_VARIABLE}"`
 )
 
 const (
@@ -55,7 +54,10 @@ func TestDeployAndDestroyOktetoManifestWithEnv(t *testing.T) {
 	require.NoError(t, err)
 
 	dir := t.TempDir()
-	require.NoError(t, createOktetoManifestwithEnv(dir))
+
+	manifestPath := filepath.Join(dir, oktetoManifestName)
+	err = os.WriteFile(manifestPath, []byte(oktetoManifestWithEnvContent), 0600)
+	require.NoError(t, err)
 
 	testNamespace := integration.GetTestNamespace("DeployDestroyVars", user)
 	namespaceOpts := &commands.NamespaceOptions{
@@ -69,7 +71,10 @@ func TestDeployAndDestroyOktetoManifestWithEnv(t *testing.T) {
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
 
-	variables := "EXTERNAL_VARIABLE=test"
+	variables := []string{
+		"EXTERNAL_VARIABLE=123456",
+		"EXTERNAL_BOOL_VARIABLE=false",
+	}
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -81,15 +86,16 @@ func TestDeployAndDestroyOktetoManifestWithEnv(t *testing.T) {
 	o, err := commands.RunOktetoDeployAndGetOutput(oktetoPath, deployOptions)
 	require.NoError(t, err)
 
-	err = expectMaskedVariableAtDeploy(o)
-	require.NoError(t, err)
+	require.Equal(t, true, strings.Contains(o, "DEPLOY_MASKED_VAR=***"))
+	require.Equal(t, true, strings.Contains(o, "DEPLOY_UNMASKED_SHORT_VAR=false"))
 
 	ctx := context.Background()
 	cfgMap, err := integration.GetConfigmap(ctx, testNamespace, "okteto-git-001", c)
 	require.NoError(t, err)
 
-	err = expectConfigMapToIncludeVariables(cfgMap)
-	require.NoError(t, err)
+	require.NotNil(t, cfgMap)
+	require.NotNil(t, cfgMap.Data)
+	require.NotEmpty(t, cfgMap.Data["variables"])
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
@@ -100,44 +106,6 @@ func TestDeployAndDestroyOktetoManifestWithEnv(t *testing.T) {
 	o, err = commands.RunOktetoDestroyAndGetOutput(oktetoPath, destroyOptions)
 	require.NoError(t, err)
 
-	err = expectMaskedVariableAtDestroy(o)
-	require.NoError(t, err)
-}
-
-func expectMaskedVariableAtDeploy(o string) error {
-	if ok := strings.Contains(o, fmt.Sprintf("%s ***", echoDeployMessage)); !ok {
-		log.Print(o)
-		return errors.New("external variable at deploy is not being masked")
-	}
-	return nil
-}
-
-func expectMaskedVariableAtDestroy(o string) error {
-	if ok := strings.Contains(o, fmt.Sprintf("%s ***", echoDestroyMessage)); !ok {
-		log.Print(o)
-		return errors.New("external variable at destroy is not being masked")
-	}
-	return nil
-}
-
-func expectConfigMapToIncludeVariables(cfgmap *v1.ConfigMap) error {
-	if cfgmap == nil {
-		return errors.New("configmap not found")
-	}
-
-	_, ok := cfgmap.Data["variables"]
-	if !ok {
-		return errors.New("config map does not have variables")
-	}
-
-	return nil
-}
-
-func createOktetoManifestwithEnv(dir string) error {
-	manifestPath := filepath.Join(dir, oktetoManifestName)
-	manifestContent := []byte(fmt.Sprintf(oktetoManifestWithEnvContent, echoDeployMessage, echoDestroyMessage))
-	if err := os.WriteFile(manifestPath, manifestContent, 0600); err != nil {
-		return err
-	}
-	return nil
+	require.Equal(t, true, strings.Contains(o, "DESTROY_MASKED_VAR=***"))
+	require.Equal(t, true, strings.Contains(o, "DESTROY_UNMASKED_SHORT_VAR=false"))
 }

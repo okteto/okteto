@@ -280,7 +280,7 @@ func TestRemoteMaskVariables(t *testing.T) {
 		OktetoHome: dir,
 		Token:      token,
 		IsRemote:   true,
-		Variables:  "TOMASK=hola-mundo",
+		Variables:  []string{"TOMASK=hola-mundo"},
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
