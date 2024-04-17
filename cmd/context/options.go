@@ -69,7 +69,7 @@ func (o *Options) InitFromEnvVars() {
 		usedEnvVars = append(usedEnvVars, model.OktetoURLEnvVar)
 	}
 
-	if os.Getenv(model.OktetoContextEnvVar) != "" {
+	if o.Context == "" && os.Getenv(model.OktetoContextEnvVar) != "" {
 		o.Context = os.Getenv(model.OktetoContextEnvVar)
 		usedEnvVars = append(usedEnvVars, model.OktetoContextEnvVar)
 	}
@@ -90,7 +90,7 @@ func (o *Options) InitFromEnvVars() {
 		o.InferredToken = true
 	}
 
-	if os.Getenv(model.OktetoNamespaceEnvVar) != "" {
+	if o.Namespace == "" && os.Getenv(model.OktetoNamespaceEnvVar) != "" {
 		o.Namespace = os.Getenv(model.OktetoNamespaceEnvVar)
 		usedEnvVars = append(usedEnvVars, model.OktetoNamespaceEnvVar)
 	}
