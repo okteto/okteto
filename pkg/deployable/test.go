@@ -34,10 +34,10 @@ type TestRunner struct {
 type TestParameters struct {
 	Name         string
 	Namespace    string
+	DevEnvName   string
 	Deployable   Entity
 	Variables    []string
 	ForceDestroy bool
-	DevEnvName   string
 }
 
 // RunTest executes the custom commands received as part of TestParameters

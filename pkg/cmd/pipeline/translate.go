@@ -101,7 +101,7 @@ type phaseJSON struct {
 	Duration float64 `json:"duration"`
 }
 
-// GetConfigmapDepedencyEnv returns Data["variables"] content from Configmap
+// GetConfigmapDependencyEnv returns Data["variables"] content from Configmap
 func GetConfigmapDependencyEnv(ctx context.Context, name, namespace string, c kubernetes.Interface) (string, error) {
 	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
 	if err != nil {

@@ -25,12 +25,10 @@ import (
 // a temporary .env file and keeps a reference to it. It is meant to be called
 // to read environment variables in a command list loop
 type envStepper struct {
-	sync.RWMutex
-
-	filename string
+	fs       afero.Fs
 	env      map[string]string
-
-	fs afero.Fs
+	filename string
+	sync.RWMutex
 }
 
 func (es *envStepper) WithFS(fs afero.Fs) {
