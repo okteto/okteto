@@ -34,11 +34,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// testRunner interface with the operations needed to execute the test operations
-type testRunner interface {
-	RunTest(params deployable.TestParameters) error
-}
-
 // TestOptions flags accepted by the remote-run test command
 type TestOptions struct {
 	Name       string
