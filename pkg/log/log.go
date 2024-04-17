@@ -311,9 +311,10 @@ func IsInteractive() bool {
 	return log.writer.IsInteractive()
 }
 
-// AddMaskedWord adds a new word to be redacted
+// AddMaskedWord adds a new word to be redacted, only if longer than 5 chars
 func AddMaskedWord(word string) {
-	if strings.TrimSpace(word) != "" {
+	minCharsToMask := 5
+	if strings.TrimSpace(word) != "" && len(word) > minCharsToMask {
 		log.maskedWords = append(log.maskedWords, word)
 	}
 }

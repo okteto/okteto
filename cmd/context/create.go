@@ -489,6 +489,7 @@ func (*Command) loadDotEnv(fs afero.Fs, setEnvFunc func(key, value string) error
 			if err != nil {
 				return fmt.Errorf("error setting env var: %w", err)
 			}
+			oktetoLog.AddMaskedWord(v)
 		}
 	}
 	return nil
