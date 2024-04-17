@@ -61,15 +61,15 @@ func (o *Options) InitFromContext() {
 }
 
 func (o *Options) InitFromEnvVars() {
-	usedEnvVars := []string{}
+	var usedEnvVars []string
 
-	if o.Context == "" && os.Getenv(model.OktetoURLEnvVar) != "" {
+	if os.Getenv(model.OktetoURLEnvVar) != "" {
 		o.Context = os.Getenv(model.OktetoURLEnvVar)
 		o.IsOkteto = true
 		usedEnvVars = append(usedEnvVars, model.OktetoURLEnvVar)
 	}
 
-	if o.Context == "" && os.Getenv(model.OktetoContextEnvVar) != "" {
+	if os.Getenv(model.OktetoContextEnvVar) != "" {
 		o.Context = os.Getenv(model.OktetoContextEnvVar)
 		usedEnvVars = append(usedEnvVars, model.OktetoContextEnvVar)
 	}
@@ -90,15 +90,16 @@ func (o *Options) InitFromEnvVars() {
 		o.InferredToken = true
 	}
 
-	if o.Namespace == "" && os.Getenv(model.OktetoNamespaceEnvVar) != "" {
+	if os.Getenv(model.OktetoNamespaceEnvVar) != "" {
 		o.Namespace = os.Getenv(model.OktetoNamespaceEnvVar)
 		usedEnvVars = append(usedEnvVars, model.OktetoNamespaceEnvVar)
 	}
 
-	if len(usedEnvVars) == 1 {
-		oktetoLog.Warning("Initializing context with the value of %s environment variable", usedEnvVars[0])
-	} else if len(usedEnvVars) > 1 {
-		oktetoLog.Warning("Initializing context with the value of %s and %s environment variables", strings.Join(usedEnvVars[0:len(usedEnvVars)-1], ", "), usedEnvVars[len(usedEnvVars)-1])
+	if o.Show {
+		if len(usedEnvVars) == 1 {
+			oktetoLog.Warning("Initializing context with the value of %s environment variable", usedEnvVars[0])
+		} else if len(usedEnvVars) > 1 {
+			oktetoLog.Warning("Initializing context with the value of %s and %s environment variables", strings.Join(usedEnvVars[0:len(usedEnvVars)-1], ", "), usedEnvVars[len(usedEnvVars)-1])
+		}
 	}
-
 }
