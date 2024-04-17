@@ -103,10 +103,9 @@ func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 		ctxOptions.Save = true
 	}
 
-	// We have to maintain this order to not break some commands
-	// See https://github.com/okteto/okteto/issues/3247 for more information
-	ctxOptions.InitFromContext()
+	// env vars such as OKTETO_CONTEXT and OKTETO_NAMESPACE have priority, if set
 	ctxOptions.InitFromEnvVars()
+	ctxOptions.InitFromContext()
 
 	if ctxOptions.Token == "" && kubeconfig.InCluster() && !isValidCluster(ctxOptions.Context) {
 		if ctxOptions.IsCtxCommand {
