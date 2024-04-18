@@ -185,10 +185,6 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 	}
 
 	ctxStore.CurrentContext = ctxOptions.Context
-	err := c.loadDotEnv(afero.NewOsFs(), os.Setenv)
-	if err != nil {
-		oktetoLog.Warning("Failed to load .env file: %s", err)
-	}
 
 	if ctxOptions.IsOkteto {
 		if err := c.initOktetoContext(ctx, ctxOptions); err != nil {
