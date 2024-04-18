@@ -23,20 +23,20 @@
         fi
 
 
-        beta_prerel_regex="^beta\.[0-9]+"
+        beta_prerel_regex="beta\.[0-9]+"
         prerel="$(semver get prerel "${RELEASE_TAG}" || true)"
         tags="okteto/okteto:${RELEASE_TAG},okteto/okteto:dev"
 
         # if release tag is  not empty, push the stable image
         if [ -n "$RELEASE_TAG" ]; then
-                if [ -n "$prerel" ]; then
-                        tags="${tags},okteto/okteto:stable"
-                elif [[ $prerel =~ $beta_prerel_regex ]]; then
+                if [[ $prerel =~ $beta_prerel_regex ]]; then
                         tags="${tags},okteto/okteto:beta"
+                elif [ -n "$prerel" ]; then
+                        tags="${tags},okteto/okteto:stable" 
                 fi
         fi
 
         echo "Pushing ${tags} to Docker Hub"
-        okteto build --platform "${PLATFORMS}" --build-arg VERSION_STRING="${RELEASE_TAG}" -t "${tags}" -f Dockerfile .
+        # okteto build --platform "${PLATFORMS}" --build-arg VERSION_STRING="${RELEASE_TAG}" -t "${tags}" -f Dockerfile .
 
 ); }
