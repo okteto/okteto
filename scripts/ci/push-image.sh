@@ -37,6 +37,6 @@
         fi
 
         echo "Pushing ${tags} to Docker Hub"
-        # okteto build --platform "${PLATFORMS}" --build-arg VERSION_STRING="${RELEASE_TAG}" -t "${tags}" -f Dockerfile .
+        okteto build --platform "${PLATFORMS}" --build-arg VERSION_STRING="${RELEASE_TAG}" -t "${tags}" -f Dockerfile .
 
 ); }
