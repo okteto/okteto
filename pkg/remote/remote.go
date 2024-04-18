@@ -131,11 +131,14 @@ type Params struct {
 	ManifestPathFlag    string
 	TemplateName        string
 	DockerfileName      string
-	// KnownHostsPath  is the default known_hosts file path. Provided mostly for testing
-	KnownHostsPath string
-	Command        string
-	Deployable     deployable.Entity
-	CommandFlags   []string
+	KnownHostsPath      string
+	Command             string
+	// ContextAbsolutePathOverride is the absolute path for the build context. Optional.
+	// If this values is not defined it will default to the folder location of the
+	// okteto manifest which is resolved through params.ManifestPathFlag
+	ContextAbsolutePathOverride string
+	Deployable                  deployable.Entity
+	CommandFlags                []string
 }
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
@@ -215,9 +218,16 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		}
 	}()
 
+	var buildCtx string
+	if params.ContextAbsolutePathOverride != "" {
+		buildCtx = params.ContextAbsolutePathOverride
+	} else {
+		buildCtx = r.getContextPath(cwd, params.ManifestPathFlag)
+	}
+
 	buildInfo := &build.Info{
 		Dockerfile: dockerfile,
-		Context:    r.getContextPath(cwd, params.ManifestPathFlag),
+		Context:    buildCtx,
 	}
 
 	// undo modification of CWD for Build command

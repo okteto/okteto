@@ -16,6 +16,7 @@ import "github.com/okteto/okteto/pkg/env"
 
 type Test struct {
 	Image     string        `yaml:"image,omitempty"`
+	Context   string        `yaml:"context,omitempty"`
 	Commands  []TestCommand `yaml:"commands,omitempty"`
 	DependsOn []string      `yaml:"depends_on,omitempty"`
 }
@@ -28,6 +29,20 @@ func (test *Test) expandEnvVars() error {
 			return err
 		}
 	}
+	return nil
+}
+
+func (t *Test) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type alias Test
+	var tt alias
+	err := unmarshal(&tt)
+	if err != nil {
+		return err
+	}
+	if tt.Context == "" {
+		tt.Context = "."
+	}
+	*t = Test(tt)
 	return nil
 }
 

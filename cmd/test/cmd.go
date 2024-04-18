@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path"
 	"time"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -279,11 +280,12 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 				// resources in the environment, so including it to set the env vars in the remote-run
 				External: manifest.External,
 			},
-			Manifest: manifest,
-			Command:  remote.TestCommand,
+			Manifest:                    manifest,
+			Command:                     remote.TestCommand,
+			ContextAbsolutePathOverride: path.Clean(fmt.Sprintf("%s/%s", cwd, test.Context)),
 		}
 
-		ioCtrl.Logger().Infof("Executing test for: %s", name)
+		oktetoLog.Information("Executing '%s'", name)
 		if err := runner.Run(ctx, params); err != nil {
 			return err
 		}
