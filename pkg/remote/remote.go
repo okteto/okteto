@@ -124,15 +124,18 @@ type Runner struct {
 
 // Params struct to pass the necessary parameters to create the Dockerfile
 type Params struct {
-	BuildEnvVars                map[string]string
-	DependenciesEnvVars         map[string]string
-	Manifest                    *model.Manifest
-	BaseImage                   string
-	ManifestPathFlag            string
-	TemplateName                string
-	DockerfileName              string
-	KnownHostsPath              string
-	Command                     string
+	BuildEnvVars        map[string]string
+	DependenciesEnvVars map[string]string
+	Manifest            *model.Manifest
+	BaseImage           string
+	ManifestPathFlag    string
+	TemplateName        string
+	DockerfileName      string
+	KnownHostsPath      string
+	Command             string
+	// ContextAbsolutePathOverride is the absolute path for the build context. Optional.
+	// If this values is not defined it will default to the folder location of the
+	// okteto manifest which is resolved through params.ManifestPathFlag
 	ContextAbsolutePathOverride string
 	Deployable                  deployable.Entity
 	CommandFlags                []string
