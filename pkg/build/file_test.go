@@ -14,7 +14,6 @@
 package build
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
@@ -49,11 +48,7 @@ func TestCreateDockerfileWithVolumeMounts(t *testing.T) {
 
 	require.ElementsMatch(t, volumes, info.VolumesToInclude)
 
-	dockerfilePath := info.Dockerfile
-
-	require.True(t, strings.HasPrefix(dockerfilePath, oktetoHome))
-
-	dockerfileContent, err := afero.ReadFile(fs, dockerfilePath)
+	dockerfileContent, err := afero.ReadFile(fs, info.Dockerfile)
 	require.NoError(t, err)
 
 	expected := "FROM nginx:latest\nCOPY /local/path /remote/path\nCOPY ./nginx/nginx.conf /etc/nginx/nginx.conf\n"
