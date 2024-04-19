@@ -789,7 +789,8 @@ func (svcResources *ServiceResources) IsDefaultValue() bool {
 func isFileCompose(path string) bool {
 	base := filepath.Base(path)
 	isComposeFileName := strings.HasPrefix(base, "compose") || strings.HasPrefix(base, "docker-compose") || strings.HasPrefix(base, "okteto-compose")
-	if !env.LoadBooleanOrDefault(stackSupportEnabledEnvVar, false) {
+	isStackSupported := env.LoadBooleanOrDefault(stackSupportEnabledEnvVar, false)
+	if !isStackSupported {
 		oktetoLog.Infof("%s is set to false. File will be treated as compose", stackSupportEnabledEnvVar)
 		if isComposeFileName {
 			oktetoLog.Warning("The file %s will be deprecated as a default compose file name in a future version. Please consider renaming your compose file to 'okteto-stack.yml'", base)
