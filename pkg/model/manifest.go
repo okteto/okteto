@@ -533,7 +533,6 @@ func GetInferredManifest(cwd string, fs afero.Fs) (*Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
-		
 		stackManifest.Deploy.ComposeSection.Stack = s
 		stackManifest.Manifest = s.Manifest
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto compose unmarshalled successfully")
