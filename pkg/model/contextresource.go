@@ -52,7 +52,7 @@ func GetContextResource(path string) (*ContextResource, error) {
 	}
 
 	if ctxResource.Context != "" || ctxResource.Namespace != "" {
-		oktetoLog.Warning("Manifest fields: 'context' and 'namespace' are deprecated. Use 'OKTETO_CONTEXT' and 'OKTETO_NAMESPACE' env vars instead.")
+		oktetoLog.Warning("Setting 'context' and 'namespace' in the okteto manifest and docker compose is deprecated. We recommend using the env vars 'OKTETO_CONTEXT' and 'OKTETO_NAMESPACE' instead.")
 	}
 
 	ctxResource.Context = os.ExpandEnv(ctxResource.Context)

@@ -533,13 +533,7 @@ func GetInferredManifest(cwd string, fs afero.Fs) (*Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		if s != nil {
-			if s.Context != "" || s.Namespace != "" {
-				oktetoLog.Warning("Compose fields: 'context' and 'namespace' are deprecated. Use 'OKTETO_CONTEXT' and 'OKTETO_NAMESPACE' env vars instead.")
-			}
-		}
-
+		
 		stackManifest.Deploy.ComposeSection.Stack = s
 		stackManifest.Manifest = s.Manifest
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto compose unmarshalled successfully")
