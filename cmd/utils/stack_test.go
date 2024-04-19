@@ -43,7 +43,7 @@ const (
 func Test_multipleStack(t *testing.T) {
 	dir := t.TempDir()
 	log.Printf("created tempdir: %s", dir)
-
+	t.Setenv("OKTETO_SUPPORT_STACKS_ENABLED", "true")
 	path, err := createFile(dir, "docker-compose.yml", firstStack)
 	if err != nil {
 		t.Fatal(err)
