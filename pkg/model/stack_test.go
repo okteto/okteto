@@ -1427,37 +1427,49 @@ func TestValidateServices(t *testing.T) {
 }
 func Test_isPathAComposeFile(t *testing.T) {
 	tests := []struct {
-		path     string
-		expected bool
+		name        string
+		path        string
+		envVarValue string
+		expected    bool
 	}{
 		{
+			name:     "compose file - no env var",
 			path:     "compose.yml",
 			expected: true,
 		},
 		{
+			name:     "compose file - no env var",
 			path:     "docker-compose.yaml",
 			expected: true,
 		},
 		{
+			name:     "compose file - no env var",
 			path:     "okteto-compose.yml",
 			expected: true,
 		},
 		{
+			name:     "compose file - no env var",
 			path:     "docker-compose-dev.yml",
 			expected: true,
 		},
 		{
+			name:     "no compose file - no env var",
 			path:     "okteto-stack.yml",
-			expected: false,
+			expected: true,
+		},
+		{
+			name:        "no compose file - env var set to true",
+			envVarValue: "true",
+			path:        "stack.yml",
+			expected:    false,
 		},
 	}
 
 	for _, test := range tests {
-		t.Run(test.path, func(t *testing.T) {
-			result := isPathAComposeFile(test.path)
-			if result != test.expected {
-				t.Errorf("Expected %v but got %v", test.expected, result)
-			}
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv(stackSupportEnabledEnvVar, test.envVarValue)
+			result := isFileCompose(test.path)
+			assert.Equal(t, test.expected, result)
 		})
 	}
 }

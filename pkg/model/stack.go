@@ -40,6 +40,12 @@ import (
 	resource "k8s.io/apimachinery/pkg/api/resource"
 )
 
+const (
+	// stacksSupportEnabledEnvVar is the environment variable to know if we should use compose or stacks
+	// Default is false
+	stackSupportEnabledEnvVar = "OKTETO_SUPPORT_STACKS_ENABLED"
+)
+
 var (
 	errBadStackName     = "must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character"
 	deprecatedManifests = []string{"stack.yml", "stack.yaml"}
@@ -777,9 +783,21 @@ func (svcResources *ServiceResources) IsDefaultValue() bool {
 	return svcResources.CPU.Value.IsZero() && svcResources.Memory.Value.IsZero() && svcResources.Storage.Size.Value.IsZero() && svcResources.Storage.Class == ""
 }
 
-func isPathAComposeFile(path string) bool {
+// isFileCompose checks if the path is a compose file
+// if the env var OKTETO_SUPPORT_STACKS_ENABLED is set to true, it will return true for any file no matter the name
+// if the env var is not set, it will return true for files that start with "compose", "docker-compose" or "okteto-compose"
+func isFileCompose(path string) bool {
 	base := filepath.Base(path)
-	return strings.HasPrefix(base, "compose") || strings.HasPrefix(base, "docker-compose") || strings.HasPrefix(base, "okteto-compose")
+	isComposeFileName := strings.HasPrefix(base, "compose") || strings.HasPrefix(base, "docker-compose") || strings.HasPrefix(base, "okteto-compose")
+	if !env.LoadBooleanOrDefault(stackSupportEnabledEnvVar, false) {
+		oktetoLog.Infof("%s is set to false. File will be treated as compose", stackSupportEnabledEnvVar)
+		if isComposeFileName {
+			oktetoLog.Warning("The file %s will be deprecated as a default compose file name in a future version. Please consider renaming your compose file to 'okteto-stack.yml'", base)
+		}
+		return true
+	}
+	oktetoLog.Infof("%s is set to true. Detecting if file is compose by name", stackSupportEnabledEnvVar)
+	return isComposeFileName
 }
 
 // LoadStack loads an okteto stack manifest checking "yml" and "yaml"
@@ -834,7 +852,7 @@ func getStack(name, manifestPath string, fs afero.Fs) (*Stack, error) {
 		deprecatedFile := filepath.Base(manifestPath)
 		oktetoLog.Warning("The file %s will be deprecated as a default compose file name in a future version. Please consider renaming your compose file to 'okteto-stack.yml'", deprecatedFile)
 	}
-	if isPathAComposeFile(manifestPath) {
+	if isFileCompose(manifestPath) {
 		isCompose = true
 	}
 	stack, err := GetStackFromPath(name, manifestPath, isCompose, fs)
@@ -865,7 +883,7 @@ func getOverrideFile(stackPath string, fs afero.Fs) (*Stack, error) {
 	overridePath := fmt.Sprintf("%s.override%s", fileName, extension)
 	var isCompose bool
 	if filesystem.FileExists(stackPath) {
-		if isPathAComposeFile(stackPath) {
+		if isFileCompose(stackPath) {
 			isCompose = true
 		}
 		stack, err := GetStackFromPath("", overridePath, isCompose, fs)
