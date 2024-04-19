@@ -1004,39 +1004,48 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 			m.Dev[svcName] = d
 		}
 
-		if svcInfo.Build == nil {
+		if svcInfo.Build == nil && len(svcInfo.VolumeMounts) == 0 {
 			continue
 		}
 
 		buildInfo := svcInfo.Build
 
-		if svcInfo.Image != "" {
-			buildInfo.Image = svcInfo.Image
-		}
+		if svcInfo.Build == nil && svcInfo.Image != "" && len(svcInfo.VolumeMounts) > 0 {
+			buildInfo, err = build.CreateDockerfileWithVolumeMounts(svcInfo.Image, svcInfo.VolumeMounts, m.Fs)
+			if err != nil {
+				return nil, err
+			}
 
-		for idx, volume := range buildInfo.VolumesToInclude {
-			localPath := volume.LocalPath
-			if filepath.IsAbs(localPath) {
-				localPath, err = filepath.Rel(buildInfo.Context, volume.LocalPath)
-				if err != nil {
-					localPath, err = filepath.Rel(cwd, volume.LocalPath)
+			for idx, volume := range buildInfo.VolumesToInclude {
+				localPath := volume.LocalPath
+				if filepath.IsAbs(localPath) {
+					localPath, err = filepath.Rel(buildInfo.Context, volume.LocalPath)
 					if err != nil {
-						oktetoLog.Info("can not find svc[%s].build.volumes to include relative to svc[%s].build.context", svcName, svcName)
+						localPath, err = filepath.Rel(cwd, volume.LocalPath)
+						if err != nil {
+							oktetoLog.Info("can not find svc[%s].build.volumes to include relative to svc[%s].build.context", svcName, svcName)
+						}
 					}
 				}
+				volume.LocalPath = localPath
+				buildInfo.VolumesToInclude[idx] = volume
 			}
-			volume.LocalPath = localPath
-			buildInfo.VolumesToInclude[idx] = volume
+		} else {
+			if svcInfo.Image != "" {
+				buildInfo.Image = svcInfo.Image
+			}
+
+			buildInfo.Context, err = filepath.Rel(cwd, buildInfo.Context)
+			if err != nil {
+				oktetoLog.Infof("can not make svc[%s].build.context relative to cwd", svcName)
+			}
+			contextAbs := filepath.Join(cwd, buildInfo.Context)
+			buildInfo.Dockerfile, err = filepath.Rel(contextAbs, buildInfo.Dockerfile)
+			if err != nil {
+				oktetoLog.Infof("can not make svc[%s].build.dockerfile relative to cwd", svcName)
+			}
 		}
-		buildInfo.Context, err = filepath.Rel(cwd, buildInfo.Context)
-		if err != nil {
-			oktetoLog.Infof("can not make svc[%s].build.context relative to cwd", svcName)
-		}
-		contextAbs := filepath.Join(cwd, buildInfo.Context)
-		buildInfo.Dockerfile, err = filepath.Rel(contextAbs, buildInfo.Dockerfile)
-		if err != nil {
-			oktetoLog.Infof("can not make svc[%s].build.dockerfile relative to cwd", svcName)
-		}
+
 		if _, ok := m.Build[svcName]; !ok {
 			m.Build[svcName] = buildInfo
 		}
