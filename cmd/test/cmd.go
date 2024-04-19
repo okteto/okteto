@@ -51,6 +51,7 @@ type Options struct {
 	Name             string
 	Variables        []string
 	Timeout          time.Duration
+	Deploy           bool
 }
 
 func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at deployCMD.AnalyticsTrackerInterface) *cobra.Command {
@@ -88,6 +89,7 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	cmd.Flags().StringVar(&options.Name, "name", "", "name of the development environment name to be deployed")
+	cmd.Flags().BoolVar(&options.Deploy, "deploy", false, "Always deploy the dev environment. If it's already deployed it will be redeployed")
 
 	return cmd
 }
@@ -174,9 +176,9 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 		ManifestName: options.Name,
 	}
 
-	name := options.Name
-	if name == "" {
-		name = namer.ResolveName(ctx)
+	devenvName := options.Name
+	if devenvName == "" {
+		devenvName = namer.ResolveName(ctx)
 	}
 
 	namespace := manifest.Namespace
@@ -184,7 +186,7 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 		namespace = okteto.GetContext().Namespace
 	}
 
-	if !pipeline.IsDeployed(ctx, name, namespace, kubeClient) {
+	if options.Deploy || !pipeline.IsDeployed(ctx, devenvName, namespace, kubeClient) {
 		c := deployCMD.Command{
 			GetManifest: func(path string, fs afero.Fs) (*model.Manifest, error) {
 				return manifest, nil
@@ -228,7 +230,7 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 		if err := manifest.ExpandEnvVars(); err != nil {
 			return fmt.Errorf("failed to expand manifest environment variables: %w", err)
 		}
-		oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy'", name)
+		oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy'", devenvName)
 	}
 
 	var nodes []dag.Node
@@ -245,10 +247,11 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 	for _, name := range tree.Ordered() {
 		test := manifest.Test[name]
 
-		commandsFlags, err := deployCMD.GetCommandFlags(name, options.Variables)
+		commandFlags, err := deployCMD.GetCommandFlags(name, options.Variables)
 		if err != nil {
 			return err
 		}
+		commandFlags = append(commandFlags, fmt.Sprintf("--devenv-name=%s", devenvName))
 
 		runner := remote.NewRunner(ioCtrl, buildCMD.NewOktetoBuilder(
 			&okteto.ContextStateless{
@@ -266,7 +269,7 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 			BaseImage:           test.Image,
 			ManifestPathFlag:    options.ManifestPathFlag,
 			TemplateName:        "dockerfile",
-			CommandFlags:        commandsFlags,
+			CommandFlags:        commandFlags,
 			BuildEnvVars:        builder.GetBuildEnvVars(),
 			DependenciesEnvVars: deployCMD.GetDependencyEnvVars(os.Environ),
 			DockerfileName:      "Dockerfile.test",

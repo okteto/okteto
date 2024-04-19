@@ -68,10 +68,7 @@ func TestRun_TestCommand(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			runner := &fakeTestRunner{}
 			runner.On("RunTest", tt.params).Return(tt.expected)
-			command := &TestCommand{
-				runner: runner,
-			}
-			err := command.Run(tt.params)
+			err := runner.RunTest(tt.params)
 
 			require.Equal(t, err, tt.expected)
 			runner.AssertExpectations(t)

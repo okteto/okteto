@@ -21,7 +21,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
@@ -273,18 +272,14 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 
 // runCommandsSection runs the commands defined in the command section of the deployable entity
 func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployParameters) error {
-	oktetoEnvFile, err := r.createTempOktetoEnvFile()
+	oktetoEnvFile, unlinkEnv, err := createTempOktetoEnvFile(r.Fs)
 	if err != nil {
 		return err
 	}
 
-	defer func() {
-		if err := r.Fs.RemoveAll(filepath.Dir(oktetoEnvFile.Name())); err != nil {
-			oktetoLog.Infof("error removing okteto env file dir: %s", err)
-		}
-	}()
+	defer unlinkEnv()
 
-	var envMapFromOktetoEnvFile map[string]string
+	envStepper := NewEnvStepper(oktetoEnvFile.Name())
 
 	if len(params.Deployable.Commands) != 0 {
 		startTime := time.Now()
@@ -305,14 +300,9 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 			}
 			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Command '%s' successfully executed", command.Name)
 
-			envMapFromOktetoEnvFile, err = godotenv.Read(oktetoEnvFile.Name())
+			envsFromOktetoEnvFile, err := envStepper.Step()
 			if err != nil {
 				oktetoLog.Warning("no valid format used in the okteto env file: %s", err.Error())
-			}
-
-			envsFromOktetoEnvFile := make([]string, 0, len(envMapFromOktetoEnvFile))
-			for k, v := range envMapFromOktetoEnvFile {
-				envsFromOktetoEnvFile = append(envsFromOktetoEnvFile, fmt.Sprintf("%s=%s", k, v))
 			}
 
 			// the variables in the $OKTETO_ENV file are added as environment variables
@@ -351,7 +341,7 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 			return nil
 		}
 
-		if err := r.deployExternals(ctx, params, envMapFromOktetoEnvFile); err != nil {
+		if err := r.deployExternals(ctx, params, envStepper.Map()); err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying external resources: %s", err.Error())
 			return err
 		}
@@ -415,18 +405,23 @@ func (r *DeployRunner) CleanUp(ctx context.Context, err error) {
 }
 
 // createTempOktetoEnvFile creates a temporal file use to store the environment variables
-func (r *DeployRunner) createTempOktetoEnvFile() (afero.File, error) {
-	oktetoEnvFileDir, err := afero.TempDir(r.Fs, "", "")
+func createTempOktetoEnvFile(fs afero.Fs) (afero.File, func(), error) {
+	oktetoEnvFileDir, err := afero.TempDir(fs, "", "")
 	if err != nil {
-		return nil, err
+		return nil, func() {}, err
 	}
 
-	oktetoEnvFile, err := r.Fs.Create(filepath.Join(oktetoEnvFileDir, ".env"))
+	oktetoEnvFile, err := fs.Create(filepath.Join(oktetoEnvFileDir, ".env"))
 	if err != nil {
-		return nil, err
+		return nil, func() {}, err
 	}
 
 	os.Setenv(constants.OktetoEnvFile, oktetoEnvFile.Name())
 	oktetoLog.Debug(fmt.Sprintf("using %s as env file for deploy command", oktetoEnvFile.Name()))
-	return oktetoEnvFile, nil
+
+	return oktetoEnvFile, func() {
+		if err := fs.RemoveAll(filepath.Dir(oktetoEnvFile.Name())); err != nil {
+			oktetoLog.Infof("error removing okteto env file dir: %s", err)
+		}
+	}, nil
 }

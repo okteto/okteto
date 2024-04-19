@@ -18,18 +18,23 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils/executor"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/spf13/afero"
 )
 
 // TestRunner is responsible for running the commands defined in a manifest when
 // running tests
 type TestRunner struct {
-	Executor executor.ManifestExecutor
+	Executor         executor.ManifestExecutor
+	Fs               afero.Fs
+	GetDevEnvEnviron func(devEnvName, namespace string) (map[string]string, error)
+	SetDevEnvEnviron func(devEnvName, namespace string, vars []string) error
 }
 
 // TestParameters represents the parameters for destroying a remote entity
 type TestParameters struct {
 	Name         string
 	Namespace    string
+	DevEnvName   string
 	Deployable   Entity
 	Variables    []string
 	ForceDestroy bool
@@ -37,25 +42,62 @@ type TestParameters struct {
 
 // RunTest executes the custom commands received as part of TestParameters
 func (dr *TestRunner) RunTest(params TestParameters) error {
-	var commandErr error
-	lastCommandName := ""
-	for _, command := range params.Deployable.Commands {
-		oktetoLog.Information("Running '%s'", command.Name)
-		lastCommandName = command.Name
-		oktetoLog.SetStage(command.Name)
-		if err := dr.Executor.Execute(command, params.Variables); err != nil {
-			err = fmt.Errorf("error executing command '%s': %w", command.Name, err)
+	oktetoLog.SetStage(params.Name)
 
-			// Store the error to return if the force destroy option is set
-			commandErr = err
-		}
-		oktetoLog.SetStage("")
+	oktetoEnvFile, unlinkEnv, err := createTempOktetoEnvFile(dr.Fs)
+	if err != nil {
+		return err
 	}
 
-	// This is a hack for improving the logs until we refactor all that. The oktetoLog.Information('Running '%s'')
-	// should not appear under any stage, that is why we clear the stage after each execution. To keep backward compatibility
-	// in case of failure of command, we end up the function setting the stage to the last command executed.
-	oktetoLog.SetStage(lastCommandName)
+	deployEnv, err := dr.getDeployEnv(params)
+	if err != nil {
+		return err
+	}
 
-	return commandErr
+	envStepper := NewEnvStepper(oktetoEnvFile.Name())
+	envStepper.WithFS(dr.Fs)
+
+	// Write back any variables written by the test into the deploy configmap
+	defer func() {
+		err := dr.SetDevEnvEnviron(params.DevEnvName, params.Namespace, append(deployEnv, params.Variables...))
+		if err != nil {
+			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error saving configmap environment: %s", err.Error())
+		}
+	}()
+	defer unlinkEnv()
+
+	for _, command := range params.Deployable.Commands {
+		oktetoLog.Information("Running '%s'", command.Name)
+
+		execEnv := []string{}
+		execEnv = append(execEnv, deployEnv...)
+		execEnv = append(execEnv, params.Variables...)
+
+		if err := dr.Executor.Execute(command, execEnv); err != nil {
+			return err
+		}
+
+		// Read variables that may have been written to OKTETO_ENV in the current step
+		envsFromOktetoEnvFile, err := envStepper.Step()
+		if err != nil {
+			oktetoLog.Warning("no valid format used in the okteto env file: %s", err.Error())
+		}
+
+		params.Variables = append(params.Variables, envsFromOktetoEnvFile...)
+	}
+
+	return nil
+}
+
+func (dr *TestRunner) getDeployEnv(params TestParameters) ([]string, error) {
+	deployEnv, err := dr.GetDevEnvEnviron(params.DevEnvName, params.Namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]string, 0, len(deployEnv))
+	for k, v := range deployEnv {
+		list = append(list, fmt.Sprintf("%s=%s", k, v))
+	}
+	return list, nil
 }
