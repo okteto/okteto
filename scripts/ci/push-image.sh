@@ -30,6 +30,8 @@
 
         # if release tag is  not empty, push the stable image
         if [ -n "$RELEASE_TAG" ]; then
+                echo "prerel: ${prerel}"
+                echo "version ${version}"
                 if [[ $prerel =~ $beta_prerel_regex ]]; then
                         tags="${tags},okteto/okteto:beta"
                 elif [ -n "$version" ]; then
