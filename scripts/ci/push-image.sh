@@ -23,7 +23,7 @@
         fi
 
 
-        beta_prerel_regex="beta\.[0-9]+"
+        beta_prerel_regex="^beta\.[0-9]+"
         prerel="$(semver get prerel "${RELEASE_TAG}" || true)"
         version="$(semver get release "${RELEASE_TAG}" || true)"
         tags="okteto/okteto:${RELEASE_TAG},okteto/okteto:dev"
