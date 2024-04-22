@@ -77,7 +77,7 @@ func TestGetContext(t *testing.T) {
 							GlobalNamespace: "globalNs",
 							Analytics:       false,
 						},
-						Secrets: []variablesQuery{
+						PlatformVariables: []variablesQuery{
 							{
 								Name:  "name",
 								Value: "value",
@@ -143,7 +143,7 @@ func TestGetContext(t *testing.T) {
 							GlobalNamespace: "",
 							Analytics:       false,
 						},
-						Secrets: []variablesQuery{
+						PlatformVariables: []variablesQuery{
 							{
 								Name:  "name",
 								Value: "value",
@@ -242,13 +242,13 @@ func TestGetContext(t *testing.T) {
 	}
 }
 
-func TestGetUserSecrets(t *testing.T) {
+func TestGetOktetoPlatformVariables(t *testing.T) {
 	type input struct {
 		client *fakeGraphQLClient
 	}
 	type expected struct {
-		err         error
-		userSecrets []env.Var
+		err               error
+		platformVariables []env.Var
 	}
 	testCases := []struct {
 		cfg      input
@@ -263,12 +263,12 @@ func TestGetUserSecrets(t *testing.T) {
 				},
 			},
 			expected: expected{
-				userSecrets: nil,
-				err:         assert.AnError,
+				platformVariables: nil,
+				err:               assert.AnError,
 			},
 		},
 		{
-			name: "query get user secrets",
+			name: "query get okteto platform variables",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					queryResult: &getVariablesQuery{
@@ -286,7 +286,7 @@ func TestGetUserSecrets(t *testing.T) {
 				},
 			},
 			expected: expected{
-				userSecrets: []env.Var{
+				platformVariables: []env.Var{
 					{
 						Name:  "password",
 						Value: "test",
@@ -302,9 +302,9 @@ func TestGetUserSecrets(t *testing.T) {
 			uc := &userClient{
 				client: tc.cfg.client,
 			}
-			userSecrets, err := uc.GetOktetoPlatformVariables(ctx)
+			vars, err := uc.GetOktetoPlatformVariables(ctx)
 			assert.ErrorIs(t, err, tc.expected.err)
-			assert.Equal(t, tc.expected.userSecrets, userSecrets)
+			assert.Equal(t, tc.expected.platformVariables, vars)
 		})
 	}
 }
@@ -351,7 +351,7 @@ func TestGetDeprecatedContext(t *testing.T) {
 							Buildkit:    "buildkit.com",
 							Certificate: "cert",
 						},
-						Secrets: []variablesQuery{
+						PlatformVariables: []variablesQuery{
 							{
 								Name:  "name",
 								Value: "value",

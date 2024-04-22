@@ -23,11 +23,11 @@ import (
 
 // FakeUserClient is used to mock the userClient interface
 type FakeUserClient struct {
-	errGetUserSecrets error
-	userCtx           *types.UserContext
-	userSecrets       []env.Var
-	err               []error
-	ClusterMetadata   types.ClusterMetadata
+	errGetPlatformVariables error
+	userCtx                 *types.UserContext
+	platformVariables       []env.Var
+	err                     []error
+	ClusterMetadata         types.ClusterMetadata
 }
 
 func NewFakeUsersClient(user *types.User, err ...error) *FakeUserClient {
@@ -51,10 +51,10 @@ func (c *FakeUserClient) GetContext(_ context.Context, _ string) (*types.UserCon
 }
 
 func (c *FakeUserClient) GetOktetoPlatformVariables(_ context.Context) ([]env.Var, error) {
-	if c.errGetUserSecrets != nil {
-		return nil, c.errGetUserSecrets
+	if c.errGetPlatformVariables != nil {
+		return nil, c.errGetPlatformVariables
 	}
-	return c.userSecrets, nil
+	return c.platformVariables, nil
 }
 
 func (*FakeUserClient) GetClusterCertificate(_ context.Context, _, _ string) ([]byte, error) {

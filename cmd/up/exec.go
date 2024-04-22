@@ -147,8 +147,8 @@ type configMapEnvsGetterInterface interface {
 	getEnvsFromConfigMap(ctx context.Context, name string, namespace string, client kubernetes.Interface) ([]string, error)
 }
 
-type userVariablesEnvsGetterInterface interface {
-	getEnvsFromUserVariables(context.Context) ([]string, error)
+type platformVariablesEnvsGetterInterface interface {
+	getEnvsFromPlatformVariables(context.Context) ([]string, error)
 }
 
 type imageEnvsGetterInterface interface {
@@ -159,34 +159,34 @@ type imageGetterInterface interface {
 	GetImageMetadata(string) (registry.ImageMetadata, error)
 }
 
-type userVariablesGetterInterface interface {
+type platformVariablesGetterInterface interface {
 	GetOktetoPlatformVariables(context.Context) ([]env.Var, error)
 }
 
 type devContainerEnvGetter struct{}
 type configMapGetter struct{}
-type userVariablesEnvsGetter struct {
-	variablesGetter userVariablesGetterInterface
+type platformVariablesEnvsGetter struct {
+	variablesGetter platformVariablesGetterInterface
 }
 type imageEnvsGetter struct {
 	imageGetter imageGetterInterface
 }
 
 type envsGetter struct {
-	client                  kubernetes.Interface
-	devContainerEnvGetter   devContainerEnvGetterInterface
-	configMapEnvsGetter     configMapEnvsGetterInterface
-	userVariablesEnvsGetter userVariablesEnvsGetterInterface
-	imageEnvsGetter         imageEnvsGetterInterface
-	dev                     *model.Dev
-	getDefaultLocalEnvs     func() []string
-	name                    string
-	namespace               string
+	client                      kubernetes.Interface
+	devContainerEnvGetter       devContainerEnvGetterInterface
+	configMapEnvsGetter         configMapEnvsGetterInterface
+	platformVariablesEnvsGetter platformVariablesEnvsGetterInterface
+	imageEnvsGetter             imageEnvsGetterInterface
+	dev                         *model.Dev
+	getDefaultLocalEnvs         func() []string
+	name                        string
+	namespace                   string
 }
 
 func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {
 
-	var variablesGetter userVariablesGetterInterface
+	var variablesGetter platformVariablesGetterInterface
 	if okteto.IsOkteto() {
 		oc, err := okteto.NewOktetoClient()
 		if err != nil {
@@ -202,7 +202,7 @@ func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {
 		client:                hybridCtx.Client,
 		devContainerEnvGetter: &devContainerEnvGetter{},
 		configMapEnvsGetter:   &configMapGetter{},
-		userVariablesEnvsGetter: &userVariablesEnvsGetter{
+		platformVariablesEnvsGetter: &platformVariablesEnvsGetter{
 			variablesGetter: variablesGetter,
 		},
 		imageEnvsGetter: &imageEnvsGetter{
@@ -232,7 +232,7 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 	}
 	envs = append(envs, imageEnvs...)
 
-	platformVariablesEnvs, err := eg.userVariablesEnvsGetter.getEnvsFromUserVariables(ctx)
+	platformVariablesEnvs, err := eg.platformVariablesEnvsGetter.getEnvsFromPlatformVariables(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -355,7 +355,7 @@ func (cmg *configMapGetter) getEnvsFromConfigMap(ctx context.Context, name, name
 	return envs, nil
 }
 
-func (sg *userVariablesEnvsGetter) getEnvsFromUserVariables(ctx context.Context) ([]string, error) {
+func (sg *platformVariablesEnvsGetter) getEnvsFromPlatformVariables(ctx context.Context) ([]string, error) {
 	var envs []string
 
 	if okteto.IsOkteto() {
@@ -514,7 +514,7 @@ func (up *upContext) checkOktetoStartError(ctx context.Context, msg string) erro
 		return oktetoErrors.UserError{
 			E: fmt.Errorf(msg),
 			Hint: fmt.Sprintf(`Check your development container logs for errors: 'kubectl logs %s',
-	Check that your container can write to the destination path of your secrets.
+	Check that your container can write to the destination path of your platformVariables.
 	Run '%s' to reset your development container and try again`, up.Pod.Name, utils.GetDownCommand(up.Options.ManifestPathFlag)),
 		}
 	}

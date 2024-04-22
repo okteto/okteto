@@ -38,9 +38,9 @@ func newUserClient(client graphqlClientInterface) *userClient {
 }
 
 type getContextQuery struct {
-	Cred    credQuery        `graphql:"credentials(space: $cred)"`
-	User    userQuery        `graphql:"user"`
-	Secrets []variablesQuery `graphql:"getGitDeploySecrets"`
+	Cred              credQuery        `graphql:"credentials(space: $cred)"`
+	User              userQuery        `graphql:"user"`
+	PlatformVariables []variablesQuery `graphql:"getGitDeploySecrets"`
 }
 
 type getVariablesQuery struct {
@@ -52,9 +52,9 @@ type getContextFileQuery struct {
 }
 
 type getDeprecatedContextQuery struct {
-	User    deprecatedUserQuery `graphql:"user"`
-	Cred    credQuery           `graphql:"credentials(space: $cred)"`
-	Secrets []variablesQuery    `graphql:"getGitDeploySecrets"`
+	User              deprecatedUserQuery `graphql:"user"`
+	Cred              credQuery           `graphql:"credentials(space: $cred)"`
+	PlatformVariables []variablesQuery    `graphql:"getGitDeploySecrets"`
 }
 
 type getRegistryCredentialsQuery struct {
@@ -143,12 +143,12 @@ func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserCont
 		return nil, err
 	}
 
-	secrets := make([]env.Var, 0)
-	for _, secret := range queryStruct.Secrets {
-		if !strings.Contains(string(secret.Name), ".") {
-			secrets = append(secrets, env.Var{
-				Name:  string(secret.Name),
-				Value: string(secret.Value),
+	platformVars := make([]env.Var, 0)
+	for _, v := range queryStruct.PlatformVariables {
+		if !strings.Contains(string(v.Name), ".") {
+			platformVars = append(platformVars, env.Var{
+				Name:  string(v.Name),
+				Value: string(v.Value),
 			})
 		}
 	}
@@ -171,7 +171,7 @@ func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserCont
 			GlobalNamespace: globalNamespace,
 			Analytics:       analytics,
 		},
-		PlatformVariables: secrets,
+		PlatformVariables: platformVars,
 		Credentials: types.Credential{
 			Server:      string(queryStruct.Cred.Server),
 			Certificate: string(queryStruct.Cred.Certificate),
@@ -215,7 +215,7 @@ func (c *userClient) deprecatedGetUserContext(ctx context.Context) (*types.UserC
 	}
 
 	secrets := make([]env.Var, 0)
-	for _, secret := range queryStruct.Secrets {
+	for _, secret := range queryStruct.PlatformVariables {
 		if !strings.Contains(string(secret.Name), ".") {
 			secrets = append(secrets, env.Var{
 				Name:  string(secret.Name),

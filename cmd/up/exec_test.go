@@ -50,7 +50,7 @@ func (f *fakeGetter) getEnvsFromConfigMap(ctx context.Context, name, namespace s
 	return f.envs, f.err
 }
 
-func (f *fakeGetter) getEnvsFromUserVariables(context.Context) ([]string, error) {
+func (f *fakeGetter) getEnvsFromPlatformVariables(context.Context) ([]string, error) {
 	return f.envs, f.err
 }
 
@@ -97,7 +97,7 @@ func TestGetEnvs(t *testing.T) {
 			},
 		},
 		{
-			name:                    "only envs from secrets",
+			name:                    "only envs from platformVariables",
 			fakeConfigMapEnvsGetter: fakeGetter{},
 			fakeSecretEnvsGetter:    fakeGetter{envs: []string{"FROMSECRET=VALUE1"}},
 			expectedEnvs:            []string{"FROMSECRET=VALUE1"},
@@ -260,15 +260,15 @@ func TestGetEnvs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			eg := envsGetter{
-				dev:                     tt.dev,
-				name:                    "test",
-				namespace:               "test",
-				client:                  tt.client,
-				devContainerEnvGetter:   &tt.fakeDevContainerEnvGetter,
-				configMapEnvsGetter:     &tt.fakeConfigMapEnvsGetter,
-				userVariablesEnvsGetter: &tt.fakeSecretEnvsGetter,
-				imageEnvsGetter:         &tt.fakeImageEnvsGetter,
-				getDefaultLocalEnvs:     func() []string { return []string{} },
+				dev:                         tt.dev,
+				name:                        "test",
+				namespace:                   "test",
+				client:                      tt.client,
+				devContainerEnvGetter:       &tt.fakeDevContainerEnvGetter,
+				configMapEnvsGetter:         &tt.fakeConfigMapEnvsGetter,
+				platformVariablesEnvsGetter: &tt.fakeSecretEnvsGetter,
+				imageEnvsGetter:             &tt.fakeImageEnvsGetter,
+				getDefaultLocalEnvs:         func() []string { return []string{} },
 			}
 
 			envs, err := eg.getEnvs(ctx)
@@ -310,7 +310,7 @@ func TestGetEnvsError(t *testing.T) {
 			}),
 		},
 		{
-			name:                    "error retrieving envs from secrets",
+			name:                    "error retrieving envs from platformVariables",
 			fakeConfigMapEnvsGetter: fakeGetter{},
 			fakeSecretEnvsGetter:    fakeGetter{err: assert.AnError},
 			client: fake.NewSimpleClientset(&appsv1.StatefulSet{
@@ -340,12 +340,12 @@ func TestGetEnvsError(t *testing.T) {
 					Name:      "test",
 					Namespace: "test",
 				},
-				name:                    "test",
-				namespace:               "test",
-				client:                  tt.client,
-				configMapEnvsGetter:     &tt.fakeConfigMapEnvsGetter,
-				userVariablesEnvsGetter: &tt.fakeSecretEnvsGetter,
-				imageEnvsGetter:         &tt.fakeImageEnvsGetter,
+				name:                        "test",
+				namespace:                   "test",
+				client:                      tt.client,
+				configMapEnvsGetter:         &tt.fakeConfigMapEnvsGetter,
+				platformVariablesEnvsGetter: &tt.fakeSecretEnvsGetter,
+				imageEnvsGetter:             &tt.fakeImageEnvsGetter,
 			}
 
 			envs, err := eg.getEnvs(ctx)
@@ -419,15 +419,15 @@ func TestGetEnvForHybridModeWithProperPriority(t *testing.T) {
 	}
 
 	eg := envsGetter{
-		dev:                     dev,
-		name:                    "test",
-		namespace:               "test",
-		client:                  client,
-		devContainerEnvGetter:   &fakeDevContainerEnvGetter,
-		configMapEnvsGetter:     &fakeConfigMapEnvsGetter,
-		userVariablesEnvsGetter: &fakeSecretEnvsGetter,
-		imageEnvsGetter:         &fakeImageEnvsGetter,
-		getDefaultLocalEnvs:     func() []string { return []string{} },
+		dev:                         dev,
+		name:                        "test",
+		namespace:                   "test",
+		client:                      client,
+		devContainerEnvGetter:       &fakeDevContainerEnvGetter,
+		configMapEnvsGetter:         &fakeConfigMapEnvsGetter,
+		platformVariablesEnvsGetter: &fakeSecretEnvsGetter,
+		imageEnvsGetter:             &fakeImageEnvsGetter,
+		getDefaultLocalEnvs:         func() []string { return []string{} },
 	}
 	envs, err := eg.getEnvs(ctx)
 	require.NoError(t, err)
@@ -825,20 +825,20 @@ func TestGetEnvsFromDevContainer(t *testing.T) {
 	}
 }
 
-type fakeUserSecretsGetter struct {
-	err     error
-	secrets []env.Var
+type fakePlatformVariablesGetter struct {
+	err               error
+	platformVariables []env.Var
 }
 
-func (fusg fakeUserSecretsGetter) GetOktetoPlatformVariables(context.Context) ([]env.Var, error) {
-	return fusg.secrets, fusg.err
+func (f fakePlatformVariablesGetter) GetOktetoPlatformVariables(context.Context) ([]env.Var, error) {
+	return f.platformVariables, f.err
 }
 
 func TestGetEnvsFromSecrets(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		fakeSecretsGetter fakeUserSecretsGetter
+		fakeSecretsGetter fakePlatformVariablesGetter
 		name              string
 		expectedEnvs      []string
 		isOkteto          bool
@@ -848,15 +848,15 @@ func TestGetEnvsFromSecrets(t *testing.T) {
 			isOkteto: false,
 		},
 		{
-			name:              "no user secrets",
+			name:              "no user platformVariables",
 			isOkteto:          true,
-			fakeSecretsGetter: fakeUserSecretsGetter{},
+			fakeSecretsGetter: fakePlatformVariablesGetter{},
 		},
 		{
-			name:     "with user secrets",
+			name:     "with user platformVariables",
 			isOkteto: true,
-			fakeSecretsGetter: fakeUserSecretsGetter{
-				secrets: []env.Var{
+			fakeSecretsGetter: fakePlatformVariablesGetter{
+				platformVariables: []env.Var{
 					{
 						Name:  "FROMSECRETSTORE",
 						Value: "AVALUE",
@@ -884,10 +884,10 @@ func TestGetEnvsFromSecrets(t *testing.T) {
 				},
 				CurrentContext: "test",
 			}
-			secretEnvsGetter := userVariablesEnvsGetter{
+			secretEnvsGetter := platformVariablesEnvsGetter{
 				variablesGetter: tt.fakeSecretsGetter,
 			}
-			envs, err := secretEnvsGetter.getEnvsFromUserVariables(ctx)
+			envs, err := secretEnvsGetter.getEnvsFromPlatformVariables(ctx)
 			require.NoError(t, err)
 			require.ElementsMatch(t, tt.expectedEnvs, envs)
 		})
@@ -895,12 +895,12 @@ func TestGetEnvsFromSecrets(t *testing.T) {
 }
 
 func TestGetEnvsFromSecretsError(t *testing.T) {
-	secretEnvsGetter := userVariablesEnvsGetter{
-		variablesGetter: fakeUserSecretsGetter{
+	secretEnvsGetter := platformVariablesEnvsGetter{
+		variablesGetter: fakePlatformVariablesGetter{
 			err: assert.AnError,
 		},
 	}
-	envs, err := secretEnvsGetter.getEnvsFromUserVariables(context.Background())
+	envs, err := secretEnvsGetter.getEnvsFromPlatformVariables(context.Background())
 	require.Error(t, err)
 	require.Nil(t, envs)
 }
