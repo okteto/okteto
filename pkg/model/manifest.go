@@ -1030,6 +1030,8 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 				volume.LocalPath = localPath
 				buildInfo.VolumesToInclude[idx] = volume
 			}
+
+			svcInfo.Build = buildInfo
 		} else {
 			if svcInfo.Image != "" {
 				buildInfo.Image = svcInfo.Image
