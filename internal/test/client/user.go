@@ -15,6 +15,7 @@ package client
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/env"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
 	"github.com/okteto/okteto/pkg/types"
@@ -24,7 +25,7 @@ import (
 type FakeUserClient struct {
 	errGetUserSecrets error
 	userCtx           *types.UserContext
-	userSecrets       []types.Secret
+	userSecrets       []env.Var
 	err               []error
 	ClusterMetadata   types.ClusterMetadata
 }
@@ -49,7 +50,7 @@ func (c *FakeUserClient) GetContext(_ context.Context, _ string) (*types.UserCon
 	return c.userCtx, nil
 }
 
-func (c *FakeUserClient) GetUserSecrets(_ context.Context) ([]types.Secret, error) {
+func (c *FakeUserClient) GetUserVariables(_ context.Context) ([]env.Var, error) {
 	if c.errGetUserSecrets != nil {
 		return nil, c.errGetUserSecrets
 	}

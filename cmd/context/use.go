@@ -16,6 +16,7 @@ package context
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"strings"
 
@@ -26,7 +27,6 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -226,7 +226,7 @@ func getContext(ctxOptions *Options) (string, error) {
 	return oktetoContext, nil
 }
 
-func setSecrets(secrets []types.Secret) {
+func setSecrets(secrets []env.Var) {
 	for _, secret := range secrets {
 		value, exists := os.LookupEnv(secret.Name)
 		if exists {

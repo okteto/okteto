@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -40,7 +41,6 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
-	"github.com/okteto/okteto/pkg/types"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -159,14 +159,14 @@ type imageGetterInterface interface {
 	GetImageMetadata(string) (registry.ImageMetadata, error)
 }
 
-type secretsGetterInterface interface {
-	GetUserSecrets(context.Context) ([]types.Secret, error)
+type userVariablesGetterInterface interface {
+	GetUserVariables(context.Context) ([]env.Var, error)
 }
 
 type devContainerEnvGetter struct{}
 type configMapGetter struct{}
 type secretsEnvsGetter struct {
-	secretsGetter secretsGetterInterface
+	secretsGetter userVariablesGetterInterface
 }
 type imageEnvsGetter struct {
 	imageGetter imageGetterInterface
@@ -186,7 +186,7 @@ type envsGetter struct {
 
 func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {
 
-	var secretsGetter secretsGetterInterface
+	var secretsGetter userVariablesGetterInterface
 	if okteto.IsOkteto() {
 		oc, err := okteto.NewOktetoClient()
 		if err != nil {
@@ -359,7 +359,7 @@ func (sg *secretsEnvsGetter) getEnvsFromSecrets(ctx context.Context) ([]string, 
 	var envs []string
 
 	if okteto.IsOkteto() {
-		secrets, err := sg.secretsGetter.GetUserSecrets(ctx)
+		secrets, err := sg.secretsGetter.GetUserVariables(ctx)
 		if err != nil {
 			return nil, err
 		}

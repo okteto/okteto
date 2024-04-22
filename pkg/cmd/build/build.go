@@ -337,7 +337,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *build.Info, o *types.Bui
 		Platform:    o.Platform,
 	}
 
-	// if secrets are present at the cmd flag, copy them to opts.Secrets
+	// if secrets are present at the cmd flag, copy them to opts.Variables
 	if o.Secrets != nil {
 		opts.Secrets = o.Secrets
 	}

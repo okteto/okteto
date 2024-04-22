@@ -26,7 +26,6 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
-	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -828,10 +827,10 @@ func TestGetEnvsFromDevContainer(t *testing.T) {
 
 type fakeUserSecretsGetter struct {
 	err     error
-	secrets []types.Secret
+	secrets []env.Var
 }
 
-func (fusg fakeUserSecretsGetter) GetUserSecrets(context.Context) ([]types.Secret, error) {
+func (fusg fakeUserSecretsGetter) GetUserVariables(context.Context) ([]env.Var, error) {
 	return fusg.secrets, fusg.err
 }
 
@@ -857,7 +856,7 @@ func TestGetEnvsFromSecrets(t *testing.T) {
 			name:     "with user secrets",
 			isOkteto: true,
 			fakeSecretsGetter: fakeUserSecretsGetter{
-				secrets: []types.Secret{
+				secrets: []env.Var{
 					{
 						Name:  "FROMSECRETSTORE",
 						Value: "AVALUE",
