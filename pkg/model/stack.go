@@ -883,7 +883,7 @@ func getOverrideFile(stackPath string, fs afero.Fs) (*Stack, error) {
 	fileName := strings.TrimSuffix(stackPath, extension)
 	overridePath := fmt.Sprintf("%s.override%s", fileName, extension)
 	var isCompose bool
-	if filesystem.FileExists(stackPath) {
+	if filesystem.FileExists(overridePath) {
 		if isFileCompose(stackPath) {
 			isCompose = true
 		}
