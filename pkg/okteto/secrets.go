@@ -17,12 +17,12 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"strings"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
 	dockercredentials "github.com/docker/docker-credential-helpers/credentials"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
