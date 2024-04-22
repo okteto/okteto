@@ -5,6 +5,9 @@
 .idea
 .atom
 
+# VSCode Plugins
+.devcontainer
+
 # Golang binary
 cli
 .syncthing*
