@@ -47,12 +47,12 @@ func CreateDockerfileWithVolumeMounts(image string, volumes []VolumeMounts, fs a
 	datawriter := bufio.NewWriter(tmpFile)
 	defer datawriter.Flush()
 
-	_, err = datawriter.Write([]byte(fmt.Sprintf("FROM %s\n", image)))
+	_, err = fmt.Fprintf(datawriter, "FROM %s\n", image)
 	if err != nil {
 		return build, fmt.Errorf("failed to write dockerfile: %w", err)
 	}
 	for _, volume := range volumes {
-		_, err = datawriter.Write([]byte(fmt.Sprintf("COPY %s %s\n", filepath.ToSlash(volume.LocalPath), volume.RemotePath)))
+		_, err = fmt.Fprintf(datawriter, "COPY %s %s\n", filepath.ToSlash(volume.LocalPath), volume.RemotePath)
 		if err != nil {
 			oktetoLog.Infof("failed to write volume %s: %s", volume.LocalPath, err)
 			continue
