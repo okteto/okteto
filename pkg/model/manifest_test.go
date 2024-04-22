@@ -811,7 +811,7 @@ func TestInferFromStackWithVolumeMounts(t *testing.T) {
 	require.NoError(t, err)
 
 	// Ensure Dockerfile was generated as it is expected in this scenario
-	expected := fmt.Sprintf("FROM %s\nCOPY %s etc/nginx/nginx.conf\n", "okteto.dev/test:my-tag", filepath.Join(expectedContext, "nginx.conf"))
+	expected := fmt.Sprintf("FROM %s\nCOPY %s %s\n", "okteto.dev/test:my-tag", filepath.Join(expectedContext, "nginx.conf"), filepath.Join("etc", "nginx", "nginx.conf"))
 	require.Equal(t, expected, string(dockerfileContent))
 }
 
