@@ -108,7 +108,7 @@ func TestGetContext(t *testing.T) {
 						GlobalNamespace: "globalNs",
 						Analytics:       false,
 					},
-					Secrets: []env.Var{
+					PlatformVariables: []env.Var{
 						{
 							Name:  "name",
 							Value: "value",
@@ -174,7 +174,7 @@ func TestGetContext(t *testing.T) {
 						GlobalNamespace: constants.DefaultGlobalNamespace,
 						Analytics:       false,
 					},
-					Secrets: []env.Var{
+					PlatformVariables: []env.Var{
 						{
 							Name:  "name",
 							Value: "value",
@@ -302,7 +302,7 @@ func TestGetUserSecrets(t *testing.T) {
 			uc := &userClient{
 				client: tc.cfg.client,
 			}
-			userSecrets, err := uc.GetUserVariables(ctx)
+			userSecrets, err := uc.GetOktetoPlatformVariables(ctx)
 			assert.ErrorIs(t, err, tc.expected.err)
 			assert.Equal(t, tc.expected.userSecrets, userSecrets)
 		})
@@ -382,7 +382,7 @@ func TestGetDeprecatedContext(t *testing.T) {
 						GlobalNamespace: constants.DefaultGlobalNamespace,
 						Analytics:       true,
 					},
-					Secrets: []env.Var{
+					PlatformVariables: []env.Var{
 						{
 							Name:  "name",
 							Value: "value",

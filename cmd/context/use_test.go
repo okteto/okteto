@@ -58,7 +58,7 @@ func Test_setSecrets(t *testing.T) {
 			for k, v := range tt.envs {
 				t.Setenv(k, v)
 			}
-			setSecrets(tt.secrets)
+			exportPlatformVariablesToEnv(tt.secrets)
 			assert.Equal(t, expectedValue, os.Getenv(key))
 		})
 	}

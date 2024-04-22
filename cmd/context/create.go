@@ -343,7 +343,7 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 	okteto.GetContext().IsTrial = clusterMetadata.IsTrialLicense
 	okteto.GetContext().CompanyName = clusterMetadata.CompanyName
 
-	setSecrets(userContext.Secrets)
+	exportPlatformVariablesToEnv(userContext.PlatformVariables)
 
 	os.Setenv(model.OktetoUserNameEnvVar, okteto.GetContext().Username)
 

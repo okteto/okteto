@@ -50,7 +50,7 @@ func (c *FakeUserClient) GetContext(_ context.Context, _ string) (*types.UserCon
 	return c.userCtx, nil
 }
 
-func (c *FakeUserClient) GetUserVariables(_ context.Context) ([]env.Var, error) {
+func (c *FakeUserClient) GetOktetoPlatformVariables(_ context.Context) ([]env.Var, error) {
 	if c.errGetUserSecrets != nil {
 		return nil, c.errGetUserSecrets
 	}

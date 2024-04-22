@@ -171,7 +171,7 @@ func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserCont
 			GlobalNamespace: globalNamespace,
 			Analytics:       analytics,
 		},
-		Secrets: secrets,
+		PlatformVariables: secrets,
 		Credentials: types.Credential{
 			Server:      string(queryStruct.Cred.Server),
 			Certificate: string(queryStruct.Cred.Certificate),
@@ -182,8 +182,8 @@ func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserCont
 	return result, nil
 }
 
-// GetUserVariables returns the user and cluster variables from Okteto API
-func (c *userClient) GetUserVariables(ctx context.Context) ([]env.Var, error) {
+// GetOktetoPlatformVariables returns the user and cluster variables from Okteto API
+func (c *userClient) GetOktetoPlatformVariables(ctx context.Context) ([]env.Var, error) {
 	var queryStruct getVariablesQuery
 	err := query(ctx, &queryStruct, nil, c.client)
 	if err != nil {
@@ -238,7 +238,7 @@ func (c *userClient) deprecatedGetUserContext(ctx context.Context) (*types.UserC
 			GlobalNamespace: constants.DefaultGlobalNamespace,
 			Analytics:       true,
 		},
-		Secrets: secrets,
+		PlatformVariables: secrets,
 		Credentials: types.Credential{
 			Server:      string(queryStruct.Cred.Server),
 			Certificate: string(queryStruct.Cred.Certificate),
