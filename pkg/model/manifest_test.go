@@ -768,8 +768,8 @@ func TestInferFromStackWithVolumeMounts(t *testing.T) {
 							Image: "okteto.dev/test:my-tag",
 							VolumeMounts: []build.VolumeMounts{
 								{
-									LocalPath:  filepath.Join(expectedContext, "nginx.conf"),
-									RemotePath: filepath.Join("etc", "nginx", "nginx.conf"),
+									LocalPath:  "./nginx.conf",
+									RemotePath: "/etc/nginx/nginx.conf",
 								},
 							},
 							Ports: []Port{
@@ -787,8 +787,8 @@ func TestInferFromStackWithVolumeMounts(t *testing.T) {
 
 	expectedVolumesToInclude := []build.VolumeMounts{
 		{
-			LocalPath:  "nginx.conf",
-			RemotePath: filepath.Join("etc", "nginx", "nginx.conf"),
+			LocalPath:  "./nginx.conf",
+			RemotePath: "/etc/nginx/nginx.conf",
 		},
 	}
 
@@ -811,7 +811,7 @@ func TestInferFromStackWithVolumeMounts(t *testing.T) {
 	require.NoError(t, err)
 
 	// Ensure Dockerfile was generated as it is expected in this scenario
-	expected := fmt.Sprintf("FROM %s\nCOPY %s %s\n", "okteto.dev/test:my-tag", filepath.Join(expectedContext, "nginx.conf"), filepath.Join("etc", "nginx", "nginx.conf"))
+	expected := "FROM okteto.dev/test:my-tag\nCOPY ./nginx.conf /etc/nginx/nginx.conf\n"
 	require.Equal(t, expected, string(dockerfileContent))
 }
 
