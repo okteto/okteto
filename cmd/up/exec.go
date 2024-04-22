@@ -514,7 +514,7 @@ func (up *upContext) checkOktetoStartError(ctx context.Context, msg string) erro
 		return oktetoErrors.UserError{
 			E: fmt.Errorf(msg),
 			Hint: fmt.Sprintf(`Check your development container logs for errors: 'kubectl logs %s',
-	Check that your container can write to the destination path of your platformVariables.
+	Check that your container can write to the destination path of your secrets.
 	Run '%s' to reset your development container and try again`, up.Pod.Name, utils.GetDownCommand(up.Options.ManifestPathFlag)),
 		}
 	}

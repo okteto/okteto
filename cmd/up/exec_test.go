@@ -97,7 +97,7 @@ func TestGetEnvs(t *testing.T) {
 			},
 		},
 		{
-			name:                    "only envs from platformVariables",
+			name:                    "only envs from secrets",
 			fakeConfigMapEnvsGetter: fakeGetter{},
 			fakeSecretEnvsGetter:    fakeGetter{envs: []string{"FROMSECRET=VALUE1"}},
 			expectedEnvs:            []string{"FROMSECRET=VALUE1"},
@@ -310,7 +310,7 @@ func TestGetEnvsError(t *testing.T) {
 			}),
 		},
 		{
-			name:                    "error retrieving envs from platformVariables",
+			name:                    "error retrieving envs from secrets",
 			fakeConfigMapEnvsGetter: fakeGetter{},
 			fakeSecretEnvsGetter:    fakeGetter{err: assert.AnError},
 			client: fake.NewSimpleClientset(&appsv1.StatefulSet{

@@ -294,7 +294,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 		return initSyncErr
 	}
 
-	oktetoLog.Info("create deployment platformVariables")
+	oktetoLog.Info("create deployment secrets")
 	if err := secrets.Create(ctx, up.Dev, k8sClient, up.Sy); err != nil {
 		return err
 	}
