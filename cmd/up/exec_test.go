@@ -834,7 +834,7 @@ func (f fakePlatformVariablesGetter) GetOktetoPlatformVariables(context.Context)
 	return f.platformVariables, f.err
 }
 
-func TestGetEnvsFromSecrets(t *testing.T) {
+func TestGetEnvsFromPlatformVariables(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
@@ -848,12 +848,12 @@ func TestGetEnvsFromSecrets(t *testing.T) {
 			isOkteto: false,
 		},
 		{
-			name:              "no user platformVariables",
+			name:              "no platform variables",
 			isOkteto:          true,
 			fakeSecretsGetter: fakePlatformVariablesGetter{},
 		},
 		{
-			name:     "with user platformVariables",
+			name:     "with platform variables",
 			isOkteto: true,
 			fakeSecretsGetter: fakePlatformVariablesGetter{
 				platformVariables: []env.Var{
