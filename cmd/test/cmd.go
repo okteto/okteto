@@ -161,7 +161,7 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 
 	kubeClient, _, err := k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
-		return fmt.Errorf("could not instantiate kuberentes client: %w", err)
+		return fmt.Errorf("could not instantiate kubernetes client: %w", err)
 	}
 
 	cwd, err := os.Getwd()

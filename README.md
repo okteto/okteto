@@ -38,9 +38,10 @@ The end result is a remote cluster that is seen by your IDE and tools as a local
 
 All you need to get started is to [install the Okteto CLI](https://www.okteto.com/docs/get-started/install-okteto-cli/) and have access to a Kubernetes cluster. You can follow our [guide for setting up a Kubernetes cluster on AWS here](https://www.okteto.com/docs/get-started/install/amazon-eks/#deploy-a-kubernetes-cluster).
 
-The Okteto CLI has two operational modes: 
-* Okteto Open Source CLI
-* Okteto Platform CLI
+The Okteto CLI has two operational modes:
+
+- Okteto Open Source CLI
+- Okteto Platform CLI
 
 ### Okteto Open Source CLI Features
 
@@ -65,10 +66,9 @@ We have getting started guides for the Open Source mode for the following langua
 - [Python](samples/python/README.md)
 - [Ruby](samples/ruby/README.md)
 
-
 ### Okteto Platform CLI Features
 
-The Okteto Platform CLI requires installation of the [Okteto Helm Chart](https://www.okteto.com/docs/get-started/overview/) in your Kubernetes cluster. In this mode, all of the Okteto CLI commands are available (`build`, `deploy`, `up`,  `down`, `destroy`, etc). The Okteto Platform comes with additional features like:
+The Okteto Platform CLI requires installation of the [Okteto Helm Chart](https://www.okteto.com/docs/get-started/overview/) in your Kubernetes cluster. In this mode, all of the Okteto CLI commands are available (`build`, `deploy`, `up`, `down`, `destroy`, etc). The Okteto Platform comes with additional features like:
 
 - User authentication and access control to Kubernetes using your own Identity provider
 - Build service for remote container image creation
@@ -81,18 +81,17 @@ And much more! Refer to the [Okteto Platform docs](https://www.okteto.com/docs) 
 
 ## Features Comparison
 
-| Feature                           | Okteto Open Source CLI | Okteto Platform CLI |
-|-----------------------------------|------------------------|---------------------|
-| **Development Containers**        | Available              | Available           |
-| **Build Service**                 | Not Available          | Available           |
-| **User Management**               | Not Available          | Available           |
-| **Access Control**                | Not Available          | Available           |
-| **Automated Scaling**             | Not Available          | Available           |
-| **Secrets Management**            | Not Available          | Available           |
-| **Observability Tools**           | Not Available          | Available           |
-| **Support**                       | Community Support      | Professional Support|
-| **Documentation**                 | [Open Source Samples](samples/README.md) | [Platform Docs](https://www.okteto.com/docs/) |
-
+| Feature                    | Okteto Open Source CLI                   | Okteto Platform CLI                           |
+| -------------------------- | ---------------------------------------- | --------------------------------------------- |
+| **Development Containers** | Available                                | Available                                     |
+| **Build Service**          | Not Available                            | Available                                     |
+| **User Management**        | Not Available                            | Available                                     |
+| **Access Control**         | Not Available                            | Available                                     |
+| **Automated Scaling**      | Not Available                            | Available                                     |
+| **Secrets Management**     | Not Available                            | Available                                     |
+| **Observability Tools**    | Not Available                            | Available                                     |
+| **Support**                | Community Support                        | Professional Support                          |
+| **Documentation**          | [Open Source Samples](samples/README.md) | [Platform Docs](https://www.okteto.com/docs/) |
 
 ## Useful links
 

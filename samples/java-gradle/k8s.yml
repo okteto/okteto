@@ -16,7 +16,6 @@ spec:
           name: hello-world
 
 ---
-
 apiVersion: v1
 kind: Service
 metadata:
@@ -24,7 +23,7 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - name: "hello-world"
+    - name: 'hello-world'
       port: 8080
   selector:
     app: hello-world

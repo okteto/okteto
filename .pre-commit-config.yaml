@@ -23,7 +23,7 @@ repos:
       - id: check-toml
       - id: check-vcs-permalinks
       - id: detect-private-key
-        exclude: ^pkg/k8s/secrets/certs\.go$|^pkg/syncthing/certs\.go$|^cmd/deploy/certs\.go$
+        exclude: ^pkg/k8s/secrets/certs\.go$|^pkg/syncthing/certs\.go$|^pkg/deployable/certs\.go$
       - id: end-of-file-fixer
       - id: fix-byte-order-marker
       - id: mixed-line-ending
@@ -35,7 +35,9 @@ repos:
     rev: 2.1.6
     hooks:
       - id: shellcheck
+        exclude: ^samples/
       - id: markdownlint
+        exclude: ^samples/
 
   # check spelling though all the repository
   - repo: https://github.com/codespell-project/codespell

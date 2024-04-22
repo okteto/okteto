@@ -12,11 +12,10 @@ spec:
         app: hello-world
     spec:
       containers:
-      - image: okteto/node-getting-started:hello-world
-        name: hello-world
+        - image: okteto/node-getting-started:hello-world
+          name: hello-world
 
 ---
-
 apiVersion: v1
 kind: Service
 metadata:
@@ -24,7 +23,7 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - name: "hello-world"
-    port: 3000
+    - name: 'hello-world'
+      port: 3000
   selector:
     app: hello-world

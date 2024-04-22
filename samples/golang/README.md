@@ -45,7 +45,7 @@ The `hello-world` key matches the name of the hello world Deployment. The meanin
 - `sync`: the folders that will be synchronized between your local machine and the development container.
 - `volumes`: a list of paths in your development container to be mounted as persistent volumes. For example, this can be used to persist the Go cache.
 - `securityContext`: `SYS_PTRACE` is a capability required by the Go debugger.
-- `forward`: a list of ports to forward from your development container to locahost in your machine. This is needed to access the port 8080 of your application on localhost and to configure the Go remote debugger.
+- `forward`: a list of ports to forward from your development container to localhost in your machine. This is needed to access the port 8080 of your application on localhost and to configure the Go remote debugger.
 
 Also, note that there is a `.stignore` file to indicate which files shouldn't be synchronized to your development container.
 This is useful to avoid synchronizing binaries, build artifacts, git metadata, or dependencies like the `vendor` folder.
@@ -110,7 +110,7 @@ Starting hello-world server...
 
 Go back to the browser and reload the page. Your code changes were instantly applied. No commit, build, or push required 😎!
 
-## Step 4: Remote debugging wtih Okteto
+## Step 4: Remote debugging with Okteto
 
 Okteto enables you to debug your applications directly from your favorite IDE.
 Let's take a look at how that works in VS Code, one of the most popular IDEs for Go development.

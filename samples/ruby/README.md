@@ -135,5 +135,4 @@ Add a breakpoint on `app.rb`, line 8. Go back to the browser and reload the page
 
 <img align="left" src="images/ruby-halt.png">
 
-
 Your code is executing in Okteto, but you can debug it from your local machine without any extra services or tools. Pretty cool no? 😉
