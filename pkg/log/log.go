@@ -313,13 +313,18 @@ func IsInteractive() bool {
 
 // AddMaskedWord adds a new word to be redacted, only if longer than 5 chars
 func AddMaskedWord(word string) {
+	clean := strings.TrimSpace(word)
+
+	// only mask words longer than 5 chars (i.e. 'true' and 'false' will not be masked)
 	minCharsToMask := 5
-	lines := strings.Split(word, "\n")
-	for _, line := range lines {
-		if strings.TrimSpace(word) != "" && len(line) > minCharsToMask {
-			log.maskedWords = append(log.maskedWords, line)
-		}
+	if len(clean) < minCharsToMask {
+		return
 	}
+	log.maskedWords = append(log.maskedWords, clean)
+
+	// multi-line support
+	lines := strings.Split(clean, "\n")
+	log.maskedWords = append(log.maskedWords, lines...)
 }
 
 // EnableMasking starts redacting all variables
