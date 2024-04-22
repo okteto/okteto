@@ -24,7 +24,7 @@ dev:
   hello-world:
     image: okteto/aspnetcore-getting-started:dev
     command: bash
-    sync: 
+    sync:
       - .:/src
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -40,7 +40,7 @@ The `hello-world` key matches the name of the hello world Deployment. The meanin
 - `sync`: the folders that will be synchronized between your local machine and the development container.
 - `environment`: the environment variables added or overwritten in your development container.
 - `remote`: the local port to use for SSH communication with your development environment.
-- `forward`: a list of ports to forward from your development container to locahost in your machine. This is needed to access the port 5000 of your application on localhost.
+- `forward`: a list of ports to forward from your development container to localhost in your machine. This is needed to access the port 5000 of your application on localhost.
 
 Also, note that there is a `.stignore` file to indicate which files shouldn't be synchronized to your development container.
 This is useful to avoid synchronizing binaries, build artifacts, or git metadata.

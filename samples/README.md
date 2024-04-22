@@ -22,7 +22,6 @@ Select a framework from the list below to explore examples for that environment.
 - [**Python**](/samples/python/README.md): Python applications leveraging Okteto for rapid development.
 - [**Ruby**](/samples/ruby/README.md): Develop Ruby applications effortlessly in Okteto.
 
-
 ## Contributing
 
 Contributions are welcome! If you have improvements to an existing sample or want to add a new one, please submit a pull request or open an issue.

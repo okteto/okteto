@@ -13,12 +13,8 @@
         "packagesPath": "/root/.nuget/packages/",
         "outputPath": "/src/obj/",
         "projectStyle": "PackageReference",
-        "configFilePaths": [
-          "/root/.nuget/NuGet/NuGet.Config"
-        ],
-        "originalTargetFrameworks": [
-          "netcoreapp6.0"
-        ],
+        "configFilePaths": ["/root/.nuget/NuGet/NuGet.Config"],
+        "originalTargetFrameworks": ["netcoreapp6.0"],
         "sources": {
           "https://api.nuget.org/v3/index.json": {}
         },
@@ -29,9 +25,7 @@
           }
         },
         "warningProperties": {
-          "warnAsError": [
-            "NU1605"
-          ]
+          "warnAsError": ["NU1605"]
         }
       },
       "frameworks": {

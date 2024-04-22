@@ -120,7 +120,7 @@ Okteto enables you to debug your applications directly from your favorite IDE. L
 1. In the Configuration section, specify the parameters listed below:
    - Debugger Mode: `Attach to remote JVM`
    - Host: `localhost`
-   - Port: `5005` (this should match the port forwared on your Okteto manifest file)
+   - Port: `5005` (this should match the port forwarded on your Okteto manifest file)
    - Command line arguments for remote JVM: `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005`
 1. Apply the changes and close the dialog.
 

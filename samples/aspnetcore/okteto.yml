@@ -2,7 +2,7 @@ dev:
   hello-world:
     image: okteto/aspnetcore-getting-started:dev
     command: bash
-    sync: 
+    sync:
       - .:/src
     environment:
       - ASPNETCORE_ENVIRONMENT=Development

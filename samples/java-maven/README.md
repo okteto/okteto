@@ -32,6 +32,7 @@ dev:
     volumes:
       - /root/.m2
 ```
+
 The `hello-world` key matches the name of the hello world Deployment. The meaning of the rest of fields is:
 
 - `image`: the image used by the development container.
@@ -119,7 +120,7 @@ Okteto enables you to debug your applications directly from your favorite IDE. L
 1. In the Configuration section, specify the parameters listed below:
    - Debugger Mode: `Attach to remote JVM`
    - Host: `localhost`
-   - Port: `5005` (this should match the port forwared on your Okteto manifest file)
+   - Port: `5005` (this should match the port forwarded on your Okteto manifest file)
    - Command line arguments for remote JVM: `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005`
 1. Apply the changes and close the dialog.
 

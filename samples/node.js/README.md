@@ -19,7 +19,6 @@ service/hello-world created
 
 The [dev section](https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional) of the Okteto Manifest defines how to activate a development container for the Node.js Sample App:
 
-
 ```yaml
 dev:
   hello-world:
@@ -90,7 +89,7 @@ Hello world!
 Open the `index.js` file in your favorite local IDE and modify the response message on line 5 to be _Hello world from Okteto!_. Save your changes.
 
 ```javascript
-res.send("Hello world from Okteto!");
+res.send('Hello world from Okteto!');
 ```
 
 Okteto will synchronize your changes to your development container.
