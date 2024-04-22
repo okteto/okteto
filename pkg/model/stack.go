@@ -792,8 +792,8 @@ func isFileCompose(path string) bool {
 	isStackSupported := env.LoadBooleanOrDefault(stackSupportEnabledEnvVar, false)
 	if !isStackSupported {
 		oktetoLog.Infof("%s is set to false. File will be treated as compose", stackSupportEnabledEnvVar)
-		if isComposeFileName {
-			oktetoLog.Warning("The file %s will be deprecated as a default compose file name in a future version. Please consider renaming your compose file to 'okteto-stack.yml'", base)
+		if !isComposeFileName {
+			oktetoLog.Warning("The file %s will be deprecated as a stack file name in a future version. Please consider migrating your file to a compose", base)
 		}
 		return true
 	}
