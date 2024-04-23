@@ -51,12 +51,6 @@ type getContextFileQuery struct {
 	ContextFileJSON string `graphql:"contextFile"`
 }
 
-type getDeprecatedContextQuery struct {
-	User              deprecatedUserQuery `graphql:"user"`
-	Cred              credQuery           `graphql:"credentials(space: $cred)"`
-	PlatformVariables []variablesQuery    `graphql:"getGitDeploySecrets"`
-}
-
 type getRegistryCredentialsQuery struct {
 	RegistryCredentials registryCredsQuery `graphql:"registryCredentials(registryUrl: $regHost)"`
 }
@@ -76,6 +70,7 @@ type userQuery struct {
 	Analytics       graphql.Boolean `graphql:"telemetryEnabled"`
 }
 
+<<<<<<< HEAD
 // TODO: Remove this code when users are in okteto chart > 0.10.8
 type deprecatedUserQuery struct {
 	Id          graphql.String
@@ -91,6 +86,9 @@ type deprecatedUserQuery struct {
 }
 
 type variablesQuery struct {
+=======
+type secretQuery struct {
+>>>>>>> 87713208 (remove deprecated code for chart 0.10.8)
 	Name  graphql.String
 	Value graphql.String
 }
@@ -134,12 +132,6 @@ func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserCont
 	}
 	err := query(ctx, &queryStruct, variables, c.client)
 	if err != nil {
-		if strings.Contains(err.Error(), "Cannot query field \"globalNamespace\" on type \"me\"") {
-			return c.deprecatedGetUserContext(ctx)
-		}
-		if strings.Contains(err.Error(), "Cannot query field \"telemetryEnabled\" on type \"me\"") {
-			return c.deprecatedGetUserContext(ctx)
-		}
 		return nil, err
 	}
 
@@ -203,6 +195,7 @@ func (c *userClient) GetOktetoPlatformVariables(ctx context.Context) ([]env.Var,
 	return vars, nil
 }
 
+<<<<<<< HEAD
 // TODO: Remove this code when users are in okteto chart > 0.10.8
 func (c *userClient) deprecatedGetUserContext(ctx context.Context) (*types.UserContext, error) {
 	var queryStruct getDeprecatedContextQuery
@@ -249,6 +242,8 @@ func (c *userClient) deprecatedGetUserContext(ctx context.Context) (*types.UserC
 	return result, nil
 }
 
+=======
+>>>>>>> 87713208 (remove deprecated code for chart 0.10.8)
 func (c *userClient) GetClusterCertificate(ctx context.Context, cluster, ns string) ([]byte, error) {
 	var queryStruct getContextFileQuery
 	if err := query(ctx, &queryStruct, nil, c.client); err != nil {
