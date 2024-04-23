@@ -18,6 +18,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"strings"
 	"time"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -40,6 +41,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/remote"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -172,6 +174,40 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 		return fmt.Errorf("failed to get the current working directory to resolve name: %w", err)
 	}
 
+	var nodes []dag.Node
+
+	for name, test := range manifest.Test {
+		nodes = append(nodes, Node{test, name})
+	}
+
+	tree, err := dag.From(nodes...)
+	if err != nil {
+		return err
+	}
+
+	testServices := tree.Ordered()
+
+	// make sure the images used for the tests exist. If they don't build them
+	for _, name := range testServices {
+		imgName := manifest.Test[name].Image
+		getImg := func(manifest *model.Manifest) string { return imgName }
+		svc, err := builder.GetServicesToBuildForImage(ctx, manifest, getImg)
+		if err != nil {
+			return err
+		}
+		if len(svc) < 1 {
+			continue
+		}
+		oktetoLog.Debugf("building services: '%s' needed for test: '%s'", strings.Join(svc, ","), name)
+		if err := builder.Build(ctx, &types.BuildOptions{
+			EnableStages: true,
+			Manifest:     manifest,
+			CommandArgs:  svc,
+		}); err != nil {
+			return err
+		}
+	}
+
 	namer := deployCMD.Namer{
 		KubeClient:   kubeClient,
 		Workdir:      cwd,
@@ -236,18 +272,7 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 		oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy'", devenvName)
 	}
 
-	var nodes []dag.Node
-
-	for name, test := range manifest.Test {
-		nodes = append(nodes, Node{test, name})
-	}
-
-	tree, err := dag.From(nodes...)
-	if err != nil {
-		return err
-	}
-
-	for _, name := range tree.Ordered() {
+	for _, name := range testServices {
 		test := manifest.Test[name]
 
 		commandFlags, err := deployCMD.GetCommandFlags(name, options.Variables)

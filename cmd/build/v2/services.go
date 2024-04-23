@@ -16,6 +16,7 @@ package v2
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -119,4 +120,30 @@ func (bc *OktetoBuilder) checkServiceToBuildDuringDeploy(service string, manifes
 		}
 	}
 	return nil
+}
+
+func (bc *OktetoBuilder) GetServicesToBuildForImage(ctx context.Context, manifest *model.Manifest, imgFinder model.ImageFromManifest) ([]string, error) {
+	img := imgFinder(manifest)
+	reg := regexp.MustCompile(`OKTETO_BUILD_(\w+)_`)
+	matches := reg.FindStringSubmatch(img)
+	foundMatches := 2
+	if len(matches) == 0 {
+		return nil, nil
+	}
+
+	sanitisedToUnsanitised := map[string]string{}
+	for buildSvc := range manifest.Build {
+		sanitizedSvc := strings.ToUpper(strings.ReplaceAll(buildSvc, "-", "_"))
+		sanitisedToUnsanitised[sanitizedSvc] = buildSvc
+	}
+	if len(matches) != foundMatches {
+		return nil, nil
+	}
+	sanitisedName := matches[1]
+	svc, ok := sanitisedToUnsanitised[sanitisedName]
+	if !ok {
+		return nil, nil
+	}
+
+	return bc.GetServicesToBuildDuringDeploy(ctx, manifest, []string{svc})
 }
