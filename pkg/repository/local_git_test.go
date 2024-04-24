@@ -369,7 +369,7 @@ func TestLocalGit_ListUntrackedFiles(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lg := NewLocalGit("git", tt.execMock())
-			files, err := lg.ListUntrackedFiles(context.Background(), "/test/dir", tt.fixAttempt)
+			files, err := lg.ListUntrackedFiles(context.Background(), "/test/dir", "/test", tt.fixAttempt)
 
 			assert.Equal(t, tt.expectedFiles, files)
 			assert.ErrorIs(t, err, tt.expectedErr)

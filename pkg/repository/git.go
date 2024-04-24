@@ -464,7 +464,7 @@ func (ogr oktetoGitWorktree) ListUntrackedFiles(ctx context.Context, workdir str
 		return files, nil
 	}
 
-	untrackedFiles, err := localGit.ListUntrackedFiles(ctx, ogr.GetRoot(), 0)
+	untrackedFiles, err := localGit.ListUntrackedFiles(ctx, ogr.GetRoot(), workdir, 0)
 	if err != nil {
 		return []string{}, fmt.Errorf("failed to get untrackedFiles: %w", err)
 	}
