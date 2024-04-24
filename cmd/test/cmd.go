@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/cmd/namespace"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
@@ -58,7 +59,7 @@ type Options struct {
 	NoCache          bool
 }
 
-func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at deployCMD.AnalyticsTrackerInterface) *cobra.Command {
+func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at *analytics.Tracker) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
 		Use:          "test",
@@ -71,7 +72,12 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 			exit := make(chan error, 1)
 
 			go func() {
-				exit <- doRun(ctx, options, ioCtrl, k8sLogger, at)
+				startTime := time.Now()
+				metadata, err := doRun(ctx, options, ioCtrl, k8sLogger, &ProxyTracker{at})
+				metadata.Err = err
+				metadata.Duration = time.Since(startTime)
+				at.TrackTest(metadata)
+				exit <- err
 			}()
 			select {
 			case <-stop:
@@ -99,31 +105,31 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 	return cmd
 }
 
-func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at deployCMD.AnalyticsTrackerInterface) error {
+func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, tracker *ProxyTracker) (analytics.TestMetadata, error) {
 	fs := afero.NewOsFs()
 
 	// Loads, updates and uses the context from path. If not found, it creates and uses a new context
 	if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: true}); err != nil {
 		if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
-			return err
+			return analytics.TestMetadata{}, err
 		}
 	}
 
 	if !okteto.IsOkteto() {
-		return fmt.Errorf("'okteto test' is only supported in contexts that have Okteto installed")
+		return analytics.TestMetadata{}, fmt.Errorf("'okteto test' is only supported in contexts that have Okteto installed")
 	}
 
 	create, err := utils.ShouldCreateNamespace(ctx, okteto.GetContext().Namespace)
 	if err != nil {
-		return err
+		return analytics.TestMetadata{}, err
 	}
 	if create {
 		nsCmd, err := namespace.NewCommand()
 		if err != nil {
-			return err
+			return analytics.TestMetadata{}, err
 		}
 		if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.GetContext().Namespace}); err != nil {
-			return err
+			return analytics.TestMetadata{}, err
 		}
 	}
 
@@ -131,11 +137,11 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 		// if path is absolute, its transformed to rel from root
 		initialCWD, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("failed to get the current working directory: %w", err)
+			return analytics.TestMetadata{}, fmt.Errorf("failed to get the current working directory: %w", err)
 		}
 		manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, options.ManifestPath)
 		if err != nil {
-			return err
+			return analytics.TestMetadata{}, err
 		}
 		// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
 		options.ManifestPathFlag = manifestPathFlag
@@ -143,35 +149,37 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 		// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
 		uptManifestPath, err := model.UpdateCWDtoManifestPath(options.ManifestPath)
 		if err != nil {
-			return err
+			return analytics.TestMetadata{}, err
 		}
 		options.ManifestPath = uptManifestPath
 	}
 
 	manifest, err := model.GetManifestV2(options.ManifestPath, fs)
 	if err != nil {
-		return err
+		return analytics.TestMetadata{}, err
 	}
 
 	k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
 
 	pc, err := pipelineCMD.NewCommand()
 	if err != nil {
-		return fmt.Errorf("could not create pipeline command: %w", err)
+		return analytics.TestMetadata{}, fmt.Errorf("could not create pipeline command: %w", err)
 	}
 
 	configmapHandler := deployCMD.NewConfigmapHandler(k8sClientProvider, k8sLogger)
 
-	builder := buildv2.NewBuilderFromScratch(ioCtrl, nil)
+	builder := buildv2.NewBuilderFromScratch(ioCtrl, []buildv2.OnBuildFinish{
+		tracker.TrackImageBuild,
+	})
 
 	kubeClient, _, err := k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
-		return fmt.Errorf("could not instantiate kubernetes client: %w", err)
+		return analytics.TestMetadata{}, fmt.Errorf("could not instantiate kubernetes client: %w", err)
 	}
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("failed to get the current working directory to resolve name: %w", err)
+		return analytics.TestMetadata{}, fmt.Errorf("failed to get the current working directory to resolve name: %w", err)
 	}
 
 	var nodes []dag.Node
@@ -182,10 +190,12 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 
 	tree, err := dag.From(nodes...)
 	if err != nil {
-		return err
+		return analytics.TestMetadata{}, err
 	}
 
 	testServices := tree.Ordered()
+
+	var wasBuilt bool
 
 	// make sure the images used for the tests exist. If they don't build them
 	for _, name := range testServices {
@@ -193,18 +203,21 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 		getImg := func(manifest *model.Manifest) string { return imgName }
 		svc, err := builder.GetServicesToBuildForImage(ctx, manifest, getImg)
 		if err != nil {
-			return err
+			return analytics.TestMetadata{}, err
 		}
 		if len(svc) < 1 {
 			continue
 		}
+
+		wasBuilt = true
+
 		oktetoLog.Debugf("building services: '%s' needed for test: '%s'", strings.Join(svc, ","), name)
 		if err := builder.Build(ctx, &types.BuildOptions{
 			EnableStages: true,
 			Manifest:     manifest,
 			CommandArgs:  svc,
 		}); err != nil {
-			return err
+			return analytics.TestMetadata{}, err
 		}
 	}
 
@@ -225,7 +238,9 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 		namespace = okteto.GetContext().Namespace
 	}
 
-	if options.Deploy || !pipeline.IsDeployed(ctx, devenvName, namespace, kubeClient) {
+	needsDeploy := options.Deploy || !pipeline.IsDeployed(ctx, devenvName, namespace, kubeClient)
+
+	if needsDeploy {
 		c := deployCMD.Command{
 			GetManifest: func(path string, fs afero.Fs) (*model.Manifest, error) {
 				return manifest, nil
@@ -238,13 +253,14 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 			CfgMapHandler:      configmapHandler,
 			Fs:                 fs,
 			PipelineCMD:        pc,
-			AnalyticsTracker:   at,
+			AnalyticsTracker:   tracker,
 			IoCtrl:             ioCtrl,
 			K8sLogger:          k8sLogger,
 			IsRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
 			RunningInInstaller: config.RunningInInstaller(),
 		}
-		if err = c.Run(ctx, &deployCMD.Options{
+		deployStartTime := time.Now()
+		err = c.Run(ctx, &deployCMD.Options{
 			Manifest:         manifest,
 			ManifestPathFlag: options.ManifestPathFlag,
 			ManifestPath:     options.ManifestPath,
@@ -259,17 +275,26 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 			RunInRemote:      manifest.Deploy.Remote,
 			Wait:             true,
 			ShowCTA:          false,
-		}); err != nil {
+		})
+		c.TrackDeploy(manifest, manifest.Deploy.Remote, deployStartTime, err)
+
+		if err != nil {
 			oktetoLog.Error("deploy failed: %s", err.Error())
-			return err
+			return analytics.TestMetadata{}, err
 		}
 	} else {
 		// The deploy operation expands environment variables in the manifest. If
 		// we don't deploy, make sure to expand the envvars
 		if err := manifest.ExpandEnvVars(); err != nil {
-			return fmt.Errorf("failed to expand manifest environment variables: %w", err)
+			return analytics.TestMetadata{}, fmt.Errorf("failed to expand manifest environment variables: %w", err)
 		}
 		oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy'", devenvName)
+	}
+
+	metadata := analytics.TestMetadata{
+		StagesCount: len(testServices),
+		WasDeployed: needsDeploy,
+		WasBuilt:    wasBuilt,
 	}
 
 	for _, name := range testServices {
@@ -277,7 +302,7 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 
 		commandFlags, err := deployCMD.GetCommandFlags(name, options.Variables)
 		if err != nil {
-			return err
+			return metadata, err
 		}
 		commandFlags = append(commandFlags, fmt.Sprintf("--devenv-name=%s", devenvName))
 
@@ -320,9 +345,9 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 
 		oktetoLog.Information("Executing '%s'", name)
 		if err := runner.Run(ctx, params); err != nil {
-			return err
+			return metadata, err
 		}
 	}
-
-	return nil
+	metadata.Success = true
+	return metadata, nil
 }

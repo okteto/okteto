@@ -821,7 +821,7 @@ func TestTrackDeploy(t *testing.T) {
 				AnalyticsTracker: &fakeTracker{},
 			}
 
-			dc.trackDeploy(tc.manifest, tc.remoteFlag, time.Now(), tc.commandErr)
+			dc.TrackDeploy(tc.manifest, tc.remoteFlag, time.Now(), tc.commandErr)
 		})
 	}
 }

@@ -252,7 +252,7 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 					namespace = options.Manifest.Namespace
 				}
 				c.insightsTracker.TrackDeploy(ctx, options.Name, namespace, err == nil)
-				c.trackDeploy(options.Manifest, options.RunInRemote, startTime, err)
+				c.TrackDeploy(options.Manifest, options.RunInRemote, startTime, err)
 				exit <- err
 			}()
 
@@ -647,7 +647,7 @@ func (dc *Command) recreateFailedPods(ctx context.Context, name string) error {
 	return nil
 }
 
-func (dc *Command) trackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error) {
+func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error) {
 	deployType := "custom"
 	hasDependencySection := false
 	hasBuildSection := false
