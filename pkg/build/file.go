@@ -14,13 +14,11 @@
 package build
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/okteto/okteto/pkg/config"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/afero"
 )
 
@@ -43,20 +41,16 @@ func CreateDockerfileWithVolumeMounts(context, image string, volumes []VolumeMou
 	if err != nil {
 		return build, err
 	}
+	defer tmpFile.Close()
 
-	datawriter := bufio.NewWriter(tmpFile)
-	defer datawriter.Flush()
+	content := fmt.Sprintf("FROM %s\n", image)
+	for _, volume := range volumes {
+		content = fmt.Sprintf("%s%s", content, fmt.Sprintf("COPY %s %s\n", filepath.ToSlash(volume.LocalPath), volume.RemotePath))
+	}
 
-	_, err = fmt.Fprintf(datawriter, "FROM %s\n", image)
+	_, err = tmpFile.WriteString(content)
 	if err != nil {
 		return build, fmt.Errorf("failed to write dockerfile: %w", err)
-	}
-	for _, volume := range volumes {
-		_, err = fmt.Fprintf(datawriter, "COPY %s %s\n", filepath.ToSlash(volume.LocalPath), volume.RemotePath)
-		if err != nil {
-			oktetoLog.Infof("failed to write volume %s: %s", volume.LocalPath, err)
-			continue
-		}
 	}
 
 	name, err := filepath.Abs(tmpFile.Name())
