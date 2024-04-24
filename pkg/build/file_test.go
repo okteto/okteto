@@ -25,8 +25,9 @@ import (
 func TestCreateDockerfileWithVolumeMounts(t *testing.T) {
 	fs := afero.NewMemMapFs()
 
-	oktetoHome := "/tmp/tests"
-	err := fs.MkdirAll(oktetoHome, 0700)
+	oktetoHome, err := filepath.Abs("./tmp/tests")
+	require.NoError(t, err)
+	err = fs.MkdirAll(oktetoHome, 0700)
 	require.NoError(t, err)
 
 	// Set the Okteto home to facilitate where the dockerfile will be created
