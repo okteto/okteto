@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -36,6 +37,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/shirou/gopsutil/process"
+	"github.com/spf13/afero"
 	"golang.org/x/crypto/bcrypt"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -335,7 +337,7 @@ func (s *Syncthing) Run() error {
 }
 
 // WaitForPing waits for syncthing to be ready
-func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
+func (s *Syncthing) WaitForPing(ctx context.Context, local bool, fs afero.Fs) error {
 	ticker := time.NewTicker(300 * time.Millisecond)
 	to := time.Now().Add(s.timeout)
 
@@ -352,6 +354,11 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 			}
 
 			if time.Now().After(to) && retries > 10 {
+				// before returning a generic error, we try detecting why syncthing is not ready and return a more accurate error
+				errDetected := s.IdentifyReadinessIssue(fs)
+				if errDetected != nil {
+					return errDetected
+				}
 				return fmt.Errorf("syncthing local=%t didn't respond after %s", local, s.timeout.String())
 			}
 
@@ -360,6 +367,28 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 			return ctx.Err()
 		}
 	}
+}
+
+// IdentifyReadinessIssue attempts to identify the issue that is preventing syncthing from being ready
+func (s *Syncthing) IdentifyReadinessIssue(fs afero.Fs) error {
+	if s.RegexMatchesLogs(fs, regexp.MustCompile("Error opening database: mkdir .*: no space left on device")) {
+		return oktetoErrors.ErrInsufficientSpace
+	}
+	if s.RegexMatchesLogs(fs, regexp.MustCompile("insufficient space on disk for database")) {
+		return oktetoErrors.ErrInsufficientSpace
+	}
+	return nil
+}
+
+// RegexMatchesLogs checks if a regex matches in the syncthing logs
+func (s *Syncthing) RegexMatchesLogs(fs afero.Fs, regx *regexp.Regexp) bool {
+	log, err := afero.ReadFile(fs, s.LogPath)
+	if err != nil {
+		oktetoLog.Infof("error reading syncthing log: %s", err)
+		return false
+	}
+
+	return regx.Match(log)
 }
 
 // Ping checks if syncthing is available
