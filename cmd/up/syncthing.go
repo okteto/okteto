@@ -61,9 +61,6 @@ func (up *upContext) sync(ctx context.Context) error {
 		return err
 	}
 
-	// check for system errors
-	up.checkForSystemErrors(ctx)
-
 	startSyncFiles := time.Now()
 	if err := up.synchronizeFiles(ctx); err != nil {
 		return err
