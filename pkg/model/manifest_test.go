@@ -815,8 +815,9 @@ func TestInferFromStackWithVolumeMounts(t *testing.T) {
 	dirtest := filepath.Clean("/stack/dir/")
 	fs := afero.NewMemMapFs()
 
-	oktetoHome := filepath.Clean("/tmp/tests")
-	err := fs.MkdirAll(oktetoHome, 0700)
+	oktetoHome, err := filepath.Abs("./tmp/tests")
+	require.NoError(t, err)
+	err = fs.MkdirAll(oktetoHome, 0700)
 	require.NoError(t, err)
 
 	// Set the Okteto home to facilitate where the dockerfile will be created
