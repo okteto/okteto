@@ -149,7 +149,7 @@ func (up *upContext) checkForSystemErrors(ctx context.Context) {
 	defer oktetoLog.StopSpinner()
 
 	if up.Sy.IsLocalRunningOutOfSpace(ctx) {
-		oktetoLog.Warning("Your local disk is almost full. This can cause synchronization issues. Please free up some space to use Okteto.")
+		oktetoLog.Warning("Your local disk is almost full. Please free up some space to avoid synchronization issues.")
 	}
 }
 
