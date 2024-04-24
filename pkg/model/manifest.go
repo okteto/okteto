@@ -990,7 +990,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 	return nil
 }
 
-// InferFromStack infers data from a stackfile
+// InferFromStack infers data, mainly dev services and build information from services defined in the stackfile
 func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 	for svcName, svcInfo := range m.Deploy.ComposeSection.Stack.Services {
 		d, err := svcInfo.ToDev(svcName)
@@ -1010,16 +1010,25 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 
 		buildInfo := svcInfo.Build
 
+		// Only if the build section of the service is empty, the service specifies an image and there are
+		// volume mounts we should create a custom Dockerfile including the volumes and generate the proper build section
 		if svcInfo.Build == nil && svcInfo.Image != "" && len(svcInfo.VolumeMounts) > 0 {
-			buildInfo, err = build.CreateDockerfileWithVolumeMounts(svcInfo.Image, svcInfo.VolumeMounts, m.Fs)
+			// This check is to prevent that we modify the build section of the manifest if that service is already
+			// defined there. In that case, we should just skip this and don't generate the custom Dockerfile and
+			// build info
+			if _, ok := m.Build[svcName]; ok {
+				continue
+			}
+
+			context, err := getBuildContextForComposeWithVolumeMounts(m)
 			if err != nil {
 				return nil, err
 			}
 
-			for idx, volume := range buildInfo.VolumesToInclude {
+			for idx, volume := range svcInfo.VolumeMounts {
 				localPath := volume.LocalPath
 				if filepath.IsAbs(localPath) {
-					localPath, err = filepath.Rel(buildInfo.Context, volume.LocalPath)
+					localPath, err = filepath.Rel(context, volume.LocalPath)
 					if err != nil {
 						localPath, err = filepath.Rel(cwd, volume.LocalPath)
 						if err != nil {
@@ -1028,7 +1037,12 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 					}
 				}
 				volume.LocalPath = localPath
-				buildInfo.VolumesToInclude[idx] = volume
+				svcInfo.VolumeMounts[idx] = volume
+			}
+
+			buildInfo, err = build.CreateDockerfileWithVolumeMounts(context, svcInfo.Image, svcInfo.VolumeMounts, m.Fs)
+			if err != nil {
+				return nil, err
 			}
 
 			svcInfo.Build = buildInfo
@@ -1364,4 +1378,31 @@ func (m *Manifest) HasDeploySection() bool {
 		(len(m.Deploy.Commands) > 0 ||
 			(m.Deploy.ComposeSection != nil &&
 				m.Deploy.ComposeSection.ComposesInfo != nil))
+}
+
+// getBuildContextForComposeWithVolumeMounts This function is very specific for the scenario of compose with
+// volume mounts where an image wrapping the image specified in the compose is built. This heuristic to calculate
+// the build context is:
+//   - If the manifestPath property is set, we should use the directory where the manifest is located.
+//     We use GetWorkdirFromManifestPath because it takes care of the case of .okteto directory
+//   - If there is any compose info, we should use the directory where the first compose is located.
+//     We use GetWorkdirFromManifestPath because it takes care of the case of .okteto directory
+//   - If none of the other condition is met, we just use the current directory
+func getBuildContextForComposeWithVolumeMounts(m *Manifest) (string, error) {
+	context, err := filepath.Abs(".")
+	if err != nil {
+		return "", err
+	}
+
+	hasComposeInfo := m.Deploy != nil &&
+		m.Deploy.ComposeSection != nil &&
+		len(m.Deploy.ComposeSection.ComposesInfo) > 0
+
+	if m.ManifestPath != "" {
+		context = GetWorkdirFromManifestPath(m.ManifestPath)
+	} else if hasComposeInfo {
+		context = GetWorkdirFromManifestPath(m.Deploy.ComposeSection.ComposesInfo[0].File)
+	}
+
+	return context, nil
 }

@@ -25,10 +25,10 @@ import (
 )
 
 // CreateDockerfileWithVolumeMounts creates the Dockerfile with volume mounts and returns the BuildInfo
-func CreateDockerfileWithVolumeMounts(image string, volumes []VolumeMounts, fs afero.Fs) (*Info, error) {
+func CreateDockerfileWithVolumeMounts(context, image string, volumes []VolumeMounts, fs afero.Fs) (*Info, error) {
 	build := &Info{}
 
-	ctx, err := filepath.Abs(".")
+	ctx, err := filepath.Abs(context)
 	if err != nil {
 		return build, nil
 	}
@@ -59,7 +59,11 @@ func CreateDockerfileWithVolumeMounts(image string, volumes []VolumeMounts, fs a
 		}
 	}
 
-	build.Dockerfile = tmpFile.Name()
+	name, err := filepath.Abs(tmpFile.Name())
+	if err != nil {
+		return nil, err
+	}
+	build.Dockerfile = name
 	build.VolumesToInclude = volumes
 	return build, nil
 }

@@ -725,6 +725,76 @@ func TestInferFromStack(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "infer from stack with build section and service with image and volume mount",
+			currentManifest: &Manifest{
+				Dev: ManifestDevs{},
+				Build: build.ManifestBuild{
+					"test": &build.Info{
+						Context:    "test-1",
+						Dockerfile: filepath.Join("test-1", "Dockerfile"),
+					},
+				},
+				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
+					ComposeSection: &ComposeSectionInfo{
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Image: "okteto.dev/test:my-tag",
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+									VolumeMounts: []build.VolumeMounts{
+										{
+											LocalPath:  "./nginx.conf",
+											RemotePath: "/etc/nginx/nginx.conf",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Build: build.ManifestBuild{
+					"test": &build.Info{
+						Context:    "test-1",
+						Dockerfile: filepath.Join("test-1", "Dockerfile"),
+					},
+				},
+				Dev:     ManifestDevs{},
+				Destroy: &DestroyInfo{},
+				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
+					ComposeSection: &ComposeSectionInfo{
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Image: "okteto.dev/test:my-tag",
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+									VolumeMounts: []build.VolumeMounts{
+										{
+											LocalPath:  "./nginx.conf",
+											RemotePath: "/etc/nginx/nginx.conf",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -1828,6 +1898,119 @@ func TestPathExistsAndDirError(t *testing.T) {
 			}
 			require.Equal(t, pathExistsAndDir(path), tt.expected)
 
+		})
+	}
+}
+
+func TestGetBuildContextForComposeWithVolumeMounts(t *testing.T) {
+	currentDir, err := filepath.Abs(".")
+	require.NoError(t, err)
+	var tests = []struct {
+		name     string
+		manifest *Manifest
+		expected string
+	}{
+		{
+			name: "build context with manifest path",
+			manifest: &Manifest{
+				ManifestPath: filepath.Join("tmp", "test", "okteto.yml"),
+			},
+			expected: filepath.Join("tmp", "test"),
+		},
+		{
+			name: "build context with manifest path and .okteto directory",
+			manifest: &Manifest{
+				ManifestPath: filepath.Join("tmp", "test", ".okteto", "okteto.yml"),
+			},
+			expected: filepath.Join("tmp", "test"),
+		},
+		{
+			name: "build context with manifest path and compose information",
+			manifest: &Manifest{
+				ManifestPath: filepath.Join("tmp", "test", "okteto.yml"),
+				Deploy: &DeployInfo{
+					ComposeSection: &ComposeSectionInfo{
+						ComposesInfo: ComposeInfoList{
+							{
+								File: filepath.Join("tmp", "test", "unit", "docker-compose.yml"),
+							},
+							{
+								File: filepath.Join("tmp", "test", "docker-compose.yml"),
+							},
+						},
+					},
+				},
+			},
+			expected: filepath.Join("tmp", "test"),
+		},
+		{
+			name: "build context with manifest path with .okteto directory and compose information",
+			manifest: &Manifest{
+				ManifestPath: filepath.Join("tmp", "test", ".okteto", "okteto.yml"),
+				Deploy: &DeployInfo{
+					ComposeSection: &ComposeSectionInfo{
+						ComposesInfo: ComposeInfoList{
+							{
+								File: filepath.Join("tmp", "test", "unit", "docker-compose.yml"),
+							},
+							{
+								File: filepath.Join("tmp", "test", "docker-compose.yml"),
+							},
+						},
+					},
+				},
+			},
+			expected: filepath.Join("tmp", "test"),
+		},
+		{
+			name: "build context without manifest path and with compose information",
+			manifest: &Manifest{
+				Deploy: &DeployInfo{
+					ComposeSection: &ComposeSectionInfo{
+						ComposesInfo: ComposeInfoList{
+							{
+								File: filepath.Join("tmp", "test", "unit", "docker-compose.yml"),
+							},
+							{
+								File: filepath.Join("tmp", "test", "docker-compose.yml"),
+							},
+						},
+					},
+				},
+			},
+			expected: filepath.Join("tmp", "test", "unit"),
+		},
+		{
+			name: "build context without manifest path and with compose information with .okteto directory",
+			manifest: &Manifest{
+				Deploy: &DeployInfo{
+					ComposeSection: &ComposeSectionInfo{
+						ComposesInfo: ComposeInfoList{
+							{
+								File: filepath.Join("tmp", "test", "unit", ".okteto", "docker-compose.yml"),
+							},
+							{
+								File: filepath.Join("tmp", "test", "docker-compose.yml"),
+							},
+						},
+					},
+				},
+			},
+			expected: filepath.Join("tmp", "test", "unit"),
+		},
+		{
+			name:     "build context without manifest path and compose information",
+			manifest: &Manifest{},
+			expected: currentDir,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := getBuildContextForComposeWithVolumeMounts(tt.manifest)
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }

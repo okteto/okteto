@@ -14,6 +14,7 @@
 package build
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
@@ -42,11 +43,15 @@ func TestCreateDockerfileWithVolumeMounts(t *testing.T) {
 			RemotePath: "/etc/nginx/nginx.conf",
 		},
 	}
+	ctx := filepath.Join("tmp", "test", "volume-mount")
+	expectedContext, err := filepath.Abs(ctx)
+	require.NoError(t, err)
 
-	info, err := CreateDockerfileWithVolumeMounts(image, volumes, fs)
+	info, err := CreateDockerfileWithVolumeMounts(ctx, image, volumes, fs)
 	require.NoError(t, err)
 
 	require.ElementsMatch(t, volumes, info.VolumesToInclude)
+	require.Equal(t, expectedContext, info.Context)
 
 	dockerfileContent, err := afero.ReadFile(fs, info.Dockerfile)
 	require.NoError(t, err)
