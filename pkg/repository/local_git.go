@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -135,6 +136,7 @@ type LocalGitInterface interface {
 	parseGitStatus(string) (git.Status, error)
 	GetDirContentSHA(ctx context.Context, repoRoot, dirPath string, fixAttempt int) (string, error)
 	Diff(ctx context.Context, repoRoot, dirPath string, fixAttempt int) (string, error)
+	ListUntrackedFiles(ctx context.Context, workdir string, fixAttempt int) ([]string, error)
 }
 
 type LocalGit struct {
@@ -219,6 +221,44 @@ func (*LocalGit) parseGitStatus(gitStatusOutput string) (git.Status, error) {
 	}
 
 	return status, nil
+}
+
+func (lg *LocalGit) ListUntrackedFiles(ctx context.Context, workdir string, fixAttempt int) ([]string, error) {
+	if fixAttempt > 1 {
+		return []string{}, errLocalGitCannotGetCommitTooManyAttempts
+	}
+
+	lsFilesCmdArgs := []string{"--no-optional-locks", "ls-files", "--others", "--exclude-standard"}
+
+	output, err := lg.exec.RunCommand(ctx, workdir, lg.gitPath, lsFilesCmdArgs...)
+	if err != nil {
+		var exitError *exec.ExitError
+		errors.As(err, &exitError)
+		if exitError != nil {
+			exitErr := string(exitError.Stderr)
+			if strings.Contains(exitErr, "detected dubious ownership in repository") {
+				err = lg.FixDubiousOwnershipConfig(workdir)
+				if err != nil {
+					return []string{}, errLocalGitCannotGetStatusCannotRecover
+				}
+				fixAttempt++
+				return lg.ListUntrackedFiles(ctx, workdir, fixAttempt)
+			}
+		}
+		return []string{}, errLocalGitCannotGetStatusCannotRecover
+	}
+
+	lines := strings.Split(string(output), "\n")
+	untrackedFiles := []string{}
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		untrackedFiles = append(untrackedFiles, line)
+	}
+	// We need to sort the untracked files to make deterministic the order of the files
+	sort.Strings(untrackedFiles)
+	return untrackedFiles, nil
 }
 
 // GetDirContentSHA calculates the SHA of the content of the given directory using git ls-files and git hash-object

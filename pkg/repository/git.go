@@ -385,20 +385,7 @@ func (ogr oktetoGitRepository) calculateUntrackedFiles(ctx context.Context, cont
 		return []string{}, fmt.Errorf("failed to infer the git repo's current worktree: %w", err)
 	}
 
-	status, err := worktree.Status(ctx, contextDir, NewLocalGit("git", &LocalExec{}))
-	if err != nil {
-		return []string{}, fmt.Errorf("failed to infer the git repo's status: %w", err)
-	}
-
-	files := []string{}
-	for k, v := range status.status {
-		if v.Staging == git.Untracked {
-			files = append(files, k)
-		}
-	}
-
-	sort.Strings(files)
-	return files, nil
+	return worktree.ListUntrackedFiles(ctx, contextDir, NewLocalGit("git", &LocalExec{}))
 }
 
 type oktetoGitWorktree struct {
@@ -429,6 +416,7 @@ type gitRepositoryInterface interface {
 type gitWorktreeInterface interface {
 	Status(context.Context, string, LocalGitInterface) (oktetoGitStatus, error)
 	GetRoot() string
+	ListUntrackedFiles(context.Context, string, LocalGitInterface) ([]string, error)
 }
 
 func (ogr oktetoGitWorktree) Status(ctx context.Context, repoRoot string, localGit LocalGitInterface) (oktetoGitStatus, error) {
@@ -451,6 +439,37 @@ func (ogr oktetoGitWorktree) Status(ctx context.Context, repoRoot string, localG
 	}
 
 	return oktetoGitStatus{status: status}, nil
+}
+
+func (ogr oktetoGitWorktree) ListUntrackedFiles(ctx context.Context, workdir string, localGit LocalGitInterface) ([]string, error) {
+	// using git directly is faster, so we check if it's available
+	_, err := localGit.Exists()
+	if err != nil {
+		// git is not available, so we fall back on git-go
+		oktetoLog.Debug("Calculating git untrackedFiles: git is not installed, for better performances consider installing it")
+
+		status, err := ogr.Status(ctx, ogr.GetRoot(), NewLocalGit("git", &LocalExec{}))
+		if err != nil {
+			return []string{}, fmt.Errorf("failed to infer the git repo's status: %w", err)
+		}
+
+		files := []string{}
+		for k, v := range status.status {
+			if v.Staging == git.Untracked {
+				files = append(files, k)
+			}
+		}
+
+		sort.Strings(files)
+		return files, nil
+	}
+
+	untrackedFiles, err := localGit.ListUntrackedFiles(ctx, ogr.GetRoot(), 0)
+	if err != nil {
+		return []string{}, fmt.Errorf("failed to get untrackedFiles: %w", err)
+	}
+
+	return untrackedFiles, nil
 }
 
 // GetLatestSHA calculates a SHA of a repo for the specified directory (dirpath). The result depends on having
