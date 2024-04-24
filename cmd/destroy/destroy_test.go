@@ -203,6 +203,12 @@ func TestDestroyWithErrorGettingManifestButDestroySuccess(t *testing.T) {
 		ConfigMapHandler: NewConfigmapHandler(fakeClient),
 		nsDestroyer:      destroyer,
 		secrets:          &fakeSecretHandler{},
+		buildCtrl: buildCtrl{
+			builder: fakeBuilderV2{
+				getSvcs: fakeGetSvcs{},
+				build:   nil,
+			},
+		},
 	}
 
 	err = dc.destroy(context.Background(), &Options{})
@@ -300,6 +306,12 @@ func TestDestroyWithErrorOnCommands(t *testing.T) {
 		executor: &fakeExecutor{
 			err: assert.AnError,
 		},
+		buildCtrl: buildCtrl{
+			builder: fakeBuilderV2{
+				getSvcs: fakeGetSvcs{},
+				build:   nil,
+			},
+		},
 	}
 
 	err = dc.destroy(ctx, &Options{
@@ -335,6 +347,12 @@ func TestDestroyWithErrorOnCommandsForcingDestroy(t *testing.T) {
 		k8sClientProvider: k8sClientProvider,
 		executor: &fakeExecutor{
 			err: fmt.Errorf("error executing command"),
+		},
+		buildCtrl: buildCtrl{
+			builder: fakeBuilderV2{
+				getSvcs: fakeGetSvcs{},
+				build:   nil,
+			},
 		},
 	}
 
@@ -372,6 +390,12 @@ func TestDestroyWithErrorDestroyingK8sResources(t *testing.T) {
 		secrets:           &fakeSecretHandler{},
 		k8sClientProvider: k8sClientProvider,
 		executor:          &fakeExecutor{},
+		buildCtrl: buildCtrl{
+			builder: fakeBuilderV2{
+				getSvcs: fakeGetSvcs{},
+				build:   nil,
+			},
+		},
 	}
 
 	err = dc.destroy(ctx, &Options{
