@@ -55,22 +55,22 @@ func TestIdentifyReadinessIssue(t *testing.T) {
 		{
 			name: "no-matching-errors",
 			s: Syncthing{
-				LogPath: "/syncthing.log",
+				LogPath: "syncthing.log",
 			},
 			mockFs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
-				_ = afero.WriteFile(fs, "/syncthing.log", []byte("happy days!"), 0644)
+				_ = afero.WriteFile(fs, "syncthing.log", []byte("happy days!"), 0644)
 				return fs
 			},
 		},
 		{
 			name: "matching-insufficient-space-for-database",
 			s: Syncthing{
-				LogPath: "/syncthing.log",
+				LogPath: "syncthing.log",
 			},
 			mockFs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
-				_ = afero.WriteFile(fs, "/syncthing.log", []byte("2024/01/01 10:00:00 INFO: Failed initial scan of sendonly folder \"1\" (okteto-1)"+
+				_ = afero.WriteFile(fs, "syncthing.log", []byte("2024/01/01 10:00:00 INFO: Failed initial scan of sendonly folder \"1\" (okteto-1)"+
 					"2024/01/01 10:01:00 WARNING: Error on folder \"1\" (okteto-1): insufficient space on disk for database (/home/<user>/.okteto/<namespace>/<service>/index-v0.14.0.db): current 0.94 % < required 1 %"+
 					"2024/01/01 10:02:00 failed to sufficiently increase receive buffer size (was: 208 kiB, wanted: 2048 kiB, got: 416 kiB). See https://github.com/quic-go/quic-go/wiki/UDP-Buffer-Sizes for details."), 0644)
 				return fs
@@ -80,11 +80,11 @@ func TestIdentifyReadinessIssue(t *testing.T) {
 		{
 			name: "matching-error-opening-database",
 			s: Syncthing{
-				LogPath: "/syncthing.log",
+				LogPath: "syncthing.log",
 			},
 			mockFs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
-				_ = afero.WriteFile(fs, "/syncthing.log", []byte("[start] \"2024/01/01 10:01:00 WARNING: Error opening database: mkdir /home/<user>/.okteto/<namespace>/<service>/index-v0.14.0.db: no space left on device"), 0644)
+				_ = afero.WriteFile(fs, "syncthing.log", []byte("[start] \"2024/01/01 10:01:00 WARNING: Error opening database: mkdir /home/<user>/.okteto/<namespace>/<service>/index-v0.14.0.db: no space left on device"), 0644)
 				return fs
 			},
 			expectedErr: oktetoErrors.ErrInsufficientSpace,
