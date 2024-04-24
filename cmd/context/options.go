@@ -63,7 +63,7 @@ func (o *Options) InitFromContext() {
 func (o *Options) InitFromEnvVars() {
 	var usedEnvVars []string
 
-	if os.Getenv(model.OktetoURLEnvVar) != "" {
+	if o.Context == "" && os.Getenv(model.OktetoURLEnvVar) != "" {
 		o.Context = os.Getenv(model.OktetoURLEnvVar)
 		o.IsOkteto = true
 		usedEnvVars = append(usedEnvVars, model.OktetoURLEnvVar)
