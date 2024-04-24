@@ -61,6 +61,9 @@ func (up *upContext) sync(ctx context.Context) error {
 		return err
 	}
 
+	// check for system errors
+	up.checkForSystemErrors(ctx)
+
 	startSyncFiles := time.Now()
 	if err := up.synchronizeFiles(ctx); err != nil {
 		return err
@@ -136,6 +139,21 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 	}
 
 	return up.Sy.WaitForConnected(ctx)
+}
+
+// checkForSystemErrors is called when syncthing is started to check for system errors (ie. available disk space is lower than 1%) and print a warning
+func (up *upContext) checkForSystemErrors(ctx context.Context) {
+	if up.Dev.IsHybridModeEnabled() {
+		return
+	}
+
+	oktetoLog.Spinner("Verifying synchronization errors...")
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
+
+	if up.Sy.IsLocalRunningOutOfSpace(ctx) {
+		oktetoLog.Warning("Your local disk is almost full. This can cause synchronization issues. Please free up some space to use Okteto.")
+	}
 }
 
 func (up *upContext) synchronizeFiles(ctx context.Context) error {

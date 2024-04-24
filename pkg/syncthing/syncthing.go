@@ -756,25 +756,38 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, local bool) error {
 }
 
 // GetSystemErrors returns the system errors identified by syncthing
-func (s *Syncthing) GetSystemErrors(ctx context.Context, local bool) error {
-	var resp SystemErrors
+func (s *Syncthing) GetSystemErrors(ctx context.Context, local bool) (*SystemErrors, error) {
+	var sysErrs *SystemErrors
 	body, err := s.APICall(ctx, "rest/system/error", "GET", http.StatusOK, nil, local, nil, true, maxRetries)
 	if err != nil {
 		oktetoLog.Infof("error getting system errors: %s", err.Error())
 		if strings.Contains(err.Error(), "Client.Timeout") {
-			return oktetoErrors.ErrBusySyncthing
+			return nil, oktetoErrors.ErrBusySyncthing
 		}
-		return oktetoErrors.ErrLostSyncthing
+		return nil, oktetoErrors.ErrLostSyncthing
 	}
 
-	err = json.Unmarshal(body, &resp)
+	err = json.Unmarshal(body, &sysErrs)
 	if err != nil {
 		oktetoLog.Infof("error unmarshalling system errors: %s", err.Error())
-		return oktetoErrors.ErrLostSyncthing
+		return nil, oktetoErrors.ErrLostSyncthing
 	}
 
-	fmt.Println("folderErrors", resp)
-	return nil
+	return sysErrs, nil
+}
+
+func (s *Syncthing) IsLocalRunningOutOfSpace(ctx context.Context) bool {
+	sysErrs, err := s.GetSystemErrors(ctx, true)
+	if err != nil {
+		oktetoLog.Infof("error getting system errors: %s", err.Error())
+		return false
+	}
+	for _, sysErr := range sysErrs.Errors {
+		if strings.Contains(sysErr.Message, "insufficient space") {
+			return true
+		}
+	}
+	return false
 }
 
 // GetInSynchronizationFile the files syncthing
