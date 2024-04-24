@@ -53,6 +53,7 @@ type Options struct {
 	Variables        []string
 	Timeout          time.Duration
 	Deploy           bool
+	NoCache          bool
 }
 
 func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at deployCMD.AnalyticsTrackerInterface) *cobra.Command {
@@ -91,6 +92,7 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	cmd.Flags().StringVar(&options.Name, "name", "", "name of the development environment name to be deployed")
 	cmd.Flags().BoolVar(&options.Deploy, "deploy", false, "Always deploy the dev environment. If it's already deployed it will be redeployed")
+	cmd.Flags().BoolVar(&options.NoCache, "no-cache", false, "Do not use cache for running tests")
 
 	return cmd
 }
@@ -283,6 +285,12 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 			Manifest:                    manifest,
 			Command:                     remote.TestCommand,
 			ContextAbsolutePathOverride: path.Clean(fmt.Sprintf("%s/%s", cwd, test.Context)),
+		}
+
+		if !options.NoCache {
+			// this value can be anything really.
+			// By keeping it constant we skip cache invalidation
+			params.CacheInvalidationKey = "const"
 		}
 
 		oktetoLog.Information("Executing '%s'", name)
