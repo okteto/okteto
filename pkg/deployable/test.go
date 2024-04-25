@@ -14,8 +14,6 @@
 package deployable
 
 import (
-	"fmt"
-
 	"github.com/okteto/okteto/cmd/utils/executor"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/afero"
@@ -24,10 +22,10 @@ import (
 // TestRunner is responsible for running the commands defined in a manifest when
 // running tests
 type TestRunner struct {
-	Executor         executor.ManifestExecutor
-	Fs               afero.Fs
-	GetDevEnvEnviron func(devEnvName, namespace string) (map[string]string, error)
-	SetDevEnvEnviron func(devEnvName, namespace string, vars []string) error
+	Executor executor.ManifestExecutor
+	Fs       afero.Fs
+	// GetDevEnvEnviron func(devEnvName, namespace string) (map[string]string, error)
+	// SetDevEnvEnviron func(devEnvName, namespace string, vars []string) error
 }
 
 // TestParameters represents the parameters for destroying a remote entity
@@ -49,28 +47,15 @@ func (dr *TestRunner) RunTest(params TestParameters) error {
 		return err
 	}
 
-	deployEnv, err := dr.getDeployEnv(params)
-	if err != nil {
-		return err
-	}
-
 	envStepper := NewEnvStepper(oktetoEnvFile.Name())
 	envStepper.WithFS(dr.Fs)
 
-	// Write back any variables written by the test into the deploy configmap
-	defer func() {
-		err := dr.SetDevEnvEnviron(params.DevEnvName, params.Namespace, append(deployEnv, params.Variables...))
-		if err != nil {
-			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error saving configmap environment: %s", err.Error())
-		}
-	}()
 	defer unlinkEnv()
 
 	for _, command := range params.Deployable.Commands {
 		oktetoLog.Information("Running '%s'", command.Name)
 
 		execEnv := []string{}
-		execEnv = append(execEnv, deployEnv...)
 		execEnv = append(execEnv, params.Variables...)
 
 		if err := dr.Executor.Execute(command, execEnv); err != nil {
@@ -87,17 +72,4 @@ func (dr *TestRunner) RunTest(params TestParameters) error {
 	}
 
 	return nil
-}
-
-func (dr *TestRunner) getDeployEnv(params TestParameters) ([]string, error) {
-	deployEnv, err := dr.GetDevEnvEnviron(params.DevEnvName, params.Namespace)
-	if err != nil {
-		return nil, err
-	}
-
-	list := make([]string, 0, len(deployEnv))
-	for k, v := range deployEnv {
-		list = append(list, fmt.Sprintf("%s=%s", k, v))
-	}
-	return list, nil
 }

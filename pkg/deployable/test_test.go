@@ -26,15 +26,6 @@ func TestTestRunner(t *testing.T) {
 	runner := TestRunner{
 		Executor: executor,
 		Fs:       afero.NewMemMapFs(),
-		GetDevEnvEnviron: func(devEnvName, namespace string) (map[string]string, error) {
-			return map[string]string{
-				"DEPLOY_ENV_1": "deploy1",
-				"DEPLOY_ENV_2": "deploy2",
-			}, nil
-		},
-		SetDevEnvEnviron: func(devEnvName, namespace string, vars []string) error {
-			return nil
-		},
 	}
 
 	cmd1 := model.DeployCommand{
@@ -55,6 +46,7 @@ func TestTestRunner(t *testing.T) {
 		Deployable: Entity{
 			Commands: []model.DeployCommand{cmd1},
 		},
+		Variables: expectedVars,
 	})
 
 	require.NoError(t, err)

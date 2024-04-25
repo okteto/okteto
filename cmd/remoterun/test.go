@@ -23,7 +23,6 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils/executor"
-	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -82,11 +81,6 @@ commands:
 				return fmt.Errorf("could not read information for tests: %w", err)
 			}
 
-			kubeClient, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).ProvideWithLogger(okteto.GetContext().Cfg, k8sLogger)
-			if err != nil {
-				return fmt.Errorf("could not create kubernetes client: %s", err.Error())
-			}
-
 			// Set the default values for the external resources environment variables (endpoints)
 			for name, external := range dep.External {
 				external.SetDefaults(name)
@@ -95,22 +89,6 @@ commands:
 			runner := &deployable.TestRunner{
 				Executor: executor.NewExecutor(oktetoLog.GetOutputFormat(), false, ""),
 				Fs:       afero.NewOsFs(),
-				GetDevEnvEnviron: func(devEnvName, namespace string) (map[string]string, error) {
-					if devEnvName == "" {
-						return nil, nil
-					}
-					base64Json, err := pipeline.GetConfigmapDependencyEnv(ctx, devEnvName, namespace, kubeClient)
-					if err != nil {
-						return nil, err
-					}
-					return decodeBase64JSON(base64Json)
-				},
-				SetDevEnvEnviron: func(devEnvName, namespace string, vars []string) (err error) {
-					if devEnvName != "" {
-						err = pipeline.UpdateEnvs(ctx, devEnvName, namespace, vars, kubeClient)
-					}
-					return
-				},
 			}
 
 			os.Setenv(constants.OktetoNameEnvVar, options.Name)
