@@ -29,6 +29,7 @@ type ImageBuildMetadata struct {
 	RepoURL                  string
 	RepoHash                 string
 	BuildContextHash         string
+	Initiator                string
 	RepoHashDuration         time.Duration
 	BuildContextHashDuration time.Duration
 	CacheHitDuration         time.Duration
@@ -52,6 +53,7 @@ func (m *ImageBuildMetadata) toProps() map[string]interface{} {
 		"buildDurationSeconds":            m.BuildDuration.Seconds(),
 		"buildContextHash":                m.BuildContextHash,
 		"buildContextHashDurationSeconds": m.BuildContextHashDuration.Seconds(),
+		"initiator":                       m.Initiator,
 	}
 
 	if m.Name != "" {

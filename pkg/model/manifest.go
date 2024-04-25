@@ -120,6 +120,11 @@ type ManifestDevs map[string]*Dev
 // ManifestTests defines all the test sections
 type ManifestTests map[string]*Test
 
+// ImageFromManifest is a thunk that returns an image value from a parsed manifest
+// This allows to implement general purpose logic on images without necessarily
+// referencing a specific image, for eg manifest.Deploy.Image or manifest.Destroy.Image
+type ImageFromManifest func(manifest *Manifest) string
+
 // NewManifest creates a new empty manifest
 func NewManifest() *Manifest {
 	return &Manifest{
