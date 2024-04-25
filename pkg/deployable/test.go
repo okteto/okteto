@@ -32,7 +32,6 @@ type TestRunner struct {
 type TestParameters struct {
 	Name         string
 	Namespace    string
-	DevEnvName   string
 	Deployable   Entity
 	Variables    []string
 	ForceDestroy bool

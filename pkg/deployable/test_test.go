@@ -40,9 +40,8 @@ func TestTestRunner(t *testing.T) {
 	executor.On("Execute", cmd1, expectedVars).Return(nil).Once()
 
 	err := runner.RunTest(TestParameters{
-		Name:       "test",
-		Namespace:  "ns",
-		DevEnvName: "deploy",
+		Name:      "test",
+		Namespace: "ns",
 		Deployable: Entity{
 			Commands: []model.DeployCommand{cmd1},
 		},

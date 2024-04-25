@@ -32,9 +32,8 @@ import (
 
 // TestOptions flags accepted by the remote-run test command
 type TestOptions struct {
-	Name       string
-	DevEnvName string
-	Variables  []string
+	Name      string
+	Variables []string
 }
 
 // Test starts the test command remotely. This is the command executed in the
@@ -95,7 +94,6 @@ commands:
 				Namespace:  oktetoContext.GetCurrentNamespace(),
 				Deployable: dep,
 				Variables:  options.Variables,
-				DevEnvName: options.DevEnvName,
 			}
 
 			// Token should be always masked from the logs
@@ -114,7 +112,6 @@ commands:
 	}
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "test run name")
-	cmd.Flags().StringVar(&options.DevEnvName, "devenv-name", "", "development environment name")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 	return cmd
 }
