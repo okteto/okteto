@@ -24,6 +24,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/spf13/afero"
 	"gopkg.in/yaml.v2"
 )
 
@@ -79,24 +80,31 @@ func GetBinaryFullPath() string {
 	return os.Args[0]
 }
 
-// GetOktetoHome returns the path of the okteto folder
-func GetOktetoHome() string {
+// GetOktetoHomeWithFilesystem returns the path of the okteto folder using the provided file system
+func GetOktetoHomeWithFilesystem(fs afero.Fs) string {
 	if v, ok := os.LookupEnv(constants.OktetoFolderEnvVar); ok {
-		if !filesystem.FileExists(v) {
+		if !filesystem.FileExistsWithFilesystem(v, fs) {
 			oktetoLog.Fatalf("OKTETO_FOLDER doesn't exist: %s", v)
 		}
 
 		return v
 	}
 
-	home := GetUserHomeDir()
+	home := GetUserHomeDirWithFilesystem(fs)
 	d := filepath.Join(home, oktetoFolderName)
 
-	if err := os.MkdirAll(d, 0700); err != nil {
+	filePerm := os.FileMode(0700)
+	if err := fs.MkdirAll(d, filePerm); err != nil {
 		oktetoLog.Fatalf("failed to create %s: %s", d, err)
 	}
 
 	return d
+}
+
+// GetOktetoHome returns the path of the okteto folder
+func GetOktetoHome() string {
+	fs := afero.NewOsFs()
+	return GetOktetoHomeWithFilesystem(fs)
 }
 
 // GetNamespaceHome returns the path of the folder
@@ -186,10 +194,10 @@ func GetState(devName, devNamespace string) (UpState, error) {
 	return result, nil
 }
 
-// GetUserHomeDir returns the OS home dir
-func GetUserHomeDir() string {
+// GetUserHomeDirWithFilesystem returns the OS home dir using the provided file system
+func GetUserHomeDirWithFilesystem(fs afero.Fs) string {
 	if v, ok := os.LookupEnv(constants.OktetoHomeEnvVar); ok {
-		if !filesystem.FileExists(v) {
+		if !filesystem.FileExistsWithFilesystem(v, fs) {
 			oktetoLog.Fatalf("OKTETO_HOME points to a non-existing directory: %s", v)
 		}
 
@@ -207,6 +215,13 @@ func GetUserHomeDir() string {
 
 	return os.Getenv(homeEnvVar)
 
+}
+
+// GetUserHomeDir returns the OS home dir
+func GetUserHomeDir() string {
+	fs := afero.NewOsFs()
+
+	return GetUserHomeDirWithFilesystem(fs)
 }
 
 func homedirWindows() (string, error) {
