@@ -15,8 +15,6 @@ package remoterun
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -27,7 +25,6 @@ import (
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -42,7 +39,7 @@ type TestOptions struct {
 
 // Test starts the test command remotely. This is the command executed in the
 // remote environment when running okteto test
-func Test(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Test(ctx context.Context) *cobra.Command {
 	options := &TestOptions{}
 	cmd := &cobra.Command{
 		Use:   "test",
@@ -120,14 +117,4 @@ commands:
 	cmd.Flags().StringVar(&options.DevEnvName, "devenv-name", "", "development environment name")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 	return cmd
-}
-
-func decodeBase64JSON(base64Str string) (data map[string]string, err error) {
-	b, err := base64.StdEncoding.DecodeString(base64Str)
-	if err != nil {
-		return nil, err
-	}
-	data = make(map[string]string)
-	err = json.Unmarshal(b, &data)
-	return
 }
