@@ -334,7 +334,7 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 			},
 			Manifest:                    manifest,
 			Command:                     remote.TestCommand,
-			ContextAbsolutePathOverride: path.Clean(fmt.Sprintf("%s/%s", cwd, test.Context)),
+			ContextAbsolutePathOverride: path.Clean(path.Join(cwd, test.Context)),
 		}
 
 		if !options.NoCache {
@@ -343,7 +343,7 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 			params.CacheInvalidationKey = "const"
 		}
 
-		oktetoLog.Information("Executing '%s'", name)
+		ioCtrl.Out().Infof("Executing '%s'", name)
 		if err := runner.Run(ctx, params); err != nil {
 			return metadata, err
 		}

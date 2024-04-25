@@ -19,13 +19,13 @@ import (
 
 const testEvent = "Test"
 
-// TestMetadata contains the metadata of a deploy event
+// TestMetadata contains the metadata of a test command execution event
 type TestMetadata struct {
 	// Err is the error (if any) that occurred during test execution. Note that
 	// this is NOT an error in the test but rather a error encounterd in the setup
 	Err error
 
-	// Duration is the total duration of the test execution. Not that this includes
+	// Duration is the total duration of the test execution. Note that this includes
 	// potential build and deploy times (not just the tests)
 	Duration time.Duration
 
@@ -38,7 +38,7 @@ type TestMetadata struct {
 	// Success is whether the tests succeeded or not
 	Success bool
 
-	// StagesCount is the number of services that were tested
+	// StagesCount is the number of sections that were tested (entries in the manifest test map)
 	StagesCount int
 }
 
