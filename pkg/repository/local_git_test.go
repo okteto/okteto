@@ -302,11 +302,11 @@ func TestLocalGit_GetDirContentSHA(t *testing.T) {
 }
 func TestLocalGit_ListUntrackedFiles(t *testing.T) {
 	tests := []struct {
-		name          string
-		fixAttempt    int
+		expectedErr   error
 		execMock      func() *mockLocalExec
 		expectedFiles []string
-		expectedErr   error
+		name          string
+		fixAttempt    int
 	}{
 		{
 			name:       "success",
