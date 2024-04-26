@@ -231,7 +231,7 @@ func exportPlatformVariablesToEnv(variables []env.Var) {
 		value, exists := os.LookupEnv(v.Name)
 		if exists {
 			if value != v.Value {
-				oktetoLog.Warning("$%s Okteto Platform variable is being overridden by a local environment variable with the same name.", v.Name)
+				oktetoLog.Warning("$%s User or Admin variable defined in the Okteto UI is being overridden by a local environment variable with the same name.", v.Name)
 			}
 			oktetoLog.AddMaskedWord(value)
 			continue
