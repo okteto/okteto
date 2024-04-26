@@ -324,7 +324,13 @@ func AddMaskedWord(word string) {
 
 	// multi-line support
 	lines := strings.Split(clean, "\n")
-	log.maskedWords = append(log.maskedWords, lines...)
+	for _, line := range lines {
+		cleanLine := strings.TrimSpace(line)
+		if len(cleanLine) < minCharsToMask {
+			continue
+		}
+		log.maskedWords = append(log.maskedWords, cleanLine)
+	}
 }
 
 // EnableMasking starts redacting all variables
