@@ -24,8 +24,6 @@ import (
 type TestRunner struct {
 	Executor executor.ManifestExecutor
 	Fs       afero.Fs
-	// GetDevEnvEnviron func(devEnvName, namespace string) (map[string]string, error)
-	// SetDevEnvEnviron func(devEnvName, namespace string, vars []string) error
 }
 
 // TestParameters represents the parameters for destroying a remote entity
