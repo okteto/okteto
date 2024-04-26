@@ -1455,7 +1455,7 @@ func Test_isPathAComposeFile(t *testing.T) {
 		{
 			name:     "no compose file - no env var",
 			path:     "okteto-stack.yml",
-			expected: true,
+			expected: false,
 		},
 		{
 			name:        "no compose file - env var set to true",
