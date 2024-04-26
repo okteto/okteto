@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/compose-spec/godotenv"
@@ -50,6 +51,8 @@ var (
 	errBadStackName     = "must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character"
 	deprecatedManifests = []string{"stack.yml", "stack.yaml"}
 	errDependsOn        = errors.New("invalid depends_on")
+
+	stackDeprecationWarningOnce = sync.Once{}
 )
 
 // Stack represents an okteto stack
@@ -794,9 +797,13 @@ func isFileCompose(path string) bool {
 		oktetoLog.Infof("%s is set to false. File will be treated as compose", stackSupportEnabledEnvVar)
 		return true
 	}
-	if !isComposeFileName {
-		oktetoLog.Warning("okteto stack syntax is deprecated. Please consider migrating to compose syntax: https://community.okteto.com/t/important-update-migrating-from-okteto-stacks-to-docker-compose/1262")
-	}
+
+	stackDeprecationWarningOnce.Do(func() {
+		if !isComposeFileName {
+			oktetoLog.Warning(`Okteto Stack syntax is deprecated. 
+    Please consider migrating to Docker Compose syntax: https://community.okteto.com/t/important-update-migrating-from-okteto-stacks-to-docker-compose/1262`)
+		}
+	})
 	oktetoLog.Infof("%s is set to true. Detecting if file is compose by name", stackSupportEnabledEnvVar)
 	return isComposeFileName
 }
