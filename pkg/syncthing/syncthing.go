@@ -163,6 +163,16 @@ type ItemEvent struct {
 	GlobalId int                                        `json:"globalID"`
 }
 
+// SystemError represents a system error in syncthing.
+type SystemError struct {
+	Message string `json:"message"`
+}
+
+// SystemErrors represents a list of system errors
+type SystemErrors struct {
+	Errors []SystemError `json:"errors"`
+}
+
 // Connections represents syncthing connections.
 type Connections struct {
 	Connections map[string]Connection `json:"connections"`
@@ -743,6 +753,41 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, local bool) error {
 
 	oktetoLog.Infof("syncthing pull error local=%t: %s", local, errMsg)
 	return fmt.Errorf("%s: %s", folderErrors.Data.Errors[0].Path, errMsg)
+}
+
+// GetSystemErrors returns the system errors identified by syncthing
+func (s *Syncthing) GetSystemErrors(ctx context.Context, local bool) (*SystemErrors, error) {
+	var sysErrs *SystemErrors
+	body, err := s.APICall(ctx, "rest/system/error", "GET", http.StatusOK, nil, local, nil, true, maxRetries)
+	if err != nil {
+		oktetoLog.Infof("error getting system errors: %s", err.Error())
+		if strings.Contains(err.Error(), "Client.Timeout") {
+			return nil, oktetoErrors.ErrBusySyncthing
+		}
+		return nil, oktetoErrors.ErrLostSyncthing
+	}
+
+	err = json.Unmarshal(body, &sysErrs)
+	if err != nil {
+		oktetoLog.Infof("error unmarshalling system errors: %s", err.Error())
+		return nil, oktetoErrors.ErrLostSyncthing
+	}
+
+	return sysErrs, nil
+}
+
+func (s *Syncthing) IsLocalRunningOutOfSpace(ctx context.Context) bool {
+	sysErrs, err := s.GetSystemErrors(ctx, true)
+	if err != nil {
+		oktetoLog.Infof("error getting system errors: %s", err.Error())
+		return false
+	}
+	for _, sysErr := range sysErrs.Errors {
+		if strings.Contains(sysErr.Message, "insufficient space") {
+			return true
+		}
+	}
+	return false
 }
 
 // GetInSynchronizationFile the files syncthing
