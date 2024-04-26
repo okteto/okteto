@@ -304,8 +304,8 @@ func TestLocalGit_ListUntrackedFiles(t *testing.T) {
 	tests := []struct {
 		expectedErr   error
 		execMock      func() *mockLocalExec
-		expectedFiles []string
 		name          string
+		expectedFiles []string
 		fixAttempt    int
 	}{
 		{
