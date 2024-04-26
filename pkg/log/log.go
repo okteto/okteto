@@ -322,7 +322,8 @@ func AddMaskedWord(word string) {
 	}
 	log.maskedWords = append(log.maskedWords, clean)
 
-	lines := strings.Split(clean, "\n")
+	crossPlatformCleanWord := strings.ReplaceAll(clean, "\r\n", "\n")
+	lines := strings.Split(crossPlatformCleanWord, "\n")
 	for _, line := range lines {
 		cleanLine := strings.TrimSpace(line)
 		if len(cleanLine) <= minCharsToMask {
