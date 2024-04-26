@@ -315,18 +315,17 @@ func IsInteractive() bool {
 func AddMaskedWord(word string) {
 	clean := strings.TrimSpace(word)
 
-	// only mask words longer than 5 chars (i.e. 'true' and 'false' will not be masked)
+	// only mask words longer than 5 chars (i.e. 'true' and 'false' won't be masked)
 	minCharsToMask := 5
-	if len(clean) < minCharsToMask {
+	if len(clean) <= minCharsToMask {
 		return
 	}
 	log.maskedWords = append(log.maskedWords, clean)
 
-	// multi-line support
 	lines := strings.Split(clean, "\n")
 	for _, line := range lines {
 		cleanLine := strings.TrimSpace(line)
-		if len(cleanLine) < minCharsToMask {
+		if len(cleanLine) <= minCharsToMask {
 			continue
 		}
 		log.maskedWords = append(log.maskedWords, cleanLine)
