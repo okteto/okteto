@@ -792,10 +792,10 @@ func isFileCompose(path string) bool {
 	isStackSupported := env.LoadBooleanOrDefault(stackSupportEnabledEnvVar, true)
 	if !isStackSupported {
 		oktetoLog.Infof("%s is set to false. File will be treated as compose", stackSupportEnabledEnvVar)
-		if !isComposeFileName {
-			oktetoLog.Warning("The file %s will be deprecated as a stack file name in a future version. Please consider migrating your file to a compose", base)
-		}
 		return true
+	}
+	if !isComposeFileName {
+		oktetoLog.Warning("okteto stack syntax is deprecated. Please consider migrating to compose syntax: https://community.okteto.com/t/important-update-migrating-from-okteto-stacks-to-docker-compose/1262")
 	}
 	oktetoLog.Infof("%s is set to true. Detecting if file is compose by name", stackSupportEnabledEnvVar)
 	return isComposeFileName
