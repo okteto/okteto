@@ -32,7 +32,7 @@ const (
 )
 
 func (up *upContext) initializeSyncthing() error {
-	sy, err := syncthing.New(up.Dev)
+	sy, err := syncthing.New(up.Dev, up.Fs)
 	if err != nil {
 		return err
 	}
@@ -110,11 +110,11 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 		return err
 	}
 
-	if err := up.Sy.WaitForPing(ctx, true, up.Fs); err != nil {
+	if err := up.Sy.WaitForPing(ctx, true); err != nil {
 		return err
 	}
 
-	if err := up.Sy.WaitForPing(ctx, false, up.Fs); err != nil {
+	if err := up.Sy.WaitForPing(ctx, false); err != nil {
 		oktetoLog.Infof("failed to ping syncthing: %s", err.Error())
 		if up.isTransient(err) {
 			return err

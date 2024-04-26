@@ -56,7 +56,7 @@ type pushOptions struct {
 }
 
 // Push builds, pushes and redeploys the target app
-func Push(ctx context.Context) *cobra.Command {
+func Push(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 	pushOpts := &pushOptions{}
 	cmd := &cobra.Command{
 		Hidden: true,
@@ -133,7 +133,7 @@ func Push(ctx context.Context) *cobra.Command {
 				dev.Autocreate = pushOpts.AutoDeploy
 			}
 
-			if err := runPush(ctx, dev, pushOpts, c); err != nil {
+			if err := runPush(ctx, dev, pushOpts, c, at); err != nil {
 				analytics.TrackPush(false)
 				return err
 			}
@@ -157,7 +157,7 @@ func Push(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func runPush(ctx context.Context, dev *model.Dev, pushOpts *pushOptions, c *kubernetes.Clientset) error {
+func runPush(ctx context.Context, dev *model.Dev, pushOpts *pushOptions, c *kubernetes.Clientset, at analyticsTrackerInterface) error {
 	exists := true
 	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 	reg := registry.NewOktetoRegistry(okteto.Config{})
@@ -223,7 +223,8 @@ func runPush(ctx context.Context, dev *model.Dev, pushOpts *pushOptions, c *kube
 			}
 		}
 		if apps.IsDevModeOn(tr.App) {
-			if err := down.Run(dev, app, trMap, false, c); err != nil {
+			dc := down.New(dev, nil, afero.NewOsFs(), okteto.NewK8sClientProvider(), at)
+			if err := dc.Run(app, trMap, false); err != nil {
 				return err
 			}
 			oktetoLog.Information("Development container deactivated")

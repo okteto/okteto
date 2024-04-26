@@ -15,6 +15,7 @@ package down
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/okteto"
 
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
@@ -23,30 +24,34 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
-	"k8s.io/client-go/kubernetes"
 )
 
 // Run runs the "okteto down" sequence
-func Run(dev *model.Dev, app apps.App, trMap map[string]*apps.Translation, wait bool, c kubernetes.Interface) error {
+func (d *Context) Run(app apps.App, trMap map[string]*apps.Translation, wait bool) error {
 	ctx := context.Background()
 	if len(trMap) == 0 {
 		oktetoLog.Info("no translations available in the deployment")
 	}
 
+	k8sClient, _, err := d.K8sClientProvider.Provide(okteto.GetContext().Cfg)
+	if err != nil {
+		return err
+	}
+
 	for _, tr := range trMap {
 		if app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
-			if err := app.Destroy(ctx, c); err != nil {
+			if err := app.Destroy(ctx, k8sClient); err != nil {
 				return err
 			}
 
-			if err := services.DestroyDev(ctx, dev, c); err != nil {
+			if err := services.DestroyDev(ctx, d.Dev, k8sClient); err != nil {
 				return err
 			}
-			if tr.Dev != dev {
+			if tr.Dev != d.Dev {
 				if err := tr.DevModeOff(); err != nil {
 					oktetoLog.Infof("failed to turn devmode off: %s", err)
 				}
-				if err := tr.App.Deploy(ctx, c); err != nil {
+				if err := tr.App.Deploy(ctx, k8sClient); err != nil {
 					return err
 				}
 			}
@@ -55,24 +60,24 @@ func Run(dev *model.Dev, app apps.App, trMap map[string]*apps.Translation, wait 
 			if err := tr.DevModeOff(); err != nil {
 				oktetoLog.Infof("failed to turn devmode off: %s", err)
 			}
-			if err := tr.App.Deploy(ctx, c); err != nil {
+			if err := tr.App.Deploy(ctx, k8sClient); err != nil {
 				return err
 			}
 		}
 
 		tr.DevApp = tr.App.DevClone()
-		if err := tr.DevApp.Destroy(ctx, c); err != nil {
+		if err := tr.DevApp.Destroy(ctx, k8sClient); err != nil {
 			return err
 		}
 	}
 
-	if err := secrets.Destroy(ctx, dev, c); err != nil {
+	if err := secrets.Destroy(ctx, d.Dev, k8sClient); err != nil {
 		return err
 	}
 
-	stopSyncthing(dev)
+	d.stopSyncthing()
 
-	if err := ssh.RemoveEntry(dev.Name); err != nil {
+	if err := ssh.RemoveEntry(d.Dev.Name); err != nil {
 		oktetoLog.Infof("failed to remove ssh entry: %s", err)
 	}
 
@@ -81,12 +86,12 @@ func Run(dev *model.Dev, app apps.App, trMap map[string]*apps.Translation, wait 
 	}
 
 	devPodTerminationRetries := 30
-	waitForDevPodsTermination(ctx, c, dev, devPodTerminationRetries)
+	waitForDevPodsTermination(ctx, k8sClient, d.Dev, devPodTerminationRetries)
 	return nil
 }
 
-func stopSyncthing(dev *model.Dev) {
-	sy, err := syncthing.New(dev)
+func (d *Context) stopSyncthing() {
+	sy, err := syncthing.New(d.Dev, d.Fs)
 	if err != nil {
 		oktetoLog.Infof("failed to create syncthing instance")
 		return

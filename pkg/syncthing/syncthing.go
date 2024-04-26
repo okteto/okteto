@@ -102,6 +102,7 @@ type Syncthing struct {
 	ResetDatabase    bool          `yaml:"-"`
 	IgnoreDelete     bool          `yaml:"-"`
 	Verbose          bool          `yaml:"-"`
+	Fs               afero.Fs      `yaml:"-"`
 }
 
 // Folder represents a sync folder
@@ -181,7 +182,7 @@ type DownloadProgressData struct {
 }
 
 // New constructs a new Syncthing.
-func New(dev *model.Dev) (*Syncthing, error) {
+func New(dev *model.Dev, fs afero.Fs) (*Syncthing, error) {
 	fullPath := getInstallPath()
 	remotePort, err := model.GetAvailablePort(dev.Interface)
 	if err != nil {
@@ -239,6 +240,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		RescanInterval:   strconv.Itoa(dev.Sync.RescanInterval),
 		Compression:      compression,
 		timeout:          dev.Timeout.Default,
+		Fs:               fs,
 	}
 	index := 1
 	for _, sync := range dev.Sync.Folders {
@@ -337,7 +339,7 @@ func (s *Syncthing) Run() error {
 }
 
 // WaitForPing waits for syncthing to be ready
-func (s *Syncthing) WaitForPing(ctx context.Context, local bool, fs afero.Fs) error {
+func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 	ticker := time.NewTicker(300 * time.Millisecond)
 	to := time.Now().Add(s.timeout)
 
@@ -355,7 +357,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool, fs afero.Fs) er
 
 			if time.Now().After(to) && retries > 10 {
 				// before returning a generic error, we try detecting why syncthing is not ready and return a more accurate error
-				errDetected := s.IdentifyReadinessIssue(fs)
+				errDetected := s.IdentifyReadinessIssue()
 				if errDetected != nil {
 					return errDetected
 				}
@@ -370,11 +372,11 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool, fs afero.Fs) er
 }
 
 // IdentifyReadinessIssue attempts to identify the issue that is preventing syncthing from being ready
-func (s *Syncthing) IdentifyReadinessIssue(fs afero.Fs) error {
-	if s.RegexMatchesLogs(fs, regexp.MustCompile("Error opening database: mkdir .*: no space left on device")) {
+func (s *Syncthing) IdentifyReadinessIssue() error {
+	if s.RegexMatchesLogs(s.Fs, regexp.MustCompile("Error opening database: mkdir .*: no space left on device")) {
 		return oktetoErrors.ErrInsufficientSpace
 	}
-	if s.RegexMatchesLogs(fs, regexp.MustCompile("insufficient space on disk for database")) {
+	if s.RegexMatchesLogs(s.Fs, regexp.MustCompile("insufficient space on disk for database")) {
 		return oktetoErrors.ErrInsufficientSpace
 	}
 	return nil
@@ -926,8 +928,8 @@ func Load(dev *model.Dev) (*Syncthing, error) {
 }
 
 // RemoveFolder deletes all the files created by the syncthing instance
-func RemoveFolder(dev *model.Dev) error {
-	s, err := New(dev)
+func RemoveFolder(dev *model.Dev, fs afero.Fs) error {
+	s, err := New(dev, fs)
 	if err != nil {
 		return fmt.Errorf("failed to create syncthing instance")
 	}

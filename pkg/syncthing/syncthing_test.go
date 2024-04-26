@@ -50,11 +50,11 @@ func TestIdentifyReadinessIssue(t *testing.T) {
 		expectedErr error
 		mockFs      func() afero.Fs
 		name        string
-		s           Syncthing
+		sy          Syncthing
 	}{
 		{
 			name: "no-matching-errors",
-			s: Syncthing{
+			sy: Syncthing{
 				LogPath: "syncthing.log",
 			},
 			mockFs: func() afero.Fs {
@@ -65,7 +65,7 @@ func TestIdentifyReadinessIssue(t *testing.T) {
 		},
 		{
 			name: "matching-insufficient-space-for-database",
-			s: Syncthing{
+			sy: Syncthing{
 				LogPath: "syncthing.log",
 			},
 			mockFs: func() afero.Fs {
@@ -79,7 +79,7 @@ func TestIdentifyReadinessIssue(t *testing.T) {
 		},
 		{
 			name: "matching-error-opening-database",
-			s: Syncthing{
+			sy: Syncthing{
 				LogPath: "syncthing.log",
 			},
 			mockFs: func() afero.Fs {
@@ -93,8 +93,8 @@ func TestIdentifyReadinessIssue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fs := tt.mockFs()
-			err := tt.s.IdentifyReadinessIssue(fs)
+			tt.sy.Fs = tt.mockFs()
+			err := tt.sy.IdentifyReadinessIssue()
 			assert.ErrorIs(t, err, tt.expectedErr)
 		})
 	}
