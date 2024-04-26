@@ -76,9 +76,10 @@ func (fr fakeRepository) calculateUntrackedFiles(ctx context.Context, contextDir
 }
 
 type fakeWorktree struct {
-	err    error
-	status oktetoGitStatus
-	root   string
+	err            error
+	status         oktetoGitStatus
+	root           string
+	untrackedFiles []string
 }
 
 func (fw fakeWorktree) GetRoot() string {
@@ -87,6 +88,10 @@ func (fw fakeWorktree) GetRoot() string {
 
 func (fw fakeWorktree) Status(context.Context, string, LocalGitInterface) (oktetoGitStatus, error) {
 	return fw.status, fw.err
+}
+
+func (fw fakeWorktree) ListUntrackedFiles(context.Context, string, LocalGitInterface) ([]string, error) {
+	return fw.untrackedFiles, fw.err
 }
 
 func TestNewRepo(t *testing.T) {
