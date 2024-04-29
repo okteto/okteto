@@ -339,6 +339,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			Manifest:                    manifest,
 			Command:                     remote.TestCommand,
 			ContextAbsolutePathOverride: path.Clean(path.Join(cwd, test.Context)),
+			Cache:                       test.Cache,
 		}
 
 		if !options.NoCache {

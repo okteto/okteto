@@ -374,7 +374,9 @@ ARG OKTETO_INVALIDATE_CACHE
 
 RUN okteto registrytoken install --force --log-output=json
 
-RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
+RUN \
+  \
+  --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
   /okteto/bin/okteto remote-run deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test"
 `,
