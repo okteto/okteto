@@ -309,7 +309,6 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		if err != nil {
 			return metadata, err
 		}
-		commandFlags = append(commandFlags, fmt.Sprintf("--devenv-name=%s", devenvName))
 
 		runner := remote.NewRunner(ioCtrl, buildCMD.NewOktetoBuilder(
 			&okteto.ContextStateless{
