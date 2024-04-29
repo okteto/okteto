@@ -125,7 +125,7 @@ func TestExpandStackVariables(t *testing.T) {
 		isOkteto: true,
 	}
 
-	err := registry.AddImageByName("okteto.global/test-test:5f2d51f7ce48b2d3396d2a38c8e7f2010234d3e6c2c17566f93f9c27532037d5")
+	err := registry.AddImageByName("okteto.global/test-test:a32545ef109a8f1e44b67b9c90727db563e88c5898c228bdb922ce555cec2856")
 	require.NoError(t, err)
 	bc := NewFakeBuilder(builder, registry, fakeConfig)
 	stack := &model.Stack{

@@ -292,7 +292,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 					Image:      "image",
 				},
 			},
-			expected: "commit:1234567890;target:target;build_args:foo=bar;key=value;secrets:secret=secret;context:context;dockerfile:dockerfile;dockerfile_content:;diff:;image:image;",
+			expected: "commit:1234567890;target:target;build_args:foo=bar;key=value;secrets:secret=secret;context:context;dockerfile_content:;diff:;image:image;",
 		},
 		{
 			name: "invalid commit",
@@ -367,7 +367,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 					Image:      "image",
 				},
 			},
-			expected: "commit:123;target:target;build_args:foo=bar;secrets:secret=secret;context:context;dockerfile:dockerfile;dockerfile_content:;diff:;image:image;",
+			expected: "commit:123;target:target;build_args:foo=bar;secrets:secret=secret;context:context;dockerfile_content:;diff:;image:image;",
 		},
 	}
 	for _, tc := range tt {
