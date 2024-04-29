@@ -176,12 +176,18 @@ func (or OktetoRegistry) CloneGlobalImageToDev(imageWithDigest string) (string, 
 	// When cloning an image from global to dev, we should do it to the "okteto" tag
 	devImage := fmt.Sprintf("%s/%s:%s", reg, devRepo, model.OktetoDefaultImageTag)
 
-	newRef, err := name.ParseReference(devImage)
+	return or.Clone(imageWithDigest, devImage)
+}
+
+// Clone clones an image to another
+func (or OktetoRegistry) Clone(from, to string) (string, error) {
+	to = or.imageCtrl.expandImageRegistries(to)
+	newRef, err := name.ParseReference(to)
 	if err != nil {
 		return "", err
 	}
 
-	descriptor, err := or.client.GetDescriptor(imageWithDigest)
+	descriptor, err := or.client.GetDescriptor(from)
 	if err != nil {
 		return "", err
 	}
@@ -198,12 +204,11 @@ func (or OktetoRegistry) CloneGlobalImageToDev(imageWithDigest string) (string, 
 	}
 
 	// To return always the sha256 os the dev image
-	r, err := or.GetImageTagWithDigest(devImage)
+	r, err := or.GetImageTagWithDigest(to)
 	if err != nil {
 		oktetoLog.Debugf("error getting the tag with digest for dev image: %s", err)
 		// If there is an error getting the tag with digest we just return the dev image
-		return devImage, nil
+		return to, nil
 	}
-
 	return r, nil
 }

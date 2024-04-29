@@ -30,6 +30,7 @@ const (
 // registryController is the interface to interact with registries
 type registryController interface {
 	CloneGlobalImageToDev(string) (string, error)
+	Clone(string, string) (string, error)
 	IsGlobalRegistry(string) bool
 }
 
@@ -108,4 +109,20 @@ func (s *Ctrl) CloneGlobalImageToDev(image string) (string, error) {
 	}
 	s.ioCtrl.Logger().Debugf("Image '%s' is not in the global registry", image)
 	return image, nil
+}
+
+// CloneGlobalToSpecificImage clones the image from the global registry to an specific image if needed
+// if the built image belongs to global registry we clone it to the dev registry
+// so that in can be used in dev containers (i.e. okteto up)
+func (s *Ctrl) Clone(from, to string) (string, error) {
+	if s.registryController.IsGlobalRegistry(from) {
+		s.ioCtrl.Logger().Debugf("Copying image '%s' from global to personal registry", from)
+		devImage, err := s.registryController.Clone(from, to)
+		if err != nil {
+			return "", fmt.Errorf("error cloning image '%s': %w", from, err)
+		}
+		return devImage, nil
+	}
+	s.ioCtrl.Logger().Debugf("Image '%s' is not in the global registry", from)
+	return from, nil
 }

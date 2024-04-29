@@ -82,12 +82,23 @@ func (ic ImageCtrl) ExpandOktetoGlobalRegistry(tag string) string {
 	if ic.config.GetGlobalNamespace() != "" {
 		globalNamespace = ic.config.GetGlobalNamespace()
 	}
-	return ic.registryReplacer.Replace(tag, constants.GlobalRegistry, globalNamespace)
+
+	tags := strings.Split(tag, ",")
+	result := ""
+	for _, t := range tags {
+		result += ic.registryReplacer.Replace(t, constants.GlobalRegistry, globalNamespace) + ","
+	}
+	return strings.TrimSuffix(result, ",")
 }
 
 // ExpandOktetoDevRegistry translates okteto.dev
 func (ic ImageCtrl) ExpandOktetoDevRegistry(tag string) string {
-	return ic.registryReplacer.Replace(tag, constants.DevRegistry, ic.config.GetNamespace())
+	tags := strings.Split(tag, ",")
+	result := ""
+	for _, t := range tags {
+		result += ic.registryReplacer.Replace(t, constants.DevRegistry, ic.config.GetNamespace()) + ","
+	}
+	return strings.TrimSuffix(result, ",")
 }
 
 // GetRegistryAndRepo returns image tag and the registry to push the image

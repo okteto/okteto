@@ -15,11 +15,13 @@ package v2
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/registry"
 )
 
 type imageTaggerInterface interface {
@@ -90,6 +92,19 @@ func (it imageTagger) getServiceImageReference(manifestName, svcName string, b *
 	// the dev registry
 	targetRegistry = constants.DevRegistry
 	return useReferenceTemplate(targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
+}
+
+func (it imageTagger) getGlobalTagFromDevIfNeccesary(tags, namespace, registryURL, buildHash, manifestName, svcName string, ic registry.ImageCtrl) string {
+	tagList := strings.Split(tags, ",")
+	for _, tag := range tagList {
+		expandedTag := ic.ExpandOktetoDevRegistry(tag)
+		if strings.HasPrefix(expandedTag, fmt.Sprintf("%s/%s/", registryURL, namespace)) {
+			sanitizedName := format.ResourceK8sMetaString(manifestName)
+			globalWithHash := useReferenceTemplate(constants.GlobalRegistry, sanitizedName, svcName, buildHash)
+			return globalWithHash
+		}
+	}
+	return ""
 }
 
 // getImageReferencesForTag returns all the possible images references that can be used for build with the given tag

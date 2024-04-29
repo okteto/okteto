@@ -60,7 +60,7 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 	}
 
 	imageCtrl := registry.NewImageCtrl(GetRegistryConfigFromOktetoConfig(okctx))
-	if okctx.IsOkteto() {
+	if okctx.IsOktetoCluster() {
 		buildOptions.DevTag = imageCtrl.ExpandOktetoDevRegistry(imageCtrl.GetDevTagFromGlobal(buildOptions.Tag))
 		buildOptions.Tag = imageCtrl.ExpandOktetoDevRegistry(buildOptions.Tag)
 		buildOptions.Tag = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.Tag)
@@ -134,9 +134,9 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 		frontendAttrs["build-arg:"+kv[0]] = kv[1]
 	}
 	attachable := []session.Attachable{}
-	if okctx.IsOkteto() {
+	if okctx.IsOktetoCluster() {
 		apCtx := &authProviderContext{
-			isOkteto: okctx.IsOkteto(),
+			isOkteto: okctx.IsOktetoCluster(),
 			context:  okctx.GetCurrentName(),
 			token:    okctx.GetCurrentToken(),
 			cert:     okctx.GetCurrentCertStr(),
