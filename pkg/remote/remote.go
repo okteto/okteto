@@ -94,7 +94,7 @@ ARG {{ .InvalidateCacheArgName }}
 RUN okteto registrytoken install --force --log-output=json
 
 RUN \
-  {{range $key, $path := .Cache }}--mount=type=cache,target={{$path}}{{end}}\
+  {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}}{{end}}\
   --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
   /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}
@@ -146,7 +146,7 @@ type Params struct {
 	CacheInvalidationKey string
 	Deployable           deployable.Entity
 	CommandFlags         []string
-	Cache                []string
+	Caches               []string
 }
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
@@ -172,7 +172,7 @@ type dockerfileTemplateProperties struct {
 	OktetoRegistryURLArgName string
 	Command                  string
 	OktetoIsPreviewEnv       string
-	Cache                    []string
+	Caches                   []string
 }
 
 // NewRunner creates a new Runner for remote
@@ -378,7 +378,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		OktetoDependencyEnvVars:  params.DependenciesEnvVars,
 		Command:                  params.Command,
 		OktetoIsPreviewEnv:       constants.OktetoIsPreviewEnvVar,
-		Cache:                    params.Cache,
+		Caches:                   params.Caches,
 	}
 
 	dockerfile, err := r.fs.Create(filepath.Join(tmpDir, params.DockerfileName))

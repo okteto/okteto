@@ -19,7 +19,7 @@ type Test struct {
 	Context   string        `yaml:"context,omitempty"`
 	Commands  []TestCommand `yaml:"commands,omitempty"`
 	DependsOn []string      `yaml:"depends_on,omitempty"`
-	Cache     []string      `yaml:"cache,omitempty"`
+	Caches    []string      `yaml:"caches,omitempty"`
 }
 
 func (test *Test) expandEnvVars() error {
