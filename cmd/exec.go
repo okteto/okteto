@@ -41,10 +41,9 @@ import (
 
 // execFlags is the input of the user to exec command
 type execFlags struct {
-	manifestPath     string
-	namespace        string
-	k8sContext       string
-	commandToExecute []string
+	manifestPath string
+	namespace    string
+	k8sContext   string
 }
 
 // Exec executes a command on the CND container

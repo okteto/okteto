@@ -90,10 +90,10 @@ func TestGetDevFromArgs(t *testing.T) {
 
 func TestGetCommandFromArgs(t *testing.T) {
 	tests := []struct {
-		name        string
 		devs        model.ManifestDevs
-		args        []string
+		name        string
 		expectedCmd string
+		args        []string
 	}{
 		{
 			name: "first arg is on dev section",
