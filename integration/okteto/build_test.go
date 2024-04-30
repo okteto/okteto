@@ -59,7 +59,6 @@ func TestBuildReplaceSecretsInManifest(t *testing.T) {
 	}
 
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	options := &commands.BuildOptions{
 		Workdir:    dir,
@@ -69,6 +68,7 @@ func TestBuildReplaceSecretsInManifest(t *testing.T) {
 	}
 
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func createDockerfile(dir string) error {

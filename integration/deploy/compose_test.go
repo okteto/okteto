@@ -233,7 +233,6 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
@@ -302,6 +301,7 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 
 	_, err = integration.GetService(context.Background(), testNamespace, "nginx", c)
 	require.True(t, k8sErrors.IsNotFound(err))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestDeployPipelineFromComposeWithVolumeMounts tests the following scenario:
@@ -334,7 +334,6 @@ func TestDeployPipelineFromComposeWithVolumeMounts(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
@@ -403,6 +402,7 @@ func TestDeployPipelineFromComposeWithVolumeMounts(t *testing.T) {
 
 	_, err = integration.GetService(context.Background(), testNamespace, "nginx", c)
 	require.True(t, k8sErrors.IsNotFound(err))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestReDeployPipelineFromCompose tests the following scenario:
@@ -426,7 +426,6 @@ func TestReDeployPipelineFromCompose(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
@@ -485,6 +484,7 @@ func TestReDeployPipelineFromCompose(t *testing.T) {
 
 	_, err = integration.GetService(context.Background(), testNamespace, "nginx", c)
 	require.True(t, k8sErrors.IsNotFound(err))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestDeployPipelineFromComposeOnlyOneSvc tests the following scenario:
@@ -507,7 +507,6 @@ func TestDeployPipelineFromComposeOnlyOneSvc(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
@@ -545,6 +544,7 @@ func TestDeployPipelineFromComposeOnlyOneSvc(t *testing.T) {
 
 	_, err = integration.GetService(context.Background(), testNamespace, "nginx", c)
 	require.True(t, k8sErrors.IsNotFound(err))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestDeployPipelineFromOktetoStacks tests the following scenario:
@@ -568,7 +568,6 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
@@ -620,6 +619,7 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 
 	_, err = integration.GetService(context.Background(), testNamespace, "nginx", c)
 	require.True(t, k8sErrors.IsNotFound(err))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestDeployPipelineFromCompose tests the following scenario:
@@ -644,7 +644,6 @@ func TestDeployComposeFromOktetoManifest(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
@@ -700,6 +699,7 @@ func TestDeployComposeFromOktetoManifest(t *testing.T) {
 
 	_, err = integration.GetService(context.Background(), testNamespace, "nginx", c)
 	require.True(t, k8sErrors.IsNotFound(err))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 func TestComposeDependsOnNonExistingService(t *testing.T) {
 	t.Parallel()
@@ -726,7 +726,6 @@ services:
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -748,6 +747,7 @@ services:
 	output, err = commands.GetOktetoDeployCmdOutput(oktetoPath, deployOptionsWithFile)
 	require.Error(t, err)
 	require.Contains(t, strings.ToLower(string(output)), "invalid depends_on: service 'app' depends on service 'nginx' which is undefined")
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func createComposeScenario(dir string) error {
