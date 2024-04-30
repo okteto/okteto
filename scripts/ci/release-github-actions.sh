@@ -70,6 +70,7 @@
                 destroy-stack
                 apply
                 context
+                test
         )
 
         for repo in "${repos[@]}"; do
