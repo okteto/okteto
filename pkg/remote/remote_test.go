@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test/client"
@@ -409,6 +410,30 @@ RUN \
 			}
 
 		})
+	}
+}
+
+func TestDockerfileWithCache(t *testing.T) {
+	wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/"))
+	fs := afero.NewMemMapFs()
+	rdc := Runner{
+		fs:                   fs,
+		workingDirectoryCtrl: wdCtrl,
+	}
+	caches := []string{"/my", "/cache", "/list"}
+	dockerfileName, err := rdc.createDockerfile("/test", &Params{
+		Caches:         caches,
+		DockerfileName: "myDockerfile",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "/test/myDockerfile", dockerfileName)
+	d, err := afero.ReadFile(fs, dockerfileName)
+	require.NoError(t, err)
+	for _, cache := range caches {
+		pattern := fmt.Sprintf("--mount=type=cache,target=%s", cache)
+		ok, err := regexp.MatchString(pattern, string(d))
+		require.NoError(t, err)
+		require.True(t, ok)
 	}
 }
 
