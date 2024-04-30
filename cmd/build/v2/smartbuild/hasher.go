@@ -146,7 +146,6 @@ func (sh *serviceHasher) hash(buildInfo *build.Info, commitHash string, diff str
 	fmt.Fprintf(&b, "build_args:%s;", argsText)
 	fmt.Fprintf(&b, "secrets:%s;", secretsText)
 	fmt.Fprintf(&b, "context:%s;", buildInfo.Context)
-	fmt.Fprintf(&b, "dockerfile:%s;", buildInfo.Dockerfile)
 	fmt.Fprintf(&b, "dockerfile_content:%s;", sh.getDockerfileContent(buildInfo.Context, buildInfo.Dockerfile))
 	fmt.Fprintf(&b, "diff:%s;", diff)
 	fmt.Fprintf(&b, "image:%s;", buildInfo.Image)
