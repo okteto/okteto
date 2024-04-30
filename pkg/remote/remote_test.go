@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test/client"
@@ -374,7 +375,9 @@ ARG OKTETO_INVALIDATE_CACHE
 
 RUN okteto registrytoken install --force --log-output=json
 
-RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
+RUN \
+  \
+  --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
   /okteto/bin/okteto remote-run deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test"
 `,
@@ -407,6 +410,30 @@ RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
 			}
 
 		})
+	}
+}
+
+func TestDockerfileWithCache(t *testing.T) {
+	wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/"))
+	fs := afero.NewMemMapFs()
+	rdc := Runner{
+		fs:                   fs,
+		workingDirectoryCtrl: wdCtrl,
+	}
+	caches := []string{"/my", "/cache", "/list"}
+	dockerfileName, err := rdc.createDockerfile("/test", &Params{
+		Caches:         caches,
+		DockerfileName: "myDockerfile",
+	})
+	require.NoError(t, err)
+	require.Equal(t, filepath.Clean("/test/myDockerfile"), dockerfileName)
+	d, err := afero.ReadFile(fs, dockerfileName)
+	require.NoError(t, err)
+	for _, cache := range caches {
+		pattern := fmt.Sprintf("--mount=type=cache,target=%s", cache)
+		ok, err := regexp.MatchString(pattern, string(d))
+		require.NoError(t, err)
+		require.True(t, ok)
 	}
 }
 
