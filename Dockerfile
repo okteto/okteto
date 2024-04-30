@@ -1,8 +1,8 @@
 # syntax = docker/dockerfile:experimental
 
-ARG KUBECTL_VERSION=1.28.4
-ARG HELM_VERSION=3.13.3
-ARG KUSTOMIZE_VERSION=5.3.0
+ARG KUBECTL_VERSION=1.29.2
+ARG HELM_VERSION=3.14.4
+ARG KUSTOMIZE_VERSION=5.4.1
 
 
 FROM golang:1.21-bullseye as kubectl-builder
