@@ -24,7 +24,7 @@ require (
 	github.com/google/go-containerregistry v0.14.0 // when updating need google.golang.org/grpc 1.29
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/uuid v1.3.0
-	github.com/hashicorp/go-getter v1.7.3
+	github.com/hashicorp/go-getter v1.7.4
 	github.com/juju/ansiterm v1.0.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/manifoldco/promptui v0.9.0
