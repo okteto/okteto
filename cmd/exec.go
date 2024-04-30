@@ -20,6 +20,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/kballard/go-shellquote"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/cmd/utils"
@@ -80,11 +81,11 @@ func Exec(k8sLogger *io.K8sLogger) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			execFlags.commandToExecute = getCommandToRunFromArgs(manifest, args)
+			cmdToExec := getCommandToRunFromArgs(manifest.Dev, args)
 
 			t := time.NewTicker(1 * time.Second)
 			iter := 0
-			err = executeExec(ctx, dev, execFlags.commandToExecute, k8sLogger)
+			err = executeExec(ctx, dev, cmdToExec, k8sLogger)
 			for oktetoErrors.IsTransient(err) {
 				if iter == 0 {
 					oktetoLog.Yellow("Connection lost to your development container, reconnecting...")
@@ -92,7 +93,7 @@ func Exec(k8sLogger *io.K8sLogger) *cobra.Command {
 				iter++
 				iter = iter % 10
 				<-t.C
-				err = executeExec(ctx, dev, execFlags.commandToExecute, k8sLogger)
+				err = executeExec(ctx, dev, cmdToExec, k8sLogger)
 			}
 
 			analytics.TrackExec(&analytics.TrackExecMetadata{
@@ -125,13 +126,13 @@ func Exec(k8sLogger *io.K8sLogger) *cobra.Command {
 	return cmd
 }
 
-func executeExec(ctx context.Context, dev *model.Dev, args []string, k8sLogger *io.K8sLogger) error {
+func executeExec(ctx context.Context, dev *model.Dev, cmdToExec string, k8sLogger *io.K8sLogger) error {
 	oktetoLog.Spinner("Preparing your container")
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
 	wrapped := []string{"sh", "-c"}
-	wrapped = append(wrapped, args...)
+	wrapped = append(wrapped, cmdToExec)
 
 	c, cfg, err := okteto.GetK8sClientWithLogger(k8sLogger)
 	if err != nil {
@@ -216,7 +217,11 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string, k8sLogger *
 				return err
 			}
 
-			cmd, err := executor.GetCommandToExec(args)
+			cmdSplitted, err := shellquote.Split(cmdToExec)
+			if err != nil {
+				return err
+			}
+			cmd, err := executor.GetCommandToExec(cmdSplitted)
 			if err != nil {
 				return err
 			}
@@ -254,9 +259,15 @@ func getDevFromArgs(manifest *model.Manifest, args, activeDevMode []string) (*mo
 	return dev, nil
 }
 
-func getCommandToRunFromArgs(manifest *model.Manifest, args []string) []string {
-	if len(args) > 1 && manifest.Dev.HasDev(args[0]) {
-		return args[1:]
+func getCommandToRunFromArgs(devs model.ManifestDevs, args []string) string {
+	cmd := ""
+	if !devs.HasDev(args[0]) {
+		cmd = shellquote.Join(args...)
+	} else if len(args) == 1 {
+		cmd = args[0]
+	} else {
+		cmd = shellquote.Join(args[1:]...)
 	}
-	return args
+
+	return cmd
 }

@@ -90,57 +90,49 @@ func TestGetDevFromArgs(t *testing.T) {
 
 func TestGetCommandFromArgs(t *testing.T) {
 	tests := []struct {
-		name         string
-		manifest     *model.Manifest
-		args         []string
-		expectedArgs []string
+		name        string
+		devs        model.ManifestDevs
+		args        []string
+		expectedCmd string
 	}{
 		{
 			name: "first arg is on dev section",
-			manifest: &model.Manifest{
-				Dev: model.ManifestDevs{
-					"autocreate": &model.Dev{},
-				},
+			devs: model.ManifestDevs{
+				"autocreate": &model.Dev{},
 			},
-			args:         []string{"autocreate", "sh"},
-			expectedArgs: []string{"sh"},
+			args:        []string{"autocreate", "sh"},
+			expectedCmd: "sh",
 		},
 		{
 			name: "only one argument/same name as dev",
-			manifest: &model.Manifest{
-				Dev: model.ManifestDevs{
-					"sh": &model.Dev{},
-				},
+			devs: model.ManifestDevs{
+				"sh": &model.Dev{},
 			},
-			args:         []string{"sh"},
-			expectedArgs: []string{"sh"},
+			args:        []string{"sh"},
+			expectedCmd: "sh",
 		},
 		{
 			name: "several argument/first argument same name as dev",
-			manifest: &model.Manifest{
-				Dev: model.ManifestDevs{
-					"sh": &model.Dev{},
-				},
+			devs: model.ManifestDevs{
+				"sh": &model.Dev{},
 			},
-			args:         []string{"sh", "autocreate"},
-			expectedArgs: []string{"autocreate"},
+			args:        []string{"sh", "autocreate"},
+			expectedCmd: "autocreate",
 		},
 		{
 			name: "dev is not found ",
-			manifest: &model.Manifest{
-				Dev: model.ManifestDevs{
-					"api":       &model.Dev{},
-					"other-dev": &model.Dev{},
-				},
+			devs: model.ManifestDevs{
+				"api":       &model.Dev{},
+				"other-dev": &model.Dev{},
 			},
-			args:         []string{"not-api", "autocreate"},
-			expectedArgs: []string{"not-api", "autocreate"},
+			args:        []string{"not-api", "autocreate"},
+			expectedCmd: "not-api autocreate",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dev := getCommandToRunFromArgs(tt.manifest, tt.args)
-			assert.Equal(t, tt.expectedArgs, dev)
+			dev := getCommandToRunFromArgs(tt.devs, tt.args)
+			assert.Equal(t, tt.expectedCmd, dev)
 		})
 	}
 }
