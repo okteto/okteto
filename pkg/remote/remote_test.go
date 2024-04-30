@@ -426,7 +426,7 @@ func TestDockerfileWithCache(t *testing.T) {
 		DockerfileName: "myDockerfile",
 	})
 	require.NoError(t, err)
-	require.Equal(t, "/test/myDockerfile", dockerfileName)
+	require.Equal(t, filepath.Clean("/test/myDockerfile"), dockerfileName)
 	d, err := afero.ReadFile(fs, dockerfileName)
 	require.NoError(t, err)
 	for _, cache := range caches {
