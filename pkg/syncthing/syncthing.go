@@ -74,35 +74,35 @@ const (
 
 // Syncthing represents the local syncthing process.
 type Syncthing struct {
+	Fs               afero.Fs      `yaml:"-"`
 	Client           *http.Client  `yaml:"-"`
 	cmd              *exec.Cmd     `yaml:"-"`
-	Type             string        `yaml:"-"`
-	APIKey           string        `yaml:"apikey"`
-	RemoteDeviceID   string        `yaml:"-"`
+	RescanInterval   string        `yaml:"-"`
+	Home             string        `yaml:"-"`
 	RemoteGUIAddress string        `yaml:"remote"`
 	GUIPassword      string        `yaml:"password"`
 	GUIPasswordHash  string        `yaml:"-"`
 	binPath          string        `yaml:"-"`
 	GUIAddress       string        `yaml:"local"`
-	Home             string        `yaml:"-"`
+	Type             string        `yaml:"-"`
 	LogPath          string        `yaml:"-"`
 	ListenAddress    string        `yaml:"-"`
 	RemoteAddress    string        `yaml:"-"`
-	RescanInterval   string        `yaml:"-"`
+	APIKey           string        `yaml:"apikey"`
 	Compression      string        `yaml:"-"`
+	RemoteDeviceID   string        `yaml:"-"`
 	Folders          []*Folder     `yaml:"folders"`
-	timeout          time.Duration `yaml:"-"`
 	FileWatcherDelay int           `yaml:"-"`
 	RemoteGUIPort    int           `yaml:"-"`
 	RemotePort       int           `yaml:"-"`
 	LocalGUIPort     int           `yaml:"-"`
 	LocalPort        int           `yaml:"-"`
 	pid              int           `yaml:"-"`
+	timeout          time.Duration `yaml:"-"`
 	ForceSendOnly    bool          `yaml:"-"`
 	ResetDatabase    bool          `yaml:"-"`
 	IgnoreDelete     bool          `yaml:"-"`
 	Verbose          bool          `yaml:"-"`
-	Fs               afero.Fs      `yaml:"-"`
 }
 
 // Folder represents a sync folder

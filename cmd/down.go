@@ -17,6 +17,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/down"
@@ -28,7 +30,6 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 type analyticsTrackerInterface interface {

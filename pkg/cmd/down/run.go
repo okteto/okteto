@@ -15,13 +15,13 @@ package down
 
 import (
 	"context"
-	"github.com/okteto/okteto/pkg/okteto"
 
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
 )

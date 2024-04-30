@@ -47,10 +47,10 @@ func TestGetFiles(t *testing.T) {
 
 func TestIdentifyReadinessIssue(t *testing.T) {
 	var tests = []struct {
+		sy          Syncthing
 		expectedErr error
 		mockFs      func() afero.Fs
 		name        string
-		sy          Syncthing
 	}{
 		{
 			name: "no-matching-errors",
