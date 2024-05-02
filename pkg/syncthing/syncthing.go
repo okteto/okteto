@@ -372,10 +372,10 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool, fs afero.Fs) er
 // IdentifyReadinessIssue attempts to identify the issue that is preventing syncthing from being ready
 func (s *Syncthing) IdentifyReadinessIssue(fs afero.Fs) error {
 	if s.RegexMatchesLogs(fs, regexp.MustCompile("Error opening database: mkdir .*: no space left on device")) {
-		return oktetoErrors.ErrInsufficientSpace
+		return oktetoErrors.ErrInsufficientSpaceOnUserDisk
 	}
 	if s.RegexMatchesLogs(fs, regexp.MustCompile("insufficient space on disk for database")) {
-		return oktetoErrors.ErrInsufficientSpace
+		return oktetoErrors.ErrInsufficientSpaceOnUserDisk
 	}
 	return nil
 }
