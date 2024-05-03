@@ -99,7 +99,7 @@ func TestPush(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	//defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
@@ -111,6 +111,7 @@ func TestPush(t *testing.T) {
 	require.NoError(t, commands.RunOktetoPush(oktetoPath, dir))
 
 	endpoint := fmt.Sprintf("https://push-test-%s.%s/index.html", testNamespace, appsSubdomain)
+	fmt.Println(endpoint)
 	require.NoError(t, waitUntilUpdatedContent(endpoint, dockerfile, timeout))
 
 	d, err := integration.GetDeployment(context.Background(), testNamespace, "push-test", c)
