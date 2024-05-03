@@ -212,10 +212,10 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
 
-	destroyOptions := &commands.StackDestroyOptions{
-		Workdir:    dir,
-		OktetoHome: dir,
-	}
+	//destroyOptions := &commands.StackDestroyOptions{
+	//	Workdir:    dir,
+	//	OktetoHome: dir,
+	//}
 	//require.NoError(t, commands.RunOktetoStackDestroy(oktetoPath, destroyOptions))
 }
 
