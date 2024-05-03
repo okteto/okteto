@@ -72,6 +72,9 @@ const (
 	maxRetries = 3
 )
 
+var regexErrOpeningDatabase = regexp.MustCompile("Error opening database: mkdir .*: no space left on device")
+var regexInsufficientSpace = regexp.MustCompile("insufficient space on disk for database")
+
 // Syncthing represents the local syncthing process.
 type Syncthing struct {
 	Client           *http.Client  `yaml:"-"`
@@ -183,6 +186,7 @@ type DownloadProgressData struct {
 // New constructs a new Syncthing.
 func New(dev *model.Dev) (*Syncthing, error) {
 	fullPath := getInstallPath()
+
 	remotePort, err := model.GetAvailablePort(dev.Interface)
 	if err != nil {
 		return nil, err
@@ -371,10 +375,10 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool, fs afero.Fs) er
 
 // IdentifyReadinessIssue attempts to identify the issue that is preventing syncthing from being ready
 func (s *Syncthing) IdentifyReadinessIssue(fs afero.Fs) error {
-	if s.RegexMatchesLogs(fs, regexp.MustCompile("Error opening database: mkdir .*: no space left on device")) {
+	if s.RegexMatchesLogs(fs, regexErrOpeningDatabase) {
 		return oktetoErrors.ErrInsufficientSpaceOnUserDisk
 	}
-	if s.RegexMatchesLogs(fs, regexp.MustCompile("insufficient space on disk for database")) {
+	if s.RegexMatchesLogs(fs, regexInsufficientSpace) {
 		return oktetoErrors.ErrInsufficientSpaceOnUserDisk
 	}
 	return nil

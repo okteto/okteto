@@ -75,7 +75,7 @@ func TestIdentifyReadinessIssue(t *testing.T) {
 					"2024/01/01 10:02:00 failed to sufficiently increase receive buffer size (was: 208 kiB, wanted: 2048 kiB, got: 416 kiB). See https://github.com/quic-go/quic-go/wiki/UDP-Buffer-Sizes for details."), 0644)
 				return fs
 			},
-			expectedErr: oktetoErrors.ErrInsufficientSpace,
+			expectedErr: oktetoErrors.ErrInsufficientSpaceOnUserDisk,
 		},
 		{
 			name: "matching-error-opening-database",
@@ -87,7 +87,7 @@ func TestIdentifyReadinessIssue(t *testing.T) {
 				_ = afero.WriteFile(fs, "syncthing.log", []byte("[start] \"2024/01/01 10:01:00 WARNING: Error opening database: mkdir /home/<user>/.okteto/<namespace>/<service>/index-v0.14.0.db: no space left on device"), 0644)
 				return fs
 			},
-			expectedErr: oktetoErrors.ErrInsufficientSpace,
+			expectedErr: oktetoErrors.ErrInsufficientSpaceOnUserDisk,
 		},
 	}
 
