@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -33,9 +34,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/shirou/gopsutil/process"
+	"github.com/spf13/afero"
 	"golang.org/x/crypto/bcrypt"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -68,7 +71,15 @@ const (
 	GUIPort = 8384
 
 	maxRetries = 3
+
+	maxLogTailLinesToRead = 5
+
+	// one line of logs in UTF-8 is between 3-400 bytes
+	maxLogTailChunkByteSize int64 = 1024
 )
+
+var regexErrOpeningDatabase = regexp.MustCompile("Error opening database: mkdir .*: no space left on device")
+var regexInsufficientSpace = regexp.MustCompile("insufficient space on disk for database")
 
 // Syncthing represents the local syncthing process.
 type Syncthing struct {
@@ -191,6 +202,7 @@ type DownloadProgressData struct {
 // New constructs a new Syncthing.
 func New(dev *model.Dev) (*Syncthing, error) {
 	fullPath := getInstallPath()
+
 	remotePort, err := model.GetAvailablePort(dev.Interface)
 	if err != nil {
 		return nil, err
@@ -345,7 +357,7 @@ func (s *Syncthing) Run() error {
 }
 
 // WaitForPing waits for syncthing to be ready
-func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
+func (s *Syncthing) WaitForPing(ctx context.Context, local bool, fs afero.Fs) error {
 	ticker := time.NewTicker(300 * time.Millisecond)
 	to := time.Now().Add(s.timeout)
 
@@ -362,6 +374,11 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 			}
 
 			if time.Now().After(to) && retries > 10 {
+				// before returning a generic error, we try detecting why syncthing is not ready and return a more accurate error
+				errDetected := s.IdentifyReadinessIssue(fs)
+				if errDetected != nil {
+					return errDetected
+				}
 				return fmt.Errorf("syncthing local=%t didn't respond after %s", local, s.timeout.String())
 			}
 
@@ -370,6 +387,34 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 			return ctx.Err()
 		}
 	}
+}
+
+// IdentifyReadinessIssue attempts to identify the issue that is preventing syncthing from being ready
+func (s *Syncthing) IdentifyReadinessIssue(fs afero.Fs) error {
+	if s.RegexMatchesLogs(fs, regexErrOpeningDatabase) {
+		return oktetoErrors.ErrInsufficientSpaceOnUserDisk
+	}
+	if s.RegexMatchesLogs(fs, regexInsufficientSpace) {
+		return oktetoErrors.ErrInsufficientSpaceOnUserDisk
+	}
+	return nil
+}
+
+// RegexMatchesLogs checks if a regex matches in the syncthing logs
+func (s *Syncthing) RegexMatchesLogs(fs afero.Fs, regx *regexp.Regexp) bool {
+	lines, err := filesystem.GetLastNLines(fs, s.LogPath, maxLogTailLinesToRead, maxLogTailChunkByteSize)
+	if err != nil {
+		oktetoLog.Infof("error reading syncthing log: %s", err)
+		return false
+	}
+
+	for _, log := range lines {
+		if regx.MatchString(log) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Ping checks if syncthing is available
