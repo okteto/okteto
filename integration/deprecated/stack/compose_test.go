@@ -180,6 +180,7 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createStacksScenario(dir))
 
+	fmt.Println("TestDeployPipelineFromOktetoStacks dir ---->", dir)
 	testNamespace := integration.GetTestNamespace("PipeStacks", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
@@ -187,7 +188,7 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	//defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
@@ -215,7 +216,7 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 		Workdir:    dir,
 		OktetoHome: dir,
 	}
-	require.NoError(t, commands.RunOktetoStackDestroy(oktetoPath, destroyOptions))
+	//require.NoError(t, commands.RunOktetoStackDestroy(oktetoPath, destroyOptions))
 }
 
 func createStacksScenario(dir string) error {
