@@ -14,6 +14,7 @@
 package filesystem
 
 import (
+	"bufio"
 	"io"
 	"os"
 
@@ -87,4 +88,40 @@ func FileExistsAndNotDir(path string, fs afero.Fs) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+// GetLastNLines returns the last N lines of a file up to a max amount of bytes
+func GetLastNLines(fs afero.Fs, path string, n int, maxChunkByteSize int64) ([]string, error) {
+	file, err := fs.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	stat, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	var offset int64
+	if stat.Size() > maxChunkByteSize {
+		offset = stat.Size() - maxChunkByteSize
+	}
+
+	_, err = file.Seek(offset, io.SeekStart)
+	if err != nil {
+		return nil, err
+	}
+
+	scanner := bufio.NewScanner(file)
+	var lines []string
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	if len(lines) > n {
+		lines = lines[len(lines)-n:]
+	}
+
+	return lines, nil
 }

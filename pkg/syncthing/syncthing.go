@@ -34,6 +34,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/shirou/gopsutil/process"
@@ -70,6 +71,11 @@ const (
 	GUIPort = 8384
 
 	maxRetries = 3
+
+	maxLogTailLinesToRead = 5
+
+	// one line of logs in UTF-8 is between 3-400 bytes
+	maxLogTailChunkByteSize int64 = 1024
 )
 
 var regexErrOpeningDatabase = regexp.MustCompile("Error opening database: mkdir .*: no space left on device")
@@ -386,13 +392,19 @@ func (s *Syncthing) IdentifyReadinessIssue(fs afero.Fs) error {
 
 // RegexMatchesLogs checks if a regex matches in the syncthing logs
 func (s *Syncthing) RegexMatchesLogs(fs afero.Fs, regx *regexp.Regexp) bool {
-	log, err := afero.ReadFile(fs, s.LogPath)
+	lines, err := filesystem.GetLastNLines(fs, s.LogPath, maxLogTailLinesToRead, maxLogTailChunkByteSize)
 	if err != nil {
 		oktetoLog.Infof("error reading syncthing log: %s", err)
 		return false
 	}
 
-	return regx.Match(log)
+	for _, log := range lines {
+		if regx.MatchString(log) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Ping checks if syncthing is available
