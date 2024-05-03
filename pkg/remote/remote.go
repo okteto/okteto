@@ -147,6 +147,10 @@ type Params struct {
 	Deployable           deployable.Entity
 	CommandFlags         []string
 	Caches               []string
+	// IgnoreRules are the ignoring rules added to this build execution.
+	// Rules follow the .dockerignore syntax as defined in:
+	// https://docs.docker.com/build/building/context/#syntax
+	IgnoreRules []string
 }
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
@@ -391,7 +395,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 	// build the services) so we would create a remote executor without certain files
 	// necessary for the later deployment which would cause an error when deploying
 	// remotely due to the lack of these files.
-	if err := CreateDockerignoreFileWithFilesystem(cwd, tmpDir, r.fs); err != nil {
+	if err := createDockerignoreFileWithFilesystem(cwd, tmpDir, params.IgnoreRules, r.fs); err != nil {
 		return "", err
 	}
 
@@ -446,9 +450,9 @@ func (r *Runner) fetchClusterMetadata(ctx context.Context) (*types.ClusterMetada
 	return &metadata, err
 }
 
-// CreateDockerignoreFileWithFilesystem creates a .dockerignore file in the tmpDir with the content of the
+// createDockerignoreFileWithFilesystem creates a .dockerignore file in the tmpDir with the content of the
 // .dockerignore file in the cwd
-func CreateDockerignoreFileWithFilesystem(cwd, tmpDir string, fs afero.Fs) error {
+func createDockerignoreFileWithFilesystem(cwd, tmpDir string, rules []string, fs afero.Fs) error {
 	dockerignoreContent := []byte(``)
 	dockerignoreFilePath := filepath.Join(cwd, oktetoDockerignoreName)
 	if _, err := fs.Stat(dockerignoreFilePath); err != nil {
@@ -465,6 +469,12 @@ func CreateDockerignoreFileWithFilesystem(cwd, tmpDir string, fs afero.Fs) error
 
 	// write the content into the .dockerignore used for building the remote image
 	filename := fmt.Sprintf("%s/%s", tmpDir, ".dockerignore")
+
+	// append rules to the contents of the .oktetodeployignore rules
+	for _, rule := range rules {
+		dockerignoreContent = append(dockerignoreContent, []byte("\n")...)
+		dockerignoreContent = append(dockerignoreContent, []byte(rule)...)
+	}
 
 	return afero.WriteFile(fs, filename, dockerignoreContent, 0600)
 }

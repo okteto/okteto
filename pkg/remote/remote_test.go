@@ -646,20 +646,22 @@ func TestCreateDockerignoreFileWithFilesystem(t *testing.T) {
 		name            string
 		expectedContent string
 		config          config
+		rules           []string
 	}{
 		{
 			name: "dockerignore present copy .oktetodeployignore to .dockerignore without manifest",
 			config: config{
 				wd: dockerignoreWd,
 			},
-			expectedContent: "FROM alpine",
+			expectedContent: "test/*",
 		},
 		{
-			name: "dockerignore present copy .oktetodeployignore to .dockerignore",
+			name: "dockerignore present copy .oktetodeployignore to .dockerignore with rules",
 			config: config{
 				wd: dockerignoreWd,
 			},
-			expectedContent: "FROM alpine",
+			expectedContent: "test/*\nbackend?\nfrontend/**",
+			rules:           []string{"backend?", "frontend/**"},
 		},
 		{
 			name:            "without dockerignore",
@@ -674,9 +676,9 @@ func TestCreateDockerignoreFileWithFilesystem(t *testing.T) {
 			fs := afero.NewMemMapFs()
 
 			assert.NoError(t, fs.MkdirAll(dockerignoreWd, 0755))
-			assert.NoError(t, afero.WriteFile(fs, filepath.Join(dockerignoreWd, ".oktetodeployignore"), []byte("FROM alpine"), 0644))
+			assert.NoError(t, afero.WriteFile(fs, filepath.Join(dockerignoreWd, ".oktetodeployignore"), []byte("test/*"), 0644))
 
-			err := CreateDockerignoreFileWithFilesystem(tt.config.wd, tempDir, fs)
+			err := createDockerignoreFileWithFilesystem(tt.config.wd, tempDir, tt.rules, fs)
 			assert.NoError(t, err)
 			b, err := afero.ReadFile(fs, filepath.Join(tempDir, ".dockerignore"))
 			assert.Equal(t, tt.expectedContent, string(b))

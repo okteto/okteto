@@ -78,9 +78,11 @@ func sectionsFromReader(r io.Reader) map[string]string {
 
 var sectionHeaderRegex = regexp.MustCompile(`^\[(?P<key>.*)\]$`)
 
+const matchThreshold = 2
+
 func isSectionHeader(line string) (bool, string) {
 	matches := sectionHeaderRegex.FindStringSubmatch(line)
-	if len(matches) < 2 {
+	if len(matches) < matchThreshold {
 		return false, ""
 	}
 	return true, matches[1]
