@@ -106,7 +106,6 @@ func TestDeploySuccessOutput(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -151,8 +150,8 @@ func TestDeploySuccessOutput(t *testing.T) {
 				t.Fatalf("Not sending build output on stage %s. Output:%s", ss, stageLines[ss])
 			}
 		}
-
 	}
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func TestDeployWithNonSanitizedOK(t *testing.T) {
@@ -172,7 +171,6 @@ func TestDeployWithNonSanitizedOK(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -187,7 +185,7 @@ func TestDeployWithNonSanitizedOK(t *testing.T) {
 	require.NoError(t, err)
 	_, err = integration.GetConfigmap(context.Background(), testNamespace, fmt.Sprintf("okteto-git-%s", "test-my-deployment"), c)
 	require.NoError(t, err)
-
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func TestCmdFailOutput(t *testing.T) {
@@ -207,7 +205,6 @@ func TestCmdFailOutput(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -253,6 +250,7 @@ func TestCmdFailOutput(t *testing.T) {
 			t.Fatalf("deploy didn't have the stage '%s'", ss)
 		}
 	}
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func TestRemoteMaskVariables(t *testing.T) {
@@ -272,7 +270,6 @@ func TestRemoteMaskVariables(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -360,6 +357,7 @@ func TestRemoteMaskVariables(t *testing.T) {
 	if !found {
 		t.Fatal("destroy does not have the expected output.")
 	}
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func TestComposeFailOutput(t *testing.T) {
@@ -379,7 +377,6 @@ func TestComposeFailOutput(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -425,6 +422,7 @@ func TestComposeFailOutput(t *testing.T) {
 			t.Fatalf("deploy didn't have the stage '%s'", ss)
 		}
 	}
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func createCommandWitMaskValuesManifest(dir string) error {

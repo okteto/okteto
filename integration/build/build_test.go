@@ -130,7 +130,6 @@ func TestBuildCommandV1(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	expectedImage := fmt.Sprintf("%s/%s/test:okteto", okteto.GetContext().Registry, testNamespace)
 	require.False(t, isImageBuilt(expectedImage))
@@ -145,6 +144,7 @@ func TestBuildCommandV1(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedImage))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestBuildInferredDockerfile tests the following scenario:
@@ -165,7 +165,6 @@ func TestBuildInferredDockerfile(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	expectedImage := fmt.Sprintf("%s/%s/test:okteto", okteto.GetContext().Registry, testNamespace)
 	require.False(t, isImageBuilt(expectedImage))
@@ -179,6 +178,7 @@ func TestBuildInferredDockerfile(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedImage))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestBuildCommandV2 tests the following scenario:
@@ -199,7 +199,6 @@ func TestBuildCommandV2(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	expectedAppImage := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.False(t, isImageBuilt(expectedAppImage))
@@ -217,6 +216,7 @@ func TestBuildCommandV2(t *testing.T) {
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedAppImage))
 	require.True(t, isImageBuilt(expectedApiImage))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestBuildCommandV2UsingDepot tests the following scenario:
@@ -238,7 +238,6 @@ func TestBuildCommandV2UsingDepot(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	expectedAppImage := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.False(t, isImageBuilt(expectedAppImage))
@@ -272,6 +271,7 @@ func TestBuildCommandV2UsingDepot(t *testing.T) {
 	require.NoError(t, commands.ExecOktetoBuildCmd(cmd))
 	require.True(t, isImageBuilt(expectedAppImage))
 	require.True(t, isImageBuilt(expectedApiImage))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestBuildCommandV2OnlyOneService tests the following scenario:
@@ -293,7 +293,6 @@ func TestBuildCommandV2OnlyOneService(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	expectedImage := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.False(t, isImageBuilt(expectedImage))
@@ -308,6 +307,7 @@ func TestBuildCommandV2OnlyOneService(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedImage))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestBuildCommandV2SpecifyingServices tests the following scenario:
@@ -329,7 +329,6 @@ func TestBuildCommandV2SpecifyingServices(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	expectedAppImage := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.False(t, isImageBuilt(expectedAppImage))
@@ -348,6 +347,7 @@ func TestBuildCommandV2SpecifyingServices(t *testing.T) {
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedAppImage))
 	require.True(t, isImageBuilt(expectedApiImage))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestBuildCommandV2FromCompose tests the following scenario:
@@ -368,7 +368,6 @@ func TestBuildCommandV2FromCompose(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	expectedBuildImage := fmt.Sprintf("%s/%s/%s-vols:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.False(t, isImageBuilt(expectedBuildImage))
@@ -381,6 +380,7 @@ func TestBuildCommandV2FromCompose(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedBuildImage), "%s not found", expectedBuildImage)
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestBuildCommandV2FromCompose tests the following scenario:
@@ -407,7 +407,6 @@ func TestBuildCommandV2WithVolumeMounts(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	expectedBuildImage := fmt.Sprintf("%s/%s/%s-nginx:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.False(t, isImageBuilt(expectedBuildImage))
@@ -420,6 +419,7 @@ func TestBuildCommandV2WithVolumeMounts(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedBuildImage), "%s not found", expectedBuildImage)
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestTestBuildCommandV2Secrets tests the following scenario:
@@ -442,7 +442,6 @@ func TestBuildCommandV2Secrets(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	expectedBuildImage := fmt.Sprintf("%s/%s/%s-test:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.False(t, isImageBuilt(expectedBuildImage))
@@ -456,6 +455,7 @@ func TestBuildCommandV2Secrets(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedBuildImage), "%s not found", expectedBuildImage)
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func createDockerfile(dir string) error {
