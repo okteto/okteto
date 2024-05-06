@@ -30,6 +30,7 @@ type StackDeployOptions struct {
 	OktetoHome   string
 	Token        string
 	Build        bool
+	Namespace    string
 }
 
 // StackDestroyOptions defines the options that can be added to a deploy command
@@ -51,6 +52,9 @@ func RunOktetoStackDeploy(oktetoPath string, deployOptions *StackDeployOptions) 
 	}
 	if deployOptions.ManifestPath != "" {
 		cmd.Args = append(cmd.Args, "-f", deployOptions.ManifestPath)
+	}
+	if deployOptions.Namespace != "" {
+		cmd.Args = append(cmd.Args, "--namespace", deployOptions.Namespace)
 	}
 
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
