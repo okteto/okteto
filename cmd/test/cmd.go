@@ -36,6 +36,7 @@ import (
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/ignore"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
@@ -305,6 +306,8 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 	for _, name := range testServices {
 		test := manifest.Test[name]
 
+		ctxCwd := path.Clean(path.Join(cwd, test.Context))
+
 		commandFlags, err := deployCMD.GetCommandFlags(name, options.Variables)
 		if err != nil {
 			return metadata, err
@@ -322,6 +325,15 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			commands[i] = model.DeployCommand(cmd)
 		}
 
+		ig, err := ignore.NewFromFile(path.Join(ctxCwd, model.IgnoreFilename))
+		if err != nil {
+			return analytics.TestMetadata{}, fmt.Errorf("failed to read ignore file: %w", err)
+		}
+
+		ignoreRules, err := ig.Rules(fmt.Sprintf("test.%s", name))
+		if err != nil {
+			return analytics.TestMetadata{}, fmt.Errorf("failed to create ignore rules for %s: %w", name, err)
+		}
 		params := &remote.Params{
 			BaseImage:           test.Image,
 			ManifestPathFlag:    options.ManifestPathFlag,
@@ -338,8 +350,9 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			},
 			Manifest:                    manifest,
 			Command:                     remote.TestCommand,
-			ContextAbsolutePathOverride: path.Clean(path.Join(cwd, test.Context)),
+			ContextAbsolutePathOverride: ctxCwd,
 			Caches:                      test.Caches,
+			IgnoreRules:                 ignoreRules,
 		}
 
 		if !options.NoCache {

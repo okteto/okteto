@@ -15,6 +15,7 @@ package ignore
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -48,7 +49,10 @@ func (i *Ignore) Rules(section string) ([]string, error) {
 func NewFromFile(ignorefile string) (*Ignore, error) {
 	f, err := os.Open(ignorefile)
 	if err != nil {
-		return nil, err
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		return &Ignore{}, nil
 	}
 	defer f.Close()
 	return NewFromReader(f), nil
