@@ -295,7 +295,6 @@ func Test_EndpointsFromStackWith_InferredName(t *testing.T) {
 		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
-	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func createStackWithEndpointsInferredNameScenario(dir string) error {
