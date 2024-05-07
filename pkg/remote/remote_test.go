@@ -647,26 +647,39 @@ func TestCreateDockerignoreFileWithFilesystem(t *testing.T) {
 		expectedContent string
 		config          config
 		rules           []string
+		useDeployIgnore bool
 	}{
 		{
 			name: "dockerignore present copy .oktetodeployignore to .dockerignore without manifest",
 			config: config{
 				wd: dockerignoreWd,
 			},
-			expectedContent: "test/*",
+			expectedContent: "test/*\n",
+			useDeployIgnore: true,
 		},
 		{
 			name: "dockerignore present copy .oktetodeployignore to .dockerignore with rules",
 			config: config{
 				wd: dockerignoreWd,
 			},
-			expectedContent: "test/*\nbackend?\nfrontend/**",
+			expectedContent: "test/*\nbackend?\nfrontend/**\n",
 			rules:           []string{"backend?", "frontend/**"},
+			useDeployIgnore: true,
 		},
 		{
 			name:            "without dockerignore",
 			config:          config{},
 			expectedContent: "",
+			useDeployIgnore: true,
+		},
+		{
+			name: "dockerignore present copy .oktetodeployignore to .dockerignore with rules",
+			config: config{
+				wd: dockerignoreWd,
+			},
+			expectedContent: "backend?\nfrontend/**\n",
+			rules:           []string{"backend?", "frontend/**"},
+			useDeployIgnore: false,
 		},
 	}
 
@@ -678,7 +691,7 @@ func TestCreateDockerignoreFileWithFilesystem(t *testing.T) {
 			assert.NoError(t, fs.MkdirAll(dockerignoreWd, 0755))
 			assert.NoError(t, afero.WriteFile(fs, filepath.Join(dockerignoreWd, ".oktetodeployignore"), []byte("test/*"), 0644))
 
-			err := createDockerignoreFileWithFilesystem(tt.config.wd, tempDir, tt.rules, fs)
+			err := createDockerignoreFileWithFilesystem(tt.config.wd, tempDir, tt.rules, tt.useDeployIgnore, fs)
 			assert.NoError(t, err)
 			b, err := afero.ReadFile(fs, filepath.Join(tempDir, ".dockerignore"))
 			assert.Equal(t, tt.expectedContent, string(b))
