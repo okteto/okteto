@@ -29,8 +29,8 @@ type StackDeployOptions struct {
 	ManifestPath string
 	OktetoHome   string
 	Token        string
-	Build        bool
 	Namespace    string
+	Build        bool
 }
 
 // StackDestroyOptions defines the options that can be added to a deploy command

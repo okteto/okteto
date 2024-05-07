@@ -180,7 +180,7 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 
 	dir := t.TempDir()
 	require.NoError(t, createStacksScenario(dir))
-	
+
 	testNamespace := integration.GetTestNamespace("PipeStacks", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
