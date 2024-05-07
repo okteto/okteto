@@ -180,8 +180,7 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 
 	dir := t.TempDir()
 	require.NoError(t, createStacksScenario(dir))
-
-	fmt.Println("TestDeployPipelineFromOktetoStacks dir ---->", dir)
+	
 	testNamespace := integration.GetTestNamespace("PipeStacks", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
@@ -217,6 +216,7 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	destroyOptions := &commands.StackDestroyOptions{
 		Workdir:    dir,
 		OktetoHome: dir,
+		Namespace:  testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoStackDestroy(oktetoPath, destroyOptions))
 }
