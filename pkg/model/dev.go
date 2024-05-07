@@ -138,8 +138,8 @@ type Sync struct {
 
 // SyncFolder represents a sync folder in the development container
 type SyncFolder struct {
-	LocalPath  string
-	RemotePath string
+	LocalPath  string `json:"localPath,omitempty" yaml:"localPath,omitempty"`
+	RemotePath string `json:"remotePath,omitempty" yaml:"remotePath,omitempty"`
 }
 
 // ExternalVolume represents a external volume in the development container

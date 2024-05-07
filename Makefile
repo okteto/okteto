@@ -33,7 +33,7 @@ latest:
 .PHONY: lint
 lint:
 	pre-commit run --all-files
-	golangci-lint run
+	golangci-lint run -v --timeout 5m
 
 .PHONY: lint-fix
 lint-fix:
