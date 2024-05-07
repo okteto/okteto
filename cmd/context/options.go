@@ -43,18 +43,15 @@ func (o *Options) InitFromContext() {
 	if o.IsCtxCommand {
 		return
 	}
-	ctxStore := okteto.GetContextStore()
-
-	cc := ctxStore.CurrentContext
 	if o.Context != "" {
-		cc = o.Context
+		return
 	}
-
-	if cc == "" {
+	ctxStore := okteto.GetContextStore()
+	if ctxStore.CurrentContext == "" {
 		return
 	}
 
-	if okCtx, ok := ctxStore.Contexts[cc]; ok {
+	if okCtx, ok := ctxStore.Contexts[ctxStore.CurrentContext]; ok {
 		o.Context = ctxStore.CurrentContext
 		if o.Namespace == "" {
 			o.Namespace = okCtx.Namespace
