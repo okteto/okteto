@@ -93,8 +93,8 @@ func TestIdentifyReadinessIssue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fs := tt.mockFs()
-			err := tt.s.IdentifyReadinessIssue(fs)
+			tt.s.Fs = tt.mockFs()
+			err := tt.s.IdentifyReadinessIssue()
 			assert.ErrorIs(t, err, tt.expectedErr)
 		})
 	}

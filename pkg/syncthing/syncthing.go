@@ -83,30 +83,31 @@ var regexInsufficientSpace = regexp.MustCompile("insufficient space on disk for 
 
 // Syncthing represents the local syncthing process.
 type Syncthing struct {
+	Fs               afero.Fs      `yaml:"-"`
 	Client           *http.Client  `yaml:"-"`
 	cmd              *exec.Cmd     `yaml:"-"`
-	Type             string        `yaml:"-"`
-	APIKey           string        `yaml:"apikey"`
-	RemoteDeviceID   string        `yaml:"-"`
+	RescanInterval   string        `yaml:"-"`
+	Home             string        `yaml:"-"`
 	RemoteGUIAddress string        `yaml:"remote"`
 	GUIPassword      string        `yaml:"password"`
 	GUIPasswordHash  string        `yaml:"-"`
 	binPath          string        `yaml:"-"`
 	GUIAddress       string        `yaml:"local"`
-	Home             string        `yaml:"-"`
+	Type             string        `yaml:"-"`
 	LogPath          string        `yaml:"-"`
 	ListenAddress    string        `yaml:"-"`
 	RemoteAddress    string        `yaml:"-"`
-	RescanInterval   string        `yaml:"-"`
+	APIKey           string        `yaml:"apikey"`
 	Compression      string        `yaml:"-"`
+	RemoteDeviceID   string        `yaml:"-"`
 	Folders          []*Folder     `yaml:"folders"`
-	timeout          time.Duration `yaml:"-"`
 	FileWatcherDelay int           `yaml:"-"`
 	RemoteGUIPort    int           `yaml:"-"`
 	RemotePort       int           `yaml:"-"`
 	LocalGUIPort     int           `yaml:"-"`
 	LocalPort        int           `yaml:"-"`
 	pid              int           `yaml:"-"`
+	timeout          time.Duration `yaml:"-"`
 	ForceSendOnly    bool          `yaml:"-"`
 	ResetDatabase    bool          `yaml:"-"`
 	IgnoreDelete     bool          `yaml:"-"`
@@ -194,13 +195,13 @@ type Connection struct {
 	Connected bool `json:"connected"`
 }
 
-// DownloadProgressData represents an the information about a DownloadProgress event
+// DownloadProgressData represents the information about a DownloadProgress event
 type DownloadProgressData struct {
 	BytesTotal int64 `json:"bytesTotal"`
 }
 
 // New constructs a new Syncthing.
-func New(dev *model.Dev) (*Syncthing, error) {
+func New(dev *model.Dev, fs afero.Fs) (*Syncthing, error) {
 	fullPath := getInstallPath()
 
 	remotePort, err := model.GetAvailablePort(dev.Interface)
@@ -259,6 +260,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		RescanInterval:   strconv.Itoa(dev.Sync.RescanInterval),
 		Compression:      compression,
 		timeout:          dev.Timeout.Default,
+		Fs:               fs,
 	}
 	index := 1
 	for _, sync := range dev.Sync.Folders {
@@ -357,7 +359,7 @@ func (s *Syncthing) Run() error {
 }
 
 // WaitForPing waits for syncthing to be ready
-func (s *Syncthing) WaitForPing(ctx context.Context, local bool, fs afero.Fs) error {
+func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 	ticker := time.NewTicker(300 * time.Millisecond)
 	to := time.Now().Add(s.timeout)
 
@@ -375,7 +377,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool, fs afero.Fs) er
 
 			if time.Now().After(to) && retries > 10 {
 				// before returning a generic error, we try detecting why syncthing is not ready and return a more accurate error
-				errDetected := s.IdentifyReadinessIssue(fs)
+				errDetected := s.IdentifyReadinessIssue()
 				if errDetected != nil {
 					return errDetected
 				}
@@ -390,19 +392,19 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool, fs afero.Fs) er
 }
 
 // IdentifyReadinessIssue attempts to identify the issue that is preventing syncthing from being ready
-func (s *Syncthing) IdentifyReadinessIssue(fs afero.Fs) error {
-	if s.RegexMatchesLogs(fs, regexErrOpeningDatabase) {
+func (s *Syncthing) IdentifyReadinessIssue() error {
+	if s.RegexMatchesLogs(regexErrOpeningDatabase) {
 		return oktetoErrors.ErrInsufficientSpaceOnUserDisk
 	}
-	if s.RegexMatchesLogs(fs, regexInsufficientSpace) {
+	if s.RegexMatchesLogs(regexInsufficientSpace) {
 		return oktetoErrors.ErrInsufficientSpaceOnUserDisk
 	}
 	return nil
 }
 
 // RegexMatchesLogs checks if a regex matches in the syncthing logs
-func (s *Syncthing) RegexMatchesLogs(fs afero.Fs, regx *regexp.Regexp) bool {
-	lines, err := filesystem.GetLastNLines(fs, s.LogPath, maxLogTailLinesToRead, maxLogTailChunkByteSize)
+func (s *Syncthing) RegexMatchesLogs(regx *regexp.Regexp) bool {
+	lines, err := filesystem.GetLastNLines(s.Fs, s.LogPath, maxLogTailLinesToRead, maxLogTailChunkByteSize)
 	if err != nil {
 		oktetoLog.Infof("error reading syncthing log: %s", err)
 		return false
@@ -987,8 +989,8 @@ func Load(dev *model.Dev) (*Syncthing, error) {
 }
 
 // RemoveFolder deletes all the files created by the syncthing instance
-func RemoveFolder(dev *model.Dev) error {
-	s, err := New(dev)
+func RemoveFolder(dev *model.Dev, fs afero.Fs) error {
+	s, err := New(dev, fs)
 	if err != nil {
 		return fmt.Errorf("failed to create syncthing instance")
 	}

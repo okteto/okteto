@@ -159,16 +159,6 @@ func TrackExec(m *TrackExecMetadata) {
 	track(execEvent, m.Success, props)
 }
 
-// TrackDown sends a tracking event to mixpanel when the user deactivates a development container
-func TrackDown(success bool) {
-	track(downEvent, success, nil)
-}
-
-// TrackDownVolumes sends a tracking event to mixpanel when the user deactivates a development container and its volumes
-func TrackDownVolumes(success bool) {
-	track(downVolumesEvent, success, nil)
-}
-
 // TrackPush sends a tracking event to mixpanel when the user pushes a development container
 func TrackPush(success bool) {
 	track(pushEvent, success, nil)
