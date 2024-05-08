@@ -800,7 +800,7 @@ func isFileCompose(path string) bool {
 
 	stackDeprecationWarningOnce.Do(func() {
 		if !isComposeFileName {
-			oktetoLog.Warning(`Okteto Stack syntax is deprecated. 
+			oktetoLog.Warning(`Okteto Stack syntax is deprecated.
     Please consider migrating to Docker Compose syntax: https://community.okteto.com/t/important-update-migrating-from-okteto-stacks-to-docker-compose/1262`)
 		}
 	})

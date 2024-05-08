@@ -37,7 +37,7 @@ linters-settings:
       regexp:
         YEAR: 2023|2024
     template-path: .copyright-header.tmpl
-  gomnd:
+  mnd:
     checks:
       - argument
       - case
@@ -84,7 +84,7 @@ linters:
     - decorder
     - exportloopref
     - makezero
-    - gomnd
+    - mnd
     - musttag
     - bodyclose
     - durationcheck
