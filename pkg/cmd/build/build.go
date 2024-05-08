@@ -63,6 +63,7 @@ type OktetoBuilderInterface interface {
 type OktetoBuilder struct {
 	OktetoContext OktetoContextInterface
 	Fs            afero.Fs
+	isRetry       bool
 }
 
 // OktetoRegistryInterface checks if an image is at the registry
@@ -109,11 +110,11 @@ func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptio
 	// use the internal cluster ip as if they were running their scripts on the k8s cluster
 	case IsDepotEnabled() && !isDeployOrDestroy:
 		depotManager := newDepotBuilder(depotProject, depotToken, ob.OktetoContext, ioCtrl)
-		return depotManager.Run(ctx, buildOptions, runAndHandleBuild)
+		return depotManager.Run(ctx, buildOptions, solveBuild)
 	case ob.OktetoContext.GetCurrentBuilder() == "":
 		return ob.buildWithDocker(ctx, buildOptions)
 	default:
-		return ob.buildWithOkteto(ctx, buildOptions, ioCtrl, runAndHandleBuild)
+		return ob.buildWithOkteto(ctx, buildOptions, ioCtrl, solveBuild)
 	}
 }
 
@@ -176,7 +177,30 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 		return err
 	}
 
-	return run(ctx, buildkitClient, opt, buildOptions, ob.OktetoContext, ioCtrl)
+	err = run(ctx, buildkitClient, opt, buildOptions.OutputMode, ioCtrl)
+	if err != nil {
+		if shouldRetryBuild(err, buildOptions.Tag, ob.OktetoContext) {
+			ioCtrl.Logger().Infof("Failed to build image: %s", err.Error())
+			ioCtrl.Logger().Infof("isRetry: %t", ob.isRetry)
+			if !ob.isRetry {
+				retryBuilder := NewOktetoBuilder(ob.OktetoContext, ob.Fs)
+				retryBuilder.isRetry = true
+				err = retryBuilder.buildWithOkteto(ctx, buildOptions, ioCtrl, run)
+			}
+		}
+		err = getErrorMessage(err, buildOptions.Tag)
+		return err
+	}
+
+	var tag string
+	if buildOptions != nil {
+		tag = buildOptions.Tag
+		if buildOptions.Manifest != nil && buildOptions.Manifest.Deploy != nil {
+			tag = buildOptions.Manifest.Deploy.Image
+		}
+	}
+	err = getErrorMessage(err, tag)
+	return err
 }
 
 // https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build.go#L209
