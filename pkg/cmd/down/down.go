@@ -38,21 +38,21 @@ type analyticsTrackerInterface interface {
 	TrackDownVolumes(bool)
 }
 
-type Context struct {
+type Operation struct {
 	Fs                afero.Fs
 	K8sClientProvider okteto.K8sClientProvider
 	AnalyticsTracker  analyticsTrackerInterface
 }
 
-func New(fs afero.Fs, k8sClientProvider okteto.K8sClientProvider, at analyticsTrackerInterface) *Context {
-	return &Context{
+func New(fs afero.Fs, k8sClientProvider okteto.K8sClientProvider, at analyticsTrackerInterface) *Operation {
+	return &Operation{
 		Fs:                fs,
 		K8sClientProvider: k8sClientProvider,
 		AnalyticsTracker:  at,
 	}
 }
 
-func (d *Context) Down(ctx context.Context, dev *model.Dev, rm bool) error {
+func (d *Operation) Down(ctx context.Context, dev *model.Dev, rm bool) error {
 	oktetoLog.Spinner(fmt.Sprintf("Deactivating '%s' development container...", dev.Name))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -133,7 +133,7 @@ func removeVolume(ctx context.Context, dev *model.Dev, c kubernetes.Interface) e
 	return volumes.Destroy(ctx, dev.GetVolumeName(), dev.Namespace, c, dev.Timeout.Default)
 }
 
-func (d *Context) AllDown(ctx context.Context, manifest *model.Manifest, rm bool) error {
+func (d *Operation) AllDown(ctx context.Context, manifest *model.Manifest, rm bool) error {
 	oktetoLog.Spinner("Deactivating your development containers...")
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()

@@ -27,7 +27,7 @@ import (
 )
 
 // Run runs the "okteto down" sequence
-func (d *Context) Run(app apps.App, dev *model.Dev, trMap map[string]*apps.Translation, wait bool) error {
+func (d *Operation) Run(app apps.App, dev *model.Dev, trMap map[string]*apps.Translation, wait bool) error {
 	ctx := context.Background()
 	if len(trMap) == 0 {
 		oktetoLog.Info("no translations available in the deployment")
@@ -90,7 +90,7 @@ func (d *Context) Run(app apps.App, dev *model.Dev, trMap map[string]*apps.Trans
 	return nil
 }
 
-func (d *Context) stopSyncthing(dev *model.Dev) {
+func (d *Operation) stopSyncthing(dev *model.Dev) {
 	sy, err := syncthing.New(dev, d.Fs)
 	if err != nil {
 		oktetoLog.Infof("failed to create syncthing instance")
