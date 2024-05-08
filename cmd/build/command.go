@@ -154,8 +154,13 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 //   - If the manifest is found and it is a V2 manifest and the build section has some image, the builder is V2
 //   - If the manifest is found and it is a V1 manifest or the build section is empty, the builder fallsback to V1
 func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.ContextStateless) (Builder, error) {
-	var builder Builder
+	// the file flag is a Dockerfile
+	isDockerfileValid := validateDockerfile(options.File) == nil
+	if options.File != "" && isDockerfileValid {
+		return buildv1.NewBuilder(bc.Builder, bc.ioCtrl), nil
+	}
 
+	var builder Builder
 	manifest, err := bc.GetManifest(options.File, afero.NewOsFs())
 	if err != nil {
 		if options.File != "" && errors.Is(err, oktetoErrors.ErrInvalidManifest) && validateDockerfile(options.File) != nil {
