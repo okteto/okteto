@@ -195,7 +195,7 @@ type Connection struct {
 	Connected bool `json:"connected"`
 }
 
-// DownloadProgressData represents an the information about a DownloadProgress event
+// DownloadProgressData represents the information about a DownloadProgress event
 type DownloadProgressData struct {
 	BytesTotal int64 `json:"bytesTotal"`
 }
@@ -359,7 +359,7 @@ func (s *Syncthing) Run() error {
 }
 
 // WaitForPing waits for syncthing to be ready
-func (s *Syncthing) WaitForPing(ctx context.Context, local bool, fs afero.Fs) error {
+func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 	ticker := time.NewTicker(300 * time.Millisecond)
 	to := time.Now().Add(s.timeout)
 
@@ -377,7 +377,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool, fs afero.Fs) er
 
 			if time.Now().After(to) && retries > 10 {
 				// before returning a generic error, we try detecting why syncthing is not ready and return a more accurate error
-				errDetected := s.IdentifyReadinessIssue(fs)
+				errDetected := s.IdentifyReadinessIssue()
 				if errDetected != nil {
 					return errDetected
 				}
@@ -392,19 +392,19 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool, fs afero.Fs) er
 }
 
 // IdentifyReadinessIssue attempts to identify the issue that is preventing syncthing from being ready
-func (s *Syncthing) IdentifyReadinessIssue(fs afero.Fs) error {
-	if s.RegexMatchesLogs(fs, regexErrOpeningDatabase) {
+func (s *Syncthing) IdentifyReadinessIssue() error {
+	if s.RegexMatchesLogs(regexErrOpeningDatabase) {
 		return oktetoErrors.ErrInsufficientSpaceOnUserDisk
 	}
-	if s.RegexMatchesLogs(fs, regexInsufficientSpace) {
+	if s.RegexMatchesLogs(regexInsufficientSpace) {
 		return oktetoErrors.ErrInsufficientSpaceOnUserDisk
 	}
 	return nil
 }
 
 // RegexMatchesLogs checks if a regex matches in the syncthing logs
-func (s *Syncthing) RegexMatchesLogs(fs afero.Fs, regx *regexp.Regexp) bool {
-	lines, err := filesystem.GetLastNLines(fs, s.LogPath, maxLogTailLinesToRead, maxLogTailChunkByteSize)
+func (s *Syncthing) RegexMatchesLogs(regx *regexp.Regexp) bool {
+	lines, err := filesystem.GetLastNLines(s.Fs, s.LogPath, maxLogTailLinesToRead, maxLogTailChunkByteSize)
 	if err != nil {
 		oktetoLog.Infof("error reading syncthing log: %s", err)
 		return false
