@@ -37,7 +37,7 @@ lint:
 
 .PHONY: lint-fix
 lint-fix:
-	golangci-lint run --fix
+	golangci-lint run --fix --timeout 5m
 
 .PHONY: install-fieldalignment
 install-fieldalignment:
