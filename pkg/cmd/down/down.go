@@ -98,7 +98,7 @@ func (d *Context) Down(ctx context.Context, dev *model.Dev, rm bool) error {
 		}
 
 		oktetoLog.Spinner(fmt.Sprintf("Removing '%s' persistent volume...", dev.Name))
-		if err := d.removeVolume(ctx, dev, k8sClient); err != nil {
+		if err := removeVolume(ctx, dev, k8sClient); err != nil {
 			d.AnalyticsTracker.TrackDownVolumes(false)
 			exit <- err
 			return
@@ -129,7 +129,7 @@ func (d *Context) Down(ctx context.Context, dev *model.Dev, rm bool) error {
 	return nil
 }
 
-func (d *Context) removeVolume(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
+func removeVolume(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	return volumes.Destroy(ctx, dev.GetVolumeName(), dev.Namespace, c, dev.Timeout.Default)
 }
 

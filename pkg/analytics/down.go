@@ -15,10 +15,10 @@ package analytics
 
 // TrackDown sends a tracking event to mixpanel when the user deactivates a development container
 func (a *Tracker) TrackDown(success bool) {
-	track(downEvent, success, nil)
+	a.trackFn(downEvent, success, nil)
 }
 
 // TrackDownVolumes sends a tracking event to mixpanel when the user deactivates a development container and its volumes
 func (a *Tracker) TrackDownVolumes(success bool) {
-	track(downVolumesEvent, success, nil)
+	a.trackFn(downVolumesEvent, success, nil)
 }
