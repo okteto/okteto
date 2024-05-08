@@ -165,7 +165,7 @@ func TestDepotRun(t *testing.T) {
 				Tag:       "okteto.dev/test:okteto",
 				DevTag:    "okteto.dev/test:okteto",
 			}
-			runAndHandle := func(ctx context.Context, c *client.Client, opt *client.SolveOpt, buildOptions *types.BuildOptions, okCtx OktetoContextInterface, ioCtrl *io.Controller) error {
+			runAndHandle := func(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error {
 				return nil
 			}
 			err := db.Run(context.Background(), opts, runAndHandle)
