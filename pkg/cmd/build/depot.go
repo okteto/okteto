@@ -52,6 +52,7 @@ type depotBuilder struct {
 	acquireMachine func(ctx context.Context, buildId, token, platform string) (depotMachineConnector, error)
 	token          string
 	project        string
+	isRetry        bool
 }
 
 func IsDepotEnabled() bool {
@@ -78,13 +79,16 @@ func newDepotBuilder(projectId, token string, okCtx OktetoContextInterface, ioCt
 func (db *depotBuilder) release(build build.Build) {
 	build.Finish(db.err)
 
+	if db.machine == nil {
+		return
+	}
 	err := db.machine.Release()
 	if err != nil {
 		db.ioCtrl.Logger().Infof("failed to release depot's machine: %s", err)
 	}
 }
 
-type runAndHandleBuildFn func(ctx context.Context, c *client.Client, opt *client.SolveOpt, buildOptions *types.BuildOptions, okCtx OktetoContextInterface, ioCtrl *io.Controller) error
+type runAndHandleBuildFn func(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error
 
 func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, run runAndHandleBuildFn) error {
 	db.ioCtrl.Logger().Info("building your image on depot's machine")
@@ -161,7 +165,31 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 	}
 
 	db.ioCtrl.Logger().Infof("[depot] build URL: %s", build.BuildURL)
-	return run(ctx, client, opt, buildOptions, db.okCtx, db.ioCtrl)
+
+	err = run(ctx, client, opt, buildOptions.OutputMode, db.ioCtrl)
+	if err != nil {
+		if shouldRetryBuild(err, buildOptions.Tag, db.okCtx) {
+			db.ioCtrl.Logger().Infof("Failed to build image: %s", err.Error())
+			db.ioCtrl.Logger().Infof("isRetry: %t", db.isRetry)
+			if !db.isRetry {
+				retryBuilder := newDepotBuilder(db.project, db.token, db.okCtx, db.ioCtrl)
+				retryBuilder.isRetry = true
+				err = retryBuilder.Run(ctx, buildOptions, run)
+			}
+		}
+		err = getErrorMessage(err, buildOptions.Tag)
+		return err
+	}
+
+	var tag string
+	if buildOptions != nil {
+		tag = buildOptions.Tag
+		if buildOptions.Manifest != nil && buildOptions.Manifest.Deploy != nil {
+			tag = buildOptions.Manifest.Deploy.Image
+		}
+	}
+	err = getErrorMessage(err, tag)
+	return err
 }
 
 // getBuildkitClient returns a buildkit client connected to the depot's machine.
