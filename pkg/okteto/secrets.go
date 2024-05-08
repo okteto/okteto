@@ -22,6 +22,7 @@ import (
 	dockertypes "github.com/docker/cli/cli/config/types"
 	dockercredentials "github.com/docker/docker-credential-helpers/credentials"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
@@ -37,13 +38,13 @@ func newUserClient(client graphqlClientInterface) *userClient {
 }
 
 type getContextQuery struct {
-	Cred    credQuery     `graphql:"credentials(space: $cred)"`
-	User    userQuery     `graphql:"user"`
-	Secrets []secretQuery `graphql:"getGitDeploySecrets"`
+	Cred              credQuery        `graphql:"credentials(space: $cred)"`
+	User              userQuery        `graphql:"user"`
+	PlatformVariables []variablesQuery `graphql:"getGitDeploySecrets"`
 }
 
-type getSecretsQuery struct {
-	Secrets []secretQuery `graphql:"getGitDeploySecrets"`
+type getVariablesQuery struct {
+	Variables []variablesQuery `graphql:"getGitDeploySecrets"`
 }
 
 type getContextFileQuery struct {
@@ -51,9 +52,9 @@ type getContextFileQuery struct {
 }
 
 type getDeprecatedContextQuery struct {
-	User    deprecatedUserQuery `graphql:"user"`
-	Cred    credQuery           `graphql:"credentials(space: $cred)"`
-	Secrets []secretQuery       `graphql:"getGitDeploySecrets"`
+	User              deprecatedUserQuery `graphql:"user"`
+	Cred              credQuery           `graphql:"credentials(space: $cred)"`
+	PlatformVariables []variablesQuery    `graphql:"getGitDeploySecrets"`
 }
 
 type getRegistryCredentialsQuery struct {
@@ -89,7 +90,7 @@ type deprecatedUserQuery struct {
 	New         graphql.Boolean
 }
 
-type secretQuery struct {
+type variablesQuery struct {
 	Name  graphql.String
 	Value graphql.String
 }
@@ -125,7 +126,7 @@ type contextFileJSON struct {
 	} `yaml:"contexts"`
 }
 
-// GetSecrets returns the secrets from Okteto API
+// GetContext returns the user context from Okteto API
 func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserContext, error) {
 	var queryStruct getContextQuery
 	variables := map[string]interface{}{
@@ -142,12 +143,12 @@ func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserCont
 		return nil, err
 	}
 
-	secrets := make([]types.Secret, 0)
-	for _, secret := range queryStruct.Secrets {
-		if !strings.Contains(string(secret.Name), ".") {
-			secrets = append(secrets, types.Secret{
-				Name:  string(secret.Name),
-				Value: string(secret.Value),
+	platformVars := make([]env.Var, 0)
+	for _, v := range queryStruct.PlatformVariables {
+		if !strings.Contains(string(v.Name), ".") {
+			platformVars = append(platformVars, env.Var{
+				Name:  string(v.Name),
+				Value: string(v.Value),
 			})
 		}
 	}
@@ -170,7 +171,7 @@ func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserCont
 			GlobalNamespace: globalNamespace,
 			Analytics:       analytics,
 		},
-		Secrets: secrets,
+		PlatformVariables: platformVars,
 		Credentials: types.Credential{
 			Server:      string(queryStruct.Cred.Server),
 			Certificate: string(queryStruct.Cred.Certificate),
@@ -181,25 +182,25 @@ func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserCont
 	return result, nil
 }
 
-// GetSecrets returns the secrets from Okteto API
-func (c *userClient) GetUserSecrets(ctx context.Context) ([]types.Secret, error) {
-	var queryStruct getSecretsQuery
+// GetOktetoPlatformVariables returns the user and cluster variables from Okteto API
+func (c *userClient) GetOktetoPlatformVariables(ctx context.Context) ([]env.Var, error) {
+	var queryStruct getVariablesQuery
 	err := query(ctx, &queryStruct, nil, c.client)
 	if err != nil {
 		return nil, err
 	}
 
-	secrets := make([]types.Secret, 0)
-	for _, secret := range queryStruct.Secrets {
-		if !strings.Contains(string(secret.Name), ".") {
-			secrets = append(secrets, types.Secret{
-				Name:  string(secret.Name),
-				Value: string(secret.Value),
+	vars := make([]env.Var, 0)
+	for _, v := range queryStruct.Variables {
+		if !strings.Contains(string(v.Name), ".") {
+			vars = append(vars, env.Var{
+				Name:  string(v.Name),
+				Value: string(v.Value),
 			})
 		}
 	}
 
-	return secrets, nil
+	return vars, nil
 }
 
 // TODO: Remove this code when users are in okteto chart > 0.10.8
@@ -213,10 +214,10 @@ func (c *userClient) deprecatedGetUserContext(ctx context.Context) (*types.UserC
 		return nil, err
 	}
 
-	secrets := make([]types.Secret, 0)
-	for _, secret := range queryStruct.Secrets {
+	secrets := make([]env.Var, 0)
+	for _, secret := range queryStruct.PlatformVariables {
 		if !strings.Contains(string(secret.Name), ".") {
-			secrets = append(secrets, types.Secret{
+			secrets = append(secrets, env.Var{
 				Name:  string(secret.Name),
 				Value: string(secret.Value),
 			})
@@ -237,7 +238,7 @@ func (c *userClient) deprecatedGetUserContext(ctx context.Context) (*types.UserC
 			GlobalNamespace: constants.DefaultGlobalNamespace,
 			Analytics:       true,
 		},
-		Secrets: secrets,
+		PlatformVariables: secrets,
 		Credentials: types.Credential{
 			Server:      string(queryStruct.Cred.Server),
 			Certificate: string(queryStruct.Cred.Certificate),

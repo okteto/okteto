@@ -22,6 +22,7 @@ actionsRepos=(delete-namespace
         destroy-stack
         apply
         context
+        test
 )
 
 for repo in "${actionsRepos[@]}"; do

@@ -15,20 +15,16 @@ package remoterun
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils/executor"
-	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -36,14 +32,13 @@ import (
 
 // TestOptions flags accepted by the remote-run test command
 type TestOptions struct {
-	Name       string
-	DevEnvName string
-	Variables  []string
+	Name      string
+	Variables []string
 }
 
 // Test starts the test command remotely. This is the command executed in the
 // remote environment when running okteto test
-func Test(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Test(ctx context.Context) *cobra.Command {
 	options := &TestOptions{}
 	cmd := &cobra.Command{
 		Use:   "test",
@@ -82,11 +77,6 @@ commands:
 				return fmt.Errorf("could not read information for tests: %w", err)
 			}
 
-			kubeClient, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).ProvideWithLogger(okteto.GetContext().Cfg, k8sLogger)
-			if err != nil {
-				return fmt.Errorf("could not create kubernetes client: %s", err.Error())
-			}
-
 			// Set the default values for the external resources environment variables (endpoints)
 			for name, external := range dep.External {
 				external.SetDefaults(name)
@@ -95,22 +85,6 @@ commands:
 			runner := &deployable.TestRunner{
 				Executor: executor.NewExecutor(oktetoLog.GetOutputFormat(), false, ""),
 				Fs:       afero.NewOsFs(),
-				GetDevEnvEnviron: func(devEnvName, namespace string) (map[string]string, error) {
-					if devEnvName == "" {
-						return nil, nil
-					}
-					base64Json, err := pipeline.GetConfigmapDependencyEnv(ctx, devEnvName, namespace, kubeClient)
-					if err != nil {
-						return nil, err
-					}
-					return decodeBase64JSON(base64Json)
-				},
-				SetDevEnvEnviron: func(devEnvName, namespace string, vars []string) (err error) {
-					if devEnvName != "" {
-						err = pipeline.UpdateEnvs(ctx, devEnvName, namespace, vars, kubeClient)
-					}
-					return
-				},
 			}
 
 			os.Setenv(constants.OktetoNameEnvVar, options.Name)
@@ -120,7 +94,6 @@ commands:
 				Namespace:  oktetoContext.GetCurrentNamespace(),
 				Deployable: dep,
 				Variables:  options.Variables,
-				DevEnvName: options.DevEnvName,
 			}
 
 			// Token should be always masked from the logs
@@ -139,17 +112,6 @@ commands:
 	}
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "test run name")
-	cmd.Flags().StringVar(&options.DevEnvName, "devenv-name", "", "development environment name")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 	return cmd
-}
-
-func decodeBase64JSON(base64Str string) (data map[string]string, err error) {
-	b, err := base64.StdEncoding.DecodeString(base64Str)
-	if err != nil {
-		return nil, err
-	}
-	data = make(map[string]string)
-	err = json.Unmarshal(b, &data)
-	return
 }

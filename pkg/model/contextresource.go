@@ -14,11 +14,13 @@
 package model
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/afero"
 	yaml "gopkg.in/yaml.v3"
 )
@@ -27,6 +29,27 @@ import (
 type ContextResource struct {
 	Context   string `yaml:"context"`
 	Namespace string `yaml:"namespace"`
+}
+
+// TODO: remove this function once we remove the support for 'context' and 'namespace' in the okteto manifest and docker compose
+func displayDeprecationWarningForContextAndNamespace(context, namespace string) {
+	var s1, s2 string
+
+	if context == "" && namespace == "" {
+		return
+	} else if context != "" && namespace != "" {
+		s1 = "'context' and 'namespace'"
+		s2 = fmt.Sprintf("'%s' and '%s'", OktetoContextEnvVar, OktetoNamespaceEnvVar)
+	} else if context != "" {
+		s1 = "'context'"
+		s2 = fmt.Sprintf("'%s'", OktetoContextEnvVar)
+	} else if namespace != "" {
+		s1 = "'namespace'"
+		s2 = fmt.Sprintf("'%s'", OktetoNamespaceEnvVar)
+	}
+
+	msg := "Setting %s in the okteto manifest or docker compose is deprecated. We recommend using the env var %s instead."
+	oktetoLog.Warning(fmt.Sprintf(msg, s1, s2))
 }
 
 // GetContextResource returns a ContextResource object from a given file
@@ -49,6 +72,8 @@ func GetContextResource(path string) (*ContextResource, error) {
 	if err := yaml.Unmarshal(bytes, ctxResource); err != nil {
 		return nil, newManifestFriendlyError(err)
 	}
+
+	displayDeprecationWarningForContextAndNamespace(ctxResource.Context, ctxResource.Namespace)
 
 	ctxResource.Context = os.ExpandEnv(ctxResource.Context)
 	ctxResource.Namespace = os.ExpandEnv(ctxResource.Namespace)

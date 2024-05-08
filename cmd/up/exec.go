@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -40,7 +41,6 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
-	"github.com/okteto/okteto/pkg/types"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -147,8 +147,8 @@ type configMapEnvsGetterInterface interface {
 	getEnvsFromConfigMap(ctx context.Context, name string, namespace string, client kubernetes.Interface) ([]string, error)
 }
 
-type secretsEnvsGetterInterface interface {
-	getEnvsFromSecrets(context.Context) ([]string, error)
+type platformVariablesEnvsGetterInterface interface {
+	getEnvsFromPlatformVariables(context.Context) ([]string, error)
 }
 
 type imageEnvsGetterInterface interface {
@@ -159,40 +159,40 @@ type imageGetterInterface interface {
 	GetImageMetadata(string) (registry.ImageMetadata, error)
 }
 
-type secretsGetterInterface interface {
-	GetUserSecrets(context.Context) ([]types.Secret, error)
+type platformVariablesGetterInterface interface {
+	GetOktetoPlatformVariables(context.Context) ([]env.Var, error)
 }
 
 type devContainerEnvGetter struct{}
 type configMapGetter struct{}
-type secretsEnvsGetter struct {
-	secretsGetter secretsGetterInterface
+type platformVariablesEnvsGetter struct {
+	variablesGetter platformVariablesGetterInterface
 }
 type imageEnvsGetter struct {
 	imageGetter imageGetterInterface
 }
 
 type envsGetter struct {
-	client                kubernetes.Interface
-	devContainerEnvGetter devContainerEnvGetterInterface
-	configMapEnvsGetter   configMapEnvsGetterInterface
-	secretsEnvsGetter     secretsEnvsGetterInterface
-	imageEnvsGetter       imageEnvsGetterInterface
-	dev                   *model.Dev
-	getDefaultLocalEnvs   func() []string
-	name                  string
-	namespace             string
+	client                      kubernetes.Interface
+	devContainerEnvGetter       devContainerEnvGetterInterface
+	configMapEnvsGetter         configMapEnvsGetterInterface
+	platformVariablesEnvsGetter platformVariablesEnvsGetterInterface
+	imageEnvsGetter             imageEnvsGetterInterface
+	dev                         *model.Dev
+	getDefaultLocalEnvs         func() []string
+	name                        string
+	namespace                   string
 }
 
 func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {
 
-	var secretsGetter secretsGetterInterface
+	var variablesGetter platformVariablesGetterInterface
 	if okteto.IsOkteto() {
 		oc, err := okteto.NewOktetoClient()
 		if err != nil {
 			return nil, err
 		}
-		secretsGetter = oc.User()
+		variablesGetter = oc.User()
 	}
 
 	return &envsGetter{
@@ -202,8 +202,8 @@ func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {
 		client:                hybridCtx.Client,
 		devContainerEnvGetter: &devContainerEnvGetter{},
 		configMapEnvsGetter:   &configMapGetter{},
-		secretsEnvsGetter: &secretsEnvsGetter{
-			secretsGetter: secretsGetter,
+		platformVariablesEnvsGetter: &platformVariablesEnvsGetter{
+			variablesGetter: variablesGetter,
 		},
 		imageEnvsGetter: &imageEnvsGetter{
 			imageGetter: registry.NewOktetoRegistry(okteto.Config{}),
@@ -232,11 +232,11 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 	}
 	envs = append(envs, imageEnvs...)
 
-	secretsEnvs, err := eg.secretsEnvsGetter.getEnvsFromSecrets(ctx)
+	platformVariablesEnvs, err := eg.platformVariablesEnvsGetter.getEnvsFromPlatformVariables(ctx)
 	if err != nil {
 		return nil, err
 	}
-	envs = append(envs, secretsEnvs...)
+	envs = append(envs, platformVariablesEnvs...)
 
 	configMapEnvs, err := eg.configMapEnvsGetter.getEnvsFromConfigMap(ctx, eg.name, eg.namespace, eg.client)
 	if err != nil {
@@ -355,17 +355,17 @@ func (cmg *configMapGetter) getEnvsFromConfigMap(ctx context.Context, name, name
 	return envs, nil
 }
 
-func (sg *secretsEnvsGetter) getEnvsFromSecrets(ctx context.Context) ([]string, error) {
+func (sg *platformVariablesEnvsGetter) getEnvsFromPlatformVariables(ctx context.Context) ([]string, error) {
 	var envs []string
 
 	if okteto.IsOkteto() {
-		secrets, err := sg.secretsGetter.GetUserSecrets(ctx)
+		variables, err := sg.variablesGetter.GetOktetoPlatformVariables(ctx)
 		if err != nil {
 			return nil, err
 		}
 
-		for _, s := range secrets {
-			envs = append(envs, fmt.Sprintf("%s=%s", s.Name, s.Value))
+		for _, v := range variables {
+			envs = append(envs, fmt.Sprintf("%s=%s", v.Name, v.Value))
 		}
 	}
 

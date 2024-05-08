@@ -11,19 +11,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package path
+package test
 
-import "path/filepath"
+import (
+	"context"
 
-// GetRelativePathFromCWD returns the relative path from the cwd
-func GetRelativePathFromCWD(cwd, path string) (string, error) {
-	if path == "" || !filepath.IsAbs(path) {
-		return path, nil
-	}
+	"github.com/okteto/okteto/pkg/analytics"
+)
 
-	relativePath, err := filepath.Rel(cwd, path)
-	if err != nil {
-		return "", err
-	}
-	return relativePath, nil
+// ProxyTracker is a dedicated wrapper for okteto test that intercepts deploy
+// operation to edit metadata prior to be sent to out analytics backend
+type ProxyTracker struct {
+	*analytics.Tracker
+}
+
+func (a *ProxyTracker) TrackDeploy(metadata analytics.DeployMetadata) {
+	metadata.DeployType = "test"
+	a.Tracker.TrackDeploy(metadata)
+}
+
+func (a *ProxyTracker) TrackImageBuild(ctx context.Context, m *analytics.ImageBuildMetadata) {
+	m.Initiator = "test"
+	a.Tracker.TrackImageBuild(ctx, m)
 }

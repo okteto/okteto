@@ -16,7 +16,6 @@ package destroy
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -43,51 +42,29 @@ func newBuildCtrl(name string, analyticsTracker, insights buildTrackerInterface,
 }
 
 type builderInterface interface {
-	GetServicesToBuildDuringDeploy(ctx context.Context, manifest *model.Manifest, svcToDeploy []string) ([]string, error)
+	GetServicesToBuildForImage(ctx context.Context, manifest *model.Manifest, findImg model.ImageFromManifest) ([]string, error)
 	Build(ctx context.Context, options *types.BuildOptions) error
 }
 
 func (bc buildCtrl) buildImageIfNecessary(ctx context.Context, manifest *model.Manifest) error {
 	oktetoLog.Debug("checking if destroy.image is already built")
-	imageToBuild := manifest.Destroy.Image
-
-	reg := regexp.MustCompile(`OKTETO_BUILD_(\w+)_`)
-	matches := reg.FindStringSubmatch(imageToBuild)
-	foundMatches := 2
-	if len(matches) == 0 {
-		oktetoLog.Debugf("image '%s' is not an okteto build variable", imageToBuild)
+	svcsToBuild, err := bc.builder.GetServicesToBuildForImage(ctx, manifest, func(manifest *model.Manifest) string {
+		return manifest.Destroy.Image
+	})
+	if err != nil {
+		return err
+	}
+	if len(svcsToBuild) < 1 {
 		return nil
 	}
-
-	sanitisedToUnsanitised := map[string]string{}
-	for buildSvc := range manifest.Build {
-		sanitizedSvc := strings.ToUpper(strings.ReplaceAll(buildSvc, "-", "_"))
-		sanitisedToUnsanitised[sanitizedSvc] = buildSvc
+	buildOptions := &types.BuildOptions{
+		EnableStages: true,
+		Manifest:     manifest,
+		CommandArgs:  svcsToBuild,
 	}
-	if len(matches) == foundMatches {
-		sanitisedName := matches[1]
-		svc, ok := sanitisedToUnsanitised[sanitisedName]
-		if !ok {
-			oktetoLog.Infof("image is not defined in build section: %s", imageToBuild)
-			return nil
-		}
-		svcsToBuild, err := bc.builder.GetServicesToBuildDuringDeploy(ctx, manifest, []string{svc})
-		if err != nil {
-			return fmt.Errorf("error getting services to build: %w", err)
-		}
-		if len(svcsToBuild) == 0 {
-			oktetoLog.Infof("image is already built: %s", imageToBuild)
-			return nil
-		}
-		buildOptions := &types.BuildOptions{
-			EnableStages: true,
-			Manifest:     manifest,
-			CommandArgs:  svcsToBuild,
-		}
-
-		if errBuild := bc.builder.Build(ctx, buildOptions); errBuild != nil {
-			return fmt.Errorf("error building images: %w", errBuild)
-		}
+	oktetoLog.Infof("rebuilding %s services image", strings.Join(svcsToBuild, "|"))
+	if errBuild := bc.builder.Build(ctx, buildOptions); errBuild != nil {
+		return fmt.Errorf("error building images: %w", errBuild)
 	}
 	return nil
 }

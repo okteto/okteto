@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/depot/depot-go/build"
@@ -109,8 +110,15 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 		buildOptions.Platform = defaultPlatform
 	}
 
-	db.ioCtrl.Logger().Infof("[depot] connecting to %s machine", buildOptions.Platform)
-	db.machine, err = db.acquireMachine(ctx, build.ID, build.Token, buildOptions.Platform)
+	platforms := strings.Split(buildOptions.Platform, ",")
+	machinePlatform := buildOptions.Platform
+	if len(platforms) > 1 {
+		db.ioCtrl.Logger().Infof("[depot] multi-platform build detected: %s", buildOptions.Platform)
+		machinePlatform = defaultPlatform
+	}
+
+	db.ioCtrl.Logger().Infof("[depot] connecting to %s machine", machinePlatform)
+	db.machine, err = db.acquireMachine(ctx, build.ID, build.Token, machinePlatform)
 	if err != nil {
 		return err
 	}

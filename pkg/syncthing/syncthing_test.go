@@ -47,14 +47,14 @@ func TestGetFiles(t *testing.T) {
 
 func TestIdentifyReadinessIssue(t *testing.T) {
 	var tests = []struct {
-		sy          Syncthing
 		expectedErr error
 		mockFs      func() afero.Fs
 		name        string
+		s           Syncthing
 	}{
 		{
 			name: "no-matching-errors",
-			sy: Syncthing{
+			s: Syncthing{
 				LogPath: "syncthing.log",
 			},
 			mockFs: func() afero.Fs {
@@ -65,7 +65,7 @@ func TestIdentifyReadinessIssue(t *testing.T) {
 		},
 		{
 			name: "matching-insufficient-space-for-database",
-			sy: Syncthing{
+			s: Syncthing{
 				LogPath: "syncthing.log",
 			},
 			mockFs: func() afero.Fs {
@@ -75,11 +75,11 @@ func TestIdentifyReadinessIssue(t *testing.T) {
 					"2024/01/01 10:02:00 failed to sufficiently increase receive buffer size (was: 208 kiB, wanted: 2048 kiB, got: 416 kiB). See https://github.com/quic-go/quic-go/wiki/UDP-Buffer-Sizes for details."), 0644)
 				return fs
 			},
-			expectedErr: oktetoErrors.ErrInsufficientSpace,
+			expectedErr: oktetoErrors.ErrInsufficientSpaceOnUserDisk,
 		},
 		{
 			name: "matching-error-opening-database",
-			sy: Syncthing{
+			s: Syncthing{
 				LogPath: "syncthing.log",
 			},
 			mockFs: func() afero.Fs {
@@ -87,14 +87,14 @@ func TestIdentifyReadinessIssue(t *testing.T) {
 				_ = afero.WriteFile(fs, "syncthing.log", []byte("[start] \"2024/01/01 10:01:00 WARNING: Error opening database: mkdir /home/<user>/.okteto/<namespace>/<service>/index-v0.14.0.db: no space left on device"), 0644)
 				return fs
 			},
-			expectedErr: oktetoErrors.ErrInsufficientSpace,
+			expectedErr: oktetoErrors.ErrInsufficientSpaceOnUserDisk,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.sy.Fs = tt.mockFs()
-			err := tt.sy.IdentifyReadinessIssue()
+			fs := tt.mockFs()
+			err := tt.s.IdentifyReadinessIssue(fs)
 			assert.ErrorIs(t, err, tt.expectedErr)
 		})
 	}

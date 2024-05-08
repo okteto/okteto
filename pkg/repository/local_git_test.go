@@ -300,3 +300,79 @@ func TestLocalGit_GetDirContentSHA(t *testing.T) {
 		})
 	}
 }
+func TestLocalGit_ListUntrackedFiles(t *testing.T) {
+	tests := []struct {
+		expectedErr   error
+		execMock      func() *mockLocalExec
+		name          string
+		expectedFiles []string
+		fixAttempt    int
+	}{
+		{
+			name:       "success",
+			fixAttempt: 0,
+			execMock: func() *mockLocalExec {
+				return &mockLocalExec{
+					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+						return []byte("file1.txt\nfile2.txt\nfile3.txt"), nil
+					},
+				}
+			},
+			expectedFiles: []string{"file1.txt", "file2.txt", "file3.txt"},
+			expectedErr:   nil,
+		},
+		{
+			name:       "failure - exit error",
+			fixAttempt: 0,
+			execMock: func() *mockLocalExec {
+				return &mockLocalExec{
+					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+						return nil, &exec.ExitError{
+							Stderr: []byte("fatal: detected dubious ownership in repository at <path>"),
+						}
+					},
+				}
+			},
+			expectedFiles: []string{},
+			expectedErr:   errLocalGitCannotGetStatusCannotRecover,
+		},
+		{
+			name:       "failure - fix attempt limit reached",
+			fixAttempt: 2,
+			execMock: func() *mockLocalExec {
+				return &mockLocalExec{
+					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+						return nil, &exec.ExitError{
+							Stderr: []byte("fatal: detected dubious ownership in repository at <path>"),
+						}
+					},
+				}
+			},
+			expectedFiles: []string{},
+			expectedErr:   errLocalGitCannotGetCommitTooManyAttempts,
+		},
+		{
+			name:       "failure - cannot recover",
+			fixAttempt: 1,
+			execMock: func() *mockLocalExec {
+				return &mockLocalExec{
+					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+						return nil, assert.AnError
+					},
+				}
+			},
+			expectedFiles: []string{},
+			expectedErr:   errLocalGitCannotGetStatusCannotRecover,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lg := NewLocalGit("git", tt.execMock())
+			files, err := lg.ListUntrackedFiles(context.Background(), "/test/dir", "/test", tt.fixAttempt)
+
+			assert.Equal(t, tt.expectedFiles, files)
+			assert.ErrorIs(t, err, tt.expectedErr)
+		})
+	}
+}

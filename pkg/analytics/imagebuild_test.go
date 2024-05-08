@@ -44,6 +44,7 @@ func TestAnalyticsTracker_TrackImageBuild(t *testing.T) {
 					"cacheHitDurationSeconds":         float64(0),
 					"buildDurationSeconds":            float64(0),
 					"buildContextHash":                "",
+					"initiator":                       "",
 					"buildContextHashDurationSeconds": float64(0),
 				},
 			},
@@ -63,6 +64,7 @@ func TestAnalyticsTracker_TrackImageBuild(t *testing.T) {
 					"cacheHitDurationSeconds":         float64(0),
 					"buildDurationSeconds":            float64(0),
 					"buildContextHash":                "",
+					"initiator":                       "",
 					"buildContextHashDurationSeconds": float64(0),
 				},
 			},
@@ -100,6 +102,7 @@ func Test_ImageBuildMetadata_toProps(t *testing.T) {
 		BuildDuration:            5 * time.Second,
 		BuildContextHash:         "contextHash",
 		BuildContextHashDuration: 5 * time.Second,
+		Initiator:                "me",
 	}
 
 	expectedProps := map[string]interface{}{
@@ -112,6 +115,7 @@ func Test_ImageBuildMetadata_toProps(t *testing.T) {
 		"buildDurationSeconds":            float64(5),
 		"buildContextHash":                "contextHash",
 		"buildContextHashDurationSeconds": float64(5),
+		"initiator":                       "me",
 	}
 
 	require.Equal(t, expectedProps, m.toProps())

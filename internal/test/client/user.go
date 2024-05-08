@@ -17,16 +17,17 @@ import (
 	"context"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/types"
 )
 
 // FakeUserClient is used to mock the userClient interface
 type FakeUserClient struct {
-	errGetUserSecrets error
-	userCtx           *types.UserContext
-	userSecrets       []types.Secret
-	err               []error
-	ClusterMetadata   types.ClusterMetadata
+	errGetPlatformVariables error
+	userCtx                 *types.UserContext
+	platformVariables       []env.Var
+	err                     []error
+	ClusterMetadata         types.ClusterMetadata
 }
 
 func NewFakeUsersClient(user *types.User, err ...error) *FakeUserClient {
@@ -49,11 +50,11 @@ func (c *FakeUserClient) GetContext(_ context.Context, _ string) (*types.UserCon
 	return c.userCtx, nil
 }
 
-func (c *FakeUserClient) GetUserSecrets(_ context.Context) ([]types.Secret, error) {
-	if c.errGetUserSecrets != nil {
-		return nil, c.errGetUserSecrets
+func (c *FakeUserClient) GetOktetoPlatformVariables(_ context.Context) ([]env.Var, error) {
+	if c.errGetPlatformVariables != nil {
+		return nil, c.errGetPlatformVariables
 	}
-	return c.userSecrets, nil
+	return c.platformVariables, nil
 }
 
 func (*FakeUserClient) GetClusterCertificate(_ context.Context, _, _ string) ([]byte, error) {

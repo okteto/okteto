@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -92,7 +93,9 @@ ARG {{ .InvalidateCacheArgName }}
 
 RUN okteto registrytoken install --force --log-output=json
 
-RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
+RUN \
+  {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}}{{end}}\
+  --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
   /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}
 `
@@ -131,11 +134,19 @@ type Params struct {
 	ManifestPathFlag    string
 	TemplateName        string
 	DockerfileName      string
-	// KnownHostsPath  is the default known_hosts file path. Provided mostly for testing
-	KnownHostsPath string
-	Command        string
-	Deployable     deployable.Entity
-	CommandFlags   []string
+	KnownHostsPath      string
+	Command             string
+	// ContextAbsolutePathOverride is the absolute path for the build context. Optional.
+	// If this values is not defined it will default to the folder location of the
+	// okteto manifest which is resolved through params.ManifestPathFlag
+	ContextAbsolutePathOverride string
+	// CacheInvalidationKey is the value use to invalidate the cache. Defaults
+	// to a random value which essentially means no-cache. Setting this to a
+	// static or known value will reuse the build cache
+	CacheInvalidationKey string
+	Deployable           deployable.Entity
+	CommandFlags         []string
+	Caches               []string
 }
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
@@ -161,6 +172,7 @@ type dockerfileTemplateProperties struct {
 	OktetoRegistryURLArgName string
 	Command                  string
 	OktetoIsPreviewEnv       string
+	Caches                   []string
 }
 
 // NewRunner creates a new Runner for remote
@@ -215,9 +227,16 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		}
 	}()
 
+	var buildCtx string
+	if params.ContextAbsolutePathOverride != "" {
+		buildCtx = params.ContextAbsolutePathOverride
+	} else {
+		buildCtx = r.getContextPath(cwd, params.ManifestPathFlag)
+	}
+
 	buildInfo := &build.Info{
 		Dockerfile: dockerfile,
-		Context:    r.getContextPath(cwd, params.ManifestPathFlag),
+		Context:    buildCtx,
 	}
 
 	// undo modification of CWD for Build command
@@ -225,9 +244,13 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		return err
 	}
 
-	randomNumber, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	if err != nil {
-		return err
+	cacheKey := params.CacheInvalidationKey
+	if cacheKey == "" {
+		randomNumber, err := rand.Int(rand.Reader, big.NewInt(1000000))
+		if err != nil {
+			return err
+		}
+		cacheKey = strconv.Itoa(int(randomNumber.Int64()))
 	}
 
 	b, err := yaml.Marshal(params.Deployable)
@@ -251,7 +274,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		fmt.Sprintf("%s=%s", constants.OktetoGitCommitEnvVar, os.Getenv(constants.OktetoGitCommitEnvVar)),
 		fmt.Sprintf("%s=%s", constants.OktetoGitBranchEnvVar, os.Getenv(constants.OktetoGitBranchEnvVar)),
 		fmt.Sprintf("%s=%s", constants.OktetoTlsCertBase64EnvVar, base64.StdEncoding.EncodeToString(sc.Certificate)),
-		fmt.Sprintf("%s=%d", constants.OktetoInvalidateCacheEnvVar, int(randomNumber.Int64())),
+		fmt.Sprintf("%s=%s", constants.OktetoInvalidateCacheEnvVar, cacheKey),
 		fmt.Sprintf("%s=%s", constants.OktetoDeployableEnvVar, base64.StdEncoding.EncodeToString(b)),
 		fmt.Sprintf("%s=%s", model.GithubRepositoryEnvVar, os.Getenv(model.GithubRepositoryEnvVar)),
 		fmt.Sprintf("%s=%s", model.OktetoRegistryURLEnvVar, os.Getenv(model.OktetoRegistryURLEnvVar)),
@@ -355,6 +378,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		OktetoDependencyEnvVars:  params.DependenciesEnvVars,
 		Command:                  params.Command,
 		OktetoIsPreviewEnv:       constants.OktetoIsPreviewEnvVar,
+		Caches:                   params.Caches,
 	}
 
 	dockerfile, err := r.fs.Create(filepath.Join(tmpDir, params.DockerfileName))
