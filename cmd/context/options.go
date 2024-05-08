@@ -45,10 +45,21 @@ func (o *Options) InitFromContext() {
 	}
 
 	ctxStore := okteto.GetContextStore()
+
+	if ctxStore.Contexts == nil {
+		return
+	}
+
+	if len(ctxStore.Contexts) == 0 {
+		return
+	}
+
 	cc := ctxStore.CurrentContext
 
 	if o.Context != "" {
 		cc = o.Context
+	} else {
+		o.Context = cc
 	}
 
 	if cc == "" {
@@ -56,7 +67,6 @@ func (o *Options) InitFromContext() {
 	}
 
 	if okCtx, ok := ctxStore.Contexts[cc]; ok {
-		o.Context = ctxStore.CurrentContext
 		if o.Namespace == "" {
 			o.Namespace = okCtx.Namespace
 		}
