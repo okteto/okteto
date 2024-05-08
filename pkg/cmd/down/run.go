@@ -27,7 +27,7 @@ import (
 )
 
 // Run runs the "okteto down" sequence
-func (d *Context) Run(app apps.App, trMap map[string]*apps.Translation, wait bool) error {
+func (d *Context) Run(app apps.App, dev *model.Dev, trMap map[string]*apps.Translation, wait bool) error {
 	ctx := context.Background()
 	if len(trMap) == 0 {
 		oktetoLog.Info("no translations available in the deployment")
@@ -44,10 +44,10 @@ func (d *Context) Run(app apps.App, trMap map[string]*apps.Translation, wait boo
 				return err
 			}
 
-			if err := services.DestroyDev(ctx, d.Dev, k8sClient); err != nil {
+			if err := services.DestroyDev(ctx, dev, k8sClient); err != nil {
 				return err
 			}
-			if tr.Dev != d.Dev {
+			if tr.Dev != dev {
 				if err := tr.DevModeOff(); err != nil {
 					oktetoLog.Infof("failed to turn devmode off: %s", err)
 				}
@@ -71,13 +71,13 @@ func (d *Context) Run(app apps.App, trMap map[string]*apps.Translation, wait boo
 		}
 	}
 
-	if err := secrets.Destroy(ctx, d.Dev, k8sClient); err != nil {
+	if err := secrets.Destroy(ctx, dev, k8sClient); err != nil {
 		return err
 	}
 
-	d.stopSyncthing()
+	d.stopSyncthing(dev)
 
-	if err := ssh.RemoveEntry(d.Dev.Name); err != nil {
+	if err := ssh.RemoveEntry(dev.Name); err != nil {
 		oktetoLog.Infof("failed to remove ssh entry: %s", err)
 	}
 
@@ -86,12 +86,12 @@ func (d *Context) Run(app apps.App, trMap map[string]*apps.Translation, wait boo
 	}
 
 	devPodTerminationRetries := 30
-	waitForDevPodsTermination(ctx, k8sClient, d.Dev, devPodTerminationRetries)
+	waitForDevPodsTermination(ctx, k8sClient, dev, devPodTerminationRetries)
 	return nil
 }
 
-func (d *Context) stopSyncthing() {
-	sy, err := syncthing.New(d.Dev, d.Fs)
+func (d *Context) stopSyncthing(dev *model.Dev) {
+	sy, err := syncthing.New(dev, d.Fs)
 	if err != nil {
 		oktetoLog.Infof("failed to create syncthing instance")
 		return

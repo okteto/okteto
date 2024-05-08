@@ -223,8 +223,8 @@ func runPush(ctx context.Context, dev *model.Dev, pushOpts *pushOptions, c *kube
 			}
 		}
 		if apps.IsDevModeOn(tr.App) {
-			dc := down.New(dev, nil, afero.NewOsFs(), okteto.NewK8sClientProvider(), at)
-			if err := dc.Run(app, trMap, false); err != nil {
+			dc := down.New(afero.NewOsFs(), okteto.NewK8sClientProvider(), at)
+			if err := dc.Run(app, dev, trMap, false); err != nil {
 				return err
 			}
 			oktetoLog.Information("Development container deactivated")

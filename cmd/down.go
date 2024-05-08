@@ -70,10 +70,10 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger) *cobra.Comman
 				return err
 			}
 
-			dc := down.New(nil, manifest, afero.NewOsFs(), okteto.NewK8sClientProviderWithLogger(k8sLogsCtrl), at)
+			dc := down.New(afero.NewOsFs(), okteto.NewK8sClientProviderWithLogger(k8sLogsCtrl), at)
 
 			if all {
-				err := dc.AllDown(ctx, rm)
+				err := dc.AllDown(ctx, manifest, rm)
 				if err != nil {
 					return err
 				}
@@ -99,18 +99,14 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger) *cobra.Comman
 					if len(options) == 1 {
 						dev = manifest.Dev[options[0]]
 						err = nil
-						dc.Dev = dev
 					} else {
 						selector := utils.NewOktetoSelector("Select which development container to deactivate:", "Development container")
 						dev, err = utils.SelectDevFromManifest(manifest, selector, options)
-						dc.Dev = dev
 					}
 					if err != nil {
 						return err
 					}
 				}
-
-				dc.Dev = dev
 
 				app, _, err := utils.GetApp(ctx, dev, c, false)
 				if err != nil {
@@ -118,7 +114,7 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger) *cobra.Comman
 				}
 
 				if apps.IsDevModeOn(app) {
-					if err := dc.Down(ctx, rm); err != nil {
+					if err := dc.Down(ctx, dev, rm); err != nil {
 						at.TrackDown(false)
 						return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
 					}
