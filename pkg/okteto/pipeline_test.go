@@ -15,7 +15,6 @@ package okteto
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"testing"
 
@@ -476,40 +475,6 @@ func TestDestroyPipeline(t *testing.T) {
 					},
 				},
 				err: nil,
-			},
-		},
-		{
-			name: "destroy volumes ->  deprecated error -> error",
-			input: input{
-				client: &fakeGraphQLMultipleCallsClient{
-					errs: []error{
-						errors.New("Cannot query field \"action\" on type \"GitDeploy\""),
-						assert.AnError,
-					},
-				},
-				name:           "test",
-				destroyVolumes: true,
-			},
-			expected: expected{
-				response: nil,
-				err:      assert.AnError,
-			},
-		},
-		{
-			name: "destroy no volumes ->  deprecated error -> error",
-			input: input{
-				client: &fakeGraphQLMultipleCallsClient{
-					errs: []error{
-						errors.New("Cannot query field \"action\" on type \"GitDeploy\""),
-						assert.AnError,
-					},
-				},
-				name:           "test",
-				destroyVolumes: false,
-			},
-			expected: expected{
-				response: nil,
-				err:      assert.AnError,
 			},
 		},
 	}
