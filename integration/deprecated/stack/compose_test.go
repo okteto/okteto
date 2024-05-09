@@ -129,6 +129,7 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 		Workdir:    dir,
 		OktetoHome: dir,
 		Token:      token,
+		Namespace:  testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoStackDeploy(oktetoPath, deployOptions))
 
@@ -195,6 +196,7 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 		Workdir:    dir,
 		OktetoHome: dir,
 		Token:      token,
+		Namespace:  testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoStackDeploy(oktetoPath, deployOptions))
 
@@ -213,6 +215,7 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	destroyOptions := &commands.StackDestroyOptions{
 		Workdir:    dir,
 		OktetoHome: dir,
+		Namespace:  testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoStackDestroy(oktetoPath, destroyOptions))
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
