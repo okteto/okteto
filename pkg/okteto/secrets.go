@@ -90,6 +90,11 @@ type metadataQuery struct {
 	Metadata []metadataQueryItem `graphql:"metadata(namespace: $namespace)"`
 }
 
+type variablesQuery struct {
+	Name  graphql.String
+	Value graphql.String
+}
+
 type metadataQueryItem struct {
 	Name  graphql.String
 	Value graphql.String
