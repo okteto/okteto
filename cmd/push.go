@@ -67,30 +67,11 @@ func Push(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 			if !env.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
 				oktetoLog.Warning("'okteto push' is deprecated in favor of 'okteto deploy', and will be removed in a future version")
 			}
-			ctxResource, err := utils.LoadManifestContext(pushOpts.DevPath)
-			if err != nil {
-				if oktetoErrors.IsNotExist(err) && len(pushOpts.AppName) > 0 {
-					ctxResource = &model.ContextResource{}
-				} else {
+			// Loads, updates and uses the context from path. If not found, it creates and uses a new context
+			if err := contextCMD.LoadContextFromPath(ctx, pushOpts.Namespace, pushOpts.K8sContext, pushOpts.DevPath, contextCMD.Options{Show: true}); err != nil {
+				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: pushOpts.Namespace, Show: false}); err != nil {
 					return err
 				}
-			}
-
-			if err := ctxResource.UpdateNamespace(pushOpts.Namespace); err != nil {
-				return err
-			}
-
-			if err := ctxResource.UpdateContext(pushOpts.K8sContext); err != nil {
-				return err
-			}
-
-			ctxOptions := &contextCMD.Options{
-				Context:   ctxResource.Context,
-				Namespace: ctxResource.Namespace,
-				Show:      true,
-			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
-				return err
 			}
 
 			manifest, err := utils.DeprecatedLoadManifestOrDefault(pushOpts.DevPath, pushOpts.AppName, afero.NewOsFs())
