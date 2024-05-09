@@ -115,6 +115,16 @@ func TestIgnore(t *testing.T) {
 				"test.frontend": {str: "\nbackend\n\n\n\n", files: []string{"backend"}},
 			},
 		},
+		{
+			name: "multiple",
+			expected: map[string]exp{
+				RootSection:     {str: "\n.git\n", files: []string{".git"}},
+				"deploy":        {str: "integration\n", files: []string{"integration"}},
+				"destroy":       {str: "frontend/*\nbackend\n", files: []string{"frontend/*", "backend"}},
+				"test":          {str: "chart\n", files: []string{"chart"}},
+				"test.frontend": {str: "backend\n\n", files: []string{"backend"}},
+			},
+		},
 	}
 
 	for _, tc := range tt {
@@ -130,4 +140,24 @@ func TestIgnore(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMultiRules(t *testing.T) {
+	input := `
+.git
+[deploy]
+integration
+[destroy]
+frontend/*
+backend
+[test]
+chart
+[test.frontend]
+backend
+`
+	ig := NewFromReader(strings.NewReader(input))
+	f, err := ig.Rules("test", "test.frontend")
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, f, []string{"chart", "backend"})
+
 }

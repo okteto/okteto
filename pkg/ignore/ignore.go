@@ -40,10 +40,18 @@ func (i *Ignore) Get(section string) (data string) {
 	return
 }
 
-func (i *Ignore) Rules(section string) ([]string, error) {
-	data := i.Get(section)
-	r := strings.NewReader(data)
-	return ignorefile.ReadAll(r)
+func (i *Ignore) Rules(sections ...string) ([]string, error) {
+	var rules []string
+	for _, section := range sections {
+		data := i.Get(section)
+		r := strings.NewReader(data)
+		slice, err := ignorefile.ReadAll(r)
+		if err != nil {
+			return nil, err
+		}
+		rules = append(rules, slice...)
+	}
+	return rules, nil
 }
 
 func NewFromFile(ignorefile string) (*Ignore, error) {

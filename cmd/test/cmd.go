@@ -330,7 +330,8 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			return analytics.TestMetadata{}, fmt.Errorf("failed to read ignore file: %w", err)
 		}
 
-		ignoreRules, err := ig.Rules(fmt.Sprintf("test.%s", name))
+		// Read "test" and "test.{name}" sections from the .oktetoignore file
+		testIgnoreRules, err := ig.Rules("test", fmt.Sprintf("test.%s", name))
 		if err != nil {
 			return analytics.TestMetadata{}, fmt.Errorf("failed to create ignore rules for %s: %w", name, err)
 		}
@@ -352,7 +353,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			Command:                     remote.TestCommand,
 			ContextAbsolutePathOverride: ctxCwd,
 			Caches:                      test.Caches,
-			IgnoreRules:                 ignoreRules,
+			IgnoreRules:                 testIgnoreRules,
 		}
 
 		if !options.NoCache {
