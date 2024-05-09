@@ -103,6 +103,9 @@ var (
 	// ErrInsufficientSpace is raised when syncthing fails with no space available
 	ErrInsufficientSpace = fmt.Errorf("there isn't enough disk space available to synchronize your files")
 
+	// ErrInsufficientSpaceOnUserDisk is raised when syncthing fails with no space available related to the user's disk
+	ErrInsufficientSpaceOnUserDisk = fmt.Errorf("there isn't enough disk space available on your machine to continue")
+
 	// ErrBusySyncthing is raised when syncthing is busy
 	ErrBusySyncthing = fmt.Errorf("synchronization service is unresponsive")
 

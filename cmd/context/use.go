@@ -113,6 +113,10 @@ func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 	ctxOptions.InitFromEnvVars()
 	ctxOptions.InitFromContext()
 
+	if ctxOptions.IsOkteto && isUrl(ctxOptions.Context) {
+		ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
+	}
+
 	if ctxOptions.Token == "" && kubeconfig.InCluster() && !isValidCluster(ctxOptions.Context) {
 		if ctxOptions.IsCtxCommand {
 			return oktetoErrors.ErrTokenFlagNeeded

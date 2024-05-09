@@ -169,7 +169,7 @@ func main() {
 	root.AddCommand(namespace.Namespace(ctx, k8sLogger))
 	root.AddCommand(cmd.Init(at, insights, ioController))
 	root.AddCommand(up.Up(at, insights, ioController, k8sLogger))
-	root.AddCommand(cmd.Down(k8sLogger))
+	root.AddCommand(cmd.Down(at, k8sLogger))
 	root.AddCommand(cmd.Status())
 	root.AddCommand(cmd.Doctor(k8sLogger))
 	root.AddCommand(cmd.Exec(k8sLogger))
@@ -189,7 +189,7 @@ func main() {
 	root.AddCommand(cmd.List(ctx))
 	root.AddCommand(cmd.Delete(ctx))
 	root.AddCommand(stack.Stack(ctx, at, insights, ioController))
-	root.AddCommand(cmd.Push(ctx))
+	root.AddCommand(cmd.Push(ctx, at))
 	root.AddCommand(pipeline.Pipeline(ctx))
 
 	err = root.Execute()

@@ -19,11 +19,12 @@ package up
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/log/io"
 	"log"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/okteto/okteto/pkg/log/io"
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
@@ -67,7 +68,6 @@ func TestUpWithDeploy(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
@@ -142,6 +142,7 @@ func TestUpWithDeploy(t *testing.T) {
 	k8sLogs, err := os.ReadFile(k8sLogsFilePath)
 	require.NoError(t, err)
 	require.Contains(t, string(k8sLogs), fmt.Sprintf("running cmd: up --deploy=true --namespace=%s", testNamespace))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func getImageWithSHA(devImage string) string {

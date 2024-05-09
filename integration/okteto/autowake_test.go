@@ -175,7 +175,6 @@ func TestAutoWakeFromURL(t *testing.T) {
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	// Prepare test environment
 	require.NoError(t, writeDeployment(dir))
@@ -214,7 +213,7 @@ func TestAutoWakeFromURL(t *testing.T) {
 	// Wake resources from url
 	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
 	require.NoError(t, waitUntilUpdatedContent(autowakeURL, "test", timeout))
-
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestAutoWakeFromURL tests the following scenario:
@@ -239,7 +238,6 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	// Prepare test environment
 	require.NoError(t, writeDeployment(dir))
@@ -291,6 +289,7 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoDown(oktetoPath, downOpts))
 	require.True(t, commands.HasUpCommandFinished(upCommand.Pid.Pid))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func writeDeployment(dir string) error {

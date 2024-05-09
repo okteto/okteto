@@ -89,7 +89,6 @@ func TestUpCompose(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 
 	indexPath := filepath.Join(dir, "index.html")
@@ -169,6 +168,7 @@ func TestUpCompose(t *testing.T) {
 
 	// Test that original hasn't change
 	require.NoError(t, compareDeployment(context.Background(), originalDeployment, c))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func createAppDockerfile(dir string) error {

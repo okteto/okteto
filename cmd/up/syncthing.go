@@ -32,7 +32,7 @@ const (
 )
 
 func (up *upContext) initializeSyncthing() error {
-	sy, err := syncthing.New(up.Dev)
+	sy, err := syncthing.New(up.Dev, up.Fs)
 	if err != nil {
 		return err
 	}

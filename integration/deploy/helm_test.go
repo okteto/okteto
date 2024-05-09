@@ -110,7 +110,6 @@ func TestDeployPipelineFromHelm(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
@@ -133,6 +132,7 @@ func TestDeployPipelineFromHelm(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 	_, err = integration.GetService(context.Background(), testNamespace, "e2etest", c)
 	require.True(t, k8sErrors.IsNotFound(err))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestDeployFromHelmNameOK tests the following scenario:
@@ -154,7 +154,6 @@ func TestDeployFromHelmNameOK(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
@@ -179,6 +178,7 @@ func TestDeployFromHelmNameOK(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 	_, err = integration.GetService(context.Background(), testNamespace, "e2etest", c)
 	require.True(t, k8sErrors.IsNotFound(err))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func createHelmChart(dir string) error {
