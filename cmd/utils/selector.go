@@ -106,6 +106,14 @@ func (s *OktetoSelector) AskForOptionsOkteto(options []SelectorItem, initialPosi
 	return optionSelected, nil
 }
 
+func ListToSelectorItem(list []string) []SelectorItem {
+	var items []SelectorItem
+	for _, item := range list {
+		items = append(items, SelectorItem{Name: item, Label: item, Enable: true})
+	}
+	return items
+}
+
 func isValidOption(options []SelectorItem, optionSelected string) bool {
 	for _, option := range options {
 		if optionSelected == option.Name {
