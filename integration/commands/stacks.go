@@ -29,6 +29,7 @@ type StackDeployOptions struct {
 	ManifestPath string
 	OktetoHome   string
 	Token        string
+	Namespace    string
 	Build        bool
 }
 
@@ -38,6 +39,7 @@ type StackDestroyOptions struct {
 	ManifestPath string
 	OktetoHome   string
 	Token        string
+	Namespace    string
 }
 
 // RunOktetoStackDeploy runs an okteto deploy command
@@ -51,6 +53,9 @@ func RunOktetoStackDeploy(oktetoPath string, deployOptions *StackDeployOptions) 
 	}
 	if deployOptions.ManifestPath != "" {
 		cmd.Args = append(cmd.Args, "-f", deployOptions.ManifestPath)
+	}
+	if deployOptions.Namespace != "" {
+		cmd.Args = append(cmd.Args, "--namespace", deployOptions.Namespace)
 	}
 
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
@@ -75,24 +80,27 @@ func RunOktetoStackDeploy(oktetoPath string, deployOptions *StackDeployOptions) 
 }
 
 // RunOktetoStackDestroy runs an okteto deploy command
-func RunOktetoStackDestroy(oktetoPath string, deployOptions *StackDestroyOptions) error {
+func RunOktetoStackDestroy(oktetoPath string, destroyOptions *StackDestroyOptions) error {
 	cmd := exec.Command(oktetoPath, "stack", "destroy")
-	if deployOptions.Workdir != "" {
-		cmd.Dir = deployOptions.Workdir
+	if destroyOptions.Workdir != "" {
+		cmd.Dir = destroyOptions.Workdir
 	}
-	if deployOptions.ManifestPath != "" {
-		cmd.Args = append(cmd.Args, "-f", deployOptions.ManifestPath)
+	if destroyOptions.ManifestPath != "" {
+		cmd.Args = append(cmd.Args, "-f", destroyOptions.ManifestPath)
+	}
+	if destroyOptions.Namespace != "" {
+		cmd.Args = append(cmd.Args, "--namespace", destroyOptions.Namespace)
 	}
 
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
 	}
 
-	if deployOptions.OktetoHome != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, deployOptions.OktetoHome))
+	if destroyOptions.OktetoHome != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, destroyOptions.OktetoHome))
 	}
-	if deployOptions.Token != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, deployOptions.Token))
+	if destroyOptions.Token != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, destroyOptions.Token))
 	}
 	log.Printf("Running '%s'", cmd.String())
 

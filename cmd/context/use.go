@@ -27,6 +27,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -103,10 +104,18 @@ func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 		ctxOptions.Save = true
 	}
 
-	// We have to maintain this order to not break some commands
-	// See https://github.com/okteto/okteto/issues/3247 for more information
-	ctxOptions.InitFromContext()
+	// if the --context and --namespace flags are set, they have priority over the env vars, and current context
+	// if env vars OKTETO_CONTEXT and OKTETO_NAMESPACE are set, they have priority over the current context
+	err := c.loadDotEnv(afero.NewOsFs(), os.Setenv)
+	if err != nil {
+		oktetoLog.Warning("Failed to load .env file: %s", err)
+	}
 	ctxOptions.InitFromEnvVars()
+	ctxOptions.InitFromContext()
+
+	if ctxOptions.IsOkteto && isUrl(ctxOptions.Context) {
+		ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
+	}
 
 	if ctxOptions.Token == "" && kubeconfig.InCluster() && !isValidCluster(ctxOptions.Context) {
 		if ctxOptions.IsCtxCommand {
