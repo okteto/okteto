@@ -15,7 +15,6 @@ package okteto
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"testing"
 
@@ -473,106 +472,6 @@ func TestDestroyPipeline(t *testing.T) {
 						Name:       "test",
 						Repository: "repo",
 						Status:     progressingStatus,
-					},
-				},
-				err: nil,
-			},
-		},
-		{
-			name: "destroy volumes ->  deprecated error -> error",
-			input: input{
-				client: &fakeGraphQLMultipleCallsClient{
-					errs: []error{
-						errors.New("Cannot query field \"action\" on type \"GitDeploy\""),
-						assert.AnError,
-					},
-				},
-				name:           "test",
-				destroyVolumes: true,
-			},
-			expected: expected{
-				response: nil,
-				err:      assert.AnError,
-			},
-		},
-		{
-			name: "destroy no volumes ->  deprecated error -> error",
-			input: input{
-				client: &fakeGraphQLMultipleCallsClient{
-					errs: []error{
-						errors.New("Cannot query field \"action\" on type \"GitDeploy\""),
-						assert.AnError,
-					},
-				},
-				name:           "test",
-				destroyVolumes: false,
-			},
-			expected: expected{
-				response: nil,
-				err:      assert.AnError,
-			},
-		},
-		{
-			name: "destroy volumes ->  deprecated error -> error",
-			input: input{
-				client: &fakeGraphQLMultipleCallsClient{
-					errs: []error{
-						errors.New("Cannot query field \"action\" on type \"GitDeploy\""),
-					},
-					mutationResult: []interface{}{
-						nil,
-						&deprecatedDestroyPipelineWithVolumesMutation{
-							Response: deprecatedDestroyPipelineResponse{
-								GitDeploy: gitDeployInfoWithRepoInfo{
-									Id:         "test",
-									Name:       "test",
-									Status:     ProgressingStatus,
-									Repository: "my-repo",
-								},
-							},
-						},
-					},
-				},
-				name:           "test",
-				destroyVolumes: true,
-			},
-			expected: expected{
-				response: &types.GitDeployResponse{
-					GitDeploy: &types.GitDeploy{
-						ID:     "test",
-						Status: progressingStatus,
-					},
-				},
-				err: nil,
-			},
-		},
-		{
-			name: "destroy no volumes ->  deprecated error -> no error",
-			input: input{
-				client: &fakeGraphQLMultipleCallsClient{
-					errs: []error{
-						errors.New("Cannot query field \"action\" on type \"GitDeploy\""),
-					},
-					mutationResult: []interface{}{
-						nil,
-						&deprecatedDestroyPipelineWithoutVolumesMutation{
-							Response: deprecatedDestroyPipelineResponse{
-								GitDeploy: gitDeployInfoWithRepoInfo{
-									Id:     "test",
-									Status: ProgressingStatus,
-								},
-							},
-						},
-					},
-				},
-				name:           "test",
-				destroyVolumes: false,
-			},
-			expected: expected{
-				response: &types.GitDeployResponse{
-					GitDeploy: &types.GitDeploy{
-						ID:     "test",
-						Status: progressingStatus,
 					},
 				},
 				err: nil,
