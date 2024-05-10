@@ -94,7 +94,7 @@ ARG {{ .InvalidateCacheArgName }}
 RUN okteto registrytoken install --force --log-output=json
 
 RUN \
-  {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}}{{end}}\
+  {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}} {{end}}\
   --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
   /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}
