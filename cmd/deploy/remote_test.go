@@ -205,8 +205,9 @@ func TestDeployRemote(t *testing.T) {
 			Commands: manifest.Deploy.Commands,
 			External: manifest.External,
 		},
-		Manifest: manifest,
-		Command:  remote.DeployCommand,
+		Manifest:                  manifest,
+		Command:                   remote.DeployCommand,
+		UseOktetoDeployIgnoreFile: true,
 	}
 	runner := &fakeRemoteRunner{}
 	runner.On("Run", mock.Anything, expectedParams).Return(nil)
@@ -264,8 +265,9 @@ func TestDeployRemoteWithError(t *testing.T) {
 			Commands: manifest.Deploy.Commands,
 			External: manifest.External,
 		},
-		Manifest: manifest,
-		Command:  remote.DeployCommand,
+		Manifest:                  manifest,
+		Command:                   remote.DeployCommand,
+		UseOktetoDeployIgnoreFile: true,
 	}
 
 	tests := []struct {

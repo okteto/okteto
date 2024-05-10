@@ -18,6 +18,9 @@ import (
 	"path/filepath"
 )
 
+// IgnoreFilename is the name of the okteto ignore file
+const IgnoreFilename = ".oktetoignore"
+
 // GetWorkdirFromManifestPath sets the path
 func GetWorkdirFromManifestPath(manifestPath string) string {
 	dir := filepath.Dir(manifestPath)

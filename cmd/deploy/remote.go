@@ -97,16 +97,17 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 	runParams := remote.Params{
 		// This is the base image provided by the deploy operation. If it is empty, the runner is the one in charge of
 		// providing the default one
-		BaseImage:           baseImage,
-		ManifestPathFlag:    deployOptions.ManifestPathFlag,
-		TemplateName:        templateName,
-		CommandFlags:        commandsFlags,
-		BuildEnvVars:        rd.getBuildEnvVars(),
-		DependenciesEnvVars: rd.getDependencyEnvVars(os.Environ),
-		DockerfileName:      dockerfileTemporalName,
-		Deployable:          dep,
-		Manifest:            deployOptions.Manifest,
-		Command:             remote.DeployCommand,
+		BaseImage:                 baseImage,
+		ManifestPathFlag:          deployOptions.ManifestPathFlag,
+		TemplateName:              templateName,
+		CommandFlags:              commandsFlags,
+		BuildEnvVars:              rd.getBuildEnvVars(),
+		DependenciesEnvVars:       rd.getDependencyEnvVars(os.Environ),
+		DockerfileName:            dockerfileTemporalName,
+		Deployable:                dep,
+		Manifest:                  deployOptions.Manifest,
+		Command:                   remote.DeployCommand,
+		UseOktetoDeployIgnoreFile: true,
 	}
 
 	if err := rd.runner.Run(ctx, &runParams); err != nil {
