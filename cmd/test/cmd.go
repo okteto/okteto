@@ -15,6 +15,7 @@ package test
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"os/signal"
 	"path"
@@ -244,7 +245,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		namespace = okteto.GetContext().Namespace
 	}
 
-	needsDeploy := options.Deploy || !pipeline.IsDeployed(ctx, devenvName, namespace, kubeClient)
+	needsDeploy := options.Deploy || !pipeline.IsDeployed(ctx, devenvName, namespace, kubeClient) && manifest.Deploy != nil
 
 	if needsDeploy {
 		c := deployCMD.Command{
@@ -306,6 +307,14 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 	for _, name := range testServices {
 		test := manifest.Test[name]
 
+		startTime := time.Now()
+		uid := fmt.Sprintf("%s-%s-%d", devenvName, name, rand.Intn(10000))
+		go func() {
+			if err := pipeline.AddTestInformation(ctx, uid, devenvName, name, namespace, pipeline.ProgressingStatus, startTime, nil, kubeClient); err != nil {
+				oktetoLog.Infof("failed to update test status: %s", err.Error())
+			}
+		}()
+
 		ctxCwd := path.Clean(path.Join(cwd, test.Context))
 
 		commandFlags, err := deployCMD.GetCommandFlags(name, options.Variables)
@@ -364,7 +373,14 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 		ioCtrl.Out().Infof("Executing '%s'", name)
 		if err := runner.Run(ctx, params); err != nil {
+			if err := pipeline.AddTestInformation(ctx, uid, devenvName, name, namespace, pipeline.ErrorStatus, startTime, nil, kubeClient); err != nil {
+				oktetoLog.Infof("failed to update test status: %s", err.Error())
+			}
 			return metadata, err
+		}
+		durationTime := time.Since(startTime)
+		if err := pipeline.AddTestInformation(ctx, uid, devenvName, name, namespace, pipeline.SuccessfulStatus, startTime, &durationTime, kubeClient); err != nil {
+			oktetoLog.Infof("failed to update test status: %s", err.Error())
 		}
 	}
 	metadata.Success = true

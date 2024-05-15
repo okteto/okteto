@@ -54,6 +54,7 @@ const (
 	actionNameField = "actionName"
 	variablesField  = "variables"
 	PhasesField     = "phases"
+	TestsField      = "tests"
 
 	actionDefaultName = "cli"
 
@@ -61,6 +62,10 @@ const (
 	ProgressingStatus = "progressing"
 	// DeployedStatus indicates that an app is deployed
 	DeployedStatus = "deployed"
+	// SuccessfulStatus indicates that a test is successful deployed
+	SuccessfulStatus = "successful"
+	// CanceledStatus indicates that a test is canceled
+	CanceledStatus = "cancelled"
 	// ErrorStatus indicates that an app has errors
 	ErrorStatus = "error"
 	// DestroyingStatus indicates that an app is being destroyed
@@ -88,6 +93,7 @@ type CfgData struct {
 	Namespace  string
 	Status     string
 	Output     string
+	Test       string
 	Repository string
 	Branch     string
 	Filename   string
@@ -99,6 +105,14 @@ type CfgData struct {
 type phaseJSON struct {
 	Name     string  `json:"name"`
 	Duration float64 `json:"duration"`
+}
+
+type testJSON struct {
+	Name      string    `json:"name"`
+	Status    string    `json:"status"`
+	StartTime time.Time `json:"startTime"`
+	Duration  *float64  `json:"duration,omitempty"`
+	ID        string    `json:"id"`
 }
 
 // GetConfigmapDependencyEnv returns Data["variables"] content from Configmap
@@ -243,6 +257,55 @@ func AddPhaseDuration(ctx context.Context, name, namespace, phase string, durati
 		return err
 	}
 	cmap.Data[PhasesField] = string(encodedPhases)
+	return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
+}
+
+func AddTestInformation(ctx context.Context, id, envName, name, namespace, status string, startTime time.Time, duration *time.Duration, c kubernetes.Interface) error {
+	cmap, err := configmaps.Get(ctx, TranslatePipelineName(envName), namespace, c)
+	if err != nil {
+		return err
+	}
+
+	val, ok := cmap.Data[TestsField]
+	tests := []testJSON{}
+	if ok {
+		if err := json.Unmarshal([]byte(val), &tests); err != nil {
+			return err
+		}
+	}
+	// If the phase already exists, update the duration
+	updatedPhase := false
+	for idx, t := range tests {
+		if t.ID == id {
+			tests[idx].Status = status
+			if duration != nil {
+				d := duration.Seconds()
+				tests[idx].Duration = &d
+			}
+			updatedPhase = true
+			break
+		}
+	}
+	// If the phase doesn't exist, add it
+	if !updatedPhase {
+		var d *float64
+		if duration != nil {
+			value := duration.Seconds()
+			d = &value
+		}
+		tests = append(tests, testJSON{
+			Name:      name,
+			ID:        id,
+			Status:    status,
+			StartTime: startTime,
+			Duration:  d,
+		})
+	}
+	encodedTests, err := json.Marshal(tests)
+	if err != nil {
+		return err
+	}
+	cmap.Data[TestsField] = string(encodedTests)
 	return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
 }
 
