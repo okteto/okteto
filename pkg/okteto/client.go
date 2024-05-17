@@ -344,6 +344,8 @@ func translateAPIErr(err error) error {
 		return fmt.Errorf("server temporarily unavailable, please try again")
 	case "non-200 OK status code: 401 Unauthorized body: \"\"":
 		return fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")
+	case "non-200 OK status code: 401 Unauthorized body: \"not-authorized\\n\"":
+		return fmt.Errorf(oktetoErrors.ErrNotLogged, GetContext().Name)
 	case "non-200 OK status code: 401 Unauthorized body: \"not-authorized: token is expired\\n\"":
 		return oktetoErrors.ErrTokenExpired
 	case "not-found":
