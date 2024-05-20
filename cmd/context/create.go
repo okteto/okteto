@@ -146,10 +146,6 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 		ctxOptions.IsOkteto = true
 	}
 
-	if ctxOptions.Context == okteto.CloudURL {
-		ctxOptions.IsOkteto = true
-	}
-
 	if !ctxOptions.IsOkteto {
 
 		if isUrl(ctxOptions.Context) {
@@ -354,14 +350,15 @@ func getLoggedUserContext(ctx context.Context, c *Command, ctxOptions *Options) 
 
 	ctxOptions.Token = user.Token
 
-	okteto.GetContext().Token = user.Token
-	okteto.SetInsecureSkipTLSVerifyPolicy(okteto.GetContext().IsStoredAsInsecure)
+	okCtx := okteto.GetContext()
+	okCtx.Token = user.Token
+	okteto.SetInsecureSkipTLSVerifyPolicy(okCtx.IsStoredAsInsecure)
 
 	if ctxOptions.Namespace == "" {
 		ctxOptions.Namespace = user.Namespace
 	}
 
-	userContext, err := c.getUserContext(ctx, okteto.GetContext().Name, okteto.GetContext().Namespace, okteto.GetContext().Token)
+	userContext, err := c.getUserContext(ctx, okCtx.Name, okCtx.Namespace, okCtx.Token)
 	if err != nil {
 		return nil, err
 	}
@@ -413,6 +410,10 @@ func (c Command) getUserContext(ctx context.Context, ctxName, ns, token string) 
 
 		if err != nil {
 			if errors.Is(err, oktetoErrors.ErrTokenExpired) {
+				return nil, err
+			}
+
+			if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.GetContext().Name).Error() {
 				return nil, err
 			}
 
