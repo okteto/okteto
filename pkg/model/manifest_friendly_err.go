@@ -44,11 +44,13 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 	manifestKeys["build.buildInfoRaw"] = manifestKeys["build.BuildInfo"]
 	manifestKeys["model.DevRC"] = manifestKeys["model.Dev"]
 	manifestKeys["model.devType"] = manifestKeys["model.Dev"]
+	manifestKeys["model.testAlias"] = manifestKeys["model.Test"]
+	manifestKeys["model.testCommandAlias"] = manifestKeys["model.TestCommand"]
 
 	for structName, structKeywords := range manifestKeys {
 		for _, keyword := range structKeywords {
 			// example: line 5: field contest not found in type build.buildInfoRaw
-			// (.*?): this excludes eerything before the keyword "field"
+			// (.*?): this excludes everything before the keyword "field"
 			// (\w+): this captures the keyword we want to calculate the levenshtein distance with
 			// (in type|into): this ensures to match all variations of the error message
 			// (.*?): this excludes everything after the message that we want to find
@@ -73,6 +75,8 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 		suggest.NewStrReplaceRule("in type build.buildInfoRaw", "the 'build' object"),
 		suggest.NewStrReplaceRule("in type model.devType", "the 'dev' object"),
 		suggest.NewStrReplaceRule("into model.devType", "the 'dev' object"),
+		suggest.NewStrReplaceRule("in type model.testCommandAlias", "the 'test commands' object"),
+		suggest.NewStrReplaceRule("in type model.testAlias", "the 'test' object"),
 
 		// yaml types
 		suggest.NewStrReplaceRule(yaml.NodeTagSeq, "list"),
