@@ -109,15 +109,16 @@ func getStructKeys(t interface{}) map[string][]string {
 			for k, v := range getStructKeys(reflect.New(fieldType.Elem()).Interface()) {
 				result[k] = mergeAndSortUnique(result[k], v)
 			}
-		} else {
-			yamlTag := field.Tag.Get("yaml")
-			if yamlTag != "" && yamlTag != "-" {
-				parts := strings.Split(yamlTag, ",")
-				if len(parts) > 0 {
-					result[structFullName] = mergeAndSortUnique(result[structFullName], []string{parts[0]})
-				}
+		}
+
+		yamlTag := field.Tag.Get("yaml")
+		if yamlTag != "" && yamlTag != "-" {
+			parts := strings.Split(yamlTag, ",")
+			if len(parts) > 0 {
+				result[structFullName] = mergeAndSortUnique(result[structFullName], []string{parts[0]})
 			}
 		}
+
 	}
 
 	return result
