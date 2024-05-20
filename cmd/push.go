@@ -69,6 +69,9 @@ func Push(ctx context.Context) *cobra.Command {
 			}
 			// Loads, updates and uses the context from path. If not found, it creates and uses a new context
 			if err := contextCMD.LoadContextFromPath(ctx, pushOpts.Namespace, pushOpts.K8sContext, pushOpts.DevPath, contextCMD.Options{Show: true}); err != nil {
+				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.GetContext().Name).Error() {
+					return err
+				}
 				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: pushOpts.Namespace, Show: false}); err != nil {
 					return err
 				}
