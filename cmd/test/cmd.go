@@ -331,7 +331,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		}
 
 		// Read "test" and "test.{name}" sections from the .oktetoignore file
-		testIgnoreRules, err := ig.Rules("test", fmt.Sprintf("test.%s", name))
+		testIgnoreRules, err := ig.Rules(ignore.RootSection, "test", fmt.Sprintf("test.%s", name))
 		if err != nil {
 			return analytics.TestMetadata{}, fmt.Errorf("failed to create ignore rules for %s: %w", name, err)
 		}
