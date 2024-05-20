@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -54,6 +55,10 @@ var onceInsecureWarning *sync.Once = &sync.Once{}
 var serverName string
 var strictTLSOnce sync.Once
 var errURLNotSet = errors.New("the okteto URL is not set")
+
+const unauthorizedTokenPattern = `^non-200 OK status code: 401 Unauthorized body: "fail to find user with token [A-Za-z0-9]+: not-authorized\\n"$`
+
+var unauthorizedTokenRegex = regexp.MustCompile(unauthorizedTokenPattern)
 
 // graphqlClientInterface contains the functions that a graphqlClient must have
 type graphqlClientInterface interface {
@@ -344,12 +349,18 @@ func translateAPIErr(err error) error {
 		return fmt.Errorf("server temporarily unavailable, please try again")
 	case "non-200 OK status code: 401 Unauthorized body: \"\"":
 		return fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")
+	case "non-200 OK status code: 401 Unauthorized body: \"not-authorized\\n\"":
+		return fmt.Errorf(oktetoErrors.ErrNotLogged, GetContext().Name)
 	case "non-200 OK status code: 401 Unauthorized body: \"not-authorized: token is expired\\n\"":
 		return oktetoErrors.ErrTokenExpired
 	case "not-found":
 		return oktetoErrors.ErrNotFound
 
 	default:
+		if unauthorizedTokenRegex.MatchString(err.Error()) {
+			return fmt.Errorf(oktetoErrors.ErrNotLogged, GetContext().Name)
+		}
+
 		switch {
 		case oktetoErrors.IsX509(err):
 			return oktetoErrors.UserError{
@@ -366,7 +377,6 @@ func translateAPIErr(err error) error {
 		oktetoLog.Infof("Unrecognized API error: %s", err)
 		return err
 	}
-
 }
 
 func isAPILicenseError(err error) bool {
