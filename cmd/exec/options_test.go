@@ -1,3 +1,16 @@
+// Copyright 2024 The Okteto Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package exec
 
 import (
@@ -11,10 +24,10 @@ import (
 
 func TestNewOptions(t *testing.T) {
 	testCases := []struct {
+		expected      *Options
 		name          string
 		argsIn        []string
 		argsLenAtDash int
-		expected      *Options
 	}{
 		{
 			name:          "Empty args",
@@ -67,8 +80,8 @@ func TestNewOptions(t *testing.T) {
 }
 
 type fakeDevSelector struct {
-	devName string
 	err     error
+	devName string
 }
 
 func (f *fakeDevSelector) AskForOptionsOkteto([]utils.SelectorItem, int) (string, error) {
@@ -78,11 +91,11 @@ func TestSetDevFromManifest(t *testing.T) {
 	ioControl := io.NewIOController()
 	// Define test cases using a slice of structs
 	testCases := []struct {
-		name          string
+		expectedError error
 		options       *Options
 		devs          model.ManifestDevs
+		name          string
 		expectedDev   string
-		expectedError error
 	}{
 		{
 			name: "Dev name already set",
@@ -137,10 +150,10 @@ func TestSetDevFromManifest(t *testing.T) {
 func TestValidate(t *testing.T) {
 	// Define test cases using a slice of structs
 	testCases := []struct {
-		name     string
+		expected error
 		options  *Options
 		devs     model.ManifestDevs
-		expected error
+		name     string
 	}{
 		{
 			name: "Missing dev name",
