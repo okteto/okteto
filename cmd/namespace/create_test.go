@@ -52,8 +52,9 @@ func Test_createNamespace(t *testing.T) {
 			okteto.CurrentStore = &okteto.ContextStore{
 				Contexts: map[string]*okteto.Context{
 					"test": {
-						Name:  "test",
-						Token: "test",
+						Name:     "test",
+						Token:    "test",
+						IsOkteto: true,
 					},
 				},
 				CurrentContext: "test",

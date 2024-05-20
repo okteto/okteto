@@ -66,7 +66,6 @@ func Test_ExternalsFromOktetoManifestWithNotesContent(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 
 	deployOptions := &commands.DeployOptions{
@@ -115,6 +114,7 @@ func Test_ExternalsFromOktetoManifestWithNotesContent(t *testing.T) {
 		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func createExternalNotes(dir string) error {

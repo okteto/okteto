@@ -97,16 +97,17 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 	}
 
 	runParams := remote.Params{
-		BaseImage:           baseImage,
-		ManifestPathFlag:    opts.ManifestPathFlag,
-		TemplateName:        templateName,
-		CommandFlags:        commandFlags,
-		BuildEnvVars:        make(map[string]string),
-		DependenciesEnvVars: make(map[string]string),
-		DockerfileName:      dockerfileTemporalName,
-		Deployable:          dep,
-		Manifest:            opts.Manifest,
-		Command:             remote.DestroyCommand,
+		BaseImage:                 baseImage,
+		ManifestPathFlag:          opts.ManifestPathFlag,
+		TemplateName:              templateName,
+		CommandFlags:              commandFlags,
+		BuildEnvVars:              make(map[string]string),
+		DependenciesEnvVars:       make(map[string]string),
+		DockerfileName:            dockerfileTemporalName,
+		Deployable:                dep,
+		Manifest:                  opts.Manifest,
+		Command:                   remote.DestroyCommand,
+		UseOktetoDeployIgnoreFile: true,
 	}
 
 	// we need to call Run() method using a remote builder. This Builder will have

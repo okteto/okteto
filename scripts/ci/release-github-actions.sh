@@ -70,6 +70,7 @@
                 destroy-stack
                 apply
                 context
+                test
         )
 
         for repo in "${repos[@]}"; do
@@ -88,7 +89,7 @@
                 git checkout "${LTS_BRANCH}" 2>/dev/null || git checkout -b "${LTS_BRANCH}"
 
                 # get the latest tag from the lts branch
-                current_tag="$(git describe --tags --abbrev=0 --match "*.*.*")"
+                current_tag="$(git describe --tags --abbrev=0 --match "*.*.*" || echo "0.0.0")"
                 diff="$(semver compare "${current_tag}" "$RELEASE_TAG")"
 
                 # RELEASE_TAG must be a newer release

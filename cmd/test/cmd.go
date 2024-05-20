@@ -36,6 +36,7 @@ import (
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/ignore"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
@@ -66,14 +67,14 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 		Short:        "Run tests",
 		Hidden:       true,
 		SilenceUsage: true,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(cmd *cobra.Command, servicesToTest []string) error {
 			stop := make(chan os.Signal, 1)
 			signal.Notify(stop, os.Interrupt)
 			exit := make(chan error, 1)
 
 			go func() {
 				startTime := time.Now()
-				metadata, err := doRun(ctx, options, ioCtrl, k8sLogger, &ProxyTracker{at})
+				metadata, err := doRun(ctx, servicesToTest, options, ioCtrl, k8sLogger, &ProxyTracker{at})
 				metadata.Err = err
 				metadata.Duration = time.Since(startTime)
 				at.TrackTest(metadata)
@@ -105,7 +106,7 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 	return cmd
 }
 
-func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, tracker *ProxyTracker) (analytics.TestMetadata, error) {
+func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, tracker *ProxyTracker) (analytics.TestMetadata, error) {
 	fs := afero.NewOsFs()
 
 	// Loads, updates and uses the context from path. If not found, it creates and uses a new context
@@ -189,6 +190,11 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 	}
 
 	tree, err := dag.From(nodes...)
+	if err != nil {
+		return analytics.TestMetadata{}, err
+	}
+
+	tree, err = tree.Subtree(servicesToTest...)
 	if err != nil {
 		return analytics.TestMetadata{}, err
 	}
@@ -300,11 +306,12 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 	for _, name := range testServices {
 		test := manifest.Test[name]
 
+		ctxCwd := path.Clean(path.Join(cwd, test.Context))
+
 		commandFlags, err := deployCMD.GetCommandFlags(name, options.Variables)
 		if err != nil {
 			return metadata, err
 		}
-		commandFlags = append(commandFlags, fmt.Sprintf("--devenv-name=%s", devenvName))
 
 		runner := remote.NewRunner(ioCtrl, buildCMD.NewOktetoBuilder(
 			&okteto.ContextStateless{
@@ -318,6 +325,16 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 			commands[i] = model.DeployCommand(cmd)
 		}
 
+		ig, err := ignore.NewFromFile(path.Join(ctxCwd, model.IgnoreFilename))
+		if err != nil {
+			return analytics.TestMetadata{}, fmt.Errorf("failed to read ignore file: %w", err)
+		}
+
+		// Read "test" and "test.{name}" sections from the .oktetoignore file
+		testIgnoreRules, err := ig.Rules("test", fmt.Sprintf("test.%s", name))
+		if err != nil {
+			return analytics.TestMetadata{}, fmt.Errorf("failed to create ignore rules for %s: %w", name, err)
+		}
 		params := &remote.Params{
 			BaseImage:           test.Image,
 			ManifestPathFlag:    options.ManifestPathFlag,
@@ -334,7 +351,9 @@ func doRun(ctx context.Context, options *Options, ioCtrl *io.Controller, k8sLogg
 			},
 			Manifest:                    manifest,
 			Command:                     remote.TestCommand,
-			ContextAbsolutePathOverride: path.Clean(path.Join(cwd, test.Context)),
+			ContextAbsolutePathOverride: ctxCwd,
+			Caches:                      test.Caches,
+			IgnoreRules:                 testIgnoreRules,
 		}
 
 		if !options.NoCache {

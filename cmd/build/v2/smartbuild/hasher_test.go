@@ -35,7 +35,7 @@ func TestServiceHasher_HashProjectCommit(t *testing.T) {
 			repoCtrl: fakeConfigRepo{
 				sha: "testsha",
 			},
-			expectedHash: "cf0ff0bb100ae8a121de62276a5004349dcd6b349ceaecb3ba75ac344152dbe0",
+			expectedHash: "832d66070268d5a47860e9bd4402f504a1c0fe8d0c2dc1ecf814af610de72f0e",
 			expectedErr:  nil,
 		},
 		{
@@ -71,14 +71,14 @@ func TestServiceHasher_HashBuildContext(t *testing.T) {
 			repoCtrl: fakeConfigRepo{
 				sha: "testtreehash",
 			},
-			expectedHash: "52d0cacde546dd525296ab1893ea73b08e3033538c235ef3ac0a451aa6810ef0",
+			expectedHash: "b6f9d71cf55933c6e385102e196522fd73c279c1edaa919b565706fb0bc3d8ce",
 		},
 		{
 			name: "error",
 			repoCtrl: fakeConfigRepo{
 				err: fakeErr,
 			},
-			expectedHash: "cf48b78ffb42fc6141950268bc89a13add4ae1efc92c9fa9342ce5d6b8cb6901",
+			expectedHash: "11cf9a064fe9b8419441515afbc33d22257ce11269ecbea211575f8cf4a33fac",
 		},
 	}
 

@@ -96,7 +96,6 @@ func TestDeployDevEnvFromK8s(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
@@ -120,4 +119,5 @@ func TestDeployDevEnvFromK8s(t *testing.T) {
 
 	_, err = integration.GetService(context.Background(), testNamespace, "e2etest", c)
 	require.True(t, k8sErrors.IsNotFound(err))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }

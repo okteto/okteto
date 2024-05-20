@@ -152,3 +152,67 @@ func TestTraverse(t *testing.T) {
 		})
 	}
 }
+
+func TestSubtree(t *testing.T) {
+	v99 := &testNode{id: "v99"}
+	v4 := &testNode{id: "v4", dependsOn: []string{"v3"}}
+	v3 := &testNode{id: "v3", dependsOn: []string{"v2"}}
+	v2 := &testNode{id: "v2", dependsOn: []string{"v1"}}
+	v1 := &testNode{id: "v1", dependsOn: []string{"v0"}}
+	v0 := &testNode{id: "v0"}
+
+	tree, err := From(v99, v4, v3, v2, v1, v0)
+	require.NoError(t, err)
+
+	tt := []struct {
+		name     string
+		subnodes []string
+		expected []string
+	}{
+		{
+			name:     "orphans",
+			subnodes: []string{"v99", "v0"},
+			expected: []string{"v99", "v0"},
+		},
+		{
+			name:     "nested1",
+			subnodes: []string{"v99", "v1"},
+			expected: []string{"v99", "v1", "v0"},
+		},
+		{
+			name:     "nested2",
+			subnodes: []string{"v99", "v2"},
+			expected: []string{"v99", "v2", "v1", "v0"},
+		},
+		{
+			name:     "nested3",
+			subnodes: []string{"v99", "v3"},
+			expected: []string{"v99", "v3", "v2", "v1", "v0"},
+		},
+		{
+			name:     "nested4",
+			subnodes: []string{"v99", "v4"},
+			expected: []string{"v99", "v4", "v3", "v2", "v1", "v0"},
+		},
+		{
+			name:     "all_no_orphan",
+			subnodes: []string{"v4"},
+			expected: []string{"v4", "v3", "v2", "v1", "v0"},
+		},
+		{
+			name:     "half",
+			subnodes: []string{"v2"},
+			expected: []string{"v2", "v1", "v0"},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			subtree, err := tree.Subtree(tc.subnodes...)
+			require.NoError(t, err)
+			result := subtree.Ordered()
+			require.Len(t, result, len(tc.expected))
+			require.ElementsMatch(t, result, tc.expected)
+		})
+	}
+}
