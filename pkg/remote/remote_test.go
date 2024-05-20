@@ -375,11 +375,26 @@ ARG OKTETO_INVALIDATE_CACHE
 
 RUN okteto registrytoken install --force --log-output=json
 
+RUN cat <<EOF > /okteto/bin/remote-run.sh && chmod +x /okteto/bin/remote-run.sh
+
+#!/bin/sh
+set -e
+mkdir -p $HOME/.ssh
+echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config
+/okteto/bin/okteto remote-run \
+  deploy \
+  --log-output=json \
+  --server-name="$INTERNAL_SERVER_NAME" \
+  --name "test"
+EOF
+
 RUN \
   \
   --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
-  mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
-  /okteto/bin/okteto remote-run deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test"
+  /okteto/bin/remote-run.sh
+
+FROM scratch
+
 `,
 				buildEnvVars:      map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUIL_SVC2_IMAGE": "TWO_VALUE"},
 				dependencyEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},

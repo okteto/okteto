@@ -362,6 +362,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			ContextAbsolutePathOverride: ctxCwd,
 			Caches:                      test.Caches,
 			IgnoreRules:                 testIgnoreRules,
+			Artifacts:                   test.Artifacts,
 		}
 
 		if !options.NoCache {

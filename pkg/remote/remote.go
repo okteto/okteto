@@ -52,7 +52,10 @@ const (
 	// DestroyCommand is the command to destroy a dev environment remotely
 	DestroyCommand         = "destroy"
 	oktetoDockerignoreName = ".oktetodeployignore"
-	dockerfileTemplate     = `
+	// relativeOutputPath is the output path to export files from the build operation
+	// after it finishes
+	relativeOutputPath = ".okteto-output"
+	dockerfileTemplate = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
 
 FROM {{ .UserRunnerImage }} as runner
@@ -93,11 +96,28 @@ ARG {{ .InvalidateCacheArgName }}
 
 RUN okteto registrytoken install --force --log-output=json
 
+RUN cat <<EOF > /okteto/bin/remote-run.sh && chmod +x /okteto/bin/remote-run.sh
+
+#!/bin/sh
+set -e
+mkdir -p $HOME/.ssh
+echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config
+/okteto/bin/okteto remote-run \
+  {{ .Command }} \
+  --log-output=json \
+  --server-name="${{ .InternalServerName }}" \
+  {{ .CommandFlags }}
+EOF
+
 RUN \
   {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}} {{end}}\
   --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
-  mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
-  /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}
+  /okteto/bin/remote-run.sh
+
+FROM scratch
+{{ range $key, $path := .Artifacts -}}
+COPY --from=runner /okteto/src/{{$path}} {{$path}}
+{{ end }}
 `
 )
 
@@ -154,6 +174,11 @@ type Params struct {
 	// UseOktetoDeployIgnoreFile if enabled loads the docker ignore file from an
 	// .oktetodeployignore file. Disabled by default
 	UseOktetoDeployIgnoreFile bool
+
+	// Artifacts are the files and or folder to export from this build operation.
+	// They are the path INSIDE the build container relative to /okteto/src. They
+	// will be exported to "{pwd}/.okteto-output/{output}"
+	Artifacts []string
 }
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
@@ -180,6 +205,7 @@ type dockerfileTemplateProperties struct {
 	Command                  string
 	OktetoIsPreviewEnv       string
 	Caches                   []string
+	Artifacts                []string
 }
 
 // NewRunner creates a new Runner for remote
@@ -334,6 +360,9 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		oktetoLog.Debug("no ssh agent found. Not mounting ssh-agent for build")
 	}
 
+	if len(params.Artifacts) > 0 {
+		buildOptions.LocalOutputPath = filepath.Join(cwd, relativeOutputPath)
+	}
 	// we need to call Run() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
 	// account that we must not confuse the user with build messages since this logic is
@@ -386,6 +415,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		Command:                  params.Command,
 		OktetoIsPreviewEnv:       constants.OktetoIsPreviewEnvVar,
 		Caches:                   params.Caches,
+		Artifacts:                params.Artifacts,
 	}
 
 	dockerfile, err := r.fs.Create(filepath.Join(tmpDir, params.DockerfileName))

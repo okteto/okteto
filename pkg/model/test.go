@@ -25,6 +25,7 @@ type Test struct {
 	Commands  []TestCommand `yaml:"commands,omitempty"`
 	DependsOn []string      `yaml:"depends_on,omitempty"`
 	Caches    []string      `yaml:"caches,omitempty"`
+	Artifacts []string      `yaml:"artifacts,omitempty"`
 }
 
 var (

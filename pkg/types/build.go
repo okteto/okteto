@@ -57,4 +57,8 @@ type BuildOptions struct {
 	BuildToGlobal bool
 	NoCache       bool
 	EnableStages  bool
+
+	// LocalOutputPath sets for remote operation the root path to where the
+	// exported files are written to. This will usually be `$PWD/.okteto-output`
+	LocalOutputPath string
 }
