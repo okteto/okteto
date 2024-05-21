@@ -71,10 +71,11 @@ func (ar *appRetriever) getApp(ctx context.Context, dev *model.Dev) (apps.App, e
 		}
 	} else {
 		ar.ioControl.Logger().Debug("retrieving app")
-		devApp, err = ar.newRunningAppGetter(c).GetApp(ctx, dev)
+		app, err := ar.newRunningAppGetter(c).GetApp(ctx, dev)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get app: %w", err)
 		}
+		devApp = app.DevClone()
 	}
 
 	if err := devApp.Refresh(ctx, c); err != nil {

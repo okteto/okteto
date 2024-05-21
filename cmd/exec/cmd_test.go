@@ -86,6 +86,15 @@ func TestExec_Run(t *testing.T) {
 						},
 					},
 				},
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      model.DevCloneName(dev.Name),
+						Namespace: dev.Namespace,
+						Labels: map[string]string{
+							constants.DevLabel: "true",
+						},
+					},
+				},
 			},
 			expectedErr: assert.AnError,
 		},
@@ -103,6 +112,15 @@ func TestExec_Run(t *testing.T) {
 							model.DeploymentRevisionAnnotation: "test",
 						},
 						UID: "test",
+					},
+				},
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      model.DevCloneName(dev.Name),
+						Namespace: dev.Namespace,
+						Labels: map[string]string{
+							constants.DevLabel: "true",
+						},
 					},
 				},
 				&appsv1.ReplicaSet{
@@ -138,6 +156,19 @@ func TestExec_Run(t *testing.T) {
 				&appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      dev.Name,
+						Namespace: dev.Namespace,
+						Labels: map[string]string{
+							constants.DevLabel: "true",
+						},
+						Annotations: map[string]string{
+							model.DeploymentRevisionAnnotation: "test",
+						},
+						UID: "test",
+					},
+				},
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      model.DevCloneName(dev.Name),
 						Namespace: dev.Namespace,
 						Labels: map[string]string{
 							constants.DevLabel: "true",
@@ -206,6 +237,19 @@ func TestExec_Run(t *testing.T) {
 						UID: "test",
 					},
 				},
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      model.DevCloneName(dev.Name),
+						Namespace: dev.Namespace,
+						Labels: map[string]string{
+							constants.DevLabel: "true",
+						},
+						Annotations: map[string]string{
+							model.DeploymentRevisionAnnotation: "test",
+						},
+						UID: "test",
+					},
+				},
 				&appsv1.ReplicaSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      dev.Name,
@@ -256,6 +300,19 @@ func TestExec_Run(t *testing.T) {
 				&appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      dev.Name,
+						Namespace: dev.Namespace,
+						Labels: map[string]string{
+							constants.DevLabel: "true",
+						},
+						Annotations: map[string]string{
+							model.DeploymentRevisionAnnotation: "test",
+						},
+						UID: "test",
+					},
+				},
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      model.DevCloneName(dev.Name),
 						Namespace: dev.Namespace,
 						Labels: map[string]string{
 							constants.DevLabel: "true",
@@ -329,6 +386,9 @@ func TestExec_Run(t *testing.T) {
 				appRetriever:      appRetriever,
 				mixpannelTracker:  &fakeMixpanelTracker{},
 				getExecutorFunc:   tc.getExecutorFunc,
+			}
+			if tc.name == "error getting executor" {
+				fmt.Print()
 			}
 			err := e.Run(
 				context.Background(),
