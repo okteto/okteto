@@ -28,7 +28,6 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/afero"
 )
@@ -90,7 +89,7 @@ func (r gitRepoController) getRepoURL() (string, error) {
 		return r.sanitiseURL(url.String()), nil
 	}
 
-	repo, err := git.PlainOpen(r.path)
+	repo, err := FindTopLevelGitRepoFromPath(r.path)
 	if err != nil {
 		return "", fmt.Errorf("failed to analyze git repo: %w", err)
 	}
@@ -348,7 +347,7 @@ type repositoryGetterInterface interface {
 type gitRepositoryGetter struct{}
 
 func (gitRepositoryGetter) get(path string) (gitRepositoryInterface, error) {
-	repo, err := git.PlainOpen(path)
+	repo, err := FindTopLevelGitRepoFromPath(path)
 	if err != nil {
 		return nil, err
 	}
@@ -526,21 +525,29 @@ func (ogr oktetoGitRepository) GetDiff(ctx context.Context, repoPath, dirpath st
 }
 
 // FindTopLevelGitDir returns the top level git directory for the given working directory
-func FindTopLevelGitDir(workingDir string, fs afero.Fs) (string, error) {
+func FindTopLevelGitDir(workingDir string) (string, error) {
 	dir, err := filepath.Abs(workingDir)
 	if err != nil {
 		return "", fmt.Errorf("%w: invalid workind dir: %w", errFindingRepo, err)
 	}
 
-	for {
-		if filesystem.FileExistsWithFilesystem(filepath.Join(dir, ".git"), fs) {
-			return dir, nil
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "", errFindingRepo
-		}
-		dir = parent
+	repo, err := FindTopLevelGitRepoFromPath(dir)
+	if err != nil {
+		return "", fmt.Errorf("%w: failed to find top level git repo: %w", errFindingRepo, err)
 	}
+
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return "", fmt.Errorf("%w: failed to find top level git repo: %w", errFindingRepo, err)
+	}
+
+	return worktree.Filesystem.Root(), nil
+}
+
+// FindTopLevelGitRepoFromPath returns the git repository for the given absolute path taking into parent folders
+func FindTopLevelGitRepoFromPath(path string) (*git.Repository, error) {
+	opts := &git.PlainOpenOptions{
+		DetectDotGit: true,
+	}
+	return git.PlainOpenWithOptions(path, opts)
 }

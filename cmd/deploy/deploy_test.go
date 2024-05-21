@@ -371,6 +371,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 		K8sClientProvider: fakeK8sClientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                afero.NewMemMapFs(),
+		IoCtrl:            io.NewIOController(),
 	}
 
 	ctx := context.Background()
@@ -443,6 +444,7 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                fakeOs,
 		Builder:           &fakeV2Builder{},
+		IoCtrl:            io.NewIOController(),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -527,6 +529,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 		K8sClientProvider: fakeK8sClientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                afero.NewMemMapFs(),
+		IoCtrl:            io.NewIOController(),
 	}
 	ctx := context.Background()
 
@@ -577,6 +580,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		GetDeployer:       fakeDeployer.Get,
 		Builder:           &fakeV2Builder{},
+		IoCtrl:            io.NewIOController(),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -727,6 +731,7 @@ func TestDeployOnlyDependencies(t *testing.T) {
 		Fs:                fakeOs,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		GetDeployer:       fakeDeployer.Get,
+		IoCtrl:            io.NewIOController(),
 	}
 	ctx := context.Background()
 	opts := &Options{

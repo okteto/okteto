@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -318,12 +319,13 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		return fmt.Errorf("failed to get the current working directory: %w", err)
 	}
 
-	topLevelGitDir, err := repository.FindTopLevelGitDir(cwd, dc.Fs)
+	topLevelGitDir, err := repository.FindTopLevelGitDir(cwd)
 	if err != nil {
 		oktetoLog.Warning("Repository not detected: the env vars '%s' and '%s' might not be available: %s.\n    For more information, check out: https://www.okteto.com/docs/core/okteto-variables/#default-environment-variables", constants.OktetoGitBranchEnvVar, constants.OktetoGitCommitEnvVar, err.Error())
 	}
 
 	if topLevelGitDir != "" {
+		dc.IoCtrl.Logger().Debugf("repository detected at %s", topLevelGitDir)
 		dc.addEnvVars(topLevelGitDir)
 	} else {
 		dc.addEnvVars(cwd)
@@ -346,12 +348,31 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		}
 	}
 
+	// This is the manifest path to be stored in the config map. It should be relative to the repository root, so next operations
+	// triggered from the UI would take the correct manifest. So, it is calculated from the topLevelGitDir and the absolute path
+	// of the manifest file.
+	// Having the following structure:
+	// root-repo
+	// |- dirA
+	//   |- dirB
+	//    |- okteto.yml
+	// If the command executed is okteto deploy from "dirB", we should store the manifest path as "dirA/dirB/okteto.yml"
+	manifestPathForConfigMap := ""
+	if topLevelGitDir != "" && deployOptions.Manifest != nil && deployOptions.Manifest.ManifestPath != "" {
+		manifestPathForConfigMap, err = filepath.Rel(topLevelGitDir, deployOptions.Manifest.ManifestPath)
+		if err != nil {
+			dc.IoCtrl.Logger().Infof("failed to get relative path for manifest path %q from the repository dir %q: %s", deployOptions.Manifest.ManifestPath, topLevelGitDir, err)
+			manifestPathForConfigMap = ""
+		}
+	}
+
+	dc.IoCtrl.Logger().Debugf("manifest path to store in metadata: %q", manifestPathForConfigMap)
 	data := &pipeline.CfgData{
 		Name:       deployOptions.Name,
 		Namespace:  deployOptions.Manifest.Namespace,
 		Repository: os.Getenv(model.GithubRepositoryEnvVar),
 		Branch:     os.Getenv(constants.OktetoGitBranchEnvVar),
-		Filename:   deployOptions.ManifestPathFlag,
+		Filename:   manifestPathForConfigMap,
 		Status:     pipeline.ProgressingStatus,
 		Manifest:   deployOptions.Manifest.Manifest,
 		Icon:       deployOptions.Manifest.Icon,
