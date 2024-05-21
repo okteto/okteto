@@ -147,35 +147,34 @@ type Params struct {
 	BuildEnvVars        map[string]string
 	DependenciesEnvVars map[string]string
 	Manifest            *model.Manifest
-	BaseImage           string
-	ManifestPathFlag    string
-	TemplateName        string
-	DockerfileName      string
-	KnownHostsPath      string
 	Command             string
-	// ContextAbsolutePathOverride is the absolute path for the build context. Optional.
-	// If this values is not defined it will default to the folder location of the
-	// okteto manifest which is resolved through params.ManifestPathFlag
-	ContextAbsolutePathOverride string
 	// CacheInvalidationKey is the value use to invalidate the cache. Defaults
 	// to a random value which essentially means no-cache. Setting this to a
 	// static or known value will reuse the build cache
 	CacheInvalidationKey string
-	Deployable           deployable.Entity
-	CommandFlags         []string
-	Caches               []string
+	TemplateName         string
+	DockerfileName       string
+	KnownHostsPath       string
+	BaseImage            string
+	// ContextAbsolutePathOverride is the absolute path for the build context. Optional.
+	// If this values is not defined it will default to the folder location of the
+	// okteto manifest which is resolved through params.ManifestPathFlag
+	ContextAbsolutePathOverride string
+	ManifestPathFlag            string
+	Deployable                  deployable.Entity
+	CommandFlags                []string
+	Caches                      []string
 	// IgnoreRules are the ignoring rules added to this build execution.
 	// Rules follow the .dockerignore syntax as defined in:
 	// https://docs.docker.com/build/building/context/#syntax
 	IgnoreRules []string
-	// UseOktetoDeployIgnoreFile if enabled loads the docker ignore file from an
-	// .oktetodeployignore file. Disabled by default
-	UseOktetoDeployIgnoreFile bool
-
 	// Artifacts are the files and or folder to export from this build operation.
 	// They are the path INSIDE the build container relative to /okteto/src. They
 	// will be exported to "{context_dir}/{artifact}"
 	Artifacts []model.Artifact
+	// UseOktetoDeployIgnoreFile if enabled loads the docker ignore file from an
+	// .oktetodeployignore file. Disabled by default
+	UseOktetoDeployIgnoreFile bool
 }
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
