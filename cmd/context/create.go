@@ -466,7 +466,7 @@ func (c Command) getUserContext(ctx context.Context, ctxName, ns, token string) 
 	return nil, oktetoErrors.ErrInternalServerError
 }
 
-func (*Command) loadDotEnv(fs afero.Fs, setEnvFunc func(key, value string) error) error {
+func (*Command) loadDotEnv(fs afero.Fs, setEnvFunc func(key, value string) error, lookupEnv func(key string) (string, bool)) error {
 	dotEnvFile := ".env"
 	if filesystem.FileExistsWithFilesystem(dotEnvFile, fs) {
 		content, err := afero.ReadFile(fs, dotEnvFile)
@@ -482,6 +482,9 @@ func (*Command) loadDotEnv(fs afero.Fs, setEnvFunc func(key, value string) error
 			return fmt.Errorf("error parsing dot env file: %w", err)
 		}
 		for k, v := range vars {
+			if _, exists := lookupEnv(k); exists {
+				continue
+			}
 			err := setEnvFunc(k, v)
 			if err != nil {
 				return fmt.Errorf("error setting env var: %w", err)
