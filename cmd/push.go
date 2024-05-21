@@ -56,7 +56,7 @@ type pushOptions struct {
 }
 
 // Push builds, pushes and redeploys the target app
-func Push(ctx context.Context) *cobra.Command {
+func Push(ctx context.Context, at analyticsTrackerInterface) *cobra.Command {
 	pushOpts := &pushOptions{}
 	cmd := &cobra.Command{
 		Hidden: true,
@@ -67,30 +67,14 @@ func Push(ctx context.Context) *cobra.Command {
 			if !env.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
 				oktetoLog.Warning("'okteto push' is deprecated in favor of 'okteto deploy', and will be removed in a future version")
 			}
-			ctxResource, err := utils.LoadManifestContext(pushOpts.DevPath)
-			if err != nil {
-				if oktetoErrors.IsNotExist(err) && len(pushOpts.AppName) > 0 {
-					ctxResource = &model.ContextResource{}
-				} else {
+			// Loads, updates and uses the context from path. If not found, it creates and uses a new context
+			if err := contextCMD.LoadContextFromPath(ctx, pushOpts.Namespace, pushOpts.K8sContext, pushOpts.DevPath, contextCMD.Options{Show: true}); err != nil {
+				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.GetContext().Name).Error() {
 					return err
 				}
-			}
-
-			if err := ctxResource.UpdateNamespace(pushOpts.Namespace); err != nil {
-				return err
-			}
-
-			if err := ctxResource.UpdateContext(pushOpts.K8sContext); err != nil {
-				return err
-			}
-
-			ctxOptions := &contextCMD.Options{
-				Context:   ctxResource.Context,
-				Namespace: ctxResource.Namespace,
-				Show:      true,
-			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
-				return err
+				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: pushOpts.Namespace, Show: false}); err != nil {
+					return err
+				}
 			}
 
 			manifest, err := utils.DeprecatedLoadManifestOrDefault(pushOpts.DevPath, pushOpts.AppName, afero.NewOsFs())
@@ -133,7 +117,7 @@ func Push(ctx context.Context) *cobra.Command {
 				dev.Autocreate = pushOpts.AutoDeploy
 			}
 
-			if err := runPush(ctx, dev, pushOpts, c); err != nil {
+			if err := runPush(ctx, dev, pushOpts, c, at); err != nil {
 				analytics.TrackPush(false)
 				return err
 			}
@@ -157,7 +141,7 @@ func Push(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func runPush(ctx context.Context, dev *model.Dev, pushOpts *pushOptions, c *kubernetes.Clientset) error {
+func runPush(ctx context.Context, dev *model.Dev, pushOpts *pushOptions, c *kubernetes.Clientset, at analyticsTrackerInterface) error {
 	exists := true
 	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 	reg := registry.NewOktetoRegistry(okteto.Config{})
@@ -223,7 +207,8 @@ func runPush(ctx context.Context, dev *model.Dev, pushOpts *pushOptions, c *kube
 			}
 		}
 		if apps.IsDevModeOn(tr.App) {
-			if err := down.Run(dev, app, trMap, false, c); err != nil {
+			dc := down.New(afero.NewOsFs(), okteto.NewK8sClientProvider(), at)
+			if err := dc.Run(app, dev, trMap, false); err != nil {
 				return err
 			}
 			oktetoLog.Information("Development container deactivated")

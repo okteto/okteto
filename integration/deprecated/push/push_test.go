@@ -91,7 +91,6 @@ func TestPush(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 	dir := t.TempDir()
-
 	testNamespace := integration.GetTestNamespace("Push", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
@@ -99,7 +98,6 @@ func TestPush(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
@@ -118,7 +116,7 @@ func TestPush(t *testing.T) {
 
 	imageName := fmt.Sprintf("registry.%s/%s/push-test:okteto", appsSubdomain, testNamespace)
 	require.Equal(t, imageName, d.Spec.Template.Spec.Containers[0].Image)
-
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func createDockerfile(dir string) error {

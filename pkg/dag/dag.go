@@ -14,6 +14,8 @@
 package dag
 
 import (
+	"fmt"
+
 	"github.com/heimdalr/dag"
 )
 
@@ -31,6 +33,47 @@ func (cb callback) Visit(vx dag.Vertexer) {
 
 type Tree struct {
 	graph *dag.DAG
+}
+
+func (tree *Tree) Subtree(nodeIds ...string) (*Tree, error) {
+	if len(nodeIds) < 1 {
+		return tree, nil
+	}
+
+	selection := make(map[string]Node)
+
+	for _, nodeId := range nodeIds {
+		nI, err := tree.graph.GetVertex(nodeId)
+		if err != nil {
+			return nil, err
+		}
+		// Add the node to the subnode list
+		n, ok := nI.(Node)
+		if !ok {
+			return nil, fmt.Errorf("fail to cast tree vertex to Node type")
+		}
+		selection[nodeId] = n
+
+		// resolve depends_on by getting nodes' ancestors
+		ancestor, err := tree.graph.GetAncestors(nodeId)
+		if err != nil {
+			return nil, err
+		}
+		for childID, nI := range ancestor {
+			n, ok := nI.(Node)
+			if !ok {
+				return nil, fmt.Errorf("fail to cast tree vertex to Node type")
+			}
+			selection[childID] = n
+		}
+	}
+
+	var subnodes []Node
+	for _, n := range selection {
+		subnodes = append(subnodes, n)
+	}
+
+	return From(subnodes...)
 }
 
 func (tree *Tree) Traverse(fn func(n Node)) {

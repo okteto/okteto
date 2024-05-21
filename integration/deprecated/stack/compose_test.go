@@ -121,7 +121,6 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
@@ -130,6 +129,7 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 		Workdir:    dir,
 		OktetoHome: dir,
 		Token:      token,
+		Namespace:  testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoStackDeploy(oktetoPath, deployOptions))
 
@@ -164,6 +164,7 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoStackDestroy(oktetoPath, destroyOptions))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestDeployPipelineFromOktetoStacks tests the following scenario:
@@ -187,7 +188,6 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
@@ -196,6 +196,7 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 		Workdir:    dir,
 		OktetoHome: dir,
 		Token:      token,
+		Namespace:  testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoStackDeploy(oktetoPath, deployOptions))
 
@@ -214,8 +215,10 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	destroyOptions := &commands.StackDestroyOptions{
 		Workdir:    dir,
 		OktetoHome: dir,
+		Namespace:  testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoStackDestroy(oktetoPath, destroyOptions))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func createStacksScenario(dir string) error {

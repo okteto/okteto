@@ -137,10 +137,11 @@ func TestDestroyRemote(t *testing.T) {
 			Commands: manifest.Destroy.Commands,
 			External: manifest.External,
 		},
-		BuildEnvVars:        make(map[string]string),
-		DependenciesEnvVars: make(map[string]string),
-		Manifest:            manifest,
-		Command:             remote.DestroyCommand,
+		BuildEnvVars:              make(map[string]string),
+		DependenciesEnvVars:       make(map[string]string),
+		Manifest:                  manifest,
+		Command:                   remote.DestroyCommand,
+		UseOktetoDeployIgnoreFile: true,
 	}
 	runner := &fakeRemoteRunner{}
 	runner.On("Run", mock.Anything, expectedParams).Return(nil)
@@ -185,10 +186,11 @@ func TestDestroyRemoteWithError(t *testing.T) {
 			Commands: manifest.Destroy.Commands,
 			External: manifest.External,
 		},
-		BuildEnvVars:        make(map[string]string),
-		DependenciesEnvVars: make(map[string]string),
-		Manifest:            manifest,
-		Command:             remote.DestroyCommand,
+		BuildEnvVars:              make(map[string]string),
+		DependenciesEnvVars:       make(map[string]string),
+		Manifest:                  manifest,
+		Command:                   remote.DestroyCommand,
+		UseOktetoDeployIgnoreFile: true,
 	}
 
 	tests := []struct {

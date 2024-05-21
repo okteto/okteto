@@ -798,14 +798,20 @@ func isFileCompose(path string) bool {
 		return true
 	}
 
-	stackDeprecationWarningOnce.Do(func() {
-		if !isComposeFileName {
-			oktetoLog.Warning(`Okteto Stack syntax is deprecated. 
-    Please consider migrating to Docker Compose syntax: https://community.okteto.com/t/important-update-migrating-from-okteto-stacks-to-docker-compose/1262`)
-		}
-	})
 	oktetoLog.Infof("%s is set to true. Detecting if file is compose by name", stackSupportEnabledEnvVar)
 	return isComposeFileName
+}
+
+func warnAboutComposeFileName(path string) {
+	base := filepath.Base(path)
+	isComposeFileName := strings.HasPrefix(base, "compose") || strings.HasPrefix(base, "docker-compose") || strings.HasPrefix(base, "okteto-compose")
+	isStackSupported := env.LoadBooleanOrDefault(stackSupportEnabledEnvVar, true)
+	if !isComposeFileName && isStackSupported {
+		stackDeprecationWarningOnce.Do(func() {
+			oktetoLog.Warning(`Okteto Stack syntax is deprecated.
+    Please consider migrating to Docker Compose syntax: https://community.okteto.com/t/important-update-migrating-from-okteto-stacks-to-docker-compose/1262`)
+		})
+	}
 }
 
 // LoadStack loads an okteto stack manifest checking "yml" and "yaml"
@@ -841,6 +847,9 @@ func LoadStack(name string, stackPaths []string, validate bool, fs afero.Fs) (*S
 		if err := resultStack.Validate(); err != nil {
 			return nil, err
 		}
+	}
+	for _, path := range resultStack.Paths {
+		warnAboutComposeFileName(path)
 	}
 
 	return resultStack, nil

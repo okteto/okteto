@@ -11,19 +11,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package path
+package analytics
 
-import "path/filepath"
+// TrackDown sends a tracking event to mixpanel when the user deactivates a development container
+func (a *Tracker) TrackDown(success bool) {
+	a.trackFn(downEvent, success, nil)
+}
 
-// GetRelativePathFromCWD returns the relative path from the cwd
-func GetRelativePathFromCWD(cwd, path string) (string, error) {
-	if path == "" || !filepath.IsAbs(path) {
-		return path, nil
-	}
-
-	relativePath, err := filepath.Rel(cwd, path)
-	if err != nil {
-		return "", err
-	}
-	return relativePath, nil
+// TrackDownVolumes sends a tracking event to mixpanel when the user deactivates a development container and its volumes
+func (a *Tracker) TrackDownVolumes(success bool) {
+	a.trackFn(downVolumesEvent, success, nil)
 }

@@ -79,7 +79,6 @@ func TestDependencies(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 
@@ -99,7 +98,7 @@ func TestDependencies(t *testing.T) {
 
 	contentURL := fmt.Sprintf("https://movies-%s.%s", testDeployNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(contentURL, timeout))
-
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func TestDependenciesOnRemote(t *testing.T) {
@@ -125,7 +124,6 @@ func TestDependenciesOnRemote(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 
@@ -145,7 +143,7 @@ func TestDependenciesOnRemote(t *testing.T) {
 
 	contentURL := fmt.Sprintf("https://movies-%s.%s", testDeployNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(contentURL, timeout))
-
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func createDependenciesManifest(dir, namespace, manifest string) error {

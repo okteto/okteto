@@ -109,7 +109,7 @@ func (ImageCtrl) GetRegistryAndRepo(tag string) (string, string) {
 
 	if len(splittedImage) == 1 {
 		imageTag = splittedImage[0]
-	} else if len(splittedImage) == 2 { //nolint:gomnd
+	} else if len(splittedImage) == 2 { //nolint:mnd
 		if strings.Contains(splittedImage[0], ".") {
 			return splittedImage[0], splittedImage[1]
 		}

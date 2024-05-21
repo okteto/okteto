@@ -19,6 +19,7 @@ type Test struct {
 	Context   string        `yaml:"context,omitempty"`
 	Commands  []TestCommand `yaml:"commands,omitempty"`
 	DependsOn []string      `yaml:"depends_on,omitempty"`
+	Caches    []string      `yaml:"caches,omitempty"`
 }
 
 func (test *Test) expandEnvVars() error {
@@ -33,8 +34,8 @@ func (test *Test) expandEnvVars() error {
 }
 
 func (t *Test) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	type alias Test
-	var tt alias
+	type testAlias Test
+	var tt testAlias
 	err := unmarshal(&tt)
 	if err != nil {
 		return err
@@ -61,8 +62,8 @@ func (t *TestCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	// prevent recursion
-	type alias TestCommand
-	var extendedCommand alias
+	type testCommandAlias TestCommand
+	var extendedCommand testCommandAlias
 	err = unmarshal(&extendedCommand)
 	if err != nil {
 		return err

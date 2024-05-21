@@ -123,7 +123,6 @@ func TestUpDeploymentV1(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
@@ -221,6 +220,7 @@ func TestUpDeploymentV1(t *testing.T) {
 
 	// Test that original hasn't change
 	require.NoError(t, compareDeployment(context.Background(), originalDeployment, c))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func TestUpDeploymentV2(t *testing.T) {
@@ -237,7 +237,6 @@ func TestUpDeploymentV2(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
@@ -335,6 +334,7 @@ func TestUpDeploymentV2(t *testing.T) {
 
 	// Test that original hasn't change
 	require.NoError(t, compareDeployment(context.Background(), originalDeployment, c))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func compareDeployment(ctx context.Context, deployment *appsv1.Deployment, c kubernetes.Interface) error {

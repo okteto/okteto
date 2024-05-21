@@ -43,16 +43,30 @@ func (o *Options) InitFromContext() {
 	if o.IsCtxCommand {
 		return
 	}
-	if o.Context != "" {
-		return
-	}
+
 	ctxStore := okteto.GetContextStore()
-	if ctxStore.CurrentContext == "" {
+
+	if ctxStore.Contexts == nil {
 		return
 	}
 
-	if okCtx, ok := ctxStore.Contexts[ctxStore.CurrentContext]; ok {
-		o.Context = ctxStore.CurrentContext
+	if len(ctxStore.Contexts) == 0 {
+		return
+	}
+
+	cc := ctxStore.CurrentContext
+
+	if o.Context != "" {
+		cc = o.Context
+	} else {
+		o.Context = cc
+	}
+
+	if cc == "" {
+		return
+	}
+
+	if okCtx, ok := ctxStore.Contexts[cc]; ok {
 		if o.Namespace == "" {
 			o.Namespace = okCtx.Namespace
 		}
@@ -61,7 +75,7 @@ func (o *Options) InitFromContext() {
 }
 
 func (o *Options) InitFromEnvVars() {
-	usedEnvVars := []string{}
+	var usedEnvVars []string
 
 	if o.Context == "" && os.Getenv(model.OktetoURLEnvVar) != "" {
 		o.Context = os.Getenv(model.OktetoURLEnvVar)
@@ -77,9 +91,6 @@ func (o *Options) InitFromEnvVars() {
 	envToken := os.Getenv(model.OktetoTokenEnvVar)
 	if o.Token != "" || envToken != "" {
 		o.IsOkteto = true
-		if o.Context == "" {
-			o.Context = okteto.CloudURL
-		}
 	}
 
 	if o.Token == "" && envToken != "" {
@@ -95,10 +106,11 @@ func (o *Options) InitFromEnvVars() {
 		usedEnvVars = append(usedEnvVars, model.OktetoNamespaceEnvVar)
 	}
 
-	if len(usedEnvVars) == 1 {
-		oktetoLog.Warning("Initializing context with the value of %s environment variable", usedEnvVars[0])
-	} else if len(usedEnvVars) > 1 {
-		oktetoLog.Warning("Initializing context with the value of %s and %s environment variables", strings.Join(usedEnvVars[0:len(usedEnvVars)-1], ", "), usedEnvVars[len(usedEnvVars)-1])
+	if o.Show {
+		if len(usedEnvVars) == 1 {
+			oktetoLog.Warning("Initializing context with the value of %s environment variable", usedEnvVars[0])
+		} else if len(usedEnvVars) > 1 {
+			oktetoLog.Warning("Initializing context with the value of %s and %s environment variables", strings.Join(usedEnvVars[0:len(usedEnvVars)-1], ", "), usedEnvVars[len(usedEnvVars)-1])
+		}
 	}
-
 }

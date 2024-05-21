@@ -146,10 +146,6 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 		ctxOptions.IsOkteto = true
 	}
 
-	if ctxOptions.Context == okteto.CloudURL {
-		ctxOptions.IsOkteto = true
-	}
-
 	if !ctxOptions.IsOkteto {
 
 		if isUrl(ctxOptions.Context) {
@@ -185,10 +181,6 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 	}
 
 	ctxStore.CurrentContext = ctxOptions.Context
-	err := c.loadDotEnv(afero.NewOsFs(), os.Setenv)
-	if err != nil {
-		oktetoLog.Warning("Failed to load .env file: %s", err)
-	}
 
 	if ctxOptions.IsOkteto {
 		if err := c.initOktetoContext(ctx, ctxOptions); err != nil {
@@ -358,14 +350,15 @@ func getLoggedUserContext(ctx context.Context, c *Command, ctxOptions *Options) 
 
 	ctxOptions.Token = user.Token
 
-	okteto.GetContext().Token = user.Token
-	okteto.SetInsecureSkipTLSVerifyPolicy(okteto.GetContext().IsStoredAsInsecure)
+	okCtx := okteto.GetContext()
+	okCtx.Token = user.Token
+	okteto.SetInsecureSkipTLSVerifyPolicy(okCtx.IsStoredAsInsecure)
 
 	if ctxOptions.Namespace == "" {
 		ctxOptions.Namespace = user.Namespace
 	}
 
-	userContext, err := c.getUserContext(ctx, okteto.GetContext().Name, okteto.GetContext().Namespace, okteto.GetContext().Token)
+	userContext, err := c.getUserContext(ctx, okCtx.Name, okCtx.Namespace, okCtx.Token)
 	if err != nil {
 		return nil, err
 	}
@@ -420,6 +413,10 @@ func (c Command) getUserContext(ctx context.Context, ctxName, ns, token string) 
 				return nil, err
 			}
 
+			if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.GetContext().Name).Error() {
+				return nil, err
+			}
+
 			if oktetoErrors.IsForbidden(err) {
 				if err := c.OktetoContextWriter.Write(); err != nil {
 					oktetoLog.Infof("error updating okteto contexts: %v", err)
@@ -469,7 +466,7 @@ func (c Command) getUserContext(ctx context.Context, ctxName, ns, token string) 
 	return nil, oktetoErrors.ErrInternalServerError
 }
 
-func (*Command) loadDotEnv(fs afero.Fs, setEnvFunc func(key, value string) error) error {
+func (*Command) loadDotEnv(fs afero.Fs, setEnvFunc func(key, value string) error, lookupEnv func(key string) (string, bool)) error {
 	dotEnvFile := ".env"
 	if filesystem.FileExistsWithFilesystem(dotEnvFile, fs) {
 		content, err := afero.ReadFile(fs, dotEnvFile)
@@ -485,6 +482,9 @@ func (*Command) loadDotEnv(fs afero.Fs, setEnvFunc func(key, value string) error
 			return fmt.Errorf("error parsing dot env file: %w", err)
 		}
 		for k, v := range vars {
+			if _, exists := lookupEnv(k); exists {
+				continue
+			}
 			err := setEnvFunc(k, v)
 			if err != nil {
 				return fmt.Errorf("error setting env var: %w", err)
