@@ -181,6 +181,8 @@ func main() {
 	root.AddCommand(test.Test(ctx, ioController, k8sLogger, at))
 	root.AddCommand(cmd.GenerateSchema())
 	root.AddCommand(cmd.Validate())
+	root.AddCommand(cmd.Validate())
+	root.AddCommand(cmd.GenerateSchema())
 
 	root.AddCommand(pipeline.Pipeline(ctx))
 

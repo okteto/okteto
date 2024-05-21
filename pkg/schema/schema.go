@@ -1,16 +1,16 @@
-// Copyright 2024 The Okteto Authors
+//  Copyright 2024 The Okteto Authors
+// Copyright 2023|2024 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-//
+// 
 // http://www.apache.org/licenses/LICENSE-2.0
-//
+// 
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package schema
 
 import (
@@ -48,6 +48,7 @@ func NewJsonSchema() *OktetoJsonSchema {
 	s := r.Reflect(&manifest{})
 	s.ID = "https://okteto.com/schemas/okteto-manifest.json"
 	s.Title = "Okteto Manifest"
+	s.Version = "2.0.0"
 	s.Required = []string{}
 
 	return &OktetoJsonSchema{
@@ -80,230 +81,4 @@ func (o *OktetoJsonSchema) ToJSON() ([]byte, error) {
 	}
 
 	return out, nil
-}
-
-type icon struct{}
-
-func (icon) JSONSchema() *jsonschema.Schema {
-	return &jsonschema.Schema{
-		Type: "string",
-		AnyOf: []*jsonschema.Schema{
-			{
-				Type:    "string",
-				Enum:    []any{"default", "container", "dashboard", "database", "function", "graph", "storage", "launchdarkly", "mongodb", "gcp", "aws", "okteto"},
-				Default: "default",
-			},
-			{
-				Type:    "string",
-				Pattern: "[-a-zA-Z0-9@:%._+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_+.~#?&/=]*)",
-			},
-		},
-	}
-}
-
-type build struct{}
-
-func (build) JSONSchema() *jsonschema.Schema {
-	buildProps := jsonschema.NewProperties()
-	buildProps.Set("context", &jsonschema.Schema{
-		Type:        "string",
-		Title:       "context",
-		Description: "The build context. Relative paths are relative to the location of the Okteto Manifest (default: .)",
-	})
-	buildProps.Set("dockerfile", &jsonschema.Schema{
-		Type:        "string",
-		Title:       "dockerfile",
-		Description: "The path to the Dockerfile. Relative paths are relative to the location of the Okteto Manifest (default: Dockerfile)",
-	})
-	buildProps.Set("target", &jsonschema.Schema{
-		Type:        "string",
-		Title:       "target",
-		Description: "The target build stage in the Dockerfile. If not specified, the default target is used.",
-	})
-	buildProps.Set("depends_on", &jsonschema.Schema{
-		Type:        "string",
-		Title:       "depends_on",
-		Description: "The name of the service that the current service depends on. The service will be built after the service it depends on is built. If the service it depends on is not defined in the Okteto Manifest, the build will fail.",
-	})
-	buildProps.Set("secrets", &jsonschema.Schema{
-		Type: "object",
-		PatternProperties: map[string]*jsonschema.Schema{
-			".*": {
-				Type: "string",
-			},
-		},
-	})
-	buildProps.Set("args", &jsonschema.Schema{
-		Type: "object",
-		PatternProperties: map[string]*jsonschema.Schema{
-			".*": {
-				Type: "string",
-			},
-		},
-	})
-	return &jsonschema.Schema{
-		Type:                 "object",
-		AdditionalProperties: jsonschema.FalseSchema,
-		PatternProperties: map[string]*jsonschema.Schema{
-			".*": {
-				Type:                 "object",
-				Properties:           buildProps,
-				AdditionalProperties: jsonschema.FalseSchema,
-			},
-		},
-	}
-}
-
-type dev struct{}
-
-func (dev) JSONSchema() *jsonschema.Schema {
-	devProps := jsonschema.NewProperties()
-	devProps.Set("command", &jsonschema.Schema{
-		Type:        "string", // changed after
-		Title:       "command",
-		Description: "The command of your development container. If empty, it defaults to sh. The command can also be a list",
-		OneOf: []*jsonschema.Schema{
-			{
-				Type:    "string",
-				Default: "sh",
-			},
-			{
-				Type:  "array",
-				Items: &jsonschema.Schema{Type: "string"},
-			},
-		},
-	})
-	devProps.Set("mode", &jsonschema.Schema{
-		Type:        "string",
-		Title:       "mode",
-		Description: "Container mode (sync, hybrid)",
-		Enum:        []any{"sync", "hybrid"},
-		Default:     "sync",
-	})
-	devProps.Set("forward", &jsonschema.Schema{
-		Title:       "forward",
-		Type:        "array",
-		Description: "",
-		OneOf: []*jsonschema.Schema{
-			{
-				Type: "array",
-				Items: &jsonschema.Schema{
-					Type:    "string",
-					Pattern: "^[0-9]+:[0-9]+$", // "^[0-9]+:[a-zA-Z0-9]+:[0-9]+$"
-				},
-			},
-		},
-	})
-	devProps.Set("sync", &jsonschema.Schema{
-		Title:       "sync",
-		Type:        "array",
-		Description: "",
-		OneOf: []*jsonschema.Schema{
-			{
-				Type: "array",
-				Items: &jsonschema.Schema{
-					Type:    "string",
-					Pattern: "^.*:.*$",
-				},
-			},
-		},
-	})
-	return &jsonschema.Schema{
-		Type:                 "object",
-		AdditionalProperties: jsonschema.FalseSchema,
-		PatternProperties: map[string]*jsonschema.Schema{
-			".*": {
-				Type:                 "object",
-				Properties:           devProps,
-				AdditionalProperties: jsonschema.FalseSchema,
-			},
-		},
-	}
-}
-
-type forward struct{}
-
-func (forward) JSONSchema() *jsonschema.Schema {
-	shorthandPattern := &jsonschema.Schema{
-		Type:    "string",
-		Pattern: "^[0-9]+:([a-zA-Z0-9]+:)?[0-9]+$",
-	}
-
-	// Define the properties for the detailed object notation
-	objectProps := jsonschema.NewProperties()
-	objectProps.Set("localPort", &jsonschema.Schema{
-		Type: "integer",
-	})
-	objectProps.Set("remotePort", &jsonschema.Schema{
-		Type: "integer",
-	})
-	objectProps.Set("name", &jsonschema.Schema{
-		Type: "string",
-	})
-	objectProps.Set("labels", &jsonschema.Schema{
-		Type: "object",
-		AdditionalProperties: &jsonschema.Schema{
-			Type: "string",
-		},
-	})
-
-	detailedObjectWithOptionalName := &jsonschema.Schema{
-		Type:                 "object",
-		Properties:           objectProps,
-		Required:             []string{"localPort", "remotePort"},
-		AdditionalProperties: jsonschema.FalseSchema,
-	}
-
-	itemsSchema := &jsonschema.Schema{
-		AnyOf: []*jsonschema.Schema{
-			shorthandPattern,
-			detailedObjectWithOptionalName,
-		},
-	}
-
-	return &jsonschema.Schema{
-		Type:  "array",
-		Items: itemsSchema,
-	}
-}
-
-type external struct{}
-
-func (external) JSONSchema() *jsonschema.Schema {
-	endpointProps := jsonschema.NewProperties()
-	endpointProps.Set("name", &jsonschema.Schema{
-		Type: "string",
-	})
-	endpointProps.Set("url", &jsonschema.Schema{
-		Type:   "string",
-		Format: "https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*)",
-	})
-
-	externalProps := jsonschema.NewProperties()
-	externalProps.Set("notes", &jsonschema.Schema{
-		Type: "string",
-	})
-	externalProps.Set("icon", &jsonschema.Schema{
-		Type: "string",
-	})
-	externalProps.Set("endpoints", &jsonschema.Schema{
-		Type: "array",
-		Items: &jsonschema.Schema{
-			Type:       "object",
-			Properties: endpointProps,
-			Required:   []string{"url"},
-		},
-	})
-
-	return &jsonschema.Schema{
-		Type:                 "object",
-		AdditionalProperties: jsonschema.FalseSchema,
-		PatternProperties: map[string]*jsonschema.Schema{
-			".*": {
-				Type:                 "object",
-				AdditionalProperties: jsonschema.FalseSchema,
-				Properties:           externalProps,
-			},
-		},
-	}
 }

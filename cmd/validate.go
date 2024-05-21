@@ -18,9 +18,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/schema"
 	"github.com/spf13/cobra"
 	"github.com/xeipuuv/gojsonschema"
+	yaml2 "gopkg.in/yaml.v2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -35,6 +37,7 @@ func Validate() *cobra.Command {
 			if len(args) > 0 {
 				manifestFile = args[0]
 			} else {
+				// TODO: replace for discovery pkg?
 				// look for okteto.yml or okteto.yaml
 				if _, err := os.Stat("okteto.yml"); err == nil {
 					manifestFile = "okteto.yml"
@@ -45,14 +48,22 @@ func Validate() *cobra.Command {
 				}
 			}
 
-			manifest, err := os.ReadFile(manifestFile)
+			content, err := os.ReadFile(manifestFile)
 			if err != nil {
 				return err
 			}
 
+			// TODO: only validate Okteto Manifest v2. Return a warning for all others (v1, stack, compose, Dockerfile)
+
+			var manifest model.Manifest
+			err = yaml2.UnmarshalStrict(content, &manifest)
+
+			if err != nil {
+				return model.NewManifestFriendlyError(err)
+			}
+
 			var obj interface{}
-			// TODO: evaluate if returning a friendly err here?
-			_ = yaml.Unmarshal(manifest, &obj) //nolint:errcheck
+			_ = yaml.Unmarshal(content, &obj) //nolint:errcheck
 
 			s := schema.NewJsonSchema()
 			json, err := s.ToJSON()

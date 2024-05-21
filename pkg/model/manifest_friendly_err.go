@@ -1,10 +1,10 @@
-// Copyright 2023 The Okteto Authors
+// Copyright 2023|2024 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-//
+// 
 // http://www.apache.org/licenses/LICENSE-2.0
-//
+// 
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,8 +24,8 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
-// newManifestFriendlyError returns a new UserFriendlyError for the okteto manifest.
-func newManifestFriendlyError(err error) *suggest.UserFriendlyError {
+// NewManifestFriendlyError returns a new UserFriendlyError for the okteto manifest.
+func NewManifestFriendlyError(err error) *suggest.UserFriendlyError {
 	rules := getManifestSuggestionRules(Manifest{})
 	// we wrap err with oktetoErrors.ErrInvalidManifest because in some parts of the code we check for this error type
 	manifestErr := fmt.Errorf("%w:\n%w", oktetoErrors.ErrInvalidManifest, err)
@@ -39,7 +39,7 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 	}
 
 	// add levenshtein rules to suggest similar field names
-	manifestKeys := getStructKeys(manifestSchema)
+	manifestKeys := GetStructKeys(manifestSchema)
 	manifestKeys["model.manifestRaw"] = manifestKeys["model.Manifest"]
 	manifestKeys["build.infoRaw"] = manifestKeys["build.Info"]
 	manifestKeys["model.devType"] = manifestKeys["model.Dev"]
