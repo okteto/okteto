@@ -14,6 +14,7 @@
 package model
 
 import (
+	"bytes"
 	"os"
 	"reflect"
 	"testing"
@@ -21,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/utils"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -1472,4 +1474,22 @@ func Test_isPathAComposeFile(t *testing.T) {
 			assert.Equal(t, test.expected, result)
 		})
 	}
+}
+func Test_warnAboutComposeFileName(t *testing.T) {
+	oktetoLog.Init(1)
+	writer := &bytes.Buffer{}
+	oktetoLog.SetOutput(writer)
+	warnAboutComposeFileName("docker-compose.yml")
+	assert.Contains(t, writer.String(), "")
+	writer.Reset()
+	warnAboutComposeFileName("stack.yml")
+	assert.Equal(t, writer.String(), " !  Okteto Stack syntax is deprecated.\n    Please consider migrating to Docker Compose syntax: https://community.okteto.com/t/important-update-migrating-from-okteto-stacks-to-docker-compose/1262\n")
+	// Check that the warning is only printed once even if the function is called multiple times
+	warnAboutComposeFileName("stack.yml")
+	assert.Equal(t, writer.String(), " !  Okteto Stack syntax is deprecated.\n    Please consider migrating to Docker Compose syntax: https://community.okteto.com/t/important-update-migrating-from-okteto-stacks-to-docker-compose/1262\n")
+	writer.Reset()
+	// Check that the warning is not printed if the env var is set to false
+	t.Setenv(stackSupportEnabledEnvVar, "false")
+	warnAboutComposeFileName("stack.yml")
+	assert.Equal(t, writer.String(), "")
 }
