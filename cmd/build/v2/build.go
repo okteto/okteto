@@ -386,6 +386,8 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 		if err != nil {
 			return "", fmt.Errorf("error accessing image at registry %s: %w", reference, err)
 		}
+		// We need to return the first image in order to keep retrocompatibility
+		return imageTagWithDigest, nil
 	}
 	return imageTagWithDigest, nil
 }
