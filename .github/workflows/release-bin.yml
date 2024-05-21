@@ -25,7 +25,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - uses: azure/docker-login@v1
+      - uses: azure/docker-login@v2
         with:
           username: '${{ secrets.DOCKER_USER }}'
           password: '${{ secrets.DOCKER_PASS }}'
