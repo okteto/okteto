@@ -52,10 +52,7 @@ const (
 	// DestroyCommand is the command to destroy a dev environment remotely
 	DestroyCommand         = "destroy"
 	oktetoDockerignoreName = ".oktetodeployignore"
-	// relativeOutputPath is the output path to export files from the build operation
-	// after it finishes
-	relativeOutputPath = ".okteto-output"
-	dockerfileTemplate = `
+	dockerfileTemplate     = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
 
 FROM {{ .UserRunnerImage }} as runner
@@ -115,8 +112,8 @@ RUN \
   /okteto/bin/remote-run.sh
 
 FROM scratch
-{{ range $key, $path := .Artifacts -}}
-COPY --from=runner /okteto/src/{{$path}} {{$path}}
+{{ range $key, $artifact := .Artifacts -}}
+COPY --from=runner /okteto/src/{{$artifact.Path}} {{$artifact.Destination}}
 {{ end }}
 `
 )
@@ -177,8 +174,8 @@ type Params struct {
 
 	// Artifacts are the files and or folder to export from this build operation.
 	// They are the path INSIDE the build container relative to /okteto/src. They
-	// will be exported to "{pwd}/.okteto-output/{output}"
-	Artifacts []string
+	// will be exported to "{context_dir}/{artifact}"
+	Artifacts []model.Artifact
 }
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
@@ -205,7 +202,7 @@ type dockerfileTemplateProperties struct {
 	Command                  string
 	OktetoIsPreviewEnv       string
 	Caches                   []string
-	Artifacts                []string
+	Artifacts                []model.Artifact
 }
 
 // NewRunner creates a new Runner for remote
@@ -361,7 +358,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 	}
 
 	if len(params.Artifacts) > 0 {
-		buildOptions.LocalOutputPath = filepath.Join(cwd, relativeOutputPath)
+		buildOptions.LocalOutputPath = buildCtx
 	}
 	// we need to call Run() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
