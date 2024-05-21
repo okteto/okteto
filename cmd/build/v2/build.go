@@ -352,7 +352,6 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	bc.ioCtrl.Logger().Info(fmt.Sprintf("Building service '%s' from Dockerfile", svcName))
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := bc.getBuildInfoWithoutVolumeMounts(manifest.Build[svcName], isStackManifest)
-	var err error
 	var buildHash string
 	if bc.smartBuildCtrl.IsEnabled() {
 		buildHash = bc.smartBuildCtrl.GetBuildHash(buildSvcInfo, svcName)
@@ -376,18 +375,21 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	}
 	var imageTagWithDigest string
 	tags := strings.Split(buildOptions.Tag, ",")
-	for _, tag := range tags {
+
+	//check that all tags are pushed and rteturn the first one to not break any scenario
+	for idx, tag := range tags {
 		// check if the image is pushed to the dev registry if DevTag is set
 		reference := tag
 		if buildOptions.DevTag != "" {
 			reference = buildOptions.DevTag
 		}
-		imageTagWithDigest, err = bc.Registry.GetImageTagWithDigest(reference)
+		digest, err := bc.Registry.GetImageTagWithDigest(reference)
 		if err != nil {
 			return "", fmt.Errorf("error accessing image at registry %s: %w", reference, err)
 		}
-		// We need to return the first image in order to keep retrocompatibility
-		return imageTagWithDigest, nil
+		if idx == 0 {
+			imageTagWithDigest = digest
+		}
 	}
 	return imageTagWithDigest, nil
 }
