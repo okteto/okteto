@@ -122,6 +122,9 @@ func (fr fakeRegistry) AddImageByOpts(opts *types.BuildOptions) error {
 	fr.registry[opts.Tag] = fakeImage{Args: opts.BuildArgs}
 	return nil
 }
+func (fr fakeRegistry) Clone(from, to string) (string, error) {
+	return from, nil
+}
 func (fr fakeRegistry) getFakeImage(image string) fakeImage {
 	v, ok := fr.registry[image]
 	if ok {

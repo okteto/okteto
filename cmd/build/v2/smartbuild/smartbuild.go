@@ -111,7 +111,7 @@ func (s *Ctrl) CloneGlobalImageToDev(image string) (string, error) {
 	return image, nil
 }
 
-// CloneGlobalToSpecificImage clones the image from the global registry to an specific image if needed
+// Clone clones the image from the global registry to an specific image if needed
 // if the built image belongs to global registry we clone it to the dev registry
 // so that in can be used in dev containers (i.e. okteto up)
 func (s *Ctrl) Clone(from, to string) (string, error) {

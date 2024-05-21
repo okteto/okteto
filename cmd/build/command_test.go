@@ -66,6 +66,9 @@ func (fr fakeRegistry) GetImageTagWithDigest(imageTag string) (string, error) {
 	return imageTag, nil
 }
 func (fr fakeRegistry) IsOktetoRegistry(_ string) bool { return false }
+func (fr fakeRegistry) Clone(from, to string) (string, error) {
+	return from, nil
+}
 
 func (fr fakeRegistry) AddImageByName(images ...string) error {
 	if fr.errAddImageByName != nil {

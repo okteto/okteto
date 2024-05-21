@@ -94,6 +94,10 @@ func (fr fakeRegistry) GetImageTagWithDigest(imageTag string) (string, error) {
 	return imageTag, nil
 }
 
+func (fr fakeRegistry) Clone(from, to string) (string, error) {
+	return from, nil
+}
+
 func (fr fakeRegistry) GetImageReference(image string) (registry.OktetoImageReference, error) {
 	ref, err := name.ParseReference(image)
 	if err != nil {

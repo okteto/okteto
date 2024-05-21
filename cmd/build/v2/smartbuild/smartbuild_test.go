@@ -44,6 +44,10 @@ func (frc fakeRegistryController) CloneGlobalImageToDev(image string) (string, e
 }
 func (frc fakeRegistryController) IsGlobalRegistry(string) bool { return frc.isGlobalRegistry }
 
+func (fr fakeRegistryController) Clone(from, to string) (string, error) {
+	return from, nil
+}
+
 type fakeHasher struct {
 	err  error
 	hash string
