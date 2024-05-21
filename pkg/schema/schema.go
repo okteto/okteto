@@ -1,22 +1,21 @@
-//  Copyright 2024 The Okteto Authors
-// Copyright 2023|2024 The Okteto Authors
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-// 
-// http://www.apache.org/licenses/LICENSE-2.0
-// 
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+//  Copyright 2023-2024 The Okteto Authors
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//  http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
 package schema
 
 import (
 	"encoding/json"
 
-	"github.com/invopop/jsonschema"
+	"github.com/kubeark/jsonschema"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -32,6 +31,7 @@ type manifest struct {
 	Image     string           `json:"image" jsonschema:"title=image,description=The name of the image to build and push. In clusters that have Okteto installed, this is optional (if not specified, the Okteto Registry is used)."`
 	Name      string           `json:"name" jsonschema:"title=name,description=The name of your development environment. It defaults to the name of your git repository."`
 	Deploy    model.DeployInfo `json:"deploy" jsonschema:"title=deploy,description=The deployment configuration for your development environment. This feature is only supported in clusters that have Okteto installed. https://www.okteto.com/docs/reference/okteto-manifest/#deploy-string-optional"`
+	Test      test             `json:"test" jsonschema:"title=test,description=The test configuration for your development environment. This feature is only supported in clusters that have Okteto installed."`
 }
 
 type OktetoJsonSchema struct {
@@ -46,7 +46,7 @@ func NewJsonSchema() *OktetoJsonSchema {
 	r.RequiredFromJSONSchemaTags = false
 
 	s := r.Reflect(&manifest{})
-	s.ID = "https://okteto.com/schemas/okteto-manifest.json"
+	s.ID = "https://raw.githubusercontent.com/okteto/okteto/af/validate-2/schema.json" // TODO: change to master branch
 	s.Title = "Okteto Manifest"
 	s.Version = "2.0.0"
 	s.Required = []string{}
@@ -70,7 +70,7 @@ func (o *OktetoJsonSchema) ToJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	// TODO: remove when MultiTypes are supported (https://github.com/invopop/jsonschema/issues/134)
+	// TODO: remove when MultiTypes are supported (https://github.com/kubeark/jsonschema/issues/134)
 	data["properties"].(map[string]interface{})["deploy"].(map[string]interface{})["type"] = []string{"array", "object"}
 	data["properties"].(map[string]interface{})["dev"].(map[string]interface{})["patternProperties"].(map[string]interface{})[".*"].(map[string]interface{})["properties"].(map[string]interface{})["command"].(map[string]interface{})["type"] = []string{"array", "string"}
 

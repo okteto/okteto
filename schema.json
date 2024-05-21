@@ -1,6 +1,6 @@
 {
-  "$id": "https://okteto.com/schemas/okteto-manifest.json",
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/okteto/okteto/af/validate-2/schema.json",
+  "$schema": "2.0.0",
   "additionalProperties": false,
   "properties": {
     "build": {
@@ -55,7 +55,9 @@
     },
     "context": {
       "description": "The build context. Relative paths are relative to the location of the Okteto Manifest (default: .)",
-      "examples": ["api"],
+      "examples": [
+        "api"
+      ],
       "title": "context",
       "type": "string"
     },
@@ -127,7 +129,9 @@
                 "driver": {
                   "default": "istio",
                   "description": "the backend for divert. Currently the only supported driver is 'istio'",
-                  "enum": ["istio"],
+                  "enum": [
+                    "istio"
+                  ],
                   "title": "driver",
                   "type": "string"
                 },
@@ -200,7 +204,11 @@
                           "type": "string"
                         }
                       },
-                      "required": ["Path", "Service", "Port"],
+                      "required": [
+                        "Path",
+                        "Service",
+                        "Port"
+                      ],
                       "type": "object"
                     },
                     "title": "rules",
@@ -221,7 +229,9 @@
                     "type": "object"
                   }
                 },
-                "required": ["Rules"],
+                "required": [
+                  "Rules"
+                ],
                 "type": "object"
               },
               "title": "endpoints",
@@ -240,7 +250,10 @@
         }
       ],
       "title": "deploy",
-      "type": ["array", "object"]
+      "type": [
+        "array",
+        "object"
+      ]
     },
     "destroy": {
       "description": "Allows destroying resources created by your development environment. Can be either a list of commands or an object (destroy.image",
@@ -272,11 +285,14 @@
                   "items": {
                     "type": "string"
                   },
-                  "type": "array"
+                  "type": "object"
                 }
               ],
               "title": "command",
-              "type": ["array", "string"]
+              "type": [
+                "array",
+                "string"
+              ]
             },
             "forward": {
               "oneOf": [
@@ -285,16 +301,19 @@
                     "pattern": "^[0-9]+:[0-9]+$",
                     "type": "string"
                   },
-                  "type": "array"
+                  "type": "object"
                 }
               ],
               "title": "forward",
-              "type": "array"
+              "type": "object"
             },
             "mode": {
               "default": "sync",
               "description": "Container mode (sync, hybrid)",
-              "enum": ["sync", "hybrid"],
+              "enum": [
+                "sync",
+                "hybrid"
+              ],
               "title": "mode",
               "type": "string"
             },
@@ -305,11 +324,11 @@
                     "pattern": "^.*:.*$",
                     "type": "string"
                   },
-                  "type": "array"
+                  "type": "object"
                 }
               ],
               "title": "sync",
-              "type": "array"
+              "type": "object"
             }
           },
           "type": "object"
@@ -336,7 +355,9 @@
                     "type": "string"
                   }
                 },
-                "required": ["url"],
+                "required": [
+                  "url"
+                ],
                 "type": "object"
               },
               "type": "array"
@@ -381,7 +402,10 @@
                 "type": "integer"
               }
             },
-            "required": ["localPort", "remotePort"],
+            "required": [
+              "localPort",
+              "remotePort"
+            ],
             "type": "object"
           }
         ]
@@ -432,6 +456,68 @@
       "description": "The namespace where the development environment is deployed. By default",
       "title": "namespace",
       "type": "string"
+    },
+    "test": {
+      "additionalProperties": false,
+      "description": "The test configuration for your development environment. This feature is only supported in clusters that have Okteto installed.",
+      "patternProperties": {
+        ".*": {
+          "additionalProperties": false,
+          "properties": {
+            "caches": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "commands": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "command": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              ],
+              "type": [
+                "array",
+                "string"
+              ]
+            },
+            "context": {
+              "description": "The build context. Relative paths are relative to the location of the Okteto Manifest (default: .)",
+              "title": "context",
+              "type": "string"
+            },
+            "depends_on": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "image": {
+              "description": "The image to use for the test container",
+              "title": "image",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "title": "test",
+      "type": "object"
     }
   },
   "title": "Okteto Manifest",
