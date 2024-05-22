@@ -71,6 +71,12 @@ func (o *Options) setDevFromManifest(devs model.ManifestDevs, ioControl *io.Cont
 	}
 	ioControl.Logger().Debug("retrieving dev name from manifest")
 
+	devNameList := devs.GetDevs()
+	if len(devNameList) == 1 {
+		o.devName = devNameList[0]
+		ioControl.Logger().Infof("dev name set to '%s'", o.devName)
+		return nil
+	}
 	devName, err := o.devSelector.AskForOptionsOkteto(utils.ListToSelectorItem(devs.GetDevs()), -1)
 	if err != nil {
 		return fmt.Errorf("failed to select dev: %w", err)
