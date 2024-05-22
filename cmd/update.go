@@ -24,11 +24,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	LATEST_URL   = "https://github.com/okteto/okteto/releases/latest/download"
-	INSTALL_PATH = "/usr/local/bin/okteto"
-)
-
 // UpdateDeprecated checks if there is a new version available and updates it
 func UpdateDeprecated() *cobra.Command {
 	return &cobra.Command{
