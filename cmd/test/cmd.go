@@ -10,6 +10,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package test
 
 import (
@@ -160,6 +161,10 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 	manifest, err := model.GetManifestV2(options.ManifestPath, fs)
 	if err != nil {
+		return analytics.TestMetadata{}, err
+	}
+
+	if err := manifest.Test.Validate(); err != nil {
 		return analytics.TestMetadata{}, err
 	}
 
