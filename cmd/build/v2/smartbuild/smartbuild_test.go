@@ -388,3 +388,60 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 		})
 	}
 }
+
+func TestClone(t *testing.T) {
+	type input struct {
+		from string
+		to   string
+	}
+	type output struct {
+		devImage string
+		err      error
+	}
+
+	tests := []struct {
+		name   string
+		input  input
+		output output
+	}{
+		{
+			name: "Global Registry",
+			input: input{
+				from: "okteto.global/myimage",
+				to:   "okteto.dev/myimage",
+			},
+			output: output{
+				devImage: "okteto.global/myimage",
+				err:      nil,
+			},
+		},
+		{
+			name: "Non-Global Registry",
+			input: input{
+				from: "okteto.dev/myimage",
+				to:   "okteto.dev/myimage",
+			},
+			output: output{
+				devImage: "okteto.dev/myimage",
+				err:      nil,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := Ctrl{
+				registryController: fakeRegistryController{
+					isGlobalRegistry: tt.input.from == "okteto.global/myimage",
+					err:              tt.output.err,
+				},
+				ioCtrl: io.NewIOController(),
+			}
+
+			devImage, err := ctrl.Clone(tt.input.from, tt.input.to)
+
+			assert.Equal(t, tt.output.devImage, devImage)
+			assert.Equal(t, tt.output.err, err)
+		})
+	}
+}
