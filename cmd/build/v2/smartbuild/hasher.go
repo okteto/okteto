@@ -173,13 +173,3 @@ func (sh *serviceHasher) getDockerfileContent(dockerfileContext, dockerfilePath 
 	encodedFile := sha256.Sum256(content)
 	return hex.EncodeToString(encodedFile[:])
 }
-
-func (sh *serviceHasher) getServiceShaInCache(service string) string {
-	sh.lock.RLock()
-	defer sh.lock.RUnlock()
-	v, ok := sh.serviceShaCache[service]
-	if !ok {
-		return ""
-	}
-	return v
-}

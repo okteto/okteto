@@ -25,7 +25,6 @@ import (
 type imageTaggerInterface interface {
 	getServiceImageReference(manifestName, svcName string, b *build.Info, buildHash string) string
 	getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string
-	getImageReferencesForTagWithDefaults(manifestName, svcToBuildName, tag string) []string
 	getImageReferencesForDeploy(manifestName, svcToBuildName string) []string
 }
 
@@ -106,22 +105,6 @@ func (it imageTagger) getImageReferencesForTag(manifestName, svcToBuildName, tag
 		referencesToCheck = append(referencesToCheck, useReferenceTemplate(targetRegistry, sanitizedName, svcToBuildName, tag))
 	}
 	return referencesToCheck
-}
-
-// getImageReferencesForTagWithDefaults returns all the possible image references for a given service, options include
-// the given tag and the default okteto tag. For the default tag, we only use dev registry.
-func (it imageTagger) getImageReferencesForTagWithDefaults(manifestName, svcToBuildName, tag string) []string {
-	var imageReferences []string
-	if it.smartBuildController.IsEnabled() {
-		imageReferences = append(imageReferences, it.getImageReferencesForTag(manifestName, svcToBuildName, tag)...)
-	}
-
-	// The default tag (okteto) should be considered only with the dev registry. It should never be used with the global
-	// registry
-	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	imageReferences = append(imageReferences, useReferenceTemplate(constants.DevRegistry, sanitizedName, svcToBuildName, model.OktetoDefaultImageTag))
-
-	return imageReferences
 }
 
 // getImageReferencesForDeploy returns the list of images references for a service when deploying it. In case of deploy,

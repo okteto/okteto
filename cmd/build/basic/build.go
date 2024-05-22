@@ -21,12 +21,10 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/log/io"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 )
@@ -41,21 +39,6 @@ type BuildRunner interface {
 type Builder struct {
 	BuildRunner BuildRunner
 	IoCtrl      *io.Controller
-}
-
-// NewBuilderFromScratch creates a new okteto builder
-func NewBuilderFromScratch(ioCtrl *io.Controller) *Builder {
-	builder := buildCmd.NewOktetoBuilder(
-		&okteto.ContextStateless{
-			Store: okteto.GetContextStore(),
-		},
-		afero.NewOsFs(),
-	)
-
-	return &Builder{
-		BuildRunner: builder,
-		IoCtrl:      ioCtrl,
-	}
 }
 
 // Build builds the image defined by the BuildOptions used the BuildRunner passed as dependency
