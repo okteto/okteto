@@ -395,13 +395,13 @@ func TestClone(t *testing.T) {
 		to   string
 	}
 	type output struct {
-		devImage string
 		err      error
+		devImage string
 	}
 
 	tests := []struct {
-		name   string
 		input  input
+		name   string
 		output output
 	}{
 		{
