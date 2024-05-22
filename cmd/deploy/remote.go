@@ -18,14 +18,18 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"strings"
 
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
+	"github.com/okteto/okteto/pkg/ignore"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/remote"
 	"github.com/spf13/afero"
@@ -94,6 +98,19 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		return err
 	}
 
+	cwd, err := remote.GetOriginalCWD(filesystem.NewOsWorkingDirectoryCtrl(), deployOptions.ManifestPathFlag)
+	if err != nil {
+		return fmt.Errorf("failed to resolve working directory for remote deploy: %w", err)
+	}
+	ig, err := ignore.NewFromFile(path.Join(cwd, model.IgnoreFilename))
+	if err != nil {
+		return fmt.Errorf("failed to read ignore file: %w", err)
+	}
+	rules, err := ig.Rules(ignore.RootSection, "deploy")
+	if err != nil {
+		return fmt.Errorf("failed to create ignore rules for remote deploy: %w", err)
+	}
+
 	runParams := remote.Params{
 		// This is the base image provided by the deploy operation. If it is empty, the runner is the one in charge of
 		// providing the default one
@@ -107,6 +124,7 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		Deployable:                dep,
 		Manifest:                  deployOptions.Manifest,
 		Command:                   remote.DeployCommand,
+		IgnoreRules:               rules,
 		UseOktetoDeployIgnoreFile: true,
 	}
 
