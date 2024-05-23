@@ -373,7 +373,7 @@ ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
 
-RUN echo "$OKTETO_INVALIDATE_CACHE" > /var/lib/.oktetocachekey
+RUN  mkdir -p /var/lib && echo "$OKTETO_INVALIDATE_CACHE" > /var/lib/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
 
 RUN \

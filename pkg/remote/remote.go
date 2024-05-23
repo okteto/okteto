@@ -91,7 +91,7 @@ ARG {{ .GitCommitArgName }}
 ARG {{ .GitBranchArgName }}
 ARG {{ .InvalidateCacheArgName }}
 
-RUN echo "${{ .InvalidateCacheArgName }}" > /var/lib/.oktetocachekey
+RUN mkdir -p /var/lib && echo "${{ .InvalidateCacheArgName }}" > /var/lib/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
 
 RUN \
