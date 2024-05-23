@@ -67,6 +67,6 @@ func (dr *TestRunner) RunTest(params TestParameters) error {
 
 		params.Variables = append(params.Variables, envsFromOktetoEnvFile...)
 	}
-
+	oktetoLog.Success("Test container '%s' executed successfully", params.Name)
 	return nil
 }

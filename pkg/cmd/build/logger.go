@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -24,6 +25,10 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/tonistiigi/units"
+)
+
+var (
+	nameRegex = regexp.MustCompile(`--name\s+"([^"]+)"`)
 )
 
 const (
@@ -45,11 +50,17 @@ func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus, o *types.
 	var done bool
 	var outputMode string
 
-	if o.OutputMode == DestroyOutputModeOnBuild {
+	switch o.OutputMode {
+	case DeployOutputModeOnBuild:
+		outputMode = DeployOutputModeOnBuild
+	case DestroyOutputModeOnBuild:
 		outputMode = DestroyOutputModeOnBuild
-	} else {
+	case TestOutputModeOnBuild:
+		outputMode = TestOutputModeOnBuild
+	default:
 		outputMode = DeployOutputModeOnBuild
 	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -107,12 +118,16 @@ func (t *trace) update(ss *client.SolveStatus) error {
 		v, ok := t.ongoing[rawVertex.Digest.Encoded()]
 		if !ok {
 			v = &vertexInfo{
-				name: rawVertex.Name,
+				name:   rawVertex.Name,
+				cached: rawVertex.Cached,
 			}
 			t.ongoing[rawVertex.Digest.Encoded()] = v
 		}
 		if rawVertex.Error != "" {
 			return fmt.Errorf("error on stage %s: %s", rawVertex.Name, rawVertex.Error)
+		}
+		if rawVertex.Cached {
+			v.cached = true
 		}
 		if rawVertex.Completed != nil {
 			v.completed = true
@@ -146,17 +161,21 @@ func (t *trace) display(progress string) {
 				currentLoadedCtx := units.Bytes(v.currentTransferedContext)
 				if t.showCtxAdvice && currentLoadedCtx > largeContextThreshold {
 					t.showCtxAdvice = false
-					oktetoLog.Information("You can use '.oktetodeployignore' file to optimize the context used to deploy your development environment.")
+					oktetoLog.Information("You can use '.oktetoignore' file to optimize the context used to deploy your development environment.")
 				}
 				oktetoLog.Spinner(fmt.Sprintf("Synchronizing context: %.2f", currentLoadedCtx))
 			}
 		}
 		if t.hasCommandLogs(v) {
-			if progress == DeployOutputModeOnBuild {
+			switch progress {
+			case DeployOutputModeOnBuild:
 				oktetoLog.Spinner("Deploying your development environment...")
-			} else {
+			case DestroyOutputModeOnBuild:
 				oktetoLog.Spinner("Destroying your development environment...")
+			case TestOutputModeOnBuild:
+				oktetoLog.Spinner("Running tests...")
 			}
+
 			for _, log := range v.logs {
 				var text oktetoLog.JSONLogFormat
 				if err := json.Unmarshal([]byte(log), &text); err != nil {
@@ -213,6 +232,16 @@ func (t trace) hasCommandLogs(v *vertexInfo) bool {
 func (t *trace) removeCompletedSteps() {
 	for k, v := range t.ongoing {
 		if v.completed {
+			// We need to specify the command test in order to not affect okteto deploy on remote
+			if strings.Contains(v.name, "remote-run test") && v.cached {
+				match := nameRegex.FindStringSubmatch(v.name)
+				if len(match) > 1 {
+					name := match[1]
+					oktetoLog.Information("Skipping test container '%s', CACHED", name)
+				} else {
+					oktetoLog.Information("Skipping test container, CACHED")
+				}
+			}
 			delete(t.ongoing, k)
 		}
 	}
@@ -224,4 +253,5 @@ type vertexInfo struct {
 	currentTransferedContext int64
 	totalTransferedContext   int64
 	completed                bool
+	cached                   bool
 }
