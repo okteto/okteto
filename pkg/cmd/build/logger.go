@@ -201,7 +201,9 @@ func (t *trace) display(progress string) {
 				default:
 					// Print the information message about the stage if needed
 					if _, ok := t.stages[text.Stage]; !ok {
-						oktetoLog.Information("Running stage '%s'", text.Stage)
+						if progress != TestOutputModeOnBuild {
+							oktetoLog.Information("Running stage '%s'", text.Stage)
+						}
 						t.stages[text.Stage] = true
 					}
 					if text.Level == "error" {
