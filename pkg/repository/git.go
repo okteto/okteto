@@ -267,7 +267,7 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 
 	// go func that calculates the diff using git diff
 	go func() {
-		diff, err := repo.GetDiff(ctx, r.path, contextDir, NewLocalGit("git", &LocalExec{}))
+		diff, err := repo.GetDiff(ctx, contextDir, NewLocalGit("git", &LocalExec{}))
 		select {
 		case <-timeoutCh:
 		case diffCh <- diffResponse{
@@ -337,7 +337,7 @@ func (r gitRepoController) calculateLatestDirSHA(ctx context.Context, contextDir
 		return "", fmt.Errorf("failed to calculate latestDirCommit: failed to analyze git repo: %w", err)
 	}
 
-	return repo.GetLatestSHA(ctx, r.path, contextDir, NewLocalGit("git", &LocalExec{}))
+	return repo.GetLatestSHA(ctx, contextDir, NewLocalGit("git", &LocalExec{}))
 }
 
 type repositoryGetterInterface interface {
@@ -407,8 +407,8 @@ type gitRepositoryInterface interface {
 	Worktree() (gitWorktreeInterface, error)
 	Head() (*plumbing.Reference, error)
 	Log(o *git.LogOptions) (object.CommitIter, error)
-	GetLatestSHA(ctx context.Context, repoPath, dirpath string, localGit LocalGitInterface) (string, error)
-	GetDiff(ctx context.Context, repoPath, dirpath string, localGit LocalGitInterface) (string, error)
+	GetLatestSHA(ctx context.Context, dirpath string, localGit LocalGitInterface) (string, error)
+	GetDiff(ctx context.Context, dirpath string, localGit LocalGitInterface) (string, error)
 	calculateUntrackedFiles(ctx context.Context, contextDir string) ([]string, error)
 }
 
@@ -475,7 +475,7 @@ func (ogr oktetoGitWorktree) ListUntrackedFiles(ctx context.Context, workdir str
 // git installed locally or not.
 // - If git is not installed locally, it will use the latest commit of that directory.
 // - If git is installed it will get a SHA from the files tracked within that directory.
-func (ogr oktetoGitRepository) GetLatestSHA(ctx context.Context, repoPath, dirpath string, localGit LocalGitInterface) (string, error) {
+func (ogr oktetoGitRepository) GetLatestSHA(ctx context.Context, dirpath string, localGit LocalGitInterface) (string, error) {
 	// using git directly is faster, so we check if it's available
 	_, err := localGit.Exists()
 	if err != nil {
@@ -509,7 +509,7 @@ func (ogr oktetoGitRepository) GetLatestSHA(ctx context.Context, repoPath, dirpa
 }
 
 // GetDiff returns the diff between the current state of the repo and the last commit
-func (ogr oktetoGitRepository) GetDiff(ctx context.Context, repoPath, dirpath string, localGit LocalGitInterface) (string, error) {
+func (ogr oktetoGitRepository) GetDiff(ctx context.Context, dirpath string, localGit LocalGitInterface) (string, error) {
 	// using git directly is faster, so we check if it's available
 	_, err := localGit.Exists()
 	if err != nil {
