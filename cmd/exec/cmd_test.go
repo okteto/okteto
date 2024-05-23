@@ -384,7 +384,7 @@ func TestExec_Run(t *testing.T) {
 				ioCtrl:            ioCtrl,
 				k8sClientProvider: k8sClientProvider,
 				appRetriever:      appRetriever,
-				mixpannelTracker:  &fakeMixpanelTracker{},
+				mixpanelTracker:   &fakeMixpanelTracker{},
 				getExecutorFunc:   tc.getExecutorFunc,
 			}
 			if tc.name == "error getting executor" {

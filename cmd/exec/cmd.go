@@ -47,7 +47,7 @@ type Exec struct {
 	fs                afero.Fs
 	appRetriever      *appRetriever
 	k8sClientProvider okteto.K8sClientProvider
-	mixpannelTracker  metadataTracker
+	mixpanelTracker   metadataTracker
 
 	getExecutorFunc func(dev *model.Dev, podName string) (executor, error)
 	onExecFinish    []onExecFinish
@@ -56,7 +56,7 @@ type Exec struct {
 // NewExec creates a new exec command
 func NewExec(fs afero.Fs, ioCtrl *io.Controller) *Exec {
 	k8sProvider := okteto.NewK8sClientProvider()
-	mixpannelTracker := &mixpannelTrack{
+	mixpanelTracker := &mixpannelTrack{
 		trackFunc: analytics.TrackExec,
 	}
 	e := &Exec{
@@ -64,9 +64,9 @@ func NewExec(fs afero.Fs, ioCtrl *io.Controller) *Exec {
 		fs:                fs,
 		k8sClientProvider: k8sProvider,
 		appRetriever:      newAppRetriever(ioCtrl, k8sProvider),
-		mixpannelTracker:  mixpannelTracker,
+		mixpanelTracker:   mixpanelTracker,
 		onExecFinish: []onExecFinish{
-			mixpannelTracker.Track,
+			mixpanelTracker.Track,
 		},
 	}
 	e.getExecutorFunc = e.getExecutor
@@ -143,7 +143,7 @@ func (e *Exec) Run(ctx context.Context, opts *Options, dev *model.Dev) error {
 		return fmt.Errorf("failed to get executor: %w", err)
 	}
 	err = executor.execute(ctx, opts.command)
-	e.mixpannelTracker.SetMetadata(&analytics.TrackExecMetadata{
+	e.mixpanelTracker.SetMetadata(&analytics.TrackExecMetadata{
 		Mode:               dev.Mode,
 		FirstArgIsDev:      opts.firstArgIsDevName,
 		Success:            err == nil,
