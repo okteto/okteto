@@ -35,7 +35,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/spf13/afero"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	yaml3 "gopkg.in/yaml.v3"
 )
 
@@ -1052,6 +1052,14 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 
 			svcInfo.Build = buildInfo
 		} else {
+			if buildInfo == nil {
+				buildInfo = &build.Info{}
+			}
+
+			if len(svcInfo.VolumeMounts) > 0 {
+				buildInfo.VolumesToInclude = svcInfo.VolumeMounts
+			}
+
 			if svcInfo.Image != "" {
 				buildInfo.Image = svcInfo.Image
 			}
