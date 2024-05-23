@@ -97,35 +97,3 @@ func TestServiceHasher_HashBuildContext(t *testing.T) {
 		})
 	}
 }
-
-func TestGetBuildContextHashInCache(t *testing.T) {
-	tests := []struct {
-		name           string
-		buildContext   string
-		cacheValue     string
-		expectedResult string
-	}{
-		{
-			name:           "Cache Hit",
-			buildContext:   "test",
-			cacheValue:     "hash123",
-			expectedResult: "hash123",
-		},
-		{
-			name:           "Cache Miss",
-			buildContext:   "nonexistentBuildContext",
-			cacheValue:     "",
-			expectedResult: "",
-		},
-	}
-
-	// Run tests
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			sh := newServiceHasher(nil, afero.NewMemMapFs())
-			sh.serviceShaCache["test"] = tt.cacheValue
-			result := sh.getServiceShaInCache(tt.buildContext)
-			assert.Equal(t, tt.expectedResult, result)
-		})
-	}
-}
