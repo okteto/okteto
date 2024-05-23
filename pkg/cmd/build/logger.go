@@ -69,7 +69,7 @@ func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus, o *types.
 		case <-timeout.C:
 		case ss, ok := <-ch:
 			if ok {
-				if err := t.update(ss, outputMode); err != nil {
+				if err := t.update(ss); err != nil {
 					oktetoLog.Info(err.Error())
 					continue
 				}
@@ -117,7 +117,7 @@ func newTrace() *trace {
 	}
 }
 
-func (t *trace) update(ss *client.SolveStatus, outputMode string) error {
+func (t *trace) update(ss *client.SolveStatus) error {
 	for _, rawVertex := range ss.Vertexes {
 		v, ok := t.ongoing[rawVertex.Digest.Encoded()]
 		if !ok {
