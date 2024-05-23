@@ -24,7 +24,7 @@ import (
 
 func TestNewOptions(t *testing.T) {
 	testCases := []struct {
-		expected      *Options
+		expected      *options
 		name          string
 		argsIn        []string
 		argsLenAtDash int
@@ -33,7 +33,7 @@ func TestNewOptions(t *testing.T) {
 			name:          "Empty args",
 			argsIn:        []string{},
 			argsLenAtDash: 0,
-			expected: &Options{
+			expected: &options{
 				command:     []string{},
 				devSelector: utils.NewOktetoSelector("Select which development container to exec:", "Development container"),
 			},
@@ -42,7 +42,7 @@ func TestNewOptions(t *testing.T) {
 			name:          "Args with dev name",
 			argsIn:        []string{"dev1"},
 			argsLenAtDash: -1,
-			expected: &Options{
+			expected: &options{
 				devName:           "dev1",
 				firstArgIsDevName: true,
 				command:           []string{},
@@ -53,7 +53,7 @@ func TestNewOptions(t *testing.T) {
 			name:          "Args with command",
 			argsIn:        []string{"echo", "test"},
 			argsLenAtDash: 0,
-			expected: &Options{
+			expected: &options{
 				command:     []string{"echo", "test"},
 				devSelector: utils.NewOktetoSelector("Select which development container to exec:", "Development container"),
 			},
@@ -62,7 +62,7 @@ func TestNewOptions(t *testing.T) {
 			name:          "Args with dev name and command",
 			argsIn:        []string{"dev1", "echo", "test"},
 			argsLenAtDash: 1,
-			expected: &Options{
+			expected: &options{
 				devName:           "dev1",
 				firstArgIsDevName: true,
 				command:           []string{"echo", "test"},
@@ -73,7 +73,7 @@ func TestNewOptions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			opts := NewOptions(tc.argsIn, tc.argsLenAtDash)
+			opts := newOptions(tc.argsIn, tc.argsLenAtDash)
 			assert.Equal(t, tc.expected, opts)
 		})
 	}
@@ -92,14 +92,14 @@ func TestSetDevFromManifest(t *testing.T) {
 	// Define test cases using a slice of structs
 	testCases := []struct {
 		expectedError error
-		options       *Options
+		options       *options
 		devs          model.ManifestDevs
 		name          string
 		expectedDev   string
 	}{
 		{
 			name: "Dev name already set",
-			options: &Options{
+			options: &options{
 				devName: "dev1",
 			},
 			devs:          model.ManifestDevs{},
@@ -108,7 +108,7 @@ func TestSetDevFromManifest(t *testing.T) {
 		},
 		{
 			name: "Select dev from manifest",
-			options: &Options{
+			options: &options{
 				devName: "",
 				devSelector: &fakeDevSelector{
 					devName: "dev1",
@@ -124,7 +124,7 @@ func TestSetDevFromManifest(t *testing.T) {
 		},
 		{
 			name: "Failed to select dev",
-			options: &Options{
+			options: &options{
 				devName: "",
 				devSelector: &fakeDevSelector{
 					devName: "",
@@ -151,13 +151,13 @@ func TestValidate(t *testing.T) {
 	// Define test cases using a slice of structs
 	testCases := []struct {
 		expected error
-		options  *Options
+		options  *options
 		devs     model.ManifestDevs
 		name     string
 	}{
 		{
 			name: "Missing dev name",
-			options: &Options{
+			options: &options{
 				command: []string{"echo", "test"},
 			},
 			devs:     model.ManifestDevs{},
@@ -165,7 +165,7 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "Missing command",
-			options: &Options{
+			options: &options{
 				devName: "dev1",
 			},
 			devs:     model.ManifestDevs{},
@@ -173,7 +173,7 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "Invalid dev name (not defined)",
-			options: &Options{
+			options: &options{
 				devName: "dev2",
 				command: []string{"echo", "test"},
 			},
@@ -182,7 +182,7 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "Valid options",
-			options: &Options{
+			options: &options{
 				devName: "dev1",
 				command: []string{"echo", "test"},
 			},

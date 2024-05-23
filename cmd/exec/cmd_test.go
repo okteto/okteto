@@ -387,12 +387,9 @@ func TestExec_Run(t *testing.T) {
 				mixpanelTracker:   &fakeMixpanelTracker{},
 				getExecutorFunc:   tc.getExecutorFunc,
 			}
-			if tc.name == "error getting executor" {
-				fmt.Print()
-			}
 			err := e.Run(
 				context.Background(),
-				&Options{
+				&options{
 					devName: "test",
 					command: []string{"echo", "test"},
 				},

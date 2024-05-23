@@ -22,7 +22,8 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 )
 
-type Options struct {
+// options represents the exec command options
+type options struct {
 	devSelector       devSelector
 	devName           string
 	command           []string
@@ -45,12 +46,14 @@ type errDevNotInManifest struct {
 	devName string
 }
 
+// Error returns the error message
 func (e *errDevNotInManifest) Error() string {
 	return fmt.Sprintf("'%s' is not defined in your okteto manifest", e.devName)
 }
 
-func NewOptions(argsIn []string, argsLenAtDash int) *Options {
-	opts := &Options{
+// newOptions creates a new exec options instance
+func newOptions(argsIn []string, argsLenAtDash int) *options {
+	opts := &options{
 		command:     []string{},
 		devSelector: utils.NewOktetoSelector("Select which development container to exec:", "Development container"),
 	}
@@ -64,7 +67,7 @@ func NewOptions(argsIn []string, argsLenAtDash int) *Options {
 	return opts
 }
 
-func (o *Options) setDevFromManifest(devs model.ManifestDevs, ioControl *io.Controller) error {
+func (o *options) setDevFromManifest(devs model.ManifestDevs, ioControl *io.Controller) error {
 	if o.devName != "" {
 		ioControl.Logger().Infof("dev name is already set to '%s'", o.devName)
 		return nil
@@ -85,7 +88,7 @@ func (o *Options) setDevFromManifest(devs model.ManifestDevs, ioControl *io.Cont
 	return nil
 }
 
-func (o *Options) Validate(devs model.ManifestDevs) error {
+func (o *options) Validate(devs model.ManifestDevs) error {
 	if o.devName == "" {
 		return errDevNameRequired
 	}

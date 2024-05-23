@@ -96,7 +96,7 @@ okteto exec my-pod`,
 			}
 
 			argsLenAtDash := cmd.ArgsLenAtDash()
-			opts := NewOptions(args, argsLenAtDash)
+			opts := newOptions(args, argsLenAtDash)
 			if err := opts.setDevFromManifest(manifest.Dev, e.ioCtrl); err != nil {
 				return fmt.Errorf("failed to set dev from manifest: %w", err)
 			}
@@ -114,7 +114,7 @@ okteto exec my-pod`,
 }
 
 // Run executes the exec command
-func (e *Exec) Run(ctx context.Context, opts *Options, dev *model.Dev) error {
+func (e *Exec) Run(ctx context.Context, opts *options, dev *model.Dev) error {
 	e.ioCtrl.Logger().Infof("executing command '%s' in development container '%s'", opts.command, opts.devName)
 
 	app, err := e.appRetriever.getApp(ctx, dev)
