@@ -36,9 +36,15 @@ type execFlags struct {
 
 type onExecFinish func()
 
+// metadataTracker is an interface to track metadata
 type metadataTracker interface {
 	SetMetadata(metadata *analytics.TrackExecMetadata)
 	Track()
+}
+
+// executorProviderInterface provides an executor for a development container
+type executorProviderInterface interface {
+	provide(dev *model.Dev, podName string) (executor, error)
 }
 
 // Exec executes a command on the remote development container
@@ -49,8 +55,8 @@ type Exec struct {
 	k8sClientProvider okteto.K8sClientProvider
 	mixpanelTracker   metadataTracker
 
-	getExecutorFunc func(dev *model.Dev, podName string) (executor, error)
-	onExecFinish    []onExecFinish
+	executorProvider executorProviderInterface
+	onExecFinish     []onExecFinish
 }
 
 // NewExec creates a new exec command
@@ -67,8 +73,11 @@ func NewExec(fs afero.Fs, ioCtrl *io.Controller, k8sProvider okteto.K8sClientPro
 		onExecFinish: []onExecFinish{
 			mixpanelTracker.Track,
 		},
+		executorProvider: executorProvider{
+			ioCtrl:            ioCtrl,
+			k8sClientProvider: k8sProvider,
+		},
 	}
-	e.getExecutorFunc = e.getExecutor
 	return e
 }
 
@@ -137,7 +146,7 @@ func (e *Exec) Run(ctx context.Context, opts *options, dev *model.Dev) error {
 		dev.Container = pod.Spec.Containers[0].Name
 	}
 	e.ioCtrl.Logger().Infof("executing command '%s' in container '%s'", opts.command, dev.Container)
-	executor, err := e.getExecutorFunc(dev, pod.Name)
+	executor, err := e.executorProvider.provide(dev, pod.Name)
 	if err != nil {
 		return fmt.Errorf("failed to get executor: %w", err)
 	}

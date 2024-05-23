@@ -26,10 +26,10 @@ import (
 )
 
 func TestExec_getExecutor(t *testing.T) {
-	e := Exec{
+	e := executorProvider{
 		ioCtrl:            io.NewIOController(),
 		k8sClientProvider: test.NewFakeK8sProvider(),
-	} // Create an instance of the Exec struct
+	}
 
 	dev := &model.Dev{} // Create a sample dev object
 	podName := "test-pod"
@@ -44,7 +44,7 @@ func TestExec_getExecutor(t *testing.T) {
 	}
 	// Test case 1: Hybrid mode enabled
 	dev.Mode = constants.OktetoHybridModeFieldValue
-	executor, err := e.getExecutor(dev, podName)
+	executor, err := e.provide(dev, podName)
 	assert.NoError(t, err)
 	assert.NotNil(t, executor)
 	assert.IsType(t, &hybridExecutor{}, executor)
@@ -52,7 +52,7 @@ func TestExec_getExecutor(t *testing.T) {
 	// Test case 2: Remote mode enabled
 	dev.Mode = constants.OktetoSyncModeFieldValue
 	dev.RemotePort = 22000
-	executor, err = e.getExecutor(dev, podName)
+	executor, err = e.provide(dev, podName)
 	assert.NoError(t, err)
 	assert.NotNil(t, executor)
 	assert.IsType(t, &sshExecutor{}, executor)
@@ -61,7 +61,7 @@ func TestExec_getExecutor(t *testing.T) {
 	dev.Mode = constants.OktetoSyncModeFieldValue
 	dev.RemotePort = 0
 	t.Setenv("OKTETO_EXECUTE_SSH", "false")
-	executor, err = e.getExecutor(dev, podName)
+	executor, err = e.provide(dev, podName)
 	assert.NoError(t, err)
 	assert.NotNil(t, executor)
 	assert.IsType(t, &k8sExecutor{}, executor)

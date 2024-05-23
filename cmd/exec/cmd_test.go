@@ -47,6 +47,15 @@ func (f *fakeExecutor) execute(ctx context.Context, cmd []string) error {
 	return f.executionErr
 }
 
+type fakeExecutorProvider struct {
+	executor executor
+	err      error
+}
+
+func (f *fakeExecutorProvider) provide(*model.Dev, string) (executor, error) {
+	return f.executor, f.err
+}
+
 func TestExec_Run(t *testing.T) {
 	okteto.CurrentStore = &okteto.ContextStore{
 		Contexts: map[string]*okteto.Context{
@@ -63,11 +72,11 @@ func TestExec_Run(t *testing.T) {
 	}
 
 	tt := []struct {
-		expectedErr     error
-		getExecutorFunc func(dev *model.Dev, podName string) (executor, error)
-		name            string
-		objects         []runtime.Object
-		k8sClientErr    bool
+		expectedErr      error
+		executorProvider executorProviderInterface
+		name             string
+		objects          []runtime.Object
+		k8sClientErr     bool
 	}{
 		{
 			name:        "error retrieving app",
@@ -216,8 +225,8 @@ func TestExec_Run(t *testing.T) {
 					},
 				},
 			},
-			getExecutorFunc: func(dev *model.Dev, podName string) (executor, error) {
-				return nil, assert.AnError
+			executorProvider: &fakeExecutorProvider{
+				err: assert.AnError,
 			},
 			expectedErr: assert.AnError,
 		},
@@ -287,10 +296,11 @@ func TestExec_Run(t *testing.T) {
 					},
 				},
 			},
-			getExecutorFunc: func(dev *model.Dev, podName string) (executor, error) {
-				return &fakeExecutor{
+			executorProvider: &fakeExecutorProvider{
+				executor: &fakeExecutor{
 					executionErr: assert.AnError,
-				}, nil
+				},
+				err: nil,
 			},
 			expectedErr: assert.AnError,
 		},
@@ -360,8 +370,9 @@ func TestExec_Run(t *testing.T) {
 					},
 				},
 			},
-			getExecutorFunc: func(dev *model.Dev, podName string) (executor, error) {
-				return &fakeExecutor{}, nil
+			executorProvider: &fakeExecutorProvider{
+				executor: &fakeExecutor{},
+				err:      nil,
 			},
 			expectedErr: nil,
 		},
@@ -385,7 +396,7 @@ func TestExec_Run(t *testing.T) {
 				k8sClientProvider: k8sClientProvider,
 				appRetriever:      appRetriever,
 				mixpanelTracker:   &fakeMixpanelTracker{},
-				getExecutorFunc:   tc.getExecutorFunc,
+				executorProvider:  tc.executorProvider,
 			}
 			err := e.Run(
 				context.Background(),

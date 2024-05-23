@@ -21,6 +21,7 @@ import (
 	"github.com/okteto/okteto/cmd/up"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/exec"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/ssh"
@@ -43,7 +44,12 @@ type executor interface {
 	execute(ctx context.Context, cmd []string) error
 }
 
-func (e Exec) getExecutor(dev *model.Dev, podName string) (executor, error) {
+type executorProvider struct {
+	ioCtrl            *io.Controller
+	k8sClientProvider okteto.K8sClientProvider
+}
+
+func (e executorProvider) provide(dev *model.Dev, podName string) (executor, error) {
 	k8sClient, cfg, err := e.k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		return nil, err
