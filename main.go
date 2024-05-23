@@ -175,7 +175,7 @@ func main() {
 	root.AddCommand(cmd.Down(at, k8sLogger))
 	root.AddCommand(cmd.Status())
 	root.AddCommand(cmd.Doctor(k8sLogger))
-	root.AddCommand(exec.NewExec(fs, ioController).NewCmdExec(ctx))
+	root.AddCommand(exec.NewExec(fs, ioController, k8sClientProvider).Cmd(ctx))
 	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
 	root.AddCommand(cmd.UpdateDeprecated())

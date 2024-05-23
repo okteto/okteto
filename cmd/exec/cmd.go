@@ -54,8 +54,7 @@ type Exec struct {
 }
 
 // NewExec creates a new exec command
-func NewExec(fs afero.Fs, ioCtrl *io.Controller) *Exec {
-	k8sProvider := okteto.NewK8sClientProvider()
+func NewExec(fs afero.Fs, ioCtrl *io.Controller, k8sProvider okteto.K8sClientProvider) *Exec {
 	mixpanelTracker := &mixpannelTrack{
 		trackFunc: analytics.TrackExec,
 	}
