@@ -363,6 +363,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		if err := runner.Run(ctx, params); err != nil {
 			return metadata, err
 		}
+		oktetoLog.Success("Test container '%s' executed successfully", name)
 	}
 	metadata.Success = true
 	return metadata, nil
