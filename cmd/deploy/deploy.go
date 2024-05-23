@@ -288,6 +288,29 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 	return cmd
 }
 
+// calculateManifestPathToBeStored calculates the manifest path that has to be stored in the config map for UI operations.
+// It calculates the absolute path from the received path and then, it gets the relative path the top level git dir (repo root)
+func (dc *Command) calculateManifestPathToBeStored(topLevelGitDir, manifestPath string) string {
+	absoluteManifestPath, err := filepath.Abs(manifestPath)
+	if err != nil {
+		dc.IoCtrl.Logger().Debugf("failed to get absolute path for manifest path %q: %s", manifestPath, err)
+		return ""
+	}
+	manifestPathForConfigMap, err := filepath.Rel(topLevelGitDir, absoluteManifestPath)
+	if err != nil {
+		dc.IoCtrl.Logger().Infof("failed to get relative path for manifest path %q from the repository dir %q: %s", absoluteManifestPath, topLevelGitDir, err)
+		return ""
+	}
+
+	// If the relative path to the repository contains "..", it means the manifest path is not within the
+	// repository, so it should not be stored in the config map
+	if strings.Contains(manifestPathForConfigMap, "..") {
+		return ""
+	}
+
+	return manifestPathForConfigMap
+}
+
 // Run runs the deploy sequence
 func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	oktetoLog.SetStage("Load manifest")
@@ -357,12 +380,15 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	//   |- dirB
 	//    |- okteto.yml
 	// If the command executed is okteto deploy from "dirB", we should store the manifest path as "dirA/dirB/okteto.yml"
+	// NOTE: This is only stored if ManifestPathFlag (-f options) is passed
 	manifestPathForConfigMap := ""
-	if topLevelGitDir != "" && deployOptions.Manifest != nil && deployOptions.Manifest.ManifestPath != "" {
-		manifestPathForConfigMap, err = filepath.Rel(topLevelGitDir, deployOptions.Manifest.ManifestPath)
-		if err != nil {
-			dc.IoCtrl.Logger().Infof("failed to get relative path for manifest path %q from the repository dir %q: %s", deployOptions.Manifest.ManifestPath, topLevelGitDir, err)
-			manifestPathForConfigMap = ""
+	if topLevelGitDir != "" && deployOptions.ManifestPathFlag != "" {
+		// If deployOptions.ManifestPath is set, means that we have changed the working directory to the one storing the manifest, so we need to take the absolute path from ManifestPath
+		// as the original deployOptions.ManifestPathFlag wouldn't build the right path if we get the absolute one
+		if deployOptions.ManifestPath != "" {
+			manifestPathForConfigMap = dc.calculateManifestPathToBeStored(topLevelGitDir, deployOptions.ManifestPath)
+		} else {
+			manifestPathForConfigMap = dc.calculateManifestPathToBeStored(topLevelGitDir, deployOptions.ManifestPathFlag)
 		}
 	}
 
