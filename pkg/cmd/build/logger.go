@@ -69,7 +69,7 @@ func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus, o *types.
 		case <-timeout.C:
 		case ss, ok := <-ch:
 			if ok {
-				if err := t.update(ss); err != nil {
+				if err := t.update(ss, outputMode); err != nil {
 					oktetoLog.Info(err.Error())
 					continue
 				}
@@ -97,11 +97,15 @@ type trace struct {
 }
 
 type OktetoCommandErr struct {
-	Err   error
-	Stage string
+	Err    error
+	Stage  string
+	output string
 }
 
 func (e OktetoCommandErr) Error() string {
+	if e.output == TestOutputModeOnBuild {
+		return fmt.Sprintf("test container '%s' failed", e.Stage)
+	}
 	return fmt.Sprintf("error on stage %s: %s", e.Stage, e.Err.Error())
 }
 
@@ -113,7 +117,7 @@ func newTrace() *trace {
 	}
 }
 
-func (t *trace) update(ss *client.SolveStatus) error {
+func (t *trace) update(ss *client.SolveStatus, outputMode string) error {
 	for _, rawVertex := range ss.Vertexes {
 		v, ok := t.ongoing[rawVertex.Digest.Encoded()]
 		if !ok {
@@ -203,8 +207,9 @@ func (t *trace) display(progress string) {
 					if text.Level == "error" {
 						if text.Stage != "" {
 							t.err = OktetoCommandErr{
-								Stage: text.Stage,
-								Err:   fmt.Errorf(text.Message),
+								Stage:  text.Stage,
+								Err:    fmt.Errorf(text.Message),
+								output: progress,
 							}
 						}
 					} else {
