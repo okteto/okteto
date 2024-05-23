@@ -86,7 +86,7 @@ func (ob *OktetoBuilder) GetBuilder() string {
 
 // Run runs the build sequence
 func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error {
-	isDeployOrDestroy := buildOptions.OutputMode == DeployOutputModeOnBuild || buildOptions.OutputMode == DestroyOutputModeOnBuild
+	isDeployOrDestroy := buildOptions.OutputMode == DeployOutputModeOnBuild || buildOptions.OutputMode == DestroyOutputModeOnBuild || buildOptions.OutputMode == TestOutputModeOnBuild
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
 	depotToken := os.Getenv(DepotTokenEnvVar)
 	depotProject := os.Getenv(DepotProjectEnvVar)
