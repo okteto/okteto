@@ -91,7 +91,7 @@ ARG {{ .GitCommitArgName }}
 ARG {{ .GitBranchArgName }}
 ARG {{ .InvalidateCacheArgName }}
 
-RUN echo "${{ .InvalidateCacheArgName }}" > /var/lib/.oktetocachekey
+RUN echo "${{ .InvalidateCacheArgName }}" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
 
 RUN \
@@ -106,7 +106,7 @@ FROM scratch
 COPY --from=runner /okteto/src/{{$artifact.Path}} {{$artifact.Destination}}
 {{ end }}
 {{ else -}}
-COPY --from=runner /var/lib/.oktetocachekey .oktetocachekey
+COPY --from=runner /etc/.oktetocachekey .oktetocachekey
 {{ end }}
 `
 )

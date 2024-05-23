@@ -373,7 +373,7 @@ ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
 
-RUN echo "$OKTETO_INVALIDATE_CACHE" > /var/lib/.oktetocachekey
+RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
 
 RUN \
@@ -383,7 +383,7 @@ RUN \
   /okteto/bin/okteto remote-run deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test"
 
 FROM scratch
-COPY --from=runner /var/lib/.oktetocachekey .oktetocachekey
+COPY --from=runner /etc/.oktetocachekey .oktetocachekey
 
 `,
 				buildEnvVars:      map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUIL_SVC2_IMAGE": "TWO_VALUE"},
