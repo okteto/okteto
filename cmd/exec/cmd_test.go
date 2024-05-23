@@ -36,8 +36,7 @@ import (
 type fakeMixpanelTracker struct {
 }
 
-func (f *fakeMixpanelTracker) Track()                                            {}
-func (f *fakeMixpanelTracker) SetMetadata(metadata *analytics.TrackExecMetadata) {}
+func (f *fakeMixpanelTracker) Track(metadata *analytics.TrackExecMetadata) {}
 
 type fakeExecutor struct {
 	executionErr error

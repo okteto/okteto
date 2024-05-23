@@ -34,12 +34,9 @@ type execFlags struct {
 	k8sContext   string
 }
 
-type onExecFinish func()
-
 // metadataTracker is an interface to track metadata
 type metadataTracker interface {
-	SetMetadata(metadata *analytics.TrackExecMetadata)
-	Track()
+	Track(metadata *analytics.TrackExecMetadata)
 }
 
 // executorProviderInterface provides an executor for a development container
@@ -56,7 +53,6 @@ type Exec struct {
 	mixpanelTracker   metadataTracker
 
 	executorProvider executorProviderInterface
-	onExecFinish     []onExecFinish
 }
 
 // NewExec creates a new exec command
@@ -70,9 +66,6 @@ func NewExec(fs afero.Fs, ioCtrl *io.Controller, k8sProvider okteto.K8sClientPro
 		k8sClientProvider: k8sProvider,
 		appRetriever:      newAppRetriever(ioCtrl, k8sProvider),
 		mixpanelTracker:   mixpanelTracker,
-		onExecFinish: []onExecFinish{
-			mixpanelTracker.Track,
-		},
 		executorProvider: executorProvider{
 			ioCtrl:            ioCtrl,
 			k8sClientProvider: k8sProvider,
@@ -151,15 +144,12 @@ func (e *Exec) Run(ctx context.Context, opts *options, dev *model.Dev) error {
 		return fmt.Errorf("failed to get executor: %w", err)
 	}
 	err = executor.execute(ctx, opts.command)
-	e.mixpanelTracker.SetMetadata(&analytics.TrackExecMetadata{
+	e.mixpanelTracker.Track(&analytics.TrackExecMetadata{
 		Mode:               dev.Mode,
 		FirstArgIsDev:      opts.firstArgIsDevName,
 		Success:            err == nil,
 		IsOktetoRepository: utils.IsOktetoRepo(),
 		IsInteractive:      dev.IsInteractive(),
 	})
-	for _, f := range e.onExecFinish {
-		f()
-	}
 	return err
 }
