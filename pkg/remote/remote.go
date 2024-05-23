@@ -473,7 +473,7 @@ func createDockerignoreFileWithFilesystem(cwd, tmpDir string, rules []string, us
 			if !errors.Is(err, os.ErrNotExist) {
 				return err
 			}
-			oktetoLog.Warning("Ignoring files through %s is deprecated and will be removed in future versions. Please use .oktetoignore. More info here: <ADD_LINK>", oktetoDockerignoreName)
+			oktetoLog.Warning("Ignoring files through %s is deprecated and will be removed in future versions. Please use .oktetoignore. More info here: https://www.okteto.com/docs/core/remote-execution/#ignoring-files", oktetoDockerignoreName)
 		} else {
 			dockerignoreContent, err = afero.ReadFile(fs, dockerignoreFilePath)
 			if err != nil {
