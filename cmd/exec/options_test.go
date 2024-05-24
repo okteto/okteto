@@ -14,12 +14,18 @@
 package exec
 
 import (
+	"context"
 	"testing"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/internal/test"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func TestNewOptions(t *testing.T) {
@@ -90,6 +96,35 @@ func (f *fakeDevSelector) AskForOptionsOkteto([]utils.SelectorItem, int) (string
 func TestSetDevFromManifest(t *testing.T) {
 	ioControl := io.NewIOController()
 	// Define test cases using a slice of structs
+
+	objects := []runtime.Object{
+		&appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "dev1",
+				Namespace: "ns",
+				Labels: map[string]string{
+					constants.DevLabel: "true",
+				},
+			},
+		},
+		&appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "dev2",
+				Namespace: "ns",
+				Labels: map[string]string{
+					constants.DevLabel: "true",
+				},
+			},
+		},
+		&appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "dev3",
+				Namespace: "ns",
+			},
+		},
+	}
+	provider := test.NewFakeK8sProvider(objects...)
+	ctx := context.Background()
 	testCases := []struct {
 		expectedError error
 		options       *options
@@ -116,11 +151,32 @@ func TestSetDevFromManifest(t *testing.T) {
 				},
 			},
 			devs: model.ManifestDevs{
-				"dev1": &model.Dev{},
-				"dev2": &model.Dev{},
+				"dev1": &model.Dev{
+					Name: "dev1",
+				},
+				"dev2": &model.Dev{
+					Name: "dev1",
+				},
 			},
 			expectedDev:   "dev1",
 			expectedError: nil,
+		},
+		{
+			name: "no dev in dev mode",
+			options: &options{
+				devName: "",
+				devSelector: &fakeDevSelector{
+					devName: "dev1",
+					err:     nil,
+				},
+			},
+			devs: model.ManifestDevs{
+				"dev3": &model.Dev{
+					Name: "dev3",
+				},
+			},
+			expectedDev:   "",
+			expectedError: errNoDevContainerInDevMode,
 		},
 		{
 			name: "Failed to select dev",
@@ -131,7 +187,14 @@ func TestSetDevFromManifest(t *testing.T) {
 					err:     assert.AnError,
 				},
 			},
-			devs:          model.ManifestDevs{},
+			devs: model.ManifestDevs{
+				"dev1": &model.Dev{
+					Name: "dev1",
+				},
+				"dev2": &model.Dev{
+					Name: "dev1",
+				},
+			},
 			expectedDev:   "",
 			expectedError: assert.AnError,
 		},
@@ -140,7 +203,7 @@ func TestSetDevFromManifest(t *testing.T) {
 	// Loop through test cases and run assertions
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.options.setDevFromManifest(tc.devs, ioControl)
+			err := tc.options.setDevFromManifest(ctx, tc.devs, "ns", provider, ioControl)
 			assert.Equal(t, tc.expectedDev, tc.options.devName)
 			assert.ErrorIs(t, err, tc.expectedError)
 		})

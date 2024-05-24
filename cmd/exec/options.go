@@ -14,12 +14,15 @@
 package exec
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
 // options represents the exec command options
@@ -40,6 +43,9 @@ var (
 
 	// errorCommandRequired is the error returned when the command is required
 	errCommandRequired = errors.New("command is required")
+
+	// errNoDevContainerInDevMode is the error returned when there are no development containers in dev mode
+	errNoDevContainerInDevMode = errors.New("there are no development containers in dev mode")
 )
 
 type errDevNotInManifest struct {
@@ -67,20 +73,24 @@ func newOptions(argsIn []string, argsLenAtDash int) *options {
 	return opts
 }
 
-func (o *options) setDevFromManifest(devs model.ManifestDevs, ioControl *io.Controller) error {
+func (o *options) setDevFromManifest(ctx context.Context, devs model.ManifestDevs, ns string, k8sClientProvider okteto.K8sClientProvider, ioControl *io.Controller) error {
 	if o.devName != "" {
 		ioControl.Logger().Infof("dev name is already set to '%s'", o.devName)
 		return nil
 	}
 	ioControl.Logger().Debug("retrieving dev name from manifest")
 
-	devNameList := devs.GetDevs()
-	if len(devNameList) == 1 {
-		o.devName = devNameList[0]
-		ioControl.Logger().Infof("dev name set to '%s'", o.devName)
-		return nil
+	k8sClient, _, err := k8sClientProvider.Provide(okteto.GetContext().Cfg)
+	if err != nil {
+		return fmt.Errorf("failed to get k8s client: %w", err)
 	}
-	devName, err := o.devSelector.AskForOptionsOkteto(utils.ListToSelectorItem(devs.GetDevs()), -1)
+
+	devNameList := apps.ListDevModeOn(ctx, devs, ns, k8sClient)
+	if len(devNameList) == 0 {
+		return errNoDevContainerInDevMode
+	}
+
+	devName, err := o.devSelector.AskForOptionsOkteto(utils.ListToSelectorItem(devNameList), -1)
 	if err != nil {
 		return fmt.Errorf("failed to select dev: %w", err)
 	}

@@ -176,9 +176,9 @@ func TranslateDevMode(trMap map[string]*Translation) error {
 
 // ListDevModeOn returns a list of strings with the names of deployments or statefulsets in DevMode.
 // If no app is found in dev mode, an empty slice is returned
-func ListDevModeOn(ctx context.Context, manifest *model.Manifest, c kubernetes.Interface) []string {
+func ListDevModeOn(ctx context.Context, devs model.ManifestDevs, ns string, c kubernetes.Interface) []string {
 	devModeApps := make([]string, 0)
-	for name, dev := range manifest.Dev {
+	for name, dev := range devs {
 		// when autocreate is active, the app name has suffix -okteto
 		// this should be taken into account when searching for dev mode apps
 		// we just want to modify the dev
@@ -187,7 +187,7 @@ func ListDevModeOn(ctx context.Context, manifest *model.Manifest, c kubernetes.I
 		if appDev.Autocreate {
 			appDev.Name = model.DevCloneName(appDev.Name)
 		}
-		app, err := Get(ctx, &appDev, manifest.Namespace, c)
+		app, err := Get(ctx, &appDev, ns, c)
 		if err != nil {
 			oktetoLog.Debugf("error listing dev-mode %s: %v", name, err)
 		}

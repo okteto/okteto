@@ -99,7 +99,7 @@ okteto exec my-pod`,
 
 			argsLenAtDash := cmd.ArgsLenAtDash()
 			opts := newOptions(args, argsLenAtDash)
-			if err := opts.setDevFromManifest(manifest.Dev, e.ioCtrl); err != nil {
+			if err := opts.setDevFromManifest(ctx, manifest.Dev, okteto.GetContext().Namespace, e.k8sClientProvider, e.ioCtrl); err != nil {
 				return fmt.Errorf("failed to set dev from manifest: %w", err)
 			}
 			if err := opts.Validate(manifest.Dev); err != nil {
