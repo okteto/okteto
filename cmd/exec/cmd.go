@@ -74,8 +74,8 @@ func NewExec(fs afero.Fs, ioCtrl *io.Controller, k8sProvider okteto.K8sClientPro
 	return e
 }
 
-// NewCmdExec returns the cobra exec command
-func (e *Exec) NewCmdExec(ctx context.Context) *cobra.Command {
+// Cmd returns the cobra exec command
+func (e *Exec) Cmd(ctx context.Context) *cobra.Command {
 	execFlags := &execFlags{}
 
 	cmd := &cobra.Command{
