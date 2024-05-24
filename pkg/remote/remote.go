@@ -91,6 +91,7 @@ ARG {{ .GitCommitArgName }}
 ARG {{ .GitBranchArgName }}
 ARG {{ .InvalidateCacheArgName }}
 
+RUN echo "${{ .InvalidateCacheArgName }}" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
 
 RUN \
@@ -98,6 +99,15 @@ RUN \
   --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
   /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}
+
+FROM scratch
+{{ if gt (len .Artifacts) 0 -}}
+{{ range $key, $artifact := .Artifacts -}}
+COPY --from=runner /okteto/src/{{$artifact.Path}} {{$artifact.Destination}}
+{{ end }}
+{{ else -}}
+COPY --from=runner /etc/.oktetocachekey .oktetocachekey
+{{ end }}
 `
 )
 
@@ -130,27 +140,31 @@ type Params struct {
 	BuildEnvVars        map[string]string
 	DependenciesEnvVars map[string]string
 	Manifest            *model.Manifest
-	BaseImage           string
-	ManifestPathFlag    string
-	TemplateName        string
-	DockerfileName      string
-	KnownHostsPath      string
 	Command             string
-	// ContextAbsolutePathOverride is the absolute path for the build context. Optional.
-	// If this values is not defined it will default to the folder location of the
-	// okteto manifest which is resolved through params.ManifestPathFlag
-	ContextAbsolutePathOverride string
 	// CacheInvalidationKey is the value use to invalidate the cache. Defaults
 	// to a random value which essentially means no-cache. Setting this to a
 	// static or known value will reuse the build cache
 	CacheInvalidationKey string
-	Deployable           deployable.Entity
-	CommandFlags         []string
-	Caches               []string
+	TemplateName         string
+	DockerfileName       string
+	KnownHostsPath       string
+	BaseImage            string
+	// ContextAbsolutePathOverride is the absolute path for the build context. Optional.
+	// If this values is not defined it will default to the folder location of the
+	// okteto manifest which is resolved through params.ManifestPathFlag
+	ContextAbsolutePathOverride string
+	ManifestPathFlag            string
+	Deployable                  deployable.Entity
+	CommandFlags                []string
+	Caches                      []string
 	// IgnoreRules are the ignoring rules added to this build execution.
 	// Rules follow the .dockerignore syntax as defined in:
 	// https://docs.docker.com/build/building/context/#syntax
 	IgnoreRules []string
+	// Artifacts are the files and or folder to export from this build operation.
+	// They are the path INSIDE the build container relative to /okteto/src. They
+	// will be exported to "{context_dir}/{artifact}"
+	Artifacts []model.Artifact
 	// UseOktetoDeployIgnoreFile if enabled loads the docker ignore file from an
 	// .oktetodeployignore file. Disabled by default
 	UseOktetoDeployIgnoreFile bool
@@ -180,6 +194,7 @@ type dockerfileTemplateProperties struct {
 	Command                  string
 	OktetoIsPreviewEnv       string
 	Caches                   []string
+	Artifacts                []model.Artifact
 }
 
 // NewRunner creates a new Runner for remote
@@ -334,6 +349,9 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		oktetoLog.Debug("no ssh agent found. Not mounting ssh-agent for build")
 	}
 
+	if len(params.Artifacts) > 0 {
+		buildOptions.LocalOutputPath = buildCtx
+	}
 	// we need to call Run() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
 	// account that we must not confuse the user with build messages since this logic is
@@ -386,6 +404,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		Command:                  params.Command,
 		OktetoIsPreviewEnv:       constants.OktetoIsPreviewEnvVar,
 		Caches:                   params.Caches,
+		Artifacts:                params.Artifacts,
 	}
 
 	dockerfile, err := r.fs.Create(filepath.Join(tmpDir, params.DockerfileName))
