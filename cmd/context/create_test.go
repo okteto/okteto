@@ -750,7 +750,6 @@ func Test_replaceCredentialsTokenWithDynamicKubetoken(t *testing.T) {
 }
 
 func Test_loadDotEnv(t *testing.T) {
-	t.Setenv("VALUE4", "VALUE4")
 	type expected struct {
 		vars map[string]string
 		err  error
@@ -769,6 +768,7 @@ func Test_loadDotEnv(t *testing.T) {
 	tests := []struct {
 		expected expected
 		mockfs   func() afero.Fs
+		mockEnv  func(t *testing.T)
 		name     string
 	}{
 		{
@@ -835,6 +835,9 @@ func Test_loadDotEnv(t *testing.T) {
 		},
 		{
 			name: "valid .env with multiple vars",
+			mockEnv: func(t *testing.T) {
+				t.Setenv("VALUE4", "VALUE4")
+			},
 			mockfs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
 				_ = afero.WriteFile(fs, ".env", []byte("VAR1=VALUE1\nVAR2=VALUE2\nVAR3=${VALUE3:-defaultValue3}\nVAR4=${VALUE4:-defaultValue4}"), 0644)
@@ -842,12 +845,29 @@ func Test_loadDotEnv(t *testing.T) {
 			},
 			expected: expected{
 				vars: map[string]string{
-					"VAR1": "VALUE1",
-					"VAR2": "VALUE2",
-					"VAR3": "defaultValue3",
-					"VAR4": "VALUE4",
+					"VAR1":   "VALUE1",
+					"VAR2":   "VALUE2",
+					"VAR3":   "defaultValue3",
+					"VAR4":   "VALUE4",
+					"VALUE4": "VALUE4",
 				},
 				err: nil,
+			},
+		},
+		{
+			name: "local vars are not overridden",
+			mockEnv: func(t *testing.T) {
+				t.Setenv("VAR4", "local")
+			},
+			mockfs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				_ = afero.WriteFile(fs, ".env", []byte("VAR4=.env"), 0644)
+				return fs
+			},
+			expected: expected{
+				vars: map[string]string{
+					"VAR4": "local",
+				},
 			},
 		},
 	}
@@ -855,7 +875,10 @@ func Test_loadDotEnv(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fs := tt.mockfs()
-			err := cmd.loadDotEnv(fs, setEnvFunc)
+			if tt.mockEnv != nil {
+				tt.mockEnv(t)
+			}
+			err := cmd.loadDotEnv(fs, setEnvFunc, os.LookupEnv)
 			if tt.expected.err != nil {
 				assert.Equal(t, tt.expected.err.Error(), err.Error())
 			} else {

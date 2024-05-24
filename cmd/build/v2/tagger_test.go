@@ -222,50 +222,6 @@ func TestImageTaggerGetPossibleHashImages(t *testing.T) {
 	}
 }
 
-func TestImageTaggerGetPossibleTags(t *testing.T) {
-	tt := []struct {
-		name                 string
-		sha                  string
-		expectedImages       []string
-		isSmartBuildsEnabled bool
-	}{
-		{
-			name: "no sha",
-			sha:  "",
-			expectedImages: []string{
-				"okteto.dev/test-test:okteto",
-			},
-			isSmartBuildsEnabled: true,
-		},
-		{
-			name: "sha",
-			sha:  "sha",
-			expectedImages: []string{
-				"okteto.dev/test-test:sha",
-				"okteto.global/test-test:sha",
-				"okteto.dev/test-test:okteto",
-			},
-			isSmartBuildsEnabled: true,
-		},
-		{
-			name: "sha but smart builds not enabled",
-			sha:  "sha",
-			expectedImages: []string{
-				"okteto.dev/test-test:okteto",
-			},
-			isSmartBuildsEnabled: false,
-		},
-	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			tagger := newImageTagger(fakeConfig{isOkteto: true}, &fakeSmartBuildCtrl{
-				isEnabled: tc.isSmartBuildsEnabled,
-			})
-			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTagWithDefaults("test", "test", tc.sha))
-		})
-	}
-}
-
 func Test_getTargetRegistries(t *testing.T) {
 	tt := []struct {
 		name     string

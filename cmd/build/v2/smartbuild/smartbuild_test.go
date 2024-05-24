@@ -53,7 +53,6 @@ func (fh fakeHasher) hashProjectCommit(*build.Info) (string, error) { return fh.
 func (fh fakeHasher) hashWithBuildContext(*build.Info, string) string {
 	return fh.hash
 }
-func (fh fakeHasher) getServiceShaInCache(string) string { return fh.hash }
 
 func TestNewSmartBuildCtrl(t *testing.T) {
 	type input struct {

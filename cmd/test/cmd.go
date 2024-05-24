@@ -10,6 +10,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package test
 
 import (
@@ -111,6 +112,9 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 	// Loads, updates and uses the context from path. If not found, it creates and uses a new context
 	if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: true}); err != nil {
+		if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.GetContext().Name).Error() {
+			return analytics.TestMetadata{}, err
+		}
 		if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
 			return analytics.TestMetadata{}, err
 		}
@@ -157,6 +161,10 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 	manifest, err := model.GetManifestV2(options.ManifestPath, fs)
 	if err != nil {
+		return analytics.TestMetadata{}, err
+	}
+
+	if err := manifest.Test.Validate(); err != nil {
 		return analytics.TestMetadata{}, err
 	}
 
@@ -331,7 +339,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		}
 
 		// Read "test" and "test.{name}" sections from the .oktetoignore file
-		testIgnoreRules, err := ig.Rules("test", fmt.Sprintf("test.%s", name))
+		testIgnoreRules, err := ig.Rules(ignore.RootSection, "test", fmt.Sprintf("test.%s", name))
 		if err != nil {
 			return analytics.TestMetadata{}, fmt.Errorf("failed to create ignore rules for %s: %w", name, err)
 		}
@@ -354,6 +362,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			ContextAbsolutePathOverride: ctxCwd,
 			Caches:                      test.Caches,
 			IgnoreRules:                 testIgnoreRules,
+			Artifacts:                   test.Artifacts,
 		}
 
 		if !options.NoCache {

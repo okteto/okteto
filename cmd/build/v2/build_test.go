@@ -178,8 +178,8 @@ func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegi
 
 func TestValidateOptions(t *testing.T) {
 	var tests = []struct {
-		name         string
 		buildSection build.ManifestBuild
+		name         string
 		svcsToBuild  []string
 		options      types.BuildOptions
 		expectedErr  bool

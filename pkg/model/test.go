@@ -10,9 +10,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package model
 
-import "github.com/okteto/okteto/pkg/env"
+import (
+	"fmt"
+
+	"github.com/okteto/okteto/pkg/env"
+)
 
 type Test struct {
 	Image     string        `yaml:"image,omitempty"`
@@ -20,6 +25,32 @@ type Test struct {
 	Commands  []TestCommand `yaml:"commands,omitempty"`
 	DependsOn []string      `yaml:"depends_on,omitempty"`
 	Caches    []string      `yaml:"caches,omitempty"`
+	Artifacts []Artifact    `yaml:"artifacts,omitempty"`
+}
+
+var (
+	// TODO: add link to docs when available
+	errNoTestsDefined = fmt.Errorf("there are no tests configured in your Okteto Manifest")
+)
+
+func (test ManifestTests) Validate() error {
+	if test == nil {
+		return errNoTestsDefined
+	}
+
+	hasAtLeastOne := false
+	for _, t := range test {
+		if t != nil {
+			hasAtLeastOne = true
+			break
+		}
+	}
+
+	if !hasAtLeastOne {
+		return errNoTestsDefined
+	}
+
+	return nil
 }
 
 func (test *Test) expandEnvVars() error {
@@ -34,8 +65,8 @@ func (test *Test) expandEnvVars() error {
 }
 
 func (t *Test) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	type alias Test
-	var tt alias
+	type testAlias Test
+	var tt testAlias
 	err := unmarshal(&tt)
 	if err != nil {
 		return err
@@ -62,8 +93,8 @@ func (t *TestCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	// prevent recursion
-	type alias TestCommand
-	var extendedCommand alias
+	type testCommandAlias TestCommand
+	var extendedCommand testCommandAlias
 	err = unmarshal(&extendedCommand)
 	if err != nil {
 		return err

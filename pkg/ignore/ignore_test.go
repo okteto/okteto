@@ -146,8 +146,8 @@ chart
 backend
 `
 	ig := NewFromReader(strings.NewReader(input))
-	f, err := ig.Rules("test", "test.frontend")
+	f, err := ig.Rules(RootSection, "test", "test.frontend")
 	assert.NoError(t, err)
-	assert.ElementsMatch(t, f, []string{"chart", "backend"})
+	assert.ElementsMatch(t, f, []string{".git", "chart", "backend"})
 
 }

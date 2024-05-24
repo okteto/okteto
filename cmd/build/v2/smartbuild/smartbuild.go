@@ -43,7 +43,6 @@ type repositoryInterface interface {
 type hasherController interface {
 	hashProjectCommit(*build.Info) (string, error)
 	hashWithBuildContext(*build.Info, string) string
-	getServiceShaInCache(string) string
 }
 
 // Ctrl is the controller for smart builds
