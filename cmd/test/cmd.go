@@ -167,8 +167,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 	if err := manifest.Test.Validate(); err != nil {
 		if errors.Is(err, model.ErrNoTestsDefined) {
-			// TODO: add link to docs when available
-			oktetoLog.Information("There are no tests configured in your Okteto Manifest")
+			oktetoLog.Information("There are no tests configured in your Okteto Manifest. For more information, check the documentation: https://okteto.com/docs/core/okteto-manifest/#test")
 			return analytics.TestMetadata{}, nil
 		}
 
