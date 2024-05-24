@@ -29,13 +29,12 @@ type Test struct {
 }
 
 var (
-	// TODO: add link to docs when available
-	errNoTestsDefined = fmt.Errorf("there are no tests configured in your Okteto Manifest")
+	ErrNoTestsDefined = fmt.Errorf("no tests defined")
 )
 
 func (test ManifestTests) Validate() error {
 	if test == nil {
-		return errNoTestsDefined
+		return ErrNoTestsDefined
 	}
 
 	hasAtLeastOne := false
@@ -47,7 +46,7 @@ func (test ManifestTests) Validate() error {
 	}
 
 	if !hasAtLeastOne {
-		return errNoTestsDefined
+		return ErrNoTestsDefined
 	}
 
 	return nil
