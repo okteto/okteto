@@ -555,7 +555,7 @@ func TestListDevModeOn(t *testing.T) {
 		ctx := context.Background()
 		clientset := fake.NewSimpleClientset(tt.sfs, tt.ds)
 
-		result := ListDevModeOn(ctx, manifest, clientset)
+		result := ListDevModeOn(ctx, manifest.Dev, "test", clientset)
 		assert.ElementsMatch(t, tt.expectedList, result)
 
 	}

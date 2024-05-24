@@ -58,7 +58,7 @@ func (e *errDevNotInManifest) Error() string {
 }
 
 // newOptions creates a new exec options instance
-func newOptions(argsIn []string, argsLenAtDash int) *options {
+func newOptions(argsIn []string, argsLenAtDash int) (*options, error) {
 	opts := &options{
 		command:     []string{},
 		devSelector: utils.NewOktetoSelector("Select which development container to exec:", "Development container"),
@@ -70,7 +70,10 @@ func newOptions(argsIn []string, argsLenAtDash int) *options {
 	if argsLenAtDash > -1 {
 		opts.command = argsIn[argsLenAtDash:]
 	}
-	return opts
+	if len(opts.command) == 0 {
+		return nil, errCommandRequired
+	}
+	return opts, nil
 }
 
 func (o *options) setDevFromManifest(ctx context.Context, devs model.ManifestDevs, ns string, k8sClientProvider okteto.K8sClientProvider, ioControl *io.Controller) error {
@@ -98,12 +101,9 @@ func (o *options) setDevFromManifest(ctx context.Context, devs model.ManifestDev
 	return nil
 }
 
-func (o *options) Validate(devs model.ManifestDevs) error {
+func (o *options) validate(devs model.ManifestDevs) error {
 	if o.devName == "" {
 		return errDevNameRequired
-	}
-	if len(o.command) == 0 {
-		return errCommandRequired
 	}
 	if _, ok := devs[o.devName]; !ok {
 		return &errDevNotInManifest{devName: o.devName}

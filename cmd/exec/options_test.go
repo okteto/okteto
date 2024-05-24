@@ -31,6 +31,7 @@ import (
 func TestNewOptions(t *testing.T) {
 	testCases := []struct {
 		expected      *options
+		expectedError error
 		name          string
 		argsIn        []string
 		argsLenAtDash int
@@ -39,21 +40,15 @@ func TestNewOptions(t *testing.T) {
 			name:          "Empty args",
 			argsIn:        []string{},
 			argsLenAtDash: 0,
-			expected: &options{
-				command:     []string{},
-				devSelector: utils.NewOktetoSelector("Select which development container to exec:", "Development container"),
-			},
+			expected:      nil,
+			expectedError: errCommandRequired,
 		},
 		{
 			name:          "Args with dev name",
 			argsIn:        []string{"dev1"},
 			argsLenAtDash: -1,
-			expected: &options{
-				devName:           "dev1",
-				firstArgIsDevName: true,
-				command:           []string{},
-				devSelector:       utils.NewOktetoSelector("Select which development container to exec:", "Development container"),
-			},
+			expected:      nil,
+			expectedError: errCommandRequired,
 		},
 		{
 			name:          "Args with command",
@@ -75,12 +70,20 @@ func TestNewOptions(t *testing.T) {
 				devSelector:       utils.NewOktetoSelector("Select which development container to exec:", "Development container"),
 			},
 		},
+		{
+			name:          "Args with dev name no command",
+			argsIn:        []string{"dev1"},
+			argsLenAtDash: -1,
+			expected:      nil,
+			expectedError: errCommandRequired,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			opts := newOptions(tc.argsIn, tc.argsLenAtDash)
+			opts, err := newOptions(tc.argsIn, tc.argsLenAtDash)
 			assert.Equal(t, tc.expected, opts)
+			assert.ErrorIs(t, err, tc.expectedError)
 		})
 	}
 }
@@ -227,14 +230,6 @@ func TestValidate(t *testing.T) {
 			expected: errDevNameRequired,
 		},
 		{
-			name: "Missing command",
-			options: &options{
-				devName: "dev1",
-			},
-			devs:     model.ManifestDevs{},
-			expected: errCommandRequired,
-		},
-		{
 			name: "Invalid dev name (not defined)",
 			options: &options{
 				devName: "dev2",
@@ -259,7 +254,7 @@ func TestValidate(t *testing.T) {
 	// Loop through test cases and run assertions
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.options.Validate(tc.devs)
+			err := tc.options.validate(tc.devs)
 			if tc.expected != nil {
 				assert.ErrorContains(t, err, tc.expected.Error())
 			} else {
