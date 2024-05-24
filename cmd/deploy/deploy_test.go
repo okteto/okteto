@@ -371,6 +371,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 		K8sClientProvider: fakeK8sClientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                afero.NewMemMapFs(),
+		IoCtrl:            io.NewIOController(),
 	}
 
 	ctx := context.Background()
@@ -443,6 +444,7 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                fakeOs,
 		Builder:           &fakeV2Builder{},
+		IoCtrl:            io.NewIOController(),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -527,6 +529,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 		K8sClientProvider: fakeK8sClientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                afero.NewMemMapFs(),
+		IoCtrl:            io.NewIOController(),
 	}
 	ctx := context.Background()
 
@@ -577,6 +580,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		GetDeployer:       fakeDeployer.Get,
 		Builder:           &fakeV2Builder{},
+		IoCtrl:            io.NewIOController(),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -727,6 +731,7 @@ func TestDeployOnlyDependencies(t *testing.T) {
 		Fs:                fakeOs,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		GetDeployer:       fakeDeployer.Get,
+		IoCtrl:            io.NewIOController(),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -1032,6 +1037,69 @@ func TestGetDependencyEnvVars(t *testing.T) {
 			result := GetDependencyEnvVars(tc.environGetter)
 
 			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestCalculateManifestPathToBeStored(t *testing.T) {
+	dc := &Command{
+		IoCtrl: io.NewIOController(),
+	}
+
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+
+	tempDir := t.TempDir()
+
+	tests := []struct {
+		name           string
+		topLevelGitDir string
+		manifestPath   string
+		expected       string
+	}{
+		{
+			name:           "manifest path in same directory as git directory",
+			topLevelGitDir: wd,
+			manifestPath:   filepath.Join(wd, "okteto.yml"),
+			expected:       "okteto.yml",
+		},
+		{
+			name:           "manifest path within a subdirectory of git directory",
+			topLevelGitDir: wd,
+			manifestPath:   filepath.Join(wd, "subdir", "okteto.yml"),
+			expected:       filepath.Join("subdir", "okteto.yml"),
+		},
+		{
+			name:           "manifest path within a deeper subdirectory of git directory",
+			topLevelGitDir: wd,
+			manifestPath:   filepath.Join(wd, "subdir", "subdir2", "okteto.yml"),
+			expected:       filepath.Join("subdir", "subdir2", "okteto.yml"),
+		},
+		{
+			name:           "manifest path from git repo's parent directory",
+			topLevelGitDir: wd,
+			manifestPath:   filepath.Join(wd, "..", "okteto.yml"),
+			expected:       "",
+		},
+		{
+			name:           "absolute manifest path within repository",
+			topLevelGitDir: wd,
+			manifestPath:   filepath.Join(wd, "subdir", "okteto.yml"),
+			expected:       filepath.Join("subdir", "okteto.yml"),
+		},
+		{
+			name:           "manifest path completely different from git directory",
+			topLevelGitDir: wd,
+			manifestPath:   filepath.Join(tempDir, "okteto.yml"),
+			expected:       "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := dc.calculateManifestPathToBeStored(tt.topLevelGitDir, tt.manifestPath)
+
+			require.Equal(t, tt.expected, result)
 		})
 	}
 }

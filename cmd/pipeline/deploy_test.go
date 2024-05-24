@@ -90,7 +90,7 @@ func Test_getRepositoryURL(t *testing.T) {
 				t.Fatal("expected error when there's no github repo")
 			}
 
-			r, err := git.PlainInit(dir, true)
+			r, err := git.PlainInit(dir, false)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -26,14 +26,18 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
 	"github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/stretchr/testify/require"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -110,6 +114,9 @@ spec:
   selector:
     app: e2etest
 `
+	simpleOktetoManifestContent = `deploy:
+  - echo "hi! this is a test"
+`
 )
 
 // TestDeployOktetoManifest tests the following scenario:
@@ -121,7 +128,7 @@ func TestDeployOktetoManifest(t *testing.T) {
 	require.NoError(t, err)
 
 	dir := t.TempDir()
-	require.NoError(t, createOktetoManifest(dir))
+	require.NoError(t, createOktetoManifest(dir, oktetoManifestContent))
 	require.NoError(t, createAppDockerfile(dir))
 	require.NoError(t, createK8sManifest(dir))
 
@@ -175,7 +182,7 @@ func TestRedeployOktetoManifestForImages(t *testing.T) {
 	require.NoError(t, err)
 
 	dir := t.TempDir()
-	require.NoError(t, createOktetoManifest(dir))
+	require.NoError(t, createOktetoManifest(dir, oktetoManifestContent))
 	require.NoError(t, createAppDockerfile(dir))
 	require.NoError(t, createK8sManifest(dir))
 
@@ -247,7 +254,7 @@ func TestDeployOktetoManifestWithDestroy(t *testing.T) {
 	require.NoError(t, err)
 
 	dir := t.TempDir()
-	require.NoError(t, createOktetoManifest(dir))
+	require.NoError(t, createOktetoManifest(dir, oktetoManifestContent))
 	require.NoError(t, createAppDockerfile(dir))
 	require.NoError(t, createK8sManifest(dir))
 
@@ -453,6 +460,185 @@ func TestDeployRemoteOktetoManifestFromParentFolder(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
+// TestDeployOktetoManifestWithinRepository tests the following scenario:
+// - Deploying a okteto manifest locally within a repository from different subdirectories to check it stores it successfully
+func TestDeployOktetoManifestWithinRepository(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	subdirA := filepath.Join(dir, "subdirA")
+	err = os.MkdirAll(subdirA, 0700)
+	require.NoError(t, err)
+
+	subdirB := filepath.Join(subdirA, "subdirB")
+	err = os.MkdirAll(subdirB, 0700)
+	require.NoError(t, err)
+
+	expectedAppName := "e2e-deploy-test"
+	repository := "https://github.com/okteto/e2e-deploy-test.git"
+	r, err := git.PlainInit(dir, false)
+	require.NoError(t, err)
+
+	_, err = r.CreateRemote(&config.RemoteConfig{Name: "origin", URLs: []string{repository}})
+	require.NoError(t, err)
+
+	require.NoError(t, createOktetoManifest(dir, simpleOktetoManifestContent))
+
+	testNamespace := integration.GetTestNamespace("ifbyol-DeployManifestWithinRepo", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
+
+	// Execute "okteto deploy" from the root of the repository
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	cfg, err := c.CoreV1().ConfigMaps(testNamespace).Get(ctx, pipeline.TranslatePipelineName(expectedAppName), metav1.GetOptions{})
+	require.NoError(t, err)
+
+	filename := cfg.Data["filename"]
+	require.Equal(t, "", filename)
+
+	require.NoError(t, createOktetoManifest(subdirA, simpleOktetoManifestContent))
+
+	// Execute "okteto deploy -f subdirA/okteto.yml" from root of the repo
+	deployOptions = &commands.DeployOptions{
+		Workdir:      dir,
+		Namespace:    testNamespace,
+		OktetoHome:   dir,
+		Token:        token,
+		ManifestPath: filepath.Join("subdirA", "okteto.yml"),
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	cfg, err = c.CoreV1().ConfigMaps(testNamespace).Get(ctx, pipeline.TranslatePipelineName(expectedAppName), metav1.GetOptions{})
+	require.NoError(t, err)
+
+	filename = cfg.Data["filename"]
+	require.Equal(t, filename, filepath.Join("subdirA", "okteto.yml"))
+
+	require.NoError(t, createOktetoManifest(subdirB, simpleOktetoManifestContent))
+
+	// Execute "okteto deploy -f subdirA/subdirB/okteto.yml" from root of the repo
+	deployOptions = &commands.DeployOptions{
+		Workdir:      dir,
+		Namespace:    testNamespace,
+		OktetoHome:   dir,
+		Token:        token,
+		ManifestPath: filepath.Join("subdirA", "subdirB", "okteto.yml"),
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	cfg, err = c.CoreV1().ConfigMaps(testNamespace).Get(ctx, pipeline.TranslatePipelineName(expectedAppName), metav1.GetOptions{})
+	require.NoError(t, err)
+
+	filename = cfg.Data["filename"]
+	require.Equal(t, filename, filepath.Join("subdirA", "subdirB", "okteto.yml"))
+
+	// Execute "okteto deploy -f subdirB/okteto.yml" from subdirA
+	deployOptions = &commands.DeployOptions{
+		Workdir:      subdirA,
+		Namespace:    testNamespace,
+		OktetoHome:   dir,
+		Token:        token,
+		ManifestPath: filepath.Join("subdirB", "okteto.yml"),
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	cfg, err = c.CoreV1().ConfigMaps(testNamespace).Get(ctx, pipeline.TranslatePipelineName(expectedAppName), metav1.GetOptions{})
+	require.NoError(t, err)
+
+	filename = cfg.Data["filename"]
+	require.Equal(t, filename, filepath.Join("subdirA", "subdirB", "okteto.yml"))
+
+	// Execute "okteto deploy -f ../../okteto.yml" from subdirB
+	deployOptions = &commands.DeployOptions{
+		Workdir:      subdirB,
+		Namespace:    testNamespace,
+		OktetoHome:   dir,
+		Token:        token,
+		ManifestPath: filepath.Join("..", "..", "okteto.yml"),
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	cfg, err = c.CoreV1().ConfigMaps(testNamespace).Get(ctx, pipeline.TranslatePipelineName(expectedAppName), metav1.GetOptions{})
+	require.NoError(t, err)
+
+	filename = cfg.Data["filename"]
+	require.Equal(t, filename, filepath.Join("okteto.yml"))
+
+	// Execute "okteto deploy -f subdirA/subdirB" from root of the repo
+	deployOptions = &commands.DeployOptions{
+		Workdir:      dir,
+		Namespace:    testNamespace,
+		OktetoHome:   dir,
+		Token:        token,
+		ManifestPath: filepath.Join("subdirA", "subdirB"),
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	cfg, err = c.CoreV1().ConfigMaps(testNamespace).Get(ctx, pipeline.TranslatePipelineName(expectedAppName), metav1.GetOptions{})
+	require.NoError(t, err)
+
+	filename = cfg.Data["filename"]
+	require.Equal(t, filename, filepath.Join("subdirA", "subdirB"))
+
+	// Execute "okteto deploy -f <root>/subdirA/subdirB/okteto.yml" from outside of the repo
+	deployOptions = &commands.DeployOptions{
+		Workdir:      filepath.Dir(dir),
+		Namespace:    testNamespace,
+		OktetoHome:   dir,
+		Token:        token,
+		ManifestPath: filepath.Join(filepath.Base(dir), "subdirA", "subdirB", "okteto.yml"),
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	cfg, err = c.CoreV1().ConfigMaps(testNamespace).Get(ctx, pipeline.TranslatePipelineName(expectedAppName), metav1.GetOptions{})
+	require.NoError(t, err)
+
+	filename = cfg.Data["filename"]
+	require.Equal(t, filename, filepath.Join("subdirA", "subdirB", "okteto.yml"))
+
+	// Execute "okteto deploy -f <absolute-path>/subdirA/subdirB/okteto.yml" from the repo
+	deployOptions = &commands.DeployOptions{
+		Workdir:      dir,
+		Namespace:    testNamespace,
+		OktetoHome:   dir,
+		Token:        token,
+		ManifestPath: filepath.Join(subdirB, "okteto.yml"),
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	cfg, err = c.CoreV1().ConfigMaps(testNamespace).Get(ctx, pipeline.TranslatePipelineName(expectedAppName), metav1.GetOptions{})
+	require.NoError(t, err)
+
+	filename = cfg.Data["filename"]
+	require.Equal(t, filename, filepath.Join("subdirA", "subdirB", "okteto.yml"))
+
+	destroyOptions := &commands.DestroyOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+}
+
 func isImageBuilt(image string) bool {
 	reg := registry.NewOktetoRegistry(okteto.Config{})
 	if _, err := reg.GetImageTagWithDigest(image); err == nil {
@@ -479,10 +665,10 @@ func createOktetoManifestWithCache(dir string) error {
 	return nil
 }
 
-func createOktetoManifest(dir string) error {
-	dockerfilePath := filepath.Join(dir, oktetoManifestName)
-	dockerfileContent := []byte(oktetoManifestContent)
-	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
+func createOktetoManifest(dir, content string) error {
+	manifestPath := filepath.Join(dir, oktetoManifestName)
+	manifestContent := []byte(content)
+	if err := os.WriteFile(manifestPath, manifestContent, 0600); err != nil {
 		return err
 	}
 	return nil

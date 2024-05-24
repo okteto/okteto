@@ -22,10 +22,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/utils"
+	"github.com/okteto/okteto/pkg/repository"
 )
 
 var (
@@ -35,7 +35,7 @@ var (
 
 // GetBranch returns the branch from a .git directory
 func GetBranch(path string) (string, error) {
-	repo, err := git.PlainOpen(path)
+	repo, err := repository.FindTopLevelGitRepoFromPath(path)
 	if err != nil {
 		return "", fmt.Errorf("failed to analyze git repo: %w", err)
 	}
