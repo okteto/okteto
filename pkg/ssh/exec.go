@@ -173,6 +173,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	if err == nil {
 		return nil
 	}
+	oktetoLog.Println()
 	if strings.Contains(err.Error(), "status 130") || strings.Contains(err.Error(), "4294967295") {
 		return nil
 	}
