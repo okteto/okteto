@@ -20,7 +20,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -166,16 +165,6 @@ func IsRunning(ctx context.Context, namespace, svcName string, c kubernetes.Inte
 		return false
 	}
 	return sfs.Status.ReadyReplicas > 0
-}
-
-// IsDevModeOn returns if a statefulset is in devmode
-func IsDevModeOn(s *appsv1.StatefulSet) bool {
-	labels := s.GetObjectMeta().GetLabels()
-	if labels == nil {
-		return false
-	}
-	_, ok := labels[constants.DevLabel]
-	return ok
 }
 
 // CheckConditionErrors checks errors in conditions
