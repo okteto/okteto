@@ -795,6 +795,51 @@ func TestInferFromStack(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "infer from stack empty build section and empty image",
+			currentManifest: &Manifest{
+				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
+					ComposeSection: &ComposeSectionInfo{
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Build: nil,
+									Image: "",
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Destroy: &DestroyInfo{},
+				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
+					ComposeSection: &ComposeSectionInfo{
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Image: "",
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
