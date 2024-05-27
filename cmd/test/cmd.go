@@ -31,7 +31,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
-	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/dag"
@@ -187,11 +186,6 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		tracker.TrackImageBuild,
 	})
 
-	kubeClient, _, err := k8sClientProvider.Provide(okteto.GetContext().Cfg)
-	if err != nil {
-		return analytics.TestMetadata{}, fmt.Errorf("could not instantiate kubernetes client: %w", err)
-	}
-
 	cwd, err := os.Getwd()
 	if err != nil {
 		return analytics.TestMetadata{}, fmt.Errorf("failed to get the current working directory to resolve name: %w", err)
@@ -240,25 +234,6 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			return analytics.TestMetadata{}, err
 		}
 	}
-
-	namer := deployCMD.Namer{
-		KubeClient:   kubeClient,
-		Workdir:      cwd,
-		ManifestPath: options.ManifestPathFlag,
-		ManifestName: options.Name,
-	}
-
-	devenvName := options.Name
-	if devenvName == "" {
-		devenvName = namer.ResolveName(ctx)
-	}
-
-	namespace := manifest.Namespace
-	if namespace == "" {
-		namespace = okteto.GetContext().Namespace
-	}
-
-	wasDeployed := pipeline.IsDeployed(ctx, devenvName, namespace, kubeClient)
 
 	if options.Deploy {
 		c := deployCMD.Command{
@@ -312,7 +287,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 	metadata := analytics.TestMetadata{
 		StagesCount: len(testServices),
-		WasDeployed: wasDeployed,
+		Deployed:    options.Deploy,
 		WasBuilt:    wasBuilt,
 	}
 

@@ -25,7 +25,7 @@ func TestTrackTest(t *testing.T) {
 	var event string
 	var success bool
 	var wasBuilt bool
-	var wasDeployed bool
+	var deployed bool
 	var duration float64
 	var stagesCount int
 	var errStr string
@@ -34,7 +34,7 @@ func TestTrackTest(t *testing.T) {
 			event = ev
 			success = ok
 			wasBuilt = props["wasBuilt"].(bool)
-			wasDeployed = props["wasDeployed"].(bool)
+			deployed = props["deployed"].(bool)
 			duration = props["duration"].(float64)
 			stagesCount = props["stagesCount"].(int)
 			errStr = props["error"].(string)
@@ -42,7 +42,7 @@ func TestTrackTest(t *testing.T) {
 	}
 
 	tracker.TrackTest(TestMetadata{
-		WasDeployed: true,
+		Deployed:    true,
 		WasBuilt:    true,
 		Success:     false,
 		Duration:    time.Second * 5,
@@ -50,7 +50,7 @@ func TestTrackTest(t *testing.T) {
 		Err:         fmt.Errorf("my-error"),
 	})
 
-	require.True(t, wasDeployed)
+	require.True(t, deployed)
 	require.True(t, wasBuilt)
 	require.False(t, success)
 	require.Equal(t, errStr, "my-error")
