@@ -27,10 +27,10 @@ import (
 type ExecOptions struct {
 	Namespace    string
 	ManifestPath string
-	Command      []string
 	OktetoHome   string
 	Token        string
 	Service      string
+	Command      []string
 }
 
 // RunExecCommand runs an exec command
