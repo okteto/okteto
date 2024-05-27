@@ -20,6 +20,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	okerrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -103,7 +104,10 @@ okteto exec my-pod`,
 				return fmt.Errorf("failed to create exec options: %w", err)
 			}
 			if err := opts.setDevFromManifest(ctx, manifest.Dev, okteto.GetContext().Namespace, e.k8sClientProvider, e.ioCtrl); err != nil {
-				return fmt.Errorf("failed to set dev from manifest: %w", err)
+				return okerrors.UserError{
+					E:    fmt.Errorf("development containers not found in namespace '%s'", okteto.GetContext().Namespace),
+					Hint: "Run 'okteto up' to deploy your development container or use 'okteto context' to change your current context",
+				}
 			}
 			if err := opts.validate(manifest.Dev); err != nil {
 				return fmt.Errorf("error validating exec command: %w", err)
@@ -124,7 +128,10 @@ func (e *Exec) Run(ctx context.Context, opts *options, dev *model.Dev) error {
 
 	app, err := e.appRetriever.getApp(ctx, dev)
 	if err != nil {
-		return fmt.Errorf("failed to get container: %w", err)
+		return okerrors.UserError{
+			E:    fmt.Errorf("development containers not found in namespace '%s'", okteto.GetContext().Namespace),
+			Hint: "Run 'okteto up' to deploy your development container or use 'okteto context' to change your current context",
+		}
 	}
 
 	c, _, err := e.k8sClientProvider.Provide(okteto.GetContext().Cfg)

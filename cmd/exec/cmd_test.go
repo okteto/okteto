@@ -79,7 +79,7 @@ func TestExec_Run(t *testing.T) {
 	}{
 		{
 			name:        "error retrieving app",
-			expectedErr: fmt.Errorf("the application 'test' referred by your okteto manifest doesn't exist"),
+			expectedErr: fmt.Errorf("development containers not found in namespace ''"),
 		},
 		{
 			name:         "error providing kubernetes client",
