@@ -258,9 +258,9 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		namespace = okteto.GetContext().Namespace
 	}
 
-	needsDeploy := options.Deploy || !pipeline.IsDeployed(ctx, devenvName, namespace, kubeClient)
+	wasDeployed := pipeline.IsDeployed(ctx, devenvName, namespace, kubeClient)
 
-	if needsDeploy {
+	if options.Deploy {
 		c := deployCMD.Command{
 			GetManifest: func(path string, fs afero.Fs) (*model.Manifest, error) {
 				return manifest, nil
@@ -308,12 +308,11 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		if err := manifest.ExpandEnvVars(); err != nil {
 			return analytics.TestMetadata{}, fmt.Errorf("failed to expand manifest environment variables: %w", err)
 		}
-		oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy'", devenvName)
 	}
 
 	metadata := analytics.TestMetadata{
 		StagesCount: len(testServices),
-		WasDeployed: needsDeploy,
+		WasDeployed: wasDeployed,
 		WasBuilt:    wasBuilt,
 	}
 
