@@ -17,12 +17,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path"
 	"strings"
 
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
+	"github.com/okteto/okteto/pkg/ignore"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
@@ -96,6 +99,19 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 		return err
 	}
 
+	cwd, err := remote.GetOriginalCWD(filesystem.NewOsWorkingDirectoryCtrl(), opts.ManifestPathFlag)
+	if err != nil {
+		return fmt.Errorf("failed to resolve working directory for remote destroy: %w", err)
+	}
+	ig, err := ignore.NewFromFile(path.Join(cwd, model.IgnoreFilename))
+	if err != nil {
+		return fmt.Errorf("failed to read ignore file: %w", err)
+	}
+	rules, err := ig.Rules(ignore.RootSection, "destroy")
+	if err != nil {
+		return fmt.Errorf("failed to create ignore rules for remote destroy: %w", err)
+	}
+
 	runParams := remote.Params{
 		BaseImage:                 baseImage,
 		ManifestPathFlag:          opts.ManifestPathFlag,
@@ -107,6 +123,7 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 		Deployable:                dep,
 		Manifest:                  opts.Manifest,
 		Command:                   remote.DestroyCommand,
+		IgnoreRules:               rules,
 		UseOktetoDeployIgnoreFile: true,
 	}
 

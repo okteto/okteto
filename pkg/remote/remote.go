@@ -228,7 +228,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		params.BaseImage = sc.PipelineRunnerImage
 	}
 
-	cwd, err := r.getOriginalCWD(params.ManifestPathFlag)
+	cwd, err := GetOriginalCWD(r.workingDirectoryCtrl, params.ManifestPathFlag)
 	if err != nil {
 		return err
 	}
@@ -359,16 +359,6 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 	return r.builder.Run(ctx, buildOptions, r.ioCtrl)
 }
 
-// getOriginalCWD returns the original cwd from the manifest path
-func (r *Runner) getOriginalCWD(manifestPath string) (string, error) {
-	cwd, err := r.workingDirectoryCtrl.Get()
-	if err != nil {
-		return "", err
-	}
-	manifestPathDir := filepath.Dir(filepath.Clean(fmt.Sprintf("/%s", manifestPath)))
-	return strings.TrimSuffix(cwd, manifestPathDir), nil
-}
-
 // createDockerfile renders the template of the Dockerfile and creates the temporary file
 func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error) {
 	cwd, err := r.workingDirectoryCtrl.Get()
@@ -483,12 +473,12 @@ func createDockerignoreFileWithFilesystem(cwd, tmpDir string, rules []string, us
 			if !errors.Is(err, os.ErrNotExist) {
 				return err
 			}
-
 		} else {
 			dockerignoreContent, err = afero.ReadFile(fs, dockerignoreFilePath)
 			if err != nil {
 				return err
 			}
+			oktetoLog.Warning("Ignoring files through %s is deprecated and will be removed in future versions. Please use .oktetoignore. More info here: https://www.okteto.com/docs/core/remote-execution/#ignoring-files", oktetoDockerignoreName)
 			dockerignoreContent = append(dockerignoreContent, []byte("\n")...)
 		}
 	}
@@ -543,4 +533,14 @@ func getExtraHosts(registryURL, subdomain, ip string, metadata types.ClusterMeta
 	}
 
 	return extraHosts
+}
+
+// GetOriginalCWD returns the original cwd from the manifest path
+func GetOriginalCWD(workingDirectoryCtrl filesystem.WorkingDirectoryInterface, manifestPath string) (string, error) {
+	cwd, err := workingDirectoryCtrl.Get()
+	if err != nil {
+		return "", err
+	}
+	manifestPathDir := filepath.Dir(filepath.Clean(fmt.Sprintf("/%s", manifestPath)))
+	return strings.TrimSuffix(cwd, manifestPathDir), nil
 }
