@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/okteto/okteto/cmd/up"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -107,7 +108,11 @@ type sshExecutor struct {
 }
 
 func (s *sshExecutor) execute(ctx context.Context, cmd []string) error {
-	p, err := ssh.GetPort(s.dev.Name)
+	devName := s.dev.Name
+	if s.dev.Autocreate {
+		devName = strings.TrimSuffix(s.dev.Name, "-okteto")
+	}
+	p, err := ssh.GetPort(devName)
 	if err != nil {
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("development mode is not enabled on your deployment"),
