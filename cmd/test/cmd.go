@@ -235,7 +235,14 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		}
 	}
 
-	if options.Deploy {
+	shouldDeploy := options.Deploy
+
+	if shouldDeploy && manifest.Deploy == nil {
+		oktetoLog.Warning("Nothing to deploy. The 'deploy' section of your Okteto Manifest is empty. For more information, check the docs: https://okteto.com/docs/core/okteto-manifest/#deploy")
+		shouldDeploy = false
+	}
+
+	if shouldDeploy {
 		c := deployCMD.Command{
 			GetManifest: func(path string, fs afero.Fs) (*model.Manifest, error) {
 				return manifest, nil
@@ -255,6 +262,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			RunningInInstaller: config.RunningInInstaller(),
 		}
 		deployStartTime := time.Now()
+		runInRemote := shouldRunInRemote(manifest.Deploy)
 		err = c.Run(ctx, &deployCMD.Options{
 			Manifest:         manifest,
 			ManifestPathFlag: options.ManifestPathFlag,
@@ -267,14 +275,14 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			Dependencies:     false,
 			Timeout:          options.Timeout,
 			RunWithoutBash:   false,
-			RunInRemote:      manifest.Deploy.Remote,
+			RunInRemote:      runInRemote,
 			Wait:             true,
 			ShowCTA:          false,
 		})
-		c.TrackDeploy(manifest, manifest.Deploy.Remote, deployStartTime, err)
+		c.TrackDeploy(manifest, runInRemote, deployStartTime, err)
 
 		if err != nil {
-			oktetoLog.Error("deploy failed: %s", err.Error())
+			oktetoLog.Errorf("deploy failed: %s", err.Error())
 			return analytics.TestMetadata{}, err
 		}
 	} else {
@@ -358,4 +366,14 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 	}
 	metadata.Success = true
 	return metadata, nil
+}
+
+func shouldRunInRemote(manifestDeploy *model.DeployInfo) bool {
+	if manifestDeploy != nil {
+		if manifestDeploy.Image != "" || manifestDeploy.Remote {
+			return true
+		}
+	}
+
+	return false
 }
