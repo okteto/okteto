@@ -263,7 +263,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			Namespace:        options.Namespace,
 			K8sContext:       options.K8sContext,
 			Variables:        options.Variables,
-			Build:            false,
+			Build:            true,
 			Dependencies:     false,
 			Timeout:          options.Timeout,
 			RunWithoutBash:   false,
