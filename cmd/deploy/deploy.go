@@ -117,7 +117,7 @@ type Command struct {
 	AnalyticsTracker  AnalyticsTrackerInterface
 	IoCtrl            *io.Controller
 	K8sLogger         *io.K8sLogger
-	insightsTracker   buildDeployTrackerInterface
+	InsightsTracker   buildDeployTrackerInterface
 
 	PipelineType model.Archetype
 	// onCleanUp is a list of functions to be executed when the execution is interrupted. This is a hack
@@ -237,7 +237,7 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 				K8sLogger:          k8sLogger,
 
 				onCleanUp:       []cleanUpFunc{},
-				insightsTracker: insightsTracker,
+				InsightsTracker: insightsTracker,
 			}
 			startTime := time.Now()
 
@@ -251,7 +251,7 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 				if options.Manifest != nil {
 					namespace = options.Manifest.Namespace
 				}
-				c.insightsTracker.TrackDeploy(ctx, options.Name, namespace, err == nil)
+				c.InsightsTracker.TrackDeploy(ctx, options.Name, namespace, err == nil)
 				c.TrackDeploy(options.Manifest, options.RunInRemote, startTime, err)
 				exit <- err
 			}()

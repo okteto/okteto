@@ -92,7 +92,7 @@ type Options struct {
 }
 
 // Up starts a development container
-func Up(at analyticsTrackerInterface, insights buildTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
 	upOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:   "up [service]",
@@ -169,7 +169,7 @@ func Up(at analyticsTrackerInterface, insights buildTrackerInterface, ioCtrl *io
 					return err
 				}
 
-				oktetoManifest, err = LoadManifestWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.ManifestPath)
+				oktetoManifest, err = LoadManifestWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.ManifestPath, at, ioCtrl, insights, k8sLogger)
 				if err != nil {
 					return err
 				}
@@ -219,6 +219,10 @@ func Up(at analyticsTrackerInterface, insights buildTrackerInterface, ioCtrl *io
 				if answer {
 					mc := &manifest.Command{
 						K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
+						AnalyticsTracker:  at,
+						InsightsTracker:   insights,
+						IoCtrl:            ioCtrl,
+						K8sLogger:         k8sLogger,
 					}
 					if upOptions.ManifestPath == "" {
 						upOptions.ManifestPath = utils.DefaultManifest
@@ -455,7 +459,7 @@ func (o *Options) AddArgs(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath string) (*model.Manifest, error) {
+func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath string, at analyticsTrackerInterface, ioCtrl *io.Controller, insights buildDeployTrackerInterface, k8sLogger *io.K8sLogger) (*model.Manifest, error) {
 	dir, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -471,6 +475,10 @@ func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath st
 
 	mc := &manifest.Command{
 		K8sClientProvider: okteto.NewK8sClientProvider(),
+		AnalyticsTracker:  at,
+		IoCtrl:            ioCtrl,
+		InsightsTracker:   insights,
+		K8sLogger:         k8sLogger,
 	}
 	manifest, err := mc.RunInitV2(ctx, &manifest.InitOpts{DevPath: devPath, ShowCTA: false, Workdir: dir})
 	if err != nil {
