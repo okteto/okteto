@@ -11,16 +11,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package filesystem
 
-import (
-	"github.com/okteto/okteto/pkg/filesystem"
-	"os"
-	"path/filepath"
-)
+import "path/filepath"
 
-// IgnoreFilename is the name of the okteto ignore file
-const IgnoreFilename = ".oktetoignore"
+// GetWorkdirFromManifestPath sets the path
+func GetWorkdirFromManifestPath(manifestPath string) string {
+	dir := filepath.Dir(manifestPath)
+	if filepath.Base(dir) == ".okteto" {
+		dir = filepath.Dir(dir)
+	}
+	return dir
+}
 
 // GetManifestPathFromWorkdir returns the path from a workdir
 func GetManifestPathFromWorkdir(manifestPath, workdir string) string {
@@ -29,13 +31,4 @@ func GetManifestPathFromWorkdir(manifestPath, workdir string) string {
 		return ""
 	}
 	return mPath
-}
-
-func UpdateCWDtoManifestPath(manifestPath string) (string, error) {
-	workdir := filesystem.GetWorkdirFromManifestPath(manifestPath)
-	if err := os.Chdir(workdir); err != nil {
-		return "", err
-	}
-	updatedManifestPath := GetManifestPathFromWorkdir(manifestPath, workdir)
-	return updatedManifestPath, nil
 }

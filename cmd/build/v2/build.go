@@ -170,7 +170,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		return nil
 	}
 	if options.File != "" {
-		workdir := model.GetWorkdirFromManifestPath(options.File)
+		workdir := filesystem.GetWorkdirFromManifestPath(options.File)
 		if err := os.Chdir(workdir); err != nil {
 			return err
 		}

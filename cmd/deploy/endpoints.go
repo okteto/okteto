@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"os"
 	"sort"
 	"strings"
@@ -89,7 +90,7 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 		Short: "Show endpoints for an environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if options.ManifestPath != "" {
-				workdir := model.GetWorkdirFromManifestPath(options.ManifestPath)
+				workdir := filesystem.GetWorkdirFromManifestPath(options.ManifestPath)
 				if err := os.Chdir(workdir); err != nil {
 					return err
 				}

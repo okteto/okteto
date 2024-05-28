@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"os"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -54,7 +55,7 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger) *cobra.Comman
 
 			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
 			if devPath != "" {
-				workdir := model.GetWorkdirFromManifestPath(devPath)
+				workdir := filesystem.GetWorkdirFromManifestPath(devPath)
 				if err := os.Chdir(workdir); err != nil {
 					return err
 				}

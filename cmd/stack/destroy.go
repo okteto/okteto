@@ -15,6 +15,7 @@ package stack
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"os"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -40,7 +41,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Warning("'okteto stack destroy' is deprecated in favor of 'okteto destroy', and will be removed in a future version")
 			if len(stackPath) == 1 {
-				workdir := model.GetWorkdirFromManifestPath(stackPath[0])
+				workdir := filesystem.GetWorkdirFromManifestPath(stackPath[0])
 				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
