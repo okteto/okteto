@@ -15,7 +15,6 @@ package stack
 
 import (
 	"context"
-	"github.com/okteto/okteto/pkg/filesystem"
 	"os"
 	"runtime"
 	"strings"
@@ -29,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/divert"
 	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
@@ -88,13 +88,16 @@ func deploy(ctx context.Context, at, insights buildTrackerInterface, ioCtrl *io.
 			return dc.RunDeploy(ctx, s, options)
 		},
 	}
+
+	tenMinutes := 10 * time.Minute
+
 	cmd.Flags().StringArrayVarP(&options.StackPaths, "file", "f", []string{}, "path to the compose manifest files. If more than one is passed the latest will overwrite the fields from the previous")
 	cmd.Flags().StringVarP(&options.Name, "name", "", "", "overwrites the compose name")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the compose namespace where the compose is deployed")
 	cmd.Flags().BoolVarP(&options.ForceBuild, "build", "", false, "build images before starting any compose service")
 	cmd.Flags().BoolVarP(&options.Wait, "wait", "", false, "wait until a minimum number of containers are in a ready state for every service")
 	cmd.Flags().BoolVarP(&options.NoCache, "no-cache", "", false, "do not use cache when building the image")
-	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", 10*time.Minute, "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
+	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", tenMinutes, "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	cmd.Flags().StringVarP(&options.Progress, "progress", "", oktetoLog.TTYFormat, "show plain/tty build output (default \"tty\")")
 	return cmd
 }
