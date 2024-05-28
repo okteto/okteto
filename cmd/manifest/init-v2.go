@@ -249,6 +249,7 @@ func (mc *Command) deploy(ctx context.Context, opts *InitOpts) error {
 		DeployWaiter:      deploy.NewDeployWaiter(mc.K8sClientProvider, mc.K8sLogger),
 		EndpointGetter:    deploy.NewEndpointGetter,
 		IoCtrl:            mc.IoCtrl,
+		InsightsTracker:   mc.InsightsTracker,
 	}
 
 	err = c.Run(ctx, &deploy.Options{

@@ -79,6 +79,7 @@ func Init(at buildTrackerInterface, insights buildDeployTrackerInterface, ioCtrl
 				AnalyticsTracker:  at,
 				InsightsTracker:   insights,
 				IoCtrl:            ioCtrl,
+				K8sLogger:         io.NewK8sLogger(),
 			}
 
 			if opts.Version1 {
