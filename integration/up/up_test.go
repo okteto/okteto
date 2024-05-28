@@ -84,7 +84,7 @@ func checkStignoreIsOnRemote(namespace, svcName, manifestPath, oktetoPath, dir s
 	opts := &commands.ExecOptions{
 		Namespace:    namespace,
 		ManifestPath: manifestPath,
-		Command:      []string{"sh", `cat .stignore | grep '(?d)venv'`},
+		Command:      []string{"sh", "-c", `cat .stignore | grep '(?d)venv'`},
 		OktetoHome:   dir,
 		Token:        token,
 		Service:      svcName,
