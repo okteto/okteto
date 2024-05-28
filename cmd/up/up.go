@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -144,7 +145,7 @@ func Up(at analyticsTrackerInterface, insights buildTrackerInterface, ioCtrl *io
 				upOptions.ManifestPathFlag = manifestPathFlag
 
 				// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
-				uptManifestPath, err := model.UpdateCWDtoManifestPath(upOptions.ManifestPath)
+				uptManifestPath, err := filesystem.UpdateCWDtoManifestPath(upOptions.ManifestPath)
 				if err != nil {
 					return err
 				}

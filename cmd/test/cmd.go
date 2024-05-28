@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"os"
 	"os/signal"
 	"path"
@@ -153,7 +154,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		options.ManifestPathFlag = manifestPathFlag
 
 		// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
-		uptManifestPath, err := model.UpdateCWDtoManifestPath(options.ManifestPath)
+		uptManifestPath, err := filesystem.UpdateCWDtoManifestPath(options.ManifestPath)
 		if err != nil {
 			return analytics.TestMetadata{}, err
 		}

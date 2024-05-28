@@ -260,4 +260,7 @@ const (
 
 	// OktetoDefaultImageTag default tag assigned to image to build
 	OktetoDefaultImageTag = "okteto"
+
+	// IgnoreFilename is the name of the okteto ignore file
+	IgnoreFilename = ".oktetoignore"
 )
