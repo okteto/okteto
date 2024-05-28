@@ -16,26 +16,16 @@ package model
 import (
 	"github.com/okteto/okteto/pkg/filesystem"
 	"os"
-	"path/filepath"
 )
 
 // IgnoreFilename is the name of the okteto ignore file
 const IgnoreFilename = ".oktetoignore"
-
-// GetManifestPathFromWorkdir returns the path from a workdir
-func GetManifestPathFromWorkdir(manifestPath, workdir string) string {
-	mPath, err := filepath.Rel(workdir, manifestPath)
-	if err != nil {
-		return ""
-	}
-	return mPath
-}
 
 func UpdateCWDtoManifestPath(manifestPath string) (string, error) {
 	workdir := filesystem.GetWorkdirFromManifestPath(manifestPath)
 	if err := os.Chdir(workdir); err != nil {
 		return "", err
 	}
-	updatedManifestPath := GetManifestPathFromWorkdir(manifestPath, workdir)
+	updatedManifestPath := filesystem.GetManifestPathFromWorkdir(manifestPath, workdir)
 	return updatedManifestPath, nil
 }

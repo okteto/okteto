@@ -257,7 +257,7 @@ func GetStackFromPath(name, stackPath string, isCompose bool, fs afero.Fs) (*Sta
 	if err := os.Chdir(stackWorkingDir); err != nil {
 		return nil, err
 	}
-	stackPath = GetManifestPathFromWorkdir(stackPath, stackWorkingDir)
+	stackPath = filesystem.GetManifestPathFromWorkdir(stackPath, stackWorkingDir)
 
 	s, err := ReadStack(b, isCompose)
 	if err != nil {

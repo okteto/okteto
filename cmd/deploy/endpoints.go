@@ -94,7 +94,7 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
-				options.ManifestPath = model.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
+				options.ManifestPath = filesystem.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
 				// check whether the manifest file provided by -f exists or not
 				if _, err := fs.Stat(options.ManifestPath); err != nil {
 					return oktetoErrors.UserError{

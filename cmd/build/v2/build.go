@@ -174,7 +174,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		if err := os.Chdir(workdir); err != nil {
 			return err
 		}
-		options.File = model.GetManifestPathFromWorkdir(options.File, workdir)
+		options.File = filesystem.GetManifestPathFromWorkdir(options.File, workdir)
 	}
 	if options.Manifest.Name == "" {
 		wd, err := os.Getwd()

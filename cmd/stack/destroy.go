@@ -45,7 +45,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
-				stackPath[0] = model.GetManifestPathFromWorkdir(stackPath[0], workdir)
+				stackPath[0] = filesystem.GetManifestPathFromWorkdir(stackPath[0], workdir)
 			}
 			s, err := contextCMD.LoadStackWithContext(ctx, name, namespace, stackPath, afero.NewOsFs())
 			if err != nil {

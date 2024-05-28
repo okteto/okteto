@@ -67,7 +67,7 @@ func deploy(ctx context.Context, at, insights buildTrackerInterface, ioCtrl *io.
 				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
-				options.StackPaths[0] = model.GetManifestPathFromWorkdir(options.StackPaths[0], workdir)
+				options.StackPaths[0] = filesystem.GetManifestPathFromWorkdir(options.StackPaths[0], workdir)
 			}
 			s, err := contextCMD.LoadStackWithContext(ctx, options.Name, options.Namespace, options.StackPaths, afero.NewOsFs())
 			if err != nil {

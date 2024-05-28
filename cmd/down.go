@@ -27,7 +27,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -59,7 +58,7 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger) *cobra.Comman
 				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
-				devPath = model.GetManifestPathFromWorkdir(devPath, workdir)
+				devPath = filesystem.GetManifestPathFromWorkdir(devPath, workdir)
 			}
 			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs())
 			if err != nil {
