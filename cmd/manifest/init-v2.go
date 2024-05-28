@@ -60,7 +60,7 @@ type buildDeployTrackerInterface interface {
 type Command struct {
 	manifest          *model.Manifest
 	K8sClientProvider okteto.K8sClientProviderWithLogger
-	AnalyticsTracker  buildTrackerInterface
+	AnalyticsTracker  deploy.AnalyticsTrackerInterface
 	InsightsTracker   buildDeployTrackerInterface
 
 	IoCtrl    *io.Controller
@@ -250,6 +250,8 @@ func (mc *Command) deploy(ctx context.Context, opts *InitOpts) error {
 		EndpointGetter:    deploy.NewEndpointGetter,
 		IoCtrl:            mc.IoCtrl,
 		InsightsTracker:   mc.InsightsTracker,
+		K8sLogger:         mc.K8sLogger,
+		AnalyticsTracker:  mc.AnalyticsTracker,
 	}
 
 	err = c.Run(ctx, &deploy.Options{
