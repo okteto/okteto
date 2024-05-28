@@ -29,8 +29,8 @@ type TestMetadata struct {
 	// potential build and deploy times (not just the tests)
 	Duration time.Duration
 
-	// WasDeployed is whether a deploy was needed as part of the test
-	WasDeployed bool
+	// Deployed is whether a deploy was done as part of the test
+	Deployed bool
 
 	// WasBuilt is whether at least one image had to be built to run the tests
 	WasBuilt bool
@@ -46,7 +46,7 @@ type TestMetadata struct {
 func (a *Tracker) TrackTest(metadata TestMetadata) {
 	props := map[string]any{
 		"duration":    metadata.Duration.Seconds(),
-		"wasDeployed": metadata.WasDeployed,
+		"deployed":    metadata.Deployed,
 		"wasBuilt":    metadata.WasBuilt,
 		"success":     metadata.Success,
 		"stagesCount": metadata.StagesCount,
