@@ -14,8 +14,12 @@
 package deployable
 
 import (
+	"fmt"
+
 	"github.com/okteto/okteto/cmd/utils/executor"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
 )
 
@@ -48,6 +52,12 @@ func (dr *TestRunner) RunTest(params TestParameters) error {
 	envStepper.WithFS(dr.Fs)
 
 	defer unlinkEnv()
+
+	params.Variables = append(
+		params.Variables,
+		// Set OKTETO_DOMAIN=okteto-subdomain env variable
+		fmt.Sprintf("%s=%s", model.OktetoDomainEnvVar, okteto.GetSubdomain()),
+	)
 
 	for _, command := range params.Deployable.Commands {
 		oktetoLog.Information("Running '%s'", command.Name)
