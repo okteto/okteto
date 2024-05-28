@@ -41,8 +41,13 @@ type buildDeployTrackerInterface interface {
 	deployTrackerInterface
 }
 
+type analyticsTracker interface {
+	buildTrackerInterface
+	TrackDeploy(analytics.DeployMetadata)
+}
+
 // Init creates okteto manifest
-func Init(at buildTrackerInterface, insights buildDeployTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
+func Init(at analyticsTracker, insights buildDeployTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
 	opts := &manifest.InitOpts{}
 	cmd := &cobra.Command{
 		Use:   "init",
@@ -79,6 +84,7 @@ func Init(at buildTrackerInterface, insights buildDeployTrackerInterface, ioCtrl
 				AnalyticsTracker:  at,
 				InsightsTracker:   insights,
 				IoCtrl:            ioCtrl,
+				K8sLogger:         io.NewK8sLogger(),
 			}
 
 			if opts.Version1 {
