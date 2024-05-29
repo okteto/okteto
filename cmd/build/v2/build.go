@@ -357,13 +357,14 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 		buildHash = bc.smartBuildCtrl.GetBuildHash(buildSvcInfo, svcName)
 	}
 	it := newImageTagger(bc.Config, bc.smartBuildCtrl)
-	tagToBuild := it.getServiceImageReference(manifest.Name, svcName, buildSvcInfo, buildHash)
+	tagsToBuild := it.getServiceImageReference(manifest.Name, svcName, buildSvcInfo, buildHash)
 	imageCtrl := registry.NewImageCtrl(bc.oktetoContext)
-	globalImage := it.getGlobalTagFromDevIfNeccesary(tagToBuild, bc.oktetoContext.GetNamespace(), bc.oktetoContext.GetRegistryURL(), buildHash, manifest.Name, svcName, imageCtrl)
+	globalImage := it.getGlobalTagFromDevIfNeccesary(tagsToBuild, bc.oktetoContext.GetNamespace(), bc.oktetoContext.GetRegistryURL(), buildHash, manifest.Name, svcName, imageCtrl)
 	if globalImage != "" {
-		tagToBuild = fmt.Sprintf("%s,%s", tagToBuild, globalImage)
+		tagsToBuild = fmt.Sprintf("%s,%s", tagsToBuild, globalImage)
 	}
-	buildSvcInfo.Image = tagToBuild
+
+	buildSvcInfo.Image = tagsToBuild
 	if err := buildSvcInfo.AddArgs(bc.buildEnvironments); err != nil {
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcName, err)
 	}
@@ -376,13 +377,10 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	var imageTagWithDigest string
 	tags := strings.Split(buildOptions.Tag, ",")
 
-	//check that all tags are pushed and rteturn the first one to not break any scenario
+	// check that all tags are pushed and return the first one to not break any scenario
 	for idx, tag := range tags {
 		// check if the image is pushed to the dev registry if DevTag is set
 		reference := tag
-		if buildOptions.DevTag != "" {
-			reference = buildOptions.DevTag
-		}
 		digest, err := bc.Registry.GetImageTagWithDigest(reference)
 		if err != nil {
 			return "", fmt.Errorf("error accessing image at registry %s: %w", reference, err)

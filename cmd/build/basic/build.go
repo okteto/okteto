@@ -100,9 +100,6 @@ func (ob *Builder) Build(ctx context.Context, options *types.BuildOptions) error
 		tags := strings.Split(options.Tag, ",")
 		for _, tag := range tags {
 			displayTag := tag
-			if options.DevTag != "" {
-				displayTag = options.DevTag
-			}
 			ob.IoCtrl.Out().Success("Image '%s' successfully pushed", displayTag)
 		}
 	}

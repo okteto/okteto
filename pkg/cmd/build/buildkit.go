@@ -61,7 +61,6 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 
 	imageCtrl := registry.NewImageCtrl(GetRegistryConfigFromOktetoConfig(okctx))
 	if okctx.IsOktetoCluster() {
-		buildOptions.DevTag = imageCtrl.ExpandOktetoDevRegistry(imageCtrl.GetDevTagFromGlobal(buildOptions.Tag))
 		buildOptions.Tag = imageCtrl.ExpandOktetoDevRegistry(buildOptions.Tag)
 		buildOptions.Tag = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.Tag)
 		for i := range buildOptions.CacheFrom {
@@ -179,29 +178,15 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 	}
 
 	if buildOptions.Tag != "" {
-		// add additional tag if DevTag is defined
-		if buildOptions.DevTag != "" {
-			opt.Exports = []client.ExportEntry{
-				{
-					Type: "image",
-					Attrs: map[string]string{
-						"name": strings.Join([]string{buildOptions.Tag, buildOptions.DevTag}, ","),
-						"push": "true",
-					},
+		opt.Exports = []client.ExportEntry{
+			{
+				Type: "image",
+				Attrs: map[string]string{
+					"name": buildOptions.Tag,
+					"push": "true",
 				},
-			}
-		} else {
-			opt.Exports = []client.ExportEntry{
-				{
-					Type: "image",
-					Attrs: map[string]string{
-						"name": buildOptions.Tag,
-						"push": "true",
-					},
-				},
-			}
+			},
 		}
-
 	}
 	for _, cacheFromImage := range buildOptions.CacheFrom {
 		opt.CacheImports = append(

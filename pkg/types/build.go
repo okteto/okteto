@@ -43,7 +43,6 @@ type BuildOptions struct {
 	Target      string
 	Namespace   string
 	K8sContext  string
-	DevTag      string
 	BuildArgs   []string
 	CacheFrom   []string
 	Secrets     []string

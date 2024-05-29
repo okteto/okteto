@@ -163,7 +163,6 @@ func TestDepotRun(t *testing.T) {
 				},
 				BuildArgs: []string{"arg1=value1"},
 				Tag:       "okteto.dev/test:okteto",
-				DevTag:    "okteto.dev/test:okteto",
 			}
 			runAndHandle := func(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error {
 				return nil
