@@ -90,7 +90,7 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger) *cobra.Comman
 					if !errors.Is(err, utils.ErrNoDevSelected) {
 						return err
 					}
-					options := apps.ListDevModeOn(ctx, manifest, c)
+					options := apps.ListDevModeOn(ctx, manifest.Dev, okteto.GetContext().Namespace, c)
 
 					if len(options) == 0 {
 						oktetoLog.Success("All development containers are deactivated")

@@ -80,13 +80,14 @@ func writeFile(filepath, content string) error {
 	return nil
 }
 
-func checkStignoreIsOnRemote(namespace, manifestPath, oktetoPath, dir string) error {
+func checkStignoreIsOnRemote(namespace, svcName, manifestPath, oktetoPath, dir string) error {
 	opts := &commands.ExecOptions{
 		Namespace:    namespace,
 		ManifestPath: manifestPath,
-		Command:      "cat .stignore | grep '(?d)venv'",
+		Command:      []string{"sh", "-c", `cat .stignore | grep '(?d)venv'`},
 		OktetoHome:   dir,
 		Token:        token,
+		Service:      svcName,
 	}
 	output, err := commands.RunExecCommand(oktetoPath, opts)
 	if err != nil {

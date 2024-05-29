@@ -184,7 +184,7 @@ func TestUpDeploymentV1(t *testing.T) {
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, localupdatedContent, timeout, upResult.ErrorChan))
 
 	// Test that stignore has been created
-	require.NoError(t, checkStignoreIsOnRemote(testNamespace, filepath.Join(dir, "okteto.yml"), oktetoPath, dir))
+	require.NoError(t, checkStignoreIsOnRemote(testNamespace, "e2etest", filepath.Join(dir, "okteto.yml"), oktetoPath, dir))
 
 	// Test modify deployment gets updated
 	d, err := integration.GetDeployment(context.Background(), testNamespace, "e2etest", c)
@@ -298,7 +298,7 @@ func TestUpDeploymentV2(t *testing.T) {
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, localupdatedContent, timeout, upResult.ErrorChan))
 
 	// Test that stignore has been created
-	require.NoError(t, checkStignoreIsOnRemote(testNamespace, filepath.Join(dir, "okteto.yml"), oktetoPath, dir))
+	require.NoError(t, checkStignoreIsOnRemote(testNamespace, "e2etest", filepath.Join(dir, "okteto.yml"), oktetoPath, dir))
 
 	// Test modify deployment gets updated
 	d, err := integration.GetDeployment(context.Background(), testNamespace, "e2etest", c)
