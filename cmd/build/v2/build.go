@@ -51,7 +51,7 @@ type oktetoRegistryInterface interface {
 
 	GetRegistryAndRepo(image string) (string, string)
 	GetRepoNameAndTag(repo string) (string, string)
-	CloneGlobalImageToDev(imageWithDigest string) (string, error)
+	GetDevImageFromGlobal(imageWithDigest string) string
 	Clone(from, to string) (string, error)
 }
 
@@ -274,20 +274,11 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				if isBuilt {
 					ob.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of '%s' because it's already built from cache.", svcToBuild)
 
-					if buildSvcInfo.Image != "" {
-						firstTag := strings.Split(buildSvcInfo.Image, ",")[0]
-						if ob.Registry.IsOktetoRegistry(firstTag) {
-							imageWithDigest, err = ob.smartBuildCtrl.Clone(imageWithDigest, firstTag)
-							if err != nil {
-								return err
-							}
-						}
-					} else {
-						imageWithDigest, err = ob.smartBuildCtrl.CloneGlobalImageToDev(imageWithDigest)
-						if err != nil {
-							return err
-						}
+					imageWithDigest, err := ob.smartBuildCtrl.Clone(imageWithDigest, buildSvcInfo)
+					if err != nil {
+						return err
 					}
+
 					ob.SetServiceEnvVars(svcToBuild, imageWithDigest)
 					builtImagesControl[svcToBuild] = true
 					meta.Success = true
@@ -363,7 +354,12 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	if globalImage != "" {
 		tagsToBuild = fmt.Sprintf("%s,%s", tagsToBuild, globalImage)
 	}
-
+	if buildSvcInfo.Image == "" {
+		devImage := it.getDevTagFromGlobalIfNeccesary(tagsToBuild, bc.oktetoContext.GetNamespace(), bc.oktetoContext.GetGlobalNamespace(), bc.oktetoContext.GetRegistryURL(), buildHash, manifest.Name, svcName, imageCtrl)
+		if devImage != "" {
+			tagsToBuild = fmt.Sprintf("%s,%s", tagsToBuild, devImage)
+		}
+	}
 	buildSvcInfo.Image = tagsToBuild
 	if err := buildSvcInfo.AddArgs(bc.buildEnvironments); err != nil {
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcName, err)

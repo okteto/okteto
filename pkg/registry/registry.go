@@ -158,17 +158,12 @@ func (or OktetoRegistry) GetRepoNameAndTag(repo string) (string, string) {
 }
 
 // CloneGlobalImageToDev clones an image from the global registry to the dev registry
-func (or OktetoRegistry) CloneGlobalImageToDev(imageWithDigest string) (string, error) {
+func (or OktetoRegistry) GetDevImageFromGlobal(imageWithDigest string) string {
 	// parse the image URI to extract registry and repository name
 	reg, repositoryWithTag := or.imageCtrl.GetRegistryAndRepo(imageWithDigest)
 	repo, _ := or.imageCtrl.GetRepoNameAndTag(repositoryWithTag)
 
 	globalNamespacePrefix := fmt.Sprintf("%s/", or.imageCtrl.config.GetGlobalNamespace())
-
-	// this function returns an error if invoked for an image that is not in the global registry
-	if !strings.HasPrefix(repo, globalNamespacePrefix) {
-		return "", fmt.Errorf("image repository '%s' is not in the global registry", repo)
-	}
 
 	// forging a new image URI in the dev registry, using the same repo name and tag as the global image
 	personalNamespacePrefix := fmt.Sprintf("%s/", or.config.GetNamespace())
@@ -176,7 +171,7 @@ func (or OktetoRegistry) CloneGlobalImageToDev(imageWithDigest string) (string, 
 	// When cloning an image from global to dev, we should do it to the "okteto" tag
 	devImage := fmt.Sprintf("%s/%s:%s", reg, devRepo, model.OktetoDefaultImageTag)
 
-	return or.Clone(imageWithDigest, devImage)
+	return devImage
 }
 
 // Clone clones an image to another

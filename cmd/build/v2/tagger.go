@@ -96,15 +96,36 @@ func (it imageTagger) getServiceImageReference(manifestName, svcName string, b *
 
 func (it imageTagger) getGlobalTagFromDevIfNeccesary(tags, namespace, registryURL, buildHash, manifestName, svcName string, ic registry.ImageCtrl) string {
 	tagList := strings.Split(tags, ",")
+	globalWithHash := ""
 	for _, tag := range tagList {
 		expandedTag := ic.ExpandOktetoDevRegistry(tag)
 		if strings.HasPrefix(expandedTag, fmt.Sprintf("%s/%s/", registryURL, namespace)) {
 			sanitizedName := format.ResourceK8sMetaString(manifestName)
-			globalWithHash := useReferenceTemplate(constants.GlobalRegistry, sanitizedName, svcName, buildHash)
-			return globalWithHash
+			if globalWithHash != "" {
+				globalWithHash += ","
+			}
+			newImage := useReferenceTemplate(constants.GlobalRegistry, sanitizedName, svcName, buildHash)
+			globalWithHash += ic.ExpandOktetoGlobalRegistry(newImage)
 		}
 	}
-	return ""
+	return globalWithHash
+}
+
+func (it imageTagger) getDevTagFromGlobalIfNeccesary(tags, namespace, globalNamespace, registryURL, buildHash, manifestName, svcName string, ic registry.ImageCtrl) string {
+	tagList := strings.Split(tags, ",")
+	devsWithDefaultTag := ""
+	for _, tag := range tagList {
+		expandedTag := ic.ExpandOktetoGlobalRegistry(tag)
+		if strings.HasPrefix(expandedTag, fmt.Sprintf("%s/%s/", registryURL, globalNamespace)) {
+			sanitizedName := format.ResourceK8sMetaString(manifestName)
+			if devsWithDefaultTag != "" {
+				devsWithDefaultTag += ","
+			}
+			newImage := useReferenceTemplate(constants.DevRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
+			devsWithDefaultTag += ic.ExpandOktetoDevRegistry(newImage)
+		}
+	}
+	return devsWithDefaultTag
 }
 
 // getImageReferencesForTag returns all the possible images references that can be used for build with the given tag

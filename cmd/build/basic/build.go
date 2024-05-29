@@ -98,8 +98,8 @@ func (ob *Builder) Build(ctx context.Context, options *types.BuildOptions) error
 		ob.IoCtrl.Out().Infof("Your image won't be pushed. To push your image specify the flag '-t'.")
 	} else {
 		tags := strings.Split(options.Tag, ",")
-		for _, tag := range tags {
-			displayTag := tag
+		if len(tags) >= 1 {
+			displayTag := tags[0]
 			ob.IoCtrl.Out().Success("Image '%s' successfully pushed", displayTag)
 		}
 	}

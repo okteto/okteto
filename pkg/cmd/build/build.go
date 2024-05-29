@@ -227,22 +227,28 @@ func (ob *OktetoBuilder) buildWithDocker(ctx context.Context, buildOptions *type
 	return nil
 }
 
-func validateImage(okctx OktetoContextInterface, imageTags string) error {
+func validateImages(okctx OktetoContextInterface, imageTags string) error {
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(okctx))
 
 	if strings.HasPrefix(imageTags, okctx.GetCurrentRegister()) && strings.Count(imageTags, "/") == 2 {
 		return nil
 	}
 	tags := strings.Split(imageTags, ",")
+	imgCtrl := registry.NewImageCtrl(okctx)
 	for _, tag := range tags {
-		if (reg.IsOktetoRegistry(tag)) && strings.Count(tag, "/") != 1 {
+		if reg.IsOktetoRegistry(tag) {
 			prefix := constants.DevRegistry
 			if reg.IsGlobalRegistry(tag) {
+				tag = imgCtrl.ExpandOktetoGlobalRegistry(tag)
 				prefix = constants.GlobalRegistry
+			} else {
+				tag = imgCtrl.ExpandOktetoDevRegistry(tag)
 			}
-			return oktetoErrors.UserError{
-				E:    fmt.Errorf("'%s' isn't a valid image tag", tag),
-				Hint: fmt.Sprintf("The Okteto Registry syntax is: '%s/image_name'", prefix),
+			if strings.Count(tag, "/") != 2 {
+				return oktetoErrors.UserError{
+					E:    fmt.Errorf("'%s' isn't a valid image tag", tag),
+					Hint: fmt.Sprintf("The Okteto Registry syntax is: '%s/image_name'", prefix),
+				}
 			}
 		}
 	}

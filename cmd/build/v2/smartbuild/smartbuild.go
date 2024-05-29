@@ -14,7 +14,7 @@
 package smartbuild
 
 import (
-	"fmt"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/env"
@@ -29,9 +29,10 @@ const (
 
 // registryController is the interface to interact with registries
 type registryController interface {
-	CloneGlobalImageToDev(string) (string, error)
+	GetDevImageFromGlobal(string) string
 	Clone(string, string) (string, error)
 	IsGlobalRegistry(string) bool
+	IsOktetoRegistry(string) bool
 }
 
 // repositoryInterface is the interface to interact with git repositories
@@ -95,34 +96,20 @@ func (s *Ctrl) GetBuildHash(buildInfo *build.Info, service string) string {
 	return s.hasher.hashWithBuildContext(buildInfo, service)
 }
 
-// CloneGlobalImageToDev clones the image from the global registry to the dev registry if needed
-// if the built image belongs to global registry we clone it to the dev registry
-// so that in can be used in dev containers (i.e. okteto up)
-func (s *Ctrl) CloneGlobalImageToDev(image string) (string, error) {
-	if s.registryController.IsGlobalRegistry(image) {
-		s.ioCtrl.Logger().Debugf("Copying image '%s' from global to personal registry", image)
-		devImage, err := s.registryController.CloneGlobalImageToDev(image)
-		if err != nil {
-			return "", fmt.Errorf("error cloning image '%s': %w", image, err)
+// Clone clones the image specified into the target
+func (s *Ctrl) Clone(from string, buildInfo *build.Info) (string, error) {
+	newImage := ""
+	if buildInfo.Image != "" {
+		firstTag := strings.Split(buildInfo.Image, ",")[0]
+		if s.registryController.IsOktetoRegistry(firstTag) {
+			newImage = firstTag
 		}
-		return devImage, nil
+	} else if s.registryController.IsGlobalRegistry(from) {
+		newImage = s.registryController.GetDevImageFromGlobal(from)
 	}
-	s.ioCtrl.Logger().Debugf("Image '%s' is not in the global registry", image)
-	return image, nil
-}
-
-// Clone clones the image from the global registry to an specific image if needed
-// if the built image belongs to global registry we clone it to the dev registry
-// so that in can be used in dev containers (i.e. okteto up)
-func (s *Ctrl) Clone(from, to string) (string, error) {
-	if s.registryController.IsGlobalRegistry(from) {
-		s.ioCtrl.Logger().Debugf("Copying image '%s' from global to personal registry", from)
-		devImage, err := s.registryController.Clone(from, to)
-		if err != nil {
-			return "", fmt.Errorf("error cloning image '%s': %w", from, err)
-		}
-		return devImage, nil
+	if newImage == "" {
+		s.ioCtrl.Logger().Debugf("Image '%s' is not in the global registry", from)
+		return from, nil
 	}
-	s.ioCtrl.Logger().Debugf("Image '%s' is not in the global registry", from)
-	return from, nil
+	return s.registryController.Clone(from, newImage)
 }

@@ -53,7 +53,7 @@ type buildWriter struct{}
 func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface, secretTempFolder string, fs afero.Fs) (*client.SolveOpt, error) {
 
 	if buildOptions.Tag != "" {
-		err := validateImage(okctx, buildOptions.Tag)
+		err := validateImages(okctx, buildOptions.Tag)
 		if err != nil {
 			return nil, err
 		}
