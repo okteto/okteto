@@ -162,7 +162,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},
-			expectedImage: "okteto.global/test-test:sha",
+			expectedImage: "okteto.dev/test-test:okteto",
 		},
 		{
 			name: "image inferred with clean project, has access to global registry, feature flag enabled and empty build hash",
@@ -184,8 +184,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 			tagger := newImageTagger(tc.cfg, &fakeSmartBuildCtrl{
 				isEnabled: tc.cfg.isSmartBuildsEnable,
 			})
-			buildHash := tc.cfg.sha
-			assert.Equal(t, tc.expectedImage, tagger.getServiceImageReference("test", "test", tc.b, buildHash))
+			assert.Equal(t, tc.expectedImage, tagger.getServiceImageReference("test", "test", tc.b))
 		})
 	}
 }

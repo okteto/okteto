@@ -157,7 +157,7 @@ func (or OktetoRegistry) GetRepoNameAndTag(repo string) (string, string) {
 	return or.imageCtrl.GetRepoNameAndTag(repo)
 }
 
-// CloneGlobalImageToDev clones an image from the global registry to the dev registry
+// GetDevImageFromGlobal clones an image from the global registry to the dev registry
 func (or OktetoRegistry) GetDevImageFromGlobal(imageWithDigest string) string {
 	// parse the image URI to extract registry and repository name
 	reg, repositoryWithTag := or.imageCtrl.GetRegistryAndRepo(imageWithDigest)

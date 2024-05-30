@@ -233,6 +233,7 @@ func validateImages(okctx OktetoContextInterface, imageTags string) error {
 	if strings.HasPrefix(imageTags, okctx.GetCurrentRegister()) && strings.Count(imageTags, "/") == 2 {
 		return nil
 	}
+	numberOfSlashToBeCorrect := 2
 	tags := strings.Split(imageTags, ",")
 	imgCtrl := registry.NewImageCtrl(okctx)
 	for _, tag := range tags {
@@ -244,7 +245,7 @@ func validateImages(okctx OktetoContextInterface, imageTags string) error {
 			} else {
 				tag = imgCtrl.ExpandOktetoDevRegistry(tag)
 			}
-			if strings.Count(tag, "/") != 2 {
+			if strings.Count(tag, "/") != numberOfSlashToBeCorrect {
 				return oktetoErrors.UserError{
 					E:    fmt.Errorf("'%s' isn't a valid image tag", tag),
 					Hint: fmt.Sprintf("The Okteto Registry syntax is: '%s/image_name'", prefix),

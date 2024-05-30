@@ -25,7 +25,7 @@ import (
 )
 
 type imageTaggerInterface interface {
-	getServiceImageReference(manifestName, svcName string, b *build.Info, buildHash string) string
+	getServiceImageReference(manifestName, svcName string, b *build.Info) string
 	getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string
 	getImageReferencesForTagWithDefaults(manifestName, svcToBuildName, tag string) []string
 	getImageReferencesForDeploy(manifestName, svcToBuildName string) []string
@@ -66,10 +66,10 @@ When service image is set on manifest, this is the returned one.
 
 Inferred tag is constructed using the following:
 [name] is the combination of the targetRegistry, manifestName and serviceName
-[tag] it is either the buildHash or the default okteto tag "okteto". If the default tag "okteto" is used, the targetRegistry
+[tag] it is either the default okteto tag "okteto". If the default tag "okteto" is used, the targetRegistry
 should always be the dev registry
 */
-func (it imageTagger) getServiceImageReference(manifestName, svcName string, b *build.Info, buildHash string) string {
+func (it imageTagger) getServiceImageReference(manifestName, svcName string, b *build.Info) string {
 	// when b.Image is set or services does not have dockerfile then no infer reference and return what is set on the manifest
 	if b.Image != "" || !serviceHasDockerfile(b) {
 		return b.Image
@@ -77,24 +77,14 @@ func (it imageTagger) getServiceImageReference(manifestName, svcName string, b *
 
 	// build the image reference based on context and buildInfo
 	targetRegistry := constants.DevRegistry
-	tag := ""
-	if it.cfg.HasGlobalAccess() && it.smartBuildController.IsEnabled() {
-		// With build context enabled, we should always use global registry
-		targetRegistry = constants.GlobalRegistry
-		tag = buildHash
-	}
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	if tag != "" {
-		return useReferenceTemplate(targetRegistry, sanitizedName, svcName, tag)
-	}
-
-	// If the tag is empty, and we default to "okteto" tag, we should not use global registry, we should use always
-	// the dev registry
-	targetRegistry = constants.DevRegistry
 	return useReferenceTemplate(targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
 }
 
 func (it imageTagger) getGlobalTagFromDevIfNeccesary(tags, namespace, registryURL, buildHash, manifestName, svcName string, ic registry.ImageCtrl) string {
+	if !it.cfg.HasGlobalAccess() || !it.smartBuildController.IsEnabled() || buildHash == "" {
+		return ""
+	}
 	tagList := strings.Split(tags, ",")
 	globalWithHash := ""
 	for _, tag := range tagList {
@@ -109,23 +99,6 @@ func (it imageTagger) getGlobalTagFromDevIfNeccesary(tags, namespace, registryUR
 		}
 	}
 	return globalWithHash
-}
-
-func (it imageTagger) getDevTagFromGlobalIfNeccesary(tags, namespace, globalNamespace, registryURL, buildHash, manifestName, svcName string, ic registry.ImageCtrl) string {
-	tagList := strings.Split(tags, ",")
-	devsWithDefaultTag := ""
-	for _, tag := range tagList {
-		expandedTag := ic.ExpandOktetoGlobalRegistry(tag)
-		if strings.HasPrefix(expandedTag, fmt.Sprintf("%s/%s/", registryURL, globalNamespace)) {
-			sanitizedName := format.ResourceK8sMetaString(manifestName)
-			if devsWithDefaultTag != "" {
-				devsWithDefaultTag += ","
-			}
-			newImage := useReferenceTemplate(constants.DevRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
-			devsWithDefaultTag += ic.ExpandOktetoDevRegistry(newImage)
-		}
-	}
-	return devsWithDefaultTag
 }
 
 // getImageReferencesForTag returns all the possible images references that can be used for build with the given tag
