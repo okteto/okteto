@@ -354,10 +354,11 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	if globalImage != "" {
 		tagsToBuild = fmt.Sprintf("%s,%s", tagsToBuild, globalImage)
 	}
+	// if the image is not set by the user, we need to push to the dev and global registry. We can get the dev image from the image that has already been tagged
 	if buildSvcInfo.Image == "" {
 		devImage := it.getDevTagFromGlobalIfNeccesary(tagsToBuild, bc.oktetoContext.GetNamespace(), bc.oktetoContext.GetGlobalNamespace(), bc.oktetoContext.GetRegistryURL(), buildHash, manifest.Name, svcName, imageCtrl)
 		if devImage != "" {
-			tagsToBuild = fmt.Sprintf("%s,%s", tagsToBuild, devImage)
+			tagsToBuild = fmt.Sprintf("%s,%s", devImage, tagsToBuild)
 		}
 	}
 	buildSvcInfo.Image = tagsToBuild
