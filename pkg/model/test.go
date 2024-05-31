@@ -10,9 +10,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package model
 
-import "github.com/okteto/okteto/pkg/env"
+import (
+	"fmt"
+
+	"github.com/okteto/okteto/pkg/env"
+)
 
 type Test struct {
 	Image     string        `yaml:"image,omitempty"`
@@ -20,6 +25,31 @@ type Test struct {
 	Commands  []TestCommand `yaml:"commands,omitempty"`
 	DependsOn []string      `yaml:"depends_on,omitempty"`
 	Caches    []string      `yaml:"caches,omitempty"`
+	Artifacts []Artifact    `yaml:"artifacts,omitempty"`
+}
+
+var (
+	ErrNoTestsDefined = fmt.Errorf("no tests defined")
+)
+
+func (test ManifestTests) Validate() error {
+	if test == nil {
+		return ErrNoTestsDefined
+	}
+
+	hasAtLeastOne := false
+	for _, t := range test {
+		if t != nil {
+			hasAtLeastOne = true
+			break
+		}
+	}
+
+	if !hasAtLeastOne {
+		return ErrNoTestsDefined
+	}
+
+	return nil
 }
 
 func (test *Test) expandEnvVars() error {

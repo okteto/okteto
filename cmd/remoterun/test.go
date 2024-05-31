@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -88,6 +89,12 @@ commands:
 			}
 
 			os.Setenv(constants.OktetoNameEnvVar, options.Name)
+
+			options.Variables = append(
+				options.Variables,
+				// Set OKTETO_DOMAIN=okteto-subdomain env variable
+				fmt.Sprintf("%s=%s", model.OktetoDomainEnvVar, okteto.GetSubdomain()),
+			)
 
 			params := deployable.TestParameters{
 				Name:       options.Name,

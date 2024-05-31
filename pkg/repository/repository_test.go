@@ -59,7 +59,7 @@ func (fr fakeRepository) Head() (*plumbing.Reference, error) {
 	return fr.head, fr.err
 }
 
-func (fr fakeRepository) GetLatestSHA(context.Context, string, string, LocalGitInterface) (string, error) {
+func (fr fakeRepository) GetLatestSHA(context.Context, string, LocalGitInterface) (string, error) {
 	return fr.commit, fr.err
 }
 
@@ -67,7 +67,7 @@ func (fr fakeRepository) Log(logOpts *git.LogOptions) (object.CommitIter, error)
 	return nil, nil
 }
 
-func (fr fakeRepository) GetDiff(ctx context.Context, repoPath, dirpath string, localGit LocalGitInterface) (string, error) {
+func (fr fakeRepository) GetDiff(ctx context.Context, dirpath string, localGit LocalGitInterface) (string, error) {
 	return fr.diff, fr.err
 }
 

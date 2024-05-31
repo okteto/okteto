@@ -188,6 +188,14 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 			},
 		}
 	}
+
+	if buildOptions.LocalOutputPath != "" {
+		opt.Exports = append(opt.Exports, client.ExportEntry{
+			Type:      "local",
+			OutputDir: buildOptions.LocalOutputPath,
+		})
+	}
+
 	for _, cacheFromImage := range buildOptions.CacheFrom {
 		opt.CacheImports = append(
 			opt.CacheImports,

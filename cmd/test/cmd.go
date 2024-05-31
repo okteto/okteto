@@ -10,10 +10,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -29,7 +31,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
-	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/dag"
@@ -163,6 +164,15 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		return analytics.TestMetadata{}, err
 	}
 
+	if err := manifest.Test.Validate(); err != nil {
+		if errors.Is(err, model.ErrNoTestsDefined) {
+			oktetoLog.Information("There are no tests configured in your Okteto Manifest. For more information, check the documentation: https://okteto.com/docs/core/okteto-manifest/#test")
+			return analytics.TestMetadata{}, nil
+		}
+
+		return analytics.TestMetadata{}, err
+	}
+
 	k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
 
 	pc, err := pipelineCMD.NewCommand()
@@ -175,11 +185,6 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 	builder := buildv2.NewBuilderFromScratch(ioCtrl, []buildv2.OnBuildFinish{
 		tracker.TrackImageBuild,
 	})
-
-	kubeClient, _, err := k8sClientProvider.Provide(okteto.GetContext().Cfg)
-	if err != nil {
-		return analytics.TestMetadata{}, fmt.Errorf("could not instantiate kubernetes client: %w", err)
-	}
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -230,26 +235,14 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		}
 	}
 
-	namer := deployCMD.Namer{
-		KubeClient:   kubeClient,
-		Workdir:      cwd,
-		ManifestPath: options.ManifestPathFlag,
-		ManifestName: options.Name,
+	shouldDeploy := options.Deploy
+
+	if shouldDeploy && manifest.Deploy == nil {
+		oktetoLog.Warning("Nothing to deploy. The 'deploy' section of your Okteto Manifest is empty. For more information, check the docs: https://okteto.com/docs/core/okteto-manifest/#deploy")
+		shouldDeploy = false
 	}
 
-	devenvName := options.Name
-	if devenvName == "" {
-		devenvName = namer.ResolveName(ctx)
-	}
-
-	namespace := manifest.Namespace
-	if namespace == "" {
-		namespace = okteto.GetContext().Namespace
-	}
-
-	needsDeploy := options.Deploy || !pipeline.IsDeployed(ctx, devenvName, namespace, kubeClient)
-
-	if needsDeploy {
+	if shouldDeploy {
 		c := deployCMD.Command{
 			GetManifest: func(path string, fs afero.Fs) (*model.Manifest, error) {
 				return manifest, nil
@@ -269,6 +262,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			RunningInInstaller: config.RunningInInstaller(),
 		}
 		deployStartTime := time.Now()
+		runInRemote := shouldRunInRemote(manifest.Deploy)
 		err = c.Run(ctx, &deployCMD.Options{
 			Manifest:         manifest,
 			ManifestPathFlag: options.ManifestPathFlag,
@@ -277,18 +271,18 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			Namespace:        options.Namespace,
 			K8sContext:       options.K8sContext,
 			Variables:        options.Variables,
-			Build:            false,
+			Build:            true,
 			Dependencies:     false,
 			Timeout:          options.Timeout,
 			RunWithoutBash:   false,
-			RunInRemote:      manifest.Deploy.Remote,
+			RunInRemote:      runInRemote,
 			Wait:             true,
 			ShowCTA:          false,
 		})
-		c.TrackDeploy(manifest, manifest.Deploy.Remote, deployStartTime, err)
+		c.TrackDeploy(manifest, runInRemote, deployStartTime, err)
 
 		if err != nil {
-			oktetoLog.Error("deploy failed: %s", err.Error())
+			oktetoLog.Errorf("deploy failed: %s", err.Error())
 			return analytics.TestMetadata{}, err
 		}
 	} else {
@@ -297,12 +291,11 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		if err := manifest.ExpandEnvVars(); err != nil {
 			return analytics.TestMetadata{}, fmt.Errorf("failed to expand manifest environment variables: %w", err)
 		}
-		oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy'", devenvName)
 	}
 
 	metadata := analytics.TestMetadata{
 		StagesCount: len(testServices),
-		WasDeployed: needsDeploy,
+		Deployed:    options.Deploy,
 		WasBuilt:    wasBuilt,
 	}
 
@@ -357,6 +350,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			ContextAbsolutePathOverride: ctxCwd,
 			Caches:                      test.Caches,
 			IgnoreRules:                 testIgnoreRules,
+			Artifacts:                   test.Artifacts,
 		}
 
 		if !options.NoCache {
@@ -372,4 +366,14 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 	}
 	metadata.Success = true
 	return metadata, nil
+}
+
+func shouldRunInRemote(manifestDeploy *model.DeployInfo) bool {
+	if manifestDeploy != nil {
+		if manifestDeploy.Image != "" || manifestDeploy.Remote {
+			return true
+		}
+	}
+
+	return false
 }

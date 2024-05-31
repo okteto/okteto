@@ -27,9 +27,10 @@ import (
 type ExecOptions struct {
 	Namespace    string
 	ManifestPath string
-	Command      string
 	OktetoHome   string
 	Token        string
+	Service      string
+	Command      []string
 }
 
 // RunExecCommand runs an exec command
@@ -44,8 +45,14 @@ func RunExecCommand(oktetoPath string, execOptions *ExecOptions) (string, error)
 		cmd.Args = append(cmd.Args, "-f", execOptions.ManifestPath)
 	}
 
-	if execOptions.Command != "" {
-		cmd.Args = append(cmd.Args, "--", execOptions.Command)
+	if execOptions.Service != "" {
+		cmd.Args = append(cmd.Args, execOptions.Service)
+	}
+
+	if len(execOptions.Command) > 0 {
+		doubleDash := []string{"--"}
+		cmdArgs := append(doubleDash, execOptions.Command...)
+		cmd.Args = append(cmd.Args, cmdArgs...)
 	}
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))

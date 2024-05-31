@@ -29,6 +29,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/destroy"
+	"github.com/okteto/okteto/cmd/exec"
 	"github.com/okteto/okteto/cmd/kubetoken"
 	"github.com/okteto/okteto/cmd/logs"
 	"github.com/okteto/okteto/cmd/namespace"
@@ -48,6 +49,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	generateFigSpec "github.com/withfig/autocomplete-tools/packages/cobra"
@@ -153,6 +155,7 @@ func main() {
 
 	insights := insights.NewInsightsPublisher(k8sClientProvider, *ioController)
 	at := analytics.NewAnalyticsTracker()
+	fs := afero.NewOsFs()
 
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
@@ -172,7 +175,7 @@ func main() {
 	root.AddCommand(cmd.Down(at, k8sLogger))
 	root.AddCommand(cmd.Status())
 	root.AddCommand(cmd.Doctor(k8sLogger))
-	root.AddCommand(cmd.Exec(k8sLogger))
+	root.AddCommand(exec.NewExec(fs, ioController, k8sClientProvider).Cmd(ctx))
 	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
 	root.AddCommand(cmd.UpdateDeprecated())

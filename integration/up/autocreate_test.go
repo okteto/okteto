@@ -149,7 +149,7 @@ func TestUpAutocreate(t *testing.T) {
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, localupdatedContent, timeout, upResult.ErrorChan))
 
 	// Test that stignore has been created
-	require.NoError(t, checkStignoreIsOnRemote(testNamespace, filepath.Join(dir, "okteto.yml"), oktetoPath, dir))
+	require.NoError(t, checkStignoreIsOnRemote(testNamespace, "autocreate", filepath.Join(dir, "okteto.yml"), oktetoPath, dir))
 
 	// Test kill syncthing reconnection
 	require.NoError(t, killLocalSyncthing(upResult.Pid.Pid))
@@ -237,7 +237,7 @@ func TestUpAutocreateV2(t *testing.T) {
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, localupdatedContent, timeout, upResult.ErrorChan))
 
 	// Test that stignore has been created
-	require.NoError(t, checkStignoreIsOnRemote(testNamespace, filepath.Join(dir, "okteto.yml"), oktetoPath, dir))
+	require.NoError(t, checkStignoreIsOnRemote(testNamespace, "autocreate", filepath.Join(dir, "okteto.yml"), oktetoPath, dir))
 
 	// Test kill syncthing reconnection
 	require.NoError(t, killLocalSyncthing(upResult.Pid.Pid))
@@ -326,7 +326,7 @@ func TestUpAutocreateV2WithBuild(t *testing.T) {
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, localupdatedContent, timeout, upResult.ErrorChan))
 
 	// Test that stignore has been created
-	require.NoError(t, checkStignoreIsOnRemote(testNamespace, filepath.Join(dir, "okteto.yml"), oktetoPath, dir))
+	require.NoError(t, checkStignoreIsOnRemote(testNamespace, "autocreate", filepath.Join(dir, "okteto.yml"), oktetoPath, dir))
 
 	// Test kill syncthing reconnection
 	require.NoError(t, killLocalSyncthing(upResult.Pid.Pid))

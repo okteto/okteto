@@ -127,7 +127,7 @@ func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish)
 	if err != nil {
 		ioCtrl.Logger().Infof("could not get working dir: %s", err)
 	}
-	topLevelGitDir, err := repository.FindTopLevelGitDir(wd, afero.NewOsFs())
+	topLevelGitDir, err := repository.FindTopLevelGitDir(wd)
 	if err != nil {
 		ioCtrl.Logger().Infof("could not get top level git dir: %s", err)
 	}

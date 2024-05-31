@@ -120,8 +120,9 @@ func Test_translateDeployment(t *testing.T) {
 	}
 	assert.Equal(t, result.Labels, labels)
 	annotations := map[string]string{
-		"annotation1": "value1",
-		"annotation2": "value2",
+		"annotation1":           "value1",
+		"annotation2":           "value2",
+		"dev.okteto.com/sample": "true",
 	}
 	assert.Equal(t, result.Annotations, annotations)
 	nodeSelector := map[string]string{
@@ -248,8 +249,9 @@ func Test_translateStatefulSet(t *testing.T) {
 	}
 	assert.Equal(t, labels, result.Labels)
 	annotations := map[string]string{
-		"annotation1": "value1",
-		"annotation2": "value2",
+		"annotation1":           "value1",
+		"annotation2":           "value2",
+		"dev.okteto.com/sample": "true",
 	}
 	assert.Equal(t, result.Annotations, annotations)
 	nodeSelector := map[string]string{
@@ -454,8 +456,9 @@ func Test_translateJobWithoutVolumes(t *testing.T) {
 	}
 	assert.Equal(t, labels, result.Labels)
 	annotations := map[string]string{
-		"annotation1": "value1",
-		"annotation2": "value2",
+		"annotation1":           "value1",
+		"annotation2":           "value2",
+		"dev.okteto.com/sample": "true",
 	}
 	assert.Equal(t, result.Annotations, annotations)
 	nodeSelector := map[string]string{
@@ -598,8 +601,9 @@ func Test_translateJobWithVolumes(t *testing.T) {
 	}
 	assert.Equal(t, labels, result.Labels)
 	annotations := map[string]string{
-		"annotation1": "value1",
-		"annotation2": "value2",
+		"annotation1":           "value1",
+		"annotation2":           "value2",
+		"dev.okteto.com/sample": "true",
 	}
 	assert.Equal(t, result.Annotations, annotations)
 	nodeSelector := map[string]string{
@@ -768,8 +772,9 @@ func Test_translateService(t *testing.T) {
 						model.DeployedByLabel:       "stackname",
 					},
 					Annotations: map[string]string{
-						"annotation1": "value1",
-						"annotation2": "value2",
+						"annotation1":           "value1",
+						"annotation2":           "value2",
+						"dev.okteto.com/sample": "true",
 					},
 				},
 				Spec: apiv1.ServiceSpec{
@@ -846,6 +851,7 @@ func Test_translateService(t *testing.T) {
 						"annotation1":                     "value1",
 						"annotation2":                     "value2",
 						model.OktetoAutoIngressAnnotation: "true",
+						"dev.okteto.com/sample":           "true",
 					},
 				},
 				Spec: apiv1.ServiceSpec{
@@ -920,6 +926,7 @@ func Test_translateService(t *testing.T) {
 						"annotation1":                     "value1",
 						"annotation2":                     "value2",
 						model.OktetoAutoIngressAnnotation: "private",
+						"dev.okteto.com/sample":           "true",
 					},
 				},
 				Spec: apiv1.ServiceSpec{
@@ -994,6 +1001,7 @@ func Test_translateService(t *testing.T) {
 						"annotation1":                    "value1",
 						"annotation2":                    "value2",
 						model.OktetoPrivateSvcAnnotation: "true",
+						"dev.okteto.com/sample":          "true",
 					},
 				},
 				Spec: apiv1.ServiceSpec{
@@ -1060,8 +1068,9 @@ func Test_translateService(t *testing.T) {
 						model.DeployedByLabel:       "stackname",
 					},
 					Annotations: map[string]string{
-						"annotation1": "value1",
-						"annotation2": "value2",
+						"annotation1":           "value1",
+						"annotation2":           "value2",
+						"dev.okteto.com/sample": "true",
 					},
 				},
 				Spec: apiv1.ServiceSpec{

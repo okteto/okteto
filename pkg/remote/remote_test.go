@@ -373,6 +373,7 @@ ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
 
+RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
 
 RUN \
@@ -380,6 +381,10 @@ RUN \
   --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
   /okteto/bin/okteto remote-run deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test"
+
+FROM scratch
+COPY --from=runner /etc/.oktetocachekey .oktetocachekey
+
 `,
 				buildEnvVars:      map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUIL_SVC2_IMAGE": "TWO_VALUE"},
 				dependencyEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
@@ -585,22 +590,14 @@ func TestGetOriginalCWD(t *testing.T) {
 		wdCtrl.SetErrors(filesystem.FakeWorkingDirectoryCtrlErrors{
 			Getter: assert.AnError,
 		})
-		r := &Runner{
-			workingDirectoryCtrl: wdCtrl,
-		}
-
-		_, err := r.getOriginalCWD("")
+		_, err := GetOriginalCWD(wdCtrl, "")
 
 		require.Error(t, err)
 	})
 
 	t.Run("with empty manifest path", func(t *testing.T) {
 		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/tmp/test"))
-		r := &Runner{
-			workingDirectoryCtrl: wdCtrl,
-		}
-
-		result, err := r.getOriginalCWD("")
+		result, err := GetOriginalCWD(wdCtrl, "")
 		expected := filepath.Clean("/tmp/test")
 
 		require.NoError(t, err)
@@ -609,12 +606,8 @@ func TestGetOriginalCWD(t *testing.T) {
 
 	t.Run("with manifest path to a dir", func(t *testing.T) {
 		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/tmp/test"))
-		r := &Runner{
-			workingDirectoryCtrl: wdCtrl,
-		}
-
 		path := filepath.Join("test", ".okteto")
-		result, err := r.getOriginalCWD(path)
+		result, err := GetOriginalCWD(wdCtrl, path)
 
 		expected := filepath.Clean("/tmp")
 		require.NoError(t, err)
@@ -623,12 +616,9 @@ func TestGetOriginalCWD(t *testing.T) {
 
 	t.Run("with manifest path to a file", func(t *testing.T) {
 		wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/tmp/test"))
-		r := &Runner{
-			workingDirectoryCtrl: wdCtrl,
-		}
 
 		path := filepath.Join("test", "okteto.yml")
-		result, err := r.getOriginalCWD(path)
+		result, err := GetOriginalCWD(wdCtrl, path)
 
 		expected := filepath.Clean("/tmp")
 		require.NoError(t, err)

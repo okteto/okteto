@@ -16,9 +16,12 @@ package model
 import (
 	"bytes"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
@@ -26,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/model/utils"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -1153,8 +1157,10 @@ func Test_getStackName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {
+			dir := t.TempDir()
+			stackPath := filepath.Join(dir, tt.stackPath)
 			t.Setenv(constants.OktetoNameEnvVar, tt.nameEnv)
-			res, err := getStackName(tt.name, tt.stackPath, tt.actualStackName)
+			res, err := getStackName(tt.name, stackPath, tt.actualStackName)
 			resEnv := os.Getenv(constants.OktetoNameEnvVar)
 
 			if err == nil && tt.expectedErr {
@@ -1172,6 +1178,30 @@ func Test_getStackName(t *testing.T) {
 		})
 
 	}
+}
+
+func Test_getStackNameWithinRepository(t *testing.T) {
+	// As getStackName internally does os.Setenv, when all the tests run at the same time,
+	// it might happen that the env var with the name is set. That env var has priority over
+	// the repository calculation. In order to avoid this, we need to unset the env var before running the test
+	t.Setenv(constants.OktetoNameEnvVar, "")
+	repository := "https://github.com/okteto/compose-repository-test.git"
+	dir := t.TempDir()
+	path := "path/to/stack4/compose.yaml"
+	stackPath := filepath.Join(dir, path)
+
+	r, err := git.PlainInit(dir, false)
+	require.NoError(t, err)
+
+	_, err = r.CreateRemote(&config.RemoteConfig{Name: "origin", URLs: []string{repository}})
+	require.NoError(t, err)
+
+	res, err := getStackName("", stackPath, "")
+	resEnv := os.Getenv(constants.OktetoNameEnvVar)
+
+	require.NoError(t, err)
+	require.Equal(t, "compose-repository-test", res)
+	require.Equal(t, "compose-repository-test", resEnv)
 }
 
 func Test_translateEnvVars(t *testing.T) {
