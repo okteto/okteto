@@ -58,6 +58,7 @@ func (dr *TestRunner) RunTest(params TestParameters) error {
 		if err := dr.Executor.Execute(command, execEnv); err != nil {
 			return err
 		}
+		oktetoLog.Success("Command '%s' successfully executed", command.Name)
 
 		// Read variables that may have been written to OKTETO_ENV in the current step
 		envsFromOktetoEnvFile, err := envStepper.Step()
@@ -67,6 +68,5 @@ func (dr *TestRunner) RunTest(params TestParameters) error {
 
 		params.Variables = append(params.Variables, envsFromOktetoEnvFile...)
 	}
-
 	return nil
 }

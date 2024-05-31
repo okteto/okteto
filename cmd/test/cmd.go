@@ -359,10 +359,11 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			params.CacheInvalidationKey = "const"
 		}
 
-		ioCtrl.Out().Infof("Executing '%s'", name)
+		ioCtrl.Out().Infof("Executing test container '%s'", name)
 		if err := runner.Run(ctx, params); err != nil {
 			return metadata, err
 		}
+		oktetoLog.Success("Test container '%s' passed", name)
 	}
 	metadata.Success = true
 	return metadata, nil

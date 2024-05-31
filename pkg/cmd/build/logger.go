@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -24,6 +25,10 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/tonistiigi/units"
+)
+
+var (
+	nameRegex = regexp.MustCompile(`--name\s+"([^"]+)"`)
 )
 
 const (
@@ -45,11 +50,17 @@ func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus, o *types.
 	var done bool
 	var outputMode string
 
-	if o.OutputMode == DestroyOutputModeOnBuild {
+	switch o.OutputMode {
+	case DeployOutputModeOnBuild:
+		outputMode = DeployOutputModeOnBuild
+	case DestroyOutputModeOnBuild:
 		outputMode = DestroyOutputModeOnBuild
-	} else {
+	case TestOutputModeOnBuild:
+		outputMode = TestOutputModeOnBuild
+	default:
 		outputMode = DeployOutputModeOnBuild
 	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -86,11 +97,15 @@ type trace struct {
 }
 
 type OktetoCommandErr struct {
-	Err   error
-	Stage string
+	Err    error
+	Stage  string
+	output string
 }
 
 func (e OktetoCommandErr) Error() string {
+	if e.output == TestOutputModeOnBuild {
+		return fmt.Sprintf("test container '%s' failed", e.Stage)
+	}
 	return fmt.Sprintf("error on stage %s: %s", e.Stage, e.Err.Error())
 }
 
@@ -107,12 +122,16 @@ func (t *trace) update(ss *client.SolveStatus) error {
 		v, ok := t.ongoing[rawVertex.Digest.Encoded()]
 		if !ok {
 			v = &vertexInfo{
-				name: rawVertex.Name,
+				name:   rawVertex.Name,
+				cached: rawVertex.Cached,
 			}
 			t.ongoing[rawVertex.Digest.Encoded()] = v
 		}
 		if rawVertex.Error != "" {
 			return fmt.Errorf("error on stage %s: %s", rawVertex.Name, rawVertex.Error)
+		}
+		if rawVertex.Cached {
+			v.cached = true
 		}
 		if rawVertex.Completed != nil {
 			v.completed = true
@@ -146,17 +165,21 @@ func (t *trace) display(progress string) {
 				currentLoadedCtx := units.Bytes(v.currentTransferedContext)
 				if t.showCtxAdvice && currentLoadedCtx > largeContextThreshold {
 					t.showCtxAdvice = false
-					oktetoLog.Information("You can use '.oktetodeployignore' file to optimize the context used to deploy your development environment.")
+					oktetoLog.Information("You can use '.oktetoignore' file to optimize the context used to deploy your development environment.")
 				}
 				oktetoLog.Spinner(fmt.Sprintf("Synchronizing context: %.2f", currentLoadedCtx))
 			}
 		}
 		if t.hasCommandLogs(v) {
-			if progress == DeployOutputModeOnBuild {
+			switch progress {
+			case DeployOutputModeOnBuild:
 				oktetoLog.Spinner("Deploying your development environment...")
-			} else {
+			case DestroyOutputModeOnBuild:
 				oktetoLog.Spinner("Destroying your development environment...")
+			case TestOutputModeOnBuild:
+				oktetoLog.Spinner("Running tests...")
 			}
+
 			for _, log := range v.logs {
 				var text oktetoLog.JSONLogFormat
 				if err := json.Unmarshal([]byte(log), &text); err != nil {
@@ -178,14 +201,17 @@ func (t *trace) display(progress string) {
 				default:
 					// Print the information message about the stage if needed
 					if _, ok := t.stages[text.Stage]; !ok {
-						oktetoLog.Information("Running stage '%s'", text.Stage)
+						if progress != TestOutputModeOnBuild {
+							oktetoLog.Information("Running stage '%s'", text.Stage)
+						}
 						t.stages[text.Stage] = true
 					}
 					if text.Level == "error" {
 						if text.Stage != "" {
 							t.err = OktetoCommandErr{
-								Stage: text.Stage,
-								Err:   fmt.Errorf(text.Message),
+								Stage:  text.Stage,
+								Err:    fmt.Errorf(text.Message),
+								output: progress,
 							}
 						}
 					} else {
@@ -213,6 +239,16 @@ func (t trace) hasCommandLogs(v *vertexInfo) bool {
 func (t *trace) removeCompletedSteps() {
 	for k, v := range t.ongoing {
 		if v.completed {
+			// We need to specify the command test in order to not affect okteto deploy on remote
+			if strings.Contains(v.name, "remote-run test") && v.cached {
+				match := nameRegex.FindStringSubmatch(v.name)
+				if len(match) > 1 {
+					name := match[1]
+					oktetoLog.Information("Skipping test container '%s', CACHED", name)
+				} else {
+					oktetoLog.Information("Skipping test container, CACHED")
+				}
+			}
 			delete(t.ongoing, k)
 		}
 	}
@@ -224,4 +260,5 @@ type vertexInfo struct {
 	currentTransferedContext int64
 	totalTransferedContext   int64
 	completed                bool
+	cached                   bool
 }

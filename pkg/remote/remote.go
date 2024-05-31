@@ -280,11 +280,18 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		return err
 	}
 
-	outputMode := buildCmd.DeployOutputModeOnBuild
-	if params.Command == DestroyCommand {
+	var outputMode string
+	switch params.Command {
+	case TestCommand:
+		outputMode = buildCmd.TestOutputModeOnBuild
+	case DeployCommand:
+		outputMode = buildCmd.DeployOutputModeOnBuild
+	case DestroyCommand:
 		outputMode = buildCmd.DestroyOutputModeOnBuild
-
+	default:
+		outputMode = buildCmd.DeployOutputModeOnBuild
 	}
+
 	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: outputMode})
 	buildOptions.Manifest = params.Manifest
 	buildOptions.BuildArgs = append(

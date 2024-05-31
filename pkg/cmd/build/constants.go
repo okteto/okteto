@@ -18,4 +18,6 @@ const (
 	DeployOutputModeOnBuild = "deploy"
 	// DestroyOutputModeOnBuild Defines the output mode set to BuildOptions when running a remote destroy
 	DestroyOutputModeOnBuild = "destroy"
+	// TestOutputModeOnBuild Defines the output mode set to BuildOptions when running a remote test
+	TestOutputModeOnBuild = "test"
 )
