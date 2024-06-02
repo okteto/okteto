@@ -1197,7 +1197,9 @@ func (*Manifest) reorderDocFields(doc *yaml3.Node) {
 		nodes = append(nodes, buildDefinitionIdx, buildDefinitionIdx+1)
 	} else {
 		whereToInject := getDocIdxWithPrior(contentCopy, "name")
-		contentCopy[whereToInject].FootComment = fmt.Sprintf("%s\n%s", buildHeadComment, buildExample)
+		if whereToInject != -1 {
+			contentCopy[whereToInject].FootComment = fmt.Sprintf("%s\n%s", buildHeadComment, buildExample)
+		}
 	}
 
 	deployDefinitionIdx := getDocIdx(doc.Content, "deploy")
@@ -1210,10 +1212,12 @@ func (*Manifest) reorderDocFields(doc *yaml3.Node) {
 		if buildDefinitionIdx == -1 {
 			footComment = "\n" + footComment
 		}
-		if contentCopy[whereToInject].FootComment == "" {
-			contentCopy[whereToInject].FootComment = footComment
-		} else {
-			contentCopy[whereToInject].FootComment += footComment
+		if whereToInject != -1 {
+			if contentCopy[whereToInject].FootComment == "" {
+				contentCopy[whereToInject].FootComment = footComment
+			} else {
+				contentCopy[whereToInject].FootComment += footComment
+			}
 		}
 	}
 
@@ -1227,10 +1231,12 @@ func (*Manifest) reorderDocFields(doc *yaml3.Node) {
 		if deployDefinitionIdx == -1 {
 			footComment = "\n\n" + footComment
 		}
-		if contentCopy[whereToInject].FootComment == "" {
-			contentCopy[whereToInject].FootComment = footComment
-		} else {
-			contentCopy[whereToInject].FootComment += footComment
+		if whereToInject != -1 {
+			if contentCopy[whereToInject].FootComment == "" {
+				contentCopy[whereToInject].FootComment = footComment
+			} else {
+				contentCopy[whereToInject].FootComment += footComment
+			}
 		}
 	}
 
@@ -1244,10 +1250,12 @@ func (*Manifest) reorderDocFields(doc *yaml3.Node) {
 		if dependenciesDefinitionIdx == -1 {
 			footComment = "\n" + footComment
 		}
-		if contentCopy[whereToInject].FootComment == "" {
-			contentCopy[whereToInject].FootComment = footComment
-		} else {
-			contentCopy[whereToInject].FootComment += footComment
+		if whereToInject != -1 {
+			if contentCopy[whereToInject].FootComment == "" {
+				contentCopy[whereToInject].FootComment = footComment
+			} else {
+				contentCopy[whereToInject].FootComment += footComment
+			}
 		}
 	}
 

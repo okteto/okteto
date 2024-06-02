@@ -106,5 +106,12 @@ func Init(at analyticsTracker, insights buildDeployTrackerInterface, ioCtrl *io.
 	cmd.Flags().BoolVarP(&opts.Version1, "v1", "", false, "create a v1 okteto manifest: www.okteto.com/docs/0.10/reference/manifest/")
 	cmd.Flags().BoolVarP(&opts.AutoDeploy, "deploy", "", false, "deploy the application after generate the okteto manifest")
 	cmd.Flags().BoolVarP(&opts.AutoConfigureDev, "configure-devs", "", false, "configure devs after deploying the application")
+
+	cmd.Flags().StringVarP(&opts.Template, "template", "t", "", "template to use for the okteto manifest")
+	cmd.Flags().StringToStringVarP(&opts.TemplateArgs, "arg", "", nil, "inline argument for the template")
+	cmd.Flags().StringVarP(&opts.TemplateArgFile, "arg-file", "", "", "specify file to be loaded into the template for arguments ")
+
+	// Marking flags as mutually exclusive
+	cmd.MarkFlagsMutuallyExclusive("template", "configure-devs")
 	return cmd
 }

@@ -15,6 +15,7 @@ package manifest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -43,11 +44,7 @@ const (
 )
 
 // RunInitV1 runs the sequence to generate okteto.yml
-func (*Command) RunInitV1(ctx context.Context, opts *InitOpts) error {
-	oktetoLog.Println("This command walks you through creating an okteto manifest.")
-	oktetoLog.Println("It only covers the most common items, and tries to guess sensible defaults.")
-	oktetoLog.Println("See https://okteto.com/docs/reference/okteto-manifest/ for the official documentation about the okteto manifest.")
-
+func (mc *Command) RunInitV1(ctx context.Context, opts *InitOpts) error {
 	if err := validateDevPath(opts.DevPath, opts.Overwrite); err != nil {
 		return err
 	}
@@ -57,55 +54,71 @@ func (*Command) RunInitV1(ctx context.Context, opts *InitOpts) error {
 		checkForRunningApp = true
 	}
 	var err error
+	var dev *model.Dev
 	opts.Language, err = GetLanguage(opts.Language, opts.Workdir)
 	if err != nil {
 		return err
 	}
-
-	dev, err := linguist.GetDevDefaults(opts.Language, opts.Workdir, registry.ImageMetadata{})
-	if err != nil {
-		return err
-	}
-
-	if checkForRunningApp {
-		app, container, err := getRunningApp(ctx)
+	if opts.Template != "" {
+		var manifest *model.Manifest
+		manifest, err = mc.RunCreateTemplate(ctx, opts)
 		if err != nil {
 			return err
 		}
-		if app == nil {
-			dev.Autocreate = true
-			linguist.SetForwardDefaults(dev, opts.Language)
-		} else {
-			dev.Container = container
-			if container == "" {
-				container = app.PodSpec().Containers[0].Name
-			}
-
-			path := getPathFromApp(opts.Workdir, app.ObjectMeta().Name)
-
-			suffix := fmt.Sprintf("Analyzing %s '%s'...", strings.ToLower(app.Kind()), app.ObjectMeta().Name)
-			oktetoLog.Spinner(suffix)
-			oktetoLog.StartSpinner()
-			err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, opts.Language, path)
-			if err == nil {
-				oktetoLog.Success(fmt.Sprintf("%s '%s' successfully analyzed", strings.ToLower(app.Kind()), app.ObjectMeta().Name))
-			} else {
-				oktetoLog.Yellow(fmt.Sprintf("%s '%s' analysis failed: %s", strings.ToLower(app.Kind()), app.ObjectMeta().Name, err))
-				linguist.SetForwardDefaults(dev, opts.Language)
-			}
+		devs := manifest.Dev.GetDevs()
+		if len(devs) == 0 {
+			return errors.New("Failed to get any manifest from template.")
 		}
 
-		if !supportsPersistentVolumes(ctx) {
-			oktetoLog.Yellow("Default storage class not found in your cluster. Persistent volumes not enabled in your okteto manifest")
-			dev.Volumes = nil
-			dev.PersistentVolumeInfo = &model.PersistentVolumeInfo{
-				Enabled: false,
-			}
-		}
+		dev = manifest.Dev[devs[0]]
 	} else {
-		linguist.SetForwardDefaults(dev, opts.Language)
-		dev.PersistentVolumeInfo = &model.PersistentVolumeInfo{
-			Enabled: true,
+		oktetoLog.Println("This command walks you through creating an okteto manifest.")
+		oktetoLog.Println("It only covers the most common items, and tries to guess sensible defaults.")
+		oktetoLog.Println("See https://okteto.com/docs/reference/okteto-manifest/ for the official documentation about the okteto manifest.")
+		dev, err = linguist.GetDevDefaults(opts.Language, opts.Workdir, registry.ImageMetadata{})
+		if err != nil {
+			return err
+		}
+		if checkForRunningApp {
+			app, container, err := getRunningApp(ctx)
+			if err != nil {
+				return err
+			}
+			if app == nil {
+				dev.Autocreate = true
+				linguist.SetForwardDefaults(dev, opts.Language)
+			} else {
+				dev.Container = container
+				if container == "" {
+					container = app.PodSpec().Containers[0].Name
+				}
+
+				path := getPathFromApp(opts.Workdir, app.ObjectMeta().Name)
+
+				suffix := fmt.Sprintf("Analyzing %s '%s'...", strings.ToLower(app.Kind()), app.ObjectMeta().Name)
+				oktetoLog.Spinner(suffix)
+				oktetoLog.StartSpinner()
+				err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, opts.Language, path)
+				if err == nil {
+					oktetoLog.Success(fmt.Sprintf("%s '%s' successfully analyzed", strings.ToLower(app.Kind()), app.ObjectMeta().Name))
+				} else {
+					oktetoLog.Yellow(fmt.Sprintf("%s '%s' analysis failed: %s", strings.ToLower(app.Kind()), app.ObjectMeta().Name, err))
+					linguist.SetForwardDefaults(dev, opts.Language)
+				}
+			}
+
+			if !supportsPersistentVolumes(ctx) {
+				oktetoLog.Yellow("Default storage class not found in your cluster. Persistent volumes not enabled in your okteto manifest")
+				dev.Volumes = nil
+				dev.PersistentVolumeInfo = &model.PersistentVolumeInfo{
+					Enabled: false,
+				}
+			}
+		} else {
+			linguist.SetForwardDefaults(dev, opts.Language)
+			dev.PersistentVolumeInfo = &model.PersistentVolumeInfo{
+				Enabled: true,
+			}
 		}
 	}
 

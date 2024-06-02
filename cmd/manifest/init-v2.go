@@ -81,6 +81,10 @@ type InitOpts struct {
 
 	AutoDeploy       bool
 	AutoConfigureDev bool
+
+	Template        string
+	TemplateArgs    map[string]string
+	TemplateArgFile string
 }
 
 // RunInitV2 initializes a new okteto manifest
@@ -92,19 +96,30 @@ func (mc *Command) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manife
 	inferer := devenvironment.NewNameInferer(c)
 	name := inferer.InferName(ctx, opts.Workdir, okteto.GetContext().Namespace, opts.DevPath)
 	os.Setenv(constants.OktetoNameEnvVar, name)
-	manifest := model.NewManifest()
+	var manifest *model.Manifest
 	var err error
-	if !opts.Overwrite {
-		manifest, err = model.GetManifestV2(opts.DevPath, afero.NewOsFs())
-		if err != nil && !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
-			return nil, err
-		}
-	}
 
-	if manifest == nil || len(manifest.Build) == 0 || manifest.Deploy == nil {
-		manifest, err = mc.configureManifestDeployAndBuild(opts.Workdir)
+	if opts.Template != "" {
+		manifest, err = mc.RunCreateTemplate(ctx, opts)
 		if err != nil {
 			return nil, err
+		}
+	} else {
+		manifest = model.NewManifest()
+		var err error
+		if !opts.Overwrite {
+			fs := afero.NewOsFs()
+			manifest, err = model.GetManifestV2(opts.DevPath, fs)
+			if err != nil && !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
+				return nil, err
+			}
+		}
+
+		if manifest == nil || len(manifest.Build) == 0 || manifest.Deploy == nil {
+			manifest, err = mc.configureManifestDeployAndBuild(opts.Workdir)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
