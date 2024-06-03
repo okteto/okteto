@@ -283,7 +283,6 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 	outputMode := buildCmd.DeployOutputModeOnBuild
 	if params.Command == DestroyCommand {
 		outputMode = buildCmd.DestroyOutputModeOnBuild
-
 	}
 	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: outputMode})
 	buildOptions.Manifest = params.Manifest
@@ -352,6 +351,8 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 	if len(params.Artifacts) > 0 {
 		buildOptions.LocalOutputPath = buildCtx
 	}
+	r.ioCtrl.Logger().Infof("Executing test with the following image: %s", params.BaseImage)
+
 	// we need to call Run() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
 	// account that we must not confuse the user with build messages since this logic is

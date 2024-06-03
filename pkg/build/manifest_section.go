@@ -73,7 +73,7 @@ func getListDiff(l1, l2 []string) []string {
 	}
 	added := []string{}
 	for _, svcName := range longerList {
-		if _, ok := shorterListSet[svcName]; ok {
+		if _, ok := shorterListSet[svcName]; !ok {
 			added = append(added, svcName)
 		}
 	}

@@ -15,6 +15,7 @@ package v2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -22,6 +23,14 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/sync/errgroup"
+)
+
+var (
+	// ErrimageIsNotAOktetoBuildSyntax is returned when the image is not an okteto build syntax
+	ErrimageIsNotAOktetoBuildSyntax = errors.New("image is not an okteto build syntax")
+
+	// ErrOktetBuildSyntaxImageIsNotInBuildSection is returned when the image is not in the build section
+	ErrOktetBuildSyntaxImageIsNotInBuildSection = errors.New("image is not in the build section")
 )
 
 // GetServicesToBuildDuringDeploy returns the services it has to build if they are not already built
@@ -122,13 +131,13 @@ func (bc *OktetoBuilder) checkServiceToBuildDuringDeploy(service string, manifes
 	return nil
 }
 
-func (bc *OktetoBuilder) GetServicesToBuildForImage(ctx context.Context, manifest *model.Manifest, imgFinder model.ImageFromManifest) ([]string, error) {
+func (bc *OktetoBuilder) GetSvcToBuildFromRegex(ctx context.Context, manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error) {
 	img := imgFinder(manifest)
 	reg := regexp.MustCompile(`OKTETO_BUILD_(\w+)_`)
 	matches := reg.FindStringSubmatch(img)
 	foundMatches := 2
 	if len(matches) == 0 {
-		return nil, nil
+		return "", ErrimageIsNotAOktetoBuildSyntax
 	}
 
 	sanitisedToUnsanitised := map[string]string{}
@@ -137,13 +146,13 @@ func (bc *OktetoBuilder) GetServicesToBuildForImage(ctx context.Context, manifes
 		sanitisedToUnsanitised[sanitizedSvc] = buildSvc
 	}
 	if len(matches) != foundMatches {
-		return nil, nil
+		return "", ErrimageIsNotAOktetoBuildSyntax
 	}
 	sanitisedName := matches[1]
 	svc, ok := sanitisedToUnsanitised[sanitisedName]
 	if !ok {
-		return nil, nil
+		return "", ErrOktetBuildSyntaxImageIsNotInBuildSection
 	}
 
-	return bc.GetServicesToBuildDuringDeploy(ctx, manifest, []string{svc})
+	return svc, nil
 }
