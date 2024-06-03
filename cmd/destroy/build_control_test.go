@@ -37,7 +37,7 @@ type fakeGetSvcs struct {
 	svcs []string
 }
 
-func (fb fakeBuilderV2) GetSvcToBuildFromRegex(ctx context.Context, manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error) {
+func (fb fakeBuilderV2) GetSvcToBuildFromRegex(manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error) {
 	if len(fb.getSvcs.svcs) == 0 {
 		return "", fb.getSvcs.err
 	}

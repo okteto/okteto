@@ -131,7 +131,7 @@ func (bc *OktetoBuilder) checkServiceToBuildDuringDeploy(service string, manifes
 	return nil
 }
 
-func (bc *OktetoBuilder) GetSvcToBuildFromRegex(ctx context.Context, manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error) {
+func (bc *OktetoBuilder) GetSvcToBuildFromRegex(manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error) {
 	img := imgFinder(manifest)
 	reg := regexp.MustCompile(`OKTETO_BUILD_(\w+)_`)
 	matches := reg.FindStringSubmatch(img)

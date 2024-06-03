@@ -1,3 +1,16 @@
+// Copyright 2024 The Okteto Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package test
 
 import (
@@ -24,12 +37,12 @@ type fakeSvcToBuildDuringDeploy struct {
 }
 
 type fakeBuilderV2 struct {
+	build                  error
 	svcFromRegex           fakeSvcFromRegex
 	svcToBuildDuringDeploy fakeSvcToBuildDuringDeploy
-	build                  error
 }
 
-func (fb *fakeBuilderV2) GetSvcToBuildFromRegex(ctx context.Context, manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error) {
+func (fb *fakeBuilderV2) GetSvcToBuildFromRegex(manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error) {
 	return fb.svcFromRegex.svc, fb.svcFromRegex.err
 }
 func (fb *fakeBuilderV2) GetServicesToBuildDuringDeploy(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error) {
@@ -70,14 +83,14 @@ func TestDoBuild(t *testing.T) {
 		svcs    []string
 	}
 	type expected struct {
-		wasBuilt bool
 		err      error
+		wasBuilt bool
 	}
 
 	tt := []struct {
+		expected expected
 		name     string
 		input    input
-		expected expected
 	}{
 		{
 			name: "image on okteto variable is not in build section",

@@ -61,7 +61,7 @@ type Options struct {
 }
 
 type builder interface {
-	GetSvcToBuildFromRegex(ctx context.Context, manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error)
+	GetSvcToBuildFromRegex(manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error)
 	GetServicesToBuildDuringDeploy(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error)
 	Build(ctx context.Context, options *types.BuildOptions) error
 }
@@ -368,7 +368,7 @@ func doBuild(ctx context.Context, manifest *model.Manifest, svcs []string, build
 	for _, name := range svcs {
 		imgName := manifest.Test[name].Image
 		getImg := func(manifest *model.Manifest) string { return imgName }
-		svc, err := builder.GetSvcToBuildFromRegex(ctx, manifest, getImg)
+		svc, err := builder.GetSvcToBuildFromRegex(manifest, getImg)
 		if err != nil {
 			if errors.Is(err, buildv2.ErrOktetBuildSyntaxImageIsNotInBuildSection) {
 				return false, fmt.Errorf("the image '%s' is not in the build section of the manifest", imgName)

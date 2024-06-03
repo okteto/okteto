@@ -42,14 +42,14 @@ func newBuildCtrl(name string, analyticsTracker, insights buildTrackerInterface,
 }
 
 type builderInterface interface {
-	GetSvcToBuildFromRegex(ctx context.Context, manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error)
+	GetSvcToBuildFromRegex(manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error)
 	GetServicesToBuildDuringDeploy(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error)
 	Build(ctx context.Context, options *types.BuildOptions) error
 }
 
 func (bc buildCtrl) buildImageIfNecessary(ctx context.Context, manifest *model.Manifest) error {
 	oktetoLog.Debug("checking if destroy.image is already built")
-	svcToBuild, err := bc.builder.GetSvcToBuildFromRegex(ctx, manifest, func(manifest *model.Manifest) string {
+	svcToBuild, err := bc.builder.GetSvcToBuildFromRegex(manifest, func(manifest *model.Manifest) string {
 		return manifest.Destroy.Image
 	})
 	if err != nil {
