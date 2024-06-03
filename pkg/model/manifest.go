@@ -1412,9 +1412,9 @@ func getBuildContextForComposeWithVolumeMounts(m *Manifest) (string, error) {
 		len(m.Deploy.ComposeSection.ComposesInfo) > 0
 
 	if m.ManifestPath != "" {
-		context = GetWorkdirFromManifestPath(m.ManifestPath)
+		context = filesystem.GetWorkdirFromManifestPath(m.ManifestPath)
 	} else if hasComposeInfo {
-		context = GetWorkdirFromManifestPath(m.Deploy.ComposeSection.ComposesInfo[0].File)
+		context = filesystem.GetWorkdirFromManifestPath(m.Deploy.ComposeSection.ComposesInfo[0].File)
 	}
 
 	return context, nil

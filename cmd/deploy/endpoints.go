@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/endpoints"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -89,11 +90,11 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 		Short: "Show endpoints for an environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if options.ManifestPath != "" {
-				workdir := model.GetWorkdirFromManifestPath(options.ManifestPath)
+				workdir := filesystem.GetWorkdirFromManifestPath(options.ManifestPath)
 				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
-				options.ManifestPath = model.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
+				options.ManifestPath = filesystem.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
 				// check whether the manifest file provided by -f exists or not
 				if _, err := fs.Stat(options.ManifestPath); err != nil {
 					return oktetoErrors.UserError{

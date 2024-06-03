@@ -51,17 +51,11 @@ const (
 	// TranslationAnnotation sets the translation rules
 	TranslationAnnotation = "dev.okteto.com/translation"
 
-	// SyncLabel indicates a syncthing pod
-	SyncLabel = "syncthing.okteto.com"
-
 	// OktetoRepositoryAnnotation indicates the git repo url with the source code of this component
 	OktetoRepositoryAnnotation = "dev.okteto.com/repository"
 
 	// OktetoDevNameAnnotation indicates the name of the dev to be deployed
 	OktetoDevNameAnnotation = "dev.okteto.com/name"
-
-	// OktetoPathAnnotation indicates the okteto manifest path of this component
-	OktetoPathAnnotation = "dev.okteto.com/path"
 
 	// FluxAnnotation indicates if the deployment ha been deployed by Flux
 	FluxAnnotation = "helm.fluxcd.io/antecedent"
@@ -116,12 +110,8 @@ const (
 	// OktetoPushCmd push command
 	OktetoPushCmd = "push"
 
-	// DeprecatedOktetoVolumeName name of the (deprecated) okteto persistent volume
-	DeprecatedOktetoVolumeName = "okteto"
 	// OktetoVolumeNameTemplate name template of the development container persistent volume
 	OktetoVolumeNameTemplate = "%s-okteto"
-	// DeprecatedOktetoVolumeNameTemplate name template of the development container persistent volume
-	DeprecatedOktetoVolumeNameTemplate = "okteto-%s"
 	// DataSubPath subpath in the development container persistent volume for the data volumes
 	DataSubPath = "data"
 	// SourceCodeSubPath subpath in the development container persistent volume for the source code
@@ -144,11 +134,6 @@ const (
 	OktetoSyncAnnotation = "dev.okteto.com/sync"
 	// OktetoStignoreAnnotation indicates the hash of the stignore files to force redeployment
 	OktetoStignoreAnnotation = "dev.okteto.com/stignore"
-	// OktetoInjectTokenAnnotation annotation to inject the okteto token
-	OktetoInjectTokenAnnotation = "dev.okteto.com/inject-token"
-
-	// OktetoInitContainer name of the okteto init container
-	OktetoInitContainer = "okteto-init"
 
 	// DefaultImage default image for sandboxes
 	DefaultImage = "okteto/dev:latest"
@@ -193,9 +178,6 @@ const (
 
 	// OktetoDomainEnvVar defines the domain the user is using
 	OktetoDomainEnvVar = "OKTETO_DOMAIN"
-
-	// OktetoLanguageEnvVar defines the language of the dev
-	OktetoLanguageEnvVar = "OKTETO_LANGUAGE"
 
 	// SyncthingVersionEnvVar defines the syncthing version okteto should use
 	SyncthingVersionEnvVar = "OKTETO_SYNCTHING_VERSION"
@@ -260,4 +242,7 @@ const (
 
 	// OktetoDefaultImageTag default tag assigned to image to build
 	OktetoDefaultImageTag = "okteto"
+
+	// IgnoreFilename is the name of the okteto ignore file
+	IgnoreFilename = ".oktetoignore"
 )

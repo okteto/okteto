@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -48,19 +47,6 @@ const (
 	DefaultManifest   = "okteto.yml"
 	secondaryManifest = "okteto.yaml"
 )
-
-// LoadManifestContext loads the contextresource from a file
-func LoadManifestContext(devPath string) (*model.ContextResource, error) {
-	if !filesystem.FileExists(devPath) {
-		if devPath == DefaultManifest {
-			if filesystem.FileExists(secondaryManifest) {
-				return model.GetContextResource(secondaryManifest)
-			}
-		}
-		return nil, fmt.Errorf("'%s' does not exist. Generate it by executing 'okteto init'", devPath)
-	}
-	return model.GetContextResource(devPath)
-}
 
 // DeprecatedLoadManifest loads an okteto manifest checking "yml" and "yaml".
 // Deprecated: use model.GetManifestV2 instead
@@ -322,35 +308,6 @@ func AsksQuestion(q string) (string, error) {
 	}
 
 	return answer, nil
-}
-
-// AskIfDeploy asks if a new deployment must be created
-func AskIfDeploy(name, namespace string) error {
-	deploy, err := AskYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one?", name, namespace), YesNoDefault_Yes)
-	if err != nil {
-		return fmt.Errorf("couldn't read your response")
-	}
-	if !deploy {
-		return oktetoErrors.UserError{
-			E:    fmt.Errorf("deployment %s doesn't exist in namespace %s", name, namespace),
-			Hint: "Deploy your application first or use 'okteto namespace' to select a different namespace and try again",
-		}
-	}
-	return nil
-}
-
-// ParseURL validates a URL
-func ParseURL(u string) (string, error) {
-	url, err := url.Parse(u)
-	if err != nil {
-		return "", fmt.Errorf("%s is not a valid URL", u)
-	}
-
-	if url.Scheme == "" {
-		url.Scheme = "https"
-	}
-
-	return strings.TrimRight(url.String(), "/"), nil
 }
 
 // CheckIfDirectory checks if a path is a directory
