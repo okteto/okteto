@@ -36,9 +36,9 @@ import (
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/model/utils"
 	"github.com/spf13/afero"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
-	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 const (
@@ -253,11 +253,11 @@ func GetStackFromPath(name, stackPath string, isCompose bool, fs afero.Fs) (*Sta
 		}
 	}()
 
-	stackWorkingDir := GetWorkdirFromManifestPath(stackPath)
+	stackWorkingDir := filesystem.GetWorkdirFromManifestPath(stackPath)
 	if err := os.Chdir(stackWorkingDir); err != nil {
 		return nil, err
 	}
-	stackPath = GetManifestPathFromWorkdir(stackPath, stackWorkingDir)
+	stackPath = filesystem.GetManifestPathFromWorkdir(stackPath, stackWorkingDir)
 
 	s, err := ReadStack(b, isCompose)
 	if err != nil {

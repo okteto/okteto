@@ -38,6 +38,7 @@ import (
 	"github.com/okteto/okteto/pkg/divert"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -840,7 +841,7 @@ func checkOktetoManifestPathFlag(options *Options, fs afero.Fs) error {
 		options.ManifestPathFlag = manifestPathFlag
 
 		// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
-		uptManifestPath, err := model.UpdateCWDtoManifestPath(options.ManifestPath)
+		uptManifestPath, err := filesystem.UpdateCWDtoManifestPath(options.ManifestPath)
 		if err != nil {
 			return err
 		}

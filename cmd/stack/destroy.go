@@ -21,6 +21,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/stack"
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/afero"
@@ -40,11 +41,11 @@ func Destroy(ctx context.Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Warning("'okteto stack destroy' is deprecated in favor of 'okteto destroy', and will be removed in a future version")
 			if len(stackPath) == 1 {
-				workdir := model.GetWorkdirFromManifestPath(stackPath[0])
+				workdir := filesystem.GetWorkdirFromManifestPath(stackPath[0])
 				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
-				stackPath[0] = model.GetManifestPathFromWorkdir(stackPath[0], workdir)
+				stackPath[0] = filesystem.GetManifestPathFromWorkdir(stackPath[0], workdir)
 			}
 			s, err := contextCMD.LoadStackWithContext(ctx, name, namespace, stackPath, afero.NewOsFs())
 			if err != nil {

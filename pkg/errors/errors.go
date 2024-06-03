@@ -76,9 +76,6 @@ var (
 	// ErrCtxNotSet is raised when we don't have ctx set
 	ErrCtxNotSet = fmt.Errorf("your context is not set. Please run 'okteto context' and select your context")
 
-	// ErrNotOktetoCluster is raised when a command is only available on an okteto cluster
-	ErrNotOktetoCluster = fmt.Errorf("user is not logged in okteto context. Please run 'okteto context use' and select your context")
-
 	// ErrNotFound is raised when an object is not found
 	ErrNotFound = fmt.Errorf("not found")
 
@@ -136,9 +133,6 @@ var (
 	// ErrTokenEnvVarNeeded is raised when the command is executed from inside a pod from a non ctx command
 	ErrTokenEnvVarNeeded = fmt.Errorf("the 'OKTETO_TOKEN' environment variable is required when running this command from within a container")
 
-	// ErrNamespaceNotFound is raised when the namespace is not found on an okteto instance
-	ErrNamespaceNotFound = "namespace '%s' not found. Please verify that the namespace exists and that you have access to it"
-
 	// ErrKubernetesContextNotFound is raised when the kubernetes context is not found in kubeconfig
 	ErrKubernetesContextNotFound = "context '%s' not found in '%s'"
 
@@ -151,7 +145,7 @@ var (
 	// ErrCorruptedOktetoContexts raised when the okteto context store is corrupted
 	ErrCorruptedOktetoContexts = "okteto context store is corrupted. Delete the folder '%s' and try again"
 
-	// ErrIntSig raised if the we get an interrupt signal in the middle of a command
+	// ErrIntSig raised if we get an interrupt signal in the middle of a command
 	ErrIntSig = fmt.Errorf("interrupt signal received")
 
 	// ErrKubernetesLongTimeToCreateDevContainer raised when the creation of the dev container times out
@@ -165,12 +159,6 @@ var (
 
 	// ErrDeployCantDeploySvcsIfNotCompose raised when a manifest is found but no compose info is detected and args are passed to deploy command
 	ErrDeployCantDeploySvcsIfNotCompose = errors.New("services args are can only be used while trying to deploy a compose")
-
-	// ErrUserAnsweredNoToCreateFromCompose raised when the user has selected a compose file but is trying to deploy without it
-	ErrUserAnsweredNoToCreateFromCompose = fmt.Errorf("user does not want to create from compose")
-
-	// ErrDeployHasFailedCommand raised when a deploy command is executed and fails
-	ErrDeployHasFailedCommand = errors.New("one of the commands in the 'deploy' section of your okteto manifests failed")
 
 	// ErrGitHubNotVerifiedEmail is raised when github login has not a verified email
 	ErrGitHubNotVerifiedEmail = errors.New("github-not-verified-email")
@@ -221,11 +209,6 @@ var (
 	// ErrTokenExpired is raised when token used for API auth is expired
 	ErrTokenExpired = errors.New("your token has expired")
 )
-
-// IsAlreadyExists raised if the Kubernetes API returns AlreadyExists
-func IsAlreadyExists(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "already exists")
-}
 
 // IsForbidden raised if the Okteto API returns 401
 func IsForbidden(err error) bool {

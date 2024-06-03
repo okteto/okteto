@@ -22,7 +22,6 @@ import (
 
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/labels"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
@@ -217,11 +216,6 @@ func Deploy(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) (
 	}
 
 	return c.AppsV1().Deployments(d.Namespace).Create(ctx, d, metav1.CreateOptions{})
-}
-
-// IsDevModeOn returns if a deployment is in devmode
-func IsDevModeOn(d *appsv1.Deployment) bool {
-	return labels.Get(d.GetObjectMeta(), constants.DevLabel) != ""
 }
 
 // Destroy destroys a k8s deployment

@@ -101,20 +101,6 @@ type phaseJSON struct {
 	Duration float64 `json:"duration"`
 }
 
-// GetConfigmapDependencyEnv returns Data["variables"] content from Configmap
-func GetConfigmapDependencyEnv(ctx context.Context, name, namespace string, c kubernetes.Interface) (string, error) {
-	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
-	if err != nil {
-		if !oktetoErrors.IsNotFound(err) {
-			return "", err
-		}
-		// if err Not Found, return empty variables but no error
-		return "", nil
-	}
-
-	return cmap.Data[constants.OktetoDependencyEnvsKey], nil
-}
-
 // GetConfigmapVariablesEncoded returns Data["variables"] content from Configmap
 func GetConfigmapVariablesEncoded(ctx context.Context, name, namespace string, c kubernetes.Interface) (string, error) {
 	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
@@ -157,12 +143,6 @@ func TranslateConfigMapAndDeploy(ctx context.Context, data *CfgData, c kubernete
 		return nil, err
 	}
 	return cmap, nil
-}
-
-// SetOutput sets the output of a config map
-func SetOutput(cfg *apiv1.ConfigMap, output string) *apiv1.ConfigMap {
-	cfg.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(output))
-	return cfg
 }
 
 // UpdateConfigMap updates the configmaps fields
