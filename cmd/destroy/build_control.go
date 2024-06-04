@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -73,7 +74,7 @@ func (bc buildCtrl) buildImageIfNecessary(ctx context.Context, manifest *model.M
 		Manifest:     manifest,
 		CommandArgs:  svcsToBuild,
 	}
-	oktetoLog.Infof("rebuilding %s services image", svcToBuild)
+	oktetoLog.Infof("rebuilding %s services image", strings.Join(svcsToBuild, ", "))
 	if errBuild := bc.builder.Build(ctx, buildOptions); errBuild != nil {
 		return fmt.Errorf("error building images: %w", errBuild)
 	}

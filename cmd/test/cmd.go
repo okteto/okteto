@@ -217,7 +217,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 	wasBuilt, err := doBuild(ctx, manifest, testServices, builder, ioCtrl)
 	if err != nil {
-		return analytics.TestMetadata{}, fmt.Errorf("failed to build services: %w", err)
+		return analytics.TestMetadata{}, fmt.Errorf("okteto test needs to build the images defined but failed: %w", err)
 	}
 
 	shouldDeploy := options.Deploy
@@ -373,7 +373,7 @@ func doBuild(ctx context.Context, manifest *model.Manifest, svcs []string, build
 		svc, err := builder.GetSvcToBuildFromRegex(manifest, getImg)
 		if err != nil {
 			if errors.Is(err, buildv2.ErrOktetBuildSyntaxImageIsNotInBuildSection) {
-				return false, fmt.Errorf("the image '%s' is not in the build section of the manifest", imgName)
+				return false, fmt.Errorf("test '%s' needs image '%s' but it's not defined in the build section of the Okteto Manifest. See: https://www.okteto.com/docs/core/okteto-variables/#built-in-environment-variables-for-images-in-okteto-registry", name, imgName)
 			}
 			ioCtrl.Logger().Debugf("error getting services to build for image '%s': %s", imgName, err)
 		}

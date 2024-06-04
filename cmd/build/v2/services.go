@@ -26,8 +26,8 @@ import (
 )
 
 var (
-	// ErrimageIsNotAOktetoBuildSyntax is returned when the image is not an okteto build syntax
-	ErrimageIsNotAOktetoBuildSyntax = errors.New("image is not an okteto build syntax")
+	// ErrImageIsNotAOktetoBuildSyntax is returned when the image is not an okteto build syntax
+	ErrImageIsNotAOktetoBuildSyntax = errors.New("image is not an okteto build syntax")
 
 	// ErrOktetBuildSyntaxImageIsNotInBuildSection is returned when the image is not in the build section
 	ErrOktetBuildSyntaxImageIsNotInBuildSection = errors.New("image is not in the build section")
@@ -137,7 +137,7 @@ func (bc *OktetoBuilder) GetSvcToBuildFromRegex(manifest *model.Manifest, imgFin
 	matches := reg.FindStringSubmatch(img)
 	foundMatches := 2
 	if len(matches) == 0 {
-		return "", ErrimageIsNotAOktetoBuildSyntax
+		return "", ErrImageIsNotAOktetoBuildSyntax
 	}
 
 	sanitisedToUnsanitised := map[string]string{}
@@ -146,7 +146,7 @@ func (bc *OktetoBuilder) GetSvcToBuildFromRegex(manifest *model.Manifest, imgFin
 		sanitisedToUnsanitised[sanitizedSvc] = buildSvc
 	}
 	if len(matches) != foundMatches {
-		return "", ErrimageIsNotAOktetoBuildSyntax
+		return "", ErrImageIsNotAOktetoBuildSyntax
 	}
 	sanitisedName := matches[1]
 	svc, ok := sanitisedToUnsanitised[sanitisedName]
