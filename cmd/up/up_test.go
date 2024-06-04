@@ -652,7 +652,7 @@ type fakeBuilder struct {
 	services         []string
 }
 
-func (b *fakeBuilder) GetServicesToBuildDuringDeploy(_ context.Context, _ *model.Manifest, _ []string) ([]string, error) {
+func (b *fakeBuilder) GetServicesToBuildDuringExecution(_ context.Context, _ *model.Manifest, _ []string) ([]string, error) {
 	if b.getServicesErr != nil {
 		return nil, b.getServicesErr
 	}
@@ -680,20 +680,20 @@ func Test_buildServicesAndSetBuildEnvs(t *testing.T) {
 		name              string
 	}{
 		{
-			name: "builder GetServicesToBuildDuringDeploy returns error",
+			name: "builder GetServicesToBuildDuringExecution returns error",
 			builder: &fakeBuilder{
 				getServicesErr: assert.AnError,
 			},
 			expectedErr: assert.AnError,
 		},
 		{
-			name: "builder GetServicesToBuildDuringDeploy returns empty list",
+			name: "builder GetServicesToBuildDuringExecution returns empty list",
 			builder: &fakeBuilder{
 				services: nil,
 			},
 		},
 		{
-			name: "builder GetServicesToBuildDuringDeploy returns list, Build is called with the list and the input manifest",
+			name: "builder GetServicesToBuildDuringExecution returns list, Build is called with the list and the input manifest",
 			builder: &fakeBuilder{
 				services: []string{"test", "okteto"},
 				usedBuildOptions: &types.BuildOptions{
@@ -714,7 +714,7 @@ func Test_buildServicesAndSetBuildEnvs(t *testing.T) {
 			},
 		},
 		{
-			name: "builder GetServicesToBuildDuringDeploy returns list, Build returns error",
+			name: "builder GetServicesToBuildDuringExecution returns list, Build returns error",
 			builder: &fakeBuilder{
 				services: []string{"test", "okteto"},
 				usedBuildOptions: &types.BuildOptions{

@@ -176,7 +176,7 @@ func (b *fakeV2Builder) Build(_ context.Context, buildOptions *types.BuildOption
 	return nil
 }
 
-func (b *fakeV2Builder) GetServicesToBuildDuringDeploy(_ context.Context, manifest *model.Manifest, servicesToDeploy []string) ([]string, error) {
+func (b *fakeV2Builder) GetServicesToBuildDuringExecution(_ context.Context, manifest *model.Manifest, servicesToDeploy []string) ([]string, error) {
 	toBuild := make(map[string]bool, len(manifest.Build))
 	for service := range manifest.Build {
 		toBuild[service] = true

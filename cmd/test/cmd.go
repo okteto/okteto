@@ -20,7 +20,6 @@ import (
 	"os"
 	"os/signal"
 	"path"
-	"strings"
 	"time"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -60,6 +59,12 @@ type Options struct {
 	Timeout          time.Duration
 	Deploy           bool
 	NoCache          bool
+}
+
+type builder interface {
+	GetSvcToBuildFromRegex(manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error)
+	GetServicesToBuildDuringExecution(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error)
+	Build(ctx context.Context, options *types.BuildOptions) error
 }
 
 func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at *analytics.Tracker) *cobra.Command {
@@ -210,30 +215,9 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 	testServices := tree.Ordered()
 
-	var wasBuilt bool
-
-	// make sure the images used for the tests exist. If they don't build them
-	for _, name := range testServices {
-		imgName := manifest.Test[name].Image
-		getImg := func(manifest *model.Manifest) string { return imgName }
-		svc, err := builder.GetServicesToBuildForImage(ctx, manifest, getImg)
-		if err != nil {
-			return analytics.TestMetadata{}, err
-		}
-		if len(svc) < 1 {
-			continue
-		}
-
-		wasBuilt = true
-
-		oktetoLog.Debugf("building services: '%s' needed for test: '%s'", strings.Join(svc, ","), name)
-		if err := builder.Build(ctx, &types.BuildOptions{
-			EnableStages: true,
-			Manifest:     manifest,
-			CommandArgs:  svc,
-		}); err != nil {
-			return analytics.TestMetadata{}, err
-		}
+	wasBuilt, err := doBuild(ctx, manifest, testServices, builder, ioCtrl)
+	if err != nil {
+		return analytics.TestMetadata{}, fmt.Errorf("okteto test needs to build the images defined but failed: %w", err)
 	}
 
 	shouldDeploy := options.Deploy
@@ -378,4 +362,48 @@ func shouldRunInRemote(manifestDeploy *model.DeployInfo) bool {
 	}
 
 	return false
+}
+
+func doBuild(ctx context.Context, manifest *model.Manifest, svcs []string, builder builder, ioCtrl *io.Controller) (bool, error) {
+	// make sure the images used for the tests exist. If they don't build them
+	svcsToBuild := []string{}
+	for _, name := range svcs {
+		imgName := manifest.Test[name].Image
+		getImg := func(manifest *model.Manifest) string { return imgName }
+		svc, err := builder.GetSvcToBuildFromRegex(manifest, getImg)
+		if err != nil {
+			switch {
+			case errors.Is(err, buildv2.ErrOktetBuildSyntaxImageIsNotInBuildSection):
+				return false, fmt.Errorf("test '%s' needs image '%s' but it's not defined in the build section of the Okteto Manifest. See: https://www.okteto.com/docs/core/okteto-variables/#built-in-environment-variables-for-images-in-okteto-registry", name, imgName)
+			case errors.Is(err, buildv2.ErrImageIsNotAOktetoBuildSyntax):
+				ioCtrl.Logger().Debugf("error getting services to build for image '%s': %s", imgName, err)
+				continue
+			default:
+				return false, fmt.Errorf("failed to get services to build: %w", err)
+			}
+
+		}
+		svcsToBuild = append(svcsToBuild, svc)
+	}
+
+	if len(svcsToBuild) > 0 {
+		servicesNotBuild, err := builder.GetServicesToBuildDuringExecution(ctx, manifest, svcsToBuild)
+		if err != nil {
+			return false, fmt.Errorf("failed to get services to build: %w", err)
+		}
+
+		if len(servicesNotBuild) != 0 {
+			buildOptions := &types.BuildOptions{
+				EnableStages: true,
+				Manifest:     manifest,
+				CommandArgs:  servicesNotBuild,
+			}
+
+			if errBuild := builder.Build(ctx, buildOptions); errBuild != nil {
+				return true, errBuild
+			}
+			return true, nil
+		}
+	}
+	return false, nil
 }
