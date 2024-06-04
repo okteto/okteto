@@ -25,7 +25,7 @@ import (
 )
 
 type imageTaggerInterface interface {
-	getServiceImageReference(manifestName, svcName string, b *build.Info) string
+	getServiceDevImageReference(manifestName, svcName string, b *build.Info) string
 	getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string
 	getImageReferencesForDeploy(manifestName, svcToBuildName string) []string
 }
@@ -59,16 +59,15 @@ func newImageTagger(cfg oktetoBuilderConfigInterface, sbc smartBuildController) 
 }
 
 /*
-getServiceImageReference returns the image reference [name]:[tag] for the given service.
+getServiceDevImageReference returns the image reference [name]:[tag] for the given service.
 
 When service image is set on manifest, this is the returned one.
 
 Inferred tag is constructed using the following:
 [name] is the combination of the targetRegistry, manifestName and serviceName
-[tag] it is either the default okteto tag "okteto". If the default tag "okteto" is used, the targetRegistry
-should always be the dev registry
+[tag] it is the default okteto tag "okteto".
 */
-func (it imageTagger) getServiceImageReference(manifestName, svcName string, b *build.Info) string {
+func (it imageTagger) getServiceDevImageReference(manifestName, svcName string, b *build.Info) string {
 	// when b.Image is set or services does not have dockerfile then no infer reference and return what is set on the manifest
 	if b.Image != "" || !serviceHasDockerfile(b) {
 		return b.Image

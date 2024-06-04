@@ -39,7 +39,7 @@ func TestInitTaggers(t *testing.T) {
 	assert.Implements(t, (*imageTaggerInterface)(nil), newImageTagger(cfg, &fakeSmartBuildCtrl{}))
 }
 
-func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
+func Test_ImageTaggerWithoutVolumes_GetServiceDevImageReference(t *testing.T) {
 	tt := []struct {
 		b             *build.Info
 		name          string
@@ -184,7 +184,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceImageReference(t *testing.T) {
 			tagger := newImageTagger(tc.cfg, &fakeSmartBuildCtrl{
 				isEnabled: tc.cfg.isSmartBuildsEnable,
 			})
-			assert.Equal(t, tc.expectedImage, tagger.getServiceImageReference("test", "test", tc.b))
+			assert.Equal(t, tc.expectedImage, tagger.getServiceDevImageReference("test", "test", tc.b))
 		})
 	}
 }
