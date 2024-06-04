@@ -43,7 +43,7 @@ func newBuildCtrl(name string, analyticsTracker, insights buildTrackerInterface,
 
 type builderInterface interface {
 	GetSvcToBuildFromRegex(manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error)
-	GetServicesToBuildDuringDeploy(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error)
+	GetServicesToBuildDuringExecution(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error)
 	Build(ctx context.Context, options *types.BuildOptions) error
 }
 
@@ -59,7 +59,7 @@ func (bc buildCtrl) buildImageIfNecessary(ctx context.Context, manifest *model.M
 		oktetoLog.Debugf("error getting services to build for image '%s': %s", svcToBuild, err)
 	}
 
-	svcsToBuild, err := bc.builder.GetServicesToBuildDuringDeploy(ctx, manifest, []string{svcToBuild})
+	svcsToBuild, err := bc.builder.GetServicesToBuildDuringExecution(ctx, manifest, []string{svcToBuild})
 	if err != nil {
 		return fmt.Errorf("failed to get services to build: %w", err)
 	}

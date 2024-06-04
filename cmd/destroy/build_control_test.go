@@ -43,7 +43,7 @@ func (fb fakeBuilderV2) GetSvcToBuildFromRegex(manifest *model.Manifest, imgFind
 	}
 	return fb.getSvcs.svcs[0], fb.getSvcs.err
 }
-func (fb fakeBuilderV2) GetServicesToBuildDuringDeploy(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error) {
+func (fb fakeBuilderV2) GetServicesToBuildDuringExecution(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error) {
 	return fb.getSvcs.svcs, fb.getSvcs.err
 }
 

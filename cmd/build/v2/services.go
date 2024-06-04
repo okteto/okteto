@@ -33,9 +33,9 @@ var (
 	ErrOktetBuildSyntaxImageIsNotInBuildSection = errors.New("image is not in the build section")
 )
 
-// GetServicesToBuildDuringDeploy returns the services it has to build if they are not already built
+// GetServicesToBuildDuringExecution returns the services it has to build if they are not already built
 // this function is called from outside the build cmd and during a "deploy operation" (up, deploy, destroy, compose).
-func (bc *OktetoBuilder) GetServicesToBuildDuringDeploy(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error) {
+func (bc *OktetoBuilder) GetServicesToBuildDuringExecution(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error) {
 	buildManifest := manifest.Build
 
 	if len(buildManifest) == 0 {

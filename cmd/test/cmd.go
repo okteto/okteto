@@ -63,7 +63,7 @@ type Options struct {
 
 type builder interface {
 	GetSvcToBuildFromRegex(manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error)
-	GetServicesToBuildDuringDeploy(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error)
+	GetServicesToBuildDuringExecution(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error)
 	Build(ctx context.Context, options *types.BuildOptions) error
 }
 
@@ -381,7 +381,7 @@ func doBuild(ctx context.Context, manifest *model.Manifest, svcs []string, build
 	}
 
 	if len(svcsToBuild) > 0 {
-		servicesNotBuild, err := builder.GetServicesToBuildDuringDeploy(ctx, manifest, svcsToBuild)
+		servicesNotBuild, err := builder.GetServicesToBuildDuringExecution(ctx, manifest, svcsToBuild)
 		if err != nil {
 			return false, fmt.Errorf("failed to get services to build: %w", err)
 		}

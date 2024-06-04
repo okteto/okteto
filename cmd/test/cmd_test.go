@@ -45,7 +45,7 @@ type fakeBuilderV2 struct {
 func (fb *fakeBuilderV2) GetSvcToBuildFromRegex(manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error) {
 	return fb.svcFromRegex.svc, fb.svcFromRegex.err
 }
-func (fb *fakeBuilderV2) GetServicesToBuildDuringDeploy(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error) {
+func (fb *fakeBuilderV2) GetServicesToBuildDuringExecution(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error) {
 	return fb.svcToBuildDuringDeploy.svcs, fb.svcToBuildDuringDeploy.err
 }
 func (fb *fakeBuilderV2) Build(ctx context.Context, options *types.BuildOptions) error {

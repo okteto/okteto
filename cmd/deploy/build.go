@@ -48,7 +48,7 @@ func buildImages(ctx context.Context, builder builderInterface, deployOptions *O
 			return errBuild
 		}
 	} else {
-		servicesToBuild, err := builder.GetServicesToBuildDuringDeploy(ctx, deployOptions.Manifest, setToSlice(servicesToBuildSet))
+		servicesToBuild, err := builder.GetServicesToBuildDuringExecution(ctx, deployOptions.Manifest, setToSlice(servicesToBuildSet))
 		if err != nil {
 			return err
 		}
