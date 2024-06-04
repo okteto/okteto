@@ -377,6 +377,11 @@ func doBuild(ctx context.Context, manifest *model.Manifest, svcs []string, build
 			}
 			ioCtrl.Logger().Debugf("error getting services to build for image '%s': %s", imgName, err)
 		}
+		// If there was an error during the GetSvcToBuildFromRegex, we will use the name of the test as the service to build
+		// it will be checked to build in the next step
+		if svc == "" {
+			svc = name
+		}
 		svcsToBuild = append(svcsToBuild, svc)
 	}
 

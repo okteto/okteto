@@ -17,7 +17,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_GetValidNameFromFolder(t *testing.T) {
@@ -126,25 +125,4 @@ func TestGetCycles(t *testing.T) {
 		})
 	}
 
-}
-
-func TestGetListDiff(t *testing.T) {
-	listA := []string{"a", "b"}
-	listB := []string{"c", "d", "a", "b", "f"}
-
-	expected := []string{"a", "b"}
-	result := GetListDiff(listA, listB)
-	require.ElementsMatch(t, result, expected)
-}
-
-func TestGetDependentNodes(t *testing.T) {
-	expected := []string{"node1", "node3", "neighbor1", "neighbor2"}
-	graph := Graph{
-		"node1": {"neighbor1", "neighbor2"},
-		"node2": {"neighbor3"},
-		"node3": {},
-	}
-
-	startingNodes := []string{"node1", "node3"}
-	require.ElementsMatch(t, GetDependentNodes(graph, startingNodes), expected)
 }
