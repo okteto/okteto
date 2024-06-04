@@ -249,31 +249,37 @@ func TranslateLifecycle(c *apiv1.Container, l *model.Lifecycle) {
 }
 
 // TranslateResources translates the resources attached to a container
-func TranslateResources(c *apiv1.Container, rr model.ResourceRequirements) {
+func TranslateResources(container *apiv1.Container, ruleResource model.ResourceRequirements) {
+	ruleResourceList := []model.ResourceList{ruleResource.Requests, ruleResource.Limits}
+	containerResourceList := []*apiv1.ResourceList{&container.Resources.Requests, &container.Resources.Limits}
+	resourceTypes := []apiv1.ResourceName{apiv1.ResourceMemory, apiv1.ResourceCPU}
 
-	rrl := []model.ResourceList{rr.Requests, rr.Limits}
-	cr := []*apiv1.ResourceList{&c.Resources.Requests, &c.Resources.Limits}
+	for i, ruleResource := range ruleResourceList {
+		containerResource := containerResourceList[i]
 
-	for i, crl := range cr {
-		rl := rrl[i]
+		if *containerResource == nil {
+			(*containerResource) = apiv1.ResourceList{}
+		}
 
-		if *crl == nil {
-			*crl = make(map[apiv1.ResourceName]resource.Quantity)
+		for _, resource := range resourceTypes {
+			if v, ok := ruleResource[resource]; ok {
+				(*containerResource)[resource] = v
+			} else {
+				delete((*containerResource), resource)
+			}
 		}
-		if v, ok := rl[apiv1.ResourceMemory]; ok {
-			(*crl)[apiv1.ResourceMemory] = v
-		}
-		if v, ok := rl[apiv1.ResourceCPU]; ok {
-			(*crl)[apiv1.ResourceCPU] = v
-		}
-		if v, ok := rl[apiv1.ResourceEphemeralStorage]; ok {
-			(*crl)[apiv1.ResourceEphemeralStorage] = v
+		// If we set ephemeralStorage to empty, the pod will be restarted by the kubelet
+		if v, ok := ruleResource[apiv1.ResourceEphemeralStorage]; ok {
+			(*containerResource)[apiv1.ResourceEphemeralStorage] = v
+		} else {
+			delete((*containerResource), apiv1.ResourceEphemeralStorage)
 		}
 
 		// Device Plugin resources (amd.com/gpu, nvidia.com/gpu, squat.ai/fuse etc.)
-		for resname, v := range rl {
+		// ruleResource=map[apiv1.ResourceName]resource.Quantity
+		for resname, v := range ruleResource {
 			if strings.Contains(string(resname), "/") {
-				(*crl)[resname] = v
+				(*containerResource)[resname] = v
 			}
 		}
 	}

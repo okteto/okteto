@@ -1055,16 +1055,8 @@ func Test_translateResources(t *testing.T) {
 				},
 				r: model.ResourceRequirements{},
 			},
-			expectedRequests: map[apiv1.ResourceName]resource.Quantity{
-				apiv1.ResourceMemory:           resource.MustParse("2Gi"),
-				apiv1.ResourceCPU:              resource.MustParse("1"),
-				apiv1.ResourceEphemeralStorage: resource.MustParse("5Gi"),
-			},
-			expectedLimits: map[apiv1.ResourceName]resource.Quantity{
-				apiv1.ResourceMemory:           resource.MustParse("0.250Gi"),
-				apiv1.ResourceCPU:              resource.MustParse("0.125"),
-				apiv1.ResourceEphemeralStorage: resource.MustParse("0.500Gi"),
-			},
+			expectedRequests: map[apiv1.ResourceName]resource.Quantity{},
+			expectedLimits:   map[apiv1.ResourceName]resource.Quantity{},
 		},
 		{
 			name: "limits-in-yaml-limits-in-container",
@@ -1095,14 +1087,12 @@ func Test_translateResources(t *testing.T) {
 				},
 			},
 			expectedRequests: map[apiv1.ResourceName]resource.Quantity{
-				apiv1.ResourceMemory:           resource.MustParse("4Gi"),
-				apiv1.ResourceCPU:              resource.MustParse("0.125"),
-				apiv1.ResourceEphemeralStorage: resource.MustParse("5Gi"),
+				apiv1.ResourceMemory: resource.MustParse("4Gi"),
+				apiv1.ResourceCPU:    resource.MustParse("0.125"),
 			},
 			expectedLimits: map[apiv1.ResourceName]resource.Quantity{
-				apiv1.ResourceMemory:           resource.MustParse("1Gi"),
-				apiv1.ResourceCPU:              resource.MustParse("2"),
-				apiv1.ResourceEphemeralStorage: resource.MustParse("0.500Gi"),
+				apiv1.ResourceMemory: resource.MustParse("1Gi"),
+				apiv1.ResourceCPU:    resource.MustParse("2"),
 			},
 		},
 	}
