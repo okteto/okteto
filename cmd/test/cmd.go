@@ -372,15 +372,16 @@ func doBuild(ctx context.Context, manifest *model.Manifest, svcs []string, build
 		getImg := func(manifest *model.Manifest) string { return imgName }
 		svc, err := builder.GetSvcToBuildFromRegex(manifest, getImg)
 		if err != nil {
-			if errors.Is(err, buildv2.ErrOktetBuildSyntaxImageIsNotInBuildSection) {
+			switch {
+			case errors.Is(err, buildv2.ErrOktetBuildSyntaxImageIsNotInBuildSection):
 				return false, fmt.Errorf("test '%s' needs image '%s' but it's not defined in the build section of the Okteto Manifest. See: https://www.okteto.com/docs/core/okteto-variables/#built-in-environment-variables-for-images-in-okteto-registry", name, imgName)
+			case errors.Is(err, buildv2.ErrImageIsNotAOktetoBuildSyntax):
+				ioCtrl.Logger().Debugf("error getting services to build for image '%s': %s", imgName, err)
+				continue
+			default:
+				return false, fmt.Errorf("failed to get services to build: %w", err)
 			}
-			ioCtrl.Logger().Debugf("error getting services to build for image '%s': %s", imgName, err)
-		}
-		// If there was an error during the GetSvcToBuildFromRegex, we will use the name of the test as the service to build
-		// it will be checked to build in the next step
-		if svc == "" {
-			svc = name
+
 		}
 		svcsToBuild = append(svcsToBuild, svc)
 	}

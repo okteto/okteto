@@ -104,7 +104,23 @@ func TestDoBuild(t *testing.T) {
 				svcs: []string{"svc3"},
 			},
 			expected: expected{
-				err:      fmt.Errorf("the image '$OKTETO_BUILD_NOIMAGE_IMAGE' is not in the build section of the manifest"),
+				err:      fmt.Errorf("test 'svc3' needs image '$OKTETO_BUILD_NOIMAGE_IMAGE' but it's not defined in the build section of the Okteto Manifest. See: https://www.okteto.com/docs/core/okteto-variables/#built-in-environment-variables-for-images-in-okteto-registry"),
+				wasBuilt: false,
+			},
+		},
+		{
+			name: "no images to build",
+			input: input{
+				builder: &fakeBuilderV2{
+					svcFromRegex: fakeSvcFromRegex{
+						err: buildv2.ErrImageIsNotAOktetoBuildSyntax,
+						svc: "",
+					},
+				},
+				svcs: []string{"svc3"},
+			},
+			expected: expected{
+				err:      nil,
 				wasBuilt: false,
 			},
 		},
@@ -120,7 +136,7 @@ func TestDoBuild(t *testing.T) {
 				svcs: []string{"svc3"},
 			},
 			expected: expected{
-				err:      nil,
+				err:      assert.AnError,
 				wasBuilt: false,
 			},
 		},
