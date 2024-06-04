@@ -104,7 +104,7 @@ func TestDoBuild(t *testing.T) {
 				svcs: []string{"svc3"},
 			},
 			expected: expected{
-				err:      fmt.Errorf("the image '$OKTETO_BUILD_NOIMAGE_IMAGE' is not in the build section of the manifest"),
+				err:      fmt.Errorf("test 'svc3' needs image '$OKTETO_BUILD_NOIMAGE_IMAGE' but it's not defined in the build section of the Okteto Manifest."),
 				wasBuilt: false,
 			},
 		},
