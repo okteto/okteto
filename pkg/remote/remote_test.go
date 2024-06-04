@@ -147,6 +147,7 @@ func TestRemoteTest(t *testing.T) {
 				workingDirectoryCtrl: wdCtrl,
 				temporalCtrl:         tempCreator,
 				oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
+				ioCtrl:               io.NewIOController(),
 			}
 			err := rdc.Run(ctx, tt.config.params)
 			if tt.expected != nil {
@@ -188,6 +189,7 @@ func TestExtraHosts(t *testing.T) {
 		temporalCtrl:         tempCreator,
 		oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
 		useInternalNetwork:   true,
+		ioCtrl:               io.NewIOController(),
 	}
 
 	err := rdc.Run(ctx, &Params{
@@ -229,6 +231,7 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 		oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
+		ioCtrl:               io.NewIOController(),
 	}
 
 	err = rdc.Run(context.Background(), &Params{
@@ -268,6 +271,7 @@ func TestRemoteDeployWithBadSshAgent(t *testing.T) {
 		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 		oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
+		ioCtrl:               io.NewIOController(),
 	}
 
 	err := rdc.Run(context.Background(), &Params{

@@ -101,7 +101,7 @@ func TestGetListDiff(t *testing.T) {
 				l1: []string{"a", "b"},
 				l2: []string{"a", "b", "c"},
 			},
-			expected: []string{"a", "b"},
+			expected: []string{"c"},
 		},
 		{
 			name: "l2 greater than l1",
@@ -112,7 +112,7 @@ func TestGetListDiff(t *testing.T) {
 				l1: []string{"a", "b", "c", "d"},
 				l2: []string{"a", "b", "c"},
 			},
-			expected: []string{"a", "b", "c"},
+			expected: []string{"d"},
 		},
 	}
 	for _, tt := range tests {

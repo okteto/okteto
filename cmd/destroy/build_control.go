@@ -15,6 +15,7 @@ package destroy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -42,19 +43,30 @@ func newBuildCtrl(name string, analyticsTracker, insights buildTrackerInterface,
 }
 
 type builderInterface interface {
-	GetServicesToBuildForImage(ctx context.Context, manifest *model.Manifest, findImg model.ImageFromManifest) ([]string, error)
+	GetSvcToBuildFromRegex(manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error)
+	GetServicesToBuildDuringExecution(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error)
 	Build(ctx context.Context, options *types.BuildOptions) error
 }
 
 func (bc buildCtrl) buildImageIfNecessary(ctx context.Context, manifest *model.Manifest) error {
 	oktetoLog.Debug("checking if destroy.image is already built")
-	svcsToBuild, err := bc.builder.GetServicesToBuildForImage(ctx, manifest, func(manifest *model.Manifest) string {
+	svcToBuild, err := bc.builder.GetSvcToBuildFromRegex(manifest, func(manifest *model.Manifest) string {
 		return manifest.Destroy.Image
 	})
 	if err != nil {
-		return err
+		if errors.Is(err, buildv2.ErrOktetBuildSyntaxImageIsNotInBuildSection) {
+			return fmt.Errorf("the image '%s' is not in the build section of the manifest", svcToBuild)
+		}
+		oktetoLog.Debugf("error getting services to build for image '%s': %s", svcToBuild, err)
 	}
-	if len(svcsToBuild) < 1 {
+
+	svcsToBuild, err := bc.builder.GetServicesToBuildDuringExecution(ctx, manifest, []string{svcToBuild})
+	if err != nil {
+		return fmt.Errorf("failed to get services to build: %w", err)
+	}
+
+	if len(svcsToBuild) == 0 {
+		oktetoLog.Debug("destroy.image is already built")
 		return nil
 	}
 	buildOptions := &types.BuildOptions{
@@ -62,7 +74,7 @@ func (bc buildCtrl) buildImageIfNecessary(ctx context.Context, manifest *model.M
 		Manifest:     manifest,
 		CommandArgs:  svcsToBuild,
 	}
-	oktetoLog.Infof("rebuilding %s services image", strings.Join(svcsToBuild, "|"))
+	oktetoLog.Infof("rebuilding %s services image", strings.Join(svcsToBuild, ", "))
 	if errBuild := bc.builder.Build(ctx, buildOptions); errBuild != nil {
 		return fmt.Errorf("error building images: %w", errBuild)
 	}

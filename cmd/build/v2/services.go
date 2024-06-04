@@ -15,6 +15,7 @@ package v2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -24,9 +25,17 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// GetServicesToBuildDuringDeploy returns the services it has to build if they are not already built
+var (
+	// ErrImageIsNotAOktetoBuildSyntax is returned when the image is not an okteto build syntax
+	ErrImageIsNotAOktetoBuildSyntax = errors.New("image is not an okteto build syntax")
+
+	// ErrOktetBuildSyntaxImageIsNotInBuildSection is returned when the image is not in the build section
+	ErrOktetBuildSyntaxImageIsNotInBuildSection = errors.New("image is not in the build section")
+)
+
+// GetServicesToBuildDuringExecution returns the services it has to build if they are not already built
 // this function is called from outside the build cmd and during a "deploy operation" (up, deploy, destroy, compose).
-func (bc *OktetoBuilder) GetServicesToBuildDuringDeploy(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error) {
+func (bc *OktetoBuilder) GetServicesToBuildDuringExecution(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error) {
 	buildManifest := manifest.Build
 
 	if len(buildManifest) == 0 {
@@ -122,13 +131,13 @@ func (bc *OktetoBuilder) checkServiceToBuildDuringDeploy(service string, manifes
 	return nil
 }
 
-func (bc *OktetoBuilder) GetServicesToBuildForImage(ctx context.Context, manifest *model.Manifest, imgFinder model.ImageFromManifest) ([]string, error) {
+func (bc *OktetoBuilder) GetSvcToBuildFromRegex(manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error) {
 	img := imgFinder(manifest)
 	reg := regexp.MustCompile(`OKTETO_BUILD_(\w+)_`)
 	matches := reg.FindStringSubmatch(img)
 	foundMatches := 2
 	if len(matches) == 0 {
-		return nil, nil
+		return "", ErrImageIsNotAOktetoBuildSyntax
 	}
 
 	sanitisedToUnsanitised := map[string]string{}
@@ -137,13 +146,13 @@ func (bc *OktetoBuilder) GetServicesToBuildForImage(ctx context.Context, manifes
 		sanitisedToUnsanitised[sanitizedSvc] = buildSvc
 	}
 	if len(matches) != foundMatches {
-		return nil, nil
+		return "", ErrImageIsNotAOktetoBuildSyntax
 	}
 	sanitisedName := matches[1]
 	svc, ok := sanitisedToUnsanitised[sanitisedName]
 	if !ok {
-		return nil, nil
+		return "", ErrOktetBuildSyntaxImageIsNotInBuildSection
 	}
 
-	return bc.GetServicesToBuildDuringDeploy(ctx, manifest, []string{svc})
+	return svc, nil
 }

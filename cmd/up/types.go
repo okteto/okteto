@@ -36,7 +36,7 @@ type registryInterface interface {
 }
 
 type builderInterface interface {
-	GetServicesToBuildDuringDeploy(ctx context.Context, manifest *model.Manifest, svcToDeploy []string) ([]string, error)
+	GetServicesToBuildDuringExecution(ctx context.Context, manifest *model.Manifest, svcToDeploy []string) ([]string, error)
 	Build(ctx context.Context, options *types.BuildOptions) error
 	GetBuildEnvVars() map[string]string
 }
