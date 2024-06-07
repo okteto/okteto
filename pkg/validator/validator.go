@@ -18,15 +18,15 @@ import (
 	"strings"
 )
 
-// errForbiddenVariableName is raised when a variable from cmd option has invalid name
-var errForbiddenVariableName = errors.New("variable name not allowed: <placeholder>")
+// ErrForbiddenVariableName is raised when a variable from cmd option has invalid name
+var ErrForbiddenVariableName = errors.New("variable name not allowed: <placeholder>")
 
 // CheckForbiddenVariablesNameOption returns an error when any of the variable names from command flags are not allowed as input
 func CheckForbiddenVariablesNameOption(variables []string) error {
 	for _, v := range variables {
 		name, _, ok := strings.Cut(v, "=")
 		if ok && isForbiddenVariableName(name) {
-			return errForbiddenVariableName
+			return ErrForbiddenVariableName
 		}
 	}
 	return nil
