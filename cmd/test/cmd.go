@@ -70,10 +70,8 @@ type builder interface {
 func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at *analytics.Tracker) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
-		Use:          "test",
-		Short:        "Run tests",
-		Hidden:       true,
-		SilenceUsage: true,
+		Use:   "test",
+		Short: "Run tests defined in your okteto manifest",
 		RunE: func(cmd *cobra.Command, servicesToTest []string) error {
 			stop := make(chan os.Signal, 1)
 			signal.Notify(stop, os.Interrupt)
