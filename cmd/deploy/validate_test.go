@@ -18,6 +18,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/validator"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -54,6 +55,12 @@ func Test_validateAndSet(t *testing.T) {
 			},
 			expectedError: nil,
 			expectedEnvs:  map[string]string{"NAME": "test", "BASE64": "something=="},
+		},
+		{
+			name:          "forbidden variable name",
+			variables:     []string{"OKTETO_CONTEXT=value"},
+			expectedError: validator.ErrForbiddenVariableName,
+			expectedEnvs:  map[string]string{},
 		},
 	}
 
