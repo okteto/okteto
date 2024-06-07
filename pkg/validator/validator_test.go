@@ -71,7 +71,7 @@ func Test_isForbiddenVariableName(t *testing.T) {
 	}
 }
 
-func TestCheckVariablesFlag(t *testing.T) {
+func TestCheckForbiddenVariablesNameOption(t *testing.T) {
 	type args struct {
 		variables []string
 	}
@@ -111,8 +111,8 @@ func TestCheckVariablesFlag(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := CheckVariablesFlag(tt.args.variables); (err != nil) != tt.wantErr {
-				t.Errorf("CheckVariablesFlag() error = %v, wantErr %v", err, tt.wantErr)
+			if err := CheckForbiddenVariablesNameOption(tt.args.variables); (err != nil) != tt.wantErr {
+				t.Errorf("CheckForbiddenVariablesNameOption() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

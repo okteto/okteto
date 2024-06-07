@@ -90,7 +90,7 @@ func deploy(ctx context.Context) *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#deploy-1"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if err := validator.CheckVariablesFlag(flags.variables); err != nil {
+			if err := validator.CheckForbiddenVariablesNameOption(flags.variables); err != nil {
 				return err
 			}
 

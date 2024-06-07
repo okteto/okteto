@@ -77,7 +77,7 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, servicesToTest []string) error {
 
-			if err := validator.CheckVariablesFlag(options.Variables); err != nil {
+			if err := validator.CheckForbiddenVariablesNameOption(options.Variables); err != nil {
 				return err
 			}
 
