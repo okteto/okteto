@@ -274,7 +274,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				if isBuilt {
 					ob.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of '%s' because it's already built from cache.", svcToBuild)
 
-					imageWithDigest, err := ob.smartBuildCtrl.Clone(imageWithDigest, buildSvcInfo)
+					imageWithDigest, err := ob.smartBuildCtrl.CloneGlobalImageToDev(imageWithDigest)
 					if err != nil {
 						return err
 					}

@@ -342,18 +342,15 @@ func TestClone(t *testing.T) {
 			name: "Global Registry",
 			input: input{
 				from: "okteto.global/myimage",
-				info: &build.Info{},
 			},
 			output: output{
 				devImage: "okteto.global/myimage",
-				err:      nil,
 			},
 		},
 		{
 			name: "Non-Global Registry",
 			input: input{
 				from: "okteto.dev/myimage",
-				info: &build.Info{},
 			},
 			output: output{
 				devImage: "okteto.dev/myimage",
@@ -372,7 +369,7 @@ func TestClone(t *testing.T) {
 				ioCtrl: io.NewIOController(),
 			}
 
-			devImage, err := ctrl.Clone(tt.input.from, tt.input.info)
+			devImage, err := ctrl.CloneGlobalImageToDev(tt.input.from)
 
 			assert.Equal(t, tt.output.devImage, devImage)
 			assert.Equal(t, tt.output.err, err)

@@ -14,7 +14,7 @@
 package smartbuild
 
 import (
-	"strings"
+	"fmt"
 
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/env"
@@ -95,20 +95,19 @@ func (s *Ctrl) GetBuildHash(buildInfo *build.Info, service string) string {
 	return s.hasher.hashWithBuildContext(buildInfo, service)
 }
 
-// Clone clones the image specified into the target
-func (s *Ctrl) Clone(from string, buildInfo *build.Info) (string, error) {
-	newImage := ""
-	if buildInfo.Image != "" {
-		firstTag := strings.Split(buildInfo.Image, ",")[0]
-		if s.registryController.IsOktetoRegistry(firstTag) {
-			newImage = firstTag
+// CloneGlobalImageToDev clones the image from the global registry to the dev registry if needed
+// if the built image belongs to global registry we clone it to the dev registry
+// so that in can be used in dev containers (i.e. okteto up)
+func (s *Ctrl) CloneGlobalImageToDev(image string) (string, error) {
+	if s.registryController.IsGlobalRegistry(image) {
+		s.ioCtrl.Logger().Debugf("Copying image '%s' from global to personal registry", image)
+		newImage := s.registryController.GetDevImageFromGlobal(image)
+		devImage, err := s.registryController.Clone(image, newImage)
+		if err != nil {
+			return "", fmt.Errorf("error cloning image '%s': %w", image, err)
 		}
-	} else if s.registryController.IsGlobalRegistry(from) {
-		newImage = s.registryController.GetDevImageFromGlobal(from)
+		return devImage, nil
 	}
-	if newImage == "" {
-		s.ioCtrl.Logger().Debugf("Image '%s' is not in the global registry", from)
-		return from, nil
-	}
-	return s.registryController.Clone(from, newImage)
+	s.ioCtrl.Logger().Debugf("Image '%s' is not in the global registry", image)
+	return image, nil
 }
