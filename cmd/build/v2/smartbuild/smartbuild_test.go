@@ -325,7 +325,6 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 
 func TestClone(t *testing.T) {
 	type input struct {
-		info *build.Info
 		from string
 	}
 	type output struct {
