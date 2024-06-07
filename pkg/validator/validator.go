@@ -19,7 +19,8 @@ import (
 )
 
 // ErrForbiddenVariableName is raised when a variable from cmd option has invalid name
-var ErrForbiddenVariableName = errors.New("variable name not allowed: <placeholder>")
+var ErrForbiddenVariableName = errors.New(`Error: Forbidden variable names
+    Some of these variable names can override built-in variables and are not allowed. Learn more about built-in variables at https://www.okteto.com/docs/core/okteto-variables/#built-in-by-okteto`)
 
 // CheckForbiddenVariablesNameOption returns an error when any of the variable names from command flags are not allowed as input
 func CheckForbiddenVariablesNameOption(variables []string) error {
