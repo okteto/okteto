@@ -16,6 +16,8 @@ package validator
 import (
 	"errors"
 	"strings"
+
+	"github.com/okteto/okteto/pkg/env"
 )
 
 // ErrForbiddenVariableName is raised when a variable from cmd option has invalid name
@@ -27,6 +29,16 @@ func CheckForbiddenVariablesNameOption(variables []string) error {
 	for _, v := range variables {
 		name, _, ok := strings.Cut(v, "=")
 		if ok && isForbiddenVariableName(name) {
+			return ErrForbiddenVariableName
+		}
+	}
+	return nil
+}
+
+// CheckForbiddenEnvName returns an error when any of the variable names from dependency manifest
+func CheckForbiddenEnvName(variables []env.Var) error {
+	for _, v := range variables {
+		if isForbiddenVariableName(v.Name) {
 			return ErrForbiddenVariableName
 		}
 	}

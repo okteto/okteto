@@ -15,6 +15,8 @@ package validator
 
 import (
 	"testing"
+
+	"github.com/okteto/okteto/pkg/env"
 )
 
 func Test_isForbiddenVariableName(t *testing.T) {
@@ -113,6 +115,49 @@ func TestCheckForbiddenVariablesNameOption(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := CheckForbiddenVariablesNameOption(tt.args.variables); (err != nil) != tt.wantErr {
 				t.Errorf("CheckForbiddenVariablesNameOption() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestCheckForbiddenEnvName(t *testing.T) {
+	type args struct {
+		variables env.Environment
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "invalid name should return err",
+			args: args{
+				variables: []env.Var{
+					{
+						Name:  "OKTETO_CONTEXT",
+						Value: "value",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "valid name should not return err",
+			args: args{
+				variables: []env.Var{
+					{
+						Name:  "NAME",
+						Value: "value",
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := CheckForbiddenEnvName(tt.args.variables); (err != nil) != tt.wantErr {
+				t.Errorf("CheckForbiddenEnvName() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
