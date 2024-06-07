@@ -48,6 +48,7 @@ import (
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -641,6 +642,11 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 	for depName, dep := range deployOptions.Manifest.Dependencies {
 		oktetoLog.Information("Deploying dependency  '%s'", depName)
 		oktetoLog.SetStage(fmt.Sprintf("Deploying dependency %s", depName))
+
+		if err := validator.CheckForbiddenEnvName(dep.Variables); err != nil {
+			return err
+		}
+
 		dep.Variables = append(dep.Variables, env.Var{
 			Name:  "OKTETO_ORIGIN",
 			Value: "okteto-deploy",
