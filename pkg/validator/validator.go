@@ -21,8 +21,7 @@ import (
 )
 
 // ErrForbiddenVariableName is raised when a variable from cmd option has invalid name
-var ErrForbiddenVariableName = errors.New(`Error: Forbidden variable names
-    Some of these variable names can override built-in variables and are not allowed. Learn more about built-in variables at https://www.okteto.com/docs/core/okteto-variables/#built-in-by-okteto`)
+var ErrForbiddenVariableName = errors.New("Overriding environment variables is not allowed. See documentation for more info https://www.okteto.com/docs/core/credentials/environment-variables/")
 
 // CheckForbiddenVariablesNameOption returns an error when any of the variable names from command flags are not allowed as input
 func CheckForbiddenVariablesNameOption(variables []string) error {
@@ -51,6 +50,7 @@ func isForbiddenVariableName(name string) bool {
 		"OKTETO_CONTEXT":   true,
 		"OKTETO_NAMESPACE": true,
 		"OKTETO_URL":       true,
+		"OKTETO_TOKEN":     true,
 	}
 
 	return forbidden[strings.ToUpper(name)]
