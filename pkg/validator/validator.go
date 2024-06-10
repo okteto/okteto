@@ -20,38 +20,38 @@ import (
 	"github.com/okteto/okteto/pkg/env"
 )
 
-// ErrForbiddenVariableName is raised when a variable from cmd option has invalid name
-var ErrForbiddenVariableName = errors.New("Overriding environment variables is not allowed. See documentation for more info https://www.okteto.com/docs/core/credentials/environment-variables/")
+// ErrReservedVariableName is raised when a variable from cmd option has invalid name
+var ErrReservedVariableName = errors.New("Reserved variable name. See documentation for more info: https://www.okteto.com/docs/core/credentials/environment-variables/")
 
-// CheckForbiddenVariablesNameOption returns an error when any of the variable names from command flags are not allowed as input
-func CheckForbiddenVariablesNameOption(variables []string) error {
+// CheckReservedVariablesNameOption returns an error when any of the variable names from command flags are not allowed as input
+func CheckReservedVariablesNameOption(variables []string) error {
 	for _, v := range variables {
 		name, _, ok := strings.Cut(v, "=")
-		if ok && isForbiddenVariableName(name) {
-			return ErrForbiddenVariableName
+		if ok && isReservedVariableName(name) {
+			return ErrReservedVariableName
 		}
 	}
 	return nil
 }
 
-// CheckForbiddenEnvName returns an error when any of the variable names from dependency manifest
-func CheckForbiddenEnvName(variables []env.Var) error {
+// CheckReservedEnvName returns an error when any of the variable names from dependency manifest
+func CheckReservedEnvName(variables []env.Var) error {
 	for _, v := range variables {
-		if isForbiddenVariableName(v.Name) {
-			return ErrForbiddenVariableName
+		if isReservedVariableName(v.Name) {
+			return ErrReservedVariableName
 		}
 	}
 	return nil
 }
 
-// isForbiddenVariableName returns true when variable name is not allowed
-func isForbiddenVariableName(name string) bool {
-	forbidden := map[string]bool{
+// isReservedVariableName returns true when variable name is not allowed
+func isReservedVariableName(name string) bool {
+	reserved := map[string]bool{
 		"OKTETO_CONTEXT":   true,
 		"OKTETO_NAMESPACE": true,
 		"OKTETO_URL":       true,
 		"OKTETO_TOKEN":     true,
 	}
 
-	return forbidden[strings.ToUpper(name)]
+	return reserved[strings.ToUpper(name)]
 }

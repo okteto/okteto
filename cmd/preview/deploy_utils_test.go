@@ -108,7 +108,7 @@ func Test_optionsSetup(t *testing.T) {
 			opts: &DeployOptions{
 				variables: []string{"OKTETO_CONTEXT=value"},
 			},
-			expectError: validator.ErrForbiddenVariableName,
+			expectError: validator.ErrReservedVariableName,
 		},
 	}
 

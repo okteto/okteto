@@ -643,7 +643,7 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 		oktetoLog.Information("Deploying dependency  '%s'", depName)
 		oktetoLog.SetStage(fmt.Sprintf("Deploying dependency %s", depName))
 
-		if err := validator.CheckForbiddenEnvName(dep.Variables); err != nil {
+		if err := validator.CheckReservedEnvName(dep.Variables); err != nil {
 			return err
 		}
 

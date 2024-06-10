@@ -57,9 +57,9 @@ func Test_validateAndSet(t *testing.T) {
 			expectedEnvs:  map[string]string{"NAME": "test", "BASE64": "something=="},
 		},
 		{
-			name:          "forbidden variable name",
+			name:          "reserved variable name",
 			variables:     []string{"OKTETO_CONTEXT=value"},
-			expectedError: validator.ErrForbiddenVariableName,
+			expectedError: validator.ErrReservedVariableName,
 			expectedEnvs:  map[string]string{},
 		},
 	}

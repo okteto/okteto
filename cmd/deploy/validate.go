@@ -21,7 +21,7 @@ import (
 // validateAndSet returns error when variables dont have expected format NAME=VALUE or NAME is not allowed
 // when variable is valid, it sets its value as env variable
 func validateAndSet(variables []string, setEnv func(key, value string) error) error {
-	if err := validator.CheckForbiddenVariablesNameOption(variables); err != nil {
+	if err := validator.CheckReservedVariablesNameOption(variables); err != nil {
 		return err
 	}
 

@@ -32,7 +32,7 @@ var (
 )
 
 func optionsSetup(cwd string, opts *DeployOptions, args []string) error {
-	if err := validator.CheckForbiddenVariablesNameOption(opts.variables); err != nil {
+	if err := validator.CheckReservedVariablesNameOption(opts.variables); err != nil {
 		return err
 	}
 

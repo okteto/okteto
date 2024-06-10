@@ -19,7 +19,7 @@ import (
 	"github.com/okteto/okteto/pkg/env"
 )
 
-func Test_isForbiddenVariableName(t *testing.T) {
+func Test_isReservedVariableName(t *testing.T) {
 	type args struct {
 		name string
 	}
@@ -66,14 +66,14 @@ func Test_isForbiddenVariableName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isForbiddenVariableName(tt.args.name); got != tt.want {
-				t.Errorf("isForbiddenVariableName() = %v, want %v", got, tt.want)
+			if got := isReservedVariableName(tt.args.name); got != tt.want {
+				t.Errorf("isReservedVariableName() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestCheckForbiddenVariablesNameOption(t *testing.T) {
+func TestCheckReservedVariablesNameOption(t *testing.T) {
 	type args struct {
 		variables []string
 	}
@@ -90,14 +90,14 @@ func TestCheckForbiddenVariablesNameOption(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "all variables are forbidden",
+			name: "all variables are reserved",
 			args: args{
 				variables: []string{"OKTETO_CONTEXT=value", "OKTETO_NAMESPACE=value"},
 			},
 			wantErr: true,
 		},
 		{
-			name: "some variables are forbidden",
+			name: "some variables are reserved",
 			args: args{
 				variables: []string{"OKTETO_CONTEXT=value", "VARIABLENAME=value"},
 			},
@@ -113,14 +113,14 @@ func TestCheckForbiddenVariablesNameOption(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := CheckForbiddenVariablesNameOption(tt.args.variables); (err != nil) != tt.wantErr {
-				t.Errorf("CheckForbiddenVariablesNameOption() error = %v, wantErr %v", err, tt.wantErr)
+			if err := CheckReservedVariablesNameOption(tt.args.variables); (err != nil) != tt.wantErr {
+				t.Errorf("CheckReservedVariablesNameOption() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
-func TestCheckForbiddenEnvName(t *testing.T) {
+func TestCheckReservedEnvName(t *testing.T) {
 	type args struct {
 		variables env.Environment
 	}
@@ -156,8 +156,8 @@ func TestCheckForbiddenEnvName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := CheckForbiddenEnvName(tt.args.variables); (err != nil) != tt.wantErr {
-				t.Errorf("CheckForbiddenEnvName() error = %v, wantErr %v", err, tt.wantErr)
+			if err := CheckReservedEnvName(tt.args.variables); (err != nil) != tt.wantErr {
+				t.Errorf("CheckReservedEnvName() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
