@@ -181,6 +181,9 @@ func (t *trace) display(progress string) {
 			}
 
 			for _, log := range v.logs {
+				if strings.Contains(log, "OKTETO_TEST_COMMANDS_") {
+					continue
+				}
 				var text oktetoLog.JSONLogFormat
 				if err := json.Unmarshal([]byte(log), &text); err != nil {
 					oktetoLog.Infof("could not parse %s: %s", log, err)
