@@ -15,6 +15,7 @@ package v2
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/build"
@@ -23,6 +24,8 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/registry"
 )
+
+var extendedImageRegex = regexp.MustCompile(`^[a-zA-Z0-9-_.]+\/[a-zA-Z0-9-_.]+\/([a-zA-Z0-9-_.]+):[a-zA-Z0-9-_.]+$`)
 
 type imageTaggerInterface interface {
 	getServiceDevImageReference(manifestName, svcName string, b *build.Info) string
@@ -87,12 +90,16 @@ func (it imageTagger) getGlobalTagFromDevIfNeccesary(tags, namespace, registryUR
 	globalWithHash := ""
 	for _, tag := range tagList {
 		expandedTag := ic.ExpandOktetoDevRegistry(tag)
+		matches := extendedImageRegex.FindStringSubmatch(expandedTag)
+		if len(matches) != 2 {
+			continue
+		}
+		name := matches[1]
 		if strings.HasPrefix(expandedTag, fmt.Sprintf("%s/%s/", registryURL, namespace)) {
-			sanitizedName := format.ResourceK8sMetaString(manifestName)
 			if globalWithHash != "" {
 				globalWithHash += ","
 			}
-			newImage := useReferenceTemplate(constants.GlobalRegistry, sanitizedName, svcName, buildHash)
+			newImage := fmt.Sprintf("%s/%s:%s", constants.GlobalRegistry, name, buildHash)
 			globalWithHash += ic.ExpandOktetoGlobalRegistry(newImage)
 		}
 	}

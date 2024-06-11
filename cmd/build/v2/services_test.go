@@ -218,6 +218,9 @@ func TestNoServiceBuiltWithSubset(t *testing.T) {
 type fakeConfig struct {
 	sha                 string
 	repoURL             string
+	globalNamespace     string
+	namespace           string
+	registryURL         string
 	isClean             bool
 	hasAccess           bool
 	isOkteto            bool
@@ -228,6 +231,10 @@ func (fc fakeConfig) HasGlobalAccess() bool                  { return fc.hasAcce
 func (fc fakeConfig) IsCleanProject() bool                   { return fc.isClean }
 func (fc fakeConfig) GetGitCommit() string                   { return fc.sha }
 func (fc fakeConfig) IsOkteto() bool                         { return fc.isOkteto }
+func (fc fakeConfig) IsOktetoCluster() bool                  { return fc.isOkteto }
 func (fc fakeConfig) GetAnonymizedRepo() string              { return fc.repoURL }
 func (fc fakeConfig) GetBuildContextHash(*build.Info) string { return "" }
 func (fc fakeConfig) IsSmartBuildsEnabled() bool             { return fc.isSmartBuildsEnable }
+func (fc fakeConfig) GetGlobalNamespace() string             { return fc.globalNamespace }
+func (fc fakeConfig) GetNamespace() string                   { return fc.namespace }
+func (fc fakeConfig) GetRegistryURL() string                 { return fc.registryURL }

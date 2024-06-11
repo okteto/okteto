@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/build"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -255,4 +256,77 @@ func TestImageTaggerWithoutVolumesGetImageReferenceForDeploy(t *testing.T) {
 	result := imageTagger.getImageReferencesForDeploy("test repository", "service-a")
 
 	require.Equal(t, expected, result)
+}
+
+func Test_getGlobalTagFromDevIfNeccesary(t *testing.T) {
+	tt := []struct {
+		name              string
+		globalAccess      bool
+		smartbuildEnabled bool
+		buildHash         string
+		tags              string
+		expectedResult    string
+	}{
+		{
+			name:           "no global access",
+			globalAccess:   false,
+			expectedResult: "",
+		},
+		{
+			name:              "smart builds disabled",
+			globalAccess:      true,
+			smartbuildEnabled: false,
+			expectedResult:    "",
+		},
+		{
+			name:              "empty build hash",
+			globalAccess:      true,
+			smartbuildEnabled: true,
+			buildHash:         "",
+			expectedResult:    "",
+		},
+		{
+			name:              "from list just one",
+			tags:              "okteto.dev/test-test:latest,okteto.global/test-test:latest",
+			globalAccess:      true,
+			smartbuildEnabled: true,
+			buildHash:         "sha",
+			expectedResult:    "myregistry.com/okteto/test-test:sha",
+		},
+		{
+			name:              "from list several",
+			tags:              "okteto.dev/test-test:latest,okteto.dev/myimage:latest",
+			globalAccess:      true,
+			smartbuildEnabled: true,
+			buildHash:         "sha",
+			expectedResult:    "myregistry.com/okteto/test-test:sha,myregistry.com/okteto/myimage:sha",
+		},
+		{
+			name:              "from global",
+			tags:              "okteto.global/myimage:latest",
+			globalAccess:      true,
+			smartbuildEnabled: true,
+			buildHash:         "sha",
+			expectedResult:    "",
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			imageTagger := imageTagger{
+				cfg: fakeConfig{
+					hasAccess: tc.globalAccess,
+				},
+				smartBuildController: &fakeSmartBuildCtrl{
+					isEnabled: tc.smartbuildEnabled,
+				},
+			}
+			iCtrl := registry.NewImageCtrl(fakeConfig{
+				registryURL: "myregistry.com",
+				namespace:   "test",
+			})
+			result := imageTagger.getGlobalTagFromDevIfNeccesary(tc.tags, "test", "myregistry.com", tc.buildHash, "", "", iCtrl)
+			assert.Equal(t, tc.expectedResult, result)
+		})
+	}
 }

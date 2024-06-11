@@ -323,7 +323,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 	}
 }
 
-func TestClone(t *testing.T) {
+func TestCloneGlobalImageToDev(t *testing.T) {
 	type input struct {
 		from string
 	}
