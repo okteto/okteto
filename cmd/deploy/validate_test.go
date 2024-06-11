@@ -59,7 +59,7 @@ func Test_validateAndSet(t *testing.T) {
 		{
 			name:          "reserved variable name",
 			variables:     []string{"OKTETO_CONTEXT=value"},
-			expectedError: validator.ErrReservedVariableName,
+			expectedError: fmt.Errorf("%s is %w", "OKTETO_CONTEXT", validator.ErrReservedVariableName),
 			expectedEnvs:  map[string]string{},
 		},
 	}

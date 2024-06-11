@@ -15,30 +15,31 @@ package validator
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/env"
 )
 
 // ErrReservedVariableName is raised when a variable from cmd option has invalid name
-var ErrReservedVariableName = errors.New("Reserved variable name. See documentation for more info: https://www.okteto.com/docs/core/credentials/environment-variables/")
+var ErrReservedVariableName = errors.New("reserved variable name. See documentation for more info: https://www.okteto.com/docs/core/credentials/environment-variables/")
 
 // CheckReservedVariablesNameOption returns an error when any of the variable names from command flags are not allowed as input
 func CheckReservedVariablesNameOption(variables []string) error {
 	for _, v := range variables {
 		name, _, ok := strings.Cut(v, "=")
 		if ok && isReservedVariableName(name) {
-			return ErrReservedVariableName
+			return fmt.Errorf("%s is %w", name, ErrReservedVariableName)
 		}
 	}
 	return nil
 }
 
-// CheckReservedEnvName returns an error when any of the variable names from dependency manifest
-func CheckReservedEnvName(variables []env.Var) error {
+// CheckReservedVarName returns an error when any of the variable names from dependency manifest
+func CheckReservedVarName(variables []env.Var) error {
 	for _, v := range variables {
 		if isReservedVariableName(v.Name) {
-			return ErrReservedVariableName
+			return fmt.Errorf("%s is %w", v.Name, ErrReservedVariableName)
 		}
 	}
 	return nil

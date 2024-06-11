@@ -120,7 +120,7 @@ func TestCheckReservedVariablesNameOption(t *testing.T) {
 	}
 }
 
-func TestCheckReservedEnvName(t *testing.T) {
+func TestCheckReservedVarName(t *testing.T) {
 	type args struct {
 		variables env.Environment
 	}
@@ -156,8 +156,8 @@ func TestCheckReservedEnvName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := CheckReservedEnvName(tt.args.variables); (err != nil) != tt.wantErr {
-				t.Errorf("CheckReservedEnvName() error = %v, wantErr %v", err, tt.wantErr)
+			if err := CheckReservedVarName(tt.args.variables); (err != nil) != tt.wantErr {
+				t.Errorf("CheckReservedVarName() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
