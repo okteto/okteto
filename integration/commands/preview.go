@@ -52,7 +52,7 @@ func RunOktetoDeployPreview(oktetoPath string, deployOptions *DeployPreviewOptio
 	if deployOptions.Scope != "" {
 		cmd.Args = append(cmd.Args, "--scope", deployOptions.Scope)
 	} else {
-		cmd.Args = append(cmd.Args, "--scope", "personal")
+		cmd.Args = append(cmd.Args, "--scope", "global")
 	}
 	if deployOptions.Branch != "" {
 		cmd.Args = append(cmd.Args, "--branch", deployOptions.Branch)
