@@ -94,20 +94,11 @@ ARG {{ .InvalidateCacheArgName }}
 RUN echo "${{ .InvalidateCacheArgName }}" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
 
-RUN cat <<EOF > /okteto/bin/remote-run.sh && chmod +x /okteto/bin/remote-run.sh
-#!/bin/sh
-if /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }} ;then
-  echo "{\"message\": \"OKTETO_TEST_COMMANDS_SUCCEEDED\"}"
-else
-  echo "{\"message\": \"OKTETO_TEST_COMMANDS_FAILED\"}"
-fi
-EOF
-
 RUN \
   {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}} {{end}}\
   --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
-  /okteto/bin/remote-run.sh
+  /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }} || true
 
 FROM scratch
 {{ if gt (len .Artifacts) 0 -}}

@@ -384,7 +384,7 @@ RUN \
   \
   --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
-  /okteto/bin/okteto remote-run deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test"
+  /okteto/bin/okteto remote-run deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test" || true
 
 FROM scratch
 COPY --from=runner /etc/.oktetocachekey .oktetocachekey
