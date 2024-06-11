@@ -350,7 +350,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	it := newImageTagger(bc.Config, bc.smartBuildCtrl)
 	tagsToBuild := it.getServiceDevImageReference(manifest.Name, svcName, buildSvcInfo)
 	imageCtrl := registry.NewImageCtrl(bc.oktetoContext)
-	globalImage := it.getGlobalTagFromDevIfNeccesary(tagsToBuild, bc.oktetoContext.GetNamespace(), bc.oktetoContext.GetRegistryURL(), buildHash, manifest.Name, svcName, imageCtrl)
+	globalImage := it.getGlobalTagFromDevIfNeccesary(tagsToBuild, bc.oktetoContext.GetNamespace(), bc.oktetoContext.GetRegistryURL(), buildHash, imageCtrl)
 	if globalImage != "" {
 		tagsToBuild = fmt.Sprintf("%s,%s", tagsToBuild, globalImage)
 	}

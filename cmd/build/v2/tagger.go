@@ -82,7 +82,7 @@ func (it imageTagger) getServiceDevImageReference(manifestName, svcName string, 
 	return useReferenceTemplate(targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
 }
 
-func (it imageTagger) getGlobalTagFromDevIfNeccesary(tags, namespace, registryURL, buildHash, manifestName, svcName string, ic registry.ImageCtrl) string {
+func (it imageTagger) getGlobalTagFromDevIfNeccesary(tags, namespace, registryURL, buildHash string, ic registry.ImageCtrl) string {
 	if !it.cfg.HasGlobalAccess() || !it.smartBuildController.IsEnabled() || buildHash == "" {
 		return ""
 	}
@@ -91,7 +91,8 @@ func (it imageTagger) getGlobalTagFromDevIfNeccesary(tags, namespace, registryUR
 	for _, tag := range tagList {
 		expandedTag := ic.ExpandOktetoDevRegistry(tag)
 		matches := extendedImageRegex.FindStringSubmatch(expandedTag)
-		if len(matches) != 2 {
+		regexGroupFullNameRepo := 2
+		if len(matches) != regexGroupFullNameRepo {
 			continue
 		}
 		name := matches[1]

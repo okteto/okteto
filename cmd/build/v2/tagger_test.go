@@ -261,11 +261,11 @@ func TestImageTaggerWithoutVolumesGetImageReferenceForDeploy(t *testing.T) {
 func Test_getGlobalTagFromDevIfNeccesary(t *testing.T) {
 	tt := []struct {
 		name              string
-		globalAccess      bool
-		smartbuildEnabled bool
 		buildHash         string
 		tags              string
 		expectedResult    string
+		globalAccess      bool
+		smartbuildEnabled bool
 	}{
 		{
 			name:           "no global access",
@@ -325,7 +325,7 @@ func Test_getGlobalTagFromDevIfNeccesary(t *testing.T) {
 				registryURL: "myregistry.com",
 				namespace:   "test",
 			})
-			result := imageTagger.getGlobalTagFromDevIfNeccesary(tc.tags, "test", "myregistry.com", tc.buildHash, "", "", iCtrl)
+			result := imageTagger.getGlobalTagFromDevIfNeccesary(tc.tags, "test", "myregistry.com", tc.buildHash, iCtrl)
 			assert.Equal(t, tc.expectedResult, result)
 		})
 	}
