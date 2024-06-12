@@ -266,7 +266,8 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				cacheHitDurationStart := time.Now()
 
 				buildHash := ob.smartBuildCtrl.GetBuildHash(buildSvcInfo, svcToBuild)
-				imageWithDigest, isBuilt := imageChecker.checkIfBuildHashIsBuilt(options.Manifest.Name, svcToBuild, buildHash)
+				imageCtrl := registry.NewImageCtrl(ob.oktetoContext)
+				imageWithDigest, isBuilt := imageChecker.checkIfBuildHashIsBuilt(buildSvcInfo.Image, ob.oktetoContext.GetNamespace(), ob.oktetoContext.GetRegistryURL(), options.Manifest.Name, svcToBuild, buildHash, imageCtrl)
 
 				meta.CacheHit = isBuilt
 				meta.CacheHitDuration = time.Since(cacheHitDurationStart)

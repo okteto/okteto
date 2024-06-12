@@ -31,6 +31,7 @@ type imageTaggerInterface interface {
 	getServiceDevImageReference(manifestName, svcName string, b *build.Info) string
 	getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string
 	getImageReferencesForDeploy(manifestName, svcToBuildName string) []string
+	getGlobalTagFromDevIfNeccesary(tags, namespace, registryURL, buildHash string, ic registry.ImageCtrl) string
 }
 
 type smartBuildController interface {

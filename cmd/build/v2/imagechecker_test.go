@@ -18,6 +18,7 @@ import (
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -98,7 +99,7 @@ func Test_checkIfBuildHashIsBuilt(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tag, isbuilt := tt.imageChecker.checkIfBuildHashIsBuilt(tt.manifestName, tt.serviceName, tt.buildHash)
+			tag, isbuilt := tt.imageChecker.checkIfBuildHashIsBuilt("", "", "", tt.manifestName, tt.serviceName, tt.buildHash, registry.NewImageCtrl(nil))
 
 			require.Equal(t, tt.expectedTag, tag)
 			require.Equal(t, tt.expectedBuilt, isbuilt)
