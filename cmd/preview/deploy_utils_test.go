@@ -18,6 +18,7 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/validator"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -101,6 +102,13 @@ func Test_optionsSetup(t *testing.T) {
 				branch:     "test-branch",
 			},
 			expectError: ErrNotValidPreviewScope,
+		},
+		{
+			name: "invalid-variable-name",
+			opts: &DeployOptions{
+				variables: []string{"OKTETO_CONTEXT=value"},
+			},
+			expectError: validator.ErrReservedVariableName,
 		},
 	}
 
