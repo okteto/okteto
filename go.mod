@@ -192,6 +192,7 @@ require (
 	github.com/depot/depot-go v0.3.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/heimdalr/dag v1.4.0
+	github.com/kubeark/jsonschema v0.1.2
 	github.com/moby/patternmatcher v0.6.0
 	github.com/samber/slog-logrus/v2 v2.1.0
 	github.com/xeipuuv/gojsonschema v1.2.0
@@ -229,7 +230,6 @@ require (
 	github.com/in-toto/in-toto-golang v0.5.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/locker v1.0.1 // indirect
-	github.com/kubeark/jsonschema v0.1.2 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
 	github.com/moby/sys/signal v0.7.0 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect

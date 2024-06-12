@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -29,7 +30,7 @@ func toFile(schemaBytes []byte, outputFilePath string) error {
 	if err != nil {
 		return err
 	}
-	oktetoLog.Success("okteto json schema has been generated and stored in %s", schemaBytes)
+	oktetoLog.Success("okteto json schema has been generated and stored in %s", outputFilePath)
 
 	return nil
 }
@@ -48,12 +49,16 @@ func GenerateSchema() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if outputFilePath == "" {
+				fmt.Print(string(json))
+				return nil
+			}
 			err = toFile(json, outputFilePath)
 
 			return err
 		},
 	}
 
-	cmd.Flags().StringVarP(&outputFilePath, "output", "o", "", "Path to the file where the json schema will be stored")
+	cmd.Flags().StringVarP(&outputFilePath, "output-file", "o", "", "Path to the file where the json schema will be stored")
 	return cmd
 }
