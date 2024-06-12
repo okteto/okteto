@@ -19,17 +19,21 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/env"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 )
 
 // ErrReservedVariableName is raised when a variable from cmd option has invalid name
-var ErrReservedVariableName = errors.New("reserved variable name. See documentation for more info: https://www.okteto.com/docs/core/credentials/environment-variables/")
+var ErrReservedVariableName = errors.New("reserved variable name")
 
 // CheckReservedVariablesNameOption returns an error when any of the variable names from command flags are not allowed as input
 func CheckReservedVariablesNameOption(variables []string) error {
 	for _, v := range variables {
 		name, _, ok := strings.Cut(v, "=")
 		if ok && isReservedVariableName(name) {
-			return fmt.Errorf("%s is %w", name, ErrReservedVariableName)
+			return oktetoErrors.UserError{
+				E:    fmt.Errorf("%s is %w.", name, ErrReservedVariableName),
+				Hint: "See documentation for more info: https://www.okteto.com/docs/core/credentials/environment-variables/",
+			}
 		}
 	}
 	return nil
