@@ -330,6 +330,7 @@ func TestCreateDockerfile(t *testing.T) {
 					DockerfileName:      "Dockerfile.deploy",
 					Command:             "deploy",
 					CommandFlags:        []string{"--name \"test\""},
+					UseRootUser:         true,
 				},
 			},
 			expected: expected{
@@ -339,6 +340,7 @@ FROM okteto/okteto:latest as okteto-cli
 
 FROM test-image as runner
 
+USER 0
 ENV PATH="${PATH}:/okteto/bin"
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
