@@ -34,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/dag"
 	"github.com/okteto/okteto/pkg/deployable"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
@@ -170,6 +171,20 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		return analytics.TestMetadata{}, err
 	}
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		return analytics.TestMetadata{}, fmt.Errorf("failed to get the current working directory to resolve name: %w", err)
+	}
+
+	if manifest.Name == "" {
+		c, _, err := okteto.NewK8sClientProvider().Provide(okteto.GetContext().Cfg)
+		if err != nil {
+			return analytics.TestMetadata{}, err
+		}
+		inferer := devenvironment.NewNameInferer(c)
+		manifest.Name = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, options.ManifestPath)
+	}
+
 	if err := manifest.Test.Validate(); err != nil {
 		if errors.Is(err, model.ErrNoTestsDefined) {
 			oktetoLog.Information("There are no tests configured in your Okteto Manifest. For more information, check the documentation: https://okteto.com/docs/core/okteto-manifest/#test")
@@ -191,11 +206,6 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 	builder := buildv2.NewBuilderFromScratch(ioCtrl, []buildv2.OnBuildFinish{
 		tracker.TrackImageBuild,
 	})
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		return analytics.TestMetadata{}, fmt.Errorf("failed to get the current working directory to resolve name: %w", err)
-	}
 
 	var nodes []dag.Node
 
@@ -336,6 +346,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			Caches:                      test.Caches,
 			IgnoreRules:                 testIgnoreRules,
 			Artifacts:                   test.Artifacts,
+			UseRootUser:                 true,
 		}
 
 		if !options.NoCache {
