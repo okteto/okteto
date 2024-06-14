@@ -235,30 +235,6 @@ type Selector map[string]string
 // Annotations is a set of (key, value) pairs.
 type Annotations map[string]string
 
-// Get returns a Dev object from a given file
-func Get(devPath string, fs afero.Fs) (*Manifest, error) {
-	b, err := os.ReadFile(devPath)
-	if err != nil {
-		return nil, err
-	}
-
-	manifest, err := Read(b)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, dev := range manifest.Dev {
-		if err := dev.translateDeprecatedVolumeFields(); err != nil {
-			return nil, err
-		}
-
-		if err := dev.PreparePathsAndExpandEnvFiles(devPath, fs); err != nil {
-			return nil, err
-		}
-	}
-
-	return manifest, nil
-}
 func NewDev() *Dev {
 	return &Dev{
 		Image:       &build.Info{},
