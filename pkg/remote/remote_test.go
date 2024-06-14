@@ -325,7 +325,7 @@ func TestCreateDockerfile(t *testing.T) {
 				params: &Params{
 					BaseImage:           "test-image",
 					Manifest:            fakeManifest,
-					BuildEnvVars:        map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUIL_SVC2_IMAGE": "TWO_VALUE"},
+					BuildEnvVars:        map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
 					DependenciesEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
 					DockerfileName:      "Dockerfile.deploy",
 					Command:             "deploy",
@@ -362,7 +362,7 @@ COPY . /okteto/src
 WORKDIR /okteto/src
 
 
-ENV OKTETO_BUIL_SVC2_IMAGE TWO_VALUE
+ENV OKTETO_BUILD_SVC2_IMAGE TWO_VALUE
 
 ENV OKTETO_BUIL_SVC_IMAGE ONE_VALUE
 
@@ -392,7 +392,7 @@ FROM scratch
 COPY --from=runner /etc/.oktetocachekey .oktetocachekey
 
 `,
-				buildEnvVars:      map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUIL_SVC2_IMAGE": "TWO_VALUE"},
+				buildEnvVars:      map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
 				dependencyEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
 			},
 		},
@@ -402,7 +402,7 @@ COPY --from=runner /etc/.oktetocachekey .oktetocachekey
 				params: &Params{
 					BaseImage:           "test-image",
 					Manifest:            fakeManifest,
-					BuildEnvVars:        map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUIL_SVC2_IMAGE": "TWO_VALUE"},
+					BuildEnvVars:        map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
 					DependenciesEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
 					DockerfileName:      "Dockerfile.test",
 					Command:             "test",
@@ -449,7 +449,7 @@ COPY . /okteto/src
 WORKDIR /okteto/src
 
 
-ENV OKTETO_BUIL_SVC2_IMAGE TWO_VALUE
+ENV OKTETO_BUILD_SVC2_IMAGE TWO_VALUE
 
 ENV OKTETO_BUIL_SVC_IMAGE ONE_VALUE
 
@@ -489,7 +489,7 @@ FROM scratch
 COPY --from=runner /okteto/artifacts/ /
 
 `,
-				buildEnvVars:      map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUIL_SVC2_IMAGE": "TWO_VALUE"},
+				buildEnvVars:      map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
 				dependencyEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
 			},
 		},
