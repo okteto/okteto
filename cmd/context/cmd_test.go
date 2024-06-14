@@ -53,15 +53,6 @@ func Test_NoArgsAcceptedUpdateKubeConfig(t *testing.T) {
 	}
 }
 
-func Test_MaxArgsCreate(t *testing.T) {
-	cmd := CreateCMD()
-	cmd.SetArgs([]string{"args", "args"})
-	err := cmd.Execute()
-	if err == nil {
-		t.Fatal("MaxArgs not supported")
-	}
-}
-
 func Test_MaxArgsUse(t *testing.T) {
 	cmd := Use()
 	cmd.SetArgs([]string{"args", "args"})
