@@ -37,7 +37,7 @@ var (
 	user            = ""
 	token           = ""
 	kubectlBinary   = "kubectl"
-	appsSubdomain   = "cloud.okteto.net"
+	appsSubdomain   = ""
 	ErrUpNotRunning = errors.New("Up command is no longer running")
 )
 

@@ -154,10 +154,6 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.ManifestPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
 			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs())
 			if err != nil {
-				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
-					return err
-				}
-
 				if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 					return err
 				}

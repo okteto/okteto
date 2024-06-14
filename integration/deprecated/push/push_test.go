@@ -39,7 +39,7 @@ var (
 	user          = ""
 	token         = ""
 	kubectlBinary = "kubectl"
-	appsSubdomain = "cloud.okteto.net"
+	appsSubdomain = ""
 )
 
 const (
