@@ -61,49 +61,9 @@ func RunOktetoCreateNamespace(oktetoPath string, namespaceOpts *NamespaceOptions
 	return nil
 }
 
-// RunOktetoNamespace runs okteto namespace command
-func RunOktetoNamespace(oktetoPath string, namespaceOpts *NamespaceOptions) error {
-	okteto.CurrentStore = nil
-	log.Printf("changing to namespace %s", namespaceOpts.Namespace)
-	args := []string{"namespace", namespaceOpts.Namespace, "-l", "debug"}
-	cmd := exec.Command(oktetoPath, args...)
-
-	cmd.Env = os.Environ()
-	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
-	}
-
-	if namespaceOpts.OktetoHome != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, namespaceOpts.OktetoHome))
-	}
-	if namespaceOpts.Token != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, namespaceOpts.Token))
-	}
-	o, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
-	}
-
-	log.Printf("namespace output: \n%s\n", string(o))
-
-	n := okteto.GetContext().Namespace
-	if namespaceOpts.Namespace != n {
-		return fmt.Errorf("current namespace is %s, expected %s", n, namespaceOpts.Namespace)
-	}
-	args = []string{"kubeconfig"}
-	cmd = exec.Command(oktetoPath, args...)
-	cmd.Env = os.Environ()
-	o, err = cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
-	}
-
-	return nil
-}
-
 // RunOktetoDeleteNamespace runs okteto namespace delete
 func RunOktetoDeleteNamespace(oktetoPath string, namespaceOpts *NamespaceOptions) error {
-	log.Printf("okteto delete namespace %s", namespaceOpts.Namespace)
+	log.Printf("okteto namespace delete %s", namespaceOpts.Namespace)
 	deleteCMD := exec.Command(oktetoPath, "namespace", "delete", namespaceOpts.Namespace)
 
 	deleteCMD.Env = os.Environ()
@@ -119,7 +79,7 @@ func RunOktetoDeleteNamespace(oktetoPath string, namespaceOpts *NamespaceOptions
 	}
 	o, err := deleteCMD.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("okteto delete namespace failed: %s - %w", string(o), err)
+		return fmt.Errorf("okteto namespace delete failed: %s - %w", string(o), err)
 	}
 	return nil
 }
