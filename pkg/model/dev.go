@@ -64,7 +64,6 @@ type Dev struct {
 	Metadata             *Metadata             `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
 	Image                *build.Info           `json:"image,omitempty" yaml:"image,omitempty"`
-	Push                 *build.Info           `json:"-" yaml:"push,omitempty"`
 	Lifecycle            *Lifecycle            `json:"lifecycle,omitempty" yaml:"lifecycle,omitempty"`
 	Replicas             *int                  `json:"replicas,omitempty" yaml:"replicas,omitempty"`
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
@@ -263,7 +262,6 @@ func Get(devPath string, fs afero.Fs) (*Manifest, error) {
 func NewDev() *Dev {
 	return &Dev{
 		Image:       &build.Info{},
-		Push:        &build.Info{},
 		Environment: make(env.Environment, 0),
 		Secrets:     make([]Secret, 0),
 		Forward:     make([]forward.Forward, 0),
@@ -294,13 +292,6 @@ func (dev *Dev) loadAbsPaths(devPath string, fs afero.Fs) error {
 		if uri, err := url.ParseRequestURI(dev.Image.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
 			dev.Image.Context = loadAbsPath(devDir, dev.Image.Context, fs)
 			dev.Image.Dockerfile = loadAbsPath(devDir, dev.Image.Dockerfile, fs)
-		}
-	}
-
-	if dev.Push != nil {
-		if uri, err := url.ParseRequestURI(dev.Push.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
-			dev.Push.Context = loadAbsPath(devDir, dev.Push.Context, fs)
-			dev.Push.Dockerfile = loadAbsPath(devDir, dev.Push.Dockerfile, fs)
 		}
 	}
 
@@ -437,10 +428,6 @@ func (dev *Dev) SetDefaults() error {
 		dev.Image = &build.Info{}
 	}
 	dev.Image.SetBuildDefaults()
-	if dev.Push == nil {
-		dev.Push = &build.Info{}
-	}
-	dev.Push.SetBuildDefaults()
 
 	if err := dev.setTimeout(); err != nil {
 		return err
@@ -1182,9 +1169,6 @@ func (service *Dev) validateForExtraFields() error {
 	}
 	if service.Context != "" {
 		return fmt.Errorf(errorMessage, "context")
-	}
-	if service.Push != nil {
-		return fmt.Errorf(errorMessage, "push")
 	}
 	if service.Secrets != nil {
 		return fmt.Errorf(errorMessage, "secrets")

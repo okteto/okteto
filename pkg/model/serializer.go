@@ -650,7 +650,6 @@ var hybridUnsupportedFields = []string{
 	"namespace",
 	"nodeSelector",
 	"persistentVolume",
-	"push",
 	"replicas",
 	"secrets",
 	"securityContext",

@@ -184,7 +184,6 @@ func generateManifestFile(devPath string) (string, error) {
 
 	dev := &model.Dev{
 		Image:       &build.Info{},
-		Push:        &build.Info{},
 		Environment: make([]env.Var, 0),
 		Secrets:     make([]model.Secret, 0),
 		Forward:     make([]forward.Forward, 0),
@@ -205,19 +204,11 @@ func generateManifestFile(devPath string) (string, error) {
 		dev.Image.Args = nil
 	}
 
-	if dev.Push != nil {
-		dev.Push.Args = nil
-	}
-
 	for i := range dev.Services {
 		dev.Services[i].Environment = nil
 
 		if dev.Services[i].Image != nil {
 			dev.Services[i].Image.Args = nil
-		}
-
-		if dev.Services[i].Push != nil {
-			dev.Services[i].Push.Args = nil
 		}
 	}
 

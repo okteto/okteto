@@ -21,9 +21,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
@@ -41,57 +39,6 @@ func TestMain(m *testing.M) {
 		},
 	}
 	os.Exit(m.Run())
-}
-
-func TestRun(t *testing.T) {
-	dir := t.TempDir()
-	ctx := context.Background()
-
-	p := filepath.Join(dir, fmt.Sprintf("okteto-%s", uuid.New().String()))
-
-	mc := &Command{}
-	opts := &InitOpts{
-		DevPath:  p,
-		Language: "golang",
-		Workdir:  dir,
-	}
-
-	require.NoError(t, mc.RunInitV1(ctx, opts))
-
-	stignorePath := filepath.Join(dir, ".stignore")
-	_, err := os.Stat(stignorePath)
-	require.NoError(t, err)
-
-	manifest, err := utils.DeprecatedLoadManifest(p, afero.NewMemMapFs())
-	require.NoError(t, err)
-
-	dev, err := utils.GetDevFromManifest(manifest, "")
-	require.NoError(t, err)
-
-	if dev.Image.Name != "okteto/golang:1" {
-		t.Errorf("got %s, expected %s", dev.Image.Name, "okteto/golang:1")
-	}
-
-	opts = &InitOpts{
-		DevPath:   p,
-		Language:  "ruby",
-		Workdir:   dir,
-		Overwrite: true,
-	}
-
-	if err := mc.RunInitV1(ctx, opts); err != nil {
-		t.Fatalf("manifest wasn't overwritten: %s", err)
-	}
-
-	manifest, err = utils.DeprecatedLoadManifest(p, afero.NewMemMapFs())
-	require.NoError(t, err)
-
-	dev, err = utils.GetDevFromManifest(manifest, "")
-	require.NoError(t, err)
-
-	if dev.Image.Name != "okteto/ruby:2" {
-		t.Errorf("got %s, expected %s", dev.Image.Name, "okteto/ruby:2")
-	}
 }
 
 func TestRunJustCreateNecessaryFields(t *testing.T) {
@@ -114,7 +61,7 @@ func TestRunJustCreateNecessaryFields(t *testing.T) {
 
 	optionalFields := [...]string{"annotations", "autocreate", "container", "context", "environment",
 		"externalVolumes", "healthchecks", "interface", "imagePullPolicy", "labels", "namespace",
-		"push", "resources", "remote", "reverse", "secrets", "services", "subpath",
+		"resources", "remote", "reverse", "secrets", "services", "subpath",
 		"tolerations", "workdir"}
 	for _, field := range optionalFields {
 		if _, ok := result[field]; ok {

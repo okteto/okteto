@@ -1106,13 +1106,6 @@ func (m *Manifest) WriteToFile(filePath string) error {
 				d.Image = nil
 			}
 		}
-
-		if d.Push != nil && d.Push.Name != "" {
-			d.Push.Context = ""
-			d.Push.Dockerfile = ""
-		} else {
-			d.Push = nil
-		}
 	}
 	// Unmarshal with yamlv2 because we have the marshal with yaml v2
 	b, err := yaml.Marshal(m)
