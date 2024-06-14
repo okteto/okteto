@@ -219,11 +219,6 @@ func TrackDestroyStack(success bool) {
 	track(destroyStackEvent, success, nil)
 }
 
-// TrackLogin sends a tracking event to mixpanel when the user logs in
-func TrackLogin(success bool) {
-	track(loginEvent, success, nil)
-}
-
 // TrackSignup sends a tracking event to mixpanel when the user signs up
 func TrackSignup(success bool, userID string) {
 	if err := mixpanelClient.Alias(get().MachineID, userID); err != nil {
