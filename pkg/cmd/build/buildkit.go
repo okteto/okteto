@@ -53,15 +53,14 @@ type buildWriter struct{}
 func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface, secretTempFolder string, fs afero.Fs) (*client.SolveOpt, error) {
 
 	if buildOptions.Tag != "" {
-		err := validateImage(okctx, buildOptions.Tag)
+		err := validateImages(okctx, buildOptions.Tag)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	imageCtrl := registry.NewImageCtrl(GetRegistryConfigFromOktetoConfig(okctx))
-	if okctx.IsOkteto() {
-		buildOptions.DevTag = imageCtrl.ExpandOktetoDevRegistry(imageCtrl.GetDevTagFromGlobal(buildOptions.Tag))
+	if okctx.IsOktetoCluster() {
 		buildOptions.Tag = imageCtrl.ExpandOktetoDevRegistry(buildOptions.Tag)
 		buildOptions.Tag = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.Tag)
 		for i := range buildOptions.CacheFrom {
@@ -134,9 +133,9 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 		frontendAttrs["build-arg:"+kv[0]] = kv[1]
 	}
 	attachable := []session.Attachable{}
-	if okctx.IsOkteto() {
+	if okctx.IsOktetoCluster() {
 		apCtx := &authProviderContext{
-			isOkteto: okctx.IsOkteto(),
+			isOkteto: okctx.IsOktetoCluster(),
 			context:  okctx.GetCurrentName(),
 			token:    okctx.GetCurrentToken(),
 			cert:     okctx.GetCurrentCertStr(),
@@ -179,29 +178,15 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 	}
 
 	if buildOptions.Tag != "" {
-		// add additional tag if DevTag is defined
-		if buildOptions.DevTag != "" {
-			opt.Exports = []client.ExportEntry{
-				{
-					Type: "image",
-					Attrs: map[string]string{
-						"name": strings.Join([]string{buildOptions.Tag, buildOptions.DevTag}, ","),
-						"push": "true",
-					},
+		opt.Exports = []client.ExportEntry{
+			{
+				Type: "image",
+				Attrs: map[string]string{
+					"name": buildOptions.Tag,
+					"push": "true",
 				},
-			}
-		} else {
-			opt.Exports = []client.ExportEntry{
-				{
-					Type: "image",
-					Attrs: map[string]string{
-						"name": buildOptions.Tag,
-						"push": "true",
-					},
-				},
-			}
+			},
 		}
-
 	}
 
 	if buildOptions.LocalOutputPath != "" {

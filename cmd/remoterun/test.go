@@ -98,7 +98,7 @@ commands:
 
 			params := deployable.TestParameters{
 				Name:       options.Name,
-				Namespace:  oktetoContext.GetCurrentNamespace(),
+				Namespace:  oktetoContext.GetNamespace(),
 				Deployable: dep,
 				Variables:  options.Variables,
 			}

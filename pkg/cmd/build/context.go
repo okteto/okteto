@@ -19,7 +19,7 @@ import (
 
 type OktetoContextInterface interface {
 	GetCurrentName() string
-	GetCurrentNamespace() string
+	GetNamespace() string
 	GetGlobalNamespace() string
 	GetCurrentBuilder() string
 	GetCurrentCertStr() string
@@ -28,8 +28,9 @@ type OktetoContextInterface interface {
 	GetCurrentUser() string
 	GetCurrentRegister() string
 	ExistsContext() bool
-	IsOkteto() bool
+	IsOktetoCluster() bool
 	IsInsecure() bool
 	UseContextByBuilder()
 	GetTokenByContextName(name string) (string, error)
+	GetRegistryURL() string
 }

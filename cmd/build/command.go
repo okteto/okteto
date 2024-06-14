@@ -72,12 +72,12 @@ type registryInterface interface {
 
 	GetRegistryAndRepo(image string) (string, string)
 	GetRepoNameAndTag(repo string) (string, string)
-	CloneGlobalImageToDev(imageWithDigest string) (string, error)
+	GetDevImageFromGlobal(imageWithDigest string) string
+	Clone(from, to string) (string, error)
 }
 
 // NewBuildCommand creates a struct to run all build methods
 func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker, insights buildTrackerInterface, okCtx *okteto.ContextStateless, k8slogger *io.K8sLogger) *Command {
-
 	return &Command{
 		GetManifest:      model.GetManifestV2,
 		Builder:          buildCmd.NewOktetoBuilder(okCtx, afero.NewOsFs()),
@@ -245,7 +245,7 @@ func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*okteto
 		return nil, err
 	}
 
-	if oktetoContext.IsOkteto() && ctxOpts.Namespace != "" {
+	if oktetoContext.IsOktetoCluster() && ctxOpts.Namespace != "" {
 		ocfg := defaultOktetoClientCfg(oktetoContext)
 		c, err := okteto.NewOktetoClientStateless(ocfg)
 		if err != nil {

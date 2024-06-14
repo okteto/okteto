@@ -94,6 +94,10 @@ func (fr fakeRegistry) GetImageTagWithDigest(imageTag string) (string, error) {
 	return imageTag, nil
 }
 
+func (fr fakeRegistry) Clone(from, to string) (string, error) {
+	return from, nil
+}
+
 func (fr fakeRegistry) GetImageReference(image string) (registry.OktetoImageReference, error) {
 	ref, err := name.ParseReference(image)
 	if err != nil {
@@ -118,11 +122,9 @@ func (fr fakeRegistry) AddImageByOpts(opts *types.BuildOptions) error {
 
 func (fr fakeRegistry) IsGlobalRegistry(image string) bool { return false }
 
-func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string) { return "", "" }
-func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)   { return "", "" }
-func (fr fakeRegistry) CloneGlobalImageToDev(string) (string, error) {
-	return "", nil
-}
+func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string)    { return "", "" }
+func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)      { return "", "" }
+func (fr fakeRegistry) GetDevImageFromGlobal(imageWithDigest string) string { return "" }
 
 var fakeManifest *model.Manifest = &model.Manifest{
 	Deploy: &model.DeployInfo{

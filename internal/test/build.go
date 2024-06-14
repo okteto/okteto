@@ -15,6 +15,7 @@ package test
 
 import (
 	"context"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
@@ -51,8 +52,12 @@ func (fb *FakeOktetoBuilder) Run(_ context.Context, opts *types.BuildOptions, _ 
 	}
 
 	if opts.Tag != "" {
-		if err := fb.Registry.AddImageByOpts(opts); err != nil {
-			return err
+		for _, img := range strings.Split(opts.Tag, ",") {
+			newOpts := *opts
+			newOpts.Tag = img
+			if err := fb.Registry.AddImageByOpts(&newOpts); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

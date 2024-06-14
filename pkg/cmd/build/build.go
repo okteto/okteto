@@ -137,9 +137,9 @@ func GetRegistryConfigFromOktetoConfig(okCtx OktetoContextInterface) *okteto.Con
 
 	return &okteto.ConfigStateless{
 		Cert:                        okCtx.GetCurrentCertStr(),
-		IsOkteto:                    okCtx.IsOkteto(),
+		IsOkteto:                    okCtx.IsOktetoCluster(),
 		ContextName:                 okCtx.GetCurrentName(),
-		Namespace:                   okCtx.GetCurrentNamespace(),
+		Namespace:                   okCtx.GetNamespace(),
 		RegistryUrl:                 okCtx.GetCurrentRegister(),
 		UserId:                      okCtx.GetCurrentUser(),
 		Token:                       okCtx.GetCurrentToken(),
@@ -227,19 +227,30 @@ func (ob *OktetoBuilder) buildWithDocker(ctx context.Context, buildOptions *type
 	return nil
 }
 
-func validateImage(okctx OktetoContextInterface, imageTag string) error {
+func validateImages(okctx OktetoContextInterface, imageTags string) error {
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(okctx))
-	if strings.HasPrefix(imageTag, okctx.GetCurrentRegister()) && strings.Count(imageTag, "/") == 2 {
+
+	if strings.HasPrefix(imageTags, okctx.GetCurrentRegister()) && strings.Count(imageTags, "/") == 2 {
 		return nil
 	}
-	if (reg.IsOktetoRegistry(imageTag)) && strings.Count(imageTag, "/") != 1 {
-		prefix := constants.DevRegistry
-		if reg.IsGlobalRegistry(imageTag) {
-			prefix = constants.GlobalRegistry
-		}
-		return oktetoErrors.UserError{
-			E:    fmt.Errorf("'%s' isn't a valid image tag", imageTag),
-			Hint: fmt.Sprintf("The Okteto Registry syntax is: '%s/image_name'", prefix),
+	numberOfSlashToBeCorrect := 2
+	tags := strings.Split(imageTags, ",")
+	imgCtrl := registry.NewImageCtrl(okctx)
+	for _, tag := range tags {
+		if reg.IsOktetoRegistry(tag) {
+			prefix := constants.DevRegistry
+			if reg.IsGlobalRegistry(tag) {
+				tag = imgCtrl.ExpandOktetoGlobalRegistry(tag)
+				prefix = constants.GlobalRegistry
+			} else {
+				tag = imgCtrl.ExpandOktetoDevRegistry(tag)
+			}
+			if strings.Count(tag, "/") != numberOfSlashToBeCorrect {
+				return oktetoErrors.UserError{
+					E:    fmt.Errorf("'%s' isn't a valid image tag", tag),
+					Hint: fmt.Sprintf("The Okteto Registry syntax is: '%s/image_name'", prefix),
+				}
+			}
 		}
 	}
 	return nil
@@ -281,7 +292,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *build.Info, o *types.Bui
 
 	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	if okCtx.IsOkteto() && b.Image == "" {
+	if okCtx.IsOktetoCluster() && b.Image == "" {
 		// if flag --global, point to global registry
 		targetRegistry := constants.DevRegistry
 		if o != nil && o.BuildToGlobal {
@@ -327,7 +338,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *build.Info, o *types.Bui
 	if reg.IsOktetoRegistry(b.Image) {
 		defaultBuildArgs := map[string]string{
 			model.OktetoContextEnvVar:   okCtx.GetCurrentName(),
-			model.OktetoNamespaceEnvVar: okCtx.GetCurrentNamespace(),
+			model.OktetoNamespaceEnvVar: okCtx.GetNamespace(),
 		}
 
 		for _, e := range b.Args {

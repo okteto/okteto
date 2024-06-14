@@ -51,7 +51,8 @@ type oktetoRegistryInterface interface {
 
 	GetRegistryAndRepo(image string) (string, string)
 	GetRepoNameAndTag(repo string) (string, string)
-	CloneGlobalImageToDev(imageWithDigest string) (string, error)
+	GetDevImageFromGlobal(imageWithDigest string) string
+	Clone(from, to string) (string, error)
 }
 
 // oktetoBuilderConfigInterface returns the configuration that the builder has for the registry and project
@@ -95,7 +96,7 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistry
 		ioCtrl.Logger().Infof("could not get working dir: %s", err)
 	}
 	gitRepo := repository.NewRepository(wd)
-	config := getConfigStateless(registry, gitRepo, ioCtrl.Logger(), okCtx.IsOkteto())
+	config := getConfigStateless(registry, gitRepo, ioCtrl.Logger(), okCtx.IsOktetoCluster())
 
 	buildEnvs := map[string]string{}
 	buildEnvs[OktetoEnableSmartBuildEnvVar] = strconv.FormatBool(config.isSmartBuildsEnable)
@@ -186,7 +187,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			return err
 		}
 		inferer := devenvironment.NewNameInferer(c)
-		options.Manifest.Name = inferer.InferName(ctx, wd, ob.oktetoContext.GetCurrentNamespace(), options.File)
+		options.Manifest.Name = inferer.InferName(ctx, wd, ob.oktetoContext.GetNamespace(), options.File)
 	}
 	toBuildSvcs := getToBuildSvcs(options.Manifest, options)
 	if err := validateOptions(options.Manifest, toBuildSvcs, options); err != nil {
@@ -239,7 +240,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			buildsAnalytics = append(buildsAnalytics, meta)
 
 			meta.Name = svcToBuild
-			meta.Namespace = ob.oktetoContext.GetCurrentNamespace()
+			meta.Namespace = ob.oktetoContext.GetNamespace()
 			meta.DevenvName = options.Manifest.Name
 			meta.RepoURL = ob.Config.GetAnonymizedRepo()
 
@@ -265,7 +266,8 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				cacheHitDurationStart := time.Now()
 
 				buildHash := ob.smartBuildCtrl.GetBuildHash(buildSvcInfo, svcToBuild)
-				imageWithDigest, isBuilt := imageChecker.checkIfBuildHashIsBuilt(options.Manifest.Name, svcToBuild, buildHash)
+				imageCtrl := registry.NewImageCtrl(ob.oktetoContext)
+				imageWithDigest, isBuilt := imageChecker.checkIfBuildHashIsBuilt(buildSvcInfo.Image, ob.oktetoContext.GetNamespace(), ob.oktetoContext.GetRegistryURL(), options.Manifest.Name, svcToBuild, buildHash, imageCtrl)
 
 				meta.CacheHit = isBuilt
 				meta.CacheHitDuration = time.Since(cacheHitDurationStart)
@@ -273,10 +275,11 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				if isBuilt {
 					ob.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of '%s' because it's already built from cache.", svcToBuild)
 
-					imageWithDigest, err = ob.smartBuildCtrl.CloneGlobalImageToDev(imageWithDigest)
+					imageWithDigest, err := ob.smartBuildCtrl.CloneGlobalImageToDev(imageWithDigest)
 					if err != nil {
 						return err
 					}
+
 					ob.SetServiceEnvVars(svcToBuild, imageWithDigest)
 					builtImagesControl[svcToBuild] = true
 					meta.Success = true
@@ -284,7 +287,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				}
 			}
 
-			if !ob.oktetoContext.IsOkteto() && buildSvcInfo.Image == "" {
+			if !ob.oktetoContext.IsOktetoCluster() && buildSvcInfo.Image == "" {
 				return fmt.Errorf("'build.%s.image' is required if your context doesn't have Okteto installed", svcToBuild)
 			}
 			buildDurationStart := time.Now()
@@ -341,13 +344,18 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	bc.ioCtrl.Logger().Info(fmt.Sprintf("Building service '%s' from Dockerfile", svcName))
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := bc.getBuildInfoWithoutVolumeMounts(manifest.Build[svcName], isStackManifest)
-	var err error
 	var buildHash string
 	if bc.smartBuildCtrl.IsEnabled() {
 		buildHash = bc.smartBuildCtrl.GetBuildHash(buildSvcInfo, svcName)
 	}
-	tagToBuild := newImageTagger(bc.Config, bc.smartBuildCtrl).getServiceImageReference(manifest.Name, svcName, buildSvcInfo, buildHash)
-	buildSvcInfo.Image = tagToBuild
+	it := newImageTagger(bc.Config, bc.smartBuildCtrl)
+	tagsToBuild := it.getServiceDevImageReference(manifest.Name, svcName, buildSvcInfo)
+	imageCtrl := registry.NewImageCtrl(bc.oktetoContext)
+	globalImage := it.getGlobalTagFromDevIfNeccesary(tagsToBuild, bc.oktetoContext.GetNamespace(), bc.oktetoContext.GetRegistryURL(), buildHash, imageCtrl)
+	if globalImage != "" {
+		tagsToBuild = fmt.Sprintf("%s,%s", tagsToBuild, globalImage)
+	}
+	buildSvcInfo.Image = tagsToBuild
 	if err := buildSvcInfo.AddArgs(bc.buildEnvironments); err != nil {
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcName, err)
 	}
@@ -359,15 +367,17 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	}
 	var imageTagWithDigest string
 	tags := strings.Split(buildOptions.Tag, ",")
-	for _, tag := range tags {
+
+	// check that all tags are pushed and return the first one to not break any scenario
+	for idx, tag := range tags {
 		// check if the image is pushed to the dev registry if DevTag is set
 		reference := tag
-		if buildOptions.DevTag != "" {
-			reference = buildOptions.DevTag
-		}
-		imageTagWithDigest, err = bc.Registry.GetImageTagWithDigest(reference)
+		digest, err := bc.Registry.GetImageTagWithDigest(reference)
 		if err != nil {
 			return "", fmt.Errorf("error accessing image at registry %s: %w", reference, err)
+		}
+		if idx == 0 {
+			imageTagWithDigest = digest
 		}
 	}
 	return imageTagWithDigest, nil
@@ -383,7 +393,7 @@ func (bc *OktetoBuilder) getBuildInfoWithoutVolumeMounts(buildInfo *build.Info, 
 	if len(result.VolumesToInclude) > 0 {
 		result.VolumesToInclude = nil
 	}
-	if isStackManifest && bc.oktetoContext.IsOkteto() && !bc.Registry.IsOktetoRegistry(buildInfo.Image) {
+	if isStackManifest && bc.oktetoContext.IsOktetoCluster() && !bc.Registry.IsOktetoRegistry(buildInfo.Image) {
 		result.Image = ""
 	}
 	return result

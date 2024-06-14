@@ -25,7 +25,7 @@ import (
 type ContextInterface interface {
 	GetCurrentName() string
 	GetCurrentCfg() *clientcmdapi.Config
-	GetCurrentNamespace() string
+	GetNamespace() string
 	GetGlobalNamespace() string
 	GetCurrentBuilder() string
 	GetCurrentCertStr() string
@@ -33,10 +33,11 @@ type ContextInterface interface {
 	GetCurrentUser() string
 	GetCurrentRegister() string
 	ExistsContext() bool
-	IsOkteto() bool
+	IsOktetoCluster() bool
 	IsInsecure() bool
 	UseContextByBuilder()
 	GetTokenByContextName(name string) (string, error)
+	GetRegistryURL() string
 }
 
 type ContextStateless struct {
@@ -81,7 +82,7 @@ func (oc *ContextStateless) GetCurrentRegister() string {
 	return oc.getCurrentOktetoContext().Registry
 }
 
-func (oc *ContextStateless) IsOkteto() bool {
+func (oc *ContextStateless) IsOktetoCluster() bool {
 	return oc.getCurrentOktetoContext().IsOkteto
 }
 
@@ -97,8 +98,12 @@ func (oc *ContextStateless) GetCurrentCfg() *clientcmdapi.Config {
 	return oc.getCurrentOktetoContext().Cfg
 }
 
-func (oc *ContextStateless) GetCurrentNamespace() string {
+func (oc *ContextStateless) GetNamespace() string {
 	return oc.getCurrentOktetoContext().Namespace
+}
+
+func (oc *ContextStateless) GetRegistryURL() string {
+	return oc.getCurrentOktetoContext().Registry
 }
 
 func (oc *ContextStateless) GetGlobalNamespace() string {
