@@ -436,6 +436,7 @@ workflows:
               only:
                 - master
                 - /.*(windows|win)/
+                - ultra-mega-release-branch-3.0
       - test-integration:
           requires:
             - build-binaries
@@ -444,6 +445,7 @@ workflows:
               only:
                 - master
                 - /.*(e2e)/
+                - ultra-mega-release-branch-3.0
       - test-release:
           context:
             - GKE
