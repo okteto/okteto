@@ -188,9 +188,6 @@ func main() {
 	root.AddCommand(test.Test(ctx, ioController, k8sLogger, at))
 
 	// deprecated
-	root.AddCommand(cmd.Create(ctx))
-	root.AddCommand(cmd.List(ctx))
-	root.AddCommand(cmd.Delete(ctx))
 	root.AddCommand(stack.Stack(ctx, at, insights, ioController))
 	root.AddCommand(cmd.Push(ctx, at))
 	root.AddCommand(pipeline.Pipeline(ctx))
