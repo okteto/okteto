@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/okteto/okteto/cmd/manifest"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/env"
@@ -181,7 +180,7 @@ func askIfCreateStignoreDefaults(folder, stignorePath string) error {
 		return nil
 	}
 
-	language, err := manifest.GetLanguage("", folder)
+	language, err := getLanguage("", folder)
 	if err != nil {
 		return fmt.Errorf("failed to get language for '%s': %w", folder, err)
 	}
@@ -204,4 +203,32 @@ func checkIfStignoreHasGitFolder(stignorePath string) error {
 
 	oktetoLog.Warning("The synchronization service performance could be degraded if the '.git' folder is synchronized. Please add '.git' to the '.stignore' file.")
 	return nil
+}
+
+// getLanguage returns the language of a given folder
+func getLanguage(language, workDir string) (string, error) {
+	if language != "" {
+		return language, nil
+	}
+	l, err := linguist.ProcessDirectory(workDir)
+	if err != nil {
+		oktetoLog.Infof("failed to process directory: %s", err)
+		l = linguist.Unrecognized
+	}
+	oktetoLog.Infof("language '%s' inferred for your current directory", l)
+	if l == linguist.Unrecognized {
+		l, err = askForLanguage()
+		if err != nil {
+			return "", err
+		}
+	}
+	return l, nil
+}
+
+func askForLanguage() (string, error) {
+	supportedLanguages := linguist.GetSupportedLanguages()
+	return utils.AskForOptions(
+		supportedLanguages,
+		"Couldn't detect any language in the current folder. Pick your project's main language from the list below:",
+	)
 }

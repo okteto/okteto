@@ -46,8 +46,6 @@ const (
 	destroyEvent             = "Destroy"
 	deployStackEvent         = "Deploy Stack"
 	destroyStackEvent        = "Destroy Stack"
-	loginEvent               = "Login"
-	initEvent                = "Create Manifest"
 	kubeconfigEvent          = "Kubeconfig"
 	namespaceEvent           = "Namespace"
 	namespaceCreateEvent     = "CreateNamespace"
@@ -79,14 +77,6 @@ func init() {
 	}
 
 	mixpanelClient = mixpanel.NewFromClient(c, mixpanelToken, "https://analytics.okteto.com")
-}
-
-// TrackInit sends a tracking event to mixpanel when the user creates a manifest
-func TrackInit(success bool, language string) {
-	props := map[string]interface{}{
-		"language": language,
-	}
-	track(initEvent, success, props)
 }
 
 // TrackKubeconfig sends a tracking event to mixpanel when the user use the kubeconfig command

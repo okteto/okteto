@@ -173,7 +173,10 @@ var (
 	ErrNoFlagAllowedOnSingleImageBuild = errors.New("flags only allowed when building a single image with `okteto build [NAME]`")
 
 	// ErrManifestNoDevSection is raised when the manifest doesn't have a dev section and the user tries to access it
-	ErrManifestNoDevSection = errors.New("okteto manifest has no 'dev' section. Configure it with 'okteto init'")
+	ErrManifestNoDevSection = UserError{
+		E:    fmt.Errorf("your Okteto Manifest doesn't have a 'dev' section"),
+		Hint: "To learn more visit: https://www.okteto.com/docs/get-started/deploy-your-app",
+	}
 
 	// ErrDevContainerNotExists is raised when the dev container doesn't exist on dev section
 	ErrDevContainerNotExists = "development container '%s' doesn't exist"
