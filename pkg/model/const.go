@@ -107,8 +107,6 @@ const (
 	oktetoDefaultSSHServerPort  = 2222
 	// OktetoUpCmd up command
 	OktetoUpCmd = "up"
-	// OktetoPushCmd push command
-	OktetoPushCmd = "push"
 
 	// OktetoVolumeNameTemplate name template of the development container persistent volume
 	OktetoVolumeNameTemplate = "%s-okteto"

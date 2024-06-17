@@ -189,7 +189,6 @@ func main() {
 
 	// deprecated
 	root.AddCommand(stack.Stack(ctx, at, insights, ioController))
-	root.AddCommand(cmd.Push(ctx, at))
 	root.AddCommand(pipeline.Pipeline(ctx))
 
 	err = root.Execute()

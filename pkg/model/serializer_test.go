@@ -1130,12 +1130,6 @@ dev:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &build.Info{
-							Name:       "",
-							Context:    ".",
-							Dockerfile: "Dockerfile",
-							Target:     "",
-						},
 						Secrets: make([]Secret, 0),
 						Command: Command{Values: []string{"sh"}},
 						Probes: &Probes{
@@ -1194,12 +1188,6 @@ dev:
 						Interface: Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
-						},
-						Push: &build.Info{
-							Name:       "",
-							Context:    ".",
-							Dockerfile: "Dockerfile",
-							Target:     "",
 						},
 						Secrets: make([]Secret, 0),
 						Command: Command{Values: []string{"sh"}},
@@ -1282,12 +1270,6 @@ sync:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &build.Info{
-							Name:       "",
-							Context:    ".",
-							Dockerfile: "Dockerfile",
-							Target:     "",
-						},
 						Secrets: make([]Secret, 0),
 						Command: Command{Values: []string{"sh"}},
 						Probes: &Probes{
@@ -1369,12 +1351,6 @@ services:
 						Interface: Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
-						},
-						Push: &build.Info{
-							Name:       "",
-							Context:    ".",
-							Dockerfile: "Dockerfile",
-							Target:     "",
 						},
 						Secrets: make([]Secret, 0),
 						Command: Command{Values: []string{"sh"}},
@@ -1506,12 +1482,6 @@ dev:
 							Enabled: true,
 						},
 						Secrets: make([]Secret, 0),
-						Push: &build.Info{
-							Name:       "",
-							Context:    ".",
-							Dockerfile: "Dockerfile",
-							Target:     "",
-						},
 						Command: Command{Values: []string{"sh"}},
 						Probes: &Probes{
 							Liveness:  false,
@@ -1595,12 +1565,6 @@ dev:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &build.Info{
-							Name:       "",
-							Context:    ".",
-							Dockerfile: "Dockerfile",
-							Target:     "",
-						},
 						Secrets: make([]Secret, 0),
 						Command: Command{Values: []string{"sh"}},
 						Probes: &Probes{
@@ -1660,12 +1624,6 @@ dev:
 						Interface: Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
-						},
-						Push: &build.Info{
-							Name:       "",
-							Context:    ".",
-							Dockerfile: "Dockerfile",
-							Target:     "",
 						},
 						Secrets: make([]Secret, 0),
 						Command: Command{Values: []string{"sh"}},
@@ -1887,7 +1845,6 @@ reverse:
 				Image: &build.Info{
 					Name: "busybox",
 				},
-				Push:      &build.Info{},
 				Secrets:   []Secret{},
 				Probes:    &Probes{},
 				Lifecycle: &Lifecycle{},
@@ -1936,7 +1893,6 @@ forward:
 				Image: &build.Info{
 					Name: "okteto/golang:1",
 				},
-				Push:      &build.Info{},
 				Secrets:   []Secret{},
 				Probes:    &Probes{},
 				Lifecycle: &Lifecycle{},
@@ -2000,7 +1956,6 @@ forward:
 				Image: &build.Info{
 					Name: "okteto/golang:1",
 				},
-				Push:      &build.Info{},
 				Secrets:   []Secret{},
 				Probes:    &Probes{},
 				Lifecycle: &Lifecycle{},
@@ -2060,7 +2015,6 @@ forward:
 				Image: &build.Info{
 					Name: "busybox",
 				},
-				Push:      &build.Info{},
 				Secrets:   []Secret{},
 				Probes:    &Probes{},
 				Lifecycle: &Lifecycle{},

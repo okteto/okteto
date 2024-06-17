@@ -616,10 +616,6 @@ func TestInferFromStack(t *testing.T) {
 							Context:    ".",
 							Dockerfile: "Dockerfile",
 						},
-						Push: &build.Info{
-							Context:    ".",
-							Dockerfile: "Dockerfile",
-						},
 						ImagePullPolicy: apiv1.PullAlways,
 						InitContainer:   InitContainer{Image: OktetoBinImageTag},
 						Probes:          &Probes{},
@@ -1769,10 +1765,6 @@ func TestRead(t *testing.T) {
 						EmptyImage: false,
 						Image: &build.Info{
 							Name:       "test-image",
-							Context:    ".",
-							Dockerfile: "Dockerfile",
-						},
-						Push: &build.Info{
 							Context:    ".",
 							Dockerfile: "Dockerfile",
 						},

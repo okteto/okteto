@@ -512,7 +512,6 @@ func TestDev_validateName(t *testing.T) {
 				Name:            tt.devName,
 				ImagePullPolicy: apiv1.PullAlways,
 				Image:           &build.Info{},
-				Push:            &build.Info{},
 				Sync: Sync{
 					Folders: []SyncFolder{
 						{
@@ -540,7 +539,6 @@ func TestDev_validateReplicas(t *testing.T) {
 		Name:            "test",
 		ImagePullPolicy: apiv1.PullAlways,
 		Image:           &build.Info{},
-		Push:            &build.Info{},
 		Replicas:        &replicasNumber,
 		Sync: Sync{
 			Folders: []SyncFolder{
@@ -1243,13 +1241,6 @@ func Test_validateForExtraFields(t *testing.T) {
 		{
 			name:  "context",
 			value: "context: minikube",
-		},
-		{
-			name: "push",
-			value: `push:
-                   context: .
-                   dockerfile: Dockerfile
-                   target: prod`,
 		},
 		{
 			name:  "healthchecks",
