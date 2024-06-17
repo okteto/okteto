@@ -14,38 +14,12 @@
 package cmd
 
 import (
-	"fmt"
 	"runtime"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/spf13/cobra"
 )
-
-// UpdateDeprecated checks if there is a new version available and updates it
-func UpdateDeprecated() *cobra.Command {
-	return &cobra.Command{
-		Use:   "update",
-		Short: "Update Okteto CLI version",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			oktetoLog.Warning("'okteto update' is deprecated in favor of 'okteto version update', and will be removed in a future version")
-			currentVersion, err := semver.NewVersion(config.VersionString)
-			if err != nil {
-				return fmt.Errorf("could not retrieve version")
-			}
-
-			if isUpdateAvailable(currentVersion) {
-				displayUpdateSteps()
-			} else {
-				oktetoLog.Success("The latest okteto version is already installed")
-			}
-
-			return nil
-		},
-	}
-}
 
 // isUpdateAvailable checks if there is a new version available
 func isUpdateAvailable(currentVersion *semver.Version) bool {
