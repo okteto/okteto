@@ -41,7 +41,7 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 	// add levenshtein rules to suggest similar field names
 	manifestKeys := getStructKeys(manifestSchema)
 	manifestKeys["model.manifestRaw"] = manifestKeys["model.Manifest"]
-	manifestKeys["build.buildInfoRaw"] = manifestKeys["build.BuildInfo"]
+	manifestKeys["build.infoRaw"] = manifestKeys["build.Info"]
 	manifestKeys["model.DevRC"] = manifestKeys["model.Dev"]
 	manifestKeys["model.devType"] = manifestKeys["model.Dev"]
 	manifestKeys["model.testAlias"] = manifestKeys["model.Test"]
@@ -72,7 +72,7 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 		suggest.NewStrReplaceRule("in type model.manifestRaw", "the okteto manifest"),
 		suggest.NewStrReplaceRule("in type model.ManifestBuild", "the 'build' section"),
 		suggest.NewStrReplaceRule("into model.ManifestBuild", "into a 'build' object"),
-		suggest.NewStrReplaceRule("in type build.buildInfoRaw", "the 'build' object"),
+		suggest.NewStrReplaceRule("in type build.infoRaw", "the 'build' object"),
 		suggest.NewStrReplaceRule("in type model.devType", "the 'dev' object"),
 		suggest.NewStrReplaceRule("into model.devType", "the 'dev' object"),
 		suggest.NewStrReplaceRule("in type model.testCommandAlias", "the 'test commands' object"),

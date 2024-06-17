@@ -19,10 +19,11 @@ import (
 
 	"github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/registry"
 )
 
 type imageCheckerInterface interface {
-	checkIfBuildHashIsBuilt(manifestName, svcToBuild string, commit string) (string, bool)
+	checkIfBuildHashIsBuilt(image, ns, registryURL, manifestName, svcToBuild, commit string, imageCtrl registry.ImageCtrl) (string, bool)
 	getImageDigestReferenceForServiceDeploy(manifestName, svcToBuild string, buildInfo *build.Info) (string, error)
 }
 
@@ -54,12 +55,21 @@ func newImageChecker(cfg oktetoBuilderConfigInterface, registry registryImageChe
 // checkIfBuildHashIsBuilt returns if the buildHash is already built
 // in case is built, the image with digest ([name]@sha256:[sha]) is returned
 // if not, empty reference is returned
-func (ic imageChecker) checkIfBuildHashIsBuilt(manifestName, svcToBuild string, buildHash string) (string, bool) {
+func (ic imageChecker) checkIfBuildHashIsBuilt(image, ns, registryURL, manifestName, svcToBuild, buildHash string, imageCtrl registry.ImageCtrl) (string, bool) {
 	if buildHash == "" {
 		return "", false
 	}
-	// [name]:[tag] being the tag the buildHash
-	referencesToCheck := ic.tagger.getImageReferencesForTag(manifestName, svcToBuild, buildHash)
+
+	var referencesToCheck []string
+	if image != "" {
+		globalImage := ic.tagger.getGlobalTagFromDevIfNeccesary(image, ns, registryURL, buildHash, imageCtrl)
+		if globalImage != "" {
+			referencesToCheck = []string{globalImage}
+		}
+	} else {
+		// [name]:[tag] being the tag the buildHash
+		referencesToCheck = ic.tagger.getImageReferencesForTag(manifestName, svcToBuild, buildHash)
+	}
 
 	for _, ref := range referencesToCheck {
 		imageWithDigest, err := ic.lookupReferenceWithDigest(ref, ic.registry)

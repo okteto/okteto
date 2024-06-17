@@ -45,6 +45,7 @@ import (
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/remote"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -75,6 +76,11 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 		Hidden:       true,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, servicesToTest []string) error {
+
+			if err := validator.CheckReservedVariablesNameOption(options.Variables); err != nil {
+				return err
+			}
+
 			stop := make(chan os.Signal, 1)
 			signal.Notify(stop, os.Interrupt)
 			exit := make(chan error, 1)

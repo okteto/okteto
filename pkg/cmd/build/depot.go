@@ -93,13 +93,14 @@ type runAndHandleBuildFn func(ctx context.Context, c *client.Client, opt *client
 func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, run runAndHandleBuildFn) error {
 	db.ioCtrl.Logger().Info("building your image on depot's machine")
 
+	tags := strings.Split(buildOptions.Tag, ",")
 	// Register a new build.
 	req := &cliv1.CreateBuildRequest{
 		ProjectId: db.project,
 		Options: []*cliv1.BuildOptions{
 			{
 				Command: cliv1.Command_COMMAND_BUILD,
-				Tags:    []string{buildOptions.Tag},
+				Tags:    tags,
 				Push:    true,
 				Load:    true,
 			},

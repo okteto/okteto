@@ -29,8 +29,10 @@ const (
 
 // registryController is the interface to interact with registries
 type registryController interface {
-	CloneGlobalImageToDev(string) (string, error)
+	GetDevImageFromGlobal(string) string
+	Clone(string, string) (string, error)
 	IsGlobalRegistry(string) bool
+	IsOktetoRegistry(string) bool
 }
 
 // repositoryInterface is the interface to interact with git repositories
@@ -99,7 +101,8 @@ func (s *Ctrl) GetBuildHash(buildInfo *build.Info, service string) string {
 func (s *Ctrl) CloneGlobalImageToDev(image string) (string, error) {
 	if s.registryController.IsGlobalRegistry(image) {
 		s.ioCtrl.Logger().Debugf("Copying image '%s' from global to personal registry", image)
-		devImage, err := s.registryController.CloneGlobalImageToDev(image)
+		newImage := s.registryController.GetDevImageFromGlobal(image)
+		devImage, err := s.registryController.Clone(image, newImage)
 		if err != nil {
 			return "", fmt.Errorf("error cloning image '%s': %w", image, err)
 		}

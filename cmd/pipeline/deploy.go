@@ -38,6 +38,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
 )
@@ -88,6 +89,11 @@ func deploy(ctx context.Context) *cobra.Command {
 		Short: "Deploy an okteto pipeline",
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#deploy-1"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+
+			if err := validator.CheckReservedVariablesNameOption(flags.variables); err != nil {
+				return err
+			}
+
 			ctxResource := &model.ContextResource{}
 			if err := ctxResource.UpdateNamespace(flags.namespace); err != nil {
 				return err

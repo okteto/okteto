@@ -119,7 +119,7 @@ It is important that this command does the minimum and must not do calculations 
 
 			params := deployable.DeployParameters{
 				Name:      options.Name,
-				Namespace: oktetoContext.GetCurrentNamespace(),
+				Namespace: oktetoContext.GetNamespace(),
 				// For the remote command, the manifest path is the current directory
 				ManifestPath: ".",
 				Deployable:   dep,

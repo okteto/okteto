@@ -19,7 +19,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -39,9 +38,10 @@ func Test_validateImage(t *testing.T) {
 		Store: &okteto.ContextStore{
 			Contexts: map[string]*okteto.Context{
 				"test": {
-					Namespace: "test",
-					IsOkteto:  true,
-					Registry:  "test",
+					Namespace:       "test",
+					IsOkteto:        true,
+					Registry:        "test",
+					GlobalNamespace: "okteto",
 				},
 			},
 			CurrentContext: "test",
@@ -80,9 +80,8 @@ func Test_validateImage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := validateImage(okCtx, tt.image); reflect.TypeOf(got) != reflect.TypeOf(tt.want) {
-				t.Errorf("build.validateImage = %v, want %v", reflect.TypeOf(got), reflect.TypeOf(tt.want))
-			}
+			result := validateImages(okCtx, tt.image)
+			assert.IsType(t, tt.want, result)
 		})
 	}
 }

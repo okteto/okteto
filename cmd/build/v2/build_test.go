@@ -122,6 +122,9 @@ func (fr fakeRegistry) AddImageByOpts(opts *types.BuildOptions) error {
 	fr.registry[opts.Tag] = fakeImage{Args: opts.BuildArgs}
 	return nil
 }
+func (fr fakeRegistry) Clone(from, to string) (string, error) {
+	return from, nil
+}
 func (fr fakeRegistry) getFakeImage(image string) fakeImage {
 	v, ok := fr.registry[image]
 	if ok {
@@ -144,11 +147,9 @@ func (fr fakeRegistry) GetImageReference(image string) (registry.OktetoImageRefe
 
 func (fr fakeRegistry) IsGlobalRegistry(image string) bool { return false }
 
-func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string) { return "", "" }
-func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)   { return "", "" }
-func (fr fakeRegistry) CloneGlobalImageToDev(_ string) (string, error) {
-	return "", nil
-}
+func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string)    { return "", "" }
+func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)      { return "", "" }
+func (fr fakeRegistry) GetDevImageFromGlobal(imageWithDigest string) string { return "" }
 
 func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistryInterface, cfg oktetoBuilderConfigInterface) *OktetoBuilder {
 	return &OktetoBuilder{

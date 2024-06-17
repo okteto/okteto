@@ -46,7 +46,6 @@ type BuildOptions struct {
 	Target          string
 	Namespace       string
 	K8sContext      string
-	DevTag          string
 	BuildArgs       []string
 	Secrets         []string
 	ExportCache     []string

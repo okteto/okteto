@@ -18,6 +18,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/validator"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -54,6 +56,15 @@ func Test_validateAndSet(t *testing.T) {
 			},
 			expectedError: nil,
 			expectedEnvs:  map[string]string{"NAME": "test", "BASE64": "something=="},
+		},
+		{
+			name:      "reserved variable name",
+			variables: []string{"OKTETO_CONTEXT=value"},
+			expectedError: errors.UserError{
+				E:    fmt.Errorf("%s is %w.", "OKTETO_CONTEXT", validator.ErrReservedVariableName),
+				Hint: "See documentation for more info: https://www.okteto.com/docs/core/credentials/environment-variables/",
+			},
+			expectedEnvs: map[string]string{},
 		},
 	}
 
