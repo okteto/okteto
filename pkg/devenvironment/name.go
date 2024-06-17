@@ -29,20 +29,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// DeprecatedInferName infers the dev environment name from the folder received as parameter.
-// It is deprecated as it doesn't take into account deployed dev environments to get the non-sanitized name.
-// This is only being effectively used in push command, which will be deleted in the next major version
-func DeprecatedInferName(cwd string) string {
-	repoURL, err := utils.GetRepositoryURL(cwd)
-	if err != nil {
-		oktetoLog.Info("inferring name from folder")
-		return filepath.Base(cwd)
-	}
-
-	oktetoLog.Info("inferring name from git repository URL")
-	return utils.TranslateURLToName(repoURL)
-}
-
 // NameInferer Allows to infer the name for a dev environment
 type NameInferer struct {
 	k8s              kubernetes.Interface

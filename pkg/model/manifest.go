@@ -392,18 +392,6 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 		return inferredManifest, nil
 	}
 
-	if manifest != nil {
-		manifest.Type = OktetoType
-		manifest.Deploy = &DeployInfo{
-			Commands: []DeployCommand{
-				{
-					Name:    "okteto push",
-					Command: "okteto push",
-				},
-			},
-		}
-		return manifest, nil
-	}
 	return nil, discovery.ErrOktetoManifestNotFound
 }
 
@@ -1117,13 +1105,6 @@ func (m *Manifest) WriteToFile(filePath string) error {
 			} else {
 				d.Image = nil
 			}
-		}
-
-		if d.Push != nil && d.Push.Name != "" {
-			d.Push.Context = ""
-			d.Push.Dockerfile = ""
-		} else {
-			d.Push = nil
 		}
 	}
 	// Unmarshal with yamlv2 because we have the marshal with yaml v2

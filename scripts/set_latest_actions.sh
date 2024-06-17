@@ -15,7 +15,6 @@ actionsRepos=(delete-namespace
         deploy-stack
         namespace
         pipeline
-        push
         create-namespace
         destroy-pipeline
         login

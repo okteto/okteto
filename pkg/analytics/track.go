@@ -37,7 +37,6 @@ const (
 	manifestHasChangedEvent  = "Manifest Has Changed"
 	downEvent                = "Down"
 	downVolumesEvent         = "DownVolumes"
-	pushEvent                = "Push"
 	restartEvent             = "Restart Services"
 	statusEvent              = "Status"
 	logsEvent                = "Logs"
@@ -157,11 +156,6 @@ func TrackExec(m *TrackExecMetadata) {
 		"hasDeploySection":       m.HasDeploySection,
 	}
 	track(execEvent, m.Success, props)
-}
-
-// TrackPush sends a tracking event to mixpanel when the user pushes a development container
-func TrackPush(success bool) {
-	track(pushEvent, success, nil)
 }
 
 // TrackRestart sends a tracking event to mixpanel when the user restarts a development environment
