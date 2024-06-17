@@ -69,3 +69,50 @@ func Show() *cobra.Command {
 		},
 	}
 }
+
+// isUpdateAvailable checks if there is a new version available
+func isUpdateAvailable(currentVersion *semver.Version) bool {
+	v, err := utils.GetLatestVersionFromGithub()
+	if err != nil {
+		oktetoLog.Infof("failed to get latest version from github: %s", err)
+		return false
+	}
+
+	if len(v) > 0 {
+		latest, err := semver.NewVersion(v)
+		if err != nil {
+			oktetoLog.Infof("failed to parse latest version '%s': %s", v, err)
+			return false
+		}
+
+		if latest.GreaterThan(currentVersion) {
+			oktetoLog.Infof("new version available: %s -> %s", currentVersion.String(), latest)
+			return true
+		}
+	}
+
+	return false
+}
+
+func displayUpdateSteps() {
+	oktetoLog.Println("You can update okteto with the following:")
+	switch {
+	case runtime.GOOS == "darwin" || runtime.GOOS == "linux":
+		oktetoLog.Print(`
+# Using installation script:
+curl https://get.okteto.com -sSfL | sh`)
+		if runtime.GOOS == "darwin" {
+			oktetoLog.Print(`
+
+# Using brew:
+brew upgrade okteto`)
+		}
+	case runtime.GOOS == "windows":
+		oktetoLog.Print(`# Using manual installation:
+1.- Download https://downloads.okteto.com/cli/okteto.exe
+2.- Add downloaded file to your $PATH
+
+# Using scoop:
+scoop update okteto`)
+	}
+}
