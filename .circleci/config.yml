@@ -176,6 +176,8 @@ jobs:
           at: ./artifacts
       - run:
           name: Prepare env
+          environment:
+            OKTETO_CONTEXT: https://staging.okteto.dev/
           command: |
             mkdir -p $HOME/.okteto
             touch $HOME/.okteto/.noanalytics
@@ -184,7 +186,7 @@ jobs:
             curl -L "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
-            /usr/local/bin/okteto login --token ${API_STAGING_TOKEN}
+            /usr/local/bin/okteto context use ${OKTETO_CONTEXT} --token ${API_STAGING_TOKEN}
       - run:
           # As the integration test running the okteto deploy needs the CLI which we are testing, we build the current
           # CLI to the okteto.dev registry, so it is available for the user running the tests. Then, in the step
@@ -435,6 +437,7 @@ workflows:
               only:
                 - master
                 - /.*(windows|win)/
+                - ultra-mega-release-branch-3.0
       - test-integration:
           requires:
             - build-binaries
@@ -443,6 +446,7 @@ workflows:
               only:
                 - master
                 - /.*(e2e)/
+                - ultra-mega-release-branch-3.0
       - test-release:
           context:
             - GKE

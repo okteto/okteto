@@ -159,7 +159,6 @@ func main() {
 
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
-	root.AddCommand(cmd.Login())
 
 	root.AddCommand(contextCMD.Context(okClientProvider))
 	root.AddCommand(cmd.Kubeconfig(okClientProvider))
@@ -188,9 +187,6 @@ func main() {
 	root.AddCommand(test.Test(ctx, ioController, k8sLogger, at))
 
 	// deprecated
-	root.AddCommand(cmd.Create(ctx))
-	root.AddCommand(cmd.List(ctx))
-	root.AddCommand(cmd.Delete(ctx))
 	root.AddCommand(stack.Stack(ctx, at, insights, ioController))
 	root.AddCommand(pipeline.Pipeline(ctx))
 

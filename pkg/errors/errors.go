@@ -225,21 +225,6 @@ func IsNotFound(err error) bool {
 	return err != nil && (strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "doesn't exist") || strings.Contains(err.Error(), "not-found"))
 }
 
-// IsNotExist returns true if err is of the type does not exist
-func IsNotExist(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	switch {
-	case strings.Contains(err.Error(), "does not exist"),
-		strings.Contains(err.Error(), "doesn't exist"):
-		return true
-	default:
-		return false
-	}
-}
-
 // IsTransient returns true if err represents a transient error
 func IsTransient(err error) bool {
 	if err == nil {
