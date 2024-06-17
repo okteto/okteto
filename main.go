@@ -159,7 +159,6 @@ func main() {
 
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
-	root.AddCommand(cmd.Login())
 
 	root.AddCommand(contextCMD.Context(okClientProvider))
 	root.AddCommand(cmd.Kubeconfig(okClientProvider))
