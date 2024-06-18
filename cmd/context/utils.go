@@ -190,40 +190,6 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions, fs afero
 	return manifest, nil
 }
 
-func LoadStackWithContext(ctx context.Context, name, namespace string, stackPaths []string, fs afero.Fs) (*model.Stack, error) {
-	ctxResource, err := utils.LoadStackContext(stackPaths)
-	if err != nil {
-		if name == "" {
-			return nil, err
-		}
-		ctxResource = &model.ContextResource{}
-	}
-
-	if err := ctxResource.UpdateNamespace(namespace); err != nil {
-		return nil, err
-	}
-
-	ctxOptions := &Options{
-		Context:   ctxResource.Context,
-		Namespace: ctxResource.Namespace,
-		Show:      true,
-	}
-
-	if err := NewContextCommand().Run(ctx, ctxOptions); err != nil {
-		return nil, err
-	}
-
-	s, err := model.LoadStack(name, stackPaths, true, fs)
-	if err != nil {
-		if name == "" {
-			return nil, err
-		}
-		s = &model.Stack{Name: name}
-	}
-	s.Namespace = okteto.GetContext().Namespace
-	return s, nil
-}
-
 // LoadContextFromPath initializes the okteto context taking into account command flags and manifest namespace/context fields
 func LoadContextFromPath(ctx context.Context, namespace, k8sContext, path string, defaultCtxOpts Options) error {
 	ctxResource, err := getCtxResource(path)

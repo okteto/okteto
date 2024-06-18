@@ -76,13 +76,6 @@ commands:
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             make integration-okteto
 
-  integration-deprecated:
-    steps:
-      - run:
-          name: Run deprecated integration tests
-          command: make integration-deprecated
-
-
 executors:
   golang-ci:
     docker:
@@ -199,7 +192,6 @@ jobs:
       - integration-up
       - integration-actions
       - integration-okteto
-      - integration-deprecated
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
@@ -270,16 +262,6 @@ jobs:
           name: Build CLI image windows
           command: |
             & "$($HOME)\project\artifacts\bin\okteto.exe" build --platform "linux/amd64" --build-arg VERSION_STRING=$env:CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-win:$env:CIRCLE_SHA1
-      - run:
-          name: Run deprecated integration tests
-          environment:
-            OKTETO_URL: https://staging.okteto.dev/
-            OKTETO_SKIP_CLEANUP: 'true'
-            OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
-          command: |
-            $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
-            $env:Path+=";$($HOME)\project\artifacts\bin"
-            go test github.com/okteto/okteto/integration/deprecated/stack -tags="integration" --count=1 -v -timeout 15m
       - run:
           name: Run build integration tests
           environment:

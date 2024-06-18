@@ -14,50 +14,11 @@
 package utils
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/discovery"
-	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 )
-
-// LoadStackContext loads the namespace and context of an okteto stack manifest
-func LoadStackContext(stackPaths []string) (*model.ContextResource, error) {
-	ctxResource := &model.ContextResource{}
-	if len(stackPaths) == 0 {
-		dir, err := os.Getwd()
-		if err != nil {
-			return nil, err
-		}
-		composePath, err := discovery.GetComposePath(dir)
-		if err != nil {
-			return nil, err
-		}
-		ctxResource, err = model.GetContextResource(composePath)
-		if err != nil {
-			return nil, err
-		}
-	}
-	for _, stackPath := range stackPaths {
-		if !filesystem.FileExists(stackPath) {
-			return nil, fmt.Errorf("'%s' does not exist", stackPath)
-		}
-		thisCtxResource, err := model.GetContextResource(stackPath)
-		if err != nil {
-			return nil, err
-		}
-		if thisCtxResource.Context != "" {
-			ctxResource.Context = thisCtxResource.Context
-		}
-		if thisCtxResource.Namespace != "" {
-			ctxResource.Namespace = thisCtxResource.Namespace
-		}
-	}
-	return ctxResource, nil
-}
 
 // GetStackFiles returns the list of stack files on a path
 func GetStackFiles(cwd string) []string {
