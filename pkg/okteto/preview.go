@@ -414,7 +414,7 @@ func (c *previewClient) Get(ctx context.Context, previewName string) (*types.Pre
 	queryStruct := getPreviewQuery{}
 
 	variables := map[string]interface{}{
-		"id": previewName,
+		"id": graphql.String(previewName),
 	}
 	err := query(ctx, &queryStruct, variables, c.client)
 	if err != nil {
