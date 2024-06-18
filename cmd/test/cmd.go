@@ -342,6 +342,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			Caches:                      test.Caches,
 			IgnoreRules:                 testIgnoreRules,
 			Artifacts:                   test.Artifacts,
+			UseRootUser:                 true,
 		}
 
 		if !options.NoCache {
