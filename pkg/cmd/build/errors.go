@@ -90,6 +90,10 @@ func isTransientError(err error) bool {
 		return true
 	case strings.Contains(err.Error(), "Canceled") && strings.Contains(err.Error(), "context canceled"):
 		return true
+
+	// Transient error connection to Depot's machine
+	case strings.Contains(err.Error(), "timed out connecting to machine"):
+		return true
 	default:
 		return false
 	}
