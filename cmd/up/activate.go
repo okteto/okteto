@@ -263,6 +263,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
+	ns := oktetoC
 	if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Starting); err != nil {
 		return err
 	}

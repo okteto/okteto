@@ -44,7 +44,8 @@ func (d *Operation) Run(app apps.App, dev *model.Dev, trMap map[string]*apps.Tra
 				return err
 			}
 
-			if err := services.DestroyDev(ctx, dev, k8sClient); err != nil {
+			ns := okteto.GetContext().Namespace
+			if err := services.DestroyDev(ctx, dev, ns, k8sClient); err != nil {
 				return err
 			}
 			if tr.Dev != dev {

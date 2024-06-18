@@ -46,8 +46,7 @@ func Sandbox(dev *model.Dev) *appsv1.Deployment {
 	}
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      dev.Name,
-			Namespace: dev.Namespace,
+			Name: dev.Name,
 			Labels: model.Labels{
 				constants.DevLabel: "true",
 			},

@@ -34,7 +34,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	apiv1 "k8s.io/api/core/v1"
-	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -788,8 +788,6 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	m.Dev = manifest.Dev
 	m.Icon = manifest.Icon
 	m.Build = manifest.Build
-	m.Namespace = manifest.Namespace
-	m.Context = manifest.Context
 	m.IsV2 = true
 	m.Dependencies = manifest.Dependencies
 	m.Name = manifest.Name

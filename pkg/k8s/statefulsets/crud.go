@@ -46,7 +46,6 @@ func Sandbox(dev *model.Dev) *appsv1.StatefulSet {
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        dev.Name,
-			Namespace:   dev.Namespace,
 			Labels:      model.Labels{},
 			Annotations: model.Annotations{},
 		},

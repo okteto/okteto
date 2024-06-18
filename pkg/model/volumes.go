@@ -178,22 +178,8 @@ func (dev *Dev) PersistentVolumeSize() string {
 	return dev.PersistentVolumeInfo.Size
 }
 
-func (dev *Dev) isOktetoCloud() bool { // TODO: inject this
-	switch dev.Context {
-	case "https://cloud.okteto.com", "https://staging.okteto.dev":
-		return true
-	default:
-		return false
-	}
-}
-
 func (dev *Dev) getDefaultPersistentVolumeSize() string {
-	switch {
-	case dev.isOktetoCloud():
-		return cloudDefaultVolumeSize
-	default:
-		return defaultVolumeSize
-	}
+	return defaultVolumeSize
 }
 
 func (dev *Dev) HasDefaultPersistentVolumeSize() bool {
