@@ -1465,32 +1465,40 @@ func Test_isPathAComposeFile(t *testing.T) {
 		expected    bool
 	}{
 		{
-			name:     "compose file - no env var",
+			name:     "compose file - default value for OKTETO_SUPPORT_STACKS_ENABLED",
 			path:     "compose.yml",
 			expected: true,
 		},
 		{
-			name:     "compose file - no env var",
-			path:     "docker-compose.yaml",
-			expected: true,
+			name:        "compose file - OKTETO_SUPPORT_STACKS_ENABLED=true",
+			envVarValue: "true",
+			path:        "compose.yml",
+			expected:    true,
 		},
 		{
-			name:     "compose file - no env var",
+			name:        "compose file - OKTETO_SUPPORT_STACKS_ENABLED=false",
+			envVarValue: "false",
+			path:        "compose.yml",
+			expected:    true,
+		},
+		{
+			name:     "compose file - default value for OKTETO_SUPPORT_STACKS_ENABLED",
 			path:     "okteto-compose.yml",
 			expected: true,
 		},
 		{
-			name:     "compose file - no env var",
+			name:     "compose file - default value for OKTETO_SUPPORT_STACKS_ENABLED",
 			path:     "docker-compose-dev.yml",
 			expected: true,
 		},
 		{
-			name:     "no compose file - no env var",
-			path:     "okteto-stack.yml",
-			expected: false,
+			name:        "no compose file - OKTETO_SUPPORT_STACKS_ENABLED=false",
+			envVarValue: "false",
+			path:        "okteto-stack.yml",
+			expected:    true,
 		},
 		{
-			name:        "no compose file - env var set to true",
+			name:        "no compose file - OKTETO_SUPPORT_STACKS_ENABLED=true",
 			envVarValue: "true",
 			path:        "stack.yml",
 			expected:    false,
@@ -1513,13 +1521,13 @@ func Test_warnAboutComposeFileName(t *testing.T) {
 	assert.Contains(t, writer.String(), "")
 	writer.Reset()
 	warnAboutComposeFileName("stack.yml")
+	assert.Equal(t, writer.String(), "")
+	// Check that the warning is printed if the env var is set to true
+	t.Setenv(stackSupportEnabledEnvVar, "true")
+	warnAboutComposeFileName("stack.yml")
 	assert.Equal(t, writer.String(), " !  Okteto Stack syntax is deprecated.\n    Please consider migrating to Docker Compose syntax: https://community.okteto.com/t/important-update-migrating-from-okteto-stacks-to-docker-compose/1262\n")
 	// Check that the warning is only printed once even if the function is called multiple times
 	warnAboutComposeFileName("stack.yml")
 	assert.Equal(t, writer.String(), " !  Okteto Stack syntax is deprecated.\n    Please consider migrating to Docker Compose syntax: https://community.okteto.com/t/important-update-migrating-from-okteto-stacks-to-docker-compose/1262\n")
 	writer.Reset()
-	// Check that the warning is not printed if the env var is set to false
-	t.Setenv(stackSupportEnabledEnvVar, "false")
-	warnAboutComposeFileName("stack.yml")
-	assert.Equal(t, writer.String(), "")
 }
