@@ -176,7 +176,7 @@ func UrlToKubernetesContext(uri string) string {
 	return strings.ReplaceAll(u.Host, ".", "_")
 }
 
-// K8sContextToOktetoUrl translates k8s contexts like cloud_okteto_com to hettps://cloud.okteto.com
+// K8sContextToOktetoUrl translates k8s contexts like okteto_example_com to https://okteto.example.com
 func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string, clientProvider K8sClientProvider) string {
 	ctxStore := GetContextStore()
 	// check if belongs to the okteto contexts
@@ -474,16 +474,6 @@ func (okctx *Context) ToUser() *types.User {
 		Analytics:       okctx.Analytics,
 	}
 	return u
-}
-
-func IsOktetoCloud() bool {
-	octx := GetContext()
-	switch octx.Name {
-	case CloudURL, StagingURL:
-		return true
-	default:
-		return false
-	}
 }
 
 func RemoveSchema(uri string) string {

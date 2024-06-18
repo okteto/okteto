@@ -32,7 +32,7 @@ func getAvailableContexts(ctxOptions *Options) []utils.SelectorItem {
 	}
 	clusters := make([]utils.SelectorItem, 0)
 
-	clusters = append(clusters, getOktetoClusters(true)...)
+	clusters = append(clusters, getOktetoClusters()...)
 	if len(k8sClusters) > 0 {
 		clusters = append(clusters, getK8sClusters(k8sClusters)...)
 	}
@@ -40,14 +40,11 @@ func getAvailableContexts(ctxOptions *Options) []utils.SelectorItem {
 	return clusters
 }
 
-func getOktetoClusters(skipCloud bool) []utils.SelectorItem {
+func getOktetoClusters() []utils.SelectorItem {
 	orderedOktetoClusters := make([]utils.SelectorItem, 0)
 	ctxStore := okteto.GetContextStore()
 	for ctxName, okCtx := range ctxStore.Contexts {
 		if !okCtx.IsOkteto {
-			continue
-		}
-		if skipCloud && ctxName == okteto.CloudURL {
 			continue
 		}
 		orderedOktetoClusters = append(
@@ -59,12 +56,6 @@ func getOktetoClusters(skipCloud bool) []utils.SelectorItem {
 			})
 	}
 	sort.Slice(orderedOktetoClusters, func(i, j int) bool {
-		if orderedOktetoClusters[i].Name == okteto.CloudURL {
-			return true
-		}
-		if orderedOktetoClusters[j].Name == okteto.CloudURL {
-			return false
-		}
 		return strings.Compare(orderedOktetoClusters[i].Name, orderedOktetoClusters[j].Name) < 0
 	})
 	return orderedOktetoClusters

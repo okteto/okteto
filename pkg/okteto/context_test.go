@@ -34,7 +34,7 @@ func Test_UrlToKubernetesContext(t *testing.T) {
 		in   string
 		want string
 	}{
-		{name: "is-url-with-protocol", in: "https://cloud.okteto.com", want: "cloud_okteto_com"},
+		{name: "is-url-with-protocol", in: "https://okteto_example.com", want: "okteto_example_com"},
 		{name: "is-k8scontext", in: "minikube", want: ""},
 	}
 
@@ -53,48 +53,25 @@ func Test_K8sContextToOktetoUrl(t *testing.T) {
 		in   string
 		want string
 	}{
-		{name: "is-url", in: CloudURL, want: CloudURL},
-		{name: "is-okteto-context", in: "cloud_okteto_com", want: CloudURL},
+		{name: "is-url", in: "https://example.com", want: "https://example.com"},
+		{name: "is-okteto-context", in: "okteto_test_com", want: "https://okteto.test.com"},
 		{name: "is-empty", in: "", want: ""},
 		{name: "is-k8scontext", in: "minikube", want: "minikube"},
 	}
 
 	CurrentStore = &ContextStore{
-		Contexts: map[string]*Context{CloudURL: {IsOkteto: true}},
+		Contexts: map[string]*Context{
+			"https://okteto.test.com": {IsOkteto: true},
+		},
+		CurrentContext: "https://okteto.test.com",
 	}
+
 	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeK8sProvider := test.NewFakeK8sProvider()
-			if result := K8sContextToOktetoUrl(ctx, tt.in, "namespace", fakeK8sProvider); result != tt.want {
-				t.Errorf("Test '%s' failed: %s", tt.name, result)
-			}
-		})
-	}
-}
-
-func Test_IsOktetoCloud(t *testing.T) {
-	var tests = []struct {
-		context *Context
-		name    string
-		want    bool
-	}{
-		{name: "is-cloud", context: &Context{Name: "https://cloud.okteto.com"}, want: true},
-		{name: "is-staging", context: &Context{Name: "https://staging.okteto.dev"}, want: true},
-		{name: "is-not-cloud", context: &Context{Name: "https://cindy.okteto.dev"}, want: false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			CurrentStore = &ContextStore{
-				CurrentContext: "test",
-				Contexts: map[string]*Context{
-					"test": tt.context,
-				},
-			}
-			if got := IsOktetoCloud(); got != tt.want {
-				t.Errorf("IsOktetoCloud, got %v, want %v", got, tt.want)
-			}
+			result := K8sContextToOktetoUrl(ctx, tt.in, "namespace", fakeK8sProvider)
+			require.Equal(t, tt.want, result)
 		})
 	}
 }

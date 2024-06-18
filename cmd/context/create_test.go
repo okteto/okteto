@@ -62,21 +62,21 @@ func Test_createContext(t *testing.T) {
 			name: "change namespace",
 			ctxStore: &okteto.ContextStore{
 				Contexts: map[string]*okteto.Context{
-					"https://okteto.cloud.com": {},
+					"https://okteto.example.com": {},
 				},
-				CurrentContext: "https://okteto.cloud.com",
+				CurrentContext: "https://okteto.example.com",
 			},
 			ctxOptions: &Options{
 				IsOkteto:  true,
 				Save:      true,
-				Context:   "https://okteto.cloud.com",
+				Context:   "https://okteto-2.example.com",
 				Namespace: "test",
 			},
 			user: &types.User{
 				Token: "test",
 			},
 			kubeconfigCtx: test.KubeconfigFields{
-				Name:           []string{"cloud_okteto_com"},
+				Name:           []string{"okteto_example_com"},
 				Namespace:      []string{"test"},
 				CurrentContext: ""},
 			expectedErr: false,
@@ -85,14 +85,14 @@ func Test_createContext(t *testing.T) {
 			name: "change namespace forbidden",
 			ctxStore: &okteto.ContextStore{
 				Contexts: map[string]*okteto.Context{
-					"https://okteto.cloud.com": {},
+					"https://okteto.example.com": {},
 				},
-				CurrentContext: "https://okteto.cloud.com",
+				CurrentContext: "https://okteto.example.com",
 			},
 			ctxOptions: &Options{
 				IsOkteto:             true,
 				Save:                 true,
-				Context:              "https://okteto.cloud.com",
+				Context:              "https://okteto.example.com",
 				Namespace:            "not-found",
 				CheckNamespaceAccess: true,
 			},
@@ -100,7 +100,7 @@ func Test_createContext(t *testing.T) {
 				Token: "test",
 			},
 			kubeconfigCtx: test.KubeconfigFields{
-				Name:           []string{"cloud_okteto_com"},
+				Name:           []string{"okteto_example_com"},
 				Namespace:      []string{"test"},
 				CurrentContext: "",
 			},
@@ -110,21 +110,21 @@ func Test_createContext(t *testing.T) {
 			name: "change to personal namespace if namespace is not found",
 			ctxStore: &okteto.ContextStore{
 				Contexts: map[string]*okteto.Context{
-					"https://okteto.cloud.com": {},
+					"https://okteto.example.com": {},
 				},
-				CurrentContext: "https://okteto.cloud.com",
+				CurrentContext: "https://okteto.example.com",
 			},
 			ctxOptions: &Options{
 				IsOkteto:  true,
 				Save:      true,
-				Context:   "https://okteto.cloud.com",
+				Context:   "https://okteto.example.com",
 				Namespace: "not-found",
 			},
 			user: &types.User{
 				Token: "test",
 			},
 			kubeconfigCtx: test.KubeconfigFields{
-				Name:           []string{"cloud_okteto_com"},
+				Name:           []string{"okteto_example_com"},
 				Namespace:      []string{"test"},
 				CurrentContext: "",
 			},
@@ -137,10 +137,10 @@ func Test_createContext(t *testing.T) {
 			},
 			ctxOptions: &Options{
 				IsOkteto: false,
-				Context:  "cloud_okteto_com",
+				Context:  "okteto_example_com",
 			},
 			kubeconfigCtx: test.KubeconfigFields{
-				Name:      []string{"cloud_okteto_com"},
+				Name:      []string{"okteto_example_com"},
 				Namespace: []string{"test"},
 			},
 			user: &types.User{
@@ -168,13 +168,13 @@ func Test_createContext(t *testing.T) {
 			},
 			ctxOptions: &Options{
 				IsOkteto: false,
-				Context:  "cloud_okteto_com",
+				Context:  "okteto_example_com",
 			},
 			user: &types.User{
 				Token: "test",
 			},
 			kubeconfigCtx: test.KubeconfigFields{
-				Name:      []string{"cloud_okteto_com"},
+				Name:      []string{"okteto_example_com"},
 				Namespace: []string{"test"},
 			},
 			expectedErr: false,
@@ -186,13 +186,13 @@ func Test_createContext(t *testing.T) {
 			},
 			ctxOptions: &Options{
 				IsOkteto: false,
-				Context:  "cloud_okteto_com",
+				Context:  "okteto_example_com",
 			},
 			user: &types.User{
 				Token: "test",
 			},
 			kubeconfigCtx: test.KubeconfigFields{
-				Name:      []string{"cloud_okteto_com"},
+				Name:      []string{"okteto_example_com"},
 				Namespace: []string{"test"},
 			},
 			expectedErr: false,
@@ -205,13 +205,13 @@ func Test_createContext(t *testing.T) {
 			},
 			ctxOptions: &Options{
 				IsOkteto: false,
-				Context:  "cloud_okteto_com",
+				Context:  "okteto_example_com",
 			},
 			user: &types.User{
 				Token: "test",
 			},
 			kubeconfigCtx: test.KubeconfigFields{
-				Name:      []string{"cloud_okteto_com"},
+				Name:      []string{"okteto_example_com"},
 				Namespace: []string{""},
 			},
 			expectedErr: false,
@@ -231,10 +231,10 @@ func Test_createContext(t *testing.T) {
 			},
 			ctxOptions: &Options{
 				IsOkteto: false,
-				Context:  "cloud_okteto_com",
+				Context:  "okteto_example_com",
 			},
 			kubeconfigCtx: test.KubeconfigFields{
-				Name:           []string{"cloud_okteto_com"},
+				Name:           []string{"okteto_example_com"},
 				Namespace:      []string{"test"},
 				CurrentContext: "",
 			},
@@ -259,7 +259,7 @@ func Test_createContext(t *testing.T) {
 			},
 			kubeconfigCtx: test.KubeconfigFields{
 
-				Name:           []string{"cloud_okteto_com"},
+				Name:           []string{"okteto_example_com"},
 				Namespace:      []string{"test"},
 				CurrentContext: "",
 			},
@@ -283,7 +283,7 @@ func Test_createContext(t *testing.T) {
 				Context:  "https://cloud.okteto.com",
 			},
 			kubeconfigCtx: test.KubeconfigFields{
-				Name:           []string{"cloud_okteto_com"},
+				Name:           []string{"okteto_example_com"},
 				Namespace:      []string{"test"},
 				CurrentContext: "",
 			},
@@ -296,14 +296,14 @@ func Test_createContext(t *testing.T) {
 			},
 			ctxOptions: &Options{
 				IsOkteto: true,
-				Context:  "https://okteto.cloud.com",
+				Context:  "https://okteto.example.com",
 				Token:    "this is a token",
 			},
 			user: &types.User{
 				Token: "test",
 			},
 			kubeconfigCtx: test.KubeconfigFields{
-				Name:           []string{"cloud_okteto_com"},
+				Name:           []string{"okteto_example_com"},
 				Namespace:      []string{"test"},
 				CurrentContext: "",
 			},
@@ -365,7 +365,7 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 			name: "okteto context triggers auto auth",
 			ctxOptions: &Options{
 				IsOkteto:     true,
-				Context:      "https://okteto.cloud.com",
+				Context:      "https://okteto.example.com",
 				Token:        "this is a invalid token",
 				IsCtxCommand: true,
 			},
@@ -377,7 +377,7 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 			name: "non okteto context command gives unauthorized message",
 			ctxOptions: &Options{
 				IsOkteto:     true,
-				Context:      "https://okteto.cloud.com",
+				Context:      "https://okteto.example.com",
 				Token:        "this is a invalid token",
 				IsCtxCommand: false,
 			},

@@ -57,7 +57,7 @@ This will prompt you to select one of your existing contexts or to create a new 
 
 You can also specify an Okteto URL:
 
-    $ okteto context use https://cloud.okteto.com
+    $ okteto context use https://okteto.example.com
 
 Or a Kubernetes context:
 
@@ -209,7 +209,7 @@ func getContext(ctxOptions *Options) (string, error) {
 		}
 		if isCreateNewContextOption(oktetoContext) {
 			ctxStore := okteto.GetContextStore()
-			clusterURL := okteto.CloudURL
+			clusterURL := ""
 			if oCtx, ok := ctxStore.Contexts[ctxStore.CurrentContext]; ok && oCtx.IsOkteto {
 				clusterURL = ctxStore.CurrentContext
 			}

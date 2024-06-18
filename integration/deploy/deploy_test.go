@@ -31,7 +31,7 @@ import (
 var (
 	user          = ""
 	kubectlBinary = "kubectl"
-	appsSubdomain = "cloud.okteto.net"
+	appsSubdomain = ""
 	token         = ""
 )
 
