@@ -98,13 +98,18 @@ RUN \
   {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}} {{end}}\
   --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
-  /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}
+  /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}{{ if eq .Command "test" }} || true{{ end }}
+
+{{range $key, $artifact := .Artifacts }}
+RUN if [ -f /okteto/src/{{$artifact.Path}} ]; then \
+    mkdir -p $(dirname /okteto/artifacts/{{$artifact.Destination}}) && \
+    cp /okteto/src/{{$artifact.Path}} /okteto/artifacts/{{$artifact.Destination}}; \
+  fi
+{{end}}
 
 FROM scratch
 {{ if gt (len .Artifacts) 0 -}}
-{{ range $key, $artifact := .Artifacts -}}
-COPY --from=runner /okteto/src/{{$artifact.Path}} {{$artifact.Destination}}
-{{ end }}
+COPY --from=runner /okteto/artifacts/ /
 {{ else -}}
 COPY --from=runner /etc/.oktetocachekey .oktetocachekey
 {{ end }}

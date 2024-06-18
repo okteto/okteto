@@ -27,7 +27,7 @@ func Test_NoArgsAcceptedCtx(t *testing.T) {
 }
 
 func Test_NoArgsAcceptedShow(t *testing.T) {
-	cmd := Context(nil)
+	cmd := Context()
 	cmd.SetArgs([]string{"args"})
 	err := cmd.Execute()
 	if err == nil {
@@ -47,15 +47,6 @@ func Test_NoArgsAcceptedList(t *testing.T) {
 func Test_NoArgsAcceptedUpdateKubeConfig(t *testing.T) {
 	cmd := UpdateKubeconfigCMD(nil)
 	cmd.SetArgs([]string{"args"})
-	err := cmd.Execute()
-	if err == nil {
-		t.Fatal("MaxArgs not supported")
-	}
-}
-
-func Test_MaxArgsCreate(t *testing.T) {
-	cmd := CreateCMD()
-	cmd.SetArgs([]string{"args", "args"})
 	err := cmd.Execute()
 	if err == nil {
 		t.Fatal("MaxArgs not supported")

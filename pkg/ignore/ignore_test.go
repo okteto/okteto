@@ -79,30 +79,30 @@ func TestIgnore(t *testing.T) {
 			name: "extran_newlines",
 			input: `
 
-      .git     
+      .git
 
-      [deploy]     
+      [deploy]
 
-      integration     
-
-
-      [destroy]     
+      integration
 
 
-      frontend/*     
+      [destroy]
 
 
-      backend     
+      frontend/*
 
 
-      [test]     
-
-      chart     
+      backend
 
 
-      [test.frontend]     
+      [test]
 
-      backend     
+      chart
+
+
+      [test.frontend]
+
+      backend
 
 
 

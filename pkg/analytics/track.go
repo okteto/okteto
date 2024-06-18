@@ -57,7 +57,6 @@ const (
 	execEvent                = "Exec"
 	signupEvent              = "Signup"
 	contextEvent             = "Context"
-	contextUseNamespaceEvent = "Context Use-namespace"
 	disableEvent             = "Disable Analytics"
 	stackNotSupportedField   = "Stack Field Not Supported"
 	buildPullErrorEvent      = "BuildPullError"
@@ -213,11 +212,6 @@ func TrackDestroyStack(success bool) {
 	track(destroyStackEvent, success, nil)
 }
 
-// TrackLogin sends a tracking event to mixpanel when the user logs in
-func TrackLogin(success bool) {
-	track(loginEvent, success, nil)
-}
-
 // TrackSignup sends a tracking event to mixpanel when the user signs up
 func TrackSignup(success bool, userID string) {
 	if err := mixpanelClient.Alias(get().MachineID, userID); err != nil {
@@ -233,11 +227,6 @@ func TrackContext(success bool) {
 		return
 	}
 	track(contextEvent, success, nil)
-}
-
-// TrackContextUseNamespace sends a tracking event to mixpanel when the user use context in
-func TrackContextUseNamespace(success bool) {
-	track(contextUseNamespaceEvent, success, nil)
 }
 
 func TrackStackWarnings(warnings []string) {
