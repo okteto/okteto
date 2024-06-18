@@ -42,7 +42,6 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 	manifestKeys := getStructKeys(manifestSchema)
 	manifestKeys["model.manifestRaw"] = manifestKeys["model.Manifest"]
 	manifestKeys["build.infoRaw"] = manifestKeys["build.Info"]
-	manifestKeys["model.DevRC"] = manifestKeys["model.Dev"]
 	manifestKeys["model.devType"] = manifestKeys["model.Dev"]
 	manifestKeys["model.testAlias"] = manifestKeys["model.Test"]
 	manifestKeys["model.testCommandAlias"] = manifestKeys["model.TestCommand"]

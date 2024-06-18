@@ -249,11 +249,11 @@ jobs:
       - run:
           name: Prepare env
           environment:
-            OKTETO_URL: https://staging.okteto.dev/
+            OKTETO_CONTEXT: https://staging.okteto.dev/
           command: |
             new-item $HOME\.okteto -itemtype "directory" -force
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
-            & "$($HOME)\project\artifacts\bin\okteto.exe" login --token $env:API_STAGING_TOKEN
+            & "$($HOME)\project\artifacts\bin\okteto.exe" context use ${OKTETO_CONTEXT} --token $env:API_STAGING_TOKEN
             & "$($HOME)\project\artifacts\bin\okteto.exe" kubeconfig
       - run:
           # As the integration test running the okteto deploy needs the CLI which we are testing, we build the current

@@ -159,7 +159,7 @@ func main() {
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
 
-	root.AddCommand(contextCMD.Context(okClientProvider))
+	root.AddCommand(contextCMD.Context())
 	root.AddCommand(cmd.Kubeconfig(okClientProvider))
 
 	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
@@ -176,7 +176,6 @@ func main() {
 	root.AddCommand(exec.NewExec(fs, ioController, k8sClientProvider).Cmd(ctx))
 	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
-	root.AddCommand(cmd.UpdateDeprecated())
 	root.AddCommand(deploy.Deploy(ctx, at, insights, ioController, k8sLogger))
 	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger))
 	root.AddCommand(deploy.Endpoints(ctx, k8sLogger))

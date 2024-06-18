@@ -325,7 +325,7 @@ func TestCreateDockerfile(t *testing.T) {
 				params: &Params{
 					BaseImage:           "test-image",
 					Manifest:            fakeManifest,
-					BuildEnvVars:        map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUIL_SVC2_IMAGE": "TWO_VALUE"},
+					BuildEnvVars:        map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
 					DependenciesEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
 					DockerfileName:      "Dockerfile.deploy",
 					Command:             "deploy",
@@ -362,7 +362,7 @@ COPY . /okteto/src
 WORKDIR /okteto/src
 
 
-ENV OKTETO_BUIL_SVC2_IMAGE TWO_VALUE
+ENV OKTETO_BUILD_SVC2_IMAGE TWO_VALUE
 
 ENV OKTETO_BUIL_SVC_IMAGE ONE_VALUE
 
@@ -386,11 +386,110 @@ RUN \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
   /okteto/bin/okteto remote-run deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test"
 
+
+
 FROM scratch
 COPY --from=runner /etc/.oktetocachekey .oktetocachekey
 
 `,
-				buildEnvVars:      map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUIL_SVC2_IMAGE": "TWO_VALUE"},
+				buildEnvVars:      map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
+				dependencyEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
+			},
+		},
+		{
+			name: "okteto test",
+			config: config{
+				params: &Params{
+					BaseImage:           "test-image",
+					Manifest:            fakeManifest,
+					BuildEnvVars:        map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
+					DependenciesEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
+					DockerfileName:      "Dockerfile.test",
+					Command:             "test",
+					CommandFlags:        []string{"--name \"test\""},
+					Artifacts: []model.Artifact{
+						{
+							Path:        "coverage.txt",
+							Destination: "coverage.txt",
+						},
+						{
+							Path:        "report.json",
+							Destination: "/testing/report.json",
+						},
+					},
+				},
+			},
+			expected: expected{
+				dockerfileName: filepath.Clean("/test/Dockerfile.test"),
+				dockerfileContent: `
+FROM okteto/okteto:latest as okteto-cli
+
+FROM test-image as runner
+
+ENV PATH="${PATH}:/okteto/bin"
+COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
+
+
+ENV OKTETO_DEPLOY_REMOTE true
+ARG OKTETO_NAMESPACE
+ARG OKTETO_CONTEXT
+ARG OKTETO_TOKEN
+ARG OKTETO_ACTION_NAME
+ARG OKTETO_TLS_CERT_BASE64
+ARG INTERNAL_SERVER_NAME
+ARG OKTETO_DEPLOYABLE
+ARG GITHUB_REPOSITORY
+ARG BUILDKIT_HOST
+ARG OKTETO_REGISTRY_URL
+ARG OKTETO_IS_PREVIEW_ENVIRONMENT
+RUN mkdir -p /etc/ssl/certs/
+RUN echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /etc/ssl/certs/okteto.crt
+
+COPY . /okteto/src
+WORKDIR /okteto/src
+
+
+ENV OKTETO_BUILD_SVC2_IMAGE TWO_VALUE
+
+ENV OKTETO_BUIL_SVC_IMAGE ONE_VALUE
+
+
+
+ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD dependency_pass
+
+ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME dependency_user
+
+
+ARG OKTETO_GIT_COMMIT
+ARG OKTETO_GIT_BRANCH
+ARG OKTETO_INVALIDATE_CACHE
+
+RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
+RUN okteto registrytoken install --force --log-output=json
+
+RUN \
+  \
+  --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
+  mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
+  /okteto/bin/okteto remote-run test --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test" || true
+
+
+RUN if [ -f /okteto/src/coverage.txt ]; then \
+    mkdir -p $(dirname /okteto/artifacts/coverage.txt) && \
+    cp /okteto/src/coverage.txt /okteto/artifacts/coverage.txt; \
+  fi
+
+RUN if [ -f /okteto/src/report.json ]; then \
+    mkdir -p $(dirname /okteto/artifacts//testing/report.json) && \
+    cp /okteto/src/report.json /okteto/artifacts//testing/report.json; \
+  fi
+
+
+FROM scratch
+COPY --from=runner /okteto/artifacts/ /
+
+`,
+				buildEnvVars:      map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
 				dependencyEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
 			},
 		},

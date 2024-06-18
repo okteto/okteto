@@ -49,7 +49,7 @@ CLI_TEST_MY_VAR4=.env
 deploy:
   commands:
   - printenv
-  
+
 destroy:
   commands:
   - printenv

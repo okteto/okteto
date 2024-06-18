@@ -83,7 +83,7 @@ func (e *Exec) Cmd(ctx context.Context) *cobra.Command {
 		Use:                   "exec (DEV SVC) [flags] -- COMMAND [args...]",
 		DisableFlagsInUseLine: true,
 		Short:                 "Execute a command in your development container",
-		Long: `Executes the provided command or the default shell inside a running pod. 
+		Long: `Executes the provided command or the default shell inside a running pod.
 This command allows you to run tools or perform operations directly on a dev environment that is already running.
 For more information on managing pods, refer to the okteto documentation: https://www.okteto.com/docs/`,
 		Example: `# Run the 'echo this is a test' command inside the pod named 'my-pod'
