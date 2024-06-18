@@ -121,9 +121,6 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 		// this is to avoid login with the browser again if we already have a valid token
 		ctxOptions.Token = okCtx.Token
 		ctxOptions.InferredToken = true
-		if ctxOptions.Builder == "" && okCtx.Builder != "" {
-			ctxOptions.Builder = okCtx.Builder
-		}
 		if ctxOptions.Namespace == "" {
 			ctxOptions.Namespace = ctxStore.Contexts[ctxOptions.Context].Namespace
 		}
@@ -335,7 +332,7 @@ func (*Command) initKubernetesContext(ctxOptions *Options) error {
 		ctxOptions.Namespace = cfg.Contexts[ctxOptions.Context].Namespace
 	}
 
-	okteto.AddKubernetesContext(ctxOptions.Context, ctxOptions.Namespace, ctxOptions.Builder)
+	okteto.AddKubernetesContext(ctxOptions.Context, ctxOptions.Namespace)
 
 	kubeCtx.Namespace = okteto.GetContext().Namespace
 	cfg.CurrentContext = okteto.GetContext().Name

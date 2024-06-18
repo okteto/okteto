@@ -123,7 +123,7 @@ func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *model.ContextRe
 	if ctxResource.Namespace == "" {
 		ctxResource.Namespace = "default"
 	}
-	okteto.AddKubernetesContext(ctxResource.Context, ctxResource.Namespace, "")
+	okteto.AddKubernetesContext(ctxResource.Context, ctxResource.Namespace)
 	return nil
 }
 
