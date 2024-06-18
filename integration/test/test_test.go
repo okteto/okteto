@@ -70,6 +70,25 @@ test:
 deploy:
   - echo "deploying"
 `
+	dockerfileWithAnotherUser = `
+FROM ubuntu:latest
+
+WORKDIR /app
+COPY . .
+
+RUN chown -R 1000:1000 /app
+USER 1000
+`
+	oktetoManifestWithImageReferencedInBuildSection = `
+build:
+  tests:
+    context: .
+test:
+  hello:
+    image: $OKTETO_BUILD_TESTS_IMAGE
+    commands:
+    - echo hello
+`
 )
 
 var (
@@ -200,6 +219,41 @@ func TestOktetoTestsWithFailingTestsAndArtifacts(t *testing.T) {
 	coverage, err := os.ReadFile(coveragePath)
 	require.NoError(t, err)
 	assert.Equal(t, "NOT-OK\n", string(coverage))
+
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+}
+
+// TestOktetoTestsWithAnotherUser validates the simplest happy path of okteto test
+func TestOktetoTestsWithAnotherUser(t *testing.T) {
+	integration.SkipIfNotOktetoCluster(t)
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+
+	oktetoManifestPath := filepath.Join(dir, "okteto.yml")
+	assert.NoError(t, os.WriteFile(oktetoManifestPath, []byte(oktetoManifestWithPassingTest), 0600))
+
+	testNamespace := integration.GetTestNamespace("TestsWithAnotherUser", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+
+	testOptions := &commands.TestOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+		NoCache:    true,
+	}
+	out, err := commands.RunOktetoTestAndGetOutput(oktetoPath, testOptions)
+	require.NoError(t, err)
+	assert.Contains(t, out, "Test container 'unit' passed")
 
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
