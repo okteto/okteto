@@ -71,3 +71,7 @@ func (c *FakePreviewsClient) Destroy(_ context.Context, _ string) error {
 func (*FakePreviewsClient) ListEndpoints(_ context.Context, _ string) ([]types.Endpoint, error) {
 	return nil, nil
 }
+
+func (*FakePreviewsClient) Get(_ context.Context, _ string) (*types.Preview, error) {
+	return nil, nil
+}
