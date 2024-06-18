@@ -18,15 +18,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
 
 	"github.com/manifoldco/promptui"
-	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -44,29 +41,6 @@ const (
 	DefaultManifest   = "okteto.yml"
 	secondaryManifest = "okteto.yaml"
 )
-
-func LoadManifestRc(dev *model.Dev) error {
-	defaultDevRcPath := filepath.Join(config.GetOktetoHome(), "okteto.yml")
-	secondaryDevRcPath := filepath.Join(config.GetOktetoHome(), "okteto.yaml")
-	var devRc *model.DevRC
-	var err error
-	if filesystem.FileExists(defaultDevRcPath) {
-		devRc, err = model.GetRc(defaultDevRcPath)
-		if err != nil {
-			return fmt.Errorf("error while reading %s file: %w", defaultDevRcPath, err)
-		}
-	} else if filesystem.FileExists(secondaryDevRcPath) {
-		devRc, err = model.GetRc(secondaryDevRcPath)
-		if err != nil {
-			return fmt.Errorf("error while reading %s file: %w", defaultDevRcPath, err)
-		}
-	}
-
-	if devRc != nil {
-		model.MergeDevWithDevRc(dev, devRc)
-	}
-	return nil
-}
 
 // GetDevFromManifest gets a dev from a manifest by comparing the given dev name with the dev name in the manifest
 func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, error) {
