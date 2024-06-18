@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"fmt"
+	"runtime"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/okteto/okteto/cmd/utils"
