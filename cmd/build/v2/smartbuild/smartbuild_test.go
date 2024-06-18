@@ -39,10 +39,13 @@ type fakeRegistryController struct {
 	isGlobalRegistry bool
 }
 
-func (frc fakeRegistryController) CloneGlobalImageToDev(image string) (string, error) {
-	return image, frc.err
-}
+func (frc fakeRegistryController) GetDevImageFromGlobal(image string) string { return image }
+
 func (frc fakeRegistryController) IsGlobalRegistry(string) bool { return frc.isGlobalRegistry }
+func (frc fakeRegistryController) IsOktetoRegistry(string) bool { return false }
+func (fr fakeRegistryController) Clone(from, to string) (string, error) {
+	return from, nil
+}
 
 type fakeHasher struct {
 	err  error
@@ -185,70 +188,6 @@ func TestGetBuildHash(t *testing.T) {
 	assert.Equal(t, "hash", out)
 }
 
-func TestCloneGlobalImageToDev(t *testing.T) {
-	type input struct {
-		err      error
-		isGlobal bool
-	}
-	type output struct {
-		err  error
-		hash string
-	}
-
-	tests := []struct {
-		name   string
-		input  input
-		output output
-	}{
-		{
-			name: "isGlobal - err",
-			input: input{
-				isGlobal: true,
-				err:      assert.AnError,
-			},
-			output: output{
-				hash: "",
-				err:  assert.AnError,
-			},
-		},
-		{
-			name: "isGlobal - no error",
-			input: input{
-				isGlobal: true,
-				err:      nil,
-			},
-			output: output{
-				hash: "test",
-				err:  nil,
-			},
-		},
-		{
-			name: "not global",
-			input: input{
-				isGlobal: false,
-			},
-			output: output{
-				hash: "test",
-				err:  nil,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			sbc := Ctrl{
-				ioCtrl: io.NewIOController(),
-				registryController: fakeRegistryController{
-					err:              tt.input.err,
-					isGlobalRegistry: tt.input.isGlobal,
-				},
-			}
-			out, err := sbc.CloneGlobalImageToDev("test")
-			assert.Equal(t, tt.output.hash, out)
-			assert.ErrorIs(t, err, tt.output.err)
-		})
-	}
-}
-
 func Test_getBuildHashFromCommit(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	err := afero.WriteFile(fs, "secret", []byte("bar"), 0600)
@@ -380,6 +319,59 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 				expectedHash := sha256.Sum256([]byte(tc.expected))
 				assert.Equal(t, hex.EncodeToString(expectedHash[:]), got)
 			}
+		})
+	}
+}
+
+func TestCloneGlobalImageToDev(t *testing.T) {
+	type input struct {
+		from string
+	}
+	type output struct {
+		err      error
+		devImage string
+	}
+
+	tests := []struct {
+		input  input
+		name   string
+		output output
+	}{
+		{
+			name: "Global Registry",
+			input: input{
+				from: "okteto.global/myimage",
+			},
+			output: output{
+				devImage: "okteto.global/myimage",
+			},
+		},
+		{
+			name: "Non-Global Registry",
+			input: input{
+				from: "okteto.dev/myimage",
+			},
+			output: output{
+				devImage: "okteto.dev/myimage",
+				err:      nil,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := Ctrl{
+				registryController: fakeRegistryController{
+					isGlobalRegistry: tt.input.from == "okteto.global/myimage",
+					err:              tt.output.err,
+				},
+				ioCtrl: io.NewIOController(),
+			}
+
+			devImage, err := ctrl.CloneGlobalImageToDev(tt.input.from)
+
+			assert.Equal(t, tt.output.devImage, devImage)
+			assert.Equal(t, tt.output.err, err)
 		})
 	}
 }

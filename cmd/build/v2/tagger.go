@@ -15,17 +15,23 @@ package v2
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/registry"
 )
 
+var extendedImageRegex = regexp.MustCompile(`^[a-zA-Z0-9-_.]+\/[a-zA-Z0-9-_.]+\/([a-zA-Z0-9-_.]+):[a-zA-Z0-9-_.]+$`)
+
 type imageTaggerInterface interface {
-	getServiceImageReference(manifestName, svcName string, b *build.Info, buildHash string) string
+	getServiceDevImageReference(manifestName, svcName string, b *build.Info) string
 	getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string
 	getImageReferencesForDeploy(manifestName, svcToBuildName string) []string
+	getGlobalTagFromDevIfNeccesary(tags, namespace, registryURL, buildHash string, ic registry.ImageCtrl) string
 }
 
 type smartBuildController interface {
@@ -57,16 +63,15 @@ func newImageTagger(cfg oktetoBuilderConfigInterface, sbc smartBuildController) 
 }
 
 /*
-getServiceImageReference returns the image reference [name]:[tag] for the given service.
+getServiceDevImageReference returns the image reference [name]:[tag] for the given service.
 
 When service image is set on manifest, this is the returned one.
 
 Inferred tag is constructed using the following:
 [name] is the combination of the targetRegistry, manifestName and serviceName
-[tag] it is either the buildHash or the default okteto tag "okteto". If the default tag "okteto" is used, the targetRegistry
-should always be the dev registry
+[tag] it is the default okteto tag "okteto".
 */
-func (it imageTagger) getServiceImageReference(manifestName, svcName string, b *build.Info, buildHash string) string {
+func (it imageTagger) getServiceDevImageReference(manifestName, svcName string, b *build.Info) string {
 	// when b.Image is set or services does not have dockerfile then no infer reference and return what is set on the manifest
 	if b.Image != "" || !serviceHasDockerfile(b) {
 		return b.Image
@@ -74,21 +79,33 @@ func (it imageTagger) getServiceImageReference(manifestName, svcName string, b *
 
 	// build the image reference based on context and buildInfo
 	targetRegistry := constants.DevRegistry
-	tag := ""
-	if it.cfg.HasGlobalAccess() && it.smartBuildController.IsEnabled() {
-		// With build context enabled, we should always use global registry
-		targetRegistry = constants.GlobalRegistry
-		tag = buildHash
-	}
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	if tag != "" {
-		return useReferenceTemplate(targetRegistry, sanitizedName, svcName, tag)
-	}
-
-	// If the tag is empty, and we default to "okteto" tag, we should not use global registry, we should use always
-	// the dev registry
-	targetRegistry = constants.DevRegistry
 	return useReferenceTemplate(targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
+}
+
+func (it imageTagger) getGlobalTagFromDevIfNeccesary(tags, namespace, registryURL, buildHash string, ic registry.ImageCtrl) string {
+	if !it.cfg.HasGlobalAccess() || !it.smartBuildController.IsEnabled() || buildHash == "" {
+		return ""
+	}
+	tagList := strings.Split(tags, ",")
+	globalWithHash := ""
+	for _, tag := range tagList {
+		expandedTag := ic.ExpandOktetoDevRegistry(tag)
+		matches := extendedImageRegex.FindStringSubmatch(expandedTag)
+		regexGroupFullNameRepo := 2
+		if len(matches) != regexGroupFullNameRepo {
+			continue
+		}
+		name := matches[1]
+		if strings.HasPrefix(expandedTag, fmt.Sprintf("%s/%s/", registryURL, namespace)) {
+			if globalWithHash != "" {
+				globalWithHash += ","
+			}
+			newImage := fmt.Sprintf("%s/%s:%s", constants.GlobalRegistry, name, buildHash)
+			globalWithHash += ic.ExpandOktetoGlobalRegistry(newImage)
+		}
+	}
+	return globalWithHash
 }
 
 // getImageReferencesForTag returns all the possible images references that can be used for build with the given tag

@@ -108,7 +108,7 @@ It is important that this command does the minimum and must not do calculations 
 
 			params := deployable.DestroyParameters{
 				Name:         options.Name,
-				Namespace:    oktetoContext.GetCurrentNamespace(),
+				Namespace:    oktetoContext.GetNamespace(),
 				Deployable:   dep,
 				Variables:    options.Variables,
 				ForceDestroy: options.ForceDestroy,

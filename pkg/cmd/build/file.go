@@ -89,7 +89,7 @@ func getTranslatedDockerFile(filename string, okCtx OktetoContextInterface) (str
 func translateOktetoRegistryImage(input string, okCtx OktetoContextInterface) string {
 	replacer := registry.NewRegistryReplacer(GetRegistryConfigFromOktetoConfig(okCtx))
 	if strings.Contains(input, constants.DevRegistry) {
-		tag := replacer.Replace(input, constants.DevRegistry, okCtx.GetCurrentNamespace())
+		tag := replacer.Replace(input, constants.DevRegistry, okCtx.GetNamespace())
 		return tag
 	}
 

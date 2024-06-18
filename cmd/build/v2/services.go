@@ -101,7 +101,7 @@ func (bc *OktetoBuilder) GetServicesToBuildDuringExecution(ctx context.Context, 
 func (bc *OktetoBuilder) checkServiceToBuildDuringDeploy(service string, manifest *model.Manifest, buildCh chan string) error {
 	buildInfo := manifest.Build[service].Copy()
 	isStack := manifest.Type == model.StackType
-	if isStack && bc.oktetoContext.IsOkteto() && !bc.Registry.IsOktetoRegistry(buildInfo.Image) {
+	if isStack && bc.oktetoContext.IsOktetoCluster() && !bc.Registry.IsOktetoRegistry(buildInfo.Image) {
 		buildInfo.Image = ""
 	}
 

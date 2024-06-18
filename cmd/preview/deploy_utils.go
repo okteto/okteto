@@ -24,6 +24,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	modelUtils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/validator"
 )
 
 var (
@@ -31,6 +32,10 @@ var (
 )
 
 func optionsSetup(cwd string, opts *DeployOptions, args []string) error {
+	if err := validator.CheckReservedVariablesNameOption(opts.variables); err != nil {
+		return err
+	}
+
 	if len(args) == 0 {
 		opts.name = getRandomName(opts.scope)
 	} else {
