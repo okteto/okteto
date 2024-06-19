@@ -80,16 +80,15 @@ type Options struct {
 	ManifestPathFlag string
 	// ManifestPath is the path to the manifest used though the command execution.
 	// This might change its value during execution
-	ManifestPath     string
-	Namespace        string
-	K8sContext       string
-	DevName          string
-	Envs             []string
-	commandToExecute []string
-	Remote           int
-	Deploy           bool
-	ForcePull        bool
-	Reset            bool
+	ManifestPath string
+	Namespace    string
+	K8sContext   string
+	DevName      string
+	Envs         []string
+	Remote       int
+	Deploy       bool
+	ForcePull    bool
+	Reset        bool
 }
 
 // Up starts a development container
