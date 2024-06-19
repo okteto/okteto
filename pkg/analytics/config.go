@@ -25,8 +25,6 @@ import (
 )
 
 var (
-	CloudContext      = "Cloud"
-	StagingContext    = "Staging"
 	EnterpriseContext = "Enterprise"
 	KubernetesContext = "Kubernetes"
 	currentAnalytics  *Analytics
@@ -38,16 +36,9 @@ type Analytics struct {
 	Enabled   bool   `json:"enabled"`
 }
 
-func getContextType(oktetoContext string) string {
+func getContextType() string {
 	if okteto.IsOkteto() {
-		switch oktetoContext {
-		case okteto.CloudURL:
-			return CloudContext
-		case okteto.StagingURL:
-			return StagingContext
-		default:
-			return EnterpriseContext
-		}
+		return EnterpriseContext
 	}
 	return KubernetesContext
 }

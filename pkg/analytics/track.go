@@ -291,7 +291,7 @@ func track(event string, success bool, props map[string]interface{}) {
 	props["source"] = origin
 	props["origin"] = origin
 	props["success"] = success
-	props["contextType"] = getContextType(okteto.GetContext().Name)
+	props["contextType"] = getContextType()
 	props["isOkteto"] = okteto.GetContext().IsOkteto
 	if termType := os.Getenv(model.TermEnvVar); termType == "" {
 		props["term-type"] = "other"
@@ -309,8 +309,5 @@ func track(event string, success bool, props map[string]interface{}) {
 }
 
 func disabledByOktetoAdmin() bool {
-	if okteto.IsOktetoCloud() {
-		return false
-	}
 	return !okteto.GetContext().Analytics
 }

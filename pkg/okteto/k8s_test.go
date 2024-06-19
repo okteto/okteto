@@ -30,12 +30,6 @@ func Test_IsLocalHostname(t *testing.T) {
 		hostname string
 		expected bool
 	}{
-
-		{
-			name:     "cloud",
-			hostname: "https://cloud.okteto.com",
-			expected: false,
-		},
 		{
 			name:     "172 non rfc",
 			hostname: "https://172.15.1.2:16443",

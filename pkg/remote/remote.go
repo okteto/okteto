@@ -57,6 +57,9 @@ FROM {{ .OktetoCLIImage }} as okteto-cli
 
 FROM {{ .UserRunnerImage }} as runner
 
+{{ if .UseRootUser -}}
+USER 0
+{{ end -}}
 ENV PATH="${PATH}:/okteto/bin"
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
@@ -173,6 +176,9 @@ type Params struct {
 	// UseOktetoDeployIgnoreFile if enabled loads the docker ignore file from an
 	// .oktetodeployignore file. Disabled by default
 	UseOktetoDeployIgnoreFile bool
+
+	// UseRootUser is a flag to indicate if the user should be root
+	UseRootUser bool
 }
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
@@ -200,6 +206,7 @@ type dockerfileTemplateProperties struct {
 	OktetoIsPreviewEnv       string
 	Caches                   []string
 	Artifacts                []model.Artifact
+	UseRootUser              bool
 }
 
 // NewRunner creates a new Runner for remote
@@ -409,6 +416,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		OktetoIsPreviewEnv:       constants.OktetoIsPreviewEnvVar,
 		Caches:                   params.Caches,
 		Artifacts:                params.Artifacts,
+		UseRootUser:              params.UseRootUser,
 	}
 
 	dockerfile, err := r.fs.Create(filepath.Join(tmpDir, params.DockerfileName))

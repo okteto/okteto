@@ -70,9 +70,6 @@ func executeContextAction() error {
 	defer integration.DeleteGitRepo(actionFolder)
 
 	oktetoURL := os.Getenv(model.OktetoURLEnvVar)
-	if oktetoURL == "" {
-		oktetoURL = okteto.CloudURL
-	}
 	log.Printf("login into %s", oktetoURL)
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
 	args := []string{token, oktetoURL}
