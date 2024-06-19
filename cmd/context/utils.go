@@ -20,7 +20,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/discovery"
