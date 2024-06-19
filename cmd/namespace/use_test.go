@@ -28,11 +28,11 @@ func Test_useNamespace(t *testing.T) {
 	ctx := context.Background()
 	currentNs := "test"
 	var tests = []struct {
+		errGetNamespace   error
+		errGetPreview     error
 		name              string
 		changeToNs        string
 		currentNamespaces []types.Namespace
-		errGetNamespace   error
-		errGetPreview     error
 		expectedErr       bool
 	}{
 		{

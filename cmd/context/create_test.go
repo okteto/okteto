@@ -55,10 +55,10 @@ func Test_createContext(t *testing.T) {
 	var tests = []struct {
 		ctxStore         *okteto.ContextStore
 		ctxOptions       *Options
+		fakeOktetoClient *client.FakeOktetoClient
 		name             string
 		kubeconfigCtx    test.KubeconfigFields
 		fakeObjects      []runtime.Object
-		fakeOktetoClient *client.FakeOktetoClient
 		expectedErr      bool
 	}{
 		{
@@ -440,8 +440,8 @@ func TestCheckAccessToNamespace(t *testing.T) {
 	// TODO: add unit-test to cover preview environments access from context
 	var tests = []struct {
 		ctxOptions       *Options
-		name             string
 		fakeOktetoClient *client.FakeOktetoClient
+		name             string
 		expectedAccess   bool
 	}{
 		{
