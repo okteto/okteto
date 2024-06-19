@@ -213,7 +213,14 @@ func TestSetDevFromManifest(t *testing.T) {
 		},
 	}
 
-	// Loop through test cases and run assertions
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"ns": {
+				Namespace: "ns",
+			},
+		},
+		CurrentContext: "ns",
+	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			parser := &DevCommandArgParser{
