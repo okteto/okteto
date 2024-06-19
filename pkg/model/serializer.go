@@ -763,23 +763,13 @@ type manifestRaw struct {
 }
 
 func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	dev := NewDev()
-	err := unmarshal(&dev)
-	if err == nil {
-		*m = *NewManifestFromDev(dev)
-		return nil
-	}
-	if !isManifestFieldNotFound(err) {
-		return err
-	}
-
 	manifest := manifestRaw{
 		Dev:          map[string]*Dev{},
 		Build:        map[string]*build.Info{},
 		Dependencies: deps.ManifestSection{},
 		External:     externalresource.Section{},
 	}
-	err = unmarshal(&manifest)
+	err := unmarshal(&manifest)
 	if err != nil {
 		return err
 	}
