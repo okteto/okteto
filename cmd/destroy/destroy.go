@@ -161,13 +161,9 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 				}
 				options.ManifestPath = uptManifestPath
 			}
-			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: true}); err != nil {
-				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.GetContext().Name).Error() {
-					return err
-				}
-				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
-					return err
-				}
+
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
+				return err
 			}
 
 			cwd, err := os.Getwd()

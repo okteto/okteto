@@ -15,7 +15,6 @@ package context
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -23,14 +22,11 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/discovery"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 type SelectItem struct {
@@ -110,36 +106,6 @@ func isValidCluster(cluster string) bool {
 	return false
 }
 
-func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *model.ContextResource) error {
-	if cfg == nil {
-		return fmt.Errorf(oktetoErrors.ErrKubernetesContextNotFound, ctxResource.Context, config.GetKubeconfigPath())
-	}
-	if _, ok := cfg.Contexts[ctxResource.Context]; !ok {
-		return fmt.Errorf(oktetoErrors.ErrKubernetesContextNotFound, ctxResource.Context, config.GetKubeconfigPath())
-	}
-	if ctxResource.Namespace == "" {
-		ctxResource.Namespace = cfg.Contexts[ctxResource.Context].Namespace
-	}
-	if ctxResource.Namespace == "" {
-		ctxResource.Namespace = "default"
-	}
-	okteto.AddKubernetesContext(ctxResource.Context, ctxResource.Namespace)
-	return nil
-}
-
-func getCtxResource(path string) (*model.ContextResource, error) {
-	ctxResource, err := model.GetContextResource(path)
-	if err != nil {
-		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
-			return nil, err
-		}
-
-		ctxResource = &model.ContextResource{}
-	}
-
-	return ctxResource, nil
-}
-
 func LoadStackWithContext(ctx context.Context, name, namespace string, stackPaths []string, fs afero.Fs) (*model.Stack, error) {
 	ctxResource, err := utils.LoadStackContext(stackPaths)
 	if err != nil {
@@ -172,26 +138,4 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 	}
 	s.Namespace = okteto.GetContext().Namespace
 	return s, nil
-}
-
-// LoadContextFromPath initializes the okteto context taking into account command flags and manifest namespace/context fields
-func LoadContextFromPath(ctx context.Context, namespace, k8sContext, path string, defaultCtxOpts Options) error {
-	ctxResource, err := getCtxResource(path)
-	if err != nil {
-		return err
-	}
-
-	if err := ctxResource.UpdateNamespace(namespace); err != nil {
-		return err
-	}
-
-	if err := ctxResource.UpdateContext(k8sContext); err != nil {
-		return err
-	}
-
-	ctxOptions := defaultCtxOpts
-	ctxOptions.Context = ctxResource.Context
-	ctxOptions.Namespace = ctxResource.Namespace
-
-	return NewContextCommand().Run(ctx, &ctxOptions)
 }

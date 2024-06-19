@@ -117,27 +117,6 @@ func GetDependentCyclic(g Graph) []string {
 	return cycle
 }
 
-func GetDependentNodes(g Graph, startingNodes []string) []string {
-	initialLength := len(startingNodes)
-	svcsToDeploySet := map[string]bool{}
-	for _, svc := range startingNodes {
-		svcsToDeploySet[svc] = true
-	}
-	for _, svcToDeploy := range startingNodes {
-		for _, dependentSvc := range g[svcToDeploy] {
-			if _, ok := svcsToDeploySet[dependentSvc]; ok {
-				continue
-			}
-			startingNodes = append(startingNodes, dependentSvc)
-			svcsToDeploySet[dependentSvc] = true
-		}
-	}
-	if initialLength != len(startingNodes) {
-		return GetDependentNodes(g, startingNodes)
-	}
-	return startingNodes
-}
-
 // dfs executes deep first search algorithm.
 // More information can be found at https://en.wikipedia.org/wiki/Depth-first_search
 func dfs(g Graph, svcName string, visited, stack map[string]bool) bool {

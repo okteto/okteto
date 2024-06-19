@@ -1,10 +1,10 @@
-// Copyright 2023 The Okteto Authors
+// Copyright 2023|2024 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-//
+// 
 // http://www.apache.org/licenses/LICENSE-2.0
-//
+// 
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,12 +17,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/spf13/afero"
-	yaml "gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v3"
 )
 
 // ContextResource provides the context and namespace to operate within a manifest
@@ -54,16 +51,6 @@ func displayDeprecationWarningForContextAndNamespace(context, namespace string) 
 
 // GetContextResource returns a ContextResource object from a given file
 func GetContextResource(path string) (*ContextResource, error) {
-	if !filesystem.FileExistsAndNotDir(path, afero.NewOsFs()) {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return nil, err
-		}
-		path, err = discovery.GetContextResourcePath(cwd)
-		if err != nil {
-			return nil, err
-		}
-	}
 	ctxResource := &ContextResource{}
 	bytes, err := os.ReadFile(path)
 	if err != nil {

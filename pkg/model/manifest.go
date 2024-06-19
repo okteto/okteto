@@ -287,36 +287,6 @@ func getManifestFromDevFilePath(cwd, manifestPath string, fs afero.Fs) (*Manifes
 	return nil, discovery.ErrOktetoManifestNotFound
 }
 
-// GetManifestV1 gets a manifest from a path or search for the files to generate it
-func GetManifestV1(manifestPath string, fs afero.Fs) (*Manifest, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
-	manifest, err := getManifestFromDevFilePath(cwd, manifestPath, fs)
-	if err != nil {
-		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
-			return nil, err
-		}
-	}
-
-	if manifest != nil {
-		return manifest, nil
-	}
-
-	if manifestPath != "" && pathExistsAndDir(manifestPath) {
-		cwd = manifestPath
-	}
-
-	manifest, err = getManifestFromOktetoFile(cwd, fs)
-	if err != nil {
-		return nil, err
-	}
-
-	return manifest, nil
-}
-
 func pathExistsAndDir(path string) bool {
 	info, err := os.Stat(path)
 	if err != nil && os.IsNotExist(err) {
