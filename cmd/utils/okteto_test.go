@@ -19,15 +19,17 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/internal/test/client"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_createContext(t *testing.T) {
+func Test_HasAccessToOktetoClusterNamespace(t *testing.T) {
 	ctx := context.Background()
 
 	var tests = []struct {
-		err            error
+		errNamespace   error
+		errPreview     error
 		name           string
 		namespaces     []types.Namespace
 		previews       []types.Preview
@@ -44,17 +46,19 @@ func Test_createContext(t *testing.T) {
 			expectedAccess: true,
 		},
 		{
-			name:        "err",
-			err:         fmt.Errorf("could not connect with okteto client"),
-			expectedErr: true,
+			name:         "err",
+			errNamespace: fmt.Errorf("could not connect with okteto client"),
+			expectedErr:  true,
 		},
 		{
-			name: "namespaceNotFound",
+			name: "namespaceNotFound and preview not found",
 			namespaces: []types.Namespace{
 				{
 					ID: "not-found",
 				},
 			},
+			errNamespace:   oktetoErrors.ErrNamespaceNotFound,
+			errPreview:     oktetoErrors.ErrNamespaceNotFound,
 			expectedAccess: false,
 		},
 		{
@@ -64,16 +68,8 @@ func Test_createContext(t *testing.T) {
 					ID: "test",
 				},
 			},
+			errNamespace:   oktetoErrors.ErrNamespaceNotFound,
 			expectedAccess: true,
-		},
-		{
-			name: "previewFound",
-			previews: []types.Preview{
-				{
-					ID: "not-found",
-				},
-			},
-			expectedAccess: false,
 		},
 	}
 
@@ -81,8 +77,8 @@ func Test_createContext(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			fakeClient := client.NewFakeOktetoClient()
-			fakeClient.Namespace = client.NewFakeNamespaceClient(tt.namespaces, tt.err)
-			fakeClient.Preview = client.NewFakePreviewClient(&client.FakePreviewResponse{PreviewList: tt.previews, ErrList: tt.err})
+			fakeClient.Namespace = client.NewFakeNamespaceClient(tt.namespaces, tt.errNamespace)
+			fakeClient.Preview = client.NewFakePreviewClient(&client.FakePreviewResponse{PreviewList: tt.previews, ErrGetPreview: tt.errPreview})
 			hasAccess, err := HasAccessToOktetoClusterNamespace(ctx, "test", fakeClient)
 
 			assert.Equal(t, tt.expectedErr, err != nil)

@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/internal/test/client"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
@@ -30,6 +31,8 @@ func Test_useNamespace(t *testing.T) {
 		name              string
 		changeToNs        string
 		currentNamespaces []types.Namespace
+		errGetNamespace   error
+		errGetPreview     error
 		expectedErr       bool
 	}{
 		{
@@ -60,8 +63,10 @@ func Test_useNamespace(t *testing.T) {
 					ID: currentNs,
 				},
 			},
-			changeToNs:  "test-1",
-			expectedErr: true,
+			errGetNamespace: oktetoErrors.ErrNamespaceNotFound,
+			errGetPreview:   oktetoErrors.ErrNamespaceNotFound,
+			changeToNs:      "test-1",
+			expectedErr:     true,
 		},
 	}
 
@@ -82,8 +87,10 @@ func Test_useNamespace(t *testing.T) {
 				Token: "test",
 			}
 			fakeOktetoClient := &client.FakeOktetoClient{
-				Namespace:       client.NewFakeNamespaceClient(tt.currentNamespaces, nil),
-				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+				Namespace: client.NewFakeNamespaceClient(tt.currentNamespaces, tt.errGetNamespace),
+				Preview: client.NewFakePreviewClient(&client.FakePreviewResponse{
+					ErrGetPreview: tt.errGetPreview,
+				}),
 				Users:           client.NewFakeUsersClient(usr),
 				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			}

@@ -15,10 +15,12 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,32 +39,21 @@ func HasAccessToK8sClusterNamespace(ctx context.Context, namespace string, k8sCl
 
 // HasAccessToOktetoClusterNamespace checks if the user has access to a namespace/preview
 func HasAccessToOktetoClusterNamespace(ctx context.Context, namespace string, oktetoClient types.OktetoInterface) (bool, error) {
-
-	nList, err := oktetoClient.Namespaces().List(ctx)
-	if err != nil {
+	_, err := oktetoClient.Namespaces().Get(ctx, namespace)
+	if err != nil && errors.Is(err, oktetoErrors.ErrNamespaceNotFound) {
+		// added possibility to point a context to a preview environment (namespace)
+		// https://github.com/okteto/okteto/pull/2018
+		_, err := oktetoClient.Previews().Get(ctx, namespace)
+		if err != nil && errors.Is(err, oktetoErrors.ErrNamespaceNotFound) {
+			return false, nil
+		} else if err != nil {
+			return false, err
+		}
+		return true, nil
+	} else if err != nil {
 		return false, err
 	}
-
-	for i := range nList {
-		if nList[i].ID == namespace {
-			return true, nil
-		}
-	}
-
-	// added possibility to point a context to a preview environment (namespace)
-	// https://github.com/okteto/okteto/pull/2018
-	previewList, err := oktetoClient.Previews().List(ctx, []string{})
-	if err != nil {
-		return false, err
-	}
-
-	for i := range previewList {
-		if previewList[i].ID == namespace {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	return true, nil
 }
 
 // ShouldCreateNamespace checks if the user has access to the namespace.
