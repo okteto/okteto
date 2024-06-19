@@ -14,18 +14,12 @@
 package linguist
 
 import (
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
-	"github.com/okteto/okteto/pkg/model/utils"
-	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -303,70 +297,6 @@ func GetSupportedLanguages() []string {
 	l = append(l, Unrecognized)
 
 	return l
-}
-
-// GetDevDefaults gets default values for the specified language
-func GetDevDefaults(language, workdir string, imageConfig registry.ImageMetadata) (*model.Dev, error) {
-	language = NormalizeLanguage(language)
-	vals := languageDefaults[language]
-
-	if imageConfig.Workdir == "" || imageConfig.Workdir == "/" {
-		imageConfig.Workdir = vals.path
-	}
-
-	if filepath.IsAbs(workdir) {
-		wd, err := os.Getwd()
-		if err != nil {
-			return nil, err
-		}
-		workdir, err = filepath.Rel(wd, workdir)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	dev := &model.Dev{
-		Image: &build.Info{
-			Name: vals.image,
-		},
-		Command: model.Command{
-			Values: vals.command,
-		},
-		Environment: vals.environment,
-		Volumes:     vals.volumes,
-		Sync: model.Sync{
-			RescanInterval: model.DefaultSyncthingRescanInterval,
-			Folders: []model.SyncFolder{
-				{
-					LocalPath:  workdir,
-					RemotePath: imageConfig.Workdir,
-				},
-			},
-		},
-		Forward:         vals.forward,
-		Reverse:         vals.reverse,
-		RemotePort:      vals.remote,
-		SecurityContext: vals.securityContext,
-	}
-
-	name, err := utils.GetValidNameFromFolder(workdir)
-	if err != nil {
-		return nil, err
-	}
-	dev.Name = name
-	dev.Context = okteto.GetContext().Name
-	dev.Namespace = okteto.GetContext().Namespace
-	return dev, nil
-}
-
-// SetForwardDefaults set port forward default values for the specified language
-func SetForwardDefaults(dev *model.Dev, language string) {
-	language = NormalizeLanguage(language)
-	vals := forwardDefaults[language]
-	if dev.Forward == nil {
-		dev.Forward = []forward.Forward{}
-	}
-	dev.Forward = append(dev.Forward, vals...)
 }
 
 func NormalizeLanguage(language string) string {

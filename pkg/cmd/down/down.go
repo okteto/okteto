@@ -144,7 +144,7 @@ func (d *Operation) AllDown(ctx context.Context, manifest *model.Manifest, rm bo
 	}
 
 	if len(manifest.Dev) == 0 {
-		return fmt.Errorf("okteto manifest has no 'dev' section. Configure it with 'okteto init'")
+		return oktetoErrors.ErrManifestNoDevSection
 	}
 
 	for _, dev := range manifest.Dev {

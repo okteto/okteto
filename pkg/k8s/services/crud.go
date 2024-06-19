@@ -105,31 +105,6 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 	return nil
 }
 
-// GetPortsByPod returns the ports exposed via endpoint of a given pod
-func GetPortsByPod(ctx context.Context, p *apiv1.Pod, c kubernetes.Interface) ([]int, error) {
-	eList, err := c.CoreV1().Endpoints(p.Namespace).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	result := []int{}
-	for _, e := range eList.Items {
-		for _, s := range e.Subsets {
-			for _, a := range append(s.Addresses, s.NotReadyAddresses...) {
-				if a.TargetRef == nil {
-					continue
-				}
-				if a.TargetRef.UID == p.UID {
-					for _, p := range s.Ports {
-						result = append(result, int(p.Port))
-					}
-					break
-				}
-			}
-		}
-	}
-	return result, nil
-}
-
 // GetServiceNameByLabel returns the name of the service with certain labels
 func GetServiceNameByLabel(ctx context.Context, namespace string, c kubernetes.Interface, labels string) (string, error) {
 	serviceList, err := c.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{LabelSelector: labels})

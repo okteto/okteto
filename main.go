@@ -169,7 +169,6 @@ func main() {
 	root.AddCommand(build.Build(ctx, ioController, at, insights, k8sLogger))
 
 	root.AddCommand(namespace.Namespace(ctx, k8sLogger))
-	root.AddCommand(cmd.Init(at, insights, ioController))
 	root.AddCommand(up.Up(at, insights, ioController, k8sLogger))
 	root.AddCommand(cmd.Down(at, k8sLogger))
 	root.AddCommand(cmd.Status())
