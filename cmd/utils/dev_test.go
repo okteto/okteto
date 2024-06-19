@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -177,6 +178,7 @@ func Test_SelectDevFromManifest(t *testing.T) {
 					"test": &model.Dev{
 						Name:            "test",
 						ImagePullPolicy: "Always",
+						Namespace:       "unit-test",
 						Sync: model.Sync{
 							Folders: []model.SyncFolder{
 								{
@@ -198,6 +200,7 @@ func Test_SelectDevFromManifest(t *testing.T) {
 			dev: &model.Dev{
 				Name:            "test",
 				ImagePullPolicy: "Always",
+				Namespace:       "unit-test",
 				Sync: model.Sync{
 					Folders: []model.SyncFolder{
 						{
@@ -232,6 +235,16 @@ func Test_SelectDevFromManifest(t *testing.T) {
 			err: errors.New("error-from-selector"),
 		},
 	}
+
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"example": {
+				Namespace: "unit-test",
+			},
+		},
+		CurrentContext: "example",
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dev, err := SelectDevFromManifest(tt.manifest, tt.selector, tt.manifest.Dev.GetDevs())

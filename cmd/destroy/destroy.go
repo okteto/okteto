@@ -401,12 +401,6 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 		return err
 	}
 
-	if opts.Manifest.Context == "" {
-		opts.Manifest.Context = okteto.GetContext().Name
-	}
-	if opts.Manifest.Namespace == "" {
-		opts.Manifest.Namespace = namespace
-	}
 	os.Setenv(constants.OktetoNameEnvVar, opts.Name)
 
 	if opts.DestroyDependencies {
@@ -418,7 +412,7 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 		}
 	}
 
-	if hasDivert(opts.Manifest) {
+	if hasDivert(opts.Manifest, namespace) {
 		oktetoLog.SetStage("Destroy Divert")
 		if err := dc.destroyDivert(ctx, opts.Manifest); err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error destroying divert: %s", err.Error())
@@ -507,7 +501,7 @@ func (dc *destroyCommand) destroyDivert(ctx context.Context, manifest *model.Man
 	if err != nil {
 		return err
 	}
-	driver, err := dc.getDivertDriver(manifest.Deploy.Divert, manifest.Name, manifest.Namespace, c)
+	driver, err := dc.getDivertDriver(manifest.Deploy.Divert, manifest.Name, okteto.GetContext().Namespace, c)
 	if err != nil {
 		return err
 	}
@@ -605,6 +599,6 @@ func (dc *destroyCommand) getDestroyer(opts *Options) destroyInterface {
 	return destroyer
 }
 
-func hasDivert(manifest *model.Manifest) bool {
-	return manifest.Deploy != nil && manifest.Deploy.Divert != nil && manifest.Deploy.Divert.Namespace != manifest.Namespace
+func hasDivert(manifest *model.Manifest, namespace string) bool {
+	return manifest.Deploy != nil && manifest.Deploy.Divert != nil && manifest.Deploy.Divert.Namespace != namespace
 }

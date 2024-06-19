@@ -141,7 +141,7 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 					options.Name = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, options.ManifestPath)
 				}
 				if options.Namespace == "" {
-					options.Namespace = manifest.Namespace
+					options.Namespace = okteto.GetContext().Namespace
 				}
 			}
 			if options.Namespace == "" {

@@ -156,9 +156,7 @@ build:
 dependencies:
   one: https://repo.url`),
 			expectedManifest: &model.Manifest{
-				IsV2:      true,
-				Namespace: "test-namespace",
-				Context:   "manifest-context",
+				IsV2: true,
 				Build: build.ManifestBuild{
 					"service": {
 						Name:       "",

@@ -110,7 +110,7 @@ func Test_getStructKeys(t *testing.T) {
 			}{
 				"key1": {"value1", 1},
 			},
-			expected: map[string][]string{"_": []string{"field1", "field2"}},
+			expected: map[string][]string{"_": {"field1", "field2"}},
 		},
 		{
 			name:     "string",
@@ -201,7 +201,7 @@ func Test_getStructKeys(t *testing.T) {
 				"model.HealthCheck":          {"http", "test", "interval", "timeout", "retries", "start_period", "disable", "x-okteto-liveness", "x-okteto-readiness"},
 				"model.InitContainer":        {"resources", "image"},
 				"model.Lifecycle":            {"postStart", "postStop"},
-				"model.Manifest":             {"name", "namespace", "context", "icon", "dev", "build", "deploy", "destroy", "dependencies", "external", "forward", "test"},
+				"model.Manifest":             {"name", "icon", "dev", "build", "deploy", "destroy", "dependencies", "external", "forward", "test"},
 				"model.Metadata":             {"labels", "annotations"},
 				"model.PersistentVolumeInfo": {"storageClass", "size", "enabled"},
 				"model.Probes":               {"liveness", "readiness", "startup"},

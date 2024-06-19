@@ -30,7 +30,7 @@ import (
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 )
@@ -1053,8 +1053,7 @@ context: context-to-use
 deploy:
   - okteto stack deploy`),
 			expected: &Manifest{
-				Namespace: "test",
-				Build:     map[string]*build.Info{},
+				Build: map[string]*build.Info{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{
@@ -1067,7 +1066,6 @@ deploy:
 				Dev:          map[string]*Dev{},
 				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.Section{},
-				Context:      "context-to-use",
 				IsV2:         true,
 				Type:         OktetoManifestType,
 				Fs:           afero.NewOsFs(),

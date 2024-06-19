@@ -175,9 +175,6 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions, fs afero
 		}
 	}
 
-	manifest.Namespace = okteto.GetContext().Namespace
-	manifest.Context = okteto.GetContext().Name
-
 	for _, dev := range manifest.Dev {
 		dev.Namespace = okteto.GetContext().Namespace
 		dev.Context = okteto.GetContext().Name

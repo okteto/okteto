@@ -101,8 +101,6 @@ type Manifest struct {
 	Deploy       *DeployInfo              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev          ManifestDevs             `json:"dev,omitempty" yaml:"dev,omitempty"`
 	Name         string                   `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace    string                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context      string                   `json:"context,omitempty" yaml:"context,omitempty"`
 	Icon         string                   `json:"icon,omitempty" yaml:"icon,omitempty"`
 	ManifestPath string                   `json:"-" yaml:"-"`
 	Destroy      *DestroyInfo             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
@@ -148,9 +146,8 @@ func NewManifestFromStack(stack *Stack) *Manifest {
 		})
 	}
 	stackManifest := &Manifest{
-		Type:      StackType,
-		Name:      stack.Name,
-		Namespace: stack.Namespace,
+		Type: StackType,
+		Name: stack.Name,
 		Deploy: &DeployInfo{
 			ComposeSection: &ComposeSectionInfo{
 				ComposesInfo: stackPaths,
@@ -471,8 +468,6 @@ func getManifestFromFile(cwd, manifestPath string, fs afero.Fs) (*Manifest, erro
 			}
 		}
 		return devManifest, nil
-	} else {
-		devManifest.setManifestDefaultsFromDev()
 	}
 	return devManifest, nil
 
@@ -1297,18 +1292,6 @@ func (m *Manifest) IsDeployDefault() bool {
 		return true
 	}
 	return false
-}
-
-// setManifestDefaultsFromDev sets context and namespace from the dev
-func (m *Manifest) setManifestDefaultsFromDev() {
-	if len(m.Dev) == 1 {
-		for _, devInfo := range m.Dev {
-			m.Context = devInfo.Context
-			m.Namespace = devInfo.Namespace
-		}
-	} else {
-		oktetoLog.Infof("could not set context and manifest from dev section due to being '%d' devs declared", len(m.Dev))
-	}
 }
 
 // HasDependencies returns true if the manifest has dependencies

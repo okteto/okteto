@@ -272,8 +272,7 @@ func TestValidateMountPaths(t *testing.T) {
 
 func TestListDevModeOn(t *testing.T) {
 	manifest := &model.Manifest{
-		Name:      "manifest-name",
-		Namespace: "test",
+		Name: "manifest-name",
 		Dev: model.ManifestDevs{
 			"dev": &model.Dev{
 				Name:      "dev",

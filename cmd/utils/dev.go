@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -99,11 +100,11 @@ func SelectDevFromManifest(manifest *model.Manifest, selector OktetoSelectorInte
 
 	dev.Name = devKey
 	if dev.Namespace == "" {
-		dev.Namespace = manifest.Namespace
+		dev.Namespace = okteto.GetContext().Namespace
 	}
 
 	if dev.Context == "" {
-		dev.Context = manifest.Context
+		dev.Context = okteto.GetContext().Name
 	}
 	if err := dev.Validate(); err != nil {
 		return nil, err

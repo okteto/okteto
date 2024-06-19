@@ -243,7 +243,7 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 			if upOptions.Deploy && !up.Manifest.IsV2 {
 				// the autocreate property is forced to be true
 				forceAutocreate = true
-			} else if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, k8sClient)) {
+			} else if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, okteto.GetContext().Namespace, k8sClient)) {
 				err := up.deployApp(ctx, ioCtrl, k8sLogger)
 
 				// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
@@ -251,7 +251,7 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 					return err
 				}
 
-			} else if !upOptions.Deploy && (up.Manifest.IsV2 && pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, k8sClient)) {
+			} else if !upOptions.Deploy && (up.Manifest.IsV2 && pipeline.IsDeployed(ctx, up.Manifest.Name, okteto.GetContext().Namespace, k8sClient)) {
 				oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy' or 'okteto up --deploy'", up.Manifest.Name)
 			}
 

@@ -927,78 +927,6 @@ func TestInferFromStackWithVolumeMounts(t *testing.T) {
 	require.Equal(t, expected, string(dockerfileContent))
 }
 
-func TestSetManifestDefaultsFromDev(t *testing.T) {
-	t.Setenv("my_key", "my_value")
-	tests := []struct {
-		name              string
-		currentManifest   *Manifest
-		expectedContext   string
-		expectedNamespace string
-	}{
-		{
-			name: "setting only manifest.Namespace",
-			currentManifest: &Manifest{
-				Dev: ManifestDevs{
-					"test": &Dev{
-						Namespace: "other-ns",
-					},
-				},
-			},
-			expectedContext:   "",
-			expectedNamespace: "other-ns",
-		},
-		{
-			name: "setting only manifest.Context",
-			currentManifest: &Manifest{
-				Dev: ManifestDevs{
-					"test": &Dev{
-						Context: "other-ctx",
-					},
-				},
-			},
-			expectedContext:   "other-ctx",
-			expectedNamespace: "",
-		},
-		{
-			name: "setting manifest.Context & manifest.Namespace",
-			currentManifest: &Manifest{
-				Dev: ManifestDevs{
-					"test": &Dev{
-						Context:   "other-ctx",
-						Namespace: "other-ns",
-					},
-				},
-			},
-			expectedContext:   "other-ctx",
-			expectedNamespace: "other-ns",
-		},
-		{
-			name: "not overwrite if manifest has more than one dev",
-			currentManifest: &Manifest{
-				Namespace: "test",
-				Context:   "test",
-				Dev: ManifestDevs{
-					"test": &Dev{
-						Context: "other-ctx",
-					},
-					"test-2": &Dev{
-						Context: "other-ctx",
-					},
-				},
-			},
-			expectedContext:   "test",
-			expectedNamespace: "test",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.currentManifest.setManifestDefaultsFromDev()
-			assert.Equal(t, tt.expectedContext, tt.currentManifest.Context)
-			assert.Equal(t, tt.expectedNamespace, tt.currentManifest.Namespace)
-		})
-	}
-}
-
 func TestSetBuildDefaults(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -1662,8 +1590,6 @@ func TestRead(t *testing.T) {
 			manifest: nil,
 			expected: &Manifest{
 				Name:         "",
-				Namespace:    "",
-				Context:      "",
 				Icon:         "",
 				ManifestPath: "",
 				Test:         ManifestTests{},
@@ -1694,8 +1620,6 @@ func TestRead(t *testing.T) {
 			manifest: []byte(""),
 			expected: &Manifest{
 				Name:         "",
-				Namespace:    "",
-				Context:      "",
 				Icon:         "",
 				ManifestPath: "",
 				Test:         ManifestTests{},
@@ -1747,8 +1671,6 @@ func TestRead(t *testing.T) {
     context: ./test`),
 			expected: &Manifest{
 				Name:         "",
-				Namespace:    "",
-				Context:      "",
 				Icon:         "",
 				ManifestPath: "",
 				Deploy:       nil,
@@ -1846,8 +1768,6 @@ func TestRead(t *testing.T) {
     service: service-b`),
 			expected: &Manifest{
 				Name:         "",
-				Namespace:    "",
-				Context:      "",
 				Icon:         "",
 				ManifestPath: "",
 				Deploy: &DeployInfo{
