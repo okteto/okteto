@@ -47,7 +47,7 @@ func Restart() *cobra.Command {
 			ctx := context.Background()
 
 			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs())
+			manifest, err := model.GetManifestV2(manifestOpts.Filename, afero.NewOsFs())
 			if err != nil {
 				return err
 			}

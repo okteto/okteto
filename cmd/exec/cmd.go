@@ -93,7 +93,7 @@ okteto exec my-pod -- echo this is a test
 okteto exec my-pod`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			manifestOpts := contextCMD.ManifestOptions{Filename: execFlags.manifestPath, Namespace: execFlags.namespace, K8sContext: execFlags.k8sContext}
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, e.fs)
+			manifest, err := model.GetManifestV2(manifestOpts.Filename, e.fs)
 			if err != nil {
 				return fmt.Errorf("failed to load manifest: %w", err)
 			}

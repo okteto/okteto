@@ -17,13 +17,13 @@ import (
 	"context"
 	"errors"
 
-	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/doctor"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -52,7 +52,7 @@ func Doctor(k8sLogger *io.K8sLogger) *cobra.Command {
 				return oktetoErrors.ErrNotInDevContainer
 			}
 
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, contextCMD.ManifestOptions{Filename: doctorOpts.DevPath, Namespace: doctorOpts.Namespace, K8sContext: doctorOpts.K8sContext}, afero.NewOsFs())
+			manifest, err := model.GetManifestV2(doctorOpts.DevPath, afero.NewOsFs())
 			if err != nil {
 				return err
 			}

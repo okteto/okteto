@@ -22,7 +22,6 @@ import (
 	"syscall"
 	"time"
 
-	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
@@ -30,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -65,7 +65,7 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, contextCMD.ManifestOptions{Filename: options.ManifestPath, Namespace: options.Namespace, K8sContext: options.Context}, afero.NewOsFs())
+			manifest, err := model.GetManifestV2(options.ManifestPath, afero.NewOsFs())
 			if err != nil {
 				return err
 			}

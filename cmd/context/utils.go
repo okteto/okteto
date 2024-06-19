@@ -140,49 +140,6 @@ func getCtxResource(path string) (*model.ContextResource, error) {
 	return ctxResource, nil
 }
 
-// LoadManifestWithContext loads context and then loads a manifest
-func LoadManifestWithContext(ctx context.Context, opts ManifestOptions, fs afero.Fs) (*model.Manifest, error) {
-	ctxResource, err := model.GetContextResource(opts.Filename)
-	if err != nil {
-		return nil, err
-	}
-	if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
-		return nil, err
-	}
-
-	if err := ctxResource.UpdateContext(opts.K8sContext); err != nil {
-		return nil, err
-	}
-
-	ctxOptions := &Options{
-		Context:   ctxResource.Context,
-		Namespace: ctxResource.Namespace,
-		Show:      true,
-	}
-
-	if err := NewContextCommand().Run(ctx, ctxOptions); err != nil {
-		return nil, err
-	}
-
-	manifest, err := model.GetManifestV1(opts.Filename, fs)
-	if err != nil {
-		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
-			return nil, err
-		}
-		manifest, err = model.GetManifestV2(opts.Filename, fs)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	for _, dev := range manifest.Dev {
-		dev.Namespace = okteto.GetContext().Namespace
-		dev.Context = okteto.GetContext().Name
-	}
-
-	return manifest, nil
-}
-
 func LoadStackWithContext(ctx context.Context, name, namespace string, stackPaths []string, fs afero.Fs) (*model.Stack, error) {
 	ctxResource, err := utils.LoadStackContext(stackPaths)
 	if err != nil {
