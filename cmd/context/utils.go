@@ -85,7 +85,9 @@ func askForOktetoURL(message string) (string, error) {
 		return "", err
 	}
 	var oktetoURL string
-	fmt.Scanln(&oktetoURL)
+	if _, err := fmt.Scanln(&oktetoURL); err != nil {
+		return "", err
+	}
 
 	url, err := url.Parse(oktetoURL)
 	if err != nil {
