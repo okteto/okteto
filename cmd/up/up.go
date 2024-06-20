@@ -256,7 +256,7 @@ okteto up my-svc -- echo this is a test
 				oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy' or 'okteto up --deploy'", up.Manifest.Name)
 			}
 
-			devCommandParser := oargs.NewDevCommandArgParser(up.K8sClientProvider, ioCtrl)
+			devCommandParser := oargs.NewDevCommandArgParser(oargs.NewManifestDevLister(), ioCtrl)
 
 			argsparserResult, err := devCommandParser.Parse(ctx, args, cmd.ArgsLenAtDash(), oktetoManifest.Dev, okteto.GetContext().Namespace)
 			if err != nil {

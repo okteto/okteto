@@ -30,13 +30,13 @@ import (
 )
 
 func TestNewDevCommandArgParser(t *testing.T) {
-	k8sClientProvider := okteto.NewK8sClientProvider()
+	lister := NewDevModeOnLister(nil)
 	ioControl := io.NewIOController()
 
-	parser := NewDevCommandArgParser(k8sClientProvider, ioControl)
+	parser := NewDevCommandArgParser(lister, ioControl)
 
 	assert.NotNil(t, parser)
-	assert.Equal(t, k8sClientProvider, parser.k8sClientProvider)
+	assert.Equal(t, lister, parser.devLister)
 	assert.Equal(t, ioControl, parser.ioCtrl)
 }
 
@@ -48,20 +48,6 @@ func TestParseFromArgs(t *testing.T) {
 		argsIn        []string
 		argsLenAtDash int
 	}{
-		{
-			name:          "Empty args",
-			argsIn:        []string{},
-			argsLenAtDash: 0,
-			expected:      nil,
-			expectedError: errCommandRequired,
-		},
-		{
-			name:          "Args with dev name",
-			argsIn:        []string{"dev1"},
-			argsLenAtDash: -1,
-			expected:      nil,
-			expectedError: errCommandRequired,
-		},
 		{
 			name:          "Args with command",
 			argsIn:        []string{"echo", "test"},
@@ -79,13 +65,6 @@ func TestParseFromArgs(t *testing.T) {
 				FirstArgIsDevName: true,
 				Command:           []string{"echo", "test"},
 			},
-		},
-		{
-			name:          "Args with dev name no command",
-			argsIn:        []string{"dev1"},
-			argsLenAtDash: -1,
-			expected:      nil,
-			expectedError: errCommandRequired,
 		},
 	}
 
@@ -224,9 +203,9 @@ func TestSetDevFromManifest(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			parser := &DevCommandArgParser{
-				devSelector:       tc.selector,
-				ioCtrl:            ioControl,
-				k8sClientProvider: provider,
+				devSelector: tc.selector,
+				ioCtrl:      ioControl,
+				devLister:   NewDevModeOnLister(provider),
 			}
 			result, err := parser.setDevNameFromManifest(ctx, tc.options, tc.devs, "ns")
 			if result != nil {

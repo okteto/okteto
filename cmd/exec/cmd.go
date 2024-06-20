@@ -101,7 +101,7 @@ okteto exec my-pod`,
 				return fmt.Errorf("failed to load manifest: %w", err)
 			}
 
-			argParser := oargs.NewDevCommandArgParser(e.k8sClientProvider, e.ioCtrl)
+			argParser := oargs.NewDevCommandArgParser(oargs.NewDevModeOnLister(e.k8sClientProvider), e.ioCtrl)
 			argsLenAtDash := cmd.ArgsLenAtDash()
 
 			argsResult, err := argParser.Parse(ctx, args, argsLenAtDash, manifest.Dev, okteto.GetContext().Namespace)

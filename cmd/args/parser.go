@@ -18,29 +18,31 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 )
 
 type devSelector interface {
 	AskForOptionsOkteto(options []utils.SelectorItem, initialPosition int) (string, error)
 }
 
+type devLister interface {
+	List(ctx context.Context, devs model.ManifestDevs, namespace string) ([]string, error)
+}
+
 // DevCommandArgParser is a parser for commands that takes a development container and a command as arguments
 type DevCommandArgParser struct {
-	devSelector       devSelector
-	k8sClientProvider okteto.K8sClientProvider
-	ioCtrl            *io.Controller
+	devSelector devSelector
+	devLister   devLister
+	ioCtrl      *io.Controller
 }
 
 // NewDevCommandArgParser creates a new DevCommandArgParser instance
-func NewDevCommandArgParser(k8sClientProvider okteto.K8sClientProvider, ioControl *io.Controller) *DevCommandArgParser {
+func NewDevCommandArgParser(lister devLister, ioControl *io.Controller) *DevCommandArgParser {
 	return &DevCommandArgParser{
-		devSelector:       utils.NewOktetoSelector("Select the development container:", "Development container"),
-		k8sClientProvider: k8sClientProvider,
-		ioCtrl:            ioControl,
+		devSelector: utils.NewOktetoSelector("Select the development container:", "Development container"),
+		ioCtrl:      ioControl,
+		devLister:   lister,
 	}
 }
 
@@ -87,14 +89,9 @@ func (p *DevCommandArgParser) setDevNameFromManifest(ctx context.Context, curren
 	}
 	p.ioCtrl.Logger().Debug("retrieving dev name from manifest")
 
-	k8sClient, _, err := p.k8sClientProvider.Provide(okteto.GetContext().Cfg)
+	devNameList, err := p.devLister.List(ctx, devs, ns)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get k8s client: %w", err)
-	}
-
-	devNameList := apps.ListDevModeOn(ctx, devs, ns, k8sClient)
-	if len(devNameList) == 0 {
-		return nil, errNoDevContainerInDevMode
+		return nil, fmt.Errorf("failed to list devs: %w", err)
 	}
 
 	devName, err := p.devSelector.AskForOptionsOkteto(utils.ListToSelectorItem(devNameList), -1)
