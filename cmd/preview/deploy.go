@@ -36,6 +36,7 @@ import (
 
 var (
 	ErrWaitResourcesTimeout = errors.New("preview environment didn't finish after on time")
+	fiveMinutes             = 5 * time.Minute
 )
 
 type DeployOptions struct {
@@ -69,7 +70,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true}); err != nil {
 				return err
 			}
 			oktetoLog.Information("Using %s @ %s as context", opts.name, okteto.RemoveSchema(okteto.GetContext().Name))
@@ -89,7 +90,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&opts.repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
 	cmd.Flags().StringVarP(&opts.scope, "scope", "s", "global", "the scope of preview environment to create. Accepted values are ['personal', 'global']")
 	cmd.Flags().StringVarP(&opts.sourceUrl, "sourceUrl", "", "", "the URL of the original pull/merge request.")
-	cmd.Flags().DurationVarP(&opts.timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
+	cmd.Flags().DurationVarP(&opts.timeout, "timeout", "t", fiveMinutes, "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	cmd.Flags().StringArrayVarP(&opts.variables, "var", "v", []string{}, "set a preview environment variable (can be set more than once)")
 	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", false, "wait until the preview environment deployment finishes (defaults to false)")
 	cmd.Flags().StringVarP(&opts.file, "file", "f", "", "relative path within the repository to the okteto manifest (default to okteto.yaml or .okteto/okteto.yaml)")

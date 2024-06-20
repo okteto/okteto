@@ -182,7 +182,7 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 				return err
 			}
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: options.Namespace}); err != nil {
 				return err
 			}
 

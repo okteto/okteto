@@ -59,7 +59,7 @@ commands:
 				return fmt.Errorf("--name is required")
 			}
 
-			oktetoContext, err := contextCMD.NewContextCommand().RunStateless(ctx, &contextCMD.Options{})
+			oktetoContext, err := contextCMD.NewContextCommand().RunStateless(ctx, &contextCMD.Options{Show: true})
 			if err != nil {
 				return err
 			}

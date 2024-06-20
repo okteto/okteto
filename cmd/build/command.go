@@ -29,7 +29,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
-	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
@@ -213,31 +212,6 @@ func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*okteto
 		Context:   options.K8sContext,
 		Namespace: options.Namespace,
 		Show:      true,
-	}
-
-	// before calling the context command, there is need to retrieve the context and
-	// namespace through the given manifest. If the manifest is a Dockerfile, this
-	// information cannot be extracted so call to GetContextResource is skipped.
-	if err := validateDockerfile(options.File); err != nil {
-		ctxResource, err := model.GetContextResource(options.File)
-		if err != nil && !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
-			return nil, err
-		}
-
-		// if ctxResource == nil (we cannot obtain context and namespace from the
-		// manifest used) then /context/config.json file from okteto home will be
-		// used to obtain the current context and the namespace associated with it.
-		if ctxResource != nil {
-			if err := ctxResource.UpdateNamespace(options.Namespace); err != nil {
-				return nil, err
-			}
-			ctxOpts.Namespace = ctxResource.Namespace
-
-			if err := ctxResource.UpdateContext(options.K8sContext); err != nil {
-				return nil, err
-			}
-			ctxOpts.Context = ctxResource.Context
-		}
 	}
 
 	oktetoContext, err := contextCMD.NewContextCommand().RunStateless(ctx, ctxOpts)

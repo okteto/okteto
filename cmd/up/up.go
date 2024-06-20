@@ -29,6 +29,7 @@ import (
 	"github.com/moby/term"
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/namespace"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
@@ -121,6 +122,15 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 			checkLocalWatchesConfiguration()
 
 			ctx := context.Background()
+
+			ctxOpts := &contextCMD.Options{
+				Show:      true,
+				Context:   upOptions.K8sContext,
+				Namespace: upOptions.Namespace,
+			}
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+				return err
+			}
 
 			upMeta := analytics.NewUpMetricsMetadata()
 

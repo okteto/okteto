@@ -106,7 +106,6 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 
 			// false for 'json' and 'md' to avoid breaking their syntax
 			showCtxHeader := options.Output == ""
-
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace, Show: showCtxHeader}); err != nil {
 				return err
 			}
