@@ -76,9 +76,6 @@ func (p *DevCommandArgParser) parseFromArgs(argsIn []string, argsLenAtDash int) 
 	if argsLenAtDash > -1 {
 		result.Command = argsIn[argsLenAtDash:]
 	}
-	if len(result.Command) == 0 {
-		return nil, errCommandRequired
-	}
 	return result, nil
 }
 

@@ -114,6 +114,9 @@ okteto exec my-pod`,
 				return err
 			}
 
+			if len(argsResult.Command) == 0 {
+				return fmt.Errorf("command is required")
+			}
 			return e.Run(ctx, argsResult, manifest.Dev[argsResult.DevName])
 		},
 	}
