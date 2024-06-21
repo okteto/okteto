@@ -37,10 +37,18 @@ func HasAccessToK8sClusterNamespace(ctx context.Context, namespace string, k8sCl
 	return true, nil
 }
 
+// errFallback returns true when err is not found or namespace not found
+// meaning we need to fallback into previews get query
+func errFallback(err error) bool {
+	return err != nil &&
+		(errors.Is(err, oktetoErrors.ErrNamespaceNotFound) ||
+			errors.Is(err, oktetoErrors.ErrNotFound))
+}
+
 // HasAccessToOktetoClusterNamespace checks if the user has access to a namespace/preview
 func HasAccessToOktetoClusterNamespace(ctx context.Context, namespace string, oktetoClient types.OktetoInterface) (bool, error) {
 	_, err := oktetoClient.Namespaces().Get(ctx, namespace)
-	if err != nil && errors.Is(err, oktetoErrors.ErrNamespaceNotFound) {
+	if errFallback(err) {
 		// added possibility to point a context to a preview environment (namespace)
 		// https://github.com/okteto/okteto/pull/2018
 		_, err := oktetoClient.Previews().Get(ctx, namespace)

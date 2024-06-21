@@ -20,7 +20,6 @@ import (
 
 	"github.com/okteto/okteto/internal/test/client"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,61 +27,80 @@ func Test_HasAccessToOktetoClusterNamespace(t *testing.T) {
 	ctx := context.Background()
 
 	var tests = []struct {
-		errNamespace   error
-		errPreview     error
-		name           string
-		namespaces     []types.Namespace
-		previews       []types.Preview
-		expectedErr    bool
-		expectedAccess bool
+		oktetoClient *client.FakeOktetoClient
+		name         string
+		want         bool
+		wantErr      bool
 	}{
 		{
-			name: "namespaceFound",
-			namespaces: []types.Namespace{
-				{
-					ID: "test",
-				},
+			name: "namespace found, no fallback",
+			oktetoClient: &client.FakeOktetoClient{
+				Namespace: client.NewFakeNamespaceClient(nil, nil),
+				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
 			},
-			expectedAccess: true,
+			want: true,
 		},
 		{
-			name:         "err",
-			errNamespace: fmt.Errorf("could not connect with okteto client"),
-			expectedErr:  true,
+			name: "namespace query error not-found, fallback to preview found",
+			oktetoClient: &client.FakeOktetoClient{
+				Namespace: client.NewFakeNamespaceClient(nil, oktetoErrors.ErrNotFound),
+				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+			},
+			want: true,
 		},
 		{
-			name: "namespaceNotFound and preview not found",
-			namespaces: []types.Namespace{
-				{
-					ID: "not-found",
-				},
+			name: "namespace query error namespace-not-found, fallback to preview found",
+			oktetoClient: &client.FakeOktetoClient{
+				Namespace: client.NewFakeNamespaceClient(nil, oktetoErrors.ErrNamespaceNotFound),
+				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
 			},
-			errNamespace:   oktetoErrors.ErrNamespaceNotFound,
-			errPreview:     oktetoErrors.ErrNamespaceNotFound,
-			expectedAccess: false,
+			want: true,
 		},
 		{
-			name: "previewFound",
-			previews: []types.Preview{
-				{
-					ID: "test",
-				},
+			name: "namespace query error, no fallback",
+			oktetoClient: &client.FakeOktetoClient{
+				Namespace: client.NewFakeNamespaceClient(nil, fmt.Errorf("error at query")),
+				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
 			},
-			errNamespace:   oktetoErrors.ErrNamespaceNotFound,
-			expectedAccess: true,
+			want:    false,
+			wantErr: true,
+		},
+		{
+			name: "fallback to previews, preview query namespace-not-found",
+			oktetoClient: &client.FakeOktetoClient{
+				Namespace: client.NewFakeNamespaceClient(nil, oktetoErrors.ErrNotFound),
+				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{ErrGetPreview: oktetoErrors.ErrNamespaceNotFound}),
+			},
+			want:    false,
+			wantErr: false,
+		},
+		{
+			name: "fallback to previews, preview query error",
+			oktetoClient: &client.FakeOktetoClient{
+				Namespace: client.NewFakeNamespaceClient(nil, oktetoErrors.ErrNotFound),
+				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{ErrGetPreview: fmt.Errorf("error at query")}),
+			},
+			want:    false,
+			wantErr: true,
+		},
+		{
+			name: "fallback to previews, preview found",
+			oktetoClient: &client.FakeOktetoClient{
+				Namespace: client.NewFakeNamespaceClient(nil, oktetoErrors.ErrNotFound),
+				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+			},
+			want:    true,
+			wantErr: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			fakeClient := client.NewFakeOktetoClient()
-			fakeClient.Namespace = client.NewFakeNamespaceClient(tt.namespaces, tt.errNamespace)
-			fakeClient.Preview = client.NewFakePreviewClient(&client.FakePreviewResponse{PreviewList: tt.previews, ErrGetPreview: tt.errPreview})
-			hasAccess, err := HasAccessToOktetoClusterNamespace(ctx, "test", fakeClient)
+			hasAccess, err := HasAccessToOktetoClusterNamespace(ctx, "test", tt.oktetoClient)
 
-			assert.Equal(t, tt.expectedErr, err != nil)
-			assert.Equal(t, tt.expectedAccess, hasAccess)
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, hasAccess)
 		})
 	}
 }
