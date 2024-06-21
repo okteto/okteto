@@ -162,7 +162,12 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 				options.ManifestPath = uptManifestPath
 			}
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: options.Namespace}); err != nil {
+			ctxOpts := &contextCMD.Options{
+				Show:      true,
+				Context:   options.K8sContext,
+				Namespace: options.Namespace,
+			}
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
 				return err
 			}
 

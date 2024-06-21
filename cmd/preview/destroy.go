@@ -71,7 +71,6 @@ func Destroy(ctx context.Context) *cobra.Command {
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
 				return err
 			}
-			oktetoLog.Information("Using %s @ %s as context", opts.name, okteto.RemoveSchema(okteto.GetContext().Name))
 
 			if !okteto.IsOkteto() {
 				return oktetoErrors.ErrContextIsNotOktetoCluster

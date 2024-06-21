@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/doctor"
@@ -47,6 +48,15 @@ func Doctor(k8sLogger *io.K8sLogger) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Info("starting doctor command")
 			ctx := context.Background()
+
+			ctxOpts := &contextCMD.Options{
+				Show:      true,
+				Context:   doctorOpts.K8sContext,
+				Namespace: doctorOpts.Namespace,
+			}
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+				return err
+			}
 
 			if okteto.InDevContainer() {
 				return oktetoErrors.ErrNotInDevContainer

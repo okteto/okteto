@@ -22,6 +22,7 @@ import (
 	"syscall"
 	"time"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
@@ -64,6 +65,15 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
+
+			ctxOpts := &contextCMD.Options{
+				Show:      true,
+				Context:   options.Context,
+				Namespace: options.Namespace,
+			}
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+				return err
+			}
 
 			manifest, err := model.GetManifestV2(options.ManifestPath, afero.NewOsFs())
 			if err != nil {
