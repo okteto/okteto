@@ -1068,7 +1068,6 @@ deploy:
 				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.Section{},
 				Context:      "context-to-use",
-				IsV2:         true,
 				Type:         OktetoManifestType,
 				Fs:           afero.NewOsFs(),
 			},
@@ -1088,7 +1087,6 @@ dev:
     - app:/app
 `),
 			expected: &Manifest{
-				IsV2:  true,
 				Type:  OktetoManifestType,
 				Build: map[string]*build.Info{},
 				Deploy: &DeployInfo{
@@ -1449,7 +1447,6 @@ dev:
 `),
 			expected: &Manifest{
 				Type:         OktetoManifestType,
-				IsV2:         true,
 				Build:        map[string]*build.Info{},
 				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.Section{},
@@ -1533,7 +1530,6 @@ dev:
 `),
 			expected: &Manifest{
 				Type:         OktetoManifestType,
-				IsV2:         true,
 				Build:        map[string]*build.Info{},
 				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.Section{},
@@ -1692,7 +1688,6 @@ deploy:
 `),
 			expected: &Manifest{
 				Type:         OktetoManifestType,
-				IsV2:         true,
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*build.Info{},
 				Dependencies: map[string]*deps.Dependency{},
@@ -1721,7 +1716,6 @@ devs:
 `),
 			expected: &Manifest{
 				Type:         OktetoManifestType,
-				IsV2:         true,
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*build.Info{},
 				Dependencies: map[string]*deps.Dependency{},

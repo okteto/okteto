@@ -798,7 +798,6 @@ func TestTrackDeploy(t *testing.T) {
 		{
 			name: "successful with V2",
 			manifest: &model.Manifest{
-				IsV2: true,
 				Deploy: &model.DeployInfo{
 					Commands: []model.DeployCommand{
 						{
@@ -813,7 +812,6 @@ func TestTrackDeploy(t *testing.T) {
 		{
 			name: "successful with compose",
 			manifest: &model.Manifest{
-				IsV2: true,
 				Deploy: &model.DeployInfo{
 					ComposeSection: &model.ComposeSectionInfo{
 						ComposesInfo: model.ComposeInfoList{},

@@ -94,22 +94,19 @@ func (up *upContext) activate() error {
 		return err
 	}
 
-	buildDevImage := false
-	if _, err := up.Registry.GetImageTagWithDigest(up.Dev.Image.Name); err == oktetoErrors.ErrNotFound {
-		oktetoLog.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
-		path := up.Dev.Image.GetDockerfilePath(up.Fs)
-		if _, err := os.Stat(path); err != nil {
-			return oktetoErrors.UserError{
-				E:    fmt.Errorf("the image '%s' doesn't exist and Dockerfile '%s' is not accessible", up.Dev.Image.Name, path),
-				Hint: "Please update your build section and try again",
+	if !up.isRetry {
+		if _, err := up.Registry.GetImageTagWithDigest(up.Dev.Image.Name); err == oktetoErrors.ErrNotFound {
+			oktetoLog.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
+			path := up.Dev.Image.GetDockerfilePath(up.Fs)
+			if _, err := os.Stat(path); err != nil {
+				return oktetoErrors.UserError{
+					E:    fmt.Errorf("the image '%s' doesn't exist and Dockerfile '%s' is not accessible", up.Dev.Image.Name, path),
+					Hint: "Please update your build section and try again",
+				}
 			}
-		}
-		buildDevImage = true
-	}
-
-	if !up.isRetry && buildDevImage {
-		if err := up.buildDevImage(ctx, app); err != nil {
-			return fmt.Errorf("error building dev image: %w", err)
+			if err := up.buildDevImage(ctx, app); err != nil {
+				return fmt.Errorf("error building dev image: %w", err)
+			}
 		}
 	}
 

@@ -111,7 +111,6 @@ type Manifest struct {
 	Type          Archetype               `json:"-" yaml:"-"`
 	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Manifest      []byte                  `json:"-" yaml:"-"`
-	IsV2          bool                    `json:"-" yaml:"-"`
 }
 
 // ManifestDevs defines all the dev section
@@ -159,7 +158,6 @@ func NewManifestFromStack(stack *Stack) *Manifest {
 		},
 		Dev:   ManifestDevs{},
 		Build: build.ManifestBuild{},
-		IsV2:  true,
 		Fs:    afero.NewOsFs(),
 	}
 	cwd, err := os.Getwd()
@@ -357,7 +355,7 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 		}
 	}
 
-	if manifest != nil && manifest.IsV2 {
+	if manifest != nil {
 		return manifest, nil
 	}
 
@@ -412,7 +410,6 @@ func getManifestFromFile(cwd, manifestPath string, fs afero.Fs) (*Manifest, erro
 			Dev:   ManifestDevs{},
 			Test:  ManifestTests{},
 			Build: build.ManifestBuild{},
-			IsV2:  true,
 			Fs:    fs,
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
@@ -447,35 +444,29 @@ func getManifestFromFile(cwd, manifestPath string, fs afero.Fs) (*Manifest, erro
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto compose unmarshalled successfully")
 		return stackManifest, nil
 	}
-	if devManifest.IsV2 {
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest v2 unmarshalled successfully")
-		devManifest.Type = OktetoManifestType
-		if devManifest.Deploy != nil && devManifest.Deploy.ComposeSection != nil && len(devManifest.Deploy.ComposeSection.ComposesInfo) > 0 {
-			var stackFiles []string
-			for _, composeInfo := range devManifest.Deploy.ComposeSection.ComposesInfo {
-				stackFiles = append(stackFiles, composeInfo.File)
-			}
-			// LoadStack should perform validation of the stack read from the file on compose section
-			// We need to ensure that LoadStack has false because we don't want to expand env vars
-			s, err := LoadStack("", stackFiles, false, fs)
-			if err != nil {
-				return nil, err
-			}
-			devManifest.Deploy.ComposeSection.Stack = s
-			devManifest, err = devManifest.InferFromStack(cwd)
-			if devManifest.Deploy.Endpoints != nil {
-				s.Endpoints = devManifest.Deploy.Endpoints
-			}
-			if err != nil {
-				return nil, err
-			}
+	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest v2 unmarshalled successfully")
+	devManifest.Type = OktetoManifestType
+	if devManifest.Deploy != nil && devManifest.Deploy.ComposeSection != nil && len(devManifest.Deploy.ComposeSection.ComposesInfo) > 0 {
+		var stackFiles []string
+		for _, composeInfo := range devManifest.Deploy.ComposeSection.ComposesInfo {
+			stackFiles = append(stackFiles, composeInfo.File)
 		}
-		return devManifest, nil
-	} else {
-		devManifest.setManifestDefaultsFromDev()
+		// LoadStack should perform validation of the stack read from the file on compose section
+		// We need to ensure that LoadStack has false because we don't want to expand env vars
+		s, err := LoadStack("", stackFiles, false, fs)
+		if err != nil {
+			return nil, err
+		}
+		devManifest.Deploy.ComposeSection.Stack = s
+		devManifest, err = devManifest.InferFromStack(cwd)
+		if devManifest.Deploy.Endpoints != nil {
+			s.Endpoints = devManifest.Deploy.Endpoints
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 	return devManifest, nil
-
 }
 
 // GetInferredManifest infers the manifest from a directory
@@ -514,7 +505,6 @@ func GetInferredManifest(cwd string, fs afero.Fs) (*Manifest, error) {
 			Dev:   ManifestDevs{},
 			Test:  ManifestTests{},
 			Build: build.ManifestBuild{},
-			IsV2:  true,
 			Fs:    fs,
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
@@ -1299,18 +1289,6 @@ func (m *Manifest) IsDeployDefault() bool {
 	return false
 }
 
-// setManifestDefaultsFromDev sets context and namespace from the dev
-func (m *Manifest) setManifestDefaultsFromDev() {
-	if len(m.Dev) == 1 {
-		for _, devInfo := range m.Dev {
-			m.Context = devInfo.Context
-			m.Namespace = devInfo.Namespace
-		}
-	} else {
-		oktetoLog.Infof("could not set context and manifest from dev section due to being '%d' devs declared", len(m.Dev))
-	}
-}
-
 // HasDependencies returns true if the manifest has dependencies
 func (m *Manifest) HasDependencies() bool {
 	if m.Dependencies == nil {
@@ -1353,22 +1331,21 @@ func (m *Manifest) HasDependenciesSection() bool {
 	if m == nil {
 		return false
 	}
-	return m.IsV2 && len(m.Dependencies) > 0
+	return len(m.Dependencies) > 0
 }
 
 func (m *Manifest) HasBuildSection() bool {
 	if m == nil {
 		return false
 	}
-	return m.IsV2 && len(m.Build) > 0
+	return len(m.Build) > 0
 }
 
 func (m *Manifest) HasDeploySection() bool {
 	if m == nil {
 		return false
 	}
-	return m.IsV2 &&
-		m.Deploy != nil &&
+	return m.Deploy != nil &&
 		(len(m.Deploy.Commands) > 0 ||
 			(m.Deploy.ComposeSection != nil &&
 				m.Deploy.ComposeSection.ComposesInfo != nil))

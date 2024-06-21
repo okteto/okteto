@@ -116,7 +116,6 @@ var fakeManifestV2 *model.Manifest = &model.Manifest{
 			Image: "test/test-2",
 		},
 	},
-	IsV2: true,
 }
 
 func getManifestWithError(_ string, _ afero.Fs) (*model.Manifest, error) {
@@ -129,90 +128,11 @@ func getManifestWithInvalidManifestError(_ string, _ afero.Fs) (*model.Manifest,
 
 func getFakeManifestV1(_ string, _ afero.Fs) (*model.Manifest, error) {
 	manifestV1 := *fakeManifestV2
-	manifestV1.IsV2 = false
 	return &manifestV1, nil
 }
 
 func getFakeManifestV2(_ string, _ afero.Fs) (*model.Manifest, error) {
 	return fakeManifestV2, nil
-}
-
-func TestIsBuildV2(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		manifest       *model.Manifest
-		name           string
-		expectedAnswer bool
-	}{
-		{
-			name: "manifest v1 is build v1",
-			manifest: &model.Manifest{
-				IsV2: false,
-			},
-			expectedAnswer: false,
-		},
-		{
-			name: "manifest v2 with no build section is build v1",
-			manifest: &model.Manifest{
-				IsV2:  true,
-				Build: build.ManifestBuild{},
-			},
-			expectedAnswer: false,
-		},
-		{
-			name: "manifest v1 with build section is build v1",
-			manifest: &model.Manifest{
-				IsV2: false,
-				Build: build.ManifestBuild{
-					"test-1": &build.Info{
-						Image: "test/test-1",
-					},
-					"test-2": &build.Info{
-						Image: "test/test-2",
-					},
-				},
-			},
-			expectedAnswer: false,
-		},
-		{
-			name: "manifest v1 with build section is build v1",
-			manifest: &model.Manifest{
-				IsV2: false,
-				Build: build.ManifestBuild{
-					"test-1": &build.Info{
-						Image: "test/test-1",
-					},
-					"test-2": &build.Info{
-						Image: "test/test-2",
-					},
-				},
-			},
-			expectedAnswer: false,
-		},
-		{
-			name: "manifest v2 with build section is build v2",
-			manifest: &model.Manifest{
-				IsV2: true,
-				Build: build.ManifestBuild{
-					"test-1": &build.Info{
-						Image: "test/test-1",
-					},
-					"test-2": &build.Info{
-						Image: "test/test-2",
-					},
-				},
-			},
-			expectedAnswer: true,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			answer := isBuildV2(tt.manifest)
-			assert.Equal(t, answer, tt.expectedAnswer)
-		})
-	}
 }
 
 func TestBuildIsManifestV2(t *testing.T) {

@@ -237,21 +237,14 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 				return fmt.Errorf("failed to load k8s client: %w", err)
 			}
 
-			// if manifest v1 - either set autocreate: true or pass --deploy (okteto forces autocreate: true)
-			// if manifest v2 - either set autocreate: true or pass --deploy with a deploy section at the manifest
-			forceAutocreate := false
-			if upOptions.Deploy && !up.Manifest.IsV2 {
-				// the autocreate property is forced to be true
-				forceAutocreate = true
-			} else if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, k8sClient)) {
+			if upOptions.Deploy || !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, k8sClient) {
 				err := up.deployApp(ctx, ioCtrl, k8sLogger)
 
 				// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
 				if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands) {
 					return err
 				}
-
-			} else if !upOptions.Deploy && (up.Manifest.IsV2 && pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, k8sClient)) {
+			} else if !upOptions.Deploy && pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, k8sClient) {
 				oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy' or 'okteto up --deploy'", up.Manifest.Name)
 			}
 
@@ -275,11 +268,6 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 			}
 
 			up.Dev = dev
-			if forceAutocreate {
-				// update autocreate property if needed to be forced
-				oktetoLog.Info("Setting Autocreate to true because manifest v1 and flag --deploy")
-				up.Dev.Autocreate = true
-			}
 
 			// only if the context is an okteto one, we should verify if the namespace has to be woken up
 			if okteto.GetContext().IsOkteto {
@@ -342,12 +330,6 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 
 			if _, ok := os.LookupEnv(model.OktetoAutoDeployEnvVar); ok {
 				upOptions.Deploy = true
-			}
-
-			if up.Manifest.Type == model.OktetoManifestType && !up.Manifest.IsV2 {
-				oktetoLog.Warning("okteto manifest v1 is deprecated and will be removed in okteto 3.0")
-				oktetoLog.Println(oktetoLog.BlueString(`    Follow this guide to upgrade to the new okteto manifest schema:
-    https://www.okteto.com/docs/reference/manifest-migration/`))
 			}
 
 			if err = up.start(); err != nil {
@@ -497,7 +479,7 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 		return err
 	}
 	c := &deploy.Command{
-		GetManifest:       up.getManifest,
+		GetManifest:       model.GetManifestV2,
 		GetDeployer:       deploy.GetDeployer,
 		K8sClientProvider: k8sProvider,
 		Builder:           up.builder,
@@ -540,16 +522,9 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 		HasDependenciesSection: up.Manifest.HasDependenciesSection(),
 		HasBuildSection:        up.Manifest.HasBuildSection(),
 		Err:                    err,
-		IsRemote:               up.Manifest.IsV2 && isRemote,
+		IsRemote:               isRemote,
 	})
 	return err
-}
-
-func (up *upContext) getManifest(path string, fs afero.Fs) (*model.Manifest, error) {
-	if up.Manifest != nil {
-		return up.Manifest, nil
-	}
-	return model.GetManifestV2(path, fs)
 }
 
 func (up *upContext) start() error {
@@ -741,7 +716,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 	context := up.Dev.Image.Context
 	target := up.Dev.Image.Target
 	cacheFrom := up.Dev.Image.CacheFrom
-	if v, ok := up.Manifest.Build[up.Dev.Name]; up.Manifest.IsV2 && ok {
+	if v, ok := up.Manifest.Build[up.Dev.Name]; ok {
 		dockerfile = v.Dockerfile
 		image = v.Image
 		args = v.Args

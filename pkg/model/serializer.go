@@ -780,7 +780,6 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	m.Build = manifest.Build
 	m.Namespace = manifest.Namespace
 	m.Context = manifest.Context
-	m.IsV2 = true
 	m.Dependencies = manifest.Dependencies
 	m.Name = manifest.Name
 	m.GlobalForward = manifest.GlobalForward
