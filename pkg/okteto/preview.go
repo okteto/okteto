@@ -406,9 +406,6 @@ func (*previewClient) translateErr(err error, name string) error {
 		return oktetoErrors.UserError{E: ErrUnauthorizedGlobalCreation,
 			Hint: "Please log in with an administrator account or use a personal preview environment"}
 	}
-	if err.Error() == "namespace-not-found" {
-		return oktetoErrors.ErrNamespaceNotFound
-	}
 	return err
 }
 
