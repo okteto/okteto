@@ -68,19 +68,6 @@ func GetContextResource(path string) (*ContextResource, error) {
 	return ctxResource, nil
 }
 
-// UpdateContext updates the context from the resource
-func (c *ContextResource) UpdateContext(okCtx string) error {
-	if c.Context != "" {
-		if okCtx != "" && okCtx != c.Context {
-			return oktetoErrors.ErrContextNotMatching
-		}
-		return nil
-	}
-
-	c.Context = okCtx
-	return nil
-}
-
 // UpdateNamespace updates the namespace from the resource
 func (c *ContextResource) UpdateNamespace(okNs string) error {
 	if c.Namespace != "" {

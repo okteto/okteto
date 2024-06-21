@@ -39,13 +39,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 		Short: "Show endpoints for a preview environment",
 		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			previewName := args[0]
-
-			//ctxResource := &model.ContextResource{}
-			//if err := ctxResource.UpdateNamespace(previewName); err != nil {
-			//	return err
-			//}
 
 			jsonContextBuffer := bytes.NewBuffer([]byte{})
 			if output == "json" {

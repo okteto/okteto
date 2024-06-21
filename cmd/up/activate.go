@@ -66,7 +66,7 @@ func (up *upContext) activate() error {
 	if err != nil {
 		return err
 	}
-	app, create, err := utils.GetApp(ctx, up.Dev, k8sClient, up.isRetry)
+	app, create, err := utils.GetApp(ctx, up.Dev, okteto.GetContext().Namespace, k8sClient, up.isRetry)
 	if err != nil {
 		return err
 	}

@@ -208,8 +208,8 @@ func GetDownCommand(devPath string) string {
 	return okDownCommandHint
 }
 
-func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry bool) (apps.App, bool, error) {
-	app, err := apps.Get(ctx, dev, dev.Namespace, c)
+func GetApp(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface, isRetry bool) (apps.App, bool, error) {
+	app, err := apps.Get(ctx, dev, namespace, c)
 	if err != nil {
 		if !oktetoErrors.IsNotFound(err) {
 			return nil, false, err
