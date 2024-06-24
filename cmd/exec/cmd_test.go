@@ -56,18 +56,20 @@ func (f *fakeExecutorProvider) provide(*model.Dev, string) (executor, error) {
 }
 
 func TestExec_Run(t *testing.T) {
+	namespace := "test"
+
 	okteto.CurrentStore = &okteto.ContextStore{
 		Contexts: map[string]*okteto.Context{
 			"test": {
-				Name: "test",
+				Name:      "test",
+				Namespace: namespace,
 			},
 		},
 		CurrentContext: "test",
 	}
 
 	dev := &model.Dev{
-		Name:      "test",
-		Namespace: "test",
+		Name: "test",
 	}
 
 	tt := []struct {
@@ -79,7 +81,7 @@ func TestExec_Run(t *testing.T) {
 	}{
 		{
 			name:        "error retrieving app",
-			expectedErr: fmt.Errorf("development containers not found in namespace ''"),
+			expectedErr: fmt.Errorf("development containers not found in namespace 'test'"),
 		},
 		{
 			name:         "error providing kubernetes client",
@@ -88,7 +90,7 @@ func TestExec_Run(t *testing.T) {
 				&appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      dev.Name,
-						Namespace: dev.Namespace,
+						Namespace: namespace,
 						Labels: map[string]string{
 							constants.DevLabel: "true",
 						},
@@ -97,7 +99,7 @@ func TestExec_Run(t *testing.T) {
 				&appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      model.DevCloneName(dev.Name),
-						Namespace: dev.Namespace,
+						Namespace: namespace,
 						Labels: map[string]string{
 							constants.DevLabel: "true",
 						},
@@ -112,7 +114,7 @@ func TestExec_Run(t *testing.T) {
 				&appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      dev.Name,
-						Namespace: dev.Namespace,
+						Namespace: namespace,
 						Labels: map[string]string{
 							constants.DevLabel: "true",
 						},
@@ -125,7 +127,7 @@ func TestExec_Run(t *testing.T) {
 				&appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      model.DevCloneName(dev.Name),
-						Namespace: dev.Namespace,
+						Namespace: namespace,
 						Labels: map[string]string{
 							constants.DevLabel: "true",
 						},
@@ -134,7 +136,7 @@ func TestExec_Run(t *testing.T) {
 				&appsv1.ReplicaSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      dev.Name,
-						Namespace: dev.Namespace,
+						Namespace: namespace,
 						Labels: map[string]string{
 							constants.DevLabel: "true",
 						},
@@ -152,7 +154,7 @@ func TestExec_Run(t *testing.T) {
 				&corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      dev.Name,
-						Namespace: dev.Namespace,
+						Namespace: namespace,
 					},
 				},
 			},
@@ -164,7 +166,7 @@ func TestExec_Run(t *testing.T) {
 				&appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      dev.Name,
-						Namespace: dev.Namespace,
+						Namespace: namespace,
 						Labels: map[string]string{
 							constants.DevLabel: "true",
 						},
@@ -177,7 +179,7 @@ func TestExec_Run(t *testing.T) {
 				&appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      model.DevCloneName(dev.Name),
-						Namespace: dev.Namespace,
+						Namespace: namespace,
 						Labels: map[string]string{
 							constants.DevLabel: "true",
 						},
@@ -190,7 +192,7 @@ func TestExec_Run(t *testing.T) {
 				&appsv1.ReplicaSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      dev.Name,
-						Namespace: dev.Namespace,
+						Namespace: namespace,
 						Labels: map[string]string{
 							constants.DevLabel: "true",
 						},
@@ -208,7 +210,7 @@ func TestExec_Run(t *testing.T) {
 				&corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      dev.Name,
-						Namespace: dev.Namespace,
+						Namespace: namespace,
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								UID: "test",
@@ -235,7 +237,7 @@ func TestExec_Run(t *testing.T) {
 				&appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      dev.Name,
-						Namespace: dev.Namespace,
+						Namespace: namespace,
 						Labels: map[string]string{
 							constants.DevLabel: "true",
 						},
@@ -248,7 +250,7 @@ func TestExec_Run(t *testing.T) {
 				&appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      model.DevCloneName(dev.Name),
-						Namespace: dev.Namespace,
+						Namespace: namespace,
 						Labels: map[string]string{
 							constants.DevLabel: "true",
 						},
@@ -261,7 +263,7 @@ func TestExec_Run(t *testing.T) {
 				&appsv1.ReplicaSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      dev.Name,
-						Namespace: dev.Namespace,
+						Namespace: namespace,
 						Labels: map[string]string{
 							constants.DevLabel: "true",
 						},
@@ -279,7 +281,7 @@ func TestExec_Run(t *testing.T) {
 				&corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      dev.Name,
-						Namespace: dev.Namespace,
+						Namespace: namespace,
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								UID: "test",
@@ -309,7 +311,7 @@ func TestExec_Run(t *testing.T) {
 				&appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      dev.Name,
-						Namespace: dev.Namespace,
+						Namespace: namespace,
 						Labels: map[string]string{
 							constants.DevLabel: "true",
 						},
@@ -322,7 +324,7 @@ func TestExec_Run(t *testing.T) {
 				&appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      model.DevCloneName(dev.Name),
-						Namespace: dev.Namespace,
+						Namespace: namespace,
 						Labels: map[string]string{
 							constants.DevLabel: "true",
 						},
@@ -335,7 +337,7 @@ func TestExec_Run(t *testing.T) {
 				&appsv1.ReplicaSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      dev.Name,
-						Namespace: dev.Namespace,
+						Namespace: namespace,
 						Labels: map[string]string{
 							constants.DevLabel: "true",
 						},
@@ -353,7 +355,7 @@ func TestExec_Run(t *testing.T) {
 				&corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      dev.Name,
-						Namespace: dev.Namespace,
+						Namespace: namespace,
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								UID: "test",

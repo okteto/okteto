@@ -48,12 +48,16 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 		return nil, oktetoErrors.ErrManifestNoDevSection
 	} else if len(manifest.Dev) == 1 {
 		for name, dev := range manifest.Dev {
-			if devName != "" && devName != name {
-				return nil, oktetoErrors.UserError{
-					E:    fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, devName),
-					Hint: fmt.Sprintf("Available options are: [%s]", name),
+			if devName != "" {
+				if devName != name {
+					return nil, oktetoErrors.UserError{
+						E:    fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, devName),
+						Hint: fmt.Sprintf("Available options are: [%s]", name),
+					}
 				}
+				dev.Namespace = okteto.GetContext().Namespace
 			}
+
 			return dev, nil
 		}
 	}
@@ -99,13 +103,9 @@ func SelectDevFromManifest(manifest *model.Manifest, selector OktetoSelectorInte
 	dev := manifest.Dev[devKey]
 
 	dev.Name = devKey
-	if dev.Namespace == "" {
-		dev.Namespace = okteto.GetContext().Namespace
-	}
+	dev.Namespace = okteto.GetContext().Namespace
+	dev.Context = okteto.GetContext().Name
 
-	if dev.Context == "" {
-		dev.Context = okteto.GetContext().Name
-	}
 	if err := dev.Validate(); err != nil {
 		return nil, err
 	}
