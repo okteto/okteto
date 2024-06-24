@@ -65,9 +65,7 @@ func TestManifestExpandDevEnvs(t *testing.T) {
 				Dev: ManifestDevs{
 					"test": &Dev{
 						Autocreate: true,
-						Image: &build.Info{
-							Name: "test",
-						},
+						Image:      "test",
 					},
 				},
 			},
@@ -91,9 +89,7 @@ func TestManifestExpandDevEnvs(t *testing.T) {
 				Dev: ManifestDevs{
 					"test": &Dev{
 						Autocreate: true,
-						Image: &build.Info{
-							Name: "${myImage}",
-						},
+						Image:      "${myImage}",
 					},
 				},
 			},
@@ -104,9 +100,7 @@ func TestManifestExpandDevEnvs(t *testing.T) {
 				Dev: ManifestDevs{
 					"test": &Dev{
 						Autocreate: true,
-						Image: &build.Info{
-							Name: "test-2",
-						},
+						Image:      "test-2",
 					},
 				},
 			},
@@ -120,9 +114,7 @@ func TestManifestExpandDevEnvs(t *testing.T) {
 				Dev: ManifestDevs{
 					"test": &Dev{
 						Autocreate: true,
-						Image: &build.Info{
-							Name: "${build}",
-						},
+						Image:      "${build}",
 					},
 				},
 			},
@@ -130,9 +122,7 @@ func TestManifestExpandDevEnvs(t *testing.T) {
 				Dev: ManifestDevs{
 					"test": &Dev{
 						Autocreate: true,
-						Image: &build.Info{
-							Name: "test",
-						},
+						Image:      "test",
 					},
 				},
 			},
@@ -610,12 +600,9 @@ func TestInferFromStack(t *testing.T) {
 							Labels:      Labels{},
 							Annotations: Annotations{},
 						},
-						Selector:   Selector{},
-						EmptyImage: true,
-						Image: &build.Info{
-							Context:    ".",
-							Dockerfile: "Dockerfile",
-						},
+						Selector:        Selector{},
+						EmptyImage:      true,
+						Image:           "",
 						ImagePullPolicy: apiv1.PullAlways,
 						InitContainer:   InitContainer{Image: OktetoBinImageTag},
 						Probes:          &Probes{},
@@ -996,15 +983,15 @@ func Test_getManifestFromFile(t *testing.T) {
 			name:          "manifestPath to a valid compose file",
 			manifestBytes: nil,
 			composeBytes: []byte(`services:
-  test:
-    image: test`),
+    test:
+        image: test`),
 		},
 		{
 			name:          "manifestPath to a invalid compose file with empty service",
 			manifestBytes: nil,
 			composeBytes: []byte(`services:
-  test:
-          `),
+    test:
+`),
 			expectedErr: oktetoErrors.ErrServiceEmpty,
 		},
 		{
@@ -1022,9 +1009,9 @@ func Test_getManifestFromFile(t *testing.T) {
 		{
 			name: "manifestPath to valid v2 okteto manifest",
 			manifestBytes: []byte(`dev:
-  api:
-    sync:
-      - .:/usr`),
+    api:
+        sync:
+        - .:/usr`),
 			composeBytes: nil,
 		},
 		{
@@ -1032,6 +1019,7 @@ func Test_getManifestFromFile(t *testing.T) {
 			manifestBytes: []byte(`name: test
 sync:
   - .:/usr`),
+			expectedErr:  fmt.Errorf("your okteto manifest is not valid, please check the following errors:"),
 			composeBytes: nil,
 		},
 		{
@@ -1058,7 +1046,11 @@ sync:
 			}
 			_, err := getManifestFromFile(dir, file, afero.NewMemMapFs())
 
-			assert.ErrorIs(t, err, tt.expectedErr)
+			if tt.expectedErr != nil {
+				assert.ErrorContains(t, err, tt.expectedErr.Error())
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
@@ -1643,12 +1635,14 @@ func TestRead(t *testing.T) {
     image: test-image
     context: ./test`),
 			expected: &Manifest{
-				Name:         "",
-				Namespace:    "",
-				Context:      "",
-				Icon:         "",
-				ManifestPath: "",
-				Deploy:       nil,
+				Name:          "",
+				Namespace:     "",
+				Context:       "",
+				Icon:          "",
+				ManifestPath:  "",
+				Deploy:        &DeployInfo{},
+				Test:          ManifestTests{},
+				GlobalForward: []forward.GlobalForward{},
 				Dev: ManifestDevs{
 					"test": &Dev{
 						Name:      "test",
@@ -1658,13 +1652,9 @@ func TestRead(t *testing.T) {
 							Labels:      Labels{},
 							Annotations: Annotations{},
 						},
-						Selector:   Selector{},
-						EmptyImage: false,
-						Image: &build.Info{
-							Name:       "test-image",
-							Context:    ".",
-							Dockerfile: "Dockerfile",
-						},
+						Selector:        Selector{},
+						EmptyImage:      false,
+						Image:           "test-image",
 						ImagePullPolicy: apiv1.PullAlways,
 						InitContainer:   InitContainer{Image: OktetoBinImageTag},
 						Probes:          &Probes{},
@@ -1709,11 +1699,10 @@ func TestRead(t *testing.T) {
 					Commands: nil,
 					Remote:   false,
 				},
-				Build:         build.ManifestBuild{},
-				Dependencies:  deps.ManifestSection{},
-				GlobalForward: nil,
-				External:      externalresource.Section{},
-				Type:          OktetoManifestType,
+				Build:        build.ManifestBuild{},
+				Dependencies: deps.ManifestSection{},
+				External:     externalresource.Section{},
+				Type:         OktetoManifestType,
 				Manifest: []byte(`dev:
   test:
     image: test-image
@@ -1741,11 +1730,13 @@ func TestRead(t *testing.T) {
     namespace: staging
     service: service-b`),
 			expected: &Manifest{
-				Name:         "",
-				Namespace:    "",
-				Context:      "",
-				Icon:         "",
-				ManifestPath: "",
+				Name:          "",
+				Namespace:     "",
+				Context:       "",
+				Icon:          "",
+				ManifestPath:  "",
+				Test:          ManifestTests{},
+				GlobalForward: []forward.GlobalForward{},
 				Deploy: &DeployInfo{
 					ComposeSection: nil,
 					Endpoints:      nil,
@@ -1768,12 +1759,11 @@ func TestRead(t *testing.T) {
 					Commands: nil,
 					Remote:   false,
 				},
-				Build:         build.ManifestBuild{},
-				Dependencies:  deps.ManifestSection{},
-				GlobalForward: nil,
-				External:      externalresource.Section{},
-				Type:          OktetoManifestType,
-				Fs:            afero.NewOsFs(),
+				Build:        build.ManifestBuild{},
+				Dependencies: deps.ManifestSection{},
+				External:     externalresource.Section{},
+				Type:         OktetoManifestType,
+				Fs:           afero.NewOsFs(),
 				Manifest: []byte(`deploy:
   divert:
     namespace: staging

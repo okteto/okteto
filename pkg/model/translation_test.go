@@ -19,7 +19,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/stretchr/testify/assert"
@@ -31,40 +30,41 @@ import (
 )
 
 func TestDevToTranslationRule(t *testing.T) {
-	manifestBytes := []byte(`name: web
-namespace: n
-container: dev
-image: web:latest
-command: ["./run_web.sh"]
-imagePullPolicy: Never
-sync:
-  - .:/app
-  - sub:/path
-resources:
-  limits:
-    cpu: 2
-    memory: 1Gi
-    nvidia.com/gpu: 1
-    amd.com/gpu: 1
-nodeSelector:
-  disktype: ssd
-affinity:
-  podAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-    - labelSelector:
-        matchExpressions:
-        - key: role
-          operator: In
-          values:
-          - web-server
-      topologyKey: kubernetes.io/hostname
-services:
-  - name: worker
-    container: dev
-    image: worker:latest
-    imagePullPolicy: IfNotPresent
-    sync:
-      - worker:/src`)
+	manifestBytes := []byte(`dev:
+    web:
+        namespace: n
+        container: dev
+        image: web:latest
+        command: ["./run_web.sh"]
+        imagePullPolicy: Never
+        sync:
+        - .:/app
+        - sub:/path
+        resources:
+            limits:
+                cpu: 2
+                memory: 1Gi
+                nvidia.com/gpu: 1
+                amd.com/gpu: 1
+        nodeSelector:
+            disktype: ssd
+        affinity:
+            podAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchExpressions:
+                    - key: role
+                      operator: In
+                      values:
+                      - web-server
+                  topologyKey: kubernetes.io/hostname
+        services:
+        - name: worker
+          container: dev
+          image: worker:latest
+          imagePullPolicy: IfNotPresent
+          sync:
+          - worker:/src`)
 
 	manifest, err := Read(manifestBytes)
 	if err != nil {
@@ -228,19 +228,20 @@ services:
 }
 
 func TestDevToTranslationRuleInitContainer(t *testing.T) {
-	manifestBytes := []byte(`name: web
-namespace: n
-sync:
-  - .:/app
-initContainer:
-  image: image
-  resources:
-    requests:
-      cpu: 1
-      memory: 1Gi
-    limits:
-      cpu: 2
-      memory: 2Gi`)
+	manifestBytes := []byte(`dev:
+    web:
+        namespace: n
+        sync:
+          - .:/app
+        initContainer:
+          image: image
+          resources:
+            requests:
+              cpu: 1
+              memory: 1Gi
+            limits:
+              cpu: 2
+              memory: 2Gi`)
 
 	manifest, err := Read(manifestBytes)
 	if err != nil {
@@ -330,11 +331,12 @@ initContainer:
 func TestDevToTranslationDebugEnabled(t *testing.T) {
 	oktetoLog.SetLevel("debug")
 	defer oktetoLog.SetLevel(oktetoLog.InfoLevel)
-	manifestBytes := []byte(`name: web
-image: dev-image
-namespace: n
-sync:
-  - .:/app`)
+	manifestBytes := []byte(`dev:
+    web:
+        image: dev-image
+        namespace: n
+        sync:
+          - .:/app`)
 
 	manifest, err := Read(manifestBytes)
 	if err != nil {
@@ -418,7 +420,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 		{
 			name: "default",
 			manifest: &Dev{
-				Image:         &build.Info{},
+				Image:         "",
 				SSHServerPort: oktetoDefaultSSHServerPort,
 			},
 			expected: env.Environment{
@@ -435,7 +437,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 		{
 			name: "custom port",
 			manifest: &Dev{
-				Image:         &build.Info{},
+				Image:         "",
 				SSHServerPort: 22220,
 			},
 			expected: env.Environment{
@@ -474,14 +476,15 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 	}{
 		{
 			name: "root-user-with-overrides",
-			manifest: []byte(`name: root-user-with-overrides
-image: worker:latest
-namespace: n
-securityContext:
-   runAsUser: 100
-   runAsGroup: 101
-   fsGroup: 102
-   runAsNonRoot: false`),
+			manifest: []byte(`dev:
+    root-user-with-overrides:
+        image: worker:latest
+        namespace: n
+        securityContext:
+           runAsUser: 100
+           runAsGroup: 101
+           fsGroup: 102
+           runAsNonRoot: false`),
 			translated: SecurityContext{
 				RunAsUser:    &runAsUser,
 				RunAsGroup:   &runAsGroup,
@@ -491,22 +494,24 @@ securityContext:
 		},
 		{
 			name: "non-root-user-without-overrides",
-			manifest: []byte(`name: non-root-user-without-overrides
-image: worker:latest
-namespace: n
-securityContext:
-   runAsNonRoot: true`),
+			manifest: []byte(`dev: 
+    non-root-user-without-overrides:
+        image: worker:latest
+        namespace: n
+        securityContext:
+           runAsNonRoot: true`),
 			translated: SecurityContext{
 				RunAsNonRoot: &trueBoolean,
 			},
 		},
 		{
 			name: "root-user-with-defaults",
-			manifest: []byte(`name: root-user-with-defaults
-image: worker:latest
-namespace: n
-securityContext:
-   runAsNonRoot: false`),
+			manifest: []byte(`dev: 
+    root-user-with-defaults:
+        image: worker:latest
+        namespace: n
+        securityContext:
+           runAsNonRoot: false`),
 			translated: SecurityContext{
 				RunAsUser:    pointer.Int64(0),
 				RunAsGroup:   pointer.Int64(0),
@@ -516,14 +521,15 @@ securityContext:
 		},
 		{
 			name: "non-root-user-with-overrides",
-			manifest: []byte(`name: non-root-user-with-overrides
-image: worker:latest
-namespace: n
-securityContext:
-   runAsUser: 100
-   runAsGroup: 101
-   fsGroup: 102
-   runAsNonRoot: true`),
+			manifest: []byte(`dev: 
+    non-root-user-with-overrides:
+        image: worker:latest
+        namespace: n
+        securityContext:
+           runAsUser: 100
+           runAsGroup: 101
+           fsGroup: 102
+           runAsNonRoot: true`),
 			translated: SecurityContext{
 				RunAsUser:    &runAsUser,
 				RunAsGroup:   &runAsGroup,
@@ -533,9 +539,10 @@ securityContext:
 		},
 		{
 			name: "no-security-context",
-			manifest: []byte(`name: no-security-context
-image: worker:latest
-namespace: n`),
+			manifest: []byte(`dev:
+    no-security-context:
+        image: worker:latest
+        namespace: n`),
 			translated: SecurityContext{
 				RunAsUser:  pointer.Int64(0),
 				RunAsGroup: pointer.Int64(0),
@@ -544,13 +551,14 @@ namespace: n`),
 		},
 		{
 			name: "no-run-as-non-root",
-			manifest: []byte(`name: no-run-as-non-root
-image: worker:latest
-namespace: n
-securityContext:
-   runAsUser: 100
-   runAsGroup: 101
-   fsGroup: 102`),
+			manifest: []byte(`dev: 
+    no-run-as-non-root:
+        image: worker:latest
+        namespace: n
+        securityContext:
+           runAsUser: 100
+           runAsGroup: 101
+           fsGroup: 102`),
 			translated: SecurityContext{
 				RunAsUser:  &runAsUser,
 				RunAsGroup: &runAsGroup,

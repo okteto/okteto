@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strings"
 
@@ -657,22 +656,8 @@ func Read(bytes []byte) (*Manifest, error) {
 
 	if bytes != nil {
 		if err := yaml.UnmarshalStrict(bytes, manifest); err != nil {
-			if err := yaml.Unmarshal(bytes, manifest); err == nil {
-				if reflect.DeepEqual(manifest, NewManifest()) {
-					return nil, oktetoErrors.ErrNotManifestContentDetected
-				}
-			}
 			return nil, err
 		}
-	}
-
-	hasShownWarning := false
-	for _, dev := range manifest.Dev {
-		if dev.Image != nil && (dev.Image.Context != "" || dev.Image.Dockerfile != "") && !hasShownWarning {
-			hasShownWarning = true
-			oktetoLog.Yellow(`The 'image' extended syntax is deprecated and will be removed in a future version. Define the images you want to build in the 'build' section of your manifest. More info at https://www.okteto.com/docs/reference/okteto-manifest/#build"`)
-		}
-
 	}
 
 	if err := manifest.setDefaults(); err != nil {
@@ -951,13 +936,11 @@ func (manifest *Manifest) ExpandEnvVars() error {
 	}
 
 	for devName, devInfo := range manifest.Dev {
-		if _, ok := manifest.Build[devName]; ok && devInfo.Image == nil && devInfo.Autocreate {
-			devInfo.Image = &build.Info{
-				Name: fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(devName, "-", "_"))),
-			}
+		if _, ok := manifest.Build[devName]; ok && devInfo.Image == "" && devInfo.Autocreate {
+			devInfo.Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(devName, "-", "_")))
 		}
-		if devInfo.Image != nil {
-			devInfo.Image.Name, err = env.ExpandEnvIfNotEmpty(devInfo.Image.Name)
+		if devInfo.Image != "" {
+			devInfo.Image, err = env.ExpandEnvIfNotEmpty(devInfo.Image)
 			if err != nil {
 				return err
 			}
@@ -1082,18 +1065,15 @@ func (m *Manifest) WriteToFile(filePath string) error {
 		d.Name = ""
 		d.Context = ""
 		d.Namespace = ""
-		if d.Image != nil && d.Image.Name != "" {
-			d.Image.Context = ""
-			d.Image.Dockerfile = ""
-		} else {
+		if d.Image == "" {
 			if v, ok := m.Build[dName]; ok {
 				if v.Image != "" {
-					d.Image = &build.Info{Name: v.Image}
+					d.Image = v.Image
 				} else {
-					d.Image = nil
+					d.Image = ""
 				}
 			} else {
-				d.Image = nil
+				d.Image = ""
 			}
 		}
 	}

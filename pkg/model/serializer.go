@@ -734,7 +734,7 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return fmt.Errorf("dev workdir is not a dir")
 		}
 		dev.Workdir = localDir
-		dev.Image.Name = "busybox"
+		dev.Image = "busybox"
 
 	} else {
 		dev.Mode = constants.OktetoSyncModeFieldValue
@@ -773,7 +773,9 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err != nil {
 		return err
 	}
-	m.Deploy = manifest.Deploy
+	if manifest.Deploy != nil {
+		m.Deploy = manifest.Deploy
+	}
 	m.Destroy = manifest.Destroy
 	m.Dev = manifest.Dev
 	m.Icon = manifest.Icon
@@ -782,10 +784,13 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	m.Context = manifest.Context
 	m.Dependencies = manifest.Dependencies
 	m.Name = manifest.Name
-	m.GlobalForward = manifest.GlobalForward
+	if manifest.GlobalForward != nil {
+		m.GlobalForward = manifest.GlobalForward
+	}
 	m.External = manifest.External
-	m.Test = manifest.Test
-
+	if manifest.Test != nil {
+		m.Test = manifest.Test
+	}
 	err = m.SanitizeSvcNames()
 	if err != nil {
 		return err

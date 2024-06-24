@@ -126,11 +126,6 @@ func getManifestWithInvalidManifestError(_ string, _ afero.Fs) (*model.Manifest,
 	return nil, oktetoErrors.ErrInvalidManifest
 }
 
-func getFakeManifestV1(_ string, _ afero.Fs) (*model.Manifest, error) {
-	manifestV1 := *fakeManifestV2
-	return &manifestV1, nil
-}
-
 func getFakeManifestV2(_ string, _ afero.Fs) (*model.Manifest, error) {
 	return fakeManifestV2, nil
 }
@@ -260,19 +255,6 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			options:           &types.BuildOptions{},
 			expectedError:     false,
 			isBuildV2Expected: true,
-		},
-		{
-			name: "Manifest valid but BuilderV1 fallback.",
-			buildCommand: &Command{
-				GetManifest:      getFakeManifestV1,
-				Registry:         newFakeRegistry(),
-				ioCtrl:           io.NewIOController(),
-				analyticsTracker: fakeAnalyticsTracker{},
-				insights:         fakeAnalyticsTracker{},
-			},
-			options:           &types.BuildOptions{},
-			expectedError:     false,
-			isBuildV2Expected: false,
 		},
 		{
 			name: "Manifest error. BuilderV1 fallback.",
