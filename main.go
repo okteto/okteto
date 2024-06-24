@@ -18,6 +18,7 @@ import (
 	cryptoRand "crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"math/rand"
 	"os"
 	"strings"
@@ -87,6 +88,21 @@ func init() {
 	}
 }
 
+type osEnvVarManager struct{}
+
+func (*osEnvVarManager) Lookup(key string) (string, bool) {
+	return os.LookupEnv(key)
+}
+func (*osEnvVarManager) Set(key, value string) error {
+	return os.Setenv(key, value)
+}
+func (*osEnvVarManager) MaskVar(value string) {
+	oktetoLog.AddMaskedWord(value)
+}
+func (*osEnvVarManager) WarningLogf(format string, args ...interface{}) {
+	oktetoLog.Warning(format, args...)
+}
+
 func main() {
 	ctx := context.Background()
 	ioController := io.NewIOController()
@@ -112,6 +128,10 @@ func main() {
 	okteto.InitContextWithDeprecatedToken()
 
 	k8sLogger := io.NewK8sLogger()
+
+	varManager := vars.NewVarManager(&osEnvVarManager{})
+	localVarsGroup := vars.CreateGroupFromLocalVars(os.Environ)
+	varManager.AddGroup(localVarsGroup, vars.PriorityVarFromLocal)
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
@@ -176,7 +196,7 @@ func main() {
 	root.AddCommand(exec.NewExec(fs, ioController, k8sClientProvider).Cmd(ctx))
 	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
-	root.AddCommand(deploy.Deploy(ctx, at, insights, ioController, k8sLogger))
+	root.AddCommand(deploy.Deploy(ctx, at, insights, ioController, k8sLogger, varManager))
 	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger))
 	root.AddCommand(deploy.Endpoints(ctx, k8sLogger))
 	root.AddCommand(logs.Logs(ctx, k8sLogger))

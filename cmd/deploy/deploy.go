@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -158,7 +159,7 @@ type Deployer interface {
 }
 
 // Deploy deploys the okteto manifest
-func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
 		Use:   "deploy [service...]",
@@ -169,7 +170,7 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 				return fmt.Errorf("'dependencies' is only supported in contexts that have Okteto installed")
 			}
 
-			if err := validateAndSet(options.Variables, os.Setenv); err != nil {
+			if err := validateAndSet(options.Variables, varManager); err != nil {
 				return err
 			}
 

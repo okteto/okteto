@@ -16,11 +16,12 @@ package deploy
 import (
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/validator"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 // validateAndSet returns error when variables dont have expected format NAME=VALUE or NAME is not allowed
 // when variable is valid, it sets its value as env variable
-func validateAndSet(variables []string, setEnv func(key, value string) error) error {
+func validateAndSet(variables []string, varManager *vars.Manager) error {
 	if err := validator.CheckReservedVariablesNameOption(variables); err != nil {
 		return err
 	}
@@ -29,14 +30,6 @@ func validateAndSet(variables []string, setEnv func(key, value string) error) er
 	if err != nil {
 		return err
 	}
-	return setOptionVarsAsEnvs(envVars, setEnv)
-}
-
-func setOptionVarsAsEnvs(variables []env.Var, setEnv func(key, value string) error) error {
-	for _, v := range variables {
-		if err := setEnv(v.Name, v.Value); err != nil {
-			return err
-		}
-	}
-	return nil
+	varManager.AddGroup(envVars, vars.PriorityVarFromFlag)
+	return varManager.Export()
 }
