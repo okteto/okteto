@@ -45,7 +45,6 @@ const (
 	buildTransientErrorEvent = "BuildTransientError"
 	destroyEvent             = "Destroy"
 	deployStackEvent         = "Deploy Stack"
-	destroyStackEvent        = "Destroy Stack"
 	loginEvent               = "Login"
 	initEvent                = "Create Manifest"
 	kubeconfigEvent          = "Kubeconfig"
@@ -204,11 +203,6 @@ func TrackDeployStack(success, isCompose bool) {
 		"deployType": "stack",
 	}
 	track(deployStackEvent, success, props)
-}
-
-// TrackDestroyStack sends a tracking event to mixpanel when the user destroys a stack
-func TrackDestroyStack(success bool) {
-	track(destroyStackEvent, success, nil)
 }
 
 // TrackSignup sends a tracking event to mixpanel when the user signs up
