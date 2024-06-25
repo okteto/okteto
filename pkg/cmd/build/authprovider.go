@@ -120,8 +120,8 @@ func (*authProvider) VerifyTokenAuthority(_ context.Context, _ *auth.VerifyToken
 
 // Credentials returns the credentials for the given host.
 // If the host is the okteto registry, it returns the credentials from the config file.
-// If the host is not the okteto registry, it returns the credentials from the config file if the OKTETO_LOCAL_REGISTRY_STORE_ENABLED is unset or true.
-// If the host is not the okteto registry and the OKTETO_LOCAL_REGISTRY_STORE_ENABLED is false, it returns the credentials retrieved from the okteto credentials store.
+// If the host is not the okteto registry and the OKTETO_LOCAL_REGISTRY_STORE_ENABLED is false or unset, it returns the credentials retrieved from the okteto credentials store.
+// If the host is not the okteto registry, it returns the credentials from the config file if the OKTETO_LOCAL_REGISTRY_STORE_ENABLED is true.
 func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRequest) (*auth.CredentialsResponse, error) {
 	if req.Host == oktetoRegistry {
 		return &auth.CredentialsResponse{
@@ -150,7 +150,7 @@ func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRe
 
 	credentials := ap.getOktetoCredentials(originalHost, c)
 
-	retrieveFromLocal := env.LoadBooleanOrDefault(oktetoLocalRegistryStoreEnabledEnvVarKey, true)
+	retrieveFromLocal := env.LoadBooleanOrDefault(oktetoLocalRegistryStoreEnabledEnvVarKey, false)
 	if !retrieveFromLocal {
 		return credentials, nil
 	}
