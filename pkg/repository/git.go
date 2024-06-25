@@ -270,6 +270,7 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 		diff, err := repo.GetDiff(ctx, contextDir, NewLocalGit("git", &LocalExec{}))
 		select {
 		case <-timeoutCh:
+			oktetoLog.Debug("Timeout exceeded calculating git diff: assuming dirty commit")
 		case diffCh <- diffResponse{
 			diff: diff,
 			err:  err,
@@ -283,6 +284,7 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 		if err != nil {
 			select {
 			case <-timeoutCh:
+				oktetoLog.Debug("Timeout exceeded calculating git untracked files: assuming dirty commit")
 			case untrackedFilesCh <- untrackedFilesResponse{
 				untrackedFilesDiff: "",
 				err:                err,
@@ -291,15 +293,15 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 			return
 		}
 
-		untrackedFilesContent, err := r.getUntrackedContent(untrackedFiles)
+		untrackedFilesContent, err := r.getUntrackedContent(ctx, untrackedFiles)
 		select {
 		case <-timeoutCh:
+			oktetoLog.Debug("Timeout exceeded calculating git untracked files: assuming dirty commit")
 		case untrackedFilesCh <- untrackedFilesResponse{
 			untrackedFilesDiff: untrackedFilesContent,
 			err:                err,
 		}:
 		}
-
 	}()
 
 	diffResponse := <-diffCh
@@ -318,15 +320,20 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 	return hex.EncodeToString(diffHash[:]), nil
 }
 
-func (r gitRepoController) getUntrackedContent(files []string) (string, error) {
+func (r gitRepoController) getUntrackedContent(ctx context.Context, files []string) (string, error) {
 	totalContent := ""
 	for _, file := range files {
-		absPath := filepath.Join(r.path, file)
-		content, err := afero.ReadFile(r.fs, absPath)
-		if err != nil {
-			return "", fmt.Errorf("failed to read file '%s': %w", absPath, err)
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		default:
+			absPath := filepath.Join(r.path, file)
+			content, err := afero.ReadFile(r.fs, absPath)
+			if err != nil {
+				return "", fmt.Errorf("failed to read file '%s': %w", absPath, err)
+			}
+			totalContent += fmt.Sprintf("%s:%s\n", file, content)
 		}
-		totalContent += fmt.Sprintf("%s:%s\n", file, content)
 	}
 	return totalContent, nil
 }
