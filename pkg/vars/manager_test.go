@@ -63,7 +63,7 @@ func Test_EnvManager(t *testing.T) {
 
 		var emptyGroup []env.Var
 
-		envManager.AddGroup(emptyGroup, PriorityVarFromLocal)
+		envManager.AddVars(emptyGroup, PriorityVarFromLocal)
 		err = envManager.Export()
 		assert.NoError(t, err)
 	})
@@ -107,11 +107,11 @@ func Test_EnvManager(t *testing.T) {
 		assert.Equal(t, false, varExists("TEST_VAR_3"))
 
 		envManager := NewVarManager(fakeEnvManager)
-		envManager.AddGroup(fakeGroupVarsFromPlatform, PriorityVarFromPlatform)
+		envManager.AddVars(fakeGroupVarsFromPlatform, PriorityVarFromPlatform)
 		assert.NoError(t, envManager.Export())
 		assert.Equal(t, "platform-value1", os.Getenv("TEST_VAR_1"))
 
-		envManager.AddGroup(fakeGroupVarsFromManifest, PriorityVarFromManifest)
+		envManager.AddVars(fakeGroupVarsFromManifest, PriorityVarFromManifest)
 
 		// until we export, the value stays the same
 		assert.Equal(t, "platform-value1", os.Getenv("TEST_VAR_1"))
@@ -119,11 +119,11 @@ func Test_EnvManager(t *testing.T) {
 		assert.NoError(t, envManager.Export())
 		assert.Equal(t, "manifest-value1", os.Getenv("TEST_VAR_1"))
 
-		envManager.AddGroup(fakeGroupVarsFromLoal, PriorityVarFromLocal)
+		envManager.AddVars(fakeGroupVarsFromLoal, PriorityVarFromLocal)
 		assert.NoError(t, envManager.Export())
 		assert.Equal(t, "local-value1", os.Getenv("TEST_VAR_1"))
 
-		envManager.AddGroup(fakeGroupVarsFromFlag, PriorityVarFromFlag)
+		envManager.AddVars(fakeGroupVarsFromFlag, PriorityVarFromFlag)
 		assert.NoError(t, envManager.Export())
 		assert.Equal(t, "flag-value1", os.Getenv("TEST_VAR_1"))
 
@@ -138,7 +138,7 @@ func Test_EnvManager(t *testing.T) {
 }
 
 func Test_CreateGroupFromLocalVars(t *testing.T) {
-	t.Run("create group from local vars", func(t *testing.T) {
+	t.Run("create Group from local vars", func(t *testing.T) {
 		fakeLocalVars := []string{
 			"TEST_VAR_1=local-value1",
 			"TEST_VAR_2=local-value2",

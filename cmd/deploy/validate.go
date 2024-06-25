@@ -19,9 +19,9 @@ import (
 	"github.com/okteto/okteto/pkg/vars"
 )
 
-// validateAndSet returns error when variables dont have expected format NAME=VALUE or NAME is not allowed
+// convertCommandFlagsToOktetoVariables returns error when variables dont have expected format NAME=VALUE or NAME is not allowed
 // when variable is valid, it sets its value as env variable
-func validateAndSet(variables []string, varManager *vars.Manager) error {
+func convertCommandFlagsToOktetoVariables(variables []string, varManager *vars.Manager) error {
 	if err := validator.CheckReservedVariablesNameOption(variables); err != nil {
 		return err
 	}
@@ -30,6 +30,12 @@ func validateAndSet(variables []string, varManager *vars.Manager) error {
 	if err != nil {
 		return err
 	}
-	varManager.AddGroup(envVars, vars.PriorityVarFromFlag)
-	return varManager.Export()
+
+	varManager.AddGroup(vars.Group{
+		Vars:        envVars,
+		Priority:    vars.PriorityVarFromFlag,
+		ExportToEnv: true,
+	})
+
+	return nil
 }

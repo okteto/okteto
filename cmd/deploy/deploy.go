@@ -170,7 +170,7 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 				return fmt.Errorf("'dependencies' is only supported in contexts that have Okteto installed")
 			}
 
-			if err := validateAndSet(options.Variables, varManager); err != nil {
+			if err := convertCommandFlagsToOktetoVariables(options.Variables, varManager); err != nil {
 				return err
 			}
 

@@ -18,6 +18,7 @@ import (
 	cryptoRand "crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/vars"
 	"math/rand"
 	"os"
@@ -130,8 +131,11 @@ func main() {
 	k8sLogger := io.NewK8sLogger()
 
 	varManager := vars.NewVarManager(&osEnvVarManager{})
-	localVarsGroup := vars.CreateGroupFromLocalVars(os.Environ)
-	varManager.AddGroup(localVarsGroup, vars.PriorityVarFromLocal)
+	varManager.AddGroup(vars.Group{
+		Vars:        env.ConvertLocalEnvVarsToOktetoVars(os.Environ),
+		Priority:    vars.PriorityVarFromLocal,
+		ExportToEnv: false,
+	})
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),

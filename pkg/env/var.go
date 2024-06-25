@@ -74,3 +74,18 @@ func Parse(variables []string) ([]Var, error) {
 	}
 	return result, nil
 }
+
+func ConvertLocalEnvVarsToOktetoVars(environ func() []string) []Var {
+	envVars := environ()
+	vars := make([]Var, 0, len(envVars))
+
+	for _, envVar := range envVars {
+		variableFormatParts := 2
+		parts := strings.SplitN(envVar, "=", variableFormatParts)
+		if len(parts) == variableFormatParts {
+			vars = append(vars, Var{Name: parts[0], Value: parts[1]})
+		}
+	}
+
+	return vars
+}

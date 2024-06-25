@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"github.com/okteto/okteto/pkg/env"
 	"sort"
-	"strings"
 	"sync"
 )
 
@@ -50,9 +49,10 @@ var config = map[Priority]ConfigItem{
 //type MaskVarFunc func(name string)
 //type WarningLogFunc func(format string, args ...interface{})
 
-type group struct {
-	Vars     []env.Var
-	Priority Priority
+type Group struct {
+	Vars        []env.Var
+	Priority    Priority
+	ExportToEnv bool
 }
 
 type ManagerInterface interface {
@@ -64,24 +64,33 @@ type ManagerInterface interface {
 
 type Manager struct {
 	m      ManagerInterface
-	groups []group
+	groups []Group
 	mu     sync.Mutex
 }
 
-// NewVarManager creates a new environment variables manager
+// NewVarManager creates a new Okteto Variables manager
 func NewVarManager(m ManagerInterface) *Manager {
 	return &Manager{
 		m: m,
 	}
 }
 
-func (m *Manager) AddGroup(vars []env.Var, priority Priority) {
+func (m *Manager) AddGroup(g Group) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	g := group{
-		Vars:     vars,
-		Priority: priority,
+	m.groups = append(m.groups, g)
+	m.sortGroupsByPriorityDesc()
+}
+
+func (m *Manager) AddVars(vars []env.Var, priority Priority, exportToEnv bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	g := Group{
+		Vars:        vars,
+		Priority:    priority,
+		ExportToEnv: exportToEnv,
 	}
 	m.groups = append(m.groups, g)
 
@@ -107,6 +116,9 @@ func (m *Manager) Export() error {
 	defer m.mu.Unlock()
 
 	for _, g := range m.groups {
+		if !g.ExportToEnv {
+			continue
+		}
 		for _, v := range g.Vars {
 			err := m.m.Set(v.Name, v.Value)
 			if err != nil {
@@ -138,19 +150,4 @@ func (m *Manager) WarnVarsPrecedence() {
 	for _, w := range warnings {
 		m.m.WarningLogf(w)
 	}
-}
-
-func CreateGroupFromLocalVars(environ func() []string) []env.Var {
-	envVars := environ()
-	vars := make([]env.Var, 0, len(envVars))
-
-	for _, envVar := range envVars {
-		variableFormatParts := 2
-		parts := strings.SplitN(envVar, "=", variableFormatParts)
-		if len(parts) == variableFormatParts {
-			vars = append(vars, env.Var{Name: parts[0], Value: parts[1]})
-		}
-	}
-
-	return vars
 }
