@@ -55,6 +55,10 @@ type listNamespacesQuery struct {
 	Response []namespaceStatus `graphql:"spaces"`
 }
 
+type getNamespaceQuery struct {
+	Response namespaceStatus `graphql:"space(id: $id)"`
+}
+
 type wakeNamespaceMutation struct {
 	Response namespaceID `graphql:"wakeSpace(space: $space)"`
 }
@@ -190,4 +194,22 @@ func (c *namespaceClient) Wake(ctx context.Context, namespace string) error {
 	}
 
 	return nil
+}
+
+// Get returns the given namespace id and status if found
+func (c *namespaceClient) Get(ctx context.Context, namespace string) (*types.Namespace, error) {
+	var queryStruct getNamespaceQuery
+	variables := map[string]interface{}{
+		"id": graphql.String(namespace),
+	}
+
+	err := query(ctx, &queryStruct, variables, c.client)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.Namespace{
+		ID:     string(queryStruct.Response.Id),
+		Status: string(queryStruct.Response.Status),
+	}, nil
 }

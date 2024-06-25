@@ -211,6 +211,9 @@ var (
 
 	// ErrTokenExpired is raised when token used for API auth is expired
 	ErrTokenExpired = errors.New("your token has expired")
+
+	// ErrNamespaceNotFound is raised when the get namespace query returns a namespace not found
+	ErrNamespaceNotFound = errors.New("namespace-not-found")
 )
 
 // IsForbidden raised if the Okteto API returns 401

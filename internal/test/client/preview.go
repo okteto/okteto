@@ -31,6 +31,7 @@ type FakePreviewResponse struct {
 	ErrDestroyPreview error
 	ErrSleepPreview   error
 	ErrWakePreview    error
+	ErrGetPreview     error
 
 	Preview             *types.PreviewResponse
 	ResourceStatus      map[string]string
@@ -70,4 +71,8 @@ func (c *FakePreviewsClient) Destroy(_ context.Context, _ string) error {
 
 func (*FakePreviewsClient) ListEndpoints(_ context.Context, _ string) ([]types.Endpoint, error) {
 	return nil, nil
+}
+
+func (c *FakePreviewsClient) Get(_ context.Context, _ string) (*types.Preview, error) {
+	return &types.Preview{}, c.response.ErrGetPreview
 }
