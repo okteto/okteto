@@ -23,16 +23,15 @@ import (
 	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/stretchr/testify/assert"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
-	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
 
 func TestDevToTranslationRule(t *testing.T) {
 	manifestBytes := []byte(`name: web
-namespace: n
 container: dev
 image: web:latest
 command: ["./run_web.sh"]

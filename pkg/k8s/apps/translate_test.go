@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/okteto"
 	"os"
 	"path"
 	"reflect"
@@ -28,10 +29,10 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
@@ -44,6 +45,15 @@ var (
 )
 
 func Test_translateWithVolumes(t *testing.T) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"example": {
+				Namespace: "unit-test",
+			},
+		},
+		CurrentContext: "example",
+	}
+
 	file, err := os.CreateTemp("", "okteto-secret-test")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
@@ -52,7 +62,6 @@ func Test_translateWithVolumes(t *testing.T) {
 	var runAsGroup int64 = 101
 	var fsGroup int64 = 102
 	manifest := []byte(fmt.Sprintf(`name: web
-namespace: n
 container: dev
 image: web:latest
 annotations:
@@ -444,9 +453,10 @@ services:
 	assert.NoError(t, err)
 	marshalledDevD1OK, err := yaml.Marshal(dDevPod1OK)
 	assert.NoError(t, err)
-	if !bytes.Equal(marshalledDevD1, marshalledDevD1OK) {
-		t.Fatalf("Wrong dev d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD1), string(marshalledDevD1OK))
-	}
+	assert.Equal(t, string(marshalledDevD1), string(marshalledDevD1OK))
+	//if !bytes.Equal(marshalledDevD1, marshalledDevD1OK) {
+	//	t.Fatalf("Wrong dev d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD1), string(marshalledDevD1OK))
+	//}
 
 	require.NoError(t, tr1.DevModeOff())
 
