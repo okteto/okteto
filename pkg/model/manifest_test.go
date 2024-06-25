@@ -1667,8 +1667,7 @@ func TestRead(t *testing.T) {
 			name: "success parsing dev",
 			manifest: []byte(`dev:
   test:
-    image: test-image
-    context: ./test`),
+    image: test-image`),
 			expected: &Manifest{
 				Name:         "",
 				Icon:         "",
@@ -1676,9 +1675,7 @@ func TestRead(t *testing.T) {
 				Deploy:       nil,
 				Dev: ManifestDevs{
 					"test": &Dev{
-						Name:      "test",
-						Context:   "./test",
-						Namespace: "",
+						Name: "test",
 						Metadata: &Metadata{
 							Labels:      Labels{},
 							Annotations: Annotations{},
@@ -1741,8 +1738,7 @@ func TestRead(t *testing.T) {
 				Type:          OktetoManifestType,
 				Manifest: []byte(`dev:
   test:
-    image: test-image
-    context: ./test`),
+    image: test-image`),
 				IsV2: true,
 				Fs:   afero.NewOsFs(),
 			},
