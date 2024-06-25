@@ -85,3 +85,7 @@ func (c *FakeNamespaceClient) Wake(_ context.Context, _ string) error {
 	c.WakeCalls++
 	return nil
 }
+
+func (c *FakeNamespaceClient) Get(_ context.Context, _ string) (*types.Namespace, error) {
+	return &types.Namespace{}, c.err
+}

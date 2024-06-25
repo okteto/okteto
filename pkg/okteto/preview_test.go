@@ -908,3 +908,58 @@ func TestTranslatePreviewErr(t *testing.T) {
 		})
 	}
 }
+
+func TestGetPreview(t *testing.T) {
+	type input struct {
+		client *fakeGraphQLClient
+	}
+	type expected struct {
+		err    error
+		result *types.Preview
+	}
+	testCases := []struct {
+		expected expected
+		cfg      input
+		name     string
+	}{
+		{
+			name: "error in graphql",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					err: assert.AnError,
+				},
+			},
+			expected: expected{
+				err: assert.AnError,
+			},
+		},
+		{
+			name: "graphql response is an preview",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &getPreviewQuery{
+						Response: previewIDStruct{
+							Id: "test",
+						},
+					},
+				},
+			},
+			expected: expected{
+				result: &types.Preview{
+					ID: "test",
+				},
+				err: nil,
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pc := &previewClient{
+				client: tc.cfg.client,
+			}
+			p, err := pc.Get(context.Background(), "")
+			assert.ErrorIs(t, err, tc.expected.err)
+			assert.Equal(t, tc.expected.result, p)
+		})
+	}
+}

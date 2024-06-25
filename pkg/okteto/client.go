@@ -355,6 +355,8 @@ func translateAPIErr(err error) error {
 		return oktetoErrors.ErrTokenExpired
 	case "not-found":
 		return oktetoErrors.ErrNotFound
+	case "namespace-not-found":
+		return oktetoErrors.ErrNamespaceNotFound
 
 	default:
 		if unauthorizedTokenRegex.MatchString(err.Error()) {

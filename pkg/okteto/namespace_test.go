@@ -409,3 +409,58 @@ func TestSleepNamespace(t *testing.T) {
 		})
 	}
 }
+
+func TestGetNamespace(t *testing.T) {
+	type input struct {
+		client *fakeGraphQLClient
+	}
+	type expected struct {
+		err    error
+		result *types.Namespace
+	}
+	testCases := []struct {
+		expected expected
+		cfg      input
+		name     string
+	}{
+		{
+			name: "error in graphql",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					err: assert.AnError,
+				},
+			},
+			expected: expected{
+				err: assert.AnError,
+			},
+		},
+		{
+			name: "graphql response is an namespace",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &getNamespaceQuery{
+						Response: namespaceStatus{
+							Id: "test",
+						},
+					},
+				},
+			},
+			expected: expected{
+				result: &types.Namespace{
+					ID: "test",
+				},
+				err: nil,
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			nc := &namespaceClient{
+				client: tc.cfg.client,
+			}
+			ns, err := nc.Get(context.Background(), "")
+			assert.ErrorIs(t, err, tc.expected.err)
+			assert.Equal(t, tc.expected.result, ns)
+		})
+	}
+}
