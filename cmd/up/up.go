@@ -97,7 +97,7 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 	cmd := &cobra.Command{
 		Use:   "up service [flags] -- COMMAND [args...]",
 		Short: "Deploy your development environment",
-		Example: `  # okteto up deplpoying the development environment defined in the okteto manifest
+		Example: `  # okteto up deploying the development environment defined in the okteto manifest
 okteto up my-svc --deploy -- echo this is a test
 
 # okteto up replacing the command defined in the okteto manifest
@@ -256,7 +256,7 @@ okteto up my-svc -- echo this is a test
 				oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy' or 'okteto up --deploy'", up.Manifest.Name)
 			}
 
-			devCommandParser := oargs.NewDevCommandArgParser(oargs.NewManifestDevLister(), ioCtrl)
+			devCommandParser := oargs.NewDevCommandArgParser(oargs.NewManifestDevLister(), ioCtrl, false)
 
 			argsparserResult, err := devCommandParser.Parse(ctx, args, cmd.ArgsLenAtDash(), oktetoManifest.Dev, okteto.GetContext().Namespace)
 			if err != nil {

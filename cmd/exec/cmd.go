@@ -101,7 +101,7 @@ okteto exec my-pod`,
 				return fmt.Errorf("failed to load manifest: %w", err)
 			}
 
-			argParser := oargs.NewDevCommandArgParser(oargs.NewDevModeOnLister(e.k8sClientProvider), e.ioCtrl)
+			argParser := oargs.NewDevCommandArgParser(oargs.NewDevModeOnLister(e.k8sClientProvider), e.ioCtrl, true)
 			argsLenAtDash := cmd.ArgsLenAtDash()
 
 			argsResult, err := argParser.Parse(ctx, args, argsLenAtDash, manifest.Dev, okteto.GetContext().Namespace)
@@ -112,10 +112,6 @@ okteto exec my-pod`,
 					return userErr
 				}
 				return err
-			}
-
-			if len(argsResult.Command) == 0 {
-				return fmt.Errorf("command is required")
 			}
 
 			e.ioCtrl.Out().Infof("Executing command in development container '%s'", argsResult.DevName)

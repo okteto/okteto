@@ -32,17 +32,19 @@ type devLister interface {
 
 // DevCommandArgParser is a parser for commands that takes a development container and a command as arguments
 type DevCommandArgParser struct {
-	devSelector devSelector
-	devLister   devLister
-	ioCtrl      *io.Controller
+	devSelector       devSelector
+	devLister         devLister
+	ioCtrl            *io.Controller
+	checkIfCmdIsEmpty bool
 }
 
 // NewDevCommandArgParser creates a new DevCommandArgParser instance
-func NewDevCommandArgParser(lister devLister, ioControl *io.Controller) *DevCommandArgParser {
+func NewDevCommandArgParser(lister devLister, ioControl *io.Controller, checkIfCmdIsEmpty bool) *DevCommandArgParser {
 	return &DevCommandArgParser{
-		devSelector: utils.NewOktetoSelector("Select the development container:", "Development container"),
-		ioCtrl:      ioControl,
-		devLister:   lister,
+		devSelector:       utils.NewOktetoSelector("Select the development container:", "Development container"),
+		ioCtrl:            ioControl,
+		devLister:         lister,
+		checkIfCmdIsEmpty: checkIfCmdIsEmpty,
 	}
 }
 
@@ -56,6 +58,11 @@ type Result struct {
 func (p *DevCommandArgParser) Parse(ctx context.Context, argsIn []string, argsLenAtDash int, devs model.ManifestDevs, ns string) (*Result, error) {
 	result := p.parseFromArgs(argsIn, argsLenAtDash)
 
+	if p.checkIfCmdIsEmpty {
+		if result.Command == nil || len(result.Command) == 0 {
+			return nil, errCommandRequired
+		}
+	}
 	result, err := p.setDevNameFromManifest(ctx, result, devs, ns)
 	if err != nil {
 		return nil, err

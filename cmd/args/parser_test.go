@@ -33,11 +33,12 @@ func TestNewDevCommandArgParser(t *testing.T) {
 	lister := NewDevModeOnLister(nil)
 	ioControl := io.NewIOController()
 
-	parser := NewDevCommandArgParser(lister, ioControl)
+	parser := NewDevCommandArgParser(lister, ioControl, true)
 
 	assert.NotNil(t, parser)
 	assert.Equal(t, lister, parser.devLister)
 	assert.Equal(t, ioControl, parser.ioCtrl)
+	assert.Equal(t, true, parser.checkIfCmdIsEmpty)
 }
 
 func TestParseFromArgs(t *testing.T) {
