@@ -16,6 +16,7 @@ package args
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/model"
@@ -53,5 +54,10 @@ func NewManifestDevLister() *ManifestDevLister {
 }
 
 func (m *ManifestDevLister) List(_ context.Context, devs model.ManifestDevs, _ string) ([]string, error) {
-	return devs.GetDevs(), nil
+	devList := devs.GetDevs()
+	if len(devList) == 0 {
+		return nil, errNoDevContainerInManifest
+	}
+	sort.Strings(devList)
+	return devList, nil
 }

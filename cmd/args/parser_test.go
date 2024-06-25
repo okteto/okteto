@@ -43,7 +43,6 @@ func TestNewDevCommandArgParser(t *testing.T) {
 func TestParseFromArgs(t *testing.T) {
 	testCases := []struct {
 		expected      *Result
-		expectedError error
 		name          string
 		argsIn        []string
 		argsLenAtDash int
@@ -71,9 +70,8 @@ func TestParseFromArgs(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			parser := &DevCommandArgParser{}
-			result, err := parser.parseFromArgs(tc.argsIn, tc.argsLenAtDash)
+			result := parser.parseFromArgs(tc.argsIn, tc.argsLenAtDash)
 			assert.Equal(t, tc.expected, result)
-			assert.ErrorIs(t, err, tc.expectedError)
 		})
 	}
 }

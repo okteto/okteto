@@ -117,6 +117,8 @@ okteto exec my-pod`,
 			if len(argsResult.Command) == 0 {
 				return fmt.Errorf("command is required")
 			}
+
+			e.ioCtrl.Out().Infof("Executing command in development container '%s'", argsResult.DevName)
 			return e.Run(ctx, argsResult, manifest.Dev[argsResult.DevName])
 		},
 	}

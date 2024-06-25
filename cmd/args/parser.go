@@ -54,11 +54,9 @@ type Result struct {
 
 // Parse parses the arguments and returns the dev name and command
 func (p *DevCommandArgParser) Parse(ctx context.Context, argsIn []string, argsLenAtDash int, devs model.ManifestDevs, ns string) (*Result, error) {
-	result, err := p.parseFromArgs(argsIn, argsLenAtDash)
-	if err != nil {
-		return nil, err
-	}
-	result, err = p.setDevNameFromManifest(ctx, result, devs, ns)
+	result := p.parseFromArgs(argsIn, argsLenAtDash)
+
+	result, err := p.setDevNameFromManifest(ctx, result, devs, ns)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +67,7 @@ func (p *DevCommandArgParser) Parse(ctx context.Context, argsIn []string, argsLe
 }
 
 // parseFromArgs parses the arguments and returns the dev name and command
-func (p *DevCommandArgParser) parseFromArgs(argsIn []string, argsLenAtDash int) (*Result, error) {
+func (p *DevCommandArgParser) parseFromArgs(argsIn []string, argsLenAtDash int) *Result {
 	result := &Result{}
 	if len(argsIn) > 0 && argsLenAtDash != 0 {
 		result.DevName = argsIn[0]
@@ -78,7 +76,7 @@ func (p *DevCommandArgParser) parseFromArgs(argsIn []string, argsLenAtDash int) 
 	if argsLenAtDash > -1 {
 		result.Command = argsIn[argsLenAtDash:]
 	}
-	return result, nil
+	return result
 }
 
 // setDevNameFromManifest sets the dev name from the manifest if it is not already set
@@ -92,6 +90,11 @@ func (p *DevCommandArgParser) setDevNameFromManifest(ctx context.Context, curren
 	devNameList, err := p.devLister.List(ctx, devs, ns)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list devs: %w", err)
+	}
+
+	if len(devNameList) == 1 {
+		currentResult.DevName = devNameList[0]
+		return currentResult, nil
 	}
 
 	devName, err := p.devSelector.AskForOptionsOkteto(utils.ListToSelectorItem(devNameList), -1)
