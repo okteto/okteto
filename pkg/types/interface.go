@@ -49,6 +49,7 @@ type NamespaceInterface interface {
 	Sleep(ctx context.Context, namespace string) error
 	DestroyAll(ctx context.Context, namespace string, destroyVolumes bool) error
 	Wake(ctx context.Context, namespace string) error
+	Get(ctx context.Context, namespace string) (*Namespace, error)
 }
 
 // PreviewInterface represents the client that connects to the preview functions
@@ -58,6 +59,7 @@ type PreviewInterface interface {
 	GetResourcesStatus(ctx context.Context, previewName, devName string) (map[string]string, error)
 	Destroy(ctx context.Context, previewName string) error
 	ListEndpoints(ctx context.Context, previewName string) ([]Endpoint, error)
+	Get(ctx context.Context, previewName string) (*Preview, error)
 }
 
 // PipelineInterface represents the client that connects to the pipeline functions

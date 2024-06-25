@@ -554,7 +554,8 @@ func TestDeployPipelineFromComposeOnlyOneSvc(t *testing.T) {
 // - Test secret injection
 // - Test that port from image is imported
 func TestDeployPipelineFromOktetoStacks(t *testing.T) {
-	t.Parallel()
+	t.Setenv("OKTETO_SUPPORT_STACKS_ENABLED", "true")
+
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 

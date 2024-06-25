@@ -98,14 +98,6 @@ func Test_disabledInOktetoCluster(t *testing.T) {
 		expected     bool
 	}{
 		{
-			name: "cloud-always-enabled",
-			contextStore: &okteto.ContextStore{
-				Contexts:       map[string]*okteto.Context{okteto.CloudURL: {Name: okteto.CloudURL, IsOkteto: true, Analytics: false}},
-				CurrentContext: okteto.CloudURL,
-			},
-			expected: false,
-		},
-		{
 			name: "vanilla-always-enabled",
 			contextStore: &okteto.ContextStore{
 				Contexts:       map[string]*okteto.Context{"minikube": {Name: "minikube", IsOkteto: false, Analytics: true}},

@@ -23,8 +23,7 @@ import (
 )
 
 const (
-	cloudDefaultVolumeSize = "2Gi"
-	defaultVolumeSize      = "5Gi"
+	defaultVolumeSize = "5Gi"
 )
 
 func (dev *Dev) translateDeprecatedVolumeFields() error {
@@ -170,34 +169,16 @@ func (dev *Dev) PersistentVolumeEnabled() bool {
 // PersistentVolumeSize returns the persistent volume size
 func (dev *Dev) PersistentVolumeSize() string {
 	if dev.PersistentVolumeInfo == nil {
-		return dev.getDefaultPersistentVolumeSize()
+		return defaultVolumeSize
 	}
 	if dev.PersistentVolumeInfo.Size == "" {
-		return dev.getDefaultPersistentVolumeSize()
+		return defaultVolumeSize
 	}
 	return dev.PersistentVolumeInfo.Size
 }
 
-func (dev *Dev) isOktetoCloud() bool { // TODO: inject this
-	switch dev.Context {
-	case "https://cloud.okteto.com", "https://staging.okteto.dev":
-		return true
-	default:
-		return false
-	}
-}
-
-func (dev *Dev) getDefaultPersistentVolumeSize() string {
-	switch {
-	case dev.isOktetoCloud():
-		return cloudDefaultVolumeSize
-	default:
-		return defaultVolumeSize
-	}
-}
-
 func (dev *Dev) HasDefaultPersistentVolumeSize() bool {
-	return dev.PersistentVolumeSize() == dev.getDefaultPersistentVolumeSize()
+	return dev.PersistentVolumeSize() == defaultVolumeSize
 }
 
 // PersistentVolumeStorageClass returns the persistent volume storage class

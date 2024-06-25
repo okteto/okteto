@@ -34,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/dag"
 	"github.com/okteto/okteto/pkg/deployable"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
@@ -71,10 +72,8 @@ type builder interface {
 func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at *analytics.Tracker) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
-		Use:          "test",
-		Short:        "Run tests",
-		Hidden:       true,
-		SilenceUsage: true,
+		Use:   "test",
+		Short: "Run unit and e2e tests defined in your okteto manifest. More information available here: https://www.okteto.com/docs/reference/okteto-cli/#test",
 		RunE: func(cmd *cobra.Command, servicesToTest []string) error {
 
 			if err := validator.CheckReservedVariablesNameOption(options.Variables); err != nil {
@@ -107,12 +106,12 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 		},
 	}
 
-	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the okteto manifest file")
-	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment is deployed")
-	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment is deployed")
-	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
-	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
-	cmd.Flags().StringVar(&options.Name, "name", "", "name of the development environment name to be deployed")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "Path to the okteto manifest file")
+	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "Overwrites the namespace where the development environment is deployed")
+	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "Context where the development environment is deployed")
+	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "Set a variable (can be set more than once)")
+	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "The length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
+	cmd.Flags().StringVar(&options.Name, "name", "", "Name of the development environment name to be deployed")
 	cmd.Flags().BoolVar(&options.Deploy, "deploy", false, "Always deploy the dev environment. If it's already deployed it will be redeployed")
 	cmd.Flags().BoolVar(&options.NoCache, "no-cache", false, "Do not use cache for running tests")
 
@@ -176,6 +175,20 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		return analytics.TestMetadata{}, err
 	}
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		return analytics.TestMetadata{}, fmt.Errorf("failed to get the current working directory to resolve name: %w", err)
+	}
+
+	if manifest.Name == "" {
+		c, _, err := okteto.NewK8sClientProvider().Provide(okteto.GetContext().Cfg)
+		if err != nil {
+			return analytics.TestMetadata{}, err
+		}
+		inferer := devenvironment.NewNameInferer(c)
+		manifest.Name = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, options.ManifestPath)
+	}
+
 	if err := manifest.Test.Validate(); err != nil {
 		if errors.Is(err, model.ErrNoTestsDefined) {
 			oktetoLog.Information("There are no tests configured in your Okteto Manifest. For more information, check the documentation: https://okteto.com/docs/core/okteto-manifest/#test")
@@ -197,11 +210,6 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 	builder := buildv2.NewBuilderFromScratch(ioCtrl, []buildv2.OnBuildFinish{
 		tracker.TrackImageBuild,
 	})
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		return analytics.TestMetadata{}, fmt.Errorf("failed to get the current working directory to resolve name: %w", err)
-	}
 
 	var nodes []dag.Node
 
@@ -342,6 +350,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			Caches:                      test.Caches,
 			IgnoreRules:                 testIgnoreRules,
 			Artifacts:                   test.Artifacts,
+			UseRootUser:                 true,
 		}
 
 		if !options.NoCache {

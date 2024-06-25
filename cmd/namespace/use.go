@@ -161,7 +161,9 @@ func askForOktetoNamespace() (string, error) {
 	if err := oktetoLog.Question("Enter the namespace you want to use: "); err != nil {
 		return "", err
 	}
-	fmt.Scanln(&namespace)
+	if _, err := fmt.Scanln(&namespace); err != nil {
+		return "", err
+	}
 	return namespace, nil
 }
 

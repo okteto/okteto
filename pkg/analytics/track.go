@@ -45,8 +45,6 @@ const (
 	buildTransientErrorEvent = "BuildTransientError"
 	destroyEvent             = "Destroy"
 	deployStackEvent         = "Deploy Stack"
-	loginEvent               = "Login"
-	initEvent                = "Create Manifest"
 	kubeconfigEvent          = "Kubeconfig"
 	namespaceEvent           = "Namespace"
 	namespaceCreateEvent     = "CreateNamespace"
@@ -78,14 +76,6 @@ func init() {
 	}
 
 	mixpanelClient = mixpanel.NewFromClient(c, mixpanelToken, "https://analytics.okteto.com")
-}
-
-// TrackInit sends a tracking event to mixpanel when the user creates a manifest
-func TrackInit(success bool, language string) {
-	props := map[string]interface{}{
-		"language": language,
-	}
-	track(initEvent, success, props)
 }
 
 // TrackKubeconfig sends a tracking event to mixpanel when the user use the kubeconfig command
@@ -294,7 +284,7 @@ func track(event string, success bool, props map[string]interface{}) {
 	props["source"] = origin
 	props["origin"] = origin
 	props["success"] = success
-	props["contextType"] = getContextType(okteto.GetContext().Name)
+	props["contextType"] = getContextType()
 	props["isOkteto"] = okteto.GetContext().IsOkteto
 	if termType := os.Getenv(model.TermEnvVar); termType == "" {
 		props["term-type"] = "other"
@@ -312,8 +302,5 @@ func track(event string, success bool, props map[string]interface{}) {
 }
 
 func disabledByOktetoAdmin() bool {
-	if okteto.IsOktetoCloud() {
-		return false
-	}
 	return !okteto.GetContext().Analytics
 }

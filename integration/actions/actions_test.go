@@ -36,7 +36,7 @@ var (
 	oktetoVersion = ""
 	user          = ""
 	kubectlBinary = "kubectl"
-	appsSubdomain = "cloud.okteto.net"
+	appsSubdomain = ""
 )
 
 func TestMain(m *testing.M) {

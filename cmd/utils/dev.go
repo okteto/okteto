@@ -38,8 +38,7 @@ var (
 
 const (
 	// DefaultManifest default okteto manifest file
-	DefaultManifest   = "okteto.yml"
-	secondaryManifest = "okteto.yaml"
+	DefaultManifest = "okteto.yml"
 )
 
 // GetDevFromManifest gets a dev from a manifest by comparing the given dev name with the dev name in the manifest
@@ -185,29 +184,6 @@ func AskForOptions(options []string, label string) (string, error) {
 	}
 
 	return options[i], nil
-}
-
-// AskIfOktetoInit asks if okteto init should be executed
-func AskIfOktetoInit(devPath string) bool {
-	result, err := AskYesNo(fmt.Sprintf("okteto manifest (%s) doesn't exist, do you want to create it?", devPath), YesNoDefault_Yes)
-	if err != nil {
-		return false
-	}
-	return result
-}
-
-// AsksQuestion asks a question to the user
-func AsksQuestion(q string) (string, error) {
-	var answer string
-
-	if err := oktetoLog.Question(q); err != nil {
-		oktetoLog.Infof("failed to ask question: %s", err)
-	}
-	if _, err := fmt.Scanln(&answer); err != nil {
-		return "", err
-	}
-
-	return answer, nil
 }
 
 // CheckIfDirectory checks if a path is a directory

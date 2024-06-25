@@ -34,18 +34,18 @@ func Test_initFromDeprecatedToken(t *testing.T) {
 	}{
 		{
 			name:     "token-create-kubeconfig",
-			tokenUrl: "https://cloud.okteto.com",
+			tokenUrl: "https://okteto.example.com",
 			kubeconfigCtx: test.KubeconfigFields{
 				Name:           []string{"test"},
 				Namespace:      []string{"test"},
-				CurrentContext: "cloud_okteto_com",
+				CurrentContext: "okteto_example_com",
 			},
 		},
 		{
 			name:     "token-token-but-not-in-kubeconfig",
-			tokenUrl: "https://cloud.okteto.com",
+			tokenUrl: "https://okteto.example.com",
 			kubeconfigCtx: test.KubeconfigFields{
-				Name:           []string{"cloud_okteto_com"},
+				Name:           []string{"okteto_example_com"},
 				Namespace:      []string{"test"},
 				CurrentContext: "test",
 			},
