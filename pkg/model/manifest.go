@@ -172,18 +172,6 @@ func NewManifestFromStack(stack *Stack) *Manifest {
 	return stackManifest
 }
 
-// NewManifestFromDev creates a manifest from a dev
-func NewManifestFromDev(dev *Dev) *Manifest {
-	manifest := NewManifest()
-	name, err := env.ExpandEnv(dev.Name)
-	if err != nil {
-		oktetoLog.Infof("could not expand dev name '%s'", dev.Name)
-		name = dev.Name
-	}
-	manifest.Dev[name] = dev
-	return manifest
-}
-
 // DeployInfo represents what must be deployed for the app to work
 type DeployInfo struct {
 	ComposeSection *ComposeSectionInfo `json:"compose,omitempty" yaml:"compose,omitempty"`
@@ -244,20 +232,6 @@ type ServicesToDeploy []string
 type DeployCommand struct {
 	Name    string `json:"name,omitempty" yaml:"name,omitempty"`
 	Command string `json:"command,omitempty" yaml:"command,omitempty"`
-}
-
-// NewDeployInfo creates a deploy Info
-func NewDeployInfo() *DeployInfo {
-	return &DeployInfo{
-		Commands: []DeployCommand{},
-	}
-}
-
-// NewDestroyInfo creates a destroy Info
-func NewDestroyInfo() *DestroyInfo {
-	return &DestroyInfo{
-		Commands: []DeployCommand{},
-	}
 }
 
 func getManifestFromOktetoFile(cwd string, fs afero.Fs) (*Manifest, error) {
