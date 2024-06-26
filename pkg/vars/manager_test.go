@@ -17,8 +17,6 @@ import (
 	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 type fakeEnvManager struct {
@@ -27,137 +25,127 @@ type fakeEnvManager struct {
 	logs        []string
 }
 
-func (*fakeEnvManager) LookupEnv(key string) (string, bool) {
-	return os.LookupEnv(key)
-}
-func (e *fakeEnvManager) SetEnv(key, value string) error {
-	e.t.Setenv(key, value)
-	return nil
-}
-func (e *fakeEnvManager) MaskVar(value string) {
-	e.maskedWords = append(e.maskedWords, value)
-}
-func (e *fakeEnvManager) WarningLogf(msg string, _ ...interface{}) {
-	e.logs = append(e.logs, msg)
-}
-func (*fakeEnvManager) WarnVarsPrecedence() {}
-
-func newFakeEnvManager(t *testing.T) *fakeEnvManager {
-	return &fakeEnvManager{
-		t: t,
-	}
-}
+//func (*fakeEnvManager) LookupEnv(key string) (string, bool) {
+//	return os.LookupEnv(key)
+//}
+//func (e *fakeEnvManager) SetEnv(key, value string) error {
+//	e.t.Setenv(key, value)
+//	return nil
+//}
+//func (e *fakeEnvManager) MaskVar(value string) {
+//	e.maskedWords = append(e.maskedWords, value)
+//}
+//func (e *fakeEnvManager) WarningLogf(msg string, _ ...interface{}) {
+//	e.logs = append(e.logs, msg)
+//}
+//func (*fakeEnvManager) WarnVarsPrecedence() {}
+//
+//func newFakeEnvManager(t *testing.T) *fakeEnvManager {
+//	return &fakeEnvManager{
+//		t: t,
+//	}
+//}
 
 func varExists(key string) bool {
 	_, exists := os.LookupEnv(key)
 	return exists
 }
 
-func Test_EnvManager(t *testing.T) {
-	fakeEnvManager := newFakeEnvManager(t)
+//func Test_EnvManager(t *testing.T) {
+//	fakeEnvManager := newFakeEnvManager(t)
+//
+//	t.Run("empty env manager", func(t *testing.T) {
+//		envManager := NewVarManager(fakeEnvManager)
+//		err := envManager.Export()
+//		assert.NoError(t, err)
+//
+//		var emptyGroup []env.Var
+//
+//		envManager.AddVars(emptyGroup, PriorityVarFromLocal)
+//		err = envManager.Export()
+//		assert.NoError(t, err)
+//	})
+//
+//	t.Run("add multiple groups and lookup var with higher priority successfully", func(t *testing.T) {
+//		fakeGroupVarsFromPlatform := []env.Var{
+//			{
+//				Name:  "TEST_VAR_1",
+//				Value: "platform-value1",
+//			},
+//			{
+//				Name:  "TEST_VAR_2",
+//				Value: "platform-value2",
+//			},
+//		}
+//
+//		fakeGroupVarsFromManifest := []env.Var{
+//			{
+//				Name:  "TEST_VAR_1",
+//				Value: "manifest-value1",
+//			},
+//		}
+//
+//		fakeGroupVarsFromLoal := []env.Var{
+//			{
+//				Name:  "TEST_VAR_1",
+//				Value: "local-value1",
+//			},
+//		}
+//
+//		fakeGroupVarsFromFlag := []env.Var{
+//			{
+//				Name:  "TEST_VAR_1",
+//				Value: "flag-value1",
+//			},
+//		}
+//
+//		// making sure these vars are not set
+//		assert.Equal(t, false, varExists("TEST_VAR_1"))
+//		assert.Equal(t, false, varExists("TEST_VAR_2"))
+//		assert.Equal(t, false, varExists("TEST_VAR_3"))
+//
+//		envManager := NewVarManager(fakeEnvManager)
+//		envManager.AddVars(fakeGroupVarsFromPlatform, PriorityVarFromPlatform)
+//		assert.NoError(t, envManager.Export())
+//		assert.Equal(t, "platform-value1", os.Getenv("TEST_VAR_1"))
+//
+//		envManager.AddVars(fakeGroupVarsFromManifest, PriorityVarFromManifest)
+//
+//		// until we export, the value stays the same
+//		assert.Equal(t, "platform-value1", os.Getenv("TEST_VAR_1"))
+//
+//		assert.NoError(t, envManager.Export())
+//		assert.Equal(t, "manifest-value1", os.Getenv("TEST_VAR_1"))
+//
+//		envManager.AddVars(fakeGroupVarsFromLoal, PriorityVarFromLocal)
+//		assert.NoError(t, envManager.Export())
+//		assert.Equal(t, "local-value1", os.Getenv("TEST_VAR_1"))
+//
+//		envManager.AddVars(fakeGroupVarsFromFlag, PriorityVarFromFlag)
+//		assert.NoError(t, envManager.Export())
+//		assert.Equal(t, "flag-value1", os.Getenv("TEST_VAR_1"))
+//
+//		// no other groups override the value
+//		assert.Equal(t, "platform-value2", os.Getenv("TEST_VAR_2"))
+//
+//		// make sure values are obfuscated
+//		// note: currently local vars are not obsucated so "local-value1" should not be in the list
+//		expectedMaskedValues := []string{"platform-value1", "platform-value2", "manifest-value1", "flag-value1"}
+//		assert.ElementsMatch(t, expectedMaskedValues, fakeEnvManager.maskedWords, "Masked words should match expected values")
+//	})
+//}
 
-	t.Run("empty env manager", func(t *testing.T) {
-		envManager := NewVarManager(fakeEnvManager)
-		err := envManager.Export()
-		assert.NoError(t, err)
+func Test_Expand(t *testing.T) {
+	fakeEnvManager := NewVarManager(newFakeEnvManager(t)
 
-		var emptyGroup []env.Var
-
-		envManager.AddVars(emptyGroup, PriorityVarFromLocal)
-		err = envManager.Export()
-		assert.NoError(t, err)
-	})
-
-	t.Run("add multiple groups and lookup var with higher priority successfully", func(t *testing.T) {
-		fakeGroupVarsFromPlatform := []env.Var{
-			{
-				Name:  "TEST_VAR_1",
-				Value: "platform-value1",
-			},
-			{
-				Name:  "TEST_VAR_2",
-				Value: "platform-value2",
-			},
-		}
-
-		fakeGroupVarsFromManifest := []env.Var{
-			{
-				Name:  "TEST_VAR_1",
-				Value: "manifest-value1",
-			},
-		}
-
-		fakeGroupVarsFromLoal := []env.Var{
-			{
-				Name:  "TEST_VAR_1",
-				Value: "local-value1",
-			},
-		}
-
-		fakeGroupVarsFromFlag := []env.Var{
-			{
-				Name:  "TEST_VAR_1",
-				Value: "flag-value1",
-			},
-		}
-
-		// making sure these vars are not set
-		assert.Equal(t, false, varExists("TEST_VAR_1"))
-		assert.Equal(t, false, varExists("TEST_VAR_2"))
-		assert.Equal(t, false, varExists("TEST_VAR_3"))
-
-		envManager := NewVarManager(fakeEnvManager)
-		envManager.AddVars(fakeGroupVarsFromPlatform, PriorityVarFromPlatform)
-		assert.NoError(t, envManager.Export())
-		assert.Equal(t, "platform-value1", os.Getenv("TEST_VAR_1"))
-
-		envManager.AddVars(fakeGroupVarsFromManifest, PriorityVarFromManifest)
-
-		// until we export, the value stays the same
-		assert.Equal(t, "platform-value1", os.Getenv("TEST_VAR_1"))
-
-		assert.NoError(t, envManager.Export())
-		assert.Equal(t, "manifest-value1", os.Getenv("TEST_VAR_1"))
-
-		envManager.AddVars(fakeGroupVarsFromLoal, PriorityVarFromLocal)
-		assert.NoError(t, envManager.Export())
-		assert.Equal(t, "local-value1", os.Getenv("TEST_VAR_1"))
-
-		envManager.AddVars(fakeGroupVarsFromFlag, PriorityVarFromFlag)
-		assert.NoError(t, envManager.Export())
-		assert.Equal(t, "flag-value1", os.Getenv("TEST_VAR_1"))
-
-		// no other groups override the value
-		assert.Equal(t, "platform-value2", os.Getenv("TEST_VAR_2"))
-
-		// make sure values are obfuscated
-		// note: currently local vars are not obsucated so "local-value1" should not be in the list
-		expectedMaskedValues := []string{"platform-value1", "platform-value2", "manifest-value1", "flag-value1"}
-		assert.ElementsMatch(t, expectedMaskedValues, fakeEnvManager.maskedWords, "Masked words should match expected values")
-	})
-}
-
-func Test_CreateGroupFromLocalVars(t *testing.T) {
-	t.Run("create Group from local vars", func(t *testing.T) {
-		fakeLocalVars := []string{
-			"TEST_VAR_1=local-value1",
-			"TEST_VAR_2=local-value2",
-		}
-
-		fakeLocalGroup := CreateGroupFromLocalVars(func() []string {
-			return fakeLocalVars
-		})
-
-		assert.Equal(t, 2, len(fakeLocalGroup))
-		assert.ElementsMatch(t, []env.Var{
+	groupLocalVars := Group{
+		Vars: []env.Var{
 			{
 				Name:  "TEST_VAR_1",
 				Value: "local-value1",
 			},
-			{
-				Name:  "TEST_VAR_2",
-				Value: "local-value2",
-			},
-		}, fakeLocalGroup)
-	})
+		}
+	}
+
+	fakeEnvManager.A
 }

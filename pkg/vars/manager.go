@@ -15,6 +15,7 @@ package vars
 
 import (
 	"fmt"
+	"github.com/a8m/envsubst/parse"
 	"github.com/okteto/okteto/pkg/env"
 	"sort"
 	"sync"
@@ -150,4 +151,33 @@ func (m *Manager) WarnVarsPrecedence() {
 	for _, w := range warnings {
 		m.m.WarningLogf(w)
 	}
+}
+
+// groupsToArray flattens all groups into a single array of vars. By defaul it only includes exported variables
+func (m *Manager) groupsToArray(includeNonExported bool) []string {
+	vars := make([]string, 0)
+	for _, g := range m.groups {
+		if !includeNonExported && !g.ExportToEnv {
+			continue
+		}
+		for _, v := range g.Vars {
+			vars = append(vars, v.String())
+		}
+	}
+	return vars
+}
+
+func (m *Manager) expandString(s string, envVars []string) (string, error) {
+	return parse.New("string", envVars, &parse.Restrictions{NoDigit: false, NoEmpty: false, NoUnset: false}).Parse(s)
+}
+
+func (m *Manager) ExpandWithLocalEnvVars(s string) (string, error) {
+	envVars := m.groupsToArray(true)
+	return m.expandString(s, envVars)
+}
+
+// Expand replaces the variables in the given string with their values and returns the result. It only expands with groups that are exported.
+func (m *Manager) Expand(s string) (string, error) {
+	envVars := m.groupsToArray(false)
+	return m.expandString(s, envVars)
 }

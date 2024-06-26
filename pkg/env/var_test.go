@@ -104,3 +104,28 @@ func Test_Var_MarshalYAML(t *testing.T) {
 		})
 	}
 }
+
+func Test_CreateGroupFromLocalVars(t *testing.T) {
+	t.Run("create Group from local vars", func(t *testing.T) {
+		fakeLocalVars := []string{
+			"TEST_VAR_1=local-value1",
+			"TEST_VAR_2=local-value2",
+		}
+
+		fakeLocalGroup := ConvertLocalEnvVarsToOktetoVars(func() []string {
+			return fakeLocalVars
+		})
+
+		assert.Equal(t, 2, len(fakeLocalGroup))
+		assert.ElementsMatch(t, []Var{
+			{
+				Name:  "TEST_VAR_1",
+				Value: "local-value1",
+			},
+			{
+				Name:  "TEST_VAR_2",
+				Value: "local-value2",
+			},
+		}, fakeLocalGroup)
+	})
+}

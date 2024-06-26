@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"net/url"
 	"os"
 	"strings"
@@ -54,18 +55,26 @@ type Command struct {
 
 	kubetokenController kubeconfigTokenController
 	OktetoContextWriter okteto.ContextConfigWriterInterface
+
+	varManager *vars.Manager
 }
 
-type ctxCmdOption func(*Command)
+type CtxCmdOption func(*Command)
 
-func withKubeTokenController(k kubeconfigTokenController) ctxCmdOption {
+func withKubeTokenController(k kubeconfigTokenController) CtxCmdOption {
 	return func(c *Command) {
 		c.kubetokenController = k
 	}
 }
 
+func WithVarManager(varManager *vars.Manager) CtxCmdOption {
+	return func(c *Command) {
+		c.varManager = varManager
+	}
+}
+
 // NewContextCommand creates a new Command
-func NewContextCommand(ctxCmdOption ...ctxCmdOption) *Command {
+func NewContextCommand(ctxCmdOption ...CtxCmdOption) *Command {
 	cfg := &Command{
 		K8sClientProvider:    okteto.NewK8sClientProvider(),
 		LoginController:      login.NewLoginController(),
@@ -413,32 +422,36 @@ func (c Command) getUserContext(ctx context.Context, ctxName, ns, token string) 
 	return nil, oktetoErrors.ErrInternalServerError
 }
 
-func (*Command) loadDotEnv(fs afero.Fs, setEnvFunc func(key, value string) error, lookupEnv func(key string) (string, bool)) error {
+func (*Command) loadDotEnv(fs afero.Fs) error {
 	dotEnvFile := ".env"
-	if filesystem.FileExistsWithFilesystem(dotEnvFile, fs) {
-		content, err := afero.ReadFile(fs, dotEnvFile)
-		if err != nil {
-			return fmt.Errorf("error reading file: %w", err)
-		}
-		expanded, err := env.ExpandEnv(string(content))
-		if err != nil {
-			return fmt.Errorf("error expanding dot env file: %w", err)
-		}
-		vars, err := godotenv.UnmarshalBytes([]byte(expanded))
-		if err != nil {
-			return fmt.Errorf("error parsing dot env file: %w", err)
-		}
-		for k, v := range vars {
-			if _, exists := lookupEnv(k); exists {
-				continue
-			}
-			err := setEnvFunc(k, v)
-			if err != nil {
-				return fmt.Errorf("error setting env var: %w", err)
-			}
-			oktetoLog.AddMaskedWord(v)
-		}
+	if !filesystem.FileExistsWithFilesystem(dotEnvFile, fs) {
+		return nil
 	}
+
+	content, err := afero.ReadFile(fs, dotEnvFile)
+	if err != nil {
+		return fmt.Errorf("error reading file: %w", err)
+	}
+
+	expanded, err := env.ExpandEnv(string(content))
+	if err != nil {
+		return fmt.Errorf("error expanding dot env file: %w", err)
+	}
+	vars, err := godotenv.UnmarshalBytes([]byte(expanded))
+	if err != nil {
+		return fmt.Errorf("error parsing dot env file: %w", err)
+	}
+	for k, v := range vars {
+		if _, exists := lookupEnv(k); exists {
+			continue
+		}
+		err := setEnvFunc(k, v)
+		if err != nil {
+			return fmt.Errorf("error setting env var: %w", err)
+		}
+		oktetoLog.AddMaskedWord(v)
+	}
+
 	return nil
 }
 
