@@ -155,6 +155,10 @@ type previewIDStruct struct {
 	Id graphql.String
 }
 
+type getPreviewQuery struct {
+	Response previewIDStruct `graphql:"preview(id: $id)"`
+}
+
 // DeployPreview creates a preview environment
 func (c *previewClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, labels []string) (*types.PreviewResponse, error) {
 	if err := c.namespaceValidator.validate(name, previewEnvObject); err != nil {
@@ -403,4 +407,21 @@ func (*previewClient) translateErr(err error, name string) error {
 			Hint: "Please log in with an administrator account or use a personal preview environment"}
 	}
 	return err
+}
+
+// Get gets the given preview environment, returns its ID if found
+func (c *previewClient) Get(ctx context.Context, previewName string) (*types.Preview, error) {
+	queryStruct := getPreviewQuery{}
+
+	variables := map[string]interface{}{
+		"id": graphql.String(previewName),
+	}
+	err := query(ctx, &queryStruct, variables, c.client)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.Preview{
+		ID: string(queryStruct.Response.Id),
+	}, nil
 }

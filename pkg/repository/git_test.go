@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -536,7 +537,7 @@ func TestGetUntrackedContent(t *testing.T) {
 			gitRepoController := gitRepoController{
 				fs: fs,
 			}
-			content, err := gitRepoController.getUntrackedContent(tt.input.files)
+			content, err := gitRepoController.getUntrackedContent(context.Background(), tt.input.files)
 			assert.Equal(t, tt.output.untrackedContent, content)
 			assert.ErrorIs(t, err, tt.output.expectedErr)
 		})

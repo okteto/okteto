@@ -27,7 +27,6 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
-	stackCMD "github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
@@ -767,13 +766,15 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 		}
 	}
 
-	stackCommand := stackCMD.DeployCommand{
-		K8sClient:      c,
-		Config:         cfg,
-		IsInsideDeploy: true,
-		DivertDriver:   divertDriver,
+	sd := stack.Stack{
+		K8sClient:        c,
+		Config:           cfg,
+		AnalyticsTracker: dc.AnalyticsTracker,
+		Insights:         dc.InsightsTracker,
+		IoCtrl:           dc.IoCtrl,
+		Divert:           divertDriver,
 	}
-	return stackCommand.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)
+	return sd.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)
 }
 
 // deployEndpoints deploys the endpoints defined in the Okteto manifest

@@ -270,8 +270,8 @@ func TestCredentials(t *testing.T) {
 			localCredentials:  true,
 			oktetoCredentials: false,
 			expected: &auth.CredentialsResponse{
-				Username: "local",
-				Secret:   "local",
+				Username: "",
+				Secret:   "",
 			},
 		},
 		{
@@ -296,8 +296,8 @@ func TestCredentials(t *testing.T) {
 			localCredentials:  true,
 			oktetoCredentials: true,
 			expected: &auth.CredentialsResponse{
-				Username: "local",
-				Secret:   "local",
+				Username: "okteto",
+				Secret:   "okteto",
 			},
 		},
 		{

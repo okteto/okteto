@@ -45,7 +45,6 @@ const (
 	buildTransientErrorEvent = "BuildTransientError"
 	destroyEvent             = "Destroy"
 	deployStackEvent         = "Deploy Stack"
-	destroyStackEvent        = "Destroy Stack"
 	kubeconfigEvent          = "Kubeconfig"
 	namespaceEvent           = "Namespace"
 	namespaceCreateEvent     = "CreateNamespace"
@@ -188,18 +187,12 @@ func TrackBuildTransientError(success bool) {
 }
 
 // TrackDeployStack sends a tracking event to mixpanel when the user deploys a stack
-func TrackDeployStack(success, isCompose, isOktetoRepo bool) {
+func TrackDeployStack(success, isCompose bool) {
 	props := map[string]interface{}{
-		"isCompose":          isCompose,
-		"deployType":         "stack",
-		"isOktetoRepository": isOktetoRepo,
+		"isCompose":  isCompose,
+		"deployType": "stack",
 	}
 	track(deployStackEvent, success, props)
-}
-
-// TrackDestroyStack sends a tracking event to mixpanel when the user destroys a stack
-func TrackDestroyStack(success bool) {
-	track(destroyStackEvent, success, nil)
 }
 
 // TrackSignup sends a tracking event to mixpanel when the user signs up
