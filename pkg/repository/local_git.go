@@ -230,6 +230,7 @@ func (lg *LocalGit) ListUntrackedFiles(ctx context.Context, repoRoot, workdir st
 
 	lsFilesCmdArgs := []string{"--no-optional-locks", "ls-files", "--others", "--exclude-standard", workdir}
 
+	oktetoLog.Infof("running command: %s %s %s %s %s", lg.gitPath, "--no-optional-locks", "ls-files", "--others", "--exclude-standard")
 	output, err := lg.exec.RunCommand(ctx, repoRoot, lg.gitPath, lsFilesCmdArgs...)
 	if err != nil {
 		var exitError *exec.ExitError
@@ -250,14 +251,17 @@ func (lg *LocalGit) ListUntrackedFiles(ctx context.Context, repoRoot, workdir st
 
 	lines := strings.Split(string(output), "\n")
 	untrackedFiles := []string{}
+	totalFiles := 0
 	for _, line := range lines {
 		if line == "" {
 			continue
 		}
 		untrackedFiles = append(untrackedFiles, line)
+		totalFiles++
 	}
 	// We need to sort the untracked files to make deterministic the order of the files
 	sort.Strings(untrackedFiles)
+	oktetoLog.Infof("found %d untracked files", totalFiles)
 	return untrackedFiles, nil
 }
 
