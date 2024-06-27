@@ -20,10 +20,12 @@ import (
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 func TestNewDevModeOnLister(t *testing.T) {
@@ -34,6 +36,14 @@ func TestNewDevModeOnLister(t *testing.T) {
 	assert.IsType(t, &DevModeOnLister{}, lister)
 }
 func TestDevModeOnLister_List(t *testing.T) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Cfg: &api.Config{},
+			},
+		},
+		CurrentContext: "test",
+	}
 	devs := model.ManifestDevs{
 		"dev1": &model.Dev{
 			Name: "dev1",

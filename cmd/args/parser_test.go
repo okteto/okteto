@@ -218,7 +218,6 @@ func TestSetDevFromManifest(t *testing.T) {
 }
 
 func TestValidate(t *testing.T) {
-	// Define test cases using a slice of structs
 	testCases := []struct {
 		expected error
 		options  *Result
@@ -254,8 +253,6 @@ func TestValidate(t *testing.T) {
 			expected: nil,
 		},
 	}
-
-	// Loop through test cases and run assertions
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			parser := &DevCommandArgParser{}
