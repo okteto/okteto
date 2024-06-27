@@ -104,8 +104,8 @@ func (m *Manager) AddGroup(g Group) error {
 	//return m.export()
 }
 
-// GetOktetoVariablesWithoutLocal returns an array of all the okteto variables that can be exported (excluding local variables)
-func (m *Manager) GetOktetoVariablesWithoutLocal() []string {
+// GetOktetoVariablesExcLocal returns an array of all tifihe okteto variables that can be exported (excluding local variables)
+func (m *Manager) GetOktetoVariablesExcLocal() []string {
 	groups := make([]Group, 0)
 	for _, g := range m.groups {
 		if g.Priority == OktetoVariableTypeLocal {
@@ -139,7 +139,19 @@ func (m *Manager) ExpandIncLocal(s string) (string, error) {
 
 // ExpandExcLocal replaces the variables in the given string with their values and returns the result. It expands with all groups, excluding local variables.
 func (m *Manager) ExpandExcLocal(s string) (string, error) {
-	return m.expandString(s, m.GetOktetoVariablesWithoutLocal())
+	return m.expandString(s, m.GetOktetoVariablesExcLocal())
+}
+
+// ExpandExcLocalIfNotEmpty replaces the variables in the given string with their values and returns the result. It expands with all groups, excluding local variables. If the result is an empty string, it returns the original value.
+func (m *Manager) ExpandExcLocalIfNotEmpty(s string) (string, error) {
+	result, err := m.expandString(s, m.GetOktetoVariablesExcLocal())
+	if err != nil {
+		return "", err
+	}
+	if result == "" {
+		return s, nil
+	}
+	return result, nil
 }
 
 // WarnVarsPrecedence prints out a warning message clarifying which variables take precedence over others in case a variables has been defined in multiple groups

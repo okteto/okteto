@@ -16,6 +16,7 @@ package deployable
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"strings"
@@ -89,6 +90,7 @@ type DeployRunner struct {
 	DivertDeployer     DivertDeployer
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
 	k8sLogger          *io.K8sLogger
+	varManager         *vars.Manager
 	TempKubeconfigFile string
 }
 
@@ -124,6 +126,7 @@ func NewDeployRunnerForRemote(
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	portGetter PortGetterFunc,
 	k8sLogger *io.K8sLogger,
+	varManager *vars.Manager,
 ) (*DeployRunner, error) {
 	kubeconfig := NewKubeConfig()
 	tempKubeconfigName := name
@@ -144,6 +147,7 @@ func NewDeployRunnerForRemote(
 		GetExternalControl: newDeployExternalK8sControl,
 		Fs:                 afero.NewOsFs(),
 		k8sLogger:          k8sLogger,
+		varManager:         varManager,
 	}, nil
 }
 
@@ -158,6 +162,7 @@ func NewDeployRunnerForLocal(
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	portGetter PortGetterFunc,
 	k8sLogger *io.K8sLogger,
+	varManager *vars.Manager,
 ) (*DeployRunner, error) {
 	kubeconfig := NewKubeConfig()
 	cwd, err := os.Getwd()
@@ -190,6 +195,7 @@ func NewDeployRunnerForLocal(
 		GetExternalControl: newDeployExternalK8sControl,
 		Fs:                 afero.NewOsFs(),
 		k8sLogger:          k8sLogger,
+		varManager:         varManager,
 	}, nil
 }
 
@@ -289,7 +295,12 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 			oktetoLog.SetStage(command.Name)
 			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Executing command '%s'...", command.Name)
 
-			err := r.Executor.Execute(command, params.Variables)
+			// env is composed by  params.Variables and r.varManager.GetOktetoVariablesExcLocal()
+			var env []string
+			env = append(env, params.Variables...)
+			env = append(env, r.varManager.GetOktetoVariablesExcLocal()...)
+
+			err := r.Executor.Execute(command, env)
 			if err != nil {
 				elapsedTime := time.Since(startTime)
 				if err := r.ConfigMapHandler.AddPhaseDuration(ctx, params.Name, params.Namespace, deployCommandsPhaseName, elapsedTime); err != nil {
