@@ -18,16 +18,17 @@ import (
 	"github.com/a8m/envsubst/parse"
 	"github.com/okteto/okteto/pkg/env"
 	"sort"
-	"sync"
 )
+
+var VarManager *Manager
 
 // Vars in groups with higher priority override those with lower priority
 const (
-	PriorityVarFromBuiltIn      = 1
-	PriorityVarFromFlag         = 2
-	PriorityVarFromLocal        = 3
-	PriorityVarFromDotEnv       = 4
-	PriorityVarFromUserAndAdmin = 5
+	OktetoVariableTypeBuiltIn      = 1
+	OktetoVariableTypeFlag         = 2
+	OktetoVariableTypeLocal        = 3
+	OktetoVariableTypeDotEnv       = 4
+	OktetoVariableTypeAdminAndUser = 5
 )
 
 type ConfigItem struct {
@@ -38,15 +39,17 @@ type ConfigItem struct {
 type Priority int
 
 var config = map[Priority]ConfigItem{
-	PriorityVarFromBuiltIn:      {Masked: false},
-	PriorityVarFromDotEnv:       {Masked: true},
-	PriorityVarFromUserAndAdmin: {Masked: true},
-	PriorityVarFromFlag:         {Name: "as --var", Masked: true},
-	PriorityVarFromLocal:        {Name: "locally or in the catalog", Masked: false},
+	OktetoVariableTypeBuiltIn:      {Masked: false},
+	OktetoVariableTypeDotEnv:       {Masked: true},
+	OktetoVariableTypeAdminAndUser: {Masked: true},
+	OktetoVariableTypeFlag:         {Name: "as --var", Masked: true},
+	OktetoVariableTypeLocal:        {Name: "locally or in the catalog", Masked: false},
 }
 
-//type LookupEnvFunc func(key string) (string, bool)
-//type SetEnvFunc func(key, value string) error
+type LookupEnvFunc func(key string) (string, bool)
+
+type SetEnvFunc func(key, value string) error
+
 //type MaskVarFunc func(name string)
 //type WarningLogFunc func(format string, args ...interface{})
 
@@ -57,7 +60,7 @@ type Group struct {
 }
 
 type ManagerInterface interface {
-	Lookup(key string) (string, bool)
+	//Lookup(key string) (string, bool)
 	Set(key, value string) error
 	MaskVar(value string)
 	WarningLogf(format string, args ...interface{})
@@ -66,56 +69,55 @@ type ManagerInterface interface {
 type Manager struct {
 	m      ManagerInterface
 	groups []Group
-	mu     sync.Mutex
 }
 
-// NewVarManager creates a new Okteto Variables manager
-func NewVarManager(m ManagerInterface) *Manager {
+// NewVarsManager creates a new Okteto Variables manager
+func NewVarsManager(m ManagerInterface) *Manager {
 	return &Manager{
 		m: m,
 	}
 }
 
-func (m *Manager) AddGroup(g Group) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.groups = append(m.groups, g)
-	m.sortGroupsByPriorityDesc()
+// Lookup returns the value of the environment variable named by the key
+func (m *Manager) Lookup(key string) (string, bool) {
+	for _, g := range m.groups {
+		for _, v := range g.Vars {
+			if v.Name == key {
+				return v.Value, true
+			}
+		}
+	}
+	return "", false
 }
 
-func (m *Manager) AddVars(vars []env.Var, priority Priority, exportToEnv bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	g := Group{
-		Vars:        vars,
-		Priority:    priority,
-		ExportToEnv: exportToEnv,
-	}
-	m.groups = append(m.groups, g)
-
+func (m *Manager) AddGroup(g Group) error {
 	if config[g.Priority].Masked {
-		for _, v := range vars {
+		for _, v := range g.Vars {
 			m.m.MaskVar(v.Value)
 		}
 	}
 
+	m.groups = append(m.groups, g)
 	m.sortGroupsByPriorityDesc()
+
+	return nil
+	//return m.export()
 }
 
-// sortGroupsByPriorityDesc sorts the groups by priority descending, so higher priority variables override lower priority ones.
-func (m *Manager) sortGroupsByPriorityDesc() {
-	sort.Slice(m.groups, func(i, j int) bool {
-		return m.groups[i].Priority > m.groups[j].Priority
-	})
+// GetOktetoVariablesWithoutLocal returns an array of all the okteto variables that can be exported (excluding local variables)
+func (m *Manager) GetOktetoVariablesWithoutLocal() []string {
+	groups := make([]Group, 0)
+	for _, g := range m.groups {
+		if g.Priority == OktetoVariableTypeLocal {
+			continue
+		}
+		groups = append(groups, g)
+	}
+	return m.groupsToArray(groups)
 }
 
-// Export exports the environment variables to the current process
-func (m *Manager) Export() error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
+// export exports the okteto variable using the provided Set function
+func (m *Manager) export() error {
 	for _, g := range m.groups {
 		if !g.ExportToEnv {
 			continue
@@ -128,6 +130,16 @@ func (m *Manager) Export() error {
 		}
 	}
 	return nil
+}
+
+// ExpandIncLocal replaces the variables in the given string with their values and returns the result. It expands with all groups, including local variables.
+func (m *Manager) ExpandIncLocal(s string) (string, error) {
+	return m.expandString(s, m.groupsToArray(m.groups))
+}
+
+// ExpandExcLocal replaces the variables in the given string with their values and returns the result. It expands with all groups, excluding local variables.
+func (m *Manager) ExpandExcLocal(s string) (string, error) {
+	return m.expandString(s, m.GetOktetoVariablesWithoutLocal())
 }
 
 // WarnVarsPrecedence prints out a warning message clarifying which variables take precedence over others in case a variables has been defined in multiple groups
@@ -153,13 +165,17 @@ func (m *Manager) WarnVarsPrecedence() {
 	}
 }
 
+// sortGroupsByPriorityDesc sorts the groups by priority descending, so higher priority variables override lower priority ones.
+func (m *Manager) sortGroupsByPriorityDesc() {
+	sort.Slice(m.groups, func(i, j int) bool {
+		return m.groups[i].Priority > m.groups[j].Priority
+	})
+}
+
 // groupsToArray flattens all groups into a single array of vars. By defaul it only includes exported variables
-func (m *Manager) groupsToArray(includeNonExported bool) []string {
+func (m *Manager) groupsToArray(groups []Group) []string {
 	vars := make([]string, 0)
-	for _, g := range m.groups {
-		if !includeNonExported && !g.ExportToEnv {
-			continue
-		}
+	for _, g := range groups {
 		for _, v := range g.Vars {
 			vars = append(vars, v.String())
 		}
@@ -169,15 +185,4 @@ func (m *Manager) groupsToArray(includeNonExported bool) []string {
 
 func (m *Manager) expandString(s string, envVars []string) (string, error) {
 	return parse.New("string", envVars, &parse.Restrictions{NoDigit: false, NoEmpty: false, NoUnset: false}).Parse(s)
-}
-
-func (m *Manager) ExpandWithLocalEnvVars(s string) (string, error) {
-	envVars := m.groupsToArray(true)
-	return m.expandString(s, envVars)
-}
-
-// Expand replaces the variables in the given string with their values and returns the result. It only expands with groups that are exported.
-func (m *Manager) Expand(s string) (string, error) {
-	envVars := m.groupsToArray(false)
-	return m.expandString(s, envVars)
 }

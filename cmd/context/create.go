@@ -351,7 +351,7 @@ func (*Command) initKubernetesContext(ctxOptions *Options) error {
 	return nil
 }
 
-func (c Command) getUserContext(ctx context.Context, ctxName, ns, token string) (*types.UserContext, error) {
+func (c *Command) getUserContext(ctx context.Context, ctxName, ns, token string) (*types.UserContext, error) {
 	client, err := c.OktetoClientProvider.Provide(
 		okteto.WithCtxName(ctxName),
 		okteto.WithToken(token),
@@ -422,7 +422,7 @@ func (c Command) getUserContext(ctx context.Context, ctxName, ns, token string) 
 	return nil, oktetoErrors.ErrInternalServerError
 }
 
-func (*Command) loadDotEnv(fs afero.Fs) error {
+func (c *Command) loadDotEnv(fs afero.Fs) error {
 	dotEnvFile := ".env"
 	if !filesystem.FileExistsWithFilesystem(dotEnvFile, fs) {
 		return nil
@@ -433,26 +433,29 @@ func (*Command) loadDotEnv(fs afero.Fs) error {
 		return fmt.Errorf("error reading file: %w", err)
 	}
 
-	expanded, err := env.ExpandEnv(string(content))
+	expanded, err := c.varManager.ExpandIncLocal(string(content))
 	if err != nil {
 		return fmt.Errorf("error expanding dot env file: %w", err)
 	}
-	vars, err := godotenv.UnmarshalBytes([]byte(expanded))
+	expandedVars, err := godotenv.UnmarshalBytes([]byte(expanded))
 	if err != nil {
 		return fmt.Errorf("error parsing dot env file: %w", err)
 	}
-	for k, v := range vars {
-		if _, exists := lookupEnv(k); exists {
+
+	dotEnvVars := vars.Group{
+		Vars:        []env.Var{},
+		Priority:    vars.OktetoVariableTypeDotEnv,
+		ExportToEnv: true,
+	}
+	for k, v := range expandedVars {
+		if _, exists := c.varManager.Lookup(k); exists {
 			continue
 		}
-		err := setEnvFunc(k, v)
-		if err != nil {
-			return fmt.Errorf("error setting env var: %w", err)
-		}
+		dotEnvVars.Vars = append(dotEnvVars.Vars, env.Var{Name: k, Value: v})
 		oktetoLog.AddMaskedWord(v)
 	}
 
-	return nil
+	return c.varManager.AddGroup(dotEnvVars)
 }
 
 func isUrl(u string) bool {

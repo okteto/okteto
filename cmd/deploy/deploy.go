@@ -102,6 +102,7 @@ type getDeployerFunc func(
 	okteto.K8sClientProviderWithLogger,
 	*io.Controller,
 	*io.K8sLogger,
+	*vars.Manager,
 	dependencyEnvVarsGetter,
 ) (Deployer, error)
 
@@ -121,6 +122,7 @@ type Command struct {
 	AnalyticsTracker  AnalyticsTrackerInterface
 	IoCtrl            *io.Controller
 	K8sLogger         *io.K8sLogger
+	VarManager        *vars.Manager
 	InsightsTracker   buildDeployTrackerInterface
 
 	PipelineType model.Archetype
@@ -233,6 +235,7 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 				AnalyticsTracker:   at,
 				IoCtrl:             ioCtrl,
 				K8sLogger:          k8sLogger,
+				VarManager:         varManager,
 
 				onCleanUp:       []cleanUpFunc{},
 				InsightsTracker: insightsTracker,
@@ -488,7 +491,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 
 func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) error {
 	// If the command is configured to execute things remotely (--remote, deploy.image or deploy.remote) it should be executed in the remote. If not, it should be executed locally
-	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder.GetBuildEnvVars, dc.CfgMapHandler, dc.K8sClientProvider, dc.IoCtrl, dc.K8sLogger, GetDependencyEnvVars)
+	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder.GetBuildEnvVars, dc.CfgMapHandler, dc.K8sClientProvider, dc.IoCtrl, dc.K8sLogger, dc.VarManager, GetDependencyEnvVars)
 	if err != nil {
 		return err
 	}
@@ -592,6 +595,7 @@ func GetDeployer(ctx context.Context,
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	ioCtrl *io.Controller,
 	k8Logger *io.K8sLogger,
+	varManager *vars.Manager,
 	dependencyEnvVarsGetter dependencyEnvVarsGetter,
 ) (Deployer, error) {
 	if shouldRunInRemote(opts) {
@@ -609,7 +613,8 @@ func GetDeployer(ctx context.Context,
 		cmapHandler,
 		k8sProvider,
 		model.GetAvailablePort,
-		k8Logger)
+		k8Logger,
+		varManager)
 	if err != nil {
 		eWrapped := fmt.Errorf("could not initialize local deploy command: %w", err)
 		if uError, ok := err.(oktetoErrors.UserError); ok {

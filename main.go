@@ -89,18 +89,18 @@ func init() {
 	}
 }
 
-type osEnvVarManager struct{}
+type varsManager struct{}
 
-func (*osEnvVarManager) Lookup(key string) (string, bool) {
-	return os.LookupEnv(key)
-}
-func (*osEnvVarManager) Set(key, value string) error {
+//	func (*osEnvVarManager) Lookup(key string) (string, bool) {
+//		return os.LookupEnv(key)
+//	}
+func (*varsManager) Set(key, value string) error {
 	return os.Setenv(key, value)
 }
-func (*osEnvVarManager) MaskVar(value string) {
+func (*varsManager) MaskVar(value string) {
 	oktetoLog.AddMaskedWord(value)
 }
-func (*osEnvVarManager) WarningLogf(format string, args ...interface{}) {
+func (*varsManager) WarningLogf(format string, args ...interface{}) {
 	oktetoLog.Warning(format, args...)
 }
 
@@ -130,12 +130,15 @@ func main() {
 
 	k8sLogger := io.NewK8sLogger()
 
-	varManager := vars.NewVarManager(&osEnvVarManager{})
-	varManager.AddGroup(vars.Group{
+	vars.VarManager = vars.NewVarsManager(&varsManager{})
+	err := vars.VarManager.AddGroup(vars.Group{
 		Vars:        env.ConvertLocalEnvVarsToOktetoVars(os.Environ),
-		Priority:    vars.PriorityVarFromLocal,
+		Priority:    vars.OktetoVariableTypeLocal,
 		ExportToEnv: false,
 	})
+	if err != nil {
+		ioController.Logger().Infof("error parsing local env vars: %s", err)
+	}
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
@@ -169,7 +172,7 @@ func main() {
 	root.PersistentFlags().StringVar(&outputMode, "log-output", oktetoLog.TTYFormat, "output format for logs (tty, plain, json)")
 
 	root.PersistentFlags().StringVarP(&serverNameOverride, "server-name", "", "", "The address and port of the Okteto Ingress server")
-	err := root.PersistentFlags().MarkHidden("server-name")
+	err = root.PersistentFlags().MarkHidden("server-name")
 	if err != nil {
 		ioController.Logger().Infof("error hiding server-name flag: %s", err)
 	}
@@ -190,7 +193,7 @@ func main() {
 	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
 	root.AddCommand(registrytoken.RegistryToken(ctx))
 
-	root.AddCommand(build.Build(ctx, ioController, at, insights, k8sLogger))
+	root.AddCommand(build.Build(ctx, ioController, at, insights, k8sLogger, vars.VarManager))
 
 	root.AddCommand(namespace.Namespace(ctx, k8sLogger))
 	root.AddCommand(up.Up(at, insights, ioController, k8sLogger))
@@ -200,13 +203,13 @@ func main() {
 	root.AddCommand(exec.NewExec(fs, ioController, k8sClientProvider).Cmd(ctx))
 	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
-	root.AddCommand(deploy.Deploy(ctx, at, insights, ioController, k8sLogger, varManager))
-	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger))
+	root.AddCommand(deploy.Deploy(ctx, at, insights, ioController, k8sLogger, vars.VarManager))
+	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger, vars.VarManager))
 	root.AddCommand(deploy.Endpoints(ctx, k8sLogger))
 	root.AddCommand(logs.Logs(ctx, k8sLogger))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
-	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger))
-	root.AddCommand(test.Test(ctx, ioController, k8sLogger, at))
+	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger, vars.VarManager))
+	root.AddCommand(test.Test(ctx, ioController, k8sLogger, vars.VarManager, at))
 
 	// deprecated
 	root.AddCommand(stack.Stack(ctx, at, insights, ioController))

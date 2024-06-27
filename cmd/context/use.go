@@ -105,7 +105,7 @@ func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 
 	// if the --context and --namespace flags are set, they have priority over the env vars, and current context
 	// if env vars OKTETO_CONTEXT and OKTETO_NAMESPACE are set, they have priority over the current context
-	err := c.loadDotEnv(afero.NewOsFs(), os.Setenv, os.LookupEnv)
+	err := c.loadDotEnv(afero.NewOsFs())
 	if err != nil {
 		oktetoLog.Warning("Failed to load .env file: %s", err)
 	}

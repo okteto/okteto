@@ -95,7 +95,7 @@ func Test_validateAndSet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			envVarStorage := make(map[string]string)
-			varManager := vars.NewVarManager(newFakeEnvManager(envVarStorage))
+			varManager := vars.NewVarsManager(newFakeEnvManager(envVarStorage))
 			err := convertCommandFlagsToOktetoVariables(tt.variables, varManager)
 
 			assert.Equal(t, tt.expectedError, err)

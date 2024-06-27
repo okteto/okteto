@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"os/signal"
 	"path"
@@ -69,7 +70,7 @@ type builder interface {
 	Build(ctx context.Context, options *types.BuildOptions) error
 }
 
-func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at *analytics.Tracker) *cobra.Command {
+func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, varManager *vars.Manager, at *analytics.Tracker) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
 		Use:   "test",
@@ -86,7 +87,7 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 
 			go func() {
 				startTime := time.Now()
-				metadata, err := doRun(ctx, servicesToTest, options, ioCtrl, k8sLogger, &ProxyTracker{at})
+				metadata, err := doRun(ctx, servicesToTest, options, ioCtrl, k8sLogger, varManager, &ProxyTracker{at})
 				metadata.Err = err
 				metadata.Duration = time.Since(startTime)
 				at.TrackTest(metadata)
@@ -118,10 +119,10 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 	return cmd
 }
 
-func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, tracker *ProxyTracker) (analytics.TestMetadata, error) {
+func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, varManager *vars.Manager, tracker *ProxyTracker) (analytics.TestMetadata, error) {
 	fs := afero.NewOsFs()
 
-	if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
+	if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
 		return analytics.TestMetadata{}, err
 	}
 

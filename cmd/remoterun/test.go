@@ -16,6 +16,7 @@ package remoterun
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"strings"
 
@@ -39,7 +40,7 @@ type TestOptions struct {
 
 // Test starts the test command remotely. This is the command executed in the
 // remote environment when running okteto test
-func Test(ctx context.Context) *cobra.Command {
+func Test(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	options := &TestOptions{}
 	cmd := &cobra.Command{
 		Use:   "test",
@@ -59,7 +60,7 @@ commands:
 				return fmt.Errorf("--name is required")
 			}
 
-			oktetoContext, err := contextCMD.NewContextCommand().RunStateless(ctx, &contextCMD.Options{Show: true})
+			oktetoContext, err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).RunStateless(ctx, &contextCMD.Options{Show: true})
 			if err != nil {
 				return err
 			}

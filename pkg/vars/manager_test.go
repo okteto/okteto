@@ -55,14 +55,14 @@ func varExists(key string) bool {
 //	fakeEnvManager := newFakeEnvManager(t)
 //
 //	t.Run("empty env manager", func(t *testing.T) {
-//		envManager := NewVarManager(fakeEnvManager)
-//		err := envManager.Export()
+//		envManager := NewVarsManager(fakeEnvManager)
+//		err := envManager.export()
 //		assert.NoError(t, err)
 //
 //		var emptyGroup []env.Var
 //
-//		envManager.AddVars(emptyGroup, PriorityVarFromLocal)
-//		err = envManager.Export()
+//		envManager.AddVars(emptyGroup, OktetoVariableTypeLocal)
+//		err = envManager.export()
 //		assert.NoError(t, err)
 //	})
 //
@@ -104,9 +104,9 @@ func varExists(key string) bool {
 //		assert.Equal(t, false, varExists("TEST_VAR_2"))
 //		assert.Equal(t, false, varExists("TEST_VAR_3"))
 //
-//		envManager := NewVarManager(fakeEnvManager)
+//		envManager := NewVarsManager(fakeEnvManager)
 //		envManager.AddVars(fakeGroupVarsFromPlatform, PriorityVarFromPlatform)
-//		assert.NoError(t, envManager.Export())
+//		assert.NoError(t, envManager.export())
 //		assert.Equal(t, "platform-value1", os.Getenv("TEST_VAR_1"))
 //
 //		envManager.AddVars(fakeGroupVarsFromManifest, PriorityVarFromManifest)
@@ -114,15 +114,15 @@ func varExists(key string) bool {
 //		// until we export, the value stays the same
 //		assert.Equal(t, "platform-value1", os.Getenv("TEST_VAR_1"))
 //
-//		assert.NoError(t, envManager.Export())
+//		assert.NoError(t, envManager.export())
 //		assert.Equal(t, "manifest-value1", os.Getenv("TEST_VAR_1"))
 //
-//		envManager.AddVars(fakeGroupVarsFromLoal, PriorityVarFromLocal)
-//		assert.NoError(t, envManager.Export())
+//		envManager.AddVars(fakeGroupVarsFromLoal, OktetoVariableTypeLocal)
+//		assert.NoError(t, envManager.export())
 //		assert.Equal(t, "local-value1", os.Getenv("TEST_VAR_1"))
 //
-//		envManager.AddVars(fakeGroupVarsFromFlag, PriorityVarFromFlag)
-//		assert.NoError(t, envManager.Export())
+//		envManager.AddVars(fakeGroupVarsFromFlag, OktetoVariableTypeFlag)
+//		assert.NoError(t, envManager.export())
 //		assert.Equal(t, "flag-value1", os.Getenv("TEST_VAR_1"))
 //
 //		// no other groups override the value
@@ -136,7 +136,7 @@ func varExists(key string) bool {
 //}
 
 func Test_Expand(t *testing.T) {
-	fakeEnvManager := NewVarManager(newFakeEnvManager(t)
+	fakeEnvManager := NewVarsManager(newFakeEnvManager(t)
 
 	groupLocalVars := Group{
 		Vars: []env.Var{

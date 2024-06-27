@@ -22,6 +22,10 @@ import (
 // convertCommandFlagsToOktetoVariables returns error when variables dont have expected format NAME=VALUE or NAME is not allowed
 // when variable is valid, it sets its value as env variable
 func convertCommandFlagsToOktetoVariables(variables []string, varManager *vars.Manager) error {
+	if len(variables) == 0 {
+		return nil
+	}
+
 	if err := validator.CheckReservedVariablesNameOption(variables); err != nil {
 		return err
 	}
@@ -31,11 +35,11 @@ func convertCommandFlagsToOktetoVariables(variables []string, varManager *vars.M
 		return err
 	}
 
-	varManager.AddGroup(vars.Group{
+	err = varManager.AddGroup(vars.Group{
 		Vars:        envVars,
-		Priority:    vars.PriorityVarFromFlag,
+		Priority:    vars.OktetoVariableTypeFlag,
 		ExportToEnv: true,
 	})
 
-	return nil
+	return err
 }

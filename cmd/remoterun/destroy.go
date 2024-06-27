@@ -16,6 +16,7 @@ package remoterun
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"strings"
@@ -51,7 +52,7 @@ type DestroyCommand struct {
 
 // Destroy starts the destroy command remotely. This is the command executed in the
 // remote environment when destroy deploy is executed with the remote flag
-func Destroy(ctx context.Context) *cobra.Command {
+func Destroy(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	options := &DestroyOptions{}
 	cmd := &cobra.Command{
 		Use:   "destroy",
@@ -73,7 +74,7 @@ It is important that this command does the minimum and must not do calculations 
 				return fmt.Errorf("--name is required")
 			}
 
-			oktetoContext, err := contextCMD.NewContextCommand().RunStateless(ctx, &contextCMD.Options{})
+			oktetoContext, err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).RunStateless(ctx, &contextCMD.Options{})
 			if err != nil {
 				return err
 			}

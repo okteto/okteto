@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"strings"
@@ -130,7 +131,7 @@ type destroyCommand struct {
 }
 
 // Destroy destroys the dev application defined by the manifest
-func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
 	options := &Options{
 		Variables: []string{},
 	}
@@ -167,7 +168,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 				Context:   options.K8sContext,
 				Namespace: options.Namespace,
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, ctxOpts); err != nil {
 				return err
 			}
 

@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -94,7 +95,7 @@ const (
 )
 
 // Build build and optionally push a Docker image
-func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTrackerInterface, k8slogger *io.K8sLogger) *cobra.Command {
+func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTrackerInterface, k8slogger *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
 	options := &types.BuildOptions{}
 	cmd := &cobra.Command{
 		Use:   "build [service...]",
@@ -104,7 +105,7 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 			// The context must be loaded before reading manifest. Otherwise,
 			// secrets will not be resolved when GetManifest is called and
 			// the manifest will load empty values.
-			oktetoContext, err := getOktetoContext(ctx, options)
+			oktetoContext, err := getOktetoContext(ctx, options, varManager)
 			if err != nil {
 				return err
 			}
@@ -207,14 +208,14 @@ func validateDockerfile(file string) error {
 	return err
 }
 
-func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*okteto.ContextStateless, error) {
+func getOktetoContext(ctx context.Context, options *types.BuildOptions, varManager *vars.Manager) (*okteto.ContextStateless, error) {
 	ctxOpts := &contextCMD.Options{
 		Context:   options.K8sContext,
 		Namespace: options.Namespace,
 		Show:      true,
 	}
 
-	oktetoContext, err := contextCMD.NewContextCommand().RunStateless(ctx, ctxOpts)
+	oktetoContext, err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).RunStateless(ctx, ctxOpts)
 	if err != nil {
 		return nil, err
 	}
