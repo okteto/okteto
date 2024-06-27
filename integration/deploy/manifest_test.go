@@ -289,7 +289,6 @@ func TestDeployOktetoManifestWithDestroy(t *testing.T) {
 	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
 
 	deployOptions.LogLevel = "debug"
-	// Test redeploy is not building any image
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
 	_, err = integration.GetConfigmap(context.Background(), testNamespace, fmt.Sprintf("okteto-git-%s", filepath.Base(dir)), c)
@@ -675,7 +674,7 @@ func createOktetoManifest(dir, content string) error {
 }
 
 func expectImageFoundSkippingBuild(output string) error {
-	if ok := strings.Contains(output, "Skipping build for image for service"); !ok {
+	if ok := strings.Contains(output, "Skipping build for image for service"); ok {
 		log.Print(output)
 		return errors.New("expected image found, skipping build")
 	}
