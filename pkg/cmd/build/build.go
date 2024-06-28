@@ -44,13 +44,6 @@ const (
 	doubleDockerfileWarning string = "Build '%s': Two Dockerfiles discovered in both the root and context path, defaulting to '%s/%s'"
 )
 
-var (
-	errDockerDaemonConnection = oktetoErrors.UserError{
-		E:    fmt.Errorf("cannot connect to Docker Daemon"),
-		Hint: "Please start the Docker Daemon or configure a builder endpoint with 'okteto context --builder BUILDKIT_URL",
-	}
-)
-
 // OktetoBuilderInterface runs the build of an image
 type OktetoBuilderInterface interface {
 	GetBuilder() string
@@ -226,16 +219,6 @@ func validateImages(okctx OktetoContextInterface, imageTags string) error {
 		}
 	}
 	return nil
-}
-
-func translateDockerErr(err error) error {
-	if err == nil {
-		return nil
-	}
-	if strings.HasPrefix(err.Error(), "failed to dial gRPC: cannot connect to the Docker daemon") {
-		return errDockerDaemonConnection
-	}
-	return err
 }
 
 type regInterface interface {
