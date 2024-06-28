@@ -43,6 +43,7 @@ func (d *DevModeOnLister) List(ctx context.Context, devs model.ManifestDevs, ns 
 	if len(devNameList) == 0 {
 		return nil, errNoDevContainerInDevMode
 	}
+	sort.Strings(devNameList)
 	return devNameList, nil
 }
 
