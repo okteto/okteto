@@ -25,6 +25,11 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+
 func Test_GetTimeout(t *testing.T) {
 	tests := []struct {
 		dependency     *Dependency
@@ -109,6 +114,8 @@ func Test_ExpandVars(t *testing.T) {
 }
 
 func Test_ManifestDependencies_UnmarshalYAML(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	tests := []struct {
 		expected    ManifestSection
 		name        string

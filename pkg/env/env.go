@@ -14,7 +14,6 @@
 package env
 
 import (
-	"fmt"
 	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"sort"
@@ -26,14 +25,14 @@ import (
 
 type Environment []vars.Var
 
-type VarExpansionErr struct {
-	err   error
-	value string
-}
-
-func (e VarExpansionErr) Error() string {
-	return fmt.Sprintf("error expanding environment on '%s': %s", e.value, e.err)
-}
+//type VarExpansionErr struct {
+//	err   error
+//	value string
+//}
+//
+//func (e VarExpansionErr) Error() string {
+//	return fmt.Sprintf("error expanding environment on '%s': %s", e.value, e.err)
+//}
 
 func (e *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	envs := make(Environment, 0)

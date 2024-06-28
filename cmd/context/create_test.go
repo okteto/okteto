@@ -37,21 +37,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-type fakeVarManager struct {
-	storage map[string]string
-}
+type fakeVarManager struct{}
 
-func (e *fakeVarManager) Set(key, value string) error {
-	e.storage[key] = value
-	return nil
-}
 func (*fakeVarManager) MaskVar(string)                     {}
 func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
-func newFakeEnvManager(envVarStorage map[string]string) *fakeVarManager {
-	return &fakeVarManager{
-		storage: envVarStorage,
-	}
-}
 
 func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User, fakeObjects []runtime.Object) *Command {
 	return &Command{
@@ -772,16 +761,10 @@ func Test_loadDotEnv(t *testing.T) {
 		err  error
 	}
 
-	varManager := vars.NewVarsManager(newFakeEnvManager(map[string]string{}))
-
-	cmd := Command{
-		varManager: varManager,
-	}
-
 	tests := []struct {
 		expected expected
 		mockfs   func() afero.Fs
-		mockEnv  func(t *testing.T)
+		mockEnv  func() *vars.Manager
 		name     string
 	}{
 		{
@@ -848,10 +831,12 @@ func Test_loadDotEnv(t *testing.T) {
 		},
 		{
 			name: "valid .env with multiple vars",
-			mockEnv: func(t *testing.T) {
+			mockEnv: func() *vars.Manager {
+				varManager := vars.NewVarsManager(&fakeVarManager{})
 				value4 := vars.Var{Name: "VALUE4", Value: "VALUE4"}
 				group := vars.Group{Vars: []vars.Var{value4}}
 				_ = varManager.AddGroup(group)
+				return varManager
 			},
 			mockfs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
@@ -871,10 +856,12 @@ func Test_loadDotEnv(t *testing.T) {
 		},
 		{
 			name: "local vars are not overridden",
-			mockEnv: func(t *testing.T) {
+			mockEnv: func() *vars.Manager {
+				varManager := vars.NewVarsManager(&fakeVarManager{})
 				value4 := vars.Var{Name: "VAR4", Value: "local"}
 				group := vars.Group{Vars: []vars.Var{value4}}
 				_ = varManager.AddGroup(group)
+				return varManager
 			},
 			mockfs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
@@ -892,8 +879,12 @@ func Test_loadDotEnv(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fs := tt.mockfs()
+			varManager := vars.NewVarsManager(&fakeVarManager{})
 			if tt.mockEnv != nil {
-				tt.mockEnv(t)
+				varManager = tt.mockEnv()
+			}
+			cmd := Command{
+				varManager: varManager,
 			}
 			err := cmd.loadDotEnv(fs)
 			if tt.expected.err != nil {

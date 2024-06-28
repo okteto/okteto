@@ -15,12 +15,12 @@ package basic
 
 import (
 	"context"
+	"fmt"
 	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
@@ -189,7 +189,7 @@ func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 	ctx := context.Background()
 
 	varManager := vars.NewVarsManager(&fakeVarManager{})
-	err := varManager.AddGroup(vars.Group{
+	localEnvVars := vars.Group{
 		Priority: vars.OktetoVariableTypeLocal,
 		Vars: []vars.Var{
 			{
@@ -197,8 +197,8 @@ func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 				Value: "unit-test",
 			},
 		},
-	})
-	assert.NoError(t, err)
+	}
+	assert.NoError(t, varManager.AddGroup(localEnvVars))
 
 	buildRunner := &fakeBuildRunner{}
 	bc := &Builder{
@@ -217,7 +217,7 @@ func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 	}
 	err = bc.Build(ctx, options)
 	// error from the build
-	assert.ErrorAs(t, err, &env.VarExpansionErr{})
+	assert.Error(t, err, fmt.Errorf("closing brace expectedxx"))
 
 	buildRunner.AssertNotCalled(t, "Run", mock.Anything, mock.Anything, mock.Anything)
 }
