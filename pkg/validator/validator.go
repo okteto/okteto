@@ -16,9 +16,9 @@ package validator
 import (
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 )
 
@@ -40,7 +40,7 @@ func CheckReservedVariablesNameOption(variables []string) error {
 }
 
 // CheckReservedVarName returns an error when any of the variable names from dependency manifest
-func CheckReservedVarName(variables []env.Var) error {
+func CheckReservedVarName(variables []vars.Var) error {
 	for _, v := range variables {
 		if isReservedVariableName(v.Name) {
 			return fmt.Errorf("%s is %w", v.Name, ErrReservedVariableName)

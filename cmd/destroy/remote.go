@@ -17,12 +17,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"path"
 	"strings"
 
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/deployable"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/ignore"
@@ -165,7 +165,7 @@ func getCommandFlags(opts *Options) ([]string, error) {
 
 	if len(opts.Variables) > 0 {
 		var varsToAddForDeploy []string
-		variables, err := env.Parse(opts.Variables)
+		variables, err := vars.Parse(opts.Variables)
 		if err != nil {
 			return nil, err
 		}

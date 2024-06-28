@@ -15,8 +15,7 @@ package model
 
 import (
 	"fmt"
-
-	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 type Test struct {
@@ -55,7 +54,7 @@ func (test ManifestTests) Validate() error {
 func (test *Test) expandEnvVars() error {
 	var err error
 	if len(test.Image) > 0 {
-		test.Image, err = env.ExpandEnv(test.Image)
+		test.Image, err = vars.VarManager.ExpandExcLocal(test.Image)
 		if err != nil {
 			return err
 		}

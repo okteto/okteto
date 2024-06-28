@@ -14,6 +14,7 @@
 package deps
 
 import (
+	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 	"time"
 
@@ -67,11 +68,11 @@ func Test_ExpandVars(t *testing.T) {
 		ManifestPath: "${NOMPATHSET=$MPATH}",
 		Namespace:    "${FOO+$SOME_NS_DEP_EXP}",
 		Variables: env.Environment{
-			env.Var{
+			vars.Var{
 				Name:  "MYVAR",
 				Value: "${AVARVALUE}",
 			},
-			env.Var{
+			vars.Var{
 				Name:  "$${ANAME}",
 				Value: "${MY_CUSTOM_VAR_FROM_ENVIRON}",
 			},
@@ -83,11 +84,11 @@ func Test_ExpandVars(t *testing.T) {
 		ManifestPath: "api/okteto.yml",
 		Namespace:    "oktetoNs",
 		Variables: env.Environment{
-			env.Var{
+			vars.Var{
 				Name:  "MYVAR",
 				Value: "thisIsAValue",
 			},
-			env.Var{
+			vars.Var{
 				Name:  "${ANAME}",
 				Value: "varValueFromEnv",
 			},
@@ -146,7 +147,7 @@ frontend:
 					ManifestPath: "frontend.yml",
 					Branch:       "frontend-branch",
 					Variables: env.Environment{
-						env.Var{
+						vars.Var{
 							Name:  "ENVIRONMENT",
 							Value: "test",
 						},

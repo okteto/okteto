@@ -14,7 +14,6 @@
 package vars
 
 import (
-	"github.com/okteto/okteto/pkg/env"
 	"os"
 	"testing"
 )
@@ -139,7 +138,7 @@ func Test_Expand(t *testing.T) {
 	fakeEnvManager := NewVarsManager(newFakeEnvManager(t)
 
 	groupLocalVars := Group{
-		Vars: []env.Var{
+		Vars: []Var{
 			{
 				Name:  "TEST_VAR_1",
 				Value: "local-value1",

@@ -17,13 +17,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path"
 	"strings"
 
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/deployable"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/ignore"
@@ -146,12 +146,12 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 	return nil
 }
 
-func GetCommandFlags(name string, vars []string) ([]string, error) {
+func GetCommandFlags(name string, variables []string) ([]string, error) {
 	var commandFlags []string
 	commandFlags = append(commandFlags, fmt.Sprintf("--name %q", name))
-	if len(vars) > 0 {
+	if len(variables) > 0 {
 		var varsToAddForDeploy []string
-		variables, err := env.Parse(vars)
+		variables, err := vars.Parse(variables)
 		if err != nil {
 			return nil, err
 		}

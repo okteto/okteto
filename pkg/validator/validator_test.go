@@ -14,6 +14,7 @@
 package validator
 
 import (
+	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/env"
@@ -132,7 +133,7 @@ func TestCheckReservedVarName(t *testing.T) {
 		{
 			name: "invalid name should return err",
 			args: args{
-				variables: []env.Var{
+				variables: []vars.Var{
 					{
 						Name:  "OKTETO_CONTEXT",
 						Value: "value",
@@ -144,7 +145,7 @@ func TestCheckReservedVarName(t *testing.T) {
 		{
 			name: "valid name should not return err",
 			args: args{
-				variables: []env.Var{
+				variables: []vars.Var{
 					{
 						Name:  "NAME",
 						Value: "value",

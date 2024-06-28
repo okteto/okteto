@@ -646,7 +646,7 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 			return err
 		}
 
-		dep.Variables = append(dep.Variables, env.Var{
+		dep.Variables = append(dep.Variables, vars.Var{
 			Name:  "OKTETO_ORIGIN",
 			Value: "okteto-deploy",
 		})

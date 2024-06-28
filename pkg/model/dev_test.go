@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"reflect"
 	"testing"
@@ -133,7 +134,7 @@ services:
 		}
 	}
 
-	expected := (63 * time.Second)
+	expected := 63 * time.Second
 	if expected != main.Timeout.Default {
 		t.Errorf("the default timeout wasn't applied, got %s, expected %s", main.Timeout, expected)
 	}
@@ -1427,7 +1428,7 @@ func Test_expandEnvFiles(t *testing.T) {
 			},
 			envs: []byte("key1=value1"),
 			expected: env.Environment{
-				env.Var{
+				vars.Var{
 					Name:  "key1",
 					Value: "value1",
 				},
@@ -1446,7 +1447,7 @@ func Test_expandEnvFiles(t *testing.T) {
 			},
 			envs: []byte("key1=value100"),
 			expected: env.Environment{
-				env.Var{
+				vars.Var{
 					Name:  "key1",
 					Value: "value1",
 				},
@@ -1460,7 +1461,7 @@ func Test_expandEnvFiles(t *testing.T) {
 			},
 			envs: []byte("OKTETO_TEST="),
 			expected: env.Environment{
-				env.Var{
+				vars.Var{
 					Name:  "OKTETO_TEST",
 					Value: "myvalue",
 				},

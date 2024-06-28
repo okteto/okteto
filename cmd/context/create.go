@@ -443,7 +443,7 @@ func (c *Command) loadDotEnv(fs afero.Fs) error {
 	}
 
 	dotEnvVars := vars.Group{
-		Vars:        []env.Var{},
+		Vars:        []vars.Var{},
 		Priority:    vars.OktetoVariableTypeDotEnv,
 		ExportToEnv: true,
 	}
@@ -451,7 +451,7 @@ func (c *Command) loadDotEnv(fs afero.Fs) error {
 		if _, exists := c.varManager.Lookup(k); exists {
 			continue
 		}
-		dotEnvVars.Vars = append(dotEnvVars.Vars, env.Var{Name: k, Value: v})
+		dotEnvVars.Vars = append(dotEnvVars.Vars, vars.Var{Name: k, Value: v})
 		oktetoLog.AddMaskedWord(v)
 	}
 

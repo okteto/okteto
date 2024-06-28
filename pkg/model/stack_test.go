@@ -15,6 +15,7 @@ package model
 
 import (
 	"bytes"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -733,7 +734,7 @@ func TestStack_Merge(t *testing.T) {
 						},
 						EnvFiles: env.Files{".env"},
 						Environment: env.Environment{
-							env.Var{
+							vars.Var{
 								Name:  "test",
 								Value: "ok",
 							},
@@ -763,7 +764,7 @@ func TestStack_Merge(t *testing.T) {
 						},
 						EnvFiles: env.Files{".env-test"},
 						Environment: env.Environment{
-							env.Var{
+							vars.Var{
 								Name:  "test",
 								Value: "overwrite",
 							},
@@ -793,7 +794,7 @@ func TestStack_Merge(t *testing.T) {
 						},
 						EnvFiles: env.Files{".env-test"},
 						Environment: env.Environment{
-							env.Var{
+							vars.Var{
 								Name:  "test",
 								Value: "overwrite",
 							},
@@ -1233,7 +1234,7 @@ func Test_translateEnvVars(t *testing.T) {
 			"1": {
 				Image:    "image",
 				EnvFiles: []string{"${ENV_PATH}", "${ENV_PATH2}"},
-				Environment: []env.Var{
+				Environment: []vars.Var{
 					{
 						Name:  "C",
 						Value: "original",

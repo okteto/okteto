@@ -14,7 +14,6 @@
 package deploy
 
 import (
-	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/validator"
 	"github.com/okteto/okteto/pkg/vars"
 )
@@ -30,7 +29,7 @@ func convertCommandFlagsToOktetoVariables(variables []string, varManager *vars.M
 		return err
 	}
 
-	envVars, err := env.Parse(variables)
+	envVars, err := vars.Parse(variables)
 	if err != nil {
 		return err
 	}

@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -24,7 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/stretchr/testify/assert"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
@@ -1916,7 +1917,7 @@ func Test_Environment(t *testing.T) {
 		{
 			name:        "envs",
 			manifest:    []byte("services:\n  app:\n    environment:\n        env: production\n    image: okteto/vote:1"),
-			environment: env.Environment{env.Var{Name: "env", Value: "production"}},
+			environment: env.Environment{vars.Var{Name: "env", Value: "production"}},
 		},
 		{
 			name:        "empty envs",
@@ -1926,12 +1927,12 @@ func Test_Environment(t *testing.T) {
 		{
 			name:        "empty envs - exists envar",
 			manifest:    []byte("services:\n  app:\n    environment:\n        OKTETO_ENVTEST:\n    image: okteto/vote:1"),
-			environment: env.Environment{env.Var{Name: "OKTETO_ENVTEST", Value: "myvalue"}},
+			environment: env.Environment{vars.Var{Name: "OKTETO_ENVTEST", Value: "myvalue"}},
 		},
 		{
 			name:        "empty list envs - exists envar",
 			manifest:    []byte("services:\n  app:\n    environment:\n      - OKTETO_ENVTEST\n    image: okteto/vote:1"),
-			environment: env.Environment{env.Var{Name: "OKTETO_ENVTEST", Value: "myvalue"}},
+			environment: env.Environment{vars.Var{Name: "OKTETO_ENVTEST", Value: "myvalue"}},
 		},
 		{
 			name:        "noenvs",
@@ -2116,7 +2117,7 @@ func Test_ExtensionUnmarshalling(t *testing.T) {
 			manifest: []byte("x-env: &testEnv\n  environment:\n  - SOME_ENV_VAR=123\nservices:\n  app:\n    <<: *testEnv"),
 			expected: &Service{
 				Environment: env.Environment{
-					env.Var{
+					vars.Var{
 						Name:  "SOME_ENV_VAR",
 						Value: "123",
 					},

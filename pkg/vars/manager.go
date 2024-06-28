@@ -16,7 +16,6 @@ package vars
 import (
 	"fmt"
 	"github.com/a8m/envsubst/parse"
-	"github.com/okteto/okteto/pkg/env"
 	"sort"
 )
 
@@ -54,7 +53,7 @@ type SetEnvFunc func(key, value string) error
 //type WarningLogFunc func(format string, args ...interface{})
 
 type Group struct {
-	Vars        []env.Var
+	Vars        []Var
 	Priority    Priority
 	ExportToEnv bool
 }

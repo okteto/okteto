@@ -18,7 +18,6 @@ import (
 	cryptoRand "crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/vars"
 	"math/rand"
 	"os"
@@ -132,7 +131,7 @@ func main() {
 
 	vars.VarManager = vars.NewVarsManager(&varsManager{})
 	err := vars.VarManager.AddGroup(vars.Group{
-		Vars:        env.ConvertLocalEnvVarsToOktetoVars(os.Environ),
+		Vars:        vars.ConvertLocalEnvVarsToOktetoVars(os.Environ),
 		Priority:    vars.OktetoVariableTypeLocal,
 		ExportToEnv: false,
 	})

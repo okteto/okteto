@@ -15,10 +15,9 @@ package build
 
 import (
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"sort"
 	"strings"
-
-	"github.com/okteto/okteto/pkg/env"
 )
 
 // Arg is an argument used on the build step.
@@ -31,7 +30,7 @@ type Arg struct {
 type Args []Arg
 
 func (a *Arg) String() string {
-	value, err := env.ExpandEnv(a.Value)
+	value, err := vars.VarManager.ExpandExcLocal(a.Value)
 	if err != nil {
 		return fmt.Sprintf("%s=%s", a.Name, a.Value)
 	}
@@ -54,7 +53,7 @@ func (a *Arg) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return nil
 	}
 
-	a.Name, err = env.ExpandEnv(parts[0])
+	a.Name, err = vars.VarManager.ExpandExcLocal(parts[0])
 	if err != nil {
 		return err
 	}
@@ -86,7 +85,7 @@ func getArgs(unmarshal func(interface{}) error) (map[string]string, error) {
 	err := unmarshal(&rawList)
 	if err == nil {
 		for _, buildArg := range rawList {
-			value, err := env.ExpandEnvIfNotEmpty(buildArg.Value)
+			value, err := vars.VarManager.ExpandExcLocalIfNotEmpty(buildArg.Value)
 			if err != nil {
 				return nil, err
 			}
@@ -100,7 +99,7 @@ func getArgs(unmarshal func(interface{}) error) (map[string]string, error) {
 		return nil, err
 	}
 	for key, value := range rawMap {
-		result[key], err = env.ExpandEnvIfNotEmpty(value)
+		result[key], err = vars.VarManager.ExpandExcLocalIfNotEmpty(value)
 		if err != nil {
 			return nil, err
 		}

@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -482,7 +483,7 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVaria
 			return nil, oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD
 		}
 
-		expandedEnv, err := env.ExpandEnv(varValueToAdd)
+		expandedEnv, err := vars.VarManager.ExpandExcLocal(varValueToAdd)
 		if err != nil {
 			return nil, err
 		}
@@ -492,7 +493,7 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVaria
 
 	overridedEnvVars := env.Environment{}
 	for k, v := range envVarsToValues {
-		overridedEnvVars = append(overridedEnvVars, env.Var{Name: k, Value: v})
+		overridedEnvVars = append(overridedEnvVars, vars.Var{Name: k, Value: v})
 	}
 
 	return &overridedEnvVars, nil

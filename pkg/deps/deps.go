@@ -15,6 +15,7 @@ package deps
 
 import (
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"net/url"
 	"os"
 	"strings"
@@ -101,7 +102,7 @@ func (d *Dependency) ExpandVars(variables []string) error {
 			v.Value = expandedVarValue
 		}
 
-		expandedVariables = append(expandedVariables, env.Var{
+		expandedVariables = append(expandedVariables, vars.Var{
 			Name:  v.Name,
 			Value: v.Value,
 		})

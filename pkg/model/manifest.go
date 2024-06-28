@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -28,7 +29,6 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/discovery"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/filesystem"
@@ -175,7 +175,7 @@ func NewManifestFromStack(stack *Stack) *Manifest {
 // NewManifestFromDev creates a manifest from a dev
 func NewManifestFromDev(dev *Dev) *Manifest {
 	manifest := NewManifest()
-	name, err := env.ExpandEnv(dev.Name)
+	name, err := vars.VarManager.ExpandExcLocal(dev.Name)
 	if err != nil {
 		oktetoLog.Infof("could not expand dev name '%s'", dev.Name)
 		name = dev.Name
@@ -787,16 +787,16 @@ func (m *Manifest) setDefaults() error {
 		if m.Deploy.Divert.Driver == "" {
 			m.Deploy.Divert.Driver = constants.OktetoDivertWeaverDriver
 		}
-		m.Deploy.Divert.Namespace, err = env.ExpandEnvIfNotEmpty(m.Deploy.Divert.Namespace)
+		m.Deploy.Divert.Namespace, err = vars.VarManager.ExpandExcLocalIfNotEmpty(m.Deploy.Divert.Namespace)
 		if err != nil {
 			return err
 		}
 		for i := range m.Deploy.Divert.Hosts {
-			m.Deploy.Divert.Hosts[i].VirtualService, err = env.ExpandEnvIfNotEmpty(m.Deploy.Divert.Hosts[i].VirtualService)
+			m.Deploy.Divert.Hosts[i].VirtualService, err = vars.VarManager.ExpandExcLocalIfNotEmpty(m.Deploy.Divert.Hosts[i].VirtualService)
 			if err != nil {
 				return err
 			}
-			m.Deploy.Divert.Hosts[i].Namespace, err = env.ExpandEnvIfNotEmpty(m.Deploy.Divert.Hosts[i].Namespace)
+			m.Deploy.Divert.Hosts[i].Namespace, err = vars.VarManager.ExpandExcLocalIfNotEmpty(m.Deploy.Divert.Hosts[i].Namespace)
 			if err != nil {
 				return err
 			}
@@ -891,7 +891,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 					continue
 				}
 				tag := fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(svcName, "-", "_")))
-				expandedTag, err := env.ExpandEnv(tag)
+				expandedTag, err := vars.VarManager.ExpandExcLocal(tag)
 				if err != nil {
 					return err
 				}
@@ -918,7 +918,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 	}
 	if manifest.Destroy != nil {
 		if manifest.Destroy.Image != "" {
-			manifest.Destroy.Image, err = env.ExpandEnv(manifest.Destroy.Image)
+			manifest.Destroy.Image, err = vars.VarManager.ExpandExcLocal(manifest.Destroy.Image)
 			if err != nil {
 				return err
 			}
@@ -932,7 +932,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 			}
 		}
 		if devInfo.Image != nil {
-			devInfo.Image.Name, err = env.ExpandEnvIfNotEmpty(devInfo.Image.Name)
+			devInfo.Image.Name, err = vars.VarManager.ExpandExcLocalIfNotEmpty(devInfo.Image.Name)
 			if err != nil {
 				return err
 			}

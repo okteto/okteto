@@ -16,6 +16,7 @@ package up
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"net/http"
 	"testing"
 
@@ -216,7 +217,7 @@ func TestGetEnvs(t *testing.T) {
 				Name:      "test",
 				Namespace: "test",
 				Environment: env.Environment{
-					env.Var{
+					vars.Var{
 						Name:  "FROMENVSECTION",
 						Value: "VALUE1",
 					},
@@ -400,7 +401,7 @@ func TestGetEnvForHybridModeWithProperPriority(t *testing.T) {
 		Name:      "test",
 		Namespace: "test",
 		Environment: env.Environment{
-			env.Var{
+			vars.Var{
 				Name:  "ENVFROMMANIFEST",
 				Value: "FROMMANIFESTVALUE",
 			},
@@ -827,10 +828,10 @@ func TestGetEnvsFromDevContainer(t *testing.T) {
 
 type fakePlatformVariablesGetter struct {
 	err               error
-	platformVariables []env.Var
+	platformVariables []vars.Var
 }
 
-func (f fakePlatformVariablesGetter) GetOktetoPlatformVariables(context.Context) ([]env.Var, error) {
+func (f fakePlatformVariablesGetter) GetOktetoPlatformVariables(context.Context) ([]vars.Var, error) {
 	return f.platformVariables, f.err
 }
 
@@ -856,7 +857,7 @@ func TestGetEnvsFromPlatformVariables(t *testing.T) {
 			name:     "with platform variables",
 			isOkteto: true,
 			fakeSecretsGetter: fakePlatformVariablesGetter{
-				platformVariables: []env.Var{
+				platformVariables: []vars.Var{
 					{
 						Name:  "FROMSECRETSTORE",
 						Value: "AVALUE",

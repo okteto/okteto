@@ -15,10 +15,10 @@ package types
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/vars"
 	"time"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
-	"github.com/okteto/okteto/pkg/env"
 )
 
 // OktetoInterface represents the client that connects to the backend to create API calls
@@ -33,7 +33,7 @@ type OktetoInterface interface {
 
 // UserInterface represents the client that connects to the user functions
 type UserInterface interface {
-	GetOktetoPlatformVariables(ctx context.Context) ([]env.Var, error)
+	GetOktetoPlatformVariables(ctx context.Context) ([]vars.Var, error)
 	GetContext(ctx context.Context, ns string) (*UserContext, error)
 	GetClusterCertificate(ctx context.Context, cluster, ns string) ([]byte, error)
 	GetClusterMetadata(ctx context.Context, ns string) (ClusterMetadata, error)

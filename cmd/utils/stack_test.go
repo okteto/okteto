@@ -14,6 +14,7 @@
 package utils
 
 import (
+	"github.com/okteto/okteto/pkg/vars"
 	"log"
 	"os"
 	"path/filepath"
@@ -62,7 +63,7 @@ func Test_multipleStack(t *testing.T) {
 	}
 	var svcResult = &model.Service{
 		Environment: env.Environment{
-			env.Var{
+			vars.Var{
 				Name:  "a",
 				Value: "b",
 			},
@@ -129,7 +130,7 @@ func Test_overrideFileStack(t *testing.T) {
 
 	var svcResult = &model.Service{
 		Environment: env.Environment{
-			env.Var{
+			vars.Var{
 				Name:  "a",
 				Value: "b",
 			},

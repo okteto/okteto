@@ -18,12 +18,12 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
 	dockercredentials "github.com/docker/docker-credential-helpers/credentials"
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
@@ -108,7 +108,7 @@ func TestGetContext(t *testing.T) {
 						GlobalNamespace: "globalNs",
 						Analytics:       false,
 					},
-					PlatformVariables: []env.Var{
+					PlatformVariables: []vars.Var{
 						{
 							Name:  "name",
 							Value: "value",
@@ -174,7 +174,7 @@ func TestGetContext(t *testing.T) {
 						GlobalNamespace: constants.DefaultGlobalNamespace,
 						Analytics:       false,
 					},
-					PlatformVariables: []env.Var{
+					PlatformVariables: []vars.Var{
 						{
 							Name:  "name",
 							Value: "value",
@@ -248,7 +248,7 @@ func TestGetOktetoPlatformVariables(t *testing.T) {
 	}
 	type expected struct {
 		err               error
-		platformVariables []env.Var
+		platformVariables []vars.Var
 	}
 	testCases := []struct {
 		cfg      input
@@ -286,7 +286,7 @@ func TestGetOktetoPlatformVariables(t *testing.T) {
 				},
 			},
 			expected: expected{
-				platformVariables: []env.Var{
+				platformVariables: []vars.Var{
 					{
 						Name:  "password",
 						Value: "test",

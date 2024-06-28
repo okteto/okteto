@@ -16,6 +16,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -933,7 +934,7 @@ func loadEnvFiles(svc *Service, svcName string) error {
 
 func setEnvironmentFromFile(svc *Service, filename string) error {
 	var err error
-	filename, err = env.ExpandEnv(filename)
+	filename, err = vars.VarManager.ExpandExcLocal(filename)
 	if err != nil {
 		return err
 	}
@@ -963,7 +964,7 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 		}
 		svc.Environment = append(
 			svc.Environment,
-			env.Var{Name: name, Value: value},
+			vars.Var{Name: name, Value: value},
 		)
 	}
 

@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,7 +30,6 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -160,7 +160,7 @@ type imageGetterInterface interface {
 }
 
 type platformVariablesGetterInterface interface {
-	GetOktetoPlatformVariables(context.Context) ([]env.Var, error)
+	GetOktetoPlatformVariables(context.Context) ([]vars.Var, error)
 }
 
 type devContainerEnvGetter struct{}

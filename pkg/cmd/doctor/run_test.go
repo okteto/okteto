@@ -14,11 +14,11 @@
 package doctor
 
 import (
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/build"
-	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model"
 	"gopkg.in/yaml.v2"
 )
@@ -54,7 +54,7 @@ func Test_generateManifestFile(t *testing.T) {
 					Name:        "svc2",
 					Image:       nil,
 					Command:     model.Command{Values: []string{"bash"}},
-					Environment: []env.Var{{Name: "foo", Value: "bar"}},
+					Environment: []vars.Var{{Name: "foo", Value: "bar"}},
 				}},
 			},
 		},

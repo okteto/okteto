@@ -16,11 +16,11 @@ package preview
 import (
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"strings"
 
 	"github.com/docker/docker/pkg/namesgenerator"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	modelUtils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -102,7 +102,7 @@ func getRandomName(scope string) string {
 }
 
 func getExpandedName(name string) string {
-	expandedName, err := env.ExpandEnv(name)
+	expandedName, err := vars.VarManager.ExpandExcLocal(name)
 	if err != nil {
 		return name
 	}

@@ -1,4 +1,4 @@
-// Copyright 2023 The Okteto Authors
+// Copyright 2023-2024 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package env
+package vars
 
 import (
 	"fmt"
@@ -40,14 +40,14 @@ func (v *Var) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, "=", maxVarStringParts)
 	v.Name = parts[0]
 	if len(parts) == maxVarStringParts {
-		v.Value, err = ExpandEnv(parts[1])
+		v.Value, err = VarManager.ExpandExcLocal(parts[1])
 		if err != nil {
 			return err
 		}
 		return nil
 	}
 
-	v.Name, err = ExpandEnv(parts[0])
+	v.Name, err = VarManager.ExpandExcLocal(parts[0])
 	if err != nil {
 		return err
 	}

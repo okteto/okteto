@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"reflect"
 	"strings"
@@ -96,66 +97,66 @@ func TestReverseMarshalling(t *testing.T) {
 
 func TestEnvVarMarshalling(t *testing.T) {
 	tests := []struct {
-		expected env.Var
+		expected vars.Var
 		name     string
 		data     []byte
 	}{
 		{
 			name:     "key-value",
 			data:     []byte(`env=production`),
-			expected: env.Var{Name: "env", Value: "production"},
+			expected: vars.Var{Name: "env", Value: "production"},
 		},
 		{
 			name:     "key-value-complex",
 			data:     []byte(`env='production=11231231asa#$˜GADAFA'`),
-			expected: env.Var{Name: "env", Value: "'production=11231231asa#$˜GADAFA'"},
+			expected: vars.Var{Name: "env", Value: "'production=11231231asa#$˜GADAFA'"},
 		},
 		{
 			name:     "key-value-with-env-var",
 			data:     []byte(`env=$DEV_ENV`),
-			expected: env.Var{Name: "env", Value: "test_environment"},
+			expected: vars.Var{Name: "env", Value: "test_environment"},
 		},
 		{
 			name:     "key-value-with-env-var-in-string",
 			data:     []byte(`env=my_env;$DEV_ENV;prod`),
-			expected: env.Var{Name: "env", Value: "my_env;test_environment;prod"},
+			expected: vars.Var{Name: "env", Value: "my_env;test_environment;prod"},
 		},
 		{
 			name:     "simple-key",
 			data:     []byte(`noenv`),
-			expected: env.Var{Name: "noenv", Value: ""},
+			expected: vars.Var{Name: "noenv", Value: ""},
 		},
 		{
 			name:     "key-with-no-value",
 			data:     []byte(`noenv=`),
-			expected: env.Var{Name: "noenv", Value: ""},
+			expected: vars.Var{Name: "noenv", Value: ""},
 		},
 		{
 			name:     "key-with-env-var-not-defined",
 			data:     []byte(`noenv=$UNDEFINED`),
-			expected: env.Var{Name: "noenv", Value: ""},
+			expected: vars.Var{Name: "noenv", Value: ""},
 		},
 		{
 			name:     "just-env-var",
 			data:     []byte(`$DEV_ENV`),
-			expected: env.Var{Name: "test_environment", Value: ""},
+			expected: vars.Var{Name: "test_environment", Value: ""},
 		},
 		{
 			name:     "just-env-var-undefined",
 			data:     []byte(`$UNDEFINED`),
-			expected: env.Var{Name: "", Value: ""},
+			expected: vars.Var{Name: "", Value: ""},
 		},
 		{
 			name:     "local_env_expanded",
 			data:     []byte(`OKTETO_TEST_ENV_MARSHALLING`),
-			expected: env.Var{Name: "OKTETO_TEST_ENV_MARSHALLING", Value: "true"},
+			expected: vars.Var{Name: "OKTETO_TEST_ENV_MARSHALLING", Value: "true"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			var result env.Var
+			var result vars.Var
 			t.Setenv("DEV_ENV", "test_environment")
 			t.Setenv("OKTETO_TEST_ENV_MARSHALLING", "true")
 
@@ -2776,7 +2777,7 @@ variables:
 				Branch:       "main",
 				ManifestPath: "okteto.yml",
 				Variables: env.Environment{
-					env.Var{
+					vars.Var{
 						Name:  "key",
 						Value: "value",
 					},
@@ -2797,7 +2798,7 @@ wait: true`),
 				ManifestPath: "okteto.yml",
 				Wait:         true,
 				Variables: env.Environment{
-					env.Var{
+					vars.Var{
 						Name:  "key",
 						Value: "value",
 					},
@@ -2819,7 +2820,7 @@ timeout: 15m`),
 				ManifestPath: "okteto.yml",
 				Wait:         true,
 				Variables: env.Environment{
-					env.Var{
+					vars.Var{
 						Name:  "key",
 						Value: "value",
 					},

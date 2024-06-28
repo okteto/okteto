@@ -14,10 +14,10 @@
 package context
 
 import (
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/env"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,11 +27,11 @@ func Test_setSecrets(t *testing.T) {
 	var tests = []struct {
 		envs    map[string]string
 		name    string
-		secrets []env.Var
+		secrets []vars.Var
 	}{
 		{
 			name: "create new env var from secret",
-			secrets: []env.Var{
+			secrets: []vars.Var{
 				{
 					Name:  key,
 					Value: expectedValue,
@@ -41,7 +41,7 @@ func Test_setSecrets(t *testing.T) {
 		},
 		{
 			name: "not overwrite env var from secret",
-			secrets: []env.Var{
+			secrets: []vars.Var{
 				{
 					Name:  key,
 					Value: "random-value",

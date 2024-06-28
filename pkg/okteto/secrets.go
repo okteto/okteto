@@ -17,12 +17,12 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"strings"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
 	dockercredentials "github.com/docker/docker-credential-helpers/credentials"
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
@@ -117,10 +117,10 @@ func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserCont
 		return nil, err
 	}
 
-	platformVars := make([]env.Var, 0)
+	platformVars := make([]vars.Var, 0)
 	for _, v := range queryStruct.PlatformVariables {
 		if !strings.Contains(string(v.Name), ".") {
-			platformVars = append(platformVars, env.Var{
+			platformVars = append(platformVars, vars.Var{
 				Name:  string(v.Name),
 				Value: string(v.Value),
 			})
@@ -157,24 +157,24 @@ func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserCont
 }
 
 // GetOktetoPlatformVariables returns the user and cluster variables from Okteto API
-func (c *userClient) GetOktetoPlatformVariables(ctx context.Context) ([]env.Var, error) {
+func (c *userClient) GetOktetoPlatformVariables(ctx context.Context) ([]vars.Var, error) {
 	var queryStruct getVariablesQuery
 	err := query(ctx, &queryStruct, nil, c.client)
 	if err != nil {
 		return nil, err
 	}
 
-	vars := make([]env.Var, 0)
+	variables := make([]vars.Var, 0)
 	for _, v := range queryStruct.Variables {
 		if !strings.Contains(string(v.Name), ".") {
-			vars = append(vars, env.Var{
+			variables = append(variables, vars.Var{
 				Name:  string(v.Name),
 				Value: string(v.Value),
 			})
 		}
 	}
 
-	return vars, nil
+	return variables, nil
 }
 
 func (c *userClient) GetClusterCertificate(ctx context.Context, cluster, ns string) ([]byte, error) {
