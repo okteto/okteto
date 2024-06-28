@@ -15,6 +15,7 @@ package v2
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,7 +38,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var fakeManifest *model.Manifest = &model.Manifest{
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+
+var fakeManifest = &model.Manifest{
 	Name: "test",
 	Build: build.ManifestBuild{
 		"test-1": &build.Info{
@@ -158,9 +164,11 @@ func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegi
 		Builder: basic.Builder{
 			BuildRunner: builder,
 			IoCtrl:      io.NewIOController(),
+			VarManager:  vars.NewVarsManager(&fakeVarManager{}),
 		},
 		Config:         cfg,
 		ioCtrl:         io.NewIOController(),
+		varManager:     vars.NewVarsManager(&fakeVarManager{}),
 		smartBuildCtrl: smartbuild.NewSmartBuildCtrl(fakeConfigRepo{}, registry, afero.NewMemMapFs(), io.NewIOController()),
 		oktetoContext: &okteto.ContextStateless{
 			Store: &okteto.ContextStore{
@@ -397,6 +405,8 @@ func createDockerfile(t *testing.T) (string, error) {
 
 func TestBuildWithDependsOn(t *testing.T) {
 	ctx := context.Background()
+
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
 
 	firstImage := "okteto/a:test"
 	secondImage := "okteto/b:test"

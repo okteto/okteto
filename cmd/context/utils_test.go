@@ -14,6 +14,7 @@
 package context
 
 import (
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"testing"
 
@@ -26,6 +27,8 @@ import (
 )
 
 func Test_GetManifestV2(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	tests := []struct {
 		expectedManifest *model.Manifest
 		name             string

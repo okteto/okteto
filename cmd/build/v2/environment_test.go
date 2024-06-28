@@ -16,6 +16,7 @@ package v2
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"strings"
 	"testing"
@@ -119,6 +120,7 @@ func Test_SetServiceEnvVars(t *testing.T) {
 
 func TestExpandStackVariables(t *testing.T) {
 	ctx := context.Background()
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
 	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
 	fakeConfig := fakeConfig{
