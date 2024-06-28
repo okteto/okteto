@@ -22,8 +22,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/docker/docker/api/types/versions"
-	"github.com/docker/docker/client"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
@@ -111,8 +109,6 @@ func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptio
 	case IsDepotEnabled() && !isRemoteExecution:
 		depotManager := newDepotBuilder(depotProject, depotToken, ob.OktetoContext, ioCtrl)
 		return depotManager.Run(ctx, buildOptions, solveBuild)
-	case ob.OktetoContext.GetCurrentBuilder() == "":
-		return ob.buildWithDocker(ctx, buildOptions)
 	default:
 		return ob.buildWithOkteto(ctx, buildOptions, ioCtrl, solveBuild)
 	}
@@ -201,30 +197,6 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	}
 	err = getErrorMessage(err, tag)
 	return err
-}
-
-// https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build.go#L209
-func (ob *OktetoBuilder) buildWithDocker(ctx context.Context, buildOptions *types.BuildOptions) error {
-
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return err
-	}
-	if versions.GreaterThanOrEqualTo(cli.ClientVersion(), "1.39") {
-		err = buildWithDockerDaemonBuildkit(ctx, buildOptions, cli)
-		if err != nil {
-			return translateDockerErr(err)
-		}
-	} else {
-		err = buildWithDockerDaemon(ctx, buildOptions, cli)
-		if err != nil {
-			return translateDockerErr(err)
-		}
-	}
-	if buildOptions.Tag != "" {
-		return pushImage(ctx, buildOptions.Tag, cli)
-	}
-	return nil
 }
 
 func validateImages(okctx OktetoContextInterface, imageTags string) error {
