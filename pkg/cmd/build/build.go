@@ -88,8 +88,6 @@ func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptio
 		depotEnabled := IsDepotEnabled()
 		if depotEnabled {
 			ioCtrl.Out().Infof("%s on depot's machine...", buildMsg)
-		} else if builder == "" {
-			ioCtrl.Out().Infof("%s using your local docker daemon", buildMsg)
 		} else {
 			ioCtrl.Out().Infof("%s in %s...", buildMsg, builder)
 		}
