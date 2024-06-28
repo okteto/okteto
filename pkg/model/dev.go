@@ -330,7 +330,7 @@ func (dev *Dev) expandEnvVars() error {
 func (dev *Dev) loadName() error {
 	var err error
 	if len(dev.Name) > 0 {
-		dev.Name, err = vars.VarManager.ExpandExcLocal(dev.Name)
+		dev.Name, err = vars.GlobalVarManager.ExpandExcLocal(dev.Name)
 		if err != nil {
 			return err
 		}
@@ -341,7 +341,7 @@ func (dev *Dev) loadName() error {
 func (dev *Dev) loadNamespace() error {
 	var err error
 	if len(dev.Namespace) > 0 {
-		dev.Namespace, err = vars.VarManager.ExpandExcLocal(dev.Namespace)
+		dev.Namespace, err = vars.GlobalVarManager.ExpandExcLocal(dev.Namespace)
 		if err != nil {
 			return err
 		}
@@ -352,7 +352,7 @@ func (dev *Dev) loadNamespace() error {
 func (dev *Dev) loadContext() error {
 	var err error
 	if len(dev.Context) > 0 {
-		dev.Context, err = vars.VarManager.ExpandExcLocal(dev.Context)
+		dev.Context, err = vars.GlobalVarManager.ExpandExcLocal(dev.Context)
 		if err != nil {
 			return err
 		}
@@ -363,7 +363,7 @@ func (dev *Dev) loadContext() error {
 func (dev *Dev) loadSelector() error {
 	var err error
 	for i := range dev.Selector {
-		dev.Selector[i], err = vars.VarManager.ExpandExcLocal(dev.Selector[i])
+		dev.Selector[i], err = vars.GlobalVarManager.ExpandExcLocal(dev.Selector[i])
 		if err != nil {
 			return err
 		}
@@ -377,7 +377,7 @@ func (dev *Dev) loadImage() error {
 		dev.Image = &build.Info{}
 	}
 	if len(dev.Image.Name) > 0 {
-		dev.Image.Name, err = vars.VarManager.ExpandExcLocalIfNotEmpty(dev.Image.Name)
+		dev.Image.Name, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(dev.Image.Name)
 		if err != nil {
 			return err
 		}
@@ -550,7 +550,7 @@ func (dev *Dev) setTimeout() error {
 // expandEnvFiles reads each env file and append all the variables to the environment
 func (dev *Dev) expandEnvFiles() error {
 	for _, envFile := range dev.EnvFiles {
-		filename, err := vars.VarManager.ExpandExcLocal(envFile)
+		filename, err := vars.GlobalVarManager.ExpandExcLocal(envFile)
 		if err != nil {
 			return err
 		}

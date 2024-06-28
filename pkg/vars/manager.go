@@ -19,7 +19,8 @@ import (
 	"sort"
 )
 
-var VarManager *Manager
+// GlobalVarManager is the global instance of the Okteto Variables manager. It should only be used in the serializer where it's harder to inject the manager.
+var GlobalVarManager *Manager
 
 // Vars in groups with higher priority override those with lower priority
 const (
@@ -49,9 +50,6 @@ type LookupEnvFunc func(key string) (string, bool)
 
 type SetEnvFunc func(key, value string) error
 
-//type MaskVarFunc func(name string)
-//type WarningLogFunc func(format string, args ...interface{})
-
 type Group struct {
 	Vars        []Var
 	Priority    Priority
@@ -59,7 +57,6 @@ type Group struct {
 }
 
 type ManagerInterface interface {
-	//Lookup(key string) (string, bool)
 	Set(key, value string) error
 	MaskVar(value string)
 	WarningLogf(format string, args ...interface{})
@@ -90,6 +87,7 @@ func (m *Manager) Lookup(key string) (string, bool) {
 }
 
 func (m *Manager) AddGroup(g Group) error {
+	fmt.Println(g)
 	if config[g.Priority].Masked {
 		for _, v := range g.Vars {
 			m.m.MaskVar(v.Value)

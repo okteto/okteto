@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -86,7 +87,7 @@ func defaultKubetokenOptions() *Options {
 	return &Options{
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
 		k8sClientProvider:    okteto.NewK8sClientProvider(),
-		oktetoCtxCmdRunner:   contextCMD.NewContextCommand(),
+		oktetoCtxCmdRunner:   contextCMD.NewContextCommand(contextCMD.WithVarManager(vars.GlobalVarManager)),
 		ctxStore:             ctxStore,
 		serializer:           &Serializer{},
 		getCtxResource:       getCtxResource,

@@ -16,6 +16,7 @@ package preview
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -26,14 +27,14 @@ import (
 )
 
 // Sleep sleeps a preview environment
-func Sleep(ctx context.Context) *cobra.Command {
+func Sleep(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sleep <name>",
 		Short: "Sleeps a preview environment",
 		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prToSleep := args[0]
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true}); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, &contextCMD.Options{Show: true}); err != nil {
 				return err
 			}
 

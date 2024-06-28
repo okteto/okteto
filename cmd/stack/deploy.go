@@ -15,6 +15,7 @@ package stack
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"runtime"
 	"strings"
@@ -48,10 +49,11 @@ type DeployCommand struct {
 	ioCtrl           *io.Controller
 	DivertDriver     divert.Driver
 	IsInsideDeploy   bool
+	varManager       *vars.Manager
 }
 
 // deploy deploys a stack
-func deploy(ctx context.Context, at, insights buildTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
+func deploy(ctx context.Context, at, insights buildTrackerInterface, ioCtrl *io.Controller, varManager *vars.Manager) *cobra.Command {
 	options := &stack.DeployOptions{}
 
 	cmd := &cobra.Command{
@@ -84,6 +86,7 @@ func deploy(ctx context.Context, at, insights buildTrackerInterface, ioCtrl *io.
 				insights:         insights,
 				ioCtrl:           ioCtrl,
 				DivertDriver:     divert.NewNoop(),
+				varManager:       varManager,
 			}
 			return dc.RunDeploy(ctx, s, options)
 		},
@@ -111,7 +114,7 @@ func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *
 			return err
 		}
 		if create {
-			nsCmd, err := namespace.NewCommand()
+			nsCmd, err := namespace.NewCommand(c.varManager)
 			if err != nil {
 				return err
 			}

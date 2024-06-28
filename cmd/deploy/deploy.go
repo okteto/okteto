@@ -195,7 +195,7 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 					return err
 				}
 				if create {
-					nsCmd, err := namespace.NewCommand()
+					nsCmd, err := namespace.NewCommand(varManager)
 					if err != nil {
 						return err
 					}

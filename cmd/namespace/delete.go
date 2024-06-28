@@ -16,6 +16,7 @@ package namespace
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"os/signal"
 	"sync"
@@ -35,13 +36,13 @@ import (
 )
 
 // Delete deletes a namespace
-func Delete(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Delete(ctx context.Context, k8sLogger *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete <name>",
 		Short: "Delete a namespace",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, &contextCMD.Options{}); err != nil {
 				return err
 			}
 
@@ -54,7 +55,7 @@ func Delete(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			nsCmd, err := NewCommand()
+			nsCmd, err := NewCommand(varManager)
 			if err != nil {
 				return err
 			}

@@ -358,7 +358,7 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 		if err := dc.buildCtrl.buildImageIfNecessary(ctx, opts.Manifest); err != nil {
 			return err
 		}
-		opts.Manifest.Destroy.Image, err = vars.VarManager.ExpandExcLocalIfNotEmpty(opts.Manifest.Destroy.Image)
+		opts.Manifest.Destroy.Image, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(opts.Manifest.Destroy.Image)
 		if err != nil {
 			return err
 		}

@@ -30,7 +30,7 @@ type Arg struct {
 type Args []Arg
 
 func (a *Arg) String() string {
-	value, err := vars.VarManager.ExpandExcLocal(a.Value)
+	value, err := vars.GlobalVarManager.ExpandExcLocal(a.Value)
 	if err != nil {
 		return fmt.Sprintf("%s=%s", a.Name, a.Value)
 	}
@@ -53,7 +53,7 @@ func (a *Arg) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return nil
 	}
 
-	a.Name, err = vars.VarManager.ExpandExcLocal(parts[0])
+	a.Name, err = vars.GlobalVarManager.ExpandExcLocal(parts[0])
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func getArgs(unmarshal func(interface{}) error) (map[string]string, error) {
 	err := unmarshal(&rawList)
 	if err == nil {
 		for _, buildArg := range rawList {
-			value, err := vars.VarManager.ExpandExcLocalIfNotEmpty(buildArg.Value)
+			value, err := vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(buildArg.Value)
 			if err != nil {
 				return nil, err
 			}
@@ -99,7 +99,7 @@ func getArgs(unmarshal func(interface{}) error) (map[string]string, error) {
 		return nil, err
 	}
 	for key, value := range rawMap {
-		result[key], err = vars.VarManager.ExpandExcLocalIfNotEmpty(value)
+		result[key], err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(value)
 		if err != nil {
 			return nil, err
 		}

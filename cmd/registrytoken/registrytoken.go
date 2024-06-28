@@ -16,6 +16,7 @@ package registrytoken
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 
 	"github.com/docker/docker-credential-helpers/credentials"
@@ -46,7 +47,7 @@ func (r regCreds) GetRegistryCredentials(host string) (string, string, error) {
 	return r.GetExternalRegistryCredentials(host)
 }
 
-func RegistryToken(ctx context.Context) *cobra.Command {
+func RegistryToken(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "registrytoken",
 		Short: "docker credentials helper for private registries registered in okteto",
@@ -66,7 +67,7 @@ More info about docker credentials helpers here: https://github.com/docker/docke
 	}
 
 	cmd.Run = func(_ *cobra.Command, args []string) {
-		if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
+		if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, &contextCMD.Options{}); err != nil {
 			_, _ = fmt.Fprintln(os.Stdout, err)
 			os.Exit(1) // skipcq: RVV-A0003
 		}

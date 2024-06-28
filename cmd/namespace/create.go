@@ -16,6 +16,7 @@ package namespace
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"strings"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -36,7 +37,7 @@ type CreateOptions struct {
 }
 
 // Create creates a namespace
-func Create(ctx context.Context) *cobra.Command {
+func Create(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	options := &CreateOptions{
 		Show: false,
 	}
@@ -44,14 +45,14 @@ func Create(ctx context.Context) *cobra.Command {
 		Use:   "create <name>",
 		Short: "Create a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, &contextCMD.Options{}); err != nil {
 				return err
 			}
 			options.Namespace = args[0]
 			if !okteto.IsOkteto() {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
-			nsCmd, err := NewCommand()
+			nsCmd, err := NewCommand(varManager)
 			if err != nil {
 				return err
 			}

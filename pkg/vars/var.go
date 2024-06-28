@@ -40,14 +40,14 @@ func (v *Var) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, "=", maxVarStringParts)
 	v.Name = parts[0]
 	if len(parts) == maxVarStringParts {
-		v.Value, err = VarManager.ExpandExcLocal(parts[1])
+		v.Value, err = GlobalVarManager.ExpandExcLocal(parts[1])
 		if err != nil {
 			return err
 		}
 		return nil
 	}
 
-	v.Name, err = VarManager.ExpandExcLocal(parts[0])
+	v.Name, err = GlobalVarManager.ExpandExcLocal(parts[0])
 	if err != nil {
 		return err
 	}

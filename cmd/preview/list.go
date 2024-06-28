@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -59,7 +60,7 @@ func newListPreviewCommand(okClient types.OktetoInterface, flags *listFlags) *li
 }
 
 // List lists all the previews
-func List(ctx context.Context) *cobra.Command {
+func List(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	flags := &listFlags{}
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -71,7 +72,7 @@ func List(ctx context.Context) *cobra.Command {
 				ctxOptions.Show = true
 			}
 
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, ctxOptions); err != nil {
 				return err
 			}
 

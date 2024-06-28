@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"os/signal"
 	"strings"
@@ -82,7 +83,7 @@ type DeployOptions struct {
 	ReuseParams  bool
 }
 
-func deploy(ctx context.Context) *cobra.Command {
+func deploy(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	flags := &deployFlags{}
 	cmd := &cobra.Command{
 		Use:   "deploy",
@@ -98,7 +99,7 @@ func deploy(ctx context.Context) *cobra.Command {
 				Namespace: flags.namespace,
 				Show:      true,
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, ctxOptions); err != nil {
 				return err
 			}
 

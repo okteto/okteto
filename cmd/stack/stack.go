@@ -15,6 +15,7 @@ package stack
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/vars"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -27,14 +28,14 @@ type buildTrackerInterface interface {
 }
 
 // Stack stack management commands
-func Stack(ctx context.Context, at, insights buildTrackerInterface, ioCtrl *io.Controller) *cobra.Command {
+func Stack(ctx context.Context, at, insights buildTrackerInterface, ioCtrl *io.Controller, varManager *vars.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "stack",
 		Short:  "Stack management commands",
 		Args:   utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#deploy"),
 		Hidden: true,
 	}
-	cmd.AddCommand(deploy(ctx, at, insights, ioCtrl))
+	cmd.AddCommand(deploy(ctx, at, insights, ioCtrl, varManager))
 	cmd.AddCommand(Destroy(ctx))
 	cmd.AddCommand(Endpoints(ctx))
 	return cmd

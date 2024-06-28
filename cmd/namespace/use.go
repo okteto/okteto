@@ -16,6 +16,7 @@ package namespace
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -36,7 +37,7 @@ type UseOptions struct {
 }
 
 // Use sets the namespace of current context
-func Use(ctx context.Context) *cobra.Command {
+func Use(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	options := &UseOptions{}
 	cmd := &cobra.Command{
 		Use:     "use [namespace]",
@@ -57,7 +58,7 @@ func Use(ctx context.Context) *cobra.Command {
 				namespace = okteto.GetContext().PersonalNamespace
 			}
 
-			nsCmd, err := NewCommand()
+			nsCmd, err := NewCommand(varManager)
 			if err != nil {
 				return err
 			}

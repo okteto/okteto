@@ -90,9 +90,6 @@ func init() {
 
 type varsManager struct{}
 
-//	func (*osEnvVarManager) Lookup(key string) (string, bool) {
-//		return os.LookupEnv(key)
-//	}
 func (*varsManager) Set(key, value string) error {
 	return os.Setenv(key, value)
 }
@@ -129,12 +126,14 @@ func main() {
 
 	k8sLogger := io.NewK8sLogger()
 
-	vars.VarManager = vars.NewVarsManager(&varsManager{})
-	err := vars.VarManager.AddGroup(vars.Group{
+	varManager := vars.NewVarsManager(&varsManager{})
+	err := varManager.AddGroup(vars.Group{
 		Vars:        vars.ConvertLocalEnvVarsToOktetoVars(os.Environ),
 		Priority:    vars.OktetoVariableTypeLocal,
 		ExportToEnv: false,
 	})
+	vars.GlobalVarManager = varManager
+
 	if err != nil {
 		ioController.Logger().Infof("error parsing local env vars: %s", err)
 	}
@@ -190,29 +189,29 @@ func main() {
 	root.AddCommand(cmd.Kubeconfig(okClientProvider))
 
 	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
-	root.AddCommand(registrytoken.RegistryToken(ctx))
+	root.AddCommand(registrytoken.RegistryToken(ctx, varManager))
 
-	root.AddCommand(build.Build(ctx, ioController, at, insights, k8sLogger, vars.VarManager))
+	root.AddCommand(build.Build(ctx, ioController, at, insights, k8sLogger, varManager))
 
-	root.AddCommand(namespace.Namespace(ctx, k8sLogger))
-	root.AddCommand(up.Up(at, insights, ioController, k8sLogger))
-	root.AddCommand(cmd.Down(at, k8sLogger))
+	root.AddCommand(namespace.Namespace(ctx, k8sLogger, varManager))
+	root.AddCommand(up.Up(at, insights, ioController, k8sLogger, varManager))
+	root.AddCommand(cmd.Down(at, k8sLogger, varManager))
 	root.AddCommand(cmd.Status())
-	root.AddCommand(cmd.Doctor(k8sLogger))
+	root.AddCommand(cmd.Doctor(k8sLogger, varManager))
 	root.AddCommand(exec.NewExec(fs, ioController, k8sClientProvider).Cmd(ctx))
-	root.AddCommand(preview.Preview(ctx))
+	root.AddCommand(preview.Preview(ctx, varManager))
 	root.AddCommand(cmd.Restart())
-	root.AddCommand(deploy.Deploy(ctx, at, insights, ioController, k8sLogger, vars.VarManager))
-	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger, vars.VarManager))
-	root.AddCommand(deploy.Endpoints(ctx, k8sLogger))
-	root.AddCommand(logs.Logs(ctx, k8sLogger))
+	root.AddCommand(deploy.Deploy(ctx, at, insights, ioController, k8sLogger, varManager))
+	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger, varManager))
+	root.AddCommand(deploy.Endpoints(ctx, k8sLogger, varManager))
+	root.AddCommand(logs.Logs(ctx, k8sLogger, varManager))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
-	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger, vars.VarManager))
-	root.AddCommand(test.Test(ctx, ioController, k8sLogger, vars.VarManager, at))
+	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger, varManager))
+	root.AddCommand(test.Test(ctx, ioController, k8sLogger, varManager, at))
 
 	// deprecated
-	root.AddCommand(stack.Stack(ctx, at, insights, ioController))
-	root.AddCommand(pipeline.Pipeline(ctx))
+	root.AddCommand(stack.Stack(ctx, at, insights, ioController, varManager))
+	root.AddCommand(pipeline.Pipeline(ctx, varManager))
 
 	err = root.Execute()
 

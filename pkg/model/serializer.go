@@ -321,7 +321,7 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	rawExpanded, err := vars.VarManager.ExpandExcLocal(raw)
+	rawExpanded, err := vars.GlobalVarManager.ExpandExcLocal(raw)
 	if err != nil {
 		return err
 	}
@@ -445,7 +445,7 @@ func (v *Volume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, ":", maxVolumeParts)
 	if len(parts) == maxVolumeParts {
 		oktetoLog.Yellow("The syntax '%s' is deprecated in the 'volumes' field and will be removed in a future version. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
-		v.LocalPath, err = vars.VarManager.ExpandExcLocal(parts[0])
+		v.LocalPath, err = vars.GlobalVarManager.ExpandExcLocal(parts[0])
 		if err != nil {
 			return err
 		}
@@ -474,22 +474,22 @@ func (s *SyncFolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.Split(raw, ":")
 	if len(parts) == syncFolderParts {
-		s.LocalPath, err = vars.VarManager.ExpandExcLocal(parts[0])
+		s.LocalPath, err = vars.GlobalVarManager.ExpandExcLocal(parts[0])
 		if err != nil {
 			return err
 		}
-		s.RemotePath, err = vars.VarManager.ExpandExcLocal(parts[1])
+		s.RemotePath, err = vars.GlobalVarManager.ExpandExcLocal(parts[1])
 		if err != nil {
 			return err
 		}
 		return nil
 	} else if len(parts) == windowsSyncFolderParts {
 		windowsPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
-		s.LocalPath, err = vars.VarManager.ExpandExcLocal(windowsPath)
+		s.LocalPath, err = vars.GlobalVarManager.ExpandExcLocal(windowsPath)
 		if err != nil {
 			return err
 		}
-		s.RemotePath, err = vars.VarManager.ExpandExcLocal(parts[2])
+		s.RemotePath, err = vars.GlobalVarManager.ExpandExcLocal(parts[2])
 		if err != nil {
 			return err
 		}
@@ -1214,7 +1214,7 @@ func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 		return nil, err
 	}
 	for key, value := range rawMap {
-		value, err = vars.VarManager.ExpandExcLocal(value)
+		value, err = vars.GlobalVarManager.ExpandExcLocal(value)
 		if err != nil {
 			return nil, err
 		}

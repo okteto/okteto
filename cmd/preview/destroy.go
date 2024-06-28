@@ -16,6 +16,7 @@ package preview
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"os/signal"
 	"sync"
@@ -53,7 +54,7 @@ type DestroyOptions struct {
 }
 
 // Destroy destroy a preview
-func Destroy(ctx context.Context) *cobra.Command {
+func Destroy(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	opts := &DestroyOptions{}
 	cmd := &cobra.Command{
 		Use:   "destroy <name>",
@@ -62,7 +63,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.name = getExpandedName(args[0])
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true}); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, &contextCMD.Options{Show: true}); err != nil {
 				return err
 			}
 

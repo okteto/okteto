@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"strconv"
 	"strings"
@@ -35,6 +36,24 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
+
+type fakeVarManager struct {
+	storage map[string]string
+}
+
+func (e *fakeVarManager) Set(key, value string) error {
+	e.storage[key] = value
+	return nil
+}
+func (*fakeVarManager) MaskVar(string) {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {
+}
+func (*fakeVarManager) WarnVarsPrecedence() {}
+func newFakeEnvManager(envVarStorage map[string]string) *fakeVarManager {
+	return &fakeVarManager{
+		storage: envVarStorage,
+	}
+}
 
 func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User, fakeObjects []runtime.Object) *Command {
 	return &Command{
@@ -754,15 +773,11 @@ func Test_loadDotEnv(t *testing.T) {
 		vars map[string]string
 		err  error
 	}
-	cmd := Command{}
 
-	setEnvFunc := func(k, v string) error {
-		var err error
-		if k == "" {
-			err = assert.AnError
-		}
-		t.Setenv(k, v)
-		return err
+	varManager := vars.NewVarsManager(newFakeEnvManager(map[string]string{}))
+
+	cmd := Command{
+		varManager: varManager,
 	}
 
 	tests := []struct {
@@ -836,7 +851,9 @@ func Test_loadDotEnv(t *testing.T) {
 		{
 			name: "valid .env with multiple vars",
 			mockEnv: func(t *testing.T) {
-				t.Setenv("VALUE4", "VALUE4")
+				value4 := vars.Var{Name: "VALUE4", Value: "VALUE4"}
+				group := vars.Group{Vars: []vars.Var{value4}}
+				_ = varManager.AddGroup(group)
 			},
 			mockfs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
@@ -857,7 +874,9 @@ func Test_loadDotEnv(t *testing.T) {
 		{
 			name: "local vars are not overridden",
 			mockEnv: func(t *testing.T) {
-				t.Setenv("VAR4", "local")
+				value4 := vars.Var{Name: "VAR4", Value: "local"}
+				group := vars.Group{Vars: []vars.Var{value4}}
+				_ = varManager.AddGroup(group)
 			},
 			mockfs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
@@ -878,7 +897,7 @@ func Test_loadDotEnv(t *testing.T) {
 			if tt.mockEnv != nil {
 				tt.mockEnv(t)
 			}
-			err := cmd.loadDotEnv(fs, setEnvFunc, os.LookupEnv)
+			err := cmd.loadDotEnv(fs)
 			if tt.expected.err != nil {
 				assert.Equal(t, tt.expected.err.Error(), err.Error())
 			} else {
@@ -886,7 +905,9 @@ func Test_loadDotEnv(t *testing.T) {
 			}
 
 			for k, v := range tt.expected.vars {
-				assert.Equal(t, v, os.Getenv(k))
+				actualVar, exists := varManager.Lookup(k)
+				assert.Equal(t, v, actualVar)
+				assert.Equal(t, true, exists)
 			}
 		})
 	}

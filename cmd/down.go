@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -39,7 +40,7 @@ type analyticsTrackerInterface interface {
 }
 
 // Down deactivates the development container
-func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger) *cobra.Command {
+func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
 	var devPath string
 	var namespace string
 	var k8sContext string
@@ -58,7 +59,7 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger) *cobra.Comman
 				Context:   k8sContext,
 				Namespace: namespace,
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, ctxOpts); err != nil {
 				return err
 			}
 

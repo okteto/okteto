@@ -93,7 +93,7 @@ type Options struct {
 }
 
 // Up starts a development container
-func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
 	upOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:   "up [service]",
@@ -129,7 +129,7 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 				Context:   upOptions.K8sContext,
 				Namespace: upOptions.Namespace,
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, ctxOpts); err != nil {
 				return err
 			}
 
@@ -178,7 +178,7 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 					return err
 				}
 				if create {
-					nsCmd, err := namespace.NewCommand()
+					nsCmd, err := namespace.NewCommand(varManager)
 					if err != nil {
 						return err
 					}
@@ -483,7 +483,7 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVaria
 			return nil, oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD
 		}
 
-		expandedEnv, err := vars.VarManager.ExpandExcLocal(varValueToAdd)
+		expandedEnv, err := vars.GlobalVarManager.ExpandExcLocal(varValueToAdd)
 		if err != nil {
 			return nil, err
 		}

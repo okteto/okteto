@@ -16,6 +16,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"github.com/okteto/okteto/pkg/vars"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -39,7 +40,7 @@ type doctorOptions struct {
 }
 
 // Doctor generates a zip file with all okteto-related log files
-func Doctor(k8sLogger *io.K8sLogger) *cobra.Command {
+func Doctor(k8sLogger *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
 	doctorOpts := &doctorOptions{}
 	cmd := &cobra.Command{
 		Use:   "doctor [service]",
@@ -54,7 +55,7 @@ func Doctor(k8sLogger *io.K8sLogger) *cobra.Command {
 				Context:   doctorOpts.K8sContext,
 				Namespace: doctorOpts.Namespace,
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, ctxOpts); err != nil {
 				return err
 			}
 

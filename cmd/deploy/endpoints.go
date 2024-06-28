@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"sort"
 	"strings"
@@ -82,7 +83,7 @@ func NewEndpointGetter(k8sLogger *io.K8sLogger) (EndpointGetter, error) {
 }
 
 // Endpoints lists the endpoints for a development environment
-func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
 	options := &EndpointsOptions{}
 	fs := afero.NewOsFs()
 	cmd := &cobra.Command{
@@ -106,7 +107,7 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 
 			// false for 'json' and 'md' to avoid breaking their syntax
 			showCtxHeader := options.Output == ""
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace, Show: showCtxHeader}); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, &contextCMD.Options{Namespace: options.Namespace, Show: showCtxHeader}); err != nil {
 				return err
 			}
 

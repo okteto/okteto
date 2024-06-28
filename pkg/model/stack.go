@@ -934,7 +934,7 @@ func loadEnvFiles(svc *Service, svcName string) error {
 
 func setEnvironmentFromFile(svc *Service, filename string) error {
 	var err error
-	filename, err = vars.VarManager.ExpandExcLocal(filename)
+	filename, err = vars.GlobalVarManager.ExpandExcLocal(filename)
 	if err != nil {
 		return err
 	}

@@ -54,7 +54,7 @@ func (test ManifestTests) Validate() error {
 func (test *Test) expandEnvVars() error {
 	var err error
 	if len(test.Image) > 0 {
-		test.Image, err = vars.VarManager.ExpandExcLocal(test.Image)
+		test.Image, err = vars.GlobalVarManager.ExpandExcLocal(test.Image)
 		if err != nil {
 			return err
 		}

@@ -16,6 +16,7 @@ package logs
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -56,7 +57,7 @@ type Options struct {
 	All          bool
 }
 
-func Logs(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Logs(ctx context.Context, k8sLogger *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
 	options := &Options{}
 
 	cmd := &cobra.Command{
@@ -71,7 +72,7 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 				Context:   options.Context,
 				Namespace: options.Namespace,
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, ctxOpts); err != nil {
 				return err
 			}
 

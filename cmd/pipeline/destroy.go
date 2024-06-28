@@ -16,6 +16,7 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"os/signal"
 	"sync"
@@ -50,7 +51,7 @@ type DestroyOptions struct {
 	Timeout        time.Duration
 }
 
-func destroy(ctx context.Context) *cobra.Command {
+func destroy(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	flags := &destroyFlags{}
 
 	cmd := &cobra.Command{
@@ -62,7 +63,7 @@ func destroy(ctx context.Context) *cobra.Command {
 				Namespace: flags.namespace,
 				Show:      true,
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, ctxOptions); err != nil {
 				return err
 			}
 

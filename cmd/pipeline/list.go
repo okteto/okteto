@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"io"
 	"os"
 	"strings"
@@ -54,7 +55,7 @@ type pipelineListItem struct {
 	Labels     []string `json:"labels" yaml:"labels"`
 }
 
-func list(ctx context.Context) *cobra.Command {
+func list(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	flags := &listFlags{}
 
 	cmd := &cobra.Command{
@@ -62,7 +63,7 @@ func list(ctx context.Context) *cobra.Command {
 		Short: "List all okteto pipelines",
 		Args:  utils.NoArgsAccepted(""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return pipelineListCommandHandler(ctx, flags, contextCMD.NewContextCommand().Run)
+			return pipelineListCommandHandler(ctx, flags, contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run)
 		},
 	}
 

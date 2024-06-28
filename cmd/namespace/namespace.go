@@ -15,6 +15,7 @@ package namespace
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/vars"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -32,45 +33,45 @@ type Command struct {
 }
 
 // NewCommand creates a namespace command for use in further operations
-func NewCommand() (*Command, error) {
+func NewCommand(varManager *vars.Manager) (*Command, error) {
 	c, err := okteto.NewOktetoClient()
 	if err != nil {
 		return nil, err
 	}
 
 	return &Command{
-		ctxCmd:            contextCMD.NewContextCommand(),
+		ctxCmd:            contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)),
 		okClient:          c,
 		k8sClientProvider: okteto.NewK8sClientProviderWithLogger(nil),
 	}, nil
 }
 
 // NewCommandStateless creates a namespace command for use in further operations
-func NewCommandStateless(c *okteto.Client) *Command {
+func NewCommandStateless(c *okteto.Client, varManager *vars.Manager) *Command {
 	return &Command{
-		ctxCmd:            contextCMD.NewContextCommand(),
+		ctxCmd:            contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)),
 		okClient:          c,
 		k8sClientProvider: okteto.NewK8sClientProviderWithLogger(nil),
 	}
 }
 
 // Namespace fetch credentials for a cluster namespace
-func Namespace(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Namespace(ctx context.Context, k8sLogger *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
 	options := &UseOptions{}
 	cmd := &cobra.Command{
 		Use:     "namespace",
 		Short:   "Configure the current namespace of the okteto context",
 		Aliases: []string{"ns"},
 		Args:    utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#namespace"),
-		RunE:    Use(ctx).RunE,
+		RunE:    Use(ctx, varManager).RunE,
 	}
 	cmd.Flags().BoolVarP(&options.personal, "personal", "", false, "Load personal account")
 
-	cmd.AddCommand(Use(ctx))
-	cmd.AddCommand(List(ctx))
-	cmd.AddCommand(Create(ctx))
-	cmd.AddCommand(Delete(ctx, k8sLogger))
-	cmd.AddCommand(Sleep(ctx))
-	cmd.AddCommand(Wake(ctx))
+	cmd.AddCommand(Use(ctx, varManager))
+	cmd.AddCommand(List(ctx, varManager))
+	cmd.AddCommand(Create(ctx, varManager))
+	cmd.AddCommand(Delete(ctx, k8sLogger, varManager))
+	cmd.AddCommand(Sleep(ctx, varManager))
+	cmd.AddCommand(Wake(ctx, varManager))
 	return cmd
 }

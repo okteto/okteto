@@ -15,6 +15,7 @@ package pipeline
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/vars"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -52,14 +53,14 @@ func NewCommand() (*Command, error) {
 }
 
 // Pipeline pipeline management commands
-func Pipeline(ctx context.Context) *cobra.Command {
+func Pipeline(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pipeline",
 		Short: "Pipeline management commands",
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#pipeline"),
 	}
-	cmd.AddCommand(deploy(ctx))
-	cmd.AddCommand(destroy(ctx))
-	cmd.AddCommand(list(ctx))
+	cmd.AddCommand(deploy(ctx, varManager))
+	cmd.AddCommand(destroy(ctx, varManager))
+	cmd.AddCommand(list(ctx, varManager))
 	return cmd
 }

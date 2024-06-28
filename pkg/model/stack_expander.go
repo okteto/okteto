@@ -23,7 +23,7 @@ import (
 func expandEnvScalarNode(node *yaml3.Node) (*yaml3.Node, error) {
 	if node.Kind == yaml3.ScalarNode {
 		// when is a ScalarNode, replace its value with the ENV replaced
-		expandValue, err := vars.VarManager.ExpandExcLocal(node.Value)
+		expandValue, err := vars.GlobalVarManager.ExpandExcLocal(node.Value)
 		if err != nil {
 			return node, err
 		}
