@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"strings"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -31,13 +32,13 @@ type buildCtrl struct {
 	name    string
 }
 
-func newBuildCtrl(name string, analyticsTracker, insights buildTrackerInterface, ioCtrl *io.Controller) buildCtrl {
+func newBuildCtrl(name string, analyticsTracker, insights buildTrackerInterface, ioCtrl *io.Controller, varManager *vars.Manager) buildCtrl {
 	onBuildFinish := []buildv2.OnBuildFinish{
 		analyticsTracker.TrackImageBuild,
 		insights.TrackImageBuild,
 	}
 	return buildCtrl{
-		builder: buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish),
+		builder: buildv2.NewBuilderFromScratch(ioCtrl, varManager, onBuildFinish),
 		name:    name,
 	}
 }

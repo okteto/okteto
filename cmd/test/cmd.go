@@ -202,7 +202,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 	configmapHandler := deployCMD.NewConfigmapHandler(k8sClientProvider, k8sLogger)
 
-	builder := buildv2.NewBuilderFromScratch(ioCtrl, []buildv2.OnBuildFinish{
+	builder := buildv2.NewBuilderFromScratch(ioCtrl, varManager, []buildv2.OnBuildFinish{
 		tracker.TrackImageBuild,
 	})
 

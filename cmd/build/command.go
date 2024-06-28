@@ -179,7 +179,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 				bc.analyticsTracker.TrackImageBuild,
 				bc.insights.TrackImageBuild,
 			}
-			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl, okCtx, bc.k8slogger, callbacks)
+			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl, okCtx, bc.k8slogger, bc.varManager, callbacks)
 		} else {
 			builder = buildv1.NewBuilder(bc.Builder, bc.ioCtrl, bc.varManager)
 		}

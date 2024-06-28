@@ -125,6 +125,7 @@ type destroyCommand struct {
 	getManifest          func(path string, fs afero.Fs) (*model.Manifest, error)
 	oktetoClient         *okteto.Client
 	ioCtrl               *io.Controller
+	varManager           *vars.Manager
 	getDivertDriver      divertProvider
 	getPipelineDestroyer pipelineDestroyerProvider
 	buildCtrl            buildCtrl
@@ -220,10 +221,11 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 				secrets:           secrets.NewSecrets(k8sClient),
 				k8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
 				oktetoClient:      okClient,
-				buildCtrl:         newBuildCtrl(options.Name, at, insights, ioCtrl),
+				buildCtrl:         newBuildCtrl(options.Name, at, insights, ioCtrl, varManager),
 				analyticsTracker:  at,
 				getManifest:       model.GetManifestV2,
 				ioCtrl:            ioCtrl,
+				varManager:        varManager,
 				getDivertDriver:   divert.New,
 				getPipelineDestroyer: func() (pipelineDestroyer, error) {
 					return pipelineCMD.NewCommand()
@@ -358,7 +360,7 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 		if err := dc.buildCtrl.buildImageIfNecessary(ctx, opts.Manifest); err != nil {
 			return err
 		}
-		opts.Manifest.Destroy.Image, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(opts.Manifest.Destroy.Image)
+		opts.Manifest.Destroy.Image, err = dc.varManager.ExpandExcLocalIfNotEmpty(opts.Manifest.Destroy.Image)
 		if err != nil {
 			return err
 		}

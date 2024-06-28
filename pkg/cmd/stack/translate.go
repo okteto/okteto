@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"sort"
 	"strconv"
@@ -72,14 +73,14 @@ const (
 	onDeleteUpdateStrategy updateStrategy = "on-delete"
 )
 
-func buildStackImages(ctx context.Context, s *model.Stack, options *DeployOptions, analyticsTracker, insights buildTrackerInterface, ioCtrl *io.Controller) error {
+func buildStackImages(ctx context.Context, s *model.Stack, options *DeployOptions, analyticsTracker, insights buildTrackerInterface, ioCtrl *io.Controller, varManager *vars.Manager) error {
 	manifest := model.NewManifestFromStack(s)
 
 	onBuildFinish := []buildv2.OnBuildFinish{
 		analyticsTracker.TrackImageBuild,
 		insights.TrackImageBuild,
 	}
-	builder := buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish)
+	builder := buildv2.NewBuilderFromScratch(ioCtrl, varManager, onBuildFinish)
 	if options.ForceBuild {
 		buildOptions := &types.BuildOptions{
 			Manifest:    manifest,

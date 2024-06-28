@@ -16,6 +16,7 @@ package destroy
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"testing"
 
@@ -207,6 +208,7 @@ func TestDestroyWithErrorGettingManifestButDestroySuccess(t *testing.T) {
 				build:   nil,
 			},
 		},
+		varManager: vars.NewVarsManager(&fakeVarManager{}),
 	}
 
 	err = dc.destroy(context.Background(), &Options{})
@@ -310,6 +312,7 @@ func TestDestroyWithErrorOnCommands(t *testing.T) {
 				build:   nil,
 			},
 		},
+		varManager: vars.NewVarsManager(&fakeVarManager{}),
 	}
 
 	err = dc.destroy(ctx, &Options{
@@ -352,6 +355,7 @@ func TestDestroyWithErrorOnCommandsForcingDestroy(t *testing.T) {
 				build:   nil,
 			},
 		},
+		varManager: vars.NewVarsManager(&fakeVarManager{}),
 	}
 
 	err = dc.destroy(ctx, &Options{
@@ -394,6 +398,7 @@ func TestDestroyWithErrorDestroyingK8sResources(t *testing.T) {
 				build:   nil,
 			},
 		},
+		varManager: vars.NewVarsManager(&fakeVarManager{}),
 	}
 
 	err = dc.destroy(ctx, &Options{

@@ -15,6 +15,7 @@ package destroy
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
 	v2 "github.com/okteto/okteto/cmd/build/v2"
@@ -26,6 +27,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
 
 type fakeBuilderV2 struct {
 	build   error
@@ -194,7 +200,7 @@ func (fakeAnalyticsTracker) TrackImageBuild(context.Context, *analytics.ImageBui
 func (fakeAnalyticsTracker) TrackDestroy(analytics.DestroyMetadata)                         {}
 
 func Test_newBuildCtrl(t *testing.T) {
-	got := newBuildCtrl("test-control", &fakeAnalyticsTracker{}, &fakeAnalyticsTracker{}, io.NewIOController())
+	got := newBuildCtrl("test-control", &fakeAnalyticsTracker{}, &fakeAnalyticsTracker{}, io.NewIOController(), vars.NewVarsManager(&fakeVarManager{}))
 
 	require.Equal(t, "test-control", got.name)
 	require.IsType(t, got.builder, &v2.OktetoBuilder{})

@@ -229,7 +229,7 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 				K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
 				varManager:        varManager,
 				tokenUpdater:      newTokenUpdaterController(),
-				builder:           buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish),
+				builder:           buildv2.NewBuilderFromScratch(ioCtrl, varManager, onBuildFinish),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {

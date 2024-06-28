@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"net"
 	"os"
 	"os/signal"
@@ -78,6 +79,7 @@ type Stack struct {
 	AnalyticsTracker buildTrackerInterface
 	Insights         buildTrackerInterface
 	IoCtrl           *io.Controller
+	VarManager       *vars.Manager
 	Divert           Divert
 }
 
@@ -93,7 +95,7 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *DeployOpti
 	}
 
 	if !options.InsidePipeline {
-		if err := buildStackImages(ctx, s, options, sd.AnalyticsTracker, sd.Insights, sd.IoCtrl); err != nil {
+		if err := buildStackImages(ctx, s, options, sd.AnalyticsTracker, sd.Insights, sd.IoCtrl, sd.VarManager); err != nil {
 			return err
 		}
 	}

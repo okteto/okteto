@@ -346,6 +346,8 @@ func TestDeployWithServicesToBuildWithoutComposeSection(t *testing.T) {
 }
 
 func TestCreateConfigMapWithBuildError(t *testing.T) {
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+
 	fakeK8sClientProvider := test.NewFakeK8sProvider()
 	opts := &Options{
 		Name:         "testErr",
@@ -368,7 +370,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 		},
 	}
 
-	builderV2 := buildv2.NewBuilder(builder, reg, io.NewIOController(), okCtx, io.NewK8sLogger(), []buildv2.OnBuildFinish{})
+	builderV2 := buildv2.NewBuilder(builder, reg, io.NewIOController(), okCtx, io.NewK8sLogger(), varManager, []buildv2.OnBuildFinish{})
 	c := &Command{
 		GetManifest:       getErrorManifest,
 		Builder:           builderV2,
@@ -376,7 +378,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                afero.NewMemMapFs(),
 		IoCtrl:            io.NewIOController(),
-		VarManager:        nil,
+		VarManager:        varManager,
 	}
 
 	ctx := context.Background()

@@ -224,7 +224,7 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 
 				K8sClientProvider:  k8sClientProvider,
 				GetDeployer:        GetDeployer,
-				Builder:            buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish),
+				Builder:            buildv2.NewBuilderFromScratch(ioCtrl, varManager, onBuildFinish),
 				DeployWaiter:       NewDeployWaiter(k8sClientProvider, k8sLogger),
 				EndpointGetter:     NewEndpointGetter,
 				IsRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
