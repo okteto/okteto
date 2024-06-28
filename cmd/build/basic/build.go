@@ -67,7 +67,7 @@ func (ob *Builder) Build(ctx context.Context, options *types.BuildOptions) error
 	}
 
 	var err error
-	options.Tag, err = ob.VarManager.ExpandExcLocal(options.Tag)
+	options.Tag, err = ob.VarManager.ExpandIncLocal(options.Tag)
 	if err != nil {
 		return err
 	}

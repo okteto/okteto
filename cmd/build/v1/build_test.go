@@ -71,39 +71,61 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	buildRunner.AssertExpectations(t)
 }
 
-//func TestBuildWithErrorFromImageExpansion(t *testing.T) {
-//	ctx := context.Background()
-//
-//	varManager := vars.NewVarsManager(&fakeVarManager{})
-//	buildRunner := &fakeBuildRunner{}
-//	bc := NewBuilder(buildRunner, io.NewIOController(), varManager)
-//	dir, err := createDockerfile(t)
-//	assert.NoError(t, err)
-//
-//	t.Setenv("TEST_VAR", "unit-test")
-//	// The missing closing brace breaks the var expansion
-//	tag := "okteto.dev/test:${TEST_VAR"
-//	options := &types.BuildOptions{
-//		CommandArgs: []string{dir},
-//		Tag:         tag,
-//	}
-//	err = bc.Build(ctx, options)
-//	// error from the build
-//	assert.ErrorAs(t, err, &env.VarExpansionErr{})
-//
-//	buildRunner.AssertNotCalled(t, "Run", mock.Anything, mock.Anything, mock.Anything)
-//}
-
-func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
+func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 	ctx := context.Background()
 
 	varManager := vars.NewVarsManager(&fakeVarManager{})
+	localEnvVars := vars.Group{
+		Priority: vars.OktetoVariableTypeLocal,
+		Vars: []vars.Var{
+			{
+				Name:  "TEST_VAR",
+				Value: "unit-test",
+			},
+		},
+	}
+	assert.NoError(t, varManager.AddGroup(localEnvVars))
 	buildRunner := &fakeBuildRunner{}
 	bc := NewBuilder(buildRunner, io.NewIOController(), varManager)
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
 
-	t.Setenv("TEST_VAR", "unit-test")
+	// The missing closing brace breaks the var expansion
+	tag := "okteto.dev/test:${TEST_VAR"
+	options := &types.BuildOptions{
+		CommandArgs: []string{dir},
+		Tag:         tag,
+	}
+	err = bc.Build(ctx, options)
+
+	// error from the build
+	assert.Error(t, err)
+	assert.Equal(t, err.Error(), "closing brace expected")
+
+	buildRunner.AssertNotCalled(t, "Run", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
+	ctx := context.Background()
+
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	localEnvVars := vars.Group{
+		Priority: vars.OktetoVariableTypeFlag,
+		Vars: []vars.Var{
+			{
+				Name:  "TEST_VAR",
+				Value: "unit-test",
+			},
+		},
+	}
+	assert.NoError(t, varManager.AddGroup(localEnvVars))
+
+	buildRunner := &fakeBuildRunner{}
+	bc := NewBuilder(buildRunner, io.NewIOController(), varManager)
+	dir, err := createDockerfile(t)
+	assert.NoError(t, err)
+
+	//t.Setenv("TEST_VAR", "unit-test")
 	tag := "okteto.dev/test:${TEST_VAR}"
 	options := &types.BuildOptions{
 		CommandArgs: []string{dir},

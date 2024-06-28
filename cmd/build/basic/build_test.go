@@ -15,7 +15,6 @@ package basic
 
 import (
 	"context"
-	"fmt"
 	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
@@ -216,8 +215,10 @@ func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 		Tag:         tag,
 	}
 	err = bc.Build(ctx, options)
+
 	// error from the build
-	assert.Error(t, err, fmt.Errorf("closing brace expectedxx"))
+	assert.Error(t, err)
+	assert.Equal(t, err.Error(), "closing brace expected")
 
 	buildRunner.AssertNotCalled(t, "Run", mock.Anything, mock.Anything, mock.Anything)
 }
