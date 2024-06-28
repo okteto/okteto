@@ -15,6 +15,7 @@ package v1
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/vars"
 
 	"github.com/okteto/okteto/cmd/build/basic"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
@@ -32,24 +33,25 @@ type OktetoBuilder struct {
 }
 
 // NewBuilder creates a new builder wrapping basic.Builder to build images directly from a Dockerfile
-func NewBuilder(builder basic.BuildRunner, ioCtrl *io.Controller) *OktetoBuilder {
+func NewBuilder(builder basic.BuildRunner, ioCtrl *io.Controller, varManager *vars.Manager) *OktetoBuilder {
 	return &OktetoBuilder{
 		Builder: basic.Builder{
 			BuildRunner: builder,
 			IoCtrl:      ioCtrl,
+			VarManager:  varManager,
 		},
 	}
 }
 
 // NewBuilderFromScratch creates a new okteto builder
-func NewBuilderFromScratch(ioCtrl *io.Controller) *OktetoBuilder {
+func NewBuilderFromScratch(ioCtrl *io.Controller, varManager *vars.Manager) *OktetoBuilder {
 	builder := buildCmd.NewOktetoBuilder(
 		&okteto.ContextStateless{
 			Store: okteto.GetContextStore(),
 		},
 		afero.NewOsFs(),
 	)
-	return NewBuilder(builder, ioCtrl)
+	return NewBuilder(builder, ioCtrl, varManager)
 }
 
 // IsV1 returns true since it is a builder v1

@@ -35,9 +35,8 @@ func convertCommandFlagsToOktetoVariables(variables []string, varManager *vars.M
 	}
 
 	err = varManager.AddGroup(vars.Group{
-		Vars:        envVars,
-		Priority:    vars.OktetoVariableTypeFlag,
-		ExportToEnv: true,
+		Vars:     envVars,
+		Priority: vars.OktetoVariableTypeFlag,
 	})
 
 	return err

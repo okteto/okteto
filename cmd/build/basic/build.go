@@ -39,6 +39,7 @@ type BuildRunner interface {
 type Builder struct {
 	BuildRunner BuildRunner
 	IoCtrl      *io.Controller
+	VarManager  *vars.Manager
 }
 
 // Build builds the image defined by the BuildOptions used the BuildRunner passed as dependency
@@ -66,7 +67,7 @@ func (ob *Builder) Build(ctx context.Context, options *types.BuildOptions) error
 	}
 
 	var err error
-	options.Tag, err = vars.GlobalVarManager.ExpandExcLocal(options.Tag)
+	options.Tag, err = ob.VarManager.ExpandExcLocal(options.Tag)
 	if err != nil {
 		return err
 	}

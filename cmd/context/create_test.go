@@ -45,10 +45,8 @@ func (e *fakeVarManager) Set(key, value string) error {
 	e.storage[key] = value
 	return nil
 }
-func (*fakeVarManager) MaskVar(string) {}
-func (*fakeVarManager) WarningLogf(string, ...interface{}) {
-}
-func (*fakeVarManager) WarnVarsPrecedence() {}
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
 func newFakeEnvManager(envVarStorage map[string]string) *fakeVarManager {
 	return &fakeVarManager{
 		storage: envVarStorage,

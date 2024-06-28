@@ -59,7 +59,7 @@ type infoRaw struct {
 	DependsOn        DependsOn         `yaml:"depends_on,omitempty"`
 }
 
-func (i *Info) addExpandedPreviousImageArgs(previousImageArgs map[string]string) error {
+func (i *Info) addExpandedPreviousImageArgs(previousImageArgs map[string]string, varManager *vars.Manager) error {
 	alreadyAddedArg := map[string]bool{}
 	for _, arg := range i.Args {
 		alreadyAddedArg[arg.Name] = true
@@ -68,7 +68,7 @@ func (i *Info) addExpandedPreviousImageArgs(previousImageArgs map[string]string)
 		if _, ok := alreadyAddedArg[k]; ok {
 			continue
 		}
-		expandedValue, err := vars.GlobalVarManager.ExpandExcLocal(v)
+		expandedValue, err := varManager.ExpandExcLocal(v)
 		if err != nil {
 			return err
 		}
@@ -214,14 +214,14 @@ func (i *Info) SetBuildDefaults() {
 }
 
 // AddArgs add a set of args to the build information
-func (i *Info) AddArgs(previousImageArgs map[string]string) error {
+func (i *Info) AddArgs(previousImageArgs map[string]string, varManager *vars.Manager) error {
 	if err := i.expandManifestBuildArgs(previousImageArgs); err != nil {
 		return err
 	}
 	if err := i.expandSecrets(); err != nil {
 		return err
 	}
-	return i.addExpandedPreviousImageArgs(previousImageArgs)
+	return i.addExpandedPreviousImageArgs(previousImageArgs, varManager)
 }
 
 // GetDockerfilePath returns the path to the Dockerfile

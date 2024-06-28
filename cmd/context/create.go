@@ -443,9 +443,8 @@ func (c *Command) loadDotEnv(fs afero.Fs) error {
 	}
 
 	dotEnvVars := vars.Group{
-		Vars:        []vars.Var{},
-		Priority:    vars.OktetoVariableTypeDotEnv,
-		ExportToEnv: true,
+		Vars:     []vars.Var{},
+		Priority: vars.OktetoVariableTypeDotEnv,
 	}
 	for k, v := range expandedVars {
 		if _, exists := c.varManager.Lookup(k); exists {

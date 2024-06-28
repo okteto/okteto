@@ -57,6 +57,7 @@ type Command struct {
 	insights         buildTrackerInterface
 	ioCtrl           *io.Controller
 	k8slogger        *io.K8sLogger
+	varManager       *vars.Manager
 }
 
 type buildTrackerInterface interface {
@@ -77,7 +78,7 @@ type registryInterface interface {
 }
 
 // NewBuildCommand creates a struct to run all build methods
-func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker, insights buildTrackerInterface, okCtx *okteto.ContextStateless, k8slogger *io.K8sLogger) *Command {
+func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker, insights buildTrackerInterface, okCtx *okteto.ContextStateless, k8slogger *io.K8sLogger, varManager *vars.Manager) *Command {
 	return &Command{
 		GetManifest:      model.GetManifestV2,
 		Builder:          buildCmd.NewOktetoBuilder(okCtx, afero.NewOsFs()),
@@ -86,6 +87,7 @@ func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker, insights buildTrac
 		k8slogger:        k8slogger,
 		analyticsTracker: analyticsTracker,
 		insights:         insights,
+		varManager:       varManager,
 	}
 }
 
@@ -112,7 +114,7 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 
 			ioCtrl.Logger().Info("context loaded")
 
-			bc := NewBuildCommand(ioCtrl, at, insights, oktetoContext, k8slogger)
+			bc := NewBuildCommand(ioCtrl, at, insights, oktetoContext, k8slogger, varManager)
 
 			builder, err := bc.getBuilder(options, oktetoContext)
 
@@ -157,7 +159,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 	// the file flag is a Dockerfile
 	isDockerfileValid := validateDockerfile(options.File) == nil
 	if options.File != "" && isDockerfileValid {
-		return buildv1.NewBuilder(bc.Builder, bc.ioCtrl), nil
+		return buildv1.NewBuilder(bc.Builder, bc.ioCtrl, bc.varManager), nil
 	}
 
 	var builder Builder
@@ -170,7 +172,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 		bc.ioCtrl.Logger().Infof("manifest located at %s is not v2 compatible: %s", options.File, err)
 		bc.ioCtrl.Logger().Info("falling back to building as a v1 manifest")
 
-		builder = buildv1.NewBuilder(bc.Builder, bc.ioCtrl)
+		builder = buildv1.NewBuilder(bc.Builder, bc.ioCtrl, bc.varManager)
 	} else {
 		if isBuildV2(manifest) {
 			callbacks := []buildv2.OnBuildFinish{
@@ -179,7 +181,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 			}
 			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl, okCtx, bc.k8slogger, callbacks)
 		} else {
-			builder = buildv1.NewBuilder(bc.Builder, bc.ioCtrl)
+			builder = buildv1.NewBuilder(bc.Builder, bc.ioCtrl, bc.varManager)
 		}
 	}
 

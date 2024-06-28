@@ -356,7 +356,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 		tagsToBuild = fmt.Sprintf("%s,%s", tagsToBuild, globalImage)
 	}
 	buildSvcInfo.Image = tagsToBuild
-	if err := buildSvcInfo.AddArgs(bc.buildEnvironments); err != nil {
+	if err := buildSvcInfo.AddArgs(bc.buildEnvironments, bc.VarManager); err != nil {
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcName, err)
 	}
 

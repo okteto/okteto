@@ -15,6 +15,7 @@ package up
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/vars"
 	"os/exec"
 	"time"
 
@@ -69,6 +70,7 @@ type upContext struct {
 	analyticsTracker      analyticsTrackerInterface
 	Fs                    afero.Fs
 	K8sClientProvider     okteto.K8sClientProvider
+	varManager            *vars.Manager
 	Registry              registryInterface
 	Disconnect            chan error
 	hybridCommand         *exec.Cmd

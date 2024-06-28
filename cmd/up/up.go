@@ -227,6 +227,7 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 				analyticsTracker:  at,
 				analyticsMeta:     upMeta,
 				K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
+				varManager:        varManager,
 				tokenUpdater:      newTokenUpdaterController(),
 				builder:           buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish),
 			}
@@ -311,7 +312,7 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 				return err
 			}
 
-			if err := loadManifestOverrides(dev, upOptions); err != nil {
+			if err := loadManifestOverrides(dev, upOptions, up.varManager); err != nil {
 				return err
 			}
 
@@ -412,7 +413,7 @@ func (o *Options) AddArgs(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func loadManifestOverrides(dev *model.Dev, upOptions *Options) error {
+func loadManifestOverrides(dev *model.Dev, upOptions *Options, varManager *vars.Manager) error {
 	if upOptions.Remote > 0 {
 		dev.RemotePort = upOptions.Remote
 	}
@@ -430,7 +431,7 @@ func loadManifestOverrides(dev *model.Dev, upOptions *Options) error {
 	}
 
 	if len(upOptions.Envs) > 0 {
-		overridedEnvVars, err := getOverridedEnvVarsFromCmd(dev.Environment, upOptions.Envs)
+		overridedEnvVars, err := getOverridedEnvVarsFromCmd(dev.Environment, upOptions.Envs, varManager)
 		if err != nil {
 			return err
 		} else {
@@ -462,7 +463,7 @@ func setSyncDefaultsByDevMode(dev *model.Dev, getSyncTempDir func() (string, err
 	return nil
 }
 
-func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVariables []string) (*env.Environment, error) {
+func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVariables []string, varManager *vars.Manager) (*env.Environment, error) {
 	envVarsToValues := make(map[string]string)
 	for _, manifestEnv := range manifestEnvVars {
 		envVarsToValues[manifestEnv.Name] = manifestEnv.Value
@@ -483,7 +484,7 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVaria
 			return nil, oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD
 		}
 
-		expandedEnv, err := vars.GlobalVarManager.ExpandExcLocal(varValueToAdd)
+		expandedEnv, err := varManager.ExpandExcLocal(varValueToAdd)
 		if err != nil {
 			return nil, err
 		}
@@ -798,7 +799,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 		BuildArgs:  buildArgs,
 		OutputMode: oktetoLog.TTYFormat,
 	}
-	builder := buildv1.NewBuilderFromScratch(io.NewIOController())
+	builder := buildv1.NewBuilderFromScratch(io.NewIOController(), up.varManager)
 	if err := builder.Build(ctx, buildOptions); err != nil {
 		return err
 	}

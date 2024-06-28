@@ -16,6 +16,7 @@ package deploy
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,7 +51,7 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-var errorManifest *model.Manifest = &model.Manifest{
+var errorManifest = &model.Manifest{
 	Name: "testManifest",
 	Build: build.ManifestBuild{
 		"service1": &build.Info{
@@ -126,7 +127,7 @@ func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string)    { re
 func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)      { return "", "" }
 func (fr fakeRegistry) GetDevImageFromGlobal(imageWithDigest string) string { return "" }
 
-var fakeManifest *model.Manifest = &model.Manifest{
+var fakeManifest = &model.Manifest{
 	Deploy: &model.DeployInfo{
 		Commands: []model.DeployCommand{
 			{
@@ -145,7 +146,7 @@ var fakeManifest *model.Manifest = &model.Manifest{
 	},
 }
 
-var fakeManifestWithDependency *model.Manifest = &model.Manifest{
+var fakeManifestWithDependency = &model.Manifest{
 	Dependencies: deps.ManifestSection{
 		"a": &deps.Dependency{
 			Namespace: "b",
@@ -154,7 +155,7 @@ var fakeManifestWithDependency *model.Manifest = &model.Manifest{
 	},
 }
 
-var noDeployNorDependenciesManifest *model.Manifest = &model.Manifest{
+var noDeployNorDependenciesManifest = &model.Manifest{
 	Name: "testManifest",
 	Build: build.ManifestBuild{
 		"service1": &build.Info{
@@ -237,6 +238,7 @@ func (f *fakeDeployer) Get(ctx context.Context,
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	ioCtrl *io.Controller,
 	k8Logger *io.K8sLogger,
+	varManager *vars.Manager,
 	dependencyEnvVarsGetter dependencyEnvVarsGetter,
 ) (Deployer, error) {
 	args := f.Called(ctx, opts, buildEnvVarsGetter, cmapHandler, k8sProvider, ioCtrl, k8Logger, dependencyEnvVarsGetter)
@@ -374,6 +376,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                afero.NewMemMapFs(),
 		IoCtrl:            io.NewIOController(),
+		VarManager:        nil,
 	}
 
 	ctx := context.Background()

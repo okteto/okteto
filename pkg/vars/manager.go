@@ -46,18 +46,12 @@ var config = map[Priority]ConfigItem{
 	OktetoVariableTypeLocal:        {Name: "locally or in the catalog", Masked: false},
 }
 
-type LookupEnvFunc func(key string) (string, bool)
-
-type SetEnvFunc func(key, value string) error
-
 type Group struct {
-	Vars        []Var
-	Priority    Priority
-	ExportToEnv bool
+	Vars     []Var
+	Priority Priority
 }
 
 type ManagerInterface interface {
-	Set(key, value string) error
 	MaskVar(value string)
 	WarningLogf(format string, args ...interface{})
 }
@@ -87,7 +81,6 @@ func (m *Manager) Lookup(key string) (string, bool) {
 }
 
 func (m *Manager) AddGroup(g Group) error {
-	fmt.Println(g)
 	if config[g.Priority].Masked {
 		for _, v := range g.Vars {
 			m.m.MaskVar(v.Value)
@@ -98,7 +91,6 @@ func (m *Manager) AddGroup(g Group) error {
 	m.sortGroupsByPriorityDesc()
 
 	return nil
-	//return m.export()
 }
 
 // GetOktetoVariablesExcLocal returns an array of all tifihe okteto variables that can be exported (excluding local variables)
@@ -111,22 +103,6 @@ func (m *Manager) GetOktetoVariablesExcLocal() []string {
 		groups = append(groups, g)
 	}
 	return m.groupsToArray(groups)
-}
-
-// export exports the okteto variable using the provided Set function
-func (m *Manager) export() error {
-	for _, g := range m.groups {
-		if !g.ExportToEnv {
-			continue
-		}
-		for _, v := range g.Vars {
-			err := m.m.Set(v.Name, v.Value)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 // ExpandIncLocal replaces the variables in the given string with their values and returns the result. It expands with all groups, including local variables.

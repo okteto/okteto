@@ -15,6 +15,7 @@ package basic
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"testing"
@@ -30,6 +31,11 @@ type fakeBuildRunner struct {
 	mock.Mock
 }
 
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+
 func (f *fakeBuildRunner) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error {
 	args := f.Called(ctx, buildOptions, ioCtrl)
 	return args.Error(0)
@@ -42,6 +48,7 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	bc := &Builder{
 		BuildRunner: buildRunner,
 		IoCtrl:      io.NewIOController(),
+		VarManager:  vars.NewVarsManager(&fakeVarManager{}),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -74,6 +81,7 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 	bc := &Builder{
 		BuildRunner: buildRunner,
 		IoCtrl:      io.NewIOController(),
+		VarManager:  vars.NewVarsManager(&fakeVarManager{}),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -106,6 +114,7 @@ func TestBuildWithNoErrorFromDockerfileAndNoTag(t *testing.T) {
 	bc := &Builder{
 		BuildRunner: buildRunner,
 		IoCtrl:      io.NewIOController(),
+		VarManager:  vars.NewVarsManager(&fakeVarManager{}),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -135,6 +144,7 @@ func TestBuildWithErrorWithPathToFile(t *testing.T) {
 	bc := &Builder{
 		BuildRunner: buildRunner,
 		IoCtrl:      io.NewIOController(),
+		VarManager:  vars.NewVarsManager(&fakeVarManager{}),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -157,6 +167,7 @@ func TestBuildWithErrorWithFileToDir(t *testing.T) {
 	bc := &Builder{
 		BuildRunner: buildRunner,
 		IoCtrl:      io.NewIOController(),
+		VarManager:  vars.NewVarsManager(&fakeVarManager{}),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -177,15 +188,27 @@ func TestBuildWithErrorWithFileToDir(t *testing.T) {
 func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 	ctx := context.Background()
 
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	err := varManager.AddGroup(vars.Group{
+		Priority: vars.OktetoVariableTypeLocal,
+		Vars: []vars.Var{
+			{
+				Name:  "TEST_VAR",
+				Value: "unit-test",
+			},
+		},
+	})
+	assert.NoError(t, err)
+
 	buildRunner := &fakeBuildRunner{}
 	bc := &Builder{
 		BuildRunner: buildRunner,
 		IoCtrl:      io.NewIOController(),
+		VarManager:  varManager,
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
 
-	t.Setenv("TEST_VAR", "unit-test")
 	// The missing closing brace breaks the var expansion
 	tag := "okteto.dev/test:${TEST_VAR"
 	options := &types.BuildOptions{

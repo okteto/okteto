@@ -14,6 +14,7 @@
 package vars
 
 import (
+	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 )
@@ -133,18 +134,136 @@ func varExists(key string) bool {
 //		assert.ElementsMatch(t, expectedMaskedValues, fakeEnvManager.maskedWords, "Masked words should match expected values")
 //	})
 //}
+//
+//func Test_Expand(t *testing.T) {
+//	fakeEnvManager := NewVarsManager(newFakeEnvManager(t)
+//
+//	groupLocalVars := Group{
+//		Vars: []Var{
+//			{
+//				Name:  "TEST_VAR_1",
+//				Value: "local-value1",
+//			},
+//		}
+//	}
+//
+//	fakeEnvManager.A
+//}
 
-func Test_Expand(t *testing.T) {
-	fakeEnvManager := NewVarsManager(newFakeEnvManager(t)
-
-	groupLocalVars := Group{
-		Vars: []Var{
-			{
-				Name:  "TEST_VAR_1",
-				Value: "local-value1",
-			},
-		}
+func Test_ExpandEnv(t *testing.T) {
+	t.Setenv("BAR", "bar")
+	tests := []struct {
+		expectedErr error
+		name        string
+		result      string
+		value       string
+	}{
+		{
+			name:        "broken var - missing closing curly bracket",
+			value:       "value-${BAR",
+			result:      "",
+			expectedErr: &VarExpansionErr{},
+		},
+		{
+			name:        "no-var",
+			value:       "value",
+			result:      "value",
+			expectedErr: nil,
+		},
+		{
+			name:        "var",
+			value:       "value-${BAR}-value",
+			result:      "value-bar-value",
+			expectedErr: nil,
+		},
+		{
+			name:        "default",
+			value:       "value-${FOO:-foo}-value",
+			result:      "value-foo-value",
+			expectedErr: nil,
+		},
+		{
+			name:        "only bar expanded",
+			value:       "${BAR}",
+			result:      "bar",
+			expectedErr: nil,
+		},
+		{
+			name:        "only bar not expand if empty",
+			value:       "${FOO}",
+			result:      "",
+			expectedErr: nil,
+		},
 	}
 
-	fakeEnvManager.A
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := ExpandEnv(tt.value)
+			assert.Equal(t, tt.result, result)
+			if tt.expectedErr != nil {
+				assert.ErrorAs(t, err, tt.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_ExpandEnvIfNotEmpty(t *testing.T) {
+	t.Setenv("BAR", "bar")
+	tests := []struct {
+		expectedErr error
+		name        string
+		result      string
+		value       string
+	}{
+		{
+			name:        "broken var - missing closing curly bracket",
+			value:       "value-${BAR",
+			result:      "",
+			expectedErr: &VarExpansionErr{},
+		},
+		{
+			name:        "no-var",
+			value:       "value",
+			result:      "value",
+			expectedErr: nil,
+		},
+		{
+			name:        "var",
+			value:       "value-${BAR}-value",
+			result:      "value-bar-value",
+			expectedErr: nil,
+		},
+		{
+			name:        "default",
+			value:       "value-${FOO:-foo}-value",
+			result:      "value-foo-value",
+			expectedErr: nil,
+		},
+		{
+			name:        "only bar expanded",
+			value:       "${BAR}",
+			result:      "bar",
+			expectedErr: nil,
+		},
+		{
+			name:        "only bar not expand if empty",
+			value:       "${FOO}",
+			result:      "${FOO}",
+			expectedErr: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := ExpandEnvIfNotEmpty(tt.value)
+			assert.Equal(t, tt.result, result)
+			if tt.expectedErr != nil {
+				assert.ErrorAs(t, err, tt.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
