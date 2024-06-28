@@ -14,14 +14,45 @@
 package env
 
 import (
+	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 )
 
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+
 func Test_Env_UnmarshalYAML(t *testing.T) {
-	t.Setenv("VALUE", "test")
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
+	// this helps to test that local env vars are not used in the manifest deserialization
+	localEnvVars := vars.Group{
+		Priority: vars.OktetoVariableTypeLocal,
+		Vars: []vars.Var{
+			{
+				Name:  "LOCAL_VAR",
+				Value: "local-env-var",
+			},
+		},
+	}
+	assert.NoError(t, vars.GlobalVarManager.AddGroup(localEnvVars))
+
+	// this helps to test that flag vars are used in the manifest deserialization
+	deployFlagVars := vars.Group{
+		Priority: vars.OktetoVariableTypeFlag,
+		Vars: []vars.Var{
+			{
+				Name:  "FLAG_VAR",
+				Value: "flag-var",
+			},
+		},
+	}
+	assert.NoError(t, vars.GlobalVarManager.AddGroup(deployFlagVars))
+
 	tests := []struct {
 		expected    Environment
 		name        string
@@ -39,13 +70,23 @@ unit: test`),
 			},
 		},
 		{
-			name: "deserialized successfully with env var",
+			name: "deserialized successfully but without expansion from local var",
 			yaml: []byte(`
 foo: bar
-unit: "unit-$VALUE"`),
+unit: "unit-$LOCAL_VAR"`),
 			expected: Environment{
 				{Name: "foo", Value: "bar"},
-				{Name: "unit", Value: "unit-test"},
+				{Name: "unit", Value: "unit-"},
+			},
+		},
+		{
+			name: "deserialized successfully with flag var",
+			yaml: []byte(`
+foo: bar
+unit: "unit-$FLAG_VAR"`),
+			expected: Environment{
+				{Name: "foo", Value: "bar"},
+				{Name: "unit", Value: "unit-flag-var"},
 			},
 		},
 		{
