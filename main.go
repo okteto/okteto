@@ -37,7 +37,6 @@ import (
 	"github.com/okteto/okteto/cmd/preview"
 	"github.com/okteto/okteto/cmd/registrytoken"
 	"github.com/okteto/okteto/cmd/remoterun"
-	"github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/test"
 	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -184,8 +183,6 @@ func main() {
 	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger))
 	root.AddCommand(test.Test(ctx, ioController, k8sLogger, at))
 
-	// deprecated
-	root.AddCommand(stack.Stack(ctx, at, insights, ioController))
 	root.AddCommand(pipeline.Pipeline(ctx))
 
 	err = root.Execute()

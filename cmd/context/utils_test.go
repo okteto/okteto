@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -156,7 +157,6 @@ build:
 dependencies:
   one: https://repo.url`),
 			expectedManifest: &model.Manifest{
-				IsV2:      true,
 				Namespace: "test-namespace",
 				Context:   "manifest-context",
 				Build: build.ManifestBuild{
@@ -177,10 +177,13 @@ dependencies:
 						CacheFrom: []string{"cache-image-1", "cache-image-2"},
 					},
 				},
-				Icon:    "",
-				Dev:     model.ManifestDevs{},
-				Type:    model.OktetoManifestType,
-				Destroy: &model.DestroyInfo{},
+				Icon:          "",
+				Dev:           model.ManifestDevs{},
+				Type:          model.OktetoManifestType,
+				Destroy:       &model.DestroyInfo{},
+				Deploy:        &model.DeployInfo{},
+				GlobalForward: []forward.GlobalForward{},
+				Test:          model.ManifestTests{},
 				Dependencies: deps.ManifestSection{
 					"one": &deps.Dependency{
 						Repository: "https://repo.url",

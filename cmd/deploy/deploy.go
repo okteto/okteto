@@ -27,7 +27,6 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
-	stackCMD "github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
@@ -407,7 +406,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		Variables:  deployOptions.Variables,
 	}
 
-	if !deployOptions.Manifest.IsV2 && deployOptions.Manifest.Type == model.StackType && deployOptions.Manifest.Deploy != nil {
+	if deployOptions.Manifest.Type == model.StackType && deployOptions.Manifest.Deploy != nil {
 		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
 	}
 
@@ -707,8 +706,7 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 	hasBuildSection := false
 	isRunningOnRemoteDeployer := false
 	if manifest != nil {
-		if manifest.IsV2 &&
-			manifest.Deploy != nil {
+		if manifest.Deploy != nil {
 			isRunningOnRemoteDeployer = isRemoteDeployer(runInRemoteFlag, manifest.Deploy.Image, manifest.Deploy.Remote)
 			if manifest.Deploy.ComposeSection != nil &&
 				manifest.Deploy.ComposeSection.ComposesInfo != nil {
@@ -774,13 +772,15 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 		}
 	}
 
-	stackCommand := stackCMD.DeployCommand{
-		K8sClient:      c,
-		Config:         cfg,
-		IsInsideDeploy: true,
-		DivertDriver:   divertDriver,
+	sd := stack.Stack{
+		K8sClient:        c,
+		Config:           cfg,
+		AnalyticsTracker: dc.AnalyticsTracker,
+		Insights:         dc.InsightsTracker,
+		IoCtrl:           dc.IoCtrl,
+		Divert:           divertDriver,
 	}
-	return stackCommand.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)
+	return sd.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)
 }
 
 // deployEndpoints deploys the endpoints defined in the Okteto manifest
