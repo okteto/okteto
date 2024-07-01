@@ -162,6 +162,7 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Execute the list of commands specified in the 'deploy' section of your okteto manifest",
+		Args:  utils.NoArgsAccepted(""),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			// validate cmd options
 			if options.Dependencies && !okteto.IsOkteto() {
