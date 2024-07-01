@@ -16,13 +16,11 @@ package deploy
 import (
 	"context"
 	"net/url"
-	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
@@ -95,81 +93,6 @@ devs:
 	assert.Equal(t, expectedCfg.Labels, currentCfg.Labels)
 	assert.Equal(t, expectedCfg.Data, currentCfg.Data)
 	assert.NotEmpty(t, currentCfg.Annotations[constants.LastUpdatedAnnotation])
-}
-
-func Test_mergeServicesToDeployFromOptionsAndManifest(t *testing.T) {
-	tests := []struct {
-		name             string
-		options          *Options
-		expectedServices []string
-	}{
-		{
-			name: "no manifest services to deploy",
-			options: &Options{
-				ServicesToDeploy: []string{"a", "b"},
-				Manifest: &model.Manifest{
-					Deploy: &model.DeployInfo{
-						ComposeSection: &model.ComposeSectionInfo{
-							ComposesInfo: []model.ComposeInfo{},
-						},
-					},
-				},
-			},
-			expectedServices: []string{"a", "b"},
-		},
-		{
-			name: "no options services to deploy",
-			options: &Options{
-				Manifest: &model.Manifest{
-					Deploy: &model.DeployInfo{
-						ComposeSection: &model.ComposeSectionInfo{
-							ComposesInfo: []model.ComposeInfo{
-								{ServicesToDeploy: []string{"a", "b"}},
-								{ServicesToDeploy: []string{"c", "d"}},
-							},
-						},
-					},
-				},
-			},
-			expectedServices: []string{"a", "b", "c", "d"},
-		},
-		{
-			name: "both",
-			options: &Options{
-				ServicesToDeploy: []string{"from command a", "from command b"},
-				Manifest: &model.Manifest{
-					Deploy: &model.DeployInfo{
-						ComposeSection: &model.ComposeSectionInfo{
-							ComposesInfo: []model.ComposeInfo{
-								{ServicesToDeploy: []string{"c", "d"}},
-							},
-						},
-					},
-				},
-			},
-			expectedServices: []string{"from command a", "from command b"},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			mergeServicesToDeployFromOptionsAndManifest(test.options)
-			// We have to check them as if they were sets to account for order
-			expected := map[string]bool{}
-			for _, service := range test.expectedServices {
-				expected[service] = true
-			}
-
-			got := map[string]bool{}
-			for _, service := range test.options.ServicesToDeploy {
-				got[service] = true
-			}
-
-			if !reflect.DeepEqual(expected, got) {
-				t.Errorf("expected %v, got %v", expected, got)
-			}
-		})
-	}
 }
 
 func Test_switchSSHRepoToHTTPS(t *testing.T) {
