@@ -55,8 +55,9 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 						Hint: fmt.Sprintf("Available options are: [%s]", name),
 					}
 				}
-				dev.Namespace = okteto.GetContext().Namespace
 			}
+
+			dev.Namespace = okteto.GetContext().Namespace
 
 			return dev, nil
 		}
