@@ -36,8 +36,8 @@ deploy:
   compose: docker-compose.yml
 dev:
   svc:
-	sync:
-	- .:/usr/src/app
+    sync:
+    - .:/usr/src/app
     mode: hybrid
     command: bash ./checker.sh
     reverse:
