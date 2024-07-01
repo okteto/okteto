@@ -27,7 +27,6 @@ import (
 
 	"github.com/mitchellh/go-ps"
 	"github.com/moby/term"
-	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
@@ -35,7 +34,6 @@ import (
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
@@ -245,21 +243,14 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 				return fmt.Errorf("failed to load k8s client: %w", err)
 			}
 
-			// if manifest v1 - either set autocreate: true or pass --deploy (okteto forces autocreate: true)
-			// if manifest v2 - either set autocreate: true or pass --deploy with a deploy section at the manifest
-			forceAutocreate := false
-			if upOptions.Deploy && !up.Manifest.IsV2 {
-				// the autocreate property is forced to be true
-				forceAutocreate = true
-			} else if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, okteto.GetContext().Namespace, k8sClient)) {
+			if upOptions.Deploy || !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, k8sClient) {
 				err := up.deployApp(ctx, ioCtrl, k8sLogger)
 
 				// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
 				if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands) {
 					return err
 				}
-
-			} else if !upOptions.Deploy && (up.Manifest.IsV2 && pipeline.IsDeployed(ctx, up.Manifest.Name, okteto.GetContext().Namespace, k8sClient)) {
+			} else if !upOptions.Deploy && pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, k8sClient) {
 				oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy' or 'okteto up --deploy'", up.Manifest.Name)
 			}
 
@@ -283,11 +274,6 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 			}
 
 			up.Dev = dev
-			if forceAutocreate {
-				// update autocreate property if needed to be forced
-				oktetoLog.Info("Setting Autocreate to true because manifest v1 and flag --deploy")
-				up.Dev.Autocreate = true
-			}
 
 			// only if the context is an okteto one, we should verify if the namespace has to be woken up
 			if okteto.GetContext().IsOkteto {
@@ -350,12 +336,6 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 
 			if _, ok := os.LookupEnv(model.OktetoAutoDeployEnvVar); ok {
 				upOptions.Deploy = true
-			}
-
-			if up.Manifest.Type == model.OktetoManifestType && !up.Manifest.IsV2 {
-				oktetoLog.Warning("okteto manifest v1 is deprecated and will be removed in okteto 3.0")
-				oktetoLog.Println(oktetoLog.BlueString(`    Follow this guide to upgrade to the new okteto manifest schema:
-    https://www.okteto.com/docs/reference/manifest-migration/`))
 			}
 
 			if err = up.start(); err != nil {
@@ -505,7 +485,7 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 		return err
 	}
 	c := &deploy.Command{
-		GetManifest:       up.getManifest,
+		GetManifest:       model.GetManifestV2,
 		GetDeployer:       deploy.GetDeployer,
 		K8sClientProvider: k8sProvider,
 		Builder:           up.builder,
@@ -548,16 +528,9 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 		HasDependenciesSection: up.Manifest.HasDependenciesSection(),
 		HasBuildSection:        up.Manifest.HasBuildSection(),
 		Err:                    err,
-		IsRemote:               up.Manifest.IsV2 && isRemote,
+		IsRemote:               isRemote,
 	})
 	return err
-}
-
-func (up *upContext) getManifest(path string, fs afero.Fs) (*model.Manifest, error) {
-	if up.Manifest != nil {
-		return up.Manifest, nil
-	}
-	return model.GetManifestV2(path, fs)
 }
 
 func (up *upContext) start() error {
@@ -742,76 +715,6 @@ func (up *upContext) applyToApps(ctx context.Context) chan error {
 	return result
 }
 
-func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
-	dockerfile := up.Dev.Image.Dockerfile
-	image := up.Dev.Image.Name
-	args := up.Dev.Image.Args
-	context := up.Dev.Image.Context
-	target := up.Dev.Image.Target
-	cacheFrom := up.Dev.Image.CacheFrom
-	if v, ok := up.Manifest.Build[up.Dev.Name]; up.Manifest.IsV2 && ok {
-		dockerfile = v.Dockerfile
-		image = v.Image
-		args = v.Args
-		context = v.Context
-		target = v.Target
-		cacheFrom = v.CacheFrom
-		if image != "" {
-			up.Dev.EmptyImage = false
-		}
-	}
-
-	if _, err := os.Stat(up.Dev.Image.GetDockerfilePath(up.Fs)); err != nil {
-		return oktetoErrors.UserError{
-			E:    fmt.Errorf("'--build' argument given but there is no Dockerfile"),
-			Hint: "Try creating a Dockerfile file or specify the 'context' and 'dockerfile' fields in your okteto manifest.",
-		}
-	}
-
-	oktetoRegistryURL := okteto.GetContext().Registry
-	if oktetoRegistryURL == "" && up.Dev.Autocreate && image == "" {
-		return fmt.Errorf("no value for 'image' has been provided in your okteto manifest")
-	}
-
-	if image == "" {
-		devContainer := apps.GetDevContainer(app.PodSpec(), up.Dev.Container)
-		if devContainer == nil {
-			return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
-		}
-		image = devContainer.Image
-	}
-
-	oktetoLog.Information("Running your build in %s...", okteto.GetContext().Builder)
-
-	imageTag := up.Registry.GetImageTag(image, up.Dev.Name, up.Dev.Namespace)
-	oktetoLog.Infof("building dev image tag %s", imageTag)
-
-	buildArgs := build.SerializeArgs(args)
-
-	buildOptions := &types.BuildOptions{
-		Path:       context,
-		File:       dockerfile,
-		Tag:        imageTag,
-		Target:     target,
-		CacheFrom:  cacheFrom,
-		BuildArgs:  buildArgs,
-		OutputMode: oktetoLog.TTYFormat,
-	}
-	builder := buildv1.NewBuilderFromScratch(io.NewIOController())
-	if err := builder.Build(ctx, buildOptions); err != nil {
-		return err
-	}
-	for _, s := range up.Dev.Services {
-		if s.Image.Name == up.Dev.Image.Name {
-			s.Image.Name = imageTag
-			s.SetLastBuiltAnnotation()
-		}
-	}
-	up.Dev.Image.Name = imageTag
-	up.Dev.SetLastBuiltAnnotation()
-	return nil
-}
-
 func (up *upContext) setDevContainer(app apps.App) error {
 	devContainer := apps.GetDevContainer(app.PodSpec(), up.Dev.Container)
 	if devContainer == nil {
@@ -820,8 +723,8 @@ func (up *upContext) setDevContainer(app apps.App) error {
 
 	up.Dev.Container = devContainer.Name
 
-	if up.Dev.Image.Name == "" {
-		up.Dev.Image.Name = devContainer.Image
+	if up.Dev.Image == "" {
+		up.Dev.Image = devContainer.Image
 	}
 
 	return nil

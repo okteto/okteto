@@ -171,7 +171,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 
 		builder = buildv1.NewBuilder(bc.Builder, bc.ioCtrl)
 	} else {
-		if isBuildV2(manifest) {
+		if len(manifest.Build) > 0 {
 			callbacks := []buildv2.OnBuildFinish{
 				bc.analyticsTracker.TrackImageBuild,
 				bc.insights.TrackImageBuild,
@@ -185,11 +185,6 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 	options.Manifest = manifest
 
 	return builder, nil
-}
-
-func isBuildV2(m *model.Manifest) bool {
-	// A manifest has the isV2 set to true if the manifest is parsed as a V2 manifest or in case of stacks and/or compose files
-	return m.IsV2 && len(m.Build) != 0
 }
 
 func validateDockerfile(file string) error {

@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strings"
 
@@ -109,7 +108,6 @@ type Manifest struct {
 	Type          Archetype               `json:"-" yaml:"-"`
 	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Manifest      []byte                  `json:"-" yaml:"-"`
-	IsV2          bool                    `json:"-" yaml:"-"`
 }
 
 // ManifestDevs defines all the dev section
@@ -156,7 +154,6 @@ func NewManifestFromStack(stack *Stack) *Manifest {
 		},
 		Dev:   ManifestDevs{},
 		Build: build.ManifestBuild{},
-		IsV2:  true,
 		Fs:    afero.NewOsFs(),
 	}
 	cwd, err := os.Getwd()
@@ -170,18 +167,6 @@ func NewManifestFromStack(stack *Stack) *Manifest {
 		return nil
 	}
 	return stackManifest
-}
-
-// NewManifestFromDev creates a manifest from a dev
-func NewManifestFromDev(dev *Dev) *Manifest {
-	manifest := NewManifest()
-	name, err := env.ExpandEnv(dev.Name)
-	if err != nil {
-		oktetoLog.Infof("could not expand dev name '%s'", dev.Name)
-		name = dev.Name
-	}
-	manifest.Dev[name] = dev
-	return manifest
 }
 
 // DeployInfo represents what must be deployed for the app to work
@@ -244,20 +229,6 @@ type ServicesToDeploy []string
 type DeployCommand struct {
 	Name    string `json:"name,omitempty" yaml:"name,omitempty"`
 	Command string `json:"command,omitempty" yaml:"command,omitempty"`
-}
-
-// NewDeployInfo creates a deploy Info
-func NewDeployInfo() *DeployInfo {
-	return &DeployInfo{
-		Commands: []DeployCommand{},
-	}
-}
-
-// NewDestroyInfo creates a destroy Info
-func NewDestroyInfo() *DestroyInfo {
-	return &DestroyInfo{
-		Commands: []DeployCommand{},
-	}
 }
 
 func getManifestFromOktetoFile(cwd string, fs afero.Fs) (*Manifest, error) {
@@ -324,7 +295,7 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 		}
 	}
 
-	if manifest != nil && manifest.IsV2 {
+	if manifest != nil {
 		return manifest, nil
 	}
 
@@ -379,7 +350,6 @@ func getManifestFromFile(cwd, manifestPath string, fs afero.Fs) (*Manifest, erro
 			Dev:   ManifestDevs{},
 			Test:  ManifestTests{},
 			Build: build.ManifestBuild{},
-			IsV2:  true,
 			Fs:    fs,
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
@@ -414,33 +384,29 @@ func getManifestFromFile(cwd, manifestPath string, fs afero.Fs) (*Manifest, erro
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto compose unmarshalled successfully")
 		return stackManifest, nil
 	}
-	if devManifest.IsV2 {
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest v2 unmarshalled successfully")
-		devManifest.Type = OktetoManifestType
-		if devManifest.Deploy != nil && devManifest.Deploy.ComposeSection != nil && len(devManifest.Deploy.ComposeSection.ComposesInfo) > 0 {
-			var stackFiles []string
-			for _, composeInfo := range devManifest.Deploy.ComposeSection.ComposesInfo {
-				stackFiles = append(stackFiles, composeInfo.File)
-			}
-			// LoadStack should perform validation of the stack read from the file on compose section
-			// We need to ensure that LoadStack has false because we don't want to expand env vars
-			s, err := LoadStack("", stackFiles, false, fs)
-			if err != nil {
-				return nil, err
-			}
-			devManifest.Deploy.ComposeSection.Stack = s
-			devManifest, err = devManifest.InferFromStack(cwd)
-			if devManifest.Deploy.Endpoints != nil {
-				s.Endpoints = devManifest.Deploy.Endpoints
-			}
-			if err != nil {
-				return nil, err
-			}
+	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest v2 unmarshalled successfully")
+	devManifest.Type = OktetoManifestType
+	if devManifest.Deploy != nil && devManifest.Deploy.ComposeSection != nil && len(devManifest.Deploy.ComposeSection.ComposesInfo) > 0 {
+		var stackFiles []string
+		for _, composeInfo := range devManifest.Deploy.ComposeSection.ComposesInfo {
+			stackFiles = append(stackFiles, composeInfo.File)
 		}
-		return devManifest, nil
+		// LoadStack should perform validation of the stack read from the file on compose section
+		// We need to ensure that LoadStack has false because we don't want to expand env vars
+		s, err := LoadStack("", stackFiles, false, fs)
+		if err != nil {
+			return nil, err
+		}
+		devManifest.Deploy.ComposeSection.Stack = s
+		devManifest, err = devManifest.InferFromStack(cwd)
+		if devManifest.Deploy.Endpoints != nil {
+			s.Endpoints = devManifest.Deploy.Endpoints
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 	return devManifest, nil
-
 }
 
 // GetInferredManifest infers the manifest from a directory
@@ -479,7 +445,6 @@ func GetInferredManifest(cwd string, fs afero.Fs) (*Manifest, error) {
 			Dev:   ManifestDevs{},
 			Test:  ManifestTests{},
 			Build: build.ManifestBuild{},
-			IsV2:  true,
 			Fs:    fs,
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
@@ -632,22 +597,8 @@ func Read(bytes []byte) (*Manifest, error) {
 
 	if bytes != nil {
 		if err := yaml.UnmarshalStrict(bytes, manifest); err != nil {
-			if err := yaml.Unmarshal(bytes, manifest); err == nil {
-				if reflect.DeepEqual(manifest, NewManifest()) {
-					return nil, oktetoErrors.ErrNotManifestContentDetected
-				}
-			}
 			return nil, err
 		}
-	}
-
-	hasShownWarning := false
-	for _, dev := range manifest.Dev {
-		if dev.Image != nil && (dev.Image.Context != "" || dev.Image.Dockerfile != "") && !hasShownWarning {
-			hasShownWarning = true
-			oktetoLog.Yellow(`The 'image' extended syntax is deprecated and will be removed in a future version. Define the images you want to build in the 'build' section of your manifest. More info at https://www.okteto.com/docs/reference/okteto-manifest/#build"`)
-		}
-
 	}
 
 	if err := manifest.setDefaults(); err != nil {
@@ -926,13 +877,11 @@ func (manifest *Manifest) ExpandEnvVars() error {
 	}
 
 	for devName, devInfo := range manifest.Dev {
-		if _, ok := manifest.Build[devName]; ok && devInfo.Image == nil && devInfo.Autocreate {
-			devInfo.Image = &build.Info{
-				Name: fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(devName, "-", "_"))),
-			}
+		if _, ok := manifest.Build[devName]; ok && devInfo.Image == "" && devInfo.Autocreate {
+			devInfo.Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(devName, "-", "_")))
 		}
-		if devInfo.Image != nil {
-			devInfo.Image.Name, err = env.ExpandEnvIfNotEmpty(devInfo.Image.Name)
+		if devInfo.Image != "" {
+			devInfo.Image, err = env.ExpandEnvIfNotEmpty(devInfo.Image)
 			if err != nil {
 				return err
 			}
@@ -1057,18 +1006,15 @@ func (m *Manifest) WriteToFile(filePath string) error {
 		d.Name = ""
 		d.Context = ""
 		d.Namespace = ""
-		if d.Image != nil && d.Image.Name != "" {
-			d.Image.Context = ""
-			d.Image.Dockerfile = ""
-		} else {
+		if d.Image == "" {
 			if v, ok := m.Build[dName]; ok {
 				if v.Image != "" {
-					d.Image = &build.Info{Name: v.Image}
+					d.Image = v.Image
 				} else {
-					d.Image = nil
+					d.Image = ""
 				}
 			} else {
-				d.Image = nil
+				d.Image = ""
 			}
 		}
 	}
@@ -1306,22 +1252,21 @@ func (m *Manifest) HasDependenciesSection() bool {
 	if m == nil {
 		return false
 	}
-	return m.IsV2 && len(m.Dependencies) > 0
+	return len(m.Dependencies) > 0
 }
 
 func (m *Manifest) HasBuildSection() bool {
 	if m == nil {
 		return false
 	}
-	return m.IsV2 && len(m.Build) > 0
+	return len(m.Build) > 0
 }
 
 func (m *Manifest) HasDeploySection() bool {
 	if m == nil {
 		return false
 	}
-	return m.IsV2 &&
-		m.Deploy != nil &&
+	return m.Deploy != nil &&
 		(len(m.Deploy.Commands) > 0 ||
 			(m.Deploy.ComposeSection != nil &&
 				m.Deploy.ComposeSection.ComposesInfo != nil))

@@ -16,7 +16,6 @@ package model
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -27,7 +26,6 @@ import (
 
 	"github.com/compose-spec/godotenv"
 	"github.com/google/uuid"
-	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -63,7 +61,7 @@ type Dev struct {
 	NodeSelector         map[string]string     `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 	Metadata             *Metadata             `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
-	Image                *build.Info           `json:"image,omitempty" yaml:"image,omitempty"`
+	Image                string                `json:"image,omitempty" yaml:"image,omitempty"`
 	Lifecycle            *Lifecycle            `json:"lifecycle,omitempty" yaml:"lifecycle,omitempty"`
 	Replicas             *int                  `json:"replicas,omitempty" yaml:"replicas,omitempty"`
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
@@ -237,7 +235,6 @@ type Annotations map[string]string
 
 func NewDev() *Dev {
 	return &Dev{
-		Image:       &build.Info{},
 		Environment: make(env.Environment, 0),
 		Secrets:     make([]Secret, 0),
 		Forward:     make([]forward.Forward, 0),
@@ -262,13 +259,6 @@ func (dev *Dev) loadAbsPaths(devPath string, fs afero.Fs) error {
 	devDir, err := filepath.Abs(filepath.Dir(devPath))
 	if err != nil {
 		return err
-	}
-
-	if dev.Image != nil {
-		if uri, err := url.ParseRequestURI(dev.Image.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
-			dev.Image.Context = loadAbsPath(devDir, dev.Image.Context, fs)
-			dev.Image.Dockerfile = loadAbsPath(devDir, dev.Image.Dockerfile, fs)
-		}
 	}
 
 	dev.loadVolumeAbsPaths(devDir, fs)
@@ -344,16 +334,13 @@ func (dev *Dev) loadSelector() error {
 
 func (dev *Dev) loadImage() error {
 	var err error
-	if dev.Image == nil {
-		dev.Image = &build.Info{}
-	}
-	if len(dev.Image.Name) > 0 {
-		dev.Image.Name, err = env.ExpandEnvIfNotEmpty(dev.Image.Name)
+	if dev.Image != "" {
+		dev.Image, err = env.ExpandEnvIfNotEmpty(dev.Image)
 		if err != nil {
 			return err
 		}
 	}
-	if dev.Image.Name == "" {
+	if dev.Image == "" {
 		dev.EmptyImage = true
 	}
 	return nil
@@ -372,10 +359,6 @@ func (dev *Dev) SetDefaults() error {
 			return dev.Forward[i].Less(&dev.Forward[j])
 		})
 	}
-	if dev.Image == nil {
-		dev.Image = &build.Info{}
-	}
-	dev.Image.SetBuildDefaults()
 
 	if err := dev.setTimeout(); err != nil {
 		return err
@@ -565,10 +548,6 @@ func (dev *Dev) expandEnvFiles() error {
 func (dev *Dev) Validate() error {
 	if dev.Name == "" {
 		return fmt.Errorf("name cannot be empty")
-	}
-
-	if dev.Image == nil {
-		dev.Image = &build.Info{}
 	}
 
 	if dev.Replicas != nil {
@@ -850,7 +829,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 	}
 
 	if !dev.EmptyImage {
-		rule.Image = dev.Image.Name
+		rule.Image = dev.Image
 	}
 
 	if rule.Healthchecks {

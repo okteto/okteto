@@ -61,60 +61,63 @@ func Test_translateWithVolumes(t *testing.T) {
 	var runAsUser int64 = 100
 	var runAsGroup int64 = 101
 	var fsGroup int64 = 102
-	manifest := []byte(fmt.Sprintf(`name: web
-container: dev
-image: web:latest
-annotations:
-  key1: value1
-command: ["./run_web.sh"]
-metadata:
-  labels:
-    app: web
-workdir: /app
-securityContext:
-  runAsUser: 100
-  runAsGroup: 101
-  fsGroup: 102
-serviceAccount: sa
-sync:
-  - .:/app
-  - sub:/path
-volumes:
-  - /go/pkg/
-  - /root/.cache/go-build
-tolerations:
-  - key: nvidia/gpu
-    operator: Exists
-nodeSelector:
-  disktype: ssd
-affinity:
-  podAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-    - labelSelector:
-        matchExpressions:
-        - key: role
-          operator: In
-          values:
-          - web-server
-      topologyKey: kubernetes.io/hostname
-secrets:
-  - %s:/remote
-resources:
-  limits:
-    cpu: 2
-    memory: 1Gi
-    amd.com/gpu: 1
-    sgx.intel.com/epc: 1
-    squat.ai/fuse: 1
-services:
-  - name: worker
+	manifest := []byte(fmt.Sprintf(`
+dev:
+  web:
+    namespace: n
     container: dev
-    image: worker:latest
-    command: ["./run_worker.sh"]
+    image: web:latest
     annotations:
-      key2: value2
+      key1: value1
+    command: ["./run_web.sh"]
+    metadata:
+      labels:
+        app: web
+    workdir: /app
+    securityContext:
+      runAsUser: 100
+      runAsGroup: 101
+      fsGroup: 102
+    serviceAccount: sa
     sync:
-       - worker:/src`, file.Name()))
+      - .:/app
+      - sub:/path
+    volumes:
+      - /go/pkg/
+      - /root/.cache/go-build
+    tolerations:
+      - key: nvidia/gpu
+        operator: Exists
+    nodeSelector:
+      disktype: ssd
+    affinity:
+      podAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+                - key: role
+                  operator: In
+                  values:
+                    - web-server
+            topologyKey: kubernetes.io/hostname
+    secrets:
+      - %s:/remote
+    resources:
+      limits:
+        cpu: 2
+        memory: 1Gi
+        amd.com/gpu: 1
+        sgx.intel.com/epc: 1
+        squat.ai/fuse: 1
+    services:
+      - name: worker
+        container: dev
+        image: worker:latest
+        command: ["./run_worker.sh"]
+        annotations:
+          key2: value2
+        sync:
+          - worker:/src`, file.Name()))
 
 	manifest1, err := model.Read(manifest)
 	require.NoError(t, err)
@@ -629,60 +632,62 @@ func Test_translateServiceWithZeroDeploymentReplicas(t *testing.T) {
 	file, err := os.CreateTemp("", "okteto-secret-test")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
-	manifest := []byte(fmt.Sprintf(`name: web
-namespace: n
-container: dev
-image: web:latest
-annotations:
-  key1: value1
-command: ["./run_web.sh"]
-metadata:
-  labels:
-    app: web
-workdir: /app
-securityContext:
-  runAsUser: 100
-  runAsGroup: 101
-  fsGroup: 102
-serviceAccount: sa
-sync:
-  - .:/app
-  - sub:/path
-volumes:
-  - /go/pkg/
-  - /root/.cache/go-build
-tolerations:
-  - key: nvidia/gpu
-    operator: Exists
-nodeSelector:
-  disktype: ssd
-affinity:
-  podAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-    - labelSelector:
-        matchExpressions:
-        - key: role
-          operator: In
-          values:
-          - web-server
-      topologyKey: kubernetes.io/hostname
-secrets:
-  - %s:/remote
-resources:
-  limits:
-    cpu: 2
-    memory: 1Gi
-    nvidia.com/gpu: 1
-    amd.com/gpu: 1
-services:
-  - name: worker
-    container: dev
-    image: worker:latest
-    command: ["./run_worker.sh"]
-    annotations:
-      key2: value2
-    sync:
-       - worker:/src`, file.Name()))
+	manifest := []byte(fmt.Sprintf(`
+dev:
+    web:
+        namespace: n
+        container: dev
+        image: web:latest
+        annotations:
+          key1: value1
+        command: ["./run_web.sh"]
+        metadata:
+          labels:
+            app: web
+        workdir: /app
+        securityContext:
+          runAsUser: 100
+          runAsGroup: 101
+          fsGroup: 102
+        serviceAccount: sa
+        sync:
+          - .:/app
+          - sub:/path
+        volumes:
+          - /go/pkg/
+          - /root/.cache/go-build
+        tolerations:
+          - key: nvidia/gpu
+            operator: Exists
+        nodeSelector:
+          disktype: ssd
+        affinity:
+          podAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                - key: role
+                  operator: In
+                  values:
+                  - web-server
+              topologyKey: kubernetes.io/hostname
+        secrets:
+          - %s:/remote
+        resources:
+          limits:
+            cpu: 2
+            memory: 1Gi
+            nvidia.com/gpu: 1
+            amd.com/gpu: 1
+        services:
+          - name: worker
+            container: dev
+            image: worker:latest
+            command: ["./run_worker.sh"]
+            annotations:
+              key2: value2
+            sync:
+               - worker:/src`, file.Name()))
 
 	manifest1, err := model.Read(manifest)
 	require.NoError(t, err)
@@ -746,61 +751,63 @@ func Test_translateServiceWithReplicasSpecifiedInServiceManifest(t *testing.T) {
 	file, err := os.CreateTemp("", "okteto-secret-test")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
-	manifest := []byte(fmt.Sprintf(`name: web
-namespace: n
-container: dev
-image: web:latest
-annotations:
-  key1: value1
-command: ["./run_web.sh"]
-metadata:
-  labels:
-    app: web
-workdir: /app
-securityContext:
-  runAsUser: 100
-  runAsGroup: 101
-  fsGroup: 102
-serviceAccount: sa
-sync:
-  - .:/app
-  - sub:/path
-volumes:
-  - /go/pkg/
-  - /root/.cache/go-build
-tolerations:
-  - key: nvidia/gpu
-    operator: Exists
-nodeSelector:
-  disktype: ssd
-affinity:
-  podAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-    - labelSelector:
-        matchExpressions:
-        - key: role
-          operator: In
-          values:
-          - web-server
-      topologyKey: kubernetes.io/hostname
-secrets:
-  - %s:/remote
-resources:
-  limits:
-    cpu: 2
-    memory: 1Gi
-    nvidia.com/gpu: 1
-    amd.com/gpu: 1
-services:
-  - name: worker
-    replicas: 5
-    container: dev
-    image: worker:latest
-    command: ["./run_worker.sh"]
-    annotations:
-      key2: value2
-    sync:
-       - worker:/src`, file.Name()))
+	manifest := []byte(fmt.Sprintf(`
+dev:
+    web:
+        namespace: n
+        container: dev
+        image: web:latest
+        annotations:
+          key1: value1
+        command: ["./run_web.sh"]
+        metadata:
+          labels:
+            app: web
+        workdir: /app
+        securityContext:
+          runAsUser: 100
+          runAsGroup: 101
+          fsGroup: 102
+        serviceAccount: sa
+        sync:
+          - .:/app
+          - sub:/path
+        volumes:
+          - /go/pkg/
+          - /root/.cache/go-build
+        tolerations:
+          - key: nvidia/gpu
+            operator: Exists
+        nodeSelector:
+          disktype: ssd
+        affinity:
+          podAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                - key: role
+                  operator: In
+                  values:
+                  - web-server
+              topologyKey: kubernetes.io/hostname
+        secrets:
+          - %s:/remote
+        resources:
+          limits:
+            cpu: 2
+            memory: 1Gi
+            nvidia.com/gpu: 1
+            amd.com/gpu: 1
+        services:
+          - name: worker
+            replicas: 5
+            container: dev
+            image: worker:latest
+            command: ["./run_worker.sh"]
+            annotations:
+              key2: value2
+            sync:
+               - worker:/src`, file.Name()))
 
 	manifest1, err := model.Read(manifest)
 	require.NoError(t, err)
@@ -861,13 +868,14 @@ services:
 }
 
 func Test_translateWithoutVolumes(t *testing.T) {
-	manifestBytes := []byte(`name: web
-namespace: n
-image: web:latest
-sync:
-  - .:/okteto
-persistentVolume:
-  enabled: false`)
+	manifestBytes := []byte(`dev:
+    web:
+        namespace: n
+        image: web:latest
+        sync:
+          - .:/okteto
+        persistentVolume:
+          enabled: false`)
 
 	manifest, err := model.Read(manifestBytes)
 	require.NoError(t, err)
@@ -1401,18 +1409,19 @@ func TestTranslateOktetoVolumes(t *testing.T) {
 }
 
 func Test_translateMultipleEnvVars(t *testing.T) {
-	manifestBytes := []byte(`name: web
-namespace: n
-image: web:latest
-sync:
-  - .:/app
-environment:
-  key2: value2
-  key1: value1
-  key4: value4
-  key5: value5
-  key3: value3
-`)
+	manifestBytes := []byte(`dev:
+    web:
+        namespace: n
+        image: web:latest
+        sync:
+          - .:/app
+        environment:
+          key2: value2
+          key1: value1
+          key4: value4
+          key5: value5
+          key3: value3
+        `)
 
 	manifest, err := model.Read(manifestBytes)
 	require.NoError(t, err)
@@ -1482,57 +1491,58 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	var runAsUser int64 = 100
 	var runAsGroup int64 = 101
 	var fsGroup int64 = 102
-	manifestBytes := []byte(fmt.Sprintf(`name: web
-namespace: n
-container: dev
-image: web:latest
-command: ["./run_web.sh"]
-workdir: /app
-annotations:
-  key1: value1
-tolerations:
-- key: nvidia/gpu
-  operator: Exists
-securityContext:
-  runAsUser: 100
-  runAsGroup: 101
-  fsGroup: 102
-serviceAccount: sa
-sync:
-  - .:/app
-  - sub:/path
-volumes:
-  - /go/pkg/
-  - /root/.cache/go-build
-nodeSelector:
-  disktype: ssd
-affinity:
-  podAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-    - labelSelector:
-        matchExpressions:
-        - key: role
-          operator: In
-          values:
-          - web-server
-      topologyKey: kubernetes.io/hostname
-secrets:
-  - %s:/remote
-resources:
-  limits:
-    cpu: 2
-    memory: 1Gi
-    amd.com/gpu: 1
-    sgx.intel.com/epc: 1
-    squat.ai/fuse: 1
-services:
-  - name: worker
-    image: worker:latest
-    annotations:
-      key2: value2
-    command: ["./run_worker.sh"]
-    sync:
-       - worker:/src`, file.Name()))
+	manifestBytes := []byte(fmt.Sprintf(`dev:
+    web:
+        namespace: n
+        container: dev
+        image: web:latest
+        command: ["./run_web.sh"]
+        workdir: /app
+        annotations:
+          key1: value1
+        tolerations:
+        - key: nvidia/gpu
+          operator: Exists
+        securityContext:
+          runAsUser: 100
+          runAsGroup: 101
+          fsGroup: 102
+        serviceAccount: sa
+        sync:
+          - .:/app
+          - sub:/path
+        volumes:
+          - /go/pkg/
+          - /root/.cache/go-build
+        nodeSelector:
+          disktype: ssd
+        affinity:
+          podAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                - key: role
+                  operator: In
+                  values:
+                  - web-server
+              topologyKey: kubernetes.io/hostname
+        secrets:
+          - %s:/remote
+        resources:
+          limits:
+            cpu: 2
+            memory: 1Gi
+            amd.com/gpu: 1
+            sgx.intel.com/epc: 1
+            squat.ai/fuse: 1
+        services:
+          - name: worker
+            image: worker:latest
+            annotations:
+              key2: value2
+            command: ["./run_worker.sh"]
+            sync:
+               - worker:/src`, file.Name()))
 
 	manifest, err := model.Read(manifestBytes)
 	require.NoError(t, err)

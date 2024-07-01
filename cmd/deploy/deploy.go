@@ -399,7 +399,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		Variables:  deployOptions.Variables,
 	}
 
-	if !deployOptions.Manifest.IsV2 && deployOptions.Manifest.Type == model.StackType && deployOptions.Manifest.Deploy != nil {
+	if deployOptions.Manifest.Type == model.StackType && deployOptions.Manifest.Deploy != nil {
 		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
 	}
 
@@ -699,8 +699,7 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 	hasBuildSection := false
 	isRunningOnRemoteDeployer := false
 	if manifest != nil {
-		if manifest.IsV2 &&
-			manifest.Deploy != nil {
+		if manifest.Deploy != nil {
 			isRunningOnRemoteDeployer = isRemoteDeployer(runInRemoteFlag, manifest.Deploy.Image, manifest.Deploy.Remote)
 			if manifest.Deploy.ComposeSection != nil &&
 				manifest.Deploy.ComposeSection.ComposesInfo != nil {

@@ -32,7 +32,6 @@ func Test_UpMetricsMetadata_ManifestProps(t *testing.T) {
 		{
 			name: "manifest with build section",
 			manifest: &model.Manifest{
-				IsV2: true,
 				Build: build.ManifestBuild{
 					"service": &build.Info{
 						Context: "service",
@@ -40,27 +39,23 @@ func Test_UpMetricsMetadata_ManifestProps(t *testing.T) {
 				},
 			},
 			expected: &UpMetricsMetadata{
-				isV2:            true,
 				hasBuildSection: true,
 			},
 		},
 		{
 			name: "manifest with dependencies section",
 			manifest: &model.Manifest{
-				IsV2: true,
 				Dependencies: deps.ManifestSection{
 					"service": &deps.Dependency{},
 				},
 			},
 			expected: &UpMetricsMetadata{
-				isV2:                   true,
 				hasDependenciesSection: true,
 			},
 		},
 		{
 			name: "manifest with deploy section",
 			manifest: &model.Manifest{
-				IsV2: true,
 				Deploy: &model.DeployInfo{
 					Commands: []model.DeployCommand{
 						{
@@ -71,7 +66,6 @@ func Test_UpMetricsMetadata_ManifestProps(t *testing.T) {
 				},
 			},
 			expected: &UpMetricsMetadata{
-				isV2:             true,
 				hasDeploySection: true,
 			},
 		},
@@ -259,7 +253,6 @@ func Test_UpTracker(t *testing.T) {
 					"isInteractive":                       false,
 					"isOktetoRepository":                  false,
 					"isReconnect":                         false,
-					"isV2":                                false,
 					"manifestType":                        model.Archetype(""),
 					"mode":                                "",
 					"reconnectCause":                      "",
@@ -295,7 +288,6 @@ func Test_UpTracker(t *testing.T) {
 					"isInteractive":                       false,
 					"isOktetoRepository":                  false,
 					"isReconnect":                         false,
-					"isV2":                                false,
 					"manifestType":                        model.Archetype(""),
 					"mode":                                "",
 					"reconnectCause":                      "",
@@ -313,7 +305,6 @@ func Test_UpTracker(t *testing.T) {
 		{
 			name: "command success all fields",
 			meta: UpMetricsMetadata{
-				isV2:                         true,
 				manifestType:                 model.OktetoManifestType,
 				isInteractive:                true,
 				isOktetoRepository:           true,
@@ -349,7 +340,6 @@ func Test_UpTracker(t *testing.T) {
 					"isInteractive":                       true,
 					"isOktetoRepository":                  true,
 					"isReconnect":                         false,
-					"isV2":                                true,
 					"manifestType":                        model.Archetype("manifest"),
 					"mode":                                "sync",
 					"reconnectCause":                      "",
@@ -367,7 +357,6 @@ func Test_UpTracker(t *testing.T) {
 		{
 			name: "command not success with errors",
 			meta: UpMetricsMetadata{
-				isV2:                   true,
 				manifestType:           model.OktetoManifestType,
 				isInteractive:          true,
 				isOktetoRepository:     true,
@@ -400,7 +389,6 @@ func Test_UpTracker(t *testing.T) {
 					"isInteractive":                       true,
 					"isOktetoRepository":                  true,
 					"isReconnect":                         false,
-					"isV2":                                true,
 					"manifestType":                        model.Archetype("manifest"),
 					"mode":                                "sync",
 					"reconnectCause":                      "",
@@ -418,7 +406,6 @@ func Test_UpTracker(t *testing.T) {
 		{
 			name: "command success all fields with reconnect",
 			meta: UpMetricsMetadata{
-				isV2:                   true,
 				manifestType:           model.OktetoManifestType,
 				isInteractive:          true,
 				isOktetoRepository:     true,
@@ -450,7 +437,6 @@ func Test_UpTracker(t *testing.T) {
 					"isInteractive":                       true,
 					"isOktetoRepository":                  true,
 					"isReconnect":                         true,
-					"isV2":                                true,
 					"manifestType":                        model.Archetype("manifest"),
 					"mode":                                "sync",
 					"reconnectCause":                      "unrecognised",

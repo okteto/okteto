@@ -154,7 +154,6 @@ func TestExpandStackVariables(t *testing.T) {
 			},
 		},
 		Type: model.StackType,
-		IsV2: true,
 	}
 	err = bc.Build(ctx, &types.BuildOptions{
 		Manifest: manifest,

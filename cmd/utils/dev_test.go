@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -188,7 +187,7 @@ func Test_SelectDevFromManifest(t *testing.T) {
 							},
 						},
 						SSHServerPort: 80,
-						Image:         &build.Info{},
+						Image:         "",
 					},
 					"test-2": &model.Dev{},
 				},
@@ -210,7 +209,7 @@ func Test_SelectDevFromManifest(t *testing.T) {
 					},
 				},
 				SSHServerPort: 80,
-				Image:         &build.Info{},
+				Image:         "",
 			},
 		},
 		{

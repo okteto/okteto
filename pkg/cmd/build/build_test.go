@@ -742,39 +742,6 @@ func Test_createTempFileWithExpandedEnvsAtSource(t *testing.T) {
 	}
 }
 
-func Test_translateDockerErr(t *testing.T) {
-	tests := []struct {
-		input       error
-		expectedErr error
-		name        string
-	}{
-		{
-			name:        "err is nil",
-			input:       nil,
-			expectedErr: nil,
-		},
-		{
-			name:        "err is docker error",
-			input:       fmt.Errorf("failed to dial gRPC: cannot connect to the Docker daemon"),
-			expectedErr: errDockerDaemonConnection,
-		},
-		{
-			name:        "err is not docker error",
-			input:       assert.AnError,
-			expectedErr: assert.AnError,
-		},
-	}
-
-	for _, tt := range tests {
-
-		t.Run(tt.name, func(t *testing.T) {
-			got := translateDockerErr(tt.input)
-			require.Equal(t, tt.expectedErr, got)
-		})
-
-	}
-}
-
 func Test_setOutputMode(t *testing.T) {
 	tests := []struct {
 		name                     string
