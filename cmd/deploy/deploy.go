@@ -162,6 +162,15 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 	cmd := &cobra.Command{
 		Use:   "deploy [service...]",
 		Short: "Execute the list of commands specified in the 'deploy' section of your okteto manifest",
+		Example: `# Execute okteto deploy
+$ okteto deploy
+
+# Execute okteto deploy in remote
+$ okteto deploy --remote 
+
+
+# Execute okteto deploy skipping the build
+$ okteto deploy --build=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// validate cmd options
 			if options.Dependencies && !okteto.IsOkteto() {
@@ -278,7 +287,7 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment is deployed")
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment is deployed")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
-	cmd.Flags().BoolVarP(&options.Build, "build", "", false, "force build of images when deploying the development environment")
+	cmd.Flags().BoolVarP(&options.Build, "build", "", true, "enable/disable building images. Default is true")
 	cmd.Flags().BoolVarP(&options.Dependencies, "dependencies", "", false, "deploy the dependencies from manifest")
 	cmd.Flags().BoolVarP(&options.RunWithoutBash, "no-bash", "", false, "execute commands without bash")
 	cmd.Flags().BoolVarP(&options.RunInRemote, "remote", "", false, "force run deploy commands in remote")
