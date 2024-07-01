@@ -21,7 +21,6 @@ import (
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model"
-
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
