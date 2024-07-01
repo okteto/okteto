@@ -101,9 +101,8 @@ func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Opti
 func getStackServicesToDeploy(ctx context.Context, composeSectionInfo *model.ComposeSectionInfo, c kubernetes.Interface) ([]string, error) {
 	svcs := []string{}
 
-	for service := range composeSectionInfo.Stack.Services {
-		svcs = append(svcs, service)
-
+	for _, composeInfo := range composeSectionInfo.ComposesInfo {
+		svcs = append(svcs, composeInfo.ServicesToDeploy...)
 	}
 	if len(composeSectionInfo.ComposesInfo) > 0 {
 		if err := stack.ValidateDefinedServices(composeSectionInfo.Stack, svcs); err != nil {
