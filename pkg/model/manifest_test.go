@@ -1696,8 +1696,7 @@ func TestRead(t *testing.T) {
 				Type:         OktetoManifestType,
 				Manifest: []byte(`dev:
   test:
-    image: test-image
-    context: ./test`),
+    image: test-image`),
 				Fs: afero.NewOsFs(),
 			},
 			expectedErr: false,

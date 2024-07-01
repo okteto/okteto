@@ -32,7 +32,6 @@ import (
 func TestDevToTranslationRule(t *testing.T) {
 	manifestBytes := []byte(`dev:
     web:
-        namespace: n
         container: dev
         image: web:latest
         command: ["./run_web.sh"]
@@ -72,6 +71,7 @@ func TestDevToTranslationRule(t *testing.T) {
 	}
 
 	dev := manifest.Dev["web"]
+	dev.Namespace = "n"
 
 	rule1 := dev.ToTranslationRule(dev, false)
 	rule1OK := &TranslationRule{
@@ -333,8 +333,7 @@ func TestDevToTranslationDebugEnabled(t *testing.T) {
 	defer oktetoLog.SetLevel(oktetoLog.InfoLevel)
 	manifestBytes := []byte(`dev:
     web:
-        image: dev-image
-        namespace: n
+        image: dev-image 
         sync:
           - .:/app`)
 
@@ -344,6 +343,7 @@ func TestDevToTranslationDebugEnabled(t *testing.T) {
 	}
 
 	dev := manifest.Dev["web"]
+	dev.Namespace = "n"
 
 	rule := dev.ToTranslationRule(dev, false)
 	ruleOK := &TranslationRule{
@@ -479,7 +479,6 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 			manifest: []byte(`dev:
     root-user-with-overrides:
         image: worker:latest
-        namespace: n
         securityContext:
            runAsUser: 100
            runAsGroup: 101
@@ -497,7 +496,6 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 			manifest: []byte(`dev: 
     non-root-user-without-overrides:
         image: worker:latest
-        namespace: n
         securityContext:
            runAsNonRoot: true`),
 			translated: SecurityContext{
@@ -509,7 +507,6 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 			manifest: []byte(`dev: 
     root-user-with-defaults:
         image: worker:latest
-        namespace: n
         securityContext:
            runAsNonRoot: false`),
 			translated: SecurityContext{
@@ -524,7 +521,6 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 			manifest: []byte(`dev: 
     non-root-user-with-overrides:
         image: worker:latest
-        namespace: n
         securityContext:
            runAsUser: 100
            runAsGroup: 101
@@ -541,8 +537,7 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 			name: "no-security-context",
 			manifest: []byte(`dev:
     no-security-context:
-        image: worker:latest
-        namespace: n`),
+        image: worker:latest`),
 			translated: SecurityContext{
 				RunAsUser:  pointer.Int64(0),
 				RunAsGroup: pointer.Int64(0),
@@ -554,7 +549,6 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 			manifest: []byte(`dev: 
     no-run-as-non-root:
         image: worker:latest
-        namespace: n
         securityContext:
            runAsUser: 100
            runAsGroup: 101
@@ -574,6 +568,7 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 		}
 
 		dev := manifest.Dev[test.name]
+		dev.Namespace = "n"
 
 		rule := dev.ToTranslationRule(dev, false)
 		marshalled, err := yaml.Marshal(rule.SecurityContext)

@@ -102,7 +102,7 @@ func (ch *defaultConfigMapHandler) UpdateConfigMap(ctx context.Context, cfg *api
 	return errMain
 }
 
-// updateEnvsFromCommands update config map by adding envs generated in OKTETO_ENV as data fields
+// UpdateEnvsFromCommands update config map by adding envs generated in OKTETO_ENV as data fields
 func (ch *defaultConfigMapHandler) UpdateEnvsFromCommands(ctx context.Context, name, namespace string, envs []string) error {
 	c, _, err := ch.k8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, ch.k8slogger)
 	if err != nil {
@@ -145,7 +145,7 @@ func (*deployInsideDeployConfigMapHandler) UpdateConfigMap(_ context.Context, _ 
 	return nil
 }
 
-// updateEnvs with the receiver deployInsideDeployConfigMapHandler doesn't do anything
+// UpdateEnvsFromCommands with the receiver deployInsideDeployConfigMapHandler doesn't do anything
 // because we have to  control the cfmap in the main execution. If both handled the configmap we will be
 // overwritten the cfmap and leave it in a inconsistent status
 func (*deployInsideDeployConfigMapHandler) UpdateEnvsFromCommands(_ context.Context, _ string, _ string, _ []string) error {

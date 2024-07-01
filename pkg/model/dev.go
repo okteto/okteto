@@ -439,8 +439,6 @@ func (dev *Dev) SetDefaults() error {
 		if s.Name != "" && len(s.Selector) > 0 {
 			return fmt.Errorf("'name' and 'selector' cannot be defined at the same time for service '%s'", s.Name)
 		}
-		s.Namespace = ""
-		s.Context = ""
 		s.setRunAsUserDefaults(dev)
 		s.Forward = make([]forward.Forward, 0)
 		s.Reverse = make([]Reverse, 0)

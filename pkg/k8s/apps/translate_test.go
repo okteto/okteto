@@ -26,7 +26,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
@@ -45,15 +44,6 @@ var (
 )
 
 func Test_translateWithVolumes(t *testing.T) {
-	okteto.CurrentStore = &okteto.ContextStore{
-		Contexts: map[string]*okteto.Context{
-			"example": {
-				Namespace: "unit-test",
-			},
-		},
-		CurrentContext: "example",
-	}
-
 	file, err := os.CreateTemp("", "okteto-secret-test")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
@@ -64,7 +54,6 @@ func Test_translateWithVolumes(t *testing.T) {
 	manifest := []byte(fmt.Sprintf(`
 dev:
   web:
-    namespace: n
     container: dev
     image: web:latest
     annotations:
@@ -123,6 +112,7 @@ dev:
 	require.NoError(t, err)
 
 	dev1 := manifest1.Dev["web"]
+	dev1.Namespace = "n"
 
 	d1 := deployments.Sandbox(dev1)
 	d1.UID = types.UID("deploy1")
@@ -635,7 +625,6 @@ func Test_translateServiceWithZeroDeploymentReplicas(t *testing.T) {
 	manifest := []byte(fmt.Sprintf(`
 dev:
     web:
-        namespace: n
         container: dev
         image: web:latest
         annotations:
@@ -693,6 +682,7 @@ dev:
 	require.NoError(t, err)
 
 	dev1 := manifest1.Dev["web"]
+	dev1.Namespace = "n"
 
 	dev2 := dev1.Services[0]
 	d2 := deployments.Sandbox(dev2)
@@ -754,7 +744,6 @@ func Test_translateServiceWithReplicasSpecifiedInServiceManifest(t *testing.T) {
 	manifest := []byte(fmt.Sprintf(`
 dev:
     web:
-        namespace: n
         container: dev
         image: web:latest
         annotations:
@@ -813,6 +802,7 @@ dev:
 	require.NoError(t, err)
 
 	dev1 := manifest1.Dev["web"]
+	dev1.Namespace = "n"
 
 	dev2 := dev1.Services[0]
 	d2 := deployments.Sandbox(dev2)
@@ -870,7 +860,6 @@ dev:
 func Test_translateWithoutVolumes(t *testing.T) {
 	manifestBytes := []byte(`dev:
     web:
-        namespace: n
         image: web:latest
         sync:
           - .:/okteto
@@ -880,6 +869,7 @@ func Test_translateWithoutVolumes(t *testing.T) {
 	manifest, err := model.Read(manifestBytes)
 	require.NoError(t, err)
 	dev := manifest.Dev["web"]
+	dev.Namespace = "n"
 
 	d := deployments.Sandbox(dev)
 	rule := dev.ToTranslationRule(dev, true)
@@ -1411,7 +1401,6 @@ func TestTranslateOktetoVolumes(t *testing.T) {
 func Test_translateMultipleEnvVars(t *testing.T) {
 	manifestBytes := []byte(`dev:
     web:
-        namespace: n
         image: web:latest
         sync:
           - .:/app
@@ -1426,7 +1415,7 @@ func Test_translateMultipleEnvVars(t *testing.T) {
 	manifest, err := model.Read(manifestBytes)
 	require.NoError(t, err)
 	dev := manifest.Dev["web"]
-
+	dev.Namespace = "n"
 	dev.Username = "cindy"
 
 	d := deployments.Sandbox(dev)
@@ -1493,7 +1482,6 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	var fsGroup int64 = 102
 	manifestBytes := []byte(fmt.Sprintf(`dev:
     web:
-        namespace: n
         container: dev
         image: web:latest
         command: ["./run_web.sh"]
@@ -1545,9 +1533,10 @@ func Test_translateSfsWithVolumes(t *testing.T) {
                - worker:/src`, file.Name()))
 
 	manifest, err := model.Read(manifestBytes)
+	//manifest.Dev["web"].Namespace = "n"
 	require.NoError(t, err)
 	dev1 := manifest.Dev["web"]
-
+	dev1.Namespace = "n"
 	sfs1 := statefulsets.Sandbox(dev1)
 	sfs1.UID = types.UID("sfs1")
 	delete(sfs1.Annotations, model.OktetoAutoCreateAnnotation)
