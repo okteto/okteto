@@ -50,10 +50,6 @@ var (
 	OktetoManifestType Archetype = "manifest"
 	// PipelineType represents a okteto pipeline manifest type
 	PipelineType Archetype = "pipeline"
-	// KubernetesType represents a k8s manifest type
-	KubernetesType Archetype = "kubernetes"
-	// ChartType represents a k8s manifest type
-	ChartType Archetype = "chart"
 )
 
 const (
