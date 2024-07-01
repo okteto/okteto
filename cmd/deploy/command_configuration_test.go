@@ -16,15 +16,18 @@ package deploy
 import (
 	"context"
 	"net/url"
+	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 func TestGetConfigMapFromData(t *testing.T) {
@@ -137,6 +140,89 @@ func Test_switchSSHRepoToHTTPS(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			url := switchRepoSchemaToHTTPS(tt.repo)
 			assert.Equal(t, tt.expected, url)
+		})
+	}
+}
+func Test_getStackServicesToDeploy(t *testing.T) {
+	stack := &model.Stack{
+		Name: "test-stack",
+		Services: map[string]*model.Service{
+			"service1": {},
+			"service2": {},
+			"service3": {},
+			"service4": {},
+		},
+	}
+	tests := []struct {
+		name               string
+		composeSectionInfo *model.ComposeSectionInfo
+		expected           []string
+	}{
+		{
+			name: "MultipleComposeInfo",
+			composeSectionInfo: &model.ComposeSectionInfo{
+				ComposesInfo: []model.ComposeInfo{
+					{
+						ServicesToDeploy: []string{"service1", "service2"},
+					},
+					{
+						ServicesToDeploy: []string{"service3", "service4"},
+					},
+				},
+				Stack: stack,
+			},
+			expected: []string{"service1", "service2", "service3", "service4"},
+		},
+		{
+			name: "MultipleComposeInfo",
+			composeSectionInfo: &model.ComposeSectionInfo{
+				ComposesInfo: []model.ComposeInfo{
+					{
+						ServicesToDeploy: []string{"service1", "service2"},
+					},
+					{
+						ServicesToDeploy: []string{"nonexistent", "service4"},
+					},
+				},
+				Stack: stack,
+			},
+			expected: []string{},
+		},
+		{
+			name: "SingleComposeInfo",
+			composeSectionInfo: &model.ComposeSectionInfo{
+				ComposesInfo: []model.ComposeInfo{
+					{
+						ServicesToDeploy: []string{"service1", "service2", "service3"},
+					},
+				},
+				Stack: stack,
+			},
+			expected: []string{"service1", "service2", "service3"},
+		},
+		{
+			name: "EmptyComposeInfo",
+			composeSectionInfo: &model.ComposeSectionInfo{
+				ComposesInfo: []model.ComposeInfo{},
+				Stack:        stack,
+			},
+			expected: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			c := fake.NewSimpleClientset()
+
+			svcs, err := getStackServicesToDeploy(ctx, tt.composeSectionInfo, c)
+			if err != nil {
+				t.Fatalf("failed to get stack services to deploy: %s", err)
+			}
+
+			if !reflect.DeepEqual(svcs, tt.expected) {
+				t.Errorf("got stack services to deploy %v, expected %v", svcs, tt.expected)
+			}
 		})
 	}
 }
