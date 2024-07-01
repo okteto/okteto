@@ -27,6 +27,7 @@ import (
 
 	"github.com/mitchellh/go-ps"
 	"github.com/moby/term"
+	oargs "github.com/okteto/okteto/cmd/args"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
@@ -77,32 +78,32 @@ type Options struct {
 	ManifestPathFlag string
 	// ManifestPath is the path to the manifest used though the command execution.
 	// This might change its value during execution
-	ManifestPath     string
-	Namespace        string
-	K8sContext       string
-	DevName          string
-	Envs             []string
-	commandToExecute []string
-	Remote           int
-	Deploy           bool
-	ForcePull        bool
-	Reset            bool
+	ManifestPath string
+	Namespace    string
+	K8sContext   string
+	DevName      string
+	Envs         []string
+	Remote       int
+	Deploy       bool
+	ForcePull    bool
+	Reset        bool
 }
 
 // Up starts a development container
 func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
 	upOptions := &Options{}
 	cmd := &cobra.Command{
-		Use:   "up [service]",
+		Use:   "up service [flags] -- COMMAND [args...]",
 		Short: "Deploy your development environment",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#up"),
+		Example: `  # okteto up deploying the development environment defined in the okteto manifest
+okteto up my-svc --deploy -- echo this is a test
+
+# okteto up replacing the command defined in the okteto manifest
+okteto up my-svc -- echo this is a test
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
 				return oktetoErrors.ErrNotInDevContainer
-			}
-
-			if err := upOptions.AddArgs(cmd, args); err != nil {
-				return err
 			}
 
 			u := utils.UpgradeAvailable()
@@ -246,19 +247,20 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 				oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy' or 'okteto up --deploy'", up.Manifest.Name)
 			}
 
-			dev, err := utils.GetDevFromManifest(oktetoManifest, upOptions.DevName)
+			devCommandParser := oargs.NewDevCommandArgParser(oargs.NewManifestDevLister(), ioCtrl, false)
+
+			argsparserResult, err := devCommandParser.Parse(ctx, args, cmd.ArgsLenAtDash(), oktetoManifest.Dev, okteto.GetContext().Namespace)
 			if err != nil {
-				if !errors.Is(err, utils.ErrNoDevSelected) {
-					return err
-				}
-				selector := utils.NewOktetoSelector("Select which development container to activate:", "Development container")
-				dev, err = utils.SelectDevFromManifest(oktetoManifest, selector, oktetoManifest.Dev.GetDevs())
-				if err != nil {
-					return err
-				}
+				return err
 			}
-			if len(upOptions.commandToExecute) > 0 {
-				dev.Command.Values = upOptions.commandToExecute
+
+			dev, err := utils.GetDevFromManifest(oktetoManifest, argsparserResult.DevName)
+			if err != nil {
+				return err
+			}
+
+			if len(argsparserResult.Command) > 0 {
+				dev.Command.Values = argsparserResult.Command
 			}
 
 			if err := dev.PreparePathsAndExpandEnvFiles(oktetoManifest.ManifestPath, up.Fs); err != nil {
@@ -358,29 +360,7 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 		oktetoLog.Infof("failed to mark 'pull' flag as hidden: %s", err)
 	}
 	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "reset the file synchronization database")
-	cmd.Flags().StringArrayVarP(&upOptions.commandToExecute, "command", "", []string{}, "external commands to be supplied to 'okteto up'")
 	return cmd
-}
-
-// AddArgs sets the args as options and return err if it's not compatible
-func (o *Options) AddArgs(cmd *cobra.Command, args []string) error {
-
-	maxV1Args := 1
-	docsURL := "https://okteto.com/docs/reference/okteto-cli/#up"
-	if len(args) > maxV1Args {
-		if err := cmd.Help(); err != nil {
-			oktetoLog.Infof("could not show help: %s", err)
-		}
-
-		return oktetoErrors.UserError{
-			E:    fmt.Errorf("%q accepts at most %d arg(s), but received %d", cmd.CommandPath(), maxV1Args, len(args)),
-			Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
-		}
-	} else if len(args) == 1 {
-		o.DevName = args[0]
-	}
-
-	return nil
 }
 
 func loadManifestOverrides(dev *model.Dev, upOptions *Options) error {
