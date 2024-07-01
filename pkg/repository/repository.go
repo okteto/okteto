@@ -16,11 +16,9 @@ package repository
 import (
 	"context"
 	"net/url"
-	"os"
 	"strings"
 
 	giturls "github.com/chainguard-dev/git-urls"
-	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
@@ -75,11 +73,6 @@ func newGitURL(path string) repositoryURL {
 // NewRepository creates a repository controller
 func NewRepository(path string) Repository {
 	var controller repositoryInterface = newGitRepoController(path)
-	// check if we are inside a remote deploy
-	if v := os.Getenv(constants.OktetoDeployRemote); v != "" {
-		sha := os.Getenv(constants.OktetoGitCommitEnvVar)
-		controller = newOktetoRemoteRepoController(sha, path)
-	}
 	repoURL, err := controller.getRepoURL()
 	if err != nil {
 		oktetoLog.Infof("could not get repo url: %s", err)
