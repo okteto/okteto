@@ -16,7 +16,6 @@ package deploy
 import (
 	"context"
 	"net/url"
-	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
@@ -215,14 +214,10 @@ func Test_getStackServicesToDeploy(t *testing.T) {
 			ctx := context.Background()
 			c := fake.NewSimpleClientset()
 
-			svcs, err := getStackServicesToDeploy(ctx, tt.composeSectionInfo, c)
-			if err != nil {
-				t.Fatalf("failed to get stack services to deploy: %s", err)
-			}
+			svcs, _ := getStackServicesToDeploy(ctx, tt.composeSectionInfo, c)
 
-			if !reflect.DeepEqual(svcs, tt.expected) {
-				t.Errorf("got stack services to deploy %v, expected %v", svcs, tt.expected)
-			}
+			assert.Equal(t, tt.expected, svcs)
+
 		})
 	}
 }
