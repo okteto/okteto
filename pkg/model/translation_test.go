@@ -230,7 +230,6 @@ func TestDevToTranslationRule(t *testing.T) {
 func TestDevToTranslationRuleInitContainer(t *testing.T) {
 	manifestBytes := []byte(`dev:
     web:
-        namespace: n
         sync:
           - .:/app
         initContainer:
@@ -249,6 +248,7 @@ func TestDevToTranslationRuleInitContainer(t *testing.T) {
 	}
 
 	dev := manifest.Dev["web"]
+	dev.Namespace = "n"
 
 	rule := dev.ToTranslationRule(dev, false)
 	ruleOK := &TranslationRule{

@@ -33,7 +33,6 @@ type Dependency struct {
 	Repository   string          `json:"repository" yaml:"repository"`
 	ManifestPath string          `json:"manifest,omitempty" yaml:"manifest,omitempty"`
 	Branch       string          `json:"branch,omitempty" yaml:"branch,omitempty"`
-	Namespace    string          `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Variables    env.Environment `json:"variables,omitempty" yaml:"variables,omitempty"`
 	Timeout      time.Duration   `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	Wait         bool            `json:"wait,omitempty" yaml:"wait,omitempty"`
@@ -73,14 +72,6 @@ func (d *Dependency) ExpandVars(variables []string) error {
 	}
 	if expandedManifestPath != "" {
 		d.ManifestPath = expandedManifestPath
-	}
-
-	expandedNamespace, err := parser.Parse(d.Namespace)
-	if err != nil {
-		return fmt.Errorf("error expanding 'namespace': %w", err)
-	}
-	if expandedNamespace != "" {
-		d.Namespace = expandedNamespace
 	}
 
 	expandedVariables := env.Environment{}

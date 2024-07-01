@@ -72,15 +72,9 @@ var fakeManifestWithDivert = &model.Manifest{
 var fakeManifestWithDependencies = &model.Manifest{
 	Name: "test-app",
 	Dependencies: map[string]*deps.Dependency{
-		"dep1": {
-			Namespace: "test-namespace",
-		},
-		"dep2": {
-			Namespace: "test-namespace",
-		},
-		"dep3": {
-			Namespace: "another-test-namespace",
-		},
+		"dep1": {},
+		"dep2": {},
+		"dep3": {},
 	},
 }
 
@@ -713,6 +707,15 @@ func TestDestroyDependenciesWithErrorDeletingDep(t *testing.T) {
 }
 
 func TestDestroyDependenciesWithoutError(t *testing.T) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"example": {
+				Namespace: "test-namespace",
+			},
+		},
+		CurrentContext: "example",
+	}
+
 	pipDestroyer := &fakePipelineDestroyer{}
 	expectedOpts1 := &pipelineCMD.DestroyOptions{
 		Name:      "dep1",
@@ -724,7 +727,7 @@ func TestDestroyDependenciesWithoutError(t *testing.T) {
 	}
 	expectedOpts3 := &pipelineCMD.DestroyOptions{
 		Name:      "dep3",
-		Namespace: "another-test-namespace",
+		Namespace: "test-namespace",
 	}
 	pipDestroyer.On("ExecuteDestroyPipeline", mock.Anything, expectedOpts1).Return(nil)
 	pipDestroyer.On("ExecuteDestroyPipeline", mock.Anything, expectedOpts2).Return(nil)
