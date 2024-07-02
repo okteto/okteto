@@ -623,8 +623,7 @@ func Test_divertIngresses(t *testing.T) {
 	}
 	c := fake.NewSimpleClientset(i1, i2, di1, di2, di3, s1, s2, ds1, ds2, ds3, e1, e2)
 	m := &model.Manifest{
-		Name:      "test",
-		Namespace: "cindy",
+		Name: "test",
 		Deploy: &model.DeployInfo{
 			Divert: &model.DivertDeploy{
 				Namespace: "staging",
@@ -632,7 +631,7 @@ func Test_divertIngresses(t *testing.T) {
 		},
 	}
 
-	d := &Driver{client: c, name: m.Name, namespace: m.Namespace, divert: *m.Deploy.Divert}
+	d := &Driver{client: c, name: m.Name, namespace: "cindy", divert: *m.Deploy.Divert}
 	err := d.Deploy(ctx)
 	assert.NoError(t, err)
 

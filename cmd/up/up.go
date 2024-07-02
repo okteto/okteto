@@ -122,6 +122,15 @@ okteto up my-svc -- echo this is a test
 
 			ctx := context.Background()
 
+			ctxOpts := &contextCMD.Options{
+				Show:      true,
+				Context:   upOptions.K8sContext,
+				Namespace: upOptions.Namespace,
+			}
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+				return err
+			}
+
 			upMeta := analytics.NewUpMetricsMetadata()
 
 			// when cmd up finishes, send the event
@@ -149,8 +158,7 @@ okteto up my-svc -- echo this is a test
 				}
 				upOptions.ManifestPath = uptManifestPath
 			}
-			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.ManifestPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
-			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs())
+			oktetoManifest, err := model.GetManifestV2(upOptions.ManifestPath, afero.NewOsFs())
 			if err != nil {
 				if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 					return err
@@ -236,14 +244,14 @@ okteto up my-svc -- echo this is a test
 				return fmt.Errorf("failed to load k8s client: %w", err)
 			}
 
-			if upOptions.Deploy || !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, k8sClient) {
+			if upOptions.Deploy || !pipeline.IsDeployed(ctx, up.Manifest.Name, okteto.GetContext().Namespace, k8sClient) {
 				err := up.deployApp(ctx, ioCtrl, k8sLogger)
 
 				// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
 				if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands) {
 					return err
 				}
-			} else if !upOptions.Deploy && pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, k8sClient) {
+			} else if !upOptions.Deploy && pipeline.IsDeployed(ctx, up.Manifest.Name, okteto.GetContext().Namespace, k8sClient) {
 				oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy' or 'okteto up --deploy'", up.Manifest.Name)
 			}
 
@@ -473,6 +481,7 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 	startTime := time.Now()
 	err = c.Run(ctx, &deploy.Options{
 		Name:             up.Manifest.Name,
+		Namespace:        okteto.GetContext().Namespace,
 		ManifestPathFlag: up.Options.ManifestPathFlag,
 		ManifestPath:     up.Options.ManifestPath,
 		Timeout:          5 * time.Minute,

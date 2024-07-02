@@ -30,7 +30,7 @@ import (
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 )
@@ -1214,7 +1214,6 @@ func TestManifestUnmarshalling(t *testing.T) {
 		// 				},
 		// 				Fs: afero.NewOsFs(),
 		// 			},
-
 		// 			isErrorExpected: false,
 		// 		},
 		{

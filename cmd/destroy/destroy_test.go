@@ -41,8 +41,7 @@ import (
 )
 
 var fakeManifest = &model.Manifest{
-	Name:      "test-app",
-	Namespace: "namespace",
+	Name: "test-app",
 	Destroy: &model.DestroyInfo{
 		Commands: []model.DeployCommand{
 			{
@@ -71,18 +70,11 @@ var fakeManifestWithDivert = &model.Manifest{
 }
 
 var fakeManifestWithDependencies = &model.Manifest{
-	Name:      "test-app",
-	Namespace: "namespace",
+	Name: "test-app",
 	Dependencies: map[string]*deps.Dependency{
-		"dep1": {
-			Namespace: "test-namespace",
-		},
-		"dep2": {
-			Namespace: "test-namespace",
-		},
-		"dep3": {
-			Namespace: "another-test-namespace",
-		},
+		"dep1": {},
+		"dep2": {},
+		"dep3": {},
 	},
 }
 
@@ -715,6 +707,15 @@ func TestDestroyDependenciesWithErrorDeletingDep(t *testing.T) {
 }
 
 func TestDestroyDependenciesWithoutError(t *testing.T) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"example": {
+				Namespace: "test-namespace",
+			},
+		},
+		CurrentContext: "example",
+	}
+
 	pipDestroyer := &fakePipelineDestroyer{}
 	expectedOpts1 := &pipelineCMD.DestroyOptions{
 		Name:      "dep1",
@@ -726,7 +727,7 @@ func TestDestroyDependenciesWithoutError(t *testing.T) {
 	}
 	expectedOpts3 := &pipelineCMD.DestroyOptions{
 		Name:      "dep3",
-		Namespace: "another-test-namespace",
+		Namespace: "test-namespace",
 	}
 	pipDestroyer.On("ExecuteDestroyPipeline", mock.Anything, expectedOpts1).Return(nil)
 	pipDestroyer.On("ExecuteDestroyPipeline", mock.Anything, expectedOpts2).Return(nil)
@@ -962,9 +963,10 @@ func TestDestroyHelmReleasesIfPresentWithErrorExecutingCommandWithForceDestroy(t
 
 func TestHasDivert(t *testing.T) {
 	tests := []struct {
-		manifest *model.Manifest
-		name     string
-		expected bool
+		manifest  *model.Manifest
+		name      string
+		namespace string
+		expected  bool
 	}{
 		{
 			name:     "NoDeploySection",
@@ -981,9 +983,9 @@ func TestHasDivert(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "WithDivertAndDifferentNamespaces",
+			name:      "WithDivertAndDifferentNamespaces",
+			namespace: "manifest-namespace",
 			manifest: &model.Manifest{
-				Namespace: "manifest-namespace",
 				Deploy: &model.DeployInfo{
 					Divert: &model.DivertDeploy{
 						Namespace: "test-namespace",
@@ -993,9 +995,9 @@ func TestHasDivert(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "WithDivertAndSameNamespace",
+			name:      "WithDivertAndSameNamespace",
+			namespace: "test-namespace",
 			manifest: &model.Manifest{
-				Namespace: "test-namespace",
 				Deploy: &model.DeployInfo{
 					Divert: &model.DivertDeploy{
 						Namespace: "test-namespace",
@@ -1008,7 +1010,7 @@ func TestHasDivert(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, hasDivert(tt.manifest))
+			assert.Equal(t, tt.expected, hasDivert(tt.manifest, tt.namespace))
 		})
 	}
 }

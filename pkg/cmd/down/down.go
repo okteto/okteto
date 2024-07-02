@@ -52,7 +52,7 @@ func New(fs afero.Fs, k8sClientProvider okteto.K8sClientProvider, at analyticsTr
 	}
 }
 
-func (d *Operation) Down(ctx context.Context, dev *model.Dev, rm bool) error {
+func (d *Operation) Down(ctx context.Context, dev *model.Dev, namespace string, rm bool) error {
 	oktetoLog.Spinner(fmt.Sprintf("Deactivating '%s' development container...", dev.Name))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -67,7 +67,7 @@ func (d *Operation) Down(ctx context.Context, dev *model.Dev, rm bool) error {
 	exit := make(chan error, 1)
 
 	go func() {
-		app, _, err := utils.GetApp(ctx, dev, k8sClient, false)
+		app, _, err := utils.GetApp(ctx, dev, namespace, k8sClient, false)
 		if err != nil {
 			if !oktetoErrors.IsNotFound(err) {
 				exit <- err
@@ -133,7 +133,7 @@ func removeVolume(ctx context.Context, dev *model.Dev, c kubernetes.Interface) e
 	return volumes.Destroy(ctx, dev.GetVolumeName(), dev.Namespace, c, dev.Timeout.Default)
 }
 
-func (d *Operation) AllDown(ctx context.Context, manifest *model.Manifest, rm bool) error {
+func (d *Operation) AllDown(ctx context.Context, manifest *model.Manifest, namespace string, rm bool) error {
 	oktetoLog.Spinner("Deactivating your development containers...")
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -148,14 +148,14 @@ func (d *Operation) AllDown(ctx context.Context, manifest *model.Manifest, rm bo
 	}
 
 	for _, dev := range manifest.Dev {
-		app, _, err := utils.GetApp(ctx, dev, k8sClient, false)
+		app, _, err := utils.GetApp(ctx, dev, namespace, k8sClient, false)
 		if err != nil {
 			return err
 		}
 
 		if apps.IsDevModeOn(app) {
 			oktetoLog.StopSpinner()
-			if err := d.Down(ctx, dev, rm); err != nil {
+			if err := d.Down(ctx, dev, namespace, rm); err != nil {
 				d.AnalyticsTracker.TrackDown(false)
 				return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
 			}

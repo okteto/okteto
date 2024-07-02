@@ -33,9 +33,9 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/spf13/afero"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
-	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
 )
 
@@ -69,8 +69,8 @@ type Dev struct {
 	Name                 string                `json:"name,omitempty" yaml:"name,omitempty"`
 	Username             string                `json:"-" yaml:"-"`
 	RegistryURL          string                `json:"-" yaml:"-"`
-	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
-	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context              string                `json:"-" yaml:"-"`
+	Namespace            string                `json:"-" yaml:"-"`
 	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
 	ServiceAccount       string                `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
 	parentSyncFolder     string
@@ -303,12 +303,6 @@ func (dev *Dev) expandEnvVars() error {
 	if err := dev.loadName(); err != nil {
 		return err
 	}
-	if err := dev.loadNamespace(); err != nil {
-		return err
-	}
-	if err := dev.loadContext(); err != nil {
-		return err
-	}
 	if err := dev.loadSelector(); err != nil {
 		return err
 	}
@@ -320,28 +314,6 @@ func (dev *Dev) loadName() error {
 	var err error
 	if len(dev.Name) > 0 {
 		dev.Name, err = env.ExpandEnv(dev.Name)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (dev *Dev) loadNamespace() error {
-	var err error
-	if len(dev.Namespace) > 0 {
-		dev.Namespace, err = env.ExpandEnv(dev.Namespace)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (dev *Dev) loadContext() error {
-	var err error
-	if len(dev.Context) > 0 {
-		dev.Context, err = env.ExpandEnv(dev.Context)
 		if err != nil {
 			return err
 		}
@@ -467,8 +439,6 @@ func (dev *Dev) SetDefaults() error {
 		if s.Name != "" && len(s.Selector) > 0 {
 			return fmt.Errorf("'name' and 'selector' cannot be defined at the same time for service '%s'", s.Name)
 		}
-		s.Namespace = ""
-		s.Context = ""
 		s.setRunAsUserDefaults(dev)
 		s.Forward = make([]forward.Forward, 0)
 		s.Reverse = make([]Reverse, 0)
@@ -1065,7 +1035,7 @@ func (s *Secret) GetFileName() string {
 
 // GetTimeout returns the timeout override
 func GetTimeout() (time.Duration, error) {
-	defaultTimeout := (60 * time.Second)
+	defaultTimeout := 60 * time.Second
 
 	t := os.Getenv(OktetoTimeoutEnvVar)
 	if t == "" {

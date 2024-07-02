@@ -30,7 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 func mockPipeline(fakeName string, fakeLabels []string) *apiv1.ConfigMap {
@@ -99,42 +98,6 @@ func TestPipelineListCommandHandler_InitOktetoContextFail(t *testing.T) {
 	err := pipelineListCommandHandler(ctx, &listFlags{}, initOkCtx)
 
 	assert.ErrorIs(t, err, assert.AnError)
-}
-
-func TestPipelineListCommandHandler_DefaultNamespace(t *testing.T) {
-	ctx := context.Background()
-
-	flags := &listFlags{
-		namespace: "",
-	}
-
-	initOkCtx := func(ctx context.Context, flags *contextCMD.Options) error {
-		return nil
-	}
-	okteto.CurrentStore = &okteto.ContextStore{
-		Contexts: map[string]*okteto.Context{
-			"test": {
-				Namespace: "test",
-				IsOkteto:  true,
-				Name:      "test",
-				Token:     "test-token",
-				Cfg: &api.Config{
-					CurrentContext: "test",
-					Contexts: map[string]*api.Context{
-						"test": {
-							Namespace: "test",
-						},
-					},
-				},
-			},
-		},
-		CurrentContext: "test",
-	}
-
-	_ = pipelineListCommandHandler(ctx, flags, initOkCtx)
-
-	assert.Equal(t, flags.namespace, "test")
-
 }
 
 func TestExecuteListPipelines(t *testing.T) {
@@ -443,7 +406,7 @@ dev4  dev4-status  https://dev4-repository  dev4-branch  -
 			// Redirect the log output to a buffer for our test
 			var buf bytes.Buffer
 
-			err := executeListPipelines(context.Background(), tt.input.flags, tt.input.listPipelines, tt.input.getPipelineListOutput, tt.input.c, &buf)
+			err := executeListPipelines(context.Background(), tt.input.flags, tt.input.flags.namespace, tt.input.listPipelines, tt.input.getPipelineListOutput, tt.input.c, &buf)
 
 			if tt.expectedError == nil {
 				assert.NoError(t, err)

@@ -28,10 +28,10 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
@@ -54,7 +54,6 @@ func Test_translateWithVolumes(t *testing.T) {
 	manifest := []byte(fmt.Sprintf(`
 dev:
   web:
-    namespace: n
     container: dev
     image: web:latest
     annotations:
@@ -113,6 +112,7 @@ dev:
 	require.NoError(t, err)
 
 	dev1 := manifest1.Dev["web"]
+	dev1.Namespace = "n"
 
 	d1 := deployments.Sandbox(dev1)
 	d1.UID = types.UID("deploy1")
@@ -446,9 +446,10 @@ dev:
 	assert.NoError(t, err)
 	marshalledDevD1OK, err := yaml.Marshal(dDevPod1OK)
 	assert.NoError(t, err)
-	if !bytes.Equal(marshalledDevD1, marshalledDevD1OK) {
-		t.Fatalf("Wrong dev d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD1), string(marshalledDevD1OK))
-	}
+	assert.Equal(t, string(marshalledDevD1), string(marshalledDevD1OK))
+	//if !bytes.Equal(marshalledDevD1, marshalledDevD1OK) {
+	//	t.Fatalf("Wrong dev d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD1), string(marshalledDevD1OK))
+	//}
 
 	require.NoError(t, tr1.DevModeOff())
 
@@ -624,7 +625,6 @@ func Test_translateServiceWithZeroDeploymentReplicas(t *testing.T) {
 	manifest := []byte(fmt.Sprintf(`
 dev:
     web:
-        namespace: n
         container: dev
         image: web:latest
         annotations:
@@ -682,6 +682,7 @@ dev:
 	require.NoError(t, err)
 
 	dev1 := manifest1.Dev["web"]
+	dev1.Namespace = "n"
 
 	dev2 := dev1.Services[0]
 	d2 := deployments.Sandbox(dev2)
@@ -743,7 +744,6 @@ func Test_translateServiceWithReplicasSpecifiedInServiceManifest(t *testing.T) {
 	manifest := []byte(fmt.Sprintf(`
 dev:
     web:
-        namespace: n
         container: dev
         image: web:latest
         annotations:
@@ -802,6 +802,7 @@ dev:
 	require.NoError(t, err)
 
 	dev1 := manifest1.Dev["web"]
+	dev1.Namespace = "n"
 
 	dev2 := dev1.Services[0]
 	d2 := deployments.Sandbox(dev2)
@@ -859,7 +860,6 @@ dev:
 func Test_translateWithoutVolumes(t *testing.T) {
 	manifestBytes := []byte(`dev:
     web:
-        namespace: n
         image: web:latest
         sync:
           - .:/okteto
@@ -869,6 +869,7 @@ func Test_translateWithoutVolumes(t *testing.T) {
 	manifest, err := model.Read(manifestBytes)
 	require.NoError(t, err)
 	dev := manifest.Dev["web"]
+	dev.Namespace = "n"
 
 	d := deployments.Sandbox(dev)
 	rule := dev.ToTranslationRule(dev, true)
@@ -1400,7 +1401,6 @@ func TestTranslateOktetoVolumes(t *testing.T) {
 func Test_translateMultipleEnvVars(t *testing.T) {
 	manifestBytes := []byte(`dev:
     web:
-        namespace: n
         image: web:latest
         sync:
           - .:/app
@@ -1415,7 +1415,7 @@ func Test_translateMultipleEnvVars(t *testing.T) {
 	manifest, err := model.Read(manifestBytes)
 	require.NoError(t, err)
 	dev := manifest.Dev["web"]
-
+	dev.Namespace = "n"
 	dev.Username = "cindy"
 
 	d := deployments.Sandbox(dev)
@@ -1482,7 +1482,6 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	var fsGroup int64 = 102
 	manifestBytes := []byte(fmt.Sprintf(`dev:
     web:
-        namespace: n
         container: dev
         image: web:latest
         command: ["./run_web.sh"]
@@ -1534,9 +1533,10 @@ func Test_translateSfsWithVolumes(t *testing.T) {
                - worker:/src`, file.Name()))
 
 	manifest, err := model.Read(manifestBytes)
+	//manifest.Dev["web"].Namespace = "n"
 	require.NoError(t, err)
 	dev1 := manifest.Dev["web"]
-
+	dev1.Namespace = "n"
 	sfs1 := statefulsets.Sandbox(dev1)
 	sfs1.UID = types.UID("sfs1")
 	delete(sfs1.Annotations, model.OktetoAutoCreateAnnotation)

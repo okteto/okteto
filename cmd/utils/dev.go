@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -47,12 +48,17 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 		return nil, oktetoErrors.ErrManifestNoDevSection
 	} else if len(manifest.Dev) == 1 {
 		for name, dev := range manifest.Dev {
-			if devName != "" && devName != name {
-				return nil, oktetoErrors.UserError{
-					E:    fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, devName),
-					Hint: fmt.Sprintf("Available options are: [%s]", name),
+			if devName != "" {
+				if devName != name {
+					return nil, oktetoErrors.UserError{
+						E:    fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, devName),
+						Hint: fmt.Sprintf("Available options are: [%s]", name),
+					}
 				}
 			}
+
+			dev.Namespace = okteto.GetContext().Namespace
+
 			return dev, nil
 		}
 	}
@@ -98,13 +104,9 @@ func SelectDevFromManifest(manifest *model.Manifest, selector OktetoSelectorInte
 	dev := manifest.Dev[devKey]
 
 	dev.Name = devKey
-	if dev.Namespace == "" {
-		dev.Namespace = manifest.Namespace
-	}
+	dev.Namespace = okteto.GetContext().Namespace
+	dev.Context = okteto.GetContext().Name
 
-	if dev.Context == "" {
-		dev.Context = manifest.Context
-	}
 	if err := dev.Validate(); err != nil {
 		return nil, err
 	}
@@ -207,8 +209,8 @@ func GetDownCommand(devPath string) string {
 	return okDownCommandHint
 }
 
-func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry bool) (apps.App, bool, error) {
-	app, err := apps.Get(ctx, dev, dev.Namespace, c)
+func GetApp(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface, isRetry bool) (apps.App, bool, error) {
+	app, err := apps.Get(ctx, dev, namespace, c)
 	if err != nil {
 		if !oktetoErrors.IsNotFound(err) {
 			return nil, false, err

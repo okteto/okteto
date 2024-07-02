@@ -41,9 +41,9 @@ func (f *fakeRunner) CleanUp(ctx context.Context, err error) {
 func TestDeploy(t *testing.T) {
 	r := &fakeRunner{}
 	opts := &Options{
-		Name: "test",
+		Name:      "test",
+		Namespace: "ns",
 		Manifest: &model.Manifest{
-			Namespace: "ns",
 			Deploy: &model.DeployInfo{
 				Commands: []model.DeployCommand{
 					{
@@ -153,8 +153,8 @@ func TestDeployWithEmptyDeploySection(t *testing.T) {
 			"A=value1",
 			"B=value2",
 		},
+		Namespace: "ns",
 		Manifest: &model.Manifest{
-			Namespace:    "ns",
 			ManifestPath: "path to manifest",
 			External: externalresource.Section{
 				"db": {

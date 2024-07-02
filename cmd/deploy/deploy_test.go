@@ -50,7 +50,7 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-var errorManifest *model.Manifest = &model.Manifest{
+var errorManifest = &model.Manifest{
 	Name: "testManifest",
 	Build: build.ManifestBuild{
 		"service1": &build.Info{
@@ -126,7 +126,7 @@ func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string)    { re
 func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)      { return "", "" }
 func (fr fakeRegistry) GetDevImageFromGlobal(imageWithDigest string) string { return "" }
 
-var fakeManifest *model.Manifest = &model.Manifest{
+var fakeManifest = &model.Manifest{
 	Deploy: &model.DeployInfo{
 		Commands: []model.DeployCommand{
 			{
@@ -145,16 +145,14 @@ var fakeManifest *model.Manifest = &model.Manifest{
 	},
 }
 
-var fakeManifestWithDependency *model.Manifest = &model.Manifest{
+var fakeManifestWithDependency = &model.Manifest{
 	Dependencies: deps.ManifestSection{
-		"a": &deps.Dependency{
-			Namespace: "b",
-		},
+		"a": &deps.Dependency{},
 		"b": &deps.Dependency{},
 	},
 }
 
-var noDeployNorDependenciesManifest *model.Manifest = &model.Manifest{
+var noDeployNorDependenciesManifest = &model.Manifest{
 	Name: "testManifest",
 	Build: build.ManifestBuild{
 		"service1": &build.Info{
@@ -668,9 +666,7 @@ func (fd fakePipelineDeployer) ExecuteDeployPipeline(_ context.Context, _ *pipel
 func TestDeployDependencies(t *testing.T) {
 	fakeManifest := &model.Manifest{
 		Dependencies: deps.ManifestSection{
-			"a": &deps.Dependency{
-				Namespace: "b",
-			},
+			"a": &deps.Dependency{},
 			"b": &deps.Dependency{},
 		},
 	}

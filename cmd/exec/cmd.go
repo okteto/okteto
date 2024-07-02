@@ -95,8 +95,17 @@ okteto exec my-pod -- echo this is a test
 # Get an interactive shell session inside the pod named 'my-pod'
 okteto exec my-pod`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctxOpts := &contextCMD.Options{
+				Show:      true,
+				Namespace: execFlags.namespace,
+				Context:   execFlags.k8sContext,
+			}
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+				return err
+			}
+
 			manifestOpts := contextCMD.ManifestOptions{Filename: execFlags.manifestPath, Namespace: execFlags.namespace, K8sContext: execFlags.k8sContext}
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, e.fs)
+			manifest, err := model.GetManifestV2(manifestOpts.Filename, e.fs)
 			if err != nil {
 				return fmt.Errorf("failed to load manifest: %w", err)
 			}
@@ -127,6 +136,8 @@ okteto exec my-pod`,
 // Run executes the exec command
 func (e *Exec) Run(ctx context.Context, opts *oargs.Result, dev *model.Dev) error {
 	e.ioCtrl.Logger().Infof("executing command '%s' in development container '%s'", opts.Command, opts.DevName)
+
+	dev.Namespace = okteto.GetContext().Namespace
 
 	app, err := e.appRetriever.getApp(ctx, dev)
 	if err != nil {
