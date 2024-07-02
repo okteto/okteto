@@ -133,7 +133,7 @@ func TestBuildImages(t *testing.T) {
 						},
 					},
 				},
-				ServicesToDeploy: testCase.servicesToDeploy,
+				StackServicesToDeploy: testCase.servicesToDeploy,
 			}
 
 			for _, service := range testCase.buildServices {

@@ -157,9 +157,6 @@ var (
 	// ErrManifestFoundButNoDeployAndDependenciesCommands raised when a manifest is found but no deploy or dependencies commands are defined
 	ErrManifestFoundButNoDeployAndDependenciesCommands = errors.New("found okteto manifest, but no deploy or dependencies commands were defined")
 
-	// ErrDeployCantDeploySvcsIfNotCompose raised when a manifest is found but no compose info is detected and args are passed to deploy command
-	ErrDeployCantDeploySvcsIfNotCompose = errors.New("services args are can only be used while trying to deploy a compose")
-
 	// ErrGitHubNotVerifiedEmail is raised when github login has not a verified email
 	ErrGitHubNotVerifiedEmail = errors.New("github-not-verified-email")
 
