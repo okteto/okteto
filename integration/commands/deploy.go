@@ -38,6 +38,7 @@ type DeployOptions struct {
 	ServicesToDeploy []string
 	Build            bool
 	IsRemote         bool
+	Wait             bool
 }
 
 // DestroyOptions defines the options that can be added to a deploy command
@@ -184,6 +185,9 @@ func getDeployCmd(oktetoPath string, deployOptions *DeployOptions) *exec.Cmd {
 	}
 	if deployOptions.IsRemote {
 		cmd.Args = append(cmd.Args, "--remote")
+	}
+	if deployOptions.Wait {
+		cmd.Args = append(cmd.Args, "--wait")
 	}
 	cmd.Env = os.Environ()
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
