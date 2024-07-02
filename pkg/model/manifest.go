@@ -1004,8 +1004,6 @@ func (m *Manifest) WriteToFile(filePath string) error {
 	}
 	for dName, d := range m.Dev {
 		d.Name = ""
-		d.Context = ""
-		d.Namespace = ""
 		if d.Image == "" {
 			if v, ok := m.Build[dName]; ok {
 				if v.Image != "" {

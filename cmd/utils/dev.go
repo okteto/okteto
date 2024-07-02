@@ -58,6 +58,7 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 			}
 
 			dev.Namespace = okteto.GetContext().Namespace
+			dev.Context = okteto.GetContext().Name
 
 			return dev, nil
 		}
