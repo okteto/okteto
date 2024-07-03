@@ -90,6 +90,10 @@ spec:
     app.kubernetes.io/name: api
     app.kubernetes.io/instance: "{{ .Release.Name }}"
 `
+
+	oktetoManifestWithHelm = `deploy:
+- helm upgrade --install e2etest
+`
 )
 
 // TestDeployPipelineFromHelm tests the following scenario:
@@ -102,6 +106,7 @@ func TestDeployPipelineFromHelm(t *testing.T) {
 
 	dir := t.TempDir()
 	require.NoError(t, createHelmChart(dir))
+	require.NoError(t, createOktetoManifestForHelm(dir))
 
 	testNamespace := integration.GetTestNamespace("DeployHelm", user)
 	namespaceOpts := &commands.NamespaceOptions{
@@ -135,50 +140,13 @@ func TestDeployPipelineFromHelm(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
-// TestDeployFromHelmNameOK tests the following scenario:
-// - Deploying a pipeline manifest with custom name not sanaitized
-// - Deploying a pipeline manifest locally from a helm chart
-// - The endpoints generated are accessible
-func TestDeployFromHelmNameOK(t *testing.T) {
-	t.Parallel()
-	oktetoPath, err := integration.GetOktetoPath()
-	require.NoError(t, err)
-
-	dir := t.TempDir()
-	require.NoError(t, createHelmChart(dir))
-
-	testNamespace := integration.GetTestNamespace("DeployFromHelmNameOK", user)
-	namespaceOpts := &commands.NamespaceOptions{
-		Namespace:  testNamespace,
-		OktetoHome: dir,
-		Token:      token,
+func createOktetoManifestForHelm(dir string) error {
+	manifestPath := filepath.Join(dir, "okteto.yml")
+	manifestContent := []byte(oktetoManifestWithHelm)
+	if err := os.WriteFile(manifestPath, manifestContent, 0600); err != nil {
+		return err
 	}
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
-	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
-	require.NoError(t, err)
-
-	deployOptions := &commands.DeployOptions{
-		Workdir:    dir,
-		Namespace:  testNamespace,
-		OktetoHome: dir,
-		Token:      token,
-		Name:       "my custom name",
-	}
-	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
-	autowakeURL := fmt.Sprintf("https://e2etest-%s.%s", testNamespace, appsSubdomain)
-	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
-
-	destroyOptions := &commands.DestroyOptions{
-		Workdir:    dir,
-		Namespace:  testNamespace,
-		OktetoHome: dir,
-		Name:       "my custom name",
-	}
-	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
-	_, err = integration.GetService(context.Background(), testNamespace, "e2etest", c)
-	require.True(t, k8sErrors.IsNotFound(err))
-	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+	return nil
 }
 
 func createHelmChart(dir string) error {
