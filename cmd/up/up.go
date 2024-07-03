@@ -603,11 +603,13 @@ func (up *upContext) activateLoop() {
 		if err != nil {
 			oktetoLog.Infof("activate failed with: %s", err)
 
-			oktetoLog.Info("updating kubeconfig token")
-			if err := up.tokenUpdater.UpdateKubeConfigToken(); err != nil {
-				oktetoLog.Infof("error updating k8s token: %s", err)
-				isTransientError = true
-				continue
+			if okteto.IsOkteto() {
+				oktetoLog.Info("updating kubeconfig token")
+				if err := up.tokenUpdater.UpdateKubeConfigToken(); err != nil {
+					oktetoLog.Infof("error updating k8s token: %s", err)
+					isTransientError = true
+					continue
+				}
 			}
 
 			if err == oktetoErrors.ErrLostSyncthing {
