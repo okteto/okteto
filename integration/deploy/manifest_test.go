@@ -329,7 +329,8 @@ func TestDeployOktetoManifestExportCache(t *testing.T) {
 
 	require.NoError(t, createOktetoManifestWithCache(dir))
 	require.NoError(t, createAppDockerfileWithCache(dir))
-	require.NoError(t, createK8sManifestWithCache(dir, testNamespace))
+	appImageDev := fmt.Sprintf("%s/%s/app:dev", okteto.GetContext().Registry, testNamespace)
+	require.NoError(t, createK8sManifestWithCache(dir, appImageDev))
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -689,11 +690,10 @@ func expectForceBuild(output string) error {
 	return nil
 }
 
-func createK8sManifestWithCache(dir, ns string) error {
+func createK8sManifestWithCache(dir, image string) error {
 	dockerfilePath := filepath.Join(dir, k8sManifestName)
-	appImageDev := fmt.Sprintf("%s/%s/app:dev", okteto.GetContext().Registry, ns)
 
-	dockerfileContent := []byte(fmt.Sprintf(k8sManifestTemplateWithCache, appImageDev))
+	dockerfileContent := []byte(fmt.Sprintf(k8sManifestTemplateWithCache, image))
 	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
 		return err
 	}
