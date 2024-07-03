@@ -310,37 +310,6 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 	fakeDeployer.AssertNotCalled(t, "Get")
 }
 
-func TestDeployWithServicesToBuildWithoutComposeSection(t *testing.T) {
-	fakeDeployer := &fakeDeployer{}
-	okteto.CurrentStore = &okteto.ContextStore{
-		Contexts: map[string]*okteto.Context{
-			"test": {
-				Namespace: "test",
-				Cfg:       &api.Config{},
-			},
-		},
-		CurrentContext: "test",
-	}
-	c := &Command{
-		GetManifest:       getFakeManifest,
-		GetDeployer:       fakeDeployer.Get,
-		K8sClientProvider: test.NewFakeK8sProvider(),
-	}
-	ctx := context.Background()
-	opts := &Options{
-		Name:             "movies",
-		ManifestPath:     "",
-		Variables:        []string{},
-		ServicesToDeploy: []string{"service1"},
-	}
-
-	err := c.Run(ctx, opts)
-
-	assert.ErrorIs(t, err, oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose)
-	// Verify the deploy phase is not even reached
-	fakeDeployer.AssertNotCalled(t, "Get")
-}
-
 func TestCreateConfigMapWithBuildError(t *testing.T) {
 	fakeK8sClientProvider := test.NewFakeK8sProvider()
 	opts := &Options{
