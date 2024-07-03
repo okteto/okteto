@@ -69,8 +69,6 @@ type Dev struct {
 	Name                 string                `json:"name,omitempty" yaml:"name,omitempty"`
 	Username             string                `json:"-" yaml:"-"`
 	RegistryURL          string                `json:"-" yaml:"-"`
-	Context              string                `json:"-" yaml:"-"`
-	Namespace            string                `json:"-" yaml:"-"`
 	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
 	ServiceAccount       string                `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
 	parentSyncFolder     string
@@ -802,7 +800,7 @@ func (dev *Dev) LabelsSelector() string {
 }
 
 // ToTranslationRule translates a dev struct into a translation rule
-func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
+func (dev *Dev) ToTranslationRule(namespace string, main *Dev, reset bool) *TranslationRule {
 	rule := &TranslationRule{
 		Container:        dev.Container,
 		ImagePullPolicy:  dev.ImagePullPolicy,
@@ -844,7 +842,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 			rule.Environment,
 			env.Var{
 				Name:  "OKTETO_NAMESPACE",
-				Value: dev.Namespace,
+				Value: namespace,
 			},
 			env.Var{
 				Name:  "OKTETO_NAME",
@@ -1091,9 +1089,6 @@ func (service *Dev) validateForExtraFields() error {
 	}
 	if service.Autocreate {
 		return fmt.Errorf(errorMessage, "autocreate")
-	}
-	if service.Context != "" {
-		return fmt.Errorf(errorMessage, "context")
 	}
 	if service.Secrets != nil {
 		return fmt.Errorf(errorMessage, "secrets")

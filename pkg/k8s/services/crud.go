@@ -27,8 +27,8 @@ import (
 )
 
 // CreateDev deploys a default k8s service for a development container
-func CreateDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
-	s := translate(dev)
+func CreateDev(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) error {
+	s := translate(dev, namespace)
 	return Deploy(ctx, s, c)
 }
 

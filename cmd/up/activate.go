@@ -243,7 +243,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
-	if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Starting); err != nil {
+	if err := config.UpdateStateFile(up.Dev.Name, up.Namespace, config.Starting); err != nil {
 		return err
 	}
 
@@ -259,7 +259,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 	}
 
 	resetOnDevContainerStart := up.resetSyncthing || !up.Dev.PersistentVolumeEnabled()
-	trMap, err := apps.GetTranslations(ctx, up.Dev, app, resetOnDevContainerStart, k8sClient)
+	trMap, err := apps.GetTranslations(ctx, up.Namespace, up.Dev, app, resetOnDevContainerStart, k8sClient)
 	if err != nil {
 		return err
 	}
@@ -294,7 +294,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 	}
 
 	if create {
-		if err := services.CreateDev(ctx, up.Dev, k8sClient); err != nil {
+		if err := services.CreateDev(ctx, up.Dev, up.Namespace, k8sClient); err != nil {
 			return err
 		}
 	}

@@ -213,6 +213,7 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 			}
 
 			up := &upContext{
+				Namespace:         okteto.GetContext().Namespace,
 				Manifest:          oktetoManifest,
 				Dev:               nil,
 				Exit:              make(chan error, 1),

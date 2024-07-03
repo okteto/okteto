@@ -79,7 +79,7 @@ func (d *Operation) Down(ctx context.Context, dev *model.Dev, namespace string, 
 			app = apps.NewDeploymentApp(deployments.Sandbox(dev))
 		}
 
-		trMap, err := apps.GetTranslations(ctx, dev, app, false, k8sClient)
+		trMap, err := apps.GetTranslations(ctx, namespace, dev, app, false, k8sClient)
 		if err != nil {
 			exit <- err
 			return
