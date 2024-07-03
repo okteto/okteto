@@ -79,9 +79,9 @@ func (e executorProvider) provide(dev *model.Dev, podName, namespace string) (ex
 }
 
 type hybridExecutor struct {
+	k8sClient kubernetes.Interface
 	dev       *model.Dev
 	namespace string
-	k8sClient kubernetes.Interface
 }
 
 func (h *hybridExecutor) execute(ctx context.Context, cmdToExec []string) error {
