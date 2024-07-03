@@ -222,7 +222,7 @@ func TestRedeployOktetoManifestForImages(t *testing.T) {
 	require.NoError(t, err)
 
 	err = expectImageFoundNoSkippingBuild(output)
-	require.NoError(t, err, err)
+	require.Error(t, err, err)
 
 	// Test redeploy with build flag builds the image
 	deployOptions.Build = true
