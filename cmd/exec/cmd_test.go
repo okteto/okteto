@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"testing"
 
+	oargs "github.com/okteto/okteto/cmd/args"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/constants"
@@ -401,9 +402,9 @@ func TestExec_Run(t *testing.T) {
 			}
 			err := e.Run(
 				context.Background(),
-				&options{
-					devName: "test",
-					command: []string{"echo", "test"},
+				&oargs.Result{
+					DevName: "test",
+					Command: []string{"echo", "test"},
 				},
 				dev)
 			if err != nil {

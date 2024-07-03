@@ -87,7 +87,7 @@ func Doctor(k8sLogger *io.K8sLogger) *cobra.Command {
 					return err
 				}
 			}
-			filename, err := doctor.Run(ctx, dev, doctorOpts.DevPath, c)
+			filename, err := doctor.Run(ctx, dev, doctorOpts.DevPath, okteto.GetContext().Namespace, c)
 			if err == nil {
 				oktetoLog.Information("Your doctor file is available at %s", filename)
 			}

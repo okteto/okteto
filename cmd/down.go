@@ -130,7 +130,7 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger) *cobra.Comman
 				if apps.IsDevModeOn(app) {
 					if err := dc.Down(ctx, dev, okteto.GetContext().Namespace, rm); err != nil {
 						at.TrackDown(false)
-						return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+						return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(okteto.GetContext().Namespace, dev.Name))
 					}
 				} else {
 					oktetoLog.Success(fmt.Sprintf("Development container '%s' deactivated", dev.Name))

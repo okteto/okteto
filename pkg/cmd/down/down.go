@@ -73,10 +73,10 @@ func (d *Operation) Down(ctx context.Context, dev *model.Dev, namespace string, 
 				exit <- err
 				return
 			}
-			app = apps.NewDeploymentApp(deployments.Sandbox(dev))
+			app = apps.NewDeploymentApp(deployments.Sandbox(dev, namespace))
 		}
 		if dev.Autocreate {
-			app = apps.NewDeploymentApp(deployments.Sandbox(dev))
+			app = apps.NewDeploymentApp(deployments.Sandbox(dev, namespace))
 		}
 
 		trMap, err := apps.GetTranslations(ctx, namespace, dev, app, false, k8sClient)
@@ -85,7 +85,7 @@ func (d *Operation) Down(ctx context.Context, dev *model.Dev, namespace string, 
 			return
 		}
 
-		if err := d.Run(app, dev, trMap, true); err != nil {
+		if err := d.Run(app, dev, namespace, trMap, true); err != nil {
 			exit <- err
 			return
 		}
@@ -98,7 +98,7 @@ func (d *Operation) Down(ctx context.Context, dev *model.Dev, namespace string, 
 		}
 
 		oktetoLog.Spinner(fmt.Sprintf("Removing '%s' persistent volume...", dev.Name))
-		if err := removeVolume(ctx, dev, k8sClient); err != nil {
+		if err := removeVolume(ctx, dev, namespace, k8sClient); err != nil {
 			d.AnalyticsTracker.TrackDownVolumes(false)
 			exit <- err
 			return
@@ -106,7 +106,7 @@ func (d *Operation) Down(ctx context.Context, dev *model.Dev, namespace string, 
 		oktetoLog.Success(fmt.Sprintf("Persistent volume '%s' removed", dev.Name))
 
 		if os.Getenv(model.OktetoSkipCleanupEnvVar) == "" {
-			if err := syncthing.RemoveFolder(dev, d.Fs); err != nil {
+			if err := syncthing.RemoveFolder(dev, namespace, d.Fs); err != nil {
 				oktetoLog.Infof("failed to delete existing syncthing folder")
 			}
 		}
@@ -129,8 +129,8 @@ func (d *Operation) Down(ctx context.Context, dev *model.Dev, namespace string, 
 	return nil
 }
 
-func removeVolume(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
-	return volumes.Destroy(ctx, dev.GetVolumeName(), dev.Namespace, c, dev.Timeout.Default)
+func removeVolume(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) error {
+	return volumes.Destroy(ctx, dev.GetVolumeName(), namespace, c, dev.Timeout.Default)
 }
 
 func (d *Operation) AllDown(ctx context.Context, manifest *model.Manifest, namespace string, rm bool) error {
@@ -157,7 +157,7 @@ func (d *Operation) AllDown(ctx context.Context, manifest *model.Manifest, names
 			oktetoLog.StopSpinner()
 			if err := d.Down(ctx, dev, namespace, rm); err != nil {
 				d.AnalyticsTracker.TrackDown(false)
-				return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+				return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(namespace, dev.Name))
 			}
 		}
 	}
