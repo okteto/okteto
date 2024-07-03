@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/utils/pointer"
 	"regexp"
 	"strings"
 
@@ -36,51 +37,51 @@ type patchAnnotations struct {
 	Path  string            `json:"path"`
 }
 
-//// Sandbox returns a default statefulset for a given dev
-//func Sandbox(dev *model.Dev) *appsv1.StatefulSet {
-//	image := dev.Image
-//	if image == "" {
-//		image = model.DefaultImage
-//	}
-//	return &appsv1.StatefulSet{
-//		ObjectMeta: metav1.ObjectMeta{
-//			Name:        dev.Name,
-//			Namespace:   dev.Namespace,
-//			Labels:      model.Labels{},
-//			Annotations: model.Annotations{},
-//		},
-//		Spec: appsv1.StatefulSetSpec{
-//			Replicas: pointer.Int32(1),
-//			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
-//				Type: appsv1.RollingUpdateStatefulSetStrategyType,
-//			},
-//			Selector: &metav1.LabelSelector{
-//				MatchLabels: map[string]string{
-//					"app": dev.Name,
-//				},
-//			},
-//			Template: apiv1.PodTemplateSpec{
-//				ObjectMeta: metav1.ObjectMeta{
-//					Labels: map[string]string{
-//						"app": dev.Name,
-//					},
-//					Annotations: map[string]string{},
-//				},
-//				Spec: apiv1.PodSpec{
-//					ServiceAccountName:            dev.ServiceAccount,
-//					TerminationGracePeriodSeconds: pointer.Int64(0),
-//					Containers: []apiv1.Container{
-//						{
-//							Name:            "dev",
-//							Image:           image,
-//							ImagePullPolicy: apiv1.PullAlways,
-//						},
-//					},
-//				},
-//			},
-//		},
-//	}
-//}
+// Sandbox returns a default statefulset for a given dev
+func Sandbox(dev *model.Dev, namespace string) *appsv1.StatefulSet {
+	image := dev.Image
+	if image == "" {
+		image = model.DefaultImage
+	}
+	return &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        dev.Name,
+			Namespace:   namespace,
+			Labels:      model.Labels{},
+			Annotations: model.Annotations{},
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas: pointer.Int32(1),
+			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
+				Type: appsv1.RollingUpdateStatefulSetStrategyType,
+			},
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": dev.Name,
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": dev.Name,
+					},
+					Annotations: map[string]string{},
+				},
+				Spec: apiv1.PodSpec{
+					ServiceAccountName:            dev.ServiceAccount,
+					TerminationGracePeriodSeconds: pointer.Int64(0),
+					Containers: []apiv1.Container{
+						{
+							Name:            "dev",
+							Image:           image,
+							ImagePullPolicy: apiv1.PullAlways,
+						},
+					},
+				},
+			},
+		},
+	}
+}
 
 // Deploy creates or updates a statefulset
 func Deploy(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) (*appsv1.StatefulSet, error) {

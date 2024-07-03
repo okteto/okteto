@@ -557,8 +557,7 @@ func TestInferFromStack(t *testing.T) {
 			currentManifest: &Manifest{
 				Dev: ManifestDevs{
 					"test": &Dev{
-						Name:      "one",
-						Namespace: "test",
+						Name: "one",
 					},
 				},
 				Build: build.ManifestBuild{},
@@ -594,8 +593,7 @@ func TestInferFromStack(t *testing.T) {
 				Destroy: &DestroyInfo{},
 				Dev: ManifestDevs{
 					"test": &Dev{
-						Name:      "one",
-						Namespace: "test",
+						Name: "one",
 						Metadata: &Metadata{
 							Labels:      Labels{},
 							Annotations: Annotations{},

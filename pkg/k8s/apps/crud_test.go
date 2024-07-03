@@ -69,9 +69,8 @@ func TestGetStatefulset(t *testing.T) {
 	clientset := fake.NewSimpleClientset(sfs)
 
 	dev := &model.Dev{
-		Name:      "test",
-		Namespace: "test",
-		Image:     "image",
+		Name:  "test",
+		Image: "image",
 		PersistentVolumeInfo: &model.PersistentVolumeInfo{
 			Enabled: true,
 		},
@@ -112,9 +111,8 @@ func TestGetDeployment(t *testing.T) {
 	clientset := fake.NewSimpleClientset(d)
 
 	dev := &model.Dev{
-		Name:      "test",
-		Namespace: "test",
-		Image:     "image",
+		Name:  "test",
+		Image: "image",
 		PersistentVolumeInfo: &model.PersistentVolumeInfo{
 			Enabled: true,
 		},
@@ -270,25 +268,22 @@ func TestListDevModeOn(t *testing.T) {
 		Name: "manifest-name",
 		Dev: model.ManifestDevs{
 			"dev": &model.Dev{
-				Name:      "dev",
-				Namespace: "test",
-				Image:     "image",
+				Name:  "dev",
+				Image: "image",
 				PersistentVolumeInfo: &model.PersistentVolumeInfo{
 					Enabled: true,
 				},
 			},
 			"sfs": &model.Dev{
-				Name:      "sfs",
-				Namespace: "test",
-				Image:     "image",
+				Name:  "sfs",
+				Image: "image",
 				PersistentVolumeInfo: &model.PersistentVolumeInfo{
 					Enabled: true,
 				},
 			},
 			"autocreate": &model.Dev{
-				Name:      "autocreate",
-				Namespace: "test",
-				Image:     "image",
+				Name:  "autocreate",
+				Image: "image",
 				PersistentVolumeInfo: &model.PersistentVolumeInfo{
 					Enabled: true,
 				},

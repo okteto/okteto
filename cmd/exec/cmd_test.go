@@ -52,7 +52,7 @@ type fakeExecutorProvider struct {
 	err      error
 }
 
-func (f *fakeExecutorProvider) provide(*model.Dev, string) (executor, error) {
+func (f *fakeExecutorProvider) provide(*model.Dev, string, string) (executor, error) {
 	return f.executor, f.err
 }
 
@@ -406,7 +406,8 @@ func TestExec_Run(t *testing.T) {
 					DevName: "test",
 					Command: []string{"echo", "test"},
 				},
-				dev)
+				dev,
+				namespace)
 			if err != nil {
 				assert.ErrorContains(t, err, tc.expectedErr.Error())
 			} else {

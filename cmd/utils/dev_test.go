@@ -132,10 +132,8 @@ func Test_GetDevFromManifest(t *testing.T) {
 				},
 			},
 			devName: "",
-			dev: &model.Dev{
-				Namespace: "unit-test",
-			},
-			err: nil,
+			dev:     &model.Dev{},
+			err:     nil,
 		},
 		{
 			name: "manifest has several dev section user introduces empty devName",
@@ -190,7 +188,6 @@ func Test_SelectDevFromManifest(t *testing.T) {
 					"test": &model.Dev{
 						Name:            "test",
 						ImagePullPolicy: "Always",
-						Namespace:       "unit-test",
 						Sync: model.Sync{
 							Folders: []model.SyncFolder{
 								{
@@ -212,7 +209,6 @@ func Test_SelectDevFromManifest(t *testing.T) {
 			dev: &model.Dev{
 				Name:            "test",
 				ImagePullPolicy: "Always",
-				Namespace:       "unit-test",
 				Sync: model.Sync{
 					Folders: []model.SyncFolder{
 						{
