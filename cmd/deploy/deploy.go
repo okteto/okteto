@@ -72,19 +72,19 @@ type Options struct {
 	ManifestPathFlag string
 	// ManifestPath is the path to the manifest used though the command execution.
 	// This might change its value during execution
-	ManifestPath     string
-	Name             string
-	Namespace        string
-	K8sContext       string
-	Variables        []string
-	ServicesToDeploy []string
-	Timeout          time.Duration
-	Build            bool
-	Dependencies     bool
-	RunWithoutBash   bool
-	RunInRemote      bool
-	Wait             bool
-	ShowCTA          bool
+	ManifestPath          string
+	Name                  string
+	Namespace             string
+	K8sContext            string
+	Variables             []string
+	StackServicesToDeploy []string
+	Timeout               time.Duration
+	Build                 bool
+	Dependencies          bool
+	RunWithoutBash        bool
+	RunInRemote           bool
+	Wait                  bool
+	ShowCTA               bool
 }
 
 type builderInterface interface {
@@ -160,9 +160,10 @@ type Deployer interface {
 func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
-		Use:   "deploy [service...]",
+		Use:   "deploy",
 		Short: "Execute the list of commands specified in the 'deploy' section of your okteto manifest",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		Args:  utils.NoArgsAccepted(""),
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			// validate cmd options
 			if options.Dependencies && !okteto.IsOkteto() {
 				return fmt.Errorf("'dependencies' is only supported in contexts that have Okteto installed")
@@ -208,7 +209,6 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 			}
 
 			options.ShowCTA = oktetoLog.IsInteractive()
-			options.ServicesToDeploy = args
 
 			k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
 			pc, err := pipelineCMD.NewCommand()
@@ -325,10 +325,6 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 
 	if deployOptions.Manifest.Deploy == nil && !deployOptions.Manifest.HasDependencies() {
 		return oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands
-	}
-
-	if len(deployOptions.ServicesToDeploy) > 0 && deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection == nil {
-		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
 
 	// We need to create a client that doesn't go through the proxy to create
@@ -755,7 +751,7 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 		ForceBuild:       false,
 		Wait:             opts.Wait,
 		Timeout:          opts.Timeout,
-		ServicesToDeploy: opts.ServicesToDeploy,
+		ServicesToDeploy: opts.StackServicesToDeploy,
 		InsidePipeline:   true,
 	}
 
