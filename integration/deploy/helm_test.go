@@ -92,7 +92,7 @@ spec:
 `
 
 	oktetoManifestWithHelm = `deploy:
-- helm upgrade --install e2etest
+- helm upgrade --install e2etest chart
 `
 )
 
