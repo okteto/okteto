@@ -725,7 +725,7 @@ func Test_validate(t *testing.T) {
 		{
 			name: "services-with-enabled-pvc",
 			manifest: []byte(`dev:
-    deployment: 
+    deployment:
       sync:
         - .:/app
       services:

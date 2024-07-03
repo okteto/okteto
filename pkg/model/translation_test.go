@@ -331,7 +331,7 @@ func TestDevToTranslationDebugEnabled(t *testing.T) {
 	defer oktetoLog.SetLevel(oktetoLog.InfoLevel)
 	manifestBytes := []byte(`dev:
     web:
-        image: dev-image 
+        image: dev-image
         sync:
           - .:/app`)
 
@@ -490,7 +490,7 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 		},
 		{
 			name: "non-root-user-without-overrides",
-			manifest: []byte(`dev: 
+			manifest: []byte(`dev:
     non-root-user-without-overrides:
         image: worker:latest
         securityContext:
@@ -501,7 +501,7 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 		},
 		{
 			name: "root-user-with-defaults",
-			manifest: []byte(`dev: 
+			manifest: []byte(`dev:
     root-user-with-defaults:
         image: worker:latest
         securityContext:
@@ -515,7 +515,7 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 		},
 		{
 			name: "non-root-user-with-overrides",
-			manifest: []byte(`dev: 
+			manifest: []byte(`dev:
     non-root-user-with-overrides:
         image: worker:latest
         securityContext:
@@ -543,7 +543,7 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 		},
 		{
 			name: "no-run-as-non-root",
-			manifest: []byte(`dev: 
+			manifest: []byte(`dev:
     no-run-as-non-root:
         image: worker:latest
         securityContext:
