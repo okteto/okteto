@@ -24,7 +24,6 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -319,44 +318,6 @@ func TestEnvVarIsNotAddedWhenHasBuiltInOktetoEnvVarsFormat(t *testing.T) {
 			if !errors.Is(err, oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD) {
 				t.Fatalf("expected error in setEnvVarsFromCmd: %s due to try to set a built-in okteto environment variable", err)
 			}
-		})
-	}
-}
-
-func TestCommandAddedToUpOptionsWhenPassedAsFlag(t *testing.T) {
-	var tests = []struct {
-		name            string
-		command         []string
-		expectedCommand []string
-	}{
-		{
-			name:            "Passing no commands",
-			command:         []string{""},
-			expectedCommand: []string{},
-		},
-		{
-			name:            "Passing commands",
-			command:         []string{"echo", "hello"},
-			expectedCommand: []string{"echo", "hello"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-
-			cmd := Up(nil, nil, io.NewIOController(), nil)
-			for _, val := range tt.command {
-				err := cmd.Flags().Set("command", val)
-				if err != nil {
-					t.Fatalf("unexpected error in Set: %s", err)
-				}
-			}
-
-			flagValue, err := cmd.Flags().GetStringArray("command")
-			if err != nil {
-				t.Fatalf("unexpected error in GetStringArray: %s", err)
-			}
-
-			assert.Equal(t, tt.expectedCommand, flagValue)
 		})
 	}
 }

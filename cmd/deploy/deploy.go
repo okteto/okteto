@@ -72,19 +72,19 @@ type Options struct {
 	ManifestPathFlag string
 	// ManifestPath is the path to the manifest used though the command execution.
 	// This might change its value during execution
-	ManifestPath     string
-	Name             string
-	Namespace        string
-	K8sContext       string
-	Variables        []string
-	ServicesToDeploy []string
-	Timeout          time.Duration
-	Build            bool
-	Dependencies     bool
-	RunWithoutBash   bool
-	RunInRemote      bool
-	Wait             bool
-	ShowCTA          bool
+	ManifestPath          string
+	Name                  string
+	Namespace             string
+	K8sContext            string
+	Variables             []string
+	StackServicesToDeploy []string
+	Timeout               time.Duration
+	Build                 bool
+	Dependencies          bool
+	RunWithoutBash        bool
+	RunInRemote           bool
+	Wait                  bool
+	ShowCTA               bool
 }
 
 type builderInterface interface {
@@ -160,7 +160,7 @@ type Deployer interface {
 func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
-		Use:   "deploy [service...]",
+		Use:   "deploy",
 		Short: "Execute the list of commands specified in the 'deploy' section of your okteto manifest",
 		Example: `# Execute okteto deploy
 $ okteto deploy
@@ -171,7 +171,8 @@ $ okteto deploy --remote
 
 # Execute okteto deploy skipping the build
 $ okteto deploy --build=false`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		Args: utils.NoArgsAccepted(""),
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			// validate cmd options
 			if options.Dependencies && !okteto.IsOkteto() {
 				return fmt.Errorf("'dependencies' is only supported in contexts that have Okteto installed")
@@ -217,7 +218,6 @@ $ okteto deploy --build=false`,
 			}
 
 			options.ShowCTA = oktetoLog.IsInteractive()
-			options.ServicesToDeploy = args
 
 			k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
 			pc, err := pipelineCMD.NewCommand()
@@ -336,10 +336,6 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		return oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands
 	}
 
-	if len(deployOptions.ServicesToDeploy) > 0 && deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection == nil {
-		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
-	}
-
 	// We need to create a client that doesn't go through the proxy to create
 	// the configmap without the deployedByLabel
 	c, _, err := dc.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, dc.K8sLogger)
@@ -415,7 +411,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		Variables:  deployOptions.Variables,
 	}
 
-	if !deployOptions.Manifest.IsV2 && deployOptions.Manifest.Type == model.StackType && deployOptions.Manifest.Deploy != nil {
+	if deployOptions.Manifest.Type == model.StackType && deployOptions.Manifest.Deploy != nil {
 		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
 	}
 
@@ -715,8 +711,7 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 	hasBuildSection := false
 	isRunningOnRemoteDeployer := false
 	if manifest != nil {
-		if manifest.IsV2 &&
-			manifest.Deploy != nil {
+		if manifest.Deploy != nil {
 			isRunningOnRemoteDeployer = isRemoteDeployer(runInRemoteFlag, manifest.Deploy.Image, manifest.Deploy.Remote)
 			if manifest.Deploy.ComposeSection != nil &&
 				manifest.Deploy.ComposeSection.ComposesInfo != nil {
@@ -765,7 +760,7 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 		ForceBuild:       false,
 		Wait:             opts.Wait,
 		Timeout:          opts.Timeout,
-		ServicesToDeploy: opts.ServicesToDeploy,
+		ServicesToDeploy: opts.StackServicesToDeploy,
 		InsidePipeline:   true,
 	}
 

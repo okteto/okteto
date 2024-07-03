@@ -17,7 +17,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model"
 	"gopkg.in/yaml.v2"
@@ -36,7 +35,7 @@ func Test_generateManifestFile(t *testing.T) {
 			name: "basic",
 			dev: &model.Dev{
 				Name:    "dev",
-				Image:   &build.Info{Name: "okteto/dev"},
+				Image:   "okteto/dev",
 				Command: model.Command{Values: []string{"bash"}},
 			},
 		},
@@ -44,15 +43,15 @@ func Test_generateManifestFile(t *testing.T) {
 			name: "with-services",
 			dev: &model.Dev{
 				Name:    "dev",
-				Image:   &build.Info{Name: "okteto/dev"},
+				Image:   "okteto/dev",
 				Command: model.Command{Values: []string{"bash"}},
 				Services: []*model.Dev{{
 					Name:    "svc",
-					Image:   &build.Info{Name: "okteto/svc"},
+					Image:   "okteto/svc",
 					Command: model.Command{Values: []string{"bash"}},
 				}, {
 					Name:        "svc2",
-					Image:       nil,
+					Image:       "",
 					Command:     model.Command{Values: []string{"bash"}},
 					Environment: []env.Var{{Name: "foo", Value: "bar"}},
 				}},

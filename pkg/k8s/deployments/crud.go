@@ -40,7 +40,7 @@ type patchAnnotations struct {
 
 // Sandbox returns a base deployment for a dev
 func Sandbox(dev *model.Dev) *appsv1.Deployment {
-	image := dev.Image.Name
+	image := dev.Image
 	if image == "" {
 		image = model.DefaultImage
 	}
