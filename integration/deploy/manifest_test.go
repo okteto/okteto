@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -277,6 +278,7 @@ func TestDeployOktetoManifestWithDestroy(t *testing.T) {
 		Namespace:  testNamespace,
 		OktetoHome: dir,
 		Token:      token,
+		Build:      false,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
@@ -292,6 +294,7 @@ func TestDeployOktetoManifestWithDestroy(t *testing.T) {
 	require.NoError(t, err)
 
 	err = expectImageFoundNoSkippingBuild(output)
+	log.Print(output)
 	require.Error(t, err, err)
 
 	_, err = integration.GetConfigmap(context.Background(), testNamespace, fmt.Sprintf("okteto-git-%s", filepath.Base(dir)), c)
