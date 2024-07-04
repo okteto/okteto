@@ -150,7 +150,7 @@ func createDependenciesManifest(dir, namespace, manifest string) error {
 	}
 
 	manifestPath := filepath.Join(dir, "okteto.yml")
-	if err := os.WriteFile(manifestPath, manifest, 0600); err != nil {
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0600); err != nil {
 		return err
 	}
 	return nil
