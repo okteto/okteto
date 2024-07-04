@@ -675,6 +675,15 @@ func createOktetoManifest(dir, content string) error {
 	return nil
 }
 
+func createOktetoManifestWithName(dir, content, name string) error {
+	manifestPath := filepath.Join(dir, name)
+	manifestContent := []byte(content)
+	if err := os.WriteFile(manifestPath, manifestContent, 0600); err != nil {
+		return err
+	}
+	return nil
+}
+
 func expectImageFoundSkippingBuild(output string) error {
 	if ok := strings.Contains(output, "Skipping build for image for service"); !ok {
 		log.Print(output)
