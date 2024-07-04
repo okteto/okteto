@@ -95,6 +95,15 @@ okteto exec my-pod -- echo this is a test
 # Get an interactive shell session inside the pod named 'my-pod'
 okteto exec my-pod`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctxOpts := &contextCMD.Options{
+				Show:      true,
+				Context:   execFlags.k8sContext,
+				Namespace: execFlags.namespace,
+			}
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+				return err
+			}
+
 			manifestOpts := contextCMD.ManifestOptions{Filename: execFlags.manifestPath, Namespace: execFlags.namespace, K8sContext: execFlags.k8sContext}
 			manifest, err := model.GetManifestV2(manifestOpts.Filename, e.fs)
 			if err != nil {
