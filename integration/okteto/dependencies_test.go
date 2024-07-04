@@ -36,7 +36,6 @@ dependencies:
     repository: https://github.com/okteto/movies
     branch: cli-e2e
     wait: true
-    namespace: %s
     variables:
       TEST_VARIABLE: test-value
 `
@@ -51,7 +50,6 @@ dependencies:
     repository: https://github.com/okteto/movies
     branch: cli-e2e
     wait: true
-    namespace: %s
     variables:
       TEST_VARIABLE: test-value
 `
@@ -152,8 +150,7 @@ func createDependenciesManifest(dir, namespace, manifest string) error {
 	}
 
 	manifestPath := filepath.Join(dir, "okteto.yml")
-	manifestContent := []byte(fmt.Sprintf(manifest, namespace))
-	if err := os.WriteFile(manifestPath, manifestContent, 0600); err != nil {
+	if err := os.WriteFile(manifestPath, manifest, 0600); err != nil {
 		return err
 	}
 	return nil
