@@ -297,18 +297,8 @@ func TestImageMarshalling(t *testing.T) {
 	}{
 		{
 			name:     "single-name",
-			image:    &build.Info{Name: "image-name"},
-			expected: "image-name\n",
-		},
-		{
-			name:     "single-name-and-defaults",
-			image:    &build.Info{Name: "image-name", Context: "."},
-			expected: "image-name\n",
-		},
-		{
-			name:     "build",
-			image:    &build.Info{Name: "image-name", Context: "path"},
-			expected: "name: image-name\ncontext: path\n",
+			image:    &build.Info{Context: "image-name"},
+			expected: "context: image-name\n",
 		},
 	}
 
@@ -2397,8 +2387,7 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
 			buildManifest: []byte(`service1: ./service1`),
 			expected: build.ManifestBuild{
 				"service1": {
-					Name:    "./service1",
-					Context: "",
+					Context: "./service1",
 				},
 			},
 		},

@@ -161,7 +161,6 @@ dependencies:
 				Context:   "manifest-context",
 				Build: build.ManifestBuild{
 					"service": {
-						Name:       "",
 						Target:     "build",
 						Context:    "./service",
 						Dockerfile: "custom-dockerfile",

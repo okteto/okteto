@@ -416,7 +416,6 @@ func TestOptsFromBuildInfoForRemoteDeploy(t *testing.T) {
 		{
 			name: "all fields set",
 			buildInfo: &build.Info{
-				Name:        "movies-service",
 				Context:     "service",
 				Dockerfile:  "Dockerfile",
 				Target:      "build",
@@ -433,7 +432,6 @@ func TestOptsFromBuildInfoForRemoteDeploy(t *testing.T) {
 		{
 			name: "just the fields needed",
 			buildInfo: &build.Info{
-				Name:        "movies-service",
 				Context:     "service",
 				Dockerfile:  "Dockerfile",
 				Target:      "build",
