@@ -758,8 +758,6 @@ type manifestRaw struct {
 	Dependencies  deps.ManifestSection     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	GlobalForward []forward.GlobalForward  `json:"forward,omitempty" yaml:"forward,omitempty"`
 	External      externalresource.Section `json:"external,omitempty" yaml:"external,omitempty"`
-
-	DeprecatedDevs []string `yaml:"devs"`
 }
 
 func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
