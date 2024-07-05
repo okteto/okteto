@@ -53,7 +53,7 @@ func TestDeployInDeployRemote(t *testing.T) {
 	require.NoError(t, createOktetoManifestWithName(dir, parentManifestContent, "okteto.yml"))
 	require.NoError(t, createOktetoManifestWithName(dir, childManifestContent, "other-okteto.yml"))
 
-	testNamespace := "teresaromero-depindep"
+	testNamespace := integration.GetTestNamespace("DeployInDeployRemote", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		Token:      token,
