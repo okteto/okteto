@@ -1,4 +1,6 @@
-# https://circleci.com/docs/2.0/configuration-reference/
+# https://circleci.com/docs/2.1/configuration-reference/
+version: 2.1
+
 aliases:
   - &init-gcloud |
     echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
@@ -13,7 +15,6 @@ aliases:
     touch $HOME/.okteto/.noanalytics
     okteto context use ${OKTETO_URL} --token ${OKTETO_TOKEN}
   - &docker-login echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-version: 2.1
 
 parameters:
   # The following parameters are filled by GH Actions to run CircleCI jobs
