@@ -341,7 +341,7 @@ jobs:
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh latest "linux/amd64"
 
-  upload-static:
+  upload-static-job:
     executor: golang-ci
     steps:
       - checkout
@@ -370,7 +370,7 @@ jobs:
           name: Auto-update-actions
           command: ./scripts/ci/release-github-actions.sh $CIRCLE_TAG
 
-  release:
+  release-job:
     executor: golang-ci
     steps:
       - checkout
@@ -379,7 +379,7 @@ jobs:
       - run: *init-gcloud
       - run: ./scripts/ci/release.sh
 
-  release-branch:
+  release-branch-job:
     executor: golang-ci
     steps:
       - checkout
@@ -392,7 +392,7 @@ jobs:
 workflows:
   upload-static:
     jobs:
-      - upload-static:
+      - upload-static-job:
           context: GKE
           filters:
             branches:
@@ -491,7 +491,7 @@ workflows:
               only: *release-branch-regex
           requires:
             - build-binaries
-      - release-branch:
+      - release-branch-job:
           requires:
             - build-binaries
             - test-integration
@@ -514,7 +514,7 @@ workflows:
           context: Product-okteto-dev
           requires:
             - build-binaries
-      - release:
+      - release-job:
           context: GKE
           requires:
             - build-binaries
@@ -554,7 +554,7 @@ workflows:
             tags:
               only:
                 - *release-regex
-      - release:
+      - release-job:
           context: GKE
           requires:
             - build-binaries
@@ -568,7 +568,7 @@ workflows:
       - release-external:
           context: GKE
           requires:
-            - release
+            - release-job
           filters:
             branches:
               ignore: /.*/
