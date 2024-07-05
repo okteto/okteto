@@ -61,15 +61,6 @@ func TestDependencies(t *testing.T) {
 	require.NoError(t, err)
 
 	dir := t.TempDir()
-	testDeployNamespace := integration.GetTestNamespace("DeployDep", user)
-	namespaceDeployOpts := &commands.NamespaceOptions{
-		Namespace:  testDeployNamespace,
-		OktetoHome: dir,
-		Token:      token,
-	}
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceDeployOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceDeployOpts)
-
 	testNamespace := integration.GetTestNamespace("Dependency", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
@@ -80,7 +71,7 @@ func TestDependencies(t *testing.T) {
 
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 
-	require.NoError(t, createDependenciesManifest(dir, testDeployNamespace, manifestWithDependencies))
+	require.NoError(t, createDependenciesManifest(dir, manifestWithDependencies))
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
 		Namespace:  testNamespace,
@@ -94,7 +85,7 @@ func TestDependencies(t *testing.T) {
 	expectedOutputCommand := "dependency variable test-value"
 	require.Contains(t, strings.ToLower(string(output)), expectedOutputCommand)
 
-	contentURL := fmt.Sprintf("https://movies-%s.%s", testDeployNamespace, appsSubdomain)
+	contentURL := fmt.Sprintf("https://movies-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(contentURL, timeout))
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
@@ -106,15 +97,6 @@ func TestDependenciesOnRemote(t *testing.T) {
 	require.NoError(t, err)
 
 	dir := t.TempDir()
-	testDeployNamespace := integration.GetTestNamespace("RemoteDeployDep", user)
-	namespaceDeployOpts := &commands.NamespaceOptions{
-		Namespace:  testDeployNamespace,
-		OktetoHome: dir,
-		Token:      token,
-	}
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceDeployOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceDeployOpts)
-
 	testNamespace := integration.GetTestNamespace("RemoteDep", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
@@ -125,7 +107,7 @@ func TestDependenciesOnRemote(t *testing.T) {
 
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 
-	require.NoError(t, createDependenciesManifest(dir, testDeployNamespace, remoteManifestWithDependencies))
+	require.NoError(t, createDependenciesManifest(dir, remoteManifestWithDependencies))
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
 		Namespace:  testNamespace,
@@ -139,12 +121,12 @@ func TestDependenciesOnRemote(t *testing.T) {
 	expectedOutputCommand := "dependency variable test-value"
 	require.Contains(t, strings.ToLower(string(output)), expectedOutputCommand)
 
-	contentURL := fmt.Sprintf("https://movies-%s.%s", testDeployNamespace, appsSubdomain)
+	contentURL := fmt.Sprintf("https://movies-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(contentURL, timeout))
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
-func createDependenciesManifest(dir, namespace, manifest string) error {
+func createDependenciesManifest(dir, manifest string) error {
 	if err := os.Mkdir(filepath.Join(dir, "nginx"), 0700); err != nil {
 		return err
 	}
