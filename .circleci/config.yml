@@ -214,7 +214,7 @@ jobs:
       - add_ssh_keys:
           fingerprints:
             - f7:81:9f:b4:31:3a:4d:46:ce:cf:54:a2:70:46:5a:df
-      - deploy:
+      - run:
           name: Update brew formula
           command: |
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
@@ -358,7 +358,7 @@ jobs:
       - add_ssh_keys:
           fingerprints:
             - f7:81:9f:b4:31:3a:4d:46:ce:cf:54:a2:70:46:5a:df
-      - deploy:
+      - run:
           name: Update brew formula
           command: |
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
@@ -366,7 +366,7 @@ jobs:
             ./scripts/update_homebrew_formula.sh $CIRCLE_TAG $sha $sha_arm
             pushd homebrew-cli
             git push git@github.com:okteto/homebrew-cli.git master
-      - deploy:
+      - run:
           name: Auto-update-actions
           command: ./scripts/ci/release-github-actions.sh $CIRCLE_TAG
 
