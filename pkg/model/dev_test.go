@@ -1274,10 +1274,6 @@ func Test_validateForExtraFields(t *testing.T) {
                    image: alpine`,
 		},
 		{
-			name:  "initFromImage",
-			value: "initFromImage: true",
-		},
-		{
 			name: "timeout",
 			value: `timeout:
                    default: 3m

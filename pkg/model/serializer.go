@@ -645,7 +645,6 @@ var hybridUnsupportedFields = []string{
 	"image",
 	"imagePullPolicy",
 	"initContainer",
-	"initFromImage",
 	"lifecycle",
 	"namespace",
 	"nodeSelector",

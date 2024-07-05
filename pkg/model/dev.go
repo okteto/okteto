@@ -94,10 +94,9 @@ type Dev struct {
 	RemotePort      int                `json:"remote,omitempty" yaml:"remote,omitempty"`
 	SSHServerPort   int                `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
 
-	EmptyImage    bool `json:"-" yaml:"-"`
-	InitFromImage bool `json:"initFromImage,omitempty" yaml:"initFromImage,omitempty"`
-	Autocreate    bool `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
-	Healthchecks  bool `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"` // Deprecated field
+	EmptyImage   bool `json:"-" yaml:"-"`
+	Autocreate   bool `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
+	Healthchecks bool `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"` // Deprecated field
 }
 
 type Affinity apiv1.Affinity
@@ -1172,9 +1171,6 @@ func (service *Dev) validateForExtraFields() error {
 	}
 	if service.InitContainer.Image != "" {
 		return fmt.Errorf(errorMessage, "initContainer")
-	}
-	if service.InitFromImage {
-		return fmt.Errorf(errorMessage, "initFromImage")
 	}
 	if service.Timeout != (Timeout{}) {
 		return fmt.Errorf(errorMessage, "timeout")
