@@ -440,7 +440,7 @@ func (up *upContext) RunCommand(ctx context.Context, cmd []string) error {
 			hybridCtx := &HybridExecCtx{
 				Dev:       up.Dev,
 				Name:      up.Manifest.Name,
-				Namespace: okteto.GetContext().Namespace,
+				Namespace: up.Namespace,
 				Client:    k8sClient,
 				Workdir:   up.Dev.Workdir,
 			}

@@ -245,7 +245,7 @@ okteto up my-svc -- echo this is a test
 				return fmt.Errorf("failed to load k8s client: %w", err)
 			}
 
-			if upOptions.Deploy || !pipeline.IsDeployed(ctx, up.Manifest.Name, okteto.GetContext().Namespace, k8sClient) {
+			if upOptions.Deploy || !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Namespace, k8sClient) {
 				err := up.deployApp(ctx, ioCtrl, k8sLogger)
 
 				// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
