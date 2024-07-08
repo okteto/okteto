@@ -396,13 +396,14 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 }
 
 func TestDeployWithErrorDeploying(t *testing.T) {
+	fakeNamespace := "test"
 	fakeOs := afero.NewMemMapFs()
 	fakeK8sClientProvider := test.NewFakeK8sProvider()
 	fakeDeployer := &fakeDeployer{}
 	okteto.CurrentStore = &okteto.ContextStore{
 		Contexts: map[string]*okteto.Context{
 			"test": {
-				Namespace: "test",
+				Namespace: fakeNamespace,
 				Cfg:       &api.Config{},
 			},
 		},
@@ -420,6 +421,7 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 	ctx := context.Background()
 	opts := &Options{
 		Name:         "movies",
+		Namespace:    fakeNamespace,
 		ManifestPath: "",
 		Variables:    []string{},
 	}
@@ -438,6 +440,7 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 
 	expectedOpts := &Options{
 		Name:         "movies",
+		Namespace:    fakeNamespace,
 		ManifestPath: "",
 		Variables:    []string{},
 		Manifest:     fakeManifest,
@@ -453,7 +456,7 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.GetContext().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), fakeNamespace, fakeClient)
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
 	assert.Equal(t, pipeline.ErrorStatus, cfg.Data["status"])
@@ -462,15 +465,17 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 }
 
 func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
+	fakeNamespace := "test"
 	opts := &Options{
 		Name:         "movies",
+		Namespace:    fakeNamespace,
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 	fakeK8sClientProvider := test.NewFakeK8sProvider(&apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pipeline.TranslatePipelineName(opts.Name),
-			Namespace: "test",
+			Namespace: fakeNamespace,
 		},
 		Data: map[string]string{
 			"actionLock": "test",
@@ -516,19 +521,20 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.GetContext().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), fakeNamespace, fakeClient)
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
 }
 
 func TestDeployWithoutErrors(t *testing.T) {
+	fakeNamespace := "test"
 	fakeOs := afero.NewMemMapFs()
 	fakeK8sClientProvider := test.NewFakeK8sProvider(&v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
 				model.DeployedByLabel: "movies",
 			},
-			Namespace: "test",
+			Namespace: fakeNamespace,
 		},
 	})
 	fakeDeployer := &fakeDeployer{}
@@ -536,7 +542,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 	okteto.CurrentStore = &okteto.ContextStore{
 		Contexts: map[string]*okteto.Context{
 			"test": {
-				Namespace: "test",
+				Namespace: fakeNamespace,
 				Cfg:       &api.Config{},
 			},
 		},
@@ -556,6 +562,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 	ctx := context.Background()
 	opts := &Options{
 		Name:         "movies",
+		Namespace:    fakeNamespace,
 		ManifestPath: "",
 		Variables:    []string{},
 	}
@@ -574,6 +581,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 
 	expectedOpts := &Options{
 		Name:         "movies",
+		Namespace:    fakeNamespace,
 		ManifestPath: "",
 		Variables:    []string{},
 		Manifest:     fakeManifest,
@@ -589,7 +597,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.GetContext().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), fakeNamespace, fakeClient)
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
 	assert.Equal(t, pipeline.DeployedStatus, cfg.Data["status"])
