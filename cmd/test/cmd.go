@@ -121,7 +121,12 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, tracker *ProxyTracker) (analytics.TestMetadata, error) {
 	fs := afero.NewOsFs()
 
-	if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
+	ctxOpts := &contextCMD.Options{
+		Context:   options.K8sContext,
+		Namespace: options.Namespace,
+		Show:      true,
+	}
+	if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
 		return analytics.TestMetadata{}, err
 	}
 
