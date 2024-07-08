@@ -311,9 +311,11 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 }
 
 func TestCreateConfigMapWithBuildError(t *testing.T) {
+	fakeNamespace := "test"
 	fakeK8sClientProvider := test.NewFakeK8sProvider()
 	opts := &Options{
 		Name:         "testErr",
+		Namespace:    fakeNamespace,
 		ManifestPath: "",
 		Variables:    []string{},
 		Build:        true,
@@ -358,13 +360,13 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	// sanitizeName is needed to check the CFGmap - this sanitization is done at RunDeploy, labels and cfg name
 	sanitizedName := format.ResourceK8sMetaString(opts.Name)
 
-	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(sanitizedName), okteto.GetContext().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(sanitizedName), fakeNamespace, fakeClient)
 	assert.NoError(t, err)
 
 	expectedCfg := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("okteto-git-%s", sanitizedName),
-			Namespace: okteto.GetContext().Namespace,
+			Namespace: fakeNamespace,
 			Labels:    map[string]string{"dev.okteto.com/git-deploy": "true"},
 		},
 		Data: map[string]string{

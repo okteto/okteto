@@ -109,7 +109,7 @@ func GetTranslations(ctx context.Context, namespace string, dev *model.Dev, app 
 		MainDev: dev,
 		Dev:     dev,
 		App:     app,
-		Rules:   []*model.TranslationRule{dev.ToTranslationRule(namespace, dev, reset)},
+		Rules:   []*model.TranslationRule{dev.ToTranslationRule(dev, namespace, reset)},
 	}
 	result := map[string]*Translation{app.ObjectMeta().Name: mainTr}
 
@@ -140,7 +140,7 @@ func loadServiceTranslations(ctx context.Context, namespace string, dev *model.D
 			return err
 		}
 
-		rule := s.ToTranslationRule(namespace, dev, reset)
+		rule := s.ToTranslationRule(dev, namespace, reset)
 
 		if _, ok := result[app.ObjectMeta().Name]; ok {
 			result[app.ObjectMeta().Name].Rules = append(result[app.ObjectMeta().Name].Rules, rule)

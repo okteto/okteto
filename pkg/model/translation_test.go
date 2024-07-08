@@ -72,7 +72,7 @@ func TestDevToTranslationRule(t *testing.T) {
 
 	dev := manifest.Dev["web"]
 
-	rule1 := dev.ToTranslationRule("n", dev, false)
+	rule1 := dev.ToTranslationRule(dev, "n", false)
 	rule1OK := &TranslationRule{
 		Marker:            OktetoBinImageTag,
 		OktetoBinImageTag: OktetoBinImageTag,
@@ -176,7 +176,7 @@ func TestDevToTranslationRule(t *testing.T) {
 	}
 
 	dev2 := dev.Services[0]
-	rule2 := dev2.ToTranslationRule("n", dev, false)
+	rule2 := dev2.ToTranslationRule(dev, "n", false)
 	rule2OK := &TranslationRule{
 		Container:       "dev",
 		Image:           "worker:latest",
@@ -248,7 +248,7 @@ func TestDevToTranslationRuleInitContainer(t *testing.T) {
 
 	dev := manifest.Dev["web"]
 
-	rule := dev.ToTranslationRule("n", dev, false)
+	rule := dev.ToTranslationRule(dev, "n", false)
 	ruleOK := &TranslationRule{
 		Marker:            OktetoBinImageTag,
 		OktetoBinImageTag: "image",
@@ -342,7 +342,7 @@ func TestDevToTranslationDebugEnabled(t *testing.T) {
 
 	dev := manifest.Dev["web"]
 
-	rule := dev.ToTranslationRule("n", dev, false)
+	rule := dev.ToTranslationRule(dev, "n", false)
 	ruleOK := &TranslationRule{
 		Marker:            OktetoBinImageTag,
 		OktetoBinImageTag: OktetoBinImageTag,
@@ -452,7 +452,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Logf("test: %s", test.name)
-		rule := test.manifest.ToTranslationRule("n", test.manifest, false)
+		rule := test.manifest.ToTranslationRule(test.manifest, "n", false)
 		if e, a := test.expected, rule.Environment; !reflect.DeepEqual(e, a) {
 			t.Errorf("expected environment:\n%#v\ngot:\n%#v", e, a)
 		}
@@ -566,7 +566,7 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 
 		dev := manifest.Dev[test.name]
 
-		rule := dev.ToTranslationRule("n", dev, false)
+		rule := dev.ToTranslationRule(dev, "n", false)
 		marshalled, err := yaml.Marshal(rule.SecurityContext)
 		assert.NoError(t, err)
 		marshalledOK, err := yaml.Marshal(test.translated)

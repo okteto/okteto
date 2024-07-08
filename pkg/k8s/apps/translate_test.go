@@ -121,7 +121,7 @@ dev:
 	d1.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RollingUpdateDeploymentStrategyType,
 	}
-	rule1 := dev1.ToTranslationRule("n", dev1, false)
+	rule1 := dev1.ToTranslationRule(dev1, "n", false)
 	tr1 := &Translation{
 		MainDev: dev1,
 		Dev:     dev1,
@@ -865,7 +865,7 @@ func Test_translateWithoutVolumes(t *testing.T) {
 	dev := manifest.Dev["web"]
 
 	d := deployments.Sandbox(dev, "n")
-	rule := dev.ToTranslationRule("n", dev, true)
+	rule := dev.ToTranslationRule(dev, "n", true)
 	tr := &Translation{
 		MainDev: dev,
 		Dev:     dev,
@@ -1411,7 +1411,7 @@ func Test_translateMultipleEnvVars(t *testing.T) {
 	dev.Username = "cindy"
 
 	d := deployments.Sandbox(dev, "n")
-	rule := dev.ToTranslationRule("n", dev, false)
+	rule := dev.ToTranslationRule(dev, "n", false)
 	tr := &Translation{
 		MainDev: dev,
 		Dev:     dev,
@@ -1533,7 +1533,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	delete(sfs1.Annotations, model.OktetoAutoCreateAnnotation)
 	sfs1.Spec.Replicas = pointer.Int32(2)
 
-	rule1 := dev1.ToTranslationRule("n", dev1, false)
+	rule1 := dev1.ToTranslationRule(dev1, "n", false)
 	tr1 := &Translation{
 		MainDev: dev1,
 		Dev:     dev1,
