@@ -385,7 +385,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	dc.IoCtrl.Logger().Debugf("manifest path to store in metadata: %q", manifestPathForConfigMap)
 	data := &pipeline.CfgData{
 		Name:       deployOptions.Name,
-		Namespace:  okteto.GetContext().Namespace,
+		Namespace:  deployOptions.Namespace,
 		Repository: os.Getenv(model.GithubRepositoryEnvVar),
 		Branch:     os.Getenv(constants.OktetoGitBranchEnvVar),
 		Filename:   manifestPathForConfigMap,

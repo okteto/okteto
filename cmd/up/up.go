@@ -482,7 +482,7 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 	startTime := time.Now()
 	err = c.Run(ctx, &deploy.Options{
 		Name:             up.Manifest.Name,
-		Namespace:        okteto.GetContext().Namespace,
+		Namespace:        up.Namespace,
 		ManifestPathFlag: up.Options.ManifestPathFlag,
 		ManifestPath:     up.Options.ManifestPath,
 		Timeout:          5 * time.Minute,
