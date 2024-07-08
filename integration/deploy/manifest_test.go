@@ -493,7 +493,7 @@ func TestDeployOktetoManifestWithinRepository(t *testing.T) {
 
 	require.NoError(t, createOktetoManifest(dir, simpleOktetoManifestContent))
 
-	testNamespace := integration.GetTestNamespace("ifbyol-DeployManifestWithinRepo", user)
+	testNamespace := integration.GetTestNamespace("DeployManifestWithinRepo", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -673,6 +673,15 @@ func createOktetoManifestWithCache(dir string) error {
 
 func createOktetoManifest(dir, content string) error {
 	manifestPath := filepath.Join(dir, oktetoManifestName)
+	manifestContent := []byte(content)
+	if err := os.WriteFile(manifestPath, manifestContent, 0600); err != nil {
+		return err
+	}
+	return nil
+}
+
+func createOktetoManifestWithName(dir, content, name string) error {
+	manifestPath := filepath.Join(dir, name)
 	manifestContent := []byte(content)
 	if err := os.WriteFile(manifestPath, manifestContent, 0600); err != nil {
 		return err

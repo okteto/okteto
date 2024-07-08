@@ -115,14 +115,6 @@ func TestNewRepo(t *testing.T) {
 				repoGetter: gitRepositoryGetter{},
 			},
 		},
-		{
-			name:         "GitCommit is not empty in remote deploy",
-			GitCommit:    "1234567890",
-			remoteDeploy: "true",
-			expectedControl: oktetoRemoteRepoController{
-				gitCommit: "1234567890",
-			},
-		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
