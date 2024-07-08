@@ -28,18 +28,14 @@ var (
 	parentManifestContent = `
 deploy:
   remote: true
-  image: golang:1.22.5-bookworm
   commands:
-    - go version
-    - version=$(go version); if [ $version -ne "go version go1.22.5 linux/amd64" ]; then exit 1; fi
     - okteto deploy -f other-okteto.yml --remote`
 
 	childManifestContent = `
 deploy:
-  image: golang:1.21.12-bookworm
+  image: aquasec/trivy:latest
   commands:
-    - go version
-    - version=$(go version); if [ $version -ne "go version go1.21.12 linux/amd64" ]; then exit 1; fi`
+    - trivy -q image alpine:3.14`
 )
 
 // TestDeployInDeployRemote test the scenario where an okteto deploy is run inside an okteto deploy in remote
