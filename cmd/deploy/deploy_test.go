@@ -318,7 +318,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 		Name:         "testErr",
 		ManifestPath: "",
 		Variables:    []string{},
-		Build:        true,
+		NoBuild:      false,
 	}
 
 	reg := newFakeRegistry()
