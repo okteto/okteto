@@ -488,7 +488,7 @@ func TestDeployOktetoManifestWithinRepository(t *testing.T) {
 
 	require.NoError(t, createOktetoManifest(dir, simpleOktetoManifestContent))
 
-	testNamespace := integration.GetTestNamespace("ifbyol-DeployManifestWithinRepo", user)
+	testNamespace := integration.GetTestNamespace("DeployManifestWithinRepo", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
