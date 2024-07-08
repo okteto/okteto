@@ -551,11 +551,6 @@ func getDefaultTimeout() time.Duration {
 }
 
 func shouldRunInRemote(opts *Options) bool {
-	// already in remote so we need to deploy locally
-	if env.LoadBoolean(constants.OktetoDeployRemote) {
-		return false
-	}
-
 	// --remote flag enabled from command line
 	if opts.RunInRemote {
 		return true

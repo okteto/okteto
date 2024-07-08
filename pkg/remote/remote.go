@@ -371,7 +371,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 	if len(params.Artifacts) > 0 {
 		buildOptions.LocalOutputPath = buildCtx
 	}
-	r.ioCtrl.Logger().Infof("Executing test with the following image: %s", params.BaseImage)
+	r.ioCtrl.Logger().Infof("Executing remote with the following base image: %s", params.BaseImage)
 
 	// we need to call Run() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
