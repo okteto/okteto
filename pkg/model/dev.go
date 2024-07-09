@@ -67,7 +67,6 @@ type Dev struct {
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
 	Workdir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	Name                 string                `json:"name,omitempty" yaml:"name,omitempty"`
-	Username             string                `json:"-" yaml:"-"`
 	RegistryURL          string                `json:"-" yaml:"-"`
 	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
 	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
@@ -827,7 +826,7 @@ func (dev *Dev) LabelsSelector() string {
 }
 
 // ToTranslationRule translates a dev struct into a translation rule
-func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
+func (dev *Dev) ToTranslationRule(main *Dev, username string, reset bool) *TranslationRule {
 	rule := &TranslationRule{
 		Container:        dev.Container,
 		ImagePullPolicy:  dev.ImagePullPolicy,
@@ -876,12 +875,13 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 				Value: dev.Name,
 			},
 		)
-		if dev.Username != "" {
+
+		if username != "" {
 			rule.Environment = append(
 				rule.Environment,
 				env.Var{
 					Name:  "OKTETO_USERNAME",
-					Value: dev.Username,
+					Value: username,
 				},
 			)
 		}
@@ -1108,9 +1108,6 @@ func (dev *Dev) translateDeprecatedMetadataFields() {
 
 func (service *Dev) validateForExtraFields() error {
 	errorMessage := "%q is not supported in Services. Please visit https://www.okteto.com/docs/reference/okteto-manifest/#services-object-optional for documentation"
-	if service.Username != "" {
-		return fmt.Errorf(errorMessage, "username")
-	}
 	if service.RegistryURL != "" {
 		return fmt.Errorf(errorMessage, "registryURL")
 	}

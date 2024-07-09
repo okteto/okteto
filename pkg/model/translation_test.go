@@ -73,7 +73,7 @@ func TestDevToTranslationRule(t *testing.T) {
 
 	dev := manifest.Dev["web"]
 
-	rule1 := dev.ToTranslationRule(dev, false)
+	rule1 := dev.ToTranslationRule(dev, "username", false)
 	rule1OK := &TranslationRule{
 		Marker:            OktetoBinImageTag,
 		OktetoBinImageTag: OktetoBinImageTag,
@@ -93,6 +93,7 @@ func TestDevToTranslationRule(t *testing.T) {
 				Name:  "OKTETO_NAME",
 				Value: "web",
 			},
+			{Name: "OKTETO_USERNAME", Value: "username"},
 			{Name: "HISTSIZE", Value: "10000000"},
 			{Name: "HISTFILESIZE", Value: "10000000"},
 			{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
@@ -172,12 +173,10 @@ func TestDevToTranslationRule(t *testing.T) {
 	assert.NoError(t, err)
 	marshalled1OK, err := yaml.Marshal(rule1OK)
 	assert.NoError(t, err)
-	if string(marshalled1) != string(marshalled1OK) {
-		t.Fatalf("Wrong rule1 generation.\nActual %s, \nExpected %s", string(marshalled1), string(marshalled1OK))
-	}
+	assert.Equal(t, string(marshalled1), string(marshalled1OK))
 
 	dev2 := dev.Services[0]
-	rule2 := dev2.ToTranslationRule(dev, false)
+	rule2 := dev2.ToTranslationRule(dev, "username", false)
 	rule2OK := &TranslationRule{
 		Container:       "dev",
 		Image:           "worker:latest",
@@ -250,7 +249,7 @@ func TestDevToTranslationRuleInitContainer(t *testing.T) {
 
 	dev := manifest.Dev["web"]
 
-	rule := dev.ToTranslationRule(dev, false)
+	rule := dev.ToTranslationRule(dev, "username", false)
 	ruleOK := &TranslationRule{
 		Marker:            OktetoBinImageTag,
 		OktetoBinImageTag: "image",
@@ -268,6 +267,7 @@ func TestDevToTranslationRuleInitContainer(t *testing.T) {
 				Name:  "OKTETO_NAME",
 				Value: "web",
 			},
+			{Name: "OKTETO_USERNAME", Value: "username"},
 			{Name: "HISTSIZE", Value: "10000000"},
 			{Name: "HISTFILESIZE", Value: "10000000"},
 			{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
@@ -323,9 +323,7 @@ func TestDevToTranslationRuleInitContainer(t *testing.T) {
 	assert.NoError(t, err)
 	marshalledOK, err := yaml.Marshal(ruleOK)
 	assert.NoError(t, err)
-	if !bytes.Equal(marshalled, marshalledOK) {
-		t.Fatalf("Wrong rule generation.\nActual %s, \nExpected %s", string(marshalled), string(marshalledOK))
-	}
+	assert.Equal(t, string(marshalled), string(marshalledOK))
 }
 
 func TestDevToTranslationDebugEnabled(t *testing.T) {
@@ -345,7 +343,7 @@ func TestDevToTranslationDebugEnabled(t *testing.T) {
 
 	dev := manifest.Dev["web"]
 
-	rule := dev.ToTranslationRule(dev, false)
+	rule := dev.ToTranslationRule(dev, "username", false)
 	ruleOK := &TranslationRule{
 		Marker:            OktetoBinImageTag,
 		OktetoBinImageTag: OktetoBinImageTag,
@@ -364,6 +362,7 @@ func TestDevToTranslationDebugEnabled(t *testing.T) {
 				Name:  "OKTETO_NAME",
 				Value: "web",
 			},
+			{Name: "OKTETO_USERNAME", Value: "username"},
 			{Name: "HISTSIZE", Value: "10000000"},
 			{Name: "HISTFILESIZE", Value: "10000000"},
 			{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
@@ -426,6 +425,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 			expected: env.Environment{
 				{Name: "OKTETO_NAMESPACE", Value: ""},
 				{Name: "OKTETO_NAME", Value: ""},
+				{Name: "OKTETO_USERNAME", Value: "username"},
 				{Name: "HISTSIZE", Value: "10000000"},
 				{Name: "HISTFILESIZE", Value: "10000000"},
 				{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
@@ -443,6 +443,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 			expected: env.Environment{
 				{Name: "OKTETO_NAMESPACE", Value: ""},
 				{Name: "OKTETO_NAME", Value: ""},
+				{Name: "OKTETO_USERNAME", Value: "username"},
 				{Name: oktetoSSHServerPortVariable, Value: "22220"},
 				{Name: "HISTSIZE", Value: "10000000"},
 				{Name: "HISTFILESIZE", Value: "10000000"},
@@ -455,7 +456,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Logf("test: %s", test.name)
-		rule := test.manifest.ToTranslationRule(test.manifest, false)
+		rule := test.manifest.ToTranslationRule(test.manifest, "username", false)
 		if e, a := test.expected, rule.Environment; !reflect.DeepEqual(e, a) {
 			t.Errorf("expected environment:\n%#v\ngot:\n%#v", e, a)
 		}
@@ -575,7 +576,7 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 
 		dev := manifest.Dev[test.name]
 
-		rule := dev.ToTranslationRule(dev, false)
+		rule := dev.ToTranslationRule(dev, "username", false)
 		marshalled, err := yaml.Marshal(rule.SecurityContext)
 		assert.NoError(t, err)
 		marshalledOK, err := yaml.Marshal(test.translated)

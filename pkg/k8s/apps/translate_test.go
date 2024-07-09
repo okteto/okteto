@@ -122,7 +122,7 @@ dev:
 	d1.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RollingUpdateDeploymentStrategyType,
 	}
-	rule1 := dev1.ToTranslationRule(dev1, false)
+	rule1 := dev1.ToTranslationRule(dev1, "cindy", false)
 	tr1 := &Translation{
 		MainDev: dev1,
 		Dev:     dev1,
@@ -293,6 +293,7 @@ dev:
 						Name:  "OKTETO_NAME",
 						Value: "web",
 					},
+					{Name: "OKTETO_USERNAME", Value: "cindy"},
 					{Name: "HISTSIZE", Value: "10000000"},
 					{Name: "HISTFILESIZE", Value: "10000000"},
 					{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
@@ -446,9 +447,7 @@ dev:
 	assert.NoError(t, err)
 	marshalledDevD1OK, err := yaml.Marshal(dDevPod1OK)
 	assert.NoError(t, err)
-	if !bytes.Equal(marshalledDevD1, marshalledDevD1OK) {
-		t.Fatalf("Wrong dev d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD1), string(marshalledDevD1OK))
-	}
+	assert.Equal(t, string(marshalledDevD1), string(marshalledDevD1OK))
 
 	require.NoError(t, tr1.DevModeOff())
 
@@ -871,7 +870,7 @@ func Test_translateWithoutVolumes(t *testing.T) {
 	dev := manifest.Dev["web"]
 
 	d := deployments.Sandbox(dev)
-	rule := dev.ToTranslationRule(dev, true)
+	rule := dev.ToTranslationRule(dev, "cindy", true)
 	tr := &Translation{
 		MainDev: dev,
 		Dev:     dev,
@@ -951,6 +950,7 @@ func Test_translateWithoutVolumes(t *testing.T) {
 						Name:  "OKTETO_NAME",
 						Value: "web",
 					},
+					{Name: "OKTETO_USERNAME", Value: "cindy"},
 				},
 				VolumeMounts: []apiv1.VolumeMount{
 					{
@@ -1416,10 +1416,8 @@ func Test_translateMultipleEnvVars(t *testing.T) {
 	require.NoError(t, err)
 	dev := manifest.Dev["web"]
 
-	dev.Username = "cindy"
-
 	d := deployments.Sandbox(dev)
-	rule := dev.ToTranslationRule(dev, false)
+	rule := dev.ToTranslationRule(dev, "cindy", false)
 	tr := &Translation{
 		MainDev: dev,
 		Dev:     dev,
@@ -1542,7 +1540,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	delete(sfs1.Annotations, model.OktetoAutoCreateAnnotation)
 	sfs1.Spec.Replicas = pointer.Int32(2)
 
-	rule1 := dev1.ToTranslationRule(dev1, false)
+	rule1 := dev1.ToTranslationRule(dev1, "cindy", false)
 	tr1 := &Translation{
 		MainDev: dev1,
 		Dev:     dev1,
@@ -1713,6 +1711,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 						Name:  "OKTETO_NAME",
 						Value: "web",
 					},
+					{Name: "OKTETO_USERNAME", Value: "cindy"},
 					{Name: "HISTSIZE", Value: "10000000"},
 					{Name: "HISTFILESIZE", Value: "10000000"},
 					{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
