@@ -157,9 +157,6 @@ var (
 	// ErrManifestFoundButNoDeployAndDependenciesCommands raised when a manifest is found but no deploy or dependencies commands are defined
 	ErrManifestFoundButNoDeployAndDependenciesCommands = errors.New("found okteto manifest, but no deploy or dependencies commands were defined")
 
-	// ErrDeployCantDeploySvcsIfNotCompose raised when a manifest is found but no compose info is detected and args are passed to deploy command
-	ErrDeployCantDeploySvcsIfNotCompose = errors.New("services args are can only be used while trying to deploy a compose")
-
 	// ErrGitHubNotVerifiedEmail is raised when github login has not a verified email
 	ErrGitHubNotVerifiedEmail = errors.New("github-not-verified-email")
 
@@ -173,7 +170,10 @@ var (
 	ErrNoFlagAllowedOnSingleImageBuild = errors.New("flags only allowed when building a single image with `okteto build [NAME]`")
 
 	// ErrManifestNoDevSection is raised when the manifest doesn't have a dev section and the user tries to access it
-	ErrManifestNoDevSection = errors.New("okteto manifest has no 'dev' section. Configure it with 'okteto init'")
+	ErrManifestNoDevSection = UserError{
+		E:    fmt.Errorf("your Okteto Manifest doesn't have a 'dev' section"),
+		Hint: "To learn more visit: https://www.okteto.com/docs/get-started/deploy-your-app",
+	}
 
 	// ErrDevContainerNotExists is raised when the dev container doesn't exist on dev section
 	ErrDevContainerNotExists = "development container '%s' doesn't exist"
@@ -194,7 +194,7 @@ var (
 	ErrNotManifestContentDetected = errors.New("couldn't detect okteto manifest content")
 
 	// ErrCouldNotInferAnyManifest is raised when we can't detect any manifest to load
-	ErrCouldNotInferAnyManifest = errors.New("couldn't detect any manifest (okteto manifest, pipeline, compose, helm chart, k8s manifest)")
+	ErrCouldNotInferAnyManifest = errors.New("couldn't detect any manifest (okteto manifest, pipeline or compose)")
 
 	// ErrX509Hint should be included within a UserError.Hint when IsX509() return true
 	ErrX509Hint = "Add the flag '--insecure-skip-tls-verify' to skip certificate verification.\n    Follow this link to know more about configuring your own certificates with Okteto:\n    https://www.okteto.com/docs/self-hosted/install/certificates/"
@@ -226,21 +226,6 @@ func IsX509(err error) bool {
 // IsNotFound returns true if err is of the type not found
 func IsNotFound(err error) bool {
 	return err != nil && (strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "doesn't exist") || strings.Contains(err.Error(), "not-found"))
-}
-
-// IsNotExist returns true if err is of the type does not exist
-func IsNotExist(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	switch {
-	case strings.Contains(err.Error(), "does not exist"),
-		strings.Contains(err.Error(), "doesn't exist"):
-		return true
-	default:
-		return false
-	}
 }
 
 // IsTransient returns true if err represents a transient error

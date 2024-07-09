@@ -18,22 +18,16 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
 
 	"github.com/manifoldco/promptui"
-	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/spf13/afero"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -44,103 +38,8 @@ var (
 
 const (
 	// DefaultManifest default okteto manifest file
-	DefaultManifest   = "okteto.yml"
-	secondaryManifest = "okteto.yaml"
+	DefaultManifest = "okteto.yml"
 )
-
-// DeprecatedLoadManifest loads an okteto manifest checking "yml" and "yaml".
-// Deprecated: use model.GetManifestV2 instead
-func DeprecatedLoadManifest(devPath string, fs afero.Fs) (*model.Manifest, error) {
-	if !filesystem.FileExists(devPath) {
-		if devPath == DefaultManifest {
-			if filesystem.FileExists(secondaryManifest) {
-				return DeprecatedLoadManifest(secondaryManifest, fs)
-			}
-		}
-
-		return nil, fmt.Errorf("'%s' does not exist. Generate it by executing 'okteto init'", devPath)
-	}
-
-	manifest, err := model.Get(devPath, fs)
-	if err != nil {
-		return nil, err
-	}
-
-	if manifest.Name == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return nil, err
-		}
-		manifest.Name = devenvironment.DeprecatedInferName(cwd)
-	}
-	if manifest.Namespace == "" {
-		manifest.Namespace = okteto.GetContext().Namespace
-	}
-
-	if manifest.Context == "" {
-		manifest.Context = okteto.GetContext().Name
-	}
-
-	for _, dev := range manifest.Dev {
-		if err := LoadManifestRc(dev); err != nil {
-			return nil, err
-		}
-
-		dev.Namespace = okteto.GetContext().Namespace
-		dev.Context = okteto.GetContext().Name
-	}
-
-	return manifest, nil
-}
-
-func LoadManifestRc(dev *model.Dev) error {
-	defaultDevRcPath := filepath.Join(config.GetOktetoHome(), "okteto.yml")
-	secondaryDevRcPath := filepath.Join(config.GetOktetoHome(), "okteto.yaml")
-	var devRc *model.DevRC
-	var err error
-	if filesystem.FileExists(defaultDevRcPath) {
-		devRc, err = model.GetRc(defaultDevRcPath)
-		if err != nil {
-			return fmt.Errorf("error while reading %s file: %w", defaultDevRcPath, err)
-		}
-	} else if filesystem.FileExists(secondaryDevRcPath) {
-		devRc, err = model.GetRc(secondaryDevRcPath)
-		if err != nil {
-			return fmt.Errorf("error while reading %s file: %w", defaultDevRcPath, err)
-		}
-	}
-
-	if devRc != nil {
-		model.MergeDevWithDevRc(dev, devRc)
-	}
-	return nil
-}
-
-// DeprecatedLoadManifestOrDefault loads an okteto manifest or a default one if does not exist
-// Deprecatd. It should only be used by `push` command that will be deleted on next major version. No new usages should be added
-func DeprecatedLoadManifestOrDefault(devPath, name string, fs afero.Fs) (*model.Manifest, error) {
-	dev, err := DeprecatedLoadManifest(devPath, fs)
-	if err == nil {
-		return dev, nil
-	}
-
-	if oktetoErrors.IsNotExist(err) && len(name) > 0 {
-		manifest, err := model.Read(nil)
-		if err != nil {
-			return nil, err
-		}
-		manifest.Dev[name] = model.NewDev()
-		manifest.Dev[name].Name = name
-		manifest.Dev[name].Namespace = okteto.GetContext().Namespace
-		manifest.Dev[name].Context = okteto.GetContext().Name
-		if err := manifest.Dev[name].SetDefaults(); err != nil {
-			return nil, err
-		}
-		return manifest, nil
-	}
-
-	return nil, err
-}
 
 // GetDevFromManifest gets a dev from a manifest by comparing the given dev name with the dev name in the manifest
 func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, error) {
@@ -285,29 +184,6 @@ func AskForOptions(options []string, label string) (string, error) {
 	}
 
 	return options[i], nil
-}
-
-// AskIfOktetoInit asks if okteto init should be executed
-func AskIfOktetoInit(devPath string) bool {
-	result, err := AskYesNo(fmt.Sprintf("okteto manifest (%s) doesn't exist, do you want to create it?", devPath), YesNoDefault_Yes)
-	if err != nil {
-		return false
-	}
-	return result
-}
-
-// AsksQuestion asks a question to the user
-func AsksQuestion(q string) (string, error) {
-	var answer string
-
-	if err := oktetoLog.Question(q); err != nil {
-		oktetoLog.Infof("failed to ask question: %s", err)
-	}
-	if _, err := fmt.Scanln(&answer); err != nil {
-		return "", err
-	}
-
-	return answer, nil
 }
 
 // CheckIfDirectory checks if a path is a directory

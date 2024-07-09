@@ -77,12 +77,6 @@ commands:
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             make integration-okteto
 
-  integration-deprecated:
-    steps:
-      - run:
-          name: Run deprecated integration tests
-          command: make integration-deprecated
-
 executors:
   golang-ci:
     docker:
@@ -176,6 +170,8 @@ jobs:
           at: ./artifacts
       - run:
           name: Prepare env
+          environment:
+            OKTETO_CONTEXT: https://staging.okteto.dev/
           command: |
             mkdir -p $HOME/.okteto
             touch $HOME/.okteto/.noanalytics
@@ -184,7 +180,7 @@ jobs:
             curl -L "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
-            /usr/local/bin/okteto login --token ${API_STAGING_TOKEN}
+            /usr/local/bin/okteto context use ${OKTETO_CONTEXT} --token ${API_STAGING_TOKEN}
       - run:
           # As the integration test running the okteto deploy needs the CLI which we are testing, we build the current
           # CLI to the okteto.dev registry, so it is available for the user running the tests. Then, in the step
@@ -197,7 +193,6 @@ jobs:
       - integration-up
       - integration-actions
       - integration-okteto
-      - integration-deprecated
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
@@ -255,11 +250,11 @@ jobs:
       - run:
           name: Prepare env
           environment:
-            OKTETO_URL: https://staging.okteto.dev/
+            OKTETO_CONTEXT: https://staging.okteto.dev/
           command: |
             new-item $HOME\.okteto -itemtype "directory" -force
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
-            & "$($HOME)\project\artifacts\bin\okteto.exe" login --token $env:API_STAGING_TOKEN
+            & "$($HOME)\project\artifacts\bin\okteto.exe" context use ${OKTETO_CONTEXT} --token $env:API_STAGING_TOKEN
             & "$($HOME)\project\artifacts\bin\okteto.exe" kubeconfig
       - run:
           # As the integration test running the okteto deploy needs the CLI which we are testing, we build the current
@@ -268,17 +263,6 @@ jobs:
           name: Build CLI image windows
           command: |
             & "$($HOME)\project\artifacts\bin\okteto.exe" build --platform "linux/amd64" --build-arg VERSION_STRING=$env:CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-win:$env:CIRCLE_SHA1
-      - run:
-          name: Run deprecated integration tests
-          environment:
-            OKTETO_URL: https://staging.okteto.dev/
-            OKTETO_SKIP_CLEANUP: "true"
-            OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
-          command: |
-            $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
-            $env:Path+=";$($HOME)\project\artifacts\bin"
-            go test github.com/okteto/okteto/integration/deprecated/push -tags="integration" --count=1 -v -timeout 15m
-            go test github.com/okteto/okteto/integration/deprecated/stack -tags="integration" --count=1 -v -timeout 15m
       - run:
           name: Run build integration tests
           environment:
@@ -435,6 +419,7 @@ workflows:
               only:
                 - master
                 - /.*(windows|win)/
+                - ultra-mega-release-branch-3.0
       - test-integration:
           requires:
             - build-binaries
@@ -443,6 +428,7 @@ workflows:
               only:
                 - master
                 - /.*(e2e)/
+                - ultra-mega-release-branch-3.0
       - test-release:
           context:
             - GKE

@@ -131,19 +131,19 @@ spec:
     app: autowake-sfs
 `
 
-	oktetoManifestV1Name    = "okteto.yml"
-	oktetoManifestV1Content = `
-name: autowake
-image: python:alpine
-command:
-  - sh
-  - -c
-  - "echo -n $VAR > var.html && python -m http.server 8080"
-forward:
-  - 8080:8080
-workdir: /usr/src/app
-persistentVolume:
-  enabled: false
+	oktetoManifestV2Name    = "okteto.yml"
+	oktetoManifestV2Content = `dev:
+  autowake:
+    image: python:alpine
+    command:
+      - sh
+      - -c
+      - "echo -n $VAR > var.html && python -m http.server 8080"
+    forward:
+      - 8080:8080
+    workdir: /usr/src/app
+    persistentVolume:
+      enabled: false
 `
 	indexHTMLName = "index.html"
 
@@ -320,8 +320,8 @@ func writeIndexHTML(dir string) error {
 }
 
 func writeOktetoManifest(dir string) error {
-	manifestManifestPath := filepath.Join(dir, oktetoManifestV1Name)
-	manifestContentBytes := []byte(oktetoManifestV1Content)
+	manifestManifestPath := filepath.Join(dir, oktetoManifestV2Name)
+	manifestContentBytes := []byte(oktetoManifestV2Content)
 	if err := os.WriteFile(manifestManifestPath, manifestContentBytes, 0600); err != nil {
 		return err
 	}

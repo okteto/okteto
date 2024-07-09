@@ -24,7 +24,6 @@ import (
 
 	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/env"
@@ -36,7 +35,6 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
-	"github.com/spf13/cobra"
 )
 
 // oktetoClientProvider provides an okteto client ready to use or fail
@@ -85,54 +83,6 @@ func NewContextCommand(ctxCmdOption ...ctxCmdOption) *Command {
 	return cfg
 }
 
-// CreateCMD adds a new cluster to okteto context
-func CreateCMD() *cobra.Command {
-	ctxOptions := &Options{}
-	cmd := &cobra.Command{
-		Hidden: true,
-		Use:    "create [cluster-url]",
-		Args:   utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#context"),
-		Short:  "Add a context",
-		Long: `Add a context
-
-A context is a group of cluster access parameters. Each context contains a Kubernetes cluster, a user, and a namespace.
-The current context is the default cluster/namespace for any Okteto CLI command.
-
-You need to specify an Okteto URL. For example, run:
-
-	$ okteto context create https://cloud.okteto.com
-
-to configure your context to access Okteto Cloud.
-
-Your browser will ask for your authentication to retrieve your API token.
-
-If you need to automate authentication or if you don't want to use browser-based authentication, use the "--token" parameter:
-
-	$ okteto context create https://cloud.okteto.com --token ${OKTETO_TOKEN}
-`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			oktetoLog.Warning("'okteto context create' is deprecated in favor of 'okteto context use', and will be removed in a future version")
-			ctx := context.Background()
-
-			ctxOptions.Context = args[0]
-			ctxOptions.Context = okteto.AddSchema(ctxOptions.Context)
-			ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
-			ctxOptions.IsOkteto = true
-			ctxOptions.IsCtxCommand = true
-			ctxOptions.Show = false
-			ctxOptions.Save = true
-
-			err := NewContextCommand().UseContext(ctx, ctxOptions)
-			analytics.TrackContext(err == nil)
-			return err
-		},
-	}
-	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication")
-	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "namespace of your okteto context")
-	cmd.Flags().StringVarP(&ctxOptions.Builder, "builder", "b", "", "url of the builder service")
-	return cmd
-}
-
 func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 	created := false
 
@@ -171,9 +121,6 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 		// this is to avoid login with the browser again if we already have a valid token
 		ctxOptions.Token = okCtx.Token
 		ctxOptions.InferredToken = true
-		if ctxOptions.Builder == "" && okCtx.Builder != "" {
-			ctxOptions.Builder = okCtx.Builder
-		}
 		if ctxOptions.Namespace == "" {
 			ctxOptions.Namespace = ctxStore.Contexts[ctxOptions.Context].Namespace
 		}
@@ -385,7 +332,7 @@ func (*Command) initKubernetesContext(ctxOptions *Options) error {
 		ctxOptions.Namespace = cfg.Contexts[ctxOptions.Context].Namespace
 	}
 
-	okteto.AddKubernetesContext(ctxOptions.Context, ctxOptions.Namespace, ctxOptions.Builder)
+	okteto.AddKubernetesContext(ctxOptions.Context, ctxOptions.Namespace)
 
 	kubeCtx.Namespace = okteto.GetContext().Namespace
 	cfg.CurrentContext = okteto.GetContext().Name

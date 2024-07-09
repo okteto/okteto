@@ -61,11 +61,6 @@ func IsDevModeOn(app App) bool {
 	return app.ObjectMeta().Labels[constants.DevLabel] == "true" || len(app.ObjectMeta().Labels[model.DevCloneLabel]) > 0
 }
 
-// SetLastBuiltAnnotation sets the app timestamp
-func SetLastBuiltAnnotation(app App) {
-	app.ObjectMeta().Annotations[model.LastBuiltAnnotation] = time.Now().UTC().Format(constants.TimeFormat)
-}
-
 // GetRunningPodInLoop returns the dev pod for an app and loops until it success
 func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kubernetes.Interface) (*apiv1.Pod, error) {
 	ticker := time.NewTicker(500 * time.Millisecond)
