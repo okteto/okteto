@@ -94,7 +94,6 @@ type Dev struct {
 	RemotePort      int                `json:"remote,omitempty" yaml:"remote,omitempty"`
 	SSHServerPort   int                `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
 
-	EmptyImage   bool `json:"-" yaml:"-"`
 	Autocreate   bool `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
 	Healthchecks bool `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"` // Deprecated field
 }
@@ -366,9 +365,6 @@ func (dev *Dev) loadImage() error {
 		if err != nil {
 			return err
 		}
-	}
-	if dev.Image == "" {
-		dev.EmptyImage = true
 	}
 	return nil
 }
@@ -855,7 +851,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		rule.WorkDir = "/okteto"
 	}
 
-	if !dev.EmptyImage {
+	if dev.Image != "" {
 		rule.Image = dev.Image
 	}
 
