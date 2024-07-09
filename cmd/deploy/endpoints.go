@@ -25,7 +25,6 @@ import (
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/endpoints"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -82,27 +81,17 @@ func NewEndpointGetter(k8sLogger *io.K8sLogger) (EndpointGetter, error) {
 }
 
 // Endpoints lists the endpoints for a development environment
-func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Endpoints(ctx context.Context, fs afero.Fs, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &EndpointsOptions{}
-	fs := afero.NewOsFs()
 	cmd := &cobra.Command{
 		Use:   "endpoints",
 		Short: "Show endpoints for an environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if options.ManifestPath != "" {
-				workdir := filesystem.GetWorkdirFromManifestPath(options.ManifestPath)
-				if err := os.Chdir(workdir); err != nil {
-					return err
-				}
-				options.ManifestPath = filesystem.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
-				// check whether the manifest file provided by -f exists or not
-				if _, err := fs.Stat(options.ManifestPath); err != nil {
-					return oktetoErrors.UserError{
-						E:    fmt.Errorf("the okteto manifest file '%s' does not exist", options.ManifestPath),
-						Hint: "Check the path to the okteto manifest file",
-					}
-				}
+			manifestFlag, err := okteto.UseManifestFlag(fs, options.ManifestPath)
+			if err != nil {
+				return err
 			}
+			options.ManifestPath = manifestFlag
 
 			// false for 'json' and 'md' to avoid breaking their syntax
 			showCtxHeader := options.Output == ""

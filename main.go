@@ -177,7 +177,7 @@ func main() {
 	root.AddCommand(cmd.Restart())
 	root.AddCommand(deploy.Deploy(ctx, at, insights, ioController, k8sLogger))
 	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger))
-	root.AddCommand(deploy.Endpoints(ctx, k8sLogger))
+	root.AddCommand(deploy.Endpoints(ctx, fs, k8sLogger))
 	root.AddCommand(logs.Logs(ctx, k8sLogger))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
 	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger))
