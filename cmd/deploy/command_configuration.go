@@ -54,14 +54,6 @@ func (na Namer) ResolveName(ctx context.Context) string {
 }
 
 func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface, k8sLogger *ioCtrl.K8sLogger) error {
-
-	if deployOptions.Manifest.Context == "" {
-		deployOptions.Manifest.Context = okteto.GetContext().Name
-	}
-	if deployOptions.Manifest.Namespace == "" {
-		deployOptions.Manifest.Namespace = okteto.GetContext().Namespace
-	}
-
 	if deployOptions.Name == "" {
 		c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okteto.GetContext().Cfg)
 		if err != nil {

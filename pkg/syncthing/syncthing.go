@@ -40,7 +40,7 @@ import (
 	"github.com/shirou/gopsutil/process"
 	"github.com/spf13/afero"
 	"golang.org/x/crypto/bcrypt"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -201,7 +201,7 @@ type DownloadProgressData struct {
 }
 
 // New constructs a new Syncthing.
-func New(dev *model.Dev, fs afero.Fs) (*Syncthing, error) {
+func New(dev *model.Dev, namespace string, fs afero.Fs) (*Syncthing, error) {
 	fullPath := getInstallPath()
 
 	remotePort, err := model.GetAvailablePort(dev.Interface)
@@ -243,8 +243,8 @@ func New(dev *model.Dev, fs afero.Fs) (*Syncthing, error) {
 		Client:           NewAPIClient(),
 		FileWatcherDelay: DefaultFileWatcherDelay,
 		GUIAddress:       net.JoinHostPort(dev.Interface, strconv.Itoa(guiPort)),
-		Home:             config.GetAppHome(dev.Namespace, dev.Name),
-		LogPath:          GetLogFile(dev.Namespace, dev.Name),
+		Home:             config.GetAppHome(namespace, dev.Name),
+		LogPath:          GetLogFile(namespace, dev.Name),
 		ListenAddress:    net.JoinHostPort(dev.Interface, strconv.Itoa(listenPort)),
 		RemoteAddress:    fmt.Sprintf("tcp://%s:%d", dev.Interface, remotePort),
 		RemoteDeviceID:   DefaultRemoteDeviceID,
@@ -956,13 +956,13 @@ func (s *Syncthing) SoftTerminate() error {
 }
 
 // SaveConfig saves the syncthing object in the dev home folder
-func (s *Syncthing) SaveConfig(dev *model.Dev) error {
+func (s *Syncthing) SaveConfig(dev *model.Dev, namespace string) error {
 	marshalled, err := yaml.Marshal(s)
 	if err != nil {
 		return err
 	}
 
-	syncthingInfoFile := getInfoFile(dev.Namespace, dev.Name)
+	syncthingInfoFile := getInfoFile(namespace, dev.Name)
 	if err := os.WriteFile(syncthingInfoFile, marshalled, 0600); err != nil {
 		return fmt.Errorf("failed to write syncthing info file: %w", err)
 	}
@@ -971,8 +971,8 @@ func (s *Syncthing) SaveConfig(dev *model.Dev) error {
 }
 
 // Load loads the syncthing object from the dev home folder
-func Load(dev *model.Dev) (*Syncthing, error) {
-	syncthingInfoFile := getInfoFile(dev.Namespace, dev.Name)
+func Load(dev *model.Dev, namespace string) (*Syncthing, error) {
+	syncthingInfoFile := getInfoFile(namespace, dev.Name)
 	b, err := os.ReadFile(syncthingInfoFile)
 	if err != nil {
 		return nil, err
@@ -989,8 +989,8 @@ func Load(dev *model.Dev) (*Syncthing, error) {
 }
 
 // RemoveFolder deletes all the files created by the syncthing instance
-func RemoveFolder(dev *model.Dev, fs afero.Fs) error {
-	s, err := New(dev, fs)
+func RemoveFolder(dev *model.Dev, namespace string, fs afero.Fs) error {
+	s, err := New(dev, namespace, fs)
 	if err != nil {
 		return fmt.Errorf("failed to create syncthing instance")
 	}

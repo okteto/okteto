@@ -47,7 +47,7 @@ func (up *upContext) forwards(ctx context.Context) error {
 	}
 
 	oktetoLog.Infof("starting port forwards")
-	up.Forwarder = forwardk8s.NewPortForwardManager(ctx, up.Dev.Interface, restConfig, k8sClient, up.Dev.Namespace)
+	up.Forwarder = forwardk8s.NewPortForwardManager(ctx, up.Dev.Interface, restConfig, k8sClient, up.Namespace)
 
 	for idx, f := range up.Dev.Forward {
 		if f.Labels != nil {
@@ -71,7 +71,7 @@ func (up *upContext) forwards(ctx context.Context) error {
 		return err
 	}
 
-	err = up.Forwarder.Start(up.Pod.Name, up.Dev.Namespace)
+	err = up.Forwarder.Start(up.Pod.Name, up.Namespace)
 	if err != nil {
 		return err
 	}
@@ -91,12 +91,12 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 	}
 
 	oktetoLog.Infof("starting SSH port forwards")
-	f := forwardk8s.NewPortForwardManager(ctx, up.Dev.Interface, restConfig, k8sClient, up.Dev.Namespace)
+	f := forwardk8s.NewPortForwardManager(ctx, up.Dev.Interface, restConfig, k8sClient, up.Namespace)
 	if err := f.Add(forward.Forward{Local: up.Dev.RemotePort, Remote: up.Dev.SSHServerPort}); err != nil {
 		return err
 	}
 
-	up.Forwarder = ssh.NewForwardManager(ctx, fmt.Sprintf(":%d", up.Dev.RemotePort), up.Dev.Interface, "0.0.0.0", f, up.Dev.Namespace)
+	up.Forwarder = ssh.NewForwardManager(ctx, fmt.Sprintf(":%d", up.Dev.RemotePort), up.Dev.Interface, "0.0.0.0", f, up.Namespace)
 	if err := up.Forwarder.Add(forward.Forward{Local: up.Sy.RemotePort, Remote: syncthing.ClusterPort}); err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 		return fmt.Errorf("failed to add entry to your SSH config file")
 	}
 
-	err = up.Forwarder.Start(up.Pod.Name, up.Dev.Namespace)
+	err = up.Forwarder.Start(up.Pod.Name, up.Namespace)
 	if err != nil {
 		return err
 	}

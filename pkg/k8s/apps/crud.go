@@ -104,16 +104,16 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 }
 
 // GetTranslations fills all the deployments pointed by a development container
-func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, c kubernetes.Interface) (map[string]*Translation, error) {
+func GetTranslations(ctx context.Context, namespace string, dev *model.Dev, app App, reset bool, c kubernetes.Interface) (map[string]*Translation, error) {
 	mainTr := &Translation{
 		MainDev: dev,
 		Dev:     dev,
 		App:     app,
-		Rules:   []*model.TranslationRule{dev.ToTranslationRule(dev, reset)},
+		Rules:   []*model.TranslationRule{dev.ToTranslationRule(dev, namespace, reset)},
 	}
 	result := map[string]*Translation{app.ObjectMeta().Name: mainTr}
 
-	if err := loadServiceTranslations(ctx, dev, reset, result, c); err != nil {
+	if err := loadServiceTranslations(ctx, namespace, dev, reset, result, c); err != nil {
 		return nil, err
 	}
 
@@ -133,14 +133,14 @@ func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, c
 	return result, nil
 }
 
-func loadServiceTranslations(ctx context.Context, dev *model.Dev, reset bool, result map[string]*Translation, c kubernetes.Interface) error {
+func loadServiceTranslations(ctx context.Context, namespace string, dev *model.Dev, reset bool, result map[string]*Translation, c kubernetes.Interface) error {
 	for _, s := range dev.Services {
-		app, err := Get(ctx, s, dev.Namespace, c)
+		app, err := Get(ctx, s, namespace, c)
 		if err != nil {
 			return err
 		}
 
-		rule := s.ToTranslationRule(dev, reset)
+		rule := s.ToTranslationRule(dev, namespace, reset)
 
 		if _, ok := result[app.ObjectMeta().Name]; ok {
 			result[app.ObjectMeta().Name].Rules = append(result[app.ObjectMeta().Name].Rules, rule)

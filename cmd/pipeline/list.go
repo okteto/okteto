@@ -75,28 +75,11 @@ func list(ctx context.Context) *cobra.Command {
 
 // pipelineListCommandHandler prepares the right okteto context depending on the provided flags and then calls the actual function that lists pipelines
 func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx initOkCtxFn) error {
-	ctxResource := &model.ContextResource{}
 	ctxOptions := &contextCMD.Options{
-		Show: false,
+		Context:   flags.context,
+		Namespace: flags.namespace,
+		Show:      flags.output == "",
 	}
-	if flags.output == "" {
-		ctxOptions.Show = true
-	}
-
-	if flags.context != "" {
-		if err := ctxResource.UpdateContext(flags.context); err != nil {
-			return err
-		}
-	}
-
-	if flags.namespace != "" {
-		if err := ctxResource.UpdateNamespace(flags.namespace); err != nil {
-			return err
-		}
-	}
-
-	ctxOptions.Context = ctxResource.Context
-	ctxOptions.Namespace = ctxResource.Namespace
 
 	if err := initOkCtx(ctx, ctxOptions); err != nil {
 		return err
@@ -108,10 +91,6 @@ func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx
 		return oktetoErrors.ErrContextIsNotOktetoCluster
 	}
 
-	if flags.namespace == "" {
-		flags.namespace = okCtx.Namespace
-	}
-
 	pc, err := NewCommand()
 	if err != nil {
 		return err
@@ -121,7 +100,7 @@ func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx
 		return fmt.Errorf("failed to load okteto context '%s': %w", okCtx.Name, err)
 	}
 
-	return executeListPipelines(ctx, *flags, configmaps.List, getPipelineListOutput, c, os.Stdout)
+	return executeListPipelines(ctx, *flags, okCtx.Namespace, configmaps.List, getPipelineListOutput, c, os.Stdout)
 }
 
 type initOkCtxFn func(ctx context.Context, ctxOptions *contextCMD.Options) error
@@ -129,13 +108,13 @@ type getPipelineListOutputFn func(ctx context.Context, listPipelines listPipelin
 type listPipelinesFn func(ctx context.Context, namespace, labelSelector string, c kubernetes.Interface) ([]apiv1.ConfigMap, error)
 
 // executeListPipelines is responsible for output management and calling the function that lists pipelines
-func executeListPipelines(ctx context.Context, opts listFlags, listPipelines listPipelinesFn, getPipelineListOutput getPipelineListOutputFn, c kubernetes.Interface, w io.Writer) error {
+func executeListPipelines(ctx context.Context, opts listFlags, namespace string, listPipelines listPipelinesFn, getPipelineListOutput getPipelineListOutputFn, c kubernetes.Interface, w io.Writer) error {
 	labelSelector, err := getLabelSelector(opts.labels)
 	if err != nil {
 		return err
 	}
 
-	pipelineListOutput, err := getPipelineListOutput(ctx, listPipelines, opts.namespace, labelSelector, c)
+	pipelineListOutput, err := getPipelineListOutput(ctx, listPipelines, namespace, labelSelector, c)
 	if err != nil {
 		return err
 	}

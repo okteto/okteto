@@ -557,8 +557,7 @@ func TestInferFromStack(t *testing.T) {
 			currentManifest: &Manifest{
 				Dev: ManifestDevs{
 					"test": &Dev{
-						Name:      "one",
-						Namespace: "test",
+						Name: "one",
 					},
 				},
 				Build: build.ManifestBuild{},
@@ -594,8 +593,7 @@ func TestInferFromStack(t *testing.T) {
 				Destroy: &DestroyInfo{},
 				Dev: ManifestDevs{
 					"test": &Dev{
-						Name:      "one",
-						Namespace: "test",
+						Name: "one",
 						Metadata: &Metadata{
 							Labels:      Labels{},
 							Annotations: Annotations{},
@@ -1485,8 +1483,6 @@ func TestRead(t *testing.T) {
 			manifest: nil,
 			expected: &Manifest{
 				Name:         "",
-				Namespace:    "",
-				Context:      "",
 				Icon:         "",
 				ManifestPath: "",
 				Test:         ManifestTests{},
@@ -1516,8 +1512,6 @@ func TestRead(t *testing.T) {
 			manifest: []byte(""),
 			expected: &Manifest{
 				Name:         "",
-				Namespace:    "",
-				Context:      "",
 				Icon:         "",
 				ManifestPath: "",
 				Test:         ManifestTests{},
@@ -1564,12 +1558,9 @@ func TestRead(t *testing.T) {
 			name: "success parsing dev",
 			manifest: []byte(`dev:
   test:
-    image: test-image
-    context: ./test`),
+    image: test-image`),
 			expected: &Manifest{
 				Name:          "",
-				Namespace:     "",
-				Context:       "",
 				Icon:          "",
 				ManifestPath:  "",
 				Deploy:        &DeployInfo{},
@@ -1577,9 +1568,7 @@ func TestRead(t *testing.T) {
 				GlobalForward: []forward.GlobalForward{},
 				Dev: ManifestDevs{
 					"test": &Dev{
-						Name:      "test",
-						Context:   "./test",
-						Namespace: "",
+						Name: "test",
 						Metadata: &Metadata{
 							Labels:      Labels{},
 							Annotations: Annotations{},
@@ -1637,8 +1626,7 @@ func TestRead(t *testing.T) {
 				Type:         OktetoManifestType,
 				Manifest: []byte(`dev:
   test:
-    image: test-image
-    context: ./test`),
+    image: test-image`),
 				Fs: afero.NewOsFs(),
 			},
 			expectedErr: false,
@@ -1663,8 +1651,6 @@ func TestRead(t *testing.T) {
     service: service-b`),
 			expected: &Manifest{
 				Name:          "",
-				Namespace:     "",
-				Context:       "",
 				Icon:          "",
 				ManifestPath:  "",
 				Test:          ManifestTests{},

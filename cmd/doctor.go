@@ -24,6 +24,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -48,11 +49,20 @@ func Doctor(k8sLogger *io.K8sLogger) *cobra.Command {
 			oktetoLog.Info("starting doctor command")
 			ctx := context.Background()
 
+			ctxOpts := &contextCMD.Options{
+				Show:      true,
+				Context:   doctorOpts.K8sContext,
+				Namespace: doctorOpts.Namespace,
+			}
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+				return err
+			}
+
 			if okteto.InDevContainer() {
 				return oktetoErrors.ErrNotInDevContainer
 			}
 
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, contextCMD.ManifestOptions{Filename: doctorOpts.DevPath, Namespace: doctorOpts.Namespace, K8sContext: doctorOpts.K8sContext}, afero.NewOsFs())
+			manifest, err := model.GetManifestV2(doctorOpts.DevPath, afero.NewOsFs())
 			if err != nil {
 				return err
 			}
@@ -77,7 +87,7 @@ func Doctor(k8sLogger *io.K8sLogger) *cobra.Command {
 					return err
 				}
 			}
-			filename, err := doctor.Run(ctx, dev, doctorOpts.DevPath, c)
+			filename, err := doctor.Run(ctx, dev, doctorOpts.DevPath, okteto.GetContext().Namespace, c)
 			if err == nil {
 				oktetoLog.Information("Your doctor file is available at %s", filename)
 			}

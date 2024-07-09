@@ -56,7 +56,7 @@ func newAppRetriever(ioControl *io.Controller, k8sProvider okteto.K8sClientProvi
 }
 
 // getContainer retrieves the container for the dev environment
-func (ar *appRetriever) getApp(ctx context.Context, dev *model.Dev) (apps.App, error) {
+func (ar *appRetriever) getApp(ctx context.Context, dev *model.Dev, namespace string) (apps.App, error) {
 	ar.ioControl.Logger().Info("start to retrieve app")
 	c, _, err := ar.k8sProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
@@ -65,13 +65,13 @@ func (ar *appRetriever) getApp(ctx context.Context, dev *model.Dev) (apps.App, e
 	var devApp apps.App
 	if dev.Autocreate {
 		ar.ioControl.Logger().Debug("retrieving autocreated app")
-		devApp, err = ar.newAutocreateAppGetter(c).GetApp(ctx, dev)
+		devApp, err = ar.newAutocreateAppGetter(c).GetApp(ctx, dev, namespace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get app: %w", err)
 		}
 	} else {
 		ar.ioControl.Logger().Debug("retrieving app")
-		app, err := ar.newRunningAppGetter(c).GetApp(ctx, dev)
+		app, err := ar.newRunningAppGetter(c).GetApp(ctx, dev, namespace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get app: %w", err)
 		}
@@ -96,9 +96,9 @@ func newAutocreateAppGetter(c kubernetes.Interface) *autocreateAppGetter {
 	}
 }
 
-func (a *autocreateAppGetter) GetApp(ctx context.Context, dev *model.Dev) (apps.App, error) {
+func (a *autocreateAppGetter) GetApp(ctx context.Context, dev *model.Dev, namespace string) (apps.App, error) {
 	dev.Name = model.DevCloneName(dev.Name)
-	app, err := apps.Get(ctx, dev, dev.Namespace, a.k8sClient)
+	app, err := apps.Get(ctx, dev, namespace, a.k8sClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get app: %w", err)
 	}
@@ -112,7 +112,7 @@ type runningAppGetter struct {
 }
 
 type waiter interface {
-	Wait(dev *model.Dev, app apps.App) error
+	Wait(dev *model.Dev, namespace string, app apps.App) error
 }
 
 func newRunningAppGetter(c kubernetes.Interface) *runningAppGetter {
@@ -127,13 +127,13 @@ func newRunningAppGetter(c kubernetes.Interface) *runningAppGetter {
 	}
 }
 
-func (r *runningAppGetter) GetApp(ctx context.Context, dev *model.Dev) (apps.App, error) {
-	app, err := apps.Get(ctx, dev, dev.Namespace, r.k8sClient)
+func (r *runningAppGetter) GetApp(ctx context.Context, dev *model.Dev, namespace string) (apps.App, error) {
+	app, err := apps.Get(ctx, dev, namespace, r.k8sClient)
 	if err != nil {
 		return nil, err
 	}
 	for _, w := range r.waiter {
-		if err := w.Wait(dev, app); err != nil {
+		if err := w.Wait(dev, namespace, app); err != nil {
 			return nil, err
 		}
 	}
@@ -144,7 +144,7 @@ type waitUntilAppIsInDevMode struct {
 	k8sClient kubernetes.Interface
 }
 
-func (w waitUntilAppIsInDevMode) Wait(dev *model.Dev, app apps.App) error {
+func (w waitUntilAppIsInDevMode) Wait(dev *model.Dev, namespace string, app apps.App) error {
 	ticker := time.NewTicker(retryIntervalUntilAppIsInDevMode)
 	defer ticker.Stop()
 
@@ -161,12 +161,12 @@ func (w waitUntilAppIsInDevMode) Wait(dev *model.Dev, app apps.App) error {
 }
 
 type waitUnitlDevModeIsReady struct {
-	statusWaiter func(dev *model.Dev, states []config.UpState) error
+	statusWaiter func(dev *model.Dev, namespace string, states []config.UpState) error
 }
 
-func (w waitUnitlDevModeIsReady) Wait(dev *model.Dev, app apps.App) error {
+func (w waitUnitlDevModeIsReady) Wait(dev *model.Dev, namespace string, app apps.App) error {
 	waitForStates := []config.UpState{config.Ready}
-	if err := w.statusWaiter(dev, waitForStates); err != nil {
+	if err := w.statusWaiter(dev, namespace, waitForStates); err != nil {
 		return fmt.Errorf("failed to wait for dev mode to be ready: %w", err)
 	}
 	return nil

@@ -79,27 +79,28 @@ func (dw *Waiter) waitForResourcesToBeRunning(ctx context.Context, opts *Options
 		case <-to.C:
 			return fmt.Errorf("'%s' deploy didn't finish after %s", opts.Manifest.Name, opts.Timeout.String())
 		case <-ticker.C:
-			dList, err := pipeline.ListDeployments(ctx, opts.Manifest.Name, opts.Manifest.Namespace, c)
+			ns := okteto.GetContext().Namespace
+			dList, err := pipeline.ListDeployments(ctx, opts.Manifest.Name, ns, c)
 			if err != nil {
 				return err
 			}
 			areAllRunning := true
 			for i := range dList {
 				d := &dList[i]
-				if !deployments.IsRunning(ctx, opts.Manifest.Namespace, d.Name, c) {
+				if !deployments.IsRunning(ctx, ns, d.Name, c) {
 					areAllRunning = false
 				}
 			}
 			if !areAllRunning {
 				continue
 			}
-			sfsList, err := pipeline.ListStatefulsets(ctx, opts.Manifest.Name, opts.Manifest.Namespace, c)
+			sfsList, err := pipeline.ListStatefulsets(ctx, opts.Manifest.Name, ns, c)
 			if err != nil {
 				return err
 			}
 			for i := range sfsList {
 				ss := &sfsList[i]
-				if !statefulsets.IsRunning(ctx, opts.Manifest.Namespace, ss.Name, c) {
+				if !statefulsets.IsRunning(ctx, ns, ss.Name, c) {
 					areAllRunning = false
 				}
 			}

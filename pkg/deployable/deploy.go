@@ -253,7 +253,7 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 		fmt.Sprintf("%s=true", constants.OktetoSkipConfigCredentialsUpdate),
 		// Set OKTETO_DISABLE_SPINNER=true env variable, so all the Okteto commands disable spinner which leads to errors
 		fmt.Sprintf("%s=true", oktetoLog.OktetoDisableSpinnerEnvVar),
-		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
+		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commands runs on the same namespace
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.GetContext().Namespace),
 	)
 	if okteto.IsOkteto() {

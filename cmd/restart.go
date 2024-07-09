@@ -47,7 +47,7 @@ func Restart() *cobra.Command {
 			ctx := context.Background()
 
 			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs())
+			manifest, err := model.GetManifestV2(manifestOpts.Filename, afero.NewOsFs())
 			if err != nil {
 				return err
 			}
@@ -76,7 +76,7 @@ func Restart() *cobra.Command {
 			if len(args) > 0 {
 				serviceName = args[0]
 			}
-			err = executeRestart(ctx, dev, serviceName)
+			err = executeRestart(ctx, dev, serviceName, namespace)
 			if err != nil {
 				return fmt.Errorf("failed to restart your deployments: %w", err)
 			}
@@ -95,7 +95,7 @@ func Restart() *cobra.Command {
 	return cmd
 }
 
-func executeRestart(ctx context.Context, dev *model.Dev, sn string) error {
+func executeRestart(ctx context.Context, dev *model.Dev, serviceName, namespace string) error {
 	oktetoLog.Infof("restarting services")
 	client, _, err := okteto.GetK8sClient()
 	if err != nil {
@@ -111,7 +111,7 @@ func executeRestart(ctx context.Context, dev *model.Dev, sn string) error {
 	exit := make(chan error, 1)
 
 	go func() {
-		exit <- pods.Restart(ctx, dev, client, sn)
+		exit <- pods.Restart(ctx, dev, namespace, client, serviceName)
 	}()
 
 	select {

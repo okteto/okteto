@@ -182,14 +182,8 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 				return err
 			}
 
-			// Loads, updates and uses the context from path. If not found, it creates and uses a new context
-			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: true}); err != nil {
-				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.GetContext().Name).Error() {
-					return err
-				}
-				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
-					return err
-				}
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: options.Namespace}); err != nil {
+				return err
 			}
 
 			if okteto.IsOkteto() {
@@ -248,12 +242,11 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 			exit := make(chan error, 1)
 
 			go func() {
-				err := c.Run(ctx, options)
-				namespace := okteto.GetContext().Namespace
-				if options.Manifest != nil {
-					namespace = options.Manifest.Namespace
+				if options.Namespace == "" {
+					options.Namespace = okteto.GetContext().Namespace
 				}
-				c.InsightsTracker.TrackDeploy(ctx, options.Name, namespace, err == nil)
+				err := c.Run(ctx, options)
+				c.InsightsTracker.TrackDeploy(ctx, options.Name, options.Namespace, err == nil)
 				c.TrackDeploy(options.Manifest, options.RunInRemote, startTime, err)
 				exit <- err
 			}()
@@ -356,7 +349,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	}
 
 	if dc.IsRemote || dc.RunningInInstaller {
-		currentVars, err := dc.CfgMapHandler.GetConfigmapVariablesEncoded(ctx, deployOptions.Name, deployOptions.Manifest.Namespace)
+		currentVars, err := dc.CfgMapHandler.GetConfigmapVariablesEncoded(ctx, deployOptions.Name, deployOptions.Namespace)
 		if err != nil {
 			return err
 		}
@@ -392,7 +385,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	dc.IoCtrl.Logger().Debugf("manifest path to store in metadata: %q", manifestPathForConfigMap)
 	data := &pipeline.CfgData{
 		Name:       deployOptions.Name,
-		Namespace:  deployOptions.Manifest.Namespace,
+		Namespace:  deployOptions.Namespace,
 		Repository: os.Getenv(model.GithubRepositoryEnvVar),
 		Branch:     os.Getenv(constants.OktetoGitBranchEnvVar),
 		Filename:   manifestPathForConfigMap,
@@ -453,7 +446,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		// a stage with "Internal Server Error" duplicating the message we already display on error. For that reason,
 		// we should not set empty stage on error.
 		oktetoLog.SetStage("")
-		hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, c)
+		hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, okteto.GetContext().Namespace, c)
 		if err != nil {
 			return err
 		}
@@ -468,7 +461,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 				if err != nil {
 					oktetoLog.Infof("could not create endpoint getter: %s", err)
 				}
-				if err := eg.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name, Namespace: deployOptions.Manifest.Namespace}); err != nil {
+				if err := eg.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name, Namespace: okteto.GetContext().Namespace}); err != nil {
 					oktetoLog.Infof("could not retrieve endpoints: %s", err)
 				}
 			}
@@ -516,7 +509,7 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		startTime := time.Now()
 		err := dc.deployStack(ctx, deployOptions)
 		elapsedTime := time.Since(startTime)
-		if addPhaseErr := dc.CfgMapHandler.AddPhaseDuration(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, deployComposePhaseName, elapsedTime); addPhaseErr != nil {
+		if addPhaseErr := dc.CfgMapHandler.AddPhaseDuration(ctx, deployOptions.Name, okteto.GetContext().Namespace, deployComposePhaseName, elapsedTime); addPhaseErr != nil {
 			oktetoLog.Info("error adding phase to configmap: %s", err)
 		}
 		if err != nil {
@@ -641,10 +634,6 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 			Name:  "OKTETO_ORIGIN",
 			Value: "okteto-deploy",
 		})
-		namespace := okteto.GetContext().Namespace
-		if dep.Namespace != "" {
-			namespace = dep.Namespace
-		}
 
 		err := dep.ExpandVars(deployOptions.Variables)
 		if err != nil {
@@ -659,7 +648,7 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 			Wait:         dep.Wait,
 			Timeout:      dep.GetTimeout(deployOptions.Timeout),
 			SkipIfExists: !deployOptions.Dependencies,
-			Namespace:    namespace,
+			Namespace:    okteto.GetContext().Namespace,
 		}
 
 		if err := dc.PipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
@@ -757,7 +746,7 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 
 	divertDriver := divert.NewNoop()
 	if opts.Manifest.Deploy.Divert != nil {
-		divertDriver, err = divert.New(opts.Manifest.Deploy.Divert, opts.Manifest.Name, opts.Manifest.Namespace, c)
+		divertDriver, err = divert.New(opts.Manifest.Deploy.Divert, opts.Manifest.Name, okteto.GetContext().Namespace, c)
 		if err != nil {
 			return err
 		}
@@ -788,7 +777,7 @@ func (dc *Command) deployEndpoints(ctx context.Context, opts *Options) error {
 	}
 
 	translateOptions := &ingresses.TranslateOptions{
-		Namespace: opts.Manifest.Namespace,
+		Namespace: okteto.GetContext().Namespace,
 		Name:      format.ResourceK8sMetaString(opts.Manifest.Name),
 	}
 

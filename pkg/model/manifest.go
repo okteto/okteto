@@ -96,8 +96,6 @@ type Manifest struct {
 	Deploy       *DeployInfo              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev          ManifestDevs             `json:"dev,omitempty" yaml:"dev,omitempty"`
 	Name         string                   `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace    string                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context      string                   `json:"context,omitempty" yaml:"context,omitempty"`
 	Icon         string                   `json:"icon,omitempty" yaml:"icon,omitempty"`
 	ManifestPath string                   `json:"-" yaml:"-"`
 	Destroy      *DestroyInfo             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
@@ -142,9 +140,8 @@ func NewManifestFromStack(stack *Stack) *Manifest {
 		})
 	}
 	stackManifest := &Manifest{
-		Type:      StackType,
-		Name:      stack.Name,
-		Namespace: stack.Namespace,
+		Type: StackType,
+		Name: stack.Name,
 		Deploy: &DeployInfo{
 			ComposeSection: &ComposeSectionInfo{
 				ComposesInfo: stackPaths,
@@ -255,36 +252,6 @@ func getManifestFromDevFilePath(cwd, manifestPath string, fs afero.Fs) (*Manifes
 	}
 
 	return nil, discovery.ErrOktetoManifestNotFound
-}
-
-// GetManifestV1 gets a manifest from a path or search for the files to generate it
-func GetManifestV1(manifestPath string, fs afero.Fs) (*Manifest, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
-	manifest, err := getManifestFromDevFilePath(cwd, manifestPath, fs)
-	if err != nil {
-		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
-			return nil, err
-		}
-	}
-
-	if manifest != nil {
-		return manifest, nil
-	}
-
-	if manifestPath != "" && pathExistsAndDir(manifestPath) {
-		cwd = manifestPath
-	}
-
-	manifest, err = getManifestFromOktetoFile(cwd, fs)
-	if err != nil {
-		return nil, err
-	}
-
-	return manifest, nil
 }
 
 func pathExistsAndDir(path string) bool {
@@ -949,8 +916,6 @@ func (m *Manifest) WriteToFile(filePath string) error {
 	}
 	for dName, d := range m.Dev {
 		d.Name = ""
-		d.Context = ""
-		d.Namespace = ""
 		if d.Image == "" {
 			if v, ok := m.Build[dName]; ok {
 				if v.Image != "" {
