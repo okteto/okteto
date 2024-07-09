@@ -24,7 +24,6 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/endpoints"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -87,11 +86,10 @@ func Endpoints(ctx context.Context, fs afero.Fs, k8sLogger *io.K8sLogger) *cobra
 		Use:   "endpoints",
 		Short: "Show endpoints for an environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			manifestFlag, err := okteto.UseManifestFlag(fs, options.ManifestPath)
+			relativeManifestPathFlag, err := okteto.UseManifestPathFlag(fs, options.ManifestPath)
 			if err != nil {
 				return err
 			}
-			options.ManifestPath = manifestFlag
 
 			// false for 'json' and 'md' to avoid breaking their syntax
 			showCtxHeader := options.Output == ""
@@ -109,7 +107,7 @@ func Endpoints(ctx context.Context, fs afero.Fs, k8sLogger *io.K8sLogger) *cobra
 			}
 
 			if options.Name == "" {
-				manifest, err := eg.GetManifest(options.ManifestPath, afero.NewOsFs())
+				manifest, err := eg.GetManifest(relativeManifestPathFlag, afero.NewOsFs())
 				if err != nil {
 					return err
 				}
@@ -121,7 +119,7 @@ func Endpoints(ctx context.Context, fs afero.Fs, k8sLogger *io.K8sLogger) *cobra
 						return err
 					}
 					inferer := devenvironment.NewNameInferer(c)
-					options.Name = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, options.ManifestPath)
+					options.Name = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, relativeManifestPathFlag)
 				}
 				if options.Namespace == "" {
 					options.Namespace = okteto.GetContext().Namespace

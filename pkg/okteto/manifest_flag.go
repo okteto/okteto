@@ -22,8 +22,8 @@ import (
 	"github.com/spf13/afero"
 )
 
-// UseManifestFlag validates the manifest path flag and changes the current working directory to the directory where the manifest is
-func UseManifestFlag(fs afero.Fs, manifestPathFlag string) (string, error) {
+// UseManifestPathFlag validates the manifest path flag and changes the current working directory to the directory where the manifest is
+func UseManifestPathFlag(fs afero.Fs, manifestPathFlag string) (string, error) {
 	if manifestPathFlag == "" {
 		return "", nil
 	}

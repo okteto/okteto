@@ -177,10 +177,10 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(constants.OktetoSkipConfigCredentialsUpdate, "false")
 
-			err := checkOktetoManifestPathFlag(options, afero.NewOsFs())
-			if err != nil {
-				return err
-			}
+			//err := checkOktetoManifestPathFlag(options, afero.NewOsFs())
+			//if err != nil {
+			//	return err
+			//}
 
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: options.Namespace}); err != nil {
 				return err

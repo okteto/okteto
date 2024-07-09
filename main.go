@@ -165,7 +165,7 @@ func main() {
 	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
 	root.AddCommand(registrytoken.RegistryToken(ctx))
 
-	root.AddCommand(build.Build(ctx, ioController, at, insights, k8sLogger))
+	root.AddCommand(build.Build(ctx, fs, at, insights, ioController, k8sLogger))
 
 	root.AddCommand(namespace.Namespace(ctx, k8sLogger))
 	root.AddCommand(up.Up(at, insights, ioController, k8sLogger))

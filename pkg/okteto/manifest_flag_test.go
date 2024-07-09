@@ -48,7 +48,7 @@ func TestUseManifestFlag(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fs := tt.mockFs()
-			manifestPath, err := UseManifestFlag(fs, tt.flag)
+			manifestPath, err := UseManifestPathFlag(fs, tt.flag)
 
 			assert.Equal(t, tt.expected.manifestPath, manifestPath)
 

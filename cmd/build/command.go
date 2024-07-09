@@ -76,10 +76,10 @@ type registryInterface interface {
 }
 
 // NewBuildCommand creates a struct to run all build methods
-func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker, insights buildTrackerInterface, okCtx *okteto.ContextStateless, k8slogger *io.K8sLogger) *Command {
+func NewBuildCommand(fs afero.Fs, ioCtrl *io.Controller, analyticsTracker, insights buildTrackerInterface, okCtx *okteto.ContextStateless, k8slogger *io.K8sLogger) *Command {
 	return &Command{
 		GetManifest:      model.GetManifestV2,
-		Builder:          buildCmd.NewOktetoBuilder(okCtx, afero.NewOsFs()),
+		Builder:          buildCmd.NewOktetoBuilder(okCtx, fs),
 		Registry:         registry.NewOktetoRegistry(buildCmd.GetRegistryConfigFromOktetoConfig(okCtx)),
 		ioCtrl:           ioCtrl,
 		k8slogger:        k8slogger,
@@ -94,7 +94,7 @@ const (
 )
 
 // Build build and optionally push a Docker image
-func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTrackerInterface, k8slogger *io.K8sLogger) *cobra.Command {
+func Build(ctx context.Context, fs afero.Fs, at, insights buildTrackerInterface, ioCtrl *io.Controller, k8slogger *io.K8sLogger) *cobra.Command {
 	options := &types.BuildOptions{}
 	cmd := &cobra.Command{
 		Use:   "build [service...]",
@@ -111,9 +111,9 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 
 			ioCtrl.Logger().Info("context loaded")
 
-			bc := NewBuildCommand(ioCtrl, at, insights, oktetoContext, k8slogger)
+			bc := NewBuildCommand(fs, ioCtrl, at, insights, oktetoContext, k8slogger)
 
-			builder, err := bc.getBuilder(options, oktetoContext)
+			builder, err := bc.getBuilder(options, oktetoContext, fs)
 
 			if err != nil {
 				return err
@@ -152,7 +152,7 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 //   - If the manifest is not found or there is any error getting the manifest, the builder fallsback to V1
 //   - If the manifest is found and it is a V2 manifest and the build section has some image, the builder is V2
 //   - If the manifest is found and it is a V1 manifest or the build section is empty, the builder fallsback to V1
-func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.ContextStateless) (Builder, error) {
+func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.ContextStateless, fs afero.Fs) (Builder, error) {
 	// the file flag is a Dockerfile
 	isDockerfileValid := validateDockerfile(options.File) == nil
 	if options.File != "" && isDockerfileValid {
@@ -160,7 +160,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 	}
 
 	var builder Builder
-	manifest, err := bc.GetManifest(options.File, afero.NewOsFs())
+	manifest, err := bc.GetManifest(options.File, fs)
 	if err != nil {
 		if options.File != "" && errors.Is(err, oktetoErrors.ErrInvalidManifest) && validateDockerfile(options.File) != nil {
 			return nil, err
