@@ -67,7 +67,6 @@ type Dev struct {
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
 	Workdir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	Name                 string                `json:"name,omitempty" yaml:"name,omitempty"`
-	RegistryURL          string                `json:"-" yaml:"-"`
 	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
 	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
@@ -1108,9 +1107,6 @@ func (dev *Dev) translateDeprecatedMetadataFields() {
 
 func (service *Dev) validateForExtraFields() error {
 	errorMessage := "%q is not supported in Services. Please visit https://www.okteto.com/docs/reference/okteto-manifest/#services-object-optional for documentation"
-	if service.RegistryURL != "" {
-		return fmt.Errorf(errorMessage, "registryURL")
-	}
 	if service.Autocreate {
 		return fmt.Errorf(errorMessage, "autocreate")
 	}

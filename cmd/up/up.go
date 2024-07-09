@@ -389,8 +389,6 @@ func loadManifestOverrides(dev *model.Dev, upOptions *Options) error {
 		}
 	}
 
-	dev.RegistryURL = okteto.GetContext().Registry
-
 	return nil
 }
 
