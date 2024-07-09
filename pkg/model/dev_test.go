@@ -132,7 +132,7 @@ func Test_LoadManifest(t *testing.T) {
 		}
 	}
 
-	expected := (63 * time.Second)
+	expected := 63 * time.Second
 	if expected != main.Timeout.Default {
 		t.Errorf("the default timeout wasn't applied, got %s, expected %s", main.Timeout, expected)
 	}
@@ -725,7 +725,7 @@ func Test_validate(t *testing.T) {
 		{
 			name: "services-with-enabled-pvc",
 			manifest: []byte(`dev:
-    deployment: 
+    deployment:
       sync:
         - .:/app
       services:
@@ -1193,10 +1193,6 @@ func Test_validateForExtraFields(t *testing.T) {
 		{
 			name:  "autocreate",
 			value: "autocreate: true",
-		},
-		{
-			name:  "context",
-			value: "context: minikube",
 		},
 		{
 			name:  "healthchecks",

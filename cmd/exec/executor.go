@@ -50,7 +50,7 @@ type executorProvider struct {
 	k8sClientProvider okteto.K8sClientProvider
 }
 
-func (e executorProvider) provide(dev *model.Dev, podName string) (executor, error) {
+func (e executorProvider) provide(dev *model.Dev, podName, namespace string) (executor, error) {
 	k8sClient, cfg, err := e.k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		return nil, err
@@ -59,6 +59,7 @@ func (e executorProvider) provide(dev *model.Dev, podName string) (executor, err
 		e.ioCtrl.Logger().Info("Using hybrid executor")
 		return &hybridExecutor{
 			dev:       dev,
+			namespace: namespace,
 			k8sClient: k8sClient,
 		}, nil
 	}
@@ -71,15 +72,16 @@ func (e executorProvider) provide(dev *model.Dev, podName string) (executor, err
 	return &k8sExecutor{
 		k8sClient: k8sClient,
 		cfg:       cfg,
-		namespace: dev.Namespace,
+		namespace: namespace,
 		podName:   podName,
 		container: dev.Container,
 	}, nil
 }
 
 type hybridExecutor struct {
-	dev       *model.Dev
 	k8sClient kubernetes.Interface
+	dev       *model.Dev
+	namespace string
 }
 
 func (h *hybridExecutor) execute(ctx context.Context, cmdToExec []string) error {
@@ -87,7 +89,7 @@ func (h *hybridExecutor) execute(ctx context.Context, cmdToExec []string) error 
 		Dev:       h.dev,
 		Workdir:   h.dev.Workdir,
 		Name:      h.dev.Name,
-		Namespace: h.dev.Namespace,
+		Namespace: h.namespace,
 		Client:    h.k8sClient,
 	}
 	executor, err := up.NewHybridExecutor(ctx, hybridCtx)

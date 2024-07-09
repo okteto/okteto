@@ -25,7 +25,7 @@ const (
 	oktetoAutoIngressAnnotation = "dev.okteto.com/auto-ingress"
 )
 
-func translate(dev *model.Dev) *apiv1.Service {
+func translate(dev *model.Dev, namespace string) *apiv1.Service {
 	annotations := model.Annotations{}
 	if len(dev.Services) == 0 {
 		annotations[oktetoAutoIngressAnnotation] = "true"
@@ -36,7 +36,7 @@ func translate(dev *model.Dev) *apiv1.Service {
 	return &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.Name,
-			Namespace: dev.Namespace,
+			Namespace: namespace,
 			Labels: map[string]string{
 				constants.DevLabel: "true",
 			},

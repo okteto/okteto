@@ -38,7 +38,7 @@ type patchAnnotations struct {
 }
 
 // Sandbox returns a default statefulset for a given dev
-func Sandbox(dev *model.Dev) *appsv1.StatefulSet {
+func Sandbox(dev *model.Dev, namespace string) *appsv1.StatefulSet {
 	image := dev.Image
 	if image == "" {
 		image = model.DefaultImage
@@ -46,7 +46,7 @@ func Sandbox(dev *model.Dev) *appsv1.StatefulSet {
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        dev.Name,
-			Namespace:   dev.Namespace,
+			Namespace:   namespace,
 			Labels:      model.Labels{},
 			Annotations: model.Annotations{},
 		},

@@ -28,10 +28,10 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
@@ -54,7 +54,6 @@ func Test_translateWithVolumes(t *testing.T) {
 	manifest := []byte(fmt.Sprintf(`
 dev:
   web:
-    namespace: n
     container: dev
     image: web:latest
     annotations:
@@ -114,7 +113,7 @@ dev:
 
 	dev1 := manifest1.Dev["web"]
 
-	d1 := deployments.Sandbox(dev1)
+	d1 := deployments.Sandbox(dev1, "n")
 	d1.UID = types.UID("deploy1")
 	delete(d1.Annotations, model.OktetoAutoCreateAnnotation)
 	d1.Annotations[model.StateBeforeSleepingAnnontation] = "{\"Replicas\":3}"
@@ -122,7 +121,7 @@ dev:
 	d1.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RollingUpdateDeploymentStrategyType,
 	}
-	rule1 := dev1.ToTranslationRule(dev1, false)
+	rule1 := dev1.ToTranslationRule(dev1, "n", false)
 	tr1 := &Translation{
 		MainDev: dev1,
 		Dev:     dev1,
@@ -384,7 +383,7 @@ dev:
 		t.Fatalf("d1 wrong strategy %v", d1App.d.Spec.Strategy)
 	}
 
-	d1Orig := deployments.Sandbox(dev1)
+	d1Orig := deployments.Sandbox(dev1, "n")
 	if tr1.App.Replicas() != 0 {
 		t.Fatalf("d1 is running %d replicas", tr1.App.Replicas())
 	}
@@ -446,9 +445,10 @@ dev:
 	assert.NoError(t, err)
 	marshalledDevD1OK, err := yaml.Marshal(dDevPod1OK)
 	assert.NoError(t, err)
-	if !bytes.Equal(marshalledDevD1, marshalledDevD1OK) {
-		t.Fatalf("Wrong dev d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD1), string(marshalledDevD1OK))
-	}
+	assert.Equal(t, string(marshalledDevD1), string(marshalledDevD1OK))
+	//if !bytes.Equal(marshalledDevD1, marshalledDevD1OK) {
+	//	t.Fatalf("Wrong dev d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD1), string(marshalledDevD1OK))
+	//}
 
 	require.NoError(t, tr1.DevModeOff())
 
@@ -465,17 +465,16 @@ dev:
 	}
 
 	dev2 := dev1.Services[0]
-	d2 := deployments.Sandbox(dev2)
+	d2 := deployments.Sandbox(dev2, "n")
 	d2.UID = types.UID("deploy2")
 	delete(d2.Annotations, model.OktetoAutoCreateAnnotation)
 	d2.Spec.Replicas = pointer.Int32(3)
-	d2.Namespace = dev1.Namespace
 
 	translationRules := make(map[string]*Translation)
 	ctx := context.Background()
 
 	c := fake.NewSimpleClientset(d2)
-	require.NoError(t, loadServiceTranslations(ctx, dev1, false, translationRules, c))
+	require.NoError(t, loadServiceTranslations(ctx, "n", dev1, false, translationRules, c))
 	tr2 := translationRules[dev2.Name]
 	require.NoError(t, tr2.translate())
 	d2DevPodOK := apiv1.PodSpec{
@@ -548,7 +547,7 @@ dev:
 	}
 
 	// checking d2 state
-	d2Orig := deployments.Sandbox(dev2)
+	d2Orig := deployments.Sandbox(dev2, "n")
 	if tr2.App.Replicas() != 0 {
 		t.Fatalf("d2 is running %d replicas", tr2.App.Replicas())
 	}
@@ -624,7 +623,6 @@ func Test_translateServiceWithZeroDeploymentReplicas(t *testing.T) {
 	manifest := []byte(fmt.Sprintf(`
 dev:
     web:
-        namespace: n
         container: dev
         image: web:latest
         annotations:
@@ -684,22 +682,21 @@ dev:
 	dev1 := manifest1.Dev["web"]
 
 	dev2 := dev1.Services[0]
-	d2 := deployments.Sandbox(dev2)
+	d2 := deployments.Sandbox(dev2, "n")
 	d2.UID = types.UID("deploy2")
 	delete(d2.Annotations, model.OktetoAutoCreateAnnotation)
 	d2.Spec.Replicas = pointer.Int32(0)
-	d2.Namespace = dev1.Namespace
 
 	translationRules := make(map[string]*Translation)
 	ctx := context.Background()
 
 	c := fake.NewSimpleClientset(d2)
-	require.NoError(t, loadServiceTranslations(ctx, dev1, false, translationRules, c))
+	require.NoError(t, loadServiceTranslations(ctx, "n", dev1, false, translationRules, c))
 	tr2 := translationRules[dev2.Name]
 	require.NoError(t, tr2.translate())
 
 	// checking d2 state
-	d2Orig := deployments.Sandbox(dev2)
+	d2Orig := deployments.Sandbox(dev2, "n")
 	if tr2.App.Replicas() != 0 {
 		t.Fatalf("d2 is running %d replicas", tr2.App.Replicas())
 	}
@@ -743,7 +740,6 @@ func Test_translateServiceWithReplicasSpecifiedInServiceManifest(t *testing.T) {
 	manifest := []byte(fmt.Sprintf(`
 dev:
     web:
-        namespace: n
         container: dev
         image: web:latest
         annotations:
@@ -804,22 +800,21 @@ dev:
 	dev1 := manifest1.Dev["web"]
 
 	dev2 := dev1.Services[0]
-	d2 := deployments.Sandbox(dev2)
+	d2 := deployments.Sandbox(dev2, "n")
 	d2.UID = types.UID("deploy2")
 	delete(d2.Annotations, model.OktetoAutoCreateAnnotation)
 	d2.Spec.Replicas = pointer.Int32(3)
-	d2.Namespace = dev1.Namespace
 
 	translationRules := make(map[string]*Translation)
 	ctx := context.Background()
 
 	c := fake.NewSimpleClientset(d2)
-	require.NoError(t, loadServiceTranslations(ctx, dev1, false, translationRules, c))
+	require.NoError(t, loadServiceTranslations(ctx, "n", dev1, false, translationRules, c))
 	tr2 := translationRules[dev2.Name]
 	require.NoError(t, tr2.translate())
 
 	// checking d2 state
-	d2Orig := deployments.Sandbox(dev2)
+	d2Orig := deployments.Sandbox(dev2, "n")
 	if tr2.App.Replicas() != 0 {
 		t.Fatalf("d2 is running %d replicas", tr2.App.Replicas())
 	}
@@ -859,7 +854,6 @@ dev:
 func Test_translateWithoutVolumes(t *testing.T) {
 	manifestBytes := []byte(`dev:
     web:
-        namespace: n
         image: web:latest
         sync:
           - .:/okteto
@@ -870,8 +864,8 @@ func Test_translateWithoutVolumes(t *testing.T) {
 	require.NoError(t, err)
 	dev := manifest.Dev["web"]
 
-	d := deployments.Sandbox(dev)
-	rule := dev.ToTranslationRule(dev, true)
+	d := deployments.Sandbox(dev, "n")
+	rule := dev.ToTranslationRule(dev, "n", true)
 	tr := &Translation{
 		MainDev: dev,
 		Dev:     dev,
@@ -1400,7 +1394,6 @@ func TestTranslateOktetoVolumes(t *testing.T) {
 func Test_translateMultipleEnvVars(t *testing.T) {
 	manifestBytes := []byte(`dev:
     web:
-        namespace: n
         image: web:latest
         sync:
           - .:/app
@@ -1415,11 +1408,10 @@ func Test_translateMultipleEnvVars(t *testing.T) {
 	manifest, err := model.Read(manifestBytes)
 	require.NoError(t, err)
 	dev := manifest.Dev["web"]
-
 	dev.Username = "cindy"
 
-	d := deployments.Sandbox(dev)
-	rule := dev.ToTranslationRule(dev, false)
+	d := deployments.Sandbox(dev, "n")
+	rule := dev.ToTranslationRule(dev, "n", false)
 	tr := &Translation{
 		MainDev: dev,
 		Dev:     dev,
@@ -1482,7 +1474,6 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	var fsGroup int64 = 102
 	manifestBytes := []byte(fmt.Sprintf(`dev:
     web:
-        namespace: n
         container: dev
         image: web:latest
         command: ["./run_web.sh"]
@@ -1537,12 +1528,12 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	require.NoError(t, err)
 	dev1 := manifest.Dev["web"]
 
-	sfs1 := statefulsets.Sandbox(dev1)
+	sfs1 := statefulsets.Sandbox(dev1, "n")
 	sfs1.UID = types.UID("sfs1")
 	delete(sfs1.Annotations, model.OktetoAutoCreateAnnotation)
 	sfs1.Spec.Replicas = pointer.Int32(2)
 
-	rule1 := dev1.ToTranslationRule(dev1, false)
+	rule1 := dev1.ToTranslationRule(dev1, "n", false)
 	tr1 := &Translation{
 		MainDev: dev1,
 		Dev:     dev1,
@@ -1798,7 +1789,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	}
 
 	// checking sfs1 state
-	sfs1Orig := statefulsets.Sandbox(dev1)
+	sfs1Orig := statefulsets.Sandbox(dev1, "n")
 	if tr1.App.Replicas() != 0 {
 		t.Fatalf("sfs1 is running %d replicas", tr1.App.Replicas())
 	}
@@ -1868,16 +1859,15 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	}
 
 	dev2 := dev1.Services[0]
-	sfs2 := statefulsets.Sandbox(dev2)
+	sfs2 := statefulsets.Sandbox(dev2, "n")
 	sfs2.Spec.Replicas = pointer.Int32(3)
 	sfs2.UID = types.UID("sfs2")
 	delete(sfs2.Annotations, model.OktetoAutoCreateAnnotation)
-	sfs2.Namespace = dev1.Namespace
 
 	trMap := make(map[string]*Translation)
 	ctx := context.Background()
 	c := fake.NewSimpleClientset(sfs2)
-	err = loadServiceTranslations(ctx, dev1, false, trMap, c)
+	err = loadServiceTranslations(ctx, "n", dev1, false, trMap, c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1953,7 +1943,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	}
 
 	// checking sfs2 state
-	sfs2Orig := statefulsets.Sandbox(dev2)
+	sfs2Orig := statefulsets.Sandbox(dev2, "n")
 	if tr2.App.Replicas() != 0 {
 		t.Fatalf("sfs2 is running %d replicas", tr2.App.Replicas())
 	}

@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/afero"
@@ -49,15 +50,18 @@ func Status() *cobra.Command {
 		Short: "Status of the synchronization process",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#status"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			if okteto.InDevContainer() {
 				return oktetoErrors.ErrNotInDevContainer
 			}
 
 			ctx := context.Background()
 
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: namespace}); err != nil {
+				return err
+			}
+
 			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs())
+			manifest, err := model.GetManifestV2(manifestOpts.Filename, afero.NewOsFs())
 			if err != nil {
 				return err
 			}
@@ -79,11 +83,11 @@ func Status() *cobra.Command {
 			}
 
 			waitForStates := []config.UpState{config.Synchronizing, config.Ready}
-			if err := status.Wait(dev, waitForStates); err != nil {
+			if err := status.Wait(dev, okteto.GetContext().Namespace, waitForStates); err != nil {
 				return err
 			}
 
-			sy, err := syncthing.Load(dev)
+			sy, err := syncthing.Load(dev, namespace)
 			if err != nil {
 				oktetoLog.Infof("error accessing the syncthing info file: %s", err)
 				return oktetoErrors.ErrNotInDevMode
