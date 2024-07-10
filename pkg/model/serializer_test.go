@@ -1684,9 +1684,6 @@ deploy:
 			manifest: []byte(`
 deploy:
   - okteto stack deploy
-devs:
-  - api
-  - test
 `),
 			expected: &Manifest{
 				Type:          OktetoManifestType,

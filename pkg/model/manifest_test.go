@@ -212,9 +212,7 @@ deploy:
   - okteto build -t okteto.dev/api:${OKTETO_GIT_COMMIT} api
   - okteto build -t okteto.dev/frontend:${OKTETO_GIT_COMMIT} frontend
   - helm upgrade --install movies chart --set tag=${OKTETO_GIT_COMMIT}
-devs:
-  - api/okteto.yml
-  - frontend/okteto.yml`),
+`),
 			expectedCommand: "okteto build -t okteto.dev/api:${OKTETO_GIT_COMMIT} api",
 		},
 		{
@@ -225,9 +223,7 @@ deploy:
   - okteto build -t okteto.dev/api:${OKTETO_GIT_COMMIT:=dev} api
   - okteto build -t okteto.dev/frontend:${OKTETO_GIT_COMMIT} frontend
   - helm upgrade --install movies chart --set tag=${OKTETO_GIT_COMMIT}
-devs:
-  - api/okteto.yml
-  - frontend/okteto.yml`),
+`),
 			expectedCommand: "okteto build -t okteto.dev/api:${OKTETO_GIT_COMMIT:=dev} api",
 		},
 	}
