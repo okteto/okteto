@@ -49,8 +49,10 @@ test:
     image: alpine
     commands:
       - echo "OK" > coverage.txt
+      - mkdir -p reports && echo "OK" > reports/additional-coverage.txt
     artifacts:
       - coverage.txt
+      - reports
 
 deploy:
   - echo "deploying"
@@ -180,6 +182,20 @@ func TestOktetoTestsWithPassingTestsAndArtifacts(t *testing.T) {
 	coverage, err := os.ReadFile(coveragePath)
 	require.NoError(t, err)
 	assert.Equal(t, "OK\n", string(coverage))
+
+	// check that 'reports' exists and is a directory
+	reportsDirPath := filepath.Join(dir, "reports")
+	reportsDir, err := os.Open(reportsDirPath)
+	assert.NoError(t, err)
+	reportsInfo, err := reportsDir.Stat()
+	require.NoError(t, err)
+	assert.True(t, reportsInfo.IsDir())
+
+	// check that additional-coverage.txt exists and has the expected content
+	additionalCoveragePath := filepath.Join(reportsDirPath, "additional-coverage.txt")
+	additionalCoverage, err := os.ReadFile(additionalCoveragePath)
+	require.NoError(t, err)
+	assert.Equal(t, "OK\n", string(additionalCoverage))
 
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
