@@ -476,14 +476,14 @@ RUN \
   /okteto/bin/okteto remote-run test --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test" || true
 
 
-RUN if [ -f /okteto/src/coverage.txt ]; then \
+RUN if [ -e /okteto/src/coverage.txt ]; then \
     mkdir -p $(dirname /okteto/artifacts/coverage.txt) && \
-    cp /okteto/src/coverage.txt /okteto/artifacts/coverage.txt; \
+    cp -r /okteto/src/coverage.txt /okteto/artifacts/coverage.txt; \
   fi
 
-RUN if [ -f /okteto/src/report.json ]; then \
+RUN if [ -e /okteto/src/report.json ]; then \
     mkdir -p $(dirname /okteto/artifacts//testing/report.json) && \
-    cp /okteto/src/report.json /okteto/artifacts//testing/report.json; \
+    cp -r /okteto/src/report.json /okteto/artifacts//testing/report.json; \
   fi
 
 
