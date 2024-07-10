@@ -42,13 +42,11 @@ import (
 	"github.com/okteto/okteto/pkg/discovery"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/process"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
@@ -90,7 +88,7 @@ type Options struct {
 }
 
 // Up starts a development container
-func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command {
 	upOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:   "up service [flags] -- COMMAND [args...]",
@@ -138,35 +136,42 @@ okteto up my-svc -- echo this is a test
 			defer at.TrackUp(upMeta)
 
 			startOkContextConfig := time.Now()
-			if upOptions.ManifestPath != "" {
-				// if path is absolute, its transformed to rel from root
-				initialCWD, err := os.Getwd()
-				if err != nil {
-					return fmt.Errorf("failed to get the current working directory: %w", err)
-				}
-				manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, upOptions.ManifestPath)
-				if err != nil {
-					return err
-				}
-				// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
-				upOptions.ManifestPathFlag = manifestPathFlag
 
-				// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
-				uptManifestPath, err := filesystem.UpdateCWDtoManifestPath(upOptions.ManifestPath)
-				if err != nil {
-					return err
-				}
-				upOptions.ManifestPath = uptManifestPath
+			relativeManifestPath, err := okteto.UseManifestPathFlag(fs, upOptions.ManifestPath)
+			if err != nil {
+				return err
 			}
-			oktetoManifest, err := model.GetManifestV2(upOptions.ManifestPath, afero.NewOsFs())
+			upOptions.ManifestPathFlag = relativeManifestPath
+			//
+			//if upOptions.ManifestPath != "" {
+			//	// if path is absolute, its transformed to rel from root
+			//	initialCWD, err := os.Getwd()
+			//	if err != nil {
+			//		return fmt.Errorf("failed to get the current working directory: %w", err)
+			//	}
+			//	manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, upOptions.ManifestPath)
+			//	if err != nil {
+			//		return err
+			//	}
+			//	// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
+			//	upOptions.ManifestPathFlag = manifestPathFlag
+			//
+			//	// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
+			//	uptManifestPath, err := filesystem.UpdateCWDtoManifestPath(upOptions.ManifestPath)
+			//	if err != nil {
+			//		return err
+			//	}
+			//	upOptions.ManifestPath = uptManifestPath
+			//}
+			oktetoManifest, err := model.GetManifestV2(relativeManifestPath, afero.NewOsFs())
 			if err != nil {
 				if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 					return err
 				}
 
-				if upOptions.ManifestPath == "" {
-					upOptions.ManifestPath = utils.DefaultManifest
-				}
+				//if upOptions.ManifestPath == "" {
+				//	upOptions.ManifestPath = utils.DefaultManifest
+				//}
 			}
 
 			upMeta.OktetoContextConfig(time.Since(startOkContextConfig))
@@ -197,7 +202,7 @@ okteto up my-svc -- echo this is a test
 					return err
 				}
 				inferer := devenvironment.NewNameInferer(c)
-				oktetoManifest.Name = inferer.InferName(ctx, wd, okteto.GetContext().Namespace, upOptions.ManifestPathFlag)
+				oktetoManifest.Name = inferer.InferName(ctx, wd, okteto.GetContext().Namespace, relativeManifestPath)
 			}
 			os.Setenv(constants.OktetoNameEnvVar, oktetoManifest.Name)
 

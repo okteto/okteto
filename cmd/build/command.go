@@ -56,6 +56,7 @@ type Command struct {
 	insights         buildTrackerInterface
 	ioCtrl           *io.Controller
 	k8slogger        *io.K8sLogger
+	fs               afero.Fs
 }
 
 type buildTrackerInterface interface {
@@ -76,7 +77,7 @@ type registryInterface interface {
 }
 
 // NewBuildCommand creates a struct to run all build methods
-func NewBuildCommand(fs afero.Fs, ioCtrl *io.Controller, analyticsTracker, insights buildTrackerInterface, okCtx *okteto.ContextStateless, k8slogger *io.K8sLogger) *Command {
+func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker, insights buildTrackerInterface, okCtx *okteto.ContextStateless, k8slogger *io.K8sLogger, fs afero.Fs) *Command {
 	return &Command{
 		GetManifest:      model.GetManifestV2,
 		Builder:          buildCmd.NewOktetoBuilder(okCtx, fs),
@@ -85,6 +86,7 @@ func NewBuildCommand(fs afero.Fs, ioCtrl *io.Controller, analyticsTracker, insig
 		k8slogger:        k8slogger,
 		analyticsTracker: analyticsTracker,
 		insights:         insights,
+		fs:               fs,
 	}
 }
 
@@ -111,9 +113,9 @@ func Build(ctx context.Context, fs afero.Fs, at, insights buildTrackerInterface,
 
 			ioCtrl.Logger().Info("context loaded")
 
-			bc := NewBuildCommand(fs, ioCtrl, at, insights, oktetoContext, k8slogger)
+			bc := NewBuildCommand(ioCtrl, at, insights, oktetoContext, k8slogger, fs)
 
-			builder, err := bc.getBuilder(options, oktetoContext, fs)
+			builder, err := bc.getBuilder(options, oktetoContext)
 
 			if err != nil {
 				return err
@@ -152,7 +154,7 @@ func Build(ctx context.Context, fs afero.Fs, at, insights buildTrackerInterface,
 //   - If the manifest is not found or there is any error getting the manifest, the builder fallsback to V1
 //   - If the manifest is found and it is a V2 manifest and the build section has some image, the builder is V2
 //   - If the manifest is found and it is a V1 manifest or the build section is empty, the builder fallsback to V1
-func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.ContextStateless, fs afero.Fs) (Builder, error) {
+func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.ContextStateless) (Builder, error) {
 	// the file flag is a Dockerfile
 	isDockerfileValid := validateDockerfile(options.File) == nil
 	if options.File != "" && isDockerfileValid {
@@ -160,7 +162,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 	}
 
 	var builder Builder
-	manifest, err := bc.GetManifest(options.File, fs)
+	manifest, err := bc.GetManifest(options.File, bc.fs)
 	if err != nil {
 		if options.File != "" && errors.Is(err, oktetoErrors.ErrInvalidManifest) && validateDockerfile(options.File) != nil {
 			return nil, err

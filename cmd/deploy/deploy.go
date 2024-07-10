@@ -37,14 +37,12 @@ import (
 	"github.com/okteto/okteto/pkg/divert"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/okteto/okteto/pkg/validator"
@@ -157,7 +155,7 @@ type Deployer interface {
 }
 
 // Deploy deploys the okteto manifest
-func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
 		Use:   "deploy",
@@ -177,10 +175,11 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(constants.OktetoSkipConfigCredentialsUpdate, "false")
 
-			//err := checkOktetoManifestPathFlag(options, afero.NewOsFs())
-			//if err != nil {
-			//	return err
-			//}
+			relativeManifestPath, err := okteto.UseManifestPathFlag(fs, options.ManifestPath)
+			if err != nil {
+				return err
+			}
+			options.ManifestPathFlag = relativeManifestPath
 
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: options.Namespace}); err != nil {
 				return err
@@ -225,7 +224,7 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 				EndpointGetter:     NewEndpointGetter,
 				IsRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
 				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider, k8sLogger),
-				Fs:                 afero.NewOsFs(),
+				Fs:                 fs,
 				PipelineCMD:        pc,
 				RunningInInstaller: config.RunningInInstaller(),
 				AnalyticsTracker:   at,
@@ -810,33 +809,4 @@ func GetDependencyEnvVars(environGetter environGetter) map[string]string {
 	}
 
 	return result
-}
-
-func checkOktetoManifestPathFlag(options *Options, fs afero.Fs) error {
-	if options.ManifestPath != "" {
-		// if path is absolute, its transformed from root path to a rel path
-		initialCWD, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("failed to get the current working directory: %w", err)
-		}
-		manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, options.ManifestPath)
-		if err != nil {
-			return err
-		}
-		// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
-		options.ManifestPathFlag = manifestPathFlag
-
-		// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
-		uptManifestPath, err := filesystem.UpdateCWDtoManifestPath(options.ManifestPath)
-		if err != nil {
-			return err
-		}
-		options.ManifestPath = uptManifestPath
-
-		// check whether the manifest file provided by -f exists or not
-		if _, err := fs.Stat(options.ManifestPath); err != nil {
-			return fmt.Errorf("%s file doesn't exist", options.ManifestPath)
-		}
-	}
-	return nil
 }

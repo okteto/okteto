@@ -904,51 +904,6 @@ func TestShouldRunInRemoteDeploy(t *testing.T) {
 	}
 }
 
-func TestOktetoManifestPathFlag(t *testing.T) {
-	opts := &Options{}
-	var tests = []struct {
-		expectedErr error
-		name        string
-		manifest    string
-	}{
-		{
-			name:        "manifest file path exists",
-			manifest:    "okteto.yml",
-			expectedErr: nil,
-		},
-		{
-			name:        "manifest file path doesn't exist",
-			manifest:    "nonexistent.yml",
-			expectedErr: fmt.Errorf("nonexistent.yml file doesn't exist"),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			fs := afero.NewOsFs()
-			dir, err := os.Getwd()
-			assert.NoError(t, err)
-			fullpath := filepath.Join(dir, tt.manifest)
-			opts.ManifestPath = fullpath
-			if tt.manifest != "nonexistent.yml" {
-				// create the manifest file only if it's not the nonexistent scenario
-				f, err := fs.Create(fullpath)
-				assert.NoError(t, err)
-				defer func() {
-					if err := f.Close(); err != nil {
-						t.Fatalf("Error closing file %s: %s", fullpath, err)
-					}
-					if err := fs.RemoveAll(fullpath); err != nil {
-						t.Fatalf("Error removing the file %v", err)
-					}
-				}()
-			}
-			err = checkOktetoManifestPathFlag(opts, fs)
-			assert.Equal(t, tt.expectedErr, err)
-		})
-	}
-}
-
 func TestGetDependencyEnvVars(t *testing.T) {
 	tt := []struct {
 		environGetter environGetter

@@ -86,7 +86,7 @@ func Endpoints(ctx context.Context, fs afero.Fs, k8sLogger *io.K8sLogger) *cobra
 		Use:   "endpoints",
 		Short: "Show endpoints for an environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			relativeManifestPathFlag, err := okteto.UseManifestPathFlag(fs, options.ManifestPath)
+			relativeManifestPath, err := okteto.UseManifestPathFlag(fs, options.ManifestPath)
 			if err != nil {
 				return err
 			}
@@ -107,7 +107,7 @@ func Endpoints(ctx context.Context, fs afero.Fs, k8sLogger *io.K8sLogger) *cobra
 			}
 
 			if options.Name == "" {
-				manifest, err := eg.GetManifest(relativeManifestPathFlag, afero.NewOsFs())
+				manifest, err := eg.GetManifest(relativeManifestPath, afero.NewOsFs())
 				if err != nil {
 					return err
 				}
@@ -119,7 +119,7 @@ func Endpoints(ctx context.Context, fs afero.Fs, k8sLogger *io.K8sLogger) *cobra
 						return err
 					}
 					inferer := devenvironment.NewNameInferer(c)
-					options.Name = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, relativeManifestPathFlag)
+					options.Name = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, relativeManifestPath)
 				}
 				if options.Namespace == "" {
 					options.Namespace = okteto.GetContext().Namespace
