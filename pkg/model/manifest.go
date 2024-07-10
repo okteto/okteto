@@ -907,7 +907,10 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 				buildInfo.Image = svcInfo.Image
 			}
 
-			contextAbs := filepath.Join(cwd, buildInfo.Context)
+			contextAbs := buildInfo.Context
+			if !filepath.IsAbs(buildInfo.Context) {
+				contextAbs = filepath.Join(cwd, buildInfo.Context)
+			}
 			buildInfo.Dockerfile, err = filepath.Rel(contextAbs, buildInfo.Dockerfile)
 			if err != nil {
 				oktetoLog.Infof("can not make svc[%s].build.dockerfile relative to cwd", svcName)
