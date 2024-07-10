@@ -269,7 +269,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			Namespace:        okteto.GetContext().Namespace,
 			K8sContext:       okteto.GetContext().Name,
 			Variables:        options.Variables,
-			Build:            true,
+			NoBuild:          false,
 			Dependencies:     false,
 			Timeout:          options.Timeout,
 			RunWithoutBash:   false,

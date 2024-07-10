@@ -486,7 +486,7 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 		ManifestPathFlag: up.Options.ManifestPathFlag,
 		ManifestPath:     up.Options.ManifestPath,
 		Timeout:          5 * time.Minute,
-		Build:            true,
+		NoBuild:          false,
 	})
 	up.analyticsMeta.HasRunDeploy()
 
