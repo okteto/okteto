@@ -28,25 +28,25 @@ func UseManifestPathFlag(fs afero.Fs, manifestPathFlag string) (string, error) {
 		return "", nil
 	}
 
-	result := manifestPathFlag
+	relativeManifestPath := manifestPathFlag
 
 	// we change the working directory to the directory where the manifest is
-	workdir := filesystem.GetWorkdirFromManifestPath(result)
+	workdir := filesystem.GetWorkdirFromManifestPath(relativeManifestPath)
 	if err := os.Chdir(workdir); err != nil {
-		return result, err
+		return relativeManifestPath, err
 	}
 
 	// we update the manifest path to be relative to the working directory
-	result = filesystem.GetManifestPathFromWorkdir(result, workdir)
+	relativeManifestPath = filesystem.GetManifestPathFromWorkdir(relativeManifestPath, workdir)
 
 	// the Okteto manifest flag should specify a file, not a directory
-	if !filesystem.FileExistsAndNotDir(result, fs) {
-		return result, oktetoErrors.UserError{
+	if !filesystem.FileExistsAndNotDir(relativeManifestPath, fs) {
+		return relativeManifestPath, oktetoErrors.UserError{
 			E:    fmt.Errorf("the Okteto manifest specified is a directory, please specify a file"),
 			Hint: "Check the path to the Okteto manifest file",
 		}
 
 	}
 
-	return result, nil
+	return relativeManifestPath, nil
 }

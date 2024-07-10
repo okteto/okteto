@@ -13,10 +13,18 @@
 
 package path
 
-import "path/filepath"
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+)
 
 // GetRelativePathFromCWD returns the relative path from the cwd
-func GetRelativePathFromCWD(cwd, path string) (string, error) {
+func GetRelativePathFromCWD(path string) (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get the current working directory: %w", err)
+	}
 	if path == "" || !filepath.IsAbs(path) {
 		return path, nil
 	}

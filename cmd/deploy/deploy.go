@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -175,11 +176,17 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(constants.OktetoSkipConfigCredentialsUpdate, "false")
 
+			if options.ManifestPath != "" {
+				relativePathToCwd, err := oktetoPath.GetRelativePathFromCWD(options.ManifestPath)
+				if err != nil {
+					return err
+				}
+				options.ManifestPathFlag = relativePathToCwd
+			}
 			relativeManifestPath, err := okteto.UseManifestPathFlag(fs, options.ManifestPath)
 			if err != nil {
 				return err
 			}
-			options.ManifestPathFlag = relativeManifestPath
 
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: options.Namespace}); err != nil {
 				return err

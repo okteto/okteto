@@ -150,11 +150,11 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 	if options.ManifestPath != "" {
 		// if path is absolute, its transformed to rel from root
-		initialCWD, err := os.Getwd()
-		if err != nil {
-			return analytics.TestMetadata{}, fmt.Errorf("failed to get the current working directory: %w", err)
-		}
-		manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, options.ManifestPath)
+		//initialCWD, err := os.Getwd()
+		//if err != nil {
+		//	return analytics.TestMetadata{}, fmt.Errorf("failed to get the current working directory: %w", err)
+		//}
+		manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(options.ManifestPath)
 		if err != nil {
 			return analytics.TestMetadata{}, err
 		}
