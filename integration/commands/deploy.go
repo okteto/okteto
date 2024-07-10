@@ -166,7 +166,7 @@ func getDeployCmd(oktetoPath string, deployOptions *DeployOptions) *exec.Cmd {
 		cmd.Args = append(cmd.Args, "-f", deployOptions.ManifestPath)
 	}
 	if !deployOptions.Build {
-		cmd.Args = append(cmd.Args, "--build=false")
+		cmd.Args = append(cmd.Args, "--no-build")
 	}
 	if deployOptions.LogLevel != "" {
 		cmd.Args = append(cmd.Args, "--log-level", deployOptions.LogLevel)
