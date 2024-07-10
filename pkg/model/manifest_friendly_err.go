@@ -76,6 +76,7 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 		suggest.NewStrReplaceRule("in type model.devType", "the 'dev' object"),
 		suggest.NewStrReplaceRule("into model.devType", "the 'dev' object"),
 		suggest.NewStrReplaceRule("in type model.testCommandAlias", "the 'test commands' object"),
+		suggest.NewStrReplaceRule("into model.testAlias", "into a 'test' object"),
 		suggest.NewStrReplaceRule("in type model.testAlias", "the 'test' object"),
 
 		// yaml types
