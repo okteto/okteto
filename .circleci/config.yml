@@ -137,7 +137,6 @@ jobs:
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
-            export OKTETO_HOME=$HOME/.okteto
             make integration-actions
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -166,7 +165,6 @@ jobs:
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
-            export OKTETO_HOME=$HOME/.okteto
             make integration-build
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -195,7 +193,6 @@ jobs:
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
-            export OKTETO_HOME=$HOME/.okteto
             make integration-deploy
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -223,7 +220,6 @@ jobs:
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
-            export OKTETO_HOME=$HOME/.okteto
             make integration-up
           environment:
             OKTETO_SKIP_CLEANUP: "true"
@@ -253,7 +249,6 @@ jobs:
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
-            export OKTETO_HOME=$HOME/.okteto
             make integration-okteto
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -280,7 +275,6 @@ jobs:
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
-            export OKTETO_HOME=$HOME/.okteto
             make integration-deprecated
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -736,15 +730,20 @@ workflows:
       - integration-deploy:
           requires:
             - test-integration
+            - integration-build
       - integration-up:
           requires:
             - test-integration
+            - integration-deploy
       - integration-actions:
           requires:
             - test-integration
+            - integration-up
       - integration-okteto:
           requires:
             - test-integration
+            - integration-actions
       - integration-deprecated:
           requires:
             - test-integration
+            - integration-okteto
