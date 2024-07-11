@@ -92,8 +92,7 @@ type Dev struct {
 	RemotePort      int                `json:"remote,omitempty" yaml:"remote,omitempty"`
 	SSHServerPort   int                `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
 
-	Autocreate   bool `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
-	Healthchecks bool `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"` // Deprecated field
+	Autocreate bool `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
 }
 
 type Affinity apiv1.Affinity
@@ -404,12 +403,7 @@ func (dev *Dev) SetDefaults() error {
 	if dev.InitContainer.Image == "" {
 		dev.InitContainer.Image = OktetoBinImageTag
 	}
-	if dev.Healthchecks {
-		oktetoLog.Yellow("The use of 'healthchecks' field is deprecated and will be removed in a future version. Please use the field 'probes' instead.")
-		if dev.Probes == nil {
-			dev.Probes = &Probes{Liveness: true, Readiness: true, Startup: true}
-		}
-	}
+
 	if dev.Probes == nil {
 		dev.Probes = &Probes{}
 	}
@@ -837,7 +831,6 @@ func (dev *Dev) ToTranslationRule(main *Dev, username string, reset bool) *Trans
 		SecurityContext:  dev.SecurityContext,
 		ServiceAccount:   dev.ServiceAccount,
 		Resources:        dev.Resources,
-		Healthchecks:     dev.Healthchecks,
 		InitContainer:    dev.InitContainer,
 		Probes:           dev.Probes,
 		Lifecycle:        dev.Lifecycle,
@@ -1115,9 +1108,6 @@ func (service *Dev) validateForExtraFields() error {
 	}
 	if service.Secrets != nil {
 		return fmt.Errorf(errorMessage, "secrets")
-	}
-	if service.Healthchecks {
-		return fmt.Errorf(errorMessage, "healthchecks")
 	}
 	if service.Probes != nil {
 		return fmt.Errorf(errorMessage, "probes")

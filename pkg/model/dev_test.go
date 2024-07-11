@@ -1199,10 +1199,6 @@ func Test_validateForExtraFields(t *testing.T) {
 			value: "context: minikube",
 		},
 		{
-			name:  "healthchecks",
-			value: "healthchecks: true",
-		},
-		{
 			name: "probes",
 			value: `probes:
                liveness: true

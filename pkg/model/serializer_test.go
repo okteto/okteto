@@ -532,14 +532,9 @@ func TestDevMarshalling(t *testing.T) {
 			expected: "probes:\n  liveness: true\nname: name-test\n",
 		},
 		{
-			name:     "healtcheck-all-true-by-healthchecks",
-			dev:      Dev{Name: "name-test", Healthchecks: true},
-			expected: "name: name-test\nhealthchecks: true\n",
-		},
-		{
 			name:     "healtcheck-all-true-by-probes",
 			dev:      Dev{Name: "name-test", Probes: &Probes{Liveness: true, Readiness: true, Startup: true}},
-			expected: "name: name-test\nhealthchecks: true\n",
+			expected: "probes: true\nname: name-test\n",
 		},
 		{
 			name:     "pv-enabled-not-show-after-marshall",
