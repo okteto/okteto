@@ -30,58 +30,12 @@ parameters:
   GHA_Meta:
     type: string
     default: ""
+  TriggerIntegration:
+    type: boolean
+    default: false
 
 orbs:
   win: circleci/windows@5.0.0
-
-commands:
-  integration-actions:
-    steps:
-      - run:
-          name: Run actions integration tests
-          command: make integration-actions
-
-  integration-build:
-    steps:
-      - run:
-          name: Run build integration tests
-          command: |
-            export DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
-            export DEPOT_TOKEN=$DEPOT_TOKEN
-            make integration-build
-
-  integration-deploy:
-    steps:
-      - run:
-          name: Run deploy integration tests
-          # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
-          command: |
-            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
-            make integration-deploy
-
-  integration-up:
-    steps:
-      - run:
-          name: Run up integration tests
-          command: |
-            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
-            make integration-up
-          environment:
-            OKTETO_SKIP_CLEANUP: "true"
-
-  integration-okteto:
-    steps:
-      - run:
-          name: Run okteto integration tests
-          command: |
-            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
-            make integration-okteto
-
-  integration-deprecated:
-    steps:
-      - run:
-          name: Run deprecated integration tests
-          command: make integration-deprecated
 
 executors:
   golang-ci:
@@ -160,6 +114,61 @@ jobs:
             go mod download
             go version
             go test ./...
+
+  integration-actions:
+    executor: golang-ci
+    steps:
+      - run:
+          name: Run actions integration tests
+          command: make integration-actions
+
+  integration-build:
+    executor: golang-ci
+    steps:
+      - run:
+          name: Run build integration tests
+          command: |
+            export DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
+            export DEPOT_TOKEN=$DEPOT_TOKEN
+            make integration-build
+
+  integration-deploy:
+    executor: golang-ci
+    steps:
+      - run:
+          name: Run deploy integration tests
+          # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
+          command: |
+            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+            make integration-deploy
+
+  integration-up:
+    executor: golang-ci
+    steps:
+      - run:
+          name: Run up integration tests
+          command: |
+            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+            make integration-up
+          environment:
+            OKTETO_SKIP_CLEANUP: "true"
+
+  integration-okteto:
+    executor: golang-ci
+    steps:
+      - run:
+          name: Run okteto integration tests
+          command: |
+            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+            make integration-okteto
+
+  integration-deprecated:
+    executor: golang-ci
+    steps:
+      - run:
+          name: Run deprecated integration tests
+          command: make integration-deprecated
+
   test-integration:
     executor: golang-ci
     resource_class: large
@@ -604,3 +613,9 @@ workflows:
       - run-windows-e2e-test:
           requires:
             - build-binaries
+
+  run-integration:
+    when:
+      equal: [true, << pipeline.parameters.TriggerIntegration >>]
+    jobs:
+      - test-integration
