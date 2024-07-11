@@ -34,7 +34,7 @@ func Test_LoadManifest(t *testing.T) {
         container: core
         image: code/core:0.1.8
         command: ["uwsgi"]
-        labels:
+        selector:
             key3: value3
         metadata:
             labels:
@@ -65,7 +65,7 @@ func Test_LoadManifest(t *testing.T) {
           container: core
           image: code/core:0.1.8
           command: ["uwsgi"]
-          labels:
+          selector:
             key3: value3
           metadata:
             labels:
@@ -389,9 +389,9 @@ func Test_loadSelector(t *testing.T) {
 				t.Fatalf("couldn't load selector")
 			}
 
-			for key, value := range dev.Labels {
+			for key, value := range dev.Selector {
 				if tt.want[key] != value {
-					t.Errorf("got: '%v', expected: '%v'", dev.Labels, tt.want)
+					t.Errorf("got: '%v', expected: '%v'", dev.Selector, tt.want)
 				}
 			}
 		})
@@ -1287,7 +1287,7 @@ func Test_validateForExtraFields(t *testing.T) {
         container: core
         image: code/core:0.1.8
         command: ["uwsgi"]
-        labels:
+        selector:
             key3: value3
         metadata:
             labels:
@@ -1318,7 +1318,7 @@ func Test_validateForExtraFields(t *testing.T) {
           container: core
           image: code/core:0.1.8
           command: ["uwsgi"]
-          labels:
+          selector:
             key3: value3
           metadata:
             labels:

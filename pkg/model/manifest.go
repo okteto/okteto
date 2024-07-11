@@ -806,8 +806,6 @@ func (m *Manifest) setDefaults() error {
 			return fmt.Errorf("error on dev '%s': %w", d.Name, err)
 		}
 
-		d.translateDeprecatedMetadataFields()
-
 		sort.SliceStable(d.Forward, func(i, j int) bool {
 			return d.Forward[i].Less(&d.Forward[j])
 		})
