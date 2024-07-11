@@ -246,12 +246,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *build.Info, o *types.Bui
 	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	if okCtx.IsOktetoCluster() && b.Image == "" {
-		// if flag --global, point to global registry
-		targetRegistry := constants.DevRegistry
-		if o != nil && o.BuildToGlobal {
-			targetRegistry = constants.GlobalRegistry
-		}
-		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
+		b.Image = fmt.Sprintf("%s/%s-%s:%s", constants.DevRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
 	}
 
 	file := b.Dockerfile
