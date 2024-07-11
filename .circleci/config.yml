@@ -134,9 +134,9 @@ jobs:
       - run:
           name: Run actions integration tests
           command: |
-            mkdir -p $HOME/.okteto && touch $HOME/.okteto/.noanalytics
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-actions
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -162,9 +162,9 @@ jobs:
           command: |
             export DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
             export DEPOT_TOKEN=$DEPOT_TOKEN
-            mkdir -p $HOME/.okteto && touch $HOME/.okteto/.noanalytics
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-build
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -192,7 +192,7 @@ jobs:
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
-            mkdir -p $HOME/.okteto && touch $HOME/.okteto/.noanalytics
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-deploy
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -219,7 +219,7 @@ jobs:
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
-            mkdir -p $HOME/.okteto && touch $HOME/.okteto/.noanalytics
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-up
           environment:
             OKTETO_SKIP_CLEANUP: "true"
@@ -248,7 +248,7 @@ jobs:
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
-            mkdir -p $HOME/.okteto && touch $HOME/.okteto/.noanalytics
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-okteto
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -274,7 +274,7 @@ jobs:
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
-            mkdir -p $HOME/.okteto && touch $HOME/.okteto/.noanalytics
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-deprecated
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -297,23 +297,14 @@ jobs:
       - attach_workspace:
           at: ./artifacts
       - run:
-          name: Prepare env
-          command: |
-            mkdir -p $HOME/.okteto
-            touch $HOME/.okteto/.noanalytics
-            echo $HOME
-            sudo chown -R $(whoami) /usr/local/bin
-            curl -L "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl
-            chmod +x /usr/local/bin/kubectl
-            cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
-            okteto context use ${OKTETO_CONTEXT} --token ${API_STAGING_TOKEN}
-      - run:
           # As the integration test running the okteto deploy needs the CLI which we are testing, we build the current
           # CLI to the okteto.dev registry, so it is available for the user running the tests. Then, in the step
           # which run the deploy, we set the env var OKTETO_REMOTE_CLI_IMAGE to the one we are building
           name: Build CLI image
           command: |
-            okteto build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+            export OKTETO_TOKEN=${API_STAGING_TOKEN}
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
       # - integration-build
       # - integration-deploy
       # - integration-up
