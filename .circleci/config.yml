@@ -312,10 +312,6 @@ jobs:
             - /go/pkg
       - store_artifacts:
           path: /root/.okteto
-      - persist_to_workspace:
-          root: .okteto
-          paths:
-            - .noanalytics
   test-release:
     executor: golang-ci
     steps:
