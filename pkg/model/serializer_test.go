@@ -1348,7 +1348,6 @@ dev:
 						Services: []*Dev{
 							{
 								Name:            "svc",
-								Annotations:     Annotations{},
 								Selector:        Selector{},
 								Image:           "",
 								ImagePullPolicy: v1.PullAlways,

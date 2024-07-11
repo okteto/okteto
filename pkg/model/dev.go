@@ -55,7 +55,6 @@ type Dev struct {
 	Selector             Selector              `json:"selector,omitempty" yaml:"selector,omitempty"`
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
 	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
-	Annotations          Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Labels               Labels                `json:"labels,omitempty" yaml:"labels,omitempty"` // Deprecated field
 	Probes               *Probes               `json:"probes,omitempty" yaml:"probes,omitempty"`
 	NodeSelector         map[string]string     `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
@@ -447,9 +446,6 @@ func (dev *Dev) SetDefaults() error {
 		}
 		if s.Selector == nil {
 			s.Selector = map[string]string{}
-		}
-		if s.Annotations == nil {
-			s.Annotations = Annotations{}
 		}
 		if s.Name != "" && len(s.Selector) > 0 {
 			return fmt.Errorf("'name' and 'selector' cannot be defined at the same time for service '%s'", s.Name)
@@ -1075,24 +1071,11 @@ func (dev *Dev) translateDeprecatedMetadataFields() {
 		}
 	}
 
-	if len(dev.Annotations) > 0 {
-		oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in a future version. Use the field 'metadata.annotations' instead (https://okteto.com/docs/reference/okteto-manifest/#metadata)")
-		for k, v := range dev.Annotations {
-			dev.Metadata.Annotations[k] = v
-		}
-	}
 	for indx, s := range dev.Services {
 		if len(s.Labels) > 0 {
 			oktetoLog.Warning("The field '%s.labels' is deprecated and will be removed in a future version. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)", s.Name)
 			for k, v := range s.Labels {
 				dev.Services[indx].Selector[k] = v
-			}
-		}
-
-		if len(s.Annotations) > 0 {
-			oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in a future version. Use the field '%s.metadata.annotations' instead (https://okteto.com/docs/reference/okteto-manifest/#metadata)", s.Name)
-			for k, v := range s.Annotations {
-				dev.Services[indx].Metadata.Annotations[k] = v
 			}
 		}
 	}

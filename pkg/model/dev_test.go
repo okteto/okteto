@@ -34,14 +34,14 @@ func Test_LoadManifest(t *testing.T) {
         container: core
         image: code/core:0.1.8
         command: ["uwsgi"]
-        annotations:
-            key1: value1
-            key2: value2
         labels:
             key3: value3
         metadata:
             labels:
                 key4: value4
+            annotations:
+                key1: value1
+                key2: value2
         resources:
             requests:
                 memory: "64Mi"
@@ -65,14 +65,14 @@ func Test_LoadManifest(t *testing.T) {
           container: core
           image: code/core:0.1.8
           command: ["uwsgi"]
-          annotations:
-            key1: value1
-            key2: value2
           labels:
             key3: value3
           metadata:
             labels:
               key4: value4
+            annotations:
+              key1: value1
+              key2: value2
           resources:
             requests:
               memory: "64Mi"
@@ -571,9 +571,10 @@ func Test_LoadRemote(t *testing.T) {
         image: code/core:0.1.8
         command: ["uwsgi"]
         remote: 22100
-        annotations:
-            key1: value1
-            key2: value2
+        metadata:
+          annotations:
+              key1: value1
+              key2: value2
         forward:
         - 8080:8080
         sshServerPort: 2222
@@ -633,9 +634,10 @@ func Test_Reverse(t *testing.T) {
         container: core
         image: code/core:0.1.8
         command: ["uwsgi"]
-        annotations:
-            key1: value1
-            key2: value2
+        metadata:
+          annotations:
+              key1: value1
+              key2: value2
         reverse:
         - 8080:8080`)
 	manifest, err := Read(manifestBytes)
@@ -662,8 +664,9 @@ func Test_Reverse(t *testing.T) {
 func Test_LoadForcePull(t *testing.T) {
 	manifestBytes := []byte(`dev:
     a:
-        annotations:
-            key1: value1
+        metadata:
+          annotations:
+              key1: value1
         services:
         - name: b
           imagePullPolicy: IfNotPresent`)
@@ -1284,14 +1287,14 @@ func Test_validateForExtraFields(t *testing.T) {
         container: core
         image: code/core:0.1.8
         command: ["uwsgi"]
-        annotations:
-            key1: value1
-            key2: value2
         labels:
             key3: value3
         metadata:
             labels:
                 key4: value4
+            annotations:
+              key1: value1
+              key2: value2
         resources:
             requests:
                 memory: "64Mi"
@@ -1315,14 +1318,14 @@ func Test_validateForExtraFields(t *testing.T) {
           container: core
           image: code/core:0.1.8
           command: ["uwsgi"]
-          annotations:
-            key1: value1
-            key2: value2
           labels:
             key3: value3
           metadata:
             labels:
                 key4: value4
+            annotations:
+              key1: value1
+              key2: value2
           resources:
             requests:
                 memory: "64Mi"

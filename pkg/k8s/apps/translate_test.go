@@ -57,12 +57,12 @@ dev:
     namespace: n
     container: dev
     image: web:latest
-    annotations:
-      key1: value1
     command: ["./run_web.sh"]
     metadata:
       labels:
         app: web
+      annotations:
+        key1: value1
     workdir: /app
     securityContext:
       runAsUser: 100
@@ -104,8 +104,9 @@ dev:
         container: dev
         image: worker:latest
         command: ["./run_worker.sh"]
-        annotations:
-          key2: value2
+        metadata:
+          annotations:
+            key2: value2
         sync:
           - worker:/src`, file.Name()))
 
@@ -626,12 +627,12 @@ dev:
         namespace: n
         container: dev
         image: web:latest
-        annotations:
-          key1: value1
         command: ["./run_web.sh"]
         metadata:
           labels:
             app: web
+          annotations:
+            key1: value1
         workdir: /app
         securityContext:
           runAsUser: 100
@@ -672,8 +673,9 @@ dev:
             container: dev
             image: worker:latest
             command: ["./run_worker.sh"]
-            annotations:
-              key2: value2
+            metadata:
+              annotations:
+                key2: value2
             sync:
                - worker:/src`, file.Name()))
 
@@ -745,12 +747,12 @@ dev:
         namespace: n
         container: dev
         image: web:latest
-        annotations:
-          key1: value1
         command: ["./run_web.sh"]
         metadata:
           labels:
             app: web
+          annotations:
+            key1: value1
         workdir: /app
         securityContext:
           runAsUser: 100
@@ -792,8 +794,9 @@ dev:
             container: dev
             image: worker:latest
             command: ["./run_worker.sh"]
-            annotations:
-              key2: value2
+            metadata:
+              annotations:
+                key2: value2
             sync:
                - worker:/src`, file.Name()))
 
@@ -1485,8 +1488,9 @@ func Test_translateSfsWithVolumes(t *testing.T) {
         image: web:latest
         command: ["./run_web.sh"]
         workdir: /app
-        annotations:
-          key1: value1
+        metadata:
+          annotations:
+            key1: value1
         tolerations:
         - key: nvidia/gpu
           operator: Exists
@@ -1525,8 +1529,9 @@ func Test_translateSfsWithVolumes(t *testing.T) {
         services:
           - name: worker
             image: worker:latest
-            annotations:
-              key2: value2
+            metadata:
+              annotations:
+                key2: value2
             command: ["./run_worker.sh"]
             sync:
                - worker:/src`, file.Name()))
