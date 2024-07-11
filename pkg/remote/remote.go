@@ -104,9 +104,9 @@ RUN \
   /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}{{ if eq .Command "test" }} || true{{ end }}
 
 {{range $key, $artifact := .Artifacts }}
-RUN if [ -f /okteto/src/{{$artifact.Path}} ]; then \
+RUN if [ -e /okteto/src/{{$artifact.Path}} ]; then \
     mkdir -p $(dirname /okteto/artifacts/{{$artifact.Destination}}) && \
-    cp /okteto/src/{{$artifact.Path}} /okteto/artifacts/{{$artifact.Destination}}; \
+    cp -r /okteto/src/{{$artifact.Path}} /okteto/artifacts/{{$artifact.Destination}}; \
   fi
 {{end}}
 
@@ -371,7 +371,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 	if len(params.Artifacts) > 0 {
 		buildOptions.LocalOutputPath = buildCtx
 	}
-	r.ioCtrl.Logger().Infof("Executing test with the following image: %s", params.BaseImage)
+	r.ioCtrl.Logger().Infof("Executing remote with the following base image: %s", params.BaseImage)
 
 	// we need to call Run() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into

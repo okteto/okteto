@@ -50,10 +50,6 @@ var (
 	OktetoManifestType Archetype = "manifest"
 	// PipelineType represents a okteto pipeline manifest type
 	PipelineType Archetype = "pipeline"
-	// KubernetesType represents a k8s manifest type
-	KubernetesType Archetype = "kubernetes"
-	// ChartType represents a k8s manifest type
-	ChartType Archetype = "chart"
 )
 
 const (
@@ -100,8 +96,6 @@ type Manifest struct {
 	Deploy       *DeployInfo              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev          ManifestDevs             `json:"dev,omitempty" yaml:"dev,omitempty"`
 	Name         string                   `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace    string                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context      string                   `json:"context,omitempty" yaml:"context,omitempty"`
 	Icon         string                   `json:"icon,omitempty" yaml:"icon,omitempty"`
 	ManifestPath string                   `json:"-" yaml:"-"`
 	Destroy      *DestroyInfo             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
@@ -146,9 +140,8 @@ func NewManifestFromStack(stack *Stack) *Manifest {
 		})
 	}
 	stackManifest := &Manifest{
-		Type:      StackType,
-		Name:      stack.Name,
-		Namespace: stack.Namespace,
+		Type: StackType,
+		Name: stack.Name,
 		Deploy: &DeployInfo{
 			ComposeSection: &ComposeSectionInfo{
 				ComposesInfo: stackPaths,
@@ -259,36 +252,6 @@ func getManifestFromDevFilePath(cwd, manifestPath string, fs afero.Fs) (*Manifes
 	}
 
 	return nil, discovery.ErrOktetoManifestNotFound
-}
-
-// GetManifestV1 gets a manifest from a path or search for the files to generate it
-func GetManifestV1(manifestPath string, fs afero.Fs) (*Manifest, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
-	manifest, err := getManifestFromDevFilePath(cwd, manifestPath, fs)
-	if err != nil {
-		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
-			return nil, err
-		}
-	}
-
-	if manifest != nil {
-		return manifest, nil
-	}
-
-	if manifestPath != "" && pathExistsAndDir(manifestPath) {
-		cwd = manifestPath
-	}
-
-	manifest, err = getManifestFromOktetoFile(cwd, fs)
-	if err != nil {
-		return nil, err
-	}
-
-	return manifest, nil
 }
 
 func pathExistsAndDir(path string) bool {
@@ -496,94 +459,10 @@ func GetInferredManifest(cwd string, fs afero.Fs) (*Manifest, error) {
 		return stackManifest, nil
 	}
 
-	chartPath, err := discovery.GetHelmChartPath(cwd)
-	if err == nil {
-		oktetoLog.Infof("Found chart")
-		chartPath, err := filepath.Rel(cwd, chartPath)
-		if err != nil {
-			return nil, err
-		}
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found helm chart on %s", chartPath)
-		tags := inferHelmTags(chartPath)
-		deployHelm := fmt.Sprintf("helm upgrade --install ${%s} %s %s", constants.OktetoAutodiscoveryReleaseName, chartPath, tags)
-		chartManifest := &Manifest{
-			Type: ChartType,
-			Deploy: &DeployInfo{
-				Commands: []DeployCommand{
-					{
-						Name:    deployHelm,
-						Command: deployHelm,
-					},
-				},
-			},
-			Dev:   ManifestDevs{},
-			Test:  ManifestTests{},
-			Build: build.ManifestBuild{},
-			Fs:    fs,
-		}
-		return chartManifest, nil
+	return nil, oktetoErrors.UserError{
+		E:    oktetoErrors.ErrCouldNotInferAnyManifest,
+		Hint: "Check https://www.okteto.com/docs/get-started/deploy-your-app/ to deploy your application",
 	}
-
-	k8sManifestPath, err := discovery.GetK8sManifestPath(cwd)
-	if err == nil {
-		oktetoLog.Infof("Found kubernetes manifests")
-		manifestPath, err := filepath.Rel(cwd, k8sManifestPath)
-		if err != nil {
-			return nil, err
-		}
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found kubernetes manifest on %s", manifestPath)
-		k8sManifest := &Manifest{
-			Type: KubernetesType,
-			Deploy: &DeployInfo{
-				Commands: []DeployCommand{
-					{
-						Name:    fmt.Sprintf("kubectl apply -f %s", manifestPath),
-						Command: fmt.Sprintf("kubectl apply -f %s", manifestPath),
-					},
-				},
-			},
-			Dev:   ManifestDevs{},
-			Test:  ManifestTests{},
-			Build: build.ManifestBuild{},
-			Fs:    fs,
-		}
-		return k8sManifest, nil
-	}
-
-	return nil, oktetoErrors.ErrCouldNotInferAnyManifest
-}
-
-func inferHelmTags(path string) string {
-	valuesPath := filepath.Join(path, "values.yaml")
-	if _, err := os.Stat(valuesPath); err != nil {
-		oktetoLog.Info("chart values not found")
-		return ""
-	}
-	type valuesImages struct {
-		Image string `yaml:"image,omitempty"`
-	}
-
-	b, err := os.ReadFile(valuesPath)
-	if err != nil {
-		oktetoLog.Info("could not read file values")
-		return ""
-	}
-	tags := map[string]*valuesImages{}
-	if err := yaml.Unmarshal(b, tags); err != nil {
-		oktetoLog.Info("could not parse values image tags")
-		return ""
-	}
-	result := ""
-	for svcName, image := range tags {
-		if image == nil {
-			continue
-		}
-		if image.Image != "" {
-			result += fmt.Sprintf(" --set %s.image=${OKTETO_BUILD_%s_IMAGE}", svcName, strings.ToUpper(svcName))
-			os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(svcName)), image.Image)
-		}
-	}
-	return result
 }
 
 // getOktetoManifest returns an okteto object from a given file
@@ -1035,8 +914,6 @@ func (m *Manifest) WriteToFile(filePath string) error {
 	}
 	for dName, d := range m.Dev {
 		d.Name = ""
-		d.Context = ""
-		d.Namespace = ""
 		if d.Image == "" {
 			if v, ok := m.Build[dName]; ok {
 				if v.Image != "" {

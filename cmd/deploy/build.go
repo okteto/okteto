@@ -37,17 +37,8 @@ func buildImages(ctx context.Context, builder builderInterface, deployOptions *O
 
 	servicesToBuildSet := setUnion(oktetoManifestServicesWithBuild, servicesToDeployWithBuild)
 
-	if deployOptions.Build {
-		buildOptions := &types.BuildOptions{
-			EnableStages: true,
-			Manifest:     deployOptions.Manifest,
-			CommandArgs:  setToSlice(servicesToBuildSet),
-		}
-		oktetoLog.Debug("force build from manifest definition")
-		if errBuild := builder.Build(ctx, buildOptions); errBuild != nil {
-			return errBuild
-		}
-	} else {
+	if deployOptions.NoBuild {
+		// If no build is requested, we only build the services that have a build section in the *okteto* manifest
 		servicesToBuild, err := builder.GetServicesToBuildDuringExecution(ctx, deployOptions.Manifest, setToSlice(servicesToBuildSet))
 		if err != nil {
 			return err
@@ -63,6 +54,16 @@ func buildImages(ctx context.Context, builder builderInterface, deployOptions *O
 			if errBuild := builder.Build(ctx, buildOptions); errBuild != nil {
 				return errBuild
 			}
+		}
+	} else {
+		buildOptions := &types.BuildOptions{
+			EnableStages: true,
+			Manifest:     deployOptions.Manifest,
+			CommandArgs:  setToSlice(servicesToBuildSet),
+		}
+		oktetoLog.Debug("force build from manifest definition")
+		if errBuild := builder.Build(ctx, buildOptions); errBuild != nil {
+			return errBuild
 		}
 	}
 

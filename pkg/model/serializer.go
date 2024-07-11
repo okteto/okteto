@@ -34,7 +34,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	apiv1 "k8s.io/api/core/v1"
-	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -745,20 +745,18 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type manifestRaw struct {
-	Name          string                   `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace     string                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context       string                   `json:"context,omitempty" yaml:"context,omitempty"`
-	Icon          string                   `json:"icon,omitempty" yaml:"icon,omitempty"`
 	Deploy        *DeployInfo              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev           ManifestDevs             `json:"dev,omitempty" yaml:"dev,omitempty"`
 	Test          ManifestTests            `json:"test,omitempty" yaml:"test,omitempty"`
 	Destroy       *DestroyInfo             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 	Build         build.ManifestBuild      `json:"build,omitempty" yaml:"build,omitempty"`
 	Dependencies  deps.ManifestSection     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
-	GlobalForward []forward.GlobalForward  `json:"forward,omitempty" yaml:"forward,omitempty"`
 	External      externalresource.Section `json:"external,omitempty" yaml:"external,omitempty"`
-
-	DeprecatedDevs []string `yaml:"devs"`
+	Name          string                   `json:"name,omitempty" yaml:"name,omitempty"`
+	Namespace     string                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context       string                   `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon          string                   `json:"icon,omitempty" yaml:"icon,omitempty"`
+	GlobalForward []forward.GlobalForward  `json:"forward,omitempty" yaml:"forward,omitempty"`
 }
 
 func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -779,8 +777,6 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	m.Dev = manifest.Dev
 	m.Icon = manifest.Icon
 	m.Build = manifest.Build
-	m.Namespace = manifest.Namespace
-	m.Context = manifest.Context
 	m.Dependencies = manifest.Dependencies
 	m.Name = manifest.Name
 	if manifest.GlobalForward != nil {

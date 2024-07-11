@@ -27,8 +27,8 @@ import (
 )
 
 // CreateDev deploys a default k8s service for a development container
-func CreateDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
-	s := translate(dev)
+func CreateDev(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) error {
+	s := translate(dev, namespace)
 	return Deploy(ctx, s, c)
 }
 
@@ -86,8 +86,8 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 }
 
 // DestroyDev destroys the default service for a development container
-func DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
-	return Destroy(ctx, dev.Name, dev.Namespace, c)
+func DestroyDev(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) error {
+	return Destroy(ctx, dev.Name, namespace, c)
 }
 
 // Destroy destroys a k8s service

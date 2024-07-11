@@ -122,6 +122,15 @@ okteto up my-svc -- echo this is a test
 
 			ctx := context.Background()
 
+			ctxOpts := &contextCMD.Options{
+				Show:      true,
+				Context:   upOptions.K8sContext,
+				Namespace: upOptions.Namespace,
+			}
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+				return err
+			}
+
 			upMeta := analytics.NewUpMetricsMetadata()
 
 			// when cmd up finishes, send the event
@@ -149,8 +158,7 @@ okteto up my-svc -- echo this is a test
 				}
 				upOptions.ManifestPath = uptManifestPath
 			}
-			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.ManifestPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
-			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs())
+			oktetoManifest, err := model.GetManifestV2(upOptions.ManifestPath, afero.NewOsFs())
 			if err != nil {
 				if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 					return err
@@ -206,6 +214,7 @@ okteto up my-svc -- echo this is a test
 			}
 
 			up := &upContext{
+				Namespace:         okteto.GetContext().Namespace,
 				Manifest:          oktetoManifest,
 				Dev:               nil,
 				Exit:              make(chan error, 1),
@@ -236,14 +245,14 @@ okteto up my-svc -- echo this is a test
 				return fmt.Errorf("failed to load k8s client: %w", err)
 			}
 
-			if upOptions.Deploy || !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, k8sClient) {
+			if upOptions.Deploy || !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Namespace, k8sClient) {
 				err := up.deployApp(ctx, ioCtrl, k8sLogger)
 
 				// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
 				if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands) {
 					return err
 				}
-			} else if !upOptions.Deploy && pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, k8sClient) {
+			} else if !upOptions.Deploy && pipeline.IsDeployed(ctx, up.Manifest.Name, okteto.GetContext().Namespace, k8sClient) {
 				oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy' or 'okteto up --deploy'", up.Manifest.Name)
 			}
 
@@ -278,7 +287,7 @@ okteto up my-svc -- echo this is a test
 						oktetoLog.Infof("failed to create okteto client: '%s'", err.Error())
 						return
 					}
-					if err := wakeNamespaceIfApplies(ctx, up.Dev.Namespace, k8sClient, okClient); err != nil {
+					if err := wakeNamespaceIfApplies(ctx, up.Namespace, k8sClient, okClient); err != nil {
 						// If there is an error waking up namespace, we don't want to fail the up command
 						oktetoLog.Infof("failed to wake up the namespace: %s", err.Error())
 					}
@@ -310,13 +319,13 @@ okteto up my-svc -- echo this is a test
 				}
 			}
 
-			oktetoLog.ConfigureFileLogger(config.GetAppHome(dev.Namespace, dev.Name), config.VersionString)
+			oktetoLog.ConfigureFileLogger(config.GetAppHome(okteto.GetContext().Namespace, dev.Name), config.VersionString)
 
 			if err := checkStignoreConfiguration(dev); err != nil {
 				oktetoLog.Infof("failed to check '.stignore' configuration: %s", err.Error())
 			}
 
-			if err := addStignoreSecrets(dev); err != nil {
+			if err := addStignoreSecrets(dev, okteto.GetContext().Namespace); err != nil {
 				return err
 			}
 
@@ -335,7 +344,7 @@ okteto up my-svc -- echo this is a test
 			if err = up.start(); err != nil {
 				switch err.(type) {
 				default:
-					return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+					return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(okteto.GetContext().Namespace, dev.Name))
 				case oktetoErrors.CommandError:
 					oktetoLog.Infof("CommandError: %v", err)
 					return err
@@ -470,10 +479,11 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 	startTime := time.Now()
 	err = c.Run(ctx, &deploy.Options{
 		Name:             up.Manifest.Name,
+		Namespace:        up.Namespace,
 		ManifestPathFlag: up.Options.ManifestPathFlag,
 		ManifestPath:     up.Options.ManifestPath,
 		Timeout:          5 * time.Minute,
-		Build:            true,
+		NoBuild:          false,
 	})
 	up.analyticsMeta.HasRunDeploy()
 
@@ -503,13 +513,13 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 }
 
 func (up *upContext) start() error {
-	up.pidController = newPIDController(up.Dev.Namespace, up.Dev.Name)
+	up.pidController = newPIDController(up.Namespace, up.Dev.Name)
 
 	if err := up.pidController.create(); err != nil {
-		oktetoLog.Infof("failed to create pid file for %s - %s: %s", up.Dev.Namespace, up.Dev.Name, err)
+		oktetoLog.Infof("failed to create pid file for %s - %s: %s", up.Namespace, up.Dev.Name, err)
 
 		return oktetoErrors.UserError{
-			E: fmt.Errorf("couldn't create a pid file for %s - %s", up.Dev.Namespace, up.Dev.Name),
+			E: fmt.Errorf("couldn't create a pid file for %s - %s", up.Namespace, up.Dev.Name),
 			Hint: `This error can occur if the ".okteto" folder in your home has misconfigured permissions.
     To resolve, try 'sudo chown -R <your-user>: ~/.okteto'
 
@@ -564,7 +574,7 @@ func (up *upContext) activateLoop() {
 	defer t.Stop()
 
 	defer func() {
-		if err := config.DeleteStateFile(up.Dev.Name, up.Dev.Namespace); err != nil {
+		if err := config.DeleteStateFile(up.Dev.Name, up.Namespace); err != nil {
 			oktetoLog.Infof("failed to delete state file: %s", err)
 		}
 	}()
@@ -818,8 +828,8 @@ func terminateProcess(p process.Interface) error {
 }
 
 func printDisplayContext(up *upContext) {
-	oktetoLog.Println(fmt.Sprintf("    %s   %s", oktetoLog.BlueString("Context:"), okteto.RemoveSchema(up.Dev.Context)))
-	oktetoLog.Println(fmt.Sprintf("    %s %s", oktetoLog.BlueString("Namespace:"), up.Dev.Namespace))
+	oktetoLog.Println(fmt.Sprintf("    %s   %s", oktetoLog.BlueString("Context:"), okteto.RemoveSchema(okteto.GetContext().Name)))
+	oktetoLog.Println(fmt.Sprintf("    %s %s", oktetoLog.BlueString("Namespace:"), up.Namespace))
 	oktetoLog.Println(fmt.Sprintf("    %s      %s", oktetoLog.BlueString("Name:"), up.Dev.Name))
 
 	anyGlobalForward := false

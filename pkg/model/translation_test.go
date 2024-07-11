@@ -22,9 +22,9 @@ import (
 	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/stretchr/testify/assert"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
-	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
@@ -32,7 +32,6 @@ import (
 func TestDevToTranslationRule(t *testing.T) {
 	manifestBytes := []byte(`dev:
     web:
-        namespace: n
         container: dev
         image: web:latest
         command: ["./run_web.sh"]
@@ -73,7 +72,7 @@ func TestDevToTranslationRule(t *testing.T) {
 
 	dev := manifest.Dev["web"]
 
-	rule1 := dev.ToTranslationRule(dev, "username", false)
+	rule1 := dev.ToTranslationRule(dev, "n", "username", false)
 	rule1OK := &TranslationRule{
 		Marker:            OktetoBinImageTag,
 		OktetoBinImageTag: OktetoBinImageTag,
@@ -176,7 +175,7 @@ func TestDevToTranslationRule(t *testing.T) {
 	assert.Equal(t, string(marshalled1), string(marshalled1OK))
 
 	dev2 := dev.Services[0]
-	rule2 := dev2.ToTranslationRule(dev, "username", false)
+	rule2 := dev2.ToTranslationRule(dev, "n", "username", false)
 	rule2OK := &TranslationRule{
 		Container:       "dev",
 		Image:           "worker:latest",
@@ -229,7 +228,6 @@ func TestDevToTranslationRule(t *testing.T) {
 func TestDevToTranslationRuleInitContainer(t *testing.T) {
 	manifestBytes := []byte(`dev:
     web:
-        namespace: n
         sync:
           - .:/app
         initContainer:
@@ -249,7 +247,7 @@ func TestDevToTranslationRuleInitContainer(t *testing.T) {
 
 	dev := manifest.Dev["web"]
 
-	rule := dev.ToTranslationRule(dev, "username", false)
+	rule := dev.ToTranslationRule(dev, "n", "username", false)
 	ruleOK := &TranslationRule{
 		Marker:            OktetoBinImageTag,
 		OktetoBinImageTag: "image",
@@ -332,7 +330,6 @@ func TestDevToTranslationDebugEnabled(t *testing.T) {
 	manifestBytes := []byte(`dev:
     web:
         image: dev-image
-        namespace: n
         sync:
           - .:/app`)
 
@@ -343,7 +340,7 @@ func TestDevToTranslationDebugEnabled(t *testing.T) {
 
 	dev := manifest.Dev["web"]
 
-	rule := dev.ToTranslationRule(dev, "username", false)
+	rule := dev.ToTranslationRule(dev, "n", "username", false)
 	ruleOK := &TranslationRule{
 		Marker:            OktetoBinImageTag,
 		OktetoBinImageTag: OktetoBinImageTag,
@@ -423,7 +420,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 				SSHServerPort: oktetoDefaultSSHServerPort,
 			},
 			expected: env.Environment{
-				{Name: "OKTETO_NAMESPACE", Value: ""},
+				{Name: "OKTETO_NAMESPACE", Value: "n"},
 				{Name: "OKTETO_NAME", Value: ""},
 				{Name: "OKTETO_USERNAME", Value: "username"},
 				{Name: "HISTSIZE", Value: "10000000"},
@@ -441,7 +438,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 				SSHServerPort: 22220,
 			},
 			expected: env.Environment{
-				{Name: "OKTETO_NAMESPACE", Value: ""},
+				{Name: "OKTETO_NAMESPACE", Value: "n"},
 				{Name: "OKTETO_NAME", Value: ""},
 				{Name: "OKTETO_USERNAME", Value: "username"},
 				{Name: oktetoSSHServerPortVariable, Value: "22220"},
@@ -456,7 +453,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Logf("test: %s", test.name)
-		rule := test.manifest.ToTranslationRule(test.manifest, "username", false)
+		rule := test.manifest.ToTranslationRule(test.manifest, "n", "username", false)
 		if e, a := test.expected, rule.Environment; !reflect.DeepEqual(e, a) {
 			t.Errorf("expected environment:\n%#v\ngot:\n%#v", e, a)
 		}
@@ -480,7 +477,6 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 			manifest: []byte(`dev:
     root-user-with-overrides:
         image: worker:latest
-        namespace: n
         securityContext:
            runAsUser: 100
            runAsGroup: 101
@@ -495,10 +491,9 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 		},
 		{
 			name: "non-root-user-without-overrides",
-			manifest: []byte(`dev: 
+			manifest: []byte(`dev:
     non-root-user-without-overrides:
         image: worker:latest
-        namespace: n
         securityContext:
            runAsNonRoot: true`),
 			translated: SecurityContext{
@@ -507,10 +502,9 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 		},
 		{
 			name: "root-user-with-defaults",
-			manifest: []byte(`dev: 
+			manifest: []byte(`dev:
     root-user-with-defaults:
         image: worker:latest
-        namespace: n
         securityContext:
            runAsNonRoot: false`),
 			translated: SecurityContext{
@@ -522,10 +516,9 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 		},
 		{
 			name: "non-root-user-with-overrides",
-			manifest: []byte(`dev: 
+			manifest: []byte(`dev:
     non-root-user-with-overrides:
         image: worker:latest
-        namespace: n
         securityContext:
            runAsUser: 100
            runAsGroup: 101
@@ -542,8 +535,7 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 			name: "no-security-context",
 			manifest: []byte(`dev:
     no-security-context:
-        image: worker:latest
-        namespace: n`),
+        image: worker:latest`),
 			translated: SecurityContext{
 				RunAsUser:  pointer.Int64(0),
 				RunAsGroup: pointer.Int64(0),
@@ -552,10 +544,9 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 		},
 		{
 			name: "no-run-as-non-root",
-			manifest: []byte(`dev: 
+			manifest: []byte(`dev:
     no-run-as-non-root:
         image: worker:latest
-        namespace: n
         securityContext:
            runAsUser: 100
            runAsGroup: 101
@@ -576,7 +567,7 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 
 		dev := manifest.Dev[test.name]
 
-		rule := dev.ToTranslationRule(dev, "username", false)
+		rule := dev.ToTranslationRule(dev, "n", "username", false)
 		marshalled, err := yaml.Marshal(rule.SecurityContext)
 		assert.NoError(t, err)
 		marshalledOK, err := yaml.Marshal(test.translated)

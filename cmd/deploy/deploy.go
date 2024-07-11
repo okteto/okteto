@@ -79,7 +79,7 @@ type Options struct {
 	Variables             []string
 	StackServicesToDeploy []string
 	Timeout               time.Duration
-	Build                 bool
+	NoBuild               bool
 	Dependencies          bool
 	RunWithoutBash        bool
 	RunInRemote           bool
@@ -162,7 +162,16 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Execute the list of commands specified in the 'deploy' section of your okteto manifest",
-		Args:  utils.NoArgsAccepted(""),
+		Example: `# Execute okteto deploy
+$ okteto deploy
+
+# Execute okteto deploy in remote
+$ okteto deploy --remote 
+
+
+# Execute okteto deploy skipping the build
+$ okteto deploy --build=false`,
+		Args: utils.NoArgsAccepted(""),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			// validate cmd options
 			if options.Dependencies && !okteto.IsOkteto() {
@@ -182,14 +191,8 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 				return err
 			}
 
-			// Loads, updates and uses the context from path. If not found, it creates and uses a new context
-			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: true}); err != nil {
-				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.GetContext().Name).Error() {
-					return err
-				}
-				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
-					return err
-				}
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: options.Namespace}); err != nil {
+				return err
 			}
 
 			if okteto.IsOkteto() {
@@ -248,12 +251,11 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 			exit := make(chan error, 1)
 
 			go func() {
-				err := c.Run(ctx, options)
-				namespace := okteto.GetContext().Namespace
-				if options.Manifest != nil {
-					namespace = options.Manifest.Namespace
+				if options.Namespace == "" {
+					options.Namespace = okteto.GetContext().Namespace
 				}
-				c.InsightsTracker.TrackDeploy(ctx, options.Name, namespace, err == nil)
+				err := c.Run(ctx, options)
+				c.InsightsTracker.TrackDeploy(ctx, options.Name, options.Namespace, err == nil)
 				c.TrackDeploy(options.Manifest, options.RunInRemote, startTime, err)
 				exit <- err
 			}()
@@ -278,7 +280,7 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment is deployed")
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment is deployed")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
-	cmd.Flags().BoolVarP(&options.Build, "build", "", false, "force build of images when deploying the development environment")
+	cmd.Flags().BoolVarP(&options.NoBuild, "no-build", "", false, "enable/disable building images")
 	cmd.Flags().BoolVarP(&options.Dependencies, "dependencies", "", false, "deploy the dependencies from manifest")
 	cmd.Flags().BoolVarP(&options.RunWithoutBash, "no-bash", "", false, "execute commands without bash")
 	cmd.Flags().BoolVarP(&options.RunInRemote, "remote", "", false, "force run deploy commands in remote")
@@ -356,7 +358,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	}
 
 	if dc.IsRemote || dc.RunningInInstaller {
-		currentVars, err := dc.CfgMapHandler.GetConfigmapVariablesEncoded(ctx, deployOptions.Name, deployOptions.Manifest.Namespace)
+		currentVars, err := dc.CfgMapHandler.GetConfigmapVariablesEncoded(ctx, deployOptions.Name, deployOptions.Namespace)
 		if err != nil {
 			return err
 		}
@@ -392,7 +394,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	dc.IoCtrl.Logger().Debugf("manifest path to store in metadata: %q", manifestPathForConfigMap)
 	data := &pipeline.CfgData{
 		Name:       deployOptions.Name,
-		Namespace:  deployOptions.Manifest.Namespace,
+		Namespace:  deployOptions.Namespace,
 		Repository: os.Getenv(model.GithubRepositoryEnvVar),
 		Branch:     os.Getenv(constants.OktetoGitBranchEnvVar),
 		Filename:   manifestPathForConfigMap,
@@ -453,7 +455,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		// a stage with "Internal Server Error" duplicating the message we already display on error. For that reason,
 		// we should not set empty stage on error.
 		oktetoLog.SetStage("")
-		hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, c)
+		hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, okteto.GetContext().Namespace, c)
 		if err != nil {
 			return err
 		}
@@ -468,7 +470,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 				if err != nil {
 					oktetoLog.Infof("could not create endpoint getter: %s", err)
 				}
-				if err := eg.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name, Namespace: deployOptions.Manifest.Namespace}); err != nil {
+				if err := eg.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name, Namespace: okteto.GetContext().Namespace}); err != nil {
 					oktetoLog.Infof("could not retrieve endpoints: %s", err)
 				}
 			}
@@ -516,7 +518,7 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		startTime := time.Now()
 		err := dc.deployStack(ctx, deployOptions)
 		elapsedTime := time.Since(startTime)
-		if addPhaseErr := dc.CfgMapHandler.AddPhaseDuration(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, deployComposePhaseName, elapsedTime); addPhaseErr != nil {
+		if addPhaseErr := dc.CfgMapHandler.AddPhaseDuration(ctx, deployOptions.Name, okteto.GetContext().Namespace, deployComposePhaseName, elapsedTime); addPhaseErr != nil {
 			oktetoLog.Info("error adding phase to configmap: %s", err)
 		}
 		if err != nil {
@@ -558,11 +560,6 @@ func getDefaultTimeout() time.Duration {
 }
 
 func shouldRunInRemote(opts *Options) bool {
-	// already in remote so we need to deploy locally
-	if env.LoadBoolean(constants.OktetoDeployRemote) {
-		return false
-	}
-
 	// --remote flag enabled from command line
 	if opts.RunInRemote {
 		return true
@@ -646,10 +643,6 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 			Name:  "OKTETO_ORIGIN",
 			Value: "okteto-deploy",
 		})
-		namespace := okteto.GetContext().Namespace
-		if dep.Namespace != "" {
-			namespace = dep.Namespace
-		}
 
 		err := dep.ExpandVars(deployOptions.Variables)
 		if err != nil {
@@ -664,7 +657,7 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 			Wait:         dep.Wait,
 			Timeout:      dep.GetTimeout(deployOptions.Timeout),
 			SkipIfExists: !deployOptions.Dependencies,
-			Namespace:    namespace,
+			Namespace:    okteto.GetContext().Namespace,
 		}
 
 		if err := dc.PipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
@@ -762,7 +755,7 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 
 	divertDriver := divert.NewNoop()
 	if opts.Manifest.Deploy.Divert != nil {
-		divertDriver, err = divert.New(opts.Manifest.Deploy.Divert, opts.Manifest.Name, opts.Manifest.Namespace, c)
+		divertDriver, err = divert.New(opts.Manifest.Deploy.Divert, opts.Manifest.Name, okteto.GetContext().Namespace, c)
 		if err != nil {
 			return err
 		}
@@ -793,7 +786,7 @@ func (dc *Command) deployEndpoints(ctx context.Context, opts *Options) error {
 	}
 
 	translateOptions := &ingresses.TranslateOptions{
-		Namespace: opts.Manifest.Namespace,
+		Namespace: okteto.GetContext().Namespace,
 		Name:      format.ResourceK8sMetaString(opts.Manifest.Name),
 	}
 

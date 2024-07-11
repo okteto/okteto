@@ -19,6 +19,7 @@ package deploy
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -76,6 +77,10 @@ spec:
   selector:
     app: e2etest
 `
+
+	oktetoManifestWithK8s = `deploy:
+- kubectl apply -f k8s.yml
+`
 )
 
 // TestDeployDevEnvFromK8s tests the following scenario:
@@ -88,6 +93,7 @@ func TestDeployDevEnvFromK8s(t *testing.T) {
 
 	dir := t.TempDir()
 	require.NoError(t, createK8sManifest(dir))
+	require.NoError(t, createOktetoManifestForK8s(dir))
 
 	testNamespace := integration.GetTestNamespace("DeployK8sFile", user)
 	namespaceOpts := &commands.NamespaceOptions{
@@ -120,4 +126,13 @@ func TestDeployDevEnvFromK8s(t *testing.T) {
 	_, err = integration.GetService(context.Background(), testNamespace, "e2etest", c)
 	require.True(t, k8sErrors.IsNotFound(err))
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+}
+
+func createOktetoManifestForK8s(dir string) error {
+	manifestPath := filepath.Join(dir, "okteto.yml")
+	manifestContent := []byte(oktetoManifestWithK8s)
+	if err := os.WriteFile(manifestPath, manifestContent, 0600); err != nil {
+		return err
+	}
+	return nil
 }

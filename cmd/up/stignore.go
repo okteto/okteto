@@ -34,7 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 )
 
-func addStignoreSecrets(dev *model.Dev) error {
+func addStignoreSecrets(dev *model.Dev, namespace string) error {
 	output := ""
 	for i, folder := range dev.Sync.Folders {
 		stignorePath := filepath.Join(folder.LocalPath, ".stignore")
@@ -56,7 +56,7 @@ func addStignoreSecrets(dev *model.Dev) error {
 		reader := bufio.NewReader(infile)
 
 		stignoreName := fmt.Sprintf(".stignore-%d", i+1)
-		transformedStignorePath := filepath.Join(config.GetAppHome(dev.Namespace, dev.Name), stignoreName)
+		transformedStignorePath := filepath.Join(config.GetAppHome(namespace, dev.Name), stignoreName)
 		outfile, err := os.OpenFile(transformedStignorePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 		if err != nil {
 			return err

@@ -161,13 +161,14 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 				}
 				options.ManifestPath = uptManifestPath
 			}
-			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: true}); err != nil {
-				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.GetContext().Name).Error() {
-					return err
-				}
-				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
-					return err
-				}
+
+			ctxOpts := &contextCMD.Options{
+				Show:      true,
+				Context:   options.K8sContext,
+				Namespace: options.Namespace,
+			}
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+				return err
 			}
 
 			cwd, err := os.Getwd()
@@ -401,12 +402,6 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 		return err
 	}
 
-	if opts.Manifest.Context == "" {
-		opts.Manifest.Context = okteto.GetContext().Name
-	}
-	if opts.Manifest.Namespace == "" {
-		opts.Manifest.Namespace = namespace
-	}
 	os.Setenv(constants.OktetoNameEnvVar, opts.Name)
 
 	if opts.DestroyDependencies {
@@ -418,7 +413,7 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 		}
 	}
 
-	if hasDivert(opts.Manifest) {
+	if hasDivert(opts.Manifest, namespace) {
 		oktetoLog.SetStage("Destroy Divert")
 		if err := dc.destroyDivert(ctx, opts.Manifest); err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error destroying divert: %s", err.Error())
@@ -474,18 +469,13 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 }
 
 func (dc *destroyCommand) destroyDependencies(ctx context.Context, opts *Options) error {
-	for depName, depInfo := range opts.Manifest.Dependencies {
+	for depName := range opts.Manifest.Dependencies {
 		oktetoLog.SetStage(fmt.Sprintf("Destroying dependency '%s'", depName))
-
-		namespace := okteto.GetContext().Namespace
-		if depInfo.Namespace != "" {
-			namespace = depInfo.Namespace
-		}
 
 		destOpts := &pipelineCMD.DestroyOptions{
 			Name:           depName,
 			DestroyVolumes: opts.DestroyVolumes,
-			Namespace:      namespace,
+			Namespace:      okteto.GetContext().Namespace,
 		}
 		pipelineCmd, err := dc.getPipelineDestroyer()
 		if err != nil {
@@ -507,7 +497,7 @@ func (dc *destroyCommand) destroyDivert(ctx context.Context, manifest *model.Man
 	if err != nil {
 		return err
 	}
-	driver, err := dc.getDivertDriver(manifest.Deploy.Divert, manifest.Name, manifest.Namespace, c)
+	driver, err := dc.getDivertDriver(manifest.Deploy.Divert, manifest.Name, okteto.GetContext().Namespace, c)
 	if err != nil {
 		return err
 	}
@@ -605,6 +595,6 @@ func (dc *destroyCommand) getDestroyer(opts *Options) destroyInterface {
 	return destroyer
 }
 
-func hasDivert(manifest *model.Manifest) bool {
-	return manifest.Deploy != nil && manifest.Deploy.Divert != nil && manifest.Deploy.Divert.Namespace != manifest.Namespace
+func hasDivert(manifest *model.Manifest, namespace string) bool {
+	return manifest.Deploy != nil && manifest.Deploy.Divert != nil && manifest.Deploy.Divert.Namespace != namespace
 }

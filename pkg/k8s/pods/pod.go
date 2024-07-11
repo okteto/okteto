@@ -227,8 +227,8 @@ func ContainerLogs(ctx context.Context, containerName, podName, namespace string
 }
 
 // Restart restarts the pods of a deployment
-func Restart(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, sn string) error {
-	pods, err := c.CoreV1().Pods(dev.Namespace).List(
+func Restart(ctx context.Context, dev *model.Dev, namespace string, c *kubernetes.Clientset, serviceName string) error {
+	pods, err := c.CoreV1().Pods(namespace).List(
 		ctx,
 		metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("%s=%s", model.DetachedDevLabel, dev.Name),
@@ -240,14 +240,14 @@ func Restart(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, sn st
 	}
 
 	found := false
-	prefix := fmt.Sprintf("%s-", sn)
+	prefix := fmt.Sprintf("%s-", serviceName)
 	for i := range pods.Items {
 
-		if sn != "" && !strings.HasPrefix(pods.Items[i].Name, prefix) {
+		if serviceName != "" && !strings.HasPrefix(pods.Items[i].Name, prefix) {
 			continue
 		}
 		found = true
-		err := c.CoreV1().Pods(dev.Namespace).Delete(ctx, pods.Items[i].Name, metav1.DeleteOptions{GracePeriodSeconds: pointer.Int64(0)})
+		err := c.CoreV1().Pods(namespace).Delete(ctx, pods.Items[i].Name, metav1.DeleteOptions{GracePeriodSeconds: pointer.Int64(0)})
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				return nil
@@ -259,7 +259,7 @@ func Restart(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, sn st
 	if !found {
 		return fmt.Errorf("no pods running in development mode")
 	}
-	return waitUntilRunning(ctx, dev.Namespace, fmt.Sprintf("%s=%s", model.DetachedDevLabel, dev.Name), c)
+	return waitUntilRunning(ctx, namespace, fmt.Sprintf("%s=%s", model.DetachedDevLabel, dev.Name), c)
 }
 
 func waitUntilRunning(ctx context.Context, namespace, selector string, c *kubernetes.Clientset) error {

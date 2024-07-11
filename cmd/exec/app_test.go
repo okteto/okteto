@@ -37,19 +37,19 @@ func TestWaitUnitlDevModeIsReady(t *testing.T) {
 
 	tt := []struct {
 		expectedErr error
-		waiter      func(*model.Dev, []config.UpState) error
+		waiter      func(*model.Dev, string, []config.UpState) error
 		name        string
 	}{
 		{
 			name: "error",
-			waiter: func(dev *model.Dev, states []config.UpState) error {
+			waiter: func(dev *model.Dev, namespace string, states []config.UpState) error {
 				return assert.AnError
 			},
 			expectedErr: assert.AnError,
 		},
 		{
 			name: "success",
-			waiter: func(dev *model.Dev, states []config.UpState) error {
+			waiter: func(dev *model.Dev, namespace string, states []config.UpState) error {
 				return nil
 			},
 		},
@@ -59,7 +59,7 @@ func TestWaitUnitlDevModeIsReady(t *testing.T) {
 			w := waitUnitlDevModeIsReady{
 				statusWaiter: tc.waiter,
 			}
-			err := w.Wait(dev, nil)
+			err := w.Wait(dev, "", nil)
 			assert.ErrorIs(t, err, tc.expectedErr)
 		})
 	}
@@ -96,7 +96,7 @@ func TestWaitUntilAppIsInDevMode_Wait(t *testing.T) {
 					},
 				},
 			})
-			err := w.Wait(dev, app)
+			err := w.Wait(dev, "", app)
 			if tc.expectedErr != nil {
 				assert.ErrorContains(t, err, tc.expectedErr.Error())
 			} else {
@@ -110,20 +110,20 @@ type fakeWaiter struct {
 	err error
 }
 
-func (f fakeWaiter) Wait(*model.Dev, apps.App) error {
+func (f fakeWaiter) Wait(*model.Dev, string, apps.App) error {
 	return f.err
 }
 
 func TestRunningAppGetter_GetApp(t *testing.T) {
+	namespace := "test"
 	dev := &model.Dev{
-		Name:      "test",
-		Namespace: "test",
+		Name: "test",
 	}
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.Name,
-			Namespace: dev.Namespace,
+			Namespace: namespace,
 		},
 	}
 	tt := []struct {
@@ -169,7 +169,7 @@ func TestRunningAppGetter_GetApp(t *testing.T) {
 				waiter:    tc.mockWaiters,
 				k8sClient: c,
 			}
-			_, err := r.GetApp(context.Background(), dev)
+			_, err := r.GetApp(context.Background(), dev, namespace)
 			if tc.expectedErr != nil {
 				assert.Error(t, err)
 			} else {

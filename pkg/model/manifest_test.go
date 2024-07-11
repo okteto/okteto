@@ -212,9 +212,7 @@ deploy:
   - okteto build -t okteto.dev/api:${OKTETO_GIT_COMMIT} api
   - okteto build -t okteto.dev/frontend:${OKTETO_GIT_COMMIT} frontend
   - helm upgrade --install movies chart --set tag=${OKTETO_GIT_COMMIT}
-devs:
-  - api/okteto.yml
-  - frontend/okteto.yml`),
+`),
 			expectedCommand: "okteto build -t okteto.dev/api:${OKTETO_GIT_COMMIT} api",
 		},
 		{
@@ -225,9 +223,7 @@ deploy:
   - okteto build -t okteto.dev/api:${OKTETO_GIT_COMMIT:=dev} api
   - okteto build -t okteto.dev/frontend:${OKTETO_GIT_COMMIT} frontend
   - helm upgrade --install movies chart --set tag=${OKTETO_GIT_COMMIT}
-devs:
-  - api/okteto.yml
-  - frontend/okteto.yml`),
+`),
 			expectedCommand: "okteto build -t okteto.dev/api:${OKTETO_GIT_COMMIT:=dev} api",
 		},
 	}
@@ -557,8 +553,7 @@ func TestInferFromStack(t *testing.T) {
 			currentManifest: &Manifest{
 				Dev: ManifestDevs{
 					"test": &Dev{
-						Name:      "one",
-						Namespace: "test",
+						Name: "one",
 					},
 				},
 				Build: build.ManifestBuild{},
@@ -594,8 +589,7 @@ func TestInferFromStack(t *testing.T) {
 				Destroy: &DestroyInfo{},
 				Dev: ManifestDevs{
 					"test": &Dev{
-						Name:      "one",
-						Namespace: "test",
+						Name: "one",
 						Metadata: &Metadata{
 							Labels:      Labels{},
 							Annotations: Annotations{},
@@ -1417,74 +1411,6 @@ func Test_Manifest_HasBuildSection(t *testing.T) {
 	}
 }
 
-func Test_getInferredManifestFromK8sManifestFile(t *testing.T) {
-	wd := t.TempDir()
-	fullpath := filepath.Join(wd, "k8s.yml")
-	f, err := os.Create(fullpath)
-	assert.NoError(t, err)
-	defer func() {
-		if err := f.Close(); err != nil {
-			t.Fatalf("Error closing file %s: %s", fullpath, err)
-		}
-	}()
-	_, err = GetInferredManifest(wd, afero.NewMemMapFs())
-	assert.NoError(t, err)
-}
-
-func Test_getInferredManifestFromK8sManifestFolder(t *testing.T) {
-	wd := t.TempDir()
-	fullpath := filepath.Join(wd, "manifests")
-	assert.NoError(t, os.MkdirAll(filepath.Dir(fullpath), 0750))
-	f, err := os.Create(fullpath)
-	assert.NoError(t, err)
-	defer func() {
-		if err := f.Close(); err != nil {
-			t.Fatalf("Error closing file %s: %s", fullpath, err)
-		}
-	}()
-
-	_, err = GetInferredManifest(wd, afero.NewMemMapFs())
-	assert.NoError(t, err)
-}
-
-func Test_getInferredManifestFromHelmPath(t *testing.T) {
-	var tests = []struct {
-		name          string
-		expected      string
-		filesToCreate []string
-	}{
-		{
-			name:          "chart folder exists on wd",
-			filesToCreate: []string{filepath.Join("chart", "Chart.yaml")},
-			expected:      "charts",
-		},
-		{
-			name:          "chart folder inside helm folder exists on wd",
-			filesToCreate: []string{filepath.Join("helm", "charts", "Chart.yaml")},
-			expected:      filepath.Join("helm", "charts"),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			wd := t.TempDir()
-			for _, fileToCreate := range tt.filesToCreate {
-				fullpath := filepath.Join(wd, fileToCreate)
-				assert.NoError(t, os.MkdirAll(filepath.Dir(fullpath), 0750))
-				f, err := os.Create(fullpath)
-				assert.NoError(t, err)
-				defer func() {
-					if err := f.Close(); err != nil {
-						t.Fatalf("Error closing file %s: %s", fullpath, err)
-					}
-				}()
-			}
-			_, err := GetInferredManifest(wd, afero.NewMemMapFs())
-			assert.NoError(t, err)
-		})
-	}
-}
-
 func Test_getInferredManifestWhenNoManifestExist(t *testing.T) {
 	wd := t.TempDir()
 	result, err := GetInferredManifest(wd, afero.NewMemMapFs())
@@ -1552,8 +1478,6 @@ func TestRead(t *testing.T) {
 			manifest: nil,
 			expected: &Manifest{
 				Name:         "",
-				Namespace:    "",
-				Context:      "",
 				Icon:         "",
 				ManifestPath: "",
 				Test:         ManifestTests{},
@@ -1583,8 +1507,6 @@ func TestRead(t *testing.T) {
 			manifest: []byte(""),
 			expected: &Manifest{
 				Name:         "",
-				Namespace:    "",
-				Context:      "",
 				Icon:         "",
 				ManifestPath: "",
 				Test:         ManifestTests{},
@@ -1631,12 +1553,9 @@ func TestRead(t *testing.T) {
 			name: "success parsing dev",
 			manifest: []byte(`dev:
   test:
-    image: test-image
-    context: ./test`),
+    image: test-image`),
 			expected: &Manifest{
 				Name:          "",
-				Namespace:     "",
-				Context:       "",
 				Icon:          "",
 				ManifestPath:  "",
 				Deploy:        &DeployInfo{},
@@ -1644,9 +1563,7 @@ func TestRead(t *testing.T) {
 				GlobalForward: []forward.GlobalForward{},
 				Dev: ManifestDevs{
 					"test": &Dev{
-						Name:      "test",
-						Context:   "./test",
-						Namespace: "",
+						Name: "test",
 						Metadata: &Metadata{
 							Labels:      Labels{},
 							Annotations: Annotations{},
@@ -1703,8 +1620,7 @@ func TestRead(t *testing.T) {
 				Type:         OktetoManifestType,
 				Manifest: []byte(`dev:
   test:
-    image: test-image
-    context: ./test`),
+    image: test-image`),
 				Fs: afero.NewOsFs(),
 			},
 			expectedErr: false,
@@ -1729,8 +1645,6 @@ func TestRead(t *testing.T) {
     service: service-b`),
 			expected: &Manifest{
 				Name:          "",
-				Namespace:     "",
-				Context:       "",
 				Icon:          "",
 				ManifestPath:  "",
 				Test:          ManifestTests{},

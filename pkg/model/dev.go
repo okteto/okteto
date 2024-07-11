@@ -33,9 +33,9 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/spf13/afero"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
-	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
 )
 
@@ -65,8 +65,6 @@ type Dev struct {
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
 	Workdir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	Name                 string                `json:"name,omitempty" yaml:"name,omitempty"`
-	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
-	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
 	ServiceAccount       string                `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
 	parentSyncFolder     string
@@ -296,12 +294,6 @@ func (dev *Dev) expandEnvVars() error {
 	if err := dev.loadName(); err != nil {
 		return err
 	}
-	if err := dev.loadNamespace(); err != nil {
-		return err
-	}
-	if err := dev.loadContext(); err != nil {
-		return err
-	}
 	if err := dev.loadSelector(); err != nil {
 		return err
 	}
@@ -313,28 +305,6 @@ func (dev *Dev) loadName() error {
 	var err error
 	if len(dev.Name) > 0 {
 		dev.Name, err = env.ExpandEnv(dev.Name)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (dev *Dev) loadNamespace() error {
-	var err error
-	if len(dev.Namespace) > 0 {
-		dev.Namespace, err = env.ExpandEnv(dev.Namespace)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (dev *Dev) loadContext() error {
-	var err error
-	if len(dev.Context) > 0 {
-		dev.Context, err = env.ExpandEnv(dev.Context)
 		if err != nil {
 			return err
 		}
@@ -446,9 +416,6 @@ func (dev *Dev) SetDefaults() error {
 		if s.Selector == nil {
 			s.Selector = map[string]string{}
 		}
-
-		s.Namespace = ""
-		s.Context = ""
 		s.setRunAsUserDefaults(dev)
 		s.Forward = make([]forward.Forward, 0)
 		s.Reverse = make([]Reverse, 0)
@@ -812,7 +779,7 @@ func (dev *Dev) LabelsSelector() string {
 }
 
 // ToTranslationRule translates a dev struct into a translation rule
-func (dev *Dev) ToTranslationRule(main *Dev, username string, reset bool) *TranslationRule {
+func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset bool) *TranslationRule {
 	rule := &TranslationRule{
 		Container:        dev.Container,
 		ImagePullPolicy:  dev.ImagePullPolicy,
@@ -853,7 +820,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, username string, reset bool) *Trans
 			rule.Environment,
 			env.Var{
 				Name:  "OKTETO_NAMESPACE",
-				Value: dev.Namespace,
+				Value: namespace,
 			},
 			env.Var{
 				Name:  "OKTETO_NAME",
@@ -1038,7 +1005,7 @@ func (s *Secret) GetFileName() string {
 
 // GetTimeout returns the timeout override
 func GetTimeout() (time.Duration, error) {
-	defaultTimeout := (60 * time.Second)
+	defaultTimeout := 60 * time.Second
 
 	t := os.Getenv(OktetoTimeoutEnvVar)
 	if t == "" {
@@ -1057,9 +1024,6 @@ func (service *Dev) validateForExtraFields() error {
 	errorMessage := "%q is not supported in Services. Please visit https://www.okteto.com/docs/reference/okteto-manifest/#services-object-optional for documentation"
 	if service.Autocreate {
 		return fmt.Errorf(errorMessage, "autocreate")
-	}
-	if service.Context != "" {
-		return fmt.Errorf(errorMessage, "context")
 	}
 	if service.Secrets != nil {
 		return fmt.Errorf(errorMessage, "secrets")
