@@ -63,6 +63,9 @@ jobs:
     resource_class: large
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - v4-pkg-cache-{{ checksum "go.sum" }}
       - run:
           name: Build all binaries
           command: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
@@ -118,7 +121,7 @@ jobs:
   integration-actions:
     executor: golang-ci
     environment:
-      OKTETO_URL: https://staging.okteto.dev/
+      OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_USER: cindylopez
       OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
@@ -131,8 +134,9 @@ jobs:
       - run:
           name: Run actions integration tests
           command: |
-            mkdir -p $HOME/.okteto && cp $(pwd)/artifacts/.okteto $HOME/.okteto
+            mkdir -p $HOME/.okteto && touch $HOME/.okteto/.noanalytics
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            export OKTETO_TOKEN=${API_STAGING_TOKEN}
             make integration-actions
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -143,7 +147,7 @@ jobs:
   integration-build:
     executor: golang-ci
     environment:
-      OKTETO_URL: https://staging.okteto.dev/
+      OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_USER: cindylopez
       OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
@@ -158,8 +162,9 @@ jobs:
           command: |
             export DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
             export DEPOT_TOKEN=$DEPOT_TOKEN
-            mkdir -p $HOME/.okteto && cp $(pwd)/artifacts/.okteto $HOME/.okteto
+            mkdir -p $HOME/.okteto && touch $HOME/.okteto/.noanalytics
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            export OKTETO_TOKEN=${API_STAGING_TOKEN}
             make integration-build
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -170,7 +175,7 @@ jobs:
   integration-deploy:
     executor: golang-ci
     environment:
-      OKTETO_URL: https://staging.okteto.dev/
+      OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_USER: cindylopez
       OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
@@ -186,7 +191,8 @@ jobs:
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
-            mkdir -p $HOME/.okteto && cp $(pwd)/artifacts/.okteto $HOME/.okteto
+            export OKTETO_TOKEN=${API_STAGING_TOKEN}
+            mkdir -p $HOME/.okteto && touch $HOME/.okteto/.noanalytics
             make integration-deploy
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -197,7 +203,7 @@ jobs:
   integration-up:
     executor: golang-ci
     environment:
-      OKTETO_URL: https://staging.okteto.dev/
+      OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_USER: cindylopez
       OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
@@ -212,7 +218,8 @@ jobs:
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
-            mkdir -p $HOME/.okteto && cp $(pwd)/artifacts/.okteto $HOME/.okteto
+            export OKTETO_TOKEN=${API_STAGING_TOKEN}
+            mkdir -p $HOME/.okteto && touch $HOME/.okteto/.noanalytics
             make integration-up
           environment:
             OKTETO_SKIP_CLEANUP: "true"
@@ -225,7 +232,7 @@ jobs:
   integration-okteto:
     executor: golang-ci
     environment:
-      OKTETO_URL: https://staging.okteto.dev/
+      OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_USER: cindylopez
       OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
@@ -240,7 +247,8 @@ jobs:
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
-            mkdir -p $HOME/.okteto && cp $(pwd)/artifacts/.okteto $HOME/.okteto
+            export OKTETO_TOKEN=${API_STAGING_TOKEN}
+            mkdir -p $HOME/.okteto && touch $HOME/.okteto/.noanalytics
             make integration-okteto
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -265,7 +273,8 @@ jobs:
           name: Run deprecated integration tests
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
-            mkdir -p $HOME/.okteto && cp $(pwd)/artifacts/.okteto $HOME/.okteto
+            export OKTETO_TOKEN=${API_STAGING_TOKEN}
+            mkdir -p $HOME/.okteto && touch $HOME/.okteto/.noanalytics
             make integration-deprecated
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -277,7 +286,7 @@ jobs:
     executor: golang-ci
     resource_class: large
     environment:
-      OKTETO_URL: https://staging.okteto.dev/
+      OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_USER: cindylopez
       OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
@@ -297,7 +306,7 @@ jobs:
             curl -L "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
-            /usr/local/bin/okteto login --token ${API_STAGING_TOKEN}
+            okteto context use ${OKTETO_CONTEXT} --token ${API_STAGING_TOKEN}
       - run:
           # As the integration test running the okteto deploy needs the CLI which we are testing, we build the current
           # CLI to the okteto.dev registry, so it is available for the user running the tests. Then, in the step
