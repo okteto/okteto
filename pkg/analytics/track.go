@@ -34,30 +34,31 @@ const (
 	// This is mixpanel's public token, is needed to send analytics to the project
 	mixpanelToken = "92fe782cdffa212d8f03861fbf1ea301"
 
-	manifestHasChangedEvent  = "Manifest Has Changed"
-	downEvent                = "Down"
-	downVolumesEvent         = "DownVolumes"
-	restartEvent             = "Restart Services"
-	statusEvent              = "Status"
-	logsEvent                = "Logs"
-	doctorEvent              = "Doctor"
-	buildEvent               = "Build"
-	buildTransientErrorEvent = "BuildTransientError"
-	destroyEvent             = "Destroy"
-	deployStackEvent         = "Deploy Stack"
-	kubeconfigEvent          = "Kubeconfig"
-	namespaceEvent           = "Namespace"
-	namespaceCreateEvent     = "CreateNamespace"
-	namespaceDeleteEvent     = "DeleteNamespace"
-	previewDeployEvent       = "DeployPreview"
-	previewDestroyEvent      = "DestroyPreview"
-	execEvent                = "Exec"
-	signupEvent              = "Signup"
-	contextEvent             = "Context"
-	disableEvent             = "Disable Analytics"
-	stackNotSupportedField   = "Stack Field Not Supported"
-	buildPullErrorEvent      = "BuildPullError"
-	deleteContexts           = "Contexts Deletion"
+	manifestHasChangedEvent       = "Manifest Has Changed"
+	downEvent                     = "Down"
+	downVolumesEvent              = "DownVolumes"
+	restartEvent                  = "Restart Services"
+	statusEvent                   = "Status"
+	logsEvent                     = "Logs"
+	doctorEvent                   = "Doctor"
+	buildEvent                    = "Build"
+	buildWithManifestVsDockerfile = "BuildWithManifestVsDockerfile"
+	buildTransientErrorEvent      = "BuildTransientError"
+	destroyEvent                  = "Destroy"
+	deployStackEvent              = "Deploy Stack"
+	kubeconfigEvent               = "Kubeconfig"
+	namespaceEvent                = "Namespace"
+	namespaceCreateEvent          = "CreateNamespace"
+	namespaceDeleteEvent          = "DeleteNamespace"
+	previewDeployEvent            = "DeployPreview"
+	previewDestroyEvent           = "DestroyPreview"
+	execEvent                     = "Exec"
+	signupEvent                   = "Signup"
+	contextEvent                  = "Context"
+	disableEvent                  = "Disable Analytics"
+	stackNotSupportedField        = "Stack Field Not Supported"
+	buildPullErrorEvent           = "BuildPullError"
+	deleteContexts                = "Contexts Deletion"
 )
 
 var (
@@ -174,6 +175,14 @@ func TrackDoctor(success bool) {
 
 func trackDisable(success bool) {
 	track(disableEvent, success, nil)
+}
+
+func TrackBuildWithManifestVsDockerfile(isDockerfile bool) {
+	props := map[string]interface{}{
+		"isDockerfile": isDockerfile,
+	}
+	track(buildWithManifestVsDockerfile, true, props)
+
 }
 
 // TrackBuild sends a tracking event to mixpanel when the user builds on remote
