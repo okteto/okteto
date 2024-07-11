@@ -106,7 +106,7 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 		},
 	}
 
-	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "Path to the okteto manifest file")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", utils.DefaultManifest, "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "Overwrites the namespace where the development environment is deployed")
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "Context where the development environment is deployed")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "Set a variable (can be set more than once)")
@@ -160,6 +160,16 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		}
 		// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
 		options.ManifestPathFlag = manifestPathFlag
+
+		// check that the manifest file exists
+		if !filesystem.FileExistsWithFilesystem(options.ManifestPath, fs) {
+			return analytics.TestMetadata{}, oktetoErrors.ErrManifestPathNotFound
+		}
+
+		// the Okteto manifest flag should specify a file, not a directory
+		if filesystem.IsDir(options.ManifestPath, fs) {
+			return analytics.TestMetadata{}, oktetoErrors.ErrManifestPathIsDir
+		}
 
 		// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
 		uptManifestPath, err := filesystem.UpdateCWDtoManifestPath(options.ManifestPath)

@@ -130,7 +130,7 @@ type destroyCommand struct {
 }
 
 // Destroy destroys the dev application defined by the manifest
-func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command {
 	options := &Options{
 		Variables: []string{},
 	}
@@ -160,6 +160,16 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 					return err
 				}
 				options.ManifestPath = uptManifestPath
+
+				// check that the manifest file exists
+				if !filesystem.FileExistsWithFilesystem(manifestPathFlag, fs) {
+					return oktetoErrors.ErrManifestPathNotFound
+				}
+
+				// the Okteto manifest flag should specify a file, not a directory
+				if filesystem.IsDir(manifestPathFlag, fs) {
+					return oktetoErrors.ErrManifestPathIsDir
+				}
 			}
 
 			ctxOpts := &contextCMD.Options{
@@ -244,7 +254,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 	}
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
-	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", utils.DefaultManifest, "path to the Okteto manifest file")
 	cmd.Flags().BoolVarP(&options.DestroyVolumes, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().BoolVarP(&options.DestroyDependencies, "dependencies", "d", false, "destroy dependencies")
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the development environment to be destroyed even if there is an error executing the custom destroy commands defined in the manifest")

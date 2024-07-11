@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -44,6 +45,19 @@ func Restart() *cobra.Command {
 		Args:   utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#restart"),
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if devPath != "" {
+				fs := afero.NewOsFs()
+				// check that the manifest file exists
+				if !filesystem.FileExistsWithFilesystem(devPath, fs) {
+					return oktetoErrors.ErrManifestPathNotFound
+				}
+
+				// the Okteto manifest flag should specify a file, not a directory
+				if filesystem.IsDir(devPath, fs) {
+					return oktetoErrors.ErrManifestPathIsDir
+				}
+			}
+
 			ctx := context.Background()
 
 			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
@@ -88,7 +102,7 @@ func Restart() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the restart command is executed")
 	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the restart command is executed")
 

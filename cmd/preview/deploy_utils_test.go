@@ -58,27 +58,6 @@ func Test_optionsSetup(t *testing.T) {
 			},
 		},
 		{
-			name: "success-filename",
-			opts: &DeployOptions{
-				scope:              "personal",
-				repository:         "test-repository",
-				branch:             "test-branch",
-				deprecatedFilename: "filename-old",
-			},
-			expectedFile: "filename-old",
-		},
-		{
-			name: "success-filename-file",
-			opts: &DeployOptions{
-				scope:              "personal",
-				repository:         "test-repository",
-				branch:             "test-branch",
-				deprecatedFilename: "filename-old",
-				file:               "file",
-			},
-			expectedFile: "file",
-		},
-		{
 			name: "get-repository-err",
 			opts: &DeployOptions{
 				scope:  "personal",
