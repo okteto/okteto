@@ -117,57 +117,155 @@ jobs:
 
   integration-actions:
     executor: golang-ci
+    environment:
+      OKTETO_URL: https://staging.okteto.dev/
+      OKTETO_USER: cindylopez
+      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v4-pkg-cache-{{ checksum "go.sum" }}
+      - attach_workspace:
+          at: ./artifacts
       - run:
           name: Run actions integration tests
-          command: make integration-actions
+          command: |
+            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            make integration-actions
+      - save_cache:
+          key: v4-pkg-cache-{{ checksum "go.sum" }}
+          paths:
+            - ~/.cache/go-build
+            - /go/pkg
 
   integration-build:
     executor: golang-ci
+    environment:
+      OKTETO_URL: https://staging.okteto.dev/
+      OKTETO_USER: cindylopez
+      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v4-pkg-cache-{{ checksum "go.sum" }}
+      - attach_workspace:
+          at: ./artifacts
       - run:
           name: Run build integration tests
           command: |
             export DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
             export DEPOT_TOKEN=$DEPOT_TOKEN
+            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             make integration-build
+      - save_cache:
+          key: v4-pkg-cache-{{ checksum "go.sum" }}
+          paths:
+            - ~/.cache/go-build
+            - /go/pkg
 
   integration-deploy:
     executor: golang-ci
+    environment:
+      OKTETO_URL: https://staging.okteto.dev/
+      OKTETO_USER: cindylopez
+      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v4-pkg-cache-{{ checksum "go.sum" }}
+      - attach_workspace:
+          at: ./artifacts
       - run:
           name: Run deploy integration tests
           # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
           command: |
+            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             make integration-deploy
+      - save_cache:
+          key: v4-pkg-cache-{{ checksum "go.sum" }}
+          paths:
+            - ~/.cache/go-build
+            - /go/pkg
 
   integration-up:
     executor: golang-ci
+    environment:
+      OKTETO_URL: https://staging.okteto.dev/
+      OKTETO_USER: cindylopez
+      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v4-pkg-cache-{{ checksum "go.sum" }}
+      - attach_workspace:
+          at: ./artifacts
       - run:
           name: Run up integration tests
           command: |
+            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             make integration-up
           environment:
             OKTETO_SKIP_CLEANUP: "true"
+      - save_cache:
+          key: v4-pkg-cache-{{ checksum "go.sum" }}
+          paths:
+            - ~/.cache/go-build
+            - /go/pkg
 
   integration-okteto:
     executor: golang-ci
+    environment:
+      OKTETO_URL: https://staging.okteto.dev/
+      OKTETO_USER: cindylopez
+      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v4-pkg-cache-{{ checksum "go.sum" }}
+      - attach_workspace:
+          at: ./artifacts
       - run:
           name: Run okteto integration tests
           command: |
+            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             make integration-okteto
+      - save_cache:
+          key: v4-pkg-cache-{{ checksum "go.sum" }}
+          paths:
+            - ~/.cache/go-build
+            - /go/pkg
 
   integration-deprecated:
     executor: golang-ci
+    environment:
+      OKTETO_URL: https://staging.okteto.dev/
+      OKTETO_USER: cindylopez
+      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v4-pkg-cache-{{ checksum "go.sum" }}
+      - attach_workspace:
+          at: ./artifacts
       - run:
           name: Run deprecated integration tests
-          command: make integration-deprecated
+          command: |
+            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            make integration-deprecated
+      - save_cache:
+          key: v4-pkg-cache-{{ checksum "go.sum" }}
+          paths:
+            - ~/.cache/go-build
+            - /go/pkg
 
   test-integration:
     executor: golang-ci
@@ -201,12 +299,12 @@ jobs:
           name: Build CLI image
           command: |
             okteto build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
-      - integration-build
-      - integration-deploy
-      - integration-up
-      - integration-actions
-      - integration-okteto
-      - integration-deprecated
+      # - integration-build
+      # - integration-deploy
+      # - integration-up
+      # - integration-actions
+      # - integration-okteto
+      # - integration-deprecated
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
@@ -214,6 +312,10 @@ jobs:
             - /go/pkg
       - store_artifacts:
           path: /root/.okteto
+      - persist_to_workspace:
+          root: .okteto
+          paths:
+            - .noanalytics
   test-release:
     executor: golang-ci
     steps:
@@ -617,3 +719,9 @@ workflows:
       equal: [true, << pipeline.parameters.TriggerIntegration >>]
     jobs:
       - test-integration
+      - integration-build
+      - integration-deploy
+      - integration-up
+      - integration-actions
+      - integration-okteto
+      - integration-deprecated
