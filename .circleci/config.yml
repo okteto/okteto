@@ -135,6 +135,7 @@ jobs:
           name: Run actions integration tests
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            export OKTETO_HOME=$HOME/.okteto
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-actions
@@ -163,6 +164,7 @@ jobs:
             export DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
             export DEPOT_TOKEN=$DEPOT_TOKEN
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            export OKTETO_HOME=$HOME/.okteto
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-build
@@ -190,6 +192,7 @@ jobs:
           # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            export OKTETO_HOME=$HOME/.okteto
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
@@ -217,6 +220,7 @@ jobs:
           name: Run up integration tests
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            export OKTETO_HOME=$HOME/.okteto
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
@@ -246,6 +250,7 @@ jobs:
           name: Run okteto integration tests
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            export OKTETO_HOME=$HOME/.okteto
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
@@ -273,6 +278,7 @@ jobs:
           name: Run deprecated integration tests
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            export OKTETO_HOME=$HOME/.okteto
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-deprecated
@@ -303,6 +309,7 @@ jobs:
           name: Build CLI image
           command: |
             export OKTETO_TOKEN=${API_STAGING_TOKEN}
+            export OKTETO_HOME=$HOME/.okteto
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
       # - integration-build
@@ -316,9 +323,6 @@ jobs:
           paths:
             - ~/.cache/go-build
             - /go/pkg
-      - store_artifacts:
-          path: $HOME/.okteto
-          destination: .okteto
   test-release:
     executor: golang-ci
     steps:
