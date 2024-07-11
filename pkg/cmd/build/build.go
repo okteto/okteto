@@ -256,7 +256,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *build.Info, o *types.Bui
 
 	file := b.Dockerfile
 	if b.Context != "" && b.Dockerfile != "" {
-		file = extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName)
+		file = extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName, os.Getwd)
 	}
 
 	args := []build.Arg{}
@@ -354,7 +354,7 @@ func OptsFromBuildInfoForRemoteDeploy(b *build.Info, o *types.BuildOptions) *typ
 	return opts
 }
 
-func extractFromContextAndDockerfile(context, dockerfile, svcName string) string {
+func extractFromContextAndDockerfile(context, dockerfile, svcName string, getWd func() (string, error)) string {
 	if filepath.IsAbs(dockerfile) {
 		return dockerfile
 	}
@@ -367,7 +367,7 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string) string
 		return dockerfile
 	}
 
-	wd, err := os.Getwd()
+	wd, err := getWd()
 	if err != nil {
 		return joinPath
 	}
