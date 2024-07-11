@@ -1006,13 +1006,6 @@ func areProbesEnabled(probes *Probes) bool {
 	return false
 }
 
-func areAllProbesEnabled(probes *Probes) bool {
-	if probes != nil {
-		return probes.Liveness && probes.Readiness && probes.Startup
-	}
-	return false
-}
-
 // RemoteModeEnabled returns true if remote is enabled
 func (dev *Dev) RemoteModeEnabled() bool {
 	if dev == nil {
