@@ -721,9 +721,21 @@ workflows:
       equal: [true, << pipeline.parameters.TriggerIntegration >>]
     jobs:
       - test-integration
-      - integration-build
-      - integration-deploy
-      - integration-up
-      - integration-actions
-      - integration-okteto
-      - integration-deprecated
+      - integration-build:
+          requires:
+            - test-integration
+      - integration-deploy:
+          requires:
+            - test-integration
+      - integration-up:
+          requires:
+            - test-integration
+      - integration-actions:
+          requires:
+            - test-integration
+      - integration-okteto:
+          requires:
+            - test-integration
+      - integration-deprecated:
+          requires:
+            - test-integration
