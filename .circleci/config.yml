@@ -720,7 +720,10 @@ workflows:
     when:
       equal: [true, << pipeline.parameters.TriggerIntegration >>]
     jobs:
-      - test-integration
+      - build-binaries
+      - test-integration:
+          requires:
+            - build-binaries
       - integration-build:
           requires:
             - test-integration
