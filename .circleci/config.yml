@@ -131,6 +131,7 @@ jobs:
       - run:
           name: Run actions integration tests
           command: |
+            mkdir -p $HOME/.okteto && cp $(pwd)/artifacts/.okteto $HOME/.okteto
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             make integration-actions
       - save_cache:
@@ -157,6 +158,7 @@ jobs:
           command: |
             export DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
             export DEPOT_TOKEN=$DEPOT_TOKEN
+            mkdir -p $HOME/.okteto && cp $(pwd)/artifacts/.okteto $HOME/.okteto
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             make integration-build
       - save_cache:
@@ -184,6 +186,7 @@ jobs:
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+            mkdir -p $HOME/.okteto && cp $(pwd)/artifacts/.okteto $HOME/.okteto
             make integration-deploy
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -209,6 +212,7 @@ jobs:
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+            mkdir -p $HOME/.okteto && cp $(pwd)/artifacts/.okteto $HOME/.okteto
             make integration-up
           environment:
             OKTETO_SKIP_CLEANUP: "true"
@@ -236,6 +240,7 @@ jobs:
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+            mkdir -p $HOME/.okteto && cp $(pwd)/artifacts/.okteto $HOME/.okteto
             make integration-okteto
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -260,6 +265,7 @@ jobs:
           name: Run deprecated integration tests
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            mkdir -p $HOME/.okteto && cp $(pwd)/artifacts/.okteto $HOME/.okteto
             make integration-deprecated
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -311,7 +317,8 @@ jobs:
             - ~/.cache/go-build
             - /go/pkg
       - store_artifacts:
-          path: /root/.okteto
+          path: $HOME/.okteto
+          destination: .okteto
   test-release:
     executor: golang-ci
     steps:
