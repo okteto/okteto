@@ -38,7 +38,6 @@ executors:
   golang-ci:
     docker:
       - image: okteto/golang-ci:2.5.0
-        user: circleci:circleci
 
 jobs:
   golangci-lint:
