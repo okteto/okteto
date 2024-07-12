@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -157,6 +158,9 @@ func (kc *Cmd) Run(ctx context.Context, flags Flags) error {
 	})
 	if err != nil {
 		return err
+	}
+	if !okteto.IsOkteto() {
+		return oktetoErrors.ErrContextIsNotOktetoCluster
 	}
 
 	ctxResource := kc.initCtxFunc(flags.Context, flags.Namespace)

@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
@@ -73,6 +74,10 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 			}
 			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
 				return err
+			}
+
+			if !okteto.IsOkteto() {
+				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
 			manifest, err := model.GetManifestV2(options.ManifestPath, afero.NewOsFs())

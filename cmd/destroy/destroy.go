@@ -171,6 +171,10 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 				return err
 			}
 
+			if !okteto.IsOkteto() {
+				return oktetoErrors.ErrContextIsNotOktetoCluster
+			}
+
 			cwd, err := os.Getwd()
 			if err != nil {
 				return fmt.Errorf("failed to get the current working directory: %w", err)
