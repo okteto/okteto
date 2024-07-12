@@ -557,15 +557,12 @@ workflows:
           context: GKE
   lint-build-test:
     when:
-      or:
-        - not:
-            equal: [scheduled_pipeline, << pipeline.trigger_source >>]
-        - not:
-            equal: ["run-e2e-windows", << pipeline.parameters.GHA_Meta >>]
-        - not:
-            equal: ["run-e2e", << pipeline.parameters.GHA_Meta >>]
-        - not:
-            equal: ["run-e2e-unix", << pipeline.parameters.GHA_Meta >>]
+      not:
+        or:
+          - equal: [scheduled_pipeline, << pipeline.trigger_source >>]
+          - equal: ["run-e2e-windows", << pipeline.parameters.GHA_Meta >>]
+          - equal: ["run-e2e", << pipeline.parameters.GHA_Meta >>]
+          - equal: ["run-e2e-unix", << pipeline.parameters.GHA_Meta >>]
 
     jobs:
       - golangci-lint
