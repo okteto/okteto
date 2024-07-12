@@ -728,20 +728,15 @@ workflows:
       - integration-deploy:
           requires:
             - test-integration
-            - integration-build
       - integration-up:
           requires:
             - test-integration
-            - integration-deploy
       - integration-actions:
           requires:
             - test-integration
-            - integration-up
       - integration-okteto:
           requires:
             - test-integration
-            - integration-actions
       - integration-deprecated:
           requires:
             - test-integration
-            - integration-okteto
