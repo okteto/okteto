@@ -347,15 +347,6 @@ jobs:
       - attach_workspace:
           at: .\artifacts
       - run:
-          name: Setup environment
-          command: |
-            go version
-            choco install kubernetes-cli -y
-            choco install kubernetes-helm -y
-      - run:
-          name: Run windows unit test-release
-          command: go test ./...
-      - run:
           # As the integration test running the okteto deploy needs the CLI which we are testing, we build the current
           # CLI to the okteto.dev registry, so it is available for the user running the tests. Then, in the step
           # which run the deploy, we set the env var OKTETO_REMOTE_CLI_IMAGE to the one we are building
@@ -363,7 +354,6 @@ jobs:
           command: |
             & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
-            & "$($HOME)\project\artifacts\bin\okteto.exe" kubeconfig
             & "$($HOME)\project\artifacts\bin\okteto.exe" build --platform "linux/amd64" --build-arg VERSION_STRING=$env:CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-win:$env:CIRCLE_SHA1
       - save_cache:
           key: v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
@@ -384,6 +374,12 @@ jobs:
             - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
       - attach_workspace:
           at: .\artifacts
+      - run:
+          name: Install kubectl and helm
+          command: |
+            go version
+            choco install kubernetes-cli -y
+            choco install kubernetes-helm -y
       - run:
           name: Run deprecated integration tests
           environment:
@@ -437,6 +433,12 @@ jobs:
       - attach_workspace:
           at: .\artifacts
       - run:
+          name: Install kubectl and helm
+          command: |
+            go version
+            choco install kubernetes-cli -y
+            choco install kubernetes-helm -y
+      - run:
           name: Run deploy integration tests
           environment:
             OKTETO_SKIP_CLEANUP: "true"
@@ -462,6 +464,12 @@ jobs:
             - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
       - attach_workspace:
           at: .\artifacts
+      - run:
+          name: Install kubectl and helm
+          command: |
+            go version
+            choco install kubernetes-cli -y
+            choco install kubernetes-helm -y
       - run:
           name: Run up integration tests
           environment:
