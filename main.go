@@ -126,15 +126,11 @@ func main() {
 	k8sLogger := io.NewK8sLogger()
 
 	varManager := vars.NewVarsManager(&varsManager{})
-	err := varManager.AddGroup(vars.Group{
+	varManager.AddGroup(vars.Group{
 		Vars:     vars.ConvertLocalEnvVarsToOktetoVars(os.Environ),
 		Priority: vars.OktetoVariableTypeLocal,
 	})
 	vars.GlobalVarManager = varManager
-
-	if err != nil {
-		ioController.Logger().Infof("error parsing local env vars: %s", err)
-	}
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
@@ -168,7 +164,7 @@ func main() {
 	root.PersistentFlags().StringVar(&outputMode, "log-output", oktetoLog.TTYFormat, "output format for logs (tty, plain, json)")
 
 	root.PersistentFlags().StringVarP(&serverNameOverride, "server-name", "", "", "The address and port of the Okteto Ingress server")
-	err = root.PersistentFlags().MarkHidden("server-name")
+	err := root.PersistentFlags().MarkHidden("server-name")
 	if err != nil {
 		ioController.Logger().Infof("error hiding server-name flag: %s", err)
 	}

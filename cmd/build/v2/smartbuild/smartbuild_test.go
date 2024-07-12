@@ -205,7 +205,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 			},
 		},
 	}
-	assert.NoError(t, vars.GlobalVarManager.AddGroup(localEnvVars))
+	vars.GlobalVarManager.AddGroup(localEnvVars)
 
 	fs := afero.NewMemMapFs()
 	err := afero.WriteFile(fs, "secret", []byte("bar"), 0600)

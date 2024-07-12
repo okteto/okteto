@@ -896,7 +896,7 @@ func Test_loadDotEnv(t *testing.T) {
 				varManager := vars.NewVarsManager(&fakeVarManager{})
 				value4 := vars.Var{Name: "VALUE4", Value: "VALUE4"}
 				group := vars.Group{Vars: []vars.Var{value4}}
-				_ = varManager.AddGroup(group)
+				varManager.AddGroup(group)
 				return varManager
 			},
 			mockfs: func() afero.Fs {
@@ -921,7 +921,7 @@ func Test_loadDotEnv(t *testing.T) {
 				varManager := vars.NewVarsManager(&fakeVarManager{})
 				value4 := vars.Var{Name: "VAR4", Value: "local"}
 				group := vars.Group{Vars: []vars.Var{value4}}
-				_ = varManager.AddGroup(group)
+				varManager.AddGroup(group)
 				return varManager
 			},
 			mockfs: func() afero.Fs {

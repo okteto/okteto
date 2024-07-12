@@ -47,7 +47,7 @@ func TestExpandBuildArgs(t *testing.T) {
 			},
 		},
 	}
-	assert.NoError(t, varManager.AddGroup(localEnvVars))
+	varManager.AddGroup(localEnvVars)
 
 	tests := []struct {
 		buildInfo          *Info

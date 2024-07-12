@@ -39,7 +39,7 @@ func Test_Env_UnmarshalYAML(t *testing.T) {
 			},
 		},
 	}
-	assert.NoError(t, vars.GlobalVarManager.AddGroup(localEnvVars))
+	vars.GlobalVarManager.AddGroup(localEnvVars)
 
 	// this helps to test that flag vars are used in the manifest deserialization
 	deployFlagVars := vars.Group{
@@ -51,7 +51,7 @@ func Test_Env_UnmarshalYAML(t *testing.T) {
 			},
 		},
 	}
-	assert.NoError(t, vars.GlobalVarManager.AddGroup(deployFlagVars))
+	vars.GlobalVarManager.AddGroup(deployFlagVars)
 
 	tests := []struct {
 		expected    Environment

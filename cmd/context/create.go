@@ -453,8 +453,9 @@ func (c *Command) loadDotEnv(fs afero.Fs) error {
 		dotEnvVars.Vars = append(dotEnvVars.Vars, vars.Var{Name: k, Value: v})
 		oktetoLog.AddMaskedWord(v)
 	}
+	c.varManager.AddGroup(dotEnvVars)
 
-	return c.varManager.AddGroup(dotEnvVars)
+	return nil
 }
 
 func isUrl(u string) bool {

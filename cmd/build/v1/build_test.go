@@ -84,7 +84,7 @@ func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 			},
 		},
 	}
-	assert.NoError(t, varManager.AddGroup(localEnvVars))
+	varManager.AddGroup(localEnvVars)
 	buildRunner := &fakeBuildRunner{}
 	bc := NewBuilder(buildRunner, io.NewIOController(), varManager)
 	dir, err := createDockerfile(t)
@@ -118,7 +118,7 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 			},
 		},
 	}
-	assert.NoError(t, varManager.AddGroup(localEnvVars))
+	varManager.AddGroup(localEnvVars)
 
 	buildRunner := &fakeBuildRunner{}
 	bc := NewBuilder(buildRunner, io.NewIOController(), varManager)
