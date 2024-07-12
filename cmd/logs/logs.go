@@ -151,7 +151,7 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Comm
 	}
 
 	cmd.Flags().BoolVarP(&options.All, "all", "a", false, "fetch logs from the whole namespace")
-	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", utils.DefaultManifest, "path to the Okteto manifest file")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "the namespace to use to fetch the logs (defaults to the current okteto namespace)")
 	cmd.Flags().StringVarP(&options.Context, "context", "c", "", "the context to use to fetch the logs")
 	cmd.Flags().StringVarP(&options.exclude, "exclude", "e", "", "exclude by service name (regular expression)")

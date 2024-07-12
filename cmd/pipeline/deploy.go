@@ -139,7 +139,7 @@ func deploy(ctx context.Context, fs afero.Fs) *cobra.Command {
 	cmd.Flags().BoolVarP(&flags.skipIfExists, "skip-if-exists", "", false, "skip the pipeline deployment if the pipeline already exists in the namespace (defaults to false)")
 	cmd.Flags().DurationVarP(&flags.timeout, "timeout", "t", fiveMinutes, "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	cmd.Flags().StringArrayVarP(&flags.variables, "var", "v", []string{}, "set a pipeline variable (can be set more than once)")
-	cmd.Flags().StringVarP(&flags.file, "file", "f", utils.DefaultManifest, "path to the Okteto manifest file")
+	cmd.Flags().StringVarP(&flags.file, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "set an environment label (can be set more than once)")
 	cmd.Flags().BoolVar(&flags.reuseParams, "reuse-params", false, "if pipeline exist, reuse same params to redeploy")
 

@@ -140,7 +140,7 @@ okteto exec my-pod`,
 			return e.Run(ctx, argsResult, manifest.Dev[argsResult.DevName], okteto.GetContext().Namespace)
 		},
 	}
-	cmd.Flags().StringVarP(&execFlags.manifestPath, "file", "f", utils.DefaultManifest, "path to the Okteto manifest file")
+	cmd.Flags().StringVarP(&execFlags.manifestPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&execFlags.namespace, "namespace", "n", "", "namespace where the exec command is executed")
 	cmd.Flags().StringVarP(&execFlags.k8sContext, "context", "c", "", "context where the exec command is executed")
 	return cmd

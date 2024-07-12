@@ -91,7 +91,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().DurationVarP(&opts.timeout, "timeout", "t", fiveMinutes, "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	cmd.Flags().StringArrayVarP(&opts.variables, "var", "v", []string{}, "set a preview environment variable (can be set more than once)")
 	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", false, "wait until the preview environment deployment finishes (defaults to false)")
-	cmd.Flags().StringVarP(&opts.file, "file", "f", utils.DefaultManifest, "path to the Okteto manifest file")
+	cmd.Flags().StringVarP(&opts.file, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringArrayVarP(&opts.labels, "label", "", []string{}, "set a preview environment label (can be set more than once)")
 
 	return cmd

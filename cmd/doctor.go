@@ -109,7 +109,7 @@ func Doctor(k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&doctorOpts.DevPath, "file", "f", utils.DefaultManifest, "path to the Okteto manifest file")
+	cmd.Flags().StringVarP(&doctorOpts.DevPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&doctorOpts.Namespace, "namespace", "n", "", "namespace where the up command was executing")
 	cmd.Flags().StringVarP(&doctorOpts.K8sContext, "context", "c", "", "context where the up command was executing")
 	return cmd

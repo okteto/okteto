@@ -254,7 +254,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 	}
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
-	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", utils.DefaultManifest, "path to the Okteto manifest file")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().BoolVarP(&options.DestroyVolumes, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().BoolVarP(&options.DestroyDependencies, "dependencies", "d", false, "destroy dependencies")
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the development environment to be destroyed even if there is an error executing the custom destroy commands defined in the manifest")

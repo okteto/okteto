@@ -106,7 +106,7 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 		},
 	}
 
-	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", utils.DefaultManifest, "path to the Okteto manifest file")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "Overwrites the namespace where the development environment is deployed")
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "Context where the development environment is deployed")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "Set a variable (can be set more than once)")

@@ -122,7 +122,7 @@ func Status(fs afero.Fs) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the Okteto manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executing")
 	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the up command is executing")
 	cmd.Flags().BoolVarP(&showInfo, "info", "i", false, "show syncthing links for troubleshooting the synchronization service")

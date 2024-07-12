@@ -153,7 +153,7 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, fs afero.Fs) 
 		},
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the Okteto manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volume")
 	cmd.Flags().BoolVarP(&all, "all", "A", false, "deactivate all running dev containers")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the down command is executed")
