@@ -165,11 +165,11 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 				}
 
 				// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
-				manifestPath, err := filesystem.UpdateCWDtoManifestPath(options.ManifestPath)
+				uptManifestPath, err := filesystem.UpdateCWDtoManifestPath(options.ManifestPath)
 				if err != nil {
 					return err
 				}
-				options.ManifestPath = manifestPath
+				options.ManifestPath = uptManifestPath
 			}
 
 			ctxOpts := &contextCMD.Options{
