@@ -1054,8 +1054,7 @@ func TestManifestUnmarshalling(t *testing.T) {
 		deploy:
 		  - okteto stack deploy`),
 			expected: &Manifest{
-				Namespace: "test",
-				Build:     map[string]*build.Info{},
+				Build: map[string]*build.Info{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{
@@ -1068,7 +1067,6 @@ func TestManifestUnmarshalling(t *testing.T) {
 				Dev:          map[string]*Dev{},
 				Dependencies: map[string]*deps.Dependency{},
 				External:     externalresource.Section{},
-				Context:      "context-to-use",
 				Type:         OktetoManifestType,
 				Fs:           afero.NewOsFs(),
 			},

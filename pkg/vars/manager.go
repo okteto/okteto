@@ -157,7 +157,7 @@ func (m *Manager) sortGroupsByPriorityDesc() {
 	})
 }
 
-// groupsToArray flattens all groups into a single array of vars. By defaul it only includes exported variables
+// groupsToArray flattens all groups into a single array of vars. By default it only includes exported variables
 func (m *Manager) groupsToArray(groups []Group) []string {
 	vars := make([]string, 0)
 	for _, g := range groups {
