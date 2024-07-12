@@ -16,7 +16,6 @@ package destroy
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"testing"
 
@@ -30,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

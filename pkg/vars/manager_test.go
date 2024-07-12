@@ -13,16 +13,11 @@
 
 package vars
 
-import (
-	"os"
-	"testing"
-)
-
-type fakeEnvManager struct {
-	t           *testing.T
-	maskedWords []string
-	logs        []string
-}
+//type fakeEnvManager struct {
+//	t           *testing.T
+//	maskedWords []string
+//	logs        []string
+//}
 
 //func (*fakeEnvManager) LookupEnv(key string) (string, bool) {
 //	return os.LookupEnv(key)
@@ -45,10 +40,10 @@ type fakeEnvManager struct {
 //	}
 //}
 
-func varExists(key string) bool {
-	_, exists := os.LookupEnv(key)
-	return exists
-}
+//func varExists(key string) bool {
+//	_, exists := os.LookupEnv(key)
+//	return exists
+//}
 
 //func Test_EnvManager(t *testing.T) {
 //	fakeEnvManager := newFakeEnvManager(t)

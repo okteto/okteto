@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+
 	"github.com/okteto/okteto/pkg/vars"
 )
 

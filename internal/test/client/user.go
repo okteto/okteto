@@ -15,10 +15,10 @@ package client
 
 import (
 	"context"
-	"github.com/okteto/okteto/pkg/vars"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 // FakeUserClient is used to mock the userClient interface

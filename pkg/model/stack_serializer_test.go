@@ -15,7 +15,6 @@ package model
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -24,6 +23,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"

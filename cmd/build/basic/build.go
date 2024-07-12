@@ -16,7 +16,6 @@ package basic
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"path/filepath"
 	"strings"
 
@@ -26,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 )
 

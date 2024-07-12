@@ -16,7 +16,6 @@ package registrytoken
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"os"
 
 	"github.com/docker/docker-credential-helpers/credentials"
@@ -24,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/auth/dockercredentials"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 )
 

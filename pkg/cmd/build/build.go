@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )

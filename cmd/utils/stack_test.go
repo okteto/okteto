@@ -14,7 +14,6 @@
 package utils
 
 import (
-	"github.com/okteto/okteto/pkg/vars"
 	"log"
 	"os"
 	"path/filepath"
@@ -23,6 +22,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 )
 

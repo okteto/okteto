@@ -15,8 +15,8 @@ package model
 
 import (
 	"bytes"
-	"github.com/okteto/okteto/pkg/vars"
 
+	"github.com/okteto/okteto/pkg/vars"
 	yaml3 "gopkg.in/yaml.v3"
 )
 

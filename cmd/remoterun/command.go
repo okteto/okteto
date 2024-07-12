@@ -17,13 +17,13 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"os"
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )

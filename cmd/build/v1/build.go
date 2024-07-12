@@ -15,11 +15,11 @@ package v1
 
 import (
 	"context"
-	"github.com/okteto/okteto/pkg/vars"
 
 	"github.com/okteto/okteto/cmd/build/basic"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 // OktetoBuilder It is a wrapper of basic.Builder to build an image specified by a Dockerfile. a.k.a. Builder v1

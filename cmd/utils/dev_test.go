@@ -188,7 +188,6 @@ func Test_SelectDevFromManifest(t *testing.T) {
 					"test": &model.Dev{
 						Name:            "test",
 						ImagePullPolicy: "Always",
-						Namespace:       "unit-test",
 						Sync: model.Sync{
 							Folders: []model.SyncFolder{
 								{
@@ -210,7 +209,6 @@ func Test_SelectDevFromManifest(t *testing.T) {
 			dev: &model.Dev{
 				Name:            "test",
 				ImagePullPolicy: "Always",
-				Namespace:       "unit-test",
 				Sync: model.Sync{
 					Folders: []model.SyncFolder{
 						{

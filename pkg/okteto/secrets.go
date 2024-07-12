@@ -17,7 +17,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"strings"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
@@ -25,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/shurcooL/graphql"
 	"gopkg.in/yaml.v3"
 )

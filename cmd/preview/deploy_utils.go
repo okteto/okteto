@@ -16,7 +16,6 @@ package preview
 import (
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"strings"
 
 	"github.com/docker/docker/pkg/namesgenerator"
@@ -25,6 +24,7 @@ import (
 	modelUtils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/validator"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 var (

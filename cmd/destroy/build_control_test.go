@@ -15,7 +15,6 @@ package destroy
 
 import (
 	"context"
-	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
 	v2 "github.com/okteto/okteto/cmd/build/v2"
@@ -24,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

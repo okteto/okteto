@@ -15,7 +15,6 @@ package up
 
 import (
 	"context"
-	"github.com/okteto/okteto/pkg/vars"
 	"os/exec"
 	"time"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	apiv1 "k8s.io/api/core/v1"
 )

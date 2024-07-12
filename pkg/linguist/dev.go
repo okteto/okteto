@@ -14,12 +14,12 @@
 package linguist
 
 import (
-	"github.com/okteto/okteto/pkg/vars"
 	"sort"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/vars"
 	apiv1 "k8s.io/api/core/v1"
 )
 

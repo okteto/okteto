@@ -18,7 +18,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
@@ -26,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/shurcooL/graphql"
 	"github.com/stretchr/testify/assert"
 )

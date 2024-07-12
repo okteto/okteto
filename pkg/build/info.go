@@ -14,7 +14,6 @@
 package build
 
 import (
-	"github.com/okteto/okteto/pkg/vars"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -23,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/cache"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 )
 

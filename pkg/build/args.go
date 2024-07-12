@@ -15,9 +15,10 @@ package build
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"sort"
 	"strings"
+
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 // Arg is an argument used on the build step.

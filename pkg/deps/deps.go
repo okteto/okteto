@@ -15,7 +15,6 @@ package deps
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"net/url"
 	"os"
 	"strings"
@@ -24,6 +23,7 @@ import (
 	"github.com/a8m/envsubst/parse"
 	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 // ManifestSection represents the map of dependencies at a manifest

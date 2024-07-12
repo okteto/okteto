@@ -16,7 +16,6 @@ package remoterun
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	deployCMD "github.com/okteto/okteto/cmd/deploy"
@@ -25,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 )
 

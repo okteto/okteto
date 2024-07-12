@@ -15,11 +15,11 @@ package pipeline
 
 import (
 	"context"
-	"github.com/okteto/okteto/pkg/vars"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 )
 

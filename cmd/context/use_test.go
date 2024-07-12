@@ -14,10 +14,10 @@
 package context
 
 import (
-	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 )
 

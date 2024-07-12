@@ -16,10 +16,10 @@ package validator
 import (
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 // ErrReservedVariableName is raised when a variable from cmd option has invalid name

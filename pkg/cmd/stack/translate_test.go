@@ -16,7 +16,6 @@ package stack
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"reflect"
 	"testing"
 	"time"
@@ -24,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"

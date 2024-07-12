@@ -14,10 +14,10 @@
 package validator
 
 import (
-	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 func Test_isReservedVariableName(t *testing.T) {

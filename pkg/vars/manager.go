@@ -15,8 +15,9 @@ package vars
 
 import (
 	"fmt"
-	"github.com/a8m/envsubst/parse"
 	"sort"
+
+	"github.com/a8m/envsubst/parse"
 )
 
 // GlobalVarManager is the global instance of the Okteto Variables manager. It should only be used in the serializer where it's harder to inject the manager.
@@ -80,7 +81,7 @@ func (m *Manager) Lookup(key string) (string, bool) {
 	return "", false
 }
 
-func (m *Manager) AddGroup(g Group) error {
+func (m *Manager) AddGroup(g Group) {
 	if config[g.Priority].Masked {
 		for _, v := range g.Vars {
 			m.m.MaskVar(v.Value)
@@ -89,8 +90,6 @@ func (m *Manager) AddGroup(g Group) error {
 
 	m.groups = append(m.groups, g)
 	m.sortGroupsByPriorityDesc()
-
-	return nil
 }
 
 // GetOktetoVariablesExcLocal returns an array of all tifihe okteto variables that can be exported (excluding local variables)

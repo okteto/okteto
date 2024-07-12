@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"strings"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -25,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 type buildCtrl struct {

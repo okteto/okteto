@@ -21,14 +21,34 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/cache"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 )
 
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+
 func TestExpandBuildArgs(t *testing.T) {
-	t.Setenv("KEY", "VALUE")
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = varManager
+
+	// this helps to test that local env vars are not used in the manifest deserialization
+	localEnvVars := vars.Group{
+		Priority: vars.OktetoVariableTypeFlag,
+		Vars: []vars.Var{
+			{
+				Name:  "KEY",
+				Value: "VALUE",
+			},
+		},
+	}
+	assert.NoError(t, varManager.AddGroup(localEnvVars))
+
 	tests := []struct {
 		buildInfo          *Info
 		expected           *Info
@@ -174,7 +194,7 @@ func TestExpandBuildArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.NoError(t, tt.buildInfo.AddArgs(tt.previousImageBuilt))
+			assert.NoError(t, tt.buildInfo.AddArgs(tt.previousImageBuilt, varManager))
 
 			assert.Equal(t, tt.expected, tt.buildInfo)
 		})

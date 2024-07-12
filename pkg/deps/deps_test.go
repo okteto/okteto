@@ -14,12 +14,12 @@
 package deps
 
 import (
-	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 	"time"
 
 	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"

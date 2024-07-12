@@ -15,7 +15,6 @@ package model
 
 import (
 	"bytes"
-	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -28,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/utils"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

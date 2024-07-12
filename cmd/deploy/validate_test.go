@@ -15,12 +15,12 @@ package deploy
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/validator"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 )
 

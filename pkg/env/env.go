@@ -14,13 +14,13 @@
 package env
 
 import (
-	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 type Environment []vars.Var
