@@ -169,6 +169,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 				Context:   options.K8sContext,
 				Namespace: options.Namespace,
 			}
+
 			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, ctxOpts); err != nil {
 				return err
 			}
@@ -472,18 +473,13 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 }
 
 func (dc *destroyCommand) destroyDependencies(ctx context.Context, opts *Options) error {
-	for depName, depInfo := range opts.Manifest.Dependencies {
+	for depName := range opts.Manifest.Dependencies {
 		oktetoLog.SetStage(fmt.Sprintf("Destroying dependency '%s'", depName))
-
-		namespace := okteto.GetContext().Namespace
-		if depInfo.Namespace != "" {
-			namespace = depInfo.Namespace
-		}
 
 		destOpts := &pipelineCMD.DestroyOptions{
 			Name:           depName,
 			DestroyVolumes: opts.DestroyVolumes,
-			Namespace:      namespace,
+			Namespace:      okteto.GetContext().Namespace,
 		}
 		pipelineCmd, err := dc.getPipelineDestroyer()
 		if err != nil {

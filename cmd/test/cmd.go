@@ -122,7 +122,12 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, v
 func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, varManager *vars.Manager, tracker *ProxyTracker) (analytics.TestMetadata, error) {
 	fs := afero.NewOsFs()
 
-	if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
+	ctxOpts := &contextCMD.Options{
+		Context:   options.K8sContext,
+		Namespace: options.Namespace,
+		Show:      true,
+	}
+	if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, ctxOpts); err != nil {
 		return analytics.TestMetadata{}, err
 	}
 
@@ -262,10 +267,10 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			ManifestPathFlag: options.ManifestPathFlag,
 			ManifestPath:     options.ManifestPath,
 			Name:             options.Name,
-			Namespace:        options.Namespace,
-			K8sContext:       options.K8sContext,
+			Namespace:        okteto.GetContext().Namespace,
+			K8sContext:       okteto.GetContext().Name,
 			Variables:        options.Variables,
-			Build:            true,
+			NoBuild:          false,
 			Dependencies:     false,
 			Timeout:          options.Timeout,
 			RunWithoutBash:   false,

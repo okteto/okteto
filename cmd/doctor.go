@@ -55,6 +55,7 @@ func Doctor(k8sLogger *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
 				Context:   doctorOpts.K8sContext,
 				Namespace: doctorOpts.Namespace,
 			}
+
 			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, ctxOpts); err != nil {
 				return err
 			}
@@ -88,7 +89,7 @@ func Doctor(k8sLogger *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
 					return err
 				}
 			}
-			filename, err := doctor.Run(ctx, dev, doctorOpts.DevPath, c)
+			filename, err := doctor.Run(ctx, dev, doctorOpts.DevPath, okteto.GetContext().Namespace, c)
 			if err == nil {
 				oktetoLog.Information("Your doctor file is available at %s", filename)
 			}

@@ -18,11 +18,8 @@ import (
 	"github.com/okteto/okteto/pkg/vars"
 
 	"github.com/okteto/okteto/cmd/build/basic"
-	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/log/io"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
-	"github.com/spf13/afero"
 )
 
 // OktetoBuilder It is a wrapper of basic.Builder to build an image specified by a Dockerfile. a.k.a. Builder v1
@@ -41,17 +38,6 @@ func NewBuilder(builder basic.BuildRunner, ioCtrl *io.Controller, varManager *va
 			VarManager:  varManager,
 		},
 	}
-}
-
-// NewBuilderFromScratch creates a new okteto builder
-func NewBuilderFromScratch(ioCtrl *io.Controller, varManager *vars.Manager) *OktetoBuilder {
-	builder := buildCmd.NewOktetoBuilder(
-		&okteto.ContextStateless{
-			Store: okteto.GetContextStore(),
-		},
-		afero.NewOsFs(),
-	)
-	return NewBuilder(builder, ioCtrl, varManager)
 }
 
 // IsV1 returns true since it is a builder v1

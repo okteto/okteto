@@ -15,12 +15,15 @@ package exec
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	oargs "github.com/okteto/okteto/cmd/args"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	okerrors "github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -42,7 +45,7 @@ type metadataTracker interface {
 
 // executorProviderInterface provides an executor for a development container
 type executorProviderInterface interface {
-	provide(dev *model.Dev, podName string) (executor, error)
+	provide(dev *model.Dev, podName, namespace string) (executor, error)
 }
 
 // Exec executes a command on the remote development container
@@ -80,7 +83,7 @@ func (e *Exec) Cmd(ctx context.Context) *cobra.Command {
 	execFlags := &execFlags{}
 
 	cmd := &cobra.Command{
-		Use:                   "exec (DEV SVC) [flags] -- COMMAND [args...]",
+		Use:                   "exec service [flags] -- COMMAND [args...]",
 		DisableFlagsInUseLine: true,
 		Short:                 "Execute a command in your development container",
 		Long: `Executes the provided command or the default shell inside a running pod.
@@ -92,28 +95,36 @@ okteto exec my-pod -- echo this is a test
 # Get an interactive shell session inside the pod named 'my-pod'
 okteto exec my-pod`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctxOpts := &contextCMD.Options{
+				Show:      true,
+				Context:   execFlags.k8sContext,
+				Namespace: execFlags.namespace,
+			}
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+				return err
+			}
+
 			manifestOpts := contextCMD.ManifestOptions{Filename: execFlags.manifestPath, Namespace: execFlags.namespace, K8sContext: execFlags.k8sContext}
 			manifest, err := model.GetManifestV2(manifestOpts.Filename, e.fs)
 			if err != nil {
 				return fmt.Errorf("failed to load manifest: %w", err)
 			}
 
+			argParser := oargs.NewDevCommandArgParser(oargs.NewDevModeOnLister(e.k8sClientProvider), e.ioCtrl, true)
 			argsLenAtDash := cmd.ArgsLenAtDash()
-			opts, err := newOptions(args, argsLenAtDash)
+
+			argsResult, err := argParser.Parse(ctx, args, argsLenAtDash, manifest.Dev, okteto.GetContext().Namespace)
 			if err != nil {
-				return fmt.Errorf("failed to create exec options: %w", err)
-			}
-			if err := opts.setDevFromManifest(ctx, manifest.Dev, okteto.GetContext().Namespace, e.k8sClientProvider, e.ioCtrl); err != nil {
-				return okerrors.UserError{
-					E:    fmt.Errorf("development containers not found in namespace '%s'", okteto.GetContext().Namespace),
-					Hint: "Run 'okteto up' to deploy your development container or use 'okteto context' to change your current context",
+				var userErr oktetoErrors.UserError
+				if errors.As(err, &userErr) {
+					userErr.Hint = "Run 'okteto up' to deploy your development container or use 'okteto context' to change your current context"
+					return userErr
 				}
-			}
-			if err := opts.validate(manifest.Dev); err != nil {
-				return fmt.Errorf("error validating exec command: %w", err)
+				return err
 			}
 
-			return e.Run(ctx, opts, manifest.Dev[opts.devName])
+			e.ioCtrl.Out().Infof("Executing command in development container '%s'", argsResult.DevName)
+			return e.Run(ctx, argsResult, manifest.Dev[argsResult.DevName], okteto.GetContext().Namespace)
 		},
 	}
 	cmd.Flags().StringVarP(&execFlags.manifestPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
@@ -123,10 +134,10 @@ okteto exec my-pod`,
 }
 
 // Run executes the exec command
-func (e *Exec) Run(ctx context.Context, opts *options, dev *model.Dev) error {
-	e.ioCtrl.Logger().Infof("executing command '%s' in development container '%s'", opts.command, opts.devName)
+func (e *Exec) Run(ctx context.Context, opts *oargs.Result, dev *model.Dev, namespace string) error {
+	e.ioCtrl.Logger().Infof("executing command '%s' in development container '%s'", opts.Command, opts.DevName)
 
-	app, err := e.appRetriever.getApp(ctx, dev)
+	app, err := e.appRetriever.getApp(ctx, dev, namespace)
 	if err != nil {
 		return okerrors.UserError{
 			E:    fmt.Errorf("development containers not found in namespace '%s'", okteto.GetContext().Namespace),
@@ -143,20 +154,20 @@ func (e *Exec) Run(ctx context.Context, opts *options, dev *model.Dev) error {
 	if err != nil {
 		return fmt.Errorf("failed to get running pod: %w", err)
 	}
-	e.ioCtrl.Logger().Infof("executing command '%s' in pod '%s'", opts.command, pod.Name)
+	e.ioCtrl.Logger().Infof("executing command '%s' in pod '%s'", opts.Command, pod.Name)
 
 	if dev.Container == "" {
 		dev.Container = pod.Spec.Containers[0].Name
 	}
-	e.ioCtrl.Logger().Infof("executing command '%s' in container '%s'", opts.command, dev.Container)
-	executor, err := e.executorProvider.provide(dev, pod.Name)
+	e.ioCtrl.Logger().Infof("executing command '%s' in container '%s'", opts.Command, dev.Container)
+	executor, err := e.executorProvider.provide(dev, pod.Name, namespace)
 	if err != nil {
 		return fmt.Errorf("failed to get executor: %w", err)
 	}
-	err = executor.execute(ctx, opts.command)
+	err = executor.execute(ctx, opts.Command)
 	e.mixpanelTracker.Track(&analytics.TrackExecMetadata{
 		Mode:               dev.Mode,
-		FirstArgIsDev:      opts.firstArgIsDevName,
+		FirstArgIsDev:      opts.FirstArgIsDevName,
 		Success:            err == nil,
 		IsOktetoRepository: utils.IsOktetoRepo(),
 		IsInteractive:      dev.IsInteractive(),

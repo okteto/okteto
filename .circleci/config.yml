@@ -1,4 +1,6 @@
-# https://circleci.com/docs/2.0/configuration-reference/
+# https://circleci.com/docs/2.1/configuration-reference/
+version: 2.1
+
 aliases:
   - &init-gcloud |
     echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
@@ -13,7 +15,6 @@ aliases:
     touch $HOME/.okteto/.noanalytics
     okteto context use ${OKTETO_URL} --token ${OKTETO_TOKEN}
   - &docker-login echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-version: 2.1
 
 parameters:
   # The following parameters are filled by GH Actions to run CircleCI jobs
@@ -30,9 +31,9 @@ parameters:
     type: string
     default: ""
 
-
 orbs:
   win: circleci/windows@5.0.0
+
 commands:
   integration-actions:
     steps:
@@ -66,7 +67,7 @@ commands:
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             make integration-up
           environment:
-            OKTETO_SKIP_CLEANUP: 'true'
+            OKTETO_SKIP_CLEANUP: "true"
 
   integration-okteto:
     steps:
@@ -75,13 +76,6 @@ commands:
           command: |
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             make integration-okteto
-
-  integration-deprecated:
-    steps:
-      - run:
-          name: Run deprecated integration tests
-          command: make integration-deprecated
-
 
 executors:
   golang-ci:
@@ -199,7 +193,6 @@ jobs:
       - integration-up
       - integration-actions
       - integration-okteto
-      - integration-deprecated
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
@@ -216,7 +209,7 @@ jobs:
       - add_ssh_keys:
           fingerprints:
             - f7:81:9f:b4:31:3a:4d:46:ce:cf:54:a2:70:46:5a:df
-      - deploy:
+      - run:
           name: Update brew formula
           command: |
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
@@ -271,20 +264,10 @@ jobs:
           command: |
             & "$($HOME)\project\artifacts\bin\okteto.exe" build --platform "linux/amd64" --build-arg VERSION_STRING=$env:CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-win:$env:CIRCLE_SHA1
       - run:
-          name: Run deprecated integration tests
-          environment:
-            OKTETO_URL: https://staging.okteto.dev/
-            OKTETO_SKIP_CLEANUP: 'true'
-            OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
-          command: |
-            $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
-            $env:Path+=";$($HOME)\project\artifacts\bin"
-            go test github.com/okteto/okteto/integration/deprecated/stack -tags="integration" --count=1 -v -timeout 15m
-      - run:
           name: Run build integration tests
           environment:
             OKTETO_URL: https://staging.okteto.dev/
-            OKTETO_SKIP_CLEANUP: 'true'
+            OKTETO_SKIP_CLEANUP: "true"
             OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
           command: |
             $env:DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
@@ -295,7 +278,7 @@ jobs:
           name: Run deploy integration tests
           environment:
             OKTETO_URL: https://staging.okteto.dev/
-            OKTETO_SKIP_CLEANUP: 'true'
+            OKTETO_SKIP_CLEANUP: "true"
             OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
           # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
           command: |
@@ -308,7 +291,7 @@ jobs:
           name: Run up integration tests
           environment:
             OKTETO_URL: https://staging.okteto.dev/
-            OKTETO_SKIP_CLEANUP: 'true'
+            OKTETO_SKIP_CLEANUP: "true"
             OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
@@ -342,7 +325,7 @@ jobs:
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh latest "linux/amd64"
 
-  upload-static:
+  upload-static-job:
     executor: golang-ci
     steps:
       - checkout
@@ -359,7 +342,7 @@ jobs:
       - add_ssh_keys:
           fingerprints:
             - f7:81:9f:b4:31:3a:4d:46:ce:cf:54:a2:70:46:5a:df
-      - deploy:
+      - run:
           name: Update brew formula
           command: |
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
@@ -367,11 +350,11 @@ jobs:
             ./scripts/update_homebrew_formula.sh $CIRCLE_TAG $sha $sha_arm
             pushd homebrew-cli
             git push git@github.com:okteto/homebrew-cli.git master
-      - deploy:
+      - run:
           name: Auto-update-actions
           command: ./scripts/ci/release-github-actions.sh $CIRCLE_TAG
 
-  release:
+  release-job:
     executor: golang-ci
     steps:
       - checkout
@@ -380,7 +363,7 @@ jobs:
       - run: *init-gcloud
       - run: ./scripts/ci/release.sh
 
-  release-branch:
+  release-branch-job:
     executor: golang-ci
     steps:
       - checkout
@@ -389,11 +372,10 @@ jobs:
             - a1:66:22:e1:67:66:fb:d6:3b:a2:7a:6c:d9:9a:46:ba
       - run: ./scripts/ci/release-branch.sh
 
-
 workflows:
   upload-static:
     jobs:
-      - upload-static:
+      - upload-static-job:
           context: GKE
           filters:
             branches:
@@ -494,7 +476,7 @@ workflows:
               only: *release-branch-regex
           requires:
             - build-binaries
-      - release-branch:
+      - release-branch-job:
           requires:
             - build-binaries
             - test-integration
@@ -517,7 +499,7 @@ workflows:
           context: Product-okteto-dev
           requires:
             - build-binaries
-      - release:
+      - release-job:
           context: GKE
           requires:
             - build-binaries
@@ -557,7 +539,7 @@ workflows:
             tags:
               only:
                 - *release-regex
-      - release:
+      - release-job:
           context: GKE
           requires:
             - build-binaries
@@ -571,7 +553,7 @@ workflows:
       - release-external:
           context: GKE
           requires:
-            - release
+            - release-job
           filters:
             branches:
               ignore: /.*/

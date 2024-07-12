@@ -72,6 +72,7 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger, varManager *vars.Manager
 				Context:   options.Context,
 				Namespace: options.Namespace,
 			}
+
 			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, ctxOpts); err != nil {
 				return err
 			}

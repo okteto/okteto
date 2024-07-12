@@ -77,7 +77,6 @@ var fakeManifest = &model.Manifest{
 			},
 		},
 	},
-	IsV2: true,
 }
 
 type fakeRegistry struct {

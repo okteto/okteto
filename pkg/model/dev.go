@@ -17,7 +17,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/okteto/okteto/pkg/vars"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -28,7 +27,6 @@ import (
 
 	"github.com/compose-spec/godotenv"
 	"github.com/google/uuid"
-	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -64,7 +62,7 @@ type Dev struct {
 	NodeSelector         map[string]string     `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 	Metadata             *Metadata             `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
-	Image                *build.Info           `json:"image,omitempty" yaml:"image,omitempty"`
+	Image                string                `json:"image,omitempty" yaml:"image,omitempty"`
 	Lifecycle            *Lifecycle            `json:"lifecycle,omitempty" yaml:"lifecycle,omitempty"`
 	Replicas             *int                  `json:"replicas,omitempty" yaml:"replicas,omitempty"`
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
@@ -72,8 +70,6 @@ type Dev struct {
 	Name                 string                `json:"name,omitempty" yaml:"name,omitempty"`
 	Username             string                `json:"-" yaml:"-"`
 	RegistryURL          string                `json:"-" yaml:"-"`
-	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
-	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
 	ServiceAccount       string                `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
 	parentSyncFolder     string
@@ -238,7 +234,6 @@ type Annotations map[string]string
 
 func NewDev() *Dev {
 	return &Dev{
-		Image:       &build.Info{},
 		Environment: make(env.Environment, 0),
 		Secrets:     make([]Secret, 0),
 		Forward:     make([]forward.Forward, 0),
@@ -263,13 +258,6 @@ func (dev *Dev) loadAbsPaths(devPath string, fs afero.Fs) error {
 	devDir, err := filepath.Abs(filepath.Dir(devPath))
 	if err != nil {
 		return err
-	}
-
-	if dev.Image != nil {
-		if uri, err := url.ParseRequestURI(dev.Image.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
-			dev.Image.Context = loadAbsPath(devDir, dev.Image.Context, fs)
-			dev.Image.Dockerfile = loadAbsPath(devDir, dev.Image.Dockerfile, fs)
-		}
 	}
 
 	dev.loadVolumeAbsPaths(devDir, fs)
@@ -314,12 +302,6 @@ func (dev *Dev) expandEnvVars() error {
 	if err := dev.loadName(); err != nil {
 		return err
 	}
-	if err := dev.loadNamespace(); err != nil {
-		return err
-	}
-	if err := dev.loadContext(); err != nil {
-		return err
-	}
 	if err := dev.loadSelector(); err != nil {
 		return err
 	}
@@ -331,28 +313,6 @@ func (dev *Dev) loadName() error {
 	var err error
 	if len(dev.Name) > 0 {
 		dev.Name, err = vars.GlobalVarManager.ExpandExcLocal(dev.Name)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (dev *Dev) loadNamespace() error {
-	var err error
-	if len(dev.Namespace) > 0 {
-		dev.Namespace, err = vars.GlobalVarManager.ExpandExcLocal(dev.Namespace)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (dev *Dev) loadContext() error {
-	var err error
-	if len(dev.Context) > 0 {
-		dev.Context, err = vars.GlobalVarManager.ExpandExcLocal(dev.Context)
 		if err != nil {
 			return err
 		}
@@ -373,16 +333,13 @@ func (dev *Dev) loadSelector() error {
 
 func (dev *Dev) loadImage() error {
 	var err error
-	if dev.Image == nil {
-		dev.Image = &build.Info{}
-	}
-	if len(dev.Image.Name) > 0 {
-		dev.Image.Name, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(dev.Image.Name)
+	if dev.Image != "" {
+		dev.Image, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(dev.Image)
 		if err != nil {
 			return err
 		}
 	}
-	if dev.Image.Name == "" {
+	if dev.Image == "" {
 		dev.EmptyImage = true
 	}
 	return nil
@@ -401,10 +358,6 @@ func (dev *Dev) SetDefaults() error {
 			return dev.Forward[i].Less(&dev.Forward[j])
 		})
 	}
-	if dev.Image == nil {
-		dev.Image = &build.Info{}
-	}
-	dev.Image.SetBuildDefaults()
 
 	if err := dev.setTimeout(); err != nil {
 		return err
@@ -485,8 +438,6 @@ func (dev *Dev) SetDefaults() error {
 		if s.Name != "" && len(s.Selector) > 0 {
 			return fmt.Errorf("'name' and 'selector' cannot be defined at the same time for service '%s'", s.Name)
 		}
-		s.Namespace = ""
-		s.Context = ""
 		s.setRunAsUserDefaults(dev)
 		s.Forward = make([]forward.Forward, 0)
 		s.Reverse = make([]Reverse, 0)
@@ -594,10 +545,6 @@ func (dev *Dev) expandEnvFiles() error {
 func (dev *Dev) Validate() error {
 	if dev.Name == "" {
 		return fmt.Errorf("name cannot be empty")
-	}
-
-	if dev.Image == nil {
-		dev.Image = &build.Info{}
 	}
 
 	if dev.Replicas != nil {
@@ -854,7 +801,7 @@ func (dev *Dev) LabelsSelector() string {
 }
 
 // ToTranslationRule translates a dev struct into a translation rule
-func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
+func (dev *Dev) ToTranslationRule(main *Dev, namespace string, reset bool) *TranslationRule {
 	rule := &TranslationRule{
 		Container:        dev.Container,
 		ImagePullPolicy:  dev.ImagePullPolicy,
@@ -879,7 +826,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 	}
 
 	if !dev.EmptyImage {
-		rule.Image = dev.Image.Name
+		rule.Image = dev.Image
 	}
 
 	if rule.Healthchecks {
@@ -896,7 +843,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 			rule.Environment,
 			vars.Var{
 				Name:  "OKTETO_NAMESPACE",
-				Value: dev.Namespace,
+				Value: namespace,
 			},
 			vars.Var{
 				Name:  "OKTETO_NAME",
@@ -1143,9 +1090,6 @@ func (service *Dev) validateForExtraFields() error {
 	}
 	if service.Autocreate {
 		return fmt.Errorf(errorMessage, "autocreate")
-	}
-	if service.Context != "" {
-		return fmt.Errorf(errorMessage, "context")
 	}
 	if service.Secrets != nil {
 		return fmt.Errorf(errorMessage, "secrets")

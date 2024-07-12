@@ -14,19 +14,14 @@
 package context
 
 import (
-	"context"
 	"fmt"
 	"net/url"
 	"strings"
 
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/spf13/afero"
 )
 
 type SelectItem struct {
@@ -106,38 +101,4 @@ func isValidCluster(cluster string) bool {
 		}
 	}
 	return false
-}
-
-func LoadStackWithContext(ctx context.Context, name, namespace string, stackPaths []string, fs afero.Fs) (*model.Stack, error) {
-	ctxResource, err := utils.LoadStackContext(stackPaths)
-	if err != nil {
-		if name == "" {
-			return nil, err
-		}
-		ctxResource = &model.ContextResource{}
-	}
-
-	if err := ctxResource.UpdateNamespace(namespace); err != nil {
-		return nil, err
-	}
-
-	ctxOptions := &Options{
-		Context:   ctxResource.Context,
-		Namespace: ctxResource.Namespace,
-		Show:      true,
-	}
-
-	if err := NewContextCommand().Run(ctx, ctxOptions); err != nil {
-		return nil, err
-	}
-
-	s, err := model.LoadStack(name, stackPaths, true, fs)
-	if err != nil {
-		if name == "" {
-			return nil, err
-		}
-		s = &model.Stack{Name: name}
-	}
-	s.Namespace = okteto.GetContext().Namespace
-	return s, nil
 }

@@ -157,9 +157,6 @@ var (
 	// ErrManifestFoundButNoDeployAndDependenciesCommands raised when a manifest is found but no deploy or dependencies commands are defined
 	ErrManifestFoundButNoDeployAndDependenciesCommands = errors.New("found okteto manifest, but no deploy or dependencies commands were defined")
 
-	// ErrDeployCantDeploySvcsIfNotCompose raised when a manifest is found but no compose info is detected and args are passed to deploy command
-	ErrDeployCantDeploySvcsIfNotCompose = errors.New("services args are can only be used while trying to deploy a compose")
-
 	// ErrGitHubNotVerifiedEmail is raised when github login has not a verified email
 	ErrGitHubNotVerifiedEmail = errors.New("github-not-verified-email")
 
@@ -197,7 +194,7 @@ var (
 	ErrNotManifestContentDetected = errors.New("couldn't detect okteto manifest content")
 
 	// ErrCouldNotInferAnyManifest is raised when we can't detect any manifest to load
-	ErrCouldNotInferAnyManifest = errors.New("couldn't detect any manifest (okteto manifest, pipeline, compose, helm chart, k8s manifest)")
+	ErrCouldNotInferAnyManifest = errors.New("couldn't detect any manifest (okteto manifest, pipeline or compose)")
 
 	// ErrX509Hint should be included within a UserError.Hint when IsX509() return true
 	ErrX509Hint = "Add the flag '--insecure-skip-tls-verify' to skip certificate verification.\n    Follow this link to know more about configuring your own certificates with Okteto:\n    https://www.okteto.com/docs/self-hosted/install/certificates/"
@@ -211,6 +208,9 @@ var (
 
 	// ErrTokenExpired is raised when token used for API auth is expired
 	ErrTokenExpired = errors.New("your token has expired")
+
+	// ErrNamespaceNotFound is raised when the get namespace query returns a namespace not found
+	ErrNamespaceNotFound = errors.New("namespace-not-found")
 )
 
 // IsForbidden raised if the Okteto API returns 401

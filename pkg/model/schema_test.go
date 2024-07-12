@@ -182,7 +182,7 @@ func Test_getStructKeys(t *testing.T) {
 			name:  "okteto manifest",
 			input: Manifest{},
 			expected: map[string][]string{
-				"deps.Dependency":            {"repository", "manifest", "branch", "namespace", "variables", "timeout", "wait"},
+				"deps.Dependency":            {"repository", "manifest", "branch", "variables", "timeout", "wait"},
 				"env.Var":                    {"name", "value"},
 				"forward.Forward":            {"labels", "name", "localPort", "remotePort"},
 				"forward.GlobalForward":      {"labels", "name", "localPort", "remotePort"},
@@ -193,7 +193,7 @@ func Test_getStructKeys(t *testing.T) {
 				"model.DeployCommand":        {"name", "command"},
 				"model.DeployInfo":           {"compose", "endpoints", "divert", "image", "commands", "remote"},
 				"model.DestroyInfo":          {"image", "commands", "remote"},
-				"model.Dev":                  {"resources", "selector", "persistentVolume", "securityContext", "annotations", "labels", "probes", "nodeSelector", "metadata", "affinity", "image", "lifecycle", "replicas", "initContainer", "workdir", "name", "context", "namespace", "container", "serviceAccount", "interface", "mode", "imagePullPolicy", "tolerations", "command", "forward", "reverse", "externalVolumes", "secrets", "volumes", "envFiles", "environment", "services", "args", "sync", "timeout", "remote", "sshServerPort", "initFromImage", "autocreate", "healthchecks"},
+				"model.Dev":                  {"resources", "selector", "persistentVolume", "securityContext", "annotations", "labels", "probes", "nodeSelector", "metadata", "affinity", "image", "lifecycle", "replicas", "initContainer", "workdir", "name", "container", "serviceAccount", "interface", "mode", "imagePullPolicy", "tolerations", "command", "forward", "reverse", "externalVolumes", "secrets", "volumes", "envFiles", "environment", "services", "args", "sync", "timeout", "remote", "sshServerPort", "initFromImage", "autocreate", "healthchecks"},
 				"model.DivertDeploy":         {"driver", "namespace", "service", "deployment", "virtualServices", "hosts", "port"},
 				"model.DivertHost":           {"virtualService", "namespace"},
 				"model.DivertVirtualService": {"name", "namespace", "routes"},

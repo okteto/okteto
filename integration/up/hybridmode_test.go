@@ -36,8 +36,8 @@ deploy:
   compose: docker-compose.yml
 dev:
   svc:
-    context: svc
-    namespace: user
+    sync:
+    - .:/usr/src/app
     mode: hybrid
     command: bash ./checker.sh
     reverse:
@@ -139,7 +139,7 @@ func TestUpUsingHybridMode(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test warnings for unsupported fields
-	require.Contains(t, output.String(), "In hybrid mode, the field(s) 'context, namespace' specified in your manifest are ignored")
+	require.Contains(t, output.String(), "In hybrid mode, the field(s) 'sync' specified in your manifest are ignored")
 
 	// Get deployment and check for annotations and labels
 	deploy, err := integration.GetDeployment(context.Background(), testNamespace, "svc", c)

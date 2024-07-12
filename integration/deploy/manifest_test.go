@@ -221,8 +221,8 @@ func TestRedeployOktetoManifestForImages(t *testing.T) {
 	output, err := commands.RunOktetoDeployAndGetOutput(oktetoPath, deployOptions)
 	require.NoError(t, err)
 
-	err = expectImageFoundSkippingBuild(output)
-	require.NoError(t, err, err)
+	err = expectImageFoundNoSkippingBuild(output)
+	require.Error(t, err, err)
 
 	// Test redeploy with build flag builds the image
 	deployOptions.Build = true
@@ -278,6 +278,7 @@ func TestDeployOktetoManifestWithDestroy(t *testing.T) {
 		Namespace:  testNamespace,
 		OktetoHome: dir,
 		Token:      token,
+		Build:      false,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
@@ -289,8 +290,12 @@ func TestDeployOktetoManifestWithDestroy(t *testing.T) {
 	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
 
 	deployOptions.LogLevel = "debug"
-	// Test redeploy is not building any image
-	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+	output, err := commands.RunOktetoDeployAndGetOutput(oktetoPath, deployOptions)
+	require.NoError(t, err)
+
+	err = expectImageFoundNoSkippingBuild(output)
+	log.Print(output)
+	require.Error(t, err, err)
 
 	_, err = integration.GetConfigmap(context.Background(), testNamespace, fmt.Sprintf("okteto-git-%s", filepath.Base(dir)), c)
 	require.NoError(t, err)
@@ -329,7 +334,8 @@ func TestDeployOktetoManifestExportCache(t *testing.T) {
 
 	require.NoError(t, createOktetoManifestWithCache(dir))
 	require.NoError(t, createAppDockerfileWithCache(dir))
-	require.NoError(t, createK8sManifestWithCache(dir, testNamespace))
+	appImageDev := fmt.Sprintf("%s/%s/app:dev", okteto.GetContext().Registry, testNamespace)
+	require.NoError(t, createK8sManifestWithCache(dir, appImageDev))
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -487,7 +493,7 @@ func TestDeployOktetoManifestWithinRepository(t *testing.T) {
 
 	require.NoError(t, createOktetoManifest(dir, simpleOktetoManifestContent))
 
-	testNamespace := integration.GetTestNamespace("ifbyol-DeployManifestWithinRepo", user)
+	testNamespace := integration.GetTestNamespace("DeployManifestWithinRepo", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -674,9 +680,17 @@ func createOktetoManifest(dir, content string) error {
 	return nil
 }
 
-func expectImageFoundSkippingBuild(output string) error {
-	if ok := strings.Contains(output, "Skipping build for image for service"); !ok {
-		log.Print(output)
+func createOktetoManifestWithName(dir, content, name string) error {
+	manifestPath := filepath.Join(dir, name)
+	manifestContent := []byte(content)
+	if err := os.WriteFile(manifestPath, manifestContent, 0600); err != nil {
+		return err
+	}
+	return nil
+}
+
+func expectImageFoundNoSkippingBuild(output string) error {
+	if ok := strings.Contains(output, "Skipping build for image for service"); ok {
 		return errors.New("expected image found, skipping build")
 	}
 	return nil
@@ -689,11 +703,10 @@ func expectForceBuild(output string) error {
 	return nil
 }
 
-func createK8sManifestWithCache(dir, ns string) error {
+func createK8sManifestWithCache(dir, image string) error {
 	dockerfilePath := filepath.Join(dir, k8sManifestName)
-	appImageDev := fmt.Sprintf("%s/%s/app:dev", okteto.GetContext().Registry, ns)
 
-	dockerfileContent := []byte(fmt.Sprintf(k8sManifestTemplateWithCache, appImageDev))
+	dockerfileContent := []byte(fmt.Sprintf(k8sManifestTemplateWithCache, image))
 	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
 		return err
 	}

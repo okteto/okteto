@@ -28,6 +28,8 @@ import (
 func Test_addStignoreSecrets(t *testing.T) {
 	localPath := t.TempDir()
 
+	namespace := "test-namespace"
+
 	tests := []struct {
 		dev                                *model.Dev
 		expectedAnnotation                 model.Annotations
@@ -39,8 +41,7 @@ func Test_addStignoreSecrets(t *testing.T) {
 		{
 			name: "test",
 			dev: &model.Dev{
-				Name:      "test-name",
-				Namespace: "test-namespace",
+				Name: "test-name",
 				Sync: model.Sync{
 					Folders: []model.SyncFolder{
 						{
@@ -85,7 +86,7 @@ func Test_addStignoreSecrets(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err := addStignoreSecrets(tt.dev)
+			err := addStignoreSecrets(tt.dev, namespace)
 			if err == nil && tt.expectedError {
 				t.Fatal("expected Error, but no error")
 			}
@@ -94,7 +95,7 @@ func Test_addStignoreSecrets(t *testing.T) {
 			}
 			assert.Equal(t, tt.expectedAnnotation, tt.dev.Metadata.Annotations)
 
-			transformedStignorePath := filepath.Join(config.GetAppHome(tt.dev.Namespace, tt.dev.Name), ".stignore-1")
+			transformedStignorePath := filepath.Join(config.GetAppHome(namespace, tt.dev.Name), ".stignore-1")
 			file, err := os.ReadFile(transformedStignorePath)
 			if err != nil {
 				t.Fatal(err)

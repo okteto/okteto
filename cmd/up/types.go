@@ -63,6 +63,7 @@ type buildDeployTrackerInterface interface {
 
 // upContext is the common context of all operations performed during the up command
 type upContext struct {
+	Namespace             string
 	StartTime             time.Time
 	Forwarder             forwarder
 	tokenUpdater          tokenUpdater

@@ -230,9 +230,8 @@ func TestCreateForDev(t *testing.T) {
 	namespace := "test"
 
 	dev := &model.Dev{
-		Name:      "test",
-		Namespace: namespace,
-		Volumes:   []model.Volume{},
+		Name:    "test",
+		Volumes: []model.Volume{},
 	}
 
 	type verbAndError struct {
@@ -305,7 +304,7 @@ func TestCreateForDev(t *testing.T) {
 				})
 			}
 
-			err = CreateForDev(context.Background(), dev, c, "")
+			err = CreateForDev(context.Background(), dev, "", namespace, c)
 
 			if test.expectedError {
 				assert.Error(t, err)

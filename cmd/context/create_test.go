@@ -54,15 +54,18 @@ func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User, fakeObj
 
 func Test_createContext(t *testing.T) {
 	ctx := context.Background()
+	user := &types.User{
+		Token: "test",
+	}
 
 	var tests = []struct {
-		ctxStore      *okteto.ContextStore
-		ctxOptions    *Options
-		user          *types.User
-		name          string
-		kubeconfigCtx test.KubeconfigFields
-		fakeObjects   []runtime.Object
-		expectedErr   bool
+		ctxStore         *okteto.ContextStore
+		ctxOptions       *Options
+		fakeOktetoClient *client.FakeOktetoClient
+		name             string
+		kubeconfigCtx    test.KubeconfigFields
+		fakeObjects      []runtime.Object
+		expectedErr      bool
 	}{
 		{
 			name: "change namespace",
@@ -78,8 +81,11 @@ func Test_createContext(t *testing.T) {
 				Context:   "https://okteto-2.example.com",
 				Namespace: "test",
 			},
-			user: &types.User{
-				Token: "test",
+			fakeOktetoClient: &client.FakeOktetoClient{
+				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{}, nil),
+				Users:           client.NewFakeUsersClient(user),
+				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			},
 			kubeconfigCtx: test.KubeconfigFields{
 				Name:           []string{"okteto_example_com"},
@@ -102,13 +108,17 @@ func Test_createContext(t *testing.T) {
 				Namespace:            "not-found",
 				CheckNamespaceAccess: true,
 			},
-			user: &types.User{
-				Token: "test",
-			},
+
 			kubeconfigCtx: test.KubeconfigFields{
 				Name:           []string{"okteto_example_com"},
 				Namespace:      []string{"test"},
 				CurrentContext: "",
+			},
+			fakeOktetoClient: &client.FakeOktetoClient{
+				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{}, oktetoErrors.ErrNamespaceNotFound),
+				Users:           client.NewFakeUsersClient(user),
+				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{ErrGetPreview: oktetoErrors.ErrNamespaceNotFound}),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			},
 			expectedErr: true,
 		},
@@ -126,13 +136,16 @@ func Test_createContext(t *testing.T) {
 				Context:   "https://okteto.example.com",
 				Namespace: "not-found",
 			},
-			user: &types.User{
-				Token: "test",
-			},
 			kubeconfigCtx: test.KubeconfigFields{
 				Name:           []string{"okteto_example_com"},
 				Namespace:      []string{"test"},
 				CurrentContext: "",
+			},
+			fakeOktetoClient: &client.FakeOktetoClient{
+				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{}, oktetoErrors.ErrNamespaceNotFound),
+				Users:           client.NewFakeUsersClient(user),
+				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{ErrGetPreview: oktetoErrors.ErrNamespaceNotFound}),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			},
 			expectedErr: false,
 		},
@@ -149,9 +162,6 @@ func Test_createContext(t *testing.T) {
 				Name:      []string{"okteto_example_com"},
 				Namespace: []string{"test"},
 			},
-			user: &types.User{
-				Token: "test",
-			},
 			fakeObjects: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: v1.ObjectMeta{
@@ -165,6 +175,12 @@ func Test_createContext(t *testing.T) {
 					},
 				},
 			},
+			fakeOktetoClient: &client.FakeOktetoClient{
+				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{}, nil),
+				Users:           client.NewFakeUsersClient(user),
+				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
+			},
 			expectedErr: false,
 		},
 		{
@@ -176,12 +192,15 @@ func Test_createContext(t *testing.T) {
 				IsOkteto: false,
 				Context:  "okteto_example_com",
 			},
-			user: &types.User{
-				Token: "test",
-			},
 			kubeconfigCtx: test.KubeconfigFields{
 				Name:      []string{"okteto_example_com"},
 				Namespace: []string{"test"},
+			},
+			fakeOktetoClient: &client.FakeOktetoClient{
+				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{}, nil),
+				Users:           client.NewFakeUsersClient(user),
+				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			},
 			expectedErr: false,
 		},
@@ -194,12 +213,15 @@ func Test_createContext(t *testing.T) {
 				IsOkteto: false,
 				Context:  "okteto_example_com",
 			},
-			user: &types.User{
-				Token: "test",
-			},
 			kubeconfigCtx: test.KubeconfigFields{
 				Name:      []string{"okteto_example_com"},
 				Namespace: []string{"test"},
+			},
+			fakeOktetoClient: &client.FakeOktetoClient{
+				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{}, nil),
+				Users:           client.NewFakeUsersClient(user),
+				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			},
 			expectedErr: false,
 		},
@@ -213,12 +235,15 @@ func Test_createContext(t *testing.T) {
 				IsOkteto: false,
 				Context:  "okteto_example_com",
 			},
-			user: &types.User{
-				Token: "test",
-			},
 			kubeconfigCtx: test.KubeconfigFields{
 				Name:      []string{"okteto_example_com"},
 				Namespace: []string{""},
+			},
+			fakeOktetoClient: &client.FakeOktetoClient{
+				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{}, nil),
+				Users:           client.NewFakeUsersClient(user),
+				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			},
 			expectedErr: false,
 		},
@@ -232,9 +257,6 @@ func Test_createContext(t *testing.T) {
 					},
 				},
 			},
-			user: &types.User{
-				Token: "test",
-			},
 			ctxOptions: &Options{
 				IsOkteto: false,
 				Context:  "okteto_example_com",
@@ -243,6 +265,12 @@ func Test_createContext(t *testing.T) {
 				Name:           []string{"okteto_example_com"},
 				Namespace:      []string{"test"},
 				CurrentContext: "",
+			},
+			fakeOktetoClient: &client.FakeOktetoClient{
+				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{}, nil),
+				Users:           client.NewFakeUsersClient(user),
+				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			},
 			expectedErr: false,
 		},
@@ -255,9 +283,6 @@ func Test_createContext(t *testing.T) {
 						IsOkteto: true,
 					},
 				},
-			},
-			user: &types.User{
-				Token: "test",
 			},
 			ctxOptions: &Options{
 				IsOkteto: true,
@@ -269,6 +294,12 @@ func Test_createContext(t *testing.T) {
 				Namespace:      []string{"test"},
 				CurrentContext: "",
 			},
+			fakeOktetoClient: &client.FakeOktetoClient{
+				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{}, nil),
+				Users:           client.NewFakeUsersClient(user),
+				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
+			},
 			expectedErr: false,
 		},
 		{
@@ -281,9 +312,6 @@ func Test_createContext(t *testing.T) {
 					},
 				},
 			},
-			user: &types.User{
-				Token: "test",
-			},
 			ctxOptions: &Options{
 				IsOkteto: true,
 				Context:  "https://cloud.okteto.com",
@@ -292,6 +320,12 @@ func Test_createContext(t *testing.T) {
 				Name:           []string{"okteto_example_com"},
 				Namespace:      []string{"test"},
 				CurrentContext: "",
+			},
+			fakeOktetoClient: &client.FakeOktetoClient{
+				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{}, nil),
+				Users:           client.NewFakeUsersClient(user),
+				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			},
 			expectedErr: false,
 		},
@@ -305,13 +339,16 @@ func Test_createContext(t *testing.T) {
 				Context:  "https://okteto.example.com",
 				Token:    "this is a token",
 			},
-			user: &types.User{
-				Token: "test",
-			},
 			kubeconfigCtx: test.KubeconfigFields{
 				Name:           []string{"okteto_example_com"},
 				Namespace:      []string{"test"},
 				CurrentContext: "",
+			},
+			fakeOktetoClient: &client.FakeOktetoClient{
+				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{}, nil),
+				Users:           client.NewFakeUsersClient(user),
+				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			},
 			expectedErr: false,
 		},
@@ -325,14 +362,7 @@ func Test_createContext(t *testing.T) {
 			}
 			defer os.Remove(file)
 
-			fakeOktetoClient := &client.FakeOktetoClient{
-				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
-				Users:           client.NewFakeUsersClient(tt.user),
-				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{}),
-				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
-			}
-
-			ctxController := newFakeContextCommand(fakeOktetoClient, tt.user, tt.fakeObjects)
+			ctxController := newFakeContextCommand(tt.fakeOktetoClient, user, tt.fakeObjects)
 			okteto.CurrentStore = tt.ctxStore
 
 			if err := ctxController.UseContext(ctx, tt.ctxOptions); err != nil && !tt.expectedErr {
@@ -413,31 +443,36 @@ func TestCheckAccessToNamespace(t *testing.T) {
 		Token: "test",
 	}
 
-	fakeOktetoClient := &client.FakeOktetoClient{
-		Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
-		Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
-		Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
-	}
-
-	fakeCtxCommand := newFakeContextCommand(fakeOktetoClient, user, []runtime.Object{
-		&corev1.Namespace{
-			ObjectMeta: v1.ObjectMeta{
-				Name: "test",
-			},
-		},
-	})
-
 	// TODO: add unit-test to cover preview environments access from context
 	var tests = []struct {
-		ctxOptions     *Options
-		name           string
-		expectedAccess bool
+		ctxOptions       *Options
+		fakeOktetoClient *client.FakeOktetoClient
+		name             string
+		expectedAccess   bool
 	}{
 		{
 			name: "okteto client can access to namespace",
 			ctxOptions: &Options{
 				IsOkteto:  true,
 				Namespace: "test",
+			},
+			fakeOktetoClient: &client.FakeOktetoClient{
+				Namespace: client.NewFakeNamespaceClient(nil, nil),
+				Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
+				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+			},
+			expectedAccess: true,
+		},
+		{
+			name: "okteto client can access to preview",
+			ctxOptions: &Options{
+				IsOkteto:  true,
+				Namespace: "test",
+			},
+			fakeOktetoClient: &client.FakeOktetoClient{
+				Namespace: client.NewFakeNamespaceClient(nil, oktetoErrors.ErrNamespaceNotFound),
+				Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
+				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
 			},
 			expectedAccess: true,
 		},
@@ -447,6 +482,13 @@ func TestCheckAccessToNamespace(t *testing.T) {
 				IsOkteto:  true,
 				Namespace: "non-ccessible-ns",
 			},
+			fakeOktetoClient: &client.FakeOktetoClient{
+				Namespace: client.NewFakeNamespaceClient(nil, oktetoErrors.ErrNamespaceNotFound),
+				Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
+				Preview: client.NewFakePreviewClient(&client.FakePreviewResponse{
+					ErrGetPreview: oktetoErrors.ErrNamespaceNotFound,
+				}),
+			},
 			expectedAccess: false,
 		},
 		{
@@ -454,6 +496,11 @@ func TestCheckAccessToNamespace(t *testing.T) {
 			ctxOptions: &Options{
 				IsOkteto:  false,
 				Namespace: "test",
+			},
+			fakeOktetoClient: &client.FakeOktetoClient{
+				Namespace: client.NewFakeNamespaceClient(nil, nil),
+				Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
+				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
 			},
 			expectedAccess: true,
 		},
@@ -463,6 +510,11 @@ func TestCheckAccessToNamespace(t *testing.T) {
 				IsOkteto:  false,
 				Namespace: "test",
 			},
+			fakeOktetoClient: &client.FakeOktetoClient{
+				Namespace: client.NewFakeNamespaceClient(nil, nil),
+				Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
+				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+			},
 			expectedAccess: false,
 		},
 	}
@@ -471,12 +523,21 @@ func TestCheckAccessToNamespace(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
+			fakeCtxCommand := newFakeContextCommand(tt.fakeOktetoClient, user, []runtime.Object{
+				&corev1.Namespace{
+					ObjectMeta: v1.ObjectMeta{
+						Name: "test",
+					},
+				},
+			})
+
 			currentCtxCommand := *fakeCtxCommand
 			if tt.ctxOptions.IsOkteto {
 				currentCtxCommand.K8sClientProvider = nil
 			} else {
 				if !tt.expectedAccess {
-					currentCtxCommand = *newFakeContextCommand(fakeOktetoClient, user, []runtime.Object{})
+					currentCtxCommand = *newFakeContextCommand(tt.fakeOktetoClient, user, []runtime.Object{})
 				}
 				currentCtxCommand.OktetoClientProvider = nil
 			}

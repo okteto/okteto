@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -66,6 +65,15 @@ func Test_CheckIfDirectory(t *testing.T) {
 }
 
 func Test_GetDevFromManifest(t *testing.T) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"example": {
+				Namespace: "unit-test",
+			},
+		},
+		CurrentContext: "example",
+	}
+
 	wrongDevName := "not-test"
 	tests := []struct {
 		err      error
@@ -146,6 +154,8 @@ func Test_GetDevFromManifest(t *testing.T) {
 			assert.Equal(t, tt.dev, dev)
 			if tt.err != nil {
 				assert.Equal(t, tt.err.Error(), err.Error())
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
@@ -188,7 +198,7 @@ func Test_SelectDevFromManifest(t *testing.T) {
 							},
 						},
 						SSHServerPort: 80,
-						Image:         &build.Info{},
+						Image:         "",
 					},
 					"test-2": &model.Dev{},
 				},
@@ -210,7 +220,7 @@ func Test_SelectDevFromManifest(t *testing.T) {
 					},
 				},
 				SSHServerPort: 80,
-				Image:         &build.Info{},
+				Image:         "",
 			},
 		},
 		{

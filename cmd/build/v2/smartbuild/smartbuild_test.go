@@ -345,6 +345,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 func TestCloneGlobalImageToDev(t *testing.T) {
 	type input struct {
 		from string
+		to   string
 	}
 	type output struct {
 		err      error
@@ -360,6 +361,7 @@ func TestCloneGlobalImageToDev(t *testing.T) {
 			name: "Global Registry",
 			input: input{
 				from: "okteto.global/myimage",
+				to:   "",
 			},
 			output: output{
 				devImage: "okteto.global/myimage",
@@ -369,9 +371,31 @@ func TestCloneGlobalImageToDev(t *testing.T) {
 			name: "Non-Global Registry",
 			input: input{
 				from: "okteto.dev/myimage",
+				to:   "",
 			},
 			output: output{
 				devImage: "okteto.dev/myimage",
+				err:      nil,
+			},
+		},
+		{
+			name: "Global Registry with image set in buildInfo",
+			input: input{
+				from: "okteto.global/myimage:sha",
+				to:   "okteto.dev/myimage:1.0",
+			},
+			output: output{
+				devImage: "okteto.global/myimage:sha",
+			},
+		},
+		{
+			name: "Non-Global Registry with image set in buildInfo",
+			input: input{
+				from: "okteto.dev/myimage:sha",
+				to:   "okteto.dev/myimage:1.0",
+			},
+			output: output{
+				devImage: "okteto.dev/myimage:sha",
 				err:      nil,
 			},
 		},
@@ -387,7 +411,7 @@ func TestCloneGlobalImageToDev(t *testing.T) {
 				ioCtrl: io.NewIOController(),
 			}
 
-			devImage, err := ctrl.CloneGlobalImageToDev(tt.input.from)
+			devImage, err := ctrl.CloneGlobalImageToDev(tt.input.from, tt.input.to)
 
 			assert.Equal(t, tt.output.devImage, devImage)
 			assert.Equal(t, tt.output.err, err)

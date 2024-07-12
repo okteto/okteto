@@ -186,7 +186,7 @@ func (c client) getAuthentication(ref name.Reference) remote.Option {
 		authn.DefaultKeychain,
 		authn.NewKeychainFromHelper(inlineHelper(c.config.GetExternalRegistryCredentials)),
 	)
-	if !env.LoadBooleanOrDefault(oktetoLocalRegistryStoreEnabledEnvVarKey, true) {
+	if !env.LoadBooleanOrDefault(oktetoLocalRegistryStoreEnabledEnvVarKey, false) {
 		kc = authn.NewMultiKeychain(
 			authn.NewKeychainFromHelper(inlineHelper(c.config.GetExternalRegistryCredentials)),
 			authn.DefaultKeychain,

@@ -735,7 +735,7 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return fmt.Errorf("dev workdir is not a dir")
 		}
 		dev.Workdir = localDir
-		dev.Image.Name = "busybox"
+		dev.Image = "busybox"
 
 	} else {
 		dev.Mode = constants.OktetoSyncModeFieldValue
@@ -747,55 +747,47 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type manifestRaw struct {
-	Name          string                   `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace     string                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context       string                   `json:"context,omitempty" yaml:"context,omitempty"`
-	Icon          string                   `json:"icon,omitempty" yaml:"icon,omitempty"`
 	Deploy        *DeployInfo              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev           ManifestDevs             `json:"dev,omitempty" yaml:"dev,omitempty"`
 	Test          ManifestTests            `json:"test,omitempty" yaml:"test,omitempty"`
 	Destroy       *DestroyInfo             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 	Build         build.ManifestBuild      `json:"build,omitempty" yaml:"build,omitempty"`
 	Dependencies  deps.ManifestSection     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
-	GlobalForward []forward.GlobalForward  `json:"forward,omitempty" yaml:"forward,omitempty"`
 	External      externalresource.Section `json:"external,omitempty" yaml:"external,omitempty"`
-
-	DeprecatedDevs []string `yaml:"devs"`
+	Name          string                   `json:"name,omitempty" yaml:"name,omitempty"`
+	Namespace     string                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context       string                   `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon          string                   `json:"icon,omitempty" yaml:"icon,omitempty"`
+	GlobalForward []forward.GlobalForward  `json:"forward,omitempty" yaml:"forward,omitempty"`
 }
 
 func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	dev := NewDev()
-	err := unmarshal(&dev)
-	if err == nil {
-		*m = *NewManifestFromDev(dev)
-		return nil
-	}
-	if !isManifestFieldNotFound(err) {
-		return err
-	}
-
 	manifest := manifestRaw{
 		Dev:          map[string]*Dev{},
 		Build:        map[string]*build.Info{},
 		Dependencies: deps.ManifestSection{},
 		External:     externalresource.Section{},
 	}
-	err = unmarshal(&manifest)
+	err := unmarshal(&manifest)
 	if err != nil {
 		return err
 	}
-	m.Deploy = manifest.Deploy
+	if manifest.Deploy != nil {
+		m.Deploy = manifest.Deploy
+	}
 	m.Destroy = manifest.Destroy
 	m.Dev = manifest.Dev
 	m.Icon = manifest.Icon
 	m.Build = manifest.Build
-	m.IsV2 = true
 	m.Dependencies = manifest.Dependencies
 	m.Name = manifest.Name
-	m.GlobalForward = manifest.GlobalForward
+	if manifest.GlobalForward != nil {
+		m.GlobalForward = manifest.GlobalForward
+	}
 	m.External = manifest.External
-	m.Test = manifest.Test
-
+	if manifest.Test != nil {
+		m.Test = manifest.Test
+	}
 	err = m.SanitizeSvcNames()
 	if err != nil {
 		return err
@@ -997,16 +989,6 @@ func (d *ManifestDevs) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 	*d = result
 	return nil
-}
-
-func isManifestFieldNotFound(err error) bool {
-	manifestFields := []string{"devs", "dev", "name", "icon", "variables", "deploy", "destroy", "build", "namespace", "context", "dependencies"}
-	for _, field := range manifestFields {
-		if strings.Contains(err.Error(), fmt.Sprintf("field %s not found", field)) {
-			return true
-		}
-	}
-	return false
 }
 
 func (d *DestroyInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {

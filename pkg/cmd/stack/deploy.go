@@ -87,8 +87,30 @@ const (
 	maxRestartsToConsiderFailed = 3
 )
 
+func (sd *Stack) RunDeploy(ctx context.Context, s *model.Stack, options *DeployOptions) error {
+
+	analytics.TrackStackWarnings(s.Warnings.NotSupportedFields)
+
+	if len(options.ServicesToDeploy) == 0 {
+		definedServices := []string{}
+		for serviceName := range s.Services {
+			definedServices = append(definedServices, serviceName)
+		}
+		options.ServicesToDeploy = definedServices
+	}
+
+	err := sd.deployCompose(ctx, s, options)
+
+	analytics.TrackDeployStack(err == nil, s.IsCompose)
+	if err != nil {
+		return err
+	}
+	oktetoLog.Success("Compose '%s' successfully deployed", s.Name)
+	return nil
+}
+
 // Deploy deploys a stack
-func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *DeployOptions) error {
+func (sd *Stack) deployCompose(ctx context.Context, s *model.Stack, options *DeployOptions) error {
 
 	if err := validateServicesToDeploy(ctx, s, options, sd.K8sClient); err != nil {
 		return err

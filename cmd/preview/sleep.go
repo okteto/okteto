@@ -34,6 +34,7 @@ func Sleep(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prToSleep := args[0]
+
 			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, &contextCMD.Options{Show: true}); err != nil {
 				return err
 			}

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package exec
+package args
 
 import (
 	"context"
@@ -22,68 +22,57 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func TestNewOptions(t *testing.T) {
+func TestNewDevCommandArgParser(t *testing.T) {
+	lister := NewDevModeOnLister(nil)
+	ioControl := io.NewIOController()
+
+	parser := NewDevCommandArgParser(lister, ioControl, true)
+
+	assert.NotNil(t, parser)
+	assert.Equal(t, lister, parser.devLister)
+	assert.Equal(t, ioControl, parser.ioCtrl)
+	assert.Equal(t, true, parser.checkIfCmdIsEmpty)
+}
+
+func TestParseFromArgs(t *testing.T) {
 	testCases := []struct {
-		expected      *options
-		expectedError error
+		expected      *Result
 		name          string
 		argsIn        []string
 		argsLenAtDash int
 	}{
 		{
-			name:          "Empty args",
-			argsIn:        []string{},
-			argsLenAtDash: 0,
-			expected:      nil,
-			expectedError: errCommandRequired,
-		},
-		{
-			name:          "Args with dev name",
-			argsIn:        []string{"dev1"},
-			argsLenAtDash: -1,
-			expected:      nil,
-			expectedError: errCommandRequired,
-		},
-		{
 			name:          "Args with command",
 			argsIn:        []string{"echo", "test"},
 			argsLenAtDash: 0,
-			expected: &options{
-				command:     []string{"echo", "test"},
-				devSelector: utils.NewOktetoSelector("Select which development container to exec:", "Development container"),
+			expected: &Result{
+				Command: []string{"echo", "test"},
 			},
 		},
 		{
 			name:          "Args with dev name and command",
 			argsIn:        []string{"dev1", "echo", "test"},
 			argsLenAtDash: 1,
-			expected: &options{
-				devName:           "dev1",
-				firstArgIsDevName: true,
-				command:           []string{"echo", "test"},
-				devSelector:       utils.NewOktetoSelector("Select which development container to exec:", "Development container"),
+			expected: &Result{
+				DevName:           "dev1",
+				FirstArgIsDevName: true,
+				Command:           []string{"echo", "test"},
 			},
-		},
-		{
-			name:          "Args with dev name no command",
-			argsIn:        []string{"dev1"},
-			argsLenAtDash: -1,
-			expected:      nil,
-			expectedError: errCommandRequired,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			opts, err := newOptions(tc.argsIn, tc.argsLenAtDash)
-			assert.Equal(t, tc.expected, opts)
-			assert.ErrorIs(t, err, tc.expectedError)
+			parser := &DevCommandArgParser{}
+			result := parser.parseFromArgs(tc.argsIn, tc.argsLenAtDash)
+			assert.Equal(t, tc.expected, result)
 		})
 	}
 }
@@ -98,8 +87,6 @@ func (f *fakeDevSelector) AskForOptionsOkteto([]utils.SelectorItem, int) (string
 }
 func TestSetDevFromManifest(t *testing.T) {
 	ioControl := io.NewIOController()
-	// Define test cases using a slice of structs
-
 	objects := []runtime.Object{
 		&appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -130,15 +117,16 @@ func TestSetDevFromManifest(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
 		expectedError error
-		options       *options
+		options       *Result
+		selector      devSelector
 		devs          model.ManifestDevs
 		name          string
 		expectedDev   string
 	}{
 		{
 			name: "Dev name already set",
-			options: &options{
-				devName: "dev1",
+			options: &Result{
+				DevName: "dev1",
 			},
 			devs:          model.ManifestDevs{},
 			expectedDev:   "dev1",
@@ -146,12 +134,12 @@ func TestSetDevFromManifest(t *testing.T) {
 		},
 		{
 			name: "Select dev from manifest",
-			options: &options{
-				devName: "",
-				devSelector: &fakeDevSelector{
-					devName: "dev1",
-					err:     nil,
-				},
+			options: &Result{
+				DevName: "",
+			},
+			selector: &fakeDevSelector{
+				devName: "dev1",
+				err:     nil,
 			},
 			devs: model.ManifestDevs{
 				"dev1": &model.Dev{
@@ -166,12 +154,12 @@ func TestSetDevFromManifest(t *testing.T) {
 		},
 		{
 			name: "no dev in dev mode",
-			options: &options{
-				devName: "",
-				devSelector: &fakeDevSelector{
-					devName: "dev1",
-					err:     nil,
-				},
+			options: &Result{
+				DevName: "",
+			},
+			selector: &fakeDevSelector{
+				devName: "dev1",
+				err:     nil,
 			},
 			devs: model.ManifestDevs{
 				"dev3": &model.Dev{
@@ -183,12 +171,12 @@ func TestSetDevFromManifest(t *testing.T) {
 		},
 		{
 			name: "Failed to select dev",
-			options: &options{
+			options: &Result{
+				DevName: "",
+			},
+			selector: &fakeDevSelector{
 				devName: "",
-				devSelector: &fakeDevSelector{
-					devName: "",
-					err:     assert.AnError,
-				},
+				err:     assert.AnError,
 			},
 			devs: model.ManifestDevs{
 				"dev1": &model.Dev{
@@ -203,46 +191,61 @@ func TestSetDevFromManifest(t *testing.T) {
 		},
 	}
 
-	// Loop through test cases and run assertions
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"ns": {
+				Namespace: "ns",
+			},
+		},
+		CurrentContext: "ns",
+	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.options.setDevFromManifest(ctx, tc.devs, "ns", provider, ioControl)
-			assert.Equal(t, tc.expectedDev, tc.options.devName)
-			assert.ErrorIs(t, err, tc.expectedError)
+			parser := &DevCommandArgParser{
+				devSelector: tc.selector,
+				ioCtrl:      ioControl,
+				devLister:   NewDevModeOnLister(provider),
+			}
+			result, err := parser.setDevNameFromManifest(ctx, tc.options, tc.devs, "ns")
+			if result != nil {
+				assert.Equal(t, tc.expectedDev, result.DevName)
+				assert.ErrorIs(t, err, tc.expectedError)
+			} else {
+				assert.ErrorIs(t, err, tc.expectedError)
+			}
 		})
 	}
 }
 
 func TestValidate(t *testing.T) {
-	// Define test cases using a slice of structs
 	testCases := []struct {
 		expected error
-		options  *options
+		options  *Result
 		devs     model.ManifestDevs
 		name     string
 	}{
 		{
 			name: "Missing dev name",
-			options: &options{
-				command: []string{"echo", "test"},
+			options: &Result{
+				Command: []string{"echo", "test"},
 			},
 			devs:     model.ManifestDevs{},
 			expected: errDevNameRequired,
 		},
 		{
 			name: "Invalid dev name (not defined)",
-			options: &options{
-				devName: "dev2",
-				command: []string{"echo", "test"},
+			options: &Result{
+				DevName: "dev2",
+				Command: []string{"echo", "test"},
 			},
 			devs:     model.ManifestDevs{},
 			expected: &errDevNotInManifest{devName: "dev2"},
 		},
 		{
 			name: "Valid options",
-			options: &options{
-				devName: "dev1",
-				command: []string{"echo", "test"},
+			options: &Result{
+				DevName: "dev1",
+				Command: []string{"echo", "test"},
 			},
 			devs: model.ManifestDevs{
 				"dev1": &model.Dev{},
@@ -250,11 +253,10 @@ func TestValidate(t *testing.T) {
 			expected: nil,
 		},
 	}
-
-	// Loop through test cases and run assertions
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.options.validate(tc.devs)
+			parser := &DevCommandArgParser{}
+			err := parser.validate(tc.options, tc.devs)
 			if tc.expected != nil {
 				assert.ErrorContains(t, err, tc.expected.Error())
 			} else {

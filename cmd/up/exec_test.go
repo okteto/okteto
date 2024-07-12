@@ -93,8 +93,7 @@ func TestGetEnvs(t *testing.T) {
 				},
 			}),
 			dev: &model.Dev{
-				Name:      "test",
-				Namespace: "test",
+				Name: "test",
 			},
 		},
 		{
@@ -120,8 +119,7 @@ func TestGetEnvs(t *testing.T) {
 				},
 			}),
 			dev: &model.Dev{
-				Name:      "test",
-				Namespace: "test",
+				Name: "test",
 			},
 		},
 		{
@@ -152,8 +150,7 @@ func TestGetEnvs(t *testing.T) {
 			fakeImageEnvsGetter:     fakeGetter{envs: []string{"FROMIMAGE=VALUE1"}},
 			expectedEnvs:            []string{"FROMIMAGE=VALUE1"},
 			dev: &model.Dev{
-				Name:      "test",
-				Namespace: "test",
+				Name: "test",
 			},
 		},
 		{
@@ -186,8 +183,7 @@ func TestGetEnvs(t *testing.T) {
 			fakeImageEnvsGetter:       fakeGetter{},
 			expectedEnvs:              []string{"FROMPOD=VALUE1"},
 			dev: &model.Dev{
-				Name:      "test",
-				Namespace: "test",
+				Name: "test",
 			},
 		},
 		{
@@ -214,8 +210,7 @@ func TestGetEnvs(t *testing.T) {
 			fakeImageEnvsGetter:     fakeGetter{},
 			expectedEnvs:            []string{"FROMENVSECTION=VALUE1"},
 			dev: &model.Dev{
-				Name:      "test",
-				Namespace: "test",
+				Name: "test",
 				Environment: env.Environment{
 					vars.Var{
 						Name:  "FROMENVSECTION",
@@ -252,8 +247,7 @@ func TestGetEnvs(t *testing.T) {
 			fakeImageEnvsGetter:     fakeGetter{err: assert.AnError},
 			expectedEnvs:            []string{},
 			dev: &model.Dev{
-				Name:      "test",
-				Namespace: "test",
+				Name: "test",
 			},
 		},
 	}
@@ -338,8 +332,7 @@ func TestGetEnvsError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			eg := envsGetter{
 				dev: &model.Dev{
-					Name:      "test",
-					Namespace: "test",
+					Name: "test",
 				},
 				name:                        "test",
 				namespace:                   "test",
@@ -398,8 +391,7 @@ func TestGetEnvForHybridModeWithProperPriority(t *testing.T) {
 		},
 	})
 	dev := &model.Dev{
-		Name:      "test",
-		Namespace: "test",
+		Name: "test",
 		Environment: env.Environment{
 			vars.Var{
 				Name:  "ENVFROMMANIFEST",
@@ -925,8 +917,7 @@ func TestCheckOktetoStartError(t *testing.T) {
 			name:        "error getting app",
 			K8sProvider: test.NewFakeK8sProvider(),
 			dev: &model.Dev{
-				Name:      "test",
-				Namespace: "test",
+				Name: "test",
 			},
 			expected: apps.ErrApplicationNotFound{
 				Name: "test",
@@ -942,8 +933,7 @@ func TestCheckOktetoStartError(t *testing.T) {
 					},
 				}),
 			dev: &model.Dev{
-				Name:      "test",
-				Namespace: "test",
+				Name: "test",
 			},
 			expected: &k8sErrors.StatusError{
 				ErrStatus: metav1.Status{
@@ -975,8 +965,7 @@ func TestCheckOktetoStartError(t *testing.T) {
 					},
 				}),
 			dev: &model.Dev{
-				Name:      "test",
-				Namespace: "test",
+				Name: "test",
 			},
 			expected: fmt.Errorf("not found"),
 		},
@@ -1028,8 +1017,7 @@ func TestCheckOktetoStartError(t *testing.T) {
 					},
 				}),
 			dev: &model.Dev{
-				Name:      "test",
-				Namespace: "test",
+				Name: "test",
 			},
 			expected: fmt.Errorf(msg),
 		},
@@ -1081,8 +1069,7 @@ func TestCheckOktetoStartError(t *testing.T) {
 					},
 				}),
 			dev: &model.Dev{
-				Name:      "test",
-				Namespace: "test",
+				Name: "test",
 				Secrets: []model.Secret{
 					{
 						LocalPath:  "test",
@@ -1097,6 +1084,7 @@ func TestCheckOktetoStartError(t *testing.T) {
 	for _, tt := range tt {
 		t.Run(tt.name, func(t *testing.T) {
 			upCtx := &upContext{
+				Namespace:         "test",
 				Dev:               tt.dev,
 				K8sClientProvider: tt.K8sProvider,
 				Options: &Options{
