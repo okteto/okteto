@@ -30,9 +30,6 @@ parameters:
   GHA_Meta:
     type: string
     default: ""
-  TriggerIntegration:
-    type: boolean
-    default: false
 
 orbs:
   win: circleci/windows@5.0.0
