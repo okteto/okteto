@@ -587,13 +587,13 @@ func TestDeployOktetoManifestWithinRepository(t *testing.T) {
 	filename = cfg.Data["filename"]
 	require.Equal(t, filename, filepath.Join("okteto.yml"))
 
-	// Execute "okteto deploy -f subdirA/subdirB" from root of the repo
+	// Execute "okteto deploy -f subdirA/subdirB/okteto.yml" from root of the repo
 	deployOptions = &commands.DeployOptions{
 		Workdir:      dir,
 		Namespace:    testNamespace,
 		OktetoHome:   dir,
 		Token:        token,
-		ManifestPath: filepath.Join("subdirA", "subdirB"),
+		ManifestPath: filepath.Join("subdirA", "subdirB", "okteto.yml"),
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
@@ -601,7 +601,7 @@ func TestDeployOktetoManifestWithinRepository(t *testing.T) {
 	require.NoError(t, err)
 
 	filename = cfg.Data["filename"]
-	require.Equal(t, filename, filepath.Join("subdirA", "subdirB"))
+	require.Equal(t, filename, filepath.Join("subdirA", "subdirB", "okteto.yml"))
 
 	// Execute "okteto deploy -f <root>/subdirA/subdirB/okteto.yml" from outside of the repo
 	deployOptions = &commands.DeployOptions{
