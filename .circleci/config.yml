@@ -287,7 +287,6 @@ jobs:
 
   test-integration-setup:
     executor: golang-ci
-    resource_class: large
     environment:
       OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_USER: cindylopez
@@ -334,48 +333,57 @@ jobs:
           command: |
             okteto build --platform "linux/arm64,linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile .
 
-  run-windows-e2e-test:
+  test-integration-setup-windows:
     executor: win/default
     environment:
+      OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_USER: cindylopez
+      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
       - checkout
-      - run:
-          name: Check Golang version
-          command: go version
       - restore_cache:
           keys:
             - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
-      - run:
-          name: Run unit tests
-          command: |
-            go mod download
-            go version
-            go test ./...
-      - run:
-          name: Upgrade kubectl
-          command: choco install kubernetes-cli -y
-      - run:
-          name: Upgrade helm
-          command: choco install kubernetes-helm -y
       - attach_workspace:
           at: .\artifacts
       - run:
-          name: Prepare env
-          environment:
-            OKTETO_URL: https://staging.okteto.dev/
+          name: Setup environment
           command: |
-            new-item $HOME\.okteto -itemtype "directory" -force
-            new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
-            & "$($HOME)\project\artifacts\bin\okteto.exe" login --token $env:API_STAGING_TOKEN
-            & "$($HOME)\project\artifacts\bin\okteto.exe" kubeconfig
+            go version
+            choco install kubernetes-cli -y
+            choco install kubernetes-helm -y
+      - run:
+          name: Run windows unit test-release
+          command: go tests ./...
       - run:
           # As the integration test running the okteto deploy needs the CLI which we are testing, we build the current
           # CLI to the okteto.dev registry, so it is available for the user running the tests. Then, in the step
           # which run the deploy, we set the env var OKTETO_REMOTE_CLI_IMAGE to the one we are building
-          name: Build CLI image windows
+          name: Build OKTETO_REMOTE_CLI_IMAGE for current commit
           command: |
+            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
+            & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
+            & "$($HOME)\project\artifacts\bin\okteto.exe" kubeconfig
             & "$($HOME)\project\artifacts\bin\okteto.exe" build --platform "linux/amd64" --build-arg VERSION_STRING=$env:CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-win:$env:CIRCLE_SHA1
+      - save_cache:
+          key: v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
+          paths:
+            - C:\Users\circleci\AppData\Local\go-build
+            - C:\Users\circleci\go\pkg
+            - C:\Go\pkg
+  integration-deprecated-windows:
+    executor: win/default
+    environment:
+      OKTETO_CONTEXT: https://staging.okteto.dev
+      OKTETO_USER: cindylopez
+      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
+      - attach_workspace:
+          at: .\artifacts
       - run:
           name: Run deprecated integration tests
           environment:
@@ -385,32 +393,75 @@ jobs:
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
+            & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
+            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
             go test github.com/okteto/okteto/integration/deprecated/push -tags="integration" --count=1 -v -timeout 15m
             go test github.com/okteto/okteto/integration/deprecated/stack -tags="integration" --count=1 -v -timeout 15m
+
+  integration-build-windows:
+    executor: win/default
+    environment:
+      OKTETO_CONTEXT: https://staging.okteto.dev
+      OKTETO_USER: cindylopez
+      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
+      - attach_workspace:
+          at: .\artifacts
       - run:
           name: Run build integration tests
           environment:
-            OKTETO_URL: https://staging.okteto.dev/
             OKTETO_SKIP_CLEANUP: "true"
-            OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
           command: |
             $env:DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
             $env:DEPOT_TOKEN=$DEPOT_TOKEN
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
+            & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
+            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
             go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
+
+  integration-deploy-windows:
+    executor: win/default
+    environment:
+      OKTETO_CONTEXT: https://staging.okteto.dev
+      OKTETO_USER: cindylopez
+      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
+      - attach_workspace:
+          at: .\artifacts
       - run:
           name: Run deploy integration tests
           environment:
-            OKTETO_URL: https://staging.okteto.dev/
             OKTETO_SKIP_CLEANUP: "true"
-            OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
           # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
             $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
             $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e-win:$env:CIRCLE_SHA1"
+            & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
+            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
             go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
+  integration-up-windows:
+    executor: win/default
+    environment:
+      OKTETO_CONTEXT: https://staging.okteto.dev
+      OKTETO_USER: cindylopez
+      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
+      - attach_workspace:
+          at: .\artifacts
       - run:
           name: Run up integration tests
           environment:
@@ -422,16 +473,9 @@ jobs:
             $env:Path+=";$($HOME)\project\artifacts\bin"
             $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
             $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e-win:$env:CIRCLE_SHA1"
+            & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
+            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
             go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
-      - store_artifacts:
-          path: C:\Users\circleci\.okteto
-
-      - save_cache:
-          key: v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
-          paths:
-            - C:\Users\circleci\AppData\Local\go-build
-            - C:\Users\circleci\go\pkg
-            - C:\Go\pkg
 
   push-image-tag:
     executor: golang-ci
@@ -536,9 +580,41 @@ workflows:
               ignore: *release-branch-regex
             tags:
               ignore: /.*/
-      - run-windows-e2e-test:
+      - test-integration-setup-windows:
           requires:
             - build-binaries
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(windows|win)/
+      - integration-build-windows:
+          requires:
+            - test-integration-setup-windows
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(windows|win)/
+      - integration-deploy-windows:
+          requires:
+            - test-integration-setup-windows
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(windows|win)/
+      - integration-up-windows:
+          requires:
+            - test-integration-setup-windows
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(windows|win)/
+      - integration-deprecated-windows:
+          requires:
+            - test-integration-setup-windows
           filters:
             branches:
               only:
@@ -744,28 +820,32 @@ workflows:
             tags:
               only: /^\d+\.\d+\.\d+$/
 
-  run-windows-e2e:
-    when:
-      equal: ["run-e2e-windows", << pipeline.parameters.GHA_Meta >>]
-    jobs:
-      - build-binaries
-      - run-windows-e2e-test:
-          requires:
-            - build-binaries
-
-  run-e2e-tests:
-    when:
-      equal: ["run-e2e", << pipeline.parameters.GHA_Meta >>]
-    jobs:
-      - build-binaries
-      - run-windows-e2e-test:
-          requires:
-            - build-binaries
-
-  run-integration:
+  run-integration-windows:
     when:
       or:
         - equal: [true, << pipeline.parameters.TriggerIntegration >>]
+        - equal: ["run-e2e-windows", << pipeline.parameters.GHA_Meta >>]
+        - equal: ["run-e2e", << pipeline.parameters.GHA_Meta >>]
+    jobs:
+      - build-binaries
+      - test-integration-setup-windows:
+          requires:
+            - build-binaries
+      - integration-build-windows:
+          requires:
+            - test-integration-setup-windows
+      - integration-deploy-windows:
+          requires:
+            - test-integration-setup-windows
+      - integration-up-windows:
+          requires:
+            - test-integration-setup-windows
+      - integration-deprecated-windows:
+          requires:
+            - test-integration-setup-windows
+  run-integration:
+    when:
+      or:
         - equal: ["run-e2e-unix", << pipeline.parameters.GHA_Meta >>]
         - equal: ["run-e2e", << pipeline.parameters.GHA_Meta >>]
     jobs:
