@@ -154,13 +154,6 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 				// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
 				options.ManifestPathFlag = manifestPathFlag
 
-				// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
-				uptManifestPath, err := filesystem.UpdateCWDtoManifestPath(options.ManifestPath)
-				if err != nil {
-					return err
-				}
-				options.ManifestPath = uptManifestPath
-
 				// check that the manifest file exists
 				if !filesystem.FileExistsWithFilesystem(manifestPathFlag, fs) {
 					return oktetoErrors.ErrManifestPathNotFound
@@ -170,6 +163,13 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 				if filesystem.IsDir(manifestPathFlag, fs) {
 					return oktetoErrors.ErrManifestPathIsDir
 				}
+
+				// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
+				manifestPath, err := filesystem.UpdateCWDtoManifestPath(options.ManifestPath)
+				if err != nil {
+					return err
+				}
+				options.ManifestPath = manifestPath
 			}
 
 			ctxOpts := &contextCMD.Options{
