@@ -354,7 +354,7 @@ jobs:
             choco install kubernetes-helm -y
       - run:
           name: Run windows unit test-release
-          command: go tests ./...
+          command: go test ./...
       - run:
           # As the integration test running the okteto deploy needs the CLI which we are testing, we build the current
           # CLI to the okteto.dev registry, so it is available for the user running the tests. Then, in the step
