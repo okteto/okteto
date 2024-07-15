@@ -62,7 +62,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v4-pkg-cache-{{ checksum "go.sum" }}
+            - v1-bin-pkg-cache-{{ checksum "go.sum" }}
       - run:
           name: Build all binaries
           command: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
@@ -70,7 +70,7 @@ jobs:
           name: Add version string
           command: env VERSION_STRING=$CIRCLE_TAG make latest
       - save_cache:
-          key: v4-pkg-cache-{{ checksum "go.sum" }}
+          key: v1-bin-pkg-cache-{{ checksum "go.sum" }}
           paths:
             - ~/.cache/go-build
             - /go/pkg
