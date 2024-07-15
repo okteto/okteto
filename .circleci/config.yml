@@ -463,8 +463,8 @@ jobs:
                 command: |
                   $env:DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
                   $env:DEPOT_TOKEN=$DEPOT_TOKEN
-                  $env:OKTETO_PATH="$($HOME)\project\integration-workspace\bin\okteto.exe"
-                  $env:Path+=";$($HOME)\project\integration-workspace\bin"
+                  $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
+                  $env:Path+=";$($HOME)\project\artifacts\bin"
                   & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
                   & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
                   go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
