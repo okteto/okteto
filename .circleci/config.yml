@@ -147,12 +147,13 @@ jobs:
                 keys:
                   - v4-pkg-cache-{{ checksum "go.sum" }}
             - attach_workspace:
-                at: ./integration-workspace
+                at: ./artifacts
             - run:
                 name: Run actions integration tests
                 command: |
-                  export OKTETO_HOME=$(pwd)/integration-workspace
-                  export OKTETO_PATH=$(pwd)/integration-workspace/bin/okteto-Linux-x86_64
+                  export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+                  $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+                  $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
                   make integration-actions
 
   integration-build:
@@ -177,14 +178,15 @@ jobs:
                 keys:
                   - v4-pkg-cache-{{ checksum "go.sum" }}
             - attach_workspace:
-                at: ./integration-workspace
+                at: ./artifacts
             - run:
                 name: Run build integration tests
                 command: |
                   export DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
                   export DEPOT_TOKEN=$DEPOT_TOKEN
-                  export OKTETO_HOME=$(pwd)/integration-workspace
-                  export OKTETO_PATH=$(pwd)/integration-workspace/bin/okteto-Linux-x86_64
+                  export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+                  $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+                  $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
                   make integration-build
 
   integration-deploy:
@@ -209,15 +211,16 @@ jobs:
                 keys:
                   - v4-pkg-cache-{{ checksum "go.sum" }}
             - attach_workspace:
-                at: ./integration-workspace
+                at: ./artifacts
             - run:
                 name: Run deploy integration tests
                 # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
                 command: |
-                  export OKTETO_HOME=$(pwd)/integration-workspace
-                  export OKTETO_PATH=$(pwd)/integration-workspace/bin/okteto-Linux-x86_64
+                  export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
                   export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
                   echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
+                  $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+                  $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
                   make integration-deploy
 
   integration-up:
@@ -242,14 +245,15 @@ jobs:
                 keys:
                   - v4-pkg-cache-{{ checksum "go.sum" }}
             - attach_workspace:
-                at: ./integration-workspace
+                at: ./artifacts
             - run:
                 name: Run up integration tests
                 command: |
-                  export OKTETO_HOME=$(pwd)/integration-workspace
-                  export OKTETO_PATH=$(pwd)/integration-workspace/bin/okteto-Linux-x86_64
+                  export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
                   export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
                   echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
+                  $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+                  $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
                   make integration-up
                 environment:
                   OKTETO_SKIP_CLEANUP: "true"
@@ -276,14 +280,15 @@ jobs:
                 keys:
                   - v4-pkg-cache-{{ checksum "go.sum" }}
             - attach_workspace:
-                at: ./integration-workspace
+                at: ./artifacts
             - run:
                 name: Run okteto integration tests
                 command: |
-                  export OKTETO_HOME=$(pwd)/integration-workspace
-                  export OKTETO_PATH=$(pwd)/integration-workspace/bin/okteto-Linux-x86_64
+                  export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
                   export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
                   echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
+                  $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+                  $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
                   make integration-okteto
 
   integration-deprecated:
@@ -308,12 +313,13 @@ jobs:
                 keys:
                   - v4-pkg-cache-{{ checksum "go.sum" }}
             - attach_workspace:
-                at: ./integration-workspace
+                at: ./artifacts
             - run:
                 name: Run deprecated integration tests
                 command: |
-                  export OKTETO_HOME=$(pwd)/integration-workspace
-                  export OKTETO_PATH=$(pwd)/integration-workspace/bin/okteto-Linux-x86_64
+                  export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+                  $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+                  $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
                   make integration-deprecated
 
   test-integration-setup:
@@ -338,28 +344,16 @@ jobs:
                 keys:
                   - v4-pkg-cache-{{ checksum "go.sum" }}
             - attach_workspace:
-                at: ./integration-workspace
-            - run:
-                name: Okteto Setup for integration
-                command: |
-                  export OKTETO_HOME=$(pwd)/integration-workspace
-                  echo "$CIRCLE_SHA1"
-                  $(pwd)/integration-workspace/bin/okteto-Linux-x86_64 version
-                  $(pwd)/integration-workspace/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
-                  $(pwd)/integration-workspace/bin/okteto-Linux-x86_64 analytics --disable
-            - persist_to_workspace:
-                root: integration-workspace
-                paths:
-                  - .okteto/analytics.json
-                  - .okteto/context/config.json
+                at: ./artifacts
             - run:
                 # As the integration test running the okteto deploy needs the CLI which we are testing, we build the current
                 # CLI to the okteto.dev registry, so it is available for the user running the tests. Then, in the step
                 # which run the deploy, we set the env var OKTETO_REMOTE_CLI_IMAGE to the one we are building
                 name: Build OKTETO_REMOTE_CLI_IMAGE for current commit
                 command: |
-                  export OKTETO_HOME=$(pwd)/integration-workspace
-                  $(pwd)/integration-workspace/bin/okteto-Linux-x86_64 build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+                  $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+                  $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
+                  $(pwd)/artifacts/bin/okteto-Linux-x86_64 build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             - save_cache:
                 key: v4-pkg-cache-{{ checksum "go.sum" }}
                 paths:
@@ -406,29 +400,16 @@ jobs:
                 keys:
                   - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
             - attach_workspace:
-                at: .\integration-workspace
-            - run:
-                name: Okteto Setup for integration
-                command: |
-                  $env:OKTETO_PATH="$($HOME)\project\integration-workspace\bin\okteto.exe"
-                  $env:Path+=";$($HOME)\project\integration-workspace\bin"
-                  $env:OKTETO_HOME="$($HOME)\project\integration-workspace"
-                  & "$($HOME)\project\integration-workspace\bin\okteto.exe" analytics --disable
-                  & "$($HOME)\project\integration-workspace\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
-            - persist_to_workspace:
-                root: integration-workspace
-                paths:
-                  - .okteto/analytics.json
-                  - .okteto/context/config.json
+                at: .\artifacts
             - run:
                 # As the integration test running the okteto deploy needs the CLI which we are testing, we build the current
                 # CLI to the okteto.dev registry, so it is available for the user running the tests. Then, in the step
                 # which run the deploy, we set the env var OKTETO_REMOTE_CLI_IMAGE to the one we are building
                 name: Build OKTETO_REMOTE_CLI_IMAGE for current commit
                 command: |
-                  $env:OKTETO_PATH="$($HOME)\project\integration-workspace\bin\okteto.exe"
-                  $env:OKTETO_HOME="$($HOME)\project\integration-workspace"
-                  & "$($HOME)\project\integration-workspace\bin\okteto.exe" build --platform "linux/amd64" --build-arg VERSION_STRING=$env:CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-win:$env:CIRCLE_SHA1
+                  & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
+                  & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
+                  & "$($HOME)\project\artifacts\bin\okteto.exe" build --platform "linux/amd64" --build-arg VERSION_STRING=$env:CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-win:$env:CIRCLE_SHA1
             - save_cache:
                 key: v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
                 paths:
@@ -454,7 +435,7 @@ jobs:
                 keys:
                   - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
             - attach_workspace:
-                at: .\integration-workspace
+                at: .\artifacts
             - run:
                 name: Install kubectl and helm
                 command: |
@@ -468,9 +449,10 @@ jobs:
                   OKTETO_SKIP_CLEANUP: "true"
                   OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
                 command: |
-                  $env:OKTETO_PATH="$($HOME)\project\integration-workspace\bin\okteto.exe"
-                  $env:Path+=";$($HOME)\project\integration-workspace\bin"
-                  $env:OKTETO_HOME="$($HOME)\project\integration-workspace"
+                  $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
+                  $env:Path+=";$($HOME)\project\artifacts\bin"
+                  & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
+                  & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
                   go test github.com/okteto/okteto/integration/deprecated/push -tags="integration" --count=1 -v -timeout 15m
                   go test github.com/okteto/okteto/integration/deprecated/stack -tags="integration" --count=1 -v -timeout 15m
 
@@ -493,7 +475,7 @@ jobs:
                 keys:
                   - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
             - attach_workspace:
-                at: .\integration-workspace
+                at: .\artifacts
             - run:
                 name: Run build integration tests
                 environment:
@@ -503,7 +485,8 @@ jobs:
                   $env:DEPOT_TOKEN=$DEPOT_TOKEN
                   $env:OKTETO_PATH="$($HOME)\project\integration-workspace\bin\okteto.exe"
                   $env:Path+=";$($HOME)\project\integration-workspace\bin"
-                  $env:OKTETO_HOME="$($HOME)\project\integration-workspace"
+                  & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
+                  & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
                   go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
 
   integration-deploy-windows:
@@ -525,7 +508,7 @@ jobs:
                 keys:
                   - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
             - attach_workspace:
-                at: .\integration-workspace
+                at: .\artifacts
             - run:
                 name: Install kubectl and helm
                 command: |
@@ -538,11 +521,12 @@ jobs:
                   OKTETO_SKIP_CLEANUP: "true"
                 # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
                 command: |
-                  $env:OKTETO_PATH="$($HOME)\project\integration-workspace\bin\okteto.exe"
-                  $env:Path+=";$($HOME)\project\integration-workspace\bin"
+                  $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
+                  $env:Path+=";$($HOME)\project\artifacts\bin"
                   $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
                   $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e-win:$env:CIRCLE_SHA1"
-                  $env:OKTETO_HOME="$($HOME)\project\integration-workspace"
+                  & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
+                  & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
                   go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
 
   integration-up-windows:
@@ -564,7 +548,7 @@ jobs:
                 keys:
                   - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
             - attach_workspace:
-                at: .\integration-workspace
+                at: .\artifacts
             - run:
                 name: Install kubectl and helm
                 command: |
@@ -578,11 +562,12 @@ jobs:
                   OKTETO_SKIP_CLEANUP: "true"
                   OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
                 command: |
-                  $env:OKTETO_PATH="$($HOME)\project\integration-workspace\bin\okteto.exe"
-                  $env:Path+=";$($HOME)\project\integration-workspace\bin"
+                  $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
+                  $env:Path+=";$($HOME)\project\artifacts\bin"
                   $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
                   $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e-win:$env:CIRCLE_SHA1"
-                  $env:OKTETO_HOME="$($HOME)\project\integration-workspace"
+                  & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
+                  & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
                   go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
 
   push-image-tag:
