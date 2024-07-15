@@ -34,7 +34,7 @@ import (
 )
 
 // Restart restarts the pods of a given dev mode deployment
-func Restart() *cobra.Command {
+func Restart(fs afero.Fs) *cobra.Command {
 	var namespace string
 	var k8sContext string
 	var devPath string
@@ -46,7 +46,6 @@ func Restart() *cobra.Command {
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if devPath != "" {
-				fs := afero.NewOsFs()
 				// check that the manifest file exists
 				if !filesystem.FileExistsWithFilesystem(devPath, fs) {
 					return oktetoErrors.ErrManifestPathNotFound
