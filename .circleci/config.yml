@@ -62,7 +62,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v5-pkg-cache-{{ checksum "go.sum" }}
+            - v4-pkg-cache-{{ checksum "go.sum" }}
       - run:
           name: Build all binaries
           command: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
@@ -70,10 +70,10 @@ jobs:
           name: Add version string
           command: env VERSION_STRING=$CIRCLE_TAG make latest
       - save_cache:
-          key: v5-pkg-cache-{{ checksum "go.sum" }}
+          key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
             - ~/.cache/go-build
-            - /go/pkg/mod
+            - /go/pkg
       - persist_to_workspace:
           root: .
           paths:
@@ -88,7 +88,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v5-pkg-cache-{{ checksum "go.sum" }}
+            - v4-pkg-cache-{{ checksum "go.sum" }}
       - run:
           name: Compile integration tests
           command: make build-integration
@@ -98,10 +98,10 @@ jobs:
             make test
             bash <(curl -s https://codecov.io/bash)
       - save_cache:
-          key: v5-pkg-cache-{{ checksum "go.sum" }}
+          key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
             - ~/.cache/go-build
-            - /go/pkg/mod
+            - /go/pkg
 
       - store_artifacts:
           path: coverage.txt
@@ -135,7 +135,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v5-pkg-cache-{{ checksum "go.sum" }}
+            - v4-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
           at: ./integration-workspace
       - run:
@@ -155,7 +155,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v5-pkg-cache-{{ checksum "go.sum" }}
+            - v4-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
           at: ./integration-workspace
       - run:
@@ -177,7 +177,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v5-pkg-cache-{{ checksum "go.sum" }}
+            - v4-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
           at: ./integration-workspace
       - run:
@@ -201,7 +201,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v5-pkg-cache-{{ checksum "go.sum" }}
+            - v4-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
           at: ./integration-workspace
       - run:
@@ -226,7 +226,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v5-pkg-cache-{{ checksum "go.sum" }}
+            - v4-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
           at: ./integration-workspace
       - run:
@@ -248,7 +248,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v5-pkg-cache-{{ checksum "go.sum" }}
+            - v4-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
           at: ./integration-workspace
       - run:
@@ -268,18 +268,17 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v5-pkg-cache-{{ checksum "go.sum" }}
+            - v4-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
           at: ./integration-workspace
       - run:
           name: Okteto Setup for integration
           command: |
             export OKTETO_HOME=$(pwd)/integration-workspace
-            export OKTETO_PATH=$(pwd)/integration-workspace/bin/okteto-Linux-x86_64
             echo "$CIRCLE_SHA1"
-            okteto version
-            okteto analytics --disable
-            okteto context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+            $(pwd)/integration-workspace/bin/okteto-Linux-x86_64 version
+            $(pwd)/integration-workspace/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+            $(pwd)/integration-workspace/bin/okteto-Linux-x86_64 analytics --disable
       - persist_to_workspace:
           root: integration-workspace
           paths:
@@ -290,12 +289,12 @@ jobs:
           # CLI to the okteto.dev registry, so it is available for the user running the tests. Then, in the step
           # which run the deploy, we set the env var OKTETO_REMOTE_CLI_IMAGE to the one we are building
           name: Build OKTETO_REMOTE_CLI_IMAGE for current commit
-          command: okteto build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+          command: $(pwd)/integration-workspace/bin/okteto-Linux-x86_64 build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
       - save_cache:
-          key: v5-pkg-cache-{{ checksum "go.sum" }}
+          key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
             - ~/.cache/go-build
-            - /go/pkg/mod
+            - /go/pkg
 
   test-release:
     executor: golang-ci
