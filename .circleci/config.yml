@@ -39,6 +39,18 @@ executors:
     docker:
       - image: okteto/golang-ci:2.6.2
 
+command:
+  save_go_mod_cache:
+    - save_cache:
+        key: v5-pkg-cache-{{ checksum "go.sum" }}
+        paths:
+          - ~/.cache/go-build
+          - /go/pkg/mod
+  restore_go_mod_cache:
+    - restore_cache:
+        keys:
+          - v5-pkg-cache-{{ checksum "go.sum" }}
+
 jobs:
   golangci-lint:
     executor: golang-ci
@@ -60,9 +72,7 @@ jobs:
     resource_class: large
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - v4-pkg-cache-{{ checksum "go.sum" }}
+      - run: restore_go_mod_cache
       - run:
           name: Build all binaries
           command: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
@@ -76,10 +86,12 @@ jobs:
       - store_artifacts:
           path: bin
           destination: binaries
+
   run-unit-test:
     executor: golang-ci
     steps:
       - checkout
+      - run: restore_go_mod_cache
       - run:
           name: Compile integration tests
           command: make build-integration
@@ -88,11 +100,8 @@ jobs:
           command: |
             make test
             bash <(curl -s https://codecov.io/bash)
-      - save_cache:
-          key: v4-pkg-cache-{{ checksum "go.sum" }}
-          paths:
-            - ~/.cache/go-build
-            - /go/pkg
+      - run: save_go_mod_cache
+
       - store_artifacts:
           path: coverage.txt
           destination: coverage.txt
@@ -123,9 +132,7 @@ jobs:
       OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - v4-pkg-cache-{{ checksum "go.sum" }}
+      - run: restore_go_mod_cache
       - attach_workspace:
           at: ./artifacts
       - run:
@@ -135,11 +142,8 @@ jobs:
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-actions
-      - save_cache:
-          key: v4-pkg-cache-{{ checksum "go.sum" }}
-          paths:
-            - ~/.cache/go-build
-            - /go/pkg
+      - run: save_go_mod_cache
+
 
   integration-build:
     executor: golang-ci
@@ -149,25 +153,19 @@ jobs:
       OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - v4-pkg-cache-{{ checksum "go.sum" }}
+      - run: restore_go_mod_cache
       - attach_workspace:
-          at: ./artifacts
+          at: integration-workspace
       - run:
           name: Run build integration tests
           command: |
             export DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
             export DEPOT_TOKEN=$DEPOT_TOKEN
-            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
+            export OKTETO_PATH=/integration-workspace/bin/okteto-Linux-x86_64
+            export OKTETO_HOME=/integration-workspace/
             make integration-build
-      - save_cache:
-          key: v4-pkg-cache-{{ checksum "go.sum" }}
-          paths:
-            - ~/.cache/go-build
-            - /go/pkg
+      - run: save_go_mod_cache
+
 
   integration-deploy:
     executor: golang-ci
@@ -177,26 +175,20 @@ jobs:
       OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - v4-pkg-cache-{{ checksum "go.sum" }}
+      - run: restore_go_mod_cache
       - attach_workspace:
-          at: ./artifacts
+          at: integration-workspace
       - run:
           name: Run deploy integration tests
           # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
           command: |
-            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            export OKTETO_PATH=/integration-workspace/bin/okteto-Linux-x86_64
+            export OKTETO_HOME=/integration-workspace/
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-deploy
-      - save_cache:
-          key: v4-pkg-cache-{{ checksum "go.sum" }}
-          paths:
-            - ~/.cache/go-build
-            - /go/pkg
+      - run: save_go_mod_cache
+
 
   integration-up:
     executor: golang-ci
@@ -206,27 +198,21 @@ jobs:
       OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - v4-pkg-cache-{{ checksum "go.sum" }}
+      - run: restore_go_mod_cache
       - attach_workspace:
-          at: ./artifacts
+          at: integration-workspace
       - run:
           name: Run up integration tests
           command: |
-            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            export OKTETO_PATH=/integration-workspace/bin/okteto-Linux-x86_64
+            export OKTETO_HOME=/integration-workspace/
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-up
           environment:
             OKTETO_SKIP_CLEANUP: "true"
-      - save_cache:
-          key: v4-pkg-cache-{{ checksum "go.sum" }}
-          paths:
-            - ~/.cache/go-build
-            - /go/pkg
+      - run: save_go_mod_cache
+
 
   integration-okteto:
     executor: golang-ci
@@ -236,25 +222,19 @@ jobs:
       OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - v4-pkg-cache-{{ checksum "go.sum" }}
+      - run: restore_go_mod_cache
       - attach_workspace:
-          at: ./artifacts
+          at: integration-workspace
       - run:
           name: Run okteto integration tests
           command: |
-            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            export OKTETO_PATH=/integration-workspace/bin/okteto-Linux-x86_64
+            export OKTETO_HOME=/integration-workspace/
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-okteto
-      - save_cache:
-          key: v4-pkg-cache-{{ checksum "go.sum" }}
-          paths:
-            - ~/.cache/go-build
-            - /go/pkg
+      - run: save_go_mod_cache
+
 
   integration-deprecated:
     executor: golang-ci
@@ -264,23 +244,16 @@ jobs:
       OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - v4-pkg-cache-{{ checksum "go.sum" }}
+      - run: restore_go_mod_cache
       - attach_workspace:
-          at: ./artifacts
+          at: integration-workspace
       - run:
           name: Run deprecated integration tests
           command: |
-            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
+            export OKTETO_PATH=/integration-workspace/bin/okteto-Linux-x86_64
+            export OKTETO_HOME=/integration-workspace/
             make integration-deprecated
-      - save_cache:
-          key: v4-pkg-cache-{{ checksum "go.sum" }}
-          paths:
-            - ~/.cache/go-build
-            - /go/pkg
+      - run: save_go_mod_cache
 
   test-integration-setup:
     executor: golang-ci
@@ -290,25 +263,34 @@ jobs:
       OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - v4-pkg-cache-{{ checksum "go.sum" }}
+      - run: restore_go_mod_cache
       - attach_workspace:
           at: ./artifacts
+      - run:
+          name: Okteto Setup for integration
+          command: |
+            mkdir -p integration-workspace/bin && export OKTETO_HOME=/integration-workspace
+            cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /integration-workspace/bin/okteto-Linux-x86_64
+            export OKTETO_PATH=/integration-workspace/bin/okteto-Linux-x86_64
+            echo "$CIRCLE_SHA1"
+            okteto version
+            okteto analytics --disable
+            okteto context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+      - persist_to_workspace:
+          root: integration-workspace
+          paths:
+            - bin/okteto-Linux-x86_64
+            - .okteto/analytics.json
+            - .okteto/context/config.json
       - run:
           # As the integration test running the okteto deploy needs the CLI which we are testing, we build the current
           # CLI to the okteto.dev registry, so it is available for the user running the tests. Then, in the step
           # which run the deploy, we set the env var OKTETO_REMOTE_CLI_IMAGE to the one we are building
           name: Build OKTETO_REMOTE_CLI_IMAGE for current commit
-          command: |
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
-      - save_cache:
-          key: v4-pkg-cache-{{ checksum "go.sum" }}
-          paths:
-            - ~/.cache/go-build
-            - /go/pkg
+          command: $(pwd)/artifacts/bin/okteto-Linux-x86_64 build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+
+      - run: save_go_mod_cache
+
   test-release:
     executor: golang-ci
     steps:
