@@ -276,7 +276,7 @@ $ okteto deploy --build=false`,
 	}
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
-	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the okteto manifest file")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment is deployed")
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment is deployed")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
@@ -822,30 +822,38 @@ func GetDependencyEnvVars(environGetter environGetter) map[string]string {
 }
 
 func checkOktetoManifestPathFlag(options *Options, fs afero.Fs) error {
-	if options.ManifestPath != "" {
-		// if path is absolute, its transformed from root path to a rel path
-		initialCWD, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("failed to get the current working directory: %w", err)
-		}
-		manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, options.ManifestPath)
-		if err != nil {
-			return err
-		}
-		// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
-		options.ManifestPathFlag = manifestPathFlag
-
-		// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
-		uptManifestPath, err := filesystem.UpdateCWDtoManifestPath(options.ManifestPath)
-		if err != nil {
-			return err
-		}
-		options.ManifestPath = uptManifestPath
-
-		// check whether the manifest file provided by -f exists or not
-		if _, err := fs.Stat(options.ManifestPath); err != nil {
-			return fmt.Errorf("%s file doesn't exist", options.ManifestPath)
-		}
+	if options.ManifestPath == "" {
+		return nil
 	}
+
+	// if path is absolute, its transformed from root path to a rel path
+	initialCWD, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get the current working directory: %w", err)
+	}
+	manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, options.ManifestPath)
+	if err != nil {
+		return err
+	}
+	// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
+	options.ManifestPathFlag = manifestPathFlag
+
+	// check that the manifest file exists
+	if !filesystem.FileExistsWithFilesystem(manifestPathFlag, fs) {
+		return oktetoErrors.ErrManifestPathNotFound
+	}
+
+	// the Okteto manifest flag should specify a file, not a directory
+	if filesystem.IsDir(manifestPathFlag, fs) {
+		return oktetoErrors.ErrManifestPathIsDir
+	}
+
+	// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
+	uptManifestPath, err := filesystem.UpdateCWDtoManifestPath(options.ManifestPath)
+	if err != nil {
+		return err
+	}
+	options.ManifestPath = uptManifestPath
+
 	return nil
 }

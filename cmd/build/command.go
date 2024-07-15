@@ -133,7 +133,7 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 	}
 
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the build command is executed")
-	cmd.Flags().StringVarP(&options.File, "file", "f", "", "path to the Okteto Manifest (default is 'okteto.yml')")
+	cmd.Flags().StringVarP(&options.File, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&options.Tag, "tag", "t", "", "name and optionally a tag in the 'name:tag' format (it is automatically pushed)")
 	cmd.Flags().StringVarP(&options.Target, "target", "", "", "set the target build stage to build")
 	cmd.Flags().BoolVarP(&options.NoCache, "no-cache", "", false, "do not use cache when building the image")

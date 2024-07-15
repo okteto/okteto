@@ -95,12 +95,15 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 					return err
 				}
 				options.ManifestPath = filesystem.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
-				// check whether the manifest file provided by -f exists or not
-				if _, err := fs.Stat(options.ManifestPath); err != nil {
-					return oktetoErrors.UserError{
-						E:    fmt.Errorf("the okteto manifest file '%s' does not exist", options.ManifestPath),
-						Hint: "Check the path to the okteto manifest file",
-					}
+
+				// check that the manifest file exists
+				if !filesystem.FileExistsWithFilesystem(options.ManifestPath, fs) {
+					return oktetoErrors.ErrManifestPathNotFound
+				}
+
+				// the Okteto manifest flag should specify a file, not a directory
+				if filesystem.IsDir(options.ManifestPath, fs) {
+					return oktetoErrors.ErrManifestPathIsDir
 				}
 			}
 
@@ -149,7 +152,7 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
-	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the okteto manifest file")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment is deployed")
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment is deployed")
 
