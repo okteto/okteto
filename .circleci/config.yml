@@ -289,7 +289,9 @@ jobs:
           # CLI to the okteto.dev registry, so it is available for the user running the tests. Then, in the step
           # which run the deploy, we set the env var OKTETO_REMOTE_CLI_IMAGE to the one we are building
           name: Build OKTETO_REMOTE_CLI_IMAGE for current commit
-          command: $(pwd)/integration-workspace/bin/okteto-Linux-x86_64 build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+          command: |
+            export OKTETO_HOME=$(pwd)/integration-workspace
+            $(pwd)/integration-workspace/bin/okteto-Linux-x86_64 build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
