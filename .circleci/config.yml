@@ -137,9 +137,6 @@ jobs:
           condition:
             or:
               - matches:
-                  pattern: /.*(e2e)/
-                  value: << pipeline.git.branch >>
-              - matches:
                   pattern: *release-branch-regex
                   value: << pipeline.git.branch >>
               - equal: ["master", << pipeline.git.branch >>]
@@ -169,9 +166,6 @@ jobs:
       - when:
           condition:
             or:
-              - matches:
-                  pattern: /.*(e2e)/
-                  value: << pipeline.git.branch >>
               - matches:
                   pattern: *release-branch-regex
                   value: << pipeline.git.branch >>
@@ -205,9 +199,6 @@ jobs:
           condition:
             or:
               - matches:
-                  pattern: /.*(e2e)/
-                  value: << pipeline.git.branch >>
-              - matches:
                   pattern: *release-branch-regex
                   value: << pipeline.git.branch >>
               - equal: ["master", << pipeline.git.branch >>]
@@ -240,9 +231,6 @@ jobs:
       - when:
           condition:
             or:
-              - matches:
-                  pattern: /.*(e2e)/
-                  value: << pipeline.git.branch >>
               - matches:
                   pattern: *release-branch-regex
                   value: << pipeline.git.branch >>
@@ -278,9 +266,6 @@ jobs:
           condition:
             or:
               - matches:
-                  pattern: /.*(e2e)/
-                  value: << pipeline.git.branch >>
-              - matches:
                   pattern: *release-branch-regex
                   value: << pipeline.git.branch >>
               - equal: ["master", << pipeline.git.branch >>]
@@ -313,9 +298,6 @@ jobs:
           condition:
             or:
               - matches:
-                  pattern: /.*(e2e)/
-                  value: << pipeline.git.branch >>
-              - matches:
                   pattern: *release-branch-regex
                   value: << pipeline.git.branch >>
               - equal: ["master", << pipeline.git.branch >>]
@@ -345,9 +327,6 @@ jobs:
       - when:
           condition:
             or:
-              - matches:
-                  pattern: /.*(e2e)/
-                  value: << pipeline.git.branch >>
               - matches:
                   pattern: *release-branch-regex
                   value: << pipeline.git.branch >>
@@ -419,9 +398,6 @@ jobs:
       - when:
           condition:
             or:
-              - matches:
-                  pattern: /.*(windows|win)/
-                  value: << pipeline.git.branch >>
               - equal: ["master", << pipeline.git.branch >>]
               - equal: ["run-e2e-windows", << pipeline.parameters.GHA_Meta >>]
               - equal: ["run-e2e", << pipeline.parameters.GHA_Meta >>]
@@ -470,9 +446,6 @@ jobs:
       - when:
           condition:
             or:
-              - matches:
-                  pattern: /.*(windows|win)/
-                  value: << pipeline.git.branch >>
               - equal: ["master", << pipeline.git.branch >>]
               - equal: ["run-e2e-windows", << pipeline.parameters.GHA_Meta >>]
               - equal: ["run-e2e", << pipeline.parameters.GHA_Meta >>]
@@ -512,9 +485,6 @@ jobs:
       - when:
           condition:
             or:
-              - matches:
-                  pattern: /.*(windows|win)/
-                  value: << pipeline.git.branch >>
               - equal: ["master", << pipeline.git.branch >>]
               - equal: ["run-e2e-windows", << pipeline.parameters.GHA_Meta >>]
               - equal: ["run-e2e", << pipeline.parameters.GHA_Meta >>]
@@ -547,9 +517,6 @@ jobs:
       - when:
           condition:
             or:
-              - matches:
-                  pattern: /.*(windows|win)/
-                  value: << pipeline.git.branch >>
               - equal: ["master", << pipeline.git.branch >>]
               - equal: ["run-e2e-windows", << pipeline.parameters.GHA_Meta >>]
               - equal: ["run-e2e", << pipeline.parameters.GHA_Meta >>]
@@ -589,9 +556,6 @@ jobs:
       - when:
           condition:
             or:
-              - matches:
-                  pattern: /.*(windows|win)/
-                  value: << pipeline.git.branch >>
               - equal: ["master", << pipeline.git.branch >>]
               - equal: ["run-e2e-windows", << pipeline.parameters.GHA_Meta >>]
               - equal: ["run-e2e", << pipeline.parameters.GHA_Meta >>]
@@ -736,7 +700,6 @@ workflows:
             branches:
               only:
                 - master
-                - /.*(windows|win)/
       - integration-build-windows:
           requires:
             - test-integration-setup-windows
@@ -744,7 +707,6 @@ workflows:
             branches:
               only:
                 - master
-                - /.*(windows|win)/
       - integration-deploy-windows:
           requires:
             - test-integration-setup-windows
@@ -752,7 +714,6 @@ workflows:
             branches:
               only:
                 - master
-                - /.*(windows|win)/
       - integration-up-windows:
           requires:
             - test-integration-setup-windows
@@ -760,7 +721,6 @@ workflows:
             branches:
               only:
                 - master
-                - /.*(windows|win)/
       - integration-deprecated-windows:
           requires:
             - test-integration-setup-windows
@@ -768,7 +728,6 @@ workflows:
             branches:
               only:
                 - master
-                - /.*(windows|win)/
       - test-integration-setup:
           requires:
             - build-binaries
@@ -776,7 +735,6 @@ workflows:
             branches:
               only:
                 - master
-                - /.*(e2e)/
       - integration-build:
           requires:
             - test-integration-setup
@@ -784,7 +742,6 @@ workflows:
             branches:
               only:
                 - master
-                - /.*(e2e)/
       - integration-deploy:
           requires:
             - test-integration-setup
@@ -792,7 +749,6 @@ workflows:
             branches:
               only:
                 - master
-                - /.*(e2e)/
       - integration-up:
           requires:
             - test-integration-setup
@@ -800,7 +756,6 @@ workflows:
             branches:
               only:
                 - master
-                - /.*(e2e)/
       - integration-actions:
           requires:
             - test-integration-setup
@@ -808,7 +763,6 @@ workflows:
             branches:
               only:
                 - master
-                - /.*(e2e)/
       - integration-okteto:
           requires:
             - test-integration-setup
@@ -816,7 +770,6 @@ workflows:
             branches:
               only:
                 - master
-                - /.*(e2e)/
       - integration-deprecated:
           requires:
             - test-integration-setup
@@ -824,7 +777,6 @@ workflows:
             branches:
               only:
                 - master
-                - /.*(e2e)/
       - test-release:
           context:
             - GKE
