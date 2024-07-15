@@ -69,6 +69,11 @@ jobs:
       - run:
           name: Add version string
           command: env VERSION_STRING=$CIRCLE_TAG make latest
+      - save_cache:
+          key: v5-pkg-cache-{{ checksum "go.sum" }}
+          paths:
+            - ~/.cache/go-build
+            - /go/pkg/mod
       - persist_to_workspace:
           root: .
           paths:
@@ -132,13 +137,12 @@ jobs:
           keys:
             - v5-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
-          at: ./artifacts
+          at: ./integration-workspace
       - run:
           name: Run actions integration tests
           command: |
-            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
+            export OKTETO_HOME=$(pwd)/integration-workspace
+            export OKTETO_PATH=$(pwd)/integration-workspace/bin/okteto-Linux-x86_64
             make integration-actions
 
   integration-build:
@@ -153,14 +157,14 @@ jobs:
           keys:
             - v5-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
-          at: integration-workspace
+          at: ./integration-workspace
       - run:
           name: Run build integration tests
           command: |
             export DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
             export DEPOT_TOKEN=$DEPOT_TOKEN
-            export OKTETO_PATH=/integration-workspace/bin/okteto-Linux-x86_64
-            export OKTETO_HOME=/integration-workspace/
+            export OKTETO_HOME=$(pwd)/integration-workspace
+            export OKTETO_PATH=$(pwd)/integration-workspace/bin/okteto-Linux-x86_64
             make integration-build
 
   integration-deploy:
@@ -175,13 +179,13 @@ jobs:
           keys:
             - v5-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
-          at: integration-workspace
+          at: ./integration-workspace
       - run:
           name: Run deploy integration tests
           # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
           command: |
-            export OKTETO_PATH=/integration-workspace/bin/okteto-Linux-x86_64
-            export OKTETO_HOME=/integration-workspace/
+            export OKTETO_HOME=$(pwd)/integration-workspace
+            export OKTETO_PATH=$(pwd)/integration-workspace/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
             make integration-deploy
@@ -199,12 +203,12 @@ jobs:
           keys:
             - v5-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
-          at: integration-workspace
+          at: ./integration-workspace
       - run:
           name: Run up integration tests
           command: |
-            export OKTETO_PATH=/integration-workspace/bin/okteto-Linux-x86_64
-            export OKTETO_HOME=/integration-workspace/
+            export OKTETO_HOME=$(pwd)/integration-workspace
+            export OKTETO_PATH=$(pwd)/integration-workspace/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
             make integration-up
@@ -224,16 +228,15 @@ jobs:
           keys:
             - v5-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
-          at: integration-workspace
+          at: ./integration-workspace
       - run:
           name: Run okteto integration tests
           command: |
-            export OKTETO_PATH=/integration-workspace/bin/okteto-Linux-x86_64
-            export OKTETO_HOME=/integration-workspace/
+            export OKTETO_HOME=$(pwd)/integration-workspace
+            export OKTETO_PATH=$(pwd)/integration-workspace/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
             make integration-okteto
-
 
   integration-deprecated:
     executor: golang-ci
@@ -247,12 +250,12 @@ jobs:
           keys:
             - v5-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
-          at: integration-workspace
+          at: ./integration-workspace
       - run:
           name: Run deprecated integration tests
           command: |
-            export OKTETO_PATH=/integration-workspace/bin/okteto-Linux-x86_64
-            export OKTETO_HOME=/integration-workspace/
+            export OKTETO_HOME=$(pwd)/integration-workspace
+            export OKTETO_PATH=$(pwd)/integration-workspace/bin/okteto-Linux-x86_64
             make integration-deprecated
 
   test-integration-setup:
@@ -267,13 +270,12 @@ jobs:
           keys:
             - v5-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
-          at: ./artifacts
+          at: ./integration-workspace
       - run:
           name: Okteto Setup for integration
           command: |
-            mkdir -p integration-workspace/bin && export OKTETO_HOME=/integration-workspace
-            cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /integration-workspace/bin/okteto-Linux-x86_64
-            export OKTETO_PATH=/integration-workspace/bin/okteto-Linux-x86_64
+            export OKTETO_HOME=$(pwd)/integration-workspace
+            export OKTETO_PATH=$(pwd)/integration-workspace/bin/okteto-Linux-x86_64
             echo "$CIRCLE_SHA1"
             okteto version
             okteto analytics --disable
@@ -281,7 +283,6 @@ jobs:
       - persist_to_workspace:
           root: integration-workspace
           paths:
-            - bin/okteto-Linux-x86_64
             - .okteto/analytics.json
             - .okteto/context/config.json
       - run:
