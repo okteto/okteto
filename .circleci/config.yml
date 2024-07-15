@@ -695,7 +695,12 @@ workflows:
   lint-build-test:
     when:
       not:
-        equal: [scheduled_pipeline, << pipeline.trigger_source >>]
+        or:
+          - equal: [scheduled_pipeline, << pipeline.trigger_source >>]
+          - equal: ["run-e2e-windows", << pipeline.parameters.GHA_Meta >>]
+          - equal: ["run-e2e", << pipeline.parameters.GHA_Meta >>]
+          - equal: ["run-e2e-unix", << pipeline.parameters.GHA_Meta >>]
+
     jobs:
       - golangci-lint
       - build-binaries:
@@ -725,39 +730,99 @@ workflows:
       - test-integration-setup-windows:
           requires:
             - build-binaries
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(windows|win)/
       - integration-build-windows:
           requires:
             - test-integration-setup-windows
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(windows|win)/
       - integration-deploy-windows:
           requires:
             - test-integration-setup-windows
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(windows|win)/
       - integration-up-windows:
           requires:
             - test-integration-setup-windows
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(windows|win)/
       - integration-deprecated-windows:
           requires:
             - test-integration-setup-windows
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(windows|win)/
       - test-integration-setup:
           requires:
             - build-binaries
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(e2e)/
       - integration-build:
           requires:
             - test-integration-setup
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(e2e)/
       - integration-deploy:
           requires:
             - test-integration-setup
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(e2e)/
       - integration-up:
           requires:
             - test-integration-setup
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(e2e)/
       - integration-actions:
           requires:
             - test-integration-setup
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(e2e)/
       - integration-okteto:
           requires:
             - test-integration-setup
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(e2e)/
       - integration-deprecated:
           requires:
             - test-integration-setup
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(e2e)/
       - test-release:
           context:
             - GKE
@@ -901,3 +966,49 @@ workflows:
               ignore: /.*/
             tags:
               only: /^\d+\.\d+\.\d+$/
+
+  # run-integration is triggered by okteto-bot via Github Actions when adding the e2e labels to the PR
+  run-integration:
+    when:
+      or:
+        - equal: ["run-e2e", << pipeline.parameters.GHA_Meta >>]
+        - equal: ["run-e2e-unix", << pipeline.parameters.GHA_Meta >>]
+        - equal: ["run-e2e-windows", << pipeline.parameters.GHA_Meta >>]
+    jobs:
+      - build-binaries
+      - test-integration-setup:
+          requires:
+            - build-binaries
+      - integration-build:
+          requires:
+            - test-integration-setup
+      - integration-deploy:
+          requires:
+            - test-integration-setup
+      - integration-up:
+          requires:
+            - test-integration-setup
+      - integration-actions:
+          requires:
+            - test-integration-setup
+      - integration-okteto:
+          requires:
+            - test-integration-setup
+      - integration-deprecated:
+          requires:
+            - test-integration-setup
+      - test-integration-setup-windows:
+          requires:
+            - build-binaries
+      - integration-build-windows:
+          requires:
+            - test-integration-setup-windows
+      - integration-deploy-windows:
+          requires:
+            - test-integration-setup-windows
+      - integration-up-windows:
+          requires:
+            - test-integration-setup-windows
+      - integration-deprecated-windows:
+          requires:
+            - test-integration-setup-windows
