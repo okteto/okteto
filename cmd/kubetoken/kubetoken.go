@@ -47,7 +47,7 @@ type k8sClientProvider interface {
 
 // oktetoCtxCmdRunner runs the okteto context command
 type oktetoCtxCmdRunner interface {
-	Run(ctx context.Context, ctxOptions *contextCMD.Options) error
+	RunStateless(ctx context.Context, ctxOptions *contextCMD.Options) (*okteto.ContextStateless, error)
 }
 
 type Serializer struct{}
@@ -152,14 +152,14 @@ func (kc *Cmd) Run(ctx context.Context, flags Flags) error {
 		return fmt.Errorf("dynamic kubernetes token cannot be requested: %w", err)
 	}
 
-	err = kc.oktetoCtxCmdRunner.Run(ctx, &contextCMD.Options{
+	okCtx, err := kc.oktetoCtxCmdRunner.RunStateless(ctx, &contextCMD.Options{
 		Context:   flags.Context,
 		Namespace: flags.Namespace,
 	})
 	if err != nil {
 		return err
 	}
-	if !okteto.IsOkteto() {
+	if !okCtx.IsOktetoCluster() {
 		return oktetoErrors.ErrContextIsNotOktetoCluster
 	}
 
