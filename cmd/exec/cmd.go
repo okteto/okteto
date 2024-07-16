@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	okerrors "github.com/okteto/okteto/pkg/errors"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -95,6 +96,18 @@ okteto exec my-pod -- echo this is a test
 # Get an interactive shell session inside the pod named 'my-pod'
 okteto exec my-pod`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if execFlags.manifestPath != "" {
+				// check that the manifest file exists
+				if !filesystem.FileExistsWithFilesystem(execFlags.manifestPath, e.fs) {
+					return oktetoErrors.ErrManifestPathNotFound
+				}
+
+				// the Okteto manifest flag should specify a file, not a directory
+				if filesystem.IsDir(execFlags.manifestPath, e.fs) {
+					return oktetoErrors.ErrManifestPathIsDir
+				}
+			}
+
 			ctxOpts := &contextCMD.Options{
 				Show:      true,
 				Context:   execFlags.k8sContext,
@@ -127,7 +140,7 @@ okteto exec my-pod`,
 			return e.Run(ctx, argsResult, manifest.Dev[argsResult.DevName], okteto.GetContext().Namespace)
 		},
 	}
-	cmd.Flags().StringVarP(&execFlags.manifestPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&execFlags.manifestPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&execFlags.namespace, "namespace", "n", "", "namespace where the exec command is executed")
 	cmd.Flags().StringVarP(&execFlags.k8sContext, "context", "c", "", "context where the exec command is executed")
 	return cmd

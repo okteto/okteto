@@ -91,7 +91,7 @@ type Options struct {
 }
 
 // Up starts a development container
-func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
+func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, varManager *vars.Manager, fs afero.Fs) *cobra.Command {
 	upOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:   "up service [flags] -- COMMAND [args...]",
@@ -153,6 +153,16 @@ okteto up my-svc -- echo this is a test
 				// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
 				upOptions.ManifestPathFlag = manifestPathFlag
 
+				// check that the manifest file exists
+				if !filesystem.FileExistsWithFilesystem(manifestPathFlag, fs) {
+					return oktetoErrors.ErrManifestPathNotFound
+				}
+
+				// the Okteto manifest flag should specify a file, not a directory
+				if filesystem.IsDir(manifestPathFlag, fs) {
+					return oktetoErrors.ErrManifestPathIsDir
+				}
+
 				// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
 				uptManifestPath, err := filesystem.UpdateCWDtoManifestPath(upOptions.ManifestPath)
 				if err != nil {
@@ -160,7 +170,7 @@ okteto up my-svc -- echo this is a test
 				}
 				upOptions.ManifestPath = uptManifestPath
 			}
-			oktetoManifest, err := model.GetManifestV2(upOptions.ManifestPath, afero.NewOsFs())
+			oktetoManifest, err := model.GetManifestV2(upOptions.ManifestPath, fs)
 			if err != nil {
 				if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 					return err
@@ -224,7 +234,7 @@ okteto up my-svc -- echo this is a test
 				StartTime:         time.Now(),
 				Registry:          registry.NewOktetoRegistry(okteto.Config{}),
 				Options:           upOptions,
-				Fs:                afero.NewOsFs(),
+				Fs:                fs,
 				analyticsTracker:  at,
 				analyticsMeta:     upMeta,
 				K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
@@ -361,7 +371,7 @@ okteto up my-svc -- echo this is a test
 		},
 	}
 
-	cmd.Flags().StringVarP(&upOptions.ManifestPath, "file", "f", "", "path to the manifest file")
+	cmd.Flags().StringVarP(&upOptions.ManifestPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&upOptions.Namespace, "namespace", "n", "", "namespace where the up command is executed")
 	cmd.Flags().StringVarP(&upOptions.K8sContext, "context", "c", "", "context where the up command is executed")
 	cmd.Flags().StringArrayVarP(&upOptions.Envs, "env", "e", []string{}, "envs to add to the development container")

@@ -188,22 +188,23 @@ func main() {
 	root.AddCommand(build.Build(ctx, ioController, at, insights, k8sLogger, varManager))
 
 	root.AddCommand(namespace.Namespace(ctx, k8sLogger, varManager))
-	root.AddCommand(up.Up(at, insights, ioController, k8sLogger, varManager))
-	root.AddCommand(cmd.Down(at, k8sLogger, varManager))
-	root.AddCommand(cmd.Status())
-	root.AddCommand(cmd.Doctor(k8sLogger, varManager))
+	root.AddCommand(up.Up(at, insights, ioController, k8sLogger, varManager, fs))
+	root.AddCommand(cmd.Down(at, k8sLogger, varManager, fs))
+	root.AddCommand(cmd.Status(fs))
+	root.AddCommand(cmd.Doctor(k8sLogger, varManager, fs))
 	root.AddCommand(exec.NewExec(fs, ioController, k8sClientProvider).Cmd(ctx))
 	root.AddCommand(preview.Preview(ctx, varManager))
-	root.AddCommand(cmd.Restart())
+	root.AddCommand(cmd.Restart(fs))
 	root.AddCommand(deploy.Deploy(ctx, at, insights, ioController, k8sLogger, varManager))
-	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger, varManager))
+	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger, varManager, fs))
 	root.AddCommand(deploy.Endpoints(ctx, k8sLogger, varManager))
-	root.AddCommand(logs.Logs(ctx, k8sLogger, varManager))
+	root.AddCommand(logs.Logs(ctx, k8sLogger, varManager, fs))
+
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
 	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger, varManager))
 	root.AddCommand(test.Test(ctx, ioController, k8sLogger, varManager, at))
 
-	root.AddCommand(pipeline.Pipeline(ctx, varManager))
+	root.AddCommand(pipeline.Pipeline(ctx, varManager, fs))
 
 	err = root.Execute()
 
@@ -214,7 +215,7 @@ func main() {
 			tmp[0] = unicode.ToUpper(tmp[0])
 			message = string(tmp)
 		}
-		oktetoLog.Fail(message) // TODO: Change to use ioController  when we fully move to ioController
+		oktetoLog.Fail(message) // TODO: Change to use ioController when we fully move to ioController
 		if uErr, ok := err.(oktetoErrors.UserError); ok {
 			if len(uErr.Hint) > 0 {
 				oktetoLog.Hint("    %s", uErr.Hint)

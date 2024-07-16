@@ -132,7 +132,7 @@ type destroyCommand struct {
 }
 
 // Destroy destroys the dev application defined by the manifest
-func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
+func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, varManager *vars.Manager, fs afero.Fs) *cobra.Command {
 	options := &Options{
 		Variables: []string{},
 	}
@@ -155,6 +155,16 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 				}
 				// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
 				options.ManifestPathFlag = manifestPathFlag
+
+				// check that the manifest file exists
+				if !filesystem.FileExistsWithFilesystem(manifestPathFlag, fs) {
+					return oktetoErrors.ErrManifestPathNotFound
+				}
+
+				// the Okteto manifest flag should specify a file, not a directory
+				if filesystem.IsDir(manifestPathFlag, fs) {
+					return oktetoErrors.ErrManifestPathIsDir
+				}
 
 				// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
 				uptManifestPath, err := filesystem.UpdateCWDtoManifestPath(options.ManifestPath)
@@ -248,7 +258,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 	}
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
-	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().BoolVarP(&options.DestroyVolumes, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().BoolVarP(&options.DestroyDependencies, "dependencies", "d", false, "destroy dependencies")
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the development environment to be destroyed even if there is an error executing the custom destroy commands defined in the manifest")
