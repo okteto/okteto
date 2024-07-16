@@ -51,8 +51,6 @@ dev:
         e2e/test-1: annotation-1
       labels:
         custom.label/e2e: "true"
-    annotations:
-      deprecated.annotation.format: deprecated-annotation-1
 `
 	hybridCompose = `services:
  svc:
