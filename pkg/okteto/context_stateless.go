@@ -31,7 +31,6 @@ type ContextInterface interface {
 	GetCurrentCertStr() string
 	GetCurrentToken() string
 	GetCurrentUser() string
-	GetCurrentRegister() string
 	ExistsContext() bool
 	IsOktetoCluster() bool
 	IsInsecure() bool
@@ -58,32 +57,52 @@ func (oc *ContextStateless) GetCurrentBuilder() string {
 	return oc.getCurrentOktetoContext().Builder
 }
 
-func (oc *ContextStateless) SetCurrentCfg(cfg *clientcmdapi.Config) {
-	oc.getCurrentOktetoContext().Cfg = cfg
+func (oc *ContextStateless) SetCurrentBuilder(builder string) {
+	oc.getCurrentOktetoContext().Builder = builder
 }
 
 func (oc *ContextStateless) GetCurrentName() string {
 	return oc.getCurrentOktetoContext().Name
 }
 
+func (oc *ContextStateless) SetCurrentName(name string) {
+	oc.getCurrentOktetoContext().Name = name
+}
+
 func (oc *ContextStateless) GetCurrentCertStr() string {
 	return oc.getCurrentOktetoContext().Certificate
+}
+
+func (oc *ContextStateless) SetCurrentCertStr(cert string) {
+	oc.getCurrentOktetoContext().Certificate = cert
 }
 
 func (oc *ContextStateless) GetCurrentToken() string {
 	return oc.getCurrentOktetoContext().Token
 }
 
+func (oc *ContextStateless) SetCurrentToken(token string) {
+	oc.getCurrentOktetoContext().Token = token
+}
+
 func (oc *ContextStateless) GetCurrentUser() string {
 	return oc.getCurrentOktetoContext().UserID
 }
 
-func (oc *ContextStateless) GetCurrentRegister() string {
-	return oc.getCurrentOktetoContext().Registry
+func (oc *ContextStateless) SetCurrentUser(user string) {
+	oc.getCurrentOktetoContext().UserID = user
+}
+
+func (oc *ContextStateless) SetCurrentRegistry(reg string) {
+	oc.getCurrentOktetoContext().Registry = reg
 }
 
 func (oc *ContextStateless) IsOktetoCluster() bool {
 	return oc.getCurrentOktetoContext().IsOkteto
+}
+
+func (oc *ContextStateless) SetOktetoCluster(isOkteto bool) {
+	oc.getCurrentOktetoContext().IsOkteto = isOkteto
 }
 
 func (oc *ContextStateless) ExistsContext() bool {
@@ -94,12 +113,24 @@ func (oc *ContextStateless) IsInsecure() bool {
 	return oc.getCurrentOktetoContext().IsInsecure
 }
 
+func (oc *ContextStateless) SetInsecure(insecure bool) {
+	oc.getCurrentOktetoContext().IsInsecure = insecure
+}
+
 func (oc *ContextStateless) GetCurrentCfg() *clientcmdapi.Config {
 	return oc.getCurrentOktetoContext().Cfg
 }
 
+func (oc *ContextStateless) SetCurrentCfg(cfg *clientcmdapi.Config) {
+	oc.getCurrentOktetoContext().Cfg = cfg
+}
+
 func (oc *ContextStateless) GetNamespace() string {
 	return oc.getCurrentOktetoContext().Namespace
+}
+
+func (oc *ContextStateless) SetNamespace(namespace string) {
+	oc.getCurrentOktetoContext().Namespace = namespace
 }
 
 func (oc *ContextStateless) GetRegistryURL() string {
