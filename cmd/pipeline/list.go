@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/spf13/afero"
 	"io"
 	"os"
 	"strings"
@@ -56,7 +55,7 @@ type pipelineListItem struct {
 	Labels     []string `json:"labels" yaml:"labels"`
 }
 
-func list(ctx context.Context, varManager *vars.Manager, fs afero.Fs) *cobra.Command {
+func list(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	flags := &listFlags{}
 
 	cmd := &cobra.Command{

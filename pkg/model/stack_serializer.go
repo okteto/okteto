@@ -15,7 +15,6 @@ package model
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -31,6 +30,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/vars"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )

@@ -20,16 +20,13 @@ import (
 
 	"github.com/docker/docker/pkg/namesgenerator"
 	"github.com/okteto/okteto/cmd/utils"
-
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	modelUtils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/validator"
-
 	"github.com/okteto/okteto/pkg/vars"
-
 	"github.com/spf13/afero"
 )
 

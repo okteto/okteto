@@ -19,11 +19,8 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
-
 	"github.com/okteto/okteto/pkg/vars"
-
 	"github.com/spf13/afero"
-
 	"github.com/spf13/cobra"
 )
 
@@ -65,7 +62,7 @@ func Pipeline(ctx context.Context, varManager *vars.Manager, fs afero.Fs) *cobra
 	}
 
 	cmd.AddCommand(deploy(ctx, varManager, fs))
-	cmd.AddCommand(destroy(ctx, varManager, fs))
-	cmd.AddCommand(list(ctx, varManager, fs))
+	cmd.AddCommand(destroy(ctx, varManager))
+	cmd.AddCommand(list(ctx, varManager))
 	return cmd
 }

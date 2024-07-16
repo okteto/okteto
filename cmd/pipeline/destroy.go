@@ -16,7 +16,6 @@ package pipeline
 import (
 	"context"
 	"fmt"
-	"github.com/spf13/afero"
 	"os"
 	"os/signal"
 	"sync"
@@ -52,7 +51,7 @@ type DestroyOptions struct {
 	Timeout        time.Duration
 }
 
-func destroy(ctx context.Context, varManager *vars.Manager, fs afero.Fs) *cobra.Command {
+func destroy(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	flags := &destroyFlags{}
 
 	cmd := &cobra.Command{

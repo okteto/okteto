@@ -39,11 +39,8 @@ import (
 	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/okteto/okteto/pkg/validator"
-
 	"github.com/okteto/okteto/pkg/vars"
-
 	"github.com/spf13/afero"
-
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
 )
