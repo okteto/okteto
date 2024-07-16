@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -31,7 +32,7 @@ import (
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/model/forward"
 	apiv1 "k8s.io/api/core/v1"
-	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 const (
@@ -454,7 +455,10 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	svc.Environment = env.Environment{}
 	for _, env := range serviceRaw.Environment {
 		if env.Value == "" {
-			env.Value = os.Getenv(env.Name)
+			env.Value, err = vars.GlobalVarManager.ExpandExcLocal(env.Value)
+			if err != nil {
+				return nil, err
+			}
 		}
 		if env.Value != "" {
 			svc.Environment = append(svc.Environment, env)

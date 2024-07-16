@@ -15,7 +15,7 @@ package model
 
 import (
 	"bytes"
-
+	"fmt"
 	"github.com/okteto/okteto/pkg/vars"
 	yaml3 "gopkg.in/yaml.v3"
 )
@@ -61,6 +61,8 @@ func ExpandStackEnvs(file []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	str := string(buffer.Bytes())
+	fmt.Print(str)
 	return buffer.Bytes(), nil
 
 }

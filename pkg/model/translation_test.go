@@ -16,7 +16,6 @@ package model
 import (
 	"bytes"
 	"path"
-	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/env"
@@ -450,12 +449,11 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 			},
 		},
 	}
-	for _, test := range tests {
-		t.Logf("test: %s", test.name)
-		rule := test.manifest.ToTranslationRule(test.manifest, "n", false)
-		if e, a := test.expected, rule.Environment; !reflect.DeepEqual(e, a) {
-			t.Errorf("expected environment:\n%#v\ngot:\n%#v", e, a)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rule := tt.manifest.ToTranslationRule(tt.manifest, "n", false)
+			assert.Equal(t, tt.expected, rule.Environment)
+		})
 	}
 }
 

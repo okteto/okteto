@@ -92,6 +92,12 @@ func (m *Manager) AddGroup(g Group) {
 	m.sortGroupsByPriorityDesc()
 }
 
+// GetExcLocal returns an okteto variable (excluding local variables)
+func (m *Manager) GetExcLocal(key string) string {
+	val, _ := m.Lookup(key)
+	return val
+}
+
 // GetOktetoVariablesExcLocal returns an array of all tifihe okteto variables that can be exported (excluding local variables)
 func (m *Manager) GetOktetoVariablesExcLocal() []string {
 	groups := make([]Group, 0)
@@ -156,7 +162,7 @@ func (m *Manager) sortGroupsByPriorityDesc() {
 	})
 }
 
-// groupsToArray flattens all groups into a single array of vars. By default it only includes exported variables
+// groupsToArray flattens all groups into a single array of vars. It only includes exported variables
 func (m *Manager) groupsToArray(groups []Group) []string {
 	vars := make([]string, 0)
 	for _, g := range groups {

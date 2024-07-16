@@ -29,7 +29,14 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 )
 
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+
 func Test_LoadManifest(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	manifestBytes := []byte(`dev:
   deployment:
         container: core
