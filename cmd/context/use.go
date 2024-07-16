@@ -169,6 +169,15 @@ func (c *Command) RunStateless(ctx context.Context, ctxOptions *Options) (*oktet
 	// Storing previous global namespace gotten after executing c.Run as it is memory, but after reading the
 	// context store from path that is lost
 	globalNamespace := okteto.GetContext().GlobalNamespace
+	builder := okteto.GetContext().Builder
+	cert := okteto.GetContext().Certificate
+	name := okteto.GetContext().Name
+	registry := okteto.GetContext().Registry
+	token := okteto.GetContext().Token
+	user := okteto.GetContext().UserID
+	isInsecure := okteto.GetContext().IsInsecure
+	namespace := okteto.GetContext().Namespace
+	isOkteto := okteto.GetContext().IsOkteto
 
 	oktetoContextStore := okteto.GetContextStoreFromStorePath()
 
@@ -177,8 +186,16 @@ func (c *Command) RunStateless(ctx context.Context, ctxOptions *Options) (*oktet
 	}
 
 	oktetoContextStateless.SetCurrentCfg(cfg)
-	// Setting the global namespace because it is missing after reading again the context from the store path
 	oktetoContextStateless.SetGlobalNamespace(globalNamespace)
+	oktetoContextStateless.SetCurrentBuilder(builder)
+	oktetoContextStateless.SetCurrentCertStr(cert)
+	oktetoContextStateless.SetCurrentName(name)
+	oktetoContextStateless.SetCurrentRegistry(registry)
+	oktetoContextStateless.SetCurrentToken(token)
+	oktetoContextStateless.SetCurrentUser(user)
+	oktetoContextStateless.SetInsecure(isInsecure)
+	oktetoContextStateless.SetNamespace(namespace)
+	oktetoContextStateless.SetOktetoCluster(isOkteto)
 
 	return oktetoContextStateless, nil
 

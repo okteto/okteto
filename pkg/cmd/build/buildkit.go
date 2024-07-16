@@ -141,7 +141,7 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 			cert:     okctx.GetCurrentCertStr(),
 		}
 
-		ap := newDockerAndOktetoAuthProvider(okctx.GetCurrentRegister(), okctx.GetCurrentUser(), okctx.GetCurrentToken(), apCtx, os.Stderr)
+		ap := newDockerAndOktetoAuthProvider(okctx.GetRegistryURL(), okctx.GetCurrentUser(), okctx.GetCurrentToken(), apCtx, os.Stderr)
 		attachable = append(attachable, ap)
 	} else {
 		dockerCfg := dockerConfig.LoadDefaultConfigFile(os.Stderr)
