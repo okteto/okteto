@@ -50,11 +50,10 @@ type BuildOptions struct {
 	Secrets         []string
 	ExportCache     []string
 	// CommandArgs comes from the user input on the command
-	CommandArgs   []string
-	SshSessions   []BuildSshSession
-	ExtraHosts    []HostMap
-	CacheFrom     []string
-	BuildToGlobal bool
-	NoCache       bool
-	EnableStages  bool
+	CommandArgs  []string
+	SshSessions  []BuildSshSession
+	ExtraHosts   []HostMap
+	CacheFrom    []string
+	NoCache      bool
+	EnableStages bool
 }
