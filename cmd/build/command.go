@@ -128,6 +128,7 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 				}
 			}
 
+			analytics.TrackBuildWithManifestVsDockerfile(builder.IsV1())
 			return builder.Build(ctx, options)
 		},
 	}
