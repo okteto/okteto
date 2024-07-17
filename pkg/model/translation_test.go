@@ -71,7 +71,7 @@ func TestDevToTranslationRule(t *testing.T) {
 
 	dev := manifest.Dev["web"]
 
-	rule1 := dev.ToTranslationRule(dev, "n", false)
+	rule1 := dev.ToTranslationRule(dev, "n", "username", false)
 	rule1OK := &TranslationRule{
 		Marker:            OktetoBinImageTag,
 		OktetoBinImageTag: OktetoBinImageTag,
@@ -175,7 +175,7 @@ func TestDevToTranslationRule(t *testing.T) {
 	}
 
 	dev2 := dev.Services[0]
-	rule2 := dev2.ToTranslationRule(dev, "n", false)
+	rule2 := dev2.ToTranslationRule(dev, "n", "username", false)
 	rule2OK := &TranslationRule{
 		Container:       "dev",
 		Image:           "worker:latest",
@@ -247,7 +247,7 @@ func TestDevToTranslationRuleInitContainer(t *testing.T) {
 
 	dev := manifest.Dev["web"]
 
-	rule := dev.ToTranslationRule(dev, "n", false)
+	rule := dev.ToTranslationRule(dev, "n", "username", false)
 	ruleOK := &TranslationRule{
 		Marker:            OktetoBinImageTag,
 		OktetoBinImageTag: "image",
@@ -341,7 +341,7 @@ func TestDevToTranslationDebugEnabled(t *testing.T) {
 
 	dev := manifest.Dev["web"]
 
-	rule := dev.ToTranslationRule(dev, "n", false)
+	rule := dev.ToTranslationRule(dev, "n", "username", false)
 	ruleOK := &TranslationRule{
 		Marker:            OktetoBinImageTag,
 		OktetoBinImageTag: OktetoBinImageTag,

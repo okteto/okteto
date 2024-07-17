@@ -14,12 +14,12 @@
 package preview
 
 import (
-	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/validator"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 )
 
