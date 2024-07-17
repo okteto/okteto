@@ -57,6 +57,8 @@ func destroy(ctx context.Context) *cobra.Command {
 		Use:   "destroy",
 		Short: "Destroy an okteto pipeline",
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#destroy-1"),
+		Example: `To run the destroy without the Okteto CLI waiting for its completion, use the '--wait=false' flag:
+okteto pipeline destroy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctxOptions := &contextCMD.Options{
 				Namespace: flags.namespace,

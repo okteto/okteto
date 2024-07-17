@@ -89,6 +89,8 @@ func deploy(ctx context.Context, fs afero.Fs) *cobra.Command {
 		Use:   "deploy",
 		Short: "Deploy an okteto pipeline",
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#deploy-1"),
+		Example: `To run the deploy without the Okteto CLI waiting for its completion, use the '--wait=false' flag:
+okteto pipeline deploy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if flags.file != "" {
 				// check that the manifest file exists
