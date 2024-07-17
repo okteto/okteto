@@ -1,6 +1,6 @@
 # syntax = docker/dockerfile:experimental
 
-ARG KUBECTL_VERSION=1.29.4
+ARG KUBECTL_VERSION=1.29.7
 ARG HELM_VERSION=3.14.4
 ARG KUSTOMIZE_VERSION=5.4.1
 FROM golang:1.22-bookworm as golang-builder
