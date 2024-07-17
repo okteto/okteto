@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -109,7 +110,7 @@ func GetTranslations(ctx context.Context, namespace string, dev *model.Dev, app 
 		MainDev: dev,
 		Dev:     dev,
 		App:     app,
-		Rules:   []*model.TranslationRule{dev.ToTranslationRule(dev, namespace, reset)},
+		Rules:   []*model.TranslationRule{dev.ToTranslationRule(dev, namespace, okteto.GetContext().Username, reset)},
 	}
 	result := map[string]*Translation{app.ObjectMeta().Name: mainTr}
 
@@ -140,7 +141,7 @@ func loadServiceTranslations(ctx context.Context, namespace string, dev *model.D
 			return err
 		}
 
-		rule := s.ToTranslationRule(dev, namespace, reset)
+		rule := s.ToTranslationRule(dev, okteto.GetContext().Username, okteto.GetContext().Username, reset)
 
 		if _, ok := result[app.ObjectMeta().Name]; ok {
 			result[app.ObjectMeta().Name].Rules = append(result[app.ObjectMeta().Name].Rules, rule)

@@ -451,7 +451,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rule := tt.manifest.ToTranslationRule(tt.manifest, "n", false)
+			rule := tt.manifest.ToTranslationRule(tt.manifest, "n", "username", false)
 			assert.Equal(t, tt.expected, rule.Environment)
 		})
 	}
@@ -564,7 +564,7 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 
 		dev := manifest.Dev[test.name]
 
-		rule := dev.ToTranslationRule(dev, "n", false)
+		rule := dev.ToTranslationRule(dev, "n", "username", false)
 		marshalled, err := yaml.Marshal(rule.SecurityContext)
 		assert.NoError(t, err)
 		marshalledOK, err := yaml.Marshal(test.translated)

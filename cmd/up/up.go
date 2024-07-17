@@ -411,9 +411,6 @@ func loadManifestOverrides(dev *model.Dev, upOptions *Options, varManager *vars.
 		}
 	}
 
-	dev.Username = okteto.GetContext().Username
-	dev.RegistryURL = okteto.GetContext().Registry
-
 	return nil
 }
 

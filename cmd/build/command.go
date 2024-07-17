@@ -131,6 +131,7 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 				}
 			}
 
+			analytics.TrackBuildWithManifestVsDockerfile(builder.IsV1())
 			return builder.Build(ctx, options)
 		},
 	}
@@ -147,7 +148,6 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 	cmd.Flags().StringArrayVar(&options.Secrets, "secret", nil, "secret files exposed to the build. Format: id=mysecret,src=/local/secret")
 	cmd.Flags().StringVar(&options.Platform, "platform", "", "set platform if server is multi-platform capable")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "namespace against which the image will be consumed. Default is the one defined at okteto context or okteto manifest")
-	cmd.Flags().BoolVarP(&options.BuildToGlobal, "global", "", false, "push the image to the global registry")
 	return cmd
 }
 
