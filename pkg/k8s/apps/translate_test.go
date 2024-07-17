@@ -56,12 +56,12 @@ dev:
   web:
     container: dev
     image: web:latest
-    annotations:
-      key1: value1
     command: ["./run_web.sh"]
     metadata:
       labels:
         app: web
+      annotations:
+        key1: value1
     workdir: /app
     securityContext:
       runAsUser: 100
@@ -103,8 +103,9 @@ dev:
         container: dev
         image: worker:latest
         command: ["./run_worker.sh"]
-        annotations:
-          key2: value2
+        metadata:
+          annotations:
+            key2: value2
         sync:
           - worker:/src`, file.Name()))
 
@@ -121,7 +122,7 @@ dev:
 	d1.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RollingUpdateDeploymentStrategyType,
 	}
-	rule1 := dev1.ToTranslationRule(dev1, "n", false)
+	rule1 := dev1.ToTranslationRule(dev1, "n", "cindy", false)
 	tr1 := &Translation{
 		MainDev: dev1,
 		Dev:     dev1,
@@ -292,6 +293,7 @@ dev:
 						Name:  "OKTETO_NAME",
 						Value: "web",
 					},
+					{Name: "OKTETO_USERNAME", Value: "cindy"},
 					{Name: "HISTSIZE", Value: "10000000"},
 					{Name: "HISTFILESIZE", Value: "10000000"},
 					{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
@@ -446,9 +448,6 @@ dev:
 	marshalledDevD1OK, err := yaml.Marshal(dDevPod1OK)
 	assert.NoError(t, err)
 	assert.Equal(t, string(marshalledDevD1), string(marshalledDevD1OK))
-	//if !bytes.Equal(marshalledDevD1, marshalledDevD1OK) {
-	//	t.Fatalf("Wrong dev d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD1), string(marshalledDevD1OK))
-	//}
 
 	require.NoError(t, tr1.DevModeOff())
 
@@ -625,12 +624,12 @@ dev:
     web:
         container: dev
         image: web:latest
-        annotations:
-          key1: value1
         command: ["./run_web.sh"]
         metadata:
           labels:
             app: web
+          annotations:
+            key1: value1
         workdir: /app
         securityContext:
           runAsUser: 100
@@ -671,8 +670,9 @@ dev:
             container: dev
             image: worker:latest
             command: ["./run_worker.sh"]
-            annotations:
-              key2: value2
+            metadata:
+              annotations:
+                key2: value2
             sync:
                - worker:/src`, file.Name()))
 
@@ -742,12 +742,12 @@ dev:
     web:
         container: dev
         image: web:latest
-        annotations:
-          key1: value1
         command: ["./run_web.sh"]
         metadata:
           labels:
             app: web
+          annotations:
+            key1: value1
         workdir: /app
         securityContext:
           runAsUser: 100
@@ -789,8 +789,9 @@ dev:
             container: dev
             image: worker:latest
             command: ["./run_worker.sh"]
-            annotations:
-              key2: value2
+            metadata:
+              annotations:
+                key2: value2
             sync:
                - worker:/src`, file.Name()))
 
@@ -865,7 +866,7 @@ func Test_translateWithoutVolumes(t *testing.T) {
 	dev := manifest.Dev["web"]
 
 	d := deployments.Sandbox(dev, "n")
-	rule := dev.ToTranslationRule(dev, "n", true)
+	rule := dev.ToTranslationRule(dev, "n", "cindy", true)
 	tr := &Translation{
 		MainDev: dev,
 		Dev:     dev,
@@ -945,6 +946,7 @@ func Test_translateWithoutVolumes(t *testing.T) {
 						Name:  "OKTETO_NAME",
 						Value: "web",
 					},
+					{Name: "OKTETO_USERNAME", Value: "cindy"},
 				},
 				VolumeMounts: []apiv1.VolumeMount{
 					{
@@ -1408,10 +1410,9 @@ func Test_translateMultipleEnvVars(t *testing.T) {
 	manifest, err := model.Read(manifestBytes)
 	require.NoError(t, err)
 	dev := manifest.Dev["web"]
-	dev.Username = "cindy"
 
 	d := deployments.Sandbox(dev, "n")
-	rule := dev.ToTranslationRule(dev, "n", false)
+	rule := dev.ToTranslationRule(dev, "n", "cindy", false)
 	tr := &Translation{
 		MainDev: dev,
 		Dev:     dev,
@@ -1478,8 +1479,9 @@ func Test_translateSfsWithVolumes(t *testing.T) {
         image: web:latest
         command: ["./run_web.sh"]
         workdir: /app
-        annotations:
-          key1: value1
+        metadata:
+          annotations:
+            key1: value1
         tolerations:
         - key: nvidia/gpu
           operator: Exists
@@ -1518,8 +1520,9 @@ func Test_translateSfsWithVolumes(t *testing.T) {
         services:
           - name: worker
             image: worker:latest
-            annotations:
-              key2: value2
+            metadata:
+              annotations:
+                key2: value2
             command: ["./run_worker.sh"]
             sync:
                - worker:/src`, file.Name()))
@@ -1533,7 +1536,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	delete(sfs1.Annotations, model.OktetoAutoCreateAnnotation)
 	sfs1.Spec.Replicas = pointer.Int32(2)
 
-	rule1 := dev1.ToTranslationRule(dev1, "n", false)
+	rule1 := dev1.ToTranslationRule(dev1, "n", "cindy", false)
 	tr1 := &Translation{
 		MainDev: dev1,
 		Dev:     dev1,
@@ -1704,6 +1707,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 						Name:  "OKTETO_NAME",
 						Value: "web",
 					},
+					{Name: "OKTETO_USERNAME", Value: "cindy"},
 					{Name: "HISTSIZE", Value: "10000000"},
 					{Name: "HISTFILESIZE", Value: "10000000"},
 					{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},

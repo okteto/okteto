@@ -132,10 +132,10 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev, devPath st
 		}
 		dev.Metadata.Annotations[model.OktetoRestartAnnotation] = restartUUID
 		for _, s := range dev.Services {
-			if s.Annotations == nil {
-				s.Annotations = map[string]string{}
+			if s.Metadata.Annotations == nil {
+				s.Metadata.Annotations = map[string]string{}
 			}
-			s.Annotations[model.OktetoRestartAnnotation] = restartUUID
+			s.Metadata.Annotations[model.OktetoRestartAnnotation] = restartUUID
 		}
 	}
 

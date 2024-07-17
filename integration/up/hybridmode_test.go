@@ -51,8 +51,6 @@ dev:
         e2e/test-1: annotation-1
       labels:
         custom.label/e2e: "true"
-    annotations:
-      deprecated.annotation.format: deprecated-annotation-1
 `
 	hybridCompose = `services:
  svc:
@@ -150,7 +148,6 @@ func TestUpUsingHybridMode(t *testing.T) {
 
 	require.Equal(t, constants.OktetoHybridModeFieldValue, deploy.Annotations[constants.OktetoDevModeAnnotation])
 	require.Equal(t, "annotation-1", deploy.Annotations["e2e/test-1"])
-	require.Equal(t, "deprecated-annotation-1", deploy.Annotations["deprecated.annotation.format"])
 	require.Equal(t, "true", pods.Items[0].Labels["custom.label/e2e"])
 
 	// Test okteto down command

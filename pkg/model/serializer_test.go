@@ -532,14 +532,9 @@ func TestDevMarshalling(t *testing.T) {
 			expected: "probes:\n  liveness: true\nname: name-test\n",
 		},
 		{
-			name:     "healtcheck-all-true-by-healthchecks",
-			dev:      Dev{Name: "name-test", Healthchecks: true},
-			expected: "name: name-test\nhealthchecks: true\n",
-		},
-		{
 			name:     "healtcheck-all-true-by-probes",
 			dev:      Dev{Name: "name-test", Probes: &Probes{Liveness: true, Readiness: true, Startup: true}},
-			expected: "name: name-test\nhealthchecks: true\n",
+			expected: "probes: true\nname: name-test\n",
 		},
 		{
 			name:     "pv-enabled-not-show-after-marshall",
@@ -1034,188 +1029,189 @@ func TestManifestUnmarshalling(t *testing.T) {
 		manifest        []byte
 		isErrorExpected bool
 	}{
-		// 		{
-		// 			name: "only dev with service unsupported field",
-		// 			manifest: []byte(`
-		// sync:
-		//   - app:/app
-		// services:
-		//   - name: svc
-		//     autocreate: true`),
-		// 			expected:        nil,
-		// 			isErrorExpected: true,
-		// 		},
-		// 		{
-		// 			name: "manifest with namespace and context",
-		// 			manifest: []byte(`
-		// namespace: test
-		// context: context-to-use
-		// deploy:
-		//   - okteto stack deploy`),
-		// 			expected: &Manifest{
-		// 				Namespace: "test",
-		// 				Build:     map[string]*build.Info{},
-		// 				Deploy: &DeployInfo{
-		// 					Commands: []DeployCommand{
-		// 						{
-		// 							Name:    "okteto stack deploy",
-		// 							Command: "okteto stack deploy",
-		// 						},
-		// 					},
-		// 				},
-		// 				Destroy:      &DestroyInfo{},
-		// 				Dev:          map[string]*Dev{},
-		// 				Dependencies: map[string]*deps.Dependency{},
-		// 				External:     externalresource.Section{},
-		// 				Context:      "context-to-use",
-		// 				Type:         OktetoManifestType,
-		// 				Fs:           afero.NewOsFs(),
-		// 			},
-		// 			isErrorExpected: false,
-		// 		},
-		// 		{
-		// 			name: "dev manifest with dev sanitized and deploy",
-		// 			manifest: []byte(`
-		// deploy:
-		//   - okteto stack deploy
-		// dev:
-		//   test-1:
-		//     sync:
-		//     - app:/app
-		//   test_2:
-		//     sync:
-		//     - app:/app
-		// `),
-		// 			expected: &Manifest{
-		// 				Type:  OktetoManifestType,
-		// 				Build: map[string]*build.Info{},
-		// 				Deploy: &DeployInfo{
-		// 					Commands: []DeployCommand{
-		// 						{
-		// 							Name:    "okteto stack deploy",
-		// 							Command: "okteto stack deploy",
-		// 						},
-		// 					},
-		// 				},
-		// 				Destroy:      &DestroyInfo{},
-		// 				Dependencies: map[string]*deps.Dependency{},
-		// 				External:     externalresource.Section{},
-		// 				Dev: map[string]*Dev{
-		// 					"test-1": {
-		// 						Mode: constants.OktetoSyncModeFieldValue,
-		// 						Name: "test-1",
-		// 						Sync: Sync{
-		// 							RescanInterval: 300,
-		// 							Compression:    true,
-		// 							Folders: []SyncFolder{
-		// 								{
-		// 									LocalPath:  "app",
-		// 									RemotePath: "/app",
-		// 								},
-		// 							},
-		// 						},
-		// 						Forward:         []forward.Forward{},
-		// 						Selector:        Selector{},
-		// 						EmptyImage:      true,
-		// 						ImagePullPolicy: v1.PullAlways,
-		// 						Image:           "",
-		// 						Interface:       Localhost,
-		// 						PersistentVolumeInfo: &PersistentVolumeInfo{
-		// 							Enabled: true,
-		// 						},
-		// 						Secrets: make([]Secret, 0),
-		// 						Command: Command{Values: []string{"sh"}},
-		// 						Probes: &Probes{
-		// 							Liveness:  false,
-		// 							Readiness: false,
-		// 							Startup:   false,
-		// 						},
-		// 						Lifecycle: &Lifecycle{
-		// 							PostStart: false,
-		// 							PostStop:  false,
-		// 						},
-		// 						SecurityContext: &SecurityContext{
-		// 							RunAsUser:    pointer.Int64(0),
-		// 							RunAsGroup:   pointer.Int64(0),
-		// 							RunAsNonRoot: nil,
-		// 							FSGroup:      pointer.Int64(0),
-		// 						},
-		// 						SSHServerPort: 2222,
-		// 						Services:      []*Dev{},
-		// 						InitContainer: InitContainer{
-		// 							Image: OktetoBinImageTag,
-		// 						},
-		// 						Timeout: Timeout{
-		// 							Resources: 120 * time.Second,
-		// 							Default:   60 * time.Second,
-		// 						},
-		// 						Metadata: &Metadata{
-		// 							Labels:      Labels{},
-		// 							Annotations: Annotations{},
-		// 						},
-		// 						Environment: env.Environment{},
-		// 						Volumes:     []Volume{},
-		// 					},
-		// 					"test-2": {
-		// 						Name: "test-2",
-		// 						Sync: Sync{
-		// 							RescanInterval: 300,
-		// 							Compression:    true,
-		// 							Folders: []SyncFolder{
-		// 								{
-		// 									LocalPath:  "app",
-		// 									RemotePath: "/app",
-		// 								},
-		// 							},
-		// 						},
-		// 						Forward:         []forward.Forward{},
-		// 						Selector:        Selector{},
-		// 						EmptyImage:      true,
-		// 						ImagePullPolicy: v1.PullAlways,
-		// 						Image:           "",
-		// 						Interface:       Localhost,
-		// 						PersistentVolumeInfo: &PersistentVolumeInfo{
-		// 							Enabled: true,
-		// 						},
-		// 						Secrets: make([]Secret, 0),
-		// 						Command: Command{Values: []string{"sh"}},
-		// 						Probes: &Probes{
-		// 							Liveness:  false,
-		// 							Readiness: false,
-		// 							Startup:   false,
-		// 						},
-		// 						Lifecycle: &Lifecycle{
-		// 							PostStart: false,
-		// 							PostStop:  false,
-		// 						},
-		// 						SecurityContext: &SecurityContext{
-		// 							RunAsUser:    pointer.Int64(0),
-		// 							RunAsGroup:   pointer.Int64(0),
-		// 							RunAsNonRoot: nil,
-		// 							FSGroup:      pointer.Int64(0),
-		// 						},
-		// 						SSHServerPort: 2222,
-		// 						Services:      []*Dev{},
-		// 						InitContainer: InitContainer{
-		// 							Image: OktetoBinImageTag,
-		// 						},
-		// 						Timeout: Timeout{
-		// 							Resources: 120 * time.Second,
-		// 							Default:   60 * time.Second,
-		// 						},
-		// 						Metadata: &Metadata{
-		// 							Labels:      Labels{},
-		// 							Annotations: Annotations{},
-		// 						},
-		// 						Environment: env.Environment{},
-		// 						Volumes:     []Volume{},
-		// 						Mode:        constants.OktetoSyncModeFieldValue,
-		// 					},
-		// 				},
-		// 				Fs: afero.NewOsFs(),
-		// 			},
-		// 			isErrorExpected: false,
-		// 		},
+		{
+			name: "only dev with service unsupported field",
+			manifest: []byte(`
+sync:
+- app:/app
+services:
+- name: svc
+  autocreate: true`),
+			expected:        nil,
+			isErrorExpected: true,
+		},
+		{
+			name: "manifest with namespace and context",
+			manifest: []byte(`
+namespace: test
+context: context-to-use
+deploy:
+- okteto stack deploy`),
+			expected: &Manifest{
+				Build: map[string]*build.Info{},
+				Deploy: &DeployInfo{
+					Commands: []DeployCommand{
+						{
+							Name:    "okteto stack deploy",
+							Command: "okteto stack deploy",
+						},
+					},
+				},
+				Destroy:       &DestroyInfo{},
+				Dev:           map[string]*Dev{},
+				Dependencies:  map[string]*deps.Dependency{},
+				External:      externalresource.Section{},
+				GlobalForward: []forward.GlobalForward{},
+				Test:          ManifestTests{},
+				Type:          OktetoManifestType,
+				Fs:            afero.NewOsFs(),
+			},
+			isErrorExpected: false,
+		},
+		{
+			name: "dev manifest with dev sanitized and deploy",
+			manifest: []byte(`
+deploy:
+- okteto stack deploy
+dev:
+  test-1:
+    sync:
+    - app:/app
+  test_2:
+    sync:
+    - app:/app
+`),
+			expected: &Manifest{
+				Type:  OktetoManifestType,
+				Build: map[string]*build.Info{},
+				Deploy: &DeployInfo{
+					Commands: []DeployCommand{
+						{
+							Name:    "okteto stack deploy",
+							Command: "okteto stack deploy",
+						},
+					},
+				},
+				Destroy:       &DestroyInfo{},
+				Dependencies:  map[string]*deps.Dependency{},
+				GlobalForward: []forward.GlobalForward{},
+				Test:          ManifestTests{},
+				External:      externalresource.Section{},
+				Dev: map[string]*Dev{
+					"test-1": {
+						Mode: constants.OktetoSyncModeFieldValue,
+						Name: "test-1",
+						Sync: Sync{
+							RescanInterval: 300,
+							Compression:    true,
+							Folders: []SyncFolder{
+								{
+									LocalPath:  "app",
+									RemotePath: "/app",
+								},
+							},
+						},
+						Forward:         []forward.Forward{},
+						Selector:        Selector{},
+						ImagePullPolicy: v1.PullAlways,
+						Image:           "",
+						Interface:       Localhost,
+						PersistentVolumeInfo: &PersistentVolumeInfo{
+							Enabled: true,
+						},
+						Secrets: make([]Secret, 0),
+						Command: Command{Values: []string{"sh"}},
+						Probes: &Probes{
+							Liveness:  false,
+							Readiness: false,
+							Startup:   false,
+						},
+						Lifecycle: &Lifecycle{
+							PostStart: false,
+							PostStop:  false,
+						},
+						SecurityContext: &SecurityContext{
+							RunAsUser:    pointer.Int64(0),
+							RunAsGroup:   pointer.Int64(0),
+							RunAsNonRoot: nil,
+							FSGroup:      pointer.Int64(0),
+						},
+						SSHServerPort: 2222,
+						Services:      []*Dev{},
+						InitContainer: InitContainer{
+							Image: OktetoBinImageTag,
+						},
+						Timeout: Timeout{
+							Resources: 120 * time.Second,
+							Default:   60 * time.Second,
+						},
+						Metadata: &Metadata{
+							Labels:      Labels{},
+							Annotations: Annotations{},
+						},
+						Environment: env.Environment{},
+						Volumes:     []Volume{},
+					},
+					"test-2": {
+						Name: "test-2",
+						Sync: Sync{
+							RescanInterval: 300,
+							Compression:    true,
+							Folders: []SyncFolder{
+								{
+									LocalPath:  "app",
+									RemotePath: "/app",
+								},
+							},
+						},
+						Forward:         []forward.Forward{},
+						Selector:        Selector{},
+						ImagePullPolicy: v1.PullAlways,
+						Image:           "",
+						Interface:       Localhost,
+						PersistentVolumeInfo: &PersistentVolumeInfo{
+							Enabled: true,
+						},
+						Secrets: make([]Secret, 0),
+						Command: Command{Values: []string{"sh"}},
+						Probes: &Probes{
+							Liveness:  false,
+							Readiness: false,
+							Startup:   false,
+						},
+						Lifecycle: &Lifecycle{
+							PostStart: false,
+							PostStop:  false,
+						},
+						SecurityContext: &SecurityContext{
+							RunAsUser:    pointer.Int64(0),
+							RunAsGroup:   pointer.Int64(0),
+							RunAsNonRoot: nil,
+							FSGroup:      pointer.Int64(0),
+						},
+						SSHServerPort: 2222,
+						Services:      []*Dev{},
+						InitContainer: InitContainer{
+							Image: OktetoBinImageTag,
+						},
+						Timeout: Timeout{
+							Resources: 120 * time.Second,
+							Default:   60 * time.Second,
+						},
+						Metadata: &Metadata{
+							Labels:      Labels{},
+							Annotations: Annotations{},
+						},
+						Environment: env.Environment{},
+						Volumes:     []Volume{},
+						Mode:        constants.OktetoSyncModeFieldValue,
+					},
+				},
+				Fs: afero.NewOsFs(),
+			},
+
+			isErrorExpected: false,
+		},
 		{
 			name: "only dev",
 			manifest: []byte(`dev:
@@ -1246,7 +1242,6 @@ func TestManifestUnmarshalling(t *testing.T) {
 						},
 						Forward:         []forward.Forward{},
 						Selector:        Selector{},
-						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
 						Image:           "",
 						Interface:       Localhost,
@@ -1324,7 +1319,6 @@ func TestManifestUnmarshalling(t *testing.T) {
 						},
 						Forward:         []forward.Forward{},
 						Selector:        Selector{},
-						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
 						Image:           "",
 						Interface:       Localhost,
@@ -1352,9 +1346,7 @@ func TestManifestUnmarshalling(t *testing.T) {
 						Services: []*Dev{
 							{
 								Name:            "svc",
-								Annotations:     Annotations{},
 								Selector:        Selector{},
-								EmptyImage:      true,
 								Image:           "",
 								ImagePullPolicy: v1.PullAlways,
 								Secrets:         []Secret{},
@@ -1450,7 +1442,6 @@ dev:
 						},
 						Forward:         []forward.Forward{},
 						Selector:        Selector{},
-						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
 						Image:           "",
 						Interface:       Localhost,
@@ -1531,7 +1522,6 @@ dev:
 						},
 						Forward:         []forward.Forward{},
 						Selector:        Selector{},
-						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
 						Image:           "",
 						Interface:       Localhost,
@@ -1586,7 +1576,6 @@ dev:
 						},
 						Forward:         []forward.Forward{},
 						Selector:        Selector{},
-						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
 						Image:           "",
 						Interface:       Localhost,
