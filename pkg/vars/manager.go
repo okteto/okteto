@@ -81,6 +81,32 @@ func (m *Manager) Lookup(key string) (string, bool) {
 	return "", false
 }
 
+// AddBuiltInVar allows to add a single variable to the manager with priority OktetoVariableTypeBuiltIn.
+func (m *Manager) AddBuiltInVar(key, value string) {
+	m.addVar(key, value, OktetoVariableTypeBuiltIn)
+}
+
+// addVar allows to add a single variable to the manager. If other variables with the same priority already exists
+// the new variable will be added to the same group. If no group with the given priority exists, a new group will be created.
+func (m *Manager) addVar(key, value string, p Priority) {
+	m.m.MaskVar(value)
+
+	v := Var{Name: key, Value: value}
+
+	for i, g := range m.groups {
+		if g.Priority == p {
+			m.groups[i].Vars = append(m.groups[i].Vars, v)
+			return
+		}
+	}
+
+	m.AddGroup(Group{
+		Vars:     []Var{v},
+		Priority: p,
+	})
+}
+
+// AddGroup allows to add a group of variables to the manager. The variables of the group should share the same priority.
 func (m *Manager) AddGroup(g Group) {
 	if config[g.Priority].Masked {
 		for _, v := range g.Vars {

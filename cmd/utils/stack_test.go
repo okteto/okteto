@@ -41,7 +41,14 @@ const (
 `
 )
 
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+
 func Test_multipleStack(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	dir := t.TempDir()
 	log.Printf("created tempdir: %s", dir)
 	t.Setenv("OKTETO_SUPPORT_STACKS_ENABLED", "true")
@@ -85,7 +92,17 @@ func Test_multipleStack(t *testing.T) {
 		t.Fatalf("Expected %v but got %v", svcResult.Image, svc.Image)
 	}
 
-	t.Setenv("OKTETO_BUILD_APP_IMAGE", "test")
+	builtInVars := vars.Group{
+		Priority: vars.OktetoVariableTypeBuiltIn,
+		Vars: []vars.Var{
+			{
+				Name:  "OKTETO_BUILD_APP_IMAGE",
+				Value: "test",
+			},
+		},
+	}
+	vars.GlobalVarManager.AddGroup(builtInVars)
+
 	svcResult.Image = "test"
 
 	stack, err = model.LoadStack("", paths, true, afero.NewMemMapFs())

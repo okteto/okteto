@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 
 	"github.com/compose-spec/godotenv"
@@ -291,9 +290,12 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 	okteto.GetContext().IsTrial = clusterMetadata.IsTrialLicense
 	okteto.GetContext().CompanyName = clusterMetadata.CompanyName
 
-	exportPlatformVariablesToEnv(userContext.PlatformVariables)
+	c.varManager.AddGroup(vars.Group{
+		Vars:     userContext.PlatformVariables,
+		Priority: vars.OktetoVariableTypeAdminAndUser,
+	})
 
-	os.Setenv(model.OktetoUserNameEnvVar, okteto.GetContext().Username)
+	c.varManager.AddBuiltInVar(model.OktetoUserNameEnvVar, okteto.GetContext().Username)
 
 	return nil
 }

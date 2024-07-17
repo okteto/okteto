@@ -16,7 +16,6 @@ package context
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -26,7 +25,6 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -148,7 +146,7 @@ func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 		return err
 	}
 
-	os.Setenv(model.OktetoNamespaceEnvVar, okteto.GetContext().Namespace)
+	c.varManager.AddBuiltInVar(model.OktetoNamespaceEnvVar, okteto.GetContext().Namespace)
 
 	if ctxOptions.Show {
 		oktetoLog.Information("Using %s @ %s as context", okteto.GetContext().Namespace, okteto.RemoveSchema(okteto.GetContext().Name))
@@ -232,19 +230,4 @@ func getContext(ctxOptions *Options) (string, error) {
 	}
 
 	return oktetoContext, nil
-}
-
-func exportPlatformVariablesToEnv(variables []vars.Var) {
-	for _, v := range variables {
-		value, exists := os.LookupEnv(v.Name)
-		if exists {
-			if value != v.Value {
-				oktetoLog.Warning("Okteto Variable '%s' is overridden by a local environment variable with the same name", v.Name)
-			}
-			oktetoLog.AddMaskedWord(value)
-			continue
-		}
-		os.Setenv(v.Name, v.Value)
-		oktetoLog.AddMaskedWord(v.Value)
-	}
 }

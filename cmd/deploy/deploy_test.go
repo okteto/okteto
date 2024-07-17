@@ -314,6 +314,8 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 
 func TestCreateConfigMapWithBuildError(t *testing.T) {
 	varManager := vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = varManager
+
 	fakeNamespace := "test"
 	fakeK8sClientProvider := test.NewFakeK8sProvider()
 	opts := &Options{

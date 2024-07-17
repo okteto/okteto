@@ -14,6 +14,7 @@
 package preview
 
 import (
+	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
 	"github.com/go-git/go-git/v5"
@@ -22,7 +23,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+
 func Test_optionsSetup(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	ctxUsername := "username"
 	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
