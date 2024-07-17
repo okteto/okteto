@@ -193,6 +193,7 @@ func TestDeployRemote(t *testing.T) {
 	}
 
 	expectedParams := &remote.Params{
+		CacheNamespace:      "test",
 		BaseImage:           manifest.Deploy.Image,
 		ManifestPathFlag:    "/path/to/manifest",
 		TemplateName:        templateName,
@@ -253,6 +254,7 @@ func TestDeployRemoteWithError(t *testing.T) {
 	}
 
 	expectedParams := &remote.Params{
+		CacheNamespace:      "test",
 		BaseImage:           manifest.Deploy.Image,
 		ManifestPathFlag:    "/path/to/manifest",
 		TemplateName:        templateName,

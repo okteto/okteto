@@ -93,6 +93,7 @@ ENV {{$key}} {{$val}}
 ARG {{ .GitCommitArgName }}
 ARG {{ .GitBranchArgName }}
 ARG {{ .InvalidateCacheArgName }}
+ARG {{ .CacheNamespaceArgName }}
 
 RUN echo "${{ .InvalidateCacheArgName }}" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
@@ -153,10 +154,12 @@ type Params struct {
 	// to a random value which essentially means no-cache. Setting this to a
 	// static or known value will reuse the build cache
 	CacheInvalidationKey string
-	TemplateName         string
-	DockerfileName       string
-	KnownHostsPath       string
-	BaseImage            string
+	// CacheNamespace is used to allow multiple builds to run concurrently without interfering with each other cache
+	CacheNamespace string
+	TemplateName   string
+	DockerfileName string
+	KnownHostsPath string
+	BaseImage      string
 	// ContextAbsolutePathOverride is the absolute path for the build context. Optional.
 	// If this values is not defined it will default to the folder location of the
 	// okteto manifest which is resolved through params.ManifestPathFlag
@@ -197,6 +200,7 @@ type dockerfileTemplateProperties struct {
 	GitCommitArgName         string
 	GitBranchArgName         string
 	InvalidateCacheArgName   string
+	CacheNamespaceArgName    string
 	CommandFlags             string
 	OktetoDeployable         string
 	GitHubRepositoryArgName  string
@@ -316,6 +320,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		fmt.Sprintf("%s=%s", constants.OktetoGitBranchEnvVar, os.Getenv(constants.OktetoGitBranchEnvVar)),
 		fmt.Sprintf("%s=%s", constants.OktetoTlsCertBase64EnvVar, base64.StdEncoding.EncodeToString(sc.Certificate)),
 		fmt.Sprintf("%s=%s", constants.OktetoInvalidateCacheEnvVar, cacheKey),
+		fmt.Sprintf("%s=%s", constants.OktetoCacheNamespaceEnvVar, params.CacheNamespace),
 		fmt.Sprintf("%s=%s", constants.OktetoDeployableEnvVar, base64.StdEncoding.EncodeToString(b)),
 		fmt.Sprintf("%s=%s", model.GithubRepositoryEnvVar, os.Getenv(model.GithubRepositoryEnvVar)),
 		fmt.Sprintf("%s=%s", model.OktetoRegistryURLEnvVar, os.Getenv(model.OktetoRegistryURLEnvVar)),
@@ -406,6 +411,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		GitCommitArgName:         constants.OktetoGitCommitEnvVar,
 		GitBranchArgName:         constants.OktetoGitBranchEnvVar,
 		InvalidateCacheArgName:   constants.OktetoInvalidateCacheEnvVar,
+		CacheNamespaceArgName:    constants.OktetoCacheNamespaceEnvVar,
 		CommandFlags:             strings.Join(params.CommandFlags, " "),
 		OktetoDeployable:         constants.OktetoDeployableEnvVar,
 		GitHubRepositoryArgName:  model.GithubRepositoryEnvVar,

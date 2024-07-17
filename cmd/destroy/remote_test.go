@@ -128,6 +128,7 @@ func TestDestroyRemote(t *testing.T) {
 	}
 
 	expectedParams := &remote.Params{
+		CacheNamespace:   "test",
 		BaseImage:        manifest.Destroy.Image,
 		ManifestPathFlag: "/path/to/manifest",
 		TemplateName:     templateName,
@@ -177,6 +178,7 @@ func TestDestroyRemoteWithError(t *testing.T) {
 	}
 
 	expectedParams := &remote.Params{
+		CacheNamespace:   "test",
 		BaseImage:        manifest.Destroy.Image,
 		ManifestPathFlag: "/path/to/manifest",
 		TemplateName:     templateName,

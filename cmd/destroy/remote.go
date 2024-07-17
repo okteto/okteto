@@ -113,6 +113,7 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 	}
 
 	runParams := remote.Params{
+		CacheNamespace:            opts.Name,
 		BaseImage:                 baseImage,
 		ManifestPathFlag:          opts.ManifestPathFlag,
 		TemplateName:              templateName,
