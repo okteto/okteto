@@ -123,6 +123,12 @@ okteto exec my-pod`,
 				return fmt.Errorf("failed to load manifest: %w", err)
 			}
 
+			if !okteto.IsOkteto() {
+				if err := manifest.ValidateForCLIOnly(); err != nil {
+					return err
+				}
+			}
+
 			argParser := oargs.NewDevCommandArgParser(oargs.NewDevModeOnLister(e.k8sClientProvider), e.ioCtrl, true)
 			argsLenAtDash := cmd.ArgsLenAtDash()
 

@@ -179,6 +179,12 @@ okteto up my-svc -- echo this is a test
 				}
 			}
 
+			if !okteto.IsOkteto() {
+				if err := oktetoManifest.ValidateForCLIOnly(); err != nil {
+					return err
+				}
+			}
+
 			upMeta.OktetoContextConfig(time.Since(startOkContextConfig))
 			if okteto.IsOkteto() {
 				create, err := utils.ShouldCreateNamespace(ctx, okteto.GetContext().Namespace)

@@ -1206,3 +1206,68 @@ func getBuildContextForComposeWithVolumeMounts(m *Manifest) (string, error) {
 
 	return context, nil
 }
+
+func (di DeployInfo) IsEmpty() bool {
+	if len(di.Commands) > 0 {
+		return false
+	}
+	if di.ComposeSection != nil && di.ComposeSection.Stack != nil {
+		return false
+	}
+	if di.Divert != nil {
+		return false
+	}
+	if di.Endpoints != nil {
+		return false
+	}
+	return true
+}
+
+func (di DestroyInfo) IsEmpty() bool {
+	if di.Image != "" {
+		return false
+	}
+	if len(di.Commands) > 0 {
+		return false
+	}
+	return true
+}
+
+func (mt ManifestTests) IsEmpty() bool {
+	return len(mt) == 0
+}
+
+func (m *Manifest) ValidateForCLIOnly() error {
+	invalidFields := []string{}
+	if !(m.Build == nil || m.Build.IsEmpty()) {
+		invalidFields = append(invalidFields, "build")
+	}
+	if !(m.Dependencies == nil || m.Dependencies.IsEmpty()) {
+		invalidFields = append(invalidFields, "dependencies")
+	}
+	if !(m.Deploy == nil || m.Deploy.IsEmpty()) {
+		invalidFields = append(invalidFields, "deploy")
+	}
+	if !(m.Destroy == nil || m.Destroy.IsEmpty()) {
+		invalidFields = append(invalidFields, "destroy")
+	}
+	if !(m.External == nil || m.External.IsEmpty()) {
+		invalidFields = append(invalidFields, "external")
+	}
+	if !(m.Test == nil || m.Test.IsEmpty()) {
+		invalidFields = append(invalidFields, "test")
+	}
+	if m.Icon != "" {
+		invalidFields = append(invalidFields, "icon")
+	}
+	if m.Name != "" {
+		invalidFields = append(invalidFields, "name")
+	}
+	if len(invalidFields) > 0 {
+		return oktetoErrors.UserError{
+			E:    fmt.Errorf("the following fields are not allowed in this context: %s", strings.Join(invalidFields, ", ")),
+			Hint: "To install Okteto platform on your cluster check: https://www.okteto.com/docs/get-started/install/",
+		}
+	}
+	return nil
+}

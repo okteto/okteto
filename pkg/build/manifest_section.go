@@ -108,3 +108,7 @@ func (b ManifestBuild) toGraph() utils.Graph {
 	}
 	return g
 }
+
+func (b ManifestBuild) IsEmpty() bool {
+	return len(b) == 0
+}
