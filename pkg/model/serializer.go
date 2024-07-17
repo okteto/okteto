@@ -645,7 +645,6 @@ var hybridUnsupportedFields = []string{
 	"image",
 	"imagePullPolicy",
 	"initContainer",
-	"initFromImage",
 	"lifecycle",
 	"namespace",
 	"nodeSelector",
@@ -1050,10 +1049,6 @@ func (d *Dev) MarshalYAML() (interface{}, error) {
 	toMarshall := dev(*d)
 	if isDefaultProbes(d) {
 		toMarshall.Probes = nil
-	}
-	if areAllProbesEnabled(d.Probes) {
-		toMarshall.Probes = nil
-		toMarshall.Healthchecks = true
 	}
 	if d.AreDefaultPersistentVolumeValues() {
 		toMarshall.PersistentVolumeInfo = nil

@@ -350,7 +350,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	err := c.Run(ctx, opts)
 
 	// we should get a build error because Dockerfile does not exist
-	assert.True(t, strings.Contains(err.Error(), oktetoErrors.InvalidDockerfile))
+	assert.True(t, strings.Contains(err.Error(), oktetoErrors.ErrManifestPathNotFound.Error()))
 
 	fakeClient, _, err := c.K8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)
 	if err != nil {
@@ -919,7 +919,7 @@ func TestOktetoManifestPathFlag(t *testing.T) {
 		{
 			name:        "manifest file path doesn't exist",
 			manifest:    "nonexistent.yml",
-			expectedErr: fmt.Errorf("nonexistent.yml file doesn't exist"),
+			expectedErr: oktetoErrors.ErrManifestPathNotFound,
 		},
 	}
 

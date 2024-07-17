@@ -61,8 +61,16 @@ func (ob *Builder) Build(ctx context.Context, options *types.BuildOptions) error
 		options.File = filepath.Join(path, "Dockerfile")
 	}
 
-	if exists := filesystem.FileExistsAndNotDir(options.File, afero.NewOsFs()); !exists {
-		return fmt.Errorf("%s: '%s' is not a regular file", oktetoErrors.InvalidDockerfile, options.File)
+	fs := afero.NewOsFs()
+
+	// check that the manifest file exists
+	if !filesystem.FileExistsWithFilesystem(options.File, fs) {
+		return oktetoErrors.ErrManifestPathNotFound
+	}
+
+	// the Okteto manifest flag should specify a file, not a directory
+	if filesystem.IsDir(options.File, fs) {
+		return oktetoErrors.ErrManifestPathIsDir
 	}
 
 	var err error

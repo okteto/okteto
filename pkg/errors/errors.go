@@ -44,11 +44,6 @@ func (u CommandError) Error() string {
 	return fmt.Sprintf("%s: %s", u.E.Error(), strings.ToLower(u.Reason.Error()))
 }
 
-const (
-	// InvalidDockerfile text error
-	InvalidDockerfile = "invalid Dockerfile"
-)
-
 // NotLoggedError is raised when the user is not logged in okteto
 type NotLoggedError struct {
 	Context string
@@ -214,6 +209,15 @@ var (
 
 	// ErrNamespaceNotFound is raised when the get namespace query returns a namespace not found
 	ErrNamespaceNotFound = errors.New("namespace-not-found")
+
+	ErrManifestPathNotFound = UserError{
+		E:    fmt.Errorf("the Okteto manifest specified does not exist"),
+		Hint: "Check the path to the Okteto manifest file",
+	}
+	ErrManifestPathIsDir = UserError{
+		E:    fmt.Errorf("the Okteto manifest specified is a directory, please specify a file"),
+		Hint: "Check the path to the Okteto manifest file",
+	}
 )
 
 // IsForbidden raised if the Okteto API returns 401

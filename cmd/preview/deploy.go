@@ -40,17 +40,16 @@ var (
 )
 
 type DeployOptions struct {
-	branch             string
-	deprecatedFilename string
-	file               string
-	name               string
-	repository         string
-	scope              string
-	sourceUrl          string
-	variables          []string
-	labels             []string
-	timeout            time.Duration
-	wait               bool
+	branch     string
+	file       string
+	name       string
+	repository string
+	scope      string
+	sourceUrl  string
+	variables  []string
+	labels     []string
+	timeout    time.Duration
+	wait       bool
 }
 
 // Deploy Deploy a preview environment
@@ -92,13 +91,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().DurationVarP(&opts.timeout, "timeout", "t", fiveMinutes, "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	cmd.Flags().StringArrayVarP(&opts.variables, "var", "v", []string{}, "set a preview environment variable (can be set more than once)")
 	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", false, "wait until the preview environment deployment finishes (defaults to false)")
-	cmd.Flags().StringVarP(&opts.file, "file", "f", "", "relative path within the repository to the okteto manifest (default to okteto.yaml or .okteto/okteto.yaml)")
+	cmd.Flags().StringVarP(&opts.file, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringArrayVarP(&opts.labels, "label", "", []string{}, "set a preview environment label (can be set more than once)")
 
-	cmd.Flags().StringVarP(&opts.deprecatedFilename, "filename", "", "", "relative path within the repository to the manifest file (default to okteto-pipeline.yaml or .okteto/okteto-pipeline.yaml)")
-	if err := cmd.Flags().MarkHidden("filename"); err != nil {
-		oktetoLog.Infof("failed to hide deprecated flag: %s", err)
-	}
 	return cmd
 }
 

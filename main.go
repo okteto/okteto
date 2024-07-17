@@ -168,22 +168,22 @@ func main() {
 	root.AddCommand(build.Build(ctx, ioController, at, insights, k8sLogger))
 
 	root.AddCommand(namespace.Namespace(ctx, k8sLogger))
-	root.AddCommand(up.Up(at, insights, ioController, k8sLogger))
-	root.AddCommand(cmd.Down(at, k8sLogger))
-	root.AddCommand(cmd.Status())
-	root.AddCommand(cmd.Doctor(k8sLogger))
+	root.AddCommand(up.Up(at, insights, ioController, k8sLogger, fs))
+	root.AddCommand(cmd.Down(at, k8sLogger, fs))
+	root.AddCommand(cmd.Status(fs))
+	root.AddCommand(cmd.Doctor(k8sLogger, fs))
 	root.AddCommand(exec.NewExec(fs, ioController, k8sClientProvider).Cmd(ctx))
 	root.AddCommand(preview.Preview(ctx))
-	root.AddCommand(cmd.Restart())
+	root.AddCommand(cmd.Restart(fs))
 	root.AddCommand(deploy.Deploy(ctx, at, insights, ioController, k8sLogger))
-	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger))
+	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger, fs))
 	root.AddCommand(deploy.Endpoints(ctx, k8sLogger))
-	root.AddCommand(logs.Logs(ctx, k8sLogger))
+	root.AddCommand(logs.Logs(ctx, k8sLogger, fs))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
 	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger))
 	root.AddCommand(test.Test(ctx, ioController, k8sLogger, at))
 
-	root.AddCommand(pipeline.Pipeline(ctx))
+	root.AddCommand(pipeline.Pipeline(ctx, fs))
 
 	err = root.Execute()
 
@@ -194,7 +194,7 @@ func main() {
 			tmp[0] = unicode.ToUpper(tmp[0])
 			message = string(tmp)
 		}
-		oktetoLog.Fail(message) // TODO: Change to use ioController  when we fully move to ioController
+		oktetoLog.Fail(message) // TODO: Change to use ioController when we fully move to ioController
 		if uErr, ok := err.(oktetoErrors.UserError); ok {
 			if len(uErr.Hint) > 0 {
 				oktetoLog.Hint("    %s", uErr.Hint)

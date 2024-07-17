@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/status"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -39,7 +40,7 @@ const (
 )
 
 // Status returns the status of the synchronization process
-func Status() *cobra.Command {
+func Status(fs afero.Fs) *cobra.Command {
 	var devPath string
 	var namespace string
 	var k8sContext string
@@ -50,6 +51,18 @@ func Status() *cobra.Command {
 		Short: "Status of the synchronization process",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#status"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if devPath != "" {
+				// check that the manifest file exists
+				if !filesystem.FileExistsWithFilesystem(devPath, fs) {
+					return oktetoErrors.ErrManifestPathNotFound
+				}
+
+				// the Okteto manifest flag should specify a file, not a directory
+				if filesystem.IsDir(devPath, fs) {
+					return oktetoErrors.ErrManifestPathIsDir
+				}
+			}
+
 			if okteto.InDevContainer() {
 				return oktetoErrors.ErrNotInDevContainer
 			}
@@ -109,7 +122,7 @@ func Status() *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executing")
 	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the up command is executing")
 	cmd.Flags().BoolVarP(&showInfo, "info", "i", false, "show syncthing links for troubleshooting the synchronization service")

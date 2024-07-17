@@ -186,9 +186,8 @@ func getDeployCmd(oktetoPath string, deployOptions *DeployOptions) *exec.Cmd {
 	if deployOptions.IsRemote {
 		cmd.Args = append(cmd.Args, "--remote")
 	}
-	if deployOptions.Wait {
-		cmd.Args = append(cmd.Args, "--wait")
-	}
+	cmd.Args = append(cmd.Args, fmt.Sprintf("--wait=%t", deployOptions.Wait))
+
 	cmd.Env = os.Environ()
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))

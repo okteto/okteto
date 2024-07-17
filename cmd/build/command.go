@@ -132,12 +132,13 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 				}
 			}
 
+			analytics.TrackBuildWithManifestVsDockerfile(builder.IsV1())
 			return builder.Build(ctx, options)
 		},
 	}
 
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the build command is executed")
-	cmd.Flags().StringVarP(&options.File, "file", "f", "", "path to the Okteto Manifest (default is 'okteto.yml')")
+	cmd.Flags().StringVarP(&options.File, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&options.Tag, "tag", "t", "", "name and optionally a tag in the 'name:tag' format (it is automatically pushed)")
 	cmd.Flags().StringVarP(&options.Target, "target", "", "", "set the target build stage to build")
 	cmd.Flags().BoolVarP(&options.NoCache, "no-cache", "", false, "do not use cache when building the image")
@@ -148,7 +149,6 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 	cmd.Flags().StringArrayVar(&options.Secrets, "secret", nil, "secret files exposed to the build. Format: id=mysecret,src=/local/secret")
 	cmd.Flags().StringVar(&options.Platform, "platform", "", "set platform if server is multi-platform capable")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "namespace against which the image will be consumed. Default is the one defined at okteto context or okteto manifest")
-	cmd.Flags().BoolVarP(&options.BuildToGlobal, "global", "", false, "push the image to the global registry")
 	return cmd
 }
 
