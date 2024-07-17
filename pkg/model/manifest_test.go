@@ -440,114 +440,114 @@ func TestInferFromStack(t *testing.T) {
 		expectedManifest *Manifest
 		name             string
 	}{
-		// {
-		// 	name: "infer from stack empty dev",
-		// 	currentManifest: &Manifest{
-		// 		Dev:   ManifestDevs{},
-		// 		Build: build.ManifestBuild{},
-		// 		Deploy: &DeployInfo{
-		// 			Image: constants.OktetoPipelineRunnerImage,
-		// 			ComposeSection: &ComposeSectionInfo{
-		// 				Stack: &Stack{
-		// 					Services: map[string]*Service{
-		// 						"test": {
-		// 							Build: &build.Info{
-		// 								Context:    filepath.Join(dirtest, "test"),
-		// 								Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
-		// 							},
-		// 							Ports: []Port{
-		// 								{
-		// 									HostPort:      8080,
-		// 									ContainerPort: 8080,
-		// 								},
-		// 							},
-		// 						},
-		// 					},
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// 	expectedManifest: &Manifest{
-		// 		Build: build.ManifestBuild{
-		// 			"test": &build.Info{
-		// 				Context:    "test",
-		// 				Dockerfile: "Dockerfile",
-		// 			},
-		// 		},
-		// 		Dev: ManifestDevs{},
-		// 		Deploy: &DeployInfo{
-		// 			Image: constants.OktetoPipelineRunnerImage,
-		// 			ComposeSection: &ComposeSectionInfo{
-		// 				Stack: stack,
-		// 			},
-		// 		},
-		// 		Destroy: &DestroyInfo{},
-		// 	},
-		// },
-		// {
-		// 	name: "infer from stack not overriding build",
-		// 	currentManifest: &Manifest{
-		// 		Dev: ManifestDevs{},
-		// 		Build: build.ManifestBuild{
-		// 			"test": &build.Info{
-		// 				Context:    "test-1",
-		// 				Dockerfile: filepath.Join("test-1", "Dockerfile"),
-		// 			},
-		// 		},
-		// 		Deploy: &DeployInfo{
-		// 			Image: constants.OktetoPipelineRunnerImage,
-		// 			ComposeSection: &ComposeSectionInfo{
-		// 				Stack: &Stack{
-		// 					Services: map[string]*Service{
-		// 						"test": {
-		// 							Build: &build.Info{
-		// 								Context:    filepath.Join(dirtest, "test"),
-		// 								Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
-		// 							},
-		// 							Ports: []Port{
-		// 								{
-		// 									HostPort:      8080,
-		// 									ContainerPort: 8080,
-		// 								},
-		// 							},
-		// 						},
-		// 					},
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// 	expectedManifest: &Manifest{
-		// 		Build: build.ManifestBuild{
-		// 			"test": &build.Info{
-		// 				Context:    "test-1",
-		// 				Dockerfile: filepath.Join("test-1", "Dockerfile"),
-		// 			},
-		// 		},
-		// 		Dev:     ManifestDevs{},
-		// 		Destroy: &DestroyInfo{},
-		// 		Deploy: &DeployInfo{
-		// 			Image: constants.OktetoPipelineRunnerImage,
-		// 			ComposeSection: &ComposeSectionInfo{
-		// 				Stack: &Stack{
-		// 					Services: map[string]*Service{
-		// 						"test": {
-		// 							Build: &build.Info{
-		// 								Context:    "test",
-		// 								Dockerfile: "Dockerfile",
-		// 							},
-		// 							Ports: []Port{
-		// 								{
-		// 									HostPort:      8080,
-		// 									ContainerPort: 8080,
-		// 								},
-		// 							},
-		// 						},
-		// 					},
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// },
+		{
+			name: "infer from stack empty dev",
+			currentManifest: &Manifest{
+				Dev:   ManifestDevs{},
+				Build: build.ManifestBuild{},
+				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
+					ComposeSection: &ComposeSectionInfo{
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Build: &build.Info{
+										Context:    filepath.Join(dirtest, "test"),
+										Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
+									},
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Build: build.ManifestBuild{
+					"test": &build.Info{
+						Context:    "test",
+						Dockerfile: "Dockerfile",
+					},
+				},
+				Dev: ManifestDevs{},
+				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
+					ComposeSection: &ComposeSectionInfo{
+						Stack: stack,
+					},
+				},
+				Destroy: &DestroyInfo{},
+			},
+		},
+		{
+			name: "infer from stack not overriding build",
+			currentManifest: &Manifest{
+				Dev: ManifestDevs{},
+				Build: build.ManifestBuild{
+					"test": &build.Info{
+						Context:    "test-1",
+						Dockerfile: filepath.Join("test-1", "Dockerfile"),
+					},
+				},
+				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
+					ComposeSection: &ComposeSectionInfo{
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Build: &build.Info{
+										Context:    filepath.Join(dirtest, "test"),
+										Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
+									},
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Build: build.ManifestBuild{
+					"test": &build.Info{
+						Context:    "test-1",
+						Dockerfile: filepath.Join("test-1", "Dockerfile"),
+					},
+				},
+				Dev:     ManifestDevs{},
+				Destroy: &DestroyInfo{},
+				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
+					ComposeSection: &ComposeSectionInfo{
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Build: &build.Info{
+										Context:    "test",
+										Dockerfile: "Dockerfile",
+									},
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 		{
 			name: "infer from stack not overriding dev",
 			currentManifest: &Manifest{
