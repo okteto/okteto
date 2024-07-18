@@ -16,6 +16,7 @@ package context
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -36,7 +37,7 @@ const (
 )
 
 // Use context points okteto to a cluster.
-func Use() *cobra.Command {
+func Use(varManager *vars.Manager) *cobra.Command {
 	ctxOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:   "use [<url>|Kubernetes context]",
@@ -71,7 +72,7 @@ Or a Kubernetes context:
 			ctxOptions.Save = true
 			ctxOptions.CheckNamespaceAccess = ctxOptions.Namespace != ""
 
-			err := NewContextCommand().Run(ctx, ctxOptions)
+			err := NewContextCommand(WithVarManager(varManager)).Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			if err != nil {
 				cmd.SilenceUsage = true

@@ -16,6 +16,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"os/signal"
 	"time"
@@ -40,7 +41,7 @@ const (
 )
 
 // Status returns the status of the synchronization process
-func Status(fs afero.Fs) *cobra.Command {
+func Status(varManager *vars.Manager, fs afero.Fs) *cobra.Command {
 	var devPath string
 	var namespace string
 	var k8sContext string
@@ -69,7 +70,7 @@ func Status(fs afero.Fs) *cobra.Command {
 
 			ctx := context.Background()
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: namespace}); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, &contextCMD.Options{Show: true, Namespace: namespace}); err != nil {
 				return err
 			}
 

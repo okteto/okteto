@@ -179,7 +179,7 @@ func main() {
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
 
-	root.AddCommand(contextCMD.Context())
+	root.AddCommand(contextCMD.Context(varManager))
 	root.AddCommand(cmd.Kubeconfig(okClientProvider))
 
 	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
@@ -190,7 +190,7 @@ func main() {
 	root.AddCommand(namespace.Namespace(ctx, k8sLogger, varManager))
 	root.AddCommand(up.Up(at, insights, ioController, k8sLogger, varManager, fs))
 	root.AddCommand(cmd.Down(at, k8sLogger, varManager, fs))
-	root.AddCommand(cmd.Status(fs))
+	root.AddCommand(cmd.Status(varManager, fs))
 	root.AddCommand(cmd.Doctor(k8sLogger, varManager, fs))
 	root.AddCommand(exec.NewExec(fs, ioController, k8sClientProvider).Cmd(ctx))
 	root.AddCommand(preview.Preview(ctx, varManager))

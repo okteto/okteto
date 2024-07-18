@@ -17,11 +17,12 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 )
 
 // Context points okteto to a cluster.
-func Context() *cobra.Command {
+func Context(varManager *vars.Manager) *cobra.Command {
 	ctxOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:     "context",
@@ -42,12 +43,12 @@ This will prompt you to select one of your existing contexts or to create a new 
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			okteto.SetInsecureSkipTLSVerifyPolicy(ctxOptions.InsecureSkipTlsVerify)
 		},
-		RunE: Use().RunE,
+		RunE: Use(varManager).RunE,
 	}
-	cmd.AddCommand(Show())
-	cmd.AddCommand(Use())
-	cmd.AddCommand(List())
-	cmd.AddCommand(DeleteCMD())
+	cmd.AddCommand(Show(varManager))
+	cmd.AddCommand(Use(varManager))
+	cmd.AddCommand(List(varManager))
+	cmd.AddCommand(DeleteCMD(varManager))
 
 	cmd.PersistentFlags().BoolVarP(&ctxOptions.InsecureSkipTlsVerify, "insecure-skip-tls-verify", "", false, " If enabled, the server's certificate will not be checked for validity. This will make your connections insecure")
 	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication")
