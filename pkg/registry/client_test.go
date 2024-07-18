@@ -514,6 +514,29 @@ func Test_GetDescriptor(t *testing.T) {
 				err:        oktetoErrors.ErrNotFound,
 			},
 		},
+		{
+			name: "not found for being invalide",
+			input: input{
+				image: "okteto/test:latest",
+			},
+			expected: expected{
+				descriptor: nil,
+				err: oktetoErrors.UserError{
+					E:    fmt.Errorf("malformed image digest"),
+					Hint: "Image 'okteto/test:latest' seems malformed. Please run 'okteto build --no-cache' to rebuild your image",
+				},
+			},
+			getConfig: getConfig{
+				descriptor: nil,
+				err: &transport.Error{
+					Errors: []transport.Diagnostic{
+						{
+							Code: manifestUnknownForBeingInvalidErrorCode,
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
