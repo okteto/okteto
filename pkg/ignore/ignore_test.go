@@ -160,10 +160,10 @@ backend
 func TestRules(t *testing.T) {
 	tt := []struct {
 		name        string
-		section     []string
 		input       string
-		expectedErr bool
+		section     []string
 		expected    []string
+		expectedErr bool
 	}{
 		{
 			name: "single_section",
