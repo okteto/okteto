@@ -112,7 +112,7 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 	}
 
 	runParams := remote.Params{
-		CacheNamespace: deployOptions.Name,
+		CacheByName: deployOptions.Name,
 		// This is the base image provided by the deploy operation. If it is empty, the runner is the one in charge of
 		// providing the default one
 		BaseImage:                 baseImage,

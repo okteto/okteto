@@ -69,8 +69,8 @@ const (
 	// OktetoInvalidateCacheEnvVar defines a random number to invalidate the "--remote" cache
 	OktetoInvalidateCacheEnvVar = "OKTETO_INVALIDATE_CACHE"
 
-	// OktetoCacheNamespaceEnvVar defines a unique name for each build to avoid conflicts in the cache when running parallel builds
-	OktetoCacheNamespaceEnvVar = "OKTETO_CACHE_NAMESPACE"
+	// OktetoCacheByNameEnvVar defines a unique name for each build to avoid conflicts in the cache when running parallel builds
+	OktetoCacheByNameEnvVar = "OKTETO_CACHE_BY_NAME"
 
 	// OktetoDeployRemoteImage defines okteto cli image used for deploy an environment remotely
 	OktetoDeployRemoteImage = "OKTETO_REMOTE_CLI_IMAGE"

@@ -323,7 +323,7 @@ func TestCreateDockerfile(t *testing.T) {
 			name: "with dockerignore",
 			config: config{
 				params: &Params{
-					CacheNamespace:      "test",
+					CacheByName:         "test",
 					BaseImage:           "test-image",
 					Manifest:            fakeManifest,
 					BuildEnvVars:        map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
@@ -379,7 +379,7 @@ ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME dependency_user
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
-ARG OKTETO_CACHE_NAMESPACE
+ARG OKTETO_CACHE_BY_NAME
 
 RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
@@ -467,7 +467,7 @@ ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME dependency_user
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
-ARG OKTETO_CACHE_NAMESPACE
+ARG OKTETO_CACHE_BY_NAME
 
 RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json

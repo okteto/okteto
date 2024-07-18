@@ -331,7 +331,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			return analytics.TestMetadata{}, fmt.Errorf("failed to create ignore rules for %s: %w", name, err)
 		}
 		params := &remote.Params{
-			CacheNamespace:      name,
+			CacheByName:         name,
 			BaseImage:           test.Image,
 			ManifestPathFlag:    options.ManifestPathFlag,
 			TemplateName:        "dockerfile",
