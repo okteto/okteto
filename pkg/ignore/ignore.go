@@ -51,6 +51,9 @@ func (i *Ignore) Rules(sections ...string) ([]string, error) {
 		}
 		rules = append(rules, slice...)
 	}
+	if len(rules) == 0 {
+		rules = append(rules, "# Okteto docker ignore")
+	}
 	return rules, nil
 }
 

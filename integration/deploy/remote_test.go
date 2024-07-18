@@ -18,6 +18,8 @@ package deploy
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/okteto/okteto/integration"
@@ -76,4 +78,52 @@ func TestDeployRemoteWithBuildCommand(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDestroyRemote(oktetoPath, destroyOptions))
 
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+}
+
+// TestDeployRemoteWithBuildCommand tests the following scenario:
+// - Deploying a okteto manifest with a k8s and there is a dockerignore file containing the k8s.yml
+func TestDeployRemoteK8sWithDockerignore(t *testing.T) {
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+
+	testNamespace := integration.GetTestNamespace("DeployRemoteK8s", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+
+	require.NoError(t, createPipelineManifest(dir))
+	require.NoError(t, createK8sManifest(dir))
+	require.NoError(t, createDockerignore(dir))
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+		IsRemote:   true,
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	destroyOptions := &commands.DestroyOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoDestroyRemote(oktetoPath, destroyOptions))
+
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+}
+
+func createDockerignore(dir string) error {
+	manifestPath := filepath.Join(dir, ".dockerignore")
+	manifestContent := []byte("k8s.yml")
+	if err := os.WriteFile(manifestPath, manifestContent, 0600); err != nil {
+		return err
+	}
+	return nil
 }
