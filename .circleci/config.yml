@@ -660,9 +660,10 @@ workflows:
         - matches:
             pattern: *release-branch-regex
             value: << pipeline.git.branch >>
-        - matches:
-            pattern: ^\S+$
-            value: << pipeline.git.tag >>
+        - not:
+            matches:
+              pattern: /.*/
+              value: << pipeline.git.tag >>
     jobs:
       - build-binaries
       - run-unit-test
