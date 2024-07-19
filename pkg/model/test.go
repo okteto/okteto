@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/env"
 )
@@ -26,10 +27,20 @@ type Test struct {
 	DependsOn []string      `yaml:"depends_on,omitempty"`
 	Caches    []string      `yaml:"caches,omitempty"`
 	Artifacts []Artifact    `yaml:"artifacts,omitempty"`
+	Hosts     []Host        `yaml:"hosts,omitempty"`
+}
+
+type Host struct {
+	Hostname string `yaml:"hostname,omitempty"`
+	IP       string `yaml:"ip,omitempty"`
 }
 
 var (
 	ErrNoTestsDefined = fmt.Errorf("no tests defined")
+
+	ErrHostMalformed   = fmt.Errorf("host is malformed")
+	ErrInvalidHostName = fmt.Errorf("invalid hostname")
+	ErrInvalidIp       = fmt.Errorf("invalid ip")
 )
 
 func (test ManifestTests) Validate() error {
@@ -99,5 +110,62 @@ func (t *TestCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	*t = TestCommand(extendedCommand)
+	return nil
+}
+
+func (h *Host) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var hostnameIP string
+	strErr := unmarshal(&hostnameIP)
+	if strErr == nil {
+		splittedHostName := strings.SplitN(hostnameIP, ":", 2)
+		if len(splittedHostName) != 2 {
+			return fmt.Errorf("%w: '%s'", ErrHostMalformed, hostnameIP)
+		}
+		hostname, err := env.ExpandEnv(splittedHostName[0])
+		if err != nil {
+			return err
+		}
+		ip, err := env.ExpandEnv(splittedHostName[1])
+		if err != nil {
+			return err
+		}
+		*h = Host{
+			Hostname: hostname,
+			IP:       ip,
+		}
+		if h.Hostname == "" {
+			return fmt.Errorf("%w: '%s' hostname is empty", ErrInvalidHostName, hostnameIP)
+		}
+		if h.IP == "" {
+			return fmt.Errorf("%w: '%s' ip is empty", ErrInvalidIp, hostnameIP)
+		}
+		return nil
+	}
+
+	type hostAlias Host
+	var hh hostAlias
+	err := unmarshal(&hh)
+	if err != nil {
+		return err
+	}
+
+	hostname, err := env.ExpandEnv(hh.Hostname)
+	if err != nil {
+		return err
+	}
+	ip, err := env.ExpandEnv(hh.IP)
+	if err != nil {
+		return err
+	}
+	hh.Hostname = hostname
+	hh.IP = ip
+	if hh.Hostname == "" {
+		return fmt.Errorf("%w: '%s' hostname is empty", ErrInvalidHostName, hostnameIP)
+	}
+	if hh.IP == "" {
+		return fmt.Errorf("%w: '%s' ip is empty", ErrInvalidIp, hostnameIP)
+	}
+
+	*h = Host(hh)
 	return nil
 }

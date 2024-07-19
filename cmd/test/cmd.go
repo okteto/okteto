@@ -351,6 +351,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			IgnoreRules:                 testIgnoreRules,
 			Artifacts:                   test.Artifacts,
 			UseRootUser:                 true,
+			Hosts:                       test.Hosts,
 		}
 
 		if !options.NoCache {
