@@ -160,6 +160,7 @@ type Params struct {
 	ManifestPathFlag            string
 	Deployable                  deployable.Entity
 	CommandFlags                []string
+	NoCache                     bool
 	Caches                      []string
 	// IgnoreRules are the ignoring rules added to this build execution.
 	// Rules follow the .dockerignore syntax as defined in:
@@ -297,7 +298,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		outputMode = buildCmd.DeployOutputModeOnBuild
 	}
 
-	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: outputMode})
+	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: outputMode, NoCache: params.NoCache})
 	buildOptions.Manifest = params.Manifest
 	buildOptions.BuildArgs = append(
 		buildOptions.BuildArgs,
