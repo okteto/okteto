@@ -657,7 +657,7 @@ workflows:
     when:
       matches:
         pattern: *release-branch-regex
-        value: << parameters.git.branch >>
+        value: << pipeline.git.branch >>
     jobs:
       - build-binaries:
           filters:
