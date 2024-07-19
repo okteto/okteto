@@ -86,7 +86,7 @@ commands:
 executors:
   golang-ci:
     docker:
-      - image: okteto/golang-ci:2.5.0
+      - image: okteto/golang-ci:2.6.2
 
 jobs:
   golangci-lint:
@@ -332,6 +332,7 @@ jobs:
       - run: *okteto-login
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG" "linux/amd64,linux/arm64"
+      - run: trivy image okteto/okteto:$CIRCLE_TAG
 
   push-image-latest:
     executor: golang-ci
@@ -340,6 +341,7 @@ jobs:
       - run: *okteto-login
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh latest "linux/amd64"
+      - run: trivy image okteto/okteto:latest
 
   upload-static-job:
     executor: golang-ci
