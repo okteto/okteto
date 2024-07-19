@@ -15,10 +15,12 @@ package context
 
 import (
 	"testing"
+
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 func Test_NoArgsAcceptedCtx(t *testing.T) {
-	cmd := Show()
+	cmd := Show(vars.NewVarsManager(&fakeVarManager{}))
 	cmd.SetArgs([]string{"args"})
 	err := cmd.Execute()
 	if err == nil {
@@ -27,7 +29,7 @@ func Test_NoArgsAcceptedCtx(t *testing.T) {
 }
 
 func Test_NoArgsAcceptedShow(t *testing.T) {
-	cmd := Context()
+	cmd := Context(vars.NewVarsManager(&fakeVarManager{}))
 	cmd.SetArgs([]string{"args"})
 	err := cmd.Execute()
 	if err == nil {
@@ -36,7 +38,7 @@ func Test_NoArgsAcceptedShow(t *testing.T) {
 }
 
 func Test_NoArgsAcceptedList(t *testing.T) {
-	cmd := List()
+	cmd := List(vars.NewVarsManager(&fakeVarManager{}))
 	cmd.SetArgs([]string{"args"})
 	err := cmd.Execute()
 	if err == nil {
@@ -54,7 +56,7 @@ func Test_NoArgsAcceptedUpdateKubeConfig(t *testing.T) {
 }
 
 func Test_MaxArgsUse(t *testing.T) {
-	cmd := Use()
+	cmd := Use(vars.NewVarsManager(&fakeVarManager{}))
 	cmd.SetArgs([]string{"args", "args"})
 	err := cmd.Execute()
 	if err == nil {

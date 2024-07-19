@@ -15,7 +15,9 @@ package model
 
 import (
 	"bytes"
+	"github.com/okteto/okteto/pkg/vars"
 	"path"
+	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/env"
@@ -29,6 +31,8 @@ import (
 )
 
 func TestDevToTranslationRule(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	manifestBytes := []byte(`dev:
     web:
         container: dev
@@ -91,6 +95,7 @@ func TestDevToTranslationRule(t *testing.T) {
 				Name:  "OKTETO_NAME",
 				Value: "web",
 			},
+			{Name: "OKTETO_USERNAME", Value: "username"},
 			{Name: "HISTSIZE", Value: "10000000"},
 			{Name: "HISTFILESIZE", Value: "10000000"},
 			{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
@@ -170,9 +175,7 @@ func TestDevToTranslationRule(t *testing.T) {
 	assert.NoError(t, err)
 	marshalled1OK, err := yaml.Marshal(rule1OK)
 	assert.NoError(t, err)
-	if string(marshalled1) != string(marshalled1OK) {
-		t.Fatalf("Wrong rule1 generation.\nActual %s, \nExpected %s", string(marshalled1), string(marshalled1OK))
-	}
+	assert.Equal(t, string(marshalled1), string(marshalled1OK))
 
 	dev2 := dev.Services[0]
 	rule2 := dev2.ToTranslationRule(dev, "n", "username", false)
@@ -265,6 +268,7 @@ func TestDevToTranslationRuleInitContainer(t *testing.T) {
 				Name:  "OKTETO_NAME",
 				Value: "web",
 			},
+			{Name: "OKTETO_USERNAME", Value: "username"},
 			{Name: "HISTSIZE", Value: "10000000"},
 			{Name: "HISTFILESIZE", Value: "10000000"},
 			{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
@@ -320,9 +324,7 @@ func TestDevToTranslationRuleInitContainer(t *testing.T) {
 	assert.NoError(t, err)
 	marshalledOK, err := yaml.Marshal(ruleOK)
 	assert.NoError(t, err)
-	if !bytes.Equal(marshalled, marshalledOK) {
-		t.Fatalf("Wrong rule generation.\nActual %s, \nExpected %s", string(marshalled), string(marshalledOK))
-	}
+	assert.Equal(t, string(marshalled), string(marshalledOK))
 }
 
 func TestDevToTranslationDebugEnabled(t *testing.T) {
@@ -360,6 +362,7 @@ func TestDevToTranslationDebugEnabled(t *testing.T) {
 				Name:  "OKTETO_NAME",
 				Value: "web",
 			},
+			{Name: "OKTETO_USERNAME", Value: "username"},
 			{Name: "HISTSIZE", Value: "10000000"},
 			{Name: "HISTFILESIZE", Value: "10000000"},
 			{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
@@ -422,6 +425,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 			expected: env.Environment{
 				{Name: "OKTETO_NAMESPACE", Value: "n"},
 				{Name: "OKTETO_NAME", Value: ""},
+				{Name: "OKTETO_USERNAME", Value: "username"},
 				{Name: "HISTSIZE", Value: "10000000"},
 				{Name: "HISTFILESIZE", Value: "10000000"},
 				{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
@@ -439,6 +443,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 			expected: env.Environment{
 				{Name: "OKTETO_NAMESPACE", Value: "n"},
 				{Name: "OKTETO_NAME", Value: ""},
+				{Name: "OKTETO_USERNAME", Value: "username"},
 				{Name: oktetoSSHServerPortVariable, Value: "22220"},
 				{Name: "HISTSIZE", Value: "10000000"},
 				{Name: "HISTFILESIZE", Value: "10000000"},
@@ -449,11 +454,12 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			rule := tt.manifest.ToTranslationRule(tt.manifest, "n", "username", false)
-			assert.Equal(t, tt.expected, rule.Environment)
-		})
+	for _, test := range tests {
+		t.Logf("test: %s", test.name)
+		rule := test.manifest.ToTranslationRule(test.manifest, "n", "username", false)
+		if e, a := test.expected, rule.Environment; !reflect.DeepEqual(e, a) {
+			t.Errorf("expected environment:\n%#v\ngot:\n%#v", e, a)
+		}
 	}
 }
 

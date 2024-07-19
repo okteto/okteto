@@ -49,6 +49,7 @@ func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User, fakeObj
 		OktetoClientProvider: client.NewFakeOktetoClientProvider(c),
 		OktetoContextWriter:  test.NewFakeOktetoContextWriter(),
 		kubetokenController:  newStaticKubetokenController(),
+		varManager:           vars.NewVarsManager(&fakeVarManager{}),
 	}
 }
 

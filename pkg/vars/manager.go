@@ -81,9 +81,19 @@ func (m *Manager) Lookup(key string) (string, bool) {
 	return "", false
 }
 
+// AddDotEnvVar allows to add a single variable to the manager with priority OktetoVariableTypeDotEnv.
+func (m *Manager) AddDotEnvVar(key, value string) {
+	m.addVar(key, value, OktetoVariableTypeDotEnv)
+}
+
 // AddBuiltInVar allows to add a single variable to the manager with priority OktetoVariableTypeBuiltIn.
 func (m *Manager) AddBuiltInVar(key, value string) {
 	m.addVar(key, value, OktetoVariableTypeBuiltIn)
+}
+
+// AddLocalVar allows to add a single variable to the manager with priority OktetoVariableTypeLocal.
+func (m *Manager) AddLocalVar(key, value string) {
+	m.addVar(key, value, OktetoVariableTypeLocal)
 }
 
 // addVar allows to add a single variable to the manager. If other variables with the same priority already exists

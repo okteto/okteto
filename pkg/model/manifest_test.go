@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,6 +38,8 @@ import (
 )
 
 func TestManifestExpandDevEnvs(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	tests := []struct {
 		manifest         *Manifest
 		expectedManifest *Manifest
@@ -185,7 +188,7 @@ echo $TEST_VAR`,
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for k, v := range tt.envs {
-				t.Setenv(k, v)
+				vars.GlobalVarManager.AddDotEnvVar(k, v)
 			}
 
 			err := tt.manifest.ExpandEnvVars()

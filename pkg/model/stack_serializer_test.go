@@ -1909,42 +1909,67 @@ func Test_validateEnvFiles(t *testing.T) {
 }
 
 func Test_Environment(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
+	vars.GlobalVarManager.AddDotEnvVar("OKTETO_ENVTEST", "myvalue")
+	t.Setenv("OKTETO_ENVTEST", "myvalue")
+
 	tests := []struct {
 		name        string
 		manifest    []byte
 		environment env.Environment
 	}{
 		{
-			name:        "envs",
-			manifest:    []byte("services:\n  app:\n    environment:\n        env: production\n    image: okteto/vote:1"),
+			name: "envs",
+			manifest: []byte(`
+services:
+  app:
+    environment:
+      env: production
+    image: okteto/vote:1`),
 			environment: env.Environment{vars.Var{Name: "env", Value: "production"}},
 		},
 		{
-			name:        "empty envs",
-			manifest:    []byte("services:\n  app:\n    environment:\n      - testEnv\n    image: okteto/vote:1"),
+			name: "empty envs",
+			manifest: []byte(`
+services:
+  app:
+    environment:
+      - testEnv
+    image: okteto/vote:1`),
 			environment: env.Environment{},
 		},
 		{
-			name:        "empty envs - exists envar",
-			manifest:    []byte("services:\n  app:\n    environment:\n        OKTETO_ENVTEST:\n    image: okteto/vote:1"),
+			name: "empty envs - exists envar",
+			manifest: []byte(`
+services:
+  app:
+    environment:
+      OKTETO_ENVTEST:
+    image: okteto/vote:1`),
 			environment: env.Environment{vars.Var{Name: "OKTETO_ENVTEST", Value: "myvalue"}},
 		},
 		{
-			name:        "empty list envs - exists envar",
-			manifest:    []byte("services:\n  app:\n    environment:\n      - OKTETO_ENVTEST\n    image: okteto/vote:1"),
+			name: "empty list envs - exists envar",
+			manifest: []byte(`
+services:
+  app:
+    environment:
+      - OKTETO_ENVTEST
+    image: okteto/vote:1`),
 			environment: env.Environment{vars.Var{Name: "OKTETO_ENVTEST", Value: "myvalue"}},
 		},
 		{
-			name:        "noenvs",
-			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1"),
+			name: "noenvs",
+			manifest: []byte(`
+services:
+  app:
+    image: okteto/vote:1`),
 			environment: env.Environment{},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
-			t.Setenv("OKTETO_ENVTEST", "myvalue")
-
 			s, err := ReadStack(tt.manifest, false)
 			if err != nil {
 				t.Fatal(err)

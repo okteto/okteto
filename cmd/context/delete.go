@@ -15,7 +15,6 @@ package context
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
@@ -27,7 +26,7 @@ import (
 )
 
 // DeleteCMD removes a cluster from okteto context
-func DeleteCMD(varManager *vars.Manager) *cobra.Command {
+func DeleteCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Args:  utils.MinimumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#delete"),

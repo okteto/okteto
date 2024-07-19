@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -58,10 +59,11 @@ type Exec struct {
 	mixpanelTracker   metadataTracker
 
 	executorProvider executorProviderInterface
+	varManager       *vars.Manager
 }
 
 // NewExec creates a new exec command
-func NewExec(fs afero.Fs, ioCtrl *io.Controller, k8sProvider okteto.K8sClientProvider) *Exec {
+func NewExec(fs afero.Fs, ioCtrl *io.Controller, k8sProvider okteto.K8sClientProvider, varManager *vars.Manager) *Exec {
 	mixpanelTracker := &mixpannelTrack{
 		trackFunc: analytics.TrackExec,
 	}
@@ -75,6 +77,7 @@ func NewExec(fs afero.Fs, ioCtrl *io.Controller, k8sProvider okteto.K8sClientPro
 			ioCtrl:            ioCtrl,
 			k8sClientProvider: k8sProvider,
 		},
+		varManager: varManager,
 	}
 	return e
 }
@@ -113,7 +116,7 @@ okteto exec my-pod`,
 				Context:   execFlags.k8sContext,
 				Namespace: execFlags.namespace,
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(e.varManager)).Run(ctx, ctxOpts); err != nil {
 				return err
 			}
 

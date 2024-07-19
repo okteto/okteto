@@ -16,7 +16,6 @@ package cmd
 import (
 	"context"
 	"errors"
-	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"os/signal"
 	"time"
@@ -32,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )

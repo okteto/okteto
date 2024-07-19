@@ -17,11 +17,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 
 	"github.com/okteto/okteto/cmd/utils"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )

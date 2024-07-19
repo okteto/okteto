@@ -20,6 +20,7 @@ import (
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -68,8 +69,9 @@ func Test_createNamespace(t *testing.T) {
 				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			}
 			nsCmd := &Command{
-				okClient: fakeOktetoClient,
-				ctxCmd:   newFakeContextCommand(fakeOktetoClient, usr),
+				okClient:   fakeOktetoClient,
+				ctxCmd:     newFakeContextCommand(fakeOktetoClient, usr),
+				varManager: vars.NewVarsManager(&fakeVarManager{}),
 			}
 			err := nsCmd.Create(ctx, &CreateOptions{
 				Members:   tt.members,

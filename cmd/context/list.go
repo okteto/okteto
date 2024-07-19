@@ -17,12 +17,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"text/tabwriter"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )

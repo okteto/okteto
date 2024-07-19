@@ -20,9 +20,18 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+
 func Test_Var_UnmarshalYAML(t *testing.T) {
-	t.Setenv("DYNAMIC_VAR_VALUE", "test")
-	t.Setenv("VALUE", "test")
+	GlobalVarManager = NewVarsManager(&fakeVarManager{})
+
+	GlobalVarManager.AddLocalVar("LOCAL_VAR", "local-env-var")
+	GlobalVarManager.AddDotEnvVar("DYNAMIC_VAR_VALUE", "test")
+	GlobalVarManager.AddDotEnvVar("VALUE", "test")
+
 	tests := []struct {
 		expected    Var
 		name        string
@@ -35,6 +44,14 @@ func Test_Var_UnmarshalYAML(t *testing.T) {
 			expected: Var{
 				Name:  "foo",
 				Value: "bar",
+			},
+		},
+		{
+			name: "local vars are not expanded",
+			yaml: []byte(`name=unit-$LOCAL_VAR`),
+			expected: Var{
+				Name:  "name",
+				Value: "unit-",
 			},
 		},
 		{

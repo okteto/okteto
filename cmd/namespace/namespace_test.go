@@ -20,10 +20,16 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
+
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
 
 type fakeK8sProvider struct {
 	k8sClient kubernetes.Interface
@@ -42,7 +48,7 @@ func (*fakeK8sProvider) GetIngressClient() (*ingresses.Client, error) {
 }
 
 func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User) *contextCMD.Command {
-	cmd := contextCMD.NewContextCommand()
+	cmd := contextCMD.NewContextCommand(contextCMD.WithVarManager(vars.NewVarsManager(&fakeVarManager{})))
 	cmd.OktetoClientProvider = client.NewFakeOktetoClientProvider(c)
 	cmd.K8sClientProvider = test.NewFakeK8sProvider(nil)
 	cmd.LoginController = test.NewFakeLoginController(user, nil)
@@ -57,5 +63,6 @@ func NewFakeNamespaceCommand(okClient *client.FakeOktetoClient, k8sClient kubern
 		k8sClientProvider: &fakeK8sProvider{
 			k8sClient: k8sClient,
 		},
+		varManager: vars.NewVarsManager(&fakeVarManager{}),
 	}
 }

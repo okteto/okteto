@@ -30,6 +30,7 @@ type Command struct {
 	ctxCmd            *contextCMD.Command
 	okClient          types.OktetoInterface
 	k8sClientProvider okteto.K8sClientProviderWithLogger
+	varManager        *vars.Manager
 }
 
 // NewCommand creates a namespace command for use in further operations
@@ -43,6 +44,7 @@ func NewCommand(varManager *vars.Manager) (*Command, error) {
 		ctxCmd:            contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)),
 		okClient:          c,
 		k8sClientProvider: okteto.NewK8sClientProviderWithLogger(nil),
+		varManager:        varManager,
 	}, nil
 }
 
@@ -52,6 +54,7 @@ func NewCommandStateless(c *okteto.Client, varManager *vars.Manager) *Command {
 		ctxCmd:            contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)),
 		okClient:          c,
 		k8sClientProvider: okteto.NewK8sClientProviderWithLogger(nil),
+		varManager:        varManager,
 	}
 }
 
