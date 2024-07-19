@@ -89,9 +89,6 @@ func init() {
 
 type varsManager struct{}
 
-func (*varsManager) Set(key, value string) error {
-	return os.Setenv(key, value)
-}
 func (*varsManager) MaskVar(value string) {
 	oktetoLog.AddMaskedWord(value)
 }

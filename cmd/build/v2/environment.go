@@ -15,7 +15,7 @@ package v2
 
 import (
 	"fmt"
-	"os"
+	"github.com/okteto/okteto/pkg/vars"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -37,25 +37,24 @@ func (bc *OktetoBuilder) SetServiceEnvVars(service, reference string) {
 	registryKey := fmt.Sprintf("OKTETO_BUILD_%s_REGISTRY", sanitizedSvc)
 	bc.lock.Lock()
 	bc.buildEnvironments[registryKey] = ref.Registry
-	os.Setenv(registryKey, ref.Registry)
+	vars.GlobalVarManager.AddBuiltInVar(registryKey, ref.Registry)
 	bc.lock.Unlock()
 
 	repositoryKey := fmt.Sprintf("OKTETO_BUILD_%s_REPOSITORY", sanitizedSvc)
 	bc.lock.Lock()
 	bc.buildEnvironments[repositoryKey] = ref.Repo
-	os.Setenv(repositoryKey, ref.Repo)
+	vars.GlobalVarManager.AddBuiltInVar(repositoryKey, ref.Repo)
 	bc.lock.Unlock()
 
 	imageKey := fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", sanitizedSvc)
 	bc.lock.Lock()
 	bc.buildEnvironments[imageKey] = ref.Image
-	os.Setenv(imageKey, ref.Image)
 	bc.lock.Unlock()
 
 	tagKey := fmt.Sprintf("OKTETO_BUILD_%s_TAG", sanitizedSvc)
 	bc.lock.Lock()
 	bc.buildEnvironments[tagKey] = ref.Tag
-	os.Setenv(tagKey, ref.Tag)
+	vars.GlobalVarManager.AddBuiltInVar(tagKey, ref.Tag)
 	bc.lock.Unlock()
 
 	sha := ref.Tag
@@ -65,7 +64,7 @@ func (bc *OktetoBuilder) SetServiceEnvVars(service, reference string) {
 	shaKey := fmt.Sprintf("OKTETO_BUILD_%s_SHA", sanitizedSvc)
 	bc.lock.Lock()
 	bc.buildEnvironments[shaKey] = sha
-	os.Setenv(shaKey, sha)
+	vars.GlobalVarManager.AddBuiltInVar(shaKey, sha)
 	bc.lock.Unlock()
 
 	bc.ioCtrl.Logger().Debug("manifest env vars set")
