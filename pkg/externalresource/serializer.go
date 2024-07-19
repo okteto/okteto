@@ -15,6 +15,7 @@ package externalresource
 
 import (
 	"fmt"
+
 	"github.com/okteto/okteto/pkg/vars"
 )
 

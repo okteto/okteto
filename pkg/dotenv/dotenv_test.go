@@ -15,12 +15,13 @@ package dotenv
 
 import (
 	"fmt"
+	"os"
+	"testing"
+
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
-	"os"
-	"testing"
 )
 
 type fakeVarManager struct{}
@@ -30,20 +31,20 @@ func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
 
 func TestLoad(t *testing.T) {
 	type expected struct {
-		varManagerVars       map[string]string
-		mustNotLoadVars      []string
-		mustHaveOsEnvVars    map[string]string
-		mustNotHaveOsEnvVars []string
 		err                  error
+		varManagerVars       map[string]string
+		mustHaveOsEnvVars    map[string]string
+		mustNotLoadVars      []string
+		mustNotHaveOsEnvVars []string
 	}
 
 	tests := []struct {
-		expected         expected
-		dotEnvFilePath   string
 		mockfs           func() afero.Fs
 		mockEnv          func(*testing.T)
 		updateVarManager func(*vars.Manager)
+		dotEnvFilePath   string
 		name             string
+		expected         expected
 	}{
 		{
 			name: "missing .env",

@@ -125,7 +125,6 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
 
-	//t.Setenv("TEST_VAR", "unit-test")
 	tag := "okteto.dev/test:${TEST_VAR}"
 	options := &types.BuildOptions{
 		CommandArgs: []string{dir},

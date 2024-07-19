@@ -109,7 +109,7 @@ dev:
         sync:
           - worker:/src`, file.Name()))
 
-	manifest1, err := model.Read(manifest)
+	manifest1, err := model.Read(manifest) // TODO: FIX
 	require.NoError(t, err)
 
 	dev1 := manifest1.Dev["web"]

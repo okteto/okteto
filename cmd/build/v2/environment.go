@@ -15,10 +15,10 @@ package v2
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 // SetServiceEnvVars set okteto build env vars

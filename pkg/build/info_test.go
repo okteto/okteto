@@ -407,7 +407,7 @@ secrets:
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tt.expected, out)
+				require.Equal(t, tt.expected, out) // TODO: FIX
 			}
 
 		})

@@ -14,10 +14,10 @@
 package externalresource
 
 import (
-	"github.com/okteto/okteto/pkg/vars"
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 )

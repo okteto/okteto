@@ -15,13 +15,13 @@ package model
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/dotenv"
 	"os"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/compose-spec/godotenv"
+	"github.com/okteto/okteto/pkg/dotenv"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/vars"

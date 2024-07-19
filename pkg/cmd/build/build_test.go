@@ -16,7 +16,6 @@ package build
 import (
 	"bytes"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"log"
 	"os"
 	"path/filepath"
@@ -29,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

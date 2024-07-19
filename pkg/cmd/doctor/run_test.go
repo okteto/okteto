@@ -77,7 +77,7 @@ func Test_generateManifestFile(t *testing.T) {
 				t.Fatal("Failed to write to temporary file", err)
 			}
 
-			_, err = generateManifestFile(file.Name())
+			_, err = generateManifestFile(file.Name()) // TODO: FIX
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -15,6 +15,7 @@ package dotenv
 
 import (
 	"fmt"
+
 	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/vars"

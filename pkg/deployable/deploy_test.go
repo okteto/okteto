@@ -297,7 +297,7 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 	executor.On("Execute", expectedCommand1, expectedVariables).Return(nil).Once()
 	executor.On("Execute", expectedCommand2, expectedVariables).Return(nil).Once()
 
-	err := r.runCommandsSection(context.Background(), params)
+	err := r.runCommandsSection(context.Background(), params) // TODO: FIX
 
 	require.NoError(t, err)
 	executor.AssertExpectations(t)

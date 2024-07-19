@@ -14,10 +14,11 @@
 package vars
 
 import (
-	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+
+	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/stretchr/testify/assert"
 )
 
 type fakeVarManager struct{}
