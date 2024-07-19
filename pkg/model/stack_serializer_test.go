@@ -1912,7 +1912,6 @@ func Test_Environment(t *testing.T) {
 	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
 
 	vars.GlobalVarManager.AddDotEnvVar("OKTETO_ENVTEST", "myvalue")
-	t.Setenv("OKTETO_ENVTEST", "myvalue")
 
 	tests := []struct {
 		name        string

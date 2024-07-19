@@ -455,10 +455,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	svc.Environment = env.Environment{}
 	for _, env := range serviceRaw.Environment {
 		if env.Value == "" {
-			env.Value, err = vars.GlobalVarManager.ExpandExcLocal(env.Value)
-			if err != nil {
-				return nil, err
-			}
+			env.Value = vars.GlobalVarManager.GetExcLocal(env.Name)
 		}
 		if env.Value != "" {
 			svc.Environment = append(svc.Environment, env)

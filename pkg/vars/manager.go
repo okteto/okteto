@@ -210,5 +210,14 @@ func (m *Manager) groupsToArray(groups []Group) []string {
 }
 
 func (m *Manager) expandString(s string, envVars []string) (string, error) {
-	return parse.New("string", envVars, &parse.Restrictions{NoDigit: false, NoEmpty: false, NoUnset: false}).Parse(s)
+	opts := &parse.Restrictions{
+		NoDigit: false,
+		NoEmpty: false,
+		NoUnset: false,
+	}
+	parser := parse.New("string", envVars, opts)
+
+	result, err := parser.Parse(s)
+
+	return result, err
 }
