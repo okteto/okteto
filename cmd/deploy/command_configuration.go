@@ -15,9 +15,6 @@ package deploy
 
 import (
 	"context"
-	"net/url"
-	"os"
-
 	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/stack"
@@ -30,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/repository"
 	"k8s.io/client-go/kubernetes"
+	"net/url"
 )
 
 const (
@@ -106,15 +104,15 @@ func getStackServicesToDeploy(ctx context.Context, composeSectionInfo *model.Com
 }
 
 func (dc *Command) addEnvVars(cwd string) {
-	if os.Getenv(constants.OktetoGitBranchEnvVar) == "" {
+	if dc.VarManager.GetExcLocal(constants.OktetoGitBranchEnvVar) == "" {
 		branch, err := utils.GetBranch(cwd)
 		if err != nil {
 			oktetoLog.Infof("could not retrieve branch name: %s", err)
 		}
-		os.Setenv(constants.OktetoGitBranchEnvVar, branch)
+		dc.VarManager.AddBuiltInVar(constants.OktetoGitBranchEnvVar, branch)
 	}
 
-	if os.Getenv(model.GithubRepositoryEnvVar) == "" {
+	if dc.VarManager.GetExcLocal(model.GithubRepositoryEnvVar) == "" {
 		repo, err := modelUtils.GetRepositoryURL(cwd)
 		if err != nil {
 			oktetoLog.Infof("could not retrieve repo name: %s", err)
@@ -129,10 +127,10 @@ func (dc *Command) addEnvVars(cwd string) {
 				repo = repoHTTPS.String()
 			}
 		}
-		os.Setenv(model.GithubRepositoryEnvVar, repo)
+		dc.VarManager.AddBuiltInVar(model.GithubRepositoryEnvVar, repo)
 	}
 
-	if os.Getenv(constants.OktetoGitCommitEnvVar) == "" {
+	if dc.VarManager.GetExcLocal(constants.OktetoGitCommitEnvVar) == "" {
 		sha, err := repository.NewRepository(cwd).GetSHA()
 		if err != nil {
 			oktetoLog.Infof("could not retrieve sha: %s", err)
@@ -147,18 +145,17 @@ func (dc *Command) addEnvVars(cwd string) {
 		if !isClean {
 			sha = utils.GetRandomSHA()
 		}
-		os.Setenv(constants.OktetoGitCommitEnvVar, sha)
+		dc.VarManager.AddBuiltInVar(constants.OktetoGitCommitEnvVar, sha)
 	}
-	if os.Getenv(model.OktetoRegistryURLEnvVar) == "" {
-		os.Setenv(model.OktetoRegistryURLEnvVar, okteto.GetContext().Registry)
+	if dc.VarManager.GetExcLocal(model.OktetoRegistryURLEnvVar) == "" {
+		dc.VarManager.AddBuiltInVar(model.OktetoRegistryURLEnvVar, okteto.GetContext().Registry)
 	}
-	if os.Getenv(model.OktetoBuildkitHostURLEnvVar) == "" {
-		os.Setenv(model.OktetoBuildkitHostURLEnvVar, okteto.GetContext().Builder)
+	if dc.VarManager.GetExcLocal(model.OktetoBuildkitHostURLEnvVar) == "" {
+		dc.VarManager.AddBuiltInVar(model.OktetoBuildkitHostURLEnvVar, okteto.GetContext().Builder)
 	}
-	if os.Getenv(model.OktetoTokenEnvVar) == "" {
-		os.Setenv(model.OktetoTokenEnvVar, okteto.GetContext().Token)
+	if dc.VarManager.GetExcLocal(model.OktetoTokenEnvVar) == "" {
+		dc.VarManager.AddBuiltInVar(model.OktetoTokenEnvVar, okteto.GetContext().Token)
 	}
-	oktetoLog.AddMaskedWord(os.Getenv(model.OktetoTokenEnvVar))
 }
 
 func switchRepoSchemaToHTTPS(repo string) *url.URL {

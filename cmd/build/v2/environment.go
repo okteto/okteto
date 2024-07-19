@@ -49,6 +49,7 @@ func (bc *OktetoBuilder) SetServiceEnvVars(service, reference string) {
 	imageKey := fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", sanitizedSvc)
 	bc.lock.Lock()
 	bc.buildEnvironments[imageKey] = ref.Image
+	vars.GlobalVarManager.AddBuiltInVar(imageKey, ref.Image)
 	bc.lock.Unlock()
 
 	tagKey := fmt.Sprintf("OKTETO_BUILD_%s_TAG", sanitizedSvc)
