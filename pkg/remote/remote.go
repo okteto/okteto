@@ -160,7 +160,6 @@ type Params struct {
 	ManifestPathFlag            string
 	Deployable                  deployable.Entity
 	CommandFlags                []string
-	NoCache                     bool
 	Caches                      []string
 	// IgnoreRules are the ignoring rules added to this build execution.
 	// Rules follow the .dockerignore syntax as defined in:
@@ -176,6 +175,8 @@ type Params struct {
 
 	// UseRootUser is a flag to indicate if the user should be root
 	UseRootUser bool
+
+	NoCache bool
 }
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
