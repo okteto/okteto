@@ -444,18 +444,19 @@ func (c *Command) loadDotEnv(fs afero.Fs) error {
 		return fmt.Errorf("error parsing dot env file: %w", err)
 	}
 
-	dotEnvVars := vars.Group{
-		Vars:     []vars.Var{},
-		Priority: vars.OktetoVariableTypeDotEnv,
-	}
+	//dotEnvVars := vars.Group{
+	//	Vars:     []vars.Var{},
+	//	Priority: vars.OktetoVariableTypeDotEnv,
+	//}
 	for k, v := range expandedVars {
+		// TODO: do we really need this IF?
 		if _, exists := c.varManager.Lookup(k); exists {
 			continue
 		}
-		dotEnvVars.Vars = append(dotEnvVars.Vars, vars.Var{Name: k, Value: v})
-		oktetoLog.AddMaskedWord(v)
+		c.varManager.AddDotEnvVar(k, v)
+		//dotEnvVars.Vars = append(dotEnvVars.Vars, vars.Var{Name: k, Value: v})
+		//oktetoLog.AddMaskedWord(v) TODO: validate this change
 	}
-	c.varManager.AddGroup(dotEnvVars)
 
 	return nil
 }

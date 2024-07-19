@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"github.com/okteto/okteto/pkg/dotenv"
 	"os"
 	"reflect"
 	"testing"
@@ -328,6 +329,8 @@ func Test_loadName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 			manifestBytes := []byte(fmt.Sprintf(`dev:
     %s:
 `, tt.devName))
@@ -342,7 +345,8 @@ func Test_loadName(t *testing.T) {
 				devName = "n1"
 			}
 
-			t.Setenv("value", tt.value)
+			vars.GlobalVarManager.AddDotEnvVar("value", tt.value)
+
 			manifest, err := Read(manifestBytes)
 			if err != nil {
 				t.Fatal(err)
@@ -391,8 +395,10 @@ func Test_loadSelector(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager.AddDotEnvVar("value", tt.value)
+
 			dev := &Dev{Selector: tt.selector}
-			t.Setenv("value", tt.value)
 			if err := dev.loadSelector(); err != nil {
 				t.Fatalf("couldn't load selector")
 			}
@@ -470,6 +476,8 @@ func Test_loadImage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 			manifestBytes := []byte(fmt.Sprintf(`dev:
     deployment:
         image: %s
@@ -485,7 +493,7 @@ func Test_loadImage(t *testing.T) {
 `, tt.image))
 			}
 
-			t.Setenv("tag", tt.tagValue)
+			vars.GlobalVarManager.AddDotEnvVar("tag", tt.tagValue)
 			manifest, err := Read(manifestBytes)
 			if err != nil {
 				t.Fatal(err)
@@ -1121,6 +1129,8 @@ func Test_loadEnvFile(t *testing.T) {
 }
 
 func Test_LoadManifestWithEnvFile(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	content := map[string]string{
 		"DEPLOYMENT":    "main",
 		"IMAGE_TAG":     "1.2",
@@ -1152,7 +1162,7 @@ func Test_LoadManifestWithEnvFile(t *testing.T) {
           environment:
           - MY_VAR=$MY_VAR`)
 
-	if err := godotenv.Load(); err != nil {
+	if err := dotenv.Load(".env", vars.GlobalVarManager, afero.NewOsFs()); err != nil {
 		t.Fatal(err)
 	}
 

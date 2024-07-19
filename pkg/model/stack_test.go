@@ -1218,6 +1218,8 @@ func Test_getStackNameWithinRepository(t *testing.T) {
 }
 
 func Test_translateEnvVars(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	tmpFile, err := os.CreateTemp("", ".env")
 	if err != nil {
 		t.Fatalf("failed to create dynamic testEnv file: %s", err.Error())
@@ -1236,10 +1238,11 @@ func Test_translateEnvVars(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpFile2.Name())
 
-	t.Setenv("B", "2")
-	t.Setenv("ENV_PATH", tmpFile.Name())
-	t.Setenv("ENV_PATH2", tmpFile2.Name())
-	t.Setenv("OKTETO_TEST", "myvalue")
+	vars.GlobalVarManager.AddDotEnvVar("B", "2")
+	vars.GlobalVarManager.AddDotEnvVar("ENV_PATH", tmpFile.Name())
+	vars.GlobalVarManager.AddDotEnvVar("ENV_PATH2", tmpFile2.Name())
+	vars.GlobalVarManager.AddDotEnvVar("OKTETO_TEST", "myvalue")
+
 	stack := &Stack{
 		Name: "name",
 		Services: map[string]*Service{

@@ -949,7 +949,7 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 		}
 	}()
 
-	envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
+	envMap, err := godotenv.ParseWithLookup(f, vars.GlobalVarManager.Lookup)
 	if err != nil {
 		return fmt.Errorf("error parsing env_file %s: %w", filename, err)
 	}
@@ -960,7 +960,7 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 
 	for name, value := range envMap {
 		if value == "" {
-			value = os.Getenv(name)
+			value = vars.GlobalVarManager.GetExcLocal(name)
 		}
 		svc.Environment = append(
 			svc.Environment,
