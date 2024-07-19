@@ -423,6 +423,7 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 		Fs:                fakeOs,
 		Builder:           &fakeV2Builder{},
 		IoCtrl:            io.NewIOController(),
+		VarManager:        vars.NewVarsManager(&fakeVarManager{}),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -512,6 +513,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                afero.NewMemMapFs(),
 		IoCtrl:            io.NewIOController(),
+		VarManager:        vars.NewVarsManager(&fakeVarManager{}),
 	}
 	ctx := context.Background()
 
@@ -564,6 +566,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		GetDeployer:       fakeDeployer.Get,
 		Builder:           &fakeV2Builder{},
 		IoCtrl:            io.NewIOController(),
+		VarManager:        vars.NewVarsManager(&fakeVarManager{}),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -715,6 +718,7 @@ func TestDeployOnlyDependencies(t *testing.T) {
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		GetDeployer:       fakeDeployer.Get,
 		IoCtrl:            io.NewIOController(),
+		VarManager:        vars.NewVarsManager(&fakeVarManager{}),
 	}
 	ctx := context.Background()
 	opts := &Options{
