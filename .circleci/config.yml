@@ -343,6 +343,14 @@ jobs:
       - run: ./scripts/ci/push-image.sh latest "linux/amd64"
       - run: trivy image okteto/okteto:latest
 
+  scan-image-test:
+    executor: golang-ci
+    steps:
+      - checkout
+      - run: *okteto-login
+      - run: *docker-login
+      - run: trivy image okteto/okteto:$CIRCLE_TAG
+
   upload-static-job:
     executor: golang-ci
     steps:
@@ -391,6 +399,14 @@ jobs:
       - run: ./scripts/ci/release-branch.sh
 
 workflows:
+  scan-test:
+    jobs:
+      - scan-image-test:
+          context: Product-okteto-dev
+          filters:
+            branches:
+              only:
+                - ifbyol/scan-image-on-release
   upload-static:
     jobs:
       - upload-static-job:
