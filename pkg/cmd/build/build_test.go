@@ -16,6 +16,7 @@ package build
 import (
 	"bytes"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"log"
 	"os"
 	"path/filepath"
@@ -114,7 +115,14 @@ func (mr *mockRegistry) GetRepoNameAndTag(_ string) (string, string) {
 	return mr.repo, mr.tag
 }
 
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+
 func Test_OptsFromBuildInfo(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	context := okteto.Context{
 		Namespace: "test",
 		Registry:  "registry.okteto",
@@ -724,7 +732,8 @@ func Test_createTempFileWithExpandedEnvsAtSource(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("ENV_IN_FILE", tt.envValue)
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager.AddDotEnvVar("ENV_IN_FILE", tt.envValue)
 
 			file, err := createTempFileWithExpandedEnvsAtSource(tt.fakeFs, tt.sourceFile, t.TempDir())
 			if tt.expectedErr {

@@ -14,6 +14,7 @@
 package remoterun
 
 import (
+	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
@@ -22,6 +23,11 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/require"
 )
+
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
 
 func TestGetDeployableEmpty(t *testing.T) {
 	dep, err := getDeployable()
@@ -51,6 +57,7 @@ func TestGetDeployableInvalidDeployable(t *testing.T) {
 }
 
 func TestGetDeployable(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
 	t.Setenv(constants.OktetoDeployableEnvVar, "Y29tbWFuZHM6CiAgLSBuYW1lOiBDb21tYW5kIDEKICAgIGNvbW1hbmQ6IGVjaG8gMQogIC0gbmFtZTogQ29tbWFuZCAyCiAgICBjb21tYW5kOiBlY2hvIDIKZXh0ZXJuYWw6CiAgZmFrZToKICAgIGljb246IGljb24KICAgIGVuZHBvaW50czoKICAgIC0gbmFtZTogbmFtZQogICAgICB1cmw6IHVybApkaXZlcnQ6CiAgZHJpdmVyOiAidGVzdCBkcml2ZXIiCiAgbmFtZXNwYWNlOiBucwo=")
 
 	expected := deployable.Entity{
