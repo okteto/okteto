@@ -472,11 +472,14 @@ func TestMarshalInfo(t *testing.T) {
 }
 
 func Test_expandSecrets(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	homeEnvVar := "HOME"
 	if runtime.GOOS == "windows" {
 		homeEnvVar = "USERPROFILE"
 	}
-	t.Setenv(homeEnvVar, filepath.Clean("/home/testuser"))
+
+	vars.GlobalVarManager.AddFlagVar(homeEnvVar, "/home/testuser")
 
 	tests := []struct {
 		input       *Info

@@ -1008,8 +1008,9 @@ func TestStack_ExpandEnvsAtFileLevel(t *testing.T) {
 			}
 			defer os.RemoveAll(tmpFile.Name())
 
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
 			for key, value := range tt.envs {
-				t.Setenv(key, value)
+				vars.GlobalVarManager.AddDotEnvVar(key, value)
 			}
 
 			stack, err := GetStackFromPath("test", tmpFile.Name(), false, afero.NewMemMapFs())

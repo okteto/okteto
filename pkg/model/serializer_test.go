@@ -393,11 +393,12 @@ func TestLifecycleMarshalling(t *testing.T) {
 }
 
 func TestSecretMarshalling(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
 	file, err := os.CreateTemp("", "okteto-secret-test")
 	assert.NoError(t, err)
 	defer os.Remove(file.Name())
 
-	t.Setenv("TEST_HOME", file.Name())
+	vars.GlobalVarManager.AddDotEnvVar("TEST_HOME", file.Name())
 
 	tests := []struct {
 		expected      *Secret
@@ -717,8 +718,9 @@ func TestLabelsUnmarshalling(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := make(Labels)
 
-			t.Setenv("DEV_ENV", "test_environment")
-			t.Setenv("OKTETO_TEST_ENV_MARSHALLING", "true")
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager.AddDotEnvVar("DEV_ENV", "test_environment")
+			vars.GlobalVarManager.AddDotEnvVar("OKTETO_TEST_ENV_MARSHALLING", "true")
 
 			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
 				t.Fatal(err)
@@ -818,8 +820,9 @@ func TestAnnotationsUnmarshalling(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := make(Annotations)
 
-			t.Setenv("DEV_ENV", "test_environment")
-			t.Setenv("OKTETO_TEST_ENV_MARSHALLING", "true")
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager.AddDotEnvVar("DEV_ENV", "test_environment")
+			vars.GlobalVarManager.AddDotEnvVar("OKTETO_TEST_ENV_MARSHALLING", "true")
 
 			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
 				t.Fatal(err)
@@ -976,7 +979,9 @@ rescanInterval: 10`),
 }
 
 func TestSyncFoldersUnmarshalling(t *testing.T) {
-	t.Setenv("REMOTE_PATH", "/usr/src/app")
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager.AddDotEnvVar("REMOTE_PATH", "/usr/src/app")
+
 	tests := []struct {
 		expected SyncFolder
 		name     string
