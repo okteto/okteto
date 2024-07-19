@@ -349,7 +349,7 @@ jobs:
       - checkout
       - run: *okteto-login
       - run: *docker-login
-      - run: trivy image okteto/okteto:$CIRCLE_TAG
+      - run: trivy image okteto/okteto:$CIRCLE_SHA1
 
   upload-static-job:
     executor: golang-ci
