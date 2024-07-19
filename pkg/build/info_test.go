@@ -306,8 +306,10 @@ func TestSetBuildDefaults(t *testing.T) {
 }
 
 func TestUnmarshalInfo(t *testing.T) {
-	t.Setenv("CONTEXT", "testContext")
-	t.Setenv("DOCKERFILE", "dockerfile")
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager.AddDotEnvVar("CONTEXT", "testContext")
+	vars.GlobalVarManager.AddDotEnvVar("DOCKERFILE", "dockerfile")
+
 	tests := []struct {
 		input       string
 		expected    *Info
@@ -407,9 +409,8 @@ secrets:
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tt.expected, out) // TODO: FIX
+				require.Equal(t, tt.expected, out)
 			}
-
 		})
 	}
 }

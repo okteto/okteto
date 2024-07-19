@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path"
 	"reflect"
@@ -43,7 +44,14 @@ var (
 	mode420 int32 = 420
 )
 
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+
 func Test_translateWithVolumes(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	file, err := os.CreateTemp("", "okteto-secret-test")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
@@ -109,7 +117,7 @@ dev:
         sync:
           - worker:/src`, file.Name()))
 
-	manifest1, err := model.Read(manifest) // TODO: FIX
+	manifest1, err := model.Read(manifest)
 	require.NoError(t, err)
 
 	dev1 := manifest1.Dev["web"]

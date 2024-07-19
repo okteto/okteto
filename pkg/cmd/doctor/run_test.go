@@ -22,7 +22,14 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+
 func Test_generateManifestFile(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	var tests = []struct {
 		dev  *model.Dev
 		name string
@@ -77,7 +84,7 @@ func Test_generateManifestFile(t *testing.T) {
 				t.Fatal("Failed to write to temporary file", err)
 			}
 
-			_, err = generateManifestFile(file.Name()) // TODO: FIX
+			_, err = generateManifestFile(file.Name())
 			if err != nil {
 				t.Fatal(err)
 			}

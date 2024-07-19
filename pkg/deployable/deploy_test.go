@@ -15,6 +15,7 @@ package deployable
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 	"time"
 
@@ -30,6 +31,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/rest"
 )
+
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
 
 type fakeCmapHandler struct {
 	errUpdatingWithEnvs error
@@ -261,6 +267,7 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
 		Executor:           executor,
+		varManager:         vars.NewVarsManager(&fakeVarManager{}),
 	}
 
 	params := DeployParameters{
@@ -297,7 +304,7 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 	executor.On("Execute", expectedCommand1, expectedVariables).Return(nil).Once()
 	executor.On("Execute", expectedCommand2, expectedVariables).Return(nil).Once()
 
-	err := r.runCommandsSection(context.Background(), params) // TODO: FIX
+	err := r.runCommandsSection(context.Background(), params)
 
 	require.NoError(t, err)
 	executor.AssertExpectations(t)
@@ -319,6 +326,7 @@ func TestRunCommandsSectionWithErrorInCommands(t *testing.T) {
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
 		Executor:           executor,
+		varManager:         vars.NewVarsManager(&fakeVarManager{}),
 	}
 
 	params := DeployParameters{
