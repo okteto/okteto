@@ -332,7 +332,7 @@ jobs:
       - run: *okteto-login
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG" "linux/amd64,linux/arm64"
-      - run: trivy image okteto/okteto:$CIRCLE_TAG
+      - run: trivy image --no-progress okteto/okteto:$CIRCLE_TAG
 
   push-image-latest:
     executor: golang-ci
@@ -341,7 +341,7 @@ jobs:
       - run: *okteto-login
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh latest "linux/amd64"
-      - run: trivy image okteto/okteto:latest
+      - run: trivy image --no-progress okteto/okteto:latest
 
   upload-static-job:
     executor: golang-ci
