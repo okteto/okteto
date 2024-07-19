@@ -353,12 +353,6 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			UseRootUser:                 true,
 		}
 
-		if !options.NoCache {
-			// this value can be anything really.
-			// By keeping it constant we skip cache invalidation
-			params.CacheInvalidationKey = "const"
-		}
-
 		ioCtrl.Out().Infof("Executing test container '%s'", name)
 		if err := runner.Run(ctx, params); err != nil {
 			return metadata, err
