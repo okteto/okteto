@@ -515,7 +515,7 @@ func Test_GetDescriptor(t *testing.T) {
 			},
 		},
 		{
-			name: "not found for being invalide",
+			name: "not found for being invalid",
 			input: input{
 				image: "okteto/test:latest",
 			},
