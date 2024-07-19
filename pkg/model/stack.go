@@ -949,7 +949,7 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 		}
 	}()
 
-	envMap, err := godotenv.ParseWithLookup(f, vars.GlobalVarManager.Lookup)
+	envMap, err := godotenv.ParseWithLookup(f, vars.GlobalVarManager.LookupIncLocal)
 	if err != nil {
 		return fmt.Errorf("error parsing env_file %s: %w", filename, err)
 	}

@@ -22,7 +22,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/a8m/envsubst"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
@@ -730,7 +729,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 	var err error
 	if manifest.Deploy != nil {
 		if manifest.Deploy.Image != "" {
-			manifest.Deploy.Image, err = envsubst.String(manifest.Deploy.Image)
+			manifest.Deploy.Image, err = vars.GlobalVarManager.ExpandExcLocal(manifest.Deploy.Image)
 			if err != nil {
 				return errors.New("could not parse env vars for an image used for remote deploy")
 			}

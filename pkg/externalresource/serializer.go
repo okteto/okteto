@@ -15,8 +15,7 @@ package externalresource
 
 import (
 	"fmt"
-
-	"github.com/a8m/envsubst"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 type externalResourceUnmarshaller struct {
@@ -59,11 +58,11 @@ func (er *ExternalResource) UnmarshalYAML(unmarshal func(interface{}) error) err
 	}
 
 	for _, endpoint := range result.Endpoints {
-		name, err := envsubst.String(endpoint.Name)
+		name, err := vars.GlobalVarManager.ExpandExcLocal(endpoint.Name)
 		if err != nil {
 			return fmt.Errorf("error expanding environment on '%s': %w", endpoint.Name, err)
 		}
-		url, err := envsubst.String(endpoint.Url)
+		url, err := vars.GlobalVarManager.ExpandExcLocal(endpoint.Url)
 		if err != nil {
 			return fmt.Errorf("error expanding environment on '%s': %w", endpoint.Name, err)
 		}

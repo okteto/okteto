@@ -480,7 +480,7 @@ func (dev *Dev) setTimeout() error {
 // expandEnvFiles reads each env file and append all the variables to the environment
 func (dev *Dev) expandEnvFiles() error {
 	for _, envFile := range dev.EnvFiles {
-		filename, err := vars.GlobalVarManager.ExpandExcLocal(envFile)
+		filename, err := vars.GlobalVarManager.ExpandIncLocal(envFile)
 		if err != nil {
 			return err
 		}
@@ -495,7 +495,7 @@ func (dev *Dev) expandEnvFiles() error {
 			}
 		}()
 
-		envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
+		envMap, err := godotenv.ParseWithLookup(f, vars.GlobalVarManager.LookupIncLocal)
 		if err != nil {
 			return fmt.Errorf("error parsing env_file %s: %w", filename, err)
 		}
@@ -506,7 +506,7 @@ func (dev *Dev) expandEnvFiles() error {
 
 		for name, value := range envMap {
 			if value == "" {
-				value = os.Getenv(name)
+				value = vars.GlobalVarManager.GetIncLocal(name)
 			}
 			if value != "" {
 				dev.Environment = append(

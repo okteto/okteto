@@ -38,8 +38,6 @@ import (
 )
 
 func TestManifestExpandDevEnvs(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
-
 	tests := []struct {
 		manifest         *Manifest
 		expectedManifest *Manifest
@@ -187,8 +185,10 @@ echo $TEST_VAR`,
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 			for k, v := range tt.envs {
-				vars.GlobalVarManager.AddDotEnvVar(k, v)
+				vars.GlobalVarManager.AddBuiltInVar(k, v)
 			}
 
 			err := tt.manifest.ExpandEnvVars()

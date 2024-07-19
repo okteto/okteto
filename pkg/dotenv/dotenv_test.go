@@ -31,6 +31,7 @@ func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
 func TestLoad(t *testing.T) {
 	type expected struct {
 		varManagerVars       map[string]string
+		mustNotLoadVars      []string
 		mustHaveOsEnvVars    map[string]string
 		mustNotHaveOsEnvVars []string
 		err                  error
@@ -146,23 +147,23 @@ TEST2=VALUE2`), 0644)
 			mockfs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
 				_ = afero.WriteFile(fs, DefaultDotEnvFile, []byte(`
-VAR1=VALUE1
-VAR2=VALUE2
+VAR1=value1
+VAR2=value2
 VAR3=${VALUE3:-defaultValue3}
-VAR4=${VALUE4:-defaultValue4}`), 0644)
+VAR4=${LOCAL_VAR:-defaultValue4}`), 0644)
 				return fs
 			},
 			dotEnvFilePath: DefaultDotEnvFile,
 			expected: expected{
 				varManagerVars: map[string]string{
-					"VAR1":   "VALUE1",
-					"VAR2":   "VALUE2",
-					"VAR3":   "defaultValue3",
-					"VAR4":   "from-local",
-					"VALUE4": "from-local",
+					"VAR1":      "value1",
+					"VAR2":      "value2",
+					"VAR3":      "defaultValue3",
+					"VAR4":      "my-local-value",
+					"LOCAL_VAR": "my-local-value",
 				},
 				mustHaveOsEnvVars: map[string]string{
-					"VALUE4": "from-local",
+					"LOCAL_VAR": "my-local-value",
 				},
 				mustNotHaveOsEnvVars: []string{
 					"VAR1",
@@ -174,29 +175,38 @@ VAR4=${VALUE4:-defaultValue4}`), 0644)
 			},
 		},
 		{
-			name: "local varManagerVars are not overridden",
+			name: "local vars are not loaded unless used in the .env",
 			mockEnv: func(test *testing.T) {
-				test.Setenv("VAR4", "from-local")
+				test.Setenv("LOCAL_VAR", "my-local-value")
 			},
 			updateVarManager: func(varManager *vars.Manager) {
-				varManager.AddLocalVar("VAR4", "from-local")
-				varManager.AddLocalVar("VAR5", "from-local")
+				varManager.AddFlagVar("FLAG_VAR", "my-flag-value")
 			},
 			mockfs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
-				_ = afero.WriteFile(fs, DefaultDotEnvFile, []byte("VAR4=from-dot-env"), 0644)
+				_ = afero.WriteFile(fs, DefaultDotEnvFile, []byte(`
+VAR1=value1
+VAR2=value2
+VAR3=${VALUE3:-defaultValue3}
+VAR4=${VALUE4:-defaultValue4}`), 0644)
 				return fs
 			},
+			dotEnvFilePath: DefaultDotEnvFile,
 			expected: expected{
 				varManagerVars: map[string]string{
-					"VAR4": "from-local",
+					"VAR1":     "value1",
+					"VAR2":     "value2",
+					"VAR3":     "defaultValue3",
+					"VAR4":     "defaultValue4",
+					"FLAG_VAR": "my-flag-value",
 				},
 				mustHaveOsEnvVars: map[string]string{
-					"VAR4": "from-local",
+					"LOCAL_VAR": "my-local-value",
 				},
-				mustNotHaveOsEnvVars: []string{
-					"VAR5",
+				mustNotLoadVars: []string{
+					"LOCAL_VAR",
 				},
+				err: nil,
 			},
 		},
 	}
@@ -219,7 +229,7 @@ VAR4=${VALUE4:-defaultValue4}`), 0644)
 			}
 
 			for k, v := range tt.expected.varManagerVars {
-				actualVar, exists := varManager.Lookup(k)
+				actualVar, exists := varManager.LookupIncLocal(k)
 				assert.Equal(t, v, actualVar)
 				assert.Equal(t, true, exists)
 			}
@@ -235,7 +245,13 @@ VAR4=${VALUE4:-defaultValue4}`), 0644)
 				}
 				assert.Equal(t, false, exists)
 			}
-
+			for _, k := range tt.expected.mustNotLoadVars {
+				_, exists := varManager.LookupIncLocal(k)
+				if exists {
+					log.Fatalf("var %s loaded in the varManager", k)
+				}
+				assert.Equal(t, false, exists)
+			}
 		})
 	}
 }

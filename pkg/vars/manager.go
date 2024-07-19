@@ -37,9 +37,9 @@ type ConfigItem struct {
 	Masked bool
 }
 
-type Priority int
+type Type int
 
-var config = map[Priority]ConfigItem{
+var config = map[Type]ConfigItem{
 	OktetoVariableTypeBuiltIn:      {Masked: false},
 	OktetoVariableTypeDotEnv:       {Masked: true},
 	OktetoVariableTypeAdminAndUser: {Masked: true},
@@ -49,7 +49,7 @@ var config = map[Priority]ConfigItem{
 
 type Group struct {
 	Vars     []Var
-	Priority Priority
+	Priority Type
 }
 
 type ManagerInterface interface {
@@ -69,9 +69,24 @@ func NewVarsManager(m ManagerInterface) *Manager {
 	}
 }
 
-// Lookup returns the value of the environment variable named by the key
-func (m *Manager) Lookup(key string) (string, bool) {
+// LookupIncLocal returns the value of an okteto variable if it's loaded in the var manager, including local variables
+func (m *Manager) LookupIncLocal(key string) (string, bool) {
 	for _, g := range m.groups {
+		for _, v := range g.Vars {
+			if v.Name == key {
+				return v.Value, true
+			}
+		}
+	}
+	return "", false
+}
+
+// LookupExcLocal returns the value of an okteto variable if it's loaded in the var manager, excluding local variables
+func (m *Manager) LookupExcLocal(key string) (string, bool) {
+	for _, g := range m.groups {
+		if g.Priority == OktetoVariableTypeLocal {
+			continue
+		}
 		for _, v := range g.Vars {
 			if v.Name == key {
 				return v.Value, true
@@ -91,6 +106,11 @@ func (m *Manager) AddBuiltInVar(key, value string) {
 	m.addVar(key, value, OktetoVariableTypeBuiltIn)
 }
 
+// AddFlagVar allows to add a single variable to the manager with priority OktetoVariableTypeFlag.
+func (m *Manager) AddFlagVar(key, value string) {
+	m.addVar(key, value, OktetoVariableTypeFlag)
+}
+
 // AddLocalVar allows to add a single variable to the manager with priority OktetoVariableTypeLocal.
 func (m *Manager) AddLocalVar(key, value string) {
 	m.addVar(key, value, OktetoVariableTypeLocal)
@@ -98,7 +118,7 @@ func (m *Manager) AddLocalVar(key, value string) {
 
 // addVar allows to add a single variable to the manager. If other variables with the same priority already exists
 // the new variable will be added to the same group. If no group with the given priority exists, a new group will be created.
-func (m *Manager) addVar(key, value string, p Priority) {
+func (m *Manager) addVar(key, value string, p Type) {
 	m.m.MaskVar(value)
 
 	v := Var{Name: key, Value: value}
@@ -128,21 +148,33 @@ func (m *Manager) AddGroup(g Group) {
 	m.sortGroupsByPriorityDesc()
 }
 
-// GetExcLocal returns an okteto variable (excluding local variables)
-func (m *Manager) GetExcLocal(key string) string {
-	val, _ := m.Lookup(key)
+// GetIncLocal returns an okteto variable (including local variables)
+func (m *Manager) GetIncLocal(key string) string {
+	val, _ := m.LookupIncLocal(key)
 	return val
 }
 
-// GetOktetoVariablesExcLocal returns an array of all tifihe okteto variables that can be exported (excluding local variables)
-func (m *Manager) GetOktetoVariablesExcLocal() []string {
+// GetExcLocal returns an okteto variable (excluding local variables)
+func (m *Manager) GetExcLocal(key string) string {
+	val, _ := m.LookupExcLocal(key)
+	return val
+}
+
+// getGroupsExcludingType returns all groups excluding the given type
+func (m *Manager) getGroupsExcludingType(typeToExclude Type) []Group {
 	groups := make([]Group, 0)
 	for _, g := range m.groups {
-		if g.Priority == OktetoVariableTypeLocal {
+		if g.Priority == typeToExclude {
 			continue
 		}
 		groups = append(groups, g)
 	}
+	return groups
+}
+
+// GetOktetoVariablesExcLocal returns an array of all tifihe okteto variables that can be exported (excluding local variables)
+func (m *Manager) GetOktetoVariablesExcLocal() []string {
+	groups := m.getGroupsExcludingType(OktetoVariableTypeLocal)
 	return m.groupsToArray(groups)
 }
 
@@ -171,7 +203,7 @@ func (m *Manager) ExpandExcLocalIfNotEmpty(s string) (string, error) {
 // WarnVarsPrecedence prints out a warning message clarifying which variables take precedence over others in case a variables has been defined in multiple groups
 func (m *Manager) WarnVarsPrecedence() {
 	warnings := make(map[string]string)
-	exportedVars := make(map[string]Priority)
+	exportedVars := make(map[string]Type)
 
 	for _, g := range m.groups {
 		for _, v := range g.Vars {

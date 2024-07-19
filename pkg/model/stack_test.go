@@ -54,7 +54,9 @@ E=word -notword`
 )
 
 func Test_ReadStack(t *testing.T) {
-	t.Setenv("PWD", "hello")
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager.AddDotEnvVar("PWD", "hello")
+
 	manifest := []byte(`name: voting-app
 services:
   vote:

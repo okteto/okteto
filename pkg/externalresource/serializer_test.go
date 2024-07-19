@@ -14,16 +14,24 @@
 package externalresource
 
 import (
+	"github.com/okteto/okteto/pkg/vars"
 	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+
 func TestExternalResource_UnmarshalYAML(t *testing.T) {
-	t.Setenv("NAME", "test")
-	t.Setenv("URL_PATH", "test")
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager.AddDotEnvVar("NAME", "test")
+	vars.GlobalVarManager.AddDotEnvVar("URL_PATH", "test")
+
 	tests := []struct {
 		name        string
 		data        []byte

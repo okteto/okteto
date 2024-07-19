@@ -13,6 +13,121 @@
 
 package vars
 
+import (
+	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/stretchr/testify/assert"
+	"os"
+	"testing"
+)
+
+type fakeVarManager struct{}
+
+func (*fakeVarManager) Set(key, value string) error {
+	return os.Setenv(key, value)
+}
+func (*fakeVarManager) MaskVar(value string) {
+	oktetoLog.AddMaskedWord(value)
+}
+func (*fakeVarManager) WarningLogf(format string, args ...interface{}) {
+	oktetoLog.Warning(format, args...)
+}
+
+func TestGetIncLocal(t *testing.T) {
+	tests := []struct {
+		name          string
+		getVarManager func() *Manager
+		find          string
+		expected      string
+	}{
+		{
+			name: "empty var manager - var not found",
+			getVarManager: func() *Manager {
+				varManager := NewVarsManager(&fakeVarManager{})
+				return varManager
+			},
+			find:     "MY_VAR",
+			expected: "",
+		},
+		{
+			name: "local var loaded in var manager - var found",
+			getVarManager: func() *Manager {
+				varManager := NewVarsManager(&fakeVarManager{})
+				varManager.AddLocalVar("MY_VAR", "my-value")
+				return varManager
+			},
+			find:     "MY_VAR",
+			expected: "my-value",
+		},
+		{
+			name: "flag var loaded in var manager - var found",
+			getVarManager: func() *Manager {
+				varManager := NewVarsManager(&fakeVarManager{})
+				varManager.AddFlagVar("MY_VAR", "my-value")
+				return varManager
+			},
+			find:     "MY_VAR",
+			expected: "my-value",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			varManager := tt.getVarManager()
+			got := varManager.GetIncLocal(tt.find)
+			assert.Equal(t, tt.expected, got)
+		})
+
+	}
+}
+
+func TestGetExcLocal(t *testing.T) {
+	tests := []struct {
+		name          string
+		getVarManager func() *Manager
+		find          string
+		expected      string
+	}{
+		{
+			name: "empty var manager - var not found",
+			getVarManager: func() *Manager {
+				varManager := NewVarsManager(&fakeVarManager{})
+				return varManager
+			},
+			find:     "MY_VAR",
+			expected: "",
+		},
+		{
+			name: "local var loaded in var manager - var found",
+			getVarManager: func() *Manager {
+				varManager := NewVarsManager(&fakeVarManager{})
+				varManager.AddLocalVar("MY_VAR", "my-value")
+				return varManager
+			},
+			find:     "MY_VAR",
+			expected: "",
+		},
+		{
+			name: "flag var loaded in var manager - var found",
+			getVarManager: func() *Manager {
+				varManager := NewVarsManager(&fakeVarManager{})
+				varManager.AddFlagVar("MY_VAR", "my-value")
+				return varManager
+			},
+			find:     "MY_VAR",
+			expected: "my-value",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			varManager := tt.getVarManager()
+			got := varManager.GetExcLocal(tt.find)
+			assert.Equal(t, tt.expected, got)
+		})
+
+	}
+}
+
 //type fakeEnvManager struct {
 //	t           *testing.T
 //	maskedWords []string

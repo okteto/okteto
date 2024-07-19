@@ -1443,6 +1443,7 @@ func Test_expandEnvFiles(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s is present", tt.name), func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
 
 			file, err := os.CreateTemp("", ".env")
 			if err != nil {
@@ -1452,7 +1453,7 @@ func Test_expandEnvFiles(t *testing.T) {
 
 			tt.dev.EnvFiles = env.Files{file.Name()}
 
-			t.Setenv("OKTETO_TEST", "myvalue")
+			vars.GlobalVarManager.AddLocalVar("OKTETO_TEST", "myvalue")
 
 			if _, err = file.Write(tt.envs); err != nil {
 				t.Fatal("Failed to write to temporary file", err)

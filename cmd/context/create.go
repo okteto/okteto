@@ -21,20 +21,17 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/okteto/okteto/pkg/vars"
-	"github.com/spf13/afero"
 )
 
 // oktetoClientProvider provides an okteto client ready to use or fail
@@ -422,43 +419,6 @@ func (c *Command) getUserContext(ctx context.Context, ctxName, ns, token string)
 		return userContext, nil
 	}
 	return nil, oktetoErrors.ErrInternalServerError
-}
-
-func (c *Command) loadDotEnv(fs afero.Fs) error {
-	dotEnvFile := ".env"
-	if !filesystem.FileExistsWithFilesystem(dotEnvFile, fs) {
-		return nil
-	}
-
-	content, err := afero.ReadFile(fs, dotEnvFile)
-	if err != nil {
-		return fmt.Errorf("error reading file: %w", err)
-	}
-
-	expanded, err := c.varManager.ExpandIncLocal(string(content))
-	if err != nil {
-		return fmt.Errorf("error expanding dot env file: %w", err)
-	}
-	expandedVars, err := godotenv.UnmarshalBytes([]byte(expanded))
-	if err != nil {
-		return fmt.Errorf("error parsing dot env file: %w", err)
-	}
-
-	//dotEnvVars := vars.Group{
-	//	Vars:     []vars.Var{},
-	//	Priority: vars.OktetoVariableTypeDotEnv,
-	//}
-	for k, v := range expandedVars {
-		// TODO: do we really need this IF?
-		if _, exists := c.varManager.Lookup(k); exists {
-			continue
-		}
-		c.varManager.AddDotEnvVar(k, v)
-		//dotEnvVars.Vars = append(dotEnvVars.Vars, vars.Var{Name: k, Value: v})
-		//oktetoLog.AddMaskedWord(v) TODO: validate this change
-	}
-
-	return nil
 }
 
 func isUrl(u string) bool {
