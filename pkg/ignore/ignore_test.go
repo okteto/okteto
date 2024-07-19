@@ -205,13 +205,13 @@ func TestRules(t *testing.T) {
 			backend
 			`,
 			section:  []string{"nonexistent"},
-			expected: []string{"# Okteto docker ignore"},
+			expected: nil,
 		},
 		{
 			name:     "empty_section",
 			input:    ``,
 			section:  []string{RootSection},
-			expected: []string{"# Okteto docker ignore"},
+			expected: nil,
 		},
 	}
 

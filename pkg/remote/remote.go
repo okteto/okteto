@@ -513,7 +513,9 @@ func createDockerignoreFileWithFilesystem(cwd, tmpDir string, rules []string, us
 		dockerignoreContent = append(dockerignoreContent, []byte(rule)...)
 		dockerignoreContent = append(dockerignoreContent, []byte("\n")...)
 	}
-
+	if len(dockerignoreContent) == 0 {
+		dockerignoreContent = []byte("# Okteto docker ignore\n")
+	}
 	return afero.WriteFile(fs, filename, dockerignoreContent, 0600)
 }
 
