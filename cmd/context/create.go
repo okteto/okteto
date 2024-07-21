@@ -391,7 +391,8 @@ func (*Command) initKubernetesContext(ctxOptions *Options) error {
 	cfg.CurrentContext = okteto.GetContext().Name
 	okteto.GetContext().Cfg = cfg
 	okteto.GetContext().IsOkteto = false
-
+	okteto.GetContext().PublicKeyFile = ctxOptions.PublicKeyFile
+	okteto.GetContext().PrivateKeyFile = ctxOptions.PrivateKeyFile
 	return nil
 }
 

@@ -82,6 +82,8 @@ type Context struct {
 	IsInsecure         bool                 `json:"-" yaml:"-"`
 	Analytics          bool                 `json:"-" yaml:"-"`
 	IsTrial            bool                 `json:"-" yaml:"-"`
+	PublicKeyFile      string               `json:"publicKeyFile,omitempty" yaml:"publicKeyFile,omitempty"`
+	PrivateKeyFile     string               `json:"privateKeyFile,omitempty" yaml:"privateKeyFile,omitempty"`
 }
 
 // ContextViewer contains info to show

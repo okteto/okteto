@@ -88,6 +88,8 @@ Or a Kubernetes context:
 	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "namespace of your okteto context")
 	cmd.Flags().StringVarP(&ctxOptions.Builder, "builder", "b", "", "url of the builder service")
 	cmd.Flags().BoolVarP(&ctxOptions.OnlyOkteto, "okteto", "", false, "only shows okteto context options")
+	cmd.Flags().StringVarP(&ctxOptions.PrivateKeyFile, "key-file", "k", "", "private key file location")
+	cmd.Flags().StringVarP(&ctxOptions.PublicKeyFile, "public-key-file", "p", "", "private key file location")
 	if err := cmd.Flags().MarkHidden("okteto"); err != nil {
 		oktetoLog.Infof("failed to mark 'okteto' flag as hidden: %s", err)
 	}
