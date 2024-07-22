@@ -161,6 +161,7 @@ type Params struct {
 	Deployable                  deployable.Entity
 	CommandFlags                []string
 	Caches                      []string
+	Hosts                       []model.Host
 	// IgnoreRules are the ignoring rules added to this build execution.
 	// Rules follow the .dockerignore syntax as defined in:
 	// https://docs.docker.com/build/building/context/#syntax
@@ -333,6 +334,8 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 			buildOptions.ExtraHosts = getExtraHosts(registryUrl, subdomain, ip, *sc)
 		}
 	}
+
+	buildOptions.ExtraHosts = addDefinedHosts(buildOptions.ExtraHosts, params.Hosts)
 
 	sshSock := os.Getenv(r.sshAuthSockEnvvar)
 	if sshSock == "" {
@@ -551,6 +554,13 @@ func getExtraHosts(registryURL, subdomain, ip string, metadata types.ClusterMeta
 		extraHosts = append(extraHosts, types.HostMap{Hostname: metadata.PublicDomain, IP: ip})
 	}
 
+	return extraHosts
+}
+
+func addDefinedHosts(extraHosts []types.HostMap, definedHosts []model.Host) []types.HostMap {
+	for _, host := range definedHosts {
+		extraHosts = append(extraHosts, types.HostMap{Hostname: host.Hostname, IP: host.IP})
+	}
 	return extraHosts
 }
 
