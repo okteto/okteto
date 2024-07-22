@@ -28,30 +28,8 @@ func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
 
 func Test_Env_UnmarshalYAML(t *testing.T) {
 	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
-
-	// this helps to test that local env vars are not used in the manifest deserialization
-	localEnvVars := vars.Group{
-		Priority: vars.OktetoVariableTypeLocal,
-		Vars: []vars.Var{
-			{
-				Name:  "LOCAL_VAR",
-				Value: "local-env-var",
-			},
-		},
-	}
-	vars.GlobalVarManager.AddGroup(localEnvVars)
-
-	// this helps to test that flag vars are used in the manifest deserialization
-	deployFlagVars := vars.Group{
-		Priority: vars.OktetoVariableTypeFlag,
-		Vars: []vars.Var{
-			{
-				Name:  "FLAG_VAR",
-				Value: "flag-var",
-			},
-		},
-	}
-	vars.GlobalVarManager.AddGroup(deployFlagVars)
+	vars.GlobalVarManager.AddLocalVar("LOCAL_VAR", "local-var")
+	vars.GlobalVarManager.AddFlagVar("FLAG_VAR", "flag-var")
 
 	tests := []struct {
 		expected    Environment

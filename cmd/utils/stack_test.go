@@ -92,16 +92,7 @@ func Test_multipleStack(t *testing.T) {
 		t.Fatalf("Expected %v but got %v", svcResult.Image, svc.Image)
 	}
 
-	builtInVars := vars.Group{
-		Priority: vars.OktetoVariableTypeBuiltIn,
-		Vars: []vars.Var{
-			{
-				Name:  "OKTETO_BUILD_APP_IMAGE",
-				Value: "test",
-			},
-		},
-	}
-	vars.GlobalVarManager.AddGroup(builtInVars)
+	vars.GlobalVarManager.AddBuiltInVar("OKTETO_BUILD_APP_IMAGE", "test")
 
 	svcResult.Image = "test"
 

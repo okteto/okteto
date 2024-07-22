@@ -48,8 +48,8 @@ var config = map[Type]ConfigItem{
 }
 
 type Group struct {
-	Vars     []Var
-	Priority Type
+	Vars []Var
+	Type Type
 }
 
 type ManagerInterface interface {
@@ -84,7 +84,7 @@ func (m *Manager) LookupIncLocal(key string) (string, bool) {
 // LookupExcLocal returns the value of an okteto variable if it's loaded in the var manager, excluding local variables
 func (m *Manager) LookupExcLocal(key string) (string, bool) {
 	for _, g := range m.groups {
-		if g.Priority == OktetoVariableTypeLocal {
+		if g.Type == OktetoVariableTypeLocal {
 			continue
 		}
 		for _, v := range g.Vars {
@@ -96,56 +96,60 @@ func (m *Manager) LookupExcLocal(key string) (string, bool) {
 	return "", false
 }
 
-// AddDotEnvVar allows to add a single variable to the manager with priority OktetoVariableTypeDotEnv.
+// AddDotEnvVar allows to add a single variable to the manager of type OktetoVariableTypeDotEnv.
 func (m *Manager) AddDotEnvVar(key, value string) {
 	m.addVar(key, value, OktetoVariableTypeDotEnv)
 }
 
-// AddBuiltInVar allows to add a single variable to the manager with priority OktetoVariableTypeBuiltIn.
+// AddBuiltInVar allows to add a single variable to the manager of type OktetoVariableTypeBuiltIn.
 func (m *Manager) AddBuiltInVar(key, value string) {
 	m.addVar(key, value, OktetoVariableTypeBuiltIn)
 }
 
-// AddFlagVar allows to add a single variable to the manager with priority OktetoVariableTypeFlag.
+// AddFlagVar allows to add a single variable to the manager of type OktetoVariableTypeFlag.
 func (m *Manager) AddFlagVar(key, value string) {
 	m.addVar(key, value, OktetoVariableTypeFlag)
+	fmt.Println(m.groups)
 }
 
-// AddLocalVar allows to add a single variable to the manager with priority OktetoVariableTypeLocal.
+// AddLocalVar allows to add a single variable to the manager of type OktetoVariableTypeLocal.
 func (m *Manager) AddLocalVar(key, value string) {
 	m.addVar(key, value, OktetoVariableTypeLocal)
 }
 
-// addVar allows to add a single variable to the manager. If other variables with the same priority already exists
-// the new variable will be added to the same group. If no group with the given priority exists, a new group will be created.
-func (m *Manager) addVar(key, value string, p Type) {
-	m.m.MaskVar(value)
-
+// addVar allows to add a single variable to the manager. If other variables of the same type already exists
+// the new variable will be added to the same group. If no group with the given type exists, a new group will be created.
+func (m *Manager) addVar(key, value string, t Type) {
 	v := Var{Name: key, Value: value}
 
+	// if the group already exists, we append the new var to the existing group
 	for i, g := range m.groups {
-		if g.Priority == p {
+		if g.Type == t {
 			m.groups[i].Vars = append(m.groups[i].Vars, v)
+			m.m.MaskVar(value)
 			return
 		}
 	}
 
+	// we create a new group because the new var is the first one of its type
 	m.AddGroup(Group{
-		Vars:     []Var{v},
-		Priority: p,
+		Vars: []Var{v},
+		Type: t,
 	})
 }
 
-// AddGroup allows to add a group of variables to the manager. The variables of the group should share the same priority.
+// AddGroup allows to add a group of variables to the manager. The variables of the group should share the same typ.
 func (m *Manager) AddGroup(g Group) {
-	if config[g.Priority].Masked {
+	if config[g.Type].Masked {
 		for _, v := range g.Vars {
 			m.m.MaskVar(v.Value)
 		}
 	}
 
 	m.groups = append(m.groups, g)
+	fmt.Println(m.groups)
 	m.sortGroupsByPriorityDesc()
+	fmt.Println(m.groups)
 }
 
 // GetIncLocal returns an okteto variable (including local variables)
@@ -164,7 +168,7 @@ func (m *Manager) GetExcLocal(key string) string {
 func (m *Manager) getGroupsExcludingType(typeToExclude Type) []Group {
 	groups := make([]Group, 0)
 	for _, g := range m.groups {
-		if g.Priority == typeToExclude {
+		if g.Type == typeToExclude {
 			continue
 		}
 		groups = append(groups, g)
@@ -208,13 +212,13 @@ func (m *Manager) WarnVarsPrecedence() {
 	for _, g := range m.groups {
 		for _, v := range g.Vars {
 			if priority, exported := exportedVars[v.Name]; exported {
-				if priority > g.Priority {
+				if priority > g.Type {
 					prevGroupName := config[priority].Name
-					currentGroupName := config[g.Priority].Name
+					currentGroupName := config[g.Type].Name
 					warnings[v.Name] = fmt.Sprintf("Variable '%s' defined %s takes precedence over the same variable defined %s, which will be ignored", v.Name, currentGroupName, prevGroupName)
 				}
 			}
-			exportedVars[v.Name] = g.Priority
+			exportedVars[v.Name] = g.Type
 		}
 	}
 
@@ -226,7 +230,7 @@ func (m *Manager) WarnVarsPrecedence() {
 // sortGroupsByPriorityDesc sorts the groups by priority descending, so higher priority variables override lower priority ones.
 func (m *Manager) sortGroupsByPriorityDesc() {
 	sort.Slice(m.groups, func(i, j int) bool {
-		return m.groups[i].Priority > m.groups[j].Priority
+		return m.groups[i].Type > m.groups[j].Type
 	})
 }
 

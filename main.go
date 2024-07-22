@@ -125,8 +125,8 @@ func main() {
 
 	varManager := vars.NewVarsManager(&varsManager{})
 	varManager.AddGroup(vars.Group{
-		Vars:     vars.ConvertLocalEnvVarsToOktetoVars(os.Environ),
-		Priority: vars.OktetoVariableTypeLocal,
+		Vars: vars.ConvertLocalEnvVarsToOktetoVars(os.Environ),
+		Type: vars.OktetoVariableTypeLocal,
 	})
 	vars.GlobalVarManager = varManager
 

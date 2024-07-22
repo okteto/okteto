@@ -202,17 +202,7 @@ services:
 
 func Test_ReadStackCompose(t *testing.T) {
 	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
-
-	dotEnvVars := vars.Group{
-		Priority: vars.OktetoVariableTypeDotEnv,
-		Vars: []vars.Var{
-			{
-				Name:  "PWD",
-				Value: "hello",
-			},
-		},
-	}
-	vars.GlobalVarManager.AddGroup(dotEnvVars)
+	vars.GlobalVarManager.AddDotEnvVar("PWD", "hello")
 
 	manifest := []byte(`name: voting-app
 services:

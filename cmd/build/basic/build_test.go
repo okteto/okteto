@@ -188,16 +188,7 @@ func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 	ctx := context.Background()
 
 	varManager := vars.NewVarsManager(&fakeVarManager{})
-	localEnvVars := vars.Group{
-		Priority: vars.OktetoVariableTypeLocal,
-		Vars: []vars.Var{
-			{
-				Name:  "TEST_VAR",
-				Value: "unit-test",
-			},
-		},
-	}
-	varManager.AddGroup(localEnvVars)
+	varManager.AddLocalVar("TEST_VAR", "unit-test")
 
 	buildRunner := &fakeBuildRunner{}
 	bc := &Builder{

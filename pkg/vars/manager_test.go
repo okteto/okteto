@@ -33,6 +33,32 @@ func (*fakeVarManager) WarningLogf(format string, args ...interface{}) {
 	oktetoLog.Warning(format, args...)
 }
 
+func TestVarManagerDoesNotExportToOsEnv(t *testing.T) {
+	varManager := NewVarsManager(&fakeVarManager{})
+
+	varManager.AddLocalVar("MY_VAR", "local-value")
+	assert.Equal(t, "", os.Getenv("MY_VAR"))
+	assert.Equal(t, "local-value", varManager.GetIncLocal("MY_VAR"))
+}
+
+func TestVarManagerRespectsVarTypePriority(t *testing.T) {
+	varManager := NewVarsManager(&fakeVarManager{})
+
+	varManager.AddBuiltInVar("MY_VAR", "built-in-value")
+	assert.Equal(t, "built-in-value", varManager.GetIncLocal("MY_VAR"))
+
+	varManager.AddLocalVar("MY_VAR", "local-value")
+	assert.Equal(t, "local-value", varManager.GetIncLocal("MY_VAR"))
+
+	varManager.AddFlagVar("MY_VAR", "flag-value")
+
+	// local vars have higher priority of flag vars
+	assert.Equal(t, "local-value", varManager.GetIncLocal("MY_VAR"))
+
+	// but if we exclude local vars, flag vars are returned
+	assert.Equal(t, "flag-value", varManager.GetExcLocal("MY_VAR"))
+}
+
 func TestGetIncLocal(t *testing.T) {
 	tests := []struct {
 		name          string

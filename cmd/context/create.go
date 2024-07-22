@@ -288,8 +288,8 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 	okteto.GetContext().CompanyName = clusterMetadata.CompanyName
 
 	c.varManager.AddGroup(vars.Group{
-		Vars:     userContext.PlatformVariables,
-		Priority: vars.OktetoVariableTypeAdminAndUser,
+		Vars: userContext.PlatformVariables,
+		Type: vars.OktetoVariableTypeAdminAndUser,
 	})
 
 	c.varManager.AddBuiltInVar(model.OktetoUserNameEnvVar, okteto.GetContext().Username)

@@ -35,18 +35,7 @@ func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
 func TestExpandBuildArgs(t *testing.T) {
 	varManager := vars.NewVarsManager(&fakeVarManager{})
 	vars.GlobalVarManager = varManager
-
-	// this helps to test that local env vars are not used in the manifest deserialization
-	localEnvVars := vars.Group{
-		Priority: vars.OktetoVariableTypeFlag,
-		Vars: []vars.Var{
-			{
-				Name:  "KEY",
-				Value: "VALUE",
-			},
-		},
-	}
-	varManager.AddGroup(localEnvVars)
+	vars.GlobalVarManager.AddFlagVar("KEY", "VALUE")
 
 	tests := []struct {
 		buildInfo          *Info
