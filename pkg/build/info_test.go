@@ -14,7 +14,6 @@
 package build
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -472,19 +471,16 @@ func TestMarshalInfo(t *testing.T) {
 }
 
 func Test_expandSecrets(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
-
 	homeEnvVar := "HOME"
 	if runtime.GOOS == "windows" {
 		homeEnvVar = "USERPROFILE"
 	}
-
-	vars.GlobalVarManager.AddFlagVar(homeEnvVar, "/home/testuser")
+	t.Setenv(homeEnvVar, filepath.Clean("/home/testuser"))
 
 	tests := []struct {
 		input       *Info
 		expected    *Info
-		setEnvFunc  func(t *testing.T)
+		setEnvFunc  func(varManager *vars.Manager)
 		name        string
 		expectedErr bool
 	}{
@@ -521,19 +517,19 @@ func Test_expandSecrets(t *testing.T) {
 			}},
 		},
 		{
-			name: "expand HOME env var",
+			name: "expand path with flag variable",
 			input: &Info{Secrets: map[string]string{
-				"path": filepath.Join(fmt.Sprintf("$%s", homeEnvVar), "secrets"),
+				"path": filepath.Join("$TEST_RANDOM_DIR", "secrets"),
 			}},
 			expected: &Info{Secrets: map[string]string{
 				"path": filepath.Clean("/home/testuser/secrets"),
 			}},
-			setEnvFunc: func(t *testing.T) {
-				t.Setenv("TEST_RANDOM_DIR", "/home/testuser")
+			setEnvFunc: func(varManager *vars.Manager) {
+				varManager.AddFlagVar("TEST_RANDOM_DIR", "/home/testuser")
 			},
 		},
 		{
-			name: "expand unset env var",
+			name: "expand unset var",
 			input: &Info{Secrets: map[string]string{
 				"path": "$TEST_RANDOM_DIR/secrets",
 			}},
@@ -564,8 +560,9 @@ func Test_expandSecrets(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
 			if tc.setEnvFunc != nil {
-				tc.setEnvFunc(t)
+				tc.setEnvFunc(vars.GlobalVarManager)
 			}
 			err := tc.input.expandSecrets()
 			if tc.expectedErr {

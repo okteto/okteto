@@ -196,16 +196,7 @@ func TestGetBuildHash(t *testing.T) {
 
 func Test_getBuildHashFromCommit(t *testing.T) {
 	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
-	localEnvVars := vars.Group{
-		Priority: vars.OktetoVariableTypeLocal,
-		Vars: []vars.Var{
-			{
-				Name:  "BAR",
-				Value: "bar",
-			},
-		},
-	}
-	vars.GlobalVarManager.AddGroup(localEnvVars)
+	vars.GlobalVarManager.AddFlagVar("BAR", "bar")
 
 	fs := afero.NewMemMapFs()
 	err := afero.WriteFile(fs, "secret", []byte("bar"), 0600)
