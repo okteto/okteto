@@ -114,6 +114,7 @@ func (t *TestCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func (h *Host) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	numberOfHostFields := 2
 	var hostnameIP string
 	err := unmarshal(&hostnameIP)
 	if err == nil {
@@ -121,8 +122,8 @@ func (h *Host) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err != nil {
 			return err
 		}
-		splittedHostNameIP := strings.SplitN(hostnameIPExpanded, ":", 2)
-		if len(splittedHostNameIP) != 2 {
+		splittedHostNameIP := strings.SplitN(hostnameIPExpanded, ":", numberOfHostFields)
+		if len(splittedHostNameIP) != numberOfHostFields {
 			return fmt.Errorf("%w: '%s'", ErrHostMalformed, hostnameIP)
 		}
 		*h = Host{
