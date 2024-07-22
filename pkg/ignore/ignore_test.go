@@ -115,6 +115,11 @@ func TestIgnore(t *testing.T) {
 				"test.frontend": {str: "\nbackend\n\n\n\n", files: []string{"backend"}},
 			},
 		},
+		{
+			name:     "empty",
+			input:    ``,
+			expected: map[string]exp{},
+		},
 	}
 
 	for _, tc := range tt {
@@ -150,4 +155,72 @@ backend
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, f, []string{".git", "chart", "backend"})
 
+}
+
+func TestRules(t *testing.T) {
+	tt := []struct {
+		name        string
+		input       string
+		section     []string
+		expected    []string
+		expectedErr bool
+	}{
+		{
+			name: "single_section",
+			input: `
+			.git
+			`,
+			section:  []string{RootSection},
+			expected: []string{".git"},
+		},
+		{
+			name: "multiple_sections",
+			input: `
+			.git
+			[deploy]
+			integration
+			[destroy]
+			frontend/*
+			backend
+			[test]
+			chart
+			[test.frontend]
+			backend
+			`,
+			section:  []string{"deploy", "destroy", "test"},
+			expected: []string{"integration", "frontend/*", "backend", "chart"},
+		},
+		{
+			name: "nonexistent_section",
+			input: `
+			.git
+			[deploy]
+			integration
+			[destroy]
+			frontend/*
+			backend
+			[test]
+			chart
+			[test.frontend]
+			backend
+			`,
+			section:  []string{"nonexistent"},
+			expected: nil,
+		},
+		{
+			name:     "empty_section",
+			input:    ``,
+			section:  []string{RootSection},
+			expected: nil,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			ig := NewFromReader(strings.NewReader(tc.input))
+			f, err := ig.Rules(tc.section...)
+			require.NoError(t, err)
+			assert.ElementsMatch(t, f, tc.expected)
+		})
+	}
 }
