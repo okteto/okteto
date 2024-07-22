@@ -764,7 +764,7 @@ func TestCreateDockerignoreFileWithFilesystem(t *testing.T) {
 		{
 			name:            "without dockerignore",
 			config:          config{},
-			expectedContent: "",
+			expectedContent: "# Okteto docker ignore\n",
 			useDeployIgnore: true,
 		},
 		{
