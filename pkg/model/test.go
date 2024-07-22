@@ -115,23 +115,19 @@ func (t *TestCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 func (h *Host) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var hostnameIP string
-	strErr := unmarshal(&hostnameIP)
-	if strErr == nil {
-		splittedHostName := strings.SplitN(hostnameIP, ":", 2)
-		if len(splittedHostName) != 2 {
+	err := unmarshal(&hostnameIP)
+	if err == nil {
+		hostnameIPExpanded, err := env.ExpandEnv(hostnameIP)
+		if err != nil {
+			return err
+		}
+		splittedHostNameIP := strings.SplitN(hostnameIPExpanded, ":", 2)
+		if len(splittedHostNameIP) != 2 {
 			return fmt.Errorf("%w: '%s'", ErrHostMalformed, hostnameIP)
 		}
-		hostname, err := env.ExpandEnv(splittedHostName[0])
-		if err != nil {
-			return err
-		}
-		ip, err := env.ExpandEnv(splittedHostName[1])
-		if err != nil {
-			return err
-		}
 		*h = Host{
-			Hostname: hostname,
-			IP:       ip,
+			Hostname: splittedHostNameIP[0],
+			IP:       splittedHostNameIP[1],
 		}
 		if h.Hostname == "" {
 			return fmt.Errorf("%w: '%s' hostname is empty", ErrInvalidHostName, hostnameIP)
@@ -144,7 +140,7 @@ func (h *Host) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	type hostAlias Host
 	var hh hostAlias
-	err := unmarshal(&hh)
+	err = unmarshal(&hh)
 	if err != nil {
 		return err
 	}
