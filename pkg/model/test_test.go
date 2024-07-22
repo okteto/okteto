@@ -14,14 +14,14 @@
 package model
 
 import (
+	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	yaml "gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v3"
 )
 
 func TestHostUnmarshalYAML(t *testing.T) {
-	t.Setenv("IP", "192.179.1.1")
 	tests := []struct {
 		expectedError error
 		expectedHost  Host
@@ -110,6 +110,9 @@ ip: ${NON_EXISTENT}`),
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager.AddDotEnvVar("IP", "192.179.1.1")
+
 			var host Host
 			err := yaml.Unmarshal(tt.bytes, &host)
 			if tt.expectedError != nil {
