@@ -16,11 +16,11 @@ package externalresource
 import (
 	b64 "encoding/base64"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 )
 
@@ -62,12 +62,12 @@ func sanitizeForEnv(name string) string {
 }
 
 // SetDefaults creates the necessary environment variables given an external resource
-func (er *ExternalResource) SetDefaults(externalName string) {
+func (er *ExternalResource) SetDefaults(externalName string, varManager *vars.Manager) {
 	sanitizedExternalName := sanitizeForEnv(externalName)
 	for _, endpoint := range er.Endpoints {
 		sanitizedEndpointName := sanitizeForEnv(endpoint.Name)
 		endpointUrlEnv := fmt.Sprintf(urlEnvFormat, sanitizedExternalName, sanitizedEndpointName)
-		os.Setenv(endpointUrlEnv, endpoint.Url)
+		varManager.AddBuiltInVar(endpointUrlEnv, endpoint.Url)
 	}
 }
 

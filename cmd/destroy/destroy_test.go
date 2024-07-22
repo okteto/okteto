@@ -190,7 +190,7 @@ func TestDestroyWithErrorGettingManifestButDestroySuccess(t *testing.T) {
 	}
 	destroyer := &fakeDestroyer{}
 	dc := &destroyCommand{
-		getManifest: func(_ string, _ afero.Fs) (*model.Manifest, error) {
+		getManifest: func(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 			return nil, assert.AnError
 		},
 		ConfigMapHandler: NewConfigmapHandler(fakeClient),
@@ -222,7 +222,7 @@ func TestDestroyWithErrorDestroyingDependencies(t *testing.T) {
 	}
 	destroyer := &fakeDestroyer{}
 	dc := &destroyCommand{
-		getManifest: func(_ string, _ afero.Fs) (*model.Manifest, error) {
+		getManifest: func(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 			return fakeManifestWithDependencies, nil
 		},
 		ConfigMapHandler: NewConfigmapHandler(fakeClient),
@@ -259,7 +259,7 @@ func TestDestroyWithErrorDestroyingDivert(t *testing.T) {
 	}
 	destroyer := &fakeDestroyer{}
 	dc := &destroyCommand{
-		getManifest: func(_ string, _ afero.Fs) (*model.Manifest, error) {
+		getManifest: func(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 			return fakeManifestWithDivert, nil
 		},
 		ConfigMapHandler:  NewConfigmapHandler(fakeClient),
@@ -290,7 +290,7 @@ func TestDestroyWithErrorOnCommands(t *testing.T) {
 	}
 	destroyer := &fakeDestroyer{}
 	dc := &destroyCommand{
-		getManifest: func(_ string, _ afero.Fs) (*model.Manifest, error) {
+		getManifest: func(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 			return fakeManifest, nil
 		},
 		ConfigMapHandler:  NewConfigmapHandler(fakeClient),
@@ -333,7 +333,7 @@ func TestDestroyWithErrorOnCommandsForcingDestroy(t *testing.T) {
 	}
 	destroyer := &fakeDestroyer{}
 	dc := &destroyCommand{
-		getManifest: func(_ string, _ afero.Fs) (*model.Manifest, error) {
+		getManifest: func(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 			return fakeManifest, nil
 		},
 		ConfigMapHandler:  NewConfigmapHandler(fakeClient),
@@ -378,7 +378,7 @@ func TestDestroyWithErrorDestroyingK8sResources(t *testing.T) {
 		errOnVolumes: assert.AnError,
 	}
 	dc := &destroyCommand{
-		getManifest: func(_ string, _ afero.Fs) (*model.Manifest, error) {
+		getManifest: func(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 			return fakeManifest, nil
 		},
 		ConfigMapHandler:  NewConfigmapHandler(fakeClient),

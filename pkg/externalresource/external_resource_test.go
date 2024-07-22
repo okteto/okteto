@@ -15,21 +15,12 @@ package externalresource
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
-
-func reset(name string, er *ExternalResource) {
-	sanitizedExternalName := sanitizeForEnv(name)
-	for _, endpoint := range er.Endpoints {
-		sanitizedEndpointName := sanitizeForEnv(endpoint.Name)
-		endpointUrlEnv := fmt.Sprintf("OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL", sanitizedExternalName, sanitizedEndpointName)
-		os.Unsetenv(endpointUrlEnv)
-	}
-}
 
 func TestExternalResource_SetDefaults(t *testing.T) {
 	externalResourceName := "myExternalApp"
@@ -51,13 +42,14 @@ func TestExternalResource_SetDefaults(t *testing.T) {
 		},
 	}
 
-	defer reset(externalResourceName, &externalResource)
-	externalResource.SetDefaults(externalResourceName)
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+
+	externalResource.SetDefaults(externalResourceName, varManager)
 
 	sanitizedExternalName := sanitizeForEnv(externalResourceName)
 	for _, endpoint := range externalResource.Endpoints {
 		sanitizedEndpointName := sanitizeForEnv(endpoint.Name)
-		assert.Equal(t, endpoint.Url, os.Getenv(fmt.Sprintf("OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL", sanitizedExternalName, sanitizedEndpointName)))
+		assert.Equal(t, endpoint.Url, varManager.GetExcLocal(fmt.Sprintf("OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL", sanitizedExternalName, sanitizedEndpointName)))
 	}
 }
 

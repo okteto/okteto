@@ -180,7 +180,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		options.ManifestPath = uptManifestPath
 	}
 
-	manifest, err := model.GetManifestV2(options.ManifestPath, fs)
+	manifest, err := model.GetManifestV2(options.ManifestPath, fs, varManager)
 	if err != nil {
 		return analytics.TestMetadata{}, err
 	}
@@ -253,7 +253,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 	if shouldDeploy {
 		c := deployCMD.Command{
-			GetManifest: func(path string, fs afero.Fs) (*model.Manifest, error) {
+			GetManifest: func(path string, fs afero.Fs, varManager *vars.Manager) (*model.Manifest, error) {
 				return manifest, nil
 			},
 			K8sClientProvider:  k8sClientProvider,

@@ -226,7 +226,7 @@ type DeployCommand struct {
 	Command string `json:"command,omitempty" yaml:"command,omitempty"`
 }
 
-func getManifestFromOktetoFile(cwd string, fs afero.Fs) (*Manifest, error) {
+func getManifestFromOktetoFile(cwd string, fs afero.Fs, varManager *vars.Manager) (*Manifest, error) {
 	manifestPath, err := discovery.GetOktetoManifestPath(cwd)
 	if err != nil {
 		return nil, err
@@ -234,7 +234,7 @@ func getManifestFromOktetoFile(cwd string, fs afero.Fs) (*Manifest, error) {
 	oktetoLog.Infof("Found okteto manifest file on path: %s", manifestPath)
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto manifest on %s", manifestPath)
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling manifest...")
-	devManifest, err := getManifestFromFile(cwd, manifestPath, fs)
+	devManifest, err := getManifestFromFile(cwd, manifestPath, fs, varManager)
 	if err != nil {
 		return nil, err
 	}
@@ -242,12 +242,12 @@ func getManifestFromOktetoFile(cwd string, fs afero.Fs) (*Manifest, error) {
 	return devManifest, nil
 }
 
-func getManifestFromDevFilePath(cwd, manifestPath string, fs afero.Fs) (*Manifest, error) {
+func getManifestFromDevFilePath(cwd, manifestPath string, fs afero.Fs, varManager *vars.Manager) (*Manifest, error) {
 	if manifestPath != "" && !filepath.IsAbs(manifestPath) {
 		manifestPath = filepath.Join(cwd, manifestPath)
 	}
 	if manifestPath != "" && filesystem.FileExistsAndNotDir(manifestPath, afero.NewOsFs()) {
-		return getManifestFromFile(cwd, manifestPath, fs)
+		return getManifestFromFile(cwd, manifestPath, fs, varManager)
 	}
 
 	return nil, discovery.ErrOktetoManifestNotFound
@@ -262,13 +262,13 @@ func pathExistsAndDir(path string) bool {
 }
 
 // GetManifestV2 gets a manifest from a path or search for the files to generate it
-func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
+func GetManifestV2(manifestPath string, fs afero.Fs, varManager *vars.Manager) (*Manifest, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
 
-	manifest, err := getManifestFromDevFilePath(cwd, manifestPath, fs)
+	manifest, err := getManifestFromDevFilePath(cwd, manifestPath, fs, varManager)
 	if err != nil {
 		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
@@ -283,7 +283,7 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 		cwd = manifestPath
 	}
 
-	manifest, err = getManifestFromOktetoFile(cwd, fs)
+	manifest, err = getManifestFromOktetoFile(cwd, fs, varManager)
 	if err != nil {
 		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
@@ -294,7 +294,7 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 		return manifest, nil
 	}
 
-	inferredManifest, err := GetInferredManifest(cwd, fs)
+	inferredManifest, err := GetInferredManifest(cwd, fs, varManager)
 	if err != nil {
 		return nil, err
 	}
@@ -329,8 +329,8 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 }
 
 // getManifestFromFile retrieves the manifest from a given file, okteto manifest or docker-compose
-func getManifestFromFile(cwd, manifestPath string, fs afero.Fs) (*Manifest, error) {
-	devManifest, err := getOktetoManifest(manifestPath)
+func getManifestFromFile(cwd, manifestPath string, fs afero.Fs, varManager *vars.Manager) (*Manifest, error) {
+	devManifest, err := getOktetoManifest(manifestPath, varManager)
 	if err != nil {
 		oktetoLog.Info("devManifest err, fallback to stack unmarshall")
 		stackManifest := &Manifest{
@@ -405,13 +405,13 @@ func getManifestFromFile(cwd, manifestPath string, fs afero.Fs) (*Manifest, erro
 }
 
 // GetInferredManifest infers the manifest from a directory
-func GetInferredManifest(cwd string, fs afero.Fs) (*Manifest, error) {
+func GetInferredManifest(cwd string, fs afero.Fs, varManager *vars.Manager) (*Manifest, error) {
 	pipelinePath, err := discovery.GetOktetoPipelinePath(cwd)
 	if err == nil {
 		oktetoLog.Infof("Found pipeline on: %s", pipelinePath)
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto pipeline manifest on %s", pipelinePath)
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling pipeline manifest...")
-		pipelineManifest, err := GetManifestV2(pipelinePath, fs)
+		pipelineManifest, err := GetManifestV2(pipelinePath, fs, varManager)
 		if err != nil {
 			return nil, err
 		}
@@ -465,7 +465,7 @@ func GetInferredManifest(cwd string, fs afero.Fs) (*Manifest, error) {
 }
 
 // getOktetoManifest returns an okteto object from a given file
-func getOktetoManifest(devPath string) (*Manifest, error) {
+func getOktetoManifest(devPath string, varManager *vars.Manager) (*Manifest, error) {
 	b, err := os.ReadFile(devPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -487,7 +487,7 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 	}
 
 	for name, external := range manifest.External {
-		external.SetDefaults(name)
+		external.SetDefaults(name, varManager)
 	}
 
 	manifest.ManifestPath = devPath

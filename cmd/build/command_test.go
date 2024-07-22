@@ -30,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -118,24 +119,29 @@ var fakeManifestV2 = &model.Manifest{
 	},
 }
 
-func getManifestWithError(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getManifestWithError(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getManifestWithInvalidManifestError(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getManifestWithInvalidManifestError(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 	return nil, oktetoErrors.ErrInvalidManifest
 }
 
-func getFakeManifestV2(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getFakeManifestV2(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 	return fakeManifestV2, nil
 }
+
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
 
 func TestBuildIsManifestV2(t *testing.T) {
 	bc := &Command{
 		GetManifest: getFakeManifestV2,
 	}
 
-	manifest, err := bc.GetManifest("", afero.NewMemMapFs())
+	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), vars.NewVarsManager(&fakeVarManager{}))
 	assert.Nil(t, err)
 	assert.Equal(t, manifest, fakeManifestV2)
 }
@@ -145,7 +151,7 @@ func TestBuildFromDockerfile(t *testing.T) {
 		GetManifest: getManifestWithError,
 	}
 
-	manifest, err := bc.GetManifest("", afero.NewMemMapFs())
+	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), vars.NewVarsManager(&fakeVarManager{}))
 	assert.NotNil(t, err)
 	assert.Nil(t, manifest)
 }
@@ -155,7 +161,7 @@ func TestBuildErrIfInvalidManifest(t *testing.T) {
 		GetManifest: getManifestWithInvalidManifestError,
 	}
 
-	manifest, err := bc.GetManifest("", afero.NewMemMapFs())
+	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), vars.NewVarsManager(&fakeVarManager{}))
 	assert.NotNil(t, err)
 	assert.Nil(t, manifest)
 }
@@ -193,6 +199,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
+				varManager:       vars.NewVarsManager(&fakeVarManager{}),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -206,6 +213,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
+				varManager:       vars.NewVarsManager(&fakeVarManager{}),
 			},
 			options: &types.BuildOptions{
 				File: "okteto.yml",
@@ -221,6 +229,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
+				varManager:       vars.NewVarsManager(&fakeVarManager{}),
 			},
 			options: &types.BuildOptions{
 				File: malformedDockerfile,
@@ -236,6 +245,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
+				varManager:       vars.NewVarsManager(&fakeVarManager{}),
 			},
 			options: &types.BuildOptions{
 				File: dockerfile,
@@ -251,6 +261,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
+				varManager:       vars.NewVarsManager(&fakeVarManager{}),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -264,6 +275,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
+				varManager:       vars.NewVarsManager(&fakeVarManager{}),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,

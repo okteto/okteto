@@ -109,7 +109,7 @@ type cleanUpFunc func(context.Context, error)
 
 // Command defines the config for deploying an app
 type Command struct {
-	GetManifest       func(path string, fs afero.Fs) (*model.Manifest, error)
+	GetManifest       func(path string, fs afero.Fs, varManager *vars.Manager) (*model.Manifest, error)
 	K8sClientProvider okteto.K8sClientProviderWithLogger
 	Builder           builderInterface
 	GetDeployer       getDeployerFunc
@@ -321,7 +321,7 @@ func (dc *Command) calculateManifestPathToBeStored(topLevelGitDir, manifestPath 
 // Run runs the deploy sequence
 func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	oktetoLog.SetStage("Load manifest")
-	manifest, err := dc.GetManifest(deployOptions.ManifestPath, dc.Fs)
+	manifest, err := dc.GetManifest(deployOptions.ManifestPath, dc.Fs, dc.VarManager)
 	if err != nil {
 		return err
 	}

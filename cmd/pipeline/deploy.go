@@ -260,6 +260,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 
 // setVarsFromDependency sets the variables found at configmap.Data[dependencyEnvs]
 func setVarsFromDependency(cmap *v1.ConfigMap, varManager *vars.Manager) error {
+	fmt.Println("setVarsFromDependency!!!!")
 	if cmap == nil || cmap.Data == nil {
 		return nil
 	}

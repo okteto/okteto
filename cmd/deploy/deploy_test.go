@@ -194,23 +194,23 @@ type fakeDeployer struct {
 	mock.Mock
 }
 
-func getManifestWithError(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getManifestWithError(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getFakeManifest(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 	return fakeManifest, nil
 }
 
-func getErrorManifest(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getErrorManifest(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 	return errorManifest, nil
 }
 
-func getManifestWithNoDeployNorDependency(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getManifestWithNoDeployNorDependency(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 	return noDeployNorDependenciesManifest, nil
 }
 
-func getFakeManifestWithDependency(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getFakeManifestWithDependency(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 	return fakeManifestWithDependency, nil
 }
 

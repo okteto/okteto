@@ -78,7 +78,7 @@ func Doctor(k8sLogger *io.K8sLogger, varManager *vars.Manager, fs afero.Fs) *cob
 				return oktetoErrors.ErrNotInDevContainer
 			}
 
-			manifest, err := model.GetManifestV2(doctorOpts.DevPath, afero.NewOsFs())
+			manifest, err := model.GetManifestV2(doctorOpts.DevPath, fs, varManager)
 			if err != nil {
 				return err
 			}

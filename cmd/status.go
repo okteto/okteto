@@ -75,7 +75,7 @@ func Status(varManager *vars.Manager, fs afero.Fs) *cobra.Command {
 			}
 
 			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
-			manifest, err := model.GetManifestV2(manifestOpts.Filename, afero.NewOsFs())
+			manifest, err := model.GetManifestV2(manifestOpts.Filename, fs, varManager)
 			if err != nil {
 				return err
 			}

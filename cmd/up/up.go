@@ -170,7 +170,7 @@ okteto up my-svc -- echo this is a test
 				}
 				upOptions.ManifestPath = uptManifestPath
 			}
-			oktetoManifest, err := model.GetManifestV2(upOptions.ManifestPath, fs)
+			oktetoManifest, err := model.GetManifestV2(upOptions.ManifestPath, fs, varManager)
 			if err != nil {
 				if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 					return err

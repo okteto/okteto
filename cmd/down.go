@@ -87,7 +87,7 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, varManager *v
 					return oktetoErrors.ErrManifestPathIsDir
 				}
 			}
-			manifest, err := model.GetManifestV2(manifestOpts.Filename, fs)
+			manifest, err := model.GetManifestV2(manifestOpts.Filename, fs, varManager)
 			if err != nil {
 				return err
 			}

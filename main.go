@@ -192,7 +192,7 @@ func main() {
 	root.AddCommand(cmd.Doctor(k8sLogger, varManager, fs))
 	root.AddCommand(exec.NewExec(fs, ioController, k8sClientProvider, varManager).Cmd(ctx))
 	root.AddCommand(preview.Preview(ctx, varManager))
-	root.AddCommand(cmd.Restart(fs))
+	root.AddCommand(cmd.Restart(fs, varManager))
 	root.AddCommand(deploy.Deploy(ctx, at, insights, ioController, k8sLogger, varManager))
 	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger, varManager, fs))
 	root.AddCommand(deploy.Endpoints(ctx, k8sLogger, varManager))

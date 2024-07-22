@@ -1040,7 +1040,7 @@ sync:
 				}
 				assert.NoError(t, os.WriteFile(filepath.Join(dir, "docker-compose.yml"), tt.composeBytes, 0600))
 			}
-			_, err := getManifestFromFile(dir, file, afero.NewMemMapFs())
+			_, err := getManifestFromFile(dir, file, afero.NewMemMapFs(), vars.NewVarsManager(&fakeVarManager{}))
 
 			if tt.expectedErr != nil {
 				assert.ErrorContains(t, err, tt.expectedErr.Error())
@@ -1416,7 +1416,7 @@ func Test_Manifest_HasBuildSection(t *testing.T) {
 
 func Test_getInferredManifestWhenNoManifestExist(t *testing.T) {
 	wd := t.TempDir()
-	result, err := GetInferredManifest(wd, afero.NewMemMapFs())
+	result, err := GetInferredManifest(wd, afero.NewMemMapFs(), vars.NewVarsManager(&fakeVarManager{}))
 	assert.Empty(t, result)
 	assert.ErrorIs(t, err, oktetoErrors.ErrCouldNotInferAnyManifest)
 }

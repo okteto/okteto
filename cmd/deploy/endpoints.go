@@ -59,7 +59,7 @@ type k8sIngressClientProvider interface {
 }
 
 type EndpointGetter struct {
-	GetManifest     func(path string, fs afero.Fs) (*model.Manifest, error)
+	GetManifest     func(path string, fs afero.Fs, varManager *vars.Manager) (*model.Manifest, error)
 	endpointControl endpointControlInterface
 }
 
@@ -124,7 +124,7 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger, varManager *vars.Ma
 			}
 
 			if options.Name == "" {
-				manifest, err := eg.GetManifest(options.ManifestPath, afero.NewOsFs())
+				manifest, err := eg.GetManifest(options.ManifestPath, fs, varManager)
 				if err != nil {
 					return err
 				}

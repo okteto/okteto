@@ -14,7 +14,7 @@
 package constants
 
 const (
-	// OktetoNameEnvVar defines if the command is running inside okteot
+	// OktetoNameEnvVar defines if the command is running inside Okteto
 	OktetoNameEnvVar = "OKTETO_NAME"
 
 	// DevLabel indicates the deployment is in dev mode

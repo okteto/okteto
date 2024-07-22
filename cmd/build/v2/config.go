@@ -14,11 +14,11 @@
 package v2
 
 import (
-	"os"
 	"strconv"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 )
 
@@ -51,7 +51,7 @@ type loggerInfo interface {
 	Infof(format string, args ...interface{})
 }
 
-func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterface, l loggerInfo) oktetoBuilderConfig {
+func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterface, l loggerInfo, varManager *vars.Manager) oktetoBuilderConfig {
 	hasAccess, err := registry.HasGlobalPushAccess()
 	if err != nil {
 		l.Infof("error trying to access globalPushAccess: %s", err)
@@ -68,11 +68,11 @@ func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterfa
 		isCleanProject:      isClean,
 		fs:                  afero.NewOsFs(),
 		isOkteto:            okteto.IsOkteto(),
-		isSmartBuildsEnable: getIsSmartBuildEnabled(),
+		isSmartBuildsEnable: getIsSmartBuildEnabled(varManager),
 	}
 }
 
-func getConfigStateless(registry configRegistryInterface, gitRepo configRepositoryInterface, l loggerInfo, isOkteto bool) oktetoBuilderConfig {
+func getConfigStateless(registry configRegistryInterface, gitRepo configRepositoryInterface, l loggerInfo, isOkteto bool, varManager *vars.Manager) oktetoBuilderConfig {
 	hasAccess, err := registry.HasGlobalPushAccess()
 	if err != nil {
 		l.Infof("error trying to access globalPushAccess: %s", err)
@@ -89,13 +89,13 @@ func getConfigStateless(registry configRegistryInterface, gitRepo configReposito
 		isCleanProject:      isClean,
 		fs:                  afero.NewOsFs(),
 		isOkteto:            isOkteto,
-		isSmartBuildsEnable: getIsSmartBuildEnabled(),
+		isSmartBuildsEnable: getIsSmartBuildEnabled(varManager),
 	}
 }
 
-func getIsSmartBuildEnabled() bool {
+func getIsSmartBuildEnabled(varManager *vars.Manager) bool {
 	enableSmartBuilds := true
-	enableSmartBuildsStr := os.Getenv(OktetoEnableSmartBuildEnvVar)
+	enableSmartBuildsStr := varManager.GetIncLocal(OktetoEnableSmartBuildEnvVar)
 	if enableSmartBuildsStr != "" {
 		smartBuildEnabledBool, err := strconv.ParseBool(enableSmartBuildsStr)
 		if err != nil {

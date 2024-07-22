@@ -96,7 +96,7 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistry
 		ioCtrl.Logger().Infof("could not get working dir: %s", err)
 	}
 	gitRepo := repository.NewRepository(wd)
-	config := getConfigStateless(registry, gitRepo, ioCtrl.Logger(), okCtx.IsOktetoCluster())
+	config := getConfigStateless(registry, gitRepo, ioCtrl.Logger(), okCtx.IsOktetoCluster(), varManager)
 
 	buildEnvs := map[string]string{}
 	buildEnvs[OktetoEnableSmartBuildEnvVar] = strconv.FormatBool(config.isSmartBuildsEnable)
@@ -136,7 +136,7 @@ func NewBuilderFromScratch(ioCtrl *io.Controller, varManager *vars.Manager, onBu
 		wd = topLevelGitDir
 	}
 	gitRepo := repository.NewRepository(wd)
-	config := getConfig(reg, gitRepo, ioCtrl.Logger())
+	config := getConfig(reg, gitRepo, ioCtrl.Logger(), varManager)
 
 	buildEnvs := map[string]string{}
 	buildEnvs[OktetoEnableSmartBuildEnvVar] = strconv.FormatBool(config.isSmartBuildsEnable)

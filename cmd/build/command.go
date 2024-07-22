@@ -49,7 +49,7 @@ const (
 
 // Command defines the build command
 type Command struct {
-	GetManifest func(path string, fs afero.Fs) (*model.Manifest, error)
+	GetManifest func(path string, fs afero.Fs, varManager *vars.Manager) (*model.Manifest, error)
 
 	Builder          buildCmd.OktetoBuilderInterface
 	Registry         registryInterface
@@ -163,7 +163,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 	}
 
 	var builder Builder
-	manifest, err := bc.GetManifest(options.File, afero.NewOsFs())
+	manifest, err := bc.GetManifest(options.File, afero.NewOsFs(), bc.varManager)
 	if err != nil {
 		if options.File != "" && errors.Is(err, oktetoErrors.ErrInvalidManifest) && validateDockerfile(options.File) != nil {
 			return nil, err

@@ -100,7 +100,7 @@ It is important that this command does the minimum and must not do calculations 
 
 			// Set the default values for the external resources environment variables (endpoints)
 			for name, external := range dep.External {
-				external.SetDefaults(name)
+				external.SetDefaults(name, varManager)
 			}
 
 			k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)

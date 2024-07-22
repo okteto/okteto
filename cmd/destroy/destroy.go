@@ -122,7 +122,7 @@ type destroyCommand struct {
 	k8sClientProvider    okteto.K8sClientProvider
 	ConfigMapHandler     configMapHandler
 	analyticsTracker     analyticsTrackerInterface
-	getManifest          func(path string, fs afero.Fs) (*model.Manifest, error)
+	getManifest          func(path string, fs afero.Fs, varManager *vars.Manager) (*model.Manifest, error)
 	oktetoClient         *okteto.Client
 	ioCtrl               *io.Controller
 	varManager           *vars.Manager
@@ -250,7 +250,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 			if err := kubeconfig.Write(okteto.GetContext().Cfg, kubeconfigPath); err != nil {
 				return err
 			}
-			os.Setenv("KUBECONFIG", kubeconfigPath)
+			varManager.AddBuiltInVar("KUBECONFIG", kubeconfigPath)
 			defer os.Remove(kubeconfigPath)
 
 			return c.runDestroy(ctx, options)
@@ -350,7 +350,7 @@ func (dc *destroyCommand) destroyAll(ctx context.Context, opts *Options) error {
 
 // destroy runs the logic needed to destroy a dev environment
 func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
-	manifest, err := dc.getManifest(opts.ManifestPath, afero.NewOsFs())
+	manifest, err := dc.getManifest(opts.ManifestPath, afero.NewOsFs(), dc.varManager)
 	if err != nil {
 		// Log error message but application can still be deleted
 		oktetoLog.Infof("could not find manifest file to be executed: %s", err)

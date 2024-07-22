@@ -85,7 +85,7 @@ It is important that this command does the minimum and must not do calculations 
 			if err := kubeconfig.Write(oktetoContext.GetCurrentCfg(), kubeconfigPath); err != nil {
 				return err
 			}
-			os.Setenv("KUBECONFIG", kubeconfigPath)
+			varManager.AddBuiltInVar("KUBECONFIG", kubeconfigPath)
 			defer os.Remove(kubeconfigPath)
 
 			dep, err := getDeployable()
@@ -95,7 +95,7 @@ It is important that this command does the minimum and must not do calculations 
 
 			// Set the default values for the external resources environment variables (endpoints)
 			for name, external := range dep.External {
-				external.SetDefaults(name)
+				external.SetDefaults(name, varManager)
 			}
 
 			runner := &deployable.DestroyRunner{

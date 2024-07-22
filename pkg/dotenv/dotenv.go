@@ -24,6 +24,8 @@ import (
 
 const DefaultDotEnvFile = ".env"
 
+// TODO: check all envFiles
+
 // Load loads the content of a .env file into the varManager
 func Load(filepath string, varManager *vars.Manager, fs afero.Fs) error {
 	if !filesystem.FileExistsWithFilesystem(filepath, fs) {

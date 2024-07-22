@@ -121,7 +121,7 @@ okteto exec my-pod`,
 			}
 
 			manifestOpts := contextCMD.ManifestOptions{Filename: execFlags.manifestPath, Namespace: execFlags.namespace, K8sContext: execFlags.k8sContext}
-			manifest, err := model.GetManifestV2(manifestOpts.Filename, e.fs)
+			manifest, err := model.GetManifestV2(manifestOpts.Filename, e.fs, e.varManager)
 			if err != nil {
 				return fmt.Errorf("failed to load manifest: %w", err)
 			}
