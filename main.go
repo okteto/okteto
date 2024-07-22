@@ -17,6 +17,7 @@ import (
 	"context"
 	cryptoRand "crypto/rand"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -212,8 +213,9 @@ func main() {
 			tmp[0] = unicode.ToUpper(tmp[0])
 			message = string(tmp)
 		}
-		oktetoLog.Fail(message) // TODO: Change to use ioController when we fully move to ioController
-		if uErr, ok := err.(oktetoErrors.UserError); ok {
+		oktetoLog.Fail(message) // TODO: Change to use ioController  when we fully move to ioController
+		var uErr oktetoErrors.UserError
+		if errors.As(err, &uErr) {
 			if len(uErr.Hint) > 0 {
 				oktetoLog.Hint("    %s", uErr.Hint)
 			}

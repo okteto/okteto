@@ -30,7 +30,12 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
-const oktetoLocalRegistryStoreEnabledEnvVarKey = "OKTETO_LOCAL_REGISTRY_STORE_ENABLED"
+const (
+	oktetoLocalRegistryStoreEnabledEnvVarKey = "OKTETO_LOCAL_REGISTRY_STORE_ENABLED"
+
+	// This is defined in our registry fork, be aware of it if changing it
+	manifestUnknownForBeingInvalidErrorCode = "MANIFEST_UNKNOWN_FOR_BEING_INVALID"
+)
 
 type clientInterface interface {
 	GetDigest(image string) (string, error)
@@ -98,6 +103,12 @@ func (c client) GetDescriptor(image string) (*remote.Descriptor, error) {
 
 	descriptor, err := c.get(ref, options...)
 	if err != nil {
+		if c.isNotFoundForBeingInvalid(err) {
+			return nil, oktetoErrors.UserError{
+				E:    fmt.Errorf("malformed image digest"),
+				Hint: fmt.Sprintf("Image %q seems malformed. Please run 'okteto build --no-cache' to rebuild your image", image),
+			}
+		}
 		if c.isNotFound(err) {
 			return nil, fmt.Errorf("error getting image descriptor: %w", oktetoErrors.ErrNotFound)
 		}
@@ -153,6 +164,18 @@ func (c client) isNotFound(err error) bool {
 	if errors.As(err, &transportErr) {
 		for _, err := range transportErr.Errors {
 			if err.Code == transport.ManifestUnknownErrorCode {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (c client) isNotFoundForBeingInvalid(err error) bool {
+	var transportErr *transport.Error
+	if errors.As(err, &transportErr) {
+		for _, err := range transportErr.Errors {
+			if err.Code == manifestUnknownForBeingInvalidErrorCode {
 				return true
 			}
 		}
