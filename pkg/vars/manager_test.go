@@ -155,251 +155,198 @@ func TestGetExcLocal(t *testing.T) {
 	}
 }
 
-//type fakeEnvManager struct {
-//	t           *testing.T
-//	maskedWords []string
-//	logs        []string
-//}
+func TestExpandIncLocal(t *testing.T) {
+	tests := []struct {
+		expectedErr bool
+		name        string
+		result      string
+		value       string
+	}{
+		{
+			name:        "broken var - missing closing curly bracket",
+			value:       "value-${BAR",
+			result:      "",
+			expectedErr: true,
+		},
+		{
+			name:        "no-var",
+			value:       "value",
+			result:      "value",
+			expectedErr: false,
+		},
+		{
+			name:        "var",
+			value:       "value-${BAR}-value",
+			result:      "value-bar-value",
+			expectedErr: false,
+		},
+		{
+			name:        "default",
+			value:       "value-${FOO:-foo}-value",
+			result:      "value-foo-value",
+			expectedErr: false,
+		},
+		{
+			name:        "only bar expanded",
+			value:       "${BAR}",
+			result:      "bar",
+			expectedErr: false,
+		},
+		{
+			name:        "only bar not expand if empty",
+			value:       "${FOO}",
+			result:      "",
+			expectedErr: false,
+		},
+	}
 
-//func (*fakeEnvManager) LookupEnv(key string) (string, bool) {
-//	return os.LookupEnv(key)
-//}
-//func (e *fakeEnvManager) SetEnv(key, value string) error {
-//	e.t.Setenv(key, value)
-//	return nil
-//}
-//func (e *fakeEnvManager) MaskVar(value string) {
-//	e.maskedWords = append(e.maskedWords, value)
-//}
-//func (e *fakeEnvManager) WarningLogf(msg string, _ ...interface{}) {
-//	e.logs = append(e.logs, msg)
-//}
-//func (*fakeEnvManager) WarnVarsPrecedence() {}
-//
-//func newFakeEnvManager(t *testing.T) *fakeEnvManager {
-//	return &fakeEnvManager{
-//		t: t,
-//	}
-//}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			varManager := NewVarsManager(&fakeVarManager{})
+			varManager.AddLocalVar("BAR", "bar")
+			result, err := varManager.ExpandIncLocal(tt.value)
+			assert.Equal(t, tt.result, result)
+			if tt.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
 
-//func varExists(key string) bool {
-//	_, exists := os.LookupEnv(key)
-//	return exists
-//}
+func TestExpandExcLocal(t *testing.T) {
+	tests := []struct {
+		expectedErr bool
+		name        string
+		result      string
+		value       string
+	}{
+		{
+			name:        "broken var - missing closing curly bracket",
+			value:       "value-${BAR",
+			result:      "",
+			expectedErr: true,
+		},
+		{
+			name:        "no-var",
+			value:       "value",
+			result:      "value",
+			expectedErr: false,
+		},
+		{
+			name:        "local var is ignored",
+			value:       "value-${LOCAL}-value",
+			result:      "value--value",
+			expectedErr: false,
+		},
+		{
+			name:        "var",
+			value:       "value-${BAR}-value",
+			result:      "value-bar-value",
+			expectedErr: false,
+		},
+		{
+			name:        "default",
+			value:       "value-${FOO:-foo}-value",
+			result:      "value-foo-value",
+			expectedErr: false,
+		},
+		{
+			name:        "only bar expanded",
+			value:       "${BAR}",
+			result:      "bar",
+			expectedErr: false,
+		},
+		{
+			name:        "only bar not expand if empty",
+			value:       "${FOO}",
+			result:      "",
+			expectedErr: false,
+		},
+	}
 
-//func Test_EnvManager(t *testing.T) {
-//	fakeEnvManager := newFakeEnvManager(t)
-//
-//	t.Run("empty env manager", func(t *testing.T) {
-//		envManager := NewVarsManager(fakeEnvManager)
-//		err := envManager.export()
-//		assert.NoError(t, err)
-//
-//		var emptyGroup []env.Var
-//
-//		envManager.AddVars(emptyGroup, OktetoVariableTypeLocal)
-//		err = envManager.export()
-//		assert.NoError(t, err)
-//	})
-//
-//	t.Run("add multiple groups and lookup var with higher priority successfully", func(t *testing.T) {
-//		fakeGroupVarsFromPlatform := []env.Var{
-//			{
-//				Name:  "TEST_VAR_1",
-//				Value: "platform-value1",
-//			},
-//			{
-//				Name:  "TEST_VAR_2",
-//				Value: "platform-value2",
-//			},
-//		}
-//
-//		fakeGroupVarsFromManifest := []env.Var{
-//			{
-//				Name:  "TEST_VAR_1",
-//				Value: "manifest-value1",
-//			},
-//		}
-//
-//		fakeGroupVarsFromLoal := []env.Var{
-//			{
-//				Name:  "TEST_VAR_1",
-//				Value: "local-value1",
-//			},
-//		}
-//
-//		fakeGroupVarsFromFlag := []env.Var{
-//			{
-//				Name:  "TEST_VAR_1",
-//				Value: "flag-value1",
-//			},
-//		}
-//
-//		// making sure these vars are not set
-//		assert.Equal(t, false, varExists("TEST_VAR_1"))
-//		assert.Equal(t, false, varExists("TEST_VAR_2"))
-//		assert.Equal(t, false, varExists("TEST_VAR_3"))
-//
-//		envManager := NewVarsManager(fakeEnvManager)
-//		envManager.AddVars(fakeGroupVarsFromPlatform, PriorityVarFromPlatform)
-//		assert.NoError(t, envManager.export())
-//		assert.Equal(t, "platform-value1", os.Getenv("TEST_VAR_1"))
-//
-//		envManager.AddVars(fakeGroupVarsFromManifest, PriorityVarFromManifest)
-//
-//		// until we export, the value stays the same
-//		assert.Equal(t, "platform-value1", os.Getenv("TEST_VAR_1"))
-//
-//		assert.NoError(t, envManager.export())
-//		assert.Equal(t, "manifest-value1", os.Getenv("TEST_VAR_1"))
-//
-//		envManager.AddVars(fakeGroupVarsFromLoal, OktetoVariableTypeLocal)
-//		assert.NoError(t, envManager.export())
-//		assert.Equal(t, "local-value1", os.Getenv("TEST_VAR_1"))
-//
-//		envManager.AddVars(fakeGroupVarsFromFlag, OktetoVariableTypeFlag)
-//		assert.NoError(t, envManager.export())
-//		assert.Equal(t, "flag-value1", os.Getenv("TEST_VAR_1"))
-//
-//		// no other groups override the value
-//		assert.Equal(t, "platform-value2", os.Getenv("TEST_VAR_2"))
-//
-//		// make sure values are obfuscated
-//		// note: currently local vars are not obsucated so "local-value1" should not be in the list
-//		expectedMaskedValues := []string{"platform-value1", "platform-value2", "manifest-value1", "flag-value1"}
-//		assert.ElementsMatch(t, expectedMaskedValues, fakeEnvManager.maskedWords, "Masked words should match expected values")
-//	})
-//}
-//
-//func Test_Expand(t *testing.T) {
-//	fakeEnvManager := NewVarsManager(newFakeEnvManager(t)
-//
-//	groupLocalVars := Group{
-//		Vars: []Var{
-//			{
-//				Name:  "TEST_VAR_1",
-//				Value: "local-value1",
-//			},
-//		}
-//	}
-//
-//	fakeEnvManager.A
-//}
-//
-//func Test_ExpandEnv(t *testing.T) {
-//	t.Setenv("BAR", "bar")
-//	tests := []struct {
-//		expectedErr error
-//		name        string
-//		result      string
-//		value       string
-//	}{
-//		{
-//			name:        "broken var - missing closing curly bracket",
-//			value:       "value-${BAR",
-//			result:      "",
-//			expectedErr: &VarExpansionErr{},
-//		},
-//		{
-//			name:        "no-var",
-//			value:       "value",
-//			result:      "value",
-//			expectedErr: nil,
-//		},
-//		{
-//			name:        "var",
-//			value:       "value-${BAR}-value",
-//			result:      "value-bar-value",
-//			expectedErr: nil,
-//		},
-//		{
-//			name:        "default",
-//			value:       "value-${FOO:-foo}-value",
-//			result:      "value-foo-value",
-//			expectedErr: nil,
-//		},
-//		{
-//			name:        "only bar expanded",
-//			value:       "${BAR}",
-//			result:      "bar",
-//			expectedErr: nil,
-//		},
-//		{
-//			name:        "only bar not expand if empty",
-//			value:       "${FOO}",
-//			result:      "",
-//			expectedErr: nil,
-//		},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			result, err := ExpandEnv(tt.value)
-//			assert.Equal(t, tt.result, result)
-//			if tt.expectedErr != nil {
-//				assert.ErrorAs(t, err, tt.expectedErr)
-//			} else {
-//				assert.NoError(t, err)
-//			}
-//		})
-//	}
-//}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			varManager := NewVarsManager(&fakeVarManager{})
+			varManager.AddLocalVar("LOCAL", "bar")
+			varManager.AddLocalVar("BAR", "bar")
+			varManager.AddDotEnvVar("BAR", "bar")
+			result, err := varManager.ExpandExcLocal(tt.value)
+			assert.Equal(t, tt.result, result)
+			if tt.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
 
-//func Test_ExpandEnvIfNotEmpty(t *testing.T) {
-//	t.Setenv("BAR", "bar")
-//	tests := []struct {
-//		expectedErr error
-//		name        string
-//		result      string
-//		value       string
-//	}{
-//		{
-//			name:        "broken var - missing closing curly bracket",
-//			value:       "value-${BAR",
-//			result:      "",
-//			expectedErr: &VarExpansionErr{},
-//		},
-//		{
-//			name:        "no-var",
-//			value:       "value",
-//			result:      "value",
-//			expectedErr: nil,
-//		},
-//		{
-//			name:        "var",
-//			value:       "value-${BAR}-value",
-//			result:      "value-bar-value",
-//			expectedErr: nil,
-//		},
-//		{
-//			name:        "default",
-//			value:       "value-${FOO:-foo}-value",
-//			result:      "value-foo-value",
-//			expectedErr: nil,
-//		},
-//		{
-//			name:        "only bar expanded",
-//			value:       "${BAR}",
-//			result:      "bar",
-//			expectedErr: nil,
-//		},
-//		{
-//			name:        "only bar not expand if empty",
-//			value:       "${FOO}",
-//			result:      "${FOO}",
-//			expectedErr: nil,
-//		},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			result, err := ExpandEnvIfNotEmpty(tt.value)
-//			assert.Equal(t, tt.result, result)
-//			if tt.expectedErr != nil {
-//				assert.ErrorAs(t, err, tt.expectedErr)
-//			} else {
-//				assert.NoError(t, err)
-//			}
-//		})
-//	}
-//}
+func TestExpandExcLocalIfNotEmpty(t *testing.T) {
+	tests := []struct {
+		expectedErr bool
+		name        string
+		result      string
+		value       string
+	}{
+		{
+			name:        "broken var - missing closing curly bracket",
+			value:       "value-${BAR",
+			result:      "",
+			expectedErr: true,
+		},
+		{
+			name:        "no-var",
+			value:       "value",
+			result:      "value",
+			expectedErr: false,
+		},
+		{
+			name:        "local var is ignored",
+			value:       "value-${LOCAL}-value",
+			result:      "value--value",
+			expectedErr: false,
+		},
+		{
+			name:        "var",
+			value:       "value-${BAR}-value",
+			result:      "value-bar-value",
+			expectedErr: false,
+		},
+		{
+			name:        "default",
+			value:       "value-${FOO:-foo}-value",
+			result:      "value-foo-value",
+			expectedErr: false,
+		},
+		{
+			name:        "only bar expanded",
+			value:       "${BAR}",
+			result:      "bar",
+			expectedErr: false,
+		},
+		{
+			name:        "only bar not expand if empty",
+			value:       "${FOO}",
+			result:      "${FOO}",
+			expectedErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			varManager := NewVarsManager(&fakeVarManager{})
+			varManager.AddLocalVar("LOCAL", "bar")
+			varManager.AddLocalVar("BAR", "bar")
+			varManager.AddDotEnvVar("BAR", "bar")
+			result, err := varManager.ExpandExcLocalIfNotEmpty(tt.value)
+			assert.Equal(t, tt.result, result)
+			if tt.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

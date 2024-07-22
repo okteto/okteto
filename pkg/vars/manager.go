@@ -127,6 +127,7 @@ func (m *Manager) addVar(key, value string, t Type) {
 		if g.Type == t {
 			m.groups[i].Vars = append(m.groups[i].Vars, v)
 			m.m.MaskVar(value)
+			// TODO: do we want this? --> m.WarnVarsPrecedence()
 			return
 		}
 	}
