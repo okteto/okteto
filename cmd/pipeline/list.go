@@ -63,7 +63,8 @@ func list(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 		Short: "List all okteto pipelines",
 		Args:  utils.NoArgsAccepted(""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return pipelineListCommandHandler(ctx, flags, contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run)
+			initOkCtx := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run
+			return pipelineListCommandHandler(ctx, flags, initOkCtx, varManager)
 		},
 	}
 
@@ -75,7 +76,7 @@ func list(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 }
 
 // pipelineListCommandHandler prepares the right okteto context depending on the provided flags and then calls the actual function that lists pipelines
-func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx initOkCtxFn) error {
+func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx initOkCtxFn, varManager *vars.Manager) error {
 	ctxOptions := &contextCMD.Options{
 		Context:   flags.context,
 		Namespace: flags.namespace,
@@ -92,7 +93,7 @@ func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx
 		return oktetoErrors.ErrContextIsNotOktetoCluster
 	}
 
-	pc, err := NewCommand()
+	pc, err := NewCommand(varManager)
 	if err != nil {
 		return err
 	}

@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
@@ -660,39 +661,20 @@ func Test_DeployPipelineWithSkipIfExistAndWait(t *testing.T) {
 	}
 }
 
-type fakeEnvSetter struct {
-	envs map[string]string
-	err  error
-}
-
-func (e *fakeEnvSetter) Set(name, value string) error {
-	if e.err != nil {
-		return e.err
-	}
-	if e.envs == nil {
-		e.envs = make(map[string]string)
-	}
-	e.envs[name] = value
-	return nil
-}
-
-func TestSetEnvsFromDependencyNoError(t *testing.T) {
+func TestSetVarsFromDependencyNoError(t *testing.T) {
 	var tests = []struct {
-		envSetter       fakeEnvSetter
 		cmap            *v1.ConfigMap
-		expectedEnvsSet map[string]string
+		expectedVarsSet map[string]string
 		name            string
 		expectedErr     bool
 	}{
 		{
 			name:            "nil cmap",
-			envSetter:       fakeEnvSetter{},
 			expectedErr:     false,
-			expectedEnvsSet: nil,
+			expectedVarsSet: nil,
 		},
 		{
-			name:      "configmap has no dependency envs",
-			envSetter: fakeEnvSetter{},
+			name: "configmap has no dependency vars",
 			cmap: &v1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-configmap",
@@ -702,11 +684,10 @@ func TestSetEnvsFromDependencyNoError(t *testing.T) {
 				},
 			},
 			expectedErr:     false,
-			expectedEnvsSet: nil,
+			expectedVarsSet: nil,
 		},
 		{
-			name:      "configmap has dependency envs",
-			envSetter: fakeEnvSetter{},
+			name: "configmap has dependency vars",
 			cmap: &v1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-configmap",
@@ -716,14 +697,13 @@ func TestSetEnvsFromDependencyNoError(t *testing.T) {
 				},
 			},
 			expectedErr: false,
-			expectedEnvsSet: map[string]string{
+			expectedVarsSet: map[string]string{
 				"OKTETO_DEPENDENCY_TEST_CONFIGMAP_VARIABLE_TESTSETENVSFROMDEPEN_ONE": "an env value",
 				"OKTETO_DEPENDENCY_TEST_CONFIGMAP_VARIABLE_TESTSETENVSFROMDEPEN_TWO": "another env value",
 			},
 		},
 		{
-			name:      "okteto git configmap has dependency envs",
-			envSetter: fakeEnvSetter{},
+			name: "okteto git configmap has dependency vars",
 			cmap: &v1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "okteto-git-test-configmap",
@@ -733,34 +713,21 @@ func TestSetEnvsFromDependencyNoError(t *testing.T) {
 				},
 			},
 			expectedErr: false,
-			expectedEnvsSet: map[string]string{
+			expectedVarsSet: map[string]string{
 				"OKTETO_DEPENDENCY_TEST_CONFIGMAP_VARIABLE_TESTSETENVSFROMDEPEN_ONE": "an env value",
 				"OKTETO_DEPENDENCY_TEST_CONFIGMAP_VARIABLE_TESTSETENVSFROMDEPEN_TWO": "another env value",
 			},
-		},
-		{
-			name: "configmap has dependency envs - return err",
-			envSetter: fakeEnvSetter{
-				err: assert.AnError,
-			},
-			cmap: &v1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-configmap",
-				},
-				Data: map[string]string{
-					constants.OktetoDependencyEnvsKey: "eyJURVNUU0VURU5WU0ZST01ERVBFTl9PTkUiOiJhbiBlbnYgdmFsdWUiLCJURVNUU0VURU5WU0ZST01ERVBFTl9UV08iOiJhbm90aGVyIGVudiB2YWx1ZSJ9",
-				},
-			},
-			expectedErr:     true,
-			expectedEnvsSet: nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := setEnvsFromDependency(tt.cmap, tt.envSetter.Set)
+			varManager := vars.NewVarsManager(&fakeVarManager{})
+			err := setVarsFromDependency(tt.cmap, varManager)
 			require.Truef(t, tt.expectedErr == (err != nil), "unexpected error")
-			require.Equal(t, tt.expectedEnvsSet, tt.envSetter.envs)
+			for k, v := range tt.expectedVarsSet {
+				require.Equal(t, v, varManager.GetExcLocal(k))
+			}
 		})
 	}
 }

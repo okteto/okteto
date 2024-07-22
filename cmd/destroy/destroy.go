@@ -239,7 +239,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 				varManager:        varManager,
 				getDivertDriver:   divert.New,
 				getPipelineDestroyer: func() (pipelineDestroyer, error) {
-					return pipelineCMD.NewCommand()
+					return pipelineCMD.NewCommand(varManager)
 				},
 			}
 

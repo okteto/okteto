@@ -25,12 +25,18 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 )
+
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string)                     {}
+func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
 
 func mockPipeline(fakeName string, fakeLabels []string) *apiv1.ConfigMap {
 	var labels = map[string]string{
@@ -73,7 +79,9 @@ func TestPipelineListCommandHandler_OnlyOktetoCluster(t *testing.T) {
 		CurrentContext: "test",
 	}
 
-	err := pipelineListCommandHandler(ctx, &listFlags{}, initOkCtx)
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+
+	err := pipelineListCommandHandler(ctx, &listFlags{}, initOkCtx, varManager)
 
 	assert.ErrorIs(t, err, oktetoErrors.ErrContextIsNotOktetoCluster)
 }
@@ -95,7 +103,9 @@ func TestPipelineListCommandHandler_InitOktetoContextFail(t *testing.T) {
 		CurrentContext: "test",
 	}
 
-	err := pipelineListCommandHandler(ctx, &listFlags{}, initOkCtx)
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+
+	err := pipelineListCommandHandler(ctx, &listFlags{}, initOkCtx, varManager)
 
 	assert.ErrorIs(t, err, assert.AnError)
 }

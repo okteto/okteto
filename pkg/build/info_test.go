@@ -525,7 +525,7 @@ func Test_expandSecrets(t *testing.T) {
 				"path": filepath.Clean("/home/testuser/secrets"),
 			}},
 			setEnvFunc: func(varManager *vars.Manager) {
-				varManager.AddFlagVar("TEST_RANDOM_DIR", "/home/testuser")
+				varManager.AddFlagVar("TEST_RANDOM_DIR", filepath.Clean("/home/testuser"))
 			},
 		},
 		{
