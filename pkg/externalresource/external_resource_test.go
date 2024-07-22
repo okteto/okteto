@@ -255,8 +255,8 @@ func TestExternalResource_SetURLUsingEnvironFile(t *testing.T) {
 }
 func TestSection_IsEmpty(t *testing.T) {
 	tests := []struct {
-		name     string
 		section  Section
+		name     string
 		expected bool
 	}{
 		{
