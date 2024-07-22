@@ -15,7 +15,6 @@ package deployable
 
 import (
 	"context"
-	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 	"time"
 
@@ -25,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

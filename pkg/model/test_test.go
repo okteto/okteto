@@ -14,9 +14,9 @@
 package model
 
 import (
-	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 )
