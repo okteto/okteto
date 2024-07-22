@@ -362,6 +362,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			Artifacts:                   test.Artifacts,
 			UseRootUser:                 true,
 			NoCache:                     options.NoCache,
+			Hosts:                       test.Hosts,
 		}
 
 		ioCtrl.Out().Infof("Executing test container '%s'", name)

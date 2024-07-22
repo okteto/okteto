@@ -213,7 +213,7 @@ func Test_getStructKeys(t *testing.T) {
 				"model.Sync":                 {"folders", "rescanInterval", "compression", "verbose"},
 				"model.Timeout":              {"default", "resources"},
 				"model.VolumeSpec":           {"labels", "annotations", "size", "class"},
-				"model.Test":                 {"image", "context", "commands", "depends_on", "caches", "artifacts"},
+				"model.Test":                 {"image", "context", "commands", "depends_on", "caches", "artifacts", "hosts"},
 			},
 		},
 	}

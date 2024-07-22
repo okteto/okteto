@@ -594,9 +594,10 @@ func TestGetExtraHosts(t *testing.T) {
 	ip := "1.2.3.4"
 
 	var tests = []struct {
-		name     string
-		expected []types.HostMap
-		metadata types.ClusterMetadata
+		name         string
+		expected     []types.HostMap
+		definedHosts []model.Host
+		metadata     types.ClusterMetadata
 	}{
 		{
 			name:     "no metadata information",
@@ -621,6 +622,27 @@ func TestGetExtraHosts(t *testing.T) {
 			name: "with public domain",
 			metadata: types.ClusterMetadata{
 				PublicDomain: "publicdomain.dev.okteto.net",
+			},
+			expected: []types.HostMap{
+				{Hostname: registryURL, IP: ip},
+				{Hostname: fmt.Sprintf("kubernetes.%s", subdomain), IP: ip},
+				{Hostname: "publicdomain.dev.okteto.net", IP: ip},
+			},
+		},
+		{
+			name: "with defined hosts",
+			metadata: types.ClusterMetadata{
+				PublicDomain: "publicdomain.dev.okteto.net",
+			},
+			definedHosts: []model.Host{
+				{
+					Hostname: "test.dev.okteto.net",
+					IP:       ip,
+				},
+				{
+					Hostname: "test2.dev.okteto.net",
+					IP:       ip,
+				},
 			},
 			expected: []types.HostMap{
 				{Hostname: registryURL, IP: ip},
@@ -764,7 +786,7 @@ func TestCreateDockerignoreFileWithFilesystem(t *testing.T) {
 		{
 			name:            "without dockerignore",
 			config:          config{},
-			expectedContent: "",
+			expectedContent: "# Okteto docker ignore\n",
 			useDeployIgnore: true,
 		},
 		{
