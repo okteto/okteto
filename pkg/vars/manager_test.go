@@ -35,22 +35,92 @@ func TestVarManagerDoesNotExportToOsEnv(t *testing.T) {
 	assert.Equal(t, "local-value", varManager.GetIncLocal("MY_VAR"))
 }
 
-func TestVarManagerRespectsVarTypePriority(t *testing.T) {
+// TestBuiltInVarsPriority ensures that built-in vars have the highest priority
+func TestBuiltInVarsPriority(t *testing.T) {
 	varManager := NewVarsManager(&fakeVarManager{})
 
-	varManager.AddBuiltInVar("MY_VAR", "built-in-value")
-	assert.Equal(t, "built-in-value", varManager.GetIncLocal("MY_VAR"))
+	varName := "MY_VAR"
 
-	varManager.AddLocalVar("MY_VAR", "local-value")
-	assert.Equal(t, "local-value", varManager.GetIncLocal("MY_VAR"))
+	varManager.AddBuiltInVar(varName, "built-in-value")
+	varManager.AddFlagVar(varName, "flag-value")
+	varManager.AddLocalVar(varName, "local-value")
+	varManager.AddDotEnvVar(varName, "dot-env-value")
+	varManager.AddAdminAndUserVar(varName, "admin-and-user-value")
 
-	varManager.AddFlagVar("MY_VAR", "flag-value")
+	result := varManager.GetIncLocal(varName)
+	assert.Equal(t, "built-in-value", result)
+}
 
-	// local vars have higher priority of flag vars
-	assert.Equal(t, "local-value", varManager.GetIncLocal("MY_VAR"))
+// TestFlagsVarsPriority ensures that flag vars have the highest priority after built-in vars
+func TestFlagsVarsPriority(t *testing.T) {
+	varManager := NewVarsManager(&fakeVarManager{})
 
-	// but if we exclude local vars, flag vars are returned
-	assert.Equal(t, "flag-value", varManager.GetExcLocal("MY_VAR"))
+	varName := "MY_VAR"
+
+	varManager.AddFlagVar(varName, "flag-value")
+	varManager.AddLocalVar(varName, "local-value")
+	varManager.AddDotEnvVar(varName, "dot-env-value")
+	varManager.AddAdminAndUserVar(varName, "admin-and-user-value")
+
+	result := varManager.GetIncLocal(varName)
+	assert.Equal(t, "flag-value", result)
+}
+
+// TestLocalVarsPriority ensures that local vars have the highest priority after flag vars
+func TestLocalVarsPriority(t *testing.T) {
+	varManager := NewVarsManager(&fakeVarManager{})
+
+	varName := "MY_VAR"
+
+	varManager.AddLocalVar(varName, "local-value")
+	varManager.AddDotEnvVar(varName, "dot-env-value")
+	varManager.AddAdminAndUserVar(varName, "admin-and-user-value")
+
+	result := varManager.GetIncLocal(varName)
+	assert.Equal(t, "local-value", result)
+}
+
+// TestDotEnvVarsPriority ensures that dotenv vars have the highest priority after local vars
+func TestDotEnvVarsPriority(t *testing.T) {
+	varManager := NewVarsManager(&fakeVarManager{})
+
+	varName := "MY_VAR"
+
+	varManager.AddDotEnvVar(varName, "dot-env-value")
+	varManager.AddAdminAndUserVar(varName, "admin-and-user-value")
+
+	result := varManager.GetIncLocal(varName)
+	assert.Equal(t, "dot-env-value", result)
+}
+
+// TestPriorityWithMoreComplexScenarios ensures the priority is respected even with more complex scenarios
+func TestPriorityWithMoreComplexScenarios(t *testing.T) {
+	varManager := NewVarsManager(&fakeVarManager{})
+	varName := "MY_VAR"
+
+	adminVars := Group{
+		Vars: []Var{
+			{Name: varName, Value: "admin-value"},
+		},
+		Type: OktetoVariableTypeAdminAndUser,
+	}
+	varManager.AddGroup(adminVars)
+
+	assert.Equal(t, "admin-value", varManager.GetIncLocal(varName))
+
+	varManager.AddLocalVar(varName, "local-value")
+	assert.Equal(t, "admin-value", varManager.GetExcLocal(varName))
+	assert.Equal(t, "local-value", varManager.GetIncLocal(varName))
+
+	varManager.AddDotEnvVar(varName, "dot-env-value")
+	assert.Equal(t, "dot-env-value", varManager.GetExcLocal(varName))
+	assert.Equal(t, "local-value", varManager.GetIncLocal(varName))
+
+	varManager.AddFlagVar(varName, "flag-value")
+	assert.Equal(t, "flag-value", varManager.GetIncLocal(varName))
+
+	varManager.AddBuiltInVar(varName, "built-in-value")
+	assert.Equal(t, "built-in-value", varManager.GetIncLocal(varName))
 }
 
 func TestGetIncLocal(t *testing.T) {

@@ -95,6 +95,11 @@ func (m *Manager) LookupExcLocal(key string) (string, bool) {
 	return "", false
 }
 
+// AddAdminAndUserVar allows to add a single variable to the manager of type OktetoVariableTypeAdminAndUser.
+func (m *Manager) AddAdminAndUserVar(key, value string) {
+	m.addVar(key, value, OktetoVariableTypeAdminAndUser)
+}
+
 // AddDotEnvVar allows to add a single variable to the manager of type OktetoVariableTypeDotEnv.
 func (m *Manager) AddDotEnvVar(key, value string) {
 	m.addVar(key, value, OktetoVariableTypeDotEnv)
@@ -146,7 +151,7 @@ func (m *Manager) AddGroup(g Group) {
 	}
 
 	m.groups = append(m.groups, g)
-	m.sortGroupsByPriorityDesc()
+	m.sortGroupsByPriorityAsc()
 }
 
 // GetIncLocal returns an okteto variable (including local variables)
@@ -201,10 +206,10 @@ func (m *Manager) ExpandExcLocalIfNotEmpty(s string) (string, error) {
 	return result, nil
 }
 
-// sortGroupsByPriorityDesc sorts the groups by priority descending, so higher priority variables override lower priority ones.
-func (m *Manager) sortGroupsByPriorityDesc() {
+// sortGroupsByPriorityAsc sorts the groups by priority ascending, so higher priority variables override lower priority ones.
+func (m *Manager) sortGroupsByPriorityAsc() {
 	sort.Slice(m.groups, func(i, j int) bool {
-		return m.groups[i].Type > m.groups[j].Type
+		return m.groups[i].Type < m.groups[j].Type
 	})
 }
 
