@@ -237,14 +237,54 @@ func TranslateLifecycle(c *apiv1.Container, l *model.Lifecycle) {
 	if l == nil {
 		return
 	}
-	if c.Lifecycle == nil {
+	setPostStart(c, l)
+	setPreStop(c, l)
+	if c.Lifecycle != nil && c.Lifecycle.PostStart == nil && c.Lifecycle.PreStop == nil {
+		c.Lifecycle = nil
+	}
+}
+
+func setPostStart(c *apiv1.Container, l *model.Lifecycle) {
+	if l.PostStart == nil {
 		return
 	}
-	if !l.PostStart {
-		c.Lifecycle.PostStart = nil
+	if c.Lifecycle == nil {
+		c.Lifecycle = &apiv1.Lifecycle{}
 	}
-	if !l.PostStart {
+	if !l.PostStart.Enabled {
 		c.Lifecycle.PostStart = nil
+		return
+	}
+	if len(l.PostStart.Command.Values) == 0 {
+		return
+	}
+
+	c.Lifecycle.PostStart = &apiv1.LifecycleHandler{
+		Exec: &apiv1.ExecAction{
+			Command: l.PostStart.Command.Values,
+		},
+	}
+}
+
+func setPreStop(c *apiv1.Container, l *model.Lifecycle) {
+	if l.PreStop == nil {
+		return
+	}
+	if c.Lifecycle == nil {
+		c.Lifecycle = &apiv1.Lifecycle{}
+	}
+	if !l.PreStop.Enabled {
+		c.Lifecycle.PreStop = nil
+		return
+	}
+	if len(l.PreStop.Command.Values) == 0 {
+		return
+	}
+
+	c.Lifecycle.PreStop = &apiv1.LifecycleHandler{
+		Exec: &apiv1.ExecAction{
+			Command: l.PreStop.Command.Values,
+		},
 	}
 }
 

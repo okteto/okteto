@@ -1208,7 +1208,7 @@ func Test_validateForExtraFields(t *testing.T) {
 			name: "lifecycle",
 			value: `lifecycle:
                postStart: false
-               postStop: true`,
+               preStop: true`,
 		},
 		{
 			name: "securityContext",

@@ -72,12 +72,6 @@ type probesRaw struct {
 	Startup   bool `json:"startup,omitempty" yaml:"startup,omitempty"`
 }
 
-// lifecycleRaw represents the lifecycle info for serialization
-type lifecycleRaw struct {
-	PostStart bool `json:"postStart,omitempty" yaml:"postStart,omitempty"`
-	PostStop  bool `json:"postStop,omitempty" yaml:"postStop,omitempty"`
-}
-
 type AffinityRaw struct {
 	NodeAffinity    *NodeAffinity    `yaml:"nodeAffinity,omitempty" json:"nodeAffinity,omitempty"`
 	PodAffinity     *PodAffinity     `yaml:"podAffinity,omitempty" json:"podAffinity,omitempty"`
@@ -575,31 +569,66 @@ func (p Probes) MarshalYAML() (interface{}, error) {
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (l *Lifecycle) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	lifecycle := &Lifecycle{
+		PostStart: &LifecycleHandler{},
+		PreStop:   &LifecycleHandler{},
+	}
 	var rawBool bool
 	err := unmarshal(&rawBool)
 	if err == nil {
-		l.PostStart = rawBool
-		l.PostStop = rawBool
+		lifecycle.PostStart.Enabled = rawBool
+		lifecycle.PreStop.Enabled = rawBool
+		*l = *lifecycle
 		return nil
 	}
 
-	var lifecycleRaw lifecycleRaw
+	type lifecycleRawType Lifecycle
+	var lifecycleRaw lifecycleRawType
 	err = unmarshal(&lifecycleRaw)
 	if err != nil {
 		return err
 	}
 
-	l.PostStart = lifecycleRaw.PostStart
-	l.PostStop = lifecycleRaw.PostStop
+	lifecycle.PostStart = lifecycleRaw.PostStart
+	lifecycle.PreStop = lifecycleRaw.PreStop
+	*l = *lifecycle
 	return nil
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (l Lifecycle) MarshalYAML() (interface{}, error) {
-	if l.PostStart && l.PostStop {
+func (l *Lifecycle) MarshalYAML() (interface{}, error) {
+	if l != nil && l.PostStart != nil && l.PostStart.Enabled && l.PreStop != nil && l.PreStop.Enabled && len(l.PostStart.Command.Values) == 0 && len(l.PreStop.Command.Values) == 0 {
 		return true, nil
 	}
-	return lifecycleRaw(l), nil
+	return l, nil
+}
+
+func (lh *LifecycleHandler) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawBool bool
+	err := unmarshal(&rawBool)
+	if err == nil {
+		lh.Enabled = rawBool
+		return nil
+	}
+
+	type lifecycleHandlerRawType LifecycleHandler
+	var lifecycleHandlerRaw lifecycleHandlerRawType
+	err = unmarshal(&lifecycleHandlerRaw)
+	if err != nil {
+		return err
+	}
+	*lh = LifecycleHandler(lifecycleHandlerRaw)
+	return nil
+}
+
+func (lh *LifecycleHandler) MarshalYAML() (interface{}, error) {
+	if lh != nil && lh.Enabled && len(lh.Command.Values) == 0 {
+		return true, nil
+	}
+	if lh != nil && lh.Enabled && len(lh.Command.Values) > 0 {
+		return lh, nil
+	}
+	return false, nil
 }
 
 type hybridModeInfo struct {
@@ -1056,9 +1085,7 @@ func (d *Dev) MarshalYAML() (interface{}, error) {
 	if toMarshall.ImagePullPolicy == apiv1.PullAlways {
 		toMarshall.ImagePullPolicy = ""
 	}
-	if toMarshall.Lifecycle != nil && (!toMarshall.Lifecycle.PostStart || !toMarshall.Lifecycle.PostStop) {
-		toMarshall.Lifecycle = nil
-	}
+
 	if toMarshall.Metadata != nil && len(toMarshall.Metadata.Annotations) == 0 && len(toMarshall.Metadata.Labels) == 0 {
 		toMarshall.Metadata = nil
 	}

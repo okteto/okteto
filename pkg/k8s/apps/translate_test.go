@@ -2141,3 +2141,145 @@ func Test_getDevName(t *testing.T) {
 		})
 	}
 }
+
+func TestTranslateLifecycle(t *testing.T) {
+	tests := []struct {
+		name            string
+		actualContainer *apiv1.Container
+		devLifecycle    *model.Lifecycle
+		expected        *apiv1.Container
+	}{
+		{
+			name: "both-lifecycle-handlers-enabled",
+			actualContainer: &apiv1.Container{
+				Name: "test-container",
+				Lifecycle: &apiv1.Lifecycle{
+					PostStart: &apiv1.LifecycleHandler{
+						Exec: &apiv1.ExecAction{
+							Command: []string{"previous", "command"},
+						},
+					},
+				},
+			},
+			devLifecycle: &model.Lifecycle{
+				PostStart: &model.LifecycleHandler{
+					Enabled: true,
+					Command: model.Command{
+						Values: []string{"echo", "post-start"},
+					},
+				},
+				PreStop: &model.LifecycleHandler{
+					Enabled: true,
+					Command: model.Command{
+						Values: []string{"echo", "pre-stop"},
+					},
+				},
+			},
+			expected: &apiv1.Container{
+				Name: "test-container",
+				Lifecycle: &apiv1.Lifecycle{
+					PostStart: &apiv1.LifecycleHandler{
+						Exec: &apiv1.ExecAction{
+							Command: []string{"echo", "post-start"},
+						},
+					},
+					PreStop: &apiv1.LifecycleHandler{
+						Exec: &apiv1.ExecAction{
+							Command: []string{"echo", "pre-stop"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "post-start-disabled",
+			actualContainer: &apiv1.Container{
+				Name: "test-container",
+			},
+			devLifecycle: &model.Lifecycle{
+				PostStart: &model.LifecycleHandler{
+					Enabled: false,
+					Command: model.Command{
+						Values: []string{"echo", "post-start"},
+					},
+				},
+				PreStop: &model.LifecycleHandler{
+					Enabled: true,
+					Command: model.Command{
+						Values: []string{"echo", "pre-stop"},
+					},
+				},
+			},
+			expected: &apiv1.Container{
+				Name: "test-container",
+				Lifecycle: &apiv1.Lifecycle{
+					PreStop: &apiv1.LifecycleHandler{
+						Exec: &apiv1.ExecAction{
+							Command: []string{"echo", "pre-stop"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "pre-stop-disabled",
+			actualContainer: &apiv1.Container{
+				Name: "test-container",
+			},
+			devLifecycle: &model.Lifecycle{
+				PostStart: &model.LifecycleHandler{
+					Enabled: true,
+					Command: model.Command{
+						Values: []string{"echo", "post-start"},
+					},
+				},
+				PreStop: &model.LifecycleHandler{
+					Enabled: false,
+					Command: model.Command{
+						Values: []string{"echo", "pre-stop"},
+					},
+				},
+			},
+			expected: &apiv1.Container{
+				Name: "test-container",
+				Lifecycle: &apiv1.Lifecycle{
+					PostStart: &apiv1.LifecycleHandler{
+						Exec: &apiv1.ExecAction{
+							Command: []string{"echo", "post-start"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "both-lifecycle-handlers-disabled",
+			actualContainer: &apiv1.Container{
+				Name: "test-container",
+			},
+			devLifecycle: &model.Lifecycle{
+				PostStart: &model.LifecycleHandler{
+					Enabled: false,
+					Command: model.Command{
+						Values: []string{"echo", "post-start"},
+					},
+				},
+				PreStop: &model.LifecycleHandler{
+					Enabled: false,
+					Command: model.Command{
+						Values: []string{"echo", "pre-stop"},
+					},
+				},
+			},
+			expected: &apiv1.Container{
+				Name: "test-container",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			TranslateLifecycle(tt.actualContainer, tt.devLifecycle)
+			assert.Equal(t, tt.expected, tt.actualContainer)
+		})
+	}
+}

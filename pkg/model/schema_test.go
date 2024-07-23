@@ -200,7 +200,7 @@ func Test_getStructKeys(t *testing.T) {
 				"model.HTTPHealtcheck":       {"path", "port"},
 				"model.HealthCheck":          {"http", "test", "interval", "timeout", "retries", "start_period", "disable", "x-okteto-liveness", "x-okteto-readiness"},
 				"model.InitContainer":        {"resources", "image"},
-				"model.Lifecycle":            {"postStart", "postStop"},
+				"model.Lifecycle":            {"postStart", "preStop"},
 				"model.Manifest":             {"name", "icon", "dev", "build", "deploy", "destroy", "dependencies", "external", "forward", "test"},
 				"model.Metadata":             {"labels", "annotations"},
 				"model.PersistentVolumeInfo": {"storageClass", "size", "enabled"},
