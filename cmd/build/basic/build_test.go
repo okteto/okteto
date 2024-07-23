@@ -32,8 +32,7 @@ type fakeBuildRunner struct {
 
 type fakeVarManager struct{}
 
-func (*fakeVarManager) MaskVar(string)                     {}
-func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+func (*fakeVarManager) MaskVar(string) {}
 
 func (f *fakeBuildRunner) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error {
 	args := f.Called(ctx, buildOptions, ioCtrl)

@@ -60,8 +60,7 @@ func (fh fakeHasher) hashWithBuildContext(*build.Info, string) string {
 
 type fakeVarManager struct{}
 
-func (*fakeVarManager) MaskVar(string)                     {}
-func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+func (*fakeVarManager) MaskVar(string) {}
 
 func TestNewSmartBuildCtrl(t *testing.T) {
 	type input struct {

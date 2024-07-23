@@ -30,8 +30,7 @@ import (
 
 type fakeVarManager struct{}
 
-func (*fakeVarManager) MaskVar(string)                     {}
-func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+func (*fakeVarManager) MaskVar(string) {}
 
 type fakeBuilderV2 struct {
 	build   error

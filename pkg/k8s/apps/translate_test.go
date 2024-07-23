@@ -46,8 +46,7 @@ var (
 
 type fakeVarManager struct{}
 
-func (*fakeVarManager) MaskVar(string)                     {}
-func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+func (*fakeVarManager) MaskVar(string) {}
 
 func Test_translateWithVolumes(t *testing.T) {
 	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})

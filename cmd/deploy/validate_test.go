@@ -26,8 +26,7 @@ import (
 
 type fakeVarManager struct{}
 
-func (*fakeVarManager) MaskVar(string)                     {}
-func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+func (*fakeVarManager) MaskVar(string) {}
 
 func Test_convertCommandFlagsToOktetoVariables(t *testing.T) {
 	var tests = []struct {

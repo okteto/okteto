@@ -133,8 +133,7 @@ func getFakeManifestV2(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, 
 
 type fakeVarManager struct{}
 
-func (*fakeVarManager) MaskVar(string)                     {}
-func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+func (*fakeVarManager) MaskVar(string) {}
 
 func TestBuildIsManifestV2(t *testing.T) {
 	bc := &Command{

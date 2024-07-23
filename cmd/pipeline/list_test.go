@@ -35,8 +35,7 @@ import (
 
 type fakeVarManager struct{}
 
-func (*fakeVarManager) MaskVar(string)                     {}
-func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+func (*fakeVarManager) MaskVar(string) {}
 
 func mockPipeline(fakeName string, fakeLabels []string) *apiv1.ConfigMap {
 	var labels = map[string]string{

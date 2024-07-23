@@ -20,12 +20,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-//
-//type fakeVarManager struct{}
-//
-//func (*fakeVarManager) MaskVar(string)                     {}
-//func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
-
 func Test_Var_UnmarshalYAML(t *testing.T) {
 	GlobalVarManager = NewVarsManager(&fakeVarManager{})
 

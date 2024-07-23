@@ -23,14 +23,8 @@ import (
 
 type fakeVarManager struct{}
 
-func (*fakeVarManager) Set(key, value string) error {
-	return os.Setenv(key, value)
-}
 func (*fakeVarManager) MaskVar(value string) {
 	oktetoLog.AddMaskedWord(value)
-}
-func (*fakeVarManager) WarningLogf(format string, args ...interface{}) {
-	oktetoLog.Warning(format, args...)
 }
 
 func TestVarManagerDoesNotExportToOsEnv(t *testing.T) {
@@ -157,10 +151,10 @@ func TestGetExcLocal(t *testing.T) {
 
 func TestExpandIncLocal(t *testing.T) {
 	tests := []struct {
-		expectedErr bool
 		name        string
 		result      string
 		value       string
+		expectedErr bool
 	}{
 		{
 			name:        "broken var - missing closing curly bracket",
@@ -217,10 +211,10 @@ func TestExpandIncLocal(t *testing.T) {
 
 func TestExpandExcLocal(t *testing.T) {
 	tests := []struct {
-		expectedErr bool
 		name        string
 		result      string
 		value       string
+		expectedErr bool
 	}{
 		{
 			name:        "broken var - missing closing curly bracket",
@@ -285,10 +279,10 @@ func TestExpandExcLocal(t *testing.T) {
 
 func TestExpandExcLocalIfNotEmpty(t *testing.T) {
 	tests := []struct {
-		expectedErr bool
 		name        string
 		result      string
 		value       string
+		expectedErr bool
 	}{
 		{
 			name:        "broken var - missing closing curly bracket",

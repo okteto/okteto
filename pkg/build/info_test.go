@@ -29,8 +29,7 @@ import (
 
 type fakeVarManager struct{}
 
-func (*fakeVarManager) MaskVar(string)                     {}
-func (*fakeVarManager) WarningLogf(string, ...interface{}) {}
+func (*fakeVarManager) MaskVar(string) {}
 
 func TestExpandBuildArgs(t *testing.T) {
 	varManager := vars.NewVarsManager(&fakeVarManager{})

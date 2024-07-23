@@ -41,7 +41,7 @@ type Type int
 
 var config = map[Type]ConfigItem{
 	OktetoVariableTypeBuiltIn:      {Masked: false},
-	OktetoVariableTypeDotEnv:       {Masked: true},
+	OktetoVariableTypeDotEnv:       {Masked: true, Name: "in the .env file"},
 	OktetoVariableTypeAdminAndUser: {Masked: true},
 	OktetoVariableTypeFlag:         {Name: "as --var", Masked: true},
 	OktetoVariableTypeLocal:        {Name: "locally or in the catalog", Masked: false},
@@ -54,7 +54,6 @@ type Group struct {
 
 type ManagerInterface interface {
 	MaskVar(value string)
-	WarningLogf(format string, args ...interface{})
 }
 
 type Manager struct {
@@ -127,7 +126,6 @@ func (m *Manager) addVar(key, value string, t Type) {
 		if g.Type == t {
 			m.groups[i].Vars = append(m.groups[i].Vars, v)
 			m.m.MaskVar(value)
-			// TODO: do we want this? --> m.WarnVarsPrecedence()
 			return
 		}
 	}
@@ -148,9 +146,7 @@ func (m *Manager) AddGroup(g Group) {
 	}
 
 	m.groups = append(m.groups, g)
-	fmt.Println(m.groups)
 	m.sortGroupsByPriorityDesc()
-	fmt.Println(m.groups)
 }
 
 // GetIncLocal returns an okteto variable (including local variables)
@@ -203,29 +199,6 @@ func (m *Manager) ExpandExcLocalIfNotEmpty(s string) (string, error) {
 		return s, nil
 	}
 	return result, nil
-}
-
-// WarnVarsPrecedence prints out a warning message clarifying which variables take precedence over others in case a variables has been defined in multiple groups
-func (m *Manager) WarnVarsPrecedence() {
-	warnings := make(map[string]string)
-	exportedVars := make(map[string]Type)
-
-	for _, g := range m.groups {
-		for _, v := range g.Vars {
-			if priority, exported := exportedVars[v.Name]; exported {
-				if priority > g.Type {
-					prevGroupName := config[priority].Name
-					currentGroupName := config[g.Type].Name
-					warnings[v.Name] = fmt.Sprintf("Variable '%s' defined %s takes precedence over the same variable defined %s, which will be ignored", v.Name, currentGroupName, prevGroupName)
-				}
-			}
-			exportedVars[v.Name] = g.Type
-		}
-	}
-
-	for _, w := range warnings {
-		m.m.WarningLogf(w)
-	}
 }
 
 // sortGroupsByPriorityDesc sorts the groups by priority descending, so higher priority variables override lower priority ones.

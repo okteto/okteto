@@ -93,9 +93,6 @@ type varsManager struct{}
 func (*varsManager) MaskVar(value string) {
 	oktetoLog.AddMaskedWord(value)
 }
-func (*varsManager) WarningLogf(format string, args ...interface{}) {
-	oktetoLog.Warning(format, args...)
-}
 
 func main() {
 	ctx := context.Background()
