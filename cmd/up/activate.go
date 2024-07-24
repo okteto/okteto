@@ -47,6 +47,8 @@ const (
 
 	// devBranchTrackingIntervalEnvVar sets the tracking interval for branch trackin (if enabled) using OKTETO_DEV_BRANCH_TRACKING_INTERVAL
 	devBranchTrackingIntervalEnvVar = "OKTETO_DEV_BRANCH_TRACKING_INTERVAL"
+
+	defaultTrackingInterval = 5 * time.Minute
 )
 
 func (up *upContext) activate() error {
@@ -592,7 +594,7 @@ func (up *upContext) TrackLatestBranchOnDevContainer(ctx context.Context) {
 	}
 	r := repository.NewRepository(gitRepo)
 
-	devBranchTrackingInterval := env.LoadTimeOrDefault(devBranchTrackingIntervalEnvVar, 5*time.Minute)
+	devBranchTrackingInterval := env.LoadTimeOrDefault(devBranchTrackingIntervalEnvVar, defaultTrackingInterval)
 	c, _, err := up.K8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		oktetoLog.Infof("error getting k8s client: %s", err.Error())
