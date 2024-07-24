@@ -17,7 +17,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -26,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 )
 
