@@ -18,6 +18,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +28,7 @@ type oktetoClientProvider interface {
 }
 
 // Kubeconfig fetch credentials for a cluster namespace
-func Kubeconfig(okClientProvider oktetoClientProvider) *cobra.Command {
+func Kubeconfig(okClientProvider oktetoClientProvider, varManager *vars.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "kubeconfig",
 		Short: "Download credentials for the Kubernetes cluster selected via 'okteto context'",
@@ -37,7 +38,7 @@ Generated kubeconfig file uses a credential plugin to get the cluster credential
 `,
 		Args: utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#kubeconfig"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return context.UpdateKubeconfigCMD(okClientProvider).RunE(cmd, args)
+			return context.UpdateKubeconfigCMD(okClientProvider, varManager).RunE(cmd, args)
 		},
 	}
 	return cmd

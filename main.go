@@ -175,7 +175,7 @@ func main() {
 	root.AddCommand(cmd.Version())
 
 	root.AddCommand(contextCMD.Context(varManager))
-	root.AddCommand(cmd.Kubeconfig(okClientProvider))
+	root.AddCommand(cmd.Kubeconfig(okClientProvider, varManager))
 
 	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
 	root.AddCommand(registrytoken.RegistryToken(ctx, varManager))
