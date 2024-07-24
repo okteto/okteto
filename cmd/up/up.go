@@ -487,6 +487,7 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 		EndpointGetter:    deploy.NewEndpointGetter,
 		AnalyticsTracker:  up.analyticsTracker,
 		IoCtrl:            ioCtrl,
+		VarManager:        up.varManager,
 	}
 
 	startTime := time.Now()
