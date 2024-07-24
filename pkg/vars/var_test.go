@@ -141,3 +141,67 @@ func Test_CreateGroupFromLocalVars(t *testing.T) {
 		}, fakeLocalGroup)
 	})
 }
+
+func Test_Parse(t *testing.T) {
+	tests := []struct {
+		vars        []string
+		name        string
+		expected    []Var
+		expectedErr bool
+	}{
+		{
+			name:     "empty",
+			vars:     nil,
+			expected: nil,
+		},
+		{
+			name: "with error",
+			vars: []string{
+				"foo",
+			},
+			expected:    nil,
+			expectedErr: true,
+		},
+		{
+			name: "single var",
+			vars: []string{
+				"foo=bar",
+			},
+			expected: []Var{
+				{
+					Name:  "foo",
+					Value: "bar",
+				},
+			},
+		},
+		{
+			name: "multiple vars",
+			vars: []string{
+				"foo=bar",
+				"bar=baz",
+			},
+			expected: []Var{
+				{
+					Name:  "foo",
+					Value: "bar",
+				},
+				{
+					Name:  "bar",
+					Value: "baz",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out, err := Parse(tt.vars)
+			if tt.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, out)
+			}
+		})
+	}
+}
