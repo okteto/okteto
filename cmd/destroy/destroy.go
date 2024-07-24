@@ -401,6 +401,7 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 			oktetoLog.AddMaskedWord(variable.Value)
 		}
 	}
+	opts.Variables = append(opts.Variables, env.GetDefaultLocalEnvs()...)
 	oktetoLog.EnableMasking()
 
 	// update to change status
