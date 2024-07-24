@@ -53,6 +53,7 @@ const (
 	actionLockField = "actionLock"
 	actionNameField = "actionName"
 	variablesField  = "variables"
+	latestUpBranch  = "latestUpBranch"
 	PhasesField     = "phases"
 
 	actionDefaultName = "cli"
@@ -229,6 +230,21 @@ func AddPhaseDuration(ctx context.Context, name, namespace, phase string, durati
 // TranslatePipelineName translate the name into the configmap name
 func TranslatePipelineName(name string) string {
 	return fmt.Sprintf("%s%s", ConfigmapNamePrefix, format.ResourceK8sMetaString(name))
+}
+
+// AddPhaseDuration adds a new phase to the configmap with the duration in seconds
+func UpdateLatestUpBranch(ctx context.Context, name, namespace, branch string, c kubernetes.Interface) error {
+	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
+	if err != nil {
+		return err
+	}
+	val, _ := cmap.Data[latestUpBranch]
+	if val == branch {
+		oktetoLog.Infof("latestUpBranch already set to %s", branch)
+		return nil
+	}
+	cmap.Data[latestUpBranch] = branch
+	return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
 }
 
 func translateOutput(output *bytes.Buffer) []byte {
