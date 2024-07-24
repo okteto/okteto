@@ -15,6 +15,7 @@ package deployable
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -261,12 +262,22 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 		CurrentContext: "test",
 	}
 	executor := &fakeExecutor{}
+
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager.AddDotEnvVar("DOT-ENV-1", "dotenv-value-1")
+	varManager.AddFlagVar("FLAG-1", "flag-value-1")
+	varManager.AddBuiltInVar("BUILT-IN-1", "built-in-value-1")
+	varManager.AddAdminAndUserVar("USER-1", "user-value-1")
+
+	t.Setenv("PATH", filepath.Clean("/some/path"))
+	t.Setenv("TERM", "term-name")
+
 	r := DeployRunner{
 		TempKubeconfigFile: "temp-kubeconfig",
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
 		Executor:           executor,
-		varManager:         vars.NewVarsManager(&fakeVarManager{}),
+		varManager:         varManager,
 	}
 
 	params := DeployParameters{
@@ -299,6 +310,12 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 	expectedVariables := []string{
 		"A=value1",
 		"B=value2",
+		"PATH=/some/path",
+		"TERM=term-name",
+		"BUILT-IN-1=built-in-value-1",
+		"FLAG-1=flag-value-1",
+		"DOT-ENV-1=dotenv-value-1",
+		"USER-1=user-value-1",
 	}
 	executor.On("Execute", expectedCommand1, expectedVariables).Return(nil).Once()
 	executor.On("Execute", expectedCommand2, expectedVariables).Return(nil).Once()
@@ -328,6 +345,9 @@ func TestRunCommandsSectionWithErrorInCommands(t *testing.T) {
 		varManager:         vars.NewVarsManager(&fakeVarManager{}),
 	}
 
+	t.Setenv("PATH", filepath.Clean("/some/path"))
+	t.Setenv("TERM", "term-name")
+
 	params := DeployParameters{
 		Variables: []string{
 			"A=value1",
@@ -358,6 +378,8 @@ func TestRunCommandsSectionWithErrorInCommands(t *testing.T) {
 	expectedVariables := []string{
 		"A=value1",
 		"B=value2",
+		"PATH=/some/path",
+		"TERM=term-name",
 	}
 	executor.On("Execute", expectedCommand1, expectedVariables).Return(assert.AnError).Once()
 

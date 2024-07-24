@@ -14,6 +14,7 @@
 package env
 
 import (
+	"fmt"
 	"os"
 	"sort"
 	"strconv"
@@ -96,4 +97,22 @@ func LoadBooleanOrDefault(k string, d bool) bool {
 	}
 
 	return h
+}
+
+// GetDefaultLocalEnvs is responsible to return the environment variables that are required to run commands locally. For
+// example 'PATH' is required to be able to find binaries locally.
+func GetDefaultLocalEnvs() []string {
+	var envs []string
+
+	path := os.Getenv("PATH")
+	if path != "" {
+		envs = append(envs, fmt.Sprintf("PATH=%s", path))
+	}
+
+	term := os.Getenv("TERM")
+	if term != "" {
+		envs = append(envs, fmt.Sprintf("TERM=%s", term))
+	}
+
+	return envs
 }

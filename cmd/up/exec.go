@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
+	oktetoEnv "github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -208,7 +209,7 @@ func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {
 		imageEnvsGetter: &imageEnvsGetter{
 			imageGetter: registry.NewOktetoRegistry(okteto.Config{}),
 		},
-		getDefaultLocalEnvs: getDefaultLocalEnvs,
+		getDefaultLocalEnvs: oktetoEnv.GetDefaultLocalEnvs,
 	}, nil
 }
 
@@ -257,22 +258,6 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 	}
 
 	return envs, nil
-}
-
-func getDefaultLocalEnvs() []string {
-	var envs []string
-
-	path := os.Getenv("PATH")
-	if path != "" {
-		envs = append(envs, fmt.Sprintf("PATH=%s", path))
-	}
-
-	term := os.Getenv("TERM")
-	if term != "" {
-		envs = append(envs, fmt.Sprintf("TERM=%s", term))
-	}
-
-	return envs
 }
 
 func (d *devContainerEnvGetter) getEnvsFromDevContainer(ctx context.Context, spec *apiv1.PodSpec, name, namespace string, client kubernetes.Interface) ([]string, error) {

@@ -178,7 +178,7 @@ func (m *Manager) getGroupsExcludingType(typeToExclude Type) []Group {
 	return groups
 }
 
-// GetOktetoVariablesExcLocal returns an array of all tifihe okteto variables that can be exported (excluding local variables)
+// GetOktetoVariablesExcLocal returns an array of all the okteto variables that can be exported (excluding local variables)
 func (m *Manager) GetOktetoVariablesExcLocal() []string {
 	groups := m.getGroupsExcludingType(OktetoVariableTypeLocal)
 	return m.groupsToArray(groups)
