@@ -42,11 +42,11 @@ import (
 )
 
 const (
-	// enableDevBranchTrackingEnvVar enables or disables the dev branch tracking by the env var OKTETO_ENABLE_DEV_BRANCH_TRACKING
-	enableDevBranchTrackingEnvVar = "OKTETO_ENABLE_DEV_BRANCH_TRACKING"
+	// enableDevBranchTrackingEnvVar enables or disables the dev branch tracking by the env var OKTETO_TRACK_DEV_BANCH_ENABLED
+	enableDevBranchTrackingEnvVar = "OKTETO_TRACK_DEV_BANCH_ENABLED"
 
-	// devBranchTrackingIntervalEnvVar sets the tracking interval for branch trackin (if enabled) using OKTETO_DEV_BRANCH_TRACKING_INTERVAL
-	devBranchTrackingIntervalEnvVar = "OKTETO_DEV_BRANCH_TRACKING_INTERVAL"
+	// devBranchTrackingIntervalEnvVar sets the tracking interval for branch trackin (if enabled) using OKTETO_TRACK_DEV_BRANCH_INTERVAL
+	devBranchTrackingIntervalEnvVar = "OKTETO_TRACK_DEV_BRANCH_INTERVAL"
 
 	defaultTrackingInterval = 5 * time.Minute
 )
@@ -224,7 +224,7 @@ func (up *upContext) activate() error {
 		durationActivateUp := time.Since(up.StartTime)
 		up.analyticsMeta.ActivateDuration(durationActivateUp)
 
-		go up.TrackLatestBranchOnDevContainer(ctx)
+		go TrackLatestBranchOnDevContainer(ctx, up.Manifest, up.Options.ManifestPathFlag, up.K8sClientProvider)
 
 		startRunCommand := time.Now()
 		up.CommandResult <- up.RunCommand(ctx, up.Dev.Command.Values)
@@ -576,18 +576,19 @@ func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) err
 }
 
 // TrackLatestBranchOnDevContainer tracks the latest branch on the dev container
-func (up *upContext) TrackLatestBranchOnDevContainer(ctx context.Context) {
-	// if the manfiest deploy is empty we can't update the configmap because it doesn't exist
-	if up.Manifest.Deploy == nil {
-		oktetoLog.Infof("no deploy section found in the manifest")
-		return
-	}
+func TrackLatestBranchOnDevContainer(ctx context.Context, manifest *model.Manifest, manifestPathFlag string, clientProvider okteto.K8sClientProvider) {
 	if !env.LoadBoolean(enableDevBranchTrackingEnvVar) {
 		oktetoLog.Infof("branch tracking is disabled")
 		return
 	}
 
-	gitRepo, err := repository.FindTopLevelGitDir((up.Options.ManifestPathFlag))
+	// if the manfiest deploy is empty we can't update the configmap because it doesn't exist
+	if manifest.Deploy == nil {
+		oktetoLog.Infof("no deploy section found in the manifest")
+		return
+	}
+
+	gitRepo, err := repository.FindTopLevelGitDir((manifestPathFlag))
 	if err != nil {
 		oktetoLog.Infof("error finding git repository: %s", err.Error())
 		return
@@ -595,7 +596,7 @@ func (up *upContext) TrackLatestBranchOnDevContainer(ctx context.Context) {
 	r := repository.NewRepository(gitRepo)
 
 	devBranchTrackingInterval := env.LoadTimeOrDefault(devBranchTrackingIntervalEnvVar, defaultTrackingInterval)
-	c, _, err := up.K8sClientProvider.Provide(okteto.GetContext().Cfg)
+	c, _, err := clientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		oktetoLog.Infof("error getting k8s client: %s", err.Error())
 		return
@@ -604,25 +605,25 @@ func (up *upContext) TrackLatestBranchOnDevContainer(ctx context.Context) {
 	ticker := time.NewTicker(devBranchTrackingInterval)
 	defer ticker.Stop()
 
-	up.updateBranch(ctx, r, c)
+	updateBranch(ctx, r, manifest.Name, manifest.Namespace, c)
 	for {
 		select {
 		case <-ticker.C:
-			up.updateBranch(ctx, r, c)
+			updateBranch(ctx, r, manifest.Name, manifest.Namespace, c)
 		case <-ctx.Done():
-			oktetoLog.Infof("context cancelled")
+			oktetoLog.Debug("TrackLatestBranchOnDevContainer done")
 			return
 		}
 	}
 }
 
-func (up *upContext) updateBranch(ctx context.Context, r repository.Repository, c kubernetes.Interface) {
+func updateBranch(ctx context.Context, r repository.Repository, name, namespace string, c kubernetes.Interface) {
 	branch, err := r.GetCurrentBranch()
 	if err != nil {
 		oktetoLog.Infof("error getting current branch: %s", err.Error())
 		return
 	}
-	err = pipeline.UpdateLatestUpBranch(ctx, up.Manifest.Name, up.Dev.Namespace, branch, c)
+	err = pipeline.UpdateLatestUpBranch(ctx, name, namespace, branch, c)
 	if err != nil {
 		oktetoLog.Infof("error updating latest branch: %s", err.Error())
 	}

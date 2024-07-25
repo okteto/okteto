@@ -53,7 +53,7 @@ const (
 	actionLockField = "actionLock"
 	actionNameField = "actionName"
 	variablesField  = "variables"
-	latestUpBranch  = "latestUpBranch"
+	devBranchField  = "dev-branch"
 	PhasesField     = "phases"
 
 	actionDefaultName = "cli"
@@ -238,12 +238,12 @@ func UpdateLatestUpBranch(ctx context.Context, name, namespace, branch string, c
 	if err != nil {
 		return err
 	}
-	val := cmap.Data[latestUpBranch]
+	val := cmap.Data[devBranchField]
 	if val == branch {
 		oktetoLog.Infof("latestUpBranch already set to %s", branch)
 		return nil
 	}
-	cmap.Data[latestUpBranch] = branch
+	cmap.Data[devBranchField] = branch
 	return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
 }
 
