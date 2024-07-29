@@ -14,17 +14,13 @@
 package v2
 
 import (
+	"github.com/okteto/okteto/cmd/build/v2/smartbuild"
 	"os"
 	"strconv"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
-)
-
-const (
-	// OktetoEnableSmartBuildEnvVar represents whether the feature flag to enable smart builds is enabled or not
-	OktetoEnableSmartBuildEnvVar = "OKTETO_SMART_BUILDS_ENABLED"
 )
 
 type configRepositoryInterface interface {
@@ -39,12 +35,12 @@ type configRegistryInterface interface {
 }
 
 type oktetoBuilderConfig struct {
-	repository          configRepositoryInterface
-	fs                  afero.Fs
-	hasGlobalAccess     bool
-	isCleanProject      bool
-	isOkteto            bool
-	isSmartBuildsEnable bool
+	repository           configRepositoryInterface
+	fs                   afero.Fs
+	hasGlobalAccess      bool
+	isCleanProject       bool
+	isOkteto             bool
+	isSmartBuildsEnabled bool
 }
 
 type loggerInfo interface {
@@ -63,12 +59,12 @@ func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterfa
 	}
 
 	return oktetoBuilderConfig{
-		repository:          gitRepo,
-		hasGlobalAccess:     hasAccess,
-		isCleanProject:      isClean,
-		fs:                  afero.NewOsFs(),
-		isOkteto:            okteto.IsOkteto(),
-		isSmartBuildsEnable: getIsSmartBuildEnabled(),
+		repository:           gitRepo,
+		hasGlobalAccess:      hasAccess,
+		isCleanProject:       isClean,
+		fs:                   afero.NewOsFs(),
+		isOkteto:             okteto.IsOkteto(),
+		isSmartBuildsEnabled: getIsSmartBuildEnabled(),
 	}
 }
 
@@ -84,18 +80,18 @@ func getConfigStateless(registry configRegistryInterface, gitRepo configReposito
 	}
 
 	return oktetoBuilderConfig{
-		repository:          gitRepo,
-		hasGlobalAccess:     hasAccess,
-		isCleanProject:      isClean,
-		fs:                  afero.NewOsFs(),
-		isOkteto:            isOkteto,
-		isSmartBuildsEnable: getIsSmartBuildEnabled(),
+		repository:           gitRepo,
+		hasGlobalAccess:      hasAccess,
+		isCleanProject:       isClean,
+		fs:                   afero.NewOsFs(),
+		isOkteto:             isOkteto,
+		isSmartBuildsEnabled: getIsSmartBuildEnabled(),
 	}
 }
 
 func getIsSmartBuildEnabled() bool {
 	enableSmartBuilds := true
-	enableSmartBuildsStr := os.Getenv(OktetoEnableSmartBuildEnvVar)
+	enableSmartBuildsStr := os.Getenv(smartbuild.OktetoEnableSmartBuildEnvVar)
 	if enableSmartBuildsStr != "" {
 		smartBuildEnabledBool, err := strconv.ParseBool(enableSmartBuildsStr)
 		if err != nil {
@@ -139,5 +135,5 @@ func (oc oktetoBuilderConfig) GetAnonymizedRepo() string {
 }
 
 func (oc oktetoBuilderConfig) IsSmartBuildsEnabled() bool {
-	return oc.isSmartBuildsEnable
+	return oc.isSmartBuildsEnabled
 }

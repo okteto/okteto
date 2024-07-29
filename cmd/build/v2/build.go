@@ -97,7 +97,7 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistry
 	config := getConfigStateless(registry, gitRepo, ioCtrl.Logger(), okCtx.IsOktetoCluster())
 
 	buildEnvs := map[string]string{}
-	buildEnvs[OktetoEnableSmartBuildEnvVar] = strconv.FormatBool(config.isSmartBuildsEnable)
+	buildEnvs[smartbuild.OktetoEnableSmartBuildEnvVar] = strconv.FormatBool(config.isSmartBuildsEnabled)
 	return &OktetoBuilder{
 		Builder:           basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl},
 		Registry:          registry,
@@ -136,7 +136,7 @@ func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish)
 	config := getConfig(reg, gitRepo, ioCtrl.Logger())
 
 	buildEnvs := map[string]string{}
-	buildEnvs[OktetoEnableSmartBuildEnvVar] = strconv.FormatBool(config.isSmartBuildsEnable)
+	buildEnvs[smartbuild.OktetoEnableSmartBuildEnvVar] = strconv.FormatBool(config.isSmartBuildsEnabled)
 	okCtx := &okteto.ContextStateless{
 		Store: okteto.GetContextStore(),
 	}
