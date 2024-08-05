@@ -1265,7 +1265,7 @@ func (m *Manifest) ValidateForCLIOnly() error {
 	}
 	if len(invalidFields) > 0 {
 		return oktetoErrors.UserError{
-			E:    fmt.Errorf("the following fields are not allowed in this context: %s", strings.Join(invalidFields, ", ")),
+			E:    fmt.Errorf("these features are only supported if you install Okteto in your cluster: %s", strings.Join(invalidFields, ", ")),
 			Hint: "To install Okteto platform on your cluster check: https://www.okteto.com/docs/get-started/install/",
 		}
 	}
