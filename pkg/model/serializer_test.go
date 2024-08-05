@@ -397,7 +397,7 @@ func TestLifecycleMarshalling(t *testing.T) {
 					Command: Command{Values: []string{"yarn", "stop"}},
 				},
 			},
-			expected: "postStart:\n  enabled: true\n  command:\n  - yarn\n  - start\npreStop:\n  enabled: true\n  command:\n  - yarn\n  - stop\n",
+			expected: "postStart:\n  command:\n  - yarn\n  - start\n  enabled: true\npreStop:\n  command:\n  - yarn\n  - stop\n  enabled: true\n",
 		},
 	}
 
