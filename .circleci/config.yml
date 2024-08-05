@@ -325,7 +325,7 @@ jobs:
   e2e-deprecated-windows:
     executor:
       name: win/server-2022
-      version: current
+      version: 2024.04.1
     environment:
       OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_USER: cindylopez
