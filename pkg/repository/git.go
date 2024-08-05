@@ -61,6 +61,18 @@ type cleanStatus struct {
 	isClean bool
 }
 
+func (r gitRepoController) getCurrentBranch() (string, error) {
+	repo, err := r.repoGetter.get(r.path)
+	if err != nil {
+		return "", fmt.Errorf("failed to analyze git repo: %w", err)
+	}
+	head, err := repo.Head()
+	if err != nil {
+		return "", fmt.Errorf("failed to analyze git repo: %w", err)
+	}
+	return head.Name().Short(), nil
+}
+
 func (r gitRepoController) calculateIsClean(ctx context.Context) (bool, error) {
 	repo, err := r.repoGetter.get(r.path)
 	if err != nil {
