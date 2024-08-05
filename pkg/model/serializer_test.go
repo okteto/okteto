@@ -360,9 +360,9 @@ func TestProbesMarshalling(t *testing.T) {
 
 func TestLifecycleMarshalling(t *testing.T) {
 	tests := []struct {
+		lifecycle Lifecycle
 		name      string
 		expected  string
-		lifecycle Lifecycle
 	}{
 		{
 			name: "true-and-false",

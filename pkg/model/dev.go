@@ -214,8 +214,8 @@ type Lifecycle struct {
 
 // LifecycleHandler defines a handler for lifecycle events
 type LifecycleHandler struct {
-	Enabled bool    `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	Command Command `json:"command,omitempty" yaml:"command,omitempty"`
+	Enabled bool    `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 }
 
 // ResourceList is a set of (resource name, quantity) pairs.

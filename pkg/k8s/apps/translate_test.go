@@ -2144,10 +2144,10 @@ func Test_getDevName(t *testing.T) {
 
 func TestTranslateLifecycle(t *testing.T) {
 	tests := []struct {
-		name            string
 		actualContainer *apiv1.Container
 		devLifecycle    *model.Lifecycle
 		expected        *apiv1.Container
+		name            string
 	}{
 		{
 			name: "both-lifecycle-handlers-enabled",
