@@ -32,6 +32,8 @@ parameters:
     default: ""
 
 orbs:
+  # https://circleci.com/developer/orbs/orb/circleci/windows#usage-run_windows_2022
+  # https://circleci.com/developer/machine/image/windows-server-2022-gui
   win: circleci/windows@5.0.0
 
 executors:
@@ -113,9 +115,9 @@ jobs:
 
   run-windows-unit-test:
     executor:
-      name: win/default
-      version: default
-      size: medium
+      # https://circleci.com/developer/machine/image/windows-server-2022-gui
+      name: win/server-2022
+      version: 2024.04.1
     environment:
       OKTETO_USER: cindylopez
     steps:
@@ -293,8 +295,8 @@ jobs:
 
   test-e2e-setup-windows:
     executor:
-      name: win/default
-      version: default
+      name: win/server-2022
+      version: 2024.04.1
     environment:
       OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_USER: cindylopez
@@ -322,8 +324,8 @@ jobs:
             - C:\Go\pkg
   e2e-deprecated-windows:
     executor:
-      name: win/default
-      version: default
+      name: win/server-2022
+      version: current
     environment:
       OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_USER: cindylopez
@@ -355,8 +357,8 @@ jobs:
 
   e2e-build-windows:
     executor:
-      name: win/default
-      version: default
+      name: win/server-2022
+      version: 2024.04.1
     environment:
       OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_USER: cindylopez
@@ -383,8 +385,8 @@ jobs:
 
   e2e-deploy-windows:
     executor:
-      name: win/default
-      version: default
+      name: win/server-2022
+      version: 2024.04.1
     environment:
       OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_USER: cindylopez
@@ -418,8 +420,8 @@ jobs:
 
   e2e-up-windows:
     executor:
-      name: win/default
-      version: default
+      name: win/server-2022
+      version: 2024.04.1
     environment:
       OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_USER: cindylopez
