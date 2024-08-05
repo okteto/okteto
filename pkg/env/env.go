@@ -19,6 +19,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/a8m/envsubst"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -109,6 +110,21 @@ func LoadBoolean(k string) bool {
 	h, err := strconv.ParseBool(v)
 	if err != nil {
 		oktetoLog.Yellow("'%s' is not a valid value for environment variable %s", v, k)
+	}
+
+	return h
+}
+
+func LoadTimeOrDefault(k string, defaultValue time.Duration) time.Duration {
+	v := os.Getenv(k)
+	if v == "" {
+		return defaultValue
+	}
+
+	h, err := time.ParseDuration(v)
+	if err != nil {
+		oktetoLog.Yellow("'%s' is not a valid value for environment variable %s", v, k)
+		return defaultValue
 	}
 
 	return h
