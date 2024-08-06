@@ -20,8 +20,10 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -31,9 +33,21 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/repository"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+)
+
+const (
+	// enableDevBranchTrackingEnvVar enables or disables the dev branch tracking by the env var OKTETO_TRACK_DEV_BANCH_ENABLED
+	enableDevBranchTrackingEnvVar = "OKTETO_TRACK_DEV_BANCH_ENABLED"
+
+	// devBranchTrackingIntervalEnvVar sets the tracking interval for branch trackin (if enabled) using OKTETO_TRACK_DEV_BRANCH_INTERVAL
+	devBranchTrackingIntervalEnvVar = "OKTETO_TRACK_DEV_BRANCH_INTERVAL"
+
+	defaultTrackingInterval = 5 * time.Minute
 )
 
 func (up *upContext) activate() error {
@@ -189,6 +203,8 @@ func (up *upContext) activate() error {
 		printDisplayContext(up)
 		durationActivateUp := time.Since(up.StartTime)
 		up.analyticsMeta.ActivateDuration(durationActivateUp)
+
+		go TrackLatestBranchOnDevContainer(ctx, up.Manifest, up.Options.ManifestPathFlag, up.K8sClientProvider)
 
 		startRunCommand := time.Now()
 		up.CommandResult <- up.RunCommand(ctx, up.Dev.Command.Values)
@@ -536,5 +552,59 @@ func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) err
 				return nil
 			}
 		}
+	}
+}
+
+// TrackLatestBranchOnDevContainer tracks the latest branch on the dev container
+func TrackLatestBranchOnDevContainer(ctx context.Context, manifest *model.Manifest, manifestPathFlag string, clientProvider okteto.K8sClientProvider) {
+	if !env.LoadBoolean(enableDevBranchTrackingEnvVar) {
+		oktetoLog.Infof("branch tracking is disabled")
+		return
+	}
+
+	// if the manfiest deploy is empty we can't update the configmap because it doesn't exist
+	if manifest.Deploy == nil {
+		oktetoLog.Infof("no deploy section found in the manifest")
+		return
+	}
+
+	gitRepo, err := repository.FindTopLevelGitDir((manifestPathFlag))
+	if err != nil {
+		oktetoLog.Infof("error finding git repository: %s", err.Error())
+		return
+	}
+	r := repository.NewRepository(gitRepo)
+
+	devBranchTrackingInterval := env.LoadTimeOrDefault(devBranchTrackingIntervalEnvVar, defaultTrackingInterval)
+	c, _, err := clientProvider.Provide(okteto.GetContext().Cfg)
+	if err != nil {
+		oktetoLog.Infof("error getting k8s client: %s", err.Error())
+		return
+	}
+
+	ticker := time.NewTicker(devBranchTrackingInterval)
+	defer ticker.Stop()
+
+	updateBranch(ctx, r, manifest.Name, manifest.Namespace, c)
+	for {
+		select {
+		case <-ticker.C:
+			updateBranch(ctx, r, manifest.Name, manifest.Namespace, c)
+		case <-ctx.Done():
+			oktetoLog.Debug("TrackLatestBranchOnDevContainer done")
+			return
+		}
+	}
+}
+
+func updateBranch(ctx context.Context, r repository.Repository, name, namespace string, c kubernetes.Interface) {
+	branch, err := r.GetCurrentBranch()
+	if err != nil {
+		oktetoLog.Infof("error getting current branch: %s", err.Error())
+		return
+	}
+	err = pipeline.UpdateLatestUpBranch(ctx, name, namespace, branch, c)
+	if err != nil {
+		oktetoLog.Infof("error updating latest branch: %s", err.Error())
 	}
 }

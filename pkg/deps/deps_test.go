@@ -127,6 +127,20 @@ func Test_ManifestDependencies_UnmarshalYAML(t *testing.T) {
 			},
 		},
 		{
+			name: "deserialized successfully from array with repo with groups",
+			yaml: []byte(`
+- https://gitlab.com/okteto24/samples/nested/movies-frontend
+- https://gitlab.com/okteto24/samples/nested/movies-api`),
+			expected: ManifestSection{
+				"movies-api": &Dependency{
+					Repository: "https://gitlab.com/okteto24/samples/nested/movies-api",
+				},
+				"movies-frontend": &Dependency{
+					Repository: "https://gitlab.com/okteto24/samples/nested/movies-frontend",
+				},
+			},
+		},
+		{
 			name: "deserialized successfully as map",
 			yaml: []byte(`
 frontend:
