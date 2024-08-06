@@ -23,10 +23,8 @@ import (
 	"github.com/a8m/envsubst/parse"
 	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/pkg/env"
-
-	"github.com/okteto/okteto/pkg/vars"
-
 	"github.com/okteto/okteto/pkg/model/utils"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 // ManifestSection represents the map of dependencies at a manifest
