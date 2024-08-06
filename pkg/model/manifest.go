@@ -908,7 +908,7 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 			}
 
 			contextAbs := buildInfo.Context
-			if !filepath.IsAbs(buildInfo.Context) {
+			if !filepath.IsAbs(buildInfo.Context) || strings.HasPrefix(contextAbs, string(os.PathSeparator)) {
 				contextAbs = filepath.Join(cwd, buildInfo.Context)
 			}
 			buildInfo.Dockerfile, err = filepath.Rel(contextAbs, buildInfo.Dockerfile)
