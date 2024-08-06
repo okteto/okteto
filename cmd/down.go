@@ -90,6 +90,11 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, fs afero.Fs) 
 				return err
 			}
 
+			if !okteto.IsOkteto() {
+				if err := manifest.ValidateForCLIOnly(); err != nil {
+					return err
+				}
+			}
 			c, _, err := okteto.GetK8sClientWithLogger(k8sLogsCtrl)
 			if err != nil {
 				return err

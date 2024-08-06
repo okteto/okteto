@@ -160,3 +160,7 @@ func (d *Dependency) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	return nil
 }
+
+func (md ManifestSection) IsEmpty() bool {
+	return len(md) == 0
+}

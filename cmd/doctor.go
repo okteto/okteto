@@ -81,6 +81,11 @@ func Doctor(k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command {
 				return err
 			}
 
+			if !okteto.IsOkteto() {
+				if err := manifest.ValidateForCLIOnly(); err != nil {
+					return err
+				}
+			}
 			c, _, err := okteto.GetK8sClientWithLogger(k8sLogger)
 			if err != nil {
 				return err
