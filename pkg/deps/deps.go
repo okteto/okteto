@@ -23,7 +23,10 @@ import (
 	"github.com/a8m/envsubst/parse"
 	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/pkg/env"
+
 	"github.com/okteto/okteto/pkg/vars"
+
+	"github.com/okteto/okteto/pkg/model/utils"
 )
 
 // ManifestSection represents the map of dependencies at a manifest
@@ -122,10 +125,7 @@ func (md *ManifestSection) UnmarshalYAML(unmarshal func(interface{}) error) erro
 			if err != nil {
 				return err
 			}
-			name, err := getRepoNameFromGitURL(r)
-			if err != nil {
-				return err
-			}
+			name := utils.TranslateURLToName(r.String())
 			rawMd[name] = &Dependency{
 				Repository: r.String(),
 			}
@@ -162,4 +162,8 @@ func (d *Dependency) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	*d = Dependency(dependencyRaw)
 
 	return nil
+}
+
+func (md ManifestSection) IsEmpty() bool {
+	return len(md) == 0
 }

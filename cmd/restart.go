@@ -66,6 +66,12 @@ func Restart(fs afero.Fs, varManager *vars.Manager) *cobra.Command {
 				return err
 			}
 
+			if !okteto.IsOkteto() {
+				if err := manifest.ValidateForCLIOnly(); err != nil {
+					return err
+				}
+			}
+
 			devName := ""
 			if len(args) == 1 {
 				devName = args[0]

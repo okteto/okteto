@@ -107,3 +107,7 @@ func (er *ExternalResource) SetURLUsingEnvironFile(name string, dynamicEnvs map[
 
 	return nil
 }
+
+func (es Section) IsEmpty() bool {
+	return len(es) == 0
+}

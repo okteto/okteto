@@ -80,6 +80,12 @@ func Status(varManager *vars.Manager, fs afero.Fs) *cobra.Command {
 				return err
 			}
 
+			if !okteto.IsOkteto() {
+				if err := manifest.ValidateForCLIOnly(); err != nil {
+					return err
+				}
+			}
+
 			devName := ""
 			if len(args) == 1 {
 				devName = args[0]

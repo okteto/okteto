@@ -245,3 +245,31 @@ func TestExternalResource_SetURLUsingEnvironFile(t *testing.T) {
 		})
 	}
 }
+func TestSection_IsEmpty(t *testing.T) {
+	tests := []struct {
+		section  Section
+		name     string
+		expected bool
+	}{
+		{
+			name:     "empty section",
+			section:  Section{},
+			expected: true,
+		},
+		{
+			name: "non-empty section",
+			section: Section{
+				"external1": &ExternalResource{},
+				"external2": &ExternalResource{},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := tt.section.IsEmpty()
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
+}
