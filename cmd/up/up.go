@@ -217,7 +217,7 @@ okteto up my-svc -- echo this is a test
 				inferer := devenvironment.NewNameInferer(c)
 				oktetoManifest.Name = inferer.InferName(ctx, wd, okteto.GetContext().Namespace, upOptions.ManifestPathFlag)
 			}
-			os.Setenv(constants.OktetoNameEnvVar, oktetoManifest.Name)
+			varManager.AddBuiltInVar(constants.OktetoNameEnvVar, oktetoManifest.Name)
 
 			if len(oktetoManifest.Dev) == 0 {
 				if oktetoManifest.Type == model.StackType {

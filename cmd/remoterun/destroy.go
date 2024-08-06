@@ -105,7 +105,7 @@ It is important that this command does the minimum and must not do calculations 
 				return fmt.Errorf("could not initialize the command properly: %w", err)
 			}
 
-			os.Setenv(constants.OktetoNameEnvVar, options.Name)
+			varManager.AddBuiltInVar(constants.OktetoNameEnvVar, options.Name)
 
 			params := deployable.DestroyParameters{
 				Name:         options.Name,

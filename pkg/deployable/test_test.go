@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
@@ -24,8 +25,9 @@ import (
 func TestTestRunner(t *testing.T) {
 	executor := &fakeExecutor{}
 	runner := TestRunner{
-		Executor: executor,
-		Fs:       afero.NewMemMapFs(),
+		Executor:   executor,
+		Fs:         afero.NewMemMapFs(),
+		VarManager: vars.NewVarsManager(&fakeVarManager{}),
 	}
 
 	cmd1 := model.DeployCommand{

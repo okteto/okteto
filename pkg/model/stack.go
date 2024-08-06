@@ -311,6 +311,7 @@ func GetStackFromPath(name, stackPath string, isCompose bool, fs afero.Fs) (*Sta
 //   - If no repository is found, we get the name from the folder where the stack/compose file is (`stackPath`)
 func getStackName(name, stackPath, actualStackName string) (string, error) {
 	if name != "" {
+		// TODO: move to varManager
 		if err := os.Setenv(constants.OktetoNameEnvVar, name); err != nil {
 			return "", err
 		}

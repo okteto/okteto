@@ -85,12 +85,12 @@ commands:
 			}
 
 			runner := &deployable.TestRunner{
-				Executor: executor.NewExecutor(oktetoLog.GetOutputFormat(), false, ""),
-				Fs:       afero.NewOsFs(),
+				Executor:   executor.NewExecutor(oktetoLog.GetOutputFormat(), false, ""),
+				Fs:         afero.NewOsFs(),
+				VarManager: varManager,
 			}
 
-			// TODO: move to varManager
-			os.Setenv(constants.OktetoNameEnvVar, options.Name)
+			varManager.AddBuiltInVar(constants.OktetoNameEnvVar, options.Name)
 
 			options.Variables = append(
 				options.Variables,

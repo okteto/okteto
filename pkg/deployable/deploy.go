@@ -82,17 +82,18 @@ type ExternalResourceInterface interface {
 // run locally or remotely. As this runs also in the remote, it should NEVER build any kind of image
 // or execute some logic that might differ from local.
 type DeployRunner struct {
-	Proxy              ProxyInterface
-	Kubeconfig         KubeConfigHandler
-	ConfigMapHandler   ConfigMapHandler
-	Executor           executor.ManifestExecutor
-	K8sClientProvider  okteto.K8sClientProviderWithLogger
-	Fs                 afero.Fs
-	DivertDeployer     DivertDeployer
-	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
-	k8sLogger          *io.K8sLogger
-	varManager         *vars.Manager
-	TempKubeconfigFile string
+	Proxy                   ProxyInterface
+	Kubeconfig              KubeConfigHandler
+	ConfigMapHandler        ConfigMapHandler
+	Executor                executor.ManifestExecutor
+	K8sClientProvider       okteto.K8sClientProviderWithLogger
+	Fs                      afero.Fs
+	DivertDeployer          DivertDeployer
+	GetExternalControl      func(cfg *rest.Config) ExternalResourceInterface
+	k8sLogger               *io.K8sLogger
+	varManager              *vars.Manager
+	createTempOktetoEnvFile func(afero.Fs, *vars.Manager) (afero.File, func(), error)
+	TempKubeconfigFile      string
 }
 
 // Entity represents a set of resources that can be deployed by the runner
@@ -187,16 +188,17 @@ func NewDeployRunnerForLocal(
 	}
 
 	return &DeployRunner{
-		Kubeconfig:         kubeconfig,
-		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash, ""),
-		ConfigMapHandler:   cmapHandler,
-		Proxy:              proxy,
-		TempKubeconfigFile: GetTempKubeConfigFile(tempKubeconfigName),
-		K8sClientProvider:  k8sProvider,
-		GetExternalControl: newDeployExternalK8sControl,
-		Fs:                 afero.NewOsFs(),
-		k8sLogger:          k8sLogger,
-		varManager:         varManager,
+		Kubeconfig:              kubeconfig,
+		Executor:                executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash, ""),
+		ConfigMapHandler:        cmapHandler,
+		Proxy:                   proxy,
+		TempKubeconfigFile:      GetTempKubeConfigFile(tempKubeconfigName),
+		K8sClientProvider:       k8sProvider,
+		GetExternalControl:      newDeployExternalK8sControl,
+		Fs:                      afero.NewOsFs(),
+		k8sLogger:               k8sLogger,
+		varManager:              varManager,
+		createTempOktetoEnvFile: createTempOktetoEnvFile,
 	}, nil
 }
 
@@ -226,7 +228,7 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 		r.DivertDeployer = driver
 	}
 
-	os.Setenv(constants.OktetoNameEnvVar, params.Name)
+	r.varManager.AddBuiltInVar(constants.OktetoNameEnvVar, params.Name)
 
 	oktetoLog.SetStage("")
 
@@ -277,7 +279,7 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 
 // runCommandsSection runs the commands defined in the command section of the deployable entity
 func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployParameters) error {
-	oktetoEnvFile, unlinkEnv, err := createTempOktetoEnvFile(r.Fs)
+	oktetoEnvFile, unlinkEnv, err := r.createTempOktetoEnvFile(r.Fs, r.varManager)
 	if err != nil {
 		return err
 	}
@@ -416,7 +418,7 @@ func (r *DeployRunner) CleanUp(ctx context.Context, err error) {
 }
 
 // createTempOktetoEnvFile creates a temporal file use to store the environment variables
-func createTempOktetoEnvFile(fs afero.Fs) (afero.File, func(), error) {
+func createTempOktetoEnvFile(fs afero.Fs, varManager *vars.Manager) (afero.File, func(), error) {
 	oktetoEnvFileDir, err := afero.TempDir(fs, "", "")
 	if err != nil {
 		return nil, func() {}, err
@@ -427,7 +429,7 @@ func createTempOktetoEnvFile(fs afero.Fs) (afero.File, func(), error) {
 		return nil, func() {}, err
 	}
 
-	os.Setenv(constants.OktetoEnvFile, oktetoEnvFile.Name())
+	varManager.AddBuiltInVar(constants.OktetoEnvFile, oktetoEnvFile.Name())
 	oktetoLog.Debug(fmt.Sprintf("using %s as env file for deploy command", oktetoEnvFile.Name()))
 
 	return oktetoEnvFile, func() {

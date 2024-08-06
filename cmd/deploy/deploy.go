@@ -417,7 +417,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		return err
 	}
 
-	os.Setenv(constants.OktetoNameEnvVar, deployOptions.Name)
+	dc.VarManager.AddBuiltInVar(constants.OktetoNameEnvVar, deployOptions.Name)
 
 	if err := dc.deployDependencies(ctx, deployOptions); err != nil {
 		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {

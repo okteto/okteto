@@ -231,6 +231,7 @@ func TestDestroyWithErrorDestroyingDependencies(t *testing.T) {
 		getPipelineDestroyer: func() (pipelineDestroyer, error) {
 			return nil, assert.AnError
 		},
+		varManager: vars.NewVarsManager(&fakeVarManager{}),
 	}
 
 	err = dc.destroy(ctx, &Options{
@@ -269,6 +270,7 @@ func TestDestroyWithErrorDestroyingDivert(t *testing.T) {
 		getDivertDriver: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface) (divert.Driver, error) {
 			return nil, assert.AnError
 		},
+		varManager: vars.NewVarsManager(&fakeVarManager{}),
 	}
 
 	err = dc.destroy(ctx, &Options{

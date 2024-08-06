@@ -41,10 +41,10 @@ type Type int
 
 var config = map[Type]ConfigItem{
 	OktetoVariableTypeBuiltIn:      {Masked: false},
-	OktetoVariableTypeDotEnv:       {Masked: true, Name: "in the .env file"},
+	OktetoVariableTypeDotEnv:       {Masked: true},
 	OktetoVariableTypeAdminAndUser: {Masked: true},
-	OktetoVariableTypeFlag:         {Name: "as --var", Masked: true},
-	OktetoVariableTypeLocal:        {Name: "locally or in the catalog", Masked: false},
+	OktetoVariableTypeFlag:         {Masked: true},
+	OktetoVariableTypeLocal:        {Masked: false},
 }
 
 type Group struct {
@@ -130,7 +130,7 @@ func (m *Manager) addVar(key, value string, t Type) {
 	for i, g := range m.groups {
 		if g.Type == t {
 			m.groups[i].Vars = append(m.groups[i].Vars, v)
-			m.m.MaskVar(value)
+			m.maskVar(value, t)
 			return
 		}
 	}
@@ -142,12 +142,17 @@ func (m *Manager) addVar(key, value string, t Type) {
 	})
 }
 
+func (m *Manager) maskVar(value string, t Type) {
+	if value == "" || !config[t].Masked {
+		return
+	}
+	m.m.MaskVar(value)
+}
+
 // AddGroup allows to add a group of variables to the manager. The variables of the group should share the same typ.
 func (m *Manager) AddGroup(g Group) {
-	if config[g.Type].Masked {
-		for _, v := range g.Vars {
-			m.m.MaskVar(v.Value)
-		}
+	for _, v := range g.Vars {
+		m.maskVar(v.Value, g.Type)
 	}
 
 	m.groups = append(m.groups, g)

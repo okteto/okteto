@@ -417,7 +417,7 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 		return err
 	}
 
-	os.Setenv(constants.OktetoNameEnvVar, opts.Name)
+	dc.varManager.AddBuiltInVar(constants.OktetoNameEnvVar, opts.Name)
 
 	if opts.DestroyDependencies {
 		if err := dc.destroyDependencies(ctx, opts); err != nil {
