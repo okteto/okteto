@@ -15,6 +15,7 @@ package deployable
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -330,7 +331,7 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 	expectedVariables := []string{
 		"A=value1",
 		"B=value2",
-		"PATH=/some/path",
+		fmt.Sprintf("PATH=%s", filepath.Clean("/some/path")),
 		"TERM=term-name",
 		"BUILT-IN-1=built-in-value-1",
 		"OKTETO_ENV=.env",
@@ -400,7 +401,7 @@ func TestRunCommandsSectionWithErrorInCommands(t *testing.T) {
 	expectedVariables := []string{
 		"A=value1",
 		"B=value2",
-		"PATH=/some/path",
+		fmt.Sprintf("PATH=%s", filepath.Clean("/some/path")),
 		"TERM=term-name",
 		"OKTETO_ENV=.env",
 	}
