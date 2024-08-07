@@ -204,7 +204,7 @@ func (up *upContext) activate() error {
 		durationActivateUp := time.Since(up.StartTime)
 		up.analyticsMeta.ActivateDuration(durationActivateUp)
 
-		go TrackLatestBranchOnDevContainer(ctx, up.Manifest, up.Options.ManifestPathFlag, up.K8sClientProvider)
+		go TrackLatestBranchOnDevContainer(ctx, up.Namespace, up.Manifest, up.Options.ManifestPathFlag, up.K8sClientProvider)
 
 		startRunCommand := time.Now()
 		up.CommandResult <- up.RunCommand(ctx, up.Dev.Command.Values)
@@ -556,7 +556,7 @@ func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) err
 }
 
 // TrackLatestBranchOnDevContainer tracks the latest branch on the dev container
-func TrackLatestBranchOnDevContainer(ctx context.Context, manifest *model.Manifest, manifestPathFlag string, clientProvider okteto.K8sClientProvider) {
+func TrackLatestBranchOnDevContainer(ctx context.Context, namespace string, manifest *model.Manifest, manifestPathFlag string, clientProvider okteto.K8sClientProvider) {
 	if !env.LoadBoolean(enableDevBranchTrackingEnvVar) {
 		oktetoLog.Infof("branch tracking is disabled")
 		return
@@ -568,7 +568,7 @@ func TrackLatestBranchOnDevContainer(ctx context.Context, manifest *model.Manife
 		return
 	}
 
-	gitRepo, err := repository.FindTopLevelGitDir((manifestPathFlag))
+	gitRepo, err := repository.FindTopLevelGitDir(manifestPathFlag)
 	if err != nil {
 		oktetoLog.Infof("error finding git repository: %s", err.Error())
 		return
@@ -585,11 +585,11 @@ func TrackLatestBranchOnDevContainer(ctx context.Context, manifest *model.Manife
 	ticker := time.NewTicker(devBranchTrackingInterval)
 	defer ticker.Stop()
 
-	updateBranch(ctx, r, manifest.Name, manifest.Namespace, c)
+	updateBranch(ctx, r, manifest.Name, namespace, c)
 	for {
 		select {
 		case <-ticker.C:
-			updateBranch(ctx, r, manifest.Name, manifest.Namespace, c)
+			updateBranch(ctx, r, manifest.Name, namespace, c)
 		case <-ctx.Done():
 			oktetoLog.Debug("TrackLatestBranchOnDevContainer done")
 			return
