@@ -599,7 +599,7 @@ func GetDeployer(ctx context.Context,
 ) (Deployer, error) {
 	if shouldRunInRemote(opts) {
 		oktetoLog.Info("Deploying remotely...")
-		return newRemoteDeployer(buildEnvVarsGetter, ioCtrl, dependencyEnvVarsGetter), nil
+		return newRemoteDeployer(buildEnvVarsGetter, ioCtrl, varManager, dependencyEnvVarsGetter), nil
 	}
 
 	oktetoLog.Info("Deploying locally...")
@@ -650,7 +650,7 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 			Value: "okteto-deploy",
 		})
 
-		err := dep.ExpandVars(deployOptions.Variables)
+		err := dep.ExpandVars(deployOptions.Variables, dc.VarManager)
 		if err != nil {
 			return fmt.Errorf("could not expand variables in dependencies: %w", err)
 		}

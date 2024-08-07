@@ -16,7 +16,6 @@ package deps
 import (
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -49,8 +48,8 @@ func (d *Dependency) GetTimeout(defaultTimeout time.Duration) time.Duration {
 }
 
 // ExpandVars sets dependencies values if values fits with list params
-func (d *Dependency) ExpandVars(variables []string) error {
-	parser := parse.New("string", append(os.Environ(), variables...), &parse.Restrictions{})
+func (d *Dependency) ExpandVars(variables []string, varManager *vars.Manager) error {
+	parser := parse.New("string", append(varManager.GetOktetoVariablesExcLocal(), variables...), &parse.Restrictions{})
 
 	expandedBranch, err := parser.Parse(d.Branch)
 	if err != nil {

@@ -65,7 +65,9 @@ func Test_GetTimeout(t *testing.T) {
 }
 
 func Test_ExpandVars(t *testing.T) {
-	t.Setenv("MY_CUSTOM_VAR_FROM_ENVIRON", "varValueFromEnv")
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager.AddDotEnvVar("MY_CUSTOM_VAR_FROM_ENVIRON", "varValueFromEnv")
+
 	dependency := Dependency{
 		Repository:   "${REPO}",
 		Branch:       "${NOBRANCHSET-$BRANCH}",
@@ -105,7 +107,7 @@ func Test_ExpandVars(t *testing.T) {
 		"AVARVALUE=thisIsAValue",
 	}
 
-	err := dependency.ExpandVars(envVariables)
+	err := dependency.ExpandVars(envVariables, varManager)
 	require.NoError(t, err)
 	assert.Equal(t, expected, dependency)
 }

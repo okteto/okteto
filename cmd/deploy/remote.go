@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path"
 	"strings"
 
@@ -59,11 +58,13 @@ type remoteDeployer struct {
 	// ioCtrl is the controller for the output of the Build logs
 	ioCtrl *io.Controller
 
+	varManager *vars.Manager
+
 	getDependencyEnvVars dependencyEnvVarsGetter
 }
 
 // newRemoteDeployer creates the remote deployer
-func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller, getDependencyEnvVars dependencyEnvVarsGetter) *remoteDeployer {
+func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller, varManager *vars.Manager, getDependencyEnvVars dependencyEnvVarsGetter) *remoteDeployer {
 	fs := afero.NewOsFs()
 	builder := buildCmd.NewOktetoBuilder(
 		&okteto.ContextStateless{
@@ -76,12 +77,12 @@ func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller
 		getBuildEnvVars:      buildVarsGetter,
 		runner:               runner,
 		ioCtrl:               ioCtrl,
+		varManager:           varManager,
 		getDependencyEnvVars: getDependencyEnvVars,
 	}
 }
 
 func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) error {
-
 	baseImage := ""
 	if deployOptions.Manifest != nil && deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.Image != "" {
 		baseImage = deployOptions.Manifest.Deploy.Image
@@ -119,7 +120,7 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		TemplateName:              templateName,
 		CommandFlags:              commandsFlags,
 		BuildEnvVars:              rd.getBuildEnvVars(),
-		DependenciesEnvVars:       rd.getDependencyEnvVars(os.Environ),
+		DependenciesEnvVars:       rd.getDependencyEnvVars(rd.varManager.GetOktetoVariablesExcLocal),
 		DockerfileName:            dockerfileTemporalName,
 		Deployable:                dep,
 		Manifest:                  deployOptions.Manifest,
