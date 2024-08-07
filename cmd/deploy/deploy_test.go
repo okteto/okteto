@@ -691,6 +691,7 @@ func TestDeployDependencies(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dc := &Command{
 				PipelineCMD: fakePipelineDeployer{tc.config.pipelineErr},
+				VarManager:  vars.NewVarsManager(&fakeVarManager{}),
 			}
 			assert.ErrorIs(t, tc.expected, dc.deployDependencies(context.Background(), &Options{Manifest: fakeManifest}))
 		})

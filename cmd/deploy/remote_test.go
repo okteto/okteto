@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/remote"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -163,9 +164,10 @@ func TestGetCommandFlags(t *testing.T) {
 }
 
 func Test_newRemoteDeployer(t *testing.T) {
+	varManager := vars.NewVarsManager(&fakeVarManager{})
 	getBuildEnvVars := func() map[string]string { return nil }
 	getDependencyEnvVars := func(_ environGetter) map[string]string { return nil }
-	got := newRemoteDeployer(getBuildEnvVars, io.NewIOController(), getDependencyEnvVars)
+	got := newRemoteDeployer(getBuildEnvVars, io.NewIOController(), varManager, getDependencyEnvVars)
 	require.IsType(t, &remoteDeployer{}, got)
 	require.NotNil(t, got.getBuildEnvVars)
 }
