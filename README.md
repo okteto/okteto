@@ -53,7 +53,9 @@ The Okteto Open Source CLI supports the following commands:
 - `okteto up`
 - `okteto down`
 
-> It's important to note that the Okteto Open Source CLI only supports the [dev section](https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional) of the Okteto Manifest.
+> [!NOTE]
+ ⚠️ Notice: The open-source version of Okteto only supports the [dev section](https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional)  of the Okteto manifest. For additional features and full functionality, consider exploring the [Okteto Platform](https://www.okteto.com/get-demo/).
+
 
 We have getting started guides for the Open Source mode for the following languages:
 
