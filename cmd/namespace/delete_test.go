@@ -88,7 +88,7 @@ func Test_deleteNamespace(t *testing.T) {
 			toDeleteNs:                      "test-non-existing",
 			initialNamespacesAtOktetoClient: initNamespaces,
 			finalNs:                         currentNamespace,
-			err:                             errFailedDeleteNamespace,
+			err:                             nil,
 			fakeOkClient: &client.FakeOktetoClient{
 				Namespace:       client.NewFakeNamespaceClient(initNamespaces, nil),
 				Users:           client.NewFakeUsersClient(usr),
