@@ -15,6 +15,7 @@ package preview
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test/client"
@@ -51,6 +52,33 @@ func TestExecuteDestroyPreviewWithErrorDestroying(t *testing.T) {
 	require.Equal(t, 0, previewResponse.DestroySuccessCount)
 }
 
+// TestExecuteDestroyPreviewWithNotFoundPreviewErrorDestroying tests the case when the preview is not found
+// not return an error
+func TestExecuteDestroyPreviewWithNotFoundPreviewErrorDestroying(t *testing.T) {
+	ctx := context.Background()
+	opts := &DestroyOptions{
+		name: "test-preview",
+		wait: true,
+	}
+	previewResponse := client.FakePreviewResponse{
+		ErrDestroyPreview: fmt.Errorf("preview-not-found"),
+	}
+	command := destroyPreviewCommand{
+		okClient: &client.FakeOktetoClient{
+			Preview: client.NewFakePreviewClient(
+				&previewResponse,
+			),
+			StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
+		},
+		k8sClient: fake.NewSimpleClientset(),
+	}
+
+	err := command.executeDestroyPreview(ctx, opts)
+
+	require.NoError(t, err)
+	require.Equal(t, 1, previewResponse.DestroySuccessCount)
+}
+
 func TestExecuteDestroyPreviewWithoutError(t *testing.T) {
 	ctx := context.Background()
 	opts := &DestroyOptions{
@@ -71,7 +99,7 @@ func TestExecuteDestroyPreviewWithoutError(t *testing.T) {
 	err := command.executeDestroyPreview(ctx, opts)
 
 	require.NoError(t, err)
-	require.Equal(t, 1, previewResponse.DestroySuccessCount)
+	require.Equal(t, 0, previewResponse.DestroySuccessCount)
 }
 
 func TestExecuteDestroyPreviewWithoutWait(t *testing.T) {
