@@ -76,7 +76,7 @@ func TestExecuteDestroyPreviewWithNotFoundPreviewErrorDestroying(t *testing.T) {
 	err := command.executeDestroyPreview(ctx, opts)
 
 	require.NoError(t, err)
-	require.Equal(t, 1, previewResponse.DestroySuccessCount)
+	require.Equal(t, 0, previewResponse.DestroySuccessCount)
 }
 
 func TestExecuteDestroyPreviewWithoutError(t *testing.T) {
@@ -99,7 +99,7 @@ func TestExecuteDestroyPreviewWithoutError(t *testing.T) {
 	err := command.executeDestroyPreview(ctx, opts)
 
 	require.NoError(t, err)
-	require.Equal(t, 0, previewResponse.DestroySuccessCount)
+	require.Equal(t, 1, previewResponse.DestroySuccessCount)
 }
 
 func TestExecuteDestroyPreviewWithoutWait(t *testing.T) {
