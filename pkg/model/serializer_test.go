@@ -362,32 +362,53 @@ func TestProbesMarshalling(t *testing.T) {
 
 func TestLifecycleMarshalling(t *testing.T) {
 	tests := []struct {
+		lifecycle Lifecycle
 		name      string
 		expected  string
-		lifecycle Lifecycle
 	}{
 		{
-			name:      "true-and-false",
-			lifecycle: Lifecycle{PostStart: true},
-			expected:  "postStart: true\n",
+			name: "true-and-false",
+			lifecycle: Lifecycle{
+				PostStart: &LifecycleHandler{
+					Enabled: true,
+				},
+			},
+			expected: "postStart: true\n",
 		},
 		{
-			name:      "all-lifecycle-true",
-			lifecycle: Lifecycle{PostStart: true, PostStop: true},
-			expected:  "true\n",
+			name: "all-lifecycle-true",
+			lifecycle: Lifecycle{
+				PostStart: &LifecycleHandler{
+					Enabled: true,
+				},
+				PreStop: &LifecycleHandler{
+					Enabled: true,
+				},
+			},
+			expected: "postStart: true\npreStop: true\n",
+		},
+		{
+			name: "full",
+			lifecycle: Lifecycle{
+				PostStart: &LifecycleHandler{
+					Enabled: true,
+					Command: Command{Values: []string{"yarn", "start"}},
+				},
+				PreStop: &LifecycleHandler{
+					Enabled: true,
+					Command: Command{Values: []string{"yarn", "stop"}},
+				},
+			},
+			expected: "postStart:\n  command:\n  - yarn\n  - start\n  enabled: true\npreStop:\n  command:\n  - yarn\n  - stop\n  enabled: true\n",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			marshalled, err := yaml.Marshal(tt.lifecycle)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, string(marshalled))
 
-			if string(marshalled) != tt.expected {
-				t.Errorf("didn't marshal correctly. Actual %s, Expected %s", marshalled, tt.expected)
-			}
 		})
 	}
 }
@@ -1030,194 +1051,197 @@ func TestSyncFoldersUnmarshalling(t *testing.T) {
 }
 
 func TestManifestUnmarshalling(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	tests := []struct {
 		expected        *Manifest
 		name            string
 		manifest        []byte
 		isErrorExpected bool
 	}{
-		// 		{
-		// 			name: "only dev with service unsupported field",
-		// 			manifest: []byte(`
-		// sync:
-		//   - app:/app
-		// services:
-		//   - name: svc
-		//     autocreate: true`),
-		// 			expected:        nil,
-		// 			isErrorExpected: true,
-		// 		},
-		// 		{
-		// 			name: "manifest with namespace and context",
-		// 			manifest: []byte(`
-		// namespace: test
-		// context: context-to-use
-		// deploy:
-		//   - okteto stack deploy`),
-		// 			expected: &Manifest{
-		// 				Namespace: "test",
-		// 				Build:     map[string]*build.Info{},
-		// 				Deploy: &DeployInfo{
-		// 					Commands: []DeployCommand{
-		// 						{
-		// 							Name:    "okteto stack deploy",
-		// 							Command: "okteto stack deploy",
-		// 						},
-		// 					},
-		// 				},
-		// 				Destroy:      &DestroyInfo{},
-		// 				Dev:          map[string]*Dev{},
-		// 				Dependencies: map[string]*deps.Dependency{},
-		// 				External:     externalresource.Section{},
-		// 				Context:      "context-to-use",
-		// 				Type:         OktetoManifestType,
-		// 				Fs:           afero.NewOsFs(),
-		// 			},
-		// 			isErrorExpected: false,
-		// 		},
-		// 		{
-		// 			name: "dev manifest with dev sanitized and deploy",
-		// 			manifest: []byte(`
-		// deploy:
-		//   - okteto stack deploy
-		// dev:
-		//   test-1:
-		//     sync:
-		//     - app:/app
-		//   test_2:
-		//     sync:
-		//     - app:/app
-		// `),
-		// 			expected: &Manifest{
-		// 				Type:  OktetoManifestType,
-		// 				Build: map[string]*build.Info{},
-		// 				Deploy: &DeployInfo{
-		// 					Commands: []DeployCommand{
-		// 						{
-		// 							Name:    "okteto stack deploy",
-		// 							Command: "okteto stack deploy",
-		// 						},
-		// 					},
-		// 				},
-		// 				Destroy:      &DestroyInfo{},
-		// 				Dependencies: map[string]*deps.Dependency{},
-		// 				External:     externalresource.Section{},
-		// 				Dev: map[string]*Dev{
-		// 					"test-1": {
-		// 						Mode: constants.OktetoSyncModeFieldValue,
-		// 						Name: "test-1",
-		// 						Sync: Sync{
-		// 							RescanInterval: 300,
-		// 							Compression:    true,
-		// 							Folders: []SyncFolder{
-		// 								{
-		// 									LocalPath:  "app",
-		// 									RemotePath: "/app",
-		// 								},
-		// 							},
-		// 						},
-		// 						Forward:         []forward.Forward{},
-		// 						Selector:        Selector{},
-		// 						EmptyImage:      true,
-		// 						ImagePullPolicy: v1.PullAlways,
-		// 						Image:           "",
-		// 						Interface:       Localhost,
-		// 						PersistentVolumeInfo: &PersistentVolumeInfo{
-		// 							Enabled: true,
-		// 						},
-		// 						Secrets: make([]Secret, 0),
-		// 						Command: Command{Values: []string{"sh"}},
-		// 						Probes: &Probes{
-		// 							Liveness:  false,
-		// 							Readiness: false,
-		// 							Startup:   false,
-		// 						},
-		// 						Lifecycle: &Lifecycle{
-		// 							PostStart: false,
-		// 							PostStop:  false,
-		// 						},
-		// 						SecurityContext: &SecurityContext{
-		// 							RunAsUser:    pointer.Int64(0),
-		// 							RunAsGroup:   pointer.Int64(0),
-		// 							RunAsNonRoot: nil,
-		// 							FSGroup:      pointer.Int64(0),
-		// 						},
-		// 						SSHServerPort: 2222,
-		// 						Services:      []*Dev{},
-		// 						InitContainer: InitContainer{
-		// 							Image: OktetoBinImageTag,
-		// 						},
-		// 						Timeout: Timeout{
-		// 							Resources: 120 * time.Second,
-		// 							Default:   60 * time.Second,
-		// 						},
-		// 						Metadata: &Metadata{
-		// 							Labels:      Labels{},
-		// 							Annotations: Annotations{},
-		// 						},
-		// 						Environment: env.Environment{},
-		// 						Volumes:     []Volume{},
-		// 					},
-		// 					"test-2": {
-		// 						Name: "test-2",
-		// 						Sync: Sync{
-		// 							RescanInterval: 300,
-		// 							Compression:    true,
-		// 							Folders: []SyncFolder{
-		// 								{
-		// 									LocalPath:  "app",
-		// 									RemotePath: "/app",
-		// 								},
-		// 							},
-		// 						},
-		// 						Forward:         []forward.Forward{},
-		// 						Selector:        Selector{},
-		// 						EmptyImage:      true,
-		// 						ImagePullPolicy: v1.PullAlways,
-		// 						Image:           "",
-		// 						Interface:       Localhost,
-		// 						PersistentVolumeInfo: &PersistentVolumeInfo{
-		// 							Enabled: true,
-		// 						},
-		// 						Secrets: make([]Secret, 0),
-		// 						Command: Command{Values: []string{"sh"}},
-		// 						Probes: &Probes{
-		// 							Liveness:  false,
-		// 							Readiness: false,
-		// 							Startup:   false,
-		// 						},
-		// 						Lifecycle: &Lifecycle{
-		// 							PostStart: false,
-		// 							PostStop:  false,
-		// 						},
-		// 						SecurityContext: &SecurityContext{
-		// 							RunAsUser:    pointer.Int64(0),
-		// 							RunAsGroup:   pointer.Int64(0),
-		// 							RunAsNonRoot: nil,
-		// 							FSGroup:      pointer.Int64(0),
-		// 						},
-		// 						SSHServerPort: 2222,
-		// 						Services:      []*Dev{},
-		// 						InitContainer: InitContainer{
-		// 							Image: OktetoBinImageTag,
-		// 						},
-		// 						Timeout: Timeout{
-		// 							Resources: 120 * time.Second,
-		// 							Default:   60 * time.Second,
-		// 						},
-		// 						Metadata: &Metadata{
-		// 							Labels:      Labels{},
-		// 							Annotations: Annotations{},
-		// 						},
-		// 						Environment: env.Environment{},
-		// 						Volumes:     []Volume{},
-		// 						Mode:        constants.OktetoSyncModeFieldValue,
-		// 					},
-		// 				},
-		// 				Fs: afero.NewOsFs(),
-		// 			},
-		// 			isErrorExpected: false,
-		// 		},
+		{
+			name: "only dev with service unsupported field",
+			manifest: []byte(`
+sync:
+- app:/app
+services:
+- name: svc
+  autocreate: true`),
+			expected:        nil,
+			isErrorExpected: true,
+		},
+		{
+			name: "manifest with namespace and context",
+			manifest: []byte(`
+namespace: test
+context: context-to-use
+deploy:
+- okteto stack deploy`),
+			expected: &Manifest{
+				Build: map[string]*build.Info{},
+				Deploy: &DeployInfo{
+					Commands: []DeployCommand{
+						{
+							Name:    "okteto stack deploy",
+							Command: "okteto stack deploy",
+						},
+					},
+				},
+				Destroy:       &DestroyInfo{},
+				Dev:           map[string]*Dev{},
+				Dependencies:  map[string]*deps.Dependency{},
+				External:      externalresource.Section{},
+				GlobalForward: []forward.GlobalForward{},
+				Test:          ManifestTests{},
+				Type:          OktetoManifestType,
+				Fs:            afero.NewOsFs(),
+			},
+			isErrorExpected: false,
+		},
+		{
+			name: "dev manifest with dev sanitized and deploy",
+			manifest: []byte(`
+deploy:
+- okteto stack deploy
+dev:
+  test-1:
+    sync:
+    - app:/app
+  test_2:
+    sync:
+    - app:/app
+`),
+			expected: &Manifest{
+				Type:  OktetoManifestType,
+				Build: map[string]*build.Info{},
+				Deploy: &DeployInfo{
+					Commands: []DeployCommand{
+						{
+							Name:    "okteto stack deploy",
+							Command: "okteto stack deploy",
+						},
+					},
+				},
+				Destroy:       &DestroyInfo{},
+				Dependencies:  map[string]*deps.Dependency{},
+				GlobalForward: []forward.GlobalForward{},
+				Test:          ManifestTests{},
+				External:      externalresource.Section{},
+				Dev: map[string]*Dev{
+					"test-1": {
+						Mode: constants.OktetoSyncModeFieldValue,
+						Name: "test-1",
+						Sync: Sync{
+							RescanInterval: 300,
+							Compression:    true,
+							Folders: []SyncFolder{
+								{
+									LocalPath:  "app",
+									RemotePath: "/app",
+								},
+							},
+						},
+						Lifecycle: &Lifecycle{
+							PostStart: nil,
+							PreStop:   nil,
+						},
+						Forward:         []forward.Forward{},
+						Selector:        Selector{},
+						ImagePullPolicy: v1.PullAlways,
+						Image:           "",
+						Interface:       Localhost,
+						PersistentVolumeInfo: &PersistentVolumeInfo{
+							Enabled: true,
+						},
+						Secrets: make([]Secret, 0),
+						Command: Command{Values: []string{"sh"}},
+						Probes: &Probes{
+							Liveness:  false,
+							Readiness: false,
+							Startup:   false,
+						},
+						SecurityContext: &SecurityContext{
+							RunAsUser:    pointer.Int64(0),
+							RunAsGroup:   pointer.Int64(0),
+							RunAsNonRoot: nil,
+							FSGroup:      pointer.Int64(0),
+						},
+						SSHServerPort: 2222,
+						Services:      []*Dev{},
+						InitContainer: InitContainer{
+							Image: OktetoBinImageTag,
+						},
+						Timeout: Timeout{
+							Resources: 120 * time.Second,
+							Default:   60 * time.Second,
+						},
+						Metadata: &Metadata{
+							Labels:      Labels{},
+							Annotations: Annotations{},
+						},
+						Environment: env.Environment{},
+						Volumes:     []Volume{},
+					},
+					"test-2": {
+						Name: "test-2",
+						Sync: Sync{
+							RescanInterval: 300,
+							Compression:    true,
+							Folders: []SyncFolder{
+								{
+									LocalPath:  "app",
+									RemotePath: "/app",
+								},
+							},
+						},
+						Forward:         []forward.Forward{},
+						Selector:        Selector{},
+						ImagePullPolicy: v1.PullAlways,
+						Image:           "",
+						Interface:       Localhost,
+						PersistentVolumeInfo: &PersistentVolumeInfo{
+							Enabled: true,
+						},
+						Secrets: make([]Secret, 0),
+						Command: Command{Values: []string{"sh"}},
+						Probes: &Probes{
+							Liveness:  false,
+							Readiness: false,
+							Startup:   false,
+						},
+						Lifecycle: &Lifecycle{
+							PostStart: nil,
+							PreStop:   nil,
+						},
+						SecurityContext: &SecurityContext{
+							RunAsUser:    pointer.Int64(0),
+							RunAsGroup:   pointer.Int64(0),
+							RunAsNonRoot: nil,
+							FSGroup:      pointer.Int64(0),
+						},
+						SSHServerPort: 2222,
+						Services:      []*Dev{},
+						InitContainer: InitContainer{
+							Image: OktetoBinImageTag,
+						},
+						Timeout: Timeout{
+							Resources: 120 * time.Second,
+							Default:   60 * time.Second,
+						},
+						Metadata: &Metadata{
+							Labels:      Labels{},
+							Annotations: Annotations{},
+						},
+						Environment: env.Environment{},
+						Volumes:     []Volume{},
+						Mode:        constants.OktetoSyncModeFieldValue,
+					},
+				},
+				Fs: afero.NewOsFs(),
+			},
+
+			isErrorExpected: false,
+		},
 		{
 			name: "only dev",
 			manifest: []byte(`dev:
@@ -1246,6 +1270,10 @@ func TestManifestUnmarshalling(t *testing.T) {
 								},
 							},
 						},
+						Lifecycle: &Lifecycle{
+							PostStart: nil,
+							PreStop:   nil,
+						},
 						Forward:         []forward.Forward{},
 						Selector:        Selector{},
 						ImagePullPolicy: v1.PullAlways,
@@ -1260,10 +1288,6 @@ func TestManifestUnmarshalling(t *testing.T) {
 							Liveness:  false,
 							Readiness: false,
 							Startup:   false,
-						},
-						Lifecycle: &Lifecycle{
-							PostStart: false,
-							PostStop:  false,
 						},
 						SecurityContext: &SecurityContext{
 							RunAsUser:    pointer.Int64(0),
@@ -1339,8 +1363,8 @@ func TestManifestUnmarshalling(t *testing.T) {
 							Startup:   false,
 						},
 						Lifecycle: &Lifecycle{
-							PostStart: false,
-							PostStop:  false,
+							PostStart: nil,
+							PreStop:   nil,
 						},
 						SecurityContext: &SecurityContext{
 							RunAsUser:    pointer.Int64(0),
@@ -1362,8 +1386,8 @@ func TestManifestUnmarshalling(t *testing.T) {
 									Startup:   false,
 								},
 								Lifecycle: &Lifecycle{
-									PostStart: false,
-									PostStop:  false,
+									PostStart: nil,
+									PreStop:   nil,
 								},
 								SecurityContext: &SecurityContext{
 									RunAsUser:    pointer.Int64(0),
@@ -1462,8 +1486,8 @@ dev:
 							Startup:   false,
 						},
 						Lifecycle: &Lifecycle{
-							PostStart: false,
-							PostStop:  false,
+							PostStart: nil,
+							PreStop:   nil,
 						},
 						SecurityContext: &SecurityContext{
 							RunAsUser:    pointer.Int64(0),
@@ -1542,8 +1566,8 @@ dev:
 							Startup:   false,
 						},
 						Lifecycle: &Lifecycle{
-							PostStart: false,
-							PostStop:  false,
+							PostStart: nil,
+							PreStop:   nil,
 						},
 						SecurityContext: &SecurityContext{
 							RunAsUser:    pointer.Int64(0),
@@ -1596,8 +1620,8 @@ dev:
 							Startup:   false,
 						},
 						Lifecycle: &Lifecycle{
-							PostStart: false,
-							PostStop:  false,
+							PostStart: nil,
+							PreStop:   nil,
 						},
 						SecurityContext: &SecurityContext{
 							RunAsUser:    pointer.Int64(0),
