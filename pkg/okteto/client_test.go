@@ -17,11 +17,11 @@ import (
 	"context"
 	"crypto/tls"
 	"net/http"
-	"os"
 	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/vars"
 	"golang.org/x/oauth2"
 )
 
@@ -30,6 +30,10 @@ type fakeGraphQLClient struct {
 	queryResult    interface{}
 	mutationResult interface{}
 }
+
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string) {}
 
 func (fc fakeGraphQLClient) Query(ctx context.Context, q interface{}, _ map[string]interface{}) error {
 	if fc.queryResult != nil {
@@ -108,10 +112,12 @@ func (fc *fakeGraphQLMultipleCallsClient) Mutate(ctx context.Context, m interfac
 }
 
 func TestInDevContainer(t *testing.T) {
-	v := os.Getenv(constants.OktetoNameEnvVar)
-	t.Setenv(constants.OktetoNameEnvVar, "")
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	v := vars.GlobalVarManager.GetExcLocal(constants.OktetoNameEnvVar)
+
+	vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, "")
 	defer func() {
-		t.Setenv(constants.OktetoNameEnvVar, v)
+		vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, v)
 	}()
 
 	in := InDevContainer()
@@ -119,13 +125,13 @@ func TestInDevContainer(t *testing.T) {
 		t.Errorf("in dev container when there was no marker env var")
 	}
 
-	t.Setenv(constants.OktetoNameEnvVar, "")
+	vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, "")
 	in = InDevContainer()
 	if in {
 		t.Errorf("in dev container when there was an empty marker env var")
 	}
 
-	t.Setenv(constants.OktetoNameEnvVar, "1")
+	vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, "1")
 	in = InDevContainer()
 	if !in {
 		t.Errorf("not in dev container when there was a marker env var")

@@ -1163,11 +1163,12 @@ func Test_getStackName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
 			dir := t.TempDir()
 			stackPath := filepath.Join(dir, tt.stackPath)
-			t.Setenv(constants.OktetoNameEnvVar, tt.nameEnv)
+			vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, tt.nameEnv)
 			res, err := getStackName(tt.name, stackPath, tt.actualStackName)
-			resEnv := os.Getenv(constants.OktetoNameEnvVar)
+			resEnv := vars.GlobalVarManager.GetExcLocal(constants.OktetoNameEnvVar)
 
 			if err == nil && tt.expectedErr {
 				t.Fatal("expected error but not thrown")
@@ -1190,7 +1191,8 @@ func Test_getStackNameWithinRepository(t *testing.T) {
 	// As getStackName internally does os.Setenv, when all the tests run at the same time,
 	// it might happen that the env var with the name is set. That env var has priority over
 	// the repository calculation. In order to avoid this, we need to unset the env var before running the test
-	t.Setenv(constants.OktetoNameEnvVar, "")
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, "")
 	repository := "https://github.com/okteto/compose-repository-test.git"
 	dir := t.TempDir()
 	path := "path/to/stack4/compose.yaml"
@@ -1203,7 +1205,7 @@ func Test_getStackNameWithinRepository(t *testing.T) {
 	require.NoError(t, err)
 
 	res, err := getStackName("", stackPath, "")
-	resEnv := os.Getenv(constants.OktetoNameEnvVar)
+	resEnv := vars.GlobalVarManager.GetExcLocal(constants.OktetoNameEnvVar)
 
 	require.NoError(t, err)
 	require.Equal(t, "compose-repository-test", res)

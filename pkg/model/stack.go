@@ -311,14 +311,11 @@ func GetStackFromPath(name, stackPath string, isCompose bool, fs afero.Fs) (*Sta
 //   - If no repository is found, we get the name from the folder where the stack/compose file is (`stackPath`)
 func getStackName(name, stackPath, actualStackName string) (string, error) {
 	if name != "" {
-		// TODO: move to varManager
-		if err := os.Setenv(constants.OktetoNameEnvVar, name); err != nil {
-			return "", err
-		}
+		vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, name)
 		return name, nil
 	}
 	if actualStackName == "" {
-		nameEnvVar := os.Getenv(constants.OktetoNameEnvVar)
+		nameEnvVar := vars.GlobalVarManager.GetExcLocal(constants.OktetoNameEnvVar)
 		if nameEnvVar != "" {
 			// this name could be not sanitized when running at pipeline installer
 			return nameEnvVar, nil
@@ -330,14 +327,10 @@ func getStackName(name, stackPath, actualStackName string) (string, error) {
 				return "", err
 			}
 		}
-		if err := os.Setenv(constants.OktetoNameEnvVar, name); err != nil {
-			return "", err
-		}
+		vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, name)
 		return name, nil
 	}
-	if err := os.Setenv(constants.OktetoNameEnvVar, actualStackName); err != nil {
-		return "", err
-	}
+	vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, actualStackName)
 	return actualStackName, nil
 }
 

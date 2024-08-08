@@ -126,9 +126,18 @@ func (m *Manager) AddLocalVar(key, value string) {
 func (m *Manager) addVar(key, value string, t Type) {
 	v := Var{Name: key, Value: value}
 
-	// if the group already exists, we append the new var to the existing group
+	// we check if the group already exists
 	for i, g := range m.groups {
 		if g.Type == t {
+			// if the var already exists, we override its value
+			for j, v := range g.Vars {
+				if v.Name == key {
+					m.groups[i].Vars[j].Value = value
+					m.maskVar(value, t)
+					return
+				}
+			}
+			// if the var does not exist, we add it to the group
 			m.groups[i].Vars = append(m.groups[i].Vars, v)
 			m.maskVar(value, t)
 			return

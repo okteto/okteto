@@ -414,3 +414,12 @@ func TestExpandExcLocalIfNotEmpty(t *testing.T) {
 		})
 	}
 }
+
+// TestAddVarOverridesOldValue ensured that adding a new var with the same name, but different value overrides the old value
+func TestAddVarOverridesOldValue(t *testing.T) {
+	varManager := NewVarsManager(&fakeVarManager{})
+	varManager.AddLocalVar("MY_VAR", "old-value")
+	assert.Equal(t, "old-value", varManager.GetIncLocal("MY_VAR"))
+	varManager.AddLocalVar("MY_VAR", "new-value")
+	assert.Equal(t, "new-value", varManager.GetIncLocal("MY_VAR"))
+}
