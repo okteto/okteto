@@ -360,32 +360,53 @@ func TestProbesMarshalling(t *testing.T) {
 
 func TestLifecycleMarshalling(t *testing.T) {
 	tests := []struct {
+		lifecycle Lifecycle
 		name      string
 		expected  string
-		lifecycle Lifecycle
 	}{
 		{
-			name:      "true-and-false",
-			lifecycle: Lifecycle{PostStart: true},
-			expected:  "postStart: true\n",
+			name: "true-and-false",
+			lifecycle: Lifecycle{
+				PostStart: &LifecycleHandler{
+					Enabled: true,
+				},
+			},
+			expected: "postStart: true\n",
 		},
 		{
-			name:      "all-lifecycle-true",
-			lifecycle: Lifecycle{PostStart: true, PostStop: true},
-			expected:  "true\n",
+			name: "all-lifecycle-true",
+			lifecycle: Lifecycle{
+				PostStart: &LifecycleHandler{
+					Enabled: true,
+				},
+				PreStop: &LifecycleHandler{
+					Enabled: true,
+				},
+			},
+			expected: "postStart: true\npreStop: true\n",
+		},
+		{
+			name: "full",
+			lifecycle: Lifecycle{
+				PostStart: &LifecycleHandler{
+					Enabled: true,
+					Command: Command{Values: []string{"yarn", "start"}},
+				},
+				PreStop: &LifecycleHandler{
+					Enabled: true,
+					Command: Command{Values: []string{"yarn", "stop"}},
+				},
+			},
+			expected: "postStart:\n  command:\n  - yarn\n  - start\n  enabled: true\npreStop:\n  command:\n  - yarn\n  - stop\n  enabled: true\n",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			marshalled, err := yaml.Marshal(tt.lifecycle)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, string(marshalled))
 
-			if string(marshalled) != tt.expected {
-				t.Errorf("didn't marshal correctly. Actual %s, Expected %s", marshalled, tt.expected)
-			}
 		})
 	}
 }
@@ -1111,6 +1132,10 @@ dev:
 								},
 							},
 						},
+						Lifecycle: &Lifecycle{
+							PostStart: nil,
+							PreStop:   nil,
+						},
 						Forward:         []forward.Forward{},
 						Selector:        Selector{},
 						ImagePullPolicy: v1.PullAlways,
@@ -1125,10 +1150,6 @@ dev:
 							Liveness:  false,
 							Readiness: false,
 							Startup:   false,
-						},
-						Lifecycle: &Lifecycle{
-							PostStart: false,
-							PostStop:  false,
 						},
 						SecurityContext: &SecurityContext{
 							RunAsUser:    pointer.Int64(0),
@@ -1180,8 +1201,8 @@ dev:
 							Startup:   false,
 						},
 						Lifecycle: &Lifecycle{
-							PostStart: false,
-							PostStop:  false,
+							PostStart: nil,
+							PreStop:   nil,
 						},
 						SecurityContext: &SecurityContext{
 							RunAsUser:    pointer.Int64(0),
@@ -1240,6 +1261,10 @@ dev:
 								},
 							},
 						},
+						Lifecycle: &Lifecycle{
+							PostStart: nil,
+							PreStop:   nil,
+						},
 						Forward:         []forward.Forward{},
 						Selector:        Selector{},
 						ImagePullPolicy: v1.PullAlways,
@@ -1254,10 +1279,6 @@ dev:
 							Liveness:  false,
 							Readiness: false,
 							Startup:   false,
-						},
-						Lifecycle: &Lifecycle{
-							PostStart: false,
-							PostStop:  false,
 						},
 						SecurityContext: &SecurityContext{
 							RunAsUser:    pointer.Int64(0),
@@ -1333,8 +1354,8 @@ dev:
 							Startup:   false,
 						},
 						Lifecycle: &Lifecycle{
-							PostStart: false,
-							PostStop:  false,
+							PostStart: nil,
+							PreStop:   nil,
 						},
 						SecurityContext: &SecurityContext{
 							RunAsUser:    pointer.Int64(0),
@@ -1356,8 +1377,8 @@ dev:
 									Startup:   false,
 								},
 								Lifecycle: &Lifecycle{
-									PostStart: false,
-									PostStop:  false,
+									PostStart: nil,
+									PreStop:   nil,
 								},
 								SecurityContext: &SecurityContext{
 									RunAsUser:    pointer.Int64(0),
@@ -1456,8 +1477,8 @@ dev:
 							Startup:   false,
 						},
 						Lifecycle: &Lifecycle{
-							PostStart: false,
-							PostStop:  false,
+							PostStart: nil,
+							PreStop:   nil,
 						},
 						SecurityContext: &SecurityContext{
 							RunAsUser:    pointer.Int64(0),
@@ -1536,8 +1557,8 @@ dev:
 							Startup:   false,
 						},
 						Lifecycle: &Lifecycle{
-							PostStart: false,
-							PostStop:  false,
+							PostStart: nil,
+							PreStop:   nil,
 						},
 						SecurityContext: &SecurityContext{
 							RunAsUser:    pointer.Int64(0),
@@ -1590,8 +1611,8 @@ dev:
 							Startup:   false,
 						},
 						Lifecycle: &Lifecycle{
-							PostStart: false,
-							PostStop:  false,
+							PostStart: nil,
+							PreStop:   nil,
 						},
 						SecurityContext: &SecurityContext{
 							RunAsUser:    pointer.Int64(0),

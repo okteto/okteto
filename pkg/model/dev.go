@@ -208,8 +208,14 @@ type Probes struct {
 
 // Lifecycle defines the lifecycle for containers
 type Lifecycle struct {
-	PostStart bool `json:"postStart,omitempty" yaml:"postStart,omitempty"`
-	PostStop  bool `json:"postStop,omitempty" yaml:"postStop,omitempty"`
+	PostStart *LifecycleHandler `json:"postStart,omitempty" yaml:"postStart,omitempty"`
+	PreStop   *LifecycleHandler `json:"preStop,omitempty" yaml:"preStop,omitempty"`
+}
+
+// LifecycleHandler defines a handler for lifecycle events
+type LifecycleHandler struct {
+	Command Command `json:"command,omitempty" yaml:"command,omitempty"`
+	Enabled bool    `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 }
 
 // ResourceList is a set of (resource name, quantity) pairs.
