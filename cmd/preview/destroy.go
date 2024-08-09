@@ -29,6 +29,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,7 +54,7 @@ type DestroyOptions struct {
 }
 
 // Destroy destroy a preview
-func Destroy(ctx context.Context) *cobra.Command {
+func Destroy(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	opts := &DestroyOptions{}
 	cmd := &cobra.Command{
 		Use:   "destroy <name>",
@@ -64,7 +65,7 @@ okteto preview destroy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.name = getExpandedName(args[0])
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true}); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, &contextCMD.Options{Show: true}); err != nil {
 				return err
 			}
 

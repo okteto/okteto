@@ -16,14 +16,16 @@ package deployable
 import (
 	"github.com/okteto/okteto/cmd/utils/executor"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 )
 
 // TestRunner is responsible for running the commands defined in a manifest when
 // running tests
 type TestRunner struct {
-	Executor executor.ManifestExecutor
-	Fs       afero.Fs
+	Executor   executor.ManifestExecutor
+	Fs         afero.Fs
+	VarManager *vars.Manager
 }
 
 // TestParameters represents the parameters for destroying a remote entity
@@ -39,7 +41,7 @@ type TestParameters struct {
 func (dr *TestRunner) RunTest(params TestParameters) error {
 	oktetoLog.SetStage(params.Name)
 
-	oktetoEnvFile, unlinkEnv, err := createTempOktetoEnvFile(dr.Fs)
+	oktetoEnvFile, unlinkEnv, err := createTempOktetoEnvFile(dr.Fs, dr.VarManager)
 	if err != nil {
 		return err
 	}

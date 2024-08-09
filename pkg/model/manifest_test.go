@@ -29,6 +29,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -184,8 +185,10 @@ echo $TEST_VAR`,
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 			for k, v := range tt.envs {
-				t.Setenv(k, v)
+				vars.GlobalVarManager.AddBuiltInVar(k, v)
 			}
 
 			err := tt.manifest.ExpandEnvVars()
@@ -1037,7 +1040,7 @@ sync:
 				}
 				assert.NoError(t, os.WriteFile(filepath.Join(dir, "docker-compose.yml"), tt.composeBytes, 0600))
 			}
-			_, err := getManifestFromFile(dir, file, afero.NewMemMapFs())
+			_, err := getManifestFromFile(dir, file, afero.NewMemMapFs(), vars.NewVarsManager(&fakeVarManager{}))
 
 			if tt.expectedErr != nil {
 				assert.ErrorContains(t, err, tt.expectedErr.Error())
@@ -1413,7 +1416,7 @@ func Test_Manifest_HasBuildSection(t *testing.T) {
 
 func Test_getInferredManifestWhenNoManifestExist(t *testing.T) {
 	wd := t.TempDir()
-	result, err := GetInferredManifest(wd, afero.NewMemMapFs())
+	result, err := GetInferredManifest(wd, afero.NewMemMapFs(), vars.NewVarsManager(&fakeVarManager{}))
 	assert.Empty(t, result)
 	assert.ErrorIs(t, err, oktetoErrors.ErrCouldNotInferAnyManifest)
 }

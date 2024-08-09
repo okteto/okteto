@@ -48,6 +48,7 @@ import (
 	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/okteto/okteto/pkg/validator"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -100,6 +101,7 @@ type getDeployerFunc func(
 	okteto.K8sClientProviderWithLogger,
 	*io.Controller,
 	*io.K8sLogger,
+	*vars.Manager,
 	dependencyEnvVarsGetter,
 ) (Deployer, error)
 
@@ -107,7 +109,7 @@ type cleanUpFunc func(context.Context, error)
 
 // Command defines the config for deploying an app
 type Command struct {
-	GetManifest       func(path string, fs afero.Fs) (*model.Manifest, error)
+	GetManifest       func(path string, fs afero.Fs, varManager *vars.Manager) (*model.Manifest, error)
 	K8sClientProvider okteto.K8sClientProviderWithLogger
 	Builder           builderInterface
 	GetDeployer       getDeployerFunc
@@ -119,6 +121,7 @@ type Command struct {
 	AnalyticsTracker  AnalyticsTrackerInterface
 	IoCtrl            *io.Controller
 	K8sLogger         *io.K8sLogger
+	VarManager        *vars.Manager
 	InsightsTracker   buildDeployTrackerInterface
 
 	PipelineType model.Archetype
@@ -157,7 +160,7 @@ type Deployer interface {
 }
 
 // Deploy deploys the okteto manifest
-func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
 		Use:   "deploy",
@@ -166,7 +169,7 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 $ okteto deploy
 
 # Execute okteto deploy in remote
-$ okteto deploy --remote 
+$ okteto deploy --remote
 
 
 # Execute okteto deploy skipping the build
@@ -178,7 +181,7 @@ $ okteto deploy --build=false`,
 				return fmt.Errorf("'dependencies' is only supported in contexts that have Okteto installed")
 			}
 
-			if err := validateAndSet(options.Variables, os.Setenv); err != nil {
+			if err := convertCommandFlagsToOktetoVariables(options.Variables, varManager); err != nil {
 				return err
 			}
 
@@ -191,7 +194,7 @@ $ okteto deploy --build=false`,
 				return err
 			}
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: options.Namespace}); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, &contextCMD.Options{Show: true, Namespace: options.Namespace}); err != nil {
 				return err
 			}
 
@@ -201,7 +204,7 @@ $ okteto deploy --build=false`,
 					return err
 				}
 				if create {
-					nsCmd, err := namespace.NewCommand()
+					nsCmd, err := namespace.NewCommand(varManager)
 					if err != nil {
 						return err
 					}
@@ -214,7 +217,7 @@ $ okteto deploy --build=false`,
 			options.ShowCTA = oktetoLog.IsInteractive()
 
 			k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
-			pc, err := pipelineCMD.NewCommand()
+			pc, err := pipelineCMD.NewCommand(varManager)
 			if err != nil {
 				return fmt.Errorf("could not create pipeline command: %w", err)
 			}
@@ -229,7 +232,7 @@ $ okteto deploy --build=false`,
 
 				K8sClientProvider:  k8sClientProvider,
 				GetDeployer:        GetDeployer,
-				Builder:            buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish),
+				Builder:            buildv2.NewBuilderFromScratch(ioCtrl, varManager, onBuildFinish),
 				DeployWaiter:       NewDeployWaiter(k8sClientProvider, k8sLogger),
 				EndpointGetter:     NewEndpointGetter,
 				IsRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
@@ -240,6 +243,7 @@ $ okteto deploy --build=false`,
 				AnalyticsTracker:   at,
 				IoCtrl:             ioCtrl,
 				K8sLogger:          k8sLogger,
+				VarManager:         varManager,
 
 				onCleanUp:       []cleanUpFunc{},
 				InsightsTracker: insightsTracker,
@@ -317,7 +321,7 @@ func (dc *Command) calculateManifestPathToBeStored(topLevelGitDir, manifestPath 
 // Run runs the deploy sequence
 func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	oktetoLog.SetStage("Load manifest")
-	manifest, err := dc.GetManifest(deployOptions.ManifestPath, dc.Fs)
+	manifest, err := dc.GetManifest(deployOptions.ManifestPath, dc.Fs, dc.VarManager)
 	if err != nil {
 		return err
 	}
@@ -413,7 +417,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		return err
 	}
 
-	os.Setenv(constants.OktetoNameEnvVar, deployOptions.Name)
+	dc.VarManager.AddBuiltInVar(constants.OktetoNameEnvVar, deployOptions.Name)
 
 	if err := dc.deployDependencies(ctx, deployOptions); err != nil {
 		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
@@ -491,7 +495,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 
 func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) error {
 	// If the command is configured to execute things remotely (--remote, deploy.image or deploy.remote) it should be executed in the remote. If not, it should be executed locally
-	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder.GetBuildEnvVars, dc.CfgMapHandler, dc.K8sClientProvider, dc.IoCtrl, dc.K8sLogger, GetDependencyEnvVars)
+	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder.GetBuildEnvVars, dc.CfgMapHandler, dc.K8sClientProvider, dc.IoCtrl, dc.K8sLogger, dc.VarManager, GetDependencyEnvVars)
 	if err != nil {
 		return err
 	}
@@ -590,11 +594,12 @@ func GetDeployer(ctx context.Context,
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	ioCtrl *io.Controller,
 	k8Logger *io.K8sLogger,
+	varManager *vars.Manager,
 	dependencyEnvVarsGetter dependencyEnvVarsGetter,
 ) (Deployer, error) {
 	if shouldRunInRemote(opts) {
 		oktetoLog.Info("Deploying remotely...")
-		return newRemoteDeployer(buildEnvVarsGetter, ioCtrl, dependencyEnvVarsGetter), nil
+		return newRemoteDeployer(buildEnvVarsGetter, ioCtrl, varManager, dependencyEnvVarsGetter), nil
 	}
 
 	oktetoLog.Info("Deploying locally...")
@@ -607,7 +612,8 @@ func GetDeployer(ctx context.Context,
 		cmapHandler,
 		k8sProvider,
 		model.GetAvailablePort,
-		k8Logger)
+		k8Logger,
+		varManager)
 	if err != nil {
 		eWrapped := fmt.Errorf("could not initialize local deploy command: %w", err)
 		if uError, ok := err.(oktetoErrors.UserError); ok {
@@ -639,12 +645,12 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 			return err
 		}
 
-		dep.Variables = append(dep.Variables, env.Var{
+		dep.Variables = append(dep.Variables, vars.Var{
 			Name:  "OKTETO_ORIGIN",
 			Value: "okteto-deploy",
 		})
 
-		err := dep.ExpandVars(deployOptions.Variables)
+		err := dep.ExpandVars(deployOptions.Variables, dc.VarManager)
 		if err != nil {
 			return fmt.Errorf("could not expand variables in dependencies: %w", err)
 		}

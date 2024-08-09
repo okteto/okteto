@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -96,68 +97,69 @@ func TestReverseMarshalling(t *testing.T) {
 
 func TestEnvVarMarshalling(t *testing.T) {
 	tests := []struct {
-		expected env.Var
+		expected vars.Var
 		name     string
 		data     []byte
 	}{
 		{
 			name:     "key-value",
 			data:     []byte(`env=production`),
-			expected: env.Var{Name: "env", Value: "production"},
+			expected: vars.Var{Name: "env", Value: "production"},
 		},
 		{
 			name:     "key-value-complex",
 			data:     []byte(`env='production=11231231asa#$˜GADAFA'`),
-			expected: env.Var{Name: "env", Value: "'production=11231231asa#$˜GADAFA'"},
+			expected: vars.Var{Name: "env", Value: "'production=11231231asa#$˜GADAFA'"},
 		},
 		{
 			name:     "key-value-with-env-var",
 			data:     []byte(`env=$DEV_ENV`),
-			expected: env.Var{Name: "env", Value: "test_environment"},
+			expected: vars.Var{Name: "env", Value: "test_environment"},
 		},
 		{
 			name:     "key-value-with-env-var-in-string",
 			data:     []byte(`env=my_env;$DEV_ENV;prod`),
-			expected: env.Var{Name: "env", Value: "my_env;test_environment;prod"},
+			expected: vars.Var{Name: "env", Value: "my_env;test_environment;prod"},
 		},
 		{
 			name:     "simple-key",
 			data:     []byte(`noenv`),
-			expected: env.Var{Name: "noenv", Value: ""},
+			expected: vars.Var{Name: "noenv", Value: ""},
 		},
 		{
 			name:     "key-with-no-value",
 			data:     []byte(`noenv=`),
-			expected: env.Var{Name: "noenv", Value: ""},
+			expected: vars.Var{Name: "noenv", Value: ""},
 		},
 		{
 			name:     "key-with-env-var-not-defined",
 			data:     []byte(`noenv=$UNDEFINED`),
-			expected: env.Var{Name: "noenv", Value: ""},
+			expected: vars.Var{Name: "noenv", Value: ""},
 		},
 		{
 			name:     "just-env-var",
 			data:     []byte(`$DEV_ENV`),
-			expected: env.Var{Name: "test_environment", Value: ""},
+			expected: vars.Var{Name: "test_environment", Value: ""},
 		},
 		{
 			name:     "just-env-var-undefined",
 			data:     []byte(`$UNDEFINED`),
-			expected: env.Var{Name: "", Value: ""},
+			expected: vars.Var{Name: "", Value: ""},
 		},
 		{
 			name:     "local_env_expanded",
 			data:     []byte(`OKTETO_TEST_ENV_MARSHALLING`),
-			expected: env.Var{Name: "OKTETO_TEST_ENV_MARSHALLING", Value: "true"},
+			expected: vars.Var{Name: "OKTETO_TEST_ENV_MARSHALLING", Value: "true"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager.AddDotEnvVar("DEV_ENV", "test_environment")
+			vars.GlobalVarManager.AddDotEnvVar("OKTETO_TEST_ENV_MARSHALLING", "true")
 
-			var result env.Var
-			t.Setenv("DEV_ENV", "test_environment")
-			t.Setenv("OKTETO_TEST_ENV_MARSHALLING", "true")
+			var result vars.Var
 
 			if err := yaml.Unmarshal(tt.data, &result); err != nil {
 				t.Fatal(err)
@@ -412,11 +414,12 @@ func TestLifecycleMarshalling(t *testing.T) {
 }
 
 func TestSecretMarshalling(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
 	file, err := os.CreateTemp("", "okteto-secret-test")
 	assert.NoError(t, err)
 	defer os.Remove(file.Name())
 
-	t.Setenv("TEST_HOME", file.Name())
+	vars.GlobalVarManager.AddDotEnvVar("TEST_HOME", file.Name())
 
 	tests := []struct {
 		expected      *Secret
@@ -736,8 +739,9 @@ func TestLabelsUnmarshalling(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := make(Labels)
 
-			t.Setenv("DEV_ENV", "test_environment")
-			t.Setenv("OKTETO_TEST_ENV_MARSHALLING", "true")
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager.AddDotEnvVar("DEV_ENV", "test_environment")
+			vars.GlobalVarManager.AddDotEnvVar("OKTETO_TEST_ENV_MARSHALLING", "true")
 
 			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
 				t.Fatal(err)
@@ -837,8 +841,9 @@ func TestAnnotationsUnmarshalling(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := make(Annotations)
 
-			t.Setenv("DEV_ENV", "test_environment")
-			t.Setenv("OKTETO_TEST_ENV_MARSHALLING", "true")
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager.AddDotEnvVar("DEV_ENV", "test_environment")
+			vars.GlobalVarManager.AddDotEnvVar("OKTETO_TEST_ENV_MARSHALLING", "true")
 
 			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
 				t.Fatal(err)
@@ -995,7 +1000,9 @@ rescanInterval: 10`),
 }
 
 func TestSyncFoldersUnmarshalling(t *testing.T) {
-	t.Setenv("REMOTE_PATH", "/usr/src/app")
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager.AddDotEnvVar("REMOTE_PATH", "/usr/src/app")
+
 	tests := []struct {
 		expected SyncFolder
 		name     string
@@ -1044,6 +1051,8 @@ func TestSyncFoldersUnmarshalling(t *testing.T) {
 }
 
 func TestManifestUnmarshalling(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	tests := []struct {
 		expected        *Manifest
 		name            string
@@ -2550,7 +2559,7 @@ variables:
 				Branch:       "main",
 				ManifestPath: "okteto.yml",
 				Variables: env.Environment{
-					env.Var{
+					vars.Var{
 						Name:  "key",
 						Value: "value",
 					},
@@ -2571,7 +2580,7 @@ wait: true`),
 				ManifestPath: "okteto.yml",
 				Wait:         true,
 				Variables: env.Environment{
-					env.Var{
+					vars.Var{
 						Name:  "key",
 						Value: "value",
 					},
@@ -2593,7 +2602,7 @@ timeout: 15m`),
 				ManifestPath: "okteto.yml",
 				Wait:         true,
 				Variables: env.Environment{
-					env.Var{
+					vars.Var{
 						Name:  "key",
 						Value: "value",
 					},

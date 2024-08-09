@@ -21,6 +21,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -30,6 +31,8 @@ import (
 )
 
 func TestDevToTranslationRule(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	manifestBytes := []byte(`dev:
     web:
         container: dev

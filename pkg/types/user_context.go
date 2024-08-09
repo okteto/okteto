@@ -13,10 +13,12 @@
 
 package types
 
-import "github.com/okteto/okteto/pkg/env"
+import (
+	"github.com/okteto/okteto/pkg/vars"
+)
 
 type UserContext struct {
 	Credentials       Credential `json:"credentials,omitempty"`
 	User              User       `json:"user,omitempty"`
-	PlatformVariables []env.Var  `json:"secrets,omitempty"`
+	PlatformVariables []vars.Var `json:"secrets,omitempty"`
 }

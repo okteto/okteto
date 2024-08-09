@@ -42,6 +42,7 @@ import (
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/vars"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -78,6 +79,7 @@ type Stack struct {
 	AnalyticsTracker buildTrackerInterface
 	Insights         buildTrackerInterface
 	IoCtrl           *io.Controller
+	VarManager       *vars.Manager
 	Divert           Divert
 }
 
@@ -115,7 +117,7 @@ func (sd *Stack) deployCompose(ctx context.Context, s *model.Stack, options *Dep
 	}
 
 	if !options.InsidePipeline {
-		if err := buildStackImages(ctx, s, options, sd.AnalyticsTracker, sd.Insights, sd.IoCtrl); err != nil {
+		if err := buildStackImages(ctx, s, options, sd.AnalyticsTracker, sd.Insights, sd.IoCtrl, sd.VarManager); err != nil {
 			return err
 		}
 	}

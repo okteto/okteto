@@ -24,7 +24,6 @@ import (
 
 	"github.com/mholt/archiver/v3"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/apps"
@@ -34,6 +33,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/syncthing"
+	"github.com/okteto/okteto/pkg/vars"
 	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -183,7 +183,7 @@ func generateManifestFile(devPath string) (string, error) {
 
 	dev := &model.Dev{
 		Image:       "",
-		Environment: make([]env.Var, 0),
+		Environment: make([]vars.Var, 0),
 		Secrets:     make([]model.Secret, 0),
 		Forward:     make([]forward.Forward, 0),
 		Volumes:     make([]model.Volume, 0),

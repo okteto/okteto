@@ -33,6 +33,7 @@ import (
 	"github.com/okteto/okteto/pkg/externalresource"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/vars"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -314,7 +315,7 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	rawExpanded, err := env.ExpandEnv(raw)
+	rawExpanded, err := vars.GlobalVarManager.ExpandExcLocal(raw)
 	if err != nil {
 		return err
 	}
@@ -438,7 +439,7 @@ func (v *Volume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, ":", maxVolumeParts)
 	if len(parts) == maxVolumeParts {
 		oktetoLog.Yellow("The syntax '%s' is deprecated in the 'volumes' field and will be removed in a future version. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
-		v.LocalPath, err = env.ExpandEnv(parts[0])
+		v.LocalPath, err = vars.GlobalVarManager.ExpandExcLocal(parts[0])
 		if err != nil {
 			return err
 		}
@@ -467,22 +468,22 @@ func (s *SyncFolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.Split(raw, ":")
 	if len(parts) == syncFolderParts {
-		s.LocalPath, err = env.ExpandEnv(parts[0])
+		s.LocalPath, err = vars.GlobalVarManager.ExpandExcLocal(parts[0])
 		if err != nil {
 			return err
 		}
-		s.RemotePath, err = env.ExpandEnv(parts[1])
+		s.RemotePath, err = vars.GlobalVarManager.ExpandExcLocal(parts[1])
 		if err != nil {
 			return err
 		}
 		return nil
 	} else if len(parts) == windowsSyncFolderParts {
 		windowsPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
-		s.LocalPath, err = env.ExpandEnv(windowsPath)
+		s.LocalPath, err = vars.GlobalVarManager.ExpandExcLocal(windowsPath)
 		if err != nil {
 			return err
 		}
-		s.RemotePath, err = env.ExpandEnv(parts[2])
+		s.RemotePath, err = vars.GlobalVarManager.ExpandExcLocal(parts[2])
 		if err != nil {
 			return err
 		}
@@ -1203,7 +1204,7 @@ func (a *Annotations) UnmarshalYAML(unmarshal func(interface{}) error) error {
 func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 	result := make(map[string]string)
 
-	var rawList []env.Var
+	var rawList []vars.Var
 	err := unmarshal(&rawList)
 	if err == nil {
 		for _, label := range rawList {
@@ -1217,7 +1218,7 @@ func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 		return nil, err
 	}
 	for key, value := range rawMap {
-		value, err = env.ExpandEnv(value)
+		value, err = vars.GlobalVarManager.ExpandExcLocal(value)
 		if err != nil {
 			return nil, err
 		}

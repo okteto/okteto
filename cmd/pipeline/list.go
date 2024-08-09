@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/repository"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -54,7 +55,7 @@ type pipelineListItem struct {
 	Labels     []string `json:"labels" yaml:"labels"`
 }
 
-func list(ctx context.Context) *cobra.Command {
+func list(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	flags := &listFlags{}
 
 	cmd := &cobra.Command{
@@ -62,7 +63,8 @@ func list(ctx context.Context) *cobra.Command {
 		Short: "List all okteto pipelines",
 		Args:  utils.NoArgsAccepted(""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return pipelineListCommandHandler(ctx, flags, contextCMD.NewContextCommand().Run)
+			initOkCtx := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run
+			return pipelineListCommandHandler(ctx, flags, initOkCtx, varManager)
 		},
 	}
 
@@ -74,7 +76,7 @@ func list(ctx context.Context) *cobra.Command {
 }
 
 // pipelineListCommandHandler prepares the right okteto context depending on the provided flags and then calls the actual function that lists pipelines
-func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx initOkCtxFn) error {
+func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx initOkCtxFn, varManager *vars.Manager) error {
 	ctxOptions := &contextCMD.Options{
 		Context:   flags.context,
 		Namespace: flags.namespace,
@@ -91,7 +93,7 @@ func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx
 		return oktetoErrors.ErrContextIsNotOktetoCluster
 	}
 
-	pc, err := NewCommand()
+	pc, err := NewCommand(varManager)
 	if err != nil {
 		return err
 	}

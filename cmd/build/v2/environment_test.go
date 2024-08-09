@@ -16,7 +16,6 @@ package v2
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 
@@ -24,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -77,6 +77,8 @@ func Test_SetServiceEnvVars(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 			registryEnv := fmt.Sprintf("OKTETO_BUILD_%s_REGISTRY", strings.ToUpper(tt.input.service))
 			imageEnv := fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(tt.input.service))
 			repositoryEnv := fmt.Sprintf("OKTETO_BUILD_%s_REPOSITORY", strings.ToUpper(tt.input.service))
@@ -85,12 +87,13 @@ func Test_SetServiceEnvVars(t *testing.T) {
 
 			envs := []string{registryEnv, imageEnv, repositoryEnv, tagEnv}
 			for _, e := range envs {
-				if err := os.Unsetenv(e); err != nil {
-					t.Errorf("error unsetting var %s", err.Error())
+				_, exists := vars.GlobalVarManager.LookupExcLocal(e)
+				if exists {
+					t.Errorf("env variable is already set [%v]", e)
 				}
 			}
 			for _, e := range envs {
-				if v := os.Getenv(e); v != "" {
+				if v := vars.GlobalVarManager.GetExcLocal(e); v != "" {
 					t.Errorf("env variable is already set [%v]", e)
 				}
 			}
@@ -102,11 +105,11 @@ func Test_SetServiceEnvVars(t *testing.T) {
 			bc := NewFakeBuilder(nil, registry, fakeConfig)
 			bc.SetServiceEnvVars(tt.input.service, tt.input.reference)
 
-			registryEnvValue := os.Getenv(registryEnv)
-			imageEnvValue := os.Getenv(imageEnv)
-			repositoryEnvValue := os.Getenv(repositoryEnv)
-			tagEnvValue := os.Getenv(tagEnv)
-			shaEnvValue := os.Getenv(shaEnv)
+			registryEnvValue := vars.GlobalVarManager.GetExcLocal(registryEnv)
+			imageEnvValue := vars.GlobalVarManager.GetExcLocal(imageEnv)
+			repositoryEnvValue := vars.GlobalVarManager.GetExcLocal(repositoryEnv)
+			tagEnvValue := vars.GlobalVarManager.GetExcLocal(tagEnv)
+			shaEnvValue := vars.GlobalVarManager.GetExcLocal(shaEnv)
 
 			assert.Equal(t, tt.expected.expRegistry, registryEnvValue)
 			assert.Equal(t, tt.expected.expImage, imageEnvValue)
@@ -119,6 +122,7 @@ func Test_SetServiceEnvVars(t *testing.T) {
 
 func TestExpandStackVariables(t *testing.T) {
 	ctx := context.Background()
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
 	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
 	fakeConfig := fakeConfig{

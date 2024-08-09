@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 // ErrReservedVariableName is raised when a variable from cmd option has invalid name
@@ -40,7 +40,7 @@ func CheckReservedVariablesNameOption(variables []string) error {
 }
 
 // CheckReservedVarName returns an error when any of the variable names from dependency manifest
-func CheckReservedVarName(variables []env.Var) error {
+func CheckReservedVarName(variables []vars.Var) error {
 	for _, v := range variables {
 		if isReservedVariableName(v.Name) {
 			return fmt.Errorf("%s is %w", v.Name, ErrReservedVariableName)

@@ -48,6 +48,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -87,6 +88,12 @@ func init() {
 	}
 }
 
+type varsManager struct{}
+
+func (*varsManager) MaskVar(value string) {
+	oktetoLog.AddMaskedWord(value)
+}
+
 func main() {
 	ctx := context.Background()
 	ioController := io.NewIOController()
@@ -112,6 +119,13 @@ func main() {
 	okteto.InitContextWithDeprecatedToken()
 
 	k8sLogger := io.NewK8sLogger()
+
+	varManager := vars.NewVarsManager(&varsManager{})
+	varManager.AddGroup(vars.Group{
+		Vars: vars.ConvertLocalEnvVarsToOktetoVars(os.Environ),
+		Type: vars.OktetoVariableTypeLocal,
+	})
+	vars.GlobalVarManager = varManager
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
@@ -160,31 +174,32 @@ func main() {
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
 
-	root.AddCommand(contextCMD.Context())
-	root.AddCommand(cmd.Kubeconfig(okClientProvider))
+	root.AddCommand(contextCMD.Context(varManager))
+	root.AddCommand(cmd.Kubeconfig(okClientProvider, varManager))
 
 	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
-	root.AddCommand(registrytoken.RegistryToken(ctx))
+	root.AddCommand(registrytoken.RegistryToken(ctx, varManager))
 
-	root.AddCommand(build.Build(ctx, ioController, at, insights, k8sLogger))
+	root.AddCommand(build.Build(ctx, ioController, at, insights, k8sLogger, varManager))
 
-	root.AddCommand(namespace.Namespace(ctx, k8sLogger))
-	root.AddCommand(up.Up(at, insights, ioController, k8sLogger, fs))
-	root.AddCommand(cmd.Down(at, k8sLogger, fs))
-	root.AddCommand(cmd.Status(fs))
-	root.AddCommand(cmd.Doctor(k8sLogger, fs))
-	root.AddCommand(exec.NewExec(fs, ioController, k8sClientProvider).Cmd(ctx))
-	root.AddCommand(preview.Preview(ctx))
-	root.AddCommand(cmd.Restart(fs))
-	root.AddCommand(deploy.Deploy(ctx, at, insights, ioController, k8sLogger))
-	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger, fs))
-	root.AddCommand(deploy.Endpoints(ctx, k8sLogger))
-	root.AddCommand(logs.Logs(ctx, k8sLogger, fs))
+	root.AddCommand(namespace.Namespace(ctx, k8sLogger, varManager))
+	root.AddCommand(up.Up(at, insights, ioController, k8sLogger, varManager, fs))
+	root.AddCommand(cmd.Down(at, k8sLogger, varManager, fs))
+	root.AddCommand(cmd.Status(varManager, fs))
+	root.AddCommand(cmd.Doctor(k8sLogger, varManager, fs))
+	root.AddCommand(exec.NewExec(fs, ioController, k8sClientProvider, varManager).Cmd(ctx))
+	root.AddCommand(preview.Preview(ctx, varManager))
+	root.AddCommand(cmd.Restart(fs, varManager))
+	root.AddCommand(deploy.Deploy(ctx, at, insights, ioController, k8sLogger, varManager))
+	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger, varManager, fs))
+	root.AddCommand(deploy.Endpoints(ctx, k8sLogger, varManager))
+	root.AddCommand(logs.Logs(ctx, k8sLogger, varManager, fs))
+
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
-	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger))
-	root.AddCommand(test.Test(ctx, ioController, k8sLogger, at))
+	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger, varManager))
+	root.AddCommand(test.Test(ctx, ioController, k8sLogger, varManager, at))
 
-	root.AddCommand(pipeline.Pipeline(ctx, fs))
+	root.AddCommand(pipeline.Pipeline(ctx, varManager, fs))
 
 	err = root.Execute()
 

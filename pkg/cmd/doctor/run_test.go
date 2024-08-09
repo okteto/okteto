@@ -17,12 +17,18 @@ import (
 	"os"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/vars"
 	"gopkg.in/yaml.v2"
 )
 
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string) {}
+
 func Test_generateManifestFile(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	var tests = []struct {
 		dev  *model.Dev
 		name string
@@ -53,7 +59,7 @@ func Test_generateManifestFile(t *testing.T) {
 					Name:        "svc2",
 					Image:       "",
 					Command:     model.Command{Values: []string{"bash"}},
-					Environment: []env.Var{{Name: "foo", Value: "bar"}},
+					Environment: []vars.Var{{Name: "foo", Value: "bar"}},
 				}},
 			},
 		},

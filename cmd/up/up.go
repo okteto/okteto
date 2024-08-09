@@ -54,6 +54,7 @@ import (
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -90,7 +91,7 @@ type Options struct {
 }
 
 // Up starts a development container
-func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command {
+func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, varManager *vars.Manager, fs afero.Fs) *cobra.Command {
 	upOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:   "up service [flags] -- COMMAND [args...]",
@@ -127,7 +128,8 @@ okteto up my-svc -- echo this is a test
 				Context:   upOptions.K8sContext,
 				Namespace: upOptions.Namespace,
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, ctxOpts); err != nil {
 				return err
 			}
 
@@ -168,7 +170,7 @@ okteto up my-svc -- echo this is a test
 				}
 				upOptions.ManifestPath = uptManifestPath
 			}
-			oktetoManifest, err := model.GetManifestV2(upOptions.ManifestPath, fs)
+			oktetoManifest, err := model.GetManifestV2(upOptions.ManifestPath, fs, varManager)
 			if err != nil {
 				if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 					return err
@@ -192,7 +194,7 @@ okteto up my-svc -- echo this is a test
 					return err
 				}
 				if create {
-					nsCmd, err := namespace.NewCommand()
+					nsCmd, err := namespace.NewCommand(varManager)
 					if err != nil {
 						return err
 					}
@@ -215,7 +217,7 @@ okteto up my-svc -- echo this is a test
 				inferer := devenvironment.NewNameInferer(c)
 				oktetoManifest.Name = inferer.InferName(ctx, wd, okteto.GetContext().Namespace, upOptions.ManifestPathFlag)
 			}
-			os.Setenv(constants.OktetoNameEnvVar, oktetoManifest.Name)
+			varManager.AddBuiltInVar(constants.OktetoNameEnvVar, oktetoManifest.Name)
 
 			if len(oktetoManifest.Dev) == 0 {
 				if oktetoManifest.Type == model.StackType {
@@ -242,8 +244,9 @@ okteto up my-svc -- echo this is a test
 				analyticsTracker:  at,
 				analyticsMeta:     upMeta,
 				K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
+				varManager:        varManager,
 				tokenUpdater:      newTokenUpdaterController(),
-				builder:           buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish),
+				builder:           buildv2.NewBuilderFromScratch(ioCtrl, varManager, onBuildFinish),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -315,7 +318,7 @@ okteto up my-svc -- echo this is a test
 				return err
 			}
 
-			if err := loadManifestOverrides(dev, upOptions); err != nil {
+			if err := loadManifestOverrides(dev, upOptions, up.varManager); err != nil {
 				return err
 			}
 
@@ -388,7 +391,7 @@ okteto up my-svc -- echo this is a test
 	return cmd
 }
 
-func loadManifestOverrides(dev *model.Dev, upOptions *Options) error {
+func loadManifestOverrides(dev *model.Dev, upOptions *Options, varManager *vars.Manager) error {
 	if upOptions.Remote > 0 {
 		dev.RemotePort = upOptions.Remote
 	}
@@ -406,7 +409,7 @@ func loadManifestOverrides(dev *model.Dev, upOptions *Options) error {
 	}
 
 	if len(upOptions.Envs) > 0 {
-		overridedEnvVars, err := getOverridedEnvVarsFromCmd(dev.Environment, upOptions.Envs)
+		overridedEnvVars, err := getOverridedEnvVarsFromCmd(dev.Environment, upOptions.Envs, varManager)
 		if err != nil {
 			return err
 		} else {
@@ -435,7 +438,7 @@ func setSyncDefaultsByDevMode(dev *model.Dev, getSyncTempDir func() (string, err
 	return nil
 }
 
-func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVariables []string) (*env.Environment, error) {
+func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVariables []string, varManager *vars.Manager) (*env.Environment, error) {
 	envVarsToValues := make(map[string]string)
 	for _, manifestEnv := range manifestEnvVars {
 		envVarsToValues[manifestEnv.Name] = manifestEnv.Value
@@ -456,7 +459,7 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVaria
 			return nil, oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD
 		}
 
-		expandedEnv, err := env.ExpandEnv(varValueToAdd)
+		expandedEnv, err := varManager.ExpandExcLocal(varValueToAdd)
 		if err != nil {
 			return nil, err
 		}
@@ -466,7 +469,7 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVaria
 
 	overridedEnvVars := env.Environment{}
 	for k, v := range envVarsToValues {
-		overridedEnvVars = append(overridedEnvVars, env.Var{Name: k, Value: v})
+		overridedEnvVars = append(overridedEnvVars, vars.Var{Name: k, Value: v})
 	}
 
 	return &overridedEnvVars, nil
@@ -474,7 +477,7 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVaria
 
 func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slogger *io.K8sLogger) error {
 	k8sProvider := okteto.NewK8sClientProviderWithLogger(k8slogger)
-	pc, err := pipelineCMD.NewCommand()
+	pc, err := pipelineCMD.NewCommand(up.varManager)
 	if err != nil {
 		return err
 	}
@@ -490,6 +493,7 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 		EndpointGetter:    deploy.NewEndpointGetter,
 		AnalyticsTracker:  up.analyticsTracker,
 		IoCtrl:            ioCtrl,
+		VarManager:        up.varManager,
 	}
 
 	startTime := time.Now()

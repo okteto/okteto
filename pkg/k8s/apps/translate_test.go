@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
@@ -43,7 +44,13 @@ var (
 	mode420 int32 = 420
 )
 
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string) {}
+
 func Test_translateWithVolumes(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	file, err := os.CreateTemp("", "okteto-secret-test")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())

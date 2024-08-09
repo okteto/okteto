@@ -17,130 +17,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 )
 
-func Test_ExpandEnv(t *testing.T) {
-	t.Setenv("BAR", "bar")
-	tests := []struct {
-		expectedErr error
-		name        string
-		result      string
-		value       string
-	}{
-		{
-			name:        "broken var - missing closing curly bracket",
-			value:       "value-${BAR",
-			result:      "",
-			expectedErr: &VarExpansionErr{},
-		},
-		{
-			name:        "no-var",
-			value:       "value",
-			result:      "value",
-			expectedErr: nil,
-		},
-		{
-			name:        "var",
-			value:       "value-${BAR}-value",
-			result:      "value-bar-value",
-			expectedErr: nil,
-		},
-		{
-			name:        "default",
-			value:       "value-${FOO:-foo}-value",
-			result:      "value-foo-value",
-			expectedErr: nil,
-		},
-		{
-			name:        "only bar expanded",
-			value:       "${BAR}",
-			result:      "bar",
-			expectedErr: nil,
-		},
-		{
-			name:        "only bar not expand if empty",
-			value:       "${FOO}",
-			result:      "",
-			expectedErr: nil,
-		},
-	}
+type fakeVarManager struct{}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := ExpandEnv(tt.value)
-			assert.Equal(t, tt.result, result)
-			if tt.expectedErr != nil {
-				assert.ErrorAs(t, err, tt.expectedErr)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
-func Test_ExpandEnvIfNotEmpty(t *testing.T) {
-	t.Setenv("BAR", "bar")
-	tests := []struct {
-		expectedErr error
-		name        string
-		result      string
-		value       string
-	}{
-		{
-			name:        "broken var - missing closing curly bracket",
-			value:       "value-${BAR",
-			result:      "",
-			expectedErr: &VarExpansionErr{},
-		},
-		{
-			name:        "no-var",
-			value:       "value",
-			result:      "value",
-			expectedErr: nil,
-		},
-		{
-			name:        "var",
-			value:       "value-${BAR}-value",
-			result:      "value-bar-value",
-			expectedErr: nil,
-		},
-		{
-			name:        "default",
-			value:       "value-${FOO:-foo}-value",
-			result:      "value-foo-value",
-			expectedErr: nil,
-		},
-		{
-			name:        "only bar expanded",
-			value:       "${BAR}",
-			result:      "bar",
-			expectedErr: nil,
-		},
-		{
-			name:        "only bar not expand if empty",
-			value:       "${FOO}",
-			result:      "${FOO}",
-			expectedErr: nil,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := ExpandEnvIfNotEmpty(tt.value)
-			assert.Equal(t, tt.result, result)
-			if tt.expectedErr != nil {
-				assert.ErrorAs(t, err, tt.expectedErr)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
+func (*fakeVarManager) MaskVar(string) {}
 
 func Test_Env_UnmarshalYAML(t *testing.T) {
-	t.Setenv("VALUE", "test")
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager.AddLocalVar("LOCAL_VAR", "local-var")
+	vars.GlobalVarManager.AddFlagVar("FLAG_VAR", "flag-var")
+
 	tests := []struct {
 		expected    Environment
 		name        string
@@ -158,13 +48,23 @@ unit: test`),
 			},
 		},
 		{
-			name: "deserialized successfully with env var",
+			name: "deserialized successfully but without expansion from local var",
 			yaml: []byte(`
 foo: bar
-unit: "unit-$VALUE"`),
+unit: "unit-$LOCAL_VAR"`),
 			expected: Environment{
 				{Name: "foo", Value: "bar"},
-				{Name: "unit", Value: "unit-test"},
+				{Name: "unit", Value: "unit-"},
+			},
+		},
+		{
+			name: "deserialized successfully with flag var",
+			yaml: []byte(`
+foo: bar
+unit: "unit-$FLAG_VAR"`),
+			expected: Environment{
+				{Name: "foo", Value: "bar"},
+				{Name: "unit", Value: "unit-flag-var"},
 			},
 		},
 		{

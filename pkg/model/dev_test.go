@@ -21,14 +21,22 @@ import (
 	"time"
 
 	"github.com/compose-spec/godotenv"
+	"github.com/okteto/okteto/pkg/dotenv"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 )
 
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string) {}
+
 func Test_LoadManifest(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	manifestBytes := []byte(`dev:
   deployment:
         container: core
@@ -320,6 +328,8 @@ func Test_loadName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 			manifestBytes := []byte(fmt.Sprintf(`dev:
     %s:
 `, tt.devName))
@@ -334,7 +344,8 @@ func Test_loadName(t *testing.T) {
 				devName = "n1"
 			}
 
-			t.Setenv("value", tt.value)
+			vars.GlobalVarManager.AddDotEnvVar("value", tt.value)
+
 			manifest, err := Read(manifestBytes)
 			if err != nil {
 				t.Fatal(err)
@@ -383,8 +394,10 @@ func Test_loadSelector(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager.AddDotEnvVar("value", tt.value)
+
 			dev := &Dev{Selector: tt.selector}
-			t.Setenv("value", tt.value)
 			if err := dev.loadSelector(); err != nil {
 				t.Fatalf("couldn't load selector")
 			}
@@ -462,6 +475,8 @@ func Test_loadImage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 			manifestBytes := []byte(fmt.Sprintf(`dev:
     deployment:
         image: %s
@@ -477,7 +492,7 @@ func Test_loadImage(t *testing.T) {
 `, tt.image))
 			}
 
-			t.Setenv("tag", tt.tagValue)
+			vars.GlobalVarManager.AddDotEnvVar("tag", tt.tagValue)
 			manifest, err := Read(manifestBytes)
 			if err != nil {
 				t.Fatal(err)
@@ -1113,6 +1128,8 @@ func Test_loadEnvFile(t *testing.T) {
 }
 
 func Test_LoadManifestWithEnvFile(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	content := map[string]string{
 		"DEPLOYMENT":    "main",
 		"IMAGE_TAG":     "1.2",
@@ -1144,7 +1161,7 @@ func Test_LoadManifestWithEnvFile(t *testing.T) {
           environment:
           - MY_VAR=$MY_VAR`)
 
-	if err := godotenv.Load(); err != nil {
+	if err := dotenv.Load(".env", vars.GlobalVarManager, afero.NewOsFs()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1374,7 +1391,7 @@ func Test_expandEnvFiles(t *testing.T) {
 			},
 			envs: []byte("key1=value1"),
 			expected: env.Environment{
-				env.Var{
+				vars.Var{
 					Name:  "key1",
 					Value: "value1",
 				},
@@ -1393,7 +1410,7 @@ func Test_expandEnvFiles(t *testing.T) {
 			},
 			envs: []byte("key1=value100"),
 			expected: env.Environment{
-				env.Var{
+				vars.Var{
 					Name:  "key1",
 					Value: "value1",
 				},
@@ -1407,7 +1424,7 @@ func Test_expandEnvFiles(t *testing.T) {
 			},
 			envs: []byte("OKTETO_TEST="),
 			expected: env.Environment{
-				env.Var{
+				vars.Var{
 					Name:  "OKTETO_TEST",
 					Value: "myvalue",
 				},
@@ -1425,6 +1442,7 @@ func Test_expandEnvFiles(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s is present", tt.name), func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
 
 			file, err := os.CreateTemp("", ".env")
 			if err != nil {
@@ -1434,7 +1452,7 @@ func Test_expandEnvFiles(t *testing.T) {
 
 			tt.dev.EnvFiles = env.Files{file.Name()}
 
-			t.Setenv("OKTETO_TEST", "myvalue")
+			vars.GlobalVarManager.AddLocalVar("OKTETO_TEST", "myvalue")
 
 			if _, err = file.Write(tt.envs); err != nil {
 				t.Fatal("Failed to write to temporary file", err)

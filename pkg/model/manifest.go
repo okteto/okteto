@@ -22,17 +22,16 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/a8m/envsubst"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/discovery"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v2"
 	yaml3 "gopkg.in/yaml.v3"
@@ -227,7 +226,7 @@ type DeployCommand struct {
 	Command string `json:"command,omitempty" yaml:"command,omitempty"`
 }
 
-func getManifestFromOktetoFile(cwd string, fs afero.Fs) (*Manifest, error) {
+func getManifestFromOktetoFile(cwd string, fs afero.Fs, varManager *vars.Manager) (*Manifest, error) {
 	manifestPath, err := discovery.GetOktetoManifestPath(cwd)
 	if err != nil {
 		return nil, err
@@ -235,7 +234,7 @@ func getManifestFromOktetoFile(cwd string, fs afero.Fs) (*Manifest, error) {
 	oktetoLog.Infof("Found okteto manifest file on path: %s", manifestPath)
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto manifest on %s", manifestPath)
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling manifest...")
-	devManifest, err := getManifestFromFile(cwd, manifestPath, fs)
+	devManifest, err := getManifestFromFile(cwd, manifestPath, fs, varManager)
 	if err != nil {
 		return nil, err
 	}
@@ -243,12 +242,12 @@ func getManifestFromOktetoFile(cwd string, fs afero.Fs) (*Manifest, error) {
 	return devManifest, nil
 }
 
-func getManifestFromDevFilePath(cwd, manifestPath string, fs afero.Fs) (*Manifest, error) {
+func getManifestFromDevFilePath(cwd, manifestPath string, fs afero.Fs, varManager *vars.Manager) (*Manifest, error) {
 	if manifestPath != "" && !filepath.IsAbs(manifestPath) {
 		manifestPath = filepath.Join(cwd, manifestPath)
 	}
 	if manifestPath != "" && filesystem.FileExistsAndNotDir(manifestPath, afero.NewOsFs()) {
-		return getManifestFromFile(cwd, manifestPath, fs)
+		return getManifestFromFile(cwd, manifestPath, fs, varManager)
 	}
 
 	return nil, discovery.ErrOktetoManifestNotFound
@@ -263,13 +262,13 @@ func pathExistsAndDir(path string) bool {
 }
 
 // GetManifestV2 gets a manifest from a path or search for the files to generate it
-func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
+func GetManifestV2(manifestPath string, fs afero.Fs, varManager *vars.Manager) (*Manifest, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
 
-	manifest, err := getManifestFromDevFilePath(cwd, manifestPath, fs)
+	manifest, err := getManifestFromDevFilePath(cwd, manifestPath, fs, varManager)
 	if err != nil {
 		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
@@ -284,7 +283,7 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 		cwd = manifestPath
 	}
 
-	manifest, err = getManifestFromOktetoFile(cwd, fs)
+	manifest, err = getManifestFromOktetoFile(cwd, fs, varManager)
 	if err != nil {
 		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
@@ -295,7 +294,7 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 		return manifest, nil
 	}
 
-	inferredManifest, err := GetInferredManifest(cwd, fs)
+	inferredManifest, err := GetInferredManifest(cwd, fs, varManager)
 	if err != nil {
 		return nil, err
 	}
@@ -330,8 +329,8 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 }
 
 // getManifestFromFile retrieves the manifest from a given file, okteto manifest or docker-compose
-func getManifestFromFile(cwd, manifestPath string, fs afero.Fs) (*Manifest, error) {
-	devManifest, err := getOktetoManifest(manifestPath)
+func getManifestFromFile(cwd, manifestPath string, fs afero.Fs, varManager *vars.Manager) (*Manifest, error) {
+	devManifest, err := getOktetoManifest(manifestPath, varManager)
 	if err != nil {
 		oktetoLog.Info("devManifest err, fallback to stack unmarshall")
 		stackManifest := &Manifest{
@@ -406,13 +405,13 @@ func getManifestFromFile(cwd, manifestPath string, fs afero.Fs) (*Manifest, erro
 }
 
 // GetInferredManifest infers the manifest from a directory
-func GetInferredManifest(cwd string, fs afero.Fs) (*Manifest, error) {
+func GetInferredManifest(cwd string, fs afero.Fs, varManager *vars.Manager) (*Manifest, error) {
 	pipelinePath, err := discovery.GetOktetoPipelinePath(cwd)
 	if err == nil {
 		oktetoLog.Infof("Found pipeline on: %s", pipelinePath)
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto pipeline manifest on %s", pipelinePath)
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling pipeline manifest...")
-		pipelineManifest, err := GetManifestV2(pipelinePath, fs)
+		pipelineManifest, err := GetManifestV2(pipelinePath, fs, varManager)
 		if err != nil {
 			return nil, err
 		}
@@ -466,7 +465,7 @@ func GetInferredManifest(cwd string, fs afero.Fs) (*Manifest, error) {
 }
 
 // getOktetoManifest returns an okteto object from a given file
-func getOktetoManifest(devPath string) (*Manifest, error) {
+func getOktetoManifest(devPath string, varManager *vars.Manager) (*Manifest, error) {
 	b, err := os.ReadFile(devPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -488,7 +487,7 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 	}
 
 	for name, external := range manifest.External {
-		external.SetDefaults(name)
+		external.SetDefaults(name, varManager)
 	}
 
 	manifest.ManifestPath = devPath
@@ -650,16 +649,16 @@ func (m *Manifest) setDefaults() error {
 		if m.Deploy.Divert.Driver == "" {
 			m.Deploy.Divert.Driver = constants.OktetoDivertWeaverDriver
 		}
-		m.Deploy.Divert.Namespace, err = env.ExpandEnvIfNotEmpty(m.Deploy.Divert.Namespace)
+		m.Deploy.Divert.Namespace, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(m.Deploy.Divert.Namespace)
 		if err != nil {
 			return err
 		}
 		for i := range m.Deploy.Divert.Hosts {
-			m.Deploy.Divert.Hosts[i].VirtualService, err = env.ExpandEnvIfNotEmpty(m.Deploy.Divert.Hosts[i].VirtualService)
+			m.Deploy.Divert.Hosts[i].VirtualService, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(m.Deploy.Divert.Hosts[i].VirtualService)
 			if err != nil {
 				return err
 			}
-			m.Deploy.Divert.Hosts[i].Namespace, err = env.ExpandEnvIfNotEmpty(m.Deploy.Divert.Hosts[i].Namespace)
+			m.Deploy.Divert.Hosts[i].Namespace, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(m.Deploy.Divert.Hosts[i].Namespace)
 			if err != nil {
 				return err
 			}
@@ -730,7 +729,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 	var err error
 	if manifest.Deploy != nil {
 		if manifest.Deploy.Image != "" {
-			manifest.Deploy.Image, err = envsubst.String(manifest.Deploy.Image)
+			manifest.Deploy.Image, err = vars.GlobalVarManager.ExpandExcLocal(manifest.Deploy.Image)
 			if err != nil {
 				return errors.New("could not parse env vars for an image used for remote deploy")
 			}
@@ -752,7 +751,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 					continue
 				}
 				tag := fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(svcName, "-", "_")))
-				expandedTag, err := env.ExpandEnv(tag)
+				expandedTag, err := vars.GlobalVarManager.ExpandExcLocal(tag)
 				if err != nil {
 					return err
 				}
@@ -779,7 +778,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 	}
 	if manifest.Destroy != nil {
 		if manifest.Destroy.Image != "" {
-			manifest.Destroy.Image, err = env.ExpandEnv(manifest.Destroy.Image)
+			manifest.Destroy.Image, err = vars.GlobalVarManager.ExpandExcLocal(manifest.Destroy.Image)
 			if err != nil {
 				return err
 			}
@@ -790,8 +789,9 @@ func (manifest *Manifest) ExpandEnvVars() error {
 		if _, ok := manifest.Build[devName]; ok && devInfo.Image == "" && devInfo.Autocreate {
 			devInfo.Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(devName, "-", "_")))
 		}
+
 		if devInfo.Image != "" {
-			devInfo.Image, err = env.ExpandEnvIfNotEmpty(devInfo.Image)
+			devInfo.Image, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(devInfo.Image)
 			if err != nil {
 				return err
 			}

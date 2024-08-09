@@ -22,7 +22,6 @@ import (
 
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/deployable"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/ignore"
@@ -31,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/remote"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 )
 
@@ -165,7 +165,7 @@ func getCommandFlags(opts *Options) ([]string, error) {
 
 	if len(opts.Variables) > 0 {
 		var varsToAddForDeploy []string
-		variables, err := env.Parse(opts.Variables)
+		variables, err := vars.Parse(opts.Variables)
 		if err != nil {
 			return nil, err
 		}

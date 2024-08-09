@@ -15,7 +15,6 @@ package executor
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 
 	"github.com/okteto/okteto/pkg/constants"
@@ -80,7 +79,7 @@ func (e *Executor) Execute(cmdInfo model.DeployCommand, env []string) error {
 	if e.runWithoutBash {
 		cmd = exec.Command(cmdInfo.Command)
 	}
-	cmd.Env = append(os.Environ(), env...)
+	cmd.Env = env
 
 	if e.dir != "" {
 		cmd.Dir = e.dir

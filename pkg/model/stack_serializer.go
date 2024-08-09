@@ -30,8 +30,9 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/vars"
 	apiv1 "k8s.io/api/core/v1"
-	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 const (
@@ -454,7 +455,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	svc.Environment = env.Environment{}
 	for _, env := range serviceRaw.Environment {
 		if env.Value == "" {
-			env.Value = os.Getenv(env.Name)
+			env.Value = vars.GlobalVarManager.GetExcLocal(env.Name)
 		}
 		if env.Value != "" {
 			svc.Environment = append(svc.Environment, env)

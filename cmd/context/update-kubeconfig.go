@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 )
 
@@ -54,7 +55,7 @@ func newKubeconfigController(okClientProvider oktetoClientProvider) *KubeconfigC
 }
 
 // UpdateKubeconfigCMD all contexts managed by okteto
-func UpdateKubeconfigCMD(okClientProvider oktetoClientProvider) *cobra.Command {
+func UpdateKubeconfigCMD(okClientProvider oktetoClientProvider, varManager *vars.Manager) *cobra.Command {
 	kc := newKubeconfigController(okClientProvider)
 	cmd := &cobra.Command{
 		Hidden: true,
@@ -65,7 +66,7 @@ func UpdateKubeconfigCMD(okClientProvider oktetoClientProvider) *cobra.Command {
 			ctx := context.Background()
 
 			// Run context command to get the Cfg into Okteto GetContext
-			if err := NewContextCommand(withKubeTokenController(kc.kubetokenController)).Run(ctx, &Options{}); err != nil {
+			if err := NewContextCommand(withKubeTokenController(kc.kubetokenController), WithVarManager(varManager)).Run(ctx, &Options{}); err != nil {
 				return err
 			}
 

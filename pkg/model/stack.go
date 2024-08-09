@@ -35,6 +35,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/model/utils"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -310,13 +311,11 @@ func GetStackFromPath(name, stackPath string, isCompose bool, fs afero.Fs) (*Sta
 //   - If no repository is found, we get the name from the folder where the stack/compose file is (`stackPath`)
 func getStackName(name, stackPath, actualStackName string) (string, error) {
 	if name != "" {
-		if err := os.Setenv(constants.OktetoNameEnvVar, name); err != nil {
-			return "", err
-		}
+		vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, name)
 		return name, nil
 	}
 	if actualStackName == "" {
-		nameEnvVar := os.Getenv(constants.OktetoNameEnvVar)
+		nameEnvVar := vars.GlobalVarManager.GetExcLocal(constants.OktetoNameEnvVar)
 		if nameEnvVar != "" {
 			// this name could be not sanitized when running at pipeline installer
 			return nameEnvVar, nil
@@ -328,14 +327,10 @@ func getStackName(name, stackPath, actualStackName string) (string, error) {
 				return "", err
 			}
 		}
-		if err := os.Setenv(constants.OktetoNameEnvVar, name); err != nil {
-			return "", err
-		}
+		vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, name)
 		return name, nil
 	}
-	if err := os.Setenv(constants.OktetoNameEnvVar, actualStackName); err != nil {
-		return "", err
-	}
+	vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, actualStackName)
 	return actualStackName, nil
 }
 
@@ -933,7 +928,7 @@ func loadEnvFiles(svc *Service, svcName string) error {
 
 func setEnvironmentFromFile(svc *Service, filename string) error {
 	var err error
-	filename, err = env.ExpandEnv(filename)
+	filename, err = vars.GlobalVarManager.ExpandExcLocal(filename)
 	if err != nil {
 		return err
 	}
@@ -948,7 +943,7 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 		}
 	}()
 
-	envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
+	envMap, err := godotenv.ParseWithLookup(f, vars.GlobalVarManager.LookupIncLocal)
 	if err != nil {
 		return fmt.Errorf("error parsing env_file %s: %w", filename, err)
 	}
@@ -959,11 +954,11 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 
 	for name, value := range envMap {
 		if value == "" {
-			value = os.Getenv(name)
+			value = vars.GlobalVarManager.GetExcLocal(name)
 		}
 		svc.Environment = append(
 			svc.Environment,
-			env.Var{Name: name, Value: value},
+			vars.Var{Name: name, Value: value},
 		)
 	}
 

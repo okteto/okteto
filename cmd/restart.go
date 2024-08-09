@@ -29,12 +29,13 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
 // Restart restarts the pods of a given dev mode deployment
-func Restart(fs afero.Fs) *cobra.Command {
+func Restart(fs afero.Fs, varManager *vars.Manager) *cobra.Command {
 	var namespace string
 	var k8sContext string
 	var devPath string
@@ -60,7 +61,7 @@ func Restart(fs afero.Fs) *cobra.Command {
 			ctx := context.Background()
 
 			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
-			manifest, err := model.GetManifestV2(manifestOpts.Filename, afero.NewOsFs())
+			manifest, err := model.GetManifestV2(manifestOpts.Filename, fs, varManager)
 			if err != nil {
 				return err
 			}

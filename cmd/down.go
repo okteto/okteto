@@ -30,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -40,7 +41,7 @@ type analyticsTrackerInterface interface {
 }
 
 // Down deactivates the development container
-func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, fs afero.Fs) *cobra.Command {
+func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, varManager *vars.Manager, fs afero.Fs) *cobra.Command {
 	var devPath string
 	var namespace string
 	var k8sContext string
@@ -59,7 +60,8 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, fs afero.Fs) 
 				Context:   k8sContext,
 				Namespace: namespace,
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, ctxOpts); err != nil {
 				return err
 			}
 
@@ -85,7 +87,7 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, fs afero.Fs) 
 					return oktetoErrors.ErrManifestPathIsDir
 				}
 			}
-			manifest, err := model.GetManifestV2(manifestOpts.Filename, fs)
+			manifest, err := model.GetManifestV2(manifestOpts.Filename, fs, varManager)
 			if err != nil {
 				return err
 			}

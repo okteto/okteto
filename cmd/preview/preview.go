@@ -18,6 +18,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 )
 
@@ -37,17 +38,17 @@ func NewCommand() (*Command, error) {
 }
 
 // Preview preview management commands
-func Preview(ctx context.Context) *cobra.Command {
+func Preview(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "preview",
 		Short: "Preview environment management commands",
 	}
 
-	cmd.AddCommand(Deploy(ctx))
-	cmd.AddCommand(Destroy(ctx))
-	cmd.AddCommand(List(ctx))
-	cmd.AddCommand(Endpoints(ctx))
-	cmd.AddCommand(Sleep(ctx))
-	cmd.AddCommand(Wake(ctx))
+	cmd.AddCommand(Deploy(ctx, varManager))
+	cmd.AddCommand(Destroy(ctx, varManager))
+	cmd.AddCommand(List(ctx, varManager))
+	cmd.AddCommand(Endpoints(ctx, varManager))
+	cmd.AddCommand(Sleep(ctx, varManager))
+	cmd.AddCommand(Wake(ctx, varManager))
 	return cmd
 }

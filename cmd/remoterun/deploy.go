@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +46,7 @@ type DeployCommand struct {
 
 // Deploy starts the deploy command remotely. This is the command executed in the
 // remote environment when okteto deploy is executed with the remote flag
-func Deploy(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Deploy(ctx context.Context, k8sLogger *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
 	options := &DeployOptions{}
 	cmd := &cobra.Command{
 		Use:   "deploy",
@@ -87,7 +88,7 @@ It is important that this command does the minimum and must not do calculations 
 				return fmt.Errorf("--name is required")
 			}
 
-			oktetoContext, err := contextCMD.NewContextCommand().RunStateless(ctx, &contextCMD.Options{})
+			oktetoContext, err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).RunStateless(ctx, &contextCMD.Options{})
 			if err != nil {
 				return err
 			}
@@ -99,7 +100,7 @@ It is important that this command does the minimum and must not do calculations 
 
 			// Set the default values for the external resources environment variables (endpoints)
 			for name, external := range dep.External {
-				external.SetDefaults(name)
+				external.SetDefaults(name, varManager)
 			}
 
 			k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
@@ -112,6 +113,7 @@ It is important that this command does the minimum and must not do calculations 
 				k8sClientProvider,
 				model.GetAvailablePort,
 				k8sLogger,
+				varManager,
 			)
 			if err != nil {
 				return fmt.Errorf("could not initialize the command properly: %w", err)

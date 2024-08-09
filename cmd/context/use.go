@@ -16,17 +16,17 @@ package context
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/dotenv"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -38,7 +38,7 @@ const (
 )
 
 // Use context points okteto to a cluster.
-func Use() *cobra.Command {
+func Use(varManager *vars.Manager) *cobra.Command {
 	ctxOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:   "use [<url>|Kubernetes context]",
@@ -73,7 +73,7 @@ Or a Kubernetes context:
 			ctxOptions.Save = true
 			ctxOptions.CheckNamespaceAccess = ctxOptions.Namespace != ""
 
-			err := NewContextCommand().Run(ctx, ctxOptions)
+			err := NewContextCommand(WithVarManager(varManager)).Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			if err != nil {
 				cmd.SilenceUsage = true
@@ -105,7 +105,7 @@ func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 
 	// if the --context and --namespace flags are set, they have priority over the env vars, and current context
 	// if env vars OKTETO_CONTEXT and OKTETO_NAMESPACE are set, they have priority over the current context
-	err := c.loadDotEnv(afero.NewOsFs(), os.Setenv, os.LookupEnv)
+	err := dotenv.Load(dotenv.DefaultDotEnvFile, c.varManager, afero.NewOsFs())
 	if err != nil {
 		oktetoLog.Warning("Failed to load .env file: %s", err)
 	}
@@ -148,7 +148,7 @@ func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 		return err
 	}
 
-	os.Setenv(model.OktetoNamespaceEnvVar, okteto.GetContext().Namespace)
+	c.varManager.AddBuiltInVar(model.OktetoNamespaceEnvVar, okteto.GetContext().Namespace)
 
 	if ctxOptions.Show {
 		oktetoLog.Information("Using %s @ %s as context", okteto.GetContext().Namespace, okteto.RemoveSchema(okteto.GetContext().Name))
@@ -232,19 +232,4 @@ func getContext(ctxOptions *Options) (string, error) {
 	}
 
 	return oktetoContext, nil
-}
-
-func exportPlatformVariablesToEnv(variables []env.Var) {
-	for _, v := range variables {
-		value, exists := os.LookupEnv(v.Name)
-		if exists {
-			if value != v.Value {
-				oktetoLog.Warning("Okteto Variable '%s' is overridden by a local environment variable with the same name", v.Name)
-			}
-			oktetoLog.AddMaskedWord(value)
-			continue
-		}
-		os.Setenv(v.Name, v.Value)
-		oktetoLog.AddMaskedWord(v.Value)
-	}
 }

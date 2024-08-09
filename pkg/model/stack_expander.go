@@ -16,14 +16,14 @@ package model
 import (
 	"bytes"
 
-	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/vars"
 	yaml3 "gopkg.in/yaml.v3"
 )
 
 func expandEnvScalarNode(node *yaml3.Node) (*yaml3.Node, error) {
 	if node.Kind == yaml3.ScalarNode {
 		// when is a ScalarNode, replace its value with the ENV replaced
-		expandValue, err := env.ExpandEnv(node.Value)
+		expandValue, err := vars.GlobalVarManager.ExpandExcLocal(node.Value)
 		if err != nil {
 			return node, err
 		}
@@ -61,6 +61,6 @@ func ExpandStackEnvs(file []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return buffer.Bytes(), nil
 
+	return buffer.Bytes(), nil
 }

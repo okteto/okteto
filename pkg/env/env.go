@@ -21,42 +21,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a8m/envsubst"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
-type Environment []Var
-
-type VarExpansionErr struct {
-	err   error
-	value string
-}
-
-func (e VarExpansionErr) Error() string {
-	return fmt.Sprintf("error expanding environment on '%s': %s", e.value, e.err)
-}
-
-// ExpandEnv expands the env vars in the given string (supporting the notation "${var:-$DEFAULT}").
-func ExpandEnv(value string) (string, error) {
-	result, err := envsubst.String(value)
-	if err != nil {
-		return "", VarExpansionErr{err, value}
-	}
-	return result, nil
-}
-
-// ExpandEnvIfNotEmpty expands the env vars in the given string (supporting the notation "${var:-$DEFAULT}").
-// If the result is an empty string, it returns the original value.
-func ExpandEnvIfNotEmpty(value string) (string, error) {
-	result, err := ExpandEnv(value)
-	if err != nil {
-		return "", err
-	}
-	if result == "" {
-		return value, nil
-	}
-	return result, nil
-}
+type Environment []vars.Var
 
 func (e *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	envs := make(Environment, 0)
@@ -65,7 +34,7 @@ func (e *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	for key, value := range result {
-		envs = append(envs, Var{Name: key, Value: value})
+		envs = append(envs, vars.Var{Name: key, Value: value})
 	}
 	sort.SliceStable(envs, func(i, j int) bool {
 		return strings.Compare(envs[i].Name, envs[j].Name) < 0
@@ -77,7 +46,7 @@ func (e *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
 func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 	result := make(map[string]string)
 
-	var rawList []Var
+	var rawList []vars.Var
 	err := unmarshal(&rawList)
 	if err == nil {
 		for _, label := range rawList {
@@ -91,7 +60,7 @@ func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 		return nil, err
 	}
 	for key, value := range rawMap {
-		value, err = ExpandEnv(value)
+		value, err = vars.GlobalVarManager.ExpandExcLocal(value)
 		if err != nil {
 			return nil, err
 		}
@@ -144,4 +113,22 @@ func LoadBooleanOrDefault(k string, d bool) bool {
 	}
 
 	return h
+}
+
+// GetDefaultLocalEnvs is responsible to return the environment variables that are required to run commands locally. For
+// example 'PATH' is required to be able to find binaries locally.
+func GetDefaultLocalEnvs() []string {
+	var envs []string
+
+	path := os.Getenv("PATH")
+	if path != "" {
+		envs = append(envs, fmt.Sprintf("PATH=%s", path))
+	}
+
+	term := os.Getenv("TERM")
+	if term != "" {
+		envs = append(envs, fmt.Sprintf("TERM=%s", term))
+	}
+
+	return envs
 }

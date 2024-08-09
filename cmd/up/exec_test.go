@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -211,7 +212,7 @@ func TestGetEnvs(t *testing.T) {
 			dev: &model.Dev{
 				Name: "test",
 				Environment: env.Environment{
-					env.Var{
+					vars.Var{
 						Name:  "FROMENVSECTION",
 						Value: "VALUE1",
 					},
@@ -392,7 +393,7 @@ func TestGetEnvForHybridModeWithProperPriority(t *testing.T) {
 	dev := &model.Dev{
 		Name: "test",
 		Environment: env.Environment{
-			env.Var{
+			vars.Var{
 				Name:  "ENVFROMMANIFEST",
 				Value: "FROMMANIFESTVALUE",
 			},
@@ -819,10 +820,10 @@ func TestGetEnvsFromDevContainer(t *testing.T) {
 
 type fakePlatformVariablesGetter struct {
 	err               error
-	platformVariables []env.Var
+	platformVariables []vars.Var
 }
 
-func (f fakePlatformVariablesGetter) GetOktetoPlatformVariables(context.Context) ([]env.Var, error) {
+func (f fakePlatformVariablesGetter) GetOktetoPlatformVariables(context.Context) ([]vars.Var, error) {
 	return f.platformVariables, f.err
 }
 
@@ -848,7 +849,7 @@ func TestGetEnvsFromPlatformVariables(t *testing.T) {
 			name:     "with platform variables",
 			isOkteto: true,
 			fakeSecretsGetter: fakePlatformVariablesGetter{
-				platformVariables: []env.Var{
+				platformVariables: []vars.Var{
 					{
 						Name:  "FROMSECRETSTORE",
 						Value: "AVALUE",

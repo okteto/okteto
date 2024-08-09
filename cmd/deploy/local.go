@@ -43,7 +43,6 @@ func (ld *localDeployer) Deploy(ctx context.Context, deployOptions *Options) err
 			Deploy:   &model.DeployInfo{},
 			External: externalresource.Section{},
 		}
-
 	}
 	if deployOptions.Manifest.Deploy == nil {
 		deployOptions.Manifest.Deploy = &model.DeployInfo{}

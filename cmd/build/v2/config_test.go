@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -156,7 +157,7 @@ func TestGetConfigStateless(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			cfg := getConfigStateless(tc.input.reg, tc.input.repo, fakeLogger{}, true)
+			cfg := getConfigStateless(tc.input.reg, tc.input.repo, fakeLogger{}, true, vars.NewVarsManager(&fakeVarManager{}))
 			assert.Equal(t, tc.expected, cfg)
 		})
 	}
@@ -280,7 +281,8 @@ func TestGetConfig(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			cfg := getConfig(tc.input.reg, tc.input.repo, fakeLogger{})
+			varManager := vars.NewVarsManager(&fakeVarManager{})
+			cfg := getConfig(tc.input.reg, tc.input.repo, fakeLogger{}, varManager)
 			assert.Equal(t, tc.expected, cfg)
 		})
 	}
@@ -310,8 +312,9 @@ func TestGetIsSmartBuildEnabled(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv(OktetoEnableSmartBuildEnvVar, tc.input)
-			cfg := getIsSmartBuildEnabled()
+			varManager := vars.NewVarsManager(&fakeVarManager{})
+			varManager.AddDotEnvVar(OktetoEnableSmartBuildEnvVar, tc.input)
+			cfg := getIsSmartBuildEnabled(varManager)
 			assert.Equal(t, tc.expected, cfg)
 		})
 	}

@@ -19,6 +19,7 @@ import (
 	"github.com/okteto/okteto/cmd/build/basic"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 // OktetoBuilder It is a wrapper of basic.Builder to build an image specified by a Dockerfile. a.k.a. Builder v1
@@ -29,11 +30,12 @@ type OktetoBuilder struct {
 }
 
 // NewBuilder creates a new builder wrapping basic.Builder to build images directly from a Dockerfile
-func NewBuilder(builder basic.BuildRunner, ioCtrl *io.Controller) *OktetoBuilder {
+func NewBuilder(builder basic.BuildRunner, ioCtrl *io.Controller, varManager *vars.Manager) *OktetoBuilder {
 	return &OktetoBuilder{
 		Builder: basic.Builder{
 			BuildRunner: builder,
 			IoCtrl:      ioCtrl,
+			VarManager:  varManager,
 		},
 	}
 }

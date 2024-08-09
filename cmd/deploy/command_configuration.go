@@ -158,7 +158,6 @@ func (dc *Command) addEnvVars(cwd string) {
 	if os.Getenv(model.OktetoTokenEnvVar) == "" {
 		os.Setenv(model.OktetoTokenEnvVar, okteto.GetContext().Token)
 	}
-	oktetoLog.AddMaskedWord(os.Getenv(model.OktetoTokenEnvVar))
 }
 
 func switchRepoSchemaToHTTPS(repo string) *url.URL {

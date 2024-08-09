@@ -15,6 +15,8 @@ package deployable
 
 import (
 	"context"
+	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -24,12 +26,17 @@ import (
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/rest"
 )
+
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string) {}
 
 type fakeCmapHandler struct {
 	errUpdatingWithEnvs error
@@ -120,6 +127,19 @@ func (f *fakeExternalResource) Deploy(ctx context.Context, name, ns string, exte
 	return args.Error(0)
 }
 
+func createFakeOktetoEnvFile(fs afero.Fs, varManager *vars.Manager) (afero.File, func(), error) {
+	filename := filepath.Clean(".env")
+	file, err := fs.Create(filename)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	varManager.AddBuiltInVar("OKTETO_ENV", filename)
+	return file, func() {
+		file.Close()
+	}, nil
+}
+
 func TestDeployNotRemovingEnvFile(t *testing.T) {
 	fs := afero.NewMemMapFs()
 
@@ -127,8 +147,10 @@ func TestDeployNotRemovingEnvFile(t *testing.T) {
 	require.NoError(t, err)
 	params := DeployParameters{}
 	r := DeployRunner{
-		ConfigMapHandler: &fakeCmapHandler{},
-		Fs:               fs,
+		ConfigMapHandler:        &fakeCmapHandler{},
+		Fs:                      fs,
+		varManager:              vars.NewVarsManager(&fakeVarManager{}),
+		createTempOktetoEnvFile: createFakeOktetoEnvFile,
 	}
 	err = r.runCommandsSection(context.Background(), params)
 	assert.NoError(t, err)
@@ -217,12 +239,14 @@ func TestRunDeployWithEmptyDeployable(t *testing.T) {
 	kubeconfigHandler.On("Modify", 80, "fake-token", "temp-kubeconfig").Return(nil)
 
 	r := DeployRunner{
-		K8sClientProvider:  k8sProvider,
-		Proxy:              proxy,
-		Kubeconfig:         kubeconfigHandler,
-		TempKubeconfigFile: "temp-kubeconfig",
-		Fs:                 afero.NewMemMapFs(),
-		ConfigMapHandler:   &fakeCmapHandler{},
+		K8sClientProvider:       k8sProvider,
+		Proxy:                   proxy,
+		Kubeconfig:              kubeconfigHandler,
+		TempKubeconfigFile:      "temp-kubeconfig",
+		Fs:                      afero.NewMemMapFs(),
+		ConfigMapHandler:        &fakeCmapHandler{},
+		varManager:              vars.NewVarsManager(&fakeVarManager{}),
+		createTempOktetoEnvFile: createFakeOktetoEnvFile,
 	}
 
 	params := DeployParameters{
@@ -256,11 +280,25 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 		CurrentContext: "test",
 	}
 	executor := &fakeExecutor{}
+
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager.AddDotEnvVar("DOT-ENV-1", "dotenv-value-1")
+	varManager.AddFlagVar("FLAG-1", "flag-value-1")
+	varManager.AddBuiltInVar("BUILT-IN-1", "built-in-value-1")
+	varManager.AddAdminAndUserVar("USER-1", "user-value-1")
+
+	t.Setenv("PATH", filepath.Clean("/some/path"))
+	t.Setenv("TERM", "term-name")
+
+	fs := afero.NewMemMapFs()
+
 	r := DeployRunner{
-		TempKubeconfigFile: "temp-kubeconfig",
-		Fs:                 afero.NewMemMapFs(),
-		ConfigMapHandler:   &fakeCmapHandler{},
-		Executor:           executor,
+		TempKubeconfigFile:      "temp-kubeconfig",
+		Fs:                      fs,
+		ConfigMapHandler:        &fakeCmapHandler{},
+		Executor:                executor,
+		varManager:              varManager,
+		createTempOktetoEnvFile: createFakeOktetoEnvFile,
 	}
 
 	params := DeployParameters{
@@ -293,6 +331,13 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 	expectedVariables := []string{
 		"A=value1",
 		"B=value2",
+		fmt.Sprintf("PATH=%s", filepath.Clean("/some/path")),
+		"TERM=term-name",
+		"BUILT-IN-1=built-in-value-1",
+		"OKTETO_ENV=.env",
+		"FLAG-1=flag-value-1",
+		"DOT-ENV-1=dotenv-value-1",
+		"USER-1=user-value-1",
 	}
 	executor.On("Execute", expectedCommand1, expectedVariables).Return(nil).Once()
 	executor.On("Execute", expectedCommand2, expectedVariables).Return(nil).Once()
@@ -315,11 +360,16 @@ func TestRunCommandsSectionWithErrorInCommands(t *testing.T) {
 	}
 	executor := &fakeExecutor{}
 	r := DeployRunner{
-		TempKubeconfigFile: "temp-kubeconfig",
-		Fs:                 afero.NewMemMapFs(),
-		ConfigMapHandler:   &fakeCmapHandler{},
-		Executor:           executor,
+		TempKubeconfigFile:      "temp-kubeconfig",
+		Fs:                      afero.NewMemMapFs(),
+		ConfigMapHandler:        &fakeCmapHandler{},
+		Executor:                executor,
+		varManager:              vars.NewVarsManager(&fakeVarManager{}),
+		createTempOktetoEnvFile: createFakeOktetoEnvFile,
 	}
+
+	t.Setenv("PATH", filepath.Clean("/some/path"))
+	t.Setenv("TERM", "term-name")
 
 	params := DeployParameters{
 		Variables: []string{
@@ -351,6 +401,9 @@ func TestRunCommandsSectionWithErrorInCommands(t *testing.T) {
 	expectedVariables := []string{
 		"A=value1",
 		"B=value2",
+		fmt.Sprintf("PATH=%s", filepath.Clean("/some/path")),
+		"TERM=term-name",
+		"OKTETO_ENV=.env",
 	}
 	executor.On("Execute", expectedCommand1, expectedVariables).Return(assert.AnError).Once()
 
@@ -374,11 +427,13 @@ func TestRunCommandsSectionWithDivert(t *testing.T) {
 	executor := &fakeExecutor{}
 	divertDeployer := &fakeDivert{}
 	r := DeployRunner{
-		TempKubeconfigFile: "temp-kubeconfig",
-		Fs:                 afero.NewMemMapFs(),
-		ConfigMapHandler:   &fakeCmapHandler{},
-		Executor:           executor,
-		DivertDeployer:     divertDeployer,
+		TempKubeconfigFile:      "temp-kubeconfig",
+		Fs:                      afero.NewMemMapFs(),
+		ConfigMapHandler:        &fakeCmapHandler{},
+		Executor:                executor,
+		DivertDeployer:          divertDeployer,
+		varManager:              vars.NewVarsManager(&fakeVarManager{}),
+		createTempOktetoEnvFile: createFakeOktetoEnvFile,
 	}
 
 	params := DeployParameters{
@@ -418,11 +473,13 @@ func TestRunCommandsSectionWithErrorDeployingDivert(t *testing.T) {
 	executor := &fakeExecutor{}
 	divertDeployer := &fakeDivert{}
 	r := DeployRunner{
-		TempKubeconfigFile: "temp-kubeconfig",
-		Fs:                 afero.NewMemMapFs(),
-		ConfigMapHandler:   &fakeCmapHandler{},
-		Executor:           executor,
-		DivertDeployer:     divertDeployer,
+		TempKubeconfigFile:      "temp-kubeconfig",
+		Fs:                      afero.NewMemMapFs(),
+		ConfigMapHandler:        &fakeCmapHandler{},
+		Executor:                executor,
+		DivertDeployer:          divertDeployer,
+		varManager:              vars.NewVarsManager(&fakeVarManager{}),
+		createTempOktetoEnvFile: createFakeOktetoEnvFile,
 	}
 
 	params := DeployParameters{
@@ -473,6 +530,8 @@ func TestRunCommandsSectionWithExternal(t *testing.T) {
 		GetExternalControl: func(_ *rest.Config) ExternalResourceInterface {
 			return externalResource
 		},
+		varManager:              vars.NewVarsManager(&fakeVarManager{}),
+		createTempOktetoEnvFile: createFakeOktetoEnvFile,
 	}
 
 	params := DeployParameters{
@@ -537,6 +596,8 @@ func TestRunCommandsSectionWithErrorDeployingExternal(t *testing.T) {
 		GetExternalControl: func(_ *rest.Config) ExternalResourceInterface {
 			return externalResource
 		},
+		varManager:              vars.NewVarsManager(&fakeVarManager{}),
+		createTempOktetoEnvFile: createFakeOktetoEnvFile,
 	}
 
 	params := DeployParameters{

@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 type Test struct {
@@ -66,7 +66,7 @@ func (test ManifestTests) Validate() error {
 func (test *Test) expandEnvVars() error {
 	var err error
 	if len(test.Image) > 0 {
-		test.Image, err = env.ExpandEnv(test.Image)
+		test.Image, err = vars.GlobalVarManager.ExpandExcLocal(test.Image)
 		if err != nil {
 			return err
 		}
@@ -118,7 +118,7 @@ func (h *Host) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var hostnameIP string
 	err := unmarshal(&hostnameIP)
 	if err == nil {
-		hostnameIPExpanded, err := env.ExpandEnv(hostnameIP)
+		hostnameIPExpanded, err := vars.GlobalVarManager.ExpandExcLocal(hostnameIP)
 		if err != nil {
 			return err
 		}
@@ -146,11 +146,11 @@ func (h *Host) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	hostname, err := env.ExpandEnv(hh.Hostname)
+	hostname, err := vars.GlobalVarManager.ExpandExcLocal(hh.Hostname)
 	if err != nil {
 		return err
 	}
-	ip, err := env.ExpandEnv(hh.IP)
+	ip, err := vars.GlobalVarManager.ExpandExcLocal(hh.IP)
 	if err != nil {
 		return err
 	}

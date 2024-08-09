@@ -21,7 +21,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -31,6 +30,7 @@ import (
 	oktetoHttp "github.com/okteto/okteto/pkg/http"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/shurcooL/graphql"
 	"golang.org/x/oauth2"
 )
@@ -51,7 +51,7 @@ type Client struct {
 type ClientProvider struct{}
 
 var insecureSkipTLSVerify bool
-var onceInsecureWarning *sync.Once = &sync.Once{}
+var onceInsecureWarning = &sync.Once{}
 var serverName string
 var strictTLSOnce sync.Once
 var errURLNotSet = errors.New("the okteto URL is not set")
@@ -414,7 +414,7 @@ func isAPITransientErr(err error) bool {
 
 // InDevContainer returns true if running in an okteto dev container
 func InDevContainer() bool {
-	if v, ok := os.LookupEnv(constants.OktetoNameEnvVar); ok && v != "" {
+	if v, ok := vars.GlobalVarManager.LookupExcLocal(constants.OktetoNameEnvVar); ok && v != "" {
 		return true
 	}
 

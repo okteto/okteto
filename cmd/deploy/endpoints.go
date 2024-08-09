@@ -32,6 +32,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -58,7 +59,7 @@ type k8sIngressClientProvider interface {
 }
 
 type EndpointGetter struct {
-	GetManifest     func(path string, fs afero.Fs) (*model.Manifest, error)
+	GetManifest     func(path string, fs afero.Fs, varManager *vars.Manager) (*model.Manifest, error)
 	endpointControl endpointControlInterface
 }
 
@@ -82,7 +83,7 @@ func NewEndpointGetter(k8sLogger *io.K8sLogger) (EndpointGetter, error) {
 }
 
 // Endpoints lists the endpoints for a development environment
-func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
 	options := &EndpointsOptions{}
 	fs := afero.NewOsFs()
 	cmd := &cobra.Command{
@@ -109,7 +110,7 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 
 			// false for 'json' and 'md' to avoid breaking their syntax
 			showCtxHeader := options.Output == ""
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace, Show: showCtxHeader}); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, &contextCMD.Options{Namespace: options.Namespace, Show: showCtxHeader}); err != nil {
 				return err
 			}
 
@@ -123,7 +124,7 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 			}
 
 			if options.Name == "" {
-				manifest, err := eg.GetManifest(options.ManifestPath, afero.NewOsFs())
+				manifest, err := eg.GetManifest(options.ManifestPath, fs, varManager)
 				if err != nil {
 					return err
 				}

@@ -16,11 +16,11 @@ package model
 import (
 	"testing"
 
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_ExpandStackEnvs(t *testing.T) {
-	t.Setenv("ENV2", "bye")
 	tests := []struct {
 		name          string
 		envValue      string
@@ -155,8 +155,12 @@ volumes:
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("CUSTOM_ENV", tt.envValue)
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager.AddDotEnvVar("ENV2", "bye")
+			vars.GlobalVarManager.AddDotEnvVar("CUSTOM_ENV", tt.envValue)
+
 			result, err := ExpandStackEnvs(tt.file)
+
 			if err != nil && !tt.expectedError {
 				t.Fatalf("expected no error, but got error: %v", err)
 			} else if err == nil && tt.expectedError {

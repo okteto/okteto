@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/utils"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,7 +54,9 @@ E=word -notword`
 )
 
 func Test_ReadStack(t *testing.T) {
-	t.Setenv("PWD", "hello")
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager.AddDotEnvVar("PWD", "hello")
+
 	manifest := []byte(`name: voting-app
 services:
   vote:
@@ -198,7 +201,9 @@ services:
 }
 
 func Test_ReadStackCompose(t *testing.T) {
-	t.Setenv("PWD", "hello")
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager.AddDotEnvVar("PWD", "hello")
+
 	manifest := []byte(`name: voting-app
 services:
   vote:
@@ -733,7 +738,7 @@ func TestStack_Merge(t *testing.T) {
 						},
 						EnvFiles: env.Files{".env"},
 						Environment: env.Environment{
-							env.Var{
+							vars.Var{
 								Name:  "test",
 								Value: "ok",
 							},
@@ -763,7 +768,7 @@ func TestStack_Merge(t *testing.T) {
 						},
 						EnvFiles: env.Files{".env-test"},
 						Environment: env.Environment{
-							env.Var{
+							vars.Var{
 								Name:  "test",
 								Value: "overwrite",
 							},
@@ -793,7 +798,7 @@ func TestStack_Merge(t *testing.T) {
 						},
 						EnvFiles: env.Files{".env-test"},
 						Environment: env.Environment{
-							env.Var{
+							vars.Var{
 								Name:  "test",
 								Value: "overwrite",
 							},
@@ -993,8 +998,9 @@ func TestStack_ExpandEnvsAtFileLevel(t *testing.T) {
 			}
 			defer os.RemoveAll(tmpFile.Name())
 
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
 			for key, value := range tt.envs {
-				t.Setenv(key, value)
+				vars.GlobalVarManager.AddDotEnvVar(key, value)
 			}
 
 			stack, err := GetStackFromPath("test", tmpFile.Name(), false, afero.NewMemMapFs())
@@ -1157,11 +1163,12 @@ func Test_getStackName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
 			dir := t.TempDir()
 			stackPath := filepath.Join(dir, tt.stackPath)
-			t.Setenv(constants.OktetoNameEnvVar, tt.nameEnv)
+			vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, tt.nameEnv)
 			res, err := getStackName(tt.name, stackPath, tt.actualStackName)
-			resEnv := os.Getenv(constants.OktetoNameEnvVar)
+			resEnv := vars.GlobalVarManager.GetExcLocal(constants.OktetoNameEnvVar)
 
 			if err == nil && tt.expectedErr {
 				t.Fatal("expected error but not thrown")
@@ -1184,7 +1191,8 @@ func Test_getStackNameWithinRepository(t *testing.T) {
 	// As getStackName internally does os.Setenv, when all the tests run at the same time,
 	// it might happen that the env var with the name is set. That env var has priority over
 	// the repository calculation. In order to avoid this, we need to unset the env var before running the test
-	t.Setenv(constants.OktetoNameEnvVar, "")
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, "")
 	repository := "https://github.com/okteto/compose-repository-test.git"
 	dir := t.TempDir()
 	path := "path/to/stack4/compose.yaml"
@@ -1197,7 +1205,7 @@ func Test_getStackNameWithinRepository(t *testing.T) {
 	require.NoError(t, err)
 
 	res, err := getStackName("", stackPath, "")
-	resEnv := os.Getenv(constants.OktetoNameEnvVar)
+	resEnv := vars.GlobalVarManager.GetExcLocal(constants.OktetoNameEnvVar)
 
 	require.NoError(t, err)
 	require.Equal(t, "compose-repository-test", res)
@@ -1205,6 +1213,8 @@ func Test_getStackNameWithinRepository(t *testing.T) {
 }
 
 func Test_translateEnvVars(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	tmpFile, err := os.CreateTemp("", ".env")
 	if err != nil {
 		t.Fatalf("failed to create dynamic testEnv file: %s", err.Error())
@@ -1223,17 +1233,18 @@ func Test_translateEnvVars(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpFile2.Name())
 
-	t.Setenv("B", "2")
-	t.Setenv("ENV_PATH", tmpFile.Name())
-	t.Setenv("ENV_PATH2", tmpFile2.Name())
-	t.Setenv("OKTETO_TEST", "myvalue")
+	vars.GlobalVarManager.AddDotEnvVar("B", "2")
+	vars.GlobalVarManager.AddDotEnvVar("ENV_PATH", tmpFile.Name())
+	vars.GlobalVarManager.AddDotEnvVar("ENV_PATH2", tmpFile2.Name())
+	vars.GlobalVarManager.AddDotEnvVar("OKTETO_TEST", "myvalue")
+
 	stack := &Stack{
 		Name: "name",
 		Services: map[string]*Service{
 			"1": {
 				Image:    "image",
 				EnvFiles: []string{"${ENV_PATH}", "${ENV_PATH2}"},
-				Environment: []env.Var{
+				Environment: []vars.Var{
 					{
 						Name:  "C",
 						Value: "original",

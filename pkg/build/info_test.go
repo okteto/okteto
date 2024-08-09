@@ -14,21 +14,28 @@
 package build
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/cache"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 )
 
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string) {}
+
 func TestExpandBuildArgs(t *testing.T) {
-	t.Setenv("KEY", "VALUE")
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = varManager
+	vars.GlobalVarManager.AddFlagVar("KEY", "VALUE")
+
 	tests := []struct {
 		buildInfo          *Info
 		expected           *Info
@@ -174,7 +181,7 @@ func TestExpandBuildArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.NoError(t, tt.buildInfo.AddArgs(tt.previousImageBuilt))
+			assert.NoError(t, tt.buildInfo.AddArgs(tt.previousImageBuilt, varManager))
 
 			assert.Equal(t, tt.expected, tt.buildInfo)
 		})
@@ -286,8 +293,10 @@ func TestSetBuildDefaults(t *testing.T) {
 }
 
 func TestUnmarshalInfo(t *testing.T) {
-	t.Setenv("CONTEXT", "testContext")
-	t.Setenv("DOCKERFILE", "dockerfile")
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager.AddDotEnvVar("CONTEXT", "testContext")
+	vars.GlobalVarManager.AddDotEnvVar("DOCKERFILE", "dockerfile")
+
 	tests := []struct {
 		input       string
 		expected    *Info
@@ -389,7 +398,6 @@ secrets:
 				require.NoError(t, err)
 				require.Equal(t, tt.expected, out)
 			}
-
 		})
 	}
 }
@@ -460,7 +468,7 @@ func Test_expandSecrets(t *testing.T) {
 	tests := []struct {
 		input       *Info
 		expected    *Info
-		setEnvFunc  func(t *testing.T)
+		setEnvFunc  func(varManager *vars.Manager)
 		name        string
 		expectedErr bool
 	}{
@@ -497,19 +505,19 @@ func Test_expandSecrets(t *testing.T) {
 			}},
 		},
 		{
-			name: "expand HOME env var",
+			name: "expand path with flag variable",
 			input: &Info{Secrets: map[string]string{
-				"path": filepath.Join(fmt.Sprintf("$%s", homeEnvVar), "secrets"),
+				"path": filepath.Join("$TEST_RANDOM_DIR", "secrets"),
 			}},
 			expected: &Info{Secrets: map[string]string{
 				"path": filepath.Clean("/home/testuser/secrets"),
 			}},
-			setEnvFunc: func(t *testing.T) {
-				t.Setenv("TEST_RANDOM_DIR", "/home/testuser")
+			setEnvFunc: func(varManager *vars.Manager) {
+				varManager.AddFlagVar("TEST_RANDOM_DIR", filepath.Clean("/home/testuser"))
 			},
 		},
 		{
-			name: "expand unset env var",
+			name: "expand unset var",
 			input: &Info{Secrets: map[string]string{
 				"path": "$TEST_RANDOM_DIR/secrets",
 			}},
@@ -540,8 +548,9 @@ func Test_expandSecrets(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
 			if tc.setEnvFunc != nil {
-				tc.setEnvFunc(t)
+				tc.setEnvFunc(vars.GlobalVarManager)
 			}
 			err := tc.input.expandSecrets()
 			if tc.expectedErr {

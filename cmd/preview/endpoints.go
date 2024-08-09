@@ -27,11 +27,12 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 )
 
 // Endpoints show all the endpoints of a preview environment
-func Endpoints(ctx context.Context) *cobra.Command {
+func Endpoints(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	var output string
 
 	cmd := &cobra.Command{
@@ -46,7 +47,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				oktetoLog.SetOutput(jsonContextBuffer)
 			}
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: previewName}); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, &contextCMD.Options{Namespace: previewName}); err != nil {
 				return err
 			}
 			if output != "json" {

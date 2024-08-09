@@ -22,6 +22,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -29,7 +30,7 @@ import (
 var output string
 
 // List returns all contexts managed by okteto
-func List() *cobra.Command {
+func List(varManager *vars.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
@@ -37,7 +38,7 @@ func List() *cobra.Command {
 		Short:   "List available contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			if err := NewContextCommand().Run(ctx, &Options{raiseNotCtxError: true}); err != nil {
+			if err := NewContextCommand(WithVarManager(varManager)).Run(ctx, &Options{raiseNotCtxError: true}); err != nil {
 				return err
 			}
 			return executeListContext()

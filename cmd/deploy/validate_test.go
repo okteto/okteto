@@ -20,33 +20,38 @@ import (
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/validator"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_validateAndSet(t *testing.T) {
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string) {}
+
+func Test_convertCommandFlagsToOktetoVariables(t *testing.T) {
 	var tests = []struct {
 		expectedError error
-		expectedEnvs  map[string]string
+		expectedEnvs  []string
 		name          string
 		variables     []string
 	}{
 		{
-			name:          "correct assingnament",
+			name:          "correct assignment",
 			variables:     []string{"NAME=test"},
 			expectedError: nil,
-			expectedEnvs:  map[string]string{"NAME": "test"},
+			expectedEnvs:  []string{"NAME=test"},
 		},
 		{
-			name:          "bas assingnament",
+			name:          "bad assignment",
 			variables:     []string{"NAME:test"},
 			expectedError: fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", "NAME:test"),
-			expectedEnvs:  map[string]string{},
+			expectedEnvs:  []string{},
 		},
 		{
 			name:          "more than 2 equals",
 			variables:     []string{"too=many=equals"},
 			expectedError: nil,
-			expectedEnvs:  map[string]string{"too": "many=equals"},
+			expectedEnvs:  []string{"too=many=equals"},
 		},
 		{
 			name: "multiple variables",
@@ -55,7 +60,7 @@ func Test_validateAndSet(t *testing.T) {
 				"BASE64=something==",
 			},
 			expectedError: nil,
-			expectedEnvs:  map[string]string{"NAME": "test", "BASE64": "something=="},
+			expectedEnvs:  []string{"NAME=test", "BASE64=something=="},
 		},
 		{
 			name:      "reserved variable name",
@@ -64,22 +69,17 @@ func Test_validateAndSet(t *testing.T) {
 				E:    fmt.Errorf("%s is %w.", "OKTETO_CONTEXT", validator.ErrReservedVariableName),
 				Hint: "See documentation for more info: https://www.okteto.com/docs/core/credentials/environment-variables/",
 			},
-			expectedEnvs: map[string]string{},
+			expectedEnvs: []string{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			envVarStorage := make(map[string]string)
-			setEnvStorage := func(key, value string) error {
-				envVarStorage[key] = value
-				return nil
-			}
-
-			err := validateAndSet(tt.variables, setEnvStorage)
+			varManager := vars.NewVarsManager(&fakeVarManager{})
+			err := convertCommandFlagsToOktetoVariables(tt.variables, varManager)
 
 			assert.Equal(t, tt.expectedError, err)
-			assert.True(t, reflect.DeepEqual(tt.expectedEnvs, envVarStorage))
+			assert.True(t, reflect.DeepEqual(tt.expectedEnvs, varManager.GetOktetoVariablesExcLocal()))
 		})
 	}
 }

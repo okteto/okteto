@@ -19,10 +19,17 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/validator"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 )
 
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string) {}
+
 func Test_optionsSetup(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	ctxUsername := "username"
 	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",

@@ -23,13 +23,14 @@ import (
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
 
 // RemoteRun starts the remote run command. This is the command executed in the
 // remote environment when okteto deploy is executed with the remote flag
-func RemoteRun(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func RemoteRun(ctx context.Context, k8sLogger *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "remote-run",
 		Short:        "Remote run management commands. These are the commands to be run remotely",
@@ -37,9 +38,9 @@ func RemoteRun(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 		SilenceUsage: true,
 	}
 
-	cmd.AddCommand(Deploy(ctx, k8sLogger))
-	cmd.AddCommand(Destroy(ctx))
-	cmd.AddCommand(Test(ctx))
+	cmd.AddCommand(Deploy(ctx, k8sLogger, varManager))
+	cmd.AddCommand(Destroy(ctx, varManager))
+	cmd.AddCommand(Test(ctx, varManager))
 	return cmd
 }
 

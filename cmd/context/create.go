@@ -19,22 +19,19 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 
-	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
-	"github.com/spf13/afero"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 // oktetoClientProvider provides an okteto client ready to use or fail
@@ -54,18 +51,26 @@ type Command struct {
 
 	kubetokenController kubeconfigTokenController
 	OktetoContextWriter okteto.ContextConfigWriterInterface
+
+	varManager *vars.Manager
 }
 
-type ctxCmdOption func(*Command)
+type CtxCmdOption func(*Command)
 
-func withKubeTokenController(k kubeconfigTokenController) ctxCmdOption {
+func withKubeTokenController(k kubeconfigTokenController) CtxCmdOption {
 	return func(c *Command) {
 		c.kubetokenController = k
 	}
 }
 
+func WithVarManager(varManager *vars.Manager) CtxCmdOption {
+	return func(c *Command) {
+		c.varManager = varManager
+	}
+}
+
 // NewContextCommand creates a new Command
-func NewContextCommand(ctxCmdOption ...ctxCmdOption) *Command {
+func NewContextCommand(ctxCmdOption ...CtxCmdOption) *Command {
 	cfg := &Command{
 		K8sClientProvider:    okteto.NewK8sClientProvider(),
 		LoginController:      login.NewLoginController(),
@@ -282,9 +287,12 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 	okteto.GetContext().IsTrial = clusterMetadata.IsTrialLicense
 	okteto.GetContext().CompanyName = clusterMetadata.CompanyName
 
-	exportPlatformVariablesToEnv(userContext.PlatformVariables)
+	c.varManager.AddGroup(vars.Group{
+		Vars: userContext.PlatformVariables,
+		Type: vars.OktetoVariableTypeAdminAndUser,
+	})
 
-	os.Setenv(model.OktetoUserNameEnvVar, okteto.GetContext().Username)
+	c.varManager.AddBuiltInVar(model.OktetoUserNameEnvVar, okteto.GetContext().Username)
 
 	return nil
 }
@@ -342,7 +350,7 @@ func (*Command) initKubernetesContext(ctxOptions *Options) error {
 	return nil
 }
 
-func (c Command) getUserContext(ctx context.Context, ctxName, ns, token string) (*types.UserContext, error) {
+func (c *Command) getUserContext(ctx context.Context, ctxName, ns, token string) (*types.UserContext, error) {
 	client, err := c.OktetoClientProvider.Provide(
 		okteto.WithCtxName(ctxName),
 		okteto.WithToken(token),
@@ -411,35 +419,6 @@ func (c Command) getUserContext(ctx context.Context, ctxName, ns, token string) 
 		return userContext, nil
 	}
 	return nil, oktetoErrors.ErrInternalServerError
-}
-
-func (*Command) loadDotEnv(fs afero.Fs, setEnvFunc func(key, value string) error, lookupEnv func(key string) (string, bool)) error {
-	dotEnvFile := ".env"
-	if filesystem.FileExistsWithFilesystem(dotEnvFile, fs) {
-		content, err := afero.ReadFile(fs, dotEnvFile)
-		if err != nil {
-			return fmt.Errorf("error reading file: %w", err)
-		}
-		expanded, err := env.ExpandEnv(string(content))
-		if err != nil {
-			return fmt.Errorf("error expanding dot env file: %w", err)
-		}
-		vars, err := godotenv.UnmarshalBytes([]byte(expanded))
-		if err != nil {
-			return fmt.Errorf("error parsing dot env file: %w", err)
-		}
-		for k, v := range vars {
-			if _, exists := lookupEnv(k); exists {
-				continue
-			}
-			err := setEnvFunc(k, v)
-			if err != nil {
-				return fmt.Errorf("error setting env var: %w", err)
-			}
-			oktetoLog.AddMaskedWord(v)
-		}
-	}
-	return nil
 }
 
 func isUrl(u string) bool {

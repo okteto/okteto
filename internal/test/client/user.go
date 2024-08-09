@@ -17,15 +17,15 @@ import (
 	"context"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
-	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 // FakeUserClient is used to mock the userClient interface
 type FakeUserClient struct {
 	errGetPlatformVariables error
 	userCtx                 *types.UserContext
-	platformVariables       []env.Var
+	platformVariables       []vars.Var
 	err                     []error
 	ClusterMetadata         types.ClusterMetadata
 }
@@ -50,7 +50,7 @@ func (c *FakeUserClient) GetContext(_ context.Context, _ string) (*types.UserCon
 	return c.userCtx, nil
 }
 
-func (c *FakeUserClient) GetOktetoPlatformVariables(_ context.Context) ([]env.Var, error) {
+func (c *FakeUserClient) GetOktetoPlatformVariables(_ context.Context) ([]vars.Var, error) {
 	if c.errGetPlatformVariables != nil {
 		return nil, c.errGetPlatformVariables
 	}

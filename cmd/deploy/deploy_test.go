@@ -39,6 +39,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -193,23 +194,23 @@ type fakeDeployer struct {
 	mock.Mock
 }
 
-func getManifestWithError(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getManifestWithError(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getFakeManifest(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 	return fakeManifest, nil
 }
 
-func getErrorManifest(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getErrorManifest(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 	return errorManifest, nil
 }
 
-func getManifestWithNoDeployNorDependency(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getManifestWithNoDeployNorDependency(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 	return noDeployNorDependenciesManifest, nil
 }
 
-func getFakeManifestWithDependency(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getFakeManifestWithDependency(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 	return fakeManifestWithDependency, nil
 }
 
@@ -235,6 +236,7 @@ func (f *fakeDeployer) Get(ctx context.Context,
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	ioCtrl *io.Controller,
 	k8Logger *io.K8sLogger,
+	varManager *vars.Manager,
 	dependencyEnvVarsGetter dependencyEnvVarsGetter,
 ) (Deployer, error) {
 	args := f.Called(ctx, opts, buildEnvVarsGetter, cmapHandler, k8sProvider, ioCtrl, k8Logger, dependencyEnvVarsGetter)
@@ -311,6 +313,9 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 }
 
 func TestCreateConfigMapWithBuildError(t *testing.T) {
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = varManager
+
 	fakeNamespace := "test"
 	fakeK8sClientProvider := test.NewFakeK8sProvider()
 	opts := &Options{
@@ -335,7 +340,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 		},
 	}
 
-	builderV2 := buildv2.NewBuilder(builder, reg, io.NewIOController(), okCtx, io.NewK8sLogger(), []buildv2.OnBuildFinish{})
+	builderV2 := buildv2.NewBuilder(builder, reg, io.NewIOController(), okCtx, io.NewK8sLogger(), varManager, []buildv2.OnBuildFinish{})
 	c := &Command{
 		GetManifest:       getErrorManifest,
 		Builder:           builderV2,
@@ -343,6 +348,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                afero.NewMemMapFs(),
 		IoCtrl:            io.NewIOController(),
+		VarManager:        varManager,
 	}
 
 	ctx := context.Background()
@@ -417,6 +423,7 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 		Fs:                fakeOs,
 		Builder:           &fakeV2Builder{},
 		IoCtrl:            io.NewIOController(),
+		VarManager:        vars.NewVarsManager(&fakeVarManager{}),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -506,6 +513,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                afero.NewMemMapFs(),
 		IoCtrl:            io.NewIOController(),
+		VarManager:        vars.NewVarsManager(&fakeVarManager{}),
 	}
 	ctx := context.Background()
 
@@ -558,6 +566,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		GetDeployer:       fakeDeployer.Get,
 		Builder:           &fakeV2Builder{},
 		IoCtrl:            io.NewIOController(),
+		VarManager:        vars.NewVarsManager(&fakeVarManager{}),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -682,6 +691,7 @@ func TestDeployDependencies(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dc := &Command{
 				PipelineCMD: fakePipelineDeployer{tc.config.pipelineErr},
+				VarManager:  vars.NewVarsManager(&fakeVarManager{}),
 			}
 			assert.ErrorIs(t, tc.expected, dc.deployDependencies(context.Background(), &Options{Manifest: fakeManifest}))
 		})
@@ -709,6 +719,7 @@ func TestDeployOnlyDependencies(t *testing.T) {
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		GetDeployer:       fakeDeployer.Get,
 		IoCtrl:            io.NewIOController(),
+		VarManager:        vars.NewVarsManager(&fakeVarManager{}),
 	}
 	ctx := context.Background()
 	opts := &Options{

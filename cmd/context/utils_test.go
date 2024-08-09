@@ -22,11 +22,14 @@ import (
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_GetManifestV2(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	tests := []struct {
 		expectedManifest *model.Manifest
 		name             string
@@ -113,7 +116,7 @@ dependencies:
 				filename = ""
 			}
 
-			m, err := model.GetManifestV2(filename, afero.NewMemMapFs())
+			m, err := model.GetManifestV2(filename, afero.NewMemMapFs(), vars.NewVarsManager(&fakeVarManager{}))
 			if tt.expectedErr {
 				assert.NotNil(t, err)
 			} else {

@@ -46,6 +46,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
@@ -121,16 +122,17 @@ type destroyCommand struct {
 	k8sClientProvider    okteto.K8sClientProvider
 	ConfigMapHandler     configMapHandler
 	analyticsTracker     analyticsTrackerInterface
-	getManifest          func(path string, fs afero.Fs) (*model.Manifest, error)
+	getManifest          func(path string, fs afero.Fs, varManager *vars.Manager) (*model.Manifest, error)
 	oktetoClient         *okteto.Client
 	ioCtrl               *io.Controller
+	varManager           *vars.Manager
 	getDivertDriver      divertProvider
 	getPipelineDestroyer pipelineDestroyerProvider
 	buildCtrl            buildCtrl
 }
 
 // Destroy destroys the dev application defined by the manifest
-func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command {
+func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, varManager *vars.Manager, fs afero.Fs) *cobra.Command {
 	options := &Options{
 		Variables: []string{},
 	}
@@ -177,7 +179,8 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 				Context:   options.K8sContext,
 				Namespace: options.Namespace,
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, ctxOpts); err != nil {
 				return err
 			}
 
@@ -229,13 +232,14 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 				secrets:           secrets.NewSecrets(k8sClient),
 				k8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
 				oktetoClient:      okClient,
-				buildCtrl:         newBuildCtrl(options.Name, at, insights, ioCtrl),
+				buildCtrl:         newBuildCtrl(options.Name, at, insights, ioCtrl, varManager),
 				analyticsTracker:  at,
 				getManifest:       model.GetManifestV2,
 				ioCtrl:            ioCtrl,
+				varManager:        varManager,
 				getDivertDriver:   divert.New,
 				getPipelineDestroyer: func() (pipelineDestroyer, error) {
-					return pipelineCMD.NewCommand()
+					return pipelineCMD.NewCommand(varManager)
 				},
 			}
 
@@ -246,7 +250,7 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 			if err := kubeconfig.Write(okteto.GetContext().Cfg, kubeconfigPath); err != nil {
 				return err
 			}
-			os.Setenv("KUBECONFIG", kubeconfigPath)
+			varManager.AddBuiltInVar("KUBECONFIG", kubeconfigPath)
 			defer os.Remove(kubeconfigPath)
 
 			return c.runDestroy(ctx, options)
@@ -346,7 +350,7 @@ func (dc *destroyCommand) destroyAll(ctx context.Context, opts *Options) error {
 
 // destroy runs the logic needed to destroy a dev environment
 func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
-	manifest, err := dc.getManifest(opts.ManifestPath, afero.NewOsFs())
+	manifest, err := dc.getManifest(opts.ManifestPath, afero.NewOsFs(), dc.varManager)
 	if err != nil {
 		// Log error message but application can still be deleted
 		oktetoLog.Infof("could not find manifest file to be executed: %s", err)
@@ -367,7 +371,7 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 		if err := dc.buildCtrl.buildImageIfNecessary(ctx, opts.Manifest); err != nil {
 			return err
 		}
-		opts.Manifest.Destroy.Image, err = env.ExpandEnvIfNotEmpty(opts.Manifest.Destroy.Image)
+		opts.Manifest.Destroy.Image, err = dc.varManager.ExpandExcLocalIfNotEmpty(opts.Manifest.Destroy.Image)
 		if err != nil {
 			return err
 		}
@@ -397,6 +401,7 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 			oktetoLog.AddMaskedWord(variable.Value)
 		}
 	}
+	opts.Variables = append(opts.Variables, env.GetDefaultLocalEnvs()...)
 	oktetoLog.EnableMasking()
 
 	// update to change status
@@ -412,7 +417,7 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 		return err
 	}
 
-	os.Setenv(constants.OktetoNameEnvVar, opts.Name)
+	dc.varManager.AddBuiltInVar(constants.OktetoNameEnvVar, opts.Name)
 
 	if opts.DestroyDependencies {
 		if err := dc.destroyDependencies(ctx, opts); err != nil {

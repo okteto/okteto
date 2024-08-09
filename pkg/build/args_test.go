@@ -16,6 +16,7 @@ package build
 import (
 	"testing"
 
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 )
@@ -120,8 +121,9 @@ func TestArgsUnmarshalling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
 			for k, v := range tt.env {
-				t.Setenv(k, v)
+				vars.GlobalVarManager.AddDotEnvVar(k, v)
 			}
 
 			var args Args

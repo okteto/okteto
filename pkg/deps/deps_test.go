@@ -19,10 +19,15 @@ import (
 
 	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 )
+
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string) {}
 
 func Test_GetTimeout(t *testing.T) {
 	tests := []struct {
@@ -60,17 +65,19 @@ func Test_GetTimeout(t *testing.T) {
 }
 
 func Test_ExpandVars(t *testing.T) {
-	t.Setenv("MY_CUSTOM_VAR_FROM_ENVIRON", "varValueFromEnv")
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager.AddDotEnvVar("MY_CUSTOM_VAR_FROM_ENVIRON", "varValueFromEnv")
+
 	dependency := Dependency{
 		Repository:   "${REPO}",
 		Branch:       "${NOBRANCHSET-$BRANCH}",
 		ManifestPath: "${NOMPATHSET=$MPATH}",
 		Variables: env.Environment{
-			env.Var{
+			vars.Var{
 				Name:  "MYVAR",
 				Value: "${AVARVALUE}",
 			},
-			env.Var{
+			vars.Var{
 				Name:  "$${ANAME}",
 				Value: "${MY_CUSTOM_VAR_FROM_ENVIRON}",
 			},
@@ -81,11 +88,11 @@ func Test_ExpandVars(t *testing.T) {
 		Branch:       "myBranch",
 		ManifestPath: "api/okteto.yml",
 		Variables: env.Environment{
-			env.Var{
+			vars.Var{
 				Name:  "MYVAR",
 				Value: "thisIsAValue",
 			},
-			env.Var{
+			vars.Var{
 				Name:  "${ANAME}",
 				Value: "varValueFromEnv",
 			},
@@ -100,12 +107,14 @@ func Test_ExpandVars(t *testing.T) {
 		"AVARVALUE=thisIsAValue",
 	}
 
-	err := dependency.ExpandVars(envVariables)
+	err := dependency.ExpandVars(envVariables, varManager)
 	require.NoError(t, err)
 	assert.Equal(t, expected, dependency)
 }
 
 func Test_ManifestDependencies_UnmarshalYAML(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	tests := []struct {
 		expected    ManifestSection
 		name        string
@@ -158,7 +167,7 @@ frontend:
 					ManifestPath: "frontend.yml",
 					Branch:       "frontend-branch",
 					Variables: env.Environment{
-						env.Var{
+						vars.Var{
 							Name:  "ENVIRONMENT",
 							Value: "test",
 						},

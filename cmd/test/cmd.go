@@ -47,6 +47,7 @@ import (
 	"github.com/okteto/okteto/pkg/remote"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/okteto/okteto/pkg/validator"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -69,7 +70,7 @@ type builder interface {
 	Build(ctx context.Context, options *types.BuildOptions) error
 }
 
-func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at *analytics.Tracker) *cobra.Command {
+func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, varManager *vars.Manager, at *analytics.Tracker) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
 		Use:   "test",
@@ -86,7 +87,7 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 
 			go func() {
 				startTime := time.Now()
-				metadata, err := doRun(ctx, servicesToTest, options, ioCtrl, k8sLogger, &ProxyTracker{at})
+				metadata, err := doRun(ctx, servicesToTest, options, ioCtrl, k8sLogger, varManager, &ProxyTracker{at})
 				metadata.Err = err
 				metadata.Duration = time.Since(startTime)
 				at.TrackTest(metadata)
@@ -118,7 +119,7 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 	return cmd
 }
 
-func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, tracker *ProxyTracker) (analytics.TestMetadata, error) {
+func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, varManager *vars.Manager, tracker *ProxyTracker) (analytics.TestMetadata, error) {
 	fs := afero.NewOsFs()
 
 	ctxOpts := &contextCMD.Options{
@@ -126,7 +127,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		Namespace: options.Namespace,
 		Show:      true,
 	}
-	if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+	if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, ctxOpts); err != nil {
 		return analytics.TestMetadata{}, err
 	}
 
@@ -139,7 +140,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		return analytics.TestMetadata{}, err
 	}
 	if create {
-		nsCmd, err := namespace.NewCommand()
+		nsCmd, err := namespace.NewCommand(varManager)
 		if err != nil {
 			return analytics.TestMetadata{}, err
 		}
@@ -179,7 +180,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		options.ManifestPath = uptManifestPath
 	}
 
-	manifest, err := model.GetManifestV2(options.ManifestPath, fs)
+	manifest, err := model.GetManifestV2(options.ManifestPath, fs, varManager)
 	if err != nil {
 		return analytics.TestMetadata{}, err
 	}
@@ -209,14 +210,14 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 	k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
 
-	pc, err := pipelineCMD.NewCommand()
+	pc, err := pipelineCMD.NewCommand(varManager)
 	if err != nil {
 		return analytics.TestMetadata{}, fmt.Errorf("could not create pipeline command: %w", err)
 	}
 
 	configmapHandler := deployCMD.NewConfigmapHandler(k8sClientProvider, k8sLogger)
 
-	builder := buildv2.NewBuilderFromScratch(ioCtrl, []buildv2.OnBuildFinish{
+	builder := buildv2.NewBuilderFromScratch(ioCtrl, varManager, []buildv2.OnBuildFinish{
 		tracker.TrackImageBuild,
 	})
 
@@ -252,7 +253,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 	if shouldDeploy {
 		c := deployCMD.Command{
-			GetManifest: func(path string, fs afero.Fs) (*model.Manifest, error) {
+			GetManifest: func(path string, fs afero.Fs, varManager *vars.Manager) (*model.Manifest, error) {
 				return manifest, nil
 			},
 			K8sClientProvider:  k8sClientProvider,
@@ -345,7 +346,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			TemplateName:        "dockerfile",
 			CommandFlags:        commandFlags,
 			BuildEnvVars:        builder.GetBuildEnvVars(),
-			DependenciesEnvVars: deployCMD.GetDependencyEnvVars(os.Environ),
+			DependenciesEnvVars: deployCMD.GetDependencyEnvVars(varManager.GetOktetoVariablesExcLocal),
 			DockerfileName:      "Dockerfile.test",
 			Deployable: deployable.Entity{
 				Commands: commands,

@@ -37,6 +37,7 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 )
 
@@ -75,8 +76,9 @@ type OktetoBuilder struct {
 	// buildEnvironments are the environment variables created by the build steps
 	buildEnvironments map[string]string
 
-	ioCtrl    *io.Controller
-	k8sLogger *io.K8sLogger
+	ioCtrl     *io.Controller
+	k8sLogger  *io.K8sLogger
+	varManager *vars.Manager
 
 	onBuildFinish []OnBuildFinish
 
@@ -87,19 +89,19 @@ type OktetoBuilder struct {
 type OnBuildFinish func(ctx context.Context, meta *analytics.ImageBuildMetadata)
 
 // NewBuilder creates a new okteto builder
-func NewBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.Controller, okCtx okteto.ContextInterface, k8sLogger *io.K8sLogger, onBuildFinish []OnBuildFinish) *OktetoBuilder {
+func NewBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistryInterface, ioCtrl *io.Controller, okCtx okteto.ContextInterface, k8sLogger *io.K8sLogger, varManager *vars.Manager, onBuildFinish []OnBuildFinish) *OktetoBuilder {
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
 	wd, err := wdCtrl.Get()
 	if err != nil {
 		ioCtrl.Logger().Infof("could not get working dir: %s", err)
 	}
 	gitRepo := repository.NewRepository(wd)
-	config := getConfigStateless(registry, gitRepo, ioCtrl.Logger(), okCtx.IsOktetoCluster())
+	config := getConfigStateless(registry, gitRepo, ioCtrl.Logger(), okCtx.IsOktetoCluster(), varManager)
 
 	buildEnvs := map[string]string{}
 	buildEnvs[OktetoEnableSmartBuildEnvVar] = strconv.FormatBool(config.isSmartBuildsEnable)
 	return &OktetoBuilder{
-		Builder:           basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl},
+		Builder:           basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl, VarManager: varManager},
 		Registry:          registry,
 		buildEnvironments: buildEnvs,
 		Config:            config,
@@ -107,12 +109,13 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistry
 		smartBuildCtrl:    smartbuild.NewSmartBuildCtrl(gitRepo, registry, config.fs, ioCtrl),
 		oktetoContext:     okCtx,
 		k8sLogger:         k8sLogger,
+		varManager:        varManager,
 		onBuildFinish:     onBuildFinish,
 	}
 }
 
 // NewBuilderFromScratch creates a new okteto builder
-func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish) *OktetoBuilder {
+func NewBuilderFromScratch(ioCtrl *io.Controller, varManager *vars.Manager, onBuildFinish []OnBuildFinish) *OktetoBuilder {
 	builder := buildCmd.NewOktetoBuilder(
 		&okteto.ContextStateless{
 			Store: okteto.GetContextStore(),
@@ -133,7 +136,7 @@ func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish)
 		wd = topLevelGitDir
 	}
 	gitRepo := repository.NewRepository(wd)
-	config := getConfig(reg, gitRepo, ioCtrl.Logger())
+	config := getConfig(reg, gitRepo, ioCtrl.Logger(), varManager)
 
 	buildEnvs := map[string]string{}
 	buildEnvs[OktetoEnableSmartBuildEnvVar] = strconv.FormatBool(config.isSmartBuildsEnable)
@@ -142,11 +145,12 @@ func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish)
 	}
 
 	return &OktetoBuilder{
-		Builder:           basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl},
+		Builder:           basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl, VarManager: varManager},
 		Registry:          reg,
 		buildEnvironments: buildEnvs,
 		Config:            config,
 		ioCtrl:            ioCtrl,
+		varManager:        varManager,
 		smartBuildCtrl:    smartbuild.NewSmartBuildCtrl(gitRepo, reg, config.fs, ioCtrl),
 		oktetoContext:     okCtx,
 
@@ -349,7 +353,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 		tagsToBuild = fmt.Sprintf("%s,%s", tagsToBuild, globalImage)
 	}
 	buildSvcInfo.Image = tagsToBuild
-	if err := buildSvcInfo.AddArgs(bc.buildEnvironments); err != nil {
+	if err := buildSvcInfo.AddArgs(bc.buildEnvironments, bc.varManager); err != nil {
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcName, err)
 	}
 

@@ -16,7 +16,6 @@ package deps
 import (
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -24,6 +23,7 @@ import (
 	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model/utils"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 // ManifestSection represents the map of dependencies at a manifest
@@ -48,8 +48,8 @@ func (d *Dependency) GetTimeout(defaultTimeout time.Duration) time.Duration {
 }
 
 // ExpandVars sets dependencies values if values fits with list params
-func (d *Dependency) ExpandVars(variables []string) error {
-	parser := parse.New("string", append(os.Environ(), variables...), &parse.Restrictions{})
+func (d *Dependency) ExpandVars(variables []string, varManager *vars.Manager) error {
+	parser := parse.New("string", append(varManager.GetOktetoVariablesExcLocal(), variables...), &parse.Restrictions{})
 
 	expandedBranch, err := parser.Parse(d.Branch)
 	if err != nil {
@@ -93,7 +93,7 @@ func (d *Dependency) ExpandVars(variables []string) error {
 			v.Value = expandedVarValue
 		}
 
-		expandedVariables = append(expandedVariables, env.Var{
+		expandedVariables = append(expandedVariables, vars.Var{
 			Name:  v.Name,
 			Value: v.Value,
 		})

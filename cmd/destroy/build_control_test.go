@@ -23,9 +23,14 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string) {}
 
 type fakeBuilderV2 struct {
 	build   error
@@ -194,7 +199,7 @@ func (fakeAnalyticsTracker) TrackImageBuild(context.Context, *analytics.ImageBui
 func (fakeAnalyticsTracker) TrackDestroy(analytics.DestroyMetadata)                         {}
 
 func Test_newBuildCtrl(t *testing.T) {
-	got := newBuildCtrl("test-control", &fakeAnalyticsTracker{}, &fakeAnalyticsTracker{}, io.NewIOController())
+	got := newBuildCtrl("test-control", &fakeAnalyticsTracker{}, &fakeAnalyticsTracker{}, io.NewIOController(), vars.NewVarsManager(&fakeVarManager{}))
 
 	require.Equal(t, "test-control", got.name)
 	require.IsType(t, got.builder, &v2.OktetoBuilder{})

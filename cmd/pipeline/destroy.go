@@ -29,6 +29,7 @@ import (
 	modelUtils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 )
 
@@ -50,7 +51,7 @@ type DestroyOptions struct {
 	Timeout        time.Duration
 }
 
-func destroy(ctx context.Context) *cobra.Command {
+func destroy(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	flags := &destroyFlags{}
 
 	cmd := &cobra.Command{
@@ -64,7 +65,7 @@ okteto pipeline destroy --wait=false`,
 				Namespace: flags.namespace,
 				Show:      true,
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, ctxOptions); err != nil {
 				return err
 			}
 
@@ -72,7 +73,7 @@ okteto pipeline destroy --wait=false`,
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			pipelineCmd, err := NewCommand()
+			pipelineCmd, err := NewCommand(varManager)
 			if err != nil {
 				return err
 			}

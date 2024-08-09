@@ -22,6 +22,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 )
 
@@ -40,7 +41,13 @@ const (
 `
 )
 
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string) {}
+
 func Test_multipleStack(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
 	dir := t.TempDir()
 	log.Printf("created tempdir: %s", dir)
 	t.Setenv("OKTETO_SUPPORT_STACKS_ENABLED", "true")
@@ -62,7 +69,7 @@ func Test_multipleStack(t *testing.T) {
 	}
 	var svcResult = &model.Service{
 		Environment: env.Environment{
-			env.Var{
+			vars.Var{
 				Name:  "a",
 				Value: "b",
 			},
@@ -84,7 +91,8 @@ func Test_multipleStack(t *testing.T) {
 		t.Fatalf("Expected %v but got %v", svcResult.Image, svc.Image)
 	}
 
-	t.Setenv("OKTETO_BUILD_APP_IMAGE", "test")
+	vars.GlobalVarManager.AddBuiltInVar("OKTETO_BUILD_APP_IMAGE", "test")
+
 	svcResult.Image = "test"
 
 	stack, err = model.LoadStack("", paths, true, afero.NewMemMapFs())
@@ -129,7 +137,7 @@ func Test_overrideFileStack(t *testing.T) {
 
 	var svcResult = &model.Service{
 		Environment: env.Environment{
-			env.Var{
+			vars.Var{
 				Name:  "a",
 				Value: "b",
 			},

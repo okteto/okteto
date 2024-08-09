@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 func Test_isReservedVariableName(t *testing.T) {
@@ -132,7 +133,7 @@ func TestCheckReservedVarName(t *testing.T) {
 		{
 			name: "invalid name should return err",
 			args: args{
-				variables: []env.Var{
+				variables: []vars.Var{
 					{
 						Name:  "OKTETO_CONTEXT",
 						Value: "value",
@@ -144,7 +145,7 @@ func TestCheckReservedVarName(t *testing.T) {
 		{
 			name: "valid name should not return err",
 			args: args{
-				variables: []env.Var{
+				variables: []vars.Var{
 					{
 						Name:  "NAME",
 						Value: "value",

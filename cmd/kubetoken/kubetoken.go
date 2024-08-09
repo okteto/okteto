@@ -22,6 +22,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -86,7 +87,7 @@ func defaultKubetokenOptions() *Options {
 	return &Options{
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
 		k8sClientProvider:    okteto.NewK8sClientProvider(),
-		oktetoCtxCmdRunner:   contextCMD.NewContextCommand(),
+		oktetoCtxCmdRunner:   contextCMD.NewContextCommand(contextCMD.WithVarManager(vars.GlobalVarManager)),
 		ctxStore:             ctxStore,
 		serializer:           &Serializer{},
 		getCtxResource:       getCtxResource,

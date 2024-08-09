@@ -32,6 +32,7 @@ import (
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -310,7 +311,7 @@ func (dev *Dev) expandEnvVars() error {
 func (dev *Dev) loadName() error {
 	var err error
 	if len(dev.Name) > 0 {
-		dev.Name, err = env.ExpandEnv(dev.Name)
+		dev.Name, err = vars.GlobalVarManager.ExpandExcLocal(dev.Name)
 		if err != nil {
 			return err
 		}
@@ -321,7 +322,7 @@ func (dev *Dev) loadName() error {
 func (dev *Dev) loadSelector() error {
 	var err error
 	for i := range dev.Selector {
-		dev.Selector[i], err = env.ExpandEnv(dev.Selector[i])
+		dev.Selector[i], err = vars.GlobalVarManager.ExpandExcLocal(dev.Selector[i])
 		if err != nil {
 			return err
 		}
@@ -332,7 +333,7 @@ func (dev *Dev) loadSelector() error {
 func (dev *Dev) loadImage() error {
 	var err error
 	if dev.Image != "" {
-		dev.Image, err = env.ExpandEnvIfNotEmpty(dev.Image)
+		dev.Image, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(dev.Image)
 		if err != nil {
 			return err
 		}
@@ -485,7 +486,7 @@ func (dev *Dev) setTimeout() error {
 // expandEnvFiles reads each env file and append all the variables to the environment
 func (dev *Dev) expandEnvFiles() error {
 	for _, envFile := range dev.EnvFiles {
-		filename, err := env.ExpandEnv(envFile)
+		filename, err := vars.GlobalVarManager.ExpandIncLocal(envFile)
 		if err != nil {
 			return err
 		}
@@ -500,7 +501,7 @@ func (dev *Dev) expandEnvFiles() error {
 			}
 		}()
 
-		envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
+		envMap, err := godotenv.ParseWithLookup(f, vars.GlobalVarManager.LookupIncLocal)
 		if err != nil {
 			return fmt.Errorf("error parsing env_file %s: %w", filename, err)
 		}
@@ -511,12 +512,12 @@ func (dev *Dev) expandEnvFiles() error {
 
 		for name, value := range envMap {
 			if value == "" {
-				value = os.Getenv(name)
+				value = vars.GlobalVarManager.GetIncLocal(name)
 			}
 			if value != "" {
 				dev.Environment = append(
 					dev.Environment,
-					env.Var{Name: name, Value: value},
+					vars.Var{Name: name, Value: value},
 				)
 			}
 		}
@@ -824,11 +825,11 @@ func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset b
 		rule.OktetoBinImageTag = dev.InitContainer.Image
 		rule.Environment = append(
 			rule.Environment,
-			env.Var{
+			vars.Var{
 				Name:  "OKTETO_NAMESPACE",
 				Value: namespace,
 			},
-			env.Var{
+			vars.Var{
 				Name:  "OKTETO_NAME",
 				Value: dev.Name,
 			},
@@ -837,7 +838,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset b
 		if username != "" {
 			rule.Environment = append(
 				rule.Environment,
-				env.Var{
+				vars.Var{
 					Name:  "OKTETO_USERNAME",
 					Value: username,
 				},
@@ -849,7 +850,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset b
 		if dev.SSHServerPort != oktetoDefaultSSHServerPort {
 			rule.Environment = append(
 				rule.Environment,
-				env.Var{
+				vars.Var{
 					Name:  oktetoSSHServerPortVariable,
 					Value: strconv.Itoa(dev.SSHServerPort),
 				},
@@ -946,27 +947,27 @@ func enableHistoryVolume(rule *TranslationRule, main *Dev) {
 		})
 
 	rule.Environment = append(rule.Environment,
-		env.Var{
+		vars.Var{
 			Name:  "HISTSIZE",
 			Value: "10000000",
 		},
-		env.Var{
+		vars.Var{
 			Name:  "HISTFILESIZE",
 			Value: "10000000",
 		},
-		env.Var{
+		vars.Var{
 			Name:  "HISTCONTROL",
 			Value: "ignoreboth:erasedups",
 		},
-		env.Var{
+		vars.Var{
 			Name:  "HISTFILE",
 			Value: "/var/okteto/bashrc/.bash_history",
 		},
-		env.Var{
+		vars.Var{
 			Name:  "BASHOPTS",
 			Value: "histappend",
 		},
-		env.Var{
+		vars.Var{
 			Name:  "PROMPT_COMMAND",
 			Value: "history -a ; history -c ; history -r",
 		})

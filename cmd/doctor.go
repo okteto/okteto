@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -40,7 +41,7 @@ type doctorOptions struct {
 }
 
 // Doctor generates a zip file with all okteto-related log files
-func Doctor(k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command {
+func Doctor(k8sLogger *io.K8sLogger, varManager *vars.Manager, fs afero.Fs) *cobra.Command {
 	doctorOpts := &doctorOptions{}
 	cmd := &cobra.Command{
 		Use:   "doctor [service]",
@@ -68,7 +69,8 @@ func Doctor(k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command {
 				Context:   doctorOpts.K8sContext,
 				Namespace: doctorOpts.Namespace,
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, ctxOpts); err != nil {
 				return err
 			}
 
@@ -76,7 +78,7 @@ func Doctor(k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command {
 				return oktetoErrors.ErrNotInDevContainer
 			}
 
-			manifest, err := model.GetManifestV2(doctorOpts.DevPath, afero.NewOsFs())
+			manifest, err := model.GetManifestV2(doctorOpts.DevPath, fs, varManager)
 			if err != nil {
 				return err
 			}

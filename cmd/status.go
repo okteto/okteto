@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -40,7 +41,7 @@ const (
 )
 
 // Status returns the status of the synchronization process
-func Status(fs afero.Fs) *cobra.Command {
+func Status(varManager *vars.Manager, fs afero.Fs) *cobra.Command {
 	var devPath string
 	var namespace string
 	var k8sContext string
@@ -69,12 +70,12 @@ func Status(fs afero.Fs) *cobra.Command {
 
 			ctx := context.Background()
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: namespace}); err != nil {
+			if err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).Run(ctx, &contextCMD.Options{Show: true, Namespace: namespace}); err != nil {
 				return err
 			}
 
 			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
-			manifest, err := model.GetManifestV2(manifestOpts.Filename, afero.NewOsFs())
+			manifest, err := model.GetManifestV2(manifestOpts.Filename, fs, varManager)
 			if err != nil {
 				return err
 			}

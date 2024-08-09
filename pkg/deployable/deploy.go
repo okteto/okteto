@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/divert"
+	oktetoEnv "github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/format"
 	kconfig "github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -32,6 +33,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"k8s.io/client-go/rest"
 )
@@ -80,16 +82,18 @@ type ExternalResourceInterface interface {
 // run locally or remotely. As this runs also in the remote, it should NEVER build any kind of image
 // or execute some logic that might differ from local.
 type DeployRunner struct {
-	Proxy              ProxyInterface
-	Kubeconfig         KubeConfigHandler
-	ConfigMapHandler   ConfigMapHandler
-	Executor           executor.ManifestExecutor
-	K8sClientProvider  okteto.K8sClientProviderWithLogger
-	Fs                 afero.Fs
-	DivertDeployer     DivertDeployer
-	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
-	k8sLogger          *io.K8sLogger
-	TempKubeconfigFile string
+	Proxy                   ProxyInterface
+	Kubeconfig              KubeConfigHandler
+	ConfigMapHandler        ConfigMapHandler
+	Executor                executor.ManifestExecutor
+	K8sClientProvider       okteto.K8sClientProviderWithLogger
+	Fs                      afero.Fs
+	DivertDeployer          DivertDeployer
+	GetExternalControl      func(cfg *rest.Config) ExternalResourceInterface
+	k8sLogger               *io.K8sLogger
+	varManager              *vars.Manager
+	createTempOktetoEnvFile func(afero.Fs, *vars.Manager) (afero.File, func(), error)
+	TempKubeconfigFile      string
 }
 
 // Entity represents a set of resources that can be deployed by the runner
@@ -124,6 +128,7 @@ func NewDeployRunnerForRemote(
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	portGetter PortGetterFunc,
 	k8sLogger *io.K8sLogger,
+	varManager *vars.Manager,
 ) (*DeployRunner, error) {
 	kubeconfig := NewKubeConfig()
 	tempKubeconfigName := name
@@ -135,15 +140,17 @@ func NewDeployRunnerForRemote(
 	}
 
 	return &DeployRunner{
-		Kubeconfig:         kubeconfig,
-		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash, ""),
-		ConfigMapHandler:   cmapHandler,
-		Proxy:              proxy,
-		TempKubeconfigFile: GetTempKubeConfigFile(tempKubeconfigName),
-		K8sClientProvider:  k8sProvider,
-		GetExternalControl: newDeployExternalK8sControl,
-		Fs:                 afero.NewOsFs(),
-		k8sLogger:          k8sLogger,
+		Kubeconfig:              kubeconfig,
+		Executor:                executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash, ""),
+		ConfigMapHandler:        cmapHandler,
+		Proxy:                   proxy,
+		TempKubeconfigFile:      GetTempKubeConfigFile(tempKubeconfigName),
+		K8sClientProvider:       k8sProvider,
+		GetExternalControl:      newDeployExternalK8sControl,
+		Fs:                      afero.NewOsFs(),
+		k8sLogger:               k8sLogger,
+		varManager:              varManager,
+		createTempOktetoEnvFile: createTempOktetoEnvFile,
 	}, nil
 }
 
@@ -158,6 +165,7 @@ func NewDeployRunnerForLocal(
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	portGetter PortGetterFunc,
 	k8sLogger *io.K8sLogger,
+	varManager *vars.Manager,
 ) (*DeployRunner, error) {
 	kubeconfig := NewKubeConfig()
 	cwd, err := os.Getwd()
@@ -181,15 +189,17 @@ func NewDeployRunnerForLocal(
 	}
 
 	return &DeployRunner{
-		Kubeconfig:         kubeconfig,
-		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash, ""),
-		ConfigMapHandler:   cmapHandler,
-		Proxy:              proxy,
-		TempKubeconfigFile: GetTempKubeConfigFile(tempKubeconfigName),
-		K8sClientProvider:  k8sProvider,
-		GetExternalControl: newDeployExternalK8sControl,
-		Fs:                 afero.NewOsFs(),
-		k8sLogger:          k8sLogger,
+		Kubeconfig:              kubeconfig,
+		Executor:                executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash, ""),
+		ConfigMapHandler:        cmapHandler,
+		Proxy:                   proxy,
+		TempKubeconfigFile:      GetTempKubeConfigFile(tempKubeconfigName),
+		K8sClientProvider:       k8sProvider,
+		GetExternalControl:      newDeployExternalK8sControl,
+		Fs:                      afero.NewOsFs(),
+		k8sLogger:               k8sLogger,
+		varManager:              varManager,
+		createTempOktetoEnvFile: createTempOktetoEnvFile,
 	}, nil
 }
 
@@ -219,7 +229,7 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 		r.DivertDeployer = driver
 	}
 
-	os.Setenv(constants.OktetoNameEnvVar, params.Name)
+	r.varManager.AddBuiltInVar(constants.OktetoNameEnvVar, params.Name)
 
 	oktetoLog.SetStage("")
 
@@ -270,7 +280,7 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 
 // runCommandsSection runs the commands defined in the command section of the deployable entity
 func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployParameters) error {
-	oktetoEnvFile, unlinkEnv, err := createTempOktetoEnvFile(r.Fs)
+	oktetoEnvFile, unlinkEnv, err := r.createTempOktetoEnvFile(r.Fs, r.varManager)
 	if err != nil {
 		return err
 	}
@@ -287,7 +297,13 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 			oktetoLog.SetStage(command.Name)
 			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Executing command '%s'...", command.Name)
 
-			err := r.Executor.Execute(command, params.Variables)
+			// env is composed by  params.Variables and r.varManager.GetOktetoVariablesExcLocal()
+			var env []string
+			env = append(env, params.Variables...)
+			env = append(env, oktetoEnv.GetDefaultLocalEnvs()...)
+			env = append(env, r.varManager.GetOktetoVariablesExcLocal()...)
+
+			err := r.Executor.Execute(command, env)
 			if err != nil {
 				elapsedTime := time.Since(startTime)
 				if err := r.ConfigMapHandler.AddPhaseDuration(ctx, params.Name, params.Namespace, deployCommandsPhaseName, elapsedTime); err != nil {
@@ -403,7 +419,7 @@ func (r *DeployRunner) CleanUp(ctx context.Context, err error) {
 }
 
 // createTempOktetoEnvFile creates a temporal file use to store the environment variables
-func createTempOktetoEnvFile(fs afero.Fs) (afero.File, func(), error) {
+func createTempOktetoEnvFile(fs afero.Fs, varManager *vars.Manager) (afero.File, func(), error) {
 	oktetoEnvFileDir, err := afero.TempDir(fs, "", "")
 	if err != nil {
 		return nil, func() {}, err
@@ -414,7 +430,7 @@ func createTempOktetoEnvFile(fs afero.Fs) (afero.File, func(), error) {
 		return nil, func() {}, err
 	}
 
-	os.Setenv(constants.OktetoEnvFile, oktetoEnvFile.Name())
+	varManager.AddBuiltInVar(constants.OktetoEnvFile, oktetoEnvFile.Name())
 	oktetoLog.Debug(fmt.Sprintf("using %s as env file for deploy command", oktetoEnvFile.Name()))
 
 	return oktetoEnvFile, func() {

@@ -183,7 +183,6 @@ func Test_getStructKeys(t *testing.T) {
 			input: Manifest{},
 			expected: map[string][]string{
 				"deps.Dependency":            {"repository", "manifest", "branch", "variables", "timeout", "wait"},
-				"env.Var":                    {"name", "value"},
 				"forward.Forward":            {"labels", "name", "localPort", "remotePort"},
 				"forward.GlobalForward":      {"labels", "name", "localPort", "remotePort"},
 				"build.Info":                 {"secrets", "name", "context", "dockerfile", "target", "image", "cache_from", "args", "export_cache", "depends_on"},

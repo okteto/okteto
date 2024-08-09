@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 )
 
@@ -51,7 +52,7 @@ type DestroyCommand struct {
 
 // Destroy starts the destroy command remotely. This is the command executed in the
 // remote environment when destroy deploy is executed with the remote flag
-func Destroy(ctx context.Context) *cobra.Command {
+func Destroy(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	options := &DestroyOptions{}
 	cmd := &cobra.Command{
 		Use:   "destroy",
@@ -73,7 +74,7 @@ It is important that this command does the minimum and must not do calculations 
 				return fmt.Errorf("--name is required")
 			}
 
-			oktetoContext, err := contextCMD.NewContextCommand().RunStateless(ctx, &contextCMD.Options{})
+			oktetoContext, err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).RunStateless(ctx, &contextCMD.Options{})
 			if err != nil {
 				return err
 			}
@@ -84,7 +85,7 @@ It is important that this command does the minimum and must not do calculations 
 			if err := kubeconfig.Write(oktetoContext.GetCurrentCfg(), kubeconfigPath); err != nil {
 				return err
 			}
-			os.Setenv("KUBECONFIG", kubeconfigPath)
+			varManager.AddBuiltInVar("KUBECONFIG", kubeconfigPath)
 			defer os.Remove(kubeconfigPath)
 
 			dep, err := getDeployable()
@@ -94,7 +95,7 @@ It is important that this command does the minimum and must not do calculations 
 
 			// Set the default values for the external resources environment variables (endpoints)
 			for name, external := range dep.External {
-				external.SetDefaults(name)
+				external.SetDefaults(name, varManager)
 			}
 
 			runner := &deployable.DestroyRunner{
@@ -104,7 +105,7 @@ It is important that this command does the minimum and must not do calculations 
 				return fmt.Errorf("could not initialize the command properly: %w", err)
 			}
 
-			os.Setenv(constants.OktetoNameEnvVar, options.Name)
+			varManager.AddBuiltInVar(constants.OktetoNameEnvVar, options.Name)
 
 			params := deployable.DestroyParameters{
 				Name:         options.Name,

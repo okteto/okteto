@@ -1,4 +1,4 @@
-// Copyright 2023 The Okteto Authors
+// Copyright 2024 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package env
+package vars
 
 import (
 	"testing"
@@ -21,8 +21,12 @@ import (
 )
 
 func Test_Var_UnmarshalYAML(t *testing.T) {
-	t.Setenv("DYNAMIC_VAR_VALUE", "test")
-	t.Setenv("VALUE", "test")
+	GlobalVarManager = NewVarsManager(&fakeVarManager{})
+
+	GlobalVarManager.AddLocalVar("LOCAL_VAR", "local-env-var")
+	GlobalVarManager.AddDotEnvVar("DYNAMIC_VAR_VALUE", "test")
+	GlobalVarManager.AddDotEnvVar("VALUE", "test")
+
 	tests := []struct {
 		expected    Var
 		name        string
@@ -35,6 +39,14 @@ func Test_Var_UnmarshalYAML(t *testing.T) {
 			expected: Var{
 				Name:  "foo",
 				Value: "bar",
+			},
+		},
+		{
+			name: "local vars are not expanded",
+			yaml: []byte(`name=unit-$LOCAL_VAR`),
+			expected: Var{
+				Name:  "name",
+				Value: "unit-",
 			},
 		},
 		{
@@ -95,6 +107,95 @@ func Test_Var_MarshalYAML(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			out, err := tt.v.MarshalYAML()
+			if tt.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, out)
+			}
+		})
+	}
+}
+
+func Test_CreateGroupFromLocalVars(t *testing.T) {
+	t.Run("create Group from local vars", func(t *testing.T) {
+		fakeLocalVars := []string{
+			"TEST_VAR_1=local-value1",
+			"TEST_VAR_2=local-value2",
+		}
+
+		fakeLocalGroup := ConvertLocalEnvVarsToOktetoVars(func() []string {
+			return fakeLocalVars
+		})
+
+		assert.Equal(t, 2, len(fakeLocalGroup))
+		assert.ElementsMatch(t, []Var{
+			{
+				Name:  "TEST_VAR_1",
+				Value: "local-value1",
+			},
+			{
+				Name:  "TEST_VAR_2",
+				Value: "local-value2",
+			},
+		}, fakeLocalGroup)
+	})
+}
+
+func Test_Parse(t *testing.T) {
+	tests := []struct {
+		vars        []string
+		name        string
+		expected    []Var
+		expectedErr bool
+	}{
+		{
+			name:     "empty",
+			vars:     nil,
+			expected: nil,
+		},
+		{
+			name: "with error",
+			vars: []string{
+				"foo",
+			},
+			expected:    nil,
+			expectedErr: true,
+		},
+		{
+			name: "single var",
+			vars: []string{
+				"foo=bar",
+			},
+			expected: []Var{
+				{
+					Name:  "foo",
+					Value: "bar",
+				},
+			},
+		},
+		{
+			name: "multiple vars",
+			vars: []string{
+				"foo=bar",
+				"bar=baz",
+			},
+			expected: []Var{
+				{
+					Name:  "foo",
+					Value: "bar",
+				},
+				{
+					Name:  "bar",
+					Value: "baz",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out, err := Parse(tt.vars)
 			if tt.expectedErr {
 				assert.Error(t, err)
 			} else {

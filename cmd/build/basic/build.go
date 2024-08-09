@@ -21,11 +21,11 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 )
 
@@ -39,6 +39,7 @@ type BuildRunner interface {
 type Builder struct {
 	BuildRunner BuildRunner
 	IoCtrl      *io.Controller
+	VarManager  *vars.Manager
 }
 
 // Build builds the image defined by the BuildOptions used the BuildRunner passed as dependency
@@ -74,7 +75,7 @@ func (ob *Builder) Build(ctx context.Context, options *types.BuildOptions) error
 	}
 
 	var err error
-	options.Tag, err = env.ExpandEnv(options.Tag)
+	options.Tag, err = ob.VarManager.ExpandIncLocal(options.Tag)
 	if err != nil {
 		return err
 	}

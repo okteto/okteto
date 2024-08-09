@@ -21,6 +21,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/cobra"
 )
 
@@ -29,48 +30,51 @@ type Command struct {
 	ctxCmd            *contextCMD.Command
 	okClient          types.OktetoInterface
 	k8sClientProvider okteto.K8sClientProviderWithLogger
+	varManager        *vars.Manager
 }
 
 // NewCommand creates a namespace command for use in further operations
-func NewCommand() (*Command, error) {
+func NewCommand(varManager *vars.Manager) (*Command, error) {
 	c, err := okteto.NewOktetoClient()
 	if err != nil {
 		return nil, err
 	}
 
 	return &Command{
-		ctxCmd:            contextCMD.NewContextCommand(),
+		ctxCmd:            contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)),
 		okClient:          c,
 		k8sClientProvider: okteto.NewK8sClientProviderWithLogger(nil),
+		varManager:        varManager,
 	}, nil
 }
 
 // NewCommandStateless creates a namespace command for use in further operations
-func NewCommandStateless(c *okteto.Client) *Command {
+func NewCommandStateless(c *okteto.Client, varManager *vars.Manager) *Command {
 	return &Command{
-		ctxCmd:            contextCMD.NewContextCommand(),
+		ctxCmd:            contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)),
 		okClient:          c,
 		k8sClientProvider: okteto.NewK8sClientProviderWithLogger(nil),
+		varManager:        varManager,
 	}
 }
 
 // Namespace fetch credentials for a cluster namespace
-func Namespace(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Namespace(ctx context.Context, k8sLogger *io.K8sLogger, varManager *vars.Manager) *cobra.Command {
 	options := &UseOptions{}
 	cmd := &cobra.Command{
 		Use:     "namespace",
 		Short:   "Configure the current namespace of the okteto context",
 		Aliases: []string{"ns"},
 		Args:    utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#namespace"),
-		RunE:    Use(ctx).RunE,
+		RunE:    Use(ctx, varManager).RunE,
 	}
 	cmd.Flags().BoolVarP(&options.personal, "personal", "", false, "Load personal account")
 
-	cmd.AddCommand(Use(ctx))
-	cmd.AddCommand(List(ctx))
-	cmd.AddCommand(Create(ctx))
-	cmd.AddCommand(Delete(ctx, k8sLogger))
-	cmd.AddCommand(Sleep(ctx))
-	cmd.AddCommand(Wake(ctx))
+	cmd.AddCommand(Use(ctx, varManager))
+	cmd.AddCommand(List(ctx, varManager))
+	cmd.AddCommand(Create(ctx, varManager))
+	cmd.AddCommand(Delete(ctx, k8sLogger, varManager))
+	cmd.AddCommand(Sleep(ctx, varManager))
+	cmd.AddCommand(Wake(ctx, varManager))
 	return cmd
 }

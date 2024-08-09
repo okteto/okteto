@@ -20,9 +20,9 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/cache"
-	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 )
 
@@ -59,7 +59,7 @@ type infoRaw struct {
 	DependsOn        DependsOn         `yaml:"depends_on,omitempty"`
 }
 
-func (i *Info) addExpandedPreviousImageArgs(previousImageArgs map[string]string) error {
+func (i *Info) addExpandedPreviousImageArgs(previousImageArgs map[string]string, varManager *vars.Manager) error {
 	alreadyAddedArg := map[string]bool{}
 	for _, arg := range i.Args {
 		alreadyAddedArg[arg.Name] = true
@@ -68,7 +68,7 @@ func (i *Info) addExpandedPreviousImageArgs(previousImageArgs map[string]string)
 		if _, ok := alreadyAddedArg[k]; ok {
 			continue
 		}
-		expandedValue, err := env.ExpandEnv(v)
+		expandedValue, err := varManager.ExpandExcLocal(v)
 		if err != nil {
 			return err
 		}
@@ -87,7 +87,7 @@ func (i *Info) expandManifestBuildArgs(previousImageArgs map[string]string) (err
 			oktetoLog.Infof("overriding '%s' with the content of previous build", arg.Name)
 			arg.Value = val
 		}
-		arg.Value, err = env.ExpandEnv(arg.Value)
+		arg.Value, err = vars.GlobalVarManager.ExpandExcLocal(arg.Value)
 		if err != nil {
 			return err
 		}
@@ -106,7 +106,7 @@ func (i *Info) expandSecrets() (err error) {
 			}
 			val = filepath.Join(home, val[2:])
 		}
-		i.Secrets[k], err = env.ExpandEnv(val)
+		i.Secrets[k], err = vars.GlobalVarManager.ExpandExcLocal(val)
 		if err != nil {
 			return err
 		}
@@ -130,11 +130,11 @@ func (i *Info) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	i.Name = rawBuildInfo.Name
-	i.Context, err = env.ExpandEnvIfNotEmpty(rawBuildInfo.Context)
+	i.Context, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(rawBuildInfo.Context)
 	if err != nil {
 		return err
 	}
-	i.Dockerfile, err = env.ExpandEnvIfNotEmpty(rawBuildInfo.Dockerfile)
+	i.Dockerfile, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(rawBuildInfo.Dockerfile)
 	if err != nil {
 		return err
 	}
@@ -214,14 +214,14 @@ func (i *Info) SetBuildDefaults() {
 }
 
 // AddArgs add a set of args to the build information
-func (i *Info) AddArgs(previousImageArgs map[string]string) error {
+func (i *Info) AddArgs(previousImageArgs map[string]string, varManager *vars.Manager) error {
 	if err := i.expandManifestBuildArgs(previousImageArgs); err != nil {
 		return err
 	}
 	if err := i.expandSecrets(); err != nil {
 		return err
 	}
-	return i.addExpandedPreviousImageArgs(previousImageArgs)
+	return i.addExpandedPreviousImageArgs(previousImageArgs, varManager)
 }
 
 // GetDockerfilePath returns the path to the Dockerfile

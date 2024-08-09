@@ -30,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -107,7 +108,7 @@ func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string)    { re
 func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)      { return "", "" }
 func (fr fakeRegistry) GetDevImageFromGlobal(imageWithDigest string) string { return "" }
 
-var fakeManifestV2 *model.Manifest = &model.Manifest{
+var fakeManifestV2 = &model.Manifest{
 	Build: build.ManifestBuild{
 		"test-1": &build.Info{
 			Image: "test/test-1",
@@ -118,24 +119,28 @@ var fakeManifestV2 *model.Manifest = &model.Manifest{
 	},
 }
 
-func getManifestWithError(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getManifestWithError(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getManifestWithInvalidManifestError(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getManifestWithInvalidManifestError(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 	return nil, oktetoErrors.ErrInvalidManifest
 }
 
-func getFakeManifestV2(_ string, _ afero.Fs) (*model.Manifest, error) {
+func getFakeManifestV2(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 	return fakeManifestV2, nil
 }
+
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string) {}
 
 func TestBuildIsManifestV2(t *testing.T) {
 	bc := &Command{
 		GetManifest: getFakeManifestV2,
 	}
 
-	manifest, err := bc.GetManifest("", afero.NewMemMapFs())
+	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), vars.NewVarsManager(&fakeVarManager{}))
 	assert.Nil(t, err)
 	assert.Equal(t, manifest, fakeManifestV2)
 }
@@ -145,7 +150,7 @@ func TestBuildFromDockerfile(t *testing.T) {
 		GetManifest: getManifestWithError,
 	}
 
-	manifest, err := bc.GetManifest("", afero.NewMemMapFs())
+	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), vars.NewVarsManager(&fakeVarManager{}))
 	assert.NotNil(t, err)
 	assert.Nil(t, manifest)
 }
@@ -155,7 +160,7 @@ func TestBuildErrIfInvalidManifest(t *testing.T) {
 		GetManifest: getManifestWithInvalidManifestError,
 	}
 
-	manifest, err := bc.GetManifest("", afero.NewMemMapFs())
+	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), vars.NewVarsManager(&fakeVarManager{}))
 	assert.NotNil(t, err)
 	assert.Nil(t, manifest)
 }
@@ -193,6 +198,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
+				varManager:       vars.NewVarsManager(&fakeVarManager{}),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -206,6 +212,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
+				varManager:       vars.NewVarsManager(&fakeVarManager{}),
 			},
 			options: &types.BuildOptions{
 				File: "okteto.yml",
@@ -221,6 +228,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
+				varManager:       vars.NewVarsManager(&fakeVarManager{}),
 			},
 			options: &types.BuildOptions{
 				File: malformedDockerfile,
@@ -236,6 +244,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
+				varManager:       vars.NewVarsManager(&fakeVarManager{}),
 			},
 			options: &types.BuildOptions{
 				File: dockerfile,
@@ -251,6 +260,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
+				varManager:       vars.NewVarsManager(&fakeVarManager{}),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -264,6 +274,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
+				varManager:       vars.NewVarsManager(&fakeVarManager{}),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -321,7 +332,7 @@ func Test_NewBuildCommand(t *testing.T) {
 			CurrentContext: "test",
 		},
 	}
-	got := NewBuildCommand(io.NewIOController(), fakeAnalyticsTracker{}, fakeAnalyticsTracker{}, okCtx, nil)
+	got := NewBuildCommand(io.NewIOController(), fakeAnalyticsTracker{}, fakeAnalyticsTracker{}, okCtx, nil, nil)
 	require.IsType(t, &Command{}, got)
 	require.NotNil(t, got.GetManifest)
 	require.NotNil(t, got.Builder)

@@ -27,6 +27,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -39,7 +40,7 @@ type TestOptions struct {
 
 // Test starts the test command remotely. This is the command executed in the
 // remote environment when running okteto test
-func Test(ctx context.Context) *cobra.Command {
+func Test(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 	options := &TestOptions{}
 	cmd := &cobra.Command{
 		Use:   "test",
@@ -59,7 +60,7 @@ commands:
 				return fmt.Errorf("--name is required")
 			}
 
-			oktetoContext, err := contextCMD.NewContextCommand().RunStateless(ctx, &contextCMD.Options{})
+			oktetoContext, err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).RunStateless(ctx, &contextCMD.Options{Show: true})
 			if err != nil {
 				return err
 			}
@@ -70,7 +71,7 @@ commands:
 			if err := kubeconfig.Write(oktetoContext.GetCurrentCfg(), kubeconfigPath); err != nil {
 				return err
 			}
-			os.Setenv("KUBECONFIG", kubeconfigPath)
+			varManager.AddBuiltInVar("KUBECONFIG", kubeconfigPath)
 			defer os.Remove(kubeconfigPath)
 
 			dep, err := getDeployable()
@@ -80,15 +81,16 @@ commands:
 
 			// Set the default values for the external resources environment variables (endpoints)
 			for name, external := range dep.External {
-				external.SetDefaults(name)
+				external.SetDefaults(name, varManager)
 			}
 
 			runner := &deployable.TestRunner{
-				Executor: executor.NewExecutor(oktetoLog.GetOutputFormat(), false, ""),
-				Fs:       afero.NewOsFs(),
+				Executor:   executor.NewExecutor(oktetoLog.GetOutputFormat(), false, ""),
+				Fs:         afero.NewOsFs(),
+				VarManager: varManager,
 			}
 
-			os.Setenv(constants.OktetoNameEnvVar, options.Name)
+			varManager.AddBuiltInVar(constants.OktetoNameEnvVar, options.Name)
 
 			options.Variables = append(
 				options.Variables,

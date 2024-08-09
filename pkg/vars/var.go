@@ -1,4 +1,4 @@
-// Copyright 2023 The Okteto Authors
+// Copyright 2024 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,11 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package env
+package vars
 
 import (
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -40,18 +39,18 @@ func (v *Var) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, "=", maxVarStringParts)
 	v.Name = parts[0]
 	if len(parts) == maxVarStringParts {
-		v.Value, err = ExpandEnv(parts[1])
+		v.Value, err = GlobalVarManager.ExpandExcLocal(parts[1])
 		if err != nil {
 			return err
 		}
 		return nil
 	}
 
-	v.Name, err = ExpandEnv(parts[0])
+	v.Name, err = GlobalVarManager.ExpandExcLocal(parts[0])
 	if err != nil {
 		return err
 	}
-	v.Value = os.Getenv(v.Name)
+	v.Value = GlobalVarManager.GetExcLocal(v.Name)
 	return nil
 }
 
@@ -73,4 +72,19 @@ func Parse(variables []string) ([]Var, error) {
 		result = append(result, Var{Name: kv[0], Value: kv[1]})
 	}
 	return result, nil
+}
+
+func ConvertLocalEnvVarsToOktetoVars(environ func() []string) []Var {
+	envVars := environ()
+	vars := make([]Var, 0, len(envVars))
+
+	for _, envVar := range envVars {
+		variableFormatParts := 2
+		parts := strings.SplitN(envVar, "=", variableFormatParts)
+		if len(parts) == variableFormatParts {
+			vars = append(vars, Var{Name: parts[0], Value: parts[1]})
+		}
+	}
+
+	return vars
 }

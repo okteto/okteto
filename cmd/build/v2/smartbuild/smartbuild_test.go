@@ -20,6 +20,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
@@ -56,6 +57,10 @@ func (fh fakeHasher) hashProjectCommit(*build.Info) (string, error) { return fh.
 func (fh fakeHasher) hashWithBuildContext(*build.Info, string) string {
 	return fh.hash
 }
+
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string) {}
 
 func TestNewSmartBuildCtrl(t *testing.T) {
 	type input struct {
@@ -189,10 +194,13 @@ func TestGetBuildHash(t *testing.T) {
 }
 
 func Test_getBuildHashFromCommit(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager.AddFlagVar("BAR", "bar")
+
 	fs := afero.NewMemMapFs()
 	err := afero.WriteFile(fs, "secret", []byte("bar"), 0600)
 	assert.NoError(t, err)
-	t.Setenv("BAR", "bar")
+
 	type input struct {
 		buildInfo *build.Info
 		repo      fakeConfigRepo
@@ -283,6 +291,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 			expected:    "",
 			expectedErr: assert.AnError,
 		},
+		// TODO: discuss with the team about this unit test
 		{
 			name: "arg with expansion",
 			input: input{
