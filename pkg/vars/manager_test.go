@@ -423,3 +423,71 @@ func TestAddVarOverridesOldValue(t *testing.T) {
 	varManager.AddLocalVar("MY_VAR", "new-value")
 	assert.Equal(t, "new-value", varManager.GetIncLocal("MY_VAR"))
 }
+
+// TestGetOktetoVariablesExcLocal ensures that the method returns all okteto variables excluding local variables, respecting the priority
+func TestGetOktetoVariablesExcLocal(t *testing.T) {
+	t.Run("adding vars as groups", func(t *testing.T) {
+		varManager := NewVarsManager(&fakeVarManager{})
+		varName := "MY_VAR"
+
+		// local env vars should not affect the var manager
+		t.Setenv("MY_VAR", "env-value")
+		assert.Equal(t, []string{}, varManager.GetOktetoVariablesExcLocal())
+
+		localVars := Group{
+			Vars: []Var{
+				{Name: varName, Value: "admin-value"},
+			},
+			Type: OktetoVariableTypeLocal,
+		}
+		varManager.AddGroup(localVars)
+
+		flagVars := Group{
+			Vars: []Var{
+				{Name: varName, Value: "flag-value"},
+			},
+			Type: OktetoVariableTypeFlag,
+		}
+		varManager.AddGroup(flagVars)
+
+		adminVars := Group{
+			Vars: []Var{
+				{Name: varName, Value: "admin-value"},
+			},
+			Type: OktetoVariableTypeAdminAndUser,
+		}
+		varManager.AddGroup(adminVars)
+
+		expected := []string{"MY_VAR=built-in-value", "MY_VAR=flag-value", "MY_VAR=dot-env-value", "MY_VAR=admin-value"}
+		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+	})
+
+	t.Run("adding vars individually", func(t *testing.T) {
+		varManager := NewVarsManager(&fakeVarManager{})
+		varName := "MY_VAR"
+
+		// local env vars should not affect the var manager
+		t.Setenv("MY_VAR", "env-value")
+		assert.Equal(t, []string{}, varManager.GetOktetoVariablesExcLocal())
+
+		varManager.AddAdminAndUserVar(varName, "admin-value")
+		expected := []string{"MY_VAR=admin-value"}
+		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+
+		varManager.AddLocalVar(varName, "local-value")
+		expected = []string{"MY_VAR=admin-value"}
+		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+
+		varManager.AddDotEnvVar(varName, "dot-env-value")
+		expected = []string{"MY_VAR=dot-env-value", "MY_VAR=admin-value"}
+		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+
+		varManager.AddFlagVar(varName, "flag-value")
+		expected = []string{"MY_VAR=flag-value", "MY_VAR=dot-env-value", "MY_VAR=admin-value"}
+		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+
+		varManager.AddBuiltInVar(varName, "built-in-value")
+		expected = []string{"MY_VAR=built-in-value", "MY_VAR=flag-value", "MY_VAR=dot-env-value", "MY_VAR=admin-value"}
+		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+	})
+}
