@@ -49,6 +49,7 @@ func (f *logrusJSONFormatter) SetStage(stage string) {
 func (f *logrusJSONFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	level := strings.ToLower(entry.Level.String())
 
+	// err empty stage still appears beacuse the format for controller is json, we dont have a silce format for io controller
 	if f.stage == "" {
 		return nil, errEmptyStage
 	}
@@ -67,4 +68,17 @@ func (f *logrusJSONFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	}
 	messageJSON = []byte(string(messageJSON) + "\n")
 	return messageJSON, nil
+}
+
+// logrusSilentFormatter is a logrus formatter that doesn't print anything
+type logrusSilentFormatter struct{}
+
+// newLogrusSilentFormatter creates a new logrusSilentFormatter
+func newLogrusSilentFormatter() *logrusSilentFormatter {
+	return &logrusSilentFormatter{}
+}
+
+// Format returns nil to avoid printing logs
+func (f *logrusSilentFormatter) Format(entry *logrus.Entry) ([]byte, error) {
+	return nil, nil
 }
