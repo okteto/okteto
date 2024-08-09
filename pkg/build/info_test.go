@@ -241,7 +241,6 @@ func TestBuildInfo_GetDockerfilePath(t *testing.T) {
 
 func Test_BuildInfoCopy(t *testing.T) {
 	b := &Info{
-		Name:        "test",
 		Context:     "context",
 		Dockerfile:  "dockerfile",
 		Target:      "target",
@@ -298,13 +297,12 @@ func TestUnmarshalInfo(t *testing.T) {
 			name:  "unmarshal string",
 			input: "an string value",
 			expected: &Info{
-				Name: "an string value",
+				Context: "an string value",
 			},
 		},
 		{
 			name: "unmarshal struct",
 			input: `
-name: default
 context: testContext
 dockerfile: dockerfile
 target: testTarget
@@ -318,7 +316,6 @@ depends_on:
 secrets:
   secretName: secretValue`,
 			expected: &Info{
-				Name:       "default",
 				Context:    "testContext",
 				Dockerfile: "dockerfile",
 				Target:     "testTarget",
@@ -340,7 +337,6 @@ secrets:
 		{
 			name: "unmarshal struct with expansion",
 			input: `
-name: default
 context: $CONTEXT
 dockerfile: $DOCKERFILE
 target: testTarget
@@ -354,7 +350,6 @@ depends_on:
 secrets:
   secretName: secretValue`,
 			expected: &Info{
-				Name:       "default",
 				Context:    "testContext",
 				Dockerfile: "dockerfile",
 				Target:     "testTarget",
@@ -402,13 +397,6 @@ func TestMarshalInfo(t *testing.T) {
 	}{
 		{
 			name:     "unmarshal string",
-			expected: "an string value\n",
-			input: &Info{
-				Name: "an string value",
-			},
-		},
-		{
-			name:     "unmarshal info with context",
 			expected: "context: an string value\n",
 			input: &Info{
 				Context: "an string value",
