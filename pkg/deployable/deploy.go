@@ -140,16 +140,17 @@ func NewDeployRunnerForRemote(
 	}
 
 	return &DeployRunner{
-		Kubeconfig:         kubeconfig,
-		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash, ""),
-		ConfigMapHandler:   cmapHandler,
-		Proxy:              proxy,
-		TempKubeconfigFile: GetTempKubeConfigFile(tempKubeconfigName),
-		K8sClientProvider:  k8sProvider,
-		GetExternalControl: newDeployExternalK8sControl,
-		Fs:                 afero.NewOsFs(),
-		k8sLogger:          k8sLogger,
-		varManager:         varManager,
+		Kubeconfig:              kubeconfig,
+		Executor:                executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash, ""),
+		ConfigMapHandler:        cmapHandler,
+		Proxy:                   proxy,
+		TempKubeconfigFile:      GetTempKubeConfigFile(tempKubeconfigName),
+		K8sClientProvider:       k8sProvider,
+		GetExternalControl:      newDeployExternalK8sControl,
+		Fs:                      afero.NewOsFs(),
+		k8sLogger:               k8sLogger,
+		varManager:              varManager,
+		createTempOktetoEnvFile: createTempOktetoEnvFile,
 	}, nil
 }
 
