@@ -69,3 +69,16 @@ func (f *logrusJSONFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	messageJSON = []byte(string(messageJSON) + "\n")
 	return messageJSON, nil
 }
+
+// logrusSilentFormatter is a logrus formatter that doesn't print anything
+type logrusSilentFormatter struct{}
+
+// newLogrusSilentFormatter creates a new logrusSilentFormatter
+func newLogrusSilentFormatter() *logrusSilentFormatter {
+	return &logrusSilentFormatter{}
+}
+
+// Format returns nil to avoid printing logs
+func (f *logrusSilentFormatter) Format(entry *logrus.Entry) ([]byte, error) {
+	return nil, nil
+}
