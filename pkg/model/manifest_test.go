@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -418,6 +419,9 @@ func Test_validateManifestBuild(t *testing.T) {
 
 func TestInferFromStack(t *testing.T) {
 	dirtest := filepath.Clean("/stack/dir/")
+	if runtime.GOOS == "windows" {
+		dirtest = filepath.Clean("C:/stack/dir/")
+	}
 	devInterface := Localhost
 	stack := &Stack{
 		Services: map[string]*Service{
@@ -583,7 +587,7 @@ func TestInferFromStack(t *testing.T) {
 				Build: build.ManifestBuild{
 					"test": &build.Info{
 						Context:    filepath.Join(dirtest, "test"),
-						Dockerfile: "",
+						Dockerfile: "Dockerfile",
 					},
 				},
 				Destroy: &DestroyInfo{},
@@ -637,7 +641,7 @@ func TestInferFromStack(t *testing.T) {
 								"test": {
 									Build: &build.Info{
 										Context:    filepath.Join(dirtest, "test"),
-										Dockerfile: "",
+										Dockerfile: "Dockerfile",
 									},
 									Ports: []Port{
 										{
@@ -684,7 +688,7 @@ func TestInferFromStack(t *testing.T) {
 				Build: build.ManifestBuild{
 					"test": &build.Info{
 						Context:    "test",
-						Dockerfile: "Dockerfile",
+						Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
 						Image:      "okteto.dev/test:my-tag",
 					},
 				},
@@ -698,7 +702,7 @@ func TestInferFromStack(t *testing.T) {
 								"test": {
 									Build: &build.Info{
 										Context:    "test",
-										Dockerfile: "Dockerfile",
+										Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
 										Image:      "okteto.dev/test:my-tag",
 									},
 									Image: "okteto.dev/test:my-tag",
