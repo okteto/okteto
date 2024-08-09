@@ -94,9 +94,9 @@ func main() {
 	ioController.Logger().SetLevel(io.WarnLevel)
 	oktetoLog.Init(logrus.WarnLevel) // TODO: Remove when we fully move to ioController
 	if registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
-		oktetoLog.SetOutput(os.Stderr)                  // TODO: Remove when we fully move to ioController
-		oktetoLog.SetLevel(oktetoLog.InfoLevel)         // TODO: Remove when we fully move to ioController
-		oktetoLog.SetOutputFormat(oktetoLog.JSONFormat) // TODO: Remove when we fully move to ioController
+		oktetoLog.SetOutput(os.Stderr)          // TODO: Remove when we fully move to ioController
+		oktetoLog.SetLevel(oktetoLog.InfoLevel) // TODO: Remove when we fully move to ioController
+		oktetoLog.SetOutputFormat("silent")
 
 		ioController.Logger().SetLevel(io.InfoLevel)
 		ioController.SetOutputFormat(io.JSONFormat)
