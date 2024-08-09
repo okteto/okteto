@@ -371,6 +371,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 	}
 	r.ioCtrl.Logger().Infof("Executing remote with the following base image: %s", params.BaseImage)
 
+	// TODO: remove next line
 	buildOptions.OutputMode = "plain"
 
 	// we need to call Run() method using a remote builder. This Builder will have
