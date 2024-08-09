@@ -227,12 +227,16 @@ func (m *Manager) sortGroupsByPriorityAsc() {
 	})
 }
 
-// groupsToArray flattens all groups into a single array of vars. It only includes exported variables
+// groupsToArray flattens all groups into a single array of vars
 func (m *Manager) groupsToArray(groups []Group) []string {
+	varsMap := make(map[string]struct{})
 	vars := make([]string, 0)
 	for _, g := range groups {
 		for _, v := range g.Vars {
-			vars = append(vars, v.String())
+			if _, exists := varsMap[v.Name]; !exists {
+				vars = append(vars, v.String())
+				varsMap[v.Name] = struct{}{}
+			}
 		}
 	}
 	return vars
