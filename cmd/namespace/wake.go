@@ -43,6 +43,7 @@ func Wake(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 			if !okteto.IsOkteto() {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
+
 			nsCmd, err := NewCommand(varManager)
 			if err != nil {
 				return err

@@ -198,19 +198,22 @@ $ okteto deploy --build=false`,
 				return err
 			}
 
-			if okteto.IsOkteto() {
-				create, err := utils.ShouldCreateNamespace(ctx, okteto.GetContext().Namespace)
+			if !okteto.IsOkteto() {
+				return oktetoErrors.ErrContextIsNotOktetoCluster
+			}
+
+			create, err := utils.ShouldCreateNamespace(ctx, okteto.GetContext().Namespace)
+			if err != nil {
+				return err
+			}
+			if create {
+				nsCmd, err := namespace.NewCommand(varManager)
 				if err != nil {
 					return err
 				}
-				if create {
-					nsCmd, err := namespace.NewCommand(varManager)
-					if err != nil {
-						return err
-					}
-					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.GetContext().Namespace}); err != nil {
-						return err
-					}
+
+				if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.GetContext().Namespace}); err != nil {
+					return err
 				}
 			}
 

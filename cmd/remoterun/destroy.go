@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -77,6 +78,10 @@ It is important that this command does the minimum and must not do calculations 
 			oktetoContext, err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).RunStateless(ctx, &contextCMD.Options{})
 			if err != nil {
 				return err
+			}
+
+			if !oktetoContext.IsOktetoCluster() {
+				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
 			// We need to store the kubeconfig of the current Okteto context locally, so commands

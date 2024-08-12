@@ -132,7 +132,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 	}
 
 	if !okteto.IsOkteto() {
-		return analytics.TestMetadata{}, fmt.Errorf("'okteto test' is only supported in contexts that have Okteto installed")
+		return analytics.TestMetadata{}, oktetoErrors.ErrContextIsNotOktetoCluster
 	}
 
 	create, err := utils.ShouldCreateNamespace(ctx, okteto.GetContext().Namespace)

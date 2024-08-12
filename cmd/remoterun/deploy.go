@@ -20,6 +20,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	deployCMD "github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/pkg/deployable"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
@@ -91,6 +92,10 @@ It is important that this command does the minimum and must not do calculations 
 			oktetoContext, err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).RunStateless(ctx, &contextCMD.Options{})
 			if err != nil {
 				return err
+			}
+
+			if !oktetoContext.IsOktetoCluster() {
+				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
 			dep, err := getDeployable()

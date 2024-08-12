@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -63,6 +64,10 @@ commands:
 			oktetoContext, err := contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)).RunStateless(ctx, &contextCMD.Options{Show: true})
 			if err != nil {
 				return err
+			}
+
+			if !oktetoContext.IsOktetoCluster() {
+				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
 			// We need to store the kubeconfig of the current Okteto context locally, so commands

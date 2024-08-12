@@ -49,9 +49,11 @@ func Create(ctx context.Context, varManager *vars.Manager) *cobra.Command {
 				return err
 			}
 			options.Namespace = args[0]
+
 			if !okteto.IsOkteto() {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
+
 			nsCmd, err := NewCommand(varManager)
 			if err != nil {
 				return err

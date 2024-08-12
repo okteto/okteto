@@ -91,7 +91,11 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger, varManager *vars.Manager
 				return err
 			}
 
-			manifest, err := model.GetManifestV2(options.ManifestPath, fs, varManager)
+			if !okteto.IsOkteto() {
+				return oktetoErrors.ErrContextIsNotOktetoCluster
+			}
+
+			manifest, err := model.GetManifestV2(options.ManifestPath, afero.NewOsFs(), varManager)
 			if err != nil {
 				return err
 			}

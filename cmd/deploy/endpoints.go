@@ -114,6 +114,10 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger, varManager *vars.Ma
 				return err
 			}
 
+			if !okteto.IsOkteto() {
+				return oktetoErrors.ErrContextIsNotOktetoCluster
+			}
+
 			eg, err := NewEndpointGetter(k8sLogger)
 			if err != nil {
 				return err
