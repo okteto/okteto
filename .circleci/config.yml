@@ -32,6 +32,8 @@ parameters:
     default: ""
 
 orbs:
+  # https://circleci.com/developer/orbs/orb/circleci/windows#usage-run_windows_2022
+  # https://circleci.com/developer/machine/image/windows-server-2022-gui
   win: circleci/windows@5.0.0
 
 executors:
@@ -112,7 +114,10 @@ jobs:
           destination: coverage.txt
 
   run-windows-unit-test:
-    executor: win/default
+    executor:
+      # https://circleci.com/developer/machine/image/windows-server-2022-gui
+      name: win/server-2022
+      version: 2024.04.1
     environment:
       OKTETO_USER: cindylopez
     steps:
@@ -272,7 +277,9 @@ jobs:
             okteto build --platform "linux/arm64,linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile .
 
   test-e2e-setup-windows:
-    executor: win/default
+    executor:
+      name: win/server-2022
+      version: 2024.04.1
     environment:
       OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_USER: cindylopez
@@ -300,7 +307,9 @@ jobs:
             - C:\Go\pkg
 
   e2e-build-windows:
-    executor: win/default
+    executor:
+      name: win/server-2022
+      version: 2024.04.1
     environment:
       OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_USER: cindylopez
@@ -326,7 +335,9 @@ jobs:
             go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
 
   e2e-deploy-windows:
-    executor: win/default
+    executor:
+      name: win/server-2022
+      version: 2024.04.1
     environment:
       OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_USER: cindylopez
@@ -359,7 +370,9 @@ jobs:
             go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
 
   e2e-up-windows:
-    executor: win/default
+    executor:
+      name: win/server-2022
+      version: 2024.04.1
     environment:
       OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_USER: cindylopez

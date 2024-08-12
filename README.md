@@ -45,15 +45,17 @@ The Okteto CLI has two operational modes:
 
 ### Okteto Open Source CLI Features
 
-Okteto Open Source requires access to a Kubernetes cluster. It's designed to support Development Containers in any Kubernetes cluster. It doesn't come with features that support multiple developers working on the same cluster. That's the goal of the [Okteto Platform](https://okteto.com/docs)
+The Okteto Open Source CLI requires access to a Kubernetes cluster. The Okteto Open Source CLI aims to enable you to develop your cloud-native applications using Development Containers in your Kubernetes clusters. If you are interested in helping your entire team share a Kubernetes cluster for development, we recommend you check out our commercial product, the [Okteto Platform](https://okteto.com)
 
-Okteto Open Source supports the following commands:
+The Okteto Open Source CLI supports the following commands:
 
 - `okteto context`
 - `okteto up`
 - `okteto down`
 
-For reference, our Open Source CLI supports the [dev section](https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional) of the Okteto Manifest.
+> [!NOTE]
+ ⚠️ Notice: The open-source version of Okteto only supports the [dev section](https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional) of the Okteto manifest. For additional features and full functionality, consider exploring the [Okteto Platform](https://www.okteto.com/get-demo/).
+
 
 We have getting started guides for the Open Source mode for the following languages:
 
@@ -68,16 +70,17 @@ We have getting started guides for the Open Source mode for the following langua
 
 ### Okteto Platform CLI Features
 
-The Okteto Platform CLI requires installation of the [Okteto Helm Chart](https://www.okteto.com/docs/get-started/overview/) in your Kubernetes cluster. In this mode, all of the Okteto CLI commands are available (`build`, `deploy`, `up`, `down`, `destroy`, etc). The Okteto Platform comes with additional features like:
+The Okteto Platform CLI requires the installation of the [Okteto Helm Chart](https://www.okteto.com/docs/get-started/overview/) in your Kubernetes cluster. In this mode, all the Okteto CLI commands are available (`build`, `deploy`, `up`, `down`, `destroy`, etc). The Okteto Platform comes with additional features like:
 
-- User authentication and access control to Kubernetes using your own Identity provider
+- User authentication and access control to Kubernetes using your Identity provider
 - Build service for remote container image creation
+- Integration with GitHub, Gitlab, Bitbucket, etc.
 - Preview environments for every pull request
 - Dynamic scaling of environments based on usage
 - Secrets manager for your development environments
 - Okteto Insights to provide observability on your development environments
 
-And much more! Refer to the [Okteto Platform docs](https://www.okteto.com/docs) to learn more.
+And much more! Please take a look at the [Okteto Platform docs](https://www.okteto.com/docs) to learn more.
 
 ## Features Comparison
 
@@ -90,7 +93,7 @@ And much more! Refer to the [Okteto Platform docs](https://www.okteto.com/docs) 
 | **Automated Scaling**      | Not Available                            | Available                                     |
 | **Secrets Management**     | Not Available                            | Available                                     |
 | **Observability Tools**    | Not Available                            | Available                                     |
-| **Support**                | Community Support                        | Professional Support                          |
+| **Support**                | Community Support                        | Premium Support available                     |
 | **Documentation**          | [Open Source Samples](samples/README.md) | [Platform Docs](https://www.okteto.com/docs/) |
 
 ## Useful links
@@ -102,17 +105,19 @@ And much more! Refer to the [Okteto Platform docs](https://www.okteto.com/docs) 
 
 ## Releases
 
-Okteto is monthly released into three channels: stable, beta, and dev. By default when Okteto is installed, the stable channel is used. If you need to access features not yet widely available you can install from the beta or dev channel. More information can be found in the [release documentation](docs/RELEASE.md).
+Okteto is monthly released into three channels: stable, beta, and dev. When Okteto is installed, the stable channel is used by default. If you need to access features that are not yet available, you can install the Okteto CLI from the beta or dev channels. More information can be found in the [release documentation](docs/RELEASE.md).
 
 ## Support and Community
 
-Got questions? Have feedback? Join the conversation in our [Community Forum](https://community.okteto.com/). You can also join us in the [#okteto](https://kubernetes.slack.com/messages/CM1QMQGS0/) Slack channel! If you don't already have a Kubernetes Slack account, [sign up here](https://slack.k8s.io/).
+Got questions? Have feedback? Join the conversation in our [Community Forum](https://community.okteto.com/). 
 
 Follow [@OktetoHQ](https://twitter.com/oktetohq) on Twitter for important announcements.
 
 ## ✨ Contributions
 
-We ❤️ contributions big or small. [See our guide](contributing.md) on how to get started.
+We ❤️ contributions, big or small. [See our guide](contributing.md) on how to get started.
+
+You can also join us in the [#okteto](https://kubernetes.slack.com/messages/CM1QMQGS0/) Slack channel and chat with us! If you don't already have a Kubernetes Slack account, [sign up here](https://slack.k8s.io/).
 
 ### Thanks to all our contributors!
 
