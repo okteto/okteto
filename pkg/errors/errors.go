@@ -120,7 +120,10 @@ var (
 	ErrDivertNotSupported = fmt.Errorf("the 'divert' field is only supported in contexts that have Okteto installed")
 
 	// ErrContextIsNotOktetoCluster raised if the cluster connected is not managed by okteto
-	ErrContextIsNotOktetoCluster = fmt.Errorf("this command is only available in contexts where Okteto is installed.\n Follow this link to know more about configuring Okteto at your context: https://www.okteto.com/docs/get-started/install-okteto-cli/#configuring-okteto-cli-with-okteto")
+	ErrContextIsNotOktetoCluster = UserError{
+		E:    fmt.Errorf("this command is only available in contexts where Okteto is installed"),
+		Hint: "Follow this link to know more about configuring Okteto at your context: https://www.okteto.com/docs/get-started/install-okteto-cli/#configuring-okteto-cli-with-okteto",
+	}
 
 	// ErrTokenFlagNeeded is raised when the command is executed from inside a pod from a ctx command
 	ErrTokenFlagNeeded = fmt.Errorf("this command is not supported without the '--token' flag from inside a container")
