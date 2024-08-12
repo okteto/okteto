@@ -26,7 +26,6 @@ type OktetoContextInterface interface {
 	GetCurrentCfg() *clientcmdapi.Config
 	GetCurrentToken() string
 	GetCurrentUser() string
-	GetCurrentRegister() string
 	ExistsContext() bool
 	IsOktetoCluster() bool
 	IsInsecure() bool
