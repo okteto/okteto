@@ -174,7 +174,6 @@ func TestDeployVariablesOrder(t *testing.T) {
 	require.NotContains(t, deployOutput, "CLI_TEST_MY_VAR3=local")
 	require.Contains(t, deployOutput, "CLI_TEST_MY_VAR4=.env")
 	require.Contains(t, deployOutput, "CLI_TEST_MY_VAR5=admin")
-	require.Contains(t, deployOutput, "Okteto Variable 'CLI_TEST_MY_VAR4' is overridden by a local environment variable with the same name")
 
 	// reset all values to make sure destroy is not affected by what was set in deploy
 	os.Unsetenv("CLI_TEST_MY_VAR1")
@@ -195,10 +194,10 @@ func TestDeployVariablesOrder(t *testing.T) {
 	require.NoError(t, destroyErr)
 	require.Contains(t, destroyOutput, "CLI_TEST_MY_VAR1=flag")
 	require.Contains(t, destroyOutput, "CLI_TEST_MY_VAR2=.env")
-	require.Contains(t, destroyOutput, "CLI_TEST_MY_VAR3=local")
+	require.Contains(t, destroyOutput, "CLI_TEST_MY_VAR3=.env")
+	require.NotContains(t, destroyOutput, "CLI_TEST_MY_VAR3=local")
 	require.Contains(t, destroyOutput, "CLI_TEST_MY_VAR4=.env")
 	require.Contains(t, destroyOutput, "CLI_TEST_MY_VAR5=admin")
-	require.Contains(t, deployOutput, "Okteto Variable 'CLI_TEST_MY_VAR4' is overridden by a local environment variable with the same name")
 
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }

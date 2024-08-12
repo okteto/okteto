@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -400,12 +399,10 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 
 	cfgVariables := types.DecodeStringToDeployVariable(cfgVariablesString)
 	for _, variable := range cfgVariables {
-		opts.Variables = append(opts.Variables, fmt.Sprintf("%s=%s", variable.Name, variable.Value))
-		if strings.TrimSpace(variable.Value) != "" {
-			oktetoLog.AddMaskedWord(variable.Value)
-		}
+		dc.varManager.AddFlagVar(variable.Name, variable.Value)
 	}
 	opts.Variables = append(opts.Variables, env.GetDefaultLocalEnvs()...)
+	opts.Variables = append(opts.Variables, dc.varManager.GetOktetoVariablesExcLocal()...)
 	oktetoLog.EnableMasking()
 
 	// update to change status
