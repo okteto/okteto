@@ -213,9 +213,7 @@ deploy:
   - okteto build -t okteto.dev/api:${OKTETO_GIT_COMMIT} api
   - okteto build -t okteto.dev/frontend:${OKTETO_GIT_COMMIT} frontend
   - helm upgrade --install movies chart --set tag=${OKTETO_GIT_COMMIT}
-devs:
-  - api/okteto.yml
-  - frontend/okteto.yml`),
+`),
 			expectedCommand: "okteto build -t okteto.dev/api:${OKTETO_GIT_COMMIT} api",
 		},
 		{
@@ -226,9 +224,7 @@ deploy:
   - okteto build -t okteto.dev/api:${OKTETO_GIT_COMMIT:=dev} api
   - okteto build -t okteto.dev/frontend:${OKTETO_GIT_COMMIT} frontend
   - helm upgrade --install movies chart --set tag=${OKTETO_GIT_COMMIT}
-devs:
-  - api/okteto.yml
-  - frontend/okteto.yml`),
+`),
 			expectedCommand: "okteto build -t okteto.dev/api:${OKTETO_GIT_COMMIT:=dev} api",
 		},
 	}
@@ -557,8 +553,7 @@ func TestInferFromStack(t *testing.T) {
 			currentManifest: &Manifest{
 				Dev: ManifestDevs{
 					"test": &Dev{
-						Name:      "one",
-						Namespace: "test",
+						Name: "one",
 					},
 				},
 				Build: build.ManifestBuild{},
@@ -593,14 +588,12 @@ func TestInferFromStack(t *testing.T) {
 				Destroy: &DestroyInfo{},
 				Dev: ManifestDevs{
 					"test": &Dev{
-						Name:      "one",
-						Namespace: "test",
+						Name: "one",
 						Metadata: &Metadata{
 							Labels:      Labels{},
 							Annotations: Annotations{},
 						},
 						Selector:        Selector{},
-						EmptyImage:      true,
 						Image:           "",
 						ImagePullPolicy: apiv1.PullAlways,
 						InitContainer:   InitContainer{Image: OktetoBinImageTag},
@@ -1496,8 +1489,6 @@ func TestRead(t *testing.T) {
 			manifest: nil,
 			expected: &Manifest{
 				Name:         "",
-				Namespace:    "",
-				Context:      "",
 				Icon:         "",
 				ManifestPath: "",
 				Test:         ManifestTests{},
@@ -1527,8 +1518,6 @@ func TestRead(t *testing.T) {
 			manifest: []byte(""),
 			expected: &Manifest{
 				Name:         "",
-				Namespace:    "",
-				Context:      "",
 				Icon:         "",
 				ManifestPath: "",
 				Test:         ManifestTests{},
@@ -1575,12 +1564,9 @@ func TestRead(t *testing.T) {
 			name: "success parsing dev",
 			manifest: []byte(`dev:
   test:
-    image: test-image
-    context: ./test`),
+    image: test-image`),
 			expected: &Manifest{
 				Name:          "",
-				Namespace:     "",
-				Context:       "",
 				Icon:          "",
 				ManifestPath:  "",
 				Deploy:        &DeployInfo{},
@@ -1588,15 +1574,12 @@ func TestRead(t *testing.T) {
 				GlobalForward: []forward.GlobalForward{},
 				Dev: ManifestDevs{
 					"test": &Dev{
-						Name:      "test",
-						Context:   "./test",
-						Namespace: "",
+						Name: "test",
 						Metadata: &Metadata{
 							Labels:      Labels{},
 							Annotations: Annotations{},
 						},
 						Selector:        Selector{},
-						EmptyImage:      false,
 						Image:           "test-image",
 						ImagePullPolicy: apiv1.PullAlways,
 						InitContainer:   InitContainer{Image: OktetoBinImageTag},
@@ -1648,8 +1631,7 @@ func TestRead(t *testing.T) {
 				Type:         OktetoManifestType,
 				Manifest: []byte(`dev:
   test:
-    image: test-image
-    context: ./test`),
+    image: test-image`),
 				Fs: afero.NewOsFs(),
 			},
 			expectedErr: false,
@@ -1674,8 +1656,6 @@ func TestRead(t *testing.T) {
     service: service-b`),
 			expected: &Manifest{
 				Name:          "",
-				Namespace:     "",
-				Context:       "",
 				Icon:          "",
 				ManifestPath:  "",
 				Test:          ManifestTests{},
@@ -1877,6 +1857,222 @@ func TestGetBuildContextForComposeWithVolumeMounts(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+func TestDeployInfo_IsEmpty(t *testing.T) {
+	tests := []struct {
+		deployInfo DeployInfo
+		isEmpty    bool
+	}{
+		{
+			deployInfo: DeployInfo{
+				Commands: []DeployCommand{
+					{
+						Name:    "Deploy",
+						Command: "echo 'Replace this line with the proper 'helm' or 'kubectl' commands to deploy your development environment'",
+					},
+				},
+			},
+			isEmpty: false,
+		},
+		{
+			deployInfo: DeployInfo{
+				ComposeSection: &ComposeSectionInfo{
+					Stack: &Stack{},
+				},
+			},
+			isEmpty: false,
+		},
+		{
+			deployInfo: DeployInfo{
+				Divert: &DivertDeploy{},
+			},
+			isEmpty: false,
+		},
+		{
+			deployInfo: DeployInfo{
+				Endpoints: EndpointSpec{},
+			},
+			isEmpty: false,
+		},
+		{
+			deployInfo: DeployInfo{},
+			isEmpty:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		isEmpty := tt.deployInfo.IsEmpty()
+		if isEmpty != tt.isEmpty {
+			t.Errorf("expected IsEmpty() to be %v, but got %v", tt.isEmpty, isEmpty)
+		}
+	}
+}
+func TestManifestTests_IsEmpty(t *testing.T) {
+	tests := []struct {
+		tests   ManifestTests
+		isEmpty bool
+	}{
+		{
+			tests:   ManifestTests{},
+			isEmpty: true,
+		},
+		{
+			tests: ManifestTests{
+				"test1": &Test{},
+				"test2": &Test{},
+			},
+			isEmpty: false,
+		},
+	}
+
+	for _, tt := range tests {
+		isEmpty := tt.tests.IsEmpty()
+		if isEmpty != tt.isEmpty {
+			t.Errorf("expected IsEmpty to be %v, but got %v", tt.isEmpty, isEmpty)
+		}
+	}
+}
+
+func TestDestroyInfo_IsEmpty(t *testing.T) {
+	tests := []struct {
+		destroyInfo DestroyInfo
+		isEmpty     bool
+	}{
+		{
+			destroyInfo: DestroyInfo{},
+			isEmpty:     true,
+		},
+		{
+			destroyInfo: DestroyInfo{
+				Image: "image",
+			},
+			isEmpty: false,
+		},
+		{
+			destroyInfo: DestroyInfo{
+				Commands: []DeployCommand{
+					{
+						Name:    "Destroy",
+						Command: "echo 'Replace this line with the proper 'helm' or 'kubectl' commands to destroy your development environment'",
+					},
+				},
+			},
+			isEmpty: false,
+		},
+	}
+
+	for _, tt := range tests {
+		isEmpty := tt.destroyInfo.IsEmpty()
+		if isEmpty != tt.isEmpty {
+			t.Errorf("expected IsEmpty to be %v, but got %v", tt.isEmpty, isEmpty)
+		}
+	}
+}
+
+func TestManifest_IsEmpty(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest Manifest
+		isErr    bool
+	}{
+		{
+			name:     "empty manifest",
+			manifest: Manifest{},
+			isErr:    false,
+		},
+		{
+			name: "manifest with test",
+			manifest: Manifest{
+				Test: ManifestTests{
+					"test1": &Test{},
+					"test2": &Test{},
+				},
+			},
+			isErr: true,
+		},
+		{
+			name: "manifest with deploy",
+			manifest: Manifest{
+				Deploy: &DeployInfo{
+					Commands: []DeployCommand{
+						{
+							Name:    "Deploy",
+							Command: "echo 'Replace this line with the proper 'helm' or 'kubectl' commands to deploy your development environment'",
+						},
+					},
+				},
+			},
+			isErr: true,
+		},
+		{
+			name: "manifest with destroy",
+			manifest: Manifest{
+				Destroy: &DestroyInfo{
+					Commands: []DeployCommand{
+						{
+							Name:    "Destroy",
+							Command: "echo 'Replace this line with the proper 'helm' or 'kubectl' commands to destroy your development environment'",
+						},
+					},
+				},
+			},
+			isErr: true,
+		},
+		{
+			name: "manifest with external",
+			manifest: Manifest{
+				External: externalresource.Section{
+					"external1": &externalresource.ExternalResource{},
+				},
+			},
+			isErr: true,
+		},
+		{
+			name: "manifest with dependencies",
+			manifest: Manifest{
+				Dependencies: deps.ManifestSection{
+					"dep1": &deps.Dependency{},
+					"dep2": &deps.Dependency{},
+				},
+			},
+			isErr: true,
+		},
+		{
+			name: "manifest with build",
+			manifest: Manifest{
+				Build: build.ManifestBuild{
+					"service1": &build.Info{},
+					"service2": &build.Info{},
+				},
+			},
+			isErr: true,
+		},
+		{
+			name: "manifest with name",
+			manifest: Manifest{
+				Name: "manifest",
+			},
+			isErr: true,
+		},
+		{
+			name: "manifest with icon",
+			manifest: Manifest{
+				Icon: "icon",
+			},
+			isErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.manifest.ValidateForCLIOnly()
+			if tt.isErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }

@@ -90,6 +90,15 @@ func FileExistsAndNotDir(path string, fs afero.Fs) bool {
 	return !info.IsDir()
 }
 
+// IsDir checks if a path is a dir or not
+func IsDir(path string, fs afero.Fs) bool {
+	info, err := fs.Stat(path)
+	if err != nil {
+		return false
+	}
+	return info.IsDir()
+}
+
 // GetLastNLines returns the last N lines of a file up to a max amount of bytes
 func GetLastNLines(fs afero.Fs, path string, n int, maxChunkByteSize int64) ([]string, error) {
 	file, err := fs.Open(path)

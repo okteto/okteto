@@ -124,7 +124,7 @@ func TestBuildImages(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 
 			deployOptions := &Options{
-				Build: testCase.build,
+				NoBuild: !testCase.build,
 				Manifest: &model.Manifest{
 					Build: build.ManifestBuild{},
 					Deploy: &model.DeployInfo{

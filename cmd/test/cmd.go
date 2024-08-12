@@ -106,7 +106,7 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 		},
 	}
 
-	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "Path to the okteto manifest file")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "Overwrites the namespace where the development environment is deployed")
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "Context where the development environment is deployed")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "Set a variable (can be set more than once)")
@@ -121,14 +121,13 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, tracker *ProxyTracker) (analytics.TestMetadata, error) {
 	fs := afero.NewOsFs()
 
-	// Loads, updates and uses the context from path. If not found, it creates and uses a new context
-	if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: true}); err != nil {
-		if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.GetContext().Name).Error() {
-			return analytics.TestMetadata{}, err
-		}
-		if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
-			return analytics.TestMetadata{}, err
-		}
+	ctxOpts := &contextCMD.Options{
+		Context:   options.K8sContext,
+		Namespace: options.Namespace,
+		Show:      true,
+	}
+	if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+		return analytics.TestMetadata{}, err
 	}
 
 	if !okteto.IsOkteto() {
@@ -161,6 +160,16 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		}
 		// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
 		options.ManifestPathFlag = manifestPathFlag
+
+		// check that the manifest file exists
+		if !filesystem.FileExistsWithFilesystem(options.ManifestPath, fs) {
+			return analytics.TestMetadata{}, oktetoErrors.ErrManifestPathNotFound
+		}
+
+		// the Okteto manifest flag should specify a file, not a directory
+		if filesystem.IsDir(options.ManifestPath, fs) {
+			return analytics.TestMetadata{}, oktetoErrors.ErrManifestPathIsDir
+		}
 
 		// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
 		uptManifestPath, err := filesystem.UpdateCWDtoManifestPath(options.ManifestPath)
@@ -267,10 +276,10 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			ManifestPathFlag: options.ManifestPathFlag,
 			ManifestPath:     options.ManifestPath,
 			Name:             options.Name,
-			Namespace:        options.Namespace,
-			K8sContext:       options.K8sContext,
+			Namespace:        okteto.GetContext().Namespace,
+			K8sContext:       okteto.GetContext().Name,
 			Variables:        options.Variables,
-			Build:            true,
+			NoBuild:          false,
 			Dependencies:     false,
 			Timeout:          options.Timeout,
 			RunWithoutBash:   false,
@@ -351,12 +360,8 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			IgnoreRules:                 testIgnoreRules,
 			Artifacts:                   test.Artifacts,
 			UseRootUser:                 true,
-		}
-
-		if !options.NoCache {
-			// this value can be anything really.
-			// By keeping it constant we skip cache invalidation
-			params.CacheInvalidationKey = "const"
+			NoCache:                     options.NoCache,
+			Hosts:                       test.Hosts,
 		}
 
 		ioCtrl.Out().Infof("Executing test container '%s'", name)

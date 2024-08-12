@@ -76,8 +76,7 @@ func Test_printDisplayContext(t *testing.T) {
 			name: "basic",
 			up: &upContext{
 				Dev: &model.Dev{
-					Name:      "dev",
-					Namespace: "namespace",
+					Name: "dev",
 				},
 				Manifest: &model.Manifest{
 					GlobalForward: []forward.GlobalForward{},
@@ -88,9 +87,8 @@ func Test_printDisplayContext(t *testing.T) {
 			name: "single-forward",
 			up: &upContext{
 				Dev: &model.Dev{
-					Name:      "dev",
-					Namespace: "namespace",
-					Forward:   []forward.Forward{{Local: 1000, Remote: 1000}},
+					Name:    "dev",
+					Forward: []forward.Forward{{Local: 1000, Remote: 1000}},
 				},
 				Manifest: &model.Manifest{
 					GlobalForward: []forward.GlobalForward{},
@@ -101,9 +99,8 @@ func Test_printDisplayContext(t *testing.T) {
 			name: "multiple-forward",
 			up: &upContext{
 				Dev: &model.Dev{
-					Name:      "dev",
-					Namespace: "namespace",
-					Forward:   []forward.Forward{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
+					Name:    "dev",
+					Forward: []forward.Forward{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
 				},
 				Manifest: &model.Manifest{
 					GlobalForward: []forward.GlobalForward{
@@ -124,9 +121,8 @@ func Test_printDisplayContext(t *testing.T) {
 			name: "single-reverse",
 			up: &upContext{
 				Dev: &model.Dev{
-					Name:      "dev",
-					Namespace: "namespace",
-					Reverse:   []model.Reverse{{Local: 1000, Remote: 1000}},
+					Name:    "dev",
+					Reverse: []model.Reverse{{Local: 1000, Remote: 1000}},
 				},
 				Manifest: &model.Manifest{
 					GlobalForward: []forward.GlobalForward{},
@@ -137,9 +133,8 @@ func Test_printDisplayContext(t *testing.T) {
 			name: "multiple-reverse+global-forward",
 			up: &upContext{
 				Dev: &model.Dev{
-					Name:      "dev",
-					Namespace: "namespace",
-					Reverse:   []model.Reverse{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
+					Name:    "dev",
+					Reverse: []model.Reverse{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
 				},
 				Manifest: &model.Manifest{
 					GlobalForward: []forward.GlobalForward{
@@ -160,8 +155,7 @@ func Test_printDisplayContext(t *testing.T) {
 			name: "global-forward",
 			up: &upContext{
 				Dev: &model.Dev{
-					Name:      "dev",
-					Namespace: "namespace",
+					Name: "dev",
 				},
 				Manifest: &model.Manifest{
 					GlobalForward: []forward.GlobalForward{
@@ -178,8 +172,7 @@ func Test_printDisplayContext(t *testing.T) {
 			name: "multiple-global-forward",
 			up: &upContext{
 				Dev: &model.Dev{
-					Name:      "dev",
-					Namespace: "namespace",
+					Name: "dev",
 				},
 				Manifest: &model.Manifest{
 					GlobalForward: []forward.GlobalForward{

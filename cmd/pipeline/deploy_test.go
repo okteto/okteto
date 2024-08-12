@@ -777,25 +777,6 @@ func TestFlagsToOptions(t *testing.T) {
 			expect: &DeployOptions{},
 		},
 		{
-			name: "filename and file",
-			flags: deployFlags{
-				file:     "file",
-				filename: "filename",
-			},
-			expect: &DeployOptions{
-				File: "file",
-			},
-		},
-		{
-			name: "just filename",
-			flags: deployFlags{
-				filename: "filename",
-			},
-			expect: &DeployOptions{
-				File: "filename",
-			},
-		},
-		{
 			name: "all flags ",
 			flags: deployFlags{
 				branch:      "branch",

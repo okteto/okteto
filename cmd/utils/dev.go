@@ -47,12 +47,15 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 		return nil, oktetoErrors.ErrManifestNoDevSection
 	} else if len(manifest.Dev) == 1 {
 		for name, dev := range manifest.Dev {
-			if devName != "" && devName != name {
-				return nil, oktetoErrors.UserError{
-					E:    fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, devName),
-					Hint: fmt.Sprintf("Available options are: [%s]", name),
+			if devName != "" {
+				if devName != name {
+					return nil, oktetoErrors.UserError{
+						E:    fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, devName),
+						Hint: fmt.Sprintf("Available options are: [%s]", name),
+					}
 				}
 			}
+
 			return dev, nil
 		}
 	}
@@ -98,13 +101,7 @@ func SelectDevFromManifest(manifest *model.Manifest, selector OktetoSelectorInte
 	dev := manifest.Dev[devKey]
 
 	dev.Name = devKey
-	if dev.Namespace == "" {
-		dev.Namespace = manifest.Namespace
-	}
 
-	if dev.Context == "" {
-		dev.Context = manifest.Context
-	}
 	if err := dev.Validate(); err != nil {
 		return nil, err
 	}
@@ -207,28 +204,28 @@ func GetDownCommand(devPath string) string {
 	return okDownCommandHint
 }
 
-func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry bool) (apps.App, bool, error) {
-	app, err := apps.Get(ctx, dev, dev.Namespace, c)
+func GetApp(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface, isRetry bool) (apps.App, bool, error) {
+	app, err := apps.Get(ctx, dev, namespace, c)
 	if err != nil {
 		if !oktetoErrors.IsNotFound(err) {
 			return nil, false, err
 		}
 		if dev.Autocreate {
-			if isRetry && !doesAutocreateAppExist(ctx, dev, c) {
+			if isRetry && !doesAutocreateAppExist(ctx, dev, namespace, c) {
 				return nil, false, fmt.Errorf("development container has been deactivated")
 			}
-			return apps.NewDeploymentApp(deployments.Sandbox(dev)), true, nil
+			return apps.NewDeploymentApp(deployments.Sandbox(dev, namespace)), true, nil
 		}
 		if len(dev.Selector) > 0 {
 			if oktetoErrors.IsNotFound(err) {
 				err = oktetoErrors.UserError{
-					E:    fmt.Errorf("didn't find an application in namespace %s that matches the labels in your Okteto manifest", dev.Namespace),
+					E:    fmt.Errorf("didn't find an application in namespace %s that matches the labels in your Okteto manifest", namespace),
 					Hint: "Update the labels or point your context to a different namespace and try again"}
 			}
 			return nil, false, err
 		}
 		return nil, false, oktetoErrors.UserError{
-			E: fmt.Errorf("application '%s' not found in namespace '%s'", dev.Name, dev.Namespace),
+			E: fmt.Errorf("application '%s' not found in namespace '%s'", dev.Name, namespace),
 			Hint: `Verify that your application is running and your okteto context is pointing to the right namespace
     Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
     More information is available here: https://okteto.com/docs/reference/okteto-cli/#up`,
@@ -237,13 +234,13 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry
 	return app, false, nil
 }
 
-func doesAutocreateAppExist(ctx context.Context, dev *model.Dev, c kubernetes.Interface) bool {
+func doesAutocreateAppExist(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) bool {
 	autocreateDev := *dev
 	autocreateDev.Name = model.DevCloneName(dev.Name)
-	_, err := apps.Get(ctx, &autocreateDev, dev.Namespace, c)
+	_, err := apps.Get(ctx, &autocreateDev, namespace, c)
 	if err != nil && !oktetoErrors.IsNotFound(err) {
 		oktetoLog.Infof("getApp autocreate k8s error, retrying...")
-		_, err := apps.Get(ctx, &autocreateDev, dev.Namespace, c)
+		_, err := apps.Get(ctx, &autocreateDev, namespace, c)
 		return err == nil
 	}
 	return err == nil

@@ -15,7 +15,6 @@ package context
 
 import (
 	"os"
-	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/build"
@@ -23,109 +22,9 @@ import (
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
-
-func Test_addKubernetesContext(t *testing.T) {
-	var tests = []struct {
-		cfg          *clientcmdapi.Config
-		ctxResource  *model.ContextResource
-		currentStore *okteto.ContextStore
-		wantStore    *okteto.ContextStore
-		name         string
-		wantError    bool
-	}{
-		{
-			name:        "nil-cfg",
-			ctxResource: &model.ContextResource{Context: "context"},
-			wantError:   true,
-		},
-		{
-			name: "not-found",
-			cfg: &clientcmdapi.Config{
-				Contexts: map[string]*clientcmdapi.Context{},
-			},
-			ctxResource: &model.ContextResource{Context: "context"},
-			wantError:   true,
-		},
-		{
-			name: "found-and-ctxresource-namespace",
-			cfg: &clientcmdapi.Config{
-				Contexts: map[string]*clientcmdapi.Context{"context": {Namespace: "n-cfg"}},
-			},
-			ctxResource: &model.ContextResource{Context: "context", Namespace: "n-ctx"},
-			currentStore: &okteto.ContextStore{
-				CurrentContext: "",
-				Contexts:       map[string]*okteto.Context{},
-			},
-			wantStore: &okteto.ContextStore{
-				CurrentContext: "context",
-				Contexts: map[string]*okteto.Context{
-					"context": {Name: "context", Namespace: "n-ctx", Analytics: true},
-				},
-			},
-			wantError: false,
-		},
-		{
-			name: "found-and-cfg-namespace",
-			cfg: &clientcmdapi.Config{
-				Contexts: map[string]*clientcmdapi.Context{"context": {Namespace: "n-cfg"}},
-			},
-			ctxResource: &model.ContextResource{Context: "context"},
-			currentStore: &okteto.ContextStore{
-				CurrentContext: "",
-				Contexts:       map[string]*okteto.Context{},
-			},
-			wantStore: &okteto.ContextStore{
-				CurrentContext: "context",
-				Contexts: map[string]*okteto.Context{
-					"context": {Name: "context", Namespace: "n-cfg", Analytics: true},
-				},
-			},
-			wantError: false,
-		},
-		{
-			name: "found-and-default-namespace",
-			cfg: &clientcmdapi.Config{
-				Contexts: map[string]*clientcmdapi.Context{"context": {}},
-			},
-			ctxResource: &model.ContextResource{Context: "context"},
-			currentStore: &okteto.ContextStore{
-				CurrentContext: "",
-				Contexts:       map[string]*okteto.Context{},
-			},
-			wantStore: &okteto.ContextStore{
-				CurrentContext: "context",
-				Contexts: map[string]*okteto.Context{
-					"context": {Name: "context", Namespace: "default", Analytics: true},
-				},
-			},
-			wantError: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			okteto.CurrentStore = tt.currentStore
-			err := addKubernetesContext(tt.cfg, tt.ctxResource)
-			if err != nil && !tt.wantError {
-				t.Errorf("Test '%s' failed: %+v", tt.name, err)
-			}
-			if err == nil && tt.wantError {
-				t.Errorf("Test '%s' didn't failed", tt.name)
-			}
-			if err != nil {
-				return
-			}
-			if !reflect.DeepEqual(tt.wantStore, okteto.CurrentStore) {
-				t.Errorf("Test '%s' failed: %+v", tt.name, okteto.CurrentStore)
-			}
-		})
-	}
-}
 
 func Test_GetManifestV2(t *testing.T) {
 	tests := []struct {
@@ -157,8 +56,6 @@ build:
 dependencies:
   one: https://repo.url`),
 			expectedManifest: &model.Manifest{
-				Namespace: "test-namespace",
-				Context:   "manifest-context",
 				Build: build.ManifestBuild{
 					"service": {
 						Target:     "build",
@@ -224,58 +121,6 @@ dependencies:
 				assert.EqualValues(t, tt.expectedManifest, m)
 			}
 
-		})
-	}
-}
-
-func Test_GetCtxResource(t *testing.T) {
-	tests := []struct {
-		expectedErr         error
-		expectedCtxResource *model.ContextResource
-		name                string
-		manifestName        string
-		manifestYAML        []byte
-	}{
-		{
-			name:         "valid manifest returns a initialized ctx resource",
-			expectedErr:  nil,
-			manifestName: "okteto.yml",
-			manifestYAML: []byte(`
-namespace: test-namespace
-context: manifest-context
-`),
-			expectedCtxResource: &model.ContextResource{
-				Namespace: "test-namespace",
-				Context:   "manifest-context",
-			},
-		},
-		{
-			name:                "no valid manifest returns a zero value ctx resource",
-			expectedErr:         nil,
-			manifestName:        "",
-			expectedCtxResource: &model.ContextResource{},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			manifestPath := ""
-			if tt.manifestName != "" {
-				tmpFile, err := os.CreateTemp("", tt.manifestName)
-				if err != nil {
-					t.Fatalf("failed to create dynamic manifest file: %s", err.Error())
-				}
-				if err := os.WriteFile(tmpFile.Name(), tt.manifestYAML, 0600); err != nil {
-					t.Fatalf("failed to write manifest file: %s", err.Error())
-				}
-				defer os.RemoveAll(tmpFile.Name())
-
-				manifestPath = tmpFile.Name()
-			}
-
-			ctxResource, err := getCtxResource(manifestPath)
-			assert.ErrorIs(t, err, tt.expectedErr)
-			assert.EqualValues(t, ctxResource, tt.expectedCtxResource)
 		})
 	}
 }

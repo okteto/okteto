@@ -45,8 +45,8 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 }
 
 // CreateForDev deploys the volume claim for a given development container
-func CreateForDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface, devPath string) error {
-	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
+func CreateForDev(ctx context.Context, dev *model.Dev, devPath string, namespace string, c kubernetes.Interface) error {
+	vClient := c.CoreV1().PersistentVolumeClaims(namespace)
 	pvcForDev := translate(dev)
 	k8Volume, err := vClient.Get(ctx, pvcForDev.Name, metav1.GetOptions{})
 	if err != nil && !strings.Contains(err.Error(), "not found") {
@@ -72,7 +72,7 @@ func CreateForDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface, d
 			if !isDynamicallyProvisionedPVCError(err, pvcForDev.Name) {
 				return fmt.Errorf("error updating kubernetes volume claim: %w", err)
 			}
-			oktetoLog.Debug("could not update pvc in namespace %s: %s", dev.Namespace, err)
+			oktetoLog.Debug("could not update pvc in namespace %s: %s", namespace, err)
 			oktetoLog.Warning(`Could not increase the size of the dev volume from %s to %s:
 try running 'okteto down -v' and 'okteto up', or talk to your administrator
 (the PVC's storage class must support 'allowVolumeExpansion' to be able to upscale dev volumes).`,
@@ -132,10 +132,10 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev, devPath st
 		}
 		dev.Metadata.Annotations[model.OktetoRestartAnnotation] = restartUUID
 		for _, s := range dev.Services {
-			if s.Annotations == nil {
-				s.Annotations = map[string]string{}
+			if s.Metadata.Annotations == nil {
+				s.Metadata.Annotations = map[string]string{}
 			}
-			s.Annotations[model.OktetoRestartAnnotation] = restartUUID
+			s.Metadata.Annotations[model.OktetoRestartAnnotation] = restartUUID
 		}
 	}
 
@@ -157,11 +157,6 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev, devPath st
 	}
 	return nil
 
-}
-
-// DestroyDev destroys the persistent volume claim for a given development container
-func DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
-	return Destroy(ctx, dev.GetVolumeName(), dev.Namespace, c, dev.Timeout.Default)
 }
 
 // Destroy destroys a persistent volume claim

@@ -78,7 +78,7 @@ func computeProgress(local, remote float64) float64 {
 }
 
 // Wait waits for the okteto up sequence to finish
-func Wait(dev *model.Dev, okStatusList []config.UpState) error {
+func Wait(dev *model.Dev, namespace string, okStatusList []config.UpState) error {
 	oktetoLog.Spinner("Activating your development container...")
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -91,7 +91,7 @@ func Wait(dev *model.Dev, okStatusList []config.UpState) error {
 
 		ticker := time.NewTicker(500 * time.Millisecond)
 		for {
-			status, err := config.GetState(dev.Name, dev.Namespace)
+			status, err := config.GetState(dev.Name, namespace)
 			if err != nil {
 				exit <- err
 				return

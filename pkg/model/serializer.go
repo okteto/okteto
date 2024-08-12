@@ -34,7 +34,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	apiv1 "k8s.io/api/core/v1"
-	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -70,12 +70,6 @@ type probesRaw struct {
 	Liveness  bool `json:"liveness,omitempty" yaml:"liveness,omitempty"`
 	Readiness bool `json:"readiness,omitempty" yaml:"readiness,omitempty"`
 	Startup   bool `json:"startup,omitempty" yaml:"startup,omitempty"`
-}
-
-// lifecycleRaw represents the lifecycle info for serialization
-type lifecycleRaw struct {
-	PostStart bool `json:"postStart,omitempty" yaml:"postStart,omitempty"`
-	PostStop  bool `json:"postStop,omitempty" yaml:"postStop,omitempty"`
 }
 
 type AffinityRaw struct {
@@ -575,31 +569,66 @@ func (p Probes) MarshalYAML() (interface{}, error) {
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (l *Lifecycle) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	lifecycle := &Lifecycle{
+		PostStart: &LifecycleHandler{},
+		PreStop:   &LifecycleHandler{},
+	}
 	var rawBool bool
 	err := unmarshal(&rawBool)
 	if err == nil {
-		l.PostStart = rawBool
-		l.PostStop = rawBool
+		lifecycle.PostStart.Enabled = rawBool
+		lifecycle.PreStop.Enabled = rawBool
+		*l = *lifecycle
 		return nil
 	}
 
-	var lifecycleRaw lifecycleRaw
+	type lifecycleRawType Lifecycle
+	var lifecycleRaw lifecycleRawType
 	err = unmarshal(&lifecycleRaw)
 	if err != nil {
 		return err
 	}
 
-	l.PostStart = lifecycleRaw.PostStart
-	l.PostStop = lifecycleRaw.PostStop
+	lifecycle.PostStart = lifecycleRaw.PostStart
+	lifecycle.PreStop = lifecycleRaw.PreStop
+	*l = *lifecycle
 	return nil
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (l Lifecycle) MarshalYAML() (interface{}, error) {
-	if l.PostStart && l.PostStop {
+func (l *Lifecycle) MarshalYAML() (interface{}, error) {
+	if l != nil && l.PostStart != nil && l.PostStart.Enabled && l.PreStop != nil && l.PreStop.Enabled && len(l.PostStart.Command.Values) == 0 && len(l.PreStop.Command.Values) == 0 {
 		return true, nil
 	}
-	return lifecycleRaw(l), nil
+	return l, nil
+}
+
+func (lh *LifecycleHandler) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawBool bool
+	err := unmarshal(&rawBool)
+	if err == nil {
+		lh.Enabled = rawBool
+		return nil
+	}
+
+	type lifecycleHandlerRawType LifecycleHandler
+	var lifecycleHandlerRaw lifecycleHandlerRawType
+	err = unmarshal(&lifecycleHandlerRaw)
+	if err != nil {
+		return err
+	}
+	*lh = LifecycleHandler(lifecycleHandlerRaw)
+	return nil
+}
+
+func (lh *LifecycleHandler) MarshalYAML() (interface{}, error) {
+	if lh != nil && lh.Enabled && len(lh.Command.Values) == 0 {
+		return true, nil
+	}
+	if lh != nil && lh.Enabled && len(lh.Command.Values) > 0 {
+		return lh, nil
+	}
+	return false, nil
 }
 
 type hybridModeInfo struct {
@@ -645,7 +674,6 @@ var hybridUnsupportedFields = []string{
 	"image",
 	"imagePullPolicy",
 	"initContainer",
-	"initFromImage",
 	"lifecycle",
 	"namespace",
 	"nodeSelector",
@@ -746,20 +774,18 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type manifestRaw struct {
-	Name          string                   `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace     string                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context       string                   `json:"context,omitempty" yaml:"context,omitempty"`
-	Icon          string                   `json:"icon,omitempty" yaml:"icon,omitempty"`
 	Deploy        *DeployInfo              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev           ManifestDevs             `json:"dev,omitempty" yaml:"dev,omitempty"`
 	Test          ManifestTests            `json:"test,omitempty" yaml:"test,omitempty"`
 	Destroy       *DestroyInfo             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 	Build         build.ManifestBuild      `json:"build,omitempty" yaml:"build,omitempty"`
 	Dependencies  deps.ManifestSection     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
-	GlobalForward []forward.GlobalForward  `json:"forward,omitempty" yaml:"forward,omitempty"`
 	External      externalresource.Section `json:"external,omitempty" yaml:"external,omitempty"`
-
-	DeprecatedDevs []string `yaml:"devs"`
+	Name          string                   `json:"name,omitempty" yaml:"name,omitempty"`
+	Namespace     string                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context       string                   `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon          string                   `json:"icon,omitempty" yaml:"icon,omitempty"`
+	GlobalForward []forward.GlobalForward  `json:"forward,omitempty" yaml:"forward,omitempty"`
 }
 
 func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -780,8 +806,6 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	m.Dev = manifest.Dev
 	m.Icon = manifest.Icon
 	m.Build = manifest.Build
-	m.Namespace = manifest.Namespace
-	m.Context = manifest.Context
 	m.Dependencies = manifest.Dependencies
 	m.Name = manifest.Name
 	if manifest.GlobalForward != nil {
@@ -1055,19 +1079,13 @@ func (d *Dev) MarshalYAML() (interface{}, error) {
 	if isDefaultProbes(d) {
 		toMarshall.Probes = nil
 	}
-	if areAllProbesEnabled(d.Probes) {
-		toMarshall.Probes = nil
-		toMarshall.Healthchecks = true
-	}
 	if d.AreDefaultPersistentVolumeValues() {
 		toMarshall.PersistentVolumeInfo = nil
 	}
 	if toMarshall.ImagePullPolicy == apiv1.PullAlways {
 		toMarshall.ImagePullPolicy = ""
 	}
-	if toMarshall.Lifecycle != nil && (!toMarshall.Lifecycle.PostStart || !toMarshall.Lifecycle.PostStop) {
-		toMarshall.Lifecycle = nil
-	}
+
 	if toMarshall.Metadata != nil && len(toMarshall.Metadata.Annotations) == 0 && len(toMarshall.Metadata.Labels) == 0 {
 		toMarshall.Metadata = nil
 	}

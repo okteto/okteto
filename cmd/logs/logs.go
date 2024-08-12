@@ -28,8 +28,11 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -55,17 +58,38 @@ type Options struct {
 	All          bool
 }
 
-func Logs(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Logs(ctx context.Context, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command {
 	options := &Options{}
 
 	cmd := &cobra.Command{
 		Use:   "logs",
 		Short: "Fetch the logs of your development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if options.ManifestPath != "" {
+				// check that the manifest file exists
+				if !filesystem.FileExistsWithFilesystem(options.ManifestPath, fs) {
+					return oktetoErrors.ErrManifestPathNotFound
+				}
+
+				// the Okteto manifest flag should specify a file, not a directory
+				if filesystem.IsDir(options.ManifestPath, fs) {
+					return oktetoErrors.ErrManifestPathIsDir
+				}
+			}
+
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, contextCMD.ManifestOptions{Filename: options.ManifestPath, Namespace: options.Namespace, K8sContext: options.Context}, afero.NewOsFs())
+			ctxOpts := &contextCMD.Options{
+				Show:      true,
+				Context:   options.Context,
+				Namespace: options.Namespace,
+			}
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+				return err
+			}
+
+			manifest, err := model.GetManifestV2(options.ManifestPath, afero.NewOsFs())
 			if err != nil {
 				return err
 			}
@@ -127,7 +151,7 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&options.All, "all", "a", false, "fetch logs from the whole namespace")
-	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "the namespace to use to fetch the logs (defaults to the current okteto namespace)")
 	cmd.Flags().StringVarP(&options.Context, "context", "c", "", "the context to use to fetch the logs")
 	cmd.Flags().StringVarP(&options.exclude, "exclude", "e", "", "exclude by service name (regular expression)")

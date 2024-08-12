@@ -33,6 +33,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	apiv1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -53,6 +54,7 @@ const (
 	actionLockField = "actionLock"
 	actionNameField = "actionName"
 	variablesField  = "variables"
+	devBranchField  = "dev-branch"
 	PhasesField     = "phases"
 
 	actionDefaultName = "cli"
@@ -231,6 +233,21 @@ func TranslatePipelineName(name string) string {
 	return fmt.Sprintf("%s%s", ConfigmapNamePrefix, format.ResourceK8sMetaString(name))
 }
 
+// UpdateLatestUpBranch adds a new phase to the configmap with the duration in seconds
+func UpdateLatestUpBranch(ctx context.Context, name, namespace, branch string, c kubernetes.Interface) error {
+	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
+	if err != nil {
+		return err
+	}
+	val := cmap.Data[devBranchField]
+	if val == branch {
+		oktetoLog.Infof("latestUpBranch already set to %s", branch)
+		return nil
+	}
+	cmap.Data[devBranchField] = branch
+	return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
+}
+
 func translateOutput(output *bytes.Buffer) []byte {
 	// If the output is larger than the currentMaxLimit for the logs trim it.
 	// We can't really truncate the buffer since we would end up with an invalid json
@@ -359,7 +376,8 @@ func AddDevAnnotations(ctx context.Context, manifest *model.Manifest, c kubernet
 		if dev.Autocreate {
 			continue
 		}
-		app, err := apps.Get(ctx, dev, manifest.Namespace, c)
+		ns := okteto.GetContext().Namespace
+		app, err := apps.Get(ctx, dev, ns, c)
 		if err != nil {
 			oktetoLog.Infof("could not add %s dev annotations due to: %s", devName, err.Error())
 			continue

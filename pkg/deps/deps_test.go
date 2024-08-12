@@ -65,7 +65,6 @@ func Test_ExpandVars(t *testing.T) {
 		Repository:   "${REPO}",
 		Branch:       "${NOBRANCHSET-$BRANCH}",
 		ManifestPath: "${NOMPATHSET=$MPATH}",
-		Namespace:    "${FOO+$SOME_NS_DEP_EXP}",
 		Variables: env.Environment{
 			env.Var{
 				Name:  "MYVAR",
@@ -81,7 +80,6 @@ func Test_ExpandVars(t *testing.T) {
 		Repository:   "my/repo",
 		Branch:       "myBranch",
 		ManifestPath: "api/okteto.yml",
-		Namespace:    "oktetoNs",
 		Variables: env.Environment{
 			env.Var{
 				Name:  "MYVAR",
@@ -125,6 +123,20 @@ func Test_ManifestDependencies_UnmarshalYAML(t *testing.T) {
 				},
 				"movies-frontend": &Dependency{
 					Repository: "https://github.com/okteto/movies-frontend",
+				},
+			},
+		},
+		{
+			name: "deserialized successfully from array with repo with groups",
+			yaml: []byte(`
+- https://gitlab.com/okteto24/samples/nested/movies-frontend
+- https://gitlab.com/okteto24/samples/nested/movies-api`),
+			expected: ManifestSection{
+				"movies-api": &Dependency{
+					Repository: "https://gitlab.com/okteto24/samples/nested/movies-api",
+				},
+				"movies-frontend": &Dependency{
+					Repository: "https://gitlab.com/okteto24/samples/nested/movies-frontend",
 				},
 			},
 		},

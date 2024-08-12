@@ -21,6 +21,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -147,10 +148,18 @@ func Test_updateEnvsWithError(t *testing.T) {
 
 func Test_AddDevAnnotations(t *testing.T) {
 	ctx := context.Background()
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"example": {
+				Namespace: "unit-test",
+			},
+		},
+		CurrentContext: "example",
+	}
 	d := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "deployment",
-			Namespace:   "namespace",
+			Namespace:   "unit-test",
 			Labels:      map[string]string{},
 			Annotations: map[string]string{},
 		},
@@ -158,7 +167,6 @@ func Test_AddDevAnnotations(t *testing.T) {
 	fakeClient := fake.NewSimpleClientset(d)
 	t.Setenv(model.GithubRepositoryEnvVar, "git-repo")
 	manifest := &model.Manifest{
-		Namespace: "namespace",
 		Dev: model.ManifestDevs{
 			"not-found-deployment": &model.Dev{
 				Name: "not-found-deployment",
@@ -172,7 +180,7 @@ func Test_AddDevAnnotations(t *testing.T) {
 		},
 	}
 	AddDevAnnotations(ctx, manifest, fakeClient)
-	d, err := fakeClient.AppsV1().Deployments("namespace").Get(ctx, "deployment", metav1.GetOptions{})
+	d, err := fakeClient.AppsV1().Deployments("unit-test").Get(ctx, "deployment", metav1.GetOptions{})
 	assert.NoError(t, err)
 	assert.Equal(t,
 		d.Annotations,

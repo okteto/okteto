@@ -96,8 +96,6 @@ type Manifest struct {
 	Deploy       *DeployInfo              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev          ManifestDevs             `json:"dev,omitempty" yaml:"dev,omitempty"`
 	Name         string                   `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace    string                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context      string                   `json:"context,omitempty" yaml:"context,omitempty"`
 	Icon         string                   `json:"icon,omitempty" yaml:"icon,omitempty"`
 	ManifestPath string                   `json:"-" yaml:"-"`
 	Destroy      *DestroyInfo             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
@@ -142,9 +140,8 @@ func NewManifestFromStack(stack *Stack) *Manifest {
 		})
 	}
 	stackManifest := &Manifest{
-		Type:      StackType,
-		Name:      stack.Name,
-		Namespace: stack.Namespace,
+		Type: StackType,
+		Name: stack.Name,
 		Deploy: &DeployInfo{
 			ComposeSection: &ComposeSectionInfo{
 				ComposesInfo: stackPaths,
@@ -255,36 +252,6 @@ func getManifestFromDevFilePath(cwd, manifestPath string, fs afero.Fs) (*Manifes
 	}
 
 	return nil, discovery.ErrOktetoManifestNotFound
-}
-
-// GetManifestV1 gets a manifest from a path or search for the files to generate it
-func GetManifestV1(manifestPath string, fs afero.Fs) (*Manifest, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
-	manifest, err := getManifestFromDevFilePath(cwd, manifestPath, fs)
-	if err != nil {
-		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
-			return nil, err
-		}
-	}
-
-	if manifest != nil {
-		return manifest, nil
-	}
-
-	if manifestPath != "" && pathExistsAndDir(manifestPath) {
-		cwd = manifestPath
-	}
-
-	manifest, err = getManifestFromOktetoFile(cwd, fs)
-	if err != nil {
-		return nil, err
-	}
-
-	return manifest, nil
 }
 
 func pathExistsAndDir(path string) bool {
@@ -718,8 +685,6 @@ func (m *Manifest) setDefaults() error {
 			return fmt.Errorf("error on dev '%s': %w", d.Name, err)
 		}
 
-		d.translateDeprecatedMetadataFields()
-
 		sort.SliceStable(d.Forward, func(i, j int) bool {
 			return d.Forward[i].Less(&d.Forward[j])
 		})
@@ -948,8 +913,6 @@ func (m *Manifest) WriteToFile(filePath string) error {
 	}
 	for dName, d := range m.Dev {
 		d.Name = ""
-		d.Context = ""
-		d.Namespace = ""
 		if d.Image == "" {
 			if v, ok := m.Build[dName]; ok {
 				if v.Image != "" {
@@ -1241,4 +1204,69 @@ func getBuildContextForComposeWithVolumeMounts(m *Manifest) (string, error) {
 	}
 
 	return context, nil
+}
+
+func (di DeployInfo) IsEmpty() bool {
+	if len(di.Commands) > 0 {
+		return false
+	}
+	if di.ComposeSection != nil && di.ComposeSection.Stack != nil {
+		return false
+	}
+	if di.Divert != nil {
+		return false
+	}
+	if di.Endpoints != nil {
+		return false
+	}
+	return true
+}
+
+func (di DestroyInfo) IsEmpty() bool {
+	if di.Image != "" {
+		return false
+	}
+	if len(di.Commands) > 0 {
+		return false
+	}
+	return true
+}
+
+func (mt ManifestTests) IsEmpty() bool {
+	return len(mt) == 0
+}
+
+func (m *Manifest) ValidateForCLIOnly() error {
+	invalidFields := []string{}
+	if !(m.Build == nil || m.Build.IsEmpty()) {
+		invalidFields = append(invalidFields, "build")
+	}
+	if !(m.Dependencies == nil || m.Dependencies.IsEmpty()) {
+		invalidFields = append(invalidFields, "dependencies")
+	}
+	if !(m.Deploy == nil || m.Deploy.IsEmpty()) {
+		invalidFields = append(invalidFields, "deploy")
+	}
+	if !(m.Destroy == nil || m.Destroy.IsEmpty()) {
+		invalidFields = append(invalidFields, "destroy")
+	}
+	if !(m.External == nil || m.External.IsEmpty()) {
+		invalidFields = append(invalidFields, "external")
+	}
+	if !(m.Test == nil || m.Test.IsEmpty()) {
+		invalidFields = append(invalidFields, "test")
+	}
+	if m.Icon != "" {
+		invalidFields = append(invalidFields, "icon")
+	}
+	if m.Name != "" {
+		invalidFields = append(invalidFields, "name")
+	}
+	if len(invalidFields) > 0 {
+		return oktetoErrors.UserError{
+			E:    fmt.Errorf("these features are only supported if you install Okteto in your context: %s", strings.Join(invalidFields, ", ")),
+			Hint: "To install Okteto platform on your cluster check: https://www.okteto.com/docs/get-started/install/",
+		}
+	}
+	return nil
 }

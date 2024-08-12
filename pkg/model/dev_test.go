@@ -34,14 +34,14 @@ func Test_LoadManifest(t *testing.T) {
         container: core
         image: code/core:0.1.8
         command: ["uwsgi"]
-        annotations:
-            key1: value1
-            key2: value2
-        labels:
+        selector:
             key3: value3
         metadata:
             labels:
                 key4: value4
+            annotations:
+                key1: value1
+                key2: value2
         resources:
             requests:
                 memory: "64Mi"
@@ -65,14 +65,14 @@ func Test_LoadManifest(t *testing.T) {
           container: core
           image: code/core:0.1.8
           command: ["uwsgi"]
-          annotations:
-            key1: value1
-            key2: value2
-          labels:
+          selector:
             key3: value3
           metadata:
             labels:
               key4: value4
+            annotations:
+              key1: value1
+              key2: value2
           resources:
             requests:
               memory: "64Mi"
@@ -132,7 +132,7 @@ func Test_LoadManifest(t *testing.T) {
 		}
 	}
 
-	expected := (63 * time.Second)
+	expected := 63 * time.Second
 	if expected != main.Timeout.Default {
 		t.Errorf("the default timeout wasn't applied, got %s, expected %s", main.Timeout, expected)
 	}
@@ -389,9 +389,9 @@ func Test_loadSelector(t *testing.T) {
 				t.Fatalf("couldn't load selector")
 			}
 
-			for key, value := range dev.Labels {
+			for key, value := range dev.Selector {
 				if tt.want[key] != value {
-					t.Errorf("got: '%v', expected: '%v'", dev.Labels, tt.want)
+					t.Errorf("got: '%v', expected: '%v'", dev.Selector, tt.want)
 				}
 			}
 		})
@@ -571,9 +571,10 @@ func Test_LoadRemote(t *testing.T) {
         image: code/core:0.1.8
         command: ["uwsgi"]
         remote: 22100
-        annotations:
-            key1: value1
-            key2: value2
+        metadata:
+          annotations:
+              key1: value1
+              key2: value2
         forward:
         - 8080:8080
         sshServerPort: 2222
@@ -633,9 +634,10 @@ func Test_Reverse(t *testing.T) {
         container: core
         image: code/core:0.1.8
         command: ["uwsgi"]
-        annotations:
-            key1: value1
-            key2: value2
+        metadata:
+          annotations:
+              key1: value1
+              key2: value2
         reverse:
         - 8080:8080`)
 	manifest, err := Read(manifestBytes)
@@ -662,8 +664,9 @@ func Test_Reverse(t *testing.T) {
 func Test_LoadForcePull(t *testing.T) {
 	manifestBytes := []byte(`dev:
     a:
-        annotations:
-            key1: value1
+        metadata:
+          annotations:
+              key1: value1
         services:
         - name: b
           imagePullPolicy: IfNotPresent`)
@@ -725,7 +728,7 @@ func Test_validate(t *testing.T) {
 		{
 			name: "services-with-enabled-pvc",
 			manifest: []byte(`dev:
-    deployment: 
+    deployment:
       sync:
         - .:/app
       services:
@@ -1195,14 +1198,6 @@ func Test_validateForExtraFields(t *testing.T) {
 			value: "autocreate: true",
 		},
 		{
-			name:  "context",
-			value: "context: minikube",
-		},
-		{
-			name:  "healthchecks",
-			value: "healthchecks: true",
-		},
-		{
 			name: "probes",
 			value: `probes:
                liveness: true
@@ -1213,7 +1208,7 @@ func Test_validateForExtraFields(t *testing.T) {
 			name: "lifecycle",
 			value: `lifecycle:
                postStart: false
-               postStop: true`,
+               preStop: true`,
 		},
 		{
 			name: "securityContext",
@@ -1274,10 +1269,6 @@ func Test_validateForExtraFields(t *testing.T) {
                    image: alpine`,
 		},
 		{
-			name:  "initFromImage",
-			value: "initFromImage: true",
-		},
-		{
 			name: "timeout",
 			value: `timeout:
                    default: 3m
@@ -1292,14 +1283,14 @@ func Test_validateForExtraFields(t *testing.T) {
         container: core
         image: code/core:0.1.8
         command: ["uwsgi"]
-        annotations:
-            key1: value1
-            key2: value2
-        labels:
+        selector:
             key3: value3
         metadata:
             labels:
                 key4: value4
+            annotations:
+              key1: value1
+              key2: value2
         resources:
             requests:
                 memory: "64Mi"
@@ -1323,14 +1314,14 @@ func Test_validateForExtraFields(t *testing.T) {
           container: core
           image: code/core:0.1.8
           command: ["uwsgi"]
-          annotations:
-            key1: value1
-            key2: value2
-          labels:
+          selector:
             key3: value3
           metadata:
             labels:
                 key4: value4
+            annotations:
+              key1: value1
+              key2: value2
           resources:
             requests:
                 memory: "64Mi"

@@ -104,9 +104,9 @@ RUN \
   /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}{{ if eq .Command "test" }} || true{{ end }}
 
 {{range $key, $artifact := .Artifacts }}
-RUN if [ -f /okteto/src/{{$artifact.Path}} ]; then \
+RUN if [ -e /okteto/src/{{$artifact.Path}} ]; then \
     mkdir -p $(dirname /okteto/artifacts/{{$artifact.Destination}}) && \
-    cp /okteto/src/{{$artifact.Path}} /okteto/artifacts/{{$artifact.Destination}}; \
+    cp -r /okteto/src/{{$artifact.Path}} /okteto/artifacts/{{$artifact.Destination}}; \
   fi
 {{end}}
 
@@ -149,14 +149,10 @@ type Params struct {
 	DependenciesEnvVars map[string]string
 	Manifest            *model.Manifest
 	Command             string
-	// CacheInvalidationKey is the value use to invalidate the cache. Defaults
-	// to a random value which essentially means no-cache. Setting this to a
-	// static or known value will reuse the build cache
-	CacheInvalidationKey string
-	TemplateName         string
-	DockerfileName       string
-	KnownHostsPath       string
-	BaseImage            string
+	TemplateName        string
+	DockerfileName      string
+	KnownHostsPath      string
+	BaseImage           string
 	// ContextAbsolutePathOverride is the absolute path for the build context. Optional.
 	// If this values is not defined it will default to the folder location of the
 	// okteto manifest which is resolved through params.ManifestPathFlag
@@ -165,6 +161,7 @@ type Params struct {
 	Deployable                  deployable.Entity
 	CommandFlags                []string
 	Caches                      []string
+	Hosts                       []model.Host
 	// IgnoreRules are the ignoring rules added to this build execution.
 	// Rules follow the .dockerignore syntax as defined in:
 	// https://docs.docker.com/build/building/context/#syntax
@@ -179,6 +176,8 @@ type Params struct {
 
 	// UseRootUser is a flag to indicate if the user should be root
 	UseRootUser bool
+
+	NoCache bool
 }
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
@@ -278,14 +277,11 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		return err
 	}
 
-	cacheKey := params.CacheInvalidationKey
-	if cacheKey == "" {
-		randomNumber, err := rand.Int(rand.Reader, big.NewInt(1000000))
-		if err != nil {
-			return err
-		}
-		cacheKey = strconv.Itoa(int(randomNumber.Int64()))
+	randomNumber, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	if err != nil {
+		return err
 	}
+	cacheKey := strconv.Itoa(int(randomNumber.Int64()))
 
 	b, err := yaml.Marshal(params.Deployable)
 	if err != nil {
@@ -304,7 +300,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		outputMode = buildCmd.DeployOutputModeOnBuild
 	}
 
-	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: outputMode})
+	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: outputMode, NoCache: params.NoCache})
 	buildOptions.Manifest = params.Manifest
 	buildOptions.BuildArgs = append(
 		buildOptions.BuildArgs,
@@ -338,6 +334,8 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 			buildOptions.ExtraHosts = getExtraHosts(registryUrl, subdomain, ip, *sc)
 		}
 	}
+
+	buildOptions.ExtraHosts = addDefinedHosts(buildOptions.ExtraHosts, params.Hosts)
 
 	sshSock := os.Getenv(r.sshAuthSockEnvvar)
 	if sshSock == "" {
@@ -513,7 +511,9 @@ func createDockerignoreFileWithFilesystem(cwd, tmpDir string, rules []string, us
 		dockerignoreContent = append(dockerignoreContent, []byte(rule)...)
 		dockerignoreContent = append(dockerignoreContent, []byte("\n")...)
 	}
-
+	if len(dockerignoreContent) == 0 {
+		dockerignoreContent = []byte("# Okteto docker ignore\n")
+	}
 	return afero.WriteFile(fs, filename, dockerignoreContent, 0600)
 }
 
@@ -554,6 +554,13 @@ func getExtraHosts(registryURL, subdomain, ip string, metadata types.ClusterMeta
 		extraHosts = append(extraHosts, types.HostMap{Hostname: metadata.PublicDomain, IP: ip})
 	}
 
+	return extraHosts
+}
+
+func addDefinedHosts(extraHosts []types.HostMap, definedHosts []model.Host) []types.HostMap {
+	for _, host := range definedHosts {
+		extraHosts = append(extraHosts, types.HostMap{Hostname: host.Hostname, IP: host.IP})
+	}
 	return extraHosts
 }
 
