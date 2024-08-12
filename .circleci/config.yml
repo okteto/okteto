@@ -179,6 +179,8 @@ jobs:
           name: Run deploy integration tests
           # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
           command: |
+            export DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
+            export DEPOT_TOKEN=$DEPOT_TOKEN
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
