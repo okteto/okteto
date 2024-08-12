@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,7 +40,7 @@ type fakeBuilder struct {
 	assertOptions func(o *types.BuildOptions)
 }
 
-func (f fakeBuilder) Run(_ context.Context, opts *types.BuildOptions, _ *io.Controller) error {
+func (f fakeBuilder) Run(_ context.Context, opts *types.BuildOptions, _ *io.Controller, _ *vars.Manager) error {
 	if f.assertOptions != nil {
 		f.assertOptions(opts)
 	}

@@ -601,7 +601,7 @@ func (dc *destroyCommand) getDestroyer(opts *Options) destroyInterface {
 	var destroyer destroyInterface
 
 	if shouldRunInRemote(opts) {
-		destroyer = newRemoteDestroyer(opts.Manifest, dc.ioCtrl)
+		destroyer = newRemoteDestroyer(opts.Manifest, dc.ioCtrl, dc.varManager)
 		oktetoLog.Info("Destroying remotely...")
 	} else {
 		runner := &deployable.DestroyRunner{

@@ -16,7 +16,6 @@ package build
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -27,6 +26,7 @@ import (
 	buildkitClient "github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 )
 
@@ -55,8 +55,8 @@ type depotBuilder struct {
 	isRetry        bool
 }
 
-func IsDepotEnabled() bool {
-	return os.Getenv(DepotTokenEnvVar) != "" && os.Getenv(DepotProjectEnvVar) != ""
+func IsDepotEnabled(varManager *vars.Manager) bool {
+	return varManager.GetIncLocal(DepotTokenEnvVar) != "" && varManager.GetIncLocal(DepotProjectEnvVar) != ""
 }
 
 // newDepotBuilder creates a new instance of DepotBuilder.

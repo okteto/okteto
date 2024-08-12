@@ -40,6 +40,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v2"
 )
@@ -126,7 +127,7 @@ type OktetoClientProvider interface {
 // Builder is the interface to run the build of the Dockerfile
 // to execute remote commands like deploy and destroy
 type Builder interface {
-	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error
+	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller, varManager *vars.Manager) error
 }
 
 // Runner struct in charge of creating the Dockerfile for remote execution
@@ -138,6 +139,7 @@ type Runner struct {
 	builder              Builder
 	oktetoClientProvider OktetoClientProvider
 	ioCtrl               *io.Controller
+	varManager           *vars.Manager
 	// sshAuthSockEnvvar is the default for SSH_AUTH_SOCK. Provided mostly for testing
 	sshAuthSockEnvvar  string
 	useInternalNetwork bool
@@ -209,14 +211,15 @@ type dockerfileTemplateProperties struct {
 }
 
 // NewRunner creates a new Runner for remote
-func NewRunner(ioCtrl *io.Controller, builder Builder) *Runner {
+func NewRunner(ioCtrl *io.Controller, varManager *vars.Manager, builder Builder) *Runner {
 	fs := afero.NewOsFs()
 	return &Runner{
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
-		useInternalNetwork:   !buildCmd.IsDepotEnabled(),
+		useInternalNetwork:   !buildCmd.IsDepotEnabled(varManager),
 		ioCtrl:               ioCtrl,
+		varManager:           varManager,
 		builder:              builder,
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
 	}
@@ -371,14 +374,11 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 	}
 	r.ioCtrl.Logger().Infof("Executing remote with the following base image: %s", params.BaseImage)
 
-	// TODO: remove next line
-	buildOptions.OutputMode = "plain"
-
 	// we need to call Run() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
 	// account that we must not confuse the user with build messages since this logic is
 	// executed in the deploy command.
-	return r.builder.Run(ctx, buildOptions, r.ioCtrl)
+	return r.builder.Run(ctx, buildOptions, r.ioCtrl, r.varManager)
 }
 
 // createDockerfile renders the template of the Dockerfile and creates the temporary file

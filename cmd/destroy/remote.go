@@ -54,7 +54,7 @@ type remoteDestroyCommand struct {
 }
 
 // newRemoteDestroyer creates a new remote destroyer
-func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remoteDestroyCommand {
+func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller, varManager *vars.Manager) *remoteDestroyCommand {
 	fs := afero.NewOsFs()
 	builder := buildCmd.NewOktetoBuilder(
 		&okteto.ContextStateless{
@@ -62,7 +62,7 @@ func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remote
 		},
 		fs,
 	)
-	runner := remote.NewRunner(ioCtrl, builder)
+	runner := remote.NewRunner(ioCtrl, varManager, builder)
 	if manifest.Destroy == nil {
 		manifest.Destroy = &model.DestroyInfo{}
 	}

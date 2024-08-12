@@ -47,7 +47,7 @@ const (
 // OktetoBuilderInterface runs the build of an image
 type OktetoBuilderInterface interface {
 	GetBuilder() string
-	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error
+	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller, varManager *vars.Manager) error
 }
 
 // OktetoBuilder runs the build of an image
@@ -76,16 +76,16 @@ func (ob *OktetoBuilder) GetBuilder() string {
 }
 
 // Run runs the build sequence
-func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error {
+func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller, varManager *vars.Manager) error {
 	isRemoteExecution := buildOptions.OutputMode == DeployOutputModeOnBuild || buildOptions.OutputMode == DestroyOutputModeOnBuild || buildOptions.OutputMode == TestOutputModeOnBuild
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
-	depotToken := os.Getenv(DepotTokenEnvVar)
-	depotProject := os.Getenv(DepotProjectEnvVar)
+	depotToken := varManager.GetIncLocal(DepotTokenEnvVar)
+	depotProject := varManager.GetIncLocal(DepotProjectEnvVar)
 
 	if !isRemoteExecution {
 		builder := ob.GetBuilder()
 		buildMsg := fmt.Sprintf("Building '%s'", buildOptions.File)
-		depotEnabled := IsDepotEnabled()
+		depotEnabled := IsDepotEnabled(varManager)
 		if depotEnabled {
 			ioCtrl.Out().Infof("%s on depot's machine...", buildMsg)
 		} else {
@@ -97,7 +97,7 @@ func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptio
 	// When depot is available we only go to depot if it's not a deploy or a destroy.
 	// On depot the workload id is not working correctly and the users would not be able to
 	// use the internal cluster ip as if they were running their scripts on the k8s cluster
-	case IsDepotEnabled() && !isRemoteExecution:
+	case IsDepotEnabled(varManager) && !isRemoteExecution:
 		depotManager := newDepotBuilder(depotProject, depotToken, ob.OktetoContext, ioCtrl)
 		return depotManager.Run(ctx, buildOptions, solveBuild)
 	default:

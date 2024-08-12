@@ -781,7 +781,9 @@ func TestGetDestroyer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dc := &destroyCommand{}
+			dc := &destroyCommand{
+				varManager: vars.NewVarsManager(&fakeVarManager{}),
+			}
 			deployer := dc.getDestroyer(tt.opts)
 			require.IsType(t, tt.expectedType, deployer)
 		})

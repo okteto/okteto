@@ -72,7 +72,7 @@ func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller
 		},
 		fs,
 	)
-	runner := remote.NewRunner(ioCtrl, builder)
+	runner := remote.NewRunner(ioCtrl, varManager, builder)
 	return &remoteDeployer{
 		getBuildEnvVars:      buildVarsGetter,
 		runner:               runner,

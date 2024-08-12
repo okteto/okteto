@@ -318,7 +318,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			return metadata, err
 		}
 
-		runner := remote.NewRunner(ioCtrl, buildCMD.NewOktetoBuilder(
+		runner := remote.NewRunner(ioCtrl, varManager, buildCMD.NewOktetoBuilder(
 			&okteto.ContextStateless{
 				Store: okteto.GetContextStore(),
 			},

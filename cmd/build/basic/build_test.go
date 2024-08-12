@@ -34,8 +34,8 @@ type fakeVarManager struct{}
 
 func (*fakeVarManager) MaskVar(string) {}
 
-func (f *fakeBuildRunner) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error {
-	args := f.Called(ctx, buildOptions, ioCtrl)
+func (f *fakeBuildRunner) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller, varManager *vars.Manager) error {
+	args := f.Called(ctx, buildOptions, ioCtrl, varManager)
 	return args.Error(0)
 }
 
@@ -63,7 +63,7 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 		Tag:         tag,
 		CommandArgs: []string{dir},
 	}
-	buildRunner.On("Run", mock.Anything, expectedOptions, mock.Anything).Return(assert.AnError)
+	buildRunner.On("Run", mock.Anything, expectedOptions, mock.Anything, mock.Anything).Return(assert.AnError)
 
 	err = bc.Build(ctx, options)
 
@@ -96,7 +96,7 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 		Tag:         tag,
 		CommandArgs: []string{dir},
 	}
-	buildRunner.On("Run", mock.Anything, expectedOptions, mock.Anything).Return(nil)
+	buildRunner.On("Run", mock.Anything, expectedOptions, mock.Anything, mock.Anything).Return(nil)
 
 	err = bc.Build(ctx, options)
 	// no error from the build
@@ -126,7 +126,7 @@ func TestBuildWithNoErrorFromDockerfileAndNoTag(t *testing.T) {
 		File:        filepath.Join(dir, "Dockerfile"),
 		CommandArgs: []string{dir},
 	}
-	buildRunner.On("Run", mock.Anything, expectedOptions, mock.Anything).Return(nil)
+	buildRunner.On("Run", mock.Anything, expectedOptions, mock.Anything, mock.Anything).Return(nil)
 
 	err = bc.Build(ctx, options)
 	// no error from the build

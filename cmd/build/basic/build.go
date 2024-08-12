@@ -31,7 +31,7 @@ import (
 
 // BuildRunner runs the build of an image
 type BuildRunner interface {
-	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error
+	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller, varManager *vars.Manager) error
 }
 
 // Builder It provides basic functionality to build images.
@@ -80,7 +80,7 @@ func (ob *Builder) Build(ctx context.Context, options *types.BuildOptions) error
 		return err
 	}
 
-	if err := ob.BuildRunner.Run(ctx, options, ob.IoCtrl); err != nil {
+	if err := ob.BuildRunner.Run(ctx, options, ob.IoCtrl, ob.VarManager); err != nil {
 		analytics.TrackBuild(false)
 		return err
 	}
