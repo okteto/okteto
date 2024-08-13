@@ -28,6 +28,9 @@ import (
 type fakeVarManager struct{}
 
 func (*fakeVarManager) MaskVar(string) {}
+func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
+	return false
+}
 
 func Test_GetTimeout(t *testing.T) {
 	tests := []struct {

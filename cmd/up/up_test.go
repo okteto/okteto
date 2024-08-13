@@ -41,6 +41,9 @@ import (
 type fakeVarManager struct{}
 
 func (*fakeVarManager) MaskVar(string) {}
+func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
+	return false
+}
 
 func Test_waitUntilExitOrInterrupt(t *testing.T) {
 	up := upContext{

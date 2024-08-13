@@ -42,6 +42,7 @@ import (
 	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/insights"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -92,6 +93,10 @@ type varsManager struct{}
 
 func (*varsManager) MaskVar(value string) {
 	oktetoLog.AddMaskedWord(value)
+}
+
+func (*varsManager) IsLocalVarSupportEnabled() bool {
+	return env.LoadBooleanOrDefault(vars.OktetoSupportLocalVariablesEnabled, false)
 }
 
 func main() {

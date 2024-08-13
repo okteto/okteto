@@ -21,10 +21,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type fakeVarManager struct{}
+type fakeVarManager struct {
+	mockIsLocalVariablesEnabled bool
+}
 
 func (*fakeVarManager) MaskVar(value string) {
 	oktetoLog.AddMaskedWord(value)
+}
+func (f *fakeVarManager) IsLocalVarSupportEnabled() bool {
+	return f.mockIsLocalVariablesEnabled
 }
 
 func TestVarManagerDoesNotExportToOsEnv(t *testing.T) {
@@ -188,7 +193,7 @@ func TestGetExcLocal(t *testing.T) {
 			expected: "",
 		},
 		{
-			name: "local var loaded in var manager - var found",
+			name: "local var loaded in var manager - ignored",
 			getVarManager: func() *Manager {
 				varManager := NewVarsManager(&fakeVarManager{})
 				varManager.AddLocalVar("MY_VAR", "my-value")
@@ -196,6 +201,18 @@ func TestGetExcLocal(t *testing.T) {
 			},
 			find:     "MY_VAR",
 			expected: "",
+		},
+		{
+			name: "local var loaded in var manager - found due to feature flag enabled",
+			getVarManager: func() *Manager {
+				varManager := NewVarsManager(&fakeVarManager{
+					mockIsLocalVariablesEnabled: true,
+				})
+				varManager.AddLocalVar("MY_VAR", "my-value")
+				return varManager
+			},
+			find:     "MY_VAR",
+			expected: "my-value",
 		},
 		{
 			name: "flag var loaded in var manager - var found",
@@ -281,10 +298,11 @@ func TestExpandIncLocal(t *testing.T) {
 
 func TestExpandExcLocal(t *testing.T) {
 	tests := []struct {
-		name        string
-		result      string
-		value       string
-		expectedErr bool
+		name                        string
+		result                      string
+		value                       string
+		expectedErr                 bool
+		mockIsLocalVariablesEnabled bool
 	}{
 		{
 			name:        "broken var - missing closing curly bracket",
@@ -303,6 +321,14 @@ func TestExpandExcLocal(t *testing.T) {
 			value:       "value-${LOCAL}-value",
 			result:      "value--value",
 			expectedErr: false,
+		},
+		{
+			name:        "local var is found due to feature flag enabled",
+			value:       "value-${LOCAL}-value",
+			result:      "value-bar-value",
+			expectedErr: false,
+
+			mockIsLocalVariablesEnabled: true,
 		},
 		{
 			name:        "var",
@@ -332,7 +358,9 @@ func TestExpandExcLocal(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			varManager := NewVarsManager(&fakeVarManager{})
+			varManager := NewVarsManager(&fakeVarManager{
+				mockIsLocalVariablesEnabled: tt.mockIsLocalVariablesEnabled,
+			})
 			varManager.AddLocalVar("LOCAL", "bar")
 			varManager.AddLocalVar("BAR", "bar")
 			varManager.AddDotEnvVar("BAR", "bar")
@@ -430,7 +458,7 @@ func TestGetOktetoVariablesExcLocal(t *testing.T) {
 		varManager := NewVarsManager(&fakeVarManager{})
 
 		// local env vars should not affect the var manager
-		t.Setenv("MY_VAR", "env-value")
+		t.Setenv("MY_VAR", "host-local-value")
 		assert.Equal(t, []string{}, varManager.GetOktetoVariablesExcLocal())
 
 		// Adding variables as groups
@@ -488,7 +516,7 @@ func TestGetOktetoVariablesExcLocal(t *testing.T) {
 		varManager := NewVarsManager(&fakeVarManager{})
 
 		// local env vars should not affect the var manager
-		t.Setenv("MY_VAR", "env-value")
+		t.Setenv("MY_VAR", "host-local-value")
 		assert.Equal(t, []string{}, varManager.GetOktetoVariablesExcLocal())
 
 		varManager.AddLocalVar("MY_VAR", "local-value")
@@ -500,6 +528,36 @@ func TestGetOktetoVariablesExcLocal(t *testing.T) {
 
 		varManager.AddDotEnvVar("MY_VAR", "dot-env-value")
 		expected = []string{"MY_VAR=dot-env-value"}
+		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+
+		varManager.AddFlagVar("MY_VAR", "flag-value")
+		expected = []string{"MY_VAR=flag-value"}
+		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+
+		varManager.AddBuiltInVar("MY_VAR", "built-in-value")
+		expected = []string{"MY_VAR=built-in-value"}
+		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+	})
+
+	t.Run("local env vars are used when the dedicated feature flag is enabled", func(t *testing.T) {
+		varManager := NewVarsManager(&fakeVarManager{
+			mockIsLocalVariablesEnabled: true,
+		})
+
+		// local env vars should not affect the var manager
+		t.Setenv("MY_VAR", "host-local-value")
+		assert.Equal(t, []string{}, varManager.GetOktetoVariablesExcLocal())
+
+		varManager.AddAdminAndUserVar("MY_VAR", "admin-value")
+		expected := []string{"MY_VAR=admin-value"}
+		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+
+		varManager.AddDotEnvVar("MY_VAR", "dot-env-value")
+		expected = []string{"MY_VAR=dot-env-value"}
+		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+
+		varManager.AddLocalVar("MY_VAR", "local-value")
+		expected = []string{"MY_VAR=local-value"}
 		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
 
 		varManager.AddFlagVar("MY_VAR", "flag-value")

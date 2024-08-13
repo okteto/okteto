@@ -25,6 +25,9 @@ import (
 type fakeVarManager struct{}
 
 func (*fakeVarManager) MaskVar(string) {}
+func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
+	return false
+}
 
 func Test_generateManifestFile(t *testing.T) {
 	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})

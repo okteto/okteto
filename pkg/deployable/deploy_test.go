@@ -38,6 +38,9 @@ import (
 type fakeVarManager struct{}
 
 func (*fakeVarManager) MaskVar(string) {}
+func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
+	return false
+}
 
 type fakeCmapHandler struct {
 	errUpdatingWithEnvs error

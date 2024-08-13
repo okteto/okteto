@@ -38,6 +38,9 @@ func (f *fakeBuildRunner) Run(ctx context.Context, buildOptions *types.BuildOpti
 type fakeVarManager struct{}
 
 func (*fakeVarManager) MaskVar(string) {}
+func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
+	return false
+}
 
 func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	ctx := context.Background()

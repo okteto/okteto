@@ -41,6 +41,9 @@ import (
 type fakeVarManager struct{}
 
 func (*fakeVarManager) MaskVar(string) {}
+func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
+	return false
+}
 
 var fakeManifest = &model.Manifest{
 	Name: "test",

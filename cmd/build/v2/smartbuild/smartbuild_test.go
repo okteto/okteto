@@ -61,6 +61,9 @@ func (fh fakeHasher) hashWithBuildContext(*build.Info, string) string {
 type fakeVarManager struct{}
 
 func (*fakeVarManager) MaskVar(string) {}
+func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
+	return false
+}
 
 func TestNewSmartBuildCtrl(t *testing.T) {
 	type input struct {

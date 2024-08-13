@@ -34,6 +34,9 @@ type fakeGraphQLClient struct {
 type fakeVarManager struct{}
 
 func (*fakeVarManager) MaskVar(string) {}
+func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
+	return false
+}
 
 func (fc fakeGraphQLClient) Query(ctx context.Context, q interface{}, _ map[string]interface{}) error {
 	if fc.queryResult != nil {

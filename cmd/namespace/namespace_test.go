@@ -29,6 +29,9 @@ import (
 type fakeVarManager struct{}
 
 func (*fakeVarManager) MaskVar(string) {}
+func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
+	return false
+}
 
 type fakeK8sProvider struct {
 	k8sClient kubernetes.Interface

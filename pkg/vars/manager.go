@@ -30,6 +30,10 @@ const (
 	OktetoVariableTypeLocal        = 3
 	OktetoVariableTypeDotEnv       = 4
 	OktetoVariableTypeAdminAndUser = 5
+
+	// OktetoSupportLocalVariablesEnabled is a feature flag that can be used to enable the support for local environment
+	// variables. Once set to true, the varManager will always return local vars in Get or Lookup methods.
+	OktetoSupportLocalVariablesEnabled = "OKTETO_SUPPORT_LOCAL_VARIABLES_ENABLED"
 )
 
 type ConfigItem struct {
@@ -40,11 +44,11 @@ type ConfigItem struct {
 type Type int
 
 var config = map[Type]ConfigItem{
-	OktetoVariableTypeBuiltIn:      {Masked: false},
+	OktetoVariableTypeBuiltIn:      {Masked: false}, // TODO: Validate this
 	OktetoVariableTypeDotEnv:       {Masked: true},
 	OktetoVariableTypeAdminAndUser: {Masked: true},
 	OktetoVariableTypeFlag:         {Masked: true},
-	OktetoVariableTypeLocal:        {Masked: false},
+	OktetoVariableTypeLocal:        {Masked: false}, // TODO: Validate this
 }
 
 type Group struct {
@@ -54,6 +58,7 @@ type Group struct {
 
 type ManagerInterface interface {
 	MaskVar(value string)
+	IsLocalVarSupportEnabled() bool
 }
 
 type Manager struct {
@@ -83,7 +88,7 @@ func (m *Manager) LookupIncLocal(key string) (string, bool) {
 // LookupExcLocal returns the value of an okteto variable if it's loaded in the var manager, excluding local variables
 func (m *Manager) LookupExcLocal(key string) (string, bool) {
 	for _, g := range m.groups {
-		if g.Type == OktetoVariableTypeLocal {
+		if g.Type == OktetoVariableTypeLocal && !m.m.IsLocalVarSupportEnabled() {
 			continue
 		}
 		for _, v := range g.Vars {
@@ -184,7 +189,7 @@ func (m *Manager) GetExcLocal(key string) string {
 func (m *Manager) getGroupsExcludingType(typeToExclude Type) []Group {
 	groups := make([]Group, 0)
 	for _, g := range m.groups {
-		if g.Type == typeToExclude {
+		if g.Type == typeToExclude && !m.m.IsLocalVarSupportEnabled() {
 			continue
 		}
 		groups = append(groups, g)

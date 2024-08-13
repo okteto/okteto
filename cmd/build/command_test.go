@@ -134,6 +134,9 @@ func getFakeManifestV2(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, 
 type fakeVarManager struct{}
 
 func (*fakeVarManager) MaskVar(string) {}
+func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
+	return false
+}
 
 func TestBuildIsManifestV2(t *testing.T) {
 	bc := &Command{
