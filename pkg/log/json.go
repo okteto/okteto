@@ -24,6 +24,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	// UnexpectedErrorStage stage to be used in the staged logs when there is an unexpected error
+	UnexpectedErrorStage = "Internal server error"
+)
+
 // JSONWriter writes into a JSON terminal
 type JSONWriter struct {
 	out  *logrus.Logger
@@ -195,7 +200,7 @@ func (w *JSONWriter) Fail(format string, args ...interface{}) {
 	msg := fmt.Sprintf("%s %s", errorSymbol, fmt.Sprintf(format, args...))
 	if msg != "" {
 		if log.stage == "" {
-			log.stage = "Internal server error"
+			log.stage = UnexpectedErrorStage
 		}
 		msg = convertToJSON(ErrorLevel, log.stage, msg)
 		if msg != "" {
