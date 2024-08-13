@@ -126,10 +126,10 @@ const (
 	// OktetoSyncModeFieldValue represents the sync mode field value
 	OktetoSyncModeFieldValue = "sync"
 
-	// OktetoConfigMapVariablesField represents the field name related to variables seetion in config map
+	// OktetoConfigMapVariablesField represents the field name related to variables section in config map
 	OktetoConfigMapVariablesField = "variables"
 
-	// OktetoDependencyEnvsKey the key on the conqfig map that will store OKTETO_ENV values
+	// OktetoDependencyEnvsKey the key on the config map that will store OKTETO_ENV values
 	OktetoDependencyEnvsKey = "dependencyEnvs"
 
 	// EnvironmentLabelKeyPrefix represents the prefix for the preview and pipeline labels
