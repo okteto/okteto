@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	ps "github.com/mitchellh/go-ps"
+	"github.com/mitchellh/go-ps"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 )
@@ -178,11 +178,13 @@ func RunOktetoDown(oktetoPath string, downOpts *DownOptions) error {
 
 	log.Printf("okteto down output:\n%s", string(o))
 	if err != nil {
-		m, err := os.ReadFile(downOpts.ManifestPath)
-		if err != nil {
-			return fmt.Errorf("okteto down failed: %w", err)
+		if downOpts.ManifestPath != "" {
+			m, err := os.ReadFile(downOpts.ManifestPath)
+			if err != nil {
+				return fmt.Errorf("okteto down failed: %w", err)
+			}
+			log.Printf("manifest: \n%s\n", string(m))
 		}
-		log.Printf("manifest: \n%s\n", string(m))
 		return fmt.Errorf("okteto down failed: %w", err)
 	}
 

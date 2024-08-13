@@ -130,5 +130,13 @@ func GetDefaultLocalEnvs() []string {
 		envs = append(envs, fmt.Sprintf("TERM=%s", term))
 	}
 
+	home, err := os.UserHomeDir()
+	if err != nil {
+		oktetoLog.Infof("failed to get user home directory: %s", err)
+	}
+	if home != "" {
+		envs = append(envs, fmt.Sprintf("HOME=%s", home))
+	}
+
 	return envs
 }
