@@ -320,6 +320,8 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 	}
 	err = r.ConfigMapHandler.UpdateEnvsFromCommands(ctx, params.Name, params.Namespace, params.Variables)
 	if err != nil {
+		oktetoLog.SetStage(oktetoLog.UnexpectedErrorStage)
+		oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error persisting OKTETO_ENV: %s", err.Error())
 		return fmt.Errorf("could not update config map with environment variables: %w", err)
 	}
 
