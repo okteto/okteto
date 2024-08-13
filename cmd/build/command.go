@@ -109,6 +109,10 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 				return err
 			}
 
+			if !okteto.IsOkteto() {
+				return oktetoErrors.ErrContextIsNotOktetoCluster
+			}
+
 			ioCtrl.Logger().Info("context loaded")
 
 			bc := NewBuildCommand(ioCtrl, at, insights, oktetoContext, k8slogger)

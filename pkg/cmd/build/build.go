@@ -127,7 +127,7 @@ func GetRegistryConfigFromOktetoConfig(okCtx OktetoContextInterface) *okteto.Con
 		IsOkteto:                    okCtx.IsOktetoCluster(),
 		ContextName:                 okCtx.GetCurrentName(),
 		Namespace:                   okCtx.GetNamespace(),
-		RegistryUrl:                 okCtx.GetCurrentRegister(),
+		RegistryUrl:                 okCtx.GetRegistryURL(),
 		UserId:                      okCtx.GetCurrentUser(),
 		Token:                       okCtx.GetCurrentToken(),
 		GlobalNamespace:             okCtx.GetGlobalNamespace(),
@@ -193,7 +193,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 func validateImages(okctx OktetoContextInterface, imageTags string) error {
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(okctx))
 
-	if strings.HasPrefix(imageTags, okctx.GetCurrentRegister()) && strings.Count(imageTags, "/") == 2 {
+	if strings.HasPrefix(imageTags, okctx.GetRegistryURL()) && strings.Count(imageTags, "/") == 2 {
 		return nil
 	}
 	numberOfSlashToBeCorrect := 2

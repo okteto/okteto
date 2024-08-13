@@ -15,6 +15,7 @@ package kubetoken
 
 import (
 	"context"
+	"log"
 	"testing"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -46,11 +47,12 @@ func (f fakeOktetoClientProvider) Provide(...okteto.Option) (types.OktetoInterfa
 }
 
 type fakeCtxCmdRunner struct {
-	err error
+	fakeCtx *okteto.ContextStateless
+	err     error
 }
 
-func (f fakeCtxCmdRunner) Run(ctx context.Context, ctxOptions *contextCMD.Options) error {
-	return f.err
+func (f fakeCtxCmdRunner) RunStateless(ctx context.Context, ctxOptions *contextCMD.Options) (*okteto.ContextStateless, error) {
+	return f.fakeCtx, f.err
 }
 
 func TestKubetoken(t *testing.T) {
@@ -58,15 +60,16 @@ func TestKubetoken(t *testing.T) {
 	type input struct {
 		fakeOktetoClientProvider fakeOktetoClientProvider
 		fakeCtxCmdRunner         fakeCtxCmdRunner
-		contextStore             *okteto.ContextStore
 		flags                    Flags
 	}
 
-	fakeCtxStore := &okteto.ContextStore{
-		CurrentContext: "https://okteto.dev",
-		Contexts: map[string]*okteto.Context{
-			"https://okteto.dev": {
-				IsOkteto: true,
+	fakeCtxStore := &okteto.ContextStateless{
+		Store: &okteto.ContextStore{
+			CurrentContext: "https://okteto.dev",
+			Contexts: map[string]*okteto.Context{
+				"https://okteto.dev": {
+					IsOkteto: true,
+				},
 			},
 		},
 	}
@@ -91,7 +94,6 @@ func TestKubetoken(t *testing.T) {
 				flags: Flags{
 					Context: "https://okteto.dev",
 				},
-				contextStore: fakeCtxStore,
 				fakeOktetoClientProvider: fakeOktetoClientProvider{
 					client: &client.FakeOktetoClient{
 						KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{
@@ -100,7 +102,8 @@ func TestKubetoken(t *testing.T) {
 					},
 				},
 				fakeCtxCmdRunner: fakeCtxCmdRunner{
-					err: assert.AnError,
+					fakeCtx: fakeCtxStore,
+					err:     assert.AnError,
 				},
 			},
 			expected: assert.AnError,
@@ -111,7 +114,6 @@ func TestKubetoken(t *testing.T) {
 				flags: Flags{
 					Context: "https://okteto.dev",
 				},
-				contextStore: fakeCtxStore,
 				fakeOktetoClientProvider: fakeOktetoClientProvider{
 					client: &client.FakeOktetoClient{
 						KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{
@@ -120,7 +122,8 @@ func TestKubetoken(t *testing.T) {
 					},
 				},
 				fakeCtxCmdRunner: fakeCtxCmdRunner{
-					err: assert.AnError,
+					fakeCtx: fakeCtxStore,
+					err:     assert.AnError,
 				},
 			},
 			expected: assert.AnError,
@@ -132,7 +135,6 @@ func TestKubetoken(t *testing.T) {
 					Context:   "https://okteto.dev",
 					Namespace: "namespace",
 				},
-				contextStore: fakeCtxStore,
 				fakeOktetoClientProvider: fakeOktetoClientProvider{
 					client: &client.FakeOktetoClient{
 						KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{
@@ -140,7 +142,9 @@ func TestKubetoken(t *testing.T) {
 						}),
 					},
 				},
-				fakeCtxCmdRunner: fakeCtxCmdRunner{},
+				fakeCtxCmdRunner: fakeCtxCmdRunner{
+					fakeCtx: fakeCtxStore,
+				},
 			},
 			expected: nil,
 		},
@@ -148,10 +152,9 @@ func TestKubetoken(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			cmd := NewKubetokenCmd()
-			cmd.ctxStore = tc.input.contextStore
 			cmd.oktetoClientProvider = tc.input.fakeOktetoClientProvider
 			cmd.oktetoCtxCmdRunner = tc.input.fakeCtxCmdRunner
-			cmd.ctxStore = tc.input.contextStore
+			cmd.ctxStore = fakeCtxStore.Store
 			cmd.initCtxFunc = func(string, string) *contextCMD.Options {
 				return &contextCMD.Options{
 					Context:   tc.input.flags.Context,
@@ -159,6 +162,7 @@ func TestKubetoken(t *testing.T) {
 				}
 			}
 
+			log.Printf("running test %s", tc.name)
 			err := cmd.Run(ctx, tc.input.flags)
 			assert.ErrorIs(t, err, tc.expected)
 		})
