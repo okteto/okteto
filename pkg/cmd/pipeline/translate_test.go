@@ -99,6 +99,7 @@ func Test_updateEnvsWithoutError(t *testing.T) {
 	envs := []string{
 		"ONE=value",
 		"TWO=values",
+		"URL=https://okteto.com?okteto=rocks",
 	}
 
 	err := UpdateEnvs(ctx, "test", namespace, envs, fakeClient)

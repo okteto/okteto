@@ -167,9 +167,9 @@ func UpdateEnvs(ctx context.Context, name, namespace string, envs []string, c ku
 
 	if cmap != nil {
 		envsToSet := make(map[string]string, len(envs))
+		envFormatParts := 2
 		for _, env := range envs {
-			result := strings.Split(env, "=")
-			envFormatParts := 2
+			result := strings.SplitN(env, "=", envFormatParts)
 			if len(result) != envFormatParts {
 				return fmt.Errorf("invalid env format: '%s'", env)
 			}
@@ -408,8 +408,8 @@ func removeSensitiveDataFromGitURL(gitURL string) string {
 
 func translateVariables(variables []string) string {
 	var v []types.DeployVariable
+	maxVariableFormatParts := 2
 	for _, item := range variables {
-		maxVariableFormatParts := 2
 		splitV := strings.SplitN(item, "=", maxVariableFormatParts)
 		if len(splitV) != maxVariableFormatParts {
 			continue
