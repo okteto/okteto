@@ -44,11 +44,11 @@ type ConfigItem struct {
 type Type int
 
 var config = map[Type]ConfigItem{
-	OktetoVariableTypeBuiltIn:      {Masked: false}, // TODO: Validate this
+	OktetoVariableTypeBuiltIn:      {Masked: false},
 	OktetoVariableTypeDotEnv:       {Masked: true},
 	OktetoVariableTypeAdminAndUser: {Masked: true},
 	OktetoVariableTypeFlag:         {Masked: true},
-	OktetoVariableTypeLocal:        {Masked: false}, // TODO: Validate this
+	OktetoVariableTypeLocal:        {Masked: false},
 }
 
 type Group struct {
