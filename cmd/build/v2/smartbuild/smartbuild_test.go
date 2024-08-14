@@ -297,7 +297,6 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 			expected:    "",
 			expectedErr: assert.AnError,
 		},
-		// TODO: discuss with the team about this unit test
 		{
 			name: "arg with expansion",
 			input: input{
