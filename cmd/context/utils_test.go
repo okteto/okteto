@@ -61,7 +61,6 @@ dependencies:
 			expectedManifest: &model.Manifest{
 				Build: build.ManifestBuild{
 					"service": {
-						Name:       "",
 						Target:     "build",
 						Context:    "./service",
 						Dockerfile: "custom-dockerfile",

@@ -29,7 +29,6 @@ import (
 // Info represents the build info to generate an image
 type Info struct {
 	Secrets          Secrets           `yaml:"secrets,omitempty"`
-	Name             string            `yaml:"name,omitempty"`
 	Context          string            `yaml:"context,omitempty"`
 	Dockerfile       string            `yaml:"dockerfile,omitempty"`
 	Target           string            `yaml:"target,omitempty"`
@@ -47,7 +46,6 @@ type Secrets map[string]string
 // infoRaw represents the build info for serialization
 type infoRaw struct {
 	Secrets          Secrets           `yaml:"secrets,omitempty"`
-	Name             string            `yaml:"name,omitempty"`
 	Context          string            `yaml:"context,omitempty"`
 	Dockerfile       string            `yaml:"dockerfile,omitempty"`
 	Target           string            `yaml:"target,omitempty"`
@@ -119,7 +117,7 @@ func (i *Info) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawString string
 	err := unmarshal(&rawString)
 	if err == nil {
-		i.Name = rawString
+		i.Context = rawString
 		return nil
 	}
 
@@ -129,7 +127,6 @@ func (i *Info) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	i.Name = rawBuildInfo.Name
 	i.Context, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(rawBuildInfo.Context)
 	if err != nil {
 		return err
@@ -162,13 +159,12 @@ func (i *Info) MarshalYAML() (interface{}, error) {
 	if i.Args != nil && len(i.Args) != 0 {
 		return infoRaw(*i), nil
 	}
-	return i.Name, nil
+	return i.Image, nil
 }
 
 // Copy clones the buildInfo without the pointers
 func (i *Info) Copy() *Info {
 	result := &Info{
-		Name:        i.Name,
 		Context:     i.Context,
 		Dockerfile:  i.Dockerfile,
 		Target:      i.Target,

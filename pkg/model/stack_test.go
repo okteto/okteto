@@ -675,7 +675,6 @@ func TestStack_Merge(t *testing.T) {
 				Services: map[string]*Service{
 					"app": {
 						Build: &build.Info{
-							Name:       "test",
 							Context:    "test",
 							Dockerfile: "test-Dockerfile",
 						},
@@ -692,7 +691,6 @@ func TestStack_Merge(t *testing.T) {
 				Services: map[string]*Service{
 					"app": {
 						Build: &build.Info{
-							Name:       "test-overwrite",
 							Context:    "test-overwrite",
 							Dockerfile: "test-overwrite-Dockerfile",
 						},
@@ -709,7 +707,6 @@ func TestStack_Merge(t *testing.T) {
 				Services: map[string]*Service{
 					"app": {
 						Build: &build.Info{
-							Name:       "test-overwrite",
 							Context:    "test-overwrite",
 							Dockerfile: "test-overwrite-Dockerfile",
 						},

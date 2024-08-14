@@ -379,10 +379,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 	}
 	for svcName, svc := range s.Services {
 		if svc.Build != nil {
-			if svc.Build.Name != "" {
-				svc.Build.Context = svc.Build.Name
-				svc.Build.Name = ""
-			}
+
 			svc.Build.SetBuildDefaults()
 		}
 		if svc.Resources.Requests.Storage.Size.Value.Cmp(resource.MustParse("0")) == 0 {

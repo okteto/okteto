@@ -226,7 +226,6 @@ type RawMessage struct {
 }
 
 type composeBuildInfo struct {
-	Name             string               `yaml:"name,omitempty"`
 	Context          string               `yaml:"context,omitempty"`
 	Dockerfile       string               `yaml:"dockerfile,omitempty"`
 	CacheFrom        cache.From           `yaml:"cache_from,omitempty"`
@@ -242,7 +241,6 @@ func (c *composeBuildInfo) toBuildInfo() *build.Info {
 		return nil
 	}
 	return &build.Info{
-		Name:             c.Name,
 		Context:          c.Context,
 		Dockerfile:       c.Dockerfile,
 		CacheFrom:        c.CacheFrom,
@@ -258,7 +256,7 @@ func (c *composeBuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) erro
 	var rawString string
 	err := unmarshal(&rawString)
 	if err == nil {
-		c.Name = rawString
+		c.Context = rawString
 		return nil
 	}
 

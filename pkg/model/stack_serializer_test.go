@@ -502,7 +502,7 @@ func TestComposeBuildSectionUnmarshalling(t *testing.T) {
 			name:  "image direct",
 			bytes: []byte(`nginx`),
 			expected: &composeBuildInfo{
-				Name: "nginx",
+				Context: "nginx",
 			},
 		},
 		{
