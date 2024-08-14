@@ -139,7 +139,7 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 
 // Run executes the kubetoken command
 func (kc *Cmd) Run(ctx context.Context, flags Flags) error {
-	oktetoLog.SetOutputFormat("silent")
+	oktetoLog.SetOutputFormat(oktetoLog.SilentFormat)
 	err := newPreReqValidator(
 		withCtxName(flags.Context),
 		withNamespace(flags.Namespace),
