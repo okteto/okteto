@@ -42,7 +42,6 @@ import (
 	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/insights"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -89,25 +88,6 @@ func init() {
 	}
 }
 
-type varsManager struct{}
-
-func (*varsManager) MaskVar(value string) {
-	oktetoLog.AddMaskedWord(value)
-}
-
-func (*varsManager) IsLocalVarSupportEnabled() bool {
-	return env.LoadBooleanOrDefault(vars.OktetoSupportLocalVariablesEnabled, false)
-}
-
-func (*varsManager) IsLocalVarException(v string) bool {
-	//if (v === "OKETO_NAMESPACE")
-	//
-	//if (v starts with "OKTETO_DEPENDENCY_)
-	//
-
-	return false
-}
-
 func main() {
 	ctx := context.Background()
 	ioController := io.NewIOController()
@@ -134,7 +114,7 @@ func main() {
 
 	k8sLogger := io.NewK8sLogger()
 
-	varManager := vars.NewVarsManager(&varsManager{})
+	varManager := vars.NewVarsManager(&cmd.VarsManager{})
 	varManager.AddGroup(
 		vars.Group{
 			Vars: vars.ConvertLocalEnvVarsToOktetoVars(os.Environ),

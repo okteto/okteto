@@ -57,7 +57,7 @@ import (
 
 const (
 	succesfullyDeployedmsg = "Development environment '%s' successfully deployed"
-	dependencyEnvVarPrefix = "OKTETO_DEPENDENCY_"
+	DependencyEnvVarPrefix = "OKTETO_DEPENDENCY_"
 	deployComposePhaseName = "compose"
 )
 
@@ -822,7 +822,7 @@ func GetDependencyEnvVars(environGetter environGetter) map[string]string {
 			continue
 		}
 
-		if strings.HasPrefix(pair[0], dependencyEnvVarPrefix) {
+		if strings.HasPrefix(pair[0], DependencyEnvVarPrefix) {
 			result[pair[0]] = pair[1]
 		}
 	}
