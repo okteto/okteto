@@ -276,11 +276,11 @@ func setVarsFromDependency(cmap *v1.ConfigMap, varManager *vars.Manager) error {
 	if err != nil {
 		return err
 	}
-	varssToSet := make(map[string]string)
-	if err = json.Unmarshal(decodedVars, &varssToSet); err != nil {
+	varsToSet := make(map[string]string)
+	if err = json.Unmarshal(decodedVars, &varsToSet); err != nil {
 		return err
 	}
-	for varKey, varValue := range varssToSet {
+	for varKey, varValue := range varsToSet {
 		varName := fmt.Sprintf(dependencyEnvTemplate, strings.ToUpper(sanitizedName), varKey)
 		varManager.AddBuiltInVar(varName, varValue)
 	}
