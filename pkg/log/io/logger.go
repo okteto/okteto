@@ -26,6 +26,9 @@ const (
 	// JSONFormat represents a json logger
 	JSONFormat string = "json"
 
+	// SilentFormat represents a silent logger
+	SilentFormat string = "silent"
+
 	// DebugLevel is the debug level
 	DebugLevel = "debug"
 
@@ -129,6 +132,8 @@ func (ol *oktetoLogger) SetOutputFormat(output string) {
 	switch output {
 	case JSONFormat:
 		ol.logrusFormatter = newLogrusJSONFormatter()
+	case SilentFormat:
+		ol.logrusFormatter = newLogrusSilentFormatter()
 	default:
 		ol.logrusFormatter = &logrus.TextFormatter{}
 	}
