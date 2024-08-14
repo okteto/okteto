@@ -14,13 +14,14 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/vars"
-	"strings"
 )
 
 type VarsManager struct{}
