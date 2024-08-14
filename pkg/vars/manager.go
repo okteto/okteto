@@ -23,7 +23,7 @@ import (
 // GlobalVarManager is the global instance of the Okteto Variables manager. It should only be used in the serializer where it's harder to inject the manager.
 var GlobalVarManager *Manager
 
-// Vars in groups with higher priority override those with lower priority
+// Okteto CLI supports the following variable types. Each type has a different priority. Higher priority variables override lower priority ones.
 const (
 	OktetoVariableTypeBuiltIn      = 1
 	OktetoVariableTypeFlag         = 2
@@ -56,9 +56,11 @@ type Group struct {
 	Type Type
 }
 
+// ManagerInterface is the interface that the Okteto Variables manager should implement
 type ManagerInterface interface {
 	MaskVar(value string)
 	IsLocalVarSupportEnabled() bool
+	IsLocalVarException(key string) bool
 }
 
 type Manager struct {
@@ -85,10 +87,11 @@ func (m *Manager) LookupIncLocal(key string) (string, bool) {
 	return "", false
 }
 
-// LookupExcLocal returns the value of an okteto variable if it's loaded in the var manager, excluding local variables
+// LookupExcLocal returns the value of an okteto variable if it's loaded in the var manager, by default excluding
+// local variables, unless the feature flag is enabled or the variable is an exception
 func (m *Manager) LookupExcLocal(key string) (string, bool) {
 	for _, g := range m.groups {
-		if g.Type == OktetoVariableTypeLocal && !m.m.IsLocalVarSupportEnabled() {
+		if g.Type == OktetoVariableTypeLocal && !m.shouldIncludeLocalVar(key) {
 			continue
 		}
 		for _, v := range g.Vars {
@@ -98,6 +101,21 @@ func (m *Manager) LookupExcLocal(key string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// shouldIncludeLocalVar returns whether a given variable should be returned. This function should only be used with
+// local variables. If the feature flag is enabled, all local variables should be returned. If the feature flag is disabled,
+// only the exceptions should be returned.
+func (m *Manager) shouldIncludeLocalVar(key string) bool {
+	if m.m.IsLocalVarSupportEnabled() {
+		return true
+	}
+
+	if m.m.IsLocalVarException(key) {
+		return true
+	}
+
+	return false
 }
 
 // AddAdminAndUserVar allows to add a single variable to the manager of type OktetoVariableTypeAdminAndUser.
@@ -185,27 +203,38 @@ func (m *Manager) GetExcLocal(key string) string {
 	return val
 }
 
-// getGroupsExcludingType returns all groups excluding the given type
-func (m *Manager) getGroupsExcludingType(typeToExclude Type) []Group {
-	groups := make([]Group, 0)
-	for _, g := range m.groups {
-		if g.Type == typeToExclude && !m.m.IsLocalVarSupportEnabled() {
-			continue
-		}
-		groups = append(groups, g)
-	}
-	return groups
-}
-
 // GetOktetoVariablesExcLocal returns an array of all the okteto variables that can be exported (excluding local variables)
 func (m *Manager) GetOktetoVariablesExcLocal() []string {
-	groups := m.getGroupsExcludingType(OktetoVariableTypeLocal)
-	return m.groupsToArray(groups)
+	varsMap := make(map[string]struct{})
+	vars := make([]string, 0)
+	for _, g := range m.groups {
+		for _, v := range g.Vars {
+			if g.Type == OktetoVariableTypeLocal && !m.shouldIncludeLocalVar(v.Name) {
+				continue
+			}
+			if _, exists := varsMap[v.Name]; !exists {
+				vars = append(vars, v.String())
+				varsMap[v.Name] = struct{}{}
+			}
+		}
+	}
+	return vars
 }
 
 // ExpandIncLocal replaces the variables in the given string with their values and returns the result. It expands with all groups, including local variables.
 func (m *Manager) ExpandIncLocal(s string) (string, error) {
-	return m.expandString(s, m.groupsToArray(m.groups))
+	varsMap := make(map[string]struct{})
+	vars := make([]string, 0)
+	for _, g := range m.groups {
+		for _, v := range g.Vars {
+			if _, exists := varsMap[v.Name]; !exists {
+				vars = append(vars, v.String())
+				varsMap[v.Name] = struct{}{}
+			}
+		}
+	}
+
+	return m.expandString(s, vars)
 }
 
 // ExpandExcLocal replaces the variables in the given string with their values and returns the result. It expands with all groups, excluding local variables.
@@ -230,21 +259,6 @@ func (m *Manager) sortGroupsByPriorityAsc() {
 	sort.Slice(m.groups, func(i, j int) bool {
 		return m.groups[i].Type < m.groups[j].Type
 	})
-}
-
-// groupsToArray flattens all groups into a single array of vars
-func (m *Manager) groupsToArray(groups []Group) []string {
-	varsMap := make(map[string]struct{})
-	vars := make([]string, 0)
-	for _, g := range groups {
-		for _, v := range g.Vars {
-			if _, exists := varsMap[v.Name]; !exists {
-				vars = append(vars, v.String())
-				varsMap[v.Name] = struct{}{}
-			}
-		}
-	}
-	return vars
 }
 
 func (m *Manager) expandString(s string, envVars []string) (string, error) {

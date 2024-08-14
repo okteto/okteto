@@ -50,6 +50,9 @@ func (*fakeVarManager) MaskVar(string) {}
 func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
 	return false
 }
+func (*fakeVarManager) IsLocalVarException(string) bool {
+	return false
+}
 
 func Test_translateWithVolumes(t *testing.T) {
 	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})

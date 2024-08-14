@@ -23,6 +23,7 @@ import (
 
 type fakeVarManager struct {
 	mockIsLocalVariablesEnabled bool
+	mockIsLocalVarException     bool
 }
 
 func (*fakeVarManager) MaskVar(value string) {
@@ -30,6 +31,9 @@ func (*fakeVarManager) MaskVar(value string) {
 }
 func (f *fakeVarManager) IsLocalVarSupportEnabled() bool {
 	return f.mockIsLocalVariablesEnabled
+}
+func (f *fakeVarManager) IsLocalVarException(string) bool {
+	return f.mockIsLocalVarException
 }
 
 func TestVarManagerDoesNotExportToOsEnv(t *testing.T) {
@@ -568,4 +572,46 @@ func TestGetOktetoVariablesExcLocal(t *testing.T) {
 		expected = []string{"MY_VAR=built-in-value"}
 		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
 	})
+}
+
+func Test_shouldIncludeLocalVar(t *testing.T) {
+	tests := []struct {
+		name                        string
+		key                         string
+		mockIsLocalVariablesEnabled bool
+		mockIsLocalVarException     bool
+		expected                    bool
+	}{
+		{
+			name:     "feature flag disabled - no exception",
+			key:      "MY_VAR",
+			expected: false,
+		},
+		{
+			name:     "feature flag enabled - no exception",
+			key:      "MY_VAR",
+			expected: true,
+
+			mockIsLocalVariablesEnabled: true,
+		},
+		{
+			name:     "feature flag disabled - with exception",
+			key:      "MY_VAR",
+			expected: true,
+
+			mockIsLocalVarException: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			varManager := NewVarsManager(&fakeVarManager{
+				mockIsLocalVariablesEnabled: tt.mockIsLocalVariablesEnabled,
+				mockIsLocalVarException:     tt.mockIsLocalVarException,
+			})
+			result := varManager.shouldIncludeLocalVar(tt.key)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+
 }

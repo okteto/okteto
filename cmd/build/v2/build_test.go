@@ -44,6 +44,9 @@ func (*fakeVarManager) MaskVar(string) {}
 func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
 	return false
 }
+func (*fakeVarManager) IsLocalVarException(string) bool {
+	return false
+}
 
 var fakeManifest = &model.Manifest{
 	Name: "test",

@@ -30,6 +30,9 @@ func (*fakeVarManager) MaskVar(string) {}
 func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
 	return false
 }
+func (*fakeVarManager) IsLocalVarException(string) bool {
+	return false
+}
 
 func Test_convertCommandFlagsToOktetoVariables(t *testing.T) {
 	var tests = []struct {

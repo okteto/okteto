@@ -39,6 +39,9 @@ func (*fakeVarManager) MaskVar(string) {}
 func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
 	return false
 }
+func (*fakeVarManager) IsLocalVarException(string) bool {
+	return false
+}
 
 func mockPipeline(fakeName string, fakeLabels []string) *apiv1.ConfigMap {
 	var labels = map[string]string{

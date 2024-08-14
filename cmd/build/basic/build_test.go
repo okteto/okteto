@@ -36,6 +36,9 @@ func (*fakeVarManager) MaskVar(string) {}
 func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
 	return false
 }
+func (*fakeVarManager) IsLocalVarException(string) bool {
+	return false
+}
 
 func (f *fakeBuildRunner) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller, varManager *vars.Manager) error {
 	args := f.Called(ctx, buildOptions, ioCtrl, varManager)

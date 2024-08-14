@@ -99,6 +99,15 @@ func (*varsManager) IsLocalVarSupportEnabled() bool {
 	return env.LoadBooleanOrDefault(vars.OktetoSupportLocalVariablesEnabled, false)
 }
 
+func (*varsManager) IsLocalVarException(v string) bool {
+	//if (v === "OKETO_NAMESPACE")
+	//
+	//if (v starts with "OKTETO_DEPENDENCY_)
+	//
+
+	return false
+}
+
 func main() {
 	ctx := context.Background()
 	ioController := io.NewIOController()
@@ -126,10 +135,12 @@ func main() {
 	k8sLogger := io.NewK8sLogger()
 
 	varManager := vars.NewVarsManager(&varsManager{})
-	varManager.AddGroup(vars.Group{
-		Vars: vars.ConvertLocalEnvVarsToOktetoVars(os.Environ),
-		Type: vars.OktetoVariableTypeLocal,
-	})
+	varManager.AddGroup(
+		vars.Group{
+			Vars: vars.ConvertLocalEnvVarsToOktetoVars(os.Environ),
+			Type: vars.OktetoVariableTypeLocal,
+		},
+	)
 	vars.GlobalVarManager = varManager
 
 	root := &cobra.Command{
