@@ -15,8 +15,6 @@ package deployable
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -294,9 +292,6 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 	varManager.AddBuiltInVar("BUILT-IN-1", "built-in-value-1")
 	varManager.AddAdminAndUserVar("USER-1", "user-value-1")
 
-	t.Setenv("PATH", filepath.Clean("/some/path"))
-	t.Setenv("TERM", "term-name")
-
 	fs := afero.NewMemMapFs()
 
 	r := DeployRunner{
@@ -327,9 +322,6 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 		},
 	}
 
-	home, err := os.UserHomeDir()
-	assert.NoError(t, err)
-
 	expectedCommand1 := model.DeployCommand{
 		Name:    "test command",
 		Command: "echo",
@@ -339,21 +331,18 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 		Command: "echo 2",
 	}
 	expectedVariables := []string{
-		"A=value1",
-		"B=value2",
-		fmt.Sprintf("PATH=%s", filepath.Clean("/some/path")),
-		"TERM=term-name",
-		fmt.Sprintf("HOME=%s", home),
 		"BUILT-IN-1=built-in-value-1",
 		"OKTETO_ENV=.env",
 		"FLAG-1=flag-value-1",
 		"DOT-ENV-1=dotenv-value-1",
 		"USER-1=user-value-1",
+		"A=value1",
+		"B=value2",
 	}
 	executor.On("Execute", expectedCommand1, expectedVariables).Return(nil).Once()
 	executor.On("Execute", expectedCommand2, expectedVariables).Return(nil).Once()
 
-	err = r.runCommandsSection(context.Background(), params)
+	err := r.runCommandsSection(context.Background(), params)
 
 	require.NoError(t, err)
 	executor.AssertExpectations(t)
@@ -401,9 +390,6 @@ func TestRunCommandsSectionWithErrorInCommands(t *testing.T) {
 		},
 	}
 
-	home, err := os.UserHomeDir()
-	assert.NoError(t, err)
-
 	expectedCommand1 := model.DeployCommand{
 		Name:    "test command",
 		Command: "echo",
@@ -413,16 +399,13 @@ func TestRunCommandsSectionWithErrorInCommands(t *testing.T) {
 		Command: "echo 2",
 	}
 	expectedVariables := []string{
+		"OKTETO_ENV=.env",
 		"A=value1",
 		"B=value2",
-		fmt.Sprintf("PATH=%s", filepath.Clean("/some/path")),
-		"TERM=term-name",
-		fmt.Sprintf("HOME=%s", home),
-		"OKTETO_ENV=.env",
 	}
 	executor.On("Execute", expectedCommand1, expectedVariables).Return(assert.AnError).Once()
 
-	err = r.runCommandsSection(context.Background(), params)
+	err := r.runCommandsSection(context.Background(), params)
 
 	require.Error(t, err)
 	executor.AssertNotCalled(t, "Execute", expectedCommand2, expectedVariables)

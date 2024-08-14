@@ -40,6 +40,10 @@ func (*VarsManager) IsLocalVarException(v string) bool {
 	}
 
 	exceptions := map[string]bool{
+		"HOME": true,
+		"TERM": true,
+		"PATH": true,
+
 		model.OktetoRegistryURLEnvVar:           true,
 		model.OktetoBuildkitHostURLEnvVar:       true,
 		model.OktetoBinEnvVar:                   true,

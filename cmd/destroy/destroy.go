@@ -401,7 +401,6 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 	for _, variable := range cfgVariables {
 		dc.varManager.AddFlagVar(variable.Name, variable.Value)
 	}
-	opts.Variables = append(opts.Variables, env.GetDefaultLocalEnvs()...)
 	opts.Variables = append(opts.Variables, dc.varManager.GetOktetoVariablesExcLocal()...)
 	oktetoLog.EnableMasking()
 

@@ -14,7 +14,6 @@
 package vars
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/a8m/envsubst/parse"
@@ -136,7 +135,6 @@ func (m *Manager) AddBuiltInVar(key, value string) {
 // AddFlagVar allows to add a single variable to the manager of type OktetoVariableTypeFlag.
 func (m *Manager) AddFlagVar(key, value string) {
 	m.addVar(key, value, OktetoVariableTypeFlag)
-	fmt.Println(m.groups)
 }
 
 // AddLocalVar allows to add a single variable to the manager of type OktetoVariableTypeLocal.

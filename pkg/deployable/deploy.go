@@ -25,7 +25,6 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/divert"
-	oktetoEnv "github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/format"
 	kconfig "github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -297,11 +296,9 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 			oktetoLog.SetStage(command.Name)
 			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Executing command '%s'...", command.Name)
 
-			// env is composed by  params.Variables and r.varManager.GetOktetoVariablesExcLocal()
 			var env []string
-			env = append(env, params.Variables...)
-			env = append(env, oktetoEnv.GetDefaultLocalEnvs()...)
 			env = append(env, r.varManager.GetOktetoVariablesExcLocal()...)
+			env = append(env, params.Variables...)
 
 			err := r.Executor.Execute(command, env)
 			if err != nil {
