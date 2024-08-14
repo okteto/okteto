@@ -416,7 +416,6 @@ func TestOptsFromBuildInfoForRemoteDeploy(t *testing.T) {
 		{
 			name: "all fields set",
 			buildInfo: &build.Info{
-				Name:        "movies-service",
 				Context:     "service",
 				Dockerfile:  "Dockerfile",
 				Target:      "build",
@@ -433,7 +432,6 @@ func TestOptsFromBuildInfoForRemoteDeploy(t *testing.T) {
 		{
 			name: "just the fields needed",
 			buildInfo: &build.Info{
-				Name:        "movies-service",
 				Context:     "service",
 				Dockerfile:  "Dockerfile",
 				Target:      "build",
@@ -538,6 +536,10 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 		},
 	}
 
+	getwd := func() (string, error) {
+		return ".", nil
+	}
+
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -569,7 +571,7 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 				contextTest = tt.optionalContext
 			}
 
-			file := extractFromContextAndDockerfile(contextTest, tt.dockerfile, tt.svcName)
+			file := extractFromContextAndDockerfile(contextTest, tt.dockerfile, tt.svcName, getwd)
 			warningErr := strings.TrimSuffix(buf.String(), "\n")
 
 			if warningErr != "" && tt.expectedError == "" {

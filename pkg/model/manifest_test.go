@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -414,13 +415,15 @@ func Test_validateManifestBuild(t *testing.T) {
 
 func TestInferFromStack(t *testing.T) {
 	dirtest := filepath.Clean("/stack/dir/")
+	if runtime.GOOS == "windows" {
+		dirtest = filepath.Clean("C:/stack/dir/")
+	}
 	devInterface := Localhost
 	stack := &Stack{
 		Services: map[string]*Service{
 			"test": {
 				Build: &build.Info{
-					Name:       "",
-					Context:    "test",
+					Context:    filepath.Join(dirtest, "test"),
 					Dockerfile: "Dockerfile",
 				},
 				Ports: []Port{
@@ -449,7 +452,6 @@ func TestInferFromStack(t *testing.T) {
 							Services: map[string]*Service{
 								"test": {
 									Build: &build.Info{
-										Name:       "test",
 										Context:    filepath.Join(dirtest, "test"),
 										Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
 									},
@@ -468,7 +470,7 @@ func TestInferFromStack(t *testing.T) {
 			expectedManifest: &Manifest{
 				Build: build.ManifestBuild{
 					"test": &build.Info{
-						Context:    "test",
+						Context:    filepath.Join(dirtest, "test"),
 						Dockerfile: "Dockerfile",
 					},
 				},
@@ -499,7 +501,6 @@ func TestInferFromStack(t *testing.T) {
 							Services: map[string]*Service{
 								"test": {
 									Build: &build.Info{
-										Name:       "test",
 										Context:    filepath.Join(dirtest, "test"),
 										Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
 									},
@@ -531,8 +532,7 @@ func TestInferFromStack(t *testing.T) {
 							Services: map[string]*Service{
 								"test": {
 									Build: &build.Info{
-										Name:       "test",
-										Context:    "test",
+										Context:    filepath.Join(dirtest, "test"),
 										Dockerfile: "Dockerfile",
 									},
 									Ports: []Port{
@@ -563,8 +563,7 @@ func TestInferFromStack(t *testing.T) {
 							Services: map[string]*Service{
 								"test": {
 									Build: &build.Info{
-										Name:       "test",
-										Context:    "test",
+										Context:    filepath.Join(dirtest, "test"),
 										Dockerfile: "Dockerfile",
 									},
 									Ports: []Port{
@@ -582,7 +581,7 @@ func TestInferFromStack(t *testing.T) {
 			expectedManifest: &Manifest{
 				Build: build.ManifestBuild{
 					"test": &build.Info{
-						Context:    "test",
+						Context:    filepath.Join(dirtest, "test"),
 						Dockerfile: "Dockerfile",
 					},
 				},
@@ -630,7 +629,22 @@ func TestInferFromStack(t *testing.T) {
 				},
 				Deploy: &DeployInfo{
 					ComposeSection: &ComposeSectionInfo{
-						Stack: stack,
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Build: &build.Info{
+										Context:    filepath.Join(dirtest, "test"),
+										Dockerfile: "Dockerfile",
+									},
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -647,8 +661,7 @@ func TestInferFromStack(t *testing.T) {
 							Services: map[string]*Service{
 								"test": {
 									Build: &build.Info{
-										Name:       "test",
-										Context:    filepath.Join(dirtest, "test"),
+										Context:    "test",
 										Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
 									},
 									Image: "okteto.dev/test:my-tag",
@@ -667,9 +680,8 @@ func TestInferFromStack(t *testing.T) {
 			expectedManifest: &Manifest{
 				Build: build.ManifestBuild{
 					"test": &build.Info{
-						Name:       "",
 						Context:    "test",
-						Dockerfile: "Dockerfile",
+						Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
 						Image:      "okteto.dev/test:my-tag",
 					},
 				},
@@ -682,9 +694,8 @@ func TestInferFromStack(t *testing.T) {
 							Services: map[string]*Service{
 								"test": {
 									Build: &build.Info{
-										Name:       "",
 										Context:    "test",
-										Dockerfile: "Dockerfile",
+										Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
 										Image:      "okteto.dev/test:my-tag",
 									},
 									Image: "okteto.dev/test:my-tag",

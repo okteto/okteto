@@ -702,10 +702,6 @@ func (m *Manifest) setDefaults() error {
 		if b == nil {
 			continue
 		}
-		if b.Name != "" {
-			b.Context = b.Name
-			b.Name = ""
-		}
 
 		if !(b.Image != "" && len(b.VolumesToInclude) > 0 && b.Dockerfile == "") {
 			b.SetBuildDefaults()
@@ -876,15 +872,21 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 				buildInfo.Image = svcInfo.Image
 			}
 
-			buildInfo.Context, err = filepath.Rel(cwd, buildInfo.Context)
-			if err != nil {
-				oktetoLog.Infof("can not make svc[%s].build.context relative to cwd", svcName)
+			contextAbs := buildInfo.Context
+
+			if !filepath.IsAbs(contextAbs) && filepath.IsAbs(buildInfo.Dockerfile) {
+				oktetoLog.Infof("context is not absolute but dockerfile is absolute")
+			} else if filepath.IsAbs(contextAbs) && filepath.IsAbs(buildInfo.Dockerfile) {
+				buildInfo.Dockerfile, err = filepath.Rel(contextAbs, buildInfo.Dockerfile)
+				if err != nil {
+					return nil, err
+				}
+			} else if !filepath.IsAbs(contextAbs) && !filepath.IsAbs(buildInfo.Dockerfile) {
+				oktetoLog.Infof("context and dockerfile are relative")
+			} else {
+				oktetoLog.Infof("context and dockerfile are relative")
 			}
-			contextAbs := filepath.Join(cwd, buildInfo.Context)
-			buildInfo.Dockerfile, err = filepath.Rel(contextAbs, buildInfo.Dockerfile)
-			if err != nil {
-				oktetoLog.Infof("can not make svc[%s].build.dockerfile relative to cwd", svcName)
-			}
+
 		}
 
 		if _, ok := m.Build[svcName]; !ok {
@@ -908,9 +910,6 @@ func (m *Manifest) WriteToFile(filePath string) error {
 				},
 			}
 		}
-	}
-	for _, b := range m.Build {
-		b.Name = ""
 	}
 	for dName, d := range m.Dev {
 		d.Name = ""
