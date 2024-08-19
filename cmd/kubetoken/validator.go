@@ -37,9 +37,9 @@ type preReqCfg struct {
 	oktetoClientProvider oktetoClientProvider
 	getContextStore      func() *okteto.ContextStore
 	getCtxResource       initCtxOptsFunc
+	varManager           *vars.Manager
 	ctxName              string
 	ns                   string
-	varManager           *vars.Manager
 }
 
 type option func(*preReqCfg)
@@ -103,9 +103,9 @@ type preReqValidator struct {
 	oktetoClientProvider oktetoClientProvider
 	getContextStore      getContextStoreFunc
 	getCtxResource       initCtxOptsFunc
+	varManager           *vars.Manager
 	ctxName              string
 	ns                   string
-	varManager           *vars.Manager
 }
 
 // newPreReqValidator returns a new preReqValidator
