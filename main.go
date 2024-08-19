@@ -81,11 +81,6 @@ func init() {
 	}
 
 	utilRuntime.ErrorHandlers = errorHandlers
-
-	if bin := os.Getenv(model.OktetoBinEnvVar); bin != "" {
-		model.OktetoBinImageTag = bin
-		oktetoLog.Infof("using %s as the bin image", bin)
-	}
 }
 
 func main() {
@@ -118,6 +113,11 @@ func main() {
 		},
 	)
 	vars.GlobalVarManager = varManager
+
+	if bin := varManager.GetIncLocal(model.OktetoBinEnvVar); bin != "" {
+		model.OktetoBinImageTag = bin
+		oktetoLog.Infof("using %s as the bin image", bin)
+	}
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
