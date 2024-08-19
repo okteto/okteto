@@ -15,8 +15,6 @@ package deploy
 
 import (
 	"context"
-	"net/url"
-
 	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/stack"
@@ -29,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/repository"
 	"k8s.io/client-go/kubernetes"
+	"net/url"
 )
 
 const (
@@ -157,6 +156,7 @@ func (dc *Command) addEnvVars(cwd string) {
 	if dc.VarManager.GetIncLocal(model.OktetoTokenEnvVar) == "" {
 		dc.VarManager.AddLocalVar(model.OktetoTokenEnvVar, okteto.GetContext().Token)
 	}
+	oktetoLog.AddMaskedWord(dc.VarManager.GetIncLocal(model.OktetoTokenEnvVar))
 }
 
 func switchRepoSchemaToHTTPS(repo string) *url.URL {
