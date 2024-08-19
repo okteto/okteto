@@ -721,11 +721,11 @@ func (m *Manifest) mergeWithOktetoManifest(other *Manifest) {
 }
 
 // ExpandEnvVars expands env vars to be set on the manifest
-func (manifest *Manifest) ExpandEnvVars() error {
+func (manifest *Manifest) ExpandEnvVars(varManager *vars.Manager) error {
 	var err error
 	if manifest.Deploy != nil {
 		if manifest.Deploy.Image != "" {
-			manifest.Deploy.Image, err = vars.GlobalVarManager.ExpandExcLocal(manifest.Deploy.Image)
+			manifest.Deploy.Image, err = varManager.ExpandExcLocal(manifest.Deploy.Image)
 			if err != nil {
 				return errors.New("could not parse env vars for an image used for remote deploy")
 			}
@@ -747,7 +747,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 					continue
 				}
 				tag := fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(svcName, "-", "_")))
-				expandedTag, err := vars.GlobalVarManager.ExpandExcLocal(tag)
+				expandedTag, err := varManager.ExpandExcLocal(tag)
 				if err != nil {
 					return err
 				}
@@ -774,7 +774,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 	}
 	if manifest.Destroy != nil {
 		if manifest.Destroy.Image != "" {
-			manifest.Destroy.Image, err = vars.GlobalVarManager.ExpandExcLocal(manifest.Destroy.Image)
+			manifest.Destroy.Image, err = varManager.ExpandExcLocal(manifest.Destroy.Image)
 			if err != nil {
 				return err
 			}
@@ -787,7 +787,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 		}
 
 		if devInfo.Image != "" {
-			devInfo.Image, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(devInfo.Image)
+			devInfo.Image, err = varManager.ExpandExcLocalIfNotEmpty(devInfo.Image)
 			if err != nil {
 				return err
 			}
@@ -795,7 +795,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 	}
 
 	for _, mf := range manifest.Test {
-		if mf.expandEnvVars() != nil {
+		if mf.expandEnvVars(varManager) != nil {
 			return err
 		}
 	}

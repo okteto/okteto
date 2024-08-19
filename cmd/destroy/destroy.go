@@ -380,7 +380,7 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 		}
 	}
 
-	err = opts.Manifest.ExpandEnvVars()
+	err = opts.Manifest.ExpandEnvVars(dc.varManager)
 	if err != nil {
 		return err
 	}

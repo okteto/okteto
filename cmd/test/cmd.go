@@ -297,7 +297,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 	} else {
 		// The deploy operation expands environment variables in the manifest. If
 		// we don't deploy, make sure to expand the envvars
-		if err := manifest.ExpandEnvVars(); err != nil {
+		if err := manifest.ExpandEnvVars(varManager); err != nil {
 			return analytics.TestMetadata{}, fmt.Errorf("failed to expand manifest environment variables: %w", err)
 		}
 	}

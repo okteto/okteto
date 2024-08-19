@@ -302,7 +302,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	if options.EnableStages {
 		ob.ioCtrl.SetStage("")
 	}
-	return options.Manifest.ExpandEnvVars()
+	return options.Manifest.ExpandEnvVars(ob.varManager)
 }
 
 // areServicesBuilt compares the list of services with the built control

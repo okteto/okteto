@@ -186,13 +186,13 @@ echo $TEST_VAR`,
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			varManager := vars.NewVarsManager(&fakeVarManager{})
 
 			for k, v := range tt.envs {
-				vars.GlobalVarManager.AddBuiltInVar(k, v)
+				varManager.AddBuiltInVar(k, v)
 			}
 
-			err := tt.manifest.ExpandEnvVars()
+			err := tt.manifest.ExpandEnvVars(varManager)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedManifest, tt.manifest)
 		})
@@ -234,20 +234,22 @@ deploy:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			varManager := vars.NewVarsManager(&fakeVarManager{})
+
 			for k, v := range tt.envs {
-				t.Setenv(k, v)
+				varManager.AddBuiltInVar(k, v)
 			}
+
 			m, err := Read(tt.manifest)
 			assert.NoError(t, err)
 
-			err = m.ExpandEnvVars()
+			err = m.ExpandEnvVars(varManager)
 			if tt.expectedErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expectedCommand, m.Deploy.Commands[0].Command)
 			}
-
 		})
 	}
 }

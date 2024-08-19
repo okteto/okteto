@@ -79,7 +79,7 @@ func (bc *OktetoBuilder) GetServicesToBuildDuringExecution(ctx context.Context, 
 
 	if len(toBuildCh) == 0 {
 		bc.ioCtrl.Out().Infof("Images were already built. To rebuild your images run 'okteto build'")
-		if err := manifest.ExpandEnvVars(); err != nil {
+		if err := manifest.ExpandEnvVars(bc.varManager); err != nil {
 			return nil, err
 		}
 		return nil, nil
