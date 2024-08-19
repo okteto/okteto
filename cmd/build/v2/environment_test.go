@@ -31,7 +31,7 @@ import (
 func Test_SetServiceEnvVars(t *testing.T) {
 	type input struct {
 		service   string
-		reference stringg
+		reference string
 	}
 	type expected struct {
 		expRegistry   string

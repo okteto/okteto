@@ -14,10 +14,10 @@
 package cmd
 
 import (
-	"github.com/okteto/okteto/pkg/config"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/deploy"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"

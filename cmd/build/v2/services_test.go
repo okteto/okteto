@@ -15,11 +15,11 @@ package v2
 
 import (
 	"context"
-	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/require"
 )
 
