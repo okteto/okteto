@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -194,7 +195,9 @@ func Test_AddOktetoCredentialsToCfg(t *testing.T) {
 				CurrentContext: "test_okteto_dev",
 			}
 
-			err := AddOktetoCredentialsToCfg(cfg, creds, ns, userName, oktetoContext)
+			varManager := vars.NewVarsManager(&fakeVarManager{})
+
+			err := AddOktetoCredentialsToCfg(cfg, creds, ns, userName, oktetoContext, varManager)
 
 			require.NoError(t, err)
 			require.Equal(t, expectedKubeconfig, *cfg)
@@ -203,7 +206,6 @@ func Test_AddOktetoCredentialsToCfg(t *testing.T) {
 }
 
 func Test_AddOktetoCredentialsToCfgWhenConfigCredentialHasntToBeDone(t *testing.T) {
-	t.Setenv(constants.OktetoSkipConfigCredentialsUpdate, "true")
 	cfg := &clientcmdapi.Config{
 		Clusters:   map[string]*clientcmdapi.Cluster{},
 		AuthInfos:  map[string]*clientcmdapi.AuthInfo{},
@@ -228,7 +230,10 @@ func Test_AddOktetoCredentialsToCfgWhenConfigCredentialHasntToBeDone(t *testing.
 		Extensions: nil,
 	}
 
-	result := AddOktetoCredentialsToCfg(cfg, creds, "ns", "userName", oktetoContext)
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager.AddLocalVar(constants.OktetoSkipConfigCredentialsUpdate, "true")
+
+	result := AddOktetoCredentialsToCfg(cfg, creds, "ns", "userName", oktetoContext, varManager)
 
 	require.NoError(t, result)
 	require.Equal(t, expectedCfg, *cfg, "config should not be updated")
@@ -252,7 +257,9 @@ func Test_AddOktetoCredentialsToCfgWithInvalidOktetoContext(t *testing.T) {
 		IsStoredAsInsecure: true,
 	}
 
-	result := AddOktetoCredentialsToCfg(cfg, creds, "ns", "userName", oktetoContext)
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+
+	result := AddOktetoCredentialsToCfg(cfg, creds, "ns", "userName", oktetoContext, varManager)
 
 	require.Error(t, result)
 }

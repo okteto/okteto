@@ -637,8 +637,9 @@ func TestGetDefaultTimeout(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv(model.OktetoTimeoutEnvVar, tc.envarValue)
-			assert.Equal(t, tc.expected, getDefaultTimeout())
+			varManager := vars.NewVarsManager(&fakeVarManager{})
+			varManager.AddLocalVar(model.OktetoTimeoutEnvVar, tc.envarValue)
+			assert.Equal(t, tc.expected, getDefaultTimeout(varManager))
 		})
 	}
 }
@@ -810,6 +811,7 @@ func TestTrackDeploy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dc := &Command{
 				AnalyticsTracker: &fakeTracker{},
+				VarManager:       vars.NewVarsManager(&fakeVarManager{}),
 			}
 
 			dc.TrackDeploy(tc.manifest, tc.remoteFlag, time.Now(), tc.commandErr)

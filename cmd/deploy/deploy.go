@@ -187,7 +187,7 @@ $ okteto deploy --build=false`,
 
 			// This is needed because the deploy command needs the original kubeconfig configuration even in the execution within another
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
-			os.Setenv(constants.OktetoSkipConfigCredentialsUpdate, "false")
+			varManager.AddLocalVar(constants.OktetoSkipConfigCredentialsUpdate, "false")
 
 			err := checkOktetoManifestPathFlag(options, afero.NewOsFs())
 			if err != nil {
@@ -293,7 +293,7 @@ $ okteto deploy --build=false`,
 	cmd.Flags().BoolVarP(&options.RunInRemote, "remote", "", false, "force run deploy commands in remote")
 
 	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", true, "wait until the development environment is deployed")
-	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
+	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(varManager), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 
 	return cmd
 }
@@ -402,8 +402,8 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	data := &pipeline.CfgData{
 		Name:       deployOptions.Name,
 		Namespace:  deployOptions.Namespace,
-		Repository: os.Getenv(model.GithubRepositoryEnvVar),
-		Branch:     os.Getenv(constants.OktetoGitBranchEnvVar),
+		Repository: dc.VarManager.GetIncLocal(model.GithubRepositoryEnvVar),
+		Branch:     dc.VarManager.GetIncLocal(constants.OktetoGitBranchEnvVar),
 		Filename:   manifestPathForConfigMap,
 		Status:     pipeline.ProgressingStatus,
 		Manifest:   deployOptions.Manifest.Manifest,
@@ -549,9 +549,9 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 	return nil
 }
 
-func getDefaultTimeout() time.Duration {
+func getDefaultTimeout(varManager *vars.Manager) time.Duration {
 	defaultTimeout := 5 * time.Minute
-	t := os.Getenv(model.OktetoTimeoutEnvVar)
+	t := varManager.GetIncLocal(model.OktetoTimeoutEnvVar)
 	if t == "" {
 		return defaultTimeout
 	}
@@ -718,8 +718,8 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 
 	// We keep DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar for backward compatibility in case an old version of the backend
 	// is being used
-	isPreview := os.Getenv(model.DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar) == "true" ||
-		os.Getenv(constants.OktetoIsPreviewEnvVar) == "true"
+	isPreview := dc.VarManager.GetIncLocal(model.DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar) == "true" ||
+		dc.VarManager.GetIncLocal(constants.OktetoIsPreviewEnvVar) == "true"
 	dc.AnalyticsTracker.TrackDeploy(analytics.DeployMetadata{
 		Success:                err == nil,
 		IsOktetoRepo:           utils.IsOktetoRepo(),

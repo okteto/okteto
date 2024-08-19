@@ -14,12 +14,12 @@
 package context
 
 import (
-	"os"
 	"strings"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 type Options struct {
@@ -73,21 +73,21 @@ func (o *Options) InitFromContext() {
 	}
 }
 
-func (o *Options) InitFromEnvVars() {
+func (o *Options) InitFromEnvVars(varManager *vars.Manager) {
 	var usedEnvVars []string
 
-	if o.Context == "" && os.Getenv(model.OktetoURLEnvVar) != "" {
-		o.Context = os.Getenv(model.OktetoURLEnvVar)
+	if o.Context == "" && varManager.GetIncLocal(model.OktetoURLEnvVar) != "" {
+		o.Context = varManager.GetIncLocal(model.OktetoURLEnvVar)
 		o.IsOkteto = true
 		usedEnvVars = append(usedEnvVars, model.OktetoURLEnvVar)
 	}
 
-	if o.Context == "" && os.Getenv(model.OktetoContextEnvVar) != "" {
-		o.Context = os.Getenv(model.OktetoContextEnvVar)
+	if o.Context == "" && varManager.GetIncLocal(model.OktetoContextEnvVar) != "" {
+		o.Context = varManager.GetIncLocal(model.OktetoContextEnvVar)
 		usedEnvVars = append(usedEnvVars, model.OktetoContextEnvVar)
 	}
 
-	envToken := os.Getenv(model.OktetoTokenEnvVar)
+	envToken := varManager.GetIncLocal(model.OktetoTokenEnvVar)
 	if o.Token != "" || envToken != "" {
 		o.IsOkteto = true
 	}
@@ -100,8 +100,8 @@ func (o *Options) InitFromEnvVars() {
 		o.InferredToken = true
 	}
 
-	if o.Namespace == "" && os.Getenv(model.OktetoNamespaceEnvVar) != "" {
-		o.Namespace = os.Getenv(model.OktetoNamespaceEnvVar)
+	if o.Namespace == "" && varManager.GetIncLocal(model.OktetoNamespaceEnvVar) != "" {
+		o.Namespace = varManager.GetIncLocal(model.OktetoNamespaceEnvVar)
 		usedEnvVars = append(usedEnvVars, model.OktetoNamespaceEnvVar)
 	}
 

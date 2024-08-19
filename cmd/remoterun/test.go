@@ -79,7 +79,7 @@ commands:
 			varManager.AddBuiltInVar("KUBECONFIG", kubeconfigPath)
 			defer os.Remove(kubeconfigPath)
 
-			dep, err := getDeployable()
+			dep, err := getDeployable(varManager)
 			if err != nil {
 				return fmt.Errorf("could not read information for tests: %w", err)
 			}

@@ -36,6 +36,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
@@ -356,10 +357,10 @@ func (*ContextConfigWriter) Write() error {
 }
 
 // AddOktetoCredentialsToCfg populates the provided kubernetes config using the provided credentials obtained from the Okteto API
-func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential, namespace, userName string, oktetoContext Context) error {
+func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential, namespace, userName string, oktetoContext Context, varManager *vars.Manager) error {
 	// If the context is being initialized within the execution of `okteto deploy` deploy command it should not
 	// write the Okteto credentials into the kubeconfig. It would overwrite the proxy settings
-	if os.Getenv(constants.OktetoSkipConfigCredentialsUpdate) == "true" {
+	if varManager.GetIncLocal(constants.OktetoSkipConfigCredentialsUpdate) == "true" {
 		return nil
 	}
 

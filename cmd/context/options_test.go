@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -316,10 +317,11 @@ func Test_initFromEnvVars(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			varManager := vars.NewVarsManager(&fakeVarManager{})
 			for k, v := range tt.env {
-				t.Setenv(k, v)
+				varManager.AddLocalVar(k, v)
 			}
-			tt.in.InitFromEnvVars()
+			tt.in.InitFromEnvVars(varManager)
 			assert.Equal(t, tt.in, tt.want)
 		})
 	}

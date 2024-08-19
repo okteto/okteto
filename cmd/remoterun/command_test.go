@@ -35,7 +35,9 @@ func (*fakeVarManager) IsLocalVarException(string) bool {
 }
 
 func TestGetDeployableEmpty(t *testing.T) {
-	dep, err := getDeployable()
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+
+	dep, err := getDeployable(varManager)
 
 	expected := deployable.Entity{
 		Commands: []model.DeployCommand{},
@@ -46,24 +48,27 @@ func TestGetDeployableEmpty(t *testing.T) {
 }
 
 func TestGetDeployableBadBase64(t *testing.T) {
-	t.Setenv(constants.OktetoDeployableEnvVar, "bad-base64  ** %")
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager.AddLocalVar(constants.OktetoDeployableEnvVar, "bad-base64  ** %")
 
-	_, err := getDeployable()
+	_, err := getDeployable(varManager)
 
 	require.Error(t, err)
 }
 
 func TestGetDeployableInvalidDeployable(t *testing.T) {
-	t.Setenv(constants.OktetoDeployableEnvVar, "aW52YWxpZCBkZXBsb3lhYmxlCg==")
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager.AddLocalVar(constants.OktetoDeployableEnvVar, "aW52YWxpZCBkZXBsb3lhYmxlCg==")
 
-	_, err := getDeployable()
+	_, err := getDeployable(varManager)
 
 	require.Error(t, err)
 }
 
 func TestGetDeployable(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
-	t.Setenv(constants.OktetoDeployableEnvVar, "Y29tbWFuZHM6CiAgLSBuYW1lOiBDb21tYW5kIDEKICAgIGNvbW1hbmQ6IGVjaG8gMQogIC0gbmFtZTogQ29tbWFuZCAyCiAgICBjb21tYW5kOiBlY2hvIDIKZXh0ZXJuYWw6CiAgZmFrZToKICAgIGljb246IGljb24KICAgIGVuZHBvaW50czoKICAgIC0gbmFtZTogbmFtZQogICAgICB1cmw6IHVybApkaXZlcnQ6CiAgZHJpdmVyOiAidGVzdCBkcml2ZXIiCiAgbmFtZXNwYWNlOiBucwo=")
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager.AddLocalVar(constants.OktetoDeployableEnvVar, "Y29tbWFuZHM6CiAgLSBuYW1lOiBDb21tYW5kIDEKICAgIGNvbW1hbmQ6IGVjaG8gMQogIC0gbmFtZTogQ29tbWFuZCAyCiAgICBjb21tYW5kOiBlY2hvIDIKZXh0ZXJuYWw6CiAgZmFrZToKICAgIGljb246IGljb24KICAgIGVuZHBvaW50czoKICAgIC0gbmFtZTogbmFtZQogICAgICB1cmw6IHVybApkaXZlcnQ6CiAgZHJpdmVyOiAidGVzdCBkcml2ZXIiCiAgbmFtZXNwYWNlOiBucwo=")
+	vars.GlobalVarManager = varManager
 
 	expected := deployable.Entity{
 		Commands: []model.DeployCommand{
@@ -93,7 +98,7 @@ func TestGetDeployable(t *testing.T) {
 		},
 	}
 
-	result, err := getDeployable()
+	result, err := getDeployable(varManager)
 
 	require.NoError(t, err)
 	require.Equal(t, expected, result)

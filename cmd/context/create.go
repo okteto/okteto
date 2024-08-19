@@ -276,7 +276,7 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 	if cfg == nil {
 		cfg = kubeconfig.Create()
 	}
-	if err := okteto.AddOktetoCredentialsToCfg(cfg, &userContext.Credentials, ctxOptions.Namespace, userContext.User.ID, *okteto.GetContext()); err != nil {
+	if err := okteto.AddOktetoCredentialsToCfg(cfg, &userContext.Credentials, ctxOptions.Namespace, userContext.User.ID, *okteto.GetContext(), c.varManager); err != nil {
 		return err
 	}
 

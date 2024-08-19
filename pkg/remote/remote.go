@@ -531,7 +531,7 @@ func getOktetoCLIVersion(versionString string) string {
 		} else {
 			oktetoLog.Infof("invalid version string: %s, using latest", versionString)
 		}
-		remoteOktetoImage := os.Getenv(constants.OktetoDeployRemoteImage)
+		remoteOktetoImage := os.Getenv(g)
 		if remoteOktetoImage != "" {
 			version = remoteOktetoImage
 		} else {

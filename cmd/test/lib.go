@@ -13,16 +13,16 @@
 package test
 
 import (
-	"os"
 	"time"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
-func getDefaultTimeout() time.Duration {
+func getDefaultTimeout(varManager *vars.Manager) time.Duration {
 	defaultTimeout := 5 * time.Minute
-	t := os.Getenv(model.OktetoTimeoutEnvVar)
+	t := varManager.GetIncLocal(model.OktetoTimeoutEnvVar)
 	if t == "" {
 		return defaultTimeout
 	}

@@ -93,7 +93,7 @@ It is important that this command does the minimum and must not do calculations 
 			varManager.AddBuiltInVar("KUBECONFIG", kubeconfigPath)
 			defer os.Remove(kubeconfigPath)
 
-			dep, err := getDeployable()
+			dep, err := getDeployable(varManager)
 			if err != nil {
 				return fmt.Errorf("could not read information to be destroyed: %w", err)
 			}

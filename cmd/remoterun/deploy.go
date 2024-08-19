@@ -98,7 +98,7 @@ It is important that this command does the minimum and must not do calculations 
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			dep, err := getDeployable()
+			dep, err := getDeployable(varManager)
 			if err != nil {
 				return fmt.Errorf("could not read information to be deployed: %w", err)
 			}

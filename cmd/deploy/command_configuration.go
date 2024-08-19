@@ -16,7 +16,6 @@ package deploy
 import (
 	"context"
 	"net/url"
-	"os"
 
 	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/cmd/utils"
@@ -106,15 +105,15 @@ func getStackServicesToDeploy(ctx context.Context, composeSectionInfo *model.Com
 }
 
 func (dc *Command) addEnvVars(cwd string) {
-	if os.Getenv(constants.OktetoGitBranchEnvVar) == "" {
+	if dc.VarManager.GetIncLocal(constants.OktetoGitBranchEnvVar) == "" {
 		branch, err := utils.GetBranch(cwd)
 		if err != nil {
 			oktetoLog.Infof("could not retrieve branch name: %s", err)
 		}
-		os.Setenv(constants.OktetoGitBranchEnvVar, branch)
+		dc.VarManager.AddLocalVar(constants.OktetoGitBranchEnvVar, branch)
 	}
 
-	if os.Getenv(model.GithubRepositoryEnvVar) == "" {
+	if dc.VarManager.GetIncLocal(model.GithubRepositoryEnvVar) == "" {
 		repo, err := modelUtils.GetRepositoryURL(cwd)
 		if err != nil {
 			oktetoLog.Infof("could not retrieve repo name: %s", err)
@@ -129,10 +128,10 @@ func (dc *Command) addEnvVars(cwd string) {
 				repo = repoHTTPS.String()
 			}
 		}
-		os.Setenv(model.GithubRepositoryEnvVar, repo)
+		dc.VarManager.AddLocalVar(model.GithubRepositoryEnvVar, repo)
 	}
 
-	if os.Getenv(constants.OktetoGitCommitEnvVar) == "" {
+	if dc.VarManager.GetIncLocal(constants.OktetoGitCommitEnvVar) == "" {
 		sha, err := repository.NewRepository(cwd).GetSHA()
 		if err != nil {
 			oktetoLog.Infof("could not retrieve sha: %s", err)
@@ -147,16 +146,16 @@ func (dc *Command) addEnvVars(cwd string) {
 		if !isClean {
 			sha = utils.GetRandomSHA()
 		}
-		os.Setenv(constants.OktetoGitCommitEnvVar, sha)
+		dc.VarManager.AddLocalVar(constants.OktetoGitCommitEnvVar, sha)
 	}
-	if os.Getenv(model.OktetoRegistryURLEnvVar) == "" {
-		os.Setenv(model.OktetoRegistryURLEnvVar, okteto.GetContext().Registry)
+	if dc.VarManager.GetIncLocal(model.OktetoRegistryURLEnvVar) == "" {
+		dc.VarManager.AddLocalVar(model.OktetoRegistryURLEnvVar, okteto.GetContext().Registry)
 	}
-	if os.Getenv(model.OktetoBuildkitHostURLEnvVar) == "" {
-		os.Setenv(model.OktetoBuildkitHostURLEnvVar, okteto.GetContext().Builder)
+	if dc.VarManager.GetIncLocal(model.OktetoBuildkitHostURLEnvVar) == "" {
+		dc.VarManager.AddLocalVar(model.OktetoBuildkitHostURLEnvVar, okteto.GetContext().Builder)
 	}
-	if os.Getenv(model.OktetoTokenEnvVar) == "" {
-		os.Setenv(model.OktetoTokenEnvVar, okteto.GetContext().Token)
+	if dc.VarManager.GetIncLocal(model.OktetoTokenEnvVar) == "" {
+		dc.VarManager.AddLocalVar(model.OktetoTokenEnvVar, okteto.GetContext().Token)
 	}
 }
 
