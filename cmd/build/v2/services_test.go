@@ -15,6 +15,7 @@ package v2
 
 import (
 	"context"
+	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/build"
@@ -27,7 +28,8 @@ func TestNoneOfTheServicesBuilt(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -42,7 +44,8 @@ func TestAllServicesAlreadyBuilt(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{"test/test-1", "test/test-2", "okteto.dev/test-test-3:okteto", "okteto.dev/test-test-4:okteto"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -57,7 +60,8 @@ func TestServicesNotAreAlreadyBuilt(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{"test/test-1"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -73,7 +77,8 @@ func TestNoServiceBuilt(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{"test/test-1"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -89,7 +94,8 @@ func TestServicesNotInStack(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: false,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -133,7 +139,8 @@ func TestServicesNotOktetoWithStack(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{"test/test-1"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -159,7 +166,8 @@ func TestAllServicesAlreadyBuiltWithSubset(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -174,7 +182,8 @@ func TestServicesNotAreAlreadyBuiltWithSubset(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{"test/test-1"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -189,7 +198,8 @@ func TestServicesBuildSection(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -205,7 +215,8 @@ func TestNoServiceBuiltWithSubset(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{"test/test-1", "test/test-2"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()

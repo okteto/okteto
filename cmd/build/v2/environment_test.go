@@ -31,7 +31,7 @@ import (
 func Test_SetServiceEnvVars(t *testing.T) {
 	type input struct {
 		service   string
-		reference string
+		reference stringg
 	}
 	type expected struct {
 		expRegistry   string
@@ -102,7 +102,8 @@ func Test_SetServiceEnvVars(t *testing.T) {
 			fakeConfig := fakeConfig{
 				isOkteto: true,
 			}
-			bc := NewFakeBuilder(nil, registry, fakeConfig)
+			varManager := vars.NewVarsManager(&fakeVarManager{})
+			bc := NewFakeBuilder(nil, registry, fakeConfig, varManager)
 			bc.SetServiceEnvVars(tt.input.service, tt.input.reference)
 
 			registryEnvValue := vars.GlobalVarManager.GetExcLocal(registryEnv)
@@ -122,7 +123,8 @@ func Test_SetServiceEnvVars(t *testing.T) {
 
 func TestExpandStackVariables(t *testing.T) {
 	ctx := context.Background()
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = varManager
 	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
 	fakeConfig := fakeConfig{
@@ -131,7 +133,7 @@ func TestExpandStackVariables(t *testing.T) {
 
 	err := registry.AddImageByName("okteto.global/test-test:a32545ef109a8f1e44b67b9c90727db563e88c5898c228bdb922ce555cec2856")
 	require.NoError(t, err)
-	bc := NewFakeBuilder(builder, registry, fakeConfig)
+	bc := NewFakeBuilder(builder, registry, fakeConfig, varManager)
 	stack := &model.Stack{
 		Services: map[string]*model.Service{
 			"test": {
