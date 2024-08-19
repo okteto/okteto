@@ -23,6 +23,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 var (
@@ -38,6 +39,7 @@ type preReqCfg struct {
 	getCtxResource       initCtxOptsFunc
 	ctxName              string
 	ns                   string
+	varManager           *vars.Manager
 }
 
 type option func(*preReqCfg)
@@ -80,6 +82,12 @@ func withInitContextFunc(initCtxFunc initCtxOptsFunc) option {
 	}
 }
 
+func withVarManager(varManager *vars.Manager) option {
+	return func(cfg *preReqCfg) {
+		cfg.varManager = varManager
+	}
+}
+
 func defaultPreReqCfg() *preReqCfg {
 	return &preReqCfg{
 		k8sClientProvider:    okteto.NewK8sClientProvider(),
@@ -97,6 +105,7 @@ type preReqValidator struct {
 	getCtxResource       initCtxOptsFunc
 	ctxName              string
 	ns                   string
+	varManager           *vars.Manager
 }
 
 // newPreReqValidator returns a new preReqValidator
@@ -112,6 +121,7 @@ func newPreReqValidator(opts ...option) *preReqValidator {
 		oktetoClientProvider: cfg.oktetoClientProvider,
 		getContextStore:      cfg.getContextStore,
 		getCtxResource:       cfg.getCtxResource,
+		varManager:           cfg.varManager,
 	}
 }
 
@@ -122,7 +132,7 @@ func (v *preReqValidator) validate(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, validationTimeout)
 	defer cancel()
 
-	ctxResource := v.getCtxResource(v.ctxName, v.ns)
+	ctxResource := v.getCtxResource(v.ctxName, v.ns, v.varManager)
 
 	err := newCtxValidator(ctxResource, v.k8sClientProvider, v.getContextStore).validate(ctx)
 	if err != nil {
@@ -136,14 +146,14 @@ func (v *preReqValidator) validate(ctx context.Context) error {
 	return nil
 }
 
-func getCtxResource(ctxName, ns string) *contextCMD.Options {
+func getCtxResource(ctxName, ns string, varManager *vars.Manager) *contextCMD.Options {
 	ctxResource := &contextCMD.Options{
 		Context:   ctxName,
 		Namespace: ns,
 	}
 	if ctxResource.Context == "" {
 		ctxResource.InitFromContext()
-		ctxResource.InitFromEnvVars()
+		ctxResource.InitFromEnvVars(varManager)
 	}
 	return ctxResource
 }

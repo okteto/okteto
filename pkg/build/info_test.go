@@ -542,11 +542,11 @@ func Test_expandSecrets(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			varManager := vars.NewVarsManager(&fakeVarManager{})
 			if tc.setEnvFunc != nil {
-				tc.setEnvFunc(vars.GlobalVarManager)
+				tc.setEnvFunc(varManager)
 			}
-			err := tc.input.expandSecrets()
+			err := tc.input.expandSecrets(varManager)
 			if tc.expectedErr {
 				assert.Error(t, err)
 			} else {

@@ -94,7 +94,7 @@ func (i *Info) expandManifestBuildArgs(previousImageArgs map[string]string) (err
 	return nil
 }
 
-func (i *Info) expandSecrets() (err error) {
+func (i *Info) expandSecrets(varManager *vars.Manager) (err error) {
 	for k, v := range i.Secrets {
 		val := v
 		if strings.HasPrefix(val, "~/") {
@@ -104,7 +104,7 @@ func (i *Info) expandSecrets() (err error) {
 			}
 			val = filepath.Join(home, val[2:])
 		}
-		i.Secrets[k], err = vars.GlobalVarManager.ExpandExcLocal(val)
+		i.Secrets[k], err = varManager.ExpandExcLocal(val)
 		if err != nil {
 			return err
 		}
@@ -214,7 +214,7 @@ func (i *Info) AddArgs(previousImageArgs map[string]string, varManager *vars.Man
 	if err := i.expandManifestBuildArgs(previousImageArgs); err != nil {
 		return err
 	}
-	if err := i.expandSecrets(); err != nil {
+	if err := i.expandSecrets(varManager); err != nil {
 		return err
 	}
 	return i.addExpandedPreviousImageArgs(previousImageArgs, varManager)

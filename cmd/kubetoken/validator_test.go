@@ -21,6 +21,7 @@ import (
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
@@ -138,7 +139,7 @@ func TestPreReqValidator(t *testing.T) {
 			v.getContextStore = func() *okteto.ContextStore {
 				return tc.input.currentStore
 			}
-			v.getCtxResource = func(s1, s2 string) *contextCMD.Options {
+			v.getCtxResource = func(s1, s2 string, _ *vars.Manager) *contextCMD.Options {
 				return &contextCMD.Options{
 					Context:   s1,
 					Namespace: s2,

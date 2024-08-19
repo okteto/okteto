@@ -109,7 +109,7 @@ func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 	if err != nil {
 		oktetoLog.Warning("Failed to load .env file: %s", err)
 	}
-	ctxOptions.InitFromEnvVars()
+	ctxOptions.InitFromEnvVars(c.varManager)
 	ctxOptions.InitFromContext()
 
 	if ctxOptions.IsOkteto && isUrl(ctxOptions.Context) {

@@ -22,11 +22,22 @@ import (
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
+
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string) {}
+func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
+	return false
+}
+func (*fakeVarManager) IsLocalVarException(string) bool {
+	return false
+}
 
 type fakeK8sClientProvider struct {
 	client kubernetes.Interface
@@ -151,11 +162,12 @@ func TestKubetoken(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			cmd := NewKubetokenCmd()
+			varManager := vars.NewVarsManager(&fakeVarManager{})
+			cmd := NewKubetokenCmd(varManager)
 			cmd.oktetoClientProvider = tc.input.fakeOktetoClientProvider
 			cmd.oktetoCtxCmdRunner = tc.input.fakeCtxCmdRunner
 			cmd.ctxStore = fakeCtxStore.Store
-			cmd.initCtxFunc = func(string, string) *contextCMD.Options {
+			cmd.initCtxFunc = func(string, string, *vars.Manager) *contextCMD.Options {
 				return &contextCMD.Options{
 					Context:   tc.input.flags.Context,
 					Namespace: tc.input.flags.Namespace,

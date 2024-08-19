@@ -61,7 +61,7 @@ func (*Serializer) ToJson(kubetoken types.KubeTokenResponse) (string, error) {
 	return string(bytes), nil
 }
 
-type initCtxOptsFunc func(string, string) *contextCMD.Options
+type initCtxOptsFunc func(string, string, *vars.Manager) *contextCMD.Options
 
 // Cmd generates a kubernetes token for a given namespace
 type Cmd struct {
@@ -71,6 +71,7 @@ type Cmd struct {
 	oktetoCtxCmdRunner   oktetoCtxCmdRunner
 	serializer           *Serializer
 	initCtxFunc          initCtxOptsFunc
+	varManager           *vars.Manager
 }
 
 // Options represents the options for kubetoken
@@ -83,12 +84,12 @@ type Options struct {
 	getCtxResource       initCtxOptsFunc
 }
 
-func defaultKubetokenOptions() *Options {
+func defaultKubetokenOptions(varManager *vars.Manager) *Options {
 	ctxStore := okteto.GetContextStore()
 	return &Options{
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
 		k8sClientProvider:    okteto.NewK8sClientProvider(),
-		oktetoCtxCmdRunner:   contextCMD.NewContextCommand(contextCMD.WithVarManager(vars.GlobalVarManager)),
+		oktetoCtxCmdRunner:   contextCMD.NewContextCommand(contextCMD.WithVarManager(varManager)),
 		ctxStore:             ctxStore,
 		serializer:           &Serializer{},
 		getCtxResource:       getCtxResource,
@@ -98,8 +99,8 @@ func defaultKubetokenOptions() *Options {
 type kubetokenOption func(*Options)
 
 // NewKubetokenCmd returns a new cobra command
-func NewKubetokenCmd(optFunc ...kubetokenOption) *Cmd {
-	opts := defaultKubetokenOptions()
+func NewKubetokenCmd(varManager *vars.Manager, optFunc ...kubetokenOption) *Cmd {
+	opts := defaultKubetokenOptions(varManager)
 	for _, o := range optFunc {
 		o(opts)
 	}
@@ -110,6 +111,7 @@ func NewKubetokenCmd(optFunc ...kubetokenOption) *Cmd {
 		ctxStore:             opts.ctxStore,
 		oktetoCtxCmdRunner:   opts.oktetoCtxCmdRunner,
 		initCtxFunc:          getCtxResource,
+		varManager:           varManager,
 	}
 }
 
@@ -148,6 +150,7 @@ func (kc *Cmd) Run(ctx context.Context, flags Flags) error {
 		withOktetoClientProvider(kc.oktetoClientProvider),
 		withContextStore(kc.ctxStore),
 		withInitContextFunc(kc.initCtxFunc),
+		withVarManager(kc.varManager),
 	).validate(ctx)
 	if err != nil {
 		return fmt.Errorf("dynamic kubernetes token cannot be requested: %w", err)
@@ -164,7 +167,7 @@ func (kc *Cmd) Run(ctx context.Context, flags Flags) error {
 		return oktetoErrors.ErrContextIsNotOktetoCluster
 	}
 
-	ctxResource := kc.initCtxFunc(flags.Context, flags.Namespace)
+	ctxResource := kc.initCtxFunc(flags.Context, flags.Namespace, kc.varManager)
 	c, err := kc.oktetoClientProvider.Provide(
 		okteto.WithCtxName(ctxResource.Context),
 		okteto.WithToken(ctxResource.Token),
