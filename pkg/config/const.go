@@ -15,21 +15,21 @@ package config
 
 const (
 
-	// homeEnvVar defines home directory
-	homeEnvVar = "HOME"
+	// HomeEnvVar defines home directory
+	HomeEnvVar = "HOME"
 
-	// homePathEnvVar defines home path
-	homePathEnvVar = "HOMEPATH"
+	// HomePathEnvVar defines home path
+	HomePathEnvVar = "HOMEPATH"
 
-	// homeDriveEnvVar defines home drive
-	homeDriveEnvVar = "HOMEDRIVE"
+	// HomeDriveEnvVar defines home drive
+	HomeDriveEnvVar = "HOMEDRIVE"
 
-	// userProfileEnvVar defines user profile
-	userProfileEnvVar = "USERPROFILE"
+	// UserProfileEnvVar defines user profile
+	UserProfileEnvVar = "USERPROFILE"
 
-	// oktetoOriginEnvVar defines where is executing okteto
-	oktetoOriginEnvVar = "OKTETO_ORIGIN"
+	// OktetoOriginEnvVar defines where is executing okteto
+	OktetoOriginEnvVar = "OKTETO_ORIGIN"
 
-	// oktetoInInstaller if set to true okteto is running inside the pipeline installer
-	oktetoInInstaller = "OKTETO_IN_INSTALLER"
+	// OktetoInInstaller if set to true okteto is running inside the pipeline installer
+	OktetoInInstaller = "OKTETO_IN_INSTALLER"
 )

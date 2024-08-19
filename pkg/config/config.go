@@ -213,7 +213,7 @@ func GetUserHomeDirWithFilesystem(fs afero.Fs) string {
 		return home
 	}
 
-	return os.Getenv(homeEnvVar)
+	return os.Getenv(HomeEnvVar)
 
 }
 
@@ -225,16 +225,16 @@ func GetUserHomeDir() string {
 }
 
 func homedirWindows() (string, error) {
-	if home := os.Getenv(homeEnvVar); home != "" {
+	if home := os.Getenv(HomeEnvVar); home != "" {
 		return home, nil
 	}
 
-	if home := os.Getenv(userProfileEnvVar); home != "" {
+	if home := os.Getenv(UserProfileEnvVar); home != "" {
 		return home, nil
 	}
 
-	drive := os.Getenv(homeDriveEnvVar)
-	path := os.Getenv(homePathEnvVar)
+	drive := os.Getenv(HomeDriveEnvVar)
+	path := os.Getenv(HomePathEnvVar)
 	home := drive + path
 	if drive == "" || path == "" {
 		return "", fmt.Errorf("HOME, HOMEDRIVE, HOMEPATH, or USERPROFILE are empty. Use $OKTETO_HOME to set your home directory")
@@ -289,7 +289,7 @@ func GetCertificatePath() string {
 // GetDeployOrigin gets the pipeline deploy origin. This is the initiator of the
 // deploy action: web, cli, github-action, etc
 func GetDeployOrigin() (src string) {
-	src = os.Getenv(oktetoOriginEnvVar)
+	src = os.Getenv(OktetoOriginEnvVar)
 	if src == "" {
 		src = "cli"
 	}
@@ -302,5 +302,5 @@ func GetDeployOrigin() (src string) {
 }
 
 func RunningInInstaller() bool {
-	return os.Getenv(oktetoInInstaller) == "true"
+	return os.Getenv(OktetoInInstaller) == "true"
 }

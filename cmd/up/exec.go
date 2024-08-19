@@ -267,9 +267,9 @@ func getDefaultLocalEnvs() []string {
 		envs = append(envs, fmt.Sprintf("PATH=%s", path))
 	}
 
-	term := os.Getenv("TERM")
+	term := os.Getenv(model.TermEnvVar)
 	if term != "" {
-		envs = append(envs, fmt.Sprintf("TERM=%s", term))
+		envs = append(envs, fmt.Sprintf("%s=%s", model.TermEnvVar, term))
 	}
 
 	return envs

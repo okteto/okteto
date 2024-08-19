@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"github.com/okteto/okteto/pkg/config"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/deploy"
@@ -40,10 +41,16 @@ func (*VarsManager) IsLocalVarException(v string) bool {
 	}
 
 	exceptions := map[string]bool{
-		"HOME": true,
-		"TERM": true,
 		"PATH": true,
 
+		config.HomeEnvVar:         true,
+		config.HomePathEnvVar:     true,
+		config.HomeDriveEnvVar:    true,
+		config.UserProfileEnvVar:  true,
+		config.OktetoOriginEnvVar: true,
+		config.OktetoInInstaller:  true,
+
+		model.TermEnvVar:                        true,
 		model.OktetoRegistryURLEnvVar:           true,
 		model.OktetoBuildkitHostURLEnvVar:       true,
 		model.OktetoBinEnvVar:                   true,
