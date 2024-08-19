@@ -15,6 +15,8 @@ package deploy
 
 import (
 	"context"
+	"net/url"
+
 	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/stack"
@@ -27,7 +29,6 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/repository"
 	"k8s.io/client-go/kubernetes"
-	"net/url"
 )
 
 const (

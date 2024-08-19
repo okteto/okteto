@@ -14,9 +14,16 @@
 package v2
 
 import (
+	"context"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/okteto/okteto/cmd/build/basic"
 	"github.com/okteto/okteto/cmd/build/v2/smartbuild"
+	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -27,6 +34,8 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeVarManager struct{}
@@ -180,400 +189,405 @@ func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegi
 	}
 }
 
-//func TestValidateOptions(t *testing.T) {
-//	var tests = []struct {
-//		buildSection build.ManifestBuild
-//		name         string
-//		svcsToBuild  []string
-//		options      types.BuildOptions
-//		expectedErr  bool
-//	}{
-//		{
-//			name:         "no services to build",
-//			buildSection: build.ManifestBuild{},
-//			svcsToBuild:  []string{},
-//			options:      types.BuildOptions{},
-//			expectedErr:  true,
-//		},
-//		{
-//			name:         "svc not defined on manifest build section",
-//			buildSection: build.ManifestBuild{},
-//			svcsToBuild:  []string{"test"},
-//			options:      types.BuildOptions{},
-//			expectedErr:  true,
-//		},
-//		{
-//			name: "several services but with flag",
-//			buildSection: build.ManifestBuild{
-//				"test":   &build.Info{},
-//				"test-2": &build.Info{},
-//			},
-//			svcsToBuild: []string{"test", "test-2"},
-//			options: types.BuildOptions{
-//				Tag: "test",
-//			},
-//			expectedErr: true,
-//		},
-//		{
-//			name: "only one service without flags",
-//			buildSection: build.ManifestBuild{
-//				"test": &build.Info{},
-//			},
-//			svcsToBuild: []string{"test"},
-//			options:     types.BuildOptions{},
-//			expectedErr: false,
-//		},
-//		{
-//			name: "only one service with flags",
-//			buildSection: build.ManifestBuild{
-//				"test": &build.Info{},
-//			},
-//			svcsToBuild: []string{"test"},
-//			options: types.BuildOptions{
-//				Tag: "test",
-//			},
-//			expectedErr: false,
-//		},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			manifest := &model.Manifest{Build: tt.buildSection}
-//			err := validateOptions(manifest, tt.svcsToBuild, &tt.options)
-//			if tt.expectedErr {
-//				assert.Error(t, err)
-//			} else {
-//				assert.NoError(t, err)
-//			}
-//		})
-//	}
-//}
-//
-//func TestTwoStepsBuild(t *testing.T) {
-//	ctx := context.Background()
-//
-//	dir, err := createDockerfile(t)
-//	assert.NoError(t, err)
-//
-//	registry := newFakeRegistry()
-//	builder := test.NewFakeOktetoBuilder(registry)
-//	fakeConfig := fakeConfig{
-//		isOkteto: true,
-//	}
-//	bc := NewFakeBuilder(builder, registry, fakeConfig)
-//	manifest := &model.Manifest{
-//		Name: "test",
-//		Build: build.ManifestBuild{
-//			"test": &build.Info{
-//				Context:    dir,
-//				Dockerfile: filepath.Join(dir, "Dockerfile"),
-//				VolumesToInclude: []build.VolumeMounts{
-//					{
-//						LocalPath:  dir,
-//						RemotePath: "test",
-//					},
-//				},
-//			},
-//		},
-//	}
-//	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
-//
-//	require.NoError(t, err)
-//	require.Equal(t, "okteto.dev/test-test:okteto", image)
-//	// the image is at the fake registry
-//	image, err = bc.Registry.GetImageTagWithDigest(image)
-//	assert.NoError(t, err)
-//	assert.NotEmpty(t, image)
-//}
-//
-//func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
-//	ctx := context.Background()
-//
-//	dir, err := createDockerfile(t)
-//	assert.NoError(t, err)
-//
-//	registry := newFakeRegistry()
-//	builder := test.NewFakeOktetoBuilder(registry)
-//	fakeConfig := fakeConfig{
-//		isOkteto: true,
-//	}
-//	bc := NewFakeBuilder(builder, registry, fakeConfig)
-//	manifest := &model.Manifest{
-//		Name: "test",
-//		Build: build.ManifestBuild{
-//			"test": &build.Info{
-//				Context:    dir,
-//				Dockerfile: filepath.Join(dir, "Dockerfile"),
-//			},
-//		},
-//	}
-//	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
-//
-//	// error from the build
-//	assert.NoError(t, err)
-//	// assert that the name of the image is the dev one
-//	assert.Equal(t, "okteto.dev/test-test:okteto", image)
-//	// the image is at the fake registry
-//	image, err = bc.Registry.GetImageTagWithDigest(image)
-//	assert.NoError(t, err)
-//	assert.NotEmpty(t, image)
-//}
-//
-//func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
-//	ctx := context.Background()
-//
-//	dir, err := createDockerfile(t)
-//	assert.NoError(t, err)
-//
-//	registry := newFakeRegistry()
-//	builder := test.NewFakeOktetoBuilder(registry)
-//	fakeConfig := fakeConfig{
-//		isOkteto: true,
-//	}
-//	bc := NewFakeBuilder(builder, registry, fakeConfig)
-//	manifest := &model.Manifest{
-//		Name: "test",
-//		Build: build.ManifestBuild{
-//			"test": &build.Info{
-//				Context:    dir,
-//				Dockerfile: filepath.Join(dir, "Dockerfile"),
-//				Image:      "okteto/test",
-//			},
-//		},
-//	}
-//	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
-//
-//	// error from the build
-//	assert.NoError(t, err)
-//	// assert that the name of the image is the dev one
-//	assert.Equal(t, "okteto/test", image)
-//	// the image is at the fake registry
-//	image, err = bc.Registry.GetImageTagWithDigest(image)
-//	assert.NoError(t, err)
-//	assert.NotEmpty(t, image)
-//}
-//
-//func TestBuildWithStack(t *testing.T) {
-//	ctx := context.Background()
-//
-//	dir, err := createDockerfile(t)
-//	assert.NoError(t, err)
-//
-//	registry := newFakeRegistry()
-//	builder := test.NewFakeOktetoBuilder(registry)
-//	fakeConfig := fakeConfig{
-//		isOkteto: true,
-//	}
-//	bc := NewFakeBuilder(builder, registry, fakeConfig)
-//	manifest := &model.Manifest{
-//		Name: "test",
-//		Type: model.StackType,
-//		Build: build.ManifestBuild{
-//			"test": &build.Info{
-//				Context:    dir,
-//				Dockerfile: filepath.Join(dir, "Dockerfile"),
-//				Image:      "okteto/test:q",
-//			},
-//		},
-//	}
-//	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
-//
-//	// error from the build
-//	assert.NoError(t, err)
-//	// assert that the name of the image is the dev one
-//	assert.Equal(t, "okteto.dev/test-test:okteto", image)
-//	// the image is at the fake registry
-//	image, err = bc.Registry.GetImageTagWithDigest(image)
-//	assert.NoError(t, err)
-//	assert.NotEmpty(t, image)
-//}
-//
-//func createDockerfile(t *testing.T) (string, error) {
-//	dir := t.TempDir()
-//	dockerfilePath := filepath.Join(dir, "Dockerfile")
-//	err := os.WriteFile(dockerfilePath, []byte("Hello"), 0600)
-//	if err != nil {
-//		return "", err
-//	}
-//	return dir, nil
-//}
-//
-//func TestBuildWithDependsOn(t *testing.T) {
-//	ctx := context.Background()
-//
-//	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
-//
-//	firstImage := "okteto/a:test"
-//	secondImage := "okteto/b:test"
-//	dir, err := createDockerfile(t)
-//	assert.NoError(t, err)
-//
-//	registry := newFakeRegistry()
-//	builder := test.NewFakeOktetoBuilder(registry)
-//	fakeConfig := fakeConfig{
-//		isOkteto: true,
-//	}
-//
-//	bc := NewFakeBuilder(builder, registry, fakeConfig)
-//	manifest := &model.Manifest{
-//		Name: "test",
-//		Build: build.ManifestBuild{
-//			"a": &build.Info{
-//				Context:    dir,
-//				Dockerfile: filepath.Join(dir, "Dockerfile"),
-//				Image:      firstImage,
-//			},
-//			"b": &build.Info{
-//				Context:    dir,
-//				Dockerfile: filepath.Join(dir, "Dockerfile"),
-//				Image:      secondImage,
-//				DependsOn:  []string{"a"},
-//			},
-//		},
-//	}
-//	err = bc.Build(ctx, &types.BuildOptions{
-//		Manifest: manifest,
-//	})
-//
-//	// error from the build
-//	assert.NoError(t, err)
-//
-//	// check that images are on the registry
-//	_, err = registry.GetImageTagWithDigest(firstImage)
-//	assert.NoError(t, err)
-//
-//	_, err = registry.GetImageTagWithDigest(secondImage)
-//	assert.NoError(t, err)
-//
-//	expectedKeys := map[string]bool{
-//		"OKTETO_BUILD_A_IMAGE":      false,
-//		"OKTETO_BUILD_A_REGISTRY":   false,
-//		"OKTETO_BUILD_A_REPOSITORY": false,
-//		"OKTETO_BUILD_A_TAG":        false,
-//		"OKTETO_BUILD_A_SHA":        false,
-//	}
-//	for _, arg := range registry.getFakeImage(secondImage).Args {
-//		parts := strings.SplitN(arg, "=", 2)
-//		if _, ok := expectedKeys[parts[0]]; ok {
-//			expectedKeys[parts[0]] = true
-//		}
-//	}
-//	for k, v := range expectedKeys {
-//		if !v {
-//			t.Fatalf("expected to inject '%s' on image '%s' but is not injected", k, secondImage)
-//		}
-//	}
-//
-//}
-//
-//func Test_areAllServicesBuilt(t *testing.T) {
-//	tests := []struct {
-//		name     string
-//		control  map[string]bool
-//		input    []string
-//		expected bool
-//	}{
-//		{
-//			name:     "all built",
-//			expected: true,
-//			input:    []string{"one", "two", "three"},
-//			control: map[string]bool{
-//				"one":   true,
-//				"two":   true,
-//				"three": true,
-//			},
-//		},
-//		{
-//			name:     "none built",
-//			expected: false,
-//			input:    []string{"one", "two", "three"},
-//			control:  map[string]bool{},
-//		},
-//		{
-//			name:     "some built",
-//			expected: false,
-//			input:    []string{"one", "two", "three"},
-//			control: map[string]bool{
-//				"one": true,
-//				"two": true,
-//			},
-//		},
-//		{
-//			name:     "nil control",
-//			expected: false,
-//			input:    []string{"one", "two", "three"},
-//		},
-//		{
-//			name:     "nil input",
-//			expected: true,
-//			control: map[string]bool{
-//				"one": true,
-//				"two": true,
-//			},
-//		},
-//		{
-//			name:     "empty input",
-//			expected: true,
-//			input:    []string{},
-//			control: map[string]bool{
-//				"one": true,
-//				"two": true,
-//			},
-//		},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			got := areAllServicesBuilt(tt.input, tt.control)
-//			require.Equal(t, tt.expected, got)
-//		})
-//
-//	}
-//}
-//
-//func Test_skipServiceBuild(t *testing.T) {
-//	tests := []struct {
-//		name     string
-//		control  map[string]bool
-//		input    string
-//		expected bool
-//	}{
-//		{
-//			name:     "is built",
-//			expected: true,
-//			input:    "one",
-//			control: map[string]bool{
-//				"one":   true,
-//				"two":   true,
-//				"three": true,
-//			},
-//		},
-//		{
-//			name:     "not built",
-//			expected: false,
-//			input:    "one",
-//			control:  map[string]bool{},
-//		},
-//		{
-//			name:     "nil control",
-//			expected: false,
-//			input:    "one",
-//		},
-//		{
-//			name:     "empty input",
-//			expected: false,
-//			control: map[string]bool{
-//				"one": true,
-//				"two": true,
-//			},
-//		},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			got := skipServiceBuild(tt.input, tt.control)
-//			require.Equal(t, tt.expected, got)
-//		})
-//
-//	}
-//}
+func TestValidateOptions(t *testing.T) {
+	var tests = []struct {
+		buildSection build.ManifestBuild
+		name         string
+		svcsToBuild  []string
+		options      types.BuildOptions
+		expectedErr  bool
+	}{
+		{
+			name:         "no services to build",
+			buildSection: build.ManifestBuild{},
+			svcsToBuild:  []string{},
+			options:      types.BuildOptions{},
+			expectedErr:  true,
+		},
+		{
+			name:         "svc not defined on manifest build section",
+			buildSection: build.ManifestBuild{},
+			svcsToBuild:  []string{"test"},
+			options:      types.BuildOptions{},
+			expectedErr:  true,
+		},
+		{
+			name: "several services but with flag",
+			buildSection: build.ManifestBuild{
+				"test":   &build.Info{},
+				"test-2": &build.Info{},
+			},
+			svcsToBuild: []string{"test", "test-2"},
+			options: types.BuildOptions{
+				Tag: "test",
+			},
+			expectedErr: true,
+		},
+		{
+			name: "only one service without flags",
+			buildSection: build.ManifestBuild{
+				"test": &build.Info{},
+			},
+			svcsToBuild: []string{"test"},
+			options:     types.BuildOptions{},
+			expectedErr: false,
+		},
+		{
+			name: "only one service with flags",
+			buildSection: build.ManifestBuild{
+				"test": &build.Info{},
+			},
+			svcsToBuild: []string{"test"},
+			options: types.BuildOptions{
+				Tag: "test",
+			},
+			expectedErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manifest := &model.Manifest{Build: tt.buildSection}
+			err := validateOptions(manifest, tt.svcsToBuild, &tt.options)
+			if tt.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestTwoStepsBuild(t *testing.T) {
+	ctx := context.Background()
+
+	dir, err := createDockerfile(t)
+	assert.NoError(t, err)
+
+	registry := newFakeRegistry()
+	builder := test.NewFakeOktetoBuilder(registry)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	bc := NewFakeBuilder(builder, registry, fakeConfig, varManager)
+	manifest := &model.Manifest{
+		Name: "test",
+		Build: build.ManifestBuild{
+			"test": &build.Info{
+				Context:    dir,
+				Dockerfile: filepath.Join(dir, "Dockerfile"),
+				VolumesToInclude: []build.VolumeMounts{
+					{
+						LocalPath:  dir,
+						RemotePath: "test",
+					},
+				},
+			},
+		},
+	}
+	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
+
+	require.NoError(t, err)
+	require.Equal(t, "okteto.dev/test-test:okteto", image)
+	// the image is at the fake registry
+	image, err = bc.Registry.GetImageTagWithDigest(image)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, image)
+}
+
+func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
+	ctx := context.Background()
+
+	dir, err := createDockerfile(t)
+	assert.NoError(t, err)
+
+	registry := newFakeRegistry()
+	builder := test.NewFakeOktetoBuilder(registry)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	bc := NewFakeBuilder(builder, registry, fakeConfig, varManager)
+	manifest := &model.Manifest{
+		Name: "test",
+		Build: build.ManifestBuild{
+			"test": &build.Info{
+				Context:    dir,
+				Dockerfile: filepath.Join(dir, "Dockerfile"),
+			},
+		},
+	}
+	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
+
+	// error from the build
+	assert.NoError(t, err)
+	// assert that the name of the image is the dev one
+	assert.Equal(t, "okteto.dev/test-test:okteto", image)
+	// the image is at the fake registry
+	image, err = bc.Registry.GetImageTagWithDigest(image)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, image)
+}
+
+func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
+	ctx := context.Background()
+
+	dir, err := createDockerfile(t)
+	assert.NoError(t, err)
+
+	registry := newFakeRegistry()
+	builder := test.NewFakeOktetoBuilder(registry)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	bc := NewFakeBuilder(builder, registry, fakeConfig, varManager)
+	manifest := &model.Manifest{
+		Name: "test",
+		Build: build.ManifestBuild{
+			"test": &build.Info{
+				Context:    dir,
+				Dockerfile: filepath.Join(dir, "Dockerfile"),
+				Image:      "okteto/test",
+			},
+		},
+	}
+	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
+
+	// error from the build
+	assert.NoError(t, err)
+	// assert that the name of the image is the dev one
+	assert.Equal(t, "okteto/test", image)
+	// the image is at the fake registry
+	image, err = bc.Registry.GetImageTagWithDigest(image)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, image)
+}
+
+func TestBuildWithStack(t *testing.T) {
+	ctx := context.Background()
+
+	dir, err := createDockerfile(t)
+	assert.NoError(t, err)
+
+	registry := newFakeRegistry()
+	builder := test.NewFakeOktetoBuilder(registry)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	bc := NewFakeBuilder(builder, registry, fakeConfig, varManager)
+	manifest := &model.Manifest{
+		Name: "test",
+		Type: model.StackType,
+		Build: build.ManifestBuild{
+			"test": &build.Info{
+				Context:    dir,
+				Dockerfile: filepath.Join(dir, "Dockerfile"),
+				Image:      "okteto/test:q",
+			},
+		},
+	}
+	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
+
+	// error from the build
+	assert.NoError(t, err)
+	// assert that the name of the image is the dev one
+	assert.Equal(t, "okteto.dev/test-test:okteto", image)
+	// the image is at the fake registry
+	image, err = bc.Registry.GetImageTagWithDigest(image)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, image)
+}
+
+func createDockerfile(t *testing.T) (string, error) {
+	dir := t.TempDir()
+	dockerfilePath := filepath.Join(dir, "Dockerfile")
+	err := os.WriteFile(dockerfilePath, []byte("Hello"), 0600)
+	if err != nil {
+		return "", err
+	}
+	return dir, nil
+}
+
+func TestBuildWithDependsOn(t *testing.T) {
+	ctx := context.Background()
+
+	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+
+	firstImage := "okteto/a:test"
+	secondImage := "okteto/b:test"
+	dir, err := createDockerfile(t)
+	assert.NoError(t, err)
+
+	registry := newFakeRegistry()
+	builder := test.NewFakeOktetoBuilder(registry)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+
+	varManager := vars.NewVarsManager(&fakeVarManager{})
+	bc := NewFakeBuilder(builder, registry, fakeConfig, varManager)
+	manifest := &model.Manifest{
+		Name: "test",
+		Build: build.ManifestBuild{
+			"a": &build.Info{
+				Context:    dir,
+				Dockerfile: filepath.Join(dir, "Dockerfile"),
+				Image:      firstImage,
+			},
+			"b": &build.Info{
+				Context:    dir,
+				Dockerfile: filepath.Join(dir, "Dockerfile"),
+				Image:      secondImage,
+				DependsOn:  []string{"a"},
+			},
+		},
+	}
+	err = bc.Build(ctx, &types.BuildOptions{
+		Manifest: manifest,
+	})
+
+	// error from the build
+	assert.NoError(t, err)
+
+	// check that images are on the registry
+	_, err = registry.GetImageTagWithDigest(firstImage)
+	assert.NoError(t, err)
+
+	_, err = registry.GetImageTagWithDigest(secondImage)
+	assert.NoError(t, err)
+
+	expectedKeys := map[string]bool{
+		"OKTETO_BUILD_A_IMAGE":      false,
+		"OKTETO_BUILD_A_REGISTRY":   false,
+		"OKTETO_BUILD_A_REPOSITORY": false,
+		"OKTETO_BUILD_A_TAG":        false,
+		"OKTETO_BUILD_A_SHA":        false,
+	}
+	for _, arg := range registry.getFakeImage(secondImage).Args {
+		parts := strings.SplitN(arg, "=", 2)
+		if _, ok := expectedKeys[parts[0]]; ok {
+			expectedKeys[parts[0]] = true
+		}
+	}
+	for k, v := range expectedKeys {
+		if !v {
+			t.Fatalf("expected to inject '%s' on image '%s' but is not injected", k, secondImage)
+		}
+	}
+
+}
+
+func Test_areAllServicesBuilt(t *testing.T) {
+	tests := []struct {
+		name     string
+		control  map[string]bool
+		input    []string
+		expected bool
+	}{
+		{
+			name:     "all built",
+			expected: true,
+			input:    []string{"one", "two", "three"},
+			control: map[string]bool{
+				"one":   true,
+				"two":   true,
+				"three": true,
+			},
+		},
+		{
+			name:     "none built",
+			expected: false,
+			input:    []string{"one", "two", "three"},
+			control:  map[string]bool{},
+		},
+		{
+			name:     "some built",
+			expected: false,
+			input:    []string{"one", "two", "three"},
+			control: map[string]bool{
+				"one": true,
+				"two": true,
+			},
+		},
+		{
+			name:     "nil control",
+			expected: false,
+			input:    []string{"one", "two", "three"},
+		},
+		{
+			name:     "nil input",
+			expected: true,
+			control: map[string]bool{
+				"one": true,
+				"two": true,
+			},
+		},
+		{
+			name:     "empty input",
+			expected: true,
+			input:    []string{},
+			control: map[string]bool{
+				"one": true,
+				"two": true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := areAllServicesBuilt(tt.input, tt.control)
+			require.Equal(t, tt.expected, got)
+		})
+
+	}
+}
+
+func Test_skipServiceBuild(t *testing.T) {
+	tests := []struct {
+		name     string
+		control  map[string]bool
+		input    string
+		expected bool
+	}{
+		{
+			name:     "is built",
+			expected: true,
+			input:    "one",
+			control: map[string]bool{
+				"one":   true,
+				"two":   true,
+				"three": true,
+			},
+		},
+		{
+			name:     "not built",
+			expected: false,
+			input:    "one",
+			control:  map[string]bool{},
+		},
+		{
+			name:     "nil control",
+			expected: false,
+			input:    "one",
+		},
+		{
+			name:     "empty input",
+			expected: false,
+			control: map[string]bool{
+				"one": true,
+				"two": true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := skipServiceBuild(tt.input, tt.control)
+			require.Equal(t, tt.expected, got)
+		})
+
+	}
+}
