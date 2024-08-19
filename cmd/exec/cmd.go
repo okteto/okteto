@@ -76,6 +76,7 @@ func NewExec(fs afero.Fs, ioCtrl *io.Controller, k8sProvider okteto.K8sClientPro
 		executorProvider: executorProvider{
 			ioCtrl:            ioCtrl,
 			k8sClientProvider: k8sProvider,
+			varManager:        varManager,
 		},
 		varManager: varManager,
 	}

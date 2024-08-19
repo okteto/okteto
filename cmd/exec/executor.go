@@ -48,6 +48,7 @@ type executor interface {
 type executorProvider struct {
 	ioCtrl            *io.Controller
 	k8sClientProvider okteto.K8sClientProvider
+	varManager        varManagerInterface
 }
 
 func (e executorProvider) provide(dev *model.Dev, podName, namespace string) (executor, error) {
@@ -58,9 +59,10 @@ func (e executorProvider) provide(dev *model.Dev, podName, namespace string) (ex
 	if dev.IsHybridModeEnabled() {
 		e.ioCtrl.Logger().Info("Using hybrid executor")
 		return &hybridExecutor{
-			dev:       dev,
-			namespace: namespace,
-			k8sClient: k8sClient,
+			dev:        dev,
+			namespace:  namespace,
+			k8sClient:  k8sClient,
+			varManager: e.varManager,
 		}, nil
 	}
 	if dev.RemoteModeEnabled() {
@@ -79,9 +81,14 @@ func (e executorProvider) provide(dev *model.Dev, podName, namespace string) (ex
 }
 
 type hybridExecutor struct {
-	k8sClient kubernetes.Interface
-	dev       *model.Dev
-	namespace string
+	k8sClient  kubernetes.Interface
+	dev        *model.Dev
+	namespace  string
+	varManager varManagerInterface
+}
+
+type varManagerInterface interface {
+	GetIncLocal(string) string
 }
 
 func (h *hybridExecutor) execute(ctx context.Context, cmdToExec []string) error {
@@ -92,7 +99,7 @@ func (h *hybridExecutor) execute(ctx context.Context, cmdToExec []string) error 
 		Namespace: h.namespace,
 		Client:    h.k8sClient,
 	}
-	executor, err := up.NewHybridExecutor(ctx, hybridCtx)
+	executor, err := up.NewHybridExecutor(ctx, hybridCtx, h.varManager)
 	if err != nil {
 		return err
 	}
