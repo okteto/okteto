@@ -115,8 +115,8 @@ func (se *syncExecutor) RunCommand(ctx context.Context, cmd []string) error {
 	return ssh.Exec(ctx, se.iface, se.remotePort, true, os.Stdin, os.Stdout, os.Stderr, cmd)
 }
 
-func NewHybridExecutor(ctx context.Context, hybridCtx *HybridExecCtx) (*hybridExecutor, error) {
-	envsGetter, err := newEnvsGetter(hybridCtx)
+func NewHybridExecutor(ctx context.Context, hybridCtx *HybridExecCtx, varManager envsGetterManagerInterface) (*hybridExecutor, error) {
+	envsGetter, err := newEnvsGetter(hybridCtx, varManager)
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +172,10 @@ type imageEnvsGetter struct {
 	imageGetter imageGetterInterface
 }
 
+type envsGetterManagerInterface interface {
+	GetIncLocal(string) string
+}
+
 type envsGetter struct {
 	client                      kubernetes.Interface
 	devContainerEnvGetter       devContainerEnvGetterInterface
@@ -179,13 +183,13 @@ type envsGetter struct {
 	platformVariablesEnvsGetter platformVariablesEnvsGetterInterface
 	imageEnvsGetter             imageEnvsGetterInterface
 	dev                         *model.Dev
-	getDefaultLocalEnvs         func() []string
+	getDefaultLocalEnvs         func(envsGetterManagerInterface) []string
 	name                        string
 	namespace                   string
+	varManager                  envsGetterManagerInterface
 }
 
-func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {
-
+func newEnvsGetter(hybridCtx *HybridExecCtx, varManager envsGetterManagerInterface) (*envsGetter, error) {
 	var variablesGetter platformVariablesGetterInterface
 	if okteto.IsOkteto() {
 		oc, err := okteto.NewOktetoClient()
@@ -209,6 +213,7 @@ func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {
 			imageGetter: registry.NewOktetoRegistry(okteto.Config{}),
 		},
 		getDefaultLocalEnvs: getDefaultLocalEnvs,
+		varManager:          varManager,
 	}, nil
 }
 
@@ -250,7 +255,7 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 	}
 	envs = append(envs, devContainerEnvs...)
 
-	envs = append(envs, eg.getDefaultLocalEnvs()...)
+	envs = append(envs, eg.getDefaultLocalEnvs(eg.varManager)...)
 
 	for _, env := range eg.dev.Environment {
 		envs = append(envs, fmt.Sprintf("%s=%s", env.Name, env.Value))
@@ -259,15 +264,15 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 	return envs, nil
 }
 
-func getDefaultLocalEnvs() []string {
+func getDefaultLocalEnvs(varManager envsGetterManagerInterface) []string {
 	var envs []string
 
-	path := os.Getenv("PATH")
+	path := varManager.GetIncLocal("PATH")
 	if path != "" {
 		envs = append(envs, fmt.Sprintf("PATH=%s", path))
 	}
 
-	term := os.Getenv(model.TermEnvVar)
+	term := varManager.GetIncLocal(model.TermEnvVar)
 	if term != "" {
 		envs = append(envs, fmt.Sprintf("%s=%s", model.TermEnvVar, term))
 	}
@@ -444,7 +449,7 @@ func (up *upContext) RunCommand(ctx context.Context, cmd []string) error {
 				Client:    k8sClient,
 				Workdir:   up.Dev.Workdir,
 			}
-			executor, err := NewHybridExecutor(ctx, hybridCtx)
+			executor, err := NewHybridExecutor(ctx, hybridCtx, up.varManager)
 			if err != nil {
 				return err
 			}
