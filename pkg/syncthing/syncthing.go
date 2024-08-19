@@ -571,7 +571,7 @@ func (s *Syncthing) GetCompletion(ctx context.Context, local bool, device string
 }
 
 // IsHealthy returns the syncthing error or nil
-func (s *Syncthing) IsHealthy(ctx context.Context, local bool, max int) error {
+func (s *Syncthing) IsHealthy(ctx context.Context, local bool, maxRetryLimit int) error {
 	pullErrors, err := s.GetPullErrors(ctx, local)
 	if err != nil {
 		if err == oktetoErrors.ErrBusySyncthing {
@@ -593,7 +593,7 @@ func (s *Syncthing) IsHealthy(ctx context.Context, local bool, max int) error {
 		return err
 	}
 
-	if isHealthyRetries <= max {
+	if isHealthyRetries <= maxRetryLimit {
 		return nil
 	}
 	if err == nil || err == oktetoErrors.ErrBusySyncthing {

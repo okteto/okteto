@@ -49,7 +49,7 @@ func (f *logrusJSONFormatter) SetStage(stage string) {
 func (f *logrusJSONFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	level := strings.ToLower(entry.Level.String())
 
-	// err empty stage still appears beacuse the format for controller is json, we dont have a silce format for io controller
+	// err empty stage still appears because the format for controller is json, we don't have a slice format for io controller
 	if f.stage == "" {
 		return nil, errEmptyStage
 	}

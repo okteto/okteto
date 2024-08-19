@@ -166,7 +166,7 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 $ okteto deploy
 
 # Execute okteto deploy in remote
-$ okteto deploy --remote 
+$ okteto deploy --remote
 
 
 # Execute okteto deploy skipping the build

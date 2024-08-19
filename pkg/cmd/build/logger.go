@@ -196,7 +196,7 @@ func (t *trace) display(progress string) {
 					continue
 				case "Load manifest":
 					if text.Level == "error" {
-						oktetoLog.Fail(text.Message)
+						oktetoLog.Fail("%s", text.Message)
 					}
 				default:
 					// Print the information message about the stage if needed
@@ -210,7 +210,7 @@ func (t *trace) display(progress string) {
 						if text.Stage != "" {
 							t.err = OktetoCommandErr{
 								Stage:  text.Stage,
-								Err:    fmt.Errorf(text.Message),
+								Err:    fmt.Errorf("%s", text.Message),
 								output: progress,
 							}
 						}
