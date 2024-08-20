@@ -263,7 +263,7 @@ func TestGetEnvs(t *testing.T) {
 				configMapEnvsGetter:         &tt.fakeConfigMapEnvsGetter,
 				platformVariablesEnvsGetter: &tt.fakeSecretEnvsGetter,
 				imageEnvsGetter:             &tt.fakeImageEnvsGetter,
-				getDefaultLocalEnvs:         func() []string { return []string{} },
+				getDefaultLocalEnvs:         func(envsGetterManagerInterface) []string { return []string{} },
 			}
 
 			envs, err := eg.getEnvs(ctx)
@@ -420,7 +420,7 @@ func TestGetEnvForHybridModeWithProperPriority(t *testing.T) {
 		configMapEnvsGetter:         &fakeConfigMapEnvsGetter,
 		platformVariablesEnvsGetter: &fakeSecretEnvsGetter,
 		imageEnvsGetter:             &fakeImageEnvsGetter,
-		getDefaultLocalEnvs:         func() []string { return []string{} },
+		getDefaultLocalEnvs:         func(envsGetterManagerInterface) []string { return []string{} },
 	}
 	envs, err := eg.getEnvs(ctx)
 	require.NoError(t, err)

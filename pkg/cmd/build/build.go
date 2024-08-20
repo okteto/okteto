@@ -78,7 +78,7 @@ func (ob *OktetoBuilder) GetBuilder() string {
 // Run runs the build sequence
 func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller, varManager *vars.Manager) error {
 	isRemoteExecution := buildOptions.OutputMode == DeployOutputModeOnBuild || buildOptions.OutputMode == DestroyOutputModeOnBuild || buildOptions.OutputMode == TestOutputModeOnBuild
-	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
+	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode, varManager)
 	depotToken := varManager.GetIncLocal(DepotTokenEnvVar)
 	depotProject := varManager.GetIncLocal(DepotProjectEnvVar)
 
@@ -105,11 +105,11 @@ func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptio
 	}
 }
 
-func setOutputMode(outputMode string) string {
+func setOutputMode(outputMode string, varManager *vars.Manager) string {
 	if outputMode != "" {
 		return outputMode
 	}
-	switch os.Getenv(model.BuildkitProgressEnvVar) {
+	switch varManager.GetIncLocal(model.BuildkitProgressEnvVar) {
 	case oktetoLog.PlainFormat:
 		return oktetoLog.PlainFormat
 	case oktetoLog.JSONFormat:
@@ -229,7 +229,7 @@ type regInterface interface {
 }
 
 // OptsFromBuildInfo returns the parsed options for the build from the manifest
-func OptsFromBuildInfo(manifestName, svcName string, b *build.Info, o *types.BuildOptions, reg regInterface, okCtx OktetoContextInterface) *types.BuildOptions {
+func OptsFromBuildInfo(manifestName, svcName string, b *build.Info, o *types.BuildOptions, reg regInterface, okCtx OktetoContextInterface, varManager *vars.Manager) *types.BuildOptions {
 	if o == nil {
 		o = &types.BuildOptions{}
 	}
@@ -333,7 +333,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *build.Info, o *types.Bui
 	if o != nil && o.OutputMode != "" {
 		outputMode = o.OutputMode
 	}
-	opts.OutputMode = setOutputMode(outputMode)
+	opts.OutputMode = setOutputMode(outputMode, varManager)
 
 	return opts
 }

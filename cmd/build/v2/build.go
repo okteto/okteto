@@ -357,7 +357,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcName, err)
 	}
 
-	buildOptions := buildCmd.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, options, bc.Registry, bc.oktetoContext)
+	buildOptions := buildCmd.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, options, bc.Registry, bc.oktetoContext, bc.varManager)
 
 	if err := bc.Builder.Build(ctx, buildOptions); err != nil {
 		return "", err

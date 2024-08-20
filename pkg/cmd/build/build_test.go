@@ -414,7 +414,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				},
 			}
 
-			result := OptsFromBuildInfo(manifest.Name, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts, &tt.mr, okCtx)
+			result := OptsFromBuildInfo(manifest.Name, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts, &tt.mr, okCtx, vars.NewVarsManager(&fakeVarManager{}))
 			require.Equal(t, tt.expected, result)
 		})
 	}
@@ -797,8 +797,9 @@ func Test_setOutputMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("BUILDKIT_PROGRESS", tt.envBuildkitProgressValue)
-			got := setOutputMode(tt.input)
+			varManager := vars.NewVarsManager(&fakeVarManager{})
+			varManager.AddLocalVar("BUILDKIT_PROGRESS", tt.envBuildkitProgressValue)
+			got := setOutputMode(tt.input, varManager)
 			require.Equal(t, tt.expected, got)
 		})
 	}
