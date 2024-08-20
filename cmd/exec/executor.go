@@ -82,9 +82,9 @@ func (e executorProvider) provide(dev *model.Dev, podName, namespace string) (ex
 
 type hybridExecutor struct {
 	k8sClient  kubernetes.Interface
+	varManager varManagerInterface
 	dev        *model.Dev
 	namespace  string
-	varManager varManagerInterface
 }
 
 type varManagerInterface interface {
