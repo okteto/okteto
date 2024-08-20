@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 const (
@@ -48,10 +49,10 @@ var (
 )
 
 // Install installs syncthing locally
-func Install(p getter.ProgressTracker) error {
+func Install(p getter.ProgressTracker, varManager *vars.Manager) error {
 	oktetoLog.Infof("installing syncthing for %s/%s", runtime.GOOS, runtime.GOARCH)
 
-	minimum := GetMinimumVersion()
+	minimum := GetMinimumVersion(varManager)
 	downloadURL, err := GetDownloadURL(runtime.GOOS, runtime.GOARCH, minimum.String())
 	if err != nil {
 		return err
@@ -113,7 +114,7 @@ func IsInstalled() bool {
 }
 
 // ShouldUpgrade returns true if syncthing should be upgraded
-func ShouldUpgrade() bool {
+func ShouldUpgrade(varManager *vars.Manager) bool {
 	if !IsInstalled() {
 		return true
 	}
@@ -122,13 +123,13 @@ func ShouldUpgrade() bool {
 		return true
 	}
 
-	minimum := GetMinimumVersion()
+	minimum := GetMinimumVersion(varManager)
 
 	return minimum.GreaterThan(current)
 }
 
-func GetMinimumVersion() *semver.Version {
-	v := os.Getenv(model.SyncthingVersionEnvVar)
+func GetMinimumVersion(varManager *vars.Manager) *semver.Version {
+	v := varManager.GetIncLocal(model.SyncthingVersionEnvVar)
 	if v == "" {
 		v = syncthingVersion
 	}
