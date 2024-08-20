@@ -15,7 +15,6 @@ package context
 
 import (
 	"encoding/base64"
-	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"testing"
 
@@ -23,6 +22,7 @@ import (
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/tools/clientcmd/api"

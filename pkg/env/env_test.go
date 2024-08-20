@@ -14,10 +14,11 @@
 package env
 
 import (
+	"testing"
+
 	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
-	"testing"
 )
 
 type varManagerLogger struct{}

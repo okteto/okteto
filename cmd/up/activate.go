@@ -16,7 +16,6 @@ package up
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"strings"
 	"time"
 
@@ -35,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/repository"
+	"github.com/okteto/okteto/pkg/vars"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
