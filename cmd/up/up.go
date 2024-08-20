@@ -451,7 +451,7 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVaria
 			if kv[0] == "" {
 				return nil, fmt.Errorf("invalid variable value '%s': please review the accepted formats at https://www.okteto.com/docs/reference/okteto-manifest/#environment-string-optional ", v)
 			}
-			kv = append(kv, os.Getenv(kv[0]))
+			kv = append(kv, varManager.Get(kv[0]))
 		}
 
 		varNameToAdd, varValueToAdd := kv[0], kv[1]
