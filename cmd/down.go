@@ -102,7 +102,7 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, varManager *v
 				return err
 			}
 
-			dc := down.New(fs, okteto.NewK8sClientProviderWithLogger(k8sLogsCtrl), at)
+			dc := down.New(fs, okteto.NewK8sClientProviderWithLogger(k8sLogsCtrl), at, varManager)
 
 			if all {
 				err := dc.AllDown(ctx, manifest, okteto.GetContext().Namespace, rm)

@@ -38,17 +38,23 @@ type analyticsTrackerInterface interface {
 	TrackDownVolumes(bool)
 }
 
+type varManagerInterface interface {
+	Get(string) string
+}
+
 type Operation struct {
 	Fs                afero.Fs
 	K8sClientProvider okteto.K8sClientProvider
 	AnalyticsTracker  analyticsTrackerInterface
+	varManager        varManagerInterface
 }
 
-func New(fs afero.Fs, k8sClientProvider okteto.K8sClientProvider, at analyticsTrackerInterface) *Operation {
+func New(fs afero.Fs, k8sClientProvider okteto.K8sClientProvider, at analyticsTrackerInterface, varManager varManagerInterface) *Operation {
 	return &Operation{
 		Fs:                fs,
 		K8sClientProvider: k8sClientProvider,
 		AnalyticsTracker:  at,
+		varManager:        varManager,
 	}
 }
 
@@ -105,7 +111,7 @@ func (d *Operation) Down(ctx context.Context, dev *model.Dev, namespace string, 
 		}
 		oktetoLog.Success(fmt.Sprintf("Persistent volume '%s' removed", dev.Name))
 
-		if os.Getenv(model.OktetoSkipCleanupEnvVar) == "" {
+		if d.varManager.Get(model.OktetoSkipCleanupEnvVar) == "" {
 			if err := syncthing.RemoveFolder(dev, namespace, d.Fs); err != nil {
 				oktetoLog.Infof("failed to delete existing syncthing folder")
 			}
