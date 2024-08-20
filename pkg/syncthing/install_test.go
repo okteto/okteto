@@ -24,11 +24,10 @@ import (
 	"github.com/okteto/okteto/pkg/vars"
 )
 
-type fakeManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeManager) MaskVar(value string)                {}
-func (*fakeManager) IsLocalVarSupportEnabled() bool      { return true }
-func (*fakeManager) IsLocalVarException(key string) bool { return true }
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func TestInstall(t *testing.T) {
 	if runtime.GOOS != "windows" {
@@ -36,7 +35,7 @@ func TestInstall(t *testing.T) {
 		t.Skip("this test is only required for windows")
 	}
 
-	if err := Install(nil, vars.NewVarsManager(&fakeManager{})); err != nil {
+	if err := Install(nil, vars.NewVarsManager(&varManagerLogger{})); err != nil {
 		t.Fatal(err)
 	}
 
@@ -45,7 +44,7 @@ func TestInstall(t *testing.T) {
 		t.Fatal("failed to get version")
 	}
 
-	m := GetMinimumVersion(vars.NewVarsManager(&fakeManager{}))
+	m := GetMinimumVersion(vars.NewVarsManager(&varManagerLogger{}))
 
 	if v.Compare(m) != 0 {
 		t.Fatalf("got %s, expected %s", v.String(), m.String())
@@ -197,7 +196,7 @@ func TestGetMinimumVersion(t *testing.T) {
 		},
 	}
 
-	varManager := vars.NewVarsManager(&fakeManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	for _, tt := range tests {
 		t.Run(tt.version, func(t *testing.T) {
 			varManager.AddLocalVar(model.SyncthingVersionEnvVar, tt.version)

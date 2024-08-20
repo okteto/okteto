@@ -15,13 +15,13 @@ package v2
 
 import (
 	"context"
-	"github.com/okteto/okteto/cmd"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/okteto/okteto/cmd"
 	"github.com/okteto/okteto/cmd/build/basic"
 	"github.com/okteto/okteto/cmd/build/v2/smartbuild"
 	"github.com/okteto/okteto/internal/test"
@@ -39,10 +39,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//type varManagerLogger struct{}
-//
-//func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
-//func (varManagerLogger) AddMaskedWord(_ string)            {}
+type varManagerLogger struct{}
+
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 var fakeManifest = &model.Manifest{
 	Name: "test",

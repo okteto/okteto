@@ -14,10 +14,11 @@
 package vars
 
 import (
-	"github.com/a8m/envsubst/parse"
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/a8m/envsubst/parse"
 )
 
 // GlobalVarManager is the global instance of the Okteto Variables manager. It should only be used in the serializer where it's harder to inject the manager.
