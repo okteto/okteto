@@ -19,11 +19,16 @@ package okteto
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"net/http"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/syncthing"
 )
+
+type fakeVarManager struct{}
+
+func (*fakeVarManager) MaskVar(string) {}
 
 func TestDownloadSyncthing(t *testing.T) {
 	var tests = []struct {
@@ -39,7 +44,7 @@ func TestDownloadSyncthing(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	m := syncthing.GetMinimumVersion()
+	m := syncthing.GetMinimumVersion(vars.NewVarsManager(&fakeVarManager{}))
 	for _, tt := range tests {
 		tt := tt
 		t.Run(fmt.Sprintf("%s-%s", tt.os, tt.arch), func(t *testing.T) {
