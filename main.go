@@ -19,6 +19,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/model"
 	"math/rand"
 	"os"
 	"strings"
@@ -46,7 +47,6 @@ import (
 	"github.com/okteto/okteto/pkg/insights"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/vars"
 	"github.com/sirupsen/logrus"
@@ -81,11 +81,6 @@ func init() {
 	}
 
 	utilRuntime.ErrorHandlers = errorHandlers
-
-	if bin := os.Getenv(model.OktetoBinEnvVar); bin != "" {
-		model.OktetoBinImageTag = bin
-		oktetoLog.Infof("using %s as the bin image", bin)
-	}
 }
 
 func main() {
@@ -118,6 +113,11 @@ func main() {
 		},
 	)
 	vars.GlobalVarManager = varManager
+
+	if bin := varManager.Get(model.OktetoBinEnvVar); bin != "" {
+		model.OktetoBinImageTag = bin
+		oktetoLog.Infof("using %s as the bin image", bin)
+	}
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
