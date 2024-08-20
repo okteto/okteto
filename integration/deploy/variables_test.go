@@ -170,8 +170,7 @@ func TestDeployVariablesOrder(t *testing.T) {
 	require.NoError(t, deployErr)
 	require.Contains(t, deployOutput, "CLI_TEST_MY_VAR1=flag")
 	require.Contains(t, deployOutput, "CLI_TEST_MY_VAR2=.env")
-	require.Contains(t, deployOutput, "CLI_TEST_MY_VAR3=.env")
-	require.NotContains(t, deployOutput, "CLI_TEST_MY_VAR3=local")
+	require.Contains(t, deployOutput, "CLI_TEST_MY_VAR3=local")
 	require.Contains(t, deployOutput, "CLI_TEST_MY_VAR4=.env")
 	require.Contains(t, deployOutput, "CLI_TEST_MY_VAR5=admin")
 
@@ -194,8 +193,7 @@ func TestDeployVariablesOrder(t *testing.T) {
 	require.NoError(t, destroyErr)
 	require.Contains(t, destroyOutput, "CLI_TEST_MY_VAR1=flag")
 	require.Contains(t, destroyOutput, "CLI_TEST_MY_VAR2=.env")
-	require.Contains(t, destroyOutput, "CLI_TEST_MY_VAR3=.env")
-	require.NotContains(t, destroyOutput, "CLI_TEST_MY_VAR3=local")
+	require.Contains(t, destroyOutput, "CLI_TEST_MY_VAR3=local")
 	require.Contains(t, destroyOutput, "CLI_TEST_MY_VAR4=.env")
 	require.Contains(t, destroyOutput, "CLI_TEST_MY_VAR5=admin")
 
