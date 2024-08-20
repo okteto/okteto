@@ -195,7 +195,7 @@ func TestGetBuildHash(t *testing.T) {
 
 func Test_getBuildHashFromCommit(t *testing.T) {
 	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
-	vars.GlobalVarManager.AddFlagVar("BAR", "bar")
+	vars.GlobalVarManager.AddLocalVar("BAR", "bar")
 
 	fs := afero.NewMemMapFs()
 	err := afero.WriteFile(fs, "secret", []byte("bar"), 0600)
