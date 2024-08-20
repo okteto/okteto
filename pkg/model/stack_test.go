@@ -54,7 +54,7 @@ E=word -notword`
 )
 
 func Test_ReadStack(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 	vars.GlobalVarManager.AddDotEnvVar("PWD", "hello")
 
 	manifest := []byte(`name: voting-app
@@ -201,7 +201,7 @@ services:
 }
 
 func Test_ReadStackCompose(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 	vars.GlobalVarManager.AddDotEnvVar("PWD", "hello")
 
 	manifest := []byte(`name: voting-app
@@ -995,7 +995,7 @@ func TestStack_ExpandEnvsAtFileLevel(t *testing.T) {
 			}
 			defer os.RemoveAll(tmpFile.Name())
 
-			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 			for key, value := range tt.envs {
 				vars.GlobalVarManager.AddDotEnvVar(key, value)
 			}
@@ -1160,7 +1160,7 @@ func Test_getStackName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {
-			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 			dir := t.TempDir()
 			stackPath := filepath.Join(dir, tt.stackPath)
 			vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, tt.nameEnv)
@@ -1188,7 +1188,7 @@ func Test_getStackNameWithinRepository(t *testing.T) {
 	// As getStackName internally does os.Setenv, when all the tests run at the same time,
 	// it might happen that the env var with the name is set. That env var has priority over
 	// the repository calculation. In order to avoid this, we need to unset the env var before running the test
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 	vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, "")
 	repository := "https://github.com/okteto/compose-repository-test.git"
 	dir := t.TempDir()
@@ -1210,7 +1210,7 @@ func Test_getStackNameWithinRepository(t *testing.T) {
 }
 
 func Test_translateEnvVars(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 
 	tmpFile, err := os.CreateTemp("", ".env")
 	if err != nil {

@@ -121,7 +121,7 @@ func TestArgsUnmarshalling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 			for k, v := range tt.env {
 				vars.GlobalVarManager.AddDotEnvVar(k, v)
 			}

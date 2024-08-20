@@ -29,9 +29,10 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 type fakeK8sClientProvider struct {
 	client kubernetes.Interface
@@ -156,7 +157,7 @@ func TestKubetoken(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			varManager := vars.NewVarsManager(&fakeVarManager{})
+			varManager := vars.NewVarsManager(&varManagerLogger{})
 			cmd := NewKubetokenCmd(varManager)
 			cmd.oktetoClientProvider = tc.input.fakeOktetoClientProvider
 			cmd.oktetoCtxCmdRunner = tc.input.fakeCtxCmdRunner

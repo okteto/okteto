@@ -42,7 +42,7 @@ func TestExternalResource_SetDefaults(t *testing.T) {
 		},
 	}
 
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 
 	externalResource.SetDefaults(externalResourceName, varManager)
 

@@ -44,12 +44,13 @@ var (
 	mode420 int32 = 420
 )
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func Test_translateWithVolumes(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 
 	file, err := os.CreateTemp("", "okteto-secret-test")
 	require.NoError(t, err)

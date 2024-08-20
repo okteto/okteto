@@ -24,9 +24,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func Test_convertCommandFlagsToOktetoVariables(t *testing.T) {
 	var tests = []struct {
@@ -75,7 +76,7 @@ func Test_convertCommandFlagsToOktetoVariables(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			varManager := vars.NewVarsManager(&fakeVarManager{})
+			varManager := vars.NewVarsManager(&varManagerLogger{})
 			err := convertCommandFlagsToOktetoVariables(tt.variables, varManager)
 
 			assert.Equal(t, tt.expectedError, err)

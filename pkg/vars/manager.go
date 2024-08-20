@@ -14,9 +14,10 @@
 package vars
 
 import (
-	"sort"
-
 	"github.com/a8m/envsubst/parse"
+	"sort"
+	"strconv"
+	"time"
 )
 
 // GlobalVarManager is the global instance of the Okteto Variables manager. It should only be used in the serializer where it's harder to inject the manager.
@@ -51,20 +52,20 @@ type Group struct {
 	Type Type
 }
 
-// ManagerInterface is the interface that the Okteto Variables manager should implement
-type ManagerInterface interface {
-	MaskVar(value string)
+type LoggerInterface interface {
+	Yellow(format string, args ...interface{})
+	AddMaskedWord(value string)
 }
 
 type Manager struct {
-	m      ManagerInterface
+	logger LoggerInterface
 	groups []Group
 }
 
 // NewVarsManager creates a new Okteto Variables manager
-func NewVarsManager(m ManagerInterface) *Manager {
+func NewVarsManager(logger LoggerInterface) *Manager {
 	return &Manager{
-		m: m,
+		logger: logger,
 	}
 }
 
@@ -139,7 +140,7 @@ func (m *Manager) maskVar(value string, t Type) {
 	if value == "" || !config[t].Masked {
 		return
 	}
-	m.m.MaskVar(value)
+	m.logger.AddMaskedWord(value)
 }
 
 // AddGroup allows to add a group of variables to the manager. The variables of the group should share the same type.
@@ -200,6 +201,52 @@ func (m *Manager) ExpandIfNotEmpty(s string) (string, error) {
 		return s, nil
 	}
 	return result, nil
+}
+
+// LoadBoolean loads a boolean environment variable and returns it value
+func (m *Manager) LoadBoolean(key string) bool {
+	val := m.Get(key)
+	if val == "" {
+		val = "false"
+	}
+
+	h, err := strconv.ParseBool(val)
+	if err != nil {
+		m.logger.Yellow("'%s' is not a valid value for environment variable %s", val, key)
+	}
+
+	return h
+}
+
+func (m *Manager) LoadTimeOrDefault(key string, defaultValue time.Duration) time.Duration {
+	val := m.Get(key)
+	if val == "" {
+		return defaultValue
+	}
+
+	h, err := time.ParseDuration(val)
+	if err != nil {
+		m.logger.Yellow("'%s' is not a valid value for environment variable %s", val, key)
+		return defaultValue
+	}
+
+	return h
+}
+
+// LoadBooleanOrDefault loads a boolean environment variable and returns it value
+// If the variable is not defined, it returns the default value
+func (m *Manager) LoadBooleanOrDefault(k string, d bool) bool {
+	val := m.Get(k)
+	if val == "" {
+		return d
+	}
+
+	h, err := strconv.ParseBool(val)
+	if err != nil {
+		m.logger.Yellow("'%s' is not a valid value for environment variable %s", val, k)
+	}
+
+	return h
 }
 
 // sortGroupsByPriorityAsc sorts the groups by priority ascending, so higher priority variables override lower priority ones.

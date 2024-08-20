@@ -30,9 +30,10 @@ type fakeBuildRunner struct {
 	mock.Mock
 }
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func (f *fakeBuildRunner) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller, varManager *vars.Manager) error {
 	args := f.Called(ctx, buildOptions, ioCtrl, varManager)
@@ -46,7 +47,7 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	bc := &Builder{
 		BuildRunner: buildRunner,
 		IoCtrl:      io.NewIOController(),
-		VarManager:  vars.NewVarsManager(&fakeVarManager{}),
+		VarManager:  vars.NewVarsManager(&varManagerLogger{}),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -79,7 +80,7 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 	bc := &Builder{
 		BuildRunner: buildRunner,
 		IoCtrl:      io.NewIOController(),
-		VarManager:  vars.NewVarsManager(&fakeVarManager{}),
+		VarManager:  vars.NewVarsManager(&varManagerLogger{}),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -112,7 +113,7 @@ func TestBuildWithNoErrorFromDockerfileAndNoTag(t *testing.T) {
 	bc := &Builder{
 		BuildRunner: buildRunner,
 		IoCtrl:      io.NewIOController(),
-		VarManager:  vars.NewVarsManager(&fakeVarManager{}),
+		VarManager:  vars.NewVarsManager(&varManagerLogger{}),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -142,7 +143,7 @@ func TestBuildWithErrorWithPathToFile(t *testing.T) {
 	bc := &Builder{
 		BuildRunner: buildRunner,
 		IoCtrl:      io.NewIOController(),
-		VarManager:  vars.NewVarsManager(&fakeVarManager{}),
+		VarManager:  vars.NewVarsManager(&varManagerLogger{}),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -165,7 +166,7 @@ func TestBuildWithErrorWithFileToDir(t *testing.T) {
 	bc := &Builder{
 		BuildRunner: buildRunner,
 		IoCtrl:      io.NewIOController(),
-		VarManager:  vars.NewVarsManager(&fakeVarManager{}),
+		VarManager:  vars.NewVarsManager(&varManagerLogger{}),
 	}
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
@@ -186,7 +187,7 @@ func TestBuildWithErrorWithFileToDir(t *testing.T) {
 func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 	ctx := context.Background()
 
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	varManager.AddLocalVar("TEST_VAR", "unit-test")
 
 	buildRunner := &fakeBuildRunner{}

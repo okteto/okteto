@@ -28,7 +28,7 @@ func TestNoneOfTheServicesBuilt(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
@@ -44,7 +44,7 @@ func TestAllServicesAlreadyBuilt(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{"test/test-1", "test/test-2", "okteto.dev/test-test-3:okteto", "okteto.dev/test-test-4:okteto"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
@@ -60,7 +60,7 @@ func TestServicesNotAreAlreadyBuilt(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{"test/test-1"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
@@ -77,7 +77,7 @@ func TestNoServiceBuilt(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{"test/test-1"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
@@ -94,7 +94,7 @@ func TestServicesNotInStack(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: false,
 	}
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
@@ -139,7 +139,7 @@ func TestServicesNotOktetoWithStack(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{"test/test-1"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
@@ -166,7 +166,7 @@ func TestAllServicesAlreadyBuiltWithSubset(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
@@ -182,7 +182,7 @@ func TestServicesNotAreAlreadyBuiltWithSubset(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{"test/test-1"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
@@ -198,7 +198,7 @@ func TestServicesBuildSection(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
@@ -215,7 +215,7 @@ func TestNoServiceBuiltWithSubset(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	bc := NewFakeBuilder(nil, fakeReg, fakeConfig, varManager)
 	alreadyBuilt := []string{"test/test-1", "test/test-2"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))

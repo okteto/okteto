@@ -31,7 +31,7 @@ import (
 )
 
 func TestDevToTranslationRule(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 
 	manifestBytes := []byte(`dev:
     web:

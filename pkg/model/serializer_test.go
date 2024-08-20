@@ -155,7 +155,7 @@ func TestEnvVarMarshalling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 			vars.GlobalVarManager.AddDotEnvVar("DEV_ENV", "test_environment")
 			vars.GlobalVarManager.AddDotEnvVar("OKTETO_TEST_ENV_MARSHALLING", "true")
 
@@ -404,7 +404,7 @@ func TestLifecycleMarshalling(t *testing.T) {
 }
 
 func TestSecretMarshalling(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 	file, err := os.CreateTemp("", "okteto-secret-test")
 	assert.NoError(t, err)
 	defer os.Remove(file.Name())
@@ -729,7 +729,7 @@ func TestLabelsUnmarshalling(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := make(Labels)
 
-			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 			vars.GlobalVarManager.AddDotEnvVar("DEV_ENV", "test_environment")
 			vars.GlobalVarManager.AddDotEnvVar("OKTETO_TEST_ENV_MARSHALLING", "true")
 
@@ -831,7 +831,7 @@ func TestAnnotationsUnmarshalling(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := make(Annotations)
 
-			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 			vars.GlobalVarManager.AddDotEnvVar("DEV_ENV", "test_environment")
 			vars.GlobalVarManager.AddDotEnvVar("OKTETO_TEST_ENV_MARSHALLING", "true")
 
@@ -990,7 +990,7 @@ rescanInterval: 10`),
 }
 
 func TestSyncFoldersUnmarshalling(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 	vars.GlobalVarManager.AddDotEnvVar("REMOTE_PATH", "/usr/src/app")
 
 	tests := []struct {
@@ -1041,7 +1041,7 @@ func TestSyncFoldersUnmarshalling(t *testing.T) {
 }
 
 func TestManifestUnmarshalling(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 
 	tests := []struct {
 		expected        *Manifest

@@ -317,7 +317,7 @@ func Test_initFromEnvVars(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			varManager := vars.NewVarsManager(&fakeVarManager{})
+			varManager := vars.NewVarsManager(&varManagerLogger{})
 			for k, v := range tt.env {
 				varManager.AddLocalVar(k, v)
 			}

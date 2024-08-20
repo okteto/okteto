@@ -186,7 +186,7 @@ echo $TEST_VAR`,
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			varManager := vars.NewVarsManager(&fakeVarManager{})
+			varManager := vars.NewVarsManager(&varManagerLogger{})
 
 			for k, v := range tt.envs {
 				varManager.AddBuiltInVar(k, v)
@@ -234,7 +234,7 @@ deploy:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			varManager := vars.NewVarsManager(&fakeVarManager{})
+			varManager := vars.NewVarsManager(&varManagerLogger{})
 
 			for k, v := range tt.envs {
 				varManager.AddBuiltInVar(k, v)
@@ -1053,7 +1053,7 @@ sync:
 				}
 				assert.NoError(t, os.WriteFile(filepath.Join(dir, "docker-compose.yml"), tt.composeBytes, 0600))
 			}
-			_, err := getManifestFromFile(dir, file, afero.NewMemMapFs(), vars.NewVarsManager(&fakeVarManager{}))
+			_, err := getManifestFromFile(dir, file, afero.NewMemMapFs(), vars.NewVarsManager(&varManagerLogger{}))
 
 			if tt.expectedErr != nil {
 				assert.ErrorContains(t, err, tt.expectedErr.Error())
@@ -1429,7 +1429,7 @@ func Test_Manifest_HasBuildSection(t *testing.T) {
 
 func Test_getInferredManifestWhenNoManifestExist(t *testing.T) {
 	wd := t.TempDir()
-	result, err := GetInferredManifest(wd, afero.NewMemMapFs(), vars.NewVarsManager(&fakeVarManager{}))
+	result, err := GetInferredManifest(wd, afero.NewMemMapFs(), vars.NewVarsManager(&varManagerLogger{}))
 	assert.Empty(t, result)
 	assert.ErrorIs(t, err, oktetoErrors.ErrCouldNotInferAnyManifest)
 }

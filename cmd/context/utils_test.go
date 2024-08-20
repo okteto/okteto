@@ -28,7 +28,7 @@ import (
 )
 
 func Test_GetManifestV2(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 
 	tests := []struct {
 		expectedManifest *model.Manifest
@@ -115,7 +115,7 @@ dependencies:
 				filename = ""
 			}
 
-			m, err := model.GetManifestV2(filename, afero.NewMemMapFs(), vars.NewVarsManager(&fakeVarManager{}))
+			m, err := model.GetManifestV2(filename, afero.NewMemMapFs(), vars.NewVarsManager(&varManagerLogger{}))
 			if tt.expectedErr {
 				assert.NotNil(t, err)
 			} else {

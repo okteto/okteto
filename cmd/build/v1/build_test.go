@@ -35,14 +35,15 @@ func (f *fakeBuildRunner) Run(ctx context.Context, buildOptions *types.BuildOpti
 	return args.Error(0)
 }
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	ctx := context.Background()
 
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	buildRunner := &fakeBuildRunner{}
 	bc := NewBuilder(buildRunner, io.NewIOController(), varManager)
 	dir, err := createDockerfile(t)
@@ -73,7 +74,7 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 	ctx := context.Background()
 
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	varManager.AddLocalVar("TEST_VAR", "unit-test")
 
 	buildRunner := &fakeBuildRunner{}
@@ -99,7 +100,7 @@ func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 	ctx := context.Background()
 
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	varManager.AddLocalVar("TEST_VAR", "unit-test")
 
 	buildRunner := &fakeBuildRunner{}
@@ -131,7 +132,7 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 func TestBuildWithNoErrorFromDockerfileAndNoTag(t *testing.T) {
 	ctx := context.Background()
 
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	buildRunner := &fakeBuildRunner{}
 	bc := NewBuilder(buildRunner, io.NewIOController(), varManager)
 	dir, err := createDockerfile(t)

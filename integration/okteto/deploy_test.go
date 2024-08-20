@@ -78,10 +78,10 @@ const (
   command: exit 1
 `
 	oktetoCmdWithMaskValuesTemplate = `deploy:
-- name: Mask command deploy
+- name: AddMaskedWord command deploy
   command: echo $TOMASK
 destroy:
-  - name: Mask command destroy
+  - name: AddMaskedWord command destroy
     command: echo $TOMASK
 `
 	nginxDockerfile = `FROM nginx
@@ -311,12 +311,12 @@ func TestRemoteMaskVariables(t *testing.T) {
 	}
 
 	require.Equal(t, 0, numErrors)
-	stagesToTest := []string{"Load manifest", "Mask command deploy", "done"}
+	stagesToTest := []string{"Load manifest", "AddMaskedWord command deploy", "done"}
 	for _, ss := range stagesToTest {
 		if _, ok := stageLines[ss]; !ok {
 			t.Fatalf("deploy didn't have the stage '%s'", ss)
 		}
-		if ss == "Mask command deploy" {
+		if ss == "AddMaskedWord command deploy" {
 			isMaskedValue := false
 			for _, cmdLog := range stageLines[ss] {
 				if cmdLog == "hola-mundo" {
@@ -346,7 +346,7 @@ func TestRemoteMaskVariables(t *testing.T) {
 	ologs := strings.Split(o, "\n")
 	found := false
 	for i, log := range ologs {
-		if strings.HasSuffix(log, "Running stage 'Mask command destroy'") {
+		if strings.HasSuffix(log, "Running stage 'AddMaskedWord command destroy'") {
 			if ologs[i+1] != "***" {
 				t.Fatal("destroy didn't mask the variable value.")
 			}

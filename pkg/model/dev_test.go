@@ -30,12 +30,13 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 )
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func Test_LoadManifest(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 
 	manifestBytes := []byte(`dev:
   deployment:
@@ -328,7 +329,7 @@ func Test_loadName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 
 			manifestBytes := []byte(fmt.Sprintf(`dev:
     %s:
@@ -394,7 +395,7 @@ func Test_loadSelector(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 			vars.GlobalVarManager.AddDotEnvVar("value", tt.value)
 
 			dev := &Dev{Selector: tt.selector}
@@ -475,7 +476,7 @@ func Test_loadImage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 
 			manifestBytes := []byte(fmt.Sprintf(`dev:
     deployment:
@@ -1128,7 +1129,7 @@ func Test_loadEnvFile(t *testing.T) {
 }
 
 func Test_LoadManifestWithEnvFile(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 
 	content := map[string]string{
 		"DEPLOYMENT":    "main",
@@ -1442,7 +1443,7 @@ func Test_expandEnvFiles(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s is present", tt.name), func(t *testing.T) {
-			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 
 			file, err := os.CreateTemp("", ".env")
 			if err != nil {

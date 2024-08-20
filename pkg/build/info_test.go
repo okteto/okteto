@@ -27,12 +27,13 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func TestExpandBuildArgs(t *testing.T) {
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	vars.GlobalVarManager = varManager
 	vars.GlobalVarManager.AddFlagVar("KEY", "VALUE")
 
@@ -292,7 +293,7 @@ func TestSetBuildDefaults(t *testing.T) {
 }
 
 func TestUnmarshalInfo(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 	vars.GlobalVarManager.AddDotEnvVar("CONTEXT", "testContext")
 	vars.GlobalVarManager.AddDotEnvVar("DOCKERFILE", "dockerfile")
 
@@ -536,7 +537,7 @@ func Test_expandSecrets(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			varManager := vars.NewVarsManager(&fakeVarManager{})
+			varManager := vars.NewVarsManager(&varManagerLogger{})
 			if tc.setEnvFunc != nil {
 				tc.setEnvFunc(varManager)
 			}

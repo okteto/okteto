@@ -77,7 +77,7 @@ func Test_SetServiceEnvVars(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 
 			registryEnv := fmt.Sprintf("OKTETO_BUILD_%s_REGISTRY", strings.ToUpper(tt.input.service))
 			imageEnv := fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(tt.input.service))
@@ -102,7 +102,7 @@ func Test_SetServiceEnvVars(t *testing.T) {
 			fakeConfig := fakeConfig{
 				isOkteto: true,
 			}
-			varManager := vars.NewVarsManager(&fakeVarManager{})
+			varManager := vars.NewVarsManager(&varManagerLogger{})
 			bc := NewFakeBuilder(nil, registry, fakeConfig, varManager)
 			bc.SetServiceEnvVars(tt.input.service, tt.input.reference)
 
@@ -123,7 +123,7 @@ func Test_SetServiceEnvVars(t *testing.T) {
 
 func TestExpandStackVariables(t *testing.T) {
 	ctx := context.Background()
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	vars.GlobalVarManager = varManager
 	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)

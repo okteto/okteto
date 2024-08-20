@@ -22,12 +22,13 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func Test_Env_UnmarshalYAML(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 	vars.GlobalVarManager.AddLocalVar("LOCAL_VAR", "local-var")
 	vars.GlobalVarManager.AddFlagVar("FLAG_VAR", "flag-var")
 

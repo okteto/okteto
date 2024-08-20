@@ -71,7 +71,7 @@ func Test_createNamespace(t *testing.T) {
 			nsCmd := &Command{
 				okClient:   fakeOktetoClient,
 				ctxCmd:     newFakeContextCommand(fakeOktetoClient, usr),
-				varManager: vars.NewVarsManager(&fakeVarManager{}),
+				varManager: vars.NewVarsManager(&varManagerLogger{}),
 			}
 			err := nsCmd.Create(ctx, &CreateOptions{
 				Members:   tt.members,

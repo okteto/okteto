@@ -21,7 +21,7 @@ import (
 )
 
 func Test_Var_UnmarshalYAML(t *testing.T) {
-	GlobalVarManager = NewVarsManager(&fakeVarManager{})
+	GlobalVarManager = NewVarsManager(&VarManagerLogger{})
 
 	GlobalVarManager.AddLocalVar("LOCAL_VAR", "local-env-var")
 	GlobalVarManager.AddDotEnvVar("DYNAMIC_VAR_VALUE", "test")

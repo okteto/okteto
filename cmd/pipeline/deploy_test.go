@@ -722,7 +722,7 @@ func TestSetVarsFromDependencyNoError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			varManager := vars.NewVarsManager(&fakeVarManager{})
+			varManager := vars.NewVarsManager(&varManagerLogger{})
 			err := setVarsFromDependency(tt.cmap, varManager)
 			require.Truef(t, tt.expectedErr == (err != nil), "unexpected error")
 			for k, v := range tt.expectedVarsSet {

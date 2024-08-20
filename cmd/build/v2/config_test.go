@@ -157,7 +157,7 @@ func TestGetConfigStateless(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			cfg := getConfigStateless(tc.input.reg, tc.input.repo, fakeLogger{}, true, vars.NewVarsManager(&fakeVarManager{}))
+			cfg := getConfigStateless(tc.input.reg, tc.input.repo, fakeLogger{}, true, vars.NewVarsManager(&varManagerLogger{}))
 			assert.Equal(t, tc.expected, cfg)
 		})
 	}
@@ -281,7 +281,7 @@ func TestGetConfig(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			varManager := vars.NewVarsManager(&fakeVarManager{})
+			varManager := vars.NewVarsManager(varManagerLogger{})
 			cfg := getConfig(tc.input.reg, tc.input.repo, fakeLogger{}, varManager)
 			assert.Equal(t, tc.expected, cfg)
 		})
@@ -312,7 +312,7 @@ func TestGetIsSmartBuildEnabled(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			varManager := vars.NewVarsManager(&fakeVarManager{})
+			varManager := vars.NewVarsManager(&varManagerLogger{})
 			varManager.AddDotEnvVar(OktetoEnableSmartBuildEnvVar, tc.input)
 			cfg := getIsSmartBuildEnabled(varManager)
 			assert.Equal(t, tc.expected, cfg)

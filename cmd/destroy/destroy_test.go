@@ -202,7 +202,7 @@ func TestDestroyWithErrorGettingManifestButDestroySuccess(t *testing.T) {
 				build:   nil,
 			},
 		},
-		varManager: vars.NewVarsManager(&fakeVarManager{}),
+		varManager: vars.NewVarsManager(&varManagerLogger{}),
 	}
 
 	err = dc.destroy(context.Background(), &Options{})
@@ -231,7 +231,7 @@ func TestDestroyWithErrorDestroyingDependencies(t *testing.T) {
 		getPipelineDestroyer: func() (pipelineDestroyer, error) {
 			return nil, assert.AnError
 		},
-		varManager: vars.NewVarsManager(&fakeVarManager{}),
+		varManager: vars.NewVarsManager(&varManagerLogger{}),
 	}
 
 	err = dc.destroy(ctx, &Options{
@@ -270,7 +270,7 @@ func TestDestroyWithErrorDestroyingDivert(t *testing.T) {
 		getDivertDriver: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface) (divert.Driver, error) {
 			return nil, assert.AnError
 		},
-		varManager: vars.NewVarsManager(&fakeVarManager{}),
+		varManager: vars.NewVarsManager(&varManagerLogger{}),
 	}
 
 	err = dc.destroy(ctx, &Options{
@@ -308,7 +308,7 @@ func TestDestroyWithErrorOnCommands(t *testing.T) {
 				build:   nil,
 			},
 		},
-		varManager: vars.NewVarsManager(&fakeVarManager{}),
+		varManager: vars.NewVarsManager(&varManagerLogger{}),
 	}
 
 	err = dc.destroy(ctx, &Options{
@@ -351,7 +351,7 @@ func TestDestroyWithErrorOnCommandsForcingDestroy(t *testing.T) {
 				build:   nil,
 			},
 		},
-		varManager: vars.NewVarsManager(&fakeVarManager{}),
+		varManager: vars.NewVarsManager(&varManagerLogger{}),
 	}
 
 	err = dc.destroy(ctx, &Options{
@@ -394,7 +394,7 @@ func TestDestroyWithErrorDestroyingK8sResources(t *testing.T) {
 				build:   nil,
 			},
 		},
-		varManager: vars.NewVarsManager(&fakeVarManager{}),
+		varManager: vars.NewVarsManager(&varManagerLogger{}),
 	}
 
 	err = dc.destroy(ctx, &Options{
@@ -782,7 +782,7 @@ func TestGetDestroyer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dc := &destroyCommand{
-				varManager: vars.NewVarsManager(&fakeVarManager{}),
+				varManager: vars.NewVarsManager(&varManagerLogger{}),
 			}
 			deployer := dc.getDestroyer(tt.opts)
 			require.IsType(t, tt.expectedType, deployer)

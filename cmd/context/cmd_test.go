@@ -20,7 +20,7 @@ import (
 )
 
 func Test_NoArgsAcceptedCtx(t *testing.T) {
-	cmd := Show(vars.NewVarsManager(&fakeVarManager{}))
+	cmd := Show(vars.NewVarsManager(&varManagerLogger{}))
 	cmd.SetArgs([]string{"args"})
 	err := cmd.Execute()
 	if err == nil {
@@ -29,7 +29,7 @@ func Test_NoArgsAcceptedCtx(t *testing.T) {
 }
 
 func Test_NoArgsAcceptedShow(t *testing.T) {
-	cmd := Context(vars.NewVarsManager(&fakeVarManager{}))
+	cmd := Context(vars.NewVarsManager(&varManagerLogger{}))
 	cmd.SetArgs([]string{"args"})
 	err := cmd.Execute()
 	if err == nil {
@@ -38,7 +38,7 @@ func Test_NoArgsAcceptedShow(t *testing.T) {
 }
 
 func Test_NoArgsAcceptedList(t *testing.T) {
-	cmd := List(vars.NewVarsManager(&fakeVarManager{}))
+	cmd := List(vars.NewVarsManager(&varManagerLogger{}))
 	cmd.SetArgs([]string{"args"})
 	err := cmd.Execute()
 	if err == nil {
@@ -56,7 +56,7 @@ func Test_NoArgsAcceptedUpdateKubeConfig(t *testing.T) {
 }
 
 func Test_MaxArgsUse(t *testing.T) {
-	cmd := Use(vars.NewVarsManager(&fakeVarManager{}))
+	cmd := Use(vars.NewVarsManager(&varManagerLogger{}))
 	cmd.SetArgs([]string{"args", "args"})
 	err := cmd.Execute()
 	if err == nil {

@@ -131,16 +131,17 @@ func getFakeManifestV2(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, 
 	return fakeManifestV2, nil
 }
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func TestBuildIsManifestV2(t *testing.T) {
 	bc := &Command{
 		GetManifest: getFakeManifestV2,
 	}
 
-	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), vars.NewVarsManager(&fakeVarManager{}))
+	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), vars.NewVarsManager(&varManagerLogger{}))
 	assert.Nil(t, err)
 	assert.Equal(t, manifest, fakeManifestV2)
 }
@@ -150,7 +151,7 @@ func TestBuildFromDockerfile(t *testing.T) {
 		GetManifest: getManifestWithError,
 	}
 
-	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), vars.NewVarsManager(&fakeVarManager{}))
+	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), vars.NewVarsManager(&varManagerLogger{}))
 	assert.NotNil(t, err)
 	assert.Nil(t, manifest)
 }
@@ -160,7 +161,7 @@ func TestBuildErrIfInvalidManifest(t *testing.T) {
 		GetManifest: getManifestWithInvalidManifestError,
 	}
 
-	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), vars.NewVarsManager(&fakeVarManager{}))
+	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), vars.NewVarsManager(&varManagerLogger{}))
 	assert.NotNil(t, err)
 	assert.Nil(t, manifest)
 }
@@ -198,7 +199,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
-				varManager:       vars.NewVarsManager(&fakeVarManager{}),
+				varManager:       vars.NewVarsManager(&varManagerLogger{}),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -212,7 +213,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
-				varManager:       vars.NewVarsManager(&fakeVarManager{}),
+				varManager:       vars.NewVarsManager(&varManagerLogger{}),
 			},
 			options: &types.BuildOptions{
 				File: "okteto.yml",
@@ -228,7 +229,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
-				varManager:       vars.NewVarsManager(&fakeVarManager{}),
+				varManager:       vars.NewVarsManager(&varManagerLogger{}),
 			},
 			options: &types.BuildOptions{
 				File: malformedDockerfile,
@@ -244,7 +245,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
-				varManager:       vars.NewVarsManager(&fakeVarManager{}),
+				varManager:       vars.NewVarsManager(&varManagerLogger{}),
 			},
 			options: &types.BuildOptions{
 				File: dockerfile,
@@ -260,7 +261,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
-				varManager:       vars.NewVarsManager(&fakeVarManager{}),
+				varManager:       vars.NewVarsManager(&varManagerLogger{}),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -274,7 +275,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
-				varManager:       vars.NewVarsManager(&fakeVarManager{}),
+				varManager:       vars.NewVarsManager(&varManagerLogger{}),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,

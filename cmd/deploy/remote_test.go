@@ -164,7 +164,7 @@ func TestGetCommandFlags(t *testing.T) {
 }
 
 func Test_newRemoteDeployer(t *testing.T) {
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	getBuildEnvVars := func() map[string]string { return nil }
 	getDependencyEnvVars := func(_ environGetter) map[string]string { return nil }
 	got := newRemoteDeployer(getBuildEnvVars, io.NewIOController(), varManager, getDependencyEnvVars)

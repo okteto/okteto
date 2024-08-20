@@ -104,8 +104,7 @@ func main() {
 	okteto.InitContextWithDeprecatedToken()
 
 	k8sLogger := io.NewK8sLogger()
-
-	varManager := vars.NewVarsManager(&cmd.VarsManager{})
+	varManager := vars.NewVarsManager(cmd.VarsManagerLogger{})
 	varManager.AddGroup(
 		vars.Group{
 			Vars: vars.ConvertLocalEnvVarsToOktetoVars(os.Environ),

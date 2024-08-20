@@ -195,7 +195,7 @@ func Test_AddOktetoCredentialsToCfg(t *testing.T) {
 				CurrentContext: "test_okteto_dev",
 			}
 
-			varManager := vars.NewVarsManager(&fakeVarManager{})
+			varManager := vars.NewVarsManager(&varManagerLogger{})
 
 			err := AddOktetoCredentialsToCfg(cfg, creds, ns, userName, oktetoContext, varManager)
 
@@ -230,7 +230,7 @@ func Test_AddOktetoCredentialsToCfgWhenConfigCredentialHasntToBeDone(t *testing.
 		Extensions: nil,
 	}
 
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	varManager.AddLocalVar(constants.OktetoSkipConfigCredentialsUpdate, "true")
 
 	result := AddOktetoCredentialsToCfg(cfg, creds, "ns", "userName", oktetoContext, varManager)
@@ -257,7 +257,7 @@ func Test_AddOktetoCredentialsToCfgWithInvalidOktetoContext(t *testing.T) {
 		IsStoredAsInsecure: true,
 	}
 
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 
 	result := AddOktetoCredentialsToCfg(cfg, creds, "ns", "userName", oktetoContext, varManager)
 

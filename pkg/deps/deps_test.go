@@ -25,9 +25,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func Test_GetTimeout(t *testing.T) {
 	tests := []struct {
@@ -65,7 +66,7 @@ func Test_GetTimeout(t *testing.T) {
 }
 
 func Test_ExpandVars(t *testing.T) {
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	varManager.AddDotEnvVar("MY_CUSTOM_VAR_FROM_ENVIRON", "varValueFromEnv")
 
 	dependency := Dependency{
@@ -113,7 +114,7 @@ func Test_ExpandVars(t *testing.T) {
 }
 
 func Test_ManifestDependencies_UnmarshalYAML(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 
 	tests := []struct {
 		expected    ManifestSection

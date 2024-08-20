@@ -115,12 +115,13 @@ func (mr *mockRegistry) GetRepoNameAndTag(_ string) (string, string) {
 	return mr.repo, mr.tag
 }
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func Test_OptsFromBuildInfo(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 
 	context := okteto.Context{
 		Namespace: "test",
@@ -408,7 +409,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				},
 			}
 
-			result := OptsFromBuildInfo(manifest.Name, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts, &tt.mr, okCtx, vars.NewVarsManager(&fakeVarManager{}))
+			result := OptsFromBuildInfo(manifest.Name, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts, &tt.mr, okCtx, vars.NewVarsManager(&varManagerLogger{}))
 			require.Equal(t, tt.expected, result)
 		})
 	}
@@ -733,7 +734,7 @@ func Test_createTempFileWithExpandedEnvsAtSource(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 			vars.GlobalVarManager.AddDotEnvVar("ENV_IN_FILE", tt.envValue)
 
 			file, err := createTempFileWithExpandedEnvsAtSource(tt.fakeFs, tt.sourceFile, t.TempDir())
@@ -791,7 +792,7 @@ func Test_setOutputMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			varManager := vars.NewVarsManager(&fakeVarManager{})
+			varManager := vars.NewVarsManager(&varManagerLogger{})
 			varManager.AddLocalVar("BUILDKIT_PROGRESS", tt.envBuildkitProgressValue)
 			got := setOutputMode(tt.input, varManager)
 			require.Equal(t, tt.expected, got)

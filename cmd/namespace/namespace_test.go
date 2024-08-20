@@ -26,9 +26,10 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 type fakeK8sProvider struct {
 	k8sClient kubernetes.Interface
@@ -47,7 +48,7 @@ func (*fakeK8sProvider) GetIngressClient() (*ingresses.Client, error) {
 }
 
 func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User) *contextCMD.Command {
-	cmd := contextCMD.NewContextCommand(contextCMD.WithVarManager(vars.NewVarsManager(&fakeVarManager{})))
+	cmd := contextCMD.NewContextCommand(contextCMD.WithVarManager(vars.NewVarsManager(&varManagerLogger{})))
 	cmd.OktetoClientProvider = client.NewFakeOktetoClientProvider(c)
 	cmd.K8sClientProvider = test.NewFakeK8sProvider(nil)
 	cmd.LoginController = test.NewFakeLoginController(user, nil)
@@ -62,6 +63,6 @@ func NewFakeNamespaceCommand(okClient *client.FakeOktetoClient, k8sClient kubern
 		k8sClientProvider: &fakeK8sProvider{
 			k8sClient: k8sClient,
 		},
-		varManager: vars.NewVarsManager(&fakeVarManager{}),
+		varManager: vars.NewVarsManager(&varManagerLogger{}),
 	}
 }

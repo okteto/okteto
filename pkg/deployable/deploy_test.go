@@ -33,9 +33,10 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 type fakeCmapHandler struct {
 	errUpdatingWithEnvs error
@@ -148,7 +149,7 @@ func TestDeployNotRemovingEnvFile(t *testing.T) {
 	r := DeployRunner{
 		ConfigMapHandler:        &fakeCmapHandler{},
 		Fs:                      fs,
-		varManager:              vars.NewVarsManager(&fakeVarManager{}),
+		varManager:              vars.NewVarsManager(&varManagerLogger{}),
 		createTempOktetoEnvFile: createFakeOktetoEnvFile,
 	}
 	err = r.runCommandsSection(context.Background(), params)
@@ -244,7 +245,7 @@ func TestRunDeployWithEmptyDeployable(t *testing.T) {
 		TempKubeconfigFile:      "temp-kubeconfig",
 		Fs:                      afero.NewMemMapFs(),
 		ConfigMapHandler:        &fakeCmapHandler{},
-		varManager:              vars.NewVarsManager(&fakeVarManager{}),
+		varManager:              vars.NewVarsManager(&varManagerLogger{}),
 		createTempOktetoEnvFile: createFakeOktetoEnvFile,
 	}
 
@@ -280,7 +281,7 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 	}
 	executor := &fakeExecutor{}
 
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	varManager.AddDotEnvVar("DOT-ENV-1", "dotenv-value-1")
 	varManager.AddFlagVar("FLAG-1", "flag-value-1")
 	varManager.AddBuiltInVar("BUILT-IN-1", "built-in-value-1")
@@ -358,7 +359,7 @@ func TestRunCommandsSectionWithErrorInCommands(t *testing.T) {
 		Fs:                      afero.NewMemMapFs(),
 		ConfigMapHandler:        &fakeCmapHandler{},
 		Executor:                executor,
-		varManager:              vars.NewVarsManager(&fakeVarManager{}),
+		varManager:              vars.NewVarsManager(&varManagerLogger{}),
 		createTempOktetoEnvFile: createFakeOktetoEnvFile,
 	}
 
@@ -424,7 +425,7 @@ func TestRunCommandsSectionWithDivert(t *testing.T) {
 		ConfigMapHandler:        &fakeCmapHandler{},
 		Executor:                executor,
 		DivertDeployer:          divertDeployer,
-		varManager:              vars.NewVarsManager(&fakeVarManager{}),
+		varManager:              vars.NewVarsManager(&varManagerLogger{}),
 		createTempOktetoEnvFile: createFakeOktetoEnvFile,
 	}
 
@@ -470,7 +471,7 @@ func TestRunCommandsSectionWithErrorDeployingDivert(t *testing.T) {
 		ConfigMapHandler:        &fakeCmapHandler{},
 		Executor:                executor,
 		DivertDeployer:          divertDeployer,
-		varManager:              vars.NewVarsManager(&fakeVarManager{}),
+		varManager:              vars.NewVarsManager(&varManagerLogger{}),
 		createTempOktetoEnvFile: createFakeOktetoEnvFile,
 	}
 
@@ -522,7 +523,7 @@ func TestRunCommandsSectionWithExternal(t *testing.T) {
 		GetExternalControl: func(_ *rest.Config) ExternalResourceInterface {
 			return externalResource
 		},
-		varManager:              vars.NewVarsManager(&fakeVarManager{}),
+		varManager:              vars.NewVarsManager(&varManagerLogger{}),
 		createTempOktetoEnvFile: createFakeOktetoEnvFile,
 	}
 
@@ -588,7 +589,7 @@ func TestRunCommandsSectionWithErrorDeployingExternal(t *testing.T) {
 		GetExternalControl: func(_ *rest.Config) ExternalResourceInterface {
 			return externalResource
 		},
-		varManager:              vars.NewVarsManager(&fakeVarManager{}),
+		varManager:              vars.NewVarsManager(&varManagerLogger{}),
 		createTempOktetoEnvFile: createFakeOktetoEnvFile,
 	}
 

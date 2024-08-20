@@ -33,9 +33,10 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func mockPipeline(fakeName string, fakeLabels []string) *apiv1.ConfigMap {
 	var labels = map[string]string{
@@ -78,7 +79,7 @@ func TestPipelineListCommandHandler_OnlyOktetoCluster(t *testing.T) {
 		CurrentContext: "test",
 	}
 
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 
 	err := pipelineListCommandHandler(ctx, &listFlags{}, initOkCtx, varManager)
 
@@ -102,7 +103,7 @@ func TestPipelineListCommandHandler_InitOktetoContextFail(t *testing.T) {
 		CurrentContext: "test",
 	}
 
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 
 	err := pipelineListCommandHandler(ctx, &listFlags{}, initOkCtx, varManager)
 

@@ -313,7 +313,7 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 }
 
 func TestCreateConfigMapWithBuildError(t *testing.T) {
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	vars.GlobalVarManager = varManager
 
 	fakeNamespace := "test"
@@ -423,7 +423,7 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 		Fs:                fakeOs,
 		Builder:           &fakeV2Builder{},
 		IoCtrl:            io.NewIOController(),
-		VarManager:        vars.NewVarsManager(&fakeVarManager{}),
+		VarManager:        vars.NewVarsManager(&varManagerLogger{}),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -513,7 +513,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                afero.NewMemMapFs(),
 		IoCtrl:            io.NewIOController(),
-		VarManager:        vars.NewVarsManager(&fakeVarManager{}),
+		VarManager:        vars.NewVarsManager(&varManagerLogger{}),
 	}
 	ctx := context.Background()
 
@@ -566,7 +566,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		GetDeployer:       fakeDeployer.Get,
 		Builder:           &fakeV2Builder{},
 		IoCtrl:            io.NewIOController(),
-		VarManager:        vars.NewVarsManager(&fakeVarManager{}),
+		VarManager:        vars.NewVarsManager(&varManagerLogger{}),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -637,7 +637,7 @@ func TestGetDefaultTimeout(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			varManager := vars.NewVarsManager(&fakeVarManager{})
+			varManager := vars.NewVarsManager(&varManagerLogger{})
 			varManager.AddLocalVar(model.OktetoTimeoutEnvVar, tc.envarValue)
 			assert.Equal(t, tc.expected, getDefaultTimeout(varManager))
 		})
@@ -692,7 +692,7 @@ func TestDeployDependencies(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dc := &Command{
 				PipelineCMD: fakePipelineDeployer{tc.config.pipelineErr},
-				VarManager:  vars.NewVarsManager(&fakeVarManager{}),
+				VarManager:  vars.NewVarsManager(&varManagerLogger{}),
 			}
 			assert.ErrorIs(t, tc.expected, dc.deployDependencies(context.Background(), &Options{Manifest: fakeManifest}))
 		})
@@ -720,7 +720,7 @@ func TestDeployOnlyDependencies(t *testing.T) {
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		GetDeployer:       fakeDeployer.Get,
 		IoCtrl:            io.NewIOController(),
-		VarManager:        vars.NewVarsManager(&fakeVarManager{}),
+		VarManager:        vars.NewVarsManager(&varManagerLogger{}),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -811,7 +811,7 @@ func TestTrackDeploy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dc := &Command{
 				AnalyticsTracker: &fakeTracker{},
-				VarManager:       vars.NewVarsManager(&fakeVarManager{}),
+				VarManager:       vars.NewVarsManager(&varManagerLogger{}),
 			}
 
 			dc.TrackDeploy(tc.manifest, tc.remoteFlag, time.Now(), tc.commandErr)

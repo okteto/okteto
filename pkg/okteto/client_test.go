@@ -31,9 +31,10 @@ type fakeGraphQLClient struct {
 	mutationResult interface{}
 }
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func (fc fakeGraphQLClient) Query(ctx context.Context, q interface{}, _ map[string]interface{}) error {
 	if fc.queryResult != nil {
@@ -112,7 +113,7 @@ func (fc *fakeGraphQLMultipleCallsClient) Mutate(ctx context.Context, m interfac
 }
 
 func TestInDevContainer(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 	v := vars.GlobalVarManager.Get(constants.OktetoNameEnvVar)
 
 	vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, "")

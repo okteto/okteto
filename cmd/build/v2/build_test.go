@@ -15,6 +15,7 @@ package v2
 
 import (
 	"context"
+	"github.com/okteto/okteto/cmd"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,9 +39,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type fakeVarManager struct{}
-
-func (*fakeVarManager) MaskVar(string) {}
+//type varManagerLogger struct{}
+//
+//func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+//func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 var fakeManifest = &model.Manifest{
 	Name: "test",
@@ -162,7 +164,7 @@ func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegi
 		Builder: basic.Builder{
 			BuildRunner: builder,
 			IoCtrl:      io.NewIOController(),
-			VarManager:  vars.NewVarsManager(&fakeVarManager{}),
+			VarManager:  vars.NewVarsManager(cmd.VarsManagerLogger{}),
 		},
 		Config:         cfg,
 		ioCtrl:         io.NewIOController(),
@@ -263,7 +265,7 @@ func TestTwoStepsBuild(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	bc := NewFakeBuilder(builder, registry, fakeConfig, varManager)
 	manifest := &model.Manifest{
 		Name: "test",
@@ -301,7 +303,7 @@ func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	bc := NewFakeBuilder(builder, registry, fakeConfig, varManager)
 	manifest := &model.Manifest{
 		Name: "test",
@@ -335,7 +337,7 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	bc := NewFakeBuilder(builder, registry, fakeConfig, varManager)
 	manifest := &model.Manifest{
 		Name: "test",
@@ -370,7 +372,7 @@ func TestBuildWithStack(t *testing.T) {
 	fakeConfig := fakeConfig{
 		isOkteto: true,
 	}
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	bc := NewFakeBuilder(builder, registry, fakeConfig, varManager)
 	manifest := &model.Manifest{
 		Name: "test",
@@ -408,7 +410,7 @@ func createDockerfile(t *testing.T) (string, error) {
 func TestBuildWithDependsOn(t *testing.T) {
 	ctx := context.Background()
 
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 
 	firstImage := "okteto/a:test"
 	secondImage := "okteto/b:test"
@@ -421,7 +423,7 @@ func TestBuildWithDependsOn(t *testing.T) {
 		isOkteto: true,
 	}
 
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	bc := NewFakeBuilder(builder, registry, fakeConfig, varManager)
 	manifest := &model.Manifest{
 		Name: "test",

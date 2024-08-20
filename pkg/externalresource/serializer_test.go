@@ -22,12 +22,13 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func TestExternalResource_UnmarshalYAML(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 	vars.GlobalVarManager.AddDotEnvVar("NAME", "test")
 	vars.GlobalVarManager.AddDotEnvVar("URL_PATH", "test")
 

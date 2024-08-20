@@ -19,22 +19,20 @@ import (
 	"testing"
 	"time"
 
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/stretchr/testify/assert"
 )
 
-type fakeVarManager struct{}
+type VarManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(value string) {
-	oktetoLog.AddMaskedWord(value)
-}
+func (VarManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (VarManagerLogger) AddMaskedWord(_ string)            {}
 
 // TestVarManagerDoesNotExportToOsEnv ensures that using var manager does not have any undesired side effects on
 // the host environment variables
 func TestVarManagerDoesNotExportToOsEnv(t *testing.T) {
 	t.Setenv("MY_VAR", "host-value")
 
-	varManager := NewVarsManager(&fakeVarManager{})
+	varManager := NewVarsManager(&VarManagerLogger{})
 	varManager.AddLocalVar("MY_VAR", "local-value")
 
 	assert.Equal(t, "host-value", os.Getenv("MY_VAR"))
@@ -52,7 +50,7 @@ func runCommandsInRandomOrder(commands []func()) {
 
 // TestBuiltInVarsPriority ensures that built-in vars have the highest priority
 func TestBuiltInVarsPriority(t *testing.T) {
-	varManager := NewVarsManager(&fakeVarManager{})
+	varManager := NewVarsManager(&VarManagerLogger{})
 
 	varName := "MY_VAR"
 
@@ -70,7 +68,7 @@ func TestBuiltInVarsPriority(t *testing.T) {
 
 // TestFlagsVarsPriority ensures that flag vars have the highest priority after built-in vars
 func TestFlagsVarsPriority(t *testing.T) {
-	varManager := NewVarsManager(&fakeVarManager{})
+	varManager := NewVarsManager(&VarManagerLogger{})
 
 	varName := "MY_VAR"
 
@@ -87,7 +85,7 @@ func TestFlagsVarsPriority(t *testing.T) {
 
 // TestLocalVarsPriority ensures that local vars have the highest priority after flag vars
 func TestLocalVarsPriority(t *testing.T) {
-	varManager := NewVarsManager(&fakeVarManager{})
+	varManager := NewVarsManager(&VarManagerLogger{})
 
 	varName := "MY_VAR"
 
@@ -103,7 +101,7 @@ func TestLocalVarsPriority(t *testing.T) {
 
 // TestDotEnvVarsPriority ensures that dotenv vars have the highest priority after local vars
 func TestDotEnvVarsPriority(t *testing.T) {
-	varManager := NewVarsManager(&fakeVarManager{})
+	varManager := NewVarsManager(&VarManagerLogger{})
 
 	varName := "MY_VAR"
 
@@ -118,7 +116,7 @@ func TestDotEnvVarsPriority(t *testing.T) {
 
 // TestPriorityWithMoreComplexScenarios ensures the priority is respected even with more complex scenarios
 func TestPriorityWithMoreComplexScenarios(t *testing.T) {
-	varManager := NewVarsManager(&fakeVarManager{})
+	varManager := NewVarsManager(&VarManagerLogger{})
 	varName := "MY_VAR"
 
 	adminVars := Group{
@@ -153,7 +151,7 @@ func TestGet(t *testing.T) {
 		{
 			name: "empty var manager - var not found",
 			getVarManager: func() *Manager {
-				varManager := NewVarsManager(&fakeVarManager{})
+				varManager := NewVarsManager(&VarManagerLogger{})
 				return varManager
 			},
 			find:     "MY_VAR",
@@ -162,7 +160,7 @@ func TestGet(t *testing.T) {
 		{
 			name: "local var loaded in var manager - var found",
 			getVarManager: func() *Manager {
-				varManager := NewVarsManager(&fakeVarManager{})
+				varManager := NewVarsManager(&VarManagerLogger{})
 				varManager.AddLocalVar("MY_VAR", "my-value")
 				return varManager
 			},
@@ -172,7 +170,7 @@ func TestGet(t *testing.T) {
 		{
 			name: "flag var loaded in var manager - var found",
 			getVarManager: func() *Manager {
-				varManager := NewVarsManager(&fakeVarManager{})
+				varManager := NewVarsManager(&VarManagerLogger{})
 				varManager.AddFlagVar("MY_VAR", "my-value")
 				return varManager
 			},
@@ -238,7 +236,7 @@ func TestExpand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			varManager := NewVarsManager(&fakeVarManager{})
+			varManager := NewVarsManager(&VarManagerLogger{})
 			varManager.AddLocalVar("BAR", "bar")
 			result, err := varManager.Expand(tt.value)
 			assert.Equal(t, tt.result, result)
@@ -304,7 +302,7 @@ func TestExpandIfNotEmpty(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			varManager := NewVarsManager(&fakeVarManager{})
+			varManager := NewVarsManager(&VarManagerLogger{})
 			varManager.AddLocalVar("LOCAL", "bar")
 			varManager.AddLocalVar("BAR", "bar")
 			varManager.AddDotEnvVar("BAR", "bar")
@@ -321,7 +319,7 @@ func TestExpandIfNotEmpty(t *testing.T) {
 
 // TestAddVarOverridesOldValue ensured that adding a new var with the same name, but different value overrides the old value
 func TestAddVarOverridesOldValue(t *testing.T) {
-	varManager := NewVarsManager(&fakeVarManager{})
+	varManager := NewVarsManager(&VarManagerLogger{})
 	varManager.AddLocalVar("MY_VAR", "old-value")
 	assert.Equal(t, "old-value", varManager.Get("MY_VAR"))
 	varManager.AddLocalVar("MY_VAR", "new-value")
@@ -331,7 +329,7 @@ func TestAddVarOverridesOldValue(t *testing.T) {
 // TestGetAll ensures that the method returns all okteto variables excluding local variables, respecting the priority
 func TestGetAll(t *testing.T) {
 	t.Run("adding vars as groups", func(t *testing.T) {
-		varManager := NewVarsManager(&fakeVarManager{})
+		varManager := NewVarsManager(&VarManagerLogger{})
 
 		// host environment variables should not affect the var manager unless they are loaded accordingly
 		t.Setenv("MY_VAR", "host-local-value")
@@ -389,7 +387,7 @@ func TestGetAll(t *testing.T) {
 	})
 
 	t.Run("adding vars individually", func(t *testing.T) {
-		varManager := NewVarsManager(&fakeVarManager{})
+		varManager := NewVarsManager(&VarManagerLogger{})
 
 		// host environment variables should not affect the var manager unless they are loaded accordingly
 		t.Setenv("MY_VAR", "host-local-value")

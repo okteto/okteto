@@ -27,7 +27,7 @@ func TestTestRunner(t *testing.T) {
 	runner := TestRunner{
 		Executor:   executor,
 		Fs:         afero.NewMemMapFs(),
-		VarManager: vars.NewVarsManager(&fakeVarManager{}),
+		VarManager: vars.NewVarsManager(&varManagerLogger{}),
 	}
 
 	cmd1 := model.DeployCommand{

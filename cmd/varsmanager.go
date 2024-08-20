@@ -17,8 +17,12 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
-type VarsManager struct{}
+type VarsManagerLogger struct{}
 
-func (*VarsManager) MaskVar(value string) {
+func (VarsManagerLogger) Yellow(format string, args ...interface{}) {
+	oktetoLog.Yellow(format, args...)
+}
+
+func (VarsManagerLogger) AddMaskedWord(value string) {
 	oktetoLog.AddMaskedWord(value)
 }

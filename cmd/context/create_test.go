@@ -36,9 +36,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User, fakeObjects []runtime.Object) *Command {
 	return &Command{
@@ -47,7 +48,7 @@ func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User, fakeObj
 		OktetoClientProvider: client.NewFakeOktetoClientProvider(c),
 		OktetoContextWriter:  test.NewFakeOktetoContextWriter(),
 		kubetokenController:  newStaticKubetokenController(),
-		varManager:           vars.NewVarsManager(&fakeVarManager{}),
+		varManager:           vars.NewVarsManager(&varManagerLogger{}),
 	}
 }
 

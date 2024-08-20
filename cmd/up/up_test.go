@@ -38,9 +38,10 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func Test_waitUntilExitOrInterrupt(t *testing.T) {
 	up := upContext{
@@ -260,7 +261,7 @@ func TestEnvVarIsAddedProperlyToDevContainerWhenIsSetFromCmd(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			overridedEnvVars, err := getOverridedEnvVarsFromCmd(tt.dev.Environment, tt.upOptions.Envs, vars.NewVarsManager(&fakeVarManager{}))
+			overridedEnvVars, err := getOverridedEnvVarsFromCmd(tt.dev.Environment, tt.upOptions.Envs, vars.NewVarsManager(&varManagerLogger{}))
 			if err != nil {
 				t.Fatalf("unexpected error in setEnvVarsFromCmd: %s", err)
 			}
@@ -312,7 +313,7 @@ func TestEnvVarIsNotAddedWhenHasBuiltInOktetoEnvVarsFormat(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := getOverridedEnvVarsFromCmd(tt.dev.Environment, tt.upOptions.Envs, vars.NewVarsManager(&fakeVarManager{}))
+			_, err := getOverridedEnvVarsFromCmd(tt.dev.Environment, tt.upOptions.Envs, vars.NewVarsManager(&varManagerLogger{}))
 			if !errors.Is(err, oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD) {
 				t.Fatalf("expected error in setEnvVarsFromCmd: %s due to try to set a built-in okteto environment variable", err)
 			}

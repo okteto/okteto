@@ -28,9 +28,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 type fakeBuilderV2 struct {
 	build   error
@@ -199,7 +200,7 @@ func (fakeAnalyticsTracker) TrackImageBuild(context.Context, *analytics.ImageBui
 func (fakeAnalyticsTracker) TrackDestroy(analytics.DestroyMetadata)                         {}
 
 func Test_newBuildCtrl(t *testing.T) {
-	got := newBuildCtrl("test-control", &fakeAnalyticsTracker{}, &fakeAnalyticsTracker{}, io.NewIOController(), vars.NewVarsManager(&fakeVarManager{}))
+	got := newBuildCtrl("test-control", &fakeAnalyticsTracker{}, &fakeAnalyticsTracker{}, io.NewIOController(), vars.NewVarsManager(&varManagerLogger{}))
 
 	require.Equal(t, "test-control", got.name)
 	require.IsType(t, got.builder, &v2.OktetoBuilder{})

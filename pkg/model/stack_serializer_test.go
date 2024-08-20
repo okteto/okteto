@@ -1909,7 +1909,7 @@ func Test_validateEnvFiles(t *testing.T) {
 }
 
 func Test_Environment(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 
 	vars.GlobalVarManager.AddDotEnvVar("OKTETO_ENVTEST", "myvalue")
 

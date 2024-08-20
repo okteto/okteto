@@ -24,12 +24,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func TestGetDeployableEmpty(t *testing.T) {
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 
 	dep, err := getDeployable(varManager)
 
@@ -42,7 +43,7 @@ func TestGetDeployableEmpty(t *testing.T) {
 }
 
 func TestGetDeployableBadBase64(t *testing.T) {
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	varManager.AddLocalVar(constants.OktetoDeployableEnvVar, "bad-base64  ** %")
 
 	_, err := getDeployable(varManager)
@@ -51,7 +52,7 @@ func TestGetDeployableBadBase64(t *testing.T) {
 }
 
 func TestGetDeployableInvalidDeployable(t *testing.T) {
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	varManager.AddLocalVar(constants.OktetoDeployableEnvVar, "aW52YWxpZCBkZXBsb3lhYmxlCg==")
 
 	_, err := getDeployable(varManager)
@@ -60,7 +61,7 @@ func TestGetDeployableInvalidDeployable(t *testing.T) {
 }
 
 func TestGetDeployable(t *testing.T) {
-	varManager := vars.NewVarsManager(&fakeVarManager{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 	varManager.AddLocalVar(constants.OktetoDeployableEnvVar, "Y29tbWFuZHM6CiAgLSBuYW1lOiBDb21tYW5kIDEKICAgIGNvbW1hbmQ6IGVjaG8gMQogIC0gbmFtZTogQ29tbWFuZCAyCiAgICBjb21tYW5kOiBlY2hvIDIKZXh0ZXJuYWw6CiAgZmFrZToKICAgIGljb246IGljb24KICAgIGVuZHBvaW50czoKICAgIC0gbmFtZTogbmFtZQogICAgICB1cmw6IHVybApkaXZlcnQ6CiAgZHJpdmVyOiAidGVzdCBkcml2ZXIiCiAgbmFtZXNwYWNlOiBucwo=")
 	vars.GlobalVarManager = varManager
 

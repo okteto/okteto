@@ -24,9 +24,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func TestLoad(t *testing.T) {
 	type expected struct {
@@ -214,7 +215,7 @@ VAR4=${VALUE4:-defaultValue4}`), 0644)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fs := tt.mockfs()
-			varManager := vars.NewVarsManager(&fakeVarManager{})
+			varManager := vars.NewVarsManager(&varManagerLogger{})
 			if tt.mockEnv != nil {
 				tt.mockEnv(t)
 			}

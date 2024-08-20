@@ -26,9 +26,10 @@ import (
 	"github.com/okteto/okteto/pkg/syncthing"
 )
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func TestDownloadSyncthing(t *testing.T) {
 	var tests = []struct {
@@ -44,7 +45,7 @@ func TestDownloadSyncthing(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	m := syncthing.GetMinimumVersion(vars.NewVarsManager(&fakeVarManager{}))
+	m := syncthing.GetMinimumVersion(vars.NewVarsManager(&varManagerLogger{}))
 	for _, tt := range tests {
 		tt := tt
 		t.Run(fmt.Sprintf("%s-%s", tt.os, tt.arch), func(t *testing.T) {

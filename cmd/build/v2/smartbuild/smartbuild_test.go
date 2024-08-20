@@ -58,9 +58,10 @@ func (fh fakeHasher) hashWithBuildContext(*build.Info, string) string {
 	return fh.hash
 }
 
-type fakeVarManager struct{}
+type varManagerLogger struct{}
 
-func (*fakeVarManager) MaskVar(string) {}
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func TestNewSmartBuildCtrl(t *testing.T) {
 	type input struct {
@@ -194,7 +195,7 @@ func TestGetBuildHash(t *testing.T) {
 }
 
 func Test_getBuildHashFromCommit(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 	vars.GlobalVarManager.AddLocalVar("BAR", "bar")
 
 	fs := afero.NewMemMapFs()

@@ -110,7 +110,7 @@ ip: ${NON_EXISTENT}`),
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
+			vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 			vars.GlobalVarManager.AddDotEnvVar("IP", "192.179.1.1")
 
 			var host Host
