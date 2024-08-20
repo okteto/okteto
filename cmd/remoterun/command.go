@@ -45,7 +45,7 @@ func RemoteRun(ctx context.Context, k8sLogger *io.K8sLogger, varManager *vars.Ma
 
 // getDeployable get the deployable entity from the OKTETO_DEPLOYABLE environment variable
 func getDeployable(varManager *vars.Manager) (deployable.Entity, error) {
-	encodedDeployable := varManager.GetIncLocal(constants.OktetoDeployableEnvVar)
+	encodedDeployable := varManager.Get(constants.OktetoDeployableEnvVar)
 
 	if encodedDeployable == "" {
 		return deployable.Entity{

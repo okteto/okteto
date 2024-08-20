@@ -56,7 +56,7 @@ type depotBuilder struct {
 }
 
 func IsDepotEnabled(varManager *vars.Manager) bool {
-	return varManager.GetIncLocal(DepotTokenEnvVar) != "" && varManager.GetIncLocal(DepotProjectEnvVar) != ""
+	return varManager.Get(DepotTokenEnvVar) != "" && varManager.Get(DepotProjectEnvVar) != ""
 }
 
 // newDepotBuilder creates a new instance of DepotBuilder.

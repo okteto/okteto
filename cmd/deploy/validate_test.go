@@ -27,12 +27,6 @@ import (
 type fakeVarManager struct{}
 
 func (*fakeVarManager) MaskVar(string) {}
-func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
-	return false
-}
-func (*fakeVarManager) IsLocalVarException(string) bool {
-	return false
-}
 
 func Test_convertCommandFlagsToOktetoVariables(t *testing.T) {
 	var tests = []struct {
@@ -85,7 +79,7 @@ func Test_convertCommandFlagsToOktetoVariables(t *testing.T) {
 			err := convertCommandFlagsToOktetoVariables(tt.variables, varManager)
 
 			assert.Equal(t, tt.expectedError, err)
-			assert.True(t, reflect.DeepEqual(tt.expectedEnvs, varManager.GetOktetoVariablesExcLocal()))
+			assert.True(t, reflect.DeepEqual(tt.expectedEnvs, varManager.GetAll()))
 		})
 	}
 }

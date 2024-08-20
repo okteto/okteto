@@ -105,7 +105,7 @@ func getStackServicesToDeploy(ctx context.Context, composeSectionInfo *model.Com
 }
 
 func (dc *Command) addEnvVars(cwd string) {
-	if dc.VarManager.GetIncLocal(constants.OktetoGitBranchEnvVar) == "" {
+	if dc.VarManager.Get(constants.OktetoGitBranchEnvVar) == "" {
 		branch, err := utils.GetBranch(cwd)
 		if err != nil {
 			oktetoLog.Infof("could not retrieve branch name: %s", err)
@@ -113,7 +113,7 @@ func (dc *Command) addEnvVars(cwd string) {
 		dc.VarManager.AddLocalVar(constants.OktetoGitBranchEnvVar, branch)
 	}
 
-	if dc.VarManager.GetIncLocal(model.GithubRepositoryEnvVar) == "" {
+	if dc.VarManager.Get(model.GithubRepositoryEnvVar) == "" {
 		repo, err := modelUtils.GetRepositoryURL(cwd)
 		if err != nil {
 			oktetoLog.Infof("could not retrieve repo name: %s", err)
@@ -131,7 +131,7 @@ func (dc *Command) addEnvVars(cwd string) {
 		dc.VarManager.AddLocalVar(model.GithubRepositoryEnvVar, repo)
 	}
 
-	if dc.VarManager.GetIncLocal(constants.OktetoGitCommitEnvVar) == "" {
+	if dc.VarManager.Get(constants.OktetoGitCommitEnvVar) == "" {
 		sha, err := repository.NewRepository(cwd).GetSHA()
 		if err != nil {
 			oktetoLog.Infof("could not retrieve sha: %s", err)
@@ -148,16 +148,16 @@ func (dc *Command) addEnvVars(cwd string) {
 		}
 		dc.VarManager.AddLocalVar(constants.OktetoGitCommitEnvVar, sha)
 	}
-	if dc.VarManager.GetIncLocal(model.OktetoRegistryURLEnvVar) == "" {
+	if dc.VarManager.Get(model.OktetoRegistryURLEnvVar) == "" {
 		dc.VarManager.AddLocalVar(model.OktetoRegistryURLEnvVar, okteto.GetContext().Registry)
 	}
-	if dc.VarManager.GetIncLocal(model.OktetoBuildkitHostURLEnvVar) == "" {
+	if dc.VarManager.Get(model.OktetoBuildkitHostURLEnvVar) == "" {
 		dc.VarManager.AddLocalVar(model.OktetoBuildkitHostURLEnvVar, okteto.GetContext().Builder)
 	}
-	if dc.VarManager.GetIncLocal(model.OktetoTokenEnvVar) == "" {
+	if dc.VarManager.Get(model.OktetoTokenEnvVar) == "" {
 		dc.VarManager.AddLocalVar(model.OktetoTokenEnvVar, okteto.GetContext().Token)
 	}
-	oktetoLog.AddMaskedWord(dc.VarManager.GetIncLocal(model.OktetoTokenEnvVar))
+	oktetoLog.AddMaskedWord(dc.VarManager.Get(model.OktetoTokenEnvVar))
 }
 
 func switchRepoSchemaToHTTPS(repo string) *url.URL {

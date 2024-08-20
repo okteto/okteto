@@ -297,7 +297,7 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Executing command '%s'...", command.Name)
 
 			var env []string
-			env = append(env, r.varManager.GetOktetoVariablesExcLocal()...)
+			env = append(env, r.varManager.GetAll()...)
 			env = append(env, params.Variables...)
 
 			err := r.Executor.Execute(command, env)

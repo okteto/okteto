@@ -459,7 +459,7 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVaria
 			return nil, oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD
 		}
 
-		expandedEnv, err := varManager.ExpandExcLocal(varValueToAdd)
+		expandedEnv, err := varManager.Expand(varValueToAdd)
 		if err != nil {
 			return nil, err
 		}
@@ -514,8 +514,8 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 
 	// We keep DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar for backward compatibility in case an old version of the backend
 	// is being used
-	isPreview := up.varManager.GetIncLocal(model.DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar) == "true" ||
-		up.varManager.GetIncLocal(constants.OktetoIsPreviewEnvVar) == "true"
+	isPreview := up.varManager.Get(model.DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar) == "true" ||
+		up.varManager.Get(constants.OktetoIsPreviewEnvVar) == "true"
 	// tracking deploy either its been successful or not
 	c.AnalyticsTracker.TrackDeploy(analytics.DeployMetadata{
 		Success:                err == nil,

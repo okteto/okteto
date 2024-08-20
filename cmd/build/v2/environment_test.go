@@ -87,13 +87,13 @@ func Test_SetServiceEnvVars(t *testing.T) {
 
 			envs := []string{registryEnv, imageEnv, repositoryEnv, tagEnv}
 			for _, e := range envs {
-				_, exists := vars.GlobalVarManager.LookupExcLocal(e)
+				_, exists := vars.GlobalVarManager.Lookup(e)
 				if exists {
 					t.Errorf("env variable is already set [%v]", e)
 				}
 			}
 			for _, e := range envs {
-				if v := vars.GlobalVarManager.GetExcLocal(e); v != "" {
+				if v := vars.GlobalVarManager.Get(e); v != "" {
 					t.Errorf("env variable is already set [%v]", e)
 				}
 			}
@@ -106,11 +106,11 @@ func Test_SetServiceEnvVars(t *testing.T) {
 			bc := NewFakeBuilder(nil, registry, fakeConfig, varManager)
 			bc.SetServiceEnvVars(tt.input.service, tt.input.reference)
 
-			registryEnvValue := vars.GlobalVarManager.GetExcLocal(registryEnv)
-			imageEnvValue := vars.GlobalVarManager.GetExcLocal(imageEnv)
-			repositoryEnvValue := vars.GlobalVarManager.GetExcLocal(repositoryEnv)
-			tagEnvValue := vars.GlobalVarManager.GetExcLocal(tagEnv)
-			shaEnvValue := vars.GlobalVarManager.GetExcLocal(shaEnv)
+			registryEnvValue := vars.GlobalVarManager.Get(registryEnv)
+			imageEnvValue := vars.GlobalVarManager.Get(imageEnv)
+			repositoryEnvValue := vars.GlobalVarManager.Get(repositoryEnv)
+			tagEnvValue := vars.GlobalVarManager.Get(tagEnv)
+			shaEnvValue := vars.GlobalVarManager.Get(shaEnv)
 
 			assert.Equal(t, tt.expected.expRegistry, registryEnvValue)
 			assert.Equal(t, tt.expected.expImage, imageEnvValue)

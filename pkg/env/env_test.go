@@ -25,12 +25,6 @@ import (
 type fakeVarManager struct{}
 
 func (*fakeVarManager) MaskVar(string) {}
-func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
-	return false
-}
-func (*fakeVarManager) IsLocalVarException(string) bool {
-	return false
-}
 
 func Test_Env_UnmarshalYAML(t *testing.T) {
 	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
@@ -54,13 +48,13 @@ unit: test`),
 			},
 		},
 		{
-			name: "deserialized successfully but without expansion from local var",
+			name: "deserialized successfully with local var",
 			yaml: []byte(`
 foo: bar
 unit: "unit-$LOCAL_VAR"`),
 			expected: Environment{
 				{Name: "foo", Value: "bar"},
-				{Name: "unit", Value: "unit-"},
+				{Name: "unit", Value: "unit-local-var"},
 			},
 		},
 		{

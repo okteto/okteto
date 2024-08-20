@@ -95,7 +95,7 @@ func getConfigStateless(registry configRegistryInterface, gitRepo configReposito
 
 func getIsSmartBuildEnabled(varManager *vars.Manager) bool {
 	enableSmartBuilds := true
-	enableSmartBuildsStr := varManager.GetIncLocal(OktetoEnableSmartBuildEnvVar)
+	enableSmartBuildsStr := varManager.Get(OktetoEnableSmartBuildEnvVar)
 	if enableSmartBuildsStr != "" {
 		smartBuildEnabledBool, err := strconv.ParseBool(enableSmartBuildsStr)
 		if err != nil {

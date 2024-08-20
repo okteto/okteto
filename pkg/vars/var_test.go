@@ -42,11 +42,11 @@ func Test_Var_UnmarshalYAML(t *testing.T) {
 			},
 		},
 		{
-			name: "local vars are not expanded",
+			name: "local vars are expanded",
 			yaml: []byte(`name=unit-$LOCAL_VAR`),
 			expected: Var{
 				Name:  "name",
-				Value: "unit-",
+				Value: "unit-local-env-var",
 			},
 		},
 		{

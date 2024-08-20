@@ -374,7 +374,7 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 		if err := dc.buildCtrl.buildImageIfNecessary(ctx, opts.Manifest); err != nil {
 			return err
 		}
-		opts.Manifest.Destroy.Image, err = dc.varManager.ExpandExcLocalIfNotEmpty(opts.Manifest.Destroy.Image)
+		opts.Manifest.Destroy.Image, err = dc.varManager.ExpandIfNotEmpty(opts.Manifest.Destroy.Image)
 		if err != nil {
 			return err
 		}
@@ -401,7 +401,7 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 	for _, variable := range cfgVariables {
 		dc.varManager.AddFlagVar(variable.Name, variable.Value)
 	}
-	opts.Variables = append(opts.Variables, dc.varManager.GetOktetoVariablesExcLocal()...)
+	opts.Variables = append(opts.Variables, dc.varManager.GetAll()...)
 	oktetoLog.EnableMasking()
 
 	// update to change status

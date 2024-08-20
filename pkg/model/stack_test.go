@@ -1165,7 +1165,7 @@ func Test_getStackName(t *testing.T) {
 			stackPath := filepath.Join(dir, tt.stackPath)
 			vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, tt.nameEnv)
 			res, err := getStackName(tt.name, stackPath, tt.actualStackName)
-			resEnv := vars.GlobalVarManager.GetExcLocal(constants.OktetoNameEnvVar)
+			resEnv := vars.GlobalVarManager.Get(constants.OktetoNameEnvVar)
 
 			if err == nil && tt.expectedErr {
 				t.Fatal("expected error but not thrown")
@@ -1202,7 +1202,7 @@ func Test_getStackNameWithinRepository(t *testing.T) {
 	require.NoError(t, err)
 
 	res, err := getStackName("", stackPath, "")
-	resEnv := vars.GlobalVarManager.GetExcLocal(constants.OktetoNameEnvVar)
+	resEnv := vars.GlobalVarManager.Get(constants.OktetoNameEnvVar)
 
 	require.NoError(t, err)
 	require.Equal(t, "compose-repository-test", res)

@@ -402,8 +402,8 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	data := &pipeline.CfgData{
 		Name:       deployOptions.Name,
 		Namespace:  deployOptions.Namespace,
-		Repository: dc.VarManager.GetIncLocal(model.GithubRepositoryEnvVar),
-		Branch:     dc.VarManager.GetIncLocal(constants.OktetoGitBranchEnvVar),
+		Repository: dc.VarManager.Get(model.GithubRepositoryEnvVar),
+		Branch:     dc.VarManager.Get(constants.OktetoGitBranchEnvVar),
 		Filename:   manifestPathForConfigMap,
 		Status:     pipeline.ProgressingStatus,
 		Manifest:   deployOptions.Manifest.Manifest,
@@ -551,7 +551,7 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 
 func getDefaultTimeout(varManager *vars.Manager) time.Duration {
 	defaultTimeout := 5 * time.Minute
-	t := varManager.GetIncLocal(model.OktetoTimeoutEnvVar)
+	t := varManager.Get(model.OktetoTimeoutEnvVar)
 	if t == "" {
 		return defaultTimeout
 	}
@@ -718,8 +718,8 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 
 	// We keep DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar for backward compatibility in case an old version of the backend
 	// is being used
-	isPreview := dc.VarManager.GetIncLocal(model.DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar) == "true" ||
-		dc.VarManager.GetIncLocal(constants.OktetoIsPreviewEnvVar) == "true"
+	isPreview := dc.VarManager.Get(model.DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar) == "true" ||
+		dc.VarManager.Get(constants.OktetoIsPreviewEnvVar) == "true"
 	dc.AnalyticsTracker.TrackDeploy(analytics.DeployMetadata{
 		Success:                err == nil,
 		IsOktetoRepo:           utils.IsOktetoRepo(),

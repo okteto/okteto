@@ -34,12 +34,6 @@ type fakeGraphQLClient struct {
 type fakeVarManager struct{}
 
 func (*fakeVarManager) MaskVar(string) {}
-func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
-	return false
-}
-func (*fakeVarManager) IsLocalVarException(string) bool {
-	return false
-}
 
 func (fc fakeGraphQLClient) Query(ctx context.Context, q interface{}, _ map[string]interface{}) error {
 	if fc.queryResult != nil {
@@ -119,7 +113,7 @@ func (fc *fakeGraphQLMultipleCallsClient) Mutate(ctx context.Context, m interfac
 
 func TestInDevContainer(t *testing.T) {
 	vars.GlobalVarManager = vars.NewVarsManager(&fakeVarManager{})
-	v := vars.GlobalVarManager.GetExcLocal(constants.OktetoNameEnvVar)
+	v := vars.GlobalVarManager.Get(constants.OktetoNameEnvVar)
 
 	vars.GlobalVarManager.AddBuiltInVar(constants.OktetoNameEnvVar, "")
 	defer func() {

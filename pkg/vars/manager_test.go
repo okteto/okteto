@@ -14,34 +14,40 @@
 package vars
 
 import (
+	"math/rand"
 	"os"
 	"testing"
+	"time"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/stretchr/testify/assert"
 )
 
-type fakeVarManager struct {
-	mockIsLocalVariablesEnabled bool
-	mockIsLocalVarException     bool
-}
+type fakeVarManager struct{}
 
 func (*fakeVarManager) MaskVar(value string) {
 	oktetoLog.AddMaskedWord(value)
 }
-func (f *fakeVarManager) IsLocalVarSupportEnabled() bool {
-	return f.mockIsLocalVariablesEnabled
-}
-func (f *fakeVarManager) IsLocalVarException(string) bool {
-	return f.mockIsLocalVarException
-}
 
+// TestVarManagerDoesNotExportToOsEnv ensures that using var manager does not have any undesired side effects on
+// the host environment variables
 func TestVarManagerDoesNotExportToOsEnv(t *testing.T) {
-	varManager := NewVarsManager(&fakeVarManager{})
+	t.Setenv("MY_VAR", "host-value")
 
+	varManager := NewVarsManager(&fakeVarManager{})
 	varManager.AddLocalVar("MY_VAR", "local-value")
-	assert.Equal(t, "", os.Getenv("MY_VAR"))
-	assert.Equal(t, "local-value", varManager.GetIncLocal("MY_VAR"))
+
+	assert.Equal(t, "host-value", os.Getenv("MY_VAR"))
+	assert.Equal(t, "local-value", varManager.Get("MY_VAR"))
+}
+
+// runCommandsInRandomOrder helps ensure that the order in which the commands are run does not affect the result
+func runCommandsInRandomOrder(commands []func()) {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r.Shuffle(len(commands), func(i, j int) { commands[i], commands[j] = commands[j], commands[i] })
+	for _, command := range commands {
+		command()
+	}
 }
 
 // TestBuiltInVarsPriority ensures that built-in vars have the highest priority
@@ -50,13 +56,15 @@ func TestBuiltInVarsPriority(t *testing.T) {
 
 	varName := "MY_VAR"
 
-	varManager.AddBuiltInVar(varName, "built-in-value")
-	varManager.AddFlagVar(varName, "flag-value")
-	varManager.AddLocalVar(varName, "local-value")
-	varManager.AddDotEnvVar(varName, "dot-env-value")
-	varManager.AddAdminAndUserVar(varName, "admin-and-user-value")
+	runCommandsInRandomOrder([]func(){
+		func() { varManager.AddBuiltInVar(varName, "built-in-value") },
+		func() { varManager.AddFlagVar(varName, "flag-value") },
+		func() { varManager.AddLocalVar(varName, "local-value") },
+		func() { varManager.AddDotEnvVar(varName, "dot-env-value") },
+		func() { varManager.AddAdminAndUserVar(varName, "admin-and-user-value") },
+	})
 
-	result := varManager.GetIncLocal(varName)
+	result := varManager.Get(varName)
 	assert.Equal(t, "built-in-value", result)
 }
 
@@ -66,12 +74,14 @@ func TestFlagsVarsPriority(t *testing.T) {
 
 	varName := "MY_VAR"
 
-	varManager.AddFlagVar(varName, "flag-value")
-	varManager.AddLocalVar(varName, "local-value")
-	varManager.AddDotEnvVar(varName, "dot-env-value")
-	varManager.AddAdminAndUserVar(varName, "admin-and-user-value")
+	runCommandsInRandomOrder([]func(){
+		func() { varManager.AddFlagVar(varName, "flag-value") },
+		func() { varManager.AddLocalVar(varName, "local-value") },
+		func() { varManager.AddDotEnvVar(varName, "dot-env-value") },
+		func() { varManager.AddAdminAndUserVar(varName, "admin-and-user-value") },
+	})
 
-	result := varManager.GetIncLocal(varName)
+	result := varManager.Get(varName)
 	assert.Equal(t, "flag-value", result)
 }
 
@@ -81,11 +91,13 @@ func TestLocalVarsPriority(t *testing.T) {
 
 	varName := "MY_VAR"
 
-	varManager.AddLocalVar(varName, "local-value")
-	varManager.AddDotEnvVar(varName, "dot-env-value")
-	varManager.AddAdminAndUserVar(varName, "admin-and-user-value")
+	runCommandsInRandomOrder([]func(){
+		func() { varManager.AddLocalVar(varName, "local-value") },
+		func() { varManager.AddDotEnvVar(varName, "dot-env-value") },
+		func() { varManager.AddAdminAndUserVar(varName, "admin-and-user-value") },
+	})
 
-	result := varManager.GetIncLocal(varName)
+	result := varManager.Get(varName)
 	assert.Equal(t, "local-value", result)
 }
 
@@ -95,10 +107,12 @@ func TestDotEnvVarsPriority(t *testing.T) {
 
 	varName := "MY_VAR"
 
-	varManager.AddDotEnvVar(varName, "dot-env-value")
-	varManager.AddAdminAndUserVar(varName, "admin-and-user-value")
+	runCommandsInRandomOrder([]func(){
+		func() { varManager.AddDotEnvVar(varName, "dot-env-value") },
+		func() { varManager.AddAdminAndUserVar(varName, "admin-and-user-value") },
+	})
 
-	result := varManager.GetIncLocal(varName)
+	result := varManager.Get(varName)
 	assert.Equal(t, "dot-env-value", result)
 }
 
@@ -114,25 +128,22 @@ func TestPriorityWithMoreComplexScenarios(t *testing.T) {
 		Type: OktetoVariableTypeAdminAndUser,
 	}
 	varManager.AddGroup(adminVars)
-
-	assert.Equal(t, "admin-value", varManager.GetIncLocal(varName))
-
-	varManager.AddLocalVar(varName, "local-value")
-	assert.Equal(t, "admin-value", varManager.GetExcLocal(varName))
-	assert.Equal(t, "local-value", varManager.GetIncLocal(varName))
+	assert.Equal(t, "admin-value", varManager.Get(varName))
 
 	varManager.AddDotEnvVar(varName, "dot-env-value")
-	assert.Equal(t, "dot-env-value", varManager.GetExcLocal(varName))
-	assert.Equal(t, "local-value", varManager.GetIncLocal(varName))
+	assert.Equal(t, "dot-env-value", varManager.Get(varName))
+
+	varManager.AddLocalVar(varName, "local-value")
+	assert.Equal(t, "local-value", varManager.Get(varName))
 
 	varManager.AddFlagVar(varName, "flag-value")
-	assert.Equal(t, "flag-value", varManager.GetIncLocal(varName))
+	assert.Equal(t, "flag-value", varManager.Get(varName))
 
 	varManager.AddBuiltInVar(varName, "built-in-value")
-	assert.Equal(t, "built-in-value", varManager.GetIncLocal(varName))
+	assert.Equal(t, "built-in-value", varManager.Get(varName))
 }
 
-func TestGetIncLocal(t *testing.T) {
+func TestGet(t *testing.T) {
 	tests := []struct {
 		name          string
 		getVarManager func() *Manager
@@ -173,74 +184,14 @@ func TestGetIncLocal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			varManager := tt.getVarManager()
-			got := varManager.GetIncLocal(tt.find)
+			got := varManager.Get(tt.find)
 			assert.Equal(t, tt.expected, got)
 		})
 
 	}
 }
 
-func TestGetExcLocal(t *testing.T) {
-	tests := []struct {
-		name          string
-		getVarManager func() *Manager
-		find          string
-		expected      string
-	}{
-		{
-			name: "empty var manager - var not found",
-			getVarManager: func() *Manager {
-				varManager := NewVarsManager(&fakeVarManager{})
-				return varManager
-			},
-			find:     "MY_VAR",
-			expected: "",
-		},
-		{
-			name: "local var loaded in var manager - ignored",
-			getVarManager: func() *Manager {
-				varManager := NewVarsManager(&fakeVarManager{})
-				varManager.AddLocalVar("MY_VAR", "my-value")
-				return varManager
-			},
-			find:     "MY_VAR",
-			expected: "",
-		},
-		{
-			name: "local var loaded in var manager - found due to feature flag enabled",
-			getVarManager: func() *Manager {
-				varManager := NewVarsManager(&fakeVarManager{
-					mockIsLocalVariablesEnabled: true,
-				})
-				varManager.AddLocalVar("MY_VAR", "my-value")
-				return varManager
-			},
-			find:     "MY_VAR",
-			expected: "my-value",
-		},
-		{
-			name: "flag var loaded in var manager - var found",
-			getVarManager: func() *Manager {
-				varManager := NewVarsManager(&fakeVarManager{})
-				varManager.AddFlagVar("MY_VAR", "my-value")
-				return varManager
-			},
-			find:     "MY_VAR",
-			expected: "my-value",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			varManager := tt.getVarManager()
-			got := varManager.GetExcLocal(tt.find)
-			assert.Equal(t, tt.expected, got)
-		})
-
-	}
-}
-
-func TestExpandIncLocal(t *testing.T) {
+func TestExpand(t *testing.T) {
 	tests := []struct {
 		name        string
 		result      string
@@ -289,7 +240,7 @@ func TestExpandIncLocal(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			varManager := NewVarsManager(&fakeVarManager{})
 			varManager.AddLocalVar("BAR", "bar")
-			result, err := varManager.ExpandIncLocal(tt.value)
+			result, err := varManager.Expand(tt.value)
 			assert.Equal(t, tt.result, result)
 			if tt.expectedErr {
 				assert.Error(t, err)
@@ -300,86 +251,7 @@ func TestExpandIncLocal(t *testing.T) {
 	}
 }
 
-func TestExpandExcLocal(t *testing.T) {
-	tests := []struct {
-		name                        string
-		result                      string
-		value                       string
-		expectedErr                 bool
-		mockIsLocalVariablesEnabled bool
-	}{
-		{
-			name:        "broken var - missing closing curly bracket",
-			value:       "value-${BAR",
-			result:      "",
-			expectedErr: true,
-		},
-		{
-			name:        "no-var",
-			value:       "value",
-			result:      "value",
-			expectedErr: false,
-		},
-		{
-			name:        "local var is ignored",
-			value:       "value-${LOCAL}-value",
-			result:      "value--value",
-			expectedErr: false,
-		},
-		{
-			name:        "local var is found due to feature flag enabled",
-			value:       "value-${LOCAL}-value",
-			result:      "value-bar-value",
-			expectedErr: false,
-
-			mockIsLocalVariablesEnabled: true,
-		},
-		{
-			name:        "var",
-			value:       "value-${BAR}-value",
-			result:      "value-bar-value",
-			expectedErr: false,
-		},
-		{
-			name:        "default",
-			value:       "value-${FOO:-foo}-value",
-			result:      "value-foo-value",
-			expectedErr: false,
-		},
-		{
-			name:        "only bar expanded",
-			value:       "${BAR}",
-			result:      "bar",
-			expectedErr: false,
-		},
-		{
-			name:        "only bar not expand if empty",
-			value:       "${FOO}",
-			result:      "",
-			expectedErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			varManager := NewVarsManager(&fakeVarManager{
-				mockIsLocalVariablesEnabled: tt.mockIsLocalVariablesEnabled,
-			})
-			varManager.AddLocalVar("LOCAL", "bar")
-			varManager.AddLocalVar("BAR", "bar")
-			varManager.AddDotEnvVar("BAR", "bar")
-			result, err := varManager.ExpandExcLocal(tt.value)
-			assert.Equal(t, tt.result, result)
-			if tt.expectedErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestExpandExcLocalIfNotEmpty(t *testing.T) {
+func TestExpandIfNotEmpty(t *testing.T) {
 	tests := []struct {
 		name        string
 		result      string
@@ -399,9 +271,9 @@ func TestExpandExcLocalIfNotEmpty(t *testing.T) {
 			expectedErr: false,
 		},
 		{
-			name:        "local var is ignored",
+			name:        "local var is expanded",
 			value:       "value-${LOCAL}-value",
-			result:      "value--value",
+			result:      "value-bar-value",
 			expectedErr: false,
 		},
 		{
@@ -436,7 +308,7 @@ func TestExpandExcLocalIfNotEmpty(t *testing.T) {
 			varManager.AddLocalVar("LOCAL", "bar")
 			varManager.AddLocalVar("BAR", "bar")
 			varManager.AddDotEnvVar("BAR", "bar")
-			result, err := varManager.ExpandExcLocalIfNotEmpty(tt.value)
+			result, err := varManager.ExpandIfNotEmpty(tt.value)
 			assert.Equal(t, tt.result, result)
 			if tt.expectedErr {
 				assert.Error(t, err)
@@ -451,29 +323,19 @@ func TestExpandExcLocalIfNotEmpty(t *testing.T) {
 func TestAddVarOverridesOldValue(t *testing.T) {
 	varManager := NewVarsManager(&fakeVarManager{})
 	varManager.AddLocalVar("MY_VAR", "old-value")
-	assert.Equal(t, "old-value", varManager.GetIncLocal("MY_VAR"))
+	assert.Equal(t, "old-value", varManager.Get("MY_VAR"))
 	varManager.AddLocalVar("MY_VAR", "new-value")
-	assert.Equal(t, "new-value", varManager.GetIncLocal("MY_VAR"))
+	assert.Equal(t, "new-value", varManager.Get("MY_VAR"))
 }
 
-// TestGetOktetoVariablesExcLocal ensures that the method returns all okteto variables excluding local variables, respecting the priority
-func TestGetOktetoVariablesExcLocal(t *testing.T) {
+// TestGetAll ensures that the method returns all okteto variables excluding local variables, respecting the priority
+func TestGetAll(t *testing.T) {
 	t.Run("adding vars as groups", func(t *testing.T) {
 		varManager := NewVarsManager(&fakeVarManager{})
 
-		// local env vars should not affect the var manager
+		// host environment variables should not affect the var manager unless they are loaded accordingly
 		t.Setenv("MY_VAR", "host-local-value")
-		assert.Equal(t, []string{}, varManager.GetOktetoVariablesExcLocal())
-
-		// Adding variables as groups
-		localVars := Group{
-			Vars: []Var{
-				{Name: "MY_VAR", Value: "local-value"},
-			},
-			Type: OktetoVariableTypeLocal,
-		}
-		varManager.AddGroup(localVars)
-		assert.Equal(t, []string{}, varManager.GetOktetoVariablesExcLocal())
+		assert.Equal(t, []string{}, varManager.GetAll())
 
 		adminAndUserVars := Group{
 			Vars: []Var{
@@ -483,7 +345,7 @@ func TestGetOktetoVariablesExcLocal(t *testing.T) {
 		}
 		varManager.AddGroup(adminAndUserVars)
 		expected := []string{"MY_VAR=admin-value"}
-		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+		assert.Equal(t, expected, varManager.GetAll())
 
 		dotEnvVars := Group{
 			Vars: []Var{
@@ -493,7 +355,17 @@ func TestGetOktetoVariablesExcLocal(t *testing.T) {
 		}
 		varManager.AddGroup(dotEnvVars)
 		expected = []string{"MY_VAR=dot-env-value"}
-		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+		assert.Equal(t, expected, varManager.GetAll())
+
+		localVars := Group{
+			Vars: []Var{
+				{Name: "MY_VAR", Value: "local-value"},
+			},
+			Type: OktetoVariableTypeLocal,
+		}
+		varManager.AddGroup(localVars)
+		expected = []string{"MY_VAR=local-value"}
+		assert.Equal(t, expected, varManager.GetAll())
 
 		flagVars := Group{
 			Vars: []Var{
@@ -503,7 +375,7 @@ func TestGetOktetoVariablesExcLocal(t *testing.T) {
 		}
 		varManager.AddGroup(flagVars)
 		expected = []string{"MY_VAR=flag-value"}
-		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+		assert.Equal(t, expected, varManager.GetAll())
 
 		builtInVars := Group{
 			Vars: []Var{
@@ -513,105 +385,34 @@ func TestGetOktetoVariablesExcLocal(t *testing.T) {
 		}
 		varManager.AddGroup(builtInVars)
 		expected = []string{"MY_VAR=built-in-value"}
-		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+		assert.Equal(t, expected, varManager.GetAll())
 	})
 
 	t.Run("adding vars individually", func(t *testing.T) {
 		varManager := NewVarsManager(&fakeVarManager{})
 
-		// local env vars should not affect the var manager
+		// host environment variables should not affect the var manager unless they are loaded accordingly
 		t.Setenv("MY_VAR", "host-local-value")
-		assert.Equal(t, []string{}, varManager.GetOktetoVariablesExcLocal())
-
-		varManager.AddLocalVar("MY_VAR", "local-value")
-		assert.Equal(t, []string{}, varManager.GetOktetoVariablesExcLocal())
+		assert.Equal(t, []string{}, varManager.GetAll())
 
 		varManager.AddAdminAndUserVar("MY_VAR", "admin-value")
 		expected := []string{"MY_VAR=admin-value"}
-		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+		assert.Equal(t, expected, varManager.GetAll())
 
 		varManager.AddDotEnvVar("MY_VAR", "dot-env-value")
 		expected = []string{"MY_VAR=dot-env-value"}
-		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
-
-		varManager.AddFlagVar("MY_VAR", "flag-value")
-		expected = []string{"MY_VAR=flag-value"}
-		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
-
-		varManager.AddBuiltInVar("MY_VAR", "built-in-value")
-		expected = []string{"MY_VAR=built-in-value"}
-		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
-	})
-
-	t.Run("local env vars are used when the dedicated feature flag is enabled", func(t *testing.T) {
-		varManager := NewVarsManager(&fakeVarManager{
-			mockIsLocalVariablesEnabled: true,
-		})
-
-		// local env vars should not affect the var manager
-		t.Setenv("MY_VAR", "host-local-value")
-		assert.Equal(t, []string{}, varManager.GetOktetoVariablesExcLocal())
-
-		varManager.AddAdminAndUserVar("MY_VAR", "admin-value")
-		expected := []string{"MY_VAR=admin-value"}
-		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
-
-		varManager.AddDotEnvVar("MY_VAR", "dot-env-value")
-		expected = []string{"MY_VAR=dot-env-value"}
-		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+		assert.Equal(t, expected, varManager.GetAll())
 
 		varManager.AddLocalVar("MY_VAR", "local-value")
 		expected = []string{"MY_VAR=local-value"}
-		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+		assert.Equal(t, expected, varManager.GetAll())
 
 		varManager.AddFlagVar("MY_VAR", "flag-value")
 		expected = []string{"MY_VAR=flag-value"}
-		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+		assert.Equal(t, expected, varManager.GetAll())
 
 		varManager.AddBuiltInVar("MY_VAR", "built-in-value")
 		expected = []string{"MY_VAR=built-in-value"}
-		assert.Equal(t, expected, varManager.GetOktetoVariablesExcLocal())
+		assert.Equal(t, expected, varManager.GetAll())
 	})
-}
-
-func Test_shouldIncludeLocalVar(t *testing.T) {
-	tests := []struct {
-		name                        string
-		key                         string
-		mockIsLocalVariablesEnabled bool
-		mockIsLocalVarException     bool
-		expected                    bool
-	}{
-		{
-			name:     "feature flag disabled - no exception",
-			key:      "MY_VAR",
-			expected: false,
-		},
-		{
-			name:     "feature flag enabled - no exception",
-			key:      "MY_VAR",
-			expected: true,
-
-			mockIsLocalVariablesEnabled: true,
-		},
-		{
-			name:     "feature flag disabled - with exception",
-			key:      "MY_VAR",
-			expected: true,
-
-			mockIsLocalVarException: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			varManager := NewVarsManager(&fakeVarManager{
-				mockIsLocalVariablesEnabled: tt.mockIsLocalVariablesEnabled,
-				mockIsLocalVarException:     tt.mockIsLocalVarException,
-			})
-			result := varManager.shouldIncludeLocalVar(tt.key)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-
 }

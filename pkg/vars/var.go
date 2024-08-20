@@ -39,18 +39,18 @@ func (v *Var) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, "=", maxVarStringParts)
 	v.Name = parts[0]
 	if len(parts) == maxVarStringParts {
-		v.Value, err = GlobalVarManager.ExpandExcLocal(parts[1])
+		v.Value, err = GlobalVarManager.Expand(parts[1])
 		if err != nil {
 			return err
 		}
 		return nil
 	}
 
-	v.Name, err = GlobalVarManager.ExpandExcLocal(parts[0])
+	v.Name, err = GlobalVarManager.Expand(parts[0])
 	if err != nil {
 		return err
 	}
-	v.Value = GlobalVarManager.GetExcLocal(v.Name)
+	v.Value = GlobalVarManager.Get(v.Name)
 	return nil
 }
 

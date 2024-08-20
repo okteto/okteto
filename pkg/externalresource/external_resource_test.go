@@ -49,7 +49,7 @@ func TestExternalResource_SetDefaults(t *testing.T) {
 	sanitizedExternalName := sanitizeForEnv(externalResourceName)
 	for _, endpoint := range externalResource.Endpoints {
 		sanitizedEndpointName := sanitizeForEnv(endpoint.Name)
-		assert.Equal(t, endpoint.Url, varManager.GetExcLocal(fmt.Sprintf("OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL", sanitizedExternalName, sanitizedEndpointName)))
+		assert.Equal(t, endpoint.Url, varManager.Get(fmt.Sprintf("OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL", sanitizedExternalName, sanitizedEndpointName)))
 	}
 }
 

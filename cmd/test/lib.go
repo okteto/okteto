@@ -22,7 +22,7 @@ import (
 
 func getDefaultTimeout(varManager *vars.Manager) time.Duration {
 	defaultTimeout := 5 * time.Minute
-	t := varManager.GetIncLocal(model.OktetoTimeoutEnvVar)
+	t := varManager.Get(model.OktetoTimeoutEnvVar)
 	if t == "" {
 		return defaultTimeout
 	}

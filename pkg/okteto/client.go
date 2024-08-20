@@ -414,7 +414,7 @@ func isAPITransientErr(err error) bool {
 
 // InDevContainer returns true if running in an okteto dev container
 func InDevContainer() bool {
-	if v, ok := vars.GlobalVarManager.LookupExcLocal(constants.OktetoNameEnvVar); ok && v != "" {
+	if v, ok := vars.GlobalVarManager.Lookup(constants.OktetoNameEnvVar); ok && v != "" {
 		return true
 	}
 

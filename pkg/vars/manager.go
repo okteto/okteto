@@ -29,20 +29,16 @@ const (
 	OktetoVariableTypeLocal        = 3
 	OktetoVariableTypeDotEnv       = 4
 	OktetoVariableTypeAdminAndUser = 5
-
-	// OktetoSupportLocalVariablesEnabled is a feature flag that can be used to enable the support for local environment
-	// variables. Once set to true, the varManager will always return local vars in Get or Lookup methods.
-	OktetoSupportLocalVariablesEnabled = "OKTETO_SUPPORT_LOCAL_VARIABLES_ENABLED"
 )
 
-type ConfigItem struct {
+type configItem struct {
 	Name   string
 	Masked bool
 }
 
 type Type int
 
-var config = map[Type]ConfigItem{
+var config = map[Type]configItem{
 	OktetoVariableTypeBuiltIn:      {Masked: false},
 	OktetoVariableTypeDotEnv:       {Masked: true},
 	OktetoVariableTypeAdminAndUser: {Masked: true},
@@ -58,8 +54,6 @@ type Group struct {
 // ManagerInterface is the interface that the Okteto Variables manager should implement
 type ManagerInterface interface {
 	MaskVar(value string)
-	IsLocalVarSupportEnabled() bool
-	IsLocalVarException(key string) bool
 }
 
 type Manager struct {
@@ -74,8 +68,8 @@ func NewVarsManager(m ManagerInterface) *Manager {
 	}
 }
 
-// LookupIncLocal returns the value of an okteto variable if it's loaded in the var manager, including local variables
-func (m *Manager) LookupIncLocal(key string) (string, bool) {
+// Lookup returns the value of an okteto variable if it's loaded in the var manager
+func (m *Manager) Lookup(key string) (string, bool) {
 	for _, g := range m.groups {
 		for _, v := range g.Vars {
 			if v.Name == key {
@@ -84,37 +78,6 @@ func (m *Manager) LookupIncLocal(key string) (string, bool) {
 		}
 	}
 	return "", false
-}
-
-// LookupExcLocal returns the value of an okteto variable if it's loaded in the var manager, by default excluding
-// local variables, unless the feature flag is enabled or the variable is an exception
-func (m *Manager) LookupExcLocal(key string) (string, bool) {
-	for _, g := range m.groups {
-		if g.Type == OktetoVariableTypeLocal && !m.shouldIncludeLocalVar(key) {
-			continue
-		}
-		for _, v := range g.Vars {
-			if v.Name == key {
-				return v.Value, true
-			}
-		}
-	}
-	return "", false
-}
-
-// shouldIncludeLocalVar returns whether a given variable should be returned. This function should only be used with
-// local variables. If the feature flag is enabled, all local variables should be returned. If the feature flag is disabled,
-// only the exceptions should be returned.
-func (m *Manager) shouldIncludeLocalVar(key string) bool {
-	if m.m.IsLocalVarSupportEnabled() {
-		return true
-	}
-
-	if m.m.IsLocalVarException(key) {
-		return true
-	}
-
-	return false
 }
 
 // AddAdminAndUserVar allows to add a single variable to the manager of type OktetoVariableTypeAdminAndUser.
@@ -179,7 +142,7 @@ func (m *Manager) maskVar(value string, t Type) {
 	m.m.MaskVar(value)
 }
 
-// AddGroup allows to add a group of variables to the manager. The variables of the group should share the same typ.
+// AddGroup allows to add a group of variables to the manager. The variables of the group should share the same type.
 func (m *Manager) AddGroup(g Group) {
 	for _, v := range g.Vars {
 		m.maskVar(v.Value, g.Type)
@@ -189,27 +152,18 @@ func (m *Manager) AddGroup(g Group) {
 	m.sortGroupsByPriorityAsc()
 }
 
-// GetIncLocal returns an okteto variable (including local variables)
-func (m *Manager) GetIncLocal(key string) string {
-	val, _ := m.LookupIncLocal(key)
+// Get returns an okteto variable
+func (m *Manager) Get(key string) string {
+	val, _ := m.Lookup(key)
 	return val
 }
 
-// GetExcLocal returns an okteto variable (excluding local variables)
-func (m *Manager) GetExcLocal(key string) string {
-	val, _ := m.LookupExcLocal(key)
-	return val
-}
-
-// GetOktetoVariablesExcLocal returns an array of all the okteto variables that can be exported (excluding local variables)
-func (m *Manager) GetOktetoVariablesExcLocal() []string {
+// GetAll returns an array of all the okteto variables
+func (m *Manager) GetAll() []string {
 	varsMap := make(map[string]struct{})
 	vars := make([]string, 0)
 	for _, g := range m.groups {
 		for _, v := range g.Vars {
-			if g.Type == OktetoVariableTypeLocal && !m.shouldIncludeLocalVar(v.Name) {
-				continue
-			}
 			if _, exists := varsMap[v.Name]; !exists {
 				vars = append(vars, v.String())
 				varsMap[v.Name] = struct{}{}
@@ -219,8 +173,8 @@ func (m *Manager) GetOktetoVariablesExcLocal() []string {
 	return vars
 }
 
-// ExpandIncLocal replaces the variables in the given string with their values and returns the result. It expands with all groups, including local variables.
-func (m *Manager) ExpandIncLocal(s string) (string, error) {
+// Expand replaces the variables in the given string with their values and returns the result
+func (m *Manager) Expand(s string) (string, error) {
 	varsMap := make(map[string]struct{})
 	vars := make([]string, 0)
 	for _, g := range m.groups {
@@ -235,14 +189,10 @@ func (m *Manager) ExpandIncLocal(s string) (string, error) {
 	return m.expandString(s, vars)
 }
 
-// ExpandExcLocal replaces the variables in the given string with their values and returns the result. It expands with all groups, excluding local variables.
-func (m *Manager) ExpandExcLocal(s string) (string, error) {
-	return m.expandString(s, m.GetOktetoVariablesExcLocal())
-}
-
-// ExpandExcLocalIfNotEmpty replaces the variables in the given string with their values and returns the result. It expands with all groups, excluding local variables. If the result is an empty string, it returns the original value.
-func (m *Manager) ExpandExcLocalIfNotEmpty(s string) (string, error) {
-	result, err := m.expandString(s, m.GetOktetoVariablesExcLocal())
+// ExpandIfNotEmpty replaces the variables in the given string with their values and returns the result.
+// If the result is an empty string, it returns the original value.
+func (m *Manager) ExpandIfNotEmpty(s string) (string, error) {
+	result, err := m.expandString(s, m.GetAll())
 	if err != nil {
 		return "", err
 	}

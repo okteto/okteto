@@ -59,7 +59,7 @@ func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 		return nil, err
 	}
 	for key, value := range rawMap {
-		value, err = vars.GlobalVarManager.ExpandExcLocal(value)
+		value, err = vars.GlobalVarManager.Expand(value)
 		if err != nil {
 			return nil, err
 		}

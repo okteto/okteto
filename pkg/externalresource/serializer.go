@@ -59,11 +59,11 @@ func (er *ExternalResource) UnmarshalYAML(unmarshal func(interface{}) error) err
 	}
 
 	for _, endpoint := range result.Endpoints {
-		name, err := vars.GlobalVarManager.ExpandExcLocal(endpoint.Name)
+		name, err := vars.GlobalVarManager.Expand(endpoint.Name)
 		if err != nil {
 			return fmt.Errorf("error expanding environment on '%s': %w", endpoint.Name, err)
 		}
-		url, err := vars.GlobalVarManager.ExpandExcLocal(endpoint.Url)
+		url, err := vars.GlobalVarManager.Expand(endpoint.Url)
 		if err != nil {
 			return fmt.Errorf("error expanding environment on '%s': %w", endpoint.Name, err)
 		}

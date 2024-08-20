@@ -79,8 +79,8 @@ func (ob *OktetoBuilder) GetBuilder() string {
 func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller, varManager *vars.Manager) error {
 	isRemoteExecution := buildOptions.OutputMode == DeployOutputModeOnBuild || buildOptions.OutputMode == DestroyOutputModeOnBuild || buildOptions.OutputMode == TestOutputModeOnBuild
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
-	depotToken := varManager.GetIncLocal(DepotTokenEnvVar)
-	depotProject := varManager.GetIncLocal(DepotProjectEnvVar)
+	depotToken := varManager.Get(DepotTokenEnvVar)
+	depotProject := varManager.Get(DepotProjectEnvVar)
 
 	if !isRemoteExecution {
 		builder := ob.GetBuilder()
@@ -435,7 +435,7 @@ func createTempFileWithExpandedEnvsAtSource(fs afero.Fs, sourceFile, tempFolder 
 	sc := bufio.NewScanner(srcFile)
 	for sc.Scan() {
 		// expand content
-		srcContent, err := vars.GlobalVarManager.ExpandExcLocal(sc.Text())
+		srcContent, err := vars.GlobalVarManager.Expand(sc.Text())
 		if err != nil {
 			return "", err
 		}

@@ -27,12 +27,6 @@ import (
 type fakeVarManager struct{}
 
 func (*fakeVarManager) MaskVar(string) {}
-func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
-	return false
-}
-func (*fakeVarManager) IsLocalVarException(string) bool {
-	return false
-}
 
 func TestGetDeployableEmpty(t *testing.T) {
 	varManager := vars.NewVarsManager(&fakeVarManager{})

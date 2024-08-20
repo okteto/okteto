@@ -726,7 +726,7 @@ func TestSetVarsFromDependencyNoError(t *testing.T) {
 			err := setVarsFromDependency(tt.cmap, varManager)
 			require.Truef(t, tt.expectedErr == (err != nil), "unexpected error")
 			for k, v := range tt.expectedVarsSet {
-				require.Equal(t, v, varManager.GetExcLocal(k))
+				require.Equal(t, v, varManager.Get(k))
 			}
 		})
 	}

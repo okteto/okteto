@@ -76,18 +76,18 @@ func (o *Options) InitFromContext() {
 func (o *Options) InitFromEnvVars(varManager *vars.Manager) {
 	var usedEnvVars []string
 
-	if o.Context == "" && varManager.GetIncLocal(model.OktetoURLEnvVar) != "" {
-		o.Context = varManager.GetIncLocal(model.OktetoURLEnvVar)
+	if o.Context == "" && varManager.Get(model.OktetoURLEnvVar) != "" {
+		o.Context = varManager.Get(model.OktetoURLEnvVar)
 		o.IsOkteto = true
 		usedEnvVars = append(usedEnvVars, model.OktetoURLEnvVar)
 	}
 
-	if o.Context == "" && varManager.GetIncLocal(model.OktetoContextEnvVar) != "" {
-		o.Context = varManager.GetIncLocal(model.OktetoContextEnvVar)
+	if o.Context == "" && varManager.Get(model.OktetoContextEnvVar) != "" {
+		o.Context = varManager.Get(model.OktetoContextEnvVar)
 		usedEnvVars = append(usedEnvVars, model.OktetoContextEnvVar)
 	}
 
-	envToken := varManager.GetIncLocal(model.OktetoTokenEnvVar)
+	envToken := varManager.Get(model.OktetoTokenEnvVar)
 	if o.Token != "" || envToken != "" {
 		o.IsOkteto = true
 	}
@@ -100,8 +100,8 @@ func (o *Options) InitFromEnvVars(varManager *vars.Manager) {
 		o.InferredToken = true
 	}
 
-	if o.Namespace == "" && varManager.GetIncLocal(model.OktetoNamespaceEnvVar) != "" {
-		o.Namespace = varManager.GetIncLocal(model.OktetoNamespaceEnvVar)
+	if o.Namespace == "" && varManager.Get(model.OktetoNamespaceEnvVar) != "" {
+		o.Namespace = varManager.Get(model.OktetoNamespaceEnvVar)
 		usedEnvVars = append(usedEnvVars, model.OktetoNamespaceEnvVar)
 	}
 

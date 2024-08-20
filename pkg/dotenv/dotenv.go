@@ -35,7 +35,7 @@ func Load(filepath string, varManager *vars.Manager, fs afero.Fs) error {
 		return fmt.Errorf("error reading file: %w", err)
 	}
 
-	expanded, err := varManager.ExpandIncLocal(string(content))
+	expanded, err := varManager.Expand(string(content))
 	if err != nil {
 		return fmt.Errorf("error expanding dot env file: %w", err)
 	}

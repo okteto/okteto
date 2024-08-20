@@ -27,12 +27,6 @@ import (
 type fakeVarManager struct{}
 
 func (*fakeVarManager) MaskVar(string) {}
-func (*fakeVarManager) IsLocalVarSupportEnabled() bool {
-	return false
-}
-func (*fakeVarManager) IsLocalVarException(string) bool {
-	return false
-}
 
 func TestLoad(t *testing.T) {
 	type expected struct {
@@ -235,7 +229,7 @@ VAR4=${VALUE4:-defaultValue4}`), 0644)
 			}
 
 			for k, v := range tt.expected.varManagerVars {
-				actualVar, exists := varManager.LookupIncLocal(k)
+				actualVar, exists := varManager.Lookup(k)
 				assert.Equal(t, v, actualVar)
 				assert.Equal(t, true, exists)
 			}
@@ -252,7 +246,7 @@ VAR4=${VALUE4:-defaultValue4}`), 0644)
 				assert.Equal(t, false, exists)
 			}
 			for _, k := range tt.expected.mustNotLoadVars {
-				_, exists := varManager.LookupIncLocal(k)
+				_, exists := varManager.Lookup(k)
 				if exists {
 					log.Fatalf("var %s loaded in the varManager", k)
 				}

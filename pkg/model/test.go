@@ -66,7 +66,7 @@ func (test ManifestTests) Validate() error {
 func (test *Test) expandEnvVars(varManager *vars.Manager) error {
 	var err error
 	if len(test.Image) > 0 {
-		test.Image, err = varManager.ExpandExcLocal(test.Image)
+		test.Image, err = varManager.Expand(test.Image)
 		if err != nil {
 			return err
 		}
@@ -118,7 +118,7 @@ func (h *Host) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var hostnameIP string
 	err := unmarshal(&hostnameIP)
 	if err == nil {
-		hostnameIPExpanded, err := vars.GlobalVarManager.ExpandExcLocal(hostnameIP)
+		hostnameIPExpanded, err := vars.GlobalVarManager.Expand(hostnameIP)
 		if err != nil {
 			return err
 		}
@@ -146,11 +146,11 @@ func (h *Host) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	hostname, err := vars.GlobalVarManager.ExpandExcLocal(hh.Hostname)
+	hostname, err := vars.GlobalVarManager.Expand(hh.Hostname)
 	if err != nil {
 		return err
 	}
-	ip, err := vars.GlobalVarManager.ExpandExcLocal(hh.IP)
+	ip, err := vars.GlobalVarManager.Expand(hh.IP)
 	if err != nil {
 		return err
 	}

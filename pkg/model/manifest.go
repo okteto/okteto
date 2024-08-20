@@ -649,16 +649,16 @@ func (m *Manifest) setDefaults() error {
 		if m.Deploy.Divert.Driver == "" {
 			m.Deploy.Divert.Driver = constants.OktetoDivertWeaverDriver
 		}
-		m.Deploy.Divert.Namespace, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(m.Deploy.Divert.Namespace)
+		m.Deploy.Divert.Namespace, err = vars.GlobalVarManager.ExpandIfNotEmpty(m.Deploy.Divert.Namespace)
 		if err != nil {
 			return err
 		}
 		for i := range m.Deploy.Divert.Hosts {
-			m.Deploy.Divert.Hosts[i].VirtualService, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(m.Deploy.Divert.Hosts[i].VirtualService)
+			m.Deploy.Divert.Hosts[i].VirtualService, err = vars.GlobalVarManager.ExpandIfNotEmpty(m.Deploy.Divert.Hosts[i].VirtualService)
 			if err != nil {
 				return err
 			}
-			m.Deploy.Divert.Hosts[i].Namespace, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(m.Deploy.Divert.Hosts[i].Namespace)
+			m.Deploy.Divert.Hosts[i].Namespace, err = vars.GlobalVarManager.ExpandIfNotEmpty(m.Deploy.Divert.Hosts[i].Namespace)
 			if err != nil {
 				return err
 			}
@@ -725,7 +725,7 @@ func (manifest *Manifest) ExpandEnvVars(varManager *vars.Manager) error {
 	var err error
 	if manifest.Deploy != nil {
 		if manifest.Deploy.Image != "" {
-			manifest.Deploy.Image, err = varManager.ExpandExcLocal(manifest.Deploy.Image)
+			manifest.Deploy.Image, err = varManager.Expand(manifest.Deploy.Image)
 			if err != nil {
 				return errors.New("could not parse env vars for an image used for remote deploy")
 			}
@@ -747,7 +747,7 @@ func (manifest *Manifest) ExpandEnvVars(varManager *vars.Manager) error {
 					continue
 				}
 				tag := fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(svcName, "-", "_")))
-				expandedTag, err := varManager.ExpandExcLocal(tag)
+				expandedTag, err := varManager.Expand(tag)
 				if err != nil {
 					return err
 				}
@@ -774,7 +774,7 @@ func (manifest *Manifest) ExpandEnvVars(varManager *vars.Manager) error {
 	}
 	if manifest.Destroy != nil {
 		if manifest.Destroy.Image != "" {
-			manifest.Destroy.Image, err = varManager.ExpandExcLocal(manifest.Destroy.Image)
+			manifest.Destroy.Image, err = varManager.Expand(manifest.Destroy.Image)
 			if err != nil {
 				return err
 			}
@@ -787,7 +787,7 @@ func (manifest *Manifest) ExpandEnvVars(varManager *vars.Manager) error {
 		}
 
 		if devInfo.Image != "" {
-			devInfo.Image, err = varManager.ExpandExcLocalIfNotEmpty(devInfo.Image)
+			devInfo.Image, err = varManager.ExpandIfNotEmpty(devInfo.Image)
 			if err != nil {
 				return err
 			}

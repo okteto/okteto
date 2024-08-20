@@ -120,7 +120,7 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		TemplateName:              templateName,
 		CommandFlags:              commandsFlags,
 		BuildEnvVars:              rd.getBuildEnvVars(),
-		DependenciesEnvVars:       rd.getDependencyEnvVars(rd.varManager.GetOktetoVariablesExcLocal),
+		DependenciesEnvVars:       rd.getDependencyEnvVars(rd.varManager.GetAll),
 		DockerfileName:            dockerfileTemporalName,
 		Deployable:                dep,
 		Manifest:                  deployOptions.Manifest,

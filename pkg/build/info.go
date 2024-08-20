@@ -66,7 +66,7 @@ func (i *Info) addExpandedPreviousImageArgs(previousImageArgs map[string]string,
 		if _, ok := alreadyAddedArg[k]; ok {
 			continue
 		}
-		expandedValue, err := varManager.ExpandExcLocal(v)
+		expandedValue, err := varManager.Expand(v)
 		if err != nil {
 			return err
 		}
@@ -85,7 +85,7 @@ func (i *Info) expandManifestBuildArgs(previousImageArgs map[string]string) (err
 			oktetoLog.Infof("overriding '%s' with the content of previous build", arg.Name)
 			arg.Value = val
 		}
-		arg.Value, err = vars.GlobalVarManager.ExpandExcLocal(arg.Value)
+		arg.Value, err = vars.GlobalVarManager.Expand(arg.Value)
 		if err != nil {
 			return err
 		}
@@ -104,7 +104,7 @@ func (i *Info) expandSecrets(varManager *vars.Manager) (err error) {
 			}
 			val = filepath.Join(home, val[2:])
 		}
-		i.Secrets[k], err = varManager.ExpandExcLocal(val)
+		i.Secrets[k], err = varManager.Expand(val)
 		if err != nil {
 			return err
 		}
@@ -127,11 +127,11 @@ func (i *Info) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	i.Context, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(rawBuildInfo.Context)
+	i.Context, err = vars.GlobalVarManager.ExpandIfNotEmpty(rawBuildInfo.Context)
 	if err != nil {
 		return err
 	}
-	i.Dockerfile, err = vars.GlobalVarManager.ExpandExcLocalIfNotEmpty(rawBuildInfo.Dockerfile)
+	i.Dockerfile, err = vars.GlobalVarManager.ExpandIfNotEmpty(rawBuildInfo.Dockerfile)
 	if err != nil {
 		return err
 	}

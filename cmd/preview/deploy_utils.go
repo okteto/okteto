@@ -110,7 +110,7 @@ func getRandomName(scope string) string {
 }
 
 func getExpandedName(name string) string {
-	expandedName, err := vars.GlobalVarManager.ExpandExcLocal(name)
+	expandedName, err := vars.GlobalVarManager.Expand(name)
 	if err != nil {
 		return name
 	}

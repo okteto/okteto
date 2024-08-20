@@ -315,7 +315,7 @@ func getStackName(name, stackPath, actualStackName string) (string, error) {
 		return name, nil
 	}
 	if actualStackName == "" {
-		nameEnvVar := vars.GlobalVarManager.GetExcLocal(constants.OktetoNameEnvVar)
+		nameEnvVar := vars.GlobalVarManager.Get(constants.OktetoNameEnvVar)
 		if nameEnvVar != "" {
 			// this name could be not sanitized when running at pipeline installer
 			return nameEnvVar, nil
@@ -925,7 +925,7 @@ func loadEnvFiles(svc *Service, svcName string) error {
 
 func setEnvironmentFromFile(svc *Service, filename string) error {
 	var err error
-	filename, err = vars.GlobalVarManager.ExpandExcLocal(filename)
+	filename, err = vars.GlobalVarManager.Expand(filename)
 	if err != nil {
 		return err
 	}
@@ -940,7 +940,7 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 		}
 	}()
 
-	envMap, err := godotenv.ParseWithLookup(f, vars.GlobalVarManager.LookupIncLocal)
+	envMap, err := godotenv.ParseWithLookup(f, vars.GlobalVarManager.Lookup)
 	if err != nil {
 		return fmt.Errorf("error parsing env_file %s: %w", filename, err)
 	}
@@ -951,7 +951,7 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 
 	for name, value := range envMap {
 		if value == "" {
-			value = vars.GlobalVarManager.GetExcLocal(name)
+			value = vars.GlobalVarManager.Get(name)
 		}
 		svc.Environment = append(
 			svc.Environment,
