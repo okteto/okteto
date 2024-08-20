@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	getter "github.com/hashicorp/go-getter"
+	"github.com/hashicorp/go-getter"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -129,7 +129,7 @@ func ShouldUpgrade(varManager *vars.Manager) bool {
 }
 
 func GetMinimumVersion(varManager *vars.Manager) *semver.Version {
-	v := varManager.GetIncLocal(model.SyncthingVersionEnvVar)
+	v := varManager.Get(model.SyncthingVersionEnvVar)
 	if v == "" {
 		v = syncthingVersion
 	}

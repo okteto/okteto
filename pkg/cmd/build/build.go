@@ -110,7 +110,7 @@ func setOutputMode(outputMode string, varManager *vars.Manager) string {
 	if outputMode != "" {
 		return outputMode
 	}
-	switch varManager.GetIncLocal(model.BuildkitProgressEnvVar) {
+	switch varManager.Get(model.BuildkitProgressEnvVar) {
 	case oktetoLog.PlainFormat:
 		return oktetoLog.PlainFormat
 	case oktetoLog.JSONFormat:
