@@ -98,6 +98,10 @@ func (c destroyPreviewCommand) executeDestroyPreview(ctx context.Context, opts *
 	defer oktetoLog.StopSpinner()
 
 	if err := c.okClient.Previews().Destroy(ctx, opts.name); err != nil {
+		if oktetoErrors.IsNotFound(err) {
+			oktetoLog.Information("Preview environment '%s' not found.", opts.name)
+			return nil
+		}
 		return fmt.Errorf("failed to destroy preview environment: %w", err)
 	}
 
