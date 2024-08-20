@@ -35,7 +35,6 @@ import (
 	"github.com/okteto/okteto/pkg/dag"
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/devenvironment"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/ignore"
@@ -267,7 +266,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			AnalyticsTracker:   tracker,
 			IoCtrl:             ioCtrl,
 			K8sLogger:          k8sLogger,
-			IsRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
+			IsRemote:           varManager.LoadBoolean(constants.OktetoDeployRemote),
 			RunningInInstaller: config.RunningInInstaller(),
 		}
 		deployStartTime := time.Now()
