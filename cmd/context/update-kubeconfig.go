@@ -21,7 +21,6 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -42,9 +41,9 @@ type KubeconfigCMD struct {
 }
 
 // newKubeconfigController creates a new command to update the kubeconfig stored in the okteto context
-func newKubeconfigController(okClientProvider oktetoClientProvider) *KubeconfigCMD {
+func newKubeconfigController(okClientProvider oktetoClientProvider, varManager *vars.Manager) *KubeconfigCMD {
 	var kubetokenController kubeconfigController
-	if env.LoadBoolean(OktetoUseStaticKubetokenEnvVar) {
+	if varManager.LoadBoolean(OktetoUseStaticKubetokenEnvVar) {
 		kubetokenController = newStaticKubetokenController()
 	} else {
 		kubetokenController = newDynamicKubetokenController(okClientProvider)
@@ -56,7 +55,7 @@ func newKubeconfigController(okClientProvider oktetoClientProvider) *KubeconfigC
 
 // UpdateKubeconfigCMD all contexts managed by okteto
 func UpdateKubeconfigCMD(okClientProvider oktetoClientProvider, varManager *vars.Manager) *cobra.Command {
-	kc := newKubeconfigController(okClientProvider)
+	kc := newKubeconfigController(okClientProvider, varManager)
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "update-kubeconfig",

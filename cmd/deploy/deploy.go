@@ -238,7 +238,7 @@ $ okteto deploy --build=false`,
 				Builder:            buildv2.NewBuilderFromScratch(ioCtrl, varManager, onBuildFinish),
 				DeployWaiter:       NewDeployWaiter(k8sClientProvider, k8sLogger),
 				EndpointGetter:     NewEndpointGetter,
-				IsRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
+				IsRemote:           varManager.LoadBoolean(constants.OktetoDeployRemote),
 				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider, k8sLogger),
 				Fs:                 afero.NewOsFs(),
 				PipelineCMD:        pc,
@@ -472,7 +472,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 					return err
 				}
 			}
-			if !env.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
+			if !dc.VarManager.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
 				eg, err := dc.EndpointGetter(dc.K8sLogger)
 				if err != nil {
 					oktetoLog.Infof("could not create endpoint getter: %s", err)

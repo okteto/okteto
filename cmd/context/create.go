@@ -24,7 +24,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -77,13 +76,13 @@ func NewContextCommand(ctxCmdOption ...CtxCmdOption) *Command {
 		OktetoClientProvider: okteto.NewOktetoClientProvider(),
 		OktetoContextWriter:  okteto.NewContextConfigWriter(),
 	}
-	if env.LoadBoolean(OktetoUseStaticKubetokenEnvVar) {
+	for _, o := range ctxCmdOption {
+		o(cfg)
+	}
+	if cfg.varManager.LoadBoolean(OktetoUseStaticKubetokenEnvVar) {
 		cfg.kubetokenController = newStaticKubetokenController()
 	} else {
 		cfg.kubetokenController = newDynamicKubetokenController(cfg.OktetoClientProvider)
-	}
-	for _, o := range ctxCmdOption {
-		o(cfg)
 	}
 	return cfg
 }

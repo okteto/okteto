@@ -15,6 +15,7 @@ package context
 
 import (
 	"encoding/base64"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"testing"
 
@@ -144,7 +145,8 @@ func Test_ExecuteUpdateKubeconfig_DisabledKubetoken(t *testing.T) {
 			okContext := okteto.GetContext()
 			kubeconfigPaths := []string{file}
 
-			err = newKubeconfigController(tt.okClientProvider).execute(okContext, kubeconfigPaths)
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			err = newKubeconfigController(tt.okClientProvider, varManager).execute(okContext, kubeconfigPaths)
 			assert.NoError(t, err, "error writing kubeconfig")
 
 			cfg := kubeconfig.Get(kubeconfigPaths)
@@ -257,7 +259,8 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 			okContext := okteto.GetContext()
 			kubeconfigPaths := []string{file}
 
-			err = newKubeconfigController(okClientProvider).execute(okContext, kubeconfigPaths)
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			err = newKubeconfigController(okClientProvider, varManager).execute(okContext, kubeconfigPaths)
 			assert.NoError(t, err, "error writing kubeconfig")
 
 			cfg := kubeconfig.Get(kubeconfigPaths)
@@ -273,7 +276,8 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 }
 
 func Test_ExecuteUpdateKubeconfig_With_OktetoUseStaticKubetokenEnvVar(t *testing.T) {
-	t.Setenv(OktetoUseStaticKubetokenEnvVar, "true")
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	varManager.AddLocalVar(OktetoUseStaticKubetokenEnvVar, "true")
 
 	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "ctx-test",
@@ -312,7 +316,7 @@ func Test_ExecuteUpdateKubeconfig_With_OktetoUseStaticKubetokenEnvVar(t *testing
 		},
 	)
 
-	err = newKubeconfigController(okClientProvider).execute(okContext, kubeconfigPaths)
+	err = newKubeconfigController(okClientProvider, varManager).execute(okContext, kubeconfigPaths)
 	assert.NoError(t, err, "error writing kubeconfig")
 
 	cfg := kubeconfig.Get(kubeconfigPaths)
@@ -351,7 +355,8 @@ func Test_ExecuteUpdateKubeconfig_ForNonOktetoContext(t *testing.T) {
 	okContext := okteto.GetContext()
 	kubeconfigPaths := []string{file}
 
-	err = newKubeconfigController(nil).execute(okContext, kubeconfigPaths)
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	err = newKubeconfigController(nil, varManager).execute(okContext, kubeconfigPaths)
 	assert.NoError(t, err, "error writing kubeconfig")
 
 	cfg := kubeconfig.Get(kubeconfigPaths)
@@ -519,7 +524,8 @@ func Test_ExecuteUpdateKubeconfig_WithRightCertificate(t *testing.T) {
 			okContext := okteto.GetContext()
 			kubeconfigPaths := []string{file}
 
-			err = newKubeconfigController(okClientProvider).execute(okContext, kubeconfigPaths)
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			err = newKubeconfigController(okClientProvider, varManager).execute(okContext, kubeconfigPaths)
 			assert.NoError(t, err, "error writing kubeconfig")
 
 			cfg := kubeconfig.Get(kubeconfigPaths)
@@ -575,6 +581,7 @@ func Test_ExecuteUpdateKubeconfig_WithWrongOktetoCertificate(t *testing.T) {
 	okContext := okteto.GetContext()
 	kubeconfigPaths := []string{file}
 
-	err = newKubeconfigController(okClientProvider).execute(okContext, kubeconfigPaths)
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	err = newKubeconfigController(okClientProvider, varManager).execute(okContext, kubeconfigPaths)
 	assert.Error(t, err, "should fail as the okteto certificate is not a valid base64 value")
 }

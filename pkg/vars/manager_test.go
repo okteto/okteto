@@ -414,3 +414,161 @@ func TestGetAll(t *testing.T) {
 		assert.Equal(t, expected, varManager.GetAll())
 	})
 }
+
+func TestLoadBoolean(t *testing.T) {
+	tests := []struct {
+		name      string
+		mockKey   string
+		mockValue string
+		key       string
+		expected  bool
+	}{
+		{
+			name:     "empty key",
+			expected: false,
+		},
+		{
+			name:     "empty value",
+			mockKey:  "NON_EXISTING_VAR_UNIT_TEST",
+			expected: false,
+		},
+		{
+			name:      "false - string",
+			mockKey:   "VAR_UNIT_TEST",
+			mockValue: "random value",
+			expected:  false,
+		},
+		{
+			name:      "false - boolean",
+			mockKey:   "VAR_UNIT_TEST",
+			mockValue: "false",
+			expected:  false,
+		},
+		{
+			name:      "false - int",
+			mockKey:   "VAR_UNIT_TEST",
+			mockValue: "0",
+			expected:  false,
+		},
+		{
+			name:      "true - boolean",
+			mockKey:   "VAR_UNIT_TEST",
+			mockValue: "true",
+			expected:  true,
+		},
+		{
+			name:      "true - int",
+			mockKey:   "VAR_UNIT_TEST",
+			mockValue: "1",
+			expected:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			varManager := NewVarsManager(&VarManagerLogger{})
+			if tt.mockKey != "" {
+				varManager.AddLocalVar(tt.mockKey, tt.mockValue)
+			}
+			got := varManager.LoadBoolean(tt.mockKey)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestLoadTimeOrDefault(t *testing.T) {
+	tests := []struct {
+		name           string
+		mockKey        string
+		mockValue      string
+		defaultValue   time.Duration
+		expectedResult time.Duration
+	}{
+		{
+			name:           "empty key",
+			defaultValue:   5 * time.Second,
+			expectedResult: 5 * time.Second,
+		},
+		{
+			name:           "empty value",
+			mockKey:        "NON_EXISTING_VAR_UNIT_TEST",
+			defaultValue:   10 * time.Second,
+			expectedResult: 10 * time.Second,
+		},
+		{
+			name:           "valid duration",
+			mockKey:        "VAR_UNIT_TEST",
+			mockValue:      "5s",
+			defaultValue:   10 * time.Second,
+			expectedResult: 5 * time.Second,
+		},
+		{
+			name:           "invalid duration",
+			mockKey:        "VAR_UNIT_TEST",
+			mockValue:      "invalid",
+			defaultValue:   10 * time.Second,
+			expectedResult: 10 * time.Second,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			varManager := NewVarsManager(&VarManagerLogger{})
+			if tt.mockKey != "" {
+				varManager.AddLocalVar(tt.mockKey, tt.mockValue)
+			}
+			got := varManager.LoadTimeOrDefault(tt.mockKey, tt.defaultValue)
+			assert.Equal(t, tt.expectedResult, got)
+		})
+	}
+}
+
+func TestLoadBooleanOrDefault(t *testing.T) {
+	type tc struct {
+		Name           string
+		EnvKey         string
+		EnvValue       string
+		DefaultValue   bool
+		ExpectedResult bool
+	}
+
+	testCases := []tc{
+		{
+			Name:           "Environment variable is 'true'",
+			EnvKey:         "TEST_KEY",
+			EnvValue:       "true",
+			DefaultValue:   false,
+			ExpectedResult: true,
+		},
+		{
+			Name:           "Environment variable is 'false'",
+			EnvKey:         "TEST_KEY",
+			EnvValue:       "false",
+			DefaultValue:   true,
+			ExpectedResult: false,
+		},
+		{
+			Name:           "Environment variable is not defined",
+			EnvKey:         "TEST_KEY",
+			EnvValue:       "",
+			DefaultValue:   true,
+			ExpectedResult: true,
+		},
+		{
+			Name:           "Environment variable has an invalid value",
+			EnvKey:         "TEST_KEY",
+			EnvValue:       "invalid",
+			DefaultValue:   false,
+			ExpectedResult: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			varManager := NewVarsManager(&VarManagerLogger{})
+			varManager.AddLocalVar(tc.EnvKey, tc.EnvValue)
+			result := varManager.LoadBooleanOrDefault(tc.EnvKey, tc.DefaultValue)
+			assert.Equal(t, tc.ExpectedResult, result)
+		})
+	}
+}
