@@ -182,11 +182,11 @@ type envsGetter struct {
 	configMapEnvsGetter         configMapEnvsGetterInterface
 	platformVariablesEnvsGetter platformVariablesEnvsGetterInterface
 	imageEnvsGetter             imageEnvsGetterInterface
+	varManager                  envsGetterManagerInterface
 	dev                         *model.Dev
 	getDefaultLocalEnvs         func(envsGetterManagerInterface) []string
 	name                        string
 	namespace                   string
-	varManager                  envsGetterManagerInterface
 }
 
 func newEnvsGetter(hybridCtx *HybridExecCtx, varManager envsGetterManagerInterface) (*envsGetter, error) {
