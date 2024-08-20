@@ -73,6 +73,10 @@ func (nc *Command) ExecuteDeleteNamespace(ctx context.Context, namespace string,
 
 	// trigger namespace deletion
 	if err := nc.okClient.Namespaces().Delete(ctx, namespace); err != nil {
+		if oktetoErrors.IsNotFound(err) {
+			oktetoLog.Information("Namespace '%s' not found", namespace)
+			return nil
+		}
 		return fmt.Errorf("%w: %w", errFailedDeleteNamespace, err)
 	}
 
