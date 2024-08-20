@@ -173,7 +173,7 @@ type imageEnvsGetter struct {
 }
 
 type envsGetterManagerInterface interface {
-	GetIncLocal(string) string
+	Get(string) string
 }
 
 type envsGetter struct {
@@ -267,12 +267,12 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 func getDefaultLocalEnvs(varManager envsGetterManagerInterface) []string {
 	var envs []string
 
-	path := varManager.GetIncLocal("PATH")
+	path := varManager.Get("PATH")
 	if path != "" {
 		envs = append(envs, fmt.Sprintf("PATH=%s", path))
 	}
 
-	term := varManager.GetIncLocal(model.TermEnvVar)
+	term := varManager.Get(model.TermEnvVar)
 	if term != "" {
 		envs = append(envs, fmt.Sprintf("%s=%s", model.TermEnvVar, term))
 	}

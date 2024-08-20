@@ -88,7 +88,7 @@ type hybridExecutor struct {
 }
 
 type varManagerInterface interface {
-	GetIncLocal(string) string
+	Get(string) string
 }
 
 func (h *hybridExecutor) execute(ctx context.Context, cmdToExec []string) error {
