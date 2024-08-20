@@ -15,14 +15,20 @@ package syncthing
 
 import (
 	"fmt"
-	"os"
 	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/vars"
 )
+
+type fakeManager struct{}
+
+func (*fakeManager) MaskVar(value string)                {}
+func (*fakeManager) IsLocalVarSupportEnabled() bool      { return true }
+func (*fakeManager) IsLocalVarException(key string) bool { return true }
 
 func TestInstall(t *testing.T) {
 	if runtime.GOOS != "windows" {
@@ -30,7 +36,7 @@ func TestInstall(t *testing.T) {
 		t.Skip("this test is only required for windows")
 	}
 
-	if err := Install(nil); err != nil {
+	if err := Install(nil, vars.NewVarsManager(&fakeManager{})); err != nil {
 		t.Fatal(err)
 	}
 
@@ -39,7 +45,7 @@ func TestInstall(t *testing.T) {
 		t.Fatal("failed to get version")
 	}
 
-	m := GetMinimumVersion()
+	m := GetMinimumVersion(vars.NewVarsManager(&fakeManager{}))
 
 	if v.Compare(m) != 0 {
 		t.Fatalf("got %s, expected %s", v.String(), m.String())
@@ -191,17 +197,11 @@ func TestGetMinimumVersion(t *testing.T) {
 		},
 	}
 
-	env := os.Getenv(model.SyncthingVersionEnvVar)
-	t.Setenv(model.SyncthingVersionEnvVar, "")
-
-	defer func() {
-		t.Setenv(model.SyncthingVersionEnvVar, env)
-	}()
-
+	varManager := vars.NewVarsManager(&fakeManager{})
 	for _, tt := range tests {
 		t.Run(tt.version, func(t *testing.T) {
-			t.Setenv(model.SyncthingVersionEnvVar, tt.version)
-			got := GetMinimumVersion()
+			varManager.AddLocalVar(model.SyncthingVersionEnvVar, tt.version)
+			got := GetMinimumVersion(varManager)
 			if got.String() != tt.expected {
 				t.Errorf("got %s, expected %s", got.String(), tt.expected)
 			}

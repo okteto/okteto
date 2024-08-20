@@ -322,9 +322,9 @@ okteto up my-svc -- echo this is a test
 				return err
 			}
 
-			if syncthing.ShouldUpgrade() {
+			if syncthing.ShouldUpgrade(up.varManager) {
 				oktetoLog.Println("Installing dependencies...")
-				if err := downloadSyncthing(); err != nil {
+				if err := downloadSyncthing(up.varManager); err != nil {
 					oktetoLog.Infof("failed to upgrade syncthing: %s", err)
 
 					if !syncthing.IsInstalled() {

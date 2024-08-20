@@ -20,15 +20,16 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
-func downloadSyncthing() error {
+func downloadSyncthing(varManager *vars.Manager) error {
 	maxRetries := 2
 	t := time.NewTicker(1 * time.Second)
 	var err error
 	for i := 0; i < 3; i++ {
 		p := &utils.ProgressBar{}
-		err = syncthing.Install(p)
+		err = syncthing.Install(p, varManager)
 		if err == nil {
 			return nil
 		}
