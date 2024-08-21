@@ -17,6 +17,7 @@
 package deploy
 
 import (
+	"github.com/okteto/okteto/pkg/vars"
 	"log"
 	"os"
 	"os/exec"
@@ -39,7 +40,14 @@ const (
 	timeout = 300 * time.Second
 )
 
+type varManagerLogger struct{}
+
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
+
 func TestMain(m *testing.M) {
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
+
 	if u, ok := os.LookupEnv(model.OktetoUserEnvVar); !ok {
 		log.Println("OKTETO_USER is not defined")
 		os.Exit(1)
