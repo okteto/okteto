@@ -15,7 +15,6 @@ package istio
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"reflect"
 	"testing"
 
@@ -23,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	istioNetworkingV1beta1 "istio.io/api/networking/v1beta1"
 	istioV1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"

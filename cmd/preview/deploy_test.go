@@ -16,13 +16,13 @@ package preview
 import (
 	"context"
 	"errors"
-	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 	"time"
 
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 )
 

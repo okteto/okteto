@@ -14,7 +14,6 @@
 package context
 
 import (
-	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"testing"
@@ -22,6 +21,7 @@ import (
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 func Test_deleteContext(t *testing.T) {
@@ -92,7 +92,8 @@ func Test_deleteContext(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer os.Remove(file)
-			t.Setenv(constants.OktetoHomeEnvVar, filepath.Dir(file))
+			varManager.AddLocalVar(constants.OktetoHomeEnvVar, filepath.Dir(file))
+			vars.GlobalVarManager = varManager
 			okteto.CurrentStore = tt.ctxStore
 			if err := Delete(tt.toDelete); err == nil && tt.expectedErr || err != nil && !tt.expectedErr {
 				t.Fatal(err)

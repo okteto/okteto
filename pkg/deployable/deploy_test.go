@@ -363,9 +363,6 @@ func TestRunCommandsSectionWithErrorInCommands(t *testing.T) {
 		createTempOktetoEnvFile: createFakeOktetoEnvFile,
 	}
 
-	t.Setenv("PATH", filepath.Clean("/some/path"))
-	t.Setenv("TERM", "term-name")
-
 	params := DeployParameters{
 		Variables: []string{
 			"A=value1",

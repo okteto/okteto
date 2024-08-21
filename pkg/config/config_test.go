@@ -14,11 +14,11 @@
 package config
 
 import (
-	"github.com/okteto/okteto/pkg/vars"
 	"path/filepath"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 type varManagerLogger struct{}

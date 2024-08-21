@@ -14,11 +14,11 @@
 package test
 
 import (
-	"github.com/okteto/okteto/pkg/vars"
 	"os"
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
+	"github.com/okteto/okteto/pkg/vars"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 

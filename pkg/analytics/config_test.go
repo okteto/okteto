@@ -14,10 +14,10 @@
 package analytics
 
 import (
-	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 type varManagerLogger struct{}

@@ -167,6 +167,16 @@ func TestRemoteTest(t *testing.T) {
 }
 
 func TestExtraHosts(t *testing.T) {
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager = varManager
+
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {},
+		},
+		CurrentContext: "test",
+	}
+
 	ctx := context.Background()
 	fakeManifest := &model.Manifest{
 		Deploy: &model.DeployInfo{
@@ -197,7 +207,7 @@ func TestExtraHosts(t *testing.T) {
 		oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
 		useInternalNetwork:   true,
 		ioCtrl:               io.NewIOController(),
-		varManager:           vars.NewVarsManager(&varManagerLogger{}),
+		varManager:           varManager,
 	}
 
 	err := rdc.Run(ctx, &Params{
@@ -207,6 +217,16 @@ func TestExtraHosts(t *testing.T) {
 }
 
 func TestRemoteDeployWithSshAgent(t *testing.T) {
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager = varManager
+
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {},
+		},
+		CurrentContext: "test",
+	}
+
 	fs := afero.NewMemMapFs()
 	socket, err := os.CreateTemp("", "okteto-test-ssh-*")
 	require.NoError(t, err)
@@ -221,10 +241,7 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 		assert.Contains(t, o.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knowHostFile.Name()))
 	}
 
-	varManager := vars.NewVarsManager(&varManagerLogger{})
-
 	envvarName := fmt.Sprintf("TEST_SOCKET_%s", varManager.Get("RANDOM"))
-
 	varManager.AddLocalVar(envvarName, socket.Name())
 
 	oktetoClient := &client.FakeOktetoClient{
@@ -255,18 +272,23 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 func TestRemoteDeployWithBadSshAgent(t *testing.T) {
 	fs := afero.NewMemMapFs()
 
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager = varManager
+
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {},
+		},
+		CurrentContext: "test",
+	}
+
 	assertFn := func(o *types.BuildOptions) {
 		assert.NotContains(t, o.SshSessions, types.BuildSshSession{Id: "remote", Target: "bad-socket"})
 		assert.NotContains(t, o.Secrets, fmt.Sprintf("id=known_hosts,src=%s", "inexistent-file"))
 	}
 
-	envvarName := fmt.Sprintf("TEST_SOCKET_%s", os.Getenv("RANDOM"))
-
-	t.Setenv(envvarName, "bad-socket")
-	defer func() {
-		t.Logf("cleaning up %s envvar", envvarName)
-		os.Unsetenv(envvarName)
-	}()
+	envvarName := fmt.Sprintf("TEST_SOCKET_%s", varManager.Get("RANDOM"))
+	varManager.AddLocalVar(envvarName, "bad-socket")
 
 	oktetoClient := &client.FakeOktetoClient{
 		Users: client.NewFakeUsersClient(&types.User{}),

@@ -356,7 +356,7 @@ okteto up my-svc -- echo this is a test
 				return err
 			}
 
-			if _, ok := os.LookupEnv(model.OktetoAutoDeployEnvVar); ok {
+			if _, ok := varManager.Lookup(model.OktetoAutoDeployEnvVar); ok {
 				upOptions.Deploy = true
 			}
 

@@ -21,6 +21,7 @@ import (
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/vars"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -46,7 +47,7 @@ func getPrivateKey() (ssh.Signer, error) {
 func getOktetoSSHTimeout() time.Duration {
 	tOnce.Do(func() {
 		timeout = 10 * time.Second
-		t, ok := os.LookupEnv(model.OktetoSSHTimeoutEnvVar)
+		t, ok := vars.GlobalVarManager.Lookup(model.OktetoSSHTimeoutEnvVar)
 		if !ok {
 			return
 		}

@@ -14,12 +14,12 @@
 package syncthing
 
 import (
-	"github.com/okteto/okteto/pkg/vars"
 	"path/filepath"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )

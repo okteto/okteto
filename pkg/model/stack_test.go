@@ -1185,7 +1185,7 @@ func Test_getStackName(t *testing.T) {
 }
 
 func Test_getStackNameWithinRepository(t *testing.T) {
-	// As getStackName internally does os.Setenv, when all the tests run at the same time,
+	// As getStackName internally sets local vars, when all the tests run at the same time,
 	// it might happen that the env var with the name is set. That env var has priority over
 	// the repository calculation. In order to avoid this, we need to unset the env var before running the test
 	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})

@@ -14,12 +14,12 @@
 package ssh
 
 import (
-	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 type varManagerLogger struct{}

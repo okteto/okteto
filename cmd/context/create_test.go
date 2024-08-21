@@ -441,8 +441,6 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 }
 
 func TestCheckAccessToNamespace(t *testing.T) {
-	t.Parallel()
-
 	ctx := context.Background()
 	user := &types.User{
 		Token: "test",
@@ -527,9 +525,15 @@ func TestCheckAccessToNamespace(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			okteto.CurrentStore = &okteto.ContextStore{
+				Contexts: map[string]*okteto.Context{
+					"test": {},
+				},
+				CurrentContext: "test",
+			}
 
 			varManager := vars.NewVarsManager(&varManagerLogger{})
+			vars.GlobalVarManager = varManager
 
 			fakeCtxCommand := newFakeContextCommand(tt.fakeOktetoClient, user, []runtime.Object{
 				&corev1.Namespace{
@@ -811,7 +815,10 @@ func Test_replaceCredentialsTokenWithDynamicKubetoken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(OktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tt.useStaticTokenEnv))
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			vars.GlobalVarManager = varManager
+
+			varManager.AddLocalVar(OktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tt.useStaticTokenEnv))
 
 			fakeOktetoClientProvider := client.NewFakeOktetoClientProvider(&client.FakeOktetoClient{
 				KubetokenClient: client.NewFakeKubetokenClient(tt.kubetokenMockResponse),

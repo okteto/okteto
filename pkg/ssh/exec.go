@@ -27,6 +27,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/vars"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/term"
@@ -125,7 +126,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 		}
 	}
 
-	sockEnvVar, ok := os.LookupEnv(model.SshAuthSockEnvVar)
+	sockEnvVar, ok := vars.GlobalVarManager.Lookup(model.SshAuthSockEnvVar)
 	if !ok {
 		oktetoLog.Info("SSH_AUTH_SOCK is not set, not forwarding socket")
 	} else {

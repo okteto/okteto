@@ -14,11 +14,11 @@
 package build
 
 import (
-	"github.com/okteto/okteto/pkg/vars"
 	"path/filepath"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )

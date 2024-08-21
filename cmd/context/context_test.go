@@ -16,14 +16,14 @@ package context
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/okteto/okteto/internal/test"
-	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"testing"
 
+	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 func Test_initFromDeprecatedToken(t *testing.T) {
@@ -58,7 +58,7 @@ func Test_initFromDeprecatedToken(t *testing.T) {
 			varManager := vars.NewVarsManager(&varManagerLogger{})
 			vars.GlobalVarManager = varManager
 
-			tokenPath, err := createDeprecatedToken(t, tt.tokenUrl)
+			tokenPath, err := createDeprecatedToken(t, tt.tokenUrl, varManager)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -77,8 +77,8 @@ func Test_initFromDeprecatedToken(t *testing.T) {
 	}
 }
 
-func createDeprecatedToken(t *testing.T, url string) (string, error) {
-	t.Setenv(constants.OktetoFolderEnvVar, t.TempDir())
+func createDeprecatedToken(t *testing.T, url string, varManager *vars.Manager) (string, error) {
+	varManager.AddLocalVar(constants.OktetoFolderEnvVar, t.TempDir())
 	token := &okteto.Token{
 		URL:       url,
 		Buildkit:  "buildkit",

@@ -16,13 +16,13 @@ package okteto
 import (
 	"errors"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	ioCtrl "github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/vars"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -124,7 +124,7 @@ func (*K8sClient) GetIngressClient() (*ingresses.Client, error) {
 func GetKubernetesTimeout() time.Duration {
 	tOnce.Do(func() {
 		timeout = 0 * time.Second
-		t, ok := os.LookupEnv(oktetoKubernetesTimeoutEnvVar)
+		t, ok := vars.GlobalVarManager.Lookup(oktetoKubernetesTimeoutEnvVar)
 		if !ok {
 			return
 		}

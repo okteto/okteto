@@ -18,7 +18,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"net"
 	"net/http"
 	"sync"
@@ -31,6 +30,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoHttp "github.com/okteto/okteto/pkg/http"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 )
 
