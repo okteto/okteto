@@ -56,6 +56,7 @@ func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func TestMain(m *testing.M) {
 	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager.AddLocalVar("HOME", os.Getenv("HOME"))
 	if u, ok := os.LookupEnv(model.OktetoUserEnvVar); !ok {
 		log.Println("OKTETO_USER is not defined")
 		os.Exit(1)
