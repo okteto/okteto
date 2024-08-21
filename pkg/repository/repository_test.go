@@ -24,11 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type varManagerLogger struct{}
-
-func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
-func (varManagerLogger) AddMaskedWord(_ string)            {}
-
 type fakeRepositoryGetter struct {
 	repository []*fakeRepository
 	err        []error
