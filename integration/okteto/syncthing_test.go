@@ -19,17 +19,13 @@ package okteto
 import (
 	"context"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"net/http"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/vars"
+
 	"github.com/okteto/okteto/pkg/syncthing"
 )
-
-type varManagerLogger struct{}
-
-func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
-func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func TestDownloadSyncthing(t *testing.T) {
 	var tests = []struct {
