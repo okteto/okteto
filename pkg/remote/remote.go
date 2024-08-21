@@ -310,16 +310,16 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		fmt.Sprintf("%s=%s", model.OktetoContextEnvVar, okteto.GetContext().Name),
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.GetContext().Namespace),
 		fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, okteto.GetContext().Token),
-		fmt.Sprintf("%s=%s", model.OktetoActionNameEnvVar, os.Getenv(model.OktetoActionNameEnvVar)),
-		fmt.Sprintf("%s=%s", constants.OktetoGitCommitEnvVar, os.Getenv(constants.OktetoGitCommitEnvVar)),
-		fmt.Sprintf("%s=%s", constants.OktetoGitBranchEnvVar, os.Getenv(constants.OktetoGitBranchEnvVar)),
+		fmt.Sprintf("%s=%s", model.OktetoActionNameEnvVar, r.varManager.Get(model.OktetoActionNameEnvVar)),
+		fmt.Sprintf("%s=%s", constants.OktetoGitCommitEnvVar, r.varManager.Get(constants.OktetoGitCommitEnvVar)),
+		fmt.Sprintf("%s=%s", constants.OktetoGitBranchEnvVar, r.varManager.Get(constants.OktetoGitBranchEnvVar)),
 		fmt.Sprintf("%s=%s", constants.OktetoTlsCertBase64EnvVar, base64.StdEncoding.EncodeToString(sc.Certificate)),
 		fmt.Sprintf("%s=%s", constants.OktetoInvalidateCacheEnvVar, cacheKey),
 		fmt.Sprintf("%s=%s", constants.OktetoDeployableEnvVar, base64.StdEncoding.EncodeToString(b)),
-		fmt.Sprintf("%s=%s", model.GithubRepositoryEnvVar, os.Getenv(model.GithubRepositoryEnvVar)),
-		fmt.Sprintf("%s=%s", model.OktetoRegistryURLEnvVar, os.Getenv(model.OktetoRegistryURLEnvVar)),
-		fmt.Sprintf("%s=%s", model.OktetoBuildkitHostURLEnvVar, os.Getenv(model.OktetoBuildkitHostURLEnvVar)),
-		fmt.Sprintf("%s=%s", constants.OktetoIsPreviewEnvVar, os.Getenv(constants.OktetoIsPreviewEnvVar)),
+		fmt.Sprintf("%s=%s", model.GithubRepositoryEnvVar, r.varManager.Get(model.GithubRepositoryEnvVar)),
+		fmt.Sprintf("%s=%s", model.OktetoRegistryURLEnvVar, r.varManager.Get(model.OktetoRegistryURLEnvVar)),
+		fmt.Sprintf("%s=%s", model.OktetoBuildkitHostURLEnvVar, r.varManager.Get(model.OktetoBuildkitHostURLEnvVar)),
+		fmt.Sprintf("%s=%s", constants.OktetoIsPreviewEnvVar, r.varManager.Get(constants.OktetoIsPreviewEnvVar)),
 	)
 
 	if r.useInternalNetwork {
@@ -340,9 +340,9 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 
 	buildOptions.ExtraHosts = addDefinedHosts(buildOptions.ExtraHosts, params.Hosts)
 
-	sshSock := os.Getenv(r.sshAuthSockEnvvar)
+	sshSock := r.varManager.Get(r.sshAuthSockEnvvar)
 	if sshSock == "" {
-		sshSock = os.Getenv("SSH_AUTH_SOCK")
+		sshSock = r.varManager.Get("SSH_AUTH_SOCK")
 	}
 
 	if sshSock != "" {
@@ -394,7 +394,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 			Parse(dockerfileTemplate))
 
 	dockerfileSyntax := dockerfileTemplateProperties{
-		OktetoCLIImage:           getOktetoCLIVersion(config.VersionString),
+		OktetoCLIImage:           getOktetoCLIVersion(config.VersionString, r.varManager),
 		UserRunnerImage:          params.BaseImage,
 		RemoteDeployEnvVar:       constants.OktetoDeployRemote,
 		ContextArgName:           model.OktetoContextEnvVar,
@@ -521,7 +521,7 @@ func createDockerignoreFileWithFilesystem(cwd, tmpDir string, rules []string, us
 }
 
 // getOktetoCLIVersion gets the CLI version to be used in the Dockerfile to extract the CLI binaries
-func getOktetoCLIVersion(versionString string) string {
+func getOktetoCLIVersion(versionString string, varManager *vars.Manager) string {
 	var version string
 	if match, err := regexp.MatchString(`\d+\.\d+\.\d+`, versionString); match {
 		version = fmt.Sprintf(constants.OktetoCLIImageForRemoteTemplate, versionString)
@@ -531,7 +531,7 @@ func getOktetoCLIVersion(versionString string) string {
 		} else {
 			oktetoLog.Infof("invalid version string: %s, using latest", versionString)
 		}
-		remoteOktetoImage := os.Getenv(constants.OktetoDeployRemoteImage)
+		remoteOktetoImage := varManager.Get(constants.OktetoDeployRemoteImage)
 		if remoteOktetoImage != "" {
 			version = remoteOktetoImage
 		} else {

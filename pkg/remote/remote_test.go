@@ -47,6 +47,11 @@ func (f fakeBuilder) Run(_ context.Context, opts *types.BuildOptions, _ *io.Cont
 	return f.err
 }
 
+type varManagerLogger struct{}
+
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
+
 func TestRemoteTest(t *testing.T) {
 	ctx := context.Background()
 	fakeManifest := &model.Manifest{
@@ -149,6 +154,7 @@ func TestRemoteTest(t *testing.T) {
 				temporalCtrl:         tempCreator,
 				oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
 				ioCtrl:               io.NewIOController(),
+				varManager:           vars.NewVarsManager(&varManagerLogger{}),
 			}
 			err := rdc.Run(ctx, tt.config.params)
 			if tt.expected != nil {
@@ -191,6 +197,7 @@ func TestExtraHosts(t *testing.T) {
 		oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
 		useInternalNetwork:   true,
 		ioCtrl:               io.NewIOController(),
+		varManager:           vars.NewVarsManager(&varManagerLogger{}),
 	}
 
 	err := rdc.Run(ctx, &Params{
@@ -214,13 +221,11 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 		assert.Contains(t, o.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knowHostFile.Name()))
 	}
 
-	envvarName := fmt.Sprintf("TEST_SOCKET_%s", os.Getenv("RANDOM"))
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 
-	t.Setenv(envvarName, socket.Name())
-	defer func() {
-		t.Logf("cleaning up %s envvar", envvarName)
-		os.Unsetenv(envvarName)
-	}()
+	envvarName := fmt.Sprintf("TEST_SOCKET_%s", varManager.Get("RANDOM"))
+
+	varManager.AddLocalVar(envvarName, socket.Name())
 
 	oktetoClient := &client.FakeOktetoClient{
 		Users: client.NewFakeUsersClient(&types.User{}),
@@ -233,6 +238,7 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 		oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
 		ioCtrl:               io.NewIOController(),
+		varManager:           varManager,
 	}
 
 	err = rdc.Run(context.Background(), &Params{
@@ -273,6 +279,7 @@ func TestRemoteDeployWithBadSshAgent(t *testing.T) {
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 		oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
 		ioCtrl:               io.NewIOController(),
+		varManager:           vars.NewVarsManager(&varManagerLogger{}),
 	}
 
 	err := rdc.Run(context.Background(), &Params{
@@ -504,6 +511,7 @@ COPY --from=runner /okteto/artifacts/ /
 			rdc := Runner{
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,
+				varManager:           vars.NewVarsManager(&varManagerLogger{}),
 			}
 			dockerfileName, err := rdc.createDockerfile("/test", tt.config.params)
 			assert.ErrorIs(t, err, tt.expected.err)
@@ -530,6 +538,7 @@ func TestDockerfileWithCache(t *testing.T) {
 	rdc := Runner{
 		fs:                   fs,
 		workingDirectoryCtrl: wdCtrl,
+		varManager:           vars.NewVarsManager(&varManagerLogger{}),
 	}
 	caches := []string{"/my", "/cache", "/list"}
 	dockerfileName, err := rdc.createDockerfile("/test", &Params{
@@ -579,11 +588,12 @@ func Test_getOktetoCLIVersion(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			varManager := vars.NewVarsManager(&varManagerLogger{})
 			if tt.cliImageEnv != "" {
-				t.Setenv(constants.OktetoDeployRemoteImage, tt.cliImageEnv)
+				varManager.AddLocalVar(constants.OktetoDeployRemoteImage, tt.cliImageEnv)
 			}
 
-			version := getOktetoCLIVersion(tt.versionString)
+			version := getOktetoCLIVersion(tt.versionString, varManager)
 			require.Equal(t, version, tt.expected)
 		})
 	}
