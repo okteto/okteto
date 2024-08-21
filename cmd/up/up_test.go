@@ -38,11 +38,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-type varManagerLogger struct{}
-
-func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
-func (varManagerLogger) AddMaskedWord(_ string)            {}
-
 func Test_waitUntilExitOrInterrupt(t *testing.T) {
 	up := upContext{
 		Options:           &Options{},

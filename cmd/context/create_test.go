@@ -41,14 +41,14 @@ type varManagerLogger struct{}
 func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
 func (varManagerLogger) AddMaskedWord(_ string)            {}
 
-func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User, fakeObjects []runtime.Object) *Command {
+func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User, fakeObjects []runtime.Object, varManager *vars.Manager) *Command {
 	return &Command{
 		K8sClientProvider:    test.NewFakeK8sProvider(fakeObjects...),
 		LoginController:      test.NewFakeLoginController(user, nil),
 		OktetoClientProvider: client.NewFakeOktetoClientProvider(c),
 		OktetoContextWriter:  test.NewFakeOktetoContextWriter(),
 		kubetokenController:  newStaticKubetokenController(),
-		varManager:           vars.NewVarsManager(&varManagerLogger{}),
+		varManager:           varManager,
 	}
 }
 
@@ -356,13 +356,16 @@ func Test_createContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			file, err := test.CreateKubeconfig(tt.kubeconfigCtx)
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			vars.GlobalVarManager = varManager
+
+			file, err := test.CreateKubeconfig(tt.kubeconfigCtx, varManager)
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer os.Remove(file)
 
-			ctxController := newFakeContextCommand(tt.fakeOktetoClient, user, tt.fakeObjects)
+			ctxController := newFakeContextCommand(tt.fakeOktetoClient, user, tt.fakeObjects, varManager)
 			okteto.CurrentStore = tt.ctxStore
 
 			if err := ctxController.UseContext(ctx, tt.ctxOptions); err != nil && !tt.expectedErr {
@@ -378,6 +381,8 @@ func Test_createContext(t *testing.T) {
 func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 	ctx := context.Background()
 
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+
 	user := &types.User{
 		Token: "test",
 	}
@@ -388,7 +393,7 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 		KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 	}
 
-	ctxController := newFakeContextCommand(fakeOktetoClient, user, nil)
+	ctxController := newFakeContextCommand(fakeOktetoClient, user, nil, varManager)
 
 	var tests = []struct {
 		ctxOptions          *Options
@@ -524,20 +529,22 @@ func TestCheckAccessToNamespace(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+
 			fakeCtxCommand := newFakeContextCommand(tt.fakeOktetoClient, user, []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: v1.ObjectMeta{
 						Name: "test",
 					},
 				},
-			})
+			}, varManager)
 
 			currentCtxCommand := *fakeCtxCommand
 			if tt.ctxOptions.IsOkteto {
 				currentCtxCommand.K8sClientProvider = nil
 			} else {
 				if !tt.expectedAccess {
-					currentCtxCommand = *newFakeContextCommand(tt.fakeOktetoClient, user, []runtime.Object{})
+					currentCtxCommand = *newFakeContextCommand(tt.fakeOktetoClient, user, []runtime.Object{}, varManager)
 				}
 				currentCtxCommand.OktetoClientProvider = nil
 			}

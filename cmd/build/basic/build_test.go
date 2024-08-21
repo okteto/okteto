@@ -66,6 +66,9 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	}
 	buildRunner.On("Run", mock.Anything, expectedOptions, mock.Anything, mock.Anything).Return(assert.AnError)
 
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager = varManager
+
 	err = bc.Build(ctx, options)
 
 	// error from the build

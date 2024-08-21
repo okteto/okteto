@@ -189,7 +189,7 @@ okteto up my-svc -- echo this is a test
 
 			upMeta.OktetoContextConfig(time.Since(startOkContextConfig))
 			if okteto.IsOkteto() {
-				create, err := utils.ShouldCreateNamespace(ctx, okteto.GetContext().Namespace)
+				create, err := utils.ShouldCreateNamespace(ctx, okteto.GetContext().Namespace, varManager)
 				if err != nil {
 					return err
 				}
@@ -340,7 +340,7 @@ okteto up my-svc -- echo this is a test
 
 			oktetoLog.ConfigureFileLogger(config.GetAppHome(okteto.GetContext().Namespace, dev.Name), config.VersionString)
 
-			if err := checkStignoreConfiguration(dev); err != nil {
+			if err := checkStignoreConfiguration(dev, varManager); err != nil {
 				oktetoLog.Infof("failed to check '.stignore' configuration: %s", err.Error())
 			}
 
@@ -396,7 +396,7 @@ func loadManifestOverrides(dev *model.Dev, upOptions *Options, varManager *vars.
 		dev.RemotePort = upOptions.Remote
 	}
 
-	if dev.RemoteModeEnabled() {
+	if dev.RemoteModeEnabled(varManager) {
 		if err := sshKeys(); err != nil {
 			return err
 		}
@@ -487,7 +487,7 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 		K8sClientProvider: k8sProvider,
 		Builder:           up.builder,
 		Fs:                up.Fs,
-		CfgMapHandler:     deploy.NewConfigmapHandler(k8sProvider, k8slogger),
+		CfgMapHandler:     deploy.NewConfigmapHandler(k8sProvider, k8slogger, up.varManager),
 		PipelineCMD:       pc,
 		DeployWaiter:      deploy.NewDeployWaiter(k8sProvider, k8slogger),
 		EndpointGetter:    deploy.NewEndpointGetter,

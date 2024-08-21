@@ -193,7 +193,7 @@ func TestDestroyWithErrorGettingManifestButDestroySuccess(t *testing.T) {
 		getManifest: func(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 			return nil, assert.AnError
 		},
-		ConfigMapHandler: NewConfigmapHandler(fakeClient),
+		ConfigMapHandler: NewConfigmapHandler(fakeClient, vars.NewVarsManager(&varManagerLogger{})),
 		nsDestroyer:      destroyer,
 		secrets:          &fakeSecretHandler{},
 		buildCtrl: buildCtrl{
@@ -225,7 +225,7 @@ func TestDestroyWithErrorDestroyingDependencies(t *testing.T) {
 		getManifest: func(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 			return fakeManifestWithDependencies, nil
 		},
-		ConfigMapHandler: NewConfigmapHandler(fakeClient),
+		ConfigMapHandler: NewConfigmapHandler(fakeClient, vars.NewVarsManager(&varManagerLogger{})),
 		nsDestroyer:      destroyer,
 		secrets:          &fakeSecretHandler{},
 		getPipelineDestroyer: func() (pipelineDestroyer, error) {
@@ -263,7 +263,7 @@ func TestDestroyWithErrorDestroyingDivert(t *testing.T) {
 		getManifest: func(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 			return fakeManifestWithDivert, nil
 		},
-		ConfigMapHandler:  NewConfigmapHandler(fakeClient),
+		ConfigMapHandler:  NewConfigmapHandler(fakeClient, vars.NewVarsManager(&varManagerLogger{})),
 		nsDestroyer:       destroyer,
 		secrets:           &fakeSecretHandler{},
 		k8sClientProvider: k8sClientProvider,
@@ -295,7 +295,7 @@ func TestDestroyWithErrorOnCommands(t *testing.T) {
 		getManifest: func(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 			return fakeManifest, nil
 		},
-		ConfigMapHandler:  NewConfigmapHandler(fakeClient),
+		ConfigMapHandler:  NewConfigmapHandler(fakeClient, vars.NewVarsManager(&varManagerLogger{})),
 		nsDestroyer:       destroyer,
 		secrets:           &fakeSecretHandler{},
 		k8sClientProvider: k8sClientProvider,
@@ -338,7 +338,7 @@ func TestDestroyWithErrorOnCommandsForcingDestroy(t *testing.T) {
 		getManifest: func(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 			return fakeManifest, nil
 		},
-		ConfigMapHandler:  NewConfigmapHandler(fakeClient),
+		ConfigMapHandler:  NewConfigmapHandler(fakeClient, vars.NewVarsManager(&varManagerLogger{})),
 		nsDestroyer:       destroyer,
 		secrets:           &fakeSecretHandler{},
 		k8sClientProvider: k8sClientProvider,
@@ -383,7 +383,7 @@ func TestDestroyWithErrorDestroyingK8sResources(t *testing.T) {
 		getManifest: func(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, error) {
 			return fakeManifest, nil
 		},
-		ConfigMapHandler:  NewConfigmapHandler(fakeClient),
+		ConfigMapHandler:  NewConfigmapHandler(fakeClient, vars.NewVarsManager(&varManagerLogger{})),
 		nsDestroyer:       destroyer,
 		secrets:           &fakeSecretHandler{},
 		k8sClientProvider: k8sClientProvider,
@@ -617,9 +617,10 @@ func TestShouldRunInRemoteDestroy(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
-			t.Setenv(constants.OktetoDeployRemote, tt.remoteDestroy)
-			t.Setenv(constants.OktetoForceRemote, tt.remoteForce)
-			result := shouldRunInRemote(tt.opts)
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			varManager.AddLocalVar(constants.OktetoDeployRemote, tt.remoteDestroy)
+			varManager.AddLocalVar(constants.OktetoForceRemote, tt.remoteForce)
+			result := shouldRunInRemote(tt.opts, varManager)
 			assert.Equal(t, result, tt.expected)
 		})
 	}

@@ -14,6 +14,7 @@
 package context
 
 import (
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"testing"
@@ -85,7 +86,8 @@ func Test_deleteContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			file, err := test.CreateKubeconfig(test.KubeconfigFields{})
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			file, err := test.CreateKubeconfig(test.KubeconfigFields{}, varManager)
 			if err != nil {
 				t.Fatal(err)
 			}

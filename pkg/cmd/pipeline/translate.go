@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"os"
 	"strings"
 	"time"
 
@@ -35,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	apiv1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -119,7 +119,7 @@ func GetConfigmapVariablesEncoded(ctx context.Context, name, namespace string, c
 
 // TranslateConfigMapAndDeploy translates the app into a configMap.
 // Name param is the pipeline sanitized name
-func TranslateConfigMapAndDeploy(ctx context.Context, data *CfgData, c kubernetes.Interface) (*apiv1.ConfigMap, error) {
+func TranslateConfigMapAndDeploy(ctx context.Context, data *CfgData, c kubernetes.Interface, varManager *vars.Manager) (*apiv1.ConfigMap, error) {
 	cmap, err := configmaps.Get(ctx, TranslatePipelineName(data.Name), data.Namespace, c)
 	if err != nil {
 		if !oktetoErrors.IsNotFound(err) {
@@ -135,7 +135,7 @@ func TranslateConfigMapAndDeploy(ctx context.Context, data *CfgData, c kubernete
 		}
 	}
 
-	if err := updateCmap(cmap, data); err != nil {
+	if err := updateCmap(cmap, data, varManager); err != nil {
 		return nil, err
 	}
 	if err := configmaps.Deploy(ctx, cmap, cmap.Namespace, c); err != nil {
@@ -148,12 +148,12 @@ func TranslateConfigMapAndDeploy(ctx context.Context, data *CfgData, c kubernete
 }
 
 // UpdateConfigMap updates the configmaps fields
-func UpdateConfigMap(ctx context.Context, cmap *apiv1.ConfigMap, data *CfgData, c kubernetes.Interface) error {
+func UpdateConfigMap(ctx context.Context, cmap *apiv1.ConfigMap, data *CfgData, c kubernetes.Interface, varManager *vars.Manager) error {
 	cmap, err := configmaps.Get(ctx, cmap.Name, cmap.Namespace, c)
 	if err != nil {
 		return err
 	}
-	if err := updateCmap(cmap, data); err != nil {
+	if err := updateCmap(cmap, data, varManager); err != nil {
 		return err
 	}
 	return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
@@ -319,13 +319,13 @@ func translateConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
 	return cmap
 }
 
-func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
+func updateCmap(cmap *apiv1.ConfigMap, data *CfgData, varManager *vars.Manager) error {
 	if cmap.Annotations == nil {
 		cmap.Annotations = map[string]string{}
 	}
 	cmap.Annotations[constants.LastUpdatedAnnotation] = time.Now().UTC().Format(constants.TimeFormat)
 
-	actionName := os.Getenv(model.OktetoActionNameEnvVar)
+	actionName := varManager.Get(model.OktetoActionNameEnvVar)
 	if actionName == "" {
 		actionName = actionDefaultName
 	}
@@ -370,8 +370,8 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 }
 
 // AddDevAnnotations add deploy labels to the deployments/sfs
-func AddDevAnnotations(ctx context.Context, manifest *model.Manifest, c kubernetes.Interface) {
-	repo := os.Getenv(model.GithubRepositoryEnvVar)
+func AddDevAnnotations(ctx context.Context, manifest *model.Manifest, c kubernetes.Interface, varManager *vars.Manager) {
+	repo := varManager.Get(model.GithubRepositoryEnvVar)
 	for devName, dev := range manifest.Dev {
 		if dev.Autocreate {
 			continue

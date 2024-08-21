@@ -16,9 +16,9 @@ package io
 import (
 	"fmt"
 	"io"
+	"os"
+	"strconv"
 	"strings"
-
-	"github.com/okteto/okteto/pkg/env"
 )
 
 // OutputController manages the output for the CLI
@@ -161,7 +161,7 @@ func (oc *OutputController) Spinner(msg string) OktetoSpinner {
 		oc.spinner.Stop()
 	}
 
-	disableSpinner := env.LoadBoolean(OktetoDisableSpinnerEnvVar)
+	disableSpinner := oc.loadBool(OktetoDisableSpinnerEnvVar)
 
 	_, isTTY := oc.formatter.(*ttyFormatter)
 	if isTTY && !disableSpinner {
@@ -170,6 +170,18 @@ func (oc *OutputController) Spinner(msg string) OktetoSpinner {
 		oc.spinner = newNoSpinner(msg, oc)
 	}
 	return oc.spinner
+}
+
+func (oc *OutputController) loadBool(env string) bool {
+	value := os.Getenv(env)
+	if value == "" {
+		value = "false"
+	}
+	boolValue, err := strconv.ParseBool(value)
+	if err != nil {
+		oc.Warning("'%s' is not a valid value for environment variable %s", value, env)
+	}
+	return boolValue
 }
 
 // Write logs into the buffer but does not print anything

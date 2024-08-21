@@ -55,7 +55,7 @@ E=word -notword`
 
 func Test_ReadStack(t *testing.T) {
 	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
-	vars.GlobalVarManager.AddDotEnvVar("PWD", "hello")
+	vars.GlobalVarManager.AddLocalVar("PWD", "hello")
 
 	manifest := []byte(`name: voting-app
 services:
@@ -1515,13 +1515,19 @@ func Test_isPathAComposeFile(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			t.Setenv(stackSupportEnabledEnvVar, test.envVarValue)
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			vars.GlobalVarManager = varManager
+
+			varManager.AddLocalVar(stackSupportEnabledEnvVar, test.envVarValue)
 			result := isFileCompose(test.path)
 			assert.Equal(t, test.expected, result)
 		})
 	}
 }
 func Test_warnAboutComposeFileName(t *testing.T) {
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager = varManager
+
 	oktetoLog.Init(1)
 	writer := &bytes.Buffer{}
 	oktetoLog.SetOutput(writer)
@@ -1531,7 +1537,7 @@ func Test_warnAboutComposeFileName(t *testing.T) {
 	warnAboutComposeFileName("stack.yml")
 	assert.Equal(t, writer.String(), "")
 	// Check that the warning is printed if the env var is set to true
-	t.Setenv(stackSupportEnabledEnvVar, "true")
+	varManager.AddLocalVar(stackSupportEnabledEnvVar, "true")
 	warnAboutComposeFileName("stack.yml")
 	assert.Equal(t, writer.String(), " !  Okteto Stack syntax is deprecated.\n    Please consider migrating to Docker Compose syntax: https://community.okteto.com/t/important-update-migrating-from-okteto-stacks-to-docker-compose/1262\n")
 	// Check that the warning is only printed once even if the function is called multiple times

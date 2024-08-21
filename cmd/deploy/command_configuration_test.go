@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,7 +62,7 @@ devs:
 	dc := &Command{
 		GetManifest:       getFakeManifest,
 		K8sClientProvider: fakeK8sProvider,
-		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sProvider, nil),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sProvider, nil, vars.NewVarsManager(&varManagerLogger{})),
 	}
 
 	ctx := context.Background()

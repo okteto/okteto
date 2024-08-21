@@ -47,11 +47,12 @@ func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
 func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func Test_multipleStack(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager = varManager
 
 	dir := t.TempDir()
 	log.Printf("created tempdir: %s", dir)
-	t.Setenv("OKTETO_SUPPORT_STACKS_ENABLED", "true")
+	varManager.AddLocalVar("OKTETO_SUPPORT_STACKS_ENABLED", "true")
 	path, err := createFile(dir, "docker-compose.yml", firstStack)
 	if err != nil {
 		t.Fatal(err)
@@ -92,7 +93,7 @@ func Test_multipleStack(t *testing.T) {
 		t.Fatalf("Expected %v but got %v", svcResult.Image, svc.Image)
 	}
 
-	vars.GlobalVarManager.AddBuiltInVar("OKTETO_BUILD_APP_IMAGE", "test")
+	varManager.AddLocalVar("OKTETO_BUILD_APP_IMAGE", "test")
 
 	svcResult.Image = "test"
 
@@ -115,7 +116,9 @@ func Test_multipleStack(t *testing.T) {
 }
 
 func Test_overrideFileStack(t *testing.T) {
-	t.Setenv("OKTETO_BUILD_APP_IMAGE", "test")
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager = varManager
+	varManager.AddLocalVar("OKTETO_BUILD_APP_IMAGE", "test")
 
 	dir := t.TempDir()
 	log.Printf("created tempdir: %s", dir)

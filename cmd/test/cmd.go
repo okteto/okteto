@@ -134,7 +134,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		return analytics.TestMetadata{}, oktetoErrors.ErrContextIsNotOktetoCluster
 	}
 
-	create, err := utils.ShouldCreateNamespace(ctx, okteto.GetContext().Namespace)
+	create, err := utils.ShouldCreateNamespace(ctx, okteto.GetContext().Namespace, varManager)
 	if err != nil {
 		return analytics.TestMetadata{}, err
 	}
@@ -214,7 +214,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		return analytics.TestMetadata{}, fmt.Errorf("could not create pipeline command: %w", err)
 	}
 
-	configmapHandler := deployCMD.NewConfigmapHandler(k8sClientProvider, k8sLogger)
+	configmapHandler := deployCMD.NewConfigmapHandler(k8sClientProvider, k8sLogger, varManager)
 
 	builder := buildv2.NewBuilderFromScratch(ioCtrl, varManager, []buildv2.OnBuildFinish{
 		tracker.TrackImageBuild,

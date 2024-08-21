@@ -169,7 +169,7 @@ func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegi
 		Config:         cfg,
 		ioCtrl:         io.NewIOController(),
 		varManager:     varManager,
-		smartBuildCtrl: smartbuild.NewSmartBuildCtrl(fakeConfigRepo{}, registry, afero.NewMemMapFs(), io.NewIOController()),
+		smartBuildCtrl: smartbuild.NewSmartBuildCtrl(fakeConfigRepo{}, registry, afero.NewMemMapFs(), io.NewIOController(), varManager),
 		oktetoContext: &okteto.ContextStateless{
 			Store: &okteto.ContextStore{
 				Contexts: map[string]*okteto.Context{
@@ -266,6 +266,7 @@ func TestTwoStepsBuild(t *testing.T) {
 		isOkteto: true,
 	}
 	varManager := vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager = varManager
 	bc := NewFakeBuilder(builder, registry, fakeConfig, varManager)
 	manifest := &model.Manifest{
 		Name: "test",

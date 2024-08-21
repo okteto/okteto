@@ -16,6 +16,7 @@ package build
 import (
 	"context"
 	"errors"
+	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
 	"github.com/docker/cli/cli/config/configfile"
@@ -316,6 +317,8 @@ func TestCredentials(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
+
 			ap := &authProvider{
 				config: &configfile.ConfigFile{
 					AuthConfigs: map[string]types.AuthConfig{
@@ -334,7 +337,7 @@ func TestCredentials(t *testing.T) {
 				authContext: &fakeContext{},
 			}
 			if tc.envVarSet {
-				t.Setenv(oktetoLocalRegistryStoreEnabledEnvVarKey, tc.envVarValue)
+				vars.GlobalVarManager.AddLocalVar(oktetoLocalRegistryStoreEnabledEnvVarKey, tc.envVarValue)
 			}
 
 			if tc.localCredentials {

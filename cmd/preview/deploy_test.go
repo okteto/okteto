@@ -16,6 +16,7 @@ package preview
 import (
 	"context"
 	"errors"
+	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 	"time"
 
@@ -186,6 +187,9 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			vars.GlobalVarManager = varManager
 
 			okteto.CurrentStore = &okteto.ContextStore{
 				CurrentContext: "test",

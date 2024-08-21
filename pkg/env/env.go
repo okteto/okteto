@@ -14,12 +14,9 @@
 package env
 
 import (
-	"os"
 	"sort"
-	"strconv"
 	"strings"
 
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/vars"
 )
 
@@ -65,32 +62,4 @@ func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 		result[key] = value
 	}
 	return result, nil
-}
-
-func LoadBoolean(k string) bool {
-	v := os.Getenv(k)
-	if v == "" {
-		v = "false"
-	}
-
-	h, err := strconv.ParseBool(v)
-	if err != nil {
-		oktetoLog.Yellow("'%s' is not a valid value for environment variable %s", v, k)
-	}
-
-	return h
-}
-
-func LoadBooleanOrDefault(k string, d bool) bool {
-	v := os.Getenv(k)
-	if v == "" {
-		return d
-	}
-
-	h, err := strconv.ParseBool(v)
-	if err != nil {
-		oktetoLog.Yellow("'%s' is not a valid value for environment variable %s", v, k)
-	}
-
-	return h
 }

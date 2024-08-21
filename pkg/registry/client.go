@@ -24,10 +24,10 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoHttp "github.com/okteto/okteto/pkg/http"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 const (
@@ -209,7 +209,7 @@ func (c client) getAuthentication(ref name.Reference) remote.Option {
 		authn.DefaultKeychain,
 		authn.NewKeychainFromHelper(inlineHelper(c.config.GetExternalRegistryCredentials)),
 	)
-	if !env.LoadBooleanOrDefault(oktetoLocalRegistryStoreEnabledEnvVarKey, false) {
+	if !vars.GlobalVarManager.LoadBooleanOrDefault(oktetoLocalRegistryStoreEnabledEnvVarKey, false) {
 		kc = authn.NewMultiKeychain(
 			authn.NewKeychainFromHelper(inlineHelper(c.config.GetExternalRegistryCredentials)),
 			authn.DefaultKeychain,

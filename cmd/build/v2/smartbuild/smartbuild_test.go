@@ -107,9 +107,10 @@ func TestNewSmartBuildCtrl(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(OktetoEnableSmartBuildEnvVar, tt.input.isEnabledValue)
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			varManager.AddLocalVar(OktetoEnableSmartBuildEnvVar, tt.input.isEnabledValue)
 
-			ctrl := NewSmartBuildCtrl(&fakeConfigRepo{}, &fakeRegistryController{}, afero.NewMemMapFs(), io.NewIOController())
+			ctrl := NewSmartBuildCtrl(&fakeConfigRepo{}, &fakeRegistryController{}, afero.NewMemMapFs(), io.NewIOController(), varManager)
 
 			assert.Equal(t, tt.output.isEnabled, ctrl.IsEnabled())
 		})

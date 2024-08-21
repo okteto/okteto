@@ -23,7 +23,6 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -558,7 +557,7 @@ func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) err
 
 // TrackLatestBranchOnDevContainer tracks the latest branch on the dev container
 func TrackLatestBranchOnDevContainer(ctx context.Context, namespace string, manifest *model.Manifest, manifestPathFlag string, clientProvider okteto.K8sClientProvider, varManager *vars.Manager) {
-	if !env.LoadBoolean(enableDevBranchTrackingEnvVar) {
+	if !varManager.LoadBoolean(enableDevBranchTrackingEnvVar) {
 		oktetoLog.Infof("branch tracking is disabled")
 		return
 	}

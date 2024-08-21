@@ -104,7 +104,7 @@ It is important that this command does the minimum and must not do calculations 
 			}
 
 			runner := &deployable.DestroyRunner{
-				Executor: executor.NewExecutor(oktetoLog.GetOutputFormat(), false, ""),
+				Executor: executor.NewExecutor(oktetoLog.GetOutputFormat(), false, "", varManager),
 			}
 			if err != nil {
 				return fmt.Errorf("could not initialize the command properly: %w", err)

@@ -24,6 +24,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v2"
 )
@@ -82,7 +83,7 @@ func GetBinaryFullPath() string {
 
 // GetOktetoHomeWithFilesystem returns the path of the okteto folder using the provided file system
 func GetOktetoHomeWithFilesystem(fs afero.Fs) string {
-	if v, ok := os.LookupEnv(constants.OktetoFolderEnvVar); ok {
+	if v, ok := vars.GlobalVarManager.Lookup(constants.OktetoFolderEnvVar); ok {
 		if !filesystem.FileExistsWithFilesystem(v, fs) {
 			oktetoLog.Fatalf("OKTETO_FOLDER doesn't exist: %s", v)
 		}
@@ -196,7 +197,7 @@ func GetState(devName, devNamespace string) (UpState, error) {
 
 // GetUserHomeDirWithFilesystem returns the OS home dir using the provided file system
 func GetUserHomeDirWithFilesystem(fs afero.Fs) string {
-	if v, ok := os.LookupEnv(constants.OktetoHomeEnvVar); ok {
+	if v, ok := vars.GlobalVarManager.Lookup(constants.OktetoHomeEnvVar); ok {
 		if !filesystem.FileExistsWithFilesystem(v, fs) {
 			oktetoLog.Fatalf("OKTETO_HOME points to a non-existing directory: %s", v)
 		}
@@ -213,7 +214,7 @@ func GetUserHomeDirWithFilesystem(fs afero.Fs) string {
 		return home
 	}
 
-	return os.Getenv(HomeEnvVar)
+	return vars.GlobalVarManager.Get(HomeEnvVar)
 
 }
 
@@ -225,16 +226,16 @@ func GetUserHomeDir() string {
 }
 
 func homedirWindows() (string, error) {
-	if home := os.Getenv(HomeEnvVar); home != "" {
+	if home := vars.GlobalVarManager.Get(HomeEnvVar); home != "" {
 		return home, nil
 	}
 
-	if home := os.Getenv(UserProfileEnvVar); home != "" {
+	if home := vars.GlobalVarManager.Get(UserProfileEnvVar); home != "" {
 		return home, nil
 	}
 
-	drive := os.Getenv(HomeDriveEnvVar)
-	path := os.Getenv(HomePathEnvVar)
+	drive := vars.GlobalVarManager.Get(HomeDriveEnvVar)
+	path := vars.GlobalVarManager.Get(HomePathEnvVar)
 	home := drive + path
 	if drive == "" || path == "" {
 		return "", fmt.Errorf("HOME, HOMEDRIVE, HOMEPATH, or USERPROFILE are empty. Use $OKTETO_HOME to set your home directory")
@@ -247,7 +248,7 @@ func homedirWindows() (string, error) {
 func GetKubeconfigPath() []string {
 	home := GetUserHomeDir()
 	kubeconfig := []string{filepath.Join(home, ".kube", "config")}
-	kubeconfigEnv := os.Getenv(constants.KubeConfigEnvVar)
+	kubeconfigEnv := vars.GlobalVarManager.Get(constants.KubeConfigEnvVar)
 	if len(kubeconfigEnv) > 0 {
 		kubeconfig = splitKubeConfigEnv(kubeconfigEnv)
 	}
@@ -289,18 +290,18 @@ func GetCertificatePath() string {
 // GetDeployOrigin gets the pipeline deploy origin. This is the initiator of the
 // deploy action: web, cli, github-action, etc
 func GetDeployOrigin() (src string) {
-	src = os.Getenv(OktetoOriginEnvVar)
+	src = vars.GlobalVarManager.Get(OktetoOriginEnvVar)
 	if src == "" {
 		src = "cli"
 	}
 	// deploys within another okteto deploy take precedence as a deploy origin.
 	// This is running okteto pipeline deploy as a step of another okteto deploy
-	if os.Getenv(constants.OktetoWithinDeployCommandContextEnvVar) == "true" {
+	if vars.GlobalVarManager.Get(constants.OktetoWithinDeployCommandContextEnvVar) == "true" {
 		src = "okteto-deploy"
 	}
 	return
 }
 
 func RunningInInstaller() bool {
-	return os.Getenv(OktetoInInstaller) == "true"
+	return vars.GlobalVarManager.Get(OktetoInInstaller) == "true"
 }

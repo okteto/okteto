@@ -21,6 +21,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -39,17 +40,19 @@ type ConfigMapHandler interface {
 type defaultConfigMapHandler struct {
 	k8sClientProvider okteto.K8sClientProviderWithLogger
 	k8slogger         *io.K8sLogger
+	varManager        *vars.Manager
 }
 
-func newDefaultConfigMapHandler(provider okteto.K8sClientProviderWithLogger, k8slogger *io.K8sLogger) *defaultConfigMapHandler {
+func newDefaultConfigMapHandler(provider okteto.K8sClientProviderWithLogger, k8slogger *io.K8sLogger, varManager *vars.Manager) *defaultConfigMapHandler {
 	return &defaultConfigMapHandler{
 		k8sClientProvider: provider,
 		k8slogger:         k8slogger,
+		varManager:        varManager,
 	}
 }
 
-func NewConfigmapHandler(provider okteto.K8sClientProviderWithLogger, k8slogger *io.K8sLogger) ConfigMapHandler {
-	return newDefaultConfigMapHandler(provider, k8slogger)
+func NewConfigmapHandler(provider okteto.K8sClientProviderWithLogger, k8slogger *io.K8sLogger, varManager *vars.Manager) ConfigMapHandler {
+	return newDefaultConfigMapHandler(provider, k8slogger, varManager)
 }
 
 func (ch *defaultConfigMapHandler) TranslateConfigMapAndDeploy(ctx context.Context, data *pipeline.CfgData) (*apiv1.ConfigMap, error) {
@@ -57,7 +60,7 @@ func (ch *defaultConfigMapHandler) TranslateConfigMapAndDeploy(ctx context.Conte
 	if err != nil {
 		return nil, err
 	}
-	return pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
+	return pipeline.TranslateConfigMapAndDeploy(ctx, data, c, ch.varManager)
 }
 
 func (ch *defaultConfigMapHandler) GetConfigmapVariablesEncoded(ctx context.Context, name, namespace string) (string, error) {
@@ -77,7 +80,7 @@ func (ch *defaultConfigMapHandler) UpdateConfigMap(ctx context.Context, cfg *api
 		oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, errMain.Error())
 		data.Status = pipeline.ErrorStatus
 	}
-	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
+	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c, ch.varManager); err != nil {
 		return err
 	}
 	return errMain

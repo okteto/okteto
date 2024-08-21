@@ -19,10 +19,10 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -66,24 +66,24 @@ func HasAccessToOktetoClusterNamespace(ctx context.Context, namespace string, ok
 
 // ShouldCreateNamespace checks if the user has access to the namespace.
 // If not, ask the user if he wants to create it
-func ShouldCreateNamespace(ctx context.Context, ns string) (bool, error) {
+func ShouldCreateNamespace(ctx context.Context, ns string, varManager *vars.Manager) (bool, error) {
 	c, err := okteto.NewOktetoClient()
 	if err != nil {
 		return false, err
 	}
 
-	return ShouldCreateNamespaceStateless(ctx, ns, c)
+	return ShouldCreateNamespaceStateless(ctx, ns, c, varManager)
 }
 
 // ShouldCreateNamespaceStateless checks if the user has access to the namespace.
 // If not, ask the user if he wants to create it
-func ShouldCreateNamespaceStateless(ctx context.Context, ns string, c *okteto.Client) (bool, error) {
+func ShouldCreateNamespaceStateless(ctx context.Context, ns string, c *okteto.Client, varManager *vars.Manager) (bool, error) {
 	hasAccess, err := HasAccessToOktetoClusterNamespace(ctx, ns, c)
 	if err != nil {
 		return false, err
 	}
 	if !hasAccess {
-		if env.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
+		if varManager.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
 			return false, fmt.Errorf("cannot deploy on a namespace that doesn't exist. Please create %s and try again", ns)
 		}
 		create, err := AskYesNo(fmt.Sprintf("The namespace %s doesn't exist. Do you want to create it?", ns), YesNoDefault_Yes)

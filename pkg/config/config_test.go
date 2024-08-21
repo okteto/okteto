@@ -14,25 +14,32 @@
 package config
 
 import (
-	"os"
+	"github.com/okteto/okteto/pkg/vars"
 	"path/filepath"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
 )
 
+type varManagerLogger struct{}
+
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
+
 func TestGetUserHomeDir(t *testing.T) {
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager = varManager
+
+	dir := t.TempDir()
+
+	varManager.AddLocalVar("HOME", dir)
+
 	home := GetUserHomeDir()
 	if home == "" {
 		t.Fatal("got an empty home value")
 	}
 
-	dir := t.TempDir()
-	defer func() {
-		os.Unsetenv(constants.OktetoHomeEnvVar)
-	}()
-
-	t.Setenv(constants.OktetoHomeEnvVar, dir)
+	varManager.AddLocalVar(constants.OktetoHomeEnvVar, dir)
 	home = GetUserHomeDir()
 	if home != dir {
 		t.Fatalf("OKTETO_HOME override failed, got %s instead of %s", home, dir)
@@ -77,25 +84,11 @@ func Test_homedirWindows(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			home := os.Getenv(HomeEnvVar)
-			up := os.Getenv(UserProfileEnvVar)
-			hp := os.Getenv(HomePathEnvVar)
-			hd := os.Getenv(HomeDriveEnvVar)
-
-			os.Unsetenv(HomeEnvVar)
-			os.Unsetenv(UserProfileEnvVar)
-			os.Unsetenv(HomePathEnvVar)
-			os.Unsetenv(HomeDriveEnvVar)
-
-			defer func() {
-				t.Setenv(HomeEnvVar, home)
-				t.Setenv(UserProfileEnvVar, up)
-				t.Setenv(HomePathEnvVar, hp)
-				t.Setenv(HomeDriveEnvVar, hd)
-			}()
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			vars.GlobalVarManager = varManager
 
 			for k, v := range tt.env {
-				t.Setenv(k, v)
+				varManager.AddLocalVar(k, v)
 			}
 
 			got, err := homedirWindows()
@@ -111,12 +104,11 @@ func Test_homedirWindows(t *testing.T) {
 }
 
 func TestGetOktetoHome(t *testing.T) {
-	dir := t.TempDir()
-	defer func() {
-		os.Unsetenv(constants.OktetoFolderEnvVar)
-	}()
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager = varManager
 
-	t.Setenv(constants.OktetoFolderEnvVar, dir)
+	dir := t.TempDir()
+	varManager.AddLocalVar(constants.OktetoFolderEnvVar, dir)
 
 	got := GetOktetoHome()
 	if got != dir {
@@ -125,9 +117,12 @@ func TestGetOktetoHome(t *testing.T) {
 }
 
 func TestGetAppHome(t *testing.T) {
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager = varManager
+
 	dir := t.TempDir()
 
-	t.Setenv(constants.OktetoFolderEnvVar, dir)
+	varManager.AddLocalVar(constants.OktetoFolderEnvVar, dir)
 
 	got := GetAppHome("ns", "dp")
 	expected := filepath.Join(dir, "ns", "dp")

@@ -14,10 +14,16 @@
 package analytics
 
 import (
+	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
 )
+
+type varManagerLogger struct{}
+
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func Test_Get(t *testing.T) {
 	var tests = []struct {
@@ -62,7 +68,10 @@ func Test_Get(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := t.TempDir()
 
-			t.Setenv(constants.OktetoFolderEnvVar, dir)
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			vars.GlobalVarManager = varManager
+
+			varManager.AddLocalVar(constants.OktetoFolderEnvVar, dir)
 
 			if !tt.currentAnalytics {
 				currentAnalytics = nil

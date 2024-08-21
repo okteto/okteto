@@ -90,7 +90,7 @@ commands:
 			}
 
 			runner := &deployable.TestRunner{
-				Executor:   executor.NewExecutor(oktetoLog.GetOutputFormat(), false, ""),
+				Executor:   executor.NewExecutor(oktetoLog.GetOutputFormat(), false, "", varManager),
 				Fs:         afero.NewOsFs(),
 				VarManager: varManager,
 			}

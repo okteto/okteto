@@ -16,9 +16,11 @@ package io
 import (
 	"fmt"
 	"net/url"
+	"os"
 	"path/filepath"
+	"strconv"
 
-	"github.com/okteto/okteto/pkg/env"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 const (
@@ -40,7 +42,21 @@ func NewK8sLogger() *K8sLogger {
 
 // IsEnabled returns true if the k8s logger is enabled
 func (k *K8sLogger) IsEnabled() bool {
-	return env.LoadBooleanOrDefault(OktetoK8sLoggerEnabledEnvVar, false)
+	return k.loadBooleanOrDefault(OktetoK8sLoggerEnabledEnvVar, false)
+}
+
+func (k *K8sLogger) loadBooleanOrDefault(key string, d bool) bool {
+	v := os.Getenv(key)
+	if v == "" {
+		return d
+	}
+
+	h, err := strconv.ParseBool(v)
+	if err != nil {
+		oktetoLog.Yellow("'%s' is not a valid value for environment variable %s", v, k)
+	}
+
+	return h
 }
 
 // Start configures the k8s logger to write to file

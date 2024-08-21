@@ -228,7 +228,7 @@ func getOktetoContext(ctx context.Context, options *types.BuildOptions, varManag
 			return nil, err
 		}
 
-		create, err := utils.ShouldCreateNamespaceStateless(ctx, ctxOpts.Namespace, c)
+		create, err := utils.ShouldCreateNamespaceStateless(ctx, ctxOpts.Namespace, c, varManager)
 		if err != nil {
 			return nil, err
 		}

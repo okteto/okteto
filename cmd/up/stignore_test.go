@@ -16,6 +16,7 @@ package up
 import (
 	"crypto/sha512"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"testing"
@@ -80,6 +81,8 @@ func Test_addStignoreSecrets(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			vars.GlobalVarManager = varManager
 
 			stignorePath := filepath.Join(localPath, ".stignore")
 			if err := os.WriteFile(stignorePath, []byte(tt.stignoreContent), 0600); err != nil {

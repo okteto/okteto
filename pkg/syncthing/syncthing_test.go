@@ -14,7 +14,7 @@
 package syncthing
 
 import (
-	"os"
+	"github.com/okteto/okteto/pkg/vars"
 	"path/filepath"
 	"testing"
 
@@ -25,12 +25,10 @@ import (
 )
 
 func TestGetFiles(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 	dir := t.TempDir()
-	defer func() {
-		os.Unsetenv(constants.OktetoFolderEnvVar)
-	}()
+	vars.GlobalVarManager.AddLocalVar(constants.OktetoFolderEnvVar, dir)
 
-	t.Setenv(constants.OktetoFolderEnvVar, dir)
 	log := GetLogFile("test", "application")
 	expected := filepath.Join(dir, "test", "application", "syncthing.log")
 

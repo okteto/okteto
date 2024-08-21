@@ -32,7 +32,6 @@ import (
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/divert"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/format"
@@ -229,8 +228,8 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 				}
 			}
 			c := &destroyCommand{
-				executor:          executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash, ""),
-				ConfigMapHandler:  NewConfigmapHandler(k8sClient),
+				executor:          executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash, "", varManager),
+				ConfigMapHandler:  NewConfigmapHandler(k8sClient, varManager),
 				nsDestroyer:       namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
 				secrets:           secrets.NewSecrets(k8sClient),
 				k8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
@@ -280,9 +279,9 @@ func getTempKubeConfigFile(name string) string {
 	return filepath.Join(config.GetOktetoHome(), tempKubeconfigFileName)
 }
 
-func shouldRunInRemote(opts *Options) bool {
+func shouldRunInRemote(opts *Options, varManager *vars.Manager) bool {
 	// already in remote so we need to deploy locally
-	if env.LoadBoolean(constants.OktetoDeployRemote) {
+	if varManager.LoadBoolean(constants.OktetoDeployRemote) {
 		return false
 	}
 
@@ -298,7 +297,7 @@ func shouldRunInRemote(opts *Options) bool {
 		}
 	}
 
-	if env.LoadBoolean(constants.OktetoForceRemote) {
+	if varManager.LoadBoolean(constants.OktetoForceRemote) {
 		return true
 	}
 
@@ -319,7 +318,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		err = dc.destroy(ctx, opts)
 
 		// Execute after the destroy function as the opts already has the manifest information to calculate it.
-		isRemote = shouldRunInRemote(opts)
+		isRemote = shouldRunInRemote(opts, dc.varManager)
 		if err == nil {
 			if opts.Name == "" {
 				oktetoLog.Success("Development environment successfully destroyed")
@@ -596,7 +595,7 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 func (dc *destroyCommand) getDestroyer(opts *Options) destroyInterface {
 	var destroyer destroyInterface
 
-	if shouldRunInRemote(opts) {
+	if shouldRunInRemote(opts, dc.varManager) {
 		destroyer = newRemoteDestroyer(opts.Manifest, dc.ioCtrl, dc.varManager)
 		oktetoLog.Info("Destroying remotely...")
 	} else {

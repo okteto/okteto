@@ -136,7 +136,8 @@ func Test_ExecuteUpdateKubeconfig_DisabledKubetoken(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			okteto.CurrentStore = tt.context
-			file, err := test.CreateKubeconfig(tt.kubeconfigCtx)
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			file, err := test.CreateKubeconfig(tt.kubeconfigCtx, varManager)
 			if err != nil {
 				assert.NoError(t, err, "error creating temporary kubeconfig")
 			}
@@ -145,7 +146,6 @@ func Test_ExecuteUpdateKubeconfig_DisabledKubetoken(t *testing.T) {
 			okContext := okteto.GetContext()
 			kubeconfigPaths := []string{file}
 
-			varManager := vars.NewVarsManager(&varManagerLogger{})
 			err = newKubeconfigController(tt.okClientProvider, varManager).execute(okContext, kubeconfigPaths)
 			assert.NoError(t, err, "error writing kubeconfig")
 
@@ -239,7 +239,9 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(OktetoUseStaticKubetokenEnvVar, "false")
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+
+			varManager.AddLocalVar(OktetoUseStaticKubetokenEnvVar, "false")
 
 			okClientProvider := client.NewFakeOktetoClientProvider(
 				&client.FakeOktetoClient{
@@ -250,7 +252,7 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 			)
 
 			okteto.CurrentStore = tt.context
-			file, err := test.CreateKubeconfig(tt.kubeconfigCtx)
+			file, err := test.CreateKubeconfig(tt.kubeconfigCtx, varManager)
 			if err != nil {
 				assert.NoError(t, err, "error creating temporary kubeconfig")
 			}
@@ -259,7 +261,6 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 			okContext := okteto.GetContext()
 			kubeconfigPaths := []string{file}
 
-			varManager := vars.NewVarsManager(&varManagerLogger{})
 			err = newKubeconfigController(okClientProvider, varManager).execute(okContext, kubeconfigPaths)
 			assert.NoError(t, err, "error writing kubeconfig")
 
@@ -299,7 +300,7 @@ func Test_ExecuteUpdateKubeconfig_With_OktetoUseStaticKubetokenEnvVar(t *testing
 		Name:           []string{"name-test"},
 		Namespace:      []string{"ns-test"},
 		CurrentContext: "ctx-test",
-	})
+	}, varManager)
 
 	if err != nil {
 		assert.NoError(t, err, "error creating temporary kubeconfig")
@@ -325,6 +326,8 @@ func Test_ExecuteUpdateKubeconfig_With_OktetoUseStaticKubetokenEnvVar(t *testing
 }
 
 func Test_ExecuteUpdateKubeconfig_ForNonOktetoContext(t *testing.T) {
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+
 	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "ctx-test",
 		Contexts: map[string]*okteto.Context{
@@ -345,7 +348,7 @@ func Test_ExecuteUpdateKubeconfig_ForNonOktetoContext(t *testing.T) {
 		Name:           []string{"name-test"},
 		Namespace:      []string{"ns-test"},
 		CurrentContext: "ctx-test",
-	})
+	}, varManager)
 
 	if err != nil {
 		assert.NoError(t, err, "error creating temporary kubeconfig")
@@ -355,7 +358,6 @@ func Test_ExecuteUpdateKubeconfig_ForNonOktetoContext(t *testing.T) {
 	okContext := okteto.GetContext()
 	kubeconfigPaths := []string{file}
 
-	varManager := vars.NewVarsManager(&varManagerLogger{})
 	err = newKubeconfigController(nil, varManager).execute(okContext, kubeconfigPaths)
 	assert.NoError(t, err, "error writing kubeconfig")
 
@@ -502,6 +504,7 @@ func Test_ExecuteUpdateKubeconfig_WithRightCertificate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			varManager := vars.NewVarsManager(&varManagerLogger{})
 
 			okClientProvider := client.NewFakeOktetoClientProvider(
 				&client.FakeOktetoClient{
@@ -515,7 +518,7 @@ func Test_ExecuteUpdateKubeconfig_WithRightCertificate(t *testing.T) {
 			kubeconfigFields := test.KubeconfigFields{
 				ClusterCert: clusterCert,
 			}
-			file, err := test.CreateKubeconfig(kubeconfigFields)
+			file, err := test.CreateKubeconfig(kubeconfigFields, varManager)
 			if err != nil {
 				assert.NoError(t, err, "error creating temporary kubeconfig")
 			}
@@ -524,7 +527,6 @@ func Test_ExecuteUpdateKubeconfig_WithRightCertificate(t *testing.T) {
 			okContext := okteto.GetContext()
 			kubeconfigPaths := []string{file}
 
-			varManager := vars.NewVarsManager(&varManagerLogger{})
 			err = newKubeconfigController(okClientProvider, varManager).execute(okContext, kubeconfigPaths)
 			assert.NoError(t, err, "error writing kubeconfig")
 
@@ -544,6 +546,8 @@ func Test_ExecuteUpdateKubeconfig_WithWrongOktetoCertificate(t *testing.T) {
 			),
 		},
 	)
+
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 
 	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "https://test.okteto.dev",
@@ -572,7 +576,7 @@ func Test_ExecuteUpdateKubeconfig_WithWrongOktetoCertificate(t *testing.T) {
 			},
 		},
 	}
-	file, err := test.CreateKubeconfig(test.KubeconfigFields{})
+	file, err := test.CreateKubeconfig(test.KubeconfigFields{}, varManager)
 	if err != nil {
 		assert.NoError(t, err, "error creating temporary kubeconfig")
 	}
@@ -581,7 +585,6 @@ func Test_ExecuteUpdateKubeconfig_WithWrongOktetoCertificate(t *testing.T) {
 	okContext := okteto.GetContext()
 	kubeconfigPaths := []string{file}
 
-	varManager := vars.NewVarsManager(&varManagerLogger{})
 	err = newKubeconfigController(okClientProvider, varManager).execute(okContext, kubeconfigPaths)
 	assert.Error(t, err, "should fail as the okteto certificate is not a valid base64 value")
 }

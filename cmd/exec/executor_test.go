@@ -14,6 +14,7 @@
 package exec
 
 import (
+	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
@@ -25,12 +26,20 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
+type varManagerLogger struct{}
+
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
+
 func TestExec_getExecutor(t *testing.T) {
 	namespace := "test"
+
+	varManager := vars.NewVarsManager(&varManagerLogger{})
 
 	e := executorProvider{
 		ioCtrl:            io.NewIOController(),
 		k8sClientProvider: test.NewFakeK8sProvider(),
+		varManager:        varManager,
 	}
 
 	dev := &model.Dev{} // Create a sample dev object
@@ -49,7 +58,9 @@ func TestExec_getExecutor(t *testing.T) {
 	executor, err := e.provide(dev, podName, namespace)
 	assert.NoError(t, err)
 	assert.NotNil(t, executor)
-	assert.IsType(t, &hybridExecutor{}, executor)
+	assert.IsType(t, &hybridExecutor{
+		varManager: varManager,
+	}, executor)
 
 	// Test case 2: Remote mode enabled
 	dev.Mode = constants.OktetoSyncModeFieldValue
@@ -62,7 +73,7 @@ func TestExec_getExecutor(t *testing.T) {
 	// Test case 3: Neither hybrid nor remote mode enabled
 	dev.Mode = constants.OktetoSyncModeFieldValue
 	dev.RemotePort = 0
-	t.Setenv("OKTETO_EXECUTE_SSH", "false")
+	varManager.AddLocalVar("OKTETO_EXECUTE_SSH", "false")
 	executor, err = e.provide(dev, podName, namespace)
 	assert.NoError(t, err)
 	assert.NotNil(t, executor)

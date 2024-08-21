@@ -17,8 +17,8 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/build"
-	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/spf13/afero"
 )
 
@@ -59,8 +59,8 @@ type Ctrl struct {
 }
 
 // NewSmartBuildCtrl creates a new smart build controller
-func NewSmartBuildCtrl(repo repositoryInterface, registry registryController, fs afero.Fs, ioCtrl *io.Controller) *Ctrl {
-	isEnabled := env.LoadBooleanOrDefault(OktetoEnableSmartBuildEnvVar, true)
+func NewSmartBuildCtrl(repo repositoryInterface, registry registryController, fs afero.Fs, ioCtrl *io.Controller, varManager *vars.Manager) *Ctrl {
+	isEnabled := varManager.LoadBooleanOrDefault(OktetoEnableSmartBuildEnvVar, true)
 
 	return &Ctrl{
 		gitRepo:            repo,

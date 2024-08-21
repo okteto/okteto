@@ -50,6 +50,9 @@ func Test_createNamespace(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			vars.GlobalVarManager = varManager
+
 			okteto.CurrentStore = &okteto.ContextStore{
 				Contexts: map[string]*okteto.Context{
 					"test": {

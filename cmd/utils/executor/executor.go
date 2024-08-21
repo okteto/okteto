@@ -18,9 +18,9 @@ import (
 	"os/exec"
 
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 // ManifestExecutor is the interface to execute a command
@@ -44,7 +44,7 @@ type executorDisplayer interface {
 }
 
 // NewExecutor returns a new executor
-func NewExecutor(output string, runWithoutBash bool, dir string) *Executor {
+func NewExecutor(output string, runWithoutBash bool, dir string, varManager *vars.Manager) *Executor {
 	var displayer executorDisplayer
 
 	switch output {
@@ -59,7 +59,7 @@ func NewExecutor(output string, runWithoutBash bool, dir string) *Executor {
 	}
 
 	shell := "bash"
-	if env.LoadBoolean(constants.OktetoDeployRemote) {
+	if varManager.LoadBoolean(constants.OktetoDeployRemote) {
 		shell = "sh"
 	}
 

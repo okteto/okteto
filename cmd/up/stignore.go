@@ -26,12 +26,12 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/linguist"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 func addStignoreSecrets(dev *model.Dev, namespace string) error {
@@ -121,7 +121,7 @@ func addSyncFieldHash(dev *model.Dev) error {
 	return nil
 }
 
-func checkStignoreConfiguration(dev *model.Dev) error {
+func checkStignoreConfiguration(dev *model.Dev, varManager *vars.Manager) error {
 	if dev.IsHybridModeEnabled() {
 		return nil
 	}
@@ -130,7 +130,7 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 		stignorePath := filepath.Join(folder.LocalPath, ".stignore")
 		gitPath := filepath.Join(folder.LocalPath, ".git")
 		if !filesystem.FileExists(stignorePath) {
-			if err := askIfCreateStignoreDefaults(folder.LocalPath, stignorePath); err != nil {
+			if err := askIfCreateStignoreDefaults(folder.LocalPath, stignorePath, varManager); err != nil {
 				return err
 			}
 			continue
@@ -148,8 +148,8 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 	return nil
 }
 
-func askIfCreateStignoreDefaults(folder, stignorePath string) error {
-	autogenerateStignore := env.LoadBoolean(model.OktetoAutogenerateStignoreEnvVar)
+func askIfCreateStignoreDefaults(folder, stignorePath string, varManager *vars.Manager) error {
+	autogenerateStignore := varManager.LoadBoolean(model.OktetoAutogenerateStignoreEnvVar)
 
 	oktetoLog.Information("'.stignore' doesn't exist in folder '%s'.", folder)
 

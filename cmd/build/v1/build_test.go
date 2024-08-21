@@ -44,6 +44,8 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	ctx := context.Background()
 
 	varManager := vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager = varManager
+
 	buildRunner := &fakeBuildRunner{}
 	bc := NewBuilder(buildRunner, io.NewIOController(), varManager)
 	dir, err := createDockerfile(t)

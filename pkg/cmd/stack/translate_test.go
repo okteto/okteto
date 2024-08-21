@@ -1594,8 +1594,11 @@ func Test_translateAffinity(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			vars.GlobalVarManager = varManager
+
 			if tt.disableVolumeAffinity {
-				t.Setenv(oktetoComposeVolumeAffinityEnabledEnvVar, "false")
+				varManager.AddLocalVar(oktetoComposeVolumeAffinityEnabledEnvVar, "false")
 			}
 			aff := translateAffinity(tt.svc)
 			assert.Equal(t, tt.affinity, aff)
@@ -1795,8 +1798,10 @@ func TestGetDeploymentStrategy(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			vars.GlobalVarManager = varManager
 			for k, v := range tt.envs {
-				t.Setenv(k, v)
+				varManager.AddLocalVar(k, v)
 			}
 			result := getDeploymentUpdateStrategy(tt.svc)
 			assert.Equal(t, tt.expected, result)
@@ -1910,8 +1915,10 @@ func TestGetStrategyStrategy(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			vars.GlobalVarManager = varManager
 			for k, v := range tt.envs {
-				t.Setenv(k, v)
+				varManager.AddLocalVar(k, v)
 			}
 			result := getStatefulsetUpdateStrategy(tt.svc)
 			assert.Equal(t, tt.expected, result)

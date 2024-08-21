@@ -65,7 +65,7 @@ func (e executorProvider) provide(dev *model.Dev, podName, namespace string) (ex
 			varManager: e.varManager,
 		}, nil
 	}
-	if dev.RemoteModeEnabled() {
+	if dev.RemoteModeEnabled(e.varManager) {
 		e.ioCtrl.Logger().Info("Using remote executor")
 		return &sshExecutor{
 			dev: dev,
@@ -89,6 +89,7 @@ type hybridExecutor struct {
 
 type varManagerInterface interface {
 	Get(string) string
+	Lookup(string) (string, bool)
 }
 
 func (h *hybridExecutor) execute(ctx context.Context, cmdToExec []string) error {

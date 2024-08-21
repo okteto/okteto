@@ -16,6 +16,7 @@ package up
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
@@ -25,6 +26,11 @@ import (
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/stretchr/testify/assert"
 )
+
+type varManagerLogger struct{}
+
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func TestGlobalForwarderStartsWhenRequired(t *testing.T) {
 	t.Parallel()
@@ -150,6 +156,17 @@ func TestForwards(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			varManager.AddLocalVar(model.OktetoExecuteSSHEnvVar, tc.OktetoExecuteSSHEnvVar)
+			vars.GlobalVarManager = varManager
+
+			okteto.CurrentStore = &okteto.ContextStore{
+				CurrentContext: "test",
+				Contexts: map[string]*okteto.Context{
+					"test": {},
+				},
+			}
+
 			up := &upContext{
 				Dev: &model.Dev{
 					Forward: []forward.Forward{
@@ -164,8 +181,9 @@ func TestForwards(t *testing.T) {
 					},
 				},
 				K8sClientProvider: tc.clientProvider,
+				varManager:        varManager,
 			}
-			t.Setenv(model.OktetoExecuteSSHEnvVar, tc.OktetoExecuteSSHEnvVar)
+
 			err := up.forwards(context.Background())
 			assert.Equal(t, tc.expected, err)
 		})

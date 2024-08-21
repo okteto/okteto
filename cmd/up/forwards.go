@@ -37,7 +37,7 @@ func (up *upContext) forwards(ctx context.Context) error {
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
-	if up.Dev.RemoteModeEnabled() {
+	if up.Dev.RemoteModeEnabled(up.varManager) {
 		return up.sshForwards(ctx)
 	}
 

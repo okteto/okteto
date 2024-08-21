@@ -14,6 +14,7 @@
 package build
 
 import (
+	"github.com/okteto/okteto/pkg/vars"
 	"path/filepath"
 	"testing"
 
@@ -25,13 +26,16 @@ import (
 func TestCreateDockerfileWithVolumeMounts(t *testing.T) {
 	fs := afero.NewMemMapFs()
 
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager = varManager
+
 	oktetoHome, err := filepath.Abs("./tmp/tests")
 	require.NoError(t, err)
 	err = fs.MkdirAll(oktetoHome, 0700)
 	require.NoError(t, err)
 
 	// Set the Okteto home to facilitate where the dockerfile will be created
-	t.Setenv(constants.OktetoFolderEnvVar, oktetoHome)
+	varManager.AddLocalVar(constants.OktetoFolderEnvVar, oktetoHome)
 
 	image := "nginx:latest"
 	volumes := []VolumeMounts{

@@ -140,7 +140,7 @@ func NewDeployRunnerForRemote(
 
 	return &DeployRunner{
 		Kubeconfig:              kubeconfig,
-		Executor:                executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash, ""),
+		Executor:                executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash, "", varManager),
 		ConfigMapHandler:        cmapHandler,
 		Proxy:                   proxy,
 		TempKubeconfigFile:      GetTempKubeConfigFile(tempKubeconfigName),
@@ -189,7 +189,7 @@ func NewDeployRunnerForLocal(
 
 	return &DeployRunner{
 		Kubeconfig:              kubeconfig,
-		Executor:                executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash, ""),
+		Executor:                executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash, "", varManager),
 		ConfigMapHandler:        cmapHandler,
 		Proxy:                   proxy,
 		TempKubeconfigFile:      GetTempKubeConfigFile(tempKubeconfigName),

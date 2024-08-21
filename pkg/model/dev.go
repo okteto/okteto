@@ -231,6 +231,10 @@ type Selector map[string]string
 // Annotations is a set of (key, value) pairs.
 type Annotations map[string]string
 
+type varManagerInterface interface {
+	Lookup(string) (string, bool)
+}
+
 func NewDev() *Dev {
 	return &Dev{
 		Environment: make(env.Environment, 0),
@@ -394,8 +398,8 @@ func (dev *Dev) SetDefaults() error {
 
 	dev.setRunAsUserDefaults(dev)
 
-	if os.Getenv(OktetoRescanIntervalEnvVar) != "" {
-		rescanInterval, err := strconv.Atoi(os.Getenv(OktetoRescanIntervalEnvVar))
+	if vars.GlobalVarManager.Get(OktetoRescanIntervalEnvVar) != "" {
+		rescanInterval, err := strconv.Atoi(vars.GlobalVarManager.Get(OktetoRescanIntervalEnvVar))
 		if err != nil {
 			return fmt.Errorf("cannot parse 'OKTETO_RESCAN_INTERVAL' into an integer: %w", err)
 		}
@@ -864,7 +868,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset b
 				SubPath:   SyncthingSubPath,
 			},
 		)
-		if main.RemoteModeEnabled() {
+		if main.RemoteModeEnabled(vars.GlobalVarManager) {
 			rule.Volumes = append(
 				rule.Volumes,
 				VolumeMount{
@@ -875,7 +879,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset b
 			)
 		}
 		rule.Command = []string{"/var/okteto/bin/start.sh"}
-		if main.RemoteModeEnabled() {
+		if main.RemoteModeEnabled(vars.GlobalVarManager) {
 			rule.Args = []string{"-r"}
 		} else {
 			rule.Args = []string{}
@@ -981,7 +985,7 @@ func areProbesEnabled(probes *Probes) bool {
 }
 
 // RemoteModeEnabled returns true if remote is enabled
-func (dev *Dev) RemoteModeEnabled() bool {
+func (dev *Dev) RemoteModeEnabled(varManager varManagerInterface) bool {
 	if dev == nil {
 		return true
 	}
@@ -994,7 +998,7 @@ func (dev *Dev) RemoteModeEnabled() bool {
 		return true
 	}
 
-	if v, ok := os.LookupEnv(OktetoExecuteSSHEnvVar); ok && v == "false" {
+	if v, ok := varManager.Lookup(OktetoExecuteSSHEnvVar); ok && v == "false" {
 		return false
 	}
 	return true
@@ -1014,7 +1018,7 @@ func (s *Secret) GetFileName() string {
 func GetTimeout() (time.Duration, error) {
 	defaultTimeout := 60 * time.Second
 
-	t := os.Getenv(OktetoTimeoutEnvVar)
+	t := vars.GlobalVarManager.Get(OktetoTimeoutEnvVar)
 	if t == "" {
 		return defaultTimeout, nil
 	}

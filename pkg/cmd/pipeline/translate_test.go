@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -29,6 +30,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/kubernetes/fake"
 )
+
+type varManagerLogger struct{}
+
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func Test_translateConfigMap(t *testing.T) {
 	ctx := context.Background()
@@ -73,7 +79,7 @@ func Test_translateConfigMap(t *testing.T) {
 				Namespace: namespace,
 				Status:    tt.status,
 			}
-			cfg, err := TranslateConfigMapAndDeploy(ctx, data, fakeClient)
+			cfg, err := TranslateConfigMapAndDeploy(ctx, data, fakeClient, vars.NewVarsManager(&varManagerLogger{}))
 
 			assert.Nil(t, err)
 			assert.Equal(t, cfg.Data[statusField], tt.status)
@@ -166,7 +172,9 @@ func Test_AddDevAnnotations(t *testing.T) {
 		},
 	}
 	fakeClient := fake.NewSimpleClientset(d)
-	t.Setenv(model.GithubRepositoryEnvVar, "git-repo")
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager = varManager
+	varManager.AddLocalVar(model.GithubRepositoryEnvVar, "git-repo")
 	manifest := &model.Manifest{
 		Dev: model.ManifestDevs{
 			"not-found-deployment": &model.Dev{
@@ -180,7 +188,7 @@ func Test_AddDevAnnotations(t *testing.T) {
 			},
 		},
 	}
-	AddDevAnnotations(ctx, manifest, fakeClient)
+	AddDevAnnotations(ctx, manifest, fakeClient, varManager)
 	d, err := fakeClient.AppsV1().Deployments("unit-test").Get(ctx, "deployment", metav1.GetOptions{})
 	assert.NoError(t, err)
 	assert.Equal(t,

@@ -17,7 +17,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -25,7 +24,6 @@ import (
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/build"
-	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -492,7 +490,7 @@ func translateVolumeLabels(volumeName string, s *model.Stack) map[string]string 
 }
 
 func translateAffinity(svc *model.Service) *apiv1.Affinity {
-	if !env.LoadBooleanOrDefault(oktetoComposeVolumeAffinityEnabledEnvVar, true) {
+	if !vars.GlobalVarManager.LoadBooleanOrDefault(oktetoComposeVolumeAffinityEnabledEnvVar, true) {
 		return nil
 	}
 
@@ -834,7 +832,7 @@ func getUpdateStrategyByAnnotation(svc *model.Service) updateStrategy {
 }
 
 func getUpdateStrategyByEnvVar() updateStrategy {
-	if v := os.Getenv(model.OktetoComposeUpdateStrategyEnvVar); v != "" {
+	if v := vars.GlobalVarManager.Get(model.OktetoComposeUpdateStrategyEnvVar); v != "" {
 		return updateStrategy(v)
 	}
 	return ""

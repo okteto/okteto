@@ -440,7 +440,7 @@ func (up *upContext) RunCommand(ctx context.Context, cmd []string) error {
 		return err
 	}
 
-	if up.Dev.RemoteModeEnabled() {
+	if up.Dev.RemoteModeEnabled(up.varManager) {
 		if up.Dev.IsHybridModeEnabled() {
 			hybridCtx := &HybridExecCtx{
 				Dev:       up.Dev,

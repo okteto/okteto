@@ -16,6 +16,7 @@ package stack
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"reflect"
 	"testing"
@@ -36,6 +37,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 )
+
+type varManagerLogger struct{}
+
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func TestMain(m *testing.M) {
 	okteto.CurrentStore = &okteto.ContextStore{
@@ -115,6 +121,7 @@ func Test_deploySvc(t *testing.T) {
 	divertDriver := divert.NewNoop()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 			err := deploySvc(ctx, tt.stack, tt.svcName, client, divertDriver)
 			if err != nil {
 				t.Fatal("Not deployed correctly")

@@ -16,10 +16,11 @@ package context
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/okteto/okteto/internal/test"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"testing"
 
-	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -54,13 +55,16 @@ func Test_initFromDeprecatedToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			vars.GlobalVarManager = varManager
+
 			tokenPath, err := createDeprecatedToken(t, tt.tokenUrl)
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer os.Remove(tokenPath)
 
-			kubepath, err := test.CreateKubeconfig(tt.kubeconfigCtx)
+			kubepath, err := test.CreateKubeconfig(tt.kubeconfigCtx, varManager)
 			if err != nil {
 				t.Fatal(err)
 			}

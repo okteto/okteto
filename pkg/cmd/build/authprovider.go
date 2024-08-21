@@ -23,9 +23,9 @@ import (
 	"github.com/docker/cli/cli/config/configfile"
 	"github.com/docker/cli/cli/config/types"
 	"github.com/moby/buildkit/session/auth"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/vars"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -150,7 +150,7 @@ func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRe
 
 	credentials := ap.getOktetoCredentials(originalHost, c)
 
-	retrieveFromLocal := env.LoadBooleanOrDefault(oktetoLocalRegistryStoreEnabledEnvVarKey, false)
+	retrieveFromLocal := vars.GlobalVarManager.LoadBooleanOrDefault(oktetoLocalRegistryStoreEnabledEnvVarKey, false)
 	if !retrieveFromLocal {
 		return credentials, nil
 	}

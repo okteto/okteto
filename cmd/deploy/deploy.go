@@ -35,7 +35,6 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/divert"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/format"
@@ -202,7 +201,7 @@ $ okteto deploy --build=false`,
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			create, err := utils.ShouldCreateNamespace(ctx, okteto.GetContext().Namespace)
+			create, err := utils.ShouldCreateNamespace(ctx, okteto.GetContext().Namespace, varManager)
 			if err != nil {
 				return err
 			}
@@ -239,7 +238,7 @@ $ okteto deploy --build=false`,
 				DeployWaiter:       NewDeployWaiter(k8sClientProvider, k8sLogger),
 				EndpointGetter:     NewEndpointGetter,
 				IsRemote:           varManager.LoadBoolean(constants.OktetoDeployRemote),
-				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider, k8sLogger),
+				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider, k8sLogger, varManager),
 				Fs:                 afero.NewOsFs(),
 				PipelineCMD:        pc,
 				RunningInInstaller: config.RunningInInstaller(),
@@ -484,7 +483,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 			if deployOptions.ShowCTA {
 				oktetoLog.Success(succesfullyDeployedmsg, deployOptions.Name)
 			}
-			pipeline.AddDevAnnotations(ctx, deployOptions.Manifest, c)
+			pipeline.AddDevAnnotations(ctx, deployOptions.Manifest, c, dc.VarManager)
 		}
 		data.Status = pipeline.DeployedStatus
 	}
@@ -566,7 +565,7 @@ func getDefaultTimeout(varManager *vars.Manager) time.Duration {
 	return parsed
 }
 
-func shouldRunInRemote(opts *Options) bool {
+func shouldRunInRemote(opts *Options, varManager *vars.Manager) bool {
 	// --remote flag enabled from command line
 	if opts.RunInRemote {
 		return true
@@ -579,7 +578,7 @@ func shouldRunInRemote(opts *Options) bool {
 		}
 	}
 
-	if env.LoadBoolean(constants.OktetoForceRemote) {
+	if varManager.LoadBoolean(constants.OktetoForceRemote) {
 		return true
 	}
 
@@ -600,7 +599,7 @@ func GetDeployer(ctx context.Context,
 	varManager *vars.Manager,
 	dependencyEnvVarsGetter dependencyEnvVarsGetter,
 ) (Deployer, error) {
-	if shouldRunInRemote(opts) {
+	if shouldRunInRemote(opts, varManager) {
 		oktetoLog.Info("Deploying remotely...")
 		return newRemoteDeployer(buildEnvVarsGetter, ioCtrl, varManager, dependencyEnvVarsGetter), nil
 	}

@@ -18,6 +18,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"net"
 	"net/http"
 	"sync"
@@ -163,7 +164,15 @@ func (f fakeClientConfig) GetExternalRegistryCredentialsStateless(_ string) (str
 	return f.externalRegistryCredentials[0], f.externalRegistryCredentials[1], f.err
 }
 
+type varManagerLogger struct{}
+
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
+
 func TestGetDigest(t *testing.T) {
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager = varManager
+
 	unautorizedErr := &transport.Error{
 		Errors: []transport.Diagnostic{
 			{

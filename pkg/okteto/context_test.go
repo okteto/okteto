@@ -265,6 +265,16 @@ func Test_AddOktetoCredentialsToCfgWithInvalidOktetoContext(t *testing.T) {
 }
 
 func TestGetContextStoreFromStorePath(t *testing.T) {
+	CurrentStore = &ContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*Context{
+			"test": {},
+		},
+	}
+
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager = varManager
+
 	fs := afero.NewOsFs()
 	tempDir, err := afero.TempDir(fs, "", "")
 	require.NoError(t, err)
@@ -287,7 +297,7 @@ func TestGetContextStoreFromStorePath(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, err)
-	t.Setenv(constants.OktetoFolderEnvVar, tempDir)
+	varManager.AddLocalVar(constants.OktetoFolderEnvVar, tempDir)
 	store := GetContextStoreFromStorePath()
 
 	expected := &ContextStore{

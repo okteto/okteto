@@ -345,7 +345,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 		GetManifest:       getErrorManifest,
 		Builder:           builderV2,
 		K8sClientProvider: fakeK8sClientProvider,
-		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil, varManager),
 		Fs:                afero.NewMemMapFs(),
 		IoCtrl:            io.NewIOController(),
 		VarManager:        varManager,
@@ -419,7 +419,7 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 		GetManifest:       getFakeManifest,
 		GetDeployer:       fakeDeployer.Get,
 		K8sClientProvider: fakeK8sClientProvider,
-		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil, vars.NewVarsManager(&varManagerLogger{})),
 		Fs:                fakeOs,
 		Builder:           &fakeV2Builder{},
 		IoCtrl:            io.NewIOController(),
@@ -510,7 +510,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 		GetManifest:       getFakeManifest,
 		GetDeployer:       fakeDeployer.Get,
 		K8sClientProvider: fakeK8sClientProvider,
-		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil, vars.NewVarsManager(&varManagerLogger{})),
 		Fs:                afero.NewMemMapFs(),
 		IoCtrl:            io.NewIOController(),
 		VarManager:        vars.NewVarsManager(&varManagerLogger{}),
@@ -562,7 +562,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		K8sClientProvider: fakeK8sClientProvider,
 		EndpointGetter:    getFakeEndpoint,
 		Fs:                fakeOs,
-		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil, vars.NewVarsManager(&varManagerLogger{})),
 		GetDeployer:       fakeDeployer.Get,
 		Builder:           &fakeV2Builder{},
 		IoCtrl:            io.NewIOController(),
@@ -717,7 +717,7 @@ func TestDeployOnlyDependencies(t *testing.T) {
 		GetManifest:       getFakeManifestWithDependency,
 		K8sClientProvider: fakeK8sClientProvider,
 		Fs:                fakeOs,
-		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil, vars.NewVarsManager(&varManagerLogger{})),
 		GetDeployer:       fakeDeployer.Get,
 		IoCtrl:            io.NewIOController(),
 		VarManager:        vars.NewVarsManager(&varManagerLogger{}),
@@ -909,9 +909,10 @@ func TestShouldRunInRemoteDeploy(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
-			t.Setenv(constants.OktetoDeployRemote, tt.remoteDeploy)
-			t.Setenv(constants.OktetoForceRemote, tt.remoteForce)
-			result := shouldRunInRemote(tt.opts)
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			varManager.AddLocalVar(constants.OktetoDeployRemote, tt.remoteDeploy)
+			varManager.AddLocalVar(constants.OktetoForceRemote, tt.remoteForce)
+			result := shouldRunInRemote(tt.opts, varManager)
 			assert.Equal(t, result, tt.expected)
 		})
 	}

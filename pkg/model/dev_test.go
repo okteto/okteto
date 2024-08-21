@@ -1043,13 +1043,13 @@ func TestGetTimeout(t *testing.T) {
 		{name: "bad env var", wantErr: true, env: "bad value"},
 	}
 
-	original := os.Getenv(OktetoTimeoutEnvVar)
-	defer t.Setenv(OktetoTimeoutEnvVar, original)
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			varManager := vars.NewVarsManager(&varManagerLogger{})
+			vars.GlobalVarManager = varManager
+
 			if tt.env != "" {
-				t.Setenv(OktetoTimeoutEnvVar, tt.env)
+				varManager.AddLocalVar(OktetoTimeoutEnvVar, tt.env)
 			}
 			got, err := GetTimeout()
 			if (err != nil) != tt.wantErr {

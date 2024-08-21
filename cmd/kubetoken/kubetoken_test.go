@@ -158,6 +158,8 @@ func TestKubetoken(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			varManager := vars.NewVarsManager(&varManagerLogger{})
+			vars.GlobalVarManager = varManager
+
 			cmd := NewKubetokenCmd(varManager)
 			cmd.oktetoClientProvider = tc.input.fakeOktetoClientProvider
 			cmd.oktetoCtxCmdRunner = tc.input.fakeCtxCmdRunner

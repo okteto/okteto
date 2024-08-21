@@ -849,6 +849,9 @@ func TestInferFromStack(t *testing.T) {
 }
 
 func TestInferFromStackWithVolumeMounts(t *testing.T) {
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager = varManager
+
 	dirtest := filepath.Clean("/stack/dir/")
 	fs := afero.NewMemMapFs()
 
@@ -858,7 +861,7 @@ func TestInferFromStackWithVolumeMounts(t *testing.T) {
 	require.NoError(t, err)
 
 	// Set the Okteto home to facilitate where the dockerfile will be created
-	t.Setenv(constants.OktetoFolderEnvVar, oktetoHome)
+	varManager.AddLocalVar(constants.OktetoFolderEnvVar, oktetoHome)
 
 	expectedContext, err := filepath.Abs(".")
 	require.NoError(t, err)

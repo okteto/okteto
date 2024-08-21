@@ -14,6 +14,7 @@
 package test
 
 import (
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 
 	"github.com/okteto/okteto/pkg/constants"
@@ -28,13 +29,13 @@ type KubeconfigFields struct {
 	Namespace      []string
 }
 
-func CreateKubeconfig(kubeconfigFields KubeconfigFields) (string, error) {
+func CreateKubeconfig(kubeconfigFields KubeconfigFields, varManager *vars.Manager) (string, error) {
 	dir, err := os.CreateTemp("", "")
 	if err != nil {
 		return "", err
 	}
 
-	os.Setenv(constants.KubeConfigEnvVar, dir.Name())
+	varManager.AddLocalVar(constants.KubeConfigEnvVar, dir.Name())
 
 	contexts := make(map[string]*clientcmdapi.Context)
 	for idx := range kubeconfigFields.Name {

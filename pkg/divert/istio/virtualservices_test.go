@@ -15,6 +15,7 @@ package istio
 
 import (
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
 	"reflect"
 	"testing"
 
@@ -27,6 +28,11 @@ import (
 	istioV1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+type varManagerLogger struct{}
+
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
 
 func Test_translateDivertVirtualService(t *testing.T) {
 	tests := []struct {
@@ -372,6 +378,7 @@ func Test_translateDivertHost(t *testing.T) {
 			},
 		},
 	}
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 	okteto.AddOktetoContext("test", &types.User{Registry: "registry.demo.okteto.dev"}, "okteto", "cyndy")
 
 	for _, tt := range tests {
