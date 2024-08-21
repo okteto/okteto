@@ -19,6 +19,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/model"
 	"math/rand"
 	"os"
 	"strings"
@@ -46,7 +47,6 @@ import (
 	"github.com/okteto/okteto/pkg/insights"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/vars"
 	"github.com/sirupsen/logrus"
@@ -85,6 +85,21 @@ func init() {
 
 func main() {
 	ctx := context.Background()
+
+	varManager := vars.NewVarsManager(cmd.VarsManagerLogger{})
+	vars.GlobalVarManager = varManager
+	varManager.AddGroup(
+		vars.Group{
+			Vars: vars.ConvertLocalEnvVarsToOktetoVars(os.Environ),
+			Type: vars.OktetoVariableTypeLocal,
+		},
+	)
+
+	if bin := varManager.Get(model.OktetoBinEnvVar); bin != "" {
+		model.OktetoBinImageTag = bin
+		oktetoLog.Infof("using %s as the bin image", bin)
+	}
+
 	ioController := io.NewIOController()
 	ioController.Logger().SetLevel(io.WarnLevel)
 	oktetoLog.Init(logrus.WarnLevel) // TODO: Remove when we fully move to ioController
@@ -104,19 +119,6 @@ func main() {
 	okteto.InitContextWithDeprecatedToken()
 
 	k8sLogger := io.NewK8sLogger()
-	varManager := vars.NewVarsManager(cmd.VarsManagerLogger{})
-	varManager.AddGroup(
-		vars.Group{
-			Vars: vars.ConvertLocalEnvVarsToOktetoVars(os.Environ),
-			Type: vars.OktetoVariableTypeLocal,
-		},
-	)
-	vars.GlobalVarManager = varManager
-
-	if bin := varManager.Get(model.OktetoBinEnvVar); bin != "" {
-		model.OktetoBinImageTag = bin
-		oktetoLog.Infof("using %s as the bin image", bin)
-	}
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
