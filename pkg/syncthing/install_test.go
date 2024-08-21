@@ -35,7 +35,10 @@ func TestInstall(t *testing.T) {
 		t.Skip("this test is only required for windows")
 	}
 
-	if err := Install(nil, vars.NewVarsManager(&varManagerLogger{})); err != nil {
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	vars.GlobalVarManager = varManager
+
+	if err := Install(nil, varManager); err != nil {
 		t.Fatal(err)
 	}
 
@@ -44,7 +47,7 @@ func TestInstall(t *testing.T) {
 		t.Fatal("failed to get version")
 	}
 
-	m := GetMinimumVersion(vars.NewVarsManager(&varManagerLogger{}))
+	m := GetMinimumVersion(varManager)
 
 	if v.Compare(m) != 0 {
 		t.Fatalf("got %s, expected %s", v.String(), m.String())
