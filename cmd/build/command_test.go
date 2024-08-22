@@ -38,6 +38,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
+type varManagerLogger struct{}
+
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
+
 func TestMain(m *testing.M) {
 	varManager := vars.NewVarsManager(&varManagerLogger{})
 	tmpDir, err := os.MkdirTemp("", "")
@@ -153,17 +158,12 @@ func getFakeManifestV2(_ string, _ afero.Fs, _ *vars.Manager) (*model.Manifest, 
 	return fakeManifestV2, nil
 }
 
-type varManagerLogger struct{}
-
-func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
-func (varManagerLogger) AddMaskedWord(_ string)            {}
-
 func TestBuildIsManifestV2(t *testing.T) {
 	bc := &Command{
 		GetManifest: getFakeManifestV2,
 	}
 
-	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), vars.NewVarsManager(&varManagerLogger{}))
+	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), vars.GlobalVarManager)
 	assert.Nil(t, err)
 	assert.Equal(t, manifest, fakeManifestV2)
 }
@@ -173,7 +173,7 @@ func TestBuildFromDockerfile(t *testing.T) {
 		GetManifest: getManifestWithError,
 	}
 
-	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), vars.NewVarsManager(&varManagerLogger{}))
+	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), vars.GlobalVarManager)
 	assert.NotNil(t, err)
 	assert.Nil(t, manifest)
 }
@@ -183,7 +183,7 @@ func TestBuildErrIfInvalidManifest(t *testing.T) {
 		GetManifest: getManifestWithInvalidManifestError,
 	}
 
-	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), vars.NewVarsManager(&varManagerLogger{}))
+	manifest, err := bc.GetManifest("", afero.NewMemMapFs(), vars.GlobalVarManager)
 	assert.NotNil(t, err)
 	assert.Nil(t, manifest)
 }
@@ -221,7 +221,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
-				varManager:       vars.NewVarsManager(&varManagerLogger{}),
+				varManager:       vars.GlobalVarManager,
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -235,7 +235,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
-				varManager:       vars.NewVarsManager(&varManagerLogger{}),
+				varManager:       vars.GlobalVarManager,
 			},
 			options: &types.BuildOptions{
 				File: "okteto.yml",
@@ -251,7 +251,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
-				varManager:       vars.NewVarsManager(&varManagerLogger{}),
+				varManager:       vars.GlobalVarManager,
 			},
 			options: &types.BuildOptions{
 				File: malformedDockerfile,
@@ -267,7 +267,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
-				varManager:       vars.NewVarsManager(&varManagerLogger{}),
+				varManager:       vars.GlobalVarManager,
 			},
 			options: &types.BuildOptions{
 				File: dockerfile,
@@ -283,7 +283,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
-				varManager:       vars.NewVarsManager(&varManagerLogger{}),
+				varManager:       vars.GlobalVarManager,
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -297,7 +297,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 				ioCtrl:           io.NewIOController(),
 				analyticsTracker: fakeAnalyticsTracker{},
 				insights:         fakeAnalyticsTracker{},
-				varManager:       vars.NewVarsManager(&varManagerLogger{}),
+				varManager:       vars.GlobalVarManager,
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,

@@ -27,9 +27,6 @@ import (
 func Test_addOnEmpty(t *testing.T) {
 	dir := t.TempDir()
 
-	varManager := vars.NewVarsManager(&varManagerLogger{})
-	vars.GlobalVarManager = varManager
-
 	if err := os.RemoveAll(dir); err != nil {
 		t.Fatal(err)
 	}
@@ -222,10 +219,7 @@ func Test_removeHost(t *testing.T) {
 func TestGetPort(t *testing.T) {
 	dir := t.TempDir()
 
-	varManager := vars.NewVarsManager(&varManagerLogger{})
-	vars.GlobalVarManager = varManager
-
-	varManager.AddLocalVar(constants.OktetoHomeEnvVar, dir)
+	vars.GlobalVarManager.AddLocalVar(constants.OktetoHomeEnvVar, dir)
 
 	if _, err := GetPort(t.Name()); err == nil {
 		t.Fatal("expected error on non existing host")
@@ -247,9 +241,6 @@ func TestGetPort(t *testing.T) {
 }
 
 func Test_getSSHConfigPath(t *testing.T) {
-	varManager := vars.NewVarsManager(&varManagerLogger{})
-	vars.GlobalVarManager = varManager
-
 	ssh := getSSHConfigPath()
 	parts := strings.Split(ssh, string(os.PathSeparator))
 	found := false

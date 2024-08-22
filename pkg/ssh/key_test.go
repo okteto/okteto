@@ -22,17 +22,10 @@ import (
 	"github.com/okteto/okteto/pkg/vars"
 )
 
-type varManagerLogger struct{}
-
-func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
-func (varManagerLogger) AddMaskedWord(_ string)            {}
-
 func TestKeyExists(t *testing.T) {
 	dir := t.TempDir()
 
-	varManager := vars.NewVarsManager(&varManagerLogger{})
-	varManager.AddLocalVar(constants.OktetoFolderEnvVar, dir)
-	vars.GlobalVarManager = varManager
+	vars.GlobalVarManager.AddLocalVar(constants.OktetoFolderEnvVar, dir)
 
 	if KeyExists() {
 		t.Error("keys shouldn't exist in an empty directory")
@@ -70,9 +63,7 @@ func TestKeyExists(t *testing.T) {
 func Test_generate(t *testing.T) {
 	dir := t.TempDir()
 
-	varManager := vars.NewVarsManager(&varManagerLogger{})
-	varManager.AddLocalVar(constants.OktetoFolderEnvVar, dir)
-	vars.GlobalVarManager = varManager
+	vars.GlobalVarManager.AddLocalVar(constants.OktetoFolderEnvVar, dir)
 
 	public, private := getKeyPaths()
 	if err := generate(public, private, 128); err != nil {

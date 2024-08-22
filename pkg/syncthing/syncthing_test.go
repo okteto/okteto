@@ -25,7 +25,6 @@ import (
 )
 
 func TestGetFiles(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 	dir := t.TempDir()
 	vars.GlobalVarManager.AddLocalVar(constants.OktetoFolderEnvVar, dir)
 

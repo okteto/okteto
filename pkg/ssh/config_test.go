@@ -38,6 +38,11 @@ Host *.google.com *.yahoo.com
 `
 )
 
+type varManagerLogger struct{}
+
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
+
 func TestMain(m *testing.M) {
 	varManager := vars.NewVarsManager(&varManagerLogger{})
 	tmpDir, err := os.MkdirTemp("", "")

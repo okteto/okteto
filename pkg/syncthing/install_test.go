@@ -24,21 +24,13 @@ import (
 	"github.com/okteto/okteto/pkg/vars"
 )
 
-type varManagerLogger struct{}
-
-func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
-func (varManagerLogger) AddMaskedWord(_ string)            {}
-
 func TestInstall(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		// we only test this on windows because linux is already covered by CI/CD in the integration test
 		t.Skip("this test is only required for windows")
 	}
 
-	varManager := vars.NewVarsManager(&varManagerLogger{})
-	vars.GlobalVarManager = varManager
-
-	if err := Install(nil, varManager); err != nil {
+	if err := Install(nil, vars.GlobalVarManager); err != nil {
 		t.Fatal(err)
 	}
 
@@ -47,7 +39,7 @@ func TestInstall(t *testing.T) {
 		t.Fatal("failed to get version")
 	}
 
-	m := GetMinimumVersion(varManager)
+	m := GetMinimumVersion(vars.GlobalVarManager)
 
 	if v.Compare(m) != 0 {
 		t.Fatalf("got %s, expected %s", v.String(), m.String())
@@ -199,11 +191,10 @@ func TestGetMinimumVersion(t *testing.T) {
 		},
 	}
 
-	varManager := vars.NewVarsManager(&varManagerLogger{})
 	for _, tt := range tests {
 		t.Run(tt.version, func(t *testing.T) {
-			varManager.AddLocalVar(model.SyncthingVersionEnvVar, tt.version)
-			got := GetMinimumVersion(varManager)
+			vars.GlobalVarManager.AddLocalVar(model.SyncthingVersionEnvVar, tt.version)
+			got := GetMinimumVersion(vars.GlobalVarManager)
 			if got.String() != tt.expected {
 				t.Errorf("got %s, expected %s", got.String(), tt.expected)
 			}

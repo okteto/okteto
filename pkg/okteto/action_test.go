@@ -25,6 +25,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type varManagerLogger struct{}
+
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
+
 func TestMain(m *testing.M) {
 	varManager := vars.NewVarsManager(&varManagerLogger{})
 	tmpDir, err := os.MkdirTemp("", "")

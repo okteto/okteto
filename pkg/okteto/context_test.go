@@ -195,9 +195,7 @@ func Test_AddOktetoCredentialsToCfg(t *testing.T) {
 				CurrentContext: "test_okteto_dev",
 			}
 
-			varManager := vars.NewVarsManager(&varManagerLogger{})
-
-			err := AddOktetoCredentialsToCfg(cfg, creds, ns, userName, oktetoContext, varManager)
+			err := AddOktetoCredentialsToCfg(cfg, creds, ns, userName, oktetoContext, vars.GlobalVarManager)
 
 			require.NoError(t, err)
 			require.Equal(t, expectedKubeconfig, *cfg)
@@ -230,10 +228,9 @@ func Test_AddOktetoCredentialsToCfgWhenConfigCredentialHasntToBeDone(t *testing.
 		Extensions: nil,
 	}
 
-	varManager := vars.NewVarsManager(&varManagerLogger{})
-	varManager.AddLocalVar(constants.OktetoSkipConfigCredentialsUpdate, "true")
+	vars.GlobalVarManager.AddLocalVar(constants.OktetoSkipConfigCredentialsUpdate, "true")
 
-	result := AddOktetoCredentialsToCfg(cfg, creds, "ns", "userName", oktetoContext, varManager)
+	result := AddOktetoCredentialsToCfg(cfg, creds, "ns", "userName", oktetoContext, vars.GlobalVarManager)
 
 	require.NoError(t, result)
 	require.Equal(t, expectedCfg, *cfg, "config should not be updated")
@@ -257,9 +254,7 @@ func Test_AddOktetoCredentialsToCfgWithInvalidOktetoContext(t *testing.T) {
 		IsStoredAsInsecure: true,
 	}
 
-	varManager := vars.NewVarsManager(&varManagerLogger{})
-
-	result := AddOktetoCredentialsToCfg(cfg, creds, "ns", "userName", oktetoContext, varManager)
+	result := AddOktetoCredentialsToCfg(cfg, creds, "ns", "userName", oktetoContext, vars.GlobalVarManager)
 
 	require.Error(t, result)
 }
@@ -271,9 +266,6 @@ func TestGetContextStoreFromStorePath(t *testing.T) {
 			"test": {},
 		},
 	}
-
-	varManager := vars.NewVarsManager(&varManagerLogger{})
-	vars.GlobalVarManager = varManager
 
 	fs := afero.NewOsFs()
 	tempDir, err := afero.TempDir(fs, "", "")
@@ -297,7 +289,7 @@ func TestGetContextStoreFromStorePath(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, err)
-	varManager.AddLocalVar(constants.OktetoFolderEnvVar, tempDir)
+	vars.GlobalVarManager.AddLocalVar(constants.OktetoFolderEnvVar, tempDir)
 	store := GetContextStoreFromStorePath()
 
 	expected := &ContextStore{
