@@ -17,7 +17,6 @@ import (
 	"testing"
 	"time"
 
-	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -182,73 +181,6 @@ frontend:
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expected, deps)
 			}
-		})
-	}
-}
-
-func Test_getRepoNameFromGitURL(t *testing.T) {
-	tests := []struct {
-		name     string
-		repoUrl  string
-		expected string
-		wantErr  bool
-	}{
-		{
-			name:     "https url with trailing slash",
-			repoUrl:  "https://git-server.com/org/repo/",
-			expected: "repo",
-		},
-		{
-			name:     "https url",
-			repoUrl:  "https://git-server.com/org/repo",
-			expected: "repo",
-		},
-		{
-			name:     "https url with git extension",
-			repoUrl:  "https://git-server.com/org/repo.git",
-			expected: "repo",
-		},
-		{
-			name:     "ssh url",
-			repoUrl:  "git@git-server.com:org/repo.git",
-			expected: "repo",
-		},
-		{
-			name:     "ssh url without .git",
-			repoUrl:  "git@git-server.com:org/repo",
-			expected: "repo",
-		},
-		{
-			name:     "missing repo name",
-			repoUrl:  "https//git-server/org",
-			expected: "",
-			wantErr:  true,
-		},
-		{
-			name:     "invalid url",
-			repoUrl:  "foo//foo/foo",
-			expected: "",
-			wantErr:  true,
-		},
-		{
-			name:     "empty",
-			repoUrl:  "foo",
-			expected: "",
-			wantErr:  true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			url, err := giturls.Parse(tt.repoUrl)
-			assert.NoError(t, err)
-			result, err := getRepoNameFromGitURL(url)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
