@@ -25,6 +25,7 @@ import (
 func TestKeyExists(t *testing.T) {
 	dir := t.TempDir()
 
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 	vars.GlobalVarManager.AddLocalVar(constants.OktetoFolderEnvVar, dir)
 
 	if KeyExists() {
@@ -63,6 +64,7 @@ func TestKeyExists(t *testing.T) {
 func Test_generate(t *testing.T) {
 	dir := t.TempDir()
 
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 	vars.GlobalVarManager.AddLocalVar(constants.OktetoFolderEnvVar, dir)
 
 	public, private := getKeyPaths()

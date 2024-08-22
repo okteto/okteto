@@ -14,18 +14,20 @@
 package ssh
 
 import (
+	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/vars"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/vars"
 )
 
 func Test_addOnEmpty(t *testing.T) {
 	dir := t.TempDir()
+
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 
 	if err := os.RemoveAll(dir); err != nil {
 		t.Fatal(err)
@@ -51,6 +53,7 @@ func Test_addOnEmpty(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
 func Test_add(t *testing.T) {
 	dir := t.TempDir()
 	sshConfig := filepath.Join(dir, "config")
@@ -219,6 +222,7 @@ func Test_removeHost(t *testing.T) {
 func TestGetPort(t *testing.T) {
 	dir := t.TempDir()
 
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 	vars.GlobalVarManager.AddLocalVar(constants.OktetoHomeEnvVar, dir)
 
 	if _, err := GetPort(t.Name()); err == nil {
@@ -241,6 +245,8 @@ func TestGetPort(t *testing.T) {
 }
 
 func Test_getSSHConfigPath(t *testing.T) {
+	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
+
 	ssh := getSSHConfigPath()
 	parts := strings.Split(ssh, string(os.PathSeparator))
 	found := false
