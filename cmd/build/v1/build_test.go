@@ -15,6 +15,7 @@ package v1
 
 import (
 	"context"
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -40,14 +41,32 @@ type varManagerLogger struct{}
 func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
 func (varManagerLogger) AddMaskedWord(_ string)            {}
 
+func TestMain(m *testing.M) {
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	tmpDir, err := os.MkdirTemp("", "")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func(path string) {
+		err := os.RemoveAll(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(tmpDir)
+
+	varManager.AddLocalVar("HOME", tmpDir)
+	vars.GlobalVarManager = varManager
+
+	exitCode := m.Run()
+
+	os.Exit(exitCode)
+}
+
 func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	ctx := context.Background()
 
-	varManager := vars.NewVarsManager(&varManagerLogger{})
-	vars.GlobalVarManager = varManager
-
 	buildRunner := &fakeBuildRunner{}
-	bc := NewBuilder(buildRunner, io.NewIOController(), varManager)
+	bc := NewBuilder(buildRunner, io.NewIOController(), vars.GlobalVarManager)
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
 
@@ -76,11 +95,10 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 	ctx := context.Background()
 
-	varManager := vars.NewVarsManager(&varManagerLogger{})
-	varManager.AddLocalVar("TEST_VAR", "unit-test")
+	vars.GlobalVarManager.AddLocalVar("TEST_VAR", "unit-test")
 
 	buildRunner := &fakeBuildRunner{}
-	bc := NewBuilder(buildRunner, io.NewIOController(), varManager)
+	bc := NewBuilder(buildRunner, io.NewIOController(), vars.GlobalVarManager)
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
 
@@ -102,11 +120,10 @@ func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 	ctx := context.Background()
 
-	varManager := vars.NewVarsManager(&varManagerLogger{})
-	varManager.AddLocalVar("TEST_VAR", "unit-test")
+	vars.GlobalVarManager.AddLocalVar("TEST_VAR", "unit-test")
 
 	buildRunner := &fakeBuildRunner{}
-	bc := NewBuilder(buildRunner, io.NewIOController(), varManager)
+	bc := NewBuilder(buildRunner, io.NewIOController(), vars.GlobalVarManager)
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
 
@@ -134,9 +151,8 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 func TestBuildWithNoErrorFromDockerfileAndNoTag(t *testing.T) {
 	ctx := context.Background()
 
-	varManager := vars.NewVarsManager(&varManagerLogger{})
 	buildRunner := &fakeBuildRunner{}
-	bc := NewBuilder(buildRunner, io.NewIOController(), varManager)
+	bc := NewBuilder(buildRunner, io.NewIOController(), vars.GlobalVarManager)
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
 

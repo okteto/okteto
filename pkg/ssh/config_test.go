@@ -16,6 +16,8 @@ package ssh
 import (
 	"bytes"
 	"fmt"
+	"github.com/okteto/okteto/pkg/vars"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,6 +36,27 @@ Host *.google.com *.yahoo.com
   User root
 `
 )
+
+func TestMain(m *testing.M) {
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	tmpDir, err := os.MkdirTemp("", "")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func(path string) {
+		err := os.RemoveAll(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(tmpDir)
+
+	varManager.AddLocalVar("HOME", tmpDir)
+	vars.GlobalVarManager = varManager
+
+	exitCode := m.Run()
+
+	os.Exit(exitCode)
+}
 
 func TestWriteToNewFile(t *testing.T) {
 	config, err := parse(strings.NewReader(sshConfigExample))

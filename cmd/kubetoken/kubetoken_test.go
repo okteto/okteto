@@ -16,6 +16,7 @@ package kubetoken
 import (
 	"context"
 	"log"
+	"os"
 	"testing"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -59,6 +60,27 @@ type fakeCtxCmdRunner struct {
 
 func (f fakeCtxCmdRunner) RunStateless(ctx context.Context, ctxOptions *contextCMD.Options) (*okteto.ContextStateless, error) {
 	return f.fakeCtx, f.err
+}
+
+func TestMain(m *testing.M) {
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	tmpDir, err := os.MkdirTemp("", "")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func(path string) {
+		err := os.RemoveAll(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(tmpDir)
+
+	varManager.AddLocalVar("HOME", tmpDir)
+	vars.GlobalVarManager = varManager
+
+	exitCode := m.Run()
+
+	os.Exit(exitCode)
 }
 
 func TestKubetoken(t *testing.T) {
@@ -158,7 +180,6 @@ func TestKubetoken(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			varManager := vars.NewVarsManager(&varManagerLogger{})
-			vars.GlobalVarManager = varManager
 
 			cmd := NewKubetokenCmd(varManager)
 			cmd.oktetoClientProvider = tc.input.fakeOktetoClientProvider

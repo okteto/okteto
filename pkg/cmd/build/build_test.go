@@ -34,6 +34,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type varManagerLogger struct{}
+
+func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
+func (varManagerLogger) AddMaskedWord(_ string)            {}
+
+func TestMain(m *testing.M) {
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	tmpDir, err := os.MkdirTemp("", "")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func(path string) {
+		err := os.RemoveAll(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(tmpDir)
+
+	varManager.AddLocalVar("HOME", tmpDir)
+	vars.GlobalVarManager = varManager
+
+	exitCode := m.Run()
+
+	os.Exit(exitCode)
+}
+
 func Test_validateImage(t *testing.T) {
 	okCtx := &okteto.ContextStateless{
 		Store: &okteto.ContextStore{
@@ -115,14 +141,7 @@ func (mr *mockRegistry) GetRepoNameAndTag(_ string) (string, string) {
 	return mr.repo, mr.tag
 }
 
-type varManagerLogger struct{}
-
-func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
-func (varManagerLogger) AddMaskedWord(_ string)            {}
-
 func Test_OptsFromBuildInfo(t *testing.T) {
-	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
-
 	context := okteto.Context{
 		Namespace: "test",
 		Registry:  "registry.okteto",
@@ -409,7 +428,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				},
 			}
 
-			result := OptsFromBuildInfo(manifest.Name, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts, &tt.mr, okCtx, vars.NewVarsManager(&varManagerLogger{}))
+			result := OptsFromBuildInfo(manifest.Name, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts, &tt.mr, okCtx, vars.GlobalVarManager)
 			require.Equal(t, tt.expected, result)
 		})
 	}
@@ -734,7 +753,6 @@ func Test_createTempFileWithExpandedEnvsAtSource(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 			vars.GlobalVarManager.AddDotEnvVar("ENV_IN_FILE", tt.envValue)
 
 			file, err := createTempFileWithExpandedEnvsAtSource(tt.fakeFs, tt.sourceFile, t.TempDir())
@@ -792,9 +810,8 @@ func Test_setOutputMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			varManager := vars.NewVarsManager(&varManagerLogger{})
-			varManager.AddLocalVar("BUILDKIT_PROGRESS", tt.envBuildkitProgressValue)
-			got := setOutputMode(tt.input, varManager)
+			vars.GlobalVarManager.AddLocalVar("BUILDKIT_PROGRESS", tt.envBuildkitProgressValue)
+			got := setOutputMode(tt.input, vars.GlobalVarManager)
 			require.Equal(t, tt.expected, got)
 		})
 	}

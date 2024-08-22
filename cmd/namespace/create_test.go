@@ -15,6 +15,8 @@ package namespace
 
 import (
 	"context"
+	"log"
+	"os"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test/client"
@@ -23,6 +25,27 @@ import (
 	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestMain(m *testing.M) {
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	tmpDir, err := os.MkdirTemp("", "")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func(path string) {
+		err := os.RemoveAll(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(tmpDir)
+
+	varManager.AddLocalVar("HOME", tmpDir)
+	vars.GlobalVarManager = varManager
+
+	exitCode := m.Run()
+
+	os.Exit(exitCode)
+}
 
 func Test_createNamespace(t *testing.T) {
 	ctx := context.Background()
@@ -50,9 +73,6 @@ func Test_createNamespace(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			varManager := vars.NewVarsManager(&varManagerLogger{})
-			vars.GlobalVarManager = varManager
-
 			okteto.CurrentStore = &okteto.ContextStore{
 				Contexts: map[string]*okteto.Context{
 					"test": {
@@ -74,7 +94,7 @@ func Test_createNamespace(t *testing.T) {
 			nsCmd := &Command{
 				okClient:   fakeOktetoClient,
 				ctxCmd:     newFakeContextCommand(fakeOktetoClient, usr),
-				varManager: vars.NewVarsManager(&varManagerLogger{}),
+				varManager: vars.GlobalVarManager,
 			}
 			err := nsCmd.Create(ctx, &CreateOptions{
 				Members:   tt.members,

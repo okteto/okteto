@@ -16,6 +16,7 @@ package context
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"testing"
 
@@ -25,6 +26,27 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/vars"
 )
+
+func TestMain(m *testing.M) {
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	tmpDir, err := os.MkdirTemp("", "")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func(path string) {
+		err := os.RemoveAll(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(tmpDir)
+
+	varManager.AddLocalVar("HOME", tmpDir)
+	vars.GlobalVarManager = varManager
+
+	exitCode := m.Run()
+
+	os.Exit(exitCode)
+}
 
 func Test_initFromDeprecatedToken(t *testing.T) {
 
@@ -55,16 +77,13 @@ func Test_initFromDeprecatedToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			varManager := vars.NewVarsManager(&varManagerLogger{})
-			vars.GlobalVarManager = varManager
-
-			tokenPath, err := createDeprecatedToken(t, tt.tokenUrl, varManager)
+			tokenPath, err := createDeprecatedToken(t, tt.tokenUrl, vars.GlobalVarManager)
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer os.Remove(tokenPath)
 
-			kubepath, err := test.CreateKubeconfig(tt.kubeconfigCtx, varManager)
+			kubepath, err := test.CreateKubeconfig(tt.kubeconfigCtx, vars.GlobalVarManager)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -356,16 +356,13 @@ func Test_createContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			varManager := vars.NewVarsManager(&varManagerLogger{})
-			vars.GlobalVarManager = varManager
-
-			file, err := test.CreateKubeconfig(tt.kubeconfigCtx, varManager)
+			file, err := test.CreateKubeconfig(tt.kubeconfigCtx, vars.GlobalVarManager)
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer os.Remove(file)
 
-			ctxController := newFakeContextCommand(tt.fakeOktetoClient, user, tt.fakeObjects, varManager)
+			ctxController := newFakeContextCommand(tt.fakeOktetoClient, user, tt.fakeObjects, vars.GlobalVarManager)
 			okteto.CurrentStore = tt.ctxStore
 
 			if err := ctxController.UseContext(ctx, tt.ctxOptions); err != nil && !tt.expectedErr {
@@ -532,23 +529,20 @@ func TestCheckAccessToNamespace(t *testing.T) {
 				CurrentContext: "test",
 			}
 
-			varManager := vars.NewVarsManager(&varManagerLogger{})
-			vars.GlobalVarManager = varManager
-
 			fakeCtxCommand := newFakeContextCommand(tt.fakeOktetoClient, user, []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: v1.ObjectMeta{
 						Name: "test",
 					},
 				},
-			}, varManager)
+			}, vars.GlobalVarManager)
 
 			currentCtxCommand := *fakeCtxCommand
 			if tt.ctxOptions.IsOkteto {
 				currentCtxCommand.K8sClientProvider = nil
 			} else {
 				if !tt.expectedAccess {
-					currentCtxCommand = *newFakeContextCommand(tt.fakeOktetoClient, user, []runtime.Object{}, varManager)
+					currentCtxCommand = *newFakeContextCommand(tt.fakeOktetoClient, user, []runtime.Object{}, vars.GlobalVarManager)
 				}
 				currentCtxCommand.OktetoClientProvider = nil
 			}
@@ -815,10 +809,7 @@ func Test_replaceCredentialsTokenWithDynamicKubetoken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			varManager := vars.NewVarsManager(&varManagerLogger{})
-			vars.GlobalVarManager = varManager
-
-			varManager.AddLocalVar(OktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tt.useStaticTokenEnv))
+			vars.GlobalVarManager.AddLocalVar(OktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tt.useStaticTokenEnv))
 
 			fakeOktetoClientProvider := client.NewFakeOktetoClientProvider(&client.FakeOktetoClient{
 				KubetokenClient: client.NewFakeKubetokenClient(tt.kubetokenMockResponse),

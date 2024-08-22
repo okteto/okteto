@@ -20,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/pkg/dotenv"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/model/forward"
@@ -1064,70 +1063,6 @@ func TestGetTimeout(t *testing.T) {
 	}
 }
 
-func Test_loadEnvFile(t *testing.T) {
-	tests := []struct {
-		content   map[string]string
-		existing  map[string]string
-		expected  map[string]string
-		name      string
-		expectErr bool
-	}{
-		{
-			name:      "missing",
-			expectErr: true,
-		},
-		{
-			name:      "basic",
-			expectErr: false,
-			content:   map[string]string{"foo": "bar"},
-			expected:  map[string]string{"foo": "bar"},
-		},
-		{
-			name:      "doesnt-override",
-			expectErr: false,
-			content:   map[string]string{"foo": "bar"},
-			existing:  map[string]string{"foo": "var"},
-			expected:  map[string]string{"foo": "var"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.content != nil {
-				file, err := createEnvFile(tt.content)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				defer os.Remove(file)
-			}
-
-			for k, v := range tt.existing {
-				t.Setenv(k, v)
-			}
-
-			if err := godotenv.Load(); err != nil {
-				if tt.expectErr {
-					return
-				}
-
-				t.Fatal(err)
-			}
-
-			if tt.expectErr {
-				t.Fatal("call didn't fail as expected")
-			}
-
-			for k, v := range tt.expected {
-				got := os.Getenv(k)
-				if got != v {
-					t.Errorf("got %s=%s, expected %s=%s", k, got, k, v)
-				}
-			}
-		})
-	}
-}
-
 func Test_LoadManifestWithEnvFile(t *testing.T) {
 	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 
@@ -1139,12 +1074,11 @@ func Test_LoadManifestWithEnvFile(t *testing.T) {
 		"SERVICE_IMAGE": "code/service:2.1",
 	}
 
-	f, err := createEnvFile(content)
+	fs := afero.NewMemMapFs()
+	err := createEnvFile(content, fs)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	defer os.Remove(f)
 
 	manifestBytes := []byte(`dev:
     deployment:
@@ -1162,7 +1096,7 @@ func Test_LoadManifestWithEnvFile(t *testing.T) {
           environment:
           - MY_VAR=$MY_VAR`)
 
-	if err := dotenv.Load(".env", vars.GlobalVarManager, afero.NewOsFs()); err != nil {
+	if err := dotenv.Load(".env", vars.GlobalVarManager, fs); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1358,23 +1292,23 @@ func Test_validateForExtraFields(t *testing.T) {
 	}
 }
 
-func createEnvFile(content map[string]string) (string, error) {
-	file, err := os.OpenFile(".env", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+func createEnvFile(content map[string]string, fs afero.Fs) error {
+	file, err := fs.OpenFile(".env", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	for k, v := range content {
 		_, err = file.WriteString(fmt.Sprintf("%s=%s\n", k, v))
 		if err != nil {
-			return "", err
+			return err
 		}
 	}
 
 	if err := file.Sync(); err != nil {
-		return "", err
+		return err
 	}
-	return file.Name(), nil
+	return nil
 }
 
 func Test_expandEnvFiles(t *testing.T) {

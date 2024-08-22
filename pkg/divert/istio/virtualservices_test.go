@@ -15,6 +15,8 @@ package istio
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"reflect"
 	"testing"
 
@@ -33,6 +35,27 @@ type varManagerLogger struct{}
 
 func (varManagerLogger) Yellow(_ string, _ ...interface{}) {}
 func (varManagerLogger) AddMaskedWord(_ string)            {}
+
+func TestMain(m *testing.M) {
+	varManager := vars.NewVarsManager(&varManagerLogger{})
+	tmpDir, err := os.MkdirTemp("", "")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func(path string) {
+		err := os.RemoveAll(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(tmpDir)
+
+	varManager.AddLocalVar("HOME", tmpDir)
+	vars.GlobalVarManager = varManager
+
+	exitCode := m.Run()
+
+	os.Exit(exitCode)
+}
 
 func Test_translateDivertVirtualService(t *testing.T) {
 	tests := []struct {
@@ -378,7 +401,6 @@ func Test_translateDivertHost(t *testing.T) {
 			},
 		},
 	}
-	vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
 	okteto.AddOktetoContext("test", &types.User{Registry: "registry.demo.okteto.dev"}, "okteto", "cyndy")
 
 	for _, tt := range tests {
