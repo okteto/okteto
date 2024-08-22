@@ -16,12 +16,13 @@ package ssh
 import (
 	"bytes"
 	"fmt"
-	"github.com/okteto/okteto/pkg/vars"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/okteto/okteto/pkg/vars"
 )
 
 var (

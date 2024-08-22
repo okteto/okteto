@@ -15,13 +15,13 @@ package okteto
 
 import (
 	"context"
-	"github.com/okteto/okteto/pkg/vars"
 	"log"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/vars"
 	"github.com/stretchr/testify/assert"
 )
 
