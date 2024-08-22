@@ -317,8 +317,6 @@ func TestCredentials(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			vars.GlobalVarManager = vars.NewVarsManager(&varManagerLogger{})
-
 			ap := &authProvider{
 				config: &configfile.ConfigFile{
 					AuthConfigs: map[string]types.AuthConfig{
