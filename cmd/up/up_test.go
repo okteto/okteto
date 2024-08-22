@@ -279,7 +279,7 @@ func TestEnvVarIsAddedProperlyToDevContainerWhenIsSetFromCmd(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			overridedEnvVars, err := getOverridedEnvVarsFromCmd(tt.dev.Environment, tt.upOptions.Envs, vars.NewVarsManager(&varManagerLogger{}))
+			overridedEnvVars, err := getOverridedEnvVarsFromCmd(tt.dev.Environment, tt.upOptions.Envs, vars.GlobalVarManager)
 			if err != nil {
 				t.Fatalf("unexpected error in setEnvVarsFromCmd: %s", err)
 			}
@@ -331,7 +331,7 @@ func TestEnvVarIsNotAddedWhenHasBuiltInOktetoEnvVarsFormat(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := getOverridedEnvVarsFromCmd(tt.dev.Environment, tt.upOptions.Envs, vars.NewVarsManager(&varManagerLogger{}))
+			_, err := getOverridedEnvVarsFromCmd(tt.dev.Environment, tt.upOptions.Envs, vars.GlobalVarManager)
 			if !errors.Is(err, oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD) {
 				t.Fatalf("expected error in setEnvVarsFromCmd: %s due to try to set a built-in okteto environment variable", err)
 			}

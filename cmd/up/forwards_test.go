@@ -156,9 +156,7 @@ func TestForwards(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			varManager := vars.NewVarsManager(&varManagerLogger{})
-			varManager.AddLocalVar(model.OktetoExecuteSSHEnvVar, tc.OktetoExecuteSSHEnvVar)
-			vars.GlobalVarManager = varManager
+			vars.GlobalVarManager.AddLocalVar(model.OktetoExecuteSSHEnvVar, tc.OktetoExecuteSSHEnvVar)
 
 			okteto.CurrentStore = &okteto.ContextStore{
 				CurrentContext: "test",
@@ -181,7 +179,7 @@ func TestForwards(t *testing.T) {
 					},
 				},
 				K8sClientProvider: tc.clientProvider,
-				varManager:        varManager,
+				varManager:        vars.GlobalVarManager,
 			}
 
 			err := up.forwards(context.Background())
