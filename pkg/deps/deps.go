@@ -15,9 +15,7 @@ package deps
 
 import (
 	"fmt"
-	"net/url"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/a8m/envsubst/parse"
@@ -110,14 +108,6 @@ func (d *Dependency) ExpandVars(variables []string) error {
 	d.Variables = expandedVariables
 
 	return nil
-}
-
-func getRepoNameFromGitURL(repo *url.URL) (string, error) {
-	repoPath := strings.Split(strings.TrimPrefix(repo.Path, "/"), "/")
-	if len(repoPath) < 2 || repoPath[1] == "" {
-		return "", fmt.Errorf("dependency has invalid repository url: %s", repo.String())
-	}
-	return strings.ReplaceAll(repoPath[1], ".git", ""), nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
