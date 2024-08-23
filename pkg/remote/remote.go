@@ -63,7 +63,9 @@ USER 0
 ENV PATH="${PATH}:/okteto/bin"
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
-
+{{range $key, $val := .OktetoPrefixEnvVars }}
+ENV {{$key}} {{$val}}
+{{end}}
 ENV {{ .RemoteDeployEnvVar }} true
 ARG {{ .NamespaceArgName }}
 ARG {{ .ContextArgName }}
@@ -141,6 +143,7 @@ type Runner struct {
 	// sshAuthSockEnvvar is the default for SSH_AUTH_SOCK. Provided mostly for testing
 	sshAuthSockEnvvar  string
 	useInternalNetwork bool
+	getEnviron         func() []string
 }
 
 // Params struct to pass the necessary parameters to create the Dockerfile
@@ -187,6 +190,7 @@ type dockerfileTemplateProperties struct {
 	RemoteDeployEnvVar       string
 	OktetoBuildEnvVars       map[string]string
 	OktetoDependencyEnvVars  map[string]string
+	OktetoPrefixEnvVars      map[string]string
 	ContextArgName           string
 	NamespaceArgName         string
 	TokenArgName             string
@@ -219,6 +223,7 @@ func NewRunner(ioCtrl *io.Controller, builder Builder) *Runner {
 		ioCtrl:               ioCtrl,
 		builder:              builder,
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
+		getEnviron:           os.Environ,
 	}
 }
 
@@ -410,6 +415,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		BuildKitHostArgName:      model.OktetoBuildkitHostURLEnvVar,
 		OktetoRegistryURLArgName: model.OktetoRegistryURLEnvVar,
 		OktetoDependencyEnvVars:  params.DependenciesEnvVars,
+		OktetoPrefixEnvVars:      getOktetoPrefixEnvVars(r.getEnviron()),
 		Command:                  params.Command,
 		OktetoIsPreviewEnv:       constants.OktetoIsPreviewEnvVar,
 		Caches:                   params.Caches,
@@ -572,4 +578,14 @@ func GetOriginalCWD(workingDirectoryCtrl filesystem.WorkingDirectoryInterface, m
 	}
 	manifestPathDir := filepath.Dir(filepath.Clean(fmt.Sprintf("/%s", manifestPath)))
 	return strings.TrimSuffix(cwd, manifestPathDir), nil
+}
+
+func getOktetoPrefixEnvVars(environ []string) map[string]string {
+	prefixEnvVars := make(map[string]string)
+	for _, v := range environ {
+		if strings.HasPrefix(v, "OKTETO_") {
+			prefixEnvVars[strings.Split(v, "=")[0]] = strings.Split(v, "=")[1]
+		}
+	}
+	return prefixEnvVars
 }

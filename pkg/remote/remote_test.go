@@ -148,6 +148,9 @@ func TestRemoteTest(t *testing.T) {
 				temporalCtrl:         tempCreator,
 				oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
 				ioCtrl:               io.NewIOController(),
+				getEnviron: func() []string {
+					return []string{}
+				},
 			}
 			err := rdc.Run(ctx, tt.config.params)
 			if tt.expected != nil {
@@ -190,6 +193,9 @@ func TestExtraHosts(t *testing.T) {
 		oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
 		useInternalNetwork:   true,
 		ioCtrl:               io.NewIOController(),
+		getEnviron: func() []string {
+			return []string{}
+		},
 	}
 
 	err := rdc.Run(ctx, &Params{
@@ -232,6 +238,9 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 		oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
 		ioCtrl:               io.NewIOController(),
+		getEnviron: func() []string {
+			return []string{}
+		},
 	}
 
 	err = rdc.Run(context.Background(), &Params{
@@ -272,6 +281,9 @@ func TestRemoteDeployWithBadSshAgent(t *testing.T) {
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 		oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
 		ioCtrl:               io.NewIOController(),
+		getEnviron: func() []string {
+			return []string{}
+		},
 	}
 
 	err := rdc.Run(context.Background(), &Params{
@@ -503,6 +515,9 @@ COPY --from=runner /okteto/artifacts/ /
 			rdc := Runner{
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,
+				getEnviron: func() []string {
+					return []string{}
+				},
 			}
 			dockerfileName, err := rdc.createDockerfile("/test", tt.config.params)
 			assert.ErrorIs(t, err, tt.expected.err)
@@ -529,6 +544,9 @@ func TestDockerfileWithCache(t *testing.T) {
 	rdc := Runner{
 		fs:                   fs,
 		workingDirectoryCtrl: wdCtrl,
+		getEnviron: func() []string {
+			return []string{}
+		},
 	}
 	caches := []string{"/my", "/cache", "/list"}
 	dockerfileName, err := rdc.createDockerfile("/test", &Params{
@@ -815,5 +833,26 @@ func TestCreateDockerignoreFileWithFilesystem(t *testing.T) {
 			assert.NoError(t, err)
 
 		})
+	}
+}
+
+func TestGetOktetoPrefixEnvVars(t *testing.T) {
+	expectedEnvVars := map[string]string{
+		"OKTETO_ENV_VAR_1": "value1",
+		"OKTETO_ENV_VAR_2": "value2",
+	}
+
+	environ := []string{
+		"OKTETO_ENV_VAR_1=value1",
+		"OKTETO_ENV_VAR_2=value2",
+		"NON_OKTETO_ENV_VAR=value3",
+	}
+
+	prefixEnvVars := getOktetoPrefixEnvVars(environ)
+
+	for key, value := range expectedEnvVars {
+		if prefixEnvVars[key] != value {
+			t.Errorf("Expected value for environment variable %s is %s, but got %s", key, value, prefixEnvVars[key])
+		}
 	}
 }
