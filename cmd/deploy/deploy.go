@@ -504,7 +504,7 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		dc.IoCtrl,
 		dc.K8sLogger,
 		GetDependencyEnvVars,
-		GetPlatformEnvironment,
+		deployable.GetPlatformEnvironment,
 	)
 	if err != nil {
 		return err
@@ -837,15 +837,6 @@ func GetDependencyEnvVars(environGetter environGetter) map[string]string {
 	}
 
 	return result
-}
-
-func GetPlatformEnvironment(ctx context.Context) map[string]string {
-	c, err := okteto.NewOktetoClient()
-	if err != nil {
-		return nil
-	}
-	env, _ := c.User().GetExecutionEnv(context.TODO())
-	return env
 }
 
 func checkOktetoManifestPathFlag(options *Options, fs afero.Fs) error {

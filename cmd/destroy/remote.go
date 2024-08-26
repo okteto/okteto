@@ -118,6 +118,7 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 		TemplateName:              templateName,
 		CommandFlags:              commandFlags,
 		BuildEnvVars:              make(map[string]string),
+		ExecutionEnvVars:          deployable.GetPlatformEnvironment(ctx),
 		DependenciesEnvVars:       make(map[string]string),
 		DockerfileName:            dockerfileTemporalName,
 		Deployable:                dep,
