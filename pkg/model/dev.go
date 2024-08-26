@@ -43,7 +43,7 @@ import (
 
 var (
 	// OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "jlopezbarb/bin-image:1.6.0"
+	OktetoBinImageTag = "jlopezbarb/bin:1.6.0"
 
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
