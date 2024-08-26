@@ -165,7 +165,7 @@ func TestGetCommandFlags(t *testing.T) {
 func Test_newRemoteDeployer(t *testing.T) {
 	getBuildEnvVars := func() map[string]string { return nil }
 	getDependencyEnvVars := func(_ environGetter) map[string]string { return nil }
-	getExecutionEvVars := func(_ context.Context) map[string]string { return nil }
+	getExecutionEvVars := func(_ context.Context) map[string]string { return make(map[string]string) }
 	got := newRemoteDeployer(getBuildEnvVars, io.NewIOController(), getDependencyEnvVars, getExecutionEvVars)
 	require.IsType(t, &remoteDeployer{}, got)
 	require.NotNil(t, got.getBuildEnvVars)
@@ -200,6 +200,7 @@ func TestDeployRemote(t *testing.T) {
 		CommandFlags:        []string{"--name \"test\""},
 		BuildEnvVars:        map[string]string{"BUILD_VAR_1": "value"},
 		DependenciesEnvVars: map[string]string{"DEP_VAR_1": "value"},
+		ExecutionEnvVars:    map[string]string{"PLAT_VAR_1": "value"},
 		DockerfileName:      dockerfileTemporalName,
 		Deployable: deployable.Entity{
 			Divert:   manifest.Deploy.Divert,
@@ -219,6 +220,9 @@ func TestDeployRemote(t *testing.T) {
 		},
 		getDependencyEnvVars: func(environGetter) map[string]string {
 			return map[string]string{"DEP_VAR_1": "value"}
+		},
+		getExecutionEnvVars: func(ctx context.Context) map[string]string {
+			return map[string]string{"PLAT_VAR_1": "value"}
 		},
 	}
 	opts := &Options{
@@ -260,6 +264,7 @@ func TestDeployRemoteWithError(t *testing.T) {
 		CommandFlags:        []string{"--name \"test\""},
 		BuildEnvVars:        map[string]string{"BUILD_VAR_1": "value"},
 		DependenciesEnvVars: map[string]string{"DEP_VAR_1": "value"},
+		ExecutionEnvVars:    map[string]string{"PLAT_VAR_1": "value"},
 		DockerfileName:      dockerfileTemporalName,
 		Deployable: deployable.Entity{
 			Divert:   manifest.Deploy.Divert,
@@ -315,6 +320,9 @@ func TestDeployRemoteWithError(t *testing.T) {
 				},
 				getDependencyEnvVars: func(environGetter) map[string]string {
 					return map[string]string{"DEP_VAR_1": "value"}
+				},
+				getExecutionEnvVars: func(_ context.Context) map[string]string {
+					return map[string]string{"PLAT_VAR_1": "value"}
 				},
 			}
 			opts := &Options{

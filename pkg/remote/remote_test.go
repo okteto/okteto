@@ -324,6 +324,7 @@ func TestCreateDockerfile(t *testing.T) {
 			config: config{
 				params: &Params{
 					BaseImage:           "test-image",
+					ExecutionEnvVars:    map[string]string{"A": "A"},
 					Manifest:            fakeManifest,
 					BuildEnvVars:        map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
 					DependenciesEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
@@ -381,6 +382,10 @@ ARG OKTETO_INVALIDATE_CACHE
 
 RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
+
+
+ENV A A
+
 
 RUN \
   \
@@ -468,6 +473,8 @@ ARG OKTETO_INVALIDATE_CACHE
 
 RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
+
+
 
 RUN \
   \

@@ -90,16 +90,16 @@ ENV {{$key}} {{$val}}
 ENV {{$key}} {{$val}}
 {{end}}
 
-{{range $key, $val := .OktetoExecutionEnvVars }}
-ENV {{$key}} {{$val}}
-{{end}}
-
 ARG {{ .GitCommitArgName }}
 ARG {{ .GitBranchArgName }}
 ARG {{ .InvalidateCacheArgName }}
 
 RUN echo "${{ .InvalidateCacheArgName }}" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
+
+{{ range $key, $val := .OktetoExecutionEnvVars}}
+ENV {{$key}} {{$val}}
+{{ end }}
 
 RUN \
   {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}} {{end}}\
