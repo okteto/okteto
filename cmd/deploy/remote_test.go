@@ -165,7 +165,8 @@ func TestGetCommandFlags(t *testing.T) {
 func Test_newRemoteDeployer(t *testing.T) {
 	getBuildEnvVars := func() map[string]string { return nil }
 	getDependencyEnvVars := func(_ environGetter) map[string]string { return nil }
-	got := newRemoteDeployer(getBuildEnvVars, io.NewIOController(), getDependencyEnvVars)
+	getExecutionEvVars := func(_ context.Context) map[string]string { return nil }
+	got := newRemoteDeployer(getBuildEnvVars, io.NewIOController(), getDependencyEnvVars, getExecutionEvVars)
 	require.IsType(t, &remoteDeployer{}, got)
 	require.NotNil(t, got.getBuildEnvVars)
 }

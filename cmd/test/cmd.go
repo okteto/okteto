@@ -337,6 +337,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			CommandFlags:        commandFlags,
 			BuildEnvVars:        builder.GetBuildEnvVars(),
 			DependenciesEnvVars: deployCMD.GetDependencyEnvVars(os.Environ),
+			ExecutionEnvVars:    deployCMD.GetPlatformEnvironment(ctx),
 			DockerfileName:      "Dockerfile.test",
 			Deployable: deployable.Entity{
 				Commands: commands,

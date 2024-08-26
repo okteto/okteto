@@ -55,6 +55,10 @@ type getRegistryCredentialsQuery struct {
 	RegistryCredentials registryCredsQuery `graphql:"registryCredentials(registryUrl: $regHost)"`
 }
 
+type getExecutionEnvQuery struct {
+	ExecutionEnv []variablesQuery `graphql:"executionEnv"`
+}
+
 type userQuery struct {
 	Id              graphql.String
 	Name            graphql.String
@@ -287,4 +291,22 @@ func (c *userClient) GetRegistryCredentials(ctx context.Context, host string) (d
 		IdentityToken: string(queryStruct.RegistryCredentials.Identitytoken),
 	}, nil
 
+}
+
+func (c *userClient) GetExecutionEnv(ctx context.Context) (map[string]string, error) {
+	result := make(map[string]string)
+
+	var queryStruct getExecutionEnvQuery
+	err := query(ctx, &queryStruct, nil, c.client)
+	if err != nil {
+		if strings.Contains(err.Error(), "Cannot query field \"executionEnv\" on type \"Query\"") {
+			return result, nil
+		}
+		return result, err
+	}
+
+	for _, envVar := range queryStruct.ExecutionEnv {
+		result[string(envVar.Name)] = string(envVar.Value)
+	}
+	return result, nil
 }

@@ -102,6 +102,7 @@ type getDeployerFunc func(
 	*io.Controller,
 	*io.K8sLogger,
 	dependencyEnvVarsGetter,
+	executionEnvVarsGetter,
 ) (Deployer, error)
 
 type cleanUpFunc func(context.Context, error)
@@ -494,7 +495,17 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 
 func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) error {
 	// If the command is configured to execute things remotely (--remote, deploy.image or deploy.remote) it should be executed in the remote. If not, it should be executed locally
-	deployer, err := dc.GetDeployer(ctx, deployOptions, dc.Builder.GetBuildEnvVars, dc.CfgMapHandler, dc.K8sClientProvider, dc.IoCtrl, dc.K8sLogger, GetDependencyEnvVars)
+	deployer, err := dc.GetDeployer(
+		ctx,
+		deployOptions,
+		dc.Builder.GetBuildEnvVars,
+		dc.CfgMapHandler,
+		dc.K8sClientProvider,
+		dc.IoCtrl,
+		dc.K8sLogger,
+		GetDependencyEnvVars,
+		GetPlatformEnvironment,
+	)
 	if err != nil {
 		return err
 	}
@@ -594,10 +605,11 @@ func GetDeployer(ctx context.Context,
 	ioCtrl *io.Controller,
 	k8Logger *io.K8sLogger,
 	dependencyEnvVarsGetter dependencyEnvVarsGetter,
+	executionEnvVarGetter executionEnvVarsGetter,
 ) (Deployer, error) {
 	if shouldRunInRemote(opts) {
 		oktetoLog.Info("Deploying remotely...")
-		return newRemoteDeployer(buildEnvVarsGetter, ioCtrl, dependencyEnvVarsGetter), nil
+		return newRemoteDeployer(buildEnvVarsGetter, ioCtrl, dependencyEnvVarsGetter, executionEnvVarGetter), nil
 	}
 
 	oktetoLog.Info("Deploying locally...")
@@ -825,6 +837,15 @@ func GetDependencyEnvVars(environGetter environGetter) map[string]string {
 	}
 
 	return result
+}
+
+func GetPlatformEnvironment(ctx context.Context) map[string]string {
+	c, err := okteto.NewOktetoClient()
+	if err != nil {
+		return nil
+	}
+	env, _ := c.User().GetExecutionEnv(context.TODO())
+	return env
 }
 
 func checkOktetoManifestPathFlag(options *Options, fs afero.Fs) error {
