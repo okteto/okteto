@@ -436,6 +436,7 @@ func GetPlatformEnvironment(ctx context.Context) map[string]string {
 	if err != nil {
 		return nil
 	}
-	env, _ := c.User().GetExecutionEnv(context.TODO())
+	// nolint:errcheck
+	env, _ := c.User().GetExecutionEnv(ctx)
 	return env
 }
