@@ -264,6 +264,9 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 			// Set OKTETO_DOMAIN=okteto-subdomain env variable
 			fmt.Sprintf("%s=%s", model.OktetoDomainEnvVar, okteto.GetSubdomain()),
 		)
+		for k, v := range getPlatformEnvironment(ctx) {
+			params.Variables = append(params.Variables, fmt.Sprintf("%s=%s", k, v))
+		}
 	}
 	oktetoLog.EnableMasking()
 	err = r.runCommandsSection(ctx, params)
@@ -426,4 +429,13 @@ func createTempOktetoEnvFile(fs afero.Fs) (afero.File, func(), error) {
 			oktetoLog.Infof("error removing okteto env file dir: %s", err)
 		}
 	}, nil
+}
+
+func getPlatformEnvironment(ctx context.Context) map[string]string {
+	c, err := okteto.NewOktetoClient()
+	if err != nil {
+		return nil
+	}
+	env, _ := c.User().GetExecutionEnv(context.TODO())
+	return env
 }
