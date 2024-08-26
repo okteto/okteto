@@ -190,6 +190,12 @@ services:
 				},
 			},
 			{
+				Name: oktetoSyncDataVolume,
+				VolumeSource: apiv1.VolumeSource{
+					EmptyDir: &apiv1.EmptyDirVolumeSource{},
+				},
+			},
+			{
 				Name: dev1.GetVolumeName(),
 				VolumeSource: apiv1.VolumeSource{
 					PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
@@ -355,8 +361,12 @@ services:
 					},
 					{
 						Name:      oktetoSyncSecretVolume,
-						ReadOnly:  false,
+						ReadOnly:  true,
 						MountPath: "/var/syncthing/secret/",
+					},
+					{
+						Name:      oktetoSyncDataVolume,
+						MountPath: "/var/syncthing/data/",
 					},
 					{
 						Name:      oktetoDevSecretVolume,
@@ -901,6 +911,12 @@ persistentVolume:
 				},
 			},
 			{
+				Name: oktetoSyncDataVolume,
+				VolumeSource: apiv1.VolumeSource{
+					EmptyDir: &apiv1.EmptyDirVolumeSource{},
+				},
+			},
+			{
 				Name: dev.GetVolumeName(),
 				VolumeSource: apiv1.VolumeSource{
 					EmptyDir: &apiv1.EmptyDirVolumeSource{},
@@ -960,8 +976,12 @@ persistentVolume:
 					},
 					{
 						Name:      oktetoSyncSecretVolume,
-						ReadOnly:  false,
+						ReadOnly:  true,
 						MountPath: "/var/syncthing/secret/",
+					},
+					{
+						Name:      oktetoSyncDataVolume,
+						MountPath: "/var/syncthing/data/",
 					},
 					{
 						Name:      OktetoBinName,
@@ -1603,6 +1623,12 @@ services:
 				},
 			},
 			{
+				Name: oktetoSyncDataVolume,
+				VolumeSource: apiv1.VolumeSource{
+					EmptyDir: &apiv1.EmptyDirVolumeSource{},
+				},
+			},
+			{
 				Name: dev1.GetVolumeName(),
 				VolumeSource: apiv1.VolumeSource{
 					PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
@@ -1768,8 +1794,12 @@ services:
 					},
 					{
 						Name:      oktetoSyncSecretVolume,
-						ReadOnly:  false,
+						ReadOnly:  true,
 						MountPath: "/var/syncthing/secret/",
+					},
+					{
+						Name:      oktetoSyncDataVolume,
+						MountPath: "/var/syncthing/data/",
 					},
 					{
 						Name:      oktetoDevSecretVolume,

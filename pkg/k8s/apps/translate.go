@@ -329,12 +329,12 @@ func TranslateVolumeMounts(c *apiv1.Container, rule *model.TranslationRule) {
 		c.VolumeMounts,
 		apiv1.VolumeMount{
 			Name:      oktetoSyncSecretVolume,
-			MountPath: "/var/syncthing/secret",
+			MountPath: "/var/syncthing/secret/",
 			ReadOnly:  true,
 		},
 		apiv1.VolumeMount{
 			Name:      oktetoSyncDataVolume,
-			MountPath: "/var/syncthing/data",
+			MountPath: "/var/syncthing/data/",
 		},
 	)
 
