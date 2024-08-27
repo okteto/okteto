@@ -37,8 +37,7 @@ const (
 
 	// syncthing
 	oktetoSyncSecretVolume = "okteto-sync-secret" // skipcq GSC-G101  not a secret
-	oktetoSyncDataVolume   = "okteto-sync-data"
-	oktetoDevSecretVolume  = "okteto-dev-secret" // skipcq GSC-G101  not a secret
+	oktetoDevSecretVolume  = "okteto-dev-secret"  // skipcq GSC-G101  not a secret
 	oktetoSecretTemplate   = "okteto-%s"
 )
 
@@ -332,10 +331,6 @@ func TranslateVolumeMounts(c *apiv1.Container, rule *model.TranslationRule) {
 			MountPath: "/var/syncthing/secret/",
 			ReadOnly:  true,
 		},
-		apiv1.VolumeMount{
-			Name:      oktetoSyncDataVolume,
-			MountPath: "/var/syncthing/data/",
-		},
 	)
 
 	if len(rule.Secrets) > 0 {
@@ -577,15 +572,6 @@ func isOktetoSyncSecretVolumePresent(spec *apiv1.PodSpec) bool {
 	return false
 }
 
-func isOktetoSyncDataVolumePresent(spec *apiv1.PodSpec) bool {
-	for _, v := range spec.Volumes {
-		if v.Name == oktetoSyncDataVolume {
-			return true
-		}
-	}
-	return false
-}
-
 // TranslateOktetoSyncthingVolumes translates the syncthing secret container of a pod
 func TranslateOktetoSyncthingVolumes(spec *apiv1.PodSpec, name string) {
 	if spec.Volumes == nil {
@@ -623,15 +609,6 @@ func TranslateOktetoSyncthingVolumes(spec *apiv1.PodSpec, name string) {
 		syncthingVolumes = append(syncthingVolumes, v)
 	}
 
-	if !isOktetoSyncDataVolumePresent(spec) {
-		v := apiv1.Volume{
-			Name: oktetoSyncDataVolume,
-			VolumeSource: apiv1.VolumeSource{
-				EmptyDir: &apiv1.EmptyDirVolumeSource{},
-			},
-		}
-		syncthingVolumes = append(syncthingVolumes, v)
-	}
 	spec.Volumes = append(spec.Volumes, syncthingVolumes...)
 }
 
