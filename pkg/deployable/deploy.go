@@ -436,7 +436,11 @@ func GetPlatformEnvironment(ctx context.Context) map[string]string {
 	if err != nil {
 		return nil
 	}
-	// nolint:errcheck
-	env, _ := c.User().GetExecutionEnv(ctx)
+
+	env, err := c.User().GetExecutionEnv(ctx)
+	if err != nil {
+		oktetoLog.Debugf("failed to get platform environment: %s", err)
+		return map[string]string{}
+	}
 	return env
 }
