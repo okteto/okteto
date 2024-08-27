@@ -97,6 +97,10 @@ ARG {{ .InvalidateCacheArgName }}
 RUN echo "${{ .InvalidateCacheArgName }}" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
 
+{{ range $key, $val := .OktetoExecutionEnvVars}}
+ENV {{$key}} {{$val}}
+{{ end }}
+
 RUN \
   {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}} {{end}}\
   --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
@@ -147,6 +151,7 @@ type Runner struct {
 type Params struct {
 	BuildEnvVars        map[string]string
 	DependenciesEnvVars map[string]string
+	ExecutionEnvVars    map[string]string
 	Manifest            *model.Manifest
 	Command             string
 	TemplateName        string
@@ -187,6 +192,7 @@ type dockerfileTemplateProperties struct {
 	RemoteDeployEnvVar       string
 	OktetoBuildEnvVars       map[string]string
 	OktetoDependencyEnvVars  map[string]string
+	OktetoExecutionEnvVars   map[string]string
 	ContextArgName           string
 	NamespaceArgName         string
 	TokenArgName             string
@@ -410,6 +416,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		BuildKitHostArgName:      model.OktetoBuildkitHostURLEnvVar,
 		OktetoRegistryURLArgName: model.OktetoRegistryURLEnvVar,
 		OktetoDependencyEnvVars:  params.DependenciesEnvVars,
+		OktetoExecutionEnvVars:   params.ExecutionEnvVars,
 		Command:                  params.Command,
 		OktetoIsPreviewEnv:       constants.OktetoIsPreviewEnvVar,
 		Caches:                   params.Caches,

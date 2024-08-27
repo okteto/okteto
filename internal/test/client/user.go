@@ -71,3 +71,7 @@ func (c *FakeUserClient) GetClusterMetadata(_ context.Context, _ string) (types.
 func (*FakeUserClient) GetRegistryCredentials(_ context.Context, _ string) (dockertypes.AuthConfig, error) {
 	return dockertypes.AuthConfig{}, nil
 }
+
+func (*FakeUserClient) GetExecutionEnv(_ context.Context) (map[string]string, error) {
+	return map[string]string{}, nil
+}
