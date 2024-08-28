@@ -585,6 +585,9 @@ func getOktetoPrefixEnvVars(environ []string) map[string]string {
 	envFormatParts := 2
 	for _, v := range environ {
 		result := strings.SplitN(v, "=", envFormatParts)
+		if len(result) != envFormatParts {
+			continue
+		}
 		key := result[0]
 		if strings.HasPrefix(key, "OKTETO_") {
 			value := result[1]

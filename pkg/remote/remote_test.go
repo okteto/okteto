@@ -838,14 +838,17 @@ func TestCreateDockerignoreFileWithFilesystem(t *testing.T) {
 
 func TestGetOktetoPrefixEnvVars(t *testing.T) {
 	expectedEnvVars := map[string]string{
-		"OKTETO_ENV_VAR_1": "value1",
-		"OKTETO_ENV_VAR_2": "value2",
+		"OKTETO_ENV_VAR_1":                        "value1",
+		"OKTETO_ENV_VAR_2":                        "value2",
+		"OKTETO_ENV_VAR_WITHOUT_VALUE_IS_SKIPPED": "MYVALUEWITHEQUAL=INVALUE",
 	}
 
 	environ := []string{
 		"OKTETO_ENV_VAR_1=value1",
 		"OKTETO_ENV_VAR_2=value2",
 		"NON_OKTETO_ENV_VAR=value3",
+		"OKTETO_ENV_VAR_WITHOUT_VALUE_IS_SKIPPED=MYVALUEWITHEQUAL=INVALUE",
+		"OKTETO_ENV_VAR_WITHOUT_VALUE_IS_SKIPPED",
 	}
 
 	prefixEnvVars := getOktetoPrefixEnvVars(environ)
