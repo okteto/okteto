@@ -345,7 +345,11 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 				if err != nil {
 					// If an error occurs while attempting to create the tty display,
 					// fallback to using plain mode on stdout (in contrast to stderr).
-					d, _ = progressui.NewDisplay(w, progressui.PlainMode)
+					d, err = progressui.NewDisplay(w, progressui.PlainMode)
+					if err != nil {
+						oktetoLog.Infof("could not display build status: %s", err)
+						return
+					}
 				}
 				// not using shared context to not disrupt display but let is finish reporting errors
 				if _, err := d.UpdateFrom(context.TODO(), plainChannel); err != nil {
@@ -358,7 +362,11 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			if err != nil {
 				// If an error occurs while attempting to create the tty display,
 				// fallback to using plain mode on stdout (in contrast to stderr).
-				d, _ = progressui.NewDisplay(os.Stdout, progressui.TtyMode)
+				d, err = progressui.NewDisplay(os.Stdout, progressui.TtyMode)
+				if err != nil {
+					oktetoLog.Infof("could not display build status: %s", err)
+					return err
+				}
 			}
 			// not using shared context to not disrupt display but let is finish reporting errors
 			if _, err := d.UpdateFrom(context.TODO(), ttyChannel); err != nil {
@@ -375,7 +383,11 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			if err != nil {
 				// If an error occurs while attempting to create the tty display,
 				// fallback to using plain mode on stdout (in contrast to stderr).
-				d, _ = progressui.NewDisplay(os.Stdout, progressui.PlainMode)
+				d, err = progressui.NewDisplay(os.Stdout, progressui.PlainMode)
+				if err != nil {
+					oktetoLog.Infof("could not display build status: %s", err)
+					return err
+				}
 			}
 			// not using shared context to not disrupt display but let is finish reporting errors
 			if _, err := d.UpdateFrom(context.TODO(), plainChannel); err != nil {
