@@ -140,10 +140,10 @@ type Runner struct {
 	builder              Builder
 	oktetoClientProvider OktetoClientProvider
 	ioCtrl               *io.Controller
+	getEnviron           func() []string
 	// sshAuthSockEnvvar is the default for SSH_AUTH_SOCK. Provided mostly for testing
 	sshAuthSockEnvvar  string
 	useInternalNetwork bool
-	getEnviron         func() []string
 }
 
 // Params struct to pass the necessary parameters to create the Dockerfile
