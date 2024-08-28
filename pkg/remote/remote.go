@@ -582,9 +582,13 @@ func GetOriginalCWD(workingDirectoryCtrl filesystem.WorkingDirectoryInterface, m
 
 func getOktetoPrefixEnvVars(environ []string) map[string]string {
 	prefixEnvVars := make(map[string]string)
+	envFormatParts := 2
 	for _, v := range environ {
-		if strings.HasPrefix(v, "OKTETO_") {
-			prefixEnvVars[strings.Split(v, "=")[0]] = strings.Split(v, "=")[1]
+		result := strings.SplitN(v, "=", envFormatParts)
+		key := result[0]
+		if strings.HasPrefix(key, "OKTETO_") {
+			value := result[1]
+			prefixEnvVars[key] = value
 		}
 	}
 	return prefixEnvVars
