@@ -15,9 +15,9 @@ require (
 	github.com/compose-spec/godotenv v1.1.1
 	github.com/containerd/console v1.0.4 // indirect
 	github.com/denisbrodbeck/machineid v1.0.1
-	github.com/docker/cli v27.0.3+incompatible
+	github.com/docker/cli v27.1.1+incompatible
 	github.com/docker/distribution v2.8.2+incompatible // indirect
-	github.com/docker/docker v27.0.3+incompatible
+	github.com/docker/docker v27.1.1+incompatible
 	github.com/docker/docker-credential-helpers v0.8.2
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
 	github.com/fatih/color v1.13.0
@@ -243,10 +243,4 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240227224415-6ceb2ff114de // indirect
 )
 
-replace (
-	github.com/Sirupsen/logrus => github.com/sirupsen/logrus v1.8.0
-	github.com/jaguilar/vt100 => github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305
-	github.com/moby/buildkit => github.com/okteto/buildkit v0.15.3-0.20240822145910-2e98b8a3f6a4
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.0
-	go.opentelemetry.io/otel/sdk => go.opentelemetry.io/otel/sdk v1.20.0
-)
+replace github.com/moby/buildkit => github.com/okteto/buildkit v0.15.3-0.20240822145910-2e98b8a3f6a4

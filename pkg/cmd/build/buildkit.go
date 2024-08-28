@@ -354,11 +354,11 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			}()
 			// not using shared context to not disrupt display but let it finish reporting errors
 			// We need to wait until the tty channel is closed to avoid writing to stdout while the tty is being used
-			d, err := progressui.NewDisplay(ioCtrl.Out(), progressui.TtyMode)
+			d, err := progressui.NewDisplay(os.Stdout, progressui.TtyMode)
 			if err != nil {
 				// If an error occurs while attempting to create the tty display,
 				// fallback to using plain mode on stdout (in contrast to stderr).
-				d, _ = progressui.NewDisplay(ioCtrl.Out(), progressui.TtyMode)
+				d, _ = progressui.NewDisplay(os.Stdout, progressui.TtyMode)
 			}
 			// not using shared context to not disrupt display but let is finish reporting errors
 			if _, err := d.UpdateFrom(context.TODO(), ttyChannel); err != nil {
@@ -371,11 +371,11 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			return err
 		default:
 			// not using shared context to not disrupt display but let it finish reporting errors
-			d, err := progressui.NewDisplay(ioCtrl.Out(), progressui.PlainMode)
+			d, err := progressui.NewDisplay(os.Stdout, progressui.PlainMode)
 			if err != nil {
 				// If an error occurs while attempting to create the tty display,
 				// fallback to using plain mode on stdout (in contrast to stderr).
-				d, _ = progressui.NewDisplay(ioCtrl.Out(), progressui.PlainMode)
+				d, _ = progressui.NewDisplay(os.Stdout, progressui.PlainMode)
 			}
 			// not using shared context to not disrupt display but let is finish reporting errors
 			if _, err := d.UpdateFrom(context.TODO(), plainChannel); err != nil {
