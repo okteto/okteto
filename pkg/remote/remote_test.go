@@ -851,8 +851,6 @@ func TestGetOktetoPrefixEnvVars(t *testing.T) {
 	prefixEnvVars := getOktetoPrefixEnvVars(environ)
 
 	for key, value := range expectedEnvVars {
-		if prefixEnvVars[key] != value {
-			t.Errorf("Expected value for environment variable %s is %s, but got %s", key, value, prefixEnvVars[key])
-		}
+		assert.Equal(t, value, prefixEnvVars[key])
 	}
 }
