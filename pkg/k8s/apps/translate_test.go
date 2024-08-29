@@ -355,7 +355,7 @@ services:
 					},
 					{
 						Name:      oktetoSyncSecretVolume,
-						ReadOnly:  false,
+						ReadOnly:  true,
 						MountPath: "/var/syncthing/secret/",
 					},
 					{
@@ -960,7 +960,7 @@ persistentVolume:
 					},
 					{
 						Name:      oktetoSyncSecretVolume,
-						ReadOnly:  false,
+						ReadOnly:  true,
 						MountPath: "/var/syncthing/secret/",
 					},
 					{
@@ -1768,7 +1768,7 @@ services:
 					},
 					{
 						Name:      oktetoSyncSecretVolume,
-						ReadOnly:  false,
+						ReadOnly:  true,
 						MountPath: "/var/syncthing/secret/",
 					},
 					{
