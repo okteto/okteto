@@ -64,7 +64,7 @@ func Test_generate(t *testing.T) {
 
 	t.Setenv(constants.OktetoFolderEnvVar, dir)
 	public, private := getKeyPaths()
-	if err := generate(public, private, 128); err != nil {
+	if err := generate(public, private); err != nil {
 		t.Error(err)
 	}
 
