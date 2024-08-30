@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/moby/buildkit/frontend/dockerfile/linter"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -202,7 +203,9 @@ func validateDockerfile(file string) error {
 		return err
 	}
 
-	_, _, err = instructions.Parse(parsedDockerfile.AST)
+	_, _, err = instructions.Parse(parsedDockerfile.AST, linter.New(&linter.Config{
+		ReturnAsError: true,
+	}))
 	return err
 }
 
