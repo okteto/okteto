@@ -42,8 +42,11 @@ import (
 )
 
 const (
+	// oldEnableDevBranchTrackingEnvVar enables or disables the dev branch tracking by the env var OKTETO_TRACK_DEV_BANCH_ENABLED
+	oldEnableDevBranchTrackingEnvVar = "OKTETO_TRACK_DEV_BANCH_ENABLED"
+
 	// enableDevBranchTrackingEnvVar enables or disables the dev branch tracking by the env var OKTETO_TRACK_DEV_BANCH_ENABLED
-	enableDevBranchTrackingEnvVar = "OKTETO_TRACK_DEV_BANCH_ENABLED"
+	enableDevBranchTrackingEnvVar = "OKTETO_TRACK_DEV_BRANCH_ENABLED"
 
 	// devBranchTrackingIntervalEnvVar sets the tracking interval for branch trackin (if enabled) using OKTETO_TRACK_DEV_BRANCH_INTERVAL
 	devBranchTrackingIntervalEnvVar = "OKTETO_TRACK_DEV_BRANCH_INTERVAL"
@@ -577,18 +580,18 @@ func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) err
 
 // TrackLatestBranchOnDevContainer tracks the latest branch on the dev container
 func TrackLatestBranchOnDevContainer(ctx context.Context, manifest *model.Manifest, manifestPathFlag string, clientProvider okteto.K8sClientProvider) {
-	if !env.LoadBoolean(enableDevBranchTrackingEnvVar) {
+	if !env.LoadBoolean(oldEnableDevBranchTrackingEnvVar) && !env.LoadBoolean(enableDevBranchTrackingEnvVar) {
 		oktetoLog.Infof("branch tracking is disabled")
 		return
 	}
 
-	// if the manfiest deploy is empty we can't update the configmap because it doesn't exist
+	// if the manifest deploy is empty we can't update the configmap because it doesn't exist
 	if manifest.Deploy == nil {
 		oktetoLog.Infof("no deploy section found in the manifest")
 		return
 	}
 
-	gitRepo, err := repository.FindTopLevelGitDir((manifestPathFlag))
+	gitRepo, err := repository.FindTopLevelGitDir(manifestPathFlag)
 	if err != nil {
 		oktetoLog.Infof("error finding git repository: %s", err.Error())
 		return
