@@ -470,6 +470,7 @@ jobs:
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh latest "linux/amd64"
       - run: trivy image --no-progress okteto/okteto:latest
+      - run: trivy image --no-progress okteto/bin:latest
 
   upload-static-job:
     executor: golang-ci
