@@ -42,7 +42,8 @@ import (
 )
 
 const (
-	// oldEnableDevBranchTrackingEnvVar enables or disables the dev branch tracking by the env var OKTETO_TRACK_DEV_BANCH_ENABLED
+	// oldEnableDevBranchTrackingEnvVar enables or disables the dev branch tracking by the env var OKTETO_TRACK_DEV_BANCH_ENABLED.
+	// This was a typo but keeping it to reduce friction with customers that are already using it. It will go away eventually
 	oldEnableDevBranchTrackingEnvVar = "OKTETO_TRACK_DEV_BANCH_ENABLED"
 
 	// enableDevBranchTrackingEnvVar enables or disables the dev branch tracking by the env var OKTETO_TRACK_DEV_BANCH_ENABLED
