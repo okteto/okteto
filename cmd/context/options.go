@@ -37,6 +37,8 @@ type Options struct {
 	raiseNotCtxError      bool
 	InsecureSkipTlsVerify bool
 	InferredToken         bool
+	PublicKeyFile         string
+	PrivateKeyFile        string
 }
 
 func (o *Options) InitFromContext() {
@@ -71,6 +73,8 @@ func (o *Options) InitFromContext() {
 			o.Namespace = okCtx.Namespace
 		}
 		o.IsOkteto = okCtx.IsOkteto
+		o.PrivateKeyFile = okCtx.PrivateKeyFile
+		o.PublicKeyFile = okCtx.PublicKeyFile
 	}
 }
 

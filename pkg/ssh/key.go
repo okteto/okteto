@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -128,9 +129,21 @@ func generatePublicKey(privatekey *ecdsa.PublicKey) ([]byte, error) {
 }
 
 func getKeyPaths() (string, string) {
+	var public, private string
 	dir := config.GetOktetoHome()
-	public := filepath.Join(dir, publicKeyFile)
-	private := filepath.Join(dir, privateKeyFile)
+
+	if okteto.IsContextInitialized() && okteto.GetContext().PublicKeyFile != "" {
+		public = okteto.GetContext().PublicKeyFile
+	} else {
+		public = filepath.Join(dir, publicKeyFile)
+	}
+
+	if okteto.IsContextInitialized() && okteto.GetContext().PrivateKeyFile != "" {
+		private = okteto.GetContext().PrivateKeyFile
+	} else {
+		private = filepath.Join(dir, privateKeyFile)
+	}
+
 	return public, private
 }
 
