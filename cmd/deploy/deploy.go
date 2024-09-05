@@ -191,7 +191,7 @@ $ okteto deploy --build=false`,
 				return err
 			}
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: options.Namespace}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: options.Namespace, Context: options.K8sContext}); err != nil {
 				return err
 			}
 

@@ -69,7 +69,7 @@ func Status(fs afero.Fs) *cobra.Command {
 
 			ctx := context.Background()
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: namespace}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: namespace, Context: k8sContext}); err != nil {
 				return err
 			}
 
