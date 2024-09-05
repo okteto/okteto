@@ -21,6 +21,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -38,6 +39,12 @@ func (f *fakeBuildRunner) Run(ctx context.Context, buildOptions *types.BuildOpti
 func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	ctx := context.Background()
 
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {},
+		},
+		CurrentContext: "test",
+	}
 	buildRunner := &fakeBuildRunner{}
 	bc := NewBuilder(buildRunner, io.NewIOController())
 	dir, err := createDockerfile(t)
@@ -67,6 +74,12 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 
 func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 	ctx := context.Background()
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {},
+		},
+		CurrentContext: "test",
+	}
 
 	buildRunner := &fakeBuildRunner{}
 	bc := NewBuilder(buildRunner, io.NewIOController())
@@ -89,6 +102,12 @@ func TestBuildWithErrorFromImageExpansion(t *testing.T) {
 
 func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 	ctx := context.Background()
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {},
+		},
+		CurrentContext: "test",
+	}
 
 	buildRunner := &fakeBuildRunner{}
 	bc := NewBuilder(buildRunner, io.NewIOController())
@@ -120,6 +139,12 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 func TestBuildWithNoErrorFromDockerfileAndNoTag(t *testing.T) {
 	ctx := context.Background()
 
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {},
+		},
+		CurrentContext: "test",
+	}
 	buildRunner := &fakeBuildRunner{}
 	bc := NewBuilder(buildRunner, io.NewIOController())
 	dir, err := createDockerfile(t)
