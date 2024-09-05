@@ -295,10 +295,10 @@ func TestGetContextStoreFromStorePath(t *testing.T) {
 
 func TestValidateContextStore(t *testing.T) {
 	tests := []struct {
-		name        string
 		ctxStore    *ContextStore
-		expectedErr bool
+		name        string
 		expectedMsg string
+		expectedErr bool
 	}{
 		{
 			name: "Valid ContextStore",
