@@ -42,6 +42,7 @@ var (
 type DeployOptions struct {
 	branch     string
 	file       string
+	k8sContext string
 	name       string
 	repository string
 	scope      string
@@ -71,7 +72,7 @@ okteto preview deploy --wait=false`,
 				return err
 			}
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Context: opts.k8sContext}); err != nil {
 				return err
 			}
 
@@ -86,6 +87,7 @@ okteto preview deploy --wait=false`,
 			return previewCmd.ExecuteDeployPreview(ctx, opts)
 		},
 	}
+	cmd.Flags().StringVarP(&opts.k8sContext, "context", "c", "", "context where the development environment was deployed")
 	cmd.Flags().StringVarP(&opts.branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
 	cmd.Flags().StringVarP(&opts.repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
 	cmd.Flags().StringVarP(&opts.scope, "scope", "s", "global", "the scope of preview environment to create. Accepted values are ['personal', 'global']")

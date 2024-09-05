@@ -48,8 +48,9 @@ func newDestroyPreviewCommand(okClient types.OktetoInterface, k8sClient kubernet
 }
 
 type DestroyOptions struct {
-	name string
-	wait bool
+	name       string
+	k8sContext string
+	wait       bool
 }
 
 // Destroy destroy a preview
@@ -64,7 +65,7 @@ okteto preview destroy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.name = getExpandedName(args[0])
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Context: opts.k8sContext}); err != nil {
 				return err
 			}
 
@@ -87,6 +88,7 @@ okteto preview destroy --wait=false`,
 			return err
 		},
 	}
+	cmd.Flags().StringVarP(&opts.k8sContext, "context", "c", "", "context where the development environment was deployed")
 	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", true, "wait until the preview environment gets destroyed")
 	return cmd
 }

@@ -33,6 +33,7 @@ import (
 // Endpoints show all the endpoints of a preview environment
 func Endpoints(ctx context.Context) *cobra.Command {
 	var output string
+	var k8sContext string
 
 	cmd := &cobra.Command{
 		Use:   "endpoints <name>",
@@ -46,7 +47,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				oktetoLog.SetOutput(jsonContextBuffer)
 			}
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: previewName}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: previewName, Context: k8sContext}); err != nil {
 				return err
 			}
 
@@ -68,6 +69,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
+	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the development environment was deployed")
 	cmd.Flags().StringVarP(&output, "output", "o", "", "output format. One of: ['json', 'md']")
 
 	return cmd
