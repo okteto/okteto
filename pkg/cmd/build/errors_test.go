@@ -200,3 +200,38 @@ func Test_isTransientError(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractImageTagFromPullAccessDeniedError(t *testing.T) {
+	tests := []struct {
+		err      error
+		expected string
+	}{
+		{
+			err:      errors.New("pull access denied"),
+			expected: "",
+		},
+		{
+			err:      errors.New("failed to solve: registry/myimage: pull access denied, repository does not exist or may require authorizatio"),
+			expected: "registry/myimage",
+		},
+		{
+			err:      errors.New("failed to solve: myimage: pull access denied, repository does not exist or may require authorizatio"),
+			expected: "myimage",
+		},
+		{
+			err:      errors.New("failed to solve: okteto.dev/myimage: pull access denied, repository does not exist or may require authorizatio"),
+			expected: "okteto.dev/myimage",
+		},
+		{
+			err:      errors.New("failed to solve: myregistry.com/my-namespace/myimage: pull access denied, repository does not exist or may require authorizatio"),
+			expected: "myregistry.com/my-namespace/myimage",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.err.Error(), func(t *testing.T) {
+			got := extractImageTagFromPullAccessDeniedError(tt.err)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}

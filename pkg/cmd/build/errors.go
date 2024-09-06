@@ -16,6 +16,7 @@ package build
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -48,6 +49,9 @@ func getErrorMessage(err error, tag string) error {
 			Hint: "Please try again later.",
 		}
 	case isPullAccessDenied(err):
+		if imageTag == "" {
+			imageTag = extractImageTagFromPullAccessDeniedError(err)
+		}
 		err = oktetoErrors.UserError{
 			E:    fmt.Errorf("error building image: failed to pull image '%s'. The repository is not accessible or it does not exist", imageTag),
 			Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.", imageTag),
@@ -62,6 +66,15 @@ func getErrorMessage(err error, tag string) error {
 		}
 	}
 	return err
+}
+
+func extractImageTagFromPullAccessDeniedError(err error) string {
+	re := regexp.MustCompile(`([a-zA-Z0-9\.\/_-]+): pull access denied`)
+	matches := re.FindStringSubmatch(err.Error())
+	if len(matches) > 1 {
+		return matches[1]
+	}
+	return ""
 }
 
 // IsTransientError returns true if err represents a transient registry error
