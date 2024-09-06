@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -275,7 +276,7 @@ func TestGetContextStoreFromStorePath(t *testing.T) {
 		_ = fs.RemoveAll(tempDir)
 	}()
 
-	content := `{"contexts": {}, "current-context": ""}`
+	content := `{"contexts": {"test":{}}, "current-context": "test"}`
 	_, err = file.WriteString(content)
 	require.NoError(t, err)
 
@@ -284,7 +285,77 @@ func TestGetContextStoreFromStorePath(t *testing.T) {
 	store := GetContextStoreFromStorePath()
 
 	expected := &ContextStore{
-		Contexts: make(map[string]*Context),
+		Contexts: map[string]*Context{
+			"test": {},
+		},
+		CurrentContext: "test",
 	}
 	require.EqualValues(t, expected, store)
+}
+
+func TestValidateContextStore(t *testing.T) {
+	tests := []struct {
+		ctxStore    *ContextStore
+		name        string
+		expectedMsg string
+		expectedErr bool
+	}{
+		{
+			name: "Valid ContextStore",
+			ctxStore: &ContextStore{
+				Contexts: map[string]*Context{
+					"context1": {},
+					"context2": {},
+				},
+				CurrentContext: "context1",
+			},
+			expectedErr: false,
+			expectedMsg: "",
+		},
+		{
+			name: "Nil Contexts",
+			ctxStore: &ContextStore{
+				Contexts:       nil,
+				CurrentContext: "context1",
+			},
+			expectedErr: true,
+			expectedMsg: "contexts cannot be nil",
+		},
+		{
+			name: "Empty CurrentContext",
+			ctxStore: &ContextStore{
+				Contexts: map[string]*Context{
+					"context1": {},
+					"context2": {},
+				},
+				CurrentContext: "",
+			},
+			expectedErr: true,
+			expectedMsg: "current-context is empty",
+		},
+		{
+			name: "CurrentContext not in Contexts",
+			ctxStore: &ContextStore{
+				Contexts: map[string]*Context{
+					"context1": {},
+					"context2": {},
+				},
+				CurrentContext: "context3",
+			},
+			expectedErr: true,
+			expectedMsg: "current-context 'context3' not found in contexts",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateContextStore(tt.ctxStore)
+			if tt.expectedErr {
+				assert.Error(t, err)
+				assert.EqualError(t, err, tt.expectedMsg)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }

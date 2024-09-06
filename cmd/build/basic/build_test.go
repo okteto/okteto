@@ -21,6 +21,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -33,6 +34,15 @@ type fakeBuildRunner struct {
 func (f *fakeBuildRunner) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error {
 	args := f.Called(ctx, buildOptions, ioCtrl)
 	return args.Error(0)
+}
+func TestMain(m *testing.M) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {},
+		},
+		CurrentContext: "test",
+	}
+	os.Exit(m.Run())
 }
 
 func TestBuildWithErrorFromDockerfile(t *testing.T) {
