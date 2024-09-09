@@ -17,10 +17,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path"
 	"strings"
 
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -113,12 +115,15 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 	}
 
 	runParams := remote.Params{
-		BaseImage:                 baseImage,
-		ManifestPathFlag:          opts.ManifestPathFlag,
-		TemplateName:              templateName,
-		CommandFlags:              commandFlags,
-		BuildEnvVars:              make(map[string]string),
-		ExecutionEnvVars:          deployable.GetPlatformEnvironment(ctx),
+		BaseImage:        baseImage,
+		ManifestPathFlag: opts.ManifestPathFlag,
+		TemplateName:     templateName,
+		CommandFlags:     commandFlags,
+		BuildEnvVars:     make(map[string]string),
+		ExecutionEnvVars: deployable.GetPlatformEnvironment(ctx),
+		OktetoCommandSpecificEnvVars: map[string]string{
+			constants.OktetoIsPreviewEnvVar: os.Getenv(constants.OktetoIsPreviewEnvVar),
+		},
 		DependenciesEnvVars:       make(map[string]string),
 		DockerfileName:            dockerfileTemporalName,
 		Deployable:                dep,

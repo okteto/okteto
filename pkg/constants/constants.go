@@ -140,4 +140,7 @@ const (
 
 	// OktetoIsPreviewEnvVar Env variable containing a boolean indicating if the environment is a preview environment
 	OktetoIsPreviewEnvVar = "OKTETO_IS_PREVIEW_ENVIRONMENT"
+
+	// CIEnvVar Env variable defines if the environment is a CI environment
+	CIEnvVar = "CI"
 )
