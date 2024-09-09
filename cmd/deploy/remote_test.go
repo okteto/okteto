@@ -205,6 +205,9 @@ func TestDeployRemote(t *testing.T) {
 			Commands: manifest.Deploy.Commands,
 			External: manifest.External,
 		},
+		OktetoCommandSpecificEnvVars: map[string]string{
+			"OKTETO_IS_PREVIEW_ENVIRONMENT": "",
+		},
 		Manifest:                  manifest,
 		Command:                   remote.DeployCommand,
 		UseOktetoDeployIgnoreFile: true,
@@ -264,6 +267,9 @@ func TestDeployRemoteWithError(t *testing.T) {
 			Divert:   manifest.Deploy.Divert,
 			Commands: manifest.Deploy.Commands,
 			External: manifest.External,
+		},
+		OktetoCommandSpecificEnvVars: map[string]string{
+			"OKTETO_IS_PREVIEW_ENVIRONMENT": "",
 		},
 		Manifest:                  manifest,
 		Command:                   remote.DeployCommand,
