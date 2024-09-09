@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -114,12 +115,15 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 	runParams := remote.Params{
 		// This is the base image provided by the deploy operation. If it is empty, the runner is the one in charge of
 		// providing the default one
-		BaseImage:                 baseImage,
-		ManifestPathFlag:          deployOptions.ManifestPathFlag,
-		TemplateName:              templateName,
-		CommandFlags:              commandsFlags,
-		BuildEnvVars:              rd.getBuildEnvVars(),
-		DependenciesEnvVars:       rd.getDependencyEnvVars(os.Environ),
+		BaseImage:           baseImage,
+		ManifestPathFlag:    deployOptions.ManifestPathFlag,
+		TemplateName:        templateName,
+		CommandFlags:        commandsFlags,
+		BuildEnvVars:        rd.getBuildEnvVars(),
+		DependenciesEnvVars: rd.getDependencyEnvVars(os.Environ),
+		OktetoCommandSpecificEnvVars: map[string]string{
+			constants.OktetoIsPreviewEnvVar: os.Getenv(constants.OktetoIsPreviewEnvVar),
+		},
 		DockerfileName:            dockerfileTemporalName,
 		Deployable:                dep,
 		Manifest:                  deployOptions.Manifest,

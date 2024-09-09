@@ -77,7 +77,6 @@ ARG {{ .OktetoDeployable }}
 ARG {{ .GitHubRepositoryArgName }}
 ARG {{ .BuildKitHostArgName }}
 ARG {{ .OktetoRegistryURLArgName }}
-ARG {{ .OktetoIsPreviewEnv }}
 RUN mkdir -p /etc/ssl/certs/
 RUN echo "${{ .TlsCertBase64ArgName }}" | base64 -d > /etc/ssl/certs/okteto.crt
 
@@ -87,7 +86,9 @@ WORKDIR /okteto/src
 {{range $key, $val := .OktetoBuildEnvVars }}
 ENV {{$key}} {{$val}}
 {{end}}
-
+{{range $key, $val := .OktetoCommandSpecificEnvVars }}
+ENV {{$key}} {{$val}}
+{{end}}
 {{range $key, $val := .OktetoDependencyEnvVars }}
 ENV {{$key}} {{$val}}
 {{end}}
@@ -148,14 +149,15 @@ type Runner struct {
 
 // Params struct to pass the necessary parameters to create the Dockerfile
 type Params struct {
-	BuildEnvVars        map[string]string
-	DependenciesEnvVars map[string]string
-	Manifest            *model.Manifest
-	Command             string
-	TemplateName        string
-	DockerfileName      string
-	KnownHostsPath      string
-	BaseImage           string
+	BuildEnvVars                 map[string]string
+	DependenciesEnvVars          map[string]string
+	OktetoCommandSpecificEnvVars map[string]string
+	Manifest                     *model.Manifest
+	Command                      string
+	TemplateName                 string
+	DockerfileName               string
+	KnownHostsPath               string
+	BaseImage                    string
 	// ContextAbsolutePathOverride is the absolute path for the build context. Optional.
 	// If this values is not defined it will default to the folder location of the
 	// okteto manifest which is resolved through params.ManifestPathFlag
@@ -185,31 +187,31 @@ type Params struct {
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
 type dockerfileTemplateProperties struct {
-	OktetoCLIImage           string
-	UserRunnerImage          string
-	RemoteDeployEnvVar       string
-	OktetoBuildEnvVars       map[string]string
-	OktetoDependencyEnvVars  map[string]string
-	OktetoPrefixEnvVars      map[string]string
-	ContextArgName           string
-	NamespaceArgName         string
-	TokenArgName             string
-	TlsCertBase64ArgName     string
-	InternalServerName       string
-	ActionNameArgName        string
-	GitCommitArgName         string
-	GitBranchArgName         string
-	InvalidateCacheArgName   string
-	CommandFlags             string
-	OktetoDeployable         string
-	GitHubRepositoryArgName  string
-	BuildKitHostArgName      string
-	OktetoRegistryURLArgName string
-	Command                  string
-	OktetoIsPreviewEnv       string
-	Caches                   []string
-	Artifacts                []model.Artifact
-	UseRootUser              bool
+	OktetoCLIImage               string
+	UserRunnerImage              string
+	RemoteDeployEnvVar           string
+	OktetoBuildEnvVars           map[string]string
+	OktetoDependencyEnvVars      map[string]string
+	OktetoCommandSpecificEnvVars map[string]string
+	OktetoPrefixEnvVars          map[string]string
+	ContextArgName               string
+	NamespaceArgName             string
+	TokenArgName                 string
+	TlsCertBase64ArgName         string
+	InternalServerName           string
+	ActionNameArgName            string
+	GitCommitArgName             string
+	GitBranchArgName             string
+	InvalidateCacheArgName       string
+	CommandFlags                 string
+	OktetoDeployable             string
+	GitHubRepositoryArgName      string
+	BuildKitHostArgName          string
+	OktetoRegistryURLArgName     string
+	Command                      string
+	Caches                       []string
+	Artifacts                    []model.Artifact
+	UseRootUser                  bool
 }
 
 // NewRunner creates a new Runner for remote
@@ -321,7 +323,6 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		fmt.Sprintf("%s=%s", model.GithubRepositoryEnvVar, os.Getenv(model.GithubRepositoryEnvVar)),
 		fmt.Sprintf("%s=%s", model.OktetoRegistryURLEnvVar, os.Getenv(model.OktetoRegistryURLEnvVar)),
 		fmt.Sprintf("%s=%s", model.OktetoBuildkitHostURLEnvVar, os.Getenv(model.OktetoBuildkitHostURLEnvVar)),
-		fmt.Sprintf("%s=%s", constants.OktetoIsPreviewEnvVar, os.Getenv(constants.OktetoIsPreviewEnvVar)),
 	)
 
 	if r.useInternalNetwork {
@@ -396,31 +397,31 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 			Parse(dockerfileTemplate))
 
 	dockerfileSyntax := dockerfileTemplateProperties{
-		OktetoCLIImage:           getOktetoCLIVersion(config.VersionString),
-		UserRunnerImage:          params.BaseImage,
-		RemoteDeployEnvVar:       constants.OktetoDeployRemote,
-		ContextArgName:           model.OktetoContextEnvVar,
-		OktetoBuildEnvVars:       params.BuildEnvVars,
-		NamespaceArgName:         model.OktetoNamespaceEnvVar,
-		TlsCertBase64ArgName:     constants.OktetoTlsCertBase64EnvVar,
-		InternalServerName:       constants.OktetoInternalServerNameEnvVar,
-		TokenArgName:             model.OktetoTokenEnvVar,
-		ActionNameArgName:        model.OktetoActionNameEnvVar,
-		GitCommitArgName:         constants.OktetoGitCommitEnvVar,
-		GitBranchArgName:         constants.OktetoGitBranchEnvVar,
-		InvalidateCacheArgName:   constants.OktetoInvalidateCacheEnvVar,
-		CommandFlags:             strings.Join(params.CommandFlags, " "),
-		OktetoDeployable:         constants.OktetoDeployableEnvVar,
-		GitHubRepositoryArgName:  model.GithubRepositoryEnvVar,
-		BuildKitHostArgName:      model.OktetoBuildkitHostURLEnvVar,
-		OktetoRegistryURLArgName: model.OktetoRegistryURLEnvVar,
-		OktetoDependencyEnvVars:  params.DependenciesEnvVars,
-		OktetoPrefixEnvVars:      getOktetoPrefixEnvVars(r.getEnviron()),
-		Command:                  params.Command,
-		OktetoIsPreviewEnv:       constants.OktetoIsPreviewEnvVar,
-		Caches:                   params.Caches,
-		Artifacts:                params.Artifacts,
-		UseRootUser:              params.UseRootUser,
+		OktetoCLIImage:               getOktetoCLIVersion(config.VersionString),
+		UserRunnerImage:              params.BaseImage,
+		RemoteDeployEnvVar:           constants.OktetoDeployRemote,
+		ContextArgName:               model.OktetoContextEnvVar,
+		OktetoBuildEnvVars:           params.BuildEnvVars,
+		NamespaceArgName:             model.OktetoNamespaceEnvVar,
+		TlsCertBase64ArgName:         constants.OktetoTlsCertBase64EnvVar,
+		InternalServerName:           constants.OktetoInternalServerNameEnvVar,
+		TokenArgName:                 model.OktetoTokenEnvVar,
+		ActionNameArgName:            model.OktetoActionNameEnvVar,
+		GitCommitArgName:             constants.OktetoGitCommitEnvVar,
+		GitBranchArgName:             constants.OktetoGitBranchEnvVar,
+		InvalidateCacheArgName:       constants.OktetoInvalidateCacheEnvVar,
+		CommandFlags:                 strings.Join(params.CommandFlags, " "),
+		OktetoDeployable:             constants.OktetoDeployableEnvVar,
+		GitHubRepositoryArgName:      model.GithubRepositoryEnvVar,
+		BuildKitHostArgName:          model.OktetoBuildkitHostURLEnvVar,
+		OktetoRegistryURLArgName:     model.OktetoRegistryURLEnvVar,
+		OktetoDependencyEnvVars:      params.DependenciesEnvVars,
+		OktetoPrefixEnvVars:          getOktetoPrefixEnvVars(r.getEnviron()),
+		OktetoCommandSpecificEnvVars: params.OktetoCommandSpecificEnvVars,
+		Command:                      params.Command,
+		Caches:                       params.Caches,
+		Artifacts:                    params.Artifacts,
+		UseRootUser:                  params.UseRootUser,
 	}
 
 	dockerfile, err := r.fs.Create(filepath.Join(tmpDir, params.DockerfileName))

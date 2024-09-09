@@ -347,6 +347,15 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			BuildEnvVars:        builder.GetBuildEnvVars(),
 			DependenciesEnvVars: deployCMD.GetDependencyEnvVars(os.Environ),
 			DockerfileName:      "Dockerfile.test",
+			OktetoCommandSpecificEnvVars: map[string]string{
+				constants.OktetoIsPreviewEnvVar: os.Getenv(constants.OktetoIsPreviewEnvVar),
+				constants.CIEnvVar: func() string {
+					if val, ok := os.LookupEnv(constants.CIEnvVar); ok {
+						return val
+					}
+					return "true"
+				}(),
+			},
 			Deployable: deployable.Entity{
 				Commands: commands,
 				// Added this for backward compatibility. Before the refactor we were having the env variables for the external

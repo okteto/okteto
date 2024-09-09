@@ -339,10 +339,13 @@ func TestCreateDockerfile(t *testing.T) {
 					Manifest:            fakeManifest,
 					BuildEnvVars:        map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
 					DependenciesEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
-					DockerfileName:      "Dockerfile.deploy",
-					Command:             "deploy",
-					CommandFlags:        []string{"--name \"test\""},
-					UseRootUser:         true,
+					OktetoCommandSpecificEnvVars: map[string]string{
+						constants.OktetoIsPreviewEnvVar: "true",
+					},
+					DockerfileName: "Dockerfile.deploy",
+					Command:        "deploy",
+					CommandFlags:   []string{"--name \"test\""},
+					UseRootUser:    true,
 				},
 			},
 			expected: expected{
@@ -368,7 +371,6 @@ ARG OKTETO_DEPLOYABLE
 ARG GITHUB_REPOSITORY
 ARG BUILDKIT_HOST
 ARG OKTETO_REGISTRY_URL
-ARG OKTETO_IS_PREVIEW_ENVIRONMENT
 RUN mkdir -p /etc/ssl/certs/
 RUN echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /etc/ssl/certs/okteto.crt
 
@@ -380,6 +382,8 @@ ENV OKTETO_BUILD_SVC2_IMAGE TWO_VALUE
 
 ENV OKTETO_BUIL_SVC_IMAGE ONE_VALUE
 
+
+ENV OKTETO_IS_PREVIEW_ENVIRONMENT true
 
 
 ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD dependency_pass
@@ -418,9 +422,12 @@ COPY --from=runner /etc/.oktetocachekey .oktetocachekey
 					Manifest:            fakeManifest,
 					BuildEnvVars:        map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
 					DependenciesEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
-					DockerfileName:      "Dockerfile.test",
-					Command:             "test",
-					CommandFlags:        []string{"--name \"test\""},
+					OktetoCommandSpecificEnvVars: map[string]string{
+						constants.CIEnvVar: "true",
+					},
+					DockerfileName: "Dockerfile.test",
+					Command:        "test",
+					CommandFlags:   []string{"--name \"test\""},
 					Artifacts: []model.Artifact{
 						{
 							Path:        "coverage.txt",
@@ -455,7 +462,6 @@ ARG OKTETO_DEPLOYABLE
 ARG GITHUB_REPOSITORY
 ARG BUILDKIT_HOST
 ARG OKTETO_REGISTRY_URL
-ARG OKTETO_IS_PREVIEW_ENVIRONMENT
 RUN mkdir -p /etc/ssl/certs/
 RUN echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /etc/ssl/certs/okteto.crt
 
@@ -467,6 +473,8 @@ ENV OKTETO_BUILD_SVC2_IMAGE TWO_VALUE
 
 ENV OKTETO_BUIL_SVC_IMAGE ONE_VALUE
 
+
+ENV CI true
 
 
 ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD dependency_pass
