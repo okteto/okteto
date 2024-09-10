@@ -35,8 +35,10 @@ var (
 
 // listFlags are the flags available for list commands
 type listFlags struct {
-	output string
-	labels []string
+	output     string
+	k8sContext string
+	namespace  string
+	labels     []string
 }
 
 type previewOutput struct {
@@ -65,7 +67,10 @@ func List(ctx context.Context) *cobra.Command {
 		Use:   "list",
 		Short: "List all preview environments",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctxOptions := &contextCMD.Options{}
+			ctxOptions := &contextCMD.Options{
+				Namespace: flags.namespace,
+				Context:   flags.k8sContext,
+			}
 
 			if flags.output == "" {
 				ctxOptions.Show = true
@@ -87,6 +92,9 @@ func List(ctx context.Context) *cobra.Command {
 			return listCmd.run(ctx)
 		},
 	}
+
+	cmd.Flags().StringVarP(&flags.k8sContext, "context", "c", "", "context where the development environment was deployed")
+	cmd.Flags().StringVarP(&flags.namespace, "namespace", "n", "", "namespace where the pipeline is deployed (defaults to the current namespace)")
 	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "tag and organize preview environments using labels (multiple --label flags accepted)")
 	cmd.Flags().StringVarP(&flags.output, "output", "o", "", "output format. One of: ['json', 'yaml']")
 

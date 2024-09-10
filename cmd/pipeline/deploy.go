@@ -58,6 +58,7 @@ type deployFlags struct {
 	branch       string
 	repository   string
 	name         string
+	k8sContext   string
 	namespace    string
 	file         string
 	variables    []string
@@ -110,6 +111,7 @@ okteto pipeline deploy --wait=false`,
 
 			ctxOptions := &contextCMD.Options{
 				Namespace: flags.namespace,
+				Context:   flags.k8sContext,
 				Show:      true,
 			}
 			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
@@ -134,6 +136,7 @@ okteto pipeline deploy --wait=false`,
 	}
 
 	cmd.Flags().StringVarP(&flags.name, "name", "p", "", "name of the pipeline (defaults to the git config name)")
+	cmd.Flags().StringVarP(&flags.k8sContext, "context", "c", "", "context where the development environment was deployed")
 	cmd.Flags().StringVarP(&flags.namespace, "namespace", "n", "", "namespace where the pipeline is deployed (defaults to the current namespace)")
 	cmd.Flags().StringVarP(&flags.repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
 	cmd.Flags().StringVarP(&flags.branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")

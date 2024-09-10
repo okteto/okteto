@@ -27,13 +27,14 @@ import (
 
 // Sleep sleeps a preview environment
 func Sleep(ctx context.Context) *cobra.Command {
+	var k8sContext string
 	cmd := &cobra.Command{
 		Use:   "sleep <name>",
 		Short: "Sleeps a preview environment",
 		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prToSleep := args[0]
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Context: k8sContext}); err != nil {
 				return err
 			}
 
@@ -49,6 +50,7 @@ func Sleep(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
+	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the development environment was deployed")
 	return cmd
 }
 

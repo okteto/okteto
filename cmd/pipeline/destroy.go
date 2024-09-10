@@ -35,6 +35,7 @@ import (
 // destroyFlags represents the user input for a pipeline destroy command
 type destroyFlags struct {
 	name           string
+	k8sContext     string
 	namespace      string
 	wait           bool
 	destroyVolumes bool
@@ -62,6 +63,7 @@ okteto pipeline destroy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctxOptions := &contextCMD.Options{
 				Namespace: flags.namespace,
+				Context:   flags.k8sContext,
 				Show:      true,
 			}
 			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
@@ -82,6 +84,7 @@ okteto pipeline destroy --wait=false`,
 	}
 
 	cmd.Flags().StringVarP(&flags.name, "name", "p", "", "name of the pipeline (defaults to the git config name)")
+	cmd.Flags().StringVarP(&flags.k8sContext, "context", "c", "", "context where the development environment was deployed")
 	cmd.Flags().StringVarP(&flags.namespace, "namespace", "n", "", "namespace where the pipeline is destroyed (defaults to the current namespace)")
 	cmd.Flags().BoolVarP(&flags.wait, "wait", "w", true, "wait until the pipeline finishes")
 	cmd.Flags().BoolVarP(&flags.destroyVolumes, "volumes", "v", false, "destroy persistent volumes created by the pipeline (defaults to false)")
