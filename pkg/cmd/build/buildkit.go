@@ -362,7 +362,7 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			if err != nil {
 				// If an error occurs while attempting to create the tty display,
 				// fallback to using plain mode on stdout (in contrast to stderr).
-				d, err = progressui.NewDisplay(os.Stdout, progressui.TtyMode)
+				d, err = progressui.NewDisplay(os.Stdout, progressui.PlainMode)
 				if err != nil {
 					oktetoLog.Infof("could not display build status: %s", err)
 					return err
