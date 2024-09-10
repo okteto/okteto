@@ -16,7 +16,6 @@ package model
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -27,7 +26,6 @@ import (
 
 	"github.com/compose-spec/godotenv"
 	"github.com/google/uuid"
-	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -35,9 +33,9 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/spf13/afero"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
-	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
 )
 
@@ -57,23 +55,16 @@ type Dev struct {
 	Selector             Selector              `json:"selector,omitempty" yaml:"selector,omitempty"`
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
 	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
-	Annotations          Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Labels               Labels                `json:"labels,omitempty" yaml:"labels,omitempty"` // Deprecated field
 	Probes               *Probes               `json:"probes,omitempty" yaml:"probes,omitempty"`
 	NodeSelector         map[string]string     `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 	Metadata             *Metadata             `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
-	Image                *build.Info           `json:"image,omitempty" yaml:"image,omitempty"`
-	Push                 *build.Info           `json:"-" yaml:"push,omitempty"`
+	Image                string                `json:"image,omitempty" yaml:"image,omitempty"`
 	Lifecycle            *Lifecycle            `json:"lifecycle,omitempty" yaml:"lifecycle,omitempty"`
 	Replicas             *int                  `json:"replicas,omitempty" yaml:"replicas,omitempty"`
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
 	Workdir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	Name                 string                `json:"name,omitempty" yaml:"name,omitempty"`
-	Username             string                `json:"-" yaml:"-"`
-	RegistryURL          string                `json:"-" yaml:"-"`
-	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
-	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
 	ServiceAccount       string                `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
 	parentSyncFolder     string
@@ -97,10 +88,7 @@ type Dev struct {
 	RemotePort      int                `json:"remote,omitempty" yaml:"remote,omitempty"`
 	SSHServerPort   int                `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
 
-	EmptyImage    bool `json:"-" yaml:"-"`
-	InitFromImage bool `json:"initFromImage,omitempty" yaml:"initFromImage,omitempty"`
-	Autocreate    bool `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
-	Healthchecks  bool `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"` // Deprecated field
+	Autocreate bool `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
 }
 
 type Affinity apiv1.Affinity
@@ -220,8 +208,14 @@ type Probes struct {
 
 // Lifecycle defines the lifecycle for containers
 type Lifecycle struct {
-	PostStart bool `json:"postStart,omitempty" yaml:"postStart,omitempty"`
-	PostStop  bool `json:"postStop,omitempty" yaml:"postStop,omitempty"`
+	PostStart *LifecycleHandler `json:"postStart,omitempty" yaml:"postStart,omitempty"`
+	PreStop   *LifecycleHandler `json:"preStop,omitempty" yaml:"preStop,omitempty"`
+}
+
+// LifecycleHandler defines a handler for lifecycle events
+type LifecycleHandler struct {
+	Command Command `json:"command,omitempty" yaml:"command,omitempty"`
+	Enabled bool    `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 }
 
 // ResourceList is a set of (resource name, quantity) pairs.
@@ -236,34 +230,8 @@ type Selector map[string]string
 // Annotations is a set of (key, value) pairs.
 type Annotations map[string]string
 
-// Get returns a Dev object from a given file
-func Get(devPath string, fs afero.Fs) (*Manifest, error) {
-	b, err := os.ReadFile(devPath)
-	if err != nil {
-		return nil, err
-	}
-
-	manifest, err := Read(b)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, dev := range manifest.Dev {
-		if err := dev.translateDeprecatedVolumeFields(); err != nil {
-			return nil, err
-		}
-
-		if err := dev.PreparePathsAndExpandEnvFiles(devPath, fs); err != nil {
-			return nil, err
-		}
-	}
-
-	return manifest, nil
-}
 func NewDev() *Dev {
 	return &Dev{
-		Image:       &build.Info{},
-		Push:        &build.Info{},
 		Environment: make(env.Environment, 0),
 		Secrets:     make([]Secret, 0),
 		Forward:     make([]forward.Forward, 0),
@@ -288,20 +256,6 @@ func (dev *Dev) loadAbsPaths(devPath string, fs afero.Fs) error {
 	devDir, err := filepath.Abs(filepath.Dir(devPath))
 	if err != nil {
 		return err
-	}
-
-	if dev.Image != nil {
-		if uri, err := url.ParseRequestURI(dev.Image.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
-			dev.Image.Context = loadAbsPath(devDir, dev.Image.Context, fs)
-			dev.Image.Dockerfile = loadAbsPath(devDir, dev.Image.Dockerfile, fs)
-		}
-	}
-
-	if dev.Push != nil {
-		if uri, err := url.ParseRequestURI(dev.Push.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
-			dev.Push.Context = loadAbsPath(devDir, dev.Push.Context, fs)
-			dev.Push.Dockerfile = loadAbsPath(devDir, dev.Push.Dockerfile, fs)
-		}
 	}
 
 	dev.loadVolumeAbsPaths(devDir, fs)
@@ -346,12 +300,6 @@ func (dev *Dev) expandEnvVars() error {
 	if err := dev.loadName(); err != nil {
 		return err
 	}
-	if err := dev.loadNamespace(); err != nil {
-		return err
-	}
-	if err := dev.loadContext(); err != nil {
-		return err
-	}
 	if err := dev.loadSelector(); err != nil {
 		return err
 	}
@@ -363,28 +311,6 @@ func (dev *Dev) loadName() error {
 	var err error
 	if len(dev.Name) > 0 {
 		dev.Name, err = env.ExpandEnv(dev.Name)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (dev *Dev) loadNamespace() error {
-	var err error
-	if len(dev.Namespace) > 0 {
-		dev.Namespace, err = env.ExpandEnv(dev.Namespace)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (dev *Dev) loadContext() error {
-	var err error
-	if len(dev.Context) > 0 {
-		dev.Context, err = env.ExpandEnv(dev.Context)
 		if err != nil {
 			return err
 		}
@@ -405,17 +331,11 @@ func (dev *Dev) loadSelector() error {
 
 func (dev *Dev) loadImage() error {
 	var err error
-	if dev.Image == nil {
-		dev.Image = &build.Info{}
-	}
-	if len(dev.Image.Name) > 0 {
-		dev.Image.Name, err = env.ExpandEnvIfNotEmpty(dev.Image.Name)
+	if dev.Image != "" {
+		dev.Image, err = env.ExpandEnvIfNotEmpty(dev.Image)
 		if err != nil {
 			return err
 		}
-	}
-	if dev.Image.Name == "" {
-		dev.EmptyImage = true
 	}
 	return nil
 }
@@ -433,14 +353,6 @@ func (dev *Dev) SetDefaults() error {
 			return dev.Forward[i].Less(&dev.Forward[j])
 		})
 	}
-	if dev.Image == nil {
-		dev.Image = &build.Info{}
-	}
-	dev.Image.SetBuildDefaults()
-	if dev.Push == nil {
-		dev.Push = &build.Info{}
-	}
-	dev.Push.SetBuildDefaults()
 
 	if err := dev.setTimeout(); err != nil {
 		return err
@@ -465,12 +377,7 @@ func (dev *Dev) SetDefaults() error {
 	if dev.InitContainer.Image == "" {
 		dev.InitContainer.Image = OktetoBinImageTag
 	}
-	if dev.Healthchecks {
-		oktetoLog.Yellow("The use of 'healthchecks' field is deprecated and will be removed in a future version. Please use the field 'probes' instead.")
-		if dev.Probes == nil {
-			dev.Probes = &Probes{Liveness: true, Readiness: true, Startup: true}
-		}
-	}
+
 	if dev.Probes == nil {
 		dev.Probes = &Probes{}
 	}
@@ -515,14 +422,6 @@ func (dev *Dev) SetDefaults() error {
 		if s.Selector == nil {
 			s.Selector = map[string]string{}
 		}
-		if s.Annotations == nil {
-			s.Annotations = Annotations{}
-		}
-		if s.Name != "" && len(s.Selector) > 0 {
-			return fmt.Errorf("'name' and 'selector' cannot be defined at the same time for service '%s'", s.Name)
-		}
-		s.Namespace = ""
-		s.Context = ""
 		s.setRunAsUserDefaults(dev)
 		s.Forward = make([]forward.Forward, 0)
 		s.Reverse = make([]Reverse, 0)
@@ -630,10 +529,6 @@ func (dev *Dev) expandEnvFiles() error {
 func (dev *Dev) Validate() error {
 	if dev.Name == "" {
 		return fmt.Errorf("name cannot be empty")
-	}
-
-	if dev.Image == nil {
-		dev.Image = &build.Info{}
 	}
 
 	if dev.Replicas != nil {
@@ -890,7 +785,7 @@ func (dev *Dev) LabelsSelector() string {
 }
 
 // ToTranslationRule translates a dev struct into a translation rule
-func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
+func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset bool) *TranslationRule {
 	rule := &TranslationRule{
 		Container:        dev.Container,
 		ImagePullPolicy:  dev.ImagePullPolicy,
@@ -902,7 +797,6 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		SecurityContext:  dev.SecurityContext,
 		ServiceAccount:   dev.ServiceAccount,
 		Resources:        dev.Resources,
-		Healthchecks:     dev.Healthchecks,
 		InitContainer:    dev.InitContainer,
 		Probes:           dev.Probes,
 		Lifecycle:        dev.Lifecycle,
@@ -914,8 +808,8 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		rule.WorkDir = "/okteto"
 	}
 
-	if !dev.EmptyImage {
-		rule.Image = dev.Image.Name
+	if dev.Image != "" {
+		rule.Image = dev.Image
 	}
 
 	if rule.Healthchecks {
@@ -932,19 +826,20 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 			rule.Environment,
 			env.Var{
 				Name:  "OKTETO_NAMESPACE",
-				Value: dev.Namespace,
+				Value: namespace,
 			},
 			env.Var{
 				Name:  "OKTETO_NAME",
 				Value: dev.Name,
 			},
 		)
-		if dev.Username != "" {
+
+		if username != "" {
 			rule.Environment = append(
 				rule.Environment,
 				env.Var{
 					Name:  "OKTETO_USERNAME",
-					Value: dev.Username,
+					Value: username,
 				},
 			)
 		}
@@ -1084,13 +979,6 @@ func areProbesEnabled(probes *Probes) bool {
 	return false
 }
 
-func areAllProbesEnabled(probes *Probes) bool {
-	if probes != nil {
-		return probes.Liveness && probes.Readiness && probes.Startup
-	}
-	return false
-}
-
 // RemoteModeEnabled returns true if remote is enabled
 func (dev *Dev) RemoteModeEnabled() bool {
 	if dev == nil {
@@ -1123,7 +1011,7 @@ func (s *Secret) GetFileName() string {
 
 // GetTimeout returns the timeout override
 func GetTimeout() (time.Duration, error) {
-	defaultTimeout := (60 * time.Second)
+	defaultTimeout := 60 * time.Second
 
 	t := os.Getenv(OktetoTimeoutEnvVar)
 	if t == "" {
@@ -1138,59 +1026,13 @@ func GetTimeout() (time.Duration, error) {
 	return parsed, nil
 }
 
-func (dev *Dev) translateDeprecatedMetadataFields() {
-	if len(dev.Labels) > 0 {
-		oktetoLog.Warning("The field 'labels' is deprecated and will be removed in a future version. Use the field 'selector' instead (https://okteto.com/docs/reference/okteto-manifest/#selector)")
-		for k, v := range dev.Labels {
-			dev.Selector[k] = v
-		}
-	}
-
-	if len(dev.Annotations) > 0 {
-		oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in a future version. Use the field 'metadata.annotations' instead (https://okteto.com/docs/reference/okteto-manifest/#metadata)")
-		for k, v := range dev.Annotations {
-			dev.Metadata.Annotations[k] = v
-		}
-	}
-	for indx, s := range dev.Services {
-		if len(s.Labels) > 0 {
-			oktetoLog.Warning("The field '%s.labels' is deprecated and will be removed in a future version. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)", s.Name)
-			for k, v := range s.Labels {
-				dev.Services[indx].Selector[k] = v
-			}
-		}
-
-		if len(s.Annotations) > 0 {
-			oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in a future version. Use the field '%s.metadata.annotations' instead (https://okteto.com/docs/reference/okteto-manifest/#metadata)", s.Name)
-			for k, v := range s.Annotations {
-				dev.Services[indx].Metadata.Annotations[k] = v
-			}
-		}
-	}
-}
-
 func (service *Dev) validateForExtraFields() error {
 	errorMessage := "%q is not supported in Services. Please visit https://www.okteto.com/docs/reference/okteto-manifest/#services-object-optional for documentation"
-	if service.Username != "" {
-		return fmt.Errorf(errorMessage, "username")
-	}
-	if service.RegistryURL != "" {
-		return fmt.Errorf(errorMessage, "registryURL")
-	}
 	if service.Autocreate {
 		return fmt.Errorf(errorMessage, "autocreate")
 	}
-	if service.Context != "" {
-		return fmt.Errorf(errorMessage, "context")
-	}
-	if service.Push != nil {
-		return fmt.Errorf(errorMessage, "push")
-	}
 	if service.Secrets != nil {
 		return fmt.Errorf(errorMessage, "secrets")
-	}
-	if service.Healthchecks {
-		return fmt.Errorf(errorMessage, "healthchecks")
 	}
 	if service.Probes != nil {
 		return fmt.Errorf(errorMessage, "probes")
@@ -1233,9 +1075,6 @@ func (service *Dev) validateForExtraFields() error {
 	}
 	if service.InitContainer.Image != "" {
 		return fmt.Errorf(errorMessage, "initContainer")
-	}
-	if service.InitFromImage {
-		return fmt.Errorf(errorMessage, "initFromImage")
 	}
 	if service.Timeout != (Timeout{}) {
 		return fmt.Errorf(errorMessage, "timeout")

@@ -27,16 +27,14 @@ import (
 
 	"github.com/mitchellh/go-ps"
 	"github.com/moby/term"
-	buildv1 "github.com/okteto/okteto/cmd/build/v1"
+	oargs "github.com/okteto/okteto/cmd/args"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
-	"github.com/okteto/okteto/cmd/manifest"
 	"github.com/okteto/okteto/cmd/namespace"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
@@ -80,32 +78,32 @@ type Options struct {
 	ManifestPathFlag string
 	// ManifestPath is the path to the manifest used though the command execution.
 	// This might change its value during execution
-	ManifestPath     string
-	Namespace        string
-	K8sContext       string
-	DevName          string
-	Envs             []string
-	commandToExecute []string
-	Remote           int
-	Deploy           bool
-	ForcePull        bool
-	Reset            bool
+	ManifestPath string
+	Namespace    string
+	K8sContext   string
+	DevName      string
+	Envs         []string
+	Remote       int
+	Deploy       bool
+	ForcePull    bool
+	Reset        bool
 }
 
 // Up starts a development container
-func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
+func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command {
 	upOptions := &Options{}
 	cmd := &cobra.Command{
-		Use:   "up [service]",
+		Use:   "up service [flags] -- COMMAND [args...]",
 		Short: "Deploy your development environment",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#up"),
+		Example: `  # okteto up deploying the development environment defined in the okteto manifest
+okteto up my-svc --deploy -- echo this is a test
+
+# okteto up replacing the command defined in the okteto manifest
+okteto up my-svc -- echo this is a test
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
 				return oktetoErrors.ErrNotInDevContainer
-			}
-
-			if err := upOptions.AddArgs(cmd, args); err != nil {
-				return err
 			}
 
 			u := utils.UpgradeAvailable()
@@ -123,6 +121,15 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 			checkLocalWatchesConfiguration()
 
 			ctx := context.Background()
+
+			ctxOpts := &contextCMD.Options{
+				Show:      true,
+				Context:   upOptions.K8sContext,
+				Namespace: upOptions.Namespace,
+			}
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+				return err
+			}
 
 			upMeta := analytics.NewUpMetricsMetadata()
 
@@ -144,6 +151,16 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 				// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
 				upOptions.ManifestPathFlag = manifestPathFlag
 
+				// check that the manifest file exists
+				if !filesystem.FileExistsWithFilesystem(manifestPathFlag, fs) {
+					return oktetoErrors.ErrManifestPathNotFound
+				}
+
+				// the Okteto manifest flag should specify a file, not a directory
+				if filesystem.IsDir(manifestPathFlag, fs) {
+					return oktetoErrors.ErrManifestPathIsDir
+				}
+
 				// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
 				uptManifestPath, err := filesystem.UpdateCWDtoManifestPath(upOptions.ManifestPath)
 				if err != nil {
@@ -151,8 +168,7 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 				}
 				upOptions.ManifestPath = uptManifestPath
 			}
-			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.ManifestPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
-			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs())
+			oktetoManifest, err := model.GetManifestV2(upOptions.ManifestPath, fs)
 			if err != nil {
 				if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 					return err
@@ -161,13 +177,10 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 				if upOptions.ManifestPath == "" {
 					upOptions.ManifestPath = utils.DefaultManifest
 				}
+			}
 
-				if !utils.AskIfOktetoInit(upOptions.ManifestPath) {
-					return err
-				}
-
-				oktetoManifest, err = LoadManifestWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.ManifestPath, at, ioCtrl, insights, k8sLogger)
-				if err != nil {
+			if !okteto.IsOkteto() {
+				if err := oktetoManifest.ValidateForCLIOnly(); err != nil {
 					return err
 				}
 			}
@@ -208,50 +221,7 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 				if oktetoManifest.Type == model.StackType {
 					return fmt.Errorf("your docker compose file is not currently supported: Okteto requires a 'host volume' to be defined. See %s", composeVolumesUrl)
 				}
-				oktetoLog.Warning("okteto manifest has no 'dev' section.")
-				answer, err := utils.AskYesNo("Do you want to configure okteto manifest now?", utils.YesNoDefault_Yes)
-				if err != nil {
-					return err
-				}
-				if answer {
-					mc := &manifest.Command{
-						K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
-						AnalyticsTracker:  at,
-						InsightsTracker:   insights,
-						IoCtrl:            ioCtrl,
-						K8sLogger:         k8sLogger,
-					}
-					if upOptions.ManifestPath == "" {
-						upOptions.ManifestPath = utils.DefaultManifest
-					}
-					oktetoManifest, err = mc.RunInitV2(ctx, &manifest.InitOpts{
-						DevPath:          upOptions.ManifestPath,
-						Namespace:        upOptions.Namespace,
-						Context:          upOptions.K8sContext,
-						ShowCTA:          false,
-						Workdir:          wd,
-						AutoDeploy:       true,
-						AutoConfigureDev: true,
-					})
-					if err != nil {
-						return err
-					}
-					if oktetoManifest.Namespace == "" {
-						oktetoManifest.Namespace = okteto.GetContext().Namespace
-					}
-					if oktetoManifest.Context == "" {
-						oktetoManifest.Context = okteto.GetContext().Name
-					}
-					oktetoManifest.IsV2 = true
-					for devName, d := range oktetoManifest.Dev {
-						if err := d.SetDefaults(); err != nil {
-							return err
-						}
-						d.Name = devName
-						d.Namespace = oktetoManifest.Namespace
-						d.Context = oktetoManifest.Context
-					}
-				}
+				return oktetoErrors.ErrManifestNoDevSection
 			}
 
 			onBuildFinish := []buildv2.OnBuildFinish{
@@ -260,6 +230,7 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 			}
 
 			up := &upContext{
+				Namespace:         okteto.GetContext().Namespace,
 				Manifest:          oktetoManifest,
 				Dev:               nil,
 				Exit:              make(chan error, 1),
@@ -267,7 +238,7 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 				StartTime:         time.Now(),
 				Registry:          registry.NewOktetoRegistry(okteto.Config{}),
 				Options:           upOptions,
-				Fs:                afero.NewOsFs(),
+				Fs:                fs,
 				analyticsTracker:  at,
 				analyticsMeta:     upMeta,
 				K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
@@ -290,37 +261,31 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 				return fmt.Errorf("failed to load k8s client: %w", err)
 			}
 
-			// if manifest v1 - either set autocreate: true or pass --deploy (okteto forces autocreate: true)
-			// if manifest v2 - either set autocreate: true or pass --deploy with a deploy section at the manifest
-			forceAutocreate := false
-			if upOptions.Deploy && !up.Manifest.IsV2 {
-				// the autocreate property is forced to be true
-				forceAutocreate = true
-			} else if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, k8sClient)) {
+			if upOptions.Deploy || !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Namespace, k8sClient) {
 				err := up.deployApp(ctx, ioCtrl, k8sLogger)
 
 				// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
 				if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands) {
 					return err
 				}
-
-			} else if !upOptions.Deploy && (up.Manifest.IsV2 && pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, k8sClient)) {
+			} else if !upOptions.Deploy && pipeline.IsDeployed(ctx, up.Manifest.Name, okteto.GetContext().Namespace, k8sClient) {
 				oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy' or 'okteto up --deploy'", up.Manifest.Name)
 			}
 
-			dev, err := utils.GetDevFromManifest(oktetoManifest, upOptions.DevName)
+			devCommandParser := oargs.NewDevCommandArgParser(oargs.NewManifestDevLister(), ioCtrl, false)
+
+			argsparserResult, err := devCommandParser.Parse(ctx, args, cmd.ArgsLenAtDash(), oktetoManifest.Dev, okteto.GetContext().Namespace)
 			if err != nil {
-				if !errors.Is(err, utils.ErrNoDevSelected) {
-					return err
-				}
-				selector := utils.NewOktetoSelector("Select which development container to activate:", "Development container")
-				dev, err = utils.SelectDevFromManifest(oktetoManifest, selector, oktetoManifest.Dev.GetDevs())
-				if err != nil {
-					return err
-				}
+				return err
 			}
-			if len(upOptions.commandToExecute) > 0 {
-				dev.Command.Values = upOptions.commandToExecute
+
+			dev, err := utils.GetDevFromManifest(oktetoManifest, argsparserResult.DevName)
+			if err != nil {
+				return err
+			}
+
+			if len(argsparserResult.Command) > 0 {
+				dev.Command.Values = argsparserResult.Command
 			}
 
 			if err := dev.PreparePathsAndExpandEnvFiles(oktetoManifest.ManifestPath, up.Fs); err != nil {
@@ -328,11 +293,6 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 			}
 
 			up.Dev = dev
-			if forceAutocreate {
-				// update autocreate property if needed to be forced
-				oktetoLog.Info("Setting Autocreate to true because manifest v1 and flag --deploy")
-				up.Dev.Autocreate = true
-			}
 
 			// only if the context is an okteto one, we should verify if the namespace has to be woken up
 			if okteto.GetContext().IsOkteto {
@@ -343,7 +303,7 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 						oktetoLog.Infof("failed to create okteto client: '%s'", err.Error())
 						return
 					}
-					if err := wakeNamespaceIfApplies(ctx, up.Dev.Namespace, k8sClient, okClient); err != nil {
+					if err := wakeNamespaceIfApplies(ctx, up.Namespace, k8sClient, okClient); err != nil {
 						// If there is an error waking up namespace, we don't want to fail the up command
 						oktetoLog.Infof("failed to wake up the namespace: %s", err.Error())
 					}
@@ -375,13 +335,13 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 				}
 			}
 
-			oktetoLog.ConfigureFileLogger(config.GetAppHome(dev.Namespace, dev.Name), config.VersionString)
+			oktetoLog.ConfigureFileLogger(config.GetAppHome(okteto.GetContext().Namespace, dev.Name), config.VersionString)
 
 			if err := checkStignoreConfiguration(dev); err != nil {
 				oktetoLog.Infof("failed to check '.stignore' configuration: %s", err.Error())
 			}
 
-			if err := addStignoreSecrets(dev); err != nil {
+			if err := addStignoreSecrets(dev, okteto.GetContext().Namespace); err != nil {
 				return err
 			}
 
@@ -397,16 +357,10 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 				upOptions.Deploy = true
 			}
 
-			if up.Manifest.Type == model.OktetoManifestType && !up.Manifest.IsV2 {
-				oktetoLog.Warning("okteto manifest v1 is deprecated and will be removed in okteto 3.0")
-				oktetoLog.Println(oktetoLog.BlueString(`    Follow this guide to upgrade to the new okteto manifest schema:
-    https://www.okteto.com/docs/reference/manifest-migration/`))
-			}
-
 			if err = up.start(); err != nil {
 				switch err.(type) {
 				default:
-					return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+					return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(okteto.GetContext().Namespace, dev.Name))
 				case oktetoErrors.CommandError:
 					oktetoLog.Infof("CommandError: %v", err)
 					return err
@@ -420,7 +374,7 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 		},
 	}
 
-	cmd.Flags().StringVarP(&upOptions.ManifestPath, "file", "f", "", "path to the manifest file")
+	cmd.Flags().StringVarP(&upOptions.ManifestPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&upOptions.Namespace, "namespace", "n", "", "namespace where the up command is executed")
 	cmd.Flags().StringVarP(&upOptions.K8sContext, "context", "c", "", "context where the up command is executed")
 	cmd.Flags().StringArrayVarP(&upOptions.Envs, "env", "e", []string{}, "envs to add to the development container")
@@ -431,74 +385,7 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 		oktetoLog.Infof("failed to mark 'pull' flag as hidden: %s", err)
 	}
 	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "reset the file synchronization database")
-	cmd.Flags().StringArrayVarP(&upOptions.commandToExecute, "command", "", []string{}, "external commands to be supplied to 'okteto up'")
 	return cmd
-}
-
-// AddArgs sets the args as options and return err if it's not compatible
-func (o *Options) AddArgs(cmd *cobra.Command, args []string) error {
-
-	maxV1Args := 1
-	docsURL := "https://okteto.com/docs/reference/okteto-cli/#up"
-	if len(args) > maxV1Args {
-		if err := cmd.Help(); err != nil {
-			oktetoLog.Infof("could not show help: %s", err)
-		}
-
-		return oktetoErrors.UserError{
-			E:    fmt.Errorf("%q accepts at most %d arg(s), but received %d", cmd.CommandPath(), maxV1Args, len(args)),
-			Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
-		}
-	} else if len(args) == 1 {
-		o.DevName = args[0]
-	}
-
-	return nil
-}
-
-func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath string, at analyticsTrackerInterface, ioCtrl *io.Controller, insights buildDeployTrackerInterface, k8sLogger *io.K8sLogger) (*model.Manifest, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-	ctxOptions := &contextCMD.Options{
-		Context:   k8sContext,
-		Namespace: namespace,
-		Show:      true,
-	}
-	if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
-		return nil, err
-	}
-
-	mc := &manifest.Command{
-		K8sClientProvider: okteto.NewK8sClientProvider(),
-		AnalyticsTracker:  at,
-		IoCtrl:            ioCtrl,
-		InsightsTracker:   insights,
-		K8sLogger:         k8sLogger,
-	}
-	manifest, err := mc.RunInitV2(ctx, &manifest.InitOpts{DevPath: devPath, ShowCTA: false, Workdir: dir})
-	if err != nil {
-		return nil, err
-	}
-
-	if manifest.Namespace == "" {
-		manifest.Namespace = okteto.GetContext().Namespace
-	}
-	if manifest.Context == "" {
-		manifest.Context = okteto.GetContext().Name
-	}
-	manifest.IsV2 = true
-	for devName, d := range manifest.Dev {
-		if err := d.SetDefaults(); err != nil {
-			return nil, err
-		}
-		d.Name = devName
-		d.Namespace = manifest.Namespace
-		d.Context = manifest.Context
-	}
-
-	return manifest, nil
 }
 
 func loadManifestOverrides(dev *model.Dev, upOptions *Options) error {
@@ -526,9 +413,6 @@ func loadManifestOverrides(dev *model.Dev, upOptions *Options) error {
 			dev.Environment = *overridedEnvVars
 		}
 	}
-
-	dev.Username = okteto.GetContext().Username
-	dev.RegistryURL = okteto.GetContext().Registry
 
 	return nil
 }
@@ -595,7 +479,7 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 		return err
 	}
 	c := &deploy.Command{
-		GetManifest:       up.getManifest,
+		GetManifest:       model.GetManifestV2,
 		GetDeployer:       deploy.GetDeployer,
 		K8sClientProvider: k8sProvider,
 		Builder:           up.builder,
@@ -611,10 +495,11 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 	startTime := time.Now()
 	err = c.Run(ctx, &deploy.Options{
 		Name:             up.Manifest.Name,
+		Namespace:        up.Namespace,
 		ManifestPathFlag: up.Options.ManifestPathFlag,
 		ManifestPath:     up.Options.ManifestPath,
 		Timeout:          5 * time.Minute,
-		Build:            false,
+		NoBuild:          false,
 	})
 	up.analyticsMeta.HasRunDeploy()
 
@@ -638,26 +523,19 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 		HasDependenciesSection: up.Manifest.HasDependenciesSection(),
 		HasBuildSection:        up.Manifest.HasBuildSection(),
 		Err:                    err,
-		IsRemote:               up.Manifest.IsV2 && isRemote,
+		IsRemote:               isRemote,
 	})
 	return err
 }
 
-func (up *upContext) getManifest(path string, fs afero.Fs) (*model.Manifest, error) {
-	if up.Manifest != nil {
-		return up.Manifest, nil
-	}
-	return model.GetManifestV2(path, fs)
-}
-
 func (up *upContext) start() error {
-	up.pidController = newPIDController(up.Dev.Namespace, up.Dev.Name)
+	up.pidController = newPIDController(up.Namespace, up.Dev.Name)
 
 	if err := up.pidController.create(); err != nil {
-		oktetoLog.Infof("failed to create pid file for %s - %s: %s", up.Dev.Namespace, up.Dev.Name, err)
+		oktetoLog.Infof("failed to create pid file for %s - %s: %s", up.Namespace, up.Dev.Name, err)
 
 		return oktetoErrors.UserError{
-			E: fmt.Errorf("couldn't create a pid file for %s - %s", up.Dev.Namespace, up.Dev.Name),
+			E: fmt.Errorf("couldn't create a pid file for %s - %s", up.Namespace, up.Dev.Name),
 			Hint: `This error can occur if the ".okteto" folder in your home has misconfigured permissions.
     To resolve, try 'sudo chown -R <your-user>: ~/.okteto'
 
@@ -712,7 +590,7 @@ func (up *upContext) activateLoop() {
 	defer t.Stop()
 
 	defer func() {
-		if err := config.DeleteStateFile(up.Dev.Name, up.Dev.Namespace); err != nil {
+		if err := config.DeleteStateFile(up.Dev.Name, up.Namespace); err != nil {
 			oktetoLog.Infof("failed to delete state file: %s", err)
 		}
 	}()
@@ -834,76 +712,6 @@ func (up *upContext) applyToApps(ctx context.Context) chan error {
 	return result
 }
 
-func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
-	dockerfile := up.Dev.Image.Dockerfile
-	image := up.Dev.Image.Name
-	args := up.Dev.Image.Args
-	context := up.Dev.Image.Context
-	target := up.Dev.Image.Target
-	cacheFrom := up.Dev.Image.CacheFrom
-	if v, ok := up.Manifest.Build[up.Dev.Name]; up.Manifest.IsV2 && ok {
-		dockerfile = v.Dockerfile
-		image = v.Image
-		args = v.Args
-		context = v.Context
-		target = v.Target
-		cacheFrom = v.CacheFrom
-		if image != "" {
-			up.Dev.EmptyImage = false
-		}
-	}
-
-	if _, err := os.Stat(up.Dev.Image.GetDockerfilePath(up.Fs)); err != nil {
-		return oktetoErrors.UserError{
-			E:    fmt.Errorf("'--build' argument given but there is no Dockerfile"),
-			Hint: "Try creating a Dockerfile file or specify the 'context' and 'dockerfile' fields in your okteto manifest.",
-		}
-	}
-
-	oktetoRegistryURL := okteto.GetContext().Registry
-	if oktetoRegistryURL == "" && up.Dev.Autocreate && image == "" {
-		return fmt.Errorf("no value for 'image' has been provided in your okteto manifest")
-	}
-
-	if image == "" {
-		devContainer := apps.GetDevContainer(app.PodSpec(), up.Dev.Container)
-		if devContainer == nil {
-			return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
-		}
-		image = devContainer.Image
-	}
-
-	oktetoLog.Information("Running your build in %s...", okteto.GetContext().Builder)
-
-	imageTag := up.Registry.GetImageTag(image, up.Dev.Name, up.Dev.Namespace)
-	oktetoLog.Infof("building dev image tag %s", imageTag)
-
-	buildArgs := build.SerializeArgs(args)
-
-	buildOptions := &types.BuildOptions{
-		Path:       context,
-		File:       dockerfile,
-		Tag:        imageTag,
-		Target:     target,
-		CacheFrom:  cacheFrom,
-		BuildArgs:  buildArgs,
-		OutputMode: oktetoLog.TTYFormat,
-	}
-	builder := buildv1.NewBuilderFromScratch(io.NewIOController())
-	if err := builder.Build(ctx, buildOptions); err != nil {
-		return err
-	}
-	for _, s := range up.Dev.Services {
-		if s.Image.Name == up.Dev.Image.Name {
-			s.Image.Name = imageTag
-			s.SetLastBuiltAnnotation()
-		}
-	}
-	up.Dev.Image.Name = imageTag
-	up.Dev.SetLastBuiltAnnotation()
-	return nil
-}
-
 func (up *upContext) setDevContainer(app apps.App) error {
 	devContainer := apps.GetDevContainer(app.PodSpec(), up.Dev.Container)
 	if devContainer == nil {
@@ -912,8 +720,8 @@ func (up *upContext) setDevContainer(app apps.App) error {
 
 	up.Dev.Container = devContainer.Name
 
-	if up.Dev.Image.Name == "" {
-		up.Dev.Image.Name = devContainer.Image
+	if up.Dev.Image == "" {
+		up.Dev.Image = devContainer.Image
 	}
 
 	return nil
@@ -1036,8 +844,8 @@ func terminateProcess(p process.Interface) error {
 }
 
 func printDisplayContext(up *upContext) {
-	oktetoLog.Println(fmt.Sprintf("    %s   %s", oktetoLog.BlueString("Context:"), okteto.RemoveSchema(up.Dev.Context)))
-	oktetoLog.Println(fmt.Sprintf("    %s %s", oktetoLog.BlueString("Namespace:"), up.Dev.Namespace))
+	oktetoLog.Println(fmt.Sprintf("    %s   %s", oktetoLog.BlueString("Context:"), okteto.RemoveSchema(okteto.GetContext().Name)))
+	oktetoLog.Println(fmt.Sprintf("    %s %s", oktetoLog.BlueString("Namespace:"), up.Namespace))
 	oktetoLog.Println(fmt.Sprintf("    %s      %s", oktetoLog.BlueString("Name:"), up.Dev.Name))
 
 	anyGlobalForward := false

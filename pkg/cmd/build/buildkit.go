@@ -22,7 +22,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/containerd/console"
 	dockerConfig "github.com/docker/cli/cli/config"
 	"github.com/moby/buildkit/client"
 	buildkit "github.com/moby/buildkit/cmd/buildctl/build"
@@ -141,11 +140,11 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 			cert:     okctx.GetCurrentCertStr(),
 		}
 
-		ap := newDockerAndOktetoAuthProvider(okctx.GetCurrentRegister(), okctx.GetCurrentUser(), okctx.GetCurrentToken(), apCtx, os.Stderr)
+		ap := newDockerAndOktetoAuthProvider(okctx.GetRegistryURL(), okctx.GetCurrentUser(), okctx.GetCurrentToken(), apCtx, os.Stderr)
 		attachable = append(attachable, ap)
 	} else {
 		dockerCfg := dockerConfig.LoadDefaultConfigFile(os.Stderr)
-		attachable = append(attachable, authprovider.NewDockerAuthProvider(dockerCfg))
+		attachable = append(attachable, authprovider.NewDockerAuthProvider(dockerCfg, map[string]*authprovider.AuthTLSConfig{}))
 	}
 
 	for _, sess := range buildOptions.SshSessions {
@@ -255,7 +254,7 @@ func getBuildkitClient(ctx context.Context, okctx OktetoContextInterface) (*clie
 		return c, nil
 	}
 
-	c, err := client.New(ctx, builder, client.WithFailFast())
+	c, err := client.New(ctx, builder)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create the builder client for %s", builder)
 	}
@@ -278,7 +277,7 @@ func getClientForOktetoCluster(ctx context.Context, builder string, token string
 	rpc := client.WithRPCCreds(oauth.TokenSource{
 		TokenSource: oauth2.StaticTokenSource(oauthToken),
 	})
-	c, err := client.New(ctx, builder, client.WithFailFast(), creds, rpc)
+	c, err := client.New(ctx, builder, creds, rpc)
 
 	if err != nil {
 		return nil, err
@@ -340,22 +339,39 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 		w := &buildWriter{}
 		switch progress {
 		case oktetoLog.TTYFormat:
-			var c console.Console
-
-			if cn, err := console.ConsoleFromFile(os.Stdout); err == nil {
-				c = cn
-			} else {
-				oktetoLog.Debugf("could not create console from file: %s ", err)
-			}
 			go func() {
 				// We use the plain channel to store the logs into a buffer and then show them in the UI
-				if _, err := progressui.DisplaySolveStatus(context.TODO(), nil, w, plainChannel); err != nil {
-					oktetoLog.Infof("could not display solve status: %s", err)
+				d, err := progressui.NewDisplay(w, progressui.PlainMode)
+				if err != nil {
+					// If an error occurs while attempting to create the tty display,
+					// fallback to using plain mode on stdout (in contrast to stderr).
+					d, err = progressui.NewDisplay(w, progressui.PlainMode)
+					if err != nil {
+						oktetoLog.Infof("could not display build status: %s", err)
+						return
+					}
+				}
+				// not using shared context to not disrupt display but let is finish reporting errors
+				if _, err := d.UpdateFrom(context.TODO(), plainChannel); err != nil {
+					oktetoLog.Infof("could not display build status: %s", err)
 				}
 			}()
 			// not using shared context to not disrupt display but let it finish reporting errors
 			// We need to wait until the tty channel is closed to avoid writing to stdout while the tty is being used
-			_, err := progressui.DisplaySolveStatus(context.TODO(), c, ioCtrl.Out(), ttyChannel)
+			d, err := progressui.NewDisplay(os.Stdout, progressui.TtyMode)
+			if err != nil {
+				// If an error occurs while attempting to create the tty display,
+				// fallback to using plain mode on stdout (in contrast to stderr).
+				d, err = progressui.NewDisplay(os.Stdout, progressui.PlainMode)
+				if err != nil {
+					oktetoLog.Infof("could not display build status: %s", err)
+					return err
+				}
+			}
+			// not using shared context to not disrupt display but let is finish reporting errors
+			if _, err := d.UpdateFrom(context.TODO(), ttyChannel); err != nil {
+				oktetoLog.Infof("could not display build status: %s", err)
+			}
 			return err
 		case DeployOutputModeOnBuild, DestroyOutputModeOnBuild, TestOutputModeOnBuild:
 			err := deployDisplayer(context.TODO(), plainChannel, &types.BuildOptions{OutputMode: progress})
@@ -363,7 +379,20 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			return err
 		default:
 			// not using shared context to not disrupt display but let it finish reporting errors
-			_, err := progressui.DisplaySolveStatus(context.TODO(), nil, ioCtrl.Out(), plainChannel)
+			d, err := progressui.NewDisplay(os.Stdout, progressui.PlainMode)
+			if err != nil {
+				// If an error occurs while attempting to create the tty display,
+				// fallback to using plain mode on stdout (in contrast to stderr).
+				d, err = progressui.NewDisplay(os.Stdout, progressui.PlainMode)
+				if err != nil {
+					oktetoLog.Infof("could not display build status: %s", err)
+					return err
+				}
+			}
+			// not using shared context to not disrupt display but let is finish reporting errors
+			if _, err := d.UpdateFrom(context.TODO(), plainChannel); err != nil {
+				oktetoLog.Infof("could not display build status: %s", err)
+			}
 			return err
 		}
 	})

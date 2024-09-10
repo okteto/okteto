@@ -17,7 +17,6 @@ import (
 	"context"
 	"net/url"
 	"os"
-	"reflect"
 
 	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/cmd/utils"
@@ -55,14 +54,6 @@ func (na Namer) ResolveName(ctx context.Context) string {
 }
 
 func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface, k8sLogger *ioCtrl.K8sLogger) error {
-
-	if deployOptions.Manifest.Context == "" {
-		deployOptions.Manifest.Context = okteto.GetContext().Name
-	}
-	if deployOptions.Manifest.Namespace == "" {
-		deployOptions.Manifest.Namespace = okteto.GetContext().Namespace
-	}
-
 	if deployOptions.Name == "" {
 		c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okteto.GetContext().Cfg)
 		if err != nil {
@@ -89,53 +80,29 @@ func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Opti
 			deployOptions.Manifest.Deploy.ComposeSection.Stack.Name = deployOptions.Name
 		}
 	}
-
-	if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
-
-		mergeServicesToDeployFromOptionsAndManifest(deployOptions)
-		if len(deployOptions.ServicesToDeploy) == 0 {
-			deployOptions.ServicesToDeploy = []string{}
-			for service := range deployOptions.Manifest.Deploy.ComposeSection.Stack.Services {
-				deployOptions.ServicesToDeploy = append(deployOptions.ServicesToDeploy, service)
-			}
+	if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil {
+		svcs, err := getStackServicesToDeploy(ctx, deployOptions.Manifest.Deploy.ComposeSection, c)
+		if err != nil {
+			return err
 		}
-		if len(deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo) > 0 {
-			if err := stack.ValidateDefinedServices(deployOptions.Manifest.Deploy.ComposeSection.Stack, deployOptions.ServicesToDeploy); err != nil {
-				return err
-			}
-			deployOptions.ServicesToDeploy = stack.AddDependentServicesIfNotPresent(ctx, deployOptions.Manifest.Deploy.ComposeSection.Stack, deployOptions.ServicesToDeploy, c)
-			deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo[0].ServicesToDeploy = deployOptions.ServicesToDeploy
-		}
+		deployOptions.StackServicesToDeploy = svcs
 	}
 	return nil
 }
 
-func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
-	var manifestDeclaredServicesToDeploy []string
-	for _, composeInfo := range deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo {
-		manifestDeclaredServicesToDeploy = append(manifestDeclaredServicesToDeploy, composeInfo.ServicesToDeploy...)
-	}
+func getStackServicesToDeploy(ctx context.Context, composeSectionInfo *model.ComposeSectionInfo, c kubernetes.Interface) ([]string, error) {
+	svcs := []string{}
 
-	manifestDeclaredServicesToDeploySet := map[string]bool{}
-	for _, service := range manifestDeclaredServicesToDeploy {
-		manifestDeclaredServicesToDeploySet[service] = true
+	for _, composeInfo := range composeSectionInfo.ComposesInfo {
+		svcs = append(svcs, composeInfo.ServicesToDeploy...)
 	}
-
-	commandDeclaredServicesToDeploy := map[string]bool{}
-	for _, service := range deployOptions.ServicesToDeploy {
-		commandDeclaredServicesToDeploy[service] = true
+	if len(composeSectionInfo.ComposesInfo) > 0 {
+		if err := stack.ValidateDefinedServices(composeSectionInfo.Stack, svcs); err != nil {
+			return []string{}, err
+		}
+		svcs = stack.AddDependentServicesIfNotPresent(ctx, composeSectionInfo.Stack, svcs, c)
 	}
-
-	if reflect.DeepEqual(manifestDeclaredServicesToDeploySet, commandDeclaredServicesToDeploy) {
-		return
-	}
-
-	if len(deployOptions.ServicesToDeploy) > 0 && len(manifestDeclaredServicesToDeploy) > 0 {
-		oktetoLog.Warning("overwriting manifest's `services to deploy` with command line arguments")
-	}
-	if len(deployOptions.ServicesToDeploy) == 0 && len(manifestDeclaredServicesToDeploy) > 0 {
-		deployOptions.ServicesToDeploy = manifestDeclaredServicesToDeploy
-	}
+	return svcs, nil
 }
 
 func (dc *Command) addEnvVars(cwd string) {

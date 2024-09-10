@@ -30,24 +30,15 @@ func buildImages(ctx context.Context, builder builderInterface, deployOptions *O
 
 	allServicesWithBuildSection := deployOptions.Manifest.GetBuildServices()
 	oktetoManifestServicesWithBuild := setDifference(allServicesWithBuildSection, stackServicesWithBuild) // Warning: this way of getting the oktetoManifestServicesWithBuild is highly dependent on the manifest struct as it is now. We are assuming that: *okteto* manifest build = manifest build - stack build section
-	servicesToDeployWithBuild := setIntersection(allServicesWithBuildSection, sliceToSet(deployOptions.ServicesToDeploy))
+	servicesToDeployWithBuild := setIntersection(allServicesWithBuildSection, sliceToSet(deployOptions.StackServicesToDeploy))
 	// We need to build:
 	// - All the services that have a build section defined in the *okteto* manifest
 	// - Services from *deployOptions.servicesToDeploy* that have a build section
 
 	servicesToBuildSet := setUnion(oktetoManifestServicesWithBuild, servicesToDeployWithBuild)
 
-	if deployOptions.Build {
-		buildOptions := &types.BuildOptions{
-			EnableStages: true,
-			Manifest:     deployOptions.Manifest,
-			CommandArgs:  setToSlice(servicesToBuildSet),
-		}
-		oktetoLog.Debug("force build from manifest definition")
-		if errBuild := builder.Build(ctx, buildOptions); errBuild != nil {
-			return errBuild
-		}
-	} else {
+	if deployOptions.NoBuild {
+		// If no build is requested, we only build the services that have a build section in the *okteto* manifest
 		servicesToBuild, err := builder.GetServicesToBuildDuringExecution(ctx, deployOptions.Manifest, setToSlice(servicesToBuildSet))
 		if err != nil {
 			return err
@@ -63,6 +54,16 @@ func buildImages(ctx context.Context, builder builderInterface, deployOptions *O
 			if errBuild := builder.Build(ctx, buildOptions); errBuild != nil {
 				return errBuild
 			}
+		}
+	} else {
+		buildOptions := &types.BuildOptions{
+			EnableStages: true,
+			Manifest:     deployOptions.Manifest,
+			CommandArgs:  setToSlice(servicesToBuildSet),
+		}
+		oktetoLog.Debug("force build from manifest definition")
+		if errBuild := builder.Build(ctx, buildOptions); errBuild != nil {
+			return errBuild
 		}
 	}
 

@@ -26,7 +26,6 @@ import (
 	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	modelUtils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -36,6 +35,7 @@ import (
 // destroyFlags represents the user input for a pipeline destroy command
 type destroyFlags struct {
 	name           string
+	k8sContext     string
 	namespace      string
 	wait           bool
 	destroyVolumes bool
@@ -58,14 +58,12 @@ func destroy(ctx context.Context) *cobra.Command {
 		Use:   "destroy",
 		Short: "Destroy an okteto pipeline",
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#destroy-1"),
+		Example: `To run the destroy without the Okteto CLI waiting for its completion, use the '--wait=false' flag:
+okteto pipeline destroy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctxResource := &model.ContextResource{}
-			if err := ctxResource.UpdateNamespace(flags.namespace); err != nil {
-				return err
-			}
-
 			ctxOptions := &contextCMD.Options{
-				Namespace: ctxResource.Namespace,
+				Namespace: flags.namespace,
+				Context:   flags.k8sContext,
 				Show:      true,
 			}
 			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
@@ -86,10 +84,11 @@ func destroy(ctx context.Context) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&flags.name, "name", "p", "", "name of the pipeline (defaults to the git config name)")
+	cmd.Flags().StringVarP(&flags.k8sContext, "context", "c", "", "context where the development environment was deployed")
 	cmd.Flags().StringVarP(&flags.namespace, "namespace", "n", "", "namespace where the pipeline is destroyed (defaults to the current namespace)")
-	cmd.Flags().BoolVarP(&flags.wait, "wait", "w", false, "wait until the pipeline finishes (defaults to false)")
+	cmd.Flags().BoolVarP(&flags.wait, "wait", "w", true, "wait until the pipeline finishes")
 	cmd.Flags().BoolVarP(&flags.destroyVolumes, "volumes", "v", false, "destroy persistent volumes created by the pipeline (defaults to false)")
-	cmd.Flags().DurationVarP(&flags.timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
+	cmd.Flags().DurationVarP(&flags.timeout, "timeout", "t", fiveMinutes, "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h")
 	return cmd
 }
 

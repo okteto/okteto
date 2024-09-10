@@ -136,3 +136,31 @@ func TestGetSvcsToBuildFromListf(t *testing.T) {
 	result := mb.GetSvcsToBuildFromList(inputList)
 	require.ElementsMatch(t, result, expectedList)
 }
+
+func TestIsEmpty(t *testing.T) {
+	tests := []struct {
+		input    ManifestBuild
+		expected bool
+	}{
+		{
+			input:    ManifestBuild{},
+			expected: true,
+		},
+		{
+			input: ManifestBuild{
+				"testSvc": &Info{
+					DependsOn: DependsOn{
+						"anotherService",
+					},
+				},
+			},
+			expected: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run("", func(t *testing.T) {
+			result := tt.input.IsEmpty()
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}

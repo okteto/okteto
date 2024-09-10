@@ -69,7 +69,9 @@ const (
       retries: 5
       start_period: 30s
   db:
-    image: alpine
+    image: postgres:16.3-alpine3.19
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
       - data:/data
     labels:
@@ -121,7 +123,9 @@ volumes:
       retries: 5
       start_period: 30s
   db:
-    image: alpine
+    image: postgres:16.3-alpine3.19
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
       - data:/data
     labels:
@@ -174,7 +178,9 @@ volumes:
       retries: 5
       start_period: 30s
   db:
-    image: alpine
+    image: postgres:16.3-alpine3.19
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
       - data:/data
     labels:
@@ -243,6 +249,7 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 		OktetoHome: dir,
 		Token:      token,
 		LogOutput:  "info",
+		Wait:       false,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
@@ -487,66 +494,6 @@ func TestReDeployPipelineFromCompose(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
-// TestDeployPipelineFromComposeOnlyOneSvc tests the following scenario:
-// - Deploying a pipeline manifest locally from a compose file
-// - The endpoints generated are accessible
-// - Depends on
-// - Test secret injection
-func TestDeployPipelineFromComposeOnlyOneSvc(t *testing.T) {
-	t.Parallel()
-	oktetoPath, err := integration.GetOktetoPath()
-	require.NoError(t, err)
-
-	dir := t.TempDir()
-	require.NoError(t, createComposeScenario(dir))
-
-	testNamespace := integration.GetTestNamespace("DeployPartialCompose", user)
-	namespaceOpts := &commands.NamespaceOptions{
-		Namespace:  testNamespace,
-		OktetoHome: dir,
-		Token:      token,
-	}
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
-	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
-	require.NoError(t, err)
-
-	deployOptions := &commands.DeployOptions{
-		Workdir:          dir,
-		ServicesToDeploy: []string{"app"},
-		Namespace:        testNamespace,
-		OktetoHome:       dir,
-		Token:            token,
-		LogOutput:        "info",
-	}
-	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
-
-	// Test that the nginx image has been created correctly
-	_, err = integration.GetDeployment(context.Background(), testNamespace, "nginx", c)
-	require.True(t, k8sErrors.IsNotFound(err))
-
-	// Test that the nginx image has been created correctly
-	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app", c)
-	require.NoError(t, err)
-	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
-	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
-
-	destroyOptions := &commands.DestroyOptions{
-		Workdir:    dir,
-		Namespace:  testNamespace,
-		OktetoHome: dir,
-	}
-
-	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
-
-	_, err = integration.GetService(context.Background(), testNamespace, "app", c)
-	require.NoError(t, err)
-
-	_, err = integration.GetService(context.Background(), testNamespace, "nginx", c)
-	require.True(t, k8sErrors.IsNotFound(err))
-	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
-}
-
 // TestDeployPipelineFromOktetoStacks tests the following scenario:
 // - Deploying a pipeline manifest locally from a compose file
 // - The endpoints generated are accessible
@@ -554,7 +501,8 @@ func TestDeployPipelineFromComposeOnlyOneSvc(t *testing.T) {
 // - Test secret injection
 // - Test that port from image is imported
 func TestDeployPipelineFromOktetoStacks(t *testing.T) {
-	t.Parallel()
+	t.Setenv("OKTETO_SUPPORT_STACKS_ENABLED", "true")
+
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
@@ -622,7 +570,7 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
-// TestDeployPipelineFromCompose tests the following scenario:
+// TestDeployComposeFromOktetoManifest tests the following scenario:
 // - Deploying a compose manifest locally from an okteto manifestv2
 // - The endpoints generated are accessible
 // - Depends on
@@ -654,6 +602,7 @@ func TestDeployComposeFromOktetoManifest(t *testing.T) {
 		OktetoHome: dir,
 		Token:      token,
 		LogOutput:  "info",
+		Wait:       false,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 

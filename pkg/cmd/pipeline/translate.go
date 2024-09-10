@@ -33,6 +33,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	apiv1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -375,7 +376,8 @@ func AddDevAnnotations(ctx context.Context, manifest *model.Manifest, c kubernet
 		if dev.Autocreate {
 			continue
 		}
-		app, err := apps.Get(ctx, dev, manifest.Namespace, c)
+		ns := okteto.GetContext().Namespace
+		app, err := apps.Get(ctx, dev, ns, c)
 		if err != nil {
 			oktetoLog.Infof("could not add %s dev annotations due to: %s", devName, err.Error())
 			continue

@@ -26,7 +26,6 @@ type Options struct {
 	Token                 string
 	Context               string
 	Namespace             string
-	Builder               string
 	OnlyOkteto            bool
 	Show                  bool
 	Save                  bool

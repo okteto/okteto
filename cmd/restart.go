@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -33,7 +34,7 @@ import (
 )
 
 // Restart restarts the pods of a given dev mode deployment
-func Restart() *cobra.Command {
+func Restart(fs afero.Fs) *cobra.Command {
 	var namespace string
 	var k8sContext string
 	var devPath string
@@ -44,12 +45,30 @@ func Restart() *cobra.Command {
 		Args:   utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#restart"),
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if devPath != "" {
+				// check that the manifest file exists
+				if !filesystem.FileExistsWithFilesystem(devPath, fs) {
+					return oktetoErrors.ErrManifestPathNotFound
+				}
+
+				// the Okteto manifest flag should specify a file, not a directory
+				if filesystem.IsDir(devPath, fs) {
+					return oktetoErrors.ErrManifestPathIsDir
+				}
+			}
+
 			ctx := context.Background()
 
 			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs())
+			manifest, err := model.GetManifestV2(manifestOpts.Filename, afero.NewOsFs())
 			if err != nil {
 				return err
+			}
+
+			if !okteto.IsOkteto() {
+				if err := manifest.ValidateForCLIOnly(); err != nil {
+					return err
+				}
 			}
 
 			devName := ""
@@ -76,7 +95,7 @@ func Restart() *cobra.Command {
 			if len(args) > 0 {
 				serviceName = args[0]
 			}
-			err = executeRestart(ctx, dev, serviceName)
+			err = executeRestart(ctx, dev, serviceName, namespace)
 			if err != nil {
 				return fmt.Errorf("failed to restart your deployments: %w", err)
 			}
@@ -88,14 +107,14 @@ func Restart() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the restart command is executed")
 	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the restart command is executed")
 
 	return cmd
 }
 
-func executeRestart(ctx context.Context, dev *model.Dev, sn string) error {
+func executeRestart(ctx context.Context, dev *model.Dev, serviceName, namespace string) error {
 	oktetoLog.Infof("restarting services")
 	client, _, err := okteto.GetK8sClient()
 	if err != nil {
@@ -111,7 +130,7 @@ func executeRestart(ctx context.Context, dev *model.Dev, sn string) error {
 	exit := make(chan error, 1)
 
 	go func() {
-		exit <- pods.Restart(ctx, dev, client, sn)
+		exit <- pods.Restart(ctx, dev, namespace, client, serviceName)
 	}()
 
 	select {

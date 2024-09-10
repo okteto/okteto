@@ -27,7 +27,6 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
-	stackCMD "github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
@@ -73,19 +72,19 @@ type Options struct {
 	ManifestPathFlag string
 	// ManifestPath is the path to the manifest used though the command execution.
 	// This might change its value during execution
-	ManifestPath     string
-	Name             string
-	Namespace        string
-	K8sContext       string
-	Variables        []string
-	ServicesToDeploy []string
-	Timeout          time.Duration
-	Build            bool
-	Dependencies     bool
-	RunWithoutBash   bool
-	RunInRemote      bool
-	Wait             bool
-	ShowCTA          bool
+	ManifestPath          string
+	Name                  string
+	Namespace             string
+	K8sContext            string
+	Variables             []string
+	StackServicesToDeploy []string
+	Timeout               time.Duration
+	NoBuild               bool
+	Dependencies          bool
+	RunWithoutBash        bool
+	RunInRemote           bool
+	Wait                  bool
+	ShowCTA               bool
 }
 
 type builderInterface interface {
@@ -162,9 +161,19 @@ type Deployer interface {
 func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker buildDeployTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
-		Use:   "deploy [service...]",
+		Use:   "deploy",
 		Short: "Execute the list of commands specified in the 'deploy' section of your okteto manifest",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		Example: `# Execute okteto deploy
+$ okteto deploy
+
+# Execute okteto deploy in remote
+$ okteto deploy --remote 
+
+
+# Execute okteto deploy skipping the build
+$ okteto deploy --build=false`,
+		Args: utils.NoArgsAccepted(""),
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			// validate cmd options
 			if options.Dependencies && !okteto.IsOkteto() {
 				return fmt.Errorf("'dependencies' is only supported in contexts that have Okteto installed")
@@ -183,34 +192,29 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 				return err
 			}
 
-			// Loads, updates and uses the context from path. If not found, it creates and uses a new context
-			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath, contextCMD.Options{Show: true}); err != nil {
-				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.GetContext().Name).Error() {
-					return err
-				}
-				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: options.Namespace}); err != nil {
-					return err
-				}
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: options.Namespace, Context: options.K8sContext}); err != nil {
+				return err
 			}
 
-			if okteto.IsOkteto() {
-				create, err := utils.ShouldCreateNamespace(ctx, okteto.GetContext().Namespace)
+			if !okteto.IsOkteto() {
+				return oktetoErrors.ErrContextIsNotOktetoCluster
+			}
+
+			create, err := utils.ShouldCreateNamespace(ctx, okteto.GetContext().Namespace)
+			if err != nil {
+				return err
+			}
+			if create {
+				nsCmd, err := namespace.NewCommand()
 				if err != nil {
 					return err
 				}
-				if create {
-					nsCmd, err := namespace.NewCommand()
-					if err != nil {
-						return err
-					}
-					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.GetContext().Namespace}); err != nil {
-						return err
-					}
+				if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.GetContext().Namespace}); err != nil {
+					return err
 				}
 			}
 
 			options.ShowCTA = oktetoLog.IsInteractive()
-			options.ServicesToDeploy = args
 
 			k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
 			pc, err := pipelineCMD.NewCommand()
@@ -250,12 +254,11 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 			exit := make(chan error, 1)
 
 			go func() {
-				err := c.Run(ctx, options)
-				namespace := okteto.GetContext().Namespace
-				if options.Manifest != nil {
-					namespace = options.Manifest.Namespace
+				if options.Namespace == "" {
+					options.Namespace = okteto.GetContext().Namespace
 				}
-				c.InsightsTracker.TrackDeploy(ctx, options.Name, namespace, err == nil)
+				err := c.Run(ctx, options)
+				c.InsightsTracker.TrackDeploy(ctx, options.Name, options.Namespace, err == nil)
 				c.TrackDeploy(options.Manifest, options.RunInRemote, startTime, err)
 				exit <- err
 			}()
@@ -276,16 +279,16 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 	}
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
-	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the okteto manifest file")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment is deployed")
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment is deployed")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
-	cmd.Flags().BoolVarP(&options.Build, "build", "", false, "force build of images when deploying the development environment")
+	cmd.Flags().BoolVarP(&options.NoBuild, "no-build", "", false, "enable/disable building images")
 	cmd.Flags().BoolVarP(&options.Dependencies, "dependencies", "", false, "deploy the dependencies from manifest")
 	cmd.Flags().BoolVarP(&options.RunWithoutBash, "no-bash", "", false, "execute commands without bash")
 	cmd.Flags().BoolVarP(&options.RunInRemote, "remote", "", false, "force run deploy commands in remote")
 
-	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", false, "wait until the development environment is deployed (defaults to false)")
+	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", true, "wait until the development environment is deployed")
 	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 
 	return cmd
@@ -329,10 +332,6 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		return oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands
 	}
 
-	if len(deployOptions.ServicesToDeploy) > 0 && deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection == nil {
-		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
-	}
-
 	// We need to create a client that doesn't go through the proxy to create
 	// the configmap without the deployedByLabel
 	c, _, err := dc.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, dc.K8sLogger)
@@ -362,7 +361,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	}
 
 	if dc.IsRemote || dc.RunningInInstaller {
-		currentVars, err := dc.CfgMapHandler.GetConfigmapVariablesEncoded(ctx, deployOptions.Name, deployOptions.Manifest.Namespace)
+		currentVars, err := dc.CfgMapHandler.GetConfigmapVariablesEncoded(ctx, deployOptions.Name, deployOptions.Namespace)
 		if err != nil {
 			return err
 		}
@@ -398,7 +397,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	dc.IoCtrl.Logger().Debugf("manifest path to store in metadata: %q", manifestPathForConfigMap)
 	data := &pipeline.CfgData{
 		Name:       deployOptions.Name,
-		Namespace:  deployOptions.Manifest.Namespace,
+		Namespace:  deployOptions.Namespace,
 		Repository: os.Getenv(model.GithubRepositoryEnvVar),
 		Branch:     os.Getenv(constants.OktetoGitBranchEnvVar),
 		Filename:   manifestPathForConfigMap,
@@ -408,7 +407,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		Variables:  deployOptions.Variables,
 	}
 
-	if !deployOptions.Manifest.IsV2 && deployOptions.Manifest.Type == model.StackType && deployOptions.Manifest.Deploy != nil {
+	if deployOptions.Manifest.Type == model.StackType && deployOptions.Manifest.Deploy != nil {
 		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
 	}
 
@@ -459,7 +458,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		// a stage with "Internal Server Error" duplicating the message we already display on error. For that reason,
 		// we should not set empty stage on error.
 		oktetoLog.SetStage("")
-		hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, c)
+		hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, okteto.GetContext().Namespace, c)
 		if err != nil {
 			return err
 		}
@@ -474,7 +473,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 				if err != nil {
 					oktetoLog.Infof("could not create endpoint getter: %s", err)
 				}
-				if err := eg.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name, Namespace: deployOptions.Manifest.Namespace}); err != nil {
+				if err := eg.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name, Namespace: okteto.GetContext().Namespace}); err != nil {
 					oktetoLog.Infof("could not retrieve endpoints: %s", err)
 				}
 			}
@@ -532,7 +531,7 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		startTime := time.Now()
 		err := dc.deployStack(ctx, deployOptions)
 		elapsedTime := time.Since(startTime)
-		if addPhaseErr := dc.CfgMapHandler.AddPhaseDuration(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, deployComposePhaseName, elapsedTime); addPhaseErr != nil {
+		if addPhaseErr := dc.CfgMapHandler.AddPhaseDuration(ctx, deployOptions.Name, okteto.GetContext().Namespace, deployComposePhaseName, elapsedTime); addPhaseErr != nil {
 			oktetoLog.Info("error adding phase to configmap: %s", err)
 		}
 		if err != nil {
@@ -658,10 +657,6 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 			Name:  "OKTETO_ORIGIN",
 			Value: "okteto-deploy",
 		})
-		namespace := okteto.GetContext().Namespace
-		if dep.Namespace != "" {
-			namespace = dep.Namespace
-		}
 
 		err := dep.ExpandVars(deployOptions.Variables)
 		if err != nil {
@@ -676,7 +671,7 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 			Wait:         dep.Wait,
 			Timeout:      dep.GetTimeout(deployOptions.Timeout),
 			SkipIfExists: !deployOptions.Dependencies,
-			Namespace:    namespace,
+			Namespace:    okteto.GetContext().Namespace,
 		}
 
 		if err := dc.PipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
@@ -714,8 +709,7 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 	hasBuildSection := false
 	isRunningOnRemoteDeployer := false
 	if manifest != nil {
-		if manifest.IsV2 &&
-			manifest.Deploy != nil {
+		if manifest.Deploy != nil {
 			isRunningOnRemoteDeployer = isRemoteDeployer(runInRemoteFlag, manifest.Deploy.Image, manifest.Deploy.Remote)
 			if manifest.Deploy.ComposeSection != nil &&
 				manifest.Deploy.ComposeSection.ComposesInfo != nil {
@@ -764,7 +758,7 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 		ForceBuild:       false,
 		Wait:             opts.Wait,
 		Timeout:          opts.Timeout,
-		ServicesToDeploy: opts.ServicesToDeploy,
+		ServicesToDeploy: opts.StackServicesToDeploy,
 		InsidePipeline:   true,
 	}
 
@@ -775,19 +769,21 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 
 	divertDriver := divert.NewNoop()
 	if opts.Manifest.Deploy.Divert != nil {
-		divertDriver, err = divert.New(opts.Manifest.Deploy.Divert, opts.Manifest.Name, opts.Manifest.Namespace, c)
+		divertDriver, err = divert.New(opts.Manifest.Deploy.Divert, opts.Manifest.Name, okteto.GetContext().Namespace, c)
 		if err != nil {
 			return err
 		}
 	}
 
-	stackCommand := stackCMD.DeployCommand{
-		K8sClient:      c,
-		Config:         cfg,
-		IsInsideDeploy: true,
-		DivertDriver:   divertDriver,
+	sd := stack.Stack{
+		K8sClient:        c,
+		Config:           cfg,
+		AnalyticsTracker: dc.AnalyticsTracker,
+		Insights:         dc.InsightsTracker,
+		IoCtrl:           dc.IoCtrl,
+		Divert:           divertDriver,
 	}
-	return stackCommand.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)
+	return sd.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)
 }
 
 // deployEndpoints deploys the endpoints defined in the Okteto manifest
@@ -804,7 +800,7 @@ func (dc *Command) deployEndpoints(ctx context.Context, opts *Options) error {
 	}
 
 	translateOptions := &ingresses.TranslateOptions{
-		Namespace: opts.Manifest.Namespace,
+		Namespace: okteto.GetContext().Namespace,
 		Name:      format.ResourceK8sMetaString(opts.Manifest.Name),
 	}
 
@@ -840,30 +836,38 @@ func GetDependencyEnvVars(environGetter environGetter) map[string]string {
 }
 
 func checkOktetoManifestPathFlag(options *Options, fs afero.Fs) error {
-	if options.ManifestPath != "" {
-		// if path is absolute, its transformed from root path to a rel path
-		initialCWD, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("failed to get the current working directory: %w", err)
-		}
-		manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, options.ManifestPath)
-		if err != nil {
-			return err
-		}
-		// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
-		options.ManifestPathFlag = manifestPathFlag
-
-		// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
-		uptManifestPath, err := filesystem.UpdateCWDtoManifestPath(options.ManifestPath)
-		if err != nil {
-			return err
-		}
-		options.ManifestPath = uptManifestPath
-
-		// check whether the manifest file provided by -f exists or not
-		if _, err := fs.Stat(options.ManifestPath); err != nil {
-			return fmt.Errorf("%s file doesn't exist", options.ManifestPath)
-		}
+	if options.ManifestPath == "" {
+		return nil
 	}
+
+	// if path is absolute, its transformed from root path to a rel path
+	initialCWD, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get the current working directory: %w", err)
+	}
+	manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, options.ManifestPath)
+	if err != nil {
+		return err
+	}
+	// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
+	options.ManifestPathFlag = manifestPathFlag
+
+	// check that the manifest file exists
+	if !filesystem.FileExistsWithFilesystem(manifestPathFlag, fs) {
+		return oktetoErrors.ErrManifestPathNotFound
+	}
+
+	// the Okteto manifest flag should specify a file, not a directory
+	if filesystem.IsDir(manifestPathFlag, fs) {
+		return oktetoErrors.ErrManifestPathIsDir
+	}
+
+	// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
+	uptManifestPath, err := filesystem.UpdateCWDtoManifestPath(options.ManifestPath)
+	if err != nil {
+		return err
+	}
+	options.ManifestPath = uptManifestPath
+
 	return nil
 }

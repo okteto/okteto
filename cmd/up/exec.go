@@ -407,7 +407,7 @@ func (up *upContext) cleanCommand(ctx context.Context) {
 		ctx,
 		k8sClient,
 		restConfig,
-		up.Dev.Namespace,
+		up.Namespace,
 		up.Pod.Name,
 		up.Dev.Container,
 		false,
@@ -426,7 +426,7 @@ func (up *upContext) cleanCommand(ctx context.Context) {
 
 func (up *upContext) RunCommand(ctx context.Context, cmd []string) error {
 	oktetoLog.Infof("starting remote command")
-	if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Ready); err != nil {
+	if err := config.UpdateStateFile(up.Dev.Name, up.Namespace, config.Ready); err != nil {
 		return err
 	}
 
@@ -440,7 +440,7 @@ func (up *upContext) RunCommand(ctx context.Context, cmd []string) error {
 			hybridCtx := &HybridExecCtx{
 				Dev:       up.Dev,
 				Name:      up.Manifest.Name,
-				Namespace: up.Manifest.Namespace,
+				Namespace: up.Namespace,
 				Client:    k8sClient,
 				Workdir:   up.Dev.Workdir,
 			}
@@ -468,7 +468,7 @@ func (up *upContext) RunCommand(ctx context.Context, cmd []string) error {
 		ctx,
 		k8sClient,
 		restConfig,
-		up.Dev.Namespace,
+		up.Namespace,
 		up.Pod.Name,
 		up.Dev.Container,
 		true,
@@ -485,7 +485,7 @@ func (up *upContext) checkOktetoStartError(ctx context.Context, msg string) erro
 		return err
 	}
 
-	app, err := apps.Get(ctx, up.Dev, up.Dev.Namespace, k8sClient)
+	app, err := apps.Get(ctx, up.Dev, up.Namespace, k8sClient)
 	if err != nil {
 		return err
 	}
@@ -499,7 +499,7 @@ func (up *upContext) checkOktetoStartError(ctx context.Context, msg string) erro
 		return err
 	}
 
-	userID := pods.GetPodUserID(ctx, pod.Name, up.Dev.Container, up.Dev.Namespace, k8sClient)
+	userID := pods.GetPodUserID(ctx, pod.Name, up.Dev.Container, up.Namespace, k8sClient)
 	if up.Dev.PersistentVolumeEnabled() {
 		if userID != -1 && userID != *up.Dev.SecurityContext.RunAsUser {
 			return oktetoErrors.UserError{

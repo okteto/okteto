@@ -63,7 +63,9 @@ USER 0
 ENV PATH="${PATH}:/okteto/bin"
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
-
+{{range $key, $val := .OktetoPrefixEnvVars }}
+ARG {{$key}} {{$val}}
+{{end}}
 ENV {{ .RemoteDeployEnvVar }} true
 ARG {{ .NamespaceArgName }}
 ARG {{ .ContextArgName }}
@@ -142,6 +144,7 @@ type Runner struct {
 	builder              Builder
 	oktetoClientProvider OktetoClientProvider
 	ioCtrl               *io.Controller
+	getEnviron           func() []string
 	// sshAuthSockEnvvar is the default for SSH_AUTH_SOCK. Provided mostly for testing
 	sshAuthSockEnvvar  string
 	useInternalNetwork bool
@@ -192,6 +195,7 @@ type dockerfileTemplateProperties struct {
 	RemoteDeployEnvVar       string
 	OktetoBuildEnvVars       map[string]string
 	OktetoDependencyEnvVars  map[string]string
+	OktetoPrefixEnvVars      map[string]string
 	OktetoExecutionEnvVars   map[string]string
 	ContextArgName           string
 	NamespaceArgName         string
@@ -225,6 +229,7 @@ func NewRunner(ioCtrl *io.Controller, builder Builder) *Runner {
 		ioCtrl:               ioCtrl,
 		builder:              builder,
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
+		getEnviron:           os.Environ,
 	}
 }
 
@@ -416,6 +421,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		BuildKitHostArgName:      model.OktetoBuildkitHostURLEnvVar,
 		OktetoRegistryURLArgName: model.OktetoRegistryURLEnvVar,
 		OktetoDependencyEnvVars:  params.DependenciesEnvVars,
+		OktetoPrefixEnvVars:      getOktetoPrefixEnvVars(r.getEnviron()),
 		OktetoExecutionEnvVars:   params.ExecutionEnvVars,
 		Command:                  params.Command,
 		OktetoIsPreviewEnv:       constants.OktetoIsPreviewEnvVar,
@@ -579,4 +585,21 @@ func GetOriginalCWD(workingDirectoryCtrl filesystem.WorkingDirectoryInterface, m
 	}
 	manifestPathDir := filepath.Dir(filepath.Clean(fmt.Sprintf("/%s", manifestPath)))
 	return strings.TrimSuffix(cwd, manifestPathDir), nil
+}
+
+func getOktetoPrefixEnvVars(environ []string) map[string]string {
+	prefixEnvVars := make(map[string]string)
+	envFormatParts := 2
+	for _, v := range environ {
+		result := strings.SplitN(v, "=", envFormatParts)
+		if len(result) != envFormatParts {
+			continue
+		}
+		key := result[0]
+		if strings.HasPrefix(key, "OKTETO_") {
+			value := result[1]
+			prefixEnvVars[key] = value
+		}
+	}
+	return prefixEnvVars
 }

@@ -44,7 +44,6 @@ type UpMetricsMetadata struct {
 	localFoldersScanDuration     time.Duration
 	execDuration                 time.Duration
 
-	isV2                     bool
 	isInteractive            bool
 	isOktetoRepository       bool
 	hasDependenciesSection   bool
@@ -71,7 +70,6 @@ func NewUpMetricsMetadata() *UpMetricsMetadata {
 func (u *UpMetricsMetadata) toProps() map[string]interface{} {
 	return map[string]interface{}{
 		"isInteractive":                       u.isInteractive,
-		"isV2":                                u.isV2,
 		"manifestType":                        u.manifestType,
 		"isOktetoRepository":                  u.isOktetoRepository,
 		"hasDependenciesSection":              u.hasDependenciesSection,
@@ -99,7 +97,6 @@ func (u *UpMetricsMetadata) toProps() map[string]interface{} {
 
 // ManifestProps adds the tracking properties of the repository manifest
 func (u *UpMetricsMetadata) ManifestProps(m *model.Manifest) {
-	u.isV2 = m.IsV2
 	u.manifestType = m.Type
 	u.hasDependenciesSection = m.HasDependenciesSection()
 	u.hasBuildSection = m.HasBuildSection()

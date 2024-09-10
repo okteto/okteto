@@ -38,7 +38,6 @@ import (
 	"github.com/okteto/okteto/cmd/preview"
 	"github.com/okteto/okteto/cmd/registrytoken"
 	"github.com/okteto/okteto/cmd/remoterun"
-	"github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/test"
 	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -156,9 +155,8 @@ func main() {
 
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
-	root.AddCommand(cmd.Login())
 
-	root.AddCommand(contextCMD.Context(okClientProvider))
+	root.AddCommand(contextCMD.Context())
 	root.AddCommand(cmd.Kubeconfig(okClientProvider))
 
 	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
@@ -167,30 +165,22 @@ func main() {
 	root.AddCommand(build.Build(ctx, ioController, at, insights, k8sLogger))
 
 	root.AddCommand(namespace.Namespace(ctx, k8sLogger))
-	root.AddCommand(cmd.Init(at, insights, ioController))
-	root.AddCommand(up.Up(at, insights, ioController, k8sLogger))
-	root.AddCommand(cmd.Down(at, k8sLogger))
-	root.AddCommand(cmd.Status())
-	root.AddCommand(cmd.Doctor(k8sLogger))
+	root.AddCommand(up.Up(at, insights, ioController, k8sLogger, fs))
+	root.AddCommand(cmd.Down(at, k8sLogger, fs))
+	root.AddCommand(cmd.Status(fs))
+	root.AddCommand(cmd.Doctor(k8sLogger, fs))
 	root.AddCommand(exec.NewExec(fs, ioController, k8sClientProvider).Cmd(ctx))
 	root.AddCommand(preview.Preview(ctx))
-	root.AddCommand(cmd.Restart())
-	root.AddCommand(cmd.UpdateDeprecated())
+	root.AddCommand(cmd.Restart(fs))
 	root.AddCommand(deploy.Deploy(ctx, at, insights, ioController, k8sLogger))
-	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger))
+	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger, fs))
 	root.AddCommand(deploy.Endpoints(ctx, k8sLogger))
-	root.AddCommand(logs.Logs(ctx, k8sLogger))
+	root.AddCommand(logs.Logs(ctx, k8sLogger, fs))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
 	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger))
 	root.AddCommand(test.Test(ctx, ioController, k8sLogger, at))
 
-	// deprecated
-	root.AddCommand(cmd.Create(ctx))
-	root.AddCommand(cmd.List(ctx))
-	root.AddCommand(cmd.Delete(ctx))
-	root.AddCommand(stack.Stack(ctx, at, insights, ioController))
-	root.AddCommand(cmd.Push(ctx, at))
-	root.AddCommand(pipeline.Pipeline(ctx))
+	root.AddCommand(pipeline.Pipeline(ctx, fs))
 
 	err = root.Execute()
 

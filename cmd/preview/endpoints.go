@@ -26,7 +26,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -34,37 +33,33 @@ import (
 // Endpoints show all the endpoints of a preview environment
 func Endpoints(ctx context.Context) *cobra.Command {
 	var output string
+	var k8sContext string
 
 	cmd := &cobra.Command{
 		Use:   "endpoints <name>",
 		Short: "Show endpoints for a preview environment",
 		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			previewName := args[0]
-
-			ctxResource := &model.ContextResource{}
-			if err := ctxResource.UpdateNamespace(previewName); err != nil {
-				return err
-			}
 
 			jsonContextBuffer := bytes.NewBuffer([]byte{})
 			if output == "json" {
 				oktetoLog.SetOutput(jsonContextBuffer)
 			}
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: previewName, Context: k8sContext}); err != nil {
 				return err
 			}
+
+			if !okteto.IsOkteto() {
+				return oktetoErrors.ErrContextIsNotOktetoCluster
+			}
+
 			if output != "json" {
 				oktetoLog.Information("Using %s @ %s as context", previewName, okteto.RemoveSchema(okteto.GetContext().Name))
 			} else {
 				oktetoLog.Info(jsonContextBuffer.String())
 				oktetoLog.SetOutput(os.Stdout)
-			}
-
-			if !okteto.IsOkteto() {
-				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
 			if err := validateOutput(output); err != nil {
@@ -74,6 +69,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
+	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the development environment was deployed")
 	cmd.Flags().StringVarP(&output, "output", "o", "", "output format. One of: ['json', 'md']")
 
 	return cmd

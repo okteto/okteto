@@ -36,8 +36,8 @@ deploy:
   compose: docker-compose.yml
 dev:
   svc:
-    context: svc
-    namespace: user
+    sync:
+    - .:/usr/src/app
     mode: hybrid
     command: bash ./checker.sh
     reverse:
@@ -51,8 +51,6 @@ dev:
         e2e/test-1: annotation-1
       labels:
         custom.label/e2e: "true"
-    annotations:
-      deprecated.annotation.format: deprecated-annotation-1
 `
 	hybridCompose = `services:
  svc:
@@ -139,7 +137,7 @@ func TestUpUsingHybridMode(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test warnings for unsupported fields
-	require.Contains(t, output.String(), "In hybrid mode, the field(s) 'context, namespace' specified in your manifest are ignored")
+	require.Contains(t, output.String(), "In hybrid mode, the field(s) 'sync' specified in your manifest are ignored")
 
 	// Get deployment and check for annotations and labels
 	deploy, err := integration.GetDeployment(context.Background(), testNamespace, "svc", c)
@@ -150,7 +148,6 @@ func TestUpUsingHybridMode(t *testing.T) {
 
 	require.Equal(t, constants.OktetoHybridModeFieldValue, deploy.Annotations[constants.OktetoDevModeAnnotation])
 	require.Equal(t, "annotation-1", deploy.Annotations["e2e/test-1"])
-	require.Equal(t, "deprecated-annotation-1", deploy.Annotations["deprecated.annotation.format"])
 	require.Equal(t, "true", pods.Items[0].Labels["custom.label/e2e"])
 
 	// Test okteto down command

@@ -32,7 +32,7 @@ const (
 )
 
 func (up *upContext) initializeSyncthing() error {
-	sy, err := syncthing.New(up.Dev, up.Fs)
+	sy, err := syncthing.New(up.Dev, up.Namespace, up.Fs)
 	if err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func (up *upContext) initializeSyncthing() error {
 	oktetoLog.Infof("local syncthing initialized: gui -> %d, sync -> %d", up.Sy.LocalGUIPort, up.Sy.LocalPort)
 	oktetoLog.Infof("remote syncthing initialized: gui -> %d, sync -> %d", up.Sy.RemoteGUIPort, up.Sy.RemotePort)
 
-	if err := up.Sy.SaveConfig(up.Dev); err != nil {
+	if err := up.Sy.SaveConfig(up.Dev, up.Namespace); err != nil {
 		oktetoLog.Infof("error saving syncthing object: %s", err)
 	}
 
@@ -57,7 +57,7 @@ func (up *upContext) sync(ctx context.Context) error {
 	}
 
 	start := time.Now()
-	if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Synchronizing); err != nil {
+	if err := config.UpdateStateFile(up.Dev.Name, up.Namespace, config.Synchronizing); err != nil {
 		return err
 	}
 
@@ -104,7 +104,7 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 		defer oktetoLog.StopSpinner()
 	}
 
-	if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.StartingSync); err != nil {
+	if err := config.UpdateStateFile(up.Dev.Name, up.Namespace, config.StartingSync); err != nil {
 		return err
 	}
 

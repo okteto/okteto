@@ -31,20 +31,22 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	modelUtils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/okteto/okteto/pkg/validator"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
 )
 
 const (
 	dependencyEnvTemplate = "OKTETO_DEPENDENCY_%s_VARIABLE_%s"
+	fiveMinutes           = 5 * time.Minute
 )
 
 var (
@@ -56,9 +58,9 @@ type deployFlags struct {
 	branch       string
 	repository   string
 	name         string
+	k8sContext   string
 	namespace    string
 	file         string
-	filename     string //Deprecated field
 	variables    []string
 	labels       []string
 	timeout      time.Duration
@@ -82,25 +84,34 @@ type DeployOptions struct {
 	ReuseParams  bool
 }
 
-func deploy(ctx context.Context) *cobra.Command {
+func deploy(ctx context.Context, fs afero.Fs) *cobra.Command {
 	flags := &deployFlags{}
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy an okteto pipeline",
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#deploy-1"),
+		Example: `To run the deploy without the Okteto CLI waiting for its completion, use the '--wait=false' flag:
+okteto pipeline deploy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if flags.file != "" {
+				// check that the manifest file exists
+				if !filesystem.FileExistsWithFilesystem(flags.file, fs) {
+					return oktetoErrors.ErrManifestPathNotFound
+				}
+
+				// the Okteto manifest flag should specify a file, not a directory
+				if filesystem.IsDir(flags.file, fs) {
+					return oktetoErrors.ErrManifestPathIsDir
+				}
+			}
 
 			if err := validator.CheckReservedVariablesNameOption(flags.variables); err != nil {
 				return err
 			}
 
-			ctxResource := &model.ContextResource{}
-			if err := ctxResource.UpdateNamespace(flags.namespace); err != nil {
-				return err
-			}
-
 			ctxOptions := &contextCMD.Options{
-				Namespace: ctxResource.Namespace,
+				Namespace: flags.namespace,
+				Context:   flags.k8sContext,
 				Show:      true,
 			}
 			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
@@ -125,18 +136,15 @@ func deploy(ctx context.Context) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&flags.name, "name", "p", "", "name of the pipeline (defaults to the git config name)")
+	cmd.Flags().StringVarP(&flags.k8sContext, "context", "c", "", "context where the development environment was deployed")
 	cmd.Flags().StringVarP(&flags.namespace, "namespace", "n", "", "namespace where the pipeline is deployed (defaults to the current namespace)")
 	cmd.Flags().StringVarP(&flags.repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
 	cmd.Flags().StringVarP(&flags.branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
-	cmd.Flags().BoolVarP(&flags.wait, "wait", "w", false, "wait until the pipeline finishes (defaults to false)")
+	cmd.Flags().BoolVarP(&flags.wait, "wait", "w", true, "wait until the pipeline finishes")
 	cmd.Flags().BoolVarP(&flags.skipIfExists, "skip-if-exists", "", false, "skip the pipeline deployment if the pipeline already exists in the namespace (defaults to false)")
-	cmd.Flags().DurationVarP(&flags.timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
+	cmd.Flags().DurationVarP(&flags.timeout, "timeout", "t", fiveMinutes, "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h")
 	cmd.Flags().StringArrayVarP(&flags.variables, "var", "v", []string{}, "set a pipeline variable (can be set more than once)")
-	cmd.Flags().StringVarP(&flags.file, "file", "f", "", "relative path within the repository to the manifest file (default to okteto-pipeline.yaml or .okteto/okteto-pipeline.yaml)")
-	cmd.Flags().StringVarP(&flags.filename, "filename", "", "", "relative path within the repository to the manifest file (default to okteto-pipeline.yaml or .okteto/okteto-pipeline.yaml)")
-	if err := cmd.Flags().MarkHidden("filename"); err != nil {
-		oktetoLog.Infof("failed to mark 'filename' flag as hidden: %s", err)
-	}
+	cmd.Flags().StringVarP(&flags.file, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "set an environment label (can be set more than once)")
 	cmd.Flags().BoolVar(&flags.reuseParams, "reuse-params", false, "if pipeline exist, reuse same params to redeploy")
 
@@ -430,15 +438,6 @@ func CheckAllResourcesRunning(name string, resourceStatus map[string]string) (bo
 }
 
 func (f deployFlags) toOptions() *DeployOptions {
-	file := f.file
-	if f.filename != "" {
-		oktetoLog.Warning("the 'filename' flag is deprecated and will be removed in a future version. Please consider using 'file' flag")
-		if file == "" {
-			file = f.filename
-		} else {
-			oktetoLog.Warning("flags 'filename' and 'file' can not be used at the same time. 'file' flag will take precedence")
-		}
-	}
 	return &DeployOptions{
 		Branch:       f.branch,
 		Repository:   f.repository,
@@ -447,7 +446,7 @@ func (f deployFlags) toOptions() *DeployOptions {
 		Wait:         f.wait,
 		SkipIfExists: f.skipIfExists,
 		Timeout:      f.timeout,
-		File:         file,
+		File:         f.file,
 		Variables:    f.variables,
 		Labels:       f.labels,
 		ReuseParams:  f.reuseParams,

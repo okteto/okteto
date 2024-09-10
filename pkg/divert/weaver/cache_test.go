@@ -77,8 +77,7 @@ func Test_initCache(t *testing.T) {
 	}
 	c := fake.NewSimpleClientset(i1, i2, i3, s1, s2, s3, e1, e2)
 	m := &model.Manifest{
-		Name:      "test",
-		Namespace: "cindy",
+		Name: "test",
 		Deploy: &model.DeployInfo{
 			Divert: &model.DivertDeploy{
 				Namespace: "staging",
@@ -86,7 +85,7 @@ func Test_initCache(t *testing.T) {
 		},
 	}
 
-	d := &Driver{client: c, name: m.Name, namespace: m.Namespace, divert: *m.Deploy.Divert}
+	d := &Driver{client: c, name: m.Name, namespace: "cindy", divert: *m.Deploy.Divert}
 	err := d.initCache(ctx)
 	assert.NoError(t, err)
 

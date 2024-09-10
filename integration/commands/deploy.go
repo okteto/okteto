@@ -165,8 +165,8 @@ func getDeployCmd(oktetoPath string, deployOptions *DeployOptions) *exec.Cmd {
 	if deployOptions.ManifestPath != "" {
 		cmd.Args = append(cmd.Args, "-f", deployOptions.ManifestPath)
 	}
-	if deployOptions.Build {
-		cmd.Args = append(cmd.Args, "--build")
+	if !deployOptions.Build {
+		cmd.Args = append(cmd.Args, "--no-build")
 	}
 	if deployOptions.LogLevel != "" {
 		cmd.Args = append(cmd.Args, "--log-level", deployOptions.LogLevel)
@@ -186,9 +186,8 @@ func getDeployCmd(oktetoPath string, deployOptions *DeployOptions) *exec.Cmd {
 	if deployOptions.IsRemote {
 		cmd.Args = append(cmd.Args, "--remote")
 	}
-	if deployOptions.Wait {
-		cmd.Args = append(cmd.Args, "--wait")
-	}
+	cmd.Args = append(cmd.Args, fmt.Sprintf("--wait=%t", deployOptions.Wait))
+
 	cmd.Env = os.Environ()
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))

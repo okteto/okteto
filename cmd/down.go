@@ -23,10 +23,12 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/down"
 	"github.com/okteto/okteto/pkg/config"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -38,7 +40,7 @@ type analyticsTrackerInterface interface {
 }
 
 // Down deactivates the development container
-func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger) *cobra.Command {
+func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, fs afero.Fs) *cobra.Command {
 	var devPath string
 	var namespace string
 	var k8sContext string
@@ -52,28 +54,56 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger) *cobra.Comman
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
+			ctxOpts := &contextCMD.Options{
+				Show:      true,
+				Context:   k8sContext,
+				Namespace: namespace,
+			}
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+				return err
+			}
+
+			manifestOpts := contextCMD.ManifestOptions{
+				Filename:   devPath,
+				Namespace:  okteto.GetContext().Namespace,
+				K8sContext: okteto.GetContext().Name,
+			}
 			if devPath != "" {
 				workdir := filesystem.GetWorkdirFromManifestPath(devPath)
 				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
 				devPath = filesystem.GetManifestPathFromWorkdir(devPath, workdir)
+
+				// check that the manifest file exists
+				if !filesystem.FileExistsWithFilesystem(devPath, fs) {
+					return oktetoErrors.ErrManifestPathNotFound
+				}
+
+				// the Okteto manifest flag should specify a file, not a directory
+				if filesystem.IsDir(devPath, fs) {
+					return oktetoErrors.ErrManifestPathIsDir
+				}
 			}
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts, afero.NewOsFs())
+			manifest, err := model.GetManifestV2(manifestOpts.Filename, fs)
 			if err != nil {
 				return err
 			}
 
+			if !okteto.IsOkteto() {
+				if err := manifest.ValidateForCLIOnly(); err != nil {
+					return err
+				}
+			}
 			c, _, err := okteto.GetK8sClientWithLogger(k8sLogsCtrl)
 			if err != nil {
 				return err
 			}
 
-			dc := down.New(afero.NewOsFs(), okteto.NewK8sClientProviderWithLogger(k8sLogsCtrl), at)
+			dc := down.New(fs, okteto.NewK8sClientProviderWithLogger(k8sLogsCtrl), at)
 
 			if all {
-				err := dc.AllDown(ctx, manifest, rm)
+				err := dc.AllDown(ctx, manifest, okteto.GetContext().Namespace, rm)
 				if err != nil {
 					return err
 				}
@@ -108,15 +138,15 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger) *cobra.Comman
 					}
 				}
 
-				app, _, err := utils.GetApp(ctx, dev, c, false)
+				app, _, err := utils.GetApp(ctx, dev, okteto.GetContext().Namespace, c, false)
 				if err != nil {
 					return err
 				}
 
 				if apps.IsDevModeOn(app) {
-					if err := dc.Down(ctx, dev, rm); err != nil {
+					if err := dc.Down(ctx, dev, okteto.GetContext().Namespace, rm); err != nil {
 						at.TrackDown(false)
-						return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+						return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(okteto.GetContext().Namespace, dev.Name))
 					}
 				} else {
 					oktetoLog.Success(fmt.Sprintf("Development container '%s' deactivated", dev.Name))
@@ -128,7 +158,7 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger) *cobra.Comman
 		},
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", "", "path to the Okteto manifest file")
 	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volume")
 	cmd.Flags().BoolVarP(&all, "all", "A", false, "deactivate all running dev containers")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the down command is executed")

@@ -64,7 +64,6 @@ func Test_ExpandVars(t *testing.T) {
 		Repository:   "${REPO}",
 		Branch:       "${NOBRANCHSET-$BRANCH}",
 		ManifestPath: "${NOMPATHSET=$MPATH}",
-		Namespace:    "${FOO+$SOME_NS_DEP_EXP}",
 		Variables: env.Environment{
 			env.Var{
 				Name:  "MYVAR",
@@ -80,7 +79,6 @@ func Test_ExpandVars(t *testing.T) {
 		Repository:   "my/repo",
 		Branch:       "myBranch",
 		ManifestPath: "api/okteto.yml",
-		Namespace:    "oktetoNs",
 		Variables: env.Environment{
 			env.Var{
 				Name:  "MYVAR",

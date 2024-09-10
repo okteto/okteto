@@ -324,12 +324,11 @@ func AddOktetoContext(name string, u *types.User, namespace, personalNamespace s
 	CurrentStore.CurrentContext = name
 }
 
-func AddKubernetesContext(name, namespace, buildkitURL string) {
+func AddKubernetesContext(name, namespace string) {
 	CurrentStore = GetContextStore()
 	CurrentStore.Contexts[name] = &Context{
 		Name:      name,
 		Namespace: namespace,
-		Builder:   buildkitURL,
 		Analytics: true,
 	}
 	CurrentStore.CurrentContext = name

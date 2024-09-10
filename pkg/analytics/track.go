@@ -34,35 +34,31 @@ const (
 	// This is mixpanel's public token, is needed to send analytics to the project
 	mixpanelToken = "92fe782cdffa212d8f03861fbf1ea301"
 
-	manifestHasChangedEvent  = "Manifest Has Changed"
-	downEvent                = "Down"
-	downVolumesEvent         = "DownVolumes"
-	pushEvent                = "Push"
-	restartEvent             = "Restart Services"
-	statusEvent              = "Status"
-	logsEvent                = "Logs"
-	doctorEvent              = "Doctor"
-	buildEvent               = "Build"
-	buildTransientErrorEvent = "BuildTransientError"
-	destroyEvent             = "Destroy"
-	deployStackEvent         = "Deploy Stack"
-	destroyStackEvent        = "Destroy Stack"
-	loginEvent               = "Login"
-	initEvent                = "Create Manifest"
-	kubeconfigEvent          = "Kubeconfig"
-	namespaceEvent           = "Namespace"
-	namespaceCreateEvent     = "CreateNamespace"
-	namespaceDeleteEvent     = "DeleteNamespace"
-	previewDeployEvent       = "DeployPreview"
-	previewDestroyEvent      = "DestroyPreview"
-	execEvent                = "Exec"
-	signupEvent              = "Signup"
-	contextEvent             = "Context"
-	contextUseNamespaceEvent = "Context Use-namespace"
-	disableEvent             = "Disable Analytics"
-	stackNotSupportedField   = "Stack Field Not Supported"
-	buildPullErrorEvent      = "BuildPullError"
-	deleteContexts           = "Contexts Deletion"
+	manifestHasChangedEvent       = "Manifest Has Changed"
+	downEvent                     = "Down"
+	downVolumesEvent              = "DownVolumes"
+	restartEvent                  = "Restart Services"
+	statusEvent                   = "Status"
+	logsEvent                     = "Logs"
+	doctorEvent                   = "Doctor"
+	buildEvent                    = "Build"
+	buildWithManifestVsDockerfile = "BuildWithManifestVsDockerfile"
+	buildTransientErrorEvent      = "BuildTransientError"
+	destroyEvent                  = "Destroy"
+	deployStackEvent              = "Deploy Stack"
+	kubeconfigEvent               = "Kubeconfig"
+	namespaceEvent                = "Namespace"
+	namespaceCreateEvent          = "CreateNamespace"
+	namespaceDeleteEvent          = "DeleteNamespace"
+	previewDeployEvent            = "DeployPreview"
+	previewDestroyEvent           = "DestroyPreview"
+	execEvent                     = "Exec"
+	signupEvent                   = "Signup"
+	contextEvent                  = "Context"
+	disableEvent                  = "Disable Analytics"
+	stackNotSupportedField        = "Stack Field Not Supported"
+	buildPullErrorEvent           = "BuildPullError"
+	deleteContexts                = "Contexts Deletion"
 )
 
 var (
@@ -81,14 +77,6 @@ func init() {
 	}
 
 	mixpanelClient = mixpanel.NewFromClient(c, mixpanelToken, "https://analytics.okteto.com")
-}
-
-// TrackInit sends a tracking event to mixpanel when the user creates a manifest
-func TrackInit(success bool, language string) {
-	props := map[string]interface{}{
-		"language": language,
-	}
-	track(initEvent, success, props)
 }
 
 // TrackKubeconfig sends a tracking event to mixpanel when the user use the kubeconfig command
@@ -159,11 +147,6 @@ func TrackExec(m *TrackExecMetadata) {
 	track(execEvent, m.Success, props)
 }
 
-// TrackPush sends a tracking event to mixpanel when the user pushes a development container
-func TrackPush(success bool) {
-	track(pushEvent, success, nil)
-}
-
 // TrackRestart sends a tracking event to mixpanel when the user restarts a development environment
 func TrackRestart(success bool) {
 	track(restartEvent, success, nil)
@@ -194,6 +177,14 @@ func trackDisable(success bool) {
 	track(disableEvent, success, nil)
 }
 
+func TrackBuildWithManifestVsDockerfile(isDockerfile bool) {
+	props := map[string]interface{}{
+		"isDockerfile": isDockerfile,
+	}
+	track(buildWithManifestVsDockerfile, true, props)
+
+}
+
 // TrackBuild sends a tracking event to mixpanel when the user builds on remote
 func TrackBuild(success bool) {
 	track(buildEvent, success, nil)
@@ -205,23 +196,12 @@ func TrackBuildTransientError(success bool) {
 }
 
 // TrackDeployStack sends a tracking event to mixpanel when the user deploys a stack
-func TrackDeployStack(success, isCompose, isOktetoRepo bool) {
+func TrackDeployStack(success, isCompose bool) {
 	props := map[string]interface{}{
-		"isCompose":          isCompose,
-		"deployType":         "stack",
-		"isOktetoRepository": isOktetoRepo,
+		"isCompose":  isCompose,
+		"deployType": "stack",
 	}
 	track(deployStackEvent, success, props)
-}
-
-// TrackDestroyStack sends a tracking event to mixpanel when the user destroys a stack
-func TrackDestroyStack(success bool) {
-	track(destroyStackEvent, success, nil)
-}
-
-// TrackLogin sends a tracking event to mixpanel when the user logs in
-func TrackLogin(success bool) {
-	track(loginEvent, success, nil)
 }
 
 // TrackSignup sends a tracking event to mixpanel when the user signs up
@@ -239,11 +219,6 @@ func TrackContext(success bool) {
 		return
 	}
 	track(contextEvent, success, nil)
-}
-
-// TrackContextUseNamespace sends a tracking event to mixpanel when the user use context in
-func TrackContextUseNamespace(success bool) {
-	track(contextUseNamespaceEvent, success, nil)
 }
 
 func TrackStackWarnings(warnings []string) {

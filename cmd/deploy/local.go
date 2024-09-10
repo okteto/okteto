@@ -51,7 +51,7 @@ func (ld *localDeployer) Deploy(ctx context.Context, deployOptions *Options) err
 
 	params := deployable.DeployParameters{
 		Name:         deployOptions.Name,
-		Namespace:    deployOptions.Manifest.Namespace,
+		Namespace:    deployOptions.Namespace,
 		Variables:    deployOptions.Variables,
 		ManifestPath: deployOptions.Manifest.ManifestPath,
 		Deployable: deployable.Entity{

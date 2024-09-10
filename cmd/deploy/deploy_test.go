@@ -50,7 +50,7 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-var errorManifest *model.Manifest = &model.Manifest{
+var errorManifest = &model.Manifest{
 	Name: "testManifest",
 	Build: build.ManifestBuild{
 		"service1": &build.Info{
@@ -126,7 +126,7 @@ func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string)    { re
 func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)      { return "", "" }
 func (fr fakeRegistry) GetDevImageFromGlobal(imageWithDigest string) string { return "" }
 
-var fakeManifest *model.Manifest = &model.Manifest{
+var fakeManifest = &model.Manifest{
 	Deploy: &model.DeployInfo{
 		Commands: []model.DeployCommand{
 			{
@@ -145,16 +145,14 @@ var fakeManifest *model.Manifest = &model.Manifest{
 	},
 }
 
-var fakeManifestWithDependency *model.Manifest = &model.Manifest{
+var fakeManifestWithDependency = &model.Manifest{
 	Dependencies: deps.ManifestSection{
-		"a": &deps.Dependency{
-			Namespace: "b",
-		},
+		"a": &deps.Dependency{},
 		"b": &deps.Dependency{},
 	},
 }
 
-var noDeployNorDependenciesManifest *model.Manifest = &model.Manifest{
+var noDeployNorDependenciesManifest = &model.Manifest{
 	Name: "testManifest",
 	Build: build.ManifestBuild{
 		"service1": &build.Info{
@@ -313,44 +311,15 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 	fakeDeployer.AssertNotCalled(t, "Get")
 }
 
-func TestDeployWithServicesToBuildWithoutComposeSection(t *testing.T) {
-	fakeDeployer := &fakeDeployer{}
-	okteto.CurrentStore = &okteto.ContextStore{
-		Contexts: map[string]*okteto.Context{
-			"test": {
-				Namespace: "test",
-				Cfg:       &api.Config{},
-			},
-		},
-		CurrentContext: "test",
-	}
-	c := &Command{
-		GetManifest:       getFakeManifest,
-		GetDeployer:       fakeDeployer.Get,
-		K8sClientProvider: test.NewFakeK8sProvider(),
-	}
-	ctx := context.Background()
-	opts := &Options{
-		Name:             "movies",
-		ManifestPath:     "",
-		Variables:        []string{},
-		ServicesToDeploy: []string{"service1"},
-	}
-
-	err := c.Run(ctx, opts)
-
-	assert.ErrorIs(t, err, oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose)
-	// Verify the deploy phase is not even reached
-	fakeDeployer.AssertNotCalled(t, "Get")
-}
-
 func TestCreateConfigMapWithBuildError(t *testing.T) {
+	fakeNamespace := "test"
 	fakeK8sClientProvider := test.NewFakeK8sProvider()
 	opts := &Options{
 		Name:         "testErr",
+		Namespace:    fakeNamespace,
 		ManifestPath: "",
 		Variables:    []string{},
-		Build:        true,
+		NoBuild:      false,
 	}
 
 	reg := newFakeRegistry()
@@ -382,7 +351,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	err := c.Run(ctx, opts)
 
 	// we should get a build error because Dockerfile does not exist
-	assert.True(t, strings.Contains(err.Error(), oktetoErrors.InvalidDockerfile))
+	assert.True(t, strings.Contains(err.Error(), oktetoErrors.ErrManifestPathNotFound.Error()))
 
 	fakeClient, _, err := c.K8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)
 	if err != nil {
@@ -392,13 +361,13 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	// sanitizeName is needed to check the CFGmap - this sanitization is done at RunDeploy, labels and cfg name
 	sanitizedName := format.ResourceK8sMetaString(opts.Name)
 
-	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(sanitizedName), okteto.GetContext().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(sanitizedName), fakeNamespace, fakeClient)
 	assert.NoError(t, err)
 
 	expectedCfg := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("okteto-git-%s", sanitizedName),
-			Namespace: okteto.GetContext().Namespace,
+			Namespace: fakeNamespace,
 			Labels:    map[string]string{"dev.okteto.com/git-deploy": "true"},
 		},
 		Data: map[string]string{
@@ -428,13 +397,14 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 }
 
 func TestDeployWithErrorDeploying(t *testing.T) {
+	fakeNamespace := "test"
 	fakeOs := afero.NewMemMapFs()
 	fakeK8sClientProvider := test.NewFakeK8sProvider()
 	fakeDeployer := &fakeDeployer{}
 	okteto.CurrentStore = &okteto.ContextStore{
 		Contexts: map[string]*okteto.Context{
 			"test": {
-				Namespace: "test",
+				Namespace: fakeNamespace,
 				Cfg:       &api.Config{},
 			},
 		},
@@ -452,6 +422,7 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 	ctx := context.Background()
 	opts := &Options{
 		Name:         "movies",
+		Namespace:    fakeNamespace,
 		ManifestPath: "",
 		Variables:    []string{},
 	}
@@ -470,6 +441,7 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 
 	expectedOpts := &Options{
 		Name:         "movies",
+		Namespace:    fakeNamespace,
 		ManifestPath: "",
 		Variables:    []string{},
 		Manifest:     fakeManifest,
@@ -485,7 +457,7 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.GetContext().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), fakeNamespace, fakeClient)
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
 	assert.Equal(t, pipeline.ErrorStatus, cfg.Data["status"])
@@ -494,15 +466,17 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 }
 
 func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
+	fakeNamespace := "test"
 	opts := &Options{
 		Name:         "movies",
+		Namespace:    fakeNamespace,
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 	fakeK8sClientProvider := test.NewFakeK8sProvider(&apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pipeline.TranslatePipelineName(opts.Name),
-			Namespace: "test",
+			Namespace: fakeNamespace,
 		},
 		Data: map[string]string{
 			"actionLock": "test",
@@ -548,19 +522,20 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.GetContext().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), fakeNamespace, fakeClient)
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
 }
 
 func TestDeployWithoutErrors(t *testing.T) {
+	fakeNamespace := "test"
 	fakeOs := afero.NewMemMapFs()
 	fakeK8sClientProvider := test.NewFakeK8sProvider(&v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
 				model.DeployedByLabel: "movies",
 			},
-			Namespace: "test",
+			Namespace: fakeNamespace,
 		},
 	})
 	fakeDeployer := &fakeDeployer{}
@@ -568,7 +543,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 	okteto.CurrentStore = &okteto.ContextStore{
 		Contexts: map[string]*okteto.Context{
 			"test": {
-				Namespace: "test",
+				Namespace: fakeNamespace,
 				Cfg:       &api.Config{},
 			},
 		},
@@ -588,6 +563,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 	ctx := context.Background()
 	opts := &Options{
 		Name:         "movies",
+		Namespace:    fakeNamespace,
 		ManifestPath: "",
 		Variables:    []string{},
 	}
@@ -606,6 +582,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 
 	expectedOpts := &Options{
 		Name:         "movies",
+		Namespace:    fakeNamespace,
 		ManifestPath: "",
 		Variables:    []string{},
 		Manifest:     fakeManifest,
@@ -621,7 +598,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.GetContext().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), fakeNamespace, fakeClient)
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
 	assert.Equal(t, pipeline.DeployedStatus, cfg.Data["status"])
@@ -669,9 +646,7 @@ func (fd fakePipelineDeployer) ExecuteDeployPipeline(_ context.Context, _ *pipel
 func TestDeployDependencies(t *testing.T) {
 	fakeManifest := &model.Manifest{
 		Dependencies: deps.ManifestSection{
-			"a": &deps.Dependency{
-				Namespace: "b",
-			},
+			"a": &deps.Dependency{},
 			"b": &deps.Dependency{},
 		},
 	}
@@ -799,7 +774,6 @@ func TestTrackDeploy(t *testing.T) {
 		{
 			name: "successful with V2",
 			manifest: &model.Manifest{
-				IsV2: true,
 				Deploy: &model.DeployInfo{
 					Commands: []model.DeployCommand{
 						{
@@ -814,7 +788,6 @@ func TestTrackDeploy(t *testing.T) {
 		{
 			name: "successful with compose",
 			manifest: &model.Manifest{
-				IsV2: true,
 				Deploy: &model.DeployInfo{
 					ComposeSection: &model.ComposeSectionInfo{
 						ComposesInfo: model.ComposeInfoList{},
@@ -947,7 +920,7 @@ func TestOktetoManifestPathFlag(t *testing.T) {
 		{
 			name:        "manifest file path doesn't exist",
 			manifest:    "nonexistent.yml",
-			expectedErr: fmt.Errorf("nonexistent.yml file doesn't exist"),
+			expectedErr: oktetoErrors.ErrManifestPathNotFound,
 		},
 	}
 

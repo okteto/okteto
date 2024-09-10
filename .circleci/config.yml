@@ -231,23 +231,6 @@ jobs:
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-okteto
 
-  e2e-deprecated:
-    executor: golang-ci
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - v4-pkg-cache-{{ checksum "go.sum" }}
-      - attach_workspace:
-          at: ./artifacts
-      - run:
-          name: Run deprecated integration tests
-          command: |
-            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
-            make integration-deprecated
-
   test-e2e-setup:
     executor: golang-ci
     steps:
@@ -322,38 +305,6 @@ jobs:
             - C:\Users\circleci\AppData\Local\go-build
             - C:\Users\circleci\go\pkg
             - C:\Go\pkg
-  e2e-deprecated-windows:
-    executor:
-      name: win/server-2022
-      version: 2024.04.1
-    environment:
-      OKTETO_CONTEXT: https://staging.okteto.dev
-      OKTETO_USER: cindylopez
-      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
-      - attach_workspace:
-          at: .\artifacts
-      - run:
-          name: Install kubectl and helm
-          command: |
-            go version
-            choco install kubernetes-cli -y
-            choco install kubernetes-helm -y
-      - run:
-          name: Run deprecated integration tests
-          environment:
-            OKTETO_SKIP_CLEANUP: "true"
-          command: |
-            $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
-            $env:Path+=";$($HOME)\project\artifacts\bin"
-            & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
-            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
-            go test github.com/okteto/okteto/integration/deprecated/push -tags="integration" --count=1 -v -timeout 15m
-            go test github.com/okteto/okteto/integration/deprecated/stack -tags="integration" --count=1 -v -timeout 15m
 
   e2e-build-windows:
     executor:
@@ -571,6 +522,7 @@ workflows:
             branches:
               only:
                 - master
+                - ultra-mega-release-branch-3.0
       - e2e-build-windows:
           requires:
             - test-e2e-setup-windows
@@ -578,6 +530,7 @@ workflows:
             branches:
               only:
                 - master
+                - ultra-mega-release-branch-3.0
       - e2e-deploy-windows:
           requires:
             - test-e2e-setup-windows
@@ -585,6 +538,7 @@ workflows:
             branches:
               only:
                 - master
+                - ultra-mega-release-branch-3.0
       - e2e-up-windows:
           requires:
             - test-e2e-setup-windows
@@ -592,13 +546,7 @@ workflows:
             branches:
               only:
                 - master
-      - e2e-deprecated-windows:
-          requires:
-            - test-e2e-setup-windows
-          filters:
-            branches:
-              only:
-                - master
+                - ultra-mega-release-branch-3.0
       - test-e2e-setup:
           requires:
             - build-binaries
@@ -606,6 +554,7 @@ workflows:
             branches:
               only:
                 - master
+                - ultra-mega-release-branch-3.0
       - e2e-build:
           requires:
             - test-e2e-setup
@@ -613,6 +562,7 @@ workflows:
             branches:
               only:
                 - master
+                - ultra-mega-release-branch-3.0
       - e2e-deploy:
           requires:
             - test-e2e-setup
@@ -620,6 +570,7 @@ workflows:
             branches:
               only:
                 - master
+                - ultra-mega-release-branch-3.0
       - e2e-up:
           requires:
             - test-e2e-setup
@@ -627,6 +578,7 @@ workflows:
             branches:
               only:
                 - master
+                - ultra-mega-release-branch-3.0
       - e2e-actions:
           requires:
             - test-e2e-setup
@@ -634,6 +586,7 @@ workflows:
             branches:
               only:
                 - master
+                - ultra-mega-release-branch-3.0
       - e2e-okteto:
           requires:
             - test-e2e-setup
@@ -641,13 +594,7 @@ workflows:
             branches:
               only:
                 - master
-      - e2e-deprecated:
-          requires:
-            - test-e2e-setup
-          filters:
-            branches:
-              only:
-                - master
+                - ultra-mega-release-branch-3.0
       - test-release:
           context:
             - GKE
@@ -706,9 +653,6 @@ workflows:
       - e2e-okteto:
           requires:
             - test-e2e-setup
-      - e2e-deprecated:
-          requires:
-            - test-e2e-setup
       - release-branch-job:
           requires:
             - build-binaries
@@ -717,7 +661,6 @@ workflows:
             - e2e-up
             - e2e-actions
             - e2e-okteto
-            - e2e-deprecated
             - run-unit-test
             - run-windows-unit-test
 
@@ -822,9 +765,6 @@ workflows:
       - e2e-okteto:
           requires:
             - test-e2e-setup
-      - e2e-deprecated:
-          requires:
-            - test-e2e-setup
       - test-e2e-setup-windows:
           requires:
             - build-binaries
@@ -835,9 +775,6 @@ workflows:
           requires:
             - test-e2e-setup-windows
       - e2e-up-windows:
-          requires:
-            - test-e2e-setup-windows
-      - e2e-deprecated-windows:
           requires:
             - test-e2e-setup-windows
 
@@ -866,9 +803,6 @@ workflows:
       - e2e-okteto:
           requires:
             - test-e2e-setup
-      - e2e-deprecated:
-          requires:
-            - test-e2e-setup
 
   # run-e2e-windows is triggered by okteto-bot via Github Actions when adding the run-e2e-windows label to the PR
   # e2e test for windows platform are run
@@ -887,8 +821,5 @@ workflows:
           requires:
             - test-e2e-setup-windows
       - e2e-up-windows:
-          requires:
-            - test-e2e-setup-windows
-      - e2e-deprecated-windows:
           requires:
             - test-e2e-setup-windows

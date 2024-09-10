@@ -22,8 +22,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/docker/docker/api/types/versions"
-	"github.com/docker/docker/client"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
@@ -44,13 +42,6 @@ import (
 const (
 	warningDockerfilePath   string = "Build '%s': Dockerfile '%s' is not in a relative path to context '%s'"
 	doubleDockerfileWarning string = "Build '%s': Two Dockerfiles discovered in both the root and context path, defaulting to '%s/%s'"
-)
-
-var (
-	errDockerDaemonConnection = oktetoErrors.UserError{
-		E:    fmt.Errorf("cannot connect to Docker Daemon"),
-		Hint: "Please start the Docker Daemon or configure a builder endpoint with 'okteto context --builder BUILDKIT_URL",
-	}
 )
 
 // OktetoBuilderInterface runs the build of an image
@@ -97,8 +88,6 @@ func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptio
 		depotEnabled := IsDepotEnabled()
 		if depotEnabled {
 			ioCtrl.Out().Infof("%s on depot's machine...", buildMsg)
-		} else if builder == "" {
-			ioCtrl.Out().Infof("%s using your local docker daemon", buildMsg)
 		} else {
 			ioCtrl.Out().Infof("%s in %s...", buildMsg, builder)
 		}
@@ -111,8 +100,6 @@ func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptio
 	case IsDepotEnabled() && !isRemoteExecution:
 		depotManager := newDepotBuilder(depotProject, depotToken, ob.OktetoContext, ioCtrl)
 		return depotManager.Run(ctx, buildOptions, solveBuild)
-	case ob.OktetoContext.GetCurrentBuilder() == "":
-		return ob.buildWithDocker(ctx, buildOptions)
 	default:
 		return ob.buildWithOkteto(ctx, buildOptions, ioCtrl, solveBuild)
 	}
@@ -140,7 +127,7 @@ func GetRegistryConfigFromOktetoConfig(okCtx OktetoContextInterface) *okteto.Con
 		IsOkteto:                    okCtx.IsOktetoCluster(),
 		ContextName:                 okCtx.GetCurrentName(),
 		Namespace:                   okCtx.GetNamespace(),
-		RegistryUrl:                 okCtx.GetCurrentRegister(),
+		RegistryUrl:                 okCtx.GetRegistryURL(),
 		UserId:                      okCtx.GetCurrentUser(),
 		Token:                       okCtx.GetCurrentToken(),
 		GlobalNamespace:             okCtx.GetGlobalNamespace(),
@@ -203,34 +190,10 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	return err
 }
 
-// https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build.go#L209
-func (ob *OktetoBuilder) buildWithDocker(ctx context.Context, buildOptions *types.BuildOptions) error {
-
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return err
-	}
-	if versions.GreaterThanOrEqualTo(cli.ClientVersion(), "1.39") {
-		err = buildWithDockerDaemonBuildkit(ctx, buildOptions, cli)
-		if err != nil {
-			return translateDockerErr(err)
-		}
-	} else {
-		err = buildWithDockerDaemon(ctx, buildOptions, cli)
-		if err != nil {
-			return translateDockerErr(err)
-		}
-	}
-	if buildOptions.Tag != "" {
-		return pushImage(ctx, buildOptions.Tag, cli)
-	}
-	return nil
-}
-
 func validateImages(okctx OktetoContextInterface, imageTags string) error {
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(okctx))
 
-	if strings.HasPrefix(imageTags, okctx.GetCurrentRegister()) && strings.Count(imageTags, "/") == 2 {
+	if strings.HasPrefix(imageTags, okctx.GetRegistryURL()) && strings.Count(imageTags, "/") == 2 {
 		return nil
 	}
 	numberOfSlashToBeCorrect := 2
@@ -254,16 +217,6 @@ func validateImages(okctx OktetoContextInterface, imageTags string) error {
 		}
 	}
 	return nil
-}
-
-func translateDockerErr(err error) error {
-	if err == nil {
-		return nil
-	}
-	if strings.HasPrefix(err.Error(), "failed to dial gRPC: cannot connect to the Docker daemon") {
-		return errDockerDaemonConnection
-	}
-	return err
 }
 
 type regInterface interface {
@@ -293,17 +246,12 @@ func OptsFromBuildInfo(manifestName, svcName string, b *build.Info, o *types.Bui
 	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	if okCtx.IsOktetoCluster() && b.Image == "" {
-		// if flag --global, point to global registry
-		targetRegistry := constants.DevRegistry
-		if o != nil && o.BuildToGlobal {
-			targetRegistry = constants.GlobalRegistry
-		}
-		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
+		b.Image = fmt.Sprintf("%s/%s-%s:%s", constants.DevRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
 	}
 
 	file := b.Dockerfile
 	if b.Context != "" && b.Dockerfile != "" {
-		file = extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName)
+		file = extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName, os.Getwd)
 	}
 
 	args := []build.Arg{}
@@ -401,7 +349,7 @@ func OptsFromBuildInfoForRemoteDeploy(b *build.Info, o *types.BuildOptions) *typ
 	return opts
 }
 
-func extractFromContextAndDockerfile(context, dockerfile, svcName string) string {
+func extractFromContextAndDockerfile(context, dockerfile, svcName string, getWd func() (string, error)) string {
 	if filepath.IsAbs(dockerfile) {
 		return dockerfile
 	}
@@ -414,7 +362,12 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string) string
 		return dockerfile
 	}
 
-	if joinPath != filepath.Clean(dockerfile) && filesystem.FileExistsAndNotDir(dockerfile, fs) {
+	wd, err := getWd()
+	if err != nil {
+		return joinPath
+	}
+
+	if joinPath != filepath.Join(wd, filepath.Clean(dockerfile)) && filesystem.FileExistsAndNotDir(dockerfile, fs) {
 		oktetoLog.Warning(fmt.Sprintf(doubleDockerfileWarning, svcName, context, dockerfile))
 	}
 

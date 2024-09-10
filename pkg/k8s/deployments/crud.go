@@ -39,15 +39,15 @@ type patchAnnotations struct {
 }
 
 // Sandbox returns a base deployment for a dev
-func Sandbox(dev *model.Dev) *appsv1.Deployment {
-	image := dev.Image.Name
+func Sandbox(dev *model.Dev, namespace string) *appsv1.Deployment {
+	image := dev.Image
 	if image == "" {
 		image = model.DefaultImage
 	}
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.Name,
-			Namespace: dev.Namespace,
+			Namespace: namespace,
 			Labels: model.Labels{
 				constants.DevLabel: "true",
 			},
