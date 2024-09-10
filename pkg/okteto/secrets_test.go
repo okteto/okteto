@@ -752,3 +752,80 @@ func TestGetRegistryCredentials(t *testing.T) {
 		})
 	}
 }
+
+func TestGetExecutionEnv(t *testing.T) {
+	ctx := context.Background()
+
+	type input struct {
+		client *fakeGraphQLClient
+	}
+	type expected struct {
+		vars      map[string]string
+		expectErr bool
+	}
+	testCases := []struct {
+		name     string
+		cfg      input
+		expected expected
+	}{
+		{
+			name: "happy path",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &getExecutionEnvQuery{
+						ExecutionEnv: []variablesQuery{
+							{Name: "A", Value: "A"},
+							{Name: "B", Value: "B"},
+							{Name: "C", Value: "C"},
+						},
+					},
+				},
+			},
+			expected: expected{
+				vars: map[string]string{
+					"A": "A",
+					"B": "B",
+					"C": "C",
+				},
+			},
+		},
+		{
+			name: "does not fail on incompatible schema",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					err: errors.New("Cannot query field \"executionEnv\" on type \"Query\""),
+				},
+			},
+			expected: expected{
+				vars: map[string]string{},
+			},
+		},
+		{
+			name: "fails on error",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					err: errors.New("this is my error"),
+				},
+			},
+			expected: expected{
+				vars:      map[string]string{},
+				expectErr: true,
+			},
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			uc := &userClient{
+				client: tc.cfg.client,
+			}
+			result, err := uc.GetExecutionEnv(ctx)
+			if tc.expected.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tc.expected.vars, result)
+		})
+	}
+}

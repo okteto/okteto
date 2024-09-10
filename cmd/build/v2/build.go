@@ -93,6 +93,13 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistry
 	if err != nil {
 		ioCtrl.Logger().Infof("could not get working dir: %s", err)
 	}
+	topLevelGitDir, err := repository.FindTopLevelGitDir(wd)
+	if err != nil {
+		ioCtrl.Logger().Infof("could not get top level git dir: %s", err)
+	}
+	if topLevelGitDir != "" {
+		wd = topLevelGitDir
+	}
 	gitRepo := repository.NewRepository(wd)
 	config := getConfigStateless(registry, gitRepo, ioCtrl.Logger(), okCtx.IsOktetoCluster())
 

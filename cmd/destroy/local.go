@@ -16,6 +16,7 @@ package destroy
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 
@@ -42,7 +43,7 @@ func newLocalDestroyer(
 }
 
 // Destroy starts the execution of the local destroyer
-func (ld *localDestroyCommand) Destroy(_ context.Context, opts *Options) error {
+func (ld *localDestroyCommand) Destroy(ctx context.Context, opts *Options) error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
@@ -52,7 +53,11 @@ func (ld *localDestroyCommand) Destroy(_ context.Context, opts *Options) error {
 			exit <- nil
 			return
 		}
+		vars := opts.Variables
 
+		for k, v := range deployable.GetPlatformEnvironment(ctx) {
+			vars = append(vars, fmt.Sprintf("%s=%s", k, v))
+		}
 		params := deployable.DestroyParameters{
 			Name:         opts.Name,
 			Namespace:    opts.Namespace,
@@ -60,7 +65,7 @@ func (ld *localDestroyCommand) Destroy(_ context.Context, opts *Options) error {
 			Deployable: deployable.Entity{
 				Commands: opts.Manifest.Destroy.Commands,
 			},
-			Variables: opts.Variables,
+			Variables: vars,
 		}
 		if err := ld.runner.RunDestroy(params); err != nil {
 			exit <- err

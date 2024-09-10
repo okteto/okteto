@@ -176,6 +176,16 @@ func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegi
 	}
 }
 
+func TestMain(m *testing.M) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {},
+		},
+		CurrentContext: "test",
+	}
+	os.Exit(m.Run())
+}
+
 func TestValidateOptions(t *testing.T) {
 	var tests = []struct {
 		buildSection build.ManifestBuild

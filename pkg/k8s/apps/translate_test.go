@@ -358,7 +358,7 @@ dev:
 					},
 					{
 						Name:      oktetoSyncSecretVolume,
-						ReadOnly:  false,
+						ReadOnly:  true,
 						MountPath: "/var/syncthing/secret/",
 					},
 					{
@@ -963,7 +963,7 @@ func Test_translateWithoutVolumes(t *testing.T) {
 					},
 					{
 						Name:      oktetoSyncSecretVolume,
-						ReadOnly:  false,
+						ReadOnly:  true,
 						MountPath: "/var/syncthing/secret/",
 					},
 					{
@@ -1772,7 +1772,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 					},
 					{
 						Name:      oktetoSyncSecretVolume,
-						ReadOnly:  false,
+						ReadOnly:  true,
 						MountPath: "/var/syncthing/secret/",
 					},
 					{

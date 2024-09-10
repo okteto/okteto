@@ -16,6 +16,7 @@ package kubetoken
 import (
 	"context"
 	"log"
+	"os"
 	"testing"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -53,6 +54,16 @@ type fakeCtxCmdRunner struct {
 
 func (f fakeCtxCmdRunner) RunStateless(ctx context.Context, ctxOptions *contextCMD.Options) (*okteto.ContextStateless, error) {
 	return f.fakeCtx, f.err
+}
+
+func TestMain(m *testing.M) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {},
+		},
+		CurrentContext: "test",
+	}
+	os.Exit(m.Run())
 }
 
 func TestKubetoken(t *testing.T) {

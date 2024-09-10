@@ -15,6 +15,7 @@ package istio
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
 
@@ -27,6 +28,16 @@ import (
 	istioV1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func TestMain(m *testing.M) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {},
+		},
+		CurrentContext: "test",
+	}
+	os.Exit(m.Run())
+}
 
 func Test_translateDivertVirtualService(t *testing.T) {
 	tests := []struct {
