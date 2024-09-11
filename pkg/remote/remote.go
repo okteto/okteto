@@ -64,7 +64,7 @@ ENV PATH="${PATH}:/okteto/bin"
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
 {{range $key, $val := .OktetoPrefixEnvVars }}
-ARG {{$key}} {{$val}}
+ARG {{$key}}={{$val}}
 {{end}}
 ENV {{ .RemoteDeployEnvVar }} true
 ARG {{ .NamespaceArgName }}
@@ -85,11 +85,11 @@ COPY . /okteto/src
 WORKDIR /okteto/src
 
 {{range $key, $val := .OktetoBuildEnvVars }}
-ENV {{$key}} {{$val}}
+ENV {{$key}}={{$val}}
 {{end}}
 
 {{range $key, $val := .OktetoDependencyEnvVars }}
-ENV {{$key}} {{$val}}
+ENV {{$key}}={{$val}}
 {{end}}
 
 ARG {{ .GitCommitArgName }}
@@ -100,7 +100,7 @@ RUN echo "${{ .InvalidateCacheArgName }}" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
 
 {{ range $key, $val := .OktetoExecutionEnvVars}}
-ENV {{$key}} {{$val}}
+ENV {{$key}}={{$val}}
 {{ end }}
 
 RUN \
@@ -430,6 +430,8 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		UseRootUser:              params.UseRootUser,
 	}
 
+	dockerfileSyntax.prepareEnvVars()
+
 	dockerfile, err := r.fs.Create(filepath.Join(tmpDir, params.DockerfileName))
 	if err != nil {
 		return "", err
@@ -602,4 +604,35 @@ func getOktetoPrefixEnvVars(environ []string) map[string]string {
 		}
 	}
 	return prefixEnvVars
+}
+
+func (dfP *dockerfileTemplateProperties) prepareEnvVars() {
+	for k, v := range dfP.OktetoBuildEnvVars {
+		dfP.OktetoBuildEnvVars[k] = formatEnvVarValueForDocker(v)
+	}
+	for k, v := range dfP.OktetoDependencyEnvVars {
+		dfP.OktetoDependencyEnvVars[k] = formatEnvVarValueForDocker(v)
+	}
+	for k, v := range dfP.OktetoPrefixEnvVars {
+		dfP.OktetoPrefixEnvVars[k] = formatEnvVarValueForDocker(v)
+	}
+	for k, v := range dfP.OktetoExecutionEnvVars {
+		dfP.OktetoExecutionEnvVars[k] = formatEnvVarValueForDocker(v)
+	}
+}
+
+func formatEnvVarValueForDocker(value string) string {
+	lines := strings.Split(value, "\n")
+	var result strings.Builder
+
+	result.WriteString("\"")
+	for i, line := range lines {
+		result.WriteString(line)
+		if i < len(lines)-1 {
+			result.WriteString("\\n")
+		}
+	}
+	result.WriteString("\"")
+
+	return result.String()
 }
