@@ -374,7 +374,7 @@ okteto up api -- echo this is a test
 		},
 	}
 
-	cmd.Flags().StringVarP(&upOptions.ManifestPath, "file", "f", "", "thepath to the Okteto Manifest")
+	cmd.Flags().StringVarP(&upOptions.ManifestPath, "file", "f", "", "the path to the Okteto Manifest")
 	cmd.Flags().StringVarP(&upOptions.Namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
 	cmd.Flags().StringVarP(&upOptions.K8sContext, "context", "c", "", "overwrite the current Okteto Context")
 	cmd.Flags().StringArrayVarP(&upOptions.Envs, "env", "e", []string{}, "set environment variable in the Development Container")
