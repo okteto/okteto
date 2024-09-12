@@ -97,7 +97,7 @@ ARG {{ .GitBranchArgName }}
 ARG {{ .InvalidateCacheArgName }}
 
 RUN echo "${{ .InvalidateCacheArgName }}" > /etc/.oktetocachekey
-RUN okteto registrytoken install --force --file /okteto/bin/docker-credential-okteto --log-output=json
+RUN okteto registrytoken install --force --log-output=json
 
 {{ range $key, $val := .OktetoExecutionEnvVars}}
 ENV {{$key}}={{$val}}

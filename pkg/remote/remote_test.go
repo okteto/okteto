@@ -393,7 +393,7 @@ ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
 
 RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
-RUN okteto registrytoken install --force --file /okteto/bin/docker-credential-okteto --log-output=json
+RUN okteto registrytoken install --force --log-output=json
 
 
 ENV A="A"
@@ -484,7 +484,7 @@ ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
 
 RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
-RUN okteto registrytoken install --force --file /okteto/bin/docker-credential-okteto --log-output=json
+RUN okteto registrytoken install --force --log-output=json
 
 
 
