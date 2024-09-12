@@ -27,8 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/devenvironment"
-	"github.com/okteto/okteto/pkg/errors"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	okerrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -68,12 +67,12 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Comm
 			if options.ManifestPath != "" {
 				// check that the manifest file exists
 				if !filesystem.FileExistsWithFilesystem(options.ManifestPath, fs) {
-					return oktetoErrors.ErrManifestPathNotFound
+					return okerrors.ErrManifestPathNotFound
 				}
 
 				// the Okteto manifest flag should specify a file, not a directory
 				if filesystem.IsDir(options.ManifestPath, fs) {
-					return oktetoErrors.ErrManifestPathIsDir
+					return okerrors.ErrManifestPathIsDir
 				}
 			}
 
@@ -90,7 +89,7 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Comm
 			}
 
 			if !okteto.IsOkteto() {
-				return oktetoErrors.ErrContextIsNotOktetoCluster
+				return okerrors.ErrContextIsNotOktetoCluster
 			}
 
 			manifest, err := model.GetManifestV2(options.ManifestPath, afero.NewOsFs())
@@ -128,7 +127,7 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Comm
 			defer os.Remove(tmpKubeconfigFile)
 			c, err := getSternConfig(manifest, options, tmpKubeconfigFile)
 			if err != nil {
-				return errors.UserError{
+				return okerrors.UserError{
 					E: fmt.Errorf("invalid log configuration: %w", err),
 				}
 			}
@@ -145,7 +144,7 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Comm
 			analytics.TrackLogs(err == nil, options.All)
 
 			if err != nil {
-				return errors.UserError{
+				return okerrors.UserError{
 					E: fmt.Errorf("failed to get logs: %w", err),
 				}
 			}
