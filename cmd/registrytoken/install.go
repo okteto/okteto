@@ -24,6 +24,7 @@ import (
 
 type InstallOptions struct {
 	Overwrite bool
+	filename  string
 }
 
 func Install() *cobra.Command {
@@ -49,6 +50,7 @@ func Install() *cobra.Command {
 			}
 
 			conf.CredentialsStore = "okteto"
+			conf.Filename = options.filename
 
 			if err := conf.Save(); err != nil {
 				return errors.Wrapf(err, "couldn't save docker config file at %q", confDir)
@@ -61,5 +63,6 @@ func Install() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&options.Overwrite, "force", "", false, "force overwrite existing credential store")
+	cmd.Flags().StringVarP(&options.filename, "filename", "f", "", "filename to store the credentials")
 	return cmd
 }

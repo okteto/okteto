@@ -35,7 +35,6 @@ deploy:
 deploy:
   image: aquasec/trivy:latest
   commands:
-    - printenv
     - trivy -q image --light alpine:3.14`
 )
 
