@@ -35,7 +35,8 @@ deploy:
 deploy:
   image: aquasec/trivy:latest
   commands:
-    - trivy -q image --skip-db-update alpine:3.14`
+    - printenv
+    - trivy -q image --light alpine:3.14`
 )
 
 // TestDeployInDeployRemote test the scenario where an okteto deploy is run inside an okteto deploy in remote
