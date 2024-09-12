@@ -63,9 +63,7 @@ USER 0
 ENV PATH="${PATH}:/okteto/bin"
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
-{{range $key, $val := .OktetoPrefixEnvVars }}
-ARG {{$key}}={{$val}}
-{{end}}
+
 ENV {{ .RemoteDeployEnvVar }} true
 ARG {{ .NamespaceArgName }}
 ARG {{ .ContextArgName }}
