@@ -432,7 +432,7 @@ func (s *Syncthing) Ping(ctx context.Context, local bool) bool {
 	return false
 }
 
-// Overwrite overwrite local changes to the remote syncthing
+// Overwrite overwrites local changes to the remote syncthing
 func (s *Syncthing) Overwrite(ctx context.Context) error {
 	for _, folder := range s.Folders {
 		oktetoLog.Infof("overriding local changes to the remote syncthing path=%s", folder.LocalPath)

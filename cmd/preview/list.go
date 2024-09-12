@@ -65,7 +65,7 @@ func List(ctx context.Context) *cobra.Command {
 	flags := &listFlags{}
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List all your Preview Environments",
+		Short: "List all Preview Environments",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctxOptions := &contextCMD.Options{
 				Namespace: flags.namespace,

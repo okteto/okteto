@@ -169,7 +169,7 @@ func (wfc *waitForCompletion) isCompleted() bool {
 		}
 	}
 	if !wfc.sy.IsAllOverwritten() {
-		oktetoLog.Info("synced completed, but overwrite not sent, retrying...")
+		oktetoLog.Info("synced completed, but overwrites not sent, retrying...")
 		return false
 	}
 	return true
