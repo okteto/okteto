@@ -590,6 +590,10 @@ func GetOriginalCWD(workingDirectoryCtrl filesystem.WorkingDirectoryInterface, m
 }
 
 func getOktetoPrefixEnvVars(environ []string) map[string]string {
+	bannedOktetoEnvVars := map[string]bool{
+		"OKTETO_HOME":   true,
+		"OKTETO_FOLDER": true,
+	}
 	prefixEnvVars := make(map[string]string)
 	envFormatParts := 2
 	for _, v := range environ {
@@ -598,6 +602,9 @@ func getOktetoPrefixEnvVars(environ []string) map[string]string {
 			continue
 		}
 		key := result[0]
+		if bannedOktetoEnvVars[key] {
+			continue
+		}
 		if strings.HasPrefix(key, "OKTETO_") {
 			value := result[1]
 			prefixEnvVars[key] = value
