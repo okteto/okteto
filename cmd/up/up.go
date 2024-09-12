@@ -94,12 +94,12 @@ func Up(at analyticsTrackerInterface, insights buildDeployTrackerInterface, ioCt
 	upOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:   "up service [flags] -- COMMAND [args...]",
-		Short: "Deploy your development environment",
-		Example: `  # okteto up deploying the development environment defined in the okteto manifest
-okteto up my-svc --deploy -- echo this is a test
+		Short: "Activate a Development Container",
+		Example: `# 'okteto up' re-deploying the Development Environment defined in the Okteto Manifest
+okteto up api --deploy
 
-# okteto up replacing the command defined in the okteto manifest
-okteto up my-svc -- echo this is a test
+# 'okteto up' replacing the command defined in the Okteto Manifest
+okteto up api -- echo this is a test
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
@@ -374,17 +374,17 @@ okteto up my-svc -- echo this is a test
 		},
 	}
 
-	cmd.Flags().StringVarP(&upOptions.ManifestPath, "file", "f", "", "path to the Okteto manifest file")
-	cmd.Flags().StringVarP(&upOptions.Namespace, "namespace", "n", "", "namespace where the up command is executed")
-	cmd.Flags().StringVarP(&upOptions.K8sContext, "context", "c", "", "context where the up command is executed")
-	cmd.Flags().StringArrayVarP(&upOptions.Envs, "env", "e", []string{}, "envs to add to the development container")
-	cmd.Flags().IntVarP(&upOptions.Remote, "remote", "r", 0, "configures remote execution on the specified port")
-	cmd.Flags().BoolVarP(&upOptions.Deploy, "deploy", "d", false, "Force execution of the commands in the 'deploy' section of the okteto manifest (defaults to 'false')")
-	cmd.Flags().BoolVarP(&upOptions.ForcePull, "pull", "", false, "force dev image pull")
+	cmd.Flags().StringVarP(&upOptions.ManifestPath, "file", "f", "", "thepath to the Okteto Manifest")
+	cmd.Flags().StringVarP(&upOptions.Namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
+	cmd.Flags().StringVarP(&upOptions.K8sContext, "context", "c", "", "overwrite the current Okteto Context")
+	cmd.Flags().StringArrayVarP(&upOptions.Envs, "env", "e", []string{}, "set environment variable in the Development Container")
+	cmd.Flags().IntVarP(&upOptions.Remote, "remote", "r", 0, "exposes the SSH server in a given port")
+	cmd.Flags().BoolVarP(&upOptions.Deploy, "deploy", "d", false, "force the redeployment of your Development Environment")
+	cmd.Flags().BoolVarP(&upOptions.ForcePull, "pull", "", false, "force the Development Container image to be pulled")
 	if err := cmd.Flags().MarkHidden("pull"); err != nil {
 		oktetoLog.Infof("failed to mark 'pull' flag as hidden: %s", err)
 	}
-	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "reset the file synchronization database")
+	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "resets the file synchronization service. Use it if the file synchronization service stops working")
 	return cmd
 }
 

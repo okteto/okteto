@@ -40,8 +40,8 @@ func Restart(fs afero.Fs) *cobra.Command {
 	var devPath string
 
 	cmd := &cobra.Command{
-		Use:    "restart [service]",
-		Short:  "Restart the deployments listed in the services field of a development container",
+		Use:    "restart [devContainer]",
+		Short:  "Restarts the containers corresponding to the 'services' section for a given Development Container",
 		Args:   utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#restart"),
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -107,9 +107,9 @@ func Restart(fs afero.Fs) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", "", "path to the Okteto manifest file")
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the restart command is executed")
-	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the restart command is executed")
+	cmd.Flags().StringVarP(&devPath, "file", "f", "", "the path to the Okteto Manifest")
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
+	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "overwrite the current Okteto Context")
 
 	return cmd
 }

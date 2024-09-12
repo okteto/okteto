@@ -118,8 +118,8 @@ func (kc *Cmd) Cmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "kubetoken",
-		Short: "Print Kubernetes cluster credentials in ExecCredential format.",
-		Long: `Print Kubernetes cluster credentials in ExecCredential format.
+		Short: "Print Kubernetes cluster credentials in ExecCredential format",
+		Long: `Print Kubernetes cluster credentials in ExecCredential format
 You can find more information on 'ExecCredential' and 'client side authentication' at (https://kubernetes.io/docs/reference/config-api/client-authentication.v1/) and  https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins`,
 		Hidden: true,
 		Args:   cobra.NoArgs,
@@ -132,8 +132,8 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 			return kc.Run(ctx, flags)
 		},
 	}
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "okteto context's namespace")
-	cmd.Flags().StringVarP(&contextName, "context", "c", "", "okteto context's name")
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrites the current Okteto Namespace")
+	cmd.Flags().StringVarP(&contextName, "context", "c", "", "overwrites the current Okteto Context")
 	return cmd
 }
 

@@ -48,7 +48,7 @@ func Status(fs afero.Fs) *cobra.Command {
 	var watch bool
 	cmd := &cobra.Command{
 		Use:   "status",
-		Short: "Status of the synchronization process",
+		Short: "Status of the file synchronization process for a given Development Container",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#status"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if devPath != "" {
@@ -128,9 +128,9 @@ func Status(fs afero.Fs) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&devPath, "file", "f", "", "path to the Okteto manifest file")
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executing")
-	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the up command is executing")
+	cmd.Flags().StringVarP(&devPath, "file", "f", "", "the path to the Okteto Manifest")
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
+	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "overwrite the current Okteto Context")
 	cmd.Flags().BoolVarP(&showInfo, "info", "i", false, "show syncthing links for troubleshooting the synchronization service")
 	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "watch for changes")
 	return cmd

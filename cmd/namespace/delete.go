@@ -38,7 +38,7 @@ import (
 func Delete(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete <name>",
-		Short: "Delete a namespace",
+		Short: "Delete an Okteto Namespace",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {

@@ -30,7 +30,7 @@ func Sleep(ctx context.Context) *cobra.Command {
 	var k8sContext string
 	cmd := &cobra.Command{
 		Use:   "sleep <name>",
-		Short: "Sleeps a preview environment",
+		Short: "Sleep a Preview Environment",
 		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prToSleep := args[0]
@@ -50,7 +50,7 @@ func Sleep(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the development environment was deployed")
+	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "overwrite the current Okteto Context")
 	return cmd
 }
 
