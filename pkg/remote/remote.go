@@ -591,6 +591,7 @@ func getOktetoPrefixEnvVars(environ []string) map[string]string {
 	bannedOktetoEnvVars := map[string]bool{
 		"OKTETO_HOME":   true,
 		"OKTETO_FOLDER": true,
+		"OKTETO_PATH":   true,
 	}
 	prefixEnvVars := make(map[string]string)
 	envFormatParts := 2
