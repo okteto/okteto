@@ -63,7 +63,6 @@ func TestDeployInDeployRemote(t *testing.T) {
 		Namespace:  testNamespace,
 		OktetoHome: dir,
 		Token:      token,
-		LogLevel:   "debug",
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
