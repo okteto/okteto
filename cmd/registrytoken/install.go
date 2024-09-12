@@ -50,7 +50,9 @@ func Install() *cobra.Command {
 			}
 
 			conf.CredentialsStore = "okteto"
-			conf.Filename = options.filename
+			if options.filename != "" {
+				conf.Filename = options.filename
+			}
 
 			if err := conf.Save(); err != nil {
 				return errors.Wrapf(err, "couldn't save docker config file at %q", confDir)
