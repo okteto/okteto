@@ -37,7 +37,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "endpoints <name>",
-		Short: "Show endpoints for a preview environment",
+		Short: "List the endpoints of a Preview Environment",
 		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			previewName := args[0]
@@ -69,7 +69,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the development environment was deployed")
+	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "overwrite the current Okteto Context")
 	cmd.Flags().StringVarP(&output, "output", "o", "", "output format. One of: ['json', 'md']")
 
 	return cmd

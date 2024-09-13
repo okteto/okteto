@@ -30,7 +30,7 @@ func Wake(ctx context.Context) *cobra.Command {
 	var k8sContext string
 	cmd := &cobra.Command{
 		Use:   "wake <name>",
-		Short: "Wakes a preview environment",
+		Short: "Wake a preview environment",
 		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prToWake := args[0]
@@ -50,7 +50,7 @@ func Wake(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the development environment was deployed")
+	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "overwrite the current Okteto Context")
 	return cmd
 }
 

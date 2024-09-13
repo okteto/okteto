@@ -87,7 +87,7 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 	fs := afero.NewOsFs()
 	cmd := &cobra.Command{
 		Use:   "endpoints",
-		Short: "Show endpoints for an environment",
+		Short: "List the public endpoints of your Development Environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if options.ManifestPath != "" {
 				workdir := filesystem.GetWorkdirFromManifestPath(options.ManifestPath)
@@ -155,10 +155,10 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 			return eg.showEndpoints(ctx, options)
 		},
 	}
-	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
-	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the Okteto manifest file")
-	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment is deployed")
-	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment is deployed")
+	cmd.Flags().StringVar(&options.Name, "name", "", "the name of the Development Environment")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "the path to the Okteto Manifest")
+	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
+	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "overwrite the current Okteto Context")
 
 	cmd.Flags().StringVarP(&options.Output, "output", "o", "", "output format. One of: ['json', 'md']")
 

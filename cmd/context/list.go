@@ -34,7 +34,7 @@ func List() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Args:    utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#list"),
-		Short:   "List available contexts",
+		Short:   "List available Okteto Contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			if err := NewContextCommand().Run(ctx, &Options{raiseNotCtxError: true}); err != nil {

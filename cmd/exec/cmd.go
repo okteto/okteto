@@ -84,17 +84,14 @@ func (e *Exec) Cmd(ctx context.Context) *cobra.Command {
 	execFlags := &execFlags{}
 
 	cmd := &cobra.Command{
-		Use:                   "exec service [flags] -- COMMAND [args...]",
+		Use:                   "exec [devContainer] [flags] -- COMMAND [args...]",
 		DisableFlagsInUseLine: true,
-		Short:                 "Execute a command in your development container",
-		Long: `Executes the provided command or the default shell inside a running pod.
-This command allows you to run tools or perform operations directly on a dev environment that is already running.
-For more information on managing pods, refer to the okteto documentation: https://www.okteto.com/docs/`,
-		Example: `# Run the 'echo this is a test' command inside the pod named 'my-pod'
-okteto exec my-pod -- echo this is a test
+		Short:                 "Execute a command inside your Development Container",
+		Example: `# Run the 'echo this is a test' command inside the Development Container 'api'
+okteto exec api -- echo this is a test
 
-# Get an interactive shell session inside the pod named 'my-pod'
-okteto exec my-pod`,
+# Get an interactive shell session inside the Development Container 'api'
+okteto exec api -- bash`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if execFlags.manifestPath != "" {
 				// check that the manifest file exists
@@ -146,9 +143,9 @@ okteto exec my-pod`,
 			return e.Run(ctx, argsResult, manifest.Dev[argsResult.DevName], okteto.GetContext().Namespace)
 		},
 	}
-	cmd.Flags().StringVarP(&execFlags.manifestPath, "file", "f", "", "path to the Okteto manifest file")
-	cmd.Flags().StringVarP(&execFlags.namespace, "namespace", "n", "", "namespace where the exec command is executed")
-	cmd.Flags().StringVarP(&execFlags.k8sContext, "context", "c", "", "context where the exec command is executed")
+	cmd.Flags().StringVarP(&execFlags.manifestPath, "file", "f", "", "the path to the Okteto Manifest")
+	cmd.Flags().StringVarP(&execFlags.namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
+	cmd.Flags().StringVarP(&execFlags.k8sContext, "context", "c", "", "overwrite the current Okteto Context")
 	return cmd
 }
 

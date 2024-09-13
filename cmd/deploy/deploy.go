@@ -162,7 +162,7 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 	options := &Options{}
 	cmd := &cobra.Command{
 		Use:   "deploy",
-		Short: "Execute the list of commands specified in the 'deploy' section of your okteto manifest",
+		Short: "Deploy your Development Environment by running the commands specified in the 'deploy' section of your Okteto Manifest",
 		Example: `# Execute okteto deploy
 $ okteto deploy
 
@@ -171,7 +171,7 @@ $ okteto deploy --remote
 
 
 # Execute okteto deploy skipping the build
-$ okteto deploy --build=false`,
+$ okteto deploy --no-build=true`,
 		Args: utils.NoArgsAccepted(""),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			// validate cmd options
@@ -278,18 +278,18 @@ $ okteto deploy --build=false`,
 		},
 	}
 
-	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
-	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the Okteto manifest file")
-	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment is deployed")
-	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment is deployed")
-	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
-	cmd.Flags().BoolVarP(&options.NoBuild, "no-build", "", false, "enable/disable building images")
-	cmd.Flags().BoolVarP(&options.Dependencies, "dependencies", "", false, "deploy the dependencies from manifest")
-	cmd.Flags().BoolVarP(&options.RunWithoutBash, "no-bash", "", false, "execute commands without bash")
-	cmd.Flags().BoolVarP(&options.RunInRemote, "remote", "", false, "force run deploy commands in remote")
+	cmd.Flags().StringVar(&options.Name, "name", "", "the name of the Development Environment")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "the path to the Okteto Manifest")
+	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
+	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "overwrite the current Okteto Context")
+	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable for the deploy commands (can be set more than once)")
+	cmd.Flags().BoolVarP(&options.NoBuild, "no-build", "", false, "skips the re-build of images")
+	cmd.Flags().BoolVarP(&options.Dependencies, "dependencies", "", false, "force deployment of repositories in the 'dependencies' section")
+	cmd.Flags().BoolVarP(&options.RunWithoutBash, "no-bash", "", false, "execute the command using the container's default shell instead of bash")
+	cmd.Flags().BoolVarP(&options.RunInRemote, "remote", "", false, "run the deploy commands using Remote Execution")
 
-	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", true, "wait until the development environment is deployed")
-	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
+	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", true, "wait until the deployment finishes")
+	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "the duration to wait for the deployment to complete")
 
 	return cmd
 }
