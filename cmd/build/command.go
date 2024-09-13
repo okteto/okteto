@@ -98,8 +98,8 @@ const (
 func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTrackerInterface, k8slogger *io.K8sLogger) *cobra.Command {
 	options := &types.BuildOptions{}
 	cmd := &cobra.Command{
-		Use:   "build [service...]",
-		Short: "Build and push the images defined in the 'build' section of your okteto manifest",
+		Use:   "build [image...]",
+		Short: "Build and push the images defined in the 'build' section of your Okteto Manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			options.CommandArgs = args
 			// The context must be loaded before reading manifest. Otherwise,
@@ -138,18 +138,18 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 		},
 	}
 
-	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the build command is executed")
-	cmd.Flags().StringVarP(&options.File, "file", "f", "", "path to the Okteto manifest file")
-	cmd.Flags().StringVarP(&options.Tag, "tag", "t", "", "name and optionally a tag in the 'name:tag' format (it is automatically pushed)")
-	cmd.Flags().StringVarP(&options.Target, "target", "", "", "set the target build stage to build")
+	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "overwrite the current Okteto Context")
+	cmd.Flags().StringVarP(&options.File, "file", "f", "", "the path to the Okteto Manifest or Dockerfile")
+	cmd.Flags().StringVarP(&options.Tag, "tag", "t", "", "tag name to be pushed (optional)")
+	cmd.Flags().StringVarP(&options.Target, "target", "", "", "target build stage to build (optional)")
 	cmd.Flags().BoolVarP(&options.NoCache, "no-cache", "", false, "do not use cache when building the image")
-	cmd.Flags().StringArrayVar(&options.CacheFrom, "cache-from", nil, "cache source images")
-	cmd.Flags().StringArrayVar(&options.ExportCache, "export-cache", nil, "export cache images")
+	cmd.Flags().StringArrayVar(&options.CacheFrom, "cache-from", nil, "list of cache source images (optional)")
+	cmd.Flags().StringArrayVar(&options.ExportCache, "export-cache", nil, "image tag for exported cache when build (optional)s")
 	cmd.Flags().StringVarP(&options.OutputMode, "progress", "", string(TTYFormat), "show plain/tty build output")
-	cmd.Flags().StringArrayVar(&options.BuildArgs, "build-arg", nil, "set build-time variables")
+	cmd.Flags().StringArrayVar(&options.BuildArgs, "build-arg", nil, "set build-time variables (optional)")
 	cmd.Flags().StringArrayVar(&options.Secrets, "secret", nil, "secret files exposed to the build. Format: id=mysecret,src=/local/secret")
-	cmd.Flags().StringVar(&options.Platform, "platform", "", "set platform if server is multi-platform capable")
-	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "namespace against which the image will be consumed. Default is the one defined at okteto context or okteto manifest")
+	cmd.Flags().StringVar(&options.Platform, "platform", "", "specify which platform to build the container image for (optional)")
+	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
 	return cmd
 }
 

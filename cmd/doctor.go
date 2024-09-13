@@ -43,8 +43,8 @@ type doctorOptions struct {
 func Doctor(k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command {
 	doctorOpts := &doctorOptions{}
 	cmd := &cobra.Command{
-		Use:   "doctor [service]",
-		Short: "Generate a zip file with the okteto logs",
+		Use:   "doctor [devContainer]",
+		Short: "Generate a doctor file with all the information relevant for troubleshooting an issue. Use it when filing an issue or asking the Okteto community for help",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#doctor"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Info("starting doctor command")
@@ -114,8 +114,8 @@ func Doctor(k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&doctorOpts.DevPath, "file", "f", "", "path to the Okteto manifest file")
-	cmd.Flags().StringVarP(&doctorOpts.Namespace, "namespace", "n", "", "namespace where the up command was executing")
-	cmd.Flags().StringVarP(&doctorOpts.K8sContext, "context", "c", "", "context where the up command was executing")
+	cmd.Flags().StringVarP(&doctorOpts.DevPath, "file", "f", "", "the path to the Okteto Manifest")
+	cmd.Flags().StringVarP(&doctorOpts.Namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
+	cmd.Flags().StringVarP(&doctorOpts.K8sContext, "context", "c", "", "overwrite the current Okteto Context")
 	return cmd
 }

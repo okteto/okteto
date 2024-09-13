@@ -40,7 +40,7 @@ func Use(ctx context.Context) *cobra.Command {
 	options := &UseOptions{}
 	cmd := &cobra.Command{
 		Use:     "use [namespace]",
-		Short:   "Configure the current namespace of the okteto context",
+		Short:   "Configure the default namespace of the Okteto Context",
 		Aliases: []string{"ns"},
 		Args:    utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#use-1"),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -67,7 +67,7 @@ func Use(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().BoolVarP(&options.personal, "personal", "", false, "Load personal account")
+	cmd.Flags().BoolVarP(&options.personal, "personal", "", false, "Load personal namespace")
 
 	return cmd
 }

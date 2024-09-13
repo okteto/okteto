@@ -58,9 +58,9 @@ func Destroy(ctx context.Context) *cobra.Command {
 	opts := &DestroyOptions{}
 	cmd := &cobra.Command{
 		Use:   "destroy <name>",
-		Short: "Destroy a preview environment",
+		Short: "Destroy a Preview Environment",
 		Args:  utils.ExactArgsAccepted(1, ""),
-		Example: `To destroy a preview environment without the Okteto CLI waiting for its completion, use the '--wait=false' flag:
+		Example: `To destroy a Preview Environment without the Okteto CLI waiting for its completion, use the '--wait=false' flag:
 okteto preview destroy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.name = getExpandedName(args[0])
@@ -88,8 +88,8 @@ okteto preview destroy --wait=false`,
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&opts.k8sContext, "context", "c", "", "context where the development environment was deployed")
-	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", true, "wait until the preview environment gets destroyed")
+	cmd.Flags().StringVarP(&opts.k8sContext, "context", "c", "", "overwrite the current Okteto Context")
+	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", true, "wait until the Preview Environment destruction finishes")
 	return cmd
 }
 

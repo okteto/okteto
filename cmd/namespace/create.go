@@ -42,7 +42,7 @@ func Create(ctx context.Context) *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:   "create <name>",
-		Short: "Create a namespace",
+		Short: "Create an Okteto Namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
 				return err
@@ -64,8 +64,8 @@ func Create(ctx context.Context) *cobra.Command {
 		Args: utils.ExactArgsAccepted(1, ""),
 	}
 
-	options.Members = cmd.Flags().StringArrayP("members", "m", []string{}, "members of the namespace, it can the username or email")
-	cmd.Flags().BoolVarP(&options.SetCurrentNs, "use", "", true, "use the newly created namespace as the current namespace")
+	options.Members = cmd.Flags().StringArrayP("members", "m", []string{}, "members of the Okteto Namespace, it can by username or email")
+	cmd.Flags().BoolVarP(&options.SetCurrentNs, "use", "", true, "use the newly created Okteto Namespace as the current namespace")
 	return cmd
 }
 

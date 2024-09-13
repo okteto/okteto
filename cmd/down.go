@@ -48,8 +48,8 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, fs afero.Fs) 
 	var all bool
 
 	cmd := &cobra.Command{
-		Use:   "down [service]",
-		Short: "Deactivate your development container",
+		Use:   "down [devContainer]",
+		Short: "Deactivate your Development Container, stops the file synchronization service, and restores your previous deployment configuration",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#down"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
@@ -158,10 +158,10 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, fs afero.Fs) 
 		},
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", "", "path to the Okteto manifest file")
-	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volume")
-	cmd.Flags().BoolVarP(&all, "all", "A", false, "deactivate all running dev containers")
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the down command is executed")
-	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the down command is executed")
+	cmd.Flags().StringVarP(&devPath, "file", "f", "", "the path to the Okteto manifest")
+	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volumes where your local folder is synched on remote")
+	cmd.Flags().BoolVarP(&all, "all", "A", false, "deactivate all running Development Containers")
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
+	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "overwrite the current Okteto Context")
 	return cmd
 }

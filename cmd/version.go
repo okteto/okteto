@@ -28,7 +28,7 @@ import (
 func Version() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",
-		Short: "View the version of the okteto binary",
+		Short: "Show the current installed Okteto CLI binary version",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#version"),
 		RunE:  Show().RunE,
 	}
@@ -41,7 +41,7 @@ func Version() *cobra.Command {
 func Update() *cobra.Command {
 	return &cobra.Command{
 		Use:   "update",
-		Short: "Update Okteto CLI version",
+		Short: "Show information about how to update the Okteto CLI binary",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			currentVersion, err := semver.NewVersion(config.VersionString)
 			if err != nil {

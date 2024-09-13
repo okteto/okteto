@@ -28,7 +28,7 @@ import (
 func Wake(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "wake <name>",
-		Short: "Wakes a namespace",
+		Short: "Wakes an Okteto Namespace. By default, it wakes the default namespace in the Okteto Context",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			nsToWake := okteto.GetContext().Namespace

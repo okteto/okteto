@@ -137,9 +137,13 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 
 	cmd := &cobra.Command{
 		Use:   "destroy",
-		Short: `Destroy everything created by the 'okteto deploy' command`,
-		Long:  `Destroy everything created by the 'okteto deploy' command. You can also include a 'destroy' section in your okteto manifest with a list of custom commands to be executed on destroy`,
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#destroy"),
+		Short: `Destroy your Development Environment`,
+		Long: `Destroy your Development Environment.
+
+It automatically destroys all the Kubernetes resources created by okteto deploy.
+If you need to destroy external resources (like s3 buckets or other Cloud resources), use the 'destroy' section.
+`,
+		Args: utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if options.ManifestPath != "" {
 				// if path is absolute, its transformed to rel from root
@@ -257,15 +261,15 @@ func Destroy(ctx context.Context, at analyticsTrackerInterface, insights buildTr
 		},
 	}
 
-	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
-	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the Okteto manifest file")
+	cmd.Flags().StringVar(&options.Name, "name", "", "the name of the Development Environment")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "the path to the Okteto Manifest")
 	cmd.Flags().BoolVarP(&options.DestroyVolumes, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().BoolVarP(&options.DestroyDependencies, "dependencies", "d", false, "destroy dependencies")
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the development environment to be destroyed even if there is an error executing the custom destroy commands defined in the manifest")
-	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment was deployed")
+	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrite the namespace where the development environment was deployed")
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment was deployed")
 	cmd.Flags().BoolVarP(&options.RunWithoutBash, "no-bash", "", false, "execute commands without bash")
-	cmd.Flags().BoolVarP(&options.DestroyAll, "all", "", false, "destroy everything in the namespace")
+	cmd.Flags().BoolVarP(&options.DestroyAll, "all", "", false, "destroy all Development Environments, excluding resources annotated with dev.okteto.com/policy: keep")
 	cmd.Flags().BoolVarP(&options.RunInRemote, "remote", "", false, "force run destroy commands in remote")
 
 	return cmd

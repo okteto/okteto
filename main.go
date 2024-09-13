@@ -111,8 +111,8 @@ func main() {
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
-		Short:         "Okteto - Remote Development Environments powered by Kubernetes",
-		Long:          "Okteto - Remote Development Environments powered by Kubernetes",
+		Short:         "The Okteto Command Line Interface is a unified tool to manage Development Environments",
+		Long:          "The Okteto Command Line Interface is a unified tool to manage Development Environments",
 		SilenceErrors: true,
 		PersistentPreRun: func(ccmd *cobra.Command, args []string) {
 			ccmd.SilenceUsage = true
