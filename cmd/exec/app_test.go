@@ -32,7 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func TestWaitUnitlDevModeIsReady(t *testing.T) {
+func TestWaitUntilDevModeIsReady(t *testing.T) {
 	dev := &model.Dev{}
 
 	tt := []struct {

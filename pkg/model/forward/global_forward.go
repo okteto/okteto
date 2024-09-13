@@ -38,7 +38,3 @@ type GlobalForwardRaw struct {
 func (gf GlobalForward) String() string {
 	return fmt.Sprintf("%d:%s:%d", gf.Local, gf.ServiceName, gf.Remote)
 }
-
-func (gf *GlobalForward) less(c *GlobalForward) bool {
-	return gf.Local < c.Local
-}
