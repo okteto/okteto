@@ -288,7 +288,7 @@ $ okteto deploy --no-build=true`,
 	cmd.Flags().BoolVarP(&options.RunWithoutBash, "no-bash", "", false, "execute the command using the container's default shell instead of bash")
 	cmd.Flags().BoolVarP(&options.RunInRemote, "remote", "", false, "run the deploy commands using Remote Execution")
 
-	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", true, "wait until the deployment finishes")
+	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", false, "wait until the deployment finishes and pods are healthy")
 	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "the duration to wait for the deployment to complete")
 
 	return cmd
