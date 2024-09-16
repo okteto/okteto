@@ -56,7 +56,7 @@ func NewCommand() (*Command, error) {
 func Pipeline(ctx context.Context, fs afero.Fs) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pipeline",
-		Short: "Pipeline management commands",
+		Short: "Development Environments management commands",
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#pipeline"),
 	}
 	cmd.AddCommand(deploy(ctx, fs))

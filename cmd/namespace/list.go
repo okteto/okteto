@@ -30,7 +30,7 @@ import (
 func List(ctx context.Context) *cobra.Command {
 	return &cobra.Command{
 		Use:     "list",
-		Short:   "List namespaces managed by Okteto in your current context",
+		Short:   "List your Okteto Namespaces",
 		Aliases: []string{"ls"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 

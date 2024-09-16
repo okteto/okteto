@@ -40,7 +40,7 @@ func NewCommand() (*Command, error) {
 func Preview(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "preview",
-		Short: "Preview environment management commands",
+		Short: "Preview Environment management commands",
 	}
 
 	cmd.AddCommand(Deploy(ctx))

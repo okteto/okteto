@@ -56,7 +56,7 @@ func destroy(ctx context.Context) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "destroy",
-		Short: "Destroy an okteto pipeline",
+		Short: "Runs a job in the cluster that clones a repository and executes okteto destroy on it.",
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#destroy-1"),
 		Example: `To run the destroy without the Okteto CLI waiting for its completion, use the '--wait=false' flag:
 okteto pipeline destroy --wait=false`,
@@ -83,12 +83,12 @@ okteto pipeline destroy --wait=false`,
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.name, "name", "p", "", "name of the pipeline (defaults to the git config name)")
-	cmd.Flags().StringVarP(&flags.k8sContext, "context", "c", "", "context where the development environment was deployed")
-	cmd.Flags().StringVarP(&flags.namespace, "namespace", "n", "", "namespace where the pipeline is destroyed (defaults to the current namespace)")
-	cmd.Flags().BoolVarP(&flags.wait, "wait", "w", true, "wait until the pipeline finishes")
-	cmd.Flags().BoolVarP(&flags.destroyVolumes, "volumes", "v", false, "destroy persistent volumes created by the pipeline (defaults to false)")
-	cmd.Flags().DurationVarP(&flags.timeout, "timeout", "t", fiveMinutes, "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h")
+	cmd.Flags().StringVarP(&flags.name, "name", "p", "", "the name of the Development Environment")
+	cmd.Flags().StringVarP(&flags.k8sContext, "context", "c", "", "overwrite the current Okteto Context")
+	cmd.Flags().StringVarP(&flags.namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
+	cmd.Flags().BoolVarP(&flags.wait, "wait", "w", true, "wait until the Development Environment is destroyed")
+	cmd.Flags().BoolVarP(&flags.destroyVolumes, "volumes", "v", false, "destroy persistent volumes created by the Development Environment")
+	cmd.Flags().DurationVarP(&flags.timeout, "timeout", "t", fiveMinutes, "the duration to wait for the Development Environment to be destroyed. Any value should contain a corresponding time unit e.g. 1s, 2m, 3h")
 	return cmd
 }
 

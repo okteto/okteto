@@ -27,17 +27,18 @@ func Context() *cobra.Command {
 		Use:     "context",
 		Aliases: []string{"ctx"},
 		Args:    utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#context"),
-		Short:   "Set the default context",
-		Long: `Set the default context
+		Short:   "Set the default Okteto Context",
+		Long: `Set the default Okteto Context.
 
-A context is a group of cluster access parameters. Each context contains a Kubernetes cluster, a user, and a namespace.
-The current context is the default cluster/namespace for any Okteto CLI command.
+An Okteto Context is a group of cluster access parameters.
+Each context contains a Kubernetes cluster, a user, and a namespace.
+The current Okteto Context is the default cluster/namespace for any Okteto CLI command.
 
-To set your default context, run the ` + "`okteto context`" + ` command:
+To set your default Okteto Context, run the ` + "`okteto context`" + ` command:
 
     $ okteto context
 
-This will prompt you to select one of your existing contexts or to create a new one.
+This will prompt you to select one of your existing Okteto Contexts or to create a new one.
 `,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			okteto.SetInsecureSkipTLSVerifyPolicy(ctxOptions.InsecureSkipTlsVerify)
@@ -49,9 +50,9 @@ This will prompt you to select one of your existing contexts or to create a new 
 	cmd.AddCommand(List())
 	cmd.AddCommand(DeleteCMD())
 
-	cmd.PersistentFlags().BoolVarP(&ctxOptions.InsecureSkipTlsVerify, "insecure-skip-tls-verify", "", false, " If enabled, the server's certificate will not be checked for validity. This will make your connections insecure")
-	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication")
-	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "namespace of your okteto context")
+	cmd.PersistentFlags().BoolVarP(&ctxOptions.InsecureSkipTlsVerify, "insecure-skip-tls-verify", "", false, "skip validation of server's certificates")
+	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication. Use this when scripting or if you don't want to use browser-based authentication")
+	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
 	cmd.Flags().BoolVarP(&ctxOptions.OnlyOkteto, "okteto", "", false, "only shows okteto context options")
 	if err := cmd.Flags().MarkHidden("okteto"); err != nil {
 		oktetoLog.Infof("failed to mark 'okteto' flag as hidden: %s", err)

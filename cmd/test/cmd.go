@@ -73,7 +73,7 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 	options := &Options{}
 	cmd := &cobra.Command{
 		Use:   "test",
-		Short: "Run unit and e2e tests defined in your okteto manifest. More information available here: https://www.okteto.com/docs/reference/okteto-cli/#test",
+		Short: "Run tests using Remote Execution",
 		RunE: func(cmd *cobra.Command, servicesToTest []string) error {
 
 			if err := validator.CheckReservedVariablesNameOption(options.Variables); err != nil {
@@ -106,14 +106,14 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 		},
 	}
 
-	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the Okteto manifest file")
-	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "Overwrites the namespace where the development environment is deployed")
-	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "Context where the development environment is deployed")
-	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "Set a variable (can be set more than once)")
-	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "The length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
-	cmd.Flags().StringVar(&options.Name, "name", "", "Name of the development environment name to be deployed")
-	cmd.Flags().BoolVar(&options.Deploy, "deploy", false, "Always deploy the dev environment. If it's already deployed it will be redeployed")
-	cmd.Flags().BoolVar(&options.NoCache, "no-cache", false, "Do not use cache for running tests")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "the path to the Okteto Manifest")
+	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
+	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "overwrite the current Okteto Context")
+	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable to be injected in the test commands (can be set more than once)")
+	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "the duration to wait for the Test Container to run. Any value should contain a corresponding time unit e.g. 1s, 2m, 3h")
+	cmd.Flags().StringVar(&options.Name, "name", "", "the name of the Development Environment")
+	cmd.Flags().BoolVar(&options.Deploy, "deploy", false, "Force execution of the commands in the 'deploy' section")
+	cmd.Flags().BoolVar(&options.NoCache, "no-cache", false, "by default, the caches of a Test Container are reused between executions")
 
 	return cmd
 }

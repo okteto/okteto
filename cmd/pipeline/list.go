@@ -59,16 +59,16 @@ func list(ctx context.Context) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List all okteto pipelines",
+		Short: "List all your Development Environments in the current Okteto Namespace",
 		Args:  utils.NoArgsAccepted(""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return pipelineListCommandHandler(ctx, flags, contextCMD.NewContextCommand().Run)
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.context, "context", "c", "", "context where the pipelines are deployed (defaults to the current context)")
-	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "tag and organize dev environments using labels (multiple --label flags accepted)")
-	cmd.Flags().StringVarP(&flags.namespace, "namespace", "n", "", "namespace where the pipelines are deployed (defaults to the current namespace)")
+	cmd.Flags().StringVarP(&flags.context, "context", "c", "", "overwrite the current Okteto Context")
+	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "tag and organize Development Environments using labels (multiple --label flags accepted)")
+	cmd.Flags().StringVarP(&flags.namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
 	cmd.Flags().StringVarP(&flags.output, "output", "o", "", "output format. One of: ['json', 'yaml']")
 	return cmd
 }

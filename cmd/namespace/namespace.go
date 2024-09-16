@@ -59,12 +59,12 @@ func Namespace(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 	options := &UseOptions{}
 	cmd := &cobra.Command{
 		Use:     "namespace",
-		Short:   "Configure the current namespace of the okteto context",
+		Short:   "Configure the default namespace of the Okteto Context",
 		Aliases: []string{"ns"},
 		Args:    utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#namespace"),
 		RunE:    Use(ctx).RunE,
 	}
-	cmd.Flags().BoolVarP(&options.personal, "personal", "", false, "Load personal account")
+	cmd.Flags().BoolVarP(&options.personal, "personal", "", false, "Load personal namespace")
 
 	cmd.AddCommand(Use(ctx))
 	cmd.AddCommand(List(ctx))
