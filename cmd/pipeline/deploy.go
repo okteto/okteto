@@ -90,8 +90,8 @@ func deploy(ctx context.Context, fs afero.Fs) *cobra.Command {
 		Use:   "deploy",
 		Short: "Runs a job in the cluster that clones a repository and executes okteto deploy on it",
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#deploy-1"),
-		Example: `To run the deploy and have the Okteto CLI wait for its completion, use the '--wait' flag:
-okteto pipeline deploy --wait`,
+		Example: `To run the deploy without the Okteto CLI wait for its completion, use the '--wait=false' flag:
+okteto pipeline deploy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if flags.file != "" {
 				// check that the manifest file exists
@@ -140,7 +140,7 @@ okteto pipeline deploy --wait`,
 	cmd.Flags().StringVarP(&flags.namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
 	cmd.Flags().StringVarP(&flags.repository, "repository", "r", "", "the repository to deploy (defaults to your current repository)")
 	cmd.Flags().StringVarP(&flags.branch, "branch", "b", "", "the branch to deploy (defaults to your current branch)")
-	cmd.Flags().BoolVarP(&flags.wait, "wait", "w", false, "wait until the deployment finishes")
+	cmd.Flags().BoolVarP(&flags.wait, "wait", "w", true, "wait until the deployment finishes")
 	cmd.Flags().BoolVarP(&flags.skipIfExists, "skip-if-exists", "", false, "skip the deployment if the Development Environment already exists")
 	cmd.Flags().DurationVarP(&flags.timeout, "timeout", "t", fiveMinutes, "the length of time to wait for the deployment, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h")
 	cmd.Flags().StringArrayVarP(&flags.variables, "var", "v", []string{}, "set a variable to be injected in the deploy commands (can be set more than once)")
