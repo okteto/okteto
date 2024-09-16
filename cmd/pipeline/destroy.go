@@ -86,7 +86,7 @@ okteto pipeline destroy --wait=false`,
 	cmd.Flags().StringVarP(&flags.name, "name", "p", "", "the name of the Development Environment")
 	cmd.Flags().StringVarP(&flags.k8sContext, "context", "c", "", "overwrite the current Okteto Context")
 	cmd.Flags().StringVarP(&flags.namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
-	cmd.Flags().BoolVarP(&flags.wait, "wait", "w", true, "wait until the Development Environment is destroyed")
+	cmd.Flags().BoolVarP(&flags.wait, "wait", "w", false, "wait until the Development Environment is destroyed")
 	cmd.Flags().BoolVarP(&flags.destroyVolumes, "volumes", "v", false, "destroy persistent volumes created by the Development Environment")
 	cmd.Flags().DurationVarP(&flags.timeout, "timeout", "t", fiveMinutes, "the duration to wait for the Development Environment to be destroyed. Any value should contain a corresponding time unit e.g. 1s, 2m, 3h")
 	return cmd

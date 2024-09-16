@@ -94,7 +94,7 @@ okteto preview deploy --wait=false`,
 	cmd.Flags().StringVarP(&opts.sourceUrl, "sourceUrl", "", "", "the URL of the original pull/merge request.")
 	cmd.Flags().DurationVarP(&opts.timeout, "timeout", "t", fiveMinutes, "the duration to wait for the deployment to complete. Any value should contain a corresponding time unit e.g. 1s, 2m, 3h")
 	cmd.Flags().StringArrayVarP(&opts.variables, "var", "v", []string{}, "set a variable to be injected in the deploy commands (can be set more than once)")
-	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", true, "wait until the deployment finishes")
+	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", false, "wait until the deployment finishes")
 	cmd.Flags().StringVarP(&opts.file, "file", "f", "", "the path to the Okteto Manifest")
 	cmd.Flags().StringArrayVarP(&opts.labels, "label", "", []string{}, "tag and organize Preview Environments using labels (multiple --label flags accepted)")
 
