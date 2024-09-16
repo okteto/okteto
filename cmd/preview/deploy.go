@@ -60,7 +60,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Use:   "deploy <name>",
 		Short: "Deploy a Preview Environment",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
-		Example: `To deploy a preview environment without the Okteto CLI waiting for its completion, use the '--wait=false' flag:
+		Example: `To deploy a preview environment without the Okteto CLI wait for its completion, use the '--wait=false' flag:
 okteto preview deploy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cwd, err := os.Getwd()
