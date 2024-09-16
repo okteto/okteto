@@ -60,8 +60,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Use:   "deploy <name>",
 		Short: "Deploy a Preview Environment",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
-		Example: `To deploy a preview environment and have the Okteto CLI wait for its completion, use the '--wait' flag:
-okteto preview deploy --wait`,
+		Example: `To deploy a preview environment without the Okteto CLI wait for its completion, use the '--wait=false' flag:
+okteto preview deploy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cwd, err := os.Getwd()
 			if err != nil {
@@ -94,7 +94,7 @@ okteto preview deploy --wait`,
 	cmd.Flags().StringVarP(&opts.sourceUrl, "sourceUrl", "", "", "the URL of the original pull/merge request.")
 	cmd.Flags().DurationVarP(&opts.timeout, "timeout", "t", fiveMinutes, "the duration to wait for the deployment to complete. Any value should contain a corresponding time unit e.g. 1s, 2m, 3h")
 	cmd.Flags().StringArrayVarP(&opts.variables, "var", "v", []string{}, "set a variable to be injected in the deploy commands (can be set more than once)")
-	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", false, "wait until the deployment finishes")
+	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", true, "wait until the deployment finishes")
 	cmd.Flags().StringVarP(&opts.file, "file", "f", "", "the path to the Okteto Manifest")
 	cmd.Flags().StringArrayVarP(&opts.labels, "label", "", []string{}, "tag and organize Preview Environments using labels (multiple --label flags accepted)")
 
