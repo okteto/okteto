@@ -90,7 +90,7 @@ func deploy(ctx context.Context, fs afero.Fs) *cobra.Command {
 		Use:   "deploy",
 		Short: "Runs a job in the cluster that clones a repository and executes okteto deploy on it",
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#deploy-1"),
-		Example: `To run the deploy without the Okteto CLI waiting for its completion, use the '--wait=false' flag:
+		Example: `To run the deploy without the Okteto CLI wait for its completion, use the '--wait=false' flag:
 okteto pipeline deploy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if flags.file != "" {
