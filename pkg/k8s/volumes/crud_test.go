@@ -31,6 +31,7 @@ import (
 
 func Test_checkPVCValues(t *testing.T) {
 	className := "class"
+	blockVolumeMode := apiv1.PersistentVolumeBlock
 	var tests = []struct {
 		pvc       *apiv1.PersistentVolumeClaim
 		dev       *model.Dev
@@ -115,7 +116,6 @@ func Test_checkPVCValues(t *testing.T) {
 			},
 			wantError: true,
 		},
-
 		{
 			name: "pvc-with-less-storage-size",
 			pvc: &apiv1.PersistentVolumeClaim{
@@ -152,6 +152,93 @@ func Test_checkPVCValues(t *testing.T) {
 				PersistentVolumeInfo: &model.PersistentVolumeInfo{
 					Size:         "20Gi",
 					StorageClass: "wrong-class",
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "pvc-with-same-access-mode",
+			pvc: &apiv1.PersistentVolumeClaim{
+				Spec: apiv1.PersistentVolumeClaimSpec{
+					StorageClassName: &className,
+					AccessModes:      []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteMany},
+					Resources: apiv1.ResourceRequirements{
+						Requests: apiv1.ResourceList{
+							"storage": resource.MustParse("10Gi"),
+						},
+					},
+				},
+			},
+			dev: &model.Dev{
+				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+					Size:         "10Gi",
+					StorageClass: "class",
+					AccessMode:   apiv1.ReadWriteMany,
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "pvc-with-different-access-mode",
+			pvc: &apiv1.PersistentVolumeClaim{
+				Spec: apiv1.PersistentVolumeClaimSpec{
+					StorageClassName: &className,
+					AccessModes:      []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteMany},
+					Resources: apiv1.ResourceRequirements{
+						Requests: apiv1.ResourceList{
+							"storage": resource.MustParse("10Gi"),
+						},
+					},
+				},
+			},
+			dev: &model.Dev{
+				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+					Size:         "10Gi",
+					StorageClass: "class",
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "pvc-with-same-volume-mode",
+			pvc: &apiv1.PersistentVolumeClaim{
+				Spec: apiv1.PersistentVolumeClaimSpec{
+					StorageClassName: &className,
+					VolumeMode:       &blockVolumeMode,
+					Resources: apiv1.ResourceRequirements{
+						Requests: apiv1.ResourceList{
+							"storage": resource.MustParse("10Gi"),
+						},
+					},
+				},
+			},
+			dev: &model.Dev{
+				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+					Size:         "10Gi",
+					StorageClass: "class",
+					VolumeMode:   blockVolumeMode,
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "pvc-with-different-access-mode",
+			pvc: &apiv1.PersistentVolumeClaim{
+				Spec: apiv1.PersistentVolumeClaimSpec{
+					StorageClassName: &className,
+					VolumeMode:       &blockVolumeMode,
+					Resources: apiv1.ResourceRequirements{
+						Requests: apiv1.ResourceList{
+							"storage": resource.MustParse("10Gi"),
+						},
+					},
+				},
+			},
+			dev: &model.Dev{
+				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+					Size:         "10Gi",
+					StorageClass: "class",
+					VolumeMode:   apiv1.PersistentVolumeFilesystem,
 				},
 			},
 			wantError: true,
