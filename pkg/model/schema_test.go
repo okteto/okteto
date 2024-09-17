@@ -203,7 +203,7 @@ func Test_getStructKeys(t *testing.T) {
 				"model.Lifecycle":            {"postStart", "preStop"},
 				"model.Manifest":             {"name", "icon", "dev", "build", "deploy", "destroy", "dependencies", "external", "forward", "test"},
 				"model.Metadata":             {"labels", "annotations"},
-				"model.PersistentVolumeInfo": {"storageClass", "size", "enabled"},
+				"model.PersistentVolumeInfo": {"accessMode", "volumeMode", "annotations", "labels", "storageClass", "size", "enabled"},
 				"model.Probes":               {"liveness", "readiness", "startup"},
 				"model.ResourceRequirements": {"limits", "requests"},
 				"model.SecurityContext":      {"runAsUser", "runAsGroup", "fsGroup", "capabilities", "runAsNonRoot", "allowPrivilegeEscalation"},

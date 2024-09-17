@@ -20,6 +20,7 @@ import (
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	apiv1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -164,6 +165,44 @@ func (dev *Dev) PersistentVolumeEnabled() bool {
 		return true
 	}
 	return dev.PersistentVolumeInfo.Enabled
+}
+
+// PersistentVolumeAccessMode returns the persistent volume accessMode
+func (dev *Dev) PersistentVolumeAccessMode() apiv1.PersistentVolumeAccessMode {
+	if dev.PersistentVolumeInfo == nil {
+		return apiv1.ReadWriteOnce
+	}
+	if dev.PersistentVolumeInfo.AccessMode == "" {
+		return apiv1.ReadWriteOnce
+	}
+	return dev.PersistentVolumeInfo.AccessMode
+}
+
+// PersistentVolumeMode returns the persistent volume volumeMode
+func (dev *Dev) PersistentVolumeMode() apiv1.PersistentVolumeMode {
+	if dev.PersistentVolumeInfo == nil {
+		return apiv1.PersistentVolumeFilesystem
+	}
+	if dev.PersistentVolumeInfo.VolumeMode == "" {
+		return apiv1.PersistentVolumeFilesystem
+	}
+	return dev.PersistentVolumeInfo.VolumeMode
+}
+
+// PersistentVolumeAnnotations returns the persistent volume annotations
+func (dev *Dev) PersistentVolumeAnnotations() Annotations {
+	if dev.PersistentVolumeInfo == nil {
+		return nil
+	}
+	return dev.PersistentVolumeInfo.Annotations
+}
+
+// PersistentVolumeLabels returns the persistent volume labels
+func (dev *Dev) PersistentVolumeLabels() Labels {
+	if dev.PersistentVolumeInfo == nil {
+		return nil
+	}
+	return dev.PersistentVolumeInfo.Labels
 }
 
 // PersistentVolumeSize returns the persistent volume size

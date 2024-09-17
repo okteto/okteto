@@ -190,6 +190,20 @@ func TestDevToTranslationRule(t *testing.T) {
 			RunAsGroup: pointer.Int64(0),
 			FSGroup:    pointer.Int64(0),
 		},
+		Affinity: &apiv1.Affinity{
+			PodAffinity: &apiv1.PodAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+					{
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								InteractiveDevLabel: "web",
+							},
+						},
+						TopologyKey: "kubernetes.io/hostname",
+					},
+				},
+			},
+		},
 		Resources:        ResourceRequirements{},
 		PersistentVolume: true,
 		Environment: env.Environment{
@@ -223,6 +237,25 @@ func TestDevToTranslationRule(t *testing.T) {
 	if !assert.Equal(t, rule2, rule2OK) {
 		t.Fatalf("Wrong rule2 generation.\nActual %s, \nExpected %s", string(marshalled2), string(marshalled2OK))
 	}
+}
+
+func TestAffinittiesIfWriteMany(t *testing.T) {
+	manifestBytes := []byte(`dev:
+    web:
+        persistentVolume:
+            accessMode: ReadWriteMany
+        services:
+        - name: worker`)
+
+	manifest, err := Read(manifestBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dev := manifest.Dev["web"]
+	dev2 := dev.Services[0]
+	rule2 := dev2.ToTranslationRule(dev, "n", "username", false)
+	assert.Nil(t, rule2.Affinity)
 }
 
 func TestDevToTranslationRuleInitContainer(t *testing.T) {
