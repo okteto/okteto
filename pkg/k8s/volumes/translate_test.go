@@ -29,9 +29,9 @@ func Test_translate(t *testing.T) {
 	blockVolumeMode := apiv1.PersistentVolumeBlock
 	storageClass := "okteto-sc"
 	var tests = []struct {
-		name string
-		dev  *model.Dev
 		want *apiv1.PersistentVolumeClaim
+		dev  *model.Dev
+		name string
 	}{
 		{
 			name: "default",

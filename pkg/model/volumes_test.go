@@ -823,8 +823,8 @@ func Test_validateVolumes(t *testing.T) {
 
 func Test_PersistentVolumeEnabled(t *testing.T) {
 	var tests = []struct {
-		name string
 		dev  *Dev
+		name string
 		want bool
 	}{
 		{
@@ -922,9 +922,9 @@ func Test_PersistentVolumeMode(t *testing.T) {
 
 func Test_PersistentVolumeAnnotations(t *testing.T) {
 	var tests = []struct {
-		name string
 		dev  *Dev
 		want Annotations
+		name string
 	}{
 		{
 			name: "nil",
@@ -950,9 +950,9 @@ func Test_PersistentVolumeAnnotations(t *testing.T) {
 
 func Test_PersistentVolumeLabels(t *testing.T) {
 	var tests = []struct {
-		name string
 		dev  *Dev
 		want Labels
+		name string
 	}{
 		{
 			name: "nil",

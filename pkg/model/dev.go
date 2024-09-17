@@ -140,13 +140,13 @@ type ExternalVolume struct {
 
 // PersistentVolumeInfo info about the persistent volume
 type PersistentVolumeInfo struct {
-	AccessMode   apiv1.PersistentVolumeAccessMode `json:"accessMode,omitempty" yaml:"accessMode,omitempty"`
 	Annotations  Annotations                      `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Enabled      bool                             `json:"enabled,omitempty" yaml:"enabled"`
 	Labels       Labels                           `json:"labels,omitempty" yaml:"labels,omitempty"`
+	AccessMode   apiv1.PersistentVolumeAccessMode `json:"accessMode,omitempty" yaml:"accessMode,omitempty"`
 	Size         string                           `json:"size,omitempty" yaml:"size,omitempty"`
 	StorageClass string                           `json:"storageClass,omitempty" yaml:"storageClass,omitempty"`
 	VolumeMode   apiv1.PersistentVolumeMode       `json:"volumeMode,omitempty" yaml:"volumeMode,omitempty"`
+	Enabled      bool                             `json:"enabled,omitempty" yaml:"enabled"`
 }
 
 // InitContainer represents the initial container
