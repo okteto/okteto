@@ -20,6 +20,7 @@ import (
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/sirupsen/logrus"
+	apiv1 "k8s.io/api/core/v1"
 )
 
 func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
@@ -815,6 +816,194 @@ func Test_validateVolumes(t *testing.T) {
 				if err != nil && !tt.wantErr {
 					t.Errorf("'%s' got unexpected error: %s", tt.name, err.Error())
 				}
+			}
+		})
+	}
+}
+
+func Test_PersistentVolumeEnabled(t *testing.T) {
+	var tests = []struct {
+		dev  *Dev
+		name string
+		want bool
+	}{
+		{
+			name: "nil",
+			dev:  &Dev{},
+			want: true,
+		},
+		{
+			name: "enabled",
+			dev:  &Dev{PersistentVolumeInfo: &PersistentVolumeInfo{Enabled: true}},
+			want: true,
+		},
+		{
+			name: "disabled",
+			dev:  &Dev{PersistentVolumeInfo: &PersistentVolumeInfo{Enabled: false}},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.dev.PersistentVolumeEnabled()
+			if result != tt.want {
+				t.Errorf("'%s' did get an expected result '%t' vs '%t'", tt.name, tt.want, result)
+			}
+		})
+	}
+}
+
+func Test_PersistentVolumeAccessMode(t *testing.T) {
+	var tests = []struct {
+		name string
+		dev  *Dev
+		want apiv1.PersistentVolumeAccessMode
+	}{
+		{
+			name: "nil",
+			dev:  &Dev{},
+			want: apiv1.ReadWriteOnce,
+		},
+		{
+			name: "empty",
+			dev:  &Dev{PersistentVolumeInfo: &PersistentVolumeInfo{}},
+			want: apiv1.ReadWriteOnce,
+		},
+		{
+			name: "access-mode",
+			dev:  &Dev{PersistentVolumeInfo: &PersistentVolumeInfo{AccessMode: apiv1.ReadWriteMany}},
+			want: apiv1.ReadWriteMany,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.dev.PersistentVolumeAccessMode()
+			if result != tt.want {
+				t.Errorf("'%s' did get an expected result '%s' vs '%s'", tt.name, tt.want, result)
+			}
+		})
+	}
+}
+
+func Test_PersistentVolumeMode(t *testing.T) {
+	var tests = []struct {
+		name string
+		dev  *Dev
+		want apiv1.PersistentVolumeMode
+	}{
+		{
+			name: "nil",
+			dev:  &Dev{},
+			want: apiv1.PersistentVolumeFilesystem,
+		},
+		{
+			name: "empty",
+			dev:  &Dev{PersistentVolumeInfo: &PersistentVolumeInfo{}},
+			want: apiv1.PersistentVolumeFilesystem,
+		},
+		{
+			name: "volume-mode",
+			dev:  &Dev{PersistentVolumeInfo: &PersistentVolumeInfo{VolumeMode: apiv1.PersistentVolumeBlock}},
+			want: apiv1.PersistentVolumeBlock,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.dev.PersistentVolumeMode()
+			if result != tt.want {
+				t.Errorf("'%s' did get an expected result '%s' vs '%s'", tt.name, tt.want, result)
+			}
+		})
+	}
+}
+
+func Test_PersistentVolumeAnnotations(t *testing.T) {
+	var tests = []struct {
+		dev  *Dev
+		want Annotations
+		name string
+	}{
+		{
+			name: "nil",
+			dev:  &Dev{},
+			want: nil,
+		},
+		{
+			name: "annotations",
+			dev:  &Dev{PersistentVolumeInfo: &PersistentVolumeInfo{Annotations: Annotations{"a1": "v1"}}},
+			want: Annotations{"a1": "v1"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.dev.PersistentVolumeAnnotations()
+			if !reflect.DeepEqual(result, tt.want) {
+				t.Errorf("'%s' did get an expected result '%v' vs '%v'", tt.name, tt.want, result)
+			}
+		})
+	}
+}
+
+func Test_PersistentVolumeLabels(t *testing.T) {
+	var tests = []struct {
+		dev  *Dev
+		want Labels
+		name string
+	}{
+		{
+			name: "nil",
+			dev:  &Dev{},
+			want: nil,
+		},
+		{
+			name: "labels",
+			dev:  &Dev{PersistentVolumeInfo: &PersistentVolumeInfo{Labels: Labels{"a1": "v1"}}},
+			want: Labels{"a1": "v1"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.dev.PersistentVolumeLabels()
+			if !reflect.DeepEqual(result, tt.want) {
+				t.Errorf("'%s' did get an expected result '%v' vs '%v'", tt.name, tt.want, result)
+			}
+		})
+	}
+}
+
+func Test_PersistentVolumeSize(t *testing.T) {
+	var tests = []struct {
+		name string
+		dev  *Dev
+		want string
+	}{
+		{
+			name: "nil",
+			dev:  &Dev{},
+			want: defaultVolumeSize,
+		},
+		{
+			name: "empty",
+			dev:  &Dev{PersistentVolumeInfo: &PersistentVolumeInfo{}},
+			want: defaultVolumeSize,
+		},
+		{
+			name: "size",
+			dev:  &Dev{PersistentVolumeInfo: &PersistentVolumeInfo{Size: "15Gi"}},
+			want: "15Gi",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.dev.PersistentVolumeSize()
+			if result != tt.want {
+				t.Errorf("'%s' did get an expected result '%s' vs '%s'", tt.name, tt.want, result)
 			}
 		})
 	}

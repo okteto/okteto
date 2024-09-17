@@ -24,7 +24,6 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
 
@@ -100,7 +99,6 @@ func (tr *Translation) translate() error {
 		}
 
 		tr.DevApp.TemplateObjectMeta().Labels[model.DetachedDevLabel] = tr.getDevName()
-		TranslatePodAffinity(tr.DevApp.PodSpec(), tr.MainDev.Name)
 	}
 
 	tr.DevApp.PodSpec().TerminationGracePeriodSeconds = pointer.Int64(0)
@@ -158,30 +156,6 @@ func (tr *Translation) DevModeOff() error {
 // TranslateDevTolerations sets the user provided toleretions
 func TranslateDevTolerations(spec *apiv1.PodSpec, tolerations []apiv1.Toleration) {
 	spec.Tolerations = append(spec.Tolerations, tolerations...)
-}
-
-// TranslatePodAffinity translates the affinity of pod to be all on the same node
-func TranslatePodAffinity(spec *apiv1.PodSpec, name string) {
-	if spec.Affinity == nil {
-		spec.Affinity = &apiv1.Affinity{}
-	}
-	if spec.Affinity.PodAffinity == nil {
-		spec.Affinity.PodAffinity = &apiv1.PodAffinity{}
-	}
-	if spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution == nil {
-		spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution = []apiv1.PodAffinityTerm{}
-	}
-	spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
-		spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
-		apiv1.PodAffinityTerm{
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					model.InteractiveDevLabel: name,
-				},
-			},
-			TopologyKey: "kubernetes.io/hostname",
-		},
-	)
 }
 
 // TranslateDevContainer translates a dev container
