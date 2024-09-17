@@ -155,6 +155,25 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev, devPath st
 			)
 		}
 	}
+
+	if len(pvc.Spec.AccessModes) == 1 && dev.PersistentVolumeAccessMode() != pvc.Spec.AccessModes[0] {
+		return fmt.Errorf(
+			"okteto volume access-mode is '%s' instead of '%s'. Run '%s' and try again",
+			pvc.Spec.AccessModes[0],
+			dev.PersistentVolumeAccessMode(),
+			utils.GetDownCommand(devPath),
+		)
+	}
+
+	if pvc.Spec.VolumeMode != nil && dev.PersistentVolumeMode() != *pvc.Spec.VolumeMode {
+		return fmt.Errorf(
+			"okteto volume mode is '%s' instead of '%s'. Run '%s' and try again",
+			*pvc.Spec.VolumeMode,
+			dev.PersistentVolumeMode(),
+			utils.GetDownCommand(devPath),
+		)
+	}
+
 	return nil
 
 }

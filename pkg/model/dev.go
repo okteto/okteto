@@ -36,6 +36,7 @@ import (
 	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
 
@@ -139,9 +140,13 @@ type ExternalVolume struct {
 
 // PersistentVolumeInfo info about the persistent volume
 type PersistentVolumeInfo struct {
-	StorageClass string `json:"storageClass,omitempty" yaml:"storageClass,omitempty"`
-	Size         string `json:"size,omitempty" yaml:"size,omitempty"`
-	Enabled      bool   `json:"enabled,omitempty" yaml:"enabled"`
+	AccessMode   apiv1.PersistentVolumeAccessMode `json:"accessMode,omitempty" yaml:"accessMode,omitempty"`
+	Annotations  Annotations                      `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Enabled      bool                             `json:"enabled,omitempty" yaml:"enabled"`
+	Labels       Labels                           `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Size         string                           `json:"size,omitempty" yaml:"size,omitempty"`
+	StorageClass string                           `json:"storageClass,omitempty" yaml:"storageClass,omitempty"`
+	VolumeMode   apiv1.PersistentVolumeMode       `json:"volumeMode,omitempty" yaml:"volumeMode,omitempty"`
 }
 
 // InitContainer represents the initial container
@@ -784,6 +789,30 @@ func (dev *Dev) LabelsSelector() string {
 	return labels
 }
 
+// TranslatePodAffinity translates the affinity of pod to be all on the same node
+func TranslatePodAffinity(tr *TranslationRule, name string) {
+	if tr.Affinity == nil {
+		tr.Affinity = &apiv1.Affinity{}
+	}
+	if tr.Affinity.PodAffinity == nil {
+		tr.Affinity.PodAffinity = &apiv1.PodAffinity{}
+	}
+	if tr.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution == nil {
+		tr.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution = []apiv1.PodAffinityTerm{}
+	}
+	tr.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
+		tr.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
+		apiv1.PodAffinityTerm{
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					InteractiveDevLabel: name,
+				},
+			},
+			TopologyKey: "kubernetes.io/hostname",
+		},
+	)
+}
+
 // ToTranslationRule translates a dev struct into a translation rule
 func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset bool) *TranslationRule {
 	rule := &TranslationRule{
@@ -892,11 +921,17 @@ func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset b
 			}
 			rule.Args = append(rule.Args, "-s", fmt.Sprintf("%s:%s", filename, s.RemotePath))
 		}
-	} else if len(dev.Args.Values) > 0 {
-		rule.Args = dev.Args.Values
-	} else if len(dev.Command.Values) > 0 {
-		rule.Command = dev.Command.Values
-		rule.Args = []string{}
+	} else {
+		if main.PersistentVolumeAccessMode() != apiv1.ReadWriteMany {
+			//force all pods to land in the same node
+			TranslatePodAffinity(rule, main.Name)
+		}
+		if len(dev.Args.Values) > 0 {
+			rule.Args = dev.Args.Values
+		} else if len(dev.Command.Values) > 0 {
+			rule.Command = dev.Command.Values
+			rule.Args = []string{}
+		}
 	}
 
 	if main.PersistentVolumeEnabled() {

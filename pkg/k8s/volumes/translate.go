@@ -22,15 +22,22 @@ import (
 )
 
 func translate(dev *model.Dev) *apiv1.PersistentVolumeClaim {
+	volumeMode := dev.PersistentVolumeMode()
+	labels := map[string]string{
+		constants.DevLabel: "true",
+	}
+	for k, v := range dev.PersistentVolumeLabels() {
+		labels[k] = v
+	}
 	pvc := &apiv1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: dev.GetVolumeName(),
-			Labels: map[string]string{
-				constants.DevLabel: "true",
-			},
+			Name:        dev.GetVolumeName(),
+			Labels:      labels,
+			Annotations: dev.PersistentVolumeAnnotations(),
 		},
 		Spec: apiv1.PersistentVolumeClaimSpec{
-			AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
+			AccessModes: []apiv1.PersistentVolumeAccessMode{dev.PersistentVolumeAccessMode()},
+			VolumeMode:  &volumeMode,
 			Resources: apiv1.ResourceRequirements{
 				Requests: apiv1.ResourceList{
 					"storage": resource.MustParse(dev.PersistentVolumeSize()),
