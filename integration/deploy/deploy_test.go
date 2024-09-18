@@ -58,6 +58,7 @@ func TestMain(m *testing.M) {
 		log.Printf("kubectl is not in the path: %s", err)
 		os.Exit(1)
 	}
+	os.Setenv("OKTETO_MULTILINE_LOCAL_VAR", "value1\nvalue2\nvalue3")
 
 	token = integration.GetToken()
 	exitCode := m.Run()
