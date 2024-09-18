@@ -63,9 +63,7 @@ USER 0
 ENV PATH="${PATH}:/okteto/bin"
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
-{{range $key, $val := .OktetoPrefixEnvVars }}
-ARG {{$key}} {{$val}}
-{{end}}
+
 ENV {{ .RemoteDeployEnvVar }} true
 ARG {{ .NamespaceArgName }}
 ARG {{ .ContextArgName }}
@@ -85,11 +83,11 @@ COPY . /okteto/src
 WORKDIR /okteto/src
 
 {{range $key, $val := .OktetoBuildEnvVars }}
-ENV {{$key}} {{$val}}
+ENV {{$key}}={{$val}}
 {{end}}
 
 {{range $key, $val := .OktetoDependencyEnvVars }}
-ENV {{$key}} {{$val}}
+ENV {{$key}}={{$val}}
 {{end}}
 
 ARG {{ .GitCommitArgName }}
@@ -100,7 +98,7 @@ RUN echo "${{ .InvalidateCacheArgName }}" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
 
 {{ range $key, $val := .OktetoExecutionEnvVars}}
-ENV {{$key}} {{$val}}
+ENV {{$key}}={{$val}}
 {{ end }}
 
 RUN \
@@ -430,6 +428,8 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		UseRootUser:              params.UseRootUser,
 	}
 
+	dockerfileSyntax.prepareEnvVars()
+
 	dockerfile, err := r.fs.Create(filepath.Join(tmpDir, params.DockerfileName))
 	if err != nil {
 		return "", err
@@ -588,6 +588,11 @@ func GetOriginalCWD(workingDirectoryCtrl filesystem.WorkingDirectoryInterface, m
 }
 
 func getOktetoPrefixEnvVars(environ []string) map[string]string {
+	bannedOktetoEnvVars := map[string]bool{
+		"OKTETO_HOME":   true,
+		"OKTETO_FOLDER": true,
+		"OKTETO_PATH":   true,
+	}
 	prefixEnvVars := make(map[string]string)
 	envFormatParts := 2
 	for _, v := range environ {
@@ -596,10 +601,44 @@ func getOktetoPrefixEnvVars(environ []string) map[string]string {
 			continue
 		}
 		key := result[0]
+		if bannedOktetoEnvVars[key] {
+			continue
+		}
 		if strings.HasPrefix(key, "OKTETO_") {
 			value := result[1]
 			prefixEnvVars[key] = value
 		}
 	}
 	return prefixEnvVars
+}
+
+func (dfP *dockerfileTemplateProperties) prepareEnvVars() {
+	for k, v := range dfP.OktetoBuildEnvVars {
+		dfP.OktetoBuildEnvVars[k] = formatEnvVarValueForDocker(v)
+	}
+	for k, v := range dfP.OktetoDependencyEnvVars {
+		dfP.OktetoDependencyEnvVars[k] = formatEnvVarValueForDocker(v)
+	}
+	for k, v := range dfP.OktetoPrefixEnvVars {
+		dfP.OktetoPrefixEnvVars[k] = formatEnvVarValueForDocker(v)
+	}
+	for k, v := range dfP.OktetoExecutionEnvVars {
+		dfP.OktetoExecutionEnvVars[k] = formatEnvVarValueForDocker(v)
+	}
+}
+
+func formatEnvVarValueForDocker(value string) string {
+	lines := strings.Split(value, "\n")
+	var result strings.Builder
+
+	result.WriteString("\"")
+	for i, line := range lines {
+		result.WriteString(line)
+		if i < len(lines)-1 {
+			result.WriteString("\\n")
+		}
+	}
+	result.WriteString("\"")
+
+	return result.String()
 }

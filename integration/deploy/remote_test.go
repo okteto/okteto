@@ -24,7 +24,6 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
-	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
 )
@@ -57,8 +56,6 @@ func TestDeployRemoteWithBuildCommand(t *testing.T) {
 	require.NoError(t, createOktetoManifest(dir, deployRemoteWithBuildCommandManifestContent))
 	require.NoError(t, createAppDockerfile(dir))
 
-	t.Setenv(build.DepotTokenEnvVar, "fakeToken")
-	t.Setenv(build.DepotProjectEnvVar, "fakeProject")
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
 		Namespace:  testNamespace,
