@@ -34,7 +34,6 @@ func Install() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			confDir := config.Dir()
 			conf, err := config.Load(confDir)
-			oktetoLog.SetStage("install registry credential helper")
 			if err != nil {
 				return errors.Wrapf(err, "couldn't load docker config file from %q", confDir)
 			}
