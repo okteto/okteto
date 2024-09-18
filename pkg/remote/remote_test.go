@@ -377,15 +377,15 @@ COPY . /okteto/src
 WORKDIR /okteto/src
 
 
-ENV OKTETO_BUILD_SVC2_IMAGE TWO_VALUE
+ENV OKTETO_BUILD_SVC2_IMAGE="TWO_VALUE"
 
-ENV OKTETO_BUIL_SVC_IMAGE ONE_VALUE
+ENV OKTETO_BUIL_SVC_IMAGE="ONE_VALUE"
 
 
 
-ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD dependency_pass
+ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD="dependency_pass"
 
-ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME dependency_user
+ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME="dependency_user"
 
 
 ARG OKTETO_GIT_COMMIT
@@ -396,7 +396,7 @@ RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
 
 
-ENV A A
+ENV A="A"
 
 
 RUN \
@@ -468,15 +468,15 @@ COPY . /okteto/src
 WORKDIR /okteto/src
 
 
-ENV OKTETO_BUILD_SVC2_IMAGE TWO_VALUE
+ENV OKTETO_BUILD_SVC2_IMAGE="TWO_VALUE"
 
-ENV OKTETO_BUIL_SVC_IMAGE ONE_VALUE
+ENV OKTETO_BUIL_SVC_IMAGE="ONE_VALUE"
 
 
 
-ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD dependency_pass
+ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD="dependency_pass"
 
-ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME dependency_user
+ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME="dependency_user"
 
 
 ARG OKTETO_GIT_COMMIT
@@ -862,5 +862,46 @@ func TestGetOktetoPrefixEnvVars(t *testing.T) {
 
 	for key, value := range expectedEnvVars {
 		assert.Equal(t, value, prefixEnvVars[key])
+	}
+}
+
+func TestFormatEnvVarValueForDocker(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "single line",
+			input:    "value",
+			expected: "\"value\"",
+		},
+		{
+			name:     "multiple lines",
+			input:    "line1\nline2\nline3",
+			expected: "\"line1\\nline2\\nline3\"",
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "\"\"",
+		},
+		{
+			name:     "single newline",
+			input:    "\n",
+			expected: "\"\\n\"",
+		},
+		{
+			name:     "trailing newline",
+			input:    "line1\nline2\n",
+			expected: "\"line1\\nline2\\n\"",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := formatEnvVarValueForDocker(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
 	}
 }
