@@ -525,8 +525,8 @@ func GetServerNameOverride() string {
 }
 
 type VersionedTransport struct {
-	Version string
 	http.RoundTripper
+	Version string
 }
 
 func (t *VersionedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
