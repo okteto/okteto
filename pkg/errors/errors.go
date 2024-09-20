@@ -122,7 +122,7 @@ var (
 	// ErrContextIsNotOktetoCluster raised if the cluster connected is not managed by okteto
 	ErrContextIsNotOktetoCluster = UserError{
 		E:    fmt.Errorf("this command is only available installing Okteto in your cluster"),
-		Hint: "Visit our docs to know more about the Okteto Platform:\n    https://www.okteto.com/docs",
+		Hint: "Visit our docs to learn more about the Okteto Platform:\n    https://www.okteto.com/docs",
 	}
 
 	// ErrTokenFlagNeeded is raised when the command is executed from inside a pod from a ctx command
