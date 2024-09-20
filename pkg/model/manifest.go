@@ -1265,7 +1265,7 @@ func (m *Manifest) ValidateForCLIOnly() error {
 	if len(invalidFields) > 0 {
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("the following fields are only available installing Okteto in your cluster: %s", strings.Join(invalidFields, ", ")),
-			Hint: "Visit our docs to know more about the Okteto Platform:\n    https://www.okteto.com/docs",
+			Hint: "Visit our docs to learn more about the Okteto Platform:\n    https://www.okteto.com/docs",
 		}
 	}
 	return nil
