@@ -163,8 +163,9 @@ func TestExecuteDestroyPreviewWithErrorStreaming(t *testing.T) {
 	ctx := context.Background()
 	var previewResponse client.FakePreviewResponse
 	opts := &DestroyOptions{
-		name: "test-preview",
-		wait: true,
+		name:    "test-preview",
+		wait:    true,
+		timeout: 5 * time.Minute,
 	}
 	command := destroyPreviewCommand{
 		okClient: &client.FakeOktetoClient{
