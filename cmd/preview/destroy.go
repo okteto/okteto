@@ -51,6 +51,7 @@ type DestroyOptions struct {
 	name       string
 	k8sContext string
 	wait       bool
+	timeout    time.Duration
 }
 
 // Destroy destroy a preview
@@ -90,6 +91,7 @@ okteto preview destroy --wait=false`,
 	}
 	cmd.Flags().StringVarP(&opts.k8sContext, "context", "c", "", "overwrite the current Okteto Context")
 	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", true, "wait until the Preview Environment destruction finishes")
+	cmd.Flags().DurationVarP(&opts.timeout, "timeout", "t", fiveMinutes, "the duration to wait for the Preview Environment to be destroyed. Any value should contain a corresponding time unit e.g. 1s, 2m, 3h")
 	return cmd
 }
 
@@ -111,7 +113,7 @@ func (c destroyPreviewCommand) executeDestroyPreview(ctx context.Context, opts *
 		return nil
 	}
 
-	if err := c.watchDestroy(ctx, opts.name); err != nil {
+	if err := c.watchDestroy(ctx, opts.name, opts.timeout); err != nil {
 		return err
 	}
 
@@ -119,7 +121,7 @@ func (c destroyPreviewCommand) executeDestroyPreview(ctx context.Context, opts *
 	return nil
 }
 
-func (c destroyPreviewCommand) watchDestroy(ctx context.Context, preview string) error {
+func (c destroyPreviewCommand) watchDestroy(ctx context.Context, preview string, timeout time.Duration) error {
 	waitCtx, ctxCancel := context.WithCancel(ctx)
 	defer ctxCancel()
 
@@ -135,7 +137,7 @@ func (c destroyPreviewCommand) watchDestroy(ctx context.Context, preview string)
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		exit <- c.waitForPreviewDestroyed(waitCtx, preview)
+		exit <- c.waitForPreviewDestroyed(waitCtx, preview, timeout)
 	}(&wg)
 
 	wg.Add(1)
@@ -160,15 +162,14 @@ func (c destroyPreviewCommand) watchDestroy(ctx context.Context, preview string)
 	}
 }
 
-func (c destroyPreviewCommand) waitForPreviewDestroyed(ctx context.Context, preview string) error {
-	timeout := 5 * time.Minute
+func (c destroyPreviewCommand) waitForPreviewDestroyed(ctx context.Context, preview string, timeout time.Duration) error {
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("%w: preview %s, time %s", errDestroyPreviewTimeout, preview, timeout.String())
+			return fmt.Errorf("%w: preview %s, time %s. Timeout can be increase using --timeout flag", errDestroyPreviewTimeout, preview, timeout.String())
 		case <-ticker.C:
 			ns, err := c.k8sClient.CoreV1().Namespaces().Get(ctx, preview, metav1.GetOptions{})
 			if err != nil {
