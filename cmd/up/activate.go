@@ -436,7 +436,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
     More information about configuring your persistent volume at https://okteto.com/docs/reference/okteto-manifest/#persistentvolume-object-optional`, utils.GetDownCommand(up.Options.ManifestPathFlag)),
 					}
 				}
-				if e.Type == "Warning" && strings.Contains(e.Message, "container veth name provided (eth0) already exists") {
+				if e.Type == "Warning" && strings.Contains(e.Message, "container veth name") && strings.Contains(e.Message, "already exists") {
 					oktetoLog.Infof("pod event: %s:%s:%s", e.Reason, e.Type, e.Message)
 					continue
 				}
