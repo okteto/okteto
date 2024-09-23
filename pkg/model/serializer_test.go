@@ -1808,7 +1808,7 @@ reverse:
 						Local:  8080,
 					},
 				},
-				Image:     "busybox",
+				Image:     constants.OktetoBusyboxImage,
 				Secrets:   []Secret{},
 				Probes:    &Probes{},
 				Lifecycle: &Lifecycle{},
@@ -1972,7 +1972,7 @@ forward:
 				Command: Command{
 					Values: []string{"sh"},
 				},
-				Image:     "busybox",
+				Image:     constants.OktetoBusyboxImage,
 				Secrets:   []Secret{},
 				Probes:    &Probes{},
 				Lifecycle: &Lifecycle{},

@@ -25,6 +25,7 @@ import (
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/build"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -338,7 +339,7 @@ func getAddPermissionsInitContainer(svcName string, svc *model.Service) apiv1.Co
 	initContainerCommand, initContainerVolumeMounts := getInitContainerCommandAndVolumeMounts(*svc)
 	initContainer := apiv1.Container{
 		Name:         fmt.Sprintf("init-%s", svcName),
-		Image:        "busybox",
+		Image:        constants.OktetoBusyboxImage,
 		Command:      initContainerCommand,
 		VolumeMounts: initContainerVolumeMounts,
 	}
