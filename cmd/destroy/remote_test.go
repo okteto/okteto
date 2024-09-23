@@ -137,6 +137,9 @@ func TestDestroyRemote(t *testing.T) {
 			Commands: manifest.Destroy.Commands,
 			External: manifest.External,
 		},
+		OktetoCommandSpecificEnvVars: map[string]string{
+			"OKTETO_IS_PREVIEW_ENVIRONMENT": "",
+		},
 		BuildEnvVars:              make(map[string]string),
 		DependenciesEnvVars:       make(map[string]string),
 		Manifest:                  manifest,
@@ -185,6 +188,9 @@ func TestDestroyRemoteWithError(t *testing.T) {
 		Deployable: deployable.Entity{
 			Commands: manifest.Destroy.Commands,
 			External: manifest.External,
+		},
+		OktetoCommandSpecificEnvVars: map[string]string{
+			"OKTETO_IS_PREVIEW_ENVIRONMENT": "",
 		},
 		BuildEnvVars:              make(map[string]string),
 		DependenciesEnvVars:       make(map[string]string),
