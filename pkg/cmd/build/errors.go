@@ -35,12 +35,12 @@ func getErrorMessage(err error, tag string) error {
 	switch {
 	case isLoggedIntoRegistryButDontHavePermissions(err):
 		err = oktetoErrors.UserError{
-			E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'", tag, imageTag),
+			E:    fmt.Errorf("failed to push image '%s': You are not authorized to push image '%s'", tag, imageTag),
 			Hint: fmt.Sprintf("Please log in into the registry '%s' with a user with push permissions to '%s' or use another image.", imageRegistry, imageTag),
 		}
 	case isNotLoggedIntoRegistry(err):
 		err = oktetoErrors.UserError{
-			E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'", tag, imageTag),
+			E:    fmt.Errorf("failed to push image '%s': You are not authorized to push image '%s'", tag, imageTag),
 			Hint: fmt.Sprintf("Log in into the registry '%s' and verify that you have permissions to push the image '%s'.", imageRegistry, imageTag),
 		}
 	case isBuildkitServiceUnavailable(err):
@@ -53,7 +53,7 @@ func getErrorMessage(err error, tag string) error {
 			imageTag = extractImageTagFromPullAccessDeniedError(err)
 		}
 		err = oktetoErrors.UserError{
-			E:    fmt.Errorf("error building image: failed to pull image '%s'. The repository is not accessible or it does not exist", imageTag),
+			E:    fmt.Errorf("failed to pull image '%s'. The repository is not accessible or it does not exist", imageTag),
 			Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.", imageTag),
 		}
 	default:

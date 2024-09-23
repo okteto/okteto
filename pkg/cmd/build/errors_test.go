@@ -41,7 +41,7 @@ func Test_getErrorMessage(t *testing.T) {
 			err:  errors.New("insufficient_scope: authorization failed"),
 			tag:  imageTag,
 			expected: oktetoErrors.UserError{
-				E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'", imageTag, imageTag),
+				E:    fmt.Errorf("failed to push image '%s': You are not authorized to push image '%s'", imageTag, imageTag),
 				Hint: fmt.Sprintf("Please log in into the registry '%s' with a user with push permissions to '%s' or use another image.", "docker.io", imageTag),
 			},
 		},
@@ -50,7 +50,7 @@ func Test_getErrorMessage(t *testing.T) {
 			err:  errors.New("failed to authorize: failed to fetch anonymous token"),
 			tag:  imageTag,
 			expected: oktetoErrors.UserError{
-				E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'", imageTag, imageTag),
+				E:    fmt.Errorf("failed to push image '%s': You are not authorized to push image '%s'", imageTag, imageTag),
 				Hint: fmt.Sprintf("Log in into the registry '%s' and verify that you have permissions to push the image '%s'.", "docker.io", imageTag),
 			},
 		},
@@ -95,7 +95,7 @@ func Test_getErrorMessage(t *testing.T) {
 			err:  errors.New("pull access denied, repository does not exist or may require authorization: server message: insufficient_scope: authorization failed"),
 			tag:  imageTag,
 			expected: oktetoErrors.UserError{
-				E:    fmt.Errorf("error building image: failed to pull image '%s'. The repository is not accessible or it does not exist", imageTag),
+				E:    fmt.Errorf("failed to pull image '%s'. The repository is not accessible or it does not exist", imageTag),
 				Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.", imageTag),
 			},
 		},
