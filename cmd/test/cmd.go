@@ -51,12 +51,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	privateSharingCache = "private"
+	sharedSharingCache  = "shared"
+	lockedSharingCache  = "locked"
+)
+
 type Options struct {
 	ManifestPath     string
 	ManifestPathFlag string
 	Namespace        string
 	K8sContext       string
 	Name             string
+	CacheSharing     string
 	Variables        []string
 	Timeout          time.Duration
 	Deploy           bool
@@ -74,6 +81,12 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 	cmd := &cobra.Command{
 		Use:   "test",
 		Short: "Run tests using Remote Execution",
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if options.CacheSharing != privateSharingCache && options.CacheSharing != sharedSharingCache && options.CacheSharing != lockedSharingCache {
+				return fmt.Errorf("invalid cache-sharing option '%s'. Valid options are: private, shared, locked", options.CacheSharing)
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, servicesToTest []string) error {
 
 			if err := validator.CheckReservedVariablesNameOption(options.Variables); err != nil {
@@ -112,6 +125,7 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable to be injected in the test commands (can be set more than once)")
 	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "the duration to wait for the Test Container to run. Any value should contain a corresponding time unit e.g. 1s, 2m, 3h")
 	cmd.Flags().StringVar(&options.Name, "name", "", "the name of the Development Environment")
+	cmd.Flags().StringVarP(&options.CacheSharing, "cache-sharing", "", "private", "Specifies the cache sharing mode for the build cache. Options: private, shared, locked.")
 	cmd.Flags().BoolVar(&options.Deploy, "deploy", false, "Force execution of the commands in the 'deploy' section")
 	cmd.Flags().BoolVar(&options.NoCache, "no-cache", false, "by default, the caches of a Test Container are reused between executions")
 
@@ -358,6 +372,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			Command:                     remote.TestCommand,
 			ContextAbsolutePathOverride: ctxCwd,
 			Caches:                      test.Caches,
+			CacheSharing:                options.CacheSharing,
 			IgnoreRules:                 testIgnoreRules,
 			Artifacts:                   test.Artifacts,
 			UseRootUser:                 true,
