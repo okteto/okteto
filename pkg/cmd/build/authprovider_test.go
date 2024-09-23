@@ -214,8 +214,8 @@ func TestCredentials(t *testing.T) {
 			localCredentials:  true,
 			oktetoCredentials: false,
 			expected: &auth.CredentialsResponse{
-				Username: "",
-				Secret:   "",
+				Username: "local",
+				Secret:   "local",
 			},
 		},
 		{
@@ -270,8 +270,8 @@ func TestCredentials(t *testing.T) {
 			localCredentials:  true,
 			oktetoCredentials: false,
 			expected: &auth.CredentialsResponse{
-				Username: "",
-				Secret:   "",
+				Username: "local",
+				Secret:   "local",
 			},
 		},
 		{
@@ -334,7 +334,7 @@ func TestCredentials(t *testing.T) {
 				authContext: &fakeContext{},
 			}
 			if tc.envVarSet {
-				t.Setenv(oktetoLocalRegistryStoreEnabledEnvVarKey, tc.envVarValue)
+				t.Setenv(oktetoLocalRegistryStorePriorityEnabledEnvVarKey, tc.envVarValue)
 			}
 
 			if tc.localCredentials {
