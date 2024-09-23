@@ -156,7 +156,7 @@ func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRe
 	}
 
 	areCredentialsValid := func(creds *auth.CredentialsResponse) bool {
-		return creds.Username != "" && creds.Secret != ""
+		return creds != nil && creds.Username != "" && creds.Secret != ""
 	}
 
 	// Return local credentials if prioritizing local and valid, otherwise Okteto credentials if valid, fallback to local
@@ -173,6 +173,7 @@ func (ap *authProvider) getLocalCredentials(req *auth.CredentialsRequest) (*auth
 			oktetoLog.Infof("could not access %s defined in %s", ap.config.CredentialsStore, ap.config.Filename)
 			return &auth.CredentialsResponse{}, nil
 		}
+		return nil, err
 	}
 
 	if ac.IdentityToken != "" {
