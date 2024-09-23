@@ -180,6 +180,13 @@ okteto up api -- echo this is a test
 			}
 
 			if !okteto.IsOkteto() {
+				if oktetoManifest.Type == model.StackType {
+					return oktetoErrors.UserError{
+						E: fmt.Errorf("docker Compose format is only available using the Okteto Platform"),
+						Hint: `Follow this link to install the Okteto Platform in your Kubernetes cluster:
+    https://www.okteto.com/docs/get-started/install`,
+					}
+				}
 				if err := oktetoManifest.ValidateForCLIOnly(); err != nil {
 					return err
 				}

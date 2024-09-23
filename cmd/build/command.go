@@ -181,9 +181,9 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 				bc.analyticsTracker.TrackImageBuild,
 				bc.insights.TrackImageBuild,
 			}
-			if manifest.Type == model.StackType {
+			if !okCtx.IsOktetoCluster() && manifest.Type == model.StackType {
 				return nil, oktetoErrors.UserError{
-					E: fmt.Errorf("Docker Compose format is only available using the Okteto Platform"),
+					E: fmt.Errorf("docker Compose format is only available using the Okteto Platform"),
 					Hint: `Follow this link to install the Okteto Platform in your Kubernetes cluster:
     https://www.okteto.com/docs/get-started/install`,
 				}

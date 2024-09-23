@@ -16,6 +16,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -82,6 +83,13 @@ func Doctor(k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command {
 			}
 
 			if !okteto.IsOkteto() {
+				if manifest.Type == model.StackType {
+					return oktetoErrors.UserError{
+						E: fmt.Errorf("docker Compose format is only available using the Okteto Platform"),
+						Hint: `Follow this link to install the Okteto Platform in your Kubernetes cluster:
+    https://www.okteto.com/docs/get-started/install`,
+					}
+				}
 				if err := manifest.ValidateForCLIOnly(); err != nil {
 					return err
 				}

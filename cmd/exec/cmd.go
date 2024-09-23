@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	okerrors "github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
@@ -120,6 +121,13 @@ okteto exec api -- bash`,
 			}
 
 			if !okteto.IsOkteto() {
+				if manifest.Type == model.StackType {
+					return oktetoErrors.UserError{
+						E: fmt.Errorf("docker Compose format is only available using the Okteto Platform"),
+						Hint: `Follow this link to install the Okteto Platform in your Kubernetes cluster:
+    https://www.okteto.com/docs/get-started/install`,
+					}
+				}
 				if err := manifest.ValidateForCLIOnly(); err != nil {
 					return err
 				}
