@@ -169,7 +169,7 @@ func (c destroyPreviewCommand) waitForPreviewDestroyed(ctx context.Context, prev
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("%w: preview %s, time %s. Timeout can be increased using --timeout flag", errDestroyPreviewTimeout, preview, timeout.String())
+			return fmt.Errorf("%w: preview %s timed out after %s. Timeout can be increased using the '--timeout' flag", errDestroyPreviewTimeout, preview, timeout.String())
 		case <-ticker.C:
 			ns, err := c.k8sClient.CoreV1().Namespaces().Get(ctx, preview, metav1.GetOptions{})
 			if err != nil {
