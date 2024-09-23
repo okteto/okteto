@@ -181,6 +181,13 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 				bc.analyticsTracker.TrackImageBuild,
 				bc.insights.TrackImageBuild,
 			}
+			if manifest.Type == model.StackType {
+				return nil, oktetoErrors.UserError{
+					E: fmt.Errorf("Docker Compose format is only available using the Okteto Platform"),
+					Hint: `Follow this link to install the Okteto Platform in your Kubernetes cluster:
+    https://www.okteto.com/docs/get-started/install`,
+				}
+			}
 			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl, okCtx, bc.k8slogger, callbacks)
 		} else {
 			builder = buildv1.NewBuilder(bc.Builder, bc.ioCtrl)
