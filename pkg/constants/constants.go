@@ -75,6 +75,9 @@ const (
 	// OktetoPipelineRunnerImage defines image to use for remote deployments if empty
 	OktetoPipelineRunnerImage = "okteto/pipeline-runner:1.0.2"
 
+	// OktetoBusyboxImage defines image to use for stacks and hybrid
+	OktetoBusyboxImage = "okteto/busybox:latest"
+
 	// OktetoEnvFile defines the name for okteto env file
 	OktetoEnvFile = "OKTETO_ENV"
 
@@ -140,4 +143,7 @@ const (
 
 	// OktetoIsPreviewEnvVar Env variable containing a boolean indicating if the environment is a preview environment
 	OktetoIsPreviewEnvVar = "OKTETO_IS_PREVIEW_ENVIRONMENT"
+
+	// CIEnvVar Env variable defines if the environment is a CI environment
+	CIEnvVar = "CI"
 )

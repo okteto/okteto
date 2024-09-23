@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/constants"
@@ -82,8 +83,9 @@ func TestExecuteDestroyPreviewWithNotFoundPreviewErrorDestroying(t *testing.T) {
 func TestExecuteDestroyPreviewWithoutError(t *testing.T) {
 	ctx := context.Background()
 	opts := &DestroyOptions{
-		name: "test-preview",
-		wait: true,
+		name:    "test-preview",
+		wait:    true,
+		timeout: 5 * time.Minute,
 	}
 	var previewResponse client.FakePreviewResponse
 	command := destroyPreviewCommand{
@@ -128,8 +130,9 @@ func TestExecuteDestroyPreviewWithoutWait(t *testing.T) {
 func TestExecuteDestroyPreviewWithFailedJob(t *testing.T) {
 	ctx := context.Background()
 	opts := &DestroyOptions{
-		name: "test-preview",
-		wait: true,
+		name:    "test-preview",
+		wait:    true,
+		timeout: 5 * time.Minute,
 	}
 	var previewResponse client.FakePreviewResponse
 	ns := v1.Namespace{
@@ -160,8 +163,9 @@ func TestExecuteDestroyPreviewWithErrorStreaming(t *testing.T) {
 	ctx := context.Background()
 	var previewResponse client.FakePreviewResponse
 	opts := &DestroyOptions{
-		name: "test-preview",
-		wait: true,
+		name:    "test-preview",
+		wait:    true,
+		timeout: 5 * time.Minute,
 	}
 	command := destroyPreviewCommand{
 		okClient: &client.FakeOktetoClient{

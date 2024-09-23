@@ -762,7 +762,7 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return fmt.Errorf("dev workdir is not a dir")
 		}
 		dev.Workdir = localDir
-		dev.Image = "busybox"
+		dev.Image = constants.OktetoBusyboxImage
 
 	} else {
 		dev.Mode = constants.OktetoSyncModeFieldValue
