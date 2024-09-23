@@ -15,6 +15,7 @@ package preview
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -144,7 +145,9 @@ func (c destroyPreviewCommand) watchDestroy(ctx context.Context, preview string,
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 		err := c.okClient.Stream().DestroyAllLogs(waitCtx, preview)
-		if err != nil {
+		// Check if error is not canceled because in the case of a timeout waiting the operation to complete,
+		// we cancel the context to stop streaming logs, but we should not display the warning
+		if err != nil && !errors.Is(err, context.Canceled) {
 			oktetoLog.Warning("final log output will appear once this action is complete")
 			oktetoLog.Infof("destroy preview logs cannot be streamed due to connectivity issues: %v", err)
 		}
@@ -156,6 +159,7 @@ func (c destroyPreviewCommand) watchDestroy(ctx context.Context, preview string,
 		oktetoLog.Infof("CTRL+C received, exit")
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
+		ctxCancel()
 		// wait until streaming logs have finished
 		wg.Wait()
 		return err
