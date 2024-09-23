@@ -566,6 +566,7 @@ func TestDockerfileWithCache(t *testing.T) {
 	caches := []string{"/my", "/cache", "/list"}
 	dockerfileName, err := rdc.createDockerfile("/test", &Params{
 		Caches:         caches,
+		CacheSharing:   "private",
 		DockerfileName: "myDockerfile",
 	})
 	require.NoError(t, err)
