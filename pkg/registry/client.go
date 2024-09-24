@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	oktetoLocalRegistryStoreEnabledEnvVarKey = "OKTETO_LOCAL_REGISTRY_STORE_ENABLED"
+	oktetoLocalRegistryStorePriorityEnabledEnvVarKey = "OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED"
 
 	// This is defined in our registry fork, be aware of it if changing it
 	manifestUnknownForBeingInvalidErrorCode = "MANIFEST_UNKNOWN_FOR_BEING_INVALID"
@@ -209,7 +209,7 @@ func (c client) getAuthentication(ref name.Reference) remote.Option {
 		authn.DefaultKeychain,
 		authn.NewKeychainFromHelper(inlineHelper(c.config.GetExternalRegistryCredentials)),
 	)
-	if !env.LoadBooleanOrDefault(oktetoLocalRegistryStoreEnabledEnvVarKey, false) {
+	if !env.LoadBooleanOrDefault(oktetoLocalRegistryStorePriorityEnabledEnvVarKey, false) {
 		kc = authn.NewMultiKeychain(
 			authn.NewKeychainFromHelper(inlineHelper(c.config.GetExternalRegistryCredentials)),
 			authn.DefaultKeychain,
