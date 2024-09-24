@@ -31,7 +31,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const oktetoLocalRegistryStoreEnabledEnvVarKey = "OKTETO_LOCAL_REGISTRY_STORE_ENABLED"
+const oktetoLocalRegistryStorePriorityEnabledEnvVarKey = "OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED"
 
 var oktetoRegistry = ""
 
@@ -120,8 +120,8 @@ func (*authProvider) VerifyTokenAuthority(_ context.Context, _ *auth.VerifyToken
 
 // Credentials returns the credentials for the given host.
 // If the host is the okteto registry, it returns the credentials from the config file.
-// If the host is not the okteto registry and the OKTETO_LOCAL_REGISTRY_STORE_ENABLED is false or unset, it returns the credentials retrieved from the okteto credentials store.
-// If the host is not the okteto registry, it returns the credentials from the config file if the OKTETO_LOCAL_REGISTRY_STORE_ENABLED is true.
+// If the host is not the okteto registry and the OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED is false or unset, it returns the credentials retrieved from the okteto credentials store.
+// If the host is not the okteto registry, it returns the credentials from the config file if the OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED is true.
 func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRequest) (*auth.CredentialsResponse, error) {
 	if req.Host == oktetoRegistry {
 		return &auth.CredentialsResponse{
@@ -148,22 +148,43 @@ func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRe
 		return nil, err
 	}
 
-	credentials := ap.getOktetoCredentials(originalHost, c)
+	oktetoCredentials := ap.getOktetoCredentials(originalHost, c)
+	// Check if we need to retrieve local credentials
+	retrieveFromLocalFirst := env.LoadBooleanOrDefault(oktetoLocalRegistryStorePriorityEnabledEnvVarKey, false)
 
-	retrieveFromLocal := env.LoadBooleanOrDefault(oktetoLocalRegistryStoreEnabledEnvVarKey, false)
-	if !retrieveFromLocal {
-		return credentials, nil
+	// If Okteto credentials are valid and we're not prioritizing local, return Okteto credentials
+	if ap.areCredentialsValid(oktetoCredentials) && !retrieveFromLocalFirst {
+		return oktetoCredentials, nil
 	}
 
+	// Fetch local credentials only if Okteto credentials are invalid or we are prioritizing local
+	localCredentials, err := ap.getLocalCredentials(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Return local credentials if they are valid, otherwise return Okteto credentials
+	if ap.areCredentialsValid(localCredentials) {
+		return localCredentials, nil
+	}
+	return oktetoCredentials, nil
+}
+
+// areCredentialsValid returns true if the credentials are valid
+func (ap *authProvider) areCredentialsValid(creds *auth.CredentialsResponse) bool {
+	return creds != nil && creds.Username != "" || creds.Secret != ""
+}
+
+func (ap *authProvider) getLocalCredentials(req *auth.CredentialsRequest) (*auth.CredentialsResponse, error) {
 	ac, err := ap.config.GetAuthConfig(req.Host)
 	if err != nil {
 		if isErrCredentialsHelperNotAccessible(err) {
 			oktetoLog.Infof("could not access %s defined in %s", ap.config.CredentialsStore, ap.config.Filename)
 			return &auth.CredentialsResponse{}, nil
 		}
-
 		return nil, err
 	}
+
 	if ac.IdentityToken != "" {
 		return &auth.CredentialsResponse{
 			Secret: ac.IdentityToken,
@@ -171,13 +192,12 @@ func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRe
 	}
 
 	if ac.Username != "" && ac.Password != "" {
-		credentials = &auth.CredentialsResponse{
+		return &auth.CredentialsResponse{
 			Username: ac.Username,
 			Secret:   ac.Password,
-		}
+		}, nil
 	}
-
-	return credentials, nil
+	return &auth.CredentialsResponse{}, nil
 }
 
 func (ap *authProvider) getOktetoCredentials(host string, c *okteto.Client) *auth.CredentialsResponse {
