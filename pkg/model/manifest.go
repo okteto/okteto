@@ -1237,6 +1237,14 @@ func (mt ManifestTests) IsEmpty() bool {
 }
 
 func (m *Manifest) ValidateForCLIOnly() error {
+	if m.Type == StackType {
+		return oktetoErrors.UserError{
+			E: fmt.Errorf("docker Compose format is only available using the Okteto Platform"),
+			Hint: `Follow this link to install the Okteto Platform in your Kubernetes cluster:
+https://www.okteto.com/docs/get-started/install`,
+		}
+	}
+
 	invalidFields := []string{}
 	if !(m.Build == nil || m.Build.IsEmpty()) {
 		invalidFields = append(invalidFields, "build")
