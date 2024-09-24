@@ -103,7 +103,7 @@ ENV {{$key}}={{$val}}
 {{ end }}
 
 RUN \
-  {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}},sharing={{ $.CacheSharing }} {{end}}\
+  {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}},sharing=private {{end}}\
   --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
   /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}{{ if eq .Command "test" }} || true{{ end }}
@@ -169,7 +169,6 @@ type Params struct {
 	Deployable                  deployable.Entity
 	CommandFlags                []string
 	Caches                      []string
-	CacheSharing                string
 	Hosts                       []model.Host
 	// IgnoreRules are the ignoring rules added to this build execution.
 	// Rules follow the .dockerignore syntax as defined in:
@@ -212,7 +211,6 @@ type dockerfileTemplateProperties struct {
 	OktetoDeployable             string
 	GitHubRepositoryArgName      string
 	BuildKitHostArgName          string
-	CacheSharing                 string
 	OktetoRegistryURLArgName     string
 	Command                      string
 	Caches                       []string
@@ -421,7 +419,6 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		GitHubRepositoryArgName:      model.GithubRepositoryEnvVar,
 		BuildKitHostArgName:          model.OktetoBuildkitHostURLEnvVar,
 		OktetoRegistryURLArgName:     model.OktetoRegistryURLEnvVar,
-		CacheSharing:                 params.CacheSharing,
 		OktetoDependencyEnvVars:      params.DependenciesEnvVars,
 		OktetoPrefixEnvVars:          getOktetoPrefixEnvVars(r.getEnviron()),
 		OktetoCommandSpecificEnvVars: params.OktetoCommandSpecificEnvVars,
