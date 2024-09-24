@@ -148,22 +148,31 @@ func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRe
 		return nil, err
 	}
 
-	retrieveFromLocalFirst := env.LoadBooleanOrDefault(oktetoLocalRegistryStorePriorityEnabledEnvVarKey, false)
 	oktetoCredentials := ap.getOktetoCredentials(originalHost, c)
+	// Check if we need to retrieve local credentials
+	retrieveFromLocalFirst := env.LoadBooleanOrDefault(oktetoLocalRegistryStorePriorityEnabledEnvVarKey, false)
+
+	// If Okteto credentials are valid and we're not prioritizing local, return Okteto credentials
+	if ap.areCredentialsValid(oktetoCredentials) && !retrieveFromLocalFirst {
+		return oktetoCredentials, nil
+	}
+
+	// Fetch local credentials only if Okteto credentials are invalid or we are prioritizing local
 	localCredentials, err := ap.getLocalCredentials(req)
 	if err != nil {
 		return nil, err
 	}
 
-	areCredentialsValid := func(creds *auth.CredentialsResponse) bool {
-		return creds != nil && creds.Username != "" && creds.Secret != ""
-	}
-
-	// Return local credentials if prioritizing local and valid, otherwise Okteto credentials if valid, fallback to local
-	if (retrieveFromLocalFirst && areCredentialsValid(localCredentials)) || !areCredentialsValid(oktetoCredentials) {
+	// Return local credentials if they are valid, otherwise return Okteto credentials
+	if ap.areCredentialsValid(localCredentials) {
 		return localCredentials, nil
 	}
 	return oktetoCredentials, nil
+}
+
+// areCredentialsValid returns true if the credentials are valid
+func (ap *authProvider) areCredentialsValid(creds *auth.CredentialsResponse) bool {
+	return creds != nil && creds.Username != "" || creds.Secret != ""
 }
 
 func (ap *authProvider) getLocalCredentials(req *auth.CredentialsRequest) (*auth.CredentialsResponse, error) {
