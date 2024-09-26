@@ -207,6 +207,18 @@ func Test_getStackServicesToDeploy(t *testing.T) {
 			},
 			expected: []string{},
 		},
+		{
+			name: "MultipleComposeInfo",
+			composeSectionInfo: &model.ComposeSectionInfo{
+				ComposesInfo: []model.ComposeInfo{
+					{
+						File: "docker-compose.yml",
+					},
+				},
+				Stack: stack,
+			},
+			expected: []string{"service1", "service2", "service3", "service4"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -216,7 +228,7 @@ func Test_getStackServicesToDeploy(t *testing.T) {
 
 			svcs, _ := getStackServicesToDeploy(ctx, tt.composeSectionInfo, c)
 
-			assert.Equal(t, tt.expected, svcs)
+			assert.ElementsMatch(t, tt.expected, svcs)
 
 		})
 	}
