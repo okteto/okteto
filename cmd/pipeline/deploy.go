@@ -31,7 +31,6 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	modelUtils "github.com/okteto/okteto/pkg/model/utils"
@@ -39,7 +38,6 @@ import (
 	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/okteto/okteto/pkg/validator"
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
 )
@@ -84,7 +82,7 @@ type DeployOptions struct {
 	ReuseParams  bool
 }
 
-func deploy(ctx context.Context, fs afero.Fs) *cobra.Command {
+func deploy(ctx context.Context) *cobra.Command {
 	flags := &deployFlags{}
 	cmd := &cobra.Command{
 		Use:   "deploy",
@@ -93,17 +91,6 @@ func deploy(ctx context.Context, fs afero.Fs) *cobra.Command {
 		Example: `To run the deploy without the Okteto CLI wait for its completion, use the '--wait=false' flag:
 okteto pipeline deploy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if flags.file != "" {
-				// check that the manifest file exists
-				if !filesystem.FileExistsWithFilesystem(flags.file, fs) {
-					return oktetoErrors.ErrManifestPathNotFound
-				}
-
-				// the Okteto manifest flag should specify a file, not a directory
-				if filesystem.IsDir(flags.file, fs) {
-					return oktetoErrors.ErrManifestPathIsDir
-				}
-			}
 
 			if err := validator.CheckReservedVariablesNameOption(flags.variables); err != nil {
 				return err
