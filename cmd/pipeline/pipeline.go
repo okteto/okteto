@@ -19,7 +19,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -53,13 +52,13 @@ func NewCommand() (*Command, error) {
 }
 
 // Pipeline pipeline management commands
-func Pipeline(ctx context.Context, fs afero.Fs) *cobra.Command {
+func Pipeline(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pipeline",
 		Short: "Development Environments management commands",
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#pipeline"),
 	}
-	cmd.AddCommand(deploy(ctx, fs))
+	cmd.AddCommand(deploy(ctx))
 	cmd.AddCommand(destroy(ctx))
 	cmd.AddCommand(list(ctx))
 	return cmd
