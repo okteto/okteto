@@ -173,7 +173,7 @@ func Test_getStackServicesToDeploy(t *testing.T) {
 			expected: []string{"service1", "service2", "service3", "service4"},
 		},
 		{
-			name: "MultipleComposeInfo",
+			name: "MultipleComposeInfo with non existent service",
 			composeSectionInfo: &model.ComposeSectionInfo{
 				ComposesInfo: []model.ComposeInfo{
 					{
@@ -205,10 +205,10 @@ func Test_getStackServicesToDeploy(t *testing.T) {
 				ComposesInfo: []model.ComposeInfo{},
 				Stack:        stack,
 			},
-			expected: []string{},
+			expected: []string{"service1", "service2", "service3", "service4"},
 		},
 		{
-			name: "MultipleComposeInfo",
+			name: "only one docker compose",
 			composeSectionInfo: &model.ComposeSectionInfo{
 				ComposesInfo: []model.ComposeInfo{
 					{

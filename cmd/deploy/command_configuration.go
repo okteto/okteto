@@ -93,23 +93,24 @@ func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Opti
 func getStackServicesToDeploy(ctx context.Context, composeSectionInfo *model.ComposeSectionInfo, c kubernetes.Interface) ([]string, error) {
 	svcs := []string{}
 
-	if len(composeSectionInfo.ComposesInfo) > 0 {
-		servicesToDeploy := 0
-		for _, composeInfo := range composeSectionInfo.ComposesInfo {
-			svcs = append(svcs, composeInfo.ServicesToDeploy...)
-			servicesToDeploy += len(composeInfo.ServicesToDeploy)
-		}
-		if servicesToDeploy == 0 {
-			for service := range composeSectionInfo.Stack.Services {
-				svcs = append(svcs, service)
-			}
-			return svcs, nil
-		}
-		if err := stack.ValidateDefinedServices(composeSectionInfo.Stack, svcs); err != nil {
-			return []string{}, err
-		}
-		svcs = stack.AddDependentServicesIfNotPresent(ctx, composeSectionInfo.Stack, svcs, c)
+	servicesToDeploy := 0
+	for _, composeInfo := range composeSectionInfo.ComposesInfo {
+		svcs = append(svcs, composeInfo.ServicesToDeploy...)
+		servicesToDeploy += len(composeInfo.ServicesToDeploy)
 	}
+	if servicesToDeploy == 0 {
+		svcs = []string{}
+		for service := range composeSectionInfo.Stack.Services {
+			svcs = append(svcs, service)
+		}
+		return svcs, nil
+	}
+
+	if err := stack.ValidateDefinedServices(composeSectionInfo.Stack, svcs); err != nil {
+		return []string{}, err
+	}
+	svcs = stack.AddDependentServicesIfNotPresent(ctx, composeSectionInfo.Stack, svcs, c)
+
 	return svcs, nil
 }
 
