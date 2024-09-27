@@ -492,9 +492,9 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 			svcName:    "t1",
 			dockerfile: filepath.Join(contextPath, "Dockerfile"),
 			getWd: func() (string, error) {
-				return "/", nil
+				return filepath.Clean("/"), nil
 			},
-			fileExpected:       filepath.Clean(filepath.Join("/", contextPath, "Dockerfile")),
+			fileExpected:       filepath.Clean(filepath.Join(filepath.Clean("/"), contextPath, "Dockerfile")),
 			dockerfilesCreated: nil,
 			expectedError:      "",
 		},
@@ -503,7 +503,7 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 			svcName:    "t2",
 			dockerfile: "Dockerfile",
 			getWd: func() (string, error) {
-				return "/", nil
+				return filepath.Clean("/"), nil
 			},
 			fileExpected:       filepath.Clean("Dockerfile"),
 			dockerfilesCreated: []string{"Dockerfile"},
@@ -514,9 +514,9 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 			svcName:    "t3",
 			dockerfile: "Dockerfile",
 			getWd: func() (string, error) {
-				return "/", nil
+				return filepath.Clean("/"), nil
 			},
-			fileExpected:       filepath.Clean(filepath.Join("/", buildName, "Dockerfile")),
+			fileExpected:       filepath.Clean(filepath.Join(filepath.Clean("/"), buildName, "Dockerfile")),
 			dockerfilesCreated: []string{"Dockerfile", filepath.Join(buildName, "Dockerfile")},
 			expectedError:      fmt.Sprintf(doubleDockerfileWarning, "t3", buildName, "Dockerfile"),
 		},
@@ -525,9 +525,9 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 			svcName:    "t4",
 			dockerfile: "Dockerfile",
 			getWd: func() (string, error) {
-				return "/", nil
+				return filepath.Clean("/"), nil
 			},
-			fileExpected:       filepath.Clean(filepath.Join("/", buildName, "Dockerfile")),
+			fileExpected:       filepath.Clean(filepath.Join(filepath.Clean("/"), buildName, "Dockerfile")),
 			dockerfilesCreated: []string{filepath.Join(buildName, "Dockerfile")},
 			expectedError:      "",
 		},
@@ -538,7 +538,7 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 			fileExpected:    "/Dockerfile",
 			optionalContext: ".",
 			getWd: func() (string, error) {
-				return "/", nil
+				return filepath.Clean("/"), nil
 			},
 			dockerfilesCreated: []string{"Dockerfile"},
 			expectedError:      "",
@@ -550,7 +550,7 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 			fileExpected:    "/Dockerfile",
 			optionalContext: ".",
 			getWd: func() (string, error) {
-				return "/", nil
+				return filepath.Clean("/"), nil
 			},
 			dockerfilesCreated: []string{"Dockerfile"},
 			expectedError:      "",
@@ -562,7 +562,7 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 			fileExpected:    filepath.Clean("/Dockerfile"),
 			optionalContext: ".",
 			getWd: func() (string, error) {
-				return "/", nil
+				return filepath.Clean("/"), nil
 			},
 			dockerfilesCreated: []string{"Dockerfile"},
 			expectedError:      "",
