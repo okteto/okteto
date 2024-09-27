@@ -535,7 +535,7 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 			name:            "one dockerfile in root no warning",
 			svcName:         "t5",
 			dockerfile:      "Dockerfile",
-			fileExpected:    "/Dockerfile",
+			fileExpected:    filepath.Clean("/Dockerfile"),
 			optionalContext: ".",
 			getWd: func() (string, error) {
 				return filepath.Clean("/"), nil
@@ -547,7 +547,7 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 			name:            "dockerfile in root, not showing 2 dockerfiles warning",
 			svcName:         "t6",
 			dockerfile:      "./Dockerfile",
-			fileExpected:    "/Dockerfile",
+			fileExpected:    filepath.Clean("/Dockerfile"),
 			optionalContext: ".",
 			getWd: func() (string, error) {
 				return filepath.Clean("/"), nil
