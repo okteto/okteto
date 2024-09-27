@@ -101,7 +101,7 @@ func getStackServicesToDeploy(ctx context.Context, composeSectionInfo *model.Com
 	if servicesToDeploy == 0 {
 		svcs = []string{}
 		if composeSectionInfo.Stack == nil {
-			oktetoLog.Warning("There is no stack defined in the manifest")
+			oktetoLog.Info("There is no stack defined in the manifest")
 			return svcs, nil
 		}
 		for service := range composeSectionInfo.Stack.Services {
