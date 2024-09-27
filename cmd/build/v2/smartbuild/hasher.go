@@ -44,11 +44,12 @@ type serviceHasher struct {
 
 	fs afero.Fs
 
+	wdGetter osWorkingDirGetter
+
 	serviceShaCache map[string]string
 
 	getCurrentTimestampNano func() int64
 	projectCommit           string
-	wdGetter                osWorkingDirGetter
 
 	// lock is a mutex to provide thread safety
 	lock sync.RWMutex

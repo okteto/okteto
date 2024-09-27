@@ -24,8 +24,8 @@ import (
 )
 
 type fakeWorkingDirGetter struct {
-	workingDir string
 	err        error
+	workingDir string
 }
 
 func (f fakeWorkingDirGetter) Get() (string, error) {
