@@ -494,7 +494,7 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 			getWd: func() (string, error) {
 				return filepath.Clean("/"), nil
 			},
-			fileExpected:       filepath.Clean(filepath.Join(filepath.Clean("/"), contextPath, "Dockerfile")),
+			fileExpected:       filepath.Clean(filepath.Join(contextPath, "Dockerfile")),
 			dockerfilesCreated: nil,
 			expectedError:      "",
 		},
