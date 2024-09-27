@@ -15,6 +15,7 @@ package smartbuild
 
 import (
 	"errors"
+	"path/filepath"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/build"
@@ -112,7 +113,7 @@ func TestServiceHasher_HashBuildContextWithError(t *testing.T) {
 			errSHA:               assert.AnError,
 			diffHash:             "",
 			errHash:              assert.AnError,
-			expectedBuildContext: "/tmp/test-okteto/working-dir/test",
+			expectedBuildContext: filepath.Clean("/tmp/test-okteto/working-dir/test"),
 			expectedHash:         "70d446809d8ec0a5c83cd8c74a24b757524e26c85ccd8f8101f40ed3f51275ea",
 		},
 		{
@@ -125,7 +126,7 @@ func TestServiceHasher_HashBuildContextWithError(t *testing.T) {
 			errSHA:               assert.AnError,
 			diffHash:             "e8a0e7cc771c6947f0808ebaef3f86b2ae8d2cf1",
 			errHash:              nil,
-			expectedBuildContext: "/tmp/test-okteto/working-dir/test",
+			expectedBuildContext: filepath.Clean("/tmp/test-okteto/working-dir/test"),
 			expectedHash:         "52f2fa59c20ab2b747ba019f6835d62c0cf76712261966b859e34957c4804578",
 		},
 		{
@@ -138,7 +139,7 @@ func TestServiceHasher_HashBuildContextWithError(t *testing.T) {
 			errSHA:               nil,
 			diffHash:             "",
 			errHash:              assert.AnError,
-			expectedBuildContext: "/tmp/test-okteto/working-dir/test",
+			expectedBuildContext: filepath.Clean("/tmp/test-okteto/working-dir/test"),
 			expectedHash:         "52b47d89a34e4ed991d415b72b3359ebc1d3204bab998ef94f1bec390dc4f0e0",
 		},
 		{
@@ -151,7 +152,7 @@ func TestServiceHasher_HashBuildContextWithError(t *testing.T) {
 			errSHA:               nil,
 			diffHash:             "e8a0e7cc771c6947f0808ebaef3f86b2ae8d2cf1",
 			errHash:              nil,
-			expectedBuildContext: "/tmp/test-okteto/working-dir/test/service-a",
+			expectedBuildContext: filepath.Clean("/tmp/test-okteto/working-dir/test/service-a"),
 			expectedHash:         "f01cf2257431831e32332e11d817d2c144fb8668fc73de0aec5b80f3b7379f0d",
 		},
 		{
