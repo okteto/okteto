@@ -26,6 +26,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoHttp "github.com/okteto/okteto/pkg/http"
@@ -182,6 +183,10 @@ func newOktetoHttpClient(contextName, token, oktetoUrlPath string) (*http.Client
 	ctx := contextWithOauth2HttpClient(context.Background(), ctxHttpClient)
 
 	httpClient := oauth2.NewClient(ctx, src)
+	httpClient.Transport = &VersionedTransport{
+		Version:      config.VersionString,
+		RoundTripper: httpClient.Transport,
+	}
 
 	return httpClient, u, err
 }
@@ -219,6 +224,10 @@ func newOktetoHttpClientStateless(contextName, token, cert, oktetoUrlPath string
 	ctx := contextWithOauth2HttpClient(context.Background(), ctxHttpClient)
 
 	httpClient := oauth2.NewClient(ctx, src)
+	httpClient.Transport = &VersionedTransport{
+		Version:      config.VersionString,
+		RoundTripper: httpClient.Transport,
+	}
 
 	return httpClient, u, err
 }
@@ -254,7 +263,10 @@ func NewOktetoClientFromUrlAndToken(url, token string) (*Client, error) {
 	ctx := contextWithOauth2HttpClient(context.Background(), ctxHttpClient)
 
 	httpClient := oauth2.NewClient(ctx, src)
-
+	httpClient.Transport = &VersionedTransport{
+		Version:      config.VersionString,
+		RoundTripper: httpClient.Transport,
+	}
 	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
 
@@ -284,7 +296,10 @@ func NewOktetoClientFromUrl(url string) (*Client, error) {
 	ctx := contextWithOauth2HttpClient(context.Background(), ctxHttpClient)
 
 	httpClient := oauth2.NewClient(ctx, nil)
-
+	httpClient.Transport = &VersionedTransport{
+		Version:      config.VersionString,
+		RoundTripper: httpClient.Transport,
+	}
 	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
 
@@ -507,4 +522,14 @@ func SetServerNameOverride(serverNameOverride string) {
 
 func GetServerNameOverride() string {
 	return serverName
+}
+
+type VersionedTransport struct {
+	http.RoundTripper
+	Version string
+}
+
+func (t *VersionedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Add("X-Okteto-CLI-Version", t.Version)
+	return t.RoundTripper.RoundTrip(req)
 }

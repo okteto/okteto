@@ -167,7 +167,7 @@ func Deploy(ctx context.Context, at AnalyticsTrackerInterface, insightsTracker b
 $ okteto deploy
 
 # Execute okteto deploy in remote
-$ okteto deploy --remote 
+$ okteto deploy --remote
 
 
 # Execute okteto deploy skipping the build
@@ -589,7 +589,9 @@ func shouldRunInRemote(opts *Options) bool {
 		return true
 	}
 
-	oktetoLog.Information("Okteto recommends that you enable remote execution for your deploy commands.\n    More information available here: https://www.okteto.com/docs/core/remote-execution")
+	if opts.Manifest != nil && opts.Manifest.Deploy != nil && (len(opts.Manifest.Deploy.Commands) > 0 || opts.Manifest.Deploy.Divert != nil || len(opts.Manifest.External) > 0) {
+		oktetoLog.Information("Okteto recommends that you enable remote execution for your deploy commands.\n    More information available here: https://www.okteto.com/docs/core/remote-execution")
+	}
 	return false
 
 }

@@ -23,7 +23,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	okerrors "github.com/okteto/okteto/pkg/errors"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
@@ -96,12 +95,12 @@ okteto exec api -- bash`,
 			if execFlags.manifestPath != "" {
 				// check that the manifest file exists
 				if !filesystem.FileExistsWithFilesystem(execFlags.manifestPath, e.fs) {
-					return oktetoErrors.ErrManifestPathNotFound
+					return okerrors.ErrManifestPathNotFound
 				}
 
 				// the Okteto manifest flag should specify a file, not a directory
 				if filesystem.IsDir(execFlags.manifestPath, e.fs) {
-					return oktetoErrors.ErrManifestPathIsDir
+					return okerrors.ErrManifestPathIsDir
 				}
 			}
 
@@ -131,7 +130,7 @@ okteto exec api -- bash`,
 
 			argsResult, err := argParser.Parse(ctx, args, argsLenAtDash, manifest.Dev, okteto.GetContext().Namespace)
 			if err != nil {
-				var userErr oktetoErrors.UserError
+				var userErr okerrors.UserError
 				if errors.As(err, &userErr) {
 					userErr.Hint = "Run 'okteto up' to deploy your development container or use 'okteto context' to change your current context"
 					return userErr
