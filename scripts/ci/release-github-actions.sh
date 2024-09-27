@@ -206,12 +206,52 @@ for repo in "${repos[@]}"; do
     update_tag_if_greater "latest"
     update_tag_if_greater "stable"
 
+    # Revert Dockerfile to use okteto/okteto:master
+    echo "Reverting Dockerfile to use okteto/okteto:master"
+    if [[ -f Dockerfile ]]; then
+        sed -i.bak -E 's|(FROM okteto/okteto:)[^ ]*|\1master|g' Dockerfile
+        rm Dockerfile.bak
+
+        echo "Dockerfile changes:"
+        git --no-pager diff Dockerfile
+
+        git add Dockerfile
+        git commit -m "Update Dockerfile to use okteto/okteto:master" || echo "No changes to commit in repository '$repo'."
+    else
+        echo "Warning: Dockerfile not found in repository '$repo'. Skipping Dockerfile update to master."
+    fi
+
     # Push changes
     if [ "$DRY_RUN" = false ]; then
         echo "Pushing commits, branches, and tags to remote for repository '$repo'"
         git push "git@github.com:${REPO_OWNER}/${repo}.git" main
         git push "git@github.com:${REPO_OWNER}/${repo}.git" "${RELEASE_BRANCH}"
         git push --tags --force
+
+        echo "Creating release for tag ${RELEASE_TAG}"
+        ghr \
+            -debug \
+            -name "${RELEASE_TAG}" \
+            -token "$GITHUB_TOKEN" \
+            -recreate \
+            -replace \
+            -commitish "$(git rev-parse "${RELEASE_TAG}")" \
+            "${RELEASE_TAG}"
+
+        # After updating the release, if the current release is the latest known
+        # release, update latest
+        latest="$(tail -n1 "${VERSIONS_FILE}")"
+        if [ "${latest}" = "${RELEASE_TAG}" ]; then
+            echo "Updating latest tag"
+            ghr \
+                -debug \
+                -name "latest@${RELEASE_TAG}" \
+                -token "$GITHUB_TOKEN" \
+                -recreate \
+                -replace \
+                -commitish "$(git rev-parse "${RELEASE_TAG}")" \
+                latest
+        fi
     else
         echo "Dry run: Skipping pushing commits, branches, and tags"
     fi
