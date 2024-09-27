@@ -35,6 +35,10 @@ type repositoryCommitRetriever interface {
 	GetDiffHash(string) (string, error)
 }
 
+type osWorkingDirGetter interface {
+	Get() (string, error)
+}
+
 type serviceHasher struct {
 	gitRepoCtrl repositoryCommitRetriever
 
@@ -44,17 +48,20 @@ type serviceHasher struct {
 
 	getCurrentTimestampNano func() int64
 	projectCommit           string
+	wdGetter                osWorkingDirGetter
 
 	// lock is a mutex to provide thread safety
 	lock sync.RWMutex
 }
 
-func newServiceHasher(gitRepoCtrl repositoryCommitRetriever, fs afero.Fs) *serviceHasher {
+func newServiceHasher(gitRepoCtrl repositoryCommitRetriever, fs afero.Fs, wdGetter osWorkingDirGetter) *serviceHasher {
 	return &serviceHasher{
+
 		gitRepoCtrl:             gitRepoCtrl,
 		serviceShaCache:         map[string]string{},
 		fs:                      fs,
 		getCurrentTimestampNano: time.Now().UnixNano,
+		wdGetter:                wdGetter,
 	}
 }
 
@@ -82,6 +89,20 @@ func (sh *serviceHasher) hashWithBuildContext(buildInfo *build.Info, service str
 	if buildContext == "" {
 		buildContext = "."
 	}
+
+	osWD, err := sh.wdGetter.Get()
+	if err != nil {
+		oktetoLog.Infof("could not get working directory to calculate hash for service %q: %s. Calculation of hash might not be correct", service, err)
+
+	} else if !filepath.IsAbs(buildContext) {
+		// Build context might be an absolute path (when coming from compose file) or a relative one (when coming from Okteto manifest)
+		// If it is a relative path, we join it with the working directory to have the absolute path and pass it to the repo controller to calculate sha and diff
+		// If it is an absolute path we should not do anything as it should point to the right build context
+		buildContext = filepath.Join(osWD, buildContext)
+	}
+
+	oktetoLog.Infof("working directory: %s", osWD)
+	oktetoLog.Infof("smart build context directory: %s", buildContext)
 	if _, ok := sh.serviceShaCache[service]; !ok {
 		errorGettingGitInfo := false
 		dirCommit, err := sh.gitRepoCtrl.GetLatestDirSHA(buildContext)

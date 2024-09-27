@@ -22,6 +22,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type fakeWorkingDirGetter struct {
+	workingDir string
+	err        error
+}
+
+func (f fakeWorkingDirGetter) Get() (string, error) {
+	if f.err != nil {
+		return "", f.err
+	}
+	return f.workingDir, nil
+}
+
 func TestServiceHasher_HashProjectCommit(t *testing.T) {
 	fakeErr := errors.New("fake error")
 	tests := []struct {
@@ -50,7 +62,8 @@ func TestServiceHasher_HashProjectCommit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sh := newServiceHasher(tt.repoCtrl, afero.NewMemMapFs())
+			wdGetter := fakeWorkingDirGetter{}
+			sh := newServiceHasher(tt.repoCtrl, afero.NewMemMapFs(), wdGetter)
 			hash, err := sh.hashProjectCommit(&build.Info{})
 			assert.Equal(t, tt.expectedHash, hash)
 			assert.ErrorIs(t, err, tt.expectedErr)
@@ -91,6 +104,7 @@ func TestServiceHasher_HashBuildContext(t *testing.T) {
 					return int64(12312345252)
 				},
 				serviceShaCache: map[string]string{},
+				wdGetter:        fakeWorkingDirGetter{},
 			}
 			hash := sh.hashWithBuildContext(&build.Info{}, serviceName)
 			assert.Equal(t, tt.expectedHash, hash)
