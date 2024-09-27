@@ -138,6 +138,8 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 	defer func() {
 		require.NoError(t, os.Chdir(originalWd))
 	}()
+	dir, err := os.Getwd()
+	require.NoError(t, err)
 	require.NoError(t, os.Mkdir(serviceContext, os.ModePerm))
 
 	df := filepath.Join(serviceContext, serviceDockerfile)
@@ -211,7 +213,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto",
-				File:       filepath.Join(serviceContext, serviceDockerfile),
+				File:       filepath.Join(dir, serviceContext, serviceDockerfile),
 				Target:     "build",
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
@@ -251,7 +253,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto",
-				File:       filepath.Join(serviceContext, serviceDockerfile),
+				File:       filepath.Join(dir, serviceContext, serviceDockerfile),
 				Target:     "build",
 				Path:       "service",
 				CacheFrom: []string{
@@ -293,7 +295,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/mycustomimage:dev",
-				File:       filepath.Join(serviceContext, serviceDockerfile),
+				File:       filepath.Join(dir, serviceContext, serviceDockerfile),
 				Target:     "build",
 				Path:       "service",
 				CacheFrom: []string{
@@ -482,62 +484,89 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 		fileExpected       string
 		optionalContext    string
 		expectedError      string
+		getWd              func() (string, error)
 		dockerfilesCreated []string
 	}{
 		{
-			name:               "dockerfile is abs path",
-			svcName:            "t1",
-			dockerfile:         filepath.Join(contextPath, "Dockerfile"),
-			fileExpected:       filepath.Join(contextPath, "Dockerfile"),
+			name:       "dockerfile is abs path",
+			svcName:    "t1",
+			dockerfile: filepath.Join(contextPath, "Dockerfile"),
+			getWd: func() (string, error) {
+				return "/", nil
+			},
+			fileExpected:       filepath.Clean(filepath.Join("/", contextPath, "Dockerfile")),
 			dockerfilesCreated: nil,
 			expectedError:      "",
 		},
 		{
-			name:               "dockerfile is NOT relative to context",
-			svcName:            "t2",
-			dockerfile:         "Dockerfile",
-			fileExpected:       "Dockerfile",
+			name:       "dockerfile is NOT relative to context",
+			svcName:    "t2",
+			dockerfile: "Dockerfile",
+			getWd: func() (string, error) {
+				return "/", nil
+			},
+			fileExpected:       filepath.Clean("Dockerfile"),
 			dockerfilesCreated: []string{"Dockerfile"},
 			expectedError:      fmt.Sprintf(warningDockerfilePath, "t2", "Dockerfile", buildName),
 		},
 		{
-			name:               "dockerfile in root and dockerfile in context path",
-			svcName:            "t3",
-			dockerfile:         "Dockerfile",
-			fileExpected:       filepath.Join(buildName, "Dockerfile"),
+			name:       "dockerfile in root and dockerfile in context path",
+			svcName:    "t3",
+			dockerfile: "Dockerfile",
+			getWd: func() (string, error) {
+				return "/", nil
+			},
+			fileExpected:       filepath.Clean(filepath.Join("/", buildName, "Dockerfile")),
 			dockerfilesCreated: []string{"Dockerfile", filepath.Join(buildName, "Dockerfile")},
 			expectedError:      fmt.Sprintf(doubleDockerfileWarning, "t3", buildName, "Dockerfile"),
 		},
 		{
-			name:               "dockerfile is relative to context",
-			svcName:            "t4",
-			dockerfile:         "Dockerfile",
-			fileExpected:       filepath.Join(buildName, "Dockerfile"),
+			name:       "dockerfile is relative to context",
+			svcName:    "t4",
+			dockerfile: "Dockerfile",
+			getWd: func() (string, error) {
+				return "/", nil
+			},
+			fileExpected:       filepath.Clean(filepath.Join("/", buildName, "Dockerfile")),
 			dockerfilesCreated: []string{filepath.Join(buildName, "Dockerfile")},
 			expectedError:      "",
 		},
 		{
-			name:               "one dockerfile in root no warning",
-			svcName:            "t5",
-			dockerfile:         "Dockerfile",
-			fileExpected:       "Dockerfile",
-			optionalContext:    ".",
+			name:            "one dockerfile in root no warning",
+			svcName:         "t5",
+			dockerfile:      "Dockerfile",
+			fileExpected:    "/Dockerfile",
+			optionalContext: ".",
+			getWd: func() (string, error) {
+				return "/", nil
+			},
 			dockerfilesCreated: []string{"Dockerfile"},
 			expectedError:      "",
 		},
 		{
-			name:               "dockerfile in root, not showing 2 dockerfiles warning",
-			svcName:            "t6",
-			dockerfile:         "./Dockerfile",
-			fileExpected:       "Dockerfile",
-			optionalContext:    ".",
+			name:            "dockerfile in root, not showing 2 dockerfiles warning",
+			svcName:         "t6",
+			dockerfile:      "./Dockerfile",
+			fileExpected:    "/Dockerfile",
+			optionalContext: ".",
+			getWd: func() (string, error) {
+				return "/", nil
+			},
 			dockerfilesCreated: []string{"Dockerfile"},
 			expectedError:      "",
 		},
-	}
-
-	getwd := func() (string, error) {
-		return ".", nil
+		{
+			name:            "dockerfile in folder, not showing 2 dockerfiles warning",
+			svcName:         "t7",
+			dockerfile:      "Dockerfile",
+			fileExpected:    filepath.Clean("/Dockerfile"),
+			optionalContext: ".",
+			getWd: func() (string, error) {
+				return "/", nil
+			},
+			dockerfilesCreated: []string{"Dockerfile"},
+			expectedError:      "",
+		},
 	}
 
 	for _, tt := range tests {
@@ -571,7 +600,7 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 				contextTest = tt.optionalContext
 			}
 
-			file := extractFromContextAndDockerfile(contextTest, tt.dockerfile, tt.svcName, getwd)
+			file := extractFromContextAndDockerfile(contextTest, tt.dockerfile, tt.svcName, tt.getWd)
 			warningErr := strings.TrimSuffix(buf.String(), "\n")
 
 			if warningErr != "" && tt.expectedError == "" {
