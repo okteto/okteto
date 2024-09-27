@@ -180,7 +180,7 @@ func main() {
 	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger))
 	root.AddCommand(test.Test(ctx, ioController, k8sLogger, at))
 
-	root.AddCommand(pipeline.Pipeline(ctx, fs))
+	root.AddCommand(pipeline.Pipeline(ctx))
 
 	err = root.Execute()
 
