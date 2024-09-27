@@ -178,7 +178,7 @@ func TestServiceHasher_HashBuildContextWithError(t *testing.T) {
 			errSHA:               nil,
 			diffHash:             "e8a0e7cc771c6947f0808ebaef3f86b2ae8d2cf1",
 			errHash:              nil,
-			expectedBuildContext: "/tmp/test-okteto/working-dir",
+			expectedBuildContext: filepath.Clean("/tmp/test-okteto/working-dir"),
 			expectedHash:         "63facbf3f5dede6119682e69dc444fa154d066a8449524a91862f8ada0e96d0f",
 		},
 		{
