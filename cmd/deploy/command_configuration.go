@@ -15,6 +15,7 @@ package deploy
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"os"
 
@@ -100,6 +101,9 @@ func getStackServicesToDeploy(ctx context.Context, composeSectionInfo *model.Com
 	}
 	if servicesToDeploy == 0 {
 		svcs = []string{}
+		if composeSectionInfo.Stack == nil {
+			return nil, fmt.Errorf("no services to deploy")
+		}
 		for service := range composeSectionInfo.Stack.Services {
 			svcs = append(svcs, service)
 		}
