@@ -763,6 +763,7 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 		dev.Workdir = localDir
 		dev.Image = constants.OktetoBusyboxImage
+		dev.ImagePullPolicy = apiv1.PullIfNotPresent
 
 	} else {
 		dev.Mode = constants.OktetoSyncModeFieldValue
