@@ -763,6 +763,7 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 		dev.Workdir = localDir
 		dev.Image = constants.OktetoBusyboxImage
+		dev.ImagePullPolicy = apiv1.PullIfNotPresent
 
 	} else {
 		dev.Mode = constants.OktetoSyncModeFieldValue
@@ -782,8 +783,6 @@ type manifestRaw struct {
 	Dependencies  deps.ManifestSection     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	External      externalresource.Section `json:"external,omitempty" yaml:"external,omitempty"`
 	Name          string                   `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace     string                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context       string                   `json:"context,omitempty" yaml:"context,omitempty"`
 	Icon          string                   `json:"icon,omitempty" yaml:"icon,omitempty"`
 	GlobalForward []forward.GlobalForward  `json:"forward,omitempty" yaml:"forward,omitempty"`
 }
