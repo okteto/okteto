@@ -103,7 +103,8 @@ func TestNewSmartBuildCtrl(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(OktetoEnableSmartBuildEnvVar, tt.input.isEnabledValue)
 
-			ctrl := NewSmartBuildCtrl(&fakeConfigRepo{}, &fakeRegistryController{}, afero.NewMemMapFs(), io.NewIOController())
+			wdGetter := fakeWorkingDirGetter{}
+			ctrl := NewSmartBuildCtrl(&fakeConfigRepo{}, &fakeRegistryController{}, afero.NewMemMapFs(), io.NewIOController(), wdGetter)
 
 			assert.Equal(t, tt.output.isEnabled, ctrl.IsEnabled())
 		})
@@ -310,10 +311,11 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
+			wdGetter := fakeWorkingDirGetter{}
 			got, err := newServiceHasher(fakeConfigRepo{
 				sha: tc.input.repo.sha,
 				err: tc.input.repo.err,
-			}, afero.NewMemMapFs()).hashProjectCommit(tc.input.buildInfo)
+			}, afero.NewMemMapFs(), wdGetter).hashProjectCommit(tc.input.buildInfo)
 			assert.ErrorIs(t, err, tc.expectedErr)
 			if tc.expected != "" {
 				expectedHash := sha256.Sum256([]byte(tc.expected))
