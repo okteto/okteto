@@ -338,10 +338,11 @@ func getInitContainers(svcName string, s *model.Stack) []apiv1.Container {
 func getAddPermissionsInitContainer(svcName string, svc *model.Service) apiv1.Container {
 	initContainerCommand, initContainerVolumeMounts := getInitContainerCommandAndVolumeMounts(*svc)
 	initContainer := apiv1.Container{
-		Name:         fmt.Sprintf("init-%s", svcName),
-		Image:        constants.OktetoBusyboxImage,
-		Command:      initContainerCommand,
-		VolumeMounts: initContainerVolumeMounts,
+		Name:            fmt.Sprintf("init-%s", svcName),
+		Image:           constants.OktetoBusyboxImage,
+		ImagePullPolicy: apiv1.PullIfNotPresent,
+		Command:         initContainerCommand,
+		VolumeMounts:    initContainerVolumeMounts,
 	}
 	return initContainer
 }

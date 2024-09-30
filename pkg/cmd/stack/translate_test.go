@@ -279,9 +279,10 @@ func Test_translateStatefulSet(t *testing.T) {
 		t.Errorf("Wrong statefulset spec.template.spec.termination_grade_period_seconds: '%d'", *result.Spec.Template.Spec.TerminationGracePeriodSeconds)
 	}
 	initContainer := apiv1.Container{
-		Name:    fmt.Sprintf("init-%s", "svcName"),
-		Image:   constants.OktetoBusyboxImage,
-		Command: []string{"sh", "-c", "chmod 777 /data"},
+		Name:            fmt.Sprintf("init-%s", "svcName"),
+		Image:           constants.OktetoBusyboxImage,
+		Command:         []string{"sh", "-c", "chmod 777 /data"},
+		ImagePullPolicy: apiv1.PullIfNotPresent,
 		VolumeMounts: []apiv1.VolumeMount{
 			{
 				MountPath: "/data",
@@ -634,9 +635,10 @@ func Test_translateJobWithVolumes(t *testing.T) {
 		t.Errorf("Wrong job spec.template.spec.termination_grade_period_seconds: '%d'", *result.Spec.Template.Spec.TerminationGracePeriodSeconds)
 	}
 	initContainer := apiv1.Container{
-		Name:    fmt.Sprintf("init-%s", "svcName"),
-		Image:   constants.OktetoBusyboxImage,
-		Command: []string{"sh", "-c", "chmod 777 /data"},
+		Name:            fmt.Sprintf("init-%s", "svcName"),
+		Image:           constants.OktetoBusyboxImage,
+		ImagePullPolicy: apiv1.PullIfNotPresent,
+		Command:         []string{"sh", "-c", "chmod 777 /data"},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
 				MountPath: "/data",
