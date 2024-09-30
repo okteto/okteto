@@ -1054,8 +1054,6 @@ services:
 		{
 			name: "manifest with namespace and context",
 			manifest: []byte(`
-namespace: test
-context: context-to-use
 deploy:
 - okteto stack deploy`),
 			expected: &Manifest{
