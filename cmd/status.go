@@ -106,7 +106,8 @@ func Status(fs afero.Fs) *cobra.Command {
 				return err
 			}
 
-			sy, err := syncthing.Load(dev, namespace)
+			ctxNamespace := okteto.GetContext().Namespace
+			sy, err := syncthing.Load(dev, ctxNamespace)
 			if err != nil {
 				oktetoLog.Infof("error accessing the syncthing info file: %s", err)
 				return oktetoErrors.ErrNotInDevMode
