@@ -1054,8 +1054,6 @@ services:
 		{
 			name: "manifest with namespace and context",
 			manifest: []byte(`
-namespace: test
-context: context-to-use
 deploy:
 - okteto stack deploy`),
 			expected: &Manifest{
@@ -1808,10 +1806,11 @@ reverse:
 						Local:  8080,
 					},
 				},
-				Image:     constants.OktetoBusyboxImage,
-				Secrets:   []Secret{},
-				Probes:    &Probes{},
-				Lifecycle: &Lifecycle{},
+				Image:           constants.OktetoBusyboxImage,
+				ImagePullPolicy: v1.PullIfNotPresent,
+				Secrets:         []Secret{},
+				Probes:          &Probes{},
+				Lifecycle:       &Lifecycle{},
 				Sync: Sync{
 					Folders: []SyncFolder{},
 				},
@@ -1972,10 +1971,11 @@ forward:
 				Command: Command{
 					Values: []string{"sh"},
 				},
-				Image:     constants.OktetoBusyboxImage,
-				Secrets:   []Secret{},
-				Probes:    &Probes{},
-				Lifecycle: &Lifecycle{},
+				Image:           constants.OktetoBusyboxImage,
+				ImagePullPolicy: v1.PullIfNotPresent,
+				Secrets:         []Secret{},
+				Probes:          &Probes{},
+				Lifecycle:       &Lifecycle{},
 				Sync: Sync{
 					Compression:    true,
 					RescanInterval: 300,
