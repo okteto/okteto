@@ -410,8 +410,8 @@ jobs:
       - run: *okteto-login
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG" "linux/amd64,linux/arm64"
-      - run: trivy image --no-progress okteto/okteto:$CIRCLE_TAG
-      - run: trivy image --no-progress okteto/bin:latest
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --no-progress okteto/okteto:$CIRCLE_TAG
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --no-progress okteto/bin:latest
 
   push-image-latest:
     executor: golang-ci
@@ -420,8 +420,8 @@ jobs:
       - run: *okteto-login
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh latest "linux/amd64"
-      - run: trivy image --no-progress okteto/okteto:latest
-      - run: trivy image --no-progress okteto/bin:latest
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --no-progress okteto/okteto:latest
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --no-progress okteto/bin:latest
 
   upload-static-job:
     executor: golang-ci
@@ -522,7 +522,6 @@ workflows:
             branches:
               only:
                 - master
-                - ultra-mega-release-branch-3.0
       - e2e-build-windows:
           requires:
             - test-e2e-setup-windows
@@ -530,7 +529,6 @@ workflows:
             branches:
               only:
                 - master
-                - ultra-mega-release-branch-3.0
       - e2e-deploy-windows:
           requires:
             - test-e2e-setup-windows
@@ -538,7 +536,6 @@ workflows:
             branches:
               only:
                 - master
-                - ultra-mega-release-branch-3.0
       - e2e-up-windows:
           requires:
             - test-e2e-setup-windows
@@ -546,7 +543,6 @@ workflows:
             branches:
               only:
                 - master
-                - ultra-mega-release-branch-3.0
       - test-e2e-setup:
           requires:
             - build-binaries
@@ -554,7 +550,6 @@ workflows:
             branches:
               only:
                 - master
-                - ultra-mega-release-branch-3.0
       - e2e-build:
           requires:
             - test-e2e-setup
@@ -562,7 +557,6 @@ workflows:
             branches:
               only:
                 - master
-                - ultra-mega-release-branch-3.0
       - e2e-deploy:
           requires:
             - test-e2e-setup
@@ -570,7 +564,6 @@ workflows:
             branches:
               only:
                 - master
-                - ultra-mega-release-branch-3.0
       - e2e-up:
           requires:
             - test-e2e-setup
@@ -578,7 +571,6 @@ workflows:
             branches:
               only:
                 - master
-                - ultra-mega-release-branch-3.0
       - e2e-actions:
           requires:
             - test-e2e-setup
@@ -586,7 +578,6 @@ workflows:
             branches:
               only:
                 - master
-                - ultra-mega-release-branch-3.0
       - e2e-okteto:
           requires:
             - test-e2e-setup
@@ -594,7 +585,6 @@ workflows:
             branches:
               only:
                 - master
-                - ultra-mega-release-branch-3.0
       - test-release:
           context:
             - GKE
