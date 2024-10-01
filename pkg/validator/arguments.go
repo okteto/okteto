@@ -6,7 +6,8 @@ import (
 	"github.com/spf13/afero"
 )
 
-// FileArgumentIsNotDir validates that the file input exists and is not a directory
+// FileArgumentIsNotDir validates the given file, if empty it returns nil
+// errors: ErrManifestPathNotFound, ErrManifestPathIsDir
 func FileArgumentIsNotDir(fs afero.Fs, file string) error {
 	if file == "" {
 		return nil
