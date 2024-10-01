@@ -36,6 +36,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -114,12 +115,15 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
+			if err := validator.FileArgumentIsNotDir(afero.NewOsFs(), options.File); err != nil {
+				return err
+			}
+
 			ioCtrl.Logger().Info("context loaded")
 
 			bc := NewBuildCommand(ioCtrl, at, insights, oktetoContext, k8slogger)
 
 			builder, err := bc.getBuilder(options, oktetoContext)
-
 			if err != nil {
 				return err
 			}
