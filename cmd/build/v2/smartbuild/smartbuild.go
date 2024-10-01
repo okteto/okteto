@@ -59,13 +59,13 @@ type Ctrl struct {
 }
 
 // NewSmartBuildCtrl creates a new smart build controller
-func NewSmartBuildCtrl(repo repositoryInterface, registry registryController, fs afero.Fs, ioCtrl *io.Controller) *Ctrl {
+func NewSmartBuildCtrl(repo repositoryInterface, registry registryController, fs afero.Fs, ioCtrl *io.Controller, wdGetter osWorkingDirGetter) *Ctrl {
 	isEnabled := env.LoadBooleanOrDefault(OktetoEnableSmartBuildEnvVar, true)
 
 	return &Ctrl{
 		gitRepo:            repo,
 		isEnabled:          isEnabled,
-		hasher:             newServiceHasher(repo, fs),
+		hasher:             newServiceHasher(repo, fs, wdGetter),
 		registryController: registry,
 		ioCtrl:             ioCtrl,
 	}

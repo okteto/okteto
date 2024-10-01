@@ -47,6 +47,7 @@ type LocalExec struct{}
 
 func (le *LocalExec) RunCommand(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
 	c := le.createCommand(ctx, dir, name, arg...)
+	oktetoLog.Debugf("executing command: %s", strings.Join(c.Args, " "))
 
 	return c.Output()
 }
@@ -60,6 +61,8 @@ func (*LocalExec) LookPath(file string) (string, error) {
 func (le *LocalExec) RunPipeCommands(ctx context.Context, dir string, cmd1 string, cmd1Args []string, cmd2 string, cmd2Args []string) ([]byte, error) {
 	c1 := le.createCommand(ctx, dir, cmd1, cmd1Args...)
 	c2 := le.createCommand(ctx, dir, cmd2, cmd2Args...)
+
+	oktetoLog.Debugf("running command %s | %s", strings.Join(c1.Args, " "), strings.Join(c2.Args, " "))
 
 	var errOut bytes.Buffer
 	var errOut2 bytes.Buffer

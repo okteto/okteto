@@ -73,6 +73,12 @@ var fakeManifest *model.Manifest = &model.Manifest{
 	},
 }
 
+type fakeWorkingDirGetter struct{}
+
+func (f fakeWorkingDirGetter) Get() (string, error) {
+	return "", nil
+}
+
 type fakeRegistry struct {
 	registry          map[string]fakeImage
 	errAddImageByName error
@@ -160,7 +166,7 @@ func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegi
 		},
 		Config:         cfg,
 		ioCtrl:         io.NewIOController(),
-		smartBuildCtrl: smartbuild.NewSmartBuildCtrl(fakeConfigRepo{}, registry, afero.NewMemMapFs(), io.NewIOController()),
+		smartBuildCtrl: smartbuild.NewSmartBuildCtrl(fakeConfigRepo{}, registry, afero.NewMemMapFs(), io.NewIOController(), fakeWorkingDirGetter{}),
 		oktetoContext: &okteto.ContextStateless{
 			Store: &okteto.ContextStore{
 				Contexts: map[string]*okteto.Context{
