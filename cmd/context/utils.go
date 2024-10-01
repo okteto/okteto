@@ -30,10 +30,8 @@ type SelectItem struct {
 }
 
 type ManifestOptions struct {
-	Name       string
-	Namespace  string
-	Filename   string
-	K8sContext string
+	Name     string
+	Filename string
 }
 
 func getKubernetesContextList(filterOkteto bool) []string {
