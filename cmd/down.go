@@ -23,13 +23,13 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/down"
 	"github.com/okteto/okteto/pkg/config"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -73,16 +73,10 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, fs afero.Fs) 
 				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
+
 				devPath = filesystem.GetManifestPathFromWorkdir(devPath, workdir)
-
-				// check that the manifest file exists
-				if !filesystem.FileExistsWithFilesystem(devPath, fs) {
-					return oktetoErrors.ErrManifestPathNotFound
-				}
-
-				// the Okteto manifest flag should specify a file, not a directory
-				if filesystem.IsDir(devPath, fs) {
-					return oktetoErrors.ErrManifestPathIsDir
+				if err := validator.FileArgumentIsNotDir(fs, devPath); err != nil {
+					return err
 				}
 			}
 			manifest, err := model.GetManifestV2(manifestOpts.Filename, fs)
