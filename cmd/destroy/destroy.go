@@ -114,6 +114,10 @@ type buildTrackerInterface interface {
 	TrackImageBuild(context.Context, *analytics.ImageBuildMetadata)
 }
 
+type buildControlProviderInterface interface {
+	provide(name string) buildCtrl
+}
+
 type destroyCommand struct {
 	executor             executor.ManifestExecutor
 	nsDestroyer          destroyer
@@ -126,7 +130,7 @@ type destroyCommand struct {
 	ioCtrl               *io.Controller
 	getDivertDriver      divertProvider
 	getPipelineDestroyer pipelineDestroyerProvider
-	buildCtrl            buildCtrl
+	buildCtrlProvider    buildControlProviderInterface
 }
 
 // Destroy destroys the dev application defined by the manifest
@@ -189,23 +193,6 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			cwd, err := os.Getwd()
-			if err != nil {
-				return fmt.Errorf("failed to get the current working directory: %w", err)
-			}
-
-			if options.Name == "" {
-				c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).ProvideWithLogger(okteto.GetContext().Cfg, k8sLogger)
-				if err != nil {
-					return err
-				}
-				inferer := devenvironment.NewNameInferer(c)
-				options.Name = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, options.ManifestPathFlag)
-				if err != nil {
-					return fmt.Errorf("could not infer environment name")
-				}
-			}
-
 			dynClient, _, err := okteto.GetDynamicClient()
 			if err != nil {
 				return err
@@ -237,11 +224,13 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 				secrets:           secrets.NewSecrets(k8sClient),
 				k8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
 				oktetoClient:      okClient,
-				buildCtrl:         newBuildCtrl(options.Name, at, insights, ioCtrl),
-				analyticsTracker:  at,
-				getManifest:       model.GetManifestV2,
-				ioCtrl:            ioCtrl,
-				getDivertDriver:   divert.New,
+				buildCtrlProvider: &buildControlProvider{
+					at, insights, ioCtrl,
+				},
+				analyticsTracker: at,
+				getManifest:      model.GetManifestV2,
+				ioCtrl:           ioCtrl,
+				getDivertDriver:  divert.New,
 				getPipelineDestroyer: func() (pipelineDestroyer, error) {
 					return pipelineCMD.NewCommand()
 				},
@@ -364,15 +353,36 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 	}
 
 	opts.Manifest = manifest
+
+	// name for cfg map being destroyed
+	// name set by flag has priority over manifest name
+	// if no name is set, the name of the manifest is used
+	// if no name is set in the manifest, the name is inferred
+	if opts.Name == "" && opts.Manifest.Name != "" {
+		opts.Name = opts.Manifest.Name
+	} else if opts.Manifest.Name == "" {
+		c, _, err := dc.k8sClientProvider.Provide(okteto.GetContext().Cfg)
+		if err != nil {
+			return err
+		}
+		cwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get the current working directory: %w", err)
+		}
+		inferer := devenvironment.NewNameInferer(c)
+		opts.Name = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, opts.ManifestPathFlag)
+	}
+
+	buildCtrl := dc.buildCtrlProvider.provide(opts.Name)
+
+	// if the destroy section has an image, we need to build it before destroying
 	if opts.Manifest.Destroy != nil {
-		if opts.Name == "" {
-			if opts.Manifest.Name == "" {
-				opts.Manifest.Name = dc.buildCtrl.name
-			}
-		} else {
+		// include the opts.Name into the manifest
+		// opts.Name would be the one from the flag or inferred
+		if opts.Manifest.Name == "" {
 			opts.Manifest.Name = opts.Name
 		}
-		if err := dc.buildCtrl.buildImageIfNecessary(ctx, opts.Manifest); err != nil {
+		if err := buildCtrl.buildImageIfNecessary(ctx, opts.Manifest); err != nil {
 			return err
 		}
 		opts.Manifest.Destroy.Image, err = env.ExpandEnvIfNotEmpty(opts.Manifest.Destroy.Image)

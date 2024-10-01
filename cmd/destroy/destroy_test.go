@@ -181,6 +181,14 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+type fakeBuildCtrlProvider struct {
+	buildCtrl buildCtrl
+}
+
+func (bcp fakeBuildCtrlProvider) provide(name string) buildCtrl {
+	return bcp.buildCtrl
+}
+
 func TestDestroyWithErrorGettingManifestButDestroySuccess(t *testing.T) {
 	k8sClientProvider := test.NewFakeK8sProvider()
 	fakeClient, _, err := k8sClientProvider.Provide(api.NewConfig())
@@ -188,6 +196,7 @@ func TestDestroyWithErrorGettingManifestButDestroySuccess(t *testing.T) {
 		t.Fatal("could not create fake k8s client")
 	}
 	destroyer := &fakeDestroyer{}
+
 	dc := &destroyCommand{
 		getManifest: func(_ string, _ afero.Fs) (*model.Manifest, error) {
 			return nil, assert.AnError
@@ -195,12 +204,15 @@ func TestDestroyWithErrorGettingManifestButDestroySuccess(t *testing.T) {
 		ConfigMapHandler: NewConfigmapHandler(fakeClient),
 		nsDestroyer:      destroyer,
 		secrets:          &fakeSecretHandler{},
-		buildCtrl: buildCtrl{
-			builder: fakeBuilderV2{
-				getSvcs: fakeGetSvcs{},
-				build:   nil,
+		buildCtrlProvider: fakeBuildCtrlProvider{
+			buildCtrl: buildCtrl{
+				builder: fakeBuilderV2{
+					getSvcs: fakeGetSvcs{},
+					build:   nil,
+				},
 			},
 		},
+		k8sClientProvider: k8sClientProvider,
 	}
 
 	err = dc.destroy(context.Background(), &Options{})
@@ -228,6 +240,14 @@ func TestDestroyWithErrorDestroyingDependencies(t *testing.T) {
 		secrets:          &fakeSecretHandler{},
 		getPipelineDestroyer: func() (pipelineDestroyer, error) {
 			return nil, assert.AnError
+		},
+		buildCtrlProvider: fakeBuildCtrlProvider{
+			buildCtrl: buildCtrl{
+				builder: fakeBuilderV2{
+					getSvcs: fakeGetSvcs{},
+					build:   nil,
+				},
+			},
 		},
 	}
 
@@ -267,6 +287,14 @@ func TestDestroyWithErrorDestroyingDivert(t *testing.T) {
 		getDivertDriver: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface) (divert.Driver, error) {
 			return nil, assert.AnError
 		},
+		buildCtrlProvider: fakeBuildCtrlProvider{
+			buildCtrl: buildCtrl{
+				builder: fakeBuilderV2{
+					getSvcs: fakeGetSvcs{},
+					build:   nil,
+				},
+			},
+		},
 	}
 
 	err = dc.destroy(ctx, &Options{
@@ -298,10 +326,12 @@ func TestDestroyWithErrorOnCommands(t *testing.T) {
 		executor: &fakeExecutor{
 			err: assert.AnError,
 		},
-		buildCtrl: buildCtrl{
-			builder: fakeBuilderV2{
-				getSvcs: fakeGetSvcs{},
-				build:   nil,
+		buildCtrlProvider: fakeBuildCtrlProvider{
+			buildCtrl: buildCtrl{
+				builder: fakeBuilderV2{
+					getSvcs: fakeGetSvcs{},
+					build:   nil,
+				},
 			},
 		},
 	}
@@ -340,10 +370,12 @@ func TestDestroyWithErrorOnCommandsForcingDestroy(t *testing.T) {
 		executor: &fakeExecutor{
 			err: fmt.Errorf("error executing command"),
 		},
-		buildCtrl: buildCtrl{
-			builder: fakeBuilderV2{
-				getSvcs: fakeGetSvcs{},
-				build:   nil,
+		buildCtrlProvider: fakeBuildCtrlProvider{
+			buildCtrl: buildCtrl{
+				builder: fakeBuilderV2{
+					getSvcs: fakeGetSvcs{},
+					build:   nil,
+				},
 			},
 		},
 	}
@@ -382,10 +414,12 @@ func TestDestroyWithErrorDestroyingK8sResources(t *testing.T) {
 		secrets:           &fakeSecretHandler{},
 		k8sClientProvider: k8sClientProvider,
 		executor:          &fakeExecutor{},
-		buildCtrl: buildCtrl{
-			builder: fakeBuilderV2{
-				getSvcs: fakeGetSvcs{},
-				build:   nil,
+		buildCtrlProvider: fakeBuildCtrlProvider{
+			buildCtrl: buildCtrl{
+				builder: fakeBuilderV2{
+					getSvcs: fakeGetSvcs{},
+					build:   nil,
+				},
 			},
 		},
 	}
