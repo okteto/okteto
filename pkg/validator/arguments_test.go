@@ -31,8 +31,8 @@ func TestFileArgumentIsNotDir(t *testing.T) {
 	}
 	tests := []struct {
 		wantErr error
-		args    args
 		name    string
+		args    args
 	}{
 		{
 			name: "empty file",
