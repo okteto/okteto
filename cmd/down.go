@@ -64,9 +64,7 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, fs afero.Fs) 
 			}
 
 			manifestOpts := contextCMD.ManifestOptions{
-				Filename:   devPath,
-				Namespace:  okteto.GetContext().Namespace,
-				K8sContext: okteto.GetContext().Name,
+				Filename: devPath,
 			}
 			if devPath != "" {
 				workdir := filesystem.GetWorkdirFromManifestPath(devPath)

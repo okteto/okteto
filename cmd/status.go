@@ -73,7 +73,7 @@ func Status(fs afero.Fs) *cobra.Command {
 				return err
 			}
 
-			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
+			manifestOpts := contextCMD.ManifestOptions{Filename: devPath}
 			manifest, err := model.GetManifestV2(manifestOpts.Filename, afero.NewOsFs())
 			if err != nil {
 				return err
@@ -106,7 +106,8 @@ func Status(fs afero.Fs) *cobra.Command {
 				return err
 			}
 
-			sy, err := syncthing.Load(dev, namespace)
+			ctxNamespace := okteto.GetContext().Namespace
+			sy, err := syncthing.Load(dev, ctxNamespace)
 			if err != nil {
 				oktetoLog.Infof("error accessing the syncthing info file: %s", err)
 				return oktetoErrors.ErrNotInDevMode
