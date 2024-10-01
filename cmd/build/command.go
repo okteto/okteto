@@ -183,9 +183,9 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 			}
 			if !okCtx.IsOktetoCluster() && manifest.Type == model.StackType {
 				return nil, oktetoErrors.UserError{
-					E: fmt.Errorf("docker Compose format is only available using the Okteto Platform"),
-					Hint: `Follow this link to install the Okteto Platform in your Kubernetes cluster:
-    https://www.okteto.com/docs/get-started/install`,
+					E: fmt.Errorf("Docker Compose is only available using the Okteto Platform"),
+					Hint: `Visit our docs to learn more about the Okteto Platform:
+    https://www.okteto.com/docs`,
 				}
 			}
 			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl, okCtx, bc.k8slogger, callbacks)
