@@ -24,10 +24,10 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	okerrors "github.com/okteto/okteto/pkg/errors"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -93,16 +93,8 @@ okteto exec api -- echo this is a test
 # Get an interactive shell session inside the Development Container 'api'
 okteto exec api -- bash`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if execFlags.manifestPath != "" {
-				// check that the manifest file exists
-				if !filesystem.FileExistsWithFilesystem(execFlags.manifestPath, e.fs) {
-					return oktetoErrors.ErrManifestPathNotFound
-				}
-
-				// the Okteto manifest flag should specify a file, not a directory
-				if filesystem.IsDir(execFlags.manifestPath, e.fs) {
-					return oktetoErrors.ErrManifestPathIsDir
-				}
+			if err := validator.FileArgumentIsNotDir(e.fs, execFlags.manifestPath); err != nil {
+				return err
 			}
 
 			ctxOpts := &contextCMD.Options{

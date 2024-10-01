@@ -46,6 +46,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
@@ -158,14 +159,8 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 				// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
 				options.ManifestPathFlag = manifestPathFlag
 
-				// check that the manifest file exists
-				if !filesystem.FileExistsWithFilesystem(manifestPathFlag, fs) {
-					return oktetoErrors.ErrManifestPathNotFound
-				}
-
-				// the Okteto manifest flag should specify a file, not a directory
-				if filesystem.IsDir(manifestPathFlag, fs) {
-					return oktetoErrors.ErrManifestPathIsDir
+				if err := validator.FileArgumentIsNotDir(fs, options.ManifestPath); err != nil {
+					return err
 				}
 
 				// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
