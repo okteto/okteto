@@ -54,6 +54,7 @@ import (
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -151,14 +152,8 @@ okteto up api -- echo this is a test
 				// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
 				upOptions.ManifestPathFlag = manifestPathFlag
 
-				// check that the manifest file exists
-				if !filesystem.FileExistsWithFilesystem(manifestPathFlag, fs) {
-					return oktetoErrors.ErrManifestPathNotFound
-				}
-
-				// the Okteto manifest flag should specify a file, not a directory
-				if filesystem.IsDir(manifestPathFlag, fs) {
-					return oktetoErrors.ErrManifestPathIsDir
+				if err := validator.FileArgumentIsNotDir(fs, manifestPathFlag); err != nil {
+					return err
 				}
 
 				// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir

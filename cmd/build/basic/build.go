@@ -22,10 +22,9 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/env"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/afero"
 )
 
@@ -60,17 +59,8 @@ func (ob *Builder) Build(ctx context.Context, options *types.BuildOptions) error
 	if options.File == "" {
 		options.File = filepath.Join(path, "Dockerfile")
 	}
-
-	fs := afero.NewOsFs()
-
-	// check that the manifest file exists
-	if !filesystem.FileExistsWithFilesystem(options.File, fs) {
-		return oktetoErrors.ErrManifestPathNotFound
-	}
-
-	// the Okteto manifest flag should specify a file, not a directory
-	if filesystem.IsDir(options.File, fs) {
-		return oktetoErrors.ErrManifestPathIsDir
+	if err := validator.FileArgumentIsNotDir(afero.NewOsFs(), options.File); err != nil {
+		return err
 	}
 
 	var err error

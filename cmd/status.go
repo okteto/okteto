@@ -26,11 +26,11 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/status"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
+	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -51,16 +51,8 @@ func Status(fs afero.Fs) *cobra.Command {
 		Short: "Status of the file synchronization process for a given Development Container",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#status"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if devPath != "" {
-				// check that the manifest file exists
-				if !filesystem.FileExistsWithFilesystem(devPath, fs) {
-					return oktetoErrors.ErrManifestPathNotFound
-				}
-
-				// the Okteto manifest flag should specify a file, not a directory
-				if filesystem.IsDir(devPath, fs) {
-					return oktetoErrors.ErrManifestPathIsDir
-				}
+			if err := validator.FileArgumentIsNotDir(fs, devPath); err != nil {
+				return err
 			}
 
 			if okteto.InDevContainer() {
@@ -73,7 +65,7 @@ func Status(fs afero.Fs) *cobra.Command {
 				return err
 			}
 
-			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
+			manifestOpts := contextCMD.ManifestOptions{Filename: devPath}
 			manifest, err := model.GetManifestV2(manifestOpts.Filename, afero.NewOsFs())
 			if err != nil {
 				return err
@@ -106,7 +98,8 @@ func Status(fs afero.Fs) *cobra.Command {
 				return err
 			}
 
-			sy, err := syncthing.Load(dev, namespace)
+			ctxNamespace := okteto.GetContext().Namespace
+			sy, err := syncthing.Load(dev, ctxNamespace)
 			if err != nil {
 				oktetoLog.Infof("error accessing the syncthing info file: %s", err)
 				return oktetoErrors.ErrNotInDevMode

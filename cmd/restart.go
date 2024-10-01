@@ -24,11 +24,11 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -45,21 +45,13 @@ func Restart(fs afero.Fs) *cobra.Command {
 		Args:   utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#restart"),
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if devPath != "" {
-				// check that the manifest file exists
-				if !filesystem.FileExistsWithFilesystem(devPath, fs) {
-					return oktetoErrors.ErrManifestPathNotFound
-				}
-
-				// the Okteto manifest flag should specify a file, not a directory
-				if filesystem.IsDir(devPath, fs) {
-					return oktetoErrors.ErrManifestPathIsDir
-				}
+			if err := validator.FileArgumentIsNotDir(fs, devPath); err != nil {
+				return err
 			}
 
 			ctx := context.Background()
 
-			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
+			manifestOpts := contextCMD.ManifestOptions{Filename: devPath}
 			manifest, err := model.GetManifestV2(manifestOpts.Filename, afero.NewOsFs())
 			if err != nil {
 				return err

@@ -22,11 +22,11 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/doctor"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -49,16 +49,8 @@ func Doctor(k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Info("starting doctor command")
 
-			if doctorOpts.DevPath != "" {
-				// check that the manifest file exists
-				if !filesystem.FileExistsWithFilesystem(doctorOpts.DevPath, fs) {
-					return oktetoErrors.ErrManifestPathNotFound
-				}
-
-				// the Okteto manifest flag should specify a file, not a directory
-				if filesystem.IsDir(doctorOpts.DevPath, fs) {
-					return oktetoErrors.ErrManifestPathIsDir
-				}
+			if err := validator.FileArgumentIsNotDir(fs, doctorOpts.DevPath); err != nil {
+				return err
 			}
 
 			ctx := context.Background()
