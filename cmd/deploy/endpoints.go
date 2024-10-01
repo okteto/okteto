@@ -32,6 +32,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -96,15 +97,10 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 				}
 				options.ManifestPath = filesystem.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
 
-				// check that the manifest file exists
-				if !filesystem.FileExistsWithFilesystem(options.ManifestPath, fs) {
-					return oktetoErrors.ErrManifestPathNotFound
+				if err := validator.FileArgumentIsNotDir(fs, options.ManifestPath); err != nil {
+					return err
 				}
 
-				// the Okteto manifest flag should specify a file, not a directory
-				if filesystem.IsDir(options.ManifestPath, fs) {
-					return oktetoErrors.ErrManifestPathIsDir
-				}
 			}
 
 			// false for 'json' and 'md' to avoid breaking their syntax

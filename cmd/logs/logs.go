@@ -28,12 +28,12 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/errors"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
+	okerrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/stern/stern/stern"
@@ -65,16 +65,8 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Comm
 		Use:   "logs",
 		Short: "Fetch the logs of your Development Environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if options.ManifestPath != "" {
-				// check that the manifest file exists
-				if !filesystem.FileExistsWithFilesystem(options.ManifestPath, fs) {
-					return oktetoErrors.ErrManifestPathNotFound
-				}
-
-				// the Okteto manifest flag should specify a file, not a directory
-				if filesystem.IsDir(options.ManifestPath, fs) {
-					return oktetoErrors.ErrManifestPathIsDir
-				}
+			if err := validator.FileArgumentIsNotDir(fs, options.ManifestPath); err != nil {
+				return err
 			}
 
 			ctx, cancel := context.WithCancel(ctx)
@@ -90,7 +82,7 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Comm
 			}
 
 			if !okteto.IsOkteto() {
-				return oktetoErrors.ErrContextIsNotOktetoCluster
+				return okerrors.ErrContextIsNotOktetoCluster
 			}
 
 			manifest, err := model.GetManifestV2(options.ManifestPath, afero.NewOsFs())
