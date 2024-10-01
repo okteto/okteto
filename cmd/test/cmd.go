@@ -161,14 +161,8 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
 		options.ManifestPathFlag = manifestPathFlag
 
-		// check that the manifest file exists
-		if !filesystem.FileExistsWithFilesystem(options.ManifestPath, fs) {
-			return analytics.TestMetadata{}, oktetoErrors.ErrManifestPathNotFound
-		}
-
-		// the Okteto manifest flag should specify a file, not a directory
-		if filesystem.IsDir(options.ManifestPath, fs) {
-			return analytics.TestMetadata{}, oktetoErrors.ErrManifestPathIsDir
+		if err := validator.FileArgumentIsNotDir(fs, options.ManifestPath); err != nil {
+			return analytics.TestMetadata{}, err
 		}
 
 		// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
