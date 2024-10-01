@@ -185,6 +185,7 @@ func TranslatePodSpec(podSpec *apiv1.PodSpec, rule *model.TranslationRule) {
 	TranslateOktetoVolumes(podSpec, rule)
 	TranslatePodSecurityContext(podSpec, rule.SecurityContext)
 	TranslatePodServiceAccount(podSpec, rule.ServiceAccount)
+	TranslatePodPriorityClassName(podSpec, rule.PriorityClassName)
 
 	TranslateOktetoNodeSelector(podSpec, rule.NodeSelector)
 	TranslateOktetoAffinity(podSpec, rule.Affinity)
@@ -450,6 +451,13 @@ func TranslatePodSecurityContext(spec *apiv1.PodSpec, s *model.SecurityContext) 
 func TranslatePodServiceAccount(spec *apiv1.PodSpec, sa string) {
 	if sa != "" {
 		spec.ServiceAccountName = sa
+	}
+}
+
+// TranslatePodPriorityClassName translates the priority class the pod uses
+func TranslatePodPriorityClassName(spec *apiv1.PodSpec, pc string) {
+	if pc != "" {
+		spec.PriorityClassName = pc
 	}
 }
 
