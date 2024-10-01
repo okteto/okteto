@@ -68,6 +68,7 @@ type Dev struct {
 	Name                 string                `json:"name,omitempty" yaml:"name,omitempty"`
 	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
 	ServiceAccount       string                `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
+	PriorityClassName    string                `json:"priorityClassName,omitempty" yaml:"priorityClassName,omitempty"`
 	parentSyncFolder     string
 	Interface            string           `json:"interface,omitempty" yaml:"interface,omitempty"`
 	Mode                 string           `json:"mode,omitempty" yaml:"mode,omitempty"`
@@ -816,21 +817,22 @@ func TranslatePodAffinity(tr *TranslationRule, name string) {
 // ToTranslationRule translates a dev struct into a translation rule
 func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset bool) *TranslationRule {
 	rule := &TranslationRule{
-		Container:        dev.Container,
-		ImagePullPolicy:  dev.ImagePullPolicy,
-		Environment:      dev.Environment,
-		Secrets:          dev.Secrets,
-		WorkDir:          dev.Workdir,
-		PersistentVolume: main.PersistentVolumeEnabled(),
-		Volumes:          []VolumeMount{},
-		SecurityContext:  dev.SecurityContext,
-		ServiceAccount:   dev.ServiceAccount,
-		Resources:        dev.Resources,
-		InitContainer:    dev.InitContainer,
-		Probes:           dev.Probes,
-		Lifecycle:        dev.Lifecycle,
-		NodeSelector:     dev.NodeSelector,
-		Affinity:         (*apiv1.Affinity)(dev.Affinity),
+		Container:         dev.Container,
+		ImagePullPolicy:   dev.ImagePullPolicy,
+		Environment:       dev.Environment,
+		Secrets:           dev.Secrets,
+		WorkDir:           dev.Workdir,
+		PersistentVolume:  main.PersistentVolumeEnabled(),
+		Volumes:           []VolumeMount{},
+		SecurityContext:   dev.SecurityContext,
+		ServiceAccount:    dev.ServiceAccount,
+		PriorityClassName: main.PriorityClassName,
+		Resources:         dev.Resources,
+		InitContainer:     dev.InitContainer,
+		Probes:            dev.Probes,
+		Lifecycle:         dev.Lifecycle,
+		NodeSelector:      dev.NodeSelector,
+		Affinity:          (*apiv1.Affinity)(dev.Affinity),
 	}
 
 	if dev.IsHybridModeEnabled() {
@@ -1080,6 +1082,9 @@ func (service *Dev) validateForExtraFields() error {
 	}
 	if service.ServiceAccount != "" {
 		return fmt.Errorf(errorMessage, "serviceAccount")
+	}
+	if service.PriorityClassName != "" {
+		return fmt.Errorf(errorMessage, "priorityClassName")
 	}
 	if service.RemotePort != 0 {
 		return fmt.Errorf(errorMessage, "remote")

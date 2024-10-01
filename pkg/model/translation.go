@@ -29,6 +29,7 @@ type TranslationRule struct {
 	NodeSelector      map[string]string    `json:"nodeSelector" yaml:"nodeSelector"`
 	Affinity          *apiv1.Affinity      `json:"affinity" yaml:"affinity"`
 	ServiceAccount    string               `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
+	PriorityClassName string               `json:"priorityClassName,omitempty" yaml:"priorityClassName,omitempty"`
 	WorkDir           string               `json:"workdir"`
 	Marker            string               `json:"marker"`
 	OktetoBinImageTag string               `json:"oktetoBinImageTag"`

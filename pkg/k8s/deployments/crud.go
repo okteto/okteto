@@ -74,6 +74,7 @@ func Sandbox(dev *model.Dev, namespace string) *appsv1.Deployment {
 				},
 				Spec: apiv1.PodSpec{
 					ServiceAccountName:            dev.ServiceAccount,
+					PriorityClassName:             dev.PriorityClassName,
 					TerminationGracePeriodSeconds: pointer.Int64(0),
 					Containers: []apiv1.Container{
 						{
