@@ -27,7 +27,6 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/devenvironment"
-	"github.com/okteto/okteto/pkg/errors"
 	okerrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -120,7 +119,7 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Comm
 			defer os.Remove(tmpKubeconfigFile)
 			c, err := getSternConfig(manifest, options, tmpKubeconfigFile)
 			if err != nil {
-				return errors.UserError{
+				return okerrors.UserError{
 					E: fmt.Errorf("invalid log configuration: %w", err),
 				}
 			}
@@ -137,7 +136,7 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Comm
 			analytics.TrackLogs(err == nil, options.All)
 
 			if err != nil {
-				return errors.UserError{
+				return okerrors.UserError{
 					E: fmt.Errorf("failed to get logs: %w", err),
 				}
 			}

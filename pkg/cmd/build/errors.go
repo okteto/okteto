@@ -16,6 +16,7 @@ package build
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -34,12 +35,12 @@ func getErrorMessage(err error, tag string) error {
 	switch {
 	case isLoggedIntoRegistryButDontHavePermissions(err):
 		err = oktetoErrors.UserError{
-			E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'", tag, imageTag),
+			E:    fmt.Errorf("failed to push image '%s': You are not authorized to push image '%s'", tag, imageTag),
 			Hint: fmt.Sprintf("Please log in into the registry '%s' with a user with push permissions to '%s' or use another image.", imageRegistry, imageTag),
 		}
 	case isNotLoggedIntoRegistry(err):
 		err = oktetoErrors.UserError{
-			E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'", tag, imageTag),
+			E:    fmt.Errorf("failed to push image '%s': You are not authorized to push image '%s'", tag, imageTag),
 			Hint: fmt.Sprintf("Log in into the registry '%s' and verify that you have permissions to push the image '%s'.", imageRegistry, imageTag),
 		}
 	case isBuildkitServiceUnavailable(err):
@@ -48,8 +49,11 @@ func getErrorMessage(err error, tag string) error {
 			Hint: "Please try again later.",
 		}
 	case isPullAccessDenied(err):
+		if imageTag == "" {
+			imageTag = extractImageTagFromPullAccessDeniedError(err)
+		}
 		err = oktetoErrors.UserError{
-			E:    fmt.Errorf("error building image: failed to pull image '%s'. The repository is not accessible or it does not exist", imageTag),
+			E:    fmt.Errorf("failed to pull image '%s'. The repository is not accessible or it does not exist", imageTag),
 			Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.", imageTag),
 		}
 	default:
@@ -62,6 +66,15 @@ func getErrorMessage(err error, tag string) error {
 		}
 	}
 	return err
+}
+
+func extractImageTagFromPullAccessDeniedError(err error) string {
+	re := regexp.MustCompile(`([a-zA-Z0-9\.\/_-]+): pull access denied`)
+	matches := re.FindStringSubmatch(err.Error())
+	if len(matches) > 1 {
+		return matches[1]
+	}
+	return ""
 }
 
 // IsTransientError returns true if err represents a transient registry error
