@@ -413,7 +413,7 @@ jobs:
       - run: trivy image --no-progress okteto/okteto:$CIRCLE_TAG
       - run: trivy image --no-progress okteto/bin:latest
 
-  push-image-latest:
+  push-image-master:
     executor: golang-ci
     steps:
       - checkout
@@ -608,7 +608,7 @@ workflows:
               ignore:
                 - master
                 - *release-branch-regex
-      - push-image-latest:
+      - push-image-master:
           context: Product-okteto-dev
           requires:
             - build-binaries
