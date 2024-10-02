@@ -72,7 +72,7 @@ type builder interface {
 func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at *analytics.Tracker) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
-		Use:   "test",
+		Use:   "test [testName...]",
 		Short: "Run tests using Remote Execution",
 		RunE: func(cmd *cobra.Command, servicesToTest []string) error {
 

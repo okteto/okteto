@@ -35,7 +35,7 @@
                 if [[ $prerel =~ $beta_prerel_regex ]]; then
                         tags="${tags},okteto/okteto:beta"
                 elif [ -n "$version" ]; then
-                        tags="${tags},okteto/okteto:stable"
+                        tags="${tags},okteto/okteto:stable,okteto/okteto:latest"
                 fi
         fi
 

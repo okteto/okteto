@@ -419,8 +419,8 @@ jobs:
       - checkout
       - run: *okteto-login
       - run: *docker-login
-      - run: ./scripts/ci/push-image.sh latest "linux/amd64"
-      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --no-progress okteto/okteto:latest
+      - run: ./scripts/ci/push-image.sh master "linux/amd64,linux/arm64"
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --no-progress okteto/okteto:master
       - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --no-progress okteto/bin:latest
 
   upload-static-job:

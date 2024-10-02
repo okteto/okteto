@@ -34,7 +34,6 @@ const (
 	// This is mixpanel's public token, is needed to send analytics to the project
 	mixpanelToken = "92fe782cdffa212d8f03861fbf1ea301"
 
-	manifestHasChangedEvent       = "Manifest Has Changed"
 	downEvent                     = "Down"
 	downVolumesEvent              = "DownVolumes"
 	restartEvent                  = "Restart Services"
@@ -46,7 +45,6 @@ const (
 	buildTransientErrorEvent      = "BuildTransientError"
 	destroyEvent                  = "Destroy"
 	deployStackEvent              = "Deploy Stack"
-	kubeconfigEvent               = "Kubeconfig"
 	namespaceEvent                = "Namespace"
 	namespaceCreateEvent          = "CreateNamespace"
 	namespaceDeleteEvent          = "DeleteNamespace"
@@ -79,11 +77,6 @@ func init() {
 	mixpanelClient = mixpanel.NewFromClient(c, mixpanelToken, "https://analytics.okteto.com")
 }
 
-// TrackKubeconfig sends a tracking event to mixpanel when the user use the kubeconfig command
-func TrackKubeconfig(success bool) {
-	track(kubeconfigEvent, success, nil)
-}
-
 // TrackNamespace sends a tracking event to mixpanel when the user changes a namespace
 func TrackNamespace(success, withArg bool) {
 	props := map[string]interface{}{
@@ -113,11 +106,6 @@ func TrackPreviewDeploy(success bool, scope string) {
 // TrackPreviewDestroy sends a tracking event to mixpanel when the deletes a preview environment
 func TrackPreviewDestroy(success bool) {
 	track(previewDestroyEvent, success, nil)
-}
-
-// TrackManifestHasChanged sends a tracking event to mixpanel when the okteto up command fails because manifest has changed
-func TrackManifestHasChanged(success bool) {
-	track(manifestHasChangedEvent, success, nil)
 }
 
 // TrackExecMetadata is the metadata added to execEvent
