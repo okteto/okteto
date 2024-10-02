@@ -148,13 +148,13 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 `,
 		Args: utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			initialCWD, err := os.Getwd()
-			if err != nil {
-				return fmt.Errorf("failed to get the current working directory: %w", err)
-			}
-
 			if options.ManifestPath != "" {
 				// if path is absolute, its transformed to rel from root
+				initialCWD, err := os.Getwd()
+				if err != nil {
+					return fmt.Errorf("failed to get the current working directory: %w", err)
+				}
+
 				manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, options.ManifestPath)
 				if err != nil {
 					return err
@@ -191,6 +191,12 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 
 			if !okteto.IsOkteto() {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
+			}
+
+			// cwd could have been changed by the manifest path flag
+			cwd, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("failed to get the current working directory: %w", err)
 			}
 
 			dynClient, _, err := okteto.GetDynamicClient()
@@ -246,7 +252,7 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 				}
 			}
 			options.Manifest = manifest
-			setOptionsNameAndManifestName(ctx, okteto.GetContext().Namespace, options, inferer, initialCWD)
+			setOptionsNameAndManifestName(ctx, okteto.GetContext().Namespace, options, inferer, cwd)
 
 			// We need to create a custom kubeconfig file to avoid to modify the user's kubeconfig when running the
 			// destroy operation locally. This kubeconfig contains the kubernetes configuration got from the okteto
