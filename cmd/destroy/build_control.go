@@ -26,6 +26,16 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 )
 
+type buildControlProvider struct {
+	analyticsTracker buildTrackerInterface
+	insights         buildTrackerInterface
+	ioCtrl           *io.Controller
+}
+
+func (bc *buildControlProvider) provide(name string) buildCtrl {
+	return newBuildCtrl(name, bc.analyticsTracker, bc.insights, bc.ioCtrl)
+}
+
 type buildCtrl struct {
 	builder builderInterface
 	name    string
