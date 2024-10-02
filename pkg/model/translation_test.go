@@ -47,6 +47,7 @@ func TestDevToTranslationRule(t *testing.T) {
                 amd.com/gpu: 1
         nodeSelector:
             disktype: ssd
+        priorityClassName: class
         affinity:
             podAffinity:
                 requiredDuringSchedulingIgnoredDuringExecution:
@@ -100,6 +101,7 @@ func TestDevToTranslationRule(t *testing.T) {
 			{Name: "BASHOPTS", Value: "histappend"},
 			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r"},
 		},
+		PriorityClassName: "class",
 		SecurityContext: &SecurityContext{
 			RunAsUser:  pointer.Int64(0),
 			RunAsGroup: pointer.Int64(0),
@@ -190,6 +192,7 @@ func TestDevToTranslationRule(t *testing.T) {
 			RunAsGroup: pointer.Int64(0),
 			FSGroup:    pointer.Int64(0),
 		},
+		PriorityClassName: "class",
 		Affinity: &apiv1.Affinity{
 			PodAffinity: &apiv1.PodAffinity{
 				RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{

@@ -21,13 +21,10 @@ import (
 	"github.com/docker/docker/pkg/namesgenerator"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/env"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	modelUtils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/validator"
-	"github.com/spf13/afero"
 )
 
 var (
@@ -43,19 +40,6 @@ func optionsSetup(cwd string, opts *DeployOptions, args []string) error {
 		opts.name = getRandomName(opts.scope)
 	} else {
 		opts.name = getExpandedName(args[0])
-	}
-
-	if opts.file != "" {
-		fs := afero.NewOsFs()
-		// check that the manifest file exists
-		if !filesystem.FileExistsWithFilesystem(opts.file, fs) {
-			return oktetoErrors.ErrManifestPathNotFound
-		}
-
-		// the Okteto manifest flag should specify a file, not a directory
-		if filesystem.IsDir(opts.file, fs) {
-			return oktetoErrors.ErrManifestPathIsDir
-		}
 	}
 
 	var err error

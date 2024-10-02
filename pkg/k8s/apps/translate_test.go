@@ -68,6 +68,7 @@ dev:
       runAsGroup: 101
       fsGroup: 102
     serviceAccount: sa
+    priorityClassName: class
     sync:
       - .:/app
       - sub:/path
@@ -164,6 +165,7 @@ dev:
 			FSGroup: &fsGroup,
 		},
 		ServiceAccountName:            "sa",
+		PriorityClassName:             "class",
 		TerminationGracePeriodSeconds: pointer.Int64(0),
 		Volumes: []apiv1.Volume{
 			{
@@ -495,6 +497,7 @@ dev:
 			FSGroup: pointer.Int64(0),
 		},
 		ServiceAccountName:            "",
+		PriorityClassName:             "class",
 		TerminationGracePeriodSeconds: pointer.Int64(0),
 		Volumes: []apiv1.Volume{
 			{

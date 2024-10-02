@@ -39,8 +39,6 @@ func Test_GetManifestV2(t *testing.T) {
 			file:        "file",
 			expectedErr: false,
 			manifestYAML: []byte(`
-namespace: test-namespace
-context: manifest-context
 build:
   service:
     image: defined-tag-image
@@ -91,6 +89,24 @@ dependencies:
 		},
 		{
 			name:        "manifest-path-not-found",
+			expectedErr: true,
+		},
+		{
+			name: "manifest-context-not-valid",
+			file: "file",
+			manifestYAML: []byte(`
+context: value
+deploy:
+  - echo "deploy"`),
+			expectedErr: true,
+		},
+		{
+			name: "manifest-namespace-not-valid",
+			file: "file",
+			manifestYAML: []byte(`
+namespace: value
+deploy:
+  - echo "deploy"`),
 			expectedErr: true,
 		},
 	}

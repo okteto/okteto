@@ -36,6 +36,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -114,12 +115,15 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
+			if err := validator.FileArgumentIsNotDir(afero.NewOsFs(), options.File); err != nil {
+				return err
+			}
+
 			ioCtrl.Logger().Info("context loaded")
 
 			bc := NewBuildCommand(ioCtrl, at, insights, oktetoContext, k8slogger)
 
 			builder, err := bc.getBuilder(options, oktetoContext)
-
 			if err != nil {
 				return err
 			}
@@ -183,14 +187,18 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 			}
 			if !okCtx.IsOktetoCluster() && manifest.Type == model.StackType {
 				return nil, oktetoErrors.UserError{
-					E: fmt.Errorf("docker Compose format is only available using the Okteto Platform"),
-					Hint: `Follow this link to install the Okteto Platform in your Kubernetes cluster:
-    https://www.okteto.com/docs/get-started/install`,
+					E: fmt.Errorf("Docker Compose is only available using the Okteto Platform"),
+					Hint: `Visit our docs to learn more about the Okteto Platform:
+    https://www.okteto.com/docs`,
 				}
 			}
 			builder = buildv2.NewBuilder(bc.Builder, bc.Registry, bc.ioCtrl, okCtx, bc.k8slogger, callbacks)
 		} else {
-			builder = buildv1.NewBuilder(bc.Builder, bc.ioCtrl)
+			return nil, oktetoErrors.UserError{
+				E: fmt.Errorf("specified Okteto Manifest doesn't contain a build section"),
+				Hint: `Add a build section to your Okteto Manifest to build your images.
+    See more at: https://www.okteto.com/docs/1.25/core/okteto-manifest/#build`,
+			}
 		}
 	}
 

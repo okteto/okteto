@@ -589,7 +589,9 @@ func shouldRunInRemote(opts *Options) bool {
 		return true
 	}
 
-	oktetoLog.Information("Okteto recommends that you enable remote execution for your deploy commands.\n    More information available here: https://www.okteto.com/docs/core/remote-execution")
+	if opts.Manifest != nil && opts.Manifest.Deploy != nil && (len(opts.Manifest.Deploy.Commands) > 0 || opts.Manifest.Deploy.Divert != nil || len(opts.Manifest.External) > 0) {
+		oktetoLog.Information("Okteto recommends that you enable remote execution for your deploy commands.\n    More information available here: https://www.okteto.com/docs/core/remote-execution")
+	}
 	return false
 
 }
@@ -849,18 +851,13 @@ func checkOktetoManifestPathFlag(options *Options, fs afero.Fs) error {
 	if err != nil {
 		return err
 	}
+
+	if err := validator.FileArgumentIsNotDir(fs, manifestPathFlag); err != nil {
+		return err
+	}
+
 	// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
 	options.ManifestPathFlag = manifestPathFlag
-
-	// check that the manifest file exists
-	if !filesystem.FileExistsWithFilesystem(manifestPathFlag, fs) {
-		return oktetoErrors.ErrManifestPathNotFound
-	}
-
-	// the Okteto manifest flag should specify a file, not a directory
-	if filesystem.IsDir(manifestPathFlag, fs) {
-		return oktetoErrors.ErrManifestPathIsDir
-	}
 
 	// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
 	uptManifestPath, err := filesystem.UpdateCWDtoManifestPath(options.ManifestPath)

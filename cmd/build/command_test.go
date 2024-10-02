@@ -122,6 +122,10 @@ func getManifestWithError(_ string, _ afero.Fs) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
+func getFakeManifestV2NoBuild(_ string, _ afero.Fs) (*model.Manifest, error) {
+	return &model.Manifest{}, nil
+}
+
 func getManifestWithInvalidManifestError(_ string, _ afero.Fs) (*model.Manifest, error) {
 	return nil, oktetoErrors.ErrInvalidManifest
 }
@@ -267,6 +271,19 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
+			isBuildV2Expected: false,
+		},
+		{
+			name: "Manifest without build section. error",
+			buildCommand: &Command{
+				GetManifest:      getFakeManifestV2NoBuild,
+				Registry:         newFakeRegistry(),
+				ioCtrl:           io.NewIOController(),
+				analyticsTracker: fakeAnalyticsTracker{},
+				insights:         fakeAnalyticsTracker{},
+			},
+			options:           &types.BuildOptions{},
+			expectedError:     true,
 			isBuildV2Expected: false,
 		},
 	}

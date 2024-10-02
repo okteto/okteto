@@ -111,7 +111,7 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistry
 		buildEnvironments: buildEnvs,
 		Config:            config,
 		ioCtrl:            ioCtrl,
-		smartBuildCtrl:    smartbuild.NewSmartBuildCtrl(gitRepo, registry, config.fs, ioCtrl),
+		smartBuildCtrl:    smartbuild.NewSmartBuildCtrl(gitRepo, registry, config.fs, ioCtrl, wdCtrl),
 		oktetoContext:     okCtx,
 		k8sLogger:         k8sLogger,
 		onBuildFinish:     onBuildFinish,
@@ -154,7 +154,7 @@ func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish)
 		buildEnvironments: buildEnvs,
 		Config:            config,
 		ioCtrl:            ioCtrl,
-		smartBuildCtrl:    smartbuild.NewSmartBuildCtrl(gitRepo, reg, config.fs, ioCtrl),
+		smartBuildCtrl:    smartbuild.NewSmartBuildCtrl(gitRepo, reg, config.fs, ioCtrl, wdCtrl),
 		oktetoContext:     okCtx,
 
 		onBuildFinish: onBuildFinish,
