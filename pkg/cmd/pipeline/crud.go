@@ -56,7 +56,7 @@ func ListStatefulsets(ctx context.Context, name, ns string, c kubernetes.Interfa
 	return sfsList, nil
 }
 
-// HasDeployedSomething checks if the pipeline has deployed any deployment/statefulset/job
+// HasDeployedSomething checks if the pipeline has deployed any deployment/statefulset
 func HasDeployedSomething(ctx context.Context, name, ns string, c kubernetes.Interface) (bool, error) {
 	labels := fmt.Sprintf("%s=%s", model.DeployedByLabel, format.ResourceK8sMetaString(name))
 	dList, err := deployments.List(ctx, ns, labels, c)

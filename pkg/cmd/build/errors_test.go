@@ -41,7 +41,7 @@ func Test_getErrorMessage(t *testing.T) {
 			err:  errors.New("insufficient_scope: authorization failed"),
 			tag:  imageTag,
 			expected: oktetoErrors.UserError{
-				E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'", imageTag, imageTag),
+				E:    fmt.Errorf("failed to push image '%s': You are not authorized to push image '%s'", imageTag, imageTag),
 				Hint: fmt.Sprintf("Please log in into the registry '%s' with a user with push permissions to '%s' or use another image.", "docker.io", imageTag),
 			},
 		},
@@ -50,7 +50,7 @@ func Test_getErrorMessage(t *testing.T) {
 			err:  errors.New("failed to authorize: failed to fetch anonymous token"),
 			tag:  imageTag,
 			expected: oktetoErrors.UserError{
-				E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'", imageTag, imageTag),
+				E:    fmt.Errorf("failed to push image '%s': You are not authorized to push image '%s'", imageTag, imageTag),
 				Hint: fmt.Sprintf("Log in into the registry '%s' and verify that you have permissions to push the image '%s'.", "docker.io", imageTag),
 			},
 		},
@@ -95,7 +95,7 @@ func Test_getErrorMessage(t *testing.T) {
 			err:  errors.New("pull access denied, repository does not exist or may require authorization: server message: insufficient_scope: authorization failed"),
 			tag:  imageTag,
 			expected: oktetoErrors.UserError{
-				E:    fmt.Errorf("error building image: failed to pull image '%s'. The repository is not accessible or it does not exist", imageTag),
+				E:    fmt.Errorf("failed to pull image '%s'. The repository is not accessible or it does not exist", imageTag),
 				Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.", imageTag),
 			},
 		},
@@ -197,6 +197,41 @@ func Test_isTransientError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			res := isTransientError(tt.err)
 			assert.Equal(t, tt.expected, res)
+		})
+	}
+}
+
+func TestExtractImageTagFromPullAccessDeniedError(t *testing.T) {
+	tests := []struct {
+		err      error
+		expected string
+	}{
+		{
+			err:      errors.New("pull access denied"),
+			expected: "",
+		},
+		{
+			err:      errors.New("failed to solve: registry/myimage: pull access denied, repository does not exist or may require authorizatio"),
+			expected: "registry/myimage",
+		},
+		{
+			err:      errors.New("failed to solve: myimage: pull access denied, repository does not exist or may require authorizatio"),
+			expected: "myimage",
+		},
+		{
+			err:      errors.New("failed to solve: okteto.dev/myimage: pull access denied, repository does not exist or may require authorizatio"),
+			expected: "okteto.dev/myimage",
+		},
+		{
+			err:      errors.New("failed to solve: myregistry.com/my-namespace/myimage: pull access denied, repository does not exist or may require authorizatio"),
+			expected: "myregistry.com/my-namespace/myimage",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.err.Error(), func(t *testing.T) {
+			got := extractImageTagFromPullAccessDeniedError(tt.err)
+			assert.Equal(t, tt.expected, got)
 		})
 	}
 }

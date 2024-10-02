@@ -147,6 +147,7 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		oktetoLog.SetStage("remote deploy")
 		var userErr oktetoErrors.UserError
 		if errors.As(err, &userErr) {
+			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying application: %s", userErr.Error())
 			return userErr
 		}
 		return fmt.Errorf("error deploying application: %w", err)
