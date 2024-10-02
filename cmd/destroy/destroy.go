@@ -376,7 +376,6 @@ func setOptionsNameAndManifestName(ctx context.Context, namespace string, opts *
 	// infer name and set it to the manifest name
 	opts.Name = inferer.InferName(ctx, cwd, namespace, opts.ManifestPathFlag)
 	opts.Manifest.Name = opts.Name
-	return
 }
 
 // destroy runs the logic needed to destroy a dev environment
