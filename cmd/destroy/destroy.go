@@ -125,7 +125,6 @@ type destroyCommand struct {
 	k8sClientProvider    okteto.K8sClientProvider
 	ConfigMapHandler     configMapHandler
 	analyticsTracker     analyticsTrackerInterface
-	getManifest          func(path string, fs afero.Fs) (*model.Manifest, error)
 	oktetoClient         *okteto.Client
 	ioCtrl               *io.Controller
 	getDivertDriver      divertProvider
@@ -149,12 +148,13 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 `,
 		Args: utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			initialCWD, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("failed to get the current working directory: %w", err)
+			}
+
 			if options.ManifestPath != "" {
 				// if path is absolute, its transformed to rel from root
-				initialCWD, err := os.Getwd()
-				if err != nil {
-					return fmt.Errorf("failed to get the current working directory: %w", err)
-				}
 				manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, options.ManifestPath)
 				if err != nil {
 					return err
@@ -228,13 +228,25 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 					at, insights, ioCtrl,
 				},
 				analyticsTracker: at,
-				getManifest:      model.GetManifestV2,
 				ioCtrl:           ioCtrl,
 				getDivertDriver:  divert.New,
 				getPipelineDestroyer: func() (pipelineDestroyer, error) {
 					return pipelineCMD.NewCommand()
 				},
 			}
+
+			// resolve name for the dev environment and configmap
+			inferer := devenvironment.NewNameInferer(k8sClient)
+			manifest, err := model.GetManifestV2(options.ManifestPath, afero.NewOsFs())
+			if err != nil {
+				// Log error message but application can still be deleted
+				oktetoLog.Infof("could not find manifest file to be executed: %s", err)
+				manifest = &model.Manifest{
+					Destroy: &model.DestroyInfo{},
+				}
+			}
+			options.Manifest = manifest
+			setOptionsNameAndManifestName(ctx, okteto.GetContext().Namespace, options, inferer, initialCWD)
 
 			// We need to create a custom kubeconfig file to avoid to modify the user's kubeconfig when running the
 			// destroy operation locally. This kubeconfig contains the kubernetes configuration got from the okteto
@@ -341,58 +353,50 @@ func (dc *destroyCommand) destroyAll(ctx context.Context, opts *Options) error {
 	return destroyer.destroy(ctx, opts)
 }
 
+// setOptionsNameAndManifestName sets the name of the dev environment to be destroyed
+// and the name of the configmap to be updated with the status
+// name is set with the following priority:
+// 1. user flag
+// 2. manifest name field
+// 3. inferred name
+// both opts.Name and opts.Manifest.Name are set with the same value
+func setOptionsNameAndManifestName(ctx context.Context, namespace string, opts *Options, inferer devenvironment.NameInferer, cwd string) {
+	// already set by user flag
+	if opts.Name != "" {
+		// override the manifest name with the flag
+		opts.Manifest.Name = opts.Name
+		return
+	}
+	// set with manifest name field
+	if opts.Manifest.Name != "" {
+		// set the name with the manifest name
+		opts.Name = opts.Manifest.Name
+		return
+	}
+	// infer name and set it to the manifest name
+	opts.Name = inferer.InferName(ctx, cwd, namespace, opts.ManifestPathFlag)
+	opts.Manifest.Name = opts.Name
+	return
+}
+
 // destroy runs the logic needed to destroy a dev environment
 func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
-	manifest, err := dc.getManifest(opts.ManifestPath, afero.NewOsFs())
-	if err != nil {
-		// Log error message but application can still be deleted
-		oktetoLog.Infof("could not find manifest file to be executed: %s", err)
-		manifest = &model.Manifest{
-			Destroy: &model.DestroyInfo{},
-		}
-	}
-
-	opts.Manifest = manifest
-
-	// name for cfg map being destroyed
-	// name set by flag has priority over manifest name
-	// if no name is set, the name of the manifest is used
-	// if no name is set in the manifest, the name is inferred
-	if opts.Name == "" && opts.Manifest.Name != "" {
-		opts.Name = opts.Manifest.Name
-	} else if opts.Manifest.Name == "" {
-		c, _, err := dc.k8sClientProvider.Provide(okteto.GetContext().Cfg)
-		if err != nil {
-			return err
-		}
-		cwd, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("failed to get the current working directory: %w", err)
-		}
-		inferer := devenvironment.NewNameInferer(c)
-		opts.Name = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, opts.ManifestPathFlag)
-	}
 
 	buildCtrl := dc.buildCtrlProvider.provide(opts.Name)
 
 	// if the destroy section has an image, we need to build it before destroying
 	if opts.Manifest.Destroy != nil {
-		// include the opts.Name into the manifest
-		// opts.Name would be the one from the flag or inferred
-		if opts.Manifest.Name == "" {
-			opts.Manifest.Name = opts.Name
-		}
 		if err := buildCtrl.buildImageIfNecessary(ctx, opts.Manifest); err != nil {
 			return err
 		}
-		opts.Manifest.Destroy.Image, err = env.ExpandEnvIfNotEmpty(opts.Manifest.Destroy.Image)
+		image, err := env.ExpandEnvIfNotEmpty(opts.Manifest.Destroy.Image)
 		if err != nil {
 			return err
 		}
+		opts.Manifest.Destroy.Image = image
 	}
 
-	err = opts.Manifest.ExpandEnvVars()
-	if err != nil {
+	if err := opts.Manifest.ExpandEnvVars(); err != nil {
 		return err
 	}
 

@@ -29,7 +29,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -198,9 +197,6 @@ func TestDestroyWithErrorGettingManifestButDestroySuccess(t *testing.T) {
 	destroyer := &fakeDestroyer{}
 
 	dc := &destroyCommand{
-		getManifest: func(_ string, _ afero.Fs) (*model.Manifest, error) {
-			return nil, assert.AnError
-		},
 		ConfigMapHandler: NewConfigmapHandler(fakeClient),
 		nsDestroyer:      destroyer,
 		secrets:          &fakeSecretHandler{},
@@ -215,7 +211,11 @@ func TestDestroyWithErrorGettingManifestButDestroySuccess(t *testing.T) {
 		k8sClientProvider: k8sClientProvider,
 	}
 
-	err = dc.destroy(context.Background(), &Options{})
+	err = dc.destroy(context.Background(), &Options{
+		Manifest: &model.Manifest{
+			Destroy: &model.DestroyInfo{},
+		},
+	})
 
 	require.NoError(t, err)
 	require.True(t, destroyer.destroyed)
@@ -232,9 +232,6 @@ func TestDestroyWithErrorDestroyingDependencies(t *testing.T) {
 	}
 	destroyer := &fakeDestroyer{}
 	dc := &destroyCommand{
-		getManifest: func(_ string, _ afero.Fs) (*model.Manifest, error) {
-			return fakeManifestWithDependencies, nil
-		},
 		ConfigMapHandler: NewConfigmapHandler(fakeClient),
 		nsDestroyer:      destroyer,
 		secrets:          &fakeSecretHandler{},
@@ -255,6 +252,7 @@ func TestDestroyWithErrorDestroyingDependencies(t *testing.T) {
 		DestroyDependencies: true,
 		Name:                fakeManifestWithDependencies.Name,
 		Namespace:           "namespace",
+		Manifest:            fakeManifestWithDependencies,
 	})
 
 	require.Error(t, err)
@@ -277,9 +275,6 @@ func TestDestroyWithErrorDestroyingDivert(t *testing.T) {
 	}
 	destroyer := &fakeDestroyer{}
 	dc := &destroyCommand{
-		getManifest: func(_ string, _ afero.Fs) (*model.Manifest, error) {
-			return fakeManifestWithDivert, nil
-		},
 		ConfigMapHandler:  NewConfigmapHandler(fakeClient),
 		nsDestroyer:       destroyer,
 		secrets:           &fakeSecretHandler{},
@@ -298,7 +293,8 @@ func TestDestroyWithErrorDestroyingDivert(t *testing.T) {
 	}
 
 	err = dc.destroy(ctx, &Options{
-		Name: fakeManifest.Name,
+		Name:     fakeManifest.Name,
+		Manifest: fakeManifestWithDivert,
 	})
 
 	require.Error(t, err)
@@ -316,9 +312,6 @@ func TestDestroyWithErrorOnCommands(t *testing.T) {
 	}
 	destroyer := &fakeDestroyer{}
 	dc := &destroyCommand{
-		getManifest: func(_ string, _ afero.Fs) (*model.Manifest, error) {
-			return fakeManifest, nil
-		},
 		ConfigMapHandler:  NewConfigmapHandler(fakeClient),
 		nsDestroyer:       destroyer,
 		secrets:           &fakeSecretHandler{},
@@ -339,6 +332,7 @@ func TestDestroyWithErrorOnCommands(t *testing.T) {
 	err = dc.destroy(ctx, &Options{
 		Name:      fakeManifest.Name,
 		Namespace: "namespace",
+		Manifest:  fakeManifest,
 	})
 
 	require.Error(t, err)
@@ -360,9 +354,6 @@ func TestDestroyWithErrorOnCommandsForcingDestroy(t *testing.T) {
 	}
 	destroyer := &fakeDestroyer{}
 	dc := &destroyCommand{
-		getManifest: func(_ string, _ afero.Fs) (*model.Manifest, error) {
-			return fakeManifest, nil
-		},
 		ConfigMapHandler:  NewConfigmapHandler(fakeClient),
 		nsDestroyer:       destroyer,
 		secrets:           &fakeSecretHandler{},
@@ -384,6 +375,7 @@ func TestDestroyWithErrorOnCommandsForcingDestroy(t *testing.T) {
 		Name:         fakeManifest.Name,
 		ForceDestroy: true,
 		Namespace:    "namespace",
+		Manifest:     fakeManifest,
 	})
 
 	require.ErrorContains(t, err, "error executing command")
@@ -406,9 +398,6 @@ func TestDestroyWithErrorDestroyingK8sResources(t *testing.T) {
 		errOnVolumes: assert.AnError,
 	}
 	dc := &destroyCommand{
-		getManifest: func(_ string, _ afero.Fs) (*model.Manifest, error) {
-			return fakeManifest, nil
-		},
 		ConfigMapHandler:  NewConfigmapHandler(fakeClient),
 		nsDestroyer:       destroyer,
 		secrets:           &fakeSecretHandler{},
@@ -427,6 +416,7 @@ func TestDestroyWithErrorDestroyingK8sResources(t *testing.T) {
 	err = dc.destroy(ctx, &Options{
 		Name:      fakeManifest.Name,
 		Namespace: "namespace",
+		Manifest:  fakeManifest,
 	})
 
 	require.Error(t, err)
