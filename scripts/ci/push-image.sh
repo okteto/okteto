@@ -45,13 +45,13 @@
                 echo "  DEBUG: prerel: ${prerel}"
                 echo "  DEBUG: version: ${version}"
 
-                tags_array+=("jlopezbarb/okteto:${tag}")
-                echo "  DEBUG: Added tag to tags_array: jlopezbarb/okteto:${tag}"
+                tags_array+=("okteto/okteto:${tag}")
+                echo "  DEBUG: Added tag to tags_array: okteto/okteto:${tag}"
                 echo "  DEBUG: tags_array so far: ${tags_array[@]}"
 
                 if [ -n "$prerel" ]; then
                         if [ "$beta_added" = false ]; then
-                                tags_array+=("jlopezbarb/okteto:beta")
+                                tags_array+=("okteto/okteto:beta")
                                 beta_added=true
                                 echo "  DEBUG: Added beta tag to tags_array"
                         else
@@ -60,7 +60,7 @@
                 elif [ -n "$version" ]; then
                         # It's a stable version because it has $version and it's not a prerrelease
                         if [ "$stable_added" = false ]; then
-                                tags_array+=("jlopezbarb/okteto:stable" "jlopezbarb/okteto:latest")
+                                tags_array+=("okteto/okteto:stable" "okteto/okteto:latest")
                                 stable_added=true
                                 echo "  DEBUG: Added stable and latest tags to tags_array"
                         else
