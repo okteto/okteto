@@ -161,8 +161,15 @@ for repo in "${repos[@]}"; do
     # Function to update tags if RELEASE_TAG is greater
     update_tag_if_greater() {
         local TAG_NAME=$1
+        # Check if the tag TAG_NAME exists in the Git repository
         if git rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
+            # If TAG_NAME exists, retrieve the semantic version associated with it
+            # Note: We are not using TAG_NAME directly for comparison
+            # Instead, we find the version tag that TAG_NAME points to
             current_tag_version=$(git describe --tags "${TAG_NAME}" --abbrev=0 --match "*.*.*" 2>/dev/null || echo "0.0.0")
+            
+            # Compare the new RELEASE_TAG with the current_tag_version
+            # This comparison determines if RELEASE_TAG is newer than the version TAG_NAME points to
             diff=$(semver compare "${RELEASE_TAG}" "${current_tag_version}")
             if [ "${diff}" -gt 0 ]; then
                 echo "Moving tag ${TAG_NAME} to new release ${RELEASE_TAG}"
