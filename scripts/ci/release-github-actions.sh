@@ -102,7 +102,6 @@ repos=(
     pipeline
     create-namespace
     destroy-pipeline
-    apply
     context
     test
 )
