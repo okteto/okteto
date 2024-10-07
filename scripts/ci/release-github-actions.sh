@@ -102,7 +102,6 @@ repos=(
     pipeline
     create-namespace
     destroy-pipeline
-    apply
     context
     test
 )
@@ -242,7 +241,7 @@ for repo in "${repos[@]}"; do
             -token "$GITHUB_TOKEN" \
             -recreate \
             -replace \
-            -commitish "$(git rev-parse "${RELEASE_TAG}")" \
+            -commitish "$(git rev-parse "${RELEASE_BRANCH}")" \
             "${RELEASE_TAG}"
 
         # After updating the release, if the current release is the latest known
@@ -256,7 +255,7 @@ for repo in "${repos[@]}"; do
                 -token "$GITHUB_TOKEN" \
                 -recreate \
                 -replace \
-                -commitish "$(git rev-parse "${RELEASE_TAG}")" \
+                -commitish "$(git rev-parse "${RELEASE_BRANCH}")" \
                 latest
         fi
     else
