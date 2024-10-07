@@ -20,13 +20,16 @@
         echo "DEBUG: RELEASE_TAG: ${RELEASE_TAG}"
         echo "DEBUG: PLATFORMS: ${PLATFORMS}"
 
-        if [ -z "$RELEASE_TAG" ]; then
+        IFS=',' read -ra TAGS_ARRAY <<< "$RELEASE_TAG"
+        
+        if [ -z "${TAGS_ARRAY[0]}" ]; then
                 commit=$(git rev-parse --short HEAD)
-                RELEASE_TAG="$commit"
-                echo "DEBUG: RELEASE_TAG was empty. Using git commit: ${RELEASE_TAG}"
+                TAGS_ARRAY=("$commit" "${TAGS_ARRAY[@]:1}")
+                echo "DEBUG: First element of RELEASE_TAG was empty. Using git commit: ${commit}"
         fi
 
-        IFS=',' read -ra TAGS_ARRAY <<< "$RELEASE_TAG"
+        echo "DEBUG: Final RELEASE_TAG: ${TAGS_ARRAY[*]}"
+        
         echo "DEBUG: Splitting RELEASE_TAG into TAGS_ARRAY:"
         for tag in "${TAGS_ARRAY[@]}"; do
                 echo "  DEBUG: Tag: ${tag}"
