@@ -178,7 +178,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	err = buildkitWaiter.WaitUntilIsUp(ctx)
 	ob.metadata.WaitForBuildkitAvailableTime = buildkitWaiter.GetWaitingTime()
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrWaitingBuildkitErr, err)
+		return err
 	}
 
 	buildkitClient, err := buildkitClientFactory.GetBuildkitClient(ctx)

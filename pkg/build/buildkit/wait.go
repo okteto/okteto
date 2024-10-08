@@ -109,7 +109,7 @@ func (bw *buildkitWaiter) WaitUntilIsUp(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			bw.waitingTime = bw.MaxWaitTime
-			return fmt.Errorf("timeout reached: BuildKit server is not responding after %v", bw.MaxWaitTime)
+			return fmt.Errorf("buildkit not available for %v", bw.MaxWaitTime)
 		default:
 			c, err := bw.buildkitClientFactory.GetBuildkitClient(ctx)
 			if err != nil {
