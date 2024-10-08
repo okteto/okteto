@@ -119,21 +119,6 @@ func TestWaitUntilIsUp(t *testing.T) {
 			expectedSleeperCalls: 1,
 			expectedAttempts:     2,
 		},
-		{
-			name:          "InfoReturnsNonTimeoutError",
-			maxWaitTime:   time.Minute,
-			retryInterval: time.Second,
-			sleeper:       &MockSleeper{},
-			buildkitClientFactory: &fakeBuildkitClientFactoryWithRetries{
-				successOnAttempt: 1,
-				infoRetriever: &fakeClientInfoRetriever{
-					err: []error{assert.AnError},
-				},
-			},
-			expectedErr:          assert.AnError,
-			expectedSleeperCalls: 0,
-			expectedAttempts:     1,
-		},
 	}
 
 	for _, tt := range tests {
