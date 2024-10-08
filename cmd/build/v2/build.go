@@ -292,6 +292,13 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			}
 			buildDurationStart := time.Now()
 			imageTag, err := ob.buildServiceImages(ctx, options.Manifest, svcToBuild, options)
+			buildkitRunner, ok := ob.Builder.BuildRunner.(*buildCmd.OktetoBuilder)
+			if ok {
+				buildkitMetadata := buildkitRunner.GetMetadata()
+				if buildkitMetadata != nil {
+					meta.WaitForBuildkitAvailable = buildkitMetadata.WaitForBuildkitAvailableTime
+				}
+			}
 			if err != nil {
 				return fmt.Errorf("error building service '%s': %w", svcToBuild, err)
 			}
