@@ -55,9 +55,8 @@ type OktetoBuilderInterface interface {
 type OktetoBuilder struct {
 	OktetoContext OktetoContextInterface
 	Fs            afero.Fs
+	metadata      *buildkit.BuildMetadata
 	isRetry       bool
-
-	metadata *buildkit.BuildMetadata
 }
 
 func (ob *OktetoBuilder) GetMetadata() *buildkit.BuildMetadata {
