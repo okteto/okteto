@@ -24,6 +24,11 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 )
 
+var (
+	// ErrWaitingBuildkitErr is returned when buildkit is not available
+	ErrWaitingBuildkitErr = errors.New("error waiting for buildkit")
+)
+
 // getErrorMessage returns the parsed error message
 func getErrorMessage(err error, tag string) error {
 	if err == nil {

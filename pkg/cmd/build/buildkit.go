@@ -15,7 +15,6 @@ package build
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"net/url"
 	"os"
@@ -30,16 +29,13 @@ import (
 	"github.com/moby/buildkit/session/sshforward/sshprovider"
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-	"golang.org/x/oauth2"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc/credentials/oauth"
 )
 
 const (
@@ -228,62 +224,6 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 	}
 
 	return opt, nil
-}
-
-func getBuildkitClient(ctx context.Context, okctx OktetoContextInterface) (*client.Client, error) {
-	builder := okctx.GetCurrentBuilder()
-	okctx.UseContextByBuilder()
-
-	ctxCert := okctx.GetCurrentCertStr()
-	if ctxCert != "" {
-		certBytes, err := base64.StdEncoding.DecodeString(ctxCert)
-		if err != nil {
-			return nil, fmt.Errorf("certificate decoding error: %w", err)
-		}
-
-		if err := os.WriteFile(config.GetCertificatePath(), certBytes, 0600); err != nil {
-			return nil, err
-		}
-
-		c, err := getClientForOktetoCluster(ctx, builder, okctx.GetCurrentToken())
-		if err != nil {
-			oktetoLog.Infof("failed to create okteto build client: %s", err)
-			return nil, fmt.Errorf("failed to create the builder client: %w", err)
-		}
-
-		return c, nil
-	}
-
-	c, err := client.New(ctx, builder)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create the builder client for %s", builder)
-	}
-	return c, nil
-}
-
-func getClientForOktetoCluster(ctx context.Context, builder string, token string) (*client.Client, error) {
-
-	b, err := url.Parse(builder)
-	if err != nil {
-		return nil, errors.Wrapf(err, "invalid buildkit host %s", builder)
-	}
-
-	creds := client.WithCAAndSystemRoot(b.Hostname(), config.GetCertificatePath())
-
-	oauthToken := &oauth2.Token{
-		AccessToken: token,
-	}
-
-	rpc := client.WithRPCCreds(oauth.TokenSource{
-		TokenSource: oauth2.StaticTokenSource(oauthToken),
-	})
-	c, err := client.New(ctx, builder, creds, rpc)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return c, nil
 }
 
 func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error {
