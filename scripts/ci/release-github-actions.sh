@@ -118,7 +118,7 @@ for repo in "${repos[@]}"; do
     pushd "$REPO_DIR" >/dev/null
 
     git config user.name "okteto"
-    git config user.email "ci@okteto.com"
+    git config user.email "test@okteto.com"
 
     git checkout main
 
