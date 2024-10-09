@@ -406,32 +406,38 @@ jobs:
 
   push-image-tag:
     executor: golang-ci
+    environment:
+      OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED : "true" # this is needed to push to Docker Hub using the local credentials instead of the ones from the context cluster
     steps:
       - checkout
       - run: *okteto-login
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG" "linux/amd64,linux/arm64"
-      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --no-progress okteto/okteto:$CIRCLE_TAG
-      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --no-progress okteto/bin:latest
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:$CIRCLE_TAG
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/bin:latest
 
   push-image-dev:
     executor: golang-ci
+    environment:
+      OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED : "true" # this is needed to push to Docker Hub using the local credentials instead of the ones from the context cluster
     steps:
       - checkout
       - run: *okteto-login
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh "${CIRCLE_TAG},dev" "linux/amd64,linux/arm64"
-      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --no-progress okteto/okteto:dev
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:dev
 
   push-image-master:
     executor: golang-ci
+    environment:
+      OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED : "true" # this is needed to push to Docker Hub using the local credentials instead of the ones from the context cluster
     steps:
       - checkout
       - run: *okteto-login
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh "master" "linux/amd64,linux/arm64"
-      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --no-progress okteto/okteto:master
-      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --no-progress okteto/bin:latest
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:master
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/bin:latest
 
   upload-static-job:
     executor: golang-ci
