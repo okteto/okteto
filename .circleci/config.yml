@@ -263,7 +263,8 @@ jobs:
           at: ./artifacts
       - add_ssh_keys:
           fingerprints:
-            - f7:81:9f:b4:31:3a:4d:46:ce:cf:54:a2:70:46:5a:df
+            # This key belongs to oktetobot user in GitHub
+            - SHA256:+wgdECJJEEyF/iyl8Y8EV/tpOEQIv6zZ/0LRqRChS18
       - run:
           name: Update brew formula
           command: |
@@ -405,32 +406,38 @@ jobs:
 
   push-image-tag:
     executor: golang-ci
+    environment:
+      OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED : "true" # this is needed to push to Docker Hub using the local credentials instead of the ones from the context cluster
     steps:
       - checkout
       - run: *okteto-login
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG" "linux/amd64,linux/arm64"
-      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --no-progress okteto/okteto:$CIRCLE_TAG
-      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --no-progress okteto/bin:latest
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:$CIRCLE_TAG
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/bin:latest
 
   push-image-dev:
     executor: golang-ci
+    environment:
+      OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED : "true" # this is needed to push to Docker Hub using the local credentials instead of the ones from the context cluster
     steps:
       - checkout
       - run: *okteto-login
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh "${CIRCLE_TAG},dev" "linux/amd64,linux/arm64"
-      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --no-progress okteto/okteto:dev
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:dev
 
   push-image-master:
     executor: golang-ci
+    environment:
+      OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED : "true" # this is needed to push to Docker Hub using the local credentials instead of the ones from the context cluster
     steps:
       - checkout
       - run: *okteto-login
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh "master" "linux/amd64,linux/arm64"
-      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --no-progress okteto/okteto:master
-      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --no-progress okteto/bin:latest
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:master
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/bin:latest
 
   upload-static-job:
     executor: golang-ci
@@ -448,7 +455,8 @@ jobs:
       - run: *init-gcloud
       - add_ssh_keys:
           fingerprints:
-            - f7:81:9f:b4:31:3a:4d:46:ce:cf:54:a2:70:46:5a:df
+            # This key belongs to oktetobot user in GitHub
+            - SHA256:+wgdECJJEEyF/iyl8Y8EV/tpOEQIv6zZ/0LRqRChS18
       - run:
           name: Update brew formula
           command: |
@@ -476,7 +484,8 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints:
-            - a1:66:22:e1:67:66:fb:d6:3b:a2:7a:6c:d9:9a:46:ba
+            # This key belongs to oktetobot user in GitHub
+            - SHA256:+wgdECJJEEyF/iyl8Y8EV/tpOEQIv6zZ/0LRqRChS18
       - run: ./scripts/ci/release-branch.sh
 
 workflows:
