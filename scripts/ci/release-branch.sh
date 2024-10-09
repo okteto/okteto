@@ -146,7 +146,7 @@
         fi
         echo "Pushing tag ${NEXT_TAG} to remote repository"
         git config user.name "okteto"
-        git config user.email "ci@okteto.com"
+        git config user.email "test@okteto.com"
         git tag "${NEXT_TAG}" -a -m "Okteto CLI ${NEXT_TAG}"
         git push origin "${NEXT_TAG}"
 ); }

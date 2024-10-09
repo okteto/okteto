@@ -67,6 +67,6 @@ EOF
 cat Formula/okteto.rb
 git add Formula/okteto.rb
 git config user.name "okteto"
-git config user.email "ci@okteto.com"
+git config user.email "test@okteto.com"
 git commit -m "$VERSION release"
 git --no-pager log -1
