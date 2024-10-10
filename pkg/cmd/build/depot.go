@@ -25,6 +25,7 @@ import (
 	cliv1 "github.com/depot/depot-go/proto/depot/cli/v1"
 	"github.com/moby/buildkit/client"
 	buildkitClient "github.com/moby/buildkit/client"
+	"github.com/okteto/okteto/pkg/build/buildkit"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
@@ -178,7 +179,7 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 				err = retryBuilder.Run(ctx, buildOptions, run)
 			}
 		}
-		err = getErrorMessage(err, buildOptions.Tag)
+		err = buildkit.GetErrorMessage(err, buildOptions.Tag)
 		return err
 	}
 
@@ -189,7 +190,7 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 			tag = buildOptions.Manifest.Deploy.Image
 		}
 	}
-	err = getErrorMessage(err, tag)
+	err = buildkit.GetErrorMessage(err, tag)
 	return err
 }
 

@@ -21,6 +21,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/build/buildkit"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
@@ -138,7 +139,7 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 	}
 
 	if err := rd.runner.Run(ctx, &runParams); err != nil {
-		var cmdErr buildCmd.OktetoCommandErr
+		var cmdErr buildkit.OktetoCommandErr
 		if errors.As(err, &cmdErr) {
 			oktetoLog.SetStage(cmdErr.Stage)
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying application: %s", cmdErr.Err.Error())
