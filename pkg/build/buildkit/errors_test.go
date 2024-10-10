@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package build
+package buildkit
 
 import (
 	"errors"
@@ -110,7 +110,7 @@ func Test_getErrorMessage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := getErrorMessage(tt.err, tt.tag)
+			err := GetErrorMessage(tt.err, tt.tag)
 			if tt.expected == nil {
 				assert.Nil(t, err)
 			} else {
@@ -195,7 +195,7 @@ func Test_isTransientError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := isTransientError(tt.err)
+			res := IsRetryable(tt.err)
 			assert.Equal(t, tt.expected, res)
 		})
 	}

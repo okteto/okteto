@@ -29,6 +29,7 @@ import (
 	"github.com/moby/buildkit/session/sshforward/sshprovider"
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/okteto/okteto/pkg/analytics"
+	okbuildkit "github.com/okteto/okteto/pkg/build/buildkit"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/registry"
@@ -226,7 +227,7 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 	return opt, nil
 }
 
-func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error {
+func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error {
 	logFilterRules := []Rule{
 		{
 			condition:   BuildKitMissingCacheCondition,
@@ -354,7 +355,7 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 }
 
 func shouldRetryBuild(err error, tag string, okCtx OktetoContextInterface) bool {
-	if isTransientError(err) {
+	if okbuildkit.IsRetryable(err) {
 		oktetoLog.Yellow(`Failed to push '%s' to the registry:
   %s,
   Retrying...`, tag, err.Error())
