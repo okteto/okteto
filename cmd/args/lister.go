@@ -34,7 +34,11 @@ func NewDevModeOnLister(k8sClientProvider okteto.K8sClientProvider) *DevModeOnLi
 }
 
 func (d *DevModeOnLister) List(ctx context.Context, devs model.ManifestDevs, ns string) ([]string, error) {
-	k8sClient, _, err := d.k8sClientProvider.Provide(okteto.GetContext().Cfg)
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get context: %w", err)
+	}
+	k8sClient, _, err := d.k8sClientProvider.Provide(okCtx.Cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get k8s client: %w", err)
 	}

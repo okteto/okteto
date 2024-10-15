@@ -173,7 +173,10 @@ okteto up api -- echo this is a test
 					upOptions.ManifestPath = utils.DefaultManifest
 				}
 			}
-
+			okCtx, err := okteto.GetContext()
+			if err != nil {
+				return err
+			}
 			if !okteto.IsOkteto() {
 				if err := oktetoManifest.ValidateForCLIOnly(); err != nil {
 					return err
@@ -182,16 +185,16 @@ okteto up api -- echo this is a test
 
 			upMeta.OktetoContextConfig(time.Since(startOkContextConfig))
 			if okteto.IsOkteto() {
-				create, err := utils.ShouldCreateNamespace(ctx, okteto.GetContext().Namespace)
+				create, err := utils.ShouldCreateNamespace(ctx, okCtx.Namespace)
 				if err != nil {
 					return err
 				}
 				if create {
-					nsCmd, err := namespace.NewCommand()
+					nsCmd, err := namespace.NewCommand(okCtx)
 					if err != nil {
 						return err
 					}
-					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.GetContext().Namespace}); err != nil {
+					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okCtx.Namespace}); err != nil {
 						return err
 					}
 				}
@@ -203,12 +206,12 @@ okteto up api -- echo this is a test
 			}
 			if oktetoManifest.Name == "" {
 				oktetoLog.Info("okteto manifest doesn't have a name, inferring it...")
-				c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okteto.GetContext().Cfg)
+				c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okCtx.Cfg)
 				if err != nil {
 					return err
 				}
 				inferer := devenvironment.NewNameInferer(c)
-				oktetoManifest.Name = inferer.InferName(ctx, wd, okteto.GetContext().Namespace, upOptions.ManifestPathFlag)
+				oktetoManifest.Name = inferer.InferName(ctx, wd, okCtx.Namespace, upOptions.ManifestPathFlag)
 			}
 			os.Setenv(constants.OktetoNameEnvVar, oktetoManifest.Name)
 
@@ -225,8 +228,9 @@ okteto up api -- echo this is a test
 			}
 
 			up := &upContext{
-				Namespace:         okteto.GetContext().Namespace,
+				Namespace:         okCtx.Namespace,
 				Manifest:          oktetoManifest,
+				okCtx:             okCtx,
 				Dev:               nil,
 				Exit:              make(chan error, 1),
 				resetSyncthing:    upOptions.Reset,
@@ -256,20 +260,20 @@ okteto up api -- echo this is a test
 				return fmt.Errorf("failed to load k8s client: %w", err)
 			}
 
-			if okteto.GetContext().IsOkteto && upOptions.Deploy || !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Namespace, k8sClient) {
+			if okCtx.IsOkteto && upOptions.Deploy || !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Namespace, k8sClient) {
 				err := up.deployApp(ctx, ioCtrl, k8sLogger)
 
 				// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
 				if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands) {
 					return err
 				}
-			} else if okteto.GetContext().IsOkteto && !upOptions.Deploy && pipeline.IsDeployed(ctx, up.Manifest.Name, okteto.GetContext().Namespace, k8sClient) {
+			} else if okCtx.IsOkteto && !upOptions.Deploy && pipeline.IsDeployed(ctx, up.Manifest.Name, okCtx.Namespace, k8sClient) {
 				oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy' or 'okteto up --deploy'", up.Manifest.Name)
 			}
 
 			devCommandParser := oargs.NewDevCommandArgParser(oargs.NewManifestDevLister(), ioCtrl, false)
 
-			argsparserResult, err := devCommandParser.Parse(ctx, args, cmd.ArgsLenAtDash(), oktetoManifest.Dev, okteto.GetContext().Namespace)
+			argsparserResult, err := devCommandParser.Parse(ctx, args, cmd.ArgsLenAtDash(), oktetoManifest.Dev, okCtx.Namespace)
 			if err != nil {
 				return err
 			}
@@ -290,7 +294,7 @@ okteto up api -- echo this is a test
 			up.Dev = dev
 
 			// only if the context is an okteto one, we should verify if the namespace has to be woken up
-			if okteto.GetContext().IsOkteto {
+			if okCtx.IsOkteto {
 				// We execute it in a goroutine to not impact the command performance
 				go func() {
 					okClient, err := okteto.NewOktetoClient()
@@ -330,13 +334,13 @@ okteto up api -- echo this is a test
 				}
 			}
 
-			oktetoLog.ConfigureFileLogger(config.GetAppHome(okteto.GetContext().Namespace, dev.Name), config.VersionString)
+			oktetoLog.ConfigureFileLogger(config.GetAppHome(okCtx.Namespace, dev.Name), config.VersionString)
 
 			if err := checkStignoreConfiguration(dev); err != nil {
 				oktetoLog.Infof("failed to check '.stignore' configuration: %s", err.Error())
 			}
 
-			if err := addStignoreSecrets(dev, okteto.GetContext().Namespace); err != nil {
+			if err := addStignoreSecrets(dev, okCtx.Namespace); err != nil {
 				return err
 			}
 
@@ -355,7 +359,7 @@ okteto up api -- echo this is a test
 			if err = up.start(); err != nil {
 				switch err.(type) {
 				default:
-					return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(okteto.GetContext().Namespace, dev.Name))
+					return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(okCtx.Namespace, dev.Name))
 				case oktetoErrors.CommandError:
 					oktetoLog.Infof("CommandError: %v", err)
 					return err
@@ -469,7 +473,7 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVaria
 
 func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slogger *io.K8sLogger) error {
 	k8sProvider := okteto.NewK8sClientProviderWithLogger(k8slogger)
-	pc, err := pipelineCMD.NewCommand()
+	pc, err := pipelineCMD.NewCommand(up.okCtx)
 	if err != nil {
 		return err
 	}
@@ -479,9 +483,9 @@ func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slo
 		K8sClientProvider: k8sProvider,
 		Builder:           up.builder,
 		Fs:                up.Fs,
-		CfgMapHandler:     deploy.NewConfigmapHandler(k8sProvider, k8slogger),
+		CfgMapHandler:     deploy.NewConfigmapHandler(k8sProvider, up.okCtx, k8slogger),
 		PipelineCMD:       pc,
-		DeployWaiter:      deploy.NewDeployWaiter(k8sProvider, k8slogger),
+		DeployWaiter:      deploy.NewDeployWaiter(k8sProvider, up.okCtx, k8slogger),
 		EndpointGetter:    deploy.NewEndpointGetter,
 		AnalyticsTracker:  up.analyticsTracker,
 		IoCtrl:            ioCtrl,
@@ -696,7 +700,7 @@ func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error 
 }
 
 func (up *upContext) applyToApps(ctx context.Context) chan error {
-	k8sClient, _, err := up.K8sClientProvider.Provide(okteto.GetContext().Cfg)
+	k8sClient, _, err := up.K8sClientProvider.Provide(up.okCtx.Cfg)
 	if err != nil {
 		return nil
 	}
@@ -839,7 +843,7 @@ func terminateProcess(p process.Interface) error {
 }
 
 func printDisplayContext(up *upContext) {
-	oktetoLog.Println(fmt.Sprintf("    %s   %s", oktetoLog.BlueString("Context:"), okteto.RemoveSchema(okteto.GetContext().Name)))
+	oktetoLog.Println(fmt.Sprintf("    %s   %s", oktetoLog.BlueString("Context:"), okteto.RemoveSchema(up.okCtx.Name)))
 	oktetoLog.Println(fmt.Sprintf("    %s %s", oktetoLog.BlueString("Namespace:"), up.Namespace))
 	oktetoLog.Println(fmt.Sprintf("    %s      %s", oktetoLog.BlueString("Name:"), up.Dev.Name))
 
@@ -942,12 +946,19 @@ func (tuc *tokenUpdaterController) UpdateKubeConfigToken() error {
 	if err != nil {
 		return err
 	}
-	token, err := oktetoClient.Kubetoken().GetKubeToken(okteto.GetContext().Name, okteto.GetContext().Namespace)
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		return err
+	}
+	token, err := oktetoClient.Kubetoken().GetKubeToken(okCtx.Name, okCtx.Namespace)
 	if err != nil {
 		return err
 	}
 	// update the token in the okteto context for future client initializations
-	okCtx := okteto.GetContext()
+	okCtx, err = okteto.GetContext()
+	if err != nil {
+		return err
+	}
 
 	ctxUserID := okCtx.UserID
 	cfg := okCtx.Cfg

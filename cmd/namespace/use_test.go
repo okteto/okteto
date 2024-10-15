@@ -97,14 +97,14 @@ func Test_useNamespace(t *testing.T) {
 			nsCmd := &Command{
 				okClient: fakeOktetoClient,
 				ctxCmd:   newFakeContextCommand(fakeOktetoClient, usr),
+				okCtx:    okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 			}
 			err := nsCmd.Use(ctx, tt.changeToNs)
 			if tt.expectedErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-
-				assert.Equal(t, tt.changeToNs, okteto.GetContext().Namespace)
+				assert.Equal(t, tt.changeToNs, okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext].Namespace)
 			}
 
 		})

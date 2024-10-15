@@ -148,6 +148,7 @@ func TestRemoteTest(t *testing.T) {
 				temporalCtrl:         tempCreator,
 				oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
 				ioCtrl:               io.NewIOController(),
+				okCtx:                okteto.CurrentStore.Contexts["test"],
 				getEnviron: func() []string {
 					return []string{}
 				},
@@ -193,6 +194,7 @@ func TestExtraHosts(t *testing.T) {
 		oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
 		useInternalNetwork:   true,
 		ioCtrl:               io.NewIOController(),
+		okCtx:                &okteto.Context{},
 		getEnviron: func() []string {
 			return []string{}
 		},
@@ -238,6 +240,7 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 		oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
 		ioCtrl:               io.NewIOController(),
+		okCtx:                &okteto.Context{},
 		getEnviron: func() []string {
 			return []string{}
 		},
@@ -281,6 +284,7 @@ func TestRemoteDeployWithBadSshAgent(t *testing.T) {
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 		oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
 		ioCtrl:               io.NewIOController(),
+		okCtx:                &okteto.Context{},
 		getEnviron: func() []string {
 			return []string{}
 		},

@@ -150,10 +150,14 @@ func Enable() error {
 }
 
 func getTrackID() string {
-	if okteto.GetContext().UserID != "" {
-		return okteto.GetContext().UserID
-	}
 	a := get()
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		return a.MachineID
+	}
+	if okCtx.UserID != "" {
+		return okCtx.UserID
+	}
 	return a.MachineID
 }
 

@@ -42,14 +42,20 @@ type Operation struct {
 	Fs                afero.Fs
 	K8sClientProvider okteto.K8sClientProvider
 	AnalyticsTracker  analyticsTrackerInterface
+	okCtx             *okteto.Context
 }
 
-func New(fs afero.Fs, k8sClientProvider okteto.K8sClientProvider, at analyticsTrackerInterface) *Operation {
+func New(fs afero.Fs, k8sClientProvider okteto.K8sClientProvider, at analyticsTrackerInterface) (*Operation, error) {
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		return nil, err
+	}
 	return &Operation{
 		Fs:                fs,
 		K8sClientProvider: k8sClientProvider,
 		AnalyticsTracker:  at,
-	}
+		okCtx:             okCtx,
+	}, nil
 }
 
 func (d *Operation) Down(ctx context.Context, dev *model.Dev, namespace string, rm bool) error {
@@ -57,7 +63,7 @@ func (d *Operation) Down(ctx context.Context, dev *model.Dev, namespace string, 
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
-	k8sClient, _, err := d.K8sClientProvider.Provide(okteto.GetContext().Cfg)
+	k8sClient, _, err := d.K8sClientProvider.Provide(d.okCtx.Cfg)
 	if err != nil {
 		return err
 	}
@@ -138,7 +144,11 @@ func (d *Operation) AllDown(ctx context.Context, manifest *model.Manifest, names
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
-	k8sClient, _, err := d.K8sClientProvider.Provide(okteto.GetContext().Cfg)
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		return err
+	}
+	k8sClient, _, err := d.K8sClientProvider.Provide(okCtx.Cfg)
 	if err != nil {
 		return err
 	}

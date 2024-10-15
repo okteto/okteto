@@ -143,6 +143,7 @@ type Runner struct {
 	builder              Builder
 	oktetoClientProvider OktetoClientProvider
 	ioCtrl               *io.Controller
+	okCtx                *okteto.Context
 	getEnviron           func() []string
 	// sshAuthSockEnvvar is the default for SSH_AUTH_SOCK. Provided mostly for testing
 	sshAuthSockEnvvar  string
@@ -219,8 +220,12 @@ type dockerfileTemplateProperties struct {
 }
 
 // NewRunner creates a new Runner for remote
-func NewRunner(ioCtrl *io.Controller, builder Builder) *Runner {
+func NewRunner(ioCtrl *io.Controller, builder Builder) (*Runner, error) {
 	fs := afero.NewOsFs()
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		return nil, err
+	}
 	return &Runner{
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
@@ -230,7 +235,8 @@ func NewRunner(ioCtrl *io.Controller, builder Builder) *Runner {
 		builder:              builder,
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
 		getEnviron:           os.Environ,
-	}
+		okCtx:                okCtx,
+	}, nil
 }
 
 // Run This function is the one in charge of creating the Dockerfile needed to run
@@ -315,9 +321,9 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 	buildOptions.Manifest = params.Manifest
 	buildOptions.BuildArgs = append(
 		buildOptions.BuildArgs,
-		fmt.Sprintf("%s=%s", model.OktetoContextEnvVar, okteto.GetContext().Name),
-		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.GetContext().Namespace),
-		fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, okteto.GetContext().Token),
+		fmt.Sprintf("%s=%s", model.OktetoContextEnvVar, r.okCtx.Name),
+		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, r.okCtx.Namespace),
+		fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, r.okCtx.Token),
 		fmt.Sprintf("%s=%s", model.OktetoActionNameEnvVar, os.Getenv(model.OktetoActionNameEnvVar)),
 		fmt.Sprintf("%s=%s", constants.OktetoGitCommitEnvVar, os.Getenv(constants.OktetoGitCommitEnvVar)),
 		fmt.Sprintf("%s=%s", constants.OktetoGitBranchEnvVar, os.Getenv(constants.OktetoGitBranchEnvVar)),
@@ -335,7 +341,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 			fmt.Sprintf("%s=%s", constants.OktetoInternalServerNameEnvVar, sc.ServerName),
 		)
 		if sc.ServerName != "" {
-			registryUrl := okteto.GetContext().Registry
+			registryUrl := r.okCtx.Registry
 			subdomain := strings.TrimPrefix(registryUrl, "registry.")
 			ip, _, err := net.SplitHostPort(sc.ServerName)
 			if err != nil {
@@ -484,13 +490,13 @@ func (r *Runner) fetchClusterMetadata(ctx context.Context) (*types.ClusterMetada
 	}
 	uc := c.User()
 
-	metadata, err := uc.GetClusterMetadata(ctx, okteto.GetContext().Namespace)
+	metadata, err := uc.GetClusterMetadata(ctx, r.okCtx.Namespace)
 	if err != nil {
 		return nil, err
 	}
 
 	if metadata.Certificate == nil {
-		metadata.Certificate, err = uc.GetClusterCertificate(ctx, okteto.GetContext().Name, okteto.GetContext().Namespace)
+		metadata.Certificate, err = uc.GetClusterCertificate(ctx, r.okCtx.Name, r.okCtx.Namespace)
 	}
 
 	return &metadata, err

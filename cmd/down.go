@@ -92,10 +92,18 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, fs afero.Fs) 
 				return err
 			}
 
-			dc := down.New(fs, okteto.NewK8sClientProviderWithLogger(k8sLogsCtrl), at)
+			dc, err := down.New(fs, okteto.NewK8sClientProviderWithLogger(k8sLogsCtrl), at)
+			if err != nil {
+				return err
+			}
+
+			okCtx, err := okteto.GetContext()
+			if err != nil {
+				return err
+			}
 
 			if all {
-				err := dc.AllDown(ctx, manifest, okteto.GetContext().Namespace, rm)
+				err := dc.AllDown(ctx, manifest, okCtx.Namespace, rm)
 				if err != nil {
 					return err
 				}
@@ -112,7 +120,7 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, fs afero.Fs) 
 					if !errors.Is(err, utils.ErrNoDevSelected) {
 						return err
 					}
-					options := apps.ListDevModeOn(ctx, manifest.Dev, okteto.GetContext().Namespace, c)
+					options := apps.ListDevModeOn(ctx, manifest.Dev, okCtx.Namespace, c)
 
 					if len(options) == 0 {
 						oktetoLog.Success("All development containers are deactivated")
@@ -130,15 +138,15 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, fs afero.Fs) 
 					}
 				}
 
-				app, _, err := utils.GetApp(ctx, dev, okteto.GetContext().Namespace, c, false)
+				app, _, err := utils.GetApp(ctx, dev, okCtx.Namespace, c, false)
 				if err != nil {
 					return err
 				}
 
 				if apps.IsDevModeOn(app) {
-					if err := dc.Down(ctx, dev, okteto.GetContext().Namespace, rm); err != nil {
+					if err := dc.Down(ctx, dev, okCtx.Namespace, rm); err != nil {
 						at.TrackDown(false)
-						return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(okteto.GetContext().Namespace, dev.Name))
+						return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(okCtx.Namespace, dev.Name))
 					}
 				} else {
 					oktetoLog.Success(fmt.Sprintf("Development container '%s' deactivated", dev.Name))

@@ -51,7 +51,11 @@ type executorProvider struct {
 }
 
 func (e executorProvider) provide(dev *model.Dev, podName, namespace string) (executor, error) {
-	k8sClient, cfg, err := e.k8sClientProvider.Provide(okteto.GetContext().Cfg)
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		return nil, err
+	}
+	k8sClient, cfg, err := e.k8sClientProvider.Provide(okCtx.Cfg)
 	if err != nil {
 		return nil, err
 	}

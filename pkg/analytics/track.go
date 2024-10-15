@@ -274,23 +274,29 @@ func track(event string, success bool, props map[string]interface{}) {
 	props["$os"] = mpOS
 	props["version"] = config.VersionString
 	props["machine_id"] = get().MachineID
-	if okteto.GetContext().ClusterType != "" {
-		props["clusterType"] = okteto.GetContext().ClusterType
+
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		oktetoLog.Infof("failed to get context: %s", err)
+		okCtx = &okteto.Context{}
+	}
+	if okCtx.ClusterType != "" {
+		props["clusterType"] = okCtx.ClusterType
 	}
 
 	props["source"] = origin
 	props["origin"] = origin
 	props["success"] = success
 	props["contextType"] = getContextType()
-	props["isOkteto"] = okteto.GetContext().IsOkteto
+	props["isOkteto"] = okCtx.IsOkteto
 	if termType := os.Getenv(model.TermEnvVar); termType == "" {
 		props["term-type"] = "other"
 	} else {
 		props["term-type"] = termType
 	}
 
-	props["context"] = okteto.GetContext().CompanyName
-	props["isTrial"] = okteto.GetContext().IsTrial
+	props["context"] = okCtx.CompanyName
+	props["isTrial"] = okCtx.IsTrial
 
 	e := &mixpanel.Event{Properties: props}
 	if err := mixpanelClient.Track(getTrackID(), event, e); err != nil {
@@ -299,5 +305,9 @@ func track(event string, success bool, props map[string]interface{}) {
 }
 
 func disabledByOktetoAdmin() bool {
-	return !okteto.GetContext().Analytics
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		return false
+	}
+	return !okCtx.Analytics
 }

@@ -200,6 +200,7 @@ func TestDestroyWithErrorGettingManifestButDestroySuccess(t *testing.T) {
 		ConfigMapHandler: NewConfigmapHandler(fakeClient),
 		nsDestroyer:      destroyer,
 		secrets:          &fakeSecretHandler{},
+		okCtx:            &okteto.Context{},
 		buildCtrlProvider: fakeBuildCtrlProvider{
 			buildCtrl: buildCtrl{
 				builder: fakeBuilderV2{
@@ -238,6 +239,7 @@ func TestDestroyWithErrorDestroyingDependencies(t *testing.T) {
 		getPipelineDestroyer: func() (pipelineDestroyer, error) {
 			return nil, assert.AnError
 		},
+		okCtx: &okteto.Context{},
 		buildCtrlProvider: fakeBuildCtrlProvider{
 			buildCtrl: buildCtrl{
 				builder: fakeBuilderV2{
@@ -278,6 +280,7 @@ func TestDestroyWithErrorDestroyingDivert(t *testing.T) {
 		ConfigMapHandler:  NewConfigmapHandler(fakeClient),
 		nsDestroyer:       destroyer,
 		secrets:           &fakeSecretHandler{},
+		okCtx:             &okteto.Context{},
 		k8sClientProvider: k8sClientProvider,
 		getDivertDriver: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface) (divert.Driver, error) {
 			return nil, assert.AnError
@@ -315,6 +318,7 @@ func TestDestroyWithErrorOnCommands(t *testing.T) {
 		ConfigMapHandler:  NewConfigmapHandler(fakeClient),
 		nsDestroyer:       destroyer,
 		secrets:           &fakeSecretHandler{},
+		okCtx:             &okteto.Context{},
 		k8sClientProvider: k8sClientProvider,
 		executor: &fakeExecutor{
 			err: assert.AnError,
@@ -357,6 +361,7 @@ func TestDestroyWithErrorOnCommandsForcingDestroy(t *testing.T) {
 		ConfigMapHandler:  NewConfigmapHandler(fakeClient),
 		nsDestroyer:       destroyer,
 		secrets:           &fakeSecretHandler{},
+		okCtx:             &okteto.Context{},
 		k8sClientProvider: k8sClientProvider,
 		executor: &fakeExecutor{
 			err: fmt.Errorf("error executing command"),
@@ -402,6 +407,7 @@ func TestDestroyWithErrorDestroyingK8sResources(t *testing.T) {
 		nsDestroyer:       destroyer,
 		secrets:           &fakeSecretHandler{},
 		k8sClientProvider: k8sClientProvider,
+		okCtx:             &okteto.Context{},
 		executor:          &fakeExecutor{},
 		buildCtrlProvider: fakeBuildCtrlProvider{
 			buildCtrl: buildCtrl{
@@ -441,6 +447,7 @@ func TestDestroyK8sResourcesWithErrorDestroyingVolumes(t *testing.T) {
 	}
 	dc := &destroyCommand{
 		nsDestroyer: destroyer,
+		okCtx:       &okteto.Context{},
 	}
 
 	err := dc.destroyK8sResources(ctx, opts)
@@ -460,6 +467,7 @@ func TestDestroyK8sResourcesWithErrorDestroyingHelmAppWithoutForce(t *testing.T)
 	destroyer := &fakeDestroyer{}
 	dc := &destroyCommand{
 		nsDestroyer: destroyer,
+		okCtx:       &okteto.Context{},
 		secrets: &fakeSecretHandler{
 			err: assert.AnError,
 		},
@@ -482,6 +490,7 @@ func TestDestroyK8sResourcesWithErrorDestroyingHelmAppWithForce(t *testing.T) {
 	destroyer := &fakeDestroyer{}
 	dc := &destroyCommand{
 		nsDestroyer: destroyer,
+		okCtx:       &okteto.Context{},
 		secrets: &fakeSecretHandler{
 			err: assert.AnError,
 		},
@@ -506,6 +515,7 @@ func TestDestroyK8sResourcesWithErrorDestroyingWithLabel(t *testing.T) {
 	}
 	dc := &destroyCommand{
 		nsDestroyer: destroyer,
+		okCtx:       &okteto.Context{},
 		secrets:     &fakeSecretHandler{},
 	}
 
@@ -526,6 +536,7 @@ func TestDestroyK8sResourcesWithoutErrors(t *testing.T) {
 	destroyer := &fakeDestroyer{}
 	dc := &destroyCommand{
 		nsDestroyer: destroyer,
+		okCtx:       &okteto.Context{},
 		secrets:     &fakeSecretHandler{},
 	}
 
@@ -646,6 +657,7 @@ func TestDestroyDivertWithErrorGettingKubernetesClient(t *testing.T) {
 	k8sClientProvider := test.NewFakeK8sProvider()
 	k8sClientProvider.ErrProvide = assert.AnError
 	dc := &destroyCommand{
+		okCtx:             &okteto.Context{},
 		k8sClientProvider: k8sClientProvider,
 	}
 
@@ -661,6 +673,7 @@ func TestDestroyDivertWithErrorCreatingDivertDriver(t *testing.T) {
 
 	dc := &destroyCommand{
 		k8sClientProvider: k8sClientProvider,
+		okCtx:             &okteto.Context{},
 		getDivertDriver: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface) (divert.Driver, error) {
 			return nil, assert.AnError
 		},
@@ -679,6 +692,7 @@ func TestDestroyDivertWithoutError(t *testing.T) {
 	divertDriver := &fakeDivertDriver{}
 	dc := &destroyCommand{
 		k8sClientProvider: k8sClientProvider,
+		okCtx:             &okteto.Context{},
 		getDivertDriver: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface) (divert.Driver, error) {
 			return divertDriver, nil
 		},
@@ -695,6 +709,7 @@ func TestDestroyDivertWithoutError(t *testing.T) {
 
 func TestDestroyDependenciesWithErrorGettingCommand(t *testing.T) {
 	dc := &destroyCommand{
+		okCtx: &okteto.Context{},
 		getPipelineDestroyer: func() (pipelineDestroyer, error) {
 			return nil, assert.AnError
 		},
@@ -714,6 +729,7 @@ func TestDestroyDependenciesWithErrorDeletingDep(t *testing.T) {
 	pipDestroyer := &fakePipelineDestroyer{}
 	pipDestroyer.On("ExecuteDestroyPipeline", mock.Anything, mock.Anything).Return(assert.AnError)
 	dc := &destroyCommand{
+		okCtx: &okteto.Context{},
 		getPipelineDestroyer: func() (pipelineDestroyer, error) {
 			return pipDestroyer, nil
 		},
@@ -757,6 +773,7 @@ func TestDestroyDependenciesWithoutError(t *testing.T) {
 	pipDestroyer.On("ExecuteDestroyPipeline", mock.Anything, expectedOpts2).Return(nil)
 	pipDestroyer.On("ExecuteDestroyPipeline", mock.Anything, expectedOpts3).Return(nil)
 	dc := &destroyCommand{
+		okCtx: okteto.CurrentStore.Contexts["example"],
 		getPipelineDestroyer: func() (pipelineDestroyer, error) {
 			return pipDestroyer, nil
 		},
@@ -799,7 +816,8 @@ func TestGetDestroyer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dc := &destroyCommand{}
-			deployer := dc.getDestroyer(tt.opts)
+			deployer, err := dc.getDestroyer(tt.opts)
+			require.NoError(t, err)
 			require.IsType(t, tt.expectedType, deployer)
 		})
 	}

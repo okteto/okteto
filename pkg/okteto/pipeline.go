@@ -237,12 +237,16 @@ func (c *pipelineClient) Destroy(ctx context.Context, name, namespace string, de
 			Status:     string(mutation.Response.GitDeploy.Status),
 		}
 	} else {
+		okCtx, err := GetContext()
+		if err != nil {
+			return nil, err
+		}
 		var mutation destroyPipelineWithoutVolumesMutation
 		queryVariables := map[string]interface{}{
 			"name":  graphql.String(name),
-			"space": graphql.String(GetContext().Namespace),
+			"space": graphql.String(okCtx.Namespace),
 		}
-		err := mutate(ctx, &mutation, queryVariables, c.client)
+		err = mutate(ctx, &mutation, queryVariables, c.client)
 		if err != nil {
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
@@ -272,8 +276,12 @@ func (c *pipelineClient) GetResourcesStatus(ctx context.Context, name, namespace
 	}
 
 	if err := query(ctx, &queryStruct, variables, c.client); err != nil {
+		okCtx, ctxErr := GetContext()
+		if ctxErr != nil {
+			return nil, ctxErr
+		}
 		if oktetoErrors.IsNotFound(err) {
-			okClient, err := NewOktetoClientFromUrlAndToken(c.url, GetContext().Token)
+			okClient, err := NewOktetoClientFromUrlAndToken(c.url, okCtx.Token)
 			if err != nil {
 				return nil, err
 			}

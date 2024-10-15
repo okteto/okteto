@@ -33,15 +33,18 @@ import (
 type localDestroyAllCommand struct {
 	oktetoClient      *okteto.Client
 	k8sClientProvider okteto.K8sClientProvider
+	okCtx             *okteto.Context
 }
 
 func newLocalDestroyerAll(
 	k8sClientProvider okteto.K8sClientProvider,
 	oktetoClient *okteto.Client,
+	okCtx *okteto.Context,
 ) *localDestroyAllCommand {
 	return &localDestroyAllCommand{
 		k8sClientProvider: k8sClientProvider,
 		oktetoClient:      oktetoClient,
+		okCtx:             okCtx,
 	}
 }
 
@@ -99,7 +102,7 @@ func (lda *localDestroyAllCommand) waitForNamespaceDestroyAllToComplete(ctx cont
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 
-	c, _, err := lda.k8sClientProvider.Provide(okteto.GetContext().Cfg)
+	c, _, err := lda.k8sClientProvider.Provide(lda.okCtx.Cfg)
 	if err != nil {
 		return err
 	}

@@ -141,7 +141,8 @@ func Test_ExecuteUpdateKubeconfig_DisabledKubetoken(t *testing.T) {
 			}
 			defer os.Remove(file)
 
-			okContext := okteto.GetContext()
+			okContext, err := okteto.GetContext()
+			assert.NoError(t, err, "error getting context")
 			kubeconfigPaths := []string{file}
 
 			err = newKubeconfigController(tt.okClientProvider).execute(okContext, kubeconfigPaths)
@@ -254,7 +255,8 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 			}
 			defer os.Remove(file)
 
-			okContext := okteto.GetContext()
+			okContext, err := okteto.GetContext()
+			assert.NoError(t, err, "error getting context")
 			kubeconfigPaths := []string{file}
 
 			err = newKubeconfigController(okClientProvider).execute(okContext, kubeconfigPaths)
@@ -302,7 +304,8 @@ func Test_ExecuteUpdateKubeconfig_With_OktetoUseStaticKubetokenEnvVar(t *testing
 	}
 	defer os.Remove(file)
 
-	okContext := okteto.GetContext()
+	okContext, err := okteto.GetContext()
+	assert.NoError(t, err, "error getting context")
 	kubeconfigPaths := []string{file}
 	okClientProvider := client.NewFakeOktetoClientProvider(
 		&client.FakeOktetoClient{
@@ -348,7 +351,8 @@ func Test_ExecuteUpdateKubeconfig_ForNonOktetoContext(t *testing.T) {
 	}
 	defer os.Remove(file)
 
-	okContext := okteto.GetContext()
+	okContext, err := okteto.GetContext()
+	assert.NoError(t, err, "error getting context")
 	kubeconfigPaths := []string{file}
 
 	err = newKubeconfigController(nil).execute(okContext, kubeconfigPaths)
@@ -516,7 +520,8 @@ func Test_ExecuteUpdateKubeconfig_WithRightCertificate(t *testing.T) {
 			}
 			defer os.Remove(file)
 
-			okContext := okteto.GetContext()
+			okContext, err := okteto.GetContext()
+			assert.NoError(t, err, "error getting context")
 			kubeconfigPaths := []string{file}
 
 			err = newKubeconfigController(okClientProvider).execute(okContext, kubeconfigPaths)
@@ -572,7 +577,8 @@ func Test_ExecuteUpdateKubeconfig_WithWrongOktetoCertificate(t *testing.T) {
 	}
 	defer os.Remove(file)
 
-	okContext := okteto.GetContext()
+	okContext, err := okteto.GetContext()
+	assert.NoError(t, err, "error getting context")
 	kubeconfigPaths := []string{file}
 
 	err = newKubeconfigController(okClientProvider).execute(okContext, kubeconfigPaths)

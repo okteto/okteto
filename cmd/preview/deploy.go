@@ -76,11 +76,15 @@ okteto preview deploy --wait=false`,
 				return err
 			}
 
-			if !okteto.IsOkteto() {
+			okCtx, err := okteto.GetContext()
+			if err != nil {
+				return err
+			}
+			if !okCtx.IsOkteto {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			previewCmd, err := NewCommand()
+			previewCmd, err := NewCommand(okCtx)
 			if err != nil {
 				return err
 			}
@@ -108,7 +112,7 @@ func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions
 		return err
 	}
 
-	oktetoLog.Information("Preview URL: %s", getPreviewURL(opts.name))
+	oktetoLog.Information("Preview URL: %s", getPreviewURL(pw.okCtx.Name, opts.name))
 	if !opts.wait {
 		oktetoLog.Success("Preview environment '%s' scheduled for deployment", opts.name)
 		return nil

@@ -21,7 +21,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/services"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
 )
@@ -33,7 +32,7 @@ func (d *Operation) Run(app apps.App, dev *model.Dev, namespace string, trMap ma
 		oktetoLog.Info("no translations available in the deployment")
 	}
 
-	k8sClient, _, err := d.K8sClientProvider.Provide(okteto.GetContext().Cfg)
+	k8sClient, _, err := d.K8sClientProvider.Provide(d.okCtx.Cfg)
 	if err != nil {
 		return err
 	}

@@ -34,7 +34,7 @@ var (
 type preReqCfg struct {
 	k8sClientProvider    k8sClientProvider
 	oktetoClientProvider oktetoClientProvider
-	getContextStore      func() *okteto.ContextStore
+	getContextStore      func() (*okteto.ContextStore, error)
 	getCtxResource       initCtxOptsFunc
 	ctxName              string
 	ns                   string
@@ -68,8 +68,8 @@ func withOktetoClientProvider(oktetoClientProvider oktetoClientProvider) option 
 
 func withContextStore(ctxStore *okteto.ContextStore) option {
 	return func(cfg *preReqCfg) {
-		cfg.getContextStore = func() *okteto.ContextStore {
-			return ctxStore
+		cfg.getContextStore = func() (*okteto.ContextStore, error) {
+			return ctxStore, nil
 		}
 	}
 }
@@ -148,7 +148,7 @@ func getCtxResource(ctxName, ns string) *contextCMD.Options {
 	return ctxResource
 }
 
-type getContextStoreFunc func() *okteto.ContextStore
+type getContextStoreFunc func() (*okteto.ContextStore, error)
 
 // ctxValidator checks that the ctx use to execute the command is an okteto context
 // that has already being added to your okteto context
@@ -195,7 +195,11 @@ func (v *ctxValidator) validate(ctx context.Context) error {
 		if !isURL(v.ctxResource.Context) {
 			v.ctxResource.Context = v.k8sCtxToOktetoURL(ctx, v.ctxResource.Context, "", v.k8sClientProvider)
 		}
-		ctxStore := v.getContextStore()
+		ctxStore, err := v.getContextStore()
+		if err != nil {
+			result <- err
+			return
+		}
 		if ctxStore == nil {
 			result <- errOktetoContextNotFound{v.ctxResource.Context}
 			return

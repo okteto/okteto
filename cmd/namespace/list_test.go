@@ -72,6 +72,7 @@ func Test_listNamespace(t *testing.T) {
 			nsCmd := &Command{
 				okClient: fakeOktetoClient,
 				ctxCmd:   newFakeContextCommand(fakeOktetoClient, usr),
+				okCtx:    okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 			}
 			err := nsCmd.executeListNamespaces(ctx)
 			if tt.err != nil {

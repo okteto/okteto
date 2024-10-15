@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	apiv1 "k8s.io/api/core/v1"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 // ConfigMapHandler defines the different functions to run okteto inside an okteto deploy
@@ -34,26 +35,32 @@ type ConfigMapHandler interface {
 	AddPhaseDuration(context.Context, string, string, string, time.Duration) error
 }
 
+type K8sCfgGetter interface {
+	GetCurrentCfg() *clientcmdapi.Config
+}
+
 // oktetoDefaultConfigMapHandler is the runner used when the okteto is executed
 // directly
 type defaultConfigMapHandler struct {
 	k8sClientProvider okteto.K8sClientProviderWithLogger
 	k8slogger         *io.K8sLogger
+	okCtx             K8sCfgGetter
 }
 
-func newDefaultConfigMapHandler(provider okteto.K8sClientProviderWithLogger, k8slogger *io.K8sLogger) *defaultConfigMapHandler {
+func newDefaultConfigMapHandler(provider okteto.K8sClientProviderWithLogger, okCtx K8sCfgGetter, k8slogger *io.K8sLogger) *defaultConfigMapHandler {
 	return &defaultConfigMapHandler{
 		k8sClientProvider: provider,
 		k8slogger:         k8slogger,
+		okCtx:             okCtx,
 	}
 }
 
-func NewConfigmapHandler(provider okteto.K8sClientProviderWithLogger, k8slogger *io.K8sLogger) ConfigMapHandler {
-	return newDefaultConfigMapHandler(provider, k8slogger)
+func NewConfigmapHandler(provider okteto.K8sClientProviderWithLogger, okCtx K8sCfgGetter, k8slogger *io.K8sLogger) ConfigMapHandler {
+	return newDefaultConfigMapHandler(provider, okCtx, k8slogger)
 }
 
 func (ch *defaultConfigMapHandler) TranslateConfigMapAndDeploy(ctx context.Context, data *pipeline.CfgData) (*apiv1.ConfigMap, error) {
-	c, _, err := ch.k8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, ch.k8slogger)
+	c, _, err := ch.k8sClientProvider.ProvideWithLogger(ch.okCtx.GetCurrentCfg(), ch.k8slogger)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +68,7 @@ func (ch *defaultConfigMapHandler) TranslateConfigMapAndDeploy(ctx context.Conte
 }
 
 func (ch *defaultConfigMapHandler) GetConfigmapVariablesEncoded(ctx context.Context, name, namespace string) (string, error) {
-	c, _, err := ch.k8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, ch.k8slogger)
+	c, _, err := ch.k8sClientProvider.ProvideWithLogger(ch.okCtx.GetCurrentCfg(), ch.k8slogger)
 	if err != nil {
 		return "", err
 	}
@@ -69,7 +76,7 @@ func (ch *defaultConfigMapHandler) GetConfigmapVariablesEncoded(ctx context.Cont
 }
 
 func (ch *defaultConfigMapHandler) UpdateConfigMap(ctx context.Context, cfg *apiv1.ConfigMap, data *pipeline.CfgData, errMain error) error {
-	c, _, err := ch.k8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, ch.k8slogger)
+	c, _, err := ch.k8sClientProvider.ProvideWithLogger(ch.okCtx.GetCurrentCfg(), ch.k8slogger)
 	if err != nil {
 		return err
 	}
@@ -85,7 +92,7 @@ func (ch *defaultConfigMapHandler) UpdateConfigMap(ctx context.Context, cfg *api
 
 // UpdateEnvsFromCommands update config map by adding envs generated in OKTETO_ENV as data fields
 func (ch *defaultConfigMapHandler) UpdateEnvsFromCommands(ctx context.Context, name, namespace string, envs []string) error {
-	c, _, err := ch.k8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, ch.k8slogger)
+	c, _, err := ch.k8sClientProvider.ProvideWithLogger(ch.okCtx.GetCurrentCfg(), ch.k8slogger)
 	if err != nil {
 		return err
 	}
@@ -97,7 +104,7 @@ func (ch *defaultConfigMapHandler) UpdateEnvsFromCommands(ctx context.Context, n
 }
 
 func (ch *defaultConfigMapHandler) AddPhaseDuration(ctx context.Context, name, namespace, phase string, duration time.Duration) error {
-	c, _, err := ch.k8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, ch.k8slogger)
+	c, _, err := ch.k8sClientProvider.ProvideWithLogger(ch.okCtx.GetCurrentCfg(), ch.k8slogger)
 	if err != nil {
 		return err
 	}

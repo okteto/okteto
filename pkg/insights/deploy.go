@@ -50,7 +50,13 @@ type phaseJSON struct {
 
 // TrackDeploy tracks an image build event
 func (ip *Publisher) TrackDeploy(ctx context.Context, name, namespace string, success bool) {
-	k8sClient, _, err := ip.k8sClientProvider.Provide(okteto.GetContext().Cfg)
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		ip.ioCtrl.Logger().Infof("could not get okteto context: %s", err)
+		return
+
+	}
+	k8sClient, _, err := ip.k8sClientProvider.Provide(okCtx.Cfg)
 	if err != nil {
 		ip.ioCtrl.Logger().Infof("could not get k8s client: %s", err)
 		return

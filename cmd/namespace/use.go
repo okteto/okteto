@@ -49,15 +49,19 @@ func Use(ctx context.Context) *cobra.Command {
 				namespace = args[0]
 			}
 
-			if !okteto.IsOkteto() {
+			okCtx, err := okteto.GetContext()
+			if err != nil {
+				return err
+			}
+			if !okCtx.IsOkteto {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
 			if options.personal {
-				namespace = okteto.GetContext().PersonalNamespace
+				namespace = okCtx.PersonalNamespace
 			}
 
-			nsCmd, err := NewCommand()
+			nsCmd, err := NewCommand(okCtx)
 			if err != nil {
 				return err
 			}
@@ -84,7 +88,7 @@ func (nc *Command) Use(ctx context.Context, namespace string) error {
 	return nc.ctxCmd.Run(
 		ctx,
 		&contextCMD.Options{
-			Context:              okteto.GetContext().Name,
+			Context:              nc.okCtx.Name,
 			Namespace:            namespace,
 			Save:                 true,
 			Show:                 false,
@@ -100,7 +104,7 @@ func (nc *Command) getNamespaceFromSelector(ctx context.Context) (string, error)
 	if err != nil {
 		return "", err
 	}
-	initialPosition := getInitialPosition(namespaces)
+	initialPosition := getInitialPosition(namespaces, nc.okCtx.Namespace)
 	selector := utils.NewOktetoSelector("Select the namespace you want to use:", "Namespace")
 	ns, err := selector.AskForOptionsOkteto(namespaces, initialPosition)
 	if err != nil {
@@ -167,8 +171,7 @@ func askForOktetoNamespace() (string, error) {
 	return namespace, nil
 }
 
-func getInitialPosition(options []utils.SelectorItem) int {
-	currentNamespace := okteto.GetContext().Namespace
+func getInitialPosition(options []utils.SelectorItem, currentNamespace string) int {
 	for indx, ns := range options {
 		if ns.Label == currentNamespace {
 			return indx

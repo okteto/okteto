@@ -54,7 +54,12 @@ func NewInsightsPublisher(k8sClientProvider okteto.K8sClientProvider, ioCtrl io.
 // insightType: the type of the event (for example: build, deploy, etc.)
 // data: the data of the event as JSON string
 func (ip *Publisher) trackEvent(ctx context.Context, namespace, insightType, data string) {
-	k8sClient, _, err := ip.k8sClientProvider.Provide(okteto.GetContext().Cfg)
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		ip.ioCtrl.Logger().Infof("could not get context: %s", err)
+		return
+	}
+	k8sClient, _, err := ip.k8sClientProvider.Provide(okCtx.Cfg)
 	if err != nil {
 		ip.ioCtrl.Logger().Infof("could not get k8s client: %s", err)
 		return

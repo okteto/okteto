@@ -60,6 +60,7 @@ func TestWaitUntilAppAwaken(t *testing.T) {
 					Autocreate: tc.autocreate,
 				},
 				K8sClientProvider: tc.oktetoClientProvider,
+				okCtx:             okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 			}
 			err := up.waitUntilAppIsAwaken(context.Background(), nil)
 			assert.ErrorIs(t, tc.expectedErr, err)
@@ -94,6 +95,7 @@ func TestWaitUntilDevelopmentContainerIsRunning(t *testing.T) {
 			up := &upContext{
 				Dev:               &model.Dev{},
 				K8sClientProvider: tc.oktetoClientProvider,
+				okCtx:             okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 			}
 			err := up.waitUntilDevelopmentContainerIsRunning(context.Background(), nil)
 			assert.ErrorIs(t, tc.expectedErr, err)

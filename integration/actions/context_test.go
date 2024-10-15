@@ -54,7 +54,11 @@ func TestContextAction(t *testing.T) {
 func executeContextAction() error {
 	token := os.Getenv(model.OktetoTokenEnvVar)
 	if token == "" {
-		token = okteto.GetContext().Token
+		okCtx, err := okteto.GetContext()
+		if err != nil {
+			return err
+		}
+		token = okCtx.Token
 	}
 
 	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, contextPath)

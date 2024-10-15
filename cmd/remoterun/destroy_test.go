@@ -64,12 +64,16 @@ func TestRun_DestroyCommand(t *testing.T) {
 			},
 		},
 	}
+	okCtx := &okteto.ContextStateless{
+		Store: okteto.CurrentStore,
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			runner := &fakeDestroyRunner{}
 			runner.On("RunDestroy", tt.params).Return(tt.expected)
 			command := &DestroyCommand{
-				runner: runner,
+				runner:        runner,
+				oktetoContext: okCtx,
 			}
 			err := command.Run(tt.params)
 

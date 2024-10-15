@@ -116,7 +116,7 @@ func Test_getPreviewURL(t *testing.T) {
 
 	t.Run("full-previews-url", func(t *testing.T) {
 		expected := "https://my.okteto.instance/previews/foo-bar"
-		actual := getPreviewURL("foo-bar")
+		actual := getPreviewURL(ctxName, "foo-bar")
 		assert.Equal(t, expected, actual)
 	})
 }

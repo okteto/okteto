@@ -85,10 +85,14 @@ func getSternConfig(manifest *model.Manifest, o *Options, kubeconfigFile string)
 	containerStates := []stern.ContainerState{"running"}
 	fieldSelector := fields.Everything()
 
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		return nil, err
+	}
 	return &stern.Config{
 		KubeConfig:          kubeconfigFile,
-		ContextName:         okteto.UrlToKubernetesContext(okteto.GetContext().Name),
-		Namespaces:          []string{okteto.GetContext().Namespace},
+		ContextName:         okteto.UrlToKubernetesContext(okCtx.Name),
+		Namespaces:          []string{okCtx.Namespace},
 		PodQuery:            includePodQuery,
 		ExcludePodQuery:     excludePodQuery,
 		ContainerQuery:      containerQuery,

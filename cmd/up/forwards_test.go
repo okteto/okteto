@@ -70,6 +70,7 @@ func TestGlobalForwarderAddsProperlyPortsToForward(t *testing.T) {
 		{
 			name: "add one global forwarder",
 			upContext: &upContext{
+				okCtx: &okteto.Context{},
 				Manifest: &model.Manifest{
 					GlobalForward: []forward.GlobalForward{
 						{
@@ -85,6 +86,7 @@ func TestGlobalForwarderAddsProperlyPortsToForward(t *testing.T) {
 		{
 			name: "add two global forwarder",
 			upContext: &upContext{
+				okCtx: &okteto.Context{},
 				Manifest: &model.Manifest{
 					GlobalForward: []forward.GlobalForward{
 						{
@@ -105,6 +107,7 @@ func TestGlobalForwarderAddsProperlyPortsToForward(t *testing.T) {
 		{
 			name: "add none global forwarder",
 			upContext: &upContext{
+				okCtx: &okteto.Context{},
 				Manifest: &model.Manifest{
 					GlobalForward: []forward.GlobalForward{},
 				},
@@ -151,6 +154,7 @@ func TestForwards(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			up := &upContext{
+				okCtx: &okteto.Context{},
 				Dev: &model.Dev{
 					Forward: []forward.Forward{
 						{
@@ -189,6 +193,7 @@ func TestSSHForwarss(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			up := &upContext{
+				okCtx: &okteto.Context{},
 				Dev: &model.Dev{
 					Forward: []forward.Forward{
 						{

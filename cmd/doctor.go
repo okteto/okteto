@@ -72,7 +72,10 @@ func Doctor(k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
+			okCtx, err := okteto.GetContext()
+			if err != nil {
+				return err
+			}
 			if !okteto.IsOkteto() {
 				if err := manifest.ValidateForCLIOnly(); err != nil {
 					return err
@@ -98,7 +101,7 @@ func Doctor(k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command {
 					return err
 				}
 			}
-			filename, err := doctor.Run(ctx, dev, doctorOpts.DevPath, okteto.GetContext().Namespace, c)
+			filename, err := doctor.Run(ctx, dev, doctorOpts.DevPath, okCtx.Namespace, c)
 			if err == nil {
 				oktetoLog.Information("Your doctor file is available at %s", filename)
 			}

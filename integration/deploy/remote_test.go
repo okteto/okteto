@@ -64,8 +64,10 @@ func TestDeployRemoteWithBuildCommand(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
+	okCtx, err := okteto.GetContext()
+	require.NoError(t, err)
 	// Test that image has been built
-	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/testing-image:test", okteto.GetContext().Registry, testNamespace)))
+	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/testing-image:test", okCtx.Registry, testNamespace)))
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,

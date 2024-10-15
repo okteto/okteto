@@ -58,7 +58,11 @@ func newAppRetriever(ioControl *io.Controller, k8sProvider okteto.K8sClientProvi
 // getContainer retrieves the container for the dev environment
 func (ar *appRetriever) getApp(ctx context.Context, dev *model.Dev, namespace string) (apps.App, error) {
 	ar.ioControl.Logger().Info("start to retrieve app")
-	c, _, err := ar.k8sProvider.Provide(okteto.GetContext().Cfg)
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get okteto context: %w", err)
+	}
+	c, _, err := ar.k8sProvider.Provide(okCtx.Cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get k8s client: %w", err)
 	}

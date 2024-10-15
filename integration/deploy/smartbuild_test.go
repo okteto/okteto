@@ -65,8 +65,11 @@ func TestDeployOktetoManifestWithSmartBuildCloneCustomImage(t *testing.T) {
 	require.NoError(t, createOktetoManifestWithCustomImage(dir))
 	require.NoError(t, integration.GitInit(dir))
 
+	okCtx, err := okteto.GetContext()
+	require.NoError(t, err)
+
 	testNamespace := integration.GetTestNamespace("DeploySBClone", user)
-	require.NoError(t, createK8sManifestWithCache(dir, fmt.Sprintf("%s/%s/test-app:1.0.0", okteto.GetContext().Registry, testNamespace)))
+	require.NoError(t, createK8sManifestWithCache(dir, fmt.Sprintf("%s/%s/test-app:1.0.0", okCtx.Registry, testNamespace)))
 
 	buildOptions := &commands.BuildOptions{
 		Workdir:    dir,
@@ -97,7 +100,7 @@ func TestDeployOktetoManifestWithSmartBuildCloneCustomImage(t *testing.T) {
 	require.Contains(t, outpput, "Okteto Smart Builds is skipping build of 'app' because it's already built from cache.")
 
 	// Test that image has been built
-	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/test-app:1.0.0", okteto.GetContext().Registry, testNamespace)))
+	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/test-app:1.0.0", okCtx.Registry, testNamespace)))
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,

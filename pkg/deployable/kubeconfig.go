@@ -75,11 +75,15 @@ func (k *KubeConfig) Modify(port int, sessionToken, destKubeconfigFile string) e
 }
 
 func (*KubeConfig) GetCMDAPIConfig() (*clientcmdapi.Config, error) {
-	if okteto.GetContext().Cfg == nil {
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		return nil, err
+	}
+	if okCtx.Cfg == nil {
 		return nil, fmt.Errorf("okteto context not initialized")
 	}
 
-	return okteto.GetContext().Cfg, nil
+	return okCtx.Cfg, nil
 }
 
 // GetTempKubeConfigFile returns where the temp kubeConfigFile for deploy should be stored

@@ -196,6 +196,7 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 				},
 			}
 			pw := &Command{
+				okCtx: okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 				okClient: &client.FakeOktetoClient{
 					PipelineClient: client.NewFakePipelineClient(tt.pipelineResponses),
 					Preview:        client.NewFakePreviewClient(tt.previewResponses),

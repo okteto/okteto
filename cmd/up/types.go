@@ -87,6 +87,7 @@ type upContext struct {
 	ShutdownCompleted     chan bool
 	Options               *Options
 	Pod                   *apiv1.Pod
+	okCtx                 *okteto.Context
 	Cancel                context.CancelFunc
 	pidController         pidController
 	inFd                  uintptr

@@ -55,7 +55,10 @@ func executeListContext() error {
 		return fmt.Errorf("no contexts are available. Run 'okteto context' to configure your first okteto context")
 	}
 
-	ctxStore := okteto.GetContextStore()
+	ctxStore, err := okteto.GetContextStore()
+	if err != nil {
+		return err
+	}
 
 	var ctxs []okteto.ContextViewer
 	for _, ctxSelector := range contexts {
@@ -65,7 +68,6 @@ func executeListContext() error {
 			Name:     ctxSelector.Name,
 			Builder:  "docker",
 			Registry: "-",
-			Current:  okteto.GetContext().Name == ctxSelector.Name,
 		}
 		if isOkteto {
 			ctxViewer.Registry = okCtx.Registry

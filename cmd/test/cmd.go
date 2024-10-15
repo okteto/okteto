@@ -134,16 +134,21 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		return analytics.TestMetadata{}, oktetoErrors.ErrContextIsNotOktetoCluster
 	}
 
-	create, err := utils.ShouldCreateNamespace(ctx, okteto.GetContext().Namespace)
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		return analytics.TestMetadata{}, err
+	}
+
+	create, err := utils.ShouldCreateNamespace(ctx, okCtx.Namespace)
 	if err != nil {
 		return analytics.TestMetadata{}, err
 	}
 	if create {
-		nsCmd, err := namespace.NewCommand()
+		nsCmd, err := namespace.NewCommand(okCtx)
 		if err != nil {
 			return analytics.TestMetadata{}, err
 		}
-		if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.GetContext().Namespace}); err != nil {
+		if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okCtx.Namespace}); err != nil {
 			return analytics.TestMetadata{}, err
 		}
 	}
@@ -184,12 +189,12 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 	}
 
 	if manifest.Name == "" {
-		c, _, err := okteto.NewK8sClientProvider().Provide(okteto.GetContext().Cfg)
+		c, _, err := okteto.NewK8sClientProvider().Provide(okCtx.Cfg)
 		if err != nil {
 			return analytics.TestMetadata{}, err
 		}
 		inferer := devenvironment.NewNameInferer(c)
-		manifest.Name = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, options.ManifestPath)
+		manifest.Name = inferer.InferName(ctx, cwd, okCtx.Namespace, options.ManifestPath)
 	}
 
 	if err := manifest.Test.Validate(); err != nil {
@@ -203,12 +208,12 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 	k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
 
-	pc, err := pipelineCMD.NewCommand()
+	pc, err := pipelineCMD.NewCommand(okCtx)
 	if err != nil {
 		return analytics.TestMetadata{}, fmt.Errorf("could not create pipeline command: %w", err)
 	}
 
-	configmapHandler := deployCMD.NewConfigmapHandler(k8sClientProvider, k8sLogger)
+	configmapHandler := deployCMD.NewConfigmapHandler(k8sClientProvider, okCtx, k8sLogger)
 
 	builder := buildv2.NewBuilderFromScratch(ioCtrl, []buildv2.OnBuildFinish{
 		tracker.TrackImageBuild,
@@ -253,7 +258,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			Builder:            builder,
 			GetDeployer:        deployCMD.GetDeployer,
 			EndpointGetter:     deployCMD.NewEndpointGetter,
-			DeployWaiter:       deployCMD.NewDeployWaiter(k8sClientProvider, k8sLogger),
+			DeployWaiter:       deployCMD.NewDeployWaiter(k8sClientProvider, okCtx, k8sLogger),
 			CfgMapHandler:      configmapHandler,
 			Fs:                 fs,
 			PipelineCMD:        pc,
@@ -270,8 +275,8 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			ManifestPathFlag: options.ManifestPathFlag,
 			ManifestPath:     options.ManifestPath,
 			Name:             options.Name,
-			Namespace:        okteto.GetContext().Namespace,
-			K8sContext:       okteto.GetContext().Name,
+			Namespace:        okCtx.Namespace,
+			K8sContext:       okCtx.Name,
 			Variables:        options.Variables,
 			NoBuild:          false,
 			Dependencies:     false,
@@ -301,6 +306,10 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		WasBuilt:    wasBuilt,
 	}
 
+	okContextStore, err := okteto.GetContextStore()
+	if err != nil {
+		return metadata, err
+	}
 	for _, name := range testServices {
 		test := manifest.Test[name]
 
@@ -311,12 +320,15 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			return metadata, err
 		}
 
-		runner := remote.NewRunner(ioCtrl, buildCMD.NewOktetoBuilder(
+		runner, err := remote.NewRunner(ioCtrl, buildCMD.NewOktetoBuilder(
 			&okteto.ContextStateless{
-				Store: okteto.GetContextStore(),
+				Store: okContextStore,
 			},
 			fs,
 		))
+		if err != nil {
+			return metadata, err
+		}
 		commands := make([]model.DeployCommand, len(test.Commands))
 
 		for i, cmd := range test.Commands {

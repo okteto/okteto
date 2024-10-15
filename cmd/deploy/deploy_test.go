@@ -222,7 +222,7 @@ func (f *fakeEndpointControl) List(_ context.Context, _ *EndpointsOptions, _ str
 	return f.endpoints, f.err
 }
 
-func getFakeEndpoint(_ *io.K8sLogger) (EndpointGetter, error) {
+func getFakeEndpoint(*io.K8sLogger, bool) (EndpointGetter, error) {
 	return EndpointGetter{
 		endpointControl: &fakeEndpointControl{},
 	}, nil
@@ -341,9 +341,10 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 		GetManifest:       getErrorManifest,
 		Builder:           builderV2,
 		K8sClientProvider: fakeK8sClientProvider,
-		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, okCtx.Store.Contexts[okCtx.Store.CurrentContext], nil),
 		Fs:                afero.NewMemMapFs(),
 		IoCtrl:            io.NewIOController(),
+		okCtx:             okCtx.Store.Contexts[okCtx.Store.CurrentContext],
 	}
 
 	ctx := context.Background()
@@ -414,9 +415,10 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 		GetManifest:       getFakeManifest,
 		GetDeployer:       fakeDeployer.Get,
 		K8sClientProvider: fakeK8sClientProvider,
-		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext], nil),
 		Fs:                fakeOs,
 		Builder:           &fakeV2Builder{},
+		okCtx:             okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 		IoCtrl:            io.NewIOController(),
 	}
 	ctx := context.Background()
@@ -504,9 +506,10 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 		GetManifest:       getFakeManifest,
 		GetDeployer:       fakeDeployer.Get,
 		K8sClientProvider: fakeK8sClientProvider,
-		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext], nil),
 		Fs:                afero.NewMemMapFs(),
 		IoCtrl:            io.NewIOController(),
+		okCtx:             okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 	}
 	ctx := context.Background()
 
@@ -555,9 +558,10 @@ func TestDeployWithoutErrors(t *testing.T) {
 		K8sClientProvider: fakeK8sClientProvider,
 		EndpointGetter:    getFakeEndpoint,
 		Fs:                fakeOs,
-		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext], nil),
 		GetDeployer:       fakeDeployer.Get,
 		Builder:           &fakeV2Builder{},
+		okCtx:             okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 		IoCtrl:            io.NewIOController(),
 	}
 	ctx := context.Background()
@@ -683,6 +687,7 @@ func TestDeployDependencies(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dc := &Command{
 				PipelineCMD: fakePipelineDeployer{tc.config.pipelineErr},
+				okCtx:       okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 			}
 			assert.ErrorIs(t, tc.expected, dc.deployDependencies(context.Background(), &Options{Manifest: fakeManifest}))
 		})
@@ -707,7 +712,7 @@ func TestDeployOnlyDependencies(t *testing.T) {
 		GetManifest:       getFakeManifestWithDependency,
 		K8sClientProvider: fakeK8sClientProvider,
 		Fs:                fakeOs,
-		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, &okteto.Context{}, nil),
 		GetDeployer:       fakeDeployer.Get,
 		IoCtrl:            io.NewIOController(),
 	}
@@ -748,6 +753,7 @@ func TestDeployOnlyDependencies(t *testing.T) {
 				CurrentContext: "test",
 			}
 
+			c.okCtx = okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext]
 			err := c.Run(ctx, opts)
 
 			require.ErrorIs(t, err, tc.expecterErr)

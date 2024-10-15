@@ -111,7 +111,11 @@ okteto exec api -- bash`,
 				return fmt.Errorf("failed to load manifest: %w", err)
 			}
 
-			if !okteto.IsOkteto() {
+			okCtx, err := okteto.GetContext()
+			if err != nil {
+				return err
+			}
+			if !okCtx.IsOkteto {
 				if err := manifest.ValidateForCLIOnly(); err != nil {
 					return err
 				}
@@ -120,7 +124,7 @@ okteto exec api -- bash`,
 			argParser := oargs.NewDevCommandArgParser(oargs.NewDevModeOnLister(e.k8sClientProvider), e.ioCtrl, true)
 			argsLenAtDash := cmd.ArgsLenAtDash()
 
-			argsResult, err := argParser.Parse(ctx, args, argsLenAtDash, manifest.Dev, okteto.GetContext().Namespace)
+			argsResult, err := argParser.Parse(ctx, args, argsLenAtDash, manifest.Dev, okCtx.Namespace)
 			if err != nil {
 				var userErr okerrors.UserError
 				if errors.As(err, &userErr) {
@@ -131,7 +135,7 @@ okteto exec api -- bash`,
 			}
 
 			e.ioCtrl.Out().Infof("Executing command in development container '%s'", argsResult.DevName)
-			return e.Run(ctx, argsResult, manifest.Dev[argsResult.DevName], okteto.GetContext().Namespace)
+			return e.Run(ctx, argsResult, manifest.Dev[argsResult.DevName], okCtx.Namespace)
 		},
 	}
 	cmd.Flags().StringVarP(&execFlags.manifestPath, "file", "f", "", "the path to the Okteto Manifest")
@@ -144,15 +148,19 @@ okteto exec api -- bash`,
 func (e *Exec) Run(ctx context.Context, opts *oargs.Result, dev *model.Dev, namespace string) error {
 	e.ioCtrl.Logger().Infof("executing command '%s' in development container '%s'", opts.Command, opts.DevName)
 
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		return err
+	}
 	app, err := e.appRetriever.getApp(ctx, dev, namespace)
 	if err != nil {
 		return okerrors.UserError{
-			E:    fmt.Errorf("development containers not found in namespace '%s'", okteto.GetContext().Namespace),
+			E:    fmt.Errorf("development containers not found in namespace '%s'", okCtx.Namespace),
 			Hint: "Run 'okteto up' to deploy your development container or use 'okteto context' to change your current context",
 		}
 	}
 
-	c, _, err := e.k8sClientProvider.Provide(okteto.GetContext().Cfg)
+	c, _, err := e.k8sClientProvider.Provide(okCtx.Cfg)
 	if err != nil {
 		return fmt.Errorf("failed to get k8s client: %w", err)
 	}
