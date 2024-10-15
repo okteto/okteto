@@ -49,11 +49,15 @@ func Create(ctx context.Context) *cobra.Command {
 			}
 			options.Namespace = args[0]
 
-			if !okteto.IsOkteto() {
+			okCtx, err := okteto.GetContext()
+			if err != nil {
+				return err
+			}
+			if !okCtx.IsOkteto {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			nsCmd, err := NewCommand()
+			nsCmd, err := NewCommand(okCtx)
 			if err != nil {
 				return err
 			}
@@ -86,9 +90,9 @@ func (nc *Command) Create(ctx context.Context, opts *CreateOptions) error {
 	ctxOptions := &contextCMD.Options{
 		IsCtxCommand: opts.Show,
 		IsOkteto:     true,
-		Token:        okteto.GetContext().Token,
+		Token:        nc.okCtx.Token,
 		Namespace:    oktetoNS,
-		Context:      okteto.GetContext().Name,
+		Context:      nc.okCtx.Name,
 	}
 
 	if opts.SetCurrentNs {

@@ -87,7 +87,10 @@ This will prompt you to select one of your existing Okteto Contexts or to create
 }
 
 func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
-	ctxStore := okteto.GetContextStore()
+	ctxStore, err := okteto.GetContextStore()
+	if err != nil {
+		return err
+	}
 	if len(ctxStore.Contexts) == 0 {
 		// if the context store has no context stored, set flag to save the
 		// new one generated. This is necessary for any command other than
@@ -98,7 +101,7 @@ func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 
 	// if the --context and --namespace flags are set, they have priority over the env vars, and current context
 	// if env vars OKTETO_CONTEXT and OKTETO_NAMESPACE are set, they have priority over the current context
-	err := c.loadDotEnv(afero.NewOsFs(), os.Setenv, os.LookupEnv)
+	err = c.loadDotEnv(afero.NewOsFs(), os.Setenv, os.LookupEnv)
 	if err != nil {
 		oktetoLog.Warning("Failed to load .env file: %s", err)
 	}
@@ -141,10 +144,14 @@ func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 		return err
 	}
 
-	os.Setenv(model.OktetoNamespaceEnvVar, okteto.GetContext().Namespace)
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		return err
+	}
+	os.Setenv(model.OktetoNamespaceEnvVar, okCtx.Namespace)
 
 	if ctxOptions.Show {
-		oktetoLog.Information("Using %s @ %s as context", okteto.GetContext().Namespace, okteto.RemoveSchema(okteto.GetContext().Name))
+		oktetoLog.Information("Using %s @ %s as context", okCtx.Namespace, okteto.RemoveSchema(okCtx.Name))
 	}
 
 	return nil
@@ -157,22 +164,29 @@ func (c *Command) RunStateless(ctx context.Context, ctxOptions *Options) (*oktet
 	if err != nil {
 		return nil, err
 	}
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		return nil, err
+	}
 
-	cfg := okteto.GetContext().Cfg.DeepCopy()
+	cfg := okCtx.Cfg.DeepCopy()
 	// Storing previous global namespace gotten after executing c.Run as it is memory, but after reading the
 	// context store from path that is lost
-	globalNamespace := okteto.GetContext().GlobalNamespace
-	builder := okteto.GetContext().Builder
-	cert := okteto.GetContext().Certificate
-	name := okteto.GetContext().Name
-	registry := okteto.GetContext().Registry
-	token := okteto.GetContext().Token
-	user := okteto.GetContext().UserID
-	isInsecure := okteto.GetContext().IsInsecure
-	namespace := okteto.GetContext().Namespace
-	isOkteto := okteto.GetContext().IsOkteto
+	globalNamespace := okCtx.GlobalNamespace
+	builder := okCtx.Builder
+	cert := okCtx.Certificate
+	name := okCtx.Name
+	registry := okCtx.Registry
+	token := okCtx.Token
+	user := okCtx.UserID
+	isInsecure := okCtx.IsInsecure
+	namespace := okCtx.Namespace
+	isOkteto := okCtx.IsOkteto
 
-	oktetoContextStore := okteto.GetContextStoreFromStorePath()
+	oktetoContextStore, err := okteto.GetContextStoreFromStorePath()
+	if err != nil {
+		return nil, err
+	}
 
 	oktetoContextStateless := &okteto.ContextStateless{
 		Store: oktetoContextStore,
@@ -217,7 +231,10 @@ func getContext(ctxOptions *Options) (string, error) {
 			return "", err
 		}
 		if isCreateNewContextOption(oktetoContext) {
-			ctxStore := okteto.GetContextStore()
+			ctxStore, err := okteto.GetContextStore()
+			if err != nil {
+				return "", err
+			}
 			clusterURL := ""
 			if oCtx, ok := ctxStore.Contexts[ctxStore.CurrentContext]; ok && oCtx.IsOkteto {
 				clusterURL = ctxStore.CurrentContext

@@ -98,11 +98,12 @@ func TestUpWithDeploy(t *testing.T) {
 		ConfigFile: filepath.Join(dir, ".kube", "config"),
 	}
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
-
+	okCtx, err := okteto.GetContext()
+	require.NoError(t, err)
 	// Test that the app image has been created correctly
 	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, model.DevCloneName("e2etest"), c)
 	require.NoError(t, err)
-	appImageDev := fmt.Sprintf("%s/%s/test:1.0.0", okteto.GetContext().Registry, testNamespace)
+	appImageDev := fmt.Sprintf("%s/%s/test:1.0.0", okCtx.Registry, testNamespace)
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
 
 	indexRemoteEndpoint := fmt.Sprintf("https://e2etest-%s.%s/index.html", testNamespace, appsSubdomain)

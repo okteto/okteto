@@ -47,7 +47,8 @@ type DestroyOptions struct {
 
 // DestroyCommand struct with the dependencies needed to run the destroy operation
 type DestroyCommand struct {
-	runner destroyRunner
+	runner        destroyRunner
+	oktetoContext *okteto.ContextStateless
 }
 
 // Destroy starts the destroy command remotely. This is the command executed in the
@@ -120,7 +121,8 @@ It is important that this command does the minimum and must not do calculations 
 			}
 
 			c := &DestroyCommand{
-				runner: runner,
+				runner:        runner,
+				oktetoContext: oktetoContext,
 			}
 
 			return c.Run(params)
@@ -135,7 +137,7 @@ It is important that this command does the minimum and must not do calculations 
 
 func (c *DestroyCommand) Run(params deployable.DestroyParameters) error {
 	// Token should be always masked from the logs
-	oktetoLog.AddMaskedWord(okteto.GetContext().Token)
+	oktetoLog.AddMaskedWord(c.oktetoContext.GetCurrentToken())
 	keyValueVarParts := 2
 	// We mask all the variables received in the command
 	for _, variable := range params.Variables {

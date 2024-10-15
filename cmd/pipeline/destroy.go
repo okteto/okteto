@@ -69,12 +69,16 @@ okteto pipeline destroy --wait=false`,
 			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
 				return err
 			}
+			okCtx, err := okteto.GetContext()
+			if err != nil {
+				return err
+			}
 
-			if !okteto.IsOkteto() {
+			if !okCtx.IsOkteto {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			pipelineCmd, err := NewCommand()
+			pipelineCmd, err := NewCommand(okCtx)
 			if err != nil {
 				return err
 			}
@@ -95,7 +99,7 @@ okteto pipeline destroy --wait=false`,
 // ExecuteDestroyPipeline executes destroy pipeline given a set of options
 func (pc *Command) ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOptions) error {
 
-	if err := opts.setDefaults(); err != nil {
+	if err := opts.setDefaults(pc.okCtx); err != nil {
 		return fmt.Errorf("could not set default values for options: %w", err)
 	}
 
@@ -219,7 +223,7 @@ func (f destroyFlags) toOptions() *DestroyOptions {
 	}
 }
 
-func (o *DestroyOptions) setDefaults() error {
+func (o *DestroyOptions) setDefaults(okCtx *okteto.Context) error {
 	if o.Name == "" {
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -230,17 +234,17 @@ func (o *DestroyOptions) setDefaults() error {
 			return err
 		}
 
-		c, _, err := okteto.NewK8sClientProvider().Provide(okteto.GetContext().Cfg)
+		c, _, err := okteto.NewK8sClientProvider().Provide(okCtx.Cfg)
 		if err != nil {
 			return err
 		}
 		inferer := devenvironment.NewNameInferer(c)
 		// okteto pipeline destroy doesn't have a -f flag to specify the path, so we pass empty string
-		o.Name = inferer.InferNameFromDevEnvsAndRepository(context.Background(), repo, okteto.GetContext().Namespace, "", "")
+		o.Name = inferer.InferNameFromDevEnvsAndRepository(context.Background(), repo, okCtx.Namespace, "", "")
 	}
 
 	if o.Namespace == "" {
-		o.Namespace = okteto.GetContext().Namespace
+		o.Namespace = okCtx.Namespace
 	}
 	return nil
 }

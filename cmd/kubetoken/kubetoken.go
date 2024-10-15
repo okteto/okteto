@@ -83,7 +83,11 @@ type Options struct {
 }
 
 func defaultKubetokenOptions() *Options {
-	ctxStore := okteto.GetContextStore()
+	ctxStore, err := okteto.GetContextStore()
+	if err != nil {
+		oktetoLog.Debug("failed to get context store")
+		ctxStore = &okteto.ContextStore{}
+	}
 	return &Options{
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
 		k8sClientProvider:    okteto.NewK8sClientProvider(),

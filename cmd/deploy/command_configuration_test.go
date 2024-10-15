@@ -61,7 +61,7 @@ devs:
 	dc := &Command{
 		GetManifest:       getFakeManifest,
 		K8sClientProvider: fakeK8sProvider,
-		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sProvider, nil),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sProvider, okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext], nil),
 	}
 
 	ctx := context.Background()

@@ -67,22 +67,29 @@ type remoteDeployer struct {
 }
 
 // newRemoteDeployer creates the remote deployer
-func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller, getDependencyEnvVars dependencyEnvVarsGetter, executionEnvVarGetter executionEnvVarsGetter) *remoteDeployer {
+func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller, getDependencyEnvVars dependencyEnvVarsGetter, executionEnvVarGetter executionEnvVarsGetter) (*remoteDeployer, error) {
 	fs := afero.NewOsFs()
+	okCtxStore, err := okteto.GetContextStore()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get okteto context store: %w", err)
+	}
 	builder := buildCmd.NewOktetoBuilder(
 		&okteto.ContextStateless{
-			Store: okteto.GetContextStore(),
+			Store: okCtxStore,
 		},
 		fs,
 	)
-	runner := remote.NewRunner(ioCtrl, builder)
+	runner, err := remote.NewRunner(ioCtrl, builder)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create remote runner: %w", err)
+	}
 	return &remoteDeployer{
 		getBuildEnvVars:      buildVarsGetter,
 		runner:               runner,
 		ioCtrl:               ioCtrl,
 		getDependencyEnvVars: getDependencyEnvVars,
 		getExecutionEnvVars:  executionEnvVarGetter,
-	}
+	}, nil
 }
 
 func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) error {

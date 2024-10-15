@@ -42,7 +42,10 @@ func getAvailableContexts(ctxOptions *Options) []utils.SelectorItem {
 
 func getOktetoClusters() []utils.SelectorItem {
 	orderedOktetoClusters := make([]utils.SelectorItem, 0)
-	ctxStore := okteto.GetContextStore()
+	ctxStore, err := okteto.GetContextStore()
+	if err != nil {
+		return orderedOktetoClusters
+	}
 	for ctxName, okCtx := range ctxStore.Contexts {
 		if !okCtx.IsOkteto {
 			continue
@@ -77,7 +80,11 @@ func getK8sClusters(k8sClusters []string) []utils.SelectorItem {
 }
 
 func getInitialPosition(options []utils.SelectorItem) int {
-	currentContext := okteto.GetContextStore().CurrentContext
+	okContextStore, err := okteto.GetContextStore()
+	if err != nil {
+		return -1
+	}
+	currentContext := okContextStore.CurrentContext
 	for indx, item := range options {
 		if item.Enable && item.Name == currentContext {
 			return indx

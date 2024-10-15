@@ -131,6 +131,7 @@ type destroyCommand struct {
 	getDivertDriver      divertProvider
 	getPipelineDestroyer pipelineDestroyerProvider
 	buildCtrlProvider    buildControlProviderInterface
+	okCtx                *okteto.Context
 }
 
 // Destroy destroys the dev application defined by the manifest
@@ -183,7 +184,10 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
 				return err
 			}
-
+			okCtx, err := okteto.GetContext()
+			if err != nil {
+				return err
+			}
 			if !okteto.IsOkteto() {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
@@ -208,11 +212,11 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 			}
 
 			if options.Namespace == "" {
-				options.Namespace = okteto.GetContext().Namespace
+				options.Namespace = okCtx.Namespace
 			}
 
 			var okClient = &okteto.Client{}
-			if okteto.GetContext().IsOkteto {
+			if okCtx.IsOkteto {
 				okClient, err = okteto.NewOktetoClient()
 				if err != nil {
 					return err
@@ -232,7 +236,7 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 				ioCtrl:           ioCtrl,
 				getDivertDriver:  divert.New,
 				getPipelineDestroyer: func() (pipelineDestroyer, error) {
-					return pipelineCMD.NewCommand()
+					return pipelineCMD.NewCommand(okCtx)
 				},
 			}
 
@@ -247,13 +251,13 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 				}
 			}
 			options.Manifest = manifest
-			setOptionsNameAndManifestName(ctx, okteto.GetContext().Namespace, options, inferer, cwd)
+			setOptionsNameAndManifestName(ctx, okCtx.Namespace, options, inferer, cwd)
 
 			// We need to create a custom kubeconfig file to avoid to modify the user's kubeconfig when running the
 			// destroy operation locally. This kubeconfig contains the kubernetes configuration got from the okteto
 			// context
 			kubeconfigPath := getTempKubeConfigFile(options.Name)
-			if err := kubeconfig.Write(okteto.GetContext().Cfg, kubeconfigPath); err != nil {
+			if err := kubeconfig.Write(okCtx.Cfg, kubeconfigPath); err != nil {
 				return err
 			}
 			os.Setenv("KUBECONFIG", kubeconfigPath)
@@ -344,10 +348,10 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 // destroyAll executes the logic to destroy all resources within a namespace. It is different from
 // the dev environment destruction
 func (dc *destroyCommand) destroyAll(ctx context.Context, opts *Options) error {
-	if !okteto.GetContext().IsOkteto {
+	if !dc.okCtx.IsOkteto {
 		return oktetoErrors.ErrContextIsNotOktetoCluster
 	}
-	destroyer := newLocalDestroyerAll(dc.k8sClientProvider, dc.oktetoClient)
+	destroyer := newLocalDestroyerAll(dc.k8sClientProvider, dc.oktetoClient, dc.okCtx)
 
 	oktetoLog.Info("Destroying all...")
 
@@ -402,7 +406,7 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 
 	namespace := opts.Namespace
 	if namespace == "" {
-		namespace = okteto.GetContext().Namespace
+		namespace = dc.okCtx.Namespace
 	}
 
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destroying...")
@@ -459,7 +463,10 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 	// it should be executed
 	if opts.Manifest.Destroy != nil && len(opts.Manifest.Destroy.Commands) > 0 {
 		// call to specific Destroy logic
-		destroyer := dc.getDestroyer(opts)
+		destroyer, err := dc.getDestroyer(opts)
+		if err != nil {
+			return err
+		}
 		if err := destroyer.Destroy(ctx, opts); err != nil {
 			// If there was an interruption in the execution, or it was an error, but it wasn't a force Destroy
 			// we have to change the status to err
@@ -507,7 +514,7 @@ func (dc *destroyCommand) destroyDependencies(ctx context.Context, opts *Options
 		destOpts := &pipelineCMD.DestroyOptions{
 			Name:           depName,
 			DestroyVolumes: opts.DestroyVolumes,
-			Namespace:      okteto.GetContext().Namespace,
+			Namespace:      dc.okCtx.Namespace,
 		}
 		pipelineCmd, err := dc.getPipelineDestroyer()
 		if err != nil {
@@ -525,11 +532,11 @@ func (dc *destroyCommand) destroyDivert(ctx context.Context, manifest *model.Man
 	stage := "Destroy Divert"
 	oktetoLog.SetStage(stage)
 	oktetoLog.Information("Running stage '%s'", stage)
-	c, _, err := dc.k8sClientProvider.Provide(okteto.GetContext().Cfg)
+	c, _, err := dc.k8sClientProvider.Provide(dc.okCtx.Cfg)
 	if err != nil {
 		return err
 	}
-	driver, err := dc.getDivertDriver(manifest.Deploy.Divert, manifest.Name, okteto.GetContext().Namespace, c)
+	driver, err := dc.getDivertDriver(manifest.Deploy.Divert, manifest.Name, dc.okCtx.Namespace, c)
 	if err != nil {
 		return err
 	}
@@ -610,21 +617,18 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 	return nil
 }
 
-func (dc *destroyCommand) getDestroyer(opts *Options) destroyInterface {
-	var destroyer destroyInterface
-
+func (dc *destroyCommand) getDestroyer(opts *Options) (destroyInterface, error) {
 	if shouldRunInRemote(opts) {
-		destroyer = newRemoteDestroyer(opts.Manifest, dc.ioCtrl)
 		oktetoLog.Info("Destroying remotely...")
-	} else {
-		runner := &deployable.DestroyRunner{
-			Executor: dc.executor,
-		}
-		destroyer = newLocalDestroyer(runner)
-		oktetoLog.Info("Destroying locally...")
+		return newRemoteDestroyer(opts.Manifest, dc.ioCtrl)
 	}
+	runner := &deployable.DestroyRunner{
+		Executor: dc.executor,
+	}
+	destroyer := newLocalDestroyer(runner)
+	oktetoLog.Info("Destroying locally...")
+	return destroyer, nil
 
-	return destroyer
 }
 
 func hasDivert(manifest *model.Manifest, namespace string) bool {

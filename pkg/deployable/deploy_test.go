@@ -152,6 +152,7 @@ func TestRunDeployWithErrorGettingClient(t *testing.T) {
 
 	r := DeployRunner{
 		K8sClientProvider: k8sProvider,
+		okCtx:             okteto.CurrentStore.Contexts["test"],
 	}
 
 	err := r.RunDeploy(context.Background(), DeployParameters{})
@@ -183,6 +184,7 @@ func TestRunDeployWithErrorModifyingKubeconfig(t *testing.T) {
 		Proxy:              proxy,
 		Kubeconfig:         kubeconfigHandler,
 		TempKubeconfigFile: "temp-kubeconfig",
+		okCtx:              okteto.CurrentStore.Contexts["test"],
 	}
 
 	err := r.RunDeploy(context.Background(), DeployParameters{})
@@ -223,6 +225,7 @@ func TestRunDeployWithEmptyDeployable(t *testing.T) {
 		TempKubeconfigFile: "temp-kubeconfig",
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
+		okCtx:              okteto.CurrentStore.Contexts["test"],
 	}
 
 	params := DeployParameters{
@@ -261,6 +264,7 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
 		Executor:           executor,
+		okCtx:              okteto.CurrentStore.Contexts["test"],
 	}
 
 	params := DeployParameters{
@@ -319,6 +323,7 @@ func TestRunCommandsSectionWithErrorInCommands(t *testing.T) {
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
 		Executor:           executor,
+		okCtx:              okteto.CurrentStore.Contexts["test"],
 	}
 
 	params := DeployParameters{
@@ -379,6 +384,7 @@ func TestRunCommandsSectionWithDivert(t *testing.T) {
 		ConfigMapHandler:   &fakeCmapHandler{},
 		Executor:           executor,
 		DivertDeployer:     divertDeployer,
+		okCtx:              okteto.CurrentStore.Contexts["test"],
 	}
 
 	params := DeployParameters{
@@ -423,6 +429,7 @@ func TestRunCommandsSectionWithErrorDeployingDivert(t *testing.T) {
 		ConfigMapHandler:   &fakeCmapHandler{},
 		Executor:           executor,
 		DivertDeployer:     divertDeployer,
+		okCtx:              okteto.CurrentStore.Contexts["test"],
 	}
 
 	params := DeployParameters{
@@ -470,6 +477,7 @@ func TestRunCommandsSectionWithExternal(t *testing.T) {
 		Executor:           executor,
 		DivertDeployer:     divertDeployer,
 		K8sClientProvider:  k8sProvider,
+		okCtx:              okteto.CurrentStore.Contexts["test"],
 		GetExternalControl: func(_ *rest.Config) ExternalResourceInterface {
 			return externalResource
 		},
@@ -533,6 +541,7 @@ func TestRunCommandsSectionWithErrorDeployingExternal(t *testing.T) {
 		ConfigMapHandler:   &fakeCmapHandler{},
 		Executor:           executor,
 		DivertDeployer:     divertDeployer,
+		okCtx:              okteto.CurrentStore.Contexts["test"],
 		K8sClientProvider:  k8sProvider,
 		GetExternalControl: func(_ *rest.Config) ExternalResourceInterface {
 			return externalResource
@@ -592,6 +601,7 @@ func TestDeployExternalWithErrorGettingClient(t *testing.T) {
 
 	r := DeployRunner{
 		K8sClientProvider: k8sProvider,
+		okCtx:             okteto.CurrentStore.Contexts["test"],
 	}
 
 	params := DeployParameters{

@@ -372,11 +372,16 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 // AddDevAnnotations add deploy labels to the deployments/sfs
 func AddDevAnnotations(ctx context.Context, manifest *model.Manifest, c kubernetes.Interface) {
 	repo := os.Getenv(model.GithubRepositoryEnvVar)
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		oktetoLog.Infof("failed to get context: %s", err)
+		return
+	}
 	for devName, dev := range manifest.Dev {
 		if dev.Autocreate {
 			continue
 		}
-		ns := okteto.GetContext().Namespace
+		ns := okCtx.Namespace
 		app, err := apps.Get(ctx, dev, ns, c)
 		if err != nil {
 			oktetoLog.Infof("could not add %s dev annotations due to: %s", devName, err.Error())

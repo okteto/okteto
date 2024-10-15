@@ -38,11 +38,15 @@ func List(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if !okteto.IsOkteto() {
+			okCtx, err := okteto.GetContext()
+			if err != nil {
+				return err
+			}
+			if !okCtx.IsOkteto {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			nsCmd, err := NewCommand()
+			nsCmd, err := NewCommand(okCtx)
 			if err != nil {
 				return err
 			}
@@ -61,7 +65,7 @@ func (nc *Command) executeListNamespaces(ctx context.Context) error {
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
 	fmt.Fprintf(w, "Namespace\tStatus\n")
 	for _, space := range spaces {
-		if space.ID == okteto.GetContext().Namespace {
+		if space.ID == nc.okCtx.Namespace {
 			space.ID += " *"
 		}
 		fmt.Fprintf(w, "%s\t%v\n", space.ID, space.Status)

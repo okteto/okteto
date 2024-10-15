@@ -41,6 +41,7 @@ func Test_waitUntilExitOrInterrupt(t *testing.T) {
 	up := upContext{
 		Options:           &Options{},
 		K8sClientProvider: test.NewFakeK8sProvider(),
+		okCtx:             &okteto.Context{},
 	}
 	up.CommandResult = make(chan error, 1)
 	up.CommandResult <- nil
@@ -75,6 +76,7 @@ func Test_printDisplayContext(t *testing.T) {
 		{
 			name: "basic",
 			up: &upContext{
+				okCtx: &okteto.Context{},
 				Dev: &model.Dev{
 					Name: "dev",
 				},
@@ -86,6 +88,7 @@ func Test_printDisplayContext(t *testing.T) {
 		{
 			name: "single-forward",
 			up: &upContext{
+				okCtx: &okteto.Context{},
 				Dev: &model.Dev{
 					Name:    "dev",
 					Forward: []forward.Forward{{Local: 1000, Remote: 1000}},
@@ -98,6 +101,7 @@ func Test_printDisplayContext(t *testing.T) {
 		{
 			name: "multiple-forward",
 			up: &upContext{
+				okCtx: &okteto.Context{},
 				Dev: &model.Dev{
 					Name:    "dev",
 					Forward: []forward.Forward{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
@@ -120,6 +124,7 @@ func Test_printDisplayContext(t *testing.T) {
 		{
 			name: "single-reverse",
 			up: &upContext{
+				okCtx: &okteto.Context{},
 				Dev: &model.Dev{
 					Name:    "dev",
 					Reverse: []model.Reverse{{Local: 1000, Remote: 1000}},
@@ -132,6 +137,7 @@ func Test_printDisplayContext(t *testing.T) {
 		{
 			name: "multiple-reverse+global-forward",
 			up: &upContext{
+				okCtx: &okteto.Context{},
 				Dev: &model.Dev{
 					Name:    "dev",
 					Reverse: []model.Reverse{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
@@ -154,6 +160,7 @@ func Test_printDisplayContext(t *testing.T) {
 		{
 			name: "global-forward",
 			up: &upContext{
+				okCtx: &okteto.Context{},
 				Dev: &model.Dev{
 					Name: "dev",
 				},
@@ -171,6 +178,7 @@ func Test_printDisplayContext(t *testing.T) {
 		{
 			name: "multiple-global-forward",
 			up: &upContext{
+				okCtx: &okteto.Context{},
 				Dev: &model.Dev{
 					Name: "dev",
 				},

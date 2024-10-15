@@ -108,7 +108,7 @@ It is important that this command does the minimum and must not do calculations 
 			}
 
 			k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
-			cmapHandler := deployCMD.NewConfigmapHandler(k8sClientProvider, k8sLogger)
+			cmapHandler := deployCMD.NewConfigmapHandler(k8sClientProvider, oktetoContext, k8sLogger)
 
 			runner, err := deployable.NewDeployRunnerForRemote(
 				options.Name,

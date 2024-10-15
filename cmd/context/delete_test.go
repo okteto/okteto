@@ -21,6 +21,7 @@ import (
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_deleteContext(t *testing.T) {
@@ -95,7 +96,10 @@ func Test_deleteContext(t *testing.T) {
 			if err := Delete(tt.toDelete); err == nil && tt.expectedErr || err != nil && !tt.expectedErr {
 				t.Fatal(err)
 			}
-			if okteto.GetContextStore().CurrentContext != tt.afterContext {
+
+			okCtxStore, err := okteto.GetContextStore()
+			assert.NoError(t, err)
+			if okCtxStore.CurrentContext != tt.afterContext {
 				t.Fatal("not delete correctly")
 			}
 		})

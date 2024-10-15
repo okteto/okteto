@@ -79,11 +79,11 @@ func (up *upContext) activate() error {
 	up.cleaned = make(chan string, 1)
 	up.hardTerminate = make(chan error, 1)
 
-	k8sClient, _, err := up.K8sClientProvider.Provide(okteto.GetContext().Cfg)
+	k8sClient, _, err := up.K8sClientProvider.Provide(up.okCtx.Cfg)
 	if err != nil {
 		return err
 	}
-	app, create, err := utils.GetApp(ctx, up.Dev, okteto.GetContext().Namespace, k8sClient, up.isRetry)
+	app, create, err := utils.GetApp(ctx, up.Dev, up.okCtx.Namespace, k8sClient, up.isRetry)
 	if err != nil {
 		return err
 	}
@@ -208,7 +208,7 @@ func (up *upContext) activate() error {
 		durationActivateUp := time.Since(up.StartTime)
 		up.analyticsMeta.ActivateDuration(durationActivateUp)
 
-		go TrackLatestBranchOnDevContainer(ctx, up.Namespace, up.Manifest, up.Options.ManifestPathFlag, up.K8sClientProvider)
+		go TrackLatestBranchOnDevContainer(ctx, up.okCtx, up.Namespace, up.Manifest, up.Options.ManifestPathFlag, up.K8sClientProvider)
 
 		startRunCommand := time.Now()
 		up.CommandResult <- up.RunCommand(ctx, up.Dev.Command.Values)
@@ -267,7 +267,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 		return err
 	}
 
-	k8sClient, _, err := up.K8sClientProvider.Provide(okteto.GetContext().Cfg)
+	k8sClient, _, err := up.K8sClientProvider.Provide(up.okCtx.Cfg)
 	if err != nil {
 		return err
 	}
@@ -344,7 +344,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
-	k8sClient, _, err := up.K8sClientProvider.Provide(okteto.GetContext().Cfg)
+	k8sClient, _, err := up.K8sClientProvider.Provide(up.okCtx.Cfg)
 	if err != nil {
 		return err
 	}
@@ -458,7 +458,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				}
 			case "Pulling":
 				failedSchedulingEvent = nil
-				message := getPullingMessage(e.Message, up.Namespace)
+				message := getPullingMessage(up.okCtx.Registry, e.Message, up.Namespace)
 				oktetoLog.Spinner(fmt.Sprintf("%s...", message))
 				if err := config.UpdateStateFile(up.Dev.Name, up.Namespace, config.Pulling); err != nil {
 					oktetoLog.Infof("error updating state: %s", err.Error())
@@ -497,8 +497,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 	}
 }
 
-func getPullingMessage(message, namespace string) string {
-	registry := okteto.GetContext().Registry
+func getPullingMessage(registry, message, namespace string) string {
 	if registry == "" {
 		return message
 	}
@@ -513,7 +512,7 @@ func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) err
 		return nil
 	}
 
-	k8sClient, _, err := up.K8sClientProvider.Provide(okteto.GetContext().Cfg)
+	k8sClient, _, err := up.K8sClientProvider.Provide(up.okCtx.Cfg)
 	if err != nil {
 		return err
 	}
@@ -560,7 +559,7 @@ func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) err
 }
 
 // TrackLatestBranchOnDevContainer tracks the latest branch on the dev container
-func TrackLatestBranchOnDevContainer(ctx context.Context, namespace string, manifest *model.Manifest, manifestPathFlag string, clientProvider okteto.K8sClientProvider) {
+func TrackLatestBranchOnDevContainer(ctx context.Context, okCtx *okteto.Context, namespace string, manifest *model.Manifest, manifestPathFlag string, clientProvider okteto.K8sClientProvider) {
 	if !env.LoadBoolean(oldEnableDevBranchTrackingEnvVar) && !env.LoadBoolean(enableDevBranchTrackingEnvVar) {
 		oktetoLog.Infof("branch tracking is disabled")
 		return
@@ -580,7 +579,7 @@ func TrackLatestBranchOnDevContainer(ctx context.Context, namespace string, mani
 	r := repository.NewRepository(gitRepo)
 
 	devBranchTrackingInterval := env.LoadTimeOrDefault(devBranchTrackingIntervalEnvVar, defaultTrackingInterval)
-	c, _, err := clientProvider.Provide(okteto.GetContext().Cfg)
+	c, _, err := clientProvider.Provide(okCtx.Cfg)
 	if err != nil {
 		oktetoLog.Infof("error getting k8s client: %s", err.Error())
 		return

@@ -69,7 +69,12 @@ func UpdateKubeconfigCMD(okClientProvider oktetoClientProvider) *cobra.Command {
 				return err
 			}
 
-			return kc.execute(okteto.GetContext(), config.GetKubeconfigPath())
+			okCtx, err := okteto.GetContext()
+			if err != nil {
+				return err
+			}
+
+			return kc.execute(okCtx, config.GetKubeconfigPath())
 		},
 	}
 

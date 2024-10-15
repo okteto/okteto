@@ -63,9 +63,9 @@ type EndpointGetter struct {
 	endpointControl endpointControlInterface
 }
 
-func NewEndpointGetter(k8sLogger *io.K8sLogger) (EndpointGetter, error) {
+func NewEndpointGetter(k8sLogger *io.K8sLogger, isOktetoCtx bool) (EndpointGetter, error) {
 	var endpointControl endpointControlInterface
-	if okteto.GetContext().IsOkteto {
+	if isOktetoCtx {
 		c, err := okteto.NewOktetoClient()
 		if err != nil {
 			return EndpointGetter{}, err
@@ -109,11 +109,16 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 				return err
 			}
 
+			okCtx, err := okteto.GetContext()
+			if err != nil {
+				return err
+			}
+
 			if !okteto.IsOkteto() {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			eg, err := NewEndpointGetter(k8sLogger)
+			eg, err := NewEndpointGetter(k8sLogger, okCtx.IsOkteto)
 			if err != nil {
 				return err
 			}
@@ -130,19 +135,19 @@ func Endpoints(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 				if manifest.Name != "" {
 					options.Name = manifest.Name
 				} else {
-					c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okteto.GetContext().Cfg)
+					c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okCtx.Cfg)
 					if err != nil {
 						return err
 					}
 					inferer := devenvironment.NewNameInferer(c)
-					options.Name = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, options.ManifestPath)
+					options.Name = inferer.InferName(ctx, cwd, okCtx.Namespace, options.ManifestPath)
 				}
 				if options.Namespace == "" {
-					options.Namespace = okteto.GetContext().Namespace
+					options.Namespace = okCtx.Namespace
 				}
 			}
 			if options.Namespace == "" {
-				options.Namespace = okteto.GetContext().Namespace
+				options.Namespace = okCtx.Namespace
 			}
 
 			if err := validateOutput(options.Output); err != nil {

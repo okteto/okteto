@@ -19,6 +19,7 @@ import (
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -50,12 +51,13 @@ func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User) *contex
 	return cmd
 }
 
-func NewFakeNamespaceCommand(okClient *client.FakeOktetoClient, k8sClient kubernetes.Interface, user *types.User) *Command {
+func NewFakeNamespaceCommand(okClient *client.FakeOktetoClient, k8sClient kubernetes.Interface, user *types.User, okCtx *okteto.Context) *Command {
 	return &Command{
 		okClient: okClient,
 		ctxCmd:   newFakeContextCommand(okClient, user),
 		k8sClientProvider: &fakeK8sProvider{
 			k8sClient: k8sClient,
 		},
+		okCtx: okCtx,
 	}
 }

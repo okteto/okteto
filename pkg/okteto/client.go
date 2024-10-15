@@ -104,9 +104,13 @@ func defaultOktetoClientCfg() *ClientCfg {
 	if CurrentStore != nil && CurrentStore.CurrentContext == "" {
 		return &ClientCfg{}
 	}
+	okCtx, err := GetContext()
+	if err != nil {
+		return &ClientCfg{}
+	}
 	return &ClientCfg{
-		CtxName: GetContext().Name,
-		Token:   GetContext().Token,
+		CtxName: okCtx.Name,
+		Token:   okCtx.Token,
 	}
 
 }
@@ -121,7 +125,11 @@ func NewOktetoClient(opts ...Option) (*Client, error) {
 	}
 
 	if cfg.Token == "" {
-		okCtx, exists := GetContextStore().Contexts[cfg.CtxName]
+		contextStore, err := GetContextStore()
+		if err != nil {
+			return nil, err
+		}
+		okCtx, exists := contextStore.Contexts[cfg.CtxName]
 		if !exists {
 			return nil, fmt.Errorf("%s context doesn't exists", cfg.CtxName)
 		}
@@ -350,10 +358,14 @@ func parseOktetoURLWithPath(u, path string) (string, error) {
 }
 
 func translateAPIErr(err error) error {
+	okCtx, okCtxerr := GetContext()
 	e := strings.TrimPrefix(err.Error(), "graphql: ")
 	switch e {
 	case "not-authorized":
-		return fmt.Errorf(oktetoErrors.ErrNotLogged, GetContext().Name)
+		if okCtxerr != nil {
+			return okCtxerr
+		}
+		return fmt.Errorf(oktetoErrors.ErrNotLogged, okCtx.Name)
 	case "namespace-quota-exceeded":
 		return fmt.Errorf("you have exceeded your namespace quota. Contact us at hello@okteto.com to learn more")
 	case "namespace-quota-exceeded-onpremises":
@@ -365,7 +377,10 @@ func translateAPIErr(err error) error {
 	case "non-200 OK status code: 401 Unauthorized body: \"\"":
 		return fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")
 	case "non-200 OK status code: 401 Unauthorized body: \"not-authorized\\n\"":
-		return fmt.Errorf(oktetoErrors.ErrNotLogged, GetContext().Name)
+		if okCtxerr != nil {
+			return okCtxerr
+		}
+		return fmt.Errorf(oktetoErrors.ErrNotLogged, okCtx.Name)
 	case "non-200 OK status code: 401 Unauthorized body: \"not-authorized: token is expired\\n\"":
 		return oktetoErrors.ErrTokenExpired
 	case "not-found":
@@ -375,7 +390,10 @@ func translateAPIErr(err error) error {
 
 	default:
 		if unauthorizedTokenRegex.MatchString(err.Error()) {
-			return fmt.Errorf(oktetoErrors.ErrNotLogged, GetContext().Name)
+			if okCtxerr != nil {
+				return okCtxerr
+			}
+			return fmt.Errorf(oktetoErrors.ErrNotLogged, okCtx.Name)
 		}
 
 		switch {

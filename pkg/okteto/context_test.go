@@ -282,7 +282,8 @@ func TestGetContextStoreFromStorePath(t *testing.T) {
 
 	require.NoError(t, err)
 	t.Setenv(constants.OktetoFolderEnvVar, tempDir)
-	store := GetContextStoreFromStorePath()
+	store, err := GetContextStoreFromStorePath()
+	require.NoError(t, err)
 
 	expected := &ContextStore{
 		Contexts: map[string]*Context{

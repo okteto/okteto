@@ -38,11 +38,15 @@ func Sleep(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if !okteto.IsOkteto() {
+			okCtx, err := okteto.GetContext()
+			if err != nil {
+				return err
+			}
+			if !okCtx.IsOkteto {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			prCmd, err := NewCommand()
+			prCmd, err := NewCommand(okCtx)
 			if err != nil {
 				return err
 			}

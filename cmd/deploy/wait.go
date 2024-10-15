@@ -32,12 +32,14 @@ import (
 type Waiter struct {
 	K8sClientProvider okteto.K8sClientProviderWithLogger
 	K8sLogger         *ioCtrl.K8sLogger
+	okCtx             *okteto.Context
 }
 
-func NewDeployWaiter(k8sClientProvider okteto.K8sClientProviderWithLogger, k8slogger *ioCtrl.K8sLogger) Waiter {
+func NewDeployWaiter(k8sClientProvider okteto.K8sClientProviderWithLogger, okCtx *okteto.Context, k8slogger *ioCtrl.K8sLogger) Waiter {
 	return Waiter{
 		K8sClientProvider: k8sClientProvider,
 		K8sLogger:         k8slogger,
+		okCtx:             okCtx,
 	}
 }
 
@@ -69,17 +71,18 @@ func (dw *Waiter) wait(ctx context.Context, opts *Options) error {
 func (dw *Waiter) waitForResourcesToBeRunning(ctx context.Context, opts *Options) error {
 	ticker := time.NewTicker(5 * time.Second)
 	to := time.NewTicker(opts.Timeout)
-	c, _, err := dw.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, dw.K8sLogger)
+	c, _, err := dw.K8sClientProvider.ProvideWithLogger(dw.okCtx.Cfg, dw.K8sLogger)
 	if err != nil {
 		return err
 	}
 
+	ns := dw.okCtx.Namespace
 	for {
 		select {
 		case <-to.C:
 			return fmt.Errorf("'%s' deploy didn't finish after %s", opts.Manifest.Name, opts.Timeout.String())
 		case <-ticker.C:
-			ns := okteto.GetContext().Namespace
+
 			dList, err := pipeline.ListDeployments(ctx, opts.Manifest.Name, ns, c)
 			if err != nil {
 				return err

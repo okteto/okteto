@@ -64,7 +64,10 @@ func Status(fs afero.Fs) *cobra.Command {
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: namespace, Context: k8sContext}); err != nil {
 				return err
 			}
-
+			okCtx, err := okteto.GetContext()
+			if err != nil {
+				return err
+			}
 			manifestOpts := contextCMD.ManifestOptions{Filename: devPath}
 			manifest, err := model.GetManifestV2(manifestOpts.Filename, afero.NewOsFs())
 			if err != nil {
@@ -94,11 +97,11 @@ func Status(fs afero.Fs) *cobra.Command {
 			}
 
 			waitForStates := []config.UpState{config.Synchronizing, config.Ready}
-			if err := status.Wait(dev, okteto.GetContext().Namespace, waitForStates); err != nil {
+			if err := status.Wait(dev, okCtx.Namespace, waitForStates); err != nil {
 				return err
 			}
 
-			ctxNamespace := okteto.GetContext().Namespace
+			ctxNamespace := okCtx.Namespace
 			sy, err := syncthing.Load(dev, ctxNamespace)
 			if err != nil {
 				oktetoLog.Infof("error accessing the syncthing info file: %s", err)

@@ -79,8 +79,11 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Comm
 			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
 				return err
 			}
-
-			if !okteto.IsOkteto() {
+			okCtx, err := okteto.GetContext()
+			if err != nil {
+				return err
+			}
+			if !okCtx.IsOkteto {
 				return okerrors.ErrContextIsNotOktetoCluster
 			}
 
@@ -98,12 +101,12 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Comm
 				manifest.Name = options.Name
 			}
 			if manifest.Name == "" {
-				c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okteto.GetContext().Cfg)
+				c, _, err := okteto.NewK8sClientProviderWithLogger(k8sLogger).Provide(okCtx.Cfg)
 				if err != nil {
 					return err
 				}
 				inferer := devenvironment.NewNameInferer(c)
-				manifest.Name = inferer.InferName(ctx, wd, okteto.GetContext().Namespace, options.ManifestPath)
+				manifest.Name = inferer.InferName(ctx, wd, okCtx.Namespace, options.ManifestPath)
 			}
 
 			if len(args) > 0 {
@@ -113,7 +116,7 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Comm
 			}
 
 			tmpKubeconfigFile := GetTempKubeConfigFile(manifest.Name)
-			if err := kubeconfig.Write(okteto.GetContext().Cfg, tmpKubeconfigFile); err != nil {
+			if err := kubeconfig.Write(okCtx.Cfg, tmpKubeconfigFile); err != nil {
 				return err
 			}
 			defer os.Remove(tmpKubeconfigFile)

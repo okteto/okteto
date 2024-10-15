@@ -23,16 +23,18 @@ import (
 
 type Command struct {
 	okClient types.OktetoInterface
+	okCtx    *okteto.Context
 }
 
 // NewCommand creates a namespace command for previews
-func NewCommand() (*Command, error) {
+func NewCommand(okCtx *okteto.Context) (*Command, error) {
 	c, err := okteto.NewOktetoClient()
 	if err != nil {
 		return nil, err
 	}
 	return &Command{
 		okClient: c,
+		okCtx:    okCtx,
 	}, nil
 }
 

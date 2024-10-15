@@ -70,13 +70,14 @@ func Test_createNamespace(t *testing.T) {
 			nsCmd := &Command{
 				okClient: fakeOktetoClient,
 				ctxCmd:   newFakeContextCommand(fakeOktetoClient, usr),
+				okCtx:    okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 			}
 			err := nsCmd.Create(ctx, &CreateOptions{
 				Members:   tt.members,
 				Namespace: tt.newNs,
 			})
 			assert.Equal(t, nil, err)
-			assert.Equal(t, tt.newNs, okteto.GetContext().Namespace)
+			assert.Equal(t, tt.newNs, okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext].Namespace)
 		})
 	}
 }

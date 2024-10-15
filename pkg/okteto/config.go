@@ -61,16 +61,71 @@ func (c ConfigStateless) GetExternalRegistryCredentials(registryHost string) (st
 
 type Config struct{}
 
-func (Config) IsOktetoCluster() bool                             { return IsOkteto() }
-func (Config) GetGlobalNamespace() string                        { return GetContext().GlobalNamespace }
-func (Config) GetNamespace() string                              { return GetContext().Namespace }
-func (Config) GetRegistryURL() string                            { return GetContext().Registry }
-func (Config) GetUserID() string                                 { return GetContext().UserID }
-func (Config) GetToken() string                                  { return GetContext().Token }
-func (Config) GetContextCertificate() (*x509.Certificate, error) { return GetContextCertificate() }
-func (Config) IsInsecureSkipTLSVerifyPolicy() bool               { return GetContext().IsInsecure }
-func (Config) GetServerNameOverride() string                     { return GetServerNameOverride() }
-func (Config) GetContextName() string                            { return GetContext().Name }
+func (Config) IsOktetoCluster() bool { return IsOkteto() }
+func (Config) GetGlobalNamespace() string {
+	okCtx, err := GetContext()
+	if err != nil {
+		return ""
+	}
+	return okCtx.GlobalNamespace
+}
+
+func (Config) GetNamespace() string {
+	okCtx, err := GetContext()
+	if err != nil {
+		return ""
+	}
+	return okCtx.Namespace
+}
+
+func (Config) GetRegistryURL() string {
+	okCtx, err := GetContext()
+	if err != nil {
+		return ""
+	}
+	return okCtx.Registry
+}
+
+func (Config) GetUserID() string {
+	okCtx, err := GetContext()
+	if err != nil {
+		return ""
+	}
+	return okCtx.UserID
+}
+
+func (Config) GetToken() string {
+	okCtx, err := GetContext()
+	if err != nil {
+		return ""
+	}
+	return okCtx.Token
+}
+
+func (Config) GetContextCertificate() (*x509.Certificate, error) {
+	return GetContextCertificate()
+}
+
+func (Config) IsInsecureSkipTLSVerifyPolicy() bool {
+	okCtx, err := GetContext()
+	if err != nil {
+		return false
+	}
+	return okCtx.IsInsecure
+}
+
+func (Config) GetServerNameOverride() string {
+	return GetServerNameOverride()
+}
+
+func (Config) GetContextName() string {
+	okCtx, err := GetContext()
+	if err != nil {
+		return ""
+	}
+	return okCtx.Name
+}
+
 func (Config) GetExternalRegistryCredentials(registryHost string) (string, string, error) {
 	return GetExternalRegistryCredentials(registryHost)
 }

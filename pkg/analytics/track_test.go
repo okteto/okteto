@@ -19,6 +19,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMain(m *testing.M) {
@@ -72,7 +73,9 @@ func Test_getTrackID(t *testing.T) {
 
 			a := get()
 			a.MachineID = tt.machineID
-			okteto.GetContext().UserID = tt.userID
+			okCtx, err := okteto.GetContext()
+			require.NoError(t, err)
+			okCtx.UserID = tt.userID
 
 			trackID := getTrackID()
 

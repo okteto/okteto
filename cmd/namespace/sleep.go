@@ -35,8 +35,12 @@ func Sleep(ctx context.Context) *cobra.Command {
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{}); err != nil {
 				return err
 			}
+			okCtx, err := okteto.GetContext()
+			if err != nil {
+				return err
+			}
 
-			nsToSleep := okteto.GetContext().Namespace
+			nsToSleep := okCtx.Namespace
 			if len(args) > 0 {
 				nsToSleep = args[0]
 			}
@@ -45,7 +49,7 @@ func Sleep(ctx context.Context) *cobra.Command {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			nsCmd, err := NewCommand()
+			nsCmd, err := NewCommand(okCtx)
 			if err != nil {
 				return err
 			}

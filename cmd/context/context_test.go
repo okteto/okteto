@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_initFromDeprecatedToken(t *testing.T) {
@@ -66,9 +67,9 @@ func Test_initFromDeprecatedToken(t *testing.T) {
 			}
 			defer os.Remove(kubepath)
 			okteto.InitContextWithDeprecatedToken()
-			if okteto.GetContextStore().CurrentContext == "" {
-				t.Fatal("Not initialized")
-			}
+			okCtxStore, err := okteto.GetContextStore()
+			assert.NoError(t, err)
+			assert.NotEqual(t, "", okCtxStore.CurrentContext)
 		})
 	}
 }

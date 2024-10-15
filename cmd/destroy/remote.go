@@ -56,15 +56,22 @@ type remoteDestroyCommand struct {
 }
 
 // newRemoteDestroyer creates a new remote destroyer
-func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remoteDestroyCommand {
+func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) (*remoteDestroyCommand, error) {
 	fs := afero.NewOsFs()
+	okCtxStore, err := okteto.GetContextStore()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get context store: %w", err)
+	}
 	builder := buildCmd.NewOktetoBuilder(
 		&okteto.ContextStateless{
-			Store: okteto.GetContextStore(),
+			Store: okCtxStore,
 		},
 		fs,
 	)
-	runner := remote.NewRunner(ioCtrl, builder)
+	runner, err := remote.NewRunner(ioCtrl, builder)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create remote runner: %w", err)
+	}
 	if manifest.Destroy == nil {
 		manifest.Destroy = &model.DestroyInfo{}
 	}
@@ -72,7 +79,7 @@ func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remote
 		runner:   runner,
 		manifest: manifest,
 		ioCtrl:   ioCtrl,
-	}
+	}, nil
 }
 
 func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) error {

@@ -150,10 +150,11 @@ func Test_deleteNamespace(t *testing.T) {
 				CurrentContext: "test-context",
 			}
 
-			nsFakeCommand := NewFakeNamespaceCommand(tt.fakeOkClient, tt.fakeK8sClient, usr)
+			nsFakeCommand := NewFakeNamespaceCommand(tt.fakeOkClient, tt.fakeK8sClient, usr, okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext])
+
 			err := nsFakeCommand.ExecuteDeleteNamespace(ctx, tt.toDeleteNs, nil)
 			assert.ErrorIs(t, err, tt.err)
-			assert.Equal(t, tt.finalNs, okteto.GetContext().Namespace)
+			assert.Equal(t, tt.finalNs, okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext].Namespace)
 
 			// check namespace has been deleted from list
 			ns, err := tt.fakeOkClient.Namespaces().List(ctx)

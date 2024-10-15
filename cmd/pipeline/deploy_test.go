@@ -221,6 +221,7 @@ func TestDeployPipelineSuccesful(t *testing.T) {
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
 		},
+		okCtx:             okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 		k8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	opts := &DeployOptions{
@@ -266,6 +267,7 @@ func TestDeployPipelineSuccesfulWithWait(t *testing.T) {
 			PipelineClient: client.NewFakePipelineClient(response),
 			StreamClient:   client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 		},
+		okCtx:             okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 		k8sClientProvider: test.NewFakeK8sProvider(cmap),
 	}
 	opts := &DeployOptions{
@@ -295,6 +297,7 @@ func TestDeployWithError(t *testing.T) {
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
 		},
+		okCtx:             okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 		k8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	opts := &DeployOptions{
@@ -340,6 +343,7 @@ func TestDeployPipelineSuccesfulWithWaitStreamError(t *testing.T) {
 			PipelineClient: client.NewFakePipelineClient(response),
 			StreamClient:   client.NewFakeStreamClient(&client.FakeStreamResponse{StreamErr: errors.New("error")}),
 		},
+		okCtx:             okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 		k8sClientProvider: test.NewFakeK8sProvider(cmap),
 	}
 	opts := &DeployOptions{
@@ -363,6 +367,7 @@ func Test_DeployPipelineWithReuseParamsNotFoundError(t *testing.T) {
 	}
 	pc := &Command{
 		k8sClientProvider: test.NewFakeK8sProvider(),
+		okCtx:             okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 	}
 	opts := &DeployOptions{
 		Repository:  "https://test",
@@ -390,6 +395,7 @@ func Test_DeployPipelineWithReuseParamsSuccess(t *testing.T) {
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: fakePipelineClient,
 		},
+		okCtx: okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 		k8sClientProvider: test.NewFakeK8sProvider(
 			&v1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
@@ -446,6 +452,7 @@ func Test_DeployPipelineWithSkipIfExist(t *testing.T) {
 						fakePipelineClientResponses,
 					),
 				},
+				okCtx: okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 				k8sClientProvider: test.NewFakeK8sProvider(
 					&v1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{
@@ -478,6 +485,7 @@ func Test_DeployPipelineWithSkipIfExist(t *testing.T) {
 						fakePipelineClientResponses,
 					),
 				},
+				okCtx: okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 				k8sClientProvider: test.NewFakeK8sProvider(
 					&v1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{
@@ -541,6 +549,7 @@ func Test_DeployPipelineWithSkipIfExistAndWait(t *testing.T) {
 						&client.FakeStreamResponse{},
 					),
 				},
+				okCtx: okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 				k8sClientProvider: test.NewFakeK8sProvider(
 					&v1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{
@@ -581,6 +590,7 @@ func Test_DeployPipelineWithSkipIfExistAndWait(t *testing.T) {
 						},
 					),
 				},
+				okCtx: okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 				k8sClientProvider: test.NewFakeK8sProvider(
 					&v1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{
@@ -619,6 +629,7 @@ func Test_DeployPipelineWithSkipIfExistAndWait(t *testing.T) {
 						&client.FakeStreamResponse{},
 					),
 				},
+				okCtx: okteto.CurrentStore.Contexts[okteto.CurrentStore.CurrentContext],
 				k8sClientProvider: test.NewFakeK8sProvider(
 					&v1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{

@@ -39,7 +39,10 @@ func Show() *cobra.Command {
 			if err := NewContextCommand().Run(ctx, &Options{raiseNotCtxError: true, Show: false}); err != nil {
 				return err
 			}
-			ctxStore := okteto.GetContextStore()
+			ctxStore, err := okteto.GetContextStore()
+			if err != nil {
+				return err
+			}
 			current := ctxStore.Contexts[ctxStore.CurrentContext]
 			if err := validateOutput(output); err != nil {
 				return err

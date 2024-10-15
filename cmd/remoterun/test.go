@@ -109,7 +109,7 @@ commands:
 			}
 
 			// Token should be always masked from the logs
-			oktetoLog.AddMaskedWord(okteto.GetContext().Token)
+			oktetoLog.AddMaskedWord(oktetoContext.GetCurrentToken())
 			keyValueVarParts := 2
 			// We mask all the variables received in the command
 			for _, variable := range params.Variables {

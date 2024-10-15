@@ -384,6 +384,12 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 
 	ctxController := newFakeContextCommand(fakeOktetoClient, user, nil)
 
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"https://okteto.example.com": {},
+		},
+		CurrentContext: "https://okteto.example.com",
+	}
 	var tests = []struct {
 		ctxOptions          *Options
 		user                *types.User
@@ -421,7 +427,9 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ctxController.initOktetoContext(ctx, tt.ctxOptions)
 			if err != nil {
-				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.GetContext().Name).Error() && tt.isAutoAuthTriggered {
+				okCtx, ctxErr := okteto.GetContext()
+				assert.NoError(t, ctxErr)
+				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okCtx.Name).Error() && tt.isAutoAuthTriggered {
 					t.Fatalf("Not expecting error but got: %s", err.Error())
 				}
 			}

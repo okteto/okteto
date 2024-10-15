@@ -120,9 +120,13 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistry
 
 // NewBuilderFromScratch creates a new okteto builder
 func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish) *OktetoBuilder {
+	okCtxStore, err := okteto.GetContextStore()
+	if err != nil {
+		ioCtrl.Logger().Infof("could not get context store: %s", err)
+	}
 	builder := buildCmd.NewOktetoBuilder(
 		&okteto.ContextStateless{
-			Store: okteto.GetContextStore(),
+			Store: okCtxStore,
 		},
 		afero.NewOsFs(),
 	)
@@ -145,7 +149,7 @@ func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish)
 	buildEnvs := map[string]string{}
 	buildEnvs[OktetoEnableSmartBuildEnvVar] = strconv.FormatBool(config.isSmartBuildsEnable)
 	okCtx := &okteto.ContextStateless{
-		Store: okteto.GetContextStore(),
+		Store: okCtxStore,
 	}
 
 	return &OktetoBuilder{

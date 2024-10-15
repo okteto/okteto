@@ -23,7 +23,6 @@ import (
 	forwardk8s "github.com/okteto/okteto/pkg/k8s/forward"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
 )
@@ -41,7 +40,7 @@ func (up *upContext) forwards(ctx context.Context) error {
 		return up.sshForwards(ctx)
 	}
 
-	k8sClient, restConfig, err := up.K8sClientProvider.Provide(okteto.GetContext().Cfg)
+	k8sClient, restConfig, err := up.K8sClientProvider.Provide(up.okCtx.Cfg)
 	if err != nil {
 		return err
 	}
@@ -85,7 +84,7 @@ func (up *upContext) forwards(ctx context.Context) error {
 }
 
 func (up *upContext) sshForwards(ctx context.Context) error {
-	k8sClient, restConfig, err := up.K8sClientProvider.Provide(okteto.GetContext().Cfg)
+	k8sClient, restConfig, err := up.K8sClientProvider.Provide(up.okCtx.Cfg)
 	if err != nil {
 		return err
 	}

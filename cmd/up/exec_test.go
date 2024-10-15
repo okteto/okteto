@@ -1085,6 +1085,7 @@ func TestCheckOktetoStartError(t *testing.T) {
 			upCtx := &upContext{
 				Namespace:         "test",
 				Dev:               tt.dev,
+				okCtx:             &okteto.Context{},
 				K8sClientProvider: tt.K8sProvider,
 				Options: &Options{
 					ManifestPathFlag: "test",
@@ -1120,6 +1121,7 @@ func TestCleanCommand(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			upCtx := &upContext{
 				K8sClientProvider: tt.k8sClientProvider,
+				okCtx:             &okteto.Context{},
 			}
 			upCtx.cleanCommand(context.Background())
 

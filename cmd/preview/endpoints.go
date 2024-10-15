@@ -50,13 +50,16 @@ func Endpoints(ctx context.Context) *cobra.Command {
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Namespace: previewName, Context: k8sContext}); err != nil {
 				return err
 			}
-
-			if !okteto.IsOkteto() {
+			okCtx, err := okteto.GetContext()
+			if err != nil {
+				return err
+			}
+			if !okCtx.IsOkteto {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
 			if output != "json" {
-				oktetoLog.Information("Using %s @ %s as context", previewName, okteto.RemoveSchema(okteto.GetContext().Name))
+				oktetoLog.Information("Using %s @ %s as context", previewName, okteto.RemoveSchema(okCtx.Name))
 			} else {
 				oktetoLog.Info(jsonContextBuffer.String())
 				oktetoLog.SetOutput(os.Stdout)
@@ -65,7 +68,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 			if err := validateOutput(output); err != nil {
 				return err
 			}
-			err := executeListPreviewEndpoints(ctx, previewName, output)
+			err = executeListPreviewEndpoints(ctx, okCtx, previewName, output)
 			return err
 		},
 	}
@@ -84,7 +87,7 @@ func validateOutput(output string) error {
 	}
 }
 
-func executeListPreviewEndpoints(ctx context.Context, name, output string) error {
+func executeListPreviewEndpoints(ctx context.Context, okCtx *okteto.Context, name, output string) error {
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
 		return err
@@ -112,7 +115,7 @@ func executeListPreviewEndpoints(ctx context.Context, name, output string) error
 			sort.Slice(endpoints, func(i, j int) bool {
 				return len(endpoints[i]) < len(endpoints[j])
 			})
-			oktetoLog.Printf("Available endpoints for preview [%s](%s):\n", name, getPreviewURL(name))
+			oktetoLog.Printf("Available endpoints for preview [%s](%s):\n", name, getPreviewURL(okCtx.Name, name))
 			for _, e := range endpoints {
 				oktetoLog.Printf("\n - [%s](%s)\n", e, e)
 			}

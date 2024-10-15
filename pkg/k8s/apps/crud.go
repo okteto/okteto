@@ -106,11 +106,15 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 
 // GetTranslations fills all the deployments pointed by a development container
 func GetTranslations(ctx context.Context, namespace string, dev *model.Dev, app App, reset bool, c kubernetes.Interface) (map[string]*Translation, error) {
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		return nil, err
+	}
 	mainTr := &Translation{
 		MainDev: dev,
 		Dev:     dev,
 		App:     app,
-		Rules:   []*model.TranslationRule{dev.ToTranslationRule(dev, namespace, okteto.GetContext().Username, reset)},
+		Rules:   []*model.TranslationRule{dev.ToTranslationRule(dev, namespace, okCtx.Username, reset)},
 	}
 	result := map[string]*Translation{app.ObjectMeta().Name: mainTr}
 
@@ -141,7 +145,11 @@ func loadServiceTranslations(ctx context.Context, namespace string, dev *model.D
 			return err
 		}
 
-		rule := s.ToTranslationRule(dev, okteto.GetContext().Username, okteto.GetContext().Username, reset)
+		okCtx, err := okteto.GetContext()
+		if err != nil {
+			return err
+		}
+		rule := s.ToTranslationRule(dev, okCtx.Username, okCtx.Username, reset)
 
 		if _, ok := result[app.ObjectMeta().Name]; ok {
 			result[app.ObjectMeta().Name].Rules = append(result[app.ObjectMeta().Name].Rules, rule)

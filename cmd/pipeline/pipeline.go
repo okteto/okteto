@@ -33,10 +33,11 @@ type Interface interface {
 type Command struct {
 	okClient          types.OktetoInterface
 	k8sClientProvider okteto.K8sClientProvider
+	okCtx             *okteto.Context
 }
 
 // NewCommand creates a namespace command to
-func NewCommand() (*Command, error) {
+func NewCommand(okCtx *okteto.Context) (*Command, error) {
 	var okClient = &okteto.Client{}
 	if okteto.IsOkteto() {
 		c, err := okteto.NewOktetoClient()
@@ -48,6 +49,7 @@ func NewCommand() (*Command, error) {
 	return &Command{
 		okClient:          okClient,
 		k8sClientProvider: okteto.NewK8sClientProvider(),
+		okCtx:             okCtx,
 	}, nil
 }
 

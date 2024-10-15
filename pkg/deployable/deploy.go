@@ -89,6 +89,7 @@ type DeployRunner struct {
 	DivertDeployer     DivertDeployer
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
 	k8sLogger          *io.K8sLogger
+	okCtx              *okteto.Context
 	TempKubeconfigFile string
 }
 
@@ -165,13 +166,17 @@ func NewDeployRunnerForLocal(
 		return nil, fmt.Errorf("failed to get the current working directory: %w", err)
 	}
 	tempKubeconfigName := name
+	okCtx, err := okteto.GetContext()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the current okteto context: %w", err)
+	}
 	if tempKubeconfigName == "" {
-		c, _, err := k8sProvider.ProvideWithLogger(okteto.GetContext().Cfg, k8sLogger)
+		c, _, err := k8sProvider.ProvideWithLogger(okCtx.Cfg, k8sLogger)
 		if err != nil {
 			return nil, err
 		}
 		inferer := devenvironment.NewNameInferer(c)
-		tempKubeconfigName = inferer.InferName(ctx, cwd, okteto.GetContext().Namespace, manifestPathFlag)
+		tempKubeconfigName = inferer.InferName(ctx, cwd, okCtx.Namespace, manifestPathFlag)
 	}
 
 	proxy, err := NewProxy(kubeconfig, portGetter)
@@ -190,6 +195,7 @@ func NewDeployRunnerForLocal(
 		GetExternalControl: newDeployExternalK8sControl,
 		Fs:                 afero.NewOsFs(),
 		k8sLogger:          k8sLogger,
+		okCtx:              okCtx,
 	}, nil
 }
 
@@ -197,7 +203,7 @@ func NewDeployRunnerForLocal(
 func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) error {
 	// We need to create a client that doesn't go through the proxy to create
 	// the configmap without the deployedByLabel
-	c, _, err := r.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, r.k8sLogger)
+	c, _, err := r.K8sClientProvider.ProvideWithLogger(r.okCtx.Cfg, r.k8sLogger)
 	if err != nil {
 		return err
 	}
@@ -232,7 +238,7 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 	defer r.CleanUp(ctx, nil)
 
 	// Token should be always masked from the logs
-	oktetoLog.AddMaskedWord(okteto.GetContext().Token)
+	oktetoLog.AddMaskedWord(r.okCtx.Token)
 	keyValueVarParts := 2
 	for _, variable := range params.Variables {
 		varParts := strings.SplitN(variable, "=", keyValueVarParts)
@@ -254,7 +260,7 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 		// Set OKTETO_DISABLE_SPINNER=true env variable, so all the Okteto commands disable spinner which leads to errors
 		fmt.Sprintf("%s=true", oktetoLog.OktetoDisableSpinnerEnvVar),
 		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commands runs on the same namespace
-		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.GetContext().Namespace),
+		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, r.okCtx.Namespace),
 	)
 	if okteto.IsOkteto() {
 		params.Variables = append(

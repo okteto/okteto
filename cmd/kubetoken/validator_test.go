@@ -135,8 +135,8 @@ func TestPreReqValidator(t *testing.T) {
 				withK8sClientProvider(tc.input.k8sClientProvider),
 				withOktetoClientProvider(tc.input.oktetoClientProvider),
 			)
-			v.getContextStore = func() *okteto.ContextStore {
-				return tc.input.currentStore
+			v.getContextStore = func() (*okteto.ContextStore, error) {
+				return tc.input.currentStore, nil
 			}
 			v.getCtxResource = func(s1, s2 string) *contextCMD.Options {
 				return &contextCMD.Options{
@@ -231,8 +231,8 @@ func TestCtxValidator(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			v := newCtxValidator(&contextCMD.Options{
 				Context: tc.input.ctxName,
-			}, tc.input.k8sClientProvider, func() *okteto.ContextStore {
-				return okteto.CurrentStore
+			}, tc.input.k8sClientProvider, func() (*okteto.ContextStore, error) {
+				return okteto.CurrentStore, nil
 			})
 			err := v.validate(tc.input.ctx)
 			assert.ErrorIs(t, err, tc.expected)

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/internal/test/client"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -39,6 +40,7 @@ func TestDestroyPipelineSuccessful(t *testing.T) {
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
 		},
+		okCtx: &okteto.Context{},
 	}
 	opts := &DestroyOptions{
 		Name: "test",
@@ -62,6 +64,7 @@ func TestDestroyPipelineSuccessfulWithWait(t *testing.T) {
 			PipelineClient: client.NewFakePipelineClient(response),
 			StreamClient:   client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 		},
+		okCtx: &okteto.Context{},
 	}
 	opts := &DestroyOptions{
 		Name: "test",
@@ -86,6 +89,7 @@ func TestDestroyPipelineSuccessfulWithWaitStreamErr(t *testing.T) {
 			PipelineClient: client.NewFakePipelineClient(response),
 			StreamClient:   client.NewFakeStreamClient(&client.FakeStreamResponse{StreamErr: errors.New("error")}),
 		},
+		okCtx: &okteto.Context{},
 	}
 	opts := &DestroyOptions{
 		Name: "test",
@@ -104,6 +108,7 @@ func TestDestroyNonExistentPipeline(t *testing.T) {
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
 		},
+		okCtx: &okteto.Context{},
 	}
 	opts := &DestroyOptions{
 		Name: "no exists",
@@ -125,6 +130,7 @@ func TestDestroyNonExistentPipelineWithWait(t *testing.T) {
 			PipelineClient: client.NewFakePipelineClient(response),
 			StreamClient:   client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 		},
+		okCtx: &okteto.Context{},
 	}
 
 	opts := &DestroyOptions{
@@ -145,6 +151,7 @@ func TestDestroyExistentPipelineWithError(t *testing.T) {
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
 		},
+		okCtx: &okteto.Context{},
 	}
 
 	opts := &DestroyOptions{
@@ -168,6 +175,7 @@ func TestDestroyExistentPipelineTimeoutError(t *testing.T) {
 			PipelineClient: client.NewFakePipelineClient(response),
 			StreamClient:   client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 		},
+		okCtx: &okteto.Context{},
 	}
 
 	opts := &DestroyOptions{

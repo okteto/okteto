@@ -43,7 +43,11 @@ func (o *Options) InitFromContext() {
 		return
 	}
 
-	ctxStore := okteto.GetContextStore()
+	ctxStore, err := okteto.GetContextStore()
+	if err != nil {
+		oktetoLog.Infof("failed to get context store: %s", err)
+		return
+	}
 
 	if ctxStore.Contexts == nil {
 		return
@@ -93,7 +97,12 @@ func (o *Options) InitFromEnvVars() {
 	}
 
 	if o.Token == "" && envToken != "" {
-		if !okteto.HasBeenLogged(o.Context) || okteto.GetContext().Token != envToken {
+		okCtx, err := okteto.GetContext()
+		if err != nil {
+			oktetoLog.Infof("failed to get context: %s", err)
+			return
+		}
+		if !okteto.HasBeenLogged(o.Context) || okCtx.Token != envToken {
 			usedEnvVars = append(usedEnvVars, model.OktetoTokenEnvVar)
 		}
 		o.Token = envToken

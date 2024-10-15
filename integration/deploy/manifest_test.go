@@ -151,13 +151,15 @@ func TestDeployOktetoManifest(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
+	okCtx, err := okteto.GetContext()
+	require.NoError(t, err)
 	// Test that endpoint works
 	autowakeURL := fmt.Sprintf("https://e2etest-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
 
 	// Test that image has been built
 
-	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
+	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okCtx.Registry, testNamespace, filepath.Base(dir))
 	require.NotEmpty(t, getImageWithSHA(appImageDev))
 
 	destroyOptions := &commands.DestroyOptions{
@@ -197,8 +199,10 @@ func TestRedeployOktetoManifestForImages(t *testing.T) {
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
 
+	okCtx, err := okteto.GetContext()
+	require.NoError(t, err)
 	// Test that image is not built before running okteto deploy
-	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
+	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okCtx.Registry, testNamespace, filepath.Base(dir))
 	require.False(t, isImageBuilt(appImageDev))
 
 	deployOptions := &commands.DeployOptions{
@@ -269,8 +273,10 @@ func TestDeployOktetoManifestWithDestroy(t *testing.T) {
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
 
+	okCtx, err := okteto.GetContext()
+	require.NoError(t, err)
 	// Test that image is not built before running okteto deploy
-	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
+	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okCtx.Registry, testNamespace, filepath.Base(dir))
 	require.False(t, isImageBuilt(appImageDev))
 
 	deployOptions := &commands.DeployOptions{
@@ -332,9 +338,11 @@ func TestDeployOktetoManifestExportCache(t *testing.T) {
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
 
+	okCtx, err := okteto.GetContext()
+	require.NoError(t, err)
 	require.NoError(t, createOktetoManifestWithCache(dir))
 	require.NoError(t, createAppDockerfileWithCache(dir))
-	appImageDev := fmt.Sprintf("%s/%s/app:dev", okteto.GetContext().Registry, testNamespace)
+	appImageDev := fmt.Sprintf("%s/%s/app:dev", okCtx.Registry, testNamespace)
 	require.NoError(t, createK8sManifestWithCache(dir, appImageDev))
 
 	deployOptions := &commands.DeployOptions{
@@ -346,7 +354,7 @@ func TestDeployOktetoManifestExportCache(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
 	// Test that image has been built
-	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okteto.GetContext().Registry, testNamespace)))
+	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okCtx.Registry, testNamespace)))
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
@@ -391,8 +399,10 @@ func TestDeployRemoteOktetoManifest(t *testing.T) {
 
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, buildOptions))
 
+	okCtx, err := okteto.GetContext()
+	require.NoError(t, err)
 	// Test that image has been built
-	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okteto.GetContext().Registry, testNamespace)))
+	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okCtx.Registry, testNamespace)))
 
 	t.Setenv(build.DepotTokenEnvVar, "fakeToken")
 	t.Setenv(build.DepotProjectEnvVar, "fakeProject")
@@ -450,8 +460,10 @@ func TestDeployRemoteOktetoManifestFromParentFolder(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
+	okCtx, err := okteto.GetContext()
+	require.NoError(t, err)
 	// Test that image has been built
-	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okteto.GetContext().Registry, testNamespace)))
+	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okCtx.Registry, testNamespace)))
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:      parentFolder,
