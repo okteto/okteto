@@ -69,8 +69,8 @@ func (o *osFileWriter) WriteFile(filename string, data []byte, perm os.FileMode)
 	return os.WriteFile(filename, data, perm)
 }
 
-// buildkitClientCreator defines an interface for creating buildkit clients
-type buildkitClientCreator interface {
+// clientCreator defines an interface for creating buildkit clients
+type clientCreator interface {
 	New(ctx context.Context, address string, opts ...client.ClientOpt) (*client.Client, error)
 }
 
@@ -86,7 +86,7 @@ func (r *realBuildkitClientCreator) New(ctx context.Context, address string, opt
 type ClientFactory struct {
 	logger                *io.Controller
 	urlParser             urlParser
-	buildkitClientCreator buildkitClientCreator
+	buildkitClientCreator clientCreator
 	certDecoder           certDecoder
 	fileWriter            fileWriter
 	cert                  string

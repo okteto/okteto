@@ -74,7 +74,7 @@ func TestBuildkitClientFactory_GetBuildkitClient(t *testing.T) {
 		urlParser       urlParser
 		certDecoder     certDecoder
 		fileWriter      fileWriter
-		clientCreator   buildkitClientCreator
+		clientCreator   clientCreator
 		name            string
 		cert            string
 		token           string
