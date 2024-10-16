@@ -123,12 +123,12 @@ func TestWaitUntilIsUp(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			bw := &buildkitWaiter{
-				Logger:                io.NewIOController(),
+			bw := &BuildkitWaiter{
+				logger:                io.NewIOController(),
 				buildkitClientFactory: tt.buildkitClientFactory,
-				MaxWaitTime:           tt.maxWaitTime,
-				RetryInterval:         tt.retryInterval,
-				Sleeper:               tt.sleeper,
+				maxWaitTime:           tt.maxWaitTime,
+				retryInterval:         tt.retryInterval,
+				sleeper:               tt.sleeper,
 			}
 
 			err := bw.WaitUntilIsUp(context.Background())
@@ -203,11 +203,11 @@ func TestNewBuildkitClientWaiter(t *testing.T) {
 			logger := io.NewIOController()
 			bw := NewBuildkitClientWaiter(factory, logger)
 
-			assert.Equal(t, tt.expectedMaxWaitTime, bw.MaxWaitTime)
-			assert.Equal(t, tt.expectedRetryTime, bw.RetryInterval)
-			assert.IsType(t, &RealSleeper{}, bw.Sleeper)
+			assert.Equal(t, tt.expectedMaxWaitTime, bw.maxWaitTime)
+			assert.Equal(t, tt.expectedRetryTime, bw.retryInterval)
+			assert.IsType(t, &RealSleeper{}, bw.sleeper)
 			assert.IsType(t, &buildkitClientFactoryToWait{}, bw.buildkitClientFactory)
-			assert.Equal(t, logger, bw.Logger)
+			assert.Equal(t, logger, bw.logger)
 		})
 	}
 }
