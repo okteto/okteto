@@ -172,6 +172,7 @@ type DeployInfo struct {
 	Divert         *DivertDeploy       `json:"divert,omitempty" yaml:"divert,omitempty"`
 	Image          string              `json:"image,omitempty" yaml:"image,omitempty"`
 	Commands       []DeployCommand     `json:"commands,omitempty" yaml:"commands,omitempty"`
+	Context        string              `yaml:"context,omitempty"`
 	Remote         bool                `json:"remote,omitempty" yaml:"remote,omitempty"`
 }
 
@@ -179,6 +180,7 @@ type DeployInfo struct {
 type DestroyInfo struct {
 	Image    string          `json:"image,omitempty" yaml:"image,omitempty"`
 	Commands []DeployCommand `json:"commands,omitempty" yaml:"commands,omitempty"`
+	Context  string          `yaml:"context,omitempty"`
 	Remote   bool            `json:"remote,omitempty" yaml:"remote,omitempty"`
 }
 

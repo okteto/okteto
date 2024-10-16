@@ -129,13 +129,14 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		OktetoCommandSpecificEnvVars: map[string]string{
 			constants.OktetoIsPreviewEnvVar: os.Getenv(constants.OktetoIsPreviewEnvVar),
 		},
-		ExecutionEnvVars:          rd.getExecutionEnvVars(ctx),
-		DockerfileName:            dockerfileTemporalName,
-		Deployable:                dep,
-		Manifest:                  deployOptions.Manifest,
-		Command:                   remote.DeployCommand,
-		IgnoreRules:               rules,
-		UseOktetoDeployIgnoreFile: true,
+		ExecutionEnvVars:            rd.getExecutionEnvVars(ctx),
+		DockerfileName:              dockerfileTemporalName,
+		Deployable:                  dep,
+		Manifest:                    deployOptions.Manifest,
+		Command:                     remote.DeployCommand,
+		IgnoreRules:                 rules,
+		UseOktetoDeployIgnoreFile:   true,
+		ContextAbsolutePathOverride: path.Clean(path.Join(cwd, deployOptions.Manifest.Destroy.Context)),
 	}
 
 	if err := rd.runner.Run(ctx, &runParams); err != nil {

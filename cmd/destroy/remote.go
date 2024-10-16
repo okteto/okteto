@@ -125,13 +125,14 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 		OktetoCommandSpecificEnvVars: map[string]string{
 			constants.OktetoIsPreviewEnvVar: os.Getenv(constants.OktetoIsPreviewEnvVar),
 		},
-		DependenciesEnvVars:       make(map[string]string),
-		DockerfileName:            dockerfileTemporalName,
-		Deployable:                dep,
-		Manifest:                  opts.Manifest,
-		Command:                   remote.DestroyCommand,
-		IgnoreRules:               rules,
-		UseOktetoDeployIgnoreFile: true,
+		DependenciesEnvVars:         make(map[string]string),
+		DockerfileName:              dockerfileTemporalName,
+		Deployable:                  dep,
+		Manifest:                    opts.Manifest,
+		Command:                     remote.DestroyCommand,
+		IgnoreRules:                 rules,
+		UseOktetoDeployIgnoreFile:   true,
+		ContextAbsolutePathOverride: path.Clean(path.Join(cwd, opts.Manifest.Destroy.Context)),
 	}
 
 	// we need to call Run() method using a remote builder. This Builder will have
