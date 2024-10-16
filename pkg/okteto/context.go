@@ -20,6 +20,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -59,6 +60,15 @@ const (
 var (
 	CurrentStore *ContextStore
 	reg          = regexp.MustCompile("[^A-Za-z0-9]+")
+
+	// ErrCtxCannotBeNil is returned when the context is nil
+	ErrCtxCannotBeNil = errors.New("contexts cannot be nil")
+
+	// ErrEmptyContextStore is returned when the context store is empty
+	ErrEmptyContextStore = errors.New("context store is empty")
+
+	// ErrCurrentContextCannotBeEmpty is returned when the current context is empty
+	ErrCurrentContextCannotBeEmpty = errors.New("current-context is empty")
 )
 
 // Context contains the information related to an okteto context
@@ -250,18 +260,18 @@ func GetContextStore() (*ContextStore, error) {
 		return CurrentStore, nil
 	}
 
+	CurrentStore = &ContextStore{
+		Contexts: map[string]*Context{},
+	}
 	if ContextExists() {
 		ctxStore, err := GetContextStoreFromStorePath()
 		if err != nil {
-			return nil, err
+			return CurrentStore, err
 		}
 		CurrentStore = ctxStore
 		return ctxStore, nil
 	}
 
-	CurrentStore = &ContextStore{
-		Contexts: map[string]*Context{},
-	}
 	return CurrentStore, nil
 }
 
@@ -278,21 +288,24 @@ func GetContextStoreFromStorePath() (*ContextStore, error) {
 	ctxStore := &ContextStore{}
 	if err := dec.Decode(&ctxStore); err != nil {
 		oktetoLog.Info("error decoding okteto contexts: %v", err)
-		return nil, fmt.Errorf("okteto context store is corrupted. Delete the folder '%s' and try again", config.GetOktetoContextFolder())
+		return ctxStore, fmt.Errorf("okteto context store is corrupted. Delete the folder '%s' and try again", config.GetOktetoContextFolder())
 	}
 	if err := validateContextStore(ctxStore); err != nil {
 		oktetoLog.Infof("error validating okteto contexts: %v", err)
-		return nil, fmt.Errorf("okteto context store is corrupted. Delete the folder '%s' and try again", config.GetOktetoContextFolder())
+		return ctxStore, fmt.Errorf("okteto context store is corrupted: %w. Delete the folder '%s' and try again", err, config.GetOktetoContextFolder())
 	}
 	return ctxStore, nil
 }
 
 func validateContextStore(ctxStore *ContextStore) error {
 	if ctxStore.Contexts == nil {
-		return fmt.Errorf("contexts cannot be nil")
+		return ErrCtxCannotBeNil
+	}
+	if ctxStore.CurrentContext == "" && len(ctxStore.Contexts) == 0 {
+		return ErrEmptyContextStore
 	}
 	if ctxStore.CurrentContext == "" {
-		return fmt.Errorf("current-context is empty")
+		return ErrCurrentContextCannotBeEmpty
 	}
 	if _, ok := ctxStore.Contexts[ctxStore.CurrentContext]; !ok {
 		return fmt.Errorf("current-context '%s' not found in contexts", ctxStore.CurrentContext)

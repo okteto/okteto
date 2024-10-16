@@ -15,6 +15,7 @@ package context
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -88,7 +89,7 @@ This will prompt you to select one of your existing Okteto Contexts or to create
 
 func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 	ctxStore, err := okteto.GetContextStore()
-	if err != nil {
+	if err != nil && !errors.Is(err, okteto.ErrEmptyContextStore) {
 		return err
 	}
 	if len(ctxStore.Contexts) == 0 {
