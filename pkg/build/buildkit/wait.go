@@ -34,7 +34,7 @@ const (
 	maxBuildkitWaitTimeEnvVar = "OKTETO_BUILDKIT_WAIT_TIMEOUT"
 
 	// retryBuildkitTimeEnvVar is the environment variable to set the retry time for buildkit
-	retryBuildkitTimeEnvVar = "OKTETO_RETRY_BUILDKIT_TIME"
+	retryBuildkitIntervalEnvVar = "OKTETO_RETRY_BUILDKIT_INTERVAL"
 )
 
 // sleeper defines an interface for sleeping
@@ -84,7 +84,7 @@ func buildkitClientFactoryToWaitFactory(factory *ClientFactory) buildkitClientFa
 func NewBuildkitClientWaiter(factory *ClientFactory, logger *io.Controller) *buildkitWaiter {
 	return &buildkitWaiter{
 		MaxWaitTime:           env.LoadTimeOrDefault(maxBuildkitWaitTimeEnvVar, maxWaitTime),
-		RetryInterval:         env.LoadTimeOrDefault(retryBuildkitTimeEnvVar, retryTime),
+		RetryInterval:         env.LoadTimeOrDefault(retryBuildkitIntervalEnvVar, retryTime),
 		Sleeper:               &RealSleeper{},
 		buildkitClientFactory: buildkitClientFactoryToWaitFactory(factory),
 		Logger:                logger,
