@@ -30,6 +30,7 @@ type ImageBuildMetadata struct {
 	RepoHash                 string
 	BuildContextHash         string
 	Initiator                string
+	WaitForBuildkitAvailable time.Duration
 	RepoHashDuration         time.Duration
 	BuildContextHashDuration time.Duration
 	CacheHitDuration         time.Duration
@@ -48,6 +49,7 @@ func (m *ImageBuildMetadata) toProps() map[string]interface{} {
 		"repoURL":                         m.RepoURL,
 		"repoHash":                        m.RepoHash,
 		"repoHashDurationSeconds":         m.RepoHashDuration.Seconds(),
+		"waitForBuildkitAvailable":        m.WaitForBuildkitAvailable.Seconds(),
 		"cacheHit":                        m.CacheHit,
 		"cacheHitDurationSeconds":         m.CacheHitDuration.Seconds(),
 		"buildDurationSeconds":            m.BuildDuration.Seconds(),

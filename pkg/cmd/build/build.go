@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/build"
+	"github.com/okteto/okteto/pkg/build/buildkit"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
@@ -54,7 +55,12 @@ type OktetoBuilderInterface interface {
 type OktetoBuilder struct {
 	OktetoContext OktetoContextInterface
 	Fs            afero.Fs
+	metadata      *buildkit.BuildMetadata
 	isRetry       bool
+}
+
+func (ob *OktetoBuilder) GetMetadata() *buildkit.BuildMetadata {
+	return ob.metadata
 }
 
 // OktetoRegistryInterface checks if an image is at the registry
@@ -68,6 +74,7 @@ func NewOktetoBuilder(context OktetoContextInterface, fs afero.Fs) *OktetoBuilde
 	return &OktetoBuilder{
 		OktetoContext: context,
 		Fs:            fs,
+		metadata:      &buildkit.BuildMetadata{},
 	}
 }
 
@@ -159,7 +166,22 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 		return errors.Wrap(err, "failed to create build solver")
 	}
 
-	buildkitClient, err := getBuildkitClient(ctx, ob.OktetoContext)
+	buildkitClientFactory := buildkit.NewBuildkitClientFactory(
+		ob.OktetoContext.GetCurrentCertStr(),
+		ob.OktetoContext.GetCurrentBuilder(),
+		ob.OktetoContext.GetCurrentToken(),
+		config.GetCertificatePath(),
+		ioCtrl)
+
+	buildkitWaiter := buildkit.NewBuildkitClientWaiter(buildkitClientFactory, ioCtrl)
+
+	err = buildkitWaiter.WaitUntilIsUp(ctx)
+	ob.metadata.WaitForBuildkitAvailableTime = buildkitWaiter.GetWaitingTime()
+	if err != nil {
+		return err
+	}
+
+	buildkitClient, err := buildkitClientFactory.GetBuildkitClient(ctx)
 	if err != nil {
 		return err
 	}
