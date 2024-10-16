@@ -58,8 +58,8 @@ type clientInfoRetriever interface {
 	Info(ctx context.Context) (*client.Info, error)
 }
 
-// BuildkitWaiter encapsulates the logic to check if the BuildKit server is up and running
-type BuildkitWaiter struct {
+// Waiter encapsulates the logic to check if the BuildKit server is up and running
+type Waiter struct {
 	sleeper               sleeper
 	buildkitClientFactory buildkitClientFactoryWaiter
 	logger                *io.Controller
@@ -81,8 +81,8 @@ func buildkitClientFactoryToWaitFactory(factory *ClientFactory) buildkitClientFa
 }
 
 // NewBuildkitClientWaiter creates a new buildkitWaiter
-func NewBuildkitClientWaiter(factory *ClientFactory, logger *io.Controller) *BuildkitWaiter {
-	return &BuildkitWaiter{
+func NewBuildkitClientWaiter(factory *ClientFactory, logger *io.Controller) *Waiter {
+	return &Waiter{
 		maxWaitTime:           env.LoadTimeOrDefault(maxBuildkitWaitTimeEnvVar, maxWaitTime),
 		retryInterval:         env.LoadTimeOrDefault(retryBuildkitIntervalEnvVar, retryTime),
 		sleeper:               &RealSleeper{},
@@ -91,12 +91,12 @@ func NewBuildkitClientWaiter(factory *ClientFactory, logger *io.Controller) *Bui
 	}
 }
 
-func (bw *BuildkitWaiter) GetWaitingTime() time.Duration {
+func (bw *Waiter) GetWaitingTime() time.Duration {
 	return bw.waitingTime
 }
 
 // WaitUntilIsUp waits for the BuildKit server to become available
-func (bw *BuildkitWaiter) WaitUntilIsUp(ctx context.Context) error {
+func (bw *Waiter) WaitUntilIsUp(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, bw.maxWaitTime)
 	defer cancel()
 
