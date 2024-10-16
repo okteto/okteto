@@ -81,9 +81,16 @@ func NewBuildkitRunner(clientFactory buildkitClientFactory, waiter buildkitWaite
 // Run executes a build using buildkit
 func (r *Runner) Run(ctx context.Context, opt *client.SolveOpt, outputMode string) error {
 	tag := r.extractTagsFromOpt(opt)
-	for r.metadata.attempts = 1; r.metadata.attempts <= r.maxAttemptsBuildkitTransientErrors; r.metadata.attempts++ {
-		if r.metadata.attempts > 1 {
-			r.logger.Logger().Infof("retrying build, attempt %d", r.metadata.attempts)
+	attempts := 0
+	var solveTime time.Duration
+	defer func() {
+		r.metadata.attempts = attempts
+		r.metadata.solveTime = solveTime
+	}()
+	for {
+		attempts++
+		if attempts > 1 {
+			r.logger.Logger().Infof("retrying build, attempt %d", attempts)
 			r.logger.Out().Warning("Buildkit connection failure. Retrying...")
 		}
 		// if buildkit is not available for 10 minutes, we should fail
@@ -95,16 +102,22 @@ func (r *Runner) Run(ctx context.Context, opt *client.SolveOpt, outputMode strin
 		client, err := r.clientFactory.GetBuildkitClient(ctx)
 		if err != nil {
 			r.logger.Logger().Infof("failed to get buildkit client: %s", err)
+			if attempts >= r.maxAttemptsBuildkitTransientErrors {
+				return ErrBuildConnecionFailed
+			}
 			continue
 		}
 
 		startSolverTime := time.Now()
 		err = r.solveBuild(ctx, client, opt, outputMode, r.logger)
-		r.metadata.solveTime = time.Since(startSolverTime)
+		solveTime = time.Since(startSolverTime)
 		if err != nil {
 			if IsRetryable(err) {
-				r.logger.Logger().Infof("retrying build: %s", err)
+				r.logger.Logger().Infof("retrying operation: %s", err)
 				analytics.TrackBuildTransientError(true)
+				if attempts >= r.maxAttemptsBuildkitTransientErrors {
+					return ErrBuildConnecionFailed
+				}
 				continue
 			}
 			err = GetErrorMessage(err, tag)
@@ -115,17 +128,14 @@ func (r *Runner) Run(ctx context.Context, opt *client.SolveOpt, outputMode strin
 		// Check if the image was pushed correctly to the registry
 		if err := r.checkIfImageIsPushed(tag); err != nil {
 			r.logger.Logger().Infof("failed to check if the image was pushed: %s", err)
+			if attempts >= r.maxAttemptsBuildkitTransientErrors {
+				return ErrBuildConnecionFailed
+			}
 			continue
 		}
-
 		// The image was built and pushed correctly
 		return nil
-
 	}
-	// If all attempts fail, we need to subtract the last attempt as it was already incremented
-	r.metadata.attempts--
-	// If all attempts fail, return the final error
-	return ErrBuildConnecionFailed
 }
 
 // extractTagsFromOpt extracts the tags from the solve options
