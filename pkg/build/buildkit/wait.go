@@ -100,7 +100,7 @@ func (bw *buildkitWaiter) WaitUntilIsUp(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, bw.MaxWaitTime)
 	defer cancel()
 
-	sp := bw.Logger.Out().Spinner("Waiting for BuildKit server to be ready...")
+	sp := bw.Logger.Out().Spinner("Waiting for BuildKit service to be ready...")
 	sp.Start()
 	defer sp.Stop()
 
@@ -109,24 +109,24 @@ func (bw *buildkitWaiter) WaitUntilIsUp(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			bw.waitingTime = bw.MaxWaitTime
-			return fmt.Errorf("buildkit not available for %v", bw.MaxWaitTime)
+			return fmt.Errorf("buildkit service not available for %v", bw.MaxWaitTime)
 		default:
 			c, err := bw.buildkitClientFactory.GetBuildkitClient(ctx)
 			if err != nil {
-				bw.Logger.Infof("Failed to connect to BuildKit server: %v\n", err)
+				bw.Logger.Infof("Failed to connect to BuildKit service: %v\n", err)
 				bw.Logger.Infof("Retrying in %v...\n", bw.RetryInterval)
 				bw.Sleeper.Sleep(bw.RetryInterval)
 				continue
 			}
 			_, err = c.Info(ctx)
 			if err != nil {
-				bw.Logger.Infof("Failed to get BuildKit server info: %v\n", err)
+				bw.Logger.Infof("Failed to get BuildKit service info: %v\n", err)
 				bw.Logger.Infof("Retrying in %v...\n", bw.RetryInterval)
 				bw.Sleeper.Sleep(bw.RetryInterval)
 				continue
 			}
 			bw.waitingTime = time.Since(startWaitingTime)
-			bw.Logger.Infof("Connected to BuildKit server.")
+			bw.Logger.Infof("Connected to BuildKit service.")
 		}
 		break
 	}

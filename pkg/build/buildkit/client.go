@@ -112,7 +112,7 @@ func NewBuildkitClientFactory(cert, builder, token, certificatePath string, l *i
 
 // GetBuildkitClient returns a buildkit client
 func (bcf *ClientFactory) GetBuildkitClient(ctx context.Context) (*client.Client, error) {
-	bcf.logger.Logger().Infof("getting buildkit client")
+	bcf.logger.Logger().Infof("getting buildkit service client")
 	cert := bcf.cert
 
 	if cert != "" {
@@ -145,7 +145,7 @@ func (bcf *ClientFactory) GetBuildkitClient(ctx context.Context) (*client.Client
 func (bcf *ClientFactory) getClientWithCert(ctx context.Context) (*client.Client, error) {
 	buildkitURL, err := bcf.urlParser.Parse(bcf.builder)
 	if err != nil {
-		return nil, fmt.Errorf("invalid buildkit host %s: %w", bcf.builder, err)
+		return nil, fmt.Errorf("invalid buildkit service host %s: %w", bcf.builder, err)
 	}
 
 	creds := client.WithCAAndSystemRoot(buildkitURL.Hostname(), bcf.certificatePath)
@@ -159,7 +159,7 @@ func (bcf *ClientFactory) getClientWithCert(ctx context.Context) (*client.Client
 
 	c, err := bcf.buildkitClientCreator.New(ctx, bcf.builder, creds, rpc)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create buildkit client: %w", err)
+		return nil, fmt.Errorf("failed to create buildkit service client: %w", err)
 	}
 
 	return c, nil
