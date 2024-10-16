@@ -95,7 +95,7 @@ func (bw *buildkitWaiter) GetWaitingTime() time.Duration {
 	return bw.waitingTime
 }
 
-// WaitForBuildKit waits for the BuildKit server to become available
+// WaitUntilIsUp waits for the BuildKit server to become available
 func (bw *buildkitWaiter) WaitUntilIsUp(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, bw.MaxWaitTime)
 	defer cancel()
