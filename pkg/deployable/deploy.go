@@ -154,6 +154,7 @@ func NewDeployRunnerForLocal(
 	name string,
 	runWithoutBash bool,
 	manifestPathFlag string,
+	dir string,
 	cmapHandler ConfigMapHandler,
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	portGetter PortGetterFunc,
@@ -182,7 +183,7 @@ func NewDeployRunnerForLocal(
 
 	return &DeployRunner{
 		Kubeconfig:         kubeconfig,
-		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash, ""),
+		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash, dir),
 		ConfigMapHandler:   cmapHandler,
 		Proxy:              proxy,
 		TempKubeconfigFile: GetTempKubeConfigFile(tempKubeconfigName),

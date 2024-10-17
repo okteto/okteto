@@ -218,8 +218,25 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 					return err
 				}
 			}
+			// resolve name for the dev environment and configmap
+			inferer := devenvironment.NewNameInferer(k8sClient)
+			manifest, err := model.GetManifestV2(options.ManifestPath, afero.NewOsFs())
+			if err != nil {
+				// Log error message but application can still be deleted
+				oktetoLog.Infof("could not find manifest file to be executed: %s", err)
+				manifest = &model.Manifest{
+					Destroy: &model.DestroyInfo{},
+				}
+			}
+			options.Manifest = manifest
+			setOptionsNameAndManifestName(ctx, okteto.GetContext().Namespace, options, inferer, cwd)
+
+			var execDir string
+			if options.Manifest.Destroy != nil {
+				execDir = options.Manifest.Destroy.Context
+			}
 			c := &destroyCommand{
-				executor:          executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash, ""),
+				executor:          executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash, execDir),
 				ConfigMapHandler:  NewConfigmapHandler(k8sClient),
 				nsDestroyer:       namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
 				secrets:           secrets.NewSecrets(k8sClient),
@@ -235,19 +252,6 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 					return pipelineCMD.NewCommand()
 				},
 			}
-
-			// resolve name for the dev environment and configmap
-			inferer := devenvironment.NewNameInferer(k8sClient)
-			manifest, err := model.GetManifestV2(options.ManifestPath, afero.NewOsFs())
-			if err != nil {
-				// Log error message but application can still be deleted
-				oktetoLog.Infof("could not find manifest file to be executed: %s", err)
-				manifest = &model.Manifest{
-					Destroy: &model.DestroyInfo{},
-				}
-			}
-			options.Manifest = manifest
-			setOptionsNameAndManifestName(ctx, okteto.GetContext().Namespace, options, inferer, cwd)
 
 			// We need to create a custom kubeconfig file to avoid to modify the user's kubeconfig when running the
 			// destroy operation locally. This kubeconfig contains the kubernetes configuration got from the okteto

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
@@ -64,6 +65,7 @@ type remoteDeployer struct {
 
 	getDependencyEnvVars dependencyEnvVarsGetter
 	getExecutionEnvVars  executionEnvVarsGetter
+	workdirCtrl          filesystem.WorkingDirectoryInterface
 }
 
 // newRemoteDeployer creates the remote deployer
@@ -82,6 +84,7 @@ func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller
 		ioCtrl:               ioCtrl,
 		getDependencyEnvVars: getDependencyEnvVars,
 		getExecutionEnvVars:  executionEnvVarGetter,
+		workdirCtrl:          filesystem.NewOsWorkingDirectoryCtrl(),
 	}
 }
 
@@ -103,7 +106,12 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		return err
 	}
 
-	cwd, err := remote.GetOriginalCWD(filesystem.NewOsWorkingDirectoryCtrl(), deployOptions.ManifestPathFlag)
+	workdirCtrl := rd.workdirCtrl
+	if workdirCtrl == nil {
+		workdirCtrl = filesystem.NewOsWorkingDirectoryCtrl()
+	}
+
+	cwd, err := remote.GetOriginalCWD(workdirCtrl, deployOptions.ManifestPathFlag)
 	if err != nil {
 		return fmt.Errorf("failed to resolve working directory for remote deploy: %w", err)
 	}
@@ -114,6 +122,12 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 	rules, err := ig.Rules(ignore.RootSection, "deploy")
 	if err != nil {
 		return fmt.Errorf("failed to create ignore rules for remote deploy: %w", err)
+	}
+
+	var ctxPath string
+	if deployOptions.Manifest.Deploy != nil {
+		manifestPathDir := filepath.Dir(deployOptions.ManifestPathFlag)
+		ctxPath = path.Clean(path.Join(cwd, manifestPathDir, deployOptions.Manifest.Deploy.Context))
 	}
 
 	runParams := remote.Params{
@@ -128,13 +142,14 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		OktetoCommandSpecificEnvVars: map[string]string{
 			constants.OktetoIsPreviewEnvVar: os.Getenv(constants.OktetoIsPreviewEnvVar),
 		},
-		ExecutionEnvVars:          rd.getExecutionEnvVars(ctx),
-		DockerfileName:            dockerfileTemporalName,
-		Deployable:                dep,
-		Manifest:                  deployOptions.Manifest,
-		Command:                   remote.DeployCommand,
-		IgnoreRules:               rules,
-		UseOktetoDeployIgnoreFile: true,
+		ExecutionEnvVars:            rd.getExecutionEnvVars(ctx),
+		DockerfileName:              dockerfileTemporalName,
+		Deployable:                  dep,
+		Manifest:                    deployOptions.Manifest,
+		Command:                     remote.DeployCommand,
+		IgnoreRules:                 rules,
+		UseOktetoDeployIgnoreFile:   true,
+		ContextAbsolutePathOverride: ctxPath,
 	}
 
 	if err := rd.runner.Run(ctx, &runParams); err != nil {
