@@ -65,6 +65,7 @@ type remoteDeployer struct {
 
 	getDependencyEnvVars dependencyEnvVarsGetter
 	getExecutionEnvVars  executionEnvVarsGetter
+	workdirCtrl          filesystem.WorkingDirectoryInterface
 }
 
 // newRemoteDeployer creates the remote deployer
@@ -83,6 +84,7 @@ func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller
 		ioCtrl:               ioCtrl,
 		getDependencyEnvVars: getDependencyEnvVars,
 		getExecutionEnvVars:  executionEnvVarGetter,
+		workdirCtrl:          filesystem.NewOsWorkingDirectoryCtrl(),
 	}
 }
 
@@ -104,7 +106,12 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		return err
 	}
 
-	cwd, err := remote.GetOriginalCWD(filesystem.NewOsWorkingDirectoryCtrl(), deployOptions.ManifestPathFlag)
+	workdirCtrl := rd.workdirCtrl
+	if workdirCtrl == nil {
+		workdirCtrl = filesystem.NewOsWorkingDirectoryCtrl()
+	}
+
+	cwd, err := remote.GetOriginalCWD(workdirCtrl, deployOptions.ManifestPathFlag)
 	if err != nil {
 		return fmt.Errorf("failed to resolve working directory for remote deploy: %w", err)
 	}
@@ -115,6 +122,11 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 	rules, err := ig.Rules(ignore.RootSection, "deploy")
 	if err != nil {
 		return fmt.Errorf("failed to create ignore rules for remote deploy: %w", err)
+	}
+
+	var ctxPath string
+	if deployOptions.Manifest.Deploy != nil {
+		ctxPath = path.Clean(path.Join(cwd, deployOptions.Manifest.Deploy.Context))
 	}
 
 	runParams := remote.Params{
@@ -136,7 +148,7 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		Command:                     remote.DeployCommand,
 		IgnoreRules:                 rules,
 		UseOktetoDeployIgnoreFile:   true,
-		ContextAbsolutePathOverride: path.Clean(path.Join(cwd, deployOptions.Manifest.Destroy.Context)),
+		ContextAbsolutePathOverride: ctxPath,
 	}
 
 	if err := rd.runner.Run(ctx, &runParams); err != nil {

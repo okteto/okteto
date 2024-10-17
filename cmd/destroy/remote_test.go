@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/deployable"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
+	fakefs "github.com/okteto/okteto/pkg/filesystem/fake"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/remote"
 	"github.com/stretchr/testify/assert"
@@ -109,7 +110,64 @@ func TestGetCommandFlags(t *testing.T) {
 	}
 }
 
+func TestDestroyRemoteWithCtx(t *testing.T) {
+	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/path/to/manifest")
+	manifest := &model.Manifest{
+		Destroy: &model.DestroyInfo{
+			Context: "../../..",
+			Image:   "test-image",
+			Commands: []model.DeployCommand{
+				{
+					Name:    "command 1",
+					Command: "test-command",
+				},
+			},
+		},
+		External: map[string]*externalresource.ExternalResource{
+			"test": {
+				Icon: "database",
+			},
+		},
+	}
+
+	expectedParams := &remote.Params{
+		BaseImage:        manifest.Destroy.Image,
+		ManifestPathFlag: "/path/to/manifest",
+		TemplateName:     templateName,
+		CommandFlags:     []string{"--name \"test\""},
+		DockerfileName:   dockerfileTemporalName,
+		Deployable: deployable.Entity{
+			Commands: manifest.Destroy.Commands,
+			External: manifest.External,
+		},
+		OktetoCommandSpecificEnvVars: map[string]string{
+			"OKTETO_IS_PREVIEW_ENVIRONMENT": "",
+		},
+		BuildEnvVars:                make(map[string]string),
+		DependenciesEnvVars:         make(map[string]string),
+		Manifest:                    manifest,
+		Command:                     remote.DestroyCommand,
+		UseOktetoDeployIgnoreFile:   true,
+		ContextAbsolutePathOverride: "/",
+	}
+	runner := &fakeRemoteRunner{}
+	runner.On("Run", mock.Anything, expectedParams).Return(nil)
+	rd := &remoteDestroyCommand{
+		runner:      runner,
+		workdirCtrl: workdirCtrl,
+	}
+	opts := &Options{
+		Name:             "test",
+		Manifest:         manifest,
+		ManifestPathFlag: "/path/to/manifest",
+	}
+	err := rd.Destroy(context.Background(), opts)
+	require.NoError(t, err)
+	runner.AssertExpectations(t)
+}
+
 func TestDestroyRemote(t *testing.T) {
+	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/root")
 	manifest := &model.Manifest{
 		Destroy: &model.DestroyInfo{
 			Image: "test-image",
@@ -140,16 +198,18 @@ func TestDestroyRemote(t *testing.T) {
 		OktetoCommandSpecificEnvVars: map[string]string{
 			"OKTETO_IS_PREVIEW_ENVIRONMENT": "",
 		},
-		BuildEnvVars:              make(map[string]string),
-		DependenciesEnvVars:       make(map[string]string),
-		Manifest:                  manifest,
-		Command:                   remote.DestroyCommand,
-		UseOktetoDeployIgnoreFile: true,
+		BuildEnvVars:                make(map[string]string),
+		DependenciesEnvVars:         make(map[string]string),
+		Manifest:                    manifest,
+		Command:                     remote.DestroyCommand,
+		UseOktetoDeployIgnoreFile:   true,
+		ContextAbsolutePathOverride: "/root",
 	}
 	runner := &fakeRemoteRunner{}
 	runner.On("Run", mock.Anything, expectedParams).Return(nil)
 	rd := &remoteDestroyCommand{
-		runner: runner,
+		runner:      runner,
+		workdirCtrl: workdirCtrl,
 	}
 	opts := &Options{
 		Name:             "test",
@@ -162,6 +222,7 @@ func TestDestroyRemote(t *testing.T) {
 }
 
 func TestDestroyRemoteWithError(t *testing.T) {
+	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/root")
 	manifest := &model.Manifest{
 		Destroy: &model.DestroyInfo{
 			Image: "test-image",
@@ -192,11 +253,12 @@ func TestDestroyRemoteWithError(t *testing.T) {
 		OktetoCommandSpecificEnvVars: map[string]string{
 			"OKTETO_IS_PREVIEW_ENVIRONMENT": "",
 		},
-		BuildEnvVars:              make(map[string]string),
-		DependenciesEnvVars:       make(map[string]string),
-		Manifest:                  manifest,
-		Command:                   remote.DestroyCommand,
-		UseOktetoDeployIgnoreFile: true,
+		BuildEnvVars:                make(map[string]string),
+		DependenciesEnvVars:         make(map[string]string),
+		Manifest:                    manifest,
+		Command:                     remote.DestroyCommand,
+		UseOktetoDeployIgnoreFile:   true,
+		ContextAbsolutePathOverride: "/root",
 	}
 
 	tests := []struct {
@@ -237,7 +299,8 @@ func TestDestroyRemoteWithError(t *testing.T) {
 			runner := &fakeRemoteRunner{}
 			runner.On("Run", mock.Anything, expectedParams).Return(tt.err)
 			rd := &remoteDestroyCommand{
-				runner: runner,
+				runner:      runner,
+				workdirCtrl: workdirCtrl,
 			}
 			opts := &Options{
 				Name:             "test",

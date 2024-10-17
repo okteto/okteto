@@ -54,6 +54,8 @@ type remoteDestroyCommand struct {
 
 	// ioCtrl is the controller for the output of the Build logs
 	ioCtrl *io.Controller
+
+	workdirCtrl filesystem.WorkingDirectoryInterface
 }
 
 // newRemoteDestroyer creates a new remote destroyer
@@ -70,9 +72,10 @@ func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remote
 		manifest.Destroy = &model.DestroyInfo{}
 	}
 	return &remoteDestroyCommand{
-		runner:   runner,
-		manifest: manifest,
-		ioCtrl:   ioCtrl,
+		runner:      runner,
+		manifest:    manifest,
+		ioCtrl:      ioCtrl,
+		workdirCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 	}
 }
 
@@ -102,7 +105,12 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 		return err
 	}
 
-	cwd, err := remote.GetOriginalCWD(filesystem.NewOsWorkingDirectoryCtrl(), opts.ManifestPathFlag)
+	workdirCtrl := rd.workdirCtrl
+	if workdirCtrl == nil {
+		workdirCtrl = filesystem.NewOsWorkingDirectoryCtrl()
+	}
+
+	cwd, err := remote.GetOriginalCWD(workdirCtrl, opts.ManifestPathFlag)
 	if err != nil {
 		return fmt.Errorf("failed to resolve working directory for remote destroy: %w", err)
 	}
@@ -113,6 +121,11 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 	rules, err := ig.Rules(ignore.RootSection, "destroy")
 	if err != nil {
 		return fmt.Errorf("failed to create ignore rules for remote destroy: %w", err)
+	}
+
+	var ctxPath string
+	if opts.Manifest.Destroy != nil {
+		ctxPath = path.Clean(path.Join(cwd, opts.Manifest.Destroy.Context))
 	}
 
 	runParams := remote.Params{
@@ -132,7 +145,7 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 		Command:                     remote.DestroyCommand,
 		IgnoreRules:                 rules,
 		UseOktetoDeployIgnoreFile:   true,
-		ContextAbsolutePathOverride: path.Clean(path.Join(cwd, opts.Manifest.Destroy.Context)),
+		ContextAbsolutePathOverride: ctxPath,
 	}
 
 	// we need to call Run() method using a remote builder. This Builder will have
