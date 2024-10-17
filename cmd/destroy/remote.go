@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/build/buildkit"
@@ -125,7 +126,8 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 
 	var ctxPath string
 	if opts.Manifest.Destroy != nil {
-		ctxPath = path.Clean(path.Join(cwd, opts.Manifest.Destroy.Context))
+		manifestPathDir := filepath.Dir(opts.ManifestPathFlag)
+		ctxPath = path.Clean(path.Join(cwd, manifestPathDir, opts.Manifest.Destroy.Context))
 	}
 
 	runParams := remote.Params{

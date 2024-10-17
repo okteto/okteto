@@ -176,7 +176,7 @@ func TestDeployRemoteWithCtx(t *testing.T) {
 	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/path/to/manifest")
 	manifest := &model.Manifest{
 		Deploy: &model.DeployInfo{
-			Context: "../../..",
+			Context: "../..",
 			Image:   "test-image",
 			Divert: &model.DivertDeploy{
 				Namespace: "test-divert",
@@ -198,7 +198,7 @@ func TestDeployRemoteWithCtx(t *testing.T) {
 
 	expectedParams := &remote.Params{
 		BaseImage:           manifest.Deploy.Image,
-		ManifestPathFlag:    "/path/to/manifest",
+		ManifestPathFlag:    "/path/to/manifest/okteto.yml",
 		TemplateName:        templateName,
 		CommandFlags:        []string{"--name \"test\""},
 		BuildEnvVars:        map[string]string{"BUILD_VAR_1": "value"},
@@ -216,7 +216,7 @@ func TestDeployRemoteWithCtx(t *testing.T) {
 		Manifest:                    manifest,
 		Command:                     remote.DeployCommand,
 		UseOktetoDeployIgnoreFile:   true,
-		ContextAbsolutePathOverride: "/",
+		ContextAbsolutePathOverride: "/path",
 	}
 	runner := &fakeRemoteRunner{}
 	runner.On("Run", mock.Anything, expectedParams).Return(nil)
@@ -236,14 +236,14 @@ func TestDeployRemoteWithCtx(t *testing.T) {
 	opts := &Options{
 		Name:             "test",
 		Manifest:         manifest,
-		ManifestPathFlag: "/path/to/manifest",
+		ManifestPathFlag: "/path/to/manifest/okteto.yml",
 	}
 	err := rd.Deploy(context.Background(), opts)
 	require.NoError(t, err)
 	runner.AssertExpectations(t)
 }
 func TestDeployRemote(t *testing.T) {
-	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/root")
+	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/")
 	manifest := &model.Manifest{
 		Deploy: &model.DeployInfo{
 			Image: "test-image",
@@ -267,7 +267,7 @@ func TestDeployRemote(t *testing.T) {
 
 	expectedParams := &remote.Params{
 		BaseImage:           manifest.Deploy.Image,
-		ManifestPathFlag:    "/path/to/manifest",
+		ManifestPathFlag:    "/path/to/manifest/okteto.yml",
 		TemplateName:        templateName,
 		CommandFlags:        []string{"--name \"test\""},
 		BuildEnvVars:        map[string]string{"BUILD_VAR_1": "value"},
@@ -285,7 +285,7 @@ func TestDeployRemote(t *testing.T) {
 		Manifest:                    manifest,
 		Command:                     remote.DeployCommand,
 		UseOktetoDeployIgnoreFile:   true,
-		ContextAbsolutePathOverride: "/root",
+		ContextAbsolutePathOverride: "/path/to/manifest",
 	}
 	runner := &fakeRemoteRunner{}
 	runner.On("Run", mock.Anything, expectedParams).Return(nil)
@@ -305,7 +305,7 @@ func TestDeployRemote(t *testing.T) {
 	opts := &Options{
 		Name:             "test",
 		Manifest:         manifest,
-		ManifestPathFlag: "/path/to/manifest",
+		ManifestPathFlag: "/path/to/manifest/okteto.yml",
 	}
 	err := rd.Deploy(context.Background(), opts)
 	require.NoError(t, err)
@@ -313,7 +313,7 @@ func TestDeployRemote(t *testing.T) {
 }
 
 func TestDeployRemoteWithError(t *testing.T) {
-	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/root")
+	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/")
 	manifest := &model.Manifest{
 		Deploy: &model.DeployInfo{
 			Image: "test-image",
@@ -337,7 +337,7 @@ func TestDeployRemoteWithError(t *testing.T) {
 
 	expectedParams := &remote.Params{
 		BaseImage:           manifest.Deploy.Image,
-		ManifestPathFlag:    "/path/to/manifest",
+		ManifestPathFlag:    "/path/to/manifest/okteto.yml",
 		TemplateName:        templateName,
 		CommandFlags:        []string{"--name \"test\""},
 		BuildEnvVars:        map[string]string{"BUILD_VAR_1": "value"},
@@ -355,7 +355,7 @@ func TestDeployRemoteWithError(t *testing.T) {
 		Manifest:                    manifest,
 		Command:                     remote.DeployCommand,
 		UseOktetoDeployIgnoreFile:   true,
-		ContextAbsolutePathOverride: "/root",
+		ContextAbsolutePathOverride: "/path/to/manifest",
 	}
 
 	tests := []struct {
@@ -411,7 +411,7 @@ func TestDeployRemoteWithError(t *testing.T) {
 			opts := &Options{
 				Name:             "test",
 				Manifest:         manifest,
-				ManifestPathFlag: "/path/to/manifest",
+				ManifestPathFlag: "/path/to/manifest/okteto.yml",
 			}
 			err := rd.Deploy(context.Background(), opts)
 			require.True(t, tt.expectedCheck(err))

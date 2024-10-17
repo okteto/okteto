@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/build/buildkit"
@@ -84,7 +85,7 @@ func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller
 		ioCtrl:               ioCtrl,
 		getDependencyEnvVars: getDependencyEnvVars,
 		getExecutionEnvVars:  executionEnvVarGetter,
-		workdirCtrl:          filesystem.NewOsWorkingDirectoryCtrl(),
+		// workdirCtrl:          filesystem.NewOsWorkingDirectoryCtrl(),
 	}
 }
 
@@ -126,7 +127,8 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 
 	var ctxPath string
 	if deployOptions.Manifest.Deploy != nil {
-		ctxPath = path.Clean(path.Join(cwd, deployOptions.Manifest.Deploy.Context))
+		manifestPathDir := filepath.Dir(deployOptions.ManifestPathFlag)
+		ctxPath = path.Clean(path.Join(cwd, manifestPathDir, deployOptions.Manifest.Deploy.Context))
 	}
 
 	runParams := remote.Params{

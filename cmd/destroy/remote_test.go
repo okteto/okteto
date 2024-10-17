@@ -111,10 +111,10 @@ func TestGetCommandFlags(t *testing.T) {
 }
 
 func TestDestroyRemoteWithCtx(t *testing.T) {
-	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/path/to/manifest")
+	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/")
 	manifest := &model.Manifest{
 		Destroy: &model.DestroyInfo{
-			Context: "../../..",
+			Context: "../..",
 			Image:   "test-image",
 			Commands: []model.DeployCommand{
 				{
@@ -132,7 +132,7 @@ func TestDestroyRemoteWithCtx(t *testing.T) {
 
 	expectedParams := &remote.Params{
 		BaseImage:        manifest.Destroy.Image,
-		ManifestPathFlag: "/path/to/manifest",
+		ManifestPathFlag: "/path/to/manifest/okteto.yml",
 		TemplateName:     templateName,
 		CommandFlags:     []string{"--name \"test\""},
 		DockerfileName:   dockerfileTemporalName,
@@ -148,7 +148,7 @@ func TestDestroyRemoteWithCtx(t *testing.T) {
 		Manifest:                    manifest,
 		Command:                     remote.DestroyCommand,
 		UseOktetoDeployIgnoreFile:   true,
-		ContextAbsolutePathOverride: "/",
+		ContextAbsolutePathOverride: "/path",
 	}
 	runner := &fakeRemoteRunner{}
 	runner.On("Run", mock.Anything, expectedParams).Return(nil)
@@ -159,7 +159,7 @@ func TestDestroyRemoteWithCtx(t *testing.T) {
 	opts := &Options{
 		Name:             "test",
 		Manifest:         manifest,
-		ManifestPathFlag: "/path/to/manifest",
+		ManifestPathFlag: "/path/to/manifest/okteto.yml",
 	}
 	err := rd.Destroy(context.Background(), opts)
 	require.NoError(t, err)
@@ -167,7 +167,7 @@ func TestDestroyRemoteWithCtx(t *testing.T) {
 }
 
 func TestDestroyRemote(t *testing.T) {
-	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/root")
+	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/")
 	manifest := &model.Manifest{
 		Destroy: &model.DestroyInfo{
 			Image: "test-image",
@@ -187,7 +187,7 @@ func TestDestroyRemote(t *testing.T) {
 
 	expectedParams := &remote.Params{
 		BaseImage:        manifest.Destroy.Image,
-		ManifestPathFlag: "/path/to/manifest",
+		ManifestPathFlag: "/path/to/manifest/okteto.yml",
 		TemplateName:     templateName,
 		CommandFlags:     []string{"--name \"test\""},
 		DockerfileName:   dockerfileTemporalName,
@@ -203,7 +203,7 @@ func TestDestroyRemote(t *testing.T) {
 		Manifest:                    manifest,
 		Command:                     remote.DestroyCommand,
 		UseOktetoDeployIgnoreFile:   true,
-		ContextAbsolutePathOverride: "/root",
+		ContextAbsolutePathOverride: "/path/to/manifest",
 	}
 	runner := &fakeRemoteRunner{}
 	runner.On("Run", mock.Anything, expectedParams).Return(nil)
@@ -214,7 +214,7 @@ func TestDestroyRemote(t *testing.T) {
 	opts := &Options{
 		Name:             "test",
 		Manifest:         manifest,
-		ManifestPathFlag: "/path/to/manifest",
+		ManifestPathFlag: "/path/to/manifest/okteto.yml",
 	}
 	err := rd.Destroy(context.Background(), opts)
 	require.NoError(t, err)
@@ -222,7 +222,7 @@ func TestDestroyRemote(t *testing.T) {
 }
 
 func TestDestroyRemoteWithError(t *testing.T) {
-	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/root")
+	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/")
 	manifest := &model.Manifest{
 		Destroy: &model.DestroyInfo{
 			Image: "test-image",
@@ -242,7 +242,7 @@ func TestDestroyRemoteWithError(t *testing.T) {
 
 	expectedParams := &remote.Params{
 		BaseImage:        manifest.Destroy.Image,
-		ManifestPathFlag: "/path/to/manifest",
+		ManifestPathFlag: "/path/to/manifest/okteto.yml",
 		TemplateName:     templateName,
 		CommandFlags:     []string{"--name \"test\""},
 		DockerfileName:   dockerfileTemporalName,
@@ -258,7 +258,7 @@ func TestDestroyRemoteWithError(t *testing.T) {
 		Manifest:                    manifest,
 		Command:                     remote.DestroyCommand,
 		UseOktetoDeployIgnoreFile:   true,
-		ContextAbsolutePathOverride: "/root",
+		ContextAbsolutePathOverride: "/path/to/manifest",
 	}
 
 	tests := []struct {
@@ -305,7 +305,7 @@ func TestDestroyRemoteWithError(t *testing.T) {
 			opts := &Options{
 				Name:             "test",
 				Manifest:         manifest,
-				ManifestPathFlag: "/path/to/manifest",
+				ManifestPathFlag: "/path/to/manifest/okteto.yml",
 			}
 			err := rd.Destroy(context.Background(), opts)
 			require.True(t, tt.expectedCheck(err))
