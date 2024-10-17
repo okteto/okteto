@@ -382,6 +382,13 @@ func AddDevAnnotations(ctx context.Context, manifest *model.Manifest, c kubernet
 			oktetoLog.Infof("could not add %s dev annotations due to: %s", devName, err.Error())
 			continue
 		}
+		if repo != "" && app.ObjectMeta().Annotations[model.OktetoRepositoryAnnotation] == repo {
+			continue
+		}
+		if app.ObjectMeta().Annotations[model.OktetoDevNameAnnotation] != "" {
+			continue
+		}
+
 		if repo != "" {
 			app.ObjectMeta().Annotations[model.OktetoRepositoryAnnotation] = removeSensitiveDataFromGitURL(repo)
 		}
