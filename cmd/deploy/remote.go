@@ -85,7 +85,7 @@ func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller
 		ioCtrl:               ioCtrl,
 		getDependencyEnvVars: getDependencyEnvVars,
 		getExecutionEnvVars:  executionEnvVarGetter,
-		// workdirCtrl:          filesystem.NewOsWorkingDirectoryCtrl(),
+		workdirCtrl:          filesystem.NewOsWorkingDirectoryCtrl(),
 	}
 }
 
