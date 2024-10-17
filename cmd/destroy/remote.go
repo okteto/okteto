@@ -21,6 +21,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/build/buildkit"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
@@ -138,7 +139,7 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 	// account that we must not confuse the user with build messages since this logic is
 	// executed in the deploy command.
 	if err := rd.runner.Run(ctx, &runParams); err != nil {
-		var cmdErr buildCmd.OktetoCommandErr
+		var cmdErr buildkit.OktetoCommandErr
 		if errors.As(err, &cmdErr) {
 			oktetoLog.SetStage(cmdErr.Stage)
 			return oktetoErrors.UserError{

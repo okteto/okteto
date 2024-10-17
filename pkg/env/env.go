@@ -115,6 +115,21 @@ func LoadBoolean(k string) bool {
 	return h
 }
 
+func LoadIntOrDefault(k string, d int) int {
+	v := os.Getenv(k)
+	if v == "" {
+		return d
+	}
+
+	h, err := strconv.Atoi(v)
+	if err != nil {
+		oktetoLog.Yellow("'%s' is not a valid value for environment variable %s", v, k)
+		return d
+	}
+
+	return h
+}
+
 func LoadTimeOrDefault(k string, defaultValue time.Duration) time.Duration {
 	v := os.Getenv(k)
 	if v == "" {

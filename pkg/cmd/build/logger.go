@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/moby/buildkit/client"
+	"github.com/okteto/okteto/pkg/build/buildkit"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/tonistiigi/units"
@@ -94,19 +95,6 @@ type trace struct {
 	ongoing       map[string]*vertexInfo
 	stages        map[string]bool
 	showCtxAdvice bool
-}
-
-type OktetoCommandErr struct {
-	Err    error
-	Stage  string
-	output string
-}
-
-func (e OktetoCommandErr) Error() string {
-	if e.output == TestOutputModeOnBuild {
-		return fmt.Sprintf("test container '%s' failed", e.Stage)
-	}
-	return fmt.Sprintf("error on stage %s: %s", e.Stage, e.Err.Error())
 }
 
 func newTrace() *trace {
@@ -208,10 +196,10 @@ func (t *trace) display(progress string) {
 					}
 					if text.Level == "error" {
 						if text.Stage != "" {
-							t.err = OktetoCommandErr{
+							t.err = buildkit.OktetoCommandErr{
 								Stage:  text.Stage,
 								Err:    fmt.Errorf(text.Message),
-								output: progress,
+								Output: progress,
 							}
 						}
 					} else {
