@@ -29,7 +29,7 @@ var (
 	// ErrBuildConnecionFailed is returned when the connection to buildkit fails
 	ErrBuildConnecionFailed = errors.New("build connection failure")
 
-	gpcRetryableCodes = map[uint32]interface{}{
+	grpcRetryableCodes = map[uint32]interface{}{
 		13: nil, // transport is closing (e.g. client buildkit pod is being deleted)
 		14: nil, // unavailable (e.g. no buildkit service available)
 		15: nil, // Data loss: request did not complete
@@ -108,7 +108,7 @@ func IsRetryable(err error) bool {
 		return false
 	}
 	if s, ok := status.FromError(err); ok {
-		if _, ok := gpcRetryableCodes[uint32(s.Code())]; ok {
+		if _, ok := grpcRetryableCodes[uint32(s.Code())]; ok {
 			return true
 		}
 	}

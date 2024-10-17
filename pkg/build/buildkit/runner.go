@@ -91,11 +91,11 @@ func (r *Runner) Run(ctx context.Context, opt *client.SolveOpt, outputMode strin
 		attempts++
 		if attempts > 1 {
 			r.logger.Logger().Infof("retrying build, attempt %d", attempts)
-			r.logger.Out().Warning("Buildkit connection failure. Retrying...")
+			r.logger.Out().Warning("BuildKit service connection failure. Retrying...")
 		}
 		// if buildkit is not available for 10 minutes, we should fail
 		if err := r.waiter.WaitUntilIsUp(ctx); err != nil {
-			r.logger.Logger().Infof("failed to wait for buildkit to be available: %s", err)
+			r.logger.Logger().Infof("failed to wait for BuildKit service to be available: %s", err)
 			return err
 		}
 
