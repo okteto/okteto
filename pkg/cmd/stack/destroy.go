@@ -55,7 +55,7 @@ func destroyDeployments(ctx context.Context, s *model.Stack, c kubernetes.Interf
 	}
 	for i := range dList {
 		svcName := dList[i].ObjectMeta.Labels[model.StackServiceNameLabel]
-		if _, ok := s.Services[svcName]; ok && s.Services[svcName].IsDeployment() {
+		if svc, ok := s.Services[svcName]; ok && svc.IsDeployment() {
 			continue
 		}
 		if err := deployments.Destroy(ctx, dList[i].Name, dList[i].Namespace, c); err != nil {
@@ -80,7 +80,7 @@ func destroyStatefulsets(ctx context.Context, s *model.Stack, c kubernetes.Inter
 	}
 	for i := range sfsList {
 		svcName := sfsList[i].ObjectMeta.Labels[model.StackServiceNameLabel]
-		if _, ok := s.Services[svcName]; ok && s.Services[svcName].IsStatefulset() {
+		if svc, ok := s.Services[svcName]; ok && svc.IsStatefulset() {
 			continue
 		}
 		if err := statefulsets.Destroy(ctx, sfsList[i].Name, sfsList[i].Namespace, c); err != nil {
@@ -104,7 +104,7 @@ func destroyJobs(ctx context.Context, s *model.Stack, c kubernetes.Interface) er
 	}
 	for i := range jobsList {
 		svcName := jobsList[i].ObjectMeta.Labels[model.StackServiceNameLabel]
-		if _, ok := s.Services[svcName]; ok && s.Services[svcName].IsJob() {
+		if svc, ok := s.Services[svcName]; ok && svc.IsJob() {
 			continue
 		}
 		if err := jobs.Destroy(ctx, jobsList[i].Name, jobsList[i].Namespace, c); err != nil {
