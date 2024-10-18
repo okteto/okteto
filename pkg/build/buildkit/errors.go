@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package build
+package buildkit
 
 import (
 	"errors"
@@ -22,10 +22,35 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
+	"google.golang.org/grpc/status"
 )
 
-// getErrorMessage returns the parsed error message
-func getErrorMessage(err error, tag string) error {
+var (
+	// ErrBuildConnecionFailed is returned when the connection to buildkit fails
+	ErrBuildConnecionFailed = errors.New("build connection failure")
+
+	grpcRetryableCodes = map[uint32]interface{}{
+		13: nil, // transport is closing (e.g. client buildkit pod is being deleted)
+		14: nil, // unavailable (e.g. no buildkit service available)
+		15: nil, // Data loss: request did not complete
+	}
+)
+
+type CommandErr struct {
+	Err    error
+	Stage  string
+	Output string
+}
+
+func (e CommandErr) Error() string {
+	if e.Output == "test" {
+		return fmt.Sprintf("test container '%s' failed", e.Stage)
+	}
+	return fmt.Sprintf("error on stage %s: %s", e.Stage, e.Err.Error())
+}
+
+// GetErrorMessage returns the parsed error message
+func GetErrorMessage(err error, tag string) error {
 	if err == nil {
 		return nil
 	}
@@ -57,7 +82,7 @@ func getErrorMessage(err error, tag string) error {
 			Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.", imageTag),
 		}
 	default:
-		var cmdErr OktetoCommandErr
+		var cmdErr CommandErr
 		if errors.As(err, &cmdErr) {
 			return cmdErr
 		}
@@ -77,10 +102,15 @@ func extractImageTagFromPullAccessDeniedError(err error) string {
 	return ""
 }
 
-// IsTransientError returns true if err represents a transient registry error
-func isTransientError(err error) bool {
+// IsRetryable returns true if err represents a transient registry error
+func IsRetryable(err error) bool {
 	if err == nil {
 		return false
+	}
+	if s, ok := status.FromError(err); ok {
+		if _, ok := grpcRetryableCodes[uint32(s.Code())]; ok {
+			return true
+		}
 	}
 
 	switch {

@@ -56,7 +56,6 @@ type OktetoBuilder struct {
 	OktetoContext OktetoContextInterface
 	Fs            afero.Fs
 	metadata      *buildkit.BuildMetadata
-	isRetry       bool
 }
 
 func (ob *OktetoBuilder) GetMetadata() *buildkit.BuildMetadata {
@@ -106,9 +105,9 @@ func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptio
 	// use the internal cluster ip as if they were running their scripts on the k8s cluster
 	case IsDepotEnabled() && !isRemoteExecution:
 		depotManager := newDepotBuilder(depotProject, depotToken, ob.OktetoContext, ioCtrl)
-		return depotManager.Run(ctx, buildOptions, solveBuild)
+		return depotManager.Run(ctx, buildOptions, SolveBuild)
 	default:
-		return ob.buildWithOkteto(ctx, buildOptions, ioCtrl, solveBuild)
+		return ob.buildWithOkteto(ctx, buildOptions, ioCtrl, SolveBuild)
 	}
 }
 
@@ -142,7 +141,7 @@ func GetRegistryConfigFromOktetoConfig(okCtx OktetoContextInterface) *okteto.Con
 	}
 }
 
-func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller, run runAndHandleBuildFn) error {
+func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller, run buildkit.SolveBuildFn) error {
 	oktetoLog.Infof("building your image on %s", ob.OktetoContext.GetCurrentBuilder())
 
 	var err error
@@ -175,41 +174,14 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 
 	buildkitWaiter := buildkit.NewBuildkitClientWaiter(buildkitClientFactory, ioCtrl)
 
-	err = buildkitWaiter.WaitUntilIsUp(ctx)
-	ob.metadata.WaitForBuildkitAvailableTime = buildkitWaiter.GetWaitingTime()
-	if err != nil {
+	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(ob.OktetoContext))
+	buildSolver := buildkit.NewBuildkitRunner(buildkitClientFactory, buildkitWaiter, reg, run, ioCtrl)
+
+	if err := buildSolver.Run(ctx, opt, buildOptions.OutputMode); err != nil {
 		return err
 	}
 
-	buildkitClient, err := buildkitClientFactory.GetBuildkitClient(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = run(ctx, buildkitClient, opt, buildOptions.OutputMode, ioCtrl)
-	if err != nil {
-		if shouldRetryBuild(err, buildOptions.Tag, ob.OktetoContext) {
-			ioCtrl.Logger().Infof("Failed to build image: %s", err.Error())
-			ioCtrl.Logger().Infof("isRetry: %t", ob.isRetry)
-			if !ob.isRetry {
-				retryBuilder := NewOktetoBuilder(ob.OktetoContext, ob.Fs)
-				retryBuilder.isRetry = true
-				err = retryBuilder.buildWithOkteto(ctx, buildOptions, ioCtrl, run)
-			}
-		}
-		err = getErrorMessage(err, buildOptions.Tag)
-		return err
-	}
-
-	var tag string
-	if buildOptions != nil {
-		tag = buildOptions.Tag
-		if buildOptions.Manifest != nil && buildOptions.Manifest.Deploy != nil {
-			tag = buildOptions.Manifest.Deploy.Image
-		}
-	}
-	err = getErrorMessage(err, tag)
-	return err
+	return nil
 }
 
 func validateImages(okctx OktetoContextInterface, imageTags string) error {
