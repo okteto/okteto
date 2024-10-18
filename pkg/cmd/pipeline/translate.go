@@ -394,7 +394,7 @@ func AddDevAnnotations(ctx context.Context, manifest *model.Manifest, c kubernet
 		}
 
 		if repo != "" {
-			app.ObjectMeta().Annotations[model.OktetoRepositoryAnnotation] = removeSensitiveDataFromGitURL(repo)
+			app.ObjectMeta().Annotations[model.OktetoRepositoryAnnotation] = sanitisedRepo
 		}
 		app.ObjectMeta().Annotations[model.OktetoDevNameAnnotation] = devName
 		if err := app.PatchAnnotations(ctx, c); err != nil {
