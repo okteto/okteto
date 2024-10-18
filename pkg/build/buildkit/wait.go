@@ -42,11 +42,11 @@ type sleeper interface {
 	Sleep(duration time.Duration)
 }
 
-// RealSleeper implements the Sleeper interface using time.Sleep
-type RealSleeper struct{}
+// DefaultSleeper implements the Sleeper interface using time.Sleep
+type DefaultSleeper struct{}
 
 // Sleep sleeps for the specified duration
-func (s *RealSleeper) Sleep(duration time.Duration) {
+func (s *DefaultSleeper) Sleep(duration time.Duration) {
 	time.Sleep(duration)
 }
 
@@ -85,7 +85,7 @@ func NewBuildkitClientWaiter(factory *ClientFactory, logger *io.Controller) *Wai
 	return &Waiter{
 		maxWaitTime:           env.LoadTimeOrDefault(maxBuildkitWaitTimeEnvVar, maxWaitTime),
 		retryInterval:         env.LoadTimeOrDefault(retryBuildkitIntervalEnvVar, retryTime),
-		sleeper:               &RealSleeper{},
+		sleeper:               &DefaultSleeper{},
 		buildkitClientFactory: buildkitClientFactoryToWaitFactory(factory),
 		logger:                logger,
 	}

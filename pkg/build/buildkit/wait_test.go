@@ -205,7 +205,7 @@ func TestNewBuildkitClientWaiter(t *testing.T) {
 
 			assert.Equal(t, tt.expectedMaxWaitTime, bw.maxWaitTime)
 			assert.Equal(t, tt.expectedRetryTime, bw.retryInterval)
-			assert.IsType(t, &RealSleeper{}, bw.sleeper)
+			assert.IsType(t, &DefaultSleeper{}, bw.sleeper)
 			assert.IsType(t, &buildkitClientFactoryToWait{}, bw.buildkitClientFactory)
 			assert.Equal(t, logger, bw.logger)
 		})
