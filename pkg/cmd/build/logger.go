@@ -196,7 +196,7 @@ func (t *trace) display(progress string) {
 					}
 					if text.Level == "error" {
 						if text.Stage != "" {
-							t.err = buildkit.OktetoCommandErr{
+							t.err = buildkit.CommandErr{
 								Stage:  text.Stage,
 								Err:    fmt.Errorf(text.Message),
 								Output: progress,

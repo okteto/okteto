@@ -139,7 +139,7 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 	}
 
 	if err := rd.runner.Run(ctx, &runParams); err != nil {
-		var cmdErr buildkit.OktetoCommandErr
+		var cmdErr buildkit.CommandErr
 		if errors.As(err, &cmdErr) {
 			oktetoLog.SetStage(cmdErr.Stage)
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying application: %s", cmdErr.Err.Error())

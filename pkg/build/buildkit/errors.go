@@ -36,13 +36,13 @@ var (
 	}
 )
 
-type OktetoCommandErr struct {
+type CommandErr struct {
 	Err    error
 	Stage  string
 	Output string
 }
 
-func (e OktetoCommandErr) Error() string {
+func (e CommandErr) Error() string {
 	if e.Output == "test" {
 		return fmt.Sprintf("test container '%s' failed", e.Stage)
 	}
@@ -82,7 +82,7 @@ func GetErrorMessage(err error, tag string) error {
 			Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.", imageTag),
 		}
 	default:
-		var cmdErr OktetoCommandErr
+		var cmdErr CommandErr
 		if errors.As(err, &cmdErr) {
 			return cmdErr
 		}

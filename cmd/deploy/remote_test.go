@@ -289,7 +289,7 @@ func TestDeployRemoteWithError(t *testing.T) {
 	}{
 		{
 			name: "WithOktetoCommandErr",
-			err: buildkit.OktetoCommandErr{
+			err: buildkit.CommandErr{
 				Stage: "test",
 				Err:   assert.AnError,
 			},
