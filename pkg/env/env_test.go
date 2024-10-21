@@ -341,3 +341,48 @@ func TestLoadTimeOrDefault(t *testing.T) {
 		})
 	}
 }
+func TestLoadIntOrDefault(t *testing.T) {
+	tests := []struct {
+		name           string
+		mockKey        string
+		mockValue      string
+		defaultValue   int
+		expectedResult int
+	}{
+		{
+			name:           "empty key",
+			defaultValue:   5,
+			expectedResult: 5,
+		},
+		{
+			name:           "empty value",
+			mockKey:        "NON_EXISTING_VAR_UNIT_TEST",
+			defaultValue:   10,
+			expectedResult: 10,
+		},
+		{
+			name:           "valid integer",
+			mockKey:        "VAR_UNIT_TEST",
+			mockValue:      "42",
+			defaultValue:   10,
+			expectedResult: 42,
+		},
+		{
+			name:           "invalid integer",
+			mockKey:        "VAR_UNIT_TEST",
+			mockValue:      "invalid",
+			defaultValue:   10,
+			expectedResult: 10,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.mockKey != "" {
+				t.Setenv(tt.mockKey, tt.mockValue)
+			}
+			got := LoadIntOrDefault(tt.mockKey, tt.defaultValue)
+			assert.Equal(t, tt.expectedResult, got)
+		})
+	}
+}

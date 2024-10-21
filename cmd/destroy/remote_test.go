@@ -18,7 +18,7 @@ import (
 	"errors"
 	"testing"
 
-	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/build/buildkit"
 	"github.com/okteto/okteto/pkg/deployable"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
@@ -206,7 +206,7 @@ func TestDestroyRemoteWithError(t *testing.T) {
 	}{
 		{
 			name: "WithOktetoCommandErr",
-			err: buildCmd.OktetoCommandErr{
+			err: buildkit.CommandErr{
 				Stage: "test",
 				Err:   assert.AnError,
 			},
