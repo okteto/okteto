@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// urlParser defines an interface for parsing URLs
+// fakeURLParser defines an interface for parsing URLs
 type fakeURLParser struct {
 	url *url.URL
 	err error
@@ -36,7 +36,7 @@ func (p *fakeURLParser) Parse(rawurl string) (*url.URL, error) {
 	return p.url, p.err
 }
 
-// certDecoder defines an interface for decoding certificates
+// fakeCertDecoder defines an interface for decoding certificates
 type fakeCertDecoder struct {
 	err  error
 	data []byte
@@ -74,7 +74,7 @@ func TestBuildkitClientFactory_GetBuildkitClient(t *testing.T) {
 		urlParser       urlParser
 		certDecoder     certDecoder
 		fileWriter      fileWriter
-		clientCreator   buildkitClientCreator
+		clientCreator   clientCreator
 		name            string
 		cert            string
 		token           string

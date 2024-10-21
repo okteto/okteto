@@ -123,12 +123,12 @@ func TestWaitUntilIsUp(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			bw := &buildkitWaiter{
-				Logger:                io.NewIOController(),
+			bw := &Waiter{
+				logger:                io.NewIOController(),
 				buildkitClientFactory: tt.buildkitClientFactory,
-				MaxWaitTime:           tt.maxWaitTime,
-				RetryInterval:         tt.retryInterval,
-				Sleeper:               tt.sleeper,
+				maxWaitTime:           tt.maxWaitTime,
+				retryInterval:         tt.retryInterval,
+				sleeper:               tt.sleeper,
 			}
 
 			err := bw.WaitUntilIsUp(context.Background())
@@ -155,8 +155,8 @@ func TestNewBuildkitClientWaiter(t *testing.T) {
 		{
 			name: "DefaultValues",
 			envVars: map[string]string{
-				maxBuildkitWaitTimeEnvVar: "",
-				retryBuildkitTimeEnvVar:   "",
+				maxBuildkitWaitTimeEnvVar:   "",
+				retryBuildkitIntervalEnvVar: "",
 			},
 			expectedMaxWaitTime: maxWaitTime,
 			expectedRetryTime:   retryTime,
@@ -164,8 +164,8 @@ func TestNewBuildkitClientWaiter(t *testing.T) {
 		{
 			name: "CustomMaxWaitTime",
 			envVars: map[string]string{
-				maxBuildkitWaitTimeEnvVar: "5m",
-				retryBuildkitTimeEnvVar:   "",
+				maxBuildkitWaitTimeEnvVar:   "5m",
+				retryBuildkitIntervalEnvVar: "",
 			},
 			expectedMaxWaitTime: 5 * time.Minute,
 			expectedRetryTime:   retryTime,
@@ -173,8 +173,8 @@ func TestNewBuildkitClientWaiter(t *testing.T) {
 		{
 			name: "CustomRetryTime",
 			envVars: map[string]string{
-				maxBuildkitWaitTimeEnvVar: "",
-				retryBuildkitTimeEnvVar:   "10s",
+				maxBuildkitWaitTimeEnvVar:   "",
+				retryBuildkitIntervalEnvVar: "10s",
 			},
 			expectedMaxWaitTime: maxWaitTime,
 			expectedRetryTime:   10 * time.Second,
@@ -182,8 +182,8 @@ func TestNewBuildkitClientWaiter(t *testing.T) {
 		{
 			name: "CustomMaxWaitTimeAndRetryTime",
 			envVars: map[string]string{
-				maxBuildkitWaitTimeEnvVar: "3m",
-				retryBuildkitTimeEnvVar:   "15s",
+				maxBuildkitWaitTimeEnvVar:   "3m",
+				retryBuildkitIntervalEnvVar: "15s",
 			},
 			expectedMaxWaitTime: 3 * time.Minute,
 			expectedRetryTime:   15 * time.Second,
@@ -203,11 +203,11 @@ func TestNewBuildkitClientWaiter(t *testing.T) {
 			logger := io.NewIOController()
 			bw := NewBuildkitClientWaiter(factory, logger)
 
-			assert.Equal(t, tt.expectedMaxWaitTime, bw.MaxWaitTime)
-			assert.Equal(t, tt.expectedRetryTime, bw.RetryInterval)
-			assert.IsType(t, &RealSleeper{}, bw.Sleeper)
+			assert.Equal(t, tt.expectedMaxWaitTime, bw.maxWaitTime)
+			assert.Equal(t, tt.expectedRetryTime, bw.retryInterval)
+			assert.IsType(t, &DefaultSleeper{}, bw.sleeper)
 			assert.IsType(t, &buildkitClientFactoryToWait{}, bw.buildkitClientFactory)
-			assert.Equal(t, logger, bw.Logger)
+			assert.Equal(t, logger, bw.logger)
 		})
 	}
 }

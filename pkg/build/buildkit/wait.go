@@ -34,7 +34,7 @@ const (
 	maxBuildkitWaitTimeEnvVar = "OKTETO_BUILDKIT_WAIT_TIMEOUT"
 
 	// retryBuildkitTimeEnvVar is the environment variable to set the retry time for buildkit
-	retryBuildkitTimeEnvVar = "OKTETO_RETRY_BUILDKIT_TIME"
+	retryBuildkitIntervalEnvVar = "OKTETO_RETRY_BUILDKIT_INTERVAL"
 )
 
 // sleeper defines an interface for sleeping
@@ -42,11 +42,11 @@ type sleeper interface {
 	Sleep(duration time.Duration)
 }
 
-// RealSleeper implements the Sleeper interface using time.Sleep
-type RealSleeper struct{}
+// DefaultSleeper implements the Sleeper interface using time.Sleep
+type DefaultSleeper struct{}
 
 // Sleep sleeps for the specified duration
-func (s *RealSleeper) Sleep(duration time.Duration) {
+func (s *DefaultSleeper) Sleep(duration time.Duration) {
 	time.Sleep(duration)
 }
 
@@ -58,14 +58,14 @@ type clientInfoRetriever interface {
 	Info(ctx context.Context) (*client.Info, error)
 }
 
-// buildkitWaiter encapsulates the logic to check if the BuildKit server is up and running
-type buildkitWaiter struct {
-	Sleeper               sleeper
+// Waiter encapsulates the logic to check if the BuildKit server is up and running
+type Waiter struct {
+	sleeper               sleeper
 	buildkitClientFactory buildkitClientFactoryWaiter
-	Logger                *io.Controller
+	logger                *io.Controller
 	waitingTime           time.Duration
-	MaxWaitTime           time.Duration
-	RetryInterval         time.Duration
+	maxWaitTime           time.Duration
+	retryInterval         time.Duration
 }
 
 type buildkitClientFactoryToWait struct {
@@ -81,26 +81,26 @@ func buildkitClientFactoryToWaitFactory(factory *ClientFactory) buildkitClientFa
 }
 
 // NewBuildkitClientWaiter creates a new buildkitWaiter
-func NewBuildkitClientWaiter(factory *ClientFactory, logger *io.Controller) *buildkitWaiter {
-	return &buildkitWaiter{
-		MaxWaitTime:           env.LoadTimeOrDefault(maxBuildkitWaitTimeEnvVar, maxWaitTime),
-		RetryInterval:         env.LoadTimeOrDefault(retryBuildkitTimeEnvVar, retryTime),
-		Sleeper:               &RealSleeper{},
+func NewBuildkitClientWaiter(factory *ClientFactory, logger *io.Controller) *Waiter {
+	return &Waiter{
+		maxWaitTime:           env.LoadTimeOrDefault(maxBuildkitWaitTimeEnvVar, maxWaitTime),
+		retryInterval:         env.LoadTimeOrDefault(retryBuildkitIntervalEnvVar, retryTime),
+		sleeper:               &DefaultSleeper{},
 		buildkitClientFactory: buildkitClientFactoryToWaitFactory(factory),
-		Logger:                logger,
+		logger:                logger,
 	}
 }
 
-func (bw *buildkitWaiter) GetWaitingTime() time.Duration {
+func (bw *Waiter) GetWaitingTime() time.Duration {
 	return bw.waitingTime
 }
 
-// WaitForBuildKit waits for the BuildKit server to become available
-func (bw *buildkitWaiter) WaitUntilIsUp(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, bw.MaxWaitTime)
+// WaitUntilIsUp waits for the BuildKit server to become available
+func (bw *Waiter) WaitUntilIsUp(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, bw.maxWaitTime)
 	defer cancel()
 
-	sp := bw.Logger.Out().Spinner("Waiting for BuildKit server to be ready...")
+	sp := bw.logger.Out().Spinner("Waiting for BuildKit service to be ready...")
 	sp.Start()
 	defer sp.Stop()
 
@@ -108,25 +108,25 @@ func (bw *buildkitWaiter) WaitUntilIsUp(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			bw.waitingTime = bw.MaxWaitTime
-			return fmt.Errorf("buildkit not available for %v", bw.MaxWaitTime)
+			bw.waitingTime = bw.maxWaitTime
+			return fmt.Errorf("buildkit service not available for %v", bw.maxWaitTime)
 		default:
 			c, err := bw.buildkitClientFactory.GetBuildkitClient(ctx)
 			if err != nil {
-				bw.Logger.Infof("Failed to connect to BuildKit server: %v\n", err)
-				bw.Logger.Infof("Retrying in %v...\n", bw.RetryInterval)
-				bw.Sleeper.Sleep(bw.RetryInterval)
+				bw.logger.Infof("Failed to connect to BuildKit service: %v\n", err)
+				bw.logger.Infof("Retrying in %v...\n", bw.retryInterval)
+				bw.sleeper.Sleep(bw.retryInterval)
 				continue
 			}
 			_, err = c.Info(ctx)
 			if err != nil {
-				bw.Logger.Infof("Failed to get BuildKit server info: %v\n", err)
-				bw.Logger.Infof("Retrying in %v...\n", bw.RetryInterval)
-				bw.Sleeper.Sleep(bw.RetryInterval)
+				bw.logger.Infof("Failed to get BuildKit service info: %v\n", err)
+				bw.logger.Infof("Retrying in %v...\n", bw.retryInterval)
+				bw.sleeper.Sleep(bw.retryInterval)
 				continue
 			}
 			bw.waitingTime = time.Since(startWaitingTime)
-			bw.Logger.Infof("Connected to BuildKit server.")
+			bw.logger.Infof("Connected to BuildKit service.")
 		}
 		break
 	}
