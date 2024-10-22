@@ -168,6 +168,24 @@ func IsRunning(ctx context.Context, namespace, svcName string, c kubernetes.Inte
 	return sfs.Status.ReadyReplicas > 0
 }
 
+func IsRunningBySelector(ctx context.Context, namespace, labels string, c kubernetes.Interface) bool {
+	stsList, err := c.AppsV1().StatefulSets(namespace).List(
+		ctx,
+		metav1.ListOptions{
+			LabelSelector: labels,
+		},
+	)
+	if err != nil {
+		return false
+	}
+	for i := range stsList.Items {
+		if stsList.Items[i].Status.ReadyReplicas > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // CheckConditionErrors checks errors in conditions
 func CheckConditionErrors(sfs *appsv1.StatefulSet, dev *model.Dev) error {
 	for _, c := range sfs.Status.Conditions {
