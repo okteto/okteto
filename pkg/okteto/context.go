@@ -236,6 +236,9 @@ func GetContextStore() *ContextStore {
 
 	if ContextExists() {
 		ctxStore := GetContextStoreFromStorePath()
+		if ctxStore.Contexts == nil {
+			ctxStore.Contexts = map[string]*Context{}
+		}
 		CurrentStore = ctxStore
 		return ctxStore
 	}
@@ -261,14 +264,10 @@ func GetContextStoreFromStorePath() *ContextStore {
 		oktetoLog.Errorf("error decoding okteto contexts: %v", err)
 		oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
 	}
-	if err := validateContextStore(ctxStore); err != nil {
-		oktetoLog.Errorf("error validating okteto contexts: %v", err)
-		oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
-	}
 	return ctxStore
 }
 
-func validateContextStore(ctxStore *ContextStore) error {
+func ValidateContextStore(ctxStore *ContextStore) error {
 	if ctxStore.Contexts == nil {
 		return fmt.Errorf("contexts cannot be nil")
 	}
