@@ -267,19 +267,6 @@ func GetContextStoreFromStorePath() *ContextStore {
 	return ctxStore
 }
 
-func ValidateContextStore(ctxStore *ContextStore) error {
-	if ctxStore.Contexts == nil {
-		return fmt.Errorf("contexts cannot be nil")
-	}
-	if ctxStore.CurrentContext == "" {
-		return fmt.Errorf("current-context is empty")
-	}
-	if _, ok := ctxStore.Contexts[ctxStore.CurrentContext]; !ok {
-		return fmt.Errorf("current-context '%s' not found in contexts", ctxStore.CurrentContext)
-	}
-	return nil
-}
-
 func GetContext() *Context {
 	c := GetContextStore()
 	if c.CurrentContext == "" {
