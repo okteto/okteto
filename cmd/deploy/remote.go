@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/build/buildkit"
@@ -112,23 +111,23 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		workdirCtrl = filesystem.NewOsWorkingDirectoryCtrl()
 	}
 
-	cwd, err := remote.GetOriginalCWD(workdirCtrl, deployOptions.ManifestPathFlag)
+	cwd, err := workdirCtrl.Get()
 	if err != nil {
 		return fmt.Errorf("failed to resolve working directory for remote deploy: %w", err)
 	}
-	ig, err := ignore.NewFromFile(path.Join(cwd, model.IgnoreFilename))
+
+	ctxPath := cwd
+	if deployOptions.Manifest.Deploy != nil {
+		ctxPath = path.Clean(path.Join(cwd, deployOptions.Manifest.Deploy.Context))
+	}
+
+	ig, err := ignore.NewFromFile(path.Join(ctxPath, model.IgnoreFilename))
 	if err != nil {
 		return fmt.Errorf("failed to read ignore file: %w", err)
 	}
 	rules, err := ig.Rules(ignore.RootSection, "deploy")
 	if err != nil {
 		return fmt.Errorf("failed to create ignore rules for remote deploy: %w", err)
-	}
-
-	var ctxPath string
-	if deployOptions.Manifest.Deploy != nil {
-		manifestPathDir := filepath.Dir(deployOptions.ManifestPathFlag)
-		ctxPath = path.Clean(path.Join(cwd, manifestPathDir, deployOptions.Manifest.Deploy.Context))
 	}
 
 	runParams := remote.Params{

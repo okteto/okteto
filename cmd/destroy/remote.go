@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/build/buildkit"
@@ -111,23 +110,23 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 		workdirCtrl = filesystem.NewOsWorkingDirectoryCtrl()
 	}
 
-	cwd, err := remote.GetOriginalCWD(workdirCtrl, opts.ManifestPathFlag)
+	cwd, err := workdirCtrl.Get()
 	if err != nil {
-		return fmt.Errorf("failed to resolve working directory for remote destroy: %w", err)
+		return fmt.Errorf("failed to resolve working directory for remote deploy: %w", err)
 	}
-	ig, err := ignore.NewFromFile(path.Join(cwd, model.IgnoreFilename))
+
+	ctxPath := cwd
+	if opts.Manifest.Destroy != nil {
+		ctxPath = path.Clean(path.Join(cwd, opts.Manifest.Deploy.Context))
+	}
+
+	ig, err := ignore.NewFromFile(path.Join(ctxPath, model.IgnoreFilename))
 	if err != nil {
 		return fmt.Errorf("failed to read ignore file: %w", err)
 	}
 	rules, err := ig.Rules(ignore.RootSection, "destroy")
 	if err != nil {
 		return fmt.Errorf("failed to create ignore rules for remote destroy: %w", err)
-	}
-
-	var ctxPath string
-	if opts.Manifest.Destroy != nil {
-		manifestPathDir := filepath.Dir(opts.ManifestPathFlag)
-		ctxPath = path.Clean(path.Join(cwd, manifestPathDir, opts.Manifest.Destroy.Context))
 	}
 
 	runParams := remote.Params{
