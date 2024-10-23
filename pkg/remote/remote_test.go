@@ -533,10 +533,10 @@ func TestGetExtraHosts(t *testing.T) {
 	ip := "1.2.3.4"
 
 	var tests = []struct {
-		metadata     types.ClusterMetadata
 		name         string
 		expected     []types.HostMap
 		definedHosts []model.Host
+		metadata     types.ClusterMetadata
 	}{
 		{
 			name:     "no metadata information",
