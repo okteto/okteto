@@ -31,15 +31,15 @@ type sshForwarder struct {
 	getTLSConfig func() *tls.Config
 }
 
-// CA is not specified because it should use System CA root. When remote-run command is executed,
-// the CA should be already available as the CLI set it in the Dockerfile used as a base to
-// run the command
 func newSSHForwarder() *sshForwarder {
 	return &sshForwarder{
 		getTLSConfig: newTLSConfigWithSystemCA,
 	}
 }
 
+// CA is not specified because it should use System CA root. When remote-run command is executed,
+// the CA should be already available as the CLI set it in the Dockerfile used as a base to
+// run the command
 func newTLSConfigWithSystemCA() *tls.Config {
 	return &tls.Config{}
 }
