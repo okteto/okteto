@@ -380,8 +380,8 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 func shouldRunInRemote(manifestDeploy *model.DeployInfo) bool {
 	if manifestDeploy != nil {
-		if manifestDeploy.Image != "" || manifestDeploy.Remote {
-			return true
+		if manifestDeploy.Remote != nil {
+			return *manifestDeploy.Remote
 		}
 	}
 

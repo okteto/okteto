@@ -581,10 +581,10 @@ func shouldRunInRemote(opts *Options) bool {
 		return opts.RunInRemote
 	}
 
-	// remote option set in the manifest via a remote deployer image or the remote option enabled
+	// remote option set in the manifest via the remote option enabled
 	if opts.Manifest != nil && opts.Manifest.Deploy != nil {
-		if opts.Manifest.Deploy.Image != "" || opts.Manifest.Deploy.Remote {
-			return true
+		if opts.Manifest.Deploy.Remote != nil {
+			return *opts.Manifest.Deploy.Remote
 		}
 	}
 
@@ -715,7 +715,7 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 	isRunningOnRemoteDeployer := false
 	if manifest != nil {
 		if manifest.Deploy != nil {
-			isRunningOnRemoteDeployer = isRemoteDeployer(runInRemoteFlag, manifest.Deploy.Image, manifest.Deploy.Remote)
+			isRunningOnRemoteDeployer = isRemoteDeployer(runInRemoteFlag, manifest.Deploy.Image, manifest.Deploy.Remote != nil && *manifest.Deploy.Remote)
 			if manifest.Deploy.ComposeSection != nil &&
 				manifest.Deploy.ComposeSection.ComposesInfo != nil {
 				deployType = "compose"
