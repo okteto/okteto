@@ -6,6 +6,7 @@
 [![Apache License 2.0](https://img.shields.io/github/license/okteto/okteto.svg?style=flat-square)](https://github.com/okteto/okteto/blob/master/LICENSE)
 ![Total Downloads](https://img.shields.io/github/downloads/okteto/okteto/total?logo=github&logoColor=white)
 [![Chat in Slack](https://img.shields.io/badge/slack-@kubernetes/okteto-red.svg?logo=slack)](https://kubernetes.slack.com/messages/CM1QMQGS0/)
+[![Gurubase](https://img.shields.io/badge/Gurubase-Ask%20Okteto%20Guru-006BFF)](https://gurubase.io/g/okteto)
 
 ## Overview
 
