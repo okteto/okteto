@@ -100,6 +100,7 @@ type Options struct {
 	RunWithoutBash      bool
 	DestroyAll          bool
 	RunInRemote         bool
+	RunInRemoteSet      bool
 }
 
 type destroyInterface interface {
@@ -149,6 +150,8 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 `,
 		Args: utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			options.RunInRemoteSet = cmd.Flags().Changed("remote")
+
 			if options.ManifestPath != "" {
 				// if path is absolute, its transformed to rel from root
 				initialCWD, err := os.Getwd()
@@ -290,8 +293,8 @@ func shouldRunInRemote(opts *Options) bool {
 	}
 
 	// --remote flag enabled from command line
-	if opts.RunInRemote {
-		return true
+	if opts.RunInRemoteSet {
+		return opts.RunInRemote
 	}
 
 	//  remote option set in the manifest via a remote destroyer image or the remote option enabled
