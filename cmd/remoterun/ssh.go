@@ -48,7 +48,7 @@ func startSshForwarder(sshAgentHostname, sshAgentPort, userToken string) {
 func handleConnection(localConn net.Conn, host, port, userToken string) {
 	defer localConn.Close()
 
-	// CA is not specified because tt should use System CA root. When remote-run command is executed,
+	// CA is not specified because it should use System CA root. When remote-run command is executed,
 	// the CA should be already available as the CLI set it in the Dockerfile used as a base to
 	// run the command
 	cfg := &tls.Config{}

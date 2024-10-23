@@ -22,4 +22,7 @@ type ClusterMetadata struct {
 	CompanyName         string
 	Certificate         []byte
 	IsTrialLicense      bool
+	SshAgentInternalIP  string
+	SshAgentHostname    string
+	SshAgentPort        string
 }

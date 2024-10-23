@@ -16,9 +16,11 @@ package remoterun
 import (
 	"context"
 	"fmt"
+	"os"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	deployCMD "github.com/okteto/okteto/cmd/deploy"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -134,6 +136,11 @@ It is important that this command does the minimum and must not do calculations 
 			c := &DeployCommand{
 				runner: runner,
 			}
+
+			sshAgentHostname := os.Getenv(constants.OktetoSshAgentHostnameEnvVar)
+			sshAgentPort := os.Getenv(constants.OktetoSshAgentPortEnvVar)
+
+			go startSshForwarder(sshAgentHostname, sshAgentPort, oktetoContext.GetCurrentToken())
 
 			return c.Run(ctx, params)
 		},

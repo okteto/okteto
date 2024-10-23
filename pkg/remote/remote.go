@@ -51,6 +51,7 @@ const (
 	DeployCommand = "deploy"
 	// DestroyCommand is the command to destroy a dev environment remotely
 	DestroyCommand         = "destroy"
+	SshAgentLocalSocket    = "/tmp/okteto-ssh-agent.sock"
 	oktetoDockerignoreName = ".oktetodeployignore"
 	dockerfileTemplate     = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
@@ -91,6 +92,9 @@ ARG {{$key}} {{$val}}
 ENV {{$key}}={{$val}}
 {{end}}
 
+ENV {{ .SshAgentHostnameArgName }}={{ .SshAgentHostname }}
+ENV {{ .SshAgentPortArgName }}={{ .SshAgentPort }}
+
 ARG {{ .GitCommitArgName }}
 ARG {{ .GitBranchArgName }}
 ARG {{ .InvalidateCacheArgName }}
@@ -104,8 +108,9 @@ ENV {{$key}}={{$val}}
 
 RUN \
   {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}},sharing=private {{end}}\
-  --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
+  --mount=type=secret,id=known_hosts \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
+  export SSH_AUTH_SOCK={{ .SshAgentSocket }} && \
   /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}{{ if eq .Command "test" }} || true{{ end }}
 
 {{range $key, $artifact := .Artifacts }}
@@ -144,9 +149,7 @@ type Runner struct {
 	oktetoClientProvider OktetoClientProvider
 	ioCtrl               *io.Controller
 	getEnviron           func() []string
-	// sshAuthSockEnvvar is the default for SSH_AUTH_SOCK. Provided mostly for testing
-	sshAuthSockEnvvar  string
-	useInternalNetwork bool
+	useInternalNetwork   bool
 }
 
 // Params struct to pass the necessary parameters to create the Dockerfile
@@ -159,7 +162,6 @@ type Params struct {
 	Command                      string
 	TemplateName                 string
 	DockerfileName               string
-	KnownHostsPath               string
 	BaseImage                    string
 	// ContextAbsolutePathOverride is the absolute path for the build context. Optional.
 	// If this values is not defined it will default to the folder location of the
@@ -186,6 +188,12 @@ type Params struct {
 	UseRootUser bool
 
 	NoCache bool
+
+	// SshAgentHostname hostname of the ssh-agent service
+	SshAgentHostname string
+
+	// SshAgentPort port of the ssh-agent service
+	SshAgentPort string
 }
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
@@ -213,9 +221,14 @@ type dockerfileTemplateProperties struct {
 	BuildKitHostArgName          string
 	OktetoRegistryURLArgName     string
 	Command                      string
+	SshAgentHostnameArgName      string
+	SshAgentHostname             string
+	SshAgentPortArgName          string
+	SshAgentPort                 string
 	Caches                       []string
 	Artifacts                    []model.Artifact
 	UseRootUser                  bool
+	SshAgentSocket               string
 }
 
 // NewRunner creates a new Runner for remote
@@ -259,6 +272,9 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 	if err != nil {
 		return err
 	}
+
+	params.SshAgentHostname = sc.SshAgentHostname
+	params.SshAgentPort = sc.SshAgentPort
 
 	dockerfile, err := r.createDockerfile(tmpDir, params)
 	if err != nil {
@@ -343,37 +359,21 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 			}
 			buildOptions.ExtraHosts = getExtraHosts(registryUrl, subdomain, ip, *sc)
 		}
+
+		if sc.SshAgentHostname != "" {
+			buildOptions.ExtraHosts = append(buildOptions.ExtraHosts, types.HostMap{Hostname: sc.SshAgentHostname, IP: sc.SshAgentInternalIP})
+		}
 	}
 
 	buildOptions.ExtraHosts = addDefinedHosts(buildOptions.ExtraHosts, params.Hosts)
 
-	sshSock := os.Getenv(r.sshAuthSockEnvvar)
-	if sshSock == "" {
-		sshSock = os.Getenv("SSH_AUTH_SOCK")
-	}
-
-	if sshSock != "" {
-		if _, err := os.Stat(sshSock); err != nil {
-			oktetoLog.Debugf("Not mounting ssh agent. Error reading socket: %s", err.Error())
-		} else {
-			sshSession := types.BuildSshSession{Id: "remote", Target: sshSock}
-			buildOptions.SshSessions = append(buildOptions.SshSessions, sshSession)
-		}
-
-		// TODO: check if ~/.ssh/config exists and has UserKnownHostsFile defined
-		knownHostsPath := params.KnownHostsPath
-		if knownHostsPath == "" {
-			knownHostsPath = filepath.Join(home, ".ssh", "known_hosts")
-		}
-		if _, err := os.Stat(knownHostsPath); err != nil {
-			oktetoLog.Debugf("Not know_hosts file. Error reading file: %s", err.Error())
-		} else {
-			oktetoLog.Debugf("reading known hosts from %s", knownHostsPath)
-			buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
-		}
-
+	// TODO: check if ~/.ssh/config exists and has UserKnownHostsFile defined
+	knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
+	if _, err := os.Stat(knownHostsPath); err != nil {
+		oktetoLog.Debugf("Not know_hosts file. Error reading file: %s", err.Error())
 	} else {
-		oktetoLog.Debug("no ssh agent found. Not mounting ssh-agent for build")
+		oktetoLog.Debugf("reading known hosts from %s", knownHostsPath)
+		buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
 	}
 
 	if len(params.Artifacts) > 0 {
@@ -427,6 +427,11 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		Caches:                       params.Caches,
 		Artifacts:                    params.Artifacts,
 		UseRootUser:                  params.UseRootUser,
+		SshAgentHostname:             params.SshAgentHostname,
+		SshAgentHostnameArgName:      constants.OktetoSshAgentHostnameEnvVar,
+		SshAgentPort:                 params.SshAgentPort,
+		SshAgentPortArgName:          constants.OktetoSshAgentPortEnvVar,
+		SshAgentSocket:               SshAgentLocalSocket,
 	}
 
 	dockerfileSyntax.prepareEnvVars()

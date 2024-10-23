@@ -14,24 +14,23 @@
 package remote
 
 import (
-	"context"
-	"fmt"
-	"os"
-	"path/filepath"
-	"regexp"
-	"testing"
+    "context"
+    "fmt"
+    "path/filepath"
+    "regexp"
+    "testing"
 
-	"github.com/okteto/okteto/internal/test/client"
-	"github.com/okteto/okteto/pkg/constants"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	filesystem "github.com/okteto/okteto/pkg/filesystem/fake"
-	"github.com/okteto/okteto/pkg/log/io"
-	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/types"
-	"github.com/spf13/afero"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+    "github.com/okteto/okteto/internal/test/client"
+    "github.com/okteto/okteto/pkg/constants"
+    oktetoErrors "github.com/okteto/okteto/pkg/errors"
+    filesystem "github.com/okteto/okteto/pkg/filesystem/fake"
+    "github.com/okteto/okteto/pkg/log/io"
+    "github.com/okteto/okteto/pkg/model"
+    "github.com/okteto/okteto/pkg/okteto"
+    "github.com/okteto/okteto/pkg/types"
+    "github.com/spf13/afero"
+    "github.com/stretchr/testify/assert"
+    "github.com/stretchr/testify/require"
 )
 
 type fakeBuilder struct {
@@ -202,99 +201,6 @@ func TestExtraHosts(t *testing.T) {
 		Manifest: fakeManifest,
 	})
 	require.NoError(t, err)
-}
-
-func TestRemoteDeployWithSshAgent(t *testing.T) {
-	fs := afero.NewMemMapFs()
-	socket, err := os.CreateTemp("", "okteto-test-ssh-*")
-	require.NoError(t, err)
-	defer socket.Close()
-
-	knowHostFile, err := os.CreateTemp("", "okteto-test-know_hosts-*")
-	require.NoError(t, err)
-	defer socket.Close()
-
-	assertFn := func(o *types.BuildOptions) {
-		assert.Contains(t, o.SshSessions, types.BuildSshSession{Id: "remote", Target: socket.Name()})
-		assert.Contains(t, o.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knowHostFile.Name()))
-	}
-
-	envvarName := fmt.Sprintf("TEST_SOCKET_%s", os.Getenv("RANDOM"))
-
-	t.Setenv(envvarName, socket.Name())
-	defer func() {
-		t.Logf("cleaning up %s envvar", envvarName)
-		os.Unsetenv(envvarName)
-	}()
-
-	oktetoClient := &client.FakeOktetoClient{
-		Users: client.NewFakeUsersClient(&types.User{}),
-	}
-	rdc := Runner{
-		sshAuthSockEnvvar:    envvarName,
-		builder:              fakeBuilder{assertOptions: assertFn},
-		fs:                   fs,
-		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
-		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
-		oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
-		ioCtrl:               io.NewIOController(),
-		getEnviron: func() []string {
-			return []string{}
-		},
-	}
-
-	err = rdc.Run(context.Background(), &Params{
-		KnownHostsPath: knowHostFile.Name(),
-		Manifest: &model.Manifest{
-			Deploy: &model.DeployInfo{
-				Image: "test-image",
-			},
-		},
-	})
-	assert.NoError(t, err)
-}
-
-func TestRemoteDeployWithBadSshAgent(t *testing.T) {
-	fs := afero.NewMemMapFs()
-
-	assertFn := func(o *types.BuildOptions) {
-		assert.NotContains(t, o.SshSessions, types.BuildSshSession{Id: "remote", Target: "bad-socket"})
-		assert.NotContains(t, o.Secrets, fmt.Sprintf("id=known_hosts,src=%s", "inexistent-file"))
-	}
-
-	envvarName := fmt.Sprintf("TEST_SOCKET_%s", os.Getenv("RANDOM"))
-
-	t.Setenv(envvarName, "bad-socket")
-	defer func() {
-		t.Logf("cleaning up %s envvar", envvarName)
-		os.Unsetenv(envvarName)
-	}()
-
-	oktetoClient := &client.FakeOktetoClient{
-		Users: client.NewFakeUsersClient(&types.User{}),
-	}
-	rdc := Runner{
-		sshAuthSockEnvvar:    envvarName,
-		builder:              fakeBuilder{assertOptions: assertFn},
-		fs:                   fs,
-		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
-		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
-		oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
-		ioCtrl:               io.NewIOController(),
-		getEnviron: func() []string {
-			return []string{}
-		},
-	}
-
-	err := rdc.Run(context.Background(), &Params{
-		KnownHostsPath: "inexistent-file",
-		Manifest: &model.Manifest{
-			Deploy: &model.DeployInfo{
-				Image: "test-image",
-			},
-		},
-	})
-	assert.NoError(t, err)
 }
 
 func TestCreateDockerfile(t *testing.T) {
