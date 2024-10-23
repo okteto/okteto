@@ -14,10 +14,27 @@ import (
 	"github.com/okteto/okteto/pkg/remote"
 )
 
+type sshForwarder struct {
+	getTLSConfig func() *tls.Config
+}
+
+// CA is not specified because it should use System CA root. When remote-run command is executed,
+// the CA should be already available as the CLI set it in the Dockerfile used as a base to
+// run the command
+func newSSHForwarder() *sshForwarder {
+	return &sshForwarder{
+		getTLSConfig: newTLSConfigWithSystemCA,
+	}
+}
+
+func newTLSConfigWithSystemCA() *tls.Config {
+	return &tls.Config{}
+}
+
 // startSshForwarder This functions starts the ssh-forwarded process expected to be run on remote-run commands.
 // This process just listens a UNIX socket, and forward the messages to the SSH Agent exposed in the hostname
 // and port received as parameters
-func startSshForwarder(sshAgentHostname, sshAgentPort, userToken string) {
+func (s *sshForwarder) startSshForwarder(sshAgentHostname, sshAgentPort, userToken string) {
 	// Remove existing socket if it exists
 	os.Remove(remote.SshAgentLocalSocket)
 
@@ -41,17 +58,14 @@ func startSshForwarder(sshAgentHostname, sshAgentPort, userToken string) {
 		}
 
 		// Handle each connection concurrently
-		go handleConnection(localConn, sshAgentHostname, sshAgentPort, userToken)
+		go s.handleConnection(localConn, sshAgentHostname, sshAgentPort, userToken)
 	}
 }
 
-func handleConnection(localConn net.Conn, host, port, userToken string) {
+func (s *sshForwarder) handleConnection(localConn net.Conn, host, port, userToken string) {
 	defer localConn.Close()
 
-	// CA is not specified because it should use System CA root. When remote-run command is executed,
-	// the CA should be already available as the CLI set it in the Dockerfile used as a base to
-	// run the command
-	cfg := &tls.Config{}
+	cfg := s.getTLSConfig()
 
 	// Connect to the remote SSH agent over TCP
 	remoteConn, err := tls.Dial("tcp", fmt.Sprintf("%s:%s", host, port), cfg)
@@ -77,7 +91,7 @@ func handleConnection(localConn net.Conn, host, port, userToken string) {
 	}
 	ack = strings.TrimSpace(ack)
 	if ack != "OK" {
-		oktetoLog.Errorf("Remote SSH agent returned '%s'", ack)
+		oktetoLog.Errorf("Invalid ACK message. Expected 'OK' but remote SSH agent returned '%s'", ack)
 		return
 	}
 
