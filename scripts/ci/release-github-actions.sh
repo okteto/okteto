@@ -139,11 +139,11 @@ for repo in "${repos[@]}"; do
         echo "Updating Dockerfile to use okteto/okteto:${RELEASE_TAG}"
         sed -i.bak -E 's|(FROM okteto/okteto:)[^ ]*|\1'"${RELEASE_TAG}"'|g' Dockerfile
         rm Dockerfile.bak
-        
+
         echo "Dockerfile changes:"
         git --no-pager diff Dockerfile
 
-        git add Dockerfile 
+        git add Dockerfile
         git commit -m "Release ${RELEASE_TAG}" || echo "No changes to commit in repository '$repo'."
     else
         echo "Warning: Dockerfile not found in repository '$repo'. Skipping Dockerfile update."
@@ -166,7 +166,7 @@ for repo in "${repos[@]}"; do
             # Note: We are not using TAG_NAME directly for comparison
             # Instead, we find the version tag that TAG_NAME points to
             current_tag_version=$(git describe --tags "${TAG_NAME}" --abbrev=0 --match "*.*.*" 2>/dev/null || echo "0.0.0")
-            
+
             # Compare the new RELEASE_TAG with the current_tag_version
             # This comparison determines if RELEASE_TAG is newer than the version TAG_NAME points to
             diff=$(semver compare "${RELEASE_TAG}" "${current_tag_version}")

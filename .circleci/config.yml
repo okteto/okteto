@@ -407,7 +407,7 @@ jobs:
   push-image-tag:
     executor: golang-ci
     environment:
-      OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED : "true" # this is needed to push to Docker Hub using the local credentials instead of the ones from the context cluster
+      OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED: "true" # this is needed to push to Docker Hub using the local credentials instead of the ones from the context cluster
     steps:
       - checkout
       - run: *okteto-login
@@ -419,7 +419,7 @@ jobs:
   push-image-dev:
     executor: golang-ci
     environment:
-      OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED : "true" # this is needed to push to Docker Hub using the local credentials instead of the ones from the context cluster
+      OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED: "true" # this is needed to push to Docker Hub using the local credentials instead of the ones from the context cluster
     steps:
       - checkout
       - run: *okteto-login
@@ -430,7 +430,7 @@ jobs:
   push-image-master:
     executor: golang-ci
     environment:
-      OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED : "true" # this is needed to push to Docker Hub using the local credentials instead of the ones from the context cluster
+      OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED: "true" # this is needed to push to Docker Hub using the local credentials instead of the ones from the context cluster
     steps:
       - checkout
       - run: *okteto-login
