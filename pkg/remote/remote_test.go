@@ -249,10 +249,12 @@ func TestCreateDockerfile(t *testing.T) {
 					OktetoCommandSpecificEnvVars: map[string]string{
 						constants.OktetoIsPreviewEnvVar: "true",
 					},
-					DockerfileName: "Dockerfile.deploy",
-					Command:        "deploy",
-					CommandFlags:   []string{"--name \"test\""},
-					UseRootUser:    true,
+					DockerfileName:   "Dockerfile.deploy",
+					Command:          "deploy",
+					SshAgentHostname: "ssh-agent.default.svc.cluster.local",
+					SshAgentPort:     "3000",
+					CommandFlags:     []string{"--name \"test\""},
+					UseRootUser:      true,
 				},
 			},
 			expected: expected{
@@ -298,6 +300,9 @@ ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD="dependency_pass"
 ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME="dependency_user"
 
 
+ENV OKTETO_SSH_AGENT_HOSTNAME="ssh-agent.default.svc.cluster.local"
+ENV OKTETO_SSH_AGENT_PORT="3000"
+
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
@@ -311,8 +316,9 @@ ENV A="A"
 
 RUN \
   \
-  --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
+  --mount=type=secret,id=known_hosts \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
+  export SSH_AUTH_SOCK=/tmp/okteto-ssh-agent.sock && \
   /okteto/bin/okteto remote-run deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test"
 
 
@@ -336,9 +342,11 @@ COPY --from=runner /etc/.oktetocachekey .oktetocachekey
 					OktetoCommandSpecificEnvVars: map[string]string{
 						constants.CIEnvVar: "true",
 					},
-					DockerfileName: "Dockerfile.test",
-					Command:        "test",
-					CommandFlags:   []string{"--name \"test\""},
+					DockerfileName:   "Dockerfile.test",
+					Command:          "test",
+					SshAgentHostname: "ssh-agent.default.svc.cluster.local",
+					SshAgentPort:     "3000",
+					CommandFlags:     []string{"--name \"test\""},
 					Artifacts: []model.Artifact{
 						{
 							Path:        "coverage.txt",
@@ -393,6 +401,9 @@ ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD="dependency_pass"
 ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME="dependency_user"
 
 
+ENV OKTETO_SSH_AGENT_HOSTNAME="ssh-agent.default.svc.cluster.local"
+ENV OKTETO_SSH_AGENT_PORT="3000"
+
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
@@ -404,8 +415,9 @@ RUN okteto registrytoken install --force --log-output=json
 
 RUN \
   \
-  --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
+  --mount=type=secret,id=known_hosts \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
+  export SSH_AUTH_SOCK=/tmp/okteto-ssh-agent.sock && \
   /okteto/bin/okteto remote-run test --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test" || true
 
 
@@ -426,6 +438,84 @@ COPY --from=runner /okteto/artifacts/ /
 `,
 				buildEnvVars:      map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
 				dependencyEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
+			},
+		},
+		{
+			name: "without ssh-agent hostname",
+			config: config{
+				params: &Params{
+					BaseImage:                    "test-image",
+					ExecutionEnvVars:             map[string]string{},
+					Manifest:                     fakeManifest,
+					BuildEnvVars:                 map[string]string{},
+					DependenciesEnvVars:          map[string]string{},
+					OktetoCommandSpecificEnvVars: map[string]string{},
+					DockerfileName:               "Dockerfile.deploy",
+					Command:                      "deploy",
+					CommandFlags:                 []string{"--name \"test\""},
+					UseRootUser:                  true,
+				},
+			},
+			expected: expected{
+				dockerfileName: filepath.Clean("/test/Dockerfile.deploy"),
+				dockerfileContent: `
+FROM okteto/okteto:latest as okteto-cli
+
+FROM test-image as runner
+
+USER 0
+ENV PATH="${PATH}:/okteto/bin"
+COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
+
+
+ENV OKTETO_DEPLOY_REMOTE true
+ARG OKTETO_NAMESPACE
+ARG OKTETO_CONTEXT
+ARG OKTETO_TOKEN
+ARG OKTETO_ACTION_NAME
+ARG OKTETO_TLS_CERT_BASE64
+ARG INTERNAL_SERVER_NAME
+ARG OKTETO_DEPLOYABLE
+ARG GITHUB_REPOSITORY
+ARG BUILDKIT_HOST
+ARG OKTETO_REGISTRY_URL
+RUN mkdir -p /etc/ssl/certs/
+RUN echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /etc/ssl/certs/okteto.crt
+
+COPY . /okteto/src
+WORKDIR /okteto/src
+
+
+
+
+
+ENV OKTETO_SSH_AGENT_HOSTNAME=""
+ENV OKTETO_SSH_AGENT_PORT=""
+
+ARG OKTETO_GIT_COMMIT
+ARG OKTETO_GIT_BRANCH
+ARG OKTETO_INVALIDATE_CACHE
+
+RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
+RUN okteto registrytoken install --force --log-output=json
+
+
+
+RUN \
+  \
+  --mount=type=secret,id=known_hosts \
+  mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
+
+  /okteto/bin/okteto remote-run deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test"
+
+
+
+FROM scratch
+COPY --from=runner /etc/.oktetocachekey .oktetocachekey
+
+`,
+				buildEnvVars:      map[string]string{},
+				dependencyEnvVars: map[string]string{},
 			},
 		},
 	}

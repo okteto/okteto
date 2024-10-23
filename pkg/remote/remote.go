@@ -92,8 +92,8 @@ ARG {{$key}} {{$val}}
 ENV {{$key}}={{$val}}
 {{end}}
 
-ENV {{ .SshAgentHostnameArgName }}={{ .SshAgentHostname }}
-ENV {{ .SshAgentPortArgName }}={{ .SshAgentPort }}
+ENV {{ .SshAgentHostnameArgName }}="{{ .SshAgentHostname }}"
+ENV {{ .SshAgentPortArgName }}="{{ .SshAgentPort }}"
 
 ARG {{ .GitCommitArgName }}
 ARG {{ .GitBranchArgName }}
@@ -110,7 +110,7 @@ RUN \
   {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}},sharing=private {{end}}\
   --mount=type=secret,id=known_hosts \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
-  export SSH_AUTH_SOCK={{ .SshAgentSocket }} && \
+{{ if .SshAgentHostname }}  export SSH_AUTH_SOCK={{ .SshAgentSocket }} && \{{ end }}
   /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}{{ if eq .Command "test" }} || true{{ end }}
 
 {{range $key, $artifact := .Artifacts }}
