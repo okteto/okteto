@@ -83,6 +83,7 @@ type Options struct {
 	Dependencies          bool
 	RunWithoutBash        bool
 	RunInRemote           bool
+	RunInRemoteSet        bool
 	Wait                  bool
 	ShowCTA               bool
 }
@@ -174,6 +175,8 @@ $ okteto deploy --remote
 $ okteto deploy --no-build=true`,
 		Args: utils.NoArgsAccepted(""),
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			// check if remote flag is used by the user
+			options.RunInRemoteSet = cmd.Flag("remote").Changed
 			// validate cmd options
 			if options.Dependencies && !okteto.IsOkteto() {
 				return fmt.Errorf("'dependencies' is only supported in contexts that have Okteto installed")
@@ -573,9 +576,9 @@ func getDefaultTimeout() time.Duration {
 }
 
 func shouldRunInRemote(opts *Options) bool {
-	// --remote flag enabled from command line
-	if opts.RunInRemote {
-		return true
+	// --remote flag enabled from command line, either true or false the flag value takes precedence
+	if opts.RunInRemoteSet {
+		return opts.RunInRemote
 	}
 
 	// remote option set in the manifest via a remote deployer image or the remote option enabled
