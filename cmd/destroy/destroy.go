@@ -299,8 +299,8 @@ func shouldRunInRemote(opts *Options) bool {
 
 	//  remote option set in the manifest via a remote destroyer image or the remote option enabled
 	if opts.Manifest != nil && opts.Manifest.Destroy != nil {
-		if opts.Manifest.Destroy.Image != "" || opts.Manifest.Destroy.Remote {
-			return true
+		if opts.Manifest.Destroy.Remote != nil {
+			return *opts.Manifest.Destroy.Remote
 		}
 	}
 

@@ -179,7 +179,7 @@ type DeployInfo struct {
 type DestroyInfo struct {
 	Image    string          `json:"image,omitempty" yaml:"image,omitempty"`
 	Commands []DeployCommand `json:"commands,omitempty" yaml:"commands,omitempty"`
-	Remote   bool            `json:"remote,omitempty" yaml:"remote,omitempty"`
+	Remote   *bool           `json:"remote,omitempty" yaml:"remote,omitempty"`
 }
 
 // DivertDeploy represents information about the deploy divert configuration
