@@ -14,23 +14,23 @@
 package remote
 
 import (
-    "context"
-    "fmt"
-    "path/filepath"
-    "regexp"
-    "testing"
+	"context"
+	"fmt"
+	"path/filepath"
+	"regexp"
+	"testing"
 
-    "github.com/okteto/okteto/internal/test/client"
-    "github.com/okteto/okteto/pkg/constants"
-    oktetoErrors "github.com/okteto/okteto/pkg/errors"
-    filesystem "github.com/okteto/okteto/pkg/filesystem/fake"
-    "github.com/okteto/okteto/pkg/log/io"
-    "github.com/okteto/okteto/pkg/model"
-    "github.com/okteto/okteto/pkg/okteto"
-    "github.com/okteto/okteto/pkg/types"
-    "github.com/spf13/afero"
-    "github.com/stretchr/testify/assert"
-    "github.com/stretchr/testify/require"
+	"github.com/okteto/okteto/internal/test/client"
+	"github.com/okteto/okteto/pkg/constants"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	filesystem "github.com/okteto/okteto/pkg/filesystem/fake"
+	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
+	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeBuilder struct {
@@ -533,10 +533,10 @@ func TestGetExtraHosts(t *testing.T) {
 	ip := "1.2.3.4"
 
 	var tests = []struct {
+		metadata     types.ClusterMetadata
 		name         string
 		expected     []types.HostMap
 		definedHosts []model.Host
-		metadata     types.ClusterMetadata
 	}{
 		{
 			name:     "no metadata information",

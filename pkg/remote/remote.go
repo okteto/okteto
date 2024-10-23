@@ -168,10 +168,14 @@ type Params struct {
 	// okteto manifest which is resolved through params.ManifestPathFlag
 	ContextAbsolutePathOverride string
 	ManifestPathFlag            string
-	Deployable                  deployable.Entity
-	CommandFlags                []string
-	Caches                      []string
-	Hosts                       []model.Host
+	// SshAgentHostname hostname of the ssh-agent service
+	SshAgentHostname string
+	// SshAgentPort port of the ssh-agent service
+	SshAgentPort string
+	Deployable   deployable.Entity
+	CommandFlags []string
+	Caches       []string
+	Hosts        []model.Host
 	// IgnoreRules are the ignoring rules added to this build execution.
 	// Rules follow the .dockerignore syntax as defined in:
 	// https://docs.docker.com/build/building/context/#syntax
@@ -188,12 +192,6 @@ type Params struct {
 	UseRootUser bool
 
 	NoCache bool
-
-	// SshAgentHostname hostname of the ssh-agent service
-	SshAgentHostname string
-
-	// SshAgentPort port of the ssh-agent service
-	SshAgentPort string
 }
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
@@ -225,10 +223,10 @@ type dockerfileTemplateProperties struct {
 	SshAgentHostname             string
 	SshAgentPortArgName          string
 	SshAgentPort                 string
+	SshAgentSocket               string
 	Caches                       []string
 	Artifacts                    []model.Artifact
 	UseRootUser                  bool
-	SshAgentSocket               string
 }
 
 // NewRunner creates a new Runner for remote

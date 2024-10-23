@@ -25,9 +25,9 @@ import (
 type FakeUserClient struct {
 	errGetPlatformVariables error
 	userCtx                 *types.UserContext
+	ClusterMetadata         types.ClusterMetadata
 	platformVariables       []env.Var
 	err                     []error
-	ClusterMetadata         types.ClusterMetadata
 }
 
 func NewFakeUsersClient(user *types.User, err ...error) *FakeUserClient {
