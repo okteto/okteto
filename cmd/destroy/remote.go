@@ -54,6 +54,8 @@ type remoteDestroyCommand struct {
 
 	// ioCtrl is the controller for the output of the Build logs
 	ioCtrl *io.Controller
+
+	workdirCtrl filesystem.WorkingDirectoryInterface
 }
 
 // newRemoteDestroyer creates a new remote destroyer
@@ -70,9 +72,10 @@ func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remote
 		manifest.Destroy = &model.DestroyInfo{}
 	}
 	return &remoteDestroyCommand{
-		runner:   runner,
-		manifest: manifest,
-		ioCtrl:   ioCtrl,
+		runner:      runner,
+		manifest:    manifest,
+		ioCtrl:      ioCtrl,
+		workdirCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 	}
 }
 
@@ -102,11 +105,22 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 		return err
 	}
 
-	cwd, err := remote.GetOriginalCWD(filesystem.NewOsWorkingDirectoryCtrl(), opts.ManifestPathFlag)
-	if err != nil {
-		return fmt.Errorf("failed to resolve working directory for remote destroy: %w", err)
+	workdirCtrl := rd.workdirCtrl
+	if workdirCtrl == nil {
+		workdirCtrl = filesystem.NewOsWorkingDirectoryCtrl()
 	}
-	ig, err := ignore.NewFromFile(path.Join(cwd, model.IgnoreFilename))
+
+	cwd, err := workdirCtrl.Get()
+	if err != nil {
+		return fmt.Errorf("failed to resolve working directory for remote deploy: %w", err)
+	}
+
+	ctxPath := cwd
+	if opts.Manifest.Destroy != nil {
+		ctxPath = path.Clean(path.Join(cwd, opts.Manifest.Destroy.Context))
+	}
+
+	ig, err := ignore.NewFromFile(path.Join(ctxPath, model.IgnoreFilename))
 	if err != nil {
 		return fmt.Errorf("failed to read ignore file: %w", err)
 	}
@@ -125,13 +139,14 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 		OktetoCommandSpecificEnvVars: map[string]string{
 			constants.OktetoIsPreviewEnvVar: os.Getenv(constants.OktetoIsPreviewEnvVar),
 		},
-		DependenciesEnvVars:       make(map[string]string),
-		DockerfileName:            dockerfileTemporalName,
-		Deployable:                dep,
-		Manifest:                  opts.Manifest,
-		Command:                   remote.DestroyCommand,
-		IgnoreRules:               rules,
-		UseOktetoDeployIgnoreFile: true,
+		DependenciesEnvVars:         make(map[string]string),
+		DockerfileName:              dockerfileTemporalName,
+		Deployable:                  dep,
+		Manifest:                    opts.Manifest,
+		Command:                     remote.DestroyCommand,
+		IgnoreRules:                 rules,
+		UseOktetoDeployIgnoreFile:   true,
+		ContextAbsolutePathOverride: ctxPath,
 	}
 
 	// we need to call Run() method using a remote builder. This Builder will have

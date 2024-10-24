@@ -65,6 +65,7 @@ type remoteDeployer struct {
 
 	getDependencyEnvVars dependencyEnvVarsGetter
 	getExecutionEnvVars  executionEnvVarsGetter
+	workdirCtrl          filesystem.WorkingDirectoryInterface
 }
 
 // newRemoteDeployer creates the remote deployer
@@ -83,6 +84,7 @@ func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller
 		ioCtrl:               ioCtrl,
 		getDependencyEnvVars: getDependencyEnvVars,
 		getExecutionEnvVars:  executionEnvVarGetter,
+		workdirCtrl:          filesystem.NewOsWorkingDirectoryCtrl(),
 	}
 }
 
@@ -104,11 +106,22 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		return err
 	}
 
-	cwd, err := remote.GetOriginalCWD(filesystem.NewOsWorkingDirectoryCtrl(), deployOptions.ManifestPathFlag)
+	workdirCtrl := rd.workdirCtrl
+	if workdirCtrl == nil {
+		workdirCtrl = filesystem.NewOsWorkingDirectoryCtrl()
+	}
+
+	cwd, err := workdirCtrl.Get()
 	if err != nil {
 		return fmt.Errorf("failed to resolve working directory for remote deploy: %w", err)
 	}
-	ig, err := ignore.NewFromFile(path.Join(cwd, model.IgnoreFilename))
+
+	ctxPath := cwd
+	if deployOptions.Manifest.Deploy != nil {
+		ctxPath = path.Clean(path.Join(cwd, deployOptions.Manifest.Deploy.Context))
+	}
+
+	ig, err := ignore.NewFromFile(path.Join(ctxPath, model.IgnoreFilename))
 	if err != nil {
 		return fmt.Errorf("failed to read ignore file: %w", err)
 	}
@@ -129,13 +142,14 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		OktetoCommandSpecificEnvVars: map[string]string{
 			constants.OktetoIsPreviewEnvVar: os.Getenv(constants.OktetoIsPreviewEnvVar),
 		},
-		ExecutionEnvVars:          rd.getExecutionEnvVars(ctx),
-		DockerfileName:            dockerfileTemporalName,
-		Deployable:                dep,
-		Manifest:                  deployOptions.Manifest,
-		Command:                   remote.DeployCommand,
-		IgnoreRules:               rules,
-		UseOktetoDeployIgnoreFile: true,
+		ExecutionEnvVars:            rd.getExecutionEnvVars(ctx),
+		DockerfileName:              dockerfileTemporalName,
+		Deployable:                  dep,
+		Manifest:                    deployOptions.Manifest,
+		Command:                     remote.DeployCommand,
+		IgnoreRules:                 rules,
+		UseOktetoDeployIgnoreFile:   true,
+		ContextAbsolutePathOverride: ctxPath,
 	}
 
 	if err := rd.runner.Run(ctx, &runParams); err != nil {

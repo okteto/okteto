@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/deployable"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
+	fakefs "github.com/okteto/okteto/pkg/filesystem/fake"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/remote"
@@ -171,10 +172,12 @@ func Test_newRemoteDeployer(t *testing.T) {
 	require.NotNil(t, got.getBuildEnvVars)
 }
 
-func TestDeployRemote(t *testing.T) {
+func TestDeployRemoteWithCtx(t *testing.T) {
+	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/path/to/manifest")
 	manifest := &model.Manifest{
 		Deploy: &model.DeployInfo{
-			Image: "test-image",
+			Context: "../..",
+			Image:   "test-image",
 			Divert: &model.DivertDeploy{
 				Namespace: "test-divert",
 				Driver:    "divert-driver",
@@ -195,7 +198,7 @@ func TestDeployRemote(t *testing.T) {
 
 	expectedParams := &remote.Params{
 		BaseImage:           manifest.Deploy.Image,
-		ManifestPathFlag:    "/path/to/manifest",
+		ManifestPathFlag:    "/path/to/manifest/okteto.yml",
 		TemplateName:        templateName,
 		CommandFlags:        []string{"--name \"test\""},
 		BuildEnvVars:        map[string]string{"BUILD_VAR_1": "value"},
@@ -210,14 +213,16 @@ func TestDeployRemote(t *testing.T) {
 		OktetoCommandSpecificEnvVars: map[string]string{
 			"OKTETO_IS_PREVIEW_ENVIRONMENT": "",
 		},
-		Manifest:                  manifest,
-		Command:                   remote.DeployCommand,
-		UseOktetoDeployIgnoreFile: true,
+		Manifest:                    manifest,
+		Command:                     remote.DeployCommand,
+		UseOktetoDeployIgnoreFile:   true,
+		ContextAbsolutePathOverride: "/path",
 	}
 	runner := &fakeRemoteRunner{}
 	runner.On("Run", mock.Anything, expectedParams).Return(nil)
 	rd := &remoteDeployer{
-		runner: runner,
+		runner:      runner,
+		workdirCtrl: workdirCtrl,
 		getBuildEnvVars: func() map[string]string {
 			return map[string]string{"BUILD_VAR_1": "value"}
 		},
@@ -231,14 +236,14 @@ func TestDeployRemote(t *testing.T) {
 	opts := &Options{
 		Name:             "test",
 		Manifest:         manifest,
-		ManifestPathFlag: "/path/to/manifest",
+		ManifestPathFlag: "/path/to/manifest/okteto.yml",
 	}
 	err := rd.Deploy(context.Background(), opts)
 	require.NoError(t, err)
 	runner.AssertExpectations(t)
 }
-
-func TestDeployRemoteWithError(t *testing.T) {
+func TestDeployRemote(t *testing.T) {
+	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/path/to/manifest")
 	manifest := &model.Manifest{
 		Deploy: &model.DeployInfo{
 			Image: "test-image",
@@ -262,7 +267,7 @@ func TestDeployRemoteWithError(t *testing.T) {
 
 	expectedParams := &remote.Params{
 		BaseImage:           manifest.Deploy.Image,
-		ManifestPathFlag:    "/path/to/manifest",
+		ManifestPathFlag:    "/path/to/manifest/okteto.yml",
 		TemplateName:        templateName,
 		CommandFlags:        []string{"--name \"test\""},
 		BuildEnvVars:        map[string]string{"BUILD_VAR_1": "value"},
@@ -277,9 +282,80 @@ func TestDeployRemoteWithError(t *testing.T) {
 		OktetoCommandSpecificEnvVars: map[string]string{
 			"OKTETO_IS_PREVIEW_ENVIRONMENT": "",
 		},
-		Manifest:                  manifest,
-		Command:                   remote.DeployCommand,
-		UseOktetoDeployIgnoreFile: true,
+		Manifest:                    manifest,
+		Command:                     remote.DeployCommand,
+		UseOktetoDeployIgnoreFile:   true,
+		ContextAbsolutePathOverride: "/path/to/manifest",
+	}
+	runner := &fakeRemoteRunner{}
+	runner.On("Run", mock.Anything, expectedParams).Return(nil)
+	rd := &remoteDeployer{
+		runner:      runner,
+		workdirCtrl: workdirCtrl,
+		getBuildEnvVars: func() map[string]string {
+			return map[string]string{"BUILD_VAR_1": "value"}
+		},
+		getDependencyEnvVars: func(environGetter) map[string]string {
+			return map[string]string{"DEP_VAR_1": "value"}
+		},
+		getExecutionEnvVars: func(ctx context.Context) map[string]string {
+			return map[string]string{"PLAT_VAR_1": "value"}
+		},
+	}
+	opts := &Options{
+		Name:             "test",
+		Manifest:         manifest,
+		ManifestPathFlag: "/path/to/manifest/okteto.yml",
+	}
+	err := rd.Deploy(context.Background(), opts)
+	require.NoError(t, err)
+	runner.AssertExpectations(t)
+}
+
+func TestDeployRemoteWithError(t *testing.T) {
+	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/path/to/manifest")
+	manifest := &model.Manifest{
+		Deploy: &model.DeployInfo{
+			Image: "test-image",
+			Divert: &model.DivertDeploy{
+				Namespace: "test-divert",
+				Driver:    "divert-driver",
+			},
+			Commands: []model.DeployCommand{
+				{
+					Name:    "command 1",
+					Command: "test-command",
+				},
+			},
+		},
+		External: map[string]*externalresource.ExternalResource{
+			"test": {
+				Icon: "database",
+			},
+		},
+	}
+
+	expectedParams := &remote.Params{
+		BaseImage:           manifest.Deploy.Image,
+		ManifestPathFlag:    "/path/to/manifest/okteto.yml",
+		TemplateName:        templateName,
+		CommandFlags:        []string{"--name \"test\""},
+		BuildEnvVars:        map[string]string{"BUILD_VAR_1": "value"},
+		DependenciesEnvVars: map[string]string{"DEP_VAR_1": "value"},
+		ExecutionEnvVars:    map[string]string{"PLAT_VAR_1": "value"},
+		DockerfileName:      dockerfileTemporalName,
+		Deployable: deployable.Entity{
+			Divert:   manifest.Deploy.Divert,
+			Commands: manifest.Deploy.Commands,
+			External: manifest.External,
+		},
+		OktetoCommandSpecificEnvVars: map[string]string{
+			"OKTETO_IS_PREVIEW_ENVIRONMENT": "",
+		},
+		Manifest:                    manifest,
+		Command:                     remote.DeployCommand,
+		UseOktetoDeployIgnoreFile:   true,
+		ContextAbsolutePathOverride: "/path/to/manifest",
 	}
 
 	tests := []struct {
@@ -320,7 +396,8 @@ func TestDeployRemoteWithError(t *testing.T) {
 			runner := &fakeRemoteRunner{}
 			runner.On("Run", mock.Anything, expectedParams).Return(tt.err)
 			rd := &remoteDeployer{
-				runner: runner,
+				workdirCtrl: workdirCtrl,
+				runner:      runner,
 				getBuildEnvVars: func() map[string]string {
 					return map[string]string{"BUILD_VAR_1": "value"}
 				},
@@ -334,7 +411,7 @@ func TestDeployRemoteWithError(t *testing.T) {
 			opts := &Options{
 				Name:             "test",
 				Manifest:         manifest,
-				ManifestPathFlag: "/path/to/manifest",
+				ManifestPathFlag: "/path/to/manifest/okteto.yml",
 			}
 			err := rd.Deploy(context.Background(), opts)
 			require.True(t, tt.expectedCheck(err))
