@@ -111,7 +111,7 @@ func TestGetCommandFlags(t *testing.T) {
 }
 
 func TestDestroyRemoteWithCtx(t *testing.T) {
-	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/")
+	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/path/to/manifest")
 	manifest := &model.Manifest{
 		Destroy: &model.DestroyInfo{
 			Context: "../..",
@@ -167,7 +167,7 @@ func TestDestroyRemoteWithCtx(t *testing.T) {
 }
 
 func TestDestroyRemote(t *testing.T) {
-	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/")
+	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/path/to/manifest")
 	manifest := &model.Manifest{
 		Destroy: &model.DestroyInfo{
 			Image: "test-image",
@@ -222,7 +222,7 @@ func TestDestroyRemote(t *testing.T) {
 }
 
 func TestDestroyRemoteWithError(t *testing.T) {
-	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/")
+	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/path/to/manifest")
 	manifest := &model.Manifest{
 		Destroy: &model.DestroyInfo{
 			Image: "test-image",

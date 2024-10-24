@@ -117,7 +117,7 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 
 	ctxPath := cwd
 	if opts.Manifest.Destroy != nil {
-		ctxPath = path.Clean(path.Join(cwd, opts.Manifest.Deploy.Context))
+		ctxPath = path.Clean(path.Join(cwd, opts.Manifest.Destroy.Context))
 	}
 
 	ig, err := ignore.NewFromFile(path.Join(ctxPath, model.IgnoreFilename))

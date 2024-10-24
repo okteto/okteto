@@ -243,7 +243,7 @@ func TestDeployRemoteWithCtx(t *testing.T) {
 	runner.AssertExpectations(t)
 }
 func TestDeployRemote(t *testing.T) {
-	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/")
+	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/path/to/manifest")
 	manifest := &model.Manifest{
 		Deploy: &model.DeployInfo{
 			Image: "test-image",
@@ -313,7 +313,7 @@ func TestDeployRemote(t *testing.T) {
 }
 
 func TestDeployRemoteWithError(t *testing.T) {
-	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/")
+	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/path/to/manifest")
 	manifest := &model.Manifest{
 		Deploy: &model.DeployInfo{
 			Image: "test-image",
