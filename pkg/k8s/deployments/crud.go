@@ -242,24 +242,6 @@ func IsRunning(ctx context.Context, namespace, svcName string, c kubernetes.Inte
 	return d.Status.ReadyReplicas > 0
 }
 
-func IsRunningBySelector(ctx context.Context, namespace, labels string, c kubernetes.Interface) bool {
-	dList, err := c.AppsV1().Deployments(namespace).List(
-		ctx,
-		metav1.ListOptions{
-			LabelSelector: labels,
-		},
-	)
-	if err != nil {
-		return false
-	}
-	for i := range dList.Items {
-		if dList.Items[i].Status.ReadyReplicas > 0 {
-			return true
-		}
-	}
-	return false
-}
-
 // PatchAnnotations patches the deployment annotations
 func PatchAnnotations(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) error {
 	payload := []patchAnnotations{

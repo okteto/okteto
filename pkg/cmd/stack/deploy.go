@@ -24,8 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/okteto/okteto/pkg/analytics"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
@@ -44,20 +42,10 @@ import (
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-)
-
-var (
-	upAnnotations = map[string]interface{}{
-		model.OktetoStignoreAnnotation: nil,
-		model.OktetoSyncAnnotation:     nil,
-	}
 )
 
 // DeployOptions represents the different options available for stack commands
@@ -95,9 +83,6 @@ type Stack struct {
 
 const (
 	maxRestartsToConsiderFailed = 3
-
-	// deploymentRevisionAnnotation is the annotation used to store the revision of a deployment
-	deploymentRevisionAnnotation = "deployment.kubernetes.io/revision"
 )
 
 func (sd *Stack) RunDeploy(ctx context.Context, s *model.Stack, options *DeployOptions) error {
@@ -533,7 +518,7 @@ func isSvcReady(ctx context.Context, stack *model.Stack, dependentSvcName string
 
 	switch condition.Condition {
 	case model.DependsOnServiceRunning:
-		return isSvcRunning(ctx, svc, stack.Namespace, stack.Name, dependentSvcName, client)
+		return isSvcRunning(ctx, svc, stack.Namespace, dependentSvcName, client)
 	case model.DependsOnServiceHealthy:
 		return isSvcHealthy(ctx, stack, dependentSvcName, client, config)
 	case model.DependsOnServiceCompleted:
@@ -554,32 +539,15 @@ func getPodName(ctx context.Context, stack *model.Stack, svcName string, client 
 	return p.Name
 }
 
-func isSvcRunning(ctx context.Context, svc *model.Service, namespace, stackName, svcName string, client kubernetes.Interface) bool {
-	stackNameLabel, err := labels.NewRequirement(
-		model.StackNameLabel,
-		selection.Equals,
-		[]string{format.ResourceK8sMetaString(stackName)},
-	)
-	if err != nil {
-		return false
-	}
-	svcNameLabel, err := labels.NewRequirement(
-		model.StackServiceNameLabel,
-		selection.Equals,
-		[]string{svcName},
-	)
-	if err != nil {
-		return false
-	}
-	selector := labels.NewSelector().Add(*stackNameLabel).Add(*svcNameLabel)
+func isSvcRunning(ctx context.Context, svc *model.Service, namespace, svcName string, client kubernetes.Interface) bool {
 
 	switch {
 	case svc.IsDeployment():
-		if deployments.IsRunningBySelector(ctx, namespace, selector.String(), client) {
+		if deployments.IsRunning(ctx, namespace, svcName, client) {
 			return true
 		}
 	case svc.IsStatefulset():
-		if statefulsets.IsRunningBySelector(ctx, namespace, selector.String(), client) {
+		if statefulsets.IsRunning(ctx, namespace, svcName, client) {
 			return true
 		}
 	case svc.IsJob():
@@ -592,7 +560,7 @@ func isSvcRunning(ctx context.Context, svc *model.Service, namespace, stackName,
 
 func isSvcHealthy(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {
 	svc := stack.Services[svcName]
-	if !isSvcRunning(ctx, svc, stack.Namespace, stack.Name, svcName, client) {
+	if !isSvcRunning(ctx, svc, stack.Namespace, svcName, client) {
 		return false
 	}
 	if svc.Healtcheck != nil {
@@ -704,10 +672,6 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 		return isNewDeployment, nil
 	}
 
-	if isStackDeployEqual(old, d) {
-		return isNewDeployment, nil
-	}
-
 	if _, err := deployments.Deploy(ctx, d, c); err != nil {
 		if isNewDeployment {
 			return false, fmt.Errorf("error creating deployment of service '%s': %w", svcName, err)
@@ -743,11 +707,6 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 			sfs.Labels[model.DeployedByLabel] = format.ResourceK8sMetaString(s.Name)
 		}
 	}
-
-	if isStackStsEqual(old, sfs) {
-		return false, nil
-	}
-
 	if _, err := statefulsets.Deploy(ctx, sfs, c); err != nil {
 		if !strings.Contains(err.Error(), "Forbidden: updates to statefulset spec") {
 			return false, fmt.Errorf("error updating statefulset of service '%s': %w", svcName, err)
@@ -976,7 +935,7 @@ func addDependentServices(ctx context.Context, s *model.Stack, svcsToDeploy []st
 			if _, ok := svcsToDeploySet[dependentSvc]; ok {
 				continue
 			}
-			if !isSvcRunning(ctx, s.Services[dependentSvc], s.Namespace, s.Name, dependentSvc, c) {
+			if !isSvcRunning(ctx, s.Services[dependentSvc], s.Namespace, dependentSvc, c) {
 				svcsToDeploy = append(svcsToDeploy, dependentSvc)
 				svcsToDeploySet[dependentSvc] = true
 			}
@@ -1000,43 +959,4 @@ func getAddedSvcs(initialSvcsToDeploy, svcsToDeployWithDependencies []string) []
 		}
 	}
 	return added
-}
-
-func isStackDeployEqual(old, new *appsv1.Deployment) bool {
-	opts := []cmp.Option{
-		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion"),
-		cmpopts.IgnoreFields(apiv1.ContainerPort{}, "Protocol"),
-		cmpopts.IgnoreFields(apiv1.Container{}, "TerminationMessagePath", "TerminationMessagePolicy", "ImagePullPolicy"),
-		cmpopts.IgnoreFields(appsv1.DeploymentSpec{}, "ProgressDeadlineSeconds", "RevisionHistoryLimit", "Replicas"),
-		cmpopts.IgnoreFields(apiv1.PodSpec{}, "SchedulerName", "DNSPolicy", "RestartPolicy", "SecurityContext"),
-		cmpopts.IgnoreMapEntries(func(k, v interface{}) bool {
-			key, ok := k.(string)
-			if !ok {
-				return false
-			}
-			if _, ok := upAnnotations[key]; ok {
-				return true
-			}
-			return false
-		}),
-		cmpopts.EquateEmpty(),
-	}
-
-	diff := cmp.Diff(old.Spec, new.Spec, opts...)
-	fmt.Println(diff)
-
-	return cmp.Equal(old.Spec, new.Spec, opts...)
-}
-
-func isStackStsEqual(old, new *appsv1.StatefulSet) bool {
-	opts := []cmp.Option{
-		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion"),
-		cmpopts.IgnoreFields(apiv1.ContainerPort{}, "Protocol"),
-		cmpopts.IgnoreFields(apiv1.Container{}, "TerminationMessagePath", "TerminationMessagePolicy", "ImagePullPolicy"),
-		cmpopts.IgnoreFields(appsv1.StatefulSetSpec{}, "RevisionHistoryLimit", "Replicas"),
-		cmpopts.IgnoreFields(apiv1.PodSpec{}, "SchedulerName", "DNSPolicy", "RestartPolicy", "SecurityContext"),
-		cmpopts.EquateEmpty(),
-	}
-
-	return cmp.Equal(old.Spec, new.Spec, opts...)
 }
