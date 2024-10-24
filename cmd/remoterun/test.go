@@ -119,6 +119,14 @@ commands:
 				}
 			}
 
+			sshAgentHostname := os.Getenv(constants.OktetoSshAgentHostnameEnvVar)
+			sshAgentPort := os.Getenv(constants.OktetoSshAgentPortEnvVar)
+
+			if sshAgentHostname != "" {
+				forwarder := newSSHForwarder()
+				go forwarder.startSshForwarder(sshAgentHostname, sshAgentPort, oktetoContext.GetCurrentToken())
+			}
+
 			return runner.RunTest(params)
 		},
 	}

@@ -123,6 +123,14 @@ It is important that this command does the minimum and must not do calculations 
 				runner: runner,
 			}
 
+			sshAgentHostname := os.Getenv(constants.OktetoSshAgentHostnameEnvVar)
+			sshAgentPort := os.Getenv(constants.OktetoSshAgentPortEnvVar)
+
+			if sshAgentHostname != "" {
+				forwarder := newSSHForwarder()
+				go forwarder.startSshForwarder(sshAgentHostname, sshAgentPort, oktetoContext.GetCurrentToken())
+			}
+
 			return c.Run(params)
 		},
 	}

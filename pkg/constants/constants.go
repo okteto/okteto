@@ -146,4 +146,10 @@ const (
 
 	// CIEnvVar Env variable defines if the environment is a CI environment
 	CIEnvVar = "CI"
+
+	// OktetoSshAgentHostnameEnvVar Env variable defining the hostname where the SSH Agent is listening
+	OktetoSshAgentHostnameEnvVar = "OKTETO_SSH_AGENT_HOSTNAME"
+
+	// OktetoSshAgentPortEnvVar Env variable defining the port where the SSH Agent is listening
+	OktetoSshAgentPortEnvVar = "OKTETO_SSH_AGENT_PORT"
 )
