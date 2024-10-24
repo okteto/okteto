@@ -21,7 +21,7 @@
         echo "DEBUG: PLATFORMS: ${PLATFORMS}"
 
         IFS=',' read -ra TAGS_ARRAY <<< "$RELEASE_TAG"
-        
+
         if [ -z "${TAGS_ARRAY[0]}" ]; then
                 commit=$(git rev-parse --short HEAD)
                 TAGS_ARRAY=("$commit" "${TAGS_ARRAY[@]:1}")
@@ -29,7 +29,7 @@
         fi
 
         echo "DEBUG: Final RELEASE_TAG: ${TAGS_ARRAY[*]}"
-        
+
         echo "DEBUG: Splitting RELEASE_TAG into TAGS_ARRAY:"
         for tag in "${TAGS_ARRAY[@]}"; do
                 echo "  DEBUG: Tag: ${tag}"
@@ -42,7 +42,7 @@
         beta_added=false
         stable_added=false
         for tag in "${TAGS_ARRAY[@]}"; do
-                echo "DEBUG: Processing tag: ${tag}"        
+                echo "DEBUG: Processing tag: ${tag}"
                 prerel="$(semver get prerel "${tag}" || true)"
                 version="$(semver get release "${tag}" || true)"
                 echo "  DEBUG: prerel: ${prerel}"
@@ -50,7 +50,7 @@
 
                 tags_array+=("okteto/okteto:${tag}")
                 echo "  DEBUG: Added tag to tags_array: okteto/okteto:${tag}"
-                echo "  DEBUG: tags_array so far: ${tags_array[@]}"
+                echo "  DEBUG: tags_array so far: ${tags_array[*]}"
 
                 if [ -n "$prerel" ]; then
                         if [ "$beta_added" = false ]; then
@@ -74,7 +74,7 @@
                         echo "  DEBUG: Tag ${tag} is a dev tag"
                 fi
         done
-        
+
         tags=$(IFS=','; echo "${tags_array[*]}")
 
         echo "DEBUG: Final tags string: ${tags}"
