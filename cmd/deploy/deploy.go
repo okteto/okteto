@@ -83,6 +83,7 @@ type Options struct {
 	Dependencies          bool
 	RunWithoutBash        bool
 	RunInRemote           bool
+	RunInRemoteSet        bool
 	Wait                  bool
 	ShowCTA               bool
 }
@@ -174,6 +175,8 @@ $ okteto deploy --remote
 $ okteto deploy --no-build=true`,
 		Args: utils.NoArgsAccepted(""),
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			// check if remote flag is used by the user
+			options.RunInRemoteSet = cmd.Flag("remote").Changed
 			// validate cmd options
 			if options.Dependencies && !okteto.IsOkteto() {
 				return fmt.Errorf("'dependencies' is only supported in contexts that have Okteto installed")
@@ -573,15 +576,15 @@ func getDefaultTimeout() time.Duration {
 }
 
 func shouldRunInRemote(opts *Options) bool {
-	// --remote flag enabled from command line
-	if opts.RunInRemote {
-		return true
+	// --remote flag enabled from command line, either true or false the flag value takes precedence
+	if opts.RunInRemoteSet {
+		return opts.RunInRemote
 	}
 
-	// remote option set in the manifest via a remote deployer image or the remote option enabled
+	// remote option set in the manifest via the remote option enabled
 	if opts.Manifest != nil && opts.Manifest.Deploy != nil {
-		if opts.Manifest.Deploy.Image != "" || opts.Manifest.Deploy.Remote {
-			return true
+		if opts.Manifest.Deploy.Remote != nil {
+			return *opts.Manifest.Deploy.Remote
 		}
 	}
 
@@ -712,7 +715,7 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 	isRunningOnRemoteDeployer := false
 	if manifest != nil {
 		if manifest.Deploy != nil {
-			isRunningOnRemoteDeployer = isRemoteDeployer(runInRemoteFlag, manifest.Deploy.Image, manifest.Deploy.Remote)
+			isRunningOnRemoteDeployer = isRemoteDeployer(runInRemoteFlag, manifest.Deploy.Image, manifest.Deploy.Remote != nil && *manifest.Deploy.Remote)
 			if manifest.Deploy.ComposeSection != nil &&
 				manifest.Deploy.ComposeSection.ComposesInfo != nil {
 				deployType = "compose"

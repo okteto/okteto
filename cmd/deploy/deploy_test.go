@@ -810,43 +810,41 @@ func TestTrackDeploy(t *testing.T) {
 func TestShouldRunInRemoteDeploy(t *testing.T) {
 	tempManifest := &model.Manifest{
 		Deploy: &model.DeployInfo{
-			Remote: true,
+			Remote: boolPointer(true),
 			Image:  "some-image",
 		},
 	}
 	var tests = []struct {
-		Name         string
-		opts         *Options
-		remoteDeploy string
-		remoteForce  string
-		expected     bool
+		Name        string
+		opts        *Options
+		remoteForce string
+		expected    bool
 	}{
-		{
-			Name: "Okteto_Deploy_Remote env is set to True",
-			opts: &Options{
-				RunInRemote: false,
-			},
-			remoteDeploy: "true",
-			remoteForce:  "",
-			expected:     false,
-		},
 		{
 			Name: "Remote flag is set to True",
 			opts: &Options{
-				RunInRemote: true,
+				RunInRemoteSet: true,
+				RunInRemote:    true,
 			},
-			remoteDeploy: "",
-			remoteForce:  "",
-			expected:     true,
+			remoteForce: "",
+			expected:    true,
+		},
+		{
+			Name: "Remote flag is set to False",
+			opts: &Options{
+				RunInRemoteSet: true,
+				RunInRemote:    false,
+			},
+			remoteForce: "",
+			expected:    false,
 		},
 		{
 			Name: "Remote option set by manifest is True and Image is not nil",
 			opts: &Options{
 				Manifest: tempManifest,
 			},
-			remoteDeploy: "",
-			remoteForce:  "",
-			expected:     true,
+			remoteForce: "",
+			expected:    true,
 		},
 		{
 			Name: "Remote option set by manifest is True and Image is nil",
@@ -854,13 +852,12 @@ func TestShouldRunInRemoteDeploy(t *testing.T) {
 				Manifest: &model.Manifest{
 					Deploy: &model.DeployInfo{
 						Image:  "",
-						Remote: true,
+						Remote: boolPointer(true),
 					},
 				},
 			},
-			remoteDeploy: "",
-			remoteForce:  "",
-			expected:     true,
+			remoteForce: "",
+			expected:    true,
 		},
 		{
 			Name: "Remote option set by manifest is False and Image is nil",
@@ -868,36 +865,37 @@ func TestShouldRunInRemoteDeploy(t *testing.T) {
 				Manifest: &model.Manifest{
 					Deploy: &model.DeployInfo{
 						Image:  "",
-						Remote: false,
+						Remote: boolPointer(false),
 					},
 				},
 			},
-			remoteDeploy: "",
-			remoteForce:  "",
-			expected:     false,
+			remoteForce: "",
+			expected:    false,
 		},
 		{
-			Name: "Okteto_Force_Remote env is set to True",
-			opts: &Options{
-				RunInRemote: false,
-			},
-			remoteDeploy: "",
-			remoteForce:  "true",
-			expected:     true,
+			Name:        "Okteto_Force_Remote env is set to True",
+			opts:        &Options{},
+			remoteForce: "true",
+			expected:    true,
 		},
 		{
-			Name: "Default case",
+			Name: "Okteto_Force_Remote env is set to True, user set to false",
 			opts: &Options{
-				RunInRemote: false,
+				RunInRemoteSet: true,
+				RunInRemote:    false,
 			},
-			remoteDeploy: "",
-			remoteForce:  "",
-			expected:     false,
+			remoteForce: "true",
+			expected:    false,
+		},
+		{
+			Name:        "Default case",
+			opts:        &Options{},
+			remoteForce: "",
+			expected:    false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
-			t.Setenv(constants.OktetoDeployRemote, tt.remoteDeploy)
 			t.Setenv(constants.OktetoForceRemote, tt.remoteForce)
 			result := shouldRunInRemote(tt.opts)
 			assert.Equal(t, result, tt.expected)
@@ -1078,4 +1076,8 @@ func TestCalculateManifestPathToBeStored(t *testing.T) {
 			require.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func boolPointer(v bool) *bool {
+	return &v
 }
