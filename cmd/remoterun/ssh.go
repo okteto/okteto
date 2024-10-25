@@ -163,18 +163,18 @@ func (s *sshForwarder) handleConnection(ctx context.Context, localConn net.Conn,
 
 	var eg errgroup.Group
 
+	err = localConn.SetDeadline(time.Now().Add(timeout))
+	if err != nil {
+		oktetoLog.Infof("failed to set timeout to the local socket: %v", err)
+	}
+
+	err = remoteConn.SetDeadline(time.Now().Add(timeout))
+	if err != nil {
+		oktetoLog.Infof("failed to set timeout to the remote ssh connection: %v", err)
+	}
+
 	// Forward data from local to remote
 	eg.Go(func() error {
-		err = localConn.SetReadDeadline(time.Now().Add(timeout))
-		if err != nil {
-			oktetoLog.Infof("failed to set read timeout to the local socket: %v", err)
-		}
-
-		err = remoteConn.SetWriteDeadline(time.Now().Add(timeout))
-		if err != nil {
-			oktetoLog.Infof("failed to set write timeout to the remote ssh connection: %v", err)
-		}
-
 		_, err := io.Copy(remoteConn, localConn)
 		if err != nil {
 			return fmt.Errorf("error while sending data to remote SSH agent: %w", err)
@@ -184,16 +184,6 @@ func (s *sshForwarder) handleConnection(ctx context.Context, localConn net.Conn,
 
 	// Forward data from remote to local
 	eg.Go(func() error {
-		err = remoteConn.SetReadDeadline(time.Now().Add(timeout))
-		if err != nil {
-			oktetoLog.Infof("failed to set read timeout to remote ssh connection: %v", err)
-		}
-
-		err = localConn.SetWriteDeadline(time.Now().Add(timeout))
-		if err != nil {
-			oktetoLog.Infof("failed to set write timeout to the local socket: %v", err)
-		}
-
 		_, err := io.Copy(localConn, remoteConn)
 		if err != nil {
 			return fmt.Errorf("error while receiving data from remote SSH agent: %w", err)
