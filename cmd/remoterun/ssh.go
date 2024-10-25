@@ -25,6 +25,7 @@ import (
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/remote"
+	"golang.org/x/sync/errgroup"
 )
 
 type sshForwarder struct {
@@ -111,30 +112,24 @@ func (s *sshForwarder) handleConnection(localConn net.Conn, host, port, userToke
 		return
 	}
 
-	// Channel to receive errors from goroutines
-	errChan := make(chan error, 2)
+	var eg errgroup.Group
 
 	// Forward data from local to remote
-	go func() {
+	eg.Go(func() error {
 		_, err := io.Copy(remoteConn, localConn)
-		if err != nil && !errors.Is(err, net.ErrClosed) {
-			oktetoLog.Errorf("Error copying from local to remote: %v", err)
-		}
-		errChan <- err
-	}()
+		return fmt.Errorf("error while sending data to remote SSH agent: %w", err)
+	})
 
 	// Forward data from remote to local
-	go func() {
+	eg.Go(func() error {
 		_, err := io.Copy(localConn, remoteConn)
-		if err != nil && !errors.Is(err, net.ErrClosed) {
-			oktetoLog.Errorf("Error copying from remote to local: %v", err)
-		}
-		errChan <- err
-	}()
+		return fmt.Errorf("error while receiving data from remote SSH agent: %w", err)
+	})
 
-	// Wait for both directions to finish
-	<-errChan
-	<-errChan
+	err = eg.Wait()
+	if err != nil && !errors.Is(err, net.ErrClosed) {
+		oktetoLog.Errorf("Error sending/receiving data to/from remote SSH agent: %v", err)
+	}
 
 	// Connections will be closed by deferred calls
 }
