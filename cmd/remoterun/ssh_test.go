@@ -79,8 +79,10 @@ func TestSSHForwarder(t *testing.T) {
 	defer localConn.Close()
 	defer clientConn.Close()
 
+	timeout := 10 * time.Second
 	go func() {
-		forwarder.handleConnection(ctx, localConn, "127.0.0.1", fmt.Sprintf("%d", port), authToken)
+		err := forwarder.handleConnection(ctx, localConn, "127.0.0.1", fmt.Sprintf("%d", port), authToken, timeout)
+		require.NoError(t, err)
 	}()
 
 	// Simulate client writing data

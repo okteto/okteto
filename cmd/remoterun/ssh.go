@@ -23,10 +23,13 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"golang.org/x/sync/errgroup"
 )
+
+const timeout = 5 * time.Minute
 
 type sshForwarder struct {
 	getTLSConfig func() *tls.Config
@@ -86,12 +89,17 @@ func (s *sshForwarder) startSshForwarder(ctx context.Context, sshAgentHostname, 
 		}
 
 		// Handle each connection concurrently
-		go s.handleConnection(ctx, localConn, sshAgentHostname, sshAgentPort, userToken)
+		go func() {
+			err := s.handleConnection(ctx, localConn, sshAgentHostname, sshAgentPort, userToken, timeout)
+			if err != nil && !errors.Is(err, net.ErrClosed) {
+				oktetoLog.Errorf("Error sending/receiving data to/from remote SSH agent: %v", err)
+			}
+		}()
 	}
 	return nil
 }
 
-func (s *sshForwarder) handleConnection(ctx context.Context, localConn net.Conn, host, port, userToken string) {
+func (s *sshForwarder) handleConnection(ctx context.Context, localConn net.Conn, host, port, userToken string, timeout time.Duration) error {
 	defer localConn.Close()
 
 	cfg := s.getTLSConfig()
@@ -100,29 +108,39 @@ func (s *sshForwarder) handleConnection(ctx context.Context, localConn net.Conn,
 	remoteConn, err := tls.Dial("tcp", fmt.Sprintf("%s:%s", host, port), cfg)
 	if err != nil {
 		oktetoLog.Errorf("Failed to connect to remote SSH agent: %v", err)
-		return
+		return fmt.Errorf("failed to connect to remote SSH agent: %v", err)
 	}
 	defer remoteConn.Close()
+
+	// Set timeout for auth request
+	remoteConn.SetWriteDeadline(time.Now().Add(timeout))
 
 	// Send the authentication token
 	_, err = remoteConn.Write([]byte(userToken + "\n"))
 	if err != nil {
 		oktetoLog.Errorf("Failed to write auth token to remote SSH agent: %v", err)
-		return
+		return fmt.Errorf("failed to write auth token to remote SSH agent: %v", err)
 	}
+
+	// Setting timeout to read response from server
+	remoteConn.SetReadDeadline(time.Now().Add(timeout))
 
 	// Read the acknowledgment
 	reader := bufio.NewReader(remoteConn)
 	ack, err := reader.ReadString('\n')
 	if err != nil {
 		oktetoLog.Errorf("Failed to read ACK from remote SSH agent: %v", err)
-		return
+		return fmt.Errorf("failed to read ACK from remote SSH agent: %v", err)
 	}
 	ack = strings.TrimSpace(ack)
 	if ack != "OK" {
 		oktetoLog.Errorf("Invalid ACK message. Expected 'OK' but remote SSH agent returned '%s'", ack)
-		return
+		return fmt.Errorf("invalid ACK message. Expected 'OK' but remote SSH agent returned '%s'", ack)
 	}
+
+	// Reset deadlines before starting data forwarding
+	remoteConn.SetDeadline(time.Time{})
+	localConn.SetDeadline(time.Time{})
 
 	go func() {
 		<-ctx.Done()
@@ -134,6 +152,9 @@ func (s *sshForwarder) handleConnection(ctx context.Context, localConn net.Conn,
 
 	// Forward data from local to remote
 	eg.Go(func() error {
+		localConn.SetReadDeadline(time.Now().Add(timeout))
+		remoteConn.SetWriteDeadline(time.Now().Add(timeout))
+
 		_, err := io.Copy(remoteConn, localConn)
 		if err != nil {
 			return fmt.Errorf("error while sending data to remote SSH agent: %w", err)
@@ -143,6 +164,9 @@ func (s *sshForwarder) handleConnection(ctx context.Context, localConn net.Conn,
 
 	// Forward data from remote to local
 	eg.Go(func() error {
+		remoteConn.SetReadDeadline(time.Now().Add(timeout))
+		localConn.SetWriteDeadline(time.Now().Add(timeout))
+
 		_, err := io.Copy(localConn, remoteConn)
 		if err != nil {
 			return fmt.Errorf("error while receiving data from remote SSH agent: %w", err)
@@ -150,8 +174,5 @@ func (s *sshForwarder) handleConnection(ctx context.Context, localConn net.Conn,
 		return nil
 	})
 
-	err = eg.Wait()
-	if err != nil && !errors.Is(err, net.ErrClosed) {
-		oktetoLog.Errorf("Error sending/receiving data to/from remote SSH agent: %v", err)
-	}
+	return eg.Wait()
 }
