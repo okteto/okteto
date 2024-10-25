@@ -152,8 +152,8 @@ type Runner struct {
 	oktetoClientProvider OktetoClientProvider
 	ioCtrl               *io.Controller
 	getEnviron           func() []string
-	useInternalNetwork   bool
 	generateSocketName   socketNameGenerator
+	useInternalNetwork   bool
 }
 
 // Params struct to pass the necessary parameters to create the Dockerfile
