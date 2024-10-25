@@ -117,7 +117,7 @@ func (s *sshForwarder) handleConnection(localConn net.Conn, host, port, userToke
 	// Forward data from local to remote
 	go func() {
 		_, err := io.Copy(remoteConn, localConn)
-		if err != nil && !isClosedNetworkError(err) {
+		if err != nil && !errors.Is(err, net.ErrClosed) {
 			oktetoLog.Errorf("Error copying from local to remote: %v", err)
 		}
 		errChan <- err
@@ -126,7 +126,7 @@ func (s *sshForwarder) handleConnection(localConn net.Conn, host, port, userToke
 	// Forward data from remote to local
 	go func() {
 		_, err := io.Copy(localConn, remoteConn)
-		if err != nil && !isClosedNetworkError(err) {
+		if err != nil && !errors.Is(err, net.ErrClosed) {
 			oktetoLog.Errorf("Error copying from remote to local: %v", err)
 		}
 		errChan <- err
@@ -137,12 +137,4 @@ func (s *sshForwarder) handleConnection(localConn net.Conn, host, port, userToke
 	<-errChan
 
 	// Connections will be closed by deferred calls
-}
-
-func isClosedNetworkError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	return errors.Is(err, net.ErrClosed)
 }
