@@ -875,20 +875,21 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 			}
 
 			contextAbs := buildInfo.Context
-
-			if !filepath.IsAbs(contextAbs) && filepath.IsAbs(buildInfo.Dockerfile) {
-				oktetoLog.Infof("context is not absolute but dockerfile is absolute")
-			} else if filepath.IsAbs(contextAbs) && filepath.IsAbs(buildInfo.Dockerfile) {
+			contextIsAbs := filepath.IsAbs(contextAbs)
+			dockerFileIsAbs := filepath.IsAbs(buildInfo.Dockerfile)
+			switch {
+			case contextIsAbs && dockerFileIsAbs:
 				buildInfo.Dockerfile, err = filepath.Rel(contextAbs, buildInfo.Dockerfile)
 				if err != nil {
 					return nil, err
 				}
-			} else if !filepath.IsAbs(contextAbs) && !filepath.IsAbs(buildInfo.Dockerfile) {
+			case !contextIsAbs && !dockerFileIsAbs:
 				oktetoLog.Infof("context and dockerfile are relative")
-			} else {
-				oktetoLog.Infof("context and dockerfile are relative")
+			case !contextIsAbs && dockerFileIsAbs:
+				oktetoLog.Infof("context is not absolute but dockerfile is absolute")
+			default: // contextIsAbs && !dockerFileIsAbs
+				oktetoLog.Infof("context is absolute but dockerfile is relative")
 			}
-
 		}
 
 		if _, ok := m.Build[svcName]; !ok {
