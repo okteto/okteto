@@ -28,6 +28,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/docker/docker/pkg/namesgenerator"
 	"github.com/mitchellh/go-homedir"
 	"github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
@@ -51,7 +52,6 @@ const (
 	DeployCommand = "deploy"
 	// DestroyCommand is the command to destroy a dev environment remotely
 	DestroyCommand         = "destroy"
-	SshAgentLocalSocket    = "/tmp/okteto-ssh-agent.sock"
 	oktetoDockerignoreName = ".oktetodeployignore"
 	dockerfileTemplate     = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
@@ -94,6 +94,7 @@ ENV {{$key}}={{$val}}
 
 ENV {{ .SSHAgentHostnameArgName }}="{{ .SSHAgentHostname }}"
 ENV {{ .SSHAgentPortArgName }}="{{ .SSHAgentPort }}"
+ENV {{ .SSHAgentSocketArgName }}="{{ .SSHAgentSocket }}"
 
 ARG {{ .GitCommitArgName }}
 ARG {{ .GitBranchArgName }}
@@ -139,6 +140,8 @@ type Builder interface {
 	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error
 }
 
+type socketNameGenerator func() string
+
 // Runner struct in charge of creating the Dockerfile for remote execution
 // of commands like deploy and destroy and running the build
 type Runner struct {
@@ -150,6 +153,7 @@ type Runner struct {
 	ioCtrl               *io.Controller
 	getEnviron           func() []string
 	useInternalNetwork   bool
+	generateSocketName   socketNameGenerator
 }
 
 // Params struct to pass the necessary parameters to create the Dockerfile
@@ -223,6 +227,7 @@ type dockerfileTemplateProperties struct {
 	SSHAgentHostname             string
 	SSHAgentPortArgName          string
 	SSHAgentPort                 string
+	SSHAgentSocketArgName        string
 	SSHAgentSocket               string
 	Caches                       []string
 	Artifacts                    []model.Artifact
@@ -241,6 +246,7 @@ func NewRunner(ioCtrl *io.Controller, builder Builder) *Runner {
 		builder:              builder,
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
 		getEnviron:           os.Environ,
+		generateSocketName:   generateRandomSocketNameString,
 	}
 }
 
@@ -429,7 +435,8 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		SSHAgentHostnameArgName:      constants.OktetoSshAgentHostnameEnvVar,
 		SSHAgentPort:                 params.SSHAgentPort,
 		SSHAgentPortArgName:          constants.OktetoSshAgentPortEnvVar,
-		SSHAgentSocket:               SshAgentLocalSocket,
+		SSHAgentSocketArgName:        constants.OktetoSshAgentSocketEnvVar,
+		SSHAgentSocket:               r.generateSocketName(),
 	}
 
 	dockerfileSyntax.prepareEnvVars()
@@ -645,4 +652,9 @@ func formatEnvVarValueForDocker(value string) string {
 	result.WriteString("\"")
 
 	return result.String()
+}
+
+func generateRandomSocketNameString() string {
+	random := strings.ReplaceAll(namesgenerator.GetRandomName(-1), "_", "-")
+	return fmt.Sprintf("/tmp/okteto-%s.sock", random)
 }

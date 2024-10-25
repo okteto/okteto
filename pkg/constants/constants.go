@@ -152,4 +152,7 @@ const (
 
 	// OktetoSshAgentPortEnvVar Env variable defining the port where the SSH Agent is listening
 	OktetoSshAgentPortEnvVar = "OKTETO_SSH_AGENT_PORT"
+
+	// OktetoSshAgentSocketEnvVar Env variable defining the socket where the ssh-forwarder will listen
+	OktetoSshAgentSocketEnvVar = "OKTETO_SSH_AGENT_SOCKET"
 )

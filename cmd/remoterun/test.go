@@ -121,10 +121,11 @@ commands:
 
 			sshAgentHostname := os.Getenv(constants.OktetoSshAgentHostnameEnvVar)
 			sshAgentPort := os.Getenv(constants.OktetoSshAgentPortEnvVar)
+			sshSocket := os.Getenv(constants.OktetoSshAgentSocketEnvVar)
 
 			if sshAgentHostname != "" {
 				forwarder := newSSHForwarder()
-				go forwarder.startSshForwarder(sshAgentHostname, sshAgentPort, oktetoContext.GetCurrentToken())
+				go forwarder.startSshForwarder(sshAgentHostname, sshAgentPort, sshSocket, oktetoContext.GetCurrentToken())
 			}
 
 			return runner.RunTest(params)

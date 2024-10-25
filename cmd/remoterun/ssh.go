@@ -24,7 +24,6 @@ import (
 	"strings"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/remote"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -48,22 +47,22 @@ func newTLSConfigWithSystemCA() *tls.Config {
 // startSshForwarder This functions starts the ssh-forwarded process expected to be run on remote-run commands.
 // This process just listens a UNIX socket, and forward the messages to the SSH Agent exposed in the hostname
 // and port received as parameters
-func (s *sshForwarder) startSshForwarder(sshAgentHostname, sshAgentPort, userToken string) {
+func (s *sshForwarder) startSshForwarder(sshAgentHostname, sshAgentPort, sshSocket, userToken string) {
 	// Remove existing socket if it exists
-	os.Remove(remote.SshAgentLocalSocket)
+	os.Remove(sshSocket)
 
 	// Listen on the UNIX domain socket
-	localListener, err := net.Listen("unix", remote.SshAgentLocalSocket)
+	localListener, err := net.Listen("unix", sshSocket)
 	if err != nil {
-		oktetoLog.Fatalf("Failed to listen on UNIX socket %s: %v", remote.SshAgentLocalSocket, err)
+		oktetoLog.Fatalf("Failed to listen on UNIX socket %s: %v", sshSocket, err)
 	}
 	defer localListener.Close()
-	oktetoLog.Infof("SSH Agent Forwarder listening on %s\n", remote.SshAgentLocalSocket)
+	oktetoLog.Infof("SSH Agent Forwarder listening on %s\n", sshSocket)
 
 	// Set permissions so only the owner can access the socket
-	err = os.Chmod(remote.SshAgentLocalSocket, 0600)
+	err = os.Chmod(sshSocket, 0600)
 	if err != nil {
-		oktetoLog.Fatalf("Failed to set permissions on UNIX socket %s: %v", remote.SshAgentLocalSocket, err)
+		oktetoLog.Fatalf("Failed to set permissions on UNIX socket %s: %v", sshSocket, err)
 	}
 
 	for {

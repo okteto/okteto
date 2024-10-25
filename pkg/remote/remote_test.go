@@ -45,6 +45,12 @@ func (f fakeBuilder) Run(_ context.Context, opts *types.BuildOptions, _ *io.Cont
 	return f.err
 }
 
+type fakeNameGenerator struct {
+	name string
+}
+
+func (f fakeNameGenerator) GenerateName() string { return f.name }
+
 func TestRemoteTest(t *testing.T) {
 	ctx := context.Background()
 	fakeManifest := &model.Manifest{
@@ -140,6 +146,9 @@ func TestRemoteTest(t *testing.T) {
 			oktetoClient := &client.FakeOktetoClient{
 				Users: usersClient,
 			}
+			nameGenerator := fakeNameGenerator{
+				name: "test",
+			}
 			rdc := Runner{
 				builder:              fakeBuilder{err: tt.config.builderErr},
 				fs:                   fs,
@@ -150,6 +159,7 @@ func TestRemoteTest(t *testing.T) {
 				getEnviron: func() []string {
 					return []string{}
 				},
+				generateSocketName: nameGenerator.GenerateName,
 			}
 			err := rdc.Run(ctx, tt.config.params)
 			if tt.expected != nil {
@@ -177,6 +187,9 @@ func TestExtraHosts(t *testing.T) {
 	oktetoClient := &client.FakeOktetoClient{
 		Users: usersClient,
 	}
+	nameGenerator := fakeNameGenerator{
+		name: "test",
+	}
 	rdc := Runner{
 		builder: fakeBuilder{
 			assertOptions: func(o *types.BuildOptions) {
@@ -195,6 +208,7 @@ func TestExtraHosts(t *testing.T) {
 		getEnviron: func() []string {
 			return []string{}
 		},
+		generateSocketName: nameGenerator.GenerateName,
 	}
 
 	err := rdc.Run(ctx, &Params{
@@ -302,6 +316,7 @@ ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME="dependency_user"
 
 ENV OKTETO_SSH_AGENT_HOSTNAME="ssh-agent.default.svc.cluster.local"
 ENV OKTETO_SSH_AGENT_PORT="3000"
+ENV OKTETO_SSH_AGENT_SOCKET="okteto-socket.sock"
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
@@ -318,7 +333,7 @@ RUN \
   \
   --mount=type=secret,id=known_hosts \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
-  export SSH_AUTH_SOCK=/tmp/okteto-ssh-agent.sock && \
+  export SSH_AUTH_SOCK=okteto-socket.sock && \
   /okteto/bin/okteto remote-run deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test"
 
 
@@ -403,6 +418,7 @@ ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME="dependency_user"
 
 ENV OKTETO_SSH_AGENT_HOSTNAME="ssh-agent.default.svc.cluster.local"
 ENV OKTETO_SSH_AGENT_PORT="3000"
+ENV OKTETO_SSH_AGENT_SOCKET="okteto-socket.sock"
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
@@ -417,7 +433,7 @@ RUN \
   \
   --mount=type=secret,id=known_hosts \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
-  export SSH_AUTH_SOCK=/tmp/okteto-ssh-agent.sock && \
+  export SSH_AUTH_SOCK=okteto-socket.sock && \
   /okteto/bin/okteto remote-run test --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test" || true
 
 
@@ -491,6 +507,7 @@ WORKDIR /okteto/src
 
 ENV OKTETO_SSH_AGENT_HOSTNAME=""
 ENV OKTETO_SSH_AGENT_PORT=""
+ENV OKTETO_SSH_AGENT_SOCKET="okteto-socket.sock"
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
@@ -523,12 +540,16 @@ COPY --from=runner /etc/.oktetocachekey .oktetocachekey
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			wdCtrl.SetErrors(tt.config.wd)
+			nameGenerator := fakeNameGenerator{
+				name: "okteto-socket.sock",
+			}
 			rdc := Runner{
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,
 				getEnviron: func() []string {
 					return []string{}
 				},
+				generateSocketName: nameGenerator.GenerateName,
 			}
 			dockerfileName, err := rdc.createDockerfile("/test", tt.config.params)
 			assert.ErrorIs(t, err, tt.expected.err)
@@ -551,6 +572,9 @@ COPY --from=runner /etc/.oktetocachekey .oktetocachekey
 
 func TestDockerfileWithCache(t *testing.T) {
 	wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/"))
+	nameGenerator := fakeNameGenerator{
+		name: "okteto-socket.sock",
+	}
 	fs := afero.NewMemMapFs()
 	rdc := Runner{
 		fs:                   fs,
@@ -558,6 +582,7 @@ func TestDockerfileWithCache(t *testing.T) {
 		getEnviron: func() []string {
 			return []string{}
 		},
+		generateSocketName: nameGenerator.GenerateName,
 	}
 	caches := []string{"/my", "/cache", "/list"}
 	dockerfileName, err := rdc.createDockerfile("/test", &Params{
