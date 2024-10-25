@@ -613,6 +613,11 @@ func GetDeployer(ctx context.Context,
 		return newRemoteDeployer(buildEnvVarsGetter, ioCtrl, dependencyEnvVarsGetter, executionEnvVarGetter), nil
 	}
 
+	var execDir string
+	if opts.Manifest.Deploy != nil {
+		execDir = opts.Manifest.Deploy.Context
+	}
+
 	oktetoLog.Info("Deploying locally...")
 	// In case the command has to run locally, we need the "local" runner
 	runner, err := deployable.NewDeployRunnerForLocal(
@@ -620,6 +625,7 @@ func GetDeployer(ctx context.Context,
 		opts.Name,
 		opts.RunWithoutBash,
 		opts.ManifestPathFlag,
+		execDir,
 		cmapHandler,
 		k8sProvider,
 		model.GetAvailablePort,

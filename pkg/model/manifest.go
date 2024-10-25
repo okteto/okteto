@@ -171,6 +171,7 @@ type DeployInfo struct {
 	Endpoints      EndpointSpec        `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	Divert         *DivertDeploy       `json:"divert,omitempty" yaml:"divert,omitempty"`
 	Image          string              `json:"image,omitempty" yaml:"image,omitempty"`
+	Context        string              `yaml:"context,omitempty"`
 	Commands       []DeployCommand     `json:"commands,omitempty" yaml:"commands,omitempty"`
 	Remote         bool                `json:"remote,omitempty" yaml:"remote,omitempty"`
 }
@@ -178,6 +179,7 @@ type DeployInfo struct {
 // DestroyInfo represents what must be destroyed for the app
 type DestroyInfo struct {
 	Image    string          `json:"image,omitempty" yaml:"image,omitempty"`
+	Context  string          `yaml:"context,omitempty"`
 	Commands []DeployCommand `json:"commands,omitempty" yaml:"commands,omitempty"`
 	Remote   bool            `json:"remote,omitempty" yaml:"remote,omitempty"`
 }

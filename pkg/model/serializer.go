@@ -859,6 +859,10 @@ func (d *DeployInfo) MarshalYAML() (interface{}, error) {
 		}
 		return result, nil
 	}
+	if d.Context == "" {
+		d.Context = "."
+	}
+
 	return d, nil
 }
 
@@ -1041,6 +1045,10 @@ func (d *DestroyInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	err = unmarshal(&destroy)
 	if err != nil {
 		return err
+	}
+
+	if d.Context == "" {
+		d.Context = "."
 	}
 
 	*d = DestroyInfo(destroy)

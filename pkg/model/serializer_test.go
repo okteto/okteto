@@ -2195,7 +2195,7 @@ func TestDeployInfoMarshalling(t *testing.T) {
 					Command: "okteto deploy",
 				},
 			}},
-			expected: "commands:\n- name: build\n  command: okteto build\n- name: deploy\n  command: okteto deploy\n",
+			expected: "context: .\ncommands:\n- name: build\n  command: okteto build\n- name: deploy\n  command: okteto deploy\n",
 		},
 	}
 
