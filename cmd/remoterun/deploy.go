@@ -141,12 +141,21 @@ It is important that this command does the minimum and must not do calculations 
 			sshAgentPort := os.Getenv(constants.OktetoSshAgentPortEnvVar)
 			sshSocket := os.Getenv(constants.OktetoSshAgentSocketEnvVar)
 
-			if sshAgentHostname != "" {
+			if sshAgentHostname != "" && sshAgentPort != "" && sshSocket != "" {
 				forwarder := newSSHForwarder()
 				go func() {
 					err := forwarder.startSshForwarder(ctx, sshAgentHostname, sshAgentPort, sshSocket, oktetoContext.GetCurrentToken())
 					oktetoLog.Infof("error starting ssh forwarder %v", err)
 				}()
+			} else {
+				message := fmt.Sprintf("ssh forwarded not started because some mandatory configuration parameters are missing. %s=%s, %s=%s and %s=%s",
+					constants.OktetoSshAgentHostnameEnvVar,
+					sshAgentHostname,
+					constants.OktetoSshAgentPortEnvVar,
+					sshAgentPort,
+					constants.OktetoSshAgentSocketEnvVar,
+					sshSocket)
+				oktetoLog.Info(message)
 			}
 
 			return c.Run(ctx, params)
