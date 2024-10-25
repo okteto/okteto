@@ -15,6 +15,7 @@ package remoterun
 
 import (
 	"bufio"
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -34,6 +35,7 @@ import (
 )
 
 func TestSSHForwarder(t *testing.T) {
+	ctx := context.Background()
 	tlsConfig, err := createTLSConfigForMockServer()
 	require.NoError(t, err)
 
@@ -78,7 +80,7 @@ func TestSSHForwarder(t *testing.T) {
 	defer clientConn.Close()
 
 	go func() {
-		forwarder.handleConnection(localConn, "127.0.0.1", fmt.Sprintf("%d", port), authToken)
+		forwarder.handleConnection(ctx, localConn, "127.0.0.1", fmt.Sprintf("%d", port), authToken)
 	}()
 
 	// Simulate client writing data

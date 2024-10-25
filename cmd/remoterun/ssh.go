@@ -15,6 +15,7 @@ package remoterun
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -47,7 +48,7 @@ func newTLSConfigWithSystemCA() *tls.Config {
 // startSshForwarder This functions starts the ssh-forwarded process expected to be run on remote-run commands.
 // This process just listens a UNIX socket, and forward the messages to the SSH Agent exposed in the hostname
 // and port received as parameters
-func (s *sshForwarder) startSshForwarder(sshAgentHostname, sshAgentPort, sshSocket, userToken string) error {
+func (s *sshForwarder) startSshForwarder(ctx context.Context, sshAgentHostname, sshAgentPort, sshSocket, userToken string) error {
 	// Remove existing socket if it exists
 	os.Remove(sshSocket)
 
@@ -67,20 +68,30 @@ func (s *sshForwarder) startSshForwarder(sshAgentHostname, sshAgentPort, sshSock
 		return err
 	}
 
+	go func() {
+		<-ctx.Done()
+		localListener.Close()
+	}()
+
 	for {
 		// Accept connections from local clients
 		localConn, err := localListener.Accept()
 		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				oktetoLog.Debugf("Listener closed, stopping accept new connections")
+				break
+			}
 			oktetoLog.Errorf("Failed to accept local connection: %v", err)
 			continue
 		}
 
 		// Handle each connection concurrently
-		go s.handleConnection(localConn, sshAgentHostname, sshAgentPort, userToken)
+		go s.handleConnection(ctx, localConn, sshAgentHostname, sshAgentPort, userToken)
 	}
+	return nil
 }
 
-func (s *sshForwarder) handleConnection(localConn net.Conn, host, port, userToken string) {
+func (s *sshForwarder) handleConnection(ctx context.Context, localConn net.Conn, host, port, userToken string) {
 	defer localConn.Close()
 
 	cfg := s.getTLSConfig()
@@ -113,24 +124,34 @@ func (s *sshForwarder) handleConnection(localConn net.Conn, host, port, userToke
 		return
 	}
 
+	go func() {
+		<-ctx.Done()
+		localConn.Close()
+		remoteConn.Close()
+	}()
+
 	var eg errgroup.Group
 
 	// Forward data from local to remote
 	eg.Go(func() error {
 		_, err := io.Copy(remoteConn, localConn)
-		return fmt.Errorf("error while sending data to remote SSH agent: %w", err)
+		if err != nil {
+			return fmt.Errorf("error while sending data to remote SSH agent: %w", err)
+		}
+		return nil
 	})
 
 	// Forward data from remote to local
 	eg.Go(func() error {
 		_, err := io.Copy(localConn, remoteConn)
-		return fmt.Errorf("error while receiving data from remote SSH agent: %w", err)
+		if err != nil {
+			return fmt.Errorf("error while receiving data from remote SSH agent: %w", err)
+		}
+		return nil
 	})
 
 	err = eg.Wait()
 	if err != nil && !errors.Is(err, net.ErrClosed) {
 		oktetoLog.Errorf("Error sending/receiving data to/from remote SSH agent: %v", err)
 	}
-
-	// Connections will be closed by deferred calls
 }

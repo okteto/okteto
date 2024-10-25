@@ -126,7 +126,7 @@ commands:
 			if sshAgentHostname != "" {
 				forwarder := newSSHForwarder()
 				go func() {
-					err := forwarder.startSshForwarder(sshAgentHostname, sshAgentPort, sshSocket, oktetoContext.GetCurrentToken())
+					err := forwarder.startSshForwarder(ctx, sshAgentHostname, sshAgentPort, sshSocket, oktetoContext.GetCurrentToken())
 					oktetoLog.Infof("error starting ssh forwarder %v", err)
 				}()
 			}
