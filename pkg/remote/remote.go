@@ -92,8 +92,8 @@ ARG {{$key}} {{$val}}
 ENV {{$key}}={{$val}}
 {{end}}
 
-ENV {{ .SshAgentHostnameArgName }}="{{ .SshAgentHostname }}"
-ENV {{ .SshAgentPortArgName }}="{{ .SshAgentPort }}"
+ENV {{ .SSHAgentHostnameArgName }}="{{ .SSHAgentHostname }}"
+ENV {{ .SSHAgentPortArgName }}="{{ .SSHAgentPort }}"
 
 ARG {{ .GitCommitArgName }}
 ARG {{ .GitBranchArgName }}
@@ -110,7 +110,7 @@ RUN \
   {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}},sharing=private {{end}}\
   --mount=type=secret,id=known_hosts \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
-{{ if .SshAgentHostname }}  export SSH_AUTH_SOCK={{ .SshAgentSocket }} && \{{ end }}
+{{ if .SSHAgentHostname }}  export SSH_AUTH_SOCK={{ .SSHAgentSocket }} && \{{ end }}
   /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}{{ if eq .Command "test" }} || true{{ end }}
 
 {{range $key, $artifact := .Artifacts }}
@@ -168,10 +168,10 @@ type Params struct {
 	// okteto manifest which is resolved through params.ManifestPathFlag
 	ContextAbsolutePathOverride string
 	ManifestPathFlag            string
-	// SshAgentHostname hostname of the ssh-agent service
-	SshAgentHostname string
-	// SshAgentPort port of the ssh-agent service
-	SshAgentPort string
+	// SSHAgentHostname hostname of the ssh-agent service
+	SSHAgentHostname string
+	// SSHAgentPort port of the ssh-agent service
+	SSHAgentPort string
 	Deployable   deployable.Entity
 	CommandFlags []string
 	Caches       []string
@@ -219,11 +219,11 @@ type dockerfileTemplateProperties struct {
 	BuildKitHostArgName          string
 	OktetoRegistryURLArgName     string
 	Command                      string
-	SshAgentHostnameArgName      string
-	SshAgentHostname             string
-	SshAgentPortArgName          string
-	SshAgentPort                 string
-	SshAgentSocket               string
+	SSHAgentHostnameArgName      string
+	SSHAgentHostname             string
+	SSHAgentPortArgName          string
+	SSHAgentPort                 string
+	SSHAgentSocket               string
 	Caches                       []string
 	Artifacts                    []model.Artifact
 	UseRootUser                  bool
@@ -271,8 +271,8 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		return err
 	}
 
-	params.SshAgentHostname = sc.SshAgentHostname
-	params.SshAgentPort = sc.SshAgentPort
+	params.SSHAgentHostname = sc.SSHAgentHostname
+	params.SSHAgentPort = sc.SSHAgentPort
 
 	dockerfile, err := r.createDockerfile(tmpDir, params)
 	if err != nil {
@@ -358,8 +358,8 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 			buildOptions.ExtraHosts = getExtraHosts(registryUrl, subdomain, ip, *sc)
 		}
 
-		if sc.SshAgentHostname != "" {
-			buildOptions.ExtraHosts = append(buildOptions.ExtraHosts, types.HostMap{Hostname: sc.SshAgentHostname, IP: sc.SshAgentInternalIP})
+		if sc.SSHAgentHostname != "" {
+			buildOptions.ExtraHosts = append(buildOptions.ExtraHosts, types.HostMap{Hostname: sc.SSHAgentHostname, IP: sc.SSHAgentInternalIP})
 		}
 	}
 
@@ -425,11 +425,11 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		Caches:                       params.Caches,
 		Artifacts:                    params.Artifacts,
 		UseRootUser:                  params.UseRootUser,
-		SshAgentHostname:             params.SshAgentHostname,
-		SshAgentHostnameArgName:      constants.OktetoSshAgentHostnameEnvVar,
-		SshAgentPort:                 params.SshAgentPort,
-		SshAgentPortArgName:          constants.OktetoSshAgentPortEnvVar,
-		SshAgentSocket:               SshAgentLocalSocket,
+		SSHAgentHostname:             params.SSHAgentHostname,
+		SSHAgentHostnameArgName:      constants.OktetoSshAgentHostnameEnvVar,
+		SSHAgentPort:                 params.SSHAgentPort,
+		SSHAgentPortArgName:          constants.OktetoSshAgentPortEnvVar,
+		SSHAgentSocket:               SshAgentLocalSocket,
 	}
 
 	dockerfileSyntax.prepareEnvVars()

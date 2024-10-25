@@ -251,8 +251,8 @@ func TestCreateDockerfile(t *testing.T) {
 					},
 					DockerfileName:   "Dockerfile.deploy",
 					Command:          "deploy",
-					SshAgentHostname: "ssh-agent.default.svc.cluster.local",
-					SshAgentPort:     "3000",
+					SSHAgentHostname: "ssh-agent.default.svc.cluster.local",
+					SSHAgentPort:     "3000",
 					CommandFlags:     []string{"--name \"test\""},
 					UseRootUser:      true,
 				},
@@ -344,8 +344,8 @@ COPY --from=runner /etc/.oktetocachekey .oktetocachekey
 					},
 					DockerfileName:   "Dockerfile.test",
 					Command:          "test",
-					SshAgentHostname: "ssh-agent.default.svc.cluster.local",
-					SshAgentPort:     "3000",
+					SSHAgentHostname: "ssh-agent.default.svc.cluster.local",
+					SSHAgentPort:     "3000",
 					CommandFlags:     []string{"--name \"test\""},
 					Artifacts: []model.Artifact{
 						{

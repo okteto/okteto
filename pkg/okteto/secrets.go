@@ -259,11 +259,11 @@ func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.C
 		case "publicDomain":
 			metadata.PublicDomain = string(v.Value)
 		case "sshAgentInternalIP":
-			metadata.SshAgentInternalIP = string(v.Value)
+			metadata.SSHAgentInternalIP = string(v.Value)
 		case "sshAgentHostname":
-			metadata.SshAgentHostname = string(v.Value)
+			metadata.SSHAgentHostname = string(v.Value)
 		case "sshAgentPort":
-			metadata.SshAgentPort = string(v.Value)
+			metadata.SSHAgentPort = string(v.Value)
 		}
 	}
 	if metadata.PipelineRunnerImage == "" {
