@@ -143,7 +143,10 @@ It is important that this command does the minimum and must not do calculations 
 
 			if sshAgentHostname != "" {
 				forwarder := newSSHForwarder()
-				go forwarder.startSshForwarder(sshAgentHostname, sshAgentPort, sshSocket, oktetoContext.GetCurrentToken())
+				go func() {
+					err := forwarder.startSshForwarder(sshAgentHostname, sshAgentPort, sshSocket, oktetoContext.GetCurrentToken())
+					oktetoLog.Infof("error starting ssh forwarder %v", err)
+				}()
 			}
 
 			return c.Run(ctx, params)

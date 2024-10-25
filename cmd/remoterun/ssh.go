@@ -47,14 +47,15 @@ func newTLSConfigWithSystemCA() *tls.Config {
 // startSshForwarder This functions starts the ssh-forwarded process expected to be run on remote-run commands.
 // This process just listens a UNIX socket, and forward the messages to the SSH Agent exposed in the hostname
 // and port received as parameters
-func (s *sshForwarder) startSshForwarder(sshAgentHostname, sshAgentPort, sshSocket, userToken string) {
+func (s *sshForwarder) startSshForwarder(sshAgentHostname, sshAgentPort, sshSocket, userToken string) error {
 	// Remove existing socket if it exists
 	os.Remove(sshSocket)
 
 	// Listen on the UNIX domain socket
 	localListener, err := net.Listen("unix", sshSocket)
 	if err != nil {
-		oktetoLog.Fatalf("Failed to listen on UNIX socket %s: %v", sshSocket, err)
+		oktetoLog.Errorf("Failed to listen on UNIX socket %s: %v", sshSocket, err)
+		return err
 	}
 	defer localListener.Close()
 	oktetoLog.Infof("SSH Agent Forwarder listening on %s\n", sshSocket)
@@ -62,7 +63,8 @@ func (s *sshForwarder) startSshForwarder(sshAgentHostname, sshAgentPort, sshSock
 	// Set permissions so only the owner can access the socket
 	err = os.Chmod(sshSocket, 0600)
 	if err != nil {
-		oktetoLog.Fatalf("Failed to set permissions on UNIX socket %s: %v", sshSocket, err)
+		oktetoLog.Errorf("Failed to set permissions on UNIX socket %s: %v", sshSocket, err)
+		return err
 	}
 
 	for {
