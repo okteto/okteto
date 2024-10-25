@@ -36,7 +36,10 @@ func Test_destroyDeployments(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "ns",
-			Labels:    map[string]string{model.StackNameLabel: "stack-test"},
+			Labels: map[string]string{
+				model.StackNameLabel:        "stack-test",
+				model.StackServiceNameLabel: "test",
+			},
 		},
 	}
 
@@ -114,7 +117,10 @@ func Test_destroyStatefulsets(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "ns",
-			Labels:    map[string]string{model.StackNameLabel: "stack-test"},
+			Labels: map[string]string{
+				model.StackNameLabel:        "stack-test",
+				model.StackServiceNameLabel: "test",
+			},
 		},
 	}
 
@@ -204,7 +210,10 @@ func Test_destroyJobs(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "ns",
-			Labels:    map[string]string{model.StackNameLabel: "stack-test"},
+			Labels: map[string]string{
+				model.StackNameLabel:        "stack-test",
+				model.StackServiceNameLabel: "test",
+			},
 		},
 	}
 
