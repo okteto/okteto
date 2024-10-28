@@ -28,6 +28,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/docker/docker/pkg/namesgenerator"
 	"github.com/mitchellh/go-homedir"
 	"github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
@@ -91,6 +92,10 @@ ARG {{$key}} {{$val}}
 ENV {{$key}}={{$val}}
 {{end}}
 
+ENV {{ .SSHAgentHostnameArgName }}="{{ .SSHAgentHostname }}"
+ENV {{ .SSHAgentPortArgName }}="{{ .SSHAgentPort }}"
+ENV {{ .SSHAgentSocketArgName }}="{{ .SSHAgentSocket }}"
+
 ARG {{ .GitCommitArgName }}
 ARG {{ .GitBranchArgName }}
 ARG {{ .InvalidateCacheArgName }}
@@ -104,8 +109,9 @@ ENV {{$key}}={{$val}}
 
 RUN \
   {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}},sharing=private {{end}}\
-  --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
+  --mount=type=secret,id=known_hosts \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
+{{ if .SSHAgentHostname }}  export SSH_AUTH_SOCK={{ .SSHAgentSocket }} && \{{ end }}
   /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}{{ if eq .Command "test" }} || true{{ end }}
 
 {{range $key, $artifact := .Artifacts }}
@@ -134,6 +140,8 @@ type Builder interface {
 	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error
 }
 
+type socketNameGenerator func() string
+
 // Runner struct in charge of creating the Dockerfile for remote execution
 // of commands like deploy and destroy and running the build
 type Runner struct {
@@ -144,9 +152,8 @@ type Runner struct {
 	oktetoClientProvider OktetoClientProvider
 	ioCtrl               *io.Controller
 	getEnviron           func() []string
-	// sshAuthSockEnvvar is the default for SSH_AUTH_SOCK. Provided mostly for testing
-	sshAuthSockEnvvar  string
-	useInternalNetwork bool
+	generateSocketName   socketNameGenerator
+	useInternalNetwork   bool
 }
 
 // Params struct to pass the necessary parameters to create the Dockerfile
@@ -159,17 +166,20 @@ type Params struct {
 	Command                      string
 	TemplateName                 string
 	DockerfileName               string
-	KnownHostsPath               string
 	BaseImage                    string
 	// ContextAbsolutePathOverride is the absolute path for the build context. Optional.
 	// If this values is not defined it will default to the folder location of the
 	// okteto manifest which is resolved through params.ManifestPathFlag
 	ContextAbsolutePathOverride string
 	ManifestPathFlag            string
-	Deployable                  deployable.Entity
-	CommandFlags                []string
-	Caches                      []string
-	Hosts                       []model.Host
+	// SSHAgentHostname hostname of the ssh-agent service
+	SSHAgentHostname string
+	// SSHAgentPort port of the ssh-agent service
+	SSHAgentPort string
+	Deployable   deployable.Entity
+	CommandFlags []string
+	Caches       []string
+	Hosts        []model.Host
 	// IgnoreRules are the ignoring rules added to this build execution.
 	// Rules follow the .dockerignore syntax as defined in:
 	// https://docs.docker.com/build/building/context/#syntax
@@ -213,6 +223,12 @@ type dockerfileTemplateProperties struct {
 	BuildKitHostArgName          string
 	OktetoRegistryURLArgName     string
 	Command                      string
+	SSHAgentHostnameArgName      string
+	SSHAgentHostname             string
+	SSHAgentPortArgName          string
+	SSHAgentPort                 string
+	SSHAgentSocketArgName        string
+	SSHAgentSocket               string
 	Caches                       []string
 	Artifacts                    []model.Artifact
 	UseRootUser                  bool
@@ -230,6 +246,7 @@ func NewRunner(ioCtrl *io.Controller, builder Builder) *Runner {
 		builder:              builder,
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
 		getEnviron:           os.Environ,
+		generateSocketName:   generateRandomSocketNameString,
 	}
 }
 
@@ -259,6 +276,9 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 	if err != nil {
 		return err
 	}
+
+	params.SSHAgentHostname = sc.SSHAgentHostname
+	params.SSHAgentPort = sc.SSHAgentPort
 
 	dockerfile, err := r.createDockerfile(tmpDir, params)
 	if err != nil {
@@ -343,37 +363,21 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 			}
 			buildOptions.ExtraHosts = getExtraHosts(registryUrl, subdomain, ip, *sc)
 		}
+
+		if sc.SSHAgentHostname != "" {
+			buildOptions.ExtraHosts = append(buildOptions.ExtraHosts, types.HostMap{Hostname: sc.SSHAgentHostname, IP: sc.SSHAgentInternalIP})
+		}
 	}
 
 	buildOptions.ExtraHosts = addDefinedHosts(buildOptions.ExtraHosts, params.Hosts)
 
-	sshSock := os.Getenv(r.sshAuthSockEnvvar)
-	if sshSock == "" {
-		sshSock = os.Getenv("SSH_AUTH_SOCK")
-	}
-
-	if sshSock != "" {
-		if _, err := os.Stat(sshSock); err != nil {
-			oktetoLog.Debugf("Not mounting ssh agent. Error reading socket: %s", err.Error())
-		} else {
-			sshSession := types.BuildSshSession{Id: "remote", Target: sshSock}
-			buildOptions.SshSessions = append(buildOptions.SshSessions, sshSession)
-		}
-
-		// TODO: check if ~/.ssh/config exists and has UserKnownHostsFile defined
-		knownHostsPath := params.KnownHostsPath
-		if knownHostsPath == "" {
-			knownHostsPath = filepath.Join(home, ".ssh", "known_hosts")
-		}
-		if _, err := os.Stat(knownHostsPath); err != nil {
-			oktetoLog.Debugf("Not know_hosts file. Error reading file: %s", err.Error())
-		} else {
-			oktetoLog.Debugf("reading known hosts from %s", knownHostsPath)
-			buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
-		}
-
+	// TODO: check if ~/.ssh/config exists and has UserKnownHostsFile defined
+	knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
+	if _, err := os.Stat(knownHostsPath); err != nil {
+		oktetoLog.Debugf("Not know_hosts file. Error reading file: %s", err.Error())
 	} else {
-		oktetoLog.Debug("no ssh agent found. Not mounting ssh-agent for build")
+		oktetoLog.Debugf("reading known hosts from %s", knownHostsPath)
+		buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
 	}
 
 	if len(params.Artifacts) > 0 {
@@ -427,6 +431,12 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		Caches:                       params.Caches,
 		Artifacts:                    params.Artifacts,
 		UseRootUser:                  params.UseRootUser,
+		SSHAgentHostname:             params.SSHAgentHostname,
+		SSHAgentHostnameArgName:      constants.OktetoSshAgentHostnameEnvVar,
+		SSHAgentPort:                 params.SSHAgentPort,
+		SSHAgentPortArgName:          constants.OktetoSshAgentPortEnvVar,
+		SSHAgentSocketArgName:        constants.OktetoSshAgentSocketEnvVar,
+		SSHAgentSocket:               r.generateSocketName(),
 	}
 
 	dockerfileSyntax.prepareEnvVars()
@@ -642,4 +652,9 @@ func formatEnvVarValueForDocker(value string) string {
 	result.WriteString("\"")
 
 	return result.String()
+}
+
+func generateRandomSocketNameString() string {
+	random := strings.ReplaceAll(namesgenerator.GetRandomName(-1), "_", "-")
+	return fmt.Sprintf("/tmp/okteto-%s.sock", random)
 }

@@ -20,6 +20,9 @@ type ClusterMetadata struct {
 	BuildKitInternalIP  string
 	PublicDomain        string
 	CompanyName         string
+	SSHAgentInternalIP  string
+	SSHAgentHostname    string
+	SSHAgentPort        string
 	Certificate         []byte
 	IsTrialLicense      bool
 }

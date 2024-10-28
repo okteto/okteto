@@ -16,9 +16,11 @@ package remoterun
 import (
 	"context"
 	"fmt"
+	"os"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	deployCMD "github.com/okteto/okteto/cmd/deploy"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -133,6 +135,27 @@ It is important that this command does the minimum and must not do calculations 
 
 			c := &DeployCommand{
 				runner: runner,
+			}
+
+			sshAgentHostname := os.Getenv(constants.OktetoSshAgentHostnameEnvVar)
+			sshAgentPort := os.Getenv(constants.OktetoSshAgentPortEnvVar)
+			sshSocket := os.Getenv(constants.OktetoSshAgentSocketEnvVar)
+
+			if sshAgentHostname != "" && sshAgentPort != "" && sshSocket != "" {
+				forwarder := newSSHForwarder()
+				go func() {
+					err := forwarder.startSshForwarder(ctx, sshAgentHostname, sshAgentPort, sshSocket, oktetoContext.GetCurrentToken())
+					oktetoLog.Infof("error starting ssh forwarder %v", err)
+				}()
+			} else {
+				message := fmt.Sprintf("ssh forwarded not started because some mandatory configuration parameters are missing. %s=%s, %s=%s and %s=%s",
+					constants.OktetoSshAgentHostnameEnvVar,
+					sshAgentHostname,
+					constants.OktetoSshAgentPortEnvVar,
+					sshAgentPort,
+					constants.OktetoSshAgentSocketEnvVar,
+					sshSocket)
+				oktetoLog.Info(message)
 			}
 
 			return c.Run(ctx, params)
