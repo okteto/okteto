@@ -821,7 +821,7 @@ func TestShouldRunInRemoteDeploy(t *testing.T) {
 		expected    bool
 	}{
 		{
-			Name: "Remote flag is set to True",
+			Name: "Cluster default=local and --remote=true",
 			opts: &Options{
 				RunInRemoteSet: true,
 				RunInRemote:    true,
@@ -830,7 +830,7 @@ func TestShouldRunInRemoteDeploy(t *testing.T) {
 			expected:    true,
 		},
 		{
-			Name: "Remote flag is set to False",
+			Name: "Cluster default=local and --remote=false",
 			opts: &Options{
 				RunInRemoteSet: true,
 				RunInRemote:    false,
@@ -839,7 +839,7 @@ func TestShouldRunInRemoteDeploy(t *testing.T) {
 			expected:    false,
 		},
 		{
-			Name: "Remote option set by manifest is True and Image is not nil",
+			Name: "Cluster default=local and deploy.remote=true + deploy.image set",
 			opts: &Options{
 				Manifest: tempManifest,
 			},
@@ -847,7 +847,7 @@ func TestShouldRunInRemoteDeploy(t *testing.T) {
 			expected:    true,
 		},
 		{
-			Name: "Remote option set by manifest is True and Image is nil",
+			Name: "Cluster default=local and deploy.remote=true + deploy.image not set",
 			opts: &Options{
 				Manifest: &model.Manifest{
 					Deploy: &model.DeployInfo{
@@ -860,7 +860,7 @@ func TestShouldRunInRemoteDeploy(t *testing.T) {
 			expected:    true,
 		},
 		{
-			Name: "Remote option set by manifest is False and Image is nil",
+			Name: "Cluster default=local and deploy.remote=false + deploy.image not set",
 			opts: &Options{
 				Manifest: &model.Manifest{
 					Deploy: &model.DeployInfo{
@@ -873,13 +873,36 @@ func TestShouldRunInRemoteDeploy(t *testing.T) {
 			expected:    false,
 		},
 		{
-			Name:        "Okteto_Force_Remote env is set to True",
-			opts:        &Options{},
+			Name: "Cluster default=local and deploy.remote=nil + deploy.image set should run remote",
+			opts: &Options{
+				Manifest: &model.Manifest{
+					Deploy: &model.DeployInfo{
+						Image: "image",
+					},
+				},
+			},
+			remoteForce: "",
+			expected:    true,
+		},
+		{
+			Name: "Cluster default=remote, no flag or manifest set",
+			opts: &Options{
+				Manifest: &model.Manifest{
+					Deploy: &model.DeployInfo{
+						Commands: []model.DeployCommand{
+							{
+								Name:    "test",
+								Command: "test",
+							},
+						},
+					},
+				},
+			},
 			remoteForce: "true",
 			expected:    true,
 		},
 		{
-			Name: "Okteto_Force_Remote env is set to True, user set to false",
+			Name: "Cluster default=remote, --remote=false",
 			opts: &Options{
 				RunInRemoteSet: true,
 				RunInRemote:    false,
@@ -888,9 +911,15 @@ func TestShouldRunInRemoteDeploy(t *testing.T) {
 			expected:    false,
 		},
 		{
-			Name:        "Default case",
-			opts:        &Options{},
-			remoteForce: "",
+			Name: "Cluster default=remote, manifest.deploy.remote=false",
+			opts: &Options{
+				Manifest: &model.Manifest{
+					Deploy: &model.DeployInfo{
+						Remote: boolPointer(false),
+					},
+				},
+			},
+			remoteForce: "true",
 			expected:    false,
 		},
 	}

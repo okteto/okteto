@@ -575,28 +575,43 @@ func getDefaultTimeout() time.Duration {
 	return parsed
 }
 
+// shouldRunInRemote determines if the deploy command should run in remote
+// default behavior is set by cluster config, but can be overridden by the user using the flag --remote or the manifest deploy.remote
 func shouldRunInRemote(opts *Options) bool {
-	// --remote flag enabled from command line, either true or false the flag value takes precedence
-	if opts.RunInRemoteSet {
-		return opts.RunInRemote
+	if env.LoadBoolean(constants.OktetoForceRemote) {
+		// the user forces --remote=false
+		if opts.RunInRemoteSet && !opts.RunInRemote {
+			return false
+		}
+
+		// the user forces manifest.deploy.remote=false
+		if opts.Manifest != nil && opts.Manifest.Deploy != nil {
+			if opts.Manifest.Deploy.Remote != nil && !*opts.Manifest.Deploy.Remote {
+				return false
+			}
+		}
+		return true
+	}
+
+	// remote option set in the command line
+	if opts.RunInRemote {
+		return true
 	}
 
 	// remote option set in the manifest via the remote option enabled
 	if opts.Manifest != nil && opts.Manifest.Deploy != nil {
-		if opts.Manifest.Deploy.Remote != nil {
-			return *opts.Manifest.Deploy.Remote
+		if opts.Manifest.Deploy.Image != "" {
+			return true
 		}
-	}
-
-	if env.LoadBoolean(constants.OktetoForceRemote) {
-		return true
+		if opts.Manifest.Deploy.Remote != nil && *opts.Manifest.Deploy.Remote {
+			return true
+		}
 	}
 
 	if opts.Manifest != nil && opts.Manifest.Deploy != nil && (len(opts.Manifest.Deploy.Commands) > 0 || opts.Manifest.Deploy.Divert != nil || len(opts.Manifest.External) > 0) {
 		oktetoLog.Information("Okteto recommends that you enable remote execution for your deploy commands.\n    More information available here: https://www.okteto.com/docs/core/remote-execution")
 	}
 	return false
-
 }
 
 // GetDeployer returns a remote or a local deployer

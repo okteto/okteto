@@ -292,20 +292,31 @@ func shouldRunInRemote(opts *Options) bool {
 		return false
 	}
 
-	// --remote flag enabled from command line
-	if opts.RunInRemoteSet {
-		return opts.RunInRemote
-	}
-
-	//  remote option set in the manifest via a remote destroyer image or the remote option enabled
-	if opts.Manifest != nil && opts.Manifest.Destroy != nil {
-		if opts.Manifest.Destroy.Remote != nil {
-			return *opts.Manifest.Destroy.Remote
-		}
-	}
-
 	if env.LoadBoolean(constants.OktetoForceRemote) {
+		// the user forces --remote=false
+		if opts.RunInRemoteSet && !opts.RunInRemote {
+			return false
+		}
+
+		// the user forces manifest.deploy.remote=false
+		if opts.Manifest != nil && opts.Manifest.Destroy != nil {
+			if opts.Manifest.Destroy.Remote != nil && !*opts.Manifest.Destroy.Remote {
+				return false
+			}
+		}
 		return true
+	}
+
+	// remote option set in the command line
+	if opts.RunInRemote {
+		return true
+	}
+
+	// remote option set in the manifest via the remote option enabled
+	if opts.Manifest != nil && opts.Manifest.Destroy != nil {
+		if opts.Manifest.Destroy.Remote != nil && *opts.Manifest.Destroy.Remote {
+			return true
+		}
 	}
 
 	return false

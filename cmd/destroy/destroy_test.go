@@ -540,6 +540,7 @@ func TestShouldRunInRemoteDestroy(t *testing.T) {
 	var tempManifest = &model.Manifest{
 		Destroy: &model.DestroyInfo{
 			Remote: loadBoolPointer(true),
+			Image:  "test-image",
 		},
 	}
 	var tests = []struct {
@@ -550,21 +551,44 @@ func TestShouldRunInRemoteDestroy(t *testing.T) {
 		expected      bool
 	}{
 		{
-			Name:          "Okteto_Deploy_Remote env variable is set to True",
-			opts:          &Options{},
-			remoteDestroy: "True",
-			remoteForce:   "",
-			expected:      false,
-		},
-		{
-			Name:          "Okteto_Force_Remote env variable is set to True",
+			Name:          "Cluster default=remote, no options input, remoteDestroy is set to False",
 			opts:          &Options{},
 			remoteDestroy: "",
 			remoteForce:   "True",
 			expected:      true,
 		},
 		{
-			Name: "Remote flag is set to True by CLI",
+			Name: "Cluster default=remote, --remote=false",
+			opts: &Options{
+				RunInRemote:    false,
+				RunInRemoteSet: true,
+			},
+			remoteDestroy: "",
+			remoteForce:   "True",
+			expected:      false,
+		},
+		{
+			Name: "Cluster default=remote, deploy.remote=false",
+			opts: &Options{
+				Manifest: &model.Manifest{
+					Destroy: &model.DestroyInfo{
+						Remote: loadBoolPointer(false),
+					},
+				},
+			},
+			remoteDestroy: "",
+			remoteForce:   "True",
+			expected:      false,
+		},
+		{
+			Name:          "Cluster default=local, no options input, remoteDestroy is set to True",
+			opts:          &Options{},
+			remoteDestroy: "True",
+			remoteForce:   "",
+			expected:      false,
+		},
+		{
+			Name: "Cluster default=local, --remote=true, remoteDestroy is set to False",
 			opts: &Options{
 				RunInRemoteSet: true,
 				RunInRemote:    true,
@@ -574,7 +598,7 @@ func TestShouldRunInRemoteDestroy(t *testing.T) {
 			expected:      true,
 		},
 		{
-			Name: "Remote option set by manifest is True & Image is not nil",
+			Name: "Cluster default=local, Remote option set by manifest is True and Image is not nil",
 			opts: &Options{
 				Manifest: tempManifest,
 			},
@@ -583,16 +607,7 @@ func TestShouldRunInRemoteDestroy(t *testing.T) {
 			expected:      true,
 		},
 		{
-			Name: "Remote option set by manifest is True and Image is not nil",
-			opts: &Options{
-				Manifest: tempManifest,
-			},
-			remoteDestroy: "",
-			remoteForce:   "",
-			expected:      true,
-		},
-		{
-			Name: "Remote option set by manifest is True and Image is nil",
+			Name: "Cluster default=local, Remote option set by manifest is True and Image is nil",
 			opts: &Options{
 				Manifest: &model.Manifest{
 					Destroy: &model.DestroyInfo{
@@ -606,7 +621,7 @@ func TestShouldRunInRemoteDestroy(t *testing.T) {
 			expected:      true,
 		},
 		{
-			Name: "Remote option set by manifest is False and Image is nil",
+			Name: "Cluster default=local, Remote option set by manifest is False and Image is nil",
 			opts: &Options{
 				Manifest: &model.Manifest{
 					Destroy: &model.DestroyInfo{
@@ -615,13 +630,6 @@ func TestShouldRunInRemoteDestroy(t *testing.T) {
 					},
 				},
 			},
-			remoteDestroy: "",
-			remoteForce:   "",
-			expected:      false,
-		},
-		{
-			Name:          "Default case",
-			opts:          &Options{},
 			remoteDestroy: "",
 			remoteForce:   "",
 			expected:      false,
