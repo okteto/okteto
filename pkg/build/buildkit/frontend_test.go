@@ -24,11 +24,11 @@ import (
 func TestGetFrontend(t *testing.T) {
 	// Define test cases
 	tests := []struct {
-		name             string
-		buildOptions     *types.BuildOptions
-		envValue         string
-		expectedFrontend *Frontend
 		expectedError    error
+		buildOptions     *types.BuildOptions
+		expectedFrontend *Frontend
+		name             string
+		envValue         string
 	}{
 		{
 			name:             "Nil BuildOptions",

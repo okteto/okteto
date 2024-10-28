@@ -75,6 +75,7 @@ func NewOktetoBuilder(context OktetoContextInterface, fs afero.Fs, logger *io.Co
 		OktetoContext: context,
 		Fs:            fs,
 		metadata:      &buildkit.BuildMetadata{},
+		logger:        logger,
 	}
 }
 
