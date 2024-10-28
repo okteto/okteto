@@ -320,7 +320,7 @@ func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			return err
 		default:
 			// not using shared context to not disrupt display but let it finish reporting errors
-			d, err := progressui.NewDisplay(os.Stdout, progressui.PlainMode)
+			d, err := progressui.NewDisplay(ioCtrl.Out(), progressui.PlainMode)
 			if err != nil {
 				// If an error occurs while attempting to create the tty display,
 				// fallback to using plain mode on stdout (in contrast to stderr).
