@@ -110,7 +110,7 @@ ENV {{$key}}={{$val}}
 RUN \
   {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}},sharing=private {{end}}\
   --mount=type=secret,id=known_hosts \
-  mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
+  mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts $HOME/.ssh/known_hosts" >> $HOME/.ssh/config && \
 {{ if .SSHAgentHostname }}  export SSH_AUTH_SOCK={{ .SSHAgentSocket }} && \{{ end }}
   /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}{{ if eq .Command "test" }} || true{{ end }}
 
