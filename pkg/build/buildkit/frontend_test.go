@@ -22,7 +22,6 @@ import (
 )
 
 func TestGetFrontend(t *testing.T) {
-	// Define test cases
 	tests := []struct {
 		expectedError    error
 		buildOptions     *types.BuildOptions
