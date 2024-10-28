@@ -125,6 +125,7 @@ func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish)
 			Store: okteto.GetContextStore(),
 		},
 		afero.NewOsFs(),
+		ioCtrl,
 	)
 	reg := registry.NewOktetoRegistry(okteto.Config{})
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()

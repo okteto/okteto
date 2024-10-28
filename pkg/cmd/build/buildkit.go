@@ -39,14 +39,10 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const (
-	defaultFrontend = "dockerfile.v0"
-)
-
 type buildWriter struct{}
 
 // getSolveOpt returns the buildkit solve options
-func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface, secretTempFolder string, fs afero.Fs) (*client.SolveOpt, error) {
+func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface, secretTempFolder string, fs afero.Fs, logger *io.Controller) (*client.SolveOpt, error) {
 
 	if buildOptions.Tag != "" {
 		err := validateImages(okctx, buildOptions.Tag)
@@ -108,15 +104,20 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 		frontendAttrs["no-cache"] = ""
 	}
 
-	frontend := defaultFrontend
+	frontend, err := okbuildkit.NewFrontendRetriever(os.Getenv, logger).GetFrontend(buildOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	if frontend.Image != "" {
+		frontendAttrs["source"] = frontend.Image
+	}
 
 	if len(buildOptions.ExtraHosts) > 0 {
 		hosts := ""
 		for _, eh := range buildOptions.ExtraHosts {
 			hosts += fmt.Sprintf("%s=%s,", eh.Hostname, eh.IP)
 		}
-		frontend = "gateway.v0"
-		frontendAttrs["source"] = "docker/dockerfile"
 		frontendAttrs["add-hosts"] = strings.TrimSuffix(hosts, ",")
 	}
 
@@ -166,7 +167,7 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 	}
 	opt := &client.SolveOpt{
 		LocalDirs:     localDirs,
-		Frontend:      frontend,
+		Frontend:      string(frontend.Frontend),
 		FrontendAttrs: frontendAttrs,
 		Session:       attachable,
 		CacheImports:  []client.CacheOptionsEntry{},

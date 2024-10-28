@@ -316,6 +316,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 				Store: okteto.GetContextStore(),
 			},
 			fs,
+			ioCtrl,
 		))
 		commands := make([]model.DeployCommand, len(test.Commands))
 

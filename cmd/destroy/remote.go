@@ -64,6 +64,7 @@ func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remote
 			Store: okteto.GetContextStore(),
 		},
 		fs,
+		ioCtrl,
 	)
 	runner := remote.NewRunner(ioCtrl, builder)
 	if manifest.Destroy == nil {
