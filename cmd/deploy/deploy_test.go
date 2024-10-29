@@ -810,96 +810,123 @@ func TestTrackDeploy(t *testing.T) {
 func TestShouldRunInRemoteDeploy(t *testing.T) {
 	tempManifest := &model.Manifest{
 		Deploy: &model.DeployInfo{
-			Remote: true,
+			Remote: boolPointer(true),
 			Image:  "some-image",
 		},
 	}
 	var tests = []struct {
-		Name         string
-		opts         *Options
-		remoteDeploy string
-		remoteForce  string
-		expected     bool
+		Name        string
+		opts        *Options
+		remoteForce string
+		expected    bool
 	}{
 		{
-			Name: "Okteto_Deploy_Remote env is set to True",
+			Name: "Cluster default=local and --remote=true",
 			opts: &Options{
-				RunInRemote: false,
+				RunInRemoteSet: true,
+				RunInRemote:    true,
 			},
-			remoteDeploy: "true",
-			remoteForce:  "",
-			expected:     false,
+			remoteForce: "",
+			expected:    true,
 		},
 		{
-			Name: "Remote flag is set to True",
+			Name: "Cluster default=local and --remote=false",
 			opts: &Options{
-				RunInRemote: true,
+				RunInRemoteSet: true,
+				RunInRemote:    false,
 			},
-			remoteDeploy: "",
-			remoteForce:  "",
-			expected:     true,
+			remoteForce: "",
+			expected:    false,
 		},
 		{
-			Name: "Remote option set by manifest is True and Image is not nil",
+			Name: "Cluster default=local and deploy.remote=true + deploy.image set",
 			opts: &Options{
 				Manifest: tempManifest,
 			},
-			remoteDeploy: "",
-			remoteForce:  "",
-			expected:     true,
+			remoteForce: "",
+			expected:    true,
 		},
 		{
-			Name: "Remote option set by manifest is True and Image is nil",
+			Name: "Cluster default=local and deploy.remote=true + deploy.image not set",
 			opts: &Options{
 				Manifest: &model.Manifest{
 					Deploy: &model.DeployInfo{
 						Image:  "",
-						Remote: true,
+						Remote: boolPointer(true),
 					},
 				},
 			},
-			remoteDeploy: "",
-			remoteForce:  "",
-			expected:     true,
+			remoteForce: "",
+			expected:    true,
 		},
 		{
-			Name: "Remote option set by manifest is False and Image is nil",
+			Name: "Cluster default=local and deploy.remote=false + deploy.image not set",
 			opts: &Options{
 				Manifest: &model.Manifest{
 					Deploy: &model.DeployInfo{
 						Image:  "",
-						Remote: false,
+						Remote: boolPointer(false),
 					},
 				},
 			},
-			remoteDeploy: "",
-			remoteForce:  "",
-			expected:     false,
+			remoteForce: "",
+			expected:    false,
 		},
 		{
-			Name: "Okteto_Force_Remote env is set to True",
+			Name: "Cluster default=local and deploy.remote=nil + deploy.image set should run remote",
 			opts: &Options{
-				RunInRemote: false,
+				Manifest: &model.Manifest{
+					Deploy: &model.DeployInfo{
+						Image: "image",
+					},
+				},
 			},
-			remoteDeploy: "",
-			remoteForce:  "true",
-			expected:     true,
+			remoteForce: "",
+			expected:    true,
 		},
 		{
-			Name: "Default case",
+			Name: "Cluster default=remote, no flag or manifest set",
 			opts: &Options{
-				RunInRemote: false,
+				Manifest: &model.Manifest{
+					Deploy: &model.DeployInfo{
+						Commands: []model.DeployCommand{
+							{
+								Name:    "test",
+								Command: "test",
+							},
+						},
+					},
+				},
 			},
-			remoteDeploy: "",
-			remoteForce:  "",
-			expected:     false,
+			remoteForce: "true",
+			expected:    true,
+		},
+		{
+			Name: "Cluster default=remote, --remote=false",
+			opts: &Options{
+				RunInRemoteSet: true,
+				RunInRemote:    false,
+			},
+			remoteForce: "true",
+			expected:    false,
+		},
+		{
+			Name: "Cluster default=remote, manifest.deploy.remote=false",
+			opts: &Options{
+				Manifest: &model.Manifest{
+					Deploy: &model.DeployInfo{
+						Remote: boolPointer(false),
+					},
+				},
+			},
+			remoteForce: "true",
+			expected:    false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
-			t.Setenv(constants.OktetoDeployRemote, tt.remoteDeploy)
 			t.Setenv(constants.OktetoForceRemote, tt.remoteForce)
-			result := shouldRunInRemote(tt.opts)
+			result := ShouldRunInRemote(tt.opts)
 			assert.Equal(t, result, tt.expected)
 		})
 	}
@@ -1078,4 +1105,8 @@ func TestCalculateManifestPathToBeStored(t *testing.T) {
 			require.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func boolPointer(v bool) *bool {
+	return &v
 }

@@ -68,6 +68,9 @@ func newRemoteDestroyer(manifest *model.Manifest, ioCtrl *io.Controller) *remote
 		fs,
 	)
 	runner := remote.NewRunner(ioCtrl, builder)
+	if manifest == nil {
+		manifest = &model.Manifest{}
+	}
 	if manifest.Destroy == nil {
 		manifest.Destroy = &model.DestroyInfo{}
 	}

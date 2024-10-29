@@ -539,7 +539,8 @@ func TestDestroyK8sResourcesWithoutErrors(t *testing.T) {
 func TestShouldRunInRemoteDestroy(t *testing.T) {
 	var tempManifest = &model.Manifest{
 		Destroy: &model.DestroyInfo{
-			Remote: true,
+			Remote: loadBoolPointer(true),
+			Image:  "test-image",
 		},
 	}
 	var tests = []struct {
@@ -550,82 +551,84 @@ func TestShouldRunInRemoteDestroy(t *testing.T) {
 		expected      bool
 	}{
 		{
-			Name: "Okteto_Deploy_Remote env variable is set to True",
-			opts: &Options{
-				RunInRemote: false,
-			},
-			remoteDestroy: "True",
-			remoteForce:   "",
-			expected:      false,
-		},
-		{
-			Name: "Okteto_Force_Remote env variable is set to True",
-			opts: &Options{
-				RunInRemote: true,
-			},
+			Name:          "Cluster default=remote, no options input, remoteDestroy is set to False",
+			opts:          &Options{},
 			remoteDestroy: "",
 			remoteForce:   "True",
 			expected:      true,
 		},
 		{
-			Name: "Remote flag is set to True by CLI",
+			Name: "Cluster default=remote, --remote=false",
 			opts: &Options{
-				RunInRemote: true,
+				RunInRemote:    false,
+				RunInRemoteSet: true,
 			},
 			remoteDestroy: "",
-			remoteForce:   "",
-			expected:      true,
+			remoteForce:   "True",
+			expected:      false,
 		},
 		{
-			Name: "Remote option set by manifest is True & Image is not nil",
-			opts: &Options{
-				Manifest: tempManifest,
-			},
-			remoteDestroy: "",
-			remoteForce:   "",
-			expected:      true,
-		},
-		{
-			Name: "Remote option set by manifest is True and Image is not nil",
-			opts: &Options{
-				Manifest: tempManifest,
-			},
-			remoteDestroy: "",
-			remoteForce:   "",
-			expected:      true,
-		},
-		{
-			Name: "Remote option set by manifest is True and Image is nil",
+			Name: "Cluster default=remote, deploy.remote=false",
 			opts: &Options{
 				Manifest: &model.Manifest{
 					Destroy: &model.DestroyInfo{
-						Image:  "",
-						Remote: true,
+						Remote: loadBoolPointer(false),
 					},
 				},
 			},
 			remoteDestroy: "",
-			remoteForce:   "",
-			expected:      true,
+			remoteForce:   "True",
+			expected:      false,
 		},
 		{
-			Name: "Remote option set by manifest is False and Image is nil",
-			opts: &Options{
-				Manifest: &model.Manifest{
-					Destroy: &model.DestroyInfo{
-						Image:  "",
-						Remote: false,
-					},
-				},
-			},
-			remoteDestroy: "",
+			Name:          "Cluster default=local, no options input, remoteDestroy is set to True",
+			opts:          &Options{},
+			remoteDestroy: "True",
 			remoteForce:   "",
 			expected:      false,
 		},
 		{
-			Name: "Default case",
+			Name: "Cluster default=local, --remote=true, remoteDestroy is set to False",
 			opts: &Options{
-				RunInRemote: false,
+				RunInRemoteSet: true,
+				RunInRemote:    true,
+			},
+			remoteDestroy: "",
+			remoteForce:   "",
+			expected:      true,
+		},
+		{
+			Name: "Cluster default=local, Remote option set by manifest is True and Image is not nil",
+			opts: &Options{
+				Manifest: tempManifest,
+			},
+			remoteDestroy: "",
+			remoteForce:   "",
+			expected:      true,
+		},
+		{
+			Name: "Cluster default=local, Remote option set by manifest is True and Image is nil",
+			opts: &Options{
+				Manifest: &model.Manifest{
+					Destroy: &model.DestroyInfo{
+						Image:  "",
+						Remote: loadBoolPointer(true),
+					},
+				},
+			},
+			remoteDestroy: "",
+			remoteForce:   "",
+			expected:      true,
+		},
+		{
+			Name: "Cluster default=local, Remote option set by manifest is False and Image is nil",
+			opts: &Options{
+				Manifest: &model.Manifest{
+					Destroy: &model.DestroyInfo{
+						Image:  "",
+						Remote: loadBoolPointer(false),
+					},
+				},
 			},
 			remoteDestroy: "",
 			remoteForce:   "",
@@ -775,22 +778,60 @@ func TestDestroyDependenciesWithoutError(t *testing.T) {
 
 func TestGetDestroyer(t *testing.T) {
 	tests := []struct {
-		expectedType interface{}
-		opts         *Options
-		name         string
+		clusterForceRemote string
+		expectedType       interface{}
+		opts               *Options
+		name               string
 	}{
 		{
-			name: "local",
+			name:         "local - default",
+			opts:         &Options{},
+			expectedType: &localDestroyCommand{},
+		},
+		{
+			name:               "local - cluster is set remote by default, user uses flag",
+			clusterForceRemote: "true",
 			opts: &Options{
-				RunInRemote: false,
+				RunInRemoteSet: true,
+				RunInRemote:    false,
 			},
 			expectedType: &localDestroyCommand{},
 		},
 		{
-			name: "remote",
+			name:               "local - cluster is set remote by default, user uses manifest",
+			clusterForceRemote: "true",
 			opts: &Options{
-				RunInRemote: true,
-				Manifest:    &model.Manifest{},
+				Manifest: &model.Manifest{
+					Destroy: &model.DestroyInfo{
+						Remote: loadBoolPointer(false),
+					},
+				},
+			},
+			expectedType: &localDestroyCommand{},
+		},
+		{
+			name:               "remote - cluster is set remote by default",
+			clusterForceRemote: "true",
+			opts:               &Options{},
+			expectedType:       &remoteDestroyCommand{},
+		},
+		{
+			name: "remote - cluster is set local by default user uses flag",
+			opts: &Options{
+				RunInRemote:    true,
+				RunInRemoteSet: true,
+				Manifest:       &model.Manifest{},
+			},
+			expectedType: &remoteDestroyCommand{},
+		},
+		{
+			name: "remote - cluster is set local by default user uses manifest",
+			opts: &Options{
+				Manifest: &model.Manifest{
+					Destroy: &model.DestroyInfo{
+						Remote: loadBoolPointer(true),
+					},
+				},
 			},
 			expectedType: &remoteDestroyCommand{},
 		},
@@ -798,6 +839,7 @@ func TestGetDestroyer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(constants.OktetoForceRemote, tt.clusterForceRemote)
 			dc := &destroyCommand{}
 			deployer := dc.getDestroyer(tt.opts)
 			require.IsType(t, tt.expectedType, deployer)
@@ -1037,4 +1079,8 @@ func TestHasDivert(t *testing.T) {
 			assert.Equal(t, tt.expected, hasDivert(tt.manifest, tt.namespace))
 		})
 	}
+}
+
+func loadBoolPointer(v bool) *bool {
+	return &v
 }
