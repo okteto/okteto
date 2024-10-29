@@ -237,14 +237,9 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		return analytics.TestMetadata{}, fmt.Errorf("okteto test needs to build the images defined but failed: %w", err)
 	}
 
-	shouldDeploy := options.Deploy
-
-	if shouldDeploy && manifest.Deploy == nil {
+	if options.Deploy && manifest.Deploy == nil {
 		oktetoLog.Warning("Nothing to deploy. The 'deploy' section of your Okteto Manifest is empty. For more information, check the docs: https://okteto.com/docs/core/okteto-manifest/#deploy")
-		shouldDeploy = false
-	}
-
-	if shouldDeploy {
+	} else if options.Deploy && manifest.Deploy != nil {
 		c := deployCMD.Command{
 			GetManifest: func(path string, fs afero.Fs) (*model.Manifest, error) {
 				return manifest, nil
@@ -263,9 +258,8 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			IsRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
 			RunningInInstaller: config.RunningInInstaller(),
 		}
-		deployStartTime := time.Now()
-		runInRemote := shouldRunInRemote(manifest.Deploy)
-		err = c.Run(ctx, &deployCMD.Options{
+		// runInRemote is not set at init, its left default to false and calculated by deployCMD.ShouldRunInRemote
+		opts := &deployCMD.Options{
 			Manifest:         manifest,
 			ManifestPathFlag: options.ManifestPathFlag,
 			ManifestPath:     options.ManifestPath,
@@ -277,10 +271,14 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			Dependencies:     false,
 			Timeout:          options.Timeout,
 			RunWithoutBash:   false,
-			RunInRemote:      runInRemote,
 			Wait:             true,
 			ShowCTA:          false,
-		})
+		}
+		deployStartTime := time.Now()
+		// we need to pre-calculate the value of the runInRemote flag before running the deploy command
+		// in order to track the information correctly, using the same logic as the deploy command
+		runInRemote := deployCMD.ShouldRunInRemote(opts)
+		err = c.Run(ctx, opts)
 		c.TrackDeploy(manifest, runInRemote, deployStartTime, err)
 
 		if err != nil {
@@ -376,19 +374,6 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 	}
 	metadata.Success = true
 	return metadata, nil
-}
-
-func shouldRunInRemote(manifestDeploy *model.DeployInfo) bool {
-	if manifestDeploy != nil {
-		if manifestDeploy.Image != "" {
-			return true
-		}
-		if manifestDeploy.Remote != nil {
-			return *manifestDeploy.Remote
-		}
-	}
-
-	return false
 }
 
 func doBuild(ctx context.Context, manifest *model.Manifest, svcs []string, builder builder, ioCtrl *io.Controller) (bool, error) {

@@ -575,9 +575,9 @@ func getDefaultTimeout() time.Duration {
 	return parsed
 }
 
-// shouldRunInRemote determines if the deploy command should run in remote
+// ShouldRunInRemote determines if the deploy command should run in remote
 // default behavior is set by cluster config, but can be overridden by the user using the flag --remote or the manifest deploy.remote
-func shouldRunInRemote(opts *Options) bool {
+func ShouldRunInRemote(opts *Options) bool {
 	if env.LoadBoolean(constants.OktetoForceRemote) {
 		// the user forces --remote=false
 		if opts.RunInRemoteSet && !opts.RunInRemote {
@@ -626,7 +626,7 @@ func GetDeployer(ctx context.Context,
 	dependencyEnvVarsGetter dependencyEnvVarsGetter,
 	executionEnvVarGetter executionEnvVarsGetter,
 ) (Deployer, error) {
-	if shouldRunInRemote(opts) {
+	if ShouldRunInRemote(opts) {
 		oktetoLog.Info("Deploying remotely...")
 		return newRemoteDeployer(buildEnvVarsGetter, ioCtrl, dependencyEnvVarsGetter, executionEnvVarGetter), nil
 	}

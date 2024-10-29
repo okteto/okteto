@@ -926,7 +926,7 @@ func TestShouldRunInRemoteDeploy(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			t.Setenv(constants.OktetoForceRemote, tt.remoteForce)
-			result := shouldRunInRemote(tt.opts)
+			result := ShouldRunInRemote(tt.opts)
 			assert.Equal(t, result, tt.expected)
 		})
 	}
