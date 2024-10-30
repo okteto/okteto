@@ -77,7 +77,7 @@ func (dw *Waiter) waitForResourcesToBeRunning(ctx context.Context, opts *Options
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("'%s' deploy didn't finish after %s", opts.Manifest.Name, opts.Timeout.String())
+			return fmt.Errorf("'%s' resources where not healthy after %s", opts.Manifest.Name, opts.Timeout.String())
 		case <-ticker.C:
 			ns := okteto.GetContext().Namespace
 			dList, err := pipeline.ListDeployments(ctx, opts.Manifest.Name, ns, c)
