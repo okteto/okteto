@@ -27,21 +27,28 @@ func TestGetFrontend(t *testing.T) {
 		buildOptions     *types.BuildOptions
 		expectedFrontend *Frontend
 		name             string
-		envValue         string
+		useDockerfileV0  string
+		frontendImage    string
 	}{
 		{
-			name:             "Nil BuildOptions",
-			buildOptions:     nil,
-			envValue:         "",
-			expectedFrontend: nil,
-			expectedError:    errOptionsIsNil,
-		},
-		{
-			name: "No ExtraHosts, No Custom Env",
+			name: "No ExtraHosts, No Custom Env No DockerfileV0",
 			buildOptions: &types.BuildOptions{
 				ExtraHosts: []types.HostMap{},
 			},
-			envValue: "",
+			frontendImage: "",
+			expectedFrontend: &Frontend{
+				Frontend: gatewayFrontend,
+				Image:    defaultDockerFrontendImage,
+			},
+			expectedError: nil,
+		},
+		{
+			name: "No ExtraHosts, No Custom Env DockerfileV0",
+			buildOptions: &types.BuildOptions{
+				ExtraHosts: []types.HostMap{},
+			},
+			frontendImage:   "",
+			useDockerfileV0: "true",
 			expectedFrontend: &Frontend{
 				Frontend: defaultFrontend,
 				Image:    "",
@@ -55,10 +62,25 @@ func TestGetFrontend(t *testing.T) {
 					{Hostname: "host1", IP: "192.168.1.1"},
 				},
 			},
-			envValue: "",
+			frontendImage: "",
 			expectedFrontend: &Frontend{
 				Frontend: gatewayFrontend,
-				Image:    dockerFrontendImage,
+				Image:    defaultDockerFrontendImage,
+			},
+			expectedError: nil,
+		},
+		{
+			name: "ExtraHosts Present, Use DockerfileV0",
+			buildOptions: &types.BuildOptions{
+				ExtraHosts: []types.HostMap{
+					{Hostname: "host1", IP: "192.168.1.1"},
+				},
+			},
+			frontendImage:   "",
+			useDockerfileV0: "true",
+			expectedFrontend: &Frontend{
+				Frontend: gatewayFrontend,
+				Image:    defaultDockerFrontendImage,
 			},
 			expectedError: nil,
 		},
@@ -67,7 +89,7 @@ func TestGetFrontend(t *testing.T) {
 			buildOptions: &types.BuildOptions{
 				ExtraHosts: []types.HostMap{},
 			},
-			envValue: "custom/image:latest",
+			frontendImage: "custom/image:latest",
 			expectedFrontend: &Frontend{
 				Frontend: gatewayFrontend,
 				Image:    "custom/image:latest",
@@ -81,7 +103,7 @@ func TestGetFrontend(t *testing.T) {
 					{Hostname: "host1", IP: "192.168.1.1"},
 				},
 			},
-			envValue: "custom/image:latest",
+			frontendImage: "custom/image:latest",
 			expectedFrontend: &Frontend{
 				Frontend: gatewayFrontend,
 				Image:    "custom/image:latest",
@@ -92,24 +114,13 @@ func TestGetFrontend(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(buildkitFrontendImageEnvVar, tt.frontendImage)
+			t.Setenv(buildkitUseDockerfileV0EnvVar, tt.useDockerfileV0)
+			retriever := NewFrontendRetriever(io.NewIOController())
 
-			getEnv := func(key string) string {
-				if key == buildkitFrontendImageEnvVar {
-					return tt.envValue
-				}
-				return ""
-			}
-			retriever := NewFrontendRetriever(getEnv, io.NewIOController())
+			frontend := retriever.GetFrontend(tt.buildOptions)
+			assert.Equal(t, tt.expectedFrontend, frontend, "expected frontend to match")
 
-			frontend, err := retriever.GetFrontend(tt.buildOptions)
-
-			if tt.expectedError != nil {
-				assert.ErrorIs(t, err, tt.expectedError, "expected error to match")
-				assert.Nil(t, frontend, "expected frontend to be nil")
-			} else {
-				assert.NoError(t, err, "expected no error")
-				assert.Equal(t, tt.expectedFrontend, frontend, "expected frontend to match")
-			}
 		})
 	}
 }

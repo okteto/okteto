@@ -14,8 +14,9 @@
 package buildkit
 
 import (
-	"errors"
+	"os"
 
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
 )
@@ -30,20 +31,17 @@ const (
 	// gatewayFrontend specifies the frontend to use for builds executed in the gateway.
 	gatewayFrontend FrontendType = "gateway.v0"
 
-	// dockerFrontendImage specifies the Docker image to use as the frontend when executing builds in the gateway.
-	dockerFrontendImage = "docker/dockerfile"
-
 	// buildkitFrontendImageEnvVar is the environment variable used to override the default frontend image.
 	buildkitFrontendImageEnvVar = "OKTETO_BUILDKIT_FRONTEND_IMAGE"
-)
 
-var (
-	// errOptionsIsNil is the error returned when the build options are nil.
-	errOptionsIsNil = errors.New("buildOptions cannot be nil")
+	// buildkitUseDockerfileV0EnvVar is the environment variable used to enable the use of the dockerfile.v0 frontend.
+	buildkitUseDockerfileV0EnvVar = "OKTETO_BUILDKIT_USE_DOCKERFILE_V0"
+
+	// defaultDockerFrontendImage is the default Docker image to use as the frontend when executing builds in the gateway.
+	defaultDockerFrontendImage = "docker/dockerfile:1.10.0"
 )
 
 type FrontendRetriever struct {
-	getEnv func(string) string
 	logger *io.Controller
 }
 
@@ -52,25 +50,30 @@ type Frontend struct {
 	Image    string
 }
 
-func NewFrontendRetriever(getEnv func(string) string, logger *io.Controller) *FrontendRetriever {
+func NewFrontendRetriever(logger *io.Controller) *FrontendRetriever {
 	return &FrontendRetriever{
-		getEnv: getEnv,
 		logger: logger,
 	}
 }
 
-func (f *FrontendRetriever) GetFrontend(buildOptions *types.BuildOptions) (*Frontend, error) {
-	if buildOptions == nil {
-		return nil, errOptionsIsNil
-	}
+func (f *FrontendRetriever) GetFrontend(buildOptions *types.BuildOptions) *Frontend {
+	useDockerfileV0 := env.LoadBooleanOrDefault(buildkitUseDockerfileV0EnvVar, false)
 
-	customFrontendImage := f.getEnv(buildkitFrontendImageEnvVar)
-	if len(buildOptions.ExtraHosts) > 0 || customFrontendImage != "" {
-		f.logger.Infof("using gateway frontend")
-		return f.getGatewayFrontend(customFrontendImage), nil
+	customFrontendImage := os.Getenv(buildkitFrontendImageEnvVar)
+	if len(buildOptions.ExtraHosts) > 0 {
+		f.logger.Infof("using gateway frontend because of extra hosts")
+		return f.getGatewayFrontend(customFrontendImage)
 	}
-	f.logger.Infof("using local frontend")
-	return f.getLocalFrontend(), nil
+	if useDockerfileV0 {
+		f.logger.Infof("using dockerfile.v0 frontend because of environment variable")
+		return f.getLocalFrontend()
+	}
+	if customFrontendImage != "" {
+		f.logger.Infof("using gateway frontend because of custom frontend image")
+		return f.getGatewayFrontend(customFrontendImage)
+	}
+	f.logger.Infof("using gateway frontend because of default")
+	return f.getGatewayFrontend("")
 }
 
 func (f *FrontendRetriever) getLocalFrontend() *Frontend {
@@ -81,7 +84,7 @@ func (f *FrontendRetriever) getLocalFrontend() *Frontend {
 }
 
 func (f *FrontendRetriever) getGatewayFrontend(customFrontendImage string) *Frontend {
-	image := dockerFrontendImage
+	image := defaultDockerFrontendImage
 	if customFrontendImage != "" {
 		f.logger.Infof("using custom frontend image %s", customFrontendImage)
 		image = customFrontendImage

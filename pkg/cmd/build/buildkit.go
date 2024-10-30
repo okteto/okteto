@@ -104,11 +104,7 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 		frontendAttrs["no-cache"] = ""
 	}
 
-	frontend, err := okbuildkit.NewFrontendRetriever(os.Getenv, logger).GetFrontend(buildOptions)
-	if err != nil {
-		return nil, err
-	}
-
+	frontend := okbuildkit.NewFrontendRetriever(logger).GetFrontend(buildOptions)
 	if frontend.Image != "" {
 		frontendAttrs["source"] = frontend.Image
 	}
