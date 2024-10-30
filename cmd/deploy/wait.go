@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"time"
 
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -26,6 +25,7 @@ import (
 	ioCtrl "github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/watch"
 )
 
 type Waiter struct {
@@ -77,22 +77,48 @@ func (dw *Waiter) waitForResourcesToBeRunning(ctx context.Context, opts *Options
 		return err
 	}
 
-	retry := true
-	retryWaitPeriod := 5 * time.Second
-	for retry {
-		pods, err := pipeline.ListPods(ctx, opts.Manifest.Name, namespace, c)
+	// first list the pods of the pipeline and check if they are running
+	podList, err := pipeline.ListPods(ctx, namespace, opts.Manifest.Name, c)
+	if err != nil {
+		return err
+	}
+	pendingPodsMap := make(map[string]bool)
+	for i := range podList.Items {
+		p := &podList.Items[i]
+		if p.Status.Phase != v1.PodRunning {
+			pendingPodsMap[p.Name] = true
+		}
+	}
+
+	// watch if there are pending pods to be running
+	if len(pendingPodsMap) > 0 {
+		w, err := pipeline.WatchPods(ctx, namespace, opts.Manifest.Name, podList.ResourceVersion, c)
 		if err != nil {
 			return err
 		}
-		for i := range pods {
-			p := &pods[i]
-			// in case some deployment is not ready, we wait 5 seconds and retry
-			if p.Status.Phase != v1.PodRunning {
-				time.Sleep(retryWaitPeriod)
-				continue
+
+		for {
+			select {
+			case event := <-w.ResultChan():
+				switch event.Type {
+				case watch.Modified:
+					pod, ok := event.Object.(*v1.Pod)
+					if !ok {
+						continue
+					}
+					if _, ok := pendingPodsMap[pod.Name]; ok && pod.Status.Phase == v1.PodRunning {
+						delete(pendingPodsMap, pod.Name)
+					}
+					if len(pendingPodsMap) == 0 {
+						w.Stop()
+						return nil
+					}
+				default:
+					continue
+				}
 			}
 		}
-		retry = false
 	}
+
 	return nil
 }
