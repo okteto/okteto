@@ -468,6 +468,10 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		if hasDeployed {
 			if deployOptions.Wait {
 				if err := dc.DeployWaiter.wait(ctx, deployOptions); err != nil {
+					if err := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); err != nil {
+						oktetoLog.Infof("could not update configmap with timeout error: %s", err)
+						return err
+					}
 					return err
 				}
 			}
