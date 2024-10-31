@@ -16,7 +16,6 @@ package buildkit
 import (
 	"os"
 
-	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
 )
@@ -33,9 +32,6 @@ const (
 
 	// buildkitFrontendImageEnvVar is the environment variable used to override the default frontend image.
 	buildkitFrontendImageEnvVar = "OKTETO_BUILDKIT_FRONTEND_IMAGE"
-
-	// buildkitUseDockerfileV0EnvVar is the environment variable used to enable the use of the dockerfile.v0 frontend.
-	buildkitUseDockerfileV0EnvVar = "OKTETO_BUILDKIT_USE_DOCKERFILE_V0"
 
 	// defaultDockerFrontendImage is the default Docker image to use as the frontend when executing builds in the gateway.
 	defaultDockerFrontendImage = "docker/dockerfile:1.10.0"
@@ -57,22 +53,18 @@ func NewFrontendRetriever(logger *io.Controller) *FrontendRetriever {
 }
 
 func (f *FrontendRetriever) GetFrontend(buildOptions *types.BuildOptions) *Frontend {
-	useDockerfileV0 := env.LoadBooleanOrDefault(buildkitUseDockerfileV0EnvVar, false)
 	customFrontendImage := os.Getenv(buildkitFrontendImageEnvVar)
 	if len(buildOptions.ExtraHosts) > 0 {
 		f.logger.Infof("using gateway frontend because of extra hosts")
 		return f.getGatewayFrontend(customFrontendImage)
 	}
-	if useDockerfileV0 {
-		f.logger.Infof("using dockerfile.v0 frontend because of environment variable")
-		return f.getLocalFrontend()
-	}
+
 	if customFrontendImage != "" {
 		f.logger.Infof("using gateway frontend because of custom frontend image")
 		return f.getGatewayFrontend(customFrontendImage)
 	}
-	f.logger.Infof("using gateway frontend because of default")
-	return f.getGatewayFrontend("")
+	f.logger.Infof("using default frontend")
+	return f.getLocalFrontend()
 }
 
 func (f *FrontendRetriever) getLocalFrontend() *Frontend {

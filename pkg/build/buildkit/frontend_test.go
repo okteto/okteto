@@ -27,28 +27,26 @@ func TestGetFrontend(t *testing.T) {
 		buildOptions     *types.BuildOptions
 		expectedFrontend *Frontend
 		name             string
-		useDockerfileV0  string
 		frontendImage    string
 	}{
 		{
-			name: "No ExtraHosts, No Custom Env No DockerfileV0",
+			name: "No ExtraHosts, No Custom Env",
 			buildOptions: &types.BuildOptions{
 				ExtraHosts: []types.HostMap{},
 			},
 			frontendImage: "",
 			expectedFrontend: &Frontend{
-				Frontend: gatewayFrontend,
-				Image:    defaultDockerFrontendImage,
+				Frontend: defaultFrontend,
+				Image:    "",
 			},
 			expectedError: nil,
 		},
 		{
-			name: "No ExtraHosts, No Custom Env DockerfileV0",
+			name: "No ExtraHosts, No Custom ",
 			buildOptions: &types.BuildOptions{
 				ExtraHosts: []types.HostMap{},
 			},
-			frontendImage:   "",
-			useDockerfileV0: "true",
+			frontendImage: "",
 			expectedFrontend: &Frontend{
 				Frontend: defaultFrontend,
 				Image:    "",
@@ -76,8 +74,7 @@ func TestGetFrontend(t *testing.T) {
 					{Hostname: "host1", IP: "192.168.1.1"},
 				},
 			},
-			frontendImage:   "",
-			useDockerfileV0: "true",
+			frontendImage: "",
 			expectedFrontend: &Frontend{
 				Frontend: gatewayFrontend,
 				Image:    defaultDockerFrontendImage,
@@ -115,7 +112,6 @@ func TestGetFrontend(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(buildkitFrontendImageEnvVar, tt.frontendImage)
-			t.Setenv(buildkitUseDockerfileV0EnvVar, tt.useDockerfileV0)
 			retriever := NewFrontendRetriever(io.NewIOController())
 
 			frontend := retriever.GetFrontend(tt.buildOptions)
