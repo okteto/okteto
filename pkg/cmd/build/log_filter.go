@@ -14,39 +14,77 @@
 package build
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 
 	"github.com/moby/buildkit/client"
+	okErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 type ConditionFunc func(vertex *client.Vertex) bool
 type TransformerFunc func(vertex *client.Vertex, ss *client.SolveStatus, progress string)
 
-type Rule struct {
+type LogRule struct {
 	condition   ConditionFunc
 	transformer TransformerFunc
 }
 
-type BuildkitLogsFilter struct {
-	rules []Rule
+type ErrorRule struct {
+	condition ConditionFunc
 }
 
-func NewBuildKitLogsFilter(rules []Rule) *BuildkitLogsFilter {
+type BuildkitLogsFilter struct {
+	transformRules []LogRule
+	errorRules     []ErrorRule
+}
+
+func NewBuildKitLogsFilter(transformRules []LogRule, errorRules []ErrorRule) *BuildkitLogsFilter {
 	return &BuildkitLogsFilter{
-		rules: rules,
+		transformRules: transformRules,
+		errorRules:     errorRules,
 	}
 }
 
 func (lf *BuildkitLogsFilter) Run(ss *client.SolveStatus, progress string) {
 	for _, vertex := range ss.Vertexes {
-		for _, rule := range lf.rules {
+		for _, rule := range lf.transformRules {
 			if rule.condition(vertex) {
 				rule.transformer(vertex, ss, progress)
 			}
 		}
 	}
+}
+
+func (lf *BuildkitLogsFilter) GetError(ss *client.SolveStatus) error {
+	for _, vertex := range ss.Vertexes {
+		for _, rule := range lf.errorRules {
+			if rule.condition(vertex) {
+				return okErrors.UserError{
+					E:    errors.New("docker frontend image not found"),
+					Hint: "Check your OKTETO_BUILDKIT_FRONTEND_IMAGE environment variable",
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// BuildKitFrontendNotFound checks if the log contains a frontend not found error
+var BuildKitFrontendNotFoundErr ConditionFunc = func(vertex *client.Vertex) bool {
+	if vertex.Error == "" {
+		return false
+	}
+	importPattern := `resolve image config for docker-image://.*`
+
+	if !regexp.MustCompile(importPattern).MatchString(vertex.Name) {
+		return false
+	}
+
+	errorPattern := `.*: not found`
+
+	return regexp.MustCompile(errorPattern).MatchString(vertex.Error)
 }
 
 // BuildKitMissingCacheCondition checks if the log contains a missing cache error

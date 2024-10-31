@@ -225,13 +225,18 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 }
 
 func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error {
-	logFilterRules := []Rule{
+	logFilterRules := []LogRule{
 		{
 			condition:   BuildKitMissingCacheCondition,
 			transformer: BuildKitMissingCacheTransformer,
 		},
 	}
-	logFilter := NewBuildKitLogsFilter(logFilterRules)
+	errorRules := []ErrorRule{
+		{
+			condition: BuildKitFrontendNotFoundErr,
+		},
+	}
+	logFilter := NewBuildKitLogsFilter(logFilterRules, errorRules)
 	ch := make(chan *client.SolveStatus)
 	ttyChannel := make(chan *client.SolveStatus)
 	plainChannel := make(chan *client.SolveStatus)
@@ -257,9 +262,13 @@ func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 					if progress == oktetoLog.TTYFormat {
 						ttyChannel <- ss
 					}
+					if err := logFilter.GetError(ss); err != nil {
+						commandFailChannel <- err
+					}
 				} else {
 					done = true
 				}
+
 			}
 			if done {
 				close(plainChannel)

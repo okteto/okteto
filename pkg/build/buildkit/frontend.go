@@ -58,7 +58,6 @@ func NewFrontendRetriever(logger *io.Controller) *FrontendRetriever {
 
 func (f *FrontendRetriever) GetFrontend(buildOptions *types.BuildOptions) *Frontend {
 	useDockerfileV0 := env.LoadBooleanOrDefault(buildkitUseDockerfileV0EnvVar, false)
-
 	customFrontendImage := os.Getenv(buildkitFrontendImageEnvVar)
 	if len(buildOptions.ExtraHosts) > 0 {
 		f.logger.Infof("using gateway frontend because of extra hosts")
