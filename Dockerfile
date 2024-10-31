@@ -2,7 +2,7 @@
 
 ARG KUBECTL_VERSION=1.30.4
 ARG HELM_VERSION=3.15.4
-
+ARG KUSTOMIZE_VERSION=5.4.3
 FROM golang:1.22-bookworm as golang-builder
 
 FROM golang-builder as kubectl-builder
@@ -24,6 +24,13 @@ RUN curl -sLf --retry 3 -o helm.tar.gz https://get.helm.sh/helm-v${HELM_VERSION}
     chmod +x /usr/local/bin/helm && \
     /usr/local/bin/helm version
 
+FROM golang-builder as kustomize-builder
+ARG TARGETARCH
+ARG KUSTOMIZE_VERSION
+RUN curl -sLf --retry 3 -o kustomize.tar.gz https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_${TARGETARCH}.tar.gz \
+    && tar -xvzf kustomize.tar.gz -C /usr/local/bin \
+    && chmod +x /usr/local/bin/kustomize \
+    && /usr/local/bin/kustomize version
 
 FROM golang-builder as builder
 WORKDIR /okteto
@@ -48,8 +55,11 @@ RUN apk add --no-cache bash ca-certificates
 
 COPY --from=kubectl-builder /usr/local/bin/kubectl /usr/local/bin/kubectl
 COPY --from=helm-builder /usr/local/bin/helm /usr/local/bin/helm
+COPY --from=kustomize-builder /usr/local/bin/kustomize /usr/local/bin/kustomize
+
 COPY --from=builder /okteto/bin/okteto /usr/local/bin/okteto
 COPY --from=builder /okteto/bin/docker-credential-okteto /usr/local/bin/docker-credential-okteto
+
 
 ENV OKTETO_DISABLE_SPINNER=true
 
