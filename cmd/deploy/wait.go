@@ -96,26 +96,28 @@ func (dw *Waiter) waitForResourcesToBeRunning(ctx context.Context, opts *Options
 		if err != nil {
 			return err
 		}
+		defer w.Stop()
 
-		for {
-			select {
-			case event := <-w.ResultChan():
-				switch event.Type {
-				case watch.Modified:
-					pod, ok := event.Object.(*v1.Pod)
-					if !ok {
-						continue
-					}
-					if _, ok := pendingPodsMap[pod.Name]; ok && pod.Status.Phase == v1.PodRunning {
-						delete(pendingPodsMap, pod.Name)
-					}
-					if len(pendingPodsMap) == 0 {
-						w.Stop()
-						return nil
-					}
-				default:
+		for e := range w.ResultChan() {
+			switch e.Type {
+			case watch.Modified, watch.Added:
+				pod, ok := e.Object.(*v1.Pod)
+				if !ok {
 					continue
 				}
+				if _, ok := pendingPodsMap[pod.Name]; ok && pod.Status.Phase == v1.PodRunning {
+					delete(pendingPodsMap, pod.Name)
+				}
+				if len(pendingPodsMap) == 0 {
+					return nil
+				}
+			// ignore this events
+			case watch.Error:
+				continue
+			case watch.Deleted, watch.Bookmark:
+				continue
+			default:
+				continue
 			}
 		}
 	}
