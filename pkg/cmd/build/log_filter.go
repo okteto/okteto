@@ -71,7 +71,7 @@ func (lf *BuildkitLogsFilter) GetError(ss *client.SolveStatus) error {
 	return nil
 }
 
-// BuildKitFrontendNotFound checks if the log contains a frontend not found error
+// BuildKitFrontendNotFoundErr checks if the log contains a frontend not found error
 var BuildKitFrontendNotFoundErr ConditionFunc = func(vertex *client.Vertex) bool {
 	if vertex.Error == "" {
 		return false
