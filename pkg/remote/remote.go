@@ -86,7 +86,7 @@ WORKDIR /okteto/src
 ENV {{$key}}={{$val}}
 {{end}}
 {{range $key, $val := .OktetoCommandSpecificEnvVars }}
-ARG {{$key}} {{$val}}
+ENV {{$key}}={{$val}}
 {{end}}
 {{range $key, $val := .OktetoDependencyEnvVars }}
 ENV {{$key}}={{$val}}
