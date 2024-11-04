@@ -57,7 +57,7 @@ func (dw *Waiter) wait(ctx context.Context, opts *Options, namespace string) err
 	}()
 	select {
 	case <-ctx.Done():
-		return fmt.Errorf("%s resources where not healthy after %s", opts.Name, opts.Timeout)
+		return fmt.Errorf("%s resources were not healthy after %s", opts.Name, opts.Timeout)
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		return oktetoErrors.ErrIntSig
