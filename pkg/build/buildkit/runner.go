@@ -30,7 +30,7 @@ const (
 	defaultMaxAttempts = 3
 
 	// MaxRetriesForBuildkitTransientErrorsEnvVar is the environment variable to set the number of retries to wait for buildkit to be available
-	MaxRetriesForBuildkitTransientErrorsEnvVar = "OKTETO_MAX_RETRIES_FOR_BUILDKIT_TRANSIENT_ERRORS"
+	MaxRetriesForBuildkitTransientErrorsEnvVar = "OKTETO_BUILDKIT_MAX_RETRIES_FOR_TRANSIENT_ERRORS"
 )
 
 type registryImageChecker interface {
