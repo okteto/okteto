@@ -34,7 +34,7 @@ const (
 	maxBuildkitWaitTimeEnvVar = "OKTETO_BUILDKIT_WAIT_TIMEOUT"
 
 	// retryBuildkitTimeEnvVar is the environment variable to set the retry time for buildkit
-	retryBuildkitIntervalEnvVar = "OKTETO_RETRY_BUILDKIT_INTERVAL"
+	retryBuildkitIntervalEnvVar = "OKTETO_BUILDKIT_RETRY_INTERVAL"
 )
 
 // sleeper defines an interface for sleeping
