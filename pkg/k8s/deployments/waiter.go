@@ -43,7 +43,6 @@ func (w *Waiter) AllDeploymentsHealthy(ctx context.Context, namespace, labelSele
 			pendingDeployments[d.Name] = true
 		}
 	}
-
 	if len(pendingDeployments) > 0 {
 		w, err := c.AppsV1().Deployments(namespace).Watch(ctx, metav1.ListOptions{
 			LabelSelector:   labelSelector,
@@ -79,7 +78,7 @@ func (w *Waiter) AllDeploymentsHealthy(ctx context.Context, namespace, labelSele
 					delete(pendingDeployments, deployment.Name)
 				}
 				if len(pendingDeployments) == 0 {
-					break
+					return nil
 				}
 			case watch.Bookmark, watch.Deleted:
 				continue

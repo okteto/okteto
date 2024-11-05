@@ -43,7 +43,6 @@ func (w *Waiter) AllStatefulSetsHealthy(ctx context.Context, namespace, labelSel
 			pendingStatefulSets[d.Name] = true
 		}
 	}
-
 	if len(pendingStatefulSets) > 0 {
 		w, err := c.AppsV1().StatefulSets(namespace).Watch(ctx, metav1.ListOptions{
 			LabelSelector:   labelSelector,
@@ -79,7 +78,7 @@ func (w *Waiter) AllStatefulSetsHealthy(ctx context.Context, namespace, labelSel
 					delete(pendingStatefulSets, sfs.Name)
 				}
 				if len(pendingStatefulSets) == 0 {
-					break
+					return nil
 				}
 			case watch.Bookmark, watch.Deleted:
 				continue
