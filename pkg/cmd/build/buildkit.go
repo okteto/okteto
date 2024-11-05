@@ -39,14 +39,10 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const (
-	defaultFrontend = "dockerfile.v0"
-)
-
 type buildWriter struct{}
 
 // getSolveOpt returns the buildkit solve options
-func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface, secretTempFolder string, fs afero.Fs) (*client.SolveOpt, error) {
+func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface, secretTempFolder string, fs afero.Fs, logger *io.Controller) (*client.SolveOpt, error) {
 
 	if buildOptions.Tag != "" {
 		err := validateImages(okctx, buildOptions.Tag)
@@ -108,15 +104,16 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 		frontendAttrs["no-cache"] = ""
 	}
 
-	frontend := defaultFrontend
+	frontend := okbuildkit.NewFrontendRetriever(logger).GetFrontend(buildOptions)
+	if frontend.Image != "" {
+		frontendAttrs["source"] = frontend.Image
+	}
 
 	if len(buildOptions.ExtraHosts) > 0 {
 		hosts := ""
 		for _, eh := range buildOptions.ExtraHosts {
 			hosts += fmt.Sprintf("%s=%s,", eh.Hostname, eh.IP)
 		}
-		frontend = "gateway.v0"
-		frontendAttrs["source"] = "docker/dockerfile"
 		frontendAttrs["add-hosts"] = strings.TrimSuffix(hosts, ",")
 	}
 
@@ -166,7 +163,7 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 	}
 	opt := &client.SolveOpt{
 		LocalDirs:     localDirs,
-		Frontend:      frontend,
+		Frontend:      string(frontend.Frontend),
 		FrontendAttrs: frontendAttrs,
 		Session:       attachable,
 		CacheImports:  []client.CacheOptionsEntry{},
@@ -228,13 +225,18 @@ func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface,
 }
 
 func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error {
-	logFilterRules := []Rule{
+	logFilterRules := []LogRule{
 		{
 			condition:   BuildKitMissingCacheCondition,
 			transformer: BuildKitMissingCacheTransformer,
 		},
 	}
-	logFilter := NewBuildKitLogsFilter(logFilterRules)
+	errorRules := []ErrorRule{
+		{
+			condition: BuildKitFrontendNotFoundErr,
+		},
+	}
+	logFilter := NewBuildKitLogsFilter(logFilterRules, errorRules)
 	ch := make(chan *client.SolveStatus)
 	ttyChannel := make(chan *client.SolveStatus)
 	plainChannel := make(chan *client.SolveStatus)
@@ -260,9 +262,13 @@ func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 					if progress == oktetoLog.TTYFormat {
 						ttyChannel <- ss
 					}
+					if err := logFilter.GetError(ss); err != nil {
+						commandFailChannel <- err
+					}
 				} else {
 					done = true
 				}
+
 			}
 			if done {
 				close(plainChannel)
