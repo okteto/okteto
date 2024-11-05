@@ -20,13 +20,10 @@ import (
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
-	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/model"
 	v1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -57,14 +54,6 @@ func ListStatefulsets(ctx context.Context, name, ns string, c kubernetes.Interfa
 		return nil, err
 	}
 	return sfsList, nil
-}
-
-func ListPods(ctx context.Context, ns, name string, c kubernetes.Interface) (*corev1.PodList, error) {
-	return pods.ListByPipeline(ctx, ns, name, c)
-}
-
-func WatchPods(ctx context.Context, ns, name, resourceVersion string, c kubernetes.Interface) (watch.Interface, error) {
-	return pods.WatchForPipeline(ctx, ns, name, resourceVersion, c)
 }
 
 // HasDeployedSomething checks if the pipeline has deployed any deployment/statefulset

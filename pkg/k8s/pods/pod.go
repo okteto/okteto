@@ -30,7 +30,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
 )
@@ -52,26 +51,6 @@ func GetBySelector(ctx context.Context, namespace string, selector map[string]st
 
 	r := ps[0]
 	return &r, nil
-}
-
-// ListByPipeline returns all the pods that matches the selector or error if not found
-func ListByPipeline(ctx context.Context, namespace, name string, c kubernetes.Interface) (*apiv1.PodList, error) {
-	return c.CoreV1().Pods(namespace).List(
-		ctx,
-		metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("%s=%s", model.DeployedByLabel, format.ResourceK8sMetaString(name)),
-		},
-	)
-}
-
-func WatchForPipeline(ctx context.Context, namespace, name, resourceVersion string, c kubernetes.Interface) (watch.Interface, error) {
-	return c.CoreV1().Pods(namespace).Watch(
-		ctx,
-		metav1.ListOptions{
-			LabelSelector:   fmt.Sprintf("%s=%s", model.DeployedByLabel, format.ResourceK8sMetaString(name)),
-			ResourceVersion: resourceVersion,
-		},
-	)
 }
 
 // ListBySelector returns all the pods that matches the selector or error if not found

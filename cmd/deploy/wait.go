@@ -19,13 +19,15 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/format"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	ioCtrl "github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/watch"
+	"golang.org/x/sync/errgroup"
 )
 
 type Waiter struct {
@@ -77,50 +79,16 @@ func (dw *Waiter) waitForResourcesToBeRunning(ctx context.Context, opts *Options
 		return err
 	}
 
-	// first list the pods of the pipeline and check if they are running
-	podList, err := pipeline.ListPods(ctx, namespace, opts.Manifest.Name, c)
-	if err != nil {
-		return err
-	}
-	pendingPodsMap := make(map[string]bool)
-	for i := range podList.Items {
-		p := &podList.Items[i]
-		if p.Status.Phase != v1.PodRunning {
-			pendingPodsMap[p.Name] = true
-		}
-	}
+	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, format.ResourceK8sMetaString(opts.Manifest.Name))
 
-	// watch if there are pending pods to be running
-	if len(pendingPodsMap) > 0 {
-		w, err := pipeline.WatchPods(ctx, namespace, opts.Manifest.Name, podList.ResourceVersion, c)
-		if err != nil {
-			return err
-		}
-		defer w.Stop()
-
-		for e := range w.ResultChan() {
-			switch e.Type {
-			case watch.Modified, watch.Added:
-				pod, ok := e.Object.(*v1.Pod)
-				if !ok {
-					continue
-				}
-				if _, ok := pendingPodsMap[pod.Name]; ok && pod.Status.Phase == v1.PodRunning {
-					delete(pendingPodsMap, pod.Name)
-				}
-				if len(pendingPodsMap) == 0 {
-					return nil
-				}
-			// ignore this events
-			case watch.Error:
-				continue
-			case watch.Deleted, watch.Bookmark:
-				continue
-			default:
-				continue
-			}
-		}
-	}
-
-	return nil
+	errgroup, ctx := errgroup.WithContext(ctx)
+	errgroup.Go(func() error {
+		w := &deployments.Waiter{Client: c}
+		return w.AllDeploymentsHealthy(ctx, namespace, labelSelector)
+	})
+	errgroup.Go(func() error {
+		w := &statefulsets.Waiter{Client: c}
+		return w.AllStatefulSetsHealthy(ctx, namespace, labelSelector)
+	})
+	return errgroup.Wait()
 }
