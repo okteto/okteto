@@ -56,6 +56,7 @@ type OktetoBuilder struct {
 	OktetoContext OktetoContextInterface
 	Fs            afero.Fs
 	metadata      *buildkit.BuildMetadata
+	logger        *io.Controller
 }
 
 func (ob *OktetoBuilder) GetMetadata() *buildkit.BuildMetadata {
@@ -69,11 +70,12 @@ type OktetoRegistryInterface interface {
 
 // NewOktetoBuilder creates a new instance of OktetoBuilder.
 // It takes an OktetoContextInterface and afero.Fs as parameters and returns a pointer to OktetoBuilder.
-func NewOktetoBuilder(context OktetoContextInterface, fs afero.Fs) *OktetoBuilder {
+func NewOktetoBuilder(context OktetoContextInterface, fs afero.Fs, logger *io.Controller) *OktetoBuilder {
 	return &OktetoBuilder{
 		OktetoContext: context,
 		Fs:            fs,
 		metadata:      &buildkit.BuildMetadata{},
+		logger:        logger,
 	}
 }
 
@@ -160,7 +162,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	}
 	defer os.RemoveAll(secretTempFolder)
 
-	opt, err := getSolveOpt(buildOptions, ob.OktetoContext, secretTempFolder, ob.Fs)
+	opt, err := getSolveOpt(buildOptions, ob.OktetoContext, secretTempFolder, ob.Fs, ob.logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create build solver")
 	}

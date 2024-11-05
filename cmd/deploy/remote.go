@@ -76,6 +76,7 @@ func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller
 			Store: okteto.GetContextStore(),
 		},
 		fs,
+		ioCtrl,
 	)
 	runner := remote.NewRunner(ioCtrl, builder)
 	return &remoteDeployer{

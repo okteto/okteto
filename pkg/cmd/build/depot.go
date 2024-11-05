@@ -161,7 +161,7 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 		}
 	}()
 
-	opt, err := getSolveOpt(buildOptions, db.okCtx, secretTempFolder, db.fs)
+	opt, err := getSolveOpt(buildOptions, db.okCtx, secretTempFolder, db.fs, db.ioCtrl)
 	if err != nil {
 		return fmt.Errorf("failed to create build solver: %w", err)
 	}

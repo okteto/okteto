@@ -24,7 +24,7 @@ import (
 )
 
 func TestNewBuildKitLogsFilterEmptyRules(t *testing.T) {
-	lf := NewBuildKitLogsFilter([]Rule{})
+	lf := NewBuildKitLogsFilter([]LogRule{}, []ErrorRule{})
 
 	v := &client.Vertex{
 		Name:  "test log message",
@@ -45,14 +45,14 @@ func TestNewBuildKitLogsFilterEmptyRules(t *testing.T) {
 func TestNewBuildKitLogsFilter(t *testing.T) {
 	now := time.Now()
 
-	rules := []Rule{
+	rules := []LogRule{
 		{
 			condition:   BuildKitMissingCacheCondition,
 			transformer: BuildKitMissingCacheTransformer,
 		},
 	}
 
-	lf := NewBuildKitLogsFilter(rules)
+	lf := NewBuildKitLogsFilter(rules, []ErrorRule{})
 
 	v := &client.Vertex{
 		Name:      "importing cache manifest from test-registry.com/test-account/test-repo",
