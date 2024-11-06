@@ -22,6 +22,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/login"
@@ -281,6 +282,33 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 
 	okteto.GetContext().IsTrial = clusterMetadata.IsTrialLicense
 	okteto.GetContext().CompanyName = clusterMetadata.CompanyName
+
+	if len(clusterMetadata.CliVersionRange) > 0 {
+		skipCheck, ok := os.LookupEnv("OKTETO_SKIP_CLUSTER_CLI_VERSION")
+		if !ok || (skipCheck != "true" && skipCheck != "1") {
+			version, err := semver.NewVersion(config.VersionString)
+			if err != nil {
+				oktetoLog.Warning("You are using a non-standard okteto version (%s) that may be incompatible with your okteto cluster. Set OKTETO_SKIP_CLUSTER_CLI_VERSION=1 to supress this message.", config.VersionString)
+			} else {
+				majorMinor := fmt.Sprintf("%d.%d", version.Major(), version.Minor())
+				var ok bool
+				for _, v := range clusterMetadata.CliVersionRange {
+					if v == majorMinor {
+						ok = true
+						break
+					}
+				}
+				if !ok {
+					supported := strings.Join(clusterMetadata.CliVersionRange, ", ")
+					return oktetoErrors.UserError{
+						E:    fmt.Errorf("unsupported okteto version: %s", config.VersionString),
+						Hint: fmt.Sprintf("Your okteto cli version is not supported by %s. Supported versions are: %s. Please update your okteto CLI version to a compatible version or contact your Okteto administrator", okteto.GetContext().Name, supported),
+					}
+				}
+			}
+
+		}
+	}
 
 	exportPlatformVariablesToEnv(userContext.PlatformVariables)
 
