@@ -17,16 +17,18 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-
-	"github.com/okteto/okteto/pkg/log/io"
 )
 
 const (
-	// versionPattern is the pattern to match a version string
-	versionPattern = `\d+\.\d+\.\d+`
+	// Image env vars
+	// OktetoBinEnvVar defines the okteto binary that should be used
+	oktetoBinEnvVar = "OKTETO_BIN"
 
 	// oktetoDeployRemoteImageEnvVar defines okteto cli image used for deploy an environment remotely
 	oktetoDeployRemoteImageEnvVar = "OKTETO_REMOTE_CLI_IMAGE"
+
+	// versionPattern is the pattern to match a version string
+	versionPattern = `\d+\.\d+\.\d+`
 
 	// oktetoCLIImageForRemoteTemplate defines okteto CLI image template to use for remote deployments
 	oktetoCLIImageForRemoteTemplate = "okteto/okteto:%s"
@@ -38,11 +40,16 @@ var (
 )
 
 type ImageConfig struct {
-	ioCtrl *io.Controller
+	ioCtrl Logger
 	getEnv func(string) string
 }
 
-func NewImageConfig(ioCtrl *io.Controller) *ImageConfig {
+// Logger is the interface used to log messages
+type Logger interface {
+	Infof(format string, args ...interface{})
+}
+
+func NewImageConfig(ioCtrl Logger) *ImageConfig {
 	return &ImageConfig{
 		ioCtrl: ioCtrl,
 		getEnv: os.Getenv,
@@ -50,7 +57,19 @@ func NewImageConfig(ioCtrl *io.Controller) *ImageConfig {
 }
 
 func (c *ImageConfig) GetBinImage() string {
-	return ""
+	binImage := c.getEnv(oktetoBinEnvVar)
+	if binImage != "" {
+		c.ioCtrl.Infof("using okteto bin image (from env var): %s", binImage)
+		return binImage
+	}
+
+	if versionRegex.MatchString(VersionString) {
+		c.ioCtrl.Infof("using okteto bin image (from cli version): %s", VersionString)
+		return fmt.Sprintf(oktetoCLIImageForRemoteTemplate, VersionString)
+	}
+
+	c.ioCtrl.Infof("invalid version string: %s, using latest", VersionString)
+	return fmt.Sprintf(oktetoCLIImageForRemoteTemplate, "master")
 }
 
 func (c *ImageConfig) GetRemoteImage(versionString string) string {

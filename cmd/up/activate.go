@@ -197,10 +197,11 @@ func (up *upContext) activate() error {
 				}
 			}
 
-			if version != model.OktetoBinImageTag {
-				oktetoLog.Yellow("The Okteto CLI version %s uses the init container image %s.", config.VersionString, model.OktetoBinImageTag)
-				oktetoLog.Yellow("Please consider upgrading your init container image %s with the content of %s", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
-				oktetoLog.Infof("Using init image %s instead of default init image (%s)", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
+			binImage := config.NewImageConfig(oktetoLog.GetOutputWriter()).GetBinImage()
+			if version != binImage {
+				oktetoLog.Yellow("The Okteto CLI version %s uses the init container image %s.", config.VersionString, binImage)
+				oktetoLog.Yellow("Please consider upgrading your init container image %s with the content of %s", up.Dev.InitContainer.Image, binImage)
+				oktetoLog.Infof("Using init image %s instead of default init image (%s)", up.Dev.InitContainer.Image, binImage)
 			}
 
 		}
