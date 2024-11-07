@@ -23,7 +23,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"text/template"
@@ -405,7 +404,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 			Parse(dockerfileTemplate))
 
 	dockerfileSyntax := dockerfileTemplateProperties{
-		OktetoCLIImage:               getOktetoCLIVersion(config.VersionString),
+		OktetoCLIImage:               config.NewImageConfig(r.ioCtrl).GetRemoteImage(config.VersionString),
 		UserRunnerImage:              params.BaseImage,
 		RemoteDeployEnvVar:           constants.OktetoDeployRemote,
 		ContextArgName:               model.OktetoContextEnvVar,
@@ -539,28 +538,6 @@ func createDockerignoreFileWithFilesystem(cwd, tmpDir string, rules []string, us
 		dockerignoreContent = []byte("# Okteto docker ignore\n")
 	}
 	return afero.WriteFile(fs, filename, dockerignoreContent, 0600)
-}
-
-// getOktetoCLIVersion gets the CLI version to be used in the Dockerfile to extract the CLI binaries
-func getOktetoCLIVersion(versionString string) string {
-	var version string
-	if match, err := regexp.MatchString(`\d+\.\d+\.\d+`, versionString); match {
-		version = fmt.Sprintf(constants.OktetoCLIImageForRemoteTemplate, versionString)
-	} else {
-		if err != nil {
-			oktetoLog.Infof("invalid version string: %s. Error: %s, using latest", versionString, err)
-		} else {
-			oktetoLog.Infof("invalid version string: %s, using latest", versionString)
-		}
-		remoteOktetoImage := os.Getenv(constants.OktetoDeployRemoteImage)
-		if remoteOktetoImage != "" {
-			version = remoteOktetoImage
-		} else {
-			version = fmt.Sprintf(constants.OktetoCLIImageForRemoteTemplate, "latest")
-		}
-	}
-
-	return version
 }
 
 // getExtraHosts returns the extra hosts to be added to the Dockerfile
