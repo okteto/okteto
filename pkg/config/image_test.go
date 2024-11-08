@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_getOktetoCLIVersion(t *testing.T) {
+func Test_GetRemoteImage(t *testing.T) {
 	var tests = []struct {
 		name                                 string
 		versionString, expected, cliImageEnv string

@@ -1,4 +1,4 @@
-// Copyright 2023 The Okteto Authors
+// Copyright 2024 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -21,10 +21,11 @@ import (
 
 const (
 	// Image env vars
-	// OktetoBinEnvVar defines the okteto binary that should be used
+	// oktetoBinEnvVar defines the okteto binary that should be used
+	// This variable is used for the okteto up start script. It runs syncthing and a supervisor
 	oktetoBinEnvVar = "OKTETO_BIN"
 
-	// oktetoDeployRemoteImageEnvVar defines okteto cli image used for deploy an environment remotely
+	// oktetoDeployRemoteImageEnvVar defines okteto cli image used to deploy an environment remotely
 	oktetoDeployRemoteImageEnvVar = "OKTETO_REMOTE_CLI_IMAGE"
 
 	// versionPattern is the pattern to match a version string

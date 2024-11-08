@@ -1,5 +1,6 @@
 ARG KUBECTL_VERSION=1.30.4
-ARG HELM_VERSION=3.15.4
+ARG HELM_VERSION=3.16.2
+ARG KUSTOMIZE_VERSION=5.5.0
 
 FROM golang:1.22-bookworm AS golang-builder
 FROM okteto/bin:1.6.1 AS okteto-bin
