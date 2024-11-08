@@ -49,6 +49,8 @@ type Logger interface {
 	Infof(format string, args ...interface{})
 }
 
+// NewImageConfig creates a new ImageConfig instance
+// ImageConfig is used to get the correct image during the code generation
 func NewImageConfig(ioCtrl Logger) *ImageConfig {
 	return &ImageConfig{
 		ioCtrl: ioCtrl,
@@ -56,6 +58,8 @@ func NewImageConfig(ioCtrl Logger) *ImageConfig {
 	}
 }
 
+// GetBinImage returns the okteto bin image to use
+// Bin image is used to run start script in okteto up
 func (c *ImageConfig) GetBinImage() string {
 	binImage := c.getEnv(oktetoBinEnvVar)
 	if binImage != "" {
@@ -72,6 +76,8 @@ func (c *ImageConfig) GetBinImage() string {
 	return fmt.Sprintf(oktetoCLIImageForRemoteTemplate, "master")
 }
 
+// GetRemoteImage returns the okteto cli image to use for remote deployments
+// Remote image is used to run okteto deploy/destroy/test remotely
 func (c *ImageConfig) GetRemoteImage(versionString string) string {
 	if versionRegex.MatchString(versionString) {
 		return fmt.Sprintf(oktetoCLIImageForRemoteTemplate, versionString)
@@ -83,4 +89,15 @@ func (c *ImageConfig) GetRemoteImage(versionString string) string {
 		return remoteOktetoImage
 	}
 	return fmt.Sprintf(oktetoCLIImageForRemoteTemplate, "latest")
+}
+
+// GetOktetoImage returns the okteto cli image to use for hybrid development environments
+func (c *ImageConfig) GetOktetoImage() string {
+	if versionRegex.MatchString(VersionString) {
+		c.ioCtrl.Infof("using okteto bin image (from cli version): %s", VersionString)
+		return fmt.Sprintf(oktetoCLIImageForRemoteTemplate, VersionString)
+	}
+
+	c.ioCtrl.Infof("invalid version string: %s, using latest", VersionString)
+	return fmt.Sprintf(oktetoCLIImageForRemoteTemplate, "master")
 }

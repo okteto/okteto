@@ -763,7 +763,7 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return fmt.Errorf("dev workdir is not a dir")
 		}
 		dev.Workdir = localDir
-		dev.Image = constants.OktetoBusyboxImage
+		dev.Image = config.NewImageConfig(oktetoLog.GetOutputWriter()).GetOktetoImage()
 		dev.ImagePullPolicy = apiv1.PullIfNotPresent
 
 	} else {

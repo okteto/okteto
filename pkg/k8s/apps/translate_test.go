@@ -22,9 +22,11 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -227,7 +229,7 @@ dev:
 		InitContainers: []apiv1.Container{
 			{
 				Name:            OktetoBinName,
-				Image:           model.OktetoBinImageTag,
+				Image:           config.NewImageConfig(io.NewIOController()).GetBinImage(),
 				ImagePullPolicy: apiv1.PullIfNotPresent,
 				Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 				SecurityContext: &apiv1.SecurityContext{
@@ -921,7 +923,7 @@ func Test_translateWithoutVolumes(t *testing.T) {
 		InitContainers: []apiv1.Container{
 			{
 				Name:            OktetoBinName,
-				Image:           model.OktetoBinImageTag,
+				Image:           config.NewImageConfig(io.NewIOController()).GetBinImage(),
 				ImagePullPolicy: apiv1.PullIfNotPresent,
 				Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 				VolumeMounts: []apiv1.VolumeMount{
@@ -1642,7 +1644,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 		InitContainers: []apiv1.Container{
 			{
 				Name:            OktetoBinName,
-				Image:           model.OktetoBinImageTag,
+				Image:           config.NewImageConfig(io.NewIOController()).GetBinImage(),
 				ImagePullPolicy: apiv1.PullIfNotPresent,
 				SecurityContext: &apiv1.SecurityContext{
 					RunAsUser:  &runAsUser,
