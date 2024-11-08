@@ -45,7 +45,7 @@ COPY --from=kubectl-builder /usr/local/bin/kubectl /usr/local/bin/kubectl
 COPY --from=helm-builder /usr/local/bin/helm /usr/local/bin/helm
 COPY --from=builder /okteto/bin/okteto /usr/local/bin/okteto
 COPY --from=builder /okteto/bin/docker-credential-okteto /usr/local/bin/docker-credential-okteto
-COPY --from=okteto-bin /usr/local/bin/* /usr/local/bin
+COPY --from=okteto-bin /usr/bin/bin/* /usr/bin-image/bin
 
 ENV OKTETO_DISABLE_SPINNER=true
 ENV PS1="\[\e[36m\]\${OKTETO_NAMESPACE:-okteto}:\e[32m\]\${OKTETO_NAME:-dev} \[\e[m\]\W> "
