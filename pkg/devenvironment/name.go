@@ -16,9 +16,11 @@ package devenvironment
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/discovery"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -29,10 +31,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+type getEnv func(string) string
+
 // NameInferer Allows to infer the name for a dev environment
 type NameInferer struct {
 	k8s              kubernetes.Interface
 	getRepositoryURL func(string) (string, error)
+	getEnv           getEnv
 	fs               afero.Fs
 }
 
@@ -41,6 +46,7 @@ func NewNameInferer(k8s kubernetes.Interface) NameInferer {
 	return NameInferer{
 		k8s:              k8s,
 		getRepositoryURL: utils.GetRepositoryURL,
+		getEnv:           os.Getenv,
 		fs:               afero.NewOsFs(),
 	}
 }
@@ -115,13 +121,20 @@ func (n NameInferer) InferNameFromDevEnvsAndRepository(ctx context.Context, repo
 // InferName infers the dev environment name from the folder received as parameter. It has the following preference:
 //   - If cwd (current working directory) contains a repo, we look for a dev environment deployed with the same repository and the same
 //     manifest path, and we took the name from the config map
-//   - If not dev environment is found, we use the repository name to infer the dev environment name
-//   - If the current working directory doesn't have a repository, we get the name from the folder name
+//   - If current working directory doesn't have a repository, we check if OKTETO_NAME env var is set
+//   - If no repository and no OKTETO_NAME env var is set, we take the name from the CWD
 //
 // `manifestPath` is needed because we compare it with the one in dev environments to see if it is the dev environment we look for
 func (n NameInferer) InferName(ctx context.Context, cwd, namespace, manifestPath string) string {
 	repoURL, err := n.getRepositoryURL(cwd)
 	if err != nil {
+		// We give priority to OKTETO_NAME env var to use it on cases where the okteto commands are executed as part
+		// of other deploy/destroy commands
+		if name := n.getEnv(constants.OktetoNameEnvVar); name != "" {
+			oktetoLog.Info("inferring name from OKTETO_NAME env var")
+			return name
+		}
+
 		oktetoLog.Info("inferring name from folder")
 		return filepath.Base(cwd)
 	}
