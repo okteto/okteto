@@ -952,3 +952,53 @@ func Test_loadDotEnv(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckCLIMinVersion(t *testing.T) {
+	tests := []struct {
+		name           string
+		currentVersion string
+		minVersion     string
+		expectedErr    error
+	}{
+		{
+			name:           "newer version",
+			currentVersion: "3.1.0",
+			minVersion:     "3.0.0",
+		},
+		{
+			name:           "same version",
+			currentVersion: "3.0.0",
+			minVersion:     "3.0.0",
+		},
+		{
+			name:           "newer patch version",
+			currentVersion: "3.0.1",
+			minVersion:     "3.0.0",
+		},
+		{
+			name:           "old version",
+			currentVersion: "2.99.0",
+			minVersion:     "3.0.0",
+			expectedErr: oktetoErrors.UserError{
+				E: fmt.Errorf("unsupported okteto CLI version: 2.99.0"),
+			},
+		},
+		{
+			name:           "old version",
+			currentVersion: "some-non-semver-version",
+			minVersion:     "3.0.0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := checkCLIMinVersion(tt.currentVersion, tt.minVersion)
+			if tt.expectedErr != nil {
+				assert.Equal(t, tt.expectedErr.Error(), err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+
+}

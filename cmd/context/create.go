@@ -286,20 +286,9 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 	if clusterMetadata.CliMinVersion != "" {
 		skip := env.LoadBoolean("OKTETO_SKIP_CLUSTER_CLI_VERSION")
 		if !skip {
-			version, err := semver.NewVersion(config.VersionString)
+			err := checkCLIMinVersion(config.VersionString, clusterMetadata.CliMinVersion)
 			if err != nil {
-				oktetoLog.Warning("You are using a non-standard okteto version (%s) that may be incompatible with your okteto cluster. Set OKTETO_SKIP_CLUSTER_CLI_VERSION=1 to supress this message.", config.VersionString)
-			} else {
-				minVersion, err := semver.NewVersion(clusterMetadata.CliMinVersion)
-				if err != nil {
-					return fmt.Errorf("failed to parse cluster min version: %v", err)
-				}
-				if version.LessThan(minVersion) {
-					return oktetoErrors.UserError{
-						E:    fmt.Errorf("unsupported okteto CLI version: %s", config.VersionString),
-						Hint: fmt.Sprintf("Your Okteto instance supports a minimum Okteto CLI version of %s.\n    Please update your Okteto CLI to the latest version or contact your Okteto administrator.", clusterMetadata.CliMinVersion),
-					}
-				}
+				return err
 			}
 		}
 	}
@@ -308,6 +297,25 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 
 	os.Setenv(model.OktetoUserNameEnvVar, okteto.GetContext().Username)
 
+	return nil
+}
+
+func checkCLIMinVersion(currentVersion, minVersion string) error {
+	version, err := semver.NewVersion(currentVersion)
+	if err != nil {
+		oktetoLog.Warning("You are using a non-standard okteto version (%s) that may be incompatible with your okteto cluster. Set OKTETO_SKIP_CLUSTER_CLI_VERSION=1 to supress this message.", currentVersion)
+		return nil
+	}
+	min, err := semver.NewVersion(minVersion)
+	if err != nil {
+		return fmt.Errorf("failed to parse cluster min version: %v", err)
+	}
+	if version.LessThan(min) {
+		return oktetoErrors.UserError{
+			E:    fmt.Errorf("unsupported okteto CLI version: %s", currentVersion),
+			Hint: fmt.Sprintf("Your Okteto instance supports a minimum Okteto CLI version of %s.\n    Please update your Okteto CLI to the latest version or contact your Okteto administrator.", minVersion),
+		}
+	}
 	return nil
 }
 
