@@ -283,30 +283,24 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 	okteto.GetContext().IsTrial = clusterMetadata.IsTrialLicense
 	okteto.GetContext().CompanyName = clusterMetadata.CompanyName
 
-	if len(clusterMetadata.CliVersionRange) > 0 {
-		skipCheck, ok := os.LookupEnv("OKTETO_SKIP_CLUSTER_CLI_VERSION")
-		if !ok || (skipCheck != "true" && skipCheck != "1") {
+	if clusterMetadata.CliMinVersion != "" {
+		skip := env.LoadBoolean("OKTETO_SKIP_CLUSTER_CLI_VERSION")
+		if !skip {
 			version, err := semver.NewVersion(config.VersionString)
 			if err != nil {
 				oktetoLog.Warning("You are using a non-standard okteto version (%s) that may be incompatible with your okteto cluster. Set OKTETO_SKIP_CLUSTER_CLI_VERSION=1 to supress this message.", config.VersionString)
 			} else {
-				majorMinor := fmt.Sprintf("%d.%d", version.Major(), version.Minor())
-				var ok bool
-				for _, v := range clusterMetadata.CliVersionRange {
-					if v == majorMinor {
-						ok = true
-						break
-					}
+				minVersion, err := semver.NewVersion(clusterMetadata.CliMinVersion)
+				if err != nil {
+					return fmt.Errorf("failed to parse cluster min version: %v", err)
 				}
-				if !ok {
-					supported := strings.Join(clusterMetadata.CliVersionRange, ", ")
+				if version.LessThan(minVersion) {
 					return oktetoErrors.UserError{
-						E:    fmt.Errorf("unsupported okteto version: %s", config.VersionString),
-						Hint: fmt.Sprintf("Your okteto cli version is not supported by %s. Supported versions are: %s. Please update your okteto CLI version to a compatible version or contact your Okteto administrator", okteto.GetContext().Name, supported),
+						E:    fmt.Errorf("unsupported okteto CLI version: %s", config.VersionString),
+						Hint: fmt.Sprintf("Your Okteto instance supports a minimum Okteto CLI version of %s.\n    Please update your Okteto CLI to the latest version or contact your Okteto administrator.", clusterMetadata.CliMinVersion),
 					}
 				}
 			}
-
 		}
 	}
 
