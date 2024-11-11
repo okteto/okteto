@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"sort"
 	"strconv"
@@ -33,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/externalresource"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"gopkg.in/yaml.v3"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -787,14 +789,18 @@ type manifestRaw struct {
 	GlobalForward []forward.GlobalForward  `json:"forward,omitempty" yaml:"forward,omitempty"`
 }
 
-func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (m *Manifest) UnmarshalYAML(value *yaml.Node) error {
+	if err := validateFields(value, manifestRaw{}); err != nil {
+		return err
+	}
+
 	manifest := manifestRaw{
 		Dev:          map[string]*Dev{},
 		Build:        map[string]*build.Info{},
 		Dependencies: deps.ManifestSection{},
 		External:     externalresource.Section{},
 	}
-	err := unmarshal(&manifest)
+	err := value.Decode(&manifest)
 	if err != nil {
 		return err
 	}
@@ -822,24 +828,50 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func (d *DeployCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var command string
-	err := unmarshal(&command)
-	if err == nil {
-		d.Command = command
-		d.Name = command
-		return nil
+func validateFields(value *yaml.Node, iface interface{}) error {
+	yamlKeys := make(map[string]struct{})
+	for i := 0; i < len(value.Content); i += 2 {
+		keyNode := value.Content[i]
+		if keyNode.Kind != yaml.ScalarNode {
+			return fmt.Errorf("expected scalar keys in mapping, but got %v", keyNode.Kind)
+		}
+		yamlKeys[keyNode.Value] = struct{}{}
 	}
 
-	// prevent recursion
-	type deployCommand DeployCommand
-	var extendedCommand deployCommand
-	err = unmarshal(&extendedCommand)
-	if err != nil {
-		return err
+	structFields := getStructFields(manifestRaw{})
+
+	var unknownFields []string
+	for key := range yamlKeys {
+		if _, ok := structFields[key]; !ok {
+			unknownFields = append(unknownFields, key)
+		}
 	}
-	*d = DeployCommand(extendedCommand)
+
+	if len(unknownFields) > 0 {
+		return fmt.Errorf("unknown fields in manifest: %v", unknownFields)
+	}
 	return nil
+}
+
+func getStructFields(iface interface{}) map[string]struct{} {
+	structFields := make(map[string]struct{})
+	t := reflect.TypeOf(iface)
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		yamlTag := field.Tag.Get("yaml")
+		if yamlTag == "-" {
+			continue
+		}
+		fieldName := field.Name
+		if yamlTag != "" {
+			parts := strings.Split(yamlTag, ",")
+			if parts[0] != "" {
+				fieldName = parts[0]
+			}
+		}
+		structFields[fieldName] = struct{}{}
+	}
+	return structFields
 }
 
 func (d *DeployInfo) MarshalYAML() (interface{}, error) {

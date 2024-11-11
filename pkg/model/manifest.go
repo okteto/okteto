@@ -34,7 +34,6 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/spf13/afero"
-	"gopkg.in/yaml.v2"
 	yaml3 "gopkg.in/yaml.v3"
 )
 
@@ -319,7 +318,7 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 		}
 
 		if len(inferredManifest.Manifest) == 0 {
-			bytes, err := yaml.Marshal(inferredManifest)
+			bytes, err := yaml3.Marshal(inferredManifest)
 			if err != nil {
 				return nil, err
 			}
@@ -506,11 +505,13 @@ func isEmptyManifestFile(bytes []byte) bool {
 }
 
 // Read reads an okteto manifests
-func Read(bytes []byte) (*Manifest, error) {
+func Read(b []byte) (*Manifest, error) {
 	manifest := NewManifest()
 
-	if bytes != nil {
-		if err := yaml.UnmarshalStrict(bytes, manifest); err != nil {
+	if b != nil && len(b) > 0 {
+		decoder := yaml3.NewDecoder(bytes.NewBuffer(b))
+		decoder.KnownFields(true)
+		if err := decoder.Decode(manifest); err != nil {
 			return nil, err
 		}
 	}
@@ -523,7 +524,7 @@ func Read(bytes []byte) (*Manifest, error) {
 		return nil, err
 	}
 
-	manifest.Manifest = bytes
+	manifest.Manifest = b
 	manifest.Type = OktetoManifestType
 	return manifest, nil
 }
@@ -929,7 +930,7 @@ func (m *Manifest) WriteToFile(filePath string) error {
 		}
 	}
 	// Unmarshal with yamlv2 because we have the marshal with yaml v2
-	b, err := yaml.Marshal(m)
+	b, err := yaml3.Marshal(m)
 	if err != nil {
 		return err
 	}
