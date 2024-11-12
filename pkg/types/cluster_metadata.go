@@ -24,6 +24,7 @@ type ClusterMetadata struct {
 	SSHAgentHostname    string
 	SSHAgentPort        string
 	CliMinVersion       string
+	CliClusterVersion   string
 	Certificate         []byte
 	IsTrialLicense      bool
 }

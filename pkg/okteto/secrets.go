@@ -266,6 +266,8 @@ func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.C
 			metadata.SSHAgentPort = string(v.Value)
 		case "cliMinVersion":
 			metadata.CliMinVersion = string(v.Value)
+		case "cliClusterVersion":
+			metadata.CliClusterVersion = string(v.Value)
 		}
 	}
 	if metadata.PipelineRunnerImage == "" {

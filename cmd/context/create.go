@@ -286,7 +286,7 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 	if clusterMetadata.CliMinVersion != "" {
 		skip := env.LoadBoolean("OKTETO_SKIP_CLUSTER_CLI_VERSION")
 		if !skip {
-			err := checkCLIMinVersion(config.VersionString, clusterMetadata.CliMinVersion)
+			err := checkCLIVersion(config.VersionString, clusterMetadata.CliClusterVersion, clusterMetadata.CliMinVersion)
 			if err != nil {
 				return err
 			}
@@ -300,23 +300,47 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 	return nil
 }
 
-func checkCLIMinVersion(currentVersion, minVersion string) error {
+func checkCLIVersion(currentVersion, recommendedVersion, minMajorMinor string) error {
 	version, err := semver.NewVersion(currentVersion)
 	if err != nil {
-		oktetoLog.Warning("You are using a non-standard okteto version (%s) that may be incompatible with your okteto cluster. Set OKTETO_SKIP_CLUSTER_CLI_VERSION=1 to supress this message.", currentVersion)
+		oktetoLog.Warning("You are using a non-standard okteto version (%s) that may be incompatible with your okteto cluster. Set OKTETO_SKIP_CLUSTER_CLI_VERSION=true to supress this message.", currentVersion)
 		return nil
 	}
-	min, err := semver.NewVersion(minVersion)
+
+	// Remove patch, pre-release and build metadata
+	currentMajorMinor := fmt.Sprintf("%v.%v", version.Major(), version.Minor())
+	version, _ = semver.NewVersion(currentMajorMinor)
+
+	recVersion, err := semver.NewVersion(recommendedVersion)
+	if err != nil {
+		return fmt.Errorf("failed to parse cluster version: %v", err)
+	}
+
+	recommendedMajorMinor := fmt.Sprintf("%v.%v", recVersion.Major(), recVersion.Minor())
+
+	min, err := semver.NewVersion(minMajorMinor)
 	if err != nil {
 		return fmt.Errorf("failed to parse cluster min version: %v", err)
 	}
 	if version.LessThan(min) {
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("unsupported okteto CLI version: %s", currentVersion),
-			Hint: fmt.Sprintf("Your Okteto instance supports a minimum Okteto CLI version of %s.\n    Please update your Okteto CLI to the latest version or contact your Okteto administrator.", minVersion),
+			Hint: fmt.Sprintf("Your Okteto instance has a recommended Okteto CLI version of %s and supports a minimum version of %s.\n    Please update your Okteto CLI or contact your Okteto administrator.", recommendedMajorMinor, minMajorMinor),
 		}
 	}
+
+	if version.LessThan(recVersion) {
+		oktetoLog.Warning(fmt.Sprintf("Your okteto version %s is older than the recommended version of your okteto instance: %s. Upgrade to the recommended version or set OKTETO_SKIP_CLUSTER_CLI_VERSION=true to supress this message.", currentMajorMinor, recommendedMajorMinor))
+	}
+
+	if version.GreaterThan(recVersion) {
+		oktetoLog.Warning(fmt.Sprintf("Your okteto version %s is newer than the recommended version of your okteto instance: %s. Downgrade to the recommended version or set OKTETO_SKIP_CLUSTER_CLI_VERSION=true to supress this message.", currentMajorMinor, recommendedMajorMinor))
+		return nil
+	}
+
+	oktetoLog.Debugf("okteto CLI version %s is compatible with the okteto instance", currentVersion)
 	return nil
+
 }
 
 func getLoggedUserContext(ctx context.Context, c *Command, ctxOptions *Options) (*types.UserContext, error) {
