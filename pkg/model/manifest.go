@@ -486,7 +486,7 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 		if errors.Is(err, oktetoErrors.ErrNotManifestContentDetected) {
 			return nil, err
 		}
-		return nil, NewManifestFriendlyError(err)
+		return nil, newManifestFriendlyError(err)
 	}
 
 	for name, external := range manifest.External {

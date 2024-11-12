@@ -195,7 +195,6 @@ require (
 	github.com/kubeark/jsonschema v0.1.2
 	github.com/moby/patternmatcher v0.6.0
 	github.com/samber/slog-logrus/v2 v2.1.0
-	github.com/xeipuuv/gojsonschema v1.2.0
 	istio.io/api v0.0.0-20221013011440-bc935762d2b9
 	istio.io/client-go v1.15.3
 )
@@ -241,8 +240,6 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/tonistiigi/go-csvvalue v0.0.0-20240710180619-ddb21b71c0b4 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
-	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
-	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace v0.46.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.47.0 // indirect
 	go.opentelemetry.io/otel/metric v1.22.0 // indirect

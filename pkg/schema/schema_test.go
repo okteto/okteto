@@ -62,8 +62,8 @@ func difference(map1, map2 map[string][]string) map[string][]string {
 
 // TestDiffStructs ensures that the model.Manifest and schema.manifest structs are in sync
 func TestDiffStructs(t *testing.T) {
-	aKeys := model.GetStructKeys(model.Manifest{})
-	bKeys := model.GetStructKeys(manifest{})
+	aKeys := model.getStructKeys(model.Manifest{})
+	bKeys := model.getStructKeys(manifest{})
 
 	differences := difference(aKeys, bKeys)
 
