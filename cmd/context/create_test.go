@@ -955,11 +955,11 @@ func Test_loadDotEnv(t *testing.T) {
 
 func TestCheckCLIMinVersion(t *testing.T) {
 	tests := []struct {
+		expectedErr        error
 		name               string
 		currentVersion     string
 		minVersion         string
 		recommendedVersion string
-		expectedErr        error
 	}{
 		{
 			name:               "newer version",
