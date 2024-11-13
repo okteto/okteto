@@ -309,8 +309,10 @@ func checkCLIVersion(currentVersion, recommendedVersion, minMajorMinor string) e
 
 	// Remove patch, pre-release and build metadata
 	currentMajorMinor := fmt.Sprintf("%v.%v", version.Major(), version.Minor())
-	version, _ = semver.NewVersion(currentMajorMinor)
-
+	version, err = semver.NewVersion(currentMajorMinor)
+	if err != nil {
+		return fmt.Errorf("failed to parse major minor version: %v", err)
+	}
 	recVersion, err := semver.NewVersion(recommendedVersion)
 	if err != nil {
 		return fmt.Errorf("failed to parse cluster version: %v", err)
