@@ -9,13 +9,16 @@
       "patternProperties": {
         ".*": {
           "additionalProperties": false,
+          "description": "The build configuration for your image",
           "properties": {
             "args": {
+              "description": "Add build arguments, which are environment variables accessible only during the build process. Build arguments with a value containing a $ sign are resolved to the environment variable value on the machine Okteto is running on.",
               "patternProperties": {
                 ".*": {
                   "type": "string"
                 }
               },
+              "title": "args",
               "type": "object"
             },
             "context": {
@@ -33,6 +36,11 @@
               "title": "dockerfile",
               "type": "string"
             },
+            "image": {
+              "description": "The name of the image to build and push. In clusters that have Okteto installed, this is optional (if not specified, the Okteto Registry is used).",
+              "title": "image",
+              "type": "string"
+            },
             "secrets": {
               "patternProperties": {
                 ".*": {
@@ -47,6 +55,7 @@
               "type": "string"
             }
           },
+          "title": "Name of your image",
           "type": "object"
         }
       },
@@ -61,9 +70,8 @@
       "title": "context",
       "type": "string"
     },
-    "deploy": {
-      "additionalProperties": false,
-      "description": "The deployment configuration for your development environment. This feature is only supported in clusters that have Okteto installed. https://www.okteto.com/docs/reference/okteto-manifest/#deploy-string-optional",
+    "dependencies": {
+      "description": "A list of repositories you want to deploy as part of your development environment.",
       "oneOf": [
         {
           "items": {
@@ -72,16 +80,85 @@
           "type": "array"
         },
         {
+          "patternProperties": {
+            ".*": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "The Git branch to use",
+                  "title": "branch",
+                  "type": "string"
+                },
+                "manifest": {
+                  "description": "The path to the Okteto manifest file in the repository",
+                  "title": "manifest",
+                  "type": "string"
+                },
+                "repository": {
+                  "description": "The Git repository URL of the dependency",
+                  "title": "repository",
+                  "type": "string"
+                },
+                "timeout": {
+                  "description": "Maximum time to wait for the dependency to be ready",
+                  "pattern": "^[0-9]+(h|m|s)$",
+                  "title": "timeout",
+                  "type": "string"
+                },
+                "variables": {
+                  "description": "Environment variables to pass to the dependency",
+                  "patternProperties": {
+                    ".*": {
+                      "type": "string"
+                    }
+                  },
+                  "title": "variables",
+                  "type": "object"
+                },
+                "wait": {
+                  "description": "Whether to wait for the dependency to be ready",
+                  "title": "wait",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "repository"
+              ],
+              "type": "object"
+            }
+          },
+          "type": "object"
+        }
+      ],
+      "title": "dependencies"
+    },
+    "deploy": {
+      "description": "The deployment configuration for your development environment. This feature is only supported in clusters that have Okteto installed. https://www.okteto.com/docs/reference/okteto-manifest/#deploy-string-optional",
+      "oneOf": [
+        {
           "items": {
-            "properties": {
-              "command": {
+            "oneOf": [
+              {
                 "type": "string"
               },
-              "name": {
-                "type": "string"
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "command": {
+                    "description": "Command to execute",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Name of the command",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "command"
+                ],
+                "type": "object"
               }
-            },
-            "type": "object"
+            ]
           },
           "type": "array"
         },
@@ -89,160 +166,102 @@
           "additionalProperties": false,
           "properties": {
             "commands": {
+              "description": "List of commands to execute",
               "items": {
-                "type": "string"
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "command": {
+                        "description": "Command to execute",
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "Name of the command",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "command"
+                    ],
+                    "type": "object"
+                  }
+                ]
               },
               "type": "array"
             },
             "compose": {
-              "additionalProperties": false,
-              "properties": {
-                "manifest": {
+              "oneOf": [
+                {
+                  "description": "Path to the compose file",
+                  "type": "string"
+                },
+                {
+                  "description": "List of compose configurations",
                   "items": {
                     "additionalProperties": false,
                     "properties": {
                       "file": {
+                        "description": "Path to the compose file",
                         "type": "string"
                       },
                       "services": {
+                        "description": "List of services to deploy",
                         "items": {
                           "type": "string"
                         },
                         "type": "array"
                       }
                     },
+                    "required": [
+                      "file"
+                    ],
                     "type": "object"
                   },
                   "type": "array"
                 }
-              },
-              "title": "compose",
-              "type": "object"
+              ]
             },
-            "divert": {
-              "additionalProperties": false,
-              "description": "The divert section defines how to divert traffic from your development environment to another service. This feature is only supported in clusters that have Okteto installed.",
-              "properties": {
-                "deployment": {
-                  "type": "string"
-                },
-                "driver": {
-                  "default": "istio",
-                  "description": "the backend for divert. Currently the only supported driver is 'istio'",
-                  "enum": [
-                    "istio"
-                  ],
-                  "title": "driver",
-                  "type": "string"
-                },
-                "hosts": {
-                  "items": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "namespace": {
-                        "type": "string"
-                      },
-                      "virtualService": {
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "type": "array"
-                },
-                "namespace": {
-                  "description": "The namespace where the development environment is deployed",
-                  "title": "namespace",
-                  "type": "string"
-                },
-                "port": {
-                  "type": "integer"
-                },
-                "service": {
-                  "type": "string"
-                },
-                "virtualServices": {
-                  "items": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "name": {
-                        "type": "string"
-                      },
-                      "namespace": {
-                        "type": "string"
-                      },
-                      "routes": {
-                        "items": {
-                          "type": "string"
-                        },
-                        "type": "array"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "type": "array"
-                }
-              },
-              "title": "divert",
-              "type": "object"
+            "context": {
+              "description": "Context for deployment",
+              "type": "string"
             },
             "endpoints": {
-              "additionalProperties": {
+              "description": "List of endpoints",
+              "items": {
                 "additionalProperties": false,
                 "properties": {
-                  "Rules": {
-                    "items": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "Path": {
-                          "type": "string"
-                        },
-                        "Port": {
-                          "type": "integer"
-                        },
-                        "Service": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "Path",
-                        "Service",
-                        "Port"
-                      ],
-                      "type": "object"
-                    },
-                    "title": "rules",
-                    "type": "array"
+                  "path": {
+                    "description": "Path for the endpoint",
+                    "type": "string"
                   },
-                  "annotations": {
-                    "additionalProperties": {
-                      "type": "string"
-                    },
-                    "title": "annotations",
-                    "type": "object"
+                  "port": {
+                    "description": "Port number",
+                    "type": "integer"
                   },
-                  "labels": {
-                    "additionalProperties": {
-                      "type": "string"
-                    },
-                    "title": "labels",
-                    "type": "object"
+                  "service": {
+                    "description": "Service name",
+                    "type": "string"
                   }
                 },
                 "required": [
-                  "Rules"
+                  "path",
+                  "service",
+                  "port"
                 ],
                 "type": "object"
               },
-              "title": "endpoints",
-              "type": "object"
+              "type": "array"
             },
             "image": {
-              "title": "image",
+              "description": "Image to use for deployment",
               "type": "string"
             },
             "remote": {
-              "title": "remote",
+              "description": "Whether to run commands remotely",
               "type": "boolean"
             }
           },
@@ -473,7 +492,10 @@
             "commands": {
               "oneOf": [
                 {
-                  "type": "string"
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
                 },
                 {
                   "items": {

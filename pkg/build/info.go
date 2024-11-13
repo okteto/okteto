@@ -28,7 +28,7 @@ import (
 
 // Info represents the build info to generate an image
 type Info struct {
-	Secrets          Secrets           `yaml:"secrets,omitempty" jsonschema:"title:secrets"`
+	Secrets          Secrets           `yaml:"secrets,omitempty"`
 	Context          string            `yaml:"context,omitempty"`
 	Dockerfile       string            `yaml:"dockerfile,omitempty"`
 	Target           string            `yaml:"target,omitempty"`
