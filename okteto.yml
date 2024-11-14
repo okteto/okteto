@@ -6,6 +6,7 @@ dev:
   cli:
     image: okteto/golang:1
     command: bash
+    workdir: /usr/src/cli
     sync:
       - .:/usr/src/cli
     volumes:
