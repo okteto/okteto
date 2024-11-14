@@ -38,7 +38,8 @@ const (
 )
 
 type FrontendRetriever struct {
-	logger *io.Controller
+	logger               *io.Controller
+	localFrontendVersion uint64
 }
 
 type Frontend struct {
@@ -46,15 +47,16 @@ type Frontend struct {
 	Image    string
 }
 
-func NewFrontendRetriever(logger *io.Controller) *FrontendRetriever {
+func NewFrontendRetriever(localFrontendVersion uint64, logger *io.Controller) *FrontendRetriever {
 	return &FrontendRetriever{
-		logger: logger,
+		logger:               logger,
+		localFrontendVersion: localFrontendVersion,
 	}
 }
 
 func (f *FrontendRetriever) GetFrontend(buildOptions *types.BuildOptions) *Frontend {
 	customFrontendImage := os.Getenv(buildkitFrontendImageEnvVar)
-	if len(buildOptions.ExtraHosts) > 0 {
+	if f.localFrontendVersion < 10 && len(buildOptions.ExtraHosts) > 0 {
 		f.logger.Infof("using gateway frontend because of extra hosts")
 		return f.getGatewayFrontend(customFrontendImage)
 	}

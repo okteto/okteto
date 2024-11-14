@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/types"
 )
 
 const (
@@ -61,12 +62,15 @@ type Runner struct {
 	metadata                           *runnerMetadata
 	maxAttemptsBuildkitTransientErrors int
 }
+type SolveOptBuilderInterface interface {
+	Build(buildOptions *types.BuildOptions) (*client.SolveOpt, error)
+}
 
 // SolveBuildFn is a function that solves a build
 type SolveBuildFn func(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error
 
 // NewBuildkitRunner creates a new buildkit runner
-func NewBuildkitRunner(clientFactory buildkitClientFactory, waiter buildkitWaiterInterface, registry registryImageChecker, solver SolveBuildFn, logger *io.Controller) *Runner {
+func NewBuildkitRunner(clientFactory buildkitClientFactory, waiter buildkitWaiterInterface, registry registryImageChecker, optBuilder SolveOptBuilderInterface, solver SolveBuildFn, logger *io.Controller) *Runner {
 	return &Runner{
 		clientFactory:                      clientFactory,
 		waiter:                             waiter,

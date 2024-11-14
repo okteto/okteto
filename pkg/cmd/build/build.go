@@ -36,7 +36,6 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
-	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )
 
@@ -162,11 +161,6 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	}
 	defer os.RemoveAll(secretTempFolder)
 
-	opt, err := getSolveOpt(buildOptions, ob.OktetoContext, secretTempFolder, ob.Fs, ob.logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to create build solver")
-	}
-
 	buildkitClientFactory := buildkit.NewBuildkitClientFactory(
 		ob.OktetoContext.GetCurrentCertStr(),
 		ob.OktetoContext.GetCurrentBuilder(),
@@ -177,7 +171,18 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	buildkitWaiter := buildkit.NewBuildkitClientWaiter(buildkitClientFactory, ioCtrl)
 
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(ob.OktetoContext))
-	buildSolver := buildkit.NewBuildkitRunner(buildkitClientFactory, buildkitWaiter, reg, run, ioCtrl)
+
+	optBuilder, err := buildkit.NewSolveOptBuilder(ctx, buildkitClientFactory, reg, ob.OktetoContext, ob.Fs, ioCtrl)
+	if err != nil {
+		return err
+	}
+
+	opt, err := optBuilder.Build(buildOptions)
+	if err != nil {
+		return fmt.Errorf("failed to create build solver: %w", err)
+	}
+
+	buildSolver := buildkit.NewBuildkitRunner(buildkitClientFactory, buildkitWaiter, reg, optBuilder, run, ioCtrl)
 
 	if err := buildSolver.Run(ctx, opt, buildOptions.OutputMode); err != nil {
 		return err

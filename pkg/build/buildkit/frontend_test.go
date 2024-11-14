@@ -25,6 +25,7 @@ func TestGetFrontend(t *testing.T) {
 	tests := []struct {
 		expectedError    error
 		buildOptions     *types.BuildOptions
+		localFrontend    uint64
 		expectedFrontend *Frontend
 		name             string
 		frontendImage    string
@@ -112,7 +113,7 @@ func TestGetFrontend(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(buildkitFrontendImageEnvVar, tt.frontendImage)
-			retriever := NewFrontendRetriever(io.NewIOController())
+			retriever := NewFrontendRetriever(tt.localFrontend, io.NewIOController())
 
 			frontend := retriever.GetFrontend(tt.buildOptions)
 			assert.Equal(t, tt.expectedFrontend, frontend, "expected frontend to match")
