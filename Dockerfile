@@ -1,7 +1,16 @@
 ARG KUBECTL_VERSION=1.30.4
 ARG HELM_VERSION=3.16.2
 ARG KUSTOMIZE_VERSION=5.5.0
+ARG SYNCTHING_VERSION=1.27.10
+ARG OKTETO_REMOTE_VERSION=0.6.0
+ARG OKTETO_SUPERVISOR_VERSION=0.4.0
+ARG OKTETO_CLEAN_VERSION=0.2.1
 
+
+FROM syncthing/syncthing:${SYNCTHING_VERSION} AS syncthing
+FROM okteto/remote:${OKTETO_REMOTE_VERSION} AS remote
+FROM okteto/supervisor:${OKTETO_SUPERVISOR_VERSION} AS supervisor
+FROM okteto/clean:${OKTETO_CLEAN_VERSION} AS clean
 FROM golang:1.22-bookworm AS golang-builder
 FROM okteto/bin:1.6.1 AS okteto-bin
 
@@ -41,12 +50,17 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 COPY docker-credential-okteto /okteto/bin/docker-credential-okteto
 
 FROM busybox:1.34.0
+USER 0
 COPY --from=certs /etc/ssl/certs /etc/ssl/certs
 COPY --from=kubectl-builder /usr/local/bin/kubectl /usr/local/bin/kubectl
 COPY --from=helm-builder /usr/local/bin/helm /usr/local/bin/helm
 COPY --from=builder /okteto/bin/okteto /usr/local/bin/okteto
 COPY --from=builder /okteto/bin/docker-credential-okteto /usr/local/bin/docker-credential-okteto
-COPY --from=okteto-bin /usr/local/bin/* /usr/bin-image/bin/
+COPY --from=remote /usr/local/bin/remote /usr/bin-image/bin/okteto-remote
+COPY --from=supervisor /usr/local/bin/supervisor /usr/bin-image/bin/okteto-supervisor
+COPY --from=syncthing /bin/syncthing /usr/bin-image/bin/syncthing
+COPY --from=clean /usr/local/bin/clean /usr/bin-image/bin/clean
+COPY --chmod=755 scripts/start.sh /usr/bin-image/bin/start.sh
 
 ENV OKTETO_DISABLE_SPINNER=true
 ENV PS1="\[\e[36m\]\${OKTETO_NAMESPACE:-okteto}:\e[32m\]\${OKTETO_NAME:-dev} \[\e[m\]\W> "

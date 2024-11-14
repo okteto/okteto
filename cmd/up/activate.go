@@ -180,10 +180,10 @@ func (up *upContext) activate() error {
 		oktetoLog.Debugf("clean command output: %s", output)
 
 		outByCommand := strings.Split(strings.TrimSpace(output), "\n")
-		var version, watches string
-		minOutCmdParts := 3
+		var watches string
+		minOutCmdParts := 2
 		if len(outByCommand) >= minOutCmdParts {
-			version, watches = outByCommand[0], outByCommand[1]
+			watches = outByCommand[0]
 
 			if isWatchesConfigurationTooLow(watches) {
 				folder := config.GetNamespaceHome(up.Namespace)
@@ -195,13 +195,6 @@ func (up *upContext) activate() error {
 						oktetoLog.Infof("failed to set warning remotewatcher state: %s", err.Error())
 					}
 				}
-			}
-
-			binImage := config.NewImageConfig(oktetoLog.GetOutputWriter()).GetBinImage()
-			if version != binImage {
-				oktetoLog.Yellow("The Okteto CLI version %s uses the init container image %s.", config.VersionString, binImage)
-				oktetoLog.Yellow("Please consider upgrading your init container image %s with the content of %s", up.Dev.InitContainer.Image, binImage)
-				oktetoLog.Infof("Using init image %s instead of default init image (%s)", up.Dev.InitContainer.Image, binImage)
 			}
 
 		}
