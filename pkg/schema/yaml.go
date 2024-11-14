@@ -15,6 +15,7 @@ package schema
 
 import (
 	"fmt"
+
 	"gopkg.in/yaml.v2"
 )
 

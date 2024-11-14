@@ -16,9 +16,10 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
+	"testing"
+
 	"github.com/kaptinlin/jsonschema"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func Test_build(t *testing.T) {
