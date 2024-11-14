@@ -42,15 +42,20 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
+const (
+	// PermissionsOwnerOnly is the permission for the secret temp folder
+	PermissionsOwnerOnly = 0700
+)
+
 // SolveOptBuilder is a builder for SolveOpt
 type SolveOptBuilder struct {
 	logger                *io.Controller
-	dockerFrontendVersion uint64
 	imageCtrl             registry.ImageCtrl
 	reg                   registry.OktetoRegistry
 	okCtx                 OktetoContextInterface
-	secretTempFolder      string
 	fs                    afero.Fs
+	secretTempFolder      string
+	dockerFrontendVersion uint64
 }
 
 type ClientFactoryIface interface {
@@ -329,7 +334,7 @@ func (b *SolveOptBuilder) extendRegistries(image string) string {
 func getSecretTempFolder(fs afero.Fs) (string, error) {
 	secretTempFolder := filepath.Join(config.GetOktetoHome(), ".secret")
 
-	if err := fs.MkdirAll(secretTempFolder, 0700); err != nil {
+	if err := fs.MkdirAll(secretTempFolder, PermissionsOwnerOnly); err != nil {
 		return "", fmt.Errorf("failed to create %s: %s", secretTempFolder, err)
 	}
 

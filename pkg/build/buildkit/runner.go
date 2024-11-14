@@ -70,7 +70,7 @@ type SolveOptBuilderInterface interface {
 type SolveBuildFn func(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error
 
 // NewBuildkitRunner creates a new buildkit runner
-func NewBuildkitRunner(clientFactory buildkitClientFactory, waiter buildkitWaiterInterface, registry registryImageChecker, optBuilder SolveOptBuilderInterface, solver SolveBuildFn, logger *io.Controller) *Runner {
+func NewBuildkitRunner(clientFactory buildkitClientFactory, waiter buildkitWaiterInterface, registry registryImageChecker, solver SolveBuildFn, logger *io.Controller) *Runner {
 	return &Runner{
 		clientFactory:                      clientFactory,
 		waiter:                             waiter,

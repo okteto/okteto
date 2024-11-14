@@ -182,7 +182,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 		return fmt.Errorf("failed to create build solver: %w", err)
 	}
 
-	buildSolver := buildkit.NewBuildkitRunner(buildkitClientFactory, buildkitWaiter, reg, optBuilder, run, ioCtrl)
+	buildSolver := buildkit.NewBuildkitRunner(buildkitClientFactory, buildkitWaiter, reg, run, ioCtrl)
 
 	if err := buildSolver.Run(ctx, opt, buildOptions.OutputMode); err != nil {
 		return err

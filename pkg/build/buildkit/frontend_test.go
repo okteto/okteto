@@ -25,10 +25,10 @@ func TestGetFrontend(t *testing.T) {
 	tests := []struct {
 		expectedError    error
 		buildOptions     *types.BuildOptions
-		localFrontend    uint64
 		expectedFrontend *Frontend
 		name             string
 		frontendImage    string
+		localFrontend    uint64
 	}{
 		{
 			name: "No ExtraHosts, No Custom Env",

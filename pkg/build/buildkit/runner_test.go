@@ -20,7 +20,6 @@ import (
 
 	"github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/log/io"
-	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -61,14 +60,6 @@ func (m *fakeBuildkitClientFactory) GetBuildkitClient(context.Context) (*client.
 		return nil, err
 	}
 	return &client.Client{}, nil
-}
-
-type fakeOptSolver struct {
-	err error
-}
-
-func (m *fakeOptSolver) Build(buildOptions *types.BuildOptions) (*client.SolveOpt, error) {
-	return nil, m.err
 }
 
 func TestRunnerRun(t *testing.T) {
@@ -370,7 +361,7 @@ func TestNewBuildkitRunner(t *testing.T) {
 				t.Setenv(MaxRetriesForBuildkitTransientErrorsEnvVar, tt.envVar)
 			}
 
-			runner := NewBuildkitRunner(&fakeBuildkitClientFactory{}, &fakeBuildkitWaiter{}, &fakeRegistryImageChecker{}, &fakeOptSolver{}, func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller) error { return nil }, io.NewIOController())
+			runner := NewBuildkitRunner(&fakeBuildkitClientFactory{}, &fakeBuildkitWaiter{}, &fakeRegistryImageChecker{}, func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller) error { return nil }, io.NewIOController())
 
 			assert.Implements(t, (*buildkitClientFactory)(nil), runner.clientFactory)
 			assert.Implements(t, (*buildkitWaiterInterface)(nil), runner.waiter)
