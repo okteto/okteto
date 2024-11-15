@@ -156,7 +156,7 @@ func (i *Info) MarshalYAML() (interface{}, error) {
 	if i.Target != "" {
 		return infoRaw(*i), nil
 	}
-	if i.Args != nil && len(i.Args) != 0 {
+	if len(i.Args) != 0 {
 		return infoRaw(*i), nil
 	}
 	return i.Image, nil

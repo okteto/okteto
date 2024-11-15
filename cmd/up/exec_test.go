@@ -1018,7 +1018,7 @@ func TestCheckOktetoStartError(t *testing.T) {
 			dev: &model.Dev{
 				Name: "test",
 			},
-			expected: fmt.Errorf(msg),
+			expected: fmt.Errorf("%s", msg),
 		},
 		{
 			name: "error pv enabled",
@@ -1076,7 +1076,7 @@ func TestCheckOktetoStartError(t *testing.T) {
 					},
 				},
 			},
-			expected: fmt.Errorf(msg),
+			expected: fmt.Errorf("%s", msg),
 		},
 	}
 

@@ -380,7 +380,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				return oktetoErrors.UserError{E: fmt.Errorf("insufficient resources"),
 					Hint: "Increase cluster resources or timeout of resources. More information is available here: https://okteto.com/docs/reference/okteto-manifest/#timeout-time-optional"}
 			}
-			return fmt.Errorf(failedSchedulingEvent.Message)
+			return fmt.Errorf("%s", failedSchedulingEvent.Message)
 		}
 		select {
 		case <-ticker.C:
@@ -440,7 +440,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 					oktetoLog.Infof("pod event: %s:%s:%s", e.Reason, e.Type, e.Message)
 					continue
 				}
-				return fmt.Errorf(e.Message)
+				return fmt.Errorf("%s", e.Message)
 			case "SuccessfulAttachVolume":
 				failedSchedulingEvent = nil
 				oktetoLog.Success("Persistent volume successfully attached")
