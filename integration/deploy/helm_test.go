@@ -108,7 +108,7 @@ func TestDeployPipelineFromHelm(t *testing.T) {
 	require.NoError(t, createHelmChart(dir))
 	require.NoError(t, createOktetoManifestForHelm(dir))
 
-	testNamespace := integration.GetTestNamespace("DeployHelm", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

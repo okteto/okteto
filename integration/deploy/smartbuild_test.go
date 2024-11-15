@@ -41,19 +41,19 @@ deploy:
 `
 )
 
-// TestDeployOktetoManifestWithSmartBuildCloneCustomImage tests the following scenario:
+// TestDeployWithSmartBuildCloneCustomImage tests the following scenario:
 // - Build in another namespace to generate image in the global registry
 // - Deploy an application with a custom image
 // - Verify the image is not built and used the one previously built
 // - Check that the deployment is successful and the image is the one expected
-func TestDeployOktetoManifestWithSmartBuildCloneCustomImage(t *testing.T) {
+func TestDeployWithSmartBuildCloneCustomImage(t *testing.T) {
 	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
 	dir := t.TempDir()
 
-	globalBuildNamespace := integration.GetTestNamespace("SBGlobalBuidl", user)
+	globalBuildNamespace := integration.GetTestNamespace(t.Name())
 	globalNamespaceOpts := &commands.NamespaceOptions{
 		Namespace:  globalBuildNamespace,
 		OktetoHome: dir,
@@ -65,7 +65,7 @@ func TestDeployOktetoManifestWithSmartBuildCloneCustomImage(t *testing.T) {
 	require.NoError(t, createOktetoManifestWithCustomImage(dir))
 	require.NoError(t, integration.GitInit(dir))
 
-	testNamespace := integration.GetTestNamespace("DeploySBClone", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	require.NoError(t, createK8sManifestWithCache(dir, fmt.Sprintf("%s/%s/test-app:1.0.0", okteto.GetContext().Registry, testNamespace)))
 
 	buildOptions := &commands.BuildOptions{

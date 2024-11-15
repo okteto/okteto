@@ -75,7 +75,7 @@ func TestDeployAndDestroyOktetoManifestWithEnv(t *testing.T) {
 	err = os.WriteFile(manifestPath, []byte(oktetoManifestWithEnvContent), 0600)
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("DeployDestroyVars", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -138,7 +138,7 @@ func TestDeployVariablesOrder(t *testing.T) {
 
 	dir := t.TempDir()
 
-	testNamespace := integration.GetTestNamespace("DeployVariablesOrder", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

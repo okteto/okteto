@@ -123,7 +123,7 @@ func TestBuildCommandV1(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("BuildV1", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -154,7 +154,7 @@ func TestBuildInferredDockerfile(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createDockerfile(dir))
 
-	testNamespace := integration.GetTestNamespace("BuildInferredDockerfile", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -192,7 +192,7 @@ func TestBuildCommandV2(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("BuildV2", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -231,7 +231,7 @@ func TestBuildCommandV2UsingDepot(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("BuildCommandV2UsingDepot", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -286,7 +286,7 @@ func TestBuildCommandV2OnlyOneService(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("PartialBuildV2", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -322,7 +322,7 @@ func TestBuildCommandV2SpecifyingServices(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("CompleteBuildV2", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -361,7 +361,7 @@ func TestBuildCommandV2FromCompose(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("BuildVolumesV2", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -400,7 +400,7 @@ func TestBuildCommandV2WithVolumeMounts(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("BuildVolumeMountsV2", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -435,7 +435,7 @@ func TestBuildCommandV2Secrets(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("BuildSecretsV2", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

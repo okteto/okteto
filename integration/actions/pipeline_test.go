@@ -45,7 +45,7 @@ const (
 func TestPipelineActions(t *testing.T) {
 	integration.SkipIfWindows(t)
 
-	namespace := integration.GetTestNamespace("PipelineActions", user)
+	namespace := integration.GetTestNamespace(t.Name())
 
 	assert.NoError(t, executeCreateNamespaceAction(namespace))
 	assert.NoError(t, executeDeployPipelineAction(t, namespace))
@@ -60,7 +60,7 @@ func TestPipelineActionsWithCompose(t *testing.T) {
 	t.Setenv(model.GithubRefEnvVar, "cli-e2e")
 	t.Setenv(model.GithubServerURLEnvVar, githubHTTPSURL)
 
-	namespace := integration.GetTestNamespace("pipelinecomposeaction", user)
+	namespace := integration.GetTestNamespace(t.Name())
 	assert.NoError(t, executeCreateNamespaceAction(namespace))
 	assert.NoError(t, executeDeployWithComposePipelineAction(namespace))
 	assert.NoError(t, executeDestroyPipelineAction(namespace))

@@ -73,7 +73,7 @@ type deployment struct {
 func TestApplyPipeline(t *testing.T) {
 	integration.SkipIfWindows(t)
 
-	namespace := integration.GetTestNamespace("applyaction", user)
+	namespace := integration.GetTestNamespace(t.Name())
 	oktetoPath, err := integration.GetOktetoPath()
 	assert.NoError(t, err)
 

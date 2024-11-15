@@ -45,7 +45,7 @@ func TestDeployRemoteWithBuildCommand(t *testing.T) {
 
 	dir := t.TempDir()
 
-	testNamespace := integration.GetTestNamespace("DeployRemoteBuild", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -85,7 +85,7 @@ func TestDeployRemoteK8sWithDockerignore(t *testing.T) {
 
 	dir := t.TempDir()
 
-	testNamespace := integration.GetTestNamespace("DeployRemoteK8s", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
