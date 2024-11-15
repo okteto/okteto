@@ -42,7 +42,6 @@ executors:
       - image: okteto/golang-ci:2.7.0
     environment:
       OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
-      OKTETO_USER: staging-okteto-bot
       OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
       OKTETO_NAMESPACE_PREFIX: staging
 
@@ -119,8 +118,6 @@ jobs:
       # https://circleci.com/developer/machine/image/windows-server-2022-gui
       name: win/server-2022
       version: 2024.04.1
-    environment:
-      OKTETO_USER: cindylopez
     steps:
       - checkout
       - run:
@@ -284,7 +281,6 @@ jobs:
       version: 2024.04.1
     environment:
       OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
-      OKTETO_USER: staging-okteto-bot
       OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
       OKTETO_NAMESPACE_PREFIX: staging
     steps:
@@ -316,7 +312,6 @@ jobs:
       version: 2024.04.1
     environment:
       OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
-      OKTETO_USER: staging-okteto-bot
       OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
       OKTETO_NAMESPACE_PREFIX: staging
     steps:
@@ -345,7 +340,6 @@ jobs:
       version: 2024.04.1
     environment:
       OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
-      OKTETO_USER: staging-okteto-bot
       OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
       OKTETO_NAMESPACE_PREFIX: staging
     steps:
@@ -381,7 +375,6 @@ jobs:
       version: 2024.04.1
     environment:
       OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
-      OKTETO_USER: staging-okteto-bot
       OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
       OKTETO_NAMESPACE_PREFIX: staging
     steps:
