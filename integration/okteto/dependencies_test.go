@@ -61,7 +61,7 @@ func TestDependencies(t *testing.T) {
 	require.NoError(t, err)
 
 	dir := t.TempDir()
-	testNamespace := integration.GetTestNamespace("Dependency", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -97,7 +97,7 @@ func TestDependenciesOnRemote(t *testing.T) {
 	require.NoError(t, err)
 
 	dir := t.TempDir()
-	testNamespace := integration.GetTestNamespace("RemoteDep", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
