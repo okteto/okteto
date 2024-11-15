@@ -283,8 +283,10 @@ jobs:
       name: win/server-2022
       version: 2024.04.1
     environment:
-      OKTETO_CONTEXT: https://staging.okteto.dev
-      OKTETO_USER: cindylopez
+      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
+      OKTETO_USER: staging-okteto-bot
+      OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
+      OKTETO_NAMESPACE_PREFIX: staging
     steps:
       - checkout
       - restore_cache:
@@ -313,9 +315,10 @@ jobs:
       name: win/server-2022
       version: 2024.04.1
     environment:
-      OKTETO_CONTEXT: https://staging.okteto.dev
-      OKTETO_USER: cindylopez
-      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
+      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
+      OKTETO_USER: staging-okteto-bot
+      OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
+      OKTETO_NAMESPACE_PREFIX: staging
     steps:
       - checkout
       - restore_cache:
@@ -341,9 +344,10 @@ jobs:
       name: win/server-2022
       version: 2024.04.1
     environment:
-      OKTETO_CONTEXT: https://staging.okteto.dev
-      OKTETO_USER: cindylopez
-      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
+      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
+      OKTETO_USER: staging-okteto-bot
+      OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
+      OKTETO_NAMESPACE_PREFIX: staging
     steps:
       - checkout
       - restore_cache:
@@ -376,9 +380,10 @@ jobs:
       name: win/server-2022
       version: 2024.04.1
     environment:
-      OKTETO_CONTEXT: https://staging.okteto.dev
-      OKTETO_USER: cindylopez
-      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
+      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
+      OKTETO_USER: staging-okteto-bot
+      OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
+      OKTETO_NAMESPACE_PREFIX: staging
     steps:
       - checkout
       - restore_cache:
