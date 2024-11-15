@@ -190,9 +190,9 @@ type EndpointSpec map[string]Endpoint
 
 // Endpoint represents an okteto stack ingress
 type Endpoint struct {
-	Labels      Labels         `json:"labels,omitempty" yaml:"labels,omitempty"  jsonschema:"title=labels"`
-	Annotations Annotations    `json:"annotations,omitempty" yaml:"annotations,omitempty"  jsonschema:"title=annotations"`
-	Rules       []EndpointRule `yaml:"rules,omitempty"  jsonschema:"title=rules"`
+	Labels      Labels         `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations Annotations    `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Rules       []EndpointRule `yaml:"rules,omitempty"`
 }
 
 // CommandStack represents an okteto stack command

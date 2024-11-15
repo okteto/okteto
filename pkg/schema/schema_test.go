@@ -1,6 +1,4 @@
-//	Copyright 2024 The Okteto Authors
-//
-// Copyright 2023|2024 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -16,86 +14,86 @@
 package schema
 
 import (
-    "github.com/santhosh-tekuri/jsonschema/v6"
-    "strings"
+	"github.com/santhosh-tekuri/jsonschema/v6"
+	"strings"
 )
 
 func validateOktetoManifest(content string) error {
-    oktetoJsonSchema, err := NewJsonSchema().ToJSON()
-    if err != nil {
-        return err
-    }
+	oktetoJsonSchema, err := NewJsonSchema().ToJSON()
+	if err != nil {
+		return err
+	}
 
-    var obj interface{}
-    err = Unmarshal([]byte(content), &obj)
-    if err != nil {
-        return err
-    }
+	var obj interface{}
+	err = Unmarshal([]byte(content), &obj)
+	if err != nil {
+		return err
+	}
 
-    compiler := jsonschema.NewCompiler()
-    doc, err := jsonschema.UnmarshalJSON(strings.NewReader(string(oktetoJsonSchema)))
-    if err != nil {
-        return err
-    }
+	compiler := jsonschema.NewCompiler()
+	doc, err := jsonschema.UnmarshalJSON(strings.NewReader(string(oktetoJsonSchema)))
+	if err != nil {
+		return err
+	}
 
-    resourceName := "schema.json"
+	resourceName := "schema.json"
 
-    err = compiler.AddResource(resourceName, doc)
-    if err != nil {
-        return err
-    }
+	err = compiler.AddResource(resourceName, doc)
+	if err != nil {
+		return err
+	}
 
-    schema, err := compiler.Compile(resourceName)
-    if err != nil {
-        return err
-    }
+	schema, err := compiler.Compile(resourceName)
+	if err != nil {
+		return err
+	}
 
-    err = schema.Validate(obj)
-    if err != nil {
-        return err
-    }
+	err = schema.Validate(obj)
+	if err != nil {
+		return err
+	}
 
-    return nil
+	return nil
 }
 
 func difference(map1, map2 map[string][]string) map[string][]string {
-    diff := make(map[string][]string)
+	diff := make(map[string][]string)
 
-    // Helper function to find the difference between two slices
-    sliceDifference := func(slice1, slice2 []string) []string {
-        m := make(map[string]bool)
-        for _, s := range slice2 {
-            m[s] = true
-        }
-        var diff []string
-        for _, s := range slice1 {
-            if !m[s] {
-                diff = append(diff, s)
-            }
-        }
-        return diff
-    }
+	// Helper function to find the difference between two slices
+	sliceDifference := func(slice1, slice2 []string) []string {
+		m := make(map[string]bool)
+		for _, s := range slice2 {
+			m[s] = true
+		}
+		var diff []string
+		for _, s := range slice1 {
+			if !m[s] {
+				diff = append(diff, s)
+			}
+		}
+		return diff
+	}
 
-    // Check map1 against map2
-    for key, slice1 := range map1 {
-        if slice2, ok := map2[key]; ok {
-            diffSlice := sliceDifference(slice1, slice2)
-            if len(diffSlice) > 0 {
-                diff[key] = diffSlice
-            }
-        } else {
-            diff[key] = slice1
-        }
-    }
+	// Check map1 against map2
+	for key, slice1 := range map1 {
+		if slice2, ok := map2[key]; ok {
+			diffSlice := sliceDifference(slice1, slice2)
+			if len(diffSlice) > 0 {
+				diff[key] = diffSlice
+			}
+		} else {
+			diff[key] = slice1
+		}
+	}
 
-    // Check map2 against map1 for keys that are only in map2
-    for key, slice2 := range map2 {
-        if _, ok := map1[key]; !ok {
-            diff[key] = slice2
-        }
-    }
+	// Check map2 against map1 for keys that are only in map2
+	for key, slice2 := range map2 {
+		if _, ok := map1[key]; !ok {
+			diff[key] = slice2
+		}
+	}
 
-    return diff
+	return diff
 }
 
 // TestDiffStructs ensures that the model.Manifest and schema.manifest structs are in sync

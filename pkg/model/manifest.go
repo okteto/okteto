@@ -17,7 +17,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"os"
 	"path/filepath"
 	"sort"
@@ -35,6 +34,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/spf13/afero"
+	"gopkg.in/yaml.v2"
 	yaml3 "gopkg.in/yaml.v3"
 )
 
@@ -186,8 +186,8 @@ type DestroyInfo struct {
 
 // DivertDeploy represents information about the deploy divert configuration
 type DivertDeploy struct {
-	Driver               string                 `json:"driver,omitempty" yaml:"driver,omitempty"  jsonschema:"title=driver,description=the backend for divert. Currently the only supported driver is 'istio',default=istio,enum=istio"`
-	Namespace            string                 `json:"namespace,omitempty" yaml:"namespace,omitempty" jsonschema:"title=namespace,description=The namespace where the development environment is deployed"`
+	Driver               string                 `json:"driver,omitempty" yaml:"driver,omitempty"`
+	Namespace            string                 `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	DeprecatedService    string                 `json:"service,omitempty" yaml:"service,omitempty"`
 	DeprecatedDeployment string                 `json:"deployment,omitempty" yaml:"deployment,omitempty"`
 	VirtualServices      []DivertVirtualService `json:"virtualServices,omitempty" yaml:"virtualServices,omitempty"`
