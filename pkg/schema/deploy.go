@@ -55,6 +55,58 @@ func (deploy) JSONSchema() *jsonschema.Schema {
 		Description: "Port number",
 	})
 
+	virtualServiceProps := jsonschema.NewProperties()
+	virtualServiceProps.Set("name", &jsonschema.Schema{
+		Type:        &jsonschema.Type{Types: []string{"string"}},
+		Description: "Name of the virtual service",
+	})
+	virtualServiceProps.Set("namespace", &jsonschema.Schema{
+		Type:        &jsonschema.Type{Types: []string{"string"}},
+		Description: "Namespace of the virtual service",
+	})
+	virtualServiceProps.Set("routes", &jsonschema.Schema{
+		Type:        &jsonschema.Type{Types: []string{"array"}},
+		Description: "List of routes to divert. If empty, all routes are diverted",
+		Items: &jsonschema.Schema{
+			Type: &jsonschema.Type{Types: []string{"string"}},
+		},
+	})
+
+	hostProps := jsonschema.NewProperties()
+	hostProps.Set("virtualService", &jsonschema.Schema{
+		Type:        &jsonschema.Type{Types: []string{"string"}},
+		Description: "Name of the virtual service",
+	})
+	hostProps.Set("namespace", &jsonschema.Schema{
+		Type:        &jsonschema.Type{Types: []string{"string"}},
+		Description: "Namespace of the virtual service",
+	})
+
+	divertProps := jsonschema.NewProperties()
+	divertProps.Set("driver", &jsonschema.Schema{
+		Type:        &jsonschema.Type{Types: []string{"string"}},
+		Enum:        []interface{}{"istio"},
+		Description: "The backend for divert. Currently, only 'istio' is supported",
+	})
+	divertProps.Set("virtualServices", &jsonschema.Schema{
+		Type:        &jsonschema.Type{Types: []string{"array"}},
+		Description: "List of virtual services to divert",
+		Items: &jsonschema.Schema{
+			Type:                 &jsonschema.Type{Types: []string{"object"}},
+			Properties:           virtualServiceProps,
+			AdditionalProperties: jsonschema.FalseSchema,
+		},
+	})
+	divertProps.Set("hosts", &jsonschema.Schema{
+		Type:        &jsonschema.Type{Types: []string{"array"}},
+		Description: "List of hosts to divert in the developer namespace",
+		Items: &jsonschema.Schema{
+			Type:                 &jsonschema.Type{Types: []string{"object"}},
+			Properties:           hostProps,
+			AdditionalProperties: jsonschema.FalseSchema,
+		},
+	})
+
 	deployProps := jsonschema.NewProperties()
 	deployProps.Set("image", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
@@ -112,6 +164,13 @@ func (deploy) JSONSchema() *jsonschema.Schema {
 			Required:             []string{"path", "service", "port"},
 			AdditionalProperties: jsonschema.FalseSchema,
 		},
+	})
+	deployProps.Set("divert", &jsonschema.Schema{
+		Type:                 &jsonschema.Type{Types: []string{"object"}},
+		Properties:           divertProps,
+		Required:             []string{"driver"},
+		AdditionalProperties: jsonschema.FalseSchema,
+		Description:          "Configuration for diverting traffic between namespaces",
 	})
 
 	return &jsonschema.Schema{

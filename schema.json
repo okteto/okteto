@@ -1,6 +1,6 @@
 {
   "$id": "https://raw.githubusercontent.com/okteto/okteto/af/validate-2/schema.json",
-  "$schema": "1.0.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
     "build": {
@@ -234,6 +234,66 @@
               "description": "The working directory for running the deploy commands. If left empty, it defaults to the directory containing the Okteto Manifest.",
               "type": "string"
             },
+            "divert": {
+              "additionalProperties": false,
+              "description": "Configuration for diverting traffic between namespaces",
+              "properties": {
+                "driver": {
+                  "description": "The backend for divert. Currently, only 'istio' is supported",
+                  "enum": [
+                    "istio"
+                  ],
+                  "type": "string"
+                },
+                "hosts": {
+                  "description": "List of hosts to divert in the developer namespace",
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "namespace": {
+                        "description": "Namespace of the virtual service",
+                        "type": "string"
+                      },
+                      "virtualService": {
+                        "description": "Name of the virtual service",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "virtualServices": {
+                  "description": "List of virtual services to divert",
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "name": {
+                        "description": "Name of the virtual service",
+                        "type": "string"
+                      },
+                      "namespace": {
+                        "description": "Namespace of the virtual service",
+                        "type": "string"
+                      },
+                      "routes": {
+                        "description": "List of routes to divert. If empty, all routes are diverted",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "driver"
+              ],
+              "type": "object"
+            },
             "endpoints": {
               "description": "List of endpoints",
               "items": {
@@ -410,12 +470,14 @@
               "type": "array"
             },
             "environment": {
-              "description": "Add environment variables to your development container",
-              "items": {
-                "type": "string"
+              "description": "Add environment variables to your development container. If a variable already exists on your deployment, it will be overridden with the value specified on the manifest. Environment variables with only a key, or with a value with a $ sign resolve to their values on the machine Okteto is running on",
+              "patternProperties": {
+                ".*": {
+                  "type": "string"
+                }
               },
               "title": "environment",
-              "type": "array"
+              "type": "object"
             },
             "externalVolumes": {
               "description": "A list of persistent volume claims that you want to mount in your development container",
@@ -583,9 +645,11 @@
               "properties": {
                 "accessMode": {
                   "default": "ReadWriteOnce",
+                  "description": "The Okteto persistent volume access mode",
                   "type": "string"
                 },
                 "annotations": {
+                  "description": "Add annotations to the Okteto persistent volume",
                   "patternProperties": {
                     ".*": {
                       "type": "string"
@@ -595,9 +659,11 @@
                 },
                 "enabled": {
                   "default": true,
+                  "description": "Enable/disable the use of persistent volumes. Must be true if using services, volumes, or to share command history.",
                   "type": "boolean"
                 },
                 "labels": {
+                  "description": "Add labels to the Okteto persistent volume",
                   "patternProperties": {
                     ".*": {
                       "type": "string"
@@ -607,9 +673,16 @@
                 },
                 "size": {
                   "default": "5Gi",
+                  "description": "The size of the Okteto persistent volume",
                   "type": "string"
                 },
                 "storageClass": {
+                  "description": "The storage class of the Okteto persistent volume. Defaults to cluster's default storage class",
+                  "type": "string"
+                },
+                "volumeMode": {
+                  "default": "Filesystem",
+                  "description": "The Okteto persistent volume mode",
                   "type": "string"
                 }
               },
@@ -651,6 +724,44 @@
               "title": "remote",
               "type": "integer"
             },
+            "resources": {
+              "additionalProperties": false,
+              "description": "Resource requests and limits for the development container",
+              "properties": {
+                "limits": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "cpu": {
+                      "type": "string"
+                    },
+                    "ephemeral-storage": {
+                      "type": "string"
+                    },
+                    "memory": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "requests": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "cpu": {
+                      "type": "string"
+                    },
+                    "ephemeral-storage": {
+                      "type": "string"
+                    },
+                    "memory": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "title": "resources",
+              "type": "object"
+            },
             "reverse": {
               "description": "Ports to reverse forward from your development container",
               "items": {
@@ -671,6 +782,18 @@
             "securityContext": {
               "additionalProperties": false,
               "properties": {
+                "capabilities": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "add": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                },
                 "fsGroup": {
                   "type": "integer"
                 },
@@ -716,10 +839,12 @@
                     "type": "string"
                   },
                   "environment": {
-                    "items": {
-                      "type": "string"
+                    "patternProperties": {
+                      ".*": {
+                        "type": "string"
+                      }
                     },
-                    "type": "array"
+                    "type": "object"
                   },
                   "image": {
                     "type": "string"

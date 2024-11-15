@@ -31,11 +31,6 @@ func Unmarshal(in []byte, out interface{}) error {
 	return nil
 }
 
-// Marshal YAML wrapper function.
-func Marshal(in interface{}) ([]byte, error) {
-	return yaml.Marshal(in)
-}
-
 func cleanupInterfaceArray(in []interface{}) []interface{} {
 	res := make([]interface{}, len(in))
 	for i, v := range in {
@@ -58,7 +53,19 @@ func cleanupMapValue(v interface{}) interface{} {
 		return cleanupInterfaceArray(v)
 	case map[interface{}]interface{}:
 		return cleanupInterfaceMap(v)
+	case bool:
+		return v
 	case string:
+		return v
+	case int:
+		return v
+	case int32:
+		return v
+	case int64:
+		return v
+	case float32:
+		return v
+	case float64:
 		return v
 	default:
 		return fmt.Sprintf("%v", v)

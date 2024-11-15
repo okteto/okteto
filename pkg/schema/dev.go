@@ -62,11 +62,13 @@ func (dev) JSONSchema() *jsonschema.Schema {
 
 	// Environment
 	devProps.Set("environment", &jsonschema.Schema{
-		Type:        &jsonschema.Type{Types: []string{"array"}},
+		Type:        &jsonschema.Type{Types: []string{"object"}},
 		Title:       "environment",
-		Description: "Add environment variables to your development container",
-		Items: &jsonschema.Schema{
-			Type: &jsonschema.Type{Types: []string{"string"}},
+		Description: "Add environment variables to your development container. If a variable already exists on your deployment, it will be overridden with the value specified on the manifest. Environment variables with only a key, or with a value with a $ sign resolve to their values on the machine Okteto is running on",
+		PatternProperties: map[string]*jsonschema.Schema{
+			".*": {
+				Type: &jsonschema.Type{Types: []string{"string"}},
+			},
 		},
 	})
 
@@ -254,23 +256,34 @@ func (dev) JSONSchema() *jsonschema.Schema {
 
 	// PersistentVolume
 	persistentVolumeProps := jsonschema.NewProperties()
+	// TODO: enforce persistentVolume.enabled must be true if you use services and volumes
 	persistentVolumeProps.Set("enabled", &jsonschema.Schema{
-		Type:    &jsonschema.Type{Types: []string{"boolean"}},
-		Default: true,
+		Type:        &jsonschema.Type{Types: []string{"boolean"}},
+		Default:     true,
+		Description: "Enable/disable the use of persistent volumes. Must be true if using services, volumes, or to share command history.",
 	})
 	persistentVolumeProps.Set("accessMode", &jsonschema.Schema{
-		Type:    &jsonschema.Type{Types: []string{"string"}},
-		Default: "ReadWriteOnce",
+		Type:        &jsonschema.Type{Types: []string{"string"}},
+		Default:     "ReadWriteOnce",
+		Description: "The Okteto persistent volume access mode",
 	})
 	persistentVolumeProps.Set("size", &jsonschema.Schema{
-		Type:    &jsonschema.Type{Types: []string{"string"}},
-		Default: "5Gi",
+		Type:        &jsonschema.Type{Types: []string{"string"}},
+		Default:     "5Gi",
+		Description: "The size of the Okteto persistent volume",
 	})
 	persistentVolumeProps.Set("storageClass", &jsonschema.Schema{
-		Type: &jsonschema.Type{Types: []string{"string"}},
+		Type:        &jsonschema.Type{Types: []string{"string"}},
+		Description: "The storage class of the Okteto persistent volume. Defaults to cluster's default storage class",
+	})
+	persistentVolumeProps.Set("volumeMode", &jsonschema.Schema{
+		Type:        &jsonschema.Type{Types: []string{"string"}},
+		Default:     "Filesystem",
+		Description: "The Okteto persistent volume mode",
 	})
 	persistentVolumeProps.Set("annotations", &jsonschema.Schema{
-		Type: &jsonschema.Type{Types: []string{"object"}},
+		Type:        &jsonschema.Type{Types: []string{"object"}},
+		Description: "Add annotations to the Okteto persistent volume",
 		PatternProperties: map[string]*jsonschema.Schema{
 			".*": {
 				Type: &jsonschema.Type{Types: []string{"string"}},
@@ -278,14 +291,14 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		},
 	})
 	persistentVolumeProps.Set("labels", &jsonschema.Schema{
-		Type: &jsonschema.Type{Types: []string{"object"}},
+		Type:        &jsonschema.Type{Types: []string{"object"}},
+		Description: "Add labels to the Okteto persistent volume",
 		PatternProperties: map[string]*jsonschema.Schema{
 			".*": {
 				Type: &jsonschema.Type{Types: []string{"string"}},
 			},
 		},
 	})
-
 	devProps.Set("persistentVolume", &jsonschema.Schema{
 		Type:                 &jsonschema.Type{Types: []string{"object"}},
 		Properties:           persistentVolumeProps,
@@ -328,31 +341,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	// Resources
-	// resourcesProps := jsonschema.NewProperties()
-	// resourcesProps.Set("requests", &jsonschema.Schema{
-	// 	Type: &jsonschema.Type{Types: []string{"object"}},
-	// 	Properties: map[string]*jsonschema.Schema{
-	// 		"cpu":               {Type: &jsonschema.Type{Types: []string{"string"}}},
-	// 		"memory":            {Type: &jsonschema.Type{Types: []string{"string"}}},
-	// 		"ephemeral-storage": {Type: &jsonschema.Type{Types: []string{"string"}}},
-	// 	},
-	// })
-	// resourcesProps.Set("limits", &jsonschema.Schema{
-	// 	Type: &jsonschema.Type{Types: []string{"object"}},
-	// 	Properties: map[string]*jsonschema.Schema{
-	// 		"cpu":               {Type: &jsonschema.Type{Types: []string{"string"}}},
-	// 		"memory":            {Type: &jsonschema.Type{Types: []string{"string"}}},
-	// 		"ephemeral-storage": {Type: &jsonschema.Type{Types: []string{"string"}}},
-	// 	},
-	// })
-
-	// devProps.Set("resources", &jsonschema.Schema{
-	// 	Type:                 &jsonschema.Type{Types: []string{"object"}},
-	// 	Properties:           resourcesProps,
-	// 	AdditionalProperties: jsonschema.FalseSchema,
-	// })
-
 	// Remote
 	devProps.Set("remote", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"integer"}},
@@ -392,17 +380,20 @@ func (dev) JSONSchema() *jsonschema.Schema {
 	securityContextProps.Set("fsGroup", &jsonschema.Schema{
 		Type: &jsonschema.Type{Types: []string{"integer"}},
 	})
-	//securityContextProps.Set("capabilities", &jsonschema.Schema{
-	//	Type: &jsonschema.Type{Types: []string{"object"}},
-	//	Properties: map[string]*jsonschema.Schema{
-	//		"add": {
-	//			Type: &jsonschema.Type{Types: []string{"array"}},
-	//			Items: &jsonschema.Schema{
-	//				Type: &jsonschema.Type{Types: []string{"string"}},
-	//			},
-	//		},
-	//	},
-	//})
+
+	capabilitiesProps := jsonschema.NewProperties()
+	capabilitiesProps.Set("add", &jsonschema.Schema{
+		Type: &jsonschema.Type{Types: []string{"array"}},
+		Items: &jsonschema.Schema{
+			Type: &jsonschema.Type{Types: []string{"string"}},
+		},
+	})
+
+	securityContextProps.Set("capabilities", &jsonschema.Schema{
+		Type:                 &jsonschema.Type{Types: []string{"object"}},
+		Properties:           capabilitiesProps,
+		AdditionalProperties: jsonschema.FalseSchema,
+	})
 
 	devProps.Set("securityContext", &jsonschema.Schema{
 		Type:                 &jsonschema.Type{Types: []string{"object"}},
@@ -444,9 +435,11 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		Type: &jsonschema.Type{Types: []string{"string"}},
 	})
 	serviceProps.Set("environment", &jsonschema.Schema{
-		Type: &jsonschema.Type{Types: []string{"array"}},
-		Items: &jsonschema.Schema{
-			Type: &jsonschema.Type{Types: []string{"string"}},
+		Type: &jsonschema.Type{Types: []string{"object"}},
+		PatternProperties: map[string]*jsonschema.Schema{
+			".*": {
+				Type: &jsonschema.Type{Types: []string{"string"}},
+			},
 		},
 	})
 	serviceProps.Set("image", &jsonschema.Schema{
@@ -574,6 +567,39 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		Type:        &jsonschema.Type{Types: []string{"string"}},
 		Title:       "workdir",
 		Description: "Working directory of your development container",
+	})
+
+	// Resources
+	resourcesProps := jsonschema.NewProperties()
+
+	resourceValuesProps := jsonschema.NewProperties()
+	resourceValuesProps.Set("cpu", &jsonschema.Schema{
+		Type: &jsonschema.Type{Types: []string{"string"}},
+	})
+	resourceValuesProps.Set("memory", &jsonschema.Schema{
+		Type: &jsonschema.Type{Types: []string{"string"}},
+	})
+	resourceValuesProps.Set("ephemeral-storage", &jsonschema.Schema{
+		Type: &jsonschema.Type{Types: []string{"string"}},
+	})
+
+	resourcesProps.Set("requests", &jsonschema.Schema{
+		Type:                 &jsonschema.Type{Types: []string{"object"}},
+		Properties:           resourceValuesProps,
+		AdditionalProperties: jsonschema.FalseSchema,
+	})
+	resourcesProps.Set("limits", &jsonschema.Schema{
+		Type:                 &jsonschema.Type{Types: []string{"object"}},
+		Properties:           resourceValuesProps,
+		AdditionalProperties: jsonschema.FalseSchema,
+	})
+
+	devProps.Set("resources", &jsonschema.Schema{
+		Type:                 &jsonschema.Type{Types: []string{"object"}},
+		Title:                "resources",
+		Description:          "Resource requests and limits for the development container",
+		Properties:           resourcesProps,
+		AdditionalProperties: jsonschema.FalseSchema,
 	})
 
 	return &jsonschema.Schema{

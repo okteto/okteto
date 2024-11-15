@@ -33,7 +33,6 @@ func validateOktetoManifest(content string) error {
     }
 
     compiler := jsonschema.NewCompiler()
-
     doc, err := jsonschema.UnmarshalJSON(strings.NewReader(string(oktetoJsonSchema)))
     if err != nil {
         return err
