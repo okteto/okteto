@@ -1,6 +1,6 @@
 {
   "$id": "https://raw.githubusercontent.com/okteto/okteto/af/validate-2/schema.json",
-  "$schema": "2.0.0",
+  "$schema": "1.0.0",
   "additionalProperties": false,
   "properties": {
     "build": {

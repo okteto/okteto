@@ -39,7 +39,7 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 	}
 
 	// add levenshtein rules to suggest similar field names
-	manifestKeys := getStructKeys(manifestSchema)
+	manifestKeys := GetStructKeys(manifestSchema)
 	manifestKeys["model.manifestRaw"] = manifestKeys["model.Manifest"]
 	manifestKeys["build.infoRaw"] = manifestKeys["build.Info"]
 	manifestKeys["model.devType"] = manifestKeys["model.Dev"]

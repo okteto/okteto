@@ -49,7 +49,7 @@ func NewJsonSchema() *OktetoJsonSchema {
 	s := r.Reflect(&manifest{})
 	s.ID = "https://raw.githubusercontent.com/okteto/okteto/af/validate-2/schema.json" // TODO: change to master branch
 	s.Title = "Okteto Manifest"
-	s.Version = "2.0.0"
+	//s.Version = "1.0.0"
 	s.Required = []string{}
 
 	return &OktetoJsonSchema{

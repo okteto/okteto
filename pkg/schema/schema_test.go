@@ -12,7 +12,52 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package schema
+
+import (
+    "github.com/santhosh-tekuri/jsonschema/v6"
+    "strings"
+)
+
+func validateOktetoManifest(content string) error {
+    oktetoJsonSchema, err := NewJsonSchema().ToJSON()
+    if err != nil {
+        return err
+    }
+
+    var obj interface{}
+    err = Unmarshal([]byte(content), &obj)
+    if err != nil {
+        return err
+    }
+
+    compiler := jsonschema.NewCompiler()
+
+    doc, err := jsonschema.UnmarshalJSON(strings.NewReader(string(oktetoJsonSchema)))
+    if err != nil {
+        return err
+    }
+
+    resourceName := "schema.json"
+
+    err = compiler.AddResource(resourceName, doc)
+    if err != nil {
+        return err
+    }
+
+    schema, err := compiler.Compile(resourceName)
+    if err != nil {
+        return err
+    }
+
+    err = schema.Validate(obj)
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
 
 func difference(map1, map2 map[string][]string) map[string][]string {
     diff := make(map[string][]string)

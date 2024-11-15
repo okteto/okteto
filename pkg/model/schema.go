@@ -39,8 +39,8 @@ func mergeAndSortUnique(slice1, slice2 []string) []string {
 	return result
 }
 
-// getStructKeys recursively goes through a given struct and returns a map of struct names to their fields
-func getStructKeys(t interface{}) map[string][]string {
+// GetStructKeys recursively goes through a given struct and returns a map of struct names to their fields
+func GetStructKeys(t interface{}) map[string][]string {
 	result := make(map[string][]string)
 	typ := reflect.TypeOf(t)
 
@@ -57,7 +57,7 @@ func getStructKeys(t interface{}) map[string][]string {
 		}
 
 		if mapValueType.Kind() == reflect.Struct {
-			return getStructKeys(reflect.New(mapValueType).Interface())
+			return GetStructKeys(reflect.New(mapValueType).Interface())
 		}
 		return result
 	}
@@ -81,7 +81,7 @@ func getStructKeys(t interface{}) map[string][]string {
 		fieldType := field.Type
 
 		if fieldType.Kind() == reflect.Struct {
-			for k, v := range getStructKeys(reflect.New(fieldType).Interface()) {
+			for k, v := range GetStructKeys(reflect.New(fieldType).Interface()) {
 				result[k] = mergeAndSortUnique(result[k], v)
 			}
 		} else if fieldType.Kind() == reflect.Map {
@@ -97,16 +97,16 @@ func getStructKeys(t interface{}) map[string][]string {
 			// Recurse if the value type of the map is a pointer-to-struct
 			mapValueType := fieldType.Elem()
 			if mapValueType.Kind() == reflect.Ptr && mapValueType.Elem().Kind() == reflect.Struct {
-				for k, v := range getStructKeys(reflect.New(mapValueType.Elem()).Interface()) {
+				for k, v := range GetStructKeys(reflect.New(mapValueType.Elem()).Interface()) {
 					result[k] = mergeAndSortUnique(result[k], v)
 				}
 			}
 		} else if fieldType.Kind() == reflect.Ptr && fieldType.Elem().Kind() == reflect.Struct {
-			for k, v := range getStructKeys(reflect.New(fieldType.Elem()).Interface()) {
+			for k, v := range GetStructKeys(reflect.New(fieldType.Elem()).Interface()) {
 				result[k] = mergeAndSortUnique(result[k], v)
 			}
 		} else if fieldType.Kind() == reflect.Slice && fieldType.Elem().Kind() == reflect.Struct {
-			for k, v := range getStructKeys(reflect.New(fieldType.Elem()).Interface()) {
+			for k, v := range GetStructKeys(reflect.New(fieldType.Elem()).Interface()) {
 				result[k] = mergeAndSortUnique(result[k], v)
 			}
 		}
