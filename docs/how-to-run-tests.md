@@ -66,6 +66,7 @@ You will need to set some environment variables to start running e2e tests
 - `OKTETO_PATH`: The path of the okteto binary (It will default to `/usr/bin/okteto`).
 - `OKTETO_APPS_SUBDOMAIN`: The subdomain of the okteto cluster. For example: `product.okteto.dev`
 - `OKTETO_TOKEN`: The token of your okteto user. You can get it from the okteto UI.
+- `OKTETO_NAMESPACE_PREFIX`: The prefix for namespaces created in `OKTETO_URL` instance.
 
 ### Run all e2e tests
 
