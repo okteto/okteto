@@ -14,10 +14,11 @@
 package schema
 
 import (
-	"github.com/santhosh-tekuri/jsonschema/v6"
-	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
+
+	"github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/stretchr/testify/assert"
 )
 
 func validateOktetoManifest(content string) error {
