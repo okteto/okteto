@@ -434,7 +434,9 @@ jobs:
       - checkout
       - run: *okteto-login
       - run: *docker-login
-      - run: ./scripts/ci/push-image.sh "master" "linux/amd64,linux/arm64"
+      - run: 
+          command: ./scripts/ci/push-image.sh "master" "linux/amd64,linux/arm64"
+          no_output_timeout: 20m
       - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:master
       - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/bin:latest
 
