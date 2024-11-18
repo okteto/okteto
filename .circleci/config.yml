@@ -304,7 +304,7 @@ jobs:
           command: |
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
             & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_PRODUCT_STAGING_TOKEN
-            & "$($HOME)\project\artifacts\bin\okteto.exe" build --platform "linux/amd64" --build-arg VERSION_STRING=${CIRCLE_SHA1} -f Dockerfile . -t okteto.global/cli-e2e-win:${CIRCLE_SHA1}
+            & "$($HOME)\project\artifacts\bin\okteto.exe" build --platform "linux/amd64" --build-arg VERSION_STRING=$env:CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-win:$env:CIRCLE_SHA1
       - save_cache:
           key: v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
           paths:
@@ -370,7 +370,7 @@ jobs:
             $env:Path+=";$($HOME)\project\artifacts\bin"
             $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
             # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
-            $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e-win:${CIRCLE_SHA1}"
+            $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e-win:$env:CIRCLE_SHA1"
             $env:OKTETO_BIN="okteto.global/cli-e2e-win:${CIRCLE_SHA1}"
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
             & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_PRODUCT_STAGING_TOKEN
@@ -405,8 +405,8 @@ jobs:
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
             $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
-            $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e-win:${CIRCLE_SHA1}"
-            $env:OKTETO_BIN="okteto.global/cli-e2e-win:${CIRCLE_SHA1}"  
+            $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e-win:$env:CIRCLE_SHA1"
+            $env:OKTETO_BIN="okteto.global/cli-e2e-win:$env:OKTETO_BIN" 
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
             & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_PRODUCT_STAGING_TOKEN
             go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
