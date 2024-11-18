@@ -9,11 +9,6 @@ aliases:
   # standard semver regex as defined in: https://semver.org/
   - &release-regex /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
   - &release-branch-regex /^release-\d+\.\d+$/
-  - &okteto-login |
-    curl https://get.okteto.com -sSfL | sh
-    mkdir -p $HOME/.okteto
-    touch $HOME/.okteto/.noanalytics
-    okteto context use ${OKTETO_URL} --token ${OKTETO_TOKEN}
   - &docker-login echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
 
 parameters:
@@ -269,11 +264,10 @@ jobs:
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
             sha_arm=$(cat ./artifacts/bin/okteto-Darwin-arm64.sha256 | awk '{print $1}')
             ./scripts/update_homebrew_formula.sh 0.0.1 $sha $sha_arm
-      - run: *okteto-login
       - run:
           name: Build Docker container
           command: |
-            okteto build --platform "linux/arm64,linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile .
+            depot build --platform "linux/arm64,linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile .
 
   test-e2e-setup-windows:
     executor:
@@ -405,11 +399,8 @@ jobs:
 
   push-image-tag:
     executor: golang-ci
-    environment:
-      OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED: "true" # this is needed to push to Docker Hub using the local credentials instead of the ones from the context cluster
     steps:
       - checkout
-      - run: *okteto-login
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG" "linux/amd64,linux/arm64"
       - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:$CIRCLE_TAG
@@ -417,22 +408,16 @@ jobs:
 
   push-image-dev:
     executor: golang-ci
-    environment:
-      OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED: "true" # this is needed to push to Docker Hub using the local credentials instead of the ones from the context cluster
     steps:
       - checkout
-      - run: *okteto-login
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG",dev "linux/amd64,linux/arm64"
       - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:dev
 
   push-image-master:
     executor: golang-ci
-    environment:
-      OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED: "true" # this is needed to push to Docker Hub using the local credentials instead of the ones from the context cluster
     steps:
       - checkout
-      - run: *okteto-login
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh "master" "linux/amd64,linux/arm64"
       - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:master
@@ -605,7 +590,6 @@ workflows:
       - test-release:
           context:
             - GKE
-            - Product-okteto-dev
           requires:
             - build-binaries
           filters:
@@ -616,7 +600,6 @@ workflows:
                 - master
                 - *release-branch-regex
       - push-image-master:
-          context: Product-okteto-dev
           requires:
             - build-binaries
           filters:
@@ -682,7 +665,6 @@ workflows:
       - run-unit-test
       - run-windows-unit-test
       - push-image-dev:
-          context: Product-okteto-dev
           requires:
             - build-binaries
       - release-job:
@@ -717,7 +699,6 @@ workflows:
             tags:
               ignore: *release-regex
       - push-image-tag:
-          context: Product-okteto-dev
           requires:
             - build-binaries
           filters:
