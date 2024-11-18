@@ -88,6 +88,10 @@ func (deploy) JSONSchema() *jsonschema.Schema {
 		Enum:        []interface{}{"istio"},
 		Description: "The backend for divert. Currently, only 'istio' is supported",
 	})
+	divertProps.Set("namespace", &jsonschema.Schema{
+		Type:        &jsonschema.Type{Types: []string{"string"}},
+		Description: "Namespace of the divert",
+	})
 	divertProps.Set("virtualServices", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"array"}},
 		Description: "List of virtual services to divert",
@@ -168,7 +172,6 @@ func (deploy) JSONSchema() *jsonschema.Schema {
 	deployProps.Set("divert", &jsonschema.Schema{
 		Type:                 &jsonschema.Type{Types: []string{"object"}},
 		Properties:           divertProps,
-		Required:             []string{"driver"},
 		AdditionalProperties: jsonschema.FalseSchema,
 		Description:          "Configuration for diverting traffic between namespaces",
 	})

@@ -42,12 +42,32 @@ func (test) JSONSchema() *jsonschema.Schema {
 	})
 
 	// Commands
+	commandProps := jsonschema.NewProperties()
+	commandProps.Set("name", &jsonschema.Schema{
+		Type:        &jsonschema.Type{Types: []string{"string"}},
+		Description: "Name of the command",
+	})
+	commandProps.Set("command", &jsonschema.Schema{
+		Type:        &jsonschema.Type{Types: []string{"string"}},
+		Description: "Command to execute",
+	})
+
 	testProps.Set("commands", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"array"}},
 		Title:       "commands",
 		Description: "Commands to run the tests. Each command must exit with zero exit code for success",
 		Items: &jsonschema.Schema{
-			Type: &jsonschema.Type{Types: []string{"string"}},
+			OneOf: []*jsonschema.Schema{
+				{
+					Type: &jsonschema.Type{Types: []string{"string"}},
+				},
+				{
+					Type:                 &jsonschema.Type{Types: []string{"object"}},
+					Properties:           commandProps,
+					Required:             []string{"command"},
+					AdditionalProperties: jsonschema.FalseSchema,
+				},
+			},
 		},
 		Required: []string{"commands"},
 	})
