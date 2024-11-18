@@ -14,8 +14,9 @@
 package schema
 
 import (
-	"github.com/santhosh-tekuri/jsonschema/v6"
 	"strings"
+
+	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
 func validateOktetoManifest(content string) error {
