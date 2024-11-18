@@ -29,7 +29,6 @@ import (
 )
 
 var (
-	user          = ""
 	kubectlBinary = "kubectl"
 	appsSubdomain = ""
 	token         = ""
@@ -40,13 +39,6 @@ const (
 )
 
 func TestMain(m *testing.M) {
-	if u, ok := os.LookupEnv(model.OktetoUserEnvVar); !ok {
-		log.Println("OKTETO_USER is not defined")
-		os.Exit(1)
-	} else {
-		user = u
-	}
-
 	if v := os.Getenv(model.OktetoAppsSubdomainEnvVar); v != "" {
 		appsSubdomain = v
 	}

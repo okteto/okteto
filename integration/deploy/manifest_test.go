@@ -132,7 +132,7 @@ func TestDeployOktetoManifest(t *testing.T) {
 	require.NoError(t, createAppDockerfile(dir))
 	require.NoError(t, createK8sManifest(dir))
 
-	testNamespace := integration.GetTestNamespace("DeployManifestV2", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -186,7 +186,7 @@ func TestRedeployOktetoManifestForImages(t *testing.T) {
 	require.NoError(t, createAppDockerfile(dir))
 	require.NoError(t, createK8sManifest(dir))
 
-	testNamespace := integration.GetTestNamespace("ReDeploy", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -258,7 +258,7 @@ func TestDeployOktetoManifestWithDestroy(t *testing.T) {
 	require.NoError(t, createAppDockerfile(dir))
 	require.NoError(t, createK8sManifest(dir))
 
-	testNamespace := integration.GetTestNamespace("DeployDestroy", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -321,7 +321,7 @@ func TestDeployOktetoManifestExportCache(t *testing.T) {
 
 	dir := t.TempDir()
 
-	testNamespace := integration.GetTestNamespace("DeployExportCache", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -369,7 +369,7 @@ func TestDeployRemoteOktetoManifest(t *testing.T) {
 
 	dir := t.TempDir()
 
-	testNamespace := integration.GetTestNamespace("DeployRemote", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -426,7 +426,7 @@ func TestDeployRemoteOktetoManifestFromParentFolder(t *testing.T) {
 	dir := t.TempDir()
 	parentFolder := filepath.Join(dir, "test-parent")
 
-	testNamespace := integration.GetTestNamespace("DeployRemoteParent", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -493,7 +493,7 @@ func TestDeployOktetoManifestWithinRepository(t *testing.T) {
 
 	require.NoError(t, createOktetoManifest(dir, simpleOktetoManifestContent))
 
-	testNamespace := integration.GetTestNamespace("DeployManifestWithinRepo", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

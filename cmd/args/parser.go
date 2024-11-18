@@ -59,7 +59,7 @@ func (p *DevCommandArgParser) Parse(ctx context.Context, argsIn []string, argsLe
 	result := p.parseFromArgs(argsIn, argsLenAtDash)
 
 	if p.checkIfCmdIsEmpty {
-		if result.Command == nil || len(result.Command) == 0 {
+		if len(result.Command) == 0 {
 			return nil, errCommandRequired
 		}
 	}

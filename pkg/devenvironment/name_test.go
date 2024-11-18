@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -28,6 +29,14 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
+type fakeEnv struct {
+	envs map[string]string
+}
+
+func (f fakeEnv) getEnv(name string) string {
+	return f.envs[name]
+}
+
 func TestInferName(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
@@ -37,11 +46,12 @@ func TestInferName(t *testing.T) {
 		manifestPath       string
 		cwd                string
 		oktetoManifestPath string
+		oktetoNameEnvVar   string
 		expectedName       string
 		devEnvs            []runtime.Object
 	}{
 		{
-			name: "without-repository-url",
+			name: "without-repository-url-and-without-okteto-name-env-var",
 			getRepositoryURL: func(s string) (string, error) {
 				return "", assert.AnError
 			},
@@ -50,6 +60,18 @@ func TestInferName(t *testing.T) {
 			manifestPath: "my-manifest/okteto.yml",
 			cwd:          "/tmp/my-dev-env",
 			expectedName: "my-dev-env",
+		},
+		{
+			name: "without-repository-url-and-with-okteto-name-env-var",
+			getRepositoryURL: func(s string) (string, error) {
+				return "", assert.AnError
+			},
+			devEnvs:          []runtime.Object{},
+			ns:               "test",
+			manifestPath:     "my-manifest/okteto.yml",
+			cwd:              "/tmp/my-dev-env",
+			oktetoNameEnvVar: "overridden name",
+			expectedName:     "overridden name",
 		},
 		{
 			name: "without-dev-envs",
@@ -148,9 +170,15 @@ func TestInferName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := fake.NewSimpleClientset(tt.devEnvs...)
+			env := fakeEnv{
+				envs: map[string]string{
+					constants.OktetoNameEnvVar: tt.oktetoNameEnvVar,
+				},
+			}
 			inferer := NameInferer{
 				k8s:              c,
 				getRepositoryURL: tt.getRepositoryURL,
+				getEnv:           env.getEnv,
 				fs:               afero.NewMemMapFs(),
 			}
 

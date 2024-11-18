@@ -39,11 +39,11 @@ orbs:
 executors:
   golang-ci:
     docker:
-      - image: okteto/golang-ci:2.6.2
+      - image: okteto/golang-ci:2.7.0
     environment:
-      OKTETO_CONTEXT: https://staging.okteto.dev
-      OKTETO_USER: cindylopez
-      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
+      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
+      OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
+      OKTETO_NAMESPACE_PREFIX: staging
 
 jobs:
   golangci-lint:
@@ -118,8 +118,6 @@ jobs:
       # https://circleci.com/developer/machine/image/windows-server-2022-gui
       name: win/server-2022
       version: 2024.04.1
-    environment:
-      OKTETO_USER: cindylopez
     steps:
       - checkout
       - run:
@@ -148,7 +146,7 @@ jobs:
           name: Run actions integration tests
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_PRODUCT_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-actions
 
@@ -167,7 +165,7 @@ jobs:
             export DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
             export DEPOT_TOKEN=$DEPOT_TOKEN
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_PRODUCT_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-build
 
@@ -189,7 +187,7 @@ jobs:
             export OKTETO_BIN=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
             echo "OKTETO_BIN=$OKTETO_BIN"
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_PRODUCT_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-deploy
 
@@ -210,7 +208,7 @@ jobs:
             export OKTETO_BIN=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
             echo "OKTETO_BIN=$OKTETO_BIN"
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_PRODUCT_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-up
           environment:
@@ -233,7 +231,7 @@ jobs:
             export OKTETO_BIN=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
             echo "OKTETO_BIN=$OKTETO_BIN"
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_PRODUCT_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-okteto
 
@@ -252,7 +250,7 @@ jobs:
           # which run the deploy, we set the env var OKTETO_REMOTE_CLI_IMAGE to the one we are building
           name: Build Dockerfile for current commit
           command: |
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_PRODUCT_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
       - save_cache:
@@ -288,8 +286,9 @@ jobs:
       name: win/server-2022
       version: 2024.04.1
     environment:
-      OKTETO_CONTEXT: https://staging.okteto.dev
-      OKTETO_USER: cindylopez
+      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
+      OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
+      OKTETO_NAMESPACE_PREFIX: staging
     steps:
       - checkout
       - restore_cache:
@@ -304,7 +303,7 @@ jobs:
           name: Build Dockerfile for current commit
           command: |
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
-            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
+            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_PRODUCT_STAGING_TOKEN
             & "$($HOME)\project\artifacts\bin\okteto.exe" build --platform "linux/amd64" --build-arg VERSION_STRING=$env:CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-win:$env:CIRCLE_SHA1
       - save_cache:
           key: v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
@@ -318,9 +317,9 @@ jobs:
       name: win/server-2022
       version: 2024.04.1
     environment:
-      OKTETO_CONTEXT: https://staging.okteto.dev
-      OKTETO_USER: cindylopez
-      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
+      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
+      OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
+      OKTETO_NAMESPACE_PREFIX: staging
     steps:
       - checkout
       - restore_cache:
@@ -338,7 +337,7 @@ jobs:
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
-            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
+            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_PRODUCT_STAGING_TOKEN
             go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
 
   e2e-deploy-windows:
@@ -346,9 +345,9 @@ jobs:
       name: win/server-2022
       version: 2024.04.1
     environment:
-      OKTETO_CONTEXT: https://staging.okteto.dev
-      OKTETO_USER: cindylopez
-      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
+      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
+      OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
+      OKTETO_NAMESPACE_PREFIX: staging
     steps:
       - checkout
       - restore_cache:
@@ -374,7 +373,7 @@ jobs:
             $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e-win:$env:CIRCLE_SHA1"
             $env:OKTETO_BIN="okteto.global/cli-e2e-win:${CIRCLE_SHA1}"
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
-            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
+            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_PRODUCT_STAGING_TOKEN
             go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
 
   e2e-up-windows:
@@ -382,9 +381,9 @@ jobs:
       name: win/server-2022
       version: 2024.04.1
     environment:
-      OKTETO_CONTEXT: https://staging.okteto.dev
-      OKTETO_USER: cindylopez
-      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
+      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
+      OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
+      OKTETO_NAMESPACE_PREFIX: staging
     steps:
       - checkout
       - restore_cache:
@@ -409,7 +408,7 @@ jobs:
             $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e-win:$env:CIRCLE_SHA1"
             $env:OKTETO_BIN="okteto.global/cli-e2e-win:${CIRCLE_SHA1}"  
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
-            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
+            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_PRODUCT_STAGING_TOKEN
             go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
 
   push-image-tag:

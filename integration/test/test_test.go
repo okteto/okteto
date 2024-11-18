@@ -124,7 +124,7 @@ func TestOktetoTestsWithPassingTests(t *testing.T) {
 	oktetoManifestPath := filepath.Join(dir, "okteto.yml")
 	assert.NoError(t, os.WriteFile(oktetoManifestPath, []byte(oktetoManifestWithPassingTest), 0600))
 
-	testNamespace := integration.GetTestNamespace("TestsWithPassingTests", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -159,7 +159,7 @@ func TestOktetoTestsWithPassingTestsAndArtifacts(t *testing.T) {
 	oktetoManifestPath := filepath.Join(dir, "okteto.yml")
 	assert.NoError(t, os.WriteFile(oktetoManifestPath, []byte(oktetoManifestWithPassingTestAndArtifacts), 0600))
 
-	testNamespace := integration.GetTestNamespace("PassingTestsAndArtifacts", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -212,7 +212,7 @@ func TestOktetoTestsWithFailingTestsAndArtifacts(t *testing.T) {
 	oktetoManifestPath := filepath.Join(dir, "okteto.yml")
 	assert.NoError(t, os.WriteFile(oktetoManifestPath, []byte(oktetoManifestWithFailingTestAndArtifacts), 0600))
 
-	testNamespace := integration.GetTestNamespace("FailingTestsAndArtifacts", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -251,7 +251,7 @@ func TestOktetoTestsWithAnotherUser(t *testing.T) {
 	oktetoManifestPath := filepath.Join(dir, "okteto.yml")
 	assert.NoError(t, os.WriteFile(oktetoManifestPath, []byte(oktetoManifestWithPassingTest), 0600))
 
-	testNamespace := integration.GetTestNamespace("TestsWithAnotherUser", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

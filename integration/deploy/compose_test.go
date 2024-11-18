@@ -232,7 +232,7 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createComposeScenario(dir))
 
-	testNamespace := integration.GetTestNamespace("DeployCompose", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -334,7 +334,7 @@ func TestDeployPipelineFromComposeWithVolumeMounts(t *testing.T) {
 	composeContent := []byte(composeTemplateWithVolumeMount)
 	require.NoError(t, os.WriteFile(composePath, composeContent, 0600))
 
-	testNamespace := integration.GetTestNamespace("DeployComposeWithVolMount", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -426,7 +426,7 @@ func TestReDeployPipelineFromCompose(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createComposeScenario(dir))
 
-	testNamespace := integration.GetTestNamespace("ReDeployCompose", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -509,7 +509,7 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createStacksScenario(dir))
 
-	testNamespace := integration.GetTestNamespace("DeployStacks", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -585,7 +585,7 @@ func TestDeployComposeFromOktetoManifest(t *testing.T) {
 	require.NoError(t, createComposeScenario(dir))
 	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), oktetoManifestV2WithCompose))
 
-	testNamespace := integration.GetTestNamespace("DeployComposeManifest", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -668,7 +668,7 @@ services:
 	err = os.WriteFile(composePath, composeContent, 0600)
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("NotPanic", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

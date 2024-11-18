@@ -515,10 +515,10 @@ func validateStackName(name string) error {
 		return fmt.Errorf("name cannot be empty")
 	}
 	if ValidKubeNameRegex.MatchString(name) {
-		return fmt.Errorf(errBadStackName)
+		return fmt.Errorf("%s", errBadStackName)
 	}
 	if strings.HasPrefix(name, "-") || strings.HasSuffix(name, "-") {
-		return fmt.Errorf(errBadStackName)
+		return fmt.Errorf("%s", errBadStackName)
 	}
 	return nil
 }

@@ -165,7 +165,7 @@ func TestAutoWakeFromURL(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("AutoWakeURL", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -228,7 +228,7 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("AutoWakeUp", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
