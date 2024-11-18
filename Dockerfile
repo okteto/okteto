@@ -50,17 +50,22 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 COPY docker-credential-okteto /okteto/bin/docker-credential-okteto
 
 FROM busybox:1.34.0
-USER 0
-COPY --from=certs /etc/ssl/certs /etc/ssl/certs
-COPY --from=kubectl-builder /usr/local/bin/kubectl /usr/local/bin/kubectl
-COPY --from=helm-builder /usr/local/bin/helm /usr/local/bin/helm
-COPY --from=builder /okteto/bin/okteto /usr/local/bin/okteto
-COPY --from=builder /okteto/bin/docker-credential-okteto /usr/local/bin/docker-credential-okteto
-COPY --from=remote /usr/local/bin/remote /usr/bin-image/bin/okteto-remote
-COPY --from=supervisor /usr/local/bin/supervisor /usr/bin-image/bin/okteto-supervisor
-COPY --from=syncthing /bin/syncthing /usr/bin-image/bin/syncthing
-COPY --from=clean /usr/local/bin/clean /usr/bin-image/bin/clean
+
+RUN addgroup cligroup && \
+    adduser -D -h /home/cliuser -G cligroup cliuser
+
+COPY --chmod=755 --from=certs /etc/ssl/certs /etc/ssl/certs
+COPY --chmod=755 --from=kubectl-builder /usr/local/bin/kubectl /usr/local/bin/kubectl
+COPY --chmod=755 --from=helm-builder /usr/local/bin/helm /usr/local/bin/helm
+COPY --chmod=755 --from=builder /okteto/bin/okteto /usr/local/bin/okteto
+COPY --chmod=755 --from=builder /okteto/bin/docker-credential-okteto /usr/local/bin/docker-credential-okteto
+COPY --chmod=755 --from=remote /usr/local/bin/remote /usr/bin-image/bin/okteto-remote
+COPY --chmod=755 --from=supervisor /usr/local/bin/supervisor /usr/bin-image/bin/okteto-supervisor
+COPY --chmod=755 --from=syncthing /bin/syncthing /usr/bin-image/bin/syncthing
+COPY --chmod=755 --from=clean /usr/local/bin/clean /usr/bin-image/bin/clean
 COPY --chmod=755 scripts/start.sh /usr/bin-image/bin/start.sh
+
+USER cliuser
 
 ENV OKTETO_DISABLE_SPINNER=true
 ENV PS1="\[\e[36m\]\${OKTETO_NAMESPACE:-okteto}:\e[32m\]\${OKTETO_NAME:-dev} \[\e[m\]\W> "

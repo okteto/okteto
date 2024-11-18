@@ -274,7 +274,7 @@ func TestCreateDockerfile(t *testing.T) {
 			expected: expected{
 				dockerfileName: filepath.Clean("/test/Dockerfile.deploy"),
 				dockerfileContent: `
-FROM okteto/okteto:latest as okteto-cli
+FROM okteto/okteto:stable as okteto-cli
 
 FROM test-image as runner
 
@@ -377,7 +377,7 @@ COPY --from=runner /etc/.oktetocachekey .oktetocachekey
 			expected: expected{
 				dockerfileName: filepath.Clean("/test/Dockerfile.test"),
 				dockerfileContent: `
-FROM okteto/okteto:latest as okteto-cli
+FROM okteto/okteto:stable as okteto-cli
 
 FROM test-image as runner
 
@@ -475,7 +475,7 @@ COPY --from=runner /okteto/artifacts/ /
 			expected: expected{
 				dockerfileName: filepath.Clean("/test/Dockerfile.deploy"),
 				dockerfileContent: `
-FROM okteto/okteto:latest as okteto-cli
+FROM okteto/okteto:stable as okteto-cli
 
 FROM test-image as runner
 

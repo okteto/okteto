@@ -73,7 +73,7 @@ func (c *ImageConfig) GetBinImage() string {
 // GetRemoteImage returns the okteto cli image to use for remote deployments
 // Remote image is used to run okteto deploy/destroy/test remotely
 func (c *ImageConfig) GetRemoteImage(versionString string) string {
-	if _, err := semver.StrictNewVersion(VersionString); err == nil {
+	if _, err := semver.StrictNewVersion(versionString); err == nil {
 		return fmt.Sprintf(oktetoCLIImageForRemoteTemplate, versionString)
 	}
 	c.ioCtrl.Infof("invalid version string: %s, using latest stable", versionString)
