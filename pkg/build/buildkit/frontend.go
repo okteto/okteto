@@ -61,6 +61,11 @@ func (f *FrontendRetriever) GetFrontend(buildOptions *types.BuildOptions) *Front
 		return f.getGatewayFrontend(customFrontendImage)
 	}
 
+	if f.localFrontendVersion < 5 && len(buildOptions.ExportCache) > 1 {
+		f.logger.Infof("using gateway frontend because of extra cache exports")
+		return f.getGatewayFrontend(customFrontendImage)
+	}
+
 	if customFrontendImage != "" {
 		f.logger.Infof("using gateway frontend because of custom frontend image")
 		return f.getGatewayFrontend(customFrontendImage)

@@ -282,10 +282,6 @@ func (b *SolveOptBuilder) Build(buildOptions *types.BuildOptions) (*client.Solve
 			},
 		)
 	}
-	// TODO(#3548): remove when we upgrade buildkit to 0.11
-	if len(opt.CacheExports) > 1 {
-		opt.CacheExports = opt.CacheExports[:1]
-	}
 
 	return opt, nil
 }

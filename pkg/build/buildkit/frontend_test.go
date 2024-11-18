@@ -108,6 +108,32 @@ func TestGetFrontend(t *testing.T) {
 			},
 			expectedError: nil,
 		},
+		{
+			name: "ExportCache and Custom Frontend Image via Env",
+			buildOptions: &types.BuildOptions{
+				ExportCache: []string{"cache1", "cache2"},
+			},
+			localFrontend: 4,
+			frontendImage: "",
+			expectedFrontend: &Frontend{
+				Frontend: gatewayFrontend,
+				Image:    "docker/dockerfile:1.10.0",
+			},
+			expectedError: nil,
+		},
+		{
+			name: "ExportCache and Custom Frontend Image via Env",
+			buildOptions: &types.BuildOptions{
+				ExportCache: []string{"cache1", "cache2"},
+			},
+			localFrontend: 10,
+			frontendImage: "",
+			expectedFrontend: &Frontend{
+				Frontend: defaultFrontend,
+				Image:    "",
+			},
+			expectedError: nil,
+		},
 	}
 
 	for _, tt := range tests {
