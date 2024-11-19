@@ -375,6 +375,7 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 					if err := getErrorDueToRestartLimit(ctx, stack, svcName, k8sClient); err != nil {
 						return err
 					}
+					continue
 				}
 
 				// deploy service
