@@ -47,9 +47,8 @@ func NewJsonSchema() *OktetoJsonSchema {
 	r.RequiredFromJSONSchemaTags = false
 
 	s := r.Reflect(&manifest{})
-	s.ID = "https://raw.githubusercontent.com/okteto/okteto/af/validate-2/schema.json" // TODO: change to master branch
+	s.ID = "https://raw.githubusercontent.com/okteto/okteto/master/schema.json"
 	s.Title = "Okteto Manifest"
-	//s.Version = "1.0.0"
 	s.Required = []string{}
 
 	return &OktetoJsonSchema{
@@ -70,10 +69,6 @@ func (o *OktetoJsonSchema) ToJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO: remove when MultiTypes are supported (https://github.com/kubeark/jsonschema/issues/134)
-	data["properties"].(map[string]interface{})["deploy"].(map[string]interface{})["type"] = []string{"array", "object"}
-	data["properties"].(map[string]interface{})["dev"].(map[string]interface{})["patternProperties"].(map[string]interface{})[".*"].(map[string]interface{})["properties"].(map[string]interface{})["command"].(map[string]interface{})["type"] = []string{"array", "string"}
 
 	// data to bytes
 	out, err := json.MarshalIndent(data, "", "  ")
