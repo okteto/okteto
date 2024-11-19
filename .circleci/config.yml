@@ -559,7 +559,7 @@ workflows:
                 - master
       - check-schema:
           requires:
-            - "build-binaries"                
+            - "build-binaries"
       - e2e-build-windows:
           requires:
             - test-e2e-setup-windows

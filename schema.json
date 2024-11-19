@@ -1,6 +1,6 @@
 {
   "$id": "https://raw.githubusercontent.com/okteto/okteto/master/schema.json",
-  "$schema": "1.0.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
     "build": {
@@ -19,6 +19,12 @@
               },
               "title": "args",
               "type": "object"
+            },
+            "context": {
+              "default": ".",
+              "description": "The build context. Relative paths are relative to the location of the Okteto Manifest",
+              "title": "context",
+              "type": "string"
             },
             "depends_on": {
               "description": "List of images that need to be built first",
