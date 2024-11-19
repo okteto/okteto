@@ -63,7 +63,7 @@ type Runner struct {
 	maxAttemptsBuildkitTransientErrors int
 }
 type SolveOptBuilderInterface interface {
-	Build(buildOptions *types.BuildOptions) (*client.SolveOpt, error)
+	Build(ctx context.Context, buildOptions *types.BuildOptions) (*client.SolveOpt, error)
 }
 
 // SolveBuildFn is a function that solves a build

@@ -51,7 +51,7 @@ type fakeSolveOptBuilder struct {
 	err error
 }
 
-func (fso *fakeSolveOptBuilder) Build(buildOptions *types.BuildOptions) (*client.SolveOpt, error) {
+func (fso *fakeSolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOptions) (*client.SolveOpt, error) {
 	return fso.opt, fso.err
 }
 
@@ -153,7 +153,7 @@ func TestDepotRun(t *testing.T) {
 						CurrentContext: "test",
 					},
 				},
-				getSolveOptBuilder: func(ctx context.Context, clientFactory buildkit.ClientFactoryIface, reg registry.OktetoRegistry, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (buildkit.SolveOptBuilderInterface, error) {
+				getSolveOptBuilder: func(clientFactory buildkit.ClientFactoryIface, reg registry.OktetoRegistry, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (buildkit.SolveOptBuilderInterface, error) {
 					return &fakeSolveOptBuilder{
 						err: nil,
 					}, nil

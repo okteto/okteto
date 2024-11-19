@@ -172,12 +172,12 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(ob.OktetoContext))
 
-	optBuilder, err := buildkit.NewSolveOptBuilder(ctx, buildkitClientFactory, reg, ob.OktetoContext, ob.Fs, ioCtrl)
+	optBuilder, err := buildkit.NewSolveOptBuilder(buildkitClientFactory, reg, ob.OktetoContext, ob.Fs, ioCtrl)
 	if err != nil {
 		return err
 	}
 
-	opt, err := optBuilder.Build(buildOptions)
+	opt, err := optBuilder.Build(ctx, buildOptions)
 	if err != nil {
 		return fmt.Errorf("failed to create build solver: %w", err)
 	}

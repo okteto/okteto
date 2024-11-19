@@ -23,7 +23,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	dockerConfig "github.com/docker/cli/cli/config"
 	"github.com/moby/buildkit/client"
 	buildctl "github.com/moby/buildkit/cmd/buildctl/build"
@@ -49,13 +48,13 @@ const (
 
 // SolveOptBuilder is a builder for SolveOpt
 type SolveOptBuilder struct {
-	logger                *io.Controller
-	imageCtrl             registry.ImageCtrl
-	reg                   registry.OktetoRegistry
-	okCtx                 OktetoContextInterface
-	fs                    afero.Fs
-	secretTempFolder      string
-	dockerFrontendVersion uint64
+	logger           *io.Controller
+	imageCtrl        registry.ImageCtrl
+	reg              registry.OktetoRegistry
+	okCtx            OktetoContextInterface
+	fs               afero.Fs
+	secretTempFolder string
+	clientFactory    ClientFactoryIface
 }
 
 type ClientFactoryIface interface {
@@ -81,43 +80,24 @@ type OktetoContextInterface interface {
 }
 
 // NewSolveOptBuilder creates a new SolveOptBuilder
-func NewSolveOptBuilder(ctx context.Context, clientFactory ClientFactoryIface, reg registry.OktetoRegistry, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (*SolveOptBuilder, error) {
-	buildkitClient, err := clientFactory.GetBuildkitClient(ctx)
-	if err != nil {
-		logger.Infof("failed to get buildkit client: %s", err)
-		return nil, err
-	}
-	info, err := buildkitClient.Info(ctx)
-	if err != nil {
-		logger.Infof("failed to get buildkit info: %s", err)
-		return nil, err
-	}
-	buildkitVersion, err := semver.NewVersion(info.BuildkitVersion.Version)
-	if err != nil {
-		logger.Infof("failed to parse buildkit version: %s", err)
-		return nil, err
-	}
-	// We substract 6 as it's the difference between the buildkit version and the docker frontend version
-	dockerfileFrontendVersion := buildkitVersion.Minor() - 6
-
+func NewSolveOptBuilder(clientFactory ClientFactoryIface, reg registry.OktetoRegistry, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (*SolveOptBuilder, error) {
 	secretTempFolder, err := getSecretTempFolder(fs)
 	if err != nil {
 		return nil, err
 	}
 
 	return &SolveOptBuilder{
-		logger:                logger,
-		dockerFrontendVersion: dockerfileFrontendVersion,
-		imageCtrl:             registry.NewImageCtrl(okCtx),
-		reg:                   reg,
-		fs:                    fs,
-		secretTempFolder:      secretTempFolder,
-		okCtx:                 okCtx,
+		logger:           logger,
+		imageCtrl:        registry.NewImageCtrl(okCtx),
+		reg:              reg,
+		fs:               fs,
+		secretTempFolder: secretTempFolder,
+		okCtx:            okCtx,
 	}, nil
 }
 
 // Build creates a new SolveOpt
-func (b *SolveOptBuilder) Build(buildOptions *types.BuildOptions) (*client.SolveOpt, error) {
+func (b *SolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOptions) (*client.SolveOpt, error) {
 	// check that the images are in the right format
 	if err := b.validateTags(buildOptions.Tag); err != nil {
 		return nil, err
@@ -171,7 +151,16 @@ func (b *SolveOptBuilder) Build(buildOptions *types.BuildOptions) (*client.Solve
 		frontendAttrs["no-cache"] = ""
 	}
 
-	frontend := NewFrontendRetriever(b.dockerFrontendVersion, b.logger).GetFrontend(buildOptions)
+	buildkitClient, err := b.clientFactory.GetBuildkitClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	frontendRetriever, err := NewFrontendRetriever(ctx, buildkitClient, b.logger)
+	if err != nil {
+		return nil, err
+	}
+	frontend := frontendRetriever.GetFrontend(buildOptions)
 	if frontend.Image != "" {
 		frontendAttrs["source"] = frontend.Image
 	}

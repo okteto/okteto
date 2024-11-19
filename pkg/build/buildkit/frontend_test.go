@@ -14,12 +14,23 @@
 package buildkit
 
 import (
+	"context"
 	"testing"
 
+	"github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
+
+type fakeBuildkitInfoGetter struct {
+	info *client.Info
+	err  error
+}
+
+func (f *fakeBuildkitInfoGetter) Info(ctx context.Context) (*client.Info, error) {
+	return f.info, f.err
+}
 
 func TestGetFrontend(t *testing.T) {
 	tests := []struct {
@@ -28,7 +39,7 @@ func TestGetFrontend(t *testing.T) {
 		expectedFrontend *Frontend
 		name             string
 		frontendImage    string
-		localFrontend    uint64
+		buildkitVersion  string
 	}{
 		{
 			name: "No ExtraHosts, No Custom Env",
@@ -55,7 +66,7 @@ func TestGetFrontend(t *testing.T) {
 			expectedError: nil,
 		},
 		{
-			name: "ExtraHosts Present, No Custom Env",
+			name: "ExtraHosts Present, No Custom Env, No buildkitVersion",
 			buildOptions: &types.BuildOptions{
 				ExtraHosts: []types.HostMap{
 					{Hostname: "host1", IP: "192.168.1.1"},
@@ -113,8 +124,8 @@ func TestGetFrontend(t *testing.T) {
 			buildOptions: &types.BuildOptions{
 				ExportCache: []string{"cache1", "cache2"},
 			},
-			localFrontend: 4,
-			frontendImage: "",
+			buildkitVersion: "0.11.0",
+			frontendImage:   "",
 			expectedFrontend: &Frontend{
 				Frontend: gatewayFrontend,
 				Image:    "docker/dockerfile:1.10.0",
@@ -126,8 +137,8 @@ func TestGetFrontend(t *testing.T) {
 			buildOptions: &types.BuildOptions{
 				ExportCache: []string{"cache1", "cache2"},
 			},
-			localFrontend: 10,
-			frontendImage: "",
+			buildkitVersion: "0.4.0",
+			frontendImage:   "",
 			expectedFrontend: &Frontend{
 				Frontend: defaultFrontend,
 				Image:    "",
@@ -139,7 +150,14 @@ func TestGetFrontend(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(buildkitFrontendImageEnvVar, tt.frontendImage)
-			retriever := NewFrontendRetriever(tt.localFrontend, io.NewIOController())
+			retriever, err := NewFrontendRetriever(context.Background(), &fakeBuildkitInfoGetter{
+				info: &client.Info{
+					BuildkitVersion: client.BuildkitVersion{
+						Version: tt.buildkitVersion,
+					},
+				},
+			}, io.NewIOController())
+			assert.NoError(t, err, "expected no error")
 
 			frontend := retriever.GetFrontend(tt.buildOptions)
 			assert.Equal(t, tt.expectedFrontend, frontend, "expected frontend to match")
