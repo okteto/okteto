@@ -95,7 +95,16 @@ func Test_getErrorMessage(t *testing.T) {
 			err:  errors.New("pull access denied, repository does not exist or may require authorization: server message: insufficient_scope: authorization failed"),
 			tag:  imageTag,
 			expected: oktetoErrors.UserError{
-				E:    fmt.Errorf("failed to pull image '%s'. The repository is not accessible or it does not exist", imageTag),
+				E:    fmt.Errorf("the image '%s' is not accessible or it does not exist", imageTag),
+				Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.", imageTag),
+			},
+		},
+		{
+			name: "not found",
+			err:  errors.New("example/image:latest: not found"),
+			tag:  imageTag,
+			expected: oktetoErrors.UserError{
+				E:    fmt.Errorf("the image '%s' is not accessible or it does not exist", imageTag),
 				Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.", imageTag),
 			},
 		},
@@ -231,6 +240,45 @@ func TestExtractImageTagFromPullAccessDeniedError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.err.Error(), func(t *testing.T) {
 			got := extractImageTagFromPullAccessDeniedError(tt.err)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func Test_extractImageTagFromNotFoundError(t *testing.T) {
+	tests := []struct {
+		err      error
+		expected string
+	}{
+		{
+			err:      errors.New("not found"),
+			expected: "",
+		},
+		{
+			err:      errors.New("failed to solve: registry/myimage: not found"),
+			expected: "registry/myimage",
+		},
+		{
+			err:      errors.New("failed to solve: registry/myimage:tag: not found"),
+			expected: "registry/myimage:tag",
+		},
+		{
+			err:      errors.New("failed to solve: myimage: not found"),
+			expected: "myimage",
+		},
+		{
+			err:      errors.New("failed to solve: okteto.dev/myimage: not found"),
+			expected: "okteto.dev/myimage",
+		},
+		{
+			err:      errors.New("failed to solve: myregistry.com/my-namespace/myimage: not found"),
+			expected: "myregistry.com/my-namespace/myimage",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.err.Error(), func(t *testing.T) {
+			got := extractImageTagFromNotFoundError(tt.err)
 			assert.Equal(t, tt.expected, got)
 		})
 	}

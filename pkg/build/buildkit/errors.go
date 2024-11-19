@@ -73,12 +73,14 @@ func GetErrorMessage(err error, tag string) error {
 			E:    fmt.Errorf("buildkit service is not available at the moment"),
 			Hint: "Please try again later.",
 		}
-	case isPullAccessDenied(err):
-		if imageTag == "" {
+	case isPullAccessDenied(err) || isNotFound(err):
+		if imageTag == "" && isPullAccessDenied(err) {
 			imageTag = extractImageTagFromPullAccessDeniedError(err)
+		} else if imageTag == "" && isNotFound(err) {
+			imageTag = extractImageTagFromNotFoundError(err)
 		}
 		err = oktetoErrors.UserError{
-			E:    fmt.Errorf("failed to pull image '%s'. The repository is not accessible or it does not exist", imageTag),
+			E:    fmt.Errorf("the image '%s' is not accessible or it does not exist", imageTag),
 			Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.", imageTag),
 		}
 	default:
@@ -94,7 +96,16 @@ func GetErrorMessage(err error, tag string) error {
 }
 
 func extractImageTagFromPullAccessDeniedError(err error) string {
-	re := regexp.MustCompile(`([a-zA-Z0-9\.\/_-]+): pull access denied`)
+	re := regexp.MustCompile(`([a-zA-Z0-9\.\/_-]+(:[a-zA-Z0-9]+)?): pull access denied`)
+	matches := re.FindStringSubmatch(err.Error())
+	if len(matches) > 1 {
+		return matches[1]
+	}
+	return ""
+}
+
+func extractImageTagFromNotFoundError(err error) string {
+	re := regexp.MustCompile(`([a-zA-Z0-9\.\/_-]+(:[a-zA-Z0-9]+)?): not found`)
 	matches := re.FindStringSubmatch(err.Error())
 	if len(matches) > 1 {
 		return matches[1]
@@ -158,7 +169,12 @@ func isBuildkitServiceUnavailable(err error) bool {
 	return strings.Contains(err.Error(), "connect: connection refused") || strings.Contains(err.Error(), "500 Internal Server Error") || strings.Contains(err.Error(), "context canceled")
 }
 
-// IsPullAccessDenied returns true pulling an image fails (e.g: image does not exist)
+// IsPullAccessDenied returns true pulling an image fails because the user does not have permissions
 func isPullAccessDenied(err error) bool {
 	return strings.Contains(err.Error(), "pull access denied")
+}
+
+// IsNotFound returns true when the error is because the resource is not found
+func isNotFound(err error) bool {
+	return strings.Contains(err.Error(), "not found")
 }
