@@ -18,7 +18,6 @@ import "github.com/kubeark/jsonschema"
 type external struct{}
 
 func (external) JSONSchema() *jsonschema.Schema {
-	// Schema for endpoints
 	endpointProps := jsonschema.NewProperties()
 	endpointProps.Set("name", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
@@ -30,10 +29,9 @@ func (external) JSONSchema() *jsonschema.Schema {
 		Type:        &jsonschema.Type{Types: []string{"string"}},
 		Title:       "url",
 		Description: "The url of the endpoint. Can be set dynamically during deployment using $OKTETO_EXTERNAL_{EXTERNAL_NAME}_ENDPOINTS_{ENDPOINT_NAME}_URL",
-		Pattern:     "^https?://[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*)$",
+		Format:      "uri",
 	})
 
-	// Schema for external resources
 	externalProps := jsonschema.NewProperties()
 	externalProps.Set("notes", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},

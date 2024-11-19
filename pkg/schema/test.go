@@ -18,30 +18,26 @@ import "github.com/kubeark/jsonschema"
 type test struct{}
 
 func (test) JSONSchema() *jsonschema.Schema {
-	// Properties for each test container
 	testProps := jsonschema.NewProperties()
 
-	// Artifacts
 	testProps.Set("artifacts", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"array"}},
 		Title:       "artifacts",
-		Description: "Files and/or folders to be exported after test execution",
+		Description: "A list of files and/or folder to be exported after the execution of the tests. They will be added relative to root context of the tests. If you want to export coverage reports and test results this is where they should go.",
 		Items: &jsonschema.Schema{
 			Type: &jsonschema.Type{Types: []string{"string"}},
 		},
 	})
 
-	// Caches
 	testProps.Set("caches", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"array"}},
 		Title:       "caches",
-		Description: "Cache mounts to speed up test execution",
+		Description: "A list of cache mounts to be used as part of running the tests. This is used to speed up recurrent test executions where, for example, dependencies will not be reinstalled and will instead be mounted from the cache.",
 		Items: &jsonschema.Schema{
 			Type: &jsonschema.Type{Types: []string{"string"}},
 		},
 	})
 
-	// Commands
 	commandProps := jsonschema.NewProperties()
 	commandProps.Set("name", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
@@ -55,7 +51,7 @@ func (test) JSONSchema() *jsonschema.Schema {
 	testProps.Set("commands", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"array"}},
 		Title:       "commands",
-		Description: "Commands to run the tests. Each command must exit with zero exit code for success",
+		Description: "Provide a list of commands to run the tests. For the tests to be considered successful, each command must exit with a zero exit code. If any command returns a non-zero exit code, the Test Container will be marked as failed",
 		Items: &jsonschema.Schema{
 			OneOf: []*jsonschema.Schema{
 				{
@@ -72,24 +68,21 @@ func (test) JSONSchema() *jsonschema.Schema {
 		Required: []string{"commands"},
 	})
 
-	// Context
 	testProps.Set("context", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
 		Title:       "context",
-		Description: "Root folder for running the tests. Defaults to the Okteto Manifest location",
+		Description: "The folder to use as the root for running the tests. If this is empty, the location of the Okteto Manifest will be used (usually the root of the project).",
 	})
 
-	// Depends On
 	testProps.Set("depends_on", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"array"}},
 		Title:       "depends_on",
-		Description: "List of Test Containers this test depends on",
+		Description: "A list of Test Containers this test depends on. When a Test Container is executed, all its dependencies are executed first. The Test Containers defined in depends_on must exist in the current Okteto Manifest.",
 		Items: &jsonschema.Schema{
 			Type: &jsonschema.Type{Types: []string{"string"}},
 		},
 	})
 
-	// Hosts
 	hostsItemProps := jsonschema.NewProperties()
 	hostsItemProps.Set("hostname", &jsonschema.Schema{
 		Type: &jsonschema.Type{Types: []string{"string"}},
@@ -101,16 +94,14 @@ func (test) JSONSchema() *jsonschema.Schema {
 	testProps.Set("hosts", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"array"}},
 		Title:       "hosts",
-		Description: "List of hostnames and IPs to add to /etc/hosts during test execution",
+		Description: "A list of hostnames and ips. For each pair, an entry is created in /etc/hosts during the test execution. The following extended notation is also supported: hosts[0].hostname=hostname1 hosts[0].ip=ip1",
 		Items: &jsonschema.Schema{
 			OneOf: []*jsonschema.Schema{
 				{
-					// Simple string format: "hostname:ip"
 					Type:    &jsonschema.Type{Types: []string{"string"}},
-					Pattern: "^[a-zA-Z0-9.-]+:[0-9.]+$",
+					Pattern: "^[a-zA-Z0-9.-]+:[0-9.]+$", // example: hostname:ip
 				},
 				{
-					// Extended object notation
 					Type:                 &jsonschema.Type{Types: []string{"object"}},
 					Properties:           hostsItemProps,
 					Required:             []string{"hostname", "ip"},
@@ -120,11 +111,10 @@ func (test) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	// Image
 	testProps.Set("image", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
 		Title:       "image",
-		Description: "Base image used to run your test. Defaults to pipeline-runner if not specified",
+		Description: "Base image used to run your test.",
 	})
 
 	return &jsonschema.Schema{

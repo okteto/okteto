@@ -18,7 +18,6 @@ import "github.com/kubeark/jsonschema"
 type destroy struct{}
 
 func (destroy) JSONSchema() *jsonschema.Schema {
-	// Schema for named commands
 	namedCommandProps := jsonschema.NewProperties()
 	namedCommandProps.Set("name", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
@@ -29,7 +28,6 @@ func (destroy) JSONSchema() *jsonschema.Schema {
 		Description: "Command to execute",
 	})
 
-	// Schema for object notation
 	destroyProps := jsonschema.NewProperties()
 	destroyProps.Set("image", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
@@ -64,7 +62,6 @@ func (destroy) JSONSchema() *jsonschema.Schema {
 	return &jsonschema.Schema{
 		OneOf: []*jsonschema.Schema{
 			{
-				// Simple array of strings
 				Type: &jsonschema.Type{Types: []string{"array"}},
 				Items: &jsonschema.Schema{
 					OneOf: []*jsonschema.Schema{
@@ -81,7 +78,6 @@ func (destroy) JSONSchema() *jsonschema.Schema {
 				},
 			},
 			{
-				// Object notation
 				Type:                 &jsonschema.Type{Types: []string{"object"}},
 				Properties:           destroyProps,
 				AdditionalProperties: jsonschema.FalseSchema,

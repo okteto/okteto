@@ -18,15 +18,13 @@ import "github.com/kubeark/jsonschema"
 type forward struct{}
 
 func (forward) JSONSchema() *jsonschema.Schema {
-	// Schema for shorthand notation (e.g., "5432:postgres:5432")
 	shorthandPattern := &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
 		Title:       "forward",
 		Description: "Port forward in the format localPort:service:remotePort or localPort:remotePort",
-		Pattern:     "^[0-9]+:([a-zA-Z0-9-_]+:)?[0-9]+$",
+		Pattern:     "^\\d+:[^:]+:\\d+$|^\\d+:\\d+$", // example: 5432:postgres:5432
 	}
 
-	// Schema for detailed object notation
 	objectProps := jsonschema.NewProperties()
 	objectProps.Set("localPort", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"integer"}},

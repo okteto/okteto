@@ -20,14 +20,12 @@ type dev struct{}
 func (dev) JSONSchema() *jsonschema.Schema {
 	devProps := jsonschema.NewProperties()
 
-	// Affinity
 	devProps.Set("affinity", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"object"}},
 		Title:       "affinity",
 		Description: "Affinity allows you to constrain which nodes your development container is eligible to be scheduled on, based on labels on the node",
 	})
 
-	// Autocreate
 	devProps.Set("autocreate", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"boolean"}},
 		Title:       "autocreate",
@@ -35,7 +33,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		Default:     false,
 	})
 
-	// Command
 	devProps.Set("command", &jsonschema.Schema{
 		Title:       "command",
 		Description: "The command of your development container. If empty, it defaults to sh. The command can also be a list",
@@ -53,14 +50,12 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	// Container
 	devProps.Set("container", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
 		Title:       "container",
 		Description: "The name of the container in your deployment you want to put on development mode. By default, it takes the first one",
 	})
 
-	// Environment
 	devProps.Set("environment", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"object"}},
 		Title:       "environment",
@@ -72,7 +67,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	// EnvFiles
 	devProps.Set("envFiles", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"array"}},
 		Title:       "envFiles",
@@ -82,7 +76,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	// ExternalVolumes
 	devProps.Set("externalVolumes", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"array"}},
 		Title:       "externalVolumes",
@@ -92,7 +85,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	// Forward
 	forwardItemProps := jsonschema.NewProperties()
 	forwardItemProps.Set("localPort", &jsonschema.Schema{
 		Type: &jsonschema.Type{Types: []string{"integer"}},
@@ -132,7 +124,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	// InitContainer
 	initContainerProps := jsonschema.NewProperties()
 	initContainerProps.Set("image", &jsonschema.Schema{
 		Type: &jsonschema.Type{Types: []string{"string"}},
@@ -149,7 +140,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		AdditionalProperties: jsonschema.FalseSchema,
 	})
 
-	// Interface
 	devProps.Set("interface", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
 		Title:       "interface",
@@ -157,14 +147,12 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		Default:     "localhost",
 	})
 
-	// Image
 	devProps.Set("image", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
 		Title:       "image",
 		Description: "Docker image of your development container",
 	})
 
-	// ImagePullPolicy
 	devProps.Set("imagePullPolicy", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
 		Title:       "imagePullPolicy",
@@ -172,7 +160,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		Default:     "Always",
 	})
 
-	// Lifecycle
 	lifecycleEventProps := jsonschema.NewProperties()
 	lifecycleEventProps.Set("enabled", &jsonschema.Schema{
 		Type:    &jsonschema.Type{Types: []string{"boolean"}},
@@ -208,7 +195,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	// Metadata
 	metadataProps := jsonschema.NewProperties()
 	metadataProps.Set("annotations", &jsonschema.Schema{
 		Type: &jsonschema.Type{Types: []string{"object"}},
@@ -233,7 +219,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		AdditionalProperties: jsonschema.FalseSchema,
 	})
 
-	// Mode
 	devProps.Set("mode", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
 		Title:       "mode",
@@ -242,7 +227,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		Default:     "sync",
 	})
 
-	// NodeSelector
 	devProps.Set("nodeSelector", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"object"}},
 		Title:       "nodeSelector",
@@ -254,7 +238,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	// PersistentVolume
 	persistentVolumeProps := jsonschema.NewProperties()
 	// TODO: enforce persistentVolume.enabled must be true if you use services and volumes
 	persistentVolumeProps.Set("enabled", &jsonschema.Schema{
@@ -305,14 +288,12 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		AdditionalProperties: jsonschema.FalseSchema,
 	})
 
-	// PriorityClassName
 	devProps.Set("priorityClassName", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
 		Title:       "priorityClassName",
 		Description: "Priority class name for the development container",
 	})
 
-	// Probes
 	probesProps := jsonschema.NewProperties()
 	probesProps.Set("liveness", &jsonschema.Schema{
 		Type:    &jsonschema.Type{Types: []string{"boolean"}},
@@ -341,14 +322,12 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	// Remote
 	devProps.Set("remote", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"integer"}},
 		Title:       "remote",
 		Description: "Local port for SSH communication",
 	})
 
-	// Reverse
 	devProps.Set("reverse", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"array"}},
 		Title:       "reverse",
@@ -359,7 +338,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	// Secrets
 	devProps.Set("secrets", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"array"}},
 		Title:       "secrets",
@@ -369,7 +347,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	// SecurityContext
 	securityContextProps := jsonschema.NewProperties()
 	securityContextProps.Set("runAsUser", &jsonschema.Schema{
 		Type: &jsonschema.Type{Types: []string{"integer"}},
@@ -401,7 +378,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		AdditionalProperties: jsonschema.FalseSchema,
 	})
 
-	// Selector
 	devProps.Set("selector", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"object"}},
 		Title:       "selector",
@@ -413,14 +389,12 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	// ServiceAccount
 	devProps.Set("serviceAccount", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
 		Title:       "serviceAccount",
 		Description: "Service account for the development container",
 	})
 
-	// Services
 	serviceProps := jsonschema.NewProperties()
 	serviceProps.Set("annotations", &jsonschema.Schema{
 		Type: &jsonschema.Type{Types: []string{"object"}},
@@ -478,7 +452,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	// Sync
 	syncProps := jsonschema.NewProperties()
 	syncProps.Set("folders", &jsonschema.Schema{
 		Type: &jsonschema.Type{Types: []string{"array"}},
@@ -517,7 +490,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	// Timeout
 	timeoutProps := jsonschema.NewProperties()
 	timeoutProps.Set("default", &jsonschema.Schema{
 		Type:    &jsonschema.Type{Types: []string{"string"}},
@@ -542,7 +514,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	// Tolerations
 	devProps.Set("tolerations", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"array"}},
 		Title:       "tolerations",
@@ -552,7 +523,6 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	// Volumes
 	devProps.Set("volumes", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"array"}},
 		Title:       "volumes",
@@ -562,14 +532,12 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	// Workdir
 	devProps.Set("workdir", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
 		Title:       "workdir",
 		Description: "Working directory of your development container",
 	})
 
-	// Resources
 	resourcesProps := jsonschema.NewProperties()
 
 	resourceValuesProps := jsonschema.NewProperties()

@@ -10,6 +10,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package schema
 
 import "github.com/kubeark/jsonschema"
@@ -21,13 +22,11 @@ func (icon) JSONSchema() *jsonschema.Schema {
 		Type: &jsonschema.Type{Types: []string{"string"}},
 		AnyOf: []*jsonschema.Schema{
 			{
-				Type:    &jsonschema.Type{Types: []string{"string"}},
-				Enum:    []any{"default", "container", "dashboard", "database", "function", "graph", "storage", "launchdarkly", "mongodb", "gcp", "aws", "okteto"},
-				Default: "default",
+				Type: &jsonschema.Type{Types: []string{"string"}},
+				Enum: []any{"default", "container", "dashboard", "database", "function", "graph", "storage", "launchdarkly", "mongodb", "gcp", "aws", "okteto"},
 			},
 			{
-				Type:    &jsonschema.Type{Types: []string{"string"}},
-				Pattern: "[-a-zA-Z0-9@:%._+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_+.~#?&/=]*)",
+				Type: &jsonschema.Type{Types: []string{"string"}},
 			},
 		},
 	}
