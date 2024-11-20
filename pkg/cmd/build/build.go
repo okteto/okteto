@@ -172,7 +172,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(ob.OktetoContext))
 
-	optBuilder, err := buildkit.NewSolveOptBuilder(reg, ob.OktetoContext, ob.Fs, ioCtrl)
+	optBuilder, err := buildkit.NewSolveOptBuilder(buildkitClientFactory, reg, ob.OktetoContext, ob.Fs, ioCtrl)
 	if err != nil {
 		return err
 	}

@@ -153,9 +153,10 @@ func TestDepotRun(t *testing.T) {
 						CurrentContext: "test",
 					},
 				},
-				getSolveOptBuilder: func(reg registry.OktetoRegistry, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (buildkit.SolveOptBuilderInterface, error) {
+				getSolveOptBuilder: func(clientFactory buildkit.ClientFactoryIface, reg registry.OktetoRegistry, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (buildkit.SolveOptBuilderInterface, error) {
 					return &fakeSolveOptBuilder{
 						err: nil,
+						opt: &client.SolveOpt{},
 					}, nil
 				},
 			}
