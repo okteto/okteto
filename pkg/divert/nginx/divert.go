@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package weaver
+package nginx
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// Driver weaver struct for the divert driver
+// Driver nginx struct for the divert driver
 type Driver struct {
 	client    kubernetes.Interface
 	cache     *cache

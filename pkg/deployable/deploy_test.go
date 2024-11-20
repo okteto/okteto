@@ -233,7 +233,7 @@ func TestRunDeployWithEmptyDeployable(t *testing.T) {
 		},
 		Deployable: Entity{
 			Divert: &model.DivertDeploy{
-				Driver: constants.OktetoDivertWeaverDriver,
+				Driver: constants.OktetoDivertNginxDriver,
 			},
 		},
 	}
@@ -389,7 +389,7 @@ func TestRunCommandsSectionWithDivert(t *testing.T) {
 		},
 		Deployable: Entity{
 			Divert: &model.DivertDeploy{
-				Driver:    constants.OktetoDivertWeaverDriver,
+				Driver:    constants.OktetoDivertNginxDriver,
 				Namespace: "test2",
 			},
 		},
@@ -433,7 +433,7 @@ func TestRunCommandsSectionWithErrorDeployingDivert(t *testing.T) {
 		},
 		Deployable: Entity{
 			Divert: &model.DivertDeploy{
-				Driver:    constants.OktetoDivertWeaverDriver,
+				Driver:    constants.OktetoDivertNginxDriver,
 				Namespace: "test2",
 			},
 		},

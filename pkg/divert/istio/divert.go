@@ -31,7 +31,7 @@ const (
 	UPDATE_CONFLICT_RETRIES = 20
 )
 
-// Driver weaver struct for the divert driver
+// Driver istio struct for the divert driver
 type Driver struct {
 	client      kubernetes.Interface
 	istioClient istioclientset.Interface

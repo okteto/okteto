@@ -604,15 +604,15 @@ func (m *Manifest) validateDivert() error {
 	}
 
 	switch m.Deploy.Divert.Driver {
-	case constants.OktetoDivertWeaverDriver:
+	case constants.OktetoDivertNginxDriver:
 		if m.Deploy.Divert.Namespace == "" {
 			return fmt.Errorf("the field 'deploy.divert.namespace' is mandatory")
 		}
 		if len(m.Deploy.Divert.VirtualServices) > 0 {
-			return fmt.Errorf("the field 'deploy.divert.virtualServices' is not supported with the weaver driver")
+			return fmt.Errorf("the field 'deploy.divert.virtualServices' is not supported with the nginx driver")
 		}
 		if len(m.Deploy.Divert.Hosts) > 0 {
-			return fmt.Errorf("the field 'deploy.divert.host' is not supported with the weaver driver")
+			return fmt.Errorf("the field 'deploy.divert.host' is not supported with the nginx driver")
 		}
 	case constants.OktetoDivertIstioDriver:
 		if m.Deploy.Divert.DeprecatedService != "" {
@@ -650,7 +650,7 @@ func (m *Manifest) setDefaults() error {
 	if m.Deploy != nil && m.Deploy.Divert != nil {
 		var err error
 		if m.Deploy.Divert.Driver == "" {
-			m.Deploy.Divert.Driver = constants.OktetoDivertWeaverDriver
+			m.Deploy.Divert.Driver = constants.OktetoDivertNginxDriver
 		}
 		m.Deploy.Divert.Namespace, err = env.ExpandEnvIfNotEmpty(m.Deploy.Divert.Namespace)
 		if err != nil {

@@ -96,8 +96,8 @@ const (
 	// OktetoNamespaceLabel is the label used to identify the namespace where the resource lives
 	OktetoNamespaceLabel = "dev.okteto.com/namespace"
 
-	// OktetoDivertWeaverDriver is the divert driver for weaver
-	OktetoDivertWeaverDriver = "weaver"
+	// OktetoDivertNginxDriver is the divert driver for nginx
+	OktetoDivertNginxDriver = "nginx"
 
 	// OktetoDivertIstioDriver is the divert driver for istio
 	OktetoDivertIstioDriver = "istio"

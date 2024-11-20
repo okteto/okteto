@@ -19,8 +19,8 @@ import (
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/divert/istio"
+	"github.com/okteto/okteto/pkg/divert/nginx"
 	"github.com/okteto/okteto/pkg/divert/noop"
-	"github.com/okteto/okteto/pkg/divert/weaver"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/virtualservices"
 	"github.com/okteto/okteto/pkg/model"
@@ -42,8 +42,8 @@ func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interf
 		return nil, oktetoErrors.ErrDivertNotSupported
 	}
 
-	if divert.Driver == constants.OktetoDivertWeaverDriver {
-		return weaver.New(divert, name, namespace, c), nil
+	if divert.Driver == constants.OktetoDivertNginxDriver {
+		return nginx.New(divert, name, namespace, c), nil
 	}
 
 	ic, err := virtualservices.GetIstioClient()
