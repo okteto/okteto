@@ -64,16 +64,8 @@ func Test_translateService(t *testing.T) {
 					},
 				},
 				Spec: apiv1.ServiceSpec{
-					Type: apiv1.ServiceTypeClusterIP,
-					Ports: []apiv1.ServicePort{
-						{
-							Name: "port",
-							Port: 8080,
-						},
-					},
-					ClusterIP:  apiv1.ClusterIPNone,
-					ClusterIPs: nil,
-					Selector:   nil,
+					Type:         apiv1.ServiceTypeExternalName,
+					ExternalName: "name.staging.svc.cluster.local",
 				},
 			},
 		},
@@ -85,10 +77,7 @@ func Test_translateService(t *testing.T) {
 					Namespace: "staging",
 				},
 				Spec: apiv1.ServiceSpec{
-					Type:       apiv1.ServiceTypeClusterIP,
-					ClusterIP:  "my-ip",
-					ClusterIPs: []string{"my-ip"},
-					Selector:   map[string]string{"label": "value"},
+					Type: apiv1.ServiceTypeExternalName,
 				},
 			},
 			expected: &apiv1.Service{
@@ -103,10 +92,8 @@ func Test_translateService(t *testing.T) {
 					},
 				},
 				Spec: apiv1.ServiceSpec{
-					Type:       apiv1.ServiceTypeClusterIP,
-					ClusterIP:  apiv1.ClusterIPNone,
-					ClusterIPs: nil,
-					Selector:   nil,
+					Type:         apiv1.ServiceTypeExternalName,
+					ExternalName: "name.staging.svc.cluster.local",
 				},
 			},
 		},

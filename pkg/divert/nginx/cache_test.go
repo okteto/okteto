@@ -63,19 +63,7 @@ func Test_initCache(t *testing.T) {
 			Namespace: "staging",
 		},
 	}
-	e1 := &apiv1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "e1",
-			Namespace: "cindy",
-		},
-	}
-	e2 := &apiv1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "e2",
-			Namespace: "other",
-		},
-	}
-	c := fake.NewSimpleClientset(i1, i2, i3, s1, s2, s3, e1, e2)
+	c := fake.NewSimpleClientset(i1, i2, i3, s1, s2, s3)
 	m := &model.Manifest{
 		Name: "test",
 		Deploy: &model.DeployInfo{
@@ -93,5 +81,4 @@ func Test_initCache(t *testing.T) {
 	assert.Equal(t, map[string]*networkingv1.Ingress{"i3": i3}, d.cache.divertIngresses)
 	assert.Equal(t, map[string]*apiv1.Service{"s1": s1}, d.cache.developerServices)
 	assert.Equal(t, map[string]*apiv1.Service{"s3": s3}, d.cache.divertServices)
-	assert.Equal(t, map[string]*apiv1.Endpoints{"e1": e1}, d.cache.developerEndpoints)
 }
