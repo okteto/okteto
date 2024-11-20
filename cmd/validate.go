@@ -128,7 +128,7 @@ func Validate(fs afero.Fs) *cobra.Command {
 				}
 				fmt.Fprintf(&output, "\n    JSON Schema Validation errors:\n")
 				fmt.Fprintf(&output, "    %s\n", errStr)
-				return fmt.Errorf(output.String())
+				return fmt.Errorf("%s", output.String())
 			}
 
 			return nil
