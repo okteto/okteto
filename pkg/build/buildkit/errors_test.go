@@ -235,6 +235,10 @@ func TestExtractImageTagFromPullAccessDeniedError(t *testing.T) {
 			err:      errors.New("failed to solve: myregistry.com/my-namespace/myimage: pull access denied, repository does not exist or may require authorizatio"),
 			expected: "myregistry.com/my-namespace/myimage",
 		},
+		{
+			err:      errors.New("failed to solve: registry/my-namespace:my-tag: pull access denied, repository does not exist or may require authorizatio"),
+			expected: "registry/my-namespace:my-tag",
+		},
 	}
 
 	for _, tt := range tests {
@@ -273,6 +277,10 @@ func Test_extractImageTagFromNotFoundError(t *testing.T) {
 		{
 			err:      errors.New("failed to solve: myregistry.com/my-namespace/myimage: not found"),
 			expected: "myregistry.com/my-namespace/myimage",
+		},
+		{
+			err:      errors.New("failed to solve: registry/my-namespace:my-tag: not found"),
+			expected: "registry/my-namespace:my-tag",
 		},
 	}
 

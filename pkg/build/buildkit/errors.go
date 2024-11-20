@@ -80,7 +80,7 @@ func GetErrorMessage(err error, tag string) error {
 			imageTag = extractImageTagFromNotFoundError(err)
 		}
 		err = oktetoErrors.UserError{
-			E:    fmt.Errorf("the image '%s' is not accessible or it does not exist", imageTag),
+			E: fmt.Errorf("the image '%s' is not accessible or it does not exist", imageTag),
 			Hint: fmt.Sprintf(`Please verify the name of the image '%s' to make sure it exists.
     When using private registries, make sure Okteto Registry Credentials are correctly configured.
     See more at: https://www.okteto.com/docs/admin/registry-credentials/`, imageTag),
@@ -97,8 +97,12 @@ func GetErrorMessage(err error, tag string) error {
 	return err
 }
 
+const (
+	regexForImageTag = `([a-zA-Z0-9\.\/_-]+(:[a-zA-Z0-9-]+)?)`
+)
+
 func extractImageTagFromPullAccessDeniedError(err error) string {
-	re := regexp.MustCompile(`([a-zA-Z0-9\.\/_-]+(:[a-zA-Z0-9]+)?): pull access denied`)
+	re := regexp.MustCompile(regexForImageTag + `: pull access denied`)
 	matches := re.FindStringSubmatch(err.Error())
 	if len(matches) > 1 {
 		return matches[1]
@@ -107,7 +111,7 @@ func extractImageTagFromPullAccessDeniedError(err error) string {
 }
 
 func extractImageTagFromNotFoundError(err error) string {
-	re := regexp.MustCompile(`([a-zA-Z0-9\.\/_-]+(:[a-zA-Z0-9]+)?): not found`)
+	re := regexp.MustCompile(regexForImageTag + `: not found`)
 	matches := re.FindStringSubmatch(err.Error())
 	if len(matches) > 1 {
 		return matches[1]
