@@ -57,7 +57,7 @@ func TestDeployPipelineManifest(t *testing.T) {
 	require.NoError(t, createPipelineManifest(dir))
 	require.NoError(t, createK8sManifest(dir))
 
-	testNamespace := integration.GetTestNamespace("DeployPipeline", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		Token:      token,
@@ -101,7 +101,7 @@ func TestDeployPipelineManifestInsidePipeline(t *testing.T) {
 	require.NoError(t, err)
 	dir := t.TempDir()
 
-	testNamespace := integration.GetTestNamespace("Deploy", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

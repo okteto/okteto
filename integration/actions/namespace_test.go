@@ -38,7 +38,7 @@ const (
 func TestNamespaceActionsPipeline(t *testing.T) {
 	integration.SkipIfWindows(t)
 
-	namespace := integration.GetTestNamespace("namespaceaction", user)
+	namespace := integration.GetTestNamespace(t.Name())
 
 	assert.NoError(t, executeCreateNamespaceAction(namespace))
 	assert.NoError(t, executeChangeNamespaceAction(namespace))

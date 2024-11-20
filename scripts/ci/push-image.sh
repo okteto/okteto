@@ -75,13 +75,13 @@
                 fi
         done
 
-        tags=$(IFS=','; echo "${tags_array[*]}")
-
+        tags=""
+        for tag in "${tags_array[@]}"; do
+                tags+="-t $tag "
+        done
         echo "DEBUG: Final tags string: ${tags}"
 
-        echo "Pushing ${tags} to Docker Hub"
         echo "DEBUG: Executing command:"
-        echo "okteto build --platform \"${PLATFORMS}\" --build-arg VERSION_STRING=\"${VERSION_STRING}\" -t \"${tags}\" -f Dockerfile . --progress=plain"
-
-        okteto build --platform "${PLATFORMS}" --build-arg VERSION_STRING="${VERSION_STRING}" -t "${tags}" -f Dockerfile . --progress=plain
+        echo "depot build --push --platform \"${PLATFORMS}\" --build-arg VERSION_STRING=\"${VERSION_STRING}\" ${tags} -f Dockerfile ."
+        depot build --push --platform "${PLATFORMS}" --build-arg VERSION_STRING="${VERSION_STRING}" ${tags} -f Dockerfile .
 ); }

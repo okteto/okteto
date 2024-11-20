@@ -157,7 +157,7 @@ func CheckConditionErrors(deployment *appsv1.Deployment, dev *model.Dev) error {
 			} else if isResourcesRelatedError(c.Message) {
 				return getResourceLimitError(c.Message, dev)
 			}
-			return fmt.Errorf(c.Message)
+			return fmt.Errorf("%s", c.Message)
 		}
 	}
 	return nil
@@ -201,7 +201,7 @@ func getResourceLimitError(errorMessage string, dev *model.Dev) error {
 			errorToReturn += fmt.Sprintf("The value of resources.limits.memory in your okteto manifest (%s) exceeds the maximum memory limit per pod (%s). ", manifestMemory, maximumMemoryPerPod)
 		}
 	}
-	return fmt.Errorf(strings.TrimSpace(errorToReturn))
+	return fmt.Errorf("%s", strings.TrimSpace(errorToReturn))
 }
 
 // Deploy creates or updates a deployment
