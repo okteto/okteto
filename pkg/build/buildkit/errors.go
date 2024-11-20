@@ -81,7 +81,9 @@ func GetErrorMessage(err error, tag string) error {
 		}
 		err = oktetoErrors.UserError{
 			E:    fmt.Errorf("the image '%s' is not accessible or it does not exist", imageTag),
-			Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.\nWhen using private registries, Okteto Registry Credentials are correctly configured https://www.okteto.com/docs/admin/registry-credentials/", imageTag),
+			Hint: fmt.Sprintf(`Please verify the name of the image '%s' to make sure it exists.
+    When using private registries, make sure Okteto Registry Credentials are correctly configured.
+    See more at: https://www.okteto.com/docs/admin/registry-credentials/`, imageTag),
 		}
 	default:
 		var cmdErr CommandErr
