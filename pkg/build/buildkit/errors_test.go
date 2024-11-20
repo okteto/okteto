@@ -22,14 +22,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_getErrorMessage(t *testing.T) {
-	imageTag := "example/image:latest"
-
+func Test_GetSolveErrorMessage(t *testing.T) {
 	tests := []struct {
 		err      error
 		expected error
 		name     string
-		tag      string
 	}{
 		{
 			name:     "no error",
@@ -37,54 +34,44 @@ func Test_getErrorMessage(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name: "logged in but no permissions",
-			err:  errors.New("insufficient_scope: authorization failed"),
-			tag:  imageTag,
+			name: "not authenticated",
+			err:  errors.New("failed to solve: image: failed to authorize: failed to fetch anonymous token"),
 			expected: oktetoErrors.UserError{
-				E:    fmt.Errorf("failed to push image '%s': You are not authorized to push image '%s'", imageTag, imageTag),
-				Hint: fmt.Sprintf("Please log in into the registry '%s' with a user with push permissions to '%s' or use another image.", "docker.io", imageTag),
+				E: fmt.Errorf("the image 'image' is not accessible or it does not exist"),
+				Hint: `Please verify the name of the image to make sure it exists.
+    When using private registries, make sure Okteto Registry Credentials are correctly configured.
+    See more at: https://www.okteto.com/docs/admin/registry-credentials/`,
 			},
 		},
 		{
-			name: "not logged in",
-			err:  errors.New("failed to authorize: failed to fetch anonymous token"),
-			tag:  imageTag,
+			name: "authenticated, not authorized",
+			err:  errors.New("failed to solve: image: insufficient_scope: authorization failed"),
 			expected: oktetoErrors.UserError{
-				E:    fmt.Errorf("failed to push image '%s': You are not authorized to push image '%s'", imageTag, imageTag),
-				Hint: fmt.Sprintf("Log in into the registry '%s' and verify that you have permissions to push the image '%s'.", "docker.io", imageTag),
+				E: fmt.Errorf("the image 'image' is not accessible or it does not exist"),
+				Hint: `Please verify the name of the image to make sure it exists.
+    When using private registries, make sure Okteto Registry Credentials are correctly configured.
+    See more at: https://www.okteto.com/docs/admin/registry-credentials/`,
 			},
 		},
 		{
-			name: "buildkit service unavailable",
-			err:  errors.New("connect: connection refused"),
-			tag:  imageTag,
-			expected: oktetoErrors.UserError{
-				E:    fmt.Errorf("buildkit service is not available at the moment"),
-				Hint: "Please try again later.",
-			},
-		},
-		{
-			name: "buildkit service unavailable",
-			err:  errors.New("connect: connection refused"),
-			tag:  imageTag,
+			name: "buildkit service unavailable - connection refused",
+			err:  errors.New("failed to solve: image: connect: connection refused"),
 			expected: oktetoErrors.UserError{
 				E:    fmt.Errorf("buildkit service is not available at the moment"),
 				Hint: "Please try again later.",
 			},
 		},
 		{
-			name: "buildkit service unavailable",
-			err:  errors.New("500 Internal Server Error"),
-			tag:  imageTag,
+			name: "buildkit service unavailable - context canceled",
+			err:  errors.New("failed to solve: image: context canceled"),
 			expected: oktetoErrors.UserError{
 				E:    fmt.Errorf("buildkit service is not available at the moment"),
 				Hint: "Please try again later.",
 			},
 		},
 		{
-			name: "buildkit service unavailable",
-			err:  errors.New("context canceled"),
-			tag:  imageTag,
+			name: "buildkit service unavailable - internal server error",
+			err:  errors.New("failed to solve: image: 500 Internal Server Error"),
 			expected: oktetoErrors.UserError{
 				E:    fmt.Errorf("buildkit service is not available at the moment"),
 				Hint: "Please try again later.",
@@ -92,39 +79,59 @@ func Test_getErrorMessage(t *testing.T) {
 		},
 		{
 			name: "pull access denied",
-			err:  errors.New("pull access denied, repository does not exist or may require authorization: server message: insufficient_scope: authorization failed"),
-			tag:  imageTag,
+			err:  errors.New("failed to solve: image: pull access denied, repository does not exist or may require authorization: server message: insufficient_scope: authorization failed"),
 			expected: oktetoErrors.UserError{
-				E:    fmt.Errorf("the image '%s' is not accessible or it does not exist", imageTag),
-				Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.", imageTag),
+				E: fmt.Errorf("the image 'image' is not accessible or it does not exist"),
+				Hint: `Please verify the name of the image to make sure it exists.
+    When using private registries, make sure Okteto Registry Credentials are correctly configured.
+    See more at: https://www.okteto.com/docs/admin/registry-credentials/`,
 			},
 		},
 		{
-			name: "not found",
-			err:  errors.New("example/image:latest: not found"),
-			tag:  imageTag,
+			name: "image not found at registry",
+			err:  errors.New("failed to solve: image: not found"),
 			expected: oktetoErrors.UserError{
-				E:    fmt.Errorf("the image '%s' is not accessible or it does not exist", imageTag),
-				Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.", imageTag),
+				E: fmt.Errorf("the image 'image' is not accessible or it does not exist"),
+				Hint: `Please verify the name of the image to make sure it exists.
+    When using private registries, make sure Okteto Registry Credentials are correctly configured.
+    See more at: https://www.okteto.com/docs/admin/registry-credentials/`,
 			},
 		},
 		{
-			name: "not handled",
+			name: "registry host not found",
+			err:  errors.New("failed to solve: image: failed to do request: Head 'https://non-existing.okteto.dev/v2/xxxx/cli/manifests/debug-4': dial tcp: lookup non-existing.okteto.dev on xx.xxxx.x.xx:xx: no such host"),
+			expected: oktetoErrors.UserError{
+				E: fmt.Errorf("the image 'image' is not accessible or it does not exist"),
+				Hint: `Please verify the name of the image to make sure it exists.
+    When using private registries, make sure Okteto Registry Credentials are correctly configured.
+    See more at: https://www.okteto.com/docs/admin/registry-credentials/`,
+			},
+		},
+		{
+			name: "cmd error",
+			err: CommandErr{
+				Err:    assert.AnError,
+				Stage:  "stage",
+				Output: "test",
+			},
+			expected: CommandErr{
+				Err:    assert.AnError,
+				Stage:  "stage",
+				Output: "test",
+			},
+		},
+		{
+			name: "default error",
 			err:  assert.AnError,
-			tag:  imageTag,
 			expected: oktetoErrors.UserError{
-				E: fmt.Errorf("error building image '%s': %s", imageTag, assert.AnError),
+				E: assert.AnError,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := GetErrorMessage(tt.err, tt.tag)
-			if tt.expected == nil {
-				assert.Nil(t, err)
-			} else {
-				assert.ErrorContains(t, tt.expected, err.Error())
-			}
+			err := GetSolveErrorMessage(tt.err)
+			assert.Equal(t, tt.expected, err)
 		})
 	}
 }
@@ -243,7 +250,7 @@ func TestExtractImageTagFromPullAccessDeniedError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.err.Error(), func(t *testing.T) {
-			got := extractImageTagFromPullAccessDeniedError(tt.err)
+			got := extractImageFromError(tt.err)
 			assert.Equal(t, tt.expected, got)
 		})
 	}
@@ -286,7 +293,85 @@ func Test_extractImageTagFromNotFoundError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.err.Error(), func(t *testing.T) {
-			got := extractImageTagFromNotFoundError(tt.err)
+			got := extractImageFromError(tt.err)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestExtractImageTagFromHostNotFound(t *testing.T) {
+	tests := []struct {
+		err      error
+		expected string
+	}{
+		{
+			err:      errors.New("failed to do request"),
+			expected: "",
+		},
+		{
+			err:      errors.New("failed to solve: registry/myimage: failed to do request: Head 'https://non-existing.okteto.dev/v2/xxxx/cli/manifests/debug-4': dial tcp: lookup non-existing.okteto.dev on xx.xxxx.x.xx:xx: no such host"),
+			expected: "registry/myimage",
+		},
+		{
+			err:      errors.New("failed to solve: myimage: failed to do request: Head 'https://non-existing.okteto.dev/v2/xxxx/cli/manifests/debug-4': dial tcp: lookup non-existing.okteto.dev on xx.xxxx.x.xx:xx: no such host"),
+			expected: "myimage",
+		},
+		{
+			err:      errors.New("failed to solve: okteto.dev/myimage: failed to do request: Head 'https://non-existing.okteto.dev/v2/xxxx/cli/manifests/debug-4': dial tcp: lookup non-existing.okteto.dev on xx.xxxx.x.xx:xx: no such host"),
+			expected: "okteto.dev/myimage",
+		},
+		{
+			err:      errors.New("failed to solve: myregistry.com/my-namespace/myimage: failed to do request: Head 'https://non-existing.okteto.dev/v2/xxxx/cli/manifests/debug-4': dial tcp: lookup non-existing.okteto.dev on xx.xxxx.x.xx:xx: no such host"),
+			expected: "myregistry.com/my-namespace/myimage",
+		},
+		{
+			err:      errors.New("failed to solve: registry/my-namespace:my-tag: failed to do request: Head 'https://non-existing.okteto.dev/v2/xxxx/cli/manifests/debug-4': dial tcp: lookup non-existing.okteto.dev on xx.xxxx.x.xx:xx: no such host"),
+			expected: "registry/my-namespace:my-tag",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.err.Error(), func(t *testing.T) {
+			got := extractImageFromError(tt.err)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestExtractImageTagFromFailedToAuthorize(t *testing.T) {
+	tests := []struct {
+		err      error
+		expected string
+	}{
+		{
+			err:      errors.New("failed to authorize: failed to fetch anonymous token"),
+			expected: "",
+		},
+		{
+			err:      errors.New("failed to solve: registry/myimage: failed to authorize: failed to fetch anonymous token"),
+			expected: "registry/myimage",
+		},
+		{
+			err:      errors.New("failed to solve: myimage: failed to authorize: failed to fetch anonymous token"),
+			expected: "myimage",
+		},
+		{
+			err:      errors.New("failed to solve: okteto.dev/myimage: failed to authorize: failed to fetch anonymous token"),
+			expected: "okteto.dev/myimage",
+		},
+		{
+			err:      errors.New("failed to solve: myregistry.com/my-namespace/myimage: failed to authorize: failed to fetch anonymous token"),
+			expected: "myregistry.com/my-namespace/myimage",
+		},
+		{
+			err:      errors.New("failed to solve: registry/my-namespace:my-tag: failed to authorize: failed to fetch anonymous token"),
+			expected: "registry/my-namespace:my-tag",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.err.Error(), func(t *testing.T) {
+			got := extractImageFromError(tt.err)
 			assert.Equal(t, tt.expected, got)
 		})
 	}

@@ -20,8 +20,6 @@ import (
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
 	"google.golang.org/grpc/status"
 )
 
@@ -50,40 +48,28 @@ func (e CommandErr) Error() string {
 }
 
 // GetErrorMessage returns the parsed error message
-func GetErrorMessage(err error, tag string) error {
+func GetSolveErrorMessage(err error) error {
 	if err == nil {
 		return nil
 	}
 
-	imageCtrl := registry.NewImageCtrl(okteto.Config{})
-	imageRegistry, imageTag := imageCtrl.GetRegistryAndRepo(tag)
+	imageFromError := extractImageFromError(err)
 	switch {
-	case isLoggedIntoRegistryButDontHavePermissions(err):
-		err = oktetoErrors.UserError{
-			E:    fmt.Errorf("failed to push image '%s': You are not authorized to push image '%s'", tag, imageTag),
-			Hint: fmt.Sprintf("Please log in into the registry '%s' with a user with push permissions to '%s' or use another image.", imageRegistry, imageTag),
-		}
-	case isNotLoggedIntoRegistry(err):
-		err = oktetoErrors.UserError{
-			E:    fmt.Errorf("failed to push image '%s': You are not authorized to push image '%s'", tag, imageTag),
-			Hint: fmt.Sprintf("Log in into the registry '%s' and verify that you have permissions to push the image '%s'.", imageRegistry, imageTag),
-		}
 	case isBuildkitServiceUnavailable(err):
 		err = oktetoErrors.UserError{
 			E:    fmt.Errorf("buildkit service is not available at the moment"),
 			Hint: "Please try again later.",
 		}
-	case isPullAccessDenied(err) || isNotFound(err):
-		if imageTag == "" && isPullAccessDenied(err) {
-			imageTag = extractImageTagFromPullAccessDeniedError(err)
-		} else if imageTag == "" && isNotFound(err) {
-			imageTag = extractImageTagFromNotFoundError(err)
-		}
+	case isLoggedIntoRegistryButDontHavePermissions(err) ||
+		isNotLoggedIntoRegistry(err) ||
+		isPullAccessDenied(err) ||
+		isNotFound(err) ||
+		isHostNotFound(err):
 		err = oktetoErrors.UserError{
-			E: fmt.Errorf("the image '%s' is not accessible or it does not exist", imageTag),
-			Hint: fmt.Sprintf(`Please verify the name of the image '%s' to make sure it exists.
+			E: fmt.Errorf("the image '%s' is not accessible or it does not exist", imageFromError),
+			Hint: `Please verify the name of the image to make sure it exists.
     When using private registries, make sure Okteto Registry Credentials are correctly configured.
-    See more at: https://www.okteto.com/docs/admin/registry-credentials/`, imageTag),
+    See more at: https://www.okteto.com/docs/admin/registry-credentials/`,
 		}
 	default:
 		var cmdErr CommandErr
@@ -91,30 +77,22 @@ func GetErrorMessage(err error, tag string) error {
 			return cmdErr
 		}
 		err = oktetoErrors.UserError{
-			E: fmt.Errorf("error building image '%s': %w", tag, err),
+			E: err,
 		}
 	}
 	return err
 }
 
 const (
-	regexForImageTag = `([a-zA-Z0-9\.\/_-]+(:[a-zA-Z0-9-]+)?)`
+	// regexForImageFromFailedToSolveErr is the regex to extract the image from an error message
+	// buildkit solve errors provide the image name between :
+	regexForImageFromFailedToSolveErr = `: ([a-zA-Z0-9\.\/_-]+(:[a-zA-Z0-9-]+)?):`
 )
 
-func extractImageTagFromPullAccessDeniedError(err error) string {
-	re := regexp.MustCompile(regexForImageTag + `: pull access denied`)
-	matches := re.FindStringSubmatch(err.Error())
-	if len(matches) > 1 {
-		return matches[1]
-	}
-	return ""
-}
-
-func extractImageTagFromNotFoundError(err error) string {
-	re := regexp.MustCompile(regexForImageTag + `: not found`)
-	matches := re.FindStringSubmatch(err.Error())
-	if len(matches) > 1 {
-		return matches[1]
+func extractImageFromError(err error) string {
+	re := regexp.MustCompile(regexForImageFromFailedToSolveErr)
+	if matchs := re.FindStringSubmatch(err.Error()); len(matchs) > 1 {
+		return matchs[1]
 	}
 	return ""
 }
@@ -183,4 +161,9 @@ func isPullAccessDenied(err error) bool {
 // IsNotFound returns true when the error is because the resource is not found
 func isNotFound(err error) bool {
 	return strings.Contains(err.Error(), "not found")
+}
+
+// isHostNotFound returns true when the error is because the host is not found
+func isHostNotFound(err error) bool {
+	return strings.Contains(err.Error(), "failed to do request") && strings.Contains(err.Error(), "no such host")
 }
