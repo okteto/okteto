@@ -52,9 +52,9 @@ type SolveOptBuilder struct {
 	imageCtrl        registry.ImageCtrl
 	reg              registry.OktetoRegistry
 	okCtx            OktetoContextInterface
+	clientFactory    ClientFactoryIface
 	fs               afero.Fs
 	secretTempFolder string
-	clientFactory    ClientFactoryIface
 }
 
 type ClientFactoryIface interface {
@@ -80,7 +80,7 @@ type OktetoContextInterface interface {
 }
 
 // NewSolveOptBuilder creates a new SolveOptBuilder
-func NewSolveOptBuilder(clientFactory ClientFactoryIface, reg registry.OktetoRegistry, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (*SolveOptBuilder, error) {
+func NewSolveOptBuilder(reg registry.OktetoRegistry, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (*SolveOptBuilder, error) {
 	secretTempFolder, err := getSecretTempFolder(fs)
 	if err != nil {
 		return nil, err

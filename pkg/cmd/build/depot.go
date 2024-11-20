@@ -52,7 +52,7 @@ type depotBuilder struct {
 	ioCtrl             *io.Controller
 	newDepotBuild      func(ctx context.Context, req *cliv1.CreateBuildRequest, token string) (build.Build, error)
 	acquireMachine     func(ctx context.Context, buildId, token, platform string) (depotMachineConnector, error)
-	getSolveOptBuilder func(clientFactory buildkit.ClientFactoryIface, reg registry.OktetoRegistry, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (buildkit.SolveOptBuilderInterface, error)
+	getSolveOptBuilder func(reg registry.OktetoRegistry, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (buildkit.SolveOptBuilderInterface, error)
 	token              string
 	project            string
 	isRetry            bool
@@ -75,8 +75,8 @@ func newDepotBuilder(projectId, token string, okCtx OktetoContextInterface, ioCt
 		acquireMachine: func(ctx context.Context, buildId, token, platform string) (depotMachineConnector, error) {
 			return machine.Acquire(ctx, buildId, token, platform)
 		},
-		getSolveOptBuilder: func(clientFactory buildkit.ClientFactoryIface, reg registry.OktetoRegistry, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (buildkit.SolveOptBuilderInterface, error) {
-			return buildkit.NewSolveOptBuilder(clientFactory, reg, okCtx, fs, logger)
+		getSolveOptBuilder: func(reg registry.OktetoRegistry, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (buildkit.SolveOptBuilderInterface, error) {
+			return buildkit.NewSolveOptBuilder(reg, okCtx, fs, logger)
 		},
 	}
 }
@@ -167,7 +167,7 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 	}()
 
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(db.okCtx))
-	optBuilder, err := db.getSolveOptBuilder(&clientRetriever{client}, reg, db.okCtx, db.fs, db.ioCtrl)
+	optBuilder, err := db.getSolveOptBuilder(reg, db.okCtx, db.fs, db.ioCtrl)
 	if err != nil {
 		return fmt.Errorf("failed to create build solver: %w", err)
 	}
@@ -218,12 +218,4 @@ func (db *depotBuilder) getBuildkitClient(ctx context.Context) (*buildkitClient.
 	}
 
 	return client, nil
-}
-
-type clientRetriever struct {
-	c *buildkitClient.Client
-}
-
-func (cr *clientRetriever) GetBuildkitClient(ctx context.Context) (*buildkitClient.Client, error) {
-	return cr.c, nil
 }
