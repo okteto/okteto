@@ -65,22 +65,22 @@ func TestUserFriendlyError(t *testing.T) {
 		{
 			name:  "yaml errors with heading and link to docs",
 			input: errors.New("yaml: some random error"),
-			expected: `your okteto manifest is not valid, please check the following errors:
+			expected: `your Okteto Manifest is not valid, please check the following errors:
 yaml: some random error
-    Check out the okteto manifest docs at: https://www.okteto.com/docs/reference/okteto-manifest`,
+    Check out the Okteto Manifest docs at: https://www.okteto.com/docs/reference/okteto-manifest`,
 		},
 		{
 			name:  "yaml errors with heading and link to docs",
 			input: errors.New("yaml: unmarshal errors:\n  line 4: field dependences not found in type model.manifestRaw"),
-			expected: `your okteto manifest is not valid, please check the following errors:
+			expected: `your Okteto Manifest is not valid, please check the following errors:
      - line 4: field 'dependences' is not a property of the okteto manifest. Did you mean "dependencies"?
-    Check out the okteto manifest docs at: https://www.okteto.com/docs/reference/okteto-manifest`,
+    Check out the Okteto Manifest docs at: https://www.okteto.com/docs/reference/okteto-manifest`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := newManifestFriendlyError(tt.input)
+			err := NewManifestFriendlyError(tt.input)
 			assert.Equal(t, tt.expected, err.Error())
 		})
 	}

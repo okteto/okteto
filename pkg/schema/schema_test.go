@@ -28,7 +28,7 @@ func validateOktetoManifest(content string) error {
 	}
 
 	var obj interface{}
-	err = unmarshal([]byte(content), &obj)
+	err = Unmarshal([]byte(content), &obj)
 	if err != nil {
 		return err
 	}
