@@ -47,7 +47,7 @@ func (e CommandErr) Error() string {
 	return fmt.Sprintf("error on stage %s: %s", e.Stage, e.Err.Error())
 }
 
-// GetErrorMessage returns the parsed error message
+// GetSolveErrorMessage returns the parsed error message
 func GetSolveErrorMessage(err error) error {
 	if err == nil {
 		return nil
@@ -91,8 +91,8 @@ const (
 
 func extractImageFromError(err error) string {
 	re := regexp.MustCompile(regexForImageFromFailedToSolveErr)
-	if matchs := re.FindStringSubmatch(err.Error()); len(matchs) > 1 {
-		return matchs[1]
+	if matches := re.FindStringSubmatch(err.Error()); len(matches) > 1 {
+		return matches[1]
 	}
 	return ""
 }
