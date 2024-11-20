@@ -57,12 +57,22 @@ func (dev) JSONSchema() *jsonschema.Schema {
 	})
 
 	devProps.Set("environment", &jsonschema.Schema{
-		Type:        &jsonschema.Type{Types: []string{"object"}},
 		Title:       "environment",
 		Description: "Add environment variables to your development container. If a variable already exists on your deployment, it will be overridden with the value specified on the manifest. Environment variables with only a key, or with a value with a $ sign resolve to their values on the machine Okteto is running on",
-		PatternProperties: map[string]*jsonschema.Schema{
-			".*": {
-				Type: &jsonschema.Type{Types: []string{"string", "boolean", "number"}},
+		OneOf: []*jsonschema.Schema{
+			{
+				Type: &jsonschema.Type{Types: []string{"object"}},
+				PatternProperties: map[string]*jsonschema.Schema{
+					".*": {
+						Type: &jsonschema.Type{Types: []string{"string", "boolean", "number"}},
+					},
+				},
+			},
+			{
+				Type: &jsonschema.Type{Types: []string{"array"}},
+				Items: &jsonschema.Schema{
+					Type: &jsonschema.Type{Types: []string{"string"}},
+				},
 			},
 		},
 	})
