@@ -128,7 +128,7 @@ func isYamlError(err error) bool {
 func addUrlToManifestDocs() *suggest.Rule {
 	addUrl := func(e error) error {
 		docsURL := "https://www.okteto.com/docs/reference/okteto-manifest"
-		errorWithUrlToDocs := fmt.Sprintf("%s\n    Check out the Okteto manifest docs at: %s", e.Error(), docsURL)
+		errorWithUrlToDocs := fmt.Sprintf("%s\n    Check out the Okteto Manifest docs at: %s", e.Error(), docsURL)
 		return errors.New(errorWithUrlToDocs)
 	}
 
