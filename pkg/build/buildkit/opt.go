@@ -52,9 +52,9 @@ type SolveOptBuilder struct {
 	imageCtrl        registry.ImageCtrl
 	reg              registry.OktetoRegistry
 	okCtx            OktetoContextInterface
+	clientFactory    ClientFactoryIface
 	fs               afero.Fs
 	secretTempFolder string
-	clientFactory    ClientFactoryIface
 }
 
 type ClientFactoryIface interface {
