@@ -82,6 +82,9 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 		suggest.NewStrReplaceRule("into model.deployCommand", "the 'deploy' object"),
 		suggest.NewStrReplaceRule("in type model.deployCommand", "the 'deploy' object"),
 
+		suggest.NewStrReplaceRule("into model.syncRaw", "the 'sync' section"),
+		suggest.NewStrReplaceRule("in type model.syncRaw", "the 'sync' section"),
+
 		// yaml types
 		suggest.NewStrReplaceRule(yaml.NodeTagSeq, "list"),
 		suggest.NewStrReplaceRule(yaml.NodeTagString, "string"),
@@ -125,7 +128,7 @@ func isYamlError(err error) bool {
 func addUrlToManifestDocs() *suggest.Rule {
 	addUrl := func(e error) error {
 		docsURL := "https://www.okteto.com/docs/reference/okteto-manifest"
-		errorWithUrlToDocs := fmt.Sprintf("%s\n    Check out the okteto manifest docs at: %s", e.Error(), docsURL)
+		errorWithUrlToDocs := fmt.Sprintf("%s\n    Check out the Okteto manifest docs at: %s", e.Error(), docsURL)
 		return errors.New(errorWithUrlToDocs)
 	}
 

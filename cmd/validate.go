@@ -15,18 +15,27 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/okteto/okteto/pkg/model"
-	"gopkg.in/yaml.v2"
 	"os"
 	"regexp"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/discovery"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/schema"
 	"github.com/okteto/okteto/pkg/validator"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
+)
+
+const (
+	docsURL = "https://www.okteto.com/docs/reference/okteto-manifest"
+)
+
+var (
+	errorWithUrlToDocs = fmt.Sprintf("\n    Check out the Okteto Manifest docs at: %s", docsURL)
 )
 
 type options struct {
@@ -98,27 +107,28 @@ func Validate(fs afero.Fs) *cobra.Command {
 				return err
 			}
 
+			if len(content) == 0 {
+				return fmt.Errorf("%s\n    - the file is empty\n    %s", oktetoErrors.ErrInvalidManifest, errorWithUrlToDocs)
+			}
+
 			err = validateOktetoManifest(string(content))
 			if err != nil {
 				re := regexp.MustCompile(`(?m)^.*\n`)
 				errStr := re.ReplaceAllString(err.Error(), "")
 				var output strings.Builder
-				//fmt.Fprintf(&output, "%s\n", oktetoErrors.ErrInvalidManifest)
 
 				var manifest model.Manifest
 				err = yaml.UnmarshalStrict(content, &manifest)
 				if err != nil {
 					friendlyErr := model.NewManifestFriendlyError(err)
 					fmt.Fprintf(&output, "%s\n", friendlyErr.Error())
+				} else {
+					fmt.Fprintf(&output, "%s\n", oktetoErrors.ErrInvalidManifest)
+					fmt.Fprintf(&output, "%s\n", errorWithUrlToDocs)
 				}
 				fmt.Fprintf(&output, "\n    JSON Schema Validation errors:\n")
 				fmt.Fprintf(&output, "    %s\n", errStr)
 				return fmt.Errorf(output.String())
-
-				//
-
-				//
-				//return fmt.Errorf("%s\n\n%v\n\n%v\n\nSee the documentation: https://www.okteto.com/docs/reference/okteto-manifest/", oktetoErrors.ErrInvalidManifest, frie,errStr)
 			}
 
 			return nil
