@@ -14,11 +14,8 @@
 package buildkit
 
 import (
-	"context"
 	"os"
 
-	"github.com/Masterminds/semver/v3"
-	"github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
 )
@@ -41,55 +38,27 @@ const (
 )
 
 type FrontendRetriever struct {
-	logger          *io.Controller
-	buildkitVersion *semver.Version
+	logger *io.Controller
 }
 
 type Frontend struct {
 	Frontend FrontendType
 	Image    string
 }
-type buildkitInfoGetter interface {
-	Info(ctx context.Context) (*client.Info, error)
-}
 
-func NewFrontendRetriever(ctx context.Context, buildkitClient buildkitInfoGetter, logger *io.Controller) (*FrontendRetriever, error) {
-	info, err := buildkitClient.Info(ctx)
-	if err != nil {
-		logger.Infof("failed to get buildkit info: %s", err)
-		return nil, err
-	}
-	buildkitVersion, err := semver.NewVersion(info.BuildkitVersion.Version)
-	if err != nil {
-		logger.Infof("failed to parse buildkit version: %s", err)
-	}
+func NewFrontendRetriever(logger *io.Controller) *FrontendRetriever {
 	return &FrontendRetriever{
-		logger:          logger,
-		buildkitVersion: buildkitVersion,
-	}, nil
+		logger: logger,
+	}
 }
 
 func (f *FrontendRetriever) GetFrontend(buildOptions *types.BuildOptions) *Frontend {
 	customFrontendImage := os.Getenv(buildkitFrontendImageEnvVar)
 	if len(buildOptions.ExtraHosts) > 0 {
-		extraHostFirstVersion := semver.MustParse("0.16.0")
-		if f.buildkitVersion != nil && (f.buildkitVersion.GreaterThan(extraHostFirstVersion) || f.buildkitVersion.Equal(extraHostFirstVersion)) {
-			f.logger.Infof("Using default frontend (BuildKit version supports extra hosts)")
-		} else {
-			f.logger.Infof("Using gateway frontend because BuildKit version doesn't support extra hosts")
-			return f.getGatewayFrontend(customFrontendImage)
-		}
+		f.logger.Infof("using gateway frontend because of extra hosts")
+		return f.getGatewayFrontend(customFrontendImage)
 	}
 
-	if len(buildOptions.ExportCache) > 1 {
-		exportSeveralCacheFirstVersion := semver.MustParse("0.11.0")
-		if f.buildkitVersion != nil && (f.buildkitVersion.GreaterThan(exportSeveralCacheFirstVersion) || f.buildkitVersion.Equal(exportSeveralCacheFirstVersion)) {
-			f.logger.Infof("Using gateway frontend because BuildKit version supports multiple cache exports")
-			return f.getGatewayFrontend(customFrontendImage)
-		} else {
-			f.logger.Infof("Using default frontend because BuildKit version doesn't support multiple cache exports in gateway frontend")
-		}
-	}
 	if customFrontendImage != "" {
 		f.logger.Infof("using gateway frontend because of custom frontend image")
 		return f.getGatewayFrontend(customFrontendImage)
