@@ -15,10 +15,18 @@ package build
 
 import (
 	"context"
+	"fmt"
+	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 
+	dockerConfig "github.com/docker/cli/cli/config"
 	"github.com/moby/buildkit/client"
+	buildkit "github.com/moby/buildkit/cmd/buildctl/build"
+	"github.com/moby/buildkit/session"
+	"github.com/moby/buildkit/session/auth/authprovider"
+	"github.com/moby/buildkit/session/sshforward/sshprovider"
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/okteto/okteto/pkg/analytics"
 	okbuildkit "github.com/okteto/okteto/pkg/build/buildkit"
@@ -27,10 +35,194 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/pkg/errors"
+	"github.com/spf13/afero"
 	"golang.org/x/sync/errgroup"
 )
 
 type buildWriter struct{}
+
+// getSolveOpt returns the buildkit solve options
+func getSolveOpt(buildOptions *types.BuildOptions, okctx OktetoContextInterface, secretTempFolder string, fs afero.Fs, logger *io.Controller) (*client.SolveOpt, error) {
+
+	if buildOptions.Tag != "" {
+		err := validateImages(okctx, buildOptions.Tag)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	imageCtrl := registry.NewImageCtrl(GetRegistryConfigFromOktetoConfig(okctx))
+	if okctx.IsOktetoCluster() {
+		buildOptions.Tag = imageCtrl.ExpandOktetoDevRegistry(buildOptions.Tag)
+		buildOptions.Tag = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.Tag)
+		for i := range buildOptions.CacheFrom {
+			buildOptions.CacheFrom[i] = imageCtrl.ExpandOktetoDevRegistry(buildOptions.CacheFrom[i])
+			buildOptions.CacheFrom[i] = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.CacheFrom[i])
+		}
+		for i := range buildOptions.ExportCache {
+			buildOptions.ExportCache[i] = imageCtrl.ExpandOktetoDevRegistry(buildOptions.ExportCache[i])
+			buildOptions.ExportCache[i] = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.ExportCache[i])
+		}
+	}
+
+	// inject secrets to buildkit from temp folder
+	if err := replaceSecretsSourceEnvWithTempFile(afero.NewOsFs(), secretTempFolder, buildOptions); err != nil {
+		return nil, fmt.Errorf("%w: secret should have the format 'id=mysecret,src=/local/secret'", err)
+	}
+
+	var localDirs map[string]string
+	var frontendAttrs map[string]string
+
+	if uri, err := url.ParseRequestURI(buildOptions.Path); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
+
+		if buildOptions.File == "" {
+			buildOptions.File = filepath.Join(buildOptions.Path, "Dockerfile")
+		}
+		if _, err := fs.Stat(buildOptions.File); os.IsNotExist(err) {
+			return nil, fmt.Errorf("file '%s' not found: %w", buildOptions.File, err)
+		}
+		localDirs = map[string]string{
+			"context":    buildOptions.Path,
+			"dockerfile": filepath.Dir(buildOptions.File),
+		}
+		frontendAttrs = map[string]string{
+			"filename": filepath.Base(buildOptions.File),
+		}
+	} else {
+		frontendAttrs = map[string]string{
+			"context": buildOptions.Path,
+		}
+	}
+
+	if buildOptions.Platform != "" {
+		frontendAttrs["platform"] = buildOptions.Platform
+	}
+	if buildOptions.Target != "" {
+		frontendAttrs["target"] = buildOptions.Target
+	}
+	if buildOptions.NoCache {
+		frontendAttrs["no-cache"] = ""
+	}
+
+	frontend := okbuildkit.NewFrontendRetriever(logger).GetFrontend(buildOptions)
+	if frontend.Image != "" {
+		frontendAttrs["source"] = frontend.Image
+	}
+
+	if len(buildOptions.ExtraHosts) > 0 {
+		hosts := ""
+		for _, eh := range buildOptions.ExtraHosts {
+			hosts += fmt.Sprintf("%s=%s,", eh.Hostname, eh.IP)
+		}
+		frontendAttrs["add-hosts"] = strings.TrimSuffix(hosts, ",")
+	}
+
+	maxArgFormatParts := 2
+	for _, buildArg := range buildOptions.BuildArgs {
+		kv := strings.SplitN(buildArg, "=", maxArgFormatParts)
+		if len(kv) != maxArgFormatParts {
+			return nil, fmt.Errorf("invalid build-arg value %s", buildArg)
+		}
+		frontendAttrs["build-arg:"+kv[0]] = kv[1]
+	}
+	attachable := []session.Attachable{}
+	if okctx.IsOktetoCluster() {
+		apCtx := &authProviderContext{
+			isOkteto: okctx.IsOktetoCluster(),
+			context:  okctx.GetCurrentName(),
+			token:    okctx.GetCurrentToken(),
+			cert:     okctx.GetCurrentCertStr(),
+		}
+
+		ap := newDockerAndOktetoAuthProvider(okctx.GetRegistryURL(), okctx.GetCurrentUser(), okctx.GetCurrentToken(), apCtx, os.Stderr)
+		attachable = append(attachable, ap)
+	} else {
+		dockerCfg := dockerConfig.LoadDefaultConfigFile(os.Stderr)
+		attachable = append(attachable, authprovider.NewDockerAuthProvider(dockerCfg, map[string]*authprovider.AuthTLSConfig{}))
+	}
+
+	for _, sess := range buildOptions.SshSessions {
+		oktetoLog.Debugf("mounting ssh agent to build from %s with key %s", sess.Target, sess.Id)
+		ssh, err := sshprovider.NewSSHAgentProvider([]sshprovider.AgentConfig{{
+			ID:    sess.Id,
+			Paths: []string{sess.Target},
+		}})
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to mount ssh agent for %s: %w", sess.Id, err)
+		}
+		attachable = append(attachable, ssh)
+	}
+
+	if len(buildOptions.Secrets) > 0 {
+		secretProvider, err := buildkit.ParseSecret(buildOptions.Secrets)
+		if err != nil {
+			return nil, err
+		}
+		attachable = append(attachable, secretProvider)
+	}
+	opt := &client.SolveOpt{
+		LocalDirs:     localDirs,
+		Frontend:      string(frontend.Frontend),
+		FrontendAttrs: frontendAttrs,
+		Session:       attachable,
+		CacheImports:  []client.CacheOptionsEntry{},
+		CacheExports:  []client.CacheOptionsEntry{},
+	}
+
+	if buildOptions.Tag != "" {
+		opt.Exports = []client.ExportEntry{
+			{
+				Type: "image",
+				Attrs: map[string]string{
+					"name": buildOptions.Tag,
+					"push": "true",
+				},
+			},
+		}
+	}
+
+	if buildOptions.LocalOutputPath != "" {
+		opt.Exports = append(opt.Exports, client.ExportEntry{
+			Type:      "local",
+			OutputDir: buildOptions.LocalOutputPath,
+		})
+	}
+
+	for _, cacheFromImage := range buildOptions.CacheFrom {
+		opt.CacheImports = append(
+			opt.CacheImports,
+			client.CacheOptionsEntry{
+				Type:  "registry",
+				Attrs: map[string]string{"ref": cacheFromImage},
+			},
+		)
+	}
+
+	for _, exportCacheTo := range buildOptions.ExportCache {
+		exportType := "inline"
+		if exportCacheTo != buildOptions.Tag {
+			exportType = "registry"
+		}
+		opt.CacheExports = append(
+			opt.CacheExports,
+			client.CacheOptionsEntry{
+				Type: exportType,
+				Attrs: map[string]string{
+					"ref":  exportCacheTo,
+					"mode": "max",
+				},
+			},
+		)
+	}
+
+	// TODO(#3548): remove when we upgrade buildkit to 0.11
+	if len(opt.CacheExports) > 1 {
+		opt.CacheExports = opt.CacheExports[:1]
+	}
+
+	return opt, nil
+}
 
 func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error {
 	logFilterRules := []LogRule{

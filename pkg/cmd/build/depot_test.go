@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -24,10 +25,8 @@ import (
 	cliv1 "github.com/depot/depot-go/proto/depot/cli/v1"
 	"github.com/moby/buildkit/client"
 	buildkitClient "github.com/moby/buildkit/client"
-	"github.com/okteto/okteto/pkg/build/buildkit"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -44,15 +43,6 @@ func (m *fakeDepotMachine) Release() error {
 
 func (m *fakeDepotMachine) Connect(ctx context.Context) (*buildkitClient.Client, error) {
 	return nil, m.err
-}
-
-type fakeSolveOptBuilder struct {
-	opt *client.SolveOpt
-	err error
-}
-
-func (fso *fakeSolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOptions) (*client.SolveOpt, error) {
-	return fso.opt, fso.err
 }
 
 func Test_newDepotBuilder(t *testing.T) {
@@ -114,6 +104,10 @@ func TestDepotRun(t *testing.T) {
 			expected:          assert.AnError,
 		},
 		{
+			name:     "dockerfile does not exist",
+			expected: os.ErrNotExist,
+		},
+		{
 			name: "successful build",
 		},
 	}
@@ -153,16 +147,8 @@ func TestDepotRun(t *testing.T) {
 						CurrentContext: "test",
 					},
 				},
-				getSolveOptBuilder: func(reg registry.OktetoRegistry, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (buildkit.SolveOptBuilderInterface, error) {
-					return &fakeSolveOptBuilder{
-						err: nil,
-					}, nil
-				},
 			}
 
-			runAndHandle := func(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error {
-				return nil
-			}
 			opts := &types.BuildOptions{
 				Path: tempDir,
 				ExportCache: []string{
@@ -180,6 +166,9 @@ func TestDepotRun(t *testing.T) {
 				},
 				BuildArgs: []string{"arg1=value1"},
 				Tag:       "okteto.dev/test:okteto",
+			}
+			runAndHandle := func(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error {
+				return nil
 			}
 			err := db.Run(context.Background(), opts, runAndHandle)
 			assert.ErrorIs(t, err, tt.expected)
