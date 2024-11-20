@@ -19,10 +19,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// unmarshal unmarshals the input YAML into the output interface{}.
+// Unmarshal unmarshals the input YAML into the output interface{}.
 // Used in context of json-schema validation due to this limitation: https://github.com/go-yaml/yaml/issues/139
 // it maps to map[string]interface{} instead of map[interface{}]interface{}.
-func unmarshal(in []byte, out interface{}) error {
+func Unmarshal(in []byte, out interface{}) error {
 	var res interface{}
 
 	if err := yaml.Unmarshal(in, &res); err != nil {
