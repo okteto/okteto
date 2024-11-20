@@ -192,7 +192,7 @@ func main() {
 			tmp[0] = unicode.ToUpper(tmp[0])
 			message = string(tmp)
 		}
-		oktetoLog.Fail(message) // TODO: Change to use ioController  when we fully move to ioController
+		oktetoLog.Fail("%s", message) // TODO: Change to use ioController  when we fully move to ioController
 		var uErr oktetoErrors.UserError
 		if errors.As(err, &uErr) {
 			if len(uErr.Hint) > 0 {

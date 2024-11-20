@@ -9,11 +9,6 @@ aliases:
   # standard semver regex as defined in: https://semver.org/
   - &release-regex /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
   - &release-branch-regex /^release-\d+\.\d+$/
-  - &okteto-login |
-    curl https://get.okteto.com -sSfL | sh
-    mkdir -p $HOME/.okteto
-    touch $HOME/.okteto/.noanalytics
-    okteto context use ${OKTETO_URL} --token ${OKTETO_TOKEN}
   - &docker-login echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
 
 parameters:
@@ -39,11 +34,11 @@ orbs:
 executors:
   golang-ci:
     docker:
-      - image: okteto/golang-ci:2.6.2
+      - image: okteto/golang-ci:2.7.0
     environment:
-      OKTETO_CONTEXT: https://staging.okteto.dev
-      OKTETO_USER: cindylopez
-      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
+      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
+      OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
+      OKTETO_NAMESPACE_PREFIX: staging
 
 jobs:
   golangci-lint:
@@ -135,8 +130,6 @@ jobs:
       # https://circleci.com/developer/machine/image/windows-server-2022-gui
       name: win/server-2022
       version: 2024.04.1
-    environment:
-      OKTETO_USER: cindylopez
     steps:
       - checkout
       - run:
@@ -165,7 +158,7 @@ jobs:
           name: Run actions integration tests
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_PRODUCT_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-actions
 
@@ -184,7 +177,7 @@ jobs:
             export DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
             export DEPOT_TOKEN=$DEPOT_TOKEN
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_PRODUCT_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-build
 
@@ -204,7 +197,7 @@ jobs:
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_PRODUCT_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-deploy
 
@@ -223,7 +216,7 @@ jobs:
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_PRODUCT_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-up
           environment:
@@ -244,7 +237,7 @@ jobs:
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
             echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_PRODUCT_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-okteto
 
@@ -263,7 +256,7 @@ jobs:
           # which run the deploy, we set the env var OKTETO_REMOTE_CLI_IMAGE to the one we are building
           name: Build OKTETO_REMOTE_CLI_IMAGE for current commit
           command: |
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_STAGING_TOKEN}
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_PRODUCT_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
       - save_cache:
@@ -288,19 +281,19 @@ jobs:
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
             sha_arm=$(cat ./artifacts/bin/okteto-Darwin-arm64.sha256 | awk '{print $1}')
             ./scripts/update_homebrew_formula.sh 0.0.1 $sha $sha_arm
-      - run: *okteto-login
       - run:
           name: Build Docker container
           command: |
-            okteto build --platform "linux/arm64,linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile .
+            depot build --platform "linux/arm64,linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile .
 
   test-e2e-setup-windows:
     executor:
       name: win/server-2022
       version: 2024.04.1
     environment:
-      OKTETO_CONTEXT: https://staging.okteto.dev
-      OKTETO_USER: cindylopez
+      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
+      OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
+      OKTETO_NAMESPACE_PREFIX: staging
     steps:
       - checkout
       - restore_cache:
@@ -315,7 +308,7 @@ jobs:
           name: Build OKTETO_REMOTE_CLI_IMAGE for current commit
           command: |
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
-            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
+            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_PRODUCT_STAGING_TOKEN
             & "$($HOME)\project\artifacts\bin\okteto.exe" build --platform "linux/amd64" --build-arg VERSION_STRING=$env:CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-win:$env:CIRCLE_SHA1
       - save_cache:
           key: v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
@@ -329,9 +322,9 @@ jobs:
       name: win/server-2022
       version: 2024.04.1
     environment:
-      OKTETO_CONTEXT: https://staging.okteto.dev
-      OKTETO_USER: cindylopez
-      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
+      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
+      OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
+      OKTETO_NAMESPACE_PREFIX: staging
     steps:
       - checkout
       - restore_cache:
@@ -349,7 +342,7 @@ jobs:
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
-            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
+            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_PRODUCT_STAGING_TOKEN
             go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
 
   e2e-deploy-windows:
@@ -357,9 +350,9 @@ jobs:
       name: win/server-2022
       version: 2024.04.1
     environment:
-      OKTETO_CONTEXT: https://staging.okteto.dev
-      OKTETO_USER: cindylopez
-      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
+      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
+      OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
+      OKTETO_NAMESPACE_PREFIX: staging
     steps:
       - checkout
       - restore_cache:
@@ -384,7 +377,7 @@ jobs:
             # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
             $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e-win:$env:CIRCLE_SHA1"
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
-            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
+            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_PRODUCT_STAGING_TOKEN
             go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
 
   e2e-up-windows:
@@ -392,9 +385,9 @@ jobs:
       name: win/server-2022
       version: 2024.04.1
     environment:
-      OKTETO_CONTEXT: https://staging.okteto.dev
-      OKTETO_USER: cindylopez
-      OKTETO_APPS_SUBDOMAIN: staging.okteto.dev
+      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
+      OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
+      OKTETO_NAMESPACE_PREFIX: staging
     steps:
       - checkout
       - restore_cache:
@@ -418,16 +411,13 @@ jobs:
             $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
             $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e-win:$env:CIRCLE_SHA1"
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
-            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_STAGING_TOKEN
+            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_PRODUCT_STAGING_TOKEN
             go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
 
   push-image-tag:
     executor: golang-ci
-    environment:
-      OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED: "true" # this is needed to push to Docker Hub using the local credentials instead of the ones from the context cluster
     steps:
       - checkout
-      - run: *okteto-login
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG" "linux/amd64,linux/arm64"
       - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:$CIRCLE_TAG
@@ -435,22 +425,16 @@ jobs:
 
   push-image-dev:
     executor: golang-ci
-    environment:
-      OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED: "true" # this is needed to push to Docker Hub using the local credentials instead of the ones from the context cluster
     steps:
       - checkout
-      - run: *okteto-login
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG",dev "linux/amd64,linux/arm64"
       - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:dev
 
   push-image-master:
     executor: golang-ci
-    environment:
-      OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED: "true" # this is needed to push to Docker Hub using the local credentials instead of the ones from the context cluster
     steps:
       - checkout
-      - run: *okteto-login
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh "master" "linux/amd64,linux/arm64"
       - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:master
@@ -626,7 +610,6 @@ workflows:
       - test-release:
           context:
             - GKE
-            - Product-okteto-dev
           requires:
             - build-binaries
           filters:
@@ -637,7 +620,6 @@ workflows:
                 - master
                 - *release-branch-regex
       - push-image-master:
-          context: Product-okteto-dev
           requires:
             - build-binaries
           filters:
@@ -703,7 +685,6 @@ workflows:
       - run-unit-test
       - run-windows-unit-test
       - push-image-dev:
-          context: Product-okteto-dev
           requires:
             - build-binaries
       - release-job:
@@ -738,7 +719,6 @@ workflows:
             tags:
               ignore: *release-regex
       - push-image-tag:
-          context: Product-okteto-dev
           requires:
             - build-binaries
           filters:

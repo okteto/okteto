@@ -48,7 +48,7 @@ func GenerateSchema() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if outputFilePath == "" {
+			if outputFilePath == "-" {
 				fmt.Print(string(json))
 				return nil
 			}
@@ -58,6 +58,6 @@ func GenerateSchema() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&outputFilePath, "output-file", "o", "", "Path to the file where the json schema will be stored")
+	cmd.Flags().StringVarP(&outputFilePath, "output-file", "o", "-", "Path to the file where the json schema will be stored")
 	return cmd
 }

@@ -42,7 +42,7 @@ func TestPipelineCommand(t *testing.T) {
 	require.NoError(t, err)
 
 	dir := t.TempDir()
-	testNamespace := integration.GetTestNamespace("Pipeline", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -80,7 +80,7 @@ func TestPipelineDeployWithReuse(t *testing.T) {
 	require.NoError(t, err)
 
 	dir := t.TempDir()
-	testNamespace := integration.GetTestNamespace("PipelineDeployWithReuse", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

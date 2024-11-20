@@ -31,7 +31,7 @@ func TestPreviewCommand(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("Preview", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	dir := t.TempDir()
 	previewOptions := &commands.DeployPreviewOptions{
 		Namespace:  testNamespace,

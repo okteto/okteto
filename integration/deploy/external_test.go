@@ -59,7 +59,7 @@ func Test_ExternalsFromOktetoManifestWithNotesContent(t *testing.T) {
 	require.NoError(t, createExternalNotes(dir))
 	require.NoError(t, createManifest(dir))
 
-	testNamespace := integration.GetTestNamespace("ExternalDeploy", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

@@ -39,7 +39,7 @@ func NewFakeUsersClientWithContext(userCtx *types.UserContext, err ...error) *Fa
 }
 
 func (c *FakeUserClient) GetContext(_ context.Context, _ string) (*types.UserContext, error) {
-	if c.err != nil && len(c.err) > 0 {
+	if len(c.err) > 0 {
 		err := c.err[0]
 		c.err = c.err[1:]
 		if err != nil {

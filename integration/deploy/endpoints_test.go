@@ -149,7 +149,7 @@ func Test_EndpointsFromOktetoManifest_InferredName(t *testing.T) {
 	require.NoError(t, createAppDockerfile(dir))
 	require.NoError(t, createK8sManifest(dir))
 
-	testNamespace := integration.GetTestNamespace("EndpointManifestInfer", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -212,7 +212,7 @@ func Test_EndpointsFromOktetoManifest_Name(t *testing.T) {
 	require.NoError(t, createAppDockerfile(dir))
 	require.NoError(t, createK8sManifest(dir))
 
-	testNamespace := integration.GetTestNamespace("EndpointsManifest", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -267,7 +267,7 @@ func Test_EndpointsFromStackWith_InferredName(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createStackWithEndpointsInferredNameScenario(dir))
 
-	testNamespace := integration.GetTestNamespace("TEndpointsFromStackInfer", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -337,7 +337,7 @@ func Test_EndpointsFromStack_Name(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createStackWithEndpointsNameScenario(dir))
 
-	testNamespace := integration.GetTestNamespace("TEndpointsFromStack", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -407,7 +407,7 @@ func Test_EndpointsFromStackAndManifest(t *testing.T) {
 	require.NoError(t, createStackWithEndpointsNameScenario(dir))
 	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), oktetoManifestV2WithComposeWithEndpoints))
 
-	testNamespace := integration.GetTestNamespace("EndpointsStackAndManif", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -451,7 +451,7 @@ func Test_EndpointsFromOktetoManifest_NameOption(t *testing.T) {
 	require.NoError(t, createAppDockerfile(dir))
 	require.NoError(t, createK8sManifest(dir))
 
-	testNamespace := integration.GetTestNamespace("EndpointManifestNameOp", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -503,7 +503,7 @@ func Test_EndpointsFromStackWith_NameOption(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createStackWithEndpointsInferredNameScenario(dir))
 
-	testNamespace := integration.GetTestNamespace("TEpStackNameOpt", user)
+	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
