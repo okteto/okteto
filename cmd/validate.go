@@ -113,8 +113,9 @@ func Validate(fs afero.Fs) *cobra.Command {
 
 			err = validateOktetoManifest(string(content))
 			if err != nil {
-				re := regexp.MustCompile(`(?m)^.*\n`)
+				re := regexp.MustCompile(`^.*?\n`)
 				errStr := re.ReplaceAllString(err.Error(), "")
+				errStr = strings.ReplaceAll(errStr, "- at", "    - at")
 				var output strings.Builder
 
 				var manifest model.Manifest
@@ -127,7 +128,7 @@ func Validate(fs afero.Fs) *cobra.Command {
 					fmt.Fprintf(&output, "%s\n", errorWithUrlToDocs)
 				}
 				fmt.Fprintf(&output, "\n    JSON Schema Validation errors:\n")
-				fmt.Fprintf(&output, "    %s\n", errStr)
+				fmt.Fprintf(&output, "%s\n", errStr)
 				return fmt.Errorf("%s", output.String())
 			}
 
