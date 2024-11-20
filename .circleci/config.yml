@@ -83,6 +83,24 @@ jobs:
           path: bin
           destination: binaries
 
+  check-schema:
+    executor: golang-ci
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ./artifacts
+      - run:
+          name: Check schema.json is up to date
+          command: |
+            ./artifacts/bin/okteto-Linux-x86_64 generate-schema -o schema.json.new
+            if ! cmp -s schema.json.new schema.json; then
+              echo "Error: schema.json is not up to date"
+              echo "Please run 'okteto generate-schema -o schema.json' and commit the changes"
+              diff schema.json.new schema.json || true
+              exit 1
+            fi
+            rm schema.json.new
+
   run-unit-test:
     executor: golang-ci
     steps:
@@ -103,7 +121,6 @@ jobs:
           paths:
             - ~/.cache/go-build
             - /go/pkg
-
       - store_artifacts:
           path: coverage.txt
           destination: coverage.txt
@@ -524,6 +541,9 @@ workflows:
             branches:
               only:
                 - master
+      - check-schema:
+          requires:
+            - "build-binaries"
       - e2e-build-windows:
           requires:
             - test-e2e-setup-windows
