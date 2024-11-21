@@ -33,9 +33,9 @@ type Section map[string]*ExternalResource
 
 // ExternalResource represents information on an external resource
 type ExternalResource struct {
-	Icon      string
-	Notes     *Notes
-	Endpoints []*ExternalEndpoint
+	Icon      string              `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Notes     *Notes              `json:"notes,omitempty" yaml:"notes,omitempty"`
+	Endpoints []*ExternalEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 }
 
 // Notes represents information about the location and content of the external resource markdown
@@ -46,8 +46,8 @@ type Notes struct {
 
 // ExternalEndpoint represents information about an endpoint
 type ExternalEndpoint struct {
-	Name string
-	Url  string
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+	Url  string `json:"url,omitempty" yaml:"url,omitempty"`
 }
 
 // ERFilesystemManager represents ExternalResource information with the filesystem injected

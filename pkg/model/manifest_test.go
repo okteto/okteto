@@ -1025,7 +1025,7 @@ func Test_getManifestFromFile(t *testing.T) {
 			manifestBytes: []byte(`name: test
 sync:
   - .:/usr`),
-			expectedErr:  fmt.Errorf("your okteto manifest is not valid, please check the following errors:"),
+			expectedErr:  fmt.Errorf("your Okteto Manifest is not valid, please check the following errors:"),
 			composeBytes: nil,
 		},
 		{

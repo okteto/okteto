@@ -182,48 +182,64 @@ func Test_getStructKeys(t *testing.T) {
 			name:  "okteto manifest",
 			input: Manifest{},
 			expected: map[string][]string{
-				"deps.Dependency":            {"repository", "manifest", "branch", "variables", "timeout", "wait"},
-				"env.Var":                    {"name", "value"},
-				"forward.Forward":            {"labels", "name", "localPort", "remotePort"},
-				"forward.GlobalForward":      {"labels", "name", "localPort", "remotePort"},
-				"build.Info":                 {"secrets", "context", "dockerfile", "target", "image", "cache_from", "args", "export_cache", "depends_on"},
-				"build.VolumeMounts":         {"local_path", "remote_path"},
-				"model.Capabilities":         {"add", "drop"},
-				"model.ComposeInfo":          {"file", "services"},
-				"model.DeployCommand":        {"name", "command"},
-				"model.DeployInfo":           {"compose", "endpoints", "divert", "image", "commands", "remote", "context"},
-				"model.DestroyInfo":          {"image", "commands", "remote", "context"},
-				"model.Dev":                  {"resources", "selector", "persistentVolume", "securityContext", "probes", "nodeSelector", "metadata", "affinity", "image", "lifecycle", "replicas", "initContainer", "workdir", "name", "container", "serviceAccount", "priorityClassName", "interface", "mode", "imagePullPolicy", "tolerations", "command", "forward", "reverse", "externalVolumes", "secrets", "volumes", "envFiles", "environment", "services", "args", "sync", "timeout", "remote", "sshServerPort", "autocreate"},
-				"model.DivertDeploy":         {"driver", "namespace", "service", "deployment", "virtualServices", "hosts", "port"},
-				"model.DivertHost":           {"virtualService", "namespace"},
-				"model.DivertVirtualService": {"name", "namespace", "routes"},
-				"model.HTTPHealtcheck":       {"path", "port"},
-				"model.HealthCheck":          {"http", "test", "interval", "timeout", "retries", "start_period", "disable", "x-okteto-liveness", "x-okteto-readiness"},
-				"model.InitContainer":        {"resources", "image"},
-				"model.Lifecycle":            {"postStart", "preStop"},
-				"model.Manifest":             {"name", "icon", "dev", "build", "deploy", "destroy", "dependencies", "external", "forward", "test"},
-				"model.Metadata":             {"labels", "annotations"},
-				"model.PersistentVolumeInfo": {"accessMode", "volumeMode", "annotations", "labels", "storageClass", "size", "enabled"},
-				"model.Probes":               {"liveness", "readiness", "startup"},
-				"model.ResourceRequirements": {"limits", "requests"},
-				"model.SecurityContext":      {"runAsUser", "runAsGroup", "fsGroup", "capabilities", "runAsNonRoot", "allowPrivilegeEscalation"},
-				"model.Service":              {"healthcheck", "labels", "resources", "x-node-selector", "user", "depends_on", "build", "workdir", "image", "restart", "environment", "ports", "volumes", "cap_add", "cap_drop", "env_file", "command", "annotations", "entrypoint", "stop_grace_period", "replicas", "max_attempts", "public"},
-				"model.Stack":                {"volumes", "services", "endpoints", "name", "namespace", "context"},
-				"model.StackSecurityContext": {"runAsUser", "runAsGroup"},
-				"model.StorageResource":      {"size", "class"},
-				"model.Sync":                 {"folders", "rescanInterval", "compression", "verbose"},
-				"model.Timeout":              {"default", "resources"},
-				"model.VolumeSpec":           {"labels", "annotations", "size", "class"},
-				"model.Test":                 {"image", "context", "commands", "depends_on", "caches", "artifacts", "hosts"},
+				"build.Info":                        {"secrets", "context", "dockerfile", "target", "image", "cache_from", "args", "export_cache", "depends_on"},
+				"build.VolumeMounts":                {"local_path", "remote_path"},
+				"deps.Dependency":                   {"repository", "manifest", "branch", "variables", "timeout", "wait"},
+				"env.Var":                           {"name", "value"},
+				"externalresource.ExternalResource": {"icon", "notes", "endpoints"},
+				"forward.Forward":                   {"labels", "name", "localPort", "remotePort"},
+				"forward.GlobalForward":             {"labels", "name", "localPort", "remotePort"},
+				"model.Artifact":                    {"path", "destination"},
+				"model.Capabilities":                {"add", "drop"},
+				"model.ComposeInfo":                 {"file", "services"},
+				"model.ComposeSectionInfo":          {"manifest"},
+				"model.DeployCommand":               {"name", "command"},
+				"model.DeployInfo":                  {"compose", "endpoints", "divert", "image", "commands", "remote", "context"},
+				"model.DestroyInfo":                 {"image", "commands", "remote", "context"},
+				"model.Dev":                         {"resources", "selector", "persistentVolume", "securityContext", "probes", "nodeSelector", "metadata", "affinity", "image", "lifecycle", "replicas", "initContainer", "workdir", "name", "container", "serviceAccount", "priorityClassName", "interface", "mode", "imagePullPolicy", "tolerations", "command", "forward", "reverse", "externalVolumes", "secrets", "volumes", "envFiles", "environment", "services", "args", "sync", "timeout", "remote", "sshServerPort", "autocreate"},
+				"model.DivertDeploy":                {"driver", "namespace", "service", "deployment", "virtualServices", "hosts", "port"},
+				"model.DivertHost":                  {"virtualService", "namespace"},
+				"model.DivertVirtualService":        {"name", "namespace", "routes"},
+				"model.HealthCheck":                 {"http", "test", "interval", "timeout", "retries", "start_period", "disable", "x-okteto-liveness", "x-okteto-readiness"},
+				"model.Host":                        {"hostname", "ip"},
+				"model.HTTPHealtcheck":              {"path", "port"},
+				"model.InitContainer":               {"resources", "image"},
+				"model.Lifecycle":                   {"postStart", "preStop"},
+				"model.LifecycleHandler":            {"command", "enabled"},
+				"model.Manifest":                    {"name", "icon", "dev", "build", "deploy", "destroy", "dependencies", "external", "forward", "test"},
+				"model.Metadata":                    {"labels", "annotations"},
+				"model.PersistentVolumeInfo":        {"accessMode", "volumeMode", "annotations", "labels", "storageClass", "size", "enabled"},
+				"model.Probes":                      {"liveness", "readiness", "startup"},
+				"model.ResourceRequirements":        {"limits", "requests"},
+				"model.SecurityContext":             {"runAsUser", "runAsGroup", "fsGroup", "capabilities", "runAsNonRoot", "allowPrivilegeEscalation"},
+				"model.Service":                     {"healthcheck", "labels", "resources", "x-node-selector", "user", "depends_on", "build", "workdir", "image", "restart", "environment", "ports", "volumes", "cap_add", "cap_drop", "env_file", "command", "annotations", "entrypoint", "stop_grace_period", "replicas", "max_attempts", "public"},
+				"model.ServiceResources":            {"cpu", "memory", "storage"},
+				"model.Stack":                       {"volumes", "services", "endpoints", "name", "namespace", "context"},
+				"model.StackResources":              {"limits", "requests"},
+				"model.StackSecurityContext":        {"runAsUser", "runAsGroup"},
+				"model.StorageResource":             {"size", "class"},
+				"model.Sync":                        {"folders", "rescanInterval", "compression", "verbose"},
+				"model.SyncFolder":                  {"localPath", "remotePath"},
+				"model.Test":                        {"image", "context", "commands", "depends_on", "caches", "artifacts", "hosts"},
+				"model.TestCommand":                 {"name", "command"},
+				"model.Timeout":                     {"default", "resources"},
+				"model.VolumeSpec":                  {"labels", "annotations", "size", "class"},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			keys := getStructKeys(tt.input)
+			keys := GetStructKeys(tt.input)
+
+			for k, v := range keys {
+				assert.ElementsMatch(t, tt.expected[k], v, "unexpected keys for %s", k)
+			}
+
 			for k, v := range tt.expected {
 				assert.ElementsMatch(t, v, keys[k])
 			}
+
+			assert.Equal(t, len(tt.expected), len(keys))
 		})
 	}
 }

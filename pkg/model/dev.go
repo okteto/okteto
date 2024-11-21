@@ -762,7 +762,7 @@ func SerializeEnvironmentVars(envs env.Environment) []string {
 	return result
 }
 
-// SetLastBuiltAnnotation sets the dev timestacmp
+// SetLastBuiltAnnotation sets the dev timestamp
 func (dev *Dev) SetLastBuiltAnnotation() {
 	if dev.Metadata.Annotations == nil {
 		dev.Metadata.Annotations = Annotations{}

@@ -16,6 +16,7 @@ package stack
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -336,47 +337,59 @@ func getEndpointsToDeployFromServicesToDeploy(endpoints model.EndpointSpec, serv
 
 func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernetes.Interface, config *rest.Config, options *DeployOptions, divert Divert) error {
 	deployedSvcs := make(map[string]bool)
+	ctx, cancel := context.WithTimeout(ctx, options.Timeout)
+	defer cancel()
+
 	t := time.NewTicker(1 * time.Second)
-	to := time.NewTicker(options.Timeout)
+	defer t.Stop()
 
 	for {
 		select {
-		case <-to.C:
-			return fmt.Errorf("compose '%s' didn't finish after %s", stack.Name, options.Timeout.String())
-		case <-t.C:
-			for len(deployedSvcs) != len(options.ServicesToDeploy) {
-				for _, svcName := range options.ServicesToDeploy {
-					if deployedSvcs[svcName] {
-						continue
-					}
-
-					if !canSvcBeDeployed(ctx, stack, svcName, k8sClient, config) {
-						if failedJobs := getDependingFailedJobs(ctx, stack, svcName, k8sClient); len(failedJobs) > 0 {
-							if len(failedJobs) == 1 {
-								return fmt.Errorf("service '%s' dependency '%s' failed", svcName, failedJobs[0])
-							}
-							return fmt.Errorf("service '%s' dependencies '%s' failed", svcName, strings.Join(failedJobs, ", "))
-						}
-						if failedServices := getServicesWithFailedProbes(ctx, stack, svcName, k8sClient); len(failedServices) > 0 {
-							for key, value := range failedServices {
-								return fmt.Errorf("service '%s' has failed his healthcheck probes: %s", key, value)
-							}
-						}
-						if err := getErrorDueToRestartLimit(ctx, stack, svcName, k8sClient); err != nil {
-							return err
-						}
-						continue
-					}
-					oktetoLog.Spinner(fmt.Sprintf("Deploying service '%s'...", svcName))
-					err := deploySvc(ctx, stack, svcName, k8sClient, divert)
-					if err != nil {
-						return err
-					}
-					deployedSvcs[svcName] = true
-					oktetoLog.Spinner("Waiting for services to be ready...")
-				}
+		case <-ctx.Done():
+			if ctx.Err() != nil {
+				return fmt.Errorf("compose '%s' didn't finish after %s", stack.Name, options.Timeout.String())
 			}
 			return nil
+		case <-t.C:
+			if len(options.ServicesToDeploy) == len(deployedSvcs) {
+				return nil
+			}
+			for _, svcName := range options.ServicesToDeploy {
+				if deployedSvcs[svcName] {
+					continue
+				}
+
+				// prevent service to be deployed as it depends on other services that are not ready
+				if !canSvcBeDeployed(ctx, stack, svcName, k8sClient, config) {
+					if failedJobs := getDependingFailedJobs(ctx, stack, svcName, k8sClient); len(failedJobs) > 0 {
+						if len(failedJobs) == 1 {
+							return fmt.Errorf("service '%s' dependency '%s' failed", svcName, failedJobs[0])
+						}
+						return fmt.Errorf("service '%s' dependencies '%s' failed", svcName, strings.Join(failedJobs, ", "))
+					}
+					if failedServices := getServicesWithFailedProbes(ctx, stack, svcName, k8sClient); len(failedServices) > 0 {
+						for key, value := range failedServices {
+							return fmt.Errorf("service '%s' has failed his healthcheck probes: %s", key, value)
+						}
+					}
+					if err := getErrorDueToRestartLimit(ctx, stack, svcName, k8sClient); err != nil {
+						return err
+					}
+					continue
+				}
+
+				// deploy service
+				oktetoLog.Spinner(fmt.Sprintf("Deploying service '%s'...", svcName))
+				err := deploySvc(ctx, stack, svcName, k8sClient, divert)
+				if err != nil {
+					if errors.Is(err, context.DeadlineExceeded) {
+						return fmt.Errorf("compose '%s' didn't finish after %s", stack.Name, options.Timeout.String())
+					}
+					return err
+				}
+				deployedSvcs[svcName] = true
+				oktetoLog.Spinner("Waiting for services to be ready...")
+			}
 		}
 	}
 }

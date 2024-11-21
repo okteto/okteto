@@ -1,0 +1,1274 @@
+{
+  "$id": "https://raw.githubusercontent.com/okteto/okteto/master/schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "build": {
+      "additionalProperties": false,
+      "description": "A list of images to build as part of your development environment.",
+      "patternProperties": {
+        ".*": {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "description": "Build arguments, which are environment variables accessible only during the build process. Build arguments with a value containing a $ sign are resolved to the environment variable value on the machine Okteto is running on",
+              "patternProperties": {
+                ".*": {
+                  "type": "string"
+                }
+              },
+              "title": "args",
+              "type": "object"
+            },
+            "context": {
+              "default": ".",
+              "description": "The build context. Relative paths are relative to the location of the Okteto Manifest",
+              "title": "context",
+              "type": "string"
+            },
+            "depends_on": {
+              "description": "List of images that need to be built first",
+              "items": {
+                "type": "string"
+              },
+              "title": "depends_on",
+              "type": "array"
+            },
+            "dockerfile": {
+              "default": "Dockerfile",
+              "description": "The path to the Dockerfile. It's a relative path to the build context",
+              "title": "dockerfile",
+              "type": "string"
+            },
+            "image": {
+              "description": "The name of the image to build and push. In clusters that have Okteto installed, this is optional (if not specified, the Okteto Registry is used)",
+              "title": "image",
+              "type": "string"
+            },
+            "secrets": {
+              "description": "List of secrets exposed to the build. The value of each secret refers to a file. Okteto will resolve references containing a $ sign in this file to environment variables on the machine Okteto is running on",
+              "patternProperties": {
+                ".*": {
+                  "type": "string"
+                }
+              },
+              "title": "secrets",
+              "type": "object"
+            },
+            "target": {
+              "description": "Build the specified stage as defined inside the Dockerfile",
+              "title": "target",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "title": "build",
+      "type": "object"
+    },
+    "context": {
+      "description": "The build context. Relative paths are relative to the location of the Okteto Manifest (default: .)",
+      "examples": [
+        "api"
+      ],
+      "title": "context",
+      "type": "string"
+    },
+    "dependencies": {
+      "description": "A list of repositories you want to deploy as part of your development environment.",
+      "oneOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "patternProperties": {
+            ".*": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "The Git branch to use",
+                  "title": "branch",
+                  "type": "string"
+                },
+                "manifest": {
+                  "description": "The path to the Okteto manifest file in the repository",
+                  "title": "manifest",
+                  "type": "string"
+                },
+                "repository": {
+                  "description": "The Git repository URL of the dependency",
+                  "title": "repository",
+                  "type": "string"
+                },
+                "timeout": {
+                  "description": "Maximum time to wait for the dependency to be ready",
+                  "pattern": "^[0-9]+(h|m|s)$",
+                  "title": "timeout",
+                  "type": "string"
+                },
+                "variables": {
+                  "description": "Environment variables to pass to the dependency",
+                  "patternProperties": {
+                    ".*": {
+                      "type": "string"
+                    }
+                  },
+                  "title": "variables",
+                  "type": "object"
+                },
+                "wait": {
+                  "description": "Whether to wait for the dependency to be ready",
+                  "title": "wait",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "repository"
+              ],
+              "type": "object"
+            }
+          },
+          "type": "object"
+        }
+      ],
+      "title": "dependencies"
+    },
+    "deploy": {
+      "description": "The deployment configuration for your development environment.",
+      "oneOf": [
+        {
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "command": {
+                    "description": "Command to execute",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Name of the command",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "command"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "commands": {
+              "description": "List of commands to execute",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "command": {
+                        "description": "Command to execute",
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "Name of the command",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "command"
+                    ],
+                    "type": "object"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "compose": {
+              "oneOf": [
+                {
+                  "description": "Path to the compose file",
+                  "type": "string"
+                },
+                {
+                  "description": "List of compose configurations",
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "file": {
+                        "description": "Path to the compose file",
+                        "type": "string"
+                      },
+                      "services": {
+                        "description": "List of services to deploy",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "file"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "context": {
+              "description": "The working directory for running the deploy commands. If left empty, it defaults to the directory containing the Okteto Manifest.",
+              "type": "string"
+            },
+            "divert": {
+              "additionalProperties": false,
+              "description": "Configuration for diverting traffic between namespaces",
+              "properties": {
+                "driver": {
+                  "description": "The backend for divert. Currently, only 'istio' is supported",
+                  "enum": [
+                    "istio"
+                  ],
+                  "type": "string"
+                },
+                "hosts": {
+                  "description": "List of hosts to divert in the developer namespace",
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "namespace": {
+                        "description": "Namespace of the virtual service",
+                        "type": "string"
+                      },
+                      "virtualService": {
+                        "description": "Name of the virtual service",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "namespace": {
+                  "description": "Namespace of the divert",
+                  "type": "string"
+                },
+                "virtualServices": {
+                  "description": "List of virtual services to divert",
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "name": {
+                        "description": "Name of the virtual service",
+                        "type": "string"
+                      },
+                      "namespace": {
+                        "description": "Namespace of the virtual service",
+                        "type": "string"
+                      },
+                      "routes": {
+                        "description": "List of routes to divert. If empty, all routes are diverted",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "type": "object"
+            },
+            "endpoints": {
+              "description": "List of endpoints",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "path": {
+                    "description": "Path for the endpoint",
+                    "type": "string"
+                  },
+                  "port": {
+                    "description": "Port number",
+                    "type": "integer"
+                  },
+                  "service": {
+                    "description": "Service name",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "service",
+                  "port"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "image": {
+              "description": "Image to use for deployment",
+              "type": "string"
+            },
+            "remote": {
+              "description": "Whether to run commands remotely",
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        }
+      ],
+      "title": "deploy"
+    },
+    "destroy": {
+      "description": "A list of commands to destroy external resources created by your development environment.",
+      "oneOf": [
+        {
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "command": {
+                    "description": "Command to execute",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Name of the command",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "command"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "commands": {
+              "description": "List of commands to execute for destroying resources",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "command": {
+                        "description": "Command to execute",
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "Name of the command",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "command"
+                    ],
+                    "type": "object"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "context": {
+              "description": "The working directory for running the destroy commands. If left empty, it defaults to the directory containing the Okteto Manifest",
+              "type": "string"
+            },
+            "image": {
+              "description": "Image to use for running destroy commands",
+              "type": "string"
+            },
+            "remote": {
+              "description": "Whether to run commands remotely",
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        }
+      ],
+      "title": "destroy"
+    },
+    "dev": {
+      "additionalProperties": false,
+      "description": "A list of development containers to define the behavior of okteto up and synchronize your code in your development environment.",
+      "patternProperties": {
+        ".*": {
+          "additionalProperties": false,
+          "properties": {
+            "affinity": {
+              "description": "Affinity allows you to constrain which nodes your development container is eligible to be scheduled on, based on labels on the node",
+              "title": "affinity",
+              "type": "object"
+            },
+            "autocreate": {
+              "default": false,
+              "description": "If set to true, okteto up creates a deployment if name doesn't match any existing deployment in the current namespace",
+              "title": "autocreate",
+              "type": "boolean"
+            },
+            "command": {
+              "description": "The command of your development container. If empty, it defaults to sh. The command can also be a list",
+              "oneOf": [
+                {
+                  "default": "sh",
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ],
+              "title": "command"
+            },
+            "container": {
+              "description": "The name of the container in your deployment you want to put on development mode. By default, it takes the first one",
+              "title": "container",
+              "type": "string"
+            },
+            "envFiles": {
+              "description": "Add environment variables to your development container from files",
+              "items": {
+                "type": "string"
+              },
+              "title": "envFiles",
+              "type": "array"
+            },
+            "environment": {
+              "description": "Add environment variables to your development container. If a variable already exists on your deployment, it will be overridden with the value specified on the manifest. Environment variables with only a key, or with a value with a $ sign resolve to their values on the machine Okteto is running on",
+              "oneOf": [
+                {
+                  "patternProperties": {
+                    ".*": {
+                      "type": [
+                        "string",
+                        "boolean",
+                        "number"
+                      ]
+                    }
+                  },
+                  "type": "object"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ],
+              "title": "environment"
+            },
+            "externalVolumes": {
+              "description": "A list of persistent volume claims that you want to mount in your development container",
+              "items": {
+                "type": "string"
+              },
+              "title": "externalVolumes",
+              "type": "array"
+            },
+            "forward": {
+              "description": "A list of ports to forward from your development container",
+              "items": {
+                "oneOf": [
+                  {
+                    "pattern": "^[0-9]+:([a-zA-Z0-9-]+:)?[0-9]+$",
+                    "type": "string"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "labels": {
+                        "patternProperties": {
+                          ".*": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "localPort": {
+                        "type": "integer"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "remotePort": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "localPort",
+                      "remotePort"
+                    ],
+                    "type": "object"
+                  }
+                ]
+              },
+              "title": "forward",
+              "type": "array"
+            },
+            "image": {
+              "description": "Docker image of your development container",
+              "title": "image",
+              "type": "string"
+            },
+            "imagePullPolicy": {
+              "default": "Always",
+              "description": "Image pull policy of your development container",
+              "title": "imagePullPolicy",
+              "type": "string"
+            },
+            "initContainer": {
+              "additionalProperties": false,
+              "description": "Configuration for the okteto init container",
+              "properties": {
+                "image": {
+                  "type": "string"
+                },
+                "resources": {
+                  "type": "object"
+                }
+              },
+              "title": "initContainer",
+              "type": "object"
+            },
+            "interface": {
+              "default": "localhost",
+              "description": "Address to bind port forwards and reverse tunnels to",
+              "title": "interface",
+              "type": "string"
+            },
+            "lifecycle": {
+              "oneOf": [
+                {
+                  "default": false,
+                  "type": "boolean"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "postStart": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "command": {
+                          "type": "string"
+                        },
+                        "enabled": {
+                          "default": false,
+                          "type": "boolean"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "preStop": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "command": {
+                          "type": "string"
+                        },
+                        "enabled": {
+                          "default": false,
+                          "type": "boolean"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "metadata": {
+              "additionalProperties": false,
+              "properties": {
+                "annotations": {
+                  "patternProperties": {
+                    ".*": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "labels": {
+                  "patternProperties": {
+                    ".*": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "mode": {
+              "default": "sync",
+              "description": "Development mode (sync, hybrid)",
+              "enum": [
+                "sync",
+                "hybrid"
+              ],
+              "title": "mode",
+              "type": "string"
+            },
+            "nodeSelector": {
+              "description": "Labels that the node must have to schedule the development container",
+              "patternProperties": {
+                ".*": {
+                  "type": "string"
+                }
+              },
+              "title": "nodeSelector",
+              "type": "object"
+            },
+            "persistentVolume": {
+              "additionalProperties": false,
+              "properties": {
+                "accessMode": {
+                  "default": "ReadWriteOnce",
+                  "description": "The Okteto persistent volume access mode",
+                  "type": "string"
+                },
+                "annotations": {
+                  "description": "Add annotations to the Okteto persistent volume",
+                  "patternProperties": {
+                    ".*": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "enabled": {
+                  "default": true,
+                  "description": "Enable/disable the use of persistent volumes. Must be true if using services, volumes, or to share command history.",
+                  "type": "boolean"
+                },
+                "labels": {
+                  "description": "Add labels to the Okteto persistent volume",
+                  "patternProperties": {
+                    ".*": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "size": {
+                  "default": "5Gi",
+                  "description": "The size of the Okteto persistent volume",
+                  "type": "string"
+                },
+                "storageClass": {
+                  "description": "The storage class of the Okteto persistent volume. Defaults to cluster's default storage class",
+                  "type": "string"
+                },
+                "volumeMode": {
+                  "default": "Filesystem",
+                  "description": "The Okteto persistent volume mode",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "priorityClassName": {
+              "description": "Priority class name for the development container",
+              "title": "priorityClassName",
+              "type": "string"
+            },
+            "probes": {
+              "oneOf": [
+                {
+                  "default": false,
+                  "type": "boolean"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "liveness": {
+                      "default": false,
+                      "type": "boolean"
+                    },
+                    "readiness": {
+                      "default": false,
+                      "type": "boolean"
+                    },
+                    "startup": {
+                      "default": false,
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "remote": {
+              "description": "Local port for SSH communication",
+              "title": "remote",
+              "type": "integer"
+            },
+            "resources": {
+              "additionalProperties": false,
+              "description": "Resource requests and limits for the development container",
+              "properties": {
+                "limits": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "cpu": {
+                      "type": "string"
+                    },
+                    "ephemeral-storage": {
+                      "type": "string"
+                    },
+                    "memory": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "requests": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "cpu": {
+                      "type": "string"
+                    },
+                    "ephemeral-storage": {
+                      "type": "string"
+                    },
+                    "memory": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "title": "resources",
+              "type": "object"
+            },
+            "reverse": {
+              "description": "Ports to reverse forward from your development container",
+              "items": {
+                "pattern": "^[0-9]+:[0-9]+$",
+                "type": "string"
+              },
+              "title": "reverse",
+              "type": "array"
+            },
+            "secrets": {
+              "description": "List of secrets to be injected",
+              "items": {
+                "type": "string"
+              },
+              "title": "secrets",
+              "type": "array"
+            },
+            "securityContext": {
+              "additionalProperties": false,
+              "properties": {
+                "capabilities": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "add": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                },
+                "fsGroup": {
+                  "type": "integer"
+                },
+                "runAsGroup": {
+                  "type": "integer"
+                },
+                "runAsUser": {
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "selector": {
+              "description": "Labels to identify the deployment/statefulset",
+              "patternProperties": {
+                ".*": {
+                  "type": "string"
+                }
+              },
+              "title": "selector",
+              "type": "object"
+            },
+            "serviceAccount": {
+              "description": "Service account for the development container",
+              "title": "serviceAccount",
+              "type": "string"
+            },
+            "services": {
+              "description": "Additional services to run in development mode",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "annotations": {
+                    "type": "object"
+                  },
+                  "command": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "container": {
+                    "type": "string"
+                  },
+                  "environment": {
+                    "patternProperties": {
+                      ".*": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "image": {
+                    "type": "string"
+                  },
+                  "labels": {
+                    "type": "object"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "replicas": {
+                    "type": "integer"
+                  },
+                  "resources": {
+                    "type": "object"
+                  },
+                  "sync": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "workdir": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "title": "services",
+              "type": "array"
+            },
+            "sync": {
+              "oneOf": [
+                {
+                  "items": {
+                    "pattern": "^.*:.*$",
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "compression": {
+                      "default": false,
+                      "type": "boolean"
+                    },
+                    "folders": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "rescanInterval": {
+                      "default": 300,
+                      "type": "integer"
+                    },
+                    "verbose": {
+                      "default": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "folders"
+                  ],
+                  "type": "object"
+                }
+              ]
+            },
+            "timeout": {
+              "oneOf": [
+                {
+                  "pattern": "^[0-9]+(h|m|s)$",
+                  "type": "string"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "pattern": "^[0-9]+(h|m|s)$",
+                      "type": "string"
+                    },
+                    "resources": {
+                      "pattern": "^[0-9]+(h|m|s)$",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "tolerations": {
+              "description": "Pod tolerations",
+              "items": {
+                "type": "object"
+              },
+              "title": "tolerations",
+              "type": "array"
+            },
+            "volumes": {
+              "description": "List of paths to persist",
+              "items": {
+                "type": "string"
+              },
+              "title": "volumes",
+              "type": "array"
+            },
+            "workdir": {
+              "description": "Working directory of your development container",
+              "title": "workdir",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "title": "dev",
+      "type": "object"
+    },
+    "external": {
+      "additionalProperties": false,
+      "description": "A list of external resources that are part of your development environment. Use this section for resources that are deployed outside of the okteto cluster like Cloud resources or dashboards.",
+      "patternProperties": {
+        ".*": {
+          "additionalProperties": false,
+          "properties": {
+            "endpoints": {
+              "description": "List of endpoints to access the external resource",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "description": "The name of the endpoint",
+                    "required": [
+                      "name"
+                    ],
+                    "title": "name",
+                    "type": "string"
+                  },
+                  "url": {
+                    "description": "The url of the endpoint. Can be set dynamically during deployment using $OKTETO_EXTERNAL_{EXTERNAL_NAME}_ENDPOINTS_{ENDPOINT_NAME}_URL",
+                    "format": "uri",
+                    "title": "url",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              },
+              "title": "endpoints",
+              "type": "array"
+            },
+            "icon": {
+              "description": "Icon to represent the external resource",
+              "title": "icon",
+              "type": "string"
+            },
+            "notes": {
+              "description": "Path to documentation or notes about the external resource",
+              "title": "notes",
+              "type": "string"
+            }
+          },
+          "required": [
+            "endpoints"
+          ],
+          "type": "object"
+        }
+      },
+      "title": "external",
+      "type": "object"
+    },
+    "forward": {
+      "description": "When declaring a global forward Okteto will automatically handle port collision when two or more okteto up sessions are running simultaneously. If the okteto up session detects that the port is already in use and said port is defined as global forward okteto up will ignore the port collision and continue the up sequence. If the port is later available okteto up session will automatically connect to it without interrupting the session.",
+      "items": {
+        "oneOf": [
+          {
+            "description": "Port forward in the format localPort:service:remotePort or localPort:remotePort",
+            "pattern": "^\\d+:[^:]+:\\d+$|^\\d+:\\d+$",
+            "title": "forward",
+            "type": "string"
+          },
+          {
+            "additionalProperties": false,
+            "description": "Detailed port forward configuration",
+            "oneOf": [
+              {
+                "not": {
+                  "required": [
+                    "labels"
+                  ]
+                },
+                "required": [
+                  "name"
+                ]
+              },
+              {
+                "not": {
+                  "required": [
+                    "name"
+                  ]
+                },
+                "required": [
+                  "labels"
+                ]
+              },
+              {
+                "not": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "name"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "labels"
+                      ]
+                    }
+                  ]
+                }
+              }
+            ],
+            "properties": {
+              "labels": {
+                "description": "Labels to select the service to forward to",
+                "patternProperties": {
+                  ".*": {
+                    "type": "string"
+                  }
+                },
+                "title": "labels",
+                "type": "object"
+              },
+              "localPort": {
+                "description": "Local port to forward from",
+                "title": "localPort",
+                "type": "integer"
+              },
+              "name": {
+                "description": "Name of the service to forward to",
+                "title": "name",
+                "type": "string"
+              },
+              "remotePort": {
+                "description": "Remote port to forward to",
+                "title": "remotePort",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "localPort",
+              "remotePort"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "title": "forward",
+      "type": "array"
+    },
+    "icon": {
+      "anyOf": [
+        {
+          "enum": [
+            "default",
+            "container",
+            "dashboard",
+            "database",
+            "function",
+            "graph",
+            "storage",
+            "launchdarkly",
+            "mongodb",
+            "gcp",
+            "aws",
+            "okteto"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "description": "Sets the icon that will be shown in the Okteto UI.",
+      "title": "icon",
+      "type": "string"
+    },
+    "image": {
+      "description": "The name of the image to build and push. In clusters that have Okteto installed",
+      "title": "image",
+      "type": "string"
+    },
+    "name": {
+      "description": "The name of your development environment. It defaults to the name of your git repository.",
+      "title": "name",
+      "type": "string"
+    },
+    "namespace": {
+      "description": "The namespace where the development environment is deployed. By default",
+      "title": "namespace",
+      "type": "string"
+    },
+    "test": {
+      "description": "The test configuration for your development environment. This feature is only supported in clusters that have Okteto installed.",
+      "patternProperties": {
+        ".*": {
+          "additionalProperties": false,
+          "properties": {
+            "artifacts": {
+              "description": "A list of files and/or folder to be exported after the execution of the tests. They will be added relative to root context of the tests. If you want to export coverage reports and test results this is where they should go.",
+              "items": {
+                "type": "string"
+              },
+              "title": "artifacts",
+              "type": "array"
+            },
+            "caches": {
+              "description": "A list of cache mounts to be used as part of running the tests. This is used to speed up recurrent test executions where, for example, dependencies will not be reinstalled and will instead be mounted from the cache.",
+              "items": {
+                "type": "string"
+              },
+              "title": "caches",
+              "type": "array"
+            },
+            "commands": {
+              "description": "Provide a list of commands to run the tests. For the tests to be considered successful, each command must exit with a zero exit code. If any command returns a non-zero exit code, the Test Container will be marked as failed",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "command": {
+                        "description": "Command to execute",
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "Name of the command",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "command"
+                    ],
+                    "type": "object"
+                  }
+                ]
+              },
+              "required": [
+                "commands"
+              ],
+              "title": "commands",
+              "type": "array"
+            },
+            "context": {
+              "description": "The folder to use as the root for running the tests. If this is empty, the location of the Okteto Manifest will be used (usually the root of the project).",
+              "title": "context",
+              "type": "string"
+            },
+            "depends_on": {
+              "description": "A list of Test Containers this test depends on. When a Test Container is executed, all its dependencies are executed first. The Test Containers defined in depends_on must exist in the current Okteto Manifest.",
+              "items": {
+                "type": "string"
+              },
+              "title": "depends_on",
+              "type": "array"
+            },
+            "hosts": {
+              "description": "A list of hostnames and ips. For each pair, an entry is created in /etc/hosts during the test execution. The following extended notation is also supported: hosts[0].hostname=hostname1 hosts[0].ip=ip1",
+              "items": {
+                "oneOf": [
+                  {
+                    "pattern": "^[a-zA-Z0-9.-]+:[0-9.]+$",
+                    "type": "string"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "hostname": {
+                        "type": "string"
+                      },
+                      "ip": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "hostname",
+                      "ip"
+                    ],
+                    "type": "object"
+                  }
+                ]
+              },
+              "title": "hosts",
+              "type": "array"
+            },
+            "image": {
+              "description": "Base image used to run your test.",
+              "title": "image",
+              "type": "string"
+            }
+          },
+          "required": [
+            "commands"
+          ],
+          "type": "object"
+        }
+      },
+      "title": "test",
+      "type": "object"
+    }
+  },
+  "title": "Okteto Manifest",
+  "type": "object"
+}
