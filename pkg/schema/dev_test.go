@@ -133,6 +133,8 @@ dev:
       runAsUser: 1000
       runAsGroup: 2000
       fsGroup: 3000
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
       capabilities:
         add:
           - SYS_PTRACE
@@ -226,7 +228,7 @@ dev:
 		//		{
 		//			name: "persistentVolume.enabled must be true when using services",
 		//			manifest: `
-		//dev:
+		// dev:
 		//  api:
 		//    services:
 		//      - name: worker
@@ -238,9 +240,9 @@ dev:
 		//      enabled: false`,
 		//			wantError: true,
 		//		},
-		//{
+		// {
 		//	name: "persistentVolume.enabled must be true when using volumes",
-		//},
+		// },
 		{
 			name: "invalid sync format",
 			manifest: `
