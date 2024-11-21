@@ -744,9 +744,6 @@ workflows:
       - e2e-okteto:
           requires:
             - test-e2e-setup
-      - test-e2e-setup:
-          requires:
-            - build-binaries
       - e2e-build-windows:
           requires:
             - test-e2e-setup
