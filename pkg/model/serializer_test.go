@@ -22,10 +22,12 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/build"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/externalresource"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -1148,7 +1150,7 @@ dev:
 						SSHServerPort: 2222,
 						Services:      []*Dev{},
 						InitContainer: InitContainer{
-							Image: OktetoBinImageTag,
+							Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
 						},
 						Timeout: Timeout{
 							Resources: 120 * time.Second,
@@ -1201,7 +1203,7 @@ dev:
 						SSHServerPort: 2222,
 						Services:      []*Dev{},
 						InitContainer: InitContainer{
-							Image: OktetoBinImageTag,
+							Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
 						},
 						Timeout: Timeout{
 							Resources: 120 * time.Second,
@@ -1277,7 +1279,7 @@ dev:
 						SSHServerPort: 2222,
 						Services:      []*Dev{},
 						InitContainer: InitContainer{
-							Image: OktetoBinImageTag,
+							Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
 						},
 						Timeout: Timeout{
 							Resources: 120 * time.Second,
@@ -1389,7 +1391,7 @@ dev:
 							},
 						},
 						InitContainer: InitContainer{
-							Image: OktetoBinImageTag,
+							Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
 						},
 						Timeout: Timeout{
 							Resources: 120 * time.Second,
@@ -1477,7 +1479,7 @@ dev:
 						SSHServerPort: 2222,
 						Services:      []*Dev{},
 						InitContainer: InitContainer{
-							Image: OktetoBinImageTag,
+							Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
 						},
 						Timeout: Timeout{
 							Resources: 120 * time.Second,
@@ -1557,7 +1559,7 @@ dev:
 						SSHServerPort: 2222,
 						Services:      []*Dev{},
 						InitContainer: InitContainer{
-							Image: OktetoBinImageTag,
+							Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
 						},
 						Timeout: Timeout{
 							Resources: 120 * time.Second,
@@ -1611,7 +1613,7 @@ dev:
 						SSHServerPort: 2222,
 						Services:      []*Dev{},
 						InitContainer: InitContainer{
-							Image: OktetoBinImageTag,
+							Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
 						},
 						Timeout: Timeout{
 							Resources: 120 * time.Second,
@@ -1806,7 +1808,7 @@ reverse:
 						Local:  8080,
 					},
 				},
-				Image:           constants.OktetoBusyboxImage,
+				Image:           config.NewImageConfig(io.NewIOController()).GetOktetoImage(),
 				ImagePullPolicy: v1.PullIfNotPresent,
 				Secrets:         []Secret{},
 				Probes:          &Probes{},
@@ -1826,7 +1828,7 @@ reverse:
 					Enabled: true,
 				},
 				InitContainer: InitContainer{
-					Image: OktetoBinImageTag,
+					Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
 				},
 			},
 		},
@@ -1889,7 +1891,7 @@ forward:
 					Enabled: true,
 				},
 				InitContainer: InitContainer{
-					Image: OktetoBinImageTag,
+					Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
 				},
 			},
 		},
@@ -1945,7 +1947,7 @@ forward:
 					Enabled: true,
 				},
 				InitContainer: InitContainer{
-					Image: OktetoBinImageTag,
+					Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
 				},
 			},
 		},
@@ -1971,7 +1973,7 @@ forward:
 				Command: Command{
 					Values: []string{"sh"},
 				},
-				Image:           constants.OktetoBusyboxImage,
+				Image:           config.NewImageConfig(io.NewIOController()).GetOktetoImage(),
 				ImagePullPolicy: v1.PullIfNotPresent,
 				Secrets:         []Secret{},
 				Probes:          &Probes{},
@@ -2003,7 +2005,7 @@ forward:
 					Enabled: true,
 				},
 				InitContainer: InitContainer{
-					Image: OktetoBinImageTag,
+					Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
 				},
 			},
 		},

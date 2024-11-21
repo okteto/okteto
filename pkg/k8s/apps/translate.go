@@ -521,7 +521,7 @@ func TranslateOktetoInitBinContainer(rule *model.TranslationRule, spec *apiv1.Po
 		Name:            OktetoBinName,
 		Image:           initContainer.Image,
 		ImagePullPolicy: apiv1.PullIfNotPresent,
-		Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
+		Command:         []string{"sh", "-c", "cp /usr/bin-image/bin/* /okteto/bin"},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
 				Name:      OktetoBinName,

@@ -66,17 +66,8 @@ const (
 	// OktetoInvalidateCacheEnvVar defines a ramdom number to invalidate the "--remote" cache
 	OktetoInvalidateCacheEnvVar = "OKTETO_INVALIDATE_CACHE"
 
-	// OktetoDeployRemoteImage defines okteto cli image used for deploy an environment remotely
-	OktetoDeployRemoteImage = "OKTETO_REMOTE_CLI_IMAGE"
-
-	// OktetoCLIImageForRemoteTemplate defines okteto CLI image template to use for remote deployments
-	OktetoCLIImageForRemoteTemplate = "okteto/okteto:%s"
-
 	// OktetoPipelineRunnerImage defines image to use for remote deployments if empty
 	OktetoPipelineRunnerImage = "okteto/pipeline-runner:1.0.2"
-
-	// OktetoBusyboxImage defines image to use for stacks and hybrid
-	OktetoBusyboxImage = "okteto/busybox:latest"
 
 	// OktetoEnvFile defines the name for okteto env file
 	OktetoEnvFile = "OKTETO_ENV"

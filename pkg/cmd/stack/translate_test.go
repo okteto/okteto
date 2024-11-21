@@ -21,8 +21,9 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/build"
-	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -280,7 +281,7 @@ func Test_translateStatefulSet(t *testing.T) {
 	}
 	initContainer := apiv1.Container{
 		Name:            fmt.Sprintf("init-%s", "svcName"),
-		Image:           constants.OktetoBusyboxImage,
+		Image:           config.NewImageConfig(io.NewIOController()).GetOktetoImage(),
 		Command:         []string{"sh", "-c", "chmod 777 /data"},
 		ImagePullPolicy: apiv1.PullIfNotPresent,
 		VolumeMounts: []apiv1.VolumeMount{
@@ -636,7 +637,7 @@ func Test_translateJobWithVolumes(t *testing.T) {
 	}
 	initContainer := apiv1.Container{
 		Name:            fmt.Sprintf("init-%s", "svcName"),
-		Image:           constants.OktetoBusyboxImage,
+		Image:           config.NewImageConfig(io.NewIOController()).GetOktetoImage(),
 		ImagePullPolicy: apiv1.PullIfNotPresent,
 		Command:         []string{"sh", "-c", "chmod 777 /data"},
 		VolumeMounts: []apiv1.VolumeMount{

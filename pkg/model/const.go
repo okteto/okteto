@@ -150,9 +150,6 @@ const (
 	// OktetoBuildkitHostURLEnvVar is the url of the Okteto Buildkit instance
 	OktetoBuildkitHostURLEnvVar = "BUILDKIT_HOST"
 
-	// OktetoBinEnvVar defines the okteto binary that should be used
-	OktetoBinEnvVar = "OKTETO_BIN"
-
 	// OktetoSkipCleanupEnvVar defines the okteto binary that should be used
 	OktetoSkipCleanupEnvVar = "OKTETO_SKIP_CLEANUP"
 

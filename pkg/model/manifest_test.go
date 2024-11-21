@@ -23,12 +23,14 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/build"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/discovery"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -596,7 +598,7 @@ func TestInferFromStack(t *testing.T) {
 						Selector:        Selector{},
 						Image:           "",
 						ImagePullPolicy: apiv1.PullAlways,
-						InitContainer:   InitContainer{Image: OktetoBinImageTag},
+						InitContainer:   InitContainer{Image: config.NewImageConfig(io.NewIOController()).GetBinImage()},
 						Probes:          &Probes{},
 						Lifecycle:       &Lifecycle{},
 						Workdir:         "/okteto",
@@ -1578,7 +1580,7 @@ func TestRead(t *testing.T) {
 						Selector:        Selector{},
 						Image:           "test-image",
 						ImagePullPolicy: apiv1.PullAlways,
-						InitContainer:   InitContainer{Image: OktetoBinImageTag},
+						InitContainer:   InitContainer{Image: config.NewImageConfig(io.NewIOController()).GetBinImage()},
 						Probes:          &Probes{},
 						Lifecycle:       &Lifecycle{},
 						Workdir:         "/okteto",

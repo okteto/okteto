@@ -195,8 +195,10 @@ jobs:
           # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
-            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e:${CIRCLE_SHA1}
+            export OKTETO_BIN=okteto.global/cli-e2e:${CIRCLE_SHA1}
             echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
+            echo "OKTETO_BIN=$OKTETO_BIN"
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_PRODUCT_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-deploy
@@ -214,8 +216,10 @@ jobs:
           name: Run up integration tests
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
-            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e:${CIRCLE_SHA1}
+            export OKTETO_BIN=okteto.global/cli-e2e:${CIRCLE_SHA1}
             echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
+            echo "OKTETO_BIN=$OKTETO_BIN"
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_PRODUCT_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-up
@@ -235,8 +239,10 @@ jobs:
           name: Run okteto integration tests
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
-            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e:${CIRCLE_SHA1}
+            export OKTETO_BIN=okteto.global/cli-e2e:${CIRCLE_SHA1}
             echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
+            echo "OKTETO_BIN=$OKTETO_BIN"
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_PRODUCT_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-okteto
@@ -254,11 +260,11 @@ jobs:
           # As the integration test running the okteto deploy needs the CLI which we are testing, we build the current
           # CLI to the okteto.dev registry, so it is available for the user running the tests. Then, in the step
           # which run the deploy, we set the env var OKTETO_REMOTE_CLI_IMAGE to the one we are building
-          name: Build OKTETO_REMOTE_CLI_IMAGE for current commit
+          name: Build Dockerfile for current commit
           command: |
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_PRODUCT_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-linux:${CIRCLE_SHA1}
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e:${CIRCLE_SHA1}
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
@@ -285,37 +291,6 @@ jobs:
           name: Build Docker container
           command: |
             depot build --platform "linux/arm64,linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile .
-
-  test-e2e-setup-windows:
-    executor:
-      name: win/server-2022
-      version: 2024.04.1
-    environment:
-      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
-      OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
-      OKTETO_NAMESPACE_PREFIX: staging
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
-      - attach_workspace:
-          at: .\artifacts
-      - run:
-          # As the integration test running the okteto deploy needs the CLI which we are testing, we build the current
-          # CLI to the okteto.dev registry, so it is available for the user running the tests. Then, in the step
-          # which run the deploy, we set the env var OKTETO_REMOTE_CLI_IMAGE to the one we are building
-          name: Build OKTETO_REMOTE_CLI_IMAGE for current commit
-          command: |
-            & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
-            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_PRODUCT_STAGING_TOKEN
-            & "$($HOME)\project\artifacts\bin\okteto.exe" build --platform "linux/amd64" --build-arg VERSION_STRING=$env:CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e-win:$env:CIRCLE_SHA1
-      - save_cache:
-          key: v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
-          paths:
-            - C:\Users\circleci\AppData\Local\go-build
-            - C:\Users\circleci\go\pkg
-            - C:\Go\pkg
 
   e2e-build-windows:
     executor:
@@ -375,7 +350,8 @@ jobs:
             $env:Path+=";$($HOME)\project\artifacts\bin"
             $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
             # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
-            $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e-win:$env:CIRCLE_SHA1"
+            $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e:$env:CIRCLE_SHA1"
+            $env:OKTETO_BIN="okteto.global/cli-e2e:${CIRCLE_SHA1}"
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
             & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_PRODUCT_STAGING_TOKEN
             go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
@@ -409,7 +385,9 @@ jobs:
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
             $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
-            $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e-win:$env:CIRCLE_SHA1"
+            $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e:$env:CIRCLE_SHA1"
+            $env:OKTETO_BIN="okteto.global/cli-e2e:$env:CIRCLE_SHA1"
+            echo OKTETO_BIN=$env:OKTETO_BIN
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
             & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_PRODUCT_STAGING_TOKEN
             go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
@@ -534,7 +512,7 @@ workflows:
               ignore: *release-branch-regex
             tags:
               ignore: /.*/
-      - test-e2e-setup-windows:
+      - test-e2e-setup:
           requires:
             - build-binaries
           filters:
@@ -546,28 +524,21 @@ workflows:
             - "build-binaries"
       - e2e-build-windows:
           requires:
-            - test-e2e-setup-windows
+            - test-e2e-setup
           filters:
             branches:
               only:
                 - master
       - e2e-deploy-windows:
           requires:
-            - test-e2e-setup-windows
+            - test-e2e-setup
           filters:
             branches:
               only:
                 - master
       - e2e-up-windows:
           requires:
-            - test-e2e-setup-windows
-          filters:
-            branches:
-              only:
-                - master
-      - test-e2e-setup:
-          requires:
-            - build-binaries
+            - test-e2e-setup
           filters:
             branches:
               only:
@@ -773,18 +744,15 @@ workflows:
       - e2e-okteto:
           requires:
             - test-e2e-setup
-      - test-e2e-setup-windows:
-          requires:
-            - build-binaries
       - e2e-build-windows:
           requires:
-            - test-e2e-setup-windows
+            - test-e2e-setup
       - e2e-deploy-windows:
           requires:
-            - test-e2e-setup-windows
+            - test-e2e-setup
       - e2e-up-windows:
           requires:
-            - test-e2e-setup-windows
+            - test-e2e-setup
 
   # run-e2e-unix is triggered by okteto-bot via Github Actions when adding the run-e2e-unix label to the PR
   # e2e test for unix platform are run
@@ -819,15 +787,15 @@ workflows:
       equal: ["run-e2e-windows", << pipeline.parameters.GHA_Meta >>]
     jobs:
       - build-binaries
-      - test-e2e-setup-windows:
+      - test-e2e-setup:
           requires:
             - build-binaries
       - e2e-build-windows:
           requires:
-            - test-e2e-setup-windows
+            - test-e2e-setup
       - e2e-deploy-windows:
           requires:
-            - test-e2e-setup-windows
+            - test-e2e-setup
       - e2e-up-windows:
           requires:
-            - test-e2e-setup-windows
+            - test-e2e-setup

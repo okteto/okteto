@@ -26,6 +26,7 @@ import (
 
 	"github.com/compose-spec/godotenv"
 	"github.com/google/uuid"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -41,9 +42,6 @@ import (
 )
 
 var (
-	// OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "okteto/bin:1.6.1"
-
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
 	// ValidKubeNameRegex is the regex to validate a kubernetes resource name
@@ -249,7 +247,7 @@ func NewDev() *Dev {
 		PersistentVolumeInfo: &PersistentVolumeInfo{Enabled: true},
 		Probes:               &Probes{},
 		Lifecycle:            &Lifecycle{},
-		InitContainer:        InitContainer{Image: OktetoBinImageTag},
+		InitContainer:        InitContainer{Image: config.NewImageConfig(oktetoLog.GetOutputWriter()).GetBinImage()},
 		Metadata: &Metadata{
 			Labels:      Labels{},
 			Annotations: Annotations{},
@@ -381,7 +379,7 @@ func (dev *Dev) SetDefaults() error {
 	}
 
 	if dev.InitContainer.Image == "" {
-		dev.InitContainer.Image = OktetoBinImageTag
+		dev.InitContainer.Image = config.NewImageConfig(oktetoLog.GetOutputWriter()).GetBinImage()
 	}
 
 	if dev.Probes == nil {
@@ -851,7 +849,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset b
 		rule.Healthchecks = true
 	}
 	if main == dev {
-		rule.Marker = OktetoBinImageTag // for backward compatibility
+		rule.Marker = config.NewImageConfig(oktetoLog.GetOutputWriter()).GetBinImage() // for backward compatibility
 		rule.OktetoBinImageTag = dev.InitContainer.Image
 		rule.Environment = append(
 			rule.Environment,

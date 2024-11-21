@@ -27,6 +27,7 @@ import (
 
 	"github.com/kballard/go-shellquote"
 	"github.com/okteto/okteto/pkg/build"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/env"
@@ -762,7 +763,7 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return fmt.Errorf("dev workdir is not a dir")
 		}
 		dev.Workdir = localDir
-		dev.Image = constants.OktetoBusyboxImage
+		dev.Image = config.NewImageConfig(oktetoLog.GetOutputWriter()).GetOktetoImage()
 		dev.ImagePullPolicy = apiv1.PullIfNotPresent
 
 	} else {
@@ -1096,7 +1097,7 @@ func (d *Dev) MarshalYAML() (interface{}, error) {
 	if toMarshall.Metadata != nil && len(toMarshall.Metadata.Annotations) == 0 && len(toMarshall.Metadata.Labels) == 0 {
 		toMarshall.Metadata = nil
 	}
-	if toMarshall.InitContainer.Image == OktetoBinImageTag {
+	if toMarshall.InitContainer.Image == config.NewImageConfig(oktetoLog.GetOutputWriter()).GetBinImage() {
 		toMarshall.InitContainer.Image = ""
 	}
 	if toMarshall.Timeout.Default == 1*time.Minute && toMarshall.Timeout.Resources == 2*time.Minute {
