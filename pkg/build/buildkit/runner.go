@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/types"
 )
 
 const (
@@ -60,6 +61,9 @@ type Runner struct {
 	logger                             *io.Controller
 	metadata                           *runnerMetadata
 	maxAttemptsBuildkitTransientErrors int
+}
+type SolveOptBuilderInterface interface {
+	Build(ctx context.Context, buildOptions *types.BuildOptions) (*client.SolveOpt, error)
 }
 
 // SolveBuildFn is a function that solves a build
