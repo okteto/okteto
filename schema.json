@@ -464,17 +464,27 @@
             },
             "environment": {
               "description": "Add environment variables to your development container. If a variable already exists on your deployment, it will be overridden with the value specified on the manifest. Environment variables with only a key, or with a value with a $ sign resolve to their values on the machine Okteto is running on",
-              "patternProperties": {
-                ".*": {
-                  "type": [
-                    "string",
-                    "boolean",
-                    "number"
-                  ]
+              "oneOf": [
+                {
+                  "patternProperties": {
+                    ".*": {
+                      "type": [
+                        "string",
+                        "boolean",
+                        "number"
+                      ]
+                    }
+                  },
+                  "type": "object"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
                 }
-              },
-              "title": "environment",
-              "type": "object"
+              ],
+              "title": "environment"
             },
             "externalVolumes": {
               "description": "A list of persistent volume claims that you want to mount in your development container",

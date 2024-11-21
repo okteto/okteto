@@ -24,8 +24,8 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
-// newManifestFriendlyError returns a new UserFriendlyError for the okteto manifest.
-func newManifestFriendlyError(err error) *suggest.UserFriendlyError {
+// NewManifestFriendlyError returns a new UserFriendlyError for the okteto manifest.
+func NewManifestFriendlyError(err error) *suggest.UserFriendlyError {
 	rules := getManifestSuggestionRules(Manifest{})
 	// we wrap err with oktetoErrors.ErrInvalidManifest because in some parts of the code we check for this error type
 	manifestErr := fmt.Errorf("%w:\n%w", oktetoErrors.ErrInvalidManifest, err)
@@ -77,6 +77,13 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 		suggest.NewStrReplaceRule("in type model.testCommandAlias", "the 'test commands' object"),
 		suggest.NewStrReplaceRule("into model.testAlias", "into a 'test' object"),
 		suggest.NewStrReplaceRule("in type model.testAlias", "the 'test' object"),
+		suggest.NewStrReplaceRule("into model.deployInfoRaw", "the 'deploy' object"),
+		suggest.NewStrReplaceRule("in type model.deployInfoRaw", "the 'deploy' object"),
+		suggest.NewStrReplaceRule("into model.deployCommand", "the 'deploy' object"),
+		suggest.NewStrReplaceRule("in type model.deployCommand", "the 'deploy' object"),
+
+		suggest.NewStrReplaceRule("into model.syncRaw", "the 'sync' section"),
+		suggest.NewStrReplaceRule("in type model.syncRaw", "the 'sync' section"),
 
 		// yaml types
 		suggest.NewStrReplaceRule(yaml.NodeTagSeq, "list"),
@@ -121,7 +128,7 @@ func isYamlError(err error) bool {
 func addUrlToManifestDocs() *suggest.Rule {
 	addUrl := func(e error) error {
 		docsURL := "https://www.okteto.com/docs/reference/okteto-manifest"
-		errorWithUrlToDocs := fmt.Sprintf("%s\n    Check out the okteto manifest docs at: %s", e.Error(), docsURL)
+		errorWithUrlToDocs := fmt.Sprintf("%s\n    Check out the Okteto Manifest docs at: %s", e.Error(), docsURL)
 		return errors.New(errorWithUrlToDocs)
 	}
 
