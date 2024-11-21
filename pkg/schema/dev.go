@@ -367,6 +367,9 @@ func (dev) JSONSchema() *jsonschema.Schema {
 	securityContextProps.Set("fsGroup", &jsonschema.Schema{
 		Type: &jsonschema.Type{Types: []string{"integer"}},
 	})
+	securityContextProps.Set("runAsNonRoot", &jsonschema.Schema{
+		Type: &jsonschema.Type{Types: []string{"boolean"}},
+	})
 
 	capabilitiesProps := jsonschema.NewProperties()
 	capabilitiesProps.Set("add", &jsonschema.Schema{
