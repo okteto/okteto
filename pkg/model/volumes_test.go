@@ -978,29 +978,49 @@ func Test_PersistentVolumeLabels(t *testing.T) {
 
 func Test_PersistentVolumeSize(t *testing.T) {
 	var tests = []struct {
-		name string
-		dev  *Dev
-		want string
+		name                            string
+		dev                             *Dev
+		devPersistentVolumeSizeEnvValue string
+		want                            string
 	}{
 		{
-			name: "nil",
+			name: "PersistentVolumeInfo nil - default",
 			dev:  &Dev{},
 			want: defaultVolumeSize,
 		},
 		{
-			name: "empty",
+			name: "PersistentVolumeInfo empty - default",
 			dev:  &Dev{PersistentVolumeInfo: &PersistentVolumeInfo{}},
 			want: defaultVolumeSize,
 		},
 		{
-			name: "size",
+			name: "PersistentVolumeInfo exists - default",
 			dev:  &Dev{PersistentVolumeInfo: &PersistentVolumeInfo{Size: "15Gi"}},
 			want: "15Gi",
+		},
+		{
+			name:                            "PersistentVolumeInfo nil - ENV",
+			dev:                             &Dev{},
+			devPersistentVolumeSizeEnvValue: "6Gi",
+			want:                            "6Gi",
+		},
+		{
+			name:                            "PersistentVolumeInfo empty - ENV",
+			devPersistentVolumeSizeEnvValue: "6Gi",
+			dev:                             &Dev{PersistentVolumeInfo: &PersistentVolumeInfo{}},
+			want:                            "6Gi",
+		},
+		{
+			name:                            "PersistentVolumeInfo exists - ENV",
+			devPersistentVolumeSizeEnvValue: "6Gi",
+			dev:                             &Dev{PersistentVolumeInfo: &PersistentVolumeInfo{Size: "15Gi"}},
+			want:                            "15Gi",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(devPersistentVolumeSizeEnvVar, tt.devPersistentVolumeSizeEnvValue)
 			result := tt.dev.PersistentVolumeSize()
 			if result != tt.want {
 				t.Errorf("'%s' did get an expected result '%s' vs '%s'", tt.name, tt.want, result)

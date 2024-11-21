@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -25,6 +26,9 @@ import (
 
 const (
 	defaultVolumeSize = "5Gi"
+
+	// devPersistentVolumeEnabledEnvVar is the name of the environment variable to change the defaultVolumeSize value
+	devPersistentVolumeSizeEnvVar = "OKTETO_DEV_PERSISTENT_VOLUME_SIZE"
 )
 
 func (dev *Dev) translateDeprecatedVolumeFields() error {
@@ -205,13 +209,24 @@ func (dev *Dev) PersistentVolumeLabels() Labels {
 	return dev.PersistentVolumeInfo.Labels
 }
 
-// PersistentVolumeSize returns the persistent volume size
+// devPersistentVolumeSizeEnvValueOrDefault returns the value of the environment variable OKTETO_DEV_PERSISTENT_VOLUME_SIZE
+// if not set, it will return the default value at defaultVolumeSize local variable
+func devPersistentVolumeSizeEnvValueOrDefault() string {
+	if v, ok := os.LookupEnv(devPersistentVolumeSizeEnvVar); ok && v != "" {
+		return v
+	}
+	return defaultVolumeSize
+}
+
+// PersistentVolumeSize returns the persistent volume size set at the dev object
+// if not set, it will return the value of the environment variable OKTETO_DEV_PERSISTENT_VOLUME_SIZE
+// if the env is not set, the default value at defaultVolumeSize local variable
 func (dev *Dev) PersistentVolumeSize() string {
 	if dev.PersistentVolumeInfo == nil {
-		return defaultVolumeSize
+		return devPersistentVolumeSizeEnvValueOrDefault()
 	}
 	if dev.PersistentVolumeInfo.Size == "" {
-		return defaultVolumeSize
+		return devPersistentVolumeSizeEnvValueOrDefault()
 	}
 	return dev.PersistentVolumeInfo.Size
 }
