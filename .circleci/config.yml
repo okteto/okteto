@@ -543,13 +543,6 @@ workflows:
             branches:
               only:
                 - master
-      - test-e2e-setup:
-          requires:
-            - build-binaries
-          filters:
-            branches:
-              only:
-                - master
       - e2e-build:
           requires:
             - test-e2e-setup
