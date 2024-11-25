@@ -47,6 +47,27 @@ func (e CommandErr) Error() string {
 	return fmt.Sprintf("error on stage %s: %s", e.Stage, e.Err.Error())
 }
 
+var (
+	oktetoRemoteCLIImage = "okteto/okteto"
+	dockerhubRegistry    = "docker.io"
+)
+
+func isOktetoRemoteImage(image string) bool {
+	return strings.Contains(image, oktetoRemoteCLIImage) && strings.Contains(image, dockerhubRegistry)
+}
+
+func isOktetoRemoteForkImage(image string) bool {
+	return strings.Contains(image, oktetoRemoteCLIImage)
+}
+
+func isImageIsNotAccessibleErr(err error) bool {
+	return isLoggedIntoRegistryButDontHavePermissions(err) ||
+		isNotLoggedIntoRegistry(err) ||
+		isPullAccessDenied(err) ||
+		isNotFound(err) ||
+		isHostNotFound(err)
+}
+
 // GetSolveErrorMessage returns the parsed error message
 func GetSolveErrorMessage(err error) error {
 	if err == nil {
@@ -60,17 +81,29 @@ func GetSolveErrorMessage(err error) error {
 			E:    fmt.Errorf("buildkit service is not available at the moment"),
 			Hint: "Please try again later.",
 		}
-	case isLoggedIntoRegistryButDontHavePermissions(err) ||
-		isNotLoggedIntoRegistry(err) ||
-		isPullAccessDenied(err) ||
-		isNotFound(err) ||
-		isHostNotFound(err):
+	case isImageIsNotAccessibleErr(err):
 		err = oktetoErrors.UserError{
 			E: fmt.Errorf("the image '%s' is not accessible or it does not exist", imageFromError),
 			Hint: `Please verify the name of the image to make sure it exists.
     When using private registries, make sure Okteto Registry Credentials are correctly configured.
     See more at: https://www.okteto.com/docs/admin/registry-credentials/`,
 		}
+
+		if isOktetoRemoteImage(imageFromError) {
+			err = oktetoErrors.UserError{
+				E: fmt.Errorf("the image '%s' is not accessible or it does not exist", imageFromError),
+				Hint: `Please verify you have access to dockerhub.
+    If you are using airgapped environment check our docs on how to use Okteto Remote in airgapped environments: [TBD]`,
+			}
+
+		} else if isOktetoRemoteForkImage(imageFromError) {
+			err = oktetoErrors.UserError{
+				E: fmt.Errorf("the image '%s' is not accessible or it does not exist", imageFromError),
+				Hint: `Please verify you have migrated correctly to the current version for remote.
+    If you are using airgapped environment check our docs on how to use Okteto Remote in airgapped environments: [TBD]`,
+			}
+		}
+
 	default:
 		var cmdErr CommandErr
 		if errors.As(err, &cmdErr) {
