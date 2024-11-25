@@ -16,6 +16,7 @@ package nginx
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/format"
@@ -32,9 +33,8 @@ func (d *Driver) divertIngress(ctx context.Context, name string) error {
 	in, ok := d.cache.developerIngresses[name]
 	if !ok {
 		in = translateIngress(d.name, d.namespace, from)
-		oktetoLog.Infof("creating ingress %s/%s\n", in.Namespace, in.Name)
-		var err error
-		if in, err = d.client.NetworkingV1().Ingresses(d.namespace).Create(ctx, in, metav1.CreateOptions{}); err != nil {
+		oktetoLog.Infof("creating ingress %s/%s", in.Namespace, in.Name)
+		if _, err := d.client.NetworkingV1().Ingresses(d.namespace).Create(ctx, in, metav1.CreateOptions{}); err != nil {
 			if !k8sErrors.IsAlreadyExists(err) {
 				return err
 			}
@@ -42,21 +42,30 @@ func (d *Driver) divertIngress(ctx context.Context, name string) error {
 			if err != nil {
 				return err
 			}
+			// the ingress was created, refresh the cache
+			d.cache.developerIngresses[name] = in
 		}
 	} else {
-		updatedIn := translateIngress(d.name, d.namespace, from)
-		oktetoLog.Infof("updating ingress %s/%s\n", updatedIn.Namespace, updatedIn.Name)
-		if _, err := d.client.NetworkingV1().Ingresses(d.namespace).Update(ctx, updatedIn, metav1.UpdateOptions{}); err != nil {
-			if !k8sErrors.IsConflict(err) {
-				return err
-			}
-			// refetch the ingress. This will include the changes from the mutation webhook
-			updatedIn, err = d.client.NetworkingV1().Ingresses(d.namespace).Get(ctx, in.Name, metav1.GetOptions{})
-			if err != nil {
-				return err
-			}
+		updatedIn := in.DeepCopy()
+		if in.Annotations[model.OktetoAutoCreateAnnotation] == "true" {
+			// ingress was created by divert
+			updatedIn = translateIngress(d.name, d.namespace, d.cache.divertIngresses[name])
 		}
-		in = updatedIn
+		if !isEqualIngress(in, updatedIn) {
+			oktetoLog.Infof("updating ingress %s/%s", updatedIn.Namespace, updatedIn.Name)
+			if _, err := d.client.NetworkingV1().Ingresses(d.namespace).Update(ctx, updatedIn, metav1.UpdateOptions{}); err != nil {
+				if !k8sErrors.IsConflict(err) {
+					return err
+				}
+				// the ingress was updated, refresh the cache
+				updatedIn, err = d.client.NetworkingV1().Ingresses(d.namespace).Get(ctx, in.Name, metav1.GetOptions{})
+				if err != nil {
+					return err
+				}
+			}
+			d.cache.developerIngresses[name] = updatedIn
+			in = updatedIn
+		}
 	}
 
 	for _, rule := range in.Spec.Rules {
@@ -95,4 +104,14 @@ func translateIngress(name, namespace string, from *networkingv1.Ingress) *netwo
 		}
 	}
 	return result
+}
+
+func isEqualIngress(in1 *networkingv1.Ingress, in2 *networkingv1.Ingress) bool {
+	if in1.Annotations == nil {
+		in1.Annotations = map[string]string{}
+	}
+	if in2.Annotations == nil {
+		in2.Annotations = map[string]string{}
+	}
+	return reflect.DeepEqual(in1.Spec, in2.Spec) && reflect.DeepEqual(in1.Labels, in2.Labels) && reflect.DeepEqual(in1.Annotations, in2.Annotations)
 }

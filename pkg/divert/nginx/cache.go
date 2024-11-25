@@ -35,7 +35,6 @@ func (d *Driver) initCache(ctx context.Context) error {
 		developerIngresses: map[string]*networkingv1.Ingress{},
 		developerServices:  map[string]*apiv1.Service{},
 	}
-
 	// Init ingress cache for diverted namespace
 	iList, err := d.client.NetworkingV1().Ingresses(d.divert.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
