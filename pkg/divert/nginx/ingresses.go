@@ -31,6 +31,9 @@ import (
 func (d *Driver) divertIngress(ctx context.Context, name string) error {
 	from := d.cache.divertIngresses[name]
 	in, ok := d.cache.developerIngresses[name]
+
+	// Ingresses that are deployed as part of the current deployment will never
+	// enter this block because they are always precreated
 	if !ok {
 		in = translateIngress(d.name, d.namespace, from)
 		oktetoLog.Infof("creating ingress %s/%s", in.Namespace, in.Name)
