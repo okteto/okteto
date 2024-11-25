@@ -61,6 +61,7 @@ func Test_translateIngress(t *testing.T) {
 					Annotations: map[string]string{
 						model.OktetoAutoCreateAnnotation:     "true",
 						model.OktetoDivertedSourceAnnotation: "staging",
+						model.OktetoDivertHeaderAnnotation:   "cindy",
 						"a1":                                 "v1",
 					},
 				},
@@ -100,6 +101,7 @@ func Test_translateIngress(t *testing.T) {
 					Annotations: map[string]string{
 						model.OktetoAutoCreateAnnotation:     "true",
 						model.OktetoDivertedSourceAnnotation: "staging",
+						model.OktetoDivertHeaderAnnotation:   "cindy",
 					},
 				},
 				Spec: networkingv1.IngressSpec{

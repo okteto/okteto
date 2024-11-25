@@ -38,6 +38,7 @@ func Test_divertIngresses(t *testing.T) {
 			Annotations: map[string]string{
 				"a1":                                 "v1",
 				model.OktetoDivertedSourceAnnotation: "staging",
+				model.OktetoDivertHeaderAnnotation:   "cindy",
 			},
 		},
 		Spec: networkingv1.IngressSpec{
@@ -155,6 +156,7 @@ func Test_divertIngresses(t *testing.T) {
 			Annotations: map[string]string{
 				model.OktetoAutoCreateAnnotation:     "true",
 				model.OktetoDivertedSourceAnnotation: "staging",
+				model.OktetoDivertHeaderAnnotation:   "cindy",
 				"a1":                                 "v2",
 			},
 		},
@@ -232,6 +234,7 @@ func Test_divertIngresses(t *testing.T) {
 			Annotations: map[string]string{
 				model.OktetoAutoCreateAnnotation:     "true",
 				model.OktetoDivertedSourceAnnotation: "staging",
+				model.OktetoDivertHeaderAnnotation:   "cindy",
 				"a1":                                 "v2",
 			},
 		},
