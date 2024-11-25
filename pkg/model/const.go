@@ -128,7 +128,9 @@ const (
 	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
 	// OktetoDivertedSourceAnnotation indicates the namespace source of the diverted resource (usually a service or an ingress)
 	// The value of this annotation is the namespace of the original resource
-	OktetoDivertedSourceAnnotation = "dev.okteto.com/diverted-source"
+	OktetoDivertedSourceAnnotation = "divert.okteto.com/source-namespace"
+	// OktetoDivertHeaderAnnotation is the value used as the baggage header for diverted resources
+	OktetoDivertHeaderAnnotation = "divert.okteto.com/header"
 	// OktetoRestartAnnotation indicates the dev pod must be recreated to pull the latest version of its image
 	OktetoRestartAnnotation = "dev.okteto.com/restart"
 	// OktetoSyncAnnotation indicates the hash of the sync folders to force redeployment

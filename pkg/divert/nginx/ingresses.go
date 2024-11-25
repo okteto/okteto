@@ -54,6 +54,10 @@ func (d *Driver) divertIngress(ctx context.Context, name string) error {
 			// ingress was created by divert
 			updatedIn = translateIngress(d.name, d.namespace, d.cache.divertIngresses[name])
 		}
+
+		// apply the header annotations always even if the ingress was created in the child namespace
+		updatedIn.Annotations[model.OktetoDivertHeaderAnnotation] = updatedIn.Namespace
+
 		if !isEqualIngress(in, updatedIn) {
 			oktetoLog.Infof("updating ingress %s/%s", updatedIn.Namespace, updatedIn.Name)
 			if _, err := d.client.NetworkingV1().Ingresses(d.namespace).Update(ctx, updatedIn, metav1.UpdateOptions{}); err != nil {
@@ -96,6 +100,7 @@ func translateIngress(name, namespace string, from *networkingv1.Ingress) *netwo
 	}
 	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
 	result.Annotations[model.OktetoDivertedSourceAnnotation] = from.Namespace
+	result.Annotations[model.OktetoDivertHeaderAnnotation] = namespace
 
 	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, format.ResourceK8sMetaString(name))
 	for i := range result.Spec.Rules {
