@@ -116,15 +116,14 @@ func GetSolveErrorMessage(err error) error {
 	return err
 }
 
-const (
+var (
 	// regexForImageFromFailedToSolveErr is the regex to extract the image from an error message
 	// buildkit solve errors provide the image name between :
-	regexForImageFromFailedToSolveErr = `: ([a-zA-Z0-9\.\/_-]+(:[a-zA-Z0-9-]+)?):`
+	regexForImageFromFailedToSolveErr = regexp.MustCompile(`: ([a-zA-Z0-9\.\/_-]+(:[a-zA-Z0-9-]+)?):`)
 )
 
 func extractImageFromError(err error) string {
-	re := regexp.MustCompile(regexForImageFromFailedToSolveErr)
-	if matches := re.FindStringSubmatch(err.Error()); len(matches) > 1 {
+	if matches := regexForImageFromFailedToSolveErr.FindStringSubmatch(err.Error()); len(matches) > 1 {
 		return matches[1]
 	}
 	return ""
