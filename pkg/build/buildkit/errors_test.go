@@ -112,8 +112,9 @@ func Test_GetSolveErrorMessage(t *testing.T) {
 			err:  errors.New("failed to solve: docker.io/okteto/okteto:1.2.4: failed to do request: Head 'https://non-existing.okteto.dev/v2/xxxx/cli/manifests/debug-4': dial tcp: lookup non-existing.okteto.dev on xx.xxxx.x.xx:xx: no such host"),
 			expected: oktetoErrors.UserError{
 				E: fmt.Errorf("the image 'docker.io/okteto/okteto' is not accessible or it does not exist"),
-				Hint: `Please verify you have access to dockerhub.
-    If you are using airgapped environment check our docs on how to use Okteto Remote in airgapped environments: [TBD]`,
+				Hint: `Please verify you have access to Docker Hub.
+    If you are using an airgapped environment, make sure Okteto Remote is correctly configured in airgapped environments:
+    See more at: https://www.okteto.com/docs/self-hosted/manage/air-gapped/`,
 			},
 		},
 		{
@@ -122,7 +123,8 @@ func Test_GetSolveErrorMessage(t *testing.T) {
 			expected: oktetoErrors.UserError{
 				E: fmt.Errorf("the image 'myregistry.com/okteto/okteto' is not accessible or it does not exist"),
 				Hint: `Please verify you have migrated correctly to the current version for remote.
-    If you are using airgapped environment check our docs on how to use Okteto Remote in airgapped environments: [TBD]`,
+    If you are using an airgapped environment, make sure Okteto Remote is correctly configured in airgapped environments:
+    See more at: https://www.okteto.com/docs/self-hosted/manage/air-gapped/`,
 			},
 		},
 		{

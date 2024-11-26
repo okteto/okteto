@@ -92,15 +92,17 @@ func GetSolveErrorMessage(err error) error {
 		if isOktetoRemoteImage(imageFromError) {
 			err = oktetoErrors.UserError{
 				E: fmt.Errorf("the image '%s' is not accessible or it does not exist", imageFromError),
-				Hint: `Please verify you have access to dockerhub.
-    If you are using airgapped environment check our docs on how to use Okteto Remote in airgapped environments: [TBD]`,
+				Hint: `Please verify you have access to Docker Hub.
+    If you are using an airgapped environment, make sure Okteto Remote is correctly configured in airgapped environments:
+    See more at: https://www.okteto.com/docs/self-hosted/manage/air-gapped/`,
 			}
 
 		} else if isOktetoRemoteForkImage(imageFromError) {
 			err = oktetoErrors.UserError{
 				E: fmt.Errorf("the image '%s' is not accessible or it does not exist", imageFromError),
 				Hint: `Please verify you have migrated correctly to the current version for remote.
-    If you are using airgapped environment check our docs on how to use Okteto Remote in airgapped environments: [TBD]`,
+    If you are using an airgapped environment, make sure Okteto Remote is correctly configured in airgapped environments:
+    See more at: https://www.okteto.com/docs/self-hosted/manage/air-gapped/`,
 			}
 		}
 
