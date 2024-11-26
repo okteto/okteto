@@ -90,23 +90,12 @@ func TestListEndpoints(t *testing.T) {
 									DeployedBy: "test",
 								},
 							},
-							Functions: []Component{
-								{
-									Endpoints: []EndpointInfo{
-										{
-											Url: "https://this.is.a.test.ok",
-										},
-									},
-									DeployedBy: "test",
-								},
-							},
 						},
 					},
 				},
 			},
 			expected: expected{
 				result: []string{
-					"https://this.is.a.test.ok",
 					"https://this.is.a.test.okk",
 					"https://this.is.a.test.okkk (external)",
 					"https://this.is.a.test.okkkk",

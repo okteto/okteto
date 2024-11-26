@@ -43,7 +43,6 @@ type Component struct {
 type Space struct {
 	Deployments  []Component
 	Statefulsets []Component
-	Functions    []Component
 	Externals    []Component
 }
 
@@ -69,7 +68,6 @@ func (c *endpointClient) List(ctx context.Context, ns, deployedBy string) ([]str
 	for _, endpoint := range filterEndpointsFromComponent(queryStruct.Response.Externals, deployedBy) {
 		endpoints = append(endpoints, fmt.Sprintf("%s (external)", endpoint))
 	}
-	endpoints = append(endpoints, filterEndpointsFromComponent(queryStruct.Response.Functions, deployedBy)...)
 
 	return endpoints, nil
 }
