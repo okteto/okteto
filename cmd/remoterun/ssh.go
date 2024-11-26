@@ -147,7 +147,7 @@ func (s *sshForwarder) handleConnection(ctx context.Context, localConn net.Conn,
 	// Reset deadlines before starting data forwarding
 	err = remoteConn.SetDeadline(time.Time{})
 	if err != nil {
-		oktetoLog.Infof("faile to reset timeout to the remote ssh agent connection: %v", err)
+		oktetoLog.Infof("failed to reset timeout to the remote ssh agent connection: %v", err)
 	}
 
 	err = localConn.SetDeadline(time.Time{})

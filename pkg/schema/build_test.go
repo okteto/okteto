@@ -46,7 +46,7 @@ build:
   withImage:
     image: my-registry/base:latest
   base:
-    context: . 
+    context: .
   api:
     context: api
     depends_on: ["base"]

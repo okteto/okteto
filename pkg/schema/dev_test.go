@@ -146,7 +146,7 @@ dev:
         annotations:
           custom.annotation/dev: "true"
         labels:
-          custom.label/dev: "true" 
+          custom.label/dev: "true"
         command: ["test"]
         container: test
         environment:
