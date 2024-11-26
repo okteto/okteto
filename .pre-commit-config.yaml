@@ -25,6 +25,7 @@ repos:
       - id: detect-private-key
         exclude: ^pkg/k8s/secrets/certs\.go$|^pkg/syncthing/certs\.go$|^pkg/deployable/certs\.go$
       - id: end-of-file-fixer
+        exclude: schema.json
       - id: fix-byte-order-marker
       - id: mixed-line-ending
       - id: trailing-whitespace
@@ -54,6 +55,7 @@ repos:
       - id: prettier
         name: Run prettier
         description: Format files with prettier
+        exclude: schema.json
 
   # yaml files check
   - repo: https://github.com/adrienverge/yamllint

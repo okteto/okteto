@@ -303,7 +303,7 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 func checkCLIVersion(currentVersion, recommendedVersion, minMajorMinor string) error {
 	version, err := semver.NewVersion(currentVersion)
 	if err != nil {
-		oktetoLog.Warning("You are using a non-standard okteto version (%s) that may be incompatible with your okteto cluster. Set OKTETO_SKIP_CLUSTER_CLI_VERSION=true to supress this message.", currentVersion)
+		oktetoLog.Warning("You are using a non-standard okteto version (%s) that may be incompatible with your okteto cluster. Set OKTETO_SKIP_CLUSTER_CLI_VERSION=true to suppress this message.", currentVersion)
 		return nil
 	}
 

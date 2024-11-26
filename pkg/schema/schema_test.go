@@ -208,7 +208,7 @@ build:
   frontend:
     context: .
     dockerfile: Dockerfile
-  
+
   frontend-dev:
     context: .
     dockerfile: Dockerfile
@@ -373,7 +373,7 @@ deploy:
       export KUBE_NAMESPACE=$OKTETO_NAMESPACE
       terraform init -input=false
       terraform apply -input=false -var "cloudflare_api_token=$CLOUDFLARE_API_TOKEN" -var "cloudflare_zone_id=$CLOUDFLARE_ZONE_ID" -var "cloudflare_account_id=$CLOUDFLARE_ACCOUNT_ID" -var "cloudflare_bucket_name=$resourceName" -var "cloudflare_record_name=www-${OKTETO_NAMESPACE}" -var "cloudflare_record_value=menu-${OKTETO_NAMESPACE}.${OKTETO_DOMAIN}" -var "sqs_queue_name=$resourceName" -auto-approve
-      
+
       r2Dashboard="https://dash.cloudflare.com/${CLOUDFLARE_ACCOUNT_ID}/r2/default/buckets/${resourceName}"
       queueDashboard="https://us-west-2.console.aws.amazon.com/sqs/v2/home?region=us-west-2#/queues"
       cloudflareDNS="https://www-${OKTETO_NAMESPACE}.okteto.net"
@@ -388,7 +388,7 @@ deploy:
         echo "QUEUE_URL=$queueUrl"
         echo "QUEUE_NAME=$resourceName"
       } >> "$OKTETO_ENV"
-  
+
   - name: Create the CF secret
     command: |
       kubectl create secret generic cf-credentials --save-config --dry-run=client --from-literal=AWS_REGION=WNAM --from-literal=AWS_DEFAULT_REGION=WNAM --from-literal=AWS_SECRET_ACCESS_KEY=$CLOUDFLARE_SECRET_ACCESS_KEY --from-literal=AWS_ACCESS_KEY_ID=$CLOUDFLARE_ACCESS_KEY_ID --from-literal=AWS_ENDPOINT=https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com -o yaml | kubectl apply -f -
@@ -456,7 +456,7 @@ dev:
     - menu:/usr/src/app
     forward:
     - 9229:9229
-  
+
   kitchen:
     image: ${OKTETO_BUILD_KITCHEN_DEV_IMAGE}
     command: bash
@@ -464,7 +464,7 @@ dev:
     - kitchen:/usr/src/app
     environment:
      GIN_MODE: debug
-  
+
   check:
     command: bash
     sync:
@@ -479,7 +479,7 @@ dev:
   unit:
     context: .
     image: okteto/golang:1
-    commands: 
+    commands:
       - make test
     artifacts:
       - coverage.txt
@@ -523,12 +523,12 @@ dev:
 			name: "okteto-community/go-getting-started-chart",
 			manifest: `
 dependencies:
-  goapp: 
+  goapp:
     repository: https://github.com/okteto-community/go-getting-started-service
     wait: true
 
 deploy:
-  - helm upgrade --install goapp chart --set image=${OKTETO_DEPENDENCY_GOAPP_VARIABLE_APP_BUILD} 
+  - helm upgrade --install goapp chart --set image=${OKTETO_DEPENDENCY_GOAPP_VARIABLE_APP_BUILD}
 `,
 		},
 		{

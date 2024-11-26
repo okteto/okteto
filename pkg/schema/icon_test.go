@@ -43,7 +43,7 @@ icon: my-custom-icon`,
 		{
 			name: "invalid type",
 			manifest: `
-icon: 
+icon:
   name: invalid`,
 			expectErr: true,
 		},
