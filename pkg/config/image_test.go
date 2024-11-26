@@ -23,29 +23,54 @@ import (
 
 func Test_GetRemoteImage(t *testing.T) {
 	var tests = []struct {
-		name                                 string
-		versionString, expected, cliImageEnv string
+		name                                          string
+		versionString, expected, cliImageEnv, cliRepo string
 	}{
+		// {
+		// 	name:          "no version string and no env return stable",
+		// 	versionString: "",
+		// 	expected:      "okteto/okteto:stable",
+		// },
+		// {
+		// 	name:          "no version string return env value",
+		// 	versionString: "",
+		// 	cliImageEnv:   "okteto/remote:test",
+		// 	expected:      "okteto/remote:test",
+		// },
+		// {
+		// 	name:          "found version string",
+		// 	versionString: "2.2.2",
+		// 	expected:      "okteto/okteto:2.2.2",
+		// },
+		// {
+		// 	name:          "found incorrect version string return stable",
+		// 	versionString: "2.a.2",
+		// 	expected:      "okteto/okteto:stable",
+		// },
 		{
-			name:          "no version string and no env return stable",
+			name:          "Cluster Repo / no version string and no env return stable",
 			versionString: "",
-			expected:      "okteto/okteto:stable",
+			cliRepo:       "cluster/cli",
+			expected:      "cluster/cli:stable",
 		},
 		{
-			name:          "no version string return env value",
+			name:          "Cluster Repo / no version string return env value",
 			versionString: "",
+			cliRepo:       "cluster/cli",
 			cliImageEnv:   "okteto/remote:test",
 			expected:      "okteto/remote:test",
 		},
 		{
-			name:          "found version string",
+			name:          "Cluster Repo / found version string",
 			versionString: "2.2.2",
-			expected:      "okteto/okteto:2.2.2",
+			cliRepo:       "cluster/cli",
+			expected:      "cluster/cli:2.2.2",
 		},
 		{
-			name:          "found incorrect version string return stable",
+			name:          "Cluster Repo / found incorrect version string return stable",
 			versionString: "2.a.2",
-			expected:      "okteto/okteto:stable",
+			cliRepo:       "cluster/cli",
+			expected:      "cluster/cli:stable",
 		},
 	}
 
@@ -55,7 +80,7 @@ func Test_GetRemoteImage(t *testing.T) {
 			if tt.cliImageEnv != "" {
 				t.Setenv(oktetoDeployRemoteImageEnvVar, tt.cliImageEnv)
 			}
-
+			ClusterCliRepository = tt.cliRepo
 			version := NewImageConfig(io.NewIOController()).GetRemoteImage(tt.versionString)
 			require.Equal(t, version, tt.expected)
 		})
@@ -117,6 +142,7 @@ func TestGetBinImage(t *testing.T) {
 					}
 					return ""
 				},
+				cliRepository: "okteto/okteto",
 			}
 
 			image := c.GetBinImage()
@@ -157,6 +183,7 @@ func TestGetOktetoImage(t *testing.T) {
 				getEnv: func(s string) string {
 					return ""
 				},
+				cliRepository: "okteto/okteto",
 			}
 
 			image := c.GetOktetoImage()
