@@ -36,9 +36,9 @@ func Test_divertIngresses(t *testing.T) {
 				"l1":                  "v1",
 			},
 			Annotations: map[string]string{
-				"a1":                                 "v1",
-				model.OktetoDivertedSourceAnnotation: "staging",
-				model.OktetoDivertHeaderAnnotation:   "cindy",
+				"a1":                                    "v1",
+				model.OktetoDivertedNamespaceAnnotation: "staging",
+				model.OktetoDivertHeaderAnnotation:      "cindy",
 			},
 		},
 		Spec: networkingv1.IngressSpec{
@@ -114,9 +114,9 @@ func Test_divertIngresses(t *testing.T) {
 				"l1":                  "v1",
 			},
 			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation:     "true",
-				model.OktetoDivertedSourceAnnotation: "staging",
-				"a1":                                 "v1",
+				model.OktetoAutoCreateAnnotation:        "true",
+				model.OktetoDivertedNamespaceAnnotation: "staging",
+				"a1":                                    "v1",
 			},
 		},
 		Spec: networkingv1.IngressSpec{
@@ -154,10 +154,10 @@ func Test_divertIngresses(t *testing.T) {
 				"l1":                  "v2",
 			},
 			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation:     "true",
-				model.OktetoDivertedSourceAnnotation: "staging",
-				model.OktetoDivertHeaderAnnotation:   "cindy",
-				"a1":                                 "v2",
+				model.OktetoAutoCreateAnnotation:        "true",
+				model.OktetoDivertedNamespaceAnnotation: "staging",
+				model.OktetoDivertHeaderAnnotation:      "cindy",
+				"a1":                                    "v2",
 			},
 		},
 		Spec: networkingv1.IngressSpec{
@@ -232,10 +232,10 @@ func Test_divertIngresses(t *testing.T) {
 				"l1":                  "v2",
 			},
 			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation:     "true",
-				model.OktetoDivertedSourceAnnotation: "staging",
-				model.OktetoDivertHeaderAnnotation:   "cindy",
-				"a1":                                 "v2",
+				model.OktetoAutoCreateAnnotation:        "true",
+				model.OktetoDivertedNamespaceAnnotation: "staging",
+				model.OktetoDivertHeaderAnnotation:      "cindy",
+				"a1":                                    "v2",
 			},
 		},
 		Spec: networkingv1.IngressSpec{

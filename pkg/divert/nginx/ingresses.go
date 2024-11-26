@@ -99,7 +99,7 @@ func translateIngress(name, namespace string, from *networkingv1.Ingress) *netwo
 		result.Annotations = map[string]string{}
 	}
 	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
-	result.Annotations[model.OktetoDivertedSourceAnnotation] = from.Namespace
+	result.Annotations[model.OktetoDivertedNamespaceAnnotation] = from.Namespace
 	result.Annotations[model.OktetoDivertHeaderAnnotation] = namespace
 
 	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, format.ResourceK8sMetaString(name))

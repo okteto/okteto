@@ -59,10 +59,10 @@ func Test_translateIngress(t *testing.T) {
 						"l1":                  "v1",
 					},
 					Annotations: map[string]string{
-						model.OktetoAutoCreateAnnotation:     "true",
-						model.OktetoDivertedSourceAnnotation: "staging",
-						model.OktetoDivertHeaderAnnotation:   "cindy",
-						"a1":                                 "v1",
+						model.OktetoAutoCreateAnnotation:        "true",
+						model.OktetoDivertedNamespaceAnnotation: "staging",
+						model.OktetoDivertHeaderAnnotation:      "cindy",
+						"a1":                                    "v1",
 					},
 				},
 				Spec: networkingv1.IngressSpec{
@@ -99,9 +99,9 @@ func Test_translateIngress(t *testing.T) {
 						model.DeployedByLabel: "test",
 					},
 					Annotations: map[string]string{
-						model.OktetoAutoCreateAnnotation:     "true",
-						model.OktetoDivertedSourceAnnotation: "staging",
-						model.OktetoDivertHeaderAnnotation:   "cindy",
+						model.OktetoAutoCreateAnnotation:        "true",
+						model.OktetoDivertedNamespaceAnnotation: "staging",
+						model.OktetoDivertHeaderAnnotation:      "cindy",
 					},
 				},
 				Spec: networkingv1.IngressSpec{
