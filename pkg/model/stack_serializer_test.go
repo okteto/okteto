@@ -2286,3 +2286,67 @@ func Test_TranslateOktetoStackPortsToComposePorts(t *testing.T) {
 		})
 	}
 }
+
+func Test_setLivenessFromDependsOnServiceHealthy(t *testing.T) {
+	type args struct {
+		svc     *Service
+		svcName string
+		s       *Stack
+	}
+	tests := []struct {
+		name string
+		args args
+		want *Service
+	}{
+		{
+			name: "app depends_on service_healthy db",
+			args: args{
+				svc:     &Service{},
+				svcName: "db",
+				s: &Stack{
+					Services: map[string]*Service{
+						"app": {
+							DependsOn: DependsOn{
+								"db": {
+									Condition: "service_healthy",
+								},
+							},
+						},
+						"db": {},
+					},
+				},
+			},
+			want: &Service{
+				Healtcheck: &HealthCheck{
+					Liveness: true,
+				},
+			},
+		},
+		{
+			name: "app depends_on service_ready db",
+			args: args{
+				svc:     &Service{},
+				svcName: "db",
+				s: &Stack{
+					Services: map[string]*Service{
+						"app": {
+							DependsOn: DependsOn{
+								"db": {
+									Condition: "service_ready",
+								},
+							},
+						},
+						"db": {},
+					},
+				},
+			},
+			want: &Service{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setLivenessFromDependsOnServiceHealthy(tt.args.svc, tt.args.svcName, tt.args.s)
+			assert.Equal(t, tt.want, tt.args.svc)
+		})
+	}
+}

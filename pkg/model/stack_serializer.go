@@ -371,6 +371,21 @@ func getAccessiblePorts(ports []PortRaw) []PortRaw {
 	return accessiblePorts
 }
 
+// setLivenessFromDependsOnServiceHealthy sets the liveness probe to true if the service depends on another service being healthy
+func setLivenessFromDependsOnServiceHealthy(svc *Service, svcName string, s *Stack) {
+	// loop for each service in the stack to find if some of it is dependant of svcName for being healthy
+	for _, depService := range s.Services {
+		// if dependant service has a service_healty dependency for svcName, then set liveness probe to true
+		if condition, ok := depService.DependsOn[svcName]; ok && condition.Condition == DependsOnServiceHealthy {
+			if svc.Healtcheck == nil {
+				svc.Healtcheck = &HealthCheck{}
+			}
+			svc.Healtcheck.Liveness = true
+			return
+		}
+	}
+}
+
 func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service, error) {
 	svc := &Service{}
 	var err error
@@ -397,6 +412,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	if serviceRaw.Healthcheck != nil && !serviceRaw.Healthcheck.Disable {
 		svc.Healtcheck = serviceRaw.Healthcheck
 		translateHealtcheckCurlToHTTP(svc.Healtcheck)
+		setLivenessFromDependsOnServiceHealthy(svc, svcName, stack)
 	}
 
 	svc.NodeSelector = serviceRaw.NodeSelector
