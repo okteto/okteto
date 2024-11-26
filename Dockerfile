@@ -50,8 +50,8 @@ COPY docker-credential-okteto /okteto/bin/docker-credential-okteto
 
 FROM busybox:1.34.0
 
-RUN addgroup cligroup && \
-    adduser -D -h /home/cliuser -G cligroup cliuser
+RUN addgroup -g 1000 cligroup && \
+    adduser -D -h /home/cliuser -G cligroup -u 1000 cliuser
 
 COPY --chmod=755 --from=certs /etc/ssl/certs /etc/ssl/certs
 COPY --chmod=755 --from=kubectl-builder /usr/local/bin/kubectl /usr/local/bin/kubectl
@@ -64,7 +64,7 @@ COPY --chmod=755 --from=syncthing /bin/syncthing /usr/bin-image/bin/syncthing
 COPY --chmod=755 --from=clean /usr/local/bin/clean /usr/bin-image/bin/clean
 COPY --chmod=755 scripts/start.sh /usr/bin-image/bin/start.sh
 
-USER cliuser
+USER 1000
 
 ENV OKTETO_DISABLE_SPINNER=true
 ENV PS1="\[\e[36m\]\${OKTETO_NAMESPACE:-okteto}:\e[32m\]\${OKTETO_NAME:-dev} \[\e[m\]\W> "
