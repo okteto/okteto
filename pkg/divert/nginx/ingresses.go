@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package weaver
+package nginx
 
 import (
 	"context"
@@ -31,6 +31,9 @@ import (
 func (d *Driver) divertIngress(ctx context.Context, name string) error {
 	from := d.cache.divertIngresses[name]
 	in, ok := d.cache.developerIngresses[name]
+
+	// Ingresses that are deployed as part of the current deployment will never
+	// enter this block because they are always precreated
 	if !ok {
 		in = translateIngress(d.name, d.namespace, from)
 		oktetoLog.Infof("creating ingress %s/%s", in.Namespace, in.Name)
@@ -51,6 +54,10 @@ func (d *Driver) divertIngress(ctx context.Context, name string) error {
 			// ingress was created by divert
 			updatedIn = translateIngress(d.name, d.namespace, d.cache.divertIngresses[name])
 		}
+
+		// apply the header annotations always even if the ingress was created in the child namespace
+		updatedIn.Annotations[model.OktetoDivertHeaderAnnotation] = updatedIn.Namespace
+
 		if !isEqualIngress(in, updatedIn) {
 			oktetoLog.Infof("updating ingress %s/%s", updatedIn.Namespace, updatedIn.Name)
 			if _, err := d.client.NetworkingV1().Ingresses(d.namespace).Update(ctx, updatedIn, metav1.UpdateOptions{}); err != nil {
@@ -92,6 +99,8 @@ func translateIngress(name, namespace string, from *networkingv1.Ingress) *netwo
 		result.Annotations = map[string]string{}
 	}
 	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
+	result.Annotations[model.OktetoDivertedNamespaceAnnotation] = from.Namespace
+	result.Annotations[model.OktetoDivertHeaderAnnotation] = namespace
 
 	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, format.ResourceK8sMetaString(name))
 	for i := range result.Spec.Rules {

@@ -11,46 +11,46 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package weaver
+package nginx
 
 import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
-	apiv1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func Test_translateService(t *testing.T) {
+func Test_translateIngress(t *testing.T) {
 	var tests = []struct {
-		s        *apiv1.Service
-		expected *apiv1.Service
+		in       *networkingv1.Ingress
+		expected *networkingv1.Ingress
 		name     string
 	}{
 		{
 			name: "ok",
-			s: &apiv1.Service{
+			in: &networkingv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        "name",
 					Namespace:   "staging",
 					Labels:      map[string]string{"l1": "v1"},
 					Annotations: map[string]string{"a1": "v1"},
 				},
-				Spec: apiv1.ServiceSpec{
-					Type: apiv1.ServiceTypeClusterIP,
-					Ports: []apiv1.ServicePort{
+				Spec: networkingv1.IngressSpec{
+					Rules: []networkingv1.IngressRule{
 						{
-							Name: "port",
-							Port: 8080,
+							Host: "test-staging.okteto.dev",
 						},
 					},
-					ClusterIP:  "my-ip",
-					ClusterIPs: []string{"my-ip"},
-					Selector:   map[string]string{"label": "value"},
+					TLS: []networkingv1.IngressTLS{
+						{
+							Hosts: []string{"test-staging.okteto.dev"},
+						},
+					},
 				},
 			},
-			expected: &apiv1.Service{
+			expected: &networkingv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "name",
 					Namespace: "cindy",
@@ -59,39 +59,39 @@ func Test_translateService(t *testing.T) {
 						"l1":                  "v1",
 					},
 					Annotations: map[string]string{
-						model.OktetoAutoCreateAnnotation: "true",
-						"a1":                             "v1",
+						model.OktetoAutoCreateAnnotation:        "true",
+						model.OktetoDivertedNamespaceAnnotation: "staging",
+						model.OktetoDivertHeaderAnnotation:      "cindy",
+						"a1":                                    "v1",
 					},
 				},
-				Spec: apiv1.ServiceSpec{
-					Type: apiv1.ServiceTypeClusterIP,
-					Ports: []apiv1.ServicePort{
+				Spec: networkingv1.IngressSpec{
+					Rules: []networkingv1.IngressRule{
 						{
-							Name: "port",
-							Port: 8080,
+							Host: "test-cindy.okteto.dev",
 						},
 					},
-					ClusterIP:  apiv1.ClusterIPNone,
-					ClusterIPs: nil,
-					Selector:   nil,
+					TLS: []networkingv1.IngressTLS{
+						{
+							Hosts: []string{"test-cindy.okteto.dev"},
+						},
+					},
 				},
 			},
 		},
 		{
 			name: "empty",
-			s: &apiv1.Service{
+			in: &networkingv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "name",
 					Namespace: "staging",
 				},
-				Spec: apiv1.ServiceSpec{
-					Type:       apiv1.ServiceTypeClusterIP,
-					ClusterIP:  "my-ip",
-					ClusterIPs: []string{"my-ip"},
-					Selector:   map[string]string{"label": "value"},
+				Spec: networkingv1.IngressSpec{
+					Rules: []networkingv1.IngressRule{},
+					TLS:   []networkingv1.IngressTLS{},
 				},
 			},
-			expected: &apiv1.Service{
+			expected: &networkingv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "name",
 					Namespace: "cindy",
@@ -99,14 +99,14 @@ func Test_translateService(t *testing.T) {
 						model.DeployedByLabel: "test",
 					},
 					Annotations: map[string]string{
-						model.OktetoAutoCreateAnnotation: "true",
+						model.OktetoAutoCreateAnnotation:        "true",
+						model.OktetoDivertedNamespaceAnnotation: "staging",
+						model.OktetoDivertHeaderAnnotation:      "cindy",
 					},
 				},
-				Spec: apiv1.ServiceSpec{
-					Type:       apiv1.ServiceTypeClusterIP,
-					ClusterIP:  apiv1.ClusterIPNone,
-					ClusterIPs: nil,
-					Selector:   nil,
+				Spec: networkingv1.IngressSpec{
+					Rules: []networkingv1.IngressRule{},
+					TLS:   []networkingv1.IngressTLS{},
 				},
 			},
 		},
@@ -114,7 +114,7 @@ func Test_translateService(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := translateService("test", "cindy", tt.s)
+			result := translateIngress("test", "cindy", tt.in)
 			assert.Equal(t, result, tt.expected)
 		})
 	}

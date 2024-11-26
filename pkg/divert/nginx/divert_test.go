@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package weaver
+package nginx
 
 import (
 	"context"
@@ -23,7 +23,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/utils/pointer"
 )
 
 func Test_divertIngresses(t *testing.T) {
@@ -36,7 +35,11 @@ func Test_divertIngresses(t *testing.T) {
 				model.DeployedByLabel: "test",
 				"l1":                  "v1",
 			},
-			Annotations: map[string]string{"a1": "v1"},
+			Annotations: map[string]string{
+				"a1":                                    "v1",
+				model.OktetoDivertedNamespaceAnnotation: "staging",
+				model.OktetoDivertHeaderAnnotation:      "cindy",
+			},
 		},
 		Spec: networkingv1.IngressSpec{
 			Rules: []networkingv1.IngressRule{
@@ -111,8 +114,9 @@ func Test_divertIngresses(t *testing.T) {
 				"l1":                  "v1",
 			},
 			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation: "true",
-				"a1":                             "v1",
+				model.OktetoAutoCreateAnnotation:        "true",
+				model.OktetoDivertedNamespaceAnnotation: "staging",
+				"a1":                                    "v1",
 			},
 		},
 		Spec: networkingv1.IngressSpec{
@@ -150,8 +154,10 @@ func Test_divertIngresses(t *testing.T) {
 				"l1":                  "v2",
 			},
 			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation: "true",
-				"a1":                             "v2",
+				model.OktetoAutoCreateAnnotation:        "true",
+				model.OktetoDivertedNamespaceAnnotation: "staging",
+				model.OktetoDivertHeaderAnnotation:      "cindy",
+				"a1":                                    "v2",
 			},
 		},
 		Spec: networkingv1.IngressSpec{
@@ -226,8 +232,10 @@ func Test_divertIngresses(t *testing.T) {
 				"l1":                  "v2",
 			},
 			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation: "true",
-				"a1":                             "v2",
+				model.OktetoAutoCreateAnnotation:        "true",
+				model.OktetoDivertedNamespaceAnnotation: "staging",
+				model.OktetoDivertHeaderAnnotation:      "cindy",
+				"a1":                                    "v2",
 			},
 		},
 		Spec: networkingv1.IngressSpec{
@@ -327,16 +335,8 @@ func Test_divertIngresses(t *testing.T) {
 			Annotations: map[string]string{"a1": "v2"},
 		},
 		Spec: apiv1.ServiceSpec{
-			Type: apiv1.ServiceTypeClusterIP,
-			Ports: []apiv1.ServicePort{
-				{
-					Name: "port-staging",
-					Port: 8080,
-				},
-			},
-			ClusterIP:  "staging-ip",
-			ClusterIPs: []string{"staging-ip"},
-			Selector:   map[string]string{"l1": "v2"},
+			Type:         apiv1.ServiceTypeExternalName,
+			ExternalName: "s1.staging.svc.cluster.local",
 		},
 	}
 
@@ -366,32 +366,7 @@ func Test_divertIngresses(t *testing.T) {
 			Selector:   nil,
 		},
 	}
-	expectedS2 := &apiv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "s2",
-			Namespace: "cindy",
-			Labels: map[string]string{
-				model.DeployedByLabel: "test",
-				"l1":                  "v2",
-			},
-			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation: "true",
-				"a1":                             "v2",
-			},
-		},
-		Spec: apiv1.ServiceSpec{
-			Type: apiv1.ServiceTypeClusterIP,
-			Ports: []apiv1.ServicePort{
-				{
-					Name: "port-staging",
-					Port: 8080,
-				},
-			},
-			ClusterIP:  apiv1.ClusterIPNone,
-			ClusterIPs: nil,
-			Selector:   nil,
-		},
-	}
+
 	ds2 := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "s2",
@@ -403,225 +378,12 @@ func Test_divertIngresses(t *testing.T) {
 			Annotations: map[string]string{"a1": "v2"},
 		},
 		Spec: apiv1.ServiceSpec{
-			Type: apiv1.ServiceTypeClusterIP,
-			Ports: []apiv1.ServicePort{
-				{
-					Name: "port-staging",
-					Port: 8080,
-				},
-			},
-			ClusterIP:  "staging-ip",
-			ClusterIPs: []string{"staging-ip"},
-			Selector:   map[string]string{"l1": "v2"},
+			Type:         apiv1.ServiceTypeExternalName,
+			ExternalName: "s2.staging.svc.cluster.local",
 		},
 	}
 
-	expectedS3 := &apiv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "s3",
-			Namespace: "cindy",
-			Labels: map[string]string{
-				model.DeployedByLabel: "test",
-				"l1":                  "v2",
-			},
-			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation: "true",
-				"a1":                             "v2",
-			},
-		},
-		Spec: apiv1.ServiceSpec{
-			Type: apiv1.ServiceTypeClusterIP,
-			Ports: []apiv1.ServicePort{
-				{
-					Name: "port-staging",
-					Port: 8080,
-				},
-			},
-			ClusterIP:  apiv1.ClusterIPNone,
-			ClusterIPs: nil,
-			Selector:   nil,
-		},
-	}
-	ds3 := &apiv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "s3",
-			Namespace: "staging",
-			Labels: map[string]string{
-				model.DeployedByLabel: "staging",
-				"l1":                  "v2",
-			},
-			Annotations: map[string]string{"a1": "v2"},
-		},
-		Spec: apiv1.ServiceSpec{
-			Type: apiv1.ServiceTypeClusterIP,
-			Ports: []apiv1.ServicePort{
-				{
-					Name: "port-staging",
-					Port: 8080,
-				},
-			},
-			ClusterIP:  "staging-ip",
-			ClusterIPs: []string{"staging-ip"},
-			Selector:   map[string]string{"l1": "v2"},
-		},
-	}
-
-	e1 := &apiv1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "s1",
-			Namespace: "cindy",
-			Labels: map[string]string{
-				model.DeployedByLabel: "test",
-				"l1":                  "v1",
-			},
-			Annotations: map[string]string{"a1": "v1"},
-		},
-		Subsets: []apiv1.EndpointSubset{
-			{
-				Addresses: []apiv1.EndpointAddress{
-					{
-						IP: "my-ip",
-						TargetRef: &apiv1.ObjectReference{
-							Kind:       "Pod",
-							Namespace:  "cindy",
-							Name:       "s1",
-							APIVersion: "v1",
-						},
-					},
-				},
-				Ports: []apiv1.EndpointPort{
-					{
-						Name:        "port1",
-						Port:        8080,
-						Protocol:    apiv1.ProtocolTCP,
-						AppProtocol: pointer.String("tcp"),
-					},
-					{
-						Name:        "port2",
-						Port:        8081,
-						Protocol:    apiv1.ProtocolTCP,
-						AppProtocol: pointer.String("tcp"),
-					},
-				},
-			},
-		},
-	}
-
-	e2 := &apiv1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "s2",
-			Namespace: "cindy",
-			Labels: map[string]string{
-				model.DeployedByLabel: "test",
-				"l1":                  "v1",
-			},
-			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation: "true",
-				"a1":                             "v1",
-			},
-		},
-		Subsets: []apiv1.EndpointSubset{
-			{
-				Addresses: []apiv1.EndpointAddress{
-					{
-						IP: "my-ip",
-						TargetRef: &apiv1.ObjectReference{
-							Kind:       "Service",
-							Namespace:  "staging",
-							Name:       "s2",
-							APIVersion: "v1",
-						},
-					},
-				},
-				Ports: []apiv1.EndpointPort{
-					{
-						Name:        "port1",
-						Port:        8080,
-						Protocol:    apiv1.ProtocolTCP,
-						AppProtocol: pointer.String("tcp"),
-					},
-					{
-						Name:        "port2",
-						Port:        8081,
-						Protocol:    apiv1.ProtocolTCP,
-						AppProtocol: pointer.String("tcp"),
-					},
-				},
-			},
-		},
-	}
-	expectedE2 := &apiv1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "s2",
-			Namespace: "cindy",
-			Labels: map[string]string{
-				model.DeployedByLabel: "test",
-				"l1":                  "v2",
-			},
-			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation: "true",
-				"a1":                             "v2",
-			},
-		},
-		Subsets: []apiv1.EndpointSubset{
-			{
-				Addresses: []apiv1.EndpointAddress{
-					{
-						IP: "staging-ip",
-						TargetRef: &apiv1.ObjectReference{
-							Kind:       "Service",
-							Namespace:  "staging",
-							Name:       "s2",
-							APIVersion: "v1",
-						},
-					},
-				},
-				Ports: []apiv1.EndpointPort{
-					{
-						Name: "port-staging",
-						Port: 8080,
-					},
-				},
-			},
-		},
-	}
-
-	expectedE3 := &apiv1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "s3",
-			Namespace: "cindy",
-			Labels: map[string]string{
-				model.DeployedByLabel: "test",
-				"l1":                  "v2",
-			},
-			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation: "true",
-				"a1":                             "v2",
-			},
-		},
-		Subsets: []apiv1.EndpointSubset{
-			{
-				Addresses: []apiv1.EndpointAddress{
-					{
-						IP: "staging-ip",
-						TargetRef: &apiv1.ObjectReference{
-							Kind:       "Service",
-							Namespace:  "staging",
-							Name:       "s3",
-							APIVersion: "v1",
-						},
-					},
-				},
-				Ports: []apiv1.EndpointPort{
-					{
-						Name: "port-staging",
-						Port: 8080,
-					},
-				},
-			},
-		},
-	}
-	c := fake.NewSimpleClientset(i1, i2, di1, di2, di3, s1, s2, ds1, ds2, ds3, e1, e2)
+	c := fake.NewSimpleClientset(i1, i2, di1, di2, di3, s1, s2, ds1, ds2)
 	m := &model.Manifest{
 		Name: "test",
 		Deploy: &model.DeployInfo{
@@ -641,32 +403,18 @@ func Test_divertIngresses(t *testing.T) {
 	resultS1, err := c.CoreV1().Services("cindy").Get(ctx, "s1", metav1.GetOptions{})
 	assert.NoError(t, err)
 	assert.Equal(t, s1, resultS1)
-	resultE1, err := c.CoreV1().Endpoints("cindy").Get(ctx, "s1", metav1.GetOptions{})
-	assert.NoError(t, err)
-	assert.Equal(t, e1, resultE1)
+
 	resultI2, err := c.NetworkingV1().Ingresses("cindy").Get(ctx, "i2", metav1.GetOptions{})
 	assert.NoError(t, err)
 	assert.Equal(t, expectedI2, resultI2)
-	resultS2, err := c.CoreV1().Services("cindy").Get(ctx, "s2", metav1.GetOptions{})
-	assert.NoError(t, err)
-	assert.Equal(t, expectedS2, resultS2)
-	resultE2, err := c.CoreV1().Endpoints("cindy").Get(ctx, "s2", metav1.GetOptions{})
-	assert.NoError(t, err)
-	assert.Equal(t, expectedE2, resultE2)
+
 	resultI3, err := c.NetworkingV1().Ingresses("cindy").Get(ctx, "i3", metav1.GetOptions{})
 	assert.NoError(t, err)
 	assert.Equal(t, expectedI3, resultI3)
-	resultS3, err := c.CoreV1().Services("cindy").Get(ctx, "s3", metav1.GetOptions{})
-	assert.NoError(t, err)
-	assert.Equal(t, expectedS3, resultS3)
-	resultE3, err := c.CoreV1().Endpoints("cindy").Get(ctx, "s3", metav1.GetOptions{})
-	assert.NoError(t, err)
-	assert.Equal(t, expectedE3, resultE3)
 
 	// Eliminate elements from the cache to force RCs
 	d.cache.developerIngresses = map[string]*networkingv1.Ingress{}
 	d.cache.developerServices = map[string]*apiv1.Service{}
-	d.cache.developerEndpoints = map[string]*apiv1.Endpoints{}
 	err = d.Deploy(ctx)
 	assert.NoError(t, err)
 
@@ -676,25 +424,12 @@ func Test_divertIngresses(t *testing.T) {
 	resultS1, err = c.CoreV1().Services("cindy").Get(ctx, "s1", metav1.GetOptions{})
 	assert.NoError(t, err)
 	assert.Equal(t, s1, resultS1)
-	resultE1, err = c.CoreV1().Endpoints("cindy").Get(ctx, "s1", metav1.GetOptions{})
-	assert.NoError(t, err)
-	assert.Equal(t, e1, resultE1)
+
 	resultI2, err = c.NetworkingV1().Ingresses("cindy").Get(ctx, "i2", metav1.GetOptions{})
 	assert.NoError(t, err)
 	assert.Equal(t, expectedI2, resultI2)
-	resultS2, err = c.CoreV1().Services("cindy").Get(ctx, "s2", metav1.GetOptions{})
-	assert.NoError(t, err)
-	assert.Equal(t, expectedS2, resultS2)
-	resultE2, err = c.CoreV1().Endpoints("cindy").Get(ctx, "s2", metav1.GetOptions{})
-	assert.NoError(t, err)
-	assert.Equal(t, expectedE2, resultE2)
+
 	resultI3, err = c.NetworkingV1().Ingresses("cindy").Get(ctx, "i3", metav1.GetOptions{})
 	assert.NoError(t, err)
 	assert.Equal(t, expectedI3, resultI3)
-	resultS3, err = c.CoreV1().Services("cindy").Get(ctx, "s3", metav1.GetOptions{})
-	assert.NoError(t, err)
-	assert.Equal(t, expectedS3, resultS3)
-	resultE3, err = c.CoreV1().Endpoints("cindy").Get(ctx, "s3", metav1.GetOptions{})
-	assert.NoError(t, err)
-	assert.Equal(t, expectedE3, resultE3)
 }

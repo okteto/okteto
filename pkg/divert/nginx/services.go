@@ -11,11 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package weaver
+package nginx
 
 import (
 	"context"
-	"reflect"
+	"fmt"
 
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/labels"
@@ -32,8 +32,8 @@ func (d *Driver) divertService(ctx context.Context, name string) error {
 		oktetoLog.Infof("service %s not found: %s", name)
 		return nil
 	}
-	s, ok := d.cache.developerServices[name]
-	if !ok {
+
+	if _, ok := d.cache.developerServices[name]; !ok {
 		newS := translateService(d.name, d.namespace, from)
 		oktetoLog.Infof("creating service %s/%s", newS.Namespace, newS.Name)
 		if _, err := d.client.CoreV1().Services(d.namespace).Create(ctx, newS, metav1.CreateOptions{}); err != nil {
@@ -47,30 +47,11 @@ func (d *Driver) divertService(ctx context.Context, name string) error {
 			}
 		}
 		d.cache.developerServices[name] = newS
-		return d.divertEndpoints(ctx, name)
-	}
-
-	if s.Annotations[model.OktetoAutoCreateAnnotation] != "true" {
 		return nil
 	}
 
-	updatedS := translateService(d.name, d.namespace, from)
+	return nil
 
-	if !isEqualService(s, updatedS) {
-		oktetoLog.Infof("updating service %s/%s", updatedS.Namespace, updatedS.Name)
-		if _, err := d.client.CoreV1().Services(d.namespace).Update(ctx, updatedS, metav1.UpdateOptions{}); err != nil {
-			if !k8sErrors.IsConflict(err) {
-				return err
-			}
-			// the service was updated, refresh the cache
-			updatedS, err = d.client.CoreV1().Services(d.namespace).Get(ctx, updatedS.Name, metav1.GetOptions{})
-			if err != nil {
-				return nil
-			}
-		}
-		d.cache.developerServices[name] = updatedS
-	}
-	return d.divertEndpoints(ctx, name)
 }
 
 func translateService(name, namespace string, s *apiv1.Service) *apiv1.Service {
@@ -81,20 +62,15 @@ func translateService(name, namespace string, s *apiv1.Service) *apiv1.Service {
 			Labels:      s.Labels,
 			Annotations: s.Annotations,
 		},
-		Spec: s.Spec,
+		Spec: apiv1.ServiceSpec{
+			Type:         apiv1.ServiceTypeExternalName,
+			ExternalName: fmt.Sprintf("%s.%s.svc.cluster.local", s.Name, s.Namespace),
+		},
 	}
 	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, format.ResourceK8sMetaString(name))
-	// create a headless service pointing to an endpoints object that resolves to service cluster ip in the diverted namespace
-	result.Spec.ClusterIP = apiv1.ClusterIPNone
-	result.Spec.ClusterIPs = nil
-	result.Spec.Selector = nil
 	if result.Annotations == nil {
 		result.Annotations = map[string]string{}
 	}
 	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
 	return result
-}
-
-func isEqualService(s1 *apiv1.Service, s2 *apiv1.Service) bool {
-	return reflect.DeepEqual(s1.Spec.Ports, s2.Spec.Ports) && reflect.DeepEqual(s1.Labels, s2.Labels) && reflect.DeepEqual(s1.Annotations, s2.Annotations) && reflect.DeepEqual(s1.Spec.Selector, s2.Spec.Selector)
 }

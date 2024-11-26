@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package weaver
+package nginx
 
 import (
 	"context"
@@ -26,7 +26,6 @@ type cache struct {
 	divertServices     map[string]*apiv1.Service
 	developerIngresses map[string]*networkingv1.Ingress
 	developerServices  map[string]*apiv1.Service
-	developerEndpoints map[string]*apiv1.Endpoints
 }
 
 func (d *Driver) initCache(ctx context.Context) error {
@@ -35,7 +34,6 @@ func (d *Driver) initCache(ctx context.Context) error {
 		divertServices:     map[string]*apiv1.Service{},
 		developerIngresses: map[string]*networkingv1.Ingress{},
 		developerServices:  map[string]*apiv1.Service{},
-		developerEndpoints: map[string]*apiv1.Endpoints{},
 	}
 	// Init ingress cache for diverted namespace
 	iList, err := d.client.NetworkingV1().Ingresses(d.divert.Namespace).List(ctx, metav1.ListOptions{})
@@ -71,15 +69,6 @@ func (d *Driver) initCache(ctx context.Context) error {
 	}
 	for i := range sList.Items {
 		d.cache.developerServices[sList.Items[i].Name] = &sList.Items[i]
-	}
-
-	// Endpoints cache for developer namespace
-	eList, err := d.client.CoreV1().Endpoints(d.namespace).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	for i := range eList.Items {
-		d.cache.developerEndpoints[eList.Items[i].Name] = &eList.Items[i]
 	}
 
 	return nil
