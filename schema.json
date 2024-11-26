@@ -69,7 +69,9 @@
     },
     "context": {
       "description": "The build context. Relative paths are relative to the location of the Okteto Manifest (default: .)",
-      "examples": ["api"],
+      "examples": [
+        "api"
+      ],
       "title": "context",
       "type": "string"
     },
@@ -124,7 +126,9 @@
                   "type": "boolean"
                 }
               },
-              "required": ["repository"],
+              "required": [
+                "repository"
+              ],
               "type": "object"
             }
           },
@@ -154,7 +158,9 @@
                     "type": "string"
                   }
                 },
-                "required": ["command"],
+                "required": [
+                  "command"
+                ],
                 "type": "object"
               }
             ]
@@ -183,7 +189,9 @@
                         "type": "string"
                       }
                     },
-                    "required": ["command"],
+                    "required": [
+                      "command"
+                    ],
                     "type": "object"
                   }
                 ]
@@ -213,7 +221,9 @@
                         "type": "array"
                       }
                     },
-                    "required": ["file"],
+                    "required": [
+                      "file"
+                    ],
                     "type": "object"
                   },
                   "type": "array"
@@ -230,7 +240,9 @@
               "properties": {
                 "driver": {
                   "description": "The backend for divert. Currently, only 'istio' is supported",
-                  "enum": ["istio"],
+                  "enum": [
+                    "istio"
+                  ],
                   "type": "string"
                 },
                 "hosts": {
@@ -301,7 +313,11 @@
                     "type": "string"
                   }
                 },
-                "required": ["path", "service", "port"],
+                "required": [
+                  "path",
+                  "service",
+                  "port"
+                ],
                 "type": "object"
               },
               "type": "array"
@@ -341,7 +357,9 @@
                     "type": "string"
                   }
                 },
-                "required": ["command"],
+                "required": [
+                  "command"
+                ],
                 "type": "object"
               }
             ]
@@ -370,7 +388,9 @@
                         "type": "string"
                       }
                     },
-                    "required": ["command"],
+                    "required": [
+                      "command"
+                    ],
                     "type": "object"
                   }
                 ]
@@ -448,7 +468,11 @@
                 {
                   "patternProperties": {
                     ".*": {
-                      "type": ["string", "boolean", "number"]
+                      "type": [
+                        "string",
+                        "boolean",
+                        "number"
+                      ]
                     }
                   },
                   "type": "object"
@@ -499,7 +523,10 @@
                         "type": "integer"
                       }
                     },
-                    "required": ["localPort", "remotePort"],
+                    "required": [
+                      "localPort",
+                      "remotePort"
+                    ],
                     "type": "object"
                   }
                 ]
@@ -603,7 +630,10 @@
             "mode": {
               "default": "sync",
               "description": "Development mode (sync, hybrid)",
-              "enum": ["sync", "hybrid"],
+              "enum": [
+                "sync",
+                "hybrid"
+              ],
               "title": "mode",
               "type": "string"
             },
@@ -890,7 +920,9 @@
                       "type": "boolean"
                     }
                   },
-                  "required": ["folders"],
+                  "required": [
+                    "folders"
+                  ],
                   "type": "object"
                 }
               ]
@@ -959,7 +991,9 @@
                 "properties": {
                   "name": {
                     "description": "The name of the endpoint",
-                    "required": ["name"],
+                    "required": [
+                      "name"
+                    ],
                     "title": "name",
                     "type": "string"
                   },
@@ -970,7 +1004,9 @@
                     "type": "string"
                   }
                 },
-                "required": ["name"],
+                "required": [
+                  "name"
+                ],
                 "type": "object"
               },
               "title": "endpoints",
@@ -987,7 +1023,9 @@
               "type": "string"
             }
           },
-          "required": ["endpoints"],
+          "required": [
+            "endpoints"
+          ],
           "type": "object"
         }
       },
@@ -1010,24 +1048,36 @@
             "oneOf": [
               {
                 "not": {
-                  "required": ["labels"]
+                  "required": [
+                    "labels"
+                  ]
                 },
-                "required": ["name"]
+                "required": [
+                  "name"
+                ]
               },
               {
                 "not": {
-                  "required": ["name"]
+                  "required": [
+                    "name"
+                  ]
                 },
-                "required": ["labels"]
+                "required": [
+                  "labels"
+                ]
               },
               {
                 "not": {
                   "anyOf": [
                     {
-                      "required": ["name"]
+                      "required": [
+                        "name"
+                      ]
                     },
                     {
-                      "required": ["labels"]
+                      "required": [
+                        "labels"
+                      ]
                     }
                   ]
                 }
@@ -1060,7 +1110,10 @@
                 "type": "integer"
               }
             },
-            "required": ["localPort", "remotePort"],
+            "required": [
+              "localPort",
+              "remotePort"
+            ],
             "type": "object"
           }
         ]
@@ -1151,12 +1204,16 @@
                         "type": "string"
                       }
                     },
-                    "required": ["command"],
+                    "required": [
+                      "command"
+                    ],
                     "type": "object"
                   }
                 ]
               },
-              "required": ["commands"],
+              "required": [
+                "commands"
+              ],
               "title": "commands",
               "type": "array"
             },
@@ -1191,7 +1248,10 @@
                         "type": "string"
                       }
                     },
-                    "required": ["hostname", "ip"],
+                    "required": [
+                      "hostname",
+                      "ip"
+                    ],
                     "type": "object"
                   }
                 ]
@@ -1205,7 +1265,9 @@
               "type": "string"
             }
           },
-          "required": ["commands"],
+          "required": [
+            "commands"
+          ],
           "type": "object"
         }
       },
