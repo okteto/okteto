@@ -2290,13 +2290,13 @@ func Test_TranslateOktetoStackPortsToComposePorts(t *testing.T) {
 func Test_setLivenessFromDependsOnServiceHealthy(t *testing.T) {
 	type args struct {
 		svc     *Service
-		svcName string
 		s       *Stack
+		svcName string
 	}
 	tests := []struct {
-		name string
 		args args
 		want *Service
+		name string
 	}{
 		{
 			name: "app depends_on service_healthy db",
