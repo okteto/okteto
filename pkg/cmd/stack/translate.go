@@ -720,34 +720,34 @@ type healthcheckProbes struct {
 
 func getSvcHealthProbe(svc *model.Service) healthcheckProbes {
 	result := healthcheckProbes{}
-	if svc.Healtcheck != nil {
+	if svc.HealthCheck != nil {
 		var handler apiv1.ProbeHandler
-		if len(svc.Healtcheck.Test) != 0 {
+		if len(svc.HealthCheck.Test) != 0 {
 			handler = apiv1.ProbeHandler{
 				Exec: &apiv1.ExecAction{
-					Command: svc.Healtcheck.Test,
+					Command: svc.HealthCheck.Test,
 				},
 			}
 		} else {
 			handler = apiv1.ProbeHandler{
 				HTTPGet: &apiv1.HTTPGetAction{
-					Path: svc.Healtcheck.HTTP.Path,
-					Port: intstr.IntOrString{IntVal: svc.Healtcheck.HTTP.Port},
+					Path: svc.HealthCheck.HTTP.Path,
+					Port: intstr.IntOrString{IntVal: svc.HealthCheck.HTTP.Port},
 				},
 			}
 		}
 		probe := &apiv1.Probe{
 			ProbeHandler:        handler,
-			TimeoutSeconds:      int32(svc.Healtcheck.Timeout.Seconds()),
-			PeriodSeconds:       int32(svc.Healtcheck.Interval.Seconds()),
-			FailureThreshold:    int32(svc.Healtcheck.Retries),
-			InitialDelaySeconds: int32(svc.Healtcheck.StartPeriod.Seconds()),
+			TimeoutSeconds:      int32(svc.HealthCheck.Timeout.Seconds()),
+			PeriodSeconds:       int32(svc.HealthCheck.Interval.Seconds()),
+			FailureThreshold:    int32(svc.HealthCheck.Retries),
+			InitialDelaySeconds: int32(svc.HealthCheck.StartPeriod.Seconds()),
 		}
 
-		if svc.Healtcheck.Readiness {
+		if svc.HealthCheck.Readiness {
 			result.readiness = probe
 		}
-		if svc.Healtcheck.Liveness {
+		if svc.HealthCheck.Liveness {
 			result.liveness = probe
 		}
 	}

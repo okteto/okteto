@@ -673,7 +673,7 @@ func TestStack_Merge(t *testing.T) {
 							Context:    "test",
 							Dockerfile: "test-Dockerfile",
 						},
-						Healtcheck: &HealthCheck{
+						HealthCheck: &HealthCheck{
 							HTTP: &HTTPHealtcheck{
 								Path: "/api",
 								Port: 8008,
@@ -689,7 +689,7 @@ func TestStack_Merge(t *testing.T) {
 							Context:    "test-overwrite",
 							Dockerfile: "test-overwrite-Dockerfile",
 						},
-						Healtcheck: &HealthCheck{
+						HealthCheck: &HealthCheck{
 							HTTP: &HTTPHealtcheck{
 								Path: "/",
 								Port: 8008,
@@ -705,7 +705,7 @@ func TestStack_Merge(t *testing.T) {
 							Context:    "test-overwrite",
 							Dockerfile: "test-overwrite-Dockerfile",
 						},
-						Healtcheck: &HealthCheck{
+						HealthCheck: &HealthCheck{
 							HTTP: &HTTPHealtcheck{
 								Path: "/",
 								Port: 8008,

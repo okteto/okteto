@@ -377,10 +377,13 @@ func setLivenessFromDependsOnServiceHealthy(svc *Service, svcName string, s *Sta
 	for _, depService := range s.Services {
 		// if dependent service has a service_healty dependency for svcName, then set liveness probe to true
 		if condition, ok := depService.DependsOn[svcName]; ok && condition.Condition == DependsOnServiceHealthy {
-			if svc.Healtcheck == nil {
-				svc.Healtcheck = &HealthCheck{}
+			if svc.HealthCheck == nil {
+				svc.HealthCheck = &HealthCheck{}
 			}
-			svc.Healtcheck.Liveness = true
+			if svc.HealthCheck.Disable {
+				return
+			}
+			svc.HealthCheck.Liveness = true
 			return
 		}
 	}
@@ -410,8 +413,8 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		return nil, err
 	}
 	if serviceRaw.Healthcheck != nil && !serviceRaw.Healthcheck.Disable {
-		svc.Healtcheck = serviceRaw.Healthcheck
-		translateHealtcheckCurlToHTTP(svc.Healtcheck)
+		svc.HealthCheck = serviceRaw.Healthcheck
+		translateHealtcheckCurlToHTTP(svc.HealthCheck)
 		setLivenessFromDependsOnServiceHealthy(svc, svcName, stack)
 	}
 

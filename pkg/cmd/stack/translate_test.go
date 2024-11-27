@@ -1114,7 +1114,7 @@ func Test_translateSvcProbe(t *testing.T) {
 		{
 			name: "nil healthcheck",
 			svc: &model.Service{
-				Healtcheck: nil,
+				HealthCheck: nil,
 			},
 			expected: healthcheckProbes{
 				readiness: nil,
@@ -1124,7 +1124,7 @@ func Test_translateSvcProbe(t *testing.T) {
 		{
 			name: "healthcheck http",
 			svc: &model.Service{
-				Healtcheck: &model.HealthCheck{
+				HealthCheck: &model.HealthCheck{
 					HTTP: &model.HTTPHealtcheck{
 						Path: "/",
 						Port: 8080,
@@ -1148,7 +1148,7 @@ func Test_translateSvcProbe(t *testing.T) {
 		{
 			name: "healthcheck http with other fields both ",
 			svc: &model.Service{
-				Healtcheck: &model.HealthCheck{
+				HealthCheck: &model.HealthCheck{
 					HTTP: &model.HTTPHealtcheck{
 						Path: "/",
 						Port: 8080,
@@ -1191,7 +1191,7 @@ func Test_translateSvcProbe(t *testing.T) {
 		{
 			name: "healthcheck exec only readiness",
 			svc: &model.Service{
-				Healtcheck: &model.HealthCheck{
+				HealthCheck: &model.HealthCheck{
 					Test: model.HealtcheckTest{
 						"curl", "db-service:8080/readiness",
 					},
@@ -1212,7 +1212,7 @@ func Test_translateSvcProbe(t *testing.T) {
 		{
 			name: "healthcheck exec with others fields only liveness",
 			svc: &model.Service{
-				Healtcheck: &model.HealthCheck{
+				HealthCheck: &model.HealthCheck{
 					Test: model.HealtcheckTest{
 						"curl", "db-service:8080/readiness",
 					},

@@ -83,7 +83,7 @@ func (cs ComposeServices) getNames() []string {
 
 // Service represents an okteto stack service
 type Service struct {
-	Healtcheck    *HealthCheck          `yaml:"healthcheck,omitempty"`
+	HealthCheck   *HealthCheck          `yaml:"healthcheck,omitempty"`
 	Labels        Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Resources     *StackResources       `yaml:"resources,omitempty"` // For okteto stack only
 	NodeSelector  Selector              `json:"x-node-selector,omitempty" yaml:"x-node-selector,omitempty"`
@@ -721,8 +721,8 @@ func (stack *Stack) mergeServices(otherStack *Stack) *Stack {
 		if svc.Build != nil {
 			resultSvc.Build = svc.Build
 		}
-		if svc.Healtcheck != nil {
-			resultSvc.Healtcheck = svc.Healtcheck
+		if svc.HealthCheck != nil {
+			resultSvc.HealthCheck = svc.HealthCheck
 		}
 
 		if len(svc.CapAdd) > 0 {

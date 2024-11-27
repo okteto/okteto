@@ -429,7 +429,7 @@ func Test_HealthcheckUnmarshalling(t *testing.T) {
 			}
 
 			if !tt.expectedError {
-				assert.Equal(t, tt.expected, s.Services["app"].Healtcheck)
+				assert.Equal(t, tt.expected, s.Services["app"].HealthCheck)
 			}
 
 		})
@@ -2308,7 +2308,7 @@ func Test_setLivenessFromDependsOnServiceHealthy(t *testing.T) {
 						"app": {
 							DependsOn: DependsOn{
 								"db": {
-									Condition: "service_healthy",
+									Condition: DependsOnServiceHealthy,
 								},
 							},
 						},
@@ -2317,13 +2317,42 @@ func Test_setLivenessFromDependsOnServiceHealthy(t *testing.T) {
 				},
 			},
 			want: &Service{
-				Healtcheck: &HealthCheck{
+				HealthCheck: &HealthCheck{
 					Liveness: true,
 				},
 			},
 		},
 		{
-			name: "app depends_on service_ready db",
+			name: "app depends_on service_healthy db, healthchek disabled",
+			args: args{
+				svc: &Service{
+					HealthCheck: &HealthCheck{
+						Disable: true,
+					},
+				},
+				svcName: "db",
+				s: &Stack{
+					Services: map[string]*Service{
+						"app": {
+							DependsOn: DependsOn{
+								"db": {
+									Condition: DependsOnServiceHealthy,
+								},
+							},
+						},
+						"db": {},
+					},
+				},
+			},
+			want: &Service{
+				HealthCheck: &HealthCheck{
+					Disable:  true,
+					Liveness: false,
+				},
+			},
+		},
+		{
+			name: "app depends_on service_running db",
 			args: args{
 				svc:     &Service{},
 				svcName: "db",
@@ -2332,7 +2361,7 @@ func Test_setLivenessFromDependsOnServiceHealthy(t *testing.T) {
 						"app": {
 							DependsOn: DependsOn{
 								"db": {
-									Condition: "service_ready",
+									Condition: DependsOnServiceRunning,
 								},
 							},
 						},

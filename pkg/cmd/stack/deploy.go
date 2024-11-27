@@ -470,7 +470,7 @@ func getServicesWithFailedProbes(ctx context.Context, stack *model.Stack, svcNam
 	svc := stack.Services[svcName]
 	dependingServices := make([]string, 0)
 	for dependingSvc, condition := range svc.DependsOn {
-		if stack.Services[dependingSvc].Healtcheck != nil && condition.Condition == model.DependsOnServiceHealthy {
+		if stack.Services[dependingSvc].HealthCheck != nil && condition.Condition == model.DependsOnServiceHealthy {
 			dependingServices = append(dependingServices, dependingSvc)
 		}
 	}
@@ -576,7 +576,7 @@ func isSvcHealthy(ctx context.Context, stack *model.Stack, svcName string, clien
 	if !isSvcRunning(ctx, svc, stack.Namespace, svcName, client) {
 		return false
 	}
-	if svc.Healtcheck != nil {
+	if svc.HealthCheck != nil {
 		return true
 	} else {
 		return isAnyPortAvailable(ctx, svc, stack, svcName, client, config)
