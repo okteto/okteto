@@ -21,6 +21,8 @@ import (
 )
 
 var (
+	// ClusterCliRepository defines the okteto cli repository for all the operations.
+	// This env var is set when executing the okteto context at the beginning of any command
 	ClusterCliRepository = ""
 )
 

@@ -26,27 +26,27 @@ func Test_GetRemoteImage(t *testing.T) {
 		name                                          string
 		versionString, expected, cliImageEnv, cliRepo string
 	}{
-		// {
-		// 	name:          "no version string and no env return stable",
-		// 	versionString: "",
-		// 	expected:      "okteto/okteto:stable",
-		// },
-		// {
-		// 	name:          "no version string return env value",
-		// 	versionString: "",
-		// 	cliImageEnv:   "okteto/remote:test",
-		// 	expected:      "okteto/remote:test",
-		// },
-		// {
-		// 	name:          "found version string",
-		// 	versionString: "2.2.2",
-		// 	expected:      "okteto/okteto:2.2.2",
-		// },
-		// {
-		// 	name:          "found incorrect version string return stable",
-		// 	versionString: "2.a.2",
-		// 	expected:      "okteto/okteto:stable",
-		// },
+		{
+			name:          "no version string and no env return stable",
+			versionString: "",
+			expected:      "okteto/okteto:stable",
+		},
+		{
+			name:          "no version string return env value",
+			versionString: "",
+			cliImageEnv:   "okteto/remote:test",
+			expected:      "okteto/remote:test",
+		},
+		{
+			name:          "found version string",
+			versionString: "2.2.2",
+			expected:      "okteto/okteto:2.2.2",
+		},
+		{
+			name:          "found incorrect version string return stable",
+			versionString: "2.a.2",
+			expected:      "okteto/okteto:stable",
+		},
 		{
 			name:          "Cluster Repo / no version string and no env return stable",
 			versionString: "",

@@ -328,14 +328,21 @@ func (c *userClient) GetExecutionEnv(ctx context.Context) (map[string]string, er
 	return result, nil
 }
 
+// getRegistryAndRepositoryFromImage returns the registry and repository from an image name
+// Valid image names are:
+// - registry/repository:tag
+// - registry/repository@digest
+// - repository:tag
+// - repository@digest
 func getRegistryAndRepositoryFromImage(image string) (string, error) {
 	// Check for multiple '@' symbols which indicate an invalid image name
 	if strings.Count(image, "@") > 1 {
 		return "", fmt.Errorf("invalid image name, multiple '@'")
 	}
 
+	imageWithDigestParts := 2
 	// Remove any digest (part after '@')
-	imageNoDigest := strings.SplitN(image, "@", 2)[0]
+	imageNoDigest := strings.SplitN(image, "@", imageWithDigestParts)[0]
 
 	// Split the image into components separated by '/'
 	parts := strings.Split(imageNoDigest, "/")
