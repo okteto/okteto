@@ -453,10 +453,10 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		if errors.Is(err, oktetoErrors.ErrIntSig) {
 			return nil
 		}
-		if errors.As(err, &oktetoErrors.UserError{}) {
-			return err
+		// transform internal errors to user errors
+		if !errors.As(err, &oktetoErrors.UserError{}) {
+			err = oktetoErrors.UserError{E: err}
 		}
-		err = oktetoErrors.UserError{E: err}
 		data.Status = pipeline.ErrorStatus
 	} else {
 		// This has to be set only when the command succeeds for the case in which the deploy is executed within an
