@@ -31,6 +31,13 @@ deploy:
   commands:
     - okteto deploy -f other-okteto.yml --remote`
 
+	parentManifestContentWithRootless = `
+deploy:
+  image: okteto/pipeline-runner:1.0.6-rootless
+  commands:
+    - touch foo
+    - echo bar > okteto.yml`
+
 	childManifestContent = `
 deploy:
   image: aquasec/trivy:latest
@@ -48,6 +55,42 @@ func TestDeployInDeployRemote(t *testing.T) {
 
 	require.NoError(t, createOktetoManifestWithName(dir, parentManifestContent, "okteto.yml"))
 	require.NoError(t, createOktetoManifestWithName(dir, childManifestContent, "other-okteto.yml"))
+
+	testNamespace := integration.GetTestNamespace(t.Name())
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		Token:      token,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	destroyOptions := &commands.DestroyOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+}
+
+// TestDeployInDeployRemoteWithRootless test the scenario where an okteto deploy in remote uses a rootless runner image
+func TestDeployInDeployRemoteWithRootless(t *testing.T) {
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+
+	require.NoError(t, createOktetoManifestWithName(dir, parentManifestContentWithRootless, "okteto.yml"))
 
 	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
