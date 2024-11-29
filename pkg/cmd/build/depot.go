@@ -179,8 +179,7 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 
 	db.ioCtrl.Logger().Infof("[depot] build URL: %s", build.BuildURL)
 
-	err = run(ctx, client, opt, buildOptions.OutputMode, db.ioCtrl)
-	if err != nil {
+	if err := run(ctx, client, opt, buildOptions.OutputMode, db.ioCtrl); err != nil {
 		if shouldRetryBuild(err, buildOptions.Tag, db.okCtx) {
 			db.ioCtrl.Logger().Infof("Failed to build image: %s", err.Error())
 			db.ioCtrl.Logger().Infof("isRetry: %t", db.isRetry)
@@ -190,19 +189,11 @@ func (db *depotBuilder) Run(ctx context.Context, buildOptions *types.BuildOption
 				err = retryBuilder.Run(ctx, buildOptions, run)
 			}
 		}
-		err = buildkit.GetErrorMessage(err, buildOptions.Tag)
+		err = buildkit.GetSolveErrorMessage(err)
 		return err
 	}
 
-	var tag string
-	if buildOptions != nil {
-		tag = buildOptions.Tag
-		if buildOptions.Manifest != nil && buildOptions.Manifest.Deploy != nil {
-			tag = buildOptions.Manifest.Deploy.Image
-		}
-	}
-	err = buildkit.GetErrorMessage(err, tag)
-	return err
+	return nil
 }
 
 // getBuildkitClient returns a buildkit client connected to the depot's machine.

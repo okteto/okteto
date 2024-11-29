@@ -124,7 +124,7 @@ func (r *Runner) Run(ctx context.Context, opt *client.SolveOpt, outputMode strin
 				}
 				continue
 			}
-			err = GetErrorMessage(err, tag)
+			err = GetSolveErrorMessage(err)
 			analytics.TrackBuildTransientError(false)
 			return err
 		}
