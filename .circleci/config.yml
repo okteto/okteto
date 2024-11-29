@@ -36,7 +36,7 @@ executors:
     docker:
       - image: okteto/golang-ci:2.7.0
     environment:
-      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
+      OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
       OKTETO_NAMESPACE_PREFIX: staging
 
@@ -297,7 +297,7 @@ jobs:
       name: win/server-2022
       version: 2024.04.1
     environment:
-      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
+      OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
       OKTETO_NAMESPACE_PREFIX: staging
     steps:
@@ -325,7 +325,7 @@ jobs:
       name: win/server-2022
       version: 2024.04.1
     environment:
-      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
+      OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
       OKTETO_NAMESPACE_PREFIX: staging
     steps:
@@ -361,7 +361,7 @@ jobs:
       name: win/server-2022
       version: 2024.04.1
     environment:
-      OKTETO_CONTEXT: https://okteto.staging.dev.okteto.net
+      OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
       OKTETO_NAMESPACE_PREFIX: staging
     steps:
