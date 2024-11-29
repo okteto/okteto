@@ -57,9 +57,7 @@ FROM {{ .OktetoCLIImage }} as okteto-cli
 
 FROM {{ .UserRunnerImage }} as runner
 
-{{ if .UseRootUser -}}
 USER 0
-{{ end -}}
 ENV PATH="${PATH}:/okteto/bin"
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
@@ -191,9 +189,6 @@ type Params struct {
 	// .oktetodeployignore file. Disabled by default
 	UseOktetoDeployIgnoreFile bool
 
-	// UseRootUser is a flag to indicate if the user should be root
-	UseRootUser bool
-
 	NoCache bool
 }
 
@@ -230,7 +225,6 @@ type dockerfileTemplateProperties struct {
 	SSHAgentSocket               string
 	Caches                       []string
 	Artifacts                    []model.Artifact
-	UseRootUser                  bool
 }
 
 // NewRunner creates a new Runner for remote
@@ -429,7 +423,6 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		Command:                      params.Command,
 		Caches:                       params.Caches,
 		Artifacts:                    params.Artifacts,
-		UseRootUser:                  params.UseRootUser,
 		SSHAgentHostname:             params.SSHAgentHostname,
 		SSHAgentHostnameArgName:      constants.OktetoSshAgentHostnameEnvVar,
 		SSHAgentPort:                 params.SSHAgentPort,
