@@ -450,10 +450,13 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
 
 	if err != nil {
-		if err == oktetoErrors.ErrIntSig {
+		if errors.Is(err, oktetoErrors.ErrIntSig) {
 			return nil
 		}
-		err = oktetoErrors.UserError{E: err}
+		// transform internal errors to user errors
+		if !errors.As(err, &oktetoErrors.UserError{}) {
+			err = oktetoErrors.UserError{E: err}
+		}
 		data.Status = pipeline.ErrorStatus
 	} else {
 		// This has to be set only when the command succeeds for the case in which the deploy is executed within an

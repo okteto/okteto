@@ -268,7 +268,6 @@ func TestCreateDockerfile(t *testing.T) {
 					SSHAgentHostname: "ssh-agent.default.svc.cluster.local",
 					SSHAgentPort:     "3000",
 					CommandFlags:     []string{"--name \"test\""},
-					UseRootUser:      true,
 				},
 			},
 			expected: expected{
@@ -383,6 +382,7 @@ FROM okteto/okteto:stable as okteto-cli
 
 FROM test-image as runner
 
+USER 0
 ENV PATH="${PATH}:/okteto/bin"
 RUN if [ -d /okteto ]; then echo "/okteto folder is reserved for internal use"; exit 1; fi
 WORKDIR /okteto
@@ -473,7 +473,6 @@ COPY --from=runner /okteto/artifacts/ /
 					DockerfileName:               "Dockerfile.deploy",
 					Command:                      "deploy",
 					CommandFlags:                 []string{"--name \"test\""},
-					UseRootUser:                  true,
 				},
 			},
 			expected: expected{

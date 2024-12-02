@@ -20,8 +20,6 @@ import (
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
 	"google.golang.org/grpc/status"
 )
 
@@ -49,54 +47,85 @@ func (e CommandErr) Error() string {
 	return fmt.Sprintf("error on stage %s: %s", e.Stage, e.Err.Error())
 }
 
-// GetErrorMessage returns the parsed error message
-func GetErrorMessage(err error, tag string) error {
+var (
+	oktetoRemoteCLIImage = "okteto/okteto"
+	dockerhubRegistry    = "docker.io"
+)
+
+func isOktetoRemoteImage(image string) bool {
+	return strings.Contains(image, oktetoRemoteCLIImage) && strings.Contains(image, dockerhubRegistry)
+}
+
+func isOktetoRemoteForkImage(image string) bool {
+	return strings.Contains(image, oktetoRemoteCLIImage)
+}
+
+func isImageIsNotAccessibleErr(err error) bool {
+	return isLoggedIntoRegistryButDontHavePermissions(err) ||
+		isNotLoggedIntoRegistry(err) ||
+		isPullAccessDenied(err) ||
+		isNotFound(err) ||
+		isHostNotFound(err)
+}
+
+// GetSolveErrorMessage returns the parsed error message
+func GetSolveErrorMessage(err error) error {
 	if err == nil {
 		return nil
 	}
 
-	imageCtrl := registry.NewImageCtrl(okteto.Config{})
-	imageRegistry, imageTag := imageCtrl.GetRegistryAndRepo(tag)
+	imageFromError := extractImageFromError(err)
 	switch {
-	case isLoggedIntoRegistryButDontHavePermissions(err):
-		err = oktetoErrors.UserError{
-			E:    fmt.Errorf("failed to push image '%s': You are not authorized to push image '%s'", tag, imageTag),
-			Hint: fmt.Sprintf("Please log in into the registry '%s' with a user with push permissions to '%s' or use another image.", imageRegistry, imageTag),
-		}
-	case isNotLoggedIntoRegistry(err):
-		err = oktetoErrors.UserError{
-			E:    fmt.Errorf("failed to push image '%s': You are not authorized to push image '%s'", tag, imageTag),
-			Hint: fmt.Sprintf("Log in into the registry '%s' and verify that you have permissions to push the image '%s'.", imageRegistry, imageTag),
-		}
 	case isBuildkitServiceUnavailable(err):
 		err = oktetoErrors.UserError{
 			E:    fmt.Errorf("buildkit service is not available at the moment"),
 			Hint: "Please try again later.",
 		}
-	case isPullAccessDenied(err):
-		if imageTag == "" {
-			imageTag = extractImageTagFromPullAccessDeniedError(err)
-		}
+	case isImageIsNotAccessibleErr(err):
 		err = oktetoErrors.UserError{
-			E:    fmt.Errorf("failed to pull image '%s'. The repository is not accessible or it does not exist", imageTag),
-			Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.", imageTag),
+			E: fmt.Errorf("the image '%s' is not accessible or it does not exist", imageFromError),
+			Hint: `Please verify the name of the image to make sure it exists.
+    When using private registries, make sure Okteto Registry Credentials are correctly configured.
+    See more at: https://www.okteto.com/docs/admin/registry-credentials/`,
 		}
+
+		if isOktetoRemoteImage(imageFromError) {
+			err = oktetoErrors.UserError{
+				E: fmt.Errorf("the image '%s' is not accessible or it does not exist", imageFromError),
+				Hint: `Please verify you have access to Docker Hub.
+    If you are using an airgapped environment, make sure Okteto Remote is correctly configured in airgapped environments:
+    See more at: https://www.okteto.com/docs/self-hosted/manage/air-gapped/`,
+			}
+
+		} else if isOktetoRemoteForkImage(imageFromError) {
+			err = oktetoErrors.UserError{
+				E: fmt.Errorf("the image '%s' is not accessible or it does not exist", imageFromError),
+				Hint: `Please verify you have migrated correctly to the current version for remote.
+    If you are using an airgapped environment, make sure Okteto Remote is correctly configured in airgapped environments:
+    See more at: https://www.okteto.com/docs/self-hosted/manage/air-gapped/`,
+			}
+		}
+
 	default:
 		var cmdErr CommandErr
 		if errors.As(err, &cmdErr) {
 			return cmdErr
 		}
 		err = oktetoErrors.UserError{
-			E: fmt.Errorf("error building image '%s': %w", tag, err),
+			E: err,
 		}
 	}
 	return err
 }
 
-func extractImageTagFromPullAccessDeniedError(err error) string {
-	re := regexp.MustCompile(`([a-zA-Z0-9\.\/_-]+): pull access denied`)
-	matches := re.FindStringSubmatch(err.Error())
-	if len(matches) > 1 {
+var (
+	// regexForImageFromFailedToSolveErr is the regex to extract the image from an error message
+	// buildkit solve errors provide the image name between :
+	regexForImageFromFailedToSolveErr = regexp.MustCompile(`: ([a-zA-Z0-9\.\/_-]+(:[a-zA-Z0-9-]+)?):`)
+)
+
+func extractImageFromError(err error) string {
+	if matches := regexForImageFromFailedToSolveErr.FindStringSubmatch(err.Error()); len(matches) > 1 {
 		return matches[1]
 	}
 	return ""
@@ -158,7 +187,17 @@ func isBuildkitServiceUnavailable(err error) bool {
 	return strings.Contains(err.Error(), "connect: connection refused") || strings.Contains(err.Error(), "500 Internal Server Error") || strings.Contains(err.Error(), "context canceled")
 }
 
-// IsPullAccessDenied returns true pulling an image fails (e.g: image does not exist)
+// IsPullAccessDenied returns true pulling an image fails because the user does not have permissions
 func isPullAccessDenied(err error) bool {
 	return strings.Contains(err.Error(), "pull access denied")
+}
+
+// IsNotFound returns true when the error is because the resource is not found
+func isNotFound(err error) bool {
+	return strings.Contains(err.Error(), "not found")
+}
+
+// isHostNotFound returns true when the error is because the host is not found
+func isHostNotFound(err error) bool {
+	return strings.Contains(err.Error(), "failed to do request") && strings.Contains(err.Error(), "no such host")
 }

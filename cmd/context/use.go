@@ -142,6 +142,7 @@ func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 	}
 
 	os.Setenv(model.OktetoNamespaceEnvVar, okteto.GetContext().Namespace)
+	os.Setenv(model.OktetoDomainEnvVar, okteto.GetSubdomain())
 
 	if ctxOptions.Show {
 		oktetoLog.Information("Using %s @ %s as context", okteto.GetContext().Namespace, okteto.RemoveSchema(okteto.GetContext().Name))
