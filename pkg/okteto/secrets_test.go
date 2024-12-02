@@ -829,3 +829,73 @@ func TestGetExecutionEnv(t *testing.T) {
 		})
 	}
 }
+
+func TestGetImageWithoutTag(t *testing.T) {
+	tests := []struct {
+		image   string
+		want    string
+		wantErr bool
+	}{
+		{
+			image: "ubuntu",
+			want:  "docker.io/library/ubuntu",
+		},
+		{
+			image: "ubuntu:latest",
+			want:  "docker.io/library/ubuntu",
+		},
+		{
+			image: "library/ubuntu",
+			want:  "docker.io/library/ubuntu",
+		},
+		{
+			image: "docker.io/library/ubuntu",
+			want:  "docker.io/library/ubuntu",
+		},
+		{
+			image: "myregistrydomain.com:5000/fedora/httpd:version1.0",
+			want:  "myregistrydomain.com:5000/fedora/httpd",
+		},
+		{
+			image: "localhost:5000/myrepo/myimage:tag",
+			want:  "localhost:5000/myrepo/myimage",
+		},
+		{
+			image: "gcr.io/myproject/myimage:tag",
+			want:  "gcr.io/myproject/myimage",
+		},
+		{
+			image: "docker.io/nginx:latest",
+			want:  "docker.io/library/nginx",
+		},
+		{
+			image: "myregistrydomain.com/myimage@sha256:abcdef",
+			want:  "myregistrydomain.com/myimage",
+		},
+		{
+			image: "registry.gitlab.com/group/project/image:tag",
+			want:  "registry.gitlab.com/group/project/image",
+		},
+		{
+			image: "localhost/myimage:tag",
+			want:  "localhost/myimage",
+		},
+		{
+			image:   "invalid@image@name",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.image, func(t *testing.T) {
+			got, err := getRegistryAndRepositoryFromImage(tt.image)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getRegistryAndRepositoryFromImage() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("getRegistryAndRepositoryFromImage() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

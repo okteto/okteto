@@ -21,6 +21,7 @@ import (
 
 	dockertypes "github.com/docker/cli/cli/config/types"
 	dockercredentials "github.com/docker/docker-credential-helpers/credentials"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/errors"
@@ -250,6 +251,12 @@ func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.C
 			metadata.ServerName = string(v.Value)
 		case "pipelineRunnerImage":
 			metadata.PipelineRunnerImage = string(v.Value)
+		case "cliImage":
+			metadata.CliImage = string(v.Value)
+			config.ClusterCliRepository, err = getRegistryAndRepositoryFromImage(string(v.Value))
+			if err != nil {
+				return metadata, err
+			}
 		case "isTrial":
 			metadata.IsTrialLicense = string(v.Value) == "true"
 		case "companyName":
@@ -319,4 +326,66 @@ func (c *userClient) GetExecutionEnv(ctx context.Context) (map[string]string, er
 		result[string(envVar.Name)] = string(envVar.Value)
 	}
 	return result, nil
+}
+
+// getRegistryAndRepositoryFromImage returns the registry and repository from an image name
+// Valid image names are:
+// - registry/repository:tag
+// - registry/repository@digest
+// - repository:tag
+// - repository@digest
+func getRegistryAndRepositoryFromImage(image string) (string, error) {
+	// Check for multiple '@' symbols which indicate an invalid image name
+	if strings.Count(image, "@") > 1 {
+		return "", fmt.Errorf("invalid image name, multiple '@'")
+	}
+
+	imageWithDigestParts := 2
+	// Remove any digest (part after '@')
+	imageNoDigest := strings.SplitN(image, "@", imageWithDigestParts)[0]
+
+	// Split the image into components separated by '/'
+	parts := strings.Split(imageNoDigest, "/")
+
+	var rest []string
+	var domain string
+
+	// Determine if a registry is specified
+	if len(parts) == 1 || (len(parts) >= 2 && !strings.ContainsAny(parts[0], ".:") && parts[0] != "localhost") {
+		// No registry specified, default to docker.io
+		domain = "docker.io"
+		rest = parts
+	} else {
+		domain = parts[0]
+		rest = parts[1:]
+	}
+
+	// Reconstruct the repository path
+	repositoryPath := strings.Join(rest, "/")
+
+	// Remove any tag (part after the last ':') from the last component
+	repoParts := strings.Split(repositoryPath, "/")
+	lastPart := repoParts[len(repoParts)-1]
+
+	if strings.Count(lastPart, ":") > 1 {
+		return "", fmt.Errorf("invalid repository name, multiple ':' in the last component")
+	}
+
+	if colonIndex := strings.LastIndex(lastPart, ":"); colonIndex != -1 {
+		// Remove the tag
+		lastPart = lastPart[:colonIndex]
+		repoParts[len(repoParts)-1] = lastPart
+	}
+
+	repositoryPath = strings.Join(repoParts, "/")
+
+	// Handle official images by adding 'library/' if no namespace is specified
+	if domain == "docker.io" && !strings.Contains(repositoryPath, "/") {
+		repositoryPath = "library/" + repositoryPath
+	}
+
+	// Combine domain and repositoryPath
+	fullImage := domain + "/" + repositoryPath
+
+	return fullImage, nil
 }
