@@ -60,7 +60,7 @@ FROM {{ .UserRunnerImage }} as runner
 USER 0
 ENV PATH="${PATH}:/okteto/bin"
 WORKDIR /okteto
-RUN chown -R $(id -u):$(id -g) /okteto
+RUN chown -R $(id -u):$(id -g) /okteto || (echo '{"level":"error", "stage": "remote deploy", "message":"The /okteto directory or its subdirectories have incorrect user/group ownership. Check your \"deploy.image\" container definition or contact your instance admin."}' && exit 1)
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
 
