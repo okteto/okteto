@@ -279,8 +279,8 @@ FROM test-image as runner
 
 USER 0
 ENV PATH="${PATH}:/okteto/bin"
-RUN if [ -d /okteto ]; then echo "/okteto folder is reserved for internal use"; exit 1; fi
 WORKDIR /okteto
+RUN chown -R $(id -u):$(id -g) /okteto
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
 
@@ -384,8 +384,8 @@ FROM test-image as runner
 
 USER 0
 ENV PATH="${PATH}:/okteto/bin"
-RUN if [ -d /okteto ]; then echo "/okteto folder is reserved for internal use"; exit 1; fi
 WORKDIR /okteto
+RUN chown -R $(id -u):$(id -g) /okteto
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
 
@@ -484,8 +484,8 @@ FROM test-image as runner
 
 USER 0
 ENV PATH="${PATH}:/okteto/bin"
-RUN if [ -d /okteto ]; then echo "/okteto folder is reserved for internal use"; exit 1; fi
 WORKDIR /okteto
+RUN chown -R $(id -u):$(id -g) /okteto
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
 
