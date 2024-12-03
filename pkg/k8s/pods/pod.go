@@ -343,13 +343,8 @@ func isRunning(p *apiv1.Pod) bool {
 	return false
 }
 
-type Failure struct {
-	Readiness bool
-	Liveness  bool
-}
-
 // GetHealthcheckFailure returns the failure reason of the healthcheck of a pod
-func GetHealthcheckFailure(ctx context.Context, c kubernetes.Interface, namespace, svcName, stackName string, healthcheck *model.HealthCheck) *Failure {
+func GetHealthcheckFailure(ctx context.Context, c kubernetes.Interface, namespace, svcName, stackName string, healthcheck *model.HealthCheck) error {
 	selector := fmt.Sprintf("%s=%s,%s=%s", model.StackNameLabel, format.ResourceK8sMetaString(stackName), model.StackServiceNameLabel, svcName)
 	pods, err := c.CoreV1().Pods(namespace).List(
 		ctx,
@@ -363,11 +358,8 @@ func GetHealthcheckFailure(ctx context.Context, c kubernetes.Interface, namespac
 	for _, pod := range pods.Items {
 		for _, containerStatus := range pod.Status.ContainerStatuses {
 			if (healthcheck.Readiness && !containerStatus.Ready) || (healthcheck.Liveness && containerStatus.RestartCount > 0) {
-				if failure := events.GetUnhealthyEventFailure(ctx, namespace, pod.Name, c); failure != nil {
-					return &Failure{
-						Readiness: failure.Readiness,
-						Liveness:  failure.Liveness,
-					}
+				if err := events.GetUnhealthyEventFailure(ctx, namespace, pod.Name, c); err != nil {
+					return err
 				}
 			}
 		}

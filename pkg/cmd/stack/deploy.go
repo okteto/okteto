@@ -369,15 +369,14 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 						return fmt.Errorf("service '%s' dependencies '%s' failed", svcName, strings.Join(failedJobs, ", "))
 					}
 					if failedServices := getServicesWithFailedProbes(ctx, stack, svcName, k8sClient); len(failedServices) > 0 {
-						for key, value := range failedServices {
-							if err, ok := value.(error); ok {
-								return fmt.Errorf("service '%s' has failed its healthcheck probes: %w", key, err)
-							}
-							if message, ok := value.(string); ok {
-								if _, ok := serviceWarnings[key]; !ok {
-									message := fmt.Sprintf("service '%s' is failing its healthcheck probes: %s", key, message)
+						for service, err := range failedServices {
+							if oktetoErrors.IsLivenessProbeFailed(err) {
+								return fmt.Errorf("service '%s' has failed its healthcheck probes: %w", service, err)
+							} else if oktetoErrors.IsReadinessProbeFailed(err) {
+								if _, ok := serviceWarnings[service]; !ok {
+									message := fmt.Sprintf("service '%s' is failing its healthcheck probes: %s", service, err)
 									oktetoLog.Information(message)
-									serviceWarnings[key] = message
+									serviceWarnings[service] = message
 								}
 							}
 						}
@@ -476,7 +475,7 @@ func canSvcBeDeployed(ctx context.Context, stack *model.Stack, svcName string, c
 	return true
 }
 
-func getServicesWithFailedProbes(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface) map[string]interface{} {
+func getServicesWithFailedProbes(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface) map[string]error {
 	svc := stack.Services[svcName]
 	dependingServicesHealthcheckMap := make(map[string]*model.HealthCheck)
 	for dependingSvc, condition := range svc.DependsOn {
@@ -485,14 +484,10 @@ func getServicesWithFailedProbes(ctx context.Context, stack *model.Stack, svcNam
 			dependingServicesHealthcheckMap[dependingSvc] = stack.Services[dependingSvc].Healtcheck
 		}
 	}
-	failedServices := make(map[string]interface{})
+	failedServices := make(map[string]error)
 	for svcName, healthcheck := range dependingServicesHealthcheckMap {
-		if healthcheckFailure := pods.GetHealthcheckFailure(ctx, client, stack.Namespace, svcName, stack.Name, healthcheck); healthcheckFailure != nil {
-			if healthcheckFailure.Liveness {
-				failedServices[svcName] = errors.New("Liveness probe failed")
-			} else if healthcheckFailure.Readiness {
-				failedServices[svcName] = "Readiness probe failed"
-			}
+		if err := pods.GetHealthcheckFailure(ctx, client, stack.Namespace, svcName, stack.Name, healthcheck); err != nil {
+			failedServices[svcName] = err
 		}
 	}
 	return failedServices
