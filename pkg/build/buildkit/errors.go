@@ -163,9 +163,6 @@ func IsRetryable(err error) bool {
 	case strings.Contains(err.Error(), "Canceled") && strings.Contains(err.Error(), "context canceled"):
 		return true
 
-	// Transient error connection to Depot's machine
-	case strings.Contains(err.Error(), "timed out connecting to machine"):
-		return true
 	default:
 		return false
 	}

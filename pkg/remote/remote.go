@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -150,7 +149,6 @@ type Runner struct {
 	ioCtrl               *io.Controller
 	getEnviron           func() []string
 	generateSocketName   socketNameGenerator
-	useInternalNetwork   bool
 }
 
 // Params struct to pass the necessary parameters to create the Dockerfile
@@ -234,7 +232,6 @@ func NewRunner(ioCtrl *io.Controller, builder Builder) *Runner {
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
-		useInternalNetwork:   !buildCmd.IsDepotEnabled(),
 		ioCtrl:               ioCtrl,
 		builder:              builder,
 		oktetoClientProvider: okteto.NewOktetoClientProvider(),
@@ -341,26 +338,6 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		fmt.Sprintf("%s=%s", model.OktetoRegistryURLEnvVar, os.Getenv(model.OktetoRegistryURLEnvVar)),
 		fmt.Sprintf("%s=%s", model.OktetoBuildkitHostURLEnvVar, os.Getenv(model.OktetoBuildkitHostURLEnvVar)),
 	)
-
-	if r.useInternalNetwork {
-		buildOptions.BuildArgs = append(
-			buildOptions.BuildArgs,
-			fmt.Sprintf("%s=%s", constants.OktetoInternalServerNameEnvVar, sc.ServerName),
-		)
-		if sc.ServerName != "" {
-			registryUrl := okteto.GetContext().Registry
-			subdomain := strings.TrimPrefix(registryUrl, "registry.")
-			ip, _, err := net.SplitHostPort(sc.ServerName)
-			if err != nil {
-				return fmt.Errorf("failed to parse server name network address: %w", err)
-			}
-			buildOptions.ExtraHosts = getExtraHosts(registryUrl, subdomain, ip, *sc)
-		}
-
-		if sc.SSHAgentHostname != "" {
-			buildOptions.ExtraHosts = append(buildOptions.ExtraHosts, types.HostMap{Hostname: sc.SSHAgentHostname, IP: sc.SSHAgentInternalIP})
-		}
-	}
 
 	buildOptions.ExtraHosts = addDefinedHosts(buildOptions.ExtraHosts, params.Hosts)
 
