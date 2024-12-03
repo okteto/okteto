@@ -171,6 +171,51 @@ func TestRemoteTest(t *testing.T) {
 	}
 }
 
+func TestExtraHosts(t *testing.T) {
+	ctx := context.Background()
+	fakeManifest := &model.Manifest{
+		Deploy: &model.DeployInfo{
+			Image: "test-image",
+		},
+	}
+	wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/"))
+	fs := afero.NewMemMapFs()
+	tempCreator := filesystem.NewTemporalDirectoryCtrl(fs)
+
+	usersClient := client.NewFakeUsersClient(&types.User{})
+	usersClient.ClusterMetadata = types.ClusterMetadata{ServerName: "1.2.3.4:443"}
+	oktetoClient := &client.FakeOktetoClient{
+		Users: usersClient,
+	}
+	nameGenerator := fakeNameGenerator{
+		name: "test",
+	}
+	rdc := Runner{
+		builder: fakeBuilder{
+			assertOptions: func(o *types.BuildOptions) {
+				require.Len(t, o.ExtraHosts, 2)
+				for _, eh := range o.ExtraHosts {
+					require.Equal(t, eh.IP, "1.2.3.4")
+				}
+			},
+		},
+		fs:                   fs,
+		workingDirectoryCtrl: wdCtrl,
+		temporalCtrl:         tempCreator,
+		oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
+		ioCtrl:               io.NewIOController(),
+		getEnviron: func() []string {
+			return []string{}
+		},
+		generateSocketName: nameGenerator.GenerateName,
+	}
+
+	err := rdc.Run(ctx, &Params{
+		Manifest: fakeManifest,
+	})
+	require.NoError(t, err)
+}
+
 func TestCreateDockerfile(t *testing.T) {
 	wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/"))
 	fs := afero.NewMemMapFs()

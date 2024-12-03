@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -338,6 +339,24 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		fmt.Sprintf("%s=%s", model.OktetoRegistryURLEnvVar, os.Getenv(model.OktetoRegistryURLEnvVar)),
 		fmt.Sprintf("%s=%s", model.OktetoBuildkitHostURLEnvVar, os.Getenv(model.OktetoBuildkitHostURLEnvVar)),
 	)
+
+	buildOptions.BuildArgs = append(
+		buildOptions.BuildArgs,
+		fmt.Sprintf("%s=%s", constants.OktetoInternalServerNameEnvVar, sc.ServerName),
+	)
+	if sc.ServerName != "" {
+		registryUrl := okteto.GetContext().Registry
+		subdomain := strings.TrimPrefix(registryUrl, "registry.")
+		ip, _, err := net.SplitHostPort(sc.ServerName)
+		if err != nil {
+			return fmt.Errorf("failed to parse server name network address: %w", err)
+		}
+		buildOptions.ExtraHosts = getExtraHosts(registryUrl, subdomain, ip, *sc)
+	}
+
+	if sc.SSHAgentHostname != "" {
+		buildOptions.ExtraHosts = append(buildOptions.ExtraHosts, types.HostMap{Hostname: sc.SSHAgentHostname, IP: sc.SSHAgentInternalIP})
+	}
 
 	buildOptions.ExtraHosts = addDefinedHosts(buildOptions.ExtraHosts, params.Hosts)
 
