@@ -83,5 +83,5 @@
 
         echo "DEBUG: Executing command:"
         echo "depot build --push --platform \"${PLATFORMS}\" --build-arg VERSION_STRING=\"${VERSION_STRING}\" ${tags} -f Dockerfile ."
-        depot build --push --platform "${PLATFORMS}" --build-arg VERSION_STRING="${VERSION_STRING}" ${tags} -f Dockerfile .
+        depot build --push --platform "${PLATFORMS}" --build-arg VERSION_STRING="${VERSION_STRING}" "${tags}" -f Dockerfile .
 ); }

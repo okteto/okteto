@@ -109,7 +109,7 @@ type destroyInterface interface {
 
 type analyticsTrackerInterface interface {
 	buildTrackerInterface
-	TrackDestroy(metadta analytics.DestroyMetadata)
+	TrackDestroy(metadata analytics.DestroyMetadata)
 }
 
 type buildTrackerInterface interface {

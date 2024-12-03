@@ -1,4 +1,5 @@
-rules '~MD013', '~MD024', '~MD025', '~MD026', '~MD033', '~MD040', '~MD041'
+rules '~MD007', '~MD013', '~MD024', '~MD025', '~MD026', '~MD033', '~MD040', '~MD041'
+# MD007 ul-indent - Unordered list indentation
 # MD013 line-length - Line length
 # MD024 no-duplicate-heading/no-duplicate-header - Multiple headings with the same content
 # MD025 single-title/single-h1 - Multiple top-level headings in the same document
