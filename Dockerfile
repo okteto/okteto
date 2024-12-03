@@ -1,25 +1,24 @@
-ARG KUBECTL_VERSION=1.30.4
-ARG HELM_VERSION=3.16.2
-ARG SYNCTHING_VERSION=1.27.10
-ARG OKTETO_REMOTE_VERSION=0.6.0
-ARG OKTETO_SUPERVISOR_VERSION=0.4.0
-ARG OKTETO_CLEAN_VERSION=0.2.1
+ARG KUBECTL_VERSION=1.30.7
+ARG HELM_VERSION=3.16.3
+ARG SYNCTHING_VERSION=1.28.0
+ARG OKTETO_REMOTE_VERSION=0.6.1
+ARG OKTETO_SUPERVISOR_VERSION=0.4.1
+ARG OKTETO_CLEAN_VERSION=0.2.2
 
 
 FROM syncthing/syncthing:${SYNCTHING_VERSION} AS syncthing
 FROM okteto/remote:${OKTETO_REMOTE_VERSION} AS remote
 FROM okteto/supervisor:${OKTETO_SUPERVISOR_VERSION} AS supervisor
 FROM okteto/clean:${OKTETO_CLEAN_VERSION} AS clean
-FROM golang:1.22-bookworm AS golang-builder
-FROM okteto/bin:1.6.1 AS okteto-bin
+FROM golang:1.22.9-bookworm AS golang-builder
 
-FROM alpine:3.18 AS certs
+FROM alpine:3.20 AS certs
 RUN apk add --no-cache ca-certificates
 
 FROM golang-builder AS kubectl-builder
 ARG TARGETARCH
 ARG KUBECTL_VERSION
-RUN curl -sLf --retry 3 -o kubectl https://storage.googleapis.com/kubernetes-release/release/v${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl && \
+RUN curl -sLf --retry 3 -o kubectl https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl && \
     cp kubectl /usr/local/bin/kubectl && \
     chmod +x /usr/local/bin/kubectl && \
     /usr/local/bin/kubectl version --client=true
@@ -48,7 +47,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 
 COPY docker-credential-okteto /okteto/bin/docker-credential-okteto
 
-FROM busybox:1.34.0
+FROM busybox:1.36.1
 
 RUN addgroup -g 1000 cligroup && \
     adduser -D -h /home/cliuser -G cligroup -u 1000 cliuser
