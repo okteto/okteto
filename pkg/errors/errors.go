@@ -218,6 +218,9 @@ var (
 		E:    fmt.Errorf("the Okteto manifest specified is a directory, please specify a file"),
 		Hint: "Check the path to the Okteto manifest file",
 	}
+
+	ErrReadinessProbeFailed = errors.New("readiness probe failed")
+	ErrLivenessProbeFailed  = errors.New("liveness probe failed")
 )
 
 // IsForbidden raised if the Okteto API returns 401
@@ -284,4 +287,12 @@ func IsClosedNetwork(err error) bool {
 
 func IsErrGitHubNotVerifiedEmail(err error) bool {
 	return err.Error() == ErrGitHubNotVerifiedEmail.Error()
+}
+
+func IsReadinessProbeFailed(err error) bool {
+	return err == ErrReadinessProbeFailed
+}
+
+func IsLivenessProbeFailed(err error) bool {
+	return err == ErrLivenessProbeFailed
 }

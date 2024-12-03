@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/errors"
 	apiv1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,14 +51,9 @@ func livenessProbeFailed(event apiv1.Event) bool {
 	return event.Reason == unhealthyReason && strings.HasPrefix(event.Message, livenessProbeFailedMessage)
 }
 
-type Failure struct {
-	Readiness bool
-	Liveness  bool
-}
-
 // GetUnhealthyEventFailure returns the message of the last event that caused the pod to be unhealthy
 // this could be a readiness or liveness probe failure
-func GetUnhealthyEventFailure(ctx context.Context, namespace, podName string, c kubernetes.Interface) *Failure {
+func GetUnhealthyEventFailure(ctx context.Context, namespace, podName string, c kubernetes.Interface) error {
 	events, err := List(ctx, namespace, podName, c)
 	if err != nil {
 		return nil
@@ -65,10 +61,10 @@ func GetUnhealthyEventFailure(ctx context.Context, namespace, podName string, c 
 	for i := len(events) - 1; i >= 0; i-- {
 		event := events[i]
 		if readinessProbeFailed(event) {
-			return &Failure{Readiness: true}
+			return errors.ErrReadinessProbeFailed
 		}
 		if livenessProbeFailed(event) {
-			return &Failure{Liveness: true}
+			return errors.ErrLivenessProbeFailed
 		}
 	}
 	return nil
