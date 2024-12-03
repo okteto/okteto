@@ -14,7 +14,6 @@
 package doctor
 
 import (
-	"compress/flate"
 	"context"
 	"fmt"
 	"os"
@@ -22,7 +21,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/mholt/archiver/v3"
+	"github.com/mholt/archives"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -48,13 +47,9 @@ type PodInfo struct {
 
 // Run runs the "okteto status" sequence
 func Run(ctx context.Context, dev *model.Dev, devPath string, namespace string, c *kubernetes.Clientset) (string, error) {
-	z := archiver.Zip{
-		CompressionLevel:       flate.DefaultCompression,
-		MkdirAll:               true,
-		SelectiveCompression:   true,
-		ContinueOnError:        true,
-		OverwriteExisting:      true,
-		ImplicitTopLevelFolder: true,
+	z := archives.Zip{
+		SelectiveCompression: true,
+		ContinueOnError:      true,
 	}
 
 	summaryFilename, err := generateSummaryFile()
@@ -88,33 +83,47 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, namespace string, 
 
 	now := time.Now()
 	archiveName := fmt.Sprintf("okteto-doctor-%s.zip", now.Format("20060102150405"))
-	files := []string{summaryFilename}
-	files = append(files, stignoreFilenames...)
+	files := map[string]string{summaryFilename: "okteto-summary.txt"}
+	for _, f := range stignoreFilenames {
+		files[f] = filepath.Base(f)
+	}
 
 	appLogsPath := filepath.Join(config.GetAppHome(namespace, dev.Name), "okteto.log")
 	if filesystem.FileExists(appLogsPath) {
-		files = append(files, appLogsPath)
+		files[appLogsPath] = "okteto.log"
 	}
 
 	if filesystem.FileExists(syncthing.GetLogFile(namespace, dev.Name)) {
-		files = append(files, syncthing.GetLogFile(namespace, dev.Name))
+		files[syncthing.GetLogFile(namespace, dev.Name)] = "syncthing.log"
 	}
 	if podPath != "" {
-		files = append(files, podPath)
+		files[podPath] = filepath.Base(podPath)
 	}
 	if manifestPath != "" {
-		files = append(files, manifestPath)
+		files[manifestPath] = filepath.Base(manifestPath)
 	}
 	if remoteLogsPath != "" {
-		files = append(files, remoteLogsPath)
+		files[remoteLogsPath] = filepath.Base(remoteLogsPath)
 	}
 
 	k8sLogsPath := io.GetK8sLoggerFilePath(config.GetOktetoHome())
 	if filesystem.FileExists(k8sLogsPath) {
-		files = append(files, k8sLogsPath)
+		files[k8sLogsPath] = "k8s.log"
 	}
 
-	if err := z.Archive(files, archiveName); err != nil {
+	archiveFiles, err := archives.FilesFromDisk(ctx, &archives.FromDiskOptions{}, files)
+	if err != nil {
+		oktetoLog.Infof("error while reading files from disk: %s", err)
+		return "", fmt.Errorf("couldn't create archive '%s', please try again: %w", archiveName, err)
+	}
+
+	file, err := os.OpenFile(archiveName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return "", fmt.Errorf("couldn't create archive '%s', please try again: %w", archiveName, err)
+	}
+	defer file.Close()
+
+	if err := z.Archive(ctx, file, archiveFiles); err != nil {
 		oktetoLog.Infof("error while archiving: %s", err)
 		return "", fmt.Errorf("couldn't create archive '%s', please try again: %w", archiveName, err)
 	}
