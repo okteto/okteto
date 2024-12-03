@@ -21,19 +21,21 @@ import (
 )
 
 const (
-	RunningStatus     = "running"
-	NotRunningStatus  = "not-running"
-	CompletedStatus   = "completed"
-	PullingStatus     = "pulling"
-	ProgressingStatus = "progressing"
-	BootingStatus     = "booting"
-	ErrorStatus       = "error"
+	RunningStatus       = "running"
+	NotRunningStatus    = "not-running"
+	CompletedStatus     = "completed"
+	PullingStatus       = "pulling"
+	ProgressingStatus   = "progressing"
+	BootingStatus       = "booting"
+	ErrorStatus         = "error"
+	UnschedulableStatus = "unschedulable"
 )
 
 var TransitionStatus = map[string]bool{
-	BootingStatus:     true,
-	ProgressingStatus: true,
-	PullingStatus:     true,
+	BootingStatus:       true,
+	ProgressingStatus:   true,
+	PullingStatus:       true,
+	UnschedulableStatus: true,
 }
 
 type namespaceClient struct {
