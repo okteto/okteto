@@ -314,7 +314,6 @@ ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME="dependency_user"
 
 ENV OKTETO_SSH_AGENT_HOSTNAME="ssh-agent.default.svc.cluster.local"
 ENV OKTETO_SSH_AGENT_PORT="3000"
-ENV OKTETO_SSH_AGENT_SOCKET="okteto-socket.sock"
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
@@ -330,8 +329,8 @@ ENV A="A"
 RUN \
   \
   --mount=type=secret,id=known_hosts \
+  --mount=type=secret,id=OKTETO_SSH_AGENT_SOCKET,env=OKTETO_SSH_AGENT_SOCKET \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts $HOME/.ssh/known_hosts" >> $HOME/.ssh/config && \
-  export SSH_AUTH_SOCK=okteto-socket.sock && \
   /okteto/bin/okteto remote-run deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test"
 
 
@@ -417,7 +416,6 @@ ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME="dependency_user"
 
 ENV OKTETO_SSH_AGENT_HOSTNAME="ssh-agent.default.svc.cluster.local"
 ENV OKTETO_SSH_AGENT_PORT="3000"
-ENV OKTETO_SSH_AGENT_SOCKET="okteto-socket.sock"
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
@@ -431,8 +429,8 @@ RUN okteto registrytoken install --force --log-output=json
 RUN \
   \
   --mount=type=secret,id=known_hosts \
+  --mount=type=secret,id=OKTETO_SSH_AGENT_SOCKET,env=OKTETO_SSH_AGENT_SOCKET \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts $HOME/.ssh/known_hosts" >> $HOME/.ssh/config && \
-  export SSH_AUTH_SOCK=okteto-socket.sock && \
   /okteto/bin/okteto remote-run test --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test" || true
 
 
@@ -505,7 +503,6 @@ WORKDIR /okteto/src
 
 ENV OKTETO_SSH_AGENT_HOSTNAME=""
 ENV OKTETO_SSH_AGENT_PORT=""
-ENV OKTETO_SSH_AGENT_SOCKET="okteto-socket.sock"
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
@@ -519,8 +516,8 @@ RUN okteto registrytoken install --force --log-output=json
 RUN \
   \
   --mount=type=secret,id=known_hosts \
+  --mount=type=secret,id=OKTETO_SSH_AGENT_SOCKET,env=OKTETO_SSH_AGENT_SOCKET \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts $HOME/.ssh/known_hosts" >> $HOME/.ssh/config && \
-
   /okteto/bin/okteto remote-run deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test"
 
 

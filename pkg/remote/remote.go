@@ -91,7 +91,6 @@ ENV {{$key}}={{$val}}
 
 ENV {{ .SSHAgentHostnameArgName }}="{{ .SSHAgentHostname }}"
 ENV {{ .SSHAgentPortArgName }}="{{ .SSHAgentPort }}"
-ENV {{ .SSHAgentSocketArgName }}="{{ .SSHAgentSocket }}"
 
 ARG {{ .GitCommitArgName }}
 ARG {{ .GitBranchArgName }}
@@ -107,8 +106,8 @@ ENV {{$key}}={{$val}}
 RUN \
   {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}},sharing=private {{end}}\
   --mount=type=secret,id=known_hosts \
+  --mount=type=secret,id={{ .SSHAgentSocketArgName }},env={{ .SSHAgentSocketArgName }} \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts $HOME/.ssh/known_hosts" >> $HOME/.ssh/config && \
-{{ if .SSHAgentHostname }}  export SSH_AUTH_SOCK={{ .SSHAgentSocket }} && \{{ end }}
   /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}{{ if eq .Command "test" }} || true{{ end }}
 
 {{range $key, $artifact := .Artifacts }}
@@ -221,7 +220,6 @@ type dockerfileTemplateProperties struct {
 	SSHAgentPortArgName          string
 	SSHAgentPort                 string
 	SSHAgentSocketArgName        string
-	SSHAgentSocket               string
 	Caches                       []string
 	Artifacts                    []model.Artifact
 }
@@ -356,6 +354,10 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 
 	if sc.SSHAgentHostname != "" {
 		buildOptions.ExtraHosts = append(buildOptions.ExtraHosts, types.HostMap{Hostname: sc.SSHAgentHostname, IP: sc.SSHAgentInternalIP})
+
+		// Set the envvar to be able to load the ssh-agent socket for a build secret
+		os.Setenv(constants.OktetoSshAgentSocketEnvVar, r.generateSocketName())
+		buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=%s", constants.OktetoSshAgentSocketEnvVar))
 	}
 
 	buildOptions.ExtraHosts = addDefinedHosts(buildOptions.ExtraHosts, params.Hosts)
@@ -424,7 +426,6 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		SSHAgentPort:                 params.SSHAgentPort,
 		SSHAgentPortArgName:          constants.OktetoSshAgentPortEnvVar,
 		SSHAgentSocketArgName:        constants.OktetoSshAgentSocketEnvVar,
-		SSHAgentSocket:               r.generateSocketName(),
 	}
 
 	dockerfileSyntax.prepareEnvVars()
