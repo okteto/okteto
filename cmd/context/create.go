@@ -307,18 +307,24 @@ func checkCLIVersion(currentVersion, recommendedVersion, minMajorMinor string) e
 		return nil
 	}
 
-	// Remove patch, pre-release and build metadata
+	// Remove patch, pre-release and build metadata from current version
 	currentMajorMinor := fmt.Sprintf("%v.%v", version.Major(), version.Minor())
 	version, err = semver.NewVersion(currentMajorMinor)
 	if err != nil {
 		return fmt.Errorf("failed to parse major minor version: %v", err)
 	}
+
 	recVersion, err := semver.NewVersion(recommendedVersion)
 	if err != nil {
 		return fmt.Errorf("failed to parse cluster version: %v", err)
 	}
-
-	recommendedMajorMinor := fmt.Sprintf("%v.%v", recVersion.Major(), recVersion.Minor())
+	// Remove patch, pre-release and build metadata from recommended version
+	recMajorMinorVersion, err := semver.NewVersion(
+		fmt.Sprintf("%v.%v", recVersion.Major(), recVersion.Minor()),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to recommended cluster version: %v", err)
+	}
 
 	minV, err := semver.NewVersion(minMajorMinor)
 	if err != nil {
@@ -327,16 +333,16 @@ func checkCLIVersion(currentVersion, recommendedVersion, minMajorMinor string) e
 	if version.LessThan(minV) {
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("unsupported okteto CLI version: %s", currentVersion),
-			Hint: fmt.Sprintf("Your Okteto instance has a recommended Okteto CLI version of %s and supports a minimum version of %s.\n    Please update your Okteto CLI or contact your Okteto administrator.", recommendedMajorMinor, minMajorMinor),
+			Hint: fmt.Sprintf("Your Okteto instance has a recommended Okteto CLI version of %s and supports a minimum version of %s.\n    Please update your Okteto CLI or contact your Okteto administrator.", recMajorMinorVersion, minMajorMinor),
 		}
 	}
 
-	if version.LessThan(recVersion) {
-		oktetoLog.Warning(fmt.Sprintf("Your Okteto CLI version %s is older than the recommended version of your Okteto instance: %s. Upgrade to the recommended version or set OKTETO_SKIP_CLUSTER_CLI_VERSION=true to suppress this message.", currentMajorMinor, recommendedMajorMinor))
+	if version.LessThan(recMajorMinorVersion) {
+		oktetoLog.Warning(fmt.Sprintf("Your Okteto CLI version %s is older than the recommended version of your Okteto instance: %s. Upgrade to the recommended version or set OKTETO_SKIP_CLUSTER_CLI_VERSION=true to suppress this message.", currentMajorMinor, recMajorMinorVersion))
 	}
 
-	if version.GreaterThan(recVersion) {
-		oktetoLog.Warning(fmt.Sprintf("Your Okteto CLI version %s is newer than the recommended version of your Okteto instance: %s. Downgrade to the recommended version or set OKTETO_SKIP_CLUSTER_CLI_VERSION=true to suppress this message.", currentMajorMinor, recommendedMajorMinor))
+	if version.GreaterThan(recMajorMinorVersion) {
+		oktetoLog.Warning(fmt.Sprintf("Your Okteto CLI version %s is newer than the recommended version of your Okteto instance: %s. Downgrade to the recommended version or set OKTETO_SKIP_CLUSTER_CLI_VERSION=true to suppress this message.", currentMajorMinor, recMajorMinorVersion))
 		return nil
 	}
 
