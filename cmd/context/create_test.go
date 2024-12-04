@@ -953,7 +953,7 @@ func Test_loadDotEnv(t *testing.T) {
 	}
 }
 
-func TestCheckCLIMinVersion(t *testing.T) {
+func TestCheckCLIVersion(t *testing.T) {
 	tests := []struct {
 		expectedErr        error
 		name               string
@@ -993,6 +993,12 @@ func TestCheckCLIMinVersion(t *testing.T) {
 			currentVersion:     "some-non-semver-version",
 			minVersion:         "3.0.0",
 			recommendedVersion: "3.1.0",
+		},
+		{
+			name:               "beta version",
+			currentVersion:     "3.2.0-beta.2",
+			minVersion:         "3.2.0",
+			recommendedVersion: "3.2.0-beta.2",
 		},
 	}
 
