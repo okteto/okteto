@@ -214,6 +214,9 @@ func translateStatefulSet(svcName string, s *model.Stack, divert Divert) *appsv1
 		Affinity:                      translateAffinity(svc),
 		NodeSelector:                  svc.NodeSelector,
 		Volumes:                       translateVolumes(svc),
+		SecurityContext: &apiv1.PodSecurityContext{
+			FSGroup: pointer.Int64(1000),
+		},
 		Containers: []apiv1.Container{
 			{
 				Name:            svcName,
