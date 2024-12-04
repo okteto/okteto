@@ -29,7 +29,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/manifoldco/promptui v0.9.0
 	github.com/mitchellh/go-ps v1.0.0
-	github.com/moby/buildkit v0.15.2
+	github.com/moby/buildkit v0.17.3
 	github.com/moby/term v0.5.0
 	github.com/pkg/errors v0.9.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
@@ -45,7 +45,7 @@ require (
 	golang.org/x/oauth2 v0.24.0
 	golang.org/x/sync v0.9.0
 	golang.org/x/term v0.25.0
-	google.golang.org/grpc v1.66.2
+	google.golang.org/grpc v1.66.3
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.28.4
@@ -253,4 +253,4 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240604185151-ef581f913117 // indirect
 )
 
-replace github.com/moby/buildkit => github.com/okteto/buildkit v0.0.0-20241112140530-03f58aa5a54d
+replace github.com/moby/buildkit => github.com/okteto/buildkit v0.0.0-20241204113742-0ceaf11ec813
