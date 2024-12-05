@@ -346,6 +346,10 @@ func getAddPermissionsInitContainer(svcName string, svc *model.Service) apiv1.Co
 		ImagePullPolicy: apiv1.PullIfNotPresent,
 		Command:         initContainerCommand,
 		VolumeMounts:    initContainerVolumeMounts,
+		SecurityContext: &apiv1.SecurityContext{
+			RunAsUser:  pointer.Int64(0),
+			RunAsGroup: pointer.Int64(0),
+		},
 	}
 	return initContainer
 }
