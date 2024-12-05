@@ -35,6 +35,15 @@ func RemoteRun(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 		Short:        "Remote run management commands. These are the commands to be run remotely",
 		Hidden:       true,
 		SilenceUsage: true,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			// If we set the OKTETO_SSH_AGENT_SOCKET for this remote execution, set the SSH_AUTH_SOCK to
+			// the same value
+			socketFile := os.Getenv(constants.OktetoSshAgentSocketEnvVar)
+			if socketFile != "" {
+				os.Setenv("SSH_AUTH_SOCK", socketFile)
+			}
+			return nil
+		},
 	}
 
 	cmd.AddCommand(Deploy(ctx, k8sLogger))
