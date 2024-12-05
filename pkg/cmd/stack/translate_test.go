@@ -293,6 +293,10 @@ func Test_translateStatefulSet(t *testing.T) {
 				Name:      pvcName,
 			},
 		},
+		SecurityContext: &apiv1.SecurityContext{
+			RunAsUser:  pointer.Int64(0),
+			RunAsGroup: pointer.Int64(0),
+		},
 	}
 	assert.Equal(t, initContainer, result.Spec.Template.Spec.InitContainers[0])
 	initVolumeContainer := apiv1.Container{
@@ -648,6 +652,10 @@ func Test_translateJobWithVolumes(t *testing.T) {
 				MountPath: "/data",
 				Name:      pvcName,
 			},
+		},
+		SecurityContext: &apiv1.SecurityContext{
+			RunAsUser:  pointer.Int64(0),
+			RunAsGroup: pointer.Int64(0),
 		},
 	}
 	if !reflect.DeepEqual(result.Spec.Template.Spec.InitContainers[0], initContainer) {
