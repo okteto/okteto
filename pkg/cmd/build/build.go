@@ -86,30 +86,14 @@ func (ob *OktetoBuilder) GetBuilder() string {
 func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error {
 	isRemoteExecution := buildOptions.OutputMode == DeployOutputModeOnBuild || buildOptions.OutputMode == DestroyOutputModeOnBuild || buildOptions.OutputMode == TestOutputModeOnBuild
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
-	depotToken := os.Getenv(DepotTokenEnvVar)
-	depotProject := os.Getenv(DepotProjectEnvVar)
 
 	if !isRemoteExecution {
 		builder := ob.GetBuilder()
 		buildMsg := fmt.Sprintf("Building '%s'", buildOptions.File)
-		depotEnabled := IsDepotEnabled()
-		if depotEnabled {
-			ioCtrl.Out().Infof("%s on depot's machine...", buildMsg)
-		} else {
-			ioCtrl.Out().Infof("%s in %s...", buildMsg, builder)
-		}
+		ioCtrl.Out().Infof("%s in %s...", buildMsg, builder)
 	}
 
-	switch {
-	// When depot is available we only go to depot if it's not a deploy or a destroy.
-	// On depot the workload id is not working correctly and the users would not be able to
-	// use the internal cluster ip as if they were running their scripts on the k8s cluster
-	case IsDepotEnabled() && !isRemoteExecution:
-		depotManager := newDepotBuilder(depotProject, depotToken, ob.OktetoContext, ioCtrl)
-		return depotManager.Run(ctx, buildOptions, SolveBuild)
-	default:
-		return ob.buildWithOkteto(ctx, buildOptions, ioCtrl, SolveBuild)
-	}
+	return ob.buildWithOkteto(ctx, buildOptions, ioCtrl, SolveBuild)
 }
 
 func setOutputMode(outputMode string) string {
