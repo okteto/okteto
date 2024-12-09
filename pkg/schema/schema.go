@@ -48,7 +48,8 @@ func NewJsonSchema() *OktetoJsonSchema {
 
 	s := r.Reflect(&manifest{})
 	s.ID = "https://raw.githubusercontent.com/okteto/okteto/master/schema.json"
-	s.Title = "Okteto Manifest"
+	s.Title = "Okteto Manifest Schema"
+	s.Description = "A JSON schema providing inline suggestions and validation for creating Okteto Manifests in supported code editors. Okteto Manifests define Development Environments and workflows for Kubernetes applications, simplifying cloud-native development."
 	s.Required = []string{}
 
 	return &OktetoJsonSchema{
