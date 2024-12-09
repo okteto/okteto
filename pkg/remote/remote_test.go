@@ -329,7 +329,7 @@ ENV A="A"
 RUN \
   \
   --mount=type=secret,id=known_hosts \
-  --mount=type=secret,id=OKTETO_SSH_AGENT_SOCKET,env=OKTETO_SSH_AGENT_SOCKET \
+  --mount=type=secret,id=OKTETO_SSH_AGENT_SOCKET,env=SSH_AUTH_SOCK \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts $HOME/.ssh/known_hosts" >> $HOME/.ssh/config && \
   /okteto/bin/okteto remote-run deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test"
 
@@ -429,7 +429,7 @@ RUN okteto registrytoken install --force --log-output=json
 RUN \
   \
   --mount=type=secret,id=known_hosts \
-  --mount=type=secret,id=OKTETO_SSH_AGENT_SOCKET,env=OKTETO_SSH_AGENT_SOCKET \
+  --mount=type=secret,id=OKTETO_SSH_AGENT_SOCKET,env=SSH_AUTH_SOCK \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts $HOME/.ssh/known_hosts" >> $HOME/.ssh/config && \
   /okteto/bin/okteto remote-run test --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test" || true
 
@@ -516,7 +516,7 @@ RUN okteto registrytoken install --force --log-output=json
 RUN \
   \
   --mount=type=secret,id=known_hosts \
-  --mount=type=secret,id=OKTETO_SSH_AGENT_SOCKET,env=OKTETO_SSH_AGENT_SOCKET \
+  --mount=type=secret,id=OKTETO_SSH_AGENT_SOCKET,env=SSH_AUTH_SOCK \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts $HOME/.ssh/known_hosts" >> $HOME/.ssh/config && \
   /okteto/bin/okteto remote-run deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test"
 
