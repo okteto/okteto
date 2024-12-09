@@ -121,7 +121,7 @@ commands:
 
 			sshAgentHostname := os.Getenv(constants.OktetoSshAgentHostnameEnvVar)
 			sshAgentPort := os.Getenv(constants.OktetoSshAgentPortEnvVar)
-			sshSocket := os.Getenv(constants.OktetoSshAgentSocketEnvVar)
+			sshSocket := os.Getenv("SSH_AUTH_SOCK")
 
 			if sshAgentHostname != "" && sshAgentPort != "" && sshSocket != "" {
 				forwarder := newSSHForwarder()
@@ -135,7 +135,7 @@ commands:
 					sshAgentHostname,
 					constants.OktetoSshAgentPortEnvVar,
 					sshAgentPort,
-					constants.OktetoSshAgentSocketEnvVar,
+					"SSH_AUTH_SOCK",
 					sshSocket)
 				oktetoLog.Info(message)
 			}

@@ -125,7 +125,7 @@ It is important that this command does the minimum and must not do calculations 
 
 			sshAgentHostname := os.Getenv(constants.OktetoSshAgentHostnameEnvVar)
 			sshAgentPort := os.Getenv(constants.OktetoSshAgentPortEnvVar)
-			sshSocket := os.Getenv(constants.OktetoSshAgentSocketEnvVar)
+			sshSocket := os.Getenv("SSH_AUTH_SOCK")
 
 			if sshAgentHostname != "" && sshAgentPort != "" && sshSocket != "" {
 				forwarder := newSSHForwarder()
@@ -139,7 +139,7 @@ It is important that this command does the minimum and must not do calculations 
 					sshAgentHostname,
 					constants.OktetoSshAgentPortEnvVar,
 					sshAgentPort,
-					constants.OktetoSshAgentSocketEnvVar,
+					"SSH_AUTH_SOCK",
 					sshSocket)
 				oktetoLog.Info(message)
 			}
