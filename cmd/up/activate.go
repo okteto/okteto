@@ -48,7 +48,7 @@ const (
 	// enableDevBranchTrackingEnvVar enables or disables the dev branch tracking by the env var OKTETO_TRACK_DEV_BANCH_ENABLED
 	enableDevBranchTrackingEnvVar = "OKTETO_TRACK_DEV_BRANCH_ENABLED"
 
-	// devBranchTrackingIntervalEnvVar sets the tracking interval for branch trackin (if enabled) using OKTETO_TRACK_DEV_BRANCH_INTERVAL
+	// devBranchTrackingIntervalEnvVar sets the tracking interval for branch tracking (if enabled) using OKTETO_TRACK_DEV_BRANCH_INTERVAL
 	devBranchTrackingIntervalEnvVar = "OKTETO_TRACK_DEV_BRANCH_INTERVAL"
 
 	defaultTrackingInterval = 5 * time.Minute
