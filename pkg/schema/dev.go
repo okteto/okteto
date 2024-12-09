@@ -23,19 +23,19 @@ func (dev) JSONSchema() *jsonschema.Schema {
 	devProps.Set("affinity", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"object"}},
 		Title:       "affinity",
-		Description: "Affinity allows you to constrain which nodes your development container is eligible to be scheduled on, based on labels on the node",
+		Description: "Affinity allows you to constrain which nodes your development container is eligible to be scheduled on, based on labels on the node.\nhttps://www.okteto.com/docs/reference/okteto-manifest/#affinity-affinity-optional",
 	})
 
 	devProps.Set("autocreate", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"boolean"}},
 		Title:       "autocreate",
-		Description: "If set to true, okteto up creates a deployment if name doesn't match any existing deployment in the current namespace",
+		Description: "If set to true, okteto up creates a deployment if name doesn't match any existing deployment in the current namespace.\nhttps://www.okteto.com/docs/reference/okteto-manifest/#autocreate-bool-optional",
 		Default:     false,
 	})
 
 	devProps.Set("command", &jsonschema.Schema{
 		Title:       "command",
-		Description: "The command of your development container. If empty, it defaults to sh. The command can also be a list",
+		Description: "The command of your development container. If empty, it defaults to sh. The command can also be a list.\nhttps://www.okteto.com/docs/reference/okteto-manifest/#command-string-optional",
 		OneOf: []*jsonschema.Schema{
 			{
 				Type:    &jsonschema.Type{Types: []string{"string"}},
@@ -53,7 +53,7 @@ func (dev) JSONSchema() *jsonschema.Schema {
 	devProps.Set("container", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
 		Title:       "container",
-		Description: "The name of the container in your deployment you want to put on development mode. By default, it takes the first one",
+		Description: "The name of the container in your deployment you want to put on development mode. By default, it takes the first one.\nhttps://www.okteto.com/docs/reference/okteto-manifest/#container-string-optional",
 	})
 
 	devProps.Set("environment", &jsonschema.Schema{
@@ -587,6 +587,8 @@ func (dev) JSONSchema() *jsonschema.Schema {
 	})
 
 	return &jsonschema.Schema{
+		Title:                "dev",
+		Description:          "A list of development containers to define the behavior of okteto up and synchronize your code in your development environment.\nhttps://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional",
 		Type:                 &jsonschema.Type{Types: []string{"object"}},
 		AdditionalProperties: jsonschema.FalseSchema,
 		PatternProperties: map[string]*jsonschema.Schema{

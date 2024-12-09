@@ -22,11 +22,11 @@ import (
 type manifest struct {
 	Deploy       deploy       `json:"deploy" jsonschema:"title=deploy,description=The deployment configuration for your development environment."`
 	Icon         icon         `json:"icon" jsonschema:"title=icon,description=Sets the icon that will be shown in the Okteto UI."`
-	Dependencies dependencies `json:"dependencies" jsonschema:"title=dependencies,description=A list of repositories you want to deploy as part of your development environment."`
+	Dependencies dependencies `json:"dependencies"`
 	Dev          dev          `json:"dev" jsonschema:"title=dev,description=A list of development containers to define the behavior of okteto up and synchronize your code in your development environment."`
 	Forward      forward      `json:"forward" jsonschema:"title=forward,description=When declaring a global forward Okteto will automatically handle port collision when two or more okteto up sessions are running simultaneously. If the okteto up session detects that the port is already in use and said port is defined as global forward okteto up will ignore the port collision and continue the up sequence. If the port is later available okteto up session will automatically connect to it without interrupting the session."`
 	External     external     `json:"external" jsonschema:"title=external,description=A list of external resources that are part of your development environment. Use this section for resources that are deployed outside of the okteto cluster like Cloud resources or dashboards."`
-	Build        build        `json:"build" jsonschema:"title=build,description=A list of images to build as part of your development environment."`
+	Build        build        `json:"build"`
 	Test         test         `json:"test" jsonschema:"title=test,description=The test configuration for your development environment. This feature is only supported in clusters that have Okteto installed."`
 	Destroy      destroy      `json:"destroy" jsonschema:"title=destroy,description=A list of commands to destroy external resources created by your development environment."`
 	Context      string       `json:"context" jsonschema:"title=context,description=The build context. Relative paths are relative to the location of the Okteto Manifest (default: .),example=api"`

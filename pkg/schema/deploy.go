@@ -177,6 +177,8 @@ func (deploy) JSONSchema() *jsonschema.Schema {
 	})
 
 	return &jsonschema.Schema{
+		Title:       "deploy",
+		Description: "A list of commands to deploy your development environment.\nhttps://www.okteto.com/docs/reference/okteto-manifest/#deploy-string-optional",
 		OneOf: []*jsonschema.Schema{
 			{
 				Type: &jsonschema.Type{Types: []string{"array"}},

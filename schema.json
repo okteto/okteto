@@ -6,7 +6,6 @@
   "properties": {
     "build": {
       "additionalProperties": false,
-      "description": "A list of images to build as part of your development environment.",
       "patternProperties": {
         ".*": {
           "additionalProperties": false,
@@ -77,7 +76,6 @@
       "type": "string"
     },
     "dependencies": {
-      "description": "A list of repositories you want to deploy as part of your development environment.",
       "oneOf": [
         {
           "items": {
@@ -424,18 +422,18 @@
           "additionalProperties": false,
           "properties": {
             "affinity": {
-              "description": "Affinity allows you to constrain which nodes your development container is eligible to be scheduled on, based on labels on the node",
+              "description": "Affinity allows you to constrain which nodes your development container is eligible to be scheduled on, based on labels on the node.\nhttps://www.okteto.com/docs/reference/okteto-manifest/#affinity-affinity-optional",
               "title": "affinity",
               "type": "object"
             },
             "autocreate": {
               "default": false,
-              "description": "If set to true, okteto up creates a deployment if name doesn't match any existing deployment in the current namespace",
+              "description": "If set to true, okteto up creates a deployment if name doesn't match any existing deployment in the current namespace.\nhttps://www.okteto.com/docs/reference/okteto-manifest/#autocreate-bool-optional",
               "title": "autocreate",
               "type": "boolean"
             },
             "command": {
-              "description": "The command of your development container. If empty, it defaults to sh. The command can also be a list",
+              "description": "The command of your development container. If empty, it defaults to sh. The command can also be a list.\nhttps://www.okteto.com/docs/reference/okteto-manifest/#command-string-optional",
               "oneOf": [
                 {
                   "default": "sh",
@@ -451,7 +449,7 @@
               "title": "command"
             },
             "container": {
-              "description": "The name of the container in your deployment you want to put on development mode. By default, it takes the first one",
+              "description": "The name of the container in your deployment you want to put on development mode. By default, it takes the first one.\nhttps://www.okteto.com/docs/reference/okteto-manifest/#container-string-optional",
               "title": "container",
               "type": "string"
             },
