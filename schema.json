@@ -2,6 +2,7 @@
   "$id": "https://raw.githubusercontent.com/okteto/okteto/master/schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
+  "description": "A JSON schema providing inline suggestions and validation for creating Okteto Manifests in supported code editors. Okteto Manifests define Development Environments and workflows for Kubernetes applications, simplifying cloud-native development.",
   "properties": {
     "build": {
       "additionalProperties": false,
@@ -1275,6 +1276,6 @@
       "type": "object"
     }
   },
-  "title": "Okteto Manifest",
+  "title": "Okteto Manifest Schema",
   "type": "object"
 }
