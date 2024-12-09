@@ -6,6 +6,7 @@ dev:
   cli:
     image: okteto/golang:1
     command: bash
+    autocreate: 1
     workdir: /usr/src/cli
     sync:
       - .:/usr/src/cli
@@ -13,3 +14,7 @@ dev:
       - /go/pkg/
       - /root/.cache/go-build/
     autocreate: true
+
+dependencies:
+
+destroy:

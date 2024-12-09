@@ -57,6 +57,8 @@ func (dependencies) JSONSchema() *jsonschema.Schema {
 	})
 
 	return &jsonschema.Schema{
+		Title:       "dependencies",
+		Description: "A list of repositories you want to deploy as part of your development environment.\nhttps://www.okteto.com/docs/reference/okteto-manifest/#dependencies-string-optional",
 		OneOf: []*jsonschema.Schema{
 			{
 				Type: &jsonschema.Type{Types: []string{"array"}},

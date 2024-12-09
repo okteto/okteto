@@ -73,7 +73,7 @@ func (build) JSONSchema() *jsonschema.Schema {
 	return &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"object"}},
 		Title:       "build",
-		Description: "A list of images to build as part of your development environment",
+		Description: "A list of images to build as part of your development environment.\nhttps://www.okteto.com/docs/reference/okteto-manifest/#build-object-optional",
 		PatternProperties: map[string]*jsonschema.Schema{
 			".*": {
 				Type:                 &jsonschema.Type{Types: []string{"object"}},
