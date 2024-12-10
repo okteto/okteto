@@ -17,19 +17,19 @@
 package test
 
 import (
-    "os"
-    "path/filepath"
-    "testing"
+	"os"
+	"path/filepath"
+	"testing"
 
-    "github.com/okteto/okteto/integration"
-    "github.com/okteto/okteto/integration/commands"
-    oktetoLog "github.com/okteto/okteto/pkg/log"
-    "github.com/stretchr/testify/assert"
-    "github.com/stretchr/testify/require"
+	"github.com/okteto/okteto/integration"
+	"github.com/okteto/okteto/integration/commands"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
-    oktetoManifestWithPassingTest = `
+	oktetoManifestWithPassingTest = `
 test:
   unit:
     context: .
@@ -41,7 +41,7 @@ deploy:
   - echo "deploying"
 `
 
-    oktetoManifestWithPassingTestAndArtifacts = `
+	oktetoManifestWithPassingTestAndArtifacts = `
 test:
   unit:
     context: .
@@ -57,7 +57,7 @@ deploy:
   - echo "deploying"
 `
 
-    oktetoManifestWithFailingTestAndArtifacts = `
+	oktetoManifestWithFailingTestAndArtifacts = `
 test:
   unit:
     context: .
@@ -71,7 +71,7 @@ test:
 deploy:
   - echo "deploying"
 `
-    dockerfileWithAnotherUser = `
+	dockerfileWithAnotherUser = `
 FROM ubuntu:latest
 
 WORKDIR /app
@@ -80,7 +80,7 @@ COPY . .
 RUN chown -R 1000:1000 /app
 USER 1000
 `
-    oktetoManifestWithImageReferencedInBuildSection = `
+	oktetoManifestWithImageReferencedInBuildSection = `
 build:
   tests:
     context: .
@@ -93,180 +93,180 @@ test:
 )
 
 var (
-    token = ""
+	token = ""
 )
 
 func TestMain(m *testing.M) {
-    token = integration.GetToken()
+	token = integration.GetToken()
 
-    exitCode := m.Run()
-    os.Exit(exitCode)
+	exitCode := m.Run()
+	os.Exit(exitCode)
 }
 
 // TestOktetoTestsWithPassingTests validates the simplest happy path of okteto test
 func TestOktetoTestsWithPassingTests(t *testing.T) {
-    integration.SkipIfNotOktetoCluster(t)
-    t.Parallel()
-    oktetoPath, err := integration.GetOktetoPath()
-    require.NoError(t, err)
+	integration.SkipIfNotOktetoCluster(t)
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
 
-    dir := t.TempDir()
+	dir := t.TempDir()
 
-    oktetoManifestPath := filepath.Join(dir, "okteto.yml")
-    assert.NoError(t, os.WriteFile(oktetoManifestPath, []byte(oktetoManifestWithPassingTest), 0600))
+	oktetoManifestPath := filepath.Join(dir, "okteto.yml")
+	assert.NoError(t, os.WriteFile(oktetoManifestPath, []byte(oktetoManifestWithPassingTest), 0600))
 
-    testNamespace := integration.GetTestNamespace(t.Name())
-    namespaceOpts := &commands.NamespaceOptions{
-        Namespace:  testNamespace,
-        OktetoHome: dir,
-        Token:      token,
-    }
-    require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-    require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	testNamespace := integration.GetTestNamespace(t.Name())
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 
-    testOptions := &commands.TestOptions{
-        Workdir:    dir,
-        Namespace:  testNamespace,
-        OktetoHome: dir,
-        Token:      token,
-        NoCache:    true,
-    }
-    out, err := commands.RunOktetoTestAndGetOutput(oktetoPath, testOptions)
-    require.NoError(t, err)
-    assert.Contains(t, out, "Test container 'unit' passed")
+	testOptions := &commands.TestOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+		NoCache:    true,
+	}
+	out, err := commands.RunOktetoTestAndGetOutput(oktetoPath, testOptions)
+	require.NoError(t, err)
+	assert.Contains(t, out, "Test container 'unit' passed")
 
-    require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestOktetoTestsWithPassingTestsAndArtifacts validates the happy path of okteto test with the export of artifacts
 func TestOktetoTestsWithPassingTestsAndArtifacts(t *testing.T) {
-    integration.SkipIfNotOktetoCluster(t)
-    t.Parallel()
-    oktetoPath, err := integration.GetOktetoPath()
-    require.NoError(t, err)
+	integration.SkipIfNotOktetoCluster(t)
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
 
-    dir := t.TempDir()
+	dir := t.TempDir()
 
-    oktetoManifestPath := filepath.Join(dir, "okteto.yml")
-    assert.NoError(t, os.WriteFile(oktetoManifestPath, []byte(oktetoManifestWithPassingTestAndArtifacts), 0600))
+	oktetoManifestPath := filepath.Join(dir, "okteto.yml")
+	assert.NoError(t, os.WriteFile(oktetoManifestPath, []byte(oktetoManifestWithPassingTestAndArtifacts), 0600))
 
-    testNamespace := integration.GetTestNamespace(t.Name())
-    namespaceOpts := &commands.NamespaceOptions{
-        Namespace:  testNamespace,
-        OktetoHome: dir,
-        Token:      token,
-    }
-    require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-    require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	testNamespace := integration.GetTestNamespace(t.Name())
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 
-    testOptions := &commands.TestOptions{
-        Workdir:    dir,
-        Namespace:  testNamespace,
-        OktetoHome: dir,
-        Token:      token,
-        NoCache:    true,
-    }
-    out, err := commands.RunOktetoTestAndGetOutput(oktetoPath, testOptions)
-    require.NoError(t, err)
-    assert.Contains(t, out, "Test container 'unit' passed")
-    coveragePath := filepath.Join(dir, "coverage.txt")
-    coverage, err := os.ReadFile(coveragePath)
-    require.NoError(t, err)
-    assert.Equal(t, "OK\n", string(coverage))
+	testOptions := &commands.TestOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+		NoCache:    true,
+	}
+	out, err := commands.RunOktetoTestAndGetOutput(oktetoPath, testOptions)
+	require.NoError(t, err)
+	assert.Contains(t, out, "Test container 'unit' passed")
+	coveragePath := filepath.Join(dir, "coverage.txt")
+	coverage, err := os.ReadFile(coveragePath)
+	require.NoError(t, err)
+	assert.Equal(t, "OK\n", string(coverage))
 
-    // check that 'reports' exists and is a directory
-    reportsDirPath := filepath.Join(dir, "reports")
-    reportsDir, err := os.Open(reportsDirPath)
-    assert.NoError(t, err)
-    defer func() {
-        if err := reportsDir.Close(); err != nil {
-            oktetoLog.Debugf("Error closing directory %s: %s", reportsDirPath, err)
-        }
-    }()
+	// check that 'reports' exists and is a directory
+	reportsDirPath := filepath.Join(dir, "reports")
+	reportsDir, err := os.Open(reportsDirPath)
+	assert.NoError(t, err)
+	defer func() {
+		if err := reportsDir.Close(); err != nil {
+			oktetoLog.Debugf("Error closing directory %s: %s", reportsDirPath, err)
+		}
+	}()
 
-    reportsInfo, err := reportsDir.Stat()
-    require.NoError(t, err)
-    assert.True(t, reportsInfo.IsDir())
+	reportsInfo, err := reportsDir.Stat()
+	require.NoError(t, err)
+	assert.True(t, reportsInfo.IsDir())
 
-    // check that additional-coverage.txt exists and has the expected content
-    additionalCoveragePath := filepath.Join(reportsDirPath, "additional-coverage.txt")
-    additionalCoverage, err := os.ReadFile(additionalCoveragePath)
-    require.NoError(t, err)
-    assert.Equal(t, "OK\n", string(additionalCoverage))
+	// check that additional-coverage.txt exists and has the expected content
+	additionalCoveragePath := filepath.Join(reportsDirPath, "additional-coverage.txt")
+	additionalCoverage, err := os.ReadFile(additionalCoveragePath)
+	require.NoError(t, err)
+	assert.Equal(t, "OK\n", string(additionalCoverage))
 
-    require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestOktetoTestsWithFailingTestsAndArtifacts validates the scenario where tests fail but we are able to export artifacts anyway
 func TestOktetoTestsWithFailingTestsAndArtifacts(t *testing.T) {
-    integration.SkipIfNotOktetoCluster(t)
-    t.Parallel()
-    oktetoPath, err := integration.GetOktetoPath()
-    require.NoError(t, err)
+	integration.SkipIfNotOktetoCluster(t)
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
 
-    dir := t.TempDir()
+	dir := t.TempDir()
 
-    oktetoManifestPath := filepath.Join(dir, "okteto.yml")
-    assert.NoError(t, os.WriteFile(oktetoManifestPath, []byte(oktetoManifestWithFailingTestAndArtifacts), 0600))
+	oktetoManifestPath := filepath.Join(dir, "okteto.yml")
+	assert.NoError(t, os.WriteFile(oktetoManifestPath, []byte(oktetoManifestWithFailingTestAndArtifacts), 0600))
 
-    testNamespace := integration.GetTestNamespace(t.Name())
-    namespaceOpts := &commands.NamespaceOptions{
-        Namespace:  testNamespace,
-        OktetoHome: dir,
-        Token:      token,
-    }
-    require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-    require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	testNamespace := integration.GetTestNamespace(t.Name())
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 
-    testOptions := &commands.TestOptions{
-        Workdir:    dir,
-        Namespace:  testNamespace,
-        OktetoHome: dir,
-        Token:      token,
-        NoCache:    true,
-    }
-    out, err := commands.RunOktetoTestAndGetOutput(oktetoPath, testOptions)
-    require.Error(t, err)
-    assert.Contains(t, out, "Test container 'unit' failed")
-    coveragePath := filepath.Join(dir, "coverage.txt")
-    coverage, err := os.ReadFile(coveragePath)
-    require.NoError(t, err)
-    assert.Equal(t, "NOT-OK\n", string(coverage))
+	testOptions := &commands.TestOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+		NoCache:    true,
+	}
+	out, err := commands.RunOktetoTestAndGetOutput(oktetoPath, testOptions)
+	require.Error(t, err)
+	assert.Contains(t, out, "Test container 'unit' failed")
+	coveragePath := filepath.Join(dir, "coverage.txt")
+	coverage, err := os.ReadFile(coveragePath)
+	require.NoError(t, err)
+	assert.Equal(t, "NOT-OK\n", string(coverage))
 
-    require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 // TestOktetoTestsWithAnotherUser validates the simplest happy path of okteto test
 func TestOktetoTestsWithAnotherUser(t *testing.T) {
-    integration.SkipIfNotOktetoCluster(t)
-    t.Parallel()
-    oktetoPath, err := integration.GetOktetoPath()
-    require.NoError(t, err)
+	integration.SkipIfNotOktetoCluster(t)
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
 
-    dir := t.TempDir()
+	dir := t.TempDir()
 
-    oktetoManifestPath := filepath.Join(dir, "okteto.yml")
-    assert.NoError(t, os.WriteFile(oktetoManifestPath, []byte(oktetoManifestWithPassingTest), 0600))
+	oktetoManifestPath := filepath.Join(dir, "okteto.yml")
+	assert.NoError(t, os.WriteFile(oktetoManifestPath, []byte(oktetoManifestWithPassingTest), 0600))
 
-    testNamespace := integration.GetTestNamespace(t.Name())
-    namespaceOpts := &commands.NamespaceOptions{
-        Namespace:  testNamespace,
-        OktetoHome: dir,
-        Token:      token,
-    }
-    require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-    require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	testNamespace := integration.GetTestNamespace(t.Name())
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 
-    testOptions := &commands.TestOptions{
-        Workdir:    dir,
-        Namespace:  testNamespace,
-        OktetoHome: dir,
-        Token:      token,
-        NoCache:    true,
-    }
-    out, err := commands.RunOktetoTestAndGetOutput(oktetoPath, testOptions)
-    require.NoError(t, err)
-    assert.Contains(t, out, "Test container 'unit' passed")
+	testOptions := &commands.TestOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+		NoCache:    true,
+	}
+	out, err := commands.RunOktetoTestAndGetOutput(oktetoPath, testOptions)
+	require.NoError(t, err)
+	assert.Contains(t, out, "Test container 'unit' passed")
 
-    require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
