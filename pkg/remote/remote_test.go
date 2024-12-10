@@ -203,7 +203,6 @@ func TestExtraHosts(t *testing.T) {
 		workingDirectoryCtrl: wdCtrl,
 		temporalCtrl:         tempCreator,
 		oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
-		useInternalNetwork:   true,
 		ioCtrl:               io.NewIOController(),
 		getEnviron: func() []string {
 			return []string{}

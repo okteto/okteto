@@ -20,11 +20,8 @@ import (
 
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/util/progress/progressui"
-	"github.com/okteto/okteto/pkg/analytics"
-	okbuildkit "github.com/okteto/okteto/pkg/build/buildkit"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
-	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
@@ -166,31 +163,6 @@ func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 		}
 	}
 	return nil
-}
-
-func shouldRetryBuild(err error, tag string, okCtx OktetoContextInterface) bool {
-	if okbuildkit.IsRetryable(err) {
-		oktetoLog.Yellow(`Failed to push '%s' to the registry:
-  %s,
-  Retrying...`, tag, err.Error())
-		analytics.TrackBuildTransientError(true)
-		return true
-	}
-
-	if err == nil && tag != "" {
-		tags := strings.Split(tag, ",")
-		reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(okCtx))
-		for _, tag := range tags {
-			if _, err := reg.GetImageTagWithDigest(tag); err != nil {
-				oktetoLog.Yellow(`Failed to push '%s' metadata to the registry:
-	  %s,
-	  Retrying...`, tag, err.Error())
-				analytics.TrackBuildPullError(true)
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func (*buildWriter) Write(p []byte) (int, error) {

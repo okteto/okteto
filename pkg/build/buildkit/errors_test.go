@@ -213,11 +213,6 @@ func Test_isTransientError(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "contains 'timed out connecting to machine'",
-			err:      fmt.Errorf("timed out connecting to machine: failed to dial \"tcp://44.222.105.67:443\" . make sure buildkitd is running: context deadline exceeded"),
-			expected: true,
-		},
-		{
 			name:     "contains other error",
 			err:      fmt.Errorf("some other error"),
 			expected: false,

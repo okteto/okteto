@@ -181,7 +181,6 @@ require (
 )
 
 require (
-	github.com/depot/depot-go v0.3.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/heimdalr/dag v1.4.0
 	github.com/kubeark/jsonschema v0.1.2
@@ -208,7 +207,6 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	cloud.google.com/go/iam v1.1.6 // indirect
-	connectrpc.com/connect v1.16.1 // indirect
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
 	github.com/BurntSushi/toml v1.2.1 // indirect

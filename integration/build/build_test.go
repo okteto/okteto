@@ -25,7 +25,6 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
-	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -205,61 +204,6 @@ func TestBuildCommandV2(t *testing.T) {
 		OktetoHome:   dir,
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
-	require.True(t, isImageBuilt(expectedAppImage))
-	require.True(t, isImageBuilt(expectedApiImage))
-	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
-}
-
-// TestBuildCommandV2UsingDepot tests the following scenario:
-// - use depot.dev as builder
-// - building having a manifest v2 with build section
-func TestBuildCommandV2UsingDepot(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	require.NoError(t, createDockerfile(dir))
-	require.NoError(t, createManifestV2(dir))
-
-	oktetoPath, err := integration.GetOktetoPath()
-	require.NoError(t, err)
-
-	testNamespace := integration.GetTestNamespace(t.Name())
-	namespaceOpts := &commands.NamespaceOptions{
-		Namespace:  testNamespace,
-		OktetoHome: dir,
-		Token:      token,
-	}
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-
-	expectedAppImage := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
-	require.False(t, isImageBuilt(expectedAppImage))
-
-	expectedApiImage := fmt.Sprintf("%s/%s/%s-api:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
-	require.False(t, isImageBuilt(expectedApiImage))
-
-	options := &commands.BuildOptions{
-		Workdir:      dir,
-		ManifestPath: filepath.Join(dir, manifestName),
-		Namespace:    testNamespace,
-		Token:        token,
-		OktetoHome:   dir,
-	}
-
-	cmd := commands.GetOktetoBuildCmd(oktetoPath, options)
-	depotToken := os.Getenv("DEPOT_TOKEN")
-	depotProjectId := os.Getenv("DEPOT_PROJECT_ID")
-
-	cmd.Args = append(cmd.Args, "--log-level", "debug")
-	if depotProjectId != "" && depotToken != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", build.DepotProjectEnvVar, depotProjectId))
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", build.DepotTokenEnvVar, depotToken))
-	} else {
-		// if the environment variables needed to run the test using depot.dev
-		// are not available, skip it as the resulting e2e test would be similar
-		// to TestBuildCommandV2.
-		t.Skip()
-	}
-
-	require.NoError(t, commands.ExecOktetoBuildCmd(cmd))
 	require.True(t, isImageBuilt(expectedAppImage))
 	require.True(t, isImageBuilt(expectedApiImage))
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))

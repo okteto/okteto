@@ -174,8 +174,6 @@ jobs:
       - run:
           name: Run build integration tests
           command: |
-            export DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
-            export DEPOT_TOKEN=$DEPOT_TOKEN
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_PRODUCT_STAGING_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
@@ -312,8 +310,6 @@ jobs:
           environment:
             OKTETO_SKIP_CLEANUP: "true"
           command: |
-            $env:DEPOT_PROJECT_ID=$DEPOT_PROJECT_ID
-            $env:DEPOT_TOKEN=$DEPOT_TOKEN
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
