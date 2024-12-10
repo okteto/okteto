@@ -30,7 +30,6 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
-	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -362,7 +361,6 @@ func TestDeployOktetoManifestExportCache(t *testing.T) {
 
 // TestDeployRemoteOktetoManifest tests the following scenario:
 // - Deploying a okteto manifest in remote with a build locally
-// - Check that is not running on depot
 func TestDeployRemoteOktetoManifest(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
@@ -394,8 +392,6 @@ func TestDeployRemoteOktetoManifest(t *testing.T) {
 	// Test that image has been built
 	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okteto.GetContext().Registry, testNamespace)))
 
-	t.Setenv(build.DepotTokenEnvVar, "fakeToken")
-	t.Setenv(build.DepotProjectEnvVar, "fakeProject")
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
 		Namespace:  testNamespace,

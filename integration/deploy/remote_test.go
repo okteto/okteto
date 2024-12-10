@@ -38,7 +38,6 @@ deploy:
 
 // TestDeployRemoteWithBuildCommand tests the following scenario:
 // - Deploying a okteto manifest in remote with a build command
-// - Check that is not running on depot
 func TestDeployRemoteWithBuildCommand(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
