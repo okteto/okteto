@@ -26,7 +26,7 @@ import (
 
 // TestOptions defines the options that can be added to a test command
 type TestOptions struct {
-	TestName     string
+	TestNames    []string
 	Workdir      string
 	ManifestPath string
 	LogLevel     string
@@ -55,7 +55,7 @@ func getTestCmd(oktetoPath string, testOptions *TestOptions) *exec.Cmd {
 		cmd.Dir = testOptions.Workdir
 	}
 
-	cmd.Args = append(cmd.Args, testOptions.TestName)
+	cmd.Args = append(cmd.Args, testOptions.TestNames...)
 	if testOptions.NoCache {
 		cmd.Args = append(cmd.Args, "--no-cache")
 	}

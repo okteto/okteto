@@ -297,7 +297,7 @@ func TestOktetoTestsRunningSubsetOfTests(t *testing.T) {
 		OktetoHome: dir,
 		Token:      token,
 		NoCache:    true,
-		TestName:   "unit e2e",
+		TestNames:  []string{"unit", "e2e"},
 	}
 	out, err := commands.RunOktetoTestAndGetOutput(oktetoPath, testOptions)
 	require.NoError(t, err)
