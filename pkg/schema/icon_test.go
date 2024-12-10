@@ -31,14 +31,9 @@ func Test_Icon(t *testing.T) {
 icon: `,
 		},
 		{
-			name: "valid enum value",
-			manifest: `
-icon: database`,
-		},
-		{
 			name: "valid custom value",
 			manifest: `
-icon: my-custom-icon`,
+icon: https://example.com/my-custom-icon.png`,
 		},
 		{
 			name: "invalid type",
