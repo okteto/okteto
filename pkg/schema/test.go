@@ -117,6 +117,12 @@ func (test) JSONSchema() *jsonschema.Schema {
 		Description: "Base image used to run your test.",
 	})
 
+	testProps.Set("skipIfNoFileChanges", &jsonschema.Schema{
+		Type:        &jsonschema.Type{Types: []string{"boolean"}},
+		Title:       "skipIfNoFileChanges",
+		Description: "Skip the test execution if no files have changed since the last test run. This is useful to avoid running tests when the code hasn't changed.",
+	})
+
 	return &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"object"}},
 		Title:       "test",
