@@ -138,8 +138,8 @@ func TestOktetoTestsWithPassingTests(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
-// TestOktetoTestsWithPassingTestsAndArtifacts validates the happy path of okteto test with the export of artifacts
-func TestOktetoTestsWithPassingTestsAndArtifacts(t *testing.T) {
+// TestOktetoTestsWithArtifactsAndPassingTests validates the happy path of okteto test with the export of artifacts
+func TestOktetoTestsWithArtifactsAndPassingTests(t *testing.T) {
 	integration.SkipIfNotOktetoCluster(t)
 	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
