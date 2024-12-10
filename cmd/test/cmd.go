@@ -84,9 +84,19 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 			signal.Notify(stop, os.Interrupt)
 			exit := make(chan error, 1)
 
+			// Filter out empty strings, as 'okteto test ""' passes an empty string as argument, provoking a failure
+			testContainers := make([]string, 0)
+			for _, svc := range servicesToTest {
+				if svc == "" {
+					continue
+				}
+
+				testContainers = append(testContainers, svc)
+			}
+
 			go func() {
 				startTime := time.Now()
-				metadata, err := doRun(ctx, servicesToTest, options, ioCtrl, k8sLogger, &ProxyTracker{at})
+				metadata, err := doRun(ctx, testContainers, options, ioCtrl, k8sLogger, &ProxyTracker{at})
 				metadata.Err = err
 				metadata.Duration = time.Since(startTime)
 				at.TrackTest(metadata)
