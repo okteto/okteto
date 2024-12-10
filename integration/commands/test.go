@@ -26,7 +26,6 @@ import (
 
 // TestOptions defines the options that can be added to a test command
 type TestOptions struct {
-	TestNames    []string
 	Workdir      string
 	ManifestPath string
 	LogLevel     string
@@ -34,6 +33,7 @@ type TestOptions struct {
 	Namespace    string
 	OktetoHome   string
 	Token        string
+	TestNames    []string
 	NoCache      bool
 }
 
