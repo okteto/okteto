@@ -374,7 +374,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			Artifacts:                   test.Artifacts,
 			Hosts:                       test.Hosts,
 		}
-		if test.SkipIfNoFileChanges {
+		if test.SkipIfNoFileChanges && !options.NoCache {
 			params.CacheInvalidationKey = "const"
 		}
 
