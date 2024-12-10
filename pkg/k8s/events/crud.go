@@ -42,6 +42,7 @@ const (
 	unhealthyReason             = "Unhealthy"
 	readinessProbeFailedMessage = "Readiness probe failed:"
 	livenessProbeFailedMessage  = "Liveness probe failed:"
+	killingPodReason            = "Killing"
 )
 
 func readinessProbeFailed(event apiv1.Event) bool {
@@ -51,6 +52,10 @@ func livenessProbeFailed(event apiv1.Event) bool {
 	return event.Reason == unhealthyReason && strings.HasPrefix(event.Message, livenessProbeFailedMessage)
 }
 
+func isKillingEvent(event apiv1.Event) bool {
+	return event.Reason == killingPodReason
+}
+
 // GetUnhealthyEventFailure returns the message of the last event that caused the pod to be unhealthy
 // this could be a readiness or liveness probe failure
 func GetUnhealthyEventFailure(ctx context.Context, namespace, podName string, c kubernetes.Interface) error {
@@ -58,13 +63,18 @@ func GetUnhealthyEventFailure(ctx context.Context, namespace, podName string, c 
 	if err != nil {
 		return nil
 	}
+	killedPod := false
 	for i := len(events) - 1; i >= 0; i-- {
 		event := events[i]
+		if killedPod && livenessProbeFailed(event) {
+			return errors.ErrLivenessProbeFailed
+		}
 		if readinessProbeFailed(event) {
 			return errors.ErrReadinessProbeFailed
 		}
-		if livenessProbeFailed(event) {
-			return errors.ErrLivenessProbeFailed
+
+		if isKillingEvent(event) {
+			killedPod = true
 		}
 	}
 	return nil
