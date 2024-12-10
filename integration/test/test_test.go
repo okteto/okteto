@@ -71,24 +71,23 @@ test:
 deploy:
   - echo "deploying"
 `
-	dockerfileWithAnotherUser = `
-FROM ubuntu:latest
-
-WORKDIR /app
-COPY . .
-
-RUN chown -R 1000:1000 /app
-USER 1000
-`
-	oktetoManifestWithImageReferencedInBuildSection = `
-build:
-  tests:
-    context: .
+	oktetoManifestWithSeveralPassingTest = `
 test:
-  hello:
-    image: $OKTETO_BUILD_TESTS_IMAGE
+  unit:
+    context: .
+    image: alpine
     commands:
-    - echo hello
+      - echo "OK unit"
+  integration:
+    context: .
+    image: alpine
+    commands:
+      - echo "OK integration"
+  e2e:
+    context: .
+    image: alpine
+    commands:
+      - echo "OK e2e"
 `
 )
 
@@ -267,6 +266,44 @@ func TestOktetoTestsWithAnotherUser(t *testing.T) {
 	out, err := commands.RunOktetoTestAndGetOutput(oktetoPath, testOptions)
 	require.NoError(t, err)
 	assert.Contains(t, out, "Test container 'unit' passed")
+
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+}
+
+// TestOktetoTestsRunningSubsetOfTests validates the simplest happy path of okteto test running a subset of tests defined in the manifest
+func TestOktetoTestsRunningSubsetOfTests(t *testing.T) {
+	integration.SkipIfNotOktetoCluster(t)
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+
+	oktetoManifestPath := filepath.Join(dir, "okteto.yml")
+	assert.NoError(t, os.WriteFile(oktetoManifestPath, []byte(oktetoManifestWithSeveralPassingTest), 0600))
+
+	testNamespace := integration.GetTestNamespace(t.Name())
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+
+	testOptions := &commands.TestOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+		NoCache:    true,
+		TestName:   "unit e2e",
+	}
+	out, err := commands.RunOktetoTestAndGetOutput(oktetoPath, testOptions)
+	require.NoError(t, err)
+	assert.Contains(t, out, "Test container 'unit' passed")
+	assert.Contains(t, out, "Test container 'e2e' passed")
+	assert.NotContains(t, out, "Test container 'integration' passed")
 
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
