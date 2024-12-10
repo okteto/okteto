@@ -17,14 +17,12 @@
 package test
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -94,18 +92,10 @@ test:
 )
 
 var (
-	user  = ""
 	token = ""
 )
 
 func TestMain(m *testing.M) {
-	if u, ok := os.LookupEnv(model.OktetoUserEnvVar); !ok {
-		log.Println("OKTETO_USER is not defined")
-		os.Exit(1)
-	} else {
-		user = u
-	}
-
 	token = integration.GetToken()
 
 	exitCode := m.Run()

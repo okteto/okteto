@@ -88,7 +88,7 @@ integration-up:
 	go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
 
 .PHONY: integration-okteto-test
-integration-up:
+integration-okteto-test:
 	go test github.com/okteto/okteto/integration/test -tags="integration" --count=1 -v -timeout 45m
 
 .PHONY: build
