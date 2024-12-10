@@ -40,13 +40,15 @@ func (external) JSONSchema() *jsonschema.Schema {
 	})
 	externalProps.Set("icon", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
+		Enum:        []any{"default", "container", "dashboard", "database", "function", "graph", "storage", "launchdarkly", "mongodb", "gcp", "aws", "okteto"},
 		Title:       "icon",
-		Description: "Icon to represent the external resource",
+		Description: withManifestRefDocLink("Icon to represent the external resource", "icon-string-optional"),
+		Default:     "default",
 	})
 	externalProps.Set("endpoints", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"array"}},
 		Title:       "endpoints",
-		Description: "List of endpoints to access the external resource",
+		Description: withManifestRefDocLink("List of endpoints to access the external resource", "endpoints-object-required"),
 		Items: &jsonschema.Schema{
 			Type:                 &jsonschema.Type{Types: []string{"object"}},
 			Properties:           endpointProps,
@@ -57,8 +59,6 @@ func (external) JSONSchema() *jsonschema.Schema {
 
 	return &jsonschema.Schema{
 		Type:                 &jsonschema.Type{Types: []string{"object"}},
-		Title:                "external",
-		Description:          "A list of external resources that are part of your development environment",
 		AdditionalProperties: jsonschema.FalseSchema,
 		PatternProperties: map[string]*jsonschema.Schema{
 			".*": {

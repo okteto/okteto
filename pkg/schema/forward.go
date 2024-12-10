@@ -84,9 +84,7 @@ func (forward) JSONSchema() *jsonschema.Schema {
 	}
 
 	return &jsonschema.Schema{
-		Type:        &jsonschema.Type{Types: []string{"array"}},
-		Title:       "forward",
-		Description: "Global port forwards that handle port collisions automatically between multiple okteto up sessions",
+		Type: &jsonschema.Type{Types: []string{"array"}},
 		Items: &jsonschema.Schema{
 			OneOf: []*jsonschema.Schema{
 				shorthandPattern,

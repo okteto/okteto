@@ -60,8 +60,6 @@ func (destroy) JSONSchema() *jsonschema.Schema {
 	})
 
 	return &jsonschema.Schema{
-		Title:       "destroy",
-		Description: "A list of commands to destroy external resources created by your development environment.\nhttps://www.okteto.com/docs/reference/okteto-manifest/#destroy-string-optional",
 		OneOf: []*jsonschema.Schema{
 			{
 				Type: &jsonschema.Type{Types: []string{"array"}},

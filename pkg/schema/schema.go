@@ -20,19 +20,16 @@ import (
 )
 
 type manifest struct {
-	Deploy       deploy       `json:"deploy" jsonschema:"title=deploy,description=The deployment configuration for your development environment."`
-	Icon         icon         `json:"icon" jsonschema:"title=icon,description=Sets the icon that will be shown in the Okteto UI."`
-	Dependencies dependencies `json:"dependencies"`
-	Dev          dev          `json:"dev" jsonschema:"title=dev,description=A list of development containers to define the behavior of okteto up and synchronize your code in your development environment."`
-	Forward      forward      `json:"forward" jsonschema:"title=forward,description=When declaring a global forward Okteto will automatically handle port collision when two or more okteto up sessions are running simultaneously. If the okteto up session detects that the port is already in use and said port is defined as global forward okteto up will ignore the port collision and continue the up sequence. If the port is later available okteto up session will automatically connect to it without interrupting the session."`
-	External     external     `json:"external" jsonschema:"title=external,description=A list of external resources that are part of your development environment. Use this section for resources that are deployed outside of the okteto cluster like Cloud resources or dashboards."`
-	Build        build        `json:"build"`
-	Test         test         `json:"test" jsonschema:"title=test,description=The test configuration for your development environment. This feature is only supported in clusters that have Okteto installed."`
-	Destroy      destroy      `json:"destroy" jsonschema:"title=destroy,description=A list of commands to destroy external resources created by your development environment."`
-	Context      string       `json:"context" jsonschema:"title=context,description=The build context. Relative paths are relative to the location of the Okteto Manifest (default: .),example=api"`
-	Name         string       `json:"name" jsonschema:"title=name,description=The name of your development environment. It defaults to the name of your git repository."`
-	Image        string       `json:"image" jsonschema:"title=image,description=The name of the image to build and push. In clusters that have Okteto installed, this is optional (if not specified, the Okteto Registry is used)."`
-	Namespace    string       `json:"namespace" jsonschema:"title=namespace,description=The namespace where the development environment is deployed. By default, it takes the current okteto context namespace. You can use an environment variable to replace the namespace field, or any part of it: namespace: $DEV_NAMESPACE"`
+	Deploy       deploy       `json:"deploy" jsonschema:"title=deploy,description=A list of commands to deploy your development environment. It's usually a combination of helm\\, kubectl\\, and okteto commands.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#deploy-string-optional"`
+	Icon         icon         `json:"icon" jsonschema:"title=icon,description=The icon associated to your development environment in the Okteto UI.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#icon-string-optional-1"`
+	Dependencies dependencies `json:"dependencies" jsonschema:"title=dependencies,description=A list of repositories you want to deploy as part of your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#dependencies-string-optional"`
+	Dev          dev          `json:"dev" jsonschema:"title=dev,description=A list of development containers to define the behavior of okteto up and synchronize your code in your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional"`
+	Forward      forward      `json:"forward" jsonschema:"title=forward,description=Global port forwards to handle port collisions automatically between multiple okteto up sessions.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#forward-string-optional-1"`
+	External     external     `json:"external" jsonschema:"title=external,description=A list of external resources that are part of your development environment. Use this section for resources that are deployed outside of the Okteto cluster, like Cloud resources or dashboards.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#external-object-optional"`
+	Build        build        `json:"build" jsonschema:"title=build,description=A list of images to build as part of your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#build-object-optional"`
+	Test         test         `json:"test" jsonschema:"title=test,description=A dictionary of Test Containers to run tests using Remote Execution.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#test-object-optional"`
+	Destroy      destroy      `json:"destroy" jsonschema:"title=destroy,description=A list of commands to destroy external resources created by your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#destroy-string-optional"`
+	Name         string       `json:"name" jsonschema:"title=name,description=The name of your development environment. It defaults to the name of your git repository.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#name-string-optional"`
 }
 
 type OktetoJsonSchema struct {

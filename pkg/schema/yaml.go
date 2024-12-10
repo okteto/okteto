@@ -73,3 +73,10 @@ func cleanupMapValue(v interface{}) interface{} {
 		return fmt.Sprintf("%v", v)
 	}
 }
+
+func withManifestRefDocLink(text, anchor string) string {
+	if anchor == "" {
+		return text
+	}
+	return fmt.Sprintf("%s\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#%s", text, anchor)
+}
