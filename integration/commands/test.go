@@ -54,9 +54,8 @@ func getTestCmd(oktetoPath string, testOptions *TestOptions) *exec.Cmd {
 	if testOptions.Workdir != "" {
 		cmd.Dir = testOptions.Workdir
 	}
-	if len(testOptions.TestName) > 0 {
-		cmd.Args = append(cmd.Args, testOptions.TestName)
-	}
+
+	cmd.Args = append(cmd.Args, testOptions.TestName)
 	if testOptions.NoCache {
 		cmd.Args = append(cmd.Args, "--no-cache")
 	}
