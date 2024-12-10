@@ -148,6 +148,13 @@ func (deploy) JSONSchema() *jsonschema.Schema {
 				Description: "Path to the compose file",
 			},
 			{
+				Type:                 &jsonschema.Type{Types: []string{"object"}},
+				Properties:           composeFileProps,
+				Required:             []string{"file"},
+				AdditionalProperties: jsonschema.FalseSchema,
+				Description:          "Single compose configuration",
+			},
+			{
 				Type:        &jsonschema.Type{Types: []string{"array"}},
 				Description: "List of compose configurations",
 				Items: &jsonschema.Schema{

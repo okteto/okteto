@@ -206,6 +206,27 @@
                   "type": "string"
                 },
                 {
+                  "additionalProperties": false,
+                  "description": "Single compose configuration",
+                  "properties": {
+                    "file": {
+                      "description": "Path to the compose file",
+                      "type": "string"
+                    },
+                    "services": {
+                      "description": "List of services to deploy",
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "file"
+                  ],
+                  "type": "object"
+                },
+                {
                   "description": "List of compose configurations",
                   "items": {
                     "additionalProperties": false,
