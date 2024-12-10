@@ -245,6 +245,27 @@ jobs:
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-okteto
 
+  e2e-okteto-test:
+    executor: golang-ci
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v4-pkg-cache-{{ checksum "go.sum" }}
+      - attach_workspace:
+          at: ./artifacts
+      - run:
+          name: Run okteto test integration tests
+          command: |
+            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e:${CIRCLE_SHA1}
+            export OKTETO_BIN=okteto.global/cli-e2e:${CIRCLE_SHA1}
+            echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
+            echo "OKTETO_BIN=$OKTETO_BIN"
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${API_PRODUCT_STAGING_TOKEN}
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
+            make integration-okteto-test
+
   test-e2e-setup:
     executor: golang-ci
     steps:
@@ -351,6 +372,42 @@ jobs:
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
             & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_PRODUCT_STAGING_TOKEN
             go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
+
+  e2e-okteto-test-windows:
+    executor:
+      name: win/server-2022
+      version: 2024.04.1
+    environment:
+      OKTETO_CONTEXT: https://staging.okteto.dev
+      OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
+      OKTETO_NAMESPACE_PREFIX: staging
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
+      - attach_workspace:
+          at: .\artifacts
+      - run:
+          name: Install kubectl and helm
+          command: |
+            go version
+            choco install kubernetes-cli -y
+            choco install kubernetes-helm -y
+      - run:
+          name: Run okteto test integration tests
+          environment:
+            OKTETO_SKIP_CLEANUP: "true"
+          command: |
+            $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
+            $env:Path+=";$($HOME)\project\artifacts\bin"
+            $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
+            # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
+            $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e:$env:CIRCLE_SHA1"
+            $env:OKTETO_BIN="okteto.global/cli-e2e:${CIRCLE_SHA1}"
+            & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
+            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:API_PRODUCT_STAGING_TOKEN
+            go test github.com/okteto/okteto/integration/test -tags="integration" --count=1 -v -timeout 20m
 
   e2e-up-windows:
     executor:
@@ -539,6 +596,13 @@ workflows:
             branches:
               only:
                 - master
+      - e2e-okteto-test-windows:
+          requires:
+            - test-e2e-setup
+          filters:
+            branches:
+              only:
+                - master
       - e2e-build:
           requires:
             - test-e2e-setup
@@ -568,6 +632,13 @@ workflows:
               only:
                 - master
       - e2e-okteto:
+          requires:
+            - test-e2e-setup
+          filters:
+            branches:
+              only:
+                - master
+      - e2e-okteto-test:
           requires:
             - test-e2e-setup
           filters:
@@ -628,6 +699,9 @@ workflows:
           requires:
             - test-e2e-setup
       - e2e-okteto:
+          requires:
+            - test-e2e-setup
+      - e2e-okteto-test:
           requires:
             - test-e2e-setup
       - release-branch-job:
@@ -740,6 +814,9 @@ workflows:
       - e2e-okteto:
           requires:
             - test-e2e-setup
+      - e2e-okteto-test:
+          requires:
+            - test-e2e-setup
       - e2e-build-windows:
           requires:
             - test-e2e-setup
@@ -747,6 +824,9 @@ workflows:
           requires:
             - test-e2e-setup
       - e2e-up-windows:
+          requires:
+            - test-e2e-setup
+      - e2e-okteto-test-windows:
           requires:
             - test-e2e-setup
 
@@ -775,6 +855,9 @@ workflows:
       - e2e-okteto:
           requires:
             - test-e2e-setup
+      - e2e-okteto-test:
+          requires:
+            - test-e2e-setup
 
   # run-e2e-windows is triggered by okteto-bot via Github Actions when adding the run-e2e-windows label to the PR
   # e2e test for windows platform are run
@@ -793,5 +876,8 @@ workflows:
           requires:
             - test-e2e-setup
       - e2e-up-windows:
+          requires:
+            - test-e2e-setup
+      - e2e-okteto-test-windows:
           requires:
             - test-e2e-setup
