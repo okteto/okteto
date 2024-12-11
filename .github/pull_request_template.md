@@ -1,6 +1,6 @@
 # Proposed changes
 
-Fixes # (issue)
+Fixes: DEV-XYZ
 
 Please include a summary of the changes and the related issue. Please also include relevant motivation and context. List any dependencies that are required for this change.
 
@@ -22,14 +22,3 @@ For both authors and reviewers:
 - Assess Developer Experience impact (log messages, performances, etc)
 - If too broad, consider breaking into smaller PRs
 - Adhere to our [code style](https://github.com/okteto/okteto/blob/master/docs/code-style.md) and [code review](https://github.com/okteto/okteto/blob/master/docs/code-review.md) guidelines
-
-<!-- Remove comment when okteto/okteto is out of wait list for Copilot for Pull Requests
-----
-
-<details>
-<summary>🧪 Copilot generated PR description</summary>
-
-copilot:all
-
-</details>
--->
