@@ -372,8 +372,10 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			Caches:                      test.Caches,
 			IgnoreRules:                 testIgnoreRules,
 			Artifacts:                   test.Artifacts,
-			NoCache:                     options.NoCache,
 			Hosts:                       test.Hosts,
+		}
+		if test.SkipIfNoFileChanges && !options.NoCache {
+			params.CacheInvalidationKey = "const"
 		}
 
 		ioCtrl.Out().Infof("Executing test container '%s'", name)

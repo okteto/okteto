@@ -21,13 +21,14 @@ import (
 )
 
 type Test struct {
-	Image     string        `yaml:"image,omitempty"`
-	Context   string        `yaml:"context,omitempty"`
-	Commands  []TestCommand `yaml:"commands,omitempty"`
-	DependsOn []string      `yaml:"depends_on,omitempty"`
-	Caches    []string      `yaml:"caches,omitempty"`
-	Artifacts []Artifact    `yaml:"artifacts,omitempty"`
-	Hosts     []Host        `yaml:"hosts,omitempty"`
+	Image               string        `yaml:"image,omitempty"`
+	Context             string        `yaml:"context,omitempty"`
+	Commands            []TestCommand `yaml:"commands,omitempty"`
+	DependsOn           []string      `yaml:"depends_on,omitempty"`
+	Caches              []string      `yaml:"caches,omitempty"`
+	Artifacts           []Artifact    `yaml:"artifacts,omitempty"`
+	Hosts               []Host        `yaml:"hosts,omitempty"`
+	SkipIfNoFileChanges bool          `yaml:"skipIfNoFileChanges,omitempty"`
 }
 
 type Host struct {

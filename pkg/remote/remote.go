@@ -159,9 +159,13 @@ type Params struct {
 	ExecutionEnvVars             map[string]string
 	Manifest                     *model.Manifest
 	Command                      string
-	TemplateName                 string
-	DockerfileName               string
-	BaseImage                    string
+	// CacheInvalidationKey is the value use to invalidate the cache. Defaults
+	// to a random value which essentially means no-cache. Setting this to a
+	// static or known value will reuse the build cache
+	CacheInvalidationKey string
+	TemplateName         string
+	DockerfileName       string
+	BaseImage            string
 	// ContextAbsolutePathOverride is the absolute path for the build context. Optional.
 	// If this values is not defined it will default to the folder location of the
 	// okteto manifest which is resolved through params.ManifestPathFlag
@@ -186,8 +190,6 @@ type Params struct {
 	// UseOktetoDeployIgnoreFile if enabled loads the docker ignore file from an
 	// .oktetodeployignore file. Disabled by default
 	UseOktetoDeployIgnoreFile bool
-
-	NoCache bool
 }
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
@@ -297,11 +299,15 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		return err
 	}
 
-	randomNumber, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	if err != nil {
-		return err
+	cacheKey := params.CacheInvalidationKey
+	if cacheKey == "" {
+
+		randomNumber, err := rand.Int(rand.Reader, big.NewInt(1000000))
+		if err != nil {
+			return err
+		}
+		cacheKey = strconv.Itoa(int(randomNumber.Int64()))
 	}
-	cacheKey := strconv.Itoa(int(randomNumber.Int64()))
 
 	b, err := yaml.Marshal(params.Deployable)
 	if err != nil {
@@ -320,7 +326,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		outputMode = buildCmd.DeployOutputModeOnBuild
 	}
 
-	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: outputMode, NoCache: params.NoCache})
+	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: outputMode})
 	buildOptions.Manifest = params.Manifest
 	buildOptions.BuildArgs = append(
 		buildOptions.BuildArgs,
