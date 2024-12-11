@@ -124,9 +124,9 @@ ip: ${NON_EXISTENT}`),
 
 func TestManifestTestsValidate(t *testing.T) {
 	tests := []struct {
-		name          string
-		manifestTests ManifestTests
 		expectedError error
+		manifestTests ManifestTests
+		name          string
 	}{
 		{
 			name:          "nil manifest tests",
