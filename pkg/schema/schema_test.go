@@ -14,6 +14,7 @@
 package schema
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -22,7 +23,9 @@ import (
 )
 
 func validateOktetoManifest(content string) error {
-	oktetoJsonSchema, err := NewJsonSchema().ToJSON()
+	oktetoJsonSchema := NewJsonSchema()
+
+	b, err := json.Marshal(oktetoJsonSchema)
 	if err != nil {
 		return err
 	}
@@ -34,7 +37,7 @@ func validateOktetoManifest(content string) error {
 	}
 
 	compiler := jsonschema.NewCompiler()
-	doc, err := jsonschema.UnmarshalJSON(strings.NewReader(string(oktetoJsonSchema)))
+	doc, err := jsonschema.UnmarshalJSON(strings.NewReader(string(b)))
 	if err != nil {
 		return err
 	}

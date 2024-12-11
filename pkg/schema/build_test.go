@@ -119,11 +119,13 @@ build:
 }
 
 func Test_Build_JsonSchema_IsAlignedWithManifest(t *testing.T) {
-	oktetoJsonSchema, err := NewJsonSchema().ToJSON()
+	oktetoJsonSchema := NewJsonSchema()
+
+	b, err := json.Marshal(oktetoJsonSchema)
 	assert.NoError(t, err)
 
 	var s map[string]interface{}
-	err = json.Unmarshal(oktetoJsonSchema, &s)
+	err = json.Unmarshal(b, &s)
 	assert.NoError(t, err)
 
 	buildSchema := s["properties"].(map[string]interface{})["build"].(map[string]interface{})

@@ -14,7 +14,7 @@
 package cmd
 
 import (
-	"fmt"
+	"encoding/json"
 	"os"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -24,17 +24,7 @@ import (
 
 var outputFilePath string
 
-func toFile(schemaBytes []byte, outputFilePath string) error {
-	err := os.WriteFile(outputFilePath, schemaBytes, 0644)
-	if err != nil {
-		return err
-	}
-	oktetoLog.Success("Okteto JSON Schema generated and saved to: %s", outputFilePath)
-
-	return nil
-}
-
-// GenerateSchema create the json schema for the okteto manifest
+// GenerateSchema generates and outputs to stdout or file the Okteto Manifest JSON Schema
 func GenerateSchema() *cobra.Command {
 	cmd := &cobra.Command{
 		Args:   cobra.NoArgs,
@@ -44,17 +34,26 @@ func GenerateSchema() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			s := schema.NewJsonSchema()
 
-			json, err := s.ToJSON()
+			if outputFilePath == "-" {
+				enc := json.NewEncoder(os.Stdout)
+				enc.SetIndent("", "  ")
+				return enc.Encode(s)
+			}
+
+			f, err := os.OpenFile(outputFilePath, os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
 				return err
 			}
-			if outputFilePath == "-" {
-				fmt.Print(string(json))
-				return nil
-			}
-			err = toFile(json, outputFilePath)
+			defer f.Close()
 
-			return err
+			enc := json.NewEncoder(f)
+			enc.SetIndent("", "  ")
+			if err := enc.Encode(s); err != nil {
+				return err
+			}
+
+			oktetoLog.Success("Okteto JSON Schema generated and saved to: %s", outputFilePath)
+			return nil
 		},
 	}
 
