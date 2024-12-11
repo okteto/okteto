@@ -165,3 +165,15 @@ We also recommend to install `pre-commit` hooks before opening a PR.
 > - [pre-commit](https://pre-commit.com/#installation)
 
 Once downloaded, run `pre-commit install` to install the hooks and before the commit is done, the checks will be run.
+
+### Okteto Manifest and JSON Schema
+
+The [Okteto Manifest](https://www.okteto.com/docs/reference/okteto-manifest/) is a YAML file used to configure development environments in Okteto.
+
+The supported fields of the Okteto Manifest are defined as Go code in the [pkg/model](pkg/model) package.
+
+This repository also contains the [JSON Schema](https://json-schema.org/) for the Okteto Manifest, located in the [schema.json](schema.json) file. This file is auto-generated using the Okteto CLI itself. If you make changes to the supported fields of the Okteto Manifest, you'll need to update the [pkg/schema](pkg/schema) package and generate a new `schema.json` by running:
+
+```bash
+make generate-schema
+```
