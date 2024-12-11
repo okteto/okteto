@@ -288,11 +288,3 @@ func IsClosedNetwork(err error) bool {
 func IsErrGitHubNotVerifiedEmail(err error) bool {
 	return err.Error() == ErrGitHubNotVerifiedEmail.Error()
 }
-
-func IsReadinessProbeFailed(err error) bool {
-	return err == ErrReadinessProbeFailed
-}
-
-func IsLivenessProbeFailed(err error) bool {
-	return err == ErrLivenessProbeFailed
-}

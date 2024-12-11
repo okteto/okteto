@@ -371,9 +371,9 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 					if failedServices := getServicesWithFailedProbes(ctx, stack, svcName, k8sClient); len(failedServices) > 0 {
 						for service, err := range failedServices {
 							errMessage := fmt.Errorf("Service '%s' cannot be deployed because dependent service '%s' is failing its healthcheck probes: %s", svcName, service, err)
-							if oktetoErrors.IsLivenessProbeFailed(err) {
+							if errors.Is(err, oktetoErrors.ErrLivenessProbeFailed) {
 								return errMessage
-							} else if oktetoErrors.IsReadinessProbeFailed(err) {
+							} else if errors.Is(err, oktetoErrors.ErrReadinessProbeFailed) {
 								if _, ok := serviceWarnings[service]; !ok {
 									oktetoLog.Information(errMessage.Error())
 									serviceWarnings[service] = errMessage.Error()
