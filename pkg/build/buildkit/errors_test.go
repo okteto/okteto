@@ -128,6 +128,16 @@ func Test_GetSolveErrorMessage(t *testing.T) {
 			},
 		},
 		{
+			name: "okteto image not found",
+			err:  errors.New("build failed: failed to solve: okteto/pipeline-runner:1.27.0-rc.14: failed to resolve source metadata for docker.io/okteto/pipeline-runner:1.27.0-rc.14: failed to do request: Head \"https://registry-1.docker.io/v2/okteto/pipeline-runner/manifests/1.27.0-rc.14\": dial tcp: lookup registry-1.docker.io on 10.96.0.10:53: no such host"),
+			expected: oktetoErrors.UserError{
+				E: fmt.Errorf("the image 'okteto/pipeline-runner:1.27.0-rc.14' is not accessible or it does not exist"),
+				Hint: `Please verify you have access to Docker Hub.
+    If you are using an airgapped environment, make sure Okteto Remote is correctly configured in airgapped environments:
+    See more at: https://www.okteto.com/docs/self-hosted/manage/air-gapped/`,
+			},
+		},
+		{
 			name: "cmd error",
 			err: CommandErr{
 				Err:    assert.AnError,

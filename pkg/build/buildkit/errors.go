@@ -48,16 +48,18 @@ func (e CommandErr) Error() string {
 }
 
 var (
-	oktetoRemoteCLIImage = "okteto/okteto"
-	dockerhubRegistry    = "docker.io"
+	oktetoRemoteCLIRepository      = "okteto/okteto"
+	oktetoPipelineRunnerRepository = "okteto/pipeline-runner"
+	dockerhubOktetoRegistry        = "docker.io/okteto"
 )
 
-func isOktetoRemoteImage(image string) bool {
-	return strings.Contains(image, oktetoRemoteCLIImage) && strings.Contains(image, dockerhubRegistry)
+func hasOktetoRegistryImage(err error) bool {
+	return (strings.Contains(err.Error(), oktetoRemoteCLIRepository) || strings.Contains(err.Error(), oktetoPipelineRunnerRepository)) &&
+		strings.Contains(err.Error(), dockerhubOktetoRegistry)
 }
 
-func isOktetoRemoteForkImage(image string) bool {
-	return strings.Contains(image, oktetoRemoteCLIImage)
+func hasOktetoForkImage(err error) bool {
+	return strings.Contains(err.Error(), oktetoRemoteCLIRepository) || strings.Contains(err.Error(), oktetoPipelineRunnerRepository)
 }
 
 func isImageIsNotAccessibleErr(err error) bool {
@@ -75,6 +77,9 @@ func GetSolveErrorMessage(err error) error {
 	}
 
 	imageFromError := extractImageFromError(err)
+	isOktetoRegistry := hasOktetoRegistryImage(err)
+	isOktetoForkRegistry := !hasOktetoRegistryImage(err) && hasOktetoForkImage(err)
+
 	switch {
 	case isBuildkitServiceUnavailable(err):
 		err = oktetoErrors.UserError{
@@ -89,7 +94,7 @@ func GetSolveErrorMessage(err error) error {
     See more at: https://www.okteto.com/docs/admin/registry-credentials/`,
 		}
 
-		if isOktetoRemoteImage(imageFromError) {
+		if isOktetoRegistry {
 			err = oktetoErrors.UserError{
 				E: fmt.Errorf("the image '%s' is not accessible or it does not exist", imageFromError),
 				Hint: `Please verify you have access to Docker Hub.
@@ -97,7 +102,8 @@ func GetSolveErrorMessage(err error) error {
     See more at: https://www.okteto.com/docs/self-hosted/manage/air-gapped/`,
 			}
 
-		} else if isOktetoRemoteForkImage(imageFromError) {
+		}
+		if isOktetoForkRegistry {
 			err = oktetoErrors.UserError{
 				E: fmt.Errorf("the image '%s' is not accessible or it does not exist", imageFromError),
 				Hint: `Please verify you have migrated correctly to the current version for remote.
