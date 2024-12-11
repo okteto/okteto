@@ -1,0 +1,7 @@
+dependencies:
+  - https://github.com/okteto/movies-frontend
+  - https://github.com/okteto/movies-api
+
+deploy:
+  - name: Deploy MongoDB
+    command:  helm upgrade --install mongodb oci://registry-1.docker.io/bitnamicharts/mongodb -f values.yml --version 13.18.5

@@ -1,0 +1,23 @@
+build:
+  frontend:
+    context: .
+    dockerfile: Dockerfile
+
+  frontend-dev:
+    context: .
+    dockerfile: Dockerfile
+    target: dev
+
+dependencies:
+  - https://github.com/okteto/movies-multi-repo
+
+deploy:
+  - name: Deploy Frontend
+    command: helm upgrade --install movies-frontend chart --set image=${OKTETO_BUILD_FRONTEND_IMAGE}
+
+dev:
+  frontend:
+    image: ${OKTETO_BUILD_FRONTEND_DEV_IMAGE}
+    command: yarn start
+    sync:
+      - .:/src
