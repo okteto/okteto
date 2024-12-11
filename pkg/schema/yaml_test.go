@@ -19,39 +19,36 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_Icon(t *testing.T) {
+func Test_withManifestRefDocLink(t *testing.T) {
 	tests := []struct {
-		name      string
-		manifest  string
-		expectErr bool
+		name     string
+		text     string
+		anchor   string
+		expected string
 	}{
 		{
-			name: "empty",
-			manifest: `
-icon: `,
+			name:     "empty",
+			text:     "",
+			anchor:   "",
+			expected: "",
 		},
 		{
-			name: "valid custom value",
-			manifest: `
-icon: https://example.com/my-custom-icon.png`,
+			name:     "empty anchor",
+			text:     "text",
+			anchor:   "",
+			expected: "text",
 		},
 		{
-			name: "invalid type",
-			manifest: `
-icon:
-  name: invalid`,
-			expectErr: true,
+			name:     "with anchor",
+			text:     "text",
+			anchor:   "anchor",
+			expected: "text\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#anchor",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateOktetoManifest(tt.manifest)
-			if tt.expectErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
+			assert.Equal(t, tt.expected, withManifestRefDocLink(tt.text, tt.anchor))
 		})
 	}
 }

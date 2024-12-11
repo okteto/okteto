@@ -13,21 +13,14 @@
 
 package schema
 
-import "github.com/kubeark/jsonschema"
+import (
+	"github.com/kubeark/jsonschema"
+)
 
 type icon struct{}
 
 func (icon) JSONSchema() *jsonschema.Schema {
 	return &jsonschema.Schema{
 		Type: &jsonschema.Type{Types: []string{"string"}},
-		AnyOf: []*jsonschema.Schema{
-			{
-				Type: &jsonschema.Type{Types: []string{"string"}},
-				Enum: []any{"default", "container", "dashboard", "database", "function", "graph", "storage", "launchdarkly", "mongodb", "gcp", "aws", "okteto"},
-			},
-			{
-				Type: &jsonschema.Type{Types: []string{"string"}},
-			},
-		},
 	}
 }
