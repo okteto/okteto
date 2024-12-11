@@ -344,7 +344,7 @@ dev:
       - .:/app`,
 		},
 		{
-			name: "okteto-community/tacoshop-with-cloudflare",
+			name: "okteto-community/tacopshop-with-cloudflare",
 			manifest: `
 icon: https://raw.githubusercontent.com/okteto/icons/main/oktaco.png
 
