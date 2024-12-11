@@ -17,14 +17,13 @@
 package test
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
-	"github.com/okteto/okteto/pkg/model"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -72,40 +71,31 @@ test:
 deploy:
   - echo "deploying"
 `
-	dockerfileWithAnotherUser = `
-FROM ubuntu:latest
-
-WORKDIR /app
-COPY . .
-
-RUN chown -R 1000:1000 /app
-USER 1000
-`
-	oktetoManifestWithImageReferencedInBuildSection = `
-build:
-  tests:
-    context: .
+	oktetoManifestWithSeveralPassingTest = `
 test:
-  hello:
-    image: $OKTETO_BUILD_TESTS_IMAGE
+  unit:
+    context: .
+    image: alpine
     commands:
-    - echo hello
+      - echo "OK unit"
+  integration:
+    context: .
+    image: alpine
+    commands:
+      - echo "OK integration"
+  e2e:
+    context: .
+    image: alpine
+    commands:
+      - echo "OK e2e"
 `
 )
 
 var (
-	user  = ""
 	token = ""
 )
 
 func TestMain(m *testing.M) {
-	if u, ok := os.LookupEnv(model.OktetoUserEnvVar); !ok {
-		log.Println("OKTETO_USER is not defined")
-		os.Exit(1)
-	} else {
-		user = u
-	}
-
 	token = integration.GetToken()
 
 	exitCode := m.Run()
@@ -147,8 +137,8 @@ func TestOktetoTestsWithPassingTests(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
-// TestOktetoTestsWithPassingTestsAndArtifacts validates the happy path of okteto test with the export of artifacts
-func TestOktetoTestsWithPassingTestsAndArtifacts(t *testing.T) {
+// TestOktetoTestsWithArtifactsAndPassingTests validates the happy path of okteto test with the export of artifacts
+func TestOktetoTestsWithArtifactsAndPassingTests(t *testing.T) {
 	integration.SkipIfNotOktetoCluster(t)
 	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
@@ -187,6 +177,12 @@ func TestOktetoTestsWithPassingTestsAndArtifacts(t *testing.T) {
 	reportsDirPath := filepath.Join(dir, "reports")
 	reportsDir, err := os.Open(reportsDirPath)
 	assert.NoError(t, err)
+	defer func() {
+		if err := reportsDir.Close(); err != nil {
+			oktetoLog.Debugf("Error closing directory %s: %s", reportsDirPath, err)
+		}
+	}()
+
 	reportsInfo, err := reportsDir.Stat()
 	require.NoError(t, err)
 	assert.True(t, reportsInfo.IsDir())
@@ -270,6 +266,44 @@ func TestOktetoTestsWithAnotherUser(t *testing.T) {
 	out, err := commands.RunOktetoTestAndGetOutput(oktetoPath, testOptions)
 	require.NoError(t, err)
 	assert.Contains(t, out, "Test container 'unit' passed")
+
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+}
+
+// TestOktetoTestsRunningSubsetOfTests validates the simplest happy path of okteto test running a subset of tests defined in the manifest
+func TestOktetoTestsRunningSubsetOfTests(t *testing.T) {
+	integration.SkipIfNotOktetoCluster(t)
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+
+	oktetoManifestPath := filepath.Join(dir, "okteto.yml")
+	assert.NoError(t, os.WriteFile(oktetoManifestPath, []byte(oktetoManifestWithSeveralPassingTest), 0600))
+
+	testNamespace := integration.GetTestNamespace(t.Name())
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+
+	testOptions := &commands.TestOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+		NoCache:    true,
+		TestNames:  []string{"unit", "e2e"},
+	}
+	out, err := commands.RunOktetoTestAndGetOutput(oktetoPath, testOptions)
+	require.NoError(t, err)
+	assert.Contains(t, out, "Test container 'unit' passed")
+	assert.Contains(t, out, "Test container 'e2e' passed")
+	assert.NotContains(t, out, "Test container 'integration' passed")
 
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
