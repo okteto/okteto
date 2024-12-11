@@ -108,21 +108,31 @@ func Test_GetSolveErrorMessage(t *testing.T) {
 			},
 		},
 		{
-			name: "registry host not found - airgapped with official okteto image",
+			name: "registry host not found - airgapped with official okteto cli image",
 			err:  errors.New("failed to solve: docker.io/okteto/okteto:1.2.4: failed to do request: Head 'https://non-existing.okteto.dev/v2/xxxx/cli/manifests/debug-4': dial tcp: lookup non-existing.okteto.dev on xx.xxxx.x.xx:xx: no such host"),
 			expected: oktetoErrors.UserError{
-				E: fmt.Errorf("the image 'docker.io/okteto/okteto' is not accessible or it does not exist"),
+				E: fmt.Errorf("the image 'docker.io/okteto/okteto:1.2.4' is not accessible or it does not exist"),
 				Hint: `Please verify you have access to Docker Hub.
     If you are using an airgapped environment, make sure Okteto Remote is correctly configured in airgapped environments:
     See more at: https://www.okteto.com/docs/self-hosted/manage/air-gapped/`,
 			},
 		},
 		{
-			name: "registry host not found - airgapped with forked okteto image",
+			name: "registry host not found - airgapped with forked okteto cli image",
 			err:  errors.New("failed to solve: myregistry.com/okteto/okteto:1.2.4: failed to do request: Head 'https://non-existing.okteto.dev/v2/xxxx/cli/manifests/debug-4': dial tcp: lookup non-existing.okteto.dev on xx.xxxx.x.xx:xx: no such host"),
 			expected: oktetoErrors.UserError{
-				E: fmt.Errorf("the image 'myregistry.com/okteto/okteto' is not accessible or it does not exist"),
+				E: fmt.Errorf("the image 'myregistry.com/okteto/okteto:1.2.4' is not accessible or it does not exist"),
 				Hint: `Please verify you have migrated correctly to the current version for remote.
+    If you are using an airgapped environment, make sure Okteto Remote is correctly configured in airgapped environments:
+    See more at: https://www.okteto.com/docs/self-hosted/manage/air-gapped/`,
+			},
+		},
+		{
+			name: "okteto image not found",
+			err:  errors.New("build failed: failed to solve: okteto/pipeline-runner:1.27.0-rc.14: failed to resolve source metadata for docker.io/okteto/pipeline-runner:1.27.0-rc.14: failed to do request: Head \"https://registry-1.docker.io/v2/okteto/pipeline-runner/manifests/1.27.0-rc.14\": dial tcp: lookup registry-1.docker.io on 10.96.0.10:53: no such host"),
+			expected: oktetoErrors.UserError{
+				E: fmt.Errorf("the image 'okteto/pipeline-runner:1.27.0-rc.14' is not accessible or it does not exist"),
+				Hint: `Please verify you have access to Docker Hub.
     If you are using an airgapped environment, make sure Okteto Remote is correctly configured in airgapped environments:
     See more at: https://www.okteto.com/docs/self-hosted/manage/air-gapped/`,
 			},
