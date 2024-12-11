@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/errors"
 	apiv1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,23 +38,46 @@ func List(ctx context.Context, namespace, podName string, c kubernetes.Interface
 	return events.Items, err
 }
 
-func GetUnhealthyEventFailure(ctx context.Context, namespace, podName string, c kubernetes.Interface) string {
+const (
+	unhealthyReason             = "Unhealthy"
+	readinessProbeFailedMessage = "Readiness probe failed:"
+	livenessProbeFailedMessage  = "Liveness probe failed:"
+	killingPodReason            = "Killing"
+)
+
+func readinessProbeFailed(event apiv1.Event) bool {
+	return event.Reason == unhealthyReason && strings.HasPrefix(event.Message, readinessProbeFailedMessage)
+}
+func livenessProbeFailed(event apiv1.Event) bool {
+	return event.Reason == unhealthyReason && strings.HasPrefix(event.Message, livenessProbeFailedMessage)
+}
+
+func isKillingEvent(event apiv1.Event) bool {
+	return event.Reason == killingPodReason
+}
+
+// GetUnhealthyEventFailure returns the message of the last event that caused the pod to be unhealthy
+// this could be a readiness or liveness probe failure
+func GetUnhealthyEventFailure(ctx context.Context, namespace, podName string, c kubernetes.Interface) error {
 	events, err := List(ctx, namespace, podName, c)
 	if err != nil {
-		return ""
+		return nil
 	}
-	previousKilling := false
+	killedPod := false
 	for i := len(events) - 1; i >= 0; i-- {
-		if previousKilling {
-			if events[i].Reason == "Unhealthy" && strings.Contains(events[i].Message, "probe failed") {
-				return events[i].Message
-			}
+		event := events[i]
+		if killedPod && livenessProbeFailed(event) {
+			return errors.ErrLivenessProbeFailed
 		}
-		if events[i].Reason == "Killing" && (strings.Contains(events[i].Message, "failed liveness probe") || strings.Contains(events[i].Message, "failed readiness probe")) {
-			previousKilling = true
+		if readinessProbeFailed(event) {
+			return errors.ErrReadinessProbeFailed
+		}
+
+		if isKillingEvent(event) {
+			killedPod = true
 		}
 	}
-	return ""
+	return nil
 }
 
 func Create(ctx context.Context, event *eventsv1.Event, c kubernetes.Interface) error {

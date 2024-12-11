@@ -343,6 +343,8 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 	t := time.NewTicker(1 * time.Second)
 	defer t.Stop()
 
+	// show an informational warning per service once
+	serviceWarnings := make(map[string]string)
 	for {
 		select {
 		case <-ctx.Done():
@@ -358,7 +360,6 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 				if deployedSvcs[svcName] {
 					continue
 				}
-
 				// prevent service to be deployed as it depends on other services that are not ready
 				if !canSvcBeDeployed(ctx, stack, svcName, k8sClient, config) {
 					if failedJobs := getDependingFailedJobs(ctx, stack, svcName, k8sClient); len(failedJobs) > 0 {
@@ -368,8 +369,16 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 						return fmt.Errorf("service '%s' dependencies '%s' failed", svcName, strings.Join(failedJobs, ", "))
 					}
 					if failedServices := getServicesWithFailedProbes(ctx, stack, svcName, k8sClient); len(failedServices) > 0 {
-						for key, value := range failedServices {
-							return fmt.Errorf("service '%s' has failed his healthcheck probes: %s", key, value)
+						for service, err := range failedServices {
+							errMessage := fmt.Errorf("Service '%s' cannot be deployed because dependent service '%s' is failing its healthcheck probes: %s", svcName, service, err)
+							if errors.Is(err, oktetoErrors.ErrLivenessProbeFailed) {
+								return errMessage
+							} else if errors.Is(err, oktetoErrors.ErrReadinessProbeFailed) {
+								if _, ok := serviceWarnings[service]; !ok {
+									oktetoLog.Information(errMessage.Error())
+									serviceWarnings[service] = errMessage.Error()
+								}
+							}
 						}
 					}
 					if err := getErrorDueToRestartLimit(ctx, stack, svcName, k8sClient); err != nil {
@@ -466,19 +475,19 @@ func canSvcBeDeployed(ctx context.Context, stack *model.Stack, svcName string, c
 	return true
 }
 
-func getServicesWithFailedProbes(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface) map[string]string {
+func getServicesWithFailedProbes(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface) map[string]error {
 	svc := stack.Services[svcName]
-	dependingServices := make([]string, 0)
+	dependingServicesHealthcheckMap := make(map[string]*model.HealthCheck)
 	for dependingSvc, condition := range svc.DependsOn {
-		if stack.Services[dependingSvc].Healtcheck != nil && condition.Condition == model.DependsOnServiceHealthy {
-			dependingServices = append(dependingServices, dependingSvc)
+		healthcheck := stack.Services[dependingSvc].Healtcheck
+		if healthcheck != nil && condition.Condition == model.DependsOnServiceHealthy {
+			dependingServicesHealthcheckMap[dependingSvc] = stack.Services[dependingSvc].Healtcheck
 		}
 	}
-	failedServices := make(map[string]string)
-	for _, dependingSvc := range dependingServices {
-
-		if healthcheckFailure := pods.GetHealthcheckFailure(ctx, stack.Namespace, dependingSvc, stack.Name, client); healthcheckFailure != "" {
-			failedServices[dependingSvc] = healthcheckFailure
+	failedServices := make(map[string]error)
+	for svcName, healthcheck := range dependingServicesHealthcheckMap {
+		if err := pods.GetHealthcheckFailure(ctx, client, stack.Namespace, svcName, stack.Name, healthcheck); err != nil {
+			failedServices[svcName] = err
 		}
 	}
 	return failedServices

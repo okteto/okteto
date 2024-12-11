@@ -218,6 +218,9 @@ var (
 		E:    fmt.Errorf("the Okteto manifest specified is a directory, please specify a file"),
 		Hint: "Check the path to the Okteto manifest file",
 	}
+
+	ErrReadinessProbeFailed = errors.New("readiness probe failed")
+	ErrLivenessProbeFailed  = errors.New("liveness probe failed")
 )
 
 // IsForbidden raised if the Okteto API returns 401
