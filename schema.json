@@ -1243,14 +1243,11 @@
               "type": "string",
               "title": "image",
               "description": "The base image used to run your test.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#image-string-optional-1"
-<<<<<<< HEAD
             },
             "skipIfNoFileChanges": {
               "type": "boolean",
               "title": "skipIfNoFileChanges",
               "description": "Skip the test execution if no files have changed since the last test run. This is useful to avoid running tests when the code hasn't changed."
-=======
->>>>>>> 3d128ffb (update schema.json)
             }
           },
           "additionalProperties": false,
