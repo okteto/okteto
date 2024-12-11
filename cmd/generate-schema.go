@@ -15,9 +15,9 @@ package cmd
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/schema"
 	"github.com/spf13/cobra"
 )
@@ -34,26 +34,20 @@ func GenerateSchema() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			s := schema.NewJsonSchema()
 
-			if outputFilePath == "-" {
-				enc := json.NewEncoder(os.Stdout)
-				enc.SetIndent("", "  ")
-				return enc.Encode(s)
+			var o io.Writer = os.Stdout
+
+			if outputFilePath != "-" {
+				f, err := os.Create(outputFilePath)
+				if err != nil {
+					return err
+				}
+				defer f.Close()
+				o = f
 			}
 
-			f, err := os.OpenFile(outputFilePath, os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-
-			enc := json.NewEncoder(f)
+			enc := json.NewEncoder(o)
 			enc.SetIndent("", "  ")
-			if err := enc.Encode(s); err != nil {
-				return err
-			}
-
-			oktetoLog.Success("Okteto JSON Schema generated and saved to: %s", outputFilePath)
-			return nil
+			return enc.Encode(s)
 		},
 	}
 
