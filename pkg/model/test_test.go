@@ -121,3 +121,53 @@ ip: ${NON_EXISTENT}`),
 		})
 	}
 }
+
+func TestManifestTestsValidate(t *testing.T) {
+	tests := []struct {
+		name          string
+		manifestTests ManifestTests
+		expectedError error
+	}{
+		{
+			name:          "nil manifest tests",
+			manifestTests: nil,
+			expectedError: ErrNoTestsDefined,
+		},
+		{
+			name:          "empty manifest tests",
+			manifestTests: ManifestTests{},
+			expectedError: ErrNoTestsDefined,
+		},
+		{
+			name: "manifest tests with empty commands",
+			manifestTests: ManifestTests{
+				"unit": &Test{
+					Commands: []TestCommand{},
+				},
+			},
+			expectedError: ErrEmptyCommands,
+		},
+		{
+			name: "valid manifest tests",
+			manifestTests: ManifestTests{
+				"unit": &Test{
+					Commands: []TestCommand{
+						{Name: "test", Command: "echo test"},
+					},
+				},
+			},
+			expectedError: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.manifestTests.Validate()
+			if tt.expectedError != nil {
+				assert.ErrorIs(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

@@ -41,6 +41,7 @@ var (
 	ErrHostMalformed   = fmt.Errorf("host is malformed")
 	ErrInvalidHostName = fmt.Errorf("invalid hostname")
 	ErrInvalidIp       = fmt.Errorf("invalid ip")
+	ErrEmptyCommands   = fmt.Errorf("commands cannot be empty")
 )
 
 func (test ManifestTests) Validate() error {
@@ -52,6 +53,9 @@ func (test ManifestTests) Validate() error {
 	for _, t := range test {
 		if t != nil {
 			hasAtLeastOne = true
+			if len(t.Commands) == 0 {
+				return ErrEmptyCommands
+			}
 			break
 		}
 	}
