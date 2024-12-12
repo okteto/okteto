@@ -49,18 +49,15 @@ func (test ManifestTests) Validate() error {
 		return ErrNoTestsDefined
 	}
 
-	hasAtLeastOne := false
-	for _, t := range test {
-		if t != nil {
-			hasAtLeastOne = true
-			break
-		}
-	}
-
-	if !hasAtLeastOne {
+	if len(test) == 0 {
 		return ErrNoTestsDefined
 	}
 
+	for k, t := range test {
+		if t == nil || len(t.Commands) == 0 {
+			return fmt.Errorf("test '%s' is invalid: no commands defined", k)
+		}
+	}
 	return nil
 }
 
