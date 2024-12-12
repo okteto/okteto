@@ -320,6 +320,7 @@ jobs:
       OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
       OKTETO_NAMESPACE_PREFIX: staging
+      OKTETO_SKIP_CLUSTER_CLI_VERSION: true
     steps:
       - checkout
       - restore_cache:
@@ -346,6 +347,7 @@ jobs:
       OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
       OKTETO_NAMESPACE_PREFIX: staging
+      OKTETO_SKIP_CLUSTER_CLI_VERSION: true
     steps:
       - checkout
       - restore_cache:
@@ -382,6 +384,7 @@ jobs:
       OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
       OKTETO_NAMESPACE_PREFIX: staging
+      OKTETO_SKIP_CLUSTER_CLI_VERSION: true
     steps:
       - checkout
       - restore_cache:
@@ -418,6 +421,7 @@ jobs:
       OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
       OKTETO_NAMESPACE_PREFIX: staging
+      OKTETO_SKIP_CLUSTER_CLI_VERSION: true
     steps:
       - checkout
       - restore_cache:
