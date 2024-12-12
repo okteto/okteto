@@ -107,3 +107,7 @@ dep:
 codecov:
 	go test -coverprofile=coverage.txt ./...
 	go tool cover -html=coverage.txt -o coverage.html
+
+.PHONY: generate-schema
+generate-schema:
+	go run . generate-schema -o schema.json
