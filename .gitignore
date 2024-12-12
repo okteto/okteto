@@ -21,3 +21,5 @@ dist
 
 # lint
 golangci-report.xml
+
+node_modules
