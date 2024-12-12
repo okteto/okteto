@@ -1,0 +1,20 @@
+icon: https://apps.okteto.com/movies/icon.png
+
+build:
+  rentals:
+    context: .
+
+deploy:
+  commands:
+    - okteto deploy -f mongodb-compose.yml
+    - helm upgrade --install rentals chart --set image=${OKTETO_BUILD_RENTALS_IMAGE}
+  divert:
+    namespace: staging
+
+dev:
+  rentals:
+    command: yarn start
+    sync:
+      - .:/src
+    forward:
+      - 9229:9229

@@ -1,0 +1,49 @@
+deploy:
+  image: hashicorp/terraform:1.4
+  commands:
+    - name: Apply Terraform Configuration
+      command: |
+        set -e
+        resourceName="${OKTETO_NAMESPACE}-okteto-lambda"
+
+        # needed to set the k8s backend correctly for terraform
+        export KUBE_CONFIG_PATH="$KUBECONFIG"
+        export KUBE_NAMESPACE=$OKTETO_NAMESPACE
+        terraform init -input=false
+        terraform apply -input=false -var "lambda_function_name=$resourceName" -auto-approve
+        FUNCTION_URL=$(terraform output -raw lambda_function_url)
+        echo "OKTETO_EXTERNAL_LAMBDA_ENDPOINTS_FUNCTION_URL=$FUNCTION_URL" >> $OKTETO_ENV
+
+test:
+  plan:
+    image: hashicorp/terraform:1.4
+    commands:
+      - name: terraform plan
+        command: |
+          set -e
+          resourceName="${OKTETO_NAMESPACE}-okteto-lambda"
+          
+          # needed to set the k8s backend correctly for terraform
+          export KUBE_CONFIG_PATH="$KUBECONFIG"
+          export KUBE_NAMESPACE=$OKTETO_NAMESPACE
+          terraform init -input=false
+          terraform plan -input=false -var "lambda_function_name=$resourceName"
+
+destroy:
+  image: hashicorp/terraform:1.4
+  commands:
+    - name: Delete the AWS infrastructure
+      command: |
+        set -e
+        resourceName="${OKTETO_NAMESPACE}-okteto-lambda"
+
+        export KUBE_CONFIG_PATH="$KUBECONFIG"
+        export KUBE_NAMESPACE=$OKTETO_NAMESPACE
+        terraform init -input=false
+        terraform apply -input=false -var "lambda_function_name=$resourceName" -auto-approve --destroy
+
+external:
+  lambda:
+    icon: function
+    endpoints:
+      - name: function

@@ -1,0 +1,6 @@
+dev:
+  server:
+    command: bash
+    mode: invalid
+    sync:
+      - .:/app
