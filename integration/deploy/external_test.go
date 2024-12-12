@@ -20,6 +20,7 @@ import (
 	"context"
 	b64 "encoding/base64"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -101,6 +102,8 @@ func Test_ExternalsFromOktetoManifestWithNotesContent(t *testing.T) {
 
 	output, err := commands.RunOktetoEndpoints(oktetoPath, opts)
 	require.NoError(t, err)
+
+	fmt.Println("******", string(output))
 
 	var endpoints []string
 	err = json.Unmarshal([]byte(output), &endpoints)
