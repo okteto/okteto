@@ -54,25 +54,7 @@ func NewJsonSchema() *OktetoJsonSchema {
 	}
 }
 
-// ToJSON fixes the issues with the generated schema and returns the JSON bytes
-func (o *OktetoJsonSchema) ToJSON() ([]byte, error) {
-	schemaBytes, err := json.MarshalIndent(o.s, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-
-	// to obj again
-	var data map[string]interface{}
-	err = json.Unmarshal(schemaBytes, &data)
-	if err != nil {
-		return nil, err
-	}
-
-	// data to bytes
-	out, err := json.MarshalIndent(data, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-
-	return out, nil
+// MarshalJSON returns the JSON bytes of the JSON Schema
+func (o *OktetoJsonSchema) MarshalJSON() ([]byte, error) {
+	return json.Marshal(o.s)
 }

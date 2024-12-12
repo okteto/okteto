@@ -129,11 +129,13 @@ forward:
 }
 
 func Test_Forward_JsonSchema_IsAlignedWithManifest(t *testing.T) {
-	oktetoJsonSchema, err := NewJsonSchema().ToJSON()
+	oktetoJsonSchema := NewJsonSchema()
+
+	b, err := json.Marshal(oktetoJsonSchema)
 	assert.NoError(t, err)
 
 	var s map[string]interface{}
-	err = json.Unmarshal(oktetoJsonSchema, &s)
+	err = json.Unmarshal(b, &s)
 	assert.NoError(t, err)
 
 	forwardSchema := s["properties"].(map[string]interface{})["forward"].(map[string]interface{})
