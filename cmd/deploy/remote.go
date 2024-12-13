@@ -118,7 +118,7 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		ctxPath = path.Clean(path.Join(cwd, deployOptions.Manifest.Deploy.Context))
 	}
 
-	ig, err := ignore.NewFromFile(path.Join(ctxPath, model.IgnoreFilename))
+	ig, err := ignore.NewOktetoIgnorerFromFile(path.Join(ctxPath, model.IgnoreFilename))
 	if err != nil {
 		return fmt.Errorf("failed to read ignore file: %w", err)
 	}
