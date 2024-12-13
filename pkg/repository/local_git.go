@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -26,7 +27,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bluekeyes/go-gitdiff/gitdiff"
 	"github.com/go-git/go-git/v5"
+	"github.com/okteto/okteto/pkg/ignore"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
@@ -145,12 +148,17 @@ type LocalGitInterface interface {
 type LocalGit struct {
 	exec    CommandExecutor
 	gitPath string
+	ignorer ignore.Ignorer
 }
 
-func NewLocalGit(gitPath string, exec CommandExecutor) *LocalGit {
+func NewLocalGit(gitPath string, exec CommandExecutor, ignorer ignore.Ignorer) *LocalGit {
+	if ignorer == nil {
+		ignorer = ignore.Never
+	}
 	return &LocalGit{
 		gitPath: gitPath,
 		exec:    exec,
+		ignorer: ignorer,
 	}
 }
 
@@ -275,18 +283,14 @@ func (lg *LocalGit) GetDirContentSHA(ctx context.Context, gitPath, dirPath strin
 		return "", errLocalGitCannotGetCommitTooManyAttempts
 	}
 
-	lsFilesCmdArgs := []string{"--no-optional-locks", "ls-files", "-s", dirPath}
-	hashObjectCmdArgs := []string{"--no-optional-locks", "hash-object", "--stdin"}
-
-	output, err := lg.exec.RunPipeCommands(ctx, gitPath, lg.gitPath, lsFilesCmdArgs, lg.gitPath, hashObjectCmdArgs)
-	if err != nil {
+	handleError := func(e error) (string, error) {
 		var exitError *exec.ExitError
-		errors.As(err, &exitError)
+		errors.As(e, &exitError)
 		if exitError != nil {
 			exitErr := string(exitError.Stderr)
 			if strings.Contains(exitErr, "detected dubious ownership in repository") {
-				err = lg.FixDubiousOwnershipConfig(gitPath)
-				if err != nil {
+				e = lg.FixDubiousOwnershipConfig(gitPath)
+				if e != nil {
 					return "", errLocalGitCannotGetStatusCannotRecover
 				}
 				fixAttempt++
@@ -294,6 +298,50 @@ func (lg *LocalGit) GetDirContentSHA(ctx context.Context, gitPath, dirPath strin
 			}
 		}
 		return "", errLocalGitCannotGetStatusCannotRecover
+	}
+
+	filesRaw, err := lg.exec.RunCommand(ctx, gitPath, lg.gitPath, "--no-optional-locks", "ls-files", "-s", dirPath)
+
+	if err != nil {
+		return handleError(err)
+	}
+
+	scanner := bufio.NewScanner(bytes.NewReader(filesRaw))
+	filteredLines := []string{}
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.Fields(line)
+		if len(parts) < 4 {
+			// if we can't parse a line, add the file to the list.
+			// It's better to over build than to over cache
+			filteredLines = append(filteredLines, line)
+		} else {
+			filename := parts[3]
+			shouldIgnore, err := lg.ignorer.Ignore(filename)
+			if err != nil {
+				oktetoLog.Debugf("ignore error in GetDirContentSHA: %v", err)
+			}
+
+			if !shouldIgnore {
+				filteredLines = append(filteredLines, line)
+			} else {
+				oktetoLog.Debugf("skipping %v file change in GetDirContentSHA based on known ignore files", filename)
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", err
+	}
+
+	filteredLS := strings.Join(filteredLines, "\n")
+
+	hashObjectCmdArgs := []string{"--no-optional-locks", "hash-object", "--stdin"}
+	output, err := lg.exec.RunPipeCommands(ctx, gitPath, "echo", []string{filteredLS}, lg.gitPath, hashObjectCmdArgs)
+
+	if err != nil {
+		return handleError(err)
 	}
 	return string(output), nil
 }
@@ -304,7 +352,7 @@ func (lg *LocalGit) Diff(ctx context.Context, gitPath, dirPath string, fixAttemp
 		return "", errLocalGitCannotGetCommitTooManyAttempts
 	}
 
-	output, err := lg.exec.RunCommand(ctx, gitPath, lg.gitPath, "--no-optional-locks", "diff", "--no-color", "--", "HEAD", dirPath)
+	rawOutput, err := lg.exec.RunCommand(ctx, gitPath, lg.gitPath, "--no-optional-locks", "diff", "--no-color", "--", "HEAD", dirPath)
 	if err != nil {
 		var exitError *exec.ExitError
 		errors.As(err, &exitError)
@@ -321,5 +369,28 @@ func (lg *LocalGit) Diff(ctx context.Context, gitPath, dirPath string, fixAttemp
 		}
 		return "", errLocalGitCannotGetStatusCannotRecover
 	}
-	return string(output), nil
+
+	files, _, err := gitdiff.Parse(bytes.NewReader(rawOutput))
+	if err != nil {
+		return "", err
+	}
+
+	var diff bytes.Buffer
+
+	for _, f := range files {
+		filename := f.NewName
+		if f.IsDelete {
+			filename = f.OldName
+		}
+		shouldIgnore, err := lg.ignorer.Ignore(filename)
+		if err != nil {
+			oktetoLog.Debugf("ignore error in Diff: %v", err)
+		}
+		if !shouldIgnore {
+			diff.WriteString(f.String())
+		} else {
+			oktetoLog.Debugf("skipping %v file change in Diff based on known ignore files", filename)
+		}
+	}
+	return diff.String(), nil
 }

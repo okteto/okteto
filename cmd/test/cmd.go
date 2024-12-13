@@ -332,7 +332,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			commands[i] = model.DeployCommand(cmd)
 		}
 
-		ig, err := ignore.NewFromFile(path.Join(ctxCwd, model.IgnoreFilename))
+		ig, err := ignore.NewOktetoIgnorerFromFile(path.Join(ctxCwd, model.IgnoreFilename))
 		if err != nil {
 			return analytics.TestMetadata{}, fmt.Errorf("failed to read ignore file: %w", err)
 		}

@@ -124,7 +124,7 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 		ctxPath = path.Clean(path.Join(cwd, opts.Manifest.Destroy.Context))
 	}
 
-	ig, err := ignore.NewFromFile(path.Join(ctxPath, model.IgnoreFilename))
+	ig, err := ignore.NewOktetoIgnorerFromFile(path.Join(ctxPath, model.IgnoreFilename))
 	if err != nil {
 		return fmt.Errorf("failed to read ignore file: %w", err)
 	}

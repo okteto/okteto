@@ -23,24 +23,57 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/moby/patternmatcher"
 	"github.com/moby/patternmatcher/ignorefile"
 )
 
 const RootSection = "__DEFAULT___"
 
-type Ignore struct {
+type OktetoIgnorer struct {
 	sections map[string]string
 	mu       sync.RWMutex
 }
 
-func (i *Ignore) Get(section string) (data string) {
+// BuildOnly returns a new OktetoIgnorer that will only consider the build
+// section AND the root section into account
+func (i *OktetoIgnorer) BuildOnly() *OktetoIgnorer {
+	buildSections := make(map[string]string)
+
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	for k, v := range i.sections {
+		if k == "build" || k == RootSection {
+			buildSections[k] = v
+		}
+	}
+
+	return &OktetoIgnorer{
+		sections: buildSections,
+	}
+}
+
+func (i *OktetoIgnorer) Get(section string) (data string) {
 	i.mu.RLock()
 	data = i.sections[section]
 	i.mu.RUnlock()
 	return
 }
 
-func (i *Ignore) Rules(sections ...string) ([]string, error) {
+// Ignore matches the root section of the okteto file against the given file path
+func (i *OktetoIgnorer) Ignore(filePath string) (bool, error) {
+	var allSections []string
+	for _, rule := range i.sections {
+		allSections = append(allSections, rule)
+	}
+	rules, err := i.Rules(allSections...)
+	if err != nil {
+		return false, err
+	}
+	return patternmatcher.Matches(filePath, rules)
+}
+
+func (i *OktetoIgnorer) Rules(sections ...string) ([]string, error) {
 	var rules []string
 	for _, section := range sections {
 		data := i.Get(section)
@@ -54,21 +87,29 @@ func (i *Ignore) Rules(sections ...string) ([]string, error) {
 	return rules, nil
 }
 
-func NewFromFile(ignorefile string) (*Ignore, error) {
+func NewOktetoIgnorerFromFile(ignorefile string) (*OktetoIgnorer, error) {
 	f, err := os.Open(ignorefile)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
-		return &Ignore{}, nil
+		return &OktetoIgnorer{}, nil
 	}
 	defer f.Close()
-	return NewFromReader(f), nil
+	return NewOktetoIgnorerFromReader(f), nil
 }
 
-func NewFromReader(r io.Reader) *Ignore {
+func NewOktetoIgnorerFromReader(r io.Reader) *OktetoIgnorer {
 	sections := sectionsFromReader(r)
-	return &Ignore{sections: sections}
+	return &OktetoIgnorer{sections: sections}
+}
+
+func NewOktetoIgnoreFromFileOrNoop(oktetoIgnoreFile string) *OktetoIgnorer {
+	ignore, err := NewOktetoIgnorerFromFile(oktetoIgnoreFile)
+	if err != nil {
+		return &OktetoIgnorer{sections: map[string]string{}}
+	}
+	return ignore
 }
 
 func sectionsFromReader(r io.Reader) map[string]string {
