@@ -363,7 +363,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		return err
 	}
 
-	if dc.IsRemote || dc.RunningInInstaller {
+	if dc.RunningInInstaller {
 		currentVars, err := dc.CfgMapHandler.GetConfigmapVariablesEncoded(ctx, deployOptions.Name, deployOptions.Namespace)
 		if err != nil {
 			return err
