@@ -42,7 +42,7 @@ repos:
     hooks:
       - id: shellcheck
         name: run shellcheck
-        exclude: ^samples/
+        exclude: ^samples/|^scripts/ci/push-image.sh
       - id: markdownlint
         name: run markdownlint
         exclude: ^samples/
