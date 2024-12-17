@@ -4,6 +4,7 @@ ARG SYNCTHING_VERSION=1.28.0
 ARG OKTETO_REMOTE_VERSION=0.6.1
 ARG OKTETO_SUPERVISOR_VERSION=0.4.1
 ARG OKTETO_CLEAN_VERSION=0.2.2
+ARG KUSTOMIZE_VERSION=5.5.0
 
 
 FROM syncthing/syncthing:${SYNCTHING_VERSION} AS syncthing
@@ -11,6 +12,14 @@ FROM okteto/remote:${OKTETO_REMOTE_VERSION} AS remote
 FROM okteto/supervisor:${OKTETO_SUPERVISOR_VERSION} AS supervisor
 FROM okteto/clean:${OKTETO_CLEAN_VERSION} AS clean
 FROM golang:1.22.9-bookworm AS golang-builder
+
+FROM golang-builder as kustomize-builder
+ARG TARGETARCH
+ARG KUSTOMIZE_VERSION
+RUN curl -sLf --retry 3 -o kustomize.tar.gz https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_${TARGETARCH}.tar.gz \
+    && tar -xvzf kustomize.tar.gz -C /usr/local/bin \
+    && chmod +x /usr/local/bin/kustomize \
+    && /usr/local/bin/kustomize version
 
 FROM alpine:3.20 AS certs
 RUN apk add --no-cache ca-certificates
@@ -51,6 +60,7 @@ FROM busybox:1.36.1
 
 COPY --chmod=755 --from=certs /etc/ssl/certs /etc/ssl/certs
 COPY --chmod=755 --from=kubectl-builder /usr/local/bin/kubectl /usr/local/bin/kubectl
+COPY --chmod=755 --from=kustomize-builder /usr/local/bin/kustomize /usr/local/bin/kustomize
 COPY --chmod=755 --from=helm-builder /usr/local/bin/helm /usr/local/bin/helm
 COPY --chmod=755 --from=builder /okteto/bin/okteto /usr/local/bin/okteto
 COPY --chmod=755 --from=builder /okteto/bin/docker-credential-okteto /usr/local/bin/docker-credential-okteto
