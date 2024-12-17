@@ -147,8 +147,8 @@ type LocalGitInterface interface {
 
 type LocalGit struct {
 	exec    CommandExecutor
-	gitPath string
 	ignorer ignore.Ignorer
+	gitPath string
 }
 
 func NewLocalGit(gitPath string, exec CommandExecutor, ignorer ignore.Ignorer) *LocalGit {
@@ -309,10 +309,13 @@ func (lg *LocalGit) GetDirContentSHA(ctx context.Context, gitPath, dirPath strin
 	scanner := bufio.NewScanner(bytes.NewReader(filesRaw))
 	filteredLines := []string{}
 
+	lsFilesColumnCount := 4
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		parts := strings.Fields(line)
-		if len(parts) < 4 {
+
+		if len(parts) < lsFilesColumnCount {
 			// if we can't parse a line, add the file to the list.
 			// It's better to over build than to over cache
 			filteredLines = append(filteredLines, line)

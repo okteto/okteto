@@ -46,8 +46,8 @@ var (
 type gitRepoController struct {
 	repoGetter repositoryGetterInterface
 	fs         afero.Fs
-	path       string
 	ignorer    ignore.Ignorer
+	path       string
 }
 
 func newGitRepoController(path string) gitRepoController {
