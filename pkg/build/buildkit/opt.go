@@ -225,6 +225,11 @@ func (b *SolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOp
 		Session:       attachable,
 		CacheImports:  []client.CacheOptionsEntry{},
 		CacheExports:  []client.CacheOptionsEntry{},
+		// Setting the internal flag marks the build as internal which prevents the
+		// build from appearing in build history and improves performance.
+		// NOTE: if at some point we want to expose build history through buildkit's
+		// API, we should remove this flag.
+		Internal: env.LoadBoolean("OKTETO_BUILDKIT_INTERNAL_MODE"),
 	}
 
 	if buildOptions.Tag != "" {
