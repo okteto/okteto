@@ -1,7 +1,4 @@
-//go:build integration
-// +build integration
-
-// Copyright 2023 The Okteto Authors
+// Copyright 2024 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -13,14 +10,16 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package kubeconfig
+
+//go:build integration
+// +build integration
+
+package okteto
 
 import (
 	"path/filepath"
-	"strconv"
 	"testing"
 
-	"github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -49,9 +48,11 @@ func Test_KubeconfigHasExec(t *testing.T) {
 	home := t.TempDir()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(context.OktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tt.useStaticToken))
-
-			err = commands.RunOktetoKubeconfig(oktetoPath, home)
+			err = commands.RunOktetoKubeconfig(oktetoPath, &commands.KubeconfigOpts{
+				OktetoHome:     home,
+				Token:          token,
+				UseStaticToken: tt.useStaticToken,
+			})
 			require.NoError(t, err)
 
 			cfg := kubeconfig.Get([]string{filepath.Join(home, ".kube", "config")})

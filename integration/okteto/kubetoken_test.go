@@ -1,7 +1,4 @@
-//go:build integration
-// +build integration
-
-// Copyright 2023 The Okteto Authors
+// Copyright 2024 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -14,7 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubetoken
+//go:build integration
+// +build integration
+
+package okteto
 
 import (
 	"encoding/json"
@@ -34,7 +34,7 @@ func TestKubetokenHasExpiration(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	out, err := commands.RunOktetoKubetoken(oktetoPath, "")
+	out, err := commands.RunOktetoKubetoken(oktetoPath, "", token)
 	require.NoError(t, err)
 
 	var resp *types.KubeTokenResponse

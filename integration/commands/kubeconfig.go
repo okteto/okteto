@@ -17,14 +17,23 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
+	"github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 )
 
+// KubeconfigOpts represents the options for the kubeconfig command
+type KubeconfigOpts struct {
+	OktetoHome     string
+	Token          string
+	UseStaticToken bool
+}
+
 // RunOktetoKubeconfig runs okteto kubeconfig command
-func RunOktetoKubeconfig(oktetoPath, oktetoHome string) error {
+func RunOktetoKubeconfig(oktetoPath string, opts *KubeconfigOpts) error {
 	args := []string{"kubeconfig"}
 	cmd := exec.Command(oktetoPath, args...)
 	cmd.Env = os.Environ()
@@ -32,8 +41,15 @@ func RunOktetoKubeconfig(oktetoPath, oktetoHome string) error {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
 	}
 
-	if oktetoHome != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, oktetoHome))
+	if opts.OktetoHome != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, opts.OktetoHome))
+	}
+	if opts.Token != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, opts.Token))
+	}
+
+	if opts.UseStaticToken {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", context.OktetoUseStaticKubetokenEnvVar, strconv.FormatBool(opts.UseStaticToken)))
 	}
 	o, err := cmd.CombinedOutput()
 	if err != nil {
