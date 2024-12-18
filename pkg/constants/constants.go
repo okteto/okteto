@@ -63,7 +63,7 @@ const (
 	// OktetoInternalServerNameEnvVar defines the internal server name for --remote
 	OktetoInternalServerNameEnvVar = "INTERNAL_SERVER_NAME"
 
-	// OktetoInvalidateCacheEnvVar defines a ramdom number to invalidate the "--remote" cache
+	// OktetoInvalidateCacheEnvVar defines a random number to invalidate the "--remote" cache
 	OktetoInvalidateCacheEnvVar = "OKTETO_INVALIDATE_CACHE"
 
 	// OktetoPipelineRunnerImage defines image to use for remote deployments if empty
