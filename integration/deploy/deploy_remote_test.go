@@ -60,7 +60,7 @@ func TestDeployInDeployRemote(t *testing.T) {
 		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	varValue := "this is a test variable"
+	varValue := "this is a test variable with some special chars as \", ' or \n aaaa"
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
