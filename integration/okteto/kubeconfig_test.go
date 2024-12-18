@@ -18,10 +18,8 @@ package okteto
 
 import (
 	"path/filepath"
-	"strconv"
 	"testing"
 
-	"github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -50,9 +48,11 @@ func Test_KubeconfigHasExec(t *testing.T) {
 	home := t.TempDir()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(context.OktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tt.useStaticToken))
-
-			err = commands.RunOktetoKubeconfig(oktetoPath, home, token)
+			err = commands.RunOktetoKubeconfig(oktetoPath, &commands.KubeconfigOpts{
+				OktetoHome:     home,
+				Token:          token,
+				UseStaticToken: tt.useStaticToken,
+			})
 			require.NoError(t, err)
 
 			cfg := kubeconfig.Get([]string{filepath.Join(home, ".kube", "config")})

@@ -64,7 +64,9 @@ func TestUpComposeWithOktetoManifest(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, &commands.KubeconfigOpts{
+		OktetoHome: dir,
+	}))
 
 	require.NoError(t, os.Mkdir(filepath.Join(dir, "api"), 0700))
 	require.NoError(t, writeFile(filepath.Join(dir, "api", "Dockerfile"), apiDockerfile))
