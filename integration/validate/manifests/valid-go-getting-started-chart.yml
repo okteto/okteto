@@ -1,0 +1,7 @@
+dependencies:
+  goapp:
+    repository: https://github.com/okteto-community/go-getting-started-service
+    wait: true
+
+deploy:
+  - helm upgrade --install goapp chart --set image=${OKTETO_DEPENDENCY_GOAPP_VARIABLE_APP_BUILD}

@@ -1,0 +1,43 @@
+test:
+  unit:
+    context: .
+    image: okteto/golang:1
+    commands:
+      - make test
+    artifacts:
+      - coverage.txt
+  e2e:
+    context: e2e
+    image: alpine/curl
+    commands:
+      - sh e2e.sh > e2e-result.txt
+    artifacts:
+      - e2e-result.txt
+  load:
+    context: load-testing
+    image: artilleryio/artillery:latest
+    commands:
+      - run run /okteto/src/artillery.yml --target "https://hello-world-${OKTETO_NAMESPACE}.${OKTETO_DOMAIN}" --output raw-artillery-report.json
+      - run report raw-artillery-report.json --output visual-artillery-report.html
+    artifacts:
+      - raw-artillery-report.json
+      - visual-artillery-report.html
+
+deploy:
+  - kubectl apply -f k8s.yml
+
+dev:
+  hello-world:
+    image: okteto/golang:1
+    command: bash
+    sync:
+      - .:/usr/src/app
+    volumes:
+      - /go
+      - /root/.cache
+    securityContext:
+      capabilities:
+        add:
+          - SYS_PTRACE
+    forward:
+      - 2345:2345
