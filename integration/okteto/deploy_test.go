@@ -105,7 +105,7 @@ func TestDeploySuccessOutput(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -170,7 +170,7 @@ func TestDeployWithNonSanitizedOK(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -204,7 +204,7 @@ func TestCmdFailOutput(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -269,7 +269,7 @@ func TestRemoteMaskVariables(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -376,7 +376,7 @@ func TestComposeFailOutput(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,

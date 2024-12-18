@@ -86,7 +86,7 @@ func TestUpAutocreateV2(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
 
@@ -174,7 +174,7 @@ func TestUpAutocreateV2WithBuild(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
 

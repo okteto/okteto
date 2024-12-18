@@ -156,7 +156,7 @@ func Test_EndpointsFromOktetoManifest_InferredName(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
 
@@ -219,7 +219,7 @@ func Test_EndpointsFromOktetoManifest_Name(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -274,7 +274,7 @@ func Test_EndpointsFromStackWith_InferredName(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -344,7 +344,7 @@ func Test_EndpointsFromStack_Name(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -414,7 +414,7 @@ func Test_EndpointsFromStackAndManifest(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -458,7 +458,7 @@ func Test_EndpointsFromOktetoManifest_NameOption(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
 
@@ -510,7 +510,7 @@ func Test_EndpointsFromStackWith_NameOption(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,

@@ -17,39 +17,39 @@
 package okteto
 
 import (
-    "encoding/json"
-    "testing"
+	"encoding/json"
+	"testing"
 
-    "github.com/golang-jwt/jwt/v4"
-    "github.com/okteto/okteto/integration"
-    "github.com/okteto/okteto/integration/commands"
-    "github.com/okteto/okteto/pkg/types"
-    "github.com/stretchr/testify/require"
+	"github.com/golang-jwt/jwt/v4"
+	"github.com/okteto/okteto/integration"
+	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/types"
+	"github.com/stretchr/testify/require"
 )
 
 // TestKubetokenHasExpiration test that kubernetes returns a dynamic token with a set expiration
 func TestKubetokenHasExpiration(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
-    oktetoPath, err := integration.GetOktetoPath()
-    require.NoError(t, err)
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
 
-    out, err := commands.RunOktetoKubetoken(oktetoPath, "")
-    require.NoError(t, err)
+	out, err := commands.RunOktetoKubetoken(oktetoPath, "", token)
+	require.NoError(t, err)
 
-    var resp *types.KubeTokenResponse
-    err = json.Unmarshal(out.Bytes(), &resp)
-    require.NoError(t, err)
+	var resp *types.KubeTokenResponse
+	err = json.Unmarshal(out.Bytes(), &resp)
+	require.NoError(t, err)
 
-    parser := new(jwt.Parser)
-    token, _, err := parser.ParseUnverified(resp.Status.Token, jwt.MapClaims{})
-    require.NoError(t, err)
+	parser := new(jwt.Parser)
+	token, _, err := parser.ParseUnverified(resp.Status.Token, jwt.MapClaims{})
+	require.NoError(t, err)
 
-    if claims, ok := token.Claims.(jwt.MapClaims); ok {
-        if _, ok := claims["exp"]; !ok {
-            t.Fatal("Expiration claim is not set")
-        }
-    } else {
-        t.Fatal("Invalid claims")
-    }
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		if _, ok := claims["exp"]; !ok {
+			t.Fatal("Expiration claim is not set")
+		}
+	} else {
+		t.Fatal("Invalid claims")
+	}
 }

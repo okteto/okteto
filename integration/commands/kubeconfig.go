@@ -24,7 +24,7 @@ import (
 )
 
 // RunOktetoKubeconfig runs okteto kubeconfig command
-func RunOktetoKubeconfig(oktetoPath, oktetoHome string) error {
+func RunOktetoKubeconfig(oktetoPath, oktetoHome, token string) error {
 	args := []string{"kubeconfig"}
 	cmd := exec.Command(oktetoPath, args...)
 	cmd.Env = os.Environ()
@@ -34,6 +34,9 @@ func RunOktetoKubeconfig(oktetoPath, oktetoHome string) error {
 
 	if oktetoHome != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, oktetoHome))
+	}
+	if token != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, token))
 	}
 	o, err := cmd.CombinedOutput()
 	if err != nil {

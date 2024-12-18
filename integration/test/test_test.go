@@ -121,7 +121,7 @@ func TestOktetoTestsWithPassingTests(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 
 	testOptions := &commands.TestOptions{
 		Workdir:    dir,
@@ -156,7 +156,7 @@ func TestOktetoTestsWithArtifactsAndPassingTests(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 
 	testOptions := &commands.TestOptions{
 		Workdir:    dir,
@@ -215,7 +215,7 @@ func TestOktetoTestsWithFailingTestsAndArtifacts(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 
 	testOptions := &commands.TestOptions{
 		Workdir:    dir,
@@ -254,7 +254,7 @@ func TestOktetoTestsWithAnotherUser(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 
 	testOptions := &commands.TestOptions{
 		Workdir:    dir,
@@ -289,7 +289,7 @@ func TestOktetoTestsRunningSubsetOfTests(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir, token))
 
 	testOptions := &commands.TestOptions{
 		Workdir:    dir,
