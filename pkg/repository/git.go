@@ -56,8 +56,8 @@ func newGitRepoController(path string) gitRepoController {
 		path:       path,
 		fs:         afero.NewOsFs(),
 		ignorer: ignore.NewMultiIgnorer(
-			ignore.NewDockerIgnorerFromFileOrNoop(".dockerignore"),
-			ignore.NewOktetoIgnoreFromFileOrNoop(".oktetoignore").BuildOnly(),
+			ignore.NewDockerIgnorer(".dockerignore"),
+			ignore.NewOktetoIgnorer(".oktetoignore").BuildOnly(),
 		),
 	}
 }

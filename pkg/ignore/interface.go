@@ -13,6 +13,7 @@
 
 package ignore
 
+// Ignorer is the interface that allows to ignore files and directories.
 type Ignorer interface {
 	Ignore(filePath string) (bool, error)
 }

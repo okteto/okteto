@@ -125,7 +125,7 @@ func TestOktetoIgnore(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 
-			ig := NewOktetoIgnorerFromReader(strings.NewReader(tc.input))
+			ig := newOktetoIgnorerFromReader(strings.NewReader(tc.input))
 			require.Len(t, ig.sections, len(tc.expected))
 			for expectedKey, expectedVal := range tc.expected {
 				assert.Equal(t, expectedVal.str, ig.Get(expectedKey))
@@ -150,7 +150,7 @@ chart
 [test.frontend]
 backend
 `
-	ig := NewOktetoIgnorerFromReader(strings.NewReader(input))
+	ig := newOktetoIgnorerFromReader(strings.NewReader(input))
 	f, err := ig.Rules(RootSection, "test", "test.frontend")
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, f, []string{".git", "chart", "backend"})
@@ -217,7 +217,7 @@ func TestOktetoIgnoreRules(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			ig := NewOktetoIgnorerFromReader(strings.NewReader(tc.input))
+			ig := newOktetoIgnorerFromReader(strings.NewReader(tc.input))
 			f, err := ig.Rules(tc.section...)
 			require.NoError(t, err)
 			assert.ElementsMatch(t, f, tc.expected)
