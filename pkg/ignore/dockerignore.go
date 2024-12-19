@@ -28,7 +28,7 @@ func (di *DockerIgnorer) Ignore(filePath string) (bool, error) {
 	return patternmatcher.Matches(filePath, di.patterns)
 }
 
-func NewDockerIgnorerFromFileOrNoop(dockerignoreFile string) *DockerIgnorer {
+func NewDockerIgnorer(dockerignoreFile string) *DockerIgnorer {
 	di := &DockerIgnorer{patterns: []string{}}
 	f, err := os.Open(dockerignoreFile)
 	if err != nil {

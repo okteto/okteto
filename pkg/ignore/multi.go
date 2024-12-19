@@ -10,9 +10,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package ignore
 
+// MultiIgnorer is an Ignorer that combines multiple Ignorers.
+// Ingore returns true if any of the Ignorers returns true.
 type MultiIgnorer struct {
 	ignorers []Ignorer
 }

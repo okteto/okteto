@@ -15,7 +15,6 @@ package ignore
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -34,8 +33,8 @@ type OktetoIgnorer struct {
 	mu       sync.RWMutex
 }
 
-// BuildOnly returns a new OktetoIgnorer that will only consider the build
-// section AND the root section into account
+// BuildOnly returns a new OktetoIgnorer that will only consider the root
+// section AND the build section
 func (i *OktetoIgnorer) BuildOnly() *OktetoIgnorer {
 	buildSections := make(map[string]string)
 
@@ -63,8 +62,8 @@ func (i *OktetoIgnorer) Get(section string) (data string) {
 // Ignore matches the root section of the okteto file against the given file path
 func (i *OktetoIgnorer) Ignore(filePath string) (bool, error) {
 	var allSections []string
-	for _, rule := range i.sections {
-		allSections = append(allSections, rule)
+	for section := range i.sections {
+		allSections = append(allSections, section)
 	}
 	rules, err := i.Rules(allSections...)
 	if err != nil {
@@ -87,29 +86,21 @@ func (i *OktetoIgnorer) Rules(sections ...string) ([]string, error) {
 	return rules, nil
 }
 
-func NewOktetoIgnorerFromFile(ignorefile string) (*OktetoIgnorer, error) {
+// NewOktetoIgnorer created a new OktetoIgnorer from the given file. If the file
+// does not exist or if there's an error reading the file the ignorer will be
+// empty, meaning that no files will be ignored.
+func NewOktetoIgnorer(ignorefile string) *OktetoIgnorer {
 	f, err := os.Open(ignorefile)
-	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return nil, err
-		}
-		return &OktetoIgnorer{}, nil
-	}
-	defer f.Close()
-	return NewOktetoIgnorerFromReader(f), nil
-}
-
-func NewOktetoIgnorerFromReader(r io.Reader) *OktetoIgnorer {
-	sections := sectionsFromReader(r)
-	return &OktetoIgnorer{sections: sections}
-}
-
-func NewOktetoIgnoreFromFileOrNoop(oktetoIgnoreFile string) *OktetoIgnorer {
-	ignore, err := NewOktetoIgnorerFromFile(oktetoIgnoreFile)
 	if err != nil {
 		return &OktetoIgnorer{sections: map[string]string{}}
 	}
-	return ignore
+	defer f.Close()
+	return newOktetoIgnorerFromReader(f)
+}
+
+func newOktetoIgnorerFromReader(r io.Reader) *OktetoIgnorer {
+	sections := sectionsFromReader(r)
+	return &OktetoIgnorer{sections: sections}
 }
 
 func sectionsFromReader(r io.Reader) map[string]string {
