@@ -17,6 +17,7 @@
 package deploy
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/okteto/okteto/integration"
@@ -29,13 +30,16 @@ var (
 deploy:
   remote: true
   commands:
-    - okteto deploy -f other-okteto.yml --remote`
+    - okteto deploy -f other-okteto.yml --var INNER_VAR="${VAR1}" --remote`
 
 	childManifestContent = `
 deploy:
   image: aquasec/trivy:latest
   commands:
-    - trivy help`
+    - name: trivy helm
+      command: trivy help
+    - name: echo testing variable
+      command: echo "inner var ${INNER_VAR}"`
 )
 
 // TestDeployInDeployRemote test the scenario where an okteto deploy is run inside an okteto deploy in remote
@@ -56,14 +60,23 @@ func TestDeployInDeployRemote(t *testing.T) {
 		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	varValue := "this is a test variable with some special chars as \", ' or \n aaaa"
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
 		Namespace:  testNamespace,
 		OktetoHome: dir,
 		Token:      token,
+		Variables: []string{
+			fmt.Sprintf("VAR1=%s", varValue),
+		},
 	}
-	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	output, err := commands.RunOktetoDeployAndGetOutput(oktetoPath, deployOptions)
+	require.NoError(t, err)
+
+	// *** is set because as it is a variable, its value is masked in the output
+	require.Contains(t, output, "inner var ***")
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
