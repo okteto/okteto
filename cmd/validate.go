@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
@@ -43,7 +44,9 @@ type options struct {
 }
 
 func validateOktetoManifest(content string) error {
-	oktetoJsonSchema, err := schema.NewJsonSchema().ToJSON()
+	oktetoJsonSchema := schema.NewJsonSchema()
+
+	b, err := json.Marshal(oktetoJsonSchema)
 	if err != nil {
 		return err
 	}
@@ -52,7 +55,7 @@ func validateOktetoManifest(content string) error {
 	_ = schema.Unmarshal([]byte(content), &obj) //nolint:errcheck
 
 	compiler := jsonschema.NewCompiler()
-	doc, err := jsonschema.UnmarshalJSON(strings.NewReader(string(oktetoJsonSchema)))
+	doc, err := jsonschema.UnmarshalJSON(strings.NewReader(string(b)))
 	if err != nil {
 		return err
 	}

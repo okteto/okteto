@@ -1,76 +1,233 @@
 {
-  "$id": "https://raw.githubusercontent.com/okteto/okteto/master/schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
-  "description": "A JSON schema providing inline suggestions and validation for creating Okteto Manifests in supported code editors. Okteto Manifests define Development Environments and workflows for Kubernetes applications, simplifying cloud-native development.",
+  "$id": "https://raw.githubusercontent.com/okteto/okteto/master/schema.json",
   "properties": {
-    "build": {
-      "additionalProperties": false,
-      "description": "A list of images to build as part of your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#build-object-optional",
-      "patternProperties": {
-        ".*": {
-          "additionalProperties": false,
-          "description": "A list of images to build as part of your development environment.\n\n\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#build-object-optional",
-          "properties": {
-            "args": {
-              "description": "Build arguments, which are environment variables accessible only during the build process. Build arguments with a value containing a $ sign are resolved to the environment variable value on the machine Okteto is running on",
-              "patternProperties": {
-                ".*": {
-                  "type": "string"
-                }
-              },
-              "title": "args",
-              "type": "object"
-            },
-            "context": {
-              "default": ".",
-              "description": "The build context. Relative paths are relative to the location of the Okteto Manifest",
-              "title": "context",
-              "type": "string"
-            },
-            "depends_on": {
-              "description": "List of images that need to be built first",
-              "items": {
+    "deploy": {
+      "oneOf": [
+        {
+          "items": {
+            "oneOf": [
+              {
                 "type": "string"
               },
-              "title": "depends_on",
-              "type": "array"
-            },
-            "dockerfile": {
-              "default": "Dockerfile",
-              "description": "The path to the Dockerfile. It's a relative path to the build context",
-              "title": "dockerfile",
-              "type": "string"
-            },
+              {
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the command"
+                  },
+                  "command": {
+                    "type": "string",
+                    "description": "Command to execute"
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "command"
+                ]
+              }
+            ]
+          },
+          "type": "array"
+        },
+        {
+          "properties": {
             "image": {
-              "description": "The name of the image to build and push. In clusters that have Okteto installed, this is optional (if not specified, the Okteto Registry is used)",
-              "title": "image",
-              "type": "string"
+              "type": "string",
+              "description": "Image to use for deployment"
             },
-            "secrets": {
-              "description": "List of secrets exposed to the build. The value of each secret refers to a file. Okteto will resolve references containing a $ sign in this file to environment variables on the machine Okteto is running on",
-              "patternProperties": {
-                ".*": {
-                  "type": "string"
+            "context": {
+              "type": "string",
+              "description": "The working directory for running the deploy commands. If left empty, it defaults to the directory containing the Okteto Manifest."
+            },
+            "remote": {
+              "type": "boolean",
+              "description": "Whether to run commands remotely"
+            },
+            "commands": {
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Name of the command"
+                      },
+                      "command": {
+                        "type": "string",
+                        "description": "Command to execute"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "command"
+                    ]
+                  }
+                ]
+              },
+              "type": "array",
+              "description": "List of commands to execute"
+            },
+            "compose": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "description": "Path to the compose file"
+                },
+                {
+                  "properties": {
+                    "file": {
+                      "type": "string",
+                      "description": "Path to the compose file"
+                    },
+                    "services": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array",
+                      "description": "List of services to deploy"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "file"
+                  ],
+                  "description": "Single compose configuration"
+                },
+                {
+                  "items": {
+                    "properties": {
+                      "file": {
+                        "type": "string",
+                        "description": "Path to the compose file"
+                      },
+                      "services": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array",
+                        "description": "List of services to deploy"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "file"
+                    ]
+                  },
+                  "type": "array",
+                  "description": "List of compose configurations"
+                }
+              ]
+            },
+            "endpoints": {
+              "items": {
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "description": "Path for the endpoint"
+                  },
+                  "service": {
+                    "type": "string",
+                    "description": "Service name"
+                  },
+                  "port": {
+                    "type": "integer",
+                    "description": "Port number"
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "path",
+                  "service",
+                  "port"
+                ]
+              },
+              "type": "array",
+              "description": "List of endpoints"
+            },
+            "divert": {
+              "properties": {
+                "driver": {
+                  "type": "string",
+                  "enum": [
+                    "istio"
+                  ],
+                  "description": "The backend for divert. Currently, only 'istio' is supported"
+                },
+                "namespace": {
+                  "type": "string",
+                  "description": "Namespace of the divert"
+                },
+                "virtualServices": {
+                  "items": {
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Name of the virtual service"
+                      },
+                      "namespace": {
+                        "type": "string",
+                        "description": "Namespace of the virtual service"
+                      },
+                      "routes": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array",
+                        "description": "List of routes to divert. If empty, all routes are diverted"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "description": "List of virtual services to divert"
+                },
+                "hosts": {
+                  "items": {
+                    "properties": {
+                      "virtualService": {
+                        "type": "string",
+                        "description": "Name of the virtual service"
+                      },
+                      "namespace": {
+                        "type": "string",
+                        "description": "Namespace of the virtual service"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "description": "List of hosts to divert in the developer namespace"
                 }
               },
-              "title": "secrets",
-              "type": "object"
-            },
-            "target": {
-              "description": "Build the specified stage as defined inside the Dockerfile",
-              "title": "target",
-              "type": "string"
+              "additionalProperties": false,
+              "type": "object",
+              "description": "Configuration for diverting traffic between namespaces"
             }
           },
+          "additionalProperties": false,
           "type": "object"
         }
-      },
-      "title": "build",
-      "type": "object"
+      ],
+      "title": "deploy",
+      "description": "A list of commands to deploy your development environment. It's usually a combination of helm, kubectl, and okteto commands.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#deploy-string-optional"
+    },
+    "icon": {
+      "type": "string",
+      "title": "icon",
+      "description": "The icon associated to your development environment in the Okteto UI.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#icon-string-optional-1"
     },
     "dependencies": {
-      "description": "A list of repositories you want to deploy as part of your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#dependencies-string-optional",
       "oneOf": [
         {
           "items": {
@@ -81,380 +238,77 @@
         {
           "patternProperties": {
             ".*": {
-              "additionalProperties": false,
               "properties": {
-                "branch": {
-                  "description": "The Git branch to use",
-                  "title": "branch",
-                  "type": "string"
+                "repository": {
+                  "type": "string",
+                  "title": "repository",
+                  "description": "The Git repository URL of the dependency"
                 },
                 "manifest": {
-                  "description": "The path to the Okteto manifest file in the repository",
+                  "type": "string",
                   "title": "manifest",
-                  "type": "string"
+                  "description": "The path to the Okteto manifest file in the repository"
                 },
-                "repository": {
-                  "description": "The Git repository URL of the dependency",
-                  "title": "repository",
-                  "type": "string"
-                },
-                "timeout": {
-                  "description": "Maximum time to wait for the dependency to be ready",
-                  "pattern": "^[0-9]+(h|m|s)$",
-                  "title": "timeout",
-                  "type": "string"
+                "branch": {
+                  "type": "string",
+                  "title": "branch",
+                  "description": "The Git branch to use"
                 },
                 "variables": {
-                  "description": "Environment variables to pass to the dependency",
                   "patternProperties": {
                     ".*": {
                       "type": "string"
                     }
                   },
+                  "type": "object",
                   "title": "variables",
-                  "type": "object"
+                  "description": "Environment variables to pass to the dependency"
                 },
                 "wait": {
-                  "description": "Whether to wait for the dependency to be ready",
+                  "type": "boolean",
                   "title": "wait",
-                  "type": "boolean"
+                  "description": "Whether to wait for the dependency to be ready"
+                },
+                "timeout": {
+                  "type": "string",
+                  "pattern": "^[0-9]+(h|m|s)$",
+                  "title": "timeout",
+                  "description": "Maximum time to wait for the dependency to be ready"
                 }
               },
+              "additionalProperties": false,
+              "type": "object",
               "required": [
                 "repository"
-              ],
-              "type": "object"
-            }
-          },
-          "type": "object"
-        }
-      ],
-      "title": "dependencies"
-    },
-    "deploy": {
-      "description": "A list of commands to deploy your development environment. It's usually a combination of helm, kubectl, and okteto commands.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#deploy-string-optional",
-      "oneOf": [
-        {
-          "items": {
-            "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "additionalProperties": false,
-                "properties": {
-                  "command": {
-                    "description": "Command to execute",
-                    "type": "string"
-                  },
-                  "name": {
-                    "description": "Name of the command",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "command"
-                ],
-                "type": "object"
-              }
-            ]
-          },
-          "type": "array"
-        },
-        {
-          "additionalProperties": false,
-          "properties": {
-            "commands": {
-              "description": "List of commands to execute",
-              "items": {
-                "oneOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "additionalProperties": false,
-                    "properties": {
-                      "command": {
-                        "description": "Command to execute",
-                        "type": "string"
-                      },
-                      "name": {
-                        "description": "Name of the command",
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "command"
-                    ],
-                    "type": "object"
-                  }
-                ]
-              },
-              "type": "array"
-            },
-            "compose": {
-              "oneOf": [
-                {
-                  "description": "Path to the compose file",
-                  "type": "string"
-                },
-                {
-                  "additionalProperties": false,
-                  "description": "Single compose configuration",
-                  "properties": {
-                    "file": {
-                      "description": "Path to the compose file",
-                      "type": "string"
-                    },
-                    "services": {
-                      "description": "List of services to deploy",
-                      "items": {
-                        "type": "string"
-                      },
-                      "type": "array"
-                    }
-                  },
-                  "required": [
-                    "file"
-                  ],
-                  "type": "object"
-                },
-                {
-                  "description": "List of compose configurations",
-                  "items": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "file": {
-                        "description": "Path to the compose file",
-                        "type": "string"
-                      },
-                      "services": {
-                        "description": "List of services to deploy",
-                        "items": {
-                          "type": "string"
-                        },
-                        "type": "array"
-                      }
-                    },
-                    "required": [
-                      "file"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                }
               ]
-            },
-            "context": {
-              "description": "The working directory for running the deploy commands. If left empty, it defaults to the directory containing the Okteto Manifest.",
-              "type": "string"
-            },
-            "divert": {
-              "additionalProperties": false,
-              "description": "Configuration for diverting traffic between namespaces",
-              "properties": {
-                "driver": {
-                  "description": "The backend for divert. Currently, only 'istio' is supported",
-                  "enum": [
-                    "istio"
-                  ],
-                  "type": "string"
-                },
-                "hosts": {
-                  "description": "List of hosts to divert in the developer namespace",
-                  "items": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "namespace": {
-                        "description": "Namespace of the virtual service",
-                        "type": "string"
-                      },
-                      "virtualService": {
-                        "description": "Name of the virtual service",
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "type": "array"
-                },
-                "namespace": {
-                  "description": "Namespace of the divert",
-                  "type": "string"
-                },
-                "virtualServices": {
-                  "description": "List of virtual services to divert",
-                  "items": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "name": {
-                        "description": "Name of the virtual service",
-                        "type": "string"
-                      },
-                      "namespace": {
-                        "description": "Namespace of the virtual service",
-                        "type": "string"
-                      },
-                      "routes": {
-                        "description": "List of routes to divert. If empty, all routes are diverted",
-                        "items": {
-                          "type": "string"
-                        },
-                        "type": "array"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "type": "array"
-                }
-              },
-              "type": "object"
-            },
-            "endpoints": {
-              "description": "List of endpoints",
-              "items": {
-                "additionalProperties": false,
-                "properties": {
-                  "path": {
-                    "description": "Path for the endpoint",
-                    "type": "string"
-                  },
-                  "port": {
-                    "description": "Port number",
-                    "type": "integer"
-                  },
-                  "service": {
-                    "description": "Service name",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "path",
-                  "service",
-                  "port"
-                ],
-                "type": "object"
-              },
-              "type": "array"
-            },
-            "image": {
-              "description": "Image to use for deployment",
-              "type": "string"
-            },
-            "remote": {
-              "description": "Whether to run commands remotely",
-              "type": "boolean"
             }
           },
           "type": "object"
         }
       ],
-      "title": "deploy"
-    },
-    "destroy": {
-      "description": "A list of commands to destroy external resources created by your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#destroy-string-optional",
-      "oneOf": [
-        {
-          "items": {
-            "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "additionalProperties": false,
-                "properties": {
-                  "command": {
-                    "description": "Command to execute",
-                    "type": "string"
-                  },
-                  "name": {
-                    "description": "Name of the command",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "command"
-                ],
-                "type": "object"
-              }
-            ]
-          },
-          "type": "array"
-        },
-        {
-          "additionalProperties": false,
-          "properties": {
-            "commands": {
-              "description": "List of commands to execute for destroying resources",
-              "items": {
-                "oneOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "additionalProperties": false,
-                    "properties": {
-                      "command": {
-                        "description": "Command to execute",
-                        "type": "string"
-                      },
-                      "name": {
-                        "description": "Name of the command",
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "command"
-                    ],
-                    "type": "object"
-                  }
-                ]
-              },
-              "type": "array"
-            },
-            "context": {
-              "description": "The working directory for running the destroy commands. If left empty, it defaults to the directory containing the Okteto Manifest",
-              "type": "string"
-            },
-            "image": {
-              "description": "Image to use for running destroy commands",
-              "type": "string"
-            },
-            "remote": {
-              "description": "Whether to run commands remotely",
-              "type": "boolean"
-            }
-          },
-          "type": "object"
-        }
-      ],
-      "title": "destroy"
+      "title": "dependencies",
+      "description": "A list of repositories you want to deploy as part of your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#dependencies-string-optional"
     },
     "dev": {
-      "additionalProperties": false,
-      "description": "A list of development containers to define the behavior of okteto up and synchronize your code in your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional",
       "patternProperties": {
         ".*": {
-          "additionalProperties": false,
-          "description": "The name of each development container must match the name of the Kubernetes Deployment or Statefulset that you want to put on development mode. If the name of your Deployment or Statefulset is dynamically generated, use the selector field to match the Deployment or Statefulset by labels.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional",
           "properties": {
             "affinity": {
-              "description": "Affinity allows you to constrain which nodes your development container is eligible to be scheduled on, based on labels on the node.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#affinity-affinity-optional",
+              "type": "object",
               "title": "affinity",
-              "type": "object"
+              "description": "Affinity allows you to constrain which nodes your development container is eligible to be scheduled on, based on labels on the node.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#affinity-affinity-optional"
             },
             "autocreate": {
-              "default": false,
-              "description": "If set to true, okteto up creates a deployment if name doesn't match any existing deployment in the current namespace.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#autocreate-bool-optional",
+              "type": "boolean",
               "title": "autocreate",
-              "type": "boolean"
+              "description": "If set to true, okteto up creates a deployment if name doesn't match any existing deployment in the current namespace.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#autocreate-bool-optional",
+              "default": false
             },
             "command": {
-              "description": "The command of your development container. If empty, it defaults to sh. The command can also be a list.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#command-string-optional",
               "oneOf": [
                 {
-                  "default": "sh",
-                  "type": "string"
+                  "type": "string",
+                  "default": "sh"
                 },
                 {
                   "items": {
@@ -463,23 +317,15 @@
                   "type": "array"
                 }
               ],
-              "title": "command"
+              "title": "command",
+              "description": "The command of your development container. If empty, it defaults to sh. The command can also be a list.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#command-string-optional"
             },
             "container": {
-              "description": "The name of the container in your deployment you want to put on development mode. By default, it takes the first one.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#container-string-optional",
+              "type": "string",
               "title": "container",
-              "type": "string"
-            },
-            "envFiles": {
-              "description": "Add environment variables to your development container from files\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#envfiles",
-              "items": {
-                "type": "string"
-              },
-              "title": "envFiles",
-              "type": "array"
+              "description": "The name of the container in your deployment you want to put on development mode. By default, it takes the first one.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#container-string-optional"
             },
             "environment": {
-              "description": "Add environment variables to your development container. If a variable already exists on your deployment, it will be overridden with the value specified on the manifest. Environment variables with only a key, or with a value with a $ sign resolve to their values on the machine Okteto is running on\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#environment-string-optional",
               "oneOf": [
                 {
                   "patternProperties": {
@@ -500,144 +346,151 @@
                   "type": "array"
                 }
               ],
-              "title": "environment"
+              "title": "environment",
+              "description": "Add environment variables to your development container. If a variable already exists on your deployment, it will be overridden with the value specified on the manifest. Environment variables with only a key, or with a value with a $ sign resolve to their values on the machine Okteto is running on\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#environment-string-optional"
             },
-            "externalVolumes": {
-              "description": "A list of persistent volume claims that you want to mount in your development container\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#externalvolumes-string-optional",
+            "envFiles": {
               "items": {
                 "type": "string"
               },
+              "type": "array",
+              "title": "envFiles",
+              "description": "Add environment variables to your development container from files\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#envfiles"
+            },
+            "externalVolumes": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
               "title": "externalVolumes",
-              "type": "array"
+              "description": "A list of persistent volume claims that you want to mount in your development container\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#externalvolumes-string-optional"
             },
             "forward": {
-              "description": "A list of ports to forward from your development container\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#forward-string-optional",
               "items": {
                 "oneOf": [
                   {
-                    "pattern": "^[0-9]+:([a-zA-Z0-9-]+:)?[0-9]+$",
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^[0-9]+:([a-zA-Z0-9-]+:)?[0-9]+$"
                   },
                   {
-                    "additionalProperties": false,
                     "properties": {
+                      "localPort": {
+                        "type": "integer",
+                        "title": "localPort"
+                      },
+                      "remotePort": {
+                        "type": "integer",
+                        "title": "remotePort"
+                      },
+                      "name": {
+                        "type": "string",
+                        "title": "name"
+                      },
                       "labels": {
                         "patternProperties": {
                           ".*": {
                             "type": "string"
                           }
                         },
-                        "title": "labels",
-                        "type": "object"
-                      },
-                      "localPort": {
-                        "title": "localPort",
-                        "type": "integer"
-                      },
-                      "name": {
-                        "title": "name",
-                        "type": "string"
-                      },
-                      "remotePort": {
-                        "title": "remotePort",
-                        "type": "integer"
+                        "type": "object",
+                        "title": "labels"
                       }
                     },
+                    "additionalProperties": false,
+                    "type": "object",
                     "required": [
                       "localPort",
                       "remotePort"
-                    ],
-                    "type": "object"
+                    ]
                   }
                 ]
               },
+              "type": "array",
               "title": "forward",
-              "type": "array"
-            },
-            "image": {
-              "description": "Sets the docker image of your development container. Defaults to the image specified in your deployment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#image-string-optional",
-              "title": "image",
-              "type": "string"
-            },
-            "imagePullPolicy": {
-              "default": "Always",
-              "description": "Image pull policy of your development container\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#imagepullpolicy-string-optional",
-              "title": "imagePullPolicy",
-              "type": "string"
+              "description": "A list of ports to forward from your development container\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#forward-string-optional"
             },
             "initContainer": {
-              "additionalProperties": false,
-              "description": "Allows you to override the okteto init container configuration of your development container.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#initcontainer-object-optional",
               "properties": {
                 "image": {
-                  "title": "image",
-                  "type": "string"
+                  "type": "string",
+                  "title": "image"
                 },
                 "resources": {
-                  "title": "resources",
-                  "type": "object"
+                  "type": "object",
+                  "title": "resources"
                 }
               },
+              "additionalProperties": false,
+              "type": "object",
               "title": "initContainer",
-              "type": "object"
+              "description": "Allows you to override the okteto init container configuration of your development container.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#initcontainer-object-optional"
             },
             "interface": {
-              "default": "localhost",
-              "description": "Port forwards and reverse tunnels will be bound to this address.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#interface-string-optional",
+              "type": "string",
               "title": "interface",
-              "type": "string"
+              "description": "Port forwards and reverse tunnels will be bound to this address.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#interface-string-optional",
+              "default": "localhost"
+            },
+            "image": {
+              "type": "string",
+              "title": "image",
+              "description": "Sets the docker image of your development container. Defaults to the image specified in your deployment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#image-string-optional"
+            },
+            "imagePullPolicy": {
+              "type": "string",
+              "title": "imagePullPolicy",
+              "description": "Image pull policy of your development container\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#imagepullpolicy-string-optional",
+              "default": "Always"
             },
             "lifecycle": {
-              "description": "Configures lifecycle hooks for your development container. Lifecycle hooks allow you to execute commands when your container starts or stops, enabling you to automate setup or cleanup tasks.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#lifecycle-boolean-optional",
               "oneOf": [
                 {
-                  "default": false,
-                  "type": "boolean"
+                  "type": "boolean",
+                  "default": false
                 },
                 {
-                  "additionalProperties": false,
                   "properties": {
                     "postStart": {
-                      "additionalProperties": false,
                       "properties": {
-                        "command": {
-                          "title": "command",
-                          "type": "string"
-                        },
                         "enabled": {
-                          "default": false,
+                          "type": "boolean",
                           "title": "enabled",
-                          "type": "boolean"
+                          "default": false
+                        },
+                        "command": {
+                          "type": "string",
+                          "title": "command"
                         }
                       },
-                      "title": "postStart",
-                      "type": "object"
+                      "additionalProperties": false,
+                      "type": "object",
+                      "title": "postStart"
                     },
                     "preStop": {
-                      "additionalProperties": false,
                       "properties": {
-                        "command": {
-                          "title": "command",
-                          "type": "string"
-                        },
                         "enabled": {
-                          "default": false,
+                          "type": "boolean",
                           "title": "enabled",
-                          "type": "boolean"
+                          "default": false
+                        },
+                        "command": {
+                          "type": "string",
+                          "title": "command"
                         }
                       },
-                      "title": "preStop",
-                      "type": "object"
+                      "additionalProperties": false,
+                      "type": "object",
+                      "title": "preStop"
                     }
                   },
+                  "additionalProperties": false,
                   "type": "object"
                 }
               ],
-              "title": "lifecycle"
+              "title": "lifecycle",
+              "description": "Configures lifecycle hooks for your development container. Lifecycle hooks allow you to execute commands when your container starts or stops, enabling you to automate setup or cleanup tasks.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#lifecycle-boolean-optional"
             },
             "metadata": {
-              "additionalProperties": false,
-              "description": "The metadata field allows to inject labels and annotations into your development container.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#metadata-object-optional",
               "properties": {
                 "annotations": {
                   "patternProperties": {
@@ -645,8 +498,8 @@
                       "type": "string"
                     }
                   },
-                  "title": "annotations",
-                  "type": "object"
+                  "type": "object",
+                  "title": "annotations"
                 },
                 "labels": {
                   "patternProperties": {
@@ -654,269 +507,223 @@
                       "type": "string"
                     }
                   },
-                  "title": "labels",
-                  "type": "object"
+                  "type": "object",
+                  "title": "labels"
                 }
               },
+              "additionalProperties": false,
+              "type": "object",
               "title": "metadata",
-              "type": "object"
+              "description": "The metadata field allows to inject labels and annotations into your development container.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#metadata-object-optional"
             },
             "mode": {
-              "default": "sync",
-              "description": "Development mode (sync, hybrid)\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#mode-string-optional",
+              "type": "string",
               "enum": [
                 "sync",
                 "hybrid"
               ],
               "title": "mode",
-              "type": "string"
+              "description": "Development mode (sync, hybrid)\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#mode-string-optional",
+              "default": "sync"
             },
             "nodeSelector": {
-              "description": "Labels that the node must have to schedule the development container\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#nodeselector-mapstringstring-optional",
               "patternProperties": {
                 ".*": {
                   "type": "string"
                 }
               },
+              "type": "object",
               "title": "nodeSelector",
-              "type": "object"
+              "description": "Labels that the node must have to schedule the development container\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#nodeselector-mapstringstring-optional"
             },
             "persistentVolume": {
-              "additionalProperties": false,
-              "description": "Allows you to configure a persistent volume for your development container.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#persistentvolume-object-optional",
               "properties": {
-                "accessMode": {
-                  "default": "ReadWriteOnce",
-                  "description": "The Okteto persistent volume access mode",
-                  "title": "accessMode",
-                  "type": "string"
-                },
-                "annotations": {
-                  "description": "Add annotations to the Okteto persistent volume",
-                  "patternProperties": {
-                    ".*": {
-                      "type": "string"
-                    }
-                  },
-                  "title": "annotations",
-                  "type": "object"
-                },
                 "enabled": {
-                  "default": true,
-                  "description": "Enable/disable the use of persistent volumes. Must be true if using services, volumes, or to share command history.",
+                  "type": "boolean",
                   "title": "enabled",
-                  "type": "boolean"
+                  "description": "Enable/disable the use of persistent volumes. Must be true if using services, volumes, or to share command history.",
+                  "default": true
                 },
-                "labels": {
-                  "description": "Add labels to the Okteto persistent volume",
-                  "patternProperties": {
-                    ".*": {
-                      "type": "string"
-                    }
-                  },
-                  "title": "labels",
-                  "type": "object"
+                "accessMode": {
+                  "type": "string",
+                  "title": "accessMode",
+                  "description": "The Okteto persistent volume access mode",
+                  "default": "ReadWriteOnce"
                 },
                 "size": {
-                  "default": "5Gi",
-                  "description": "The size of the Okteto persistent volume",
+                  "type": "string",
                   "title": "size",
-                  "type": "string"
+                  "description": "The size of the Okteto persistent volume",
+                  "default": "5Gi"
                 },
                 "storageClass": {
-                  "description": "The storage class of the Okteto persistent volume. Defaults to cluster's default storage class",
+                  "type": "string",
                   "title": "storageClass",
-                  "type": "string"
+                  "description": "The storage class of the Okteto persistent volume. Defaults to cluster's default storage class"
                 },
                 "volumeMode": {
-                  "default": "Filesystem",
-                  "description": "The Okteto persistent volume mode",
+                  "type": "string",
                   "title": "volumeMode",
-                  "type": "string"
-                }
-              },
-              "title": "persistentVolume",
-              "type": "object"
-            },
-            "priorityClassName": {
-              "description": "Priority class name for the development container\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#priorityclassname-string-optional",
-              "title": "priorityClassName",
-              "type": "string"
-            },
-            "probes": {
-              "description": "Used to enable or disable the Kubernetes probes of your development container. If set to 'true' \nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#probes-boolean-optional",
-              "oneOf": [
-                {
-                  "default": false,
-                  "type": "boolean"
+                  "description": "The Okteto persistent volume mode",
+                  "default": "Filesystem"
                 },
-                {
-                  "additionalProperties": false,
-                  "properties": {
-                    "liveness": {
-                      "default": false,
-                      "title": "liveness",
-                      "type": "boolean"
-                    },
-                    "readiness": {
-                      "default": false,
-                      "title": "readiness",
-                      "type": "boolean"
-                    },
-                    "startup": {
-                      "default": false,
-                      "title": "startup",
-                      "type": "boolean"
+                "annotations": {
+                  "patternProperties": {
+                    ".*": {
+                      "type": "string"
                     }
                   },
+                  "type": "object",
+                  "title": "annotations",
+                  "description": "Add annotations to the Okteto persistent volume"
+                },
+                "labels": {
+                  "patternProperties": {
+                    ".*": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object",
+                  "title": "labels",
+                  "description": "Add labels to the Okteto persistent volume"
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "title": "persistentVolume",
+              "description": "Allows you to configure a persistent volume for your development container.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#persistentvolume-object-optional"
+            },
+            "priorityClassName": {
+              "type": "string",
+              "title": "priorityClassName",
+              "description": "Priority class name for the development container\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#priorityclassname-string-optional"
+            },
+            "probes": {
+              "oneOf": [
+                {
+                  "type": "boolean",
+                  "default": false
+                },
+                {
+                  "properties": {
+                    "liveness": {
+                      "type": "boolean",
+                      "title": "liveness",
+                      "default": false
+                    },
+                    "readiness": {
+                      "type": "boolean",
+                      "title": "readiness",
+                      "default": false
+                    },
+                    "startup": {
+                      "type": "boolean",
+                      "title": "startup",
+                      "default": false
+                    }
+                  },
+                  "additionalProperties": false,
                   "type": "object"
                 }
               ],
-              "title": "probes"
+              "title": "probes",
+              "description": "Used to enable or disable the Kubernetes probes of your development container. If set to 'true' \nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#probes-boolean-optional"
             },
             "remote": {
-              "description": "Local port for SSH communication",
+              "type": "integer",
               "title": "remote",
-              "type": "integer"
-            },
-            "resources": {
-              "additionalProperties": false,
-              "description": "Resource requests and limits for the development container\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#resources-object-optional",
-              "properties": {
-                "limits": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "cpu": {
-                      "title": "cpu",
-                      "type": "string"
-                    },
-                    "ephemeral-storage": {
-                      "title": "ephemeral-storage",
-                      "type": "string"
-                    },
-                    "memory": {
-                      "title": "memory",
-                      "type": "string"
-                    }
-                  },
-                  "title": "limits",
-                  "type": "object"
-                },
-                "requests": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "cpu": {
-                      "title": "cpu",
-                      "type": "string"
-                    },
-                    "ephemeral-storage": {
-                      "title": "ephemeral-storage",
-                      "type": "string"
-                    },
-                    "memory": {
-                      "title": "memory",
-                      "type": "string"
-                    }
-                  },
-                  "title": "requests",
-                  "type": "object"
-                }
-              },
-              "title": "resources",
-              "type": "object"
+              "description": "Local port for SSH communication"
             },
             "reverse": {
-              "description": "Ports to reverse forward from your development container",
               "items": {
-                "pattern": "^[0-9]+:[0-9]+$",
-                "type": "string"
+                "type": "string",
+                "pattern": "^[0-9]+:[0-9]+$"
               },
+              "type": "array",
               "title": "reverse",
-              "type": "array"
+              "description": "Ports to reverse forward from your development container"
             },
             "secrets": {
-              "description": "List of secrets to be injected",
               "items": {
                 "type": "string"
               },
+              "type": "array",
               "title": "secrets",
-              "type": "array"
+              "description": "List of secrets to be injected"
             },
             "securityContext": {
-              "additionalProperties": false,
               "properties": {
+                "runAsUser": {
+                  "type": "integer",
+                  "title": "runAsUser"
+                },
+                "runAsGroup": {
+                  "type": "integer",
+                  "title": "runAsGroup"
+                },
+                "fsGroup": {
+                  "type": "integer",
+                  "title": "fsGroup"
+                },
+                "runAsNonRoot": {
+                  "type": "boolean",
+                  "title": "runAsNonRoot"
+                },
                 "allowPrivilegeEscalation": {
-                  "title": "allowPrivilegeEscalation",
-                  "type": "boolean"
+                  "type": "boolean",
+                  "title": "allowPrivilegeEscalation"
                 },
                 "capabilities": {
-                  "additionalProperties": false,
                   "properties": {
                     "add": {
                       "items": {
                         "type": "string"
                       },
-                      "title": "add",
-                      "type": "array"
+                      "type": "array",
+                      "title": "add"
                     }
                   },
-                  "title": "capabilities",
-                  "type": "object"
-                },
-                "fsGroup": {
-                  "title": "fsGroup",
-                  "type": "integer"
-                },
-                "runAsGroup": {
-                  "title": "runAsGroup",
-                  "type": "integer"
-                },
-                "runAsNonRoot": {
-                  "title": "runAsNonRoot",
-                  "type": "boolean"
-                },
-                "runAsUser": {
-                  "title": "runAsUser",
-                  "type": "integer"
+                  "additionalProperties": false,
+                  "type": "object",
+                  "title": "capabilities"
                 }
               },
-              "title": "securityContext",
-              "type": "object"
+              "additionalProperties": false,
+              "type": "object",
+              "title": "securityContext"
             },
             "selector": {
-              "description": "The labels of the Kubernetes deployment/statefulset you want to put on development mode. They must identify a single Kubernetes deployment/statefulset.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#selector-mapstringstring-optional",
               "patternProperties": {
                 ".*": {
                   "type": "string"
                 }
               },
+              "type": "object",
               "title": "selector",
-              "type": "object"
+              "description": "The labels of the Kubernetes deployment/statefulset you want to put on development mode. They must identify a single Kubernetes deployment/statefulset.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#selector-mapstringstring-optional"
             },
             "serviceAccount": {
-              "description": "Service account for the development container\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#serviceaccount-string-optional",
+              "type": "string",
               "title": "serviceAccount",
-              "type": "string"
+              "description": "Service account for the development container\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#serviceaccount-string-optional"
             },
             "services": {
-              "description": "A list of services that you want to put on developer mode along your development container. The services work just like the development container, with one exception: they won't be able to start an interactive session.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#services-object-optional",
               "items": {
-                "additionalProperties": false,
                 "properties": {
                   "annotations": {
-                    "title": "annotations",
-                    "type": "object"
+                    "type": "object",
+                    "title": "annotations"
                   },
                   "command": {
                     "items": {
                       "type": "string"
                     },
-                    "title": "command",
-                    "type": "array"
+                    "type": "array",
+                    "title": "command"
                   },
                   "container": {
-                    "title": "container",
-                    "type": "string"
+                    "type": "string",
+                    "title": "container"
                   },
                   "environment": {
                     "patternProperties": {
@@ -924,227 +731,206 @@
                         "type": "string"
                       }
                     },
-                    "title": "environment",
-                    "type": "object"
+                    "type": "object",
+                    "title": "environment"
                   },
                   "image": {
-                    "title": "image",
-                    "type": "string"
+                    "type": "string",
+                    "title": "image"
                   },
                   "labels": {
-                    "title": "labels",
-                    "type": "object"
+                    "type": "object",
+                    "title": "labels"
                   },
                   "name": {
-                    "title": "name",
-                    "type": "string"
-                  },
-                  "replicas": {
-                    "title": "replicas",
-                    "type": "integer"
+                    "type": "string",
+                    "title": "name"
                   },
                   "resources": {
-                    "title": "resources",
-                    "type": "object"
+                    "type": "object",
+                    "title": "resources"
                   },
                   "sync": {
                     "items": {
                       "type": "string"
                     },
-                    "title": "sync",
-                    "type": "array"
+                    "type": "array",
+                    "title": "sync"
                   },
                   "workdir": {
-                    "title": "workdir",
-                    "type": "string"
+                    "type": "string",
+                    "title": "workdir"
+                  },
+                  "replicas": {
+                    "type": "integer",
+                    "title": "replicas"
                   }
                 },
+                "additionalProperties": false,
                 "type": "object"
               },
+              "type": "array",
               "title": "services",
-              "type": "array"
+              "description": "A list of services that you want to put on developer mode along your development container. The services work just like the development container, with one exception: they won't be able to start an interactive session.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#services-object-optional"
             },
             "sync": {
-              "description": "Specifies local folders that must be synchronized to the development container.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#sync-string-required",
               "oneOf": [
                 {
                   "items": {
-                    "pattern": "^.*:.*$",
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^.*:.*$"
                   },
                   "type": "array"
                 },
                 {
-                  "additionalProperties": false,
                   "properties": {
-                    "compression": {
-                      "default": false,
-                      "title": "compression",
-                      "type": "boolean"
-                    },
                     "folders": {
                       "items": {
                         "type": "string"
                       },
-                      "title": "folders",
-                      "type": "array"
-                    },
-                    "rescanInterval": {
-                      "default": 300,
-                      "title": "rescanInterval",
-                      "type": "integer"
+                      "type": "array",
+                      "title": "folders"
                     },
                     "verbose": {
-                      "default": true,
+                      "type": "boolean",
                       "title": "verbose",
-                      "type": "boolean"
+                      "default": true
+                    },
+                    "compression": {
+                      "type": "boolean",
+                      "title": "compression",
+                      "default": false
+                    },
+                    "rescanInterval": {
+                      "type": "integer",
+                      "title": "rescanInterval",
+                      "default": 300
                     }
                   },
+                  "additionalProperties": false,
+                  "type": "object",
                   "required": [
                     "folders"
-                  ],
-                  "type": "object"
+                  ]
                 }
               ],
-              "title": "sync"
+              "title": "sync",
+              "description": "Specifies local folders that must be synchronized to the development container.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#sync-string-required"
             },
             "timeout": {
-              "description": "Maximum time to be waiting for creating a development container until an error is returned.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#timeout-time-optional",
               "oneOf": [
                 {
-                  "pattern": "^[0-9]+(h|m|s)$",
-                  "type": "string"
+                  "type": "string",
+                  "pattern": "^[0-9]+(h|m|s)$"
                 },
                 {
-                  "additionalProperties": false,
                   "properties": {
                     "default": {
+                      "type": "string",
                       "pattern": "^[0-9]+(h|m|s)$",
-                      "title": "default",
-                      "type": "string"
+                      "title": "default"
                     },
                     "resources": {
+                      "type": "string",
                       "pattern": "^[0-9]+(h|m|s)$",
-                      "title": "resources",
-                      "type": "string"
+                      "title": "resources"
                     }
                   },
+                  "additionalProperties": false,
                   "type": "object"
                 }
               ],
-              "title": "timeout"
+              "title": "timeout",
+              "description": "Maximum time to be waiting for creating a development container until an error is returned.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#timeout-time-optional"
             },
             "tolerations": {
-              "description": "A list of tolerations that will be injected into your development container.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#tolerations-object-optional",
               "items": {
                 "type": "object"
               },
+              "type": "array",
               "title": "tolerations",
-              "type": "array"
+              "description": "A list of tolerations that will be injected into your development container.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#tolerations-object-optional"
             },
             "volumes": {
-              "description": "A list of paths in your development container that you want to associate to persistent volumes. This is useful to persist information between okteto up executions, like downloaded libraries or cache information. \nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#volumes-string-optional",
               "items": {
                 "type": "string"
               },
+              "type": "array",
               "title": "volumes",
-              "type": "array"
+              "description": "A list of paths in your development container that you want to associate to persistent volumes. This is useful to persist information between okteto up executions, like downloaded libraries or cache information. \nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#volumes-string-optional"
             },
             "workdir": {
-              "description": "Sets the working directory of your development container.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#workdir-string-optional",
+              "type": "string",
               "title": "workdir",
-              "type": "string"
-            }
-          },
-          "type": "object"
-        }
-      },
-      "title": "dev",
-      "type": "object"
-    },
-    "external": {
-      "additionalProperties": false,
-      "description": "A list of external resources that are part of your development environment. Use this section for resources that are deployed outside of the Okteto cluster",
-      "patternProperties": {
-        ".*": {
-          "additionalProperties": false,
-          "properties": {
-            "endpoints": {
-              "description": "List of endpoints to access the external resource\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#endpoints-object-required",
-              "items": {
-                "additionalProperties": false,
-                "properties": {
-                  "name": {
-                    "description": "The name of the endpoint",
-                    "required": [
-                      "name"
-                    ],
-                    "title": "name",
-                    "type": "string"
+              "description": "Sets the working directory of your development container.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#workdir-string-optional"
+            },
+            "resources": {
+              "properties": {
+                "requests": {
+                  "properties": {
+                    "cpu": {
+                      "type": "string",
+                      "title": "cpu"
+                    },
+                    "memory": {
+                      "type": "string",
+                      "title": "memory"
+                    },
+                    "ephemeral-storage": {
+                      "type": "string",
+                      "title": "ephemeral-storage"
+                    }
                   },
-                  "url": {
-                    "description": "The url of the endpoint. Can be set dynamically during deployment using $OKTETO_EXTERNAL_{EXTERNAL_NAME}_ENDPOINTS_{ENDPOINT_NAME}_URL",
-                    "format": "uri",
-                    "title": "url",
-                    "type": "string"
-                  }
+                  "additionalProperties": false,
+                  "type": "object",
+                  "title": "requests"
                 },
-                "required": [
-                  "name"
-                ],
-                "type": "object"
+                "limits": {
+                  "properties": {
+                    "cpu": {
+                      "type": "string",
+                      "title": "cpu"
+                    },
+                    "memory": {
+                      "type": "string",
+                      "title": "memory"
+                    },
+                    "ephemeral-storage": {
+                      "type": "string",
+                      "title": "ephemeral-storage"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "title": "limits"
+                }
               },
-              "title": "endpoints",
-              "type": "array"
-            },
-            "icon": {
-              "default": "default",
-              "description": "Icon to represent the external resource\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#icon-string-optional",
-              "enum": [
-                "default",
-                "container",
-                "dashboard",
-                "database",
-                "function",
-                "graph",
-                "storage",
-                "launchdarkly",
-                "mongodb",
-                "gcp",
-                "aws",
-                "okteto"
-              ],
-              "title": "icon",
-              "type": "string"
-            },
-            "notes": {
-              "description": "Path to documentation or notes about the external resource",
-              "title": "notes",
-              "type": "string"
+              "additionalProperties": false,
+              "type": "object",
+              "title": "resources",
+              "description": "Resource requests and limits for the development container\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#resources-object-optional"
             }
           },
-          "required": [
-            "endpoints"
-          ],
-          "type": "object"
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The name of each development container must match the name of the Kubernetes Deployment or Statefulset that you want to put on development mode. If the name of your Deployment or Statefulset is dynamically generated, use the selector field to match the Deployment or Statefulset by labels.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional"
         }
       },
-      "title": "external",
-      "type": "object"
+      "additionalProperties": false,
+      "type": "object",
+      "title": "dev",
+      "description": "A list of development containers to define the behavior of okteto up and synchronize your code in your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional"
     },
     "forward": {
-      "description": "Global port forwards to handle port collisions automatically between multiple okteto up sessions.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#forward-string-optional-1",
       "items": {
         "oneOf": [
           {
-            "description": "Port forward in the format localPort:service:remotePort or localPort:remotePort",
+            "type": "string",
             "pattern": "^\\d+:[^:]+:\\d+$|^\\d+:\\d+$",
             "title": "forward",
-            "type": "string"
+            "description": "Port forward in the format localPort:service:remotePort or localPort:remotePort"
           },
           {
-            "additionalProperties": false,
-            "description": "Detailed port forward configuration",
             "oneOf": [
               {
                 "not": {
@@ -1184,130 +970,254 @@
               }
             ],
             "properties": {
+              "localPort": {
+                "type": "integer",
+                "title": "localPort",
+                "description": "Local port to forward from"
+              },
+              "remotePort": {
+                "type": "integer",
+                "title": "remotePort",
+                "description": "Remote port to forward to"
+              },
+              "name": {
+                "type": "string",
+                "title": "name",
+                "description": "Name of the service to forward to"
+              },
               "labels": {
-                "description": "Labels to select the service to forward to",
                 "patternProperties": {
                   ".*": {
                     "type": "string"
                   }
                 },
+                "type": "object",
                 "title": "labels",
-                "type": "object"
-              },
-              "localPort": {
-                "description": "Local port to forward from",
-                "title": "localPort",
-                "type": "integer"
-              },
-              "name": {
-                "description": "Name of the service to forward to",
-                "title": "name",
-                "type": "string"
-              },
-              "remotePort": {
-                "description": "Remote port to forward to",
-                "title": "remotePort",
-                "type": "integer"
+                "description": "Labels to select the service to forward to"
               }
             },
+            "additionalProperties": false,
+            "type": "object",
             "required": [
               "localPort",
               "remotePort"
             ],
-            "type": "object"
+            "description": "Detailed port forward configuration"
           }
         ]
       },
+      "type": "array",
       "title": "forward",
-      "type": "array"
+      "description": "Global port forwards to handle port collisions automatically between multiple okteto up sessions.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#forward-string-optional-1"
     },
-    "icon": {
-      "description": "The icon associated to your development environment in the Okteto UI.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#icon-string-optional-1",
-      "title": "icon",
-      "type": "string"
-    },
-    "name": {
-      "description": "The name of your development environment. It defaults to the name of your git repository.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#name-string-optional",
-      "title": "name",
-      "type": "string"
-    },
-    "test": {
-      "description": "A dictionary of Test Containers to run tests using Remote Execution.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#test-object-optional",
+    "external": {
       "patternProperties": {
         ".*": {
+          "properties": {
+            "notes": {
+              "type": "string",
+              "title": "notes",
+              "description": "Path to documentation or notes about the external resource"
+            },
+            "icon": {
+              "type": "string",
+              "enum": [
+                "default",
+                "container",
+                "dashboard",
+                "database",
+                "function",
+                "graph",
+                "storage",
+                "launchdarkly",
+                "mongodb",
+                "gcp",
+                "aws",
+                "okteto"
+              ],
+              "title": "icon",
+              "description": "Icon to represent the external resource\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#icon-string-optional",
+              "default": "default"
+            },
+            "endpoints": {
+              "items": {
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "required": [
+                      "name"
+                    ],
+                    "title": "name",
+                    "description": "The name of the endpoint"
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "title": "url",
+                    "description": "The url of the endpoint. Can be set dynamically during deployment using $OKTETO_EXTERNAL_{EXTERNAL_NAME}_ENDPOINTS_{ENDPOINT_NAME}_URL"
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "name"
+                ]
+              },
+              "type": "array",
+              "title": "endpoints",
+              "description": "List of endpoints to access the external resource\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#endpoints-object-required"
+            }
+          },
           "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "endpoints"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "title": "external",
+      "description": "A list of external resources that are part of your development environment. Use this section for resources that are deployed outside of the Okteto cluster"
+    },
+    "build": {
+      "patternProperties": {
+        ".*": {
+          "properties": {
+            "args": {
+              "patternProperties": {
+                ".*": {
+                  "type": "string"
+                }
+              },
+              "type": "object",
+              "title": "args",
+              "description": "Build arguments, which are environment variables accessible only during the build process. Build arguments with a value containing a $ sign are resolved to the environment variable value on the machine Okteto is running on"
+            },
+            "context": {
+              "type": "string",
+              "title": "context",
+              "description": "The build context. Relative paths are relative to the location of the Okteto Manifest",
+              "default": "."
+            },
+            "depends_on": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "title": "depends_on",
+              "description": "List of images that need to be built first"
+            },
+            "dockerfile": {
+              "type": "string",
+              "title": "dockerfile",
+              "description": "The path to the Dockerfile. It's a relative path to the build context",
+              "default": "Dockerfile"
+            },
+            "image": {
+              "type": "string",
+              "title": "image",
+              "description": "The name of the image to build and push. In clusters that have Okteto installed, this is optional (if not specified, the Okteto Registry is used)"
+            },
+            "secrets": {
+              "patternProperties": {
+                ".*": {
+                  "type": "string"
+                }
+              },
+              "type": "object",
+              "title": "secrets",
+              "description": "List of secrets exposed to the build. The value of each secret refers to a file. Okteto will resolve references containing a $ sign in this file to environment variables on the machine Okteto is running on"
+            },
+            "target": {
+              "type": "string",
+              "title": "target",
+              "description": "Build the specified stage as defined inside the Dockerfile"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "A list of images to build as part of your development environment.\n\n\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#build-object-optional"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "title": "build",
+      "description": "A list of images to build as part of your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#build-object-optional"
+    },
+    "test": {
+      "patternProperties": {
+        ".*": {
           "properties": {
             "artifacts": {
-              "description": "A list of files and/or folder to be exported after the execution of the tests. They will be added relative to root context of the tests. If you want to export coverage reports and test results this is where they should go.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#artifacts-string-optional",
               "items": {
                 "type": "string"
               },
+              "type": "array",
               "title": "artifacts",
-              "type": "array"
+              "description": "A list of files and/or folder to be exported after the execution of the tests. They will be added relative to root context of the tests. If you want to export coverage reports and test results this is where they should go.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#artifacts-string-optional"
             },
             "caches": {
-              "description": "A list of cache mounts to be used as part of running the tests. This is used to speed up recurrent test executions where, for example, dependencies will not be reinstalled and will instead be mounted from the cache.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#caches-string-optional",
               "items": {
                 "type": "string"
               },
+              "type": "array",
               "title": "caches",
-              "type": "array"
+              "description": "A list of cache mounts to be used as part of running the tests. This is used to speed up recurrent test executions where, for example, dependencies will not be reinstalled and will instead be mounted from the cache.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#caches-string-optional"
             },
             "commands": {
-              "description": "Provide a list of commands to run the tests. For the tests to be considered successful, each command must exit with a zero exit code. If any command returns a non-zero exit code, the Test Container will be marked as failed\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#commands-string-required",
               "items": {
                 "oneOf": [
                   {
                     "type": "string"
                   },
                   {
-                    "additionalProperties": false,
                     "properties": {
-                      "command": {
-                        "description": "Command to execute",
-                        "type": "string"
-                      },
                       "name": {
-                        "description": "Name of the command",
-                        "type": "string"
+                        "type": "string",
+                        "description": "Name of the command"
+                      },
+                      "command": {
+                        "type": "string",
+                        "description": "Command to execute"
                       }
                     },
+                    "additionalProperties": false,
+                    "type": "object",
                     "required": [
                       "command"
-                    ],
-                    "type": "object"
+                    ]
                   }
                 ]
               },
+              "type": "array",
               "required": [
                 "commands"
               ],
               "title": "commands",
-              "type": "array"
+              "description": "Provide a list of commands to run the tests. For the tests to be considered successful, each command must exit with a zero exit code. If any command returns a non-zero exit code, the Test Container will be marked as failed\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#commands-string-required"
             },
             "context": {
-              "description": "The folder to use as the root for running the tests. If this is empty, the location of the Okteto Manifest will be used (usually the root of the project).\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#context-string-optional",
+              "type": "string",
               "title": "context",
-              "type": "string"
+              "description": "The folder to use as the root for running the tests. If this is empty, the location of the Okteto Manifest will be used (usually the root of the project).\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#context-string-optional"
             },
             "depends_on": {
-              "description": "A list of Test Containers this test depends on. When a Test Container is executed, all its dependencies are executed first. The Test Containers defined in depends_on must exist in the current Okteto Manifest.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#depends_on-string-optional",
               "items": {
                 "type": "string"
               },
+              "type": "array",
               "title": "depends_on",
-              "type": "array"
+              "description": "A list of Test Containers this test depends on. When a Test Container is executed, all its dependencies are executed first. The Test Containers defined in depends_on must exist in the current Okteto Manifest.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#depends_on-string-optional"
             },
             "hosts": {
-              "description": "A list of hostnames and ips. For each pair, an entry is created in /etc/hosts during the test execution. The following extended notation is also supported: hosts[0].hostname=hostname1 hosts[0].ip=ip1\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#hosts-string-optional",
               "items": {
                 "oneOf": [
                   {
-                    "pattern": "^[a-zA-Z0-9.-]+:[0-9.]+$",
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^[a-zA-Z0-9.-]+:[0-9.]+$"
                   },
                   {
-                    "additionalProperties": false,
                     "properties": {
                       "hostname": {
                         "type": "string"
@@ -1316,38 +1226,128 @@
                         "type": "string"
                       }
                     },
+                    "additionalProperties": false,
+                    "type": "object",
                     "required": [
                       "hostname",
                       "ip"
-                    ],
-                    "type": "object"
+                    ]
                   }
                 ]
               },
+              "type": "array",
               "title": "hosts",
-              "type": "array"
+              "description": "A list of hostnames and ips. For each pair, an entry is created in /etc/hosts during the test execution. The following extended notation is also supported: hosts[0].hostname=hostname1 hosts[0].ip=ip1\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#hosts-string-optional"
             },
             "image": {
-              "description": "The base image used to run your test.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#image-string-optional-1",
+              "type": "string",
               "title": "image",
-              "type": "string"
+              "description": "The base image used to run your test.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#image-string-optional-1"
             },
             "skipIfNoFileChanges": {
-              "description": "Skip the test execution if no files have changed since the last test run. This is useful to avoid running tests when the code hasn't changed.",
+              "type": "boolean",
               "title": "skipIfNoFileChanges",
-              "type": "boolean"
+              "description": "Skip the test execution if no files have changed since the last test run. This is useful to avoid running tests when the code hasn't changed."
             }
           },
+          "additionalProperties": false,
+          "type": "object",
           "required": [
             "commands"
-          ],
-          "type": "object"
+          ]
         }
       },
+      "type": "object",
       "title": "test",
-      "type": "object"
+      "description": "A dictionary of Test Containers to run tests using Remote Execution.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#test-object-optional"
+    },
+    "destroy": {
+      "oneOf": [
+        {
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the command"
+                  },
+                  "command": {
+                    "type": "string",
+                    "description": "Command to execute"
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "command"
+                ]
+              }
+            ]
+          },
+          "type": "array"
+        },
+        {
+          "properties": {
+            "image": {
+              "type": "string",
+              "description": "Image to use for running destroy commands"
+            },
+            "context": {
+              "type": "string",
+              "description": "The working directory for running the destroy commands. If left empty, it defaults to the directory containing the Okteto Manifest"
+            },
+            "remote": {
+              "type": "boolean",
+              "description": "Whether to run commands remotely"
+            },
+            "commands": {
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Name of the command"
+                      },
+                      "command": {
+                        "type": "string",
+                        "description": "Command to execute"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "command"
+                    ]
+                  }
+                ]
+              },
+              "type": "array",
+              "description": "List of commands to execute for destroying resources"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object"
+        }
+      ],
+      "title": "destroy",
+      "description": "A list of commands to destroy external resources created by your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#destroy-string-optional"
+    },
+    "name": {
+      "type": "string",
+      "title": "name",
+      "description": "The name of your development environment. It defaults to the name of your git repository.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#name-string-optional"
     }
   },
+  "additionalProperties": false,
+  "type": "object",
   "title": "Okteto Manifest Schema",
-  "type": "object"
+  "description": "A JSON schema providing inline suggestions and validation for creating Okteto Manifests in supported code editors. Okteto Manifests define Development Environments and workflows for Kubernetes applications, simplifying cloud-native development."
 }
