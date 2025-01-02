@@ -17,8 +17,60 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v3"
 )
+
+func TestValidate(t *testing.T) {
+	tests := []struct {
+		expectedError error
+		tests         ManifestTests
+		name          string
+		expectAnError bool
+	}{
+		{
+			name:          "nil",
+			tests:         nil,
+			expectedError: ErrNoTestsDefined,
+		},
+		{
+			name:          "empty",
+			tests:         ManifestTests{},
+			expectedError: ErrNoTestsDefined,
+		},
+		{
+			name: "one test",
+			tests: ManifestTests{
+				"one": &Test{},
+			},
+			expectAnError: true,
+		},
+		{
+			name: "one test",
+			tests: ManifestTests{
+				"one": &Test{
+					Commands: []TestCommand{
+						{Command: "echo 'hello'"},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.tests.Validate()
+			if tt.expectedError != nil {
+				require.ErrorIs(t, err, tt.expectedError)
+			} else if tt.expectAnError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+
+}
 
 func TestHostUnmarshalYAML(t *testing.T) {
 	t.Setenv("IP", "192.179.1.1")
