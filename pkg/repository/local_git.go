@@ -368,8 +368,13 @@ func (lg *LocalGit) GetDirContentSHA(ctx context.Context, gitPath, dirPath strin
 		}
 	}()
 
-	lsCmd.Wait()
-	hashCmd.Wait()
+	if err := lsCmd.Wait(); err != nil {
+		return handleError(err)
+	}
+
+	if err := hashCmd.Wait(); err != nil {
+		return handleError(err)
+	}
 
 	if pe1.Len() > 0 {
 		return "", errors.New(pe1.String())
