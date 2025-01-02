@@ -23,9 +23,9 @@ import (
 
 func TestValidate(t *testing.T) {
 	tests := []struct {
-		name          string
-		tests         ManifestTests
 		expectedError error
+		tests         ManifestTests
+		name          string
 		expectAnError bool
 	}{
 		{
