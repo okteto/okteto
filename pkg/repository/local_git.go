@@ -346,6 +346,7 @@ func (lg *LocalGit) GetDirContentSHA(ctx context.Context, gitPath, dirPath strin
 			if len(parts) < lsFilesColumnCount {
 				// if we can't parse a line, add the file to the list.
 				// It's better to over build than to over cache
+				//nolint:errcheck
 				pw2.Write([]byte(line + "\n"))
 			} else {
 				filename := parts[3]
@@ -354,6 +355,7 @@ func (lg *LocalGit) GetDirContentSHA(ctx context.Context, gitPath, dirPath strin
 					oktetoLog.Debugf("ignore error in GetDirContentSHA: %v", err)
 				}
 				if !shouldIgnore {
+					//nolint:errcheck
 					pw2.Write([]byte(line + "\n"))
 				} else {
 					oktetoLog.Debugf("skipping %v file change in GetDirContentSHA based on known ignore files", filename)
@@ -361,6 +363,7 @@ func (lg *LocalGit) GetDirContentSHA(ctx context.Context, gitPath, dirPath strin
 			}
 		}
 		if err := scanner.Err(); err != nil {
+			//nolint:errcheck
 			pe2.Write([]byte(err.Error()))
 		}
 	}()
