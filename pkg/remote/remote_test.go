@@ -278,6 +278,8 @@ FROM test-image as runner
 
 USER 0
 ENV PATH="${PATH}:/okteto/bin"
+WORKDIR /okteto
+RUN chown -R $(id -u):$(id -g) /okteto
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
 
@@ -292,11 +294,11 @@ ARG OKTETO_DEPLOYABLE
 ARG GITHUB_REPOSITORY
 ARG BUILDKIT_HOST
 ARG OKTETO_REGISTRY_URL
-RUN mkdir -p /etc/ssl/certs/
-RUN echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /etc/ssl/certs/okteto.crt
+RUN mkdir -p /okteto/.ssl/certs && echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /okteto/.ssl/certs/okteto.crt
+ENV SSL_CERT_DIR=/etc/ssl/certs:/okteto/.ssl/certs
 
-COPY . /okteto/src
 WORKDIR /okteto/src
+COPY --chmod=0777 . /okteto/src
 
 
 ENV OKTETO_BUILD_SVC2_IMAGE="TWO_VALUE"
@@ -319,7 +321,7 @@ ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
 
-RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
+RUN echo "$OKTETO_INVALIDATE_CACHE" > /okteto/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
 
 
@@ -336,7 +338,7 @@ RUN \
 
 
 FROM scratch
-COPY --from=runner /etc/.oktetocachekey .oktetocachekey
+COPY --from=runner /okteto/.oktetocachekey /okteto/.oktetocachekey
 
 `,
 				buildEnvVars:      map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
@@ -380,6 +382,8 @@ FROM test-image as runner
 
 USER 0
 ENV PATH="${PATH}:/okteto/bin"
+WORKDIR /okteto
+RUN chown -R $(id -u):$(id -g) /okteto
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
 
@@ -394,11 +398,11 @@ ARG OKTETO_DEPLOYABLE
 ARG GITHUB_REPOSITORY
 ARG BUILDKIT_HOST
 ARG OKTETO_REGISTRY_URL
-RUN mkdir -p /etc/ssl/certs/
-RUN echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /etc/ssl/certs/okteto.crt
+RUN mkdir -p /okteto/.ssl/certs && echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /okteto/.ssl/certs/okteto.crt
+ENV SSL_CERT_DIR=/etc/ssl/certs:/okteto/.ssl/certs
 
-COPY . /okteto/src
 WORKDIR /okteto/src
+COPY --chmod=0777 . /okteto/src
 
 
 ENV OKTETO_BUILD_SVC2_IMAGE="TWO_VALUE"
@@ -421,7 +425,7 @@ ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
 
-RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
+RUN echo "$OKTETO_INVALIDATE_CACHE" > /okteto/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
 
 
@@ -477,6 +481,8 @@ FROM test-image as runner
 
 USER 0
 ENV PATH="${PATH}:/okteto/bin"
+WORKDIR /okteto
+RUN chown -R $(id -u):$(id -g) /okteto
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
 
@@ -491,11 +497,11 @@ ARG OKTETO_DEPLOYABLE
 ARG GITHUB_REPOSITORY
 ARG BUILDKIT_HOST
 ARG OKTETO_REGISTRY_URL
-RUN mkdir -p /etc/ssl/certs/
-RUN echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /etc/ssl/certs/okteto.crt
+RUN mkdir -p /okteto/.ssl/certs && echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /okteto/.ssl/certs/okteto.crt
+ENV SSL_CERT_DIR=/etc/ssl/certs:/okteto/.ssl/certs
 
-COPY . /okteto/src
 WORKDIR /okteto/src
+COPY --chmod=0777 . /okteto/src
 
 
 
@@ -508,7 +514,7 @@ ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
 
-RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
+RUN echo "$OKTETO_INVALIDATE_CACHE" > /okteto/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
 
 
@@ -523,7 +529,7 @@ RUN \
 
 
 FROM scratch
-COPY --from=runner /etc/.oktetocachekey .oktetocachekey
+COPY --from=runner /okteto/.oktetocachekey /okteto/.oktetocachekey
 
 `,
 				buildEnvVars:      map[string]string{},
