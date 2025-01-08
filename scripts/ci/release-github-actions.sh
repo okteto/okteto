@@ -104,6 +104,7 @@ repos=(
     destroy-pipeline
     context
     test
+    validate
 )
 
 for repo in "${repos[@]}"; do
