@@ -261,10 +261,6 @@ func Test_translateStatefulSet(t *testing.T) {
 		"node2": "value2",
 	}
 	assert.Equal(t, result.Spec.Template.Spec.NodeSelector, nodeSelector)
-	podSecurityContext := &apiv1.PodSecurityContext{
-		FSGroup: pointer.Int64(1000),
-	}
-	assert.Equal(t, result.Spec.Template.Spec.SecurityContext, podSecurityContext)
 	if *result.Spec.Replicas != 3 {
 		t.Errorf("Wrong statefulset spec.replicas: '%d'", *result.Spec.Replicas)
 	}
@@ -292,10 +288,6 @@ func Test_translateStatefulSet(t *testing.T) {
 				MountPath: "/data",
 				Name:      pvcName,
 			},
-		},
-		SecurityContext: &apiv1.SecurityContext{
-			RunAsUser:  pointer.Int64(0),
-			RunAsGroup: pointer.Int64(0),
 		},
 	}
 	assert.Equal(t, initContainer, result.Spec.Template.Spec.InitContainers[0])
@@ -652,10 +644,6 @@ func Test_translateJobWithVolumes(t *testing.T) {
 				MountPath: "/data",
 				Name:      pvcName,
 			},
-		},
-		SecurityContext: &apiv1.SecurityContext{
-			RunAsUser:  pointer.Int64(0),
-			RunAsGroup: pointer.Int64(0),
 		},
 	}
 	if !reflect.DeepEqual(result.Spec.Template.Spec.InitContainers[0], initContainer) {
