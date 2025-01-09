@@ -344,25 +344,23 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 		case <-to.C:
 			return fmt.Errorf("compose '%s' didn't finish after %s", stack.Name, options.Timeout.String())
 		case <-t.C:
-			if len(options.ServicesToDeploy) == len(deployedSvcs) {
-				return nil
-			}
-			for _, svcName := range options.ServicesToDeploy {
-				if deployedSvcs[svcName] {
-					continue
-				}
-
-				// prevent service to be deployed as it depends on other services that are not ready
-				if !canSvcBeDeployed(ctx, stack, svcName, k8sClient, config) {
-					if failedJobs := getDependingFailedJobs(ctx, stack, svcName, k8sClient); len(failedJobs) > 0 {
-						if len(failedJobs) == 1 {
-							return fmt.Errorf("service '%s' dependency '%s' failed", svcName, failedJobs[0])
-						}
-						return fmt.Errorf("service '%s' dependencies '%s' failed", svcName, strings.Join(failedJobs, ", "))
+			for len(deployedSvcs) != len(options.ServicesToDeploy) {
+				for _, svcName := range options.ServicesToDeploy {
+					if deployedSvcs[svcName] {
+						continue
 					}
-					if failedServices := getServicesWithFailedProbes(ctx, stack, svcName, k8sClient); len(failedServices) > 0 {
-						for key, value := range failedServices {
-							return fmt.Errorf("service '%s' has failed his healthcheck probes: %s", key, value)
+
+					if !canSvcBeDeployed(ctx, stack, svcName, k8sClient, config) {
+						if failedJobs := getDependingFailedJobs(ctx, stack, svcName, k8sClient); len(failedJobs) > 0 {
+							if len(failedJobs) == 1 {
+								return fmt.Errorf("service '%s' dependency '%s' failed", svcName, failedJobs[0])
+							}
+							return fmt.Errorf("service '%s' dependencies '%s' failed", svcName, strings.Join(failedJobs, ", "))
+						}
+						if failedServices := getServicesWithFailedProbes(ctx, stack, svcName, k8sClient); len(failedServices) > 0 {
+							for key, value := range failedServices {
+								return fmt.Errorf("service '%s' has failed his healthcheck probes: %s", key, value)
+							}
 						}
 						if err := getErrorDueToRestartLimit(ctx, stack, svcName, k8sClient); err != nil {
 							return err
