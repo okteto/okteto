@@ -214,9 +214,6 @@ func translateStatefulSet(svcName string, s *model.Stack, divert Divert) *appsv1
 		Affinity:                      translateAffinity(svc),
 		NodeSelector:                  svc.NodeSelector,
 		Volumes:                       translateVolumes(svc),
-		SecurityContext: &apiv1.PodSecurityContext{
-			FSGroup: pointer.Int64(1000),
-		},
 		Containers: []apiv1.Container{
 			{
 				Name:            svcName,
@@ -346,10 +343,6 @@ func getAddPermissionsInitContainer(svcName string, svc *model.Service) apiv1.Co
 		ImagePullPolicy: apiv1.PullIfNotPresent,
 		Command:         initContainerCommand,
 		VolumeMounts:    initContainerVolumeMounts,
-		SecurityContext: &apiv1.SecurityContext{
-			RunAsUser:  pointer.Int64(0),
-			RunAsGroup: pointer.Int64(0),
-		},
 	}
 	return initContainer
 }
