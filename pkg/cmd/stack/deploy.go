@@ -337,68 +337,57 @@ func getEndpointsToDeployFromServicesToDeploy(endpoints model.EndpointSpec, serv
 
 func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernetes.Interface, config *rest.Config, options *DeployOptions, divert Divert) error {
 	deployedSvcs := make(map[string]bool)
-	ctx, cancel := context.WithTimeout(ctx, options.Timeout)
-	defer cancel()
-
 	t := time.NewTicker(1 * time.Second)
-	defer t.Stop()
+	to := time.NewTicker(options.Timeout)
 
 	// show an informational warning per service once
 	serviceWarnings := make(map[string]string)
 	for {
 		select {
-		case <-ctx.Done():
-			if ctx.Err() != nil {
-				return fmt.Errorf("compose '%s' didn't finish after %s", stack.Name, options.Timeout.String())
-			}
-			return nil
+		case <-to.C:
+			return fmt.Errorf("compose '%s' didn't finish after %s", stack.Name, options.Timeout.String())
 		case <-t.C:
-			if len(options.ServicesToDeploy) == len(deployedSvcs) {
-				return nil
-			}
-			for _, svcName := range options.ServicesToDeploy {
-				if deployedSvcs[svcName] {
-					continue
-				}
-				// prevent service to be deployed as it depends on other services that are not ready
-				if !canSvcBeDeployed(ctx, stack, svcName, k8sClient, config) {
-					if failedJobs := getDependingFailedJobs(ctx, stack, svcName, k8sClient); len(failedJobs) > 0 {
-						if len(failedJobs) == 1 {
-							return fmt.Errorf("service '%s' dependency '%s' failed", svcName, failedJobs[0])
-						}
-						return fmt.Errorf("service '%s' dependencies '%s' failed", svcName, strings.Join(failedJobs, ", "))
+			for len(deployedSvcs) != len(options.ServicesToDeploy) {
+				for _, svcName := range options.ServicesToDeploy {
+					if deployedSvcs[svcName] {
+						continue
 					}
-					if failedServices := getServicesWithFailedProbes(ctx, stack, svcName, k8sClient); len(failedServices) > 0 {
-						for service, err := range failedServices {
-							errMessage := fmt.Errorf("Service '%s' cannot be deployed because dependent service '%s' is failing its healthcheck probes: %s", svcName, service, err)
-							if errors.Is(err, oktetoErrors.ErrLivenessProbeFailed) {
-								return errMessage
-							} else if errors.Is(err, oktetoErrors.ErrReadinessProbeFailed) {
-								if _, ok := serviceWarnings[service]; !ok {
-									oktetoLog.Information(errMessage.Error())
-									serviceWarnings[service] = errMessage.Error()
+
+					if !canSvcBeDeployed(ctx, stack, svcName, k8sClient, config) {
+						if failedJobs := getDependingFailedJobs(ctx, stack, svcName, k8sClient); len(failedJobs) > 0 {
+							if len(failedJobs) == 1 {
+								return fmt.Errorf("service '%s' dependency '%s' failed", svcName, failedJobs[0])
+							}
+							return fmt.Errorf("service '%s' dependencies '%s' failed", svcName, strings.Join(failedJobs, ", "))
+						}
+						if failedServices := getServicesWithFailedProbes(ctx, stack, svcName, k8sClient); len(failedServices) > 0 {
+							for service, err := range failedServices {
+								errMessage := fmt.Errorf("Service '%s' cannot be deployed because dependent service '%s' is failing its healthcheck probes: %s", svcName, service, err)
+								if errors.Is(err, oktetoErrors.ErrLivenessProbeFailed) {
+									return errMessage
+								} else if errors.Is(err, oktetoErrors.ErrReadinessProbeFailed) {
+									if _, ok := serviceWarnings[service]; !ok {
+										oktetoLog.Information(errMessage.Error())
+										serviceWarnings[service] = errMessage.Error()
+									}
 								}
 							}
 						}
+						if err := getErrorDueToRestartLimit(ctx, stack, svcName, k8sClient); err != nil {
+							return err
+						}
+						continue
 					}
-					if err := getErrorDueToRestartLimit(ctx, stack, svcName, k8sClient); err != nil {
+					oktetoLog.Spinner(fmt.Sprintf("Deploying service '%s'...", svcName))
+					err := deploySvc(ctx, stack, svcName, k8sClient, divert)
+					if err != nil {
 						return err
 					}
-					continue
+					deployedSvcs[svcName] = true
+					oktetoLog.Spinner("Waiting for services to be ready...")
 				}
-
-				// deploy service
-				oktetoLog.Spinner(fmt.Sprintf("Deploying service '%s'...", svcName))
-				err := deploySvc(ctx, stack, svcName, k8sClient, divert)
-				if err != nil {
-					if errors.Is(err, context.DeadlineExceeded) {
-						return fmt.Errorf("compose '%s' didn't finish after %s", stack.Name, options.Timeout.String())
-					}
-					return err
-				}
-				deployedSvcs[svcName] = true
-				oktetoLog.Spinner("Waiting for services to be ready...")
 			}
+			return nil
 		}
 	}
 }
