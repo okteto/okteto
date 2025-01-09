@@ -16,7 +16,6 @@ package stack
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -337,19 +336,13 @@ func getEndpointsToDeployFromServicesToDeploy(endpoints model.EndpointSpec, serv
 
 func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernetes.Interface, config *rest.Config, options *DeployOptions, divert Divert) error {
 	deployedSvcs := make(map[string]bool)
-	ctx, cancel := context.WithTimeout(ctx, options.Timeout)
-	defer cancel()
-
 	t := time.NewTicker(1 * time.Second)
-	defer t.Stop()
+	to := time.NewTicker(options.Timeout)
 
 	for {
 		select {
-		case <-ctx.Done():
-			if ctx.Err() != nil {
-				return fmt.Errorf("compose '%s' didn't finish after %s", stack.Name, options.Timeout.String())
-			}
-			return nil
+		case <-to.C:
+			return fmt.Errorf("compose '%s' didn't finish after %s", stack.Name, options.Timeout.String())
 		case <-t.C:
 			if len(options.ServicesToDeploy) == len(deployedSvcs) {
 				return nil
@@ -371,25 +364,21 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 						for key, value := range failedServices {
 							return fmt.Errorf("service '%s' has failed his healthcheck probes: %s", key, value)
 						}
+						if err := getErrorDueToRestartLimit(ctx, stack, svcName, k8sClient); err != nil {
+							return err
+						}
+						continue
 					}
-					if err := getErrorDueToRestartLimit(ctx, stack, svcName, k8sClient); err != nil {
+					oktetoLog.Spinner(fmt.Sprintf("Deploying service '%s'...", svcName))
+					err := deploySvc(ctx, stack, svcName, k8sClient, divert)
+					if err != nil {
 						return err
 					}
-					continue
+					deployedSvcs[svcName] = true
+					oktetoLog.Spinner("Waiting for services to be ready...")
 				}
-
-				// deploy service
-				oktetoLog.Spinner(fmt.Sprintf("Deploying service '%s'...", svcName))
-				err := deploySvc(ctx, stack, svcName, k8sClient, divert)
-				if err != nil {
-					if errors.Is(err, context.DeadlineExceeded) {
-						return fmt.Errorf("compose '%s' didn't finish after %s", stack.Name, options.Timeout.String())
-					}
-					return err
-				}
-				deployedSvcs[svcName] = true
-				oktetoLog.Spinner("Waiting for services to be ready...")
 			}
+			return nil
 		}
 	}
 }
