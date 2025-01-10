@@ -24,9 +24,10 @@ import (
 )
 
 type mockLocalExec struct {
-	runCommand  func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error)
-	pipeCommand func(ctx context.Context, dir string, cmd1 string, cmd1Args []string, cmd2 string, cmd2Args []string) ([]byte, error)
-	lookPath    func(file string) (string, error)
+	createCommand func(ctx context.Context, dir, cmd string, args ...string) *exec.Cmd
+	runCommand    func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error)
+	pipeCommand   func(ctx context.Context, dir string, cmd1 string, cmd1Args []string, cmd2 string, cmd2Args []string) ([]byte, error)
+	lookPath      func(file string) (string, error)
 }
 
 func (mle *mockLocalExec) RunCommand(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
@@ -34,6 +35,13 @@ func (mle *mockLocalExec) RunCommand(ctx context.Context, dir string, name strin
 		return mle.runCommand(ctx, dir, name, arg...)
 	}
 	return nil, assert.AnError
+}
+
+func (mle *mockLocalExec) CreateCommand(ctx context.Context, dir, cmd string, args ...string) *exec.Cmd {
+	if mle.createCommand != nil {
+		return mle.createCommand(ctx, dir, cmd, args...)
+	}
+	return nil
 }
 
 func (mle *mockLocalExec) LookPath(file string) (string, error) {
@@ -83,7 +91,7 @@ func TestLocalGit_Exists(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lg := NewLocalGit("git", tt.mockExec())
+			lg := NewLocalGit("git", tt.mockExec(), nil)
 			_, err := lg.Exists()
 			assert.ErrorIs(t, err, tt.err)
 		})
@@ -122,7 +130,7 @@ func TestLocalGit_FixDubiousOwnershipConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lg := NewLocalGit("git", tt.mockExec())
+			lg := NewLocalGit("git", tt.mockExec(), nil)
 			err := lg.FixDubiousOwnershipConfig("/test/dir")
 
 			assert.ErrorIs(t, err, tt.err)
@@ -210,7 +218,7 @@ func TestLocalGit_Status(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lg := NewLocalGit("git", tt.mock())
+			lg := NewLocalGit("git", tt.mock(), nil)
 			_, err := lg.Status(context.Background(), "/test/dir", "", tt.fixAttempts)
 
 			assert.ErrorIs(t, err, tt.expectedErr)
@@ -257,9 +265,19 @@ func TestLocalGit_GetDirContentSHA(t *testing.T) {
 			name:        "success",
 			fixAttempts: 0,
 			mock: func() *mockLocalExec {
+				var count int
 				return &mockLocalExec{
-					pipeCommand: func(ctx context.Context, dir string, cmd1 string, cmd1Args []string, cmd2 string, cmd2Args []string) ([]byte, error) {
-						return []byte("hash"), nil
+					createCommand: func(ctx context.Context, dir, name string, arg ...string) *exec.Cmd {
+						cmd1 := exec.Command("echo", `100644 5cc5ccc76f0fa2674fd3b17c1b863d62eebcb853 0	Dockerfile
+  100644 261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64 0	LICENSE
+  100644 50675ea7dda5ea4d4204468eaf121681c204a717 0	Makefile
+  100644 5a48ac3289fbec053cc3016b9f1a46d7d59597d2 0	README.md`)
+						cmd2 := exec.Command("echo", "123123")
+						if count == 0 {
+							count++
+							return cmd1
+						}
+						return cmd2
 					},
 				}
 			},
@@ -282,8 +300,8 @@ func TestLocalGit_GetDirContentSHA(t *testing.T) {
 			fixAttempts: 1,
 			mock: func() *mockLocalExec {
 				return &mockLocalExec{
-					pipeCommand: func(ctx context.Context, dir string, cmd1 string, cmd1Args []string, cmd2 string, cmd2Args []string) ([]byte, error) {
-						return nil, assert.AnError
+					createCommand: func(ctx context.Context, dir, name string, arg ...string) *exec.Cmd {
+						return exec.Command("this-command-does-not-exist", "123123")
 					},
 				}
 			},
@@ -293,7 +311,7 @@ func TestLocalGit_GetDirContentSHA(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lg := NewLocalGit("git", tt.mock())
+			lg := NewLocalGit("git", tt.mock(), nil)
 			_, err := lg.GetDirContentSHA(context.Background(), "", "/test/dir", tt.fixAttempts)
 
 			assert.ErrorIs(t, err, tt.expectedErr)
@@ -368,7 +386,7 @@ func TestLocalGit_ListUntrackedFiles(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lg := NewLocalGit("git", tt.execMock())
+			lg := NewLocalGit("git", tt.execMock(), nil)
 			files, err := lg.ListUntrackedFiles(context.Background(), "/test/dir", "/test", tt.fixAttempt)
 
 			assert.Equal(t, tt.expectedFiles, files)

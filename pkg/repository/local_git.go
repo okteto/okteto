@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -26,7 +27,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bluekeyes/go-gitdiff/gitdiff"
 	"github.com/go-git/go-git/v5"
+	"github.com/okteto/okteto/pkg/ignore"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
@@ -39,6 +42,7 @@ var (
 
 type CommandExecutor interface {
 	RunCommand(ctx context.Context, dir string, name string, arg ...string) ([]byte, error)
+	CreateCommand(ctx context.Context, dir, cmd string, args ...string) *exec.Cmd
 	RunPipeCommands(ctx context.Context, dir string, cmd1 string, cmd1Args []string, cmd2 string, cmd2Args []string) ([]byte, error)
 	LookPath(file string) (string, error)
 }
@@ -46,7 +50,7 @@ type CommandExecutor interface {
 type LocalExec struct{}
 
 func (le *LocalExec) RunCommand(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
-	c := le.createCommand(ctx, dir, name, arg...)
+	c := le.CreateCommand(ctx, dir, name, arg...)
 	oktetoLog.Debugf("executing command: %s", strings.Join(c.Args, " "))
 
 	return c.Output()
@@ -59,8 +63,8 @@ func (*LocalExec) LookPath(file string) (string, error) {
 // RunPipeCommands runs two commands in a pipeline. cmd1 | cmd2. Example:
 // /usr/bin/git --no-optional-locks ls-files -s . | /usr/bin/git --no-optional-locks hash-object --stdin
 func (le *LocalExec) RunPipeCommands(ctx context.Context, dir string, cmd1 string, cmd1Args []string, cmd2 string, cmd2Args []string) ([]byte, error) {
-	c1 := le.createCommand(ctx, dir, cmd1, cmd1Args...)
-	c2 := le.createCommand(ctx, dir, cmd2, cmd2Args...)
+	c1 := le.CreateCommand(ctx, dir, cmd1, cmd1Args...)
+	c2 := le.CreateCommand(ctx, dir, cmd2, cmd2Args...)
 
 	oktetoLog.Debugf("running command %s | %s", strings.Join(c1.Args, " "), strings.Join(c2.Args, " "))
 
@@ -101,7 +105,7 @@ func (le *LocalExec) RunPipeCommands(ctx context.Context, dir string, cmd1 strin
 	return []byte(output), nil
 }
 
-func (*LocalExec) createCommand(ctx context.Context, dir, cmd string, args ...string) *exec.Cmd {
+func (*LocalExec) CreateCommand(ctx context.Context, dir, cmd string, args ...string) *exec.Cmd {
 	c := exec.CommandContext(ctx, cmd, args...)
 	c.Cancel = func() error {
 		// windows: https://pkg.go.dev/os#Signal
@@ -144,13 +148,18 @@ type LocalGitInterface interface {
 
 type LocalGit struct {
 	exec    CommandExecutor
+	ignorer ignore.Ignorer
 	gitPath string
 }
 
-func NewLocalGit(gitPath string, exec CommandExecutor) *LocalGit {
+func NewLocalGit(gitPath string, exec CommandExecutor, ignorer ignore.Ignorer) *LocalGit {
+	if ignorer == nil {
+		ignorer = ignore.Never
+	}
 	return &LocalGit{
 		gitPath: gitPath,
 		exec:    exec,
+		ignorer: ignorer,
 	}
 }
 
@@ -269,24 +278,20 @@ func (lg *LocalGit) ListUntrackedFiles(ctx context.Context, repoRoot, workdir st
 }
 
 // GetDirContentSHA calculates the SHA of the content of the given directory using git ls-files and git hash-object
-// commands
+// commands. It skips files based on ignore rules passed to the LocalGit instance
 func (lg *LocalGit) GetDirContentSHA(ctx context.Context, gitPath, dirPath string, fixAttempt int) (string, error) {
 	if fixAttempt > 1 {
 		return "", errLocalGitCannotGetCommitTooManyAttempts
 	}
 
-	lsFilesCmdArgs := []string{"--no-optional-locks", "ls-files", "-s", dirPath}
-	hashObjectCmdArgs := []string{"--no-optional-locks", "hash-object", "--stdin"}
-
-	output, err := lg.exec.RunPipeCommands(ctx, gitPath, lg.gitPath, lsFilesCmdArgs, lg.gitPath, hashObjectCmdArgs)
-	if err != nil {
+	handleError := func(e error) (string, error) {
 		var exitError *exec.ExitError
-		errors.As(err, &exitError)
+		errors.As(e, &exitError)
 		if exitError != nil {
 			exitErr := string(exitError.Stderr)
 			if strings.Contains(exitErr, "detected dubious ownership in repository") {
-				err = lg.FixDubiousOwnershipConfig(gitPath)
-				if err != nil {
+				e = lg.FixDubiousOwnershipConfig(gitPath)
+				if e != nil {
 					return "", errLocalGitCannotGetStatusCannotRecover
 				}
 				fixAttempt++
@@ -295,7 +300,90 @@ func (lg *LocalGit) GetDirContentSHA(ctx context.Context, gitPath, dirPath strin
 		}
 		return "", errLocalGitCannotGetStatusCannotRecover
 	}
-	return string(output), nil
+
+	// Create a git ls-files command to list all files and pipe it into a bufio.Scanner
+	// to filter out ignored files
+	lsCmd := lg.exec.CreateCommand(ctx, gitPath, lg.gitPath, "--no-optional-locks", "ls-files", "-s", dirPath)
+	pr1, pw1 := io.Pipe()
+	var pe1 bytes.Buffer
+
+	defer pw1.Close()
+	defer pr1.Close()
+
+	lsCmd.Stdout = pw1
+	lsCmd.Stderr = &pe1
+
+	if err := lsCmd.Start(); err != nil {
+		return handleError(err)
+	}
+
+	hashCmd := lg.exec.CreateCommand(ctx, gitPath, lg.gitPath, "--no-optional-locks", "hash-object", "--stdin")
+	scanner := bufio.NewScanner(pr1)
+
+	pr2, pw2 := io.Pipe()
+	var pe2 bytes.Buffer
+
+	defer pw2.Close()
+	defer pr2.Close()
+
+	if err := hashCmd.Start(); err != nil {
+		return handleError(err)
+	}
+
+	var result bytes.Buffer
+
+	hashCmd.Stdin = pr2
+	hashCmd.Stdout = &result
+	hashCmd.Stderr = &pe2
+
+	go func() {
+		lsFilesColumnCount := 4
+
+		for scanner.Scan() {
+			line := scanner.Text()
+			parts := strings.Fields(line)
+
+			if len(parts) < lsFilesColumnCount {
+				// if we can't parse a line, add the file to the list.
+				// It's better to over build than to over cache
+				//nolint:errcheck
+				pw2.Write([]byte(line + "\n"))
+			} else {
+				filename := parts[3]
+				shouldIgnore, err := lg.ignorer.Ignore(filename)
+				if err != nil {
+					oktetoLog.Debugf("ignore error in GetDirContentSHA: %v", err)
+				}
+				if !shouldIgnore {
+					//nolint:errcheck
+					pw2.Write([]byte(line + "\n"))
+				} else {
+					oktetoLog.Debugf("skipping %v file change in GetDirContentSHA based on known ignore files", filename)
+				}
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			//nolint:errcheck
+			pe2.Write([]byte(err.Error()))
+		}
+	}()
+
+	if err := lsCmd.Wait(); err != nil {
+		return handleError(err)
+	}
+
+	if err := hashCmd.Wait(); err != nil {
+		return handleError(err)
+	}
+
+	if pe1.Len() > 0 {
+		return "", errors.New(pe1.String())
+	}
+	if pe2.Len() > 0 {
+		return "", errors.New(pe2.String())
+	}
+
+	return result.String(), nil
 }
 
 // Diff returns the diff of the repository at the given path
@@ -304,7 +392,7 @@ func (lg *LocalGit) Diff(ctx context.Context, gitPath, dirPath string, fixAttemp
 		return "", errLocalGitCannotGetCommitTooManyAttempts
 	}
 
-	output, err := lg.exec.RunCommand(ctx, gitPath, lg.gitPath, "--no-optional-locks", "diff", "--no-color", "--", "HEAD", dirPath)
+	rawOutput, err := lg.exec.RunCommand(ctx, gitPath, lg.gitPath, "--no-optional-locks", "diff", "--no-color", "--", "HEAD", dirPath)
 	if err != nil {
 		var exitError *exec.ExitError
 		errors.As(err, &exitError)
@@ -321,5 +409,28 @@ func (lg *LocalGit) Diff(ctx context.Context, gitPath, dirPath string, fixAttemp
 		}
 		return "", errLocalGitCannotGetStatusCannotRecover
 	}
-	return string(output), nil
+
+	files, _, err := gitdiff.Parse(bytes.NewReader(rawOutput))
+	if err != nil {
+		return "", err
+	}
+
+	var diff bytes.Buffer
+
+	for _, f := range files {
+		filename := f.NewName
+		if f.IsDelete {
+			filename = f.OldName
+		}
+		shouldIgnore, err := lg.ignorer.Ignore(filename)
+		if err != nil {
+			oktetoLog.Debugf("ignore error in Diff: %v", err)
+		}
+		if !shouldIgnore {
+			diff.WriteString(f.String())
+		} else {
+			oktetoLog.Debugf("skipping %v file change in Diff based on known ignore files", filename)
+		}
+	}
+	return diff.String(), nil
 }
