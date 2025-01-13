@@ -59,6 +59,8 @@ FROM {{ .UserRunnerImage }} as runner
 
 USER 0
 ENV PATH="${PATH}:/okteto/bin"
+WORKDIR /okteto
+RUN chown -R $(id -u):$(id -g) /okteto || (echo '{"level":"error", "stage": "remote deploy", "message":"The /okteto directory or its subdirectories have incorrect user/group ownership. Check your \"deploy.image\" container definition or contact your instance admin."}' && exit 1)
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
 
@@ -73,11 +75,11 @@ ARG {{ .OktetoDeployable }}
 ARG {{ .GitHubRepositoryArgName }}
 ARG {{ .BuildKitHostArgName }}
 ARG {{ .OktetoRegistryURLArgName }}
-RUN mkdir -p /etc/ssl/certs/
-RUN echo "${{ .TlsCertBase64ArgName }}" | base64 -d > /etc/ssl/certs/okteto.crt
+RUN mkdir -p /okteto/.ssl/certs && echo "${{ .TlsCertBase64ArgName }}" | base64 -d > /okteto/.ssl/certs/okteto.crt
+ENV SSL_CERT_DIR=/etc/ssl/certs:/okteto/.ssl/certs
 
-COPY . /okteto/src
 WORKDIR /okteto/src
+COPY --chmod=0777 . /okteto/src
 
 {{range $key, $val := .OktetoBuildEnvVars }}
 ENV {{$key}}={{$val}}
@@ -96,7 +98,7 @@ ARG {{ .GitCommitArgName }}
 ARG {{ .GitBranchArgName }}
 ARG {{ .InvalidateCacheArgName }}
 
-RUN echo "${{ .InvalidateCacheArgName }}" > /etc/.oktetocachekey
+RUN echo "${{ .InvalidateCacheArgName }}" > /okteto/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
 
 {{ range $key, $val := .OktetoExecutionEnvVars}}
@@ -121,7 +123,7 @@ FROM scratch
 {{ if gt (len .Artifacts) 0 -}}
 COPY --from=runner /okteto/artifacts/ /
 {{ else -}}
-COPY --from=runner /etc/.oktetocachekey .oktetocachekey
+COPY --from=runner /okteto/.oktetocachekey /okteto/.oktetocachekey
 {{ end }}
 `
 )
