@@ -14,16 +14,19 @@
 package build
 
 import (
+	"bytes"
 	"testing"
 
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/stretchr/testify/require"
 )
 
 func TestValidate(t *testing.T) {
 	tests := []struct {
-		input     *ManifestBuild
-		name      string
-		expectErr bool
+		input        *ManifestBuild
+		name         string
+		expectErr    bool
+		expectedWarn string
 	}{
 		{
 			name: "nil manifest info",
@@ -60,6 +63,19 @@ func TestValidate(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			name: "repeated image names",
+			input: &ManifestBuild{
+				"testSvc": &Info{
+					Image: "testImage",
+				},
+				"anotherService": &Info{
+					Image: "testImage",
+				},
+			},
+			expectErr:    false,
+			expectedWarn: "The following images are repeated in the build section",
+		},
+		{
 			name: "successful validation",
 			input: &ManifestBuild{
 				"testSvc": &Info{
@@ -73,12 +89,15 @@ func TestValidate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			b := bytes.NewBuffer(nil)
+			oktetoLog.SetOutput(b)
 			err := tt.input.Validate()
 			if tt.expectErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
 			}
+			require.Contains(t, b.String(), tt.expectedWarn)
 		})
 	}
 }

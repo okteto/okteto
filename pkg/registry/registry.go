@@ -207,3 +207,8 @@ func (or OktetoRegistry) Clone(from, to string) (string, error) {
 	}
 	return r, nil
 }
+
+// ExpandImage expands the image to include the registry
+func (or OktetoRegistry) ExpandImage(image string) string {
+	return or.imageCtrl.expandImageRegistries(image)
+}
