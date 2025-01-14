@@ -40,11 +40,6 @@ func (d *Driver) divertService(ctx context.Context, name string) error {
 			if !k8sErrors.IsAlreadyExists(err) {
 				return err
 			}
-			// the service was created, refresh the cache
-			newS, err = d.client.CoreV1().Services(d.namespace).Get(ctx, newS.Name, metav1.GetOptions{})
-			if err != nil {
-				return nil
-			}
 		}
 		d.cache.developerServices[name] = newS
 		return nil
