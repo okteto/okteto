@@ -49,27 +49,17 @@ func Deploy(ctx context.Context, s *apiv1.Service, c kubernetes.Interface) error
 	} else {
 		oktetoLog.Infof("updating service '%s'", s.Name)
 
-		for k, v := range s.Annotations {
-			if old.Annotations == nil {
-				old.Annotations = make(map[string]string)
-			}
-			old.Annotations[k] = v
-		}
+		isDivertDeploy := old.Spec.Type == apiv1.ServiceTypeExternalName && old.Annotations[model.OktetoAutoCreateAnnotation] == "true"
 
-		for k, v := range s.Labels {
-			if old.Labels == nil {
-				old.Labels = make(map[string]string)
-			}
-			old.Annotations[k] = v
-		}
-
+		old.Annotations = s.Annotations
+		old.Labels = s.Labels
 		old.Spec.Ports = s.Spec.Ports
 		old.Spec.Selector = s.Spec.Selector
 
 		if s.Spec.Type == apiv1.ServiceTypeClusterIP {
-			if old.Spec.Type == apiv1.ServiceTypeExternalName && old.Annotations[model.OktetoAutoCreateAnnotation] == "true" {
-				old.Spec.Type = apiv1.ServiceTypeClusterIP
-				old.Spec.ExternalName = ""
+			if isDivertDeploy {
+				old.Spec.Type = s.Spec.Type
+				old.Spec.ExternalName = s.Spec.ExternalName
 			}
 		}
 
