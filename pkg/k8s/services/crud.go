@@ -48,10 +48,21 @@ func Deploy(ctx context.Context, s *apiv1.Service, c kubernetes.Interface) error
 		oktetoLog.Infof("created service '%s'", s.Name)
 	} else {
 		oktetoLog.Infof("updating service '%s'", s.Name)
+
+		isDivertDeploy := old.Spec.Type == apiv1.ServiceTypeExternalName && old.Annotations[model.OktetoAutoCreateAnnotation] == "true"
+
 		old.Annotations = s.Annotations
 		old.Labels = s.Labels
 		old.Spec.Ports = s.Spec.Ports
 		old.Spec.Selector = s.Spec.Selector
+
+		if s.Spec.Type == apiv1.ServiceTypeClusterIP {
+			if isDivertDeploy {
+				old.Spec.Type = s.Spec.Type
+				old.Spec.ExternalName = s.Spec.ExternalName
+			}
+		}
+
 		_, err = c.CoreV1().Services(s.Namespace).Update(ctx, old, metav1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("error updating kubernetes service: %w", err)
