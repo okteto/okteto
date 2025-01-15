@@ -306,7 +306,7 @@ okteto up api -- echo this is a test
 			}
 
 			// build images and set env vars for the services at the manifest
-			if err := buildServicesAndSetBuildEnvs(ctx, oktetoManifest, up.builder); err != nil {
+			if err := newUpBuilder(oktetoManifest, argsparserResult.DevName, up.builder, up.Registry).build(ctx); err != nil {
 				return err
 			}
 
@@ -883,22 +883,6 @@ func printDisplayContext(up *upContext) {
 	}
 
 	oktetoLog.Println()
-}
-
-// buildServicesAndSetBuildEnvs get services to build and run build to set build envs
-func buildServicesAndSetBuildEnvs(ctx context.Context, m *model.Manifest, builder builderInterface) error {
-	svcsToBuild, err := builder.GetServicesToBuildDuringExecution(ctx, m, []string{})
-	if err != nil {
-		return err
-	}
-	if len(svcsToBuild) == 0 {
-		return nil
-	}
-	buildOptions := &types.BuildOptions{
-		CommandArgs: svcsToBuild,
-		Manifest:    m,
-	}
-	return builder.Build(ctx, buildOptions)
 }
 
 // wakeNamespaceIfApplies wakes the namespace if it is sleeping
