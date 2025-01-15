@@ -3,7 +3,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+// http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -41,11 +41,11 @@ func TestUpBuilder_Build(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
+		expectError error
 		manifest    *model.Manifest
 		builder     *fakeBuilder
 		name        string
 		devName     string
-		expectError error
 	}{
 		{
 			name: "DevImageIsEmpty_returnsNil",
