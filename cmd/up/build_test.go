@@ -41,10 +41,10 @@ func TestUpBuilder_Build(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		name        string
 		manifest    *model.Manifest
-		devName     string
 		builder     *fakeBuilder
+		name        string
+		devName     string
 		expectError error
 	}{
 		{

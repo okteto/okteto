@@ -25,8 +25,8 @@ func TestValidate(t *testing.T) {
 	tests := []struct {
 		input        *ManifestBuild
 		name         string
-		expectErr    bool
 		expectedWarn string
+		expectErr    bool
 	}{
 		{
 			name: "nil manifest info",
