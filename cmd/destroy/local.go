@@ -26,7 +26,7 @@ import (
 )
 
 type runner interface {
-	RunDestroy(params deployable.DestroyParameters) error
+	RunDestroy(ctx context.Context, params deployable.DestroyParameters) error
 	CleanUp(err error)
 }
 
@@ -67,7 +67,7 @@ func (ld *localDestroyCommand) Destroy(ctx context.Context, opts *Options) error
 			},
 			Variables: vars,
 		}
-		if err := ld.runner.RunDestroy(params); err != nil {
+		if err := ld.runner.RunDestroy(ctx, params); err != nil {
 			exit <- err
 			return
 		}

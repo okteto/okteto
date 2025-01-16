@@ -14,6 +14,9 @@
 package deployable
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/okteto/okteto/cmd/utils/executor"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/afero"
@@ -36,12 +39,16 @@ type TestParameters struct {
 }
 
 // RunTest executes the custom commands received as part of TestParameters
-func (dr *TestRunner) RunTest(params TestParameters) error {
+func (dr *TestRunner) RunTest(ctx context.Context, params TestParameters) error {
 	oktetoLog.SetStage(params.Name)
 
 	oktetoEnvFile, unlinkEnv, err := createTempOktetoEnvFile(dr.Fs)
 	if err != nil {
 		return err
+	}
+
+	for k, v := range GetPlatformEnvironment(ctx) {
+		params.Variables = append(params.Variables, fmt.Sprintf("%s=%s", k, v))
 	}
 
 	envStepper := NewEnvStepper(oktetoEnvFile.Name())

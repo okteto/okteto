@@ -54,8 +54,6 @@ type buildEnvVarsGetter func() map[string]string
 
 type dependencyEnvVarsGetter func(environGetter environGetter) map[string]string
 
-type executionEnvVarsGetter func(ctx context.Context) map[string]string
-
 type remoteDeployer struct {
 	getBuildEnvVars buildEnvVarsGetter
 	runner          remoteRunner
@@ -64,12 +62,11 @@ type remoteDeployer struct {
 	ioCtrl *io.Controller
 
 	getDependencyEnvVars dependencyEnvVarsGetter
-	getExecutionEnvVars  executionEnvVarsGetter
 	workdirCtrl          filesystem.WorkingDirectoryInterface
 }
 
 // newRemoteDeployer creates the remote deployer
-func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller, getDependencyEnvVars dependencyEnvVarsGetter, executionEnvVarGetter executionEnvVarsGetter) *remoteDeployer {
+func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller, getDependencyEnvVars dependencyEnvVarsGetter) *remoteDeployer {
 	fs := afero.NewOsFs()
 	builder := buildCmd.NewOktetoBuilder(
 		&okteto.ContextStateless{
@@ -84,7 +81,6 @@ func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller
 		runner:               runner,
 		ioCtrl:               ioCtrl,
 		getDependencyEnvVars: getDependencyEnvVars,
-		getExecutionEnvVars:  executionEnvVarGetter,
 		workdirCtrl:          filesystem.NewOsWorkingDirectoryCtrl(),
 	}
 }
@@ -143,7 +139,6 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		OktetoCommandSpecificEnvVars: map[string]string{
 			constants.OktetoIsPreviewEnvVar: os.Getenv(constants.OktetoIsPreviewEnvVar),
 		},
-		ExecutionEnvVars:            rd.getExecutionEnvVars(ctx),
 		DockerfileName:              dockerfileTemporalName,
 		Deployable:                  dep,
 		Manifest:                    deployOptions.Manifest,

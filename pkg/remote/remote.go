@@ -99,10 +99,6 @@ ARG {{ .InvalidateCacheArgName }}
 RUN echo "${{ .InvalidateCacheArgName }}" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
 
-{{ range $key, $val := .OktetoExecutionEnvVars}}
-ENV {{$key}}={{$val}}
-{{ end }}
-
 RUN \
   {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}},sharing=private {{end}}\
   --mount=type=secret,id=known_hosts \
@@ -156,7 +152,6 @@ type Params struct {
 	BuildEnvVars                 map[string]string
 	DependenciesEnvVars          map[string]string
 	OktetoCommandSpecificEnvVars map[string]string
-	ExecutionEnvVars             map[string]string
 	Manifest                     *model.Manifest
 	Command                      string
 	// CacheInvalidationKey is the value use to invalidate the cache. Defaults
@@ -201,7 +196,6 @@ type dockerfileTemplateProperties struct {
 	OktetoDependencyEnvVars      map[string]string
 	OktetoPrefixEnvVars          map[string]string
 	OktetoCommandSpecificEnvVars map[string]string
-	OktetoExecutionEnvVars       map[string]string
 	ContextArgName               string
 	NamespaceArgName             string
 	TokenArgName                 string
@@ -423,7 +417,6 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		OktetoDependencyEnvVars:      params.DependenciesEnvVars,
 		OktetoPrefixEnvVars:          getOktetoPrefixEnvVars(r.getEnviron()),
 		OktetoCommandSpecificEnvVars: params.OktetoCommandSpecificEnvVars,
-		OktetoExecutionEnvVars:       params.ExecutionEnvVars,
 		Command:                      params.Command,
 		Caches:                       params.Caches,
 		Artifacts:                    params.Artifacts,
@@ -605,9 +598,6 @@ func (dfP *dockerfileTemplateProperties) prepareEnvVars() {
 	}
 	for k, v := range dfP.OktetoPrefixEnvVars {
 		dfP.OktetoPrefixEnvVars[k] = formatEnvVarValueForDocker(v)
-	}
-	for k, v := range dfP.OktetoExecutionEnvVars {
-		dfP.OktetoExecutionEnvVars[k] = formatEnvVarValueForDocker(v)
 	}
 }
 

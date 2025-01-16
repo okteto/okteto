@@ -139,7 +139,6 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 		TemplateName:     templateName,
 		CommandFlags:     commandFlags,
 		BuildEnvVars:     make(map[string]string),
-		ExecutionEnvVars: deployable.GetPlatformEnvironment(ctx),
 		OktetoCommandSpecificEnvVars: map[string]string{
 			constants.OktetoIsPreviewEnvVar: os.Getenv(constants.OktetoIsPreviewEnvVar),
 		},

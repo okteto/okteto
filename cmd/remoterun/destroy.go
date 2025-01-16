@@ -35,7 +35,7 @@ import (
 
 // destroyRunner interface with the operations needed to execute the destroy operations
 type destroyRunner interface {
-	RunDestroy(params deployable.DestroyParameters) error
+	RunDestroy(ctx context.Context, params deployable.DestroyParameters) error
 }
 
 // DestroyOptions flags accepted by the remote-run destroy command
@@ -144,7 +144,7 @@ It is important that this command does the minimum and must not do calculations 
 				oktetoLog.Info(message)
 			}
 
-			return c.Run(params)
+			return c.Run(ctx, params)
 		},
 	}
 
@@ -154,7 +154,7 @@ It is important that this command does the minimum and must not do calculations 
 	return cmd
 }
 
-func (c *DestroyCommand) Run(params deployable.DestroyParameters) error {
+func (c *DestroyCommand) Run(ctx context.Context, params deployable.DestroyParameters) error {
 	// Token should be always masked from the logs
 	oktetoLog.AddMaskedWord(okteto.GetContext().Token)
 	keyValueVarParts := 2
@@ -166,7 +166,7 @@ func (c *DestroyCommand) Run(params deployable.DestroyParameters) error {
 		}
 	}
 
-	return c.runner.RunDestroy(params)
+	return c.runner.RunDestroy(ctx, params)
 }
 
 func getTempKubeConfigFile(operation string, name string) string {
