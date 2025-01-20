@@ -14,6 +14,7 @@
 package deployable
 
 import (
+	"context"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -63,7 +64,7 @@ func TestRunDestroyWithError(t *testing.T) {
 		},
 	}
 
-	err := runner.RunDestroy(params)
+	err := runner.RunDestroy(context.Background(), params)
 
 	expectedExecutedCommands := []model.DeployCommand{
 		{
@@ -99,7 +100,7 @@ func TestRunDestroyWithErrorAndForceDestroy(t *testing.T) {
 		ForceDestroy: true,
 	}
 
-	err := runner.RunDestroy(params)
+	err := runner.RunDestroy(context.Background(), params)
 
 	expectedExecutedCommands := []model.DeployCommand{
 		{
@@ -137,7 +138,7 @@ func TestRunDestroyWithoutError(t *testing.T) {
 		ForceDestroy: true,
 	}
 
-	err := runner.RunDestroy(params)
+	err := runner.RunDestroy(context.Background(), params)
 
 	expectedExecutedCommands := []model.DeployCommand{
 		{

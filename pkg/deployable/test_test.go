@@ -14,6 +14,7 @@
 package deployable
 
 import (
+	"context"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -39,7 +40,7 @@ func TestTestRunner(t *testing.T) {
 	}
 	executor.On("Execute", cmd1, expectedVars).Return(nil).Once()
 
-	err := runner.RunTest(TestParameters{
+	err := runner.RunTest(context.Background(), TestParameters{
 		Name:      "test",
 		Namespace: "ns",
 		Deployable: Entity{

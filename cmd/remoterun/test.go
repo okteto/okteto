@@ -140,7 +140,7 @@ commands:
 				oktetoLog.Info(message)
 			}
 
-			return runner.RunTest(params)
+			return runner.RunTest(context.Background(), params)
 		},
 	}
 

@@ -14,6 +14,7 @@
 package remoterun
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -27,7 +28,7 @@ type fakeDestroyRunner struct {
 	mock.Mock
 }
 
-func (f *fakeDestroyRunner) RunDestroy(params deployable.DestroyParameters) error {
+func (f *fakeDestroyRunner) RunDestroy(ctx context.Context, params deployable.DestroyParameters) error {
 	args := f.Called(params)
 	return args.Error(0)
 }
@@ -71,7 +72,7 @@ func TestRun_DestroyCommand(t *testing.T) {
 			command := &DestroyCommand{
 				runner: runner,
 			}
-			err := command.Run(tt.params)
+			err := command.Run(context.Background(), tt.params)
 
 			require.Equal(t, err, tt.expected)
 			runner.AssertExpectations(t)

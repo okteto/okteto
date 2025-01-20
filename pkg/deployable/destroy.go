@@ -14,6 +14,7 @@
 package deployable
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils/executor"
@@ -39,9 +40,14 @@ type DestroyParameters struct {
 }
 
 // RunDestroy executes the custom commands received as part of DestroyParameters
-func (dr *DestroyRunner) RunDestroy(params DestroyParameters) error {
+func (dr *DestroyRunner) RunDestroy(ctx context.Context, params DestroyParameters) error {
 	var commandErr error
 	lastCommandName := ""
+
+	for k, v := range GetPlatformEnvironment(ctx) {
+		params.Variables = append(params.Variables, fmt.Sprintf("%s=%s", k, v))
+	}
+
 	for _, command := range params.Deployable.Commands {
 		oktetoLog.Information("Running '%s'", command.Name)
 		lastCommandName = command.Name

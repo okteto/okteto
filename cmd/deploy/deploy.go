@@ -102,7 +102,6 @@ type getDeployerFunc func(
 	*io.Controller,
 	*io.K8sLogger,
 	dependencyEnvVarsGetter,
-	executionEnvVarsGetter,
 ) (Deployer, error)
 
 type cleanUpFunc func(context.Context, error)
@@ -513,7 +512,6 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		dc.IoCtrl,
 		dc.K8sLogger,
 		GetDependencyEnvVars,
-		deployable.GetPlatformEnvironment,
 	)
 	if err != nil {
 		return err
@@ -631,11 +629,10 @@ func GetDeployer(ctx context.Context,
 	ioCtrl *io.Controller,
 	k8Logger *io.K8sLogger,
 	dependencyEnvVarsGetter dependencyEnvVarsGetter,
-	executionEnvVarGetter executionEnvVarsGetter,
 ) (Deployer, error) {
 	if ShouldRunInRemote(opts) {
 		oktetoLog.Info("Deploying remotely...")
-		return newRemoteDeployer(buildEnvVarsGetter, ioCtrl, dependencyEnvVarsGetter, executionEnvVarGetter), nil
+		return newRemoteDeployer(buildEnvVarsGetter, ioCtrl, dependencyEnvVarsGetter), nil
 	}
 
 	var execDir string

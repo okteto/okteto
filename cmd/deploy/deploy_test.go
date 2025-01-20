@@ -236,7 +236,6 @@ func (f *fakeDeployer) Get(ctx context.Context,
 	ioCtrl *io.Controller,
 	k8Logger *io.K8sLogger,
 	dependencyEnvVarsGetter dependencyEnvVarsGetter,
-	executionEnvVarGetter executionEnvVarsGetter,
 ) (Deployer, error) {
 	args := f.Called(ctx, opts, buildEnvVarsGetter, cmapHandler, k8sProvider, ioCtrl, k8Logger, dependencyEnvVarsGetter)
 	return args.Get(0).(Deployer), args.Error(1)
