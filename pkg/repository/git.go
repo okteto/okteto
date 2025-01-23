@@ -28,6 +28,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/ignore"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/afero"
@@ -51,14 +52,19 @@ type gitRepoController struct {
 }
 
 func newGitRepoController(path string) gitRepoController {
+	var ignorer ignore.Ignorer = ignore.Never
+
+	if env.LoadBoolean("OKTETO_SMART_BUILDS_IGNORE_FILES_ENABLED") {
+		ignorer = ignore.NewMultiIgnorer(
+			ignore.NewDockerIgnorer(".dockerignore"),
+			ignore.NewOktetoIgnorer(".oktetoignore").BuildOnly(),
+		)
+	}
 	return gitRepoController{
 		repoGetter: gitRepositoryGetter{},
 		path:       path,
 		fs:         afero.NewOsFs(),
-		ignorer: ignore.NewMultiIgnorer(
-			ignore.NewDockerIgnorer(".dockerignore"),
-			ignore.NewOktetoIgnorer(".oktetoignore").BuildOnly(),
-		),
+		ignorer:    ignorer,
 	}
 }
 
