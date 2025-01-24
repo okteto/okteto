@@ -47,24 +47,25 @@ var (
 type gitRepoController struct {
 	repoGetter repositoryGetterInterface
 	fs         afero.Fs
-	ignorer    ignore.Ignorer
+	ignorer    func(subpath string) ignore.Ignorer
 	path       string
 }
 
 func newGitRepoController(path string) gitRepoController {
-	var ignorer ignore.Ignorer = ignore.Never
-
-	if env.LoadBoolean("OKTETO_SMART_BUILDS_IGNORE_FILES_ENABLED") {
-		ignorer = ignore.NewMultiIgnorer(
-			ignore.NewDockerIgnorer(".dockerignore"),
-			ignore.NewOktetoIgnorer(".oktetoignore").BuildOnly(),
-		)
-	}
 	return gitRepoController{
 		repoGetter: gitRepositoryGetter{},
 		path:       path,
 		fs:         afero.NewOsFs(),
-		ignorer:    ignorer,
+		ignorer: func(subpath string) ignore.Ignorer {
+			if !env.LoadBoolean("OKTETO_SMART_BUILDS_IGNORE_FILES_ENABLED") {
+				return ignore.Never
+			}
+			return ignore.NewMultiIgnorer(
+				ignore.NewDockerIgnorer(filepath.Join(subpath, ".dockerignore")),
+				ignore.NewOktetoIgnorer(filepath.Join(subpath, ".oktetoignore")).BuildOnly(),
+			)
+
+		},
 	}
 }
 
@@ -95,7 +96,6 @@ func (r gitRepoController) calculateIsClean(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("failed to infer the git repo's current worktree: %w", err)
 	}
-
 	status, err := worktree.Status(ctx, "", NewLocalGit("git", &LocalExec{}, r.ignorer))
 	if err != nil {
 		return false, fmt.Errorf("failed to infer the git repo's status: %w", err)
@@ -273,6 +273,10 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to analyze git repo: %w", err)
 	}
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return "", fmt.Errorf("failed to get git repo root: %w", err)
+	}
 
 	// go func that cancels the context after the timeout
 	go func() {
@@ -319,7 +323,8 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 
 		filteredUntrackedFiles := []string{}
 		for _, f := range untrackedFiles {
-			shouldIgnore, err := r.ignorer.Ignore(f)
+			relpath := resolveRelativePath(filepath.Join(worktree.GetRoot(), f), contextDir)
+			shouldIgnore, err := r.ignorer(contextDir).Ignore(relpath)
 			if err != nil {
 				oktetoLog.Debugf("ignore error in GetDiffHash: %v", err)
 			}
