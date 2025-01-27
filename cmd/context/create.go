@@ -338,7 +338,7 @@ func checkCLIVersion(currentVersion, recommendedVersion, minMajorMinor string) e
 	}
 
 	if version.LessThan(recMajorMinorVersion) {
-		oktetoLog.Warning(fmt.Sprintf("Your Okteto CLI version %s is older than the recommended version of your Okteto instance: %s. Upgrade to the recommended version or set OKTETO_SKIP_CLUSTER_CLI_VERSION=true to suppress this message.", currentMajorMinor, recMajorMinorVersion))
+		oktetoLog.Debugf(fmt.Sprintf("Your Okteto CLI version %s is older than the recommended version of your Okteto instance: %s", currentMajorMinor, recMajorMinorVersion))
 	}
 
 	if version.GreaterThan(recMajorMinorVersion) {
