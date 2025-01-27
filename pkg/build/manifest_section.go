@@ -39,6 +39,21 @@ func (b *ManifestBuild) Validate() error {
 		svcsDependents := fmt.Sprintf("%s and %s", strings.Join(cycle[:len(cycle)-1], ", "), cycle[len(cycle)-1])
 		return fmt.Errorf("manifest validation failed: cyclic dependendecy found between %s", svcsDependents)
 	}
+
+	imageNames := map[string]bool{}
+	repeatedImageNames := []string{}
+	for _, v := range *b {
+		if v.Image == "" {
+			continue
+		}
+		if _, ok := imageNames[v.Image]; ok {
+			repeatedImageNames = append(repeatedImageNames, v.Image)
+		}
+		imageNames[v.Image] = true
+	}
+	if len(repeatedImageNames) > 0 {
+		oktetoLog.Warning("The following images are repeated in the build section: [%s]", strings.Join(repeatedImageNames, ", "))
+	}
 	return nil
 }
 

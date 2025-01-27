@@ -33,11 +33,13 @@ import (
 type registryInterface interface {
 	GetImageTagWithDigest(imageTag string) (string, error)
 	GetImageTag(image, service, namespace string) string
+	ExpandImage(image string) string
 }
 
 type builderInterface interface {
 	GetServicesToBuildDuringExecution(ctx context.Context, manifest *model.Manifest, svcToDeploy []string) ([]string, error)
 	Build(ctx context.Context, options *types.BuildOptions) error
+	GetSvcToBuildFromRegex(manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error)
 	GetBuildEnvVars() map[string]string
 }
 

@@ -600,10 +600,12 @@ func TestUpdateKubetoken(t *testing.T) {
 }
 
 type fakeBuilder struct {
-	getServicesErr   error
-	buildErr         error
-	usedBuildOptions *types.BuildOptions
-	services         []string
+	getServicesErr     error
+	buildErr           error
+	getSvcFromRegexErr error
+	getSvcFromRegexRes string
+	usedBuildOptions   *types.BuildOptions
+	services           []string
 }
 
 func (b *fakeBuilder) GetServicesToBuildDuringExecution(_ context.Context, _ *model.Manifest, _ []string) ([]string, error) {
@@ -624,81 +626,6 @@ func (b *fakeBuilder) Build(_ context.Context, opts *types.BuildOptions) error {
 func (*fakeBuilder) GetBuildEnvVars() map[string]string {
 	return nil
 }
-
-func Test_buildServicesAndSetBuildEnvs(t *testing.T) {
-	tests := []struct {
-		expectedErr       error
-		m                 *model.Manifest
-		builder           *fakeBuilder
-		expectedBuildOpts *types.BuildOptions
-		name              string
-	}{
-		{
-			name: "builder GetServicesToBuildDuringExecution returns error",
-			builder: &fakeBuilder{
-				getServicesErr: assert.AnError,
-			},
-			expectedErr: assert.AnError,
-		},
-		{
-			name: "builder GetServicesToBuildDuringExecution returns empty list",
-			builder: &fakeBuilder{
-				services: nil,
-			},
-		},
-		{
-			name: "builder GetServicesToBuildDuringExecution returns list, Build is called with the list and the input manifest",
-			builder: &fakeBuilder{
-				services: []string{"test", "okteto"},
-				usedBuildOptions: &types.BuildOptions{
-					CommandArgs: []string{"test", "okteto"},
-					Manifest: &model.Manifest{
-						Name: "test-okteto",
-					},
-				},
-			},
-			m: &model.Manifest{
-				Name: "test-okteto",
-			},
-			expectedBuildOpts: &types.BuildOptions{
-				CommandArgs: []string{"test", "okteto"},
-				Manifest: &model.Manifest{
-					Name: "test-okteto",
-				},
-			},
-		},
-		{
-			name: "builder GetServicesToBuildDuringExecution returns list, Build returns error",
-			builder: &fakeBuilder{
-				services: []string{"test", "okteto"},
-				usedBuildOptions: &types.BuildOptions{
-					CommandArgs: []string{"test", "okteto"},
-					Manifest: &model.Manifest{
-						Name: "test-okteto",
-					},
-				},
-				buildErr: assert.AnError,
-			},
-			m: &model.Manifest{
-				Name: "test-okteto",
-			},
-			expectedBuildOpts: &types.BuildOptions{
-				CommandArgs: []string{"test", "okteto"},
-				Manifest: &model.Manifest{
-					Name: "test-okteto",
-				},
-			},
-			expectedErr: assert.AnError,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
-			got := buildServicesAndSetBuildEnvs(ctx, tt.m, tt.builder)
-
-			require.Equal(t, tt.expectedErr, got)
-			require.Equal(t, tt.expectedBuildOpts, tt.builder.usedBuildOptions)
-		})
-	}
+func (fb *fakeBuilder) GetSvcToBuildFromRegex(_ *model.Manifest, _ model.ImageFromManifest) (string, error) {
+	return fb.getSvcFromRegexRes, fb.getSvcFromRegexErr
 }
