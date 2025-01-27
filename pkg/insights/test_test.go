@@ -92,8 +92,8 @@ func TestTrackTest(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, events.Items, 1)
 	insightEvent := events.Items[0]
-	assert.Equal(t, "okteto_insights_build", insightEvent.Reason)
+	assert.Equal(t, "okteto_insights_test", insightEvent.Reason)
 	assert.Equal(t, "Normal", insightEvent.Type)
-	assert.Equal(t, "build", insightEvent.Action)
-	assert.Contains(t, "build", insightEvent.Name)
+	assert.Equal(t, "test", insightEvent.Action)
+	assert.Contains(t, "test", insightEvent.Name)
 }
