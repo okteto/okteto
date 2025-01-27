@@ -21,47 +21,45 @@ import (
 )
 
 const (
-	// buildInsightType represents the type of the build event
-	buildInsightType = "build"
+	// testInsightType represents the type of the test event
+	testInsightType = "test"
 
-	// buildSchemaVersion represents the schema version of the build event
+	// testSchemaVersion represents the schema version of the test event
 	// This version should be updated if the structure of the event changes
-	buildSchemaVersion = "1.0"
+	testSchemaVersion = "1.0"
 )
 
-// buildEventJSON represents the JSON structure of a build event
-type buildEventJSON struct {
+// testEventJSON represents the JSON structure of a test event
+type testEventJSON struct {
 	DevenvName    string  `json:"devenv_name"`
-	ImageName     string  `json:"image_name"`
 	Namespace     string  `json:"namespace"`
+	TestName      string  `json:"test_name"`
 	Repository    string  `json:"repository"`
-	SchemaVersion string  `json:"schema_version"`
 	Duration      float64 `json:"duration"`
-	SmartBuildHit bool    `json:"smart_build_hit"`
 	Success       bool    `json:"success"`
+	SchemaVersion string  `json:"schema_version"`
 }
 
 // TrackImageBuild tracks an image build event
-func (ip *Publisher) TrackImageBuild(ctx context.Context, meta *analytics.ImageBuildMetadata) {
-	eventJSON, err := json.Marshal(ip.convertImageBuildMetadataToEvent(meta))
+func (ip *Publisher) TrackTest(ctx context.Context, meta *analytics.SingleTestMetadata) {
+	eventJSON, err := json.Marshal(ip.convertTestMetadataToEvent(meta))
 	if err != nil {
 		ip.ioCtrl.Logger().Infof("failed to marshal event metadata: %s", err)
 		return
 	}
 
-	ip.trackEvent(ctx, meta.Namespace, buildInsightType, string(eventJSON))
+	ip.trackEvent(ctx, meta.Namespace, testInsightType, string(eventJSON))
 }
 
-// convertImageBuildMetadataToEvent converts an ImageBuildMetadata to a buildEventJSON
-func (*Publisher) convertImageBuildMetadataToEvent(metadata *analytics.ImageBuildMetadata) buildEventJSON {
-	return buildEventJSON{
+// convertTestMetadataToEvent converts an ImageBuildMetadata to a buildEventJSON
+func (*Publisher) convertTestMetadataToEvent(metadata *analytics.SingleTestMetadata) testEventJSON {
+	return testEventJSON{
 		DevenvName:    metadata.DevenvName,
-		ImageName:     metadata.Name,
 		Namespace:     metadata.Namespace,
-		Repository:    metadata.RepoURL,
-		SmartBuildHit: metadata.CacheHit,
+		TestName:      metadata.TestName,
+		Repository:    metadata.Repository,
+		Duration:      metadata.Duration.Seconds(),
 		Success:       metadata.Success,
-		Duration:      metadata.BuildDuration.Seconds(),
-		SchemaVersion: buildSchemaVersion,
+		SchemaVersion: testSchemaVersion,
 	}
 }
