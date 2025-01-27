@@ -35,12 +35,12 @@ type testEventJSON struct {
 	Namespace     string  `json:"namespace"`
 	TestName      string  `json:"test_name"`
 	Repository    string  `json:"repository"`
+	SchemaVersion string  `json:"schema_version"`
 	Duration      float64 `json:"duration"`
 	Success       bool    `json:"success"`
-	SchemaVersion string  `json:"schema_version"`
 }
 
-// TrackImageBuild tracks an image build event
+// TrackTest tracks an image build event
 func (ip *Publisher) TrackTest(ctx context.Context, meta *analytics.SingleTestMetadata) {
 	eventJSON, err := json.Marshal(ip.convertTestMetadataToEvent(meta))
 	if err != nil {
