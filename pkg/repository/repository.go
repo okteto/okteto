@@ -124,6 +124,9 @@ func cleanPath(path string) string {
 
 // GetAnonymizedRepo returns a clean repo url string without sensible information
 func (r Repository) GetAnonymizedRepo() string {
+	if r.url.String() == "file:" {
+		return ""
+	}
 	return r.url.String()
 }
 
