@@ -28,6 +28,8 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/ignore"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/afero"
 )
@@ -45,6 +47,7 @@ var (
 type gitRepoController struct {
 	repoGetter repositoryGetterInterface
 	fs         afero.Fs
+	ignorer    func(subpath string) ignore.Ignorer
 	path       string
 }
 
@@ -53,6 +56,16 @@ func newGitRepoController(path string) gitRepoController {
 		repoGetter: gitRepositoryGetter{},
 		path:       path,
 		fs:         afero.NewOsFs(),
+		ignorer: func(subpath string) ignore.Ignorer {
+			if !env.LoadBoolean("OKTETO_SMART_BUILDS_IGNORE_FILES_ENABLED") {
+				return ignore.Never
+			}
+			return ignore.NewMultiIgnorer(
+				ignore.NewDockerIgnorer(filepath.Join(subpath, ".dockerignore")),
+				ignore.NewOktetoIgnorer(filepath.Join(subpath, ".oktetoignore")).BuildOnly(),
+			)
+
+		},
 	}
 }
 
@@ -83,8 +96,7 @@ func (r gitRepoController) calculateIsClean(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("failed to infer the git repo's current worktree: %w", err)
 	}
-
-	status, err := worktree.Status(ctx, "", NewLocalGit("git", &LocalExec{}))
+	status, err := worktree.Status(ctx, "", NewLocalGit("git", &LocalExec{}, r.ignorer))
 	if err != nil {
 		return false, fmt.Errorf("failed to infer the git repo's status: %w", err)
 	}
@@ -261,6 +273,10 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to analyze git repo: %w", err)
 	}
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return "", fmt.Errorf("failed to get git repo root: %w", err)
+	}
 
 	// go func that cancels the context after the timeout
 	go func() {
@@ -279,7 +295,7 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 
 	// go func that calculates the diff using git diff
 	go func() {
-		diff, err := repo.GetDiff(ctx, contextDir, NewLocalGit("git", &LocalExec{}))
+		diff, err := repo.GetDiff(ctx, contextDir, NewLocalGit("git", &LocalExec{}, r.ignorer))
 		select {
 		case <-timeoutCh:
 			oktetoLog.Debug("Timeout exceeded calculating git diff: assuming dirty commit")
@@ -305,7 +321,22 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 			return
 		}
 
-		untrackedFilesContent, err := r.getUntrackedContent(ctx, untrackedFiles)
+		filteredUntrackedFiles := []string{}
+		for _, f := range untrackedFiles {
+			relpath := resolveRelativePath(filepath.Join(worktree.GetRoot(), f), contextDir)
+			shouldIgnore, err := r.ignorer(contextDir).Ignore(relpath)
+			if err != nil {
+				oktetoLog.Debugf("ignore error in GetDiffHash: %v", err)
+			}
+			if !shouldIgnore {
+				filteredUntrackedFiles = append(filteredUntrackedFiles, f)
+			} else {
+				oktetoLog.Debugf("skipping %v file change in GetDiffHash based on known ignore files", f)
+			}
+
+		}
+
+		untrackedFilesContent, err := r.getUntrackedContent(ctx, filteredUntrackedFiles)
 		select {
 		case <-timeoutCh:
 			oktetoLog.Debug("Timeout exceeded calculating git untracked files: assuming dirty commit")
@@ -356,7 +387,7 @@ func (r gitRepoController) calculateLatestDirSHA(ctx context.Context, contextDir
 		return "", fmt.Errorf("failed to calculate latestDirCommit: failed to analyze git repo: %w", err)
 	}
 
-	return repo.GetLatestSHA(ctx, contextDir, NewLocalGit("git", &LocalExec{}))
+	return repo.GetLatestSHA(ctx, contextDir, NewLocalGit("git", &LocalExec{}, r.ignorer))
 }
 
 type repositoryGetterInterface interface {
@@ -403,7 +434,7 @@ func (ogr oktetoGitRepository) calculateUntrackedFiles(ctx context.Context, cont
 		return []string{}, fmt.Errorf("failed to infer the git repo's current worktree: %w", err)
 	}
 
-	return worktree.ListUntrackedFiles(ctx, contextDir, NewLocalGit("git", &LocalExec{}))
+	return worktree.ListUntrackedFiles(ctx, contextDir, NewLocalGit("git", &LocalExec{}, nil))
 }
 
 type oktetoGitWorktree struct {
@@ -466,7 +497,7 @@ func (ogr oktetoGitWorktree) ListUntrackedFiles(ctx context.Context, workdir str
 		// git is not available, so we fall back on git-go
 		oktetoLog.Debug("Calculating git untrackedFiles: git is not installed, for better performances consider installing it")
 
-		status, err := ogr.Status(ctx, ogr.GetRoot(), NewLocalGit("git", &LocalExec{}))
+		status, err := ogr.Status(ctx, ogr.GetRoot(), NewLocalGit("git", &LocalExec{}, nil))
 		if err != nil {
 			return []string{}, fmt.Errorf("failed to infer the git repo's status: %w", err)
 		}

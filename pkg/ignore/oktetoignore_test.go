@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIgnore(t *testing.T) {
+func TestOktetoIgnore(t *testing.T) {
 	type exp struct {
 		str   string
 		files []string
@@ -125,7 +125,7 @@ func TestIgnore(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 
-			ig := NewFromReader(strings.NewReader(tc.input))
+			ig := newOktetoIgnorerFromReader(strings.NewReader(tc.input))
 			require.Len(t, ig.sections, len(tc.expected))
 			for expectedKey, expectedVal := range tc.expected {
 				assert.Equal(t, expectedVal.str, ig.Get(expectedKey))
@@ -137,7 +137,7 @@ func TestIgnore(t *testing.T) {
 	}
 }
 
-func TestMultiRules(t *testing.T) {
+func TestOktetoIngoreMultiRules(t *testing.T) {
 	input := `
 .git
 [deploy]
@@ -150,14 +150,14 @@ chart
 [test.frontend]
 backend
 `
-	ig := NewFromReader(strings.NewReader(input))
+	ig := newOktetoIgnorerFromReader(strings.NewReader(input))
 	f, err := ig.Rules(RootSection, "test", "test.frontend")
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, f, []string{".git", "chart", "backend"})
 
 }
 
-func TestRules(t *testing.T) {
+func TestOktetoIgnoreRules(t *testing.T) {
 	tt := []struct {
 		name        string
 		input       string
@@ -217,7 +217,7 @@ func TestRules(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			ig := NewFromReader(strings.NewReader(tc.input))
+			ig := newOktetoIgnorerFromReader(strings.NewReader(tc.input))
 			f, err := ig.Rules(tc.section...)
 			require.NoError(t, err)
 			assert.ElementsMatch(t, f, tc.expected)
