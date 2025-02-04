@@ -2074,8 +2074,8 @@ func TestManifest_IsEmpty(t *testing.T) {
 
 func TestDivertDeployIsEmpty(t *testing.T) {
 	tests := []struct {
-		name string
 		d    *DivertDeploy
+		name string
 		want bool
 	}{
 		{
