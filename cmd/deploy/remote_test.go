@@ -237,6 +237,37 @@ func TestDeployRemoteWithCtx(t *testing.T) {
 	require.NoError(t, err)
 	runner.AssertExpectations(t)
 }
+
+func TestDeployRemoteEmptyDeployableEntity(t *testing.T) {
+	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/path/to/manifest")
+	manifest := &model.Manifest{
+		Deploy: &model.DeployInfo{
+			Image:          "test-image",
+			ComposeSection: &model.ComposeSectionInfo{},
+		},
+	}
+
+	runner := &fakeRemoteRunner{}
+	rd := &remoteDeployer{
+		runner:      runner,
+		workdirCtrl: workdirCtrl,
+		getBuildEnvVars: func() map[string]string {
+			return map[string]string{"BUILD_VAR_1": "value"}
+		},
+		getDependencyEnvVars: func(environGetter) map[string]string {
+			return map[string]string{"DEP_VAR_1": "value"}
+		},
+		ioCtrl: io.NewIOController(),
+	}
+	opts := &Options{
+		Name:             "test",
+		Manifest:         manifest,
+		ManifestPathFlag: "/path/to/manifest/okteto.yml",
+	}
+	err := rd.Deploy(context.Background(), opts)
+	require.NoError(t, err)
+}
+
 func TestDeployRemote(t *testing.T) {
 	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/path/to/manifest")
 	manifest := &model.Manifest{
