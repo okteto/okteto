@@ -1,4 +1,4 @@
-// Copyright 2023 The Okteto Authors
+// Copyright 2025 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -40,7 +40,7 @@ type testEventJSON struct {
 	Success       bool    `json:"success"`
 }
 
-// TrackTest tracks an image build event
+// TrackTest tracks a test execution event
 func (ip *Publisher) TrackTest(ctx context.Context, meta *analytics.SingleTestMetadata) {
 	eventJSON, err := json.Marshal(ip.convertTestMetadataToEvent(meta))
 	if err != nil {
@@ -51,7 +51,7 @@ func (ip *Publisher) TrackTest(ctx context.Context, meta *analytics.SingleTestMe
 	ip.trackEvent(ctx, meta.Namespace, testInsightType, string(eventJSON))
 }
 
-// convertTestMetadataToEvent converts an ImageBuildMetadata to a buildEventJSON
+// convertTestMetadataToEvent converts an SingleTestMetadata to a testEventJSON
 func (*Publisher) convertTestMetadataToEvent(metadata *analytics.SingleTestMetadata) testEventJSON {
 	return testEventJSON{
 		DevenvName:    metadata.DevenvName,

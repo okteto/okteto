@@ -316,7 +316,8 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 	testAnalytics := make([]*analytics.SingleTestMetadata, 0)
 
-	// send all events appended on each build
+	// send all events appended on each test
+
 	defer func([]*analytics.SingleTestMetadata) {
 		for _, meta := range testAnalytics {
 			m := meta
