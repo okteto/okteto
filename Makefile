@@ -39,26 +39,6 @@ lint:
 lint-fix:
 	golangci-lint run --fix --timeout 5m
 
-.PHONY: install-fieldalignment
-install-fieldalignment:
-	$(eval GOBIN=$(shell go env GOPATH)/bin)
-	$(eval FIELDALIGNMENT_BIN=$(GOBIN)/fieldalignment)
-	@if [ ! -x "$(FIELDALIGNMENT_BIN)" ]; then \
-    	echo "Installing fieldalignment..."; \
-    	go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest; \
-    fi
-
-.PHONY: lint-fix-fieldalignment
-lint-fix-fieldalignment: install-fieldalignment
-	@$(FIELDALIGNMENT_BIN) -fix ./...; \
-	if ! git diff --quiet -- '*.go'; then \
-		echo "⚠️  Please review the changes before committing. This step might remove code comments while reordering the struct fields."; \
-	fi
-
-.PHONY: lint-fieldalignment
-lint-fieldalignment: install-fieldalignment
-	@$(FIELDALIGNMENT_BIN) -json ./...
-
 .PHONY: test
 test:
 	go test -p 4 -race -coverprofile=coverage.txt -covermode=atomic ./...
