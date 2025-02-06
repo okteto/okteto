@@ -14,197 +14,197 @@
 package main
 
 import (
-	"context"
-	cryptoRand "crypto/rand"
-	"encoding/binary"
-	"errors"
-	"fmt"
-	"math/rand"
-	"os"
-	"strings"
-	"time"
-	"unicode"
+    "context"
+    cryptoRand "crypto/rand"
+    "encoding/binary"
+    "errors"
+    "fmt"
+    "math/rand"
+    "os"
+    "strings"
+    "time"
+    "unicode"
 
-	"github.com/okteto/okteto/cmd"
-	"github.com/okteto/okteto/cmd/build"
-	contextCMD "github.com/okteto/okteto/cmd/context"
-	"github.com/okteto/okteto/cmd/deploy"
-	"github.com/okteto/okteto/cmd/destroy"
-	"github.com/okteto/okteto/cmd/exec"
-	"github.com/okteto/okteto/cmd/kubetoken"
-	"github.com/okteto/okteto/cmd/logs"
-	"github.com/okteto/okteto/cmd/namespace"
-	"github.com/okteto/okteto/cmd/pipeline"
-	"github.com/okteto/okteto/cmd/preview"
-	"github.com/okteto/okteto/cmd/registrytoken"
-	"github.com/okteto/okteto/cmd/remoterun"
-	"github.com/okteto/okteto/cmd/test"
-	"github.com/okteto/okteto/cmd/up"
-	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/config"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/insights"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/log/io"
-	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/afero"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	generateFigSpec "github.com/withfig/autocomplete-tools/packages/cobra"
-	utilRuntime "k8s.io/apimachinery/pkg/util/runtime"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/azure" // Load the different library for authentication
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"   // Load the different library for authentication
-	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"  // Load the different library for authentication
+    "github.com/okteto/okteto/cmd"
+    "github.com/okteto/okteto/cmd/build"
+    contextCMD "github.com/okteto/okteto/cmd/context"
+    "github.com/okteto/okteto/cmd/deploy"
+    "github.com/okteto/okteto/cmd/destroy"
+    "github.com/okteto/okteto/cmd/exec"
+    "github.com/okteto/okteto/cmd/kubetoken"
+    "github.com/okteto/okteto/cmd/logs"
+    "github.com/okteto/okteto/cmd/namespace"
+    "github.com/okteto/okteto/cmd/pipeline"
+    "github.com/okteto/okteto/cmd/preview"
+    "github.com/okteto/okteto/cmd/registrytoken"
+    "github.com/okteto/okteto/cmd/remoterun"
+    "github.com/okteto/okteto/cmd/test"
+    "github.com/okteto/okteto/cmd/up"
+    "github.com/okteto/okteto/pkg/analytics"
+    "github.com/okteto/okteto/pkg/config"
+    oktetoErrors "github.com/okteto/okteto/pkg/errors"
+    "github.com/okteto/okteto/pkg/insights"
+    oktetoLog "github.com/okteto/okteto/pkg/log"
+    "github.com/okteto/okteto/pkg/log/io"
+    "github.com/okteto/okteto/pkg/okteto"
+    "github.com/sirupsen/logrus"
+    "github.com/spf13/afero"
+    "github.com/spf13/cobra"
+    "github.com/spf13/pflag"
+    generateFigSpec "github.com/withfig/autocomplete-tools/packages/cobra"
+    utilRuntime "k8s.io/apimachinery/pkg/util/runtime"
+    _ "k8s.io/client-go/plugin/pkg/client/auth/azure" // Load the different library for authentication
+    _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"   // Load the different library for authentication
+    _ "k8s.io/client-go/plugin/pkg/client/auth/oidc"  // Load the different library for authentication
 )
 
 func init() {
-	oktetoLog.SetLevel("warn") // TODO: Remove when we fully move to ioController
-	var b [16]byte
-	_, err := cryptoRand.Read(b[:])
-	seed := int64(binary.LittleEndian.Uint64(b[:]))
-	if err != nil {
-		oktetoLog.Info("cannot use cryptoRead. Fallback to timestamp seed generator") // TODO: Remove when we fully move to ioController
-		seed = time.Now().UnixNano()
-	}
-	rand.New(rand.NewSource(seed))
+    oktetoLog.SetLevel("warn") // TODO: Remove when we fully move to ioController
+    var b [16]byte
+    _, err := cryptoRand.Read(b[:])
+    seed := int64(binary.LittleEndian.Uint64(b[:]))
+    if err != nil {
+        oktetoLog.Info("cannot use cryptoRead. Fallback to timestamp seed generator") // TODO: Remove when we fully move to ioController
+        seed = time.Now().UnixNano()
+    }
+    rand.New(rand.NewSource(seed))
 
-	// override client-go error handlers to downgrade the "logging before flag.Parse" error
-	errorHandlers := []func(error){
-		func(e error) {
+    // override client-go error handlers to downgrade the "logging before flag.Parse" error
+    errorHandlers := []utilRuntime.ErrorHandler{
+        func(_ context.Context, e error, _ string, _ ...interface{}) {
 
-			// Error when there's no service on the other side: an error occurred forwarding 8080 -> 8080: error forwarding port 8080 to pod df05e7e1c85d6b256df779c0b2deb417eb53a299c8581fc0945264301d8fa4b3, uid : exit status 1: 2020/03/16 02:11:09 socat[42490] E connect(5, AF=2 127.0.0.1:8080, 16): Connection refused\n
-			oktetoLog.Debugf("port-forward: %s", e)
-		},
-	}
+            // Error when there's no service on the other side: an error occurred forwarding 8080 -> 8080: error forwarding port 8080 to pod df05e7e1c85d6b256df779c0b2deb417eb53a299c8581fc0945264301d8fa4b3, uid : exit status 1: 2020/03/16 02:11:09 socat[42490] E connect(5, AF=2 127.0.0.1:8080, 16): Connection refused\n
+            oktetoLog.Debugf("port-forward: %s", e)
+        },
+    }
 
-	utilRuntime.ErrorHandlers = errorHandlers
+    utilRuntime.ErrorHandlers = errorHandlers
 }
 
 func main() {
-	ctx := context.Background()
-	ioController := io.NewIOController()
-	ioController.Logger().SetLevel(io.WarnLevel)
-	oktetoLog.Init(logrus.WarnLevel) // TODO: Remove when we fully move to ioController
-	if registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
-		oktetoLog.SetOutputFormat(io.SilentFormat)
-		ioController.SetOutputFormat(io.SilentFormat)
-	}
+    ctx := context.Background()
+    ioController := io.NewIOController()
+    ioController.Logger().SetLevel(io.WarnLevel)
+    oktetoLog.Init(logrus.WarnLevel) // TODO: Remove when we fully move to ioController
+    if registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
+        oktetoLog.SetOutputFormat(io.SilentFormat)
+        ioController.SetOutputFormat(io.SilentFormat)
+    }
 
-	var logLevel string
-	var outputMode string
-	var serverNameOverride string
+    var logLevel string
+    var outputMode string
+    var serverNameOverride string
 
-	if err := analytics.Init(); err != nil {
-		oktetoLog.Infof("error initializing okteto analytics: %s", err)
-	}
+    if err := analytics.Init(); err != nil {
+        oktetoLog.Infof("error initializing okteto analytics: %s", err)
+    }
 
-	okteto.InitContextWithDeprecatedToken()
+    okteto.InitContextWithDeprecatedToken()
 
-	k8sLogger := io.NewK8sLogger()
+    k8sLogger := io.NewK8sLogger()
 
-	root := &cobra.Command{
-		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
-		Short:         "The Okteto Command Line Interface is a unified tool to manage Development Environments",
-		Long:          "The Okteto Command Line Interface is a unified tool to manage Development Environments",
-		SilenceErrors: true,
-		PersistentPreRun: func(ccmd *cobra.Command, args []string) {
-			ccmd.SilenceUsage = true
-			if !registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
-				oktetoLog.SetLevel(logLevel)          // TODO: Remove when we fully move to ioController
-				oktetoLog.SetOutputFormat(outputMode) // TODO: Remove when we fully move to ioController
+    root := &cobra.Command{
+        Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
+        Short:         "The Okteto Command Line Interface is a unified tool to manage Development Environments",
+        Long:          "The Okteto Command Line Interface is a unified tool to manage Development Environments",
+        SilenceErrors: true,
+        PersistentPreRun: func(ccmd *cobra.Command, args []string) {
+            ccmd.SilenceUsage = true
+            if !registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
+                oktetoLog.SetLevel(logLevel)          // TODO: Remove when we fully move to ioController
+                oktetoLog.SetOutputFormat(outputMode) // TODO: Remove when we fully move to ioController
 
-				ioController.Logger().SetLevel(logLevel)
-				ioController.SetOutputFormat(outputMode)
-			}
-			okteto.SetServerNameOverride(serverNameOverride)
-			ioController.Logger().Infof("started %s", strings.Join(os.Args, " "))
+                ioController.Logger().SetLevel(logLevel)
+                ioController.SetOutputFormat(outputMode)
+            }
+            okteto.SetServerNameOverride(serverNameOverride)
+            ioController.Logger().Infof("started %s", strings.Join(os.Args, " "))
 
-			if k8sLogger.IsEnabled() {
-				cmdName, flags := getCurrentCmdWithUsedFlags(ccmd)
-				k8sLogger.Start(config.GetOktetoHome(), cmdName, flags)
-				ioController.Logger().Debugf("okteto k8s log file: %s", io.GetK8sLoggerFilePath(config.GetOktetoHome()))
-			}
-		},
-		PersistentPostRun: func(ccmd *cobra.Command, args []string) {
-			ioController.Logger().Infof("finished %s", strings.Join(os.Args, " "))
-		},
-	}
+            if k8sLogger.IsEnabled() {
+                cmdName, flags := getCurrentCmdWithUsedFlags(ccmd)
+                k8sLogger.Start(config.GetOktetoHome(), cmdName, flags)
+                ioController.Logger().Debugf("okteto k8s log file: %s", io.GetK8sLoggerFilePath(config.GetOktetoHome()))
+            }
+        },
+        PersistentPostRun: func(ccmd *cobra.Command, args []string) {
+            ioController.Logger().Infof("finished %s", strings.Join(os.Args, " "))
+        },
+    }
 
-	root.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warn", "amount of information output (debug, info, warn, error)")
-	root.PersistentFlags().StringVar(&outputMode, "log-output", oktetoLog.TTYFormat, "output format for logs (tty, plain, json)")
+    root.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warn", "amount of information output (debug, info, warn, error)")
+    root.PersistentFlags().StringVar(&outputMode, "log-output", oktetoLog.TTYFormat, "output format for logs (tty, plain, json)")
 
-	root.PersistentFlags().StringVarP(&serverNameOverride, "server-name", "", "", "The address and port of the Okteto Ingress server")
-	err := root.PersistentFlags().MarkHidden("server-name")
-	if err != nil {
-		ioController.Logger().Infof("error hiding server-name flag: %s", err)
-	}
+    root.PersistentFlags().StringVarP(&serverNameOverride, "server-name", "", "", "The address and port of the Okteto Ingress server")
+    err := root.PersistentFlags().MarkHidden("server-name")
+    if err != nil {
+        ioController.Logger().Infof("error hiding server-name flag: %s", err)
+    }
 
-	okClientProvider := okteto.NewOktetoClientProvider()
-	k8sClientProvider := okteto.NewK8sClientProvider()
+    okClientProvider := okteto.NewOktetoClientProvider()
+    k8sClientProvider := okteto.NewK8sClientProvider()
 
-	insights := insights.NewInsightsPublisher(k8sClientProvider, *ioController)
-	at := analytics.NewAnalyticsTracker()
-	fs := afero.NewOsFs()
+    insights := insights.NewInsightsPublisher(k8sClientProvider, *ioController)
+    at := analytics.NewAnalyticsTracker()
+    fs := afero.NewOsFs()
 
-	root.AddCommand(cmd.Analytics())
-	root.AddCommand(cmd.Version())
+    root.AddCommand(cmd.Analytics())
+    root.AddCommand(cmd.Version())
 
-	root.AddCommand(contextCMD.Context())
-	root.AddCommand(cmd.Kubeconfig(okClientProvider))
+    root.AddCommand(contextCMD.Context())
+    root.AddCommand(cmd.Kubeconfig(okClientProvider))
 
-	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
-	root.AddCommand(registrytoken.RegistryToken(ctx))
+    root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
+    root.AddCommand(registrytoken.RegistryToken(ctx))
 
-	root.AddCommand(build.Build(ctx, ioController, at, insights, k8sLogger))
+    root.AddCommand(build.Build(ctx, ioController, at, insights, k8sLogger))
 
-	root.AddCommand(namespace.Namespace(ctx, k8sLogger))
-	root.AddCommand(up.Up(at, insights, ioController, k8sLogger, fs))
-	root.AddCommand(cmd.Down(at, k8sLogger, fs))
-	root.AddCommand(cmd.Status(fs))
-	root.AddCommand(cmd.Doctor(k8sLogger, fs))
-	root.AddCommand(exec.NewExec(fs, ioController, k8sClientProvider).Cmd(ctx))
-	root.AddCommand(preview.Preview(ctx))
-	root.AddCommand(cmd.Restart(fs))
-	root.AddCommand(deploy.Deploy(ctx, at, insights, ioController, k8sLogger))
-	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger, fs))
-	root.AddCommand(deploy.Endpoints(ctx, k8sLogger))
-	root.AddCommand(logs.Logs(ctx, k8sLogger, fs))
-	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
-	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger))
-	root.AddCommand(test.Test(ctx, ioController, k8sLogger, at))
-	root.AddCommand(cmd.GenerateSchema())
-	root.AddCommand(cmd.Validate(fs))
+    root.AddCommand(namespace.Namespace(ctx, k8sLogger))
+    root.AddCommand(up.Up(at, insights, ioController, k8sLogger, fs))
+    root.AddCommand(cmd.Down(at, k8sLogger, fs))
+    root.AddCommand(cmd.Status(fs))
+    root.AddCommand(cmd.Doctor(k8sLogger, fs))
+    root.AddCommand(exec.NewExec(fs, ioController, k8sClientProvider).Cmd(ctx))
+    root.AddCommand(preview.Preview(ctx))
+    root.AddCommand(cmd.Restart(fs))
+    root.AddCommand(deploy.Deploy(ctx, at, insights, ioController, k8sLogger))
+    root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger, fs))
+    root.AddCommand(deploy.Endpoints(ctx, k8sLogger))
+    root.AddCommand(logs.Logs(ctx, k8sLogger, fs))
+    root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
+    root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger))
+    root.AddCommand(test.Test(ctx, ioController, k8sLogger, at))
+    root.AddCommand(cmd.GenerateSchema())
+    root.AddCommand(cmd.Validate(fs))
 
-	root.AddCommand(pipeline.Pipeline(ctx))
+    root.AddCommand(pipeline.Pipeline(ctx))
 
-	err = root.Execute()
+    err = root.Execute()
 
-	if err != nil {
-		message := err.Error()
-		if len(message) > 0 {
-			tmp := []rune(message)
-			tmp[0] = unicode.ToUpper(tmp[0])
-			message = string(tmp)
-		}
-		oktetoLog.Fail("%s", message) // TODO: Change to use ioController  when we fully move to ioController
-		var uErr oktetoErrors.UserError
-		if errors.As(err, &uErr) {
-			if len(uErr.Hint) > 0 {
-				oktetoLog.Hint("    %s", uErr.Hint)
-			}
-		}
-		os.Exit(1)
-	}
+    if err != nil {
+        message := err.Error()
+        if len(message) > 0 {
+            tmp := []rune(message)
+            tmp[0] = unicode.ToUpper(tmp[0])
+            message = string(tmp)
+        }
+        oktetoLog.Fail("%s", message) // TODO: Change to use ioController  when we fully move to ioController
+        var uErr oktetoErrors.UserError
+        if errors.As(err, &uErr) {
+            if len(uErr.Hint) > 0 {
+                oktetoLog.Hint("    %s", uErr.Hint)
+            }
+        }
+        os.Exit(1)
+    }
 }
 
 func getCurrentCmdWithUsedFlags(cmd *cobra.Command) (string, string) {
-	var flags []string
-	cmd.Flags().Visit(func(f *pflag.Flag) {
-		if f.Changed {
-			flags = append(flags, fmt.Sprintf("--%s=%s", f.Name, f.Value))
-		}
-	})
+    var flags []string
+    cmd.Flags().Visit(func(f *pflag.Flag) {
+        if f.Changed {
+            flags = append(flags, fmt.Sprintf("--%s=%s", f.Name, f.Value))
+        }
+    })
 
-	return cmd.Name(), strings.Join(flags, " ")
+    return cmd.Name(), strings.Join(flags, " ")
 }
