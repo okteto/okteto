@@ -28,7 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 type patchAnnotations struct {
@@ -51,7 +51,7 @@ func Sandbox(dev *model.Dev, namespace string) *appsv1.StatefulSet {
 			Annotations: model.Annotations{},
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas: pointer.Int32(1),
+			Replicas: ptr.To(int32(1)),
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 				Type: appsv1.RollingUpdateStatefulSetStrategyType,
 			},
@@ -70,7 +70,7 @@ func Sandbox(dev *model.Dev, namespace string) *appsv1.StatefulSet {
 				Spec: apiv1.PodSpec{
 					ServiceAccountName:            dev.ServiceAccount,
 					PriorityClassName:             dev.PriorityClassName,
-					TerminationGracePeriodSeconds: pointer.Int64(0),
+					TerminationGracePeriodSeconds: ptr.To(int64(0)),
 					Containers: []apiv1.Container{
 						{
 							Name:            "dev",

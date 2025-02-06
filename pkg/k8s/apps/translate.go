@@ -24,7 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -101,7 +101,7 @@ func (tr *Translation) translate() error {
 		tr.DevApp.TemplateObjectMeta().Labels[model.DetachedDevLabel] = tr.getDevName()
 	}
 
-	tr.DevApp.PodSpec().TerminationGracePeriodSeconds = pointer.Int64(0)
+	tr.DevApp.PodSpec().TerminationGracePeriodSeconds = ptr.To(int64(0))
 
 	for _, rule := range tr.Rules {
 		devContainer := GetDevContainer(tr.DevApp.PodSpec(), rule.Container)

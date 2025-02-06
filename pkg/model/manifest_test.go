@@ -36,7 +36,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestManifestExpandDevEnvs(t *testing.T) {
@@ -603,9 +603,9 @@ func TestInferFromStack(t *testing.T) {
 						Lifecycle:       &Lifecycle{},
 						Workdir:         "/okteto",
 						SecurityContext: &SecurityContext{
-							RunAsUser:  pointer.Int64(0),
-							RunAsGroup: pointer.Int64(0),
-							FSGroup:    pointer.Int64(0),
+							RunAsUser:  ptr.To(int64(0)),
+							RunAsGroup: ptr.To(int64(0)),
+							FSGroup:    ptr.To(int64(0)),
 						},
 						SSHServerPort: 2222,
 						Volumes:       []Volume{},
@@ -1585,9 +1585,9 @@ func TestRead(t *testing.T) {
 						Lifecycle:       &Lifecycle{},
 						Workdir:         "/okteto",
 						SecurityContext: &SecurityContext{
-							RunAsUser:  pointer.Int64(0),
-							RunAsGroup: pointer.Int64(0),
-							FSGroup:    pointer.Int64(0),
+							RunAsUser:  ptr.To(int64(0)),
+							RunAsGroup: ptr.To(int64(0)),
+							FSGroup:    ptr.To(int64(0)),
 						},
 						SSHServerPort: 2222,
 						Volumes:       []Volume{},

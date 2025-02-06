@@ -27,7 +27,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestTranslateHealthcheckCurlToHttp(t *testing.T) {
@@ -125,7 +125,7 @@ func Test_DeployReplicasUnmarshalling(t *testing.T) {
 		},
 		{
 			name:      "deploy-replicas-set",
-			deployRaw: &DeployInfoRaw{Replicas: pointer.Int32(4)},
+			deployRaw: &DeployInfoRaw{Replicas: ptr.To(int32(4))},
 			scale:     nil,
 			replicas:  nil,
 			expected:  4,
@@ -133,7 +133,7 @@ func Test_DeployReplicasUnmarshalling(t *testing.T) {
 		{
 			name:      "scale",
 			deployRaw: &DeployInfoRaw{},
-			scale:     pointer.Int32(3),
+			scale:     ptr.To(int32(3)),
 			replicas:  nil,
 			expected:  3,
 		},
@@ -141,20 +141,20 @@ func Test_DeployReplicasUnmarshalling(t *testing.T) {
 			name:      "replicas",
 			deployRaw: &DeployInfoRaw{},
 			scale:     nil,
-			replicas:  pointer.Int32(2),
+			replicas:  ptr.To(int32(2)),
 			expected:  2,
 		},
 		{
 			name:      "replicas priority",
-			deployRaw: &DeployInfoRaw{Replicas: pointer.Int32(1)},
-			scale:     pointer.Int32(2),
-			replicas:  pointer.Int32(3),
+			deployRaw: &DeployInfoRaw{Replicas: ptr.To(int32(1))},
+			scale:     ptr.To(int32(2)),
+			replicas:  ptr.To(int32(3)),
 			expected:  3,
 		},
 		{
 			name:      "deploy priority",
-			deployRaw: &DeployInfoRaw{Replicas: pointer.Int32(1)},
-			scale:     pointer.Int32(2),
+			deployRaw: &DeployInfoRaw{Replicas: ptr.To(int32(1))},
+			scale:     ptr.To(int32(2)),
 			replicas:  nil,
 			expected:  1,
 		},
@@ -2168,17 +2168,17 @@ func Test_UnmarshalStackUser(t *testing.T) {
 		{
 			name:     "expanded form",
 			manifest: []byte("runAsUser: 1000\nrunAsGroup: 2000"),
-			expected: &StackSecurityContext{RunAsUser: pointer.Int64(1000), RunAsGroup: pointer.Int64(2000)},
+			expected: &StackSecurityContext{RunAsUser: ptr.To(int64(1000)), RunAsGroup: ptr.To(int64(2000))},
 		},
 		{
 			name:     "runAsUserOnly",
 			manifest: []byte("1000"),
-			expected: &StackSecurityContext{RunAsUser: pointer.Int64(1000)},
+			expected: &StackSecurityContext{RunAsUser: ptr.To(int64(1000))},
 		},
 		{
 			name:     "runAsUser and runAsGroup",
 			manifest: []byte("1000:2000"),
-			expected: &StackSecurityContext{RunAsUser: pointer.Int64(1000), RunAsGroup: pointer.Int64(2000)},
+			expected: &StackSecurityContext{RunAsUser: ptr.To(int64(1000)), RunAsGroup: ptr.To(int64(2000))},
 		},
 		{
 			name:          "not a number",

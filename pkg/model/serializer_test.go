@@ -34,7 +34,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestReverseMarshalling(t *testing.T) {
@@ -1142,10 +1142,10 @@ dev:
 							Startup:   false,
 						},
 						SecurityContext: &SecurityContext{
-							RunAsUser:    pointer.Int64(0),
-							RunAsGroup:   pointer.Int64(0),
+							RunAsUser:    ptr.To(int64(0)),
+							RunAsGroup:   ptr.To(int64(0)),
 							RunAsNonRoot: nil,
-							FSGroup:      pointer.Int64(0),
+							FSGroup:      ptr.To(int64(0)),
 						},
 						SSHServerPort: 2222,
 						Services:      []*Dev{},
@@ -1195,10 +1195,10 @@ dev:
 							PreStop:   nil,
 						},
 						SecurityContext: &SecurityContext{
-							RunAsUser:    pointer.Int64(0),
-							RunAsGroup:   pointer.Int64(0),
+							RunAsUser:    ptr.To(int64(0)),
+							RunAsGroup:   ptr.To(int64(0)),
 							RunAsNonRoot: nil,
-							FSGroup:      pointer.Int64(0),
+							FSGroup:      ptr.To(int64(0)),
 						},
 						SSHServerPort: 2222,
 						Services:      []*Dev{},
@@ -1271,10 +1271,10 @@ dev:
 							Startup:   false,
 						},
 						SecurityContext: &SecurityContext{
-							RunAsUser:    pointer.Int64(0),
-							RunAsGroup:   pointer.Int64(0),
+							RunAsUser:    ptr.To(int64(0)),
+							RunAsGroup:   ptr.To(int64(0)),
 							RunAsNonRoot: nil,
-							FSGroup:      pointer.Int64(0),
+							FSGroup:      ptr.To(int64(0)),
 						},
 						SSHServerPort: 2222,
 						Services:      []*Dev{},
@@ -1348,10 +1348,10 @@ dev:
 							PreStop:   nil,
 						},
 						SecurityContext: &SecurityContext{
-							RunAsUser:    pointer.Int64(0),
-							RunAsGroup:   pointer.Int64(0),
+							RunAsUser:    ptr.To(int64(0)),
+							RunAsGroup:   ptr.To(int64(0)),
 							RunAsNonRoot: nil,
-							FSGroup:      pointer.Int64(0),
+							FSGroup:      ptr.To(int64(0)),
 						},
 						SSHServerPort: 2222,
 						Services: []*Dev{
@@ -1371,10 +1371,10 @@ dev:
 									PreStop:   nil,
 								},
 								SecurityContext: &SecurityContext{
-									RunAsUser:    pointer.Int64(0),
-									RunAsGroup:   pointer.Int64(0),
+									RunAsUser:    ptr.To(int64(0)),
+									RunAsGroup:   ptr.To(int64(0)),
 									RunAsNonRoot: nil,
-									FSGroup:      pointer.Int64(0),
+									FSGroup:      ptr.To(int64(0)),
 								},
 								Sync: Sync{
 									RescanInterval: 300,
@@ -1471,10 +1471,10 @@ dev:
 							PreStop:   nil,
 						},
 						SecurityContext: &SecurityContext{
-							RunAsUser:    pointer.Int64(0),
-							RunAsGroup:   pointer.Int64(0),
+							RunAsUser:    ptr.To(int64(0)),
+							RunAsGroup:   ptr.To(int64(0)),
 							RunAsNonRoot: nil,
-							FSGroup:      pointer.Int64(0),
+							FSGroup:      ptr.To(int64(0)),
 						},
 						SSHServerPort: 2222,
 						Services:      []*Dev{},
@@ -1551,10 +1551,10 @@ dev:
 							PreStop:   nil,
 						},
 						SecurityContext: &SecurityContext{
-							RunAsUser:    pointer.Int64(0),
-							RunAsGroup:   pointer.Int64(0),
+							RunAsUser:    ptr.To(int64(0)),
+							RunAsGroup:   ptr.To(int64(0)),
 							RunAsNonRoot: nil,
-							FSGroup:      pointer.Int64(0),
+							FSGroup:      ptr.To(int64(0)),
 						},
 						SSHServerPort: 2222,
 						Services:      []*Dev{},
@@ -1605,10 +1605,10 @@ dev:
 							PreStop:   nil,
 						},
 						SecurityContext: &SecurityContext{
-							RunAsUser:    pointer.Int64(0),
-							RunAsGroup:   pointer.Int64(0),
+							RunAsUser:    ptr.To(int64(0)),
+							RunAsGroup:   ptr.To(int64(0)),
 							RunAsNonRoot: nil,
-							FSGroup:      pointer.Int64(0),
+							FSGroup:      ptr.To(int64(0)),
 						},
 						SSHServerPort: 2222,
 						Services:      []*Dev{},

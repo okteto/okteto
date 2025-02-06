@@ -31,7 +31,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 var (
@@ -147,7 +147,7 @@ func Destroy(ctx context.Context, podName, namespace string, c kubernetes.Interf
 		ctx,
 		podName,
 		metav1.DeleteOptions{
-			GracePeriodSeconds: pointer.Int64(0),
+			GracePeriodSeconds: ptr.To(int64(0)),
 		},
 	)
 	if err != nil && !oktetoErrors.IsNotFound(err) {
@@ -247,7 +247,7 @@ func Restart(ctx context.Context, dev *model.Dev, namespace string, c *kubernete
 			continue
 		}
 		found = true
-		err := c.CoreV1().Pods(namespace).Delete(ctx, pods.Items[i].Name, metav1.DeleteOptions{GracePeriodSeconds: pointer.Int64(0)})
+		err := c.CoreV1().Pods(namespace).Delete(ctx, pods.Items[i].Name, metav1.DeleteOptions{GracePeriodSeconds: ptr.To(int64(0))})
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				return nil

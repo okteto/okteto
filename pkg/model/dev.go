@@ -38,7 +38,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 var (
@@ -459,7 +459,7 @@ func (dev *Dev) setRunAsUserDefaults(main *Dev) {
 		dev.SecurityContext = &SecurityContext{}
 	}
 	if dev.SecurityContext.RunAsUser == nil {
-		dev.SecurityContext.RunAsUser = pointer.Int64(0)
+		dev.SecurityContext.RunAsUser = ptr.To(int64(0))
 	}
 	if dev.SecurityContext.RunAsGroup == nil {
 		dev.SecurityContext.RunAsGroup = dev.SecurityContext.RunAsUser
@@ -923,7 +923,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset b
 		}
 	} else {
 		if main.PersistentVolumeAccessMode() != apiv1.ReadWriteMany {
-			//force all pods to land in the same node
+			// force all pods to land in the same node
 			TranslatePodAffinity(rule, main.Name)
 		}
 		if len(dev.Args.Values) > 0 {
