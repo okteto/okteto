@@ -1281,3 +1281,15 @@ func (m *Manifest) ValidateForCLIOnly() error {
 	}
 	return nil
 }
+
+// IsEmpty returns true if the manifest is empty
+func (d *DivertDeploy) IsEmpty() bool {
+	return d == nil ||
+		d.Driver == "" &&
+			d.Namespace == "" &&
+			len(d.VirtualServices) == 0 &&
+			len(d.Hosts) == 0 &&
+			d.DeprecatedService == "" &&
+			d.DeprecatedDeployment == "" &&
+			d.DeprecatedPort == 0
+}

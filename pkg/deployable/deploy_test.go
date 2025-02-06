@@ -633,3 +633,86 @@ func TestCleaUp(t *testing.T) {
 	proxy.AssertExpectations(t)
 	executor.AssertExpectations(t)
 }
+
+func TestEntityIsEmpty(t *testing.T) {
+	tests := []struct {
+		name string
+		e    Entity
+		want bool
+	}{
+		{
+			name: "All nil",
+			e: Entity{
+				External: nil,
+				Divert:   nil,
+				Commands: nil,
+			},
+			want: true,
+		},
+		{
+			name: "All empty",
+			e: Entity{
+				External: externalresource.Section{},
+				Divert:   &model.DivertDeploy{},
+				Commands: []model.DeployCommand{},
+			},
+			want: true,
+		},
+		{
+			name: "Non-empty Commands",
+			e: Entity{
+				External: nil,
+				Divert:   nil,
+				Commands: []model.DeployCommand{
+					{
+						Name:    "test",
+						Command: "echo",
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "Non-empty Divert",
+			e: Entity{
+				External: nil,
+				Divert:   &model.DivertDeploy{Driver: "nginx"},
+				Commands: nil,
+			},
+			want: false,
+		},
+		{
+			name: "Non-empty External",
+			e: Entity{
+				External: externalresource.Section{
+					"test": {
+						Icon: "icon",
+					},
+				},
+				Divert:   nil,
+				Commands: nil,
+			},
+			want: false,
+		},
+		{
+			name: "Multiple non-empty fields",
+			e: Entity{
+				External: externalresource.Section{
+					"test": {
+						Icon: "icon",
+					},
+				},
+				Divert:   &model.DivertDeploy{Driver: "nginx"},
+				Commands: nil,
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.e.IsEmpty()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

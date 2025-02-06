@@ -2071,3 +2071,107 @@ func TestManifest_IsEmpty(t *testing.T) {
 		})
 	}
 }
+
+func TestDivertDeployIsEmpty(t *testing.T) {
+	tests := []struct {
+		d    *DivertDeploy
+		name string
+		want bool
+	}{
+		{
+			name: "nil DivertDeploy",
+			d:    nil,
+			want: true,
+		},
+		{
+			name: "Empty DivertDeploy",
+			d:    &DivertDeploy{},
+			want: true,
+		},
+		{
+			name: "Non-empty Driver",
+			d: &DivertDeploy{
+				Driver: "nginx",
+			},
+			want: false,
+		},
+		{
+			name: "Non-empty Namespace",
+			d: &DivertDeploy{
+				Namespace: "default",
+			},
+			want: false,
+		},
+		{
+			name: "Non-empty VirtualServices",
+			d: &DivertDeploy{
+				VirtualServices: []DivertVirtualService{
+					{
+						Name: "vs1",
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "Non-empty Hosts",
+			d: &DivertDeploy{
+				Hosts: []DivertHost{
+					{
+						VirtualService: "vs1",
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "Non-empty DeprecatedService",
+			d: &DivertDeploy{
+				DeprecatedService: "old-service",
+			},
+			want: false,
+		},
+		{
+			name: "Non-empty DeprecatedDeployment",
+			d: &DivertDeploy{
+				DeprecatedDeployment: "old-deployment",
+			},
+			want: false,
+		},
+		{
+			name: "Non-zero DeprecatedPort",
+			d: &DivertDeploy{
+				DeprecatedPort: 8080,
+			},
+			want: false,
+		},
+		{
+			name: "Multiple non-empty fields",
+			d: &DivertDeploy{
+				Driver:    "driver",
+				Namespace: "namespace",
+				VirtualServices: []DivertVirtualService{
+					{
+						Name: "vs1",
+					},
+				},
+				Hosts: []DivertHost{
+					{
+						VirtualService: "vs1",
+					},
+				},
+				DeprecatedService:    "ds",
+				DeprecatedDeployment: "dd",
+				DeprecatedPort:       9090,
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.d.IsEmpty()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

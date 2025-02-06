@@ -97,6 +97,10 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		Commands: deployOptions.Manifest.Deploy.Commands,
 		External: deployOptions.Manifest.External,
 	}
+	if dep.IsEmpty() {
+		rd.ioCtrl.Logger().Info("no deployable entities found in the manifest, skipping remote deploy")
+		return nil
+	}
 
 	commandsFlags, err := GetCommandFlags(deployOptions.Name, deployOptions.Variables)
 	if err != nil {

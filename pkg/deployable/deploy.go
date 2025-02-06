@@ -99,6 +99,11 @@ type Entity struct {
 	Commands []model.DeployCommand
 }
 
+// IsEmpty checks if the deployable entity is empty
+func (e Entity) IsEmpty() bool {
+	return len(e.Commands) == 0 && e.Divert.IsEmpty() && e.External.IsEmpty()
+}
+
 // DeployParameters represents the parameters for deploying a remote entity
 type DeployParameters struct {
 	Name         string
