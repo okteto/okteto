@@ -376,7 +376,7 @@ func Test_translateStatefulSet(t *testing.T) {
 	}
 	volumeClaimTemplateSpec := apiv1.PersistentVolumeClaimSpec{
 		AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
-		Resources: apiv1.ResourceRequirements{
+		Resources: apiv1.VolumeResourceRequirements{
 			Requests: apiv1.ResourceList{
 				"storage": resource.MustParse("20Gi"),
 			},
