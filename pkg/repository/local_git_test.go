@@ -83,7 +83,7 @@ func TestLocalGit_Exists(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lg := NewLocalGit("git", tt.mockExec(), nil)
+			lg := NewLocalGit("git", tt.mockExec())
 			_, err := lg.Exists()
 			assert.ErrorIs(t, err, tt.err)
 		})
@@ -122,7 +122,7 @@ func TestLocalGit_FixDubiousOwnershipConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lg := NewLocalGit("git", tt.mockExec(), nil)
+			lg := NewLocalGit("git", tt.mockExec())
 			err := lg.FixDubiousOwnershipConfig("/test/dir")
 
 			assert.ErrorIs(t, err, tt.err)
@@ -210,7 +210,7 @@ func TestLocalGit_Status(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lg := NewLocalGit("git", tt.mock(), nil)
+			lg := NewLocalGit("git", tt.mock())
 			_, err := lg.Status(context.Background(), "/test/dir", "", tt.fixAttempts)
 
 			assert.ErrorIs(t, err, tt.expectedErr)
@@ -258,15 +258,8 @@ func TestLocalGit_GetDirContentSHA(t *testing.T) {
 			fixAttempts: 0,
 			mock: func() *mockLocalExec {
 				return &mockLocalExec{
-					runCommand: func(ctx context.Context, dir, name string, arg ...string) ([]byte, error) {
-						return []byte(
-							`100644 5cc5ccc76f0fa2674fd3b17c1b863d62eebcb853 0	Dockerfile
-  100644 261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64 0	LICENSE
-  100644 50675ea7dda5ea4d4204468eaf121681c204a717 0	Makefile
-  100644 5a48ac3289fbec053cc3016b9f1a46d7d59597d2 0	README.md`), nil
-					},
 					pipeCommand: func(ctx context.Context, dir string, cmd1 string, cmd1Args []string, cmd2 string, cmd2Args []string) ([]byte, error) {
-						return []byte("123123"), nil
+						return []byte("hash"), nil
 					},
 				}
 			},
@@ -289,7 +282,7 @@ func TestLocalGit_GetDirContentSHA(t *testing.T) {
 			fixAttempts: 1,
 			mock: func() *mockLocalExec {
 				return &mockLocalExec{
-					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+					pipeCommand: func(ctx context.Context, dir string, cmd1 string, cmd1Args []string, cmd2 string, cmd2Args []string) ([]byte, error) {
 						return nil, assert.AnError
 					},
 				}
@@ -300,7 +293,7 @@ func TestLocalGit_GetDirContentSHA(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lg := NewLocalGit("git", tt.mock(), nil)
+			lg := NewLocalGit("git", tt.mock())
 			_, err := lg.GetDirContentSHA(context.Background(), "", "/test/dir", tt.fixAttempts)
 
 			assert.ErrorIs(t, err, tt.expectedErr)
@@ -375,7 +368,7 @@ func TestLocalGit_ListUntrackedFiles(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lg := NewLocalGit("git", tt.execMock(), nil)
+			lg := NewLocalGit("git", tt.execMock())
 			files, err := lg.ListUntrackedFiles(context.Background(), "/test/dir", "/test", tt.fixAttempt)
 
 			assert.Equal(t, tt.expectedFiles, files)
