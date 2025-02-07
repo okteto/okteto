@@ -14,23 +14,19 @@
 package repository
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/bluekeyes/go-gitdiff/gitdiff"
 	"github.com/go-git/go-git/v5"
-	"github.com/okteto/okteto/pkg/ignore"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
@@ -148,20 +144,13 @@ type LocalGitInterface interface {
 
 type LocalGit struct {
 	exec    CommandExecutor
-	ignorer func(subpath string) ignore.Ignorer
 	gitPath string
 }
 
-func NewLocalGit(gitPath string, exec CommandExecutor, ignorer func(path string) ignore.Ignorer) *LocalGit {
-	if ignorer == nil {
-		ignorer = func(path string) ignore.Ignorer {
-			return ignore.Never
-		}
-	}
+func NewLocalGit(gitPath string, exec CommandExecutor) *LocalGit {
 	return &LocalGit{
 		gitPath: gitPath,
 		exec:    exec,
-		ignorer: ignorer,
 	}
 }
 
@@ -244,7 +233,7 @@ func (lg *LocalGit) ListUntrackedFiles(ctx context.Context, repoRoot, workdir st
 
 	lsFilesCmdArgs := []string{"--no-optional-locks", "ls-files", "--others", "--exclude-standard", workdir}
 
-	oktetoLog.Infof("running command: %s %s %s %s %s %s", lg.gitPath, "--no-optional-locks", "ls-files", "--others", "--exclude-standard", workdir)
+	oktetoLog.Infof("running command: %s %s %s %s %s", lg.gitPath, "--no-optional-locks", "ls-files", "--others", "--exclude-standard")
 	output, err := lg.exec.RunCommand(ctx, repoRoot, lg.gitPath, lsFilesCmdArgs...)
 	if err != nil {
 		var exitError *exec.ExitError
@@ -286,82 +275,10 @@ func (lg *LocalGit) GetDirContentSHA(ctx context.Context, gitPath, dirPath strin
 		return "", errLocalGitCannotGetCommitTooManyAttempts
 	}
 
-	handleError := func(e error) (string, error) {
-		var exitError *exec.ExitError
-		errors.As(e, &exitError)
-		if exitError != nil {
-			exitErr := string(exitError.Stderr)
-			if strings.Contains(exitErr, "detected dubious ownership in repository") {
-				e = lg.FixDubiousOwnershipConfig(gitPath)
-				if e != nil {
-					return "", errLocalGitCannotGetStatusCannotRecover
-				}
-				fixAttempt++
-				return lg.GetDirContentSHA(ctx, gitPath, dirPath, fixAttempt)
-			}
-		}
-		return "", errLocalGitCannotGetStatusCannotRecover
-	}
-
-	filesRaw, err := lg.exec.RunCommand(ctx, dirPath, lg.gitPath, "--no-optional-locks", "ls-files", "-s")
-
-	if err != nil {
-		return handleError(err)
-	}
-
-	scanner := bufio.NewScanner(bytes.NewReader(filesRaw))
-	filteredLines := []string{}
-
-	lsFilesColumnCount := 4
-
-	ignorer := lg.ignorer(dirPath)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.Fields(line)
-
-		if len(parts) < lsFilesColumnCount {
-			// if we can't parse a line, add the file to the list.
-			// It's better to over build than to over cache
-			filteredLines = append(filteredLines, line)
-		} else {
-			filename := parts[3]
-			shouldIgnore, err := ignorer.Ignore(filename)
-			if err != nil {
-				oktetoLog.Debugf("ignore error in GetDirContentSHA: %v", err)
-			}
-
-			if !shouldIgnore {
-				filteredLines = append(filteredLines, line)
-			} else {
-				oktetoLog.Debugf("skipping %v file change in GetDirContentSHA based on known ignore files", filename)
-			}
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return "", err
-	}
-
-	filteredLS := strings.Join(filteredLines, "\n")
-
+	lsFilesCmdArgs := []string{"--no-optional-locks", "ls-files", "-s", dirPath}
 	hashObjectCmdArgs := []string{"--no-optional-locks", "hash-object", "--stdin"}
-	output, err := lg.exec.RunPipeCommands(ctx, gitPath, "echo", []string{filteredLS}, lg.gitPath, hashObjectCmdArgs)
 
-	if err != nil {
-		return handleError(err)
-	}
-	return string(output), nil
-}
-
-// Diff returns the diff of the repository at the given path
-func (lg *LocalGit) Diff(ctx context.Context, gitPath, dirPath string, fixAttempt int) (string, error) {
-	if fixAttempt > 1 {
-		return "", errLocalGitCannotGetCommitTooManyAttempts
-	}
-
-	rawOutput, err := lg.exec.RunCommand(ctx, dirPath, lg.gitPath, "--no-optional-locks", "diff", "--no-color", "HEAD", ".")
-
+	output, err := lg.exec.RunPipeCommands(ctx, gitPath, lg.gitPath, lsFilesCmdArgs, lg.gitPath, hashObjectCmdArgs)
 	if err != nil {
 		var exitError *exec.ExitError
 		errors.As(err, &exitError)
@@ -378,37 +295,31 @@ func (lg *LocalGit) Diff(ctx context.Context, gitPath, dirPath string, fixAttemp
 		}
 		return "", errLocalGitCannotGetStatusCannotRecover
 	}
-
-	files, _, err := gitdiff.Parse(bytes.NewReader(rawOutput))
-	if err != nil {
-		return "", err
-	}
-
-	var diff bytes.Buffer
-
-	for _, f := range files {
-		filename := f.NewName
-		if f.IsDelete {
-			filename = f.OldName
-		}
-
-		relpath := resolveRelativePath(filepath.Join(gitPath, filename), dirPath)
-
-		shouldIgnore, err := lg.ignorer(dirPath).Ignore(relpath)
-		if err != nil {
-			oktetoLog.Debugf("ignore error in Diff: %v", err)
-		}
-		if !shouldIgnore {
-			diff.WriteString(f.String())
-		} else {
-			oktetoLog.Debugf("skipping %v file change in Diff based on known ignore files", filename)
-		}
-	}
-	return diff.String(), nil
+	return string(output), nil
 }
 
-// relpath removes dirPathToRemove from fullpath and returns the relative path
-func resolveRelativePath(absoluteFullpath string, dirPathToRemove string) string {
-	relpath := strings.TrimPrefix(absoluteFullpath, dirPathToRemove)
-	return strings.TrimPrefix(relpath, string(filepath.Separator))
+// Diff returns the diff of the repository at the given path
+func (lg *LocalGit) Diff(ctx context.Context, gitPath, dirPath string, fixAttempt int) (string, error) {
+	if fixAttempt > 1 {
+		return "", errLocalGitCannotGetCommitTooManyAttempts
+	}
+
+	output, err := lg.exec.RunCommand(ctx, gitPath, lg.gitPath, "--no-optional-locks", "diff", "--no-color", "--", "HEAD", dirPath)
+	if err != nil {
+		var exitError *exec.ExitError
+		errors.As(err, &exitError)
+		if exitError != nil {
+			exitErr := string(exitError.Stderr)
+			if strings.Contains(exitErr, "detected dubious ownership in repository") {
+				err = lg.FixDubiousOwnershipConfig(gitPath)
+				if err != nil {
+					return "", errLocalGitCannotGetStatusCannotRecover
+				}
+				fixAttempt++
+				return lg.GetDirContentSHA(ctx, gitPath, dirPath, fixAttempt)
+			}
+		}
+		return "", errLocalGitCannotGetStatusCannotRecover
+	}
+	return string(output), nil
 }
