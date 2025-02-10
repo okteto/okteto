@@ -156,6 +156,10 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(ob.OktetoContext))
 
+	if err := buildkitWaiter.WaitUntilIsUp(ctx); err != nil {
+		return err
+	}
+
 	optBuilder, err := buildkit.NewSolveOptBuilder(buildkitClientFactory, reg, ob.OktetoContext, ob.Fs, ioCtrl)
 	if err != nil {
 		return err
