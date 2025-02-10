@@ -42,6 +42,27 @@ type TestMetadata struct {
 	StagesCount int
 }
 
+// SingleTestMetadata contains the metadata of a single test execution
+type SingleTestMetadata struct {
+	// DevenvName is the name of the development environment where the test was run
+	DevenvName string `json:"devenv_name"`
+
+	// Namespace is the namespace where the test was run
+	Namespace string `json:"namespace"`
+
+	// TestName is the name of the test that was run
+	TestName string `json:"test_name"`
+
+	// Repository is the repository where the test was run
+	Repository string `json:"repository"`
+
+	// Duration is the duration of the test execution
+	Duration time.Duration `json:"duration"`
+
+	// Success is whether the test succeeded or not
+	Success bool `json:"success"`
+}
+
 // TrackTest sends a tracking event to mixpanel when the user runs test through the command okteto test
 func (a *Tracker) TrackTest(metadata TestMetadata) {
 	props := map[string]any{

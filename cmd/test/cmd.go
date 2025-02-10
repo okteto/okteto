@@ -45,6 +45,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/remote"
+	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/afero"
@@ -69,7 +70,11 @@ type builder interface {
 	Build(ctx context.Context, options *types.BuildOptions) error
 }
 
-func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at *analytics.Tracker) *cobra.Command {
+type insightsTracker interface {
+	TrackTest(ctx context.Context, meta *analytics.SingleTestMetadata)
+}
+
+func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at *analytics.Tracker, insights insightsTracker) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
 		Use:   "test [testName...]",
@@ -96,7 +101,7 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 
 			go func() {
 				startTime := time.Now()
-				metadata, err := doRun(ctx, testContainers, options, ioCtrl, k8sLogger, &ProxyTracker{at})
+				metadata, err := doRun(ctx, testContainers, options, ioCtrl, k8sLogger, &ProxyTracker{at}, insights)
 				metadata.Err = err
 				metadata.Duration = time.Since(startTime)
 				at.TrackTest(metadata)
@@ -128,7 +133,7 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 	return cmd
 }
 
-func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, tracker *ProxyTracker) (analytics.TestMetadata, error) {
+func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, tracker *ProxyTracker, at insightsTracker) (analytics.TestMetadata, error) {
 	fs := afero.NewOsFs()
 
 	ctxOpts := &contextCMD.Options{
@@ -309,6 +314,17 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		WasBuilt:    wasBuilt,
 	}
 
+	testAnalytics := make([]*analytics.SingleTestMetadata, 0)
+
+	// send all events appended on each test
+
+	defer func([]*analytics.SingleTestMetadata) {
+		for _, meta := range testAnalytics {
+			m := meta
+			at.TrackTest(ctx, m)
+		}
+	}(testAnalytics)
+
 	for _, name := range testServices {
 		test := manifest.Test[name]
 
@@ -378,7 +394,18 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		}
 
 		ioCtrl.Out().Infof("Executing test container '%s'", name)
-		if err := runner.Run(ctx, params); err != nil {
+		testMetadata := analytics.SingleTestMetadata{
+			DevenvName: manifest.Name,
+			TestName:   name,
+			Namespace:  okteto.GetContext().Namespace,
+			Repository: repository.NewRepository(manifest.ManifestPath).GetAnonymizedRepo(),
+		}
+		testStartTime := time.Now()
+		err = runner.Run(ctx, params)
+		testMetadata.Duration = time.Since(testStartTime)
+		testMetadata.Success = err == nil
+		testAnalytics = append(testAnalytics, &testMetadata)
+		if err != nil {
 			return metadata, err
 		}
 		oktetoLog.Success("Test container '%s' passed", name)
