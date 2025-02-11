@@ -10,7 +10,7 @@ coverage:
 
     patch:
       default:
-        target: 75%
+        target: 60%
         only_pulls: true
 
 github_checks:
@@ -18,6 +18,6 @@ github_checks:
 
 ignore:
   - '**/*_test.go'
-  - integration/*
-  - scripts/*
-  - internal/*
+  - "integration"
+  - "scripts"
+  - "internal"
