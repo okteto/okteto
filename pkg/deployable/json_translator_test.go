@@ -82,7 +82,7 @@ func TestJSONTranslatorTranslateDeployment(t *testing.T) {
 			},
 		},
 	}
-	translatorName := "test-deployer"
+	translatorName := "test-deployer1"
 	out := runTranslatorTest(t, input, translatorName, &fakeDivertDriver{})
 
 	// Verify top-level metadata.

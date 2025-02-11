@@ -22,10 +22,6 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-var (
-	ph = &proxyHandler{}
-)
-
 type fakeKubeConfig struct {
 	config      *rest.Config
 	errOnModify error
