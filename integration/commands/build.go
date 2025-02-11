@@ -80,9 +80,11 @@ func GetOktetoBuildCmd(oktetoPath string, buildOptions *BuildOptions) *exec.Cmd 
 
 // ExecOktetoBuildCmd runs an okteto build command
 func ExecOktetoBuildCmd(cmd *exec.Cmd) error {
-	o, err := cmd.CombinedOutput()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
 	if err != nil {
-		return fmt.Errorf("okteto build failed: \nerror: %w \noutput:\n %s", err, string(o))
+		return fmt.Errorf("okteto build failed: \nerror: %w", err)
 	}
 	return nil
 }

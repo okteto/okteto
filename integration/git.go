@@ -56,13 +56,20 @@ func DeleteGitRepo(path string) error {
 	return nil
 }
 
-func GitInit(path string) error {
+func GitInit(path string, withEmptycommit bool) error {
 	log.Printf("git init %s", path)
 	cmd := exec.Command("git", "init")
 	cmd.Dir = path
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("git init failed: %s - %w", string(o), err)
+	}
+	if withEmptycommit {
+		commitCmd := exec.Command("git", "commit", "-m", "Initial empty commit", "--allow-empty")
+		commitCmd.Dir = path
+		if o, err := commitCmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("git commit failed: %s - %w", string(o), err)
+		}
 	}
 	return nil
 }

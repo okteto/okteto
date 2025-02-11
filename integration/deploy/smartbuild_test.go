@@ -63,7 +63,7 @@ func TestDeployWithSmartBuildCloneCustomImage(t *testing.T) {
 
 	require.NoError(t, createAppDockerfile(dir))
 	require.NoError(t, createOktetoManifestWithCustomImage(dir))
-	require.NoError(t, integration.GitInit(dir))
+	require.NoError(t, integration.GitInit(dir, true))
 
 	testNamespace := integration.GetTestNamespace(t.Name())
 	require.NoError(t, createK8sManifestWithCache(dir, fmt.Sprintf("%s/%s/test-app:1.0.0", okteto.GetContext().Registry, testNamespace)))
