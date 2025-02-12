@@ -65,7 +65,7 @@ func GitInit(path string, withEmptycommit bool) error {
 		return fmt.Errorf("git init failed: %s - %w", string(o), err)
 	}
 	if withEmptycommit {
-		configCmd := exec.Command("sh", "-c", `git config --global user.name "oktetobot" && git config --global user.email "test@okteto.com"`)
+		configCmd := exec.Command("sh", "-c", `git config user.name "oktetobot" && git config user.email "test@okteto.com"`)
 		configCmd.Dir = path
 		if o, err := configCmd.CombinedOutput(); err != nil {
 			return fmt.Errorf("git config command failed: %s - %w", string(o), err)
