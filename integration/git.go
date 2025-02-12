@@ -65,7 +65,7 @@ func GitInit(path string, withEmptycommit bool) error {
 		return fmt.Errorf("git init failed: %s - %w", string(o), err)
 	}
 	if withEmptycommit {
-		commitCmd := exec.Command("git", "commit", "-m", "Initial empty commit", "--allow-empty")
+		commitCmd := exec.Command("git", "commit", "-m", "Initial empty commit", "--allow-empty", "--author", "oktetobot <test@okteto.com>")
 		commitCmd.Dir = path
 		if o, err := commitCmd.CombinedOutput(); err != nil {
 			return fmt.Errorf("git commit failed: %s - %w", string(o), err)
