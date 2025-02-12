@@ -32,7 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 const modifiedHostName = "modified.test.hostname"
@@ -376,12 +376,12 @@ func Test_translateStatefulSet(t *testing.T) {
 	}
 	volumeClaimTemplateSpec := apiv1.PersistentVolumeClaimSpec{
 		AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
-		Resources: apiv1.ResourceRequirements{
+		Resources: apiv1.VolumeResourceRequirements{
 			Requests: apiv1.ResourceList{
 				"storage": resource.MustParse("20Gi"),
 			},
 		},
-		StorageClassName: pointer.String("class-name"),
+		StorageClassName: ptr.To("class-name"),
 	}
 	if !reflect.DeepEqual(vct.Spec, volumeClaimTemplateSpec) {
 		t.Errorf("Wrong statefulset volume claim template: '%v'", vct.Spec)

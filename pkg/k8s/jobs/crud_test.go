@@ -23,7 +23,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestCreate(t *testing.T) {
@@ -170,7 +170,7 @@ func TestIsSuccedded(t *testing.T) {
 			Namespace: "test",
 		},
 		Spec: batchv1.JobSpec{
-			Completions: pointer.Int32(1),
+			Completions: ptr.To(int32(1)),
 		},
 		Status: batchv1.JobStatus{
 			Succeeded: 1,
@@ -182,7 +182,7 @@ func TestIsSuccedded(t *testing.T) {
 			Namespace: "test",
 		},
 		Spec: batchv1.JobSpec{
-			Completions: pointer.Int32(2),
+			Completions: ptr.To(int32(2)),
 		},
 		Status: batchv1.JobStatus{
 			Succeeded: 1,
@@ -208,8 +208,8 @@ func TestIsFailed(t *testing.T) {
 			Namespace: "test",
 		},
 		Spec: batchv1.JobSpec{
-			Completions:  pointer.Int32(1),
-			BackoffLimit: pointer.Int32(0),
+			Completions:  ptr.To(int32(1)),
+			BackoffLimit: ptr.To(int32(0)),
 		},
 		Status: batchv1.JobStatus{
 			Failed: 1,
@@ -221,8 +221,8 @@ func TestIsFailed(t *testing.T) {
 			Namespace: "test",
 		},
 		Spec: batchv1.JobSpec{
-			Completions:  pointer.Int32(2),
-			BackoffLimit: pointer.Int32(0),
+			Completions:  ptr.To(int32(2)),
+			BackoffLimit: ptr.To(int32(0)),
 		},
 		Status: batchv1.JobStatus{
 			Failed: 0,

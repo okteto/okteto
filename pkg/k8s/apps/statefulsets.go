@@ -29,7 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 type StatefulSetApp struct {
@@ -60,7 +60,7 @@ func (i *StatefulSetApp) Replicas() int32 {
 }
 
 func (i *StatefulSetApp) SetReplicas(n int32) {
-	i.sfs.Spec.Replicas = pointer.Int32(n)
+	i.sfs.Spec.Replicas = ptr.To(n)
 }
 
 func (i *StatefulSetApp) TemplateObjectMeta() metav1.ObjectMeta {

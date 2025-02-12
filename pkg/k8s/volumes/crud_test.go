@@ -43,7 +43,7 @@ func Test_checkPVCValues(t *testing.T) {
 			pvc: &apiv1.PersistentVolumeClaim{
 				Spec: apiv1.PersistentVolumeClaimSpec{
 					StorageClassName: &className,
-					Resources: apiv1.ResourceRequirements{
+					Resources: apiv1.VolumeResourceRequirements{
 						Requests: apiv1.ResourceList{
 							"storage": resource.MustParse("20Gi"),
 						},
@@ -63,7 +63,7 @@ func Test_checkPVCValues(t *testing.T) {
 			name: "ok-without-storage-class",
 			pvc: &apiv1.PersistentVolumeClaim{
 				Spec: apiv1.PersistentVolumeClaimSpec{
-					Resources: apiv1.ResourceRequirements{
+					Resources: apiv1.VolumeResourceRequirements{
 						Requests: apiv1.ResourceList{
 							"storage": resource.MustParse("20Gi"),
 						},
@@ -82,7 +82,7 @@ func Test_checkPVCValues(t *testing.T) {
 			pvc: &apiv1.PersistentVolumeClaim{
 				Spec: apiv1.PersistentVolumeClaimSpec{
 					StorageClassName: &className,
-					Resources: apiv1.ResourceRequirements{
+					Resources: apiv1.VolumeResourceRequirements{
 						Requests: apiv1.ResourceList{
 							"storage": resource.MustParse("20Gi"),
 						},
@@ -101,7 +101,7 @@ func Test_checkPVCValues(t *testing.T) {
 			name: "pvc-without-storage",
 			pvc: &apiv1.PersistentVolumeClaim{
 				Spec: apiv1.PersistentVolumeClaimSpec{
-					Resources: apiv1.ResourceRequirements{
+					Resources: apiv1.VolumeResourceRequirements{
 						Requests: apiv1.ResourceList{
 							"cpu": resource.MustParse("1"),
 						},
@@ -121,7 +121,7 @@ func Test_checkPVCValues(t *testing.T) {
 			pvc: &apiv1.PersistentVolumeClaim{
 				Spec: apiv1.PersistentVolumeClaimSpec{
 					StorageClassName: &className,
-					Resources: apiv1.ResourceRequirements{
+					Resources: apiv1.VolumeResourceRequirements{
 						Requests: apiv1.ResourceList{
 							"storage": resource.MustParse("20Gi"),
 						},
@@ -141,7 +141,7 @@ func Test_checkPVCValues(t *testing.T) {
 			pvc: &apiv1.PersistentVolumeClaim{
 				Spec: apiv1.PersistentVolumeClaimSpec{
 					StorageClassName: &className,
-					Resources: apiv1.ResourceRequirements{
+					Resources: apiv1.VolumeResourceRequirements{
 						Requests: apiv1.ResourceList{
 							"storage": resource.MustParse("20Gi"),
 						},
@@ -162,7 +162,7 @@ func Test_checkPVCValues(t *testing.T) {
 				Spec: apiv1.PersistentVolumeClaimSpec{
 					StorageClassName: &className,
 					AccessModes:      []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteMany},
-					Resources: apiv1.ResourceRequirements{
+					Resources: apiv1.VolumeResourceRequirements{
 						Requests: apiv1.ResourceList{
 							"storage": resource.MustParse("10Gi"),
 						},
@@ -184,7 +184,7 @@ func Test_checkPVCValues(t *testing.T) {
 				Spec: apiv1.PersistentVolumeClaimSpec{
 					StorageClassName: &className,
 					AccessModes:      []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteMany},
-					Resources: apiv1.ResourceRequirements{
+					Resources: apiv1.VolumeResourceRequirements{
 						Requests: apiv1.ResourceList{
 							"storage": resource.MustParse("10Gi"),
 						},
@@ -205,7 +205,7 @@ func Test_checkPVCValues(t *testing.T) {
 				Spec: apiv1.PersistentVolumeClaimSpec{
 					StorageClassName: &className,
 					VolumeMode:       &blockVolumeMode,
-					Resources: apiv1.ResourceRequirements{
+					Resources: apiv1.VolumeResourceRequirements{
 						Requests: apiv1.ResourceList{
 							"storage": resource.MustParse("10Gi"),
 						},
@@ -227,7 +227,7 @@ func Test_checkPVCValues(t *testing.T) {
 				Spec: apiv1.PersistentVolumeClaimSpec{
 					StorageClassName: &className,
 					VolumeMode:       &blockVolumeMode,
-					Resources: apiv1.ResourceRequirements{
+					Resources: apiv1.VolumeResourceRequirements{
 						Requests: apiv1.ResourceList{
 							"storage": resource.MustParse("10Gi"),
 						},
@@ -374,7 +374,7 @@ func TestCreateForDev(t *testing.T) {
 			existentPvc := &apiv1.PersistentVolumeClaim{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-okteto"},
 				Spec: apiv1.PersistentVolumeClaimSpec{
-					Resources: apiv1.ResourceRequirements{
+					Resources: apiv1.VolumeResourceRequirements{
 						Requests: apiv1.ResourceList{
 							"storage": resource.MustParse(test.existentPvcStorage),
 						},

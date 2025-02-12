@@ -31,7 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 type DeploymentApp struct {
@@ -62,7 +62,7 @@ func (i *DeploymentApp) Replicas() int32 {
 }
 
 func (i *DeploymentApp) SetReplicas(n int32) {
-	i.d.Spec.Replicas = pointer.Int32(n)
+	i.d.Spec.Replicas = ptr.To(n)
 }
 
 func (i *DeploymentApp) TemplateObjectMeta() metav1.ObjectMeta {

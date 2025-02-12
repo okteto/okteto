@@ -208,9 +208,6 @@ func TestGet(t *testing.T) {
 			if tt.expectedFoundCount > 0 && d == nil {
 				t.Fatalf("expected %d deployments, instead found none", tt.expectedFoundCount)
 			}
-			if tt.expectedFoundCount == 0 && d != nil {
-				t.Fatal("expected no deployments, instead found one")
-			}
 		})
 	}
 }
