@@ -185,9 +185,6 @@ const (
 	// OktetoSkipContextTestEnvVar if set skips the context test
 	OktetoSkipContextTestEnvVar = "OKTETO_SKIP_CONTEXT_TEST"
 
-	// OktetoAutoDeployEnvVar if set the application will be deployed while running okteto up
-	OktetoAutoDeployEnvVar = "OKTETO_AUTODEPLOY"
-
 	// OktetoAppsSubdomainEnvVar defines which is the subdomain for urls
 	OktetoAppsSubdomainEnvVar = "OKTETO_APPS_SUBDOMAIN"
 
