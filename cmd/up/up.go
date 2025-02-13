@@ -30,12 +30,9 @@ import (
 	oargs "github.com/okteto/okteto/cmd/args"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
-	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/namespace"
-	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
@@ -256,15 +253,9 @@ okteto up api -- echo this is a test
 				return fmt.Errorf("failed to load k8s client: %w", err)
 			}
 
-			if okteto.GetContext().IsOkteto && upOptions.Deploy || !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Namespace, k8sClient) {
-				err := up.deployApp(ctx, ioCtrl, k8sLogger)
-
-				// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
-				if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands) {
-					return err
-				}
-			} else if okteto.GetContext().IsOkteto && !upOptions.Deploy && pipeline.IsDeployed(ctx, up.Manifest.Name, okteto.GetContext().Namespace, k8sClient) {
-				oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy' or 'okteto up --deploy'", up.Manifest.Name)
+			devEnvDeployer := NewDevEnvDeployerManager(up, upOptions, okteto.GetContext(), ioCtrl, k8sLogger)
+			if err := devEnvDeployer.DeployIfNeeded(ctx); err != nil {
+				return err
 			}
 
 			devCommandParser := oargs.NewDevCommandArgParser(oargs.NewManifestDevLister(), ioCtrl, false)
@@ -346,10 +337,6 @@ okteto up api -- echo this is a test
 
 			if err := setSyncDefaultsByDevMode(dev, up.getSyncTempDir); err != nil {
 				return err
-			}
-
-			if _, ok := os.LookupEnv(model.OktetoAutoDeployEnvVar); ok {
-				upOptions.Deploy = true
 			}
 
 			if err = up.start(); err != nil {
@@ -465,62 +452,6 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars env.Environment, commandEnvVaria
 	}
 
 	return &overridedEnvVars, nil
-}
-
-func (up *upContext) deployApp(ctx context.Context, ioCtrl *io.Controller, k8slogger *io.K8sLogger) error {
-	k8sProvider := okteto.NewK8sClientProviderWithLogger(k8slogger)
-	pc, err := pipelineCMD.NewCommand()
-	if err != nil {
-		return err
-	}
-	c := &deploy.Command{
-		GetManifest:       model.GetManifestV2,
-		GetDeployer:       deploy.GetDeployer,
-		K8sClientProvider: k8sProvider,
-		Builder:           up.builder,
-		Fs:                up.Fs,
-		CfgMapHandler:     deploy.NewConfigmapHandler(k8sProvider, k8slogger),
-		PipelineCMD:       pc,
-		DeployWaiter:      deploy.NewDeployWaiter(k8sProvider, k8slogger),
-		EndpointGetter:    deploy.NewEndpointGetter,
-		AnalyticsTracker:  up.analyticsTracker,
-		IoCtrl:            ioCtrl,
-	}
-
-	startTime := time.Now()
-	err = c.Run(ctx, &deploy.Options{
-		Name:             up.Manifest.Name,
-		Namespace:        up.Namespace,
-		ManifestPathFlag: up.Options.ManifestPathFlag,
-		ManifestPath:     up.Options.ManifestPath,
-		Timeout:          5 * time.Minute,
-		NoBuild:          false,
-	})
-	up.analyticsMeta.HasRunDeploy()
-
-	isRemote := false
-	if up.Manifest.Deploy != nil {
-		isRemote = up.Manifest.Deploy.Image != ""
-	}
-
-	// We keep DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar for backward compatibility in case an old version of the backend
-	// is being used
-	isPreview := os.Getenv(model.DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar) == "true" ||
-		os.Getenv(constants.OktetoIsPreviewEnvVar) == "true"
-	// tracking deploy either its been successful or not
-	c.AnalyticsTracker.TrackDeploy(analytics.DeployMetadata{
-		Success:                err == nil,
-		IsOktetoRepo:           utils.IsOktetoRepo(),
-		Duration:               time.Since(startTime),
-		PipelineType:           up.Manifest.Type,
-		DeployType:             "automatic",
-		IsPreview:              isPreview,
-		HasDependenciesSection: up.Manifest.HasDependenciesSection(),
-		HasBuildSection:        up.Manifest.HasBuildSection(),
-		Err:                    err,
-		IsRemote:               isRemote,
-	})
-	return err
 }
 
 func (up *upContext) start() error {
