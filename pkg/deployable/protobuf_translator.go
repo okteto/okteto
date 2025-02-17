@@ -18,8 +18,13 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/divert"
+	"github.com/okteto/okteto/pkg/k8s/labels"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/protobuf"
@@ -27,17 +32,19 @@ import (
 )
 
 type ProtobufTranslator struct {
-	b          []byte
-	serializer *protobuf.Serializer
-	name       string
+	b            []byte
+	serializer   *protobuf.Serializer
+	DivertDriver divert.Driver
+	name         string
 }
 
-func NewProtobufTranslator(b []byte, name string) *ProtobufTranslator {
+func NewProtobufTranslator(b []byte, name string, divertDriver divert.Driver) *ProtobufTranslator {
 	protobufSerializer := protobuf.NewSerializer(scheme.Scheme, scheme.Scheme)
 	return &ProtobufTranslator{
-		b:          b,
-		name:       name,
-		serializer: protobufSerializer,
+		b:            b,
+		name:         name,
+		serializer:   protobufSerializer,
+		DivertDriver: divertDriver,
 	}
 }
 
@@ -55,6 +62,38 @@ func (p *ProtobufTranslator) Translate() ([]byte, error) {
 	var buf bytes.Buffer
 	if err := p.serializer.Encode(obj, &buf); err != nil {
 		return nil, fmt.Errorf("could not encode resource: %w", err)
+	}
+
+	switch obj.GetObjectKind().GroupVersionKind().Kind {
+	case "Deployment":
+		if err := p.translateDeploymentSpec(obj); err != nil {
+			return nil, err
+		}
+	case "StatefulSet":
+		if err := p.translateStatefulSetSpec(obj); err != nil {
+			return nil, err
+		}
+	case "Job":
+		if err := p.translateJobSpec(obj); err != nil {
+			return nil, err
+		}
+	case "CronJob":
+		if err := p.translateCronJobSpec(obj); err != nil {
+			return nil, err
+		}
+	case "DaemonSet":
+		if err := p.translateDaemonSetSpec(obj); err != nil {
+			return nil, err
+		}
+	case "ReplicationController":
+		if err := p.translateReplicationControllerSpec(obj); err != nil {
+			return nil, err
+		}
+	case "ReplicaSet":
+		if err := p.translateReplicaSetSpec(obj); err != nil {
+			return nil, err
+		}
+
 	}
 
 	return buf.Bytes(), nil
@@ -85,4 +124,102 @@ func (p *ProtobufTranslator) translateMetadata(obj runtime.Object) error {
 	metaObj.SetAnnotations(annotations)
 
 	return nil
+}
+
+func (p *ProtobufTranslator) translateDeploymentSpec(obj runtime.Object) error {
+	deployment, ok := obj.(*appsv1.Deployment)
+	if !ok {
+		return fmt.Errorf("expected *appsv1.Deployment, got %T", obj)
+	}
+
+	labels.SetInMetadata(&deployment.Spec.Template.ObjectMeta, model.DeployedByLabel, p.name)
+
+	deployment.Spec.Template.Spec = p.applyDivertToPod(deployment.Spec.Template.Spec)
+
+	return nil
+}
+
+func (p *ProtobufTranslator) translateStatefulSetSpec(obj runtime.Object) error {
+	sts, ok := obj.(*appsv1.StatefulSet)
+	if !ok {
+		return fmt.Errorf("expected *appsv1.Statefulset, got %T", obj)
+	}
+
+	labels.SetInMetadata(&sts.Spec.Template.ObjectMeta, model.DeployedByLabel, p.name)
+
+	sts.Spec.Template.Spec = p.applyDivertToPod(sts.Spec.Template.Spec)
+
+	return nil
+}
+
+func (p *ProtobufTranslator) translateJobSpec(obj runtime.Object) error {
+	job, ok := obj.(*batchv1.Job)
+	if !ok {
+		return fmt.Errorf("expected *batchv1.Job, got %T", obj)
+	}
+
+	labels.SetInMetadata(&job.Spec.Template.ObjectMeta, model.DeployedByLabel, p.name)
+
+	job.Spec.Template.Spec = p.applyDivertToPod(job.Spec.Template.Spec)
+
+	return nil
+}
+
+func (p *ProtobufTranslator) translateCronJobSpec(obj runtime.Object) error {
+	cronJob, ok := obj.(*batchv1.CronJob)
+	if !ok {
+		return fmt.Errorf("expected *batchv1.CronJob, got %T", obj)
+	}
+
+	labels.SetInMetadata(&cronJob.Spec.JobTemplate.Spec.Template.ObjectMeta, model.DeployedByLabel, p.name)
+
+	cronJob.Spec.JobTemplate.Spec.Template.Spec = p.applyDivertToPod(cronJob.Spec.JobTemplate.Spec.Template.Spec)
+
+	return nil
+}
+
+func (p *ProtobufTranslator) translateDaemonSetSpec(obj runtime.Object) error {
+	daemonSet, ok := obj.(*appsv1.DaemonSet)
+	if !ok {
+		return fmt.Errorf("expected *appsv1.DaemonSet, got %T", obj)
+	}
+
+	labels.SetInMetadata(&daemonSet.Spec.Template.ObjectMeta, model.DeployedByLabel, p.name)
+
+	daemonSet.Spec.Template.Spec = p.applyDivertToPod(daemonSet.Spec.Template.Spec)
+
+	return nil
+}
+
+func (p *ProtobufTranslator) translateReplicationControllerSpec(obj runtime.Object) error {
+	replicationController, ok := obj.(*apiv1.ReplicationController)
+	if !ok {
+		return fmt.Errorf("expected *apiv1.ReplicationController, got %T", obj)
+	}
+
+	labels.SetInMetadata(&replicationController.Spec.Template.ObjectMeta, model.DeployedByLabel, p.name)
+
+	replicationController.Spec.Template.Spec = p.applyDivertToPod(replicationController.Spec.Template.Spec)
+
+	return nil
+}
+
+func (p *ProtobufTranslator) translateReplicaSetSpec(obj runtime.Object) error {
+	replicaSet, ok := obj.(*appsv1.ReplicaSet)
+	if !ok {
+		return fmt.Errorf("expected *appsv1.ReplicaSet, got %T", obj)
+	}
+
+	labels.SetInMetadata(&replicaSet.Spec.Template.ObjectMeta, model.DeployedByLabel, p.name)
+
+	replicaSet.Spec.Template.Spec = p.applyDivertToPod(replicaSet.Spec.Template.Spec)
+
+	return nil
+}
+
+func (p *ProtobufTranslator) applyDivertToPod(podSpec apiv1.PodSpec) apiv1.PodSpec {
+	if p.DivertDriver == nil {
+		return podSpec
+	}
+	return p.DivertDriver.UpdatePod(podSpec)
 }

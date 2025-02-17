@@ -245,7 +245,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 			if r.Header.Get("Content-Type") == "application/json" {
 				translator = NewJSONTranslator(b, ph.Name, ph.DivertDriver)
 			} else {
-				translator = NewProtobufTranslator(b, ph.Name)
+				translator = NewProtobufTranslator(b, ph.Name, ph.DivertDriver)
 			}
 			b, err = translator.Translate()
 			if err != nil {
