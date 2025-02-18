@@ -59,7 +59,7 @@ type proxyHandler struct {
 }
 
 type translator interface {
-	Translate() ([]byte, error)
+	Translate([]byte) ([]byte, error)
 }
 
 // NewProxy creates a new proxy
@@ -243,11 +243,11 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 			}
 			var translator translator
 			if r.Header.Get("Content-Type") == "application/json" {
-				translator = NewJSONTranslator(b, ph.Name, ph.DivertDriver)
+				translator = newJSONTranslator(ph.Name, ph.DivertDriver)
 			} else {
-				translator = NewProtobufTranslator(b, ph.Name, ph.DivertDriver)
+				translator = newProtobufTranslator(ph.Name, ph.DivertDriver)
 			}
-			b, err = translator.Translate()
+			b, err = translator.Translate(b)
 			if err != nil {
 				oktetoLog.Info(err)
 				rw.WriteHeader(http.StatusInternalServerError)

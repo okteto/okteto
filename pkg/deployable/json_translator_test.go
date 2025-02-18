@@ -54,8 +54,8 @@ func (f *fakeDivertDriver) Destroy(ctx context.Context) error {
 func runTranslatorTest(t *testing.T, input interface{}, translatorName string, dDriver divert.Driver) map[string]json.RawMessage {
 	b, err := json.Marshal(input)
 	assert.NoError(t, err, "failed to marshal input")
-	translator := NewJSONTranslator(b, translatorName, dDriver)
-	outBytes, err := translator.Translate()
+	translator := newJSONTranslator(translatorName, dDriver)
+	outBytes, err := translator.Translate(b)
 	assert.NoError(t, err, "Translate returned error")
 	var out map[string]json.RawMessage
 	err = json.Unmarshal(outBytes, &out)
@@ -423,8 +423,8 @@ func TestJSONTranslatorMissingMetadata(t *testing.T) {
 	}
 	b, err := json.Marshal(input)
 	assert.NoError(t, err, "failed to marshal input without metadata")
-	translator := NewJSONTranslator(b, "test-deployer", nil)
-	_, err = translator.Translate()
+	translator := newJSONTranslator("test-deployer", nil)
+	_, err = translator.Translate(b)
 	assert.Error(t, err, "expected an error when metadata is missing")
 	assert.Equal(t, "request body doesn't have metadata field", err.Error(), "unexpected error message")
 }

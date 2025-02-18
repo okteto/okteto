@@ -69,8 +69,8 @@ func TestProtobufTranslator_Translate_Success(t *testing.T) {
 	inputBytes := buf.Bytes()
 
 	translatorName := "test-deployer"
-	translator := NewProtobufTranslator(inputBytes, translatorName, nil)
-	outputBytes, err := translator.Translate()
+	translator := newProtobufTranslator(translatorName, nil)
+	outputBytes, err := translator.Translate(inputBytes)
 	require.NoError(t, err, "Translate returned an error")
 	require.NotNil(t, outputBytes, "expected non-nil output bytes")
 
@@ -90,14 +90,14 @@ func TestProtobufTranslator_Translate_Success(t *testing.T) {
 
 func TestProtobufTranslator_InvalidInput(t *testing.T) {
 	invalidBytes := []byte("this is not valid protobuf data")
-	translator := NewProtobufTranslator(invalidBytes, "test-deployer", nil)
-	outputBytes, err := translator.Translate()
+	translator := newProtobufTranslator("test-deployer", nil)
+	outputBytes, err := translator.Translate(invalidBytes)
 	assert.Error(t, err, "Translate should not return an error for invalid input")
 	assert.Nil(t, outputBytes, "expected output bytes to be nil for invalid input")
 }
 
 func TestProtobufTranslator_translateMetadata_NoMetadata(t *testing.T) {
-	translator := NewProtobufTranslator(nil, "test-deployer", nil)
+	translator := newProtobufTranslator("test-deployer", nil)
 	obj := &noMetaObject{}
 	err := translator.translateMetadata(obj)
 	assert.Error(t, err, "expected error when object has no metadata")
@@ -130,9 +130,9 @@ func TestTranslateDeploymentSpec(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			translator := &ProtobufTranslator{
+			translator := &protobufTranslator{
 				name:         "test-name",
-				DivertDriver: &fakeDivertDriver{},
+				divertDriver: &fakeDivertDriver{},
 			}
 
 			err := translator.translateDeploymentSpec(tc.obj)
@@ -180,9 +180,9 @@ func TestTranslateStatefulSetSpec(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			translator := &ProtobufTranslator{
+			translator := &protobufTranslator{
 				name:         "test-name",
-				DivertDriver: &fakeDivertDriver{},
+				divertDriver: &fakeDivertDriver{},
 			}
 
 			err := translator.translateStatefulSetSpec(tc.obj)
@@ -230,9 +230,9 @@ func TestTranslateJobSpec(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			translator := &ProtobufTranslator{
+			translator := &protobufTranslator{
 				name:         "test-name",
-				DivertDriver: &fakeDivertDriver{},
+				divertDriver: &fakeDivertDriver{},
 			}
 
 			err := translator.translateJobSpec(tc.obj)
@@ -284,9 +284,9 @@ func TestTranslateCronJobSpec(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			translator := &ProtobufTranslator{
+			translator := &protobufTranslator{
 				name:         "test-name",
-				DivertDriver: &fakeDivertDriver{},
+				divertDriver: &fakeDivertDriver{},
 			}
 
 			err := translator.translateCronJobSpec(tc.obj)
@@ -334,9 +334,9 @@ func TestTranslateDaemonSetSpec(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			translator := &ProtobufTranslator{
+			translator := &protobufTranslator{
 				name:         "test-name",
-				DivertDriver: &fakeDivertDriver{},
+				divertDriver: &fakeDivertDriver{},
 			}
 
 			err := translator.translateDaemonSetSpec(tc.obj)
@@ -384,9 +384,9 @@ func TestTranslateReplicationControllerSpec(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			translator := &ProtobufTranslator{
+			translator := &protobufTranslator{
 				name:         "test-name",
-				DivertDriver: &fakeDivertDriver{},
+				divertDriver: &fakeDivertDriver{},
 			}
 
 			err := translator.translateReplicationControllerSpec(tc.obj)
@@ -434,9 +434,9 @@ func TestTranslateReplicaSetSpec(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			translator := &ProtobufTranslator{
+			translator := &protobufTranslator{
 				name:         "test-name",
-				DivertDriver: &fakeDivertDriver{},
+				divertDriver: &fakeDivertDriver{},
 			}
 
 			err := translator.translateReplicaSetSpec(tc.obj)

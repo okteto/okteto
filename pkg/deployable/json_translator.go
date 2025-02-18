@@ -29,23 +29,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type JSONTranslator struct {
-	b            []byte
+type jsonTranslator struct {
 	name         string
-	DivertDriver divert.Driver
+	divertDriver divert.Driver
 }
 
-func NewJSONTranslator(b []byte, name string, divertDriver divert.Driver) *JSONTranslator {
-	return &JSONTranslator{
-		b:            b,
+func newJSONTranslator(name string, divertDriver divert.Driver) *jsonTranslator {
+	return &jsonTranslator{
 		name:         name,
-		DivertDriver: divertDriver,
+		divertDriver: divertDriver,
 	}
 }
 
-func (j *JSONTranslator) Translate() ([]byte, error) {
+func (j *jsonTranslator) Translate(b []byte) ([]byte, error) {
 	var body map[string]json.RawMessage
-	if err := json.Unmarshal(j.b, &body); err != nil {
+	if err := json.Unmarshal(b, &body); err != nil {
 		oktetoLog.Infof("error unmarshalling resource body on proxy: %s", err.Error())
 		return nil, nil
 	}
@@ -55,7 +53,7 @@ func (j *JSONTranslator) Translate() ([]byte, error) {
 	}
 
 	var typeMeta metav1.TypeMeta
-	if err := json.Unmarshal(j.b, &typeMeta); err != nil {
+	if err := json.Unmarshal(b, &typeMeta); err != nil {
 		oktetoLog.Infof("error unmarshalling typemeta on proxy: %s", err.Error())
 		return nil, nil
 	}
@@ -98,7 +96,7 @@ func (j *JSONTranslator) Translate() ([]byte, error) {
 	return json.Marshal(body)
 }
 
-func (j *JSONTranslator) translateMetadata(body map[string]json.RawMessage) error {
+func (j *jsonTranslator) translateMetadata(body map[string]json.RawMessage) error {
 	m, ok := body["metadata"]
 	if !ok {
 		return fmt.Errorf("request body doesn't have metadata field")
@@ -129,7 +127,7 @@ func (j *JSONTranslator) translateMetadata(body map[string]json.RawMessage) erro
 	return nil
 }
 
-func (j *JSONTranslator) translateDeploymentSpec(body map[string]json.RawMessage) error {
+func (j *jsonTranslator) translateDeploymentSpec(body map[string]json.RawMessage) error {
 	var spec appsv1.DeploymentSpec
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
 		oktetoLog.Infof("error unmarshalling deployment spec on proxy: %s", err.Error())
@@ -145,7 +143,7 @@ func (j *JSONTranslator) translateDeploymentSpec(body map[string]json.RawMessage
 	return nil
 }
 
-func (j *JSONTranslator) translateStatefulSetSpec(body map[string]json.RawMessage) error {
+func (j *jsonTranslator) translateStatefulSetSpec(body map[string]json.RawMessage) error {
 	var spec appsv1.StatefulSetSpec
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
 		oktetoLog.Infof("error unmarshalling statefulset spec on proxy: %s", err.Error())
@@ -161,7 +159,7 @@ func (j *JSONTranslator) translateStatefulSetSpec(body map[string]json.RawMessag
 	return nil
 }
 
-func (j *JSONTranslator) translateJobSpec(body map[string]json.RawMessage) error {
+func (j *jsonTranslator) translateJobSpec(body map[string]json.RawMessage) error {
 	var spec batchv1.JobSpec
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
 		oktetoLog.Infof("error unmarshalling job spec on proxy: %s", err.Error())
@@ -177,7 +175,7 @@ func (j *JSONTranslator) translateJobSpec(body map[string]json.RawMessage) error
 	return nil
 }
 
-func (j *JSONTranslator) translateCronJobSpec(body map[string]json.RawMessage) error {
+func (j *jsonTranslator) translateCronJobSpec(body map[string]json.RawMessage) error {
 	var spec batchv1.CronJobSpec
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
 		oktetoLog.Infof("error unmarshalling cronjob spec on proxy: %s", err.Error())
@@ -193,7 +191,7 @@ func (j *JSONTranslator) translateCronJobSpec(body map[string]json.RawMessage) e
 	return nil
 }
 
-func (j *JSONTranslator) translateDaemonSetSpec(body map[string]json.RawMessage) error {
+func (j *jsonTranslator) translateDaemonSetSpec(body map[string]json.RawMessage) error {
 	var spec appsv1.DaemonSetSpec
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
 		oktetoLog.Infof("error unmarshalling daemonset spec on proxy: %s", err.Error())
@@ -209,7 +207,7 @@ func (j *JSONTranslator) translateDaemonSetSpec(body map[string]json.RawMessage)
 	return nil
 }
 
-func (j *JSONTranslator) translateReplicationControllerSpec(body map[string]json.RawMessage) error {
+func (j *jsonTranslator) translateReplicationControllerSpec(body map[string]json.RawMessage) error {
 	var spec apiv1.ReplicationControllerSpec
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
 		oktetoLog.Infof("error unmarshalling replicationcontroller on proxy: %s", err.Error())
@@ -225,7 +223,7 @@ func (j *JSONTranslator) translateReplicationControllerSpec(body map[string]json
 	return nil
 }
 
-func (j *JSONTranslator) translateReplicaSetSpec(body map[string]json.RawMessage) error {
+func (j *jsonTranslator) translateReplicaSetSpec(body map[string]json.RawMessage) error {
 	var spec appsv1.ReplicaSetSpec
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
 		oktetoLog.Infof("error unmarshalling replicaset on proxy: %s", err.Error())
@@ -240,15 +238,15 @@ func (j *JSONTranslator) translateReplicaSetSpec(body map[string]json.RawMessage
 	body["spec"] = specAsByte
 	return nil
 }
-func (j *JSONTranslator) applyDivertToPod(podSpec apiv1.PodSpec) apiv1.PodSpec {
-	if j.DivertDriver == nil {
+func (j *jsonTranslator) applyDivertToPod(podSpec apiv1.PodSpec) apiv1.PodSpec {
+	if j.divertDriver == nil {
 		return podSpec
 	}
-	return j.DivertDriver.UpdatePod(podSpec)
+	return j.divertDriver.UpdatePod(podSpec)
 }
 
-func (j *JSONTranslator) translateVirtualServiceSpec(body map[string]json.RawMessage) error {
-	if j.DivertDriver == nil {
+func (j *jsonTranslator) translateVirtualServiceSpec(body map[string]json.RawMessage) error {
+	if j.divertDriver == nil {
 		return nil
 	}
 
@@ -257,7 +255,7 @@ func (j *JSONTranslator) translateVirtualServiceSpec(body map[string]json.RawMes
 		oktetoLog.Infof("error unmarshalling replicaset on proxy: %s", err.Error())
 		return nil
 	}
-	j.DivertDriver.UpdateVirtualService(spec)
+	j.divertDriver.UpdateVirtualService(spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process virtual service's spec: %w", err)

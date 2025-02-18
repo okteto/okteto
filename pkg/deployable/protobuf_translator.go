@@ -31,25 +31,23 @@ import (
 	"k8s.io/kubectl/pkg/scheme"
 )
 
-type ProtobufTranslator struct {
-	b            []byte
+type protobufTranslator struct {
 	serializer   *protobuf.Serializer
-	DivertDriver divert.Driver
+	divertDriver divert.Driver
 	name         string
 }
 
-func NewProtobufTranslator(b []byte, name string, divertDriver divert.Driver) *ProtobufTranslator {
+func newProtobufTranslator(name string, divertDriver divert.Driver) *protobufTranslator {
 	protobufSerializer := protobuf.NewSerializer(scheme.Scheme, scheme.Scheme)
-	return &ProtobufTranslator{
-		b:            b,
+	return &protobufTranslator{
 		name:         name,
 		serializer:   protobufSerializer,
-		DivertDriver: divertDriver,
+		divertDriver: divertDriver,
 	}
 }
 
-func (p *ProtobufTranslator) Translate() ([]byte, error) {
-	obj, _, err := p.serializer.Decode(p.b, nil, nil)
+func (p *protobufTranslator) Translate(b []byte) ([]byte, error) {
+	obj, _, err := p.serializer.Decode(b, nil, nil)
 	if err != nil {
 		oktetoLog.Infof("error unmarshalling resource body on proxy: %s", err.Error())
 		return nil, fmt.Errorf("could not unmarshal resource body: %w", err)
@@ -99,7 +97,7 @@ func (p *ProtobufTranslator) Translate() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (p *ProtobufTranslator) translateMetadata(obj runtime.Object) error {
+func (p *protobufTranslator) translateMetadata(obj runtime.Object) error {
 	metaObj, err := meta.Accessor(obj)
 	if err != nil {
 		return fmt.Errorf("could not access object metadata: %w", err)
@@ -126,7 +124,7 @@ func (p *ProtobufTranslator) translateMetadata(obj runtime.Object) error {
 	return nil
 }
 
-func (p *ProtobufTranslator) translateDeploymentSpec(obj runtime.Object) error {
+func (p *protobufTranslator) translateDeploymentSpec(obj runtime.Object) error {
 	deployment, ok := obj.(*appsv1.Deployment)
 	if !ok {
 		return fmt.Errorf("expected *appsv1.Deployment, got %T", obj)
@@ -139,7 +137,7 @@ func (p *ProtobufTranslator) translateDeploymentSpec(obj runtime.Object) error {
 	return nil
 }
 
-func (p *ProtobufTranslator) translateStatefulSetSpec(obj runtime.Object) error {
+func (p *protobufTranslator) translateStatefulSetSpec(obj runtime.Object) error {
 	sts, ok := obj.(*appsv1.StatefulSet)
 	if !ok {
 		return fmt.Errorf("expected *appsv1.Statefulset, got %T", obj)
@@ -152,7 +150,7 @@ func (p *ProtobufTranslator) translateStatefulSetSpec(obj runtime.Object) error 
 	return nil
 }
 
-func (p *ProtobufTranslator) translateJobSpec(obj runtime.Object) error {
+func (p *protobufTranslator) translateJobSpec(obj runtime.Object) error {
 	job, ok := obj.(*batchv1.Job)
 	if !ok {
 		return fmt.Errorf("expected *batchv1.Job, got %T", obj)
@@ -165,7 +163,7 @@ func (p *ProtobufTranslator) translateJobSpec(obj runtime.Object) error {
 	return nil
 }
 
-func (p *ProtobufTranslator) translateCronJobSpec(obj runtime.Object) error {
+func (p *protobufTranslator) translateCronJobSpec(obj runtime.Object) error {
 	cronJob, ok := obj.(*batchv1.CronJob)
 	if !ok {
 		return fmt.Errorf("expected *batchv1.CronJob, got %T", obj)
@@ -178,7 +176,7 @@ func (p *ProtobufTranslator) translateCronJobSpec(obj runtime.Object) error {
 	return nil
 }
 
-func (p *ProtobufTranslator) translateDaemonSetSpec(obj runtime.Object) error {
+func (p *protobufTranslator) translateDaemonSetSpec(obj runtime.Object) error {
 	daemonSet, ok := obj.(*appsv1.DaemonSet)
 	if !ok {
 		return fmt.Errorf("expected *appsv1.DaemonSet, got %T", obj)
@@ -191,7 +189,7 @@ func (p *ProtobufTranslator) translateDaemonSetSpec(obj runtime.Object) error {
 	return nil
 }
 
-func (p *ProtobufTranslator) translateReplicationControllerSpec(obj runtime.Object) error {
+func (p *protobufTranslator) translateReplicationControllerSpec(obj runtime.Object) error {
 	replicationController, ok := obj.(*apiv1.ReplicationController)
 	if !ok {
 		return fmt.Errorf("expected *apiv1.ReplicationController, got %T", obj)
@@ -204,7 +202,7 @@ func (p *ProtobufTranslator) translateReplicationControllerSpec(obj runtime.Obje
 	return nil
 }
 
-func (p *ProtobufTranslator) translateReplicaSetSpec(obj runtime.Object) error {
+func (p *protobufTranslator) translateReplicaSetSpec(obj runtime.Object) error {
 	replicaSet, ok := obj.(*appsv1.ReplicaSet)
 	if !ok {
 		return fmt.Errorf("expected *appsv1.ReplicaSet, got %T", obj)
@@ -217,9 +215,9 @@ func (p *ProtobufTranslator) translateReplicaSetSpec(obj runtime.Object) error {
 	return nil
 }
 
-func (p *ProtobufTranslator) applyDivertToPod(podSpec apiv1.PodSpec) apiv1.PodSpec {
-	if p.DivertDriver == nil {
+func (p *protobufTranslator) applyDivertToPod(podSpec apiv1.PodSpec) apiv1.PodSpec {
+	if p.divertDriver == nil {
 		return podSpec
 	}
-	return p.DivertDriver.UpdatePod(podSpec)
+	return p.divertDriver.UpdatePod(podSpec)
 }
