@@ -16,16 +16,13 @@ package up
 import (
 	"context"
 	"errors"
-	"os"
+	"fmt"
 	"time"
 
 	"github.com/okteto/okteto/cmd/deploy"
-	deployCMD "github.com/okteto/okteto/cmd/deploy"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
-	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -37,158 +34,107 @@ import (
 )
 
 const (
-	// OktetoAutoDeployEnvVar if set the application will be deployed while running okteto up
-	OktetoAutoDeployEnvVar = "OKTETO_AUTODEPLOY"
+	// oktetoAutoDeployEnvVar if set the application will be deployed while running okteto up
+	oktetoAutoDeployEnvVar = "OKTETO_AUTODEPLOY"
 )
 
 // devEnvDeployerManager deploys the dev environment
 type devEnvDeployerManager struct {
-	okCtx *okteto.Context
-
-	mustDeploy bool
-	devenvName string
-	ns         string
-
 	isDevEnvDeployed func(ctx context.Context, name, namespace string, c kubernetes.Interface) bool
-	deployStrategy   devEnvEnvDeployStrategy
 
 	k8sClientProvider okteto.K8sClientProvider
 	ioCtrl            *io.Controller
+	getDeployer       func(deployParams) (deployer, error)
 }
 
-// devEnvEnvDeployStrategy defines the behavior for deploying an app.
-type devEnvEnvDeployStrategy interface {
-	Deploy(ctx context.Context) error
+type deployer interface {
+	Run(ctx context.Context, opts *deploy.Options) error
+	TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error)
 }
 
-type oktetoDevEnvDeployStrategy struct {
-	manifest *model.Manifest
-	okCtx    *okteto.Context
-
-	manifestPathFlag string
-	manifestPath     string
-	ns               string
-	devenvName       string
-
-	builder          builderInterface
-	analyticsMeta    *analytics.UpMetricsMetadata
-	analyticsTracker analyticsTrackerInterface
-	fs               afero.Fs
-
-	k8sLogger         *io.K8sLogger
-	k8sClientProvider okteto.K8sClientProvider
-	ioCtrl            *io.Controller
+type deployParams struct {
+	deployFlag                     bool
+	okCtx                          *okteto.Context
+	devenvName, ns                 string
+	manifestPathFlag, manifestPath string
+	manifest                       *model.Manifest
 }
 
 // NewDevEnvDeployerManager creates a new DevEnvDeployer
 func NewDevEnvDeployerManager(up *upContext, opts *Options, okCtx *okteto.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *devEnvDeployerManager {
-	mustDeploy := opts.Deploy
-	if env.LoadBoolean(OktetoAutoDeployEnvVar) {
-		mustDeploy = true
-	}
-
 	return &devEnvDeployerManager{
-		okCtx:             okCtx,
-		mustDeploy:        mustDeploy,
-		devenvName:        up.Manifest.Name,
-		ns:                okCtx.Namespace,
 		ioCtrl:            ioCtrl,
 		k8sClientProvider: up.K8sClientProvider,
 		isDevEnvDeployed:  pipeline.IsDeployed,
-		deployStrategy: &oktetoDevEnvDeployStrategy{
-			manifest:          up.Manifest,
-			okCtx:             okCtx,
-			manifestPathFlag:  opts.ManifestPathFlag,
-			manifestPath:      opts.ManifestPath,
-			ns:                okCtx.Namespace,
-			devenvName:        up.Manifest.Name,
-			builder:           up.builder,
-			analyticsTracker:  up.analyticsTracker,
-			fs:                up.Fs,
-			k8sLogger:         k8sLogger,
-			k8sClientProvider: up.K8sClientProvider,
-			ioCtrl:            ioCtrl,
-			analyticsMeta:     up.analyticsMeta,
+		getDeployer: func(params deployParams) (deployer, error) {
+			k8sProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
+			pc, err := pipelineCMD.NewCommand()
+			if err != nil {
+				return nil, err
+			}
+			c := &deploy.Command{
+				// reuse the manifest we already have in the upContext so we don't open a file again
+				GetManifest: func(string, afero.Fs) (*model.Manifest, error) {
+					return params.manifest, nil
+				},
+				GetDeployer:       deploy.GetDeployer,
+				K8sClientProvider: k8sProvider,
+				Builder:           up.builder,
+				Fs:                up.Fs,
+				CfgMapHandler:     deploy.NewConfigmapHandler(k8sProvider, k8sLogger),
+				PipelineCMD:       pc,
+				DeployWaiter:      deploy.NewDeployWaiter(k8sProvider, k8sLogger),
+				EndpointGetter:    deploy.NewEndpointGetter,
+				AnalyticsTracker:  up.analyticsTracker,
+				IoCtrl:            ioCtrl,
+			}
+			return c, nil
 		},
 	}
 }
 
 // DeployIfNeeded deploys the app if it's not already deployed or if the user has set the auto deploy env var or the --deploy flag
-func (dd *devEnvDeployerManager) DeployIfNeeded(ctx context.Context) error {
-	if !dd.okCtx.IsOkteto {
+func (dd *devEnvDeployerManager) DeployIfNeeded(ctx context.Context, params deployParams, analyticsMeta *analytics.UpMetricsMetadata) error {
+	if !params.okCtx.IsOkteto {
 		dd.ioCtrl.Logger().Infof("Deploy is skipped because is not okteto context")
 		return nil
 	}
-	k8sClient, _, err := dd.k8sClientProvider.Provide(dd.okCtx.Cfg)
+	k8sClient, _, err := dd.k8sClientProvider.Provide(params.okCtx.Cfg)
 	if err != nil {
 		return err
 	}
 
-	if dd.mustDeploy || !dd.isDevEnvDeployed(ctx, dd.devenvName, dd.ns, k8sClient) {
-		err := dd.deployStrategy.Deploy(ctx)
+	mustDeploy := params.deployFlag
+	if env.LoadBoolean(oktetoAutoDeployEnvVar) {
+		mustDeploy = true
+	}
+
+	if mustDeploy || !dd.isDevEnvDeployed(ctx, params.devenvName, params.ns, k8sClient) {
+		deployer, err := dd.getDeployer(params)
+		if err != nil {
+			dd.ioCtrl.Logger().Infof("failed to create deployer: %s", err)
+			return fmt.Errorf("failed to create deployer: %w", err)
+		}
+
+		deployOpts := &deploy.Options{
+			Name:             params.devenvName,
+			Namespace:        params.ns,
+			ManifestPathFlag: params.manifestPathFlag,
+			ManifestPath:     params.manifestPath,
+			Timeout:          5 * time.Minute,
+			NoBuild:          false,
+		}
+		startTime := time.Now()
+		err = deployer.Run(ctx, deployOpts)
+		go analyticsMeta.HasRunDeploy()
+		deployer.TrackDeploy(params.manifest, deploy.ShouldRunInRemote(deployOpts), startTime, err)
 		// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
 		if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands) {
 			return err
 		}
 
 	} else {
-		oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy' or 'okteto up --deploy'", dd.devenvName)
+		oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy' or 'okteto up --deploy'", params.devenvName)
 	}
 	return nil
-}
-
-func (od *oktetoDevEnvDeployStrategy) Deploy(ctx context.Context) error {
-	k8sProvider := okteto.NewK8sClientProviderWithLogger(od.k8sLogger)
-	pc, err := pipelineCMD.NewCommand()
-	if err != nil {
-		return err
-	}
-	c := &deploy.Command{
-		GetManifest:       model.GetManifestV2,
-		GetDeployer:       deploy.GetDeployer,
-		K8sClientProvider: k8sProvider,
-		Builder:           od.builder,
-		Fs:                od.fs,
-		CfgMapHandler:     deploy.NewConfigmapHandler(k8sProvider, od.k8sLogger),
-		PipelineCMD:       pc,
-		DeployWaiter:      deploy.NewDeployWaiter(k8sProvider, od.k8sLogger),
-		EndpointGetter:    deploy.NewEndpointGetter,
-		AnalyticsTracker:  od.analyticsTracker,
-		IoCtrl:            od.ioCtrl,
-	}
-
-	deployOpts := &deploy.Options{
-		Name:             od.devenvName,
-		Namespace:        od.ns,
-		ManifestPathFlag: od.manifestPathFlag,
-		ManifestPath:     od.manifestPath,
-		Timeout:          5 * time.Minute,
-		NoBuild:          false,
-	}
-	startTime := time.Now()
-	err = c.Run(ctx, deployOpts)
-	od.analyticsMeta.HasRunDeploy()
-
-	// we need to pre-calculate the value of the runInRemote flag before running the deploy command
-	// in order to track the information correctly, using the same logic as the deploy command
-	runInRemote := deployCMD.ShouldRunInRemote(deployOpts)
-
-	// We keep DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar for backward compatibility in case an old version of the backend
-	// is being used
-	isPreview := os.Getenv(model.DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar) == "true" ||
-		os.Getenv(constants.OktetoIsPreviewEnvVar) == "true"
-	// tracking deploy either its been successful or not
-	c.AnalyticsTracker.TrackDeploy(analytics.DeployMetadata{
-		Success:                err == nil,
-		IsOktetoRepo:           utils.IsOktetoRepo(),
-		Duration:               time.Since(startTime),
-		PipelineType:           od.manifest.Type,
-		DeployType:             "automatic",
-		IsPreview:              isPreview,
-		HasDependenciesSection: od.manifest.HasDependenciesSection(),
-		HasBuildSection:        od.manifest.HasBuildSection(),
-		Err:                    err,
-		IsRemote:               runInRemote,
-	})
-	return err
 }

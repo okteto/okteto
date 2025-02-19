@@ -254,7 +254,16 @@ okteto up api -- echo this is a test
 			}
 
 			devEnvDeployer := NewDevEnvDeployerManager(up, upOptions, okteto.GetContext(), ioCtrl, k8sLogger)
-			if err := devEnvDeployer.DeployIfNeeded(ctx); err != nil {
+			deployParams := deployParams{
+				deployFlag:       upOptions.Deploy,
+				okCtx:            okteto.GetContext(),
+				devenvName:       upOptions.DevName,
+				ns:               okteto.GetContext().Namespace,
+				manifestPathFlag: upOptions.ManifestPathFlag,
+				manifestPath:     upOptions.ManifestPath,
+				manifest:         oktetoManifest,
+			}
+			if err := devEnvDeployer.DeployIfNeeded(ctx, deployParams, up.analyticsMeta); err != nil {
 				return err
 			}
 
