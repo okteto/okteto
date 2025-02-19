@@ -61,7 +61,7 @@ type deployParams struct {
 }
 
 // NewDevEnvDeployerManager creates a new DevEnvDeployer
-func NewDevEnvDeployerManager(up *upContext, opts *Options, okCtx *okteto.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *devEnvDeployerManager {
+func NewDevEnvDeployerManager(up *upContext, okCtx *okteto.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *devEnvDeployerManager {
 	return &devEnvDeployerManager{
 		ioCtrl:            ioCtrl,
 		k8sClientProvider: up.K8sClientProvider,
