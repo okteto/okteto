@@ -88,9 +88,7 @@ func (f *fakeProxy) SetName(name string) {
 func (f *fakeProxy) SetDivert(driver divert.Driver) {
 	f.Called(driver)
 }
-func (f *fakeProxy) InitTranslator() {
-	f.Called()
-}
+func (f *fakeProxy) InitTranslator() {}
 
 type fakeExecutor struct {
 	mock.Mock
