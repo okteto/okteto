@@ -53,6 +53,7 @@ type ProxyInterface interface {
 	GetToken() string
 	SetName(name string)
 	SetDivert(driver divert.Driver)
+	InitTranslator()
 }
 
 // KubeConfigHandler defines the operations to handle the kubeconfig file
@@ -224,6 +225,7 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 		r.Proxy.SetDivert(driver)
 		r.DivertDeployer = driver
 	}
+	r.Proxy.InitTranslator()
 
 	os.Setenv(constants.OktetoNameEnvVar, params.Name)
 

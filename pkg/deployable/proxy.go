@@ -55,7 +55,8 @@ type Proxy struct {
 type proxyHandler struct {
 	DivertDriver divert.Driver
 	// Name is sanitized version of the pipeline name
-	Name string
+	Name        string
+	translators map[string]translator
 }
 
 type translator interface {
@@ -177,6 +178,13 @@ func (p *Proxy) SetDivert(driver divert.Driver) {
 	p.proxyHandler.SetDivert(driver)
 }
 
+func (p *Proxy) InitTranslator() {
+	p.proxyHandler.translators = map[string]translator{
+		"application/json":                    newJSONTranslator(p.proxyHandler.Name, p.proxyHandler.DivertDriver),
+		"application/vnd.kubernetes.protobuf": newProtobufTranslator(p.proxyHandler.Name, p.proxyHandler.DivertDriver),
+	}
+}
+
 func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config) (http.Handler, error) {
 	// By default we don't disable HTTP/2
 	trans, err := newProtocolTransport(clusterConfig, false)
@@ -242,10 +250,12 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 				return
 			}
 			var translator translator
-			if r.Header.Get("Content-Type") == "application/json" {
-				translator = newJSONTranslator(ph.Name, ph.DivertDriver)
+			if v, ok := ph.translators[r.Header.Get("Content-Type")]; ok {
+				translator = v
 			} else {
-				translator = newProtobufTranslator(ph.Name, ph.DivertDriver)
+				oktetoLog.Infof("unsupported content type: %s", r.Header.Get("Content-Type"))
+				rw.WriteHeader(http.StatusUnsupportedMediaType)
+				return
 			}
 			b, err = translator.Translate(b)
 			if err != nil {
