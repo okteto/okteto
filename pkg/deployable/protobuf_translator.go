@@ -47,6 +47,8 @@ func newProtobufTranslator(name string, divertDriver divert.Driver) *protobufTra
 }
 
 func (p *protobufTranslator) Translate(b []byte) ([]byte, error) {
+	// Passing nil for defaultGVK and into, so the serializer infers the GVK from the data and creates a new object.
+	// This is necessary because the object is not known at compile time.
 	obj, _, err := p.serializer.Decode(b, nil, nil)
 	if err != nil {
 		oktetoLog.Infof("error unmarshalling resource body on proxy: %s", err.Error())
