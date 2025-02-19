@@ -253,7 +253,7 @@ okteto up api -- echo this is a test
 				return fmt.Errorf("failed to load k8s client: %w", err)
 			}
 
-			devEnvDeployer := NewDevEnvDeployerManager(up, okteto.GetContext(), ioCtrl, k8sLogger)
+			devEnvDeployer := NewDevEnvDeployerManager(up, ioCtrl, k8sLogger)
 			deployParams := deployParams{
 				deployFlag:       upOptions.Deploy,
 				okCtx:            okteto.GetContext(),
