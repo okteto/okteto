@@ -29,6 +29,7 @@ import (
 	"syscall"
 
 	"github.com/google/uuid"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -55,8 +56,9 @@ type Proxy struct {
 type proxyHandler struct {
 	DivertDriver divert.Driver
 	// Name is sanitized version of the pipeline name
-	Name        string
-	translators map[string]translator
+	Name             string
+	translators      map[string]translator
+	analyticsTracker *analytics.Tracker
 }
 
 type translator interface {
@@ -88,7 +90,9 @@ func NewProxy(kubeconfig KubeConfigHandler, portGetter PortGetterFunc) (*Proxy, 
 		return nil, err
 	}
 
-	ph := &proxyHandler{}
+	ph := &proxyHandler{
+		analyticsTracker: analytics.NewAnalyticsTracker(),
+	}
 	handler, err := ph.getProxyHandler(sessionToken, clusterConfig)
 	if err != nil {
 		oktetoLog.Errorf("could not configure local proxy: %s", err)
@@ -254,6 +258,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 				translator = v
 			} else {
 				oktetoLog.Infof("unsupported content type: %s", r.Header.Get("Content-Type"))
+				go ph.analyticsTracker.TrackUnsupportedContentType(r.Header.Get("Content-Type"))
 				translator = ph.translators["application/json"]
 			}
 			b, err = translator.Translate(b)
