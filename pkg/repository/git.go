@@ -62,7 +62,6 @@ func newGitRepoController(path string) gitRepoController {
 			}
 			return ignore.NewMultiIgnorer(
 				ignore.NewDockerIgnorer(filepath.Join(subpath, ".dockerignore")),
-				ignore.NewOktetoIgnorer(filepath.Join(subpath, ".oktetoignore")).BuildOnly(),
 			)
 
 		},

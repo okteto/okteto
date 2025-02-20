@@ -33,25 +33,6 @@ type OktetoIgnorer struct {
 	mu       sync.RWMutex
 }
 
-// BuildOnly returns a new OktetoIgnorer that will only consider the root
-// section AND the build section
-func (i *OktetoIgnorer) BuildOnly() *OktetoIgnorer {
-	buildSections := make(map[string]string)
-
-	i.mu.RLock()
-	defer i.mu.RUnlock()
-
-	for k, v := range i.sections {
-		if k == "build" || k == RootSection {
-			buildSections[k] = v
-		}
-	}
-
-	return &OktetoIgnorer{
-		sections: buildSections,
-	}
-}
-
 func (i *OktetoIgnorer) Get(section string) (data string) {
 	i.mu.RLock()
 	data = i.sections[section]
