@@ -48,7 +48,7 @@ func Test_translate(t *testing.T) {
 				Spec: apiv1.PersistentVolumeClaimSpec{
 					AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
 					VolumeMode:  &filesystemVolumeMode,
-					Resources: apiv1.ResourceRequirements{
+					Resources: apiv1.VolumeResourceRequirements{
 						Requests: apiv1.ResourceList{
 							"storage": resource.MustParse("5Gi"),
 						},
@@ -84,7 +84,7 @@ func Test_translate(t *testing.T) {
 				Spec: apiv1.PersistentVolumeClaimSpec{
 					AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteMany},
 					VolumeMode:  &blockVolumeMode,
-					Resources: apiv1.ResourceRequirements{
+					Resources: apiv1.VolumeResourceRequirements{
 						Requests: apiv1.ResourceList{
 							"storage": resource.MustParse("20Gi"),
 						},

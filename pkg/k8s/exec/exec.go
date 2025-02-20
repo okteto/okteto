@@ -73,7 +73,7 @@ func Exec(ctx context.Context, c kubernetes.Interface, config *rest.Config, podN
 
 		done := make(chan error, 1)
 		go func() {
-			done <- p.Executor.Execute("POST", req.URL(), config, p.In, p.Out, p.ErrOut, t.Raw, sizeQueue)
+			done <- p.Executor.Execute(req.URL(), config, p.In, p.Out, p.ErrOut, t.Raw, sizeQueue)
 		}()
 
 		select {

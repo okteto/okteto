@@ -38,7 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -132,7 +132,7 @@ func translateDeployment(svcName string, s *model.Stack, divert Divert) *appsv1.
 	svcHealthchecks := getSvcHealthProbe(svc)
 
 	podSpec := apiv1.PodSpec{
-		TerminationGracePeriodSeconds: pointer.Int64(svc.StopGracePeriod),
+		TerminationGracePeriodSeconds: ptr.To(svc.StopGracePeriod),
 		NodeSelector:                  svc.NodeSelector,
 		Containers: []apiv1.Container{
 			{
@@ -163,7 +163,7 @@ func translateDeployment(svcName string, s *model.Stack, divert Divert) *appsv1.
 			Annotations: translateAnnotations(svc),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: pointer.Int32(svc.Replicas),
+			Replicas: ptr.To(svc.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: translateLabelSelector(svcName, s),
 			},
@@ -191,7 +191,7 @@ func translatePersistentVolumeClaim(volumeName string, s *model.Stack) apiv1.Per
 		},
 		Spec: apiv1.PersistentVolumeClaimSpec{
 			AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
-			Resources: apiv1.ResourceRequirements{
+			Resources: apiv1.VolumeResourceRequirements{
 				Requests: apiv1.ResourceList{
 					"storage": volumeSpec.Size.Value,
 				},
@@ -209,7 +209,7 @@ func translateStatefulSet(svcName string, s *model.Stack, divert Divert) *appsv1
 	svcHealthchecks := getSvcHealthProbe(svc)
 
 	podSpec := apiv1.PodSpec{
-		TerminationGracePeriodSeconds: pointer.Int64(svc.StopGracePeriod),
+		TerminationGracePeriodSeconds: ptr.To(svc.StopGracePeriod),
 		InitContainers:                initContainers,
 		Affinity:                      translateAffinity(svc),
 		NodeSelector:                  svc.NodeSelector,
@@ -244,8 +244,8 @@ func translateStatefulSet(svcName string, s *model.Stack, divert Divert) *appsv1
 			Annotations: translateAnnotations(svc),
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas:             pointer.Int32(svc.Replicas),
-			RevisionHistoryLimit: pointer.Int32(2),
+			Replicas:             ptr.To(svc.Replicas),
+			RevisionHistoryLimit: ptr.To(int32(2)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: translateLabelSelector(svcName, s),
 			},
@@ -270,7 +270,7 @@ func translateJob(svcName string, s *model.Stack, divert Divert) *batchv1.Job {
 	svcHealthchecks := getSvcHealthProbe(svc)
 	podSpec := apiv1.PodSpec{
 		RestartPolicy:                 svc.RestartPolicy,
-		TerminationGracePeriodSeconds: pointer.Int64(svc.StopGracePeriod),
+		TerminationGracePeriodSeconds: ptr.To(svc.StopGracePeriod),
 		InitContainers:                initContainers,
 		Affinity:                      translateAffinity(svc),
 		NodeSelector:                  svc.NodeSelector,
@@ -305,8 +305,8 @@ func translateJob(svcName string, s *model.Stack, divert Divert) *batchv1.Job {
 			Annotations: translateAnnotations(svc),
 		},
 		Spec: batchv1.JobSpec{
-			Completions:  pointer.Int32(svc.Replicas),
-			Parallelism:  pointer.Int32(1),
+			Completions:  ptr.To(svc.Replicas),
+			Parallelism:  ptr.To(int32(1)),
 			BackoffLimit: &svc.BackOffLimit,
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -420,7 +420,7 @@ func translateVolumeClaimTemplates(svcName string, s *model.Stack) []apiv1.Persi
 					},
 					Spec: apiv1.PersistentVolumeClaimSpec{
 						AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
-						Resources: apiv1.ResourceRequirements{
+						Resources: apiv1.VolumeResourceRequirements{
 							Requests: apiv1.ResourceList{
 								"storage": svc.Resources.Requests.Storage.Size.Value,
 							},

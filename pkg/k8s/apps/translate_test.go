@@ -37,7 +37,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 var (
@@ -121,7 +121,7 @@ dev:
 	d1.UID = types.UID("deploy1")
 	delete(d1.Annotations, model.OktetoAutoCreateAnnotation)
 	d1.Annotations[model.StateBeforeSleepingAnnontation] = "{\"Replicas\":3}"
-	d1.Spec.Replicas = pointer.Int32(2)
+	d1.Spec.Replicas = ptr.To(int32(2))
 	d1.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RollingUpdateDeploymentStrategyType,
 	}
@@ -168,7 +168,7 @@ dev:
 		},
 		ServiceAccountName:            "sa",
 		PriorityClassName:             "class",
-		TerminationGracePeriodSeconds: pointer.Int64(0),
+		TerminationGracePeriodSeconds: ptr.To(int64(0)),
 		Volumes: []apiv1.Volume{
 			{
 				Name: oktetoSyncSecretVolume,
@@ -471,7 +471,7 @@ dev:
 	d2 := deployments.Sandbox(dev2, "n")
 	d2.UID = types.UID("deploy2")
 	delete(d2.Annotations, model.OktetoAutoCreateAnnotation)
-	d2.Spec.Replicas = pointer.Int32(3)
+	d2.Spec.Replicas = ptr.To(int32(3))
 
 	translationRules := make(map[string]*Translation)
 	ctx := context.Background()
@@ -496,11 +496,11 @@ dev:
 			},
 		},
 		SecurityContext: &apiv1.PodSecurityContext{
-			FSGroup: pointer.Int64(0),
+			FSGroup: ptr.To(int64(0)),
 		},
 		ServiceAccountName:            "",
 		PriorityClassName:             "class",
-		TerminationGracePeriodSeconds: pointer.Int64(0),
+		TerminationGracePeriodSeconds: ptr.To(int64(0)),
 		Volumes: []apiv1.Volume{
 			{
 				Name: dev1.GetVolumeName(),
@@ -528,8 +528,8 @@ dev:
 					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r"},
 				},
 				SecurityContext: &apiv1.SecurityContext{
-					RunAsUser:  pointer.Int64(0),
-					RunAsGroup: pointer.Int64(0),
+					RunAsUser:  ptr.To(int64(0)),
+					RunAsGroup: ptr.To(int64(0)),
 				},
 				VolumeMounts: []apiv1.VolumeMount{
 					{
@@ -690,7 +690,7 @@ dev:
 	d2 := deployments.Sandbox(dev2, "n")
 	d2.UID = types.UID("deploy2")
 	delete(d2.Annotations, model.OktetoAutoCreateAnnotation)
-	d2.Spec.Replicas = pointer.Int32(0)
+	d2.Spec.Replicas = ptr.To(int32(0))
 
 	translationRules := make(map[string]*Translation)
 	ctx := context.Background()
@@ -809,7 +809,7 @@ dev:
 	d2 := deployments.Sandbox(dev2, "n")
 	d2.UID = types.UID("deploy2")
 	delete(d2.Annotations, model.OktetoAutoCreateAnnotation)
-	d2.Spec.Replicas = pointer.Int32(3)
+	d2.Spec.Replicas = ptr.To(int32(3))
 
 	translationRules := make(map[string]*Translation)
 	ctx := context.Background()
@@ -880,7 +880,7 @@ func Test_translateWithoutVolumes(t *testing.T) {
 	}
 	require.NoError(t, tr.translate())
 	dDevPodOK := &apiv1.PodSpec{
-		TerminationGracePeriodSeconds: pointer.Int64(0),
+		TerminationGracePeriodSeconds: ptr.To(int64(0)),
 		Volumes: []apiv1.Volume{
 			{
 				Name: oktetoSyncSecretVolume,
@@ -1539,7 +1539,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	sfs1 := statefulsets.Sandbox(dev1, "n")
 	sfs1.UID = types.UID("sfs1")
 	delete(sfs1.Annotations, model.OktetoAutoCreateAnnotation)
-	sfs1.Spec.Replicas = pointer.Int32(2)
+	sfs1.Spec.Replicas = ptr.To(int32(2))
 
 	rule1 := dev1.ToTranslationRule(dev1, "n", "cindy", false)
 	tr1 := &Translation{
@@ -1583,7 +1583,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 			FSGroup: &fsGroup,
 		},
 		ServiceAccountName:            "sa",
-		TerminationGracePeriodSeconds: pointer.Int64(0),
+		TerminationGracePeriodSeconds: ptr.To(int64(0)),
 		Volumes: []apiv1.Volume{
 			{
 				Name: oktetoSyncSecretVolume,
@@ -1869,7 +1869,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 
 	dev2 := dev1.Services[0]
 	sfs2 := statefulsets.Sandbox(dev2, "n")
-	sfs2.Spec.Replicas = pointer.Int32(3)
+	sfs2.Spec.Replicas = ptr.To(int32(3))
 	sfs2.UID = types.UID("sfs2")
 	delete(sfs2.Annotations, model.OktetoAutoCreateAnnotation)
 
@@ -1898,10 +1898,10 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 			},
 		},
 		SecurityContext: &apiv1.PodSecurityContext{
-			FSGroup: pointer.Int64(0),
+			FSGroup: ptr.To(int64(0)),
 		},
 		ServiceAccountName:            "",
-		TerminationGracePeriodSeconds: pointer.Int64(0),
+		TerminationGracePeriodSeconds: ptr.To(int64(0)),
 		Volumes: []apiv1.Volume{
 			{
 				Name: dev1.GetVolumeName(),
@@ -1921,8 +1921,8 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 				Command:         []string{"./run_worker.sh"},
 				Args:            []string{},
 				SecurityContext: &apiv1.SecurityContext{
-					RunAsUser:  pointer.Int64(0),
-					RunAsGroup: pointer.Int64(0),
+					RunAsUser:  ptr.To(int64(0)),
+					RunAsGroup: ptr.To(int64(0)),
 				},
 				Env: []apiv1.EnvVar{
 					{Name: "HISTSIZE", Value: "10000000"},
@@ -2034,7 +2034,7 @@ func Test_translateAnnotations(t *testing.T) {
 				App: &DeploymentApp{
 					d: &appsv1.Deployment{
 						Spec: appsv1.DeploymentSpec{
-							Replicas: pointer.Int32(1),
+							Replicas: ptr.To(int32(1)),
 						},
 					},
 				},
@@ -2054,7 +2054,7 @@ func Test_translateAnnotations(t *testing.T) {
 				App: &DeploymentApp{
 					d: &appsv1.Deployment{
 						Spec: appsv1.DeploymentSpec{
-							Replicas: pointer.Int32(1),
+							Replicas: ptr.To(int32(1)),
 						},
 					},
 				},

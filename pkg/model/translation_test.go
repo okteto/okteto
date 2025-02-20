@@ -28,7 +28,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestDevToTranslationRule(t *testing.T) {
@@ -105,9 +105,9 @@ func TestDevToTranslationRule(t *testing.T) {
 		},
 		PriorityClassName: "class",
 		SecurityContext: &SecurityContext{
-			RunAsUser:  pointer.Int64(0),
-			RunAsGroup: pointer.Int64(0),
-			FSGroup:    pointer.Int64(0),
+			RunAsUser:  ptr.To(int64(0)),
+			RunAsGroup: ptr.To(int64(0)),
+			FSGroup:    ptr.To(int64(0)),
 		},
 		Resources: ResourceRequirements{
 			Limits: ResourceList{
@@ -190,9 +190,9 @@ func TestDevToTranslationRule(t *testing.T) {
 		Probes:          &Probes{},
 		Lifecycle:       &Lifecycle{},
 		SecurityContext: &SecurityContext{
-			RunAsUser:  pointer.Int64(0),
-			RunAsGroup: pointer.Int64(0),
-			FSGroup:    pointer.Int64(0),
+			RunAsUser:  ptr.To(int64(0)),
+			RunAsGroup: ptr.To(int64(0)),
+			FSGroup:    ptr.To(int64(0)),
 		},
 		PriorityClassName: "class",
 		Affinity: &apiv1.Affinity{
@@ -312,9 +312,9 @@ func TestDevToTranslationRuleInitContainer(t *testing.T) {
 			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r"},
 		},
 		SecurityContext: &SecurityContext{
-			RunAsUser:  pointer.Int64(0),
-			RunAsGroup: pointer.Int64(0),
-			FSGroup:    pointer.Int64(0),
+			RunAsUser:  ptr.To(int64(0)),
+			RunAsGroup: ptr.To(int64(0)),
+			FSGroup:    ptr.To(int64(0)),
 		},
 		Resources:        ResourceRequirements{},
 		PersistentVolume: true,
@@ -406,9 +406,9 @@ func TestDevToTranslationDebugEnabled(t *testing.T) {
 			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r"},
 		},
 		SecurityContext: &SecurityContext{
-			RunAsUser:  pointer.Int64(0),
-			RunAsGroup: pointer.Int64(0),
-			FSGroup:    pointer.Int64(0),
+			RunAsUser:  ptr.To(int64(0)),
+			RunAsGroup: ptr.To(int64(0)),
+			FSGroup:    ptr.To(int64(0)),
 		},
 		PersistentVolume: true,
 		Volumes: []VolumeMount{
@@ -546,9 +546,9 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
         securityContext:
            runAsNonRoot: false`),
 			translated: SecurityContext{
-				RunAsUser:    pointer.Int64(0),
-				RunAsGroup:   pointer.Int64(0),
-				FSGroup:      pointer.Int64(0),
+				RunAsUser:    ptr.To(int64(0)),
+				RunAsGroup:   ptr.To(int64(0)),
+				FSGroup:      ptr.To(int64(0)),
 				RunAsNonRoot: &falseBoolean,
 			},
 		},
@@ -575,9 +575,9 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
     no-security-context:
         image: worker:latest`),
 			translated: SecurityContext{
-				RunAsUser:  pointer.Int64(0),
-				RunAsGroup: pointer.Int64(0),
-				FSGroup:    pointer.Int64(0),
+				RunAsUser:  ptr.To(int64(0)),
+				RunAsGroup: ptr.To(int64(0)),
+				FSGroup:    ptr.To(int64(0)),
 			},
 		},
 		{

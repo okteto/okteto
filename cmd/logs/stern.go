@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func getSternConfig(manifest *model.Manifest, o *Options, kubeconfigFile string) (*stern.Config, error) {
@@ -101,7 +101,7 @@ func getSternConfig(manifest *model.Manifest, o *Options, kubeconfigFile string)
 		Location:            location,
 		LabelSelector:       labelSelector,
 		FieldSelector:       fieldSelector,
-		TailLines:           pointer.Int64(o.Tail),
+		TailLines:           ptr.To(o.Tail),
 		Follow:              true,
 		Timestamps:          o.Timestamps,
 		AllNamespaces:       false,

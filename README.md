@@ -38,11 +38,6 @@ The end result is a remote cluster that is seen by your IDE and tools as a local
 
 All you need to get started is to [install the Okteto CLI](https://www.okteto.com/docs/get-started/install-okteto-cli/) and have access to a Kubernetes cluster. You can follow our [guide for setting up a Kubernetes cluster on AWS here](https://www.okteto.com/docs/get-started/install/amazon-eks/#deploy-a-kubernetes-cluster).
 
-The Okteto CLI has two operational modes:
-
-- Okteto Open Source CLI
-- Okteto Platform CLI
-
 ### Okteto Open Source CLI Features
 
 The Okteto Open Source CLI requires access to a Kubernetes cluster. The Okteto Open Source CLI aims to enable you to develop your cloud-native applications using Development Containers in your Kubernetes clusters. If you are interested in helping your entire team share a Kubernetes cluster for development, we recommend you check out our commercial product, the [Okteto Platform](https://okteto.com)
