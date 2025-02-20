@@ -18,7 +18,7 @@ const (
 	contentTypeKey              = "contentType"
 )
 
-// TrackDown sends a tracking event to mixpanel when the user deactivates a development container
+// TrackUnsupportedContentType sends a tracking event to mixpanel when the proxy receives a request with an unsupported content type
 func (a *Tracker) TrackUnsupportedContentType(contentType string) {
 	a.trackFn(unsupportedContentTypeEvent, true, map[string]interface{}{
 		contentTypeKey: contentType,
