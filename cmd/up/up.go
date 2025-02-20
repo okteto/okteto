@@ -257,7 +257,7 @@ okteto up api -- echo this is a test
 			deployParams := deployParams{
 				deployFlag:       upOptions.Deploy,
 				okCtx:            okteto.GetContext(),
-				devenvName:       upOptions.DevName,
+				devenvName:       up.Manifest.Name,
 				ns:               okteto.GetContext().Namespace,
 				manifestPathFlag: upOptions.ManifestPathFlag,
 				manifestPath:     upOptions.ManifestPath,
