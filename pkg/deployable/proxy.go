@@ -254,8 +254,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 				translator = v
 			} else {
 				oktetoLog.Infof("unsupported content type: %s", r.Header.Get("Content-Type"))
-				rw.WriteHeader(http.StatusUnsupportedMediaType)
-				return
+				translator = ph.translators["application/json"]
 			}
 			b, err = translator.Translate(b)
 			if err != nil {
