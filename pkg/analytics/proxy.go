@@ -14,13 +14,13 @@
 package analytics
 
 const (
-	unsupportedContentTypeEvent = "Unsupported Content Type"
-	contentTypeKey              = "contentType"
+	unsupportedProxyContentTypeEvent = "Unsupported Proxy Content Type"
+	contentTypeKey                   = "contentType"
 )
 
 // TrackUnsupportedContentType sends a tracking event to mixpanel when the proxy receives a request with an unsupported content type
 func (a *Tracker) TrackUnsupportedContentType(contentType string) {
-	a.trackFn(unsupportedContentTypeEvent, true, map[string]interface{}{
+	a.trackFn(unsupportedProxyContentTypeEvent, true, map[string]interface{}{
 		contentTypeKey: contentType,
 	})
 }

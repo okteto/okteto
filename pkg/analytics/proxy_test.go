@@ -29,6 +29,6 @@ func TestProxyUnsupportedContentType(t *testing.T) {
 		},
 	}
 	tracker.TrackUnsupportedContentType("application/json")
-	assert.Equal(t, unsupportedContentTypeEvent, event)
+	assert.Equal(t, unsupportedProxyContentTypeEvent, event)
 	assert.Equal(t, "application/json", contentType)
 }
