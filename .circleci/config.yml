@@ -360,7 +360,7 @@ jobs:
           command: |
             go version
             choco install kubernetes-cli -y
-            choco install kubernetes-helm@3.16.4 -y
+            choco install kubernetes-helm --version 3.16.4 -y
       - run:
           name: Run deploy integration tests
           environment:
