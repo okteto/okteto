@@ -245,7 +245,12 @@ func (up *upContext) devMode(ctx context.Context, app apps.App, create bool) err
 		return err
 	}
 	up.analyticsMeta.DevContainerCreation(time.Since(startCreateDev))
-	return up.waitUntilDevelopmentContainerIsRunning(ctx, app)
+
+	startDevContainerIsRunning := time.Now()
+	err := up.waitUntilDevelopmentContainerIsRunning(ctx, app)
+	up.analyticsMeta.DevContainerIsRunning(time.Since(startDevContainerIsRunning))
+	return err
+
 }
 
 func (up *upContext) createDevContainer(ctx context.Context, app apps.App, create bool) error {
@@ -451,6 +456,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 					oktetoLog.Spinner("Initializing persistent volume content...")
 				}
 			case "Pulling":
+				up.analyticsMeta.PulledDevContainerImage()
 				failedSchedulingEvent = nil
 				message := getPullingMessage(e.Message, up.Namespace)
 				oktetoLog.Spinner(fmt.Sprintf("%s...", message))
@@ -502,6 +508,8 @@ func getPullingMessage(message, namespace string) string {
 
 // waitUntilAppIsAwaken waits until the app is awaken checking if the annotation dev.okteto.com/state-before-sleeping is present in the app resource
 func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) error {
+	startWaitingForAwaken := time.Now()
+
 	// If it is auto create, we don't need to wait for the app to wake up
 	if up.Dev.Autocreate {
 		return nil
@@ -547,6 +555,7 @@ func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) err
 
 			// If the app is not sleeping anymore, we are done
 			if _, ok := appToCheck.ObjectMeta().Annotations[model.StateBeforeSleepingAnnontation]; !ok {
+				up.analyticsMeta.WaitedForAwakenDuration(time.Since(startWaitingForAwaken))
 				return nil
 			}
 		}
