@@ -342,6 +342,7 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 
 	// show an informational warning per service once
 	serviceWarnings := make(map[string]string)
+	restartsPerSvc := map[string]int{}
 	for {
 		select {
 		case <-to.C:
@@ -349,7 +350,14 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 		case <-t.C:
 			for len(deployedSvcs) != len(options.ServicesToDeploy) {
 				for _, svcName := range options.ServicesToDeploy {
-					if deployedSvcs[svcName] {
+					areAllDependenciesDeployed := true
+					for dependentSvc := range stack.Services[svcName].DependsOn {
+						if !deployedSvcs[dependentSvc] {
+							areAllDependenciesDeployed = false
+							break
+						}
+					}
+					if deployedSvcs[svcName] || !areAllDependenciesDeployed {
 						continue
 					}
 
@@ -362,7 +370,7 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 						}
 						if failedServices := getServicesWithFailedProbes(ctx, stack, svcName, k8sClient); len(failedServices) > 0 {
 							for service, err := range failedServices {
-								errMessage := fmt.Errorf("Service '%s' cannot be deployed because dependent service '%s' is failing its healthcheck probes: %s", svcName, service, err)
+								errMessage := fmt.Errorf("service '%s' cannot be deployed because dependent service '%s' is failing its healthcheck probes: %s", svcName, service, err)
 								if errors.Is(err, oktetoErrors.ErrLivenessProbeFailed) {
 									return errMessage
 								} else if errors.Is(err, oktetoErrors.ErrReadinessProbeFailed) {
@@ -373,7 +381,7 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 								}
 							}
 						}
-						if err := getErrorDueToRestartLimit(ctx, stack, svcName, k8sClient); err != nil {
+						if err := getErrorDueToRestartLimit(ctx, stack, svcName, restartsPerSvc, k8sClient); err != nil {
 							return err
 						}
 						continue
@@ -482,7 +490,7 @@ func getServicesWithFailedProbes(ctx context.Context, stack *model.Stack, svcNam
 	return failedServices
 }
 
-func getErrorDueToRestartLimit(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface) error {
+func getErrorDueToRestartLimit(ctx context.Context, stack *model.Stack, svcName string, restartsPerSvc map[string]int, client kubernetes.Interface) error {
 	svc := stack.Services[svcName]
 	for dependingSvc := range svc.DependsOn {
 		svcLabels := map[string]string{model.StackNameLabel: format.ResourceK8sMetaString(stack.Name), model.StackServiceNameLabel: dependingSvc}
@@ -491,20 +499,31 @@ func getErrorDueToRestartLimit(ctx context.Context, stack *model.Stack, svcName 
 			oktetoLog.Infof("could not get pod of svc '%s': %s", dependingSvc, err)
 			continue
 		}
-		totalRestarts := 0
-		for _, cStatus := range p.Status.ContainerStatuses {
-			totalRestarts += int(cStatus.RestartCount)
+		if _, ok := restartsPerSvc[dependingSvc]; !ok {
+			restartsPerSvc[dependingSvc] = getPodRestarts(p)
 		}
+
+		totalRestarts := getPodRestarts(p)
+		restartsFromThisDeploy := totalRestarts - restartsPerSvc[dependingSvc]
 		maxSvcRestarts := stack.Services[dependingSvc].BackOffLimit
 		if maxSvcRestarts == 0 {
 			maxSvcRestarts = maxRestartsToConsiderFailed
 		}
-		if int32(totalRestarts) >= maxSvcRestarts {
-			return fmt.Errorf("Service '%s' has been restarted %d times. Please check the logs and try again", dependingSvc, totalRestarts)
+
+		if int32(restartsFromThisDeploy) >= maxSvcRestarts {
+			return fmt.Errorf("service '%s' has been restarted %d times within this deploy. Please check the logs and try again", dependingSvc, restartsFromThisDeploy)
 		}
 	}
 
 	return nil
+}
+
+func getPodRestarts(p *apiv1.Pod) int {
+	totalRestarts := 0
+	for _, cStatus := range p.Status.ContainerStatuses {
+		totalRestarts += int(cStatus.RestartCount)
+	}
+	return totalRestarts
 }
 
 func getDependingFailedJobs(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface) []string {
