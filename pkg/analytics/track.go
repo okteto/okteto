@@ -299,6 +299,5 @@ func track(event string, success bool, props map[string]interface{}) {
 }
 
 func disabledByOktetoAdmin() bool {
-	return false
-	//return !okteto.GetContext().Analytics
+	return !okteto.GetContext().Analytics
 }
