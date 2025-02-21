@@ -350,7 +350,14 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 		case <-t.C:
 			for len(deployedSvcs) != len(options.ServicesToDeploy) {
 				for _, svcName := range options.ServicesToDeploy {
-					if deployedSvcs[svcName] {
+					areAllDependenciesDeployed := true
+					for dependentSvc := range stack.Services[svcName].DependsOn {
+						if !deployedSvcs[dependentSvc] {
+							areAllDependenciesDeployed = false
+							break
+						}
+					}
+					if deployedSvcs[svcName] || !areAllDependenciesDeployed {
 						continue
 					}
 
@@ -363,7 +370,7 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 						}
 						if failedServices := getServicesWithFailedProbes(ctx, stack, svcName, k8sClient); len(failedServices) > 0 {
 							for service, err := range failedServices {
-								errMessage := fmt.Errorf("Service '%s' cannot be deployed because dependent service '%s' is failing its healthcheck probes: %s", svcName, service, err)
+								errMessage := fmt.Errorf("service '%s' cannot be deployed because dependent service '%s' is failing its healthcheck probes: %s", svcName, service, err)
 								if errors.Is(err, oktetoErrors.ErrLivenessProbeFailed) {
 									return errMessage
 								} else if errors.Is(err, oktetoErrors.ErrReadinessProbeFailed) {
