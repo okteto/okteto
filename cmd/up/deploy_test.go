@@ -62,16 +62,16 @@ func TestDeployIfNeeded(t *testing.T) {
 		input    input
 		expected expected
 	}{
-		// {
-		// 	name:     "not okteto context",
-		// 	input:    input{isOkteto: false},
-		// 	expected: expected{isDeploymentExpected: false, expectedErr: nil},
-		// },
-		// {
-		// 	name:     "error creating k8s client",
-		// 	input:    input{isOkteto: true, k8sClientProviderErr: assert.AnError},
-		// 	expected: expected{isDeploymentExpected: false, expectedErr: assert.AnError},
-		// },
+		{
+			name:     "not okteto context",
+			input:    input{isOkteto: false},
+			expected: expected{isDeploymentExpected: false, expectedErr: nil},
+		},
+		{
+			name:     "error creating k8s client",
+			input:    input{isOkteto: true, k8sClientProviderErr: assert.AnError},
+			expected: expected{isDeploymentExpected: false, expectedErr: assert.AnError},
+		},
 		{
 			name:     "must deploy: true // isDeployedApp: false",
 			input:    input{isOkteto: true, k8sClientProviderErr: nil, mustDeploy: true},
