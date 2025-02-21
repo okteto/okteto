@@ -871,10 +871,11 @@ func TestDeployK8sService(t *testing.T) {
 
 func TestGetErrorDueToRestartLimit(t *testing.T) {
 	tests := []struct {
-		err        error
-		stack      *model.Stack
-		name       string
-		k8sObjects []runtime.Object
+		err                              error
+		stack                            *model.Stack
+		previousDeployedServicesRestarts map[string]int
+		name                             string
+		k8sObjects                       []runtime.Object
 	}{
 		{
 			name: "no dependent services",
@@ -885,7 +886,8 @@ func TestGetErrorDueToRestartLimit(t *testing.T) {
 					},
 				},
 			},
-			err: nil,
+			previousDeployedServicesRestarts: map[string]int{},
+			err:                              nil,
 		},
 		{
 			name: "dependent svc without reaching backoff",
@@ -922,7 +924,8 @@ func TestGetErrorDueToRestartLimit(t *testing.T) {
 					},
 				},
 			},
-			err: nil,
+			previousDeployedServicesRestarts: map[string]int{},
+			err:                              nil,
 		},
 		{
 			name: "dependent svc reaching backoff",
@@ -959,14 +962,57 @@ func TestGetErrorDueToRestartLimit(t *testing.T) {
 					},
 				},
 			},
-			err: fmt.Errorf("Service 'test1' has been restarted 5 times. Please check the logs and try again"),
+			previousDeployedServicesRestarts: map[string]int{
+				"test1": 0,
+			},
+			err: fmt.Errorf("service 'test1' has been restarted 5 times within this deploy. Please check the logs and try again"),
+		},
+		{
+			name: "dependent svc reaching backoff with previous deploy with failures",
+			k8sObjects: []runtime.Object{
+				&apiv1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							model.StackNameLabel:        "test",
+							model.StackServiceNameLabel: "test1",
+						},
+					},
+					Status: apiv1.PodStatus{
+						ContainerStatuses: []apiv1.ContainerStatus{
+							{
+								RestartCount: 8,
+							},
+						},
+					},
+				},
+			},
+			stack: &model.Stack{
+				Name: "test",
+				Services: map[string]*model.Service{
+					"test1": {
+						BackOffLimit: 2,
+						DependsOn:    model.DependsOn{},
+					},
+					"test2": {
+						DependsOn: model.DependsOn{
+							"test1": model.DependsOnConditionSpec{
+								Condition: model.DependsOnServiceHealthy,
+							},
+						},
+					},
+				},
+			},
+			previousDeployedServicesRestarts: map[string]int{
+				"test1": 5,
+			},
+			err: fmt.Errorf("service 'test1' has been restarted 3 times within this deploy. Please check the logs and try again"),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClient := fake.NewSimpleClientset(tt.k8sObjects...)
-			err := getErrorDueToRestartLimit(context.Background(), tt.stack, "test2", fakeClient)
+			err := getErrorDueToRestartLimit(context.Background(), tt.stack, "test2", tt.previousDeployedServicesRestarts, fakeClient)
 			assert.Equal(t, tt.err, err)
 		})
 	}
