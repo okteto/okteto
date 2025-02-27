@@ -14,6 +14,7 @@
 package integration
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"log"
@@ -95,8 +96,9 @@ func GetTestNamespace(name string) string {
 	} else {
 		runtimeOS = runtimeOS[:3]
 	}
-	name = reduceName(strings.ToLower(name))
-	finalName := fmt.Sprintf("%d-%s-%s", time.Now().Unix(), runtimeOS, name)
+	// To avoid namespace name conflicts, we hash the test name, and add a timestamp and the OS as prefix
+	sha := fmt.Sprintf("%x", sha256.Sum256([]byte(name)))
+	finalName := fmt.Sprintf("%d-%s-%s", time.Now().Unix(), runtimeOS, sha[:8])
 	if prefix := os.Getenv("OKTETO_NAMESPACE_PREFIX"); prefix != "" {
 		finalName = fmt.Sprintf("%s-%s", prefix, finalName)
 	}
