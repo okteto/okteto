@@ -26,8 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 )
@@ -101,12 +99,7 @@ func GetTestNamespace(name string) string {
 	if prefix := os.Getenv("OKTETO_NAMESPACE_PREFIX"); prefix != "" {
 		name = fmt.Sprintf("%s-%s", prefix, name)
 	}
-	return strings.ToLower(fmt.Sprintf("%s-%s-%d", name, runtimeOS, time.Now().Unix()))
-}
-
-// GetCurrentNamespace returns the current namespace of the kubeconfig path
-func GetCurrentNamespace() string {
-	return kubeconfig.CurrentNamespace(config.GetKubeconfigPath())
+	return strings.ToLower(fmt.Sprintf("%d-%s-%s", time.Now().Unix(), runtimeOS, name))
 }
 
 // GetContentFromURL returns the content of the url
