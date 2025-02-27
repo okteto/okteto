@@ -78,16 +78,6 @@ func RunOktetoVersion(oktetoPath string) (string, error) {
 	return string(o), nil
 }
 
-func reduceName(s string) string {
-	return strings.Map(func(r rune) rune {
-		switch r {
-		case 'a', 'e', 'i', 'o', 'u', '_':
-			return -1
-		}
-		return r
-	}, s)
-}
-
 // GetTestNamespace returns the name for a namespace
 func GetTestNamespace(name string) string {
 	runtimeOS := runtime.GOOS
