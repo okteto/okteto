@@ -96,10 +96,11 @@ func GetTestNamespace(name string) string {
 		runtimeOS = runtimeOS[:3]
 	}
 	name = reduceName(strings.ToLower(name))
+	finalName := fmt.Sprintf("%d-%s-%s", time.Now().Unix(), runtimeOS, name)
 	if prefix := os.Getenv("OKTETO_NAMESPACE_PREFIX"); prefix != "" {
-		name = fmt.Sprintf("%s-%s", prefix, name)
+		finalName = fmt.Sprintf("%s-%s", prefix, finalName)
 	}
-	return strings.ToLower(fmt.Sprintf("%d-%s-%s", time.Now().Unix(), runtimeOS, name))
+	return finalName
 }
 
 // GetContentFromURL returns the content of the url
