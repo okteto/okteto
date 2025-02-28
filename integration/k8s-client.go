@@ -26,22 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
-
-func getClientConfig(kubeconfigPaths []string, kubeContext string) clientcmd.ClientConfig {
-	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-	loadingRules.DefaultClientConfig = &clientcmd.DefaultClientConfig
-	loadingRules.Precedence = kubeconfigPaths
-	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		loadingRules,
-		&clientcmd.ConfigOverrides{
-			CurrentContext: kubeContext,
-			ClusterInfo:    clientcmdapi.Cluster{Server: ""},
-		},
-	)
-}
 
 func GetPodsBySelector(ctx context.Context, ns, selector string, client kubernetes.Interface) (*corev1.PodList, error) {
 	return client.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{LabelSelector: selector})
