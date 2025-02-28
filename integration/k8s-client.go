@@ -22,31 +22,13 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/integration/commands"
-	"github.com/okteto/okteto/pkg/config"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
-
-// K8sClient returns a kubernetes client for current KUBECONFIG
-func K8sClient() (*kubernetes.Clientset, *rest.Config, error) {
-	clientConfig := getClientConfig(config.GetKubeconfigPath(), "")
-
-	config, err := clientConfig.ClientConfig()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	client, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, nil, err
-	}
-	return client, config, nil
-}
 
 func getClientConfig(kubeconfigPaths []string, kubeContext string) clientcmd.ClientConfig {
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
