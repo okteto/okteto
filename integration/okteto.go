@@ -14,6 +14,7 @@
 package integration
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"log"
@@ -26,8 +27,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 )
@@ -79,16 +78,6 @@ func RunOktetoVersion(oktetoPath string) (string, error) {
 	return string(o), nil
 }
 
-func reduceName(s string) string {
-	return strings.Map(func(r rune) rune {
-		switch r {
-		case 'a', 'e', 'i', 'o', 'u', '_':
-			return -1
-		}
-		return r
-	}, s)
-}
-
 // GetTestNamespace returns the name for a namespace
 func GetTestNamespace(name string) string {
 	runtimeOS := runtime.GOOS
@@ -97,16 +86,13 @@ func GetTestNamespace(name string) string {
 	} else {
 		runtimeOS = runtimeOS[:3]
 	}
-	name = reduceName(strings.ToLower(name))
+	// To avoid namespace name conflicts, we hash the test name, and add a timestamp and the OS as prefix
+	sha := fmt.Sprintf("%x", sha256.Sum256([]byte(name)))
+	finalName := fmt.Sprintf("%d-%s-%s", time.Now().Unix(), runtimeOS, sha[:8])
 	if prefix := os.Getenv("OKTETO_NAMESPACE_PREFIX"); prefix != "" {
-		name = fmt.Sprintf("%s-%s", prefix, name)
+		finalName = fmt.Sprintf("%s-%s", prefix, finalName)
 	}
-	return strings.ToLower(fmt.Sprintf("%s-%s-%d", name, runtimeOS, time.Now().Unix()))
-}
-
-// GetCurrentNamespace returns the current namespace of the kubeconfig path
-func GetCurrentNamespace() string {
-	return kubeconfig.CurrentNamespace(config.GetKubeconfigPath())
+	return finalName
 }
 
 // GetContentFromURL returns the content of the url

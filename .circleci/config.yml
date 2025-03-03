@@ -10,6 +10,7 @@ aliases:
   - &release-regex /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
   - &release-branch-regex /^release-\d+\.\d+$/
   - &docker-login echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+  - &install-cli curl https://get.okteto.com -sSfL | sh
 
 parameters:
   # The following parameters are filled by GH Actions to run CircleCI jobs
@@ -155,6 +156,8 @@ jobs:
             - v4-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
           at: ./artifacts
+      # Install the latest CLI public available, as the actions tests uses the installed version to checkout the action branch to test
+      - run: *install-cli
       - run:
           name: Run actions integration tests
           command: |
