@@ -37,7 +37,6 @@ type fakeConfigRepo struct {
 	isClean bool
 }
 
-func (fcr fakeConfigRepo) GetSHA() (string, error)                { return fcr.sha, fcr.err }
 func (fcr fakeConfigRepo) IsClean() (bool, error)                 { return fcr.isClean, fcr.err }
 func (fcr fakeConfigRepo) GetAnonymizedRepo() string              { return fcr.url }
 func (fcr fakeConfigRepo) GetLatestDirSHA(string) (string, error) { return fcr.sha, fcr.err }
@@ -313,41 +312,6 @@ func TestGetIsSmartBuildEnabled(t *testing.T) {
 			t.Setenv(OktetoEnableSmartBuildEnvVar, tc.input)
 			cfg := getIsSmartBuildEnabled()
 			assert.Equal(t, tc.expected, cfg)
-		})
-	}
-}
-
-func TestGetGitCommit(t *testing.T) {
-	tt := []struct {
-		name     string
-		expected string
-		input    fakeConfigRepo
-	}{
-		{
-			name: "valid commit",
-			input: fakeConfigRepo{
-				sha:     "1234567890",
-				isClean: true,
-				err:     nil,
-			},
-			expected: "1234567890",
-		},
-		{
-			name: "invalid commit",
-			input: fakeConfigRepo{
-				sha:     "",
-				isClean: true,
-				err:     assert.AnError,
-			},
-			expected: "",
-		},
-	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			cfg := oktetoBuilderConfig{
-				repository: tc.input,
-			}
-			assert.Equal(t, tc.expected, cfg.GetGitCommit())
 		})
 	}
 }

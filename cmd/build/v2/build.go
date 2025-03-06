@@ -57,7 +57,6 @@ type oktetoRegistryInterface interface {
 type oktetoBuilderConfigInterface interface {
 	HasGlobalAccess() bool
 	IsCleanProject() bool
-	GetGitCommit() string
 	IsOkteto() bool
 	GetAnonymizedRepo() string
 }
