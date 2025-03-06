@@ -195,7 +195,11 @@ func (b *SolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOp
 		attachable = append(attachable, ap)
 	} else {
 		dockerCfg := dockerConfig.LoadDefaultConfigFile(os.Stderr)
-		attachable = append(attachable, authprovider.NewDockerAuthProvider(dockerCfg, map[string]*authprovider.AuthTLSConfig{}))
+		authProviderConfig := authprovider.DockerAuthProviderConfig{
+			ConfigFile: dockerCfg,
+			TLSConfigs: map[string]*authprovider.AuthTLSConfig{},
+		}
+		attachable = append(attachable, authprovider.NewDockerAuthProvider(authProviderConfig))
 	}
 
 	for _, sess := range buildOptions.SshSessions {
