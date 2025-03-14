@@ -16,6 +16,7 @@ package stack
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
@@ -57,6 +58,9 @@ const (
 
 	// oktetoComposeVolumeAffinityEnabledEnvVar represents whether the feature flag to enable volume affinity is enabled or not
 	oktetoComposeVolumeAffinityEnabledEnvVar = "OKTETO_COMPOSE_VOLUME_AFFINITY_ENABLED"
+
+	// dependsOnAnnotation represents the annotation to define the depends_on field
+	dependsOnAnnotation = "okteto.dev/depends-on"
 )
 
 // +enum
@@ -554,18 +558,27 @@ func translateLabelSelector(svcName string, s *model.Stack) map[string]string {
 }
 
 func translateAnnotations(svc *model.Service) map[string]string {
-	result := getAnnotations()
+	result := getAnnotations(svc)
 	for k, v := range svc.Annotations {
 		result[k] = v
 	}
 	return result
 }
 
-func getAnnotations() map[string]string {
+func getAnnotations(svc *model.Service) map[string]string {
 	annotations := map[string]string{}
 	if utils.IsOktetoRepo() {
 		annotations[model.OktetoSampleAnnotation] = "true"
 	}
+	if len(svc.DependsOn) > 0 {
+		dependsOn, err := json.Marshal(svc.DependsOn)
+		if err != nil {
+			oktetoLog.Infof("error marshalling depends_on annotation: %s", err)
+		} else {
+			annotations[dependsOnAnnotation] = string(dependsOn)
+		}
+	}
+
 	return annotations
 }
 
