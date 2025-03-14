@@ -40,6 +40,7 @@ import (
 	"github.com/okteto/okteto/cmd/remoterun"
 	"github.com/okteto/okteto/cmd/test"
 	"github.com/okteto/okteto/cmd/up"
+	waitfor "github.com/okteto/okteto/cmd/wait-for"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -155,6 +156,7 @@ func main() {
 
 	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
 	root.AddCommand(registrytoken.RegistryToken(ctx))
+	root.AddCommand(waitfor.WaitForCmd(ctx, k8sClientProvider, ioController))
 
 	root.AddCommand(build.Build(ctx, ioController, at, insights, k8sLogger))
 
