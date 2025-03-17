@@ -15,7 +15,6 @@ package waitfor
 
 import (
 	"context"
-	"sync"
 	"testing"
 	"time"
 
@@ -118,11 +117,8 @@ func TestWaitForDeployment(t *testing.T) {
 			}
 
 			ioCtrl := io.NewIOController()
-			var wg sync.WaitGroup
-			wg.Add(1)
 
-			err := waitForDeployment(ctx, client, tt.resourceName, tt.condition, namespace, &wg, tt.timeout, ioCtrl)
-			wg.Wait()
+			err := waitForDeployment(ctx, client, tt.resourceName, tt.condition, namespace, tt.timeout, ioCtrl)
 
 			if tt.expectError {
 				assert.Error(t, err)
@@ -220,11 +216,8 @@ func TestWaitForStatefulset(t *testing.T) {
 			}
 
 			ioCtrl := io.NewIOController()
-			var wg sync.WaitGroup
-			wg.Add(1)
 
-			err := waitForStatefulSet(ctx, client, tt.resourceName, tt.condition, namespace, &wg, tt.timeout, ioCtrl)
-			wg.Wait()
+			err := waitForStatefulSet(ctx, client, tt.resourceName, tt.condition, namespace, tt.timeout, ioCtrl)
 
 			if tt.expectError {
 				assert.Error(t, err)
@@ -310,11 +303,8 @@ func TestWaitForJob(t *testing.T) {
 			}
 
 			ioCtrl := io.NewIOController()
-			var wg sync.WaitGroup
-			wg.Add(1)
 
-			err := waitForJob(ctx, client, tt.resourceName, tt.condition, namespace, &wg, tt.timeout, ioCtrl)
-			wg.Wait()
+			err := waitForJob(ctx, client, tt.resourceName, tt.condition, namespace, tt.timeout, ioCtrl)
 
 			if tt.expectError {
 				assert.Error(t, err)

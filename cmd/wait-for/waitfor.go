@@ -15,7 +15,6 @@ package waitfor
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -32,6 +31,11 @@ import (
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+)
+
+const (
+	defaultTimeout = 5 * time.Minute
+	intervalDelay  = 1 * time.Second
 )
 
 // opts represents the wait-for command options
@@ -107,13 +111,13 @@ Examples:
 				default:
 					return fmt.Errorf("invalid resource type '%s'. The resource type must be 'deployment', 'statefulset', or 'job'", result.serviceType)
 				}
-				return nil
 			}
 			if len(deploymentList)+len(stsList)+len(jobsList) != len(args) {
 				return fmt.Errorf("invalid service format. The service format must be 'kind/service/condition'")
 			}
 			var wg sync.WaitGroup
 			wg.Add(len(args))
+			errChan := make(chan error, len(args))
 
 			c, _, err := k8sProvider.Provide(okteto.GetContext().Cfg)
 			if err != nil {
@@ -123,19 +127,39 @@ Examples:
 			for name, condition := range deploymentList {
 				name := name
 				condition := condition
-				go waitForDeployment(ctx, c, name, condition, o.namespace, &wg, o.timeout, ioCtrl)
+				go func(name string, condition model.DependsOnCondition) {
+					defer wg.Done()
+					if err := waitForDeployment(ctx, c, name, condition, o.namespace, o.timeout, ioCtrl); err != nil {
+						errChan <- fmt.Errorf("deployment %s: %w", name, err)
+					}
+				}(name, condition)
 			}
 			for name, condition := range stsList {
 				name := name
 				condition := condition
-				go waitForStatefulSet(ctx, c, name, condition, o.namespace, &wg, o.timeout, ioCtrl)
+				go func(name string, condition model.DependsOnCondition) {
+					defer wg.Done()
+					if err := waitForStatefulSet(ctx, c, name, condition, o.namespace, o.timeout, ioCtrl); err != nil {
+						errChan <- fmt.Errorf("statefulset %s: %w", name, err)
+					}
+				}(name, condition)
 			}
 			for name, condition := range jobsList {
 				name := name
 				condition := condition
-				go waitForJob(ctx, c, name, condition, o.namespace, &wg, o.timeout, ioCtrl)
+				go func(name string, condition model.DependsOnCondition) {
+					defer wg.Done()
+					if err := waitForJob(ctx, c, name, condition, o.namespace, o.timeout, ioCtrl); err != nil {
+						errChan <- fmt.Errorf("job %s: %w", name, err)
+					}
+				}(name, condition)
 			}
 			wg.Wait()
+			close(errChan)
+
+			for err := range errChan {
+				ioCtrl.Out().Warning(err.Error())
+			}
 			return nil
 		},
 	}
@@ -143,12 +167,11 @@ Examples:
 	cmd.Flags().StringVarP(&o.namespace, "namespace", "n", "", "namespace where the service is deployed")
 	cmd.Flags().StringVarP(&o.devEnvironment, "dev-environment", "", "", "name of the development environment")
 	cmd.Flags().StringVarP(&o.k8sContext, "context", "c", "", "overwrite the current Okteto Context")
-	cmd.Flags().DurationVarP(&o.timeout, "timeout", "t", 5*time.Minute, "timeout to wait for the service to be ready")
+	cmd.Flags().DurationVarP(&o.timeout, "timeout", "t", defaultTimeout, "timeout to wait for the service to be ready")
 	return cmd
 }
 
-func waitForDeployment(ctx context.Context, c kubernetes.Interface, resourceName string, condition model.DependsOnCondition, namespace string, wg *sync.WaitGroup, timeout time.Duration, ioCtrl *io.Controller) error {
-	defer wg.Done()
+func waitForDeployment(ctx context.Context, c kubernetes.Interface, resourceName string, condition model.DependsOnCondition, namespace string, timeout time.Duration, ioCtrl *io.Controller) error {
 	deadlineCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -156,7 +179,7 @@ func waitForDeployment(ctx context.Context, c kubernetes.Interface, resourceName
 	for {
 		select {
 		case <-deadlineCtx.Done():
-			return errors.New(fmt.Sprintf("Timeout waiting for deployment '%s'", resourceName))
+			return fmt.Errorf("timeout waiting for deployment '%s'", resourceName)
 		default:
 
 			if deployments.IsRunning(ctx, namespace, resourceName, c) {
@@ -175,13 +198,12 @@ func waitForDeployment(ctx context.Context, c kubernetes.Interface, resourceName
 				}
 			}
 
-			time.Sleep(1 * time.Second)
+			time.Sleep(intervalDelay)
 		}
 	}
 }
 
-func waitForStatefulSet(ctx context.Context, c kubernetes.Interface, name string, condition model.DependsOnCondition, namespace string, wg *sync.WaitGroup, timeout time.Duration, ioCtrl *io.Controller) error {
-	defer wg.Done()
+func waitForStatefulSet(ctx context.Context, c kubernetes.Interface, name string, condition model.DependsOnCondition, namespace string, timeout time.Duration, ioCtrl *io.Controller) error {
 	to := time.Now().Add(timeout)
 	ioCtrl.Logger().Infof("waiting for statefulset '%s' to reach condition '%s'", name, condition)
 
@@ -197,7 +219,7 @@ func waitForStatefulSet(ctx context.Context, c kubernetes.Interface, name string
 				return nil
 			}
 
-			time.Sleep(1 * time.Second)
+			time.Sleep(intervalDelay)
 		}
 	case model.DependsOnServiceHealthy:
 		for {
@@ -217,14 +239,13 @@ func waitForStatefulSet(ctx context.Context, c kubernetes.Interface, name string
 				}
 			}
 
-			time.Sleep(5 * time.Second)
+			time.Sleep(intervalDelay)
 		}
 	}
 	return fmt.Errorf("unsupported condition '%s' for statefulset '%s'", condition, name)
 }
 
-func waitForJob(ctx context.Context, c kubernetes.Interface, name string, condition model.DependsOnCondition, namespace string, wg *sync.WaitGroup, timeout time.Duration, ioCtrl *io.Controller) error {
-	defer wg.Done()
+func waitForJob(ctx context.Context, c kubernetes.Interface, name string, condition model.DependsOnCondition, namespace string, timeout time.Duration, ioCtrl *io.Controller) error {
 	to := time.Now().Add(timeout)
 	ioCtrl.Logger().Infof("waiting for job '%s' to reach condition '%s'", name, condition)
 
@@ -246,6 +267,6 @@ func waitForJob(ctx context.Context, c kubernetes.Interface, name string, condit
 			return nil
 		}
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(intervalDelay)
 	}
 }
