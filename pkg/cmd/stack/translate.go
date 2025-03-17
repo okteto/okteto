@@ -58,6 +58,9 @@ const (
 
 	// oktetoComposeVolumeAffinityEnabledEnvVar represents whether the feature flag to enable volume affinity is enabled or not
 	oktetoComposeVolumeAffinityEnabledEnvVar = "OKTETO_COMPOSE_VOLUME_AFFINITY_ENABLED"
+
+	// OktetoComposeWaitForDependencies represents the environment variable to enable waiting for dependencies in an init container
+	OktetoComposeWaitForDependencies = "OKTETO_COMPOSE_WAIT_FOR_DEPENDENCIES"
 )
 
 // +enum
@@ -336,7 +339,7 @@ func getInitContainers(svcName string, s *model.Stack) []apiv1.Container {
 		}
 	}
 
-	if waitForDeps := env.LoadBooleanOrDefault("OKTETO_COMPOSE_WAIT_FOR_DEPENDENCIES", false); waitForDeps {
+	if waitForDeps := env.LoadBooleanOrDefault(OktetoComposeWaitForDependencies, false); waitForDeps {
 		dependsOnContainer := getDependsOnInitContainer(svcName, s)
 		if dependsOnContainer != nil {
 			initContainers = append(initContainers, *dependsOnContainer)

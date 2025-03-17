@@ -8,6 +8,8 @@ import (
 	"time"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/pkg/cmd/stack"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/endpoints"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
@@ -65,6 +67,11 @@ Examples:
 			}
 			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
 				return err
+			}
+
+			if !env.LoadBoolean(stack.OktetoComposeWaitForDependencies) {
+				ioCtrl.Out().Infof("wait-for is not enabled in your stack file")
+				return nil
 			}
 
 			deploymentList := map[string]model.DependsOnCondition{}
