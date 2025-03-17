@@ -71,7 +71,7 @@ func executeOktetoTestAction(namespace, oktetoManifest string) error {
 		return fmt.Errorf("filepath.Abs: %s", err)
 	}
 
-	command := exec.Command(testBinary, "", namespace, "", "", "", "", "", "", "")
+	command := exec.Command(testBinary, "", namespace, "", "", "", "VAR1=Hello", "", "", "")
 	command.Env = os.Environ()
 	command.Dir = filepath.Dir(oktetoManifest)
 	o, err = command.CombinedOutput()
@@ -79,7 +79,21 @@ func executeOktetoTestAction(namespace, oktetoManifest string) error {
 		return fmt.Errorf("test: %s", string(o))
 	}
 
-	log.Printf("destroy preview output: \n%s\n", string(o))
+	log.Printf("okteto test output: \n%s\n", string(o))
+
+	_, err = os.Stat(filepath.Join(filepath.Dir(oktetoManifest), "coverage.txt"))
+	if err != nil {
+		return err
+	}
+
+	_, err = os.Stat(filepath.Join(filepath.Dir(oktetoManifest), "reports/additional-coverage.txt"))
+	if err != nil {
+		return err
+	}
+
+	if !strings.Contains(string(o), "OK unit") && !strings.Contains(string(o), "OK integration") && !strings.Contains(string(o), "OK e2e") && !strings.Contains(string(o), "VAR1=Hello") {
+		return fmt.Errorf("unexpected output: %s", string(o))
+	}
 	return nil
 }
 
@@ -106,6 +120,11 @@ test:
     image: alpine
     commands:
       - echo "OK e2e"
+  var:
+    context: .
+    image: alpine
+    commands:
+      - echo "VAR1=$VAR1"
 `
 	dir := t.TempDir()
 	log.Printf("created tempdir: %s", dir)
