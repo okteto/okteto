@@ -1,3 +1,16 @@
+// Copyright 2025 The Okteto Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package waitfor
 
 import (
@@ -11,6 +24,11 @@ var (
 	errInvalidService   = errors.New("invalid service format. The service format must be 'kind/service/condition'")
 	errInvalidResource  = errors.New("invalid resource type. The resource type must be 'deployment', 'statefulset', or 'job'")
 	errInvalidCondition = errors.New("invalid condition. The condition must be 'service_started', 'service_healthy', or 'service_completed_successfully'")
+)
+
+const (
+	// maxPartsPerService represents the maximum number of parts in a service
+	maxPartsPerService = 3
 )
 
 // parser represents the parser
@@ -43,7 +61,7 @@ func newParser() *parser {
 
 func (p *parser) parse(service string) (*parseResult, error) {
 	substrings := strings.Split(service, "/")
-	if len(substrings) != 3 {
+	if len(substrings) != maxPartsPerService {
 		return nil, errInvalidService
 	}
 
