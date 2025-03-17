@@ -158,7 +158,7 @@ Examples:
 			close(errChan)
 
 			for err := range errChan {
-				ioCtrl.Out().Warning(err.Error())
+				ioCtrl.Out().Warning("error detected: %s", err.Error())
 			}
 			return nil
 		},
@@ -238,9 +238,10 @@ func waitForStatefulSet(ctx context.Context, c kubernetes.Interface, name string
 					return nil
 				}
 			}
-
 			time.Sleep(intervalDelay)
 		}
+	default:
+		return fmt.Errorf("unsupported condition '%s' for statefulset '%s'", condition, name)
 	}
 	return fmt.Errorf("unsupported condition '%s' for statefulset '%s'", condition, name)
 }
