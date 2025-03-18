@@ -11,7 +11,7 @@ FROM syncthing/syncthing:${SYNCTHING_VERSION} AS syncthing
 FROM okteto/remote:${OKTETO_REMOTE_VERSION} AS remote
 FROM okteto/supervisor:${OKTETO_SUPERVISOR_VERSION} AS supervisor
 FROM okteto/clean:${OKTETO_CLEAN_VERSION} AS clean
-FROM golang:1.22.9-bookworm AS golang-builder
+FROM golang:1.23.6-bookworm AS golang-builder
 
 FROM golang-builder as kustomize-builder
 ARG TARGETARCH
