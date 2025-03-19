@@ -49,6 +49,9 @@ const (
 	ComposeField = "compose"
 	outputField  = "output"
 
+	tokenField   = "okteto-token"
+	contextField = "okteto-context"
+
 	progressingStatus = "progressing"
 	deployedStatus    = "deployed"
 	errorStatus       = "error"
@@ -381,12 +384,26 @@ func getDependsOnInitContainer(svcName string, s *model.Stack) *apiv1.Container 
 		Command:         []string{"sh", "-c", fmt.Sprintf("okteto wait-for %s", strings.Join(args, " "))},
 		Env: []apiv1.EnvVar{
 			{
-				Name:  "OKTETO_TOKEN",
-				Value: okteto.GetContext().Token,
+				Name: "OKTETO_TOKEN",
+				ValueFrom: &apiv1.EnvVarSource{
+					SecretKeyRef: &apiv1.SecretKeySelector{
+						Key: tokenField,
+						LocalObjectReference: apiv1.LocalObjectReference{
+							Name: fmt.Sprintf("okteto-%s-stack-secret", s.Name),
+						},
+					},
+				},
 			},
 			{
-				Name:  "OKTETO_CONTEXT",
-				Value: okteto.GetContext().Name,
+				Name: "OKTETO_CONTEXT",
+				ValueFrom: &apiv1.EnvVarSource{
+					SecretKeyRef: &apiv1.SecretKeySelector{
+						Key: contextField,
+						LocalObjectReference: apiv1.LocalObjectReference{
+							Name: fmt.Sprintf("okteto-%s-stack-secret", s.Name),
+						},
+					},
+				},
 			},
 		},
 	}
@@ -524,6 +541,24 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 			Ports:    translateServicePorts(*svc),
 		},
 	}
+}
+
+func translateSecret(s *model.Stack) *apiv1.Secret {
+	return &apiv1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("okteto-%s-stack-secret", s.Name),
+			Namespace: s.Namespace,
+			Labels: map[string]string{
+				model.StackLabel:      "true",
+				model.DeployedByLabel: format.ResourceK8sMetaString(s.Name),
+			},
+		},
+		StringData: map[string]string{
+			tokenField:   okteto.GetContext().Token,
+			contextField: okteto.GetContext().Name,
+		},
+	}
+
 }
 
 func getSvcPublicPorts(svcName string, s *model.Stack) []model.Port {

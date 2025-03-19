@@ -32,19 +32,19 @@ func TestParser_Parse(t *testing.T) {
 			name:      "valid-deployment",
 			input:     "deployment/nginx/service_started",
 			expectErr: nil,
-			result:    &parseResult{"deployment", "nginx", "service_started"},
+			result:    &parseResult{deploymentResource, "nginx", "service_started"},
 		},
 		{
 			name:      "valid-statefulset",
 			input:     "statefulset/mysql/service_healthy",
 			expectErr: nil,
-			result:    &parseResult{"statefulset", "mysql", "service_healthy"},
+			result:    &parseResult{statefulsetResource, "mysql", "service_healthy"},
 		},
 		{
 			name:      "valid-job",
 			input:     "job/wake/service_completed_successfully",
 			expectErr: nil,
-			result:    &parseResult{"job", "wake", "service_completed_successfully"},
+			result:    &parseResult{jobResource, "wake", "service_completed_successfully"},
 		},
 		{
 			name:      "invalid-format",

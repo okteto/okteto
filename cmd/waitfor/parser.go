@@ -29,6 +29,10 @@ var (
 const (
 	// maxPartsPerService represents the maximum number of parts in a service
 	maxPartsPerService = 3
+
+	deploymentResource  = "deployment"
+	statefulsetResource = "statefulset"
+	jobResource         = "job"
 )
 
 // parser represents the parser
@@ -47,9 +51,9 @@ type parseResult struct {
 func newParser() *parser {
 	return &parser{
 		validateResource: func(resource string) bool {
-			return resource == "deployment" ||
-				resource == "statefulset" ||
-				resource == "job"
+			return resource == deploymentResource ||
+				resource == statefulsetResource ||
+				resource == jobResource
 		},
 		validateCondition: func(condition string) bool {
 			return condition == string(model.DependsOnServiceCompleted) ||

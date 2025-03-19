@@ -40,7 +40,7 @@ import (
 	"github.com/okteto/okteto/cmd/remoterun"
 	"github.com/okteto/okteto/cmd/test"
 	"github.com/okteto/okteto/cmd/up"
-	waitfor "github.com/okteto/okteto/cmd/wait-for"
+	"github.com/okteto/okteto/cmd/waitfor"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"

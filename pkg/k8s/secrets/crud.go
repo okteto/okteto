@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
 	v1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -138,4 +139,14 @@ func (s *Secrets) List(ctx context.Context, ns, labelSelector string) ([]v1.Secr
 		return nil, err
 	}
 	return sList.Items, nil
+}
+
+func (s *Secrets) CreateOrUpdate(ctx context.Context, ns string, secret *v1.Secret) error {
+	_, err := s.k8sClient.CoreV1().Secrets(ns).Create(ctx, secret, metav1.CreateOptions{})
+	if err != nil {
+		if k8sErrors.IsAlreadyExists(err) {
+			_, err = s.k8sClient.CoreV1().Secrets(ns).Update(ctx, secret, metav1.UpdateOptions{})
+		}
+	}
+	return err
 }

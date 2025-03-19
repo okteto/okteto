@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -34,6 +35,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/jobs"
 	"github.com/okteto/okteto/pkg/k8s/pods"
+	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
@@ -169,6 +171,12 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			return
 		}
 
+		if env.LoadBoolean(OktetoComposeWaitForDependencies) {
+			if err := deploySecrets(ctx, s, c); err != nil {
+				exit <- err
+				return
+			}
+		}
 		for _, serviceName := range options.ServicesToDeploy {
 			if len(s.Services[serviceName].Ports) == 0 {
 				continue
@@ -631,6 +639,14 @@ func isAnyPortAvailable(ctx context.Context, svc *model.Service, stack *model.St
 		return true
 	}
 	return false
+}
+
+func deploySecrets(ctx context.Context, s *model.Stack, c kubernetes.Interface) error {
+	stackSecret := translateSecret(s)
+	if err := secrets.NewSecrets(c).CreateOrUpdate(ctx, s.Namespace, stackSecret); err != nil {
+		return err
+	}
+	return nil
 }
 
 func deployK8sService(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface) error {

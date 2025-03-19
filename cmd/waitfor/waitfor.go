@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -102,11 +103,11 @@ Examples:
 					return fmt.Errorf("invalid service '%s' format: %s", service, err)
 				}
 				switch result.serviceType {
-				case "deployment":
+				case deploymentResource:
 					deploymentList[result.serviceName] = model.DependsOnCondition(result.condition)
-				case "statefulset":
+				case statefulsetResource:
 					stsList[result.serviceName] = model.DependsOnCondition(result.condition)
-				case "job":
+				case jobResource:
 					jobsList[result.serviceName] = model.DependsOnCondition(result.condition)
 				default:
 					return fmt.Errorf("invalid resource type '%s'. The resource type must be 'deployment', 'statefulset', or 'job'", result.serviceType)
@@ -121,7 +122,8 @@ Examples:
 
 			c, _, err := k8sProvider.Provide(okteto.GetContext().Cfg)
 			if err != nil {
-				return fmt.Errorf("failed to get k8s client: %w", err)
+				ioCtrl.Out().Warning("skipping waitfor: failed to get k8s client: %s", err)
+				return nil
 			}
 
 			for name, condition := range deploymentList {
@@ -175,6 +177,7 @@ func waitForDeployment(ctx context.Context, c kubernetes.Interface, resourceName
 	deadlineCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
+	endpointsGetter := endpoints.NewGetter(c)
 	isRunningCondition := condition == model.DependsOnServiceRunning
 	for {
 		select {
@@ -187,7 +190,7 @@ func waitForDeployment(ctx context.Context, c kubernetes.Interface, resourceName
 					ioCtrl.Out().Success("Deployment '%s' is ready", resourceName)
 					return nil
 				}
-				e, err := endpoints.GetByName(ctx, resourceName, namespace, c)
+				e, err := endpointsGetter.GetByName(ctx, resourceName, namespace)
 				if err != nil {
 					continue
 				}
@@ -203,71 +206,65 @@ func waitForDeployment(ctx context.Context, c kubernetes.Interface, resourceName
 	}
 }
 
-func waitForStatefulSet(ctx context.Context, c kubernetes.Interface, name string, condition model.DependsOnCondition, namespace string, timeout time.Duration, ioCtrl *io.Controller) error {
-	to := time.Now().Add(timeout)
-	ioCtrl.Logger().Infof("waiting for statefulset '%s' to reach condition '%s'", name, condition)
+func waitForStatefulSet(ctx context.Context, c kubernetes.Interface, resourceName string, condition model.DependsOnCondition, namespace string, timeout time.Duration, ioCtrl *io.Controller) error {
+	deadlineCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 
-	switch condition {
-	case model.DependsOnServiceRunning:
-		for {
-			if time.Now().After(to) {
-				ioCtrl.Logger().Infof("statefulset '%s' did not reach condition '%s' after %s", name, condition, timeout)
-				return fmt.Errorf("statefulset '%s' did not reach condition '%s' after %s", name, condition, timeout)
-			}
-			if statefulsets.IsRunning(ctx, namespace, name, c) {
-				ioCtrl.Out().Success("statefulset '%s' reached condition '%s'", name, condition)
-				return nil
-			}
-
-			time.Sleep(intervalDelay)
-		}
-	case model.DependsOnServiceHealthy:
-		for {
-			if time.Now().After(to) {
-				ioCtrl.Logger().Infof("statefulset '%s' did not reach condition '%s' after %s", name, condition, timeout)
-				return fmt.Errorf("statefulset '%s' did not reach condition '%s' after %s", name, condition, timeout)
-			}
-			if statefulsets.IsRunning(ctx, namespace, name, c) {
-				e, err := endpoints.GetByName(ctx, name, namespace, c)
+	endpointsGetter := endpoints.NewGetter(c)
+	isRunningCondition := condition == model.DependsOnServiceRunning
+	for {
+		select {
+		case <-deadlineCtx.Done():
+			return fmt.Errorf("timeout waiting for statefulset '%s'", resourceName)
+		default:
+			if statefulsets.IsRunning(ctx, namespace, resourceName, c) {
+				if isRunningCondition {
+					ioCtrl.Out().Success("Statefulset '%s' is ready", resourceName)
+					return nil
+				}
+				e, err := endpointsGetter.GetByName(ctx, resourceName, namespace)
 				if err != nil {
 					continue
 				}
 				// if there are subsets, the service is healthy
 				if len(e.Subsets) > 0 {
-					ioCtrl.Out().Success("statefulset '%s' reached condition '%s'", name, condition)
+					ioCtrl.Out().Success("Statefulset '%s' reached condition '%s'", resourceName, condition)
 					return nil
 				}
 			}
 			time.Sleep(intervalDelay)
 		}
-	default:
-		return fmt.Errorf("unsupported condition '%s' for statefulset '%s'", condition, name)
 	}
-	return fmt.Errorf("unsupported condition '%s' for statefulset '%s'", condition, name)
 }
 
-func waitForJob(ctx context.Context, c kubernetes.Interface, name string, condition model.DependsOnCondition, namespace string, timeout time.Duration, ioCtrl *io.Controller) error {
-	to := time.Now().Add(timeout)
-	ioCtrl.Logger().Infof("waiting for job '%s' to reach condition '%s'", name, condition)
+func waitForJob(ctx context.Context, c kubernetes.Interface, resourceName string, condition model.DependsOnCondition, namespace string, timeout time.Duration, ioCtrl *io.Controller) error {
+	ioCtrl.Logger().Infof("waiting for job '%s' to reach condition '%s'", resourceName, condition)
 
 	if condition != model.DependsOnServiceCompleted {
-		return fmt.Errorf("unsupported condition '%s' for job '%s'", condition, name)
+		return fmt.Errorf("unsupported condition '%s' for job '%s'", condition, resourceName)
 	}
 
-	for {
-		if time.Now().After(to) {
-			ioCtrl.Logger().Infof("job '%s' did not reach condition '%s' after %s", name, condition, timeout)
-			return fmt.Errorf("job '%s' did not reach condition '%s' after %s", name, condition, timeout)
-		}
-		job, err := c.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			continue
-		}
-		if job.Status.Succeeded == *job.Spec.Completions {
-			ioCtrl.Out().Success("job '%s' reached condition '%s'", name, condition)
-			return nil
-		}
+	deadlineCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 
-		time.Sleep(intervalDelay)
+	for {
+		select {
+		case <-deadlineCtx.Done():
+			return fmt.Errorf("timeout waiting for statefulset '%s'", resourceName)
+		default:
+			job, err := c.BatchV1().Jobs(namespace).Get(ctx, resourceName, metav1.GetOptions{})
+			if err != nil {
+				if k8sErrors.IsNotFound(err) {
+					ioCtrl.Out().Warning("job '%s' not found", resourceName)
+					return nil
+				}
+				continue
+			}
+			if job.Status.Succeeded == *job.Spec.Completions {
+				ioCtrl.Out().Success("job '%s' reached condition '%s'", resourceName, condition)
+				return nil
+			}
+			time.Sleep(intervalDelay)
+		}
 	}
 }

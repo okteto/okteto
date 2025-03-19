@@ -22,8 +22,18 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func GetByName(ctx context.Context, name, namespace string, c kubernetes.Interface) (*corev1.Endpoints, error) {
-	e, err := c.CoreV1().Endpoints(namespace).Get(ctx, name, metav1.GetOptions{})
+// Getter represents the endpoints getter
+type Getter struct {
+	client kubernetes.Interface
+}
+
+// NewGetter returns a new endpoints getter
+func NewGetter(client kubernetes.Interface) *Getter {
+	return &Getter{client: client}
+}
+
+func (g Getter) GetByName(ctx context.Context, name, namespace string) (*corev1.Endpoints, error) {
+	e, err := g.client.CoreV1().Endpoints(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("error getting kubernetes endpoint: %s", err)
 	}
