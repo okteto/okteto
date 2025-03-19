@@ -37,7 +37,7 @@ func TestWaitForDeployment(t *testing.T) {
 		setupMock    func(kubernetes.Interface, string, string)
 		resourceName string
 		condition    model.DependsOnCondition
-		timeout      time.Duration
+		timeout      bool
 		expectError  bool
 	}{
 		{
@@ -58,7 +58,7 @@ func TestWaitForDeployment(t *testing.T) {
 			},
 			resourceName: "ready-deployment",
 			condition:    model.DependsOnServiceRunning,
-			timeout:      3 * time.Second,
+			timeout:      false,
 			expectError:  false,
 		},
 		{
@@ -91,7 +91,7 @@ func TestWaitForDeployment(t *testing.T) {
 			},
 			resourceName: "healthy-deployment",
 			condition:    model.DependsOnServiceHealthy,
-			timeout:      3 * time.Second,
+			timeout:      false,
 			expectError:  false,
 		},
 		{
@@ -101,7 +101,7 @@ func TestWaitForDeployment(t *testing.T) {
 			},
 			resourceName: "missing-deployment",
 			condition:    model.DependsOnServiceRunning,
-			timeout:      2 * time.Second,
+			timeout:      true,
 			expectError:  true,
 		},
 	}
@@ -116,13 +116,19 @@ func TestWaitForDeployment(t *testing.T) {
 				tt.setupMock(client, namespace, tt.resourceName)
 			}
 
+			if tt.timeout {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithTimeout(ctx, 100*time.Millisecond)
+				cancel()
+			}
+
 			ioCtrl := io.NewIOController()
 
-			err := waitForDeployment(ctx, client, tt.resourceName, tt.condition, namespace, tt.timeout, ioCtrl)
+			err := waitForDeployment(ctx, client, tt.resourceName, tt.condition, namespace, 2*time.Second, ioCtrl)
 
 			if tt.expectError {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "Timeout waiting for deployment")
+				assert.Contains(t, err.Error(), "timeout waiting for deployment")
 			} else {
 				assert.NoError(t, err)
 			}
@@ -136,7 +142,7 @@ func TestWaitForStatefulset(t *testing.T) {
 		setupMock    func(kubernetes.Interface, string, string)
 		resourceName string
 		condition    model.DependsOnCondition
-		timeout      time.Duration
+		timeout      bool
 		expectError  bool
 	}{
 		{
@@ -157,7 +163,7 @@ func TestWaitForStatefulset(t *testing.T) {
 			},
 			resourceName: "ready-deployment",
 			condition:    model.DependsOnServiceRunning,
-			timeout:      3 * time.Second,
+			timeout:      false,
 			expectError:  false,
 		},
 		{
@@ -190,7 +196,7 @@ func TestWaitForStatefulset(t *testing.T) {
 			},
 			resourceName: "healthy-deployment",
 			condition:    model.DependsOnServiceHealthy,
-			timeout:      3 * time.Second,
+			timeout:      false,
 			expectError:  false,
 		},
 		{
@@ -200,7 +206,7 @@ func TestWaitForStatefulset(t *testing.T) {
 			},
 			resourceName: "missing-deployment",
 			condition:    model.DependsOnServiceRunning,
-			timeout:      1 * time.Second,
+			timeout:      true,
 			expectError:  true,
 		},
 	}
@@ -214,14 +220,19 @@ func TestWaitForStatefulset(t *testing.T) {
 			if tt.setupMock != nil {
 				tt.setupMock(client, namespace, tt.resourceName)
 			}
+			if tt.timeout {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithTimeout(ctx, 100*time.Millisecond)
+				cancel()
+			}
 
 			ioCtrl := io.NewIOController()
 
-			err := waitForStatefulSet(ctx, client, tt.resourceName, tt.condition, namespace, tt.timeout, ioCtrl)
+			err := waitForStatefulSet(ctx, client, tt.resourceName, tt.condition, namespace, 2*time.Second, ioCtrl)
 
 			if tt.expectError {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "did not reach condition ")
+				assert.Contains(t, err.Error(), "timeout")
 			} else {
 				assert.NoError(t, err)
 			}
