@@ -31,6 +31,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -48,6 +49,9 @@ const (
 	ComposeField = "compose"
 	outputField  = "output"
 
+	tokenField   = "okteto-token"
+	contextField = "okteto-context"
+
 	progressingStatus = "progressing"
 	deployedStatus    = "deployed"
 	errorStatus       = "error"
@@ -57,6 +61,9 @@ const (
 
 	// oktetoComposeVolumeAffinityEnabledEnvVar represents whether the feature flag to enable volume affinity is enabled or not
 	oktetoComposeVolumeAffinityEnabledEnvVar = "OKTETO_COMPOSE_VOLUME_AFFINITY_ENABLED"
+
+	// OktetoComposeWaitForDependencies represents the environment variable to enable waiting for dependencies in an init container
+	OktetoComposeWaitForDependencies = "OKTETO_COMPOSE_WAIT_FOR_DEPENDENCIES"
 )
 
 // +enum
@@ -134,6 +141,7 @@ func translateDeployment(svcName string, s *model.Stack, divert Divert) *appsv1.
 	podSpec := apiv1.PodSpec{
 		TerminationGracePeriodSeconds: ptr.To(svc.StopGracePeriod),
 		NodeSelector:                  svc.NodeSelector,
+		InitContainers:                getInitContainers(svcName, s),
 		Containers: []apiv1.Container{
 			{
 				Name:            svcName,
@@ -322,17 +330,83 @@ func translateJob(svcName string, s *model.Stack, divert Divert) *batchv1.Job {
 func getInitContainers(svcName string, s *model.Stack) []apiv1.Container {
 	svc := s.Services[svcName]
 	initContainers := []apiv1.Container{}
-	if len(svc.Volumes) > 0 {
-		addPermissionsContainer := getAddPermissionsInitContainer(svcName, svc)
-		initContainers = append(initContainers, addPermissionsContainer)
+	if !svc.IsDeployment() {
+		if len(svc.Volumes) > 0 {
+			addPermissionsContainer := getAddPermissionsInitContainer(svcName, svc)
+			initContainers = append(initContainers, addPermissionsContainer)
 
-	}
-	initializationContainer := getInitializeVolumeContentContainer(svcName, svc)
-	if initializationContainer != nil {
-		initContainers = append(initContainers, *initializationContainer)
+		}
+		initializationContainer := getInitializeVolumeContentContainer(svcName, svc)
+		if initializationContainer != nil {
+			initContainers = append(initContainers, *initializationContainer)
+		}
 	}
 
+	if waitForDeps := env.LoadBooleanOrDefault(OktetoComposeWaitForDependencies, false); waitForDeps {
+		dependsOnContainer := getDependsOnInitContainer(svcName, s)
+		if dependsOnContainer != nil {
+			initContainers = append(initContainers, *dependsOnContainer)
+		}
+	}
 	return initContainers
+}
+
+func getDependsOnInitContainer(svcName string, s *model.Stack) *apiv1.Container {
+	dependsOn := s.Services[svcName].DependsOn
+	if len(dependsOn) == 0 {
+		return nil
+	}
+	args := []string{}
+	for dependingSvc, condition := range dependsOn {
+		depSvc, ok := s.Services[dependingSvc]
+		if !ok {
+			oktetoLog.Infof("service '%s' depends on service '%s' which is not defined in the stack", svcName, dependingSvc)
+			continue
+		}
+		var kind string
+		switch {
+		case depSvc.IsDeployment():
+			kind = "deployment"
+		case depSvc.IsStatefulset():
+			kind = "statefulset"
+		case depSvc.IsJob():
+			kind = "job"
+		default:
+			oktetoLog.Infof("service '%s' depends on service '%s' which is not a deployment, statefulset or job", svcName, dependingSvc)
+			continue
+		}
+		args = append(args, fmt.Sprintf("%s/%s/%s", kind, dependingSvc, condition.Condition))
+	}
+	return &apiv1.Container{
+		Name:            "depends-on",
+		ImagePullPolicy: apiv1.PullIfNotPresent,
+		Image:           config.NewImageConfig(oktetoLog.GetOutputWriter()).GetOktetoImage(),
+		Command:         []string{"sh", "-c", fmt.Sprintf("okteto wait-for %s", strings.Join(args, " "))},
+		Env: []apiv1.EnvVar{
+			{
+				Name: "OKTETO_TOKEN",
+				ValueFrom: &apiv1.EnvVarSource{
+					SecretKeyRef: &apiv1.SecretKeySelector{
+						Key: tokenField,
+						LocalObjectReference: apiv1.LocalObjectReference{
+							Name: fmt.Sprintf("okteto-%s-stack-secret", s.Name),
+						},
+					},
+				},
+			},
+			{
+				Name: "OKTETO_CONTEXT",
+				ValueFrom: &apiv1.EnvVarSource{
+					SecretKeyRef: &apiv1.SecretKeySelector{
+						Key: contextField,
+						LocalObjectReference: apiv1.LocalObjectReference{
+							Name: fmt.Sprintf("okteto-%s-stack-secret", s.Name),
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
 func getAddPermissionsInitContainer(svcName string, svc *model.Service) apiv1.Container {
@@ -467,6 +541,24 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 			Ports:    translateServicePorts(*svc),
 		},
 	}
+}
+
+func translateSecret(s *model.Stack) *apiv1.Secret {
+	return &apiv1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("okteto-%s-stack-secret", s.Name),
+			Namespace: s.Namespace,
+			Labels: map[string]string{
+				model.StackLabel:      "true",
+				model.DeployedByLabel: format.ResourceK8sMetaString(s.Name),
+			},
+		},
+		StringData: map[string]string{
+			tokenField:   okteto.GetContext().Token,
+			contextField: okteto.GetContext().Name,
+		},
+	}
+
 }
 
 func getSvcPublicPorts(svcName string, s *model.Stack) []model.Port {
