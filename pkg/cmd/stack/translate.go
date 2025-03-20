@@ -60,7 +60,7 @@ const (
 	oktetoComposeVolumeAffinityEnabledEnvVar = "OKTETO_COMPOSE_VOLUME_AFFINITY_ENABLED"
 
 	// dependsOnAnnotation represents the annotation to define the depends_on field
-	dependsOnAnnotation = "okteto.dev/depends-on"
+	dependsOnAnnotation = "dev.okteto.com/depends-on"
 )
 
 // +enum
