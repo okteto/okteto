@@ -35,7 +35,8 @@ import (
 )
 
 const (
-	gitOperationTimeout = 5 * time.Second
+	gitOperationTimeout    = 5 * time.Second
+	limitDiffSizeToLogInMB = 1024 * 1024
 )
 
 var (
@@ -364,7 +365,13 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 	}
 
 	hashFrom := fmt.Sprintf("%s-%s", diffResponse.diff, untrackedFilesResponse.untrackedFilesDiff)
-	oktetoLog.Infof("hashing diff: %s", hashFrom)
+	logDiff := hashFrom
+	if len(hashFrom) > limitDiffSizeToLogInMB {
+		logDiff = hashFrom[:limitDiffSizeToLogInMB]
+	}
+
+	// As the diff might be huge, setting an arbitrary limit in the chars we print in the logs, if not, it could cause performance issues
+	oktetoLog.Infof("hashing diff: %v", logDiff)
 	diffHash := sha256.Sum256([]byte(hashFrom))
 	return hex.EncodeToString(diffHash[:]), nil
 }

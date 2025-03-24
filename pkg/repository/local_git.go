@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -30,8 +31,10 @@ import (
 
 	"github.com/bluekeyes/go-gitdiff/gitdiff"
 	"github.com/go-git/go-git/v5"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/ignore"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/spf13/afero"
 )
 
 var (
@@ -151,6 +154,7 @@ type LocalGit struct {
 	ignorer           func(subpath string) ignore.Ignorer
 	gitPath           string
 	shouldIgnoreFiles bool
+	fs                afero.Fs
 }
 
 func NewLocalGit(gitPath string, exec CommandExecutor, ignorer func(path string) ignore.Ignorer, shouldIgnoreFiles bool) *LocalGit {
@@ -164,6 +168,7 @@ func NewLocalGit(gitPath string, exec CommandExecutor, ignorer func(path string)
 		exec:              exec,
 		ignorer:           ignorer,
 		shouldIgnoreFiles: shouldIgnoreFiles,
+		fs:                afero.NewOsFs(),
 	}
 }
 
@@ -358,8 +363,28 @@ func (lg *LocalGit) getDirContentSHAWithIgnore(ctx context.Context, gitPath, dir
 
 	filteredLS := strings.Join(filteredLines, "\n")
 
-	hashObjectCmdArgs := []string{"--no-optional-locks", "hash-object", "--stdin"}
-	output, err := lg.exec.RunPipeCommands(ctx, gitPath, "echo", []string{filteredLS}, lg.gitPath, hashObjectCmdArgs)
+	// As the list of files might be too long, we write it to a file and calculate the hash of the file
+	f, err := lg.fs.Create(filepath.Join(config.GetOktetoHome(), fmt.Sprintf("git-untracked-%s-%d", filepath.Base(dirPath), time.Now().UnixNano())))
+	if err != nil {
+		oktetoLog.Debugf("failed to create untracked file: %v", err)
+		return "", err
+	}
+
+	defer func() {
+		err := lg.fs.Remove(f.Name())
+		if err != nil {
+			oktetoLog.Debugf("failed to close untracked file: %v", err)
+		}
+	}()
+
+	_, err = f.WriteString(filteredLS)
+	if err != nil {
+		oktetoLog.Debugf("failed to write untracked file: %v", err)
+		return "", err
+	}
+
+	hashObjectCmdArgs := []string{"--no-optional-locks", "hash-object", f.Name()}
+	output, err := lg.exec.RunCommand(ctx, dirPath, lg.gitPath, hashObjectCmdArgs...)
 
 	if err != nil {
 		oktetoLog.Debugf("failed to calculate hash of directory %s: %v", dirPath, err)
