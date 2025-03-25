@@ -268,8 +268,8 @@ func (r gitRepoController) GetDiffHash(contextDir string) (string, error) {
 	defer cancel()
 
 	timeoutCh := make(chan struct{})
-	diffCh := make(chan diffResponse)
-	untrackedFilesCh := make(chan untrackedFilesResponse)
+	diffCh := make(chan diffResponse, 2)
+	untrackedFilesCh := make(chan untrackedFilesResponse, 2)
 
 	repo, err := r.repoGetter.get(r.path)
 	if err != nil {
