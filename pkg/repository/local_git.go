@@ -373,7 +373,7 @@ func (lg *LocalGit) getDirContentSHAWithIgnore(ctx context.Context, gitPath, dir
 	defer func() {
 		err := lg.fs.Remove(f.Name())
 		if err != nil {
-			oktetoLog.Debugf("failed to close untracked file: %v", err)
+			oktetoLog.Debugf("failed to remove untracked file: %v", err)
 		}
 	}()
 
