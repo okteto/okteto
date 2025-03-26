@@ -57,6 +57,10 @@ func Restart(fs afero.Fs) *cobra.Command {
 				return err
 			}
 
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: namespace, Context: k8sContext}); err != nil {
+				return err
+			}
+
 			if !okteto.IsOkteto() {
 				if err := manifest.ValidateForCLIOnly(); err != nil {
 					return err
