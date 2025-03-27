@@ -86,6 +86,9 @@ func Restart(fs afero.Fs) *cobra.Command {
 			if len(dev.Services) == 0 {
 				return oktetoErrors.ErrNoServicesinOktetoManifest
 			}
+			if namespace == "" {
+				namespace = okteto.GetContext().Namespace
+			}
 
 			serviceName := ""
 			if len(args) > 0 {
