@@ -101,7 +101,6 @@ func (bw *Waiter) WaitUntilIsUp(ctx context.Context) error {
 	defer cancel()
 
 	sp := bw.logger.Out().Spinner("Waiting for BuildKit service to be ready...")
-	sp.Start()
 	defer sp.Stop()
 
 	startWaitingTime := time.Now()
@@ -113,6 +112,7 @@ func (bw *Waiter) WaitUntilIsUp(ctx context.Context) error {
 		default:
 			c, err := bw.buildkitClientFactory.GetBuildkitClient(ctx)
 			if err != nil {
+				sp.Start()
 				bw.logger.Infof("Failed to connect to BuildKit service: %v\n", err)
 				bw.logger.Infof("Retrying in %v...\n", bw.retryInterval)
 				bw.sleeper.Sleep(bw.retryInterval)
@@ -120,6 +120,7 @@ func (bw *Waiter) WaitUntilIsUp(ctx context.Context) error {
 			}
 			_, err = c.Info(ctx)
 			if err != nil {
+				sp.Start()
 				bw.logger.Infof("Failed to get BuildKit service info: %v\n", err)
 				bw.logger.Infof("Retrying in %v...\n", bw.retryInterval)
 				bw.sleeper.Sleep(bw.retryInterval)
