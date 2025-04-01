@@ -74,7 +74,9 @@ func (s *ttySpinner) Start() {
 
 // Stop stops the spinner
 func (s *ttySpinner) Stop() {
-	s.Spinner.Stop()
+	if s.Spinner != nil && s.Spinner.Active() {
+		s.Spinner.Stop()
+	}
 }
 
 // getMessage returns the spinner message
