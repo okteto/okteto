@@ -19,7 +19,7 @@ func (fn Func) Ignore(filePath string) (bool, error) {
 	return fn(filePath)
 }
 
-// Never is a noop ingorer that never ignores a file
+// Never is a noop ignorer that never ignores a file
 var Never = Func(func(filePath string) (bool, error) {
 	return false, nil
 })
