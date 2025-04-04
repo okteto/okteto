@@ -13,7 +13,7 @@
 package ignore
 
 // MultiIgnorer is an Ignorer that combines multiple Ignorers.
-// Ingore returns true if any of the Ignorers returns true.
+// Ignore returns true if any of the Ignorers returns true.
 type MultiIgnorer struct {
 	ignorers []Ignorer
 }

@@ -137,7 +137,7 @@ func TestOktetoIgnore(t *testing.T) {
 	}
 }
 
-func TestOktetoIngoreMultiRules(t *testing.T) {
+func TestOktetoIgnoreMultiRules(t *testing.T) {
 	input := `
 .git
 [deploy]
