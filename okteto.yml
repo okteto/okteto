@@ -5,6 +5,8 @@ build:
     args:
       VERSION_STRING: $OKTETO_GIT_COMMIT
 deploy:
+  remote: true
+  context: .
   image: $OKTETO_BUILD_CLI_IMAGE
   commands:
   - name: CLI
@@ -20,3 +22,24 @@ dev:
       - /go/pkg/
       - /root/.cache/go-build/
     autocreate: true
+test:
+  unit:
+    image: okteto/golang:1
+    context: .
+    commands:
+      - go test ./pkg/... -v
+    artifacts:
+      - coverage.out
+    caches:
+      - /go/pkg
+      - /root/.cache/go-build
+  integration:
+    image: okteto/golang:1
+    context: .
+    commands:
+      - go test ./integration/... -v
+    artifacts:
+      - integration-results.log
+    caches:
+      - /go/pkg
+      - /root/.cache/go-build
