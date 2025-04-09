@@ -16,7 +16,6 @@
 /.gitignore
 /.golangci.yml
 .oktetoignore
-okteto.yml
 ./mdlrc
 /.pre-commit-config.yaml
 /.prettierrc
