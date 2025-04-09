@@ -1,13 +1,33 @@
-/bin
-/docs
-/integration
-/.circleci
-/.git
-/.github
-/.vscode
-/artifacts
-/images
-/samples
+# ===== Files needed for the build =====
+# Keep go.mod, go.sum, source code, and Makefile
+
+# ===== Files to exclude =====
+
+# Build artifacts and binaries (already built)
+/bin/
+/artifacts/
+
+# Documentation and examples (not needed for build)
+/docs/
+/images/
+/samples/
+/CODE_OF_CONDUCT.md
+/CODEOWNERS
+/contributing.md
+/LICENSE
+/README.md
+
+# Test files (not needed for production build)
+/integration/
+/internal/test/
+**/*_test.go
+**/*.test
+
+# CI/CD and development configurations
+/.circleci/
+/.git/
+/.github/
+/.vscode/
 /.codecov.yml
 /.copyright-header.tmpl
 /.deepsource.toml
@@ -15,13 +35,21 @@
 /.editorconfig
 /.gitignore
 /.golangci.yml
-.oktetoignore
-okteto.yml
-./mdlrc
+/.mdlrc
 /.pre-commit-config.yaml
 /.prettierrc
 /.prettierignore
 /.stignore
 /.yaml-lint.yml
-/CODE_OF_CONDUCT.md
-/CODEOWNERS
+
+# Okteto specific files (not needed inside the container)
+/.oktetoignore
+/okteto.yml
+
+# Temporary files and editor artifacts
+**/.DS_Store
+**/*.swp
+**/*.swo
+**/tmp/
+**/*.bak
+**/*.log
