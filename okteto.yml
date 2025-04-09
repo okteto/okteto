@@ -43,3 +43,10 @@ test:
     caches:
       - /go/pkg
       - /root/.cache/go-build
+  cves:
+    image: aquasec/trivy:latest
+    context: .
+    commands:
+      - trivy image --severity HIGH,CRITICAL --output trivy-results.txt $OKTETO_BUILD_CLI_IMAGE
+    artifacts:
+      - trivy-results.txt
