@@ -24,6 +24,7 @@ import (
 )
 
 func TestGetDeployableEmpty(t *testing.T) {
+	t.Setenv(constants.OktetoDeployableEnvVar, "")
 	dep, err := getDeployable()
 
 	expected := deployable.Entity{
