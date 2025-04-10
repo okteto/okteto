@@ -20,3 +20,16 @@ dev:
       - /go/pkg/
       - /root/.cache/go-build/
     autocreate: true
+test:
+  unit:
+    image: okteto/golang:1
+    artifacts:
+      - coverage.txt
+      - coverage.html
+    caches:
+      - /go/pkg/
+      - /root/.cache/go-build/
+    commands:
+      - mkdir -p /var/lib/dbus && echo "11111111111111111111111111111111" | tee /var/lib/dbus/machine-id && chmod 644 /var/lib/dbus/machine-id
+      - git init && git remote add origin https://github.com/okteto/okteto.git
+      - make test

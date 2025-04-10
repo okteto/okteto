@@ -1,13 +1,13 @@
-/bin
-/docs
-/integration
-/.circleci
-/.git
-/.github
-/.vscode
-/artifacts
-/images
-/samples
+# Only ignore specific directories and files
+/bin/
+/docs/
+/integration/
+/.circleci/
+/.github/
+/.vscode/
+/artifacts/
+/images/
+/samples/
 /.codecov.yml
 /.copyright-header.tmpl
 /.deepsource.toml
@@ -15,8 +15,7 @@
 /.editorconfig
 /.gitignore
 /.golangci.yml
-.oktetoignore
-./mdlrc
+/.mdlrc
 /.pre-commit-config.yaml
 /.prettierrc
 /.prettierignore
@@ -24,3 +23,10 @@
 /.yaml-lint.yml
 /CODE_OF_CONDUCT.md
 /CODEOWNERS
+
+[test.unit]
+*
+!**/*.go
+!go.mod
+!go.sum
+!Makefile
