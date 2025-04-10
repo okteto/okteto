@@ -88,6 +88,11 @@ func (d *Driver) UpdatePod(pod apiv1.PodSpec) apiv1.PodSpec {
 	pod.DNSConfig.Searches = searches
 
 	// Add or update environment variables for all containers
+	for i := range pod.InitContainers {
+		updateEnvVar(&pod.InitContainers[i].Env, constants.OktetoSharedEnvironmentEnvVar, d.divert.Namespace)
+		updateEnvVar(&pod.InitContainers[i].Env, constants.OktetoDivertedEnvironmentEnvVar, d.namespace)
+	}
+
 	for i := range pod.Containers {
 		updateEnvVar(&pod.Containers[i].Env, constants.OktetoSharedEnvironmentEnvVar, d.divert.Namespace)
 		updateEnvVar(&pod.Containers[i].Env, constants.OktetoDivertedEnvironmentEnvVar, d.namespace)

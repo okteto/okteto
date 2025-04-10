@@ -263,6 +263,152 @@ func Test_UpdatePod(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "pod-with-init-containers",
+			podSpec: apiv1.PodSpec{
+				InitContainers: []apiv1.Container{
+					{
+						Name: "app1",
+					},
+					{
+						Name: "app2",
+						Env: []apiv1.EnvVar{
+							{
+								Name:  "EXISTING_VAR",
+								Value: "value",
+							},
+						},
+					},
+				},
+			},
+			expected: apiv1.PodSpec{
+				InitContainers: []apiv1.Container{
+					{
+						Name: "app1",
+						Env: []apiv1.EnvVar{
+							{
+								Name:  "OKTETO_SHARED_ENVIRONMENT",
+								Value: "staging",
+							},
+							{
+								Name:  "OKTETO_DIVERTED_ENVIRONMENT",
+								Value: "cindy",
+							},
+						},
+					},
+					{
+						Name: "app2",
+						Env: []apiv1.EnvVar{
+							{
+								Name:  "EXISTING_VAR",
+								Value: "value",
+							},
+							{
+								Name:  "OKTETO_SHARED_ENVIRONMENT",
+								Value: "staging",
+							},
+							{
+								Name:  "OKTETO_DIVERTED_ENVIRONMENT",
+								Value: "cindy",
+							},
+						},
+					},
+				},
+				DNSConfig: &apiv1.PodDNSConfig{
+					Searches: []string{"staging.svc.cluster.local"},
+				},
+			},
+			driver: &Driver{
+				name:      "test",
+				namespace: "cindy",
+				divert: model.DivertDeploy{
+					Namespace: "staging",
+				},
+			},
+		},
+		{
+			name: "pod-with-init-containers-and-main-containers",
+			podSpec: apiv1.PodSpec{
+				InitContainers: []apiv1.Container{
+					{
+						Name: "app1",
+					},
+					{
+						Name: "app2",
+						Env: []apiv1.EnvVar{
+							{
+								Name:  "EXISTING_VAR",
+								Value: "value",
+							},
+						},
+					},
+				},
+				Containers: []apiv1.Container{
+					{
+						Name: "app3",
+					},
+				},
+			},
+			expected: apiv1.PodSpec{
+				InitContainers: []apiv1.Container{
+					{
+						Name: "app1",
+						Env: []apiv1.EnvVar{
+							{
+								Name:  "OKTETO_SHARED_ENVIRONMENT",
+								Value: "staging",
+							},
+							{
+								Name:  "OKTETO_DIVERTED_ENVIRONMENT",
+								Value: "cindy",
+							},
+						},
+					},
+					{
+						Name: "app2",
+						Env: []apiv1.EnvVar{
+							{
+								Name:  "EXISTING_VAR",
+								Value: "value",
+							},
+							{
+								Name:  "OKTETO_SHARED_ENVIRONMENT",
+								Value: "staging",
+							},
+							{
+								Name:  "OKTETO_DIVERTED_ENVIRONMENT",
+								Value: "cindy",
+							},
+						},
+					},
+				},
+				Containers: []apiv1.Container{
+					{
+						Name: "app3",
+						Env: []apiv1.EnvVar{
+							{
+								Name:  "OKTETO_SHARED_ENVIRONMENT",
+								Value: "staging",
+							},
+							{
+								Name:  "OKTETO_DIVERTED_ENVIRONMENT",
+								Value: "cindy",
+							},
+						},
+					},
+				},
+				DNSConfig: &apiv1.PodDNSConfig{
+					Searches: []string{"staging.svc.cluster.local"},
+				},
+			},
+			driver: &Driver{
+				name:      "test",
+				namespace: "cindy",
+				divert: model.DivertDeploy{
+					Namespace: "staging",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
