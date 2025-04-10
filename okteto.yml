@@ -3,7 +3,7 @@ build:
     context: .
     dockerfile: Dockerfile
     args:
-      - VERSION_STRING=$OKTETO_GIT_COMMIT
+      VERSION_STRING: $OKTETO_GIT_COMMIT
 deploy:
   image: $OKTETO_BUILD_CLI_IMAGE
   commands:
