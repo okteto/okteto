@@ -46,6 +46,7 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd/api"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -141,6 +142,9 @@ var fakeManifest = &model.Manifest{
 				Name:    "cat /tmp/test.txt",
 				Command: "cat /tmp/test.txt",
 			},
+		},
+		Divert: &model.DivertDeploy{
+			Namespace: "staging",
 		},
 	},
 }
@@ -248,6 +252,15 @@ func (f *fakeDeployer) Deploy(ctx context.Context, opts *Options) error {
 
 func (f *fakeDeployer) CleanUp(ctx context.Context, err error) {
 	f.Called(ctx, err)
+}
+
+type fakeDivert struct {
+	mock.Mock
+}
+
+func (f *fakeDivert) Deploy(ctx context.Context) error {
+	args := f.Called(ctx)
+	return args.Error(0)
 }
 
 func TestDeployWithErrorReadingManifestFile(t *testing.T) {
@@ -538,6 +551,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		},
 	})
 	fakeDeployer := &fakeDeployer{}
+	divert := &fakeDivert{}
 
 	okteto.CurrentStore = &okteto.ContextStore{
 		Contexts: map[string]*okteto.Context{
@@ -558,6 +572,92 @@ func TestDeployWithoutErrors(t *testing.T) {
 		GetDeployer:       fakeDeployer.Get,
 		Builder:           &fakeV2Builder{},
 		IoCtrl:            io.NewIOController(),
+		DivertDeployerGetter: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface) (DivertDeployer, error) {
+			return divert, nil
+		},
+	}
+	ctx := context.Background()
+	opts := &Options{
+		Name:         "movies",
+		Namespace:    fakeNamespace,
+		ManifestPath: "",
+		Variables:    []string{},
+	}
+
+	fakeDeployer.On(
+		"Get",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(fakeDeployer, nil)
+
+	expectedOpts := &Options{
+		Name:         "movies",
+		Namespace:    fakeNamespace,
+		ManifestPath: "",
+		Variables:    []string{},
+		Manifest:     fakeManifest,
+	}
+	fakeDeployer.On("Deploy", mock.Anything, expectedOpts).Return(nil)
+	divert.On("Deploy", mock.Anything).Return(nil)
+
+	err := c.Run(ctx, opts)
+
+	assert.NoError(t, err)
+
+	// check if configmap has been created
+	fakeClient, _, err := c.K8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)
+	if err != nil {
+		t.Fatal("could not create fake k8s client")
+	}
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), fakeNamespace, fakeClient)
+	assert.Nil(t, err)
+	assert.NotNil(t, cfg)
+	assert.Equal(t, pipeline.DeployedStatus, cfg.Data["status"])
+	divert.AssertExpectations(t)
+}
+
+func TestDeployWithErrorGettingDivertDriver(t *testing.T) {
+	fakeNamespace := "test"
+	fakeOs := afero.NewMemMapFs()
+	fakeK8sClientProvider := test.NewFakeK8sProvider(&v1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				model.DeployedByLabel: "movies",
+			},
+			Namespace: fakeNamespace,
+		},
+	})
+	fakeDeployer := &fakeDeployer{}
+	divert := &fakeDivert{}
+
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: fakeNamespace,
+				Cfg:       &api.Config{},
+			},
+		},
+		CurrentContext: "test",
+	}
+
+	c := &Command{
+		GetManifest:       getFakeManifest,
+		K8sClientProvider: fakeK8sClientProvider,
+		EndpointGetter:    getFakeEndpoint,
+		Fs:                fakeOs,
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
+		GetDeployer:       fakeDeployer.Get,
+		Builder:           &fakeV2Builder{},
+		IoCtrl:            io.NewIOController(),
+		DivertDeployerGetter: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface) (DivertDeployer, error) {
+			return divert, fmt.Errorf("error getting divert driver")
+		},
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -590,7 +690,8 @@ func TestDeployWithoutErrors(t *testing.T) {
 
 	err := c.Run(ctx, opts)
 
-	assert.NoError(t, err)
+	assert.Error(t, err)
+	assert.Equal(t, "error getting divert driver", err.Error())
 
 	// check if configmap has been created
 	fakeClient, _, err := c.K8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)
@@ -600,7 +701,92 @@ func TestDeployWithoutErrors(t *testing.T) {
 	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), fakeNamespace, fakeClient)
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
-	assert.Equal(t, pipeline.DeployedStatus, cfg.Data["status"])
+	assert.Equal(t, pipeline.ErrorStatus, cfg.Data["status"])
+	divert.AssertNotCalled(t, "Deploy", mock.Anything)
+}
+
+func TestDeployWithErrorDeployingDivertDriver(t *testing.T) {
+	fakeNamespace := "test"
+	fakeOs := afero.NewMemMapFs()
+	fakeK8sClientProvider := test.NewFakeK8sProvider(&v1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				model.DeployedByLabel: "movies",
+			},
+			Namespace: fakeNamespace,
+		},
+	})
+	fakeDeployer := &fakeDeployer{}
+	divert := &fakeDivert{}
+
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: fakeNamespace,
+				Cfg:       &api.Config{},
+			},
+		},
+		CurrentContext: "test",
+	}
+
+	c := &Command{
+		GetManifest:       getFakeManifest,
+		K8sClientProvider: fakeK8sClientProvider,
+		EndpointGetter:    getFakeEndpoint,
+		Fs:                fakeOs,
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
+		GetDeployer:       fakeDeployer.Get,
+		Builder:           &fakeV2Builder{},
+		IoCtrl:            io.NewIOController(),
+		DivertDeployerGetter: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface) (DivertDeployer, error) {
+			return divert, nil
+		},
+	}
+	ctx := context.Background()
+	opts := &Options{
+		Name:         "movies",
+		Namespace:    fakeNamespace,
+		ManifestPath: "",
+		Variables:    []string{},
+	}
+
+	fakeDeployer.On(
+		"Get",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(fakeDeployer, nil)
+	divert.On("Deploy", mock.Anything).Return(fmt.Errorf("error getting deploying driver"))
+
+	expectedOpts := &Options{
+		Name:         "movies",
+		Namespace:    fakeNamespace,
+		ManifestPath: "",
+		Variables:    []string{},
+		Manifest:     fakeManifest,
+	}
+	fakeDeployer.On("Deploy", mock.Anything, expectedOpts).Return(nil)
+
+	err := c.Run(ctx, opts)
+
+	assert.Error(t, err)
+	assert.Equal(t, "error getting deploying driver", err.Error())
+
+	// check if configmap has been created
+	fakeClient, _, err := c.K8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)
+	if err != nil {
+		t.Fatal("could not create fake k8s client")
+	}
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), fakeNamespace, fakeClient)
+	assert.Nil(t, err)
+	assert.NotNil(t, cfg)
+	assert.Equal(t, pipeline.ErrorStatus, cfg.Data["status"])
+	divert.AssertExpectations(t)
 }
 
 func TestGetDefaultTimeout(t *testing.T) {
