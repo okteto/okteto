@@ -103,15 +103,6 @@ func (f *fakeExecutor) CleanUp(err error) {
 	f.Called(err)
 }
 
-type fakeDivert struct {
-	mock.Mock
-}
-
-func (f *fakeDivert) Deploy(ctx context.Context) error {
-	args := f.Called(ctx)
-	return args.Error(0)
-}
-
 type fakeExternalResource struct {
 	mock.Mock
 }
@@ -362,94 +353,6 @@ func TestRunCommandsSectionWithErrorInCommands(t *testing.T) {
 	executor.AssertExpectations(t)
 }
 
-func TestRunCommandsSectionWithDivert(t *testing.T) {
-	okteto.CurrentStore = &okteto.ContextStore{
-		Contexts: map[string]*okteto.Context{
-			"test": {
-				Namespace: "test",
-				IsOkteto:  true,
-			},
-		},
-		CurrentContext: "test",
-	}
-	executor := &fakeExecutor{}
-	divertDeployer := &fakeDivert{}
-	r := DeployRunner{
-		TempKubeconfigFile: "temp-kubeconfig",
-		Fs:                 afero.NewMemMapFs(),
-		ConfigMapHandler:   &fakeCmapHandler{},
-		Executor:           executor,
-		DivertDeployer:     divertDeployer,
-	}
-
-	params := DeployParameters{
-		Namespace: "test1",
-		Variables: []string{
-			"A=value1",
-			"B=value2",
-		},
-		Deployable: Entity{
-			Divert: &model.DivertDeploy{
-				Driver:    constants.OktetoDivertNginxDriver,
-				Namespace: "test2",
-			},
-		},
-	}
-
-	divertDeployer.On("Deploy", mock.Anything).Return(nil).Once()
-
-	err := r.runCommandsSection(context.Background(), params)
-
-	require.NoError(t, err)
-	executor.AssertNotCalled(t, "Execute", mock.Anything, mock.Anything)
-	executor.AssertExpectations(t)
-	divertDeployer.AssertExpectations(t)
-}
-
-func TestRunCommandsSectionWithErrorDeployingDivert(t *testing.T) {
-	okteto.CurrentStore = &okteto.ContextStore{
-		Contexts: map[string]*okteto.Context{
-			"test": {
-				Namespace: "test",
-				IsOkteto:  true,
-			},
-		},
-		CurrentContext: "test",
-	}
-	executor := &fakeExecutor{}
-	divertDeployer := &fakeDivert{}
-	r := DeployRunner{
-		TempKubeconfigFile: "temp-kubeconfig",
-		Fs:                 afero.NewMemMapFs(),
-		ConfigMapHandler:   &fakeCmapHandler{},
-		Executor:           executor,
-		DivertDeployer:     divertDeployer,
-	}
-
-	params := DeployParameters{
-		Namespace: "test1",
-		Variables: []string{
-			"A=value1",
-			"B=value2",
-		},
-		Deployable: Entity{
-			Divert: &model.DivertDeploy{
-				Driver:    constants.OktetoDivertNginxDriver,
-				Namespace: "test2",
-			},
-		},
-	}
-
-	divertDeployer.On("Deploy", mock.Anything).Return(assert.AnError).Once()
-
-	err := r.runCommandsSection(context.Background(), params)
-
-	require.Error(t, err)
-	executor.AssertNotCalled(t, "Execute", mock.Anything, mock.Anything)
-	executor.AssertExpectations(t)
-	divertDeployer.AssertExpectations(t)
-}
-
 func TestRunCommandsSectionWithExternal(t *testing.T) {
 	okteto.CurrentStore = &okteto.ContextStore{
 		Contexts: map[string]*okteto.Context{
@@ -462,14 +365,12 @@ func TestRunCommandsSectionWithExternal(t *testing.T) {
 	}
 	k8sProvider := test.NewFakeK8sProvider()
 	executor := &fakeExecutor{}
-	divertDeployer := &fakeDivert{}
 	externalResource := &fakeExternalResource{}
 	r := DeployRunner{
 		TempKubeconfigFile: "temp-kubeconfig",
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
 		Executor:           executor,
-		DivertDeployer:     divertDeployer,
 		K8sClientProvider:  k8sProvider,
 		GetExternalControl: func(_ *rest.Config) ExternalResourceInterface {
 			return externalResource
@@ -508,9 +409,7 @@ func TestRunCommandsSectionWithExternal(t *testing.T) {
 
 	require.NoError(t, err)
 	executor.AssertNotCalled(t, "Execute", mock.Anything, mock.Anything)
-	divertDeployer.AssertNotCalled(t, "Deploy", mock.Anything)
 	executor.AssertExpectations(t)
-	divertDeployer.AssertExpectations(t)
 	externalResource.AssertExpectations(t)
 }
 
@@ -526,14 +425,12 @@ func TestRunCommandsSectionWithErrorDeployingExternal(t *testing.T) {
 	}
 	k8sProvider := test.NewFakeK8sProvider()
 	executor := &fakeExecutor{}
-	divertDeployer := &fakeDivert{}
 	externalResource := &fakeExternalResource{}
 	r := DeployRunner{
 		TempKubeconfigFile: "temp-kubeconfig",
 		Fs:                 afero.NewMemMapFs(),
 		ConfigMapHandler:   &fakeCmapHandler{},
 		Executor:           executor,
-		DivertDeployer:     divertDeployer,
 		K8sClientProvider:  k8sProvider,
 		GetExternalControl: func(_ *rest.Config) ExternalResourceInterface {
 			return externalResource
@@ -572,9 +469,7 @@ func TestRunCommandsSectionWithErrorDeployingExternal(t *testing.T) {
 
 	require.Error(t, err)
 	executor.AssertNotCalled(t, "Execute", mock.Anything, mock.Anything)
-	divertDeployer.AssertNotCalled(t, "Deploy", mock.Anything)
 	executor.AssertExpectations(t)
-	divertDeployer.AssertExpectations(t)
 	externalResource.AssertExpectations(t)
 }
 

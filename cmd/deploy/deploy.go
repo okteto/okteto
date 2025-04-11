@@ -108,19 +108,20 @@ type cleanUpFunc func(context.Context, error)
 
 // Command defines the config for deploying an app
 type Command struct {
-	GetManifest       func(path string, fs afero.Fs) (*model.Manifest, error)
-	K8sClientProvider okteto.K8sClientProviderWithLogger
-	Builder           builderInterface
-	GetDeployer       getDeployerFunc
-	EndpointGetter    func(k8sLogger *io.K8sLogger) (EndpointGetter, error)
-	DeployWaiter      Waiter
-	CfgMapHandler     ConfigMapHandler
-	Fs                afero.Fs
-	PipelineCMD       pipelineCMD.DeployerInterface
-	AnalyticsTracker  AnalyticsTrackerInterface
-	IoCtrl            *io.Controller
-	K8sLogger         *io.K8sLogger
-	InsightsTracker   buildDeployTrackerInterface
+	GetManifest          func(path string, fs afero.Fs) (*model.Manifest, error)
+	K8sClientProvider    okteto.K8sClientProviderWithLogger
+	Builder              builderInterface
+	GetDeployer          getDeployerFunc
+	EndpointGetter       func(k8sLogger *io.K8sLogger) (EndpointGetter, error)
+	DeployWaiter         Waiter
+	CfgMapHandler        ConfigMapHandler
+	Fs                   afero.Fs
+	PipelineCMD          pipelineCMD.DeployerInterface
+	AnalyticsTracker     AnalyticsTrackerInterface
+	IoCtrl               *io.Controller
+	K8sLogger            *io.K8sLogger
+	InsightsTracker      buildDeployTrackerInterface
+	DivertDeployerGetter getDivertDeployer
 
 	PipelineType model.Archetype
 	// onCleanUp is a list of functions to be executed when the execution is interrupted. This is a hack
@@ -155,6 +156,17 @@ type buildDeployTrackerInterface interface {
 type Deployer interface {
 	Deploy(context.Context, *Options) error
 	CleanUp(ctx context.Context, err error)
+}
+
+// DivertDeployer defines the operations to deploy the divert section of an Okteto manifest
+type DivertDeployer interface {
+	Deploy(ctx context.Context) error
+}
+
+type getDivertDeployer func(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interface) (DivertDeployer, error)
+
+func newDivertDeployer(d *model.DivertDeploy, name, namespace string, c kubernetes.Interface) (DivertDeployer, error) {
+	return divert.New(d, name, namespace, c)
 }
 
 // Deploy deploys the okteto manifest
@@ -232,19 +244,20 @@ $ okteto deploy --no-build=true`,
 			c := &Command{
 				GetManifest: model.GetManifestV2,
 
-				K8sClientProvider:  k8sClientProvider,
-				GetDeployer:        GetDeployer,
-				Builder:            buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish),
-				DeployWaiter:       NewDeployWaiter(k8sClientProvider, k8sLogger),
-				EndpointGetter:     NewEndpointGetter,
-				IsRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
-				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider, k8sLogger),
-				Fs:                 afero.NewOsFs(),
-				PipelineCMD:        pc,
-				RunningInInstaller: config.RunningInInstaller(),
-				AnalyticsTracker:   at,
-				IoCtrl:             ioCtrl,
-				K8sLogger:          k8sLogger,
+				K8sClientProvider:    k8sClientProvider,
+				GetDeployer:          GetDeployer,
+				Builder:              buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish),
+				DeployWaiter:         NewDeployWaiter(k8sClientProvider, k8sLogger),
+				EndpointGetter:       NewEndpointGetter,
+				IsRemote:             env.LoadBoolean(constants.OktetoDeployRemote),
+				CfgMapHandler:        NewConfigmapHandler(k8sClientProvider, k8sLogger),
+				Fs:                   afero.NewOsFs(),
+				PipelineCMD:          pc,
+				RunningInInstaller:   config.RunningInInstaller(),
+				AnalyticsTracker:     at,
+				IoCtrl:               ioCtrl,
+				K8sLogger:            k8sLogger,
+				DivertDeployerGetter: newDivertDeployer,
 
 				onCleanUp:       []cleanUpFunc{},
 				InsightsTracker: insightsTracker,
@@ -555,6 +568,21 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		oktetoLog.Information("Running stage '%s'", stage)
 		if err := dc.deployEndpoints(ctx, deployOptions); err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error generating endpoints: %s", err.Error())
+			return err
+		}
+		oktetoLog.SetStage("")
+	}
+
+	if deployOptions.Manifest.Deploy.Divert != nil && deployOptions.Manifest.Deploy.Divert.Namespace != okteto.GetContext().Namespace {
+		stage := "Deploy Divert"
+		oktetoLog.SetStage(stage)
+		oktetoLog.Information("Running stage '%s'", stage)
+		driver, err := dc.DivertDeployerGetter(deployOptions.Manifest.Deploy.Divert, deployOptions.Name, deployOptions.Namespace, c)
+		if err != nil {
+			return err
+		}
+		if err := driver.Deploy(ctx); err != nil {
+			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error creating divert: %s", err.Error())
 			return err
 		}
 		oktetoLog.SetStage("")
