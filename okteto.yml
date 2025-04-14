@@ -20,3 +20,18 @@ dev:
       - /go/pkg/
       - /root/.cache/go-build/
     autocreate: true
+test:
+  unit:
+    image: okteto/golang:1
+    artifacts:
+      - coverage.txt
+      - coverage.html
+    caches:
+      - /go/pkg/
+      - /root/.cache/go-build/
+    commands:
+      # We need to set the machine-id in order to run the tests that require dbus
+      - mkdir -p /var/lib/dbus && echo "11111111111111111111111111111111" | tee /var/lib/dbus/machine-id && chmod 644 /var/lib/dbus/machine-id
+      # We need to initialize the git repository in order to check that the annotation dev.okteto.com/sample is set
+      - git init && git remote add origin https://github.com/okteto/okteto.git
+      - make test

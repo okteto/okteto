@@ -1,26 +1,28 @@
-# Global ignores (applied to all commands)
-bin/
-docs/
-.circleci/
-.git/
-.github/
-.vscode/
-artifacts/
-images/
-samples/
-.*yml
-.*yaml
-.*toml
-.*tmpl
-.editorconfig
-.gitignore
-.oktetoignore
-.mdlrc
-.pre-commit-config.*
-.prettier*
-.stignore
-CODE_OF_CONDUCT.md
-CODEOWNERS
+# Only ignore specific directories and files
+/bin/
+/docs/
+/integration/
+/.circleci/
+/.github/
+/.vscode/
+/artifacts/
+/images/
+/samples/
+/.codecov.yml
+/.copyright-header.tmpl
+/.deepsource.toml
+/.DEREK.yml
+/.editorconfig
+/.gitignore
+/.golangci.yml
+/.mdlrc
+/.pre-commit-config.yaml
+/.prettierrc
+/.prettierignore
+/.stignore
+/.yaml-lint.yml
+/CODE_OF_CONDUCT.md
+/CODEOWNERS
 
 # Applied to deploy commands only - ignore everything
 [deploy]
@@ -30,8 +32,9 @@ CODEOWNERS
 [destroy]
 *
 
-# Applied to all test commands
-[test]
-docs/
-samples/
-scripts/ci/
+[test.unit]
+*
+!**/*.go
+!go.mod
+!go.sum
+!Makefile

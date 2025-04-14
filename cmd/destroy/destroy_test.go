@@ -836,7 +836,6 @@ func TestGetDestroyer(t *testing.T) {
 			expectedType: &remoteDestroyCommand{},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(constants.OktetoForceRemote, tt.clusterForceRemote)
