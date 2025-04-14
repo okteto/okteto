@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	istioNetworkingV1beta1 "istio.io/api/networking/v1beta1"
@@ -85,7 +86,33 @@ func (d *Driver) UpdatePod(pod apiv1.PodSpec) apiv1.PodSpec {
 	searches := []string{fmt.Sprintf("%s.svc.cluster.local", d.divert.Namespace)}
 	searches = append(searches, pod.DNSConfig.Searches...)
 	pod.DNSConfig.Searches = searches
+
+	// Add or update environment variables for all containers
+	for i := range pod.InitContainers {
+		updateEnvVar(&pod.InitContainers[i].Env, constants.OktetoSharedEnvironmentEnvVar, d.divert.Namespace)
+		updateEnvVar(&pod.InitContainers[i].Env, constants.OktetoDivertedEnvironmentEnvVar, d.namespace)
+	}
+
+	for i := range pod.Containers {
+		updateEnvVar(&pod.Containers[i].Env, constants.OktetoSharedEnvironmentEnvVar, d.divert.Namespace)
+		updateEnvVar(&pod.Containers[i].Env, constants.OktetoDivertedEnvironmentEnvVar, d.namespace)
+	}
+
 	return pod
 }
 
 func (d *Driver) UpdateVirtualService(vs *istioNetworkingV1beta1.VirtualService) {}
+
+// updateEnvVar adds or updates an environment variable in the given env var slice
+func updateEnvVar(envVars *[]apiv1.EnvVar, name, value string) {
+	for i := range *envVars {
+		if (*envVars)[i].Name == name {
+			(*envVars)[i].Value = value
+			return
+		}
+	}
+	*envVars = append(*envVars, apiv1.EnvVar{
+		Name:  name,
+		Value: value,
+	})
+}

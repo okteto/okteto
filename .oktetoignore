@@ -24,6 +24,14 @@
 /CODE_OF_CONDUCT.md
 /CODEOWNERS
 
+# Applied to deploy commands only - ignore everything
+[deploy]
+*
+
+# Applied to destroy commands only - ignore everything
+[destroy]
+*
+
 [test.unit]
 *
 !**/*.go
