@@ -146,4 +146,10 @@ const (
 
 	// OktetoSshAgentSocketEnvVar Env variable defining the socket where the ssh-forwarder will listen
 	OktetoSshAgentSocketEnvVar = "OKTETO_SSH_AGENT_SOCKET"
+
+	// OktetoSharedEnvironmentEnvVar Env variable containing the namespace of the shared environment in divert
+	OktetoSharedEnvironmentEnvVar = "OKTETO_SHARED_ENVIRONMENT"
+
+	// OktetoDivertedEnvironmentEnvVar Env variable containing the namespace of the diverted environment in divert
+	OktetoDivertedEnvironmentEnvVar = "OKTETO_DIVERTED_ENVIRONMENT"
 )

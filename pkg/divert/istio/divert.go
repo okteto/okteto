@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/k8s/virtualservices"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -120,6 +121,16 @@ func (d *Driver) Destroy(ctx context.Context) error {
 }
 
 func (d *Driver) UpdatePod(pod apiv1.PodSpec) apiv1.PodSpec {
+	// Add or update environment variables for all containers
+	for i := range pod.InitContainers {
+		updateEnvVar(&pod.InitContainers[i].Env, constants.OktetoSharedEnvironmentEnvVar, d.divert.Namespace)
+		updateEnvVar(&pod.InitContainers[i].Env, constants.OktetoDivertedEnvironmentEnvVar, d.namespace)
+	}
+
+	for i := range pod.Containers {
+		updateEnvVar(&pod.Containers[i].Env, constants.OktetoSharedEnvironmentEnvVar, d.divert.Namespace)
+		updateEnvVar(&pod.Containers[i].Env, constants.OktetoDivertedEnvironmentEnvVar, d.namespace)
+	}
 	return pod
 }
 
@@ -185,4 +196,18 @@ func (d *Driver) retryTranslateDivertHost(ctx context.Context, divertHost model.
 		}
 	}
 	return err
+}
+
+// updateEnvVar adds or updates an environment variable in the given env var slice
+func updateEnvVar(envVars *[]apiv1.EnvVar, name, value string) {
+	for i := range *envVars {
+		if (*envVars)[i].Name == name {
+			(*envVars)[i].Value = value
+			return
+		}
+	}
+	*envVars = append(*envVars, apiv1.EnvVar{
+		Name:  name,
+		Value: value,
+	})
 }
