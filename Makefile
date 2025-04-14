@@ -41,7 +41,7 @@ lint-fix:
 
 .PHONY: test
 test:
-	go test -p 4 -race -coverprofile=coverage.txt -covermode=atomic ./...
+	OKTETO_DEPLOYABLE="" OKTETO_FORCE_REMOTE="" OKTETO_DEPLOY_REMOTE="" go test -p 4 -race -coverprofile=coverage.txt -covermode=atomic ./...
 
 .PHONY: integration
 integration:
