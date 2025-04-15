@@ -19,6 +19,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/registry"
 )
 
@@ -36,17 +37,19 @@ type imageChecker struct {
 	cfg      oktetoBuilderConfigInterface
 	registry registryImageCheckerInterface
 	logger   loggerInfo
+	outCtrl  *io.OutputController
 
 	lookupReferenceWithDigest func(tag string, registry registryImageCheckerInterface) (string, error)
 }
 
 // newImageChecker returns a new image checker
-func newImageChecker(cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface, tagger imageTaggerInterface, logger loggerInfo) imageChecker {
+func newImageChecker(cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface, tagger imageTaggerInterface, ioCtrl *io.Controller) imageChecker {
 	return imageChecker{
 		tagger:   tagger,
 		cfg:      cfg,
 		registry: registry,
-		logger:   logger,
+		logger:   ioCtrl.Logger(),
+		outCtrl:  ioCtrl.Out(),
 
 		lookupReferenceWithDigest: lookupReferenceWithDigest,
 	}
@@ -59,6 +62,10 @@ func (ic imageChecker) checkIfBuildHashIsBuilt(image, ns, registryURL, manifestN
 	if buildHash == "" {
 		return "", false
 	}
+
+	sp := ic.outCtrl.Spinner(fmt.Sprintf("Checking if image '%s' is already built", svcToBuild))
+	sp.Start()
+	defer sp.Stop()
 
 	var referencesToCheck []string
 	if image != "" {

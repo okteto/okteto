@@ -37,7 +37,8 @@ func Test_checkIfBuildHashIsBuilt(t *testing.T) {
 		{
 			name: "empty build hash",
 			imageChecker: &imageChecker{
-				logger: io.NewIOController().Logger(),
+				logger:  io.NewIOController().Logger(),
+				outCtrl: io.NewIOController().Out(),
 			},
 			expectedTag:   "",
 			expectedBuilt: false,
@@ -51,7 +52,8 @@ func Test_checkIfBuildHashIsBuilt(t *testing.T) {
 				lookupReferenceWithDigest: func(_ string, _ registryImageCheckerInterface) (string, error) {
 					return "", oktetoErrors.ErrNotFound
 				},
-				logger: io.NewIOController().Logger(),
+				logger:  io.NewIOController().Logger(),
+				outCtrl: io.NewIOController().Out(),
 			},
 			manifestName:  "manifest",
 			serviceName:   "service",
@@ -62,7 +64,8 @@ func Test_checkIfBuildHashIsBuilt(t *testing.T) {
 		{
 			name: "error getting SHA from registry",
 			imageChecker: &imageChecker{
-				logger: io.NewIOController().Logger(),
+				logger:  io.NewIOController().Logger(),
+				outCtrl: io.NewIOController().Out(),
 				tagger: imageTagger{
 					cfg: &fakeConfig{},
 				},
@@ -87,7 +90,8 @@ func Test_checkIfBuildHashIsBuilt(t *testing.T) {
 				lookupReferenceWithDigest: func(_ string, _ registryImageCheckerInterface) (string, error) {
 					return "image-tag-from-registry", nil
 				},
-				logger: io.NewIOController().Logger(),
+				logger:  io.NewIOController().Logger(),
+				outCtrl: io.NewIOController().Out(),
 			},
 			manifestName:  "manifest",
 			serviceName:   "service",
