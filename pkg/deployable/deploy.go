@@ -40,11 +40,6 @@ const (
 	deployCommandsPhaseName = "commands"
 )
 
-// DivertDeployer defines the operations to deploy the divert section of a deployable
-type DivertDeployer interface {
-	Deploy(ctx context.Context) error
-}
-
 // ProxyInterface defines the different operations to work with the proxy run by Okteto
 type ProxyInterface interface {
 	Start()
@@ -87,7 +82,6 @@ type DeployRunner struct {
 	Executor           executor.ManifestExecutor
 	K8sClientProvider  okteto.K8sClientProviderWithLogger
 	Fs                 afero.Fs
-	DivertDeployer     DivertDeployer
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
 	k8sLogger          *io.K8sLogger
 	TempKubeconfigFile string
@@ -223,7 +217,6 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 			return err
 		}
 		r.Proxy.SetDivert(driver)
-		r.DivertDeployer = driver
 	}
 	r.Proxy.InitTranslator()
 
@@ -332,16 +325,6 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 		oktetoLog.SetStage(oktetoLog.UnexpectedErrorStage)
 		oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error persisting OKTETO_ENV: %s", err.Error())
 		return fmt.Errorf("could not update config map with environment variables: %w", err)
-	}
-
-	// deploy divert if any
-	if params.Deployable.Divert != nil && params.Deployable.Divert.Namespace != params.Namespace {
-		oktetoLog.SetStage("Deploy Divert")
-		if err := r.DivertDeployer.Deploy(ctx); err != nil {
-			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error creating divert: %s", err.Error())
-			return err
-		}
-		oktetoLog.SetStage("")
 	}
 
 	// deploy externals if any
