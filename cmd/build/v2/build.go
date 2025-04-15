@@ -263,7 +263,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 			// We only check that the image is built in the global registry if the noCache option is not set
 			if !options.NoCache && ob.smartBuildCtrl.IsEnabled() {
-				imageChecker := getImageChecker(ob.Config, ob.Registry, ob.smartBuildCtrl, ob.ioCtrl.Logger())
+				imageChecker := getImageChecker(ob.Config, ob.Registry, ob.smartBuildCtrl, ob.ioCtrl)
 				cacheHitDurationStart := time.Now()
 
 				buildHash := ob.smartBuildCtrl.GetBuildHash(buildSvcInfo, svcToBuild)
@@ -450,7 +450,7 @@ func validateServices(buildSection build.ManifestBuild, svcsToBuild []string) er
 	return nil
 }
 
-func getImageChecker(cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface, sbc smartBuildController, logger loggerInfo) imageCheckerInterface {
+func getImageChecker(cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface, sbc smartBuildController, ioCtrl *io.Controller) imageCheckerInterface {
 	tagger := newImageTagger(cfg, sbc)
-	return newImageChecker(cfg, registry, tagger, logger)
+	return newImageChecker(cfg, registry, tagger, ioCtrl)
 }
