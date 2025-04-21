@@ -12,6 +12,7 @@ ARG OKTETO_CLEAN_VERSION=0.2.2
 ARG GOLANG_VERSION=1.23.6
 ARG ALPINE_VERSION=3.20
 ARG BUSYBOX_VERSION=1.36.1
+ARG GIT_VERSION=2.42.0
 
 # Stage 1: Prepare base components
 # SSL certificates for secure connections
@@ -107,6 +108,34 @@ RUN curl -sLf --retry 3 -o helm.tar.gz \
     # Verify compressed binary still works
     && /tmp/helm version
 
+# Stage 3.4: Download and compress git (Version control system)
+FROM debian:stable-slim AS git-builder
+
+ARG GIT_VERSION="2.42.0"
+ENV CC=gcc
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential autoconf pkg-config ca-certificates \
+      libcurl4-openssl-dev libssl-dev libexpat1-dev zlib1g-dev \
+      gettext wget curl \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/src/git
+RUN curl -fSL \
+      "https://mirrors.edge.kernel.org/pub/software/scm/git/git-${GIT_VERSION}.tar.gz" \
+      -o git.tar.gz \
+  && tar -xzf git.tar.gz --strip-components=1 \
+  && rm git.tar.gz
+
+RUN make configure \
+ && ./configure --prefix=/usr \
+      CFLAGS="-static" LDFLAGS="-static" \
+      NO_GETTEXT=YesPlease NO_PYTHON=YesPlease \
+ && make -j"$(nproc)" \
+ && make install \
+ && strip /usr/bin/git \
+ && rm -rf /usr/src/git
+
 # Stage 4: Build and compress the Okteto CLI
 FROM golang-builder AS builder
 WORKDIR /okteto
@@ -161,6 +190,7 @@ COPY --link --chmod=755 --from=supervisor /tmp/supervisor /usr/bin-image/bin/okt
 COPY --link --chmod=755 --from=syncthing /tmp/syncthing /usr/bin-image/bin/syncthing
 COPY --link --chmod=755 --from=clean /tmp/clean /usr/bin-image/bin/clean
 COPY --link --chmod=755 scripts/start.sh /usr/bin-image/bin/start.sh
+COPY --link --chmod=755 --from=git-builder /usr/bin/git /usr/bin/git
 
 # Step 5: Add OCI-compliant metadata labels
 # https://github.com/opencontainers/image-spec/blob/main/annotations.md
