@@ -109,7 +109,7 @@ RUN curl -sLf --retry 3 -o helm.tar.gz \
     && /tmp/helm version
 
 # Stage 3.4: Download and compress git (Version control system)
-FROM debian:stable-slim AS git-builder
+FROM debian:bookworm-slim AS git-builder
 
 ARG GIT_VERSION="2.42.0"
 ENV CC=gcc
