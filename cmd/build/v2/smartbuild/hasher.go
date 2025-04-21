@@ -26,6 +26,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/build"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/spf13/afero"
 )
 
@@ -51,11 +52,13 @@ type serviceHasher struct {
 	getCurrentTimestampNano func() int64
 	projectCommit           string
 
+	ioCtrl *io.Controller
+
 	// lock is a mutex to provide thread safety
 	lock sync.RWMutex
 }
 
-func newServiceHasher(gitRepoCtrl repositoryCommitRetriever, fs afero.Fs, wdGetter osWorkingDirGetter) *serviceHasher {
+func newServiceHasher(gitRepoCtrl repositoryCommitRetriever, fs afero.Fs, wdGetter osWorkingDirGetter, ioCtrl *io.Controller) *serviceHasher {
 	return &serviceHasher{
 
 		gitRepoCtrl:             gitRepoCtrl,
@@ -63,6 +66,7 @@ func newServiceHasher(gitRepoCtrl repositoryCommitRetriever, fs afero.Fs, wdGett
 		fs:                      fs,
 		getCurrentTimestampNano: time.Now().UnixNano,
 		wdGetter:                wdGetter,
+		ioCtrl:                  ioCtrl,
 	}
 }
 
@@ -102,15 +106,15 @@ func (sh *serviceHasher) hashWithBuildContext(buildInfo *build.Info, service str
 		buildContext = filepath.Join(osWD, buildContext)
 	}
 
-	oktetoLog.Infof("working directory: %s", osWD)
-	oktetoLog.Infof("smart build context directory: %s", buildContext)
+	sh.ioCtrl.Logger().Infof("working directory: %s", osWD)
+	sh.ioCtrl.Logger().Infof("smart build context directory: %s", buildContext)
 	if _, ok := sh.serviceShaCache[service]; !ok {
 		errorGettingGitInfo := false
 		dirCommit, err := sh.gitRepoCtrl.GetLatestDirSHA(buildContext)
 		if err != nil {
 			errorGettingGitInfo = true
 
-			oktetoLog.Infof("could not get build context sha: %s, generating a random one", err)
+			sh.ioCtrl.Logger().Infof("could not get build context sha: %s, generating a random one", err)
 			// In case of error getting the dir commit, we just generate a random one, and it will rebuild the image
 			dirCommit = sh.calculateRandomShaForService(service)
 		}
@@ -118,7 +122,7 @@ func (sh *serviceHasher) hashWithBuildContext(buildInfo *build.Info, service str
 		diffHash, err := sh.gitRepoCtrl.GetDiffHash(buildContext)
 		if err != nil {
 			errorGettingGitInfo = true
-			oktetoLog.Infof("could not get build context diff sha: %s, generating a random one", err)
+			sh.ioCtrl.Logger().Infof("could not get build context diff sha: %s, generating a random one", err)
 			// In case of error getting the diff hash, we just generate a random one, and it will rebuild the image
 			diffHash = sh.calculateRandomShaForService(service)
 		}
@@ -126,7 +130,7 @@ func (sh *serviceHasher) hashWithBuildContext(buildInfo *build.Info, service str
 		// This is to display just one single warning if any of the git operation fails. As we generate random sha
 		// it will imply a new build of image, and we want to warn users
 		if errorGettingGitInfo {
-			oktetoLog.Warning("Smart builds cannot access git metadata, building image %q...", service)
+			sh.ioCtrl.Out().Warning("Smart builds cannot access git metadata, building image %q...", service)
 		}
 
 		sh.lock.Lock()
@@ -173,7 +177,7 @@ func (sh *serviceHasher) hash(buildInfo *build.Info, commitHash string, diff str
 	fmt.Fprintf(&b, "image:%s;", buildInfo.Image)
 
 	hashFrom := b.String()
-	oktetoLog.Infof("hashing build info: %s", hashFrom)
+	sh.ioCtrl.Logger().Infof("hashing build info: %s", hashFrom)
 	oktetoBuildHash := sha256.Sum256([]byte(hashFrom))
 	return hex.EncodeToString(oktetoBuildHash[:])
 }
@@ -182,12 +186,12 @@ func (sh *serviceHasher) hash(buildInfo *build.Info, commitHash string, diff str
 func (sh *serviceHasher) getDockerfileContent(dockerfileContext, dockerfilePath string) string {
 	content, err := afero.ReadFile(sh.fs, dockerfilePath)
 	if err != nil {
-		oktetoLog.Infof("error trying to read Dockerfile on path '%s': %s", dockerfilePath, err)
+		sh.ioCtrl.Logger().Infof("error trying to read Dockerfile on path '%s': %s", dockerfilePath, err)
 		if errors.Is(err, os.ErrNotExist) {
 			dockerfilePath = filepath.Join(dockerfileContext, dockerfilePath)
 			content, err = afero.ReadFile(sh.fs, dockerfilePath)
 			if err != nil {
-				oktetoLog.Infof("error trying to read Dockerfile: %s", err)
+				sh.ioCtrl.Logger().Infof("error trying to read Dockerfile: %s", err)
 				return ""
 			}
 		}

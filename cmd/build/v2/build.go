@@ -234,6 +234,10 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				ob.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svcToBuild))
 			}
 
+			sp := ob.ioCtrl.Out().Spinner(fmt.Sprintf("Checking if image '%s' is already built", svcToBuild))
+			sp.Start()
+			defer sp.Stop()
+
 			buildSvcInfo := buildManifest[svcToBuild]
 
 			// create the meta pointer and append it to the analytics slice
@@ -291,6 +295,8 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			if !ob.oktetoContext.IsOktetoCluster() && buildSvcInfo.Image == "" {
 				return fmt.Errorf("'build.%s.image' is required if your context doesn't have Okteto installed", svcToBuild)
 			}
+
+			sp.Stop()
 			buildDurationStart := time.Now()
 			imageTag, err := ob.buildServiceImages(ctx, options.Manifest, svcToBuild, options)
 			buildkitRunner, ok := ob.Builder.BuildRunner.(*buildCmd.OktetoBuilder)
