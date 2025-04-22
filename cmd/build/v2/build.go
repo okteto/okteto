@@ -278,8 +278,6 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				meta.CacheHitDuration = time.Since(cacheHitDurationStart)
 
 				if isBuilt {
-					ob.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of '%s' because it's already built from cache.", svcToBuild)
-
 					imageWithDigest, err := ob.smartBuildCtrl.CloneGlobalImageToDev(imageWithDigest, buildSvcInfo.Image)
 					if err != nil {
 						return err
@@ -288,6 +286,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 					ob.SetServiceEnvVars(svcToBuild, imageWithDigest)
 					builtImagesControl[svcToBuild] = true
 					meta.Success = true
+					ob.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of '%s' because it's already built from cache.", svcToBuild)
 					continue
 				}
 			}
