@@ -234,7 +234,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				ob.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svcToBuild))
 			}
 
-			sp := ob.ioCtrl.Out().Spinner(fmt.Sprintf("Checking if image '%s' is already built", svcToBuild))
+			sp := ob.ioCtrl.Out().Spinner(fmt.Sprintf("Checking if image '%s' is already built...", svcToBuild))
 			sp.Start()
 			defer sp.Stop()
 
