@@ -315,7 +315,7 @@ func Test_getBuildHashFromCommit(t *testing.T) {
 			got, err := newServiceHasher(fakeConfigRepo{
 				sha: tc.input.repo.sha,
 				err: tc.input.repo.err,
-			}, afero.NewMemMapFs(), wdGetter).hashProjectCommit(tc.input.buildInfo)
+			}, afero.NewMemMapFs(), wdGetter, io.NewIOController()).hashProjectCommit(tc.input.buildInfo)
 			assert.ErrorIs(t, err, tc.expectedErr)
 			if tc.expected != "" {
 				expectedHash := sha256.Sum256([]byte(tc.expected))

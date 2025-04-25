@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/build"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -82,7 +83,7 @@ func TestServiceHasher_HashProjectCommit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			wdGetter := fakeWorkingDirGetter{}
-			sh := newServiceHasher(tt.repoCtrl, afero.NewMemMapFs(), wdGetter)
+			sh := newServiceHasher(tt.repoCtrl, afero.NewMemMapFs(), wdGetter, io.NewIOController())
 			hash, err := sh.hashProjectCommit(&build.Info{})
 			assert.Equal(t, tt.expectedHash, hash)
 			assert.ErrorIs(t, err, tt.expectedErr)
@@ -225,6 +226,7 @@ func TestServiceHasher_HashBuildContextWithError(t *testing.T) {
 				},
 				serviceShaCache: map[string]string{},
 				wdGetter:        tt.wdGetter,
+				ioCtrl:          io.NewIOController(),
 			}
 
 			repoController.On("GetLatestDirSHA", tt.expectedBuildContext).Return(tt.dirSHA, tt.errSHA)

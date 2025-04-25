@@ -65,7 +65,7 @@ func NewSmartBuildCtrl(repo repositoryInterface, registry registryController, fs
 	return &Ctrl{
 		gitRepo:            repo,
 		isEnabled:          isEnabled,
-		hasher:             newServiceHasher(repo, fs, wdGetter),
+		hasher:             newServiceHasher(repo, fs, wdGetter, ioCtrl),
 		registryController: registry,
 		ioCtrl:             ioCtrl,
 	}
