@@ -19,7 +19,7 @@ ARG GIT_VERSION=2.42.0
 FROM alpine:${ALPINE_VERSION} AS certs
 RUN apk add --no-cache ca-certificates
 
-# Stage 2: Compress Okteto utility binaries to reduce final image size
+# Stage 2: Prepare Okteto components to be copied to the final image
 # File synchronization tool
 FROM syncthing/syncthing:${SYNCTHING_VERSION} AS syncthing
 
@@ -35,7 +35,7 @@ FROM okteto/clean:${OKTETO_CLEAN_VERSION} AS clean
 # Stage 3: Set up Go build environment for Kubernetes tools and Okteto CLI
 FROM golang:${GOLANG_VERSION}-bookworm AS golang-builder
 
-# Stage 3.1: Download and compress kustomize (Kubernetes resource customization tool)
+# Stage 3.1: Download kustomize (Kubernetes resource customization tool)
 FROM golang-builder AS kustomize-builder
 ARG TARGETARCH
 ARG KUSTOMIZE_VERSION
@@ -44,10 +44,10 @@ RUN curl -sLf --retry 3 -o kustomize.tar.gz \
     && tar -xzf kustomize.tar.gz -C /usr/local/bin \
     && chmod +x /usr/local/bin/kustomize \
     && rm kustomize.tar.gz \
-    # Verify binary works before compression
+    # Verify binary works 
     && /usr/local/bin/kustomize version
 
-# Stage 3.2: Download and compress kubectl (Kubernetes CLI)
+# Stage 3.2: Download kubectl (Kubernetes CLI)
 FROM golang-builder AS kubectl-builder
 ARG TARGETARCH
 ARG KUBECTL_VERSION
@@ -55,10 +55,10 @@ RUN curl -sLf --retry 3 -o kubectl \
     "https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl" \
     && chmod +x kubectl \
     && mv kubectl /usr/local/bin/ \
-    # Verify binary works before compression
+    # Verify binary works
     && /usr/local/bin/kubectl version --client=true 
 
-# Stage 3.3: Download and compress Helm (Kubernetes package manager)
+# Stage 3.3: Download Helm (Kubernetes package manager)
 FROM golang-builder AS helm-builder
 ARG TARGETARCH
 ARG HELM_VERSION
@@ -69,10 +69,10 @@ RUN curl -sLf --retry 3 -o helm.tar.gz \
     && mv helm/linux-${TARGETARCH}/helm /usr/local/bin/ \
     && chmod +x /usr/local/bin/helm \
     && rm -rf helm helm.tar.gz \
-    # Verify binary works before compression
+    # Verify binary works
     && /usr/local/bin/helm version 
 
-# Stage 3.4: Download and compress git (Version control system)
+# Stage 3.4: Download git (Version control system)
 FROM debian:bookworm-slim AS git-builder
 
 ARG GIT_VERSION="2.42.0"
@@ -100,7 +100,7 @@ RUN make configure \
  && strip /usr/bin/git \
  && rm -rf /usr/src/git
 
-# Stage 4: Build and compress the Okteto CLI
+# Stage 4: Build the Okteto CLI
 FROM golang-builder AS builder
 WORKDIR /okteto
 # Disable CGO for a more portable binary
@@ -134,7 +134,7 @@ FROM busybox:${BUSYBOX_VERSION}
 # Step 1: Copy SSL certificates for secure connections
 COPY --link --chmod=755 --from=certs /etc/ssl/certs /etc/ssl/certs
 
-# Step 2: Copy compressed Kubernetes tools
+# Step 2: Copy Kubernetes tools
 COPY --link --chmod=755 --from=kubectl-builder /usr/local/bin/kubectl /usr/local/bin/kubectl
 COPY --link --chmod=755 --from=kustomize-builder /usr/local/bin/kustomize /usr/local/bin/kustomize
 COPY --link --chmod=755 --from=helm-builder /usr/local/bin/helm /usr/local/bin/helm
