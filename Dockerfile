@@ -19,42 +19,21 @@ ARG GIT_VERSION=2.42.0
 FROM alpine:${ALPINE_VERSION} AS certs
 RUN apk add --no-cache ca-certificates
 
-# UPX binary compression tool - used to reduce binary sizes
-FROM alpine:${ALPINE_VERSION} AS upx-provider
-RUN apk add --no-cache curl \
-    && curl -L -o /usr/bin/upx.tar.xz https://github.com/upx/upx/releases/download/v4.2.1/upx-4.2.1-amd64_linux.tar.xz \
-    && tar -xf /usr/bin/upx.tar.xz -C /tmp \
-    && cp /tmp/upx-4.2.1-amd64_linux/upx /usr/bin/upx \
-    && chmod +x /usr/bin/upx
-
 # Stage 2: Compress Okteto utility binaries to reduce final image size
 # File synchronization tool
 FROM syncthing/syncthing:${SYNCTHING_VERSION} AS syncthing
-COPY --from=upx-provider /usr/bin/upx /usr/bin/upx
-RUN cp /bin/syncthing /tmp/syncthing && \
-    /usr/bin/upx --best --lzma /tmp/syncthing
 
 # Remote execution component
 FROM okteto/remote:${OKTETO_REMOTE_VERSION} AS remote
-COPY --from=upx-provider /usr/bin/upx /usr/bin/upx
-RUN cp /usr/local/bin/remote /tmp/remote && \
-    /usr/bin/upx --best --lzma /tmp/remote
 
 # Process supervisor component
 FROM okteto/supervisor:${OKTETO_SUPERVISOR_VERSION} AS supervisor
-COPY --from=upx-provider /usr/bin/upx /usr/bin/upx
-RUN cp /usr/local/bin/supervisor /tmp/supervisor && \
-    /usr/bin/upx --best --lzma /tmp/supervisor
 
 # Cleanup utility
 FROM okteto/clean:${OKTETO_CLEAN_VERSION} AS clean
-COPY --from=upx-provider /usr/bin/upx /usr/bin/upx
-RUN cp /usr/local/bin/clean /tmp/clean && \
-    /usr/bin/upx --best --lzma /tmp/clean
 
 # Stage 3: Set up Go build environment for Kubernetes tools and Okteto CLI
 FROM golang:${GOLANG_VERSION}-bookworm AS golang-builder
-COPY --from=upx-provider /usr/bin/upx /usr/bin/upx
 
 # Stage 3.1: Download and compress kustomize (Kubernetes resource customization tool)
 FROM golang-builder AS kustomize-builder
@@ -66,12 +45,7 @@ RUN curl -sLf --retry 3 -o kustomize.tar.gz \
     && chmod +x /usr/local/bin/kustomize \
     && rm kustomize.tar.gz \
     # Verify binary works before compression
-    && /usr/local/bin/kustomize version \
-    # Compress binary to reduce size
-    && cp /usr/local/bin/kustomize /tmp/kustomize \
-    && /usr/bin/upx --best --lzma /tmp/kustomize \
-    # Verify compressed binary still works
-    && /tmp/kustomize version
+    && /usr/local/bin/kustomize version
 
 # Stage 3.2: Download and compress kubectl (Kubernetes CLI)
 FROM golang-builder AS kubectl-builder
@@ -82,12 +56,7 @@ RUN curl -sLf --retry 3 -o kubectl \
     && chmod +x kubectl \
     && mv kubectl /usr/local/bin/ \
     # Verify binary works before compression
-    && /usr/local/bin/kubectl version --client=true \
-    # Compress binary to reduce size
-    && cp /usr/local/bin/kubectl /tmp/kubectl \
-    && /usr/bin/upx --best --lzma /tmp/kubectl \
-    # Verify compressed binary still works
-    && /usr/local/bin/kubectl version --client=true
+    && /usr/local/bin/kubectl version --client=true 
 
 # Stage 3.3: Download and compress Helm (Kubernetes package manager)
 FROM golang-builder AS helm-builder
@@ -101,12 +70,7 @@ RUN curl -sLf --retry 3 -o helm.tar.gz \
     && chmod +x /usr/local/bin/helm \
     && rm -rf helm helm.tar.gz \
     # Verify binary works before compression
-    && /usr/local/bin/helm version \
-    # Compress binary to reduce size
-    && cp /usr/local/bin/helm /tmp/helm \
-    && /usr/bin/upx --best --lzma /tmp/helm \
-    # Verify compressed binary still works
-    && /tmp/helm version
+    && /usr/local/bin/helm version 
 
 # Stage 3.4: Download and compress git (Version control system)
 FROM debian:bookworm-slim AS git-builder
@@ -161,12 +125,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     echo "Binary validation successful" && \
     # Prepare docker-credential-okteto helper
     mkdir -p /okteto/bin && \
-    cp docker-credential-okteto /okteto/bin/ && \
-    # Compress the binary with UPX to reduce size
-    cp /okteto/bin/okteto /tmp/okteto && \
-    /usr/bin/upx --best --lzma /tmp/okteto && \
-    # Verify compressed binary still works
-    /tmp/okteto --help > /dev/null
+    cp docker-credential-okteto /okteto/bin/
 
 # Stage 5: Create the final minimal image
 # Using BusyBox as the base for a tiny footprint
@@ -176,19 +135,19 @@ FROM busybox:${BUSYBOX_VERSION}
 COPY --link --chmod=755 --from=certs /etc/ssl/certs /etc/ssl/certs
 
 # Step 2: Copy compressed Kubernetes tools
-COPY --link --chmod=755 --from=kubectl-builder /tmp/kubectl /usr/local/bin/kubectl
-COPY --link --chmod=755 --from=kustomize-builder /tmp/kustomize /usr/local/bin/kustomize
-COPY --link --chmod=755 --from=helm-builder /tmp/helm /usr/local/bin/helm
+COPY --link --chmod=755 --from=kubectl-builder /usr/local/bin/kubectl /usr/local/bin/kubectl
+COPY --link --chmod=755 --from=kustomize-builder /usr/local/bin/kustomize /usr/local/bin/kustomize
+COPY --link --chmod=755 --from=helm-builder /usr/local/bin/helm /usr/local/bin/helm
 
 # Step 3: Copy Okteto CLI and credential helper
-COPY --link --chmod=755 --from=builder /tmp/okteto /usr/local/bin/okteto
+COPY --link --chmod=755 --from=builder /okteto/bin/okteto /usr/local/bin/okteto
 COPY --link --chmod=755 --from=builder /okteto/bin/docker-credential-okteto /usr/local/bin/docker-credential-okteto
 
 # Step 4: Copy Okteto supporting utilities
-COPY --link --chmod=755 --from=remote /tmp/remote /usr/bin-image/bin/okteto-remote
-COPY --link --chmod=755 --from=supervisor /tmp/supervisor /usr/bin-image/bin/okteto-supervisor
-COPY --link --chmod=755 --from=syncthing /tmp/syncthing /usr/bin-image/bin/syncthing
-COPY --link --chmod=755 --from=clean /tmp/clean /usr/bin-image/bin/clean
+COPY --link --chmod=755 --from=remote /usr/local/bin/remote /usr/bin-image/bin/okteto-remote
+COPY --link --chmod=755 --from=supervisor /usr/local/bin/supervisor /usr/bin-image/bin/okteto-supervisor
+COPY --link --chmod=755 --from=syncthing /bin/syncthing /usr/bin-image/bin/syncthing
+COPY --link --chmod=755 --from=clean /usr/local/bin/clean /usr/bin-image/bin/clean
 COPY --link --chmod=755 scripts/start.sh /usr/bin-image/bin/start.sh
 COPY --link --chmod=755 --from=git-builder /usr/bin/git /usr/bin/git
 
