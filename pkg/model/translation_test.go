@@ -127,6 +127,11 @@ func TestDevToTranslationRule(t *testing.T) {
 			},
 			{
 				Name:      dev.GetVolumeName(),
+				MountPath: "/var/syncthing/data",
+				SubPath:   "syncthing-data",
+			},
+			{
+				Name:      dev.GetVolumeName(),
 				MountPath: RemoteMountPath,
 				SubPath:   RemoteSubPath,
 			},
@@ -326,6 +331,11 @@ func TestDevToTranslationRuleInitContainer(t *testing.T) {
 			},
 			{
 				Name:      dev.GetVolumeName(),
+				MountPath: "/var/syncthing/data",
+				SubPath:   "syncthing-data",
+			},
+			{
+				Name:      dev.GetVolumeName(),
 				MountPath: RemoteMountPath,
 				SubPath:   RemoteSubPath,
 			},
@@ -416,6 +426,11 @@ func TestDevToTranslationDebugEnabled(t *testing.T) {
 				Name:      dev.GetVolumeName(),
 				MountPath: OktetoSyncthingMountPath,
 				SubPath:   SyncthingSubPath,
+			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: "/var/syncthing/data",
+				SubPath:   "syncthing-data",
 			},
 			{
 				Name:      dev.GetVolumeName(),

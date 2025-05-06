@@ -328,6 +328,12 @@ dev:
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
+						MountPath: "/var/syncthing/data",
+						SubPath:   "syncthing-data",
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
 						MountPath: model.RemoteMountPath,
 						SubPath:   model.RemoteSubPath,
 					},
@@ -959,6 +965,12 @@ func Test_translateWithoutVolumes(t *testing.T) {
 						ReadOnly:  false,
 						MountPath: "/var/syncthing",
 						SubPath:   model.SyncthingSubPath,
+					},
+					{
+						Name:      dev.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/var/syncthing/data",
+						SubPath:   "syncthing-data",
 					},
 					{
 						Name:      dev.GetVolumeName(),
@@ -1739,6 +1751,12 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 						ReadOnly:  false,
 						MountPath: "/var/syncthing",
 						SubPath:   model.SyncthingSubPath,
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/var/syncthing/data",
+						SubPath:   "syncthing-data",
 					},
 					{
 						Name:      dev1.GetVolumeName(),
