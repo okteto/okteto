@@ -66,7 +66,7 @@ const (
 	devHeadComment = "The dev section defines how to activate a development container\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#dev"
 	devExample     = `dev:
   sample:
-    image: okteto/dev:latest
+    image: okteto/dev:1.0
     command: bash
     workdir: /usr/src/app
     sync:
