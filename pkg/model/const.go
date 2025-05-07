@@ -139,7 +139,7 @@ const (
 	OktetoStignoreAnnotation = "dev.okteto.com/stignore"
 
 	// DefaultImage default image for sandboxes
-	DefaultImage = "okteto/dev:latest"
+	DefaultImage = "okteto/dev:1.0"
 
 	// this path is expected by remote
 	authorizedKeysPath = "/var/okteto/remote/authorized_keys"
