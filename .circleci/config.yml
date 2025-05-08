@@ -699,28 +699,63 @@ workflows:
               only: master
       - notify-failures:
           requires:
-            - golangci-lint
-            - build-binaries
-            - run-unit-test
-            - run-windows-unit-test
-            - test-e2e-setup
-            - check-schema
-            - e2e-build-windows
-            - e2e-deploy-windows
-            - e2e-up-windows
-            - e2e-okteto-test-windows
-            - e2e-build
-            - e2e-deploy
-            - e2e-up
-            - e2e-actions
-            - e2e-okteto
-            - e2e-okteto-test
-            - test-release
-            - push-image-master
+            - golangci-lint:
+                - fail
+                - success
+            - build-binaries:
+                - fail
+                - success
+            - run-unit-test:
+                - fail
+                - success
+            - run-windows-unit-test:
+                - fail
+                - success
+            - test-e2e-setup:
+                - fail
+                - success
+            - check-schema:
+                - fail
+                - success
+            - e2e-build-windows:
+                - fail
+                - success
+            - e2e-deploy-windows:
+                - fail
+                - success
+            - e2e-up-windows:
+                - fail
+                - success
+            - e2e-okteto-test-windows:
+                - fail
+                - success
+            - e2e-build:
+                - fail
+                - success
+            - e2e-deploy:
+                - fail
+                - success
+            - e2e-up:
+                - fail
+                - success
+            - e2e-actions:
+                - fail
+                - success
+            - e2e-okteto:
+                - fail
+                - success
+            - e2e-okteto-test:
+                - fail
+                - success
+            - test-release:
+                - fail
+                - success
+            - push-image-master:
+                - fail
+                - success
           filters:
             branches:
               only: master
-          when: always
 
   # release-branch workflow is triggered when branch name is "release-*", ignoring any tag
   release-branch:
