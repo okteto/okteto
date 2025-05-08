@@ -53,33 +53,35 @@ var (
 
 // deployFlags represents the user input for a pipeline deploy command
 type deployFlags struct {
-	branch       string
-	repository   string
-	name         string
-	k8sContext   string
-	namespace    string
-	file         string
-	variables    []string
-	labels       []string
-	timeout      time.Duration
-	wait         bool
-	skipIfExists bool
-	reuseParams  bool
+	branch               string
+	repository           string
+	name                 string
+	k8sContext           string
+	namespace            string
+	file                 string
+	variables            []string
+	labels               []string
+	timeout              time.Duration
+	wait                 bool
+	skipIfExists         bool
+	reuseParams          bool
+	redeployDependencies bool
 }
 
 // DeployOptions represents options for deploy pipeline command
 type DeployOptions struct {
-	Branch       string
-	Repository   string
-	Name         string
-	Namespace    string
-	File         string
-	Variables    []string
-	Labels       []string
-	Timeout      time.Duration
-	Wait         bool
-	SkipIfExists bool
-	ReuseParams  bool
+	Branch               string
+	Repository           string
+	Name                 string
+	Namespace            string
+	File                 string
+	Variables            []string
+	Labels               []string
+	Timeout              time.Duration
+	Wait                 bool
+	SkipIfExists         bool
+	ReuseParams          bool
+	RedeployDependencies bool
 }
 
 func deploy(ctx context.Context) *cobra.Command {
@@ -134,7 +136,7 @@ okteto pipeline deploy --wait=false`,
 	cmd.Flags().StringVarP(&flags.file, "file", "f", "", "the path to the Okteto Manifest")
 	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "tag and organize Development Environments using labels (multiple --label flags accepted)")
 	cmd.Flags().BoolVar(&flags.reuseParams, "reuse-params", false, "if the Development Environment exists, reuse same parameters to redeploy")
-
+	cmd.Flags().BoolVar(&flags.redeployDependencies, "dependencies", false, "if it has dependencies already deployed, redeploy dependencies")
 	return cmd
 }
 
@@ -426,17 +428,18 @@ func CheckAllResourcesRunning(name string, resourceStatus map[string]string) (bo
 
 func (f deployFlags) toOptions() *DeployOptions {
 	return &DeployOptions{
-		Branch:       f.branch,
-		Repository:   f.repository,
-		Name:         f.name,
-		Namespace:    f.namespace,
-		Wait:         f.wait,
-		SkipIfExists: f.skipIfExists,
-		Timeout:      f.timeout,
-		File:         f.file,
-		Variables:    f.variables,
-		Labels:       f.labels,
-		ReuseParams:  f.reuseParams,
+		Branch:               f.branch,
+		Repository:           f.repository,
+		Name:                 f.name,
+		Namespace:            f.namespace,
+		Wait:                 f.wait,
+		SkipIfExists:         f.skipIfExists,
+		Timeout:              f.timeout,
+		File:                 f.file,
+		Variables:            f.variables,
+		Labels:               f.labels,
+		ReuseParams:          f.reuseParams,
+		RedeployDependencies: f.redeployDependencies,
 	}
 }
 
@@ -505,13 +508,14 @@ func (o *DeployOptions) toPipelineDeployClientOptions() (types.PipelineDeployOpt
 		})
 	}
 	return types.PipelineDeployOptions{
-		Name:       o.Name,
-		Repository: o.Repository,
-		Branch:     o.Branch,
-		Filename:   o.File,
-		Variables:  varList,
-		Namespace:  o.Namespace,
-		Labels:     o.Labels,
+		Name:                 o.Name,
+		Repository:           o.Repository,
+		Branch:               o.Branch,
+		Filename:             o.File,
+		Variables:            varList,
+		Namespace:            o.Namespace,
+		Labels:               o.Labels,
+		RedeployDependencies: o.RedeployDependencies,
 	}, nil
 }
 

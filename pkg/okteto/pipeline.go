@@ -56,8 +56,16 @@ type deployPipelineMutation struct {
 	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename)"`
 }
 
+type deployPipelineMutationWithRedeployDependencies struct {
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies)"`
+}
+
 type deployPipelineMutationWithLabels struct {
 	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, labels: $labels)"`
+}
+
+type deployPipelineMutationWithLabelsWithRedeployDependencies struct {
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, labels: $labels)"`
 }
 
 type getPipelineByNameQuery struct {
@@ -108,25 +116,44 @@ func (c *pipelineClient) Deploy(ctx context.Context, opts types.PipelineDeployOp
 	oktetoLog.Infof("deploying pipeline '%s' mutation on %s", opts.Name, opts.Namespace)
 
 	mutationVariables := c.getDeployVariables(opts)
+	oktetoLog.Infof("deploying pipeline with variables: %v", mutationVariables)
 	var response deployPipelineResponse
 	if len(opts.Labels) == 0 {
-		mutationStruct := &deployPipelineMutation{}
+		mutationStruct := &deployPipelineMutationWithRedeployDependencies{}
 		err := mutate(ctx, mutationStruct, mutationVariables, c.client)
 		if err != nil {
-			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+			oktetoLog.Infof("deploy pipeline error: %s", err)
+			if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"deployGitRepository\" of type \"Mutation\"") {
+				mutationWithoutDependencies := &deployPipelineMutation{}
+				err = mutate(ctx, mutationWithoutDependencies, mutationVariables, c.client)
+				if err != nil {
+					return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+				}
+				response = mutationWithoutDependencies.Response
+			} else {
+				return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+			}
+		} else {
+			response = mutationStruct.Response
 		}
-		response = mutationStruct.Response
 	} else {
-		mutationStruct := &deployPipelineMutationWithLabels{}
+		mutationStruct := &deployPipelineMutationWithLabelsWithRedeployDependencies{}
 		err := mutate(ctx, mutationStruct, mutationVariables, c.client)
-
 		if err != nil {
 			if strings.Contains(err.Error(), "Unknown argument \"labels\" on field \"deployGitRepository\" of type \"Mutation\"") {
 				return nil, oktetoErrors.UserError{E: ErrDeployPipelineLabelsFeatureNotSupported, Hint: "Please upgrade to the latest version or ask your administrator"}
 			}
+			if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"deployGitRepository\" of type \"Mutation\"") {
+				mutationWithoutDependencies := &deployPipelineMutationWithLabels{}
+				err = mutate(ctx, mutationWithoutDependencies, mutationVariables, c.client)
+				if err != nil {
+					return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+				}
+			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+		} else {
+			response = mutationStruct.Response
 		}
-		response = mutationStruct.Response
 	}
 
 	gitDeployResponse := &types.GitDeployResponse{
@@ -167,12 +194,13 @@ func (c *pipelineClient) getDeployVariables(opts types.PipelineDeployOptions) ma
 		})
 	}
 	vars := map[string]interface{}{
-		"name":       graphql.String(opts.Name),
-		"space":      graphql.String(opts.Namespace),
-		"repository": graphql.String(opts.Repository),
-		"branch":     graphql.String(opts.Branch),
-		"variables":  variablesVariable,
-		"filename":   graphql.String(opts.Filename),
+		"name":         graphql.String(opts.Name),
+		"space":        graphql.String(opts.Namespace),
+		"repository":   graphql.String(opts.Repository),
+		"branch":       graphql.String(opts.Branch),
+		"variables":    variablesVariable,
+		"filename":     graphql.String(opts.Filename),
+		"dependencies": graphql.Boolean(opts.RedeployDependencies),
 	}
 
 	if len(opts.Labels) > 0 {

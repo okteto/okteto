@@ -40,17 +40,18 @@ var (
 )
 
 type DeployOptions struct {
-	branch     string
-	file       string
-	k8sContext string
-	name       string
-	repository string
-	scope      string
-	sourceUrl  string
-	variables  []string
-	labels     []string
-	timeout    time.Duration
-	wait       bool
+	branch               string
+	file                 string
+	k8sContext           string
+	name                 string
+	repository           string
+	scope                string
+	sourceUrl            string
+	variables            []string
+	labels               []string
+	timeout              time.Duration
+	wait                 bool
+	redeployDependencies bool
 }
 
 // Deploy Deploy a preview environment
@@ -97,7 +98,7 @@ okteto preview deploy --wait=false`,
 	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", true, "wait until the deployment finishes")
 	cmd.Flags().StringVarP(&opts.file, "file", "f", "", "the path to the Okteto Manifest")
 	cmd.Flags().StringArrayVarP(&opts.labels, "label", "", []string{}, "tag and organize Preview Environments using labels (multiple --label flags accepted)")
-
+	cmd.Flags().BoolVar(&opts.redeployDependencies, "dependencies", false, "if it has dependencies already deployed, redeploy dependencies")
 	return cmd
 }
 
@@ -139,7 +140,7 @@ func (pw *Command) deployPreview(ctx context.Context, opts *DeployOptions) (*typ
 		})
 	}
 
-	return pw.okClient.Previews().DeployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.file, varList, opts.labels)
+	return pw.okClient.Previews().DeployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.file, varList, opts.labels, opts.redeployDependencies)
 }
 
 func (pw *Command) waitUntilRunning(ctx context.Context, name, namespace string, a *types.Action, timeout time.Duration) error {

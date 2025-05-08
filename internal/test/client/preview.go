@@ -52,7 +52,7 @@ func (c *FakePreviewsClient) List(_ context.Context, _ []string) ([]types.Previe
 }
 
 // DeployPreview deploys a preview
-func (c *FakePreviewsClient) DeployPreview(_ context.Context, _, _, _, _, _, _ string, _ []types.Variable, _ []string) (*types.PreviewResponse, error) {
+func (c *FakePreviewsClient) DeployPreview(_ context.Context, _, _, _, _, _, _ string, _ []types.Variable, _ []string, _ bool) (*types.PreviewResponse, error) {
 	return c.response.Preview, c.response.ErrDeployPreview
 }
 
