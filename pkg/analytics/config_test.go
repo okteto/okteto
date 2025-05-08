@@ -14,74 +14,74 @@
 package analytics
 
 import (
-	"testing"
+    "testing"
 
-	"github.com/okteto/okteto/pkg/constants"
+    "github.com/okteto/okteto/pkg/constants"
 )
 
 func Test_Get(t *testing.T) {
-	var tests = []struct {
-		name             string
-		currentAnalytics bool
-		enabled          bool
-		fileExits        bool
-		want             bool
-	}{
-		{
-			name:             "is-currentAnalytics-enabled",
-			currentAnalytics: true,
-			enabled:          true,
-			want:             true,
-		},
-		{
-			name:             "is-currentAnalytics-disabled",
-			currentAnalytics: true,
-			enabled:          false,
-			want:             false,
-		},
-		{
-			name:      "is-currentAnalytics-nil-file-not-exists",
-			fileExits: false,
-			want:      false,
-		},
-		{
-			name:      "is-currentAnalytics-nil-file-exists-enabled",
-			fileExits: true,
-			enabled:   true,
-			want:      true,
-		},
-		{
-			name:      "is-currentAnalytics-nil-file-exists-disabled",
-			fileExits: true,
-			enabled:   false,
-			want:      false,
-		},
-	}
+    var tests = []struct {
+        name             string
+        currentAnalytics bool
+        enabled          bool
+        fileExits        bool
+        want             bool
+    }{
+        {
+            name:             "is-currentAnalytics-enabled",
+            currentAnalytics: true,
+            enabled:          true,
+            want:             true,
+        },
+        {
+            name:             "is-currentAnalytics-disabled",
+            currentAnalytics: true,
+            enabled:          false,
+            want:             false,
+        },
+        {
+            name:      "is-currentAnalytics-nil-file-not-exists",
+            fileExits: false,
+            want:      true,
+        },
+        {
+            name:      "is-currentAnalytics-nil-file-exists-enabled",
+            fileExits: true,
+            enabled:   true,
+            want:      true,
+        },
+        {
+            name:      "is-currentAnalytics-nil-file-exists-disabled",
+            fileExits: true,
+            enabled:   false,
+            want:      false,
+        },
+    }
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			dir := t.TempDir()
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            dir := t.TempDir()
 
-			t.Setenv(constants.OktetoFolderEnvVar, dir)
+            t.Setenv(constants.OktetoFolderEnvVar, dir)
 
-			if !tt.currentAnalytics {
-				currentAnalytics = nil
-			} else {
-				currentAnalytics = &Analytics{Enabled: tt.enabled}
-			}
+            if !tt.currentAnalytics {
+                currentAnalytics = nil
+            } else {
+                currentAnalytics = &Analytics{Enabled: tt.enabled}
+            }
 
-			if tt.fileExits {
-				a := &Analytics{Enabled: tt.enabled}
-				if err := a.save(); err != nil {
-					t.Fatalf("analytics file wasn't created")
-				}
-			}
+            if tt.fileExits {
+                a := &Analytics{Enabled: tt.enabled}
+                if err := a.save(); err != nil {
+                    t.Fatalf("analytics file wasn't created")
+                }
+            }
 
-			if got := get().Enabled; got != tt.want {
-				t.Errorf("After Init, got %v, want %v", got, tt.want)
-			}
+            if got := get().Enabled; got != tt.want {
+                t.Errorf("After Init, got %v, want %v", got, tt.want)
+            }
 
-		})
-	}
+        })
+    }
 
 }

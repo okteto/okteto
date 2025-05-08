@@ -711,51 +711,51 @@ workflows:
             - run-windows-unit-test:
                 - failed
                 - success
-            - test-e2e-setup:
-                - failed
-                - success
-            - check-schema:
-                - failed
-                - success
-            - e2e-build-windows:
-                - failed
-                - success
-            - e2e-deploy-windows:
-                - failed
-                - success
-            - e2e-up-windows:
-                - failed
-                - success
-            - e2e-okteto-test-windows:
-                - failed
-                - success
-            - e2e-build:
-                - failed
-                - success
-            - e2e-deploy:
-                - failed
-                - success
-            - e2e-up:
-                - failed
-                - success
-            - e2e-actions:
-                - failed
-                - success
-            - e2e-okteto:
-                - failed
-                - success
-            - e2e-okteto-test:
-                - failed
-                - success
-            - test-release:
-                - failed
-                - success
-            - push-image-master:
-                - failed
-                - success
-          filters:
-            branches:
-              only: master
+            #- test-e2e-setup:
+            #    - failed
+            #    - success
+            #- check-schema:
+            #    - failed
+            #    - success
+            #- e2e-build-windows:
+            #    - failed
+            #    - success
+            #- e2e-deploy-windows:
+            #    - failed
+            #    - success
+            #- e2e-up-windows:
+            #    - failed
+            #    - success
+            #- e2e-okteto-test-windows:
+            #    - failed
+            #    - success
+            #- e2e-build:
+            #    - failed
+            #    - success
+            #- e2e-deploy:
+            #    - failed
+            #    - success
+            #- e2e-up:
+            #    - failed
+            #    - success
+            #- e2e-actions:
+            #    - failed
+            #    - success
+            #- e2e-okteto:
+            #    - failed
+            #    - success
+            #- e2e-okteto-test:
+            #    - failed
+            #    - success
+            #- test-release:
+            #    - failed
+            #    - success
+            #- push-image-master:
+            #    - failed
+            #    - success
+          #filters:
+          #  branches:
+          #    only: master
 
   # release-branch workflow is triggered when branch name is "release-*", ignoring any tag
   release-branch:
