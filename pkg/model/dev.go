@@ -891,6 +891,11 @@ func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset b
 				MountPath: OktetoSyncthingMountPath,
 				SubPath:   SyncthingSubPath,
 			},
+			VolumeMount{
+				Name:      main.GetVolumeName(),
+				MountPath: "/var/syncthing/data",
+				SubPath:   "syncthing-data",
+			},
 		)
 		if main.RemoteModeEnabled() {
 			rule.Volumes = append(
