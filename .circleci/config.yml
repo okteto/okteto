@@ -700,58 +700,58 @@ workflows:
       - notify-failures:
           requires:
             - golangci-lint:
-                - fail
+                - failed
                 - success
             - build-binaries:
-                - fail
+                - failed
                 - success
             - run-unit-test:
-                - fail
+                - failed
                 - success
             - run-windows-unit-test:
-                - fail
+                - failed
                 - success
             - test-e2e-setup:
-                - fail
+                - failed
                 - success
             - check-schema:
-                - fail
+                - failed
                 - success
             - e2e-build-windows:
-                - fail
+                - failed
                 - success
             - e2e-deploy-windows:
-                - fail
+                - failed
                 - success
             - e2e-up-windows:
-                - fail
+                - failed
                 - success
             - e2e-okteto-test-windows:
-                - fail
+                - failed
                 - success
             - e2e-build:
-                - fail
+                - failed
                 - success
             - e2e-deploy:
-                - fail
+                - failed
                 - success
             - e2e-up:
-                - fail
+                - failed
                 - success
             - e2e-actions:
-                - fail
+                - failed
                 - success
             - e2e-okteto:
-                - fail
+                - failed
                 - success
             - e2e-okteto-test:
-                - fail
+                - failed
                 - success
             - test-release:
-                - fail
+                - failed
                 - success
             - push-image-master:
-                - fail
+                - failed
                 - success
           filters:
             branches:
