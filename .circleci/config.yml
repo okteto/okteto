@@ -31,6 +31,7 @@ orbs:
   # https://circleci.com/developer/orbs/orb/circleci/windows#usage-run_windows_2022
   # https://circleci.com/developer/machine/image/windows-server-2022-gui
   win: circleci/windows@5.0.0
+  slack: circleci/slack@4.12.3
 
 executors:
   golang-ci:
@@ -526,6 +527,33 @@ jobs:
             - SHA256:+wgdECJJEEyF/iyl8Y8EV/tpOEQIv6zZ/0LRqRChS18
       - run: ./scripts/ci/release-branch.sh
 
+  notify-failures:
+    executor: golang-ci
+    steps:
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+          channel: '#ci-okteto'
+          custom: |
+            {
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Pipeline Failed* :x:\nSome jobs in the pipeline failed. Check the details below:"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Failed Jobs:*\n{{#each .Jobs}}\n{{#if .Failed}}\n• {{.Name}}\n{{/if}}\n{{/each}}"
+                  }
+                }
+              ]
+            }
+
 workflows:
   # upload-static runs on every merge to master
   upload-static:
@@ -669,6 +697,30 @@ workflows:
           filters:
             branches:
               only: master
+      - notify-failures:
+          requires:
+            - golangci-lint
+            - build-binaries
+            - run-unit-test
+            - run-windows-unit-test
+            - test-e2e-setup
+            - check-schema
+            - e2e-build-windows
+            - e2e-deploy-windows
+            - e2e-up-windows
+            - e2e-okteto-test-windows
+            - e2e-build
+            - e2e-deploy
+            - e2e-up
+            - e2e-actions
+            - e2e-okteto
+            - e2e-okteto-test
+            - test-release
+            - push-image-master
+          filters:
+            branches:
+              only: master
+          when: always
 
   # release-branch workflow is triggered when branch name is "release-*", ignoring any tag
   release-branch:
