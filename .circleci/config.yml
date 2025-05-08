@@ -702,15 +702,19 @@ workflows:
             - golangci-lint:
                 - failed
                 - success
+                - blocked
             - build-binaries:
                 - failed
                 - success
+                - blocked
             - run-unit-test:
                 - failed
                 - success
+                - blocked
             - run-windows-unit-test:
                 - failed
                 - success
+                - blocked
             #- test-e2e-setup:
             #    - failed
             #    - success
