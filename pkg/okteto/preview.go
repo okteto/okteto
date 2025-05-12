@@ -211,7 +211,7 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 				return nil, oktetoErrors.UserError{E: ErrLabelsFeatureNotSupported, Hint: "Please upgrade to the latest version or ask your administrator"}
 			}
 			if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"deployGitRepository\" of type \"Mutation\"") {
-				mutationWithoutDependencies := &deployPipelineMutationWithLabels{}
+				mutationWithoutDependencies := &deployPreviewMutationWithLabels{}
 				delete(mutationVariables, "dependencies")
 				err = mutate(ctx, mutationWithoutDependencies, mutationVariables, c.client)
 				if err != nil {
