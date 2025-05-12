@@ -125,6 +125,7 @@ func (c *pipelineClient) Deploy(ctx context.Context, opts types.PipelineDeployOp
 			oktetoLog.Infof("deploy pipeline error: %s", err)
 			if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"deployGitRepository\" of type \"Mutation\"") {
 				mutationWithoutDependencies := &deployPipelineMutation{}
+				delete(mutationVariables, "dependencies")
 				err = mutate(ctx, mutationWithoutDependencies, mutationVariables, c.client)
 				if err != nil {
 					return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
@@ -145,6 +146,7 @@ func (c *pipelineClient) Deploy(ctx context.Context, opts types.PipelineDeployOp
 			}
 			if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"deployGitRepository\" of type \"Mutation\"") {
 				mutationWithoutDependencies := &deployPipelineMutationWithLabels{}
+				delete(mutationVariables, "dependencies")
 				err = mutate(ctx, mutationWithoutDependencies, mutationVariables, c.client)
 				if err != nil {
 					return nil, fmt.Errorf("failed to deploy pipeline: %w", err)

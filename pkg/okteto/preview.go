@@ -191,6 +191,7 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 			oktetoLog.Infof("deploy preview error: %s", err)
 			if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"deployPreview\" of type \"Mutation\"") {
 				mutationWithoutDependencies := &deployPreviewMutation{}
+				delete(mutationVariables, "dependencies")
 				err = mutate(ctx, mutationWithoutDependencies, mutationVariables, c.client)
 				if err != nil {
 					return nil, c.translateErr(err, name)
@@ -211,6 +212,7 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 			}
 			if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"deployGitRepository\" of type \"Mutation\"") {
 				mutationWithoutDependencies := &deployPipelineMutationWithLabels{}
+				delete(mutationVariables, "dependencies")
 				err = mutate(ctx, mutationWithoutDependencies, mutationVariables, c.client)
 				if err != nil {
 					return nil, c.translateErr(err, name)
