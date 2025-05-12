@@ -217,7 +217,7 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 				if err != nil {
 					return nil, c.translateErr(err, name)
 				}
-				response = mutationStruct.response()
+				response = mutationWithoutDependencies.response()
 			}
 		} else {
 			response = mutationStruct.response()
