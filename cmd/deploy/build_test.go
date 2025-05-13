@@ -17,6 +17,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
@@ -140,7 +141,9 @@ func TestBuildImages(t *testing.T) {
 				deployOptions.Manifest.Build[service] = &build.Info{}
 			}
 
-			err := buildImages(context.Background(), testCase.builder, deployOptions)
+			err := buildImages(context.Background(), testCase.builder, &defaultConfigMapHandler{
+				k8sClientProvider: test.NewFakeK8sProvider(),
+			}, deployOptions)
 			assert.Equal(t, testCase.expectedError, err)
 			assert.Equal(t, sliceToSet(testCase.expectedImages), sliceToSet(testCase.builder.buildOptionsStorage.CommandArgs))
 		})

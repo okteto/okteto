@@ -43,19 +43,20 @@ import (
 )
 
 const (
-	nameField       = "name"
-	statusField     = "status"
-	outputField     = "output"
-	repoField       = "repository"
-	branchField     = "branch"
-	filenameField   = "filename"
-	yamlField       = "yaml"
-	iconField       = "icon"
-	actionLockField = "actionLock"
-	actionNameField = "actionName"
-	variablesField  = "variables"
-	devBranchField  = "dev-branch"
-	PhasesField     = "phases"
+	nameField        = "name"
+	statusField      = "status"
+	outputField      = "output"
+	repoField        = "repository"
+	branchField      = "branch"
+	filenameField    = "filename"
+	yamlField        = "yaml"
+	iconField        = "icon"
+	actionLockField  = "actionLock"
+	actionNameField  = "actionName"
+	variablesField   = "variables"
+	buildEnvVarField = "build-envs"
+	devBranchField   = "dev-branch"
+	PhasesField      = "phases"
 
 	actionDefaultName = "cli"
 
@@ -115,6 +116,27 @@ func GetConfigmapVariablesEncoded(ctx context.Context, name, namespace string, c
 	}
 
 	return cmap.Data[variablesField], nil
+}
+
+// GetConfigmapVariablesEncoded returns Data["variables"] content from Configmap
+func GetConfigmapBuildEnvVars(ctx context.Context, name, namespace string, c kubernetes.Interface) (map[string]map[string]string, error) {
+	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
+	if err != nil {
+		return nil, err
+	}
+
+	if v, ok := cmap.Data[buildEnvVarField]; ok {
+		decoded, err := base64.StdEncoding.DecodeString(v)
+		if err != nil {
+			return nil, err
+		}
+		var envVars map[string]map[string]string
+		if err := json.Unmarshal(decoded, &envVars); err != nil {
+			return nil, err
+		}
+		return envVars, nil
+	}
+	return nil, nil
 }
 
 // TranslateConfigMapAndDeploy translates the app into a configMap.
@@ -225,6 +247,29 @@ func AddPhaseDuration(ctx context.Context, name, namespace, phase string, durati
 		return err
 	}
 	cmap.Data[PhasesField] = string(encodedPhases)
+	return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
+}
+
+func SetBuildEnvVars(ctx context.Context, cmapName, ns string, envVars map[string]map[string]string, c kubernetes.Interface) error {
+	cmap, err := configmaps.Get(ctx, TranslatePipelineName(cmapName), ns, c)
+	if err != nil {
+		return err
+	}
+
+	if cmap.Data == nil {
+		cmap.Data = map[string]string{}
+	}
+
+	if len(envVars) > 0 {
+		encodedEnvs, err := json.Marshal(envVars)
+		if err != nil {
+			return fmt.Errorf("failed to encode env vars: %w", err)
+		}
+		cmap.Data[buildEnvVarField] = base64.StdEncoding.EncodeToString(encodedEnvs)
+	} else {
+		delete(cmap.Data, buildEnvVarField)
+	}
+
 	return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
 }
 
