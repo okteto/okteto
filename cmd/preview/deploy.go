@@ -98,7 +98,7 @@ okteto preview deploy --wait=false`,
 	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", true, "wait until the deployment finishes")
 	cmd.Flags().StringVarP(&opts.file, "file", "f", "", "the path to the Okteto Manifest")
 	cmd.Flags().StringArrayVarP(&opts.labels, "label", "", []string{}, "tag and organize Preview Environments using labels (multiple --label flags accepted)")
-	cmd.Flags().BoolVar(&opts.redeployDependencies, "dependencies", false, "if it has dependencies already deployed, redeploy dependencies")
+	cmd.Flags().BoolVar(&opts.redeployDependencies, "dependencies", false, "force deployment of repositories in the 'dependencies' section")
 	return cmd
 }
 

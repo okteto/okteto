@@ -136,7 +136,7 @@ okteto pipeline deploy --wait=false`,
 	cmd.Flags().StringVarP(&flags.file, "file", "f", "", "the path to the Okteto Manifest")
 	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "tag and organize Development Environments using labels (multiple --label flags accepted)")
 	cmd.Flags().BoolVar(&flags.reuseParams, "reuse-params", false, "if the Development Environment exists, reuse same parameters to redeploy")
-	cmd.Flags().BoolVar(&flags.redeployDependencies, "dependencies", false, "if it has dependencies already deployed, redeploy dependencies")
+	cmd.Flags().BoolVar(&flags.redeployDependencies, "dependencies", false, "force deployment of repositories in the 'dependencies' section")
 	return cmd
 }
 
