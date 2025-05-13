@@ -210,7 +210,7 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 			if strings.Contains(err.Error(), "Unknown argument \"labels\" on field \"deployPreview\" of type \"Mutation\"") {
 				return nil, oktetoErrors.UserError{E: ErrLabelsFeatureNotSupported, Hint: "Please upgrade to the latest version or ask your administrator"}
 			}
-			if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"deployGitRepository\" of type \"Mutation\"") {
+			if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"deployPreview\" of type \"Mutation\"") {
 				mutationWithoutDependencies := &deployPreviewMutationWithLabels{}
 				delete(mutationVariables, "dependencies")
 				err = mutate(ctx, mutationWithoutDependencies, mutationVariables, c.client)
@@ -258,14 +258,14 @@ func (*previewClient) getDeployVariables(name, scope, repository, branch, source
 		})
 	}
 	vars := map[string]interface{}{
-		"name":                 graphql.String(name),
-		"scope":                PreviewScope(scope),
-		"repository":           graphql.String(repository),
-		"branch":               graphql.String(branch),
-		"sourceURL":            graphql.String(sourceUrl),
-		"variables":            variablesVariable,
-		"filename":             graphql.String(filename),
-		"redeployDependencies": graphql.Boolean(redeployDependencies),
+		"name":         graphql.String(name),
+		"scope":        PreviewScope(scope),
+		"repository":   graphql.String(repository),
+		"branch":       graphql.String(branch),
+		"sourceURL":    graphql.String(sourceUrl),
+		"variables":    variablesVariable,
+		"filename":     graphql.String(filename),
+		"dependencies": graphql.Boolean(redeployDependencies),
 	}
 
 	if len(labels) > 0 {
