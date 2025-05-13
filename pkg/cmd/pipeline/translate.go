@@ -118,7 +118,7 @@ func GetConfigmapVariablesEncoded(ctx context.Context, name, namespace string, c
 	return cmap.Data[variablesField], nil
 }
 
-// GetConfigmapVariablesEncoded returns Data["variables"] content from Configmap
+// GetConfigmapBuildEnvVars returns Data["build-envs"] content from Configmap
 func GetConfigmapBuildEnvVars(ctx context.Context, name, namespace string, c kubernetes.Interface) (map[string]map[string]string, error) {
 	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
 	if err != nil {
