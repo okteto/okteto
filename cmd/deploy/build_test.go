@@ -20,10 +20,22 @@ import (
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 func TestBuildImages(t *testing.T) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "test",
+				Cfg:       &api.Config{},
+			},
+		},
+		CurrentContext: "test",
+	}
+
 	testCases := []struct {
 		expectedError        error
 		builder              *fakeV2Builder
