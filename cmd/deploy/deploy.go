@@ -444,7 +444,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		return nil
 	}
 
-	if err := buildImages(ctx, dc.Builder, deployOptions); err != nil {
+	if err := buildImages(ctx, dc.Builder, dc.CfgMapHandler, deployOptions); err != nil {
 		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
 			return errStatus
 		}
@@ -734,6 +734,17 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 
 		if err := dc.PipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
 			return err
+		}
+		if dep.Wait {
+			depBuildEnvs, err := dc.CfgMapHandler.GetDependencyBuildEnvVars(ctx, depName, deployOptions.Namespace)
+			if err != nil {
+				return fmt.Errorf("could not get dependency build env vars: %w", err)
+			}
+			for key, val := range depBuildEnvs {
+				if err := os.Setenv(key, val); err != nil {
+					return fmt.Errorf("could not set dependency env var %s: %w", key, err)
+				}
+			}
 		}
 	}
 	oktetoLog.SetStage("")

@@ -17,12 +17,25 @@ import (
 	"context"
 	"testing"
 
+	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 func TestBuildImages(t *testing.T) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "test",
+				Cfg:       &api.Config{},
+			},
+		},
+		CurrentContext: "test",
+	}
+
 	testCases := []struct {
 		expectedError        error
 		builder              *fakeV2Builder
@@ -140,7 +153,9 @@ func TestBuildImages(t *testing.T) {
 				deployOptions.Manifest.Build[service] = &build.Info{}
 			}
 
-			err := buildImages(context.Background(), testCase.builder, deployOptions)
+			err := buildImages(context.Background(), testCase.builder, &defaultConfigMapHandler{
+				k8sClientProvider: test.NewFakeK8sProvider(),
+			}, deployOptions)
 			assert.Equal(t, testCase.expectedError, err)
 			assert.Equal(t, sliceToSet(testCase.expectedImages), sliceToSet(testCase.builder.buildOptionsStorage.CommandArgs))
 		})
