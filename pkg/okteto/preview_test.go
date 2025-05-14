@@ -26,10 +26,11 @@ import (
 
 func TestDeployPreview(t *testing.T) {
 	type input struct {
-		client    *fakeGraphQLClient
-		name      string
-		variables []types.Variable
-		labels    []string
+		client       *fakeGraphQLClient
+		name         string
+		variables    []types.Variable
+		labels       []string
+		dependencies bool
 	}
 	type expected struct {
 		response *types.PreviewResponse
@@ -224,7 +225,7 @@ func TestDeployPreview(t *testing.T) {
 				client:             tc.input.client,
 				namespaceValidator: newNamespaceValidator(),
 			}
-			response, err := pc.DeployPreview(context.Background(), tc.input.name, "", "", "", "", "", tc.input.variables, tc.input.labels)
+			response, err := pc.DeployPreview(context.Background(), tc.input.name, "", "", "", "", "", tc.input.variables, tc.input.labels, tc.input.dependencies)
 			assert.ErrorIs(t, err, tc.expected.err)
 			assert.Equal(t, tc.expected.response, response)
 		})
