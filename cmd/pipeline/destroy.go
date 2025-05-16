@@ -34,21 +34,23 @@ import (
 
 // destroyFlags represents the user input for a pipeline destroy command
 type destroyFlags struct {
-	name           string
-	k8sContext     string
-	namespace      string
-	wait           bool
-	destroyVolumes bool
-	timeout        time.Duration
+	name                string
+	k8sContext          string
+	namespace           string
+	wait                bool
+	destroyVolumes      bool
+	timeout             time.Duration
+	destroyDependencies bool
 }
 
 // DestroyOptions options to destroy pipeline command
 type DestroyOptions struct {
-	Name           string
-	Namespace      string
-	Wait           bool
-	DestroyVolumes bool
-	Timeout        time.Duration
+	Name                string
+	Namespace           string
+	Wait                bool
+	DestroyVolumes      bool
+	Timeout             time.Duration
+	DestroyDependencies bool
 }
 
 func destroy(ctx context.Context) *cobra.Command {
@@ -89,6 +91,7 @@ okteto pipeline destroy --wait=false`,
 	cmd.Flags().BoolVarP(&flags.wait, "wait", "w", true, "wait until the Development Environment is destroyed")
 	cmd.Flags().BoolVarP(&flags.destroyVolumes, "volumes", "v", false, "destroy persistent volumes created by the Development Environment")
 	cmd.Flags().DurationVarP(&flags.timeout, "timeout", "t", fiveMinutes, "the duration to wait for the Development Environment to be destroyed. Any value should contain a corresponding time unit e.g. 1s, 2m, 3h")
+	cmd.Flags().BoolVar(&flags.destroyDependencies, "dependencies", false, "destroy repositories in the 'dependencies' section")
 	return cmd
 }
 
@@ -99,7 +102,7 @@ func (pc *Command) ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOpti
 		return fmt.Errorf("could not set default values for options: %w", err)
 	}
 
-	resp, err := pc.destroyPipeline(ctx, opts.Name, opts.Namespace, opts.DestroyVolumes)
+	resp, err := pc.destroyPipeline(ctx, opts.Name, opts.Namespace, opts.DestroyVolumes, opts.DestroyDependencies)
 	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return err
 	}
@@ -121,7 +124,7 @@ func (pc *Command) ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOpti
 	return nil
 }
 
-func (pc *Command) destroyPipeline(ctx context.Context, name, namespace string, destroyVolumes bool) (*types.GitDeployResponse, error) {
+func (pc *Command) destroyPipeline(ctx context.Context, name, namespace string, destroyVolumes, destroyDependencies bool) (*types.GitDeployResponse, error) {
 	oktetoLog.Spinner(fmt.Sprintf("Destroying repository '%s'...", name))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -134,7 +137,7 @@ func (pc *Command) destroyPipeline(ctx context.Context, name, namespace string, 
 	var resp *types.GitDeployResponse
 
 	go func() {
-		resp, err = pc.okClient.Pipeline().Destroy(ctx, name, namespace, destroyVolumes)
+		resp, err = pc.okClient.Pipeline().Destroy(ctx, name, namespace, destroyVolumes, destroyDependencies)
 		if err != nil {
 			exit <- fmt.Errorf("failed to destroy repository '%s': %w", name, err)
 			return
@@ -211,11 +214,12 @@ func (pc *Command) waitToBeDestroyed(ctx context.Context, name, namespace string
 // toOptions transform the flags
 func (f destroyFlags) toOptions() *DestroyOptions {
 	return &DestroyOptions{
-		Name:           f.name,
-		Namespace:      f.namespace,
-		Wait:           f.wait,
-		Timeout:        f.timeout,
-		DestroyVolumes: f.destroyVolumes,
+		Name:                f.name,
+		Namespace:           f.namespace,
+		Wait:                f.wait,
+		Timeout:             f.timeout,
+		DestroyVolumes:      f.destroyVolumes,
+		DestroyDependencies: f.destroyDependencies,
 	}
 }
 
