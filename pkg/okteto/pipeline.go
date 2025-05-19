@@ -252,6 +252,7 @@ func (c *pipelineClient) Destroy(ctx context.Context, name, namespace string, de
 		"dependencies":   graphql.Boolean(destroyDependencies),
 	}
 	err := mutate(ctx, &mutation, queryVariables, c.client)
+	response = mutation.Response
 	if err != nil {
 		if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"destroyGitRepository\" of type \"Mutation\"") {
 			mutationWithoutDependencies := &destroyPipelineMutation{}
@@ -264,19 +265,18 @@ func (c *pipelineClient) Destroy(ctx context.Context, name, namespace string, de
 		} else {
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
-		gitDeployResponse.Action = &types.Action{
-			ID:     string(response.Action.Id),
-			Name:   string(response.Action.Name),
-			Status: string(response.Action.Status),
-		}
-		gitDeployResponse.GitDeploy = &types.GitDeploy{
-			ID:         string(response.GitDeploy.Id),
-			Name:       string(response.GitDeploy.Name),
-			Repository: string(response.GitDeploy.Repository),
-			Status:     string(response.GitDeploy.Status),
-		}
 	}
-
+	gitDeployResponse.Action = &types.Action{
+		ID:     string(response.Action.Id),
+		Name:   string(response.Action.Name),
+		Status: string(response.Action.Status),
+	}
+	gitDeployResponse.GitDeploy = &types.GitDeploy{
+		ID:         string(response.GitDeploy.Id),
+		Name:       string(response.GitDeploy.Name),
+		Repository: string(response.GitDeploy.Repository),
+		Status:     string(response.GitDeploy.Status),
+	}
 	oktetoLog.Infof("destroy pipeline: %+v", gitDeployResponse.GitDeploy.Status)
 	return gitDeployResponse, nil
 }
