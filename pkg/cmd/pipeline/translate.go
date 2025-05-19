@@ -124,19 +124,20 @@ func GetConfigmapBuildEnvVars(ctx context.Context, name, namespace string, c kub
 	if err != nil {
 		return nil, err
 	}
-
-	if v, ok := cmap.Data[buildEnvVarField]; ok {
-		decoded, err := base64.StdEncoding.DecodeString(v)
-		if err != nil {
-			return nil, err
-		}
-		var envVars map[string]map[string]string
-		if err := json.Unmarshal(decoded, &envVars); err != nil {
-			return nil, err
-		}
-		return envVars, nil
+	v, ok := cmap.Data[buildEnvVarField]
+	if !ok {
+		return nil, nil
 	}
-	return nil, nil
+
+	decoded, err := base64.StdEncoding.DecodeString(v)
+	if err != nil {
+		return nil, err
+	}
+	var envVars map[string]map[string]string
+	if err := json.Unmarshal(decoded, &envVars); err != nil {
+		return nil, err
+	}
+	return envVars, nil
 }
 
 // TranslateConfigMapAndDeploy translates the app into a configMap.
