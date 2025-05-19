@@ -398,7 +398,7 @@ func TestDestroyPipeline(t *testing.T) {
 			input: input{
 				client: &fakeGraphQLMultipleCallsClient{
 					mutationResult: []interface{}{
-						&destroyPipelineWithVolumesMutation{
+						&destroyPipelineMutation{
 							Response: destroyPipelineResponse{
 								Action: actionStruct{
 									Id:     "test",
@@ -440,7 +440,7 @@ func TestDestroyPipeline(t *testing.T) {
 			input: input{
 				client: &fakeGraphQLMultipleCallsClient{
 					mutationResult: []interface{}{
-						&destroyPipelineWithoutVolumesMutation{
+						&destroyPipelineMutation{
 							Response: destroyPipelineResponse{
 								Action: actionStruct{
 									Id:     "test",
@@ -483,7 +483,7 @@ func TestDestroyPipeline(t *testing.T) {
 			pc := pipelineClient{
 				client: tc.input.client,
 			}
-			response, err := pc.Destroy(context.Background(), tc.input.name, "", tc.input.destroyVolumes)
+			response, err := pc.Destroy(context.Background(), tc.input.name, "", tc.input.destroyVolumes, false)
 			assert.ErrorIs(t, err, tc.expected.err)
 			assert.Equal(t, tc.expected.response, response)
 		})

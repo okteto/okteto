@@ -72,12 +72,12 @@ type getPipelineByNameQuery struct {
 	Response getPipelineByNameResponse `graphql:"space(id: $id)"`
 }
 
-type destroyPipelineWithVolumesMutation struct {
+type destroyPipelineMutation struct {
 	Response destroyPipelineResponse `graphql:"destroyGitRepository(name: $name, space: $space, destroyVolumes: $destroyVolumes)"`
 }
 
-type destroyPipelineWithoutVolumesMutation struct {
-	Response destroyPipelineResponse `graphql:"destroyGitRepository(name: $name, space: $space)"`
+type destroyPipelineDependenciesMutation struct {
+	Response destroyPipelineResponse `graphql:"destroyGitRepository(name: $name, space: $space, destroyVolumes: $destroyVolumes, dependencies: $dependencies)"`
 }
 
 type getPipelineResources struct {
@@ -240,55 +240,43 @@ func (c *pipelineClient) GetByName(ctx context.Context, name, namespace string) 
 }
 
 // Destroy destroys a pipeline
-func (c *pipelineClient) Destroy(ctx context.Context, name, namespace string, destroyVolumes bool) (*types.GitDeployResponse, error) {
+func (c *pipelineClient) Destroy(ctx context.Context, name, namespace string, destroyVolumes, destroyDependencies bool) (*types.GitDeployResponse, error) {
 	oktetoLog.Infof("destroy pipeline: %s/%s", namespace, name)
 	gitDeployResponse := &types.GitDeployResponse{}
-	if destroyVolumes {
-		var mutation destroyPipelineWithVolumesMutation
-
-		queryVariables := map[string]interface{}{
-			"name":           graphql.String(name),
-			"destroyVolumes": graphql.Boolean(destroyVolumes),
-			"space":          graphql.String(namespace),
-		}
-		err := mutate(ctx, &mutation, queryVariables, c.client)
-		if err != nil {
+	var mutation destroyPipelineDependenciesMutation
+	var response destroyPipelineResponse
+	queryVariables := map[string]interface{}{
+		"name":           graphql.String(name),
+		"space":          graphql.String(namespace),
+		"destroyVolumes": graphql.Boolean(destroyVolumes),
+		"dependencies":   graphql.Boolean(destroyDependencies),
+	}
+	err := mutate(ctx, &mutation, queryVariables, c.client)
+	response = mutation.Response
+	if err != nil {
+		if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"destroyGitRepository\" of type \"Mutation\"") {
+			mutationWithoutDependencies := &destroyPipelineMutation{}
+			delete(queryVariables, "dependencies")
+			err = mutate(ctx, mutationWithoutDependencies, queryVariables, c.client)
+			if err != nil {
+				return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+			}
+			response = mutationWithoutDependencies.Response
+		} else {
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
-		}
-		gitDeployResponse.Action = &types.Action{
-			ID:     string(mutation.Response.Action.Id),
-			Name:   string(mutation.Response.Action.Name),
-			Status: string(mutation.Response.Action.Status),
-		}
-		gitDeployResponse.GitDeploy = &types.GitDeploy{
-			ID:         string(mutation.Response.GitDeploy.Id),
-			Name:       string(mutation.Response.GitDeploy.Name),
-			Repository: string(mutation.Response.GitDeploy.Repository),
-			Status:     string(mutation.Response.GitDeploy.Status),
-		}
-	} else {
-		var mutation destroyPipelineWithoutVolumesMutation
-		queryVariables := map[string]interface{}{
-			"name":  graphql.String(name),
-			"space": graphql.String(GetContext().Namespace),
-		}
-		err := mutate(ctx, &mutation, queryVariables, c.client)
-		if err != nil {
-			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
-		}
-		gitDeployResponse.Action = &types.Action{
-			ID:     string(mutation.Response.Action.Id),
-			Name:   string(mutation.Response.Action.Name),
-			Status: string(mutation.Response.Action.Status),
-		}
-		gitDeployResponse.GitDeploy = &types.GitDeploy{
-			ID:         string(mutation.Response.GitDeploy.Id),
-			Name:       string(mutation.Response.GitDeploy.Name),
-			Repository: string(mutation.Response.GitDeploy.Repository),
-			Status:     string(mutation.Response.GitDeploy.Status),
 		}
 	}
-
+	gitDeployResponse.Action = &types.Action{
+		ID:     string(response.Action.Id),
+		Name:   string(response.Action.Name),
+		Status: string(response.Action.Status),
+	}
+	gitDeployResponse.GitDeploy = &types.GitDeploy{
+		ID:         string(response.GitDeploy.Id),
+		Name:       string(response.GitDeploy.Name),
+		Repository: string(response.GitDeploy.Repository),
+		Status:     string(response.GitDeploy.Status),
+	}
 	oktetoLog.Infof("destroy pipeline: %+v", gitDeployResponse.GitDeploy.Status)
 	return gitDeployResponse, nil
 }
