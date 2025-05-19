@@ -360,7 +360,7 @@ func TestGetConfigmapBuildEnvVars(t *testing.T) {
 		assert.True(t, k8sErrors.IsNotFound(err))
 	})
 
-	t.Run("configmap exists but no build-envs field", func(t *testing.T) {
+	t.Run("configmap exists but no buildEnvs field", func(t *testing.T) {
 		cmap := &apiv1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      TranslatePipelineName(name),
@@ -374,7 +374,7 @@ func TestGetConfigmapBuildEnvVars(t *testing.T) {
 		assert.Nil(t, envVars)
 	})
 
-	t.Run("configmap exists with valid build-envs field", func(t *testing.T) {
+	t.Run("configmap exists with valid buildEnvs field", func(t *testing.T) {
 		envVarsData := map[string]map[string]string{
 			"build1": {"VAR1": "value1", "VAR2": "value2"},
 			"build2": {"VAR3": "value3"},

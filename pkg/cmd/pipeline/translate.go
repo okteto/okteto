@@ -54,7 +54,7 @@ const (
 	actionLockField  = "actionLock"
 	actionNameField  = "actionName"
 	variablesField   = "variables"
-	buildEnvVarField = "build-envs"
+	buildEnvVarField = "buildEnvs"
 	devBranchField   = "dev-branch"
 	PhasesField      = "phases"
 
@@ -118,7 +118,7 @@ func GetConfigmapVariablesEncoded(ctx context.Context, name, namespace string, c
 	return cmap.Data[variablesField], nil
 }
 
-// GetConfigmapBuildEnvVars returns Data["build-envs"] content from Configmap
+// GetConfigmapBuildEnvVars returns Data["buildEnvs"] content from Configmap
 func GetConfigmapBuildEnvVars(ctx context.Context, name, namespace string, c kubernetes.Interface) (map[string]map[string]string, error) {
 	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
 	if err != nil {
