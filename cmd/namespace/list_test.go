@@ -16,6 +16,8 @@ package namespace
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test/client"
@@ -73,13 +75,115 @@ func Test_listNamespace(t *testing.T) {
 				okClient: fakeOktetoClient,
 				ctxCmd:   newFakeContextCommand(fakeOktetoClient, usr),
 			}
-			err := nsCmd.executeListNamespaces(ctx)
+			err := nsCmd.executeListNamespaces(ctx, "")
 			if tt.err != nil {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
 
+		})
+	}
+}
+
+func Test_validateNamespaceListOutput(t *testing.T) {
+	tests := []struct {
+		name        string
+		output      string
+		expectedErr error
+	}{
+		{
+			name:   "yaml output",
+			output: "yaml",
+		},
+		{
+			name:   "json output",
+			output: "json",
+		},
+		{
+			name:        "invalid output",
+			output:      "xml",
+			expectedErr: errInvalidOutput,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateNamespaceListOutput(tt.output)
+			assert.Equal(t, tt.expectedErr, err)
+		})
+	}
+}
+
+func Test_displayListNamespaces(t *testing.T) {
+	tests := []struct {
+		name           string
+		format         string
+		input          []types.Namespace
+		expectedOutput string
+	}{
+		{
+			name:           "empty default",
+			format:         "",
+			expectedOutput: "There are no namespaces\n",
+		},
+		{
+			name:           "empty json",
+			format:         "json",
+			expectedOutput: "[]\n",
+		},
+		{
+			name:   "default format",
+			format: "",
+			input: []types.Namespace{
+				{ID: "test", Status: "Active"},
+				{ID: "test2", Status: "Sleeping"},
+			},
+			expectedOutput: "Namespace  Status\ntest *      Active\ntest2        Sleeping\n",
+		},
+		{
+			name:   "json format",
+			format: "json",
+			input: []types.Namespace{
+				{ID: "test", Status: "Active"},
+				{ID: "test2", Status: "Sleeping"},
+			},
+			expectedOutput: "[\n {\n  \"id\": \"test\",\n  \"status\": \"Active\",\n  \"sleeping\": false\n },\n {\n  \"id\": \"test2\",\n  \"status\": \"Sleeping\",\n  \"sleeping\": false\n }\n]\n",
+		},
+		{
+			name:   "yaml format",
+			format: "yaml",
+			input: []types.Namespace{
+				{ID: "test", Status: "Active"},
+				{ID: "test2", Status: "Sleeping"},
+			},
+			expectedOutput: "- id: test\n  status: Active\n  sleeping: false\n- id: test2\n  status: Sleeping\n  sleeping: false\n\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			okteto.CurrentStore = &okteto.ContextStore{
+				Contexts: map[string]*okteto.Context{
+					"test": {
+						Namespace: "test",
+						IsOkteto:  true,
+					},
+				},
+				CurrentContext: "test",
+			}
+			r, w, _ := os.Pipe()
+			initialStdout := os.Stdout
+			os.Stdout = w
+
+			err := displayListNamespaces(tt.input, tt.format)
+			assert.NoError(t, err)
+
+			w.Close()
+			out, _ := io.ReadAll(r)
+			os.Stdout = initialStdout
+
+			assert.Equal(t, tt.expectedOutput, string(out))
 		})
 	}
 }
