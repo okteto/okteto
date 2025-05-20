@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
+	clientauthenticationv1 "k8s.io/client-go/pkg/apis/clientauthentication/v1"
 	"k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -53,6 +54,12 @@ type oktetoCtxCmdRunner interface {
 type Serializer struct{}
 
 func (*Serializer) ToJson(kubetoken types.KubeTokenResponse) (string, error) {
+	if kubetoken.Kind == "" {
+		kubetoken.Kind = "ExecCredential"
+	}
+	if kubetoken.APIVersion == "" {
+		kubetoken.APIVersion = clientauthenticationv1.SchemeGroupVersion.String()
+	}
 	bytes, err := json.MarshalIndent(kubetoken, "", "  ")
 	if err != nil {
 		return "", err
