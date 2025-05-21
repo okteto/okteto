@@ -40,6 +40,7 @@ type listFlags struct {
 type namespaceOutput struct {
 	Namespace string `json:"namespace" yaml:"namespace"`
 	Status    string `json:"status" yaml:"status"`
+	Current   bool   `json:"current" yaml:"current"`
 }
 
 // List all namespace in current context
@@ -136,10 +137,12 @@ func validateNamespaceListOutput(output string) error {
 // getNamespaceOutput transforms type.Namespace into namespaceOutput type
 func getNamespaceOutput(namespaces []types.Namespace) []namespaceOutput {
 	var namespaceSlice []namespaceOutput
+	currentNamespace := okteto.GetContext().Namespace
 	for _, ns := range namespaces {
 		previewOutput := namespaceOutput{
 			Namespace: ns.ID,
 			Status:    ns.Status,
+			Current:   ns.ID == currentNamespace,
 		}
 		namespaceSlice = append(namespaceSlice, previewOutput)
 	}

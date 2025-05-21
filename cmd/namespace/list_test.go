@@ -136,8 +136,8 @@ func Test_displayListNamespaces(t *testing.T) {
 			name:   "default format",
 			format: "",
 			input: []namespaceOutput{
-				{Namespace: "test", Status: "Active"},
-				{Namespace: "test2", Status: "Sleeping"},
+				{Namespace: "test", Status: "Active", Current: true},
+				{Namespace: "test2", Status: "Sleeping", Current: false},
 			},
 			expectedOutput: "Namespace  Status\ntest *     Active\ntest2      Sleeping\n",
 		},
@@ -145,19 +145,19 @@ func Test_displayListNamespaces(t *testing.T) {
 			name:   "json format",
 			format: "json",
 			input: []namespaceOutput{
-				{Namespace: "test", Status: "Active"},
-				{Namespace: "test2", Status: "Sleeping"},
+				{Namespace: "test", Status: "Active", Current: true},
+				{Namespace: "test2", Status: "Sleeping", Current: false},
 			},
-			expectedOutput: "[\n {\n  \"namespace\": \"test\",\n  \"status\": \"Active\"\n },\n {\n  \"namespace\": \"test2\",\n  \"status\": \"Sleeping\"\n }\n]\n",
+			expectedOutput: "[\n {\n  \"namespace\": \"test\",\n  \"status\": \"Active\",\n  \"current\": true\n },\n {\n  \"namespace\": \"test2\",\n  \"status\": \"Sleeping\",\n  \"current\": false\n }\n]\n",
 		},
 		{
 			name:   "yaml format",
 			format: "yaml",
 			input: []namespaceOutput{
-				{Namespace: "test", Status: "Active"},
-				{Namespace: "test2", Status: "Sleeping"},
+				{Namespace: "test", Status: "Active", Current: true},
+				{Namespace: "test2", Status: "Sleeping", Current: false},
 			},
-			expectedOutput: "- namespace: test\n  status: Active\n- namespace: test2\n  status: Sleeping\n",
+			expectedOutput: "- namespace: test\n  status: Active\n  current: true\n- namespace: test2\n  status: Sleeping\n  current: false\n",
 		},
 	}
 
