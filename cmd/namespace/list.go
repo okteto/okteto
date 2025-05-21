@@ -29,7 +29,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// List all namespace in current context
 var (
 	errInvalidOutput = fmt.Errorf("output format is not accepted. Value must be one of: ['json', 'yaml']")
 )
@@ -43,6 +42,7 @@ type namespaceOutput struct {
 	Status    string `json:"status" yaml:"status"`
 }
 
+// List all namespace in current context
 func List(ctx context.Context) *cobra.Command {
 	flags := &listFlags{}
 	cmd := &cobra.Command{
