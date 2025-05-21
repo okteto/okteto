@@ -38,6 +38,11 @@ type listFlags struct {
 	output string
 }
 
+type namespaceOutput struct {
+	Namespace string `json:"namespace" yaml:"namespace"`
+	Status    string `json:"status" yaml:"status"`
+}
+
 func List(ctx context.Context) *cobra.Command {
 	flags := &listFlags{}
 	cmd := &cobra.Command{
@@ -78,10 +83,11 @@ func (nc *Command) executeListNamespaces(ctx context.Context, output string) err
 		return fmt.Errorf("failed to get namespaces: %w", err)
 	}
 
-	return displayListNamespaces(spaces, output)
+	namespaces := getNamespaceOutput(spaces)
+	return displayListNamespaces(namespaces, output)
 }
 
-func displayListNamespaces(namespaces []types.Namespace, output string) error {
+func displayListNamespaces(namespaces []namespaceOutput, output string) error {
 	switch output {
 	case "json":
 		if len(namespaces) == 0 {
@@ -107,7 +113,7 @@ func displayListNamespaces(namespaces []types.Namespace, output string) error {
 		w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
 		fmt.Fprintf(w, "Namespace\tStatus\n")
 		for _, space := range namespaces {
-			id := space.ID
+			id := space.Namespace
 			if id == okteto.GetContext().Namespace {
 				id += " *"
 			}
@@ -125,4 +131,17 @@ func validateNamespaceListOutput(output string) error {
 	default:
 		return errInvalidOutput
 	}
+}
+
+// getNamespaceOutput transforms type.Namespace into namespaceOutput type
+func getNamespaceOutput(namespaces []types.Namespace) []namespaceOutput {
+	var namespaceSlice []namespaceOutput
+	for _, ns := range namespaces {
+		previewOutput := namespaceOutput{
+			Namespace: ns.ID,
+			Status:    ns.Status,
+		}
+		namespaceSlice = append(namespaceSlice, previewOutput)
+	}
+	return namespaceSlice
 }
