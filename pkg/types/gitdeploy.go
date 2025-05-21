@@ -15,13 +15,14 @@ package types
 
 // PipelineDeployOptions represents the options to deploy a pipeline
 type PipelineDeployOptions struct {
-	Name       string
-	Repository string
-	Branch     string
-	Filename   string
-	Variables  []Variable
-	Namespace  string
-	Labels     []string
+	Name                 string
+	Repository           string
+	Branch               string
+	Filename             string
+	Variables            []Variable
+	Namespace            string
+	Labels               []string
+	RedeployDependencies bool
 }
 
 // SpaceBody top body answer

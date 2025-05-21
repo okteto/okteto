@@ -20,6 +20,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 )
@@ -69,11 +70,27 @@ func (d *deployPreviewMutation) response() deployPreviewResponse {
 	return d.Response
 }
 
+type deployPreviewMutationWithRedeployDependencies struct {
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, dependencies: $dependencies)"`
+}
+
+func (d *deployPreviewMutationWithRedeployDependencies) response() deployPreviewResponse {
+	return d.Response
+}
+
 type deployPreviewMutationWithLabels struct {
 	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, labels: $labels)"`
 }
 
 func (d *deployPreviewMutationWithLabels) response() deployPreviewResponse {
+	return d.Response
+}
+
+type deployPreviewMutationWithLabelsAndRedpeloyDependencies struct {
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, dependencies: $dependencies, labels: $labels)"`
+}
+
+func (d *deployPreviewMutationWithLabelsAndRedpeloyDependencies) response() deployPreviewResponse {
 	return d.Response
 }
 
@@ -160,32 +177,51 @@ type getPreviewQuery struct {
 }
 
 // DeployPreview creates a preview environment
-func (c *previewClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, labels []string) (*types.PreviewResponse, error) {
+func (c *previewClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, labels []string, redeployDependencies bool) (*types.PreviewResponse, error) {
 	if err := c.namespaceValidator.validate(name, previewEnvObject); err != nil {
 		return nil, err
 	}
 
-	mutationVariables := c.getDeployVariables(name, scope, repository, branch, sourceUrl, filename, variables, labels)
+	mutationVariables := c.getDeployVariables(name, scope, repository, branch, sourceUrl, filename, variables, labels, redeployDependencies)
 	var response deployPreviewResponse
 	if len(labels) == 0 {
-		mutationStruct := &deployPreviewMutation{}
+		mutationStruct := &deployPreviewMutationWithRedeployDependencies{}
 		err := mutate(ctx, mutationStruct, mutationVariables, c.client)
 		if err != nil {
-			return nil, c.translateErr(err, name)
+			oktetoLog.Infof("deploy preview error: %s", err)
+			if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"deployPreview\" of type \"Mutation\"") {
+				mutationWithoutDependencies := &deployPreviewMutation{}
+				delete(mutationVariables, "dependencies")
+				err = mutate(ctx, mutationWithoutDependencies, mutationVariables, c.client)
+				if err != nil {
+					return nil, c.translateErr(err, name)
+				}
+				response = mutationWithoutDependencies.response()
+			} else {
+				return nil, fmt.Errorf("failed to deploy preview: %w", err)
+			}
+		} else {
+			response = mutationStruct.response()
 		}
-		response = mutationStruct.response()
 	} else {
-		mutationStruct := &deployPreviewMutationWithLabels{}
+		mutationStruct := &deployPreviewMutationWithLabelsAndRedpeloyDependencies{}
 		err := mutate(ctx, mutationStruct, mutationVariables, c.client)
-
 		if err != nil {
 			if strings.Contains(err.Error(), "Unknown argument \"labels\" on field \"deployPreview\" of type \"Mutation\"") {
 				return nil, oktetoErrors.UserError{E: ErrLabelsFeatureNotSupported, Hint: "Please upgrade to the latest version or ask your administrator"}
 			}
-
-			return nil, c.translateErr(err, name)
+			if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"deployPreview\" of type \"Mutation\"") {
+				mutationWithoutDependencies := &deployPreviewMutationWithLabels{}
+				delete(mutationVariables, "dependencies")
+				err = mutate(ctx, mutationWithoutDependencies, mutationVariables, c.client)
+				if err != nil {
+					return nil, c.translateErr(err, name)
+				}
+				response = mutationWithoutDependencies.response()
+			}
+		} else {
+			response = mutationStruct.response()
 		}
-		response = mutationStruct.response()
 	}
 
 	previewResponse := &types.PreviewResponse{}
@@ -200,7 +236,7 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 	return previewResponse, nil
 }
 
-func (*previewClient) getDeployVariables(name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, labels []string) map[string]interface{} {
+func (*previewClient) getDeployVariables(name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, labels []string, redeployDependencies bool) map[string]interface{} {
 	variablesVariable := make([]InputVariable, 0)
 	for _, v := range variables {
 		variablesVariable = append(variablesVariable, InputVariable{
@@ -222,13 +258,14 @@ func (*previewClient) getDeployVariables(name, scope, repository, branch, source
 		})
 	}
 	vars := map[string]interface{}{
-		"name":       graphql.String(name),
-		"scope":      PreviewScope(scope),
-		"repository": graphql.String(repository),
-		"branch":     graphql.String(branch),
-		"sourceURL":  graphql.String(sourceUrl),
-		"variables":  variablesVariable,
-		"filename":   graphql.String(filename),
+		"name":         graphql.String(name),
+		"scope":        PreviewScope(scope),
+		"repository":   graphql.String(repository),
+		"branch":       graphql.String(branch),
+		"sourceURL":    graphql.String(sourceUrl),
+		"variables":    variablesVariable,
+		"filename":     graphql.String(filename),
+		"dependencies": graphql.Boolean(redeployDependencies),
 	}
 
 	if len(labels) > 0 {

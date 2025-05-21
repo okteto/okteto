@@ -56,7 +56,7 @@ type NamespaceInterface interface {
 // PreviewInterface represents the client that connects to the preview functions
 type PreviewInterface interface {
 	List(ctx context.Context, labels []string) ([]Preview, error)
-	DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable, labels []string) (*PreviewResponse, error)
+	DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable, labels []string, redeployDependencies bool) (*PreviewResponse, error)
 	GetResourcesStatus(ctx context.Context, previewName, devName string) (map[string]string, error)
 	Destroy(ctx context.Context, previewName string) error
 	ListEndpoints(ctx context.Context, previewName string) ([]Endpoint, error)
@@ -67,7 +67,7 @@ type PreviewInterface interface {
 type PipelineInterface interface {
 	Deploy(ctx context.Context, opts PipelineDeployOptions) (*GitDeployResponse, error)
 	WaitForActionToFinish(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error
-	Destroy(ctx context.Context, name, namespace string, destroyVolumes bool) (*GitDeployResponse, error)
+	Destroy(ctx context.Context, name, namespace string, destroyVolumes, destroyDependencies bool) (*GitDeployResponse, error)
 	GetResourcesStatus(ctx context.Context, name, namespace string) (map[string]string, error)
 	GetByName(ctx context.Context, name, namespace string) (*GitDeploy, error)
 	WaitForActionProgressing(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error
