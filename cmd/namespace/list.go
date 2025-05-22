@@ -16,6 +16,7 @@ package namespace
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"text/tabwriter"
@@ -30,7 +31,7 @@ import (
 )
 
 var (
-	errInvalidOutput = fmt.Errorf("output format is not accepted. Value must be one of: ['json', 'yaml']")
+	errInvalidOutput = errors.New("output format is not accepted. Value must be one of: ['json', 'yaml']")
 )
 
 type listFlags struct {
