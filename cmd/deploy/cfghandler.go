@@ -15,9 +15,13 @@ package deploy
 
 import (
 	"context"
+	"fmt"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -30,6 +34,8 @@ type ConfigMapHandler interface {
 	TranslateConfigMapAndDeploy(context.Context, *pipeline.CfgData) (*apiv1.ConfigMap, error)
 	UpdateConfigMap(context.Context, *apiv1.ConfigMap, *pipeline.CfgData, error) error
 	UpdateEnvsFromCommands(context.Context, string, string, []string) error
+	GetDependencyBuildEnvVars(context.Context, string, string) (map[string]string, error)
+	SetBuildEnvVars(context.Context, string, string, map[string]string) error
 	GetConfigmapVariablesEncoded(ctx context.Context, name, namespace string) (string, error)
 	AddPhaseDuration(context.Context, string, string, string, time.Duration) error
 }
@@ -102,4 +108,62 @@ func (ch *defaultConfigMapHandler) AddPhaseDuration(ctx context.Context, name, n
 		return err
 	}
 	return pipeline.AddPhaseDuration(ctx, name, namespace, phase, duration, c)
+}
+
+func (ch *defaultConfigMapHandler) SetBuildEnvVars(ctx context.Context, name, ns string, envVars map[string]string) error {
+	c, _, err := ch.k8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, ch.k8slogger)
+	if err != nil {
+		return err
+	}
+
+	re := regexp.MustCompile(`^OKTETO_BUILD_(.+)_(REGISTRY|REPOSITORY|IMAGE|TAG|SHA)$`)
+	buildEnvVars := make(map[string]map[string]string)
+	for k, v := range envVars {
+		// Ignore env vars that are not related to build
+		if !re.MatchString(k) {
+			continue
+		}
+
+		// Extract the build name and variable name from the env var
+		// e.g. OKTETO_BUILD_myapp_REGISTRY -> myapp, REGISTRY
+		// e.g. OKTETO_BUILD_myapp_REPOSITORY -> myapp, REPOSITORY
+		// e.g. OKTETO_BUILD_myapp_TAG -> myapp, TAG
+		// e.g. OKTETO_BUILD_myapp_SHA -> myapp, SHA
+		// e.g. OKTETO_BUILD_myapp_IMAGE -> myapp, IMAGE
+		m := re.FindStringSubmatch(k)
+		if m == nil {
+			continue
+		}
+		name, varName := m[1], m[2]
+		if _, ok := buildEnvVars[name]; !ok {
+			buildEnvVars[name] = make(map[string]string)
+		}
+
+		buildEnvVars[name][varName] = v
+	}
+
+	return pipeline.SetBuildEnvVars(ctx, name, ns, buildEnvVars, c)
+}
+
+func (ch *defaultConfigMapHandler) GetDependencyBuildEnvVars(ctx context.Context, name, ns string) (map[string]string, error) {
+	c, _, err := ch.k8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, ch.k8slogger)
+	if err != nil {
+		return nil, err
+	}
+	envVars, err := pipeline.GetConfigmapBuildEnvVars(ctx, name, ns, c)
+	if err != nil {
+		return nil, err
+	}
+	if len(envVars) == 0 {
+		return nil, nil
+	}
+	dependencyName := strings.ToUpper(strings.ReplaceAll(format.ResourceK8sMetaString(name), "-", "_"))
+	envs := make(map[string]string)
+	for build, buildEnvVarValue := range envVars {
+		for buildEnvVar, value := range buildEnvVarValue {
+			dependencyName := fmt.Sprintf("OKTETO_DEPENDENCY_%s_BUILD_%s_%s", dependencyName, build, buildEnvVar)
+			envs[dependencyName] = value
+		}
+	}
+	return envs, nil
 }

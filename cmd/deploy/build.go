@@ -21,7 +21,7 @@ import (
 )
 
 // buildImages it collects all the images that need to be built during the deploy phase and builds them
-func buildImages(ctx context.Context, builder builderInterface, deployOptions *Options) error {
+func buildImages(ctx context.Context, builder builderInterface, cmapHandler ConfigMapHandler, deployOptions *Options) error {
 	var stackServicesWithBuild map[string]bool
 
 	if stack := deployOptions.Manifest.GetStack(); stack != nil {
@@ -67,6 +67,10 @@ func buildImages(ctx context.Context, builder builderInterface, deployOptions *O
 		}
 	}
 
+	err := cmapHandler.SetBuildEnvVars(ctx, deployOptions.Name, deployOptions.Namespace, builder.GetBuildEnvVars())
+	if err != nil {
+		oktetoLog.Infof("error setting build env vars: %s", err.Error())
+	}
 	return nil
 }
 
