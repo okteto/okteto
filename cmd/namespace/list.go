@@ -15,6 +15,8 @@ package namespace
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"text/tabwriter"
@@ -23,12 +25,29 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
 )
+
+var (
+	errInvalidOutput = errors.New("output format is not accepted. Value must be one of: ['json', 'yaml']")
+)
+
+type listFlags struct {
+	output string
+}
+
+type namespaceOutput struct {
+	Namespace string `json:"namespace" yaml:"namespace"`
+	Status    string `json:"status" yaml:"status"`
+	Current   bool   `json:"current" yaml:"current"`
+}
 
 // List all namespace in current context
 func List(ctx context.Context) *cobra.Command {
-	return &cobra.Command{
+	flags := &listFlags{}
+	cmd := &cobra.Command{
 		Use:     "list",
 		Short:   "List your Okteto Namespaces",
 		Aliases: []string{"ls"},
@@ -46,27 +65,87 @@ func List(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = nsCmd.executeListNamespaces(ctx)
+			err = nsCmd.executeListNamespaces(ctx, flags.output)
 			return err
 		},
 		Args: utils.NoArgsAccepted(""),
 	}
+
+	cmd.Flags().StringVarP(&flags.output, "output", "o", "", "output format. One of: ['json', 'yaml']")
+	return cmd
 }
 
-func (nc *Command) executeListNamespaces(ctx context.Context) error {
+func (nc *Command) executeListNamespaces(ctx context.Context, output string) error {
+	if err := validateNamespaceListOutput(output); err != nil {
+		return err
+	}
+
 	spaces, err := nc.okClient.Namespaces().List(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get namespaces: %w", err)
 	}
-	w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
-	fmt.Fprintf(w, "Namespace\tStatus\n")
-	for _, space := range spaces {
-		if space.ID == okteto.GetContext().Namespace {
-			space.ID += " *"
-		}
-		fmt.Fprintf(w, "%s\t%v\n", space.ID, space.Status)
-	}
 
-	w.Flush()
+	namespaces := getNamespaceOutput(spaces)
+	return displayListNamespaces(namespaces, output)
+}
+
+func displayListNamespaces(namespaces []namespaceOutput, output string) error {
+	switch output {
+	case "json":
+		if len(namespaces) == 0 {
+			fmt.Println("[]")
+			return nil
+		}
+		b, err := json.MarshalIndent(namespaces, "", " ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(b))
+	case "yaml":
+		b, err := yaml.Marshal(namespaces)
+		if err != nil {
+			return err
+		}
+		fmt.Print(string(b))
+	default:
+		if len(namespaces) == 0 {
+			fmt.Println("There are no namespaces")
+			return nil
+		}
+		w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
+		fmt.Fprintf(w, "Namespace\tStatus\n")
+		for _, space := range namespaces {
+			id := space.Namespace
+			if id == okteto.GetContext().Namespace {
+				id += " *"
+			}
+			fmt.Fprintf(w, "%s\t%v\n", id, space.Status)
+		}
+		w.Flush()
+	}
 	return nil
+}
+
+func validateNamespaceListOutput(output string) error {
+	switch output {
+	case "", "json", "yaml":
+		return nil
+	default:
+		return errInvalidOutput
+	}
+}
+
+// getNamespaceOutput transforms type.Namespace into namespaceOutput type
+func getNamespaceOutput(namespaces []types.Namespace) []namespaceOutput {
+	var namespaceSlice []namespaceOutput
+	currentNamespace := okteto.GetContext().Namespace
+	for _, ns := range namespaces {
+		previewOutput := namespaceOutput{
+			Namespace: ns.ID,
+			Status:    ns.Status,
+			Current:   ns.ID == currentNamespace,
+		}
+		namespaceSlice = append(namespaceSlice, previewOutput)
+	}
+	return namespaceSlice
 }
