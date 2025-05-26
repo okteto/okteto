@@ -35,7 +35,7 @@ import (
 )
 
 // Delete deletes a namespace
-func Delete(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Delete(ctx context.Context, k8sLogger *io.K8sLogger, ioCtrl *io.Controller) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete <name>",
 		Short: "Delete an Okteto Namespace",
@@ -54,7 +54,7 @@ func Delete(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			nsCmd, err := NewCommand()
+			nsCmd, err := NewCommand(ioCtrl)
 			if err != nil {
 				return err
 			}

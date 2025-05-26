@@ -154,7 +154,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		return analytics.TestMetadata{}, err
 	}
 	if create {
-		nsCmd, err := namespace.NewCommand()
+		nsCmd, err := namespace.NewCommand(ioCtrl)
 		if err != nil {
 			return analytics.TestMetadata{}, err
 		}

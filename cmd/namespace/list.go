@@ -24,6 +24,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -45,7 +46,7 @@ type namespaceOutput struct {
 }
 
 // List all namespace in current context
-func List(ctx context.Context) *cobra.Command {
+func List(ctx context.Context, ioCtrl *io.Controller) *cobra.Command {
 	flags := &listFlags{}
 	cmd := &cobra.Command{
 		Use:     "list",
@@ -61,7 +62,7 @@ func List(ctx context.Context) *cobra.Command {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			nsCmd, err := NewCommand()
+			nsCmd, err := NewCommand(ioCtrl)
 			if err != nil {
 				return err
 			}
@@ -86,30 +87,30 @@ func (nc *Command) executeListNamespaces(ctx context.Context, output string) err
 	}
 
 	namespaces := getNamespaceOutput(spaces)
-	return displayListNamespaces(namespaces, output)
+	return nc.displayListNamespaces(namespaces, output)
 }
 
-func displayListNamespaces(namespaces []namespaceOutput, output string) error {
+func (nc *Command) displayListNamespaces(namespaces []namespaceOutput, output string) error {
 	switch output {
 	case "json":
 		if len(namespaces) == 0 {
-			fmt.Println("[]")
+			nc.ioCtrl.Out().Println("[]")
 			return nil
 		}
 		b, err := json.MarshalIndent(namespaces, "", " ")
 		if err != nil {
 			return err
 		}
-		fmt.Println(string(b))
+		nc.ioCtrl.Out().Println(string(b))
 	case "yaml":
 		b, err := yaml.Marshal(namespaces)
 		if err != nil {
 			return err
 		}
-		fmt.Print(string(b))
+		nc.ioCtrl.Out().Print(string(b))
 	default:
 		if len(namespaces) == 0 {
-			fmt.Println("There are no namespaces")
+			nc.ioCtrl.Out().Println("There are no namespaces")
 			return nil
 		}
 		w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)

@@ -21,11 +21,12 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
-func Wake(ctx context.Context) *cobra.Command {
+func Wake(ctx context.Context, ioCtrl *io.Controller) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "wake <name>",
 		Short: "Wakes an Okteto Namespace. By default, it wakes the default namespace in the Okteto Context",
@@ -43,7 +44,7 @@ func Wake(ctx context.Context) *cobra.Command {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			nsCmd, err := NewCommand()
+			nsCmd, err := NewCommand(ioCtrl)
 			if err != nil {
 				return err
 			}

@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/internal/test/client"
+	oktetoio "github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
@@ -175,8 +176,11 @@ func Test_displayListNamespaces(t *testing.T) {
 			r, w, _ := os.Pipe()
 			initialStdout := os.Stdout
 			os.Stdout = w
+			nsCmd := &Command{
+				ioCtrl: oktetoio.NewIOController(),
+			}
 
-			err := displayListNamespaces(tt.input, tt.format)
+			err := nsCmd.displayListNamespaces(tt.input, tt.format)
 			assert.NoError(t, err)
 
 			w.Close()

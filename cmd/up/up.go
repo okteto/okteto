@@ -184,7 +184,7 @@ okteto up api -- echo this is a test
 					return err
 				}
 				if create {
-					nsCmd, err := namespace.NewCommand()
+					nsCmd, err := namespace.NewCommand(ioCtrl)
 					if err != nil {
 						return err
 					}
