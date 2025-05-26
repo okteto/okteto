@@ -23,8 +23,10 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/kubernetes/fake"
@@ -344,4 +346,150 @@ func decodePhases(encodedPhases string) []phaseJSON {
 	var phases []phaseJSON
 	_ = json.Unmarshal([]byte(encodedPhases), &phases)
 	return phases
+}
+
+func TestGetConfigmapBuildEnvVars(t *testing.T) {
+	ctx := context.Background()
+	namespace := "test-namespace"
+	name := "test-name"
+
+	t.Run("configmap not found", func(t *testing.T) {
+		client := fake.NewSimpleClientset()
+		_, err := GetConfigmapBuildEnvVars(ctx, name, namespace, client)
+		assert.Error(t, err)
+		assert.True(t, k8sErrors.IsNotFound(err))
+	})
+
+	t.Run("configmap exists but no buildEnvs field", func(t *testing.T) {
+		cmap := &apiv1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      TranslatePipelineName(name),
+				Namespace: namespace,
+			},
+			Data: map[string]string{},
+		}
+		client := fake.NewSimpleClientset(cmap)
+		envVars, err := GetConfigmapBuildEnvVars(ctx, name, namespace, client)
+		assert.NoError(t, err)
+		assert.Nil(t, envVars)
+	})
+
+	t.Run("configmap exists with valid buildEnvs field", func(t *testing.T) {
+		envVarsData := map[string]map[string]string{
+			"build1": {"VAR1": "value1", "VAR2": "value2"},
+			"build2": {"VAR3": "value3"},
+		}
+		encodedData, err := json.Marshal(envVarsData)
+		require.NoError(t, err)
+
+		cmap := &apiv1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      TranslatePipelineName(name),
+				Namespace: namespace,
+			},
+			Data: map[string]string{
+				buildEnvVarField: base64.StdEncoding.EncodeToString(encodedData),
+			},
+		}
+		client := fake.NewSimpleClientset(cmap)
+		envVars, err := GetConfigmapBuildEnvVars(ctx, name, namespace, client)
+		assert.NoError(t, err)
+		assert.Equal(t, envVarsData, envVars)
+	})
+
+	t.Run("configmap exists with invalid base64 data", func(t *testing.T) {
+		cmap := &apiv1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      TranslatePipelineName(name),
+				Namespace: namespace,
+			},
+			Data: map[string]string{
+				buildEnvVarField: "invalid-base64",
+			},
+		}
+		client := fake.NewSimpleClientset(cmap)
+		_, err := GetConfigmapBuildEnvVars(ctx, name, namespace, client)
+		assert.Error(t, err)
+	})
+
+	t.Run("configmap exists with invalid JSON data", func(t *testing.T) {
+		cmap := &apiv1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      TranslatePipelineName(name),
+				Namespace: namespace,
+			},
+			Data: map[string]string{
+				buildEnvVarField: base64.StdEncoding.EncodeToString([]byte("invalid-json")),
+			},
+		}
+		client := fake.NewSimpleClientset(cmap)
+		_, err := GetConfigmapBuildEnvVars(ctx, name, namespace, client)
+		assert.Error(t, err)
+	})
+}
+func TestSetBuildEnvVars(t *testing.T) {
+	ctx := context.Background()
+	namespace := "test-namespace"
+	cmapName := "test-cmap"
+
+	t.Run("configmap not found", func(t *testing.T) {
+		client := fake.NewSimpleClientset()
+		envVars := map[string]map[string]string{
+			"build1": {"VAR1": "value1"},
+		}
+		err := SetBuildEnvVars(ctx, cmapName, namespace, envVars, client)
+		assert.Error(t, err)
+		assert.True(t, k8sErrors.IsNotFound(err))
+	})
+
+	t.Run("configmap exists and env vars are set", func(t *testing.T) {
+		cmap := &apiv1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      TranslatePipelineName(cmapName),
+				Namespace: namespace,
+			},
+			Data: map[string]string{},
+		}
+		client := fake.NewSimpleClientset(cmap)
+		envVars := map[string]map[string]string{
+			"build1": {"VAR1": "value1", "VAR2": "value2"},
+			"build2": {"VAR3": "value3"},
+		}
+		err := SetBuildEnvVars(ctx, cmapName, namespace, envVars, client)
+		assert.NoError(t, err)
+
+		updatedCmap, err := client.CoreV1().ConfigMaps(namespace).Get(ctx, TranslatePipelineName(cmapName), metav1.GetOptions{})
+		assert.NoError(t, err)
+
+		encodedData, err := json.Marshal(envVars)
+		require.NoError(t, err)
+		assert.Equal(t, base64.StdEncoding.EncodeToString(encodedData), updatedCmap.Data[buildEnvVarField])
+	})
+
+	t.Run("configmap exists and env vars are cleared", func(t *testing.T) {
+		envVars := map[string]map[string]string{
+			"build1": {"VAR1": "value1"},
+		}
+		encodedData, err := json.Marshal(envVars)
+		require.NoError(t, err)
+
+		cmap := &apiv1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      TranslatePipelineName(cmapName),
+				Namespace: namespace,
+			},
+			Data: map[string]string{
+				buildEnvVarField: base64.StdEncoding.EncodeToString(encodedData),
+			},
+		}
+		client := fake.NewSimpleClientset(cmap)
+
+		err = SetBuildEnvVars(ctx, cmapName, namespace, nil, client)
+		assert.NoError(t, err)
+
+		updatedCmap, err := client.CoreV1().ConfigMaps(namespace).Get(ctx, TranslatePipelineName(cmapName), metav1.GetOptions{})
+		assert.NoError(t, err)
+		_, exists := updatedCmap.Data[buildEnvVarField]
+		assert.False(t, exists)
+	})
 }
