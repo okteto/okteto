@@ -972,3 +972,75 @@ func Test_parseEnvironmentLabelFromLabelsMap(t *testing.T) {
 		})
 	}
 }
+
+func TestShouldRedeployDependencies(t *testing.T) {
+	tests := []struct {
+		name   string
+		opts   *DeployOptions
+		envVar string
+		want   bool
+	}{
+		{
+			name: "force redeploy enabled via env var, dependencies not set",
+			opts: &DeployOptions{
+				DependenciesIsSet:    false,
+				RedeployDependencies: false,
+			},
+			envVar: "true",
+			want:   true,
+		},
+		{
+			name: "force redeploy enabled via env var, dependencies set to false",
+			opts: &DeployOptions{
+				DependenciesIsSet:    true,
+				RedeployDependencies: false,
+			},
+			envVar: "true",
+			want:   false,
+		},
+		{
+			name: "force redeploy enabled via env var, dependencies set to true",
+			opts: &DeployOptions{
+				DependenciesIsSet:    true,
+				RedeployDependencies: true,
+			},
+			envVar: "true",
+			want:   true,
+		},
+		{
+			name: "force redeploy disabled via env var, dependencies set to true",
+			opts: &DeployOptions{
+				DependenciesIsSet:    true,
+				RedeployDependencies: true,
+			},
+			envVar: "false",
+			want:   true,
+		},
+		{
+			name: "force redeploy disabled via env var, dependencies set to false",
+			opts: &DeployOptions{
+				DependenciesIsSet:    true,
+				RedeployDependencies: false,
+			},
+			envVar: "false",
+			want:   false,
+		},
+		{
+			name: "force redeploy disabled via env var, dependencies not set",
+			opts: &DeployOptions{
+				DependenciesIsSet:    false,
+				RedeployDependencies: false,
+			},
+			envVar: "false",
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(constants.OktetoForceRedeployDependencies, tt.envVar)
+
+			assert.Equal(t, tt.want, shouldRedeployDependencies(tt.opts))
+		})
+	}
+}

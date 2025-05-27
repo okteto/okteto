@@ -716,6 +716,11 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 			Value: "okteto-deploy",
 		})
 
+		dep.Variables = append(dep.Variables, env.Var{
+			Name:  constants.OktetoIsDependencyEnvVar,
+			Value: "true",
+		})
+
 		err := dep.ExpandVars(deployOptions.Variables)
 		if err != nil {
 			return fmt.Errorf("could not expand variables in dependencies: %w", err)
@@ -746,6 +751,7 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 				}
 			}
 		}
+		oktetoLog.SetStage("")
 	}
 	oktetoLog.SetStage("")
 	return nil

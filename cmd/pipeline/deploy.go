@@ -30,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -66,6 +67,7 @@ type deployFlags struct {
 	skipIfExists         bool
 	reuseParams          bool
 	redeployDependencies bool
+	dependenciesIsSet    bool
 }
 
 // DeployOptions represents options for deploy pipeline command
@@ -82,6 +84,7 @@ type DeployOptions struct {
 	SkipIfExists         bool
 	ReuseParams          bool
 	RedeployDependencies bool
+	DependenciesIsSet    bool
 }
 
 func deploy(ctx context.Context) *cobra.Command {
@@ -93,7 +96,7 @@ func deploy(ctx context.Context) *cobra.Command {
 		Example: `To run the deploy without the Okteto CLI wait for its completion, use the '--wait=false' flag:
 okteto pipeline deploy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
+			flags.dependenciesIsSet = cmd.Flags().Changed("dependencies")
 			if err := validator.CheckReservedVariablesNameOption(flags.variables); err != nil {
 				return err
 			}
@@ -142,6 +145,7 @@ okteto pipeline deploy --wait=false`,
 
 // ExecuteDeployPipeline executes deploy pipeline given a set of options
 func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
+	opts.RedeployDependencies = shouldRedeployDependencies(opts)
 	if err := opts.setDefaults(); err != nil {
 		return fmt.Errorf("could not set default values for options: %w", err)
 	}
@@ -250,6 +254,27 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 }
 
 type envSetter func(name, value string) error
+
+// shouldRedeployDependencies determines if the pipeline should redeploy dependencies
+// default behavior is set by cluster config, but can be overridden by the user using the flag --dependencies
+func shouldRedeployDependencies(opts *DeployOptions) bool {
+	isForceRedeployDependenciesSetInOktetoInstance := env.LoadBoolean(constants.OktetoForceRedeployDependencies)
+	isInsideDependency := env.LoadBoolean(constants.OktetoIsDependencyEnvVar)
+	if !isInsideDependency && isForceRedeployDependenciesSetInOktetoInstance {
+		// the user forces --dependencies=false
+		if opts.DependenciesIsSet && !opts.RedeployDependencies {
+			return false
+		}
+		return true
+	}
+
+	// remote option set in the command line
+	if opts.RedeployDependencies {
+		return true
+	}
+
+	return false
+}
 
 // setEnvsFromDependency sets the environment variables found at configmap.Data[dependencyEnvs]
 func setEnvsFromDependency(cmap *v1.ConfigMap, envSetter envSetter) error {
@@ -440,6 +465,7 @@ func (f deployFlags) toOptions() *DeployOptions {
 		Labels:               f.labels,
 		ReuseParams:          f.reuseParams,
 		RedeployDependencies: f.redeployDependencies,
+		DependenciesIsSet:    f.dependenciesIsSet,
 	}
 }
 
