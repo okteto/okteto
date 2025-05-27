@@ -57,6 +57,12 @@ const (
 	// OktetoForceRemote defines whether a deploy/destroy operation is to be executed remotely
 	OktetoForceRemote = "OKTETO_FORCE_REMOTE"
 
+	// OktetoForceRedeployDependencies defines whether a deploy operation should redeploy dependencies
+	OktetoForceRedeployDependencies = "OKTETO_FORCE_DEPLOY_DEPENDENCIES_FLAG"
+
+	// OktetoIsDependencyEnvVar defines if the command is executed inside a dependency
+	OktetoIsDependencyEnvVar = "OKTETO_DEPENDENCY_DEPLOYMENT"
+
 	// OktetoTlsCertBase64EnvVar defines the TLS certificate in base64 for --remote
 	OktetoTlsCertBase64EnvVar = "OKTETO_TLS_CERT_BASE64"
 
