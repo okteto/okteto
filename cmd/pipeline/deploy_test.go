@@ -975,10 +975,11 @@ func Test_parseEnvironmentLabelFromLabelsMap(t *testing.T) {
 
 func TestShouldRedeployDependencies(t *testing.T) {
 	tests := []struct {
-		name   string
-		opts   *DeployOptions
-		envVar string
-		want   bool
+		name           string
+		opts           *DeployOptions
+		envVar         string
+		isInDependency bool
+		want           bool
 	}{
 		{
 			name: "force redeploy enabled via env var, dependencies not set",
@@ -1034,13 +1035,44 @@ func TestShouldRedeployDependencies(t *testing.T) {
 			envVar: "false",
 			want:   false,
 		},
+		{
+			name: "inside dependency, force redeploy enabled, dependencies not set",
+			opts: &DeployOptions{
+				DependenciesIsSet:    false,
+				RedeployDependencies: false,
+			},
+			envVar:         "true",
+			isInDependency: true,
+			want:           false,
+		},
+		{
+			name: "inside dependency, force redeploy enabled, dependencies set to true",
+			opts: &DeployOptions{
+				DependenciesIsSet:    true,
+				RedeployDependencies: true,
+			},
+			envVar:         "true",
+			isInDependency: true,
+			want:           true,
+		},
+		{
+			name: "inside dependency, force redeploy disabled, dependencies set to true",
+			opts: &DeployOptions{
+				DependenciesIsSet:    true,
+				RedeployDependencies: true,
+			},
+			envVar:         "false",
+			isInDependency: true,
+			want:           true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(constants.OktetoForceRedeployDependencies, tt.envVar)
-
-			assert.Equal(t, tt.want, shouldRedeployDependencies(tt.opts))
+			t.Setenv(constants.OktetoIsDependencyEnvVar, fmt.Sprintf("%v", tt.isInDependency))
+			got := shouldRedeployDependencies(tt.opts)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
