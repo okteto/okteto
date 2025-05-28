@@ -23,6 +23,7 @@ type PipelineDeployOptions struct {
 	Namespace            string
 	Labels               []string
 	RedeployDependencies bool
+	IsDependency         bool
 }
 
 // SpaceBody top body answer

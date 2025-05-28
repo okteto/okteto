@@ -152,4 +152,13 @@ const (
 
 	// OktetoDivertedEnvironmentEnvVar Env variable containing the namespace of the diverted environment in divert
 	OktetoDivertedEnvironmentEnvVar = "OKTETO_DIVERTED_ENVIRONMENT"
+
+	// OktetoForceRedeployDependencies defines whether a deploy operation should redeploy dependencies
+	OktetoForceRedeployDependencies = "OKTETO_FORCE_DEPLOY_DEPENDENCIES_FLAG"
+
+	// OktetoForceDestroyDependencies defines whether a destroy operation should destroy dependencies
+	OktetoForceDestroyDependencies = "OKTETO_FORCE_DESTROY_DEPENDENCIES_FLAG"
+
+	// OktetoIsDependencyEnvVar defines if the command is executed inside a dependency
+	OktetoIsDependencyEnvVar = "OKTETO_IS_DEPENDENCY"
 )
