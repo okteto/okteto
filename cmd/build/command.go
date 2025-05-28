@@ -106,7 +106,7 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 			// The context must be loaded before reading manifest. Otherwise,
 			// secrets will not be resolved when GetManifest is called and
 			// the manifest will load empty values.
-			oktetoContext, err := getOktetoContext(ctx, options)
+			oktetoContext, err := getOktetoContext(ctx, options, ioCtrl)
 			if err != nil {
 				return err
 			}
@@ -224,7 +224,7 @@ func validateDockerfile(file string) error {
 	return err
 }
 
-func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*okteto.ContextStateless, error) {
+func getOktetoContext(ctx context.Context, options *types.BuildOptions, ioCtrl *io.Controller) (*okteto.ContextStateless, error) {
 	ctxOpts := &contextCMD.Options{
 		Context:   options.K8sContext,
 		Namespace: options.Namespace,
@@ -248,7 +248,7 @@ func getOktetoContext(ctx context.Context, options *types.BuildOptions) (*okteto
 			return nil, err
 		}
 		if create {
-			if err := namespace.NewCommandStateless(c).Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
+			if err := namespace.NewCommandStateless(c, ioCtrl).Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
 				return nil, err
 			}
 		}

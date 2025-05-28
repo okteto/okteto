@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -36,7 +37,7 @@ type UseOptions struct {
 }
 
 // Use sets the namespace of current context
-func Use(ctx context.Context) *cobra.Command {
+func Use(ctx context.Context, ioCtrl *io.Controller) *cobra.Command {
 	options := &UseOptions{}
 	cmd := &cobra.Command{
 		Use:     "use [namespace]",
@@ -57,7 +58,7 @@ func Use(ctx context.Context) *cobra.Command {
 				namespace = okteto.GetContext().PersonalNamespace
 			}
 
-			nsCmd, err := NewCommand()
+			nsCmd, err := NewCommand(ioCtrl)
 			if err != nil {
 				return err
 			}

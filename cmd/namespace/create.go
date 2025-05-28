@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -36,7 +37,7 @@ type CreateOptions struct {
 }
 
 // Create creates a namespace
-func Create(ctx context.Context) *cobra.Command {
+func Create(ctx context.Context, ioCtrl *io.Controller) *cobra.Command {
 	options := &CreateOptions{
 		Show: false,
 	}
@@ -53,7 +54,7 @@ func Create(ctx context.Context) *cobra.Command {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			nsCmd, err := NewCommand()
+			nsCmd, err := NewCommand(ioCtrl)
 			if err != nil {
 				return err
 			}

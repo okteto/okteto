@@ -21,12 +21,13 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
 // Sleep sleeps a namespace
-func Sleep(ctx context.Context) *cobra.Command {
+func Sleep(ctx context.Context, ioCtrl *io.Controller) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sleep <name>",
 		Short: "Sleeps a namespace",
@@ -45,7 +46,7 @@ func Sleep(ctx context.Context) *cobra.Command {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			nsCmd, err := NewCommand()
+			nsCmd, err := NewCommand(ioCtrl)
 			if err != nil {
 				return err
 			}
