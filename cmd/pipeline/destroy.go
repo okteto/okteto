@@ -136,15 +136,15 @@ func shouldDestroyDependencies(opts *DestroyOptions) bool {
 	if isInsideDependency {
 		return false
 	}
-	if !isInsideDependency && isForceDestroyDependenciesSetInOktetoInstance {
-		// the user forces --dependencies=false
-		if opts.DependenciesIsSet && !opts.DestroyDependencies {
-			return false
-		}
-		return true
+	if !isForceDestroyDependenciesSetInOktetoInstance {
+		return opts.DestroyDependencies
 	}
 
-	return opts.DestroyDependencies
+	// the user forces --dependencies=false
+	if opts.DependenciesIsSet && !opts.DestroyDependencies {
+		return false
+	}
+	return true
 }
 
 func (pc *Command) destroyPipeline(ctx context.Context, name, namespace string, destroyVolumes, destroyDependencies, isDependency bool) (*types.GitDeployResponse, error) {

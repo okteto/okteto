@@ -262,16 +262,14 @@ func shouldRedeployDependencies(opts *DeployOptions) bool {
 	if isInsideDependency {
 		return false
 	}
-
-	if !isInsideDependency && isForceRedeployDependenciesSetInOktetoInstance {
-		// the user forces --dependencies=false
-		if opts.DependenciesIsSet && !opts.RedeployDependencies {
-			return false
-		}
-		return true
+	if !isForceRedeployDependenciesSetInOktetoInstance {
+		return opts.RedeployDependencies
 	}
-
-	return opts.RedeployDependencies
+	// the user forces --dependencies=false
+	if opts.DependenciesIsSet && !opts.RedeployDependencies {
+		return false
+	}
+	return true
 }
 
 type envSetter func(name, value string) error
