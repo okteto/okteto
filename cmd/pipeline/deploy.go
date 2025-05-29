@@ -67,7 +67,6 @@ type deployFlags struct {
 	skipIfExists         bool
 	reuseParams          bool
 	redeployDependencies bool
-	dependenciesIsSet    bool
 }
 
 // DeployOptions represents options for deploy pipeline command
@@ -97,7 +96,7 @@ func deploy(ctx context.Context) *cobra.Command {
 		Example: `To run the deploy without the Okteto CLI wait for its completion, use the '--wait=false' flag:
 okteto pipeline deploy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			flags.dependenciesIsSet = cmd.Flags().Changed("dependencies")
+			dependenciesIsSet := cmd.Flags().Changed("dependencies")
 			if err := validator.CheckReservedVariablesNameOption(flags.variables); err != nil {
 				return err
 			}
@@ -119,7 +118,7 @@ okteto pipeline deploy --wait=false`,
 			if err != nil {
 				return err
 			}
-			opts := flags.toOptions()
+			opts := flags.toOptions(dependenciesIsSet)
 			err = pipelineCmd.ExecuteDeployPipeline(ctx, opts)
 			if err != nil {
 				return fmt.Errorf("pipeline deploy failed: %w", err)
@@ -259,16 +258,17 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 func shouldRedeployDependencies(opts *DeployOptions) bool {
 	isForceRedeployDependenciesSetInOktetoInstance := env.LoadBoolean(constants.OktetoForceRedeployDependencies)
 	isInsideDependency := env.LoadBoolean(constants.OktetoIsDependencyEnvVar)
+
+	if isInsideDependency {
+		return false
+	}
+
 	if !isInsideDependency && isForceRedeployDependenciesSetInOktetoInstance {
 		// the user forces --dependencies=false
 		if opts.DependenciesIsSet && !opts.RedeployDependencies {
 			return false
 		}
 		return true
-	}
-
-	if isInsideDependency {
-		return false
 	}
 
 	return opts.RedeployDependencies
@@ -451,7 +451,7 @@ func CheckAllResourcesRunning(name string, resourceStatus map[string]string) (bo
 	return allRunning, nil
 }
 
-func (f deployFlags) toOptions() *DeployOptions {
+func (f deployFlags) toOptions(dependenciesIsSet bool) *DeployOptions {
 	return &DeployOptions{
 		Branch:               f.branch,
 		Repository:           f.repository,
@@ -465,7 +465,7 @@ func (f deployFlags) toOptions() *DeployOptions {
 		Labels:               f.labels,
 		ReuseParams:          f.reuseParams,
 		RedeployDependencies: f.redeployDependencies,
-		DependenciesIsSet:    f.dependenciesIsSet,
+		DependenciesIsSet:    dependenciesIsSet,
 	}
 }
 

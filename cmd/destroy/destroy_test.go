@@ -745,16 +745,19 @@ func TestDestroyDependenciesWithoutError(t *testing.T) {
 
 	pipDestroyer := &fakePipelineDestroyer{}
 	expectedOpts1 := &pipelineCMD.DestroyOptions{
-		Name:      "dep1",
-		Namespace: "test-namespace",
+		Name:         "dep1",
+		Namespace:    "test-namespace",
+		IsDependency: true,
 	}
 	expectedOpts2 := &pipelineCMD.DestroyOptions{
-		Name:      "dep2",
-		Namespace: "test-namespace",
+		Name:         "dep2",
+		Namespace:    "test-namespace",
+		IsDependency: true,
 	}
 	expectedOpts3 := &pipelineCMD.DestroyOptions{
-		Name:      "dep3",
-		Namespace: "test-namespace",
+		Name:         "dep3",
+		Namespace:    "test-namespace",
+		IsDependency: true,
 	}
 	pipDestroyer.On("ExecuteDestroyPipeline", mock.Anything, expectedOpts1).Return(nil)
 	pipDestroyer.On("ExecuteDestroyPipeline", mock.Anything, expectedOpts2).Return(nil)

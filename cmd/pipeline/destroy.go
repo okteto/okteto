@@ -131,18 +131,19 @@ func (pc *Command) ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOpti
 }
 
 func shouldDestroyDependencies(opts *DestroyOptions) bool {
-	isForceRedeployDependenciesSetInOktetoInstance := env.LoadBoolean(constants.OktetoForceDestroyDependencies)
+	isForceDestroyDependenciesSetInOktetoInstance := env.LoadBoolean(constants.OktetoForceDestroyDependencies)
 	isInsideDependency := env.LoadBoolean(constants.OktetoIsDependencyEnvVar)
-	if !isInsideDependency && isForceRedeployDependenciesSetInOktetoInstance {
+	if isInsideDependency {
+		return false
+	}
+	if !isInsideDependency && isForceDestroyDependenciesSetInOktetoInstance {
 		// the user forces --dependencies=false
 		if opts.DependenciesIsSet && !opts.DestroyDependencies {
 			return false
 		}
 		return true
 	}
-	if isInsideDependency {
-		return false
-	}
+
 	return opts.DestroyDependencies
 }
 
