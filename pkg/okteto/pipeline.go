@@ -57,7 +57,7 @@ type deployPipelineMutation struct {
 }
 
 type deployPipelineMutationWithRedeployDependencies struct {
-	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies)"`
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, isDependency: $isDependency)"`
 }
 
 type deployPipelineMutationWithLabels struct {
@@ -65,7 +65,7 @@ type deployPipelineMutationWithLabels struct {
 }
 
 type deployPipelineMutationWithLabelsWithRedeployDependencies struct {
-	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, labels: $labels)"`
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, labels: $labels, isDependency: $isDependency)"`
 }
 
 type getPipelineByNameQuery struct {
@@ -77,7 +77,7 @@ type destroyPipelineMutation struct {
 }
 
 type destroyPipelineDependenciesMutation struct {
-	Response destroyPipelineResponse `graphql:"destroyGitRepository(name: $name, space: $space, destroyVolumes: $destroyVolumes, dependencies: $dependencies)"`
+	Response destroyPipelineResponse `graphql:"destroyGitRepository(name: $name, space: $space, destroyVolumes: $destroyVolumes, dependencies: $dependencies, isDependency: $isDependency)"`
 }
 
 type getPipelineResources struct {
@@ -126,6 +126,7 @@ func (c *pipelineClient) Deploy(ctx context.Context, opts types.PipelineDeployOp
 			if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"deployGitRepository\" of type \"Mutation\"") {
 				mutationWithoutDependencies := &deployPipelineMutation{}
 				delete(mutationVariables, "dependencies")
+				delete(mutationVariables, "isDependency")
 				err = mutate(ctx, mutationWithoutDependencies, mutationVariables, c.client)
 				if err != nil {
 					return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
@@ -147,6 +148,7 @@ func (c *pipelineClient) Deploy(ctx context.Context, opts types.PipelineDeployOp
 			if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"deployGitRepository\" of type \"Mutation\"") {
 				mutationWithoutDependencies := &deployPipelineMutationWithLabels{}
 				delete(mutationVariables, "dependencies")
+				delete(mutationVariables, "isDependency")
 				err = mutate(ctx, mutationWithoutDependencies, mutationVariables, c.client)
 				if err != nil {
 					return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
@@ -203,6 +205,7 @@ func (c *pipelineClient) getDeployVariables(opts types.PipelineDeployOptions) ma
 		"variables":    variablesVariable,
 		"filename":     graphql.String(opts.Filename),
 		"dependencies": graphql.Boolean(opts.RedeployDependencies),
+		"isDependency": graphql.Boolean(opts.IsDependency),
 	}
 
 	if len(opts.Labels) > 0 {
@@ -240,7 +243,7 @@ func (c *pipelineClient) GetByName(ctx context.Context, name, namespace string) 
 }
 
 // Destroy destroys a pipeline
-func (c *pipelineClient) Destroy(ctx context.Context, name, namespace string, destroyVolumes, destroyDependencies bool) (*types.GitDeployResponse, error) {
+func (c *pipelineClient) Destroy(ctx context.Context, name, namespace string, destroyVolumes, destroyDependencies, isDependency bool) (*types.GitDeployResponse, error) {
 	oktetoLog.Infof("destroy pipeline: %s/%s", namespace, name)
 	gitDeployResponse := &types.GitDeployResponse{}
 	var mutation destroyPipelineDependenciesMutation
@@ -250,6 +253,7 @@ func (c *pipelineClient) Destroy(ctx context.Context, name, namespace string, de
 		"space":          graphql.String(namespace),
 		"destroyVolumes": graphql.Boolean(destroyVolumes),
 		"dependencies":   graphql.Boolean(destroyDependencies),
+		"isDependency":   graphql.Boolean(isDependency),
 	}
 	err := mutate(ctx, &mutation, queryVariables, c.client)
 	response = mutation.Response
@@ -257,6 +261,7 @@ func (c *pipelineClient) Destroy(ctx context.Context, name, namespace string, de
 		if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"destroyGitRepository\" of type \"Mutation\"") {
 			mutationWithoutDependencies := &destroyPipelineMutation{}
 			delete(queryVariables, "dependencies")
+			delete(queryVariables, "isDependency")
 			err = mutate(ctx, mutationWithoutDependencies, queryVariables, c.client)
 			if err != nil {
 				return nil, fmt.Errorf("failed to deploy pipeline: %w", err)

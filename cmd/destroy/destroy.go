@@ -529,6 +529,7 @@ func (dc *destroyCommand) destroyDependencies(ctx context.Context, opts *Options
 			Name:           depName,
 			DestroyVolumes: opts.DestroyVolumes,
 			Namespace:      okteto.GetContext().Namespace,
+			IsDependency:   true,
 		}
 		pipelineCmd, err := dc.getPipelineDestroyer()
 		if err != nil {

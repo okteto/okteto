@@ -483,7 +483,7 @@ func TestDestroyPipeline(t *testing.T) {
 			pc := pipelineClient{
 				client: tc.input.client,
 			}
-			response, err := pc.Destroy(context.Background(), tc.input.name, "", tc.input.destroyVolumes, false)
+			response, err := pc.Destroy(context.Background(), tc.input.name, "", tc.input.destroyVolumes, false, false)
 			assert.ErrorIs(t, err, tc.expected.err)
 			assert.Equal(t, tc.expected.response, response)
 		})

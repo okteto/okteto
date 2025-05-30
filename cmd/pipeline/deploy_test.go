@@ -806,7 +806,7 @@ func TestFlagsToOptions(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			opts := tc.flags.toOptions()
+			opts := tc.flags.toOptions(false)
 			assert.Equal(t, tc.expect, opts)
 		})
 	}

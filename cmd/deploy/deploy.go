@@ -706,7 +706,6 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 	for depName, dep := range deployOptions.Manifest.Dependencies {
 		oktetoLog.Information("Deploying dependency  '%s'", depName)
 		oktetoLog.SetStage(fmt.Sprintf("Deploying dependency %s", depName))
-
 		if err := validator.CheckReservedVarName(dep.Variables); err != nil {
 			return err
 		}
@@ -730,6 +729,7 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 			Timeout:      dep.GetTimeout(deployOptions.Timeout),
 			SkipIfExists: !deployOptions.Dependencies,
 			Namespace:    okteto.GetContext().Namespace,
+			IsDependency: true,
 		}
 
 		if err := dc.PipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
@@ -746,6 +746,7 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 				}
 			}
 		}
+		oktetoLog.SetStage("")
 	}
 	oktetoLog.SetStage("")
 	return nil
