@@ -71,6 +71,10 @@ func handlerPipelineLogLine(line string) bool {
 		if pLog.Stage == "done" && pLog.Message == "EOF" {
 			return true
 		}
+		// Set the stage before printing to ensure proper JSON formatting
+		if pLog.Stage != "" {
+			oktetoLog.SetStage(pLog.Stage)
+		}
 		oktetoLog.Println(pLog.Message)
 		return false
 	}
@@ -79,10 +83,16 @@ func handlerPipelineLogLine(line string) bool {
 		if pLog.Stage == "done" && pLog.Message == "EOF" {
 			return true
 		}
+		// Set the stage before printing to ensure proper JSON formatting
+		if pLog.Stage != "" {
+			oktetoLog.SetStage(pLog.Stage)
+		}
 		oktetoLog.Println(pLog.Message)
 	}
 	return false
 }
+
+
 
 // DestroyAllLogs retrieves logs from the pipeline provided and prints them, returns error
 func (c *streamClient) DestroyAllLogs(ctx context.Context, namespace string) error {
