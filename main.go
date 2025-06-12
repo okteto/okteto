@@ -38,6 +38,7 @@ import (
 	"github.com/okteto/okteto/cmd/preview"
 	"github.com/okteto/okteto/cmd/registrytoken"
 	"github.com/okteto/okteto/cmd/remoterun"
+	"github.com/okteto/okteto/cmd/snapshot"
 	"github.com/okteto/okteto/cmd/test"
 	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -172,6 +173,7 @@ func main() {
 	root.AddCommand(logs.Logs(ctx, k8sLogger, fs))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
 	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger))
+	root.AddCommand(snapshot.Snapshot(ctx, k8sLogger, ioController))
 	root.AddCommand(test.Test(ctx, ioController, k8sLogger, at, insights))
 	root.AddCommand(cmd.GenerateSchema())
 	root.AddCommand(cmd.Validate(fs))
