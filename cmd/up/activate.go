@@ -172,6 +172,11 @@ func (up *upContext) activate() error {
 		return err
 	}
 
+	dd := newDevDeployer(up.Translations, k8sClient)
+	if err := dd.deployDevServices(ctx); err != nil {
+		return err
+	}
+
 	// success means all context is ready to run the activation
 	up.success = true
 
@@ -293,18 +298,9 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 		return err
 	}
 
-	var devApp apps.App
-	for _, tr := range trMap {
-		delete(tr.DevApp.ObjectMeta().Annotations, model.DeploymentRevisionAnnotation)
-		if err := tr.DevApp.Deploy(ctx, k8sClient); err != nil {
-			return err
-		}
-		if err := tr.App.Deploy(ctx, k8sClient); err != nil {
-			return err
-		}
-		if tr.MainDev == tr.Dev {
-			devApp = tr.DevApp
-		}
+	dd := newDevDeployer(trMap, k8sClient)
+	if err := dd.deployMainDev(ctx); err != nil {
+		return err
 	}
 
 	if create {
@@ -313,7 +309,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 		}
 	}
 
-	pod, err := apps.GetRunningPodInLoop(ctx, up.Dev, devApp, k8sClient)
+	pod, err := apps.GetRunningPodInLoop(ctx, up.Dev, dd.mainTranslation.DevApp, k8sClient)
 	if err != nil {
 		return err
 	}
