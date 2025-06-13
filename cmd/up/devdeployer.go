@@ -16,14 +16,22 @@ package up
 import (
 	"context"
 
+	"github.com/google/uuid"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/model"
 	"k8s.io/client-go/kubernetes"
 )
 
+const (
+	servicesUpWaitEnvVar    = "OKTETO_SERVICES_UP_WAIT"
+	forceRedeployAnnotation = "okteto.dev/force-redeploy"
+)
+
 type devDeployer struct {
-	translations map[string]*apps.Translation
-	k8sClient    kubernetes.Interface
+	translations   map[string]*apps.Translation
+	k8sClient      kubernetes.Interface
+	servicesUpWait bool
 
 	mainTranslation *apps.Translation
 	devTranslations []*apps.Translation
@@ -33,6 +41,7 @@ type devDeployer struct {
 func newDevDeployer(translations map[string]*apps.Translation, k8sClient kubernetes.Interface) *devDeployer {
 	var mainTranslation *apps.Translation
 	devTranslations := make([]*apps.Translation, 0)
+	servicesUpWait := env.LoadBoolean(servicesUpWaitEnvVar)
 
 	for _, translation := range translations {
 		if translation.MainDev == translation.Dev {
@@ -47,17 +56,37 @@ func newDevDeployer(translations map[string]*apps.Translation, k8sClient kuberne
 		k8sClient:       k8sClient,
 		mainTranslation: mainTranslation,
 		devTranslations: devTranslations,
+		servicesUpWait:  servicesUpWait,
 	}
 }
 
 // deployMainDev deploys the main dev
 func (dd *devDeployer) deployMainDev(ctx context.Context) error {
-	return dd.deploy(ctx, dd.mainTranslation)
+
+	err := dd.deploy(ctx, dd.mainTranslation)
+	if err != nil {
+		return err
+	}
+
+	if !dd.servicesUpWait {
+		return dd.deployDevServices(ctx)
+	}
+	return nil
 }
 
 // deployDevServices deploys the dev services
 func (dd *devDeployer) deployDevServices(ctx context.Context) error {
+	if !dd.servicesUpWait {
+		return nil
+	}
+
 	for _, tr := range dd.devTranslations {
+		annotations := tr.DevApp.TemplateObjectMeta().Annotations
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+		annotations[forceRedeployAnnotation] = uuid.New().String()
+
 		if err := dd.deploy(ctx, tr); err != nil {
 			return err
 		}

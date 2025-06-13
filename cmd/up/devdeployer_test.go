@@ -42,6 +42,11 @@ func (m *MockApp) ObjectMeta() metav1.ObjectMeta {
 	return args.Get(0).(metav1.ObjectMeta)
 }
 
+func (m *MockApp) TemplateObjectMeta() metav1.ObjectMeta {
+	args := m.Called()
+	return args.Get(0).(metav1.ObjectMeta)
+}
+
 func TestDevDeployer_DeployMainDev_Success(t *testing.T) {
 	ctx := context.Background()
 	k8sClient := fake.NewSimpleClientset()
@@ -117,6 +122,9 @@ func TestDevDeployer_DeployDevServices_Success(t *testing.T) {
 			model.DeploymentRevisionAnnotation: "1",
 		},
 	})
+	devApp.On("TemplateObjectMeta").Return(metav1.ObjectMeta{
+		Annotations: map[string]string{},
+	})
 
 	app := &MockApp{}
 	app.On("Deploy", ctx, k8sClient).Return(nil)
@@ -135,6 +143,7 @@ func TestDevDeployer_DeployDevServices_Success(t *testing.T) {
 	}
 
 	deployer := newDevDeployer(translations, k8sClient)
+	deployer.servicesUpWait = true
 
 	err := deployer.deployDevServices(ctx)
 	assert.NoError(t, err)
@@ -154,6 +163,9 @@ func TestDevDeployer_DeployDevServices_DeployError(t *testing.T) {
 			model.DeploymentRevisionAnnotation: "1",
 		},
 	})
+	devApp.On("TemplateObjectMeta").Return(metav1.ObjectMeta{
+		Annotations: map[string]string{},
+	})
 
 	translations := map[string]*apps.Translation{
 		"svc1": {
@@ -169,6 +181,7 @@ func TestDevDeployer_DeployDevServices_DeployError(t *testing.T) {
 	}
 
 	deployer := newDevDeployer(translations, k8sClient)
+	deployer.servicesUpWait = true
 
 	err := deployer.deployDevServices(ctx)
 	assert.Error(t, err)
