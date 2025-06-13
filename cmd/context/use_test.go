@@ -63,3 +63,93 @@ func Test_setSecrets(t *testing.T) {
 		})
 	}
 }
+
+
+func TestUseCommand_NoBrowserFlag(t *testing.T) {
+	tests := []struct {
+		name           string
+		args           []string
+		expectedNoBrowser bool
+	}{
+		{
+			name:           "no-browser flag set",
+			args:           []string{"--no-browser"},
+			expectedNoBrowser: true,
+		},
+		{
+			name:           "no-browser flag not set",
+			args:           []string{},
+			expectedNoBrowser: false,
+		},
+		{
+			name:           "no-browser flag with other flags",
+			args:           []string{"--no-browser", "--token", "test-token"},
+			expectedNoBrowser: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := Use()
+			cmd.SetArgs(tt.args)
+			
+			// Parse flags to populate the options
+			err := cmd.ParseFlags(tt.args)
+			assert.NoError(t, err)
+			
+			// Get the flag value
+			noBrowserFlag, err := cmd.Flags().GetBool("no-browser")
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedNoBrowser, noBrowserFlag)
+		})
+	}
+}
+
+func TestContextCommand_NoBrowserFlag(t *testing.T) {
+	tests := []struct {
+		name           string
+		args           []string
+		expectedNoBrowser bool
+	}{
+		{
+			name:           "no-browser flag set",
+			args:           []string{"--no-browser"},
+			expectedNoBrowser: true,
+		},
+		{
+			name:           "no-browser flag not set",
+			args:           []string{},
+			expectedNoBrowser: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := Context()
+			cmd.SetArgs(tt.args)
+			
+			// Parse flags to populate the options
+			err := cmd.ParseFlags(tt.args)
+			assert.NoError(t, err)
+			
+			// Get the flag value
+			noBrowserFlag, err := cmd.Flags().GetBool("no-browser")
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedNoBrowser, noBrowserFlag)
+		})
+	}
+}
+
+func TestOptions_NoBrowserField(t *testing.T) {
+	options := &Options{}
+	
+	// Test default value
+	assert.False(t, options.NoBrowser)
+	
+	// Test setting value
+	options.NoBrowser = true
+	assert.True(t, options.NoBrowser)
+	
+	options.NoBrowser = false
+	assert.False(t, options.NoBrowser)
+}

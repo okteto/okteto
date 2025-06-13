@@ -31,3 +31,7 @@ func NewFakeLoginController(user *types.User, err error) *FakeLoginController {
 func (fakeController FakeLoginController) AuthenticateToOktetoCluster(_ context.Context, _, _ string) (*types.User, error) {
 	return fakeController.User, fakeController.Err
 }
+
+func (fakeController FakeLoginController) AuthenticateToOktetoClusterWithOptions(_ context.Context, _, _ string, _ bool) (*types.User, error) {
+	return fakeController.User, fakeController.Err
+}

@@ -352,7 +352,7 @@ func checkCLIVersion(currentVersion, recommendedVersion, minMajorMinor string) e
 }
 
 func getLoggedUserContext(ctx context.Context, c *Command, ctxOptions *Options) (*types.UserContext, error) {
-	user, err := c.LoginController.AuthenticateToOktetoCluster(ctx, ctxOptions.Context, ctxOptions.Token)
+	user, err := c.LoginController.AuthenticateToOktetoClusterWithOptions(ctx, ctxOptions.Context, ctxOptions.Token, ctxOptions.NoBrowser)
 	if err != nil {
 		return nil, err
 	}

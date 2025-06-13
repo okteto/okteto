@@ -33,6 +33,7 @@ import (
 
 type Interface interface {
 	AuthenticateToOktetoCluster(context.Context, string, string) (*types.User, error)
+	AuthenticateToOktetoClusterWithOptions(context.Context, string, string, bool) (*types.User, error)
 }
 
 type Controller struct {
@@ -42,10 +43,14 @@ func NewLoginController() *Controller {
 	return &Controller{}
 }
 
-func (*Controller) AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*types.User, error) {
+func (c *Controller) AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*types.User, error) {
+	return c.AuthenticateToOktetoClusterWithOptions(ctx, oktetoURL, token, false)
+}
+
+func (*Controller) AuthenticateToOktetoClusterWithOptions(ctx context.Context, oktetoURL, token string, noBrowser bool) (*types.User, error) {
 	if token == "" {
 		oktetoLog.Infof("authenticating with browser code")
-		user, err := WithBrowser(ctx, oktetoURL)
+		user, err := WithBrowserOptions(ctx, oktetoURL, noBrowser)
 		// If there is a TLS error, return the raw error
 		if oktetoErrors.IsX509(err) {
 			return nil, oktetoErrors.UserError{
@@ -71,6 +76,11 @@ func (*Controller) AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, t
 
 // WithBrowser authenticates the user with the browser
 func WithBrowser(ctx context.Context, oktetoURL string) (*types.User, error) {
+	return WithBrowserOptions(ctx, oktetoURL, false)
+}
+
+// WithBrowserOptions authenticates the user with the browser with options
+func WithBrowserOptions(ctx context.Context, oktetoURL string, noBrowser bool) (*types.User, error) {
 	h, err := StartWithBrowser(ctx, oktetoURL)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't start the login process: %w", err)
@@ -80,15 +90,18 @@ func WithBrowser(ctx context.Context, oktetoURL string) (*types.User, error) {
 	if err != nil {
 		return nil, err
 	}
-	oktetoLog.Println("Authentication will continue in your default browser")
-	if err := open.Start(authorizationURL); err != nil {
-		if strings.Contains(err.Error(), "executable file not found in $PATH") {
-			return nil, oktetoErrors.UserError{
-				E:    fmt.Errorf("no browser could be found"),
-				Hint: "Use the '--token' flag to run this command in server mode. More information can be found here: https://www.okteto.com/docs/reference/okteto-cli/#context",
+
+	if !noBrowser {
+		oktetoLog.Println("Authentication will continue in your default browser")
+		if err := open.Start(authorizationURL); err != nil {
+			if strings.Contains(err.Error(), "executable file not found in $PATH") {
+				return nil, oktetoErrors.UserError{
+					E:    fmt.Errorf("no browser could be found"),
+					Hint: "Use the '--token' flag to run this command in server mode. More information can be found here: https://www.okteto.com/docs/reference/okteto-cli/#context",
+				}
 			}
+			oktetoLog.Errorf("Something went wrong opening your browser: %s\n", err)
 		}
-		oktetoLog.Errorf("Something went wrong opening your browser: %s\n", err)
 	}
 
 	oktetoLog.Printf("You can also open a browser and navigate to the following address:\n")

@@ -54,6 +54,7 @@ This will prompt you to select one of your existing Okteto Contexts or to create
 	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication. Use this when scripting or if you don't want to use browser-based authentication")
 	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
 	cmd.Flags().BoolVarP(&ctxOptions.OnlyOkteto, "okteto", "", false, "only shows okteto context options")
+	cmd.Flags().BoolVarP(&ctxOptions.NoBrowser, "no-browser", "", false, "disable automatically opening the verification URL in the default browser")
 	if err := cmd.Flags().MarkHidden("okteto"); err != nil {
 		oktetoLog.Infof("failed to mark 'okteto' flag as hidden: %s", err)
 	}

@@ -36,6 +36,7 @@ type Options struct {
 	raiseNotCtxError      bool
 	InsecureSkipTlsVerify bool
 	InferredToken         bool
+	NoBrowser             bool
 }
 
 func (o *Options) InitFromContext() {
