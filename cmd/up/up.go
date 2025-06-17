@@ -512,11 +512,11 @@ func (up *upContext) start() error {
 		if up.Dev.IsHybridModeEnabled() {
 			up.shutdownHybridMode()
 		}
-		if err != nil {
-			oktetoLog.Infof("exit signal received due to error: %s", err)
+		if err := up.autoDown.run(context.Background(), up.Dev, up.Namespace, k8sClient); err != nil {
 			return err
 		}
-		if err := up.autoDown.run(context.Background(), up.Dev, up.Namespace, k8sClient); err != nil {
+		if err != nil {
+			oktetoLog.Infof("exit signal received due to error: %s", err)
 			return err
 		}
 	case err := <-pidFileCh:
