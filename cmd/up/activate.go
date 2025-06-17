@@ -173,7 +173,7 @@ func (up *upContext) activate() error {
 	}
 
 	dd := newDevDeployer(up.Translations, k8sClient)
-	// if servicesUpWait is not set, we need to deploy the dev services because they will be deployed with the main dev
+	// if servicesUpWait is set, we need to deploy the dev services because they won't be deployed with the main dev
 	if dd.servicesUpWait {
 		if err := dd.deployDevServices(ctx); err != nil {
 			return err
