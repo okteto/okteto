@@ -62,24 +62,11 @@ func newDevDeployer(translations map[string]*apps.Translation, k8sClient kuberne
 
 // deployMainDev deploys the main dev
 func (dd *devDeployer) deployMainDev(ctx context.Context) error {
-
-	err := dd.deploy(ctx, dd.mainTranslation)
-	if err != nil {
-		return err
-	}
-
-	if !dd.servicesUpWait {
-		return dd.deployDevServices(ctx)
-	}
-	return nil
+	return dd.deploy(ctx, dd.mainTranslation)
 }
 
 // deployDevServices deploys the dev services
 func (dd *devDeployer) deployDevServices(ctx context.Context) error {
-	if !dd.servicesUpWait {
-		return nil
-	}
-
 	for _, tr := range dd.devTranslations {
 		annotations := tr.DevApp.TemplateObjectMeta().Annotations
 		if annotations == nil {

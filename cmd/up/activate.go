@@ -173,8 +173,11 @@ func (up *upContext) activate() error {
 	}
 
 	dd := newDevDeployer(up.Translations, k8sClient)
-	if err := dd.deployDevServices(ctx); err != nil {
-		return err
+	// if servicesUpWait is not set, we need to deploy the dev services because they will be deployed with the main dev
+	if dd.servicesUpWait {
+		if err := dd.deployDevServices(ctx); err != nil {
+			return err
+		}
 	}
 
 	// success means all context is ready to run the activation
@@ -301,6 +304,12 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 	dd := newDevDeployer(trMap, k8sClient)
 	if err := dd.deployMainDev(ctx); err != nil {
 		return err
+	}
+	// if servicesUpWait is not set, we need to deploy the dev services because they will be deployed with the main dev
+	if !dd.servicesUpWait {
+		if err := dd.deployDevServices(ctx); err != nil {
+			return err
+		}
 	}
 
 	if create {
