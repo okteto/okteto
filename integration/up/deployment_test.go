@@ -54,6 +54,21 @@ dev:
       sync:
       - .:/usr/src/app
 `
+	deploymentManifestV2Exec = `
+dev:
+  e2etest:
+    image: python:alpine
+    command:
+    - sh
+    - -c
+    - "echo -n $VAR > var.html && python -m http.server 8080"
+    workdir: /usr/src/app
+    sync:
+    - .:/usr/src/app
+    forward:
+    - 8084:8080
+`
+
 	k8sManifestTemplate = `
 apiVersion: apps/v1
 kind: Deployment
