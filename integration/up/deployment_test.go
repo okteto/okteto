@@ -49,7 +49,26 @@ dev:
     - .:/usr/src/app
     forward:
     - 8084:8080
+    services:
+    - name: e2etest-other
+      sync:
+      - .:/usr/src/app
 `
+	deploymentManifestV2Exec = `
+dev:
+  e2etest:
+    image: python:alpine
+    command:
+    - sh
+    - -c
+    - "echo -n $VAR > var.html && python -m http.server 8080"
+    workdir: /usr/src/app
+    sync:
+    - .:/usr/src/app
+    forward:
+    - 8084:8080
+`
+
 	k8sManifestTemplate = `
 apiVersion: apps/v1
 kind: Deployment
@@ -94,6 +113,50 @@ spec:
   selector:
     app: e2etest
 `
+	anotherK8sManifestTemplate = `
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: e2etest-other
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: e2etest-other
+  template:
+    metadata:
+      labels:
+        app: e2etest-other
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+      - name: test
+        image: python:alpine
+        ports:
+        - containerPort: 8080
+        workingDir: /usr/src/app
+        env:
+        - name: VAR
+          value: value1
+        command:
+          - sh
+          - -c
+          - "echo -n $VAR > var.html && python -m http.server 8080"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: e2etest-other
+  annotations:
+    dev.okteto.com/auto-ingress: "true"
+spec:
+  type: ClusterIP
+  ports:
+  - name: e2etest-other
+    port: 8080
+  selector:
+    app: e2etest-other
+`
 )
 
 func TestUpDeploymentV2(t *testing.T) {
@@ -121,6 +184,7 @@ func TestUpDeploymentV2(t *testing.T) {
 	log.Printf("original 'index.html' content: %s", testNamespace)
 
 	require.NoError(t, writeFile(filepath.Join(dir, "deployment.yml"), k8sManifestTemplate))
+	require.NoError(t, writeFile(filepath.Join(dir, "deployment-other.yml"), anotherK8sManifestTemplate))
 	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), deploymentManifestV2))
 	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
 
@@ -133,7 +197,19 @@ func TestUpDeploymentV2(t *testing.T) {
 	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOpts))
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
 
+	kubectlOptsOther := &commands.KubectlOptions{
+		Namespace:  testNamespace,
+		File:       filepath.Join(dir, "deployment-other.yml"),
+		Name:       "e2etest-other",
+		ConfigFile: filepath.Join(dir, ".kube", "config"),
+	}
+	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOptsOther))
+	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOptsOther, 1, timeout))
+
 	originalDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "e2etest", c)
+	require.NoError(t, err)
+
+	originalDeploymentService, err := integration.GetDeployment(context.Background(), testNamespace, "e2etest-other", c)
 	require.NoError(t, err)
 
 	upOptions := &commands.UpOptions{
@@ -154,6 +230,7 @@ func TestUpDeploymentV2(t *testing.T) {
 		ConfigFile: filepath.Join(dir, ".kube", "config"),
 	}
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
+	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOptsOther, 1, timeout))
 
 	varLocalEndpoint := "http://localhost:8084/var.html"
 	indexLocalEndpoint := "http://localhost:8084/index.html"
@@ -209,6 +286,7 @@ func TestUpDeploymentV2(t *testing.T) {
 
 	// Test that original hasn't change
 	require.NoError(t, compareDeployment(context.Background(), originalDeployment, c))
+	require.NoError(t, compareDeployment(context.Background(), originalDeploymentService, c))
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 

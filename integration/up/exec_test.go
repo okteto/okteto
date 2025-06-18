@@ -107,7 +107,7 @@ func TestExec(t *testing.T) {
 	log.Printf("original 'index.html' content: %s", testNamespace)
 
 	require.NoError(t, writeFile(filepath.Join(dir, "deployment.yml"), k8sManifestTemplate))
-	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), deploymentManifestV2))
+	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), deploymentManifestV2Exec))
 	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
 
 	kubectlOpts := &commands.KubectlOptions{
