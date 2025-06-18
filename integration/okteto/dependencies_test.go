@@ -25,6 +25,7 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
 )
 
@@ -52,6 +53,18 @@ dependencies:
     wait: true
     variables:
       TEST_VARIABLE: test-value
+`
+
+const manifestWithDependenciesBuild = `
+deploy:
+  remote: true
+  commands:
+    - echo "dependency build variable ${OKTETO_DEPENDENCY_TEST_BUILD_VOTE_IMAGE}"
+dependencies:
+  test:
+    repository: https://github.com/okteto/microservices-demo
+    branch: cli-e2e
+    wait: true
 `
 
 func TestDependencies(t *testing.T) {
@@ -127,6 +140,38 @@ func TestDependenciesOnRemote(t *testing.T) {
 
 	contentURL := fmt.Sprintf("https://movies-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(contentURL, timeout))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+}
+
+func TestDependenciesBuild(t *testing.T) {
+	integration.SkipIfNotOktetoCluster(t)
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	testNamespace := integration.GetTestNamespace(t.Name())
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+
+	require.NoError(t, createDependenciesManifest(dir, manifestWithDependenciesBuild))
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+
+	output, err := commands.GetOktetoDeployCmdOutput(oktetoPath, deployOptions)
+	require.NoError(t, err, "there was an error executing the command, output is: %s", string(output))
+	expectedImage := fmt.Sprintf("%s/%s/test-vote", okteto.GetContext().Registry, testNamespace)
+	expectedOutputCommand := fmt.Sprintf("dependency build variable %s", expectedImage)
+	require.Contains(t, strings.ToLower(string(output)), expectedOutputCommand)
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
