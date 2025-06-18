@@ -66,7 +66,8 @@ const (
 )
 
 var (
-	errConfigNotConfigured = fmt.Errorf("kubeconfig not found")
+	errConfigNotConfigured     = fmt.Errorf("kubeconfig not found")
+	errAnotherUpCommandStarted = errors.New("development container has been deactivated by another 'okteto up' command")
 )
 
 // Options represents the options available on up command
@@ -512,11 +513,11 @@ func (up *upContext) start() error {
 		if up.Dev.IsHybridModeEnabled() {
 			up.shutdownHybridMode()
 		}
-		if err := up.autoDown.run(context.Background(), up.Dev, up.Namespace, k8sClient); err != nil {
-			return err
-		}
 		if err != nil {
 			oktetoLog.Infof("exit signal received due to error: %s", err)
+			return err
+		}
+		if err := up.autoDown.run(context.Background(), up.Dev, up.Namespace, k8sClient); err != nil {
 			return err
 		}
 	case err := <-pidFileCh:
@@ -554,7 +555,7 @@ func (up *upContext) activateLoop() {
 					up.shutdownHybridMode()
 				}
 				up.Exit <- oktetoErrors.UserError{
-					E:    fmt.Errorf("development container has been deactivated by another 'okteto up' command"),
+					E:    errAnotherUpCommandStarted,
 					Hint: "Use 'okteto exec' to open another terminal to your development container",
 				}
 				return
