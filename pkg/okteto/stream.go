@@ -92,8 +92,6 @@ func handlerPipelineLogLine(line string) bool {
 	return false
 }
 
-
-
 // DestroyAllLogs retrieves logs from the pipeline provided and prints them, returns error
 func (c *streamClient) DestroyAllLogs(ctx context.Context, namespace string) error {
 	// GetContext().Name represents baseURL for SSE subscription endpoints
