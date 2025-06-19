@@ -71,6 +71,10 @@ func handlerPipelineLogLine(line string) bool {
 		if pLog.Stage == "done" && pLog.Message == "EOF" {
 			return true
 		}
+		// Set the stage before printing to ensure proper JSON formatting
+		if pLog.Stage != "" {
+			oktetoLog.SetStage(pLog.Stage)
+		}
 		oktetoLog.Println(pLog.Message)
 		return false
 	}
@@ -78,6 +82,10 @@ func handlerPipelineLogLine(line string) bool {
 		// stop when the event log is in stage done and message is EOF
 		if pLog.Stage == "done" && pLog.Message == "EOF" {
 			return true
+		}
+		// Set the stage before printing to ensure proper JSON formatting
+		if pLog.Stage != "" {
+			oktetoLog.SetStage(pLog.Stage)
 		}
 		oktetoLog.Println(pLog.Message)
 	}
