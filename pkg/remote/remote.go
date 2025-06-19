@@ -106,6 +106,9 @@ RUN \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts $HOME/.ssh/known_hosts" >> $HOME/.ssh/config && \
   /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}{{ if eq .Command "test" }} || true{{ end }}
 
+{{ if gt (len .Artifacts) 0 -}}
+RUN mkdir -p /okteto/artifacts
+{{ end -}}
 {{range $key, $artifact := .Artifacts }}
 RUN if [ -e /okteto/src/{{$artifact.Path}} ]; then \
     mkdir -p $(dirname /okteto/artifacts/{{$artifact.Destination}}) && \

@@ -426,6 +426,7 @@ RUN \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts $HOME/.ssh/known_hosts" >> $HOME/.ssh/config && \
   /okteto/bin/okteto remote-run test --log-output=json --server-name="$INTERNAL_SERVER_NAME" --name "test" || true
 
+RUN mkdir -p /okteto/artifacts
 
 RUN if [ -e /okteto/src/coverage.txt ]; then \
     mkdir -p $(dirname /okteto/artifacts/coverage.txt) && \
