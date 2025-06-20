@@ -179,7 +179,7 @@ func (pc pidController) notifyIfPIDFileChange(notifyCh chan error) {
 				}
 				if strconv.Itoa(pid) != filePID {
 					notifyCh <- oktetoErrors.UserError{
-						E:    fmt.Errorf("development container has been deactivated by another 'okteto up' command"),
+						E:    errAnotherUpCommandStarted,
 						Hint: "Use 'okteto exec' to open another terminal to your development container",
 					}
 					return

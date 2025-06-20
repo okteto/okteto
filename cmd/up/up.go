@@ -66,7 +66,8 @@ const (
 )
 
 var (
-	errConfigNotConfigured = fmt.Errorf("kubeconfig not found")
+	errConfigNotConfigured     = fmt.Errorf("kubeconfig not found")
+	errAnotherUpCommandStarted = errors.New("development container has been deactivated by another 'okteto up' command")
 )
 
 // Options represents the options available on up command
@@ -236,6 +237,7 @@ okteto up api -- echo this is a test
 				K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
 				tokenUpdater:      newTokenUpdaterController(),
 				builder:           buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish),
+				autoDown:          newAutoDown(ioCtrl, k8sLogger, at),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -493,18 +495,30 @@ func (up *upContext) start() error {
 
 	go up.pidController.notifyIfPIDFileChange(pidFileCh)
 
+	k8sClient, _, err := up.K8sClientProvider.Provide(okteto.GetContext().Cfg)
+	if err != nil {
+		return err
+	}
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		up.interruptReceived = true
 		up.shutdown()
+
+		if err := up.autoDown.run(context.Background(), up.Dev, up.Namespace, k8sClient); err != nil {
+			return err
+		}
 		oktetoLog.Println()
 	case err := <-up.Exit:
 		if up.Dev.IsHybridModeEnabled() {
 			up.shutdownHybridMode()
 		}
 		if err != nil {
+			oktetoLog.Warning("Exited without running okteto down. Your dev environment is still active. Run okteto down to clean it up and free resources.")
 			oktetoLog.Infof("exit signal received due to error: %s", err)
+			return err
+		}
+		if err := up.autoDown.run(context.Background(), up.Dev, up.Namespace, k8sClient); err != nil {
 			return err
 		}
 	case err := <-pidFileCh:
@@ -542,7 +556,7 @@ func (up *upContext) activateLoop() {
 					up.shutdownHybridMode()
 				}
 				up.Exit <- oktetoErrors.UserError{
-					E:    fmt.Errorf("development container has been deactivated by another 'okteto up' command"),
+					E:    errAnotherUpCommandStarted,
 					Hint: "Use 'okteto exec' to open another terminal to your development container",
 				}
 				return
