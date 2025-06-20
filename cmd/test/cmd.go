@@ -403,10 +403,10 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		testMetadata.Success = err == nil
 		testAnalytics = append(testAnalytics, &testMetadata)
 		if err != nil {
-			hint := `Please verify test container definition.
+			hint := `Please verify the specified image is accesible.
     You can use --log-level flag to get additional output.`
 			if len(test.Artifacts) > 0 {
-				hint = `Please verify test container definition and review if expected artifacts are being generated.
+				hint = `Please verify the specified image is accesible and review if expected artifacts are being generated.
     You can use --log-level flag to get additional output.`
 			}
 
