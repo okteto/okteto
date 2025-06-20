@@ -29,6 +29,7 @@ import (
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/build/buildkit"
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
@@ -403,6 +404,24 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		testMetadata.Success = err == nil
 		testAnalytics = append(testAnalytics, &testMetadata)
 		if err != nil {
+			// If it is a commandErr, it means that there were an error on the tests itself, so we should return that error directly
+			var cmdErr buildkit.CommandErr
+			if errors.As(err, &cmdErr) {
+				return metadata, err
+			}
+
+			hint := `Please verify the specified image is accesible.
+    You can use --log-level flag to get additional output.`
+			if len(test.Artifacts) > 0 {
+				hint = `Please verify the specified image is accesible and review if expected artifacts are being generated.
+    You can use --log-level flag to get additional output.`
+			}
+
+			ioCtrl.Logger().Infof("error executing test container: %v", err)
+			err = oktetoErrors.UserError{
+				E:    fmt.Errorf("error executing test container '%s'", name),
+				Hint: hint,
+			}
 			return metadata, err
 		}
 		oktetoLog.Success("Test container '%s' passed", name)
