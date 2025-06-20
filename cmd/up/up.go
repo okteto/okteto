@@ -514,7 +514,7 @@ func (up *upContext) start() error {
 			up.shutdownHybridMode()
 		}
 		if err != nil {
-			oktetoLog.Warning("Exited without runnig okteto down. Run okteto down to clean up the development environment")
+			oktetoLog.Warning("Exited without running okteto down. Your dev environment is still active. Run okteto down to clean it up and free resources.")
 			oktetoLog.Infof("exit signal received due to error: %s", err)
 			return err
 		}
