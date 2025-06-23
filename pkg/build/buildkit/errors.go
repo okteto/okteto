@@ -86,7 +86,11 @@ func GetSolveErrorMessage(err error) error {
 			E:    fmt.Errorf("buildkit service is not available at the moment"),
 			Hint: "Please try again later.",
 		}
-	case isImageIsNotAccessibleErr(err):
+
+	// Usually, the failed to calculate checksum error happens when some file doesn't exist and the dockerfile
+	// has an instruction to copy it. In that case, the error contains "not found", what makes it look like
+	// a permission error. That is why we add also the extra check to make sure it is not a failed checksum error
+	case isImageIsNotAccessibleErr(err) && !isFailedChecksum(err):
 		err = oktetoErrors.UserError{
 			E: fmt.Errorf("the image '%s' is not accessible or it does not exist", imageFromError),
 			Hint: `Please verify the name of the image to make sure it exists.
@@ -203,4 +207,10 @@ func isNotFound(err error) bool {
 // isHostNotFound returns true when the error is because the host is not found
 func isHostNotFound(err error) bool {
 	return strings.Contains(err.Error(), "failed to do request") && strings.Contains(err.Error(), "no such host")
+}
+
+// isFailedChecksum returns true when the error is because the build process cannot calculate checksum of a layer.
+// It usually happens when copying a non-existent file
+func isFailedChecksum(err error) bool {
+	return strings.Contains(err.Error(), "failed to calculate checksum of ref")
 }
