@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"google.golang.org/grpc/status"
 )
 
@@ -82,11 +83,13 @@ func GetSolveErrorMessage(err error) error {
 
 	switch {
 	case isBuildkitServiceUnavailable(err):
+		oktetoLog.Infof("buildkit seems unavialable: %v", err)
 		err = oktetoErrors.UserError{
 			E:    fmt.Errorf("buildkit service is not available at the moment"),
 			Hint: "Please try again later.",
 		}
 	case isImageIsNotAccessibleErr(err):
+		oktetoLog.Infof("image seems not accesible: %v", err)
 		err = oktetoErrors.UserError{
 			E: fmt.Errorf("the image '%s' is not accessible or it does not exist", imageFromError),
 			Hint: `Please verify the name of the image to make sure it exists.
@@ -113,6 +116,7 @@ func GetSolveErrorMessage(err error) error {
 		}
 
 	default:
+		oktetoLog.Infof("default error: %v", err)
 		var cmdErr CommandErr
 		if errors.As(err, &cmdErr) {
 			return cmdErr
