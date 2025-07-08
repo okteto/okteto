@@ -100,3 +100,30 @@ func GetUpgradeCommand() string {
 
 	return `curl https://get.okteto.com -sSfL | sh`
 }
+
+// GetUpgradeInstructions returns detailed upgrade instructions for the current platform
+func GetUpgradeInstructions() string {
+	switch {
+	case runtime.GOOS == "darwin" || runtime.GOOS == "linux":
+		instructions := `
+
+curl https://get.okteto.com -sSfL | sh`
+		if runtime.GOOS == "darwin" {
+			instructions += `
+
+You can also use:
+- macOS: brew upgrade okteto`
+		}
+		return instructions
+	case runtime.GOOS == "windows":
+		return `
+
+scoop update okteto
+
+Or download manually from https://github.com/okteto/okteto/releases`
+	default:
+		return `
+
+curl https://get.okteto.com -sSfL | sh`
+	}
+}
