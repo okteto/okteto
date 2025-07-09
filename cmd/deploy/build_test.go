@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -161,4 +162,85 @@ func TestBuildImages(t *testing.T) {
 		})
 	}
 
+}
+
+func TestBuildImagesWithNothingToBuild(t *testing.T) {
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "test",
+				Cfg:       &api.Config{},
+			},
+		},
+		CurrentContext: "test",
+	}
+
+	testCases := []struct {
+		expectedError        error
+		builder              *fakeV2Builder
+		stack                *model.Stack
+		name                 string
+		buildServices        []string
+		servicesToDeploy     []string
+		servicesAlreadyBuilt []string
+		expectedImages       []string
+		build                bool
+	}{
+		{
+			name:          "services to deploy without build section, with another service defined in the stack with build section",
+			build:         true,
+			builder:       &fakeV2Builder{},
+			buildServices: []string{},
+			stack: &model.Stack{Services: map[string]*model.Service{
+				"stack A": {},
+				"stack B": {},
+				"stack C": {Build: &build.Info{}},
+			}},
+			servicesToDeploy: []string{"stack A", "stack B"},
+			expectedError:    nil,
+			expectedImages:   []string{},
+		},
+		{
+			name:          "services to deploy without build section, with another service defined in the stack with build section, and same services in the build section",
+			build:         true,
+			builder:       &fakeV2Builder{},
+			buildServices: []string{"stack C"},
+			stack: &model.Stack{Services: map[string]*model.Service{
+				"stack A": {},
+				"stack B": {},
+				"stack C": {Build: &build.Info{}},
+			}},
+			servicesToDeploy: []string{"stack A", "stack B"},
+			expectedError:    nil,
+			expectedImages:   []string{},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+
+			deployOptions := &Options{
+				NoBuild: !testCase.build,
+				Manifest: &model.Manifest{
+					Build: build.ManifestBuild{},
+					Deploy: &model.DeployInfo{
+						ComposeSection: &model.ComposeSectionInfo{
+							Stack: testCase.stack,
+						},
+					},
+				},
+				StackServicesToDeploy: testCase.servicesToDeploy,
+			}
+
+			for _, service := range testCase.buildServices {
+				deployOptions.Manifest.Build[service] = &build.Info{}
+			}
+
+			err := buildImages(context.Background(), testCase.builder, &defaultConfigMapHandler{
+				k8sClientProvider: test.NewFakeK8sProvider(),
+			}, deployOptions)
+			assert.NoError(t, err)
+			testCase.builder.AssertNotCalled(t, "Build", mock.Anything, mock.Anything)
+		})
+	}
 }

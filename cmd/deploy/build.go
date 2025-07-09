@@ -32,7 +32,7 @@ func buildImages(ctx context.Context, builder builderInterface, cmapHandler Conf
 	oktetoManifestServicesWithBuild := setDifference(allServicesWithBuildSection, stackServicesWithBuild) // Warning: this way of getting the oktetoManifestServicesWithBuild is highly dependent on the manifest struct as it is now. We are assuming that: *okteto* manifest build = manifest build - stack build section
 	servicesToDeployWithBuild := setIntersection(allServicesWithBuildSection, sliceToSet(deployOptions.StackServicesToDeploy))
 	// We need to build:
-	// - All the services that have a build section defined in the *okteto* manifest
+	// - All the services that have a build section defined in the *okteto* manifest, and are not overriding the build of a service defined in the stack
 	// - Services from *deployOptions.servicesToDeploy* that have a build section
 
 	servicesToBuildSet := setUnion(oktetoManifestServicesWithBuild, servicesToDeployWithBuild)
@@ -56,6 +56,11 @@ func buildImages(ctx context.Context, builder builderInterface, cmapHandler Conf
 			}
 		}
 	} else {
+		// If there are no images to build, we just return early as we don't need to do anything
+		if len(servicesToBuildSet) == 0 {
+			return nil
+		}
+
 		buildOptions := &types.BuildOptions{
 			EnableStages: true,
 			Manifest:     deployOptions.Manifest,
