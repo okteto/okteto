@@ -98,7 +98,7 @@ func TestGetKubeconfig(t *testing.T) {
 			expected: &clientcmdapi.Config{
 				Contexts: map[string]*clientcmdapi.Context{
 					"test": {
-						Namespace:  "namespace",
+						Namespace:  "test",
 						Extensions: map[string]runtime.Object{},
 					},
 				},
