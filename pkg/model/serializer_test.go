@@ -2606,3 +2606,130 @@ timeout: 15m`),
 		})
 	}
 }
+
+func TestServicesToDeployUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name      string
+		data      []byte
+		expected  ServicesToDeploy
+		expectErr bool
+	}{
+		{
+			name:     "single string service",
+			data:     []byte("frontend"),
+			expected: ServicesToDeploy{"frontend"},
+		},
+		{
+			name:     "single string service with env var",
+			data:     []byte("${SERVICE_NAME}"),
+			expected: ServicesToDeploy{"backend"},
+		},
+		{
+			name:     "single string service with env var and default",
+			data:     []byte("${NOEXIST:-frontend}"),
+			expected: ServicesToDeploy{"frontend"},
+		},
+		{
+			name:     "single string service with complex env var",
+			data:     []byte("${SERVICE_NAME}-${ENV}"),
+			expected: ServicesToDeploy{"backend-prod"},
+		},
+		{
+			name:     "array of services",
+			data:     []byte("- frontend\n- backend\n- database"),
+			expected: ServicesToDeploy{"frontend", "backend", "database"},
+		},
+		{
+			name:     "array of services with env vars",
+			data:     []byte("- ${SERVICE1}\n- ${SERVICE2}\n- database"),
+			expected: ServicesToDeploy{"frontend", "backend", "database"},
+		},
+		{
+			name:     "array of services with mixed env vars and literals",
+			data:     []byte("- ${SERVICE1}\n- api\n- ${SERVICE3}"),
+			expected: ServicesToDeploy{"frontend", "api", "redis"},
+		},
+		{
+			name:     "array of services with env vars with defaults",
+			data:     []byte("- ${SERVICE1:-web}\n- ${SERVICE2:-api}\n- database"),
+			expected: ServicesToDeploy{"frontend", "backend", "database"},
+		},
+		{
+			name:     "empty array",
+			data:     []byte("[]"),
+			expected: ServicesToDeploy{},
+		},
+		{
+			name:     "array with empty strings",
+			data:     []byte("- \"\"\n- service\n- \"\""),
+			expected: ServicesToDeploy{"", "service", ""},
+		},
+		{
+			name:     "array with env vars that expand to empty",
+			data:     []byte("- ${EMPTY_VAR}\n- service"),
+			expected: ServicesToDeploy{"", "service"},
+		},
+		{
+			name:     "array with undefined env vars",
+			data:     []byte("- ${UNDEFINED_VAR}\n- service"),
+			expected: ServicesToDeploy{"", "service"},
+		},
+		{
+			name:     "array with undefined env vars with defaults",
+			data:     []byte("- ${UNDEFINED_VAR:-default}\n- service"),
+			expected: ServicesToDeploy{"default", "service"},
+		},
+		{
+			name:     "complex env var expansion",
+			data:     []byte("- ${PREFIX}-${SERVICE}-${SUFFIX}"),
+			expected: ServicesToDeploy{"my-api-service"},
+		},
+		{
+			name:      "single string with broken env var syntax",
+			data:      []byte("${BROKEN_VAR"),
+			expectErr: true,
+		},
+		{
+			name:      "array with broken env var syntax",
+			data:      []byte("- ${BROKEN_VAR\n- service"),
+			expectErr: true,
+		},
+		{
+			name:      "invalid data type - map",
+			data:      []byte("a: b"),
+			expectErr: true,
+		},
+		{
+			name:      "array with mixed types",
+			data:      []byte("- service1\n- a: asa\n- service2"),
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set up environment variables for this test
+			t.Setenv("SERVICE_NAME", "backend")
+			t.Setenv("SERVICE1", "frontend")
+			t.Setenv("SERVICE2", "backend")
+			t.Setenv("SERVICE3", "redis")
+			t.Setenv("ENV", "prod")
+			t.Setenv("PREFIX", "my")
+			t.Setenv("SERVICE", "api")
+			t.Setenv("SUFFIX", "service")
+			t.Setenv("EMPTY_VAR", "")
+			t.Setenv("VALID_VAR", "valid")
+
+			var result ServicesToDeploy
+			err := yaml.Unmarshal(tt.data, &result)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

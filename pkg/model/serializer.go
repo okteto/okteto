@@ -969,8 +969,12 @@ func (s *ServicesToDeploy) UnmarshalYAML(unmarshal func(interface{}) error) erro
 	var rawString string
 	err := unmarshal(&rawString)
 	if err == nil {
+		expanded, err := env.ExpandEnv(rawString)
+		if err != nil {
+			return err
+		}
 		*s = ServicesToDeploy{
-			rawString,
+			expanded,
 		}
 		return nil
 	}
@@ -979,7 +983,15 @@ func (s *ServicesToDeploy) UnmarshalYAML(unmarshal func(interface{}) error) erro
 	var servicesToDeployHolder servicesToDeployRaw
 	err = unmarshal(&servicesToDeployHolder)
 	if err == nil {
-		*s = ServicesToDeploy(servicesToDeployHolder)
+		servicesToDeploy := ServicesToDeploy{}
+		for _, service := range servicesToDeployHolder {
+			expanded, err := env.ExpandEnv(service)
+			if err != nil {
+				return err
+			}
+			servicesToDeploy = append(servicesToDeploy, expanded)
+		}
+		*s = servicesToDeploy
 		return nil
 	}
 	return err
