@@ -154,11 +154,14 @@ func TestBuildImages(t *testing.T) {
 				deployOptions.Manifest.Build[service] = &build.Info{}
 			}
 
+			testCase.builder.On("Build", mock.Anything, mock.Anything, mock.Anything).Once()
+
 			err := buildImages(context.Background(), testCase.builder, &defaultConfigMapHandler{
 				k8sClientProvider: test.NewFakeK8sProvider(),
 			}, deployOptions)
 			assert.Equal(t, testCase.expectedError, err)
 			assert.Equal(t, sliceToSet(testCase.expectedImages), sliceToSet(testCase.builder.buildOptionsStorage.CommandArgs))
+			testCase.builder.AssertExpectations(t)
 		})
 	}
 
