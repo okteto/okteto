@@ -170,13 +170,17 @@ type fakeV2Builder struct {
 	buildErr             error
 	buildOptionsStorage  *types.BuildOptions
 	servicesAlreadyBuilt []string
+
+	mock.Mock
 }
 
-func (b *fakeV2Builder) Build(_ context.Context, buildOptions *types.BuildOptions) error {
+func (b *fakeV2Builder) Build(ctx context.Context, buildOptions *types.BuildOptions) error {
 	if b.buildErr != nil {
 		return b.buildErr
 	}
 	b.buildOptionsStorage = buildOptions
+
+	b.Called(ctx, buildOptions)
 	return nil
 }
 
