@@ -59,7 +59,7 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 
 // IsDevModeOn returns if a statefulset is in devmode
 func IsDevModeOn(app App) bool {
-	return app.ObjectMeta().Labels[constants.DevLabel] == "true" || len(app.ObjectMeta().Labels[model.DevCloneLabel]) > 0
+	return app.ObjectMeta().Labels[constants.DevLabel] == "true" || app.ObjectMeta().Labels[model.DevCloneLabel] != ""
 }
 
 // GetRunningPodInLoop returns the dev pod for an app and loops until it success

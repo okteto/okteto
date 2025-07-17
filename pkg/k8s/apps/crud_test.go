@@ -719,7 +719,7 @@ func TestGetTranslations_InheritKubernetesResources(t *testing.T) {
 					assert.Equal(t, tt.expectedResources, mainTranslation.Rules[0].Resources)
 				} else {
 					// When not inheriting, the rule should have the original dev resources
-					assert.Equal(t, tt.expectedResources, mainTranslation.Rules[0].Resources)
+					assert.Equal(t, tt.dev.Resources, mainTranslation.Rules[0].Resources)
 				}
 			}
 		})

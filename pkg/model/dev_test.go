@@ -1348,7 +1348,7 @@ func createEnvFile(content map[string]string) (string, error) {
 	}
 
 	for k, v := range content {
-		_, err = file.WriteString(fmt.Sprintf("%s=%s\n", k, v))
+		_, err = fmt.Fprintf(file, "%s=%s\n", k, v)
 		if err != nil {
 			return "", err
 		}
