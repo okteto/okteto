@@ -193,8 +193,8 @@ func Test_LoadManifestDefaults(t *testing.T) {
         - ENV=production
         - name=test-node`),
 			env.Environment{
-				{Name: "ENV", Value: "production"},
-				{Name: "name", Value: "test-node"},
+				env.Var{Name: "ENV", Value: "production"},
+				env.Var{Name: "name", Value: "test-node"},
 			},
 			[]forward.Forward{},
 		},
@@ -1385,7 +1385,7 @@ func Test_expandEnvFiles(t *testing.T) {
 			name: "dont overwrite envs",
 			dev: &Dev{
 				Environment: env.Environment{
-					{
+					env.Var{
 						Name:  "key1",
 						Value: "value1",
 					},
@@ -1814,10 +1814,10 @@ func TestDev_HasEmptyNodeSelector(t *testing.T) {
 
 func TestDev_InheritNodeSelectorFromPodSpec(t *testing.T) {
 	tests := []struct {
-		name         string
-		dev          *Dev
-		podSpec      *apiv1.PodSpec
-		expected     map[string]string
+		name     string
+		dev      *Dev
+		podSpec  *apiv1.PodSpec
+		expected map[string]string
 	}{
 		{
 			name: "inherit from podSpec with nodeSelector",

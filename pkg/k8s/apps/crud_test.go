@@ -547,12 +547,12 @@ func TestListDevModeOn(t *testing.T) {
 
 func TestGetTranslations_InheritKubernetesResources(t *testing.T) {
 	tests := []struct {
-		name                string
-		envVarValue         string
-		dev                 *model.Dev
-		deployment          *appsv1.Deployment
-		expectedResources   model.ResourceRequirements
-		shouldInherit       bool
+		name              string
+		envVarValue       string
+		dev               *model.Dev
+		deployment        *appsv1.Deployment
+		expectedResources model.ResourceRequirements
+		shouldInherit     bool
 	}{
 		{
 			name:        "inherit resources when env var is true and dev resources are empty",
@@ -728,12 +728,12 @@ func TestGetTranslations_InheritKubernetesResources(t *testing.T) {
 
 func TestGetTranslations_InheritKubernetesNodeSelector(t *testing.T) {
 	tests := []struct {
-		name                  string
-		envVarValue           string
-		dev                   *model.Dev
-		deployment            *appsv1.Deployment
-		expectedNodeSelector  map[string]string
-		shouldInherit         bool
+		name                 string
+		envVarValue          string
+		dev                  *model.Dev
+		deployment           *appsv1.Deployment
+		expectedNodeSelector map[string]string
+		shouldInherit        bool
 	}{
 		{
 			name:        "inherit nodeSelector when env var is true and dev nodeSelector is empty",
@@ -801,7 +801,7 @@ func TestGetTranslations_InheritKubernetesNodeSelector(t *testing.T) {
 				},
 			},
 			expectedNodeSelector: nil,
-			shouldInherit:         false,
+			shouldInherit:        false,
 		},
 		{
 			name:        "do not inherit when dev nodeSelector is not empty",
