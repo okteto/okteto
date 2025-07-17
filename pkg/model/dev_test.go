@@ -26,6 +26,7 @@ import (
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 func Test_LoadManifest(t *testing.T) {
@@ -1485,6 +1486,403 @@ func TestPrepare(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+		})
+	}
+}
+
+func TestShouldInheritKubernetesResources(t *testing.T) {
+	tests := []struct {
+		name     string
+		envValue string
+		expected bool
+	}{
+		{
+			name:     "environment variable set to true",
+			envValue: "true",
+			expected: true,
+		},
+		{
+			name:     "environment variable set to false",
+			envValue: "false",
+			expected: false,
+		},
+		{
+			name:     "environment variable not set",
+			envValue: "",
+			expected: false,
+		},
+		{
+			name:     "environment variable set to invalid value",
+			envValue: "invalid",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save original value
+			originalValue := os.Getenv(OktetoInheritKubernetesResourcesEnvVar)
+			defer func() {
+				if originalValue == "" {
+					os.Unsetenv(OktetoInheritKubernetesResourcesEnvVar)
+				} else {
+					os.Setenv(OktetoInheritKubernetesResourcesEnvVar, originalValue)
+				}
+			}()
+
+			// Set test value
+			if tt.envValue == "" {
+				os.Unsetenv(OktetoInheritKubernetesResourcesEnvVar)
+			} else {
+				os.Setenv(OktetoInheritKubernetesResourcesEnvVar, tt.envValue)
+			}
+
+			result := ShouldInheritKubernetesResources()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestDev_HasEmptyResources(t *testing.T) {
+	tests := []struct {
+		name     string
+		dev      *Dev
+		expected bool
+	}{
+		{
+			name: "empty resources",
+			dev: &Dev{
+				Resources: ResourceRequirements{},
+			},
+			expected: true,
+		},
+		{
+			name: "only requests set",
+			dev: &Dev{
+				Resources: ResourceRequirements{
+					Requests: ResourceList{
+						"memory": resource.MustParse("100Mi"),
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "only limits set",
+			dev: &Dev{
+				Resources: ResourceRequirements{
+					Limits: ResourceList{
+						"cpu": resource.MustParse("200m"),
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "both requests and limits set",
+			dev: &Dev{
+				Resources: ResourceRequirements{
+					Requests: ResourceList{
+						"memory": resource.MustParse("100Mi"),
+					},
+					Limits: ResourceList{
+						"cpu": resource.MustParse("200m"),
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "nil requests and limits",
+			dev: &Dev{
+				Resources: ResourceRequirements{
+					Requests: nil,
+					Limits:   nil,
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.dev.HasEmptyResources()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestDev_InheritResourcesFromContainer(t *testing.T) {
+	tests := []struct {
+		name      string
+		dev       *Dev
+		container *apiv1.Container
+		expected  ResourceRequirements
+	}{
+		{
+			name: "inherit from container with requests and limits",
+			dev: &Dev{
+				Resources: ResourceRequirements{},
+			},
+			container: &apiv1.Container{
+				Resources: apiv1.ResourceRequirements{
+					Requests: apiv1.ResourceList{
+						apiv1.ResourceMemory: mustParseQuantity("128Mi"),
+						apiv1.ResourceCPU:    mustParseQuantity("100m"),
+					},
+					Limits: apiv1.ResourceList{
+						apiv1.ResourceMemory: mustParseQuantity("256Mi"),
+						apiv1.ResourceCPU:    mustParseQuantity("200m"),
+					},
+				},
+			},
+			expected: ResourceRequirements{
+				Requests: ResourceList{
+					apiv1.ResourceMemory: mustParseQuantity("128Mi"),
+					apiv1.ResourceCPU:    mustParseQuantity("100m"),
+				},
+				Limits: ResourceList{
+					apiv1.ResourceMemory: mustParseQuantity("256Mi"),
+					apiv1.ResourceCPU:    mustParseQuantity("200m"),
+				},
+			},
+		},
+		{
+			name: "inherit from container with only requests",
+			dev: &Dev{
+				Resources: ResourceRequirements{},
+			},
+			container: &apiv1.Container{
+				Resources: apiv1.ResourceRequirements{
+					Requests: apiv1.ResourceList{
+						apiv1.ResourceMemory: mustParseQuantity("128Mi"),
+					},
+				},
+			},
+			expected: ResourceRequirements{
+				Requests: ResourceList{
+					apiv1.ResourceMemory: mustParseQuantity("128Mi"),
+				},
+				Limits: nil,
+			},
+		},
+		{
+			name: "inherit from container with only limits",
+			dev: &Dev{
+				Resources: ResourceRequirements{},
+			},
+			container: &apiv1.Container{
+				Resources: apiv1.ResourceRequirements{
+					Limits: apiv1.ResourceList{
+						apiv1.ResourceCPU: mustParseQuantity("200m"),
+					},
+				},
+			},
+			expected: ResourceRequirements{
+				Requests: nil,
+				Limits: ResourceList{
+					apiv1.ResourceCPU: mustParseQuantity("200m"),
+				},
+			},
+		},
+		{
+			name: "inherit from nil container",
+			dev: &Dev{
+				Resources: ResourceRequirements{},
+			},
+			container: nil,
+			expected: ResourceRequirements{
+				Requests: nil,
+				Limits:   nil,
+			},
+		},
+		{
+			name: "inherit from container with empty resources",
+			dev: &Dev{
+				Resources: ResourceRequirements{},
+			},
+			container: &apiv1.Container{
+				Resources: apiv1.ResourceRequirements{},
+			},
+			expected: ResourceRequirements{
+				Requests: nil,
+				Limits:   nil,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.dev.InheritResourcesFromContainer(tt.container)
+			assert.Equal(t, tt.expected, tt.dev.Resources)
+		})
+	}
+}
+
+// Helper function to parse resource quantities for tests
+func mustParseQuantity(s string) resource.Quantity {
+	return resource.MustParse(s)
+}
+
+func TestShouldInheritKubernetesNodeSelector(t *testing.T) {
+	tests := []struct {
+		name     string
+		envValue string
+		expected bool
+	}{
+		{
+			name:     "environment variable set to true",
+			envValue: "true",
+			expected: true,
+		},
+		{
+			name:     "environment variable set to false",
+			envValue: "false",
+			expected: false,
+		},
+		{
+			name:     "environment variable not set",
+			envValue: "",
+			expected: false,
+		},
+		{
+			name:     "environment variable set to invalid value",
+			envValue: "invalid",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set environment variable
+			if tt.envValue != "" {
+				os.Setenv(OktetoInheritKubernetesNodeSelectorEnvVar, tt.envValue)
+			} else {
+				os.Unsetenv(OktetoInheritKubernetesNodeSelectorEnvVar)
+			}
+			defer os.Unsetenv(OktetoInheritKubernetesNodeSelectorEnvVar)
+
+			result := ShouldInheritKubernetesNodeSelector()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestDev_HasEmptyNodeSelector(t *testing.T) {
+	tests := []struct {
+		name         string
+		nodeSelector map[string]string
+		expected     bool
+	}{
+		{
+			name:         "empty nodeSelector",
+			nodeSelector: map[string]string{},
+			expected:     true,
+		},
+		{
+			name:         "nil nodeSelector",
+			nodeSelector: nil,
+			expected:     true,
+		},
+		{
+			name: "nodeSelector with values",
+			nodeSelector: map[string]string{
+				"kubernetes.io/os": "linux",
+			},
+			expected: false,
+		},
+		{
+			name: "nodeSelector with multiple values",
+			nodeSelector: map[string]string{
+				"kubernetes.io/os":   "linux",
+				"kubernetes.io/arch": "amd64",
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dev := &Dev{
+				NodeSelector: tt.nodeSelector,
+			}
+			result := dev.HasEmptyNodeSelector()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestDev_InheritNodeSelectorFromPodSpec(t *testing.T) {
+	tests := []struct {
+		name         string
+		dev          *Dev
+		podSpec      *apiv1.PodSpec
+		expected     map[string]string
+	}{
+		{
+			name: "inherit from podSpec with nodeSelector",
+			dev: &Dev{
+				NodeSelector: nil,
+			},
+			podSpec: &apiv1.PodSpec{
+				NodeSelector: map[string]string{
+					"kubernetes.io/os":   "linux",
+					"kubernetes.io/arch": "amd64",
+				},
+			},
+			expected: map[string]string{
+				"kubernetes.io/os":   "linux",
+				"kubernetes.io/arch": "amd64",
+			},
+		},
+		{
+			name: "inherit from podSpec with single nodeSelector",
+			dev: &Dev{
+				NodeSelector: map[string]string{},
+			},
+			podSpec: &apiv1.PodSpec{
+				NodeSelector: map[string]string{
+					"node-type": "gpu",
+				},
+			},
+			expected: map[string]string{
+				"node-type": "gpu",
+			},
+		},
+		{
+			name: "inherit from nil podSpec",
+			dev: &Dev{
+				NodeSelector: nil,
+			},
+			podSpec:  nil,
+			expected: nil,
+		},
+		{
+			name: "inherit from podSpec with empty nodeSelector",
+			dev: &Dev{
+				NodeSelector: nil,
+			},
+			podSpec: &apiv1.PodSpec{
+				NodeSelector: map[string]string{},
+			},
+			expected: nil,
+		},
+		{
+			name: "inherit from podSpec with nil nodeSelector",
+			dev: &Dev{
+				NodeSelector: nil,
+			},
+			podSpec: &apiv1.PodSpec{
+				NodeSelector: nil,
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.dev.InheritNodeSelectorFromPodSpec(tt.podSpec)
+			assert.Equal(t, tt.expected, tt.dev.NodeSelector)
 		})
 	}
 }

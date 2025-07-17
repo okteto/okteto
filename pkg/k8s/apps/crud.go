@@ -128,6 +128,20 @@ func GetTranslations(ctx context.Context, namespace string, dev *model.Dev, app 
 			if rule.Image == "" {
 				rule.Image = devContainer.Image
 			}
+
+			// Inherit Kubernetes resources if the feature is enabled and dev resources are empty
+			if model.ShouldInheritKubernetesResources() && tr.Dev.HasEmptyResources() {
+				tr.Dev.InheritResourcesFromContainer(devContainer)
+				// Update the rule with the inherited resources
+				rule.Resources = tr.Dev.Resources
+			}
+
+			// Inherit Kubernetes nodeSelector if the feature is enabled and dev nodeSelector is empty
+			if model.ShouldInheritKubernetesNodeSelector() && tr.Dev.HasEmptyNodeSelector() {
+				tr.Dev.InheritNodeSelectorFromPodSpec(app.PodSpec())
+				// Update the rule with the inherited nodeSelector
+				rule.NodeSelector = tr.Dev.NodeSelector
+			}
 		}
 	}
 

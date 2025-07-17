@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -542,4 +543,349 @@ func TestListDevModeOn(t *testing.T) {
 		assert.ElementsMatch(t, tt.expectedList, result)
 
 	}
+}
+
+func TestGetTranslations_InheritKubernetesResources(t *testing.T) {
+	tests := []struct {
+		name                string
+		envVarValue         string
+		dev                 *model.Dev
+		deployment          *appsv1.Deployment
+		expectedResources   model.ResourceRequirements
+		shouldInherit       bool
+	}{
+		{
+			name:        "inherit resources when env var is true and dev resources are empty",
+			envVarValue: "true",
+			dev: &model.Dev{
+				Name:      "test",
+				Container: "test",
+				Resources: model.ResourceRequirements{},
+			},
+			deployment: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "test",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									Name: "test",
+									Resources: v1.ResourceRequirements{
+										Requests: v1.ResourceList{
+											v1.ResourceMemory: mustParseK8sQuantity("128Mi"),
+											v1.ResourceCPU:    mustParseK8sQuantity("100m"),
+										},
+										Limits: v1.ResourceList{
+											v1.ResourceMemory: mustParseK8sQuantity("256Mi"),
+											v1.ResourceCPU:    mustParseK8sQuantity("200m"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedResources: model.ResourceRequirements{
+				Requests: model.ResourceList{
+					v1.ResourceMemory: mustParseModelQuantity("128Mi"),
+					v1.ResourceCPU:    mustParseModelQuantity("100m"),
+				},
+				Limits: model.ResourceList{
+					v1.ResourceMemory: mustParseModelQuantity("256Mi"),
+					v1.ResourceCPU:    mustParseModelQuantity("200m"),
+				},
+			},
+			shouldInherit: true,
+		},
+		{
+			name:        "do not inherit when env var is false",
+			envVarValue: "false",
+			dev: &model.Dev{
+				Name:      "test",
+				Container: "test",
+				Resources: model.ResourceRequirements{},
+			},
+			deployment: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "test",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									Name: "test",
+									Resources: v1.ResourceRequirements{
+										Requests: v1.ResourceList{
+											v1.ResourceMemory: mustParseK8sQuantity("128Mi"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedResources: model.ResourceRequirements{},
+			shouldInherit:     false,
+		},
+		{
+			name:        "do not inherit when dev resources are not empty",
+			envVarValue: "true",
+			dev: &model.Dev{
+				Name:      "test",
+				Container: "test",
+				Resources: model.ResourceRequirements{
+					Requests: model.ResourceList{
+						v1.ResourceMemory: mustParseModelQuantity("64Mi"),
+					},
+				},
+			},
+			deployment: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "test",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									Name: "test",
+									Resources: v1.ResourceRequirements{
+										Requests: v1.ResourceList{
+											v1.ResourceMemory: mustParseK8sQuantity("128Mi"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedResources: model.ResourceRequirements{
+				Requests: model.ResourceList{
+					v1.ResourceMemory: mustParseModelQuantity("64Mi"),
+				},
+			},
+			shouldInherit: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save original environment variable value
+			originalValue := os.Getenv(model.OktetoInheritKubernetesResourcesEnvVar)
+			defer func() {
+				if originalValue == "" {
+					os.Unsetenv(model.OktetoInheritKubernetesResourcesEnvVar)
+				} else {
+					os.Setenv(model.OktetoInheritKubernetesResourcesEnvVar, originalValue)
+				}
+			}()
+
+			// Set test environment variable
+			if tt.envVarValue == "" {
+				os.Unsetenv(model.OktetoInheritKubernetesResourcesEnvVar)
+			} else {
+				os.Setenv(model.OktetoInheritKubernetesResourcesEnvVar, tt.envVarValue)
+			}
+
+			ctx := context.Background()
+			clientset := fake.NewSimpleClientset(tt.deployment)
+
+			app := NewDeploymentApp(tt.deployment)
+			translations, err := GetTranslations(ctx, "test", tt.dev, app, false, clientset)
+
+			assert.NoError(t, err)
+			assert.NotNil(t, translations)
+
+			// Check that the main translation exists
+			mainTranslation, exists := translations[tt.deployment.Name]
+			assert.True(t, exists)
+			assert.NotNil(t, mainTranslation)
+
+			// Check the dev resources
+			assert.Equal(t, tt.expectedResources, mainTranslation.Dev.Resources)
+
+			// Check the translation rule resources
+			if len(mainTranslation.Rules) > 0 {
+				if tt.shouldInherit {
+					assert.Equal(t, tt.expectedResources, mainTranslation.Rules[0].Resources)
+				} else {
+					// When not inheriting, the rule should have the original dev resources
+					assert.Equal(t, tt.expectedResources, mainTranslation.Rules[0].Resources)
+				}
+			}
+		})
+	}
+}
+
+func TestGetTranslations_InheritKubernetesNodeSelector(t *testing.T) {
+	tests := []struct {
+		name                  string
+		envVarValue           string
+		dev                   *model.Dev
+		deployment            *appsv1.Deployment
+		expectedNodeSelector  map[string]string
+		shouldInherit         bool
+	}{
+		{
+			name:        "inherit nodeSelector when env var is true and dev nodeSelector is empty",
+			envVarValue: "true",
+			dev: &model.Dev{
+				Name:         "test",
+				Container:    "app",
+				NodeSelector: nil,
+			},
+			deployment: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "test",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							NodeSelector: map[string]string{
+								"kubernetes.io/os":   "linux",
+								"kubernetes.io/arch": "amd64",
+							},
+							Containers: []v1.Container{
+								{
+									Name:  "app",
+									Image: "nginx:latest",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedNodeSelector: map[string]string{
+				"kubernetes.io/os":   "linux",
+				"kubernetes.io/arch": "amd64",
+			},
+			shouldInherit: true,
+		},
+		{
+			name:        "do not inherit when env var is false",
+			envVarValue: "false",
+			dev: &model.Dev{
+				Name:         "test",
+				Container:    "app",
+				NodeSelector: nil,
+			},
+			deployment: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "test",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							NodeSelector: map[string]string{
+								"node-type": "gpu",
+							},
+							Containers: []v1.Container{
+								{
+									Name:  "app",
+									Image: "nginx:latest",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedNodeSelector: nil,
+			shouldInherit:         false,
+		},
+		{
+			name:        "do not inherit when dev nodeSelector is not empty",
+			envVarValue: "true",
+			dev: &model.Dev{
+				Name:      "test",
+				Container: "app",
+				NodeSelector: map[string]string{
+					"custom-label": "custom-value",
+				},
+			},
+			deployment: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "test",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							NodeSelector: map[string]string{
+								"kubernetes.io/os": "linux",
+							},
+							Containers: []v1.Container{
+								{
+									Name:  "app",
+									Image: "nginx:latest",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedNodeSelector: map[string]string{
+				"custom-label": "custom-value",
+			},
+			shouldInherit: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set environment variable
+			if tt.envVarValue != "" {
+				os.Setenv(model.OktetoInheritKubernetesNodeSelectorEnvVar, tt.envVarValue)
+			} else {
+				os.Unsetenv(model.OktetoInheritKubernetesNodeSelectorEnvVar)
+			}
+			defer os.Unsetenv(model.OktetoInheritKubernetesNodeSelectorEnvVar)
+
+			ctx := context.Background()
+			clientset := fake.NewSimpleClientset(tt.deployment)
+
+			app := NewDeploymentApp(tt.deployment)
+			translations, err := GetTranslations(ctx, "test", tt.dev, app, false, clientset)
+
+			assert.NoError(t, err)
+			assert.NotNil(t, translations)
+
+			// Check that the main translation exists
+			mainTranslation, exists := translations["test"]
+			assert.True(t, exists)
+			assert.NotNil(t, mainTranslation)
+
+			// Check that there's at least one rule
+			assert.Greater(t, len(mainTranslation.Rules), 0)
+
+			if tt.shouldInherit {
+				// When inheriting, the dev should have the inherited nodeSelector
+				assert.Equal(t, tt.expectedNodeSelector, tt.dev.NodeSelector)
+				// And the rule should also have the inherited nodeSelector
+				assert.Equal(t, tt.expectedNodeSelector, mainTranslation.Rules[0].NodeSelector)
+			} else {
+				// When not inheriting, the rule should have the original dev nodeSelector
+				assert.Equal(t, tt.expectedNodeSelector, mainTranslation.Rules[0].NodeSelector)
+			}
+		})
+	}
+}
+
+// Helper functions for parsing quantities in tests
+func mustParseK8sQuantity(s string) resource.Quantity {
+	return resource.MustParse(s)
+}
+
+func mustParseModelQuantity(s string) resource.Quantity {
+	return resource.MustParse(s)
 }

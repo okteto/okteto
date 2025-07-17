@@ -1049,6 +1049,68 @@ func (s *Secret) GetFileName() string {
 	return filepath.Base(s.RemotePath)
 }
 
+// ShouldInheritKubernetesResources returns true if the environment variable is enabled
+func ShouldInheritKubernetesResources() bool {
+	return os.Getenv(OktetoInheritKubernetesResourcesEnvVar) == "true"
+}
+
+// ShouldInheritKubernetesNodeSelector returns true if the environment variable is enabled
+func ShouldInheritKubernetesNodeSelector() bool {
+	return os.Getenv(OktetoInheritKubernetesNodeSelectorEnvVar) == "true"
+}
+
+// HasEmptyResources returns true if the dev resources are empty (no resources specified in okteto manifest)
+func (dev *Dev) HasEmptyResources() bool {
+	return len(dev.Resources.Requests) == 0 && len(dev.Resources.Limits) == 0
+}
+
+// InheritResourcesFromContainer copies resources from the original Kubernetes container to the dev resources
+func (dev *Dev) InheritResourcesFromContainer(container *apiv1.Container) {
+	if container == nil {
+		return
+	}
+
+	// Copy requests
+	if len(container.Resources.Requests) > 0 {
+		if dev.Resources.Requests == nil {
+			dev.Resources.Requests = make(ResourceList)
+		}
+		for k, v := range container.Resources.Requests {
+			dev.Resources.Requests[k] = v
+		}
+	}
+
+	// Copy limits
+	if len(container.Resources.Limits) > 0 {
+		if dev.Resources.Limits == nil {
+			dev.Resources.Limits = make(ResourceList)
+		}
+		for k, v := range container.Resources.Limits {
+			dev.Resources.Limits[k] = v
+		}
+	}
+}
+
+// HasEmptyNodeSelector checks if the dev configuration has an empty nodeSelector
+func (dev *Dev) HasEmptyNodeSelector() bool {
+	return len(dev.NodeSelector) == 0
+}
+
+// InheritNodeSelectorFromPodSpec copies nodeSelector from a Kubernetes PodSpec to the dev configuration
+func (dev *Dev) InheritNodeSelectorFromPodSpec(podSpec *apiv1.PodSpec) {
+	if podSpec == nil || len(podSpec.NodeSelector) == 0 {
+		return
+	}
+
+	if dev.NodeSelector == nil {
+		dev.NodeSelector = make(map[string]string)
+	}
+
+	for key, value := range podSpec.NodeSelector {
+		dev.NodeSelector[key] = value
+	}
+}
+
 // GetTimeout returns the timeout override
 func GetTimeout() (time.Duration, error) {
 	defaultTimeout := 60 * time.Second
