@@ -93,14 +93,12 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 	if ctxOptions.Force && ctxOptions.Context != "" {
 		contextToDelete := ctxOptions.Context
 		// Try both with and without schema
-		if _, ok := ctxStore.Contexts[contextToDelete]; ok {
-			delete(ctxStore.Contexts, contextToDelete)
-		}
+		delete(ctxStore.Contexts, contextToDelete)
 		contextWithSchema := okteto.AddSchema(contextToDelete)
 		if _, ok := ctxStore.Contexts[contextWithSchema]; ok {
-			delete(ctxStore.Contexts, contextWithSchema)
 			contextToDelete = contextWithSchema
 		}
+		delete(ctxStore.Contexts, contextWithSchema)
 
 		// If we deleted the current context, clear it
 		if ctxStore.CurrentContext == contextToDelete {
