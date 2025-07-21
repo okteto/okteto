@@ -10,4 +10,3 @@ name = "go"
 enabled = true
   [analyzers.meta]
   import_root = "github.com/okteto/okteto"
-  cyclomatic_complexity_threshold = "high"
