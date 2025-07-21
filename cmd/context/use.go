@@ -87,6 +87,32 @@ This will prompt you to select one of your existing Okteto Contexts or to create
 	return cmd
 }
 
+func (c *Command) deleteContext(contextToDelete string, ctxStore *okteto.ContextStore) error {
+
+	// Try both with and without schema
+	delete(ctxStore.Contexts, contextToDelete)
+	contextWithSchema := okteto.AddSchema(contextToDelete)
+	delete(ctxStore.Contexts, contextWithSchema)
+	ctxStore.CurrentContext = ""
+
+	// Write the updated context store
+	if err := c.OktetoContextWriter.Write(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Command) forceLoginIfRequested(ctxOptions *Options, ctxStore *okteto.ContextStore) error {
+	if ctxOptions.Force && ctxOptions.Context != "" {
+		c.deleteContext(ctxOptions.Context, ctxStore)
+		// Clear any cached token to force re-authentication
+		ctxOptions.Token = ""
+		ctxOptions.InferredToken = false
+	}
+
+	return nil
+}
+
 func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 	ctxStore := okteto.GetContextStore()
 	if len(ctxStore.Contexts) == 0 {
@@ -138,7 +164,17 @@ func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 		ctxOptions.Save = true
 	}
 
+	if err := c.forceLoginIfRequested(ctxOptions, ctxStore); err != nil {
+		return err
+	}
+
 	if err := c.UseContext(ctx, ctxOptions); err != nil {
+		// delete the context to force the user to log in again
+		if oktetoErrors.IsNotFound(err) {
+			c.deleteContext(ctxOptions.Context, ctxStore)
+			return oktetoErrors.AuthFailedError{Context: ctxOptions.Context}.Error()
+		}
+
 		return err
 	}
 

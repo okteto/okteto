@@ -58,7 +58,23 @@ func (NotLoggedError) Unwrap() error {
 	return ErrNotLoggedMsg
 }
 
+// AuthFailedError is raised when the user can't be logged to Okteto
+type AuthFailedError struct {
+	Context string
+}
+
+// Error returns the error message
+func (e AuthFailedError) Error() UserError {
+	return UserError{
+		E:    ErrAuthFailed,
+		Hint: fmt.Sprintf(" Please run 'okteto context use %s' and try again", e.Context),
+	}
+}
+
 var (
+	// ErrAuthFailed is raised when the CLI failed to log in the user
+	ErrAuthFailed = errors.New("we couldn’t log you in due to an unexpected issue")
+
 	// ErrCommandFailed is raised when the command execution failed
 	ErrCommandFailed = errors.New("command execution failed")
 

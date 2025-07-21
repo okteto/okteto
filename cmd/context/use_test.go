@@ -14,7 +14,6 @@
 package context
 
 import (
-	"context"
 	"os"
 	"testing"
 
@@ -71,8 +70,7 @@ func Test_setSecrets(t *testing.T) {
 	}
 }
 
-func TestUseContext_Force(t *testing.T) {
-	ctx := context.Background()
+func TestUseContext_forceLoginIfRequired(t *testing.T) {
 	user := &types.User{
 		Token: "test-token",
 	}
@@ -114,8 +112,50 @@ func TestUseContext_Force(t *testing.T) {
 			},
 			expectedErr: false,
 			validateFunc: func(t *testing.T, ctxStore *okteto.ContextStore, ctxOptions *Options) {
-				// Verify that the context was recreated (should exist after UseContext)
-				assert.Contains(t, ctxStore.Contexts, "https://okteto.example.com")
+				// Verify that the context was removed
+				assert.NotContains(t, ctxStore.Contexts, "https://okteto.example.com")
+				// Verify that the token was cleared during force operation
+				assert.Empty(t, ctxOptions.Token)
+				assert.False(t, ctxOptions.InferredToken)
+			},
+		},
+		{
+			name: "force flag deletes only matching context",
+			ctxStore: &okteto.ContextStore{
+				Contexts: map[string]*okteto.Context{
+					"https://okteto.example.com": {
+						Name:      "https://okteto.example.com",
+						Token:     "existing-token",
+						Namespace: "existing-namespace",
+						IsOkteto:  true,
+					},
+					"https://okteto.example.dev": {
+						Name:      "https://okteto.example.dev",
+						Token:     "existing-token-dev",
+						Namespace: "existing-namespace-dev",
+						IsOkteto:  true,
+					},
+				},
+				CurrentContext: "https://okteto.example.com",
+			},
+			ctxOptions: &Options{
+				Context:      "https://okteto.example.com",
+				Force:        true,
+				IsOkteto:     true,
+				Save:         true,
+				IsCtxCommand: true,
+			},
+			fakeOktetoClient: &client.FakeOktetoClient{
+				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{}, nil),
+				Users:           client.NewFakeUsersClient(user),
+				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
+			},
+			expectedErr: false,
+			validateFunc: func(t *testing.T, ctxStore *okteto.ContextStore, ctxOptions *Options) {
+				// Verify that the context was removed
+				assert.NotContains(t, ctxStore.Contexts, "https://okteto.example.com")
+				assert.Contains(t, ctxStore.Contexts, "https://okteto.example.dev")
 				// Verify that the token was cleared during force operation
 				assert.Empty(t, ctxOptions.Token)
 				assert.False(t, ctxOptions.InferredToken)
@@ -149,43 +189,11 @@ func TestUseContext_Force(t *testing.T) {
 			},
 			expectedErr: false,
 			validateFunc: func(t *testing.T, ctxStore *okteto.ContextStore, ctxOptions *Options) {
-				// Verify that the context was recreated
-				assert.Contains(t, ctxStore.Contexts, "https://okteto.example.com")
+				// Verify that the context was removed
+				assert.NotContains(t, ctxStore.Contexts, "https://okteto.example.com")
 				// Verify that the token was cleared during force operation
 				assert.Empty(t, ctxOptions.Token)
 				assert.False(t, ctxOptions.InferredToken)
-			},
-		},
-		{
-			name: "force flag clears current context when deleting it",
-			ctxStore: &okteto.ContextStore{
-				Contexts: map[string]*okteto.Context{
-					"https://okteto.example.com": {
-						Name:      "https://okteto.example.com",
-						Token:     "existing-token",
-						Namespace: "existing-namespace",
-						IsOkteto:  true,
-					},
-				},
-				CurrentContext: "https://okteto.example.com",
-			},
-			ctxOptions: &Options{
-				Context:      "https://okteto.example.com",
-				Force:        true,
-				IsOkteto:     true,
-				Save:         true,
-				IsCtxCommand: true,
-			},
-			fakeOktetoClient: &client.FakeOktetoClient{
-				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{}, nil),
-				Users:           client.NewFakeUsersClient(user),
-				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{}),
-				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
-			},
-			expectedErr: false,
-			validateFunc: func(t *testing.T, ctxStore *okteto.ContextStore, ctxOptions *Options) {
-				// The current context should be set back to the context after UseContext completes
-				assert.Equal(t, "https://okteto.example.com", ctxStore.CurrentContext)
 			},
 		},
 		{
@@ -209,9 +217,8 @@ func TestUseContext_Force(t *testing.T) {
 			},
 			expectedErr: false,
 			validateFunc: func(t *testing.T, ctxStore *okteto.ContextStore, ctxOptions *Options) {
-				// Context should be created normally
-				assert.Contains(t, ctxStore.Contexts, "https://okteto.example.com")
-				assert.Equal(t, "https://okteto.example.com", ctxStore.CurrentContext)
+				assert.Equal(t, ctxStore.Contexts, map[string]*okteto.Context{})
+				assert.Equal(t, "", ctxStore.CurrentContext)
 			},
 		},
 		{
@@ -228,11 +235,12 @@ func TestUseContext_Force(t *testing.T) {
 				CurrentContext: "https://okteto.example.com",
 			},
 			ctxOptions: &Options{
-				Context:      "https://okteto.example.com",
-				Force:        false,
-				IsOkteto:     true,
-				Save:         true,
-				IsCtxCommand: true,
+				Context:       "https://okteto.example.com",
+				Force:         false,
+				IsOkteto:      true,
+				Save:          true,
+				IsCtxCommand:  true,
+				InferredToken: false,
 			},
 			fakeOktetoClient: &client.FakeOktetoClient{
 				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{}, nil),
@@ -243,8 +251,9 @@ func TestUseContext_Force(t *testing.T) {
 			expectedErr: false,
 			validateFunc: func(t *testing.T, ctxStore *okteto.ContextStore, ctxOptions *Options) {
 				// Token should be preserved from existing context
-				assert.Equal(t, "existing-token", ctxOptions.Token)
-				assert.True(t, ctxOptions.InferredToken)
+				assert.Contains(t, ctxStore.Contexts, "https://okteto.example.com")
+				assert.Equal(t, "existing-token", ctxStore.Contexts["https://okteto.example.com"].Token)
+				assert.False(t, ctxOptions.InferredToken)
 			},
 		},
 	}
@@ -263,8 +272,7 @@ func TestUseContext_Force(t *testing.T) {
 				kubetokenController:  newStaticKubetokenController(),
 			}
 
-			// Execute the UseContext method
-			err := cmd.UseContext(ctx, tt.ctxOptions)
+			err := cmd.forceLoginIfRequested(tt.ctxOptions, tt.ctxStore)
 
 			// Validate the result
 			if tt.expectedErr {
