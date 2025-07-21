@@ -30,7 +30,7 @@ import (
 )
 
 // Test helpers
-func assertDevFields(t *testing.T, dev *Dev, main *Dev) {
+func assertDevFields(t *testing.T, dev, main *Dev) {
 	t.Helper()
 	if dev.Name != "deployment" {
 		t.Errorf("'name' was not parsed: %+v", main)
@@ -126,11 +126,6 @@ func assertImage(t *testing.T, got, want string) {
 	if got != want {
 		t.Errorf("got: '%s', expected: '%s'", got, want)
 	}
-}
-
-func runValidateTestCase(t *testing.T, manifest []byte, expectErr bool) {
-	t.Helper()
-
 }
 
 func Test_LoadManifest(t *testing.T) {
@@ -1706,7 +1701,7 @@ func TestDev_InheritResourcesFromContainer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resources := tt.dev.GetInheritedResourcesFromContainer(tt.container)
+			resources := GetInheritedResourcesFromContainer(tt.container)
 			assert.Equal(t, tt.expected, resources)
 		})
 	}

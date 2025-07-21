@@ -133,7 +133,7 @@ func GetTranslations(ctx context.Context, namespace string, dev *model.Dev, app 
 			if model.ShouldInheritKubernetesResources() && tr.Dev.HasEmptyResources() {
 
 				// Update the rule with the inherited resources
-				rule.Resources = tr.Dev.GetInheritedResourcesFromContainer(devContainer)
+				rule.Resources = model.GetInheritedResourcesFromContainer(devContainer)
 			}
 
 			// Inherit Kubernetes nodeSelector if the feature is enabled and dev nodeSelector is empty

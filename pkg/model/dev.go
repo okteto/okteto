@@ -1064,8 +1064,13 @@ func (dev *Dev) HasEmptyResources() bool {
 	return len(dev.Resources.Requests) == 0 && len(dev.Resources.Limits) == 0
 }
 
+// HasEmptyNodeSelector checks if the dev configuration has an empty nodeSelector
+func (dev *Dev) HasEmptyNodeSelector() bool {
+	return len(dev.NodeSelector) == 0
+}
+
 // GetInheritedResourcesFromContainer returns resources inherited from the original Kubernetes container to the dev resources
-func (dev *Dev) GetInheritedResourcesFromContainer(container *apiv1.Container) ResourceRequirements {
+func GetInheritedResourcesFromContainer(container *apiv1.Container) ResourceRequirements {
 	rr := ResourceRequirements{}
 
 	if container == nil {
@@ -1089,11 +1094,6 @@ func (dev *Dev) GetInheritedResourcesFromContainer(container *apiv1.Container) R
 	}
 
 	return rr
-}
-
-// HasEmptyNodeSelector checks if the dev configuration has an empty nodeSelector
-func (dev *Dev) HasEmptyNodeSelector() bool {
-	return len(dev.NodeSelector) == 0
 }
 
 // GetTimeout returns the timeout override

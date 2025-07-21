@@ -865,13 +865,7 @@ func TestGetTranslations_InheritKubernetesNodeSelector(t *testing.T) {
 			// Check that there's at least one rule
 			assert.Greater(t, len(mainTranslation.Rules), 0)
 
-			if tt.shouldInherit {
-				// When inheriting, the rule should have the inherited nodeSelector
-				assert.Equal(t, tt.expectedNodeSelector, mainTranslation.Rules[0].NodeSelector)
-			} else {
-				// When not inheriting, the rule should have the original dev nodeSelector
-				assert.Equal(t, tt.expectedNodeSelector, mainTranslation.Rules[0].NodeSelector)
-			}
+			assert.Equal(t, tt.expectedNodeSelector, mainTranslation.Rules[0].NodeSelector)
 		})
 	}
 }
