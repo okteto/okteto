@@ -1706,8 +1706,8 @@ func TestDev_InheritResourcesFromContainer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.dev.InheritResourcesFromContainer(tt.container)
-			assert.Equal(t, tt.expected, tt.dev.Resources)
+			resources := tt.dev.GetInheritedResourcesFromContainer(tt.container)
+			assert.Equal(t, tt.expected, resources)
 		})
 	}
 }
@@ -1801,81 +1801,6 @@ func TestDev_HasEmptyNodeSelector(t *testing.T) {
 			}
 			result := dev.HasEmptyNodeSelector()
 			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestDev_InheritNodeSelectorFromPodSpec(t *testing.T) {
-	tests := []struct {
-		name     string
-		dev      *Dev
-		podSpec  *apiv1.PodSpec
-		expected map[string]string
-	}{
-		{
-			name: "inherit from podSpec with nodeSelector",
-			dev: &Dev{
-				NodeSelector: nil,
-			},
-			podSpec: &apiv1.PodSpec{
-				NodeSelector: map[string]string{
-					"kubernetes.io/os":   "linux",
-					"kubernetes.io/arch": "amd64",
-				},
-			},
-			expected: map[string]string{
-				"kubernetes.io/os":   "linux",
-				"kubernetes.io/arch": "amd64",
-			},
-		},
-		{
-			name: "inherit from podSpec with single nodeSelector",
-			dev: &Dev{
-				NodeSelector: map[string]string{},
-			},
-			podSpec: &apiv1.PodSpec{
-				NodeSelector: map[string]string{
-					"node-type": "gpu",
-				},
-			},
-			expected: map[string]string{
-				"node-type": "gpu",
-			},
-		},
-		{
-			name: "inherit from nil podSpec",
-			dev: &Dev{
-				NodeSelector: nil,
-			},
-			podSpec:  nil,
-			expected: nil,
-		},
-		{
-			name: "inherit from podSpec with empty nodeSelector",
-			dev: &Dev{
-				NodeSelector: nil,
-			},
-			podSpec: &apiv1.PodSpec{
-				NodeSelector: map[string]string{},
-			},
-			expected: nil,
-		},
-		{
-			name: "inherit from podSpec with nil nodeSelector",
-			dev: &Dev{
-				NodeSelector: nil,
-			},
-			podSpec: &apiv1.PodSpec{
-				NodeSelector: nil,
-			},
-			expected: nil,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.dev.InheritNodeSelectorFromPodSpec(tt.podSpec)
-			assert.Equal(t, tt.expected, tt.dev.NodeSelector)
 		})
 	}
 }

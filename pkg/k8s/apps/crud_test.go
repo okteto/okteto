@@ -710,9 +710,6 @@ func TestGetTranslations_InheritKubernetesResources(t *testing.T) {
 			assert.True(t, exists)
 			assert.NotNil(t, mainTranslation)
 
-			// Check the dev resources
-			assert.Equal(t, tt.expectedResources, mainTranslation.Dev.Resources)
-
 			// Check the translation rule resources
 			if len(mainTranslation.Rules) > 0 {
 				if tt.shouldInherit {
@@ -869,9 +866,7 @@ func TestGetTranslations_InheritKubernetesNodeSelector(t *testing.T) {
 			assert.Greater(t, len(mainTranslation.Rules), 0)
 
 			if tt.shouldInherit {
-				// When inheriting, the dev should have the inherited nodeSelector
-				assert.Equal(t, tt.expectedNodeSelector, tt.dev.NodeSelector)
-				// And the rule should also have the inherited nodeSelector
+				// When inheriting, the rule should have the inherited nodeSelector
 				assert.Equal(t, tt.expectedNodeSelector, mainTranslation.Rules[0].NodeSelector)
 			} else {
 				// When not inheriting, the rule should have the original dev nodeSelector
