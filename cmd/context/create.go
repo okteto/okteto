@@ -88,7 +88,7 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 	created := false
 
 	ctxStore := okteto.GetContextStore()
-	
+
 	// Handle force flag: delete existing context configuration to force re-login
 	if ctxOptions.Force && ctxOptions.Context != "" {
 		contextToDelete := ctxOptions.Context
@@ -101,22 +101,22 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 			delete(ctxStore.Contexts, contextWithSchema)
 			contextToDelete = contextWithSchema
 		}
-		
+
 		// If we deleted the current context, clear it
 		if ctxStore.CurrentContext == contextToDelete {
 			ctxStore.CurrentContext = ""
 		}
-		
+
 		// Write the updated context store
 		if err := c.OktetoContextWriter.Write(); err != nil {
 			return err
 		}
-		
+
 		// Clear any cached token to force re-authentication
 		ctxOptions.Token = ""
 		ctxOptions.InferredToken = false
 	}
-	
+
 	if okCtx, ok := ctxStore.Contexts[ctxOptions.Context]; ok && okCtx.IsOkteto {
 		ctxOptions.IsOkteto = true
 	}

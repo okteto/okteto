@@ -284,7 +284,7 @@ func TestUseContext_Force(t *testing.T) {
 func TestUseCommand_ForceFlag(t *testing.T) {
 	// Test that the force flag is properly added to the command
 	cmd := Use()
-	
+
 	// Check that the force flag exists
 	forceFlag := cmd.Flags().Lookup("force")
 	require.NotNil(t, forceFlag, "force flag should be defined")
