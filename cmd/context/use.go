@@ -177,7 +177,11 @@ func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 	if err := c.UseContext(ctx, ctxOptions); err != nil {
 		// delete the context to force the user to log in again
 		if oktetoErrors.IsNotFound(err) {
-			c.deleteContext(ctxOptions.Context, ctxStore)
+			if err := c.deleteContext(ctxOptions.Context, ctxStore); err != nil {
+				// at this point we only log since there is no clear action left
+				oktetoLog.Info(err)
+			}
+
 			return oktetoErrors.AuthFailedError{Context: ctxOptions.Context}.Error()
 		}
 
