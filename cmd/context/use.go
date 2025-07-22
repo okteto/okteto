@@ -118,7 +118,7 @@ func (c *Command) forceLoginIfRequested(ctxOptions *Options, ctxStore *okteto.Co
 	return nil
 }
 
-func (c *Command) prepareContextOptionsBeforeRun(ctxStore *okteto.ContextStore, ctxOptions *Options) error {
+func prepareContextOptionsBeforeRun(ctxStore *okteto.ContextStore, ctxOptions *Options) error {
 	if len(ctxStore.Contexts) == 0 {
 		// if the context store has no context stored, set flag to save the
 		// new one generated. This is necessary for any command other than
@@ -174,7 +174,7 @@ func (c *Command) prepareContextOptionsBeforeRun(ctxStore *okteto.ContextStore, 
 
 func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 	ctxStore := okteto.GetContextStore()
-	if err := c.prepareContextOptionsBeforeRun(ctxStore, ctxOptions); err != nil {
+	if err := prepareContextOptionsBeforeRun(ctxStore, ctxOptions); err != nil {
 		return err
 	}
 

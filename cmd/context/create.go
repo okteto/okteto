@@ -439,6 +439,42 @@ func (c *Command) saveContext() error {
 	return nil
 }
 
+func (c *Command) saveContextWithUserContext(userContext *types.UserContext) error {
+	// If userID is not on context config file we add it and save it.
+	// this prevents from relogin to actual users
+	if okteto.GetContext().UserID == "" && okteto.GetContext().IsOkteto {
+		okteto.GetContext().UserID = userContext.User.ID
+		if err := c.saveContext(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// shouldContinue returns true if the getUserContext loop should continue
+func shouldGetUserContextLoopContinue(err error) (bool, error) {
+	if errors.Is(err, oktetoErrors.ErrTokenExpired) {
+		return false, err
+	}
+
+	if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.GetContext().Name).Error() {
+		return false, err
+	}
+
+	// If there is a TLS error, don't continue the loop and return the raw error
+	if oktetoErrors.IsX509(err) {
+		return false, err
+	}
+
+	if errors.Is(err, oktetoErrors.ErrInvalidLicense) {
+		return false, err
+	}
+
+	return true, nil
+
+}
+
 func (c *Command) getUserContext(ctx context.Context, ctxName, ns, token string) (*types.UserContext, error) {
 	client, err := c.OktetoClientProvider.Provide(
 		okteto.WithCtxName(ctxName),
@@ -451,60 +487,40 @@ func (c *Command) getUserContext(ctx context.Context, ctxName, ns, token string)
 	retries := 0
 	for retries <= 3 {
 		userContext, err := client.User().GetContext(ctx, ns)
-
-		if err != nil {
-			if errors.Is(err, oktetoErrors.ErrTokenExpired) {
-				return nil, err
-			}
-
-			if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.GetContext().Name).Error() {
-				return nil, err
-			}
-
-			if oktetoErrors.IsForbidden(err) {
-				if err := c.saveContext(); err != nil {
-					return nil, err
-				}
-
-				return nil, oktetoErrors.NotLoggedError{
-					Context: okteto.GetContext().Name,
-				}
-			}
-
-			// If there is a TLS error, don't continue the loop and return the raw error
-			if oktetoErrors.IsX509(err) {
-				return nil, err
-			}
-
-			if errors.Is(err, oktetoErrors.ErrInvalidLicense) {
-				return nil, err
-			}
-
-			if oktetoErrors.IsNotFound(err) {
-				// fallback to personal namespace using empty string as param
-				userContext, err = client.User().GetContext(ctx, "")
-				if err != nil {
-					return nil, err
-				}
-			}
+		if err == nil {
+			return userContext, c.saveContextWithUserContext(userContext)
 		}
 
-		if err != nil {
-			oktetoLog.Info(err)
-			retries++
-			continue
-		}
-
-		// If userID is not on context config file we add it and save it.
-		// this prevents from relogin to actual users
-		if okteto.GetContext().UserID == "" && okteto.GetContext().IsOkteto {
-			okteto.GetContext().UserID = userContext.User.ID
+		if oktetoErrors.IsNotFound(err) {
+			// IsNotFound requires special handling: we  fallback to the personal namespace using empty string as param and try again
+			userContext, err = client.User().GetContext(ctx, "")
+			if err == nil {
+				return userContext, c.saveContextWithUserContext(userContext)
+			}
+		} else if oktetoErrors.IsForbidden(err) {
+			// IsForbidden requires special handling: we update the context before returning
 			if err := c.saveContext(); err != nil {
 				return nil, err
 			}
+
+			return nil, oktetoErrors.NotLoggedError{
+				Context: okteto.GetContext().Name,
+			}
+		} else {
+			// For Nontransient errors, we return immediately
+			shouldContinue, parsedError := shouldGetUserContextLoopContinue(err)
+			if !shouldContinue {
+				return nil, parsedError
+			}
 		}
-		return userContext, nil
+
+		oktetoLog.Info(err)
+		retries++
+		continue
+
 	}
+
+	// If we can't get the usercontext, we return an ErrInternalServerError
 	return nil, oktetoErrors.ErrInternalServerError
 }
 
