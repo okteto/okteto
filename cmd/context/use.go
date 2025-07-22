@@ -174,7 +174,9 @@ func (c *Command) prepareContextOptionsBeforeRun(ctxStore *okteto.ContextStore, 
 
 func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 	ctxStore := okteto.GetContextStore()
-	c.prepareContextOptionsBeforeRun(ctxStore, ctxOptions)
+	if err := c.prepareContextOptionsBeforeRun(ctxStore, ctxOptions); err != nil {
+		return err
+	}
 
 	if err := c.forceLoginIfRequested(ctxOptions, ctxStore); err != nil {
 		return err
