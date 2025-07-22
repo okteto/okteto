@@ -148,7 +148,7 @@ func (t *trace) update(ss *client.SolveStatus) error {
 
 func (t *trace) display(progress string) {
 	for _, v := range t.ongoing {
-		if t.isTransferringContext(v.name) {
+		if isTransferringContext(v.name) {
 			if v.currentTransferedContext != 0 {
 				currentLoadedCtx := units.Bytes(v.currentTransferedContext)
 				if t.showCtxAdvice && currentLoadedCtx > largeContextThreshold {
@@ -158,7 +158,7 @@ func (t *trace) display(progress string) {
 				oktetoLog.Spinner(fmt.Sprintf("Synchronizing context: %.2f", currentLoadedCtx))
 			}
 		}
-		if t.hasCommandLogs(v) {
+		if hasCommandLogs(v) {
 			switch progress {
 			case DeployOutputModeOnBuild:
 				oktetoLog.Spinner("Deploying your development environment...")
@@ -218,16 +218,6 @@ func (t *trace) display(progress string) {
 	}
 }
 
-func (t trace) isTransferringContext(name string) bool {
-	isInternal := strings.HasPrefix(name, "[internal]")
-	isLoadingCtx := strings.Contains(name, "load build")
-	return isInternal && isLoadingCtx
-}
-
-func (t trace) hasCommandLogs(v *vertexInfo) bool {
-	return len(v.logs) != 0
-}
-
 func (t *trace) removeCompletedSteps() {
 	for k, v := range t.ongoing {
 		if v.completed {
@@ -244,6 +234,16 @@ func (t *trace) removeCompletedSteps() {
 			delete(t.ongoing, k)
 		}
 	}
+}
+
+func hasCommandLogs(v *vertexInfo) bool {
+	return len(v.logs) != 0
+}
+
+func isTransferringContext(name string) bool {
+	isInternal := strings.HasPrefix(name, "[internal]")
+	isLoadingCtx := strings.Contains(name, "load build")
+	return isInternal && isLoadingCtx
 }
 
 type vertexInfo struct {
