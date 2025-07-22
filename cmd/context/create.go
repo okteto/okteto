@@ -84,9 +84,27 @@ func NewContextCommand(ctxCmdOption ...ctxCmdOption) *Command {
 	return cfg
 }
 
-func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
+func (c *Command) prepareOptionsForNonOktetoContext(ctx context.Context, ctxOptions *Options) error {
+	if isUrl(ctxOptions.Context) {
+		ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
+		ctxOptions.IsOkteto = true
+	} else {
+		if !isValidCluster(ctxOptions.Context) {
+			return oktetoErrors.UserError{E: fmt.Errorf("invalid okteto context '%s'", ctxOptions.Context),
+				Hint: "Please run 'okteto context' to select one context"}
+		}
+		transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace, c.K8sClientProvider)
+		if transformedCtx != ctxOptions.Context {
+			ctxOptions.Context = transformedCtx
+			ctxOptions.IsOkteto = true
+		}
+	}
+
+	return nil
+}
+
+func (c *Command) prepareContextOptionsBeforeUseContext(ctx context.Context, ctxStore *okteto.ContextStore, ctxOptions *Options) (bool, error) {
 	created := false
-	ctxStore := okteto.GetContextStore()
 
 	if okCtx, ok := ctxStore.Contexts[ctxOptions.Context]; ok && okCtx.IsOkteto {
 		ctxOptions.IsOkteto = true
@@ -98,20 +116,8 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 	}
 
 	if !ctxOptions.IsOkteto {
-
-		if isUrl(ctxOptions.Context) {
-			ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
-			ctxOptions.IsOkteto = true
-		} else {
-			if !isValidCluster(ctxOptions.Context) {
-				return oktetoErrors.UserError{E: fmt.Errorf("invalid okteto context '%s'", ctxOptions.Context),
-					Hint: "Please run 'okteto context' to select one context"}
-			}
-			transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace, c.K8sClientProvider)
-			if transformedCtx != ctxOptions.Context {
-				ctxOptions.Context = transformedCtx
-				ctxOptions.IsOkteto = true
-			}
+		if err := c.prepareOptionsForNonOktetoContext(ctx, ctxOptions); err != nil {
+			return created, err
 		}
 	}
 
@@ -129,6 +135,53 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 	}
 
 	ctxStore.CurrentContext = ctxOptions.Context
+	return created, nil
+}
+
+func (c *Command) checkForAccessAndUpdateContext(ctx context.Context, ctxStore *okteto.ContextStore, ctxOptions *Options) error {
+
+	hasAccess, err := hasAccessToNamespace(ctx, c, ctxOptions)
+	if err != nil {
+		return err
+	}
+
+	if !hasAccess {
+		if ctxOptions.CheckNamespaceAccess {
+			return oktetoErrors.UserError{
+				E:    fmt.Errorf("namespace '%s' not found on context '%s'", ctxOptions.Namespace, ctxOptions.Context),
+				Hint: "Please verify that the namespace exists and that you have access to it.",
+			}
+		}
+
+		// if using a new context, our cached namespace may have been removed
+		// so swap over to the personal namespace instead of erroring
+		oktetoLog.Warning(
+			"No access to namespace '%s' switching to personal namespace '%s'",
+			ctxOptions.Namespace,
+			okteto.GetContext().PersonalNamespace,
+		)
+		currentCtx := ctxStore.Contexts[ctxOptions.Context]
+		currentCtx.Namespace = currentCtx.PersonalNamespace
+	}
+
+	currentCtx := ctxStore.Contexts[ctxOptions.Context]
+	currentCtx.IsStoredAsInsecure = okteto.IsInsecureSkipTLSVerifyPolicy()
+
+	if err := c.OktetoContextWriter.Write(); err != nil {
+		oktetoLog.Infof("error saving okteto context file: %v", err)
+		return fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
+	}
+
+	return nil
+}
+
+func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
+	ctxStore := okteto.GetContextStore()
+
+	created, err := c.prepareContextOptionsBeforeUseContext(ctx, ctxStore, ctxOptions)
+	if err != nil {
+		return err
+	}
 
 	if ctxOptions.IsOkteto {
 		if err := c.initOktetoContext(ctx, ctxOptions); err != nil {
@@ -141,36 +194,8 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 	}
 
 	if ctxOptions.Save {
-		hasAccess, err := hasAccessToNamespace(ctx, c, ctxOptions)
-		if err != nil {
+		if err := c.checkForAccessAndUpdateContext(ctx, ctxStore, ctxOptions); err != nil {
 			return err
-		}
-
-		if !hasAccess {
-			if ctxOptions.CheckNamespaceAccess {
-				return oktetoErrors.UserError{
-					E:    fmt.Errorf("namespace '%s' not found on context '%s'", ctxOptions.Namespace, ctxOptions.Context),
-					Hint: "Please verify that the namespace exists and that you have access to it.",
-				}
-			}
-
-			// if using a new context, our cached namespace may have been removed
-			// so swap over to the personal namespace instead of erroring
-			oktetoLog.Warning(
-				"No access to namespace '%s' switching to personal namespace '%s'",
-				ctxOptions.Namespace,
-				okteto.GetContext().PersonalNamespace,
-			)
-			currentCtx := ctxStore.Contexts[ctxOptions.Context]
-			currentCtx.Namespace = currentCtx.PersonalNamespace
-		}
-
-		currentCtx := ctxStore.Contexts[ctxOptions.Context]
-		currentCtx.IsStoredAsInsecure = okteto.IsInsecureSkipTLSVerifyPolicy()
-
-		if err := c.OktetoContextWriter.Write(); err != nil {
-			oktetoLog.Infof("error saving okteto context file: %v", err)
-			return fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
 		}
 	}
 
@@ -405,6 +430,15 @@ func (*Command) initKubernetesContext(ctxOptions *Options) error {
 	return nil
 }
 
+func (c *Command) saveContext() error {
+	if err := c.OktetoContextWriter.Write(); err != nil {
+		oktetoLog.Infof("error saving okteto context file: %v", err)
+		return fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
+	}
+
+	return nil
+}
+
 func (c *Command) getUserContext(ctx context.Context, ctxName, ns, token string) (*types.UserContext, error) {
 	client, err := c.OktetoClientProvider.Provide(
 		okteto.WithCtxName(ctxName),
@@ -428,10 +462,10 @@ func (c *Command) getUserContext(ctx context.Context, ctxName, ns, token string)
 			}
 
 			if oktetoErrors.IsForbidden(err) {
-				if err := c.OktetoContextWriter.Write(); err != nil {
-					oktetoLog.Infof("error saving okteto context file: %v", err)
-					return nil, fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
+				if err := c.saveContext(); err != nil {
+					return nil, err
 				}
+
 				return nil, oktetoErrors.NotLoggedError{
 					Context: okteto.GetContext().Name,
 				}
@@ -465,12 +499,10 @@ func (c *Command) getUserContext(ctx context.Context, ctxName, ns, token string)
 		// this prevents from relogin to actual users
 		if okteto.GetContext().UserID == "" && okteto.GetContext().IsOkteto {
 			okteto.GetContext().UserID = userContext.User.ID
-			if err := c.OktetoContextWriter.Write(); err != nil {
-				oktetoLog.Infof("error saving okteto context file: %v", err)
-				return nil, fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
+			if err := c.saveContext(); err != nil {
+				return nil, err
 			}
 		}
-
 		return userContext, nil
 	}
 	return nil, oktetoErrors.ErrInternalServerError

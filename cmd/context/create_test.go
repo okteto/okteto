@@ -832,10 +832,8 @@ func Test_loadDotEnv(t *testing.T) {
 		name     string
 	}{
 		{
-			name: "missing .env",
-			mockfs: func() afero.Fs {
-				return afero.NewMemMapFs()
-			},
+			name:   "missing .env",
+			mockfs: afero.NewMemMapFs,
 			expected: expected{
 				vars: map[string]string{},
 				err:  nil,
