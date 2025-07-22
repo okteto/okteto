@@ -30,7 +30,7 @@ import (
 
 func TestNewTrace(t *testing.T) {
 	trace := newTrace()
-	
+
 	assert.NotNil(t, trace)
 	assert.NotNil(t, trace.ongoing)
 	assert.NotNil(t, trace.stages)
@@ -42,7 +42,7 @@ func TestNewTrace(t *testing.T) {
 
 func TestTrace_IsTransferringContext(t *testing.T) {
 	trace := newTrace()
-	
+
 	tests := []struct {
 		name     string
 		input    string
@@ -74,7 +74,7 @@ func TestTrace_IsTransferringContext(t *testing.T) {
 			expected: false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := trace.isTransferringContext(tt.input)
@@ -85,7 +85,7 @@ func TestTrace_IsTransferringContext(t *testing.T) {
 
 func TestTrace_HasCommandLogs(t *testing.T) {
 	trace := newTrace()
-	
+
 	tests := []struct {
 		name     string
 		vertex   *vertexInfo
@@ -113,7 +113,7 @@ func TestTrace_HasCommandLogs(t *testing.T) {
 			expected: false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := trace.hasCommandLogs(tt.vertex)
@@ -225,7 +225,7 @@ func TestTrace_Update(t *testing.T) {
 			solveStatus: &client.SolveStatus{
 				Statuses: []*client.VertexStatus{
 					{
-						Vertex: mockDigest("missing-vertex"),
+						Vertex:  mockDigest("missing-vertex"),
 						Current: 50,
 						Total:   100,
 					},
@@ -246,18 +246,18 @@ func TestTrace_Update(t *testing.T) {
 			expectError: false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			trace := newTrace()
 			err := trace.update(tt.solveStatus)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errorMsg)
 			} else {
 				assert.NoError(t, err)
-				
+
 				// Verify vertex was added to ongoing
 				if len(tt.solveStatus.Vertexes) > 0 {
 					vertex := tt.solveStatus.Vertexes[0]
@@ -265,12 +265,12 @@ func TestTrace_Update(t *testing.T) {
 					assert.True(t, exists)
 					assert.Equal(t, vertex.Name, info.name)
 					assert.Equal(t, vertex.Cached, info.cached)
-					
+
 					if vertex.Completed != nil {
 						assert.True(t, info.completed)
 					}
 				}
-				
+
 				// Verify status was updated (only if vertex exists)
 				if len(tt.solveStatus.Statuses) > 0 {
 					status := tt.solveStatus.Statuses[0]
@@ -285,7 +285,7 @@ func TestTrace_Update(t *testing.T) {
 						assert.True(t, info.completed)
 					}
 				}
-				
+
 				// Verify logs were added (only if vertex exists)
 				if len(tt.solveStatus.Logs) > 0 {
 					log := tt.solveStatus.Logs[0]
@@ -375,14 +375,14 @@ func TestTrace_RemoveCompletedSteps(t *testing.T) {
 			expectLog:     false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			trace := newTrace()
 			trace.ongoing = tt.initialOngoing
-			
+
 			trace.removeCompletedSteps()
-			
+
 			assert.Equal(t, tt.expectedCount, len(trace.ongoing))
 		})
 	}
@@ -390,10 +390,10 @@ func TestTrace_RemoveCompletedSteps(t *testing.T) {
 
 func TestTrace_Display(t *testing.T) {
 	tests := []struct {
-		name         string
-		progress     string
-		vertexInfo   *vertexInfo
-		expectStage  bool
+		name          string
+		progress      string
+		vertexInfo    *vertexInfo
+		expectStage   bool
 		expectSpinner bool
 	}{
 		{
@@ -516,18 +516,18 @@ func TestTrace_Display(t *testing.T) {
 			expectSpinner: false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			trace := newTrace()
 			trace.ongoing["test-digest"] = tt.vertexInfo
-			
+
 			// Capture the display call - in a real scenario we'd mock the logger
 			// For now, we just ensure the function doesn't panic
 			assert.NotPanics(t, func() {
 				trace.display(tt.progress)
 			})
-			
+
 			// Verify logs were cleared after processing
 			if tt.vertexInfo.logs != nil && len(tt.vertexInfo.logs) > 0 {
 				// Check if logs contain valid JSON that would be processed
@@ -539,12 +539,12 @@ func TestTrace_Display(t *testing.T) {
 						break
 					}
 				}
-				
+
 				if hasValidLogs {
 					assert.Empty(t, tt.vertexInfo.logs, "logs should be cleared after processing")
 				}
 			}
-			
+
 			// Check if error was set for error logs
 			if tt.vertexInfo.logs != nil {
 				for _, log := range tt.vertexInfo.logs {
@@ -669,11 +669,11 @@ func TestDeployDisplayer(t *testing.T) {
 					},
 				},
 			},
-			expectError:    false,
-			simulateDelay:  true, // This will help test timeout behavior
+			expectError:   false,
+			simulateDelay: true, // This will help test timeout behavior
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -682,26 +682,26 @@ func TestDeployDisplayer(t *testing.T) {
 				ctx, cancel = context.WithCancel(ctx)
 				cancel() // Cancel immediately
 			}
-			
+
 			ch := make(chan *client.SolveStatus, len(tt.solveStatuses)+1)
-			
+
 			// Send solve statuses
 			for _, ss := range tt.solveStatuses {
 				ch <- ss
 			}
-			
+
 			// Only close channel if context is not cancelled
 			// For context cancellation test, we want the context to be checked first
 			if !tt.contextTimeout {
 				close(ch) // Close channel to signal completion
 			}
-			
+
 			buildOptions := &types.BuildOptions{
 				OutputMode: tt.outputMode,
 			}
-			
+
 			err := deployDisplayer(ctx, ch, buildOptions)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {
