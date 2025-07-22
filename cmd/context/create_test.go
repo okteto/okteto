@@ -815,7 +815,6 @@ func Test_loadDotEnv(t *testing.T) {
 		vars map[string]string
 		err  error
 	}
-	cmd := Command{}
 
 	setEnvFunc := func(k, v string) error {
 		var err error
@@ -939,7 +938,7 @@ func Test_loadDotEnv(t *testing.T) {
 			if tt.mockEnv != nil {
 				tt.mockEnv(t)
 			}
-			err := cmd.loadDotEnv(fs, setEnvFunc, os.LookupEnv)
+			err := loadDotEnv(fs, setEnvFunc, os.LookupEnv)
 			if tt.expected.err != nil {
 				assert.Equal(t, tt.expected.err.Error(), err.Error())
 			} else {

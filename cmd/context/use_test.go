@@ -219,6 +219,7 @@ func TestUseContext_forceLoginIfRequired(t *testing.T) {
 			validateFunc: func(t *testing.T, ctxStore *okteto.ContextStore, ctxOptions *Options) {
 				assert.Equal(t, ctxStore.Contexts, map[string]*okteto.Context{})
 				assert.Equal(t, "", ctxStore.CurrentContext)
+				assert.Empty(t, ctxOptions.Token)
 			},
 		},
 		{

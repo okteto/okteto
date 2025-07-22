@@ -74,9 +74,8 @@ func (o *Options) InitFromContext() {
 	}
 }
 
-func (o *Options) InitFromEnvVars() {
+func (o *Options) initContext() []string {
 	var usedEnvVars []string
-
 	if o.Context == "" && os.Getenv(model.OktetoURLEnvVar) != "" {
 		o.Context = os.Getenv(model.OktetoURLEnvVar)
 		o.IsOkteto = true
@@ -88,6 +87,11 @@ func (o *Options) InitFromEnvVars() {
 		usedEnvVars = append(usedEnvVars, model.OktetoContextEnvVar)
 	}
 
+	return usedEnvVars
+}
+
+func (o *Options) inferTokenFromEnv() []string {
+	var usedEnvVars []string
 	envToken := os.Getenv(model.OktetoTokenEnvVar)
 	if o.Token != "" || envToken != "" {
 		o.IsOkteto = true
@@ -101,10 +105,24 @@ func (o *Options) InitFromEnvVars() {
 		o.InferredToken = true
 	}
 
+	return usedEnvVars
+}
+
+func (o *Options) inferNamespaceFromEnv() []string {
+	var usedEnvVars []string
 	if o.Namespace == "" && os.Getenv(model.OktetoNamespaceEnvVar) != "" {
 		o.Namespace = os.Getenv(model.OktetoNamespaceEnvVar)
 		usedEnvVars = append(usedEnvVars, model.OktetoNamespaceEnvVar)
 	}
+
+	return usedEnvVars
+}
+
+func (o *Options) InitFromEnvVars() {
+	var usedEnvVars []string
+	usedEnvVars = append(usedEnvVars, o.initContext()...)
+	usedEnvVars = append(usedEnvVars, o.inferTokenFromEnv()...)
+	usedEnvVars = append(usedEnvVars, o.inferNamespaceFromEnv()...)
 
 	if o.Show {
 		if len(usedEnvVars) == 1 {

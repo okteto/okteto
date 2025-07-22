@@ -21,6 +21,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -97,14 +98,18 @@ func (c *Command) deleteContext(contextToDelete string, ctxStore *okteto.Context
 
 	// Write the updated context store
 	if err := c.OktetoContextWriter.Write(); err != nil {
-		return err
+		oktetoLog.Infof("error updating okteto contexts: %v", err)
+		return fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
 	}
 	return nil
 }
 
 func (c *Command) forceLoginIfRequested(ctxOptions *Options, ctxStore *okteto.ContextStore) error {
 	if ctxOptions.Force && ctxOptions.Context != "" {
-		c.deleteContext(ctxOptions.Context, ctxStore)
+		if err := c.deleteContext(ctxOptions.Context, ctxStore); err != nil {
+			return err
+		}
+
 		// Clear any cached token to force re-authentication
 		ctxOptions.Token = ""
 		ctxOptions.InferredToken = false
@@ -125,10 +130,11 @@ func (c *Command) Run(ctx context.Context, ctxOptions *Options) error {
 
 	// if the --context and --namespace flags are set, they have priority over the env vars, and current context
 	// if env vars OKTETO_CONTEXT and OKTETO_NAMESPACE are set, they have priority over the current context
-	err := c.loadDotEnv(afero.NewOsFs(), os.Setenv, os.LookupEnv)
+	err := loadDotEnv(afero.NewOsFs(), os.Setenv, os.LookupEnv)
 	if err != nil {
 		oktetoLog.Warning("Failed to load .env file: %s", err)
 	}
+
 	ctxOptions.InitFromEnvVars()
 	ctxOptions.InitFromContext()
 

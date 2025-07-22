@@ -404,7 +404,7 @@ func (*Command) initKubernetesContext(ctxOptions *Options) error {
 	return nil
 }
 
-func (c Command) getUserContext(ctx context.Context, ctxName, ns, token string) (*types.UserContext, error) {
+func (c *Command) getUserContext(ctx context.Context, ctxName, ns, token string) (*types.UserContext, error) {
 	client, err := c.OktetoClientProvider.Provide(
 		okteto.WithCtxName(ctxName),
 		okteto.WithToken(token),
@@ -475,7 +475,7 @@ func (c Command) getUserContext(ctx context.Context, ctxName, ns, token string) 
 	return nil, oktetoErrors.ErrInternalServerError
 }
 
-func (*Command) loadDotEnv(fs afero.Fs, setEnvFunc func(key, value string) error, lookupEnv func(key string) (string, bool)) error {
+func loadDotEnv(fs afero.Fs, setEnvFunc func(key, value string) error, lookupEnv func(key string) (string, bool)) error {
 	dotEnvFile := ".env"
 	if filesystem.FileExistsWithFilesystem(dotEnvFile, fs) {
 		content, err := afero.ReadFile(fs, dotEnvFile)
