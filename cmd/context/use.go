@@ -98,7 +98,7 @@ func (c *Command) deleteContext(contextToDelete string, ctxStore *okteto.Context
 
 	// Write the updated context store
 	if err := c.OktetoContextWriter.Write(); err != nil {
-		oktetoLog.Infof("error updating okteto contexts: %v", err)
+		oktetoLog.Infof("error saving okteto context file: %v", err)
 		return fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
 	}
 	return nil

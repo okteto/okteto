@@ -169,7 +169,8 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 		currentCtx.IsStoredAsInsecure = okteto.IsInsecureSkipTLSVerifyPolicy()
 
 		if err := c.OktetoContextWriter.Write(); err != nil {
-			return err
+			oktetoLog.Infof("error saving okteto context file: %v", err)
+			return fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
 		}
 	}
 
@@ -428,7 +429,7 @@ func (c *Command) getUserContext(ctx context.Context, ctxName, ns, token string)
 
 			if oktetoErrors.IsForbidden(err) {
 				if err := c.OktetoContextWriter.Write(); err != nil {
-					oktetoLog.Infof("error updating okteto contexts: %v", err)
+					oktetoLog.Infof("error saving okteto context file: %v", err)
 					return nil, fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
 				}
 				return nil, oktetoErrors.NotLoggedError{
@@ -465,7 +466,7 @@ func (c *Command) getUserContext(ctx context.Context, ctxName, ns, token string)
 		if okteto.GetContext().UserID == "" && okteto.GetContext().IsOkteto {
 			okteto.GetContext().UserID = userContext.User.ID
 			if err := c.OktetoContextWriter.Write(); err != nil {
-				oktetoLog.Infof("error updating okteto contexts: %v", err)
+				oktetoLog.Infof("error saving okteto context file: %v", err)
 				return nil, fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
 			}
 		}
