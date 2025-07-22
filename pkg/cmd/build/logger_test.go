@@ -529,7 +529,7 @@ func TestTrace_Display(t *testing.T) {
 			})
 
 			// Verify logs were cleared after processing
-			if tt.vertexInfo.logs != nil && len(tt.vertexInfo.logs) > 0 {
+			if len(tt.vertexInfo.logs) > 0 {
 				// Check if logs contain valid JSON that would be processed
 				hasValidLogs := false
 				for _, log := range tt.vertexInfo.logs {
