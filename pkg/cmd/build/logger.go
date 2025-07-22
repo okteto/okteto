@@ -169,9 +169,13 @@ func (t *trace) display(progress string) {
 			}
 
 			for _, log := range v.logs {
+				if log == "" {
+					continue
+				}
+
 				var text oktetoLog.JSONLogFormat
 				if err := json.Unmarshal([]byte(log), &text); err != nil {
-					oktetoLog.Infof("could not parse %s: %s", log, err)
+					oktetoLog.Debugf("could not parse %s: %s", log, err)
 					continue
 				}
 				if text.Stage == "" {
