@@ -281,7 +281,7 @@ func TestDestroyPreview(t *testing.T) {
 			pc := previewClient{
 				client: tc.input.client,
 			}
-			err := pc.Destroy(context.Background(), tc.input.name)
+			err := pc.Destroy(context.Background(), tc.input.name, 0)
 			assert.ErrorIs(t, err, tc.expected.err)
 		})
 	}

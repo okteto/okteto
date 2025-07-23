@@ -58,7 +58,7 @@ type PreviewInterface interface {
 	List(ctx context.Context, labels []string) ([]Preview, error)
 	DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable, labels []string, redeployDependencies bool) (*PreviewResponse, error)
 	GetResourcesStatus(ctx context.Context, previewName, devName string) (map[string]string, error)
-	Destroy(ctx context.Context, previewName string) error
+	Destroy(ctx context.Context, previewName string, timeout int) error
 	ListEndpoints(ctx context.Context, previewName string) ([]Endpoint, error)
 	Get(ctx context.Context, previewName string) (*Preview, error)
 }
