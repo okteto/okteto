@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
@@ -129,16 +130,11 @@ func GetTranslations(ctx context.Context, namespace string, dev *model.Dev, app 
 				rule.Image = devContainer.Image
 			}
 
-			// Inherit Kubernetes resources if the feature is enabled and dev resources are empty
-			if model.ShouldInheritKubernetesResources() && tr.Dev.HasEmptyResources() {
-
-				// Update the rule with the inherited resources
-				rule.Resources = model.GetInheritedResourcesFromContainer(devContainer)
+			if env.LoadBooleanOrDefault(model.OktetoInheritKubernetesResourcesEnvVar, false) && tr.Dev.Resources.HasEmptyResources() {
+				rule.Resources = getInheritedResourcesFromContainer(devContainer)
 			}
 
-			// Inherit Kubernetes nodeSelector if the feature is enabled and dev nodeSelector is empty
-			if model.ShouldInheritKubernetesNodeSelector() && tr.Dev.HasEmptyNodeSelector() {
-				// Update the rule with the inherited nodeSelector
+			if env.LoadBooleanOrDefault(model.OktetoInheritKubernetesNodeSelectorEnvVar, false) && tr.Dev.HasEmptyNodeSelector() {
 				rule.NodeSelector = app.PodSpec().NodeSelector
 			}
 		}

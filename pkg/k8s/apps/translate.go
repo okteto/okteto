@@ -690,3 +690,28 @@ func TranslateOktetoAffinity(spec *apiv1.PodSpec, affinity *apiv1.Affinity) {
 		spec.Affinity = affinity
 	}
 }
+
+// GetInheritedResourcesFromContainer returns resources inherited from the original Kubernetes container to the dev resources
+func getInheritedResourcesFromContainer(container *apiv1.Container) model.ResourceRequirements {
+	rr := model.ResourceRequirements{}
+
+	if container == nil {
+		return rr
+	}
+
+	if len(container.Resources.Requests) > 0 {
+		rr.Requests = make(model.ResourceList)
+		for k, v := range container.Resources.Requests {
+			rr.Requests[k] = v
+		}
+	}
+
+	if len(container.Resources.Limits) > 0 {
+		rr.Limits = make(model.ResourceList)
+		for k, v := range container.Resources.Limits {
+			rr.Limits[k] = v
+		}
+	}
+
+	return rr
+}

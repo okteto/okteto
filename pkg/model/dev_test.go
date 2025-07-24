@@ -1525,7 +1525,7 @@ func TestShouldInheritKubernetesResources(t *testing.T) {
 				os.Setenv(OktetoInheritKubernetesResourcesEnvVar, tt.envValue)
 			}
 
-			result := ShouldInheritKubernetesResources()
+			result := env.LoadBooleanOrDefault(OktetoInheritKubernetesResourcesEnvVar, false)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -1594,115 +1594,8 @@ func TestDev_HasEmptyResources(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.dev.HasEmptyResources()
+			result := tt.dev.Resources.HasEmptyResources()
 			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestDev_InheritResourcesFromContainer(t *testing.T) {
-	tests := []struct {
-		name      string
-		dev       *Dev
-		container *apiv1.Container
-		expected  ResourceRequirements
-	}{
-		{
-			name: "inherit from container with requests and limits",
-			dev: &Dev{
-				Resources: ResourceRequirements{},
-			},
-			container: &apiv1.Container{
-				Resources: apiv1.ResourceRequirements{
-					Requests: apiv1.ResourceList{
-						apiv1.ResourceMemory: mustParseQuantity("128Mi"),
-						apiv1.ResourceCPU:    mustParseQuantity("100m"),
-					},
-					Limits: apiv1.ResourceList{
-						apiv1.ResourceMemory: mustParseQuantity("256Mi"),
-						apiv1.ResourceCPU:    mustParseQuantity("200m"),
-					},
-				},
-			},
-			expected: ResourceRequirements{
-				Requests: ResourceList{
-					apiv1.ResourceMemory: mustParseQuantity("128Mi"),
-					apiv1.ResourceCPU:    mustParseQuantity("100m"),
-				},
-				Limits: ResourceList{
-					apiv1.ResourceMemory: mustParseQuantity("256Mi"),
-					apiv1.ResourceCPU:    mustParseQuantity("200m"),
-				},
-			},
-		},
-		{
-			name: "inherit from container with only requests",
-			dev: &Dev{
-				Resources: ResourceRequirements{},
-			},
-			container: &apiv1.Container{
-				Resources: apiv1.ResourceRequirements{
-					Requests: apiv1.ResourceList{
-						apiv1.ResourceMemory: mustParseQuantity("128Mi"),
-					},
-				},
-			},
-			expected: ResourceRequirements{
-				Requests: ResourceList{
-					apiv1.ResourceMemory: mustParseQuantity("128Mi"),
-				},
-				Limits: nil,
-			},
-		},
-		{
-			name: "inherit from container with only limits",
-			dev: &Dev{
-				Resources: ResourceRequirements{},
-			},
-			container: &apiv1.Container{
-				Resources: apiv1.ResourceRequirements{
-					Limits: apiv1.ResourceList{
-						apiv1.ResourceCPU: mustParseQuantity("200m"),
-					},
-				},
-			},
-			expected: ResourceRequirements{
-				Requests: nil,
-				Limits: ResourceList{
-					apiv1.ResourceCPU: mustParseQuantity("200m"),
-				},
-			},
-		},
-		{
-			name: "inherit from nil container",
-			dev: &Dev{
-				Resources: ResourceRequirements{},
-			},
-			container: nil,
-			expected: ResourceRequirements{
-				Requests: nil,
-				Limits:   nil,
-			},
-		},
-		{
-			name: "inherit from container with empty resources",
-			dev: &Dev{
-				Resources: ResourceRequirements{},
-			},
-			container: &apiv1.Container{
-				Resources: apiv1.ResourceRequirements{},
-			},
-			expected: ResourceRequirements{
-				Requests: nil,
-				Limits:   nil,
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			resources := GetInheritedResourcesFromContainer(tt.container)
-			assert.Equal(t, tt.expected, resources)
 		})
 	}
 }
@@ -1750,7 +1643,7 @@ func TestShouldInheritKubernetesNodeSelector(t *testing.T) {
 			}
 			defer os.Unsetenv(OktetoInheritKubernetesNodeSelectorEnvVar)
 
-			result := ShouldInheritKubernetesNodeSelector()
+			result := env.LoadBooleanOrDefault(OktetoInheritKubernetesNodeSelectorEnvVar, false)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

@@ -1049,51 +1049,14 @@ func (s *Secret) GetFileName() string {
 	return filepath.Base(s.RemotePath)
 }
 
-// ShouldInheritKubernetesResources returns true if the environment variable is enabled
-func ShouldInheritKubernetesResources() bool {
-	return os.Getenv(OktetoInheritKubernetesResourcesEnvVar) == "true"
-}
-
-// ShouldInheritKubernetesNodeSelector returns true if the environment variable is enabled
-func ShouldInheritKubernetesNodeSelector() bool {
-	return os.Getenv(OktetoInheritKubernetesNodeSelectorEnvVar) == "true"
-}
-
 // HasEmptyResources returns true if the dev resources are empty (no resources specified in okteto manifest)
-func (dev *Dev) HasEmptyResources() bool {
-	return len(dev.Resources.Requests) == 0 && len(dev.Resources.Limits) == 0
+func (r *ResourceRequirements) HasEmptyResources() bool {
+	return len(r.Requests) == 0 && len(r.Limits) == 0
 }
 
 // HasEmptyNodeSelector checks if the dev configuration has an empty nodeSelector
 func (dev *Dev) HasEmptyNodeSelector() bool {
 	return len(dev.NodeSelector) == 0
-}
-
-// GetInheritedResourcesFromContainer returns resources inherited from the original Kubernetes container to the dev resources
-func GetInheritedResourcesFromContainer(container *apiv1.Container) ResourceRequirements {
-	rr := ResourceRequirements{}
-
-	if container == nil {
-		return rr
-	}
-
-	// Copy requests
-	if len(container.Resources.Requests) > 0 {
-		rr.Requests = make(ResourceList)
-		for k, v := range container.Resources.Requests {
-			rr.Requests[k] = v
-		}
-	}
-
-	// Copy limits
-	if len(container.Resources.Limits) > 0 {
-		rr.Limits = make(ResourceList)
-		for k, v := range container.Resources.Limits {
-			rr.Limits[k] = v
-		}
-	}
-
-	return rr
 }
 
 // GetTimeout returns the timeout override

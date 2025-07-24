@@ -2306,3 +2306,110 @@ func TestTranslateLifecycle(t *testing.T) {
 		})
 	}
 }
+
+func TestDev_InheritResourcesFromContainer(t *testing.T) {
+	tests := []struct {
+		name      string
+		dev       *model.Dev
+		container *apiv1.Container
+		expected  model.ResourceRequirements
+	}{
+		{
+			name: "inherit from container with requests and limits",
+			dev: &model.Dev{
+				Resources: model.ResourceRequirements{},
+			},
+			container: &apiv1.Container{
+				Resources: apiv1.ResourceRequirements{
+					Requests: apiv1.ResourceList{
+						apiv1.ResourceMemory: resource.MustParse("128Mi"),
+						apiv1.ResourceCPU:    resource.MustParse("100m"),
+					},
+					Limits: apiv1.ResourceList{
+						apiv1.ResourceMemory: resource.MustParse("256Mi"),
+						apiv1.ResourceCPU:    resource.MustParse("200m"),
+					},
+				},
+			},
+			expected: model.ResourceRequirements{
+				Requests: model.ResourceList{
+					apiv1.ResourceMemory: resource.MustParse("128Mi"),
+					apiv1.ResourceCPU:    resource.MustParse("100m"),
+				},
+				Limits: model.ResourceList{
+					apiv1.ResourceMemory: resource.MustParse("256Mi"),
+					apiv1.ResourceCPU:    resource.MustParse("200m"),
+				},
+			},
+		},
+		{
+			name: "inherit from container with only requests",
+			dev: &model.Dev{
+				Resources: model.ResourceRequirements{},
+			},
+			container: &apiv1.Container{
+				Resources: apiv1.ResourceRequirements{
+					Requests: apiv1.ResourceList{
+						apiv1.ResourceMemory: resource.MustParse("128Mi"),
+					},
+				},
+			},
+			expected: model.ResourceRequirements{
+				Requests: model.ResourceList{
+					apiv1.ResourceMemory: resource.MustParse("128Mi"),
+				},
+				Limits: nil,
+			},
+		},
+		{
+			name: "inherit from container with only limits",
+			dev: &model.Dev{
+				Resources: model.ResourceRequirements{},
+			},
+			container: &apiv1.Container{
+				Resources: apiv1.ResourceRequirements{
+					Limits: apiv1.ResourceList{
+						apiv1.ResourceCPU: resource.MustParse("200m"),
+					},
+				},
+			},
+			expected: model.ResourceRequirements{
+				Requests: nil,
+				Limits: model.ResourceList{
+					apiv1.ResourceCPU: resource.MustParse("200m"),
+				},
+			},
+		},
+		{
+			name: "inherit from nil container",
+			dev: &model.Dev{
+				Resources: model.ResourceRequirements{},
+			},
+			container: nil,
+			expected: model.ResourceRequirements{
+				Requests: nil,
+				Limits:   nil,
+			},
+		},
+		{
+			name: "inherit from container with empty resources",
+			dev: &model.Dev{
+				Resources: model.ResourceRequirements{},
+			},
+			container: &apiv1.Container{
+				Resources: apiv1.ResourceRequirements{},
+			},
+			expected: model.ResourceRequirements{
+				Requests: nil,
+				Limits:   nil,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resources := getInheritedResourcesFromContainer(tt.container)
+			assert.Equal(t, tt.expected, resources)
+		})
+	}
+}
