@@ -238,10 +238,10 @@ const (
 	OktetoAutogenerateStignoreEnvVar = "OKTETO_AUTOGENERATE_STIGNORE"
 
 	// OktetoInheritKubernetesResourcesEnvVar enables inheriting Kubernetes resources when resources section is omitted
-	OktetoInheritKubernetesResourcesEnvVar = "OKTETO_INHERIT_KUBERNETES_RESOURCES_SETTINGS"
+	OktetoInheritKubernetesResourcesEnvVar = "OKTETO_INHERIT_KUBERNETES_RESOURCES"
 
 	// OktetoInheritKubernetesNodeSelectorEnvVar enables inheriting Kubernetes nodeSelector when nodeSelector section is omitted
-	OktetoInheritKubernetesNodeSelectorEnvVar = "OKTETO_INHERIT_KUBERNETES_NODESELECTOR_SETTINGS"
+	OktetoInheritKubernetesNodeSelectorEnvVar = "OKTETO_INHERIT_KUBERNETES_NODESELECTOR"
 
 	// OktetoDefaultImageTag default tag assigned to image to build
 	OktetoDefaultImageTag = "okteto"
