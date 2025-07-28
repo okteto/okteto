@@ -59,6 +59,7 @@ import (
 )
 
 func init() {
+	cobra.EnableTraverseRunHooks = true
 	oktetoLog.SetLevel("warn") // TODO: Remove when we fully move to ioController
 	var b [16]byte
 	_, err := cryptoRand.Read(b[:])
