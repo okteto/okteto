@@ -19,6 +19,7 @@ import (
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/labels"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -133,4 +134,28 @@ func TestGetNameBySelector(t *testing.T) {
 		})
 	}
 
+}
+
+func TestCreateDev(t *testing.T) {
+	ctx := context.Background()
+	dev := &model.Dev{
+		Name: "test-dev",
+		Metadata: &model.Metadata{
+			Annotations: map[string]string{
+				"test-annotation": "test-value",
+			},
+		},
+	}
+	namespace := "test-namespace"
+	client := fake.NewSimpleClientset()
+
+	err := CreateDev(ctx, dev, namespace, client)
+	require.NoError(t, err, "CreateDev failed")
+
+	svc, err := client.CoreV1().Services(namespace).Get(ctx, dev.Name, metav1.GetOptions{})
+	require.NoError(t, err, "failed to get created service")
+
+	require.Equal(t, dev.Name, svc.Name, "expected service name to match")
+	require.Equal(t, namespace, svc.Namespace, "expected service namespace to match")
+	require.NotEmpty(t, svc.Spec.Ports, "expected service to have ports")
 }
