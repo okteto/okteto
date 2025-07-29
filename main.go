@@ -59,6 +59,8 @@ import (
 )
 
 func init() {
+	// This is to make sure that all PersistentPreRun functions in the command chain (from parent to child) are executed
+	cobra.EnableTraverseRunHooks = true
 	oktetoLog.SetLevel("warn") // TODO: Remove when we fully move to ioController
 	var b [16]byte
 	_, err := cryptoRand.Read(b[:])

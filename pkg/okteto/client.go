@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"strings"
 	"sync"
 
@@ -57,9 +56,7 @@ var serverName string
 var strictTLSOnce sync.Once
 var errURLNotSet = errors.New("the okteto URL is not set")
 
-const unauthorizedTokenPattern = `^non-200 OK status code: 401 Unauthorized body: "fail to find user with token [A-Za-z0-9]+: not-authorized\\n"$`
-
-var unauthorizedTokenRegex = regexp.MustCompile(unauthorizedTokenPattern)
+const unauthorizedTokenPrefix = `non-200 OK status code: 401 Unauthorized body: "fail to find user with token`
 
 // graphqlClientInterface contains the functions that a graphqlClient must have
 type graphqlClientInterface interface {
@@ -350,6 +347,8 @@ func parseOktetoURLWithPath(u, path string) (string, error) {
 }
 
 func translateAPIErr(err error) error {
+	oktetoLog.Debugf("returnedAPI error: %s", err.Error())
+
 	e := strings.TrimPrefix(err.Error(), "graphql: ")
 	switch e {
 	case "not-authorized":
@@ -374,7 +373,9 @@ func translateAPIErr(err error) error {
 		return oktetoErrors.ErrNamespaceNotFound
 
 	default:
-		if unauthorizedTokenRegex.MatchString(err.Error()) {
+		// Checking the prefix we make sure that the backend returned a 401 error, and in that case, we should
+		// return a not logged error
+		if strings.HasPrefix(err.Error(), unauthorizedTokenPrefix) {
 			return fmt.Errorf(oktetoErrors.ErrNotLogged, GetContext().Name)
 		}
 
