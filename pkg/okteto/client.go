@@ -373,6 +373,8 @@ func translateAPIErr(err error) error {
 		return oktetoErrors.ErrNamespaceNotFound
 
 	default:
+		// Checking the prefix we make sure that the backend returned a 401 error, and in that case, we should
+		// return a not logged error
 		if strings.HasPrefix(err.Error(), unauthorizedTokenPrefix) {
 			return fmt.Errorf(oktetoErrors.ErrNotLogged, GetContext().Name)
 		}
