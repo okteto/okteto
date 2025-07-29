@@ -2307,7 +2307,7 @@ func TestTranslateLifecycle(t *testing.T) {
 	}
 }
 
-func TestDev_InheritResourcesFromContainer(t *testing.T) {
+func TestDev_GetInheritedResourcesFromContainer(t *testing.T) {
 	tests := []struct {
 		name      string
 		dev       *model.Dev

@@ -32,37 +32,30 @@ import (
 // Test helpers
 func assertDevFields(t *testing.T, dev, main *Dev) {
 	t.Helper()
-	if dev.Name != "deployment" {
-		t.Errorf("'name' was not parsed: %+v", main)
+	assert := assert.New(t)
+
+	assert.Equal("deployment", dev.Name, "'name' was not parsed: %+v", main)
+	assert.Len(dev.Command.Values, 1, "command was not parsed: %+v", dev)
+	if assert.Len(dev.Command.Values, 1) {
+		assert.Equal("uwsgi", dev.Command.Values[0], "command was not parsed: %+v", dev)
 	}
-	if len(dev.Command.Values) != 1 || dev.Command.Values[0] != "uwsgi" {
-		t.Errorf("command was not parsed: %+v", dev)
-	}
+
 	memory := dev.Resources.Requests["memory"]
-	if memory.String() != "64Mi" {
-		t.Errorf("Resources.Requests.Memory was not parsed: %s", memory.String())
-	}
+	assert.Equal("64Mi", memory.String(), "Resources.Requests.Memory was not parsed: %s", memory.String())
+
 	cpu := dev.Resources.Requests["cpu"]
-	if cpu.String() != "250m" {
-		t.Errorf("Resources.Requests.CPU was not parsed correctly. Expected '250M', got '%s'", cpu.String())
-	}
+	assert.Equal("250m", cpu.String(), "Resources.Requests.CPU was not parsed correctly. Expected '250M', got '%s'", cpu.String())
+
 	memory = dev.Resources.Limits["memory"]
-	if memory.String() != "128Mi" {
-		t.Errorf("Resources.Requests.Memory was not parsed: %s", memory.String())
-	}
+	assert.Equal("128Mi", memory.String(), "Resources.Limits.Memory was not parsed: %s", memory.String())
+
 	cpu = dev.Resources.Limits["cpu"]
-	if cpu.String() != "500m" {
-		t.Errorf("Resources.Requests.CPU was not parsed correctly. Expected '500M', got '%s'", cpu.String())
-	}
-	if dev.Metadata.Annotations["key1"] != "value1" && dev.Metadata.Annotations["key2"] != "value2" {
-		t.Errorf("Annotations were not parsed correctly")
-	}
-	if dev.Metadata.Labels["key4"] != "value4" {
-		t.Errorf("Labels were not parsed correctly")
-	}
-	if dev.Selector["key3"] != "value3" {
-		t.Errorf("Selector were not parsed correctly")
-	}
+	assert.Equal("500m", cpu.String(), "Resources.Limits.CPU was not parsed correctly. Expected '500M', got '%s'", cpu.String())
+
+	assert.Equal("value1", dev.Metadata.Annotations["key1"], "Annotation 'key1' was not parsed correctly")
+	assert.Equal("value2", dev.Metadata.Annotations["key2"], "Annotation 'key2' was not parsed correctly")
+	assert.Equal("value4", dev.Metadata.Labels["key4"], "Label 'key4' was not parsed correctly")
+	assert.Equal("value3", dev.Selector["key3"], "Selector 'key3' was not parsed correctly")
 }
 
 func assertManifestDefaults(t *testing.T, d *Dev, expectedEnvironment env.Environment, expectedForward []forward.Forward) {
@@ -1478,59 +1471,6 @@ func TestPrepare(t *testing.T) {
 	}
 }
 
-func TestShouldInheritKubernetesResources(t *testing.T) {
-	tests := []struct {
-		name     string
-		envValue string
-		expected bool
-	}{
-		{
-			name:     "environment variable set to true",
-			envValue: "true",
-			expected: true,
-		},
-		{
-			name:     "environment variable set to false",
-			envValue: "false",
-			expected: false,
-		},
-		{
-			name:     "environment variable not set",
-			envValue: "",
-			expected: false,
-		},
-		{
-			name:     "environment variable set to invalid value",
-			envValue: "invalid",
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Save original value
-			originalValue := os.Getenv(OktetoInheritKubernetesResourcesEnvVar)
-			defer func() {
-				if originalValue == "" {
-					os.Unsetenv(OktetoInheritKubernetesResourcesEnvVar)
-				} else {
-					os.Setenv(OktetoInheritKubernetesResourcesEnvVar, originalValue)
-				}
-			}()
-
-			// Set test value
-			if tt.envValue == "" {
-				os.Unsetenv(OktetoInheritKubernetesResourcesEnvVar)
-			} else {
-				os.Setenv(OktetoInheritKubernetesResourcesEnvVar, tt.envValue)
-			}
-
-			result := env.LoadBooleanOrDefault(OktetoInheritKubernetesResourcesEnvVar, false)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 func TestDev_HasEmptyResources(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -1595,55 +1535,6 @@ func TestDev_HasEmptyResources(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.dev.Resources.HasEmptyResources()
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-// Helper function to parse resource quantities for tests
-func mustParseQuantity(s string) resource.Quantity {
-	return resource.MustParse(s)
-}
-
-func TestShouldInheritKubernetesNodeSelector(t *testing.T) {
-	tests := []struct {
-		name     string
-		envValue string
-		expected bool
-	}{
-		{
-			name:     "environment variable set to true",
-			envValue: "true",
-			expected: true,
-		},
-		{
-			name:     "environment variable set to false",
-			envValue: "false",
-			expected: false,
-		},
-		{
-			name:     "environment variable not set",
-			envValue: "",
-			expected: false,
-		},
-		{
-			name:     "environment variable set to invalid value",
-			envValue: "invalid",
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Set environment variable
-			if tt.envValue != "" {
-				os.Setenv(OktetoInheritKubernetesNodeSelectorEnvVar, tt.envValue)
-			} else {
-				os.Unsetenv(OktetoInheritKubernetesNodeSelectorEnvVar)
-			}
-			defer os.Unsetenv(OktetoInheritKubernetesNodeSelectorEnvVar)
-
-			result := env.LoadBooleanOrDefault(OktetoInheritKubernetesNodeSelectorEnvVar, false)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

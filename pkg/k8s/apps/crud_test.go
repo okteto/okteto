@@ -575,12 +575,12 @@ func TestGetTranslations_InheritKubernetesResources(t *testing.T) {
 									Name: "test",
 									Resources: v1.ResourceRequirements{
 										Requests: v1.ResourceList{
-											v1.ResourceMemory: mustParseK8sQuantity("128Mi"),
-											v1.ResourceCPU:    mustParseK8sQuantity("100m"),
+											v1.ResourceMemory: resource.MustParse("128Mi"),
+											v1.ResourceCPU:    resource.MustParse("100m"),
 										},
 										Limits: v1.ResourceList{
-											v1.ResourceMemory: mustParseK8sQuantity("256Mi"),
-											v1.ResourceCPU:    mustParseK8sQuantity("200m"),
+											v1.ResourceMemory: resource.MustParse("256Mi"),
+											v1.ResourceCPU:    resource.MustParse("200m"),
 										},
 									},
 								},
@@ -591,12 +591,12 @@ func TestGetTranslations_InheritKubernetesResources(t *testing.T) {
 			},
 			expectedResources: model.ResourceRequirements{
 				Requests: model.ResourceList{
-					v1.ResourceMemory: mustParseModelQuantity("128Mi"),
-					v1.ResourceCPU:    mustParseModelQuantity("100m"),
+					v1.ResourceMemory: resource.MustParse("128Mi"),
+					v1.ResourceCPU:    resource.MustParse("100m"),
 				},
 				Limits: model.ResourceList{
-					v1.ResourceMemory: mustParseModelQuantity("256Mi"),
-					v1.ResourceCPU:    mustParseModelQuantity("200m"),
+					v1.ResourceMemory: resource.MustParse("256Mi"),
+					v1.ResourceCPU:    resource.MustParse("200m"),
 				},
 			},
 			shouldInherit: true,
@@ -622,7 +622,7 @@ func TestGetTranslations_InheritKubernetesResources(t *testing.T) {
 									Name: "test",
 									Resources: v1.ResourceRequirements{
 										Requests: v1.ResourceList{
-											v1.ResourceMemory: mustParseK8sQuantity("128Mi"),
+											v1.ResourceMemory: resource.MustParse("128Mi"),
 										},
 									},
 								},
@@ -642,7 +642,7 @@ func TestGetTranslations_InheritKubernetesResources(t *testing.T) {
 				Container: "test",
 				Resources: model.ResourceRequirements{
 					Requests: model.ResourceList{
-						v1.ResourceMemory: mustParseModelQuantity("64Mi"),
+						v1.ResourceMemory: resource.MustParse("64Mi"),
 					},
 				},
 			},
@@ -659,7 +659,7 @@ func TestGetTranslations_InheritKubernetesResources(t *testing.T) {
 									Name: "test",
 									Resources: v1.ResourceRequirements{
 										Requests: v1.ResourceList{
-											v1.ResourceMemory: mustParseK8sQuantity("128Mi"),
+											v1.ResourceMemory: resource.MustParse("128Mi"),
 										},
 									},
 								},
@@ -670,7 +670,7 @@ func TestGetTranslations_InheritKubernetesResources(t *testing.T) {
 			},
 			expectedResources: model.ResourceRequirements{
 				Requests: model.ResourceList{
-					v1.ResourceMemory: mustParseModelQuantity("64Mi"),
+					v1.ResourceMemory: resource.MustParse("64Mi"),
 				},
 			},
 			shouldInherit: false,
@@ -679,22 +679,7 @@ func TestGetTranslations_InheritKubernetesResources(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Save original environment variable value
-			originalValue := os.Getenv(model.OktetoInheritKubernetesResourcesEnvVar)
-			defer func() {
-				if originalValue == "" {
-					os.Unsetenv(model.OktetoInheritKubernetesResourcesEnvVar)
-				} else {
-					os.Setenv(model.OktetoInheritKubernetesResourcesEnvVar, originalValue)
-				}
-			}()
-
-			// Set test environment variable
-			if tt.envVarValue == "" {
-				os.Unsetenv(model.OktetoInheritKubernetesResourcesEnvVar)
-			} else {
-				os.Setenv(model.OktetoInheritKubernetesResourcesEnvVar, tt.envVarValue)
-			}
+			t.Setenv(model.OktetoInheritKubernetesResourcesEnvVar, tt.envVarValue)
 
 			ctx := context.Background()
 			clientset := fake.NewSimpleClientset(tt.deployment)
@@ -710,15 +695,7 @@ func TestGetTranslations_InheritKubernetesResources(t *testing.T) {
 			assert.True(t, exists)
 			assert.NotNil(t, mainTranslation)
 
-			// Check the translation rule resources
-			if len(mainTranslation.Rules) > 0 {
-				if tt.shouldInherit {
-					assert.Equal(t, tt.expectedResources, mainTranslation.Rules[0].Resources)
-				} else {
-					// When not inheriting, the rule should have the original dev resources
-					assert.Equal(t, tt.dev.Resources, mainTranslation.Rules[0].Resources)
-				}
-			}
+			assert.Equal(t, tt.expectedResources, mainTranslation.Rules[0].Resources)
 		})
 	}
 }
@@ -840,13 +817,7 @@ func TestGetTranslations_InheritKubernetesNodeSelector(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set environment variable
-			if tt.envVarValue != "" {
-				os.Setenv(model.OktetoInheritKubernetesNodeSelectorEnvVar, tt.envVarValue)
-			} else {
-				os.Unsetenv(model.OktetoInheritKubernetesNodeSelectorEnvVar)
-			}
-			defer os.Unsetenv(model.OktetoInheritKubernetesNodeSelectorEnvVar)
+			t.Setenv(model.OktetoInheritKubernetesNodeSelectorEnvVar, tt.envVarValue)
 
 			ctx := context.Background()
 			clientset := fake.NewSimpleClientset(tt.deployment)
@@ -868,13 +839,4 @@ func TestGetTranslations_InheritKubernetesNodeSelector(t *testing.T) {
 			assert.Equal(t, tt.expectedNodeSelector, mainTranslation.Rules[0].NodeSelector)
 		})
 	}
-}
-
-// Helper functions for parsing quantities in tests
-func mustParseK8sQuantity(s string) resource.Quantity {
-	return resource.MustParse(s)
-}
-
-func mustParseModelQuantity(s string) resource.Quantity {
-	return resource.MustParse(s)
 }
