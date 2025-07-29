@@ -98,6 +98,10 @@ type destroyPreviewMutation struct {
 	Response previewIDStruct `graphql:"destroyPreview(id: $id)"`
 }
 
+type destroyPreviewMutationWithTimeout struct {
+	Response previewIDStruct `graphql:"destroyPreview(id: $id, timeout: $timeout)"`
+}
+
 type listPreviewQuery struct {
 	Response []previewEnv `graphql:"previews(labels: $labels)"`
 }
@@ -279,13 +283,27 @@ func (*previewClient) getDeployVariables(name, scope, repository, branch, source
 }
 
 // DestroyPreview destroy a preview environment
-func (c *previewClient) Destroy(ctx context.Context, name string) error {
-	mutationStruct := destroyPreviewMutation{}
+func (c *previewClient) Destroy(ctx context.Context, name string, timeout int) error {
+	mutationStruct := destroyPreviewMutationWithTimeout{}
 	variables := map[string]interface{}{
-		"id": graphql.String(name),
+		"id":      graphql.String(name),
+		"timeout": graphql.Int(timeout),
 	}
 
 	err := mutate(ctx, &mutationStruct, variables, c.client)
+	if err != nil {
+		if strings.Contains(err.Error(), "Unknown argument \"timeout\" on field \"destroyPreview\" of type \"Mutation\"") {
+			mutationStruct := destroyPreviewMutation{}
+			variables := map[string]interface{}{
+				"id": graphql.String(name),
+			}
+			err = mutate(ctx, &mutationStruct, variables, c.client)
+			if err != nil {
+				return fmt.Errorf("failed to destroy preview: %w", err)
+			}
+			return nil
+		}
+	}
 	return err
 }
 
