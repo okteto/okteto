@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
@@ -59,7 +60,7 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 
 // IsDevModeOn returns if a statefulset is in devmode
 func IsDevModeOn(app App) bool {
-	return app.ObjectMeta().Labels[constants.DevLabel] == "true" || len(app.ObjectMeta().Labels[model.DevCloneLabel]) > 0
+	return app.ObjectMeta().Labels[constants.DevLabel] == "true" || app.ObjectMeta().Labels[model.DevCloneLabel] != ""
 }
 
 // GetRunningPodInLoop returns the dev pod for an app and loops until it success
@@ -127,6 +128,14 @@ func GetTranslations(ctx context.Context, namespace string, dev *model.Dev, app 
 			rule.Container = devContainer.Name
 			if rule.Image == "" {
 				rule.Image = devContainer.Image
+			}
+
+			if env.LoadBooleanOrDefault(model.OktetoInheritKubernetesResourcesEnvVar, false) && tr.Dev.Resources.HasEmptyResources() {
+				rule.Resources = getInheritedResourcesFromContainer(devContainer)
+			}
+
+			if env.LoadBooleanOrDefault(model.OktetoInheritKubernetesNodeSelectorEnvVar, false) && tr.Dev.HasEmptyNodeSelector() {
+				rule.NodeSelector = app.PodSpec().NodeSelector
 			}
 		}
 	}

@@ -26,7 +26,100 @@ import (
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
+
+// Test helpers
+func assertDevFields(t *testing.T, dev, main *Dev) {
+	t.Helper()
+	assert := assert.New(t)
+
+	assert.Equal("deployment", dev.Name, "'name' was not parsed: %+v", main)
+	assert.Len(dev.Command.Values, 1, "command was not parsed: %+v", dev)
+	if assert.Len(dev.Command.Values, 1) {
+		assert.Equal("uwsgi", dev.Command.Values[0], "command was not parsed: %+v", dev)
+	}
+
+	memory := dev.Resources.Requests["memory"]
+	assert.Equal("64Mi", memory.String(), "Resources.Requests.Memory was not parsed: %s", memory.String())
+
+	cpu := dev.Resources.Requests["cpu"]
+	assert.Equal("250m", cpu.String(), "Resources.Requests.CPU was not parsed correctly. Expected '250M', got '%s'", cpu.String())
+
+	memory = dev.Resources.Limits["memory"]
+	assert.Equal("128Mi", memory.String(), "Resources.Limits.Memory was not parsed: %s", memory.String())
+
+	cpu = dev.Resources.Limits["cpu"]
+	assert.Equal("500m", cpu.String(), "Resources.Limits.CPU was not parsed correctly. Expected '500M', got '%s'", cpu.String())
+
+	assert.Equal("value1", dev.Metadata.Annotations["key1"], "Annotation 'key1' was not parsed correctly")
+	assert.Equal("value2", dev.Metadata.Annotations["key2"], "Annotation 'key2' was not parsed correctly")
+	assert.Equal("value4", dev.Metadata.Labels["key4"], "Label 'key4' was not parsed correctly")
+	assert.Equal("value3", dev.Selector["key3"], "Selector 'key3' was not parsed correctly")
+}
+
+func assertManifestDefaults(t *testing.T, d *Dev, expectedEnvironment env.Environment, expectedForward []forward.Forward) {
+	t.Helper()
+	if len(d.Command.Values) != 1 || d.Command.Values[0] != "sh" {
+		t.Errorf("command was parsed: %+v", d)
+	}
+	for _, env := range d.Environment {
+		found := false
+		for _, expectedEnv := range expectedEnvironment {
+			if env.Name == expectedEnv.Name && env.Value == expectedEnv.Value {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("environment was not parsed correctly:\n%+v\n%+v", d.Environment, expectedEnvironment)
+		}
+	}
+	if !reflect.DeepEqual(d.Forward, expectedForward) {
+		t.Errorf("environment was not parsed correctly:\n%+v\n%+v", d.Forward, expectedForward)
+	}
+	for k, v := range d.Resources.Limits {
+		if v.IsZero() {
+			t.Errorf("resources.limits.%s wasn't set", k)
+		}
+	}
+	for k, v := range d.Resources.Requests {
+		if !v.IsZero() {
+			t.Errorf("resources.limits.%s was set", k)
+		}
+	}
+	if !d.PersistentVolumeEnabled() {
+		t.Errorf("persistent volume was not enabled by default")
+	}
+	defaultTimeout, err := GetTimeout()
+	assert.NoError(t, err)
+	if defaultTimeout != d.Timeout.Default {
+		t.Errorf("the default timeout wasn't applied, got %s, expected %s", d.Timeout, defaultTimeout)
+	}
+}
+
+func assertDevName(t *testing.T, got, want string) {
+	t.Helper()
+	if got != want {
+		t.Errorf("got: '%s', expected: '%s'", got, want)
+	}
+}
+
+func assertSelector(t *testing.T, got, want Selector) {
+	t.Helper()
+	for key, value := range got {
+		if want[key] != value {
+			t.Errorf("got: '%v', expected: '%v'", got, want)
+		}
+	}
+}
+
+func assertImage(t *testing.T, got, want string) {
+	t.Helper()
+	if got != want {
+		t.Errorf("got: '%s', expected: '%s'", got, want)
+	}
+}
 
 func Test_LoadManifest(t *testing.T) {
 	manifestBytes := []byte(`dev:
@@ -85,53 +178,13 @@ func Test_LoadManifest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	main := manifest.Dev["deployment"]
-
 	if len(main.Services) != 1 {
 		t.Errorf("'services' was not parsed: %+v", main)
 	}
 	for _, dev := range []*Dev{main, main.Services[0]} {
-		if dev.Name != "deployment" {
-			t.Errorf("'name' was not parsed: %+v", main)
-		}
-
-		if len(dev.Command.Values) != 1 || dev.Command.Values[0] != "uwsgi" {
-			t.Errorf("command was not parsed: %+v", dev)
-		}
-
-		memory := dev.Resources.Requests["memory"]
-		if memory.String() != "64Mi" {
-			t.Errorf("Resources.Requests.Memory was not parsed: %s", memory.String())
-		}
-
-		cpu := dev.Resources.Requests["cpu"]
-		if cpu.String() != "250m" {
-			t.Errorf("Resources.Requests.CPU was not parsed correctly. Expected '250M', got '%s'", cpu.String())
-		}
-
-		memory = dev.Resources.Limits["memory"]
-		if memory.String() != "128Mi" {
-			t.Errorf("Resources.Requests.Memory was not parsed: %s", memory.String())
-		}
-
-		cpu = dev.Resources.Limits["cpu"]
-		if cpu.String() != "500m" {
-			t.Errorf("Resources.Requests.CPU was not parsed correctly. Expected '500M', got '%s'", cpu.String())
-		}
-
-		if dev.Metadata.Annotations["key1"] != "value1" && dev.Metadata.Annotations["key2"] != "value2" {
-			t.Errorf("Annotations were not parsed correctly")
-		}
-		if dev.Metadata.Labels["key4"] != "value4" {
-			t.Errorf("Labels were not parsed correctly")
-		}
-
-		if dev.Selector["key3"] != "value3" {
-			t.Errorf("Selector were not parsed correctly")
-		}
+		assertDevFields(t, dev, main)
 	}
-
 	expected := 63 * time.Second
 	if expected != main.Timeout.Default {
 		t.Errorf("the default timeout wasn't applied, got %s, expected %s", main.Timeout, expected)
@@ -192,8 +245,8 @@ func Test_LoadManifestDefaults(t *testing.T) {
         - ENV=production
         - name=test-node`),
 			env.Environment{
-				{Name: "ENV", Value: "production"},
-				{Name: "name", Value: "test-node"},
+				env.Var{Name: "ENV", Value: "production"},
+				env.Var{Name: "name", Value: "test-node"},
 			},
 			[]forward.Forward{},
 		},
@@ -213,58 +266,14 @@ func Test_LoadManifestDefaults(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			manifest, err := Read(tt.manifest)
 			if err != nil {
 				t.Fatal(err)
 			}
-
 			d := manifest.Dev["service"]
-
-			if len(d.Command.Values) != 1 || d.Command.Values[0] != "sh" {
-				t.Errorf("command was parsed: %+v", d)
-			}
-
-			for _, env := range d.Environment {
-				found := false
-				for _, expectedEnv := range tt.expectedEnvironment {
-					if env.Name == expectedEnv.Name && env.Value == expectedEnv.Value {
-						found = true
-						break
-					}
-				}
-				if !found {
-					t.Errorf("environment was not parsed correctly:\n%+v\n%+v", d.Environment, tt.expectedEnvironment)
-				}
-			}
-
-			if !reflect.DeepEqual(d.Forward, tt.expectedForward) {
-				t.Errorf("environment was not parsed correctly:\n%+v\n%+v", d.Forward, tt.expectedForward)
-			}
-
-			for k, v := range d.Resources.Limits {
-				if v.IsZero() {
-					t.Errorf("resources.limits.%s wasn't set", k)
-				}
-			}
-
-			for k, v := range d.Resources.Requests {
-				if !v.IsZero() {
-					t.Errorf("resources.limits.%s was set", k)
-				}
-			}
-
-			if !d.PersistentVolumeEnabled() {
-				t.Errorf("persistent volume was not enabled by default")
-			}
-
-			defaultTimeout, err := GetTimeout()
-			assert.NoError(t, err)
-			if defaultTimeout != d.Timeout.Default {
-				t.Errorf("the default timeout wasn't applied, got %s, expected %s", d.Timeout, defaultTimeout)
-			}
+			assertManifestDefaults(t, d, tt.expectedEnvironment, tt.expectedForward)
 		})
 	}
 }
@@ -317,15 +326,12 @@ func Test_loadName(t *testing.T) {
 			want:      "code-",
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			manifestBytes := []byte(fmt.Sprintf(`dev:
     %s:
 `, tt.devName))
-
 			devName := tt.want
-
 			if tt.onService {
 				manifestBytes = []byte(fmt.Sprintf(`dev:
     n1:
@@ -333,23 +339,17 @@ func Test_loadName(t *testing.T) {
         - name: %s`, tt.devName))
 				devName = "n1"
 			}
-
 			t.Setenv("value", tt.value)
 			manifest, err := Read(manifestBytes)
 			if err != nil {
 				t.Fatal(err)
 			}
-
 			dev := manifest.Dev[devName]
-
 			name := devName
 			if tt.onService {
 				name = dev.Services[0].Name
 			}
-
-			if name != tt.want {
-				t.Errorf("got: '%s', expected: '%s'", name, tt.want)
-			}
+			assertDevName(t, name, tt.want)
 		})
 	}
 }
@@ -380,7 +380,6 @@ func Test_loadSelector(t *testing.T) {
 			want:     Selector{"a": "1", "b": ""},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dev := &Dev{Selector: tt.selector}
@@ -388,12 +387,7 @@ func Test_loadSelector(t *testing.T) {
 			if err := dev.loadSelector(); err != nil {
 				t.Fatalf("couldn't load selector")
 			}
-
-			for key, value := range dev.Selector {
-				if tt.want[key] != value {
-					t.Errorf("got: '%v', expected: '%v'", dev.Selector, tt.want)
-				}
-			}
+			assertSelector(t, dev.Selector, tt.want)
 		})
 	}
 }
@@ -459,14 +453,12 @@ func Test_loadImage(t *testing.T) {
 			onService: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			manifestBytes := []byte(fmt.Sprintf(`dev:
     deployment:
         image: %s
 `, tt.image))
-
 			if tt.onService {
 				manifestBytes = []byte(fmt.Sprintf(`dev:
     deployment:
@@ -476,23 +468,17 @@ func Test_loadImage(t *testing.T) {
             image: %s
 `, tt.image))
 			}
-
 			t.Setenv("tag", tt.tagValue)
 			manifest, err := Read(manifestBytes)
 			if err != nil {
 				t.Fatal(err)
 			}
-
 			dev := manifest.Dev["deployment"]
-
 			img := dev.Image
 			if tt.onService {
 				img = dev.Services[0].Image
 			}
-
-			if img != tt.want {
-				t.Errorf("got: '%s', expected: '%s'", img, tt.want)
-			}
+			assertImage(t, img, tt.want)
 		})
 	}
 }
@@ -942,21 +928,17 @@ func Test_validate(t *testing.T) {
 			expectErr: false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			manifest, err := Read(tt.manifest)
+			m, err := Read(tt.manifest)
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			dev := manifest.Dev["deployment"]
-
+			dev := m.Dev["deployment"]
 			err = dev.Validate()
 			if tt.expectErr && err == nil {
 				t.Error("didn't get the expected error")
 			}
-
 			if !tt.expectErr && err != nil {
 				t.Errorf("got an unexpected error: %s", err)
 			}
@@ -1347,7 +1329,7 @@ func createEnvFile(content map[string]string) (string, error) {
 	}
 
 	for k, v := range content {
-		_, err = file.WriteString(fmt.Sprintf("%s=%s\n", k, v))
+		_, err = fmt.Fprintf(file, "%s=%s\n", k, v)
 		if err != nil {
 			return "", err
 		}
@@ -1384,7 +1366,7 @@ func Test_expandEnvFiles(t *testing.T) {
 			name: "dont overwrite envs",
 			dev: &Dev{
 				Environment: env.Environment{
-					{
+					env.Var{
 						Name:  "key1",
 						Value: "value1",
 					},
@@ -1485,6 +1467,119 @@ func TestPrepare(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+		})
+	}
+}
+
+func TestDev_HasEmptyResources(t *testing.T) {
+	tests := []struct {
+		name     string
+		dev      *Dev
+		expected bool
+	}{
+		{
+			name: "empty resources",
+			dev: &Dev{
+				Resources: ResourceRequirements{},
+			},
+			expected: true,
+		},
+		{
+			name: "only requests set",
+			dev: &Dev{
+				Resources: ResourceRequirements{
+					Requests: ResourceList{
+						"memory": resource.MustParse("100Mi"),
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "only limits set",
+			dev: &Dev{
+				Resources: ResourceRequirements{
+					Limits: ResourceList{
+						"cpu": resource.MustParse("200m"),
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "both requests and limits set",
+			dev: &Dev{
+				Resources: ResourceRequirements{
+					Requests: ResourceList{
+						"memory": resource.MustParse("100Mi"),
+					},
+					Limits: ResourceList{
+						"cpu": resource.MustParse("200m"),
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "nil requests and limits",
+			dev: &Dev{
+				Resources: ResourceRequirements{
+					Requests: nil,
+					Limits:   nil,
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.dev.Resources.HasEmptyResources()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestDev_HasEmptyNodeSelector(t *testing.T) {
+	tests := []struct {
+		name         string
+		nodeSelector map[string]string
+		expected     bool
+	}{
+		{
+			name:         "empty nodeSelector",
+			nodeSelector: map[string]string{},
+			expected:     true,
+		},
+		{
+			name:         "nil nodeSelector",
+			nodeSelector: nil,
+			expected:     true,
+		},
+		{
+			name: "nodeSelector with values",
+			nodeSelector: map[string]string{
+				"kubernetes.io/os": "linux",
+			},
+			expected: false,
+		},
+		{
+			name: "nodeSelector with multiple values",
+			nodeSelector: map[string]string{
+				"kubernetes.io/os":   "linux",
+				"kubernetes.io/arch": "amd64",
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dev := &Dev{
+				NodeSelector: tt.nodeSelector,
+			}
+			result := dev.HasEmptyNodeSelector()
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }

@@ -1049,6 +1049,16 @@ func (s *Secret) GetFileName() string {
 	return filepath.Base(s.RemotePath)
 }
 
+// HasEmptyResources returns true if the dev resources are empty (no resources specified in okteto manifest)
+func (r *ResourceRequirements) HasEmptyResources() bool {
+	return len(r.Requests) == 0 && len(r.Limits) == 0
+}
+
+// HasEmptyNodeSelector checks if the dev configuration has an empty nodeSelector
+func (dev *Dev) HasEmptyNodeSelector() bool {
+	return len(dev.NodeSelector) == 0
+}
+
 // GetTimeout returns the timeout override
 func GetTimeout() (time.Duration, error) {
 	defaultTimeout := 60 * time.Second
