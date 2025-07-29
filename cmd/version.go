@@ -15,7 +15,6 @@ package cmd
 
 import (
 	"fmt"
-	"runtime"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/okteto/okteto/cmd/utils"
@@ -97,23 +96,5 @@ func isUpdateAvailable(currentVersion *semver.Version) bool {
 
 func displayUpdateSteps() {
 	oktetoLog.Println("You can update okteto with the following:")
-	switch {
-	case runtime.GOOS == "darwin" || runtime.GOOS == "linux":
-		oktetoLog.Print(`
-# Using installation script:
-curl https://get.okteto.com -sSfL | sh`)
-		if runtime.GOOS == "darwin" {
-			oktetoLog.Print(`
-
-# Using brew:
-brew upgrade okteto`)
-		}
-	case runtime.GOOS == "windows":
-		oktetoLog.Print(`# Using manual installation:
-1.- Download https://downloads.okteto.com/cli/okteto.exe
-2.- Add downloaded file to your $PATH
-
-# Using scoop:
-scoop update okteto`)
-	}
+	oktetoLog.Print(utils.GetUpgradeInstructions())
 }

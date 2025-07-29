@@ -100,3 +100,39 @@ func GetUpgradeCommand() string {
 
 	return `curl https://get.okteto.com -sSfL | sh`
 }
+
+// GetUpgradeInstructions returns detailed upgrade instructions for the current platform
+func GetUpgradeInstructions() string {
+	switch {
+	case runtime.GOOS == "darwin" || runtime.GOOS == "linux":
+		instructions := `
+
+First, check your current installation: which okteto
+
+Then upgrade using the method you originally used:
+- If installed via script: curl https://get.okteto.com -sSfL | sh`
+		if runtime.GOOS == "darwin" {
+			instructions += `
+- If installed via brew: brew upgrade okteto`
+		}
+		instructions += `
+- If manually downloaded: Download from https://github.com/okteto/okteto/releases
+
+Note: Multiple installations may exist. Check your PATH if issues persist.`
+		return instructions
+	case runtime.GOOS == "windows":
+		return `
+
+First, check your current installation: where okteto
+
+Then upgrade using the method you originally used:
+- If installed via scoop: scoop update okteto
+- If manually downloaded: Download from https://github.com/okteto/okteto/releases
+
+Note: Multiple installations may exist. Check your PATH if issues persist.`
+	default:
+		return `
+
+curl https://get.okteto.com -sSfL | sh`
+	}
+}

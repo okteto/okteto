@@ -333,7 +333,7 @@ func checkCLIVersion(currentVersion, recommendedVersion, minMajorMinor string) e
 	if version.LessThan(minV) {
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("unsupported okteto CLI version: %s", currentVersion),
-			Hint: fmt.Sprintf("Your Okteto instance has a recommended Okteto CLI version of %s and supports a minimum version of %s.\n    Please update your Okteto CLI or contact your Okteto administrator.", recMajorMinorVersion, minMajorMinor),
+			Hint: fmt.Sprintf("Your Okteto instance has a recommended Okteto CLI version of %s and supports a minimum version of %s.\n\nYou can update Okteto with the following:%s\n\nAlternatively, contact your Okteto administrator.", recMajorMinorVersion, minMajorMinor, utils.GetUpgradeInstructions()),
 		}
 	}
 
