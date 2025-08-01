@@ -367,6 +367,9 @@ func getManifestFromFile(cwd, manifestPath string, fs afero.Fs) (*Manifest, erro
 			if errors.Is(stackErr, oktetoErrors.ErrServiceEmpty) {
 				return nil, stackErr
 			}
+
+			// We just log the error in this case to not lose the stackErr. Before that, we are returning it
+			oktetoLog.Debugf("there was an error loading compose file(s): %v", stackErr)
 			// if not return original manifest err
 			return nil, err
 		}
