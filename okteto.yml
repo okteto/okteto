@@ -7,8 +7,8 @@ build:
 deploy:
   image: $OKTETO_BUILD_CLI_IMAGE
   commands:
-  - name: CLI
-    command: /usr/local/bin/okteto version
+    - name: CLI
+      command: /usr/local/bin/okteto version
 dev:
   cli:
     image: okteto/golang:1
