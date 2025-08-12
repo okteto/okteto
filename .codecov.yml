@@ -18,6 +18,6 @@ github_checks:
 
 ignore:
   - '**/*_test.go'
-  - "integration"
-  - "scripts"
-  - "internal"
+  - 'integration'
+  - 'scripts'
+  - 'internal'

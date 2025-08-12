@@ -25,12 +25,12 @@ deploy:
         export KUBE_NAMESPACE=$OKTETO_NAMESPACE
         terraform init -input=false
         terraform apply -input=false -var "cloudflare_api_token=$CLOUDFLARE_API_TOKEN" -var "cloudflare_zone_id=$CLOUDFLARE_ZONE_ID" -var "cloudflare_account_id=$CLOUDFLARE_ACCOUNT_ID" -var "cloudflare_bucket_name=$resourceName" -var "cloudflare_record_name=www-${OKTETO_NAMESPACE}" -var "cloudflare_record_value=menu-${OKTETO_NAMESPACE}.${OKTETO_DOMAIN}" -var "sqs_queue_name=$resourceName" -auto-approve
-        
+
         r2Dashboard="https://dash.cloudflare.com/${CLOUDFLARE_ACCOUNT_ID}/r2/default/buckets/${resourceName}"
         queueDashboard="https://us-west-2.console.aws.amazon.com/sqs/v2/home?region=us-west-2#/queues"
         cloudflareDNS="https://www-${OKTETO_NAMESPACE}.okteto.net"
         queueUrl=$(terraform output -raw queue_url)
-        
+
         # make the values available to the following steps and the dashboard
         {
           echo "OKTETO_EXTERNAL_R2_ENDPOINTS_BUCKET_URL=$r2Dashboard"
