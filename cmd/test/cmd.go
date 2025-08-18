@@ -410,10 +410,10 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 				return metadata, err
 			}
 
-			hint := `Please verify the specified image is accesible.
+			hint := `Please verify the specified image is accessible.
     You can use --log-level flag to get additional output.`
 			if len(test.Artifacts) > 0 {
-				hint = `Please verify the specified image is accesible and review if expected artifacts are being generated.
+				hint = `Please verify the specified image is accessible and review if expected artifacts are being generated.
     You can use --log-level flag to get additional output.`
 			}
 
