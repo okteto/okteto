@@ -1,4 +1,4 @@
-// Copyright 2023 The Okteto Authors
+// Copyright 2025 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,15 +17,15 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	k8sdivert "github.com/okteto/okteto/pkg/divert/k8s"
 	"github.com/okteto/okteto/pkg/divert/k8s/fake"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestDivertClient_CRUD(t *testing.T) {
 	namespace := "test-namespace"
-	
+
 	// Create fake client
 	fakeClient := fake.NewFakeDivertV1(fake.PossibleDivertErrors{})
 	client := fakeClient.Diverts(namespace)
