@@ -48,7 +48,7 @@ type DeployCommand struct {
 
 // Deploy starts the deploy command remotely. This is the command executed in the
 // remote environment when okteto deploy is executed with the remote flag
-func Deploy(ctx context.Context, k8sLogger *io.K8sLogger) *cobra.Command {
+func Deploy(ctx context.Context, k8sLogger *io.K8sLogger, ioCtrl *io.Controller) *cobra.Command {
 	options := &DeployOptions{}
 	cmd := &cobra.Command{
 		Use:   "deploy",
@@ -119,6 +119,7 @@ It is important that this command does the minimum and must not do calculations 
 				k8sClientProvider,
 				model.GetAvailablePort,
 				k8sLogger,
+				ioCtrl,
 			)
 			if err != nil {
 				return fmt.Errorf("could not initialize the command properly: %w", err)

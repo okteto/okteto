@@ -16,18 +16,26 @@ package divert
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/divert/istio"
+	"github.com/okteto/okteto/pkg/divert/k8s"
 	"github.com/okteto/okteto/pkg/divert/nginx"
 	"github.com/okteto/okteto/pkg/divert/noop"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/virtualservices"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	istioNetworkingV1beta1 "istio.io/api/networking/v1beta1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
+)
+
+var (
+	isDivertCRDInstalled bool
+	tOnce                sync.Once
 )
 
 type Driver interface {
@@ -37,13 +45,27 @@ type Driver interface {
 	UpdateVirtualService(vs *istioNetworkingV1beta1.VirtualService)
 }
 
-func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interface) (Driver, error) {
+func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interface, ioCtrl *io.Controller) (Driver, error) {
 	if !okteto.IsOkteto() {
 		return nil, oktetoErrors.ErrDivertNotSupported
 	}
 
 	if divert.Driver == constants.OktetoDivertNginxDriver {
-		return nginx.New(divert, name, namespace, c), nil
+		// Check if the divert CRD is installed only once
+		tOnce.Do(checkIfDivertCRDIsInstalled(ioCtrl))
+
+		var err error
+		divertClient := k8s.GetNoopDivertClient(ioCtrl)
+
+		// If the divert CRD is not installed, we use the noop client to not fail when deploying the divert section
+		if isDivertCRDInstalled {
+			divertClient, err = k8s.GetDivertClient()
+			if err != nil {
+				return nil, fmt.Errorf("error creating divert client: %w", err)
+			}
+		}
+
+		return nginx.New(divert, name, namespace, c, divertClient), nil
 	}
 
 	ic, err := virtualservices.GetIstioClient()
@@ -58,4 +80,26 @@ func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interf
 // in the manifest but the flow needs a driver
 func NewNoop() Driver {
 	return &noop.Driver{}
+}
+
+func checkIfDivertCRDIsInstalled(ioCtrl *io.Controller) func() {
+	return func() {
+		apixClient, err := okteto.GetApiExtensionsClient()
+		if err != nil {
+			ioCtrl.Logger().Infof("error getting api extensions client: %v. Assuming CRDs are not installed", err)
+			return
+		}
+		checker := k8s.CRDInstallationChecker{
+			Client: apixClient,
+			Logger: ioCtrl.Logger(),
+		}
+
+		isInstalled, err := checker.IsInstalled(context.Background())
+		if err != nil {
+			ioCtrl.Logger().Infof("error checking if Divert CRD is installed: %v. Assuming CRDs are not installed", err)
+			return
+		}
+
+		isDivertCRDInstalled = isInstalled
+	}
 }

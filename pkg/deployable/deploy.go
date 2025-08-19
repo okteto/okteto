@@ -85,6 +85,7 @@ type DeployRunner struct {
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
 	k8sLogger          *io.K8sLogger
 	TempKubeconfigFile string
+	IOCtrl             *io.Controller
 }
 
 // Entity represents a set of resources that can be deployed by the runner
@@ -124,6 +125,7 @@ func NewDeployRunnerForRemote(
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	portGetter PortGetterFunc,
 	k8sLogger *io.K8sLogger,
+	ioCtrl *io.Controller,
 ) (*DeployRunner, error) {
 	kubeconfig := NewKubeConfig()
 	tempKubeconfigName := name
@@ -144,6 +146,7 @@ func NewDeployRunnerForRemote(
 		GetExternalControl: newDeployExternalK8sControl,
 		Fs:                 afero.NewOsFs(),
 		k8sLogger:          k8sLogger,
+		IOCtrl:             ioCtrl,
 	}, nil
 }
 
@@ -212,7 +215,7 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 
 	r.Proxy.SetName(format.ResourceK8sMetaString(params.Name))
 	if params.Deployable.Divert != nil {
-		driver, err := divert.New(params.Deployable.Divert, params.Name, params.Namespace, c)
+		driver, err := divert.New(params.Deployable.Divert, params.Name, params.Namespace, c, r.IOCtrl)
 		if err != nil {
 			return err
 		}

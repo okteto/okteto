@@ -14,12 +14,26 @@
 package k8s
 
 import (
+	"context"
+
+	apixclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// Divert represents a configuration to route traffic from a service in the shared namespace 
-// to a service with the same name in the namespace where this resource is created, based on 
+type Logger interface {
+	Infof(format string, args ...interface{})
+}
+
+// CRDInstallationChecker is a struct to check if the Divert CRD is installed in the cluster
+type CRDInstallationChecker struct {
+	Client apixclient.Interface
+	Logger Logger
+}
+
+// Divert represents a configuration to route traffic from a service in the shared namespace
+// to a service with the same name in the namespace where this resource is created, based on
 // the Okteto divert HTTP header value defined in this resource
 type Divert struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -37,12 +51,12 @@ type DivertList struct {
 
 // DivertSpec represents the spec of a divert resource
 type DivertSpec struct {
-	// SharedNamespace is the namespace where the original service is deployed, 
+	// SharedNamespace is the namespace where the original service is deployed,
 	// from which traffic will be routed to the diverted namespace based on the divert key
 	SharedNamespace string `json:"sharedNamespace"`
 	// Service whose traffic will be routed from the shared namespace to the diverted one based on the divert key
 	Service string `json:"service"`
-	// DivertKey is the value to be set in the Okteto divert HTTP header when traffic to the target service 
+	// DivertKey is the value to be set in the Okteto divert HTTP header when traffic to the target service
 	// should be routed from the shared namespace to the diverted one
 	DivertKey string `json:"divertKey"`
 }
@@ -112,4 +126,18 @@ func (in *DivertSpec) DeepCopy() *DivertSpec {
 	out := new(DivertSpec)
 	in.DeepCopyInto(out)
 	return out
+}
+
+// IsInstalled checks if the Divert CRD is installed in the cluster
+func (c *CRDInstallationChecker) IsInstalled(ctx context.Context) (bool, error) {
+	_, err := c.Client.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, CRDName, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		c.Logger.Infof("failed to check CRD installation: %s", err.Error())
+		return false, err
+	}
+
+	return true, nil
 }

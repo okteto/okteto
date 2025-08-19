@@ -79,7 +79,7 @@ type pipelineDestroyer interface {
 type pipelineDestroyerProvider func() (pipelineDestroyer, error)
 
 // divertProvider is a function that returns a divert driver
-type divertProvider func(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interface) (divert.Driver, error)
+type divertProvider func(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interface, ioCtrl *io.Controller) (divert.Driver, error)
 
 // Options represents the options for destroy command
 type Options struct {
@@ -551,7 +551,7 @@ func (dc *destroyCommand) destroyDivert(ctx context.Context, manifest *model.Man
 	if err != nil {
 		return err
 	}
-	driver, err := dc.getDivertDriver(manifest.Deploy.Divert, manifest.Name, okteto.GetContext().Namespace, c)
+	driver, err := dc.getDivertDriver(manifest.Deploy.Divert, manifest.Name, okteto.GetContext().Namespace, c, dc.ioCtrl)
 	if err != nil {
 		return err
 	}

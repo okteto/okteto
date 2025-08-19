@@ -14,6 +14,8 @@
 package k8s
 
 import (
+	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/okteto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -26,6 +28,8 @@ const (
 	GroupName = "okteto.com"
 	// GroupVersion k8s version for Divert resource
 	GroupVersion = "v1"
+	// CRDName defines the name of the Custom Resource Definition for Divert
+	CRDName = "diverts.okteto.com"
 )
 
 var (
@@ -46,8 +50,22 @@ type DivertV1Client struct {
 	scheme     *runtime.Scheme
 }
 
+// GetNoopDivertClient returns a new noop client satisfying the interface DivertV1Interface
+func GetNoopDivertClient(ioCtrl *io.Controller) DivertV1Interface {
+	return &NoopV1DivertClient{
+		client: &NoopDivertClient{
+			IOCtrl: ioCtrl,
+		},
+	}
+}
+
 // GetDivertClient returns a new DivertV1Interface client
-func GetDivertClient(config *rest.Config) (DivertV1Interface, error) {
+func GetDivertClient() (DivertV1Interface, error) {
+	_, config, err := okteto.NewK8sClientProvider().Provide(okteto.GetContext().Cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	c, err := NewForConfig(config)
 	if err != nil {
 		return nil, err

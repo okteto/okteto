@@ -18,28 +18,32 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/divert/k8s"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	istioNetworkingV1beta1 "istio.io/api/networking/v1beta1"
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 // Driver nginx struct for the divert driver
 type Driver struct {
-	client    kubernetes.Interface
-	cache     *cache
-	name      string
-	namespace string
-	divert    model.DivertDeploy
+	client       kubernetes.Interface
+	cache        *cache
+	name         string
+	namespace    string
+	divert       model.DivertDeploy
+	divertClient k8s.DivertV1Interface
 }
 
-func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interface) *Driver {
+func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interface, divertClient k8s.DivertV1Interface) *Driver {
 	return &Driver{
-		name:      name,
-		namespace: namespace,
-		divert:    *divert,
-		client:    c,
+		name:         name,
+		namespace:    namespace,
+		divert:       *divert,
+		client:       c,
+		divertClient: divertClient,
 	}
 }
 
@@ -50,7 +54,40 @@ func (d *Driver) Deploy(ctx context.Context) error {
 	if err := d.initCache(ctx); err != nil {
 		return err
 	}
+	for _, in := range d.cache.developerIngresses {
+		select {
+		case <-ctx.Done():
+			oktetoLog.Infof("deployDivert context cancelled")
+			return ctx.Err()
+		default:
+			// TODO: If the ingress doesn't have the divert namespace annotation, I have to create or update the divert resource
+			if in.Annotations[model.OktetoDivertedNamespaceAnnotation] != "" {
+				continue
+			}
+
+			for _, rule := range in.Spec.Rules {
+				for _, path := range rule.IngressRuleValue.HTTP.Paths {
+					service := path.Backend.Service.Name
+					div := k8s.Divert{
+						// TODO: Review the name to use for the resource
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", d.name, service),
+							Namespace: d.namespace,
+						},
+						Spec: k8s.DivertSpec{
+							Service:         service,
+							SharedNamespace: d.divert.Namespace,
+							DivertKey:       d.namespace,
+						},
+					}
+					oktetoLog.Errorf("divert to be created: %v", div)
+					// TODO: We have to add the logic to create or update a divert resouce
+				}
+			}
+		}
+	}
 	for name, in := range d.cache.divertIngresses {
+		oktetoLog.Errorf("Diverting ingress %s/%s", in.Namespace, in.Name)
 		select {
 		case <-ctx.Done():
 			oktetoLog.Infof("deployDivert context cancelled")

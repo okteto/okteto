@@ -173,7 +173,7 @@ func main() {
 	root.AddCommand(deploy.Endpoints(ctx, k8sLogger))
 	root.AddCommand(logs.Logs(ctx, k8sLogger, fs))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
-	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger))
+	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger, ioController))
 	root.AddCommand(test.Test(ctx, ioController, k8sLogger, at, insights))
 	root.AddCommand(cmd.GenerateSchema())
 	root.AddCommand(cmd.Validate(fs))

@@ -36,6 +36,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
+	apixclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
@@ -456,6 +457,14 @@ func GetDiscoveryClient() (discovery.DiscoveryInterface, *rest.Config, error) {
 		return nil, nil, fmt.Errorf("okteto context not initialized")
 	}
 	return getDiscoveryClient(GetContext().Cfg)
+}
+
+// GetApiExtensionsClient returns the k8s client for API extensions.
+func GetApiExtensionsClient() (apixclient.Interface, error) {
+	if GetContext().Cfg == nil {
+		return nil, fmt.Errorf("okteto context not initialized")
+	}
+	return getApiExtensionClient(GetContext().Cfg)
 }
 
 // GetSanitizedUsername returns the username of the authenticated user sanitized to be DNS compatible

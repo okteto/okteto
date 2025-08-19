@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/divert"
 	okerrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
@@ -279,7 +280,7 @@ func TestDestroyWithErrorDestroyingDivert(t *testing.T) {
 		nsDestroyer:       destroyer,
 		secrets:           &fakeSecretHandler{},
 		k8sClientProvider: k8sClientProvider,
-		getDivertDriver: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface) (divert.Driver, error) {
+		getDivertDriver: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface, _ *io.Controller) (divert.Driver, error) {
 			return nil, assert.AnError
 		},
 		buildCtrlProvider: fakeBuildCtrlProvider{
@@ -664,7 +665,7 @@ func TestDestroyDivertWithErrorCreatingDivertDriver(t *testing.T) {
 
 	dc := &destroyCommand{
 		k8sClientProvider: k8sClientProvider,
-		getDivertDriver: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface) (divert.Driver, error) {
+		getDivertDriver: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface, _ *io.Controller) (divert.Driver, error) {
 			return nil, assert.AnError
 		},
 	}
@@ -682,7 +683,7 @@ func TestDestroyDivertWithoutError(t *testing.T) {
 	divertDriver := &fakeDivertDriver{}
 	dc := &destroyCommand{
 		k8sClientProvider: k8sClientProvider,
-		getDivertDriver: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface) (divert.Driver, error) {
+		getDivertDriver: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface, _ *io.Controller) (divert.Driver, error) {
 			return divertDriver, nil
 		},
 	}
