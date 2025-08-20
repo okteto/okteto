@@ -19,6 +19,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/divert/k8s"
+	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	istioNetworkingV1beta1 "istio.io/api/networking/v1beta1"
@@ -27,23 +28,28 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// Driver nginx struct for the divert driver
-type Driver struct {
-	client       kubernetes.Interface
-	cache        *cache
-	name         string
-	namespace    string
-	divert       model.DivertDeploy
-	divertClient k8s.DivertV1Interface
+// DivertManager interface defines the methods for managing divert resources
+type DivertManager interface {
+	CreateOrUpdate(ctx context.Context, d *k8s.Divert) error
 }
 
-func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interface, divertClient k8s.DivertV1Interface) *Driver {
+// Driver nginx struct for the divert driver
+type Driver struct {
+	client        kubernetes.Interface
+	cache         *cache
+	name          string
+	namespace     string
+	divert        model.DivertDeploy
+	divertManager DivertManager
+}
+
+func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interface, divertManager DivertManager) *Driver {
 	return &Driver{
-		name:         name,
-		namespace:    namespace,
-		divert:       *divert,
-		client:       c,
-		divertClient: divertClient,
+		name:          name,
+		namespace:     namespace,
+		divert:        *divert,
+		client:        c,
+		divertManager: divertManager,
 	}
 }
 
@@ -54,40 +60,43 @@ func (d *Driver) Deploy(ctx context.Context) error {
 	if err := d.initCache(ctx); err != nil {
 		return err
 	}
-	for _, in := range d.cache.developerIngresses {
+
+	for _, svc := range d.cache.developerServices {
 		select {
 		case <-ctx.Done():
 			oktetoLog.Infof("deployDivert context cancelled")
 			return ctx.Err()
 		default:
-			// TODO: If the ingress doesn't have the divert namespace annotation, I have to create or update the divert resource
-			if in.Annotations[model.OktetoDivertedNamespaceAnnotation] != "" {
+			// If the service doesn't have the divert namespace annotation, we don't have to create or update
+			// the divert resource as they are just a copy from the base namespace
+			if svc.Annotations[model.OktetoDivertedNamespaceAnnotation] != "" {
 				continue
 			}
 
-			for _, rule := range in.Spec.Rules {
-				for _, path := range rule.IngressRuleValue.HTTP.Paths {
-					service := path.Backend.Service.Name
-					div := k8s.Divert{
-						// TODO: Review the name to use for the resource
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      fmt.Sprintf("%s-%s", d.name, service),
-							Namespace: d.namespace,
-						},
-						Spec: k8s.DivertSpec{
-							Service:         service,
-							SharedNamespace: d.divert.Namespace,
-							DivertKey:       d.namespace,
-						},
-					}
-					oktetoLog.Errorf("divert to be created: %v", div)
-					// TODO: We have to add the logic to create or update a divert resouce
-				}
+			div := &k8s.Divert{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       k8s.DivertKind,
+					APIVersion: fmt.Sprintf("%s/%s", k8s.GroupName, k8s.GroupVersion),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-%s", format.ResourceK8sMetaString(d.name), svc.Name),
+					Namespace: d.namespace,
+				},
+				Spec: k8s.DivertSpec{
+					Service:         svc.Name,
+					SharedNamespace: d.divert.Namespace,
+					DivertKey:       d.namespace,
+				},
 			}
+
+			if err := d.divertManager.CreateOrUpdate(ctx, div); err != nil {
+				oktetoLog.Infof("error creating or updating divert resource '%s/%s': %s", div.Namespace, div.Name, err)
+				return fmt.Errorf("error diverting service %s/%s: %w", div.Namespace, div.Name, err)
+			}
+			oktetoLog.Debugf("Divert resource '%s/%s' created or updated", div.Namespace, div.Name)
 		}
 	}
 	for name, in := range d.cache.divertIngresses {
-		oktetoLog.Errorf("Diverting ingress %s/%s", in.Namespace, in.Name)
 		select {
 		case <-ctx.Done():
 			oktetoLog.Infof("deployDivert context cancelled")

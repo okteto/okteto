@@ -28,8 +28,6 @@ const (
 	GroupName = "okteto.com"
 	// GroupVersion k8s version for Divert resource
 	GroupVersion = "v1"
-	// CRDName defines the name of the Custom Resource Definition for Divert
-	CRDName = "diverts.okteto.com"
 )
 
 var (
