@@ -275,7 +275,7 @@ func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.C
 			metadata.CliMinVersion = string(v.Value)
 		case "cliClusterVersion":
 			metadata.CliClusterVersion = string(v.Value)
-		case "DivertCRDSEnabled":
+		case "divertCRDSEnabled":
 			metadata.DivertCRDSEnabled = string(v.Value) == "true"
 		}
 	}
