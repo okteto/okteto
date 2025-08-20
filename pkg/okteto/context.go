@@ -36,7 +36,6 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
-	apixclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
@@ -65,24 +64,25 @@ var (
 
 // Context contains the information related to an okteto context
 type Context struct {
-	Cfg                *clientcmdapi.Config `json:"-" yaml:"-"`
-	Name               string               `json:"name" yaml:"name,omitempty"`
-	UserID             string               `json:"id,omitempty" yaml:"id,omitempty"`
-	Username           string               `json:"username,omitempty" yaml:"username,omitempty"`
-	Token              string               `json:"token,omitempty" yaml:"token,omitempty"`
-	Namespace          string               `json:"namespace" yaml:"namespace,omitempty"`
-	Builder            string               `json:"builder,omitempty" yaml:"builder,omitempty"`
-	Registry           string               `json:"registry,omitempty" yaml:"registry,omitempty"`
-	Certificate        string               `json:"certificate,omitempty" yaml:"certificate,omitempty"`
-	PersonalNamespace  string               `json:"personalNamespace,omitempty" yaml:"personalNamespace,omitempty"`
-	GlobalNamespace    string               `json:"-" yaml:"-"`
-	ClusterType        string               `json:"-" yaml:"-"`
-	CompanyName        string               `json:"-" yaml:"-"`
-	IsOkteto           bool                 `json:"isOkteto,omitempty" yaml:"isOkteto,omitempty"`
-	IsStoredAsInsecure bool                 `json:"isInsecure,omitempty" yaml:"isInsecure,omitempty"`
-	IsInsecure         bool                 `json:"-" yaml:"-"`
-	Analytics          bool                 `json:"-" yaml:"-"`
-	IsTrial            bool                 `json:"-" yaml:"-"`
+	Cfg                  *clientcmdapi.Config `json:"-" yaml:"-"`
+	Name                 string               `json:"name" yaml:"name,omitempty"`
+	UserID               string               `json:"id,omitempty" yaml:"id,omitempty"`
+	Username             string               `json:"username,omitempty" yaml:"username,omitempty"`
+	Token                string               `json:"token,omitempty" yaml:"token,omitempty"`
+	Namespace            string               `json:"namespace" yaml:"namespace,omitempty"`
+	Builder              string               `json:"builder,omitempty" yaml:"builder,omitempty"`
+	Registry             string               `json:"registry,omitempty" yaml:"registry,omitempty"`
+	Certificate          string               `json:"certificate,omitempty" yaml:"certificate,omitempty"`
+	PersonalNamespace    string               `json:"personalNamespace,omitempty" yaml:"personalNamespace,omitempty"`
+	GlobalNamespace      string               `json:"-" yaml:"-"`
+	ClusterType          string               `json:"-" yaml:"-"`
+	CompanyName          string               `json:"-" yaml:"-"`
+	IsOkteto             bool                 `json:"isOkteto,omitempty" yaml:"isOkteto,omitempty"`
+	IsStoredAsInsecure   bool                 `json:"isInsecure,omitempty" yaml:"isInsecure,omitempty"`
+	IsInsecure           bool                 `json:"-" yaml:"-"`
+	Analytics            bool                 `json:"-" yaml:"-"`
+	IsTrial              bool                 `json:"-" yaml:"-"`
+	LinkerdDivertEnabled bool                 `json:"-" yaml:"-"`
 }
 
 // ContextViewer contains info to show
@@ -457,14 +457,6 @@ func GetDiscoveryClient() (discovery.DiscoveryInterface, *rest.Config, error) {
 		return nil, nil, fmt.Errorf("okteto context not initialized")
 	}
 	return getDiscoveryClient(GetContext().Cfg)
-}
-
-// GetApiExtensionsClient returns the k8s client for API extensions.
-func GetApiExtensionsClient() (apixclient.Interface, error) {
-	if GetContext().Cfg == nil {
-		return nil, fmt.Errorf("okteto context not initialized")
-	}
-	return getApiExtensionClient(GetContext().Cfg)
 }
 
 // GetSanitizedUsername returns the username of the authenticated user sanitized to be DNS compatible

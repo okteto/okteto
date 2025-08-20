@@ -186,7 +186,6 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	istio.io/api v0.0.0-20221013011440-bc935762d2b9
 	istio.io/client-go v1.15.3
-	k8s.io/apiextensions-apiserver v0.32.3
 )
 
 require (

@@ -23,7 +23,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	ioCtrl "github.com/okteto/okteto/pkg/log/io"
-	apixclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -202,23 +201,4 @@ func getDiscoveryClient(clientAPIConfig *clientcmdapi.Config) (discovery.Discove
 	}
 
 	return dc, config, err
-}
-
-func getApiExtensionClient(clientAPIConfig *clientcmdapi.Config) (apixclient.Interface, error) {
-	clientConfig := clientcmd.NewDefaultClientConfig(*clientAPIConfig, nil)
-
-	config, err := clientConfig.ClientConfig()
-	if err != nil {
-		return nil, err
-	}
-	config.WarningHandler = rest.NoWarnings{}
-
-	config.Timeout = GetKubernetesTimeout()
-
-	dc, err := apixclient.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	return dc, err
 }

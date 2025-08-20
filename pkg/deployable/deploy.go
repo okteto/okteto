@@ -162,6 +162,7 @@ func NewDeployRunnerForLocal(
 	k8sProvider okteto.K8sClientProviderWithLogger,
 	portGetter PortGetterFunc,
 	k8sLogger *io.K8sLogger,
+	ioCtrl *io.Controller,
 ) (*DeployRunner, error) {
 	kubeconfig := NewKubeConfig()
 	cwd, err := os.Getwd()
@@ -194,6 +195,7 @@ func NewDeployRunnerForLocal(
 		GetExternalControl: newDeployExternalK8sControl,
 		Fs:                 afero.NewOsFs(),
 		k8sLogger:          k8sLogger,
+		IOCtrl:             ioCtrl,
 	}, nil
 }
 

@@ -679,7 +679,8 @@ func GetDeployer(ctx context.Context,
 		cmapHandler,
 		k8sProvider,
 		model.GetAvailablePort,
-		k8Logger)
+		k8Logger,
+		ioCtrl)
 	if err != nil {
 		eWrapped := fmt.Errorf("could not initialize local deploy command: %w", err)
 		if uError, ok := err.(oktetoErrors.UserError); ok {

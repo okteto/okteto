@@ -33,11 +33,10 @@ const (
 )
 
 var (
-	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
-	AddToScheme   = SchemeBuilder.AddToScheme
+	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
+	AddToScheme        = SchemeBuilder.AddToScheme
+	schemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: GroupVersion}
 )
-
-var schemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: GroupVersion}
 
 // DivertV1Interface defines a method to get a DivertInterface
 type DivertV1Interface interface {
