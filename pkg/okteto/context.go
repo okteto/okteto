@@ -64,25 +64,25 @@ var (
 
 // Context contains the information related to an okteto context
 type Context struct {
-	Cfg                  *clientcmdapi.Config `json:"-" yaml:"-"`
-	Name                 string               `json:"name" yaml:"name,omitempty"`
-	UserID               string               `json:"id,omitempty" yaml:"id,omitempty"`
-	Username             string               `json:"username,omitempty" yaml:"username,omitempty"`
-	Token                string               `json:"token,omitempty" yaml:"token,omitempty"`
-	Namespace            string               `json:"namespace" yaml:"namespace,omitempty"`
-	Builder              string               `json:"builder,omitempty" yaml:"builder,omitempty"`
-	Registry             string               `json:"registry,omitempty" yaml:"registry,omitempty"`
-	Certificate          string               `json:"certificate,omitempty" yaml:"certificate,omitempty"`
-	PersonalNamespace    string               `json:"personalNamespace,omitempty" yaml:"personalNamespace,omitempty"`
-	GlobalNamespace      string               `json:"-" yaml:"-"`
-	ClusterType          string               `json:"-" yaml:"-"`
-	CompanyName          string               `json:"-" yaml:"-"`
-	IsOkteto             bool                 `json:"isOkteto,omitempty" yaml:"isOkteto,omitempty"`
-	IsStoredAsInsecure   bool                 `json:"isInsecure,omitempty" yaml:"isInsecure,omitempty"`
-	IsInsecure           bool                 `json:"-" yaml:"-"`
-	Analytics            bool                 `json:"-" yaml:"-"`
-	IsTrial              bool                 `json:"-" yaml:"-"`
-	LinkerdDivertEnabled bool                 `json:"-" yaml:"-"`
+	Cfg                *clientcmdapi.Config `json:"-" yaml:"-"`
+	Name               string               `json:"name" yaml:"name,omitempty"`
+	UserID             string               `json:"id,omitempty" yaml:"id,omitempty"`
+	Username           string               `json:"username,omitempty" yaml:"username,omitempty"`
+	Token              string               `json:"token,omitempty" yaml:"token,omitempty"`
+	Namespace          string               `json:"namespace" yaml:"namespace,omitempty"`
+	Builder            string               `json:"builder,omitempty" yaml:"builder,omitempty"`
+	Registry           string               `json:"registry,omitempty" yaml:"registry,omitempty"`
+	Certificate        string               `json:"certificate,omitempty" yaml:"certificate,omitempty"`
+	PersonalNamespace  string               `json:"personalNamespace,omitempty" yaml:"personalNamespace,omitempty"`
+	GlobalNamespace    string               `json:"-" yaml:"-"`
+	ClusterType        string               `json:"-" yaml:"-"`
+	CompanyName        string               `json:"-" yaml:"-"`
+	IsOkteto           bool                 `json:"isOkteto,omitempty" yaml:"isOkteto,omitempty"`
+	IsStoredAsInsecure bool                 `json:"isInsecure,omitempty" yaml:"isInsecure,omitempty"`
+	IsInsecure         bool                 `json:"-" yaml:"-"`
+	Analytics          bool                 `json:"-" yaml:"-"`
+	IsTrial            bool                 `json:"-" yaml:"-"`
+	DivertCRDSEnabled  bool                 `json:"-" yaml:"-"`
 }
 
 // ContextViewer contains info to show

@@ -49,7 +49,7 @@ func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interf
 		divertClient := k8s.GetNoopDivertClient(ioCtrl)
 
 		// If linkerd divert is not enabled, we use the noop divert client
-		if okteto.GetContext().LinkerdDivertEnabled {
+		if okteto.GetContext().DivertCRDSEnabled {
 			divertClient, err = k8s.GetDivertClient()
 			if err != nil {
 				return nil, fmt.Errorf("error creating divert client: %w", err)
