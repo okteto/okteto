@@ -17,7 +17,9 @@ import (
 	"context"
 
 	"github.com/okteto/okteto/pkg/log/io"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // NoopV1DivertClient is a no-operation implementation of the DivertV1Interface
@@ -41,12 +43,12 @@ func (n *NoopDivertClient) Create(_ context.Context, _ *Divert, _ metav1.CreateO
 
 func (n *NoopDivertClient) Get(_ context.Context, _ string, _ metav1.GetOptions) (*Divert, error) {
 	n.IOCtrl.Logger().Debugf("NoopDivertClient: Get called, but no operation performed")
-	return nil, nil
+	return nil, k8sErrors.NewNotFound(schema.GroupResource{Group: GroupName, Resource: DivertResource}, "not found")
 }
 
 func (n *NoopDivertClient) Update(_ context.Context, _ *Divert) (*Divert, error) {
 	n.IOCtrl.Logger().Debugf("NoopDivertClient: Update called, but no operation performed")
-	return nil, nil
+	return nil, k8sErrors.NewNotFound(schema.GroupResource{Group: GroupName, Resource: DivertResource}, "not found")
 }
 
 func (n *NoopDivertClient) Delete(_ context.Context, _ string, _ metav1.DeleteOptions) error {
@@ -56,5 +58,5 @@ func (n *NoopDivertClient) Delete(_ context.Context, _ string, _ metav1.DeleteOp
 
 func (n *NoopDivertClient) List(_ context.Context, _ metav1.ListOptions) (*DivertList, error) {
 	n.IOCtrl.Logger().Debugf("NoopDivertClient: List called, but no operation performed")
-	return nil, nil
+	return &DivertList{Items: make([]Divert, 0)}, nil
 }
