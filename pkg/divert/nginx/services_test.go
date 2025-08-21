@@ -59,8 +59,9 @@ func Test_translateService(t *testing.T) {
 						"l1":                  "v1",
 					},
 					Annotations: map[string]string{
-						model.OktetoAutoCreateAnnotation: "true",
-						"a1":                             "v1",
+						model.OktetoAutoCreateAnnotation:        "true",
+						"a1":                                    "v1",
+						model.OktetoDivertedNamespaceAnnotation: "staging",
 					},
 				},
 				Spec: apiv1.ServiceSpec{
@@ -88,7 +89,8 @@ func Test_translateService(t *testing.T) {
 						model.DeployedByLabel: "test",
 					},
 					Annotations: map[string]string{
-						model.OktetoAutoCreateAnnotation: "true",
+						model.OktetoAutoCreateAnnotation:        "true",
+						model.OktetoDivertedNamespaceAnnotation: "staging",
 					},
 				},
 				Spec: apiv1.ServiceSpec{
