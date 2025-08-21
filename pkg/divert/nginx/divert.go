@@ -163,6 +163,9 @@ func (d *Driver) deployDivertResources(ctx context.Context) error {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: d.namespace,
+					Labels: map[string]string{
+						model.DeployedByLabel: format.ResourceK8sMetaString(d.name),
+					},
 				},
 				Spec: k8s.DivertSpec{
 					Service:         svc.Name,
