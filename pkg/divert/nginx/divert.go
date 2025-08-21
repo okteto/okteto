@@ -61,41 +61,10 @@ func (d *Driver) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	for _, svc := range d.cache.developerServices {
-		select {
-		case <-ctx.Done():
-			oktetoLog.Infof("deployDivert context cancelled")
-			return ctx.Err()
-		default:
-			// If the service doesn't have the divert namespace annotation, we don't have to create or update
-			// the divert resource as they are just a copy from the base namespace
-			if svc.Annotations[model.OktetoDivertedNamespaceAnnotation] != "" {
-				continue
-			}
-
-			div := &k8s.Divert{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       k8s.DivertKind,
-					APIVersion: fmt.Sprintf("%s/%s", k8s.GroupName, k8s.GroupVersion),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-%s", format.ResourceK8sMetaString(d.name), svc.Name),
-					Namespace: d.namespace,
-				},
-				Spec: k8s.DivertSpec{
-					Service:         svc.Name,
-					SharedNamespace: d.divert.Namespace,
-					DivertKey:       d.namespace,
-				},
-			}
-
-			if err := d.divertManager.CreateOrUpdate(ctx, div); err != nil {
-				oktetoLog.Infof("error creating or updating divert resource '%s/%s': %s", div.Namespace, div.Name, err)
-				return fmt.Errorf("error diverting service %s/%s: %w", div.Namespace, div.Name, err)
-			}
-			oktetoLog.Debugf("Divert resource '%s/%s' created or updated", div.Namespace, div.Name)
-		}
+	if err := d.deployDivertResources(ctx); err != nil {
+		return err
 	}
+
 	for name, in := range d.cache.divertIngresses {
 		select {
 		case <-ctx.Done():
@@ -147,7 +116,7 @@ func (d *Driver) UpdatePod(pod apiv1.PodSpec) apiv1.PodSpec {
 	return pod
 }
 
-func (d *Driver) UpdateVirtualService(vs *istioNetworkingV1beta1.VirtualService) {}
+func (d *Driver) UpdateVirtualService(_ *istioNetworkingV1beta1.VirtualService) {}
 
 // updateEnvVar adds or updates an environment variable in the given env var slice
 func updateEnvVar(envVars *[]apiv1.EnvVar, name, value string) {
@@ -161,4 +130,48 @@ func updateEnvVar(envVars *[]apiv1.EnvVar, name, value string) {
 		Name:  name,
 		Value: value,
 	})
+}
+
+func (d *Driver) deployDivertResources(ctx context.Context) error {
+	for _, svc := range d.cache.developerServices {
+		select {
+		case <-ctx.Done():
+			oktetoLog.Infof("deployDivert context cancelled")
+			return ctx.Err()
+		default:
+			// If the service doesn't have the divert namespace annotation, we don't have to create or update
+			// the divert resource as they are just a copy from the base namespace
+			if svc.Annotations[model.OktetoDivertedNamespaceAnnotation] != "" {
+				continue
+			}
+
+			div := &k8s.Divert{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       k8s.DivertKind,
+					APIVersion: fmt.Sprintf("%s/%s", k8s.GroupName, k8s.GroupVersion),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-%s", format.ResourceK8sMetaString(d.name), svc.Name),
+					Namespace: d.namespace,
+				},
+				Spec: k8s.DivertSpec{
+					Service:         svc.Name,
+					SharedNamespace: d.divert.Namespace,
+					DivertKey:       d.namespace,
+				},
+			}
+
+			// As divert resources are created or updated only here, and they are scoped to the developer namespace
+			// we don't handle a conflict error to retry the change. If that situation changes, we should add
+			// a retry mechanism to handle conflicts.
+			oktetoLog.Debugf("creating or updating divert resource for service '%s/%s'", svc.Namespace, svc.Name)
+			if err := d.divertManager.CreateOrUpdate(ctx, div); err != nil {
+				oktetoLog.Infof("error creating or updating divert resource '%s/%s': %s", div.Namespace, div.Name, err)
+				return fmt.Errorf("error diverting service %s/%s: %w", div.Namespace, div.Name, err)
+			}
+			oktetoLog.Debugf("Divert resource '%s/%s' created or updated", div.Namespace, div.Name)
+		}
+	}
+
+	return nil
 }
