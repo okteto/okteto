@@ -56,7 +56,7 @@ func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interf
 			}
 		}
 
-		manager := NewDivertManager(divertClient)
+		manager := NewManager(divertClient)
 		return nginx.New(divert, name, namespace, c, manager), nil
 	}
 

@@ -28,7 +28,7 @@ import (
 func TestCreateOrUpdate_Create(t *testing.T) {
 	ctx := context.Background()
 	client := fake.NewFakeDivertV1(fake.PossibleDivertErrors{})
-	manager := NewDivertManager(client)
+	manager := NewManager(client)
 
 	d := &k8s.Divert{
 		ObjectMeta: metav1.ObjectMeta{
@@ -58,10 +58,7 @@ func TestCreateOrUpdate_Update(t *testing.T) {
 		Spec: k8s.DivertSpec{Service: "old-service"},
 	}
 	client := fake.NewFakeDivertV1(fake.PossibleDivertErrors{}, pre)
-	manager := NewDivertManager(client)
-
-	/*_, err := client.Diverts("default").Create(ctx, pre, metav1.CreateOptions{})
-	  require.NoError(t, err, "failed to pre-create divert")*/
+	manager := NewManager(client)
 
 	update := &k8s.Divert{
 		ObjectMeta: metav1.ObjectMeta{
