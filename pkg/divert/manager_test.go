@@ -17,11 +17,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/divert/k8s"
-	"github.com/stretchr/testify/require"
-
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/divert/k8s"
 	"github.com/okteto/okteto/pkg/divert/k8s/fake"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
