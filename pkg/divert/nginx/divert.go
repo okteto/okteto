@@ -16,6 +16,7 @@ package nginx
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/divert/k8s"
@@ -26,6 +27,10 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+)
+
+var (
+	divertCRDMaxLength = 253
 )
 
 // DivertManager interface defines the methods for managing divert resources
@@ -145,13 +150,18 @@ func (d *Driver) deployDivertResources(ctx context.Context) error {
 				continue
 			}
 
+			name := fmt.Sprintf("%s-%s", format.ResourceK8sMetaString(d.name), svc.Name)
+			if len(name) > divertCRDMaxLength {
+				name = name[:divertCRDMaxLength]
+				name = strings.TrimSuffix(name, "-")
+			}
 			div := &k8s.Divert{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       k8s.DivertKind,
 					APIVersion: fmt.Sprintf("%s/%s", k8s.GroupName, k8s.GroupVersion),
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-%s", format.ResourceK8sMetaString(d.name), svc.Name),
+					Name:      name,
 					Namespace: d.namespace,
 				},
 				Spec: k8s.DivertSpec{
