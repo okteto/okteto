@@ -269,7 +269,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			Fs:                 fs,
 			PipelineCMD:        pc,
 			AnalyticsTracker:   tracker,
-			IOCtrl:             ioCtrl,
+			IoCtrl:             ioCtrl,
 			K8sLogger:          k8sLogger,
 			IsRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
 			RunningInInstaller: config.RunningInInstaller(),

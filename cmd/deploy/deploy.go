@@ -118,7 +118,7 @@ type Command struct {
 	Fs                   afero.Fs
 	PipelineCMD          pipelineCMD.DeployerInterface
 	AnalyticsTracker     AnalyticsTrackerInterface
-	IOCtrl               *io.Controller
+	IoCtrl               *io.Controller
 	K8sLogger            *io.K8sLogger
 	InsightsTracker      buildDeployTrackerInterface
 	DivertDeployerGetter getDivertDeployer
@@ -255,7 +255,7 @@ $ okteto deploy --no-build=true`,
 				PipelineCMD:          pc,
 				RunningInInstaller:   config.RunningInInstaller(),
 				AnalyticsTracker:     at,
-				IOCtrl:               ioCtrl,
+				IoCtrl:               ioCtrl,
 				K8sLogger:            k8sLogger,
 				DivertDeployerGetter: newDivertDeployer,
 
@@ -314,12 +314,12 @@ $ okteto deploy --no-build=true`,
 func (dc *Command) calculateManifestPathToBeStored(topLevelGitDir, manifestPath string) string {
 	absoluteManifestPath, err := filepath.Abs(manifestPath)
 	if err != nil {
-		dc.IOCtrl.Logger().Debugf("failed to get absolute path for manifest path %q: %s", manifestPath, err)
+		dc.IoCtrl.Logger().Debugf("failed to get absolute path for manifest path %q: %s", manifestPath, err)
 		return ""
 	}
 	manifestPathForConfigMap, err := filepath.Rel(topLevelGitDir, absoluteManifestPath)
 	if err != nil {
-		dc.IOCtrl.Logger().Infof("failed to get relative path for manifest path %q from the repository dir %q: %s", absoluteManifestPath, topLevelGitDir, err)
+		dc.IoCtrl.Logger().Infof("failed to get relative path for manifest path %q from the repository dir %q: %s", absoluteManifestPath, topLevelGitDir, err)
 		return ""
 	}
 
@@ -365,7 +365,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	}
 
 	if topLevelGitDir != "" {
-		dc.IOCtrl.Logger().Debugf("repository detected at %s", topLevelGitDir)
+		dc.IoCtrl.Logger().Debugf("repository detected at %s", topLevelGitDir)
 		dc.addEnvVars(topLevelGitDir)
 	} else {
 		dc.addEnvVars(cwd)
@@ -409,7 +409,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		}
 	}
 
-	dc.IOCtrl.Logger().Debugf("manifest path to store in metadata: %q", manifestPathForConfigMap)
+	dc.IoCtrl.Logger().Debugf("manifest path to store in metadata: %q", manifestPathForConfigMap)
 	data := &pipeline.CfgData{
 		Name:       deployOptions.Name,
 		Namespace:  deployOptions.Namespace,
@@ -522,7 +522,7 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		dc.Builder.GetBuildEnvVars,
 		dc.CfgMapHandler,
 		dc.K8sClientProvider,
-		dc.IOCtrl,
+		dc.IoCtrl,
 		dc.K8sLogger,
 		GetDependencyEnvVars,
 	)
@@ -577,7 +577,7 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		stage := "Deploy Divert"
 		oktetoLog.SetStage(stage)
 		oktetoLog.Information("Running stage '%s'", stage)
-		driver, err := dc.DivertDeployerGetter(deployOptions.Manifest.Deploy.Divert, deployOptions.Name, deployOptions.Namespace, c, dc.IOCtrl)
+		driver, err := dc.DivertDeployerGetter(deployOptions.Manifest.Deploy.Divert, deployOptions.Name, deployOptions.Namespace, c, dc.IoCtrl)
 		if err != nil {
 			return err
 		}
@@ -840,7 +840,7 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 
 	divertDriver := divert.NewNoop()
 	if opts.Manifest.Deploy.Divert != nil {
-		divertDriver, err = divert.New(opts.Manifest.Deploy.Divert, opts.Manifest.Name, okteto.GetContext().Namespace, c, dc.IOCtrl)
+		divertDriver, err = divert.New(opts.Manifest.Deploy.Divert, opts.Manifest.Name, okteto.GetContext().Namespace, c, dc.IoCtrl)
 		if err != nil {
 			return err
 		}
@@ -851,7 +851,7 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 		Config:           cfg,
 		AnalyticsTracker: dc.AnalyticsTracker,
 		Insights:         dc.InsightsTracker,
-		IoCtrl:           dc.IOCtrl,
+		IoCtrl:           dc.IoCtrl,
 		Divert:           divertDriver,
 	}
 	return sd.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)

@@ -86,7 +86,7 @@ func NewDevEnvDeployerManager(up *upContext, ioCtrl *io.Controller, k8sLogger *i
 				DeployWaiter:      deploy.NewDeployWaiter(k8sProvider, k8sLogger),
 				EndpointGetter:    deploy.NewEndpointGetter,
 				AnalyticsTracker:  up.analyticsTracker,
-				IOCtrl:            ioCtrl,
+				IoCtrl:            ioCtrl,
 			}
 			return c, nil
 		},

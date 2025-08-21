@@ -359,7 +359,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 		K8sClientProvider: fakeK8sClientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                afero.NewMemMapFs(),
-		IOCtrl:            io.NewIOController(),
+		IoCtrl:            io.NewIOController(),
 	}
 
 	ctx := context.Background()
@@ -433,7 +433,7 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                fakeOs,
 		Builder:           &fakeV2Builder{},
-		IOCtrl:            io.NewIOController(),
+		IoCtrl:            io.NewIOController(),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -522,7 +522,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 		K8sClientProvider: fakeK8sClientProvider,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		Fs:                afero.NewMemMapFs(),
-		IOCtrl:            io.NewIOController(),
+		IoCtrl:            io.NewIOController(),
 	}
 	ctx := context.Background()
 
@@ -575,7 +575,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		GetDeployer:       fakeDeployer.Get,
 		Builder:           &fakeV2Builder{},
-		IOCtrl:            io.NewIOController(),
+		IoCtrl:            io.NewIOController(),
 		DivertDeployerGetter: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface, _ *io.Controller) (DivertDeployer, error) {
 			return divert, nil
 		},
@@ -658,7 +658,7 @@ func TestDeployWithErrorGettingDivertDriver(t *testing.T) {
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		GetDeployer:       fakeDeployer.Get,
 		Builder:           &fakeV2Builder{},
-		IOCtrl:            io.NewIOController(),
+		IoCtrl:            io.NewIOController(),
 		DivertDeployerGetter: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface, _ *io.Controller) (DivertDeployer, error) {
 			return divert, fmt.Errorf("error getting divert driver")
 		},
@@ -741,7 +741,7 @@ func TestDeployWithErrorDeployingDivertDriver(t *testing.T) {
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		GetDeployer:       fakeDeployer.Get,
 		Builder:           &fakeV2Builder{},
-		IOCtrl:            io.NewIOController(),
+		IoCtrl:            io.NewIOController(),
 		DivertDeployerGetter: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface, _ *io.Controller) (DivertDeployer, error) {
 			return divert, nil
 		},
@@ -898,7 +898,7 @@ func TestDeployOnlyDependencies(t *testing.T) {
 		Fs:                fakeOs,
 		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
 		GetDeployer:       fakeDeployer.Get,
-		IOCtrl:            io.NewIOController(),
+		IoCtrl:            io.NewIOController(),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -1235,7 +1235,7 @@ func TestGetDependencyEnvVars(t *testing.T) {
 
 func TestCalculateManifestPathToBeStored(t *testing.T) {
 	dc := &Command{
-		IOCtrl: io.NewIOController(),
+		IoCtrl: io.NewIOController(),
 	}
 
 	wd, err := os.Getwd()
