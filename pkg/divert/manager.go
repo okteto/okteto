@@ -11,23 +11,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package k8s
+package divert
 
 import (
 	"context"
 	"time"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/divert/k8s"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // DivertManager is the manager for Divert resources in Kubernetes.
 type DivertManager struct {
-	Client DivertV1Interface
+	Client k8s.DivertV1Interface
 }
 
-func NewDivertManager(client DivertV1Interface) *DivertManager {
+func NewDivertManager(client k8s.DivertV1Interface) *DivertManager {
 	return &DivertManager{
 		Client: client,
 	}
@@ -36,8 +37,8 @@ func NewDivertManager(client DivertV1Interface) *DivertManager {
 // CreateOrUpdate creates or updates a Divert resource in Kubernetes.
 // If the resource already exists, it updates it; otherwise, it creates a new one.
 // It returns an error if the operation fails.
-func (dm *DivertManager) CreateOrUpdate(ctx context.Context, d *Divert) error {
-	old, err := dm.Client.Diverts(d.Namespace).Get(ctx, "foo", metav1.GetOptions{})
+func (dm *DivertManager) CreateOrUpdate(ctx context.Context, d *k8s.Divert) error {
+	old, err := dm.Client.Diverts(d.Namespace).Get(ctx, d.Name, metav1.GetOptions{})
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
 			return dm.create(ctx, d)
@@ -50,7 +51,7 @@ func (dm *DivertManager) CreateOrUpdate(ctx context.Context, d *Divert) error {
 	return dm.update(ctx, old)
 }
 
-func (dm *DivertManager) create(ctx context.Context, d *Divert) error {
+func (dm *DivertManager) create(ctx context.Context, d *k8s.Divert) error {
 	if d.Annotations == nil {
 		d.Annotations = make(map[string]string)
 	}
@@ -59,7 +60,7 @@ func (dm *DivertManager) create(ctx context.Context, d *Divert) error {
 	return err
 }
 
-func (dm *DivertManager) update(ctx context.Context, d *Divert) error {
+func (dm *DivertManager) update(ctx context.Context, d *k8s.Divert) error {
 	if d.Annotations == nil {
 		d.Annotations = make(map[string]string)
 	}
