@@ -1346,9 +1346,9 @@ func Test_translateSecurityContextReadOnlyRootFilesystem(t *testing.T) {
 			expected: &falseB,
 		},
 		{
-			name: "no-readonly-specified",
-			c:    &apiv1.Container{},
-			s:    &model.SecurityContext{},
+			name:     "no-readonly-specified",
+			c:        &apiv1.Container{},
+			s:        &model.SecurityContext{},
 			expected: nil,
 		},
 		{
@@ -1378,11 +1378,11 @@ func Test_translateSecurityContextReadOnlyRootFilesystem(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			TranslateContainerSecurityContext(tt.c, tt.s)
-			
+
 			if tt.c.SecurityContext == nil && tt.expected != nil {
 				t.Fatal("SecurityContext was nil but expected a value")
 			}
-			
+
 			if tt.expected == nil {
 				if tt.c.SecurityContext != nil && tt.c.SecurityContext.ReadOnlyRootFilesystem != nil {
 					t.Errorf("Expected ReadOnlyRootFilesystem to be nil, but got %t", *tt.c.SecurityContext.ReadOnlyRootFilesystem)
