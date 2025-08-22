@@ -44,7 +44,7 @@ RUN curl -sLf --retry 3 -o kustomize.tar.gz \
     && tar -xzf kustomize.tar.gz -C /usr/local/bin \
     && chmod +x /usr/local/bin/kustomize \
     && rm kustomize.tar.gz \
-    # Verify binary works 
+    # Verify binary works
     && /usr/local/bin/kustomize version
 
 # Stage 3.2: Download kubectl (Kubernetes CLI)
@@ -56,7 +56,7 @@ RUN curl -sLf --retry 3 -o kubectl \
     && chmod +x kubectl \
     && mv kubectl /usr/local/bin/ \
     # Verify binary works
-    && /usr/local/bin/kubectl version --client=true 
+    && /usr/local/bin/kubectl version --client=true
 
 # Stage 3.3: Download Helm (Kubernetes package manager)
 FROM golang-builder AS helm-builder
@@ -70,7 +70,7 @@ RUN curl -sLf --retry 3 -o helm.tar.gz \
     && chmod +x /usr/local/bin/helm \
     && rm -rf helm helm.tar.gz \
     # Verify binary works
-    && /usr/local/bin/helm version 
+    && /usr/local/bin/helm version
 
 # Stage 3.4: Download git (Version control system)
 FROM debian:bookworm-slim AS git-builder

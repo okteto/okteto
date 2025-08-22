@@ -22,7 +22,7 @@ test:
         command: |
           set -e
           resourceName="${OKTETO_NAMESPACE}-okteto-lambda"
-          
+
           # needed to set the k8s backend correctly for terraform
           export KUBE_CONFIG_PATH="$KUBECONFIG"
           export KUBE_NAMESPACE=$OKTETO_NAMESPACE
