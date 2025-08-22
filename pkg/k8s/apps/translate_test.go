@@ -1319,6 +1319,10 @@ func Test_translateSecurityContextWithParams(t *testing.T) {
 			if tt.c.SecurityContext.RunAsNonRoot != tt.expectedRunAsNonRoot {
 				t.Errorf("tt.c.SecurityContext.RunAsNonRoot != tt.expectedRunAsNonRoot. Expected: %t, Got; %t", *tt.expectedRunAsNonRoot, *tt.c.SecurityContext.RunAsNonRoot)
 			}
+
+			if tt.c.SecurityContext.ReadOnlyRootFilesystem != nil {
+				t.Errorf("ReadOnlyRootFilesystem was not removed")
+			}
 		})
 	}
 }
