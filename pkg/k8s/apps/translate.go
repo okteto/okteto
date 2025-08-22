@@ -487,6 +487,10 @@ func TranslateContainerSecurityContext(c *apiv1.Container, s *model.SecurityCont
 		c.SecurityContext.AllowPrivilegeEscalation = s.AllowPrivilegeEscalation
 	}
 
+	if s.ReadOnlyRootFilesystem != nil {
+		c.SecurityContext.ReadOnlyRootFilesystem = s.ReadOnlyRootFilesystem
+	}
+
 	if s.Capabilities == nil {
 		return
 	}
@@ -494,7 +498,6 @@ func TranslateContainerSecurityContext(c *apiv1.Container, s *model.SecurityCont
 		c.SecurityContext.Capabilities = &apiv1.Capabilities{}
 	}
 
-	c.SecurityContext.ReadOnlyRootFilesystem = nil
 	c.SecurityContext.Capabilities.Add = append(c.SecurityContext.Capabilities.Add, s.Capabilities.Add...)
 	c.SecurityContext.Capabilities.Drop = append(c.SecurityContext.Capabilities.Drop, s.Capabilities.Drop...)
 }

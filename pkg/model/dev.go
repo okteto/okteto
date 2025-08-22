@@ -176,6 +176,7 @@ type SecurityContext struct {
 	Capabilities             *Capabilities `json:"capabilities,omitempty" yaml:"capabilities,omitempty"`
 	RunAsNonRoot             *bool         `json:"runAsNonRoot,omitempty" yaml:"runAsNonRoot,omitempty"`
 	AllowPrivilegeEscalation *bool         `json:"allowPrivilegeEscalation,omitempty" yaml:"allowPrivilegeEscalation,omitempty"`
+	ReadOnlyRootFilesystem   *bool         `json:"readOnlyRootFilesystem,omitempty" yaml:"readOnlyRootFilesystem,omitempty"`
 }
 
 // Capabilities sets the linux capabilities of a container
