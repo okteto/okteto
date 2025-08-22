@@ -37,6 +37,16 @@ func (f *fakeDivertManager) CreateOrUpdate(ctx context.Context, d *k8s.Divert) e
 	return args.Error(0)
 }
 
+func (f *fakeDivertManager) List(ctx context.Context, namespace string) ([]*k8s.Divert, error) {
+	args := f.Called(ctx, namespace)
+	return args.Get(0).([]*k8s.Divert), args.Error(1)
+}
+
+func (f *fakeDivertManager) Delete(ctx context.Context, name, namespace string) error {
+	args := f.Called(ctx, name, namespace)
+	return args.Error(0)
+}
+
 func Test_updateEnvVar(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -802,6 +812,7 @@ func Test_divertIngresses(t *testing.T) {
 	dm := &fakeDivertManager{}
 
 	dm.On("CreateOrUpdate", mock.Anything, mock.Anything).Return(nil).Times(2)
+	dm.On("List", mock.Anything, "cindy").Return([]*k8s.Divert{}, nil).Times(2)
 
 	d := &Driver{client: c, name: m.Name, namespace: "cindy", divert: *m.Deploy.Divert, divertManager: dm}
 	err := d.Deploy(ctx)

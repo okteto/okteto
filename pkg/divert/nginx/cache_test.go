@@ -17,8 +17,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/divert/k8s"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,7 +65,13 @@ func Test_initCache(t *testing.T) {
 			Namespace: "staging",
 		},
 	}
-	c := fake.NewSimpleClientset(i1, i2, i3, s1, s2, s3)
+	div := &k8s.Divert{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-divert-1",
+			Namespace: "cindy",
+		},
+	}
+	c := fake.NewClientset(i1, i2, i3, s1, s2, s3)
 	m := &model.Manifest{
 		Name: "test",
 		Deploy: &model.DeployInfo{
@@ -73,7 +81,10 @@ func Test_initCache(t *testing.T) {
 		},
 	}
 
-	d := &Driver{client: c, name: m.Name, namespace: "cindy", divert: *m.Deploy.Divert}
+	divertManager := &fakeDivertManager{}
+	divertManager.On("List", mock.Anything, "cindy").Return([]*k8s.Divert{div}, nil)
+
+	d := &Driver{client: c, name: m.Name, namespace: "cindy", divert: *m.Deploy.Divert, divertManager: divertManager}
 	err := d.initCache(ctx)
 	assert.NoError(t, err)
 
@@ -81,4 +92,7 @@ func Test_initCache(t *testing.T) {
 	assert.Equal(t, map[string]*networkingv1.Ingress{"i3": i3}, d.cache.divertIngresses)
 	assert.Equal(t, map[string]*apiv1.Service{"s1": s1}, d.cache.developerServices)
 	assert.Equal(t, map[string]*apiv1.Service{"s3": s3}, d.cache.divertServices)
+	assert.Equal(t, map[string]*k8s.Divert{"test-divert-1": div}, d.cache.divertResources)
+
+	divertManager.AssertExpectations(t)
 }

@@ -36,6 +36,8 @@ var (
 // DivertManager interface defines the methods for managing divert resources
 type DivertManager interface {
 	CreateOrUpdate(ctx context.Context, d *k8s.Divert) error
+	List(ctx context.Context, namespace string) ([]*k8s.Divert, error)
+	Delete(ctx context.Context, name, namespace string) error
 }
 
 // Driver nginx struct for the divert driver
@@ -68,6 +70,10 @@ func (d *Driver) Deploy(ctx context.Context) error {
 
 	if err := d.deployDivertResources(ctx); err != nil {
 		return err
+	}
+
+	if err := d.deleteOrphanDiverts(ctx); err != nil {
+		return fmt.Errorf("error deleting orphan diverts resources: %w", err)
 	}
 
 	for name, in := range d.cache.divertIngresses {
@@ -184,6 +190,30 @@ func (d *Driver) deployDivertResources(ctx context.Context) error {
 			}
 			oktetoLog.Debugf("Divert resource '%s/%s' created or updated", div.Namespace, div.Name)
 		}
+	}
+
+	return nil
+}
+
+// deleteOrphanDiverts checks for divert resources that are not associated with any developer service, and deletes them.
+func (d *Driver) deleteOrphanDiverts(ctx context.Context) error {
+	// We check if we need to delete some divert resource
+	divertToDelete := make([]string, 0)
+	for _, div := range d.cache.divertResources {
+		if _, ok := d.cache.developerServices[div.Spec.Service]; ok {
+			continue
+		}
+
+		divertToDelete = append(divertToDelete, div.Name)
+	}
+
+	for _, name := range divertToDelete {
+		if err := d.divertManager.Delete(ctx, name, d.namespace); err != nil {
+			oktetoLog.Infof("failed to delete divert '%s/%s': %s", d.namespace, name, err.Error())
+			return err
+		}
+
+		oktetoLog.Debugf("deleted divert '%s/%s'", d.namespace, name)
 	}
 
 	return nil
