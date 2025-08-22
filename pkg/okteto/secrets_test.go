@@ -377,6 +377,10 @@ func TestGetClusterMetadata(t *testing.T) {
 								Name:  "publicDomain",
 								Value: "test.okteto.com",
 							},
+							{
+								Name:  "divertCRDSEnabled",
+								Value: "true",
+							},
 						},
 					},
 				},
@@ -388,6 +392,7 @@ func TestGetClusterMetadata(t *testing.T) {
 					PipelineRunnerImage: "installer-runner-image",
 					BuildKitInternalIP:  "10.10.10.10",
 					PublicDomain:        "test.okteto.com",
+					DivertCRDSEnabled:   true,
 				},
 			},
 		},
@@ -535,6 +540,7 @@ func TestGetClusterMetadata(t *testing.T) {
 			assert.Equal(t, tc.expected.metadata.PipelineRunnerImage, result.PipelineRunnerImage)
 			assert.Equal(t, tc.expected.metadata.CompanyName, result.CompanyName)
 			assert.Equal(t, tc.expected.metadata.IsTrialLicense, result.IsTrialLicense)
+			assert.Equal(t, tc.expected.metadata.DivertCRDSEnabled, result.DivertCRDSEnabled)
 
 		})
 	}

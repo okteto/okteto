@@ -16,30 +16,45 @@ package nginx
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/divert/k8s"
+	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	istioNetworkingV1beta1 "istio.io/api/networking/v1beta1"
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
-// Driver nginx struct for the divert driver
-type Driver struct {
-	client    kubernetes.Interface
-	cache     *cache
-	name      string
-	namespace string
-	divert    model.DivertDeploy
+var (
+	divertCRDMaxLength = 253
+)
+
+// DivertManager interface defines the methods for managing divert resources
+type DivertManager interface {
+	CreateOrUpdate(ctx context.Context, d *k8s.Divert) error
 }
 
-func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interface) *Driver {
+// Driver nginx struct for the divert driver
+type Driver struct {
+	client        kubernetes.Interface
+	cache         *cache
+	name          string
+	namespace     string
+	divert        model.DivertDeploy
+	divertManager DivertManager
+}
+
+func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interface, divertManager DivertManager) *Driver {
 	return &Driver{
-		name:      name,
-		namespace: namespace,
-		divert:    *divert,
-		client:    c,
+		name:          name,
+		namespace:     namespace,
+		divert:        *divert,
+		client:        c,
+		divertManager: divertManager,
 	}
 }
 
@@ -50,6 +65,11 @@ func (d *Driver) Deploy(ctx context.Context) error {
 	if err := d.initCache(ctx); err != nil {
 		return err
 	}
+
+	if err := d.deployDivertResources(ctx); err != nil {
+		return err
+	}
+
 	for name, in := range d.cache.divertIngresses {
 		select {
 		case <-ctx.Done():
@@ -101,7 +121,7 @@ func (d *Driver) UpdatePod(pod apiv1.PodSpec) apiv1.PodSpec {
 	return pod
 }
 
-func (d *Driver) UpdateVirtualService(vs *istioNetworkingV1beta1.VirtualService) {}
+func (d *Driver) UpdateVirtualService(_ *istioNetworkingV1beta1.VirtualService) {}
 
 // updateEnvVar adds or updates an environment variable in the given env var slice
 func updateEnvVar(envVars *[]apiv1.EnvVar, name, value string) {
@@ -115,4 +135,56 @@ func updateEnvVar(envVars *[]apiv1.EnvVar, name, value string) {
 		Name:  name,
 		Value: value,
 	})
+}
+
+func (d *Driver) deployDivertResources(ctx context.Context) error {
+	for _, svc := range d.cache.developerServices {
+		select {
+		case <-ctx.Done():
+			oktetoLog.Infof("deployDivert context cancelled")
+			return ctx.Err()
+		default:
+			// If the service doesn't have the divert namespace annotation, we don't have to create or update
+			// the divert resource as they are just a copy from the base namespace
+			if svc.Annotations[model.OktetoDivertedNamespaceAnnotation] != "" {
+				continue
+			}
+
+			name := fmt.Sprintf("%s-%s", format.ResourceK8sMetaString(d.name), svc.Name)
+			if len(name) > divertCRDMaxLength {
+				name = name[:divertCRDMaxLength]
+				name = strings.TrimSuffix(name, "-")
+			}
+			div := &k8s.Divert{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       k8s.DivertKind,
+					APIVersion: fmt.Sprintf("%s/%s", k8s.GroupName, k8s.GroupVersion),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: d.namespace,
+					Labels: map[string]string{
+						model.DeployedByLabel: format.ResourceK8sMetaString(d.name),
+					},
+				},
+				Spec: k8s.DivertSpec{
+					Service:         svc.Name,
+					SharedNamespace: d.divert.Namespace,
+					DivertKey:       d.namespace,
+				},
+			}
+
+			// As divert resources are created or updated only here, and they are scoped to the developer namespace
+			// we don't handle a conflict error to retry the change. If that situation changes, we should add
+			// a retry mechanism to handle conflicts.
+			oktetoLog.Debugf("creating or updating divert resource for service '%s/%s'", svc.Namespace, svc.Name)
+			if err := d.divertManager.CreateOrUpdate(ctx, div); err != nil {
+				oktetoLog.Infof("error creating or updating divert resource '%s/%s': %s", div.Namespace, div.Name, err)
+				return fmt.Errorf("error diverting service %s/%s: %w", div.Namespace, div.Name, err)
+			}
+			oktetoLog.Debugf("Divert resource '%s/%s' created or updated", div.Namespace, div.Name)
+		}
+	}
+
+	return nil
 }

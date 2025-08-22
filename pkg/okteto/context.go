@@ -82,6 +82,7 @@ type Context struct {
 	IsInsecure         bool                 `json:"-" yaml:"-"`
 	Analytics          bool                 `json:"-" yaml:"-"`
 	IsTrial            bool                 `json:"-" yaml:"-"`
+	DivertCRDSEnabled  bool                 `json:"-" yaml:"-"`
 }
 
 // ContextViewer contains info to show

@@ -275,8 +275,8 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			K8sLogger:          k8sLogger,
 			IsRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
 			RunningInInstaller: config.RunningInInstaller(),
-			DivertDeployerGetter: func(d *model.DivertDeploy, name, namespace string, c kubernetes.Interface) (deployCMD.DivertDeployer, error) {
-				return divert.New(d, name, namespace, c)
+			DivertDeployerGetter: func(d *model.DivertDeploy, name, namespace string, c kubernetes.Interface, ioCtrl *io.Controller) (deployCMD.DivertDeployer, error) {
+				return divert.New(d, name, namespace, c, ioCtrl)
 			},
 		}
 		// runInRemote is not set at init, its left default to false and calculated by deployCMD.ShouldRunInRemote

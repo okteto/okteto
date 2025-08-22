@@ -88,8 +88,8 @@ func NewDevEnvDeployerManager(up *upContext, ioCtrl *io.Controller, k8sLogger *i
 				EndpointGetter:    deploy.NewEndpointGetter,
 				AnalyticsTracker:  up.analyticsTracker,
 				IoCtrl:            ioCtrl,
-				DivertDeployerGetter: func(d *model.DivertDeploy, name, namespace string, c kubernetes.Interface) (deploy.DivertDeployer, error) {
-					return divert.New(d, name, namespace, c)
+				DivertDeployerGetter: func(d *model.DivertDeploy, name, namespace string, c kubernetes.Interface, ioCtrl *io.Controller) (deploy.DivertDeployer, error) {
+					return divert.New(d, name, namespace, c, ioCtrl)
 				},
 			}
 			return c, nil

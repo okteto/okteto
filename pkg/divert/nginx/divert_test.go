@@ -15,15 +15,27 @@ package nginx
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/divert/k8s"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
+
+type fakeDivertManager struct {
+	mock.Mock
+}
+
+func (f *fakeDivertManager) CreateOrUpdate(ctx context.Context, d *k8s.Divert) error {
+	args := f.Called(ctx, d)
+	return args.Error(0)
+}
 
 func Test_updateEnvVar(t *testing.T) {
 	tests := []struct {
@@ -703,10 +715,11 @@ func Test_divertIngresses(t *testing.T) {
 				model.DeployedByLabel: "test",
 				"l1":                  "v1",
 			},
-			Annotations: map[string]string{"a1": "v1"},
+			Annotations: map[string]string{"a1": "v1", model.OktetoDivertedNamespaceAnnotation: "staging"},
 		},
 		Spec: apiv1.ServiceSpec{
-			Type: apiv1.ServiceTypeClusterIP,
+			Type:         apiv1.ServiceTypeExternalName,
+			ExternalName: "s1.staging.svc.cluster.local",
 			Ports: []apiv1.ServicePort{
 				{
 					Name: "port-cindy",
@@ -729,8 +742,7 @@ func Test_divertIngresses(t *testing.T) {
 			Annotations: map[string]string{"a1": "v2"},
 		},
 		Spec: apiv1.ServiceSpec{
-			Type:         apiv1.ServiceTypeExternalName,
-			ExternalName: "s1.staging.svc.cluster.local",
+			Type: apiv1.ServiceTypeClusterIP,
 		},
 	}
 
@@ -787,7 +799,11 @@ func Test_divertIngresses(t *testing.T) {
 		},
 	}
 
-	d := &Driver{client: c, name: m.Name, namespace: "cindy", divert: *m.Deploy.Divert}
+	dm := &fakeDivertManager{}
+
+	dm.On("CreateOrUpdate", mock.Anything, mock.Anything).Return(nil).Times(2)
+
+	d := &Driver{client: c, name: m.Name, namespace: "cindy", divert: *m.Deploy.Divert, divertManager: dm}
 	err := d.Deploy(ctx)
 	assert.NoError(t, err)
 
@@ -826,4 +842,209 @@ func Test_divertIngresses(t *testing.T) {
 	resultI3, err = c.NetworkingV1().Ingresses("cindy").Get(ctx, "i3", metav1.GetOptions{})
 	assert.NoError(t, err)
 	assert.Equal(t, expectedI3, resultI3)
+
+	dm.AssertExpectations(t)
+}
+
+func Test_deployDivertResources_Success(t *testing.T) {
+	ctx := context.Background()
+
+	developerServices := map[string]*apiv1.Service{
+		"svc1": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "svc1",
+				Namespace: "cindy",
+				Annotations: map[string]string{
+					model.OktetoDivertedNamespaceAnnotation: "staging",
+				},
+			},
+		},
+		"svc2": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "svc2",
+				Namespace:   "cindy",
+				Annotations: map[string]string{},
+			},
+		},
+		"svc3": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "svc3",
+				Namespace:   "cindy",
+				Annotations: map[string]string{},
+			},
+		},
+	}
+
+	dm := &fakeDivertManager{}
+	dm.On("CreateOrUpdate", mock.Anything, mock.MatchedBy(func(d *k8s.Divert) bool {
+		return d.Name == "test-svc2" &&
+			d.Namespace == "cindy" &&
+			d.Spec.Service == "svc2" &&
+			d.Spec.SharedNamespace == "staging" &&
+			d.Spec.DivertKey == "cindy"
+	})).Return(nil).Once()
+
+	dm.On("CreateOrUpdate", mock.Anything, mock.MatchedBy(func(d *k8s.Divert) bool {
+		return d.Name == "test-svc3" &&
+			d.Namespace == "cindy" &&
+			d.Spec.Service == "svc3" &&
+			d.Spec.SharedNamespace == "staging" &&
+			d.Spec.DivertKey == "cindy"
+	})).Return(nil).Once()
+
+	d := &Driver{
+		name:      "test",
+		namespace: "cindy",
+		divert: model.DivertDeploy{
+			Namespace: "staging",
+		},
+		divertManager: dm,
+		cache: &cache{
+			developerServices: developerServices,
+		},
+	}
+
+	err := d.deployDivertResources(ctx)
+
+	assert.NoError(t, err)
+	dm.AssertExpectations(t)
+}
+
+func Test_deployDivertResources_NoServices(t *testing.T) {
+	ctx := context.Background()
+
+	developerServices := map[string]*apiv1.Service{}
+
+	dm := &fakeDivertManager{}
+
+	d := &Driver{
+		name:      "test",
+		namespace: "cindy",
+		divert: model.DivertDeploy{
+			Namespace: "staging",
+		},
+		divertManager: dm,
+		cache: &cache{
+			developerServices: developerServices,
+		},
+	}
+
+	err := d.deployDivertResources(ctx)
+
+	assert.NoError(t, err)
+	dm.AssertNumberOfCalls(t, "CreateOrUpdate", 0)
+}
+
+func Test_deployDivertResources_OnlyAnnotatedServices(t *testing.T) {
+	ctx := context.Background()
+
+	developerServices := map[string]*apiv1.Service{
+		"svc1": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "svc1",
+				Namespace: "cindy",
+				Annotations: map[string]string{
+					model.OktetoDivertedNamespaceAnnotation: "staging",
+				},
+			},
+		},
+		"svc2": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "svc2",
+				Namespace: "cindy",
+				Annotations: map[string]string{
+					model.OktetoDivertedNamespaceAnnotation: "staging",
+				},
+			},
+		},
+	}
+
+	dm := &fakeDivertManager{}
+
+	d := &Driver{
+		name:      "test",
+		namespace: "cindy",
+		divert: model.DivertDeploy{
+			Namespace: "staging",
+		},
+		divertManager: dm,
+		cache: &cache{
+			developerServices: developerServices,
+		},
+	}
+
+	err := d.deployDivertResources(ctx)
+
+	assert.NoError(t, err)
+	dm.AssertNumberOfCalls(t, "CreateOrUpdate", 0)
+}
+
+func Test_deployDivertResources_CreateError(t *testing.T) {
+	ctx := context.Background()
+
+	developerServices := map[string]*apiv1.Service{
+		"svc1": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "svc1",
+				Namespace:   "cindy",
+				Annotations: map[string]string{},
+			},
+		},
+	}
+
+	dm := &fakeDivertManager{}
+	dm.On("CreateOrUpdate", mock.Anything, mock.Anything).Return(fmt.Errorf("failed to create divert")).Once()
+
+	d := &Driver{
+		name:      "test",
+		namespace: "cindy",
+		divert: model.DivertDeploy{
+			Namespace: "staging",
+		},
+		divertManager: dm,
+		cache: &cache{
+			developerServices: developerServices,
+		},
+	}
+
+	err := d.deployDivertResources(ctx)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "error diverting service")
+	dm.AssertExpectations(t)
+}
+
+func Test_deployDivertResources_ContextCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	developerServices := map[string]*apiv1.Service{
+		"svc1": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "svc1",
+				Namespace:   "cindy",
+				Annotations: map[string]string{},
+			},
+		},
+	}
+
+	dm := &fakeDivertManager{}
+
+	d := &Driver{
+		name:      "test",
+		namespace: "cindy",
+		divert: model.DivertDeploy{
+			Namespace: "staging",
+		},
+		divertManager: dm,
+		cache: &cache{
+			developerServices: developerServices,
+		},
+	}
+
+	err := d.deployDivertResources(ctx)
+
+	assert.Error(t, err)
+	assert.Equal(t, ctx.Err(), err)
+	dm.AssertNumberOfCalls(t, "CreateOrUpdate", 0)
 }

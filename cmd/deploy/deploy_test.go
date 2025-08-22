@@ -576,7 +576,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		GetDeployer:       fakeDeployer.Get,
 		Builder:           &fakeV2Builder{},
 		IoCtrl:            io.NewIOController(),
-		DivertDeployerGetter: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface) (DivertDeployer, error) {
+		DivertDeployerGetter: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface, _ *io.Controller) (DivertDeployer, error) {
 			return divert, nil
 		},
 	}
@@ -659,7 +659,7 @@ func TestDeployWithErrorGettingDivertDriver(t *testing.T) {
 		GetDeployer:       fakeDeployer.Get,
 		Builder:           &fakeV2Builder{},
 		IoCtrl:            io.NewIOController(),
-		DivertDeployerGetter: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface) (DivertDeployer, error) {
+		DivertDeployerGetter: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface, _ *io.Controller) (DivertDeployer, error) {
 			return divert, fmt.Errorf("error getting divert driver")
 		},
 	}
@@ -742,7 +742,7 @@ func TestDeployWithErrorDeployingDivertDriver(t *testing.T) {
 		GetDeployer:       fakeDeployer.Get,
 		Builder:           &fakeV2Builder{},
 		IoCtrl:            io.NewIOController(),
-		DivertDeployerGetter: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface) (DivertDeployer, error) {
+		DivertDeployerGetter: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface, _ *io.Controller) (DivertDeployer, error) {
 			return divert, nil
 		},
 	}

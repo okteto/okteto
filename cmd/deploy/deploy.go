@@ -163,10 +163,10 @@ type DivertDeployer interface {
 	Deploy(ctx context.Context) error
 }
 
-type getDivertDeployer func(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interface) (DivertDeployer, error)
+type getDivertDeployer func(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interface, ioCtrl *io.Controller) (DivertDeployer, error)
 
-func newDivertDeployer(d *model.DivertDeploy, name, namespace string, c kubernetes.Interface) (DivertDeployer, error) {
-	return divert.New(d, name, namespace, c)
+func newDivertDeployer(d *model.DivertDeploy, name, namespace string, c kubernetes.Interface, ioCtrl *io.Controller) (DivertDeployer, error) {
+	return divert.New(d, name, namespace, c, ioCtrl)
 }
 
 // Deploy deploys the okteto manifest
@@ -577,7 +577,7 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		stage := "Deploy Divert"
 		oktetoLog.SetStage(stage)
 		oktetoLog.Information("Running stage '%s'", stage)
-		driver, err := dc.DivertDeployerGetter(deployOptions.Manifest.Deploy.Divert, deployOptions.Name, deployOptions.Namespace, c)
+		driver, err := dc.DivertDeployerGetter(deployOptions.Manifest.Deploy.Divert, deployOptions.Name, deployOptions.Namespace, c, dc.IoCtrl)
 		if err != nil {
 			return err
 		}
@@ -679,7 +679,8 @@ func GetDeployer(ctx context.Context,
 		cmapHandler,
 		k8sProvider,
 		model.GetAvailablePort,
-		k8Logger)
+		k8Logger,
+		ioCtrl)
 	if err != nil {
 		eWrapped := fmt.Errorf("could not initialize local deploy command: %w", err)
 		if uError, ok := err.(oktetoErrors.UserError); ok {
@@ -839,7 +840,7 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 
 	divertDriver := divert.NewNoop()
 	if opts.Manifest.Deploy.Divert != nil {
-		divertDriver, err = divert.New(opts.Manifest.Deploy.Divert, opts.Manifest.Name, okteto.GetContext().Namespace, c)
+		divertDriver, err = divert.New(opts.Manifest.Deploy.Divert, opts.Manifest.Name, okteto.GetContext().Namespace, c, dc.IoCtrl)
 		if err != nil {
 			return err
 		}

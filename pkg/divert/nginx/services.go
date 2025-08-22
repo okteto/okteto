@@ -67,5 +67,6 @@ func translateService(name, namespace string, s *apiv1.Service) *apiv1.Service {
 		result.Annotations = map[string]string{}
 	}
 	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
+	result.Annotations[model.OktetoDivertedNamespaceAnnotation] = s.Namespace
 	return result
 }
