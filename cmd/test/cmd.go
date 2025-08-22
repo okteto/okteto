@@ -36,6 +36,7 @@ import (
 	"github.com/okteto/okteto/pkg/dag"
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/devenvironment"
+	"github.com/okteto/okteto/pkg/divert"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
@@ -51,6 +52,7 @@ import (
 	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	"k8s.io/client-go/kubernetes"
 )
 
 type Options struct {
@@ -273,6 +275,9 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			K8sLogger:          k8sLogger,
 			IsRemote:           env.LoadBoolean(constants.OktetoDeployRemote),
 			RunningInInstaller: config.RunningInInstaller(),
+			DivertDeployerGetter: func(d *model.DivertDeploy, name, namespace string, c kubernetes.Interface) (deployCMD.DivertDeployer, error) {
+				return divert.New(d, name, namespace, c)
+			},
 		}
 		// runInRemote is not set at init, its left default to false and calculated by deployCMD.ShouldRunInRemote
 		opts := &deployCMD.Options{
