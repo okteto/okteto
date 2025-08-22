@@ -197,7 +197,6 @@ func (d *Driver) deployDivertResources(ctx context.Context) error {
 
 // deleteOrphanDiverts checks for divert resources that are not associated with any developer service, and deletes them.
 func (d *Driver) deleteOrphanDiverts(ctx context.Context) error {
-	// We check if we need to delete some divert resource
 	divertToDelete := make([]string, 0)
 	for _, div := range d.cache.divertResources {
 		if _, ok := d.cache.developerServices[div.Spec.Service]; ok {

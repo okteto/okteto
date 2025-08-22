@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -809,10 +810,31 @@ func Test_divertIngresses(t *testing.T) {
 		},
 	}
 
+	divertResources := []*k8s.Divert{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "divert-1",
+				Namespace: "cindy",
+			},
+			Spec: k8s.DivertSpec{
+				Service: "s1",
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "divert-2",
+				Namespace: "cindy",
+			},
+			Spec: k8s.DivertSpec{
+				Service: "s2",
+			},
+		},
+	}
+
 	dm := &fakeDivertManager{}
 
 	dm.On("CreateOrUpdate", mock.Anything, mock.Anything).Return(nil).Times(2)
-	dm.On("List", mock.Anything, "cindy").Return([]*k8s.Divert{}, nil).Times(2)
+	dm.On("List", mock.Anything, "cindy").Return(divertResources, nil).Times(2)
 
 	d := &Driver{client: c, name: m.Name, namespace: "cindy", divert: *m.Deploy.Divert, divertManager: dm}
 	err := d.Deploy(ctx)
@@ -836,6 +858,7 @@ func Test_divertIngresses(t *testing.T) {
 	// Eliminate elements from the cache to force RCs
 	d.cache.developerIngresses = map[string]*networkingv1.Ingress{}
 	d.cache.developerServices = map[string]*apiv1.Service{}
+	d.cache.divertResources = map[string]*k8s.Divert{}
 	err = d.Deploy(ctx)
 	assert.NoError(t, err)
 
@@ -855,6 +878,7 @@ func Test_divertIngresses(t *testing.T) {
 	assert.Equal(t, expectedI3, resultI3)
 
 	dm.AssertExpectations(t)
+	dm.AssertNotCalled(t, "Delete", mock.Anything, mock.Anything)
 }
 
 func Test_deployDivertResources_Success(t *testing.T) {
@@ -1058,4 +1082,168 @@ func Test_deployDivertResources_ContextCancelled(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, ctx.Err(), err)
 	dm.AssertNumberOfCalls(t, "CreateOrUpdate", 0)
+}
+
+func Test_deleteOrphanDiverts_Success(t *testing.T) {
+	ctx := context.Background()
+
+	divertResources := map[string]*k8s.Divert{
+		"divert1": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "divert1",
+				Namespace: "cindy",
+			},
+			Spec: k8s.DivertSpec{
+				Service: "service1",
+			},
+		},
+		"divert2": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "divert2",
+				Namespace: "cindy",
+			},
+			Spec: k8s.DivertSpec{
+				Service: "service2",
+			},
+		},
+		"divert3": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "divert3",
+				Namespace: "cindy",
+			},
+			Spec: k8s.DivertSpec{
+				Service: "service3",
+			},
+		},
+	}
+
+	developerServices := map[string]*apiv1.Service{
+		"service1": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "service1",
+				Namespace: "cindy",
+			},
+		},
+	}
+
+	dm := &fakeDivertManager{}
+	dm.On("Delete", ctx, "divert2", "cindy").Return(nil).Once()
+	dm.On("Delete", ctx, "divert3", "cindy").Return(nil).Once()
+
+	d := &Driver{
+		namespace:     "cindy",
+		divertManager: dm,
+		cache: &cache{
+			divertResources:   divertResources,
+			developerServices: developerServices,
+		},
+	}
+
+	err := d.deleteOrphanDiverts(ctx)
+
+	require.NoError(t, err)
+	dm.AssertExpectations(t)
+	dm.AssertNotCalled(t, "Delete", ctx, "divert1", "cindy")
+}
+
+func Test_deleteOrphanDiverts_NoOrphans(t *testing.T) {
+	ctx := context.Background()
+
+	divertResources := map[string]*k8s.Divert{
+		"divert1": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "divert1",
+				Namespace: "cindy",
+			},
+			Spec: k8s.DivertSpec{
+				Service: "service1",
+			},
+		},
+		"divert2": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "divert2",
+				Namespace: "cindy",
+			},
+			Spec: k8s.DivertSpec{
+				Service: "service2",
+			},
+		},
+	}
+
+	developerServices := map[string]*apiv1.Service{
+		"service1": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "service1",
+				Namespace: "cindy",
+			},
+		},
+		"service2": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "service2",
+				Namespace: "cindy",
+			},
+		},
+	}
+
+	dm := &fakeDivertManager{}
+
+	d := &Driver{
+		namespace:     "cindy",
+		divertManager: dm,
+		cache: &cache{
+			divertResources:   divertResources,
+			developerServices: developerServices,
+		},
+	}
+
+	err := d.deleteOrphanDiverts(ctx)
+
+	require.NoError(t, err)
+	dm.AssertNumberOfCalls(t, "Delete", 0)
+}
+
+func Test_deleteOrphanDiverts_DeleteError(t *testing.T) {
+	ctx := context.Background()
+
+	divertResources := map[string]*k8s.Divert{
+		"divert1": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "divert1",
+				Namespace: "cindy",
+			},
+			Spec: k8s.DivertSpec{
+				Service: "service1",
+			},
+		},
+		"divert2": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "divert2",
+				Namespace: "cindy",
+			},
+			Spec: k8s.DivertSpec{
+				Service: "service2",
+			},
+		},
+	}
+
+	developerServices := map[string]*apiv1.Service{}
+
+	dm := &fakeDivertManager{}
+	dm.On("Delete", ctx, "divert1", "cindy").Return(nil).Once()
+	dm.On("Delete", ctx, "divert2", "cindy").Return(fmt.Errorf("delete error")).Once()
+
+	d := &Driver{
+		namespace:     "cindy",
+		divertManager: dm,
+		cache: &cache{
+			divertResources:   divertResources,
+			developerServices: developerServices,
+		},
+	}
+
+	err := d.deleteOrphanDiverts(ctx)
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "delete error")
+	dm.AssertExpectations(t)
 }
