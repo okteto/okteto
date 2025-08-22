@@ -19,10 +19,12 @@ import (
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/divert/istio"
+	"github.com/okteto/okteto/pkg/divert/k8s"
 	"github.com/okteto/okteto/pkg/divert/nginx"
 	"github.com/okteto/okteto/pkg/divert/noop"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/virtualservices"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	istioNetworkingV1beta1 "istio.io/api/networking/v1beta1"
@@ -37,13 +39,25 @@ type Driver interface {
 	UpdateVirtualService(vs *istioNetworkingV1beta1.VirtualService)
 }
 
-func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interface) (Driver, error) {
+func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interface, ioCtrl *io.Controller) (Driver, error) {
 	if !okteto.IsOkteto() {
 		return nil, oktetoErrors.ErrDivertNotSupported
 	}
 
 	if divert.Driver == constants.OktetoDivertNginxDriver {
-		return nginx.New(divert, name, namespace, c), nil
+		var err error
+		divertClient := k8s.GetNoopDivertClient(ioCtrl)
+
+		// If linkerd divert is not enabled, we use the noop divert client
+		if okteto.GetContext().DivertCRDSEnabled {
+			divertClient, err = k8s.GetDivertClient()
+			if err != nil {
+				return nil, fmt.Errorf("error creating divert client: %w", err)
+			}
+		}
+
+		manager := NewManager(divertClient)
+		return nginx.New(divert, name, namespace, c, manager), nil
 	}
 
 	ic, err := virtualservices.GetIstioClient()

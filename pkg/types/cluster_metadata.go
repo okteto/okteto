@@ -28,4 +28,5 @@ type ClusterMetadata struct {
 	CliClusterVersion   string
 	Certificate         []byte
 	IsTrialLicense      bool
+	DivertCRDSEnabled   bool
 }

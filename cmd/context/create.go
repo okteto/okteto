@@ -282,6 +282,7 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 
 	okteto.GetContext().IsTrial = clusterMetadata.IsTrialLicense
 	okteto.GetContext().CompanyName = clusterMetadata.CompanyName
+	okteto.GetContext().DivertCRDSEnabled = clusterMetadata.DivertCRDSEnabled
 
 	if clusterMetadata.CliMinVersion != "" {
 		skip := env.LoadBoolean("OKTETO_SKIP_CLUSTER_CLI_VERSION")

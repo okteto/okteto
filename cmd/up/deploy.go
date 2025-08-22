@@ -23,6 +23,7 @@ import (
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	"github.com/okteto/okteto/pkg/divert"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -87,6 +88,9 @@ func NewDevEnvDeployerManager(up *upContext, ioCtrl *io.Controller, k8sLogger *i
 				EndpointGetter:    deploy.NewEndpointGetter,
 				AnalyticsTracker:  up.analyticsTracker,
 				IoCtrl:            ioCtrl,
+				DivertDeployerGetter: func(d *model.DivertDeploy, name, namespace string, c kubernetes.Interface, ioCtrl *io.Controller) (deploy.DivertDeployer, error) {
+					return divert.New(d, name, namespace, c, ioCtrl)
+				},
 			}
 			return c, nil
 		},
