@@ -1217,7 +1217,7 @@ func Test_translateSecurityContext(t *testing.T) {
 			expectedDrop: []apiv1.Capability{"SYS_BAR", "SYS_NICE"},
 		},
 		{
-			name: "existing-read-only-preserved",
+			name: "read-only-removed-when-adding-capabilities",
 			c: &apiv1.Container{
 				SecurityContext: &apiv1.SecurityContext{
 					ReadOnlyRootFilesystem: &trueB,
@@ -1245,6 +1245,10 @@ func Test_translateSecurityContext(t *testing.T) {
 
 			if !reflect.DeepEqual(tt.c.SecurityContext.Capabilities.Drop, tt.expectedDrop) {
 				t.Errorf("tt.c.SecurityContext.Capabilities.Drop != tt.expectedDrop. Expected: %s, Got; %s", tt.expectedDrop, tt.c.SecurityContext.Capabilities.Drop)
+			}
+
+			if tt.c.SecurityContext.ReadOnlyRootFilesystem != nil {
+				t.Errorf("ReadOnlyRootFilesystem was not removed")
 			}
 		})
 	}
@@ -1379,21 +1383,7 @@ func Test_translateSecurityContextReadOnlyRootFilesystem(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			TranslateContainerSecurityContext(tt.c, tt.s)
 
-			if tt.c.SecurityContext == nil && tt.expected != nil {
-				t.Fatal("SecurityContext was nil but expected a value")
-			}
-
-			if tt.expected == nil {
-				if tt.c.SecurityContext != nil && tt.c.SecurityContext.ReadOnlyRootFilesystem != nil {
-					t.Errorf("Expected ReadOnlyRootFilesystem to be nil, but got %t", *tt.c.SecurityContext.ReadOnlyRootFilesystem)
-				}
-			} else {
-				if tt.c.SecurityContext == nil || tt.c.SecurityContext.ReadOnlyRootFilesystem == nil {
-					t.Errorf("Expected ReadOnlyRootFilesystem to be %t, but got nil", *tt.expected)
-				} else if *tt.c.SecurityContext.ReadOnlyRootFilesystem != *tt.expected {
-					t.Errorf("Expected ReadOnlyRootFilesystem to be %t, but got %t", *tt.expected, *tt.c.SecurityContext.ReadOnlyRootFilesystem)
-				}
-			}
+			require.Equal(t, tt.expected, tt.c.SecurityContext.ReadOnlyRootFilesystem)
 		})
 	}
 }
