@@ -211,7 +211,7 @@ func Test_getStructKeys(t *testing.T) {
 				"model.PersistentVolumeInfo":        {"accessMode", "volumeMode", "annotations", "labels", "storageClass", "size", "enabled"},
 				"model.Probes":                      {"liveness", "readiness", "startup"},
 				"model.ResourceRequirements":        {"limits", "requests"},
-				"model.SecurityContext":             {"runAsUser", "runAsGroup", "fsGroup", "capabilities", "runAsNonRoot", "allowPrivilegeEscalation"},
+				"model.SecurityContext":             {"runAsUser", "runAsGroup", "fsGroup", "capabilities", "runAsNonRoot", "allowPrivilegeEscalation", "readOnlyRootFilesystem"},
 				"model.Service":                     {"healthcheck", "labels", "resources", "x-node-selector", "user", "depends_on", "build", "workdir", "image", "restart", "environment", "ports", "volumes", "cap_add", "cap_drop", "env_file", "command", "annotations", "entrypoint", "stop_grace_period", "replicas", "max_attempts", "public"},
 				"model.ServiceResources":            {"cpu", "memory", "storage"},
 				"model.Stack":                       {"volumes", "services", "endpoints", "name", "namespace", "context"},

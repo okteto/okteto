@@ -1217,7 +1217,7 @@ func Test_translateSecurityContext(t *testing.T) {
 			expectedDrop: []apiv1.Capability{"SYS_BAR", "SYS_NICE"},
 		},
 		{
-			name: "read-only",
+			name: "read-only-removed-when-adding-capabilities",
 			c: &apiv1.Container{
 				SecurityContext: &apiv1.SecurityContext{
 					ReadOnlyRootFilesystem: &trueB,
@@ -1323,6 +1323,71 @@ func Test_translateSecurityContextWithParams(t *testing.T) {
 			if tt.c.SecurityContext.ReadOnlyRootFilesystem != nil {
 				t.Errorf("ReadOnlyRootFilesystem was not removed")
 			}
+		})
+	}
+}
+
+func Test_translateSecurityContextReadOnlyRootFilesystem(t *testing.T) {
+	var trueB = true
+	var falseB = false
+
+	tests := []struct {
+		name     string
+		c        *apiv1.Container
+		s        *model.SecurityContext
+		expected *bool
+	}{
+		{
+			name: "set-readonly-true",
+			c:    &apiv1.Container{},
+			s: &model.SecurityContext{
+				ReadOnlyRootFilesystem: &trueB,
+			},
+			expected: &trueB,
+		},
+		{
+			name: "set-readonly-false",
+			c:    &apiv1.Container{},
+			s: &model.SecurityContext{
+				ReadOnlyRootFilesystem: &falseB,
+			},
+			expected: &falseB,
+		},
+		{
+			name:     "no-readonly-specified",
+			c:        &apiv1.Container{},
+			s:        &model.SecurityContext{},
+			expected: nil,
+		},
+		{
+			name: "override-existing-readonly",
+			c: &apiv1.Container{
+				SecurityContext: &apiv1.SecurityContext{
+					ReadOnlyRootFilesystem: &trueB,
+				},
+			},
+			s: &model.SecurityContext{
+				ReadOnlyRootFilesystem: &falseB,
+			},
+			expected: &falseB,
+		},
+		{
+			name: "preserve-existing-when-not-specified",
+			c: &apiv1.Container{
+				SecurityContext: &apiv1.SecurityContext{
+					ReadOnlyRootFilesystem: &trueB,
+				},
+			},
+			s:        &model.SecurityContext{},
+			expected: &trueB,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			TranslateContainerSecurityContext(tt.c, tt.s)
+
+			require.Equal(t, tt.expected, tt.c.SecurityContext.ReadOnlyRootFilesystem)
 		})
 	}
 }

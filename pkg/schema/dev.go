@@ -408,6 +408,10 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		Type:  &jsonschema.Type{Types: []string{"boolean"}},
 		Title: "allowPrivilegeEscalation",
 	})
+	securityContextProps.Set("readOnlyRootFilesystem", &jsonschema.Schema{
+		Type:  &jsonschema.Type{Types: []string{"boolean"}},
+		Title: "readOnlyRootFilesystem",
+	})
 
 	capabilitiesProps := jsonschema.NewProperties()
 	capabilitiesProps.Set("add", &jsonschema.Schema{

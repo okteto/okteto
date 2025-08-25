@@ -673,6 +673,10 @@
                   "type": "boolean",
                   "title": "allowPrivilegeEscalation"
                 },
+                "readOnlyRootFilesystem": {
+                  "type": "boolean",
+                  "title": "readOnlyRootFilesystem"
+                },
                 "capabilities": {
                   "properties": {
                     "add": {
