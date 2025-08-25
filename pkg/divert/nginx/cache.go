@@ -16,6 +16,7 @@ package nginx
 import (
 	"context"
 
+	"github.com/okteto/okteto/pkg/divert/k8s"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,6 +27,7 @@ type cache struct {
 	divertServices     map[string]*apiv1.Service
 	developerIngresses map[string]*networkingv1.Ingress
 	developerServices  map[string]*apiv1.Service
+	divertResources    map[string]*k8s.Divert
 }
 
 func (d *Driver) initCache(ctx context.Context) error {
@@ -34,6 +36,7 @@ func (d *Driver) initCache(ctx context.Context) error {
 		divertServices:     map[string]*apiv1.Service{},
 		developerIngresses: map[string]*networkingv1.Ingress{},
 		developerServices:  map[string]*apiv1.Service{},
+		divertResources:    map[string]*k8s.Divert{},
 	}
 	// Init ingress cache for diverted namespace
 	iList, err := d.client.NetworkingV1().Ingresses(d.divert.Namespace).List(ctx, metav1.ListOptions{})
@@ -69,6 +72,14 @@ func (d *Driver) initCache(ctx context.Context) error {
 	}
 	for i := range sList.Items {
 		d.cache.developerServices[sList.Items[i].Name] = &sList.Items[i]
+	}
+
+	divList, err := d.divertManager.List(ctx, d.namespace)
+	if err != nil {
+		return err
+	}
+	for i := range divList {
+		d.cache.divertResources[divList[i].Name] = divList[i]
 	}
 
 	return nil

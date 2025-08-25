@@ -19,6 +19,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/divert/k8s"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -49,6 +50,34 @@ func (dm *Manager) CreateOrUpdate(ctx context.Context, d *k8s.Divert) error {
 
 	old.Spec = d.Spec
 	return dm.update(ctx, old)
+}
+
+// List returns a list of Divert resources in the specified namespace.
+func (dm *Manager) List(ctx context.Context, namespace string) ([]*k8s.Divert, error) {
+	diverts, err := dm.Client.Diverts(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*k8s.Divert, 0, len(diverts.Items))
+	for i := range diverts.Items {
+		result = append(result, &diverts.Items[i])
+	}
+
+	return result, nil
+}
+
+// Delete removes a Divert resource from Kubernetes by its name and namespace. If the resource is not found,
+// it does not return an error.
+func (dm *Manager) Delete(ctx context.Context, name, namespace string) error {
+	oktetoLog.Debugf("divert '%s' deleted successfully", name)
+	err := dm.Client.Diverts(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return err
+	}
+
+	oktetoLog.Debugf("divert '%s' deleted successfully", name)
+	return nil
 }
 
 func (dm *Manager) create(ctx context.Context, d *k8s.Divert) error {

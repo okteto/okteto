@@ -20,7 +20,9 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/divert/k8s"
 	"github.com/okteto/okteto/pkg/divert/k8s/fake"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -75,4 +77,88 @@ func TestCreateOrUpdate_Update(t *testing.T) {
 
 	require.NotEmpty(t, updated.Annotations[constants.LastUpdatedAnnotation], "expected LastUpdatedAnnotation to be set")
 	require.Equal(t, "new-service", updated.Spec.Service, "expected spec Service to be 'new-service'")
+}
+
+func TestList(t *testing.T) {
+	ctx := context.Background()
+
+	divert1 := &k8s.Divert{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-divert-1",
+			Namespace: "default",
+		},
+		Spec: k8s.DivertSpec{Service: "service-1"},
+	}
+
+	divert2 := &k8s.Divert{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-divert-2",
+			Namespace: "default",
+		},
+		Spec: k8s.DivertSpec{Service: "service-2"},
+	}
+
+	client := fake.NewFakeDivertV1(fake.PossibleDivertErrors{}, divert1, divert2)
+	manager := NewManager(client)
+	expected := []*k8s.Divert{divert1, divert2}
+
+	diverts, err := manager.List(ctx, "default")
+	require.NoError(t, err, "expected no error on list")
+	require.ElementsMatch(t, expected, diverts)
+}
+
+func TestList_Error(t *testing.T) {
+	ctx := context.Background()
+
+	errorClient := fake.NewFakeDivertV1(fake.PossibleDivertErrors{
+		ListErr: assert.AnError,
+	})
+	errorManager := NewManager(errorClient)
+
+	_, err := errorManager.List(ctx, "default")
+	require.Error(t, err, "expected error when List returns error")
+}
+
+func TestDelete_Success(t *testing.T) {
+	ctx := context.Background()
+
+	divert := &k8s.Divert{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-divert",
+			Namespace: "default",
+		},
+		Spec: k8s.DivertSpec{Service: "my-service"},
+	}
+
+	client := fake.NewFakeDivertV1(fake.PossibleDivertErrors{}, divert)
+	manager := NewManager(client)
+
+	err := manager.Delete(ctx, "test-divert", "default")
+	require.NoError(t, err, "expected no error on delete")
+
+	_, err = client.Diverts("default").Get(ctx, "test-divert", metav1.GetOptions{})
+	require.True(t, k8sErrors.IsNotFound(err), "expected divert to be deleted")
+}
+
+func TestDelete_NotFound(t *testing.T) {
+	ctx := context.Background()
+
+	client := fake.NewFakeDivertV1(fake.PossibleDivertErrors{})
+	manager := NewManager(client)
+
+	err := manager.Delete(ctx, "non-existent", "default")
+	require.NoError(t, err, "expected no error when divert doesn't exist")
+}
+
+func TestDelete_Error(t *testing.T) {
+	ctx := context.Background()
+
+	errorClient := fake.NewFakeDivertV1(fake.PossibleDivertErrors{
+		DeleteErr: assert.AnError,
+	})
+	manager := NewManager(errorClient)
+
+	err := manager.Delete(ctx, "test-divert", "default")
+	require.Error(t, err, "expected error when Delete returns error")
+	require.Equal(t, assert.AnError, err, "expected specific error to be returned")
 }
