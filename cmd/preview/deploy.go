@@ -160,8 +160,8 @@ func (pw *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := pw.okClient.Stream().PipelineLogs(waitCtx, name, namespace, a.Name)
-		if err != nil {
+		err := streamPreviewLogsWithTimeout(waitCtx, pw.okClient, name, namespace, a.Name, timeout)
+		if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 			oktetoLog.Warning("preview logs cannot be streamed due to connectivity issues")
 			oktetoLog.Infof("preview logs cannot be streamed due to connectivity issues: %v", err)
 		}
