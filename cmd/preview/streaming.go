@@ -26,15 +26,18 @@ import (
 // streamFn represents a function that attempts to stream logs and returns an error
 type streamFn func(ctx context.Context) error
 
+const (
+	maxAttemptPower = 10
+)
+
 // calculateExponentialBackoff calculates the next retry delay using exponential backoff
 func calculateExponentialBackoff(attempt int) time.Duration {
 	// Prevent overflow for very large attempts by capping at a reasonable value
 	// After attempt 6, we hit the 30s cap anyway, so no need to calculate large powers
-	if attempt > 10 {
-		attempt = 10
+	if attempt > maxAttemptPower {
+		attempt = maxAttemptPower
 	}
 
-	// Use the same formula as the original stream package: (2^attempt - 1) * 0.5 seconds
 	baseDelaySeconds := (math.Pow(2, float64(attempt)) - 1) * 0.5
 	baseDelay := time.Duration(baseDelaySeconds * float64(time.Second))
 
