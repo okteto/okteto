@@ -1127,8 +1127,8 @@ func Test_deleteOrphanDiverts_Success(t *testing.T) {
 	}
 
 	dm := &fakeDivertManager{}
-	dm.On("Delete", ctx, "divert2", "cindy").Return(nil).Once()
-	dm.On("Delete", ctx, "divert3", "cindy").Return(nil).Once()
+	dm.On("Delete", mock.Anything, "divert2", "cindy").Return(nil).Once()
+	dm.On("Delete", mock.Anything, "divert3", "cindy").Return(nil).Once()
 
 	d := &Driver{
 		namespace:     "cindy",
@@ -1143,7 +1143,7 @@ func Test_deleteOrphanDiverts_Success(t *testing.T) {
 
 	require.NoError(t, err)
 	dm.AssertExpectations(t)
-	dm.AssertNotCalled(t, "Delete", ctx, "divert1", "cindy")
+	dm.AssertNotCalled(t, "Delete", mock.Anything, "divert1", "cindy")
 }
 
 func Test_deleteOrphanDiverts_NoOrphans(t *testing.T) {
@@ -1229,8 +1229,8 @@ func Test_deleteOrphanDiverts_DeleteError(t *testing.T) {
 	developerServices := map[string]*apiv1.Service{}
 
 	dm := &fakeDivertManager{}
-	dm.On("Delete", ctx, "divert1", "cindy").Return(nil).Once()
-	dm.On("Delete", ctx, "divert2", "cindy").Return(fmt.Errorf("delete error")).Once()
+	dm.On("Delete", mock.Anything, "divert1", "cindy").Return(nil).Once()
+	dm.On("Delete", mock.Anything, "divert2", "cindy").Return(fmt.Errorf("delete error")).Once()
 
 	d := &Driver{
 		namespace:     "cindy",
