@@ -75,7 +75,7 @@ func TestCalculateExponentialBackoff(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			delay := calculateExponentialBackoff(tt.attempt)
-			assert.Equal(t, tt.expected, delay, 
+			assert.Equal(t, tt.expected, delay,
 				"Expected exact delay %v for attempt %d, but got %v", tt.expected, tt.attempt, delay)
 		})
 	}
@@ -85,11 +85,11 @@ func TestCalculateExponentialBackoff_Deterministic(t *testing.T) {
 	// Verify that the function returns the same value for the same input (deterministic)
 	attempt := 5
 	expectedDelay := 15500 * time.Millisecond // (2^5-1)*0.5 = 15.5s
-	
+
 	// Call multiple times to ensure deterministic behavior
 	for i := 0; i < 10; i++ {
 		delay := calculateExponentialBackoff(attempt)
-		assert.Equal(t, expectedDelay, delay, 
+		assert.Equal(t, expectedDelay, delay,
 			"Expected deterministic behavior: same input should always produce same output")
 	}
 }
@@ -98,7 +98,7 @@ func TestCalculateExponentialBackoff_MinimumDelay(t *testing.T) {
 	// Test that very small attempts still respect minimum delay
 	delay := calculateExponentialBackoff(1)
 	assert.Equal(t, 500*time.Millisecond, delay, "Should enforce minimum delay of 500ms")
-	
+
 	// Also test attempt 0 (edge case)
 	delay0 := calculateExponentialBackoff(0)
 	assert.Equal(t, 500*time.Millisecond, delay0, "Should enforce minimum delay of 500ms for attempt 0")
@@ -109,7 +109,7 @@ func TestCalculateExponentialBackoff_MaximumDelay(t *testing.T) {
 	largeAttempts := []int{6, 10, 15, 20, 100}
 	for _, attempt := range largeAttempts {
 		delay := calculateExponentialBackoff(attempt)
-		assert.Equal(t, 30*time.Second, delay, 
+		assert.Equal(t, 30*time.Second, delay,
 			"Delay should be exactly 30s for large attempt %d, got %v", attempt, delay)
 	}
 }
@@ -126,7 +126,7 @@ type mockStreamFunc struct {
 func (m *mockStreamFunc) call(ctx context.Context) error {
 	atomic.AddInt32(&m.callCount, 1)
 	m.callTimes = append(m.callTimes, time.Now())
-	
+
 	// Simulate some processing time if specified
 	if m.callDuration > 0 {
 		select {
@@ -135,12 +135,12 @@ func (m *mockStreamFunc) call(ctx context.Context) error {
 		case <-time.After(m.callDuration):
 		}
 	}
-	
+
 	// Fail for the first N attempts, then succeed
 	if m.failCount > 0 && atomic.LoadInt32(&m.callCount) <= m.failCount {
 		return m.err
 	}
-	
+
 	return nil
 }
 
@@ -151,11 +151,11 @@ func (m *mockStreamFunc) getCallCount() int {
 func TestStreamWithExponentialBackoff_Success(t *testing.T) {
 	ctx := context.Background()
 	timeout := 10 * time.Second
-	
+
 	mock := &mockStreamFunc{}
-	
+
 	err := streamWithExponentialBackoff(ctx, timeout, mock.call, "test operation")
-	
+
 	assert.NoError(t, err)
 	assert.Equal(t, 1, mock.getCallCount(), "Should succeed on first attempt")
 }
@@ -163,19 +163,19 @@ func TestStreamWithExponentialBackoff_Success(t *testing.T) {
 func TestStreamWithExponentialBackoff_SuccessAfterRetries(t *testing.T) {
 	ctx := context.Background()
 	timeout := 30 * time.Second
-	
+
 	mock := &mockStreamFunc{
 		failCount: 3, // Fail first 3 attempts, succeed on 4th
 		err:       errors.New("temporary failure"),
 	}
-	
+
 	start := time.Now()
 	err := streamWithExponentialBackoff(ctx, timeout, mock.call, "test operation")
 	duration := time.Since(start)
-	
+
 	assert.NoError(t, err)
 	assert.Equal(t, 4, mock.getCallCount(), "Should succeed on 4th attempt")
-	
+
 	// Verify we actually waited between retries (should be several seconds)
 	assert.Greater(t, duration, 2*time.Second, "Should have waited for exponential backoff")
 }
@@ -183,23 +183,23 @@ func TestStreamWithExponentialBackoff_SuccessAfterRetries(t *testing.T) {
 func TestStreamWithExponentialBackoff_TimeoutReached(t *testing.T) {
 	ctx := context.Background()
 	timeout := 2 * time.Second // Short timeout
-	
+
 	mock := &mockStreamFunc{
 		failCount: 100, // Always fail
 		err:       errors.New("persistent failure"),
 	}
-	
+
 	start := time.Now()
 	err := streamWithExponentialBackoff(ctx, timeout, mock.call, "test operation")
 	duration := time.Since(start)
-	
+
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, context.DeadlineExceeded)
-	
+
 	// Should have timed out around the expected timeout
 	assert.GreaterOrEqual(t, duration, timeout)
 	assert.Less(t, duration, timeout+500*time.Millisecond) // Some tolerance
-	
+
 	// Should have made multiple attempts within the timeout
 	assert.GreaterOrEqual(t, mock.getCallCount(), 2, "Should have made multiple attempts")
 }
@@ -207,25 +207,25 @@ func TestStreamWithExponentialBackoff_TimeoutReached(t *testing.T) {
 func TestStreamWithExponentialBackoff_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	timeout := 30 * time.Second
-	
+
 	mock := &mockStreamFunc{
 		failCount: 100, // Always fail
 		err:       errors.New("persistent failure"),
 	}
-	
+
 	// Cancel context after 1 second
 	go func() {
 		time.Sleep(1 * time.Second)
 		cancel()
 	}()
-	
+
 	start := time.Now()
 	err := streamWithExponentialBackoff(ctx, timeout, mock.call, "test operation")
 	duration := time.Since(start)
-	
+
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, context.Canceled)
-	
+
 	// Should have stopped quickly after cancellation
 	assert.Less(t, duration, 2*time.Second)
 	assert.GreaterOrEqual(t, mock.getCallCount(), 1, "Should have made at least one attempt")
@@ -234,15 +234,15 @@ func TestStreamWithExponentialBackoff_ContextCancellation(t *testing.T) {
 func TestStreamWithExponentialBackoff_ErrorPropagation(t *testing.T) {
 	ctx := context.Background()
 	timeout := 1 * time.Second
-	
+
 	testError := errors.New("specific test error")
 	mock := &mockStreamFunc{
 		failCount: 100, // Always fail
 		err:       testError,
 	}
-	
+
 	err := streamWithExponentialBackoff(ctx, timeout, mock.call, "test operation")
-	
+
 	// Should timeout, not return the specific error (since we keep retrying)
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, context.DeadlineExceeded)
@@ -250,7 +250,7 @@ func TestStreamWithExponentialBackoff_ErrorPropagation(t *testing.T) {
 
 func TestStreamWithExponentialBackoff_ImmediateContextErrors(t *testing.T) {
 	timeout := 10 * time.Second
-	
+
 	tests := []struct {
 		name    string
 		ctx     context.Context
@@ -262,20 +262,24 @@ func TestStreamWithExponentialBackoff_ImmediateContextErrors(t *testing.T) {
 			wantErr: context.Canceled,
 		},
 		{
-			name:    "expired context",
-			ctx:     func() context.Context { ctx, cancel := context.WithTimeout(context.Background(), -1*time.Second); defer cancel(); return ctx }(),
+			name: "expired context",
+			ctx: func() context.Context {
+				ctx, cancel := context.WithTimeout(context.Background(), -1*time.Second)
+				defer cancel()
+				return ctx
+			}(),
 			wantErr: context.DeadlineExceeded,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mock := &mockStreamFunc{
 				err: errors.New("should not be called"),
 			}
-			
+
 			err := streamWithExponentialBackoff(tt.ctx, timeout, mock.call, "test operation")
-			
+
 			assert.Error(t, err)
 			assert.ErrorIs(t, err, tt.wantErr)
 			// Should not have made any calls due to immediate context error
@@ -287,20 +291,20 @@ func TestStreamWithExponentialBackoff_ImmediateContextErrors(t *testing.T) {
 func TestStreamWithExponentialBackoff_SlowFunction(t *testing.T) {
 	ctx := context.Background()
 	timeout := 10 * time.Second
-	
+
 	mock := &mockStreamFunc{
 		callDuration: 500 * time.Millisecond, // Each call takes 500ms
 		failCount:    2,                      // Fail first 2 attempts
 		err:          errors.New("temporary failure"),
 	}
-	
+
 	start := time.Now()
 	err := streamWithExponentialBackoff(ctx, timeout, mock.call, "test operation")
 	duration := time.Since(start)
-	
+
 	assert.NoError(t, err)
 	assert.Equal(t, 3, mock.getCallCount(), "Should succeed on 3rd attempt")
-	
+
 	// Should account for both retry delays and function call duration
 	expectedMinDuration := 2*500*time.Millisecond + 500*time.Millisecond // 2 failed calls + backoff delay
 	assert.GreaterOrEqual(t, duration, expectedMinDuration)
@@ -309,45 +313,45 @@ func TestStreamWithExponentialBackoff_SlowFunction(t *testing.T) {
 func TestStreamWithExponentialBackoff_RetryTiming(t *testing.T) {
 	ctx := context.Background()
 	timeout := 10 * time.Second
-	
+
 	mock := &mockStreamFunc{
 		failCount: 3, // Fail first 3 attempts
 		err:       errors.New("temporary failure"),
 	}
-	
+
 	start := time.Now()
 	err := streamWithExponentialBackoff(ctx, timeout, mock.call, "test operation")
-	
+
 	require.NoError(t, err)
 	require.Equal(t, 4, mock.getCallCount(), "Should have made 4 attempts")
 	require.Len(t, mock.callTimes, 4, "Should have recorded 4 call times")
-	
+
 	// Verify exact exponential backoff timing between calls (deterministic without jitter)
-	// Call 1 -> Call 2: should wait exactly 500ms (attempt 1 backoff, min enforced)  
+	// Call 1 -> Call 2: should wait exactly 500ms (attempt 1 backoff, min enforced)
 	// Call 2 -> Call 3: should wait exactly 1500ms (attempt 2 backoff)
 	// Call 3 -> Call 4: should wait exactly 3500ms (attempt 3 backoff)
-	
+
 	delay1 := mock.callTimes[1].Sub(mock.callTimes[0])
-	delay2 := mock.callTimes[2].Sub(mock.callTimes[1])  
+	delay2 := mock.callTimes[2].Sub(mock.callTimes[1])
 	delay3 := mock.callTimes[3].Sub(mock.callTimes[2])
-	
+
 	// Allow small tolerance for timing precision (±50ms)
 	tolerance := 50 * time.Millisecond
-	
+
 	expectedDelay1 := 500 * time.Millisecond  // attempt 1: min enforced
 	expectedDelay2 := 1500 * time.Millisecond // attempt 2: (2^2-1)*0.5 = 1.5s
 	expectedDelay3 := 3500 * time.Millisecond // attempt 3: (2^3-1)*0.5 = 3.5s
-	
-	assert.InDelta(t, expectedDelay1.Nanoseconds(), delay1.Nanoseconds(), float64(tolerance.Nanoseconds()), 
+
+	assert.InDelta(t, expectedDelay1.Nanoseconds(), delay1.Nanoseconds(), float64(tolerance.Nanoseconds()),
 		"First retry delay should be %v (±%v), got %v", expectedDelay1, tolerance, delay1)
-	assert.InDelta(t, expectedDelay2.Nanoseconds(), delay2.Nanoseconds(), float64(tolerance.Nanoseconds()), 
+	assert.InDelta(t, expectedDelay2.Nanoseconds(), delay2.Nanoseconds(), float64(tolerance.Nanoseconds()),
 		"Second retry delay should be %v (±%v), got %v", expectedDelay2, tolerance, delay2)
-	assert.InDelta(t, expectedDelay3.Nanoseconds(), delay3.Nanoseconds(), float64(tolerance.Nanoseconds()), 
+	assert.InDelta(t, expectedDelay3.Nanoseconds(), delay3.Nanoseconds(), float64(tolerance.Nanoseconds()),
 		"Third retry delay should be %v (±%v), got %v", expectedDelay3, tolerance, delay3)
-	
+
 	// Verify total duration matches expected cumulative delays
 	expectedTotalDelay := expectedDelay1 + expectedDelay2 + expectedDelay3
 	totalDuration := time.Since(start)
-	assert.GreaterOrEqual(t, totalDuration, expectedTotalDelay, 
+	assert.GreaterOrEqual(t, totalDuration, expectedTotalDelay,
 		"Total duration should include all retry delays: %v", expectedTotalDelay)
 }
