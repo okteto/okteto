@@ -33,23 +33,23 @@ func calculateExponentialBackoff(attempt int) time.Duration {
 	if attempt > 10 {
 		attempt = 10
 	}
-	
+
 	// Use the same formula as the original stream package: (2^attempt - 1) * 0.5 seconds
 	baseDelaySeconds := (math.Pow(2, float64(attempt)) - 1) * 0.5
 	baseDelay := time.Duration(baseDelaySeconds * float64(time.Second))
-	
-	// Cap the maximum delay at 30 seconds 
+
+	// Cap the maximum delay at 30 seconds
 	maxDelay := 30 * time.Second
 	if baseDelay > maxDelay {
 		baseDelay = maxDelay
 	}
-	
+
 	// Ensure minimum delay of 500ms
 	minDelay := 500 * time.Millisecond
 	if baseDelay < minDelay {
 		baseDelay = minDelay
 	}
-	
+
 	return baseDelay
 }
 
@@ -60,7 +60,7 @@ func streamWithExponentialBackoff(ctx context.Context, timeout time.Duration, st
 	defer cancel()
 
 	attempt := 0
-	
+
 	for {
 		select {
 		case <-timeoutCtx.Done():
@@ -86,7 +86,7 @@ func streamWithExponentialBackoff(ctx context.Context, timeout time.Duration, st
 			// Calculate exponential backoff delay
 			attempt++
 			retryDelay := calculateExponentialBackoff(attempt)
-			
+
 			// Log the retry attempt
 			oktetoLog.Warning("preview stream client not reachable, waiting to reconnect...")
 			oktetoLog.Infof("%s streaming error: %v, retrying in %v (attempt %d)", operationName, err, retryDelay, attempt)
