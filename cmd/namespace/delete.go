@@ -34,10 +34,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var timeout time.Duration
-
-const fiveMinutes = 5 * time.Minute
-
 // Delete deletes a namespace
 func Delete(ctx context.Context, k8sLogger *io.K8sLogger, ioCtrl *io.Controller) *cobra.Command {
 	cmd := &cobra.Command{
@@ -62,16 +58,15 @@ func Delete(ctx context.Context, k8sLogger *io.K8sLogger, ioCtrl *io.Controller)
 			if err != nil {
 				return err
 			}
-			err = nsCmd.ExecuteDeleteNamespace(ctx, nsToDelete, k8sLogger, timeout)
+			err = nsCmd.ExecuteDeleteNamespace(ctx, nsToDelete, k8sLogger)
 			analytics.TrackDeleteNamespace(err == nil)
 			return err
 		},
 	}
-	cmd.Flags().DurationVarP(&timeout, "timeout", "t", fiveMinutes, "the duration to wait for the ns to be deleted. Any value should contain a corresponding time unit e.g. 1s, 2m, 3h")
 	return cmd
 }
 
-func (nc *Command) ExecuteDeleteNamespace(ctx context.Context, namespace string, k8sLogger *io.K8sLogger, timeout time.Duration) error {
+func (nc *Command) ExecuteDeleteNamespace(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
 	oktetoLog.Spinner(fmt.Sprintf("Deleting %s namespace", namespace))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -85,7 +80,7 @@ func (nc *Command) ExecuteDeleteNamespace(ctx context.Context, namespace string,
 		return fmt.Errorf("%w: %w", errFailedDeleteNamespace, err)
 	}
 
-	if err := nc.watchDelete(ctx, namespace, k8sLogger, timeout); err != nil {
+	if err := nc.watchDelete(ctx, namespace, k8sLogger); err != nil {
 		return err
 	}
 
@@ -106,7 +101,7 @@ func (nc *Command) ExecuteDeleteNamespace(ctx context.Context, namespace string,
 	return nil
 }
 
-func (nc *Command) watchDelete(ctx context.Context, namespace string, k8sLogger *io.K8sLogger, timeout time.Duration) error {
+func (nc *Command) watchDelete(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
 	waitCtx, ctxCancel := context.WithCancel(ctx)
 	defer ctxCancel()
 
@@ -128,7 +123,8 @@ func (nc *Command) watchDelete(ctx context.Context, namespace string, k8sLogger 
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := nc.okClient.Stream().DestroyAllLogs(waitCtx, namespace, timeout)
+		reconnectionTime := 5 * time.Minute
+		err := nc.okClient.Stream().DestroyAllLogs(waitCtx, namespace, reconnectionTime)
 		if err != nil {
 			oktetoLog.Warning("delete namespace logs cannot be streamed due to connectivity issues")
 			oktetoLog.Infof("delete namespace logs cannot be streamed due to connectivity issues: %v", err)
