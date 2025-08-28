@@ -36,6 +36,8 @@ import (
 
 var timeout time.Duration
 
+const fiveMinutes = 5 * time.Minute
+
 // Delete deletes a namespace
 func Delete(ctx context.Context, k8sLogger *io.K8sLogger, ioCtrl *io.Controller) *cobra.Command {
 	cmd := &cobra.Command{
@@ -65,7 +67,7 @@ func Delete(ctx context.Context, k8sLogger *io.K8sLogger, ioCtrl *io.Controller)
 			return err
 		},
 	}
-	cmd.Flags().DurationVarP(&timeout, "timeout", "t", 5*time.Minute, "the duration to wait for the ns to be deleted. Any value should contain a corresponding time unit e.g. 1s, 2m, 3h")
+	cmd.Flags().DurationVarP(&timeout, "timeout", "t", fiveMinutes, "the duration to wait for the ns to be deleted. Any value should contain a corresponding time unit e.g. 1s, 2m, 3h")
 	return cmd
 }
 

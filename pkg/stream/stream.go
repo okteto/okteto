@@ -27,16 +27,10 @@ import (
 )
 
 const (
-	maxRetryAttempts = 3
-	dataPing         = "ping"
-	dataHeader       = "data: "
-	maxAttemptPower  = 10
+	dataPing        = "ping"
+	dataHeader      = "data: "
+	maxAttemptPower = 10
 )
-
-func nextRetrySchedule(attempts int) time.Duration {
-	delaySecs := int64(math.Floor((math.Pow(2, float64(attempts)) - 1) * 0.5))
-	return time.Duration(delaySecs) * time.Second
-}
 
 func request(c *http.Client, url string) (*http.Response, error) {
 	resp, err := c.Get(url)

@@ -60,6 +60,7 @@ const (
 	nameLabel            = "name"
 	helmOwner            = "helm"
 	helmUninstallCommand = "helm uninstall %s"
+	fiveMinutes          = 5 * time.Minute
 )
 
 type destroyer interface {
@@ -281,7 +282,7 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 	cmd.Flags().BoolVarP(&options.RunWithoutBash, "no-bash", "", false, "execute commands without bash")
 	cmd.Flags().BoolVarP(&options.DestroyAll, "all", "", false, "destroy all Development Environments, excluding resources annotated with dev.okteto.com/policy: keep")
 	cmd.Flags().BoolVarP(&options.RunInRemote, "remote", "", false, "force run destroy commands in remote")
-	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", 5*time.Minute, "the duration to wait for the deployment to complete. Any value should contain a corresponding time unit e.g. 1s, 2m, 3h")
+	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", fiveMinutes, "the duration to wait for the deployment to complete. Any value should contain a corresponding time unit e.g. 1s, 2m, 3h")
 
 	return cmd
 }
