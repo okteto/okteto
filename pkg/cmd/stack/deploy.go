@@ -258,7 +258,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 		}
 
 		oktetoLog.Spinner("Waiting for services to be ready...")
-		exit <- waitForPodsToBeRunning(ctx, s, c)
+		exit <- waitForPodsToBeRunning(ctx, s, options.ServicesToDeploy, c)
 	}()
 
 	select {
@@ -824,9 +824,20 @@ func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c kube
 	return nil
 }
 
-func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, c kubernetes.Interface) error {
+func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, servicesToDeploy []string, c kubernetes.Interface) error {
 	var numPods int32 = 0
-	for _, svc := range s.Services {
+	cacheServicesToDeploy := map[string]bool{}
+	for _, svc := range servicesToDeploy {
+		cacheServicesToDeploy[svc] = true
+	}
+
+	for name, svc := range s.Services {
+		// If there is a subset of services to deploy, and the service is not there, skip it
+		// Otherwise (the services is amoung the subset to deploy, or there is no subset and everything was deployed),
+		// count it
+		if len(cacheServicesToDeploy) > 0 && !cacheServicesToDeploy[name] {
+			continue
+		}
 		numPods += svc.Replicas
 	}
 
