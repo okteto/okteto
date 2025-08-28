@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/stream"
@@ -48,13 +49,13 @@ type destroyAllLogFormat struct {
 }
 
 // PipelineLogs retrieves logs from the pipeline provided and prints them, returns error
-func (c *streamClient) PipelineLogs(ctx context.Context, name, namespace, actionName string) error {
+func (c *streamClient) PipelineLogs(ctx context.Context, name, namespace, actionName string, timeout time.Duration) error {
 	streamURL := fmt.Sprintf(gitDeployUrlTemplate, GetContext().Name, namespace, name, actionName)
 	url, err := url.Parse(streamURL)
 	if err != nil {
 		return err
 	}
-	return stream.GetLogsFromURL(ctx, c.client, url.String(), handlerPipelineLogLine)
+	return stream.GetLogsFromURL(ctx, c.client, url.String(), handlerPipelineLogLine, timeout)
 }
 
 // handlerPipelineLog prints a line with the Message unmarshalled from line
@@ -85,14 +86,14 @@ func handlerPipelineLogLine(line string) bool {
 }
 
 // DestroyAllLogs retrieves logs from the pipeline provided and prints them, returns error
-func (c *streamClient) DestroyAllLogs(ctx context.Context, namespace string) error {
+func (c *streamClient) DestroyAllLogs(ctx context.Context, namespace string, timeout time.Duration) error {
 	// GetContext().Name represents baseURL for SSE subscription endpoints
 	streamURL := fmt.Sprintf(destroyAllUrlTempleate, GetContext().Name, namespace)
 	url, err := url.Parse(streamURL)
 	if err != nil {
 		return err
 	}
-	return stream.GetLogsFromURL(ctx, c.client, url.String(), handlerDestroyAllLog)
+	return stream.GetLogsFromURL(ctx, c.client, url.String(), handlerDestroyAllLog, timeout)
 }
 
 // handlerDestroyAllLog prints a line with the Message unmarshalled from line

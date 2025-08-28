@@ -16,6 +16,7 @@ package namespace
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/constants"
@@ -151,7 +152,7 @@ func Test_deleteNamespace(t *testing.T) {
 			}
 
 			nsFakeCommand := NewFakeNamespaceCommand(tt.fakeOkClient, tt.fakeK8sClient, usr)
-			err := nsFakeCommand.ExecuteDeleteNamespace(ctx, tt.toDeleteNs, nil)
+			err := nsFakeCommand.ExecuteDeleteNamespace(ctx, tt.toDeleteNs, nil, 5*time.Minute)
 			assert.ErrorIs(t, err, tt.err)
 			assert.Equal(t, tt.finalNs, okteto.GetContext().Namespace)
 
