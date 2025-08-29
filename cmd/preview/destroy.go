@@ -126,6 +126,9 @@ func (c destroyPreviewCommand) watchDestroy(ctx context.Context, preview string,
 	waitCtx, ctxCancel := context.WithCancel(ctx)
 	defer ctxCancel()
 
+	logsCtx, logsCtxCancel := context.WithCancel(waitCtx)
+	defer logsCtxCancel()
+
 	stop := make(chan os.Signal, 1)
 	defer close(stop)
 
@@ -139,12 +142,13 @@ func (c destroyPreviewCommand) watchDestroy(ctx context.Context, preview string,
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 		exit <- c.waitForPreviewDestroyed(waitCtx, preview, timeout)
+		logsCtxCancel()
 	}(&wg)
 
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := c.okClient.Stream().DestroyAllLogs(waitCtx, preview, timeout)
+		err := c.okClient.Stream().DestroyAllLogs(logsCtx, preview, timeout)
 		// Check if error is not canceled because in the case of a timeout waiting the operation to complete,
 		// we cancel the context to stop streaming logs, but we should not display the warning
 		if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
