@@ -15,6 +15,7 @@ package client
 
 import (
 	"context"
+	"time"
 )
 
 // FakeStreamClient mocks the stream client interface
@@ -35,11 +36,11 @@ func NewFakeStreamClient(response *FakeStreamResponse) *FakeStreamClient {
 }
 
 // PipelineLogs starts the streaming of pipeline logs
-func (c *FakeStreamClient) PipelineLogs(_ context.Context, _, _, _ string) error {
+func (c *FakeStreamClient) PipelineLogs(_ context.Context, _, _, _ string, _ time.Duration) error {
 	return c.response.StreamErr
 }
 
 // DestroyAllLogs starts the streaming of pipeline logs
-func (c *FakeStreamClient) DestroyAllLogs(_ context.Context, _ string) error {
+func (c *FakeStreamClient) DestroyAllLogs(_ context.Context, _ string, _ time.Duration) error {
 	return c.response.StreamErr
 }
