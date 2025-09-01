@@ -35,7 +35,7 @@ orbs:
 executors:
   golang-ci:
     docker:
-      - image: okteto/golang-ci:2.7.3
+      - image: okteto/golang-ci:2.8.0
     environment:
       OKTETO_CONTEXT: https://staging.okteto.dev
       OKTETO_APPS_SUBDOMAIN: staging.dev.okteto.net
