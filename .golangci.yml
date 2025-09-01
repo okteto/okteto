@@ -68,13 +68,13 @@ linters:
 formatters:
   enable:
     - gci
-  # settings for gci:
-  # settings:
-  #   gci:
-  #     sections:
-  #       - standard
-  #       - default
-  #       - prefix(github.com/tu/org/tu-proyecto)
+    # settings for gci:
+    # settings:
+    #   gci:
+    #     sections:
+    #       - standard
+    #       - default
+    #       - prefix(github.com/tu/org/tu-proyecto)
 
 issues:
   include:
