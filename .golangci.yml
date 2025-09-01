@@ -1,4 +1,4 @@
-version: "2"
+version: '2'
 
 run:
   modules-download-mode: readonly
@@ -65,10 +65,9 @@ linters:
     - revive
     - staticcheck # replace with "gosimple"
 
-
 formatters:
   enable:
-  - gci
+    - gci
   # settings for gci:
   # settings:
   #   gci:
