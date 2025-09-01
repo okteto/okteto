@@ -13,8 +13,6 @@ linters-settings:
   errcheck:
     check-type-assertions: true
     check-blank: true
-  tenv:
-    all: true # <- queda inofensivo si lo dejas, pero puedes borrar toda esta sección si quieres
   goheader:
     values:
       regexp:
@@ -61,17 +59,17 @@ linters:
 
   disable:
     # We need to revisit this. For now, we're disabling the following linters until we fix the issues they raise.
-    - copyloopvar # reemplaza a "exportloopref"
+    - copyloopvar # replace with "exportloopref"
     - errcheck
     - mnd
     - revive
-    - staticcheck # reemplaza a "gosimple"
+    - staticcheck # replace with "gosimple"
 
 
 formatters:
   enable:
   - gci
-  # settings opcionales para gci:
+  # settings for gci:
   # settings:
   #   gci:
   #     sections:
