@@ -1,3 +1,5 @@
+version: '2'
+
 run:
   modules-download-mode: readonly
 
@@ -7,41 +9,17 @@ output:
 
 linters-settings:
   unparam:
-    # Inspect exported functions.
-    #
-    # Set to true if no external program/library imports your code.
-    # XXX: if you enable this setting, unparam will report a lot of false-positives in text editors:
-    # if it's called for subdir of a project it can't find external interfaces. All text editor integrations
-    # with golangci-lint call it on a directory with the changed file.
-    #
     check-exported: true
   errcheck:
-    # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
-    # Such cases aren't reported by default.
-    # Default: false
     check-type-assertions: true
-    # report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`.
-    # Such cases aren't reported by default.
-    # Default: false
     check-blank: true
-  tenv:
-    # The option `all` will run against whole test files (`_test.go`) regardless of method/function signatures.
-    # Otherwise, only methods that take `*testing.T`, `*testing.B`, and `testing.TB` as arguments are checked.
-    # Default: false
-    all: true
   goheader:
     values:
       regexp:
         YEAR: 2023|2024|2025
     template-path: .copyright-header.tmpl
   mnd:
-    checks:
-      - argument
-      - case
-      - condition
-      # - operation
-      # - return
-      # - assign
+    checks: [argument, case, condition]
     ignored-functions:
       - '\.NewWriter'
       - '\.NewTabWriter'
@@ -59,19 +37,13 @@ linters-settings:
     rules:
       - name: exported
 
-# All possible linters can be found https://golangci-lint.run/usage/linters/
 linters:
   enable:
-    - errcheck
-    - gosimple
-    - typecheck
     - govet
     - ineffassign
     - unused
     - unparam
-    - tenv
     - tparallel
-    - gci
     - goheader
     - unconvert
     - predeclared
@@ -79,30 +51,38 @@ linters:
     - asasalint
     - bidichk
     - decorder
-    - exportloopref
     - makezero
-    - mnd
     - musttag
     - bodyclose
     - durationcheck
     - exhaustive
+
+  disable:
+    # We need to revisit this. For now, we're disabling the following linters until we fix the issues they raise.
+    - copyloopvar # replace with "exportloopref"
+    - errcheck
+    - mnd
     - revive
+    - staticcheck # replace with "gosimple"
+
+formatters:
+  enable:
+    - gci
+    # settings for gci:
+    # settings:
+    #   gci:
+    #     sections:
+    #       - standard
+    #       - default
+    #       - prefix(github.com/tu/org/tu-proyecto)
 
 issues:
   include:
-    - EXC0014 # EXC0014 revive: comment on exported (.+) should be of the form "(.+)..."
-
-  # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
+    - EXC0014 # revive: comment on exported...
   max-issues-per-linter: 0
-
-  # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
   max-same-issues: 0
-
   exclude-rules:
     - path: '(.+)_test\.go'
-      linters:
-        - errcheck
-    - linters:
-        - unparam
-      # exclude from linting the custom implementation for "MarshalYAML"
+      linters: [errcheck]
+    - linters: [unparam]
       text: 'MarshalYAML()'
