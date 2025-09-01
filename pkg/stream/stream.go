@@ -76,7 +76,7 @@ func requestWithRetry(ctx context.Context, c *http.Client, url string, timeout t
 			retryDelay := calculateExponentialBackoff(attempts)
 
 			// Log the retry attempt
-			oktetoLog.Warning("preview stream client not reachable, waiting to reconnect...")
+			oktetoLog.Warning("Unable to connect to stream logs, waiting to reconnect...")
 			oktetoLog.Infof("logs streaming error: %v, retrying in %v (attempt %d)", err, retryDelay, attempts)
 
 			// Wait before retrying, but respect context cancellation

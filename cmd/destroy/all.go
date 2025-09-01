@@ -79,8 +79,8 @@ func (lda *localDestroyAllCommand) destroy(ctx context.Context, opts *Options) e
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		reconnectionTime := 5 * time.Minute
-		err := lda.oktetoClient.Stream().DestroyAllLogs(logsCtx, opts.Namespace, reconnectionTime)
+		connectionTimeout := 5 * time.Minute
+		err := lda.oktetoClient.Stream().DestroyAllLogs(logsCtx, opts.Namespace, connectionTimeout)
 		if err != nil {
 			oktetoLog.Warning("destroy all logs cannot be streamed due to connectivity issues")
 			oktetoLog.Infof("destroy all logs cannot be streamed due to connectivity issues: %v", err)
