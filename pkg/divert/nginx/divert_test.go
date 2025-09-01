@@ -1229,8 +1229,16 @@ func Test_deleteOrphanDiverts_DeleteError(t *testing.T) {
 	developerServices := map[string]*apiv1.Service{}
 
 	dm := &fakeDivertManager{}
-	dm.On("Delete", mock.Anything, "divert1", "cindy").Return(nil).Once()
-	dm.On("Delete", mock.Anything, "divert2", "cindy").Return(fmt.Errorf("delete error")).Once()
+	isExpectedDivert := func(arg interface{}) bool {
+		divertName := arg.(string)
+		return divertName == "divert1" || divertName == "divert2"
+	}
+	isExpectedNamespace := func(arg interface{}) bool {
+		namespace := arg.(string)
+		return namespace == "cindy"
+	}
+	dm.On("Delete", mock.Anything, mock.MatchedBy(isExpectedDivert), mock.MatchedBy(isExpectedNamespace)).Return(nil).Once()
+	dm.On("Delete", mock.Anything, mock.MatchedBy(isExpectedDivert), mock.MatchedBy(isExpectedNamespace)).Return(fmt.Errorf("delete error")).Once()
 
 	d := &Driver{
 		namespace:     "cindy",
