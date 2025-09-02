@@ -151,24 +151,26 @@ func (pw *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
+	logsCtx, logsCtxCancel := context.WithCancel(waitCtx)
+	defer logsCtxCancel()
+
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
 
 	var wg sync.WaitGroup
-
 	wg.Add(1)
-	go func(wg *sync.WaitGroup) {
+	go func() {
 		defer wg.Done()
-		err := pw.okClient.Stream().PipelineLogs(waitCtx, name, namespace, a.Name)
-		if err != nil {
+		err := pw.okClient.Stream().PipelineLogs(logsCtx, name, namespace, a.Name, timeout)
+		if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 			oktetoLog.Warning("preview logs cannot be streamed due to connectivity issues")
 			oktetoLog.Infof("preview logs cannot be streamed due to connectivity issues: %v", err)
 		}
-	}(&wg)
+	}()
 
-	wg.Add(1)
 	go func() {
+		defer logsCtxCancel()
 		err := pw.waitToBeDeployed(ctx, name, a, timeout)
 		if err != nil {
 			exit <- err
@@ -178,18 +180,18 @@ func (pw *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 		exit <- pw.waitForResourcesToBeRunning(ctx, name, timeout)
 	}()
 
-	go func(wg *sync.WaitGroup) {
-		wg.Wait()
-		close(stop)
-		close(exit)
-	}(&wg)
-
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+		ctxCancel()
+		logsCtxCancel()
 		oktetoLog.StopSpinner()
+		wg.Wait()
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
+		ctxCancel()
+		logsCtxCancel()
+		wg.Wait()
 		if err != nil {
 			oktetoLog.Infof("exit signal received due to error: %s", err)
 			return err
@@ -198,6 +200,7 @@ func (pw *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 
 	return nil
 }
+
 func (pw *Command) waitToBeDeployed(ctx context.Context, name string, a *types.Action, timeout time.Duration) error {
 	return pw.okClient.Pipeline().WaitForActionToFinish(ctx, name, name, a.Name, timeout)
 }

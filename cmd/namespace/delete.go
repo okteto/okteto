@@ -108,6 +108,9 @@ func (nc *Command) watchDelete(ctx context.Context, namespace string, k8sLogger 
 	stop := make(chan os.Signal, 1)
 	defer close(stop)
 
+	logsCtx, logsCtxCancel := context.WithCancel(waitCtx)
+	defer logsCtxCancel()
+
 	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
 	defer close(exit)
@@ -118,12 +121,14 @@ func (nc *Command) watchDelete(ctx context.Context, namespace string, k8sLogger 
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 		exit <- nc.waitForNamespaceDeleted(waitCtx, namespace, k8sLogger)
+		logsCtxCancel()
 	}(&wg)
 
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := nc.okClient.Stream().DestroyAllLogs(waitCtx, namespace)
+		connectionTimeout := 5 * time.Minute
+		err := nc.okClient.Stream().DestroyAllLogs(logsCtx, namespace, connectionTimeout)
 		if err != nil {
 			oktetoLog.Warning("delete namespace logs cannot be streamed due to connectivity issues")
 			oktetoLog.Infof("delete namespace logs cannot be streamed due to connectivity issues: %v", err)

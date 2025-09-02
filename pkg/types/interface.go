@@ -80,8 +80,8 @@ type OktetoClientProvider interface {
 
 // StreamInterface represents the streaming client
 type StreamInterface interface {
-	PipelineLogs(ctx context.Context, name, namespace, actionName string) error
-	DestroyAllLogs(ctx context.Context, namespace string) error
+	PipelineLogs(ctx context.Context, name, namespace, actionName string, timeout time.Duration) error
+	DestroyAllLogs(ctx context.Context, namespace string, timeout time.Duration) error
 }
 
 // KubetokenInterface represents the kubetoken client

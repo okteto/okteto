@@ -16,6 +16,7 @@ package stream
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -26,15 +27,10 @@ import (
 )
 
 const (
-	maxRetryAttempts = 3
-	dataPing         = "ping"
-	dataHeader       = "data: "
+	dataPing        = "ping"
+	dataHeader      = "data: "
+	maxAttemptPower = 10
 )
-
-func nextRetrySchedule(attempts int) time.Duration {
-	delaySecs := int64(math.Floor((math.Pow(2, float64(attempts)) - 1) * 0.5))
-	return time.Duration(delaySecs) * time.Second
-}
 
 func request(c *http.Client, url string) (*http.Response, error) {
 	resp, err := c.Get(url)
@@ -45,30 +41,52 @@ func request(c *http.Client, url string) (*http.Response, error) {
 	return resp, nil
 }
 
-func requestWithRetry(c *http.Client, url string) (*http.Response, error) {
+func requestWithRetry(ctx context.Context, c *http.Client, url string, timeout time.Duration) (*http.Response, error) {
 	attempts := 0
 	for {
-		attempts++
-		resp, err := request(c, url)
-		if err != nil {
-			continue
-		}
+		select {
+		case <-ctx.Done():
+			// Timeout reached, stop retrying
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				oktetoLog.Infof("logs streaming stopped after timeout %v", timeout)
+				return nil, context.DeadlineExceeded
+			}
+			return nil, ctx.Err()
 
-		if resp.StatusCode == http.StatusOK {
-			return resp, nil
-		}
+		default:
+			// Attempt to stream logs
+			resp, err := request(c, url)
+			if err != nil {
+				continue
+			}
+			if resp.StatusCode == http.StatusOK {
+				return resp, nil
+			}
 
-		if resp.StatusCode != http.StatusInternalServerError {
-			return nil, fmt.Errorf("response from request: %s", resp.Status)
-		}
+			if resp.StatusCode != http.StatusInternalServerError {
+				return nil, fmt.Errorf("response from request: %s", resp.Status)
+			}
+			// Check if context was cancelled or timed out
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return nil, err
+			}
 
-		if attempts >= maxRetryAttempts {
-			return nil, fmt.Errorf("server disconnected, maxRetries reached")
-		}
+			// Calculate exponential backoff delay
+			attempts++
+			retryDelay := calculateExponentialBackoff(attempts)
 
-		oktetoLog.Warning("stream client not reachable, waiting to reconnect...")
-		delay := nextRetrySchedule(attempts)
-		time.Sleep(delay)
+			// Log the retry attempt
+			oktetoLog.Warning("Unable to connect to stream logs, waiting to reconnect...")
+			oktetoLog.Infof("logs streaming error: %v, retrying in %v (attempt %d)", err, retryDelay, attempts)
+
+			// Wait before retrying, but respect context cancellation
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(retryDelay):
+				// Continue to next attempt
+			}
+		}
 	}
 }
 
@@ -78,8 +96,8 @@ type handleLineFn func(line string) bool
 // GetLogsFromURL makes a request to the url provided and reads the content of the body
 // the client will try to retry connection if fails
 // the handler will handle the content of the streaming events coming from the request body
-func GetLogsFromURL(ctx context.Context, c *http.Client, url string, handler handleLineFn) error {
-	resp, err := requestWithRetry(c, url)
+func GetLogsFromURL(ctx context.Context, c *http.Client, url string, handler handleLineFn, timeout time.Duration) error {
+	resp, err := requestWithRetry(ctx, c, url, timeout)
 	if err != nil {
 		return err
 	}
@@ -106,4 +124,30 @@ func GetLogsFromURL(ctx context.Context, c *http.Client, url string, handler han
 
 	// return whether the scan has encountered any error
 	return sc.Err()
+}
+
+// calculateExponentialBackoff calculates the next retry delay using exponential backoff
+func calculateExponentialBackoff(attempt int) time.Duration {
+	// Prevent overflow for very large attempts by capping at a reasonable value
+	// After attempt 6, we hit the 30s cap anyway, so no need to calculate large powers
+	if attempt > maxAttemptPower {
+		attempt = maxAttemptPower
+	}
+
+	baseDelaySeconds := (math.Pow(2, float64(attempt)) - 1) * 0.5
+	baseDelay := time.Duration(baseDelaySeconds * float64(time.Second))
+
+	// Cap the maximum delay at 30 seconds
+	maxDelay := 30 * time.Second
+	if baseDelay > maxDelay {
+		baseDelay = maxDelay
+	}
+
+	// Ensure minimum delay of 500ms
+	minDelay := 500 * time.Millisecond
+	if baseDelay < minDelay {
+		baseDelay = minDelay
+	}
+
+	return baseDelay
 }

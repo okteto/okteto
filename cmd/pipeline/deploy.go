@@ -349,7 +349,7 @@ func (pc *Command) streamPipelineLogs(ctx context.Context, name, namespace, acti
 		return err
 	}
 
-	return pc.okClient.Stream().PipelineLogs(ctx, name, namespace, actionName)
+	return pc.okClient.Stream().PipelineLogs(ctx, name, namespace, actionName, timeout)
 }
 
 func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string, action *types.Action, timeout time.Duration) error {
