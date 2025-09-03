@@ -14,7 +14,7 @@ repos:
         name: run check-hooks-apply
   # general checks for the repository
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-added-large-files
       - id: check-case-conflict
@@ -26,12 +26,15 @@ repos:
       - id: check-shebang-scripts-are-executable
       - id: check-toml
       - id: check-vcs-permalinks
-      # - id: check-yaml
+      - id: check-xml
+      - id: check-yaml
+        exclude: ^integration/validate/manifests/invalid-syntax\.yml$|k8s\.yml$
       - id: detect-private-key
         exclude: ^pkg/k8s/secrets/certs\.go$|^pkg/syncthing/certs\.go$|^pkg/deployable/certs\.go$
       - id: end-of-file-fixer
         exclude: schema.json
       - id: fix-byte-order-marker
+      - id: forbid-submodules
       - id: mixed-line-ending
       - id: trailing-whitespace
         exclude: ^\.github/pull_request_template\.md$
