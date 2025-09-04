@@ -339,7 +339,7 @@ func (s *Syncthing) Run() error {
 		"--log-max-old-files=0",
 	}
 	if s.Verbose {
-		cmdArgs = append(cmdArgs, "--verbose")
+		cmdArgs = append(cmdArgs, "--log-level=info")
 	}
 
 	s.cmd = exec.Command(s.binPath, cmdArgs...) // nolint: gas, gosec

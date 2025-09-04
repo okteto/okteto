@@ -7,7 +7,7 @@ ARG KUSTOMIZE_VERSION=5.7.1
 ARG SYNCTHING_VERSION=2.0.6
 ARG OKTETO_REMOTE_VERSION=0.6.4
 
-ARG OKTETO_SUPERVISOR_VERSION=syncthing2.0-3
+ARG OKTETO_SUPERVISOR_VERSION=1.0.0
 ARG OKTETO_CLEAN_VERSION=0.2.4
 # Base images
 ARG GOLANG_VERSION=1.23.12
@@ -28,7 +28,7 @@ FROM syncthing/syncthing:${SYNCTHING_VERSION} AS syncthing
 FROM okteto/remote:${OKTETO_REMOTE_VERSION} AS remote
 
 # Process supervisor component
-FROM jlopezbarb/supervisor:${OKTETO_SUPERVISOR_VERSION} AS supervisor
+FROM okteto/supervisor:${OKTETO_SUPERVISOR_VERSION} AS supervisor
 
 # Cleanup utility
 FROM okteto/clean:${OKTETO_CLEAN_VERSION} AS clean
