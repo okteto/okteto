@@ -333,13 +333,13 @@ func (s *Syncthing) Run() error {
 	}
 
 	cmdArgs := []string{
-		"-home", s.Home,
-		"-no-browser",
-		"-logfile", s.LogPath,
-		"-log-max-old-files=0",
+		"--home", s.Home,
+		"--no-browser",
+		"--logfile", s.LogPath,
+		"--log-max-old-files=0",
 	}
 	if s.Verbose {
-		cmdArgs = append(cmdArgs, "-verbose")
+		cmdArgs = append(cmdArgs, "--verbose")
 	}
 
 	s.cmd = exec.Command(s.binPath, cmdArgs...) // nolint: gas, gosec
