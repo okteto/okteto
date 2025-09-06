@@ -2,3 +2,4 @@
 .github/**
 /docs/**
 integration/validate/manifests/invalid-syntax.yml
+schema.json
