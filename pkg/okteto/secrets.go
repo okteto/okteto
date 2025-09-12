@@ -60,6 +60,10 @@ type getExecutionEnvQuery struct {
 	ExecutionEnv []variablesQuery `graphql:"executionEnv"`
 }
 
+type getKnownHostsConfigQuery struct {
+	KnownHostsConfig knownHostsConfigQuery `graphql:"knownHostsConfig"`
+}
+
 type userQuery struct {
 	Id              graphql.String
 	Name            graphql.String
@@ -103,6 +107,10 @@ type variablesQuery struct {
 type metadataQueryItem struct {
 	Name  graphql.String
 	Value graphql.String
+}
+
+type knownHostsConfigQuery struct {
+	Content graphql.String
 }
 
 type contextFileJSON struct {
@@ -328,6 +336,20 @@ func (c *userClient) GetExecutionEnv(ctx context.Context) (map[string]string, er
 		result[string(envVar.Name)] = string(envVar.Value)
 	}
 	return result, nil
+}
+
+// GetKnownHostsConfig returns the known hosts configuration from Okteto API
+func (c *userClient) GetKnownHostsConfig(ctx context.Context) (string, error) {
+	var queryStruct getKnownHostsConfigQuery
+	err := query(ctx, &queryStruct, nil, c.client)
+	if err != nil {
+		if strings.Contains(err.Error(), "Cannot query field \"knownHostsConfig\" on type \"Query\"") {
+			return "", nil
+		}
+		return "", err
+	}
+
+	return string(queryStruct.KnownHostsConfig.Content), nil
 }
 
 // getRegistryAndRepositoryFromImage returns the registry and repository from an image name

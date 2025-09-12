@@ -365,13 +365,41 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 
 	buildOptions.ExtraHosts = addDefinedHosts(buildOptions.ExtraHosts, params.Hosts)
 
-	// TODO: check if ~/.ssh/config exists and has UserKnownHostsFile defined
-	knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
-	if _, err := os.Stat(knownHostsPath); err != nil {
-		oktetoLog.Debugf("Not know_hosts file. Error reading file: %s", err.Error())
+	apiKnownHosts := ""
+	// Try to get known hosts from API first
+	c, err := r.oktetoClientProvider.Provide()
+	if err != nil {
+		oktetoLog.Debugf("Failed to provide okteto client for known hosts: %s", err.Error())
 	} else {
-		oktetoLog.Debugf("reading known hosts from %s", knownHostsPath)
-		buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
+		apiKnownHosts, err = c.User().GetKnownHostsConfig(ctx)
+		if err != nil {
+			oktetoLog.Debugf("Failed to get known hosts from API: %s", err.Error())
+		}
+	}
+
+	// Fallback to user's local known_hosts if API didn't provide content
+	if apiKnownHosts != "" {
+		tmpKnownHostsFile, err := r.fs.Create(filepath.Join(tmpDir, "known_hosts"))
+		if err == nil {
+			_, err = tmpKnownHostsFile.WriteString(apiKnownHosts)
+			tmpKnownHostsFile.Close()
+			if err == nil {
+				buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", tmpKnownHostsFile.Name()))
+			} else {
+				oktetoLog.Debugf("Failed to write API known hosts to temp file: %s", err.Error())
+			}
+		} else {
+			oktetoLog.Debugf("Failed to create temp known hosts file: %s", err.Error())
+		}
+	} else {
+		// TODO: check if ~/.ssh/config exists and has UserKnownHostsFile defined
+		knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
+		if _, err := os.Stat(knownHostsPath); err != nil {
+			oktetoLog.Debugf("Not know_hosts file. Error reading file: %s", err.Error())
+		} else {
+			oktetoLog.Debugf("reading known hosts from %s", knownHostsPath)
+			buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
+		}
 	}
 
 	if len(params.Artifacts) > 0 {
@@ -623,4 +651,14 @@ func formatEnvVarValueForDocker(value string) string {
 func generateRandomSocketNameString() string {
 	random := strings.ReplaceAll(namesgenerator.GetRandomName(-1), "_", "-")
 	return fmt.Sprintf("/tmp/okteto-%s.sock", random)
+}
+
+// containsKnownHostsSecret checks if the secrets slice contains a known_hosts secret
+func containsKnownHostsSecret(secrets []string) bool {
+	for _, secret := range secrets {
+		if strings.HasPrefix(secret, "id=known_hosts") {
+			return true
+		}
+	}
+	return false
 }
