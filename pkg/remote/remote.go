@@ -653,12 +653,3 @@ func generateRandomSocketNameString() string {
 	return fmt.Sprintf("/tmp/okteto-%s.sock", random)
 }
 
-// containsKnownHostsSecret checks if the secrets slice contains a known_hosts secret
-func containsKnownHostsSecret(secrets []string) bool {
-	for _, secret := range secrets {
-		if strings.HasPrefix(secret, "id=known_hosts") {
-			return true
-		}
-	}
-	return false
-}

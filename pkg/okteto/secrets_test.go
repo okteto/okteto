@@ -836,6 +836,107 @@ func TestGetExecutionEnv(t *testing.T) {
 	}
 }
 
+func TestGetKnownHostsConfig(t *testing.T) {
+	ctx := context.Background()
+
+	type input struct {
+		client *fakeGraphQLClient
+	}
+	type expected struct {
+		content   string
+		expectErr bool
+	}
+	testCases := []struct {
+		name     string
+		cfg      input
+		expected expected
+	}{
+		{
+			name: "happy path with content",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &getKnownHostsConfigQuery{
+						KnownHostsConfig: knownHostsConfigQuery{
+							Content: "example.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC...",
+						},
+					},
+				},
+			},
+			expected: expected{
+				content: "example.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC...",
+			},
+		},
+		{
+			name: "empty content from API",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &getKnownHostsConfigQuery{
+						KnownHostsConfig: knownHostsConfigQuery{
+							Content: "",
+						},
+					},
+				},
+			},
+			expected: expected{
+				content: "",
+			},
+		},
+		{
+			name: "does not fail on incompatible schema",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					err: errors.New("Cannot query field \"knownHostsConfig\" on type \"Query\""),
+				},
+			},
+			expected: expected{
+				content: "",
+			},
+		},
+		{
+			name: "fails on other errors",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					err: errors.New("this is my error"),
+				},
+			},
+			expected: expected{
+				content:   "",
+				expectErr: true,
+			},
+		},
+		{
+			name: "handles multiline known_hosts content",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &getKnownHostsConfigQuery{
+						KnownHostsConfig: knownHostsConfigQuery{
+							Content: "github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC...\ngitlab.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD...",
+						},
+					},
+				},
+			},
+			expected: expected{
+				content: "github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC...\ngitlab.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD...",
+			},
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			uc := &userClient{
+				client: tc.cfg.client,
+			}
+			result, err := uc.GetKnownHostsConfig(ctx)
+			if tc.expected.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tc.expected.content, result)
+		})
+	}
+}
+
 func TestGetImageWithoutTag(t *testing.T) {
 	tests := []struct {
 		image   string
