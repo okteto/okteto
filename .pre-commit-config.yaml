@@ -13,6 +13,12 @@ repos:
       - id: check-hooks-apply
         name: run check-hooks-apply
   # general checks for the repository
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.28.0
+    hooks:
+      - id: gitleaks
+        name: run gitleaks
+        description: detect hardcoded secrets with gitleaks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
