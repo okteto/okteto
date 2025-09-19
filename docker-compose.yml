@@ -1,0 +1,7 @@
+services:
+  frontend:
+    image: bitnami/nginx:latest
+    ports:
+      - "8080:8080"
+    deploy:
+      endpoint_mode: dnsrr

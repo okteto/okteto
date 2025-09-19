@@ -158,7 +158,7 @@ type DeployInfoRaw struct {
 	Labels        Labels            `yaml:"labels,omitempty"`
 	RestartPolicy *RestartPolicyRaw `yaml:"restart_policy,omitempty"`
 
-	EndpointMode   *WarningType `yaml:"endpoint_mode,omitempty"`
+	EndpointMode   string       `yaml:"endpoint_mode,omitempty"`
 	Mode           *WarningType `yaml:"mode,omitempty"`
 	Placement      *WarningType `yaml:"placement,omitempty"`
 	Constraints    *WarningType `yaml:"constraints,omitempty"`
@@ -502,7 +502,24 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	if serviceRaw.Deploy != nil && serviceRaw.Deploy.RestartPolicy != nil {
 		svc.BackOffLimit = serviceRaw.Deploy.RestartPolicy.MaxAttempts
 	}
+	
+	// Handle endpoint_mode from deploy section
+	if serviceRaw.Deploy != nil && serviceRaw.Deploy.EndpointMode != "" {
+		if err := validateEndpointMode(serviceRaw.Deploy.EndpointMode); err != nil {
+			return nil, fmt.Errorf("services[%s].deploy.endpoint_mode: %w", svcName, err)
+		}
+		svc.EndpointMode = serviceRaw.Deploy.EndpointMode
+	}
+	// If endpoint_mode is not set, leave it empty (no modifications to manifest)
+	
 	return svc, nil
+}
+
+func validateEndpointMode(endpointMode string) error {
+	if endpointMode != "vip" && endpointMode != "dnsrr" {
+		return fmt.Errorf("invalid value '%s', must be either 'vip' or 'dnsrr'", endpointMode)
+	}
+	return nil
 }
 
 type healthCheckunmarshaller struct {
@@ -1480,9 +1497,7 @@ func getDeployNotSupportedFields(svcName string, deploy *DeployInfoRaw) []string
 			notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.window", svcName))
 		}
 	}
-	if deploy.EndpointMode != nil {
-		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.endpoint_mode", svcName))
-	}
+	// endpoint_mode is now supported, so don't add it to notSupported list
 	if deploy.Mode != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.mode", svcName))
 	}

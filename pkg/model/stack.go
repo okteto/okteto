@@ -109,7 +109,8 @@ type Service struct {
 	Replicas     int32 `yaml:"replicas,omitempty"` // For okteto stack only
 	BackOffLimit int32 `yaml:"max_attempts,omitempty"`
 
-	Public bool `yaml:"public,omitempty"` // For okteto stack only
+	Public       bool   `yaml:"public,omitempty"`       // For okteto stack only
+	EndpointMode string `yaml:"endpoint_mode,omitempty"` // For docker compose deploy section
 }
 
 // StackSecurityContext defines which user and group use
