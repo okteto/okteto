@@ -48,6 +48,7 @@ func Deploy(ctx context.Context, s *apiv1.Service, c kubernetes.Interface) error
 		oktetoLog.Infof("created service '%s'", s.Name)
 	} else {
 		oktetoLog.Infof("updating service '%s'", s.Name)
+		op := "update"
 
 		isDivertDeploy := old.Spec.Type == apiv1.ServiceTypeExternalName && old.Annotations[model.OktetoAutoCreateAnnotation] == "true"
 
@@ -56,6 +57,15 @@ func Deploy(ctx context.Context, s *apiv1.Service, c kubernetes.Interface) error
 		old.Spec.Ports = s.Spec.Ports
 		old.Spec.Selector = s.Spec.Selector
 
+		if (old.Spec.ClusterIP != "None" && s.Spec.ClusterIP == "") || s.Spec.ClusterIP == old.Spec.ClusterIP {
+			// do nothing, keep the same clusterIP if the new one doesn't specify it
+			// or if both are the same value
+			oktetoLog.Debugf("keeping existing service ClusterIP %q", old.Spec.ClusterIP)
+		} else {
+			oktetoLog.Debugf("replacing service ClusterIP %q with %q", old.Spec.ClusterIP, s.Spec.ClusterIP)
+			op = "replace"
+		}
+
 		if s.Spec.Type == apiv1.ServiceTypeClusterIP {
 			if isDivertDeploy {
 				old.Spec.Type = s.Spec.Type
@@ -63,9 +73,20 @@ func Deploy(ctx context.Context, s *apiv1.Service, c kubernetes.Interface) error
 			}
 		}
 
-		_, err = c.CoreV1().Services(s.Namespace).Update(ctx, old, metav1.UpdateOptions{})
-		if err != nil {
-			return fmt.Errorf("error updating kubernetes service: %w", err)
+		switch op {
+		case "replace":
+			s.ResourceVersion = ""
+			oktetoLog.Debugf("replacing service '%s'", s.Name)
+			if err := c.CoreV1().Services(s.Namespace).Delete(ctx, s.Name, metav1.DeleteOptions{}); err != nil {
+				return fmt.Errorf("error deleting kubernetes service: %w", err)
+			}
+			if _, err := c.CoreV1().Services(s.Namespace).Create(ctx, s, metav1.CreateOptions{}); err != nil {
+				return fmt.Errorf("error creating kubernetes service: %w", err)
+			}
+		case "update":
+			if _, err := c.CoreV1().Services(s.Namespace).Update(ctx, old, metav1.UpdateOptions{}); err != nil {
+				return fmt.Errorf("error updating kubernetes service: %w", err)
+			}
 		}
 		oktetoLog.Infof("updated service '%s'.", s.Name)
 	}
