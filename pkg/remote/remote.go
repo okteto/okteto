@@ -16,7 +16,9 @@ package remote
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -39,6 +41,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v2"
@@ -100,7 +103,7 @@ RUN echo "${{ .InvalidateCacheArgName }}" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
 
 RUN \
-  {{range $key, $path := .Caches }}--mount=type=cache,id={{$.ManifestName}}-{{$.TestName}}-{{$key}},target={{$path}},sharing=private {{end}}\
+  {{range $key, $path := .Caches }}--mount=type=cache,id={{$.RepoHash}}-{{$.ManifestName}}-{{$.TestName}}-{{$key}},target={{$path}},sharing=private {{end}}\
   --mount=type=secret,id=known_hosts \
   --mount=type=secret,id={{ .SSHAgentSocketArgName }},env=SSH_AUTH_SOCK \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts $HOME/.ssh/known_hosts" >> $HOME/.ssh/config && \
@@ -222,6 +225,7 @@ type dockerfileTemplateProperties struct {
 	SSHAgentPort                 string
 	SSHAgentSocketArgName        string
 	Caches                       []string
+	RepoHash                     string
 	TestName                     string
 	ManifestName                 string
 	Artifacts                    []model.Artifact
@@ -397,6 +401,17 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		return "", err
 	}
 
+	repoHash := ""
+	if params.Manifest != nil && params.Manifest.ManifestPath != "" {
+		repo := repository.NewRepository(params.Manifest.ManifestPath)
+		repoURL := repo.GetAnonymizedRepo()
+		hasher := sha256.New()
+		hasher.Write([]byte(repoURL))
+		hash := hasher.Sum(nil)
+
+		repoHash = hex.EncodeToString(hash)[:12]
+	}
+
 	tmpl := template.
 		Must(template.New(params.TemplateName).
 			Funcs(template.FuncMap{"join": strings.Join}).
@@ -426,6 +441,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		OktetoCommandSpecificEnvVars: params.OktetoCommandSpecificEnvVars,
 		Command:                      params.Command,
 		Caches:                       params.Caches,
+		RepoHash:                     repoHash,
 		TestName:                     params.TestName,
 		ManifestName:                 params.Manifest.Name,
 		Artifacts:                    params.Artifacts,

@@ -584,10 +584,10 @@ func TestDockerfileWithCache(t *testing.T) {
 	require.Equal(t, filepath.Clean("/test/myDockerfile"), dockerfileName)
 	d, err := afero.ReadFile(fs, dockerfileName)
 	require.NoError(t, err)
-	
+
 	// Verify that each cache has a unique ID based on manifest name, test name, and cache index
 	for i, cache := range caches {
-		expectedID := fmt.Sprintf("test-manifest-unit-test-%d", i)
+		expectedID := fmt.Sprintf("-test-manifest-unit-test-%d", i)
 		pattern := fmt.Sprintf("--mount=type=cache,id=%s,target=%s", expectedID, cache)
 		ok, err := regexp.MatchString(pattern, string(d))
 		require.NoError(t, err)
@@ -611,7 +611,7 @@ func TestCacheIsolationBetweenTestContexts(t *testing.T) {
 		generateSocketName: nameGenerator.GenerateName,
 	}
 	caches := []string{"/root/.cache", "/go/pkg/mod"}
-	
+
 	// Test case 1: manifest1, test1
 	manifest1 := &model.Manifest{Name: "app1"}
 	dockerfile1, err := rdc.createDockerfile("/test1", &Params{
@@ -621,7 +621,7 @@ func TestCacheIsolationBetweenTestContexts(t *testing.T) {
 		Manifest:       manifest1,
 	})
 	require.NoError(t, err)
-	
+
 	// Test case 2: manifest1, test2 (different test context)
 	dockerfile2, err := rdc.createDockerfile("/test2", &Params{
 		Caches:         caches,
@@ -630,7 +630,7 @@ func TestCacheIsolationBetweenTestContexts(t *testing.T) {
 		Manifest:       manifest1,
 	})
 	require.NoError(t, err)
-	
+
 	// Test case 3: manifest2, test1 (different manifest)
 	manifest2 := &model.Manifest{Name: "app2"}
 	dockerfile3, err := rdc.createDockerfile("/test3", &Params{
@@ -640,7 +640,7 @@ func TestCacheIsolationBetweenTestContexts(t *testing.T) {
 		Manifest:       manifest2,
 	})
 	require.NoError(t, err)
-	
+
 	// Read all dockerfiles
 	d1, err := afero.ReadFile(fs, dockerfile1)
 	require.NoError(t, err)
@@ -648,32 +648,32 @@ func TestCacheIsolationBetweenTestContexts(t *testing.T) {
 	require.NoError(t, err)
 	d3, err := afero.ReadFile(fs, dockerfile3)
 	require.NoError(t, err)
-	
+
 	// Verify that each test context generates unique cache IDs
 	for i, cache := range caches {
 		// Expected cache IDs for each context
-		expectedID1 := fmt.Sprintf("app1-unit-%d", i)
-		expectedID2 := fmt.Sprintf("app1-integration-%d", i)
-		expectedID3 := fmt.Sprintf("app2-unit-%d", i)
-		
+		expectedID1 := fmt.Sprintf("-app1-unit-%d", i)
+		expectedID2 := fmt.Sprintf("-app1-integration-%d", i)
+		expectedID3 := fmt.Sprintf("-app2-unit-%d", i)
+
 		// Verify dockerfile1 has app1-unit cache IDs
 		pattern1 := fmt.Sprintf("--mount=type=cache,id=%s,target=%s", expectedID1, cache)
 		ok, err := regexp.MatchString(pattern1, string(d1))
 		require.NoError(t, err)
 		require.True(t, ok, "Dockerfile1 should have cache ID %s", expectedID1)
-		
+
 		// Verify dockerfile2 has app1-integration cache IDs
 		pattern2 := fmt.Sprintf("--mount=type=cache,id=%s,target=%s", expectedID2, cache)
 		ok, err = regexp.MatchString(pattern2, string(d2))
 		require.NoError(t, err)
 		require.True(t, ok, "Dockerfile2 should have cache ID %s", expectedID2)
-		
+
 		// Verify dockerfile3 has app2-unit cache IDs
 		pattern3 := fmt.Sprintf("--mount=type=cache,id=%s,target=%s", expectedID3, cache)
 		ok, err = regexp.MatchString(pattern3, string(d3))
 		require.NoError(t, err)
 		require.True(t, ok, "Dockerfile3 should have cache ID %s", expectedID3)
-		
+
 		// Ensure that the cache IDs are different between contexts
 		require.NotEqual(t, expectedID1, expectedID2, "Cache IDs should be different between test contexts")
 		require.NotEqual(t, expectedID1, expectedID3, "Cache IDs should be different between manifests")
