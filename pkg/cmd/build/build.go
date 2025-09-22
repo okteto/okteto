@@ -16,7 +16,9 @@ package build
 import (
 	"bufio"
 	"context"
+	"crypto/sha256"
 	"encoding/csv"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -35,6 +37,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 )
@@ -129,9 +132,20 @@ func GetRegistryConfigFromOktetoConfig(okCtx OktetoContextInterface) *okteto.Con
 func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller, run buildkit.SolveBuildFn) error {
 	oktetoLog.Infof("building your image on %s", ob.OktetoContext.GetCurrentBuilder())
 
-	var err error
+	repo := repository.NewRepository(buildOptions.File)
+	repoURL := repo.GetAnonymizedRepo()
+	hasher := sha256.New()
+	dockerfilepath, err := filepath.Abs(buildOptions.File)
+	if err != nil {
+		return err
+	}
+
+	hasher.Write([]byte(fmt.Sprintf("%s-%s", repoURL, dockerfilepath)))
+	hash := hasher.Sum(nil)
+	repoHash := hex.EncodeToString(hash)[:12]
+
 	if buildOptions.File != "" {
-		buildOptions.File, err = GetDockerfile(buildOptions.File, ob.OktetoContext)
+		buildOptions.File, err = GetDockerfile(buildOptions.File, ob.OktetoContext, repoHash)
 		if err != nil {
 			return err
 		}

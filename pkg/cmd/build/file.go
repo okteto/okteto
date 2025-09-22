@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
@@ -32,8 +33,8 @@ const (
 )
 
 // GetDockerfile returns the dockerfile with the cache and registry translations
-func GetDockerfile(dockerFile string, okCtx OktetoContextInterface) (string, error) {
-	file, err := getTranslatedDockerFile(dockerFile, okCtx)
+func GetDockerfile(dockerFile string, okCtx OktetoContextInterface, projectHash string) (string, error) {
+	file, err := getTranslatedDockerFile(dockerFile, okCtx, projectHash)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create temporary build folder")
 	}
@@ -41,7 +42,7 @@ func GetDockerfile(dockerFile string, okCtx OktetoContextInterface) (string, err
 	return file, nil
 }
 
-func getTranslatedDockerFile(filename string, okCtx OktetoContextInterface) (string, error) {
+func getTranslatedDockerFile(filename string, okCtx OktetoContextInterface, projectHash string) (string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return "", err
@@ -70,6 +71,7 @@ func getTranslatedDockerFile(filename string, okCtx OktetoContextInterface) (str
 	for scanner.Scan() {
 		line := scanner.Text()
 		translatedLine := translateOktetoRegistryImage(line, okCtx)
+		translatedLine = translateCacheHandler(translatedLine, projectHash)
 		_, err = datawriter.WriteString(translatedLine + "\n")
 		if err != nil {
 			return "", fmt.Errorf("failed to write dockerfile: %w", err)
@@ -153,4 +155,31 @@ func copyFile(orig, dest string) error {
 		return err
 	}
 	return nil
+}
+
+func translateCacheHandler(input, projectHash string) string {
+	// Check if this RUN command has a cache mount
+	hasCacheMount, err := regexp.MatchString(`^RUN.*--mount=.*type=cache`, input)
+	if err != nil || !hasCacheMount {
+		return input
+	}
+
+	// If an id is already defined, leave unchanged
+	hasID, err := regexp.MatchString(`^RUN.*--mount=[^ ]*id=`, input)
+	if err == nil && hasID {
+		return input
+	}
+
+	target := ""
+	re := regexp.MustCompile(`--mount=[^ ]*target=([^, ]+)`)
+	if matches := re.FindStringSubmatch(input); len(matches) > 1 {
+		target = matches[1]
+	}
+
+	id := projectHash
+	if target != "" {
+		id = fmt.Sprintf("%s-%s", projectHash, target)
+	}
+	// Otherwise, insert id=<projectHash> into the mount
+	return strings.ReplaceAll(input, "--mount=", fmt.Sprintf("--mount=id=%s,", id))
 }
