@@ -39,7 +39,7 @@ type UserInterface interface {
 	GetClusterMetadata(ctx context.Context, ns string) (ClusterMetadata, error)
 	GetRegistryCredentials(ctx context.Context, host string) (dockertypes.AuthConfig, error)
 	GetExecutionEnv(ctx context.Context) (map[string]string, error)
-	GetKnownHostsConfig(ctx context.Context) (string, error)
+	GetKnownHostsConfig(ctx context.Context) (KnownHostsConfig, error)
 }
 
 // NamespaceInterface represents the client that connects to the namespace functions

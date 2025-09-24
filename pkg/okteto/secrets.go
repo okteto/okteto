@@ -111,6 +111,7 @@ type metadataQueryItem struct {
 
 type knownHostsConfigQuery struct {
 	Content graphql.String
+	Enabled graphql.Boolean
 }
 
 type contextFileJSON struct {
@@ -339,17 +340,20 @@ func (c *userClient) GetExecutionEnv(ctx context.Context) (map[string]string, er
 }
 
 // GetKnownHostsConfig returns the known hosts configuration from Okteto API
-func (c *userClient) GetKnownHostsConfig(ctx context.Context) (string, error) {
+func (c *userClient) GetKnownHostsConfig(ctx context.Context) (types.KnownHostsConfig, error) {
 	var queryStruct getKnownHostsConfigQuery
 	err := query(ctx, &queryStruct, nil, c.client)
 	if err != nil {
 		if strings.Contains(err.Error(), "Cannot query field \"knownHostsConfig\" on type \"Query\"") {
-			return "", nil
+			return types.KnownHostsConfig{}, nil
 		}
-		return "", err
+		return types.KnownHostsConfig{}, err
 	}
 
-	return string(queryStruct.KnownHostsConfig.Content), nil
+	return types.KnownHostsConfig{
+		Content: string(queryStruct.KnownHostsConfig.Content),
+		Enabled: bool(queryStruct.KnownHostsConfig.Enabled),
+	}, nil
 }
 
 // getRegistryAndRepositoryFromImage returns the registry and repository from an image name

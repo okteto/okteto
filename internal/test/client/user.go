@@ -76,6 +76,6 @@ func (*FakeUserClient) GetExecutionEnv(_ context.Context) (map[string]string, er
 	return map[string]string{}, nil
 }
 
-func (*FakeUserClient) GetKnownHostsConfig(_ context.Context) (string, error) {
-	return "", nil
+func (*FakeUserClient) GetKnownHostsConfig(_ context.Context) (types.KnownHostsConfig, error) {
+	return types.KnownHostsConfig{}, nil
 }

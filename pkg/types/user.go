@@ -28,3 +28,9 @@ type User struct {
 	Analytics       bool
 	New             bool
 }
+
+// KnownHostsConfig contains the SSH known hosts configuration
+type KnownHostsConfig struct {
+	Content string
+	Enabled bool
+}

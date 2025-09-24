@@ -843,7 +843,7 @@ func TestGetKnownHostsConfig(t *testing.T) {
 		client *fakeGraphQLClient
 	}
 	type expected struct {
-		content   string
+		config    types.KnownHostsConfig
 		expectErr bool
 	}
 	testCases := []struct {
@@ -852,33 +852,41 @@ func TestGetKnownHostsConfig(t *testing.T) {
 		expected expected
 	}{
 		{
-			name: "happy path with content",
+			name: "happy path with content and enabled",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					queryResult: &getKnownHostsConfigQuery{
 						KnownHostsConfig: knownHostsConfigQuery{
 							Content: "example.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC...",
+							Enabled: true,
 						},
 					},
 				},
 			},
 			expected: expected{
-				content: "example.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC...",
+				config: types.KnownHostsConfig{
+					Content: "example.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC...",
+					Enabled: true,
+				},
 			},
 		},
 		{
-			name: "empty content from API",
+			name: "content disabled from API",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					queryResult: &getKnownHostsConfigQuery{
 						KnownHostsConfig: knownHostsConfigQuery{
-							Content: "",
+							Content: "some content",
+							Enabled: false,
 						},
 					},
 				},
 			},
 			expected: expected{
-				content: "",
+				config: types.KnownHostsConfig{
+					Content: "some content",
+					Enabled: false,
+				},
 			},
 		},
 		{
@@ -889,7 +897,7 @@ func TestGetKnownHostsConfig(t *testing.T) {
 				},
 			},
 			expected: expected{
-				content: "",
+				config: types.KnownHostsConfig{},
 			},
 		},
 		{
@@ -900,23 +908,46 @@ func TestGetKnownHostsConfig(t *testing.T) {
 				},
 			},
 			expected: expected{
-				content:   "",
+				config:    types.KnownHostsConfig{},
 				expectErr: true,
 			},
 		},
 		{
-			name: "handles multiline known_hosts content",
+			name: "handles multiline known_hosts content with enabled",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					queryResult: &getKnownHostsConfigQuery{
 						KnownHostsConfig: knownHostsConfigQuery{
 							Content: "github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC...\ngitlab.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD...",
+							Enabled: true,
 						},
 					},
 				},
 			},
 			expected: expected{
-				content: "github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC...\ngitlab.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD...",
+				config: types.KnownHostsConfig{
+					Content: "github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC...\ngitlab.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD...",
+					Enabled: true,
+				},
+			},
+		},
+		{
+			name: "empty content with enabled true",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &getKnownHostsConfigQuery{
+						KnownHostsConfig: knownHostsConfigQuery{
+							Content: "",
+							Enabled: true,
+						},
+					},
+				},
+			},
+			expected: expected{
+				config: types.KnownHostsConfig{
+					Content: "",
+					Enabled: true,
+				},
 			},
 		},
 	}
@@ -932,7 +963,7 @@ func TestGetKnownHostsConfig(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-			assert.Equal(t, tc.expected.content, result)
+			assert.Equal(t, tc.expected.config, result)
 		})
 	}
 }
