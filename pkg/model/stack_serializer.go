@@ -506,9 +506,9 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	// Extract endpoint_mode from deploy section
 	if serviceRaw.Deploy != nil && serviceRaw.Deploy.EndpointMode != "" {
 		switch serviceRaw.Deploy.EndpointMode {
-		case "vip":
+		case string(EndpointModeVIP):
 			svc.EndpointMode = EndpointModeVIP
-		case "dnsrr":
+		case string(EndpointModeDNSRR):
 			svc.EndpointMode = EndpointModeDNSRR
 		default:
 			return nil, fmt.Errorf("unsupported endpoint_mode '%s' for service '%s': must be 'vip' or 'dnsrr'", serviceRaw.Deploy.EndpointMode, svcName)
