@@ -418,7 +418,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 	}
 
 	// Fallback to user's local known_hosts if API didn't provide content
-	if !knownHostEnabled {
+	if knownHostEnabled {
 		tmpKnownHostsFile, err := r.fs.Create(filepath.Join(tmpDir, "known_hosts"))
 		if err == nil {
 			_, err = tmpKnownHostsFile.WriteString(knownHostsContent)
