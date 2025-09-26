@@ -365,13 +365,81 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 
 	buildOptions.ExtraHosts = addDefinedHosts(buildOptions.ExtraHosts, params.Hosts)
 
-	// TODO: check if ~/.ssh/config exists and has UserKnownHostsFile defined
-	knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
-	if _, err := os.Stat(knownHostsPath); err != nil {
-		oktetoLog.Debugf("Not know_hosts file. Error reading file: %s", err.Error())
+	knownHostEnabled := false
+	knownHostsContent := ""
+	// Try to get known hosts from API first
+	c, err := r.oktetoClientProvider.Provide()
+	if err != nil {
+		oktetoLog.Debugf("Failed to provide okteto client for known hosts: %s", err.Error())
 	} else {
-		oktetoLog.Debugf("reading known hosts from %s", knownHostsPath)
-		buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
+		knownHostsConfig, err := c.User().GetKnownHostsConfig(ctx)
+		if err != nil {
+			oktetoLog.Debugf("Failed to get known hosts from API: %s", err.Error())
+		} else if knownHostsConfig.Enabled && knownHostsConfig.Content != "" {
+			// Use known hosts from API when enabled and content is available
+			oktetoLog.Debugf("using known hosts from API")
+			tmpKnownHostsFile, err := r.fs.Create(filepath.Join(tmpDir, "known_hosts"))
+			if err == nil {
+				_, err = tmpKnownHostsFile.WriteString(knownHostsConfig.Content)
+				tmpKnownHostsFile.Close()
+				if err == nil {
+					buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", tmpKnownHostsFile.Name()))
+				} else {
+					oktetoLog.Debugf("Failed to write API known hosts to temp file: %s", err.Error())
+				}
+			} else {
+				oktetoLog.Debugf("Failed to create temp known hosts file: %s", err.Error())
+			}
+		} else if !knownHostsConfig.Enabled {
+			oktetoLog.Debugf("known hosts from API is disabled, using local file")
+		}
+
+		knownHostEnabled = knownHostsConfig.Enabled
+		knownHostsContent = knownHostsConfig.Content
+
+		if knownHostsConfig.Enabled && knownHostsConfig.Content != "" {
+			// Use known hosts from API when enabled and content is available
+			oktetoLog.Debugf("using known hosts from API")
+			tmpKnownHostsFile, err := r.fs.Create(filepath.Join(tmpDir, "known_hosts"))
+			if err == nil {
+				_, err = tmpKnownHostsFile.WriteString(knownHostsConfig.Content)
+				tmpKnownHostsFile.Close()
+				if err == nil {
+					buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", tmpKnownHostsFile.Name()))
+				} else {
+					oktetoLog.Debugf("Failed to write API known hosts to temp file: %s", err.Error())
+				}
+			} else {
+				oktetoLog.Debugf("Failed to create temp known hosts file: %s", err.Error())
+			}
+		} else if !knownHostsConfig.Enabled {
+			oktetoLog.Debugf("known hosts from API is disabled, using local file")
+		}
+	}
+
+	// Fallback to user's local known_hosts if API didn't provide content
+	if knownHostEnabled {
+		tmpKnownHostsFile, err := r.fs.Create(filepath.Join(tmpDir, "known_hosts"))
+		if err == nil {
+			_, err = tmpKnownHostsFile.WriteString(knownHostsContent)
+			tmpKnownHostsFile.Close()
+			if err == nil {
+				buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", tmpKnownHostsFile.Name()))
+			} else {
+				oktetoLog.Debugf("Failed to write API known hosts to temp file: %s", err.Error())
+			}
+		} else {
+			oktetoLog.Debugf("Failed to create temp known hosts file: %s", err.Error())
+		}
+	} else {
+		// TODO: check if ~/.ssh/config exists and has UserKnownHostsFile defined
+		knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
+		if _, err := os.Stat(knownHostsPath); err != nil {
+			oktetoLog.Debugf("Not know_hosts file. Error reading file: %s", err.Error())
+		} else {
+			oktetoLog.Debugf("reading known hosts from %s", knownHostsPath)
+			buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
+		}
 	}
 
 	if len(params.Artifacts) > 0 {

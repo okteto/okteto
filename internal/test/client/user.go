@@ -75,3 +75,7 @@ func (*FakeUserClient) GetRegistryCredentials(_ context.Context, _ string) (dock
 func (*FakeUserClient) GetExecutionEnv(_ context.Context) (map[string]string, error) {
 	return map[string]string{}, nil
 }
+
+func (*FakeUserClient) GetKnownHostsConfig(_ context.Context) (types.KnownHostsConfig, error) {
+	return types.KnownHostsConfig{}, nil
+}
