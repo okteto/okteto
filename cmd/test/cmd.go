@@ -387,6 +387,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			Manifest:                    manifest,
 			Command:                     remote.TestCommand,
 			ContextAbsolutePathOverride: ctxCwd,
+			TestName:                    name,
 			Caches:                      test.Caches,
 			IgnoreRules:                 testIgnoreRules,
 			Artifacts:                   test.Artifacts,
