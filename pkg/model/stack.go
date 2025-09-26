@@ -81,6 +81,19 @@ func (cs ComposeServices) getNames() []string {
 	return names
 }
 
+// EndpointMode represents the endpoint mode for a service
+type EndpointMode string
+
+const (
+	// EndpointModeVIP assigns the service a virtual IP (VIP) that acts as the front end
+	// for clients to reach the service on a network. This is the default mode.
+	EndpointModeVIP EndpointMode = "vip"
+
+	// EndpointModeDNSRR sets up DNS entries for the service such that a DNS query
+	// for the service name returns a list of IP addresses (DNS round-robin)
+	EndpointModeDNSRR EndpointMode = "dnsrr"
+)
+
 // Service represents an okteto stack service
 type Service struct {
 	Healtcheck    *HealthCheck          `yaml:"healthcheck,omitempty"`
@@ -110,6 +123,8 @@ type Service struct {
 	BackOffLimit int32 `yaml:"max_attempts,omitempty"`
 
 	Public bool `yaml:"public,omitempty"` // For okteto stack only
+
+	EndpointMode EndpointMode `yaml:"endpoint_mode,omitempty"` // For compose services.deploy.endpoint_mode
 }
 
 // StackSecurityContext defines which user and group use

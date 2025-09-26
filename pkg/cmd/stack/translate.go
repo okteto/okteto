@@ -458,6 +458,18 @@ func translateVolumes(svc *model.Service) []apiv1.Volume {
 func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	svc := s.Services[svcName]
 	annotations := translateAnnotations(svc)
+
+	serviceSpec := apiv1.ServiceSpec{
+		Selector: translateLabelSelector(svcName, s),
+		Type:     apiv1.ServiceTypeClusterIP,
+		Ports:    translateServicePorts(*svc),
+	}
+
+	// Configure headless service for DNS round-robin endpoint mode
+	if svc.EndpointMode == model.EndpointModeDNSRR {
+		serviceSpec.ClusterIP = "None"
+	}
+
 	return &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -465,11 +477,7 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 			Labels:      translateLabels(svcName, s),
 			Annotations: annotations,
 		},
-		Spec: apiv1.ServiceSpec{
-			Selector: translateLabelSelector(svcName, s),
-			Type:     apiv1.ServiceTypeClusterIP,
-			Ports:    translateServicePorts(*svc),
-		},
+		Spec: serviceSpec,
 	}
 }
 

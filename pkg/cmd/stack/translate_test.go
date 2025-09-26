@@ -1093,6 +1093,98 @@ func Test_translateService(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "translate service with VIP endpoint mode",
+			stack: &model.Stack{
+				Name: "stackName",
+				Services: map[string]*model.Service{
+					"svcName": {
+						EndpointMode: model.EndpointModeVIP,
+						Ports: []model.Port{
+							{
+								ContainerPort: 80,
+								Protocol:      apiv1.ProtocolTCP,
+							},
+						},
+					},
+				},
+			},
+			expected: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "svcName",
+					Labels: map[string]string{
+						model.StackNameLabel:        "stackname",
+						model.StackServiceNameLabel: "svcName",
+						model.DeployedByLabel:       "stackname",
+					},
+					Annotations: map[string]string{
+						"dev.okteto.com/sample": "true",
+					},
+				},
+				Spec: apiv1.ServiceSpec{
+					Type: apiv1.ServiceTypeClusterIP,
+					Selector: map[string]string{
+						model.StackNameLabel:        "stackname",
+						model.StackServiceNameLabel: "svcName",
+					},
+					Ports: []apiv1.ServicePort{
+						{
+							Name:       "p-80-80-tcp",
+							Port:       80,
+							TargetPort: intstr.IntOrString{IntVal: 80},
+							Protocol:   apiv1.ProtocolTCP,
+						},
+					},
+					// ClusterIP should not be set for VIP mode (default behavior)
+				},
+			},
+		},
+		{
+			name: "translate service with DNSRR endpoint mode (headless)",
+			stack: &model.Stack{
+				Name: "stackName",
+				Services: map[string]*model.Service{
+					"svcName": {
+						EndpointMode: model.EndpointModeDNSRR,
+						Ports: []model.Port{
+							{
+								ContainerPort: 80,
+								Protocol:      apiv1.ProtocolTCP,
+							},
+						},
+					},
+				},
+			},
+			expected: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "svcName",
+					Labels: map[string]string{
+						model.StackNameLabel:        "stackname",
+						model.StackServiceNameLabel: "svcName",
+						model.DeployedByLabel:       "stackname",
+					},
+					Annotations: map[string]string{
+						"dev.okteto.com/sample": "true",
+					},
+				},
+				Spec: apiv1.ServiceSpec{
+					Type: apiv1.ServiceTypeClusterIP,
+					Selector: map[string]string{
+						model.StackNameLabel:        "stackname",
+						model.StackServiceNameLabel: "svcName",
+					},
+					Ports: []apiv1.ServicePort{
+						{
+							Name:       "p-80-80-tcp",
+							Port:       80,
+							TargetPort: intstr.IntOrString{IntVal: 80},
+							Protocol:   apiv1.ProtocolTCP,
+						},
+					},
+					ClusterIP: "None", // This creates a headless service
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
