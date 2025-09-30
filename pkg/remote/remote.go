@@ -16,7 +16,9 @@ package remote
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -39,6 +41,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v2"
@@ -100,7 +103,7 @@ RUN echo "${{ .InvalidateCacheArgName }}" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
 
 RUN \
-  {{range $key, $path := .Caches }}--mount=type=cache,target={{$path}},sharing=private {{end}}\
+  {{range $key, $path := .Caches }}--mount=type=cache,id={{cacheID $.RepositoryURL $.ManifestName $.TestName $path}},target={{$path}},sharing=private {{end}}\
   --mount=type=secret,id=known_hosts \
   --mount=type=secret,id={{ .SSHAgentSocketArgName }},env=SSH_AUTH_SOCK \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts $HOME/.ssh/known_hosts" >> $HOME/.ssh/config && \
@@ -177,6 +180,8 @@ type Params struct {
 	CommandFlags []string
 	Caches       []string
 	Hosts        []model.Host
+	// TestName is the name of the test container, used for cache isolation
+	TestName string
 	// IgnoreRules are the ignoring rules added to this build execution.
 	// Rules follow the .dockerignore syntax as defined in:
 	// https://docs.docker.com/build/building/context/#syntax
@@ -220,6 +225,9 @@ type dockerfileTemplateProperties struct {
 	SSHAgentPort                 string
 	SSHAgentSocketArgName        string
 	Caches                       []string
+	TestName                     string
+	ManifestName                 string
+	RepositoryURL                string
 	Artifacts                    []model.Artifact
 }
 
@@ -461,9 +469,24 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		return "", err
 	}
 
+	// Get repository URL for cache ID generation
+	repoURL := ""
+	if params.Manifest != nil && params.Manifest.ManifestPath != "" {
+		repo := repository.NewRepository(params.Manifest.ManifestPath)
+		repoURL = repo.GetAnonymizedRepo()
+	}
+	if repoURL == "" {
+		repoURL = params.Manifest.ManifestPath
+	}
+
 	tmpl := template.
 		Must(template.New(params.TemplateName).
-			Funcs(template.FuncMap{"join": strings.Join}).
+			Funcs(template.FuncMap{
+				"join": strings.Join,
+				"cacheID": func(repoURL, manifestName, testName, path string) string {
+					return generateCacheID(repoURL, manifestName, testName, path)
+				},
+			}).
 			Parse(dockerfileTemplate))
 
 	dockerfileSyntax := dockerfileTemplateProperties{
@@ -490,6 +513,9 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		OktetoCommandSpecificEnvVars: params.OktetoCommandSpecificEnvVars,
 		Command:                      params.Command,
 		Caches:                       params.Caches,
+		TestName:                     params.TestName,
+		ManifestName:                 params.Manifest.Name,
+		RepositoryURL:                repoURL,
 		Artifacts:                    params.Artifacts,
 		SSHAgentHostname:             params.SSHAgentHostname,
 		SSHAgentHostnameArgName:      constants.OktetoSshAgentHostnameEnvVar,
@@ -686,6 +712,20 @@ func formatEnvVarValueForDocker(value string) string {
 	result.WriteString("\"")
 
 	return result.String()
+}
+
+// generateCacheID creates a unique cache identifier based on repository, manifest name, and test name
+func generateCacheID(repositoryURL, manifestName, testName, path string) string {
+	// Create input string for hashing
+	input := fmt.Sprintf("%s-%s-%s-%s", repositoryURL, manifestName, testName, path)
+
+	// Generate SHA256 hash
+	hasher := sha256.New()
+	hasher.Write([]byte(input))
+	hash := hasher.Sum(nil)
+
+	// Return first 12 characters of hex hash for readability
+	return hex.EncodeToString(hash)[:12]
 }
 
 func generateRandomSocketNameString() string {
