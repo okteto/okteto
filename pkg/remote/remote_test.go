@@ -573,20 +573,133 @@ func TestDockerfileWithCache(t *testing.T) {
 		generateSocketName: nameGenerator.GenerateName,
 	}
 	caches := []string{"/my", "/cache", "/list"}
+	manifest := &model.Manifest{Name: "test-manifest"}
 	dockerfileName, err := rdc.createDockerfile("/test", &Params{
 		Caches:         caches,
 		DockerfileName: "myDockerfile",
+		TestName:       "unit-test",
+		Manifest:       manifest,
 	})
 	require.NoError(t, err)
 	require.Equal(t, filepath.Clean("/test/myDockerfile"), dockerfileName)
 	d, err := afero.ReadFile(fs, dockerfileName)
 	require.NoError(t, err)
+
+	// Verify that each cache has a unique ID based on manifest name, test name, and cache index
 	for _, cache := range caches {
-		pattern := fmt.Sprintf("--mount=type=cache,target=%s", cache)
+		pattern := fmt.Sprintf("--mount=type=cache,id=\\w+,target=%s", cache)
 		ok, err := regexp.MatchString(pattern, string(d))
 		require.NoError(t, err)
-		require.True(t, ok)
+		require.True(t, ok, "Expected cache mount pattern not found: %s", pattern)
 	}
+}
+
+func TestCacheIsolationBetweenTestContexts(t *testing.T) {
+	wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/"))
+	nameGenerator := fakeNameGenerator{
+		name: "okteto-socket.sock",
+	}
+	fs := afero.NewMemMapFs()
+	rdc := Runner{
+		fs:                   fs,
+		workingDirectoryCtrl: wdCtrl,
+		getEnviron: func() []string {
+			return []string{}
+		},
+		ioCtrl:             io.NewIOController(),
+		generateSocketName: nameGenerator.GenerateName,
+	}
+	caches := []string{"/root/.cache", "/go/pkg/mod"}
+
+	// Test case 1: manifest1, test1
+	manifest1 := &model.Manifest{Name: "app1"}
+	dockerfile1, err := rdc.createDockerfile("/test1", &Params{
+		Caches:         caches,
+		DockerfileName: "Dockerfile.test1",
+		TestName:       "unit",
+		Manifest:       manifest1,
+	})
+	require.NoError(t, err)
+
+	// Test case 2: manifest1, test2 (different test context)
+	dockerfile2, err := rdc.createDockerfile("/test2", &Params{
+		Caches:         caches,
+		DockerfileName: "Dockerfile.test2",
+		TestName:       "integration",
+		Manifest:       manifest1,
+	})
+	require.NoError(t, err)
+
+	// Test case 3: manifest2, test1 (different manifest)
+	manifest2 := &model.Manifest{Name: "app2"}
+	dockerfile3, err := rdc.createDockerfile("/test3", &Params{
+		Caches:         caches,
+		DockerfileName: "Dockerfile.test3",
+		TestName:       "unit",
+		Manifest:       manifest2,
+	})
+	require.NoError(t, err)
+
+	// Read all dockerfiles
+	d1, err := afero.ReadFile(fs, dockerfile1)
+	require.NoError(t, err)
+	d2, err := afero.ReadFile(fs, dockerfile2)
+	require.NoError(t, err)
+	d3, err := afero.ReadFile(fs, dockerfile3)
+	require.NoError(t, err)
+
+	// Capture the actual cache IDs generated for each dockerfile
+	cacheIDs1 := extractCacheIDs(string(d1), caches)
+	cacheIDs2 := extractCacheIDs(string(d2), caches)
+	cacheIDs3 := extractCacheIDs(string(d3), caches)
+
+	// Verify that we found cache IDs for all cache paths
+	require.Len(t, cacheIDs1, len(caches), "Dockerfile1 should have cache IDs for all cache paths")
+	require.Len(t, cacheIDs2, len(caches), "Dockerfile2 should have cache IDs for all cache paths")
+	require.Len(t, cacheIDs3, len(caches), "Dockerfile3 should have cache IDs for all cache paths")
+
+	// Verify that each test context generates unique cache IDs
+	for _, cache := range caches {
+		id1, exists1 := cacheIDs1[cache]
+		require.True(t, exists1, "Dockerfile1 should have cache ID for %s", cache)
+
+		id2, exists2 := cacheIDs2[cache]
+		require.True(t, exists2, "Dockerfile2 should have cache ID for %s", cache)
+
+		id3, exists3 := cacheIDs3[cache]
+		require.True(t, exists3, "Dockerfile3 should have cache ID for %s", cache)
+
+		// Ensure that the cache IDs are different between contexts
+		require.NotEqual(t, id1, id2, "Cache IDs should be different between test contexts for cache %s (%s vs %s)", cache, id1, id2)
+		require.NotEqual(t, id1, id3, "Cache IDs should be different between manifests for cache %s (%s vs %s)", cache, id1, id3)
+		require.NotEqual(t, id2, id3, "Cache IDs should be different between different manifest-test combinations for cache %s (%s vs %s)", cache, id2, id3)
+
+		// Verify that cache IDs are non-empty and reasonable length (should be SHA256 hash prefixes)
+		require.NotEmpty(t, id1, "Cache ID for dockerfile1, cache %s should not be empty", cache)
+		require.NotEmpty(t, id2, "Cache ID for dockerfile2, cache %s should not be empty", cache)
+		require.NotEmpty(t, id3, "Cache ID for dockerfile3, cache %s should not be empty", cache)
+		require.Greater(t, len(id1), 8, "Cache ID should be at least 8 characters long")
+		require.Greater(t, len(id2), 8, "Cache ID should be at least 8 characters long")
+		require.Greater(t, len(id3), 8, "Cache ID should be at least 8 characters long")
+	}
+}
+
+// extractCacheIDs extracts cache IDs from dockerfile content and maps them to their target paths
+func extractCacheIDs(dockerfileContent string, cachePaths []string) map[string]string {
+	cacheIDs := make(map[string]string)
+
+	for _, cachePath := range cachePaths {
+		// Look for pattern: --mount=type=cache,id=SOME_ID,target=CACHE_PATH
+		pattern := fmt.Sprintf(`--mount=type=cache,id=([^,]+),target=%s`, regexp.QuoteMeta(cachePath))
+		re := regexp.MustCompile(pattern)
+
+		matches := re.FindStringSubmatch(dockerfileContent)
+		if len(matches) > 1 {
+			cacheIDs[cachePath] = matches[1]
+		}
+	}
+
+	return cacheIDs
 }
 
 func TestGetExtraHosts(t *testing.T) {

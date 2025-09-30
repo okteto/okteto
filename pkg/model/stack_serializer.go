@@ -157,8 +157,8 @@ type DeployInfoRaw struct {
 	Replicas      *int32            `yaml:"replicas,omitempty"`
 	Labels        Labels            `yaml:"labels,omitempty"`
 	RestartPolicy *RestartPolicyRaw `yaml:"restart_policy,omitempty"`
+	EndpointMode  string            `yaml:"endpoint_mode,omitempty"`
 
-	EndpointMode   *WarningType `yaml:"endpoint_mode,omitempty"`
 	Mode           *WarningType `yaml:"mode,omitempty"`
 	Placement      *WarningType `yaml:"placement,omitempty"`
 	Constraints    *WarningType `yaml:"constraints,omitempty"`
@@ -502,6 +502,22 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	if serviceRaw.Deploy != nil && serviceRaw.Deploy.RestartPolicy != nil {
 		svc.BackOffLimit = serviceRaw.Deploy.RestartPolicy.MaxAttempts
 	}
+
+	// Extract endpoint_mode from deploy section
+	if serviceRaw.Deploy != nil && serviceRaw.Deploy.EndpointMode != "" {
+		switch serviceRaw.Deploy.EndpointMode {
+		case string(EndpointModeVIP):
+			svc.EndpointMode = EndpointModeVIP
+		case string(EndpointModeDNSRR):
+			svc.EndpointMode = EndpointModeDNSRR
+		default:
+			return nil, fmt.Errorf("unsupported endpoint_mode '%s' for service '%s': must be 'vip' or 'dnsrr'", serviceRaw.Deploy.EndpointMode, svcName)
+		}
+	} else {
+		// Default to vip if not specified
+		svc.EndpointMode = EndpointModeVIP
+	}
+
 	return svc, nil
 }
 
@@ -1479,9 +1495,6 @@ func getDeployNotSupportedFields(svcName string, deploy *DeployInfoRaw) []string
 		if deploy.RestartPolicy.Window != nil {
 			notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.window", svcName))
 		}
-	}
-	if deploy.EndpointMode != nil {
-		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.endpoint_mode", svcName))
 	}
 	if deploy.Mode != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.mode", svcName))

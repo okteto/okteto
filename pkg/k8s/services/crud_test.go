@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -158,4 +159,297 @@ func TestCreateDev(t *testing.T) {
 	require.Equal(t, dev.Name, svc.Name, "expected service name to match")
 	require.Equal(t, namespace, svc.Namespace, "expected service namespace to match")
 	require.NotEmpty(t, svc.Spec.Ports, "expected service to have ports")
+}
+
+func TestDeployReplace(t *testing.T) {
+	tests := []struct {
+		name             string
+		clientset        kubernetes.Interface
+		k8sService       *apiv1.Service
+		expectedService  *apiv1.Service
+		expectedError    bool
+		errorMsgContains string
+	}{
+		{
+			name:      "create-new-service",
+			clientset: fake.NewSimpleClientset(),
+			k8sService: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "new-service",
+					Namespace: "default",
+				},
+				Spec: apiv1.ServiceSpec{
+					Selector: map[string]string{"app": "my-app"},
+					Ports: []apiv1.ServicePort{
+						{
+							Port:     80,
+							Protocol: apiv1.ProtocolTCP,
+						},
+					},
+					Type: apiv1.ServiceTypeClusterIP,
+				},
+			},
+			expectedService: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "new-service",
+					Namespace: "default",
+				},
+				Spec: apiv1.ServiceSpec{
+					Selector: map[string]string{"app": "my-app"},
+					Ports: []apiv1.ServicePort{
+						{
+							Port:     80,
+							Protocol: apiv1.ProtocolTCP,
+						},
+					},
+					Type: apiv1.ServiceTypeClusterIP,
+				},
+			},
+			expectedError: false,
+		},
+		{
+			name: "existing-default-service",
+			clientset: fake.NewSimpleClientset(&apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "existing-service",
+					Namespace: "default",
+					UID:       "12345", // UID to ensure it's the same object
+				},
+				Spec: apiv1.ServiceSpec{
+					Selector:  map[string]string{"app": "my-app"},
+					ClusterIP: "1.2.3.4",
+					Ports: []apiv1.ServicePort{
+						{
+							Port:     80,
+							Protocol: apiv1.ProtocolTCP,
+						},
+					},
+					Type: apiv1.ServiceTypeClusterIP,
+				},
+			}),
+			k8sService: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "existing-service",
+					Namespace: "default",
+				},
+				Spec: apiv1.ServiceSpec{
+					Selector:  map[string]string{"app": "my-app"},
+					ClusterIP: "",
+					Ports: []apiv1.ServicePort{
+						{
+							Port:     80,
+							Protocol: apiv1.ProtocolTCP,
+						},
+					},
+					Type: apiv1.ServiceTypeClusterIP,
+				},
+			},
+			expectedService: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "existing-service",
+					Namespace: "default",
+					UID:       "12345", // Should keep the same UID
+				},
+				Spec: apiv1.ServiceSpec{
+					Selector:  map[string]string{"app": "my-app"},
+					ClusterIP: "1.2.3.4", // Should keep the same clusterIP
+					Ports: []apiv1.ServicePort{
+						{
+							Port:     80,
+							Protocol: apiv1.ProtocolTCP,
+						},
+					},
+					Type: apiv1.ServiceTypeClusterIP,
+				},
+			},
+			expectedError: false,
+		},
+		{
+			name: "switch-into-headless",
+			clientset: fake.NewSimpleClientset(&apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "existing-service",
+					Namespace: "default",
+					UID:       "12345", // UID to ensure it's the same object
+				},
+				Spec: apiv1.ServiceSpec{
+					Selector:  map[string]string{"app": "my-app"},
+					ClusterIP: "1.2.3.4",
+					Ports: []apiv1.ServicePort{
+						{
+							Port:     80,
+							Protocol: apiv1.ProtocolTCP,
+						},
+					},
+					Type: apiv1.ServiceTypeClusterIP,
+				},
+			}),
+			k8sService: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "existing-service",
+					Namespace: "default",
+				},
+				Spec: apiv1.ServiceSpec{
+					Selector:  map[string]string{"app": "my-app"},
+					ClusterIP: "None", // Switching to headless
+					Ports: []apiv1.ServicePort{
+						{
+							Port:     80,
+							Protocol: apiv1.ProtocolTCP,
+						},
+					},
+					Type: apiv1.ServiceTypeClusterIP,
+				},
+			},
+			expectedService: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "existing-service",
+					Namespace: "default",
+					//UID: 	 "", // UID is cleared on replace
+				},
+				Spec: apiv1.ServiceSpec{
+					Selector:  map[string]string{"app": "my-app"},
+					ClusterIP: "None", // Should be headless now
+					Ports: []apiv1.ServicePort{
+						{
+							Port:     80,
+							Protocol: apiv1.ProtocolTCP,
+						},
+					},
+					Type: apiv1.ServiceTypeClusterIP,
+				},
+			},
+			expectedError: false,
+		},
+		{
+			name: "existing-headless-service",
+			clientset: fake.NewSimpleClientset(&apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "existing-service",
+					Namespace: "default",
+					UID:       "12345", // UID to ensure it's the same object
+				},
+				Spec: apiv1.ServiceSpec{
+					Selector:  map[string]string{"app": "my-app"},
+					ClusterIP: "None",
+					Ports: []apiv1.ServicePort{
+						{
+							Port:     80,
+							Protocol: apiv1.ProtocolTCP,
+						},
+					},
+					Type: apiv1.ServiceTypeClusterIP,
+				},
+			}),
+			k8sService: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "existing-service",
+					Namespace: "default",
+				},
+				Spec: apiv1.ServiceSpec{
+					Selector:  map[string]string{"app": "my-app"},
+					ClusterIP: "None",
+					Ports: []apiv1.ServicePort{
+						{
+							Port:     80,
+							Protocol: apiv1.ProtocolTCP,
+						},
+					},
+					Type: apiv1.ServiceTypeClusterIP,
+				},
+			},
+			expectedService: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "existing-service",
+					Namespace: "default",
+					UID:       "12345", // Should keep the same UID
+				},
+				Spec: apiv1.ServiceSpec{
+					Selector:  map[string]string{"app": "my-app"},
+					ClusterIP: "None", // Should keep the same clusterIP
+					Ports: []apiv1.ServicePort{
+						{
+							Port:     80,
+							Protocol: apiv1.ProtocolTCP,
+						},
+					},
+					Type: apiv1.ServiceTypeClusterIP,
+				},
+			},
+			expectedError: false,
+		},
+		{
+			name: "switch-into-default",
+			clientset: fake.NewSimpleClientset(&apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "existing-service",
+					Namespace: "default",
+					UID:       "12345", // UID to ensure it's the same object
+				},
+				Spec: apiv1.ServiceSpec{
+					Selector:  map[string]string{"app": "my-app"},
+					ClusterIP: "None",
+					Ports: []apiv1.ServicePort{
+						{
+							Port:     80,
+							Protocol: apiv1.ProtocolTCP,
+						},
+					},
+					Type: apiv1.ServiceTypeClusterIP,
+				},
+			}),
+			k8sService: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "existing-service",
+					Namespace: "default",
+				},
+				Spec: apiv1.ServiceSpec{
+					Selector:  map[string]string{"app": "my-app"},
+					ClusterIP: "", // Switching to default
+					Ports: []apiv1.ServicePort{
+						{
+							Port:     80,
+							Protocol: apiv1.ProtocolTCP,
+						},
+					},
+					Type: apiv1.ServiceTypeClusterIP,
+				},
+			},
+			expectedService: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "existing-service",
+					Namespace: "default",
+					//UID: 	 "", // UID is cleared on replace
+				},
+				Spec: apiv1.ServiceSpec{
+					Selector:  map[string]string{"app": "my-app"},
+					ClusterIP: "", // Should be default now
+					Ports: []apiv1.ServicePort{
+						{
+							Port:     80,
+							Protocol: apiv1.ProtocolTCP,
+						},
+					},
+					Type: apiv1.ServiceTypeClusterIP,
+				},
+			},
+			expectedError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			err := Deploy(ctx, tt.k8sService, tt.clientset)
+			if tt.expectedError {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.errorMsgContains)
+				return
+			}
+			require.NoError(t, err)
+			createdSvc, err := tt.clientset.CoreV1().Services(tt.k8sService.Namespace).Get(ctx, tt.k8sService.Name, metav1.GetOptions{})
+			require.NoError(t, err, "failed to get created service")
+			require.Equal(t, tt.expectedService, createdSvc)
+		})
+	}
 }

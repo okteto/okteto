@@ -2286,3 +2286,76 @@ func Test_TranslateOktetoStackPortsToComposePorts(t *testing.T) {
 		})
 	}
 }
+
+func Test_EndpointModeUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name         string
+		yaml         string
+		expectedMode EndpointMode
+		expectError  bool
+	}{
+		{
+			name: "VIP endpoint mode",
+			yaml: `
+services:
+  web:
+    image: nginx
+    deploy:
+      endpoint_mode: vip
+`,
+			expectedMode: EndpointModeVIP,
+			expectError:  false,
+		},
+		{
+			name: "DNSRR endpoint mode",
+			yaml: `
+services:
+  web:
+    image: nginx
+    deploy:
+      endpoint_mode: dnsrr
+`,
+			expectedMode: EndpointModeDNSRR,
+			expectError:  false,
+		},
+		{
+			name: "Default endpoint mode (VIP when not specified)",
+			yaml: `
+services:
+  web:
+    image: nginx
+`,
+			expectedMode: EndpointModeVIP,
+			expectError:  false,
+		},
+		{
+			name: "Invalid endpoint mode",
+			yaml: `
+services:
+  web:
+    image: nginx
+    deploy:
+      endpoint_mode: invalid
+`,
+			expectedMode: EndpointModeVIP,
+			expectError:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var stack Stack
+			stack.IsCompose = true
+			err := yaml.Unmarshal([]byte(tt.yaml), &stack)
+
+			if tt.expectError {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Contains(t, stack.Services, "web")
+			assert.Equal(t, tt.expectedMode, stack.Services["web"].EndpointMode)
+		})
+	}
+}
