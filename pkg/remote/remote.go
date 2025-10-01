@@ -717,7 +717,7 @@ func formatEnvVarValueForDocker(value string) string {
 // generateCacheID creates a unique cache identifier based on repository, manifest name, and test name
 func generateCacheID(repositoryURL, manifestName, testName, path string) string {
 	// Create input string for hashing
-	input := fmt.Sprintf("%s-%s-%s-%s", repositoryURL, manifestName, testName, path)
+	input := fmt.Sprintf("test-%s-%s-%s-%s", repositoryURL, manifestName, testName, path)
 
 	// Generate SHA256 hash
 	hasher := sha256.New()

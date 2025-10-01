@@ -199,7 +199,7 @@ func newCacheMountTranslator(repo, dockerfilePath, target string) cacheMountTran
 
 func generateProjectHash(repositoryURL, dockerfilePath, buildTarget, cacheTarget string) string {
 	// Create input string for hashing
-	input := fmt.Sprintf("%s-%s-%s-%s", repositoryURL, dockerfilePath, buildTarget, cacheTarget)
+	input := fmt.Sprintf("build-%s-%s-%s-%s", repositoryURL, dockerfilePath, buildTarget, cacheTarget)
 
 	// Generate SHA256 hash
 	hasher := sha256.New()
