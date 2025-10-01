@@ -173,8 +173,8 @@ func (rt registryTranslator) translate(line string) string {
 type cacheMountTranslator struct {
 	repo               string
 	dockerfilePath     string
-	target             string
-	hash               func(repositoryURL, manifestName, path, target string) string
+	buildTarget        string
+	hash               func(repositoryURL, dockerfilePath, buildTarget, cacheTarget string) string
 	cacheMountRegex    *regexp.Regexp
 	hasIDRegex         *regexp.Regexp
 	targetExtractRegex *regexp.Regexp
@@ -187,7 +187,7 @@ func newCacheMountTranslator(repo, dockerfilePath, target string) cacheMountTran
 	return cacheMountTranslator{
 		repo:               repo,
 		dockerfilePath:     dockerfilePath,
-		target:             target,
+		buildTarget:        target,
 		hash:               generateProjectHash,
 		cacheMountRegex:    cacheMountRegex,
 		hasIDRegex:         hasIDRegex,
@@ -197,9 +197,9 @@ func newCacheMountTranslator(repo, dockerfilePath, target string) cacheMountTran
 	}
 }
 
-func generateProjectHash(repositoryURL, manifestName, path, target string) string {
+func generateProjectHash(repositoryURL, dockerfilePath, buildTarget, cacheTarget string) string {
 	// Create input string for hashing
-	input := fmt.Sprintf("%s-%s-%s-%s", repositoryURL, manifestName, path, target)
+	input := fmt.Sprintf("%s-%s-%s-%s", repositoryURL, dockerfilePath, buildTarget, cacheTarget)
 
 	// Generate SHA256 hash
 	hasher := sha256.New()
@@ -256,7 +256,7 @@ func (cmt cacheMountTranslator) translate(line string) string {
 		}
 
 		// Generate unique ID for this mount
-		id := cmt.hash(cmt.repo, cmt.dockerfilePath, cmt.target, target)
+		id := cmt.hash(cmt.repo, cmt.dockerfilePath, cmt.buildTarget, target)
 
 		// Replace this specific mount with the one that includes the ID
 		newMount := fmt.Sprintf("--mount=id=%s,%s", id, mountParams)
