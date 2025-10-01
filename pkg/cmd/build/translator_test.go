@@ -423,6 +423,8 @@ func TestNewCacheMountTranslator(t *testing.T) {
 			assert.NotNil(t, cmt.cacheMountRegex)
 			assert.NotNil(t, cmt.hasIDRegex)
 			assert.NotNil(t, cmt.targetExtractRegex)
+			assert.NotNil(t, cmt.mountRegex)
+			assert.NotNil(t, cmt.targetRegex)
 		})
 	}
 }
@@ -557,6 +559,11 @@ func TestCacheMountTranslator_Translate(t *testing.T) {
 			name:     "leaves RUN with secret mount unchanged",
 			input:    "RUN --mount=type=secret,id=mysecret cat /run/secrets/mysecret",
 			expected: "RUN --mount=type=secret,id=mysecret cat /run/secrets/mysecret",
+		},
+		{
+			name:     "handles multiple cache mounts in single RUN command",
+			input:    "RUN --mount=type=cache,target=./.eslintcache --mount=type=cache,target=./.yarn/cache,sharing=private --mount=type=cache,target=./node_modules,sharing=private yarn install --immutable",
+			expected: "RUN --mount=id=abcdef123456-./.eslintcache,type=cache,target=./.eslintcache --mount=id=abcdef123456-./.yarn/cache,type=cache,target=./.yarn/cache,sharing=private --mount=id=abcdef123456-./node_modules,type=cache,target=./node_modules,sharing=private yarn install --immutable",
 		},
 	}
 

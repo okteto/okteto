@@ -167,18 +167,24 @@ type cacheMountTranslator struct {
 	cacheMountRegex    *regexp.Regexp
 	hasIDRegex         *regexp.Regexp
 	targetExtractRegex *regexp.Regexp
+	mountRegex         *regexp.Regexp
+	targetRegex        *regexp.Regexp
 }
 
 func newCacheMountTranslator(repo, dockerfilePath, target string) cacheMountTranslator {
 	cacheMountRegex := regexp.MustCompile(`^RUN.*--mount=.*type=cache`)
 	hasIDRegex := regexp.MustCompile(`^RUN.*--mount=[^ ]*id=`)
 	targetExtractRegex := regexp.MustCompile(`--mount=[^ ]*target=([^, ]+)`)
+	mountRegex := regexp.MustCompile(`--mount=([^[:space:]]+)`)
+	targetRegex := regexp.MustCompile(`target=([^,\s]+)`)
 
 	return cacheMountTranslator{
 		projectHash:        generateProjectHash(repo, dockerfilePath, target),
 		cacheMountRegex:    cacheMountRegex,
 		hasIDRegex:         hasIDRegex,
 		targetExtractRegex: targetExtractRegex,
+		mountRegex:         mountRegex,
+		targetRegex:        targetRegex,
 	}
 }
 
@@ -207,15 +213,46 @@ func (cmt cacheMountTranslator) translate(line string) string {
 		return line
 	}
 
-	target := ""
-	if matches := cmt.targetExtractRegex.FindStringSubmatch(line); len(matches) > 1 {
-		target = matches[1]
+	// Find all --mount= occurrences and process them individually
+	result := line
+
+	// Find all mount definitions
+	matches := cmt.mountRegex.FindAllStringSubmatch(result, -1)
+
+	for _, match := range matches {
+		if len(match) < 2 {
+			continue
+		}
+
+		fullMount := match[0]   // --mount=type=cache,target=...
+		mountParams := match[1] // type=cache,target=...
+
+		// Check if this is a cache mount
+		if !strings.Contains(mountParams, "type=cache") {
+			continue
+		}
+
+		// Check if it already has an id
+		if strings.Contains(mountParams, "id=") {
+			continue
+		}
+
+		// Extract target from this specific mount
+		target := ""
+		if targetMatch := cmt.targetRegex.FindStringSubmatch(mountParams); len(targetMatch) > 1 {
+			target = targetMatch[1]
+		}
+
+		// Generate unique ID for this mount
+		id := cmt.projectHash
+		if target != "" {
+			id = fmt.Sprintf("%s-%s", cmt.projectHash, target)
+		}
+
+		// Replace this specific mount with the one that includes the ID
+		newMount := fmt.Sprintf("--mount=id=%s,%s", id, mountParams)
+		result = strings.Replace(result, fullMount, newMount, 1)
 	}
 
-	id := cmt.projectHash
-	if target != "" {
-		id = fmt.Sprintf("%s-%s", cmt.projectHash, target)
-	}
-	// Otherwise, insert id=<projectHash> into the mount
-	return strings.ReplaceAll(line, "--mount=", fmt.Sprintf("--mount=id=%s,", id))
+	return result
 }
