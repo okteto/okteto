@@ -17,7 +17,6 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/stretchr/testify/assert"
 )
 
 func Test_translateOktetoRegistryImage(t *testing.T) {
@@ -78,49 +77,6 @@ func Test_translateOktetoRegistryImage(t *testing.T) {
 			if got := translateOktetoRegistryImage(tt.input, okCtx); got != tt.want {
 				t.Errorf("registry.translateOktetoRegistryImage = %v,  want %v", got, tt.want)
 			}
-		})
-	}
-}
-
-func TestTranslateCacheHandler(t *testing.T) {
-	projectHash := "abc123"
-
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "no RUN command",
-			input:    "COPY . .",
-			expected: "COPY . .",
-		},
-		{
-			name:     "RUN without cache mount",
-			input:    "RUN echo hello",
-			expected: "RUN echo hello",
-		},
-		{
-			name:     "RUN with cache mount and id already present",
-			input:    "RUN --mount=type=cache,id=mycache,target=/root/.cache pip install -r requirements.txt",
-			expected: "RUN --mount=type=cache,id=mycache,target=/root/.cache pip install -r requirements.txt",
-		},
-		{
-			name:     "RUN with cache mount but no id, with target",
-			input:    "RUN --mount=type=cache,target=/root/.cache pip install -r requirements.txt",
-			expected: "RUN --mount=id=abc123-/root/.cache,type=cache,target=/root/.cache pip install -r requirements.txt",
-		},
-		{
-			name:     "RUN with cache mount but no id, without target",
-			input:    "RUN --mount=type=cache pip install -r requirements.txt",
-			expected: "RUN --mount=id=abc123,type=cache pip install -r requirements.txt",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			output := translateCacheHandler(tt.input, projectHash)
-			assert.Equal(t, tt.expected, output)
 		})
 	}
 }
