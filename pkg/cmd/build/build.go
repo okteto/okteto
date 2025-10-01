@@ -135,7 +135,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 		repo := repository.NewRepository(buildOptions.Manifest.ManifestPath)
 		repoURL = repo.GetAnonymizedRepo()
 	}
-	if repoURL == "" {
+	if buildOptions.Manifest != nil && repoURL == "" {
 		repoURL = buildOptions.Manifest.ManifestPath
 	}
 
@@ -228,7 +228,7 @@ type regInterface interface {
 }
 
 // OptsFromBuildInfo returns the parsed options for the build from the manifest
-func OptsFromBuildInfo(manifestName, svcName string, b *build.Info, o *types.BuildOptions, reg regInterface, okCtx OktetoContextInterface) *types.BuildOptions {
+func OptsFromBuildInfo(manifest *model.Manifest, svcName string, b *build.Info, o *types.BuildOptions, reg regInterface, okCtx OktetoContextInterface) *types.BuildOptions {
 	if o == nil {
 		o = &types.BuildOptions{}
 	}
@@ -242,8 +242,12 @@ func OptsFromBuildInfo(manifestName, svcName string, b *build.Info, o *types.Bui
 		b.Image = o.Tag
 	}
 
+	name := ""
+	if manifest != nil && manifest.Name != "" {
+		name = manifest.Name
+	}
 	// manifestName can be not sanitized when option name is used at deploy
-	sanitizedName := format.ResourceK8sMetaString(manifestName)
+	sanitizedName := format.ResourceK8sMetaString(name)
 	if okCtx.IsOktetoCluster() && b.Image == "" {
 		b.Image = fmt.Sprintf("%s/%s-%s:%s", constants.DevRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
 	}
@@ -308,6 +312,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *build.Info, o *types.Bui
 	}
 
 	opts := &types.BuildOptions{
+		Manifest:    manifest,
 		CacheFrom:   b.CacheFrom,
 		Target:      b.Target,
 		Path:        b.Context,

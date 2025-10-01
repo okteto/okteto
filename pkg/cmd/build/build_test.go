@@ -171,6 +171,14 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			},
 			isOkteto: true,
 			expected: &types.BuildOptions{
+				Manifest: &model.Manifest{
+					Name: "movies",
+					Build: build.ManifestBuild{
+						"service": {
+							Image: "okteto.dev/movies-service:okteto",
+						},
+					},
+				},
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto",
 				BuildArgs:  []string{namespaceEnvVar.String()},
@@ -182,6 +190,12 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			buildInfo:   &build.Info{},
 			isOkteto:    false,
 			expected: &types.BuildOptions{
+				Manifest: &model.Manifest{
+					Name: "movies",
+					Build: build.ManifestBuild{
+						"service": {},
+					},
+				},
 				OutputMode: oktetoLog.TTYFormat,
 				BuildArgs:  []string{},
 			},
@@ -211,6 +225,24 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			},
 			isOkteto: true,
 			expected: &types.BuildOptions{
+				Manifest: &model.Manifest{
+					Name: "movies",
+					Build: build.ManifestBuild{
+						"service": {
+							Context:    serviceContext,
+							Dockerfile: serviceDockerfile,
+							Image:      "okteto.dev/movies-service:okteto",
+							Target:     "build",
+							CacheFrom:  []string{"cache-image"},
+							Args: build.Args{
+								{
+									Name:  "arg1",
+									Value: "value1",
+								},
+							},
+						},
+					},
+				},
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto",
 				File:       filepath.Join(dir, serviceContext, serviceDockerfile),
@@ -251,6 +283,30 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			},
 			isOkteto: true,
 			expected: &types.BuildOptions{
+				Manifest: &model.Manifest{
+					Name: "movies",
+					Build: build.ManifestBuild{
+						"service": {
+							Context:    serviceContext,
+							Image:      "okteto.dev/movies-service:okteto",
+							Dockerfile: serviceDockerfile,
+							Target:     "build",
+							CacheFrom:  []string{"cache-image"},
+							Args: build.Args{
+								{
+									Name:  "arg1",
+									Value: "value1",
+								},
+							},
+							VolumesToInclude: []build.VolumeMounts{
+								{
+									LocalPath:  "a",
+									RemotePath: "b",
+								},
+							},
+						},
+					},
+				},
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto",
 				File:       filepath.Join(dir, serviceContext, serviceDockerfile),
@@ -293,6 +349,29 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			},
 			isOkteto: true,
 			expected: &types.BuildOptions{
+				Manifest: &model.Manifest{
+					Name: "movies",
+					Build: build.ManifestBuild{
+						"service": {
+							Image:      "okteto.dev/mycustomimage:dev",
+							Context:    serviceContext,
+							Dockerfile: serviceDockerfile,
+							Target:     "build",
+							CacheFrom:  []string{"cache-image"},
+							Args: build.Args{
+								namespaceEnvVar,
+								{
+									Name:  "arg1",
+									Value: "value1",
+								},
+							},
+							Secrets: map[string]string{
+								"mysecret": "source",
+							},
+							ExportCache: []string{"export-image"},
+						},
+					},
+				},
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/mycustomimage:dev",
 				File:       filepath.Join(dir, serviceContext, serviceDockerfile),
@@ -321,6 +400,14 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				repo:             "movies-service",
 			},
 			expected: &types.BuildOptions{
+				Manifest: &model.Manifest{
+					Name: "movies",
+					Build: build.ManifestBuild{
+						"service": {
+							Image: "okteto.dev/movies-service:okteto",
+						},
+					},
+				},
 				BuildArgs:  []string{namespaceEnvVar.String()},
 				Platform:   "linux/amd64",
 				Tag:        "okteto.dev/movies-service:okteto",
@@ -343,6 +430,14 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				repo:             "movies-service",
 			},
 			expected: &types.BuildOptions{
+				Manifest: &model.Manifest{
+					Name: "movies",
+					Build: build.ManifestBuild{
+						"service": {
+							Image: "okteto.dev/movies-service:okteto",
+						},
+					},
+				},
 				BuildArgs: []string{
 					namespaceEnvVar.String(),
 					"arg1=value1",
@@ -374,6 +469,20 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				repo:             "movies-service",
 			},
 			expected: &types.BuildOptions{
+				Manifest: &model.Manifest{
+					Name: "movies",
+					Build: build.ManifestBuild{
+						"service": {
+							Image: "okteto.dev/movies-service:okteto",
+							Args: build.Args{
+								{
+									Name:  "arg1",
+									Value: "value2",
+								},
+							},
+						},
+					},
+				},
 				BuildArgs: []string{
 					namespaceEnvVar.String(),
 					"arg1=",
@@ -403,7 +512,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				},
 			}
 
-			result := OptsFromBuildInfo(manifest.Name, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts, &tt.mr, okCtx)
+			result := OptsFromBuildInfo(manifest, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts, &tt.mr, okCtx)
 			require.Equal(t, tt.expected, result)
 		})
 	}

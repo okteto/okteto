@@ -1,4 +1,4 @@
-// Copyright 2023 The Okteto Authors
+// Copyright 2025 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -34,18 +34,13 @@ const (
 )
 
 type opener interface {
-	Open(file string) (io.ReadWriter, error)
+	Open(file string) (io.ReadWriteCloser, error)
 }
 
 type fileOpener struct{}
 
-func (fileOpener) Open(file string) (io.ReadWriter, error) {
-	return os.Open(file)
-}
-
-type NameWriter interface {
-	Name() string
-	io.Writer
+func (fileOpener) Open(file string) (io.ReadWriteCloser, error) {
+	return os.OpenFile(file, os.O_RDWR, 0644)
 }
 
 type tmpFileCreator interface {
@@ -73,7 +68,6 @@ type DockerfileTranslator struct {
 }
 
 func newDockerfileTranslator(okCtx OktetoContextInterface, repoURL, dockerfilePath, target string) (*DockerfileTranslator, error) {
-
 	dockerfileTmpFolder := filepath.Join(config.GetOktetoHome(), ".dockerfile")
 	if err := os.MkdirAll(dockerfileTmpFolder, 0700); err != nil {
 		return nil, fmt.Errorf("failed to create %s: %w", dockerfileTmpFolder, err)
@@ -95,6 +89,7 @@ func (dt *DockerfileTranslator) translate(filename string) error {
 	if err != nil {
 		return err
 	}
+	defer readerFile.Close()
 
 	dt.tmpFileName, err = dt.tmpFileCreator.Create(dt.tmpFolder)
 	if err != nil {
@@ -105,6 +100,7 @@ func (dt *DockerfileTranslator) translate(filename string) error {
 	if err != nil {
 		return err
 	}
+	defer writerFile.Close()
 
 	scanner := bufio.NewScanner(readerFile)
 	datawriter := bufio.NewWriter(writerFile)
@@ -167,12 +163,22 @@ func (rt registryTranslator) translate(line string) string {
 }
 
 type cacheMountTranslator struct {
-	projectHash string
+	projectHash        string
+	cacheMountRegex    *regexp.Regexp
+	hasIDRegex         *regexp.Regexp
+	targetExtractRegex *regexp.Regexp
 }
 
 func newCacheMountTranslator(repo, dockerfilePath, target string) cacheMountTranslator {
+	cacheMountRegex := regexp.MustCompile(`^RUN.*--mount=.*type=cache`)
+	hasIDRegex := regexp.MustCompile(`^RUN.*--mount=[^ ]*id=`)
+	targetExtractRegex := regexp.MustCompile(`--mount=[^ ]*target=([^, ]+)`)
+
 	return cacheMountTranslator{
-		projectHash: generateProjectHash(repo, dockerfilePath, target),
+		projectHash:        generateProjectHash(repo, dockerfilePath, target),
+		cacheMountRegex:    cacheMountRegex,
+		hasIDRegex:         hasIDRegex,
+		targetExtractRegex: targetExtractRegex,
 	}
 }
 
@@ -190,21 +196,19 @@ func generateProjectHash(repositoryURL, manifestName, path string) string {
 }
 
 func (cmt cacheMountTranslator) translate(line string) string {
+
 	// Check if this RUN command has a cache mount
-	hasCacheMount, err := regexp.MatchString(`^RUN.*--mount=.*type=cache`, line)
-	if err != nil || !hasCacheMount {
+	if !cmt.cacheMountRegex.MatchString(line) {
 		return line
 	}
 
 	// If an id is already defined, leave unchanged
-	hasID, err := regexp.MatchString(`^RUN.*--mount=[^ ]*id=`, line)
-	if err == nil && hasID {
+	if cmt.hasIDRegex.MatchString(line) {
 		return line
 	}
 
 	target := ""
-	re := regexp.MustCompile(`--mount=[^ ]*target=([^, ]+)`)
-	if matches := re.FindStringSubmatch(line); len(matches) > 1 {
+	if matches := cmt.targetExtractRegex.FindStringSubmatch(line); len(matches) > 1 {
 		target = matches[1]
 	}
 
