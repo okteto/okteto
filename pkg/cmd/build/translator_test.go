@@ -418,8 +418,6 @@ func TestNewCacheMountTranslator(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cmt := newCacheMountTranslator(tt.repo, tt.dockerfilePath, tt.target)
 
-			assert.NotEmpty(t, cmt.projectHash)
-			assert.Len(t, cmt.projectHash, tt.expectedHashLength)
 			assert.NotNil(t, cmt.cacheMountRegex)
 			assert.NotNil(t, cmt.hasIDRegex)
 			assert.NotNil(t, cmt.targetExtractRegex)
@@ -435,6 +433,7 @@ func TestGenerateProjectHash(t *testing.T) {
 		repositoryURL      string
 		manifestName       string
 		path               string
+		target             string
 		expectedHashLength int
 		comparisonInputs   []string
 		shouldBeDifferent  bool
@@ -444,8 +443,9 @@ func TestGenerateProjectHash(t *testing.T) {
 			repositoryURL:      "https://github.com/test/repo",
 			manifestName:       "Dockerfile",
 			path:               "production",
+			target:             "production",
 			expectedHashLength: 12,
-			comparisonInputs:   []string{"https://github.com/test/repo", "Dockerfile", "production"},
+			comparisonInputs:   []string{"https://github.com/test/repo", "Dockerfile", "production", "production"},
 			shouldBeDifferent:  false,
 		},
 		{
@@ -453,8 +453,9 @@ func TestGenerateProjectHash(t *testing.T) {
 			repositoryURL:      "https://github.com/different/repo",
 			manifestName:       "Dockerfile",
 			path:               "production",
+			target:             "production",
 			expectedHashLength: 12,
-			comparisonInputs:   []string{"https://github.com/test/repo", "Dockerfile", "production"},
+			comparisonInputs:   []string{"https://github.com/test/repo", "Dockerfile", "production", "production"},
 			shouldBeDifferent:  true,
 		},
 		{
@@ -462,8 +463,9 @@ func TestGenerateProjectHash(t *testing.T) {
 			repositoryURL:      "https://github.com/test/repo",
 			manifestName:       "Dockerfile",
 			path:               "development",
+			target:             "development",
 			expectedHashLength: 12,
-			comparisonInputs:   []string{"https://github.com/test/repo", "Dockerfile", "production"},
+			comparisonInputs:   []string{"https://github.com/test/repo", "Dockerfile", "production", "production"},
 			shouldBeDifferent:  true,
 		},
 		{
@@ -471,25 +473,26 @@ func TestGenerateProjectHash(t *testing.T) {
 			repositoryURL:      "",
 			manifestName:       "",
 			path:               "",
+			target:             "",
 			expectedHashLength: 12,
-			comparisonInputs:   []string{"https://github.com/test/repo", "Dockerfile", "production"},
+			comparisonInputs:   []string{"https://github.com/test/repo", "Dockerfile", "production", "production"},
 			shouldBeDifferent:  true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			hash := generateProjectHash(tt.repositoryURL, tt.manifestName, tt.path)
+			hash := generateProjectHash(tt.repositoryURL, tt.manifestName, tt.path, tt.target)
 
 			assert.Len(t, hash, tt.expectedHashLength)
 			assert.NotEmpty(t, hash)
 
 			// Test consistency
-			hash2 := generateProjectHash(tt.repositoryURL, tt.manifestName, tt.path)
+			hash2 := generateProjectHash(tt.repositoryURL, tt.manifestName, tt.path, tt.target)
 			assert.Equal(t, hash, hash2)
 
 			// Test comparison
-			comparisonHash := generateProjectHash(tt.comparisonInputs[0], tt.comparisonInputs[1], tt.comparisonInputs[2])
+			comparisonHash := generateProjectHash(tt.comparisonInputs[0], tt.comparisonInputs[1], tt.comparisonInputs[2], tt.comparisonInputs[3])
 			assert.Equal(t, tt.shouldBeDifferent, hash != comparisonHash)
 		})
 	}
@@ -498,7 +501,9 @@ func TestGenerateProjectHash(t *testing.T) {
 func TestCacheMountTranslator_Translate(t *testing.T) {
 	cmt := newCacheMountTranslator("https://github.com/test/repo", "Dockerfile", "prod")
 	// Override projectHash for predictable test results
-	cmt.projectHash = "abcdef123456"
+	cmt.hash = func(repositoryURL, manifestName, path, target string) string {
+		return fmt.Sprintf("%s-%s-%s-%s", repositoryURL, manifestName, path, target)
+	}
 
 	tests := []struct {
 		name     string
@@ -508,22 +513,22 @@ func TestCacheMountTranslator_Translate(t *testing.T) {
 		{
 			name:     "adds id to cache mount without target",
 			input:    "RUN --mount=type=cache apt-get update",
-			expected: "RUN --mount=id=abcdef123456,type=cache apt-get update",
+			expected: "RUN --mount=id=https://github.com/test/repo-Dockerfile-prod-,type=cache apt-get update",
 		},
 		{
 			name:     "adds id with target to cache mount",
 			input:    "RUN --mount=type=cache,target=/root/.cache pip install -r requirements.txt",
-			expected: "RUN --mount=id=abcdef123456-/root/.cache,type=cache,target=/root/.cache pip install -r requirements.txt",
+			expected: "RUN --mount=id=https://github.com/test/repo-Dockerfile-prod-/root/.cache,type=cache,target=/root/.cache pip install -r requirements.txt",
 		},
 		{
 			name:     "handles complex cache mount with multiple parameters",
 			input:    "RUN --mount=type=cache,target=/var/cache/apt,sharing=locked apt-get update",
-			expected: "RUN --mount=id=abcdef123456-/var/cache/apt,type=cache,target=/var/cache/apt,sharing=locked apt-get update",
+			expected: "RUN --mount=id=https://github.com/test/repo-Dockerfile-prod-/var/cache/apt,type=cache,target=/var/cache/apt,sharing=locked apt-get update",
 		},
 		{
 			name:     "handles cache mount with quoted target",
 			input:    `RUN --mount=type=cache,target="/go/pkg/mod" go mod download`,
-			expected: `RUN --mount=id=abcdef123456-"/go/pkg/mod",type=cache,target="/go/pkg/mod" go mod download`,
+			expected: `RUN --mount=id=https://github.com/test/repo-Dockerfile-prod-"/go/pkg/mod",type=cache,target="/go/pkg/mod" go mod download`,
 		},
 		{
 			name:     "leaves non-RUN command unchanged",
@@ -563,7 +568,7 @@ func TestCacheMountTranslator_Translate(t *testing.T) {
 		{
 			name:     "handles multiple cache mounts in single RUN command",
 			input:    "RUN --mount=type=cache,target=./.eslintcache --mount=type=cache,target=./.yarn/cache,sharing=private --mount=type=cache,target=./node_modules,sharing=private yarn install --immutable",
-			expected: "RUN --mount=id=abcdef123456-./.eslintcache,type=cache,target=./.eslintcache --mount=id=abcdef123456-./.yarn/cache,type=cache,target=./.yarn/cache,sharing=private --mount=id=abcdef123456-./node_modules,type=cache,target=./node_modules,sharing=private yarn install --immutable",
+			expected: "RUN --mount=id=https://github.com/test/repo-Dockerfile-prod-./.eslintcache,type=cache,target=./.eslintcache --mount=id=https://github.com/test/repo-Dockerfile-prod-./.yarn/cache,type=cache,target=./.yarn/cache,sharing=private --mount=id=https://github.com/test/repo-Dockerfile-prod-./node_modules,type=cache,target=./node_modules,sharing=private yarn install --immutable",
 		},
 	}
 
