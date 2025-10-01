@@ -33,6 +33,14 @@ const (
 	tmpFilePrefix = "buildkit-"
 )
 
+var (
+	cacheMountRegex    = regexp.MustCompile(`^RUN.*--mount=.*type=cache`)
+	hasIDRegex         = regexp.MustCompile(`^RUN.*--mount=[^ ]*id=`)
+	targetExtractRegex = regexp.MustCompile(`--mount=[^ ]*target=([^, ]+)`)
+	mountRegex         = regexp.MustCompile(`--mount=([^[:space:]]+)`)
+	targetRegex        = regexp.MustCompile(`target=([^,\s]+)`)
+)
+
 type opener interface {
 	Open(file string) (io.ReadWriteCloser, error)
 }
@@ -172,11 +180,6 @@ type cacheMountTranslator struct {
 }
 
 func newCacheMountTranslator(repo, dockerfilePath, target string) cacheMountTranslator {
-	cacheMountRegex := regexp.MustCompile(`^RUN.*--mount=.*type=cache`)
-	hasIDRegex := regexp.MustCompile(`^RUN.*--mount=[^ ]*id=`)
-	targetExtractRegex := regexp.MustCompile(`--mount=[^ ]*target=([^, ]+)`)
-	mountRegex := regexp.MustCompile(`--mount=([^[:space:]]+)`)
-	targetRegex := regexp.MustCompile(`target=([^,\s]+)`)
 
 	return cacheMountTranslator{
 		projectHash:        generateProjectHash(repo, dockerfilePath, target),
