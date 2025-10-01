@@ -218,8 +218,8 @@ func (cmt cacheMountTranslator) translate(line string) string {
 
 	// Find all mount definitions
 	matches := cmt.mountRegex.FindAllStringSubmatch(result, -1)
-
 	for _, match := range matches {
+
 		if len(match) < 2 {
 			continue
 		}
