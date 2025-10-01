@@ -570,6 +570,11 @@ func TestCacheMountTranslator_Translate(t *testing.T) {
 			input:    "RUN --mount=type=cache,target=./.eslintcache --mount=type=cache,target=./.yarn/cache,sharing=private --mount=type=cache,target=./node_modules,sharing=private yarn install --immutable",
 			expected: "RUN --mount=id=https://github.com/test/repo-Dockerfile-prod-./.eslintcache,type=cache,target=./.eslintcache --mount=id=https://github.com/test/repo-Dockerfile-prod-./.yarn/cache,type=cache,target=./.yarn/cache,sharing=private --mount=id=https://github.com/test/repo-Dockerfile-prod-./node_modules,type=cache,target=./node_modules,sharing=private yarn install --immutable",
 		},
+		{
+			name:     "handles multiple cache mounts in single RUN command, some with id",
+			input:    "RUN --mount=id=test,type=cache,target=./.eslintcache --mount=type=cache,target=./.yarn/cache,sharing=private --mount=type=cache,target=./node_modules,sharing=private yarn install --immutable",
+			expected: "RUN --mount=id=test,type=cache,target=./.eslintcache --mount=id=https://github.com/test/repo-Dockerfile-prod-./.yarn/cache,type=cache,target=./.yarn/cache,sharing=private --mount=id=https://github.com/test/repo-Dockerfile-prod-./node_modules,type=cache,target=./node_modules,sharing=private yarn install --immutable",
+		},
 	}
 
 	for _, tt := range tests {

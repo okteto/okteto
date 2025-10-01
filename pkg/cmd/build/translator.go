@@ -217,11 +217,6 @@ func (cmt cacheMountTranslator) translate(line string) string {
 		return line
 	}
 
-	// If an id is already defined, leave unchanged
-	if cmt.hasIDRegex.MatchString(line) {
-		return line
-	}
-
 	// Find all --mount= occurrences and process them individually
 	result := line
 
@@ -229,6 +224,10 @@ func (cmt cacheMountTranslator) translate(line string) string {
 	matches := cmt.mountRegex.FindAllStringSubmatch(result, -1)
 	for _, match := range matches {
 
+		// Check that the mountID has mount and params
+		// Example: --mount=id=test,type=cache,target=...
+		// [0] --mount=id=test,type=cache,target=...
+		// [1] id=test,type=cache,target=...
 		if len(match) < 2 {
 			continue
 		}
@@ -237,11 +236,15 @@ func (cmt cacheMountTranslator) translate(line string) string {
 		mountParams := match[1] // type=cache,target=...
 
 		// Check if this is a cache mount
+		// Example: type=cache,target=... => true
+		// Example: type=secret => false
 		if !strings.Contains(mountParams, "type=cache") {
 			continue
 		}
 
 		// Check if it already has an id
+		// Example: id=test,type=cache,target=... => true
+		// Example: type=cache,target=... => false
 		if strings.Contains(mountParams, "id=") {
 			continue
 		}
