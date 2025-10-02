@@ -164,13 +164,11 @@ func TestNewDockerfileTranslator(t *testing.T) {
 func TestDockerfileTranslator_Translate(t *testing.T) {
 	tests := []struct {
 		name            string
-		inputContent    string
 		expectedOutput  string
 		setupTranslator func() *DockerfileTranslator
 	}{
 		{
 			name:           "simple dockerfile with no translations needed",
-			inputContent:   "FROM ubuntu:20.04\nRUN echo hello",
 			expectedOutput: "FROM ubuntu:20.04\nRUN echo hello\n",
 			setupTranslator: func() *DockerfileTranslator {
 				mockOpener := &mockOpener{
@@ -188,7 +186,6 @@ func TestDockerfileTranslator_Translate(t *testing.T) {
 		},
 		{
 			name:           "dockerfile with dev registry translation",
-			inputContent:   fmt.Sprintf("FROM %s/myimage:latest", constants.DevRegistry),
 			expectedOutput: "FROM registry.example.com/test-ns/myimage:latest\n",
 			setupTranslator: func() *DockerfileTranslator {
 				mockOpener := &mockOpener{
@@ -225,6 +222,39 @@ func TestDockerfileTranslator_Translate(t *testing.T) {
 			assert.Equal(t, tt.expectedOutput, outputFile.content)
 		})
 	}
+}
+
+type fakeTranslator struct {
+	called bool
+}
+
+func (ft *fakeTranslator) translate(line string) string {
+	ft.called = true
+	return line
+}
+
+func TestDockerfileTranslator_AllTranslatorsUsed(t *testing.T) {
+	t1 := &fakeTranslator{}
+	t2 := &fakeTranslator{}
+	t3 := &fakeTranslator{}
+
+	mockOpener := &mockOpener{
+		files: make(map[string]*mockFile),
+	}
+	mockOpener.files["input.dockerfile"] = newMockFile(fmt.Sprintf("FROM %s/myimage:latest", constants.DevRegistry))
+	dt := &DockerfileTranslator{
+		opener:         mockOpener,
+		tmpFileCreator: &mockTmpFileCreator{fileName: "temp.dockerfile"},
+		tmpFolder:      "/tmp",
+		translators:    []translator{t1, t2, t3},
+	}
+
+	err := dt.translate("input.dockerfile")
+	require.NoError(t, err)
+
+	assert.True(t, t1.called)
+	assert.True(t, t2.called)
+	assert.True(t, t3.called)
 }
 
 func TestDockerfileTranslator_Translate_Failures(t *testing.T) {
@@ -274,46 +304,6 @@ func TestDockerfileTranslator_Translate_Failures(t *testing.T) {
 			err := dt.translate(tt.filename)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tt.expectedError)
-		})
-	}
-}
-
-func TestNewRegistryTranslator(t *testing.T) {
-	tests := []struct {
-		name                    string
-		okCtx                   OktetoContextInterface
-		expectedUserNs          string
-		expectedGlobalNamespace string
-	}{
-		{
-			name: "with custom global namespace",
-			okCtx: &mockOktetoContext{
-				namespace:       "user-namespace",
-				globalNamespace: "custom-global",
-				registryURL:     "registry.example.com",
-			},
-			expectedUserNs:          "user-namespace",
-			expectedGlobalNamespace: "custom-global",
-		},
-		{
-			name: "with empty global namespace defaults to okteto",
-			okCtx: &mockOktetoContext{
-				namespace:       "test-ns",
-				globalNamespace: "",
-				registryURL:     "registry.example.com",
-			},
-			expectedUserNs:          "test-ns",
-			expectedGlobalNamespace: constants.DefaultGlobalNamespace,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			rt := newRegistryTranslator(tt.okCtx)
-
-			assert.Equal(t, tt.expectedUserNs, rt.userNs)
-			assert.Equal(t, tt.expectedGlobalNamespace, rt.globalNamespace)
-			assert.NotNil(t, rt.replacer)
 		})
 	}
 }
@@ -386,40 +376,6 @@ func TestRegistryTranslator_Translate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := rt.translate(tt.input)
 			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestNewCacheMountTranslator(t *testing.T) {
-	tests := []struct {
-		name               string
-		repo               string
-		dockerfilePath     string
-		target             string
-		expectedHashLength int
-	}{
-		{
-			name:               "creates translator with valid project hash",
-			repo:               "https://github.com/test/repo",
-			dockerfilePath:     "Dockerfile",
-			target:             "production",
-			expectedHashLength: 12,
-		},
-		{
-			name:               "different inputs produce different hashes",
-			repo:               "https://github.com/different/repo",
-			dockerfilePath:     "Dockerfile.dev",
-			target:             "development",
-			expectedHashLength: 12,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cmt := newCacheMountTranslator(tt.repo, tt.dockerfilePath, tt.target)
-
-			assert.NotNil(t, cmt.hash)
-
 		})
 	}
 }

@@ -34,11 +34,10 @@ const (
 )
 
 var (
-	cacheMountRegex    = regexp.MustCompile(`^RUN.*--mount=.*type=cache`)
-	targetExtractRegex = regexp.MustCompile(`--mount=[^ ]*target=([^, ]+)`)
-	mountRegex         = regexp.MustCompile(`--mount=([^[:space:]]+)`)
-	targetRegex        = regexp.MustCompile(`target=([^,\s]+)`)
-	hasIDParamRegex    = regexp.MustCompile(`\bid=.*`)
+	cacheMountRegex = regexp.MustCompile(`^RUN.*--mount=.*type=cache`)
+	mountRegex      = regexp.MustCompile(`--mount=([^[:space:]]+)`)
+	targetRegex     = regexp.MustCompile(`target=([^,\s]+)`)
+	hasIDParamRegex = regexp.MustCompile(`\bid=.*`)
 )
 
 type opener interface {
