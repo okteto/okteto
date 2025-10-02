@@ -418,11 +418,8 @@ func TestNewCacheMountTranslator(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cmt := newCacheMountTranslator(tt.repo, tt.dockerfilePath, tt.target)
 
-			assert.NotNil(t, cmt.cacheMountRegex)
-			assert.NotNil(t, cmt.hasIDRegex)
-			assert.NotNil(t, cmt.targetExtractRegex)
-			assert.NotNil(t, cmt.mountRegex)
-			assert.NotNil(t, cmt.targetRegex)
+			assert.NotNil(t, cmt.hash)
+
 		})
 	}
 }
@@ -574,6 +571,11 @@ func TestCacheMountTranslator_Translate(t *testing.T) {
 			name:     "handles multiple cache mounts in single RUN command, some with id",
 			input:    "RUN --mount=id=test,type=cache,target=./.eslintcache --mount=type=cache,target=./.yarn/cache,sharing=private --mount=type=cache,target=./node_modules,sharing=private yarn install --immutable",
 			expected: "RUN --mount=id=test,type=cache,target=./.eslintcache --mount=id=https://github.com/test/repo-Dockerfile-prod-./.yarn/cache,type=cache,target=./.yarn/cache,sharing=private --mount=id=https://github.com/test/repo-Dockerfile-prod-./node_modules,type=cache,target=./node_modules,sharing=private yarn install --immutable",
+		},
+		{
+			name:     "handles one cache mount without id but with uid and gid",
+			input:    "RUN --mount=type=cache,uid=1000,gid=1000,target=./.eslintcache --mount=type=cache,target=./.yarn/cache,sharing=private --mount=type=cache,target=./node_modules,sharing=private yarn install --immutable",
+			expected: "RUN --mount=id=https://github.com/test/repo-Dockerfile-prod-./.eslintcache,type=cache,uid=1000,gid=1000,target=./.eslintcache --mount=id=https://github.com/test/repo-Dockerfile-prod-./.yarn/cache,type=cache,target=./.yarn/cache,sharing=private --mount=id=https://github.com/test/repo-Dockerfile-prod-./node_modules,type=cache,target=./node_modules,sharing=private yarn install --immutable",
 		},
 	}
 

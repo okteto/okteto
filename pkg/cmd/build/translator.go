@@ -35,10 +35,10 @@ const (
 
 var (
 	cacheMountRegex    = regexp.MustCompile(`^RUN.*--mount=.*type=cache`)
-	hasIDRegex         = regexp.MustCompile(`^RUN.*--mount=[^ ]*id=`)
 	targetExtractRegex = regexp.MustCompile(`--mount=[^ ]*target=([^, ]+)`)
 	mountRegex         = regexp.MustCompile(`--mount=([^[:space:]]+)`)
 	targetRegex        = regexp.MustCompile(`target=([^,\s]+)`)
+	hasIDParamRegex    = regexp.MustCompile(`\bid=.*`)
 )
 
 type opener interface {
@@ -171,29 +171,19 @@ func (rt registryTranslator) translate(line string) string {
 }
 
 type cacheMountTranslator struct {
-	repo               string
-	dockerfilePath     string
-	buildTarget        string
-	hash               func(repositoryURL, dockerfilePath, buildTarget, cacheTarget string) string
-	cacheMountRegex    *regexp.Regexp
-	hasIDRegex         *regexp.Regexp
-	targetExtractRegex *regexp.Regexp
-	mountRegex         *regexp.Regexp
-	targetRegex        *regexp.Regexp
+	repo           string
+	dockerfilePath string
+	buildTarget    string
+	hash           func(repositoryURL, dockerfilePath, buildTarget, cacheTarget string) string
 }
 
 func newCacheMountTranslator(repo, dockerfilePath, target string) cacheMountTranslator {
 
 	return cacheMountTranslator{
-		repo:               repo,
-		dockerfilePath:     dockerfilePath,
-		buildTarget:        target,
-		hash:               generateProjectHash,
-		cacheMountRegex:    cacheMountRegex,
-		hasIDRegex:         hasIDRegex,
-		targetExtractRegex: targetExtractRegex,
-		mountRegex:         mountRegex,
-		targetRegex:        targetRegex,
+		repo:           repo,
+		dockerfilePath: dockerfilePath,
+		buildTarget:    target,
+		hash:           generateProjectHash,
 	}
 }
 
@@ -213,7 +203,7 @@ func generateProjectHash(repositoryURL, dockerfilePath, buildTarget, cacheTarget
 func (cmt cacheMountTranslator) translate(line string) string {
 
 	// Check if this RUN command has a cache mount
-	if !cmt.cacheMountRegex.MatchString(line) {
+	if !cacheMountRegex.MatchString(line) {
 		return line
 	}
 
@@ -221,7 +211,7 @@ func (cmt cacheMountTranslator) translate(line string) string {
 	result := line
 
 	// Find all mount definitions
-	matches := cmt.mountRegex.FindAllStringSubmatch(result, -1)
+	matches := mountRegex.FindAllStringSubmatch(result, -1)
 	for _, match := range matches {
 
 		// Check that the mountID has mount and params
@@ -245,13 +235,14 @@ func (cmt cacheMountTranslator) translate(line string) string {
 		// Check if it already has an id
 		// Example: id=test,type=cache,target=... => true
 		// Example: type=cache,target=... => false
-		if strings.Contains(mountParams, "id=") {
+		// Example: uid=101,gid=101,type=cache,target=... => false
+		if hasIDParamRegex.MatchString(mountParams) {
 			continue
 		}
 
 		// Extract target from this specific mount
 		target := ""
-		if targetMatch := cmt.targetRegex.FindStringSubmatch(mountParams); len(targetMatch) > 1 {
+		if targetMatch := targetRegex.FindStringSubmatch(mountParams); len(targetMatch) > 1 {
 			target = targetMatch[1]
 		}
 
