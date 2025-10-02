@@ -32,7 +32,7 @@ require (
 	github.com/moby/buildkit v0.18.2
 	github.com/moby/term v0.5.2
 	github.com/pkg/errors v0.9.1
-	github.com/shirou/gopsutil v3.21.11+incompatible
+	github.com/shirou/gopsutil/v4 v4.25.9
 	github.com/shurcooL/graphql v0.0.0-20220606043923-3cf50f8a0a29
 	github.com/sirupsen/logrus v1.9.3
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
@@ -134,9 +134,9 @@ require (
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/src-d/go-oniguruma v1.1.0 // indirect
-	github.com/stretchr/testify v1.10.0
-	github.com/tklauser/go-sysconf v0.3.9 // indirect
-	github.com/tklauser/numcpus v0.3.0 // indirect
+	github.com/stretchr/testify v1.11.1
+	github.com/tklauser/go-sysconf v0.3.15 // indirect
+	github.com/tklauser/numcpus v0.10.0 // indirect
 	github.com/tonistiigi/fsutil v0.0.0-20250605211040-586307ad452f // indirect
 	github.com/tonistiigi/units v0.0.0-20180711220420-6950e57a87ea
 	github.com/tonistiigi/vt100 v0.0.0-20240514184818-90bafcd6abab // indirect
@@ -145,7 +145,7 @@ require (
 	github.com/withfig/autocomplete-tools/packages/cobra v0.0.0-20211118163844-94616c903bcb
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
-	github.com/yusufpapurcu/wmi v1.2.2 // indirect
+	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.60.0 // indirect
 	go.opentelemetry.io/otel v1.35.0 // indirect
@@ -155,7 +155,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.5.0 // indirect
 	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
 	golang.org/x/net v0.39.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	google.golang.org/api v0.162.0 // indirect
@@ -195,12 +195,15 @@ require (
 	github.com/bodgit/windows v1.0.1 // indirect
 	github.com/containerd/containerd/v2 v2.1.3 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
+	github.com/ebitengine/purego v0.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
+	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/nwaples/rardecode/v2 v2.0.0-beta.4.0.20241112120701-034e449c6e78 // indirect
+	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/sorairolake/lzip-go v0.3.5 // indirect
 	github.com/therootcompany/xz v1.0.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
