@@ -84,7 +84,8 @@ func CopyFile(from, to string) error {
 // FileExistsAndNotDir checks if the file exists, and it's not a dir
 func FileExistsAndNotDir(path string, fs afero.Fs) bool {
 	info, err := fs.Stat(path)
-	if err != nil && os.IsNotExist(err) {
+	if err != nil {
+		oktetoLog.Infof("failed to check if %s is a file: %s", path, err)
 		return false
 	}
 	return !info.IsDir()
