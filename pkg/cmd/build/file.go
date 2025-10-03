@@ -14,13 +14,11 @@
 package build
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/registry"
@@ -32,8 +30,8 @@ const (
 )
 
 // GetDockerfile returns the dockerfile with the cache and registry translations
-func GetDockerfile(dockerFile string, okCtx OktetoContextInterface) (string, error) {
-	file, err := getTranslatedDockerFile(dockerFile, okCtx)
+func GetDockerfile(dockerFile string, okCtx OktetoContextInterface, repoURL, dockerfilePath, target string) (string, error) {
+	file, err := getTranslatedDockerFile(dockerFile, okCtx, repoURL, dockerFile, target)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create temporary build folder")
 	}
@@ -41,49 +39,21 @@ func GetDockerfile(dockerFile string, okCtx OktetoContextInterface) (string, err
 	return file, nil
 }
 
-func getTranslatedDockerFile(filename string, okCtx OktetoContextInterface) (string, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return "", err
-	}
-	defer func() {
-		if err := file.Close(); err != nil {
-			oktetoLog.Debugf("Error closing file %s: %s", filename, err)
-		}
-	}()
-
-	scanner := bufio.NewScanner(file)
-
-	dockerfileTmpFolder := filepath.Join(config.GetOktetoHome(), ".dockerfile")
-	if err := os.MkdirAll(dockerfileTmpFolder, 0700); err != nil {
-		return "", fmt.Errorf("failed to create %s: %w", dockerfileTmpFolder, err)
-	}
-
-	tmpFile, err := os.CreateTemp(dockerfileTmpFolder, "buildkit-")
+func getTranslatedDockerFile(filename string, okCtx OktetoContextInterface, repoURL, dockerfilePath, target string) (string, error) {
+	translator, err := newDockerfileTranslator(okCtx, repoURL, dockerfilePath, target)
 	if err != nil {
 		return "", err
 	}
 
-	datawriter := bufio.NewWriter(tmpFile)
-	defer datawriter.Flush()
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		translatedLine := translateOktetoRegistryImage(line, okCtx)
-		_, err = datawriter.WriteString(translatedLine + "\n")
-		if err != nil {
-			return "", fmt.Errorf("failed to write dockerfile: %w", err)
-		}
-	}
-	if err := scanner.Err(); err != nil {
+	if err := translator.translate(filename); err != nil {
 		return "", err
 	}
 
-	if err := copyDockerIgnore(filename, tmpFile.Name()); err != nil {
+	if err := copyDockerIgnore(filename, translator.tmpFileName); err != nil {
 		return "", err
 	}
 
-	return tmpFile.Name(), nil
+	return translator.tmpFileName, nil
 }
 
 func translateOktetoRegistryImage(input string, okCtx OktetoContextInterface) string {
