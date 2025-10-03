@@ -21,9 +21,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/cache"
 	"github.com/okteto/okteto/pkg/env"
-	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/spf13/afero"
 )
 
 // Info represents the build info to generate an image
@@ -218,22 +216,4 @@ func (i *Info) AddArgs(previousImageArgs map[string]string) error {
 		return err
 	}
 	return i.addExpandedPreviousImageArgs(previousImageArgs)
-}
-
-// GetDockerfilePath returns the path to the Dockerfile
-func (i *Info) GetDockerfilePath(fs afero.Fs) string {
-	if filepath.IsAbs(i.Dockerfile) {
-		return i.Dockerfile
-	}
-	joinPath := filepath.Join(i.Context, i.Dockerfile)
-	if !filesystem.FileExistsAndNotDir(joinPath, fs) {
-		oktetoLog.Infof("Dockerfile '%s' is not in a relative path to context '%s'", i.Dockerfile, i.Context)
-		return i.Dockerfile
-	}
-
-	if joinPath != filepath.Clean(i.Dockerfile) && filesystem.FileExistsAndNotDir(i.Dockerfile, fs) {
-		oktetoLog.Infof("Two Dockerfiles discovered in both the root and context path, defaulting to '%s/%s'", i.Context, i.Dockerfile)
-	}
-
-	return joinPath
 }
