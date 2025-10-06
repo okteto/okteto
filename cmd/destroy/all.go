@@ -28,6 +28,11 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+)
+
+const (
+	destroyingAllTickerDuration = 30 * time.Second
 )
 
 type localDestroyAllCommand struct {
@@ -99,10 +104,14 @@ func (lda *localDestroyAllCommand) destroy(ctx context.Context, opts *Options) e
 	}
 }
 
+// waitForNamespaceDestroyAllToComplete waits for the namespace destroy all operation to complete.
+// When the namespace status is Active, it performs comprehensive checks to verify all resources
+// have been properly destroyed, including helm releases and dev environments that need explicit destruction.
 func (lda *localDestroyAllCommand) waitForNamespaceDestroyAllToComplete(ctx context.Context, namespace string) error {
 	timeout := 5 * time.Minute
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
+	destroyingAllTicker := time.Now()
 
 	c, _, err := lda.k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
@@ -129,32 +138,19 @@ func (lda *localDestroyAllCommand) waitForNamespaceDestroyAllToComplete(ctx cont
 
 			switch status {
 			case "Active":
-				if hasBeenDestroyingAll {
-					// when status is active again check if all resources have been correctly destroyed
-					// list configmaps that belong okteto deployments
-					resourcesLabels := map[string]bool{
-						model.GitDeployLabel: true,
-						model.StackLabel:     true,
-						"dev.okteto.com/app": true,
+				// If we haven't been in DestroyingAll state for at least destroyingAllTickerDuration, wait before checking resources.
+				if !hasBeenDestroyingAll {
+					if time.Since(destroyingAllTicker) < destroyingAllTickerDuration {
+						continue
 					}
-
-					cfgList, err := c.CoreV1().ConfigMaps(namespace).List(ctx, metav1.ListOptions{})
-					if err != nil {
-						return err
-					}
-
-					// no configmap for resources of the given namespace should exist
-					for _, cfg := range cfgList.Items {
-						for l := range cfg.GetLabels() {
-							if _, ok := resourcesLabels[l]; ok {
-								return fmt.Errorf("namespace destroy all failed: some resources where not destroyed")
-							}
-						}
-					}
-
-					// exit the waiting loop when status is active again
-					return nil
+					hasBeenDestroyingAll = true
 				}
+
+				if err := lda.checkAllResourcesDestroyed(ctx, namespace, c); err != nil {
+					oktetoLog.Infof("namespace destroy all failed: %v", err)
+					continue
+				}
+				return nil
 			case "DestroyingAll":
 				// initial state would be active, check if this changes to assure namespace has been in destroying all status
 				hasBeenDestroyingAll = true
@@ -163,4 +159,32 @@ func (lda *localDestroyAllCommand) waitForNamespaceDestroyAllToComplete(ctx cont
 			}
 		}
 	}
+}
+
+// checkAllResourcesDestroyed performs a comprehensive check to verify all resources have been destroyed
+func (lda *localDestroyAllCommand) checkAllResourcesDestroyed(ctx context.Context, namespace string, k8s kubernetes.Interface) error {
+	// when status is active again check if all resources have been correctly destroyed
+	// list configmaps that belong okteto deployments
+	resourcesLabels := map[string]bool{
+		model.GitDeployLabel: true,
+		model.StackLabel:     true,
+		"dev.okteto.com/app": true,
+	}
+
+	cfgList, err := k8s.CoreV1().ConfigMaps(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	// no configmap for resources of the given namespace should exist
+	for _, cfg := range cfgList.Items {
+		for l := range cfg.GetLabels() {
+			if _, ok := resourcesLabels[l]; ok {
+				return fmt.Errorf("namespace destroy all failed: some resources where not destroyed")
+			}
+		}
+	}
+
+	// exit the waiting loop when status is active again
+	return nil
 }
