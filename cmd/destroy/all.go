@@ -147,7 +147,7 @@ func (lda *localDestroyAllCommand) waitForNamespaceDestroyAllToComplete(ctx cont
 				}
 
 				if err := lda.checkAllResourcesDestroyed(ctx, namespace, c); err != nil {
-					oktetoLog.Infof("namespace destroy all failed: %v", err)
+					oktetoLog.Infof("Checking if all resources have been destroyed error: %v", err)
 					continue
 				}
 				return nil
