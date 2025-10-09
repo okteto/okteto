@@ -192,7 +192,7 @@ var (
 	ErrNotManifestContentDetected = errors.New("couldn't detect okteto manifest content")
 
 	// ErrCouldNotInferAnyManifest is raised when we can't detect any manifest to load
-	ErrCouldNotInferAnyManifest = errors.New("couldn't detect any manifest (okteto manifest, pipeline or compose)")
+	ErrCouldNotInferAnyManifest = errors.New("couldn't detect any manifest (okteto manifest or compose)")
 
 	// ErrX509Hint should be included within a UserError.Hint when IsX509() return true
 	ErrX509Hint = "Add the flag '--insecure-skip-tls-verify' to skip certificate verification.\n    Follow this link to know more about configuring your own certificates with Okteto:\n    https://www.okteto.com/docs/self-hosted/install/certificates/"
