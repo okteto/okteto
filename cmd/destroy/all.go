@@ -118,6 +118,7 @@ func (lda *localDestroyAllCommand) waitForNamespaceDestroyAllToComplete(ctx cont
 		return err
 	}
 	hasBeenDestroyingAll := false
+	jobNotFoundAfterXSeconds := false
 
 	for {
 		select {
@@ -139,16 +140,17 @@ func (lda *localDestroyAllCommand) waitForNamespaceDestroyAllToComplete(ctx cont
 			switch status {
 			case "Active":
 				// If we haven't been in DestroyingAll state for at least destroyingAllTickerDuration, wait before checking resources.
-				if !hasBeenDestroyingAll {
-					if time.Since(destroyingAllTicker) < destroyingAllTickerDuration {
-						continue
-					}
-					hasBeenDestroyingAll = true
+				if !hasBeenDestroyingAll && time.Since(destroyingAllTicker) < destroyingAllTickerDuration {
+					jobNotFoundAfterXSeconds = true
 				}
 
 				if err := lda.checkAllResourcesDestroyed(ctx, namespace, c); err != nil {
-					oktetoLog.Infof("Checking if all resources have been destroyed error: %v", err)
-					continue
+					if jobNotFoundAfterXSeconds {
+						continue
+					}
+					if hasBeenDestroyingAll {
+						return err
+					}
 				}
 				return nil
 			case "DestroyingAll":
@@ -180,7 +182,7 @@ func (lda *localDestroyAllCommand) checkAllResourcesDestroyed(ctx context.Contex
 	for _, cfg := range cfgList.Items {
 		for l := range cfg.GetLabels() {
 			if _, ok := resourcesLabels[l]; ok {
-				return fmt.Errorf("namespace destroy all failed: some resources where not destroyed")
+				return fmt.Errorf("some resources where not destroyed")
 			}
 		}
 	}
