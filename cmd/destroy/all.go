@@ -182,7 +182,7 @@ func (lda *localDestroyAllCommand) checkAllResourcesDestroyed(ctx context.Contex
 	for _, cfg := range cfgList.Items {
 		for l := range cfg.GetLabels() {
 			if _, ok := resourcesLabels[l]; ok {
-				return fmt.Errorf("some resources where not destroyed")
+				return fmt.Errorf("some resources were not destroyed")
 			}
 		}
 	}
