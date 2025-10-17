@@ -142,7 +142,6 @@ func (c destroyPreviewCommand) watchDestroy(ctx context.Context, preview string,
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 		exit <- c.waitForPreviewDestroyed(waitCtx, preview, timeout)
-		logsCtxCancel()
 	}(&wg)
 
 	wg.Add(1)
@@ -160,6 +159,7 @@ func (c destroyPreviewCommand) watchDestroy(ctx context.Context, preview string,
 	select {
 	case <-stop:
 		ctxCancel()
+		logsCtxCancel()
 		oktetoLog.Infof("CTRL+C received, exit")
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:

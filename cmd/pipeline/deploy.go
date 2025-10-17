@@ -365,6 +365,15 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
+		oktetoLog.Spinner("Waiting for pipeline to start deploying...")
+		oktetoLog.StartSpinner()
+		defer oktetoLog.StopSpinner()
+		if err := pc.okClient.Pipeline().WaitForActionProgressing(waitCtx, name, namespace, action.Name, timeout); err != nil {
+			oktetoLog.Infof("waiting for action to progress failed: %v", err)
+			exit <- err
+			return
+		}
+		oktetoLog.Spinner(fmt.Sprintf("Waiting for repository '%s' to be deployed...", name))
 		err := pc.streamPipelineLogs(waitCtx, name, namespace, action.Name, timeout)
 		if err != nil {
 			oktetoLog.Warning("pipeline logs cannot be streamed due to connectivity issues")

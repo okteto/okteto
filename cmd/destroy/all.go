@@ -78,7 +78,6 @@ func (lda *localDestroyAllCommand) destroy(ctx context.Context, opts *Options) e
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 		exit <- lda.waitForNamespaceDestroyAllToComplete(waitCtx, opts.Namespace)
-		logsCtxCancel()
 	}(&wg)
 
 	wg.Add(1)
@@ -98,6 +97,7 @@ func (lda *localDestroyAllCommand) destroy(ctx context.Context, opts *Options) e
 	select {
 	case <-stop:
 		ctxCancel()
+		logsCtxCancel()
 		oktetoLog.Infof("CTRL+C received, exit")
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
