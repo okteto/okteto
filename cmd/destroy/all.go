@@ -77,7 +77,11 @@ func (lda *localDestroyAllCommand) destroy(ctx context.Context, opts *Options) e
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		exit <- lda.waitForNamespaceDestroyAllToComplete(waitCtx, opts.Namespace)
+		select {
+		case exit <- lda.waitForNamespaceDestroyAllToComplete(waitCtx, opts.Namespace):
+		case <-waitCtx.Done():
+			// Context was cancelled, don't send to exit channel
+		}
 	}(&wg)
 
 	wg.Add(1)
