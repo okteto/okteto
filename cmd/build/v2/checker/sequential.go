@@ -99,7 +99,7 @@ func (s *SequentialCheckStrategy) CloneGlobalImagesToDev(images []string) error 
 	}
 	if len(skippedServices) == 1 {
 		s.ioCtrl.Infof("Okteto Smart Builds is skipping build of %q because it's already built from cache.", skippedServices[0])
-	} else {
+	} else if len(skippedServices) > 1 {
 		s.ioCtrl.Infof("Okteto Smart Builds is skipping build of %d services [%s] because they're already built from cache.", len(skippedServices), strings.Join(skippedServices, ", "))
 	}
 	return nil

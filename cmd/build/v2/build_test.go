@@ -22,7 +22,6 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/okteto/okteto/cmd/build/basic"
-	"github.com/okteto/okteto/cmd/build/v2/checker"
 	"github.com/okteto/okteto/cmd/build/v2/environment"
 	"github.com/okteto/okteto/cmd/build/v2/smartbuild"
 	"github.com/okteto/okteto/internal/test"
@@ -183,17 +182,9 @@ func (fmc fakeMetadataCollector) GetMetadataMap() map[string]*analytics.ImageBui
 }
 
 type fakeImageChecker struct {
-	imageMap                map[string]*analytics.ImageBuildMetadata
-	fakeRegistry            oktetoRegistryInterface
-	tagger                  imageTagger
-	sequentialCheckStrategy *checker.SequentialCheckStrategy
-}
-
-func newFakeImageChecker(fakeRegistry oktetoRegistryInterface, tagger imageTagger) *fakeImageChecker {
-	return &fakeImageChecker{
-		fakeRegistry: fakeRegistry,
-		tagger:       tagger,
-	}
+	imageMap     map[string]*analytics.ImageBuildMetadata
+	fakeRegistry oktetoRegistryInterface
+	tagger       imageTagger
 }
 
 func (fmc fakeImageChecker) CheckImages(ctx context.Context, manifestName string, buildManifest build.ManifestBuild, toBuildSvcs []string) ([]string, []string, error) {

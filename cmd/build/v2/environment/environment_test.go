@@ -67,14 +67,6 @@ func (fr fakeRegistry) GetImageReference(image string) (registry.OktetoImageRefe
 	}, nil
 }
 
-type fakeConfig struct {
-	isOkteto bool
-}
-
-func (fc fakeConfig) IsOkteto() bool {
-	return fc.isOkteto
-}
-
 type fakeOktetoBuilder struct {
 	registry fakeRegistry
 }

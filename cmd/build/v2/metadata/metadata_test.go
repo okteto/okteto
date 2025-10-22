@@ -98,7 +98,7 @@ func (m *mockWorkingDirGetter) Get() (string, error) {
 }
 
 // createMockSmartBuildCtrl creates a smartbuild.Ctrl with mock dependencies
-func createMockSmartBuildCtrl(projectHash string, projectErr error, serviceHash string) *smartbuild.Ctrl {
+func createMockSmartBuildCtrl(projectHash string, projectErr error, _ string) *smartbuild.Ctrl {
 	repo := &mockRepositoryInterface{
 		sha:    projectHash,
 		shaErr: projectErr,
@@ -553,12 +553,4 @@ func TestCollectForService_DurationMeasurement(t *testing.T) {
 	// Verify durations are measured
 	assert.GreaterOrEqual(t, meta.RepoHashDuration, time.Duration(0))
 	assert.GreaterOrEqual(t, meta.BuildContextHashDuration, time.Duration(0))
-}
-
-// Helper function to get minimum of two integers
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
