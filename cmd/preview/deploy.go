@@ -162,6 +162,10 @@ func (pw *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		if err := pw.okClient.Pipeline().WaitForActionProgressing(logsCtx, name, namespace, a.Name, timeout); err != nil {
+			oktetoLog.Infof("waiting for action to progress failed: %v", err)
+			return
+		}
 		err := pw.okClient.Stream().PipelineLogs(logsCtx, name, namespace, a.Name, timeout)
 		if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 			oktetoLog.Warning("preview logs cannot be streamed due to connectivity issues")
