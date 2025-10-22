@@ -105,8 +105,7 @@ func (bc *OktetoBuilder) checkServiceToBuildDuringDeploy(service string, manifes
 		buildInfo.Image = ""
 	}
 
-	imageChecker := getImageChecker(bc.Config, bc.Registry, bc.smartBuildCtrl, bc.ioCtrl.Logger())
-	imageWithDigest, err := imageChecker.getImageDigestReferenceForServiceDeploy(manifest.Name, service, buildInfo)
+	imageWithDigest, err := bc.imageChecker.GetImageDigestReferenceForServiceDeploy(manifest.Name, service, buildInfo)
 	if oktetoErrors.IsNotFound(err) {
 		bc.ioCtrl.Logger().Debug("image not found, building image")
 		buildCh <- service
@@ -120,7 +119,7 @@ func (bc *OktetoBuilder) checkServiceToBuildDuringDeploy(service string, manifes
 	}
 	bc.ioCtrl.Logger().Debugf("Skipping build for image for service: %s", service)
 
-	bc.SetServiceEnvVars(service, imageWithDigest)
+	bc.serviceEnvVarsSetter.SetServiceEnvVars(service, imageWithDigest)
 
 	if manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
 		stack := manifest.Deploy.ComposeSection.Stack
