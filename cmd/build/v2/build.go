@@ -71,7 +71,7 @@ type metadataCollectorInterface interface {
 
 type imageCheckerInterface interface {
 	CheckImages(ctx context.Context, manifestName string, buildManifest build.ManifestBuild, toBuildSvcs []string) ([]string, []string, error)
-	CloneGlobalImagesToDev(images []string) error
+	CloneGlobalImagesToDev(manifestName string, buildManifest build.ManifestBuild, svcsToClone []string) error
 	GetImageDigestReferenceForServiceDeploy(manifestName, service string, buildInfo *build.Info) (string, error)
 }
 
@@ -283,16 +283,20 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 	ob.ioCtrl.Logger().Infof("Images to build: [%s]", strings.Join(toBuildSvcs, ", "))
 
+	sp := ob.ioCtrl.Out().Spinner("Collecting metadata for the images")
+	sp.Start()
 	if err := ob.metadataCollector.CollectMetadata(ctx, options.Manifest.Name, options.Manifest.Build, toBuildSvcs); err != nil {
 		return err
 	}
+	sp.Stop()
 	metaMap := ob.metadataCollector.GetMetadataMap()
 
 	notCachedServices := toBuildSvcs
 	var cachedServices []string
 	if !options.NoCache && ob.smartBuildCtrl.IsEnabled() {
-		sp := ob.ioCtrl.Out().Spinner("Checking images cache")
+		sp := ob.ioCtrl.Out().Spinner("Checking if the images are already built from cache...")
 		sp.Start()
+		defer sp.Stop()
 		cachedServices, notCachedServices, err = ob.imageChecker.CheckImages(ctx, options.Manifest.Name, options.Manifest.Build, toBuildSvcs)
 		if err != nil {
 			return fmt.Errorf("error checking images: %w", err)
@@ -300,8 +304,9 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		ob.ioCtrl.Logger().Infof("Images cached: [%s]", strings.Join(cachedServices, ", "))
 		ob.ioCtrl.Logger().Infof("Images not cached: [%s]", strings.Join(notCachedServices, ", "))
 
-		ob.ioCtrl.Out().Spinner("Cloning global images to dev")
-		if err := ob.imageChecker.CloneGlobalImagesToDev(cachedServices); err != nil {
+		sp = ob.ioCtrl.Out().Spinner("Cloning global images to dev...")
+		sp.Start()
+		if err := ob.imageChecker.CloneGlobalImagesToDev(options.Manifest.Name, options.Manifest.Build, cachedServices); err != nil {
 			return fmt.Errorf("error cloning global images to dev: %w", err)
 		}
 		sp.Stop()

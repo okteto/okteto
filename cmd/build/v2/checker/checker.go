@@ -43,7 +43,7 @@ type SmartBuildController interface {
 // CheckStrategy defines the interface for different cache checking strategies.
 type CheckStrategy interface {
 	CheckServicesCache(ctx context.Context, manifestName string, buildManifest build.ManifestBuild, svcsToBuild []string) (cachedServices []string, notCachedServices []string, err error)
-	CloneGlobalImagesToDev(images []string) error
+	CloneGlobalImagesToDev(manifestName string, buildManifest build.ManifestBuild, images []string) error
 	GetImageDigestReferenceForServiceDeploy(manifestName, service string, buildInfo *build.Info) (string, error)
 }
 
@@ -84,8 +84,8 @@ func (i *ImageCacheChecker) GetImageDigestReferenceForServiceDeploy(manifestName
 
 // CloneGlobalImagesToDev clones multiple global images to the development environment.
 // This is useful for ensuring development environments have access to the latest global images.
-func (i *ImageCacheChecker) CloneGlobalImagesToDev(images []string) error {
-	if err := i.checkStrategy.CloneGlobalImagesToDev(images); err != nil {
+func (i *ImageCacheChecker) CloneGlobalImagesToDev(manifestName string, buildManifest build.ManifestBuild, images []string) error {
+	if err := i.checkStrategy.CloneGlobalImagesToDev(manifestName, buildManifest, images); err != nil {
 		return err
 	}
 	return nil

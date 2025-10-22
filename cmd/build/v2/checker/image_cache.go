@@ -87,7 +87,7 @@ func (c *RegistryCacheProbe) IsCached(ctx context.Context, manifestName, image, 
 		}
 		c.logger.Infof("image %s found", ref)
 		c.mu.Lock()
-		c.cache[ref] = imageWithDigest
+		c.cache[svcToBuild] = imageWithDigest
 		c.mu.Unlock()
 		return true, imageWithDigest, nil
 	}
@@ -96,4 +96,14 @@ func (c *RegistryCacheProbe) IsCached(ctx context.Context, manifestName, image, 
 
 func (c *RegistryCacheProbe) LookupReferenceWithDigest(reference string) (string, error) {
 	return c.registry.GetImageTagWithDigest(reference)
+}
+
+func (c *RegistryCacheProbe) GetFromCache(svc string) (hit bool, reference string) {
+	c.mu.RLock()
+	reference, ok := c.cache[svc]
+	c.mu.RUnlock()
+	if ok {
+		return true, reference
+	}
+	return false, ""
 }

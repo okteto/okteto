@@ -43,6 +43,11 @@ func (m *MockCacheProbe) LookupReferenceWithDigest(reference string) (string, er
 	return args.String(0), args.Error(1)
 }
 
+func (m *MockCacheProbe) GetFromCache(svc string) (hit bool, reference string) {
+	args := m.Called(svc)
+	return args.Bool(0), args.String(1)
+}
+
 type MockServiceEnvVarsSetter struct {
 	mock.Mock
 }
@@ -279,7 +284,7 @@ func TestSequentialCheckStrategy_CloneGlobalImagesToDev(t *testing.T) {
 			strategy, smartBuildCtrl, _, _, metadataCollector, serviceEnvVarsSetter, ioCtrl := createTestSequentialCheckStrategy()
 			tt.setupMocks(smartBuildCtrl, serviceEnvVarsSetter, metadataCollector, ioCtrl)
 
-			err := strategy.CloneGlobalImagesToDev(tt.images)
+			err := strategy.CloneGlobalImagesToDev("test-manifest", build.ManifestBuild{}, tt.images)
 
 			assert.Equal(t, tt.expectedError, err)
 

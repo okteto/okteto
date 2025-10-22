@@ -191,7 +191,7 @@ func (fmc fakeImageChecker) CheckImages(ctx context.Context, manifestName string
 	return []string{}, toBuildSvcs, nil
 }
 
-func (fmc fakeImageChecker) CloneGlobalImagesToDev(images []string) error {
+func (fmc fakeImageChecker) CloneGlobalImagesToDev(manifestName string, buildManifest build.ManifestBuild, svcsToClone []string) error {
 	return nil
 }
 

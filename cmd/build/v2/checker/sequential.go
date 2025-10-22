@@ -27,6 +27,7 @@ import (
 type CacheProbe interface {
 	IsCached(ctx context.Context, manifestName, image, buildHash, svcToBuild string) (bool, string, error)
 	LookupReferenceWithDigest(reference string) (string, error)
+	GetFromCache(svc string) (hit bool, reference string)
 }
 
 type ServiceEnvVarsSetter interface {
@@ -84,18 +85,30 @@ func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manife
 	return cachedSvcs, notCachedSvcs, nil
 }
 
-func (s *SequentialCheckStrategy) CloneGlobalImagesToDev(images []string) error {
+func (s *SequentialCheckStrategy) CloneGlobalImagesToDev(manifestName string, buildManifest build.ManifestBuild, svcsToClone []string) error {
 	skippedServices := make([]string, 0)
-	for _, image := range images {
-		meta := s.metadataCollector.GetMetadata(image)
-		reference, err := s.smartBuildCtrl.CloneGlobalImageToDev(image, image)
+	for _, svc := range svcsToClone {
+
+		meta := s.metadataCollector.GetMetadata(svc)
+		ok, globalImage := s.imageCacheChecker.GetFromCache(svc)
+		if !ok {
+			return fmt.Errorf("image %s not found in cache", svc)
+		}
+
+		buildInfo := buildManifest[svc]
+		devImage := buildInfo.Image
+		if buildInfo.Dockerfile != "" && buildInfo.Image == "" {
+			devImage = s.tagger.GetImageReferencesForDeploy(manifestName, svc)[0]
+		}
+
+		reference, err := s.smartBuildCtrl.CloneGlobalImageToDev(globalImage, devImage)
 		if err != nil {
 			return err
 		}
 
-		s.serviceEnvVarsSetter.SetServiceEnvVars(image, reference)
+		s.serviceEnvVarsSetter.SetServiceEnvVars(svc, reference)
 		meta.Success = true
-		skippedServices = append(skippedServices, image)
+		skippedServices = append(skippedServices, svc)
 	}
 	if len(skippedServices) == 1 {
 		s.ioCtrl.Infof("Okteto Smart Builds is skipping build of %q because it's already built from cache.", skippedServices[0])

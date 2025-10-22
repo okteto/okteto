@@ -69,8 +69,8 @@ func (m *MockCheckStrategy) CheckServicesCache(ctx context.Context, manifestName
 	return args.Get(0).([]string), args.Get(1).([]string), args.Error(2)
 }
 
-func (m *MockCheckStrategy) CloneGlobalImagesToDev(images []string) error {
-	args := m.Called(images)
+func (m *MockCheckStrategy) CloneGlobalImagesToDev(manifestName string, buildManifest build.ManifestBuild, svcsToClone []string) error {
+	args := m.Called(manifestName, buildManifest, svcsToClone)
 	return args.Error(0)
 }
 
@@ -316,7 +316,7 @@ func TestImageCacheChecker_CloneGlobalImagesToDev(t *testing.T) {
 			}
 
 			// Execute
-			err := checker.CloneGlobalImagesToDev(tt.images)
+			err := checker.CloneGlobalImagesToDev("test-manifest", build.ManifestBuild{}, tt.images)
 
 			// Verify results
 			if tt.expectedError {
@@ -371,7 +371,7 @@ func TestImageCacheChecker_EdgeCases(t *testing.T) {
 		mockCheckStrategy.On("CloneGlobalImagesToDev", ([]string)(nil)).
 			Return(nil)
 
-		err := checker.CloneGlobalImagesToDev(nil)
+		err := checker.CloneGlobalImagesToDev("test-manifest", build.ManifestBuild{}, nil)
 		assert.NoError(t, err)
 		mockCheckStrategy.AssertExpectations(t)
 	})
