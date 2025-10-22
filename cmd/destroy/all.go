@@ -77,8 +77,11 @@ func (lda *localDestroyAllCommand) destroy(ctx context.Context, opts *Options) e
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		exit <- lda.waitForNamespaceDestroyAllToComplete(waitCtx, opts.Namespace)
-		logsCtxCancel()
+		select {
+		case exit <- lda.waitForNamespaceDestroyAllToComplete(waitCtx, opts.Namespace):
+		case <-waitCtx.Done():
+			// Context was cancelled, don't send to exit channel
+		}
 	}(&wg)
 
 	wg.Add(1)
@@ -86,7 +89,10 @@ func (lda *localDestroyAllCommand) destroy(ctx context.Context, opts *Options) e
 		defer wg.Done()
 		connectionTimeout := 5 * time.Minute
 		err := lda.oktetoClient.Stream().DestroyAllLogs(logsCtx, opts.Namespace, connectionTimeout)
-		if err != nil {
+
+		// Check if error is not canceled because in the case of a timeout waiting the operation to complete,
+		// we cancel the context to stop streaming logs, but we should not display the warning
+		if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 			oktetoLog.Warning("destroy all logs cannot be streamed due to connectivity issues")
 			oktetoLog.Infof("destroy all logs cannot be streamed due to connectivity issues: %v", err)
 		}
@@ -95,6 +101,7 @@ func (lda *localDestroyAllCommand) destroy(ctx context.Context, opts *Options) e
 	select {
 	case <-stop:
 		ctxCancel()
+		logsCtxCancel()
 		oktetoLog.Infof("CTRL+C received, exit")
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
