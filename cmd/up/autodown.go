@@ -17,6 +17,7 @@ import (
 	"context"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/down"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -50,8 +51,10 @@ type downCmdRunner interface {
 }
 
 // newAutoDown creates a new AutoDown instance
-func newAutoDown(ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at analyticsTrackerInterface) *autoDownRunner {
+func newAutoDown(ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at analyticsTrackerInterface, upMeta *analytics.UpMetricsMetadata) *autoDownRunner {
 	enabled := env.LoadBooleanOrDefault(autoDownEnvVar, false)
+	upMeta.IsAutoDownEnabled(enabled)
+
 	downCmd := down.New(afero.NewOsFs(), okteto.NewK8sClientProviderWithLogger(k8sLogger), at)
 	return &autoDownRunner{
 		autoDown:         enabled,

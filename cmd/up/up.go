@@ -237,7 +237,7 @@ okteto up api -- echo this is a test
 				K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
 				tokenUpdater:      newTokenUpdaterController(),
 				builder:           buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish),
-				autoDown:          newAutoDown(ioCtrl, k8sLogger, at),
+				autoDown:          newAutoDown(ioCtrl, k8sLogger, at, upMeta),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
