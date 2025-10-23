@@ -93,6 +93,7 @@ func (u *UpMetricsMetadata) toProps() map[string]interface{} {
 		"contextSyncDurationSeconds":          u.contextSyncDuration.Seconds(),
 		"localFoldersScanDurationSeconds":     u.localFoldersScanDuration.Seconds(),
 		"execDurationSeconds":                 u.execDuration.Seconds(),
+		"isAutoDownEnabled":                   u.isAutoDownEnabled,
 	}
 }
 
