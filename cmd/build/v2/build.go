@@ -204,7 +204,7 @@ func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish)
 		imageChecker:         imageChecker,
 		Config:               config,
 		ioCtrl:               ioCtrl,
-		smartBuildCtrl:       smartbuild.NewSmartBuildCtrl(gitRepo, reg, config.fs, ioCtrl, wdCtrl),
+		smartBuildCtrl:       smartBuildCtrl,
 		oktetoContext:        okCtx,
 		metadataCollector:    metadataCollector,
 		onBuildFinish:        onBuildFinish,
