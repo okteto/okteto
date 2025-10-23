@@ -226,14 +226,15 @@ func TestSequentialCheckStrategy_CloneGlobalImagesToDev(t *testing.T) {
 	tests := []struct {
 		name          string
 		images        []string
-		setupMocks    func(*MockSmartBuildController, *MockServiceEnvVarsSetter, *MockMetadataCollector, *MockOutInformer)
+		setupMocks    func(*MockSmartBuildController, *MockServiceEnvVarsSetter, *MockMetadataCollector, *MockOutInformer, *MockCacheProbe)
 		expectedError error
 	}{
 		{
 			name:   "single image success",
 			images: []string{"image1"},
-			setupMocks: func(smartBuildCtrl *MockSmartBuildController, serviceEnvVarsSetter *MockServiceEnvVarsSetter, metadataCollector *MockMetadataCollector, ioCtrl *MockOutInformer) {
-				smartBuildCtrl.On("CloneGlobalImageToDev", "image1", "image1").Return("dev-image1", nil)
+			setupMocks: func(smartBuildCtrl *MockSmartBuildController, serviceEnvVarsSetter *MockServiceEnvVarsSetter, metadataCollector *MockMetadataCollector, ioCtrl *MockOutInformer, cacheProbe *MockCacheProbe) {
+				cacheProbe.On("GetFromCache", "image1").Return(true, "global-image1")
+				smartBuildCtrl.On("CloneGlobalImageToDev", "global-image1", "image1").Return("dev-image1", nil)
 				serviceEnvVarsSetter.On("SetServiceEnvVars", "image1", "dev-image1").Return()
 				metadataCollector.On("GetMetadata", "image1").Return(&analytics.ImageBuildMetadata{})
 				ioCtrl.On("Infof", "Okteto Smart Builds is skipping build of %q because it's already built from cache.", mock.Anything).Return()
@@ -243,10 +244,14 @@ func TestSequentialCheckStrategy_CloneGlobalImagesToDev(t *testing.T) {
 		{
 			name:   "multiple images success",
 			images: []string{"image1", "image2", "image3"},
-			setupMocks: func(smartBuildCtrl *MockSmartBuildController, serviceEnvVarsSetter *MockServiceEnvVarsSetter, metadataCollector *MockMetadataCollector, ioCtrl *MockOutInformer) {
-				smartBuildCtrl.On("CloneGlobalImageToDev", "image1", "image1").Return("dev-image1", nil)
-				smartBuildCtrl.On("CloneGlobalImageToDev", "image2", "image2").Return("dev-image2", nil)
-				smartBuildCtrl.On("CloneGlobalImageToDev", "image3", "image3").Return("dev-image3", nil)
+			setupMocks: func(smartBuildCtrl *MockSmartBuildController, serviceEnvVarsSetter *MockServiceEnvVarsSetter, metadataCollector *MockMetadataCollector, ioCtrl *MockOutInformer, cacheProbe *MockCacheProbe) {
+				cacheProbe.On("GetFromCache", "image1").Return(true, "global-image1")
+				cacheProbe.On("GetFromCache", "image2").Return(true, "global-image2")
+				cacheProbe.On("GetFromCache", "image3").Return(true, "global-image3")
+
+				smartBuildCtrl.On("CloneGlobalImageToDev", "global-image1", "image1").Return("dev-image1", nil)
+				smartBuildCtrl.On("CloneGlobalImageToDev", "global-image2", "image2").Return("dev-image2", nil)
+				smartBuildCtrl.On("CloneGlobalImageToDev", "global-image3", "image3").Return("dev-image3", nil)
 
 				serviceEnvVarsSetter.On("SetServiceEnvVars", "image1", "dev-image1").Return()
 				serviceEnvVarsSetter.On("SetServiceEnvVars", "image2", "dev-image2").Return()
@@ -262,8 +267,9 @@ func TestSequentialCheckStrategy_CloneGlobalImagesToDev(t *testing.T) {
 		{
 			name:   "clone error",
 			images: []string{"image1"},
-			setupMocks: func(smartBuildCtrl *MockSmartBuildController, serviceEnvVarsSetter *MockServiceEnvVarsSetter, metadataCollector *MockMetadataCollector, ioCtrl *MockOutInformer) {
-				smartBuildCtrl.On("CloneGlobalImageToDev", "image1", "image1").Return("", errors.New("clone failed"))
+			setupMocks: func(smartBuildCtrl *MockSmartBuildController, serviceEnvVarsSetter *MockServiceEnvVarsSetter, metadataCollector *MockMetadataCollector, ioCtrl *MockOutInformer, cacheProbe *MockCacheProbe) {
+				cacheProbe.On("GetFromCache", "image1").Return(true, "global-image1")
+				smartBuildCtrl.On("CloneGlobalImageToDev", "global-image1", "image1").Return("", errors.New("clone failed"))
 				metadataCollector.On("GetMetadata", "image1").Return(&analytics.ImageBuildMetadata{})
 			},
 			expectedError: errors.New("clone failed"),
@@ -271,9 +277,8 @@ func TestSequentialCheckStrategy_CloneGlobalImagesToDev(t *testing.T) {
 		{
 			name:   "empty images list",
 			images: []string{},
-			setupMocks: func(smartBuildCtrl *MockSmartBuildController, serviceEnvVarsSetter *MockServiceEnvVarsSetter, metadataCollector *MockMetadataCollector, ioCtrl *MockOutInformer) {
-				// Mock the Infof call that happens even with empty list
-				ioCtrl.On("Infof", "Okteto Smart Builds is skipping build of %d services [%s] because they're already built from cache.", mock.Anything, mock.Anything).Return()
+			setupMocks: func(smartBuildCtrl *MockSmartBuildController, serviceEnvVarsSetter *MockServiceEnvVarsSetter, metadataCollector *MockMetadataCollector, ioCtrl *MockOutInformer, cacheProbe *MockCacheProbe) {
+				// No mocks needed for empty list - no calls should be made
 			},
 			expectedError: nil,
 		},
@@ -281,10 +286,15 @@ func TestSequentialCheckStrategy_CloneGlobalImagesToDev(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			strategy, smartBuildCtrl, _, _, metadataCollector, serviceEnvVarsSetter, ioCtrl := createTestSequentialCheckStrategy()
-			tt.setupMocks(smartBuildCtrl, serviceEnvVarsSetter, metadataCollector, ioCtrl)
+			strategy, smartBuildCtrl, _, cacheProbe, metadataCollector, serviceEnvVarsSetter, ioCtrl := createTestSequentialCheckStrategy()
+			tt.setupMocks(smartBuildCtrl, serviceEnvVarsSetter, metadataCollector, ioCtrl, cacheProbe)
 
-			err := strategy.CloneGlobalImagesToDev("test-manifest", build.ManifestBuild{}, tt.images)
+			buildManifest := build.ManifestBuild{
+				"image1": &build.Info{Image: "image1"},
+				"image2": &build.Info{Image: "image2"},
+				"image3": &build.Info{Image: "image3"},
+			}
+			err := strategy.CloneGlobalImagesToDev("test-manifest", buildManifest, tt.images)
 
 			assert.Equal(t, tt.expectedError, err)
 
@@ -292,6 +302,7 @@ func TestSequentialCheckStrategy_CloneGlobalImagesToDev(t *testing.T) {
 			serviceEnvVarsSetter.AssertExpectations(t)
 			metadataCollector.AssertExpectations(t)
 			ioCtrl.AssertExpectations(t)
+			cacheProbe.AssertExpectations(t)
 		})
 	}
 }

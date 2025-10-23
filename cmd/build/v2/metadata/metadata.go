@@ -55,7 +55,15 @@ func NewMetadataCollector(oktetoContext namespaceDevEnvGetter, config repoAnonym
 }
 
 func (m *MetadataCollector) GetMetadataMap() map[string]*analytics.ImageBuildMetadata {
-	return m.metaMap
+	m.metaMu.RLock()
+	defer m.metaMu.RUnlock()
+
+	// Create a copy to avoid race conditions
+	result := make(map[string]*analytics.ImageBuildMetadata)
+	for k, v := range m.metaMap {
+		result[k] = v
+	}
+	return result
 }
 
 // GetMetadata returns the metadata for the given service name

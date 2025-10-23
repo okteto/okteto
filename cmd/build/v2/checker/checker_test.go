@@ -307,7 +307,7 @@ func TestImageCacheChecker_CloneGlobalImagesToDev(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create mocks
 			mockCheckStrategy := &MockCheckStrategy{}
-			mockCheckStrategy.On("CloneGlobalImagesToDev", tt.images).
+			mockCheckStrategy.On("CloneGlobalImagesToDev", "test-manifest", build.ManifestBuild{}, tt.images).
 				Return(tt.mockError)
 
 			// Create checker with mock strategy
@@ -368,7 +368,7 @@ func TestImageCacheChecker_EdgeCases(t *testing.T) {
 			checkStrategy: mockCheckStrategy,
 		}
 
-		mockCheckStrategy.On("CloneGlobalImagesToDev", ([]string)(nil)).
+		mockCheckStrategy.On("CloneGlobalImagesToDev", "test-manifest", build.ManifestBuild{}, ([]string)(nil)).
 			Return(nil)
 
 		err := checker.CloneGlobalImagesToDev("test-manifest", build.ManifestBuild{}, nil)
