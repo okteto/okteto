@@ -111,16 +111,17 @@ func (m *MetadataCollector) collectForService(ctx context.Context, manifestName,
 		select {
 		case <-ctx.Done():
 			repoErr = ctx.Err()
+			repoHashDuration = time.Since(start)
 			return
 		default:
 		}
 		m.logger.Logger().Debugf("getting project hash for analytics (%s)", svcName)
 		h, err := m.smartBuildCtrl.GetProjectHash(info)
+		repoHashDuration = time.Since(start)
 		if err != nil {
 			m.logger.Logger().Infof("error getting project commit hash for %s: %v", svcName, err)
 		} else {
 			repoHash = h
-			repoHashDuration = time.Since(start)
 		}
 	}()
 
@@ -132,6 +133,7 @@ func (m *MetadataCollector) collectForService(ctx context.Context, manifestName,
 		start := time.Now()
 		select {
 		case <-ctx.Done():
+			ctxHashDuration = time.Since(start)
 			return
 		default:
 		}
