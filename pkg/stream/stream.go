@@ -57,6 +57,9 @@ func requestWithRetry(ctx context.Context, c *http.Client, url string, timeout t
 			// Attempt to stream logs
 			resp, err := request(c, url)
 			if err != nil {
+				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+					return nil, err
+				}
 				continue
 			}
 			if resp.StatusCode == http.StatusOK {
@@ -66,18 +69,16 @@ func requestWithRetry(ctx context.Context, c *http.Client, url string, timeout t
 			if resp.StatusCode != http.StatusInternalServerError {
 				return nil, fmt.Errorf("response from request: %s", resp.Status)
 			}
-			// Check if context was cancelled or timed out
-			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-				return nil, err
-			}
-
 			// Calculate exponential backoff delay
 			attempts++
 			retryDelay := calculateExponentialBackoff(attempts)
 
+			// Create a proper error message for logging
+			streamError := fmt.Errorf("received status %d, retrying", resp.StatusCode)
+
 			// Log the retry attempt
 			oktetoLog.Warning("Unable to connect to stream logs, waiting to reconnect...")
-			oktetoLog.Infof("logs streaming error: %v, retrying in %v (attempt %d)", err, retryDelay, attempts)
+			oktetoLog.Infof("logs streaming error: %v, retrying in %v (attempt %d)", streamError, retryDelay, attempts)
 
 			// Wait before retrying, but respect context cancellation
 			select {
