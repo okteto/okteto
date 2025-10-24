@@ -17,12 +17,16 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/cache"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
+
+// Regex to match OKTETO_BUILD_<service>_<type> pattern
+var buildEnvVarRegex = regexp.MustCompile(`^OKTETO_BUILD_(.+)_(REGISTRY|REPOSITORY|IMAGE|TAG|SHA)$`)
 
 // Info represents the build info to generate an image
 type Info struct {
@@ -55,15 +59,43 @@ type infoRaw struct {
 	DependsOn        DependsOn         `yaml:"depends_on,omitempty"`
 }
 
+// normalizeServiceName converts a service name from env var format back to depends_on format
+// e.g., "SVC_1" -> "svc-1", "API" -> "api"
+func normalizeServiceName(serviceName string) string {
+	return strings.ToLower(strings.ReplaceAll(serviceName, "_", "-"))
+}
+
+// isServiceInDependencies checks if a service is in the depends_on list
+func (i *Info) isServiceInDependencies(serviceName string) bool {
+	normalizedService := normalizeServiceName(serviceName)
+	for _, dep := range i.DependsOn {
+		if dep == normalizedService {
+			return true
+		}
+	}
+	return false
+}
+
 func (i *Info) addExpandedPreviousImageArgs(previousImageArgs map[string]string) error {
 	alreadyAddedArg := map[string]bool{}
 	for _, arg := range i.Args {
 		alreadyAddedArg[arg.Name] = true
 	}
+
 	for k, v := range previousImageArgs {
 		if _, ok := alreadyAddedArg[k]; ok {
 			continue
 		}
+
+		// Check if this is a build environment variable and if the service is in dependencies
+		if matches := buildEnvVarRegex.FindStringSubmatch(k); matches != nil && len(matches) > 1 {
+			serviceName := matches[1]
+			if !i.isServiceInDependencies(serviceName) {
+				oktetoLog.Debugf("Skipping '%s' - service '%s' not in depends_on list", k, normalizeServiceName(serviceName))
+				continue
+			}
+		}
+
 		expandedValue, err := env.ExpandEnv(v)
 		if err != nil {
 			return err

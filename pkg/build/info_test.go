@@ -481,3 +481,208 @@ func Test_expandSecrets(t *testing.T) {
 		})
 	}
 }
+
+func TestAddArgsWithDependsOnFiltering(t *testing.T) {
+	tests := []struct {
+		name              string
+		buildInfo         *Info
+		previousImageArgs map[string]string
+		expectedArgsCount int
+		expectedArgs      []string
+		shouldNotContain  []string
+	}{
+		{
+			name: "adds build args for services in depends_on",
+			buildInfo: &Info{
+				DependsOn: DependsOn{"api", "frontend"},
+			},
+			previousImageArgs: map[string]string{
+				"OKTETO_BUILD_API_IMAGE":      "registry.com/api:latest",
+				"OKTETO_BUILD_API_REGISTRY":   "registry.com",
+				"OKTETO_BUILD_FRONTEND_IMAGE": "registry.com/frontend:latest",
+			},
+			expectedArgsCount: 3,
+			expectedArgs: []string{
+				"OKTETO_BUILD_API_IMAGE",
+				"OKTETO_BUILD_API_REGISTRY",
+				"OKTETO_BUILD_FRONTEND_IMAGE",
+			},
+		},
+		{
+			name: "skips build args for services not in depends_on",
+			buildInfo: &Info{
+				DependsOn: DependsOn{"api"},
+			},
+			previousImageArgs: map[string]string{
+				"OKTETO_BUILD_API_IMAGE":      "registry.com/api:latest",
+				"OKTETO_BUILD_FRONTEND_IMAGE": "registry.com/frontend:latest",
+				"OKTETO_BUILD_DATABASE_IMAGE": "registry.com/database:latest",
+			},
+			expectedArgsCount: 1,
+			expectedArgs: []string{
+				"OKTETO_BUILD_API_IMAGE",
+			},
+			shouldNotContain: []string{
+				"OKTETO_BUILD_FRONTEND_IMAGE",
+				"OKTETO_BUILD_DATABASE_IMAGE",
+			},
+		},
+		{
+			name: "handles services with hyphens in depends_on",
+			buildInfo: &Info{
+				DependsOn: DependsOn{"svc-1", "my-service"},
+			},
+			previousImageArgs: map[string]string{
+				"OKTETO_BUILD_SVC_1_IMAGE":      "registry.com/svc-1:latest",
+				"OKTETO_BUILD_SVC_1_REGISTRY":   "registry.com",
+				"OKTETO_BUILD_MY_SERVICE_IMAGE": "registry.com/my-service:latest",
+				"OKTETO_BUILD_OTHER_IMAGE":      "registry.com/other:latest",
+			},
+			expectedArgsCount: 3,
+			expectedArgs: []string{
+				"OKTETO_BUILD_SVC_1_IMAGE",
+				"OKTETO_BUILD_SVC_1_REGISTRY",
+				"OKTETO_BUILD_MY_SERVICE_IMAGE",
+			},
+			shouldNotContain: []string{
+				"OKTETO_BUILD_OTHER_IMAGE",
+			},
+		},
+		{
+			name: "adds non-build environment variables regardless of depends_on",
+			buildInfo: &Info{
+				DependsOn: DependsOn{"api"},
+			},
+			previousImageArgs: map[string]string{
+				"OKTETO_BUILD_API_IMAGE":   "registry.com/api:latest",
+				"OKTETO_BUILD_OTHER_IMAGE": "registry.com/other:latest",
+				"REGULAR_ENV_VAR":          "some-value",
+				"ANOTHER_ENV_VAR":          "another-value",
+			},
+			expectedArgsCount: 3,
+			expectedArgs: []string{
+				"OKTETO_BUILD_API_IMAGE",
+				"REGULAR_ENV_VAR",
+				"ANOTHER_ENV_VAR",
+			},
+			shouldNotContain: []string{
+				"OKTETO_BUILD_OTHER_IMAGE",
+			},
+		},
+		{
+			name: "empty depends_on skips all build args",
+			buildInfo: &Info{
+				DependsOn: DependsOn{},
+			},
+			previousImageArgs: map[string]string{
+				"OKTETO_BUILD_API_IMAGE":      "registry.com/api:latest",
+				"OKTETO_BUILD_FRONTEND_IMAGE": "registry.com/frontend:latest",
+				"REGULAR_ENV_VAR":             "some-value",
+			},
+			expectedArgsCount: 1,
+			expectedArgs: []string{
+				"REGULAR_ENV_VAR",
+			},
+			shouldNotContain: []string{
+				"OKTETO_BUILD_API_IMAGE",
+				"OKTETO_BUILD_FRONTEND_IMAGE",
+			},
+		},
+		{
+			name: "handles all build env var types",
+			buildInfo: &Info{
+				DependsOn: DependsOn{"api"},
+			},
+			previousImageArgs: map[string]string{
+				"OKTETO_BUILD_API_REGISTRY":   "registry.com",
+				"OKTETO_BUILD_API_REPOSITORY": "myorg/api",
+				"OKTETO_BUILD_API_IMAGE":      "registry.com/myorg/api:latest",
+				"OKTETO_BUILD_API_TAG":        "latest",
+				"OKTETO_BUILD_API_SHA":        "abc123",
+			},
+			expectedArgsCount: 5,
+			expectedArgs: []string{
+				"OKTETO_BUILD_API_REGISTRY",
+				"OKTETO_BUILD_API_REPOSITORY",
+				"OKTETO_BUILD_API_IMAGE",
+				"OKTETO_BUILD_API_TAG",
+				"OKTETO_BUILD_API_SHA",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.buildInfo.AddArgs(tt.previousImageArgs)
+			require.NoError(t, err)
+
+			// Check expected args count
+			assert.Equal(t, tt.expectedArgsCount, len(tt.buildInfo.Args))
+
+			// Check that expected args are present
+			argNames := make([]string, len(tt.buildInfo.Args))
+			for i, arg := range tt.buildInfo.Args {
+				argNames[i] = arg.Name
+			}
+
+			for _, expectedArg := range tt.expectedArgs {
+				assert.Contains(t, argNames, expectedArg, "Expected arg %s not found", expectedArg)
+			}
+
+			// Check that unwanted args are not present
+			for _, unwantedArg := range tt.shouldNotContain {
+				assert.NotContains(t, argNames, unwantedArg, "Unwanted arg %s found", unwantedArg)
+			}
+		})
+	}
+}
+
+func TestNormalizeServiceName(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"API", "api"},
+		{"SVC_1", "svc-1"},
+		{"MY_SERVICE", "my-service"},
+		{"FRONTEND", "frontend"},
+		{"BACK_END_SERVICE", "back-end-service"},
+		{"SERVICE_WITH_MULTIPLE_UNDERSCORES", "service-with-multiple-underscores"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := normalizeServiceName(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestIsServiceInDependencies(t *testing.T) {
+	info := &Info{
+		DependsOn: DependsOn{"api", "svc-1", "my-service"},
+	}
+
+	tests := []struct {
+		serviceName string
+		expected    bool
+	}{
+		{"API", true},
+		{"api", true},
+		{"SVC_1", true},
+		{"svc-1", true},
+		{"MY_SERVICE", true},
+		{"my-service", true},
+		{"FRONTEND", false},
+		{"frontend", false},
+		{"DATABASE", false},
+		{"database", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.serviceName, func(t *testing.T) {
+			result := info.isServiceInDependencies(tt.serviceName)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
