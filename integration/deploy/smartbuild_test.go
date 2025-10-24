@@ -96,7 +96,7 @@ func TestDeployWithSmartBuildCloneCustomImage(t *testing.T) {
 
 	outpput, err := commands.RunOktetoDeployAndGetOutput(oktetoPath, deployOptions)
 	require.NoError(t, err)
-	require.Contains(t, outpput, "Okteto Smart Builds is skipping build of 'app' because it's already built from cache.")
+	require.Contains(t, outpput, "Okteto Smart Builds is skipping build of \"app\" because it's already built from cache.")
 
 	// Test that image has been built
 	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/test-app:1.0.0", okteto.GetContext().Registry, testNamespace)))
