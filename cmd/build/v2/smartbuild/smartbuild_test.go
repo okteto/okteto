@@ -173,7 +173,7 @@ func TestGetServiceHash(t *testing.T) {
 			hash: "hash",
 		},
 	}
-	out := sbc.GetServiceHash(&build.Info{}, service)
+	out := sbc.GetBuildHash(&build.Info{}, service)
 	assert.Equal(t, "hash", out)
 }
 
