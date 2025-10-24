@@ -252,8 +252,10 @@ func (up *upContext) devMode(ctx context.Context, app apps.App, create bool) err
 	if err := up.createDevContainer(ctx, app, create); err != nil {
 		return err
 	}
+
+	err := up.waitUntilDevelopmentContainerIsRunning(ctx, app)
 	up.analyticsMeta.DevContainerCreation(time.Since(startCreateDev))
-	return up.waitUntilDevelopmentContainerIsRunning(ctx, app)
+	return err
 }
 
 func (up *upContext) createDevContainer(ctx context.Context, app apps.App, create bool) error {

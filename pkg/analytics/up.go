@@ -59,6 +59,7 @@ type UpMetricsMetadata struct {
 	errSyncLostSyncthing     bool
 	success                  bool
 	hasRunDeploy             bool
+	isAutoDownEnabled        bool
 }
 
 // NewUpMetricsMetadata returns an empty instance of UpMetricsMetadata
@@ -92,6 +93,7 @@ func (u *UpMetricsMetadata) toProps() map[string]interface{} {
 		"contextSyncDurationSeconds":          u.contextSyncDuration.Seconds(),
 		"localFoldersScanDurationSeconds":     u.localFoldersScanDuration.Seconds(),
 		"execDurationSeconds":                 u.execDuration.Seconds(),
+		"isAutoDownEnabled":                   u.isAutoDownEnabled,
 	}
 }
 
@@ -189,6 +191,10 @@ func (u *UpMetricsMetadata) LocalFolderScan(duration time.Duration) {
 
 func (u *UpMetricsMetadata) ExecDuration(duration time.Duration) {
 	u.execDuration = duration
+}
+
+func (u *UpMetricsMetadata) IsAutoDownEnabled(enabled bool) {
+	u.isAutoDownEnabled = enabled
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
