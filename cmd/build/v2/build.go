@@ -261,7 +261,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 			buildContextHashDurationStart := time.Now()
 
-			serviceHash := ob.smartBuildCtrl.GetServiceHash(buildSvcInfo, svcToBuild)
+			serviceHash := ob.smartBuildCtrl.GetBuildHash(buildSvcInfo, svcToBuild)
 			meta.BuildContextHash = serviceHash
 			meta.BuildContextHashDuration = time.Since(buildContextHashDurationStart)
 

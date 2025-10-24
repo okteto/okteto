@@ -82,12 +82,6 @@ func (s *Ctrl) GetProjectHash(buildInfo *build.Info) (string, error) {
 	return s.hasher.hashProjectCommit(buildInfo)
 }
 
-// GetServiceHash returns the hash of the service
-func (s *Ctrl) GetServiceHash(buildInfo *build.Info, service string) string {
-	s.ioCtrl.Logger().Debugf("getting service hash")
-	return s.hasher.hashWithBuildContext(buildInfo, service)
-}
-
 // GetBuildHash returns the hash of the build based on the env vars
 func (s *Ctrl) GetBuildHash(buildInfo *build.Info, service string) string {
 	s.ioCtrl.Logger().Debugf("getting hash based on the buildContext env var")
