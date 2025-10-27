@@ -34,10 +34,6 @@ type ServiceEnvVarsSetter interface {
 	SetServiceEnvVars(service, reference string)
 }
 
-type outInformer interface {
-	Infof(format string, args ...interface{})
-}
-
 type SvcMetadataGetter interface {
 	GetMetadata(svcName string) *analytics.ImageBuildMetadata
 }
@@ -47,7 +43,7 @@ type SequentialCheckStrategy struct {
 	tagger               ImageTagger
 	imageCacheChecker    CacheProbe
 	metadataCollector    SvcMetadataGetter
-	ioCtrl               outInformer
+	ioCtrl               *io.Controller
 	serviceEnvVarsSetter ServiceEnvVarsSetter
 }
 
@@ -57,13 +53,33 @@ func newSequentialCheckStrategy(smartBuildCtrl SmartBuildController, tagger Imag
 		tagger:               tagger,
 		imageCacheChecker:    imageCacheChecker,
 		metadataCollector:    metadataCollector,
-		ioCtrl:               ioCtrl.Out(),
+		ioCtrl:               ioCtrl,
 		serviceEnvVarsSetter: serviceEnvVarsSetter,
 	}
 }
 
 func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manifestName string, buildManifest build.ManifestBuild, svcsToBuild []string) (cachedSvcs []string, notCachedSvcs []string, err error) {
+	// svcsToBuild is already ordered by dependencies (from DAG.Ordered())
+	// so we can optimize by stopping the check as soon as we find a service that's not cached.
+	// All subsequent services that depend on it will also need to be rebuilt.
+
+	dependantMap := make(map[string][]string)
+	// Build dependantMap: for each service, track which services depend on it
+	for svcName, buildInfo := range buildManifest {
+		for _, dep := range buildInfo.DependsOn {
+			dependantMap[dep] = append(dependantMap[dep], svcName)
+		}
+	}
+
+	// Track processed services to avoid duplicates
+	processed := make(map[string]bool)
+
 	for _, svc := range svcsToBuild {
+		// Skip if already processed
+		if processed[svc] {
+			continue
+		}
+
 		meta := s.metadataCollector.GetMetadata(svc)
 		start := time.Now()
 		buildInfo := buildManifest[svc]
@@ -74,21 +90,49 @@ func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manife
 			return cachedSvcs, notCachedSvcs, err
 		}
 		meta.CacheHitDuration = time.Since(start)
+
+		processed[svc] = true
+
 		if isCached {
 			meta.CacheHit = true
 			cachedSvcs = append(cachedSvcs, svc)
 		} else {
 			meta.CacheHit = false
 			notCachedSvcs = append(notCachedSvcs, svc)
+
+			// Recursively add all dependant services to notCached without checking cache
+			notCachedSvcs = s.addDependantsToNotCached(svc, dependantMap, processed, notCachedSvcs)
 		}
 	}
 	return cachedSvcs, notCachedSvcs, nil
 }
 
+// addDependantsToNotCached recursively adds all dependant services to notCached
+// This ensures that when a service is not cached, all services that depend on it
+// (directly or indirectly) are also marked as not cached without checking cache
+func (s *SequentialCheckStrategy) addDependantsToNotCached(svc string, dependantMap map[string][]string, processed map[string]bool, notCachedSvcs []string) []string {
+	if dependants, exists := dependantMap[svc]; exists {
+		for _, dependant := range dependants {
+			if !processed[dependant] {
+				processed[dependant] = true
+				notCachedSvcs = append(notCachedSvcs, dependant)
+				// Set metadata for dependant services
+				dependantMeta := s.metadataCollector.GetMetadata(dependant)
+				dependantMeta.CacheHit = false
+				dependantMeta.CacheHitDuration = 0 // No cache check performed
+
+				// Recursively add dependants of this dependant
+				notCachedSvcs = s.addDependantsToNotCached(dependant, dependantMap, processed, notCachedSvcs)
+			}
+		}
+	}
+	return notCachedSvcs
+}
+
 func (s *SequentialCheckStrategy) CloneGlobalImagesToDev(manifestName string, buildManifest build.ManifestBuild, svcsToClone []string) error {
 	skippedServices := make([]string, 0)
 	for _, svc := range svcsToClone {
-
+		s.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svc))
 		meta := s.metadataCollector.GetMetadata(svc)
 		ok, globalImage := s.imageCacheChecker.GetFromCache(svc)
 		if !ok {

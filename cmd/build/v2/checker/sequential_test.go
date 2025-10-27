@@ -56,14 +56,6 @@ func (m *MockServiceEnvVarsSetter) SetServiceEnvVars(service, reference string) 
 	m.Called(service, reference)
 }
 
-type MockOutInformer struct {
-	mock.Mock
-}
-
-func (m *MockOutInformer) Infof(format string, args ...interface{}) {
-	m.Called(format, args)
-}
-
 type MockMetadataCollector struct {
 	mock.Mock
 	metadata map[string]*analytics.ImageBuildMetadata
@@ -88,13 +80,13 @@ func (m *MockMetadataCollector) GetMetadata(svcName string) *analytics.ImageBuil
 }
 
 // Helper function to create a test SequentialCheckStrategy
-func createTestSequentialCheckStrategy() (*SequentialCheckStrategy, *MockSmartBuildController, *MockImageTagger, *MockCacheProbe, *MockMetadataCollector, *MockServiceEnvVarsSetter, *MockOutInformer) {
+func createTestSequentialCheckStrategy() (*SequentialCheckStrategy, *MockSmartBuildController, *MockImageTagger, *MockCacheProbe, *MockMetadataCollector, *MockServiceEnvVarsSetter, *io.Controller) {
 	smartBuildCtrl := &MockSmartBuildController{}
 	tagger := &MockImageTagger{}
 	imageCacheChecker := &MockCacheProbe{}
 	metadataCollector := NewMockMetadataCollector()
 	serviceEnvVarsSetter := &MockServiceEnvVarsSetter{}
-	ioCtrl := &MockOutInformer{}
+	ioCtrl := io.NewIOController()
 
 	strategy := &SequentialCheckStrategy{
 		smartBuildCtrl:       smartBuildCtrl,
@@ -202,6 +194,104 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 			expectedNotCached: nil,
 			expectedError:     errors.New("cache check failed"),
 		},
+		{
+			name:         "optimization: dependant services added to notCached without cache check",
+			manifestName: "test-manifest",
+			buildManifest: build.ManifestBuild{
+				"service1": &build.Info{Image: "image1"},
+				"service2": &build.Info{Image: "image2", DependsOn: []string{"service1"}},
+				"service3": &build.Info{Image: "image3", DependsOn: []string{"service1"}},
+			},
+			svcsToBuild: []string{"service1", "service2", "service3"},
+			setupMocks: func(smartBuildCtrl *MockSmartBuildController, cacheProbe *MockCacheProbe, metadataCollector *MockMetadataCollector) {
+				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
+				// Only service1 should be checked for cache, service2 and service3 should be added directly to notCached
+				cacheProbe.On("IsCached", mock.Anything, "test-manifest", "image1", "hash1", "service1").Return(false, "", nil)
+
+				metadataCollector.On("GetMetadata", "service1").Return(&analytics.ImageBuildMetadata{})
+				metadataCollector.On("GetMetadata", "service2").Return(&analytics.ImageBuildMetadata{})
+				metadataCollector.On("GetMetadata", "service3").Return(&analytics.ImageBuildMetadata{})
+			},
+			expectedCached:    nil,
+			expectedNotCached: []string{"service1", "service2", "service3"},
+			expectedError:     nil,
+		},
+		{
+			name:         "optimization: mixed scenario with cached and not cached services",
+			manifestName: "test-manifest",
+			buildManifest: build.ManifestBuild{
+				"service1": &build.Info{Image: "image1"},
+				"service2": &build.Info{Image: "image2", DependsOn: []string{"service1"}},
+				"service3": &build.Info{Image: "image3"},
+				"service4": &build.Info{Image: "image4", DependsOn: []string{"service3"}},
+			},
+			svcsToBuild: []string{"service1", "service2", "service3", "service4"},
+			setupMocks: func(smartBuildCtrl *MockSmartBuildController, cacheProbe *MockCacheProbe, metadataCollector *MockMetadataCollector) {
+				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
+				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service3").Return("hash3")
+				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service4").Return("hash4")
+
+				// service1 is not cached, so service2 should be added without checking
+				cacheProbe.On("IsCached", mock.Anything, "test-manifest", "image1", "hash1", "service1").Return(false, "", nil)
+				// service3 is cached, so service4 should be checked normally
+				cacheProbe.On("IsCached", mock.Anything, "test-manifest", "image3", "hash3", "service3").Return(true, "digest3", nil)
+				cacheProbe.On("IsCached", mock.Anything, "test-manifest", "image4", "hash4", "service4").Return(false, "", nil)
+
+				metadataCollector.On("GetMetadata", "service1").Return(&analytics.ImageBuildMetadata{})
+				metadataCollector.On("GetMetadata", "service2").Return(&analytics.ImageBuildMetadata{})
+				metadataCollector.On("GetMetadata", "service3").Return(&analytics.ImageBuildMetadata{})
+				metadataCollector.On("GetMetadata", "service4").Return(&analytics.ImageBuildMetadata{})
+			},
+			expectedCached:    []string{"service3"},
+			expectedNotCached: []string{"service1", "service2", "service4"},
+			expectedError:     nil,
+		},
+		{
+			name:         "optimization: nested dependencies - service2 depends on service1, service3 depends on service2",
+			manifestName: "test-manifest",
+			buildManifest: build.ManifestBuild{
+				"service1": &build.Info{Image: "image1"},
+				"service2": &build.Info{Image: "image2", DependsOn: []string{"service1"}},
+				"service3": &build.Info{Image: "image3", DependsOn: []string{"service2"}},
+			},
+			svcsToBuild: []string{"service1", "service2", "service3"},
+			setupMocks: func(smartBuildCtrl *MockSmartBuildController, cacheProbe *MockCacheProbe, metadataCollector *MockMetadataCollector) {
+				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
+				// Only service1 should be checked for cache, service2 and service3 should be added directly to notCached
+				cacheProbe.On("IsCached", mock.Anything, "test-manifest", "image1", "hash1", "service1").Return(false, "", nil)
+
+				metadataCollector.On("GetMetadata", "service1").Return(&analytics.ImageBuildMetadata{})
+				metadataCollector.On("GetMetadata", "service2").Return(&analytics.ImageBuildMetadata{})
+				metadataCollector.On("GetMetadata", "service3").Return(&analytics.ImageBuildMetadata{})
+			},
+			expectedCached:    nil,
+			expectedNotCached: []string{"service1", "service2", "service3"},
+			expectedError:     nil,
+		},
+		{
+			name:         "optimization: complex nested dependencies - service1 -> service2 -> service3 -> service4",
+			manifestName: "test-manifest",
+			buildManifest: build.ManifestBuild{
+				"service1": &build.Info{Image: "image1"},
+				"service2": &build.Info{Image: "image2", DependsOn: []string{"service1"}},
+				"service3": &build.Info{Image: "image3", DependsOn: []string{"service2"}},
+				"service4": &build.Info{Image: "image4", DependsOn: []string{"service3"}},
+			},
+			svcsToBuild: []string{"service1", "service2", "service3", "service4"},
+			setupMocks: func(smartBuildCtrl *MockSmartBuildController, cacheProbe *MockCacheProbe, metadataCollector *MockMetadataCollector) {
+				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
+				// Only service1 should be checked for cache, all others should be added directly to notCached
+				cacheProbe.On("IsCached", mock.Anything, "test-manifest", "image1", "hash1", "service1").Return(false, "", nil)
+
+				metadataCollector.On("GetMetadata", "service1").Return(&analytics.ImageBuildMetadata{})
+				metadataCollector.On("GetMetadata", "service2").Return(&analytics.ImageBuildMetadata{})
+				metadataCollector.On("GetMetadata", "service3").Return(&analytics.ImageBuildMetadata{})
+				metadataCollector.On("GetMetadata", "service4").Return(&analytics.ImageBuildMetadata{})
+			},
+			expectedCached:    nil,
+			expectedNotCached: []string{"service1", "service2", "service3", "service4"},
+			expectedError:     nil,
+		},
 	}
 
 	for _, tt := range tests {
@@ -226,25 +316,25 @@ func TestSequentialCheckStrategy_CloneGlobalImagesToDev(t *testing.T) {
 	tests := []struct {
 		name          string
 		images        []string
-		setupMocks    func(*MockSmartBuildController, *MockServiceEnvVarsSetter, *MockMetadataCollector, *MockOutInformer, *MockCacheProbe)
+		setupMocks    func(*MockSmartBuildController, *MockServiceEnvVarsSetter, *MockMetadataCollector, *io.Controller, *MockCacheProbe)
 		expectedError error
 	}{
 		{
 			name:   "single image success",
 			images: []string{"image1"},
-			setupMocks: func(smartBuildCtrl *MockSmartBuildController, serviceEnvVarsSetter *MockServiceEnvVarsSetter, metadataCollector *MockMetadataCollector, ioCtrl *MockOutInformer, cacheProbe *MockCacheProbe) {
+			setupMocks: func(smartBuildCtrl *MockSmartBuildController, serviceEnvVarsSetter *MockServiceEnvVarsSetter, metadataCollector *MockMetadataCollector, ioCtrl *io.Controller, cacheProbe *MockCacheProbe) {
 				cacheProbe.On("GetFromCache", "image1").Return(true, "global-image1")
 				smartBuildCtrl.On("CloneGlobalImageToDev", "global-image1", "image1").Return("dev-image1", nil)
 				serviceEnvVarsSetter.On("SetServiceEnvVars", "image1", "dev-image1").Return()
 				metadataCollector.On("GetMetadata", "image1").Return(&analytics.ImageBuildMetadata{})
-				ioCtrl.On("Infof", "Okteto Smart Builds is skipping build of %q because it's already built from cache.", mock.Anything).Return()
+				// No need to mock ioCtrl calls since we're using a real io.Controller
 			},
 			expectedError: nil,
 		},
 		{
 			name:   "multiple images success",
 			images: []string{"image1", "image2", "image3"},
-			setupMocks: func(smartBuildCtrl *MockSmartBuildController, serviceEnvVarsSetter *MockServiceEnvVarsSetter, metadataCollector *MockMetadataCollector, ioCtrl *MockOutInformer, cacheProbe *MockCacheProbe) {
+			setupMocks: func(smartBuildCtrl *MockSmartBuildController, serviceEnvVarsSetter *MockServiceEnvVarsSetter, metadataCollector *MockMetadataCollector, ioCtrl *io.Controller, cacheProbe *MockCacheProbe) {
 				cacheProbe.On("GetFromCache", "image1").Return(true, "global-image1")
 				cacheProbe.On("GetFromCache", "image2").Return(true, "global-image2")
 				cacheProbe.On("GetFromCache", "image3").Return(true, "global-image3")
@@ -260,14 +350,14 @@ func TestSequentialCheckStrategy_CloneGlobalImagesToDev(t *testing.T) {
 				metadataCollector.On("GetMetadata", "image1").Return(&analytics.ImageBuildMetadata{})
 				metadataCollector.On("GetMetadata", "image2").Return(&analytics.ImageBuildMetadata{})
 				metadataCollector.On("GetMetadata", "image3").Return(&analytics.ImageBuildMetadata{})
-				ioCtrl.On("Infof", "Okteto Smart Builds is skipping build of %d services [%s] because they're already built from cache.", mock.Anything, mock.Anything).Return()
+				// No need to mock ioCtrl calls since we're using a real io.Controller
 			},
 			expectedError: nil,
 		},
 		{
 			name:   "clone error",
 			images: []string{"image1"},
-			setupMocks: func(smartBuildCtrl *MockSmartBuildController, serviceEnvVarsSetter *MockServiceEnvVarsSetter, metadataCollector *MockMetadataCollector, ioCtrl *MockOutInformer, cacheProbe *MockCacheProbe) {
+			setupMocks: func(smartBuildCtrl *MockSmartBuildController, serviceEnvVarsSetter *MockServiceEnvVarsSetter, metadataCollector *MockMetadataCollector, ioCtrl *io.Controller, cacheProbe *MockCacheProbe) {
 				cacheProbe.On("GetFromCache", "image1").Return(true, "global-image1")
 				smartBuildCtrl.On("CloneGlobalImageToDev", "global-image1", "image1").Return("", errors.New("clone failed"))
 				metadataCollector.On("GetMetadata", "image1").Return(&analytics.ImageBuildMetadata{})
@@ -277,7 +367,7 @@ func TestSequentialCheckStrategy_CloneGlobalImagesToDev(t *testing.T) {
 		{
 			name:   "empty images list",
 			images: []string{},
-			setupMocks: func(smartBuildCtrl *MockSmartBuildController, serviceEnvVarsSetter *MockServiceEnvVarsSetter, metadataCollector *MockMetadataCollector, ioCtrl *MockOutInformer, cacheProbe *MockCacheProbe) {
+			setupMocks: func(smartBuildCtrl *MockSmartBuildController, serviceEnvVarsSetter *MockServiceEnvVarsSetter, metadataCollector *MockMetadataCollector, ioCtrl *io.Controller, cacheProbe *MockCacheProbe) {
 				// No mocks needed for empty list - no calls should be made
 			},
 			expectedError: nil,
@@ -301,7 +391,7 @@ func TestSequentialCheckStrategy_CloneGlobalImagesToDev(t *testing.T) {
 			smartBuildCtrl.AssertExpectations(t)
 			serviceEnvVarsSetter.AssertExpectations(t)
 			metadataCollector.AssertExpectations(t)
-			ioCtrl.AssertExpectations(t)
+			// ioCtrl is a real controller, no need to assert expectations
 			cacheProbe.AssertExpectations(t)
 		})
 	}
@@ -426,6 +516,6 @@ func TestNewSequentialCheckStrategy(t *testing.T) {
 	assert.Equal(t, tagger, strategy.tagger)
 	assert.Equal(t, imageCacheChecker, strategy.imageCacheChecker)
 	assert.Equal(t, metadataCollector, strategy.metadataCollector)
-	assert.Equal(t, ioCtrl.Out(), strategy.ioCtrl)
+	assert.Equal(t, ioCtrl, strategy.ioCtrl)
 	assert.Equal(t, serviceEnvVarsSetter, strategy.serviceEnvVarsSetter)
 }
