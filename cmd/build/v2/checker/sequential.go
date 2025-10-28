@@ -155,9 +155,9 @@ func (s *SequentialCheckStrategy) CloneGlobalImagesToDev(manifestName string, bu
 		skippedServices = append(skippedServices, svc)
 	}
 	if len(skippedServices) == 1 {
-		s.ioCtrl.Infof("Okteto Smart Builds is skipping build of %q because it's already built from cache.", skippedServices[0])
+		s.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of %q because it's already built from cache.", skippedServices[0])
 	} else if len(skippedServices) > 1 {
-		s.ioCtrl.Infof("Okteto Smart Builds is skipping build of %d services [%s] because they're already built from cache.", len(skippedServices), strings.Join(skippedServices, ", "))
+		s.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of %d services [%s] because they're already built from cache.", len(skippedServices), strings.Join(skippedServices, ", "))
 	}
 	return nil
 }

@@ -296,11 +296,11 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	if !options.NoCache && ob.smartBuildCtrl.IsEnabled() {
 		sp := ob.ioCtrl.Out().Spinner("Checking if the images are already built from cache...")
 		sp.Start()
-		defer sp.Stop()
 		cachedServices, notCachedServices, err = ob.imageChecker.CheckImages(ctx, options.Manifest.Name, options.Manifest.Build, toBuildSvcs)
 		if err != nil {
 			return fmt.Errorf("error checking images: %w", err)
 		}
+		sp.Stop()
 		ob.ioCtrl.Logger().Infof("Images cached: [%s]", strings.Join(cachedServices, ", "))
 		ob.ioCtrl.Logger().Infof("Images not cached: [%s]", strings.Join(notCachedServices, ", "))
 
