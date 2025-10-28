@@ -112,6 +112,11 @@ func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manife
 			notCachedSvcs = s.addDependentsToNotCached(svc, dependantMap, processed, notCachedSvcs)
 		}
 	}
+	if len(cachedSvcs) == 1 {
+		s.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of %q because it's already built from cache.", cachedSvcs[0])
+	} else if len(cachedSvcs) > 1 {
+		s.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of %d services [%s] because they're already built from cache.", len(cachedSvcs), strings.Join(cachedSvcs, ", "))
+	}
 	return cachedSvcs, notCachedSvcs, nil
 }
 
