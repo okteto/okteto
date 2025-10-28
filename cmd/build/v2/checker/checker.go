@@ -43,7 +43,6 @@ type SmartBuildController interface {
 // CheckStrategy defines the interface for different cache checking strategies.
 type CheckStrategy interface {
 	CheckServicesCache(ctx context.Context, manifestName string, buildManifest build.ManifestBuild, svcsToBuild []string) (cachedServices []string, notCachedServices []string, err error)
-	CloneGlobalImagesToDev(manifestName string, buildManifest build.ManifestBuild, images []string) error
 	GetImageDigestReferenceForServiceDeploy(manifestName, service string, buildInfo *build.Info) (string, error)
 }
 
@@ -55,7 +54,7 @@ type ImageCacheChecker struct {
 // NewImageCacheChecker creates a new ImageCacheChecker instance with the appropriate check strategy.
 // It determines whether to use parallel or sequential checking based on the OKTETO_BUILD_CHECK_STRATEGY_PARALLEL environment variable.
 func NewImageCacheChecker(namespace string, registryURL string, tagger ImageTagger, smartBuildCtrl SmartBuildController, imageCtrl registry.ImageCtrl, metadataCollector *metadata.MetadataCollector, registry DigestResolver, logger *io.Controller, buildEnvVarsHandler *environment.ServiceEnvVarsHandler) *ImageCacheChecker {
-	cacheChecker := NewImageChecker(tagger, namespace, registryURL, imageCtrl, registry, logger)
+	cacheChecker := NewRegistryCacheProbe(tagger, namespace, registryURL, imageCtrl, registry, logger)
 	var checkStrategy CheckStrategy
 	if env.LoadBoolean(parallelCheckStrategyEnvVar) {
 		// TODO: Implement parallel check strategy
@@ -80,13 +79,4 @@ func (i *ImageCacheChecker) CheckImages(ctx context.Context, manifestName string
 // that will be used during deployment. This ensures the correct image version is deployed.
 func (i *ImageCacheChecker) GetImageDigestReferenceForServiceDeploy(manifestName, service string, buildInfo *build.Info) (string, error) {
 	return i.checkStrategy.GetImageDigestReferenceForServiceDeploy(manifestName, service, buildInfo)
-}
-
-// CloneGlobalImagesToDev clones multiple global images to the development environment.
-// This is useful for ensuring development environments have access to the latest global images.
-func (i *ImageCacheChecker) CloneGlobalImagesToDev(manifestName string, buildManifest build.ManifestBuild, images []string) error {
-	if err := i.checkStrategy.CloneGlobalImagesToDev(manifestName, buildManifest, images); err != nil {
-		return err
-	}
-	return nil
 }

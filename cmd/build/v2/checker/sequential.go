@@ -25,7 +25,7 @@ import (
 )
 
 type CacheProbe interface {
-	IsCached(ctx context.Context, manifestName, image, buildHash, svcToBuild string) (bool, string, error)
+	IsCached(manifestName, image, buildHash, svcToBuild string) (bool, string, error)
 	LookupReferenceWithDigest(reference string) (string, error)
 	GetFromCache(svc string) (hit bool, reference string)
 }
@@ -80,12 +80,13 @@ func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manife
 			continue
 		}
 
+		s.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svc))
 		meta := s.metadataCollector.GetMetadata(svc)
 		start := time.Now()
 		buildInfo := buildManifest[svc]
 		buildHash := s.smartBuildCtrl.GetBuildHash(buildInfo, svc)
 
-		isCached, _, err := s.imageCacheChecker.IsCached(ctx, manifestName, buildInfo.Image, buildHash, svc)
+		isCached, _, err := s.imageCacheChecker.IsCached(manifestName, buildInfo.Image, buildHash, svc)
 		if err != nil {
 			return cachedSvcs, notCachedSvcs, err
 		}
@@ -96,6 +97,13 @@ func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manife
 		if isCached {
 			meta.CacheHit = true
 			cachedSvcs = append(cachedSvcs, svc)
+
+			reference, err := s.cloneGlobalImageToDev(manifestName, buildManifest, svc)
+			if err != nil {
+				return cachedSvcs, notCachedSvcs, err
+			}
+			s.serviceEnvVarsSetter.SetServiceEnvVars(svc, reference)
+			meta.Success = true
 		} else {
 			meta.CacheHit = false
 			notCachedSvcs = append(notCachedSvcs, svc)
@@ -105,6 +113,24 @@ func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manife
 		}
 	}
 	return cachedSvcs, notCachedSvcs, nil
+}
+
+func (s *SequentialCheckStrategy) cloneGlobalImageToDev(manifestName string, buildManifest build.ManifestBuild, svc string) (string, error) {
+	buildInfo := buildManifest[svc]
+	devImage := buildInfo.Image
+	if buildInfo.Dockerfile != "" && buildInfo.Image == "" {
+		devImage = s.tagger.GetImageReferencesForDeploy(manifestName, svc)[0]
+	}
+	ok, globalImage := s.imageCacheChecker.GetFromCache(svc)
+	if !ok {
+		return "", fmt.Errorf("image %s not found in cache", svc)
+	}
+	reference, err := s.smartBuildCtrl.CloneGlobalImageToDev(globalImage, devImage)
+	if err != nil {
+		return reference, err
+	}
+
+	return reference, nil
 }
 
 // addDependentsToNotCached recursively adds all dependent services to notCached
@@ -127,39 +153,6 @@ func (s *SequentialCheckStrategy) addDependentsToNotCached(svc string, dependant
 		}
 	}
 	return notCachedSvcs
-}
-
-func (s *SequentialCheckStrategy) CloneGlobalImagesToDev(manifestName string, buildManifest build.ManifestBuild, svcsToClone []string) error {
-	skippedServices := make([]string, 0)
-	for _, svc := range svcsToClone {
-		s.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svc))
-		meta := s.metadataCollector.GetMetadata(svc)
-		ok, globalImage := s.imageCacheChecker.GetFromCache(svc)
-		if !ok {
-			return fmt.Errorf("image %s not found in cache", svc)
-		}
-
-		buildInfo := buildManifest[svc]
-		devImage := buildInfo.Image
-		if buildInfo.Dockerfile != "" && buildInfo.Image == "" {
-			devImage = s.tagger.GetImageReferencesForDeploy(manifestName, svc)[0]
-		}
-
-		reference, err := s.smartBuildCtrl.CloneGlobalImageToDev(globalImage, devImage)
-		if err != nil {
-			return err
-		}
-
-		s.serviceEnvVarsSetter.SetServiceEnvVars(svc, reference)
-		meta.Success = true
-		skippedServices = append(skippedServices, svc)
-	}
-	if len(skippedServices) == 1 {
-		s.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of %q because it's already built from cache.", skippedServices[0])
-	} else if len(skippedServices) > 1 {
-		s.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of %d services [%s] because they're already built from cache.", len(skippedServices), strings.Join(skippedServices, ", "))
-	}
-	return nil
 }
 
 func (s *SequentialCheckStrategy) GetImageDigestReferenceForServiceDeploy(manifestName, service string, buildInfo *build.Info) (string, error) {

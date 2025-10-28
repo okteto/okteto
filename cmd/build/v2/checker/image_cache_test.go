@@ -14,7 +14,6 @@
 package checker
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -102,16 +101,16 @@ func createTestImageCtrl() registry.ImageCtrl {
 	return registry.NewImageCtrl(mockConfig)
 }
 
-func TestNewImageChecker(t *testing.T) {
-	t.Run("creates image checker with all dependencies", func(t *testing.T) {
+func TestNewRegistryCacheProbe(t *testing.T) {
+	t.Run("creates registry cache probe with all dependencies", func(t *testing.T) {
 		// Create mocks
 		mockTagger := &MockImageTaggerForCache{}
 		mockDigestResolver := &MockDigestResolverForCache{}
 		mockLogger := &MockLoggerForCache{}
 		imageCtrl := createTestImageCtrl()
 
-		// Create image checker
-		checker := NewImageChecker(
+		// Create registry cache probe
+		probe := NewRegistryCacheProbe(
 			mockTagger,
 			"test-namespace",
 			"test-registry.com",
@@ -120,16 +119,16 @@ func TestNewImageChecker(t *testing.T) {
 			mockLogger,
 		)
 
-		// Verify checker was created with correct properties
-		assert.NotNil(t, checker)
-		assert.Equal(t, mockTagger, checker.tagger)
-		assert.Equal(t, "test-namespace", checker.namespace)
-		assert.Equal(t, "test-registry.com", checker.registryURL)
-		assert.Equal(t, imageCtrl, checker.imageCtrl)
-		assert.Equal(t, mockDigestResolver, checker.registry)
-		assert.Equal(t, mockLogger, checker.logger)
-		assert.NotNil(t, checker.cache)
-		assert.Empty(t, checker.cache) // Cache should be initialized as empty
+		// Verify probe was created with correct properties
+		assert.NotNil(t, probe)
+		assert.Equal(t, mockTagger, probe.tagger)
+		assert.Equal(t, "test-namespace", probe.namespace)
+		assert.Equal(t, "test-registry.com", probe.registryURL)
+		assert.Equal(t, imageCtrl, probe.imageCtrl)
+		assert.Equal(t, mockDigestResolver, probe.registry)
+		assert.Equal(t, mockLogger, probe.logger)
+		assert.NotNil(t, probe.cache)
+		assert.Empty(t, probe.cache) // Cache should be initialized as empty
 	})
 }
 
@@ -272,8 +271,8 @@ func TestRegistryCacheProbe_IsCached(t *testing.T) {
 				}
 			}
 
-			// Create image checker
-			checker := NewImageChecker(
+			// Create registry cache probe
+			probe := NewRegistryCacheProbe(
 				mockTagger,
 				"test-namespace",
 				"test-registry.com",
@@ -283,8 +282,7 @@ func TestRegistryCacheProbe_IsCached(t *testing.T) {
 			)
 
 			// Execute
-			ctx := context.Background()
-			cached, digest, err := checker.IsCached(ctx, tt.manifestName, tt.image, tt.buildHash, tt.svcToBuild)
+			cached, digest, err := probe.IsCached(tt.manifestName, tt.image, tt.buildHash, tt.svcToBuild)
 
 			// Verify results
 			assert.Equal(t, tt.expectedCached, cached)
@@ -311,8 +309,8 @@ func TestRegistryCacheProbe_IsCached_CacheBehavior(t *testing.T) {
 		mockLogger := &MockLoggerForCache{}
 		imageCtrl := createTestImageCtrl()
 
-		// Create image checker
-		checker := NewImageChecker(
+		// Create registry cache probe
+		probe := NewRegistryCacheProbe(
 			mockTagger,
 			"test-namespace",
 			"test-registry.com",
@@ -322,17 +320,16 @@ func TestRegistryCacheProbe_IsCached_CacheBehavior(t *testing.T) {
 		)
 
 		// Pre-populate cache
-		checker.mu.Lock()
-		checker.cache["test-image:tag"] = "test-image:tag@sha256:cached"
-		checker.mu.Unlock()
+		probe.mu.Lock()
+		probe.cache["test-image:tag"] = "test-image:tag@sha256:cached"
+		probe.mu.Unlock()
 
 		// Set up mock expectations - should not be called since result is cached
 		mockTagger.On("GetGlobalTagFromDevIfNeccesary", "test-image", "test-namespace", "test-registry.com", "hash123", imageCtrl).
 			Return("test-image:tag")
 
 		// Execute
-		ctx := context.Background()
-		cached, digest, err := checker.IsCached(ctx, "test-manifest", "test-image", "hash123", "test-service")
+		cached, digest, err := probe.IsCached("test-manifest", "test-image", "hash123", "test-service")
 
 		// Verify results
 		assert.True(t, cached)
@@ -392,8 +389,8 @@ func TestRegistryCacheProbe_LookupReferenceWithDigest(t *testing.T) {
 			mockDigestResolver.On("GetImageTagWithDigest", tt.reference).
 				Return(tt.mockDigestResult, tt.mockDigestError)
 
-			// Create image checker
-			checker := NewImageChecker(
+			// Create registry cache probe
+			probe := NewRegistryCacheProbe(
 				mockTagger,
 				"test-namespace",
 				"test-registry.com",
@@ -403,7 +400,7 @@ func TestRegistryCacheProbe_LookupReferenceWithDigest(t *testing.T) {
 			)
 
 			// Execute
-			digest, err := checker.LookupReferenceWithDigest(tt.reference)
+			digest, err := probe.LookupReferenceWithDigest(tt.reference)
 
 			// Verify results
 			assert.Equal(t, tt.expectedDigest, digest)
@@ -434,7 +431,7 @@ func TestRegistryCacheProbe_EdgeCases(t *testing.T) {
 			Return("test-image:tag@sha256:abc123", nil)
 		mockLogger.On("Infof", mock.Anything, mock.Anything).Return()
 
-		checker := NewImageChecker(
+		probe := NewRegistryCacheProbe(
 			mockTagger,
 			"test-namespace",
 			"test-registry.com",
@@ -444,7 +441,7 @@ func TestRegistryCacheProbe_EdgeCases(t *testing.T) {
 		)
 
 		// Should not panic with context
-		_, _, err := checker.IsCached(context.TODO(), "test-manifest", "test-image", "hash123", "test-service")
+		_, _, err := probe.IsCached("test-manifest", "test-image", "hash123", "test-service")
 		assert.NoError(t, err)
 
 		mockTagger.AssertExpectations(t)
@@ -458,7 +455,7 @@ func TestRegistryCacheProbe_EdgeCases(t *testing.T) {
 		mockLogger := &MockLoggerForCache{}
 		imageCtrl := createTestImageCtrl()
 
-		checker := NewImageChecker(
+		probe := NewRegistryCacheProbe(
 			mockTagger,
 			"test-namespace",
 			"test-registry.com",
@@ -468,7 +465,7 @@ func TestRegistryCacheProbe_EdgeCases(t *testing.T) {
 		)
 
 		// Test with empty strings
-		cached, digest, err := checker.IsCached(context.TODO(), "", "", "", "")
+		cached, digest, err := probe.IsCached("", "", "", "")
 		assert.False(t, cached)
 		assert.Empty(t, digest)
 		assert.NoError(t, err)
@@ -480,7 +477,7 @@ func TestRegistryCacheProbe_EdgeCases(t *testing.T) {
 		mockLogger := &MockLoggerForCache{}
 		imageCtrl := createTestImageCtrl()
 
-		checker := NewImageChecker(
+		probe := NewRegistryCacheProbe(
 			mockTagger,
 			"test-namespace",
 			"test-registry.com",
@@ -490,9 +487,9 @@ func TestRegistryCacheProbe_EdgeCases(t *testing.T) {
 		)
 
 		// Pre-populate cache
-		checker.mu.Lock()
-		checker.cache["test-image:tag"] = "test-image:tag@sha256:cached"
-		checker.mu.Unlock()
+		probe.mu.Lock()
+		probe.cache["test-image:tag"] = "test-image:tag@sha256:cached"
+		probe.mu.Unlock()
 
 		// Set up mock expectations
 		mockTagger.On("GetGlobalTagFromDevIfNeccesary", "test-image", "test-namespace", "test-registry.com", "hash123", imageCtrl).
@@ -503,7 +500,7 @@ func TestRegistryCacheProbe_EdgeCases(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			go func() {
 				defer func() { done <- true }()
-				cached, _, err := checker.IsCached(context.TODO(), "test-manifest", "test-image", "hash123", "test-service")
+				cached, _, err := probe.IsCached("test-manifest", "test-image", "hash123", "test-service")
 				assert.True(t, cached)
 				assert.NoError(t, err)
 			}()

@@ -71,7 +71,6 @@ type metadataCollectorInterface interface {
 
 type imageCheckerInterface interface {
 	CheckImages(ctx context.Context, manifestName string, buildManifest build.ManifestBuild, toBuildSvcs []string) ([]string, []string, error)
-	CloneGlobalImagesToDev(manifestName string, buildManifest build.ManifestBuild, svcsToClone []string) error
 	GetImageDigestReferenceForServiceDeploy(manifestName, service string, buildInfo *build.Info) (string, error)
 }
 
@@ -303,13 +302,6 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		sp.Stop()
 		ob.ioCtrl.Logger().Infof("Images cached: [%s]", strings.Join(cachedServices, ", "))
 		ob.ioCtrl.Logger().Infof("Images not cached: [%s]", strings.Join(notCachedServices, ", "))
-
-		sp = ob.ioCtrl.Out().Spinner("Cloning global images to dev...")
-		sp.Start()
-		if err := ob.imageChecker.CloneGlobalImagesToDev(options.Manifest.Name, options.Manifest.Build, cachedServices); err != nil {
-			return fmt.Errorf("error cloning global images to dev: %w", err)
-		}
-		sp.Stop()
 	}
 
 	for _, svcToBuild := range notCachedServices {

@@ -13,7 +13,6 @@
 package checker
 
 import (
-	"context"
 	"sync"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -40,7 +39,7 @@ type RegistryCacheProbe struct {
 	cache map[string]string
 }
 
-func NewImageChecker(tagger ImageTagger, namespace string, registryURL string, imageCtrl registry.ImageCtrl, registry DigestResolver, logger Logger) *RegistryCacheProbe {
+func NewRegistryCacheProbe(tagger ImageTagger, namespace string, registryURL string, imageCtrl registry.ImageCtrl, registry DigestResolver, logger Logger) *RegistryCacheProbe {
 	return &RegistryCacheProbe{
 		tagger:      tagger,
 		namespace:   namespace,
@@ -53,7 +52,7 @@ func NewImageChecker(tagger ImageTagger, namespace string, registryURL string, i
 	}
 }
 
-func (c *RegistryCacheProbe) IsCached(ctx context.Context, manifestName, image, buildHash, svcToBuild string) (bool, string, error) {
+func (c *RegistryCacheProbe) IsCached(manifestName, image, buildHash, svcToBuild string) (bool, string, error) {
 	if buildHash == "" {
 		return false, "", nil
 	}
