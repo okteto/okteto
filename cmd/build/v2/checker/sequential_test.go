@@ -195,7 +195,7 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 			expectedError:     errors.New("cache check failed"),
 		},
 		{
-			name:         "optimization: dependant services added to notCached without cache check",
+			name:         "optimization: dependent services added to notCached without cache check",
 			manifestName: "test-manifest",
 			buildManifest: build.ManifestBuild{
 				"service1": &build.Info{Image: "image1"},

@@ -100,29 +100,26 @@ func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manife
 			meta.CacheHit = false
 			notCachedSvcs = append(notCachedSvcs, svc)
 
-			// Recursively add all dependant services to notCached without checking cache
-			notCachedSvcs = s.addDependantsToNotCached(svc, dependantMap, processed, notCachedSvcs)
+			// Recursively add all dependent services to notCached without checking cache
+			notCachedSvcs = s.addDependentsToNotCached(svc, dependantMap, processed, notCachedSvcs)
 		}
 	}
 	return cachedSvcs, notCachedSvcs, nil
 }
 
-// addDependantsToNotCached recursively adds all dependant services to notCached
+// addDependentsToNotCached recursively adds all dependent services to notCached
 // This ensures that when a service is not cached, all services that depend on it
 // (directly or indirectly) are also marked as not cached without checking cache
-func (s *SequentialCheckStrategy) addDependantsToNotCached(svc string, dependantMap map[string][]string, processed map[string]bool, notCachedSvcs []string) []string {
-	if dependants, exists := dependantMap[svc]; exists {
-		for _, dependant := range dependants {
-			if !processed[dependant] {
-				processed[dependant] = true
-				notCachedSvcs = append(notCachedSvcs, dependant)
-				// Set metadata for dependant services
-				dependantMeta := s.metadataCollector.GetMetadata(dependant)
-				dependantMeta.CacheHit = false
-				dependantMeta.CacheHitDuration = 0 // No cache check performed
-
-				// Recursively add dependants of this dependant
-				notCachedSvcs = s.addDependantsToNotCached(dependant, dependantMap, processed, notCachedSvcs)
+func (s *SequentialCheckStrategy) addDependentsToNotCached(svc string, dependantMap map[string][]string, processed map[string]bool, notCachedSvcs []string) []string {
+	if dependents, exists := dependantMap[svc]; exists {
+		for _, dependent := range dependents {
+			if !processed[dependent] {
+				processed[dependent] = true
+				notCachedSvcs = append(notCachedSvcs, dependent)
+				// Set metadata for dependent services
+				dependentMeta := s.metadataCollector.GetMetadata(dependent)
+				dependentMeta.CacheHit = false
+				dependentMeta.CacheHitDuration = 0 // No cache check performed
 			}
 		}
 	}
