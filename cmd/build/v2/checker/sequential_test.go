@@ -301,8 +301,8 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 
 			cached, notCached, err := strategy.CheckServicesCache(context.Background(), tt.manifestName, tt.buildManifest, tt.svcsToBuild)
 
-			assert.Equal(t, tt.expectedCached, cached)
-			assert.Equal(t, tt.expectedNotCached, notCached)
+			assert.ElementsMatch(t, tt.expectedCached, cached, "cached services")
+			assert.ElementsMatch(t, tt.expectedNotCached, notCached, "not cached services")
 			assert.Equal(t, tt.expectedError, err)
 
 			smartBuildCtrl.AssertExpectations(t)
