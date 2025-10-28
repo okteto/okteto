@@ -120,6 +120,9 @@ func (s *SequentialCheckStrategy) addDependentsToNotCached(svc string, dependant
 				dependentMeta := s.metadataCollector.GetMetadata(dependent)
 				dependentMeta.CacheHit = false
 				dependentMeta.CacheHitDuration = 0 // No cache check performed
+
+				// Recursively add dependents of this dependent
+				notCachedSvcs = s.addDependentsToNotCached(dependent, dependantMap, processed, notCachedSvcs)
 			}
 		}
 	}
