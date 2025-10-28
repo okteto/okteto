@@ -137,7 +137,7 @@ func (m *MetadataCollector) collectForService(ctx context.Context, manifestName,
 			return
 		default:
 		}
-		h := m.smartBuildCtrl.GetServiceHash(info, svcName)
+		h := m.smartBuildCtrl.GetBuildHash(info, svcName)
 		ctxHash = h
 		ctxHashDuration = time.Since(start)
 	}()
