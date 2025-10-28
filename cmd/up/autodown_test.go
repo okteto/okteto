@@ -97,7 +97,7 @@ func TestNewAutoDown(t *testing.T) {
 			k8sLogger := io.NewK8sLogger()
 			at := &mockAnalyticsTracker{}
 
-			ad := newAutoDown(ioCtrl, k8sLogger, at)
+			ad := newAutoDown(ioCtrl, k8sLogger, at, analytics.NewUpMetricsMetadata())
 
 			assert.Equal(t, tt.expectedResult, ad.autoDown)
 			assert.NotNil(t, ad.ioCtrl)

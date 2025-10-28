@@ -81,7 +81,7 @@ func (nc *Command) ExecuteDeleteNamespace(ctx context.Context, namespace string,
 	}
 
 	if err := nc.watchDelete(ctx, namespace, k8sLogger); err != nil {
-		return err
+		return fmt.Errorf("watching namespace deletion stopped: %w", err)
 	}
 
 	oktetoLog.Success("Namespace '%s' deleted", namespace)
@@ -121,7 +121,6 @@ func (nc *Command) watchDelete(ctx context.Context, namespace string, k8sLogger 
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 		exit <- nc.waitForNamespaceDeleted(waitCtx, namespace, k8sLogger)
-		logsCtxCancel()
 	}(&wg)
 
 	wg.Add(1)
@@ -138,7 +137,9 @@ func (nc *Command) watchDelete(ctx context.Context, namespace string, k8sLogger 
 	select {
 	case <-stop:
 		ctxCancel()
+		logsCtxCancel()
 		oktetoLog.Infof("CTRL+C received, exit")
+		oktetoLog.Information("CTRL+C received, cancelling wait and logs streaming but operation will continue in background")
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		// wait until streaming logs have finished
