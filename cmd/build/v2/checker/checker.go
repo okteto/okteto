@@ -54,13 +54,13 @@ type ImageCacheChecker struct {
 
 // NewImageCacheChecker creates a new ImageCacheChecker instance with the appropriate check strategy.
 // It determines whether to use parallel or sequential checking based on the OKTETO_BUILD_CHECK_STRATEGY_PARALLEL environment variable.
-func NewImageCacheChecker(namespace string, registryURL string, tagger ImageTagger, smartBuildCtrl SmartBuildController, imageCtrl registry.ImageCtrl, metadataCollector *metadata.MetadataCollector, registry DigestResolver, logger *io.Controller, buildEnvVarsSetter *environment.ServiceEnvVarsSetter) *ImageCacheChecker {
+func NewImageCacheChecker(namespace string, registryURL string, tagger ImageTagger, smartBuildCtrl SmartBuildController, imageCtrl registry.ImageCtrl, metadataCollector *metadata.MetadataCollector, registry DigestResolver, logger *io.Controller, buildEnvVarsHandler *environment.ServiceEnvVarsHandler) *ImageCacheChecker {
 	cacheChecker := NewImageChecker(tagger, namespace, registryURL, imageCtrl, registry, logger)
 	var checkStrategy CheckStrategy
 	if env.LoadBoolean(parallelCheckStrategyEnvVar) {
 		// TODO: Implement parallel check strategy
 	} else {
-		checkStrategy = newSequentialCheckStrategy(smartBuildCtrl, tagger, cacheChecker, metadataCollector, logger, buildEnvVarsSetter)
+		checkStrategy = newSequentialCheckStrategy(smartBuildCtrl, tagger, cacheChecker, metadataCollector, logger, buildEnvVarsHandler)
 	}
 
 	return &ImageCacheChecker{

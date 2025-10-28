@@ -146,7 +146,7 @@ func Test_SetServiceEnvVars(t *testing.T) {
 
 			registry := newFakeRegistry()
 
-			serviceEnvVarsSetter := NewServiceEnvVarsSetter(io.NewIOController(), registry)
+			serviceEnvVarsSetter := NewServiceEnvVarsHandler(io.NewIOController(), registry)
 			serviceEnvVarsSetter.SetServiceEnvVars(tt.input.service, tt.input.reference)
 
 			registryEnvValue := os.Getenv(registryEnv)

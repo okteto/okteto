@@ -85,9 +85,9 @@ type OktetoBuilder struct {
 	imageChecker  imageCheckerInterface
 	tagger        imageTagger
 
-	smartBuildCtrl       *smartbuild.Ctrl
-	serviceEnvVarsSetter *environment.ServiceEnvVarsSetter
-	metadataCollector    metadataCollectorInterface
+	smartBuildCtrl        *smartbuild.Ctrl
+	serviceEnvVarsHandler *environment.ServiceEnvVarsHandler
+	metadataCollector     metadataCollectorInterface
 
 	ioCtrl    *io.Controller
 	k8sLogger *io.K8sLogger
@@ -118,8 +118,8 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registryCtrl oktetoRegi
 	metadataCollector := metadata.NewMetadataCollector(okCtx, config, smartBuildCtrl, ioCtrl)
 	imageCtrl := registry.NewImageCtrl(okCtx)
 
-	serviceEnvVarsSetter := environment.NewServiceEnvVarsSetter(ioCtrl, registryCtrl)
-	serviceEnvVarsSetter.SetEnvVar(OktetoEnableSmartBuildEnvVar, strconv.FormatBool(config.isSmartBuildsEnable))
+	serviceEnvVarsHandler := environment.NewServiceEnvVarsHandler(ioCtrl, registryCtrl)
+	serviceEnvVarsHandler.SetEnvVar(OktetoEnableSmartBuildEnvVar, strconv.FormatBool(config.isSmartBuildsEnable))
 
 	imageChecker := checker.NewImageCacheChecker(
 		okCtx.GetNamespace(),
@@ -130,20 +130,20 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registryCtrl oktetoRegi
 		metadataCollector,
 		registryCtrl,
 		ioCtrl,
-		serviceEnvVarsSetter)
+		serviceEnvVarsHandler)
 	ob := &OktetoBuilder{
-		Builder:              basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl},
-		Registry:             registryCtrl,
-		imageChecker:         imageChecker,
-		Config:               config,
-		ioCtrl:               ioCtrl,
-		smartBuildCtrl:       smartBuildCtrl,
-		oktetoContext:        okCtx,
-		k8sLogger:            k8sLogger,
-		metadataCollector:    metadataCollector,
-		onBuildFinish:        onBuildFinish,
-		serviceEnvVarsSetter: serviceEnvVarsSetter,
-		tagger:               tagger,
+		Builder:               basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl},
+		Registry:              registryCtrl,
+		imageChecker:          imageChecker,
+		Config:                config,
+		ioCtrl:                ioCtrl,
+		smartBuildCtrl:        smartBuildCtrl,
+		oktetoContext:         okCtx,
+		k8sLogger:             k8sLogger,
+		metadataCollector:     metadataCollector,
+		onBuildFinish:         onBuildFinish,
+		serviceEnvVarsHandler: serviceEnvVarsHandler,
+		tagger:                tagger,
 	}
 
 	return ob
@@ -184,8 +184,8 @@ func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish)
 	metadataCollector := metadata.NewMetadataCollector(okCtx, config, smartBuildCtrl, ioCtrl)
 	imageCtrl := registry.NewImageCtrl(okCtx)
 
-	serviceEnvVarsSetter := environment.NewServiceEnvVarsSetter(ioCtrl, reg)
-	serviceEnvVarsSetter.SetEnvVar(OktetoEnableSmartBuildEnvVar, strconv.FormatBool(config.isSmartBuildsEnable))
+	serviceEnvVarsHandler := environment.NewServiceEnvVarsHandler(ioCtrl, reg)
+	serviceEnvVarsHandler.SetEnvVar(OktetoEnableSmartBuildEnvVar, strconv.FormatBool(config.isSmartBuildsEnable))
 
 	imageChecker := checker.NewImageCacheChecker(
 		okCtx.GetNamespace(),
@@ -196,26 +196,26 @@ func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish)
 		metadataCollector,
 		reg,
 		ioCtrl,
-		serviceEnvVarsSetter)
+		serviceEnvVarsHandler)
 
 	return &OktetoBuilder{
-		Builder:              basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl},
-		Registry:             reg,
-		imageChecker:         imageChecker,
-		Config:               config,
-		ioCtrl:               ioCtrl,
-		smartBuildCtrl:       smartBuildCtrl,
-		oktetoContext:        okCtx,
-		metadataCollector:    metadataCollector,
-		onBuildFinish:        onBuildFinish,
-		serviceEnvVarsSetter: serviceEnvVarsSetter,
-		tagger:               tagger,
+		Builder:               basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl},
+		Registry:              reg,
+		imageChecker:          imageChecker,
+		Config:                config,
+		ioCtrl:                ioCtrl,
+		smartBuildCtrl:        smartBuildCtrl,
+		oktetoContext:         okCtx,
+		metadataCollector:     metadataCollector,
+		onBuildFinish:         onBuildFinish,
+		serviceEnvVarsHandler: serviceEnvVarsHandler,
+		tagger:                tagger,
 	}
 }
 
 // GetBuildEnvVars returns the build env vars
 func (ob *OktetoBuilder) GetBuildEnvVars() map[string]string {
-	return ob.serviceEnvVarsSetter.GetBuildEnvVars()
+	return ob.serviceEnvVarsHandler.GetBuildEnvVars()
 }
 
 // IsV1 returns false since it is a builder v2
@@ -335,7 +335,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		metaMap[svcToBuild].BuildDuration = time.Since(buildDurationStart)
 		metaMap[svcToBuild].Success = true
 
-		ob.serviceEnvVarsSetter.SetServiceEnvVars(svcToBuild, imageTag)
+		ob.serviceEnvVarsHandler.SetServiceEnvVars(svcToBuild, imageTag)
 	}
 
 	if options.EnableStages {
@@ -376,7 +376,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 		tagsToBuild = fmt.Sprintf("%s,%s", tagsToBuild, globalImage)
 	}
 	buildSvcInfo.Image = tagsToBuild
-	if err := buildSvcInfo.AddArgs(bc.serviceEnvVarsSetter.GetBuildEnvVars()); err != nil {
+	if err := buildSvcInfo.AddArgs(bc.serviceEnvVarsHandler.GetBuildEnvVars()); err != nil {
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcName, err)
 	}
 

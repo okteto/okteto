@@ -119,7 +119,7 @@ func (bc *OktetoBuilder) checkServiceToBuildDuringDeploy(service string, manifes
 	}
 	bc.ioCtrl.Logger().Debugf("Skipping build for image for service: %s", service)
 
-	bc.serviceEnvVarsSetter.SetServiceEnvVars(service, imageWithDigest)
+	bc.serviceEnvVarsHandler.SetServiceEnvVars(service, imageWithDigest)
 
 	if manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
 		stack := manifest.Deploy.ComposeSection.Stack

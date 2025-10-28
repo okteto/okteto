@@ -28,15 +28,15 @@ type imageReferenceGetter interface {
 	GetImageReference(reference string) (registry.OktetoImageReference, error)
 }
 
-type ServiceEnvVarsSetter struct {
+type ServiceEnvVarsHandler struct {
 	buildEnvironments    map[string]string
 	lock                 sync.RWMutex
 	ioCtrl               *io.Controller
 	imageReferenceGetter imageReferenceGetter
 }
 
-func NewServiceEnvVarsSetter(ioCtrl *io.Controller, imageReferenceGetter imageReferenceGetter) *ServiceEnvVarsSetter {
-	return &ServiceEnvVarsSetter{
+func NewServiceEnvVarsHandler(ioCtrl *io.Controller, imageReferenceGetter imageReferenceGetter) *ServiceEnvVarsHandler {
+	return &ServiceEnvVarsHandler{
 		lock:                 sync.RWMutex{},
 		ioCtrl:               ioCtrl,
 		imageReferenceGetter: imageReferenceGetter,
@@ -45,7 +45,7 @@ func NewServiceEnvVarsSetter(ioCtrl *io.Controller, imageReferenceGetter imageRe
 }
 
 // SetEnvVar sets an environment variable
-func (es *ServiceEnvVarsSetter) SetEnvVar(key, value string) {
+func (es *ServiceEnvVarsHandler) SetEnvVar(key, value string) {
 	es.lock.Lock()
 	es.buildEnvironments[key] = value
 	os.Setenv(key, value)
@@ -53,7 +53,7 @@ func (es *ServiceEnvVarsSetter) SetEnvVar(key, value string) {
 }
 
 // SetServiceEnvVars set okteto build env vars
-func (es *ServiceEnvVarsSetter) SetServiceEnvVars(service, reference string) {
+func (es *ServiceEnvVarsHandler) SetServiceEnvVars(service, reference string) {
 	ref, err := es.imageReferenceGetter.GetImageReference(reference)
 	if err != nil {
 		es.ioCtrl.Logger().Debugf("could not set service env vars: %s", err)
@@ -103,6 +103,6 @@ func (es *ServiceEnvVarsSetter) SetServiceEnvVars(service, reference string) {
 }
 
 // GetBuildEnvVars gets okteto build env vars
-func (es *ServiceEnvVarsSetter) GetBuildEnvVars() map[string]string {
+func (es *ServiceEnvVarsHandler) GetBuildEnvVars() map[string]string {
 	return es.buildEnvironments
 }

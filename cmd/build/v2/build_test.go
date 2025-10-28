@@ -231,9 +231,9 @@ func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegi
 				CurrentContext: "test",
 			},
 		},
-		serviceEnvVarsSetter: environment.NewServiceEnvVarsSetter(io.NewIOController(), registry),
-		metadataCollector:    &fakeMetadataCollector{metadataMap: make(map[string]*analytics.ImageBuildMetadata)},
-		imageChecker:         &fakeImageChecker{imageMap: make(map[string]*analytics.ImageBuildMetadata), fakeRegistry: registry, tagger: tagger},
+		serviceEnvVarsHandler: environment.NewServiceEnvVarsHandler(io.NewIOController(), registry),
+		metadataCollector:     &fakeMetadataCollector{metadataMap: make(map[string]*analytics.ImageBuildMetadata)},
+		imageChecker:          &fakeImageChecker{imageMap: make(map[string]*analytics.ImageBuildMetadata), fakeRegistry: registry, tagger: tagger},
 	}
 }
 
