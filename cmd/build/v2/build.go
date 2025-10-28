@@ -281,7 +281,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	}
 	toBuildSvcs = tree.Ordered()
 
-	ob.ioCtrl.Logger().Infof("Images to build: [%s]", strings.Join(toBuildSvcs, ", "))
+	ob.ioCtrl.Logger().Infof("Ordered services: [%s]", strings.Join(toBuildSvcs, ", "))
 
 	sp := ob.ioCtrl.Out().Spinner("Collecting metadata for the images")
 	sp.Start()
