@@ -14,22 +14,19 @@
 package smartbuild
 
 import (
-	"fmt"
+	"context"
 
+	"github.com/okteto/okteto/cmd/build/v2/environment"
 	"github.com/okteto/okteto/pkg/build"
-	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/afero"
-)
-
-const (
-	// OktetoEnableSmartBuildEnvVar represents whether the feature flag to enable smart builds is enabled or not
-	OktetoEnableSmartBuildEnvVar = "OKTETO_SMART_BUILDS_ENABLED"
 )
 
 // registryController is the interface to interact with registries
 type registryController interface {
 	GetDevImageFromGlobal(string) string
+	GetImageTagWithDigest(string) (string, error)
 	Clone(string, string) (string, error)
 	IsGlobalRegistry(string) bool
 	IsOktetoRegistry(string) bool
@@ -47,33 +44,62 @@ type hasherController interface {
 	hashWithBuildContext(*build.Info, string) string
 }
 
+// CheckStrategy is the interface for the check strategy
+type CheckStrategy interface {
+	CheckServicesCache(ctx context.Context, manifestName string, buildManifest build.ManifestBuild, toBuildSvcs []string) ([]string, []string, error)
+	GetImageDigestReferenceForServiceDeploy(manifestName, service string, buildInfo *build.Info) (string, error)
+}
+
 // Ctrl is the controller for smart builds
 type Ctrl struct {
+	CheckStrategy
 	gitRepo            repositoryInterface
 	registryController registryController
 	ioCtrl             *io.Controller
 
 	hasher hasherController
-
-	isEnabled bool
+	config *Config
 }
 
 // NewSmartBuildCtrl creates a new smart build controller
-func NewSmartBuildCtrl(repo repositoryInterface, registry registryController, fs afero.Fs, ioCtrl *io.Controller, wdGetter osWorkingDirGetter) *Ctrl {
-	isEnabled := env.LoadBooleanOrDefault(OktetoEnableSmartBuildEnvVar, true)
+func NewSmartBuildCtrl(
+	repo repositoryInterface,
+	registry registryController,
+	fs afero.Fs,
+	ioCtrl *io.Controller,
+	wdGetter osWorkingDirGetter,
+	smartBuildConfig *Config,
+	tagger ImageTagger,
+	imageCtrl registry.ImageCtrl,
+	serviceEnvVarsHandler *environment.ServiceEnvVarsHandler,
+	ns string,
+	registryURL string) *Ctrl {
+	hasher := newServiceHasher(repo, fs, wdGetter, ioCtrl)
+	cloner := NewCloner(registry, ioCtrl)
+	cacheChecker := NewRegistryCacheProbe(tagger, ns, registryURL, imageCtrl, registry, ioCtrl)
+
+	var checkStrategy CheckStrategy
+	if smartBuildConfig.isSequentialCheckStrategy {
+		checkStrategy = NewSequentialCheckStrategy(tagger, hasher, cacheChecker, ioCtrl, serviceEnvVarsHandler, cloner)
+	} else {
+		// TODO: Implement parallel check strategy
+		// For now, use sequential strategy as fallback since parallel is not implemented yet
+		checkStrategy = NewSequentialCheckStrategy(tagger, hasher, cacheChecker, ioCtrl, serviceEnvVarsHandler, cloner)
+	}
 
 	return &Ctrl{
 		gitRepo:            repo,
-		isEnabled:          isEnabled,
-		hasher:             newServiceHasher(repo, fs, wdGetter, ioCtrl),
+		config:             smartBuildConfig,
+		hasher:             hasher,
 		registryController: registry,
 		ioCtrl:             ioCtrl,
+		CheckStrategy:      checkStrategy,
 	}
 }
 
 // IsEnabled returns true if smart builds are enabled, false otherwise
 func (s *Ctrl) IsEnabled() bool {
-	return s.isEnabled
+	return s.config.isEnabled
 }
 
 // GetProjectHash returns the commit hash of the project
@@ -87,23 +113,4 @@ func (s *Ctrl) GetBuildHash(buildInfo *build.Info, service string) string {
 	s.ioCtrl.Logger().Debugf("getting hash based on the buildContext env var")
 	s.ioCtrl.Logger().Info("getting hash using build context due to env var")
 	return s.hasher.hashWithBuildContext(buildInfo, service)
-}
-
-// CloneGlobalImageToDev clones the image from the global registry to the dev registry if needed
-// if the built image belongs to global registry we clone it to the dev registry
-// so that in can be used in dev containers (i.e. okteto up)
-func (s *Ctrl) CloneGlobalImageToDev(globalImage, svcImage string) (string, error) {
-	if s.registryController.IsGlobalRegistry(globalImage) {
-		s.ioCtrl.Logger().Debugf("Copying image '%s' from global to personal registry", globalImage)
-		if svcImage == "" {
-			svcImage = s.registryController.GetDevImageFromGlobal(globalImage)
-		}
-		devImage, err := s.registryController.Clone(globalImage, svcImage)
-		if err != nil {
-			return "", fmt.Errorf("error cloning image '%s' to '%s': %w", globalImage, svcImage, err)
-		}
-		return devImage, nil
-	}
-	s.ioCtrl.Logger().Debugf("Image '%s' is not in the global registry", globalImage)
-	return globalImage, nil
 }

@@ -10,15 +10,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package checker
+package smartbuild
 
 import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
-	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -52,27 +50,23 @@ type ServiceEnvVarsSetter interface {
 	SetServiceEnvVars(service, reference string)
 }
 
-type SvcMetadataGetter interface {
-	GetMetadata(svcName string) *analytics.ImageBuildMetadata
-}
-
 type SequentialCheckStrategy struct {
-	smartBuildCtrl       SmartBuildController
 	tagger               ImageTagger
+	hasher               hasherController
 	imageCacheChecker    CacheProbe
-	metadataCollector    SvcMetadataGetter
 	ioCtrl               *io.Controller
 	serviceEnvVarsSetter ServiceEnvVarsSetter
+	cloner               *cloner
 }
 
-func NewSequentialCheckStrategy(smartBuildCtrl SmartBuildController, tagger ImageTagger, imageCacheChecker CacheProbe, metadataCollector SvcMetadataGetter, ioCtrl *io.Controller, serviceEnvVarsSetter ServiceEnvVarsSetter) *SequentialCheckStrategy {
+func NewSequentialCheckStrategy(tagger ImageTagger, hasher hasherController, imageCacheChecker CacheProbe, ioCtrl *io.Controller, serviceEnvVarsSetter ServiceEnvVarsSetter, cloner *cloner) *SequentialCheckStrategy {
 	return &SequentialCheckStrategy{
-		smartBuildCtrl:       smartBuildCtrl,
 		tagger:               tagger,
+		hasher:               hasher,
 		imageCacheChecker:    imageCacheChecker,
-		metadataCollector:    metadataCollector,
 		ioCtrl:               ioCtrl,
 		serviceEnvVarsSetter: serviceEnvVarsSetter,
+		cloner:               cloner,
 	}
 }
 
@@ -99,21 +93,17 @@ func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manife
 		}
 
 		s.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svc))
-		meta := s.metadataCollector.GetMetadata(svc)
-		start := time.Now()
 		buildInfo := buildManifest[svc]
-		buildHash := s.smartBuildCtrl.GetBuildHash(buildInfo, svc)
+		buildHash := s.hasher.hashWithBuildContext(buildInfo, svc)
 
 		isCached, _, err := s.imageCacheChecker.IsCached(manifestName, buildInfo.Image, buildHash, svc)
 		if err != nil {
 			return cachedSvcs, notCachedSvcs, err
 		}
-		meta.CacheHitDuration = time.Since(start)
 
 		processed[svc] = true
 
 		if isCached {
-			meta.CacheHit = true
 			cachedSvcs = append(cachedSvcs, svc)
 
 			reference, err := s.cloneGlobalImageToDev(manifestName, buildManifest, svc)
@@ -121,9 +111,7 @@ func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manife
 				return cachedSvcs, notCachedSvcs, err
 			}
 			s.serviceEnvVarsSetter.SetServiceEnvVars(svc, reference)
-			meta.Success = true
 		} else {
-			meta.CacheHit = false
 			notCachedSvcs = append(notCachedSvcs, svc)
 
 			// Recursively add all dependent services to notCached without checking cache
@@ -148,7 +136,7 @@ func (s *SequentialCheckStrategy) cloneGlobalImageToDev(manifestName string, bui
 	if !ok {
 		return "", fmt.Errorf("image %s not found in cache", svc)
 	}
-	reference, err := s.smartBuildCtrl.CloneGlobalImageToDev(globalImage, devImage)
+	reference, err := s.cloner.CloneGlobalImageToDev(globalImage, devImage)
 	if err != nil {
 		return reference, err
 	}
@@ -166,10 +154,6 @@ func (s *SequentialCheckStrategy) addDependentsToNotCached(svc string, dependant
 				processed[dependent] = true
 				notCachedSvcs = append(notCachedSvcs, dependent)
 				// Set metadata for dependent services
-				dependentMeta := s.metadataCollector.GetMetadata(dependent)
-				dependentMeta.CacheHit = false
-				dependentMeta.CacheHitDuration = 0 // No cache check performed
-
 				// Recursively add dependents of this dependent
 				notCachedSvcs = s.addDependentsToNotCached(dependent, dependantMap, processed, notCachedSvcs)
 			}

@@ -18,10 +18,13 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/okteto/okteto/cmd/build/v2/environment"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 type fakeConfigRepo struct {
@@ -46,6 +49,9 @@ func (frc fakeRegistryController) IsOktetoRegistry(string) bool { return false }
 func (fr fakeRegistryController) Clone(from, to string) (string, error) {
 	return from, nil
 }
+func (fr fakeRegistryController) GetImageTagWithDigest(image string) (string, error) {
+	return image + "@sha256:fake", nil
+}
 
 type fakeHasher struct {
 	err  error
@@ -55,6 +61,63 @@ type fakeHasher struct {
 func (fh fakeHasher) hashProjectCommit(*build.Info) (string, error) { return fh.hash, fh.err }
 func (fh fakeHasher) hashWithBuildContext(*build.Info, string) string {
 	return fh.hash
+}
+
+type fakeImageTagger struct {
+	mock.Mock
+}
+
+func (fit *fakeImageTagger) GetGlobalTagFromDevIfNeccesary(tags, namespace, registryURL, buildHash string, ic registry.ImageCtrl) string {
+	args := fit.Called(tags, namespace, registryURL, buildHash, ic)
+	return args.String(0)
+}
+
+func (fit *fakeImageTagger) GetImageReferencesForTag(manifestName, svcToBuildName, tag string) []string {
+	args := fit.Called(manifestName, svcToBuildName, tag)
+	return args.Get(0).([]string)
+}
+
+func (fit *fakeImageTagger) GetImageReferencesForDeploy(manifestName, svcToBuildName string) []string {
+	args := fit.Called(manifestName, svcToBuildName)
+	return args.Get(0).([]string)
+}
+
+type fakeImageCtrl struct {
+	mock.Mock
+}
+
+func (fic *fakeImageCtrl) IsOktetoCluster() bool {
+	args := fic.Called()
+	return args.Bool(0)
+}
+
+func (fic *fakeImageCtrl) GetGlobalNamespace() string {
+	args := fic.Called()
+	return args.String(0)
+}
+
+func (fic *fakeImageCtrl) GetNamespace() string {
+	args := fic.Called()
+	return args.String(0)
+}
+
+func (fic *fakeImageCtrl) GetRegistryURL() string {
+	args := fic.Called()
+	return args.String(0)
+}
+
+func (fic *fakeImageCtrl) GetImageReference(reference string) (registry.OktetoImageReference, error) {
+	args := fic.Called(reference)
+	return args.Get(0).(registry.OktetoImageReference), args.Error(1)
+}
+
+type fakeOktetoRegistry struct {
+	mock.Mock
+}
+
+func (fr *fakeOktetoRegistry) GetImageReference(reference string) (registry.OktetoImageReference, error) {
+	args := fr.Called(reference)
+	return args.Get(0).(registry.OktetoImageReference), args.Error(1)
 }
 
 func TestNewSmartBuildCtrl(t *testing.T) {
@@ -104,7 +167,15 @@ func TestNewSmartBuildCtrl(t *testing.T) {
 			t.Setenv(OktetoEnableSmartBuildEnvVar, tt.input.isEnabledValue)
 
 			wdGetter := fakeWorkingDirGetter{}
-			ctrl := NewSmartBuildCtrl(&fakeConfigRepo{}, &fakeRegistryController{}, afero.NewMemMapFs(), io.NewIOController(), wdGetter)
+			ioCtrl := io.NewIOController()
+			config := &Config{isEnabled: tt.output.isEnabled, isSequentialCheckStrategy: true}
+			tagger := &fakeImageTagger{}
+			// Create a fake OktetoRegistry that implements the imageReferenceGetter interface
+			fakeRegistry := &fakeOktetoRegistry{}
+			serviceEnvVarsHandler := environment.NewServiceEnvVarsHandler(ioCtrl, fakeRegistry)
+
+			imageCtrl := registry.NewImageCtrl(&fakeImageCtrl{})
+			ctrl := NewSmartBuildCtrl(&fakeConfigRepo{}, &fakeRegistryController{}, afero.NewMemMapFs(), ioCtrl, wdGetter, config, tagger, imageCtrl, serviceEnvVarsHandler, "test-namespace", "test-registry.com")
 
 			assert.Equal(t, tt.output.isEnabled, ctrl.IsEnabled())
 		})
@@ -386,15 +457,14 @@ func TestCloneGlobalImageToDev(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctrl := Ctrl{
-				registryController: fakeRegistryController{
-					isGlobalRegistry: tt.input.from == "okteto.global/myimage",
-					err:              tt.output.err,
-				},
-				ioCtrl: io.NewIOController(),
+			registry := fakeRegistryController{
+				isGlobalRegistry: tt.input.from == "okteto.global/myimage",
+				err:              tt.output.err,
 			}
+			ioCtrl := io.NewIOController()
+			cloner := NewCloner(registry, ioCtrl)
 
-			devImage, err := ctrl.CloneGlobalImageToDev(tt.input.from, tt.input.to)
+			devImage, err := cloner.CloneGlobalImageToDev(tt.input.from, tt.input.to)
 
 			assert.Equal(t, tt.output.devImage, devImage)
 			assert.Equal(t, tt.output.err, err)

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package checker
+package smartbuild
 
 import (
 	"context"
@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -29,20 +28,6 @@ import (
 )
 
 // Additional mocks needed for SequentialCheckStrategy
-
-type MockSmartBuildController struct {
-	mock.Mock
-}
-
-func (m *MockSmartBuildController) GetBuildHash(buildInfo *build.Info, service string) string {
-	args := m.Called(buildInfo, service)
-	return args.String(0)
-}
-
-func (m *MockSmartBuildController) CloneGlobalImageToDev(globalImage, svcImage string) (string, error) {
-	args := m.Called(globalImage, svcImage)
-	return args.String(0), args.Error(1)
-}
 
 type MockImageTagger struct {
 	mock.Mock
@@ -61,6 +46,20 @@ func (m *MockImageTagger) GetImageReferencesForTag(manifestName, svcToBuildName,
 func (m *MockImageTagger) GetImageReferencesForDeploy(manifestName, svcToBuildName string) []string {
 	args := m.Called(manifestName, svcToBuildName)
 	return args.Get(0).([]string)
+}
+
+type MockHasherController struct {
+	mock.Mock
+}
+
+func (m *MockHasherController) hashProjectCommit(buildInfo *build.Info) (string, error) {
+	args := m.Called(buildInfo)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockHasherController) hashWithBuildContext(buildInfo *build.Info, service string) string {
+	args := m.Called(buildInfo, service)
+	return args.String(0)
 }
 
 type MockCacheProbe struct {
@@ -90,48 +89,57 @@ func (m *MockServiceEnvVarsSetter) SetServiceEnvVars(service, reference string) 
 	m.Called(service, reference)
 }
 
-type MockMetadataCollector struct {
+type MockRegistryController struct {
 	mock.Mock
-	metadata map[string]*analytics.ImageBuildMetadata
 }
 
-func NewMockMetadataCollector() *MockMetadataCollector {
-	return &MockMetadataCollector{
-		metadata: make(map[string]*analytics.ImageBuildMetadata),
-	}
+func (m *MockRegistryController) GetDevImageFromGlobal(image string) string {
+	args := m.Called(image)
+	return args.String(0)
 }
 
-func (m *MockMetadataCollector) GetMetadata(svcName string) *analytics.ImageBuildMetadata {
-	args := m.Called(svcName)
-	if args.Get(0) == nil {
-		// Return a default metadata object if none is provided
-		if m.metadata[svcName] == nil {
-			m.metadata[svcName] = &analytics.ImageBuildMetadata{}
-		}
-		return m.metadata[svcName]
-	}
-	return args.Get(0).(*analytics.ImageBuildMetadata)
+func (m *MockRegistryController) GetImageTagWithDigest(image string) (string, error) {
+	args := m.Called(image)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockRegistryController) Clone(from, to string) (string, error) {
+	args := m.Called(from, to)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockRegistryController) IsGlobalRegistry(image string) bool {
+	args := m.Called(image)
+	return args.Bool(0)
+}
+
+func (m *MockRegistryController) IsOktetoRegistry(image string) bool {
+	args := m.Called(image)
+	return args.Bool(0)
 }
 
 // Helper function to create a test SequentialCheckStrategy
-func createTestSequentialCheckStrategy() (*SequentialCheckStrategy, *MockSmartBuildController, *MockImageTagger, *MockCacheProbe, *MockMetadataCollector, *MockServiceEnvVarsSetter, *io.Controller) {
-	smartBuildCtrl := &MockSmartBuildController{}
+func createTestSequentialCheckStrategy() (*SequentialCheckStrategy, *MockImageTagger, *MockHasherController, *MockCacheProbe, *MockServiceEnvVarsSetter, *cloner, *MockRegistryController, *io.Controller) {
 	tagger := &MockImageTagger{}
+	hasher := &MockHasherController{}
 	imageCacheChecker := &MockCacheProbe{}
-	metadataCollector := NewMockMetadataCollector()
 	serviceEnvVarsSetter := &MockServiceEnvVarsSetter{}
 	ioCtrl := io.NewIOController()
 
+	// Create a real cloner with a mock registry controller
+	mockRegistry := &MockRegistryController{}
+	cloner := NewCloner(mockRegistry, ioCtrl)
+
 	strategy := &SequentialCheckStrategy{
-		smartBuildCtrl:       smartBuildCtrl,
 		tagger:               tagger,
+		hasher:               hasher,
 		imageCacheChecker:    imageCacheChecker,
-		metadataCollector:    metadataCollector,
 		ioCtrl:               ioCtrl,
 		serviceEnvVarsSetter: serviceEnvVarsSetter,
+		cloner:               cloner,
 	}
 
-	return strategy, smartBuildCtrl, tagger, imageCacheChecker, metadataCollector, serviceEnvVarsSetter, ioCtrl
+	return strategy, tagger, hasher, imageCacheChecker, serviceEnvVarsSetter, cloner, mockRegistry, ioCtrl
 }
 
 func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
@@ -140,7 +148,7 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 		manifestName      string
 		buildManifest     build.ManifestBuild
 		svcsToBuild       []string
-		setupMocks        func(*MockSmartBuildController, *MockCacheProbe, *MockMetadataCollector, *MockServiceEnvVarsSetter)
+		setupMocks        func(*MockHasherController, *MockCacheProbe, *MockServiceEnvVarsSetter, *MockRegistryController)
 		expectedCached    []string
 		expectedNotCached []string
 		expectedError     error
@@ -153,21 +161,21 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 				"service2": &build.Info{Image: "image2"},
 			},
 			svcsToBuild: []string{"service1", "service2"},
-			setupMocks: func(smartBuildCtrl *MockSmartBuildController, cacheProbe *MockCacheProbe, metadataCollector *MockMetadataCollector, serviceEnvVarsSetter *MockServiceEnvVarsSetter) {
-				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
-				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service2").Return("hash2")
+			setupMocks: func(hasher *MockHasherController, cacheProbe *MockCacheProbe, serviceEnvVarsSetter *MockServiceEnvVarsSetter, mockRegistry *MockRegistryController) {
+				hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
+				hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service2").Return("hash2")
 
 				cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(true, "digest1", nil)
 				cacheProbe.On("IsCached", "test-manifest", "image2", "hash2", "service2").Return(true, "digest2", nil)
 				cacheProbe.On("GetFromCache", "service1").Return(true, "global-image1")
 				cacheProbe.On("GetFromCache", "service2").Return(true, "global-image2")
-				smartBuildCtrl.On("CloneGlobalImageToDev", "global-image1", "image1").Return("dev-image1", nil)
-				smartBuildCtrl.On("CloneGlobalImageToDev", "global-image2", "image2").Return("dev-image2", nil)
 
-				metadataCollector.On("GetMetadata", "service1").Return(&analytics.ImageBuildMetadata{})
-				metadataCollector.On("GetMetadata", "service2").Return(&analytics.ImageBuildMetadata{})
-				serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "dev-image1").Return()
-				serviceEnvVarsSetter.On("SetServiceEnvVars", "service2", "dev-image2").Return()
+				// Set up mock registry controller expectations for cloning
+				mockRegistry.On("IsGlobalRegistry", "global-image1").Return(false)
+				mockRegistry.On("IsGlobalRegistry", "global-image2").Return(false)
+
+				serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "global-image1").Return()
+				serviceEnvVarsSetter.On("SetServiceEnvVars", "service2", "global-image2").Return()
 			},
 			expectedCached:    []string{"service1", "service2"},
 			expectedNotCached: nil,
@@ -181,15 +189,12 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 				"service2": &build.Info{Image: "image2"},
 			},
 			svcsToBuild: []string{"service1", "service2"},
-			setupMocks: func(smartBuildCtrl *MockSmartBuildController, cacheProbe *MockCacheProbe, metadataCollector *MockMetadataCollector, serviceEnvVarsSetter *MockServiceEnvVarsSetter) {
-				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
-				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service2").Return("hash2")
+			setupMocks: func(hasher *MockHasherController, cacheProbe *MockCacheProbe, serviceEnvVarsSetter *MockServiceEnvVarsSetter, mockRegistry *MockRegistryController) {
+				hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
+				hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service2").Return("hash2")
 
 				cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(false, "", nil)
 				cacheProbe.On("IsCached", "test-manifest", "image2", "hash2", "service2").Return(false, "", nil)
-
-				metadataCollector.On("GetMetadata", "service1").Return(&analytics.ImageBuildMetadata{})
-				metadataCollector.On("GetMetadata", "service2").Return(&analytics.ImageBuildMetadata{})
 			},
 			expectedCached:    nil,
 			expectedNotCached: []string{"service1", "service2"},
@@ -203,18 +208,18 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 				"service2": &build.Info{Image: "image2"},
 			},
 			svcsToBuild: []string{"service1", "service2"},
-			setupMocks: func(smartBuildCtrl *MockSmartBuildController, cacheProbe *MockCacheProbe, metadataCollector *MockMetadataCollector, serviceEnvVarsSetter *MockServiceEnvVarsSetter) {
-				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
-				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service2").Return("hash2")
+			setupMocks: func(hasher *MockHasherController, cacheProbe *MockCacheProbe, serviceEnvVarsSetter *MockServiceEnvVarsSetter, mockRegistry *MockRegistryController) {
+				hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
+				hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service2").Return("hash2")
 
 				cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(true, "digest1", nil)
 				cacheProbe.On("IsCached", "test-manifest", "image2", "hash2", "service2").Return(false, "", nil)
 				cacheProbe.On("GetFromCache", "service1").Return(true, "global-image1")
-				smartBuildCtrl.On("CloneGlobalImageToDev", "global-image1", "image1").Return("dev-image1", nil)
 
-				metadataCollector.On("GetMetadata", "service1").Return(&analytics.ImageBuildMetadata{})
-				metadataCollector.On("GetMetadata", "service2").Return(&analytics.ImageBuildMetadata{})
-				serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "dev-image1").Return()
+				// Set up mock registry controller expectations for cloning
+				mockRegistry.On("IsGlobalRegistry", "global-image1").Return(false)
+
+				serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "global-image1").Return()
 			},
 			expectedCached:    []string{"service1"},
 			expectedNotCached: []string{"service2"},
@@ -227,11 +232,9 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 				"service1": &build.Info{Image: "image1"},
 			},
 			svcsToBuild: []string{"service1"},
-			setupMocks: func(smartBuildCtrl *MockSmartBuildController, cacheProbe *MockCacheProbe, metadataCollector *MockMetadataCollector, serviceEnvVarsSetter *MockServiceEnvVarsSetter) {
-				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
+			setupMocks: func(hasher *MockHasherController, cacheProbe *MockCacheProbe, serviceEnvVarsSetter *MockServiceEnvVarsSetter, mockRegistry *MockRegistryController) {
+				hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
 				cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(false, "", errors.New("cache check failed"))
-
-				metadataCollector.On("GetMetadata", "service1").Return(&analytics.ImageBuildMetadata{})
 			},
 			expectedCached:    nil,
 			expectedNotCached: nil,
@@ -246,14 +249,11 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 				"service3": &build.Info{Image: "image3", DependsOn: []string{"service1"}},
 			},
 			svcsToBuild: []string{"service1", "service2", "service3"},
-			setupMocks: func(smartBuildCtrl *MockSmartBuildController, cacheProbe *MockCacheProbe, metadataCollector *MockMetadataCollector, serviceEnvVarsSetter *MockServiceEnvVarsSetter) {
-				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
+			setupMocks: func(hasher *MockHasherController, cacheProbe *MockCacheProbe, serviceEnvVarsSetter *MockServiceEnvVarsSetter, mockRegistry *MockRegistryController) {
+				hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
 				// Only service1 should be checked for cache, service2 and service3 should be added directly to notCached
 				cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(false, "", nil)
 
-				metadataCollector.On("GetMetadata", "service1").Return(&analytics.ImageBuildMetadata{})
-				metadataCollector.On("GetMetadata", "service2").Return(&analytics.ImageBuildMetadata{})
-				metadataCollector.On("GetMetadata", "service3").Return(&analytics.ImageBuildMetadata{})
 			},
 			expectedCached:    nil,
 			expectedNotCached: []string{"service1", "service2", "service3"},
@@ -269,10 +269,10 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 				"service4": &build.Info{Image: "image4", DependsOn: []string{"service3"}},
 			},
 			svcsToBuild: []string{"service1", "service2", "service3", "service4"},
-			setupMocks: func(smartBuildCtrl *MockSmartBuildController, cacheProbe *MockCacheProbe, metadataCollector *MockMetadataCollector, serviceEnvVarsSetter *MockServiceEnvVarsSetter) {
-				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
-				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service3").Return("hash3")
-				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service4").Return("hash4")
+			setupMocks: func(hasher *MockHasherController, cacheProbe *MockCacheProbe, serviceEnvVarsSetter *MockServiceEnvVarsSetter, mockRegistry *MockRegistryController) {
+				hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
+				hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service3").Return("hash3")
+				hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service4").Return("hash4")
 
 				// service1 is not cached, so service2 should be added without checking
 				cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(false, "", nil)
@@ -280,13 +280,11 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 				cacheProbe.On("IsCached", "test-manifest", "image3", "hash3", "service3").Return(true, "digest3", nil)
 				cacheProbe.On("IsCached", "test-manifest", "image4", "hash4", "service4").Return(false, "", nil)
 				cacheProbe.On("GetFromCache", "service3").Return(true, "global-image3")
-				smartBuildCtrl.On("CloneGlobalImageToDev", "global-image3", "image3").Return("dev-image3", nil)
 
-				metadataCollector.On("GetMetadata", "service1").Return(&analytics.ImageBuildMetadata{})
-				metadataCollector.On("GetMetadata", "service2").Return(&analytics.ImageBuildMetadata{})
-				metadataCollector.On("GetMetadata", "service3").Return(&analytics.ImageBuildMetadata{})
-				metadataCollector.On("GetMetadata", "service4").Return(&analytics.ImageBuildMetadata{})
-				serviceEnvVarsSetter.On("SetServiceEnvVars", "service3", "dev-image3").Return()
+				// Set up mock registry controller expectations for cloning
+				mockRegistry.On("IsGlobalRegistry", "global-image3").Return(false)
+
+				serviceEnvVarsSetter.On("SetServiceEnvVars", "service3", "global-image3").Return()
 			},
 			expectedCached:    []string{"service3"},
 			expectedNotCached: []string{"service1", "service2", "service4"},
@@ -301,14 +299,11 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 				"service3": &build.Info{Image: "image3", DependsOn: []string{"service2"}},
 			},
 			svcsToBuild: []string{"service1", "service2", "service3"},
-			setupMocks: func(smartBuildCtrl *MockSmartBuildController, cacheProbe *MockCacheProbe, metadataCollector *MockMetadataCollector, serviceEnvVarsSetter *MockServiceEnvVarsSetter) {
-				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
+			setupMocks: func(hasher *MockHasherController, cacheProbe *MockCacheProbe, serviceEnvVarsSetter *MockServiceEnvVarsSetter, mockRegistry *MockRegistryController) {
+				hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
 				// Only service1 should be checked for cache, service2 and service3 should be added directly to notCached
 				cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(false, "", nil)
 
-				metadataCollector.On("GetMetadata", "service1").Return(&analytics.ImageBuildMetadata{})
-				metadataCollector.On("GetMetadata", "service2").Return(&analytics.ImageBuildMetadata{})
-				metadataCollector.On("GetMetadata", "service3").Return(&analytics.ImageBuildMetadata{})
 			},
 			expectedCached:    nil,
 			expectedNotCached: []string{"service1", "service2", "service3"},
@@ -324,15 +319,11 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 				"service4": &build.Info{Image: "image4", DependsOn: []string{"service3"}},
 			},
 			svcsToBuild: []string{"service1", "service2", "service3", "service4"},
-			setupMocks: func(smartBuildCtrl *MockSmartBuildController, cacheProbe *MockCacheProbe, metadataCollector *MockMetadataCollector, serviceEnvVarsSetter *MockServiceEnvVarsSetter) {
-				smartBuildCtrl.On("GetBuildHash", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
+			setupMocks: func(hasher *MockHasherController, cacheProbe *MockCacheProbe, serviceEnvVarsSetter *MockServiceEnvVarsSetter, mockRegistry *MockRegistryController) {
+				hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
 				// Only service1 should be checked for cache, all others should be added directly to notCached
 				cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(false, "", nil)
 
-				metadataCollector.On("GetMetadata", "service1").Return(&analytics.ImageBuildMetadata{})
-				metadataCollector.On("GetMetadata", "service2").Return(&analytics.ImageBuildMetadata{})
-				metadataCollector.On("GetMetadata", "service3").Return(&analytics.ImageBuildMetadata{})
-				metadataCollector.On("GetMetadata", "service4").Return(&analytics.ImageBuildMetadata{})
 			},
 			expectedCached:    nil,
 			expectedNotCached: []string{"service1", "service2", "service3", "service4"},
@@ -342,8 +333,8 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			strategy, smartBuildCtrl, _, cacheProbe, metadataCollector, serviceEnvVarsSetter, _ := createTestSequentialCheckStrategy()
-			tt.setupMocks(smartBuildCtrl, cacheProbe, metadataCollector, serviceEnvVarsSetter)
+			strategy, _, hasher, cacheProbe, serviceEnvVarsSetter, _, mockRegistry, _ := createTestSequentialCheckStrategy()
+			tt.setupMocks(hasher, cacheProbe, serviceEnvVarsSetter, mockRegistry)
 
 			cached, notCached, err := strategy.CheckServicesCache(context.Background(), tt.manifestName, tt.buildManifest, tt.svcsToBuild)
 
@@ -351,10 +342,10 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 			assert.ElementsMatch(t, tt.expectedNotCached, notCached, "not cached services")
 			assert.Equal(t, tt.expectedError, err)
 
-			smartBuildCtrl.AssertExpectations(t)
+			hasher.AssertExpectations(t)
 			cacheProbe.AssertExpectations(t)
-			metadataCollector.AssertExpectations(t)
 			serviceEnvVarsSetter.AssertExpectations(t)
+			mockRegistry.AssertExpectations(t)
 		})
 	}
 }
@@ -444,7 +435,7 @@ func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *test
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			strategy, _, tagger, cacheProbe, _, _, _ := createTestSequentialCheckStrategy()
+			strategy, tagger, _, cacheProbe, _, _, _, _ := createTestSequentialCheckStrategy()
 			tt.setupMocks(tagger, cacheProbe)
 
 			reference, err := strategy.GetImageDigestReferenceForServiceDeploy(tt.manifestName, tt.service, tt.buildInfo)
@@ -464,20 +455,21 @@ func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *test
 }
 
 func TestNewSequentialCheckStrategy(t *testing.T) {
-	smartBuildCtrl := &MockSmartBuildController{}
 	tagger := &MockImageTagger{}
+	hasher := &MockHasherController{}
 	imageCacheChecker := &MockCacheProbe{}
-	metadataCollector := NewMockMetadataCollector()
 	ioCtrl := &io.Controller{}
 	serviceEnvVarsSetter := &MockServiceEnvVarsSetter{}
+	mockRegistry := &MockRegistryController{}
+	cloner := NewCloner(mockRegistry, ioCtrl)
 
-	strategy := NewSequentialCheckStrategy(smartBuildCtrl, tagger, imageCacheChecker, metadataCollector, ioCtrl, serviceEnvVarsSetter)
+	strategy := NewSequentialCheckStrategy(tagger, hasher, imageCacheChecker, ioCtrl, serviceEnvVarsSetter, cloner)
 
 	assert.NotNil(t, strategy)
-	assert.Equal(t, smartBuildCtrl, strategy.smartBuildCtrl)
 	assert.Equal(t, tagger, strategy.tagger)
+	assert.Equal(t, hasher, strategy.hasher)
 	assert.Equal(t, imageCacheChecker, strategy.imageCacheChecker)
-	assert.Equal(t, metadataCollector, strategy.metadataCollector)
 	assert.Equal(t, ioCtrl, strategy.ioCtrl)
 	assert.Equal(t, serviceEnvVarsSetter, strategy.serviceEnvVarsSetter)
+	assert.Equal(t, cloner, strategy.cloner)
 }

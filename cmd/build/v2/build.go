@@ -20,18 +20,14 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/okteto/okteto/cmd/build/basic"
-	"github.com/okteto/okteto/cmd/build/v2/checker"
 	"github.com/okteto/okteto/cmd/build/v2/environment"
-	"github.com/okteto/okteto/cmd/build/v2/metadata"
 	"github.com/okteto/okteto/cmd/build/v2/smartbuild"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/devenvironment"
-	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -83,15 +79,14 @@ type imageCheckerInterface interface {
 type OktetoBuilder struct {
 	basic.Builder
 
-	Registry          oktetoRegistryInterface
-	Config            oktetoBuilderConfigInterface
-	oktetoContext     buildCmd.OktetoContextInterface
-	imageCacheChecker imageCheckerInterface
-	tagger            imageTagger
+	Registry      oktetoRegistryInterface
+	Config        oktetoBuilderConfigInterface
+	oktetoContext buildCmd.OktetoContextInterface
+
+	tagger imageTagger
 
 	smartBuildCtrl        *smartbuild.Ctrl
 	serviceEnvVarsHandler *environment.ServiceEnvVarsHandler
-	metadataCollector     metadataCollectorInterface
 
 	ioCtrl    *io.Controller
 	k8sLogger *io.K8sLogger
@@ -117,32 +112,24 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registryCtrl oktetoRegi
 	}
 	gitRepo := repository.NewRepository(wd)
 	config := getConfigStateless(registryCtrl, gitRepo, ioCtrl.Logger(), okCtx.IsOktetoCluster())
-	smartBuildCtrl := smartbuild.NewSmartBuildCtrl(gitRepo, registryCtrl, config.fs, ioCtrl, wdCtrl)
-	tagger := newImageTagger(config, smartBuildCtrl)
-	metadataCollector := metadata.NewMetadataCollector(okCtx, config, smartBuildCtrl, ioCtrl)
+
+	smartBuildConfig := smartbuild.NewConfig()
+	tagger := newImageTagger(config, smartBuildConfig)
 	imageCtrl := registry.NewImageCtrl(okCtx)
 
 	serviceEnvVarsHandler := environment.NewServiceEnvVarsHandler(ioCtrl, registryCtrl)
 	serviceEnvVarsHandler.SetEnvVar(OktetoEnableSmartBuildEnvVar, strconv.FormatBool(config.isSmartBuildsEnable))
 
-	cacheChecker := checker.NewRegistryCacheProbe(tagger, okCtx.GetNamespace(), okCtx.GetRegistryURL(), imageCtrl, registryCtrl, ioCtrl)
-	var checkStrategy imageCheckerInterface
-	if env.LoadBoolean(parallelCheckStrategyEnvVar) {
-		// TODO: Implement parallel check strategy
-	} else {
-		checkStrategy = checker.NewSequentialCheckStrategy(smartBuildCtrl, tagger, cacheChecker, metadataCollector, ioCtrl, serviceEnvVarsHandler)
-	}
+	smartBuildCtrl := smartbuild.NewSmartBuildCtrl(gitRepo, registryCtrl, config.fs, ioCtrl, wdCtrl, smartBuildConfig, tagger, imageCtrl, serviceEnvVarsHandler, okCtx.GetNamespace(), okCtx.GetRegistryURL())
 
 	ob := &OktetoBuilder{
 		Builder:               basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl},
 		Registry:              registryCtrl,
-		imageCacheChecker:     checkStrategy,
 		Config:                config,
 		ioCtrl:                ioCtrl,
 		smartBuildCtrl:        smartBuildCtrl,
 		oktetoContext:         okCtx,
 		k8sLogger:             k8sLogger,
-		metadataCollector:     metadataCollector,
 		onBuildFinish:         onBuildFinish,
 		serviceEnvVarsHandler: serviceEnvVarsHandler,
 		tagger:                tagger,
@@ -181,31 +168,22 @@ func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish)
 		Store: okteto.GetContextStore(),
 	}
 
-	smartBuildCtrl := smartbuild.NewSmartBuildCtrl(gitRepo, reg, config.fs, ioCtrl, wdCtrl)
-	tagger := newImageTagger(config, smartBuildCtrl)
-	metadataCollector := metadata.NewMetadataCollector(okCtx, config, smartBuildCtrl, ioCtrl)
+	smartBuildConfig := smartbuild.NewConfig()
+	tagger := newImageTagger(config, smartBuildConfig)
 	imageCtrl := registry.NewImageCtrl(okCtx)
 
 	serviceEnvVarsHandler := environment.NewServiceEnvVarsHandler(ioCtrl, reg)
 	serviceEnvVarsHandler.SetEnvVar(OktetoEnableSmartBuildEnvVar, strconv.FormatBool(config.isSmartBuildsEnable))
 
-	cacheChecker := checker.NewRegistryCacheProbe(tagger, okCtx.GetNamespace(), okCtx.GetRegistryURL(), imageCtrl, reg, ioCtrl)
-	var checkStrategy imageCheckerInterface
-	if env.LoadBoolean(parallelCheckStrategyEnvVar) {
-		// TODO: Implement parallel check strategy
-	} else {
-		checkStrategy = checker.NewSequentialCheckStrategy(smartBuildCtrl, tagger, cacheChecker, metadataCollector, ioCtrl, serviceEnvVarsHandler)
-	}
+	smartBuildCtrl := smartbuild.NewSmartBuildCtrl(gitRepo, reg, config.fs, ioCtrl, wdCtrl, smartBuildConfig, tagger, imageCtrl, serviceEnvVarsHandler, okCtx.GetNamespace(), okCtx.GetRegistryURL())
 
 	return &OktetoBuilder{
 		Builder:               basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl},
 		Registry:              reg,
-		imageCacheChecker:     checkStrategy,
 		Config:                config,
 		ioCtrl:                ioCtrl,
 		smartBuildCtrl:        smartBuildCtrl,
 		oktetoContext:         okCtx,
-		metadataCollector:     metadataCollector,
 		onBuildFinish:         onBuildFinish,
 		serviceEnvVarsHandler: serviceEnvVarsHandler,
 		tagger:                tagger,
@@ -282,20 +260,12 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 	ob.ioCtrl.Logger().Infof("Ordered services: [%s]", strings.Join(toBuildSvcs, ", "))
 
-	sp := ob.ioCtrl.Out().Spinner("Collecting metadata for the images")
-	sp.Start()
-	if err := ob.metadataCollector.CollectMetadata(ctx, options.Manifest.Name, options.Manifest.Build, toBuildSvcs); err != nil {
-		return err
-	}
-	sp.Stop()
-	metaMap := ob.metadataCollector.GetMetadataMap()
-
 	notCachedServices := toBuildSvcs
 	var cachedServices []string
 	if !options.NoCache && ob.smartBuildCtrl.IsEnabled() {
 		sp := ob.ioCtrl.Out().Spinner("Checking if the images are already built from cache...")
 		sp.Start()
-		cachedServices, notCachedServices, err = ob.imageCacheChecker.CheckServicesCache(ctx, options.Manifest.Name, options.Manifest.Build, toBuildSvcs)
+		cachedServices, notCachedServices, err = ob.smartBuildCtrl.CheckServicesCache(ctx, options.Manifest.Name, options.Manifest.Build, toBuildSvcs)
 		if err != nil {
 			return fmt.Errorf("error checking images: %w", err)
 		}
@@ -312,20 +282,10 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		if !ob.oktetoContext.IsOktetoCluster() && buildSvcInfo.Image == "" {
 			return fmt.Errorf("'build.%s.image' is required if your context doesn't have Okteto installed", svcToBuild)
 		}
-		buildDurationStart := time.Now()
 		imageTag, err := ob.buildServiceImages(ctx, options.Manifest, svcToBuild, options)
-		buildkitRunner, ok := ob.Builder.BuildRunner.(*buildCmd.OktetoBuilder)
-		if ok {
-			buildkitMetadata := buildkitRunner.GetMetadata()
-			if buildkitMetadata != nil {
-				metaMap[svcToBuild].WaitForBuildkitAvailable = buildkitMetadata.WaitForBuildkitAvailableTime
-			}
-		}
 		if err != nil {
 			return fmt.Errorf("error building service '%s': %w", svcToBuild, err)
 		}
-		metaMap[svcToBuild].BuildDuration = time.Since(buildDurationStart)
-		metaMap[svcToBuild].Success = true
 
 		ob.serviceEnvVarsHandler.SetServiceEnvVars(svcToBuild, imageTag)
 	}

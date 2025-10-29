@@ -208,17 +208,52 @@ func (fmc fakeImageChecker) GetImageDigestReferenceForServiceDeploy(manifestName
 	return imageWithDigest, nil
 }
 
-func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistryInterface, cfg oktetoBuilderConfigInterface) *OktetoBuilder {
-	tagger := newImageTagger(cfg, smartbuild.NewSmartBuildCtrl(fakeConfigRepo{}, registry, afero.NewMemMapFs(), io.NewIOController(), fakeWorkingDirGetter{}))
+type fakeImageConfig struct{}
+
+func (fic *fakeImageConfig) IsOktetoCluster() bool {
+	return true
+}
+
+func (fic *fakeImageConfig) GetGlobalNamespace() string {
+	return "okteto-global"
+}
+
+func (fic *fakeImageConfig) GetNamespace() string {
+	return "test"
+}
+
+func (fic *fakeImageConfig) GetRegistryURL() string {
+	return "my-registry"
+}
+
+func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registryIface oktetoRegistryInterface, cfg oktetoBuilderConfigInterface) *OktetoBuilder {
+	ioCtrl := io.NewIOController()
+	// Smart builds are enabled by default, and now sequential strategy is used as fallback
+	// when parallel is not implemented, so CheckStrategy should never be nil
+	config := smartbuild.NewConfig()
+	imageCtrl := registry.NewImageCtrl(&fakeImageConfig{})
+	smartBuildCtrl := smartbuild.NewSmartBuildCtrl(
+		fakeConfigRepo{},
+		registryIface,
+		afero.NewMemMapFs(),
+		ioCtrl,
+		fakeWorkingDirGetter{},
+		config,
+		newImageTagger(cfg, nil),
+		imageCtrl,
+		environment.NewServiceEnvVarsHandler(ioCtrl, registryIface),
+		"test-namespace",
+		"test-registry.com",
+	)
 	return &OktetoBuilder{
-		Registry: registry,
+		Registry: registryIface,
 		Builder: basic.Builder{
 			BuildRunner: builder,
-			IoCtrl:      io.NewIOController(),
+			IoCtrl:      ioCtrl,
 		},
 		Config:         cfg,
-		ioCtrl:         io.NewIOController(),
-		smartBuildCtrl: smartbuild.NewSmartBuildCtrl(fakeConfigRepo{}, registry, afero.NewMemMapFs(), io.NewIOController(), fakeWorkingDirGetter{}),
+		ioCtrl:         ioCtrl,
+		smartBuildCtrl: smartBuildCtrl,
 		oktetoContext: &okteto.ContextStateless{
 			Store: &okteto.ContextStore{
 				Contexts: map[string]*okteto.Context{
@@ -231,9 +266,7 @@ func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegi
 				CurrentContext: "test",
 			},
 		},
-		serviceEnvVarsHandler: environment.NewServiceEnvVarsHandler(io.NewIOController(), registry),
-		metadataCollector:     &fakeMetadataCollector{metadataMap: make(map[string]*analytics.ImageBuildMetadata)},
-		imageCacheChecker:     &fakeImageChecker{imageMap: make(map[string]*analytics.ImageBuildMetadata), fakeRegistry: registry, tagger: tagger},
+		serviceEnvVarsHandler: environment.NewServiceEnvVarsHandler(ioCtrl, registryIface),
 	}
 }
 
