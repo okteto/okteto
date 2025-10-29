@@ -105,7 +105,7 @@ func (bc *OktetoBuilder) checkServiceToBuildDuringDeploy(service string, manifes
 		buildInfo.Image = ""
 	}
 
-	imageWithDigest, err := bc.imageChecker.GetImageDigestReferenceForServiceDeploy(manifest.Name, service, buildInfo)
+	imageWithDigest, err := bc.imageCacheChecker.GetImageDigestReferenceForServiceDeploy(manifest.Name, service, buildInfo)
 	if oktetoErrors.IsNotFound(err) {
 		bc.ioCtrl.Logger().Debug("image not found, building image")
 		buildCh <- service

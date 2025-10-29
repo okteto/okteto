@@ -23,11 +23,45 @@ import (
 	"github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 // Additional mocks needed for SequentialCheckStrategy
+
+type MockSmartBuildController struct {
+	mock.Mock
+}
+
+func (m *MockSmartBuildController) GetBuildHash(buildInfo *build.Info, service string) string {
+	args := m.Called(buildInfo, service)
+	return args.String(0)
+}
+
+func (m *MockSmartBuildController) CloneGlobalImageToDev(globalImage, svcImage string) (string, error) {
+	args := m.Called(globalImage, svcImage)
+	return args.String(0), args.Error(1)
+}
+
+type MockImageTagger struct {
+	mock.Mock
+}
+
+func (m *MockImageTagger) GetGlobalTagFromDevIfNeccesary(tags, namespace, registryURL, buildHash string, ic registry.ImageCtrl) string {
+	args := m.Called(tags, namespace, registryURL, buildHash, ic)
+	return args.String(0)
+}
+
+func (m *MockImageTagger) GetImageReferencesForTag(manifestName, svcToBuildName, tag string) []string {
+	args := m.Called(manifestName, svcToBuildName, tag)
+	return args.Get(0).([]string)
+}
+
+func (m *MockImageTagger) GetImageReferencesForDeploy(manifestName, svcToBuildName string) []string {
+	args := m.Called(manifestName, svcToBuildName)
+	return args.Get(0).([]string)
+}
 
 type MockCacheProbe struct {
 	mock.Mock
@@ -437,7 +471,7 @@ func TestNewSequentialCheckStrategy(t *testing.T) {
 	ioCtrl := &io.Controller{}
 	serviceEnvVarsSetter := &MockServiceEnvVarsSetter{}
 
-	strategy := newSequentialCheckStrategy(smartBuildCtrl, tagger, imageCacheChecker, metadataCollector, ioCtrl, serviceEnvVarsSetter)
+	strategy := NewSequentialCheckStrategy(smartBuildCtrl, tagger, imageCacheChecker, metadataCollector, ioCtrl, serviceEnvVarsSetter)
 
 	assert.NotNil(t, strategy)
 	assert.Equal(t, smartBuildCtrl, strategy.smartBuildCtrl)

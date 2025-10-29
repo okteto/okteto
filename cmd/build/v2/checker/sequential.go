@@ -22,7 +22,25 @@ import (
 	"github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/registry"
 )
+
+const (
+	parallelCheckStrategyEnvVar = "OKTETO_BUILD_CHECK_STRATEGY_PARALLEL"
+)
+
+// ImageTagger defines the interface for managing image tags and references.
+type ImageTagger interface {
+	GetGlobalTagFromDevIfNeccesary(tags, namespace, registryURL, buildHash string, ic registry.ImageCtrl) string
+	GetImageReferencesForTag(manifestName, svcToBuildName, tag string) []string
+	GetImageReferencesForDeploy(manifestName, svcToBuildName string) []string
+}
+
+// SmartBuildController defines the interface for smart build operations.
+type SmartBuildController interface {
+	GetBuildHash(buildInfo *build.Info, service string) string
+	CloneGlobalImageToDev(globalImage, svcImage string) (string, error)
+}
 
 type CacheProbe interface {
 	IsCached(manifestName, image, buildHash, svcToBuild string) (bool, string, error)
@@ -47,7 +65,7 @@ type SequentialCheckStrategy struct {
 	serviceEnvVarsSetter ServiceEnvVarsSetter
 }
 
-func newSequentialCheckStrategy(smartBuildCtrl SmartBuildController, tagger ImageTagger, imageCacheChecker CacheProbe, metadataCollector SvcMetadataGetter, ioCtrl *io.Controller, serviceEnvVarsSetter ServiceEnvVarsSetter) *SequentialCheckStrategy {
+func NewSequentialCheckStrategy(smartBuildCtrl SmartBuildController, tagger ImageTagger, imageCacheChecker CacheProbe, metadataCollector SvcMetadataGetter, ioCtrl *io.Controller, serviceEnvVarsSetter ServiceEnvVarsSetter) *SequentialCheckStrategy {
 	return &SequentialCheckStrategy{
 		smartBuildCtrl:       smartBuildCtrl,
 		tagger:               tagger,

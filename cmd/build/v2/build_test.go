@@ -187,7 +187,7 @@ type fakeImageChecker struct {
 	tagger       imageTagger
 }
 
-func (fmc fakeImageChecker) CheckImages(ctx context.Context, manifestName string, buildManifest build.ManifestBuild, toBuildSvcs []string) ([]string, []string, error) {
+func (fmc fakeImageChecker) CheckServicesCache(ctx context.Context, manifestName string, buildManifest build.ManifestBuild, toBuildSvcs []string) ([]string, []string, error) {
 	return []string{}, toBuildSvcs, nil
 }
 
@@ -233,7 +233,7 @@ func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegi
 		},
 		serviceEnvVarsHandler: environment.NewServiceEnvVarsHandler(io.NewIOController(), registry),
 		metadataCollector:     &fakeMetadataCollector{metadataMap: make(map[string]*analytics.ImageBuildMetadata)},
-		imageChecker:          &fakeImageChecker{imageMap: make(map[string]*analytics.ImageBuildMetadata), fakeRegistry: registry, tagger: tagger},
+		imageCacheChecker:     &fakeImageChecker{imageMap: make(map[string]*analytics.ImageBuildMetadata), fakeRegistry: registry, tagger: tagger},
 	}
 }
 
