@@ -25,7 +25,6 @@ import (
 	"github.com/okteto/okteto/cmd/build/v2/environment"
 	"github.com/okteto/okteto/cmd/build/v2/smartbuild"
 	"github.com/okteto/okteto/internal/test"
-	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -158,55 +157,6 @@ func (fr fakeRegistry) IsGlobalRegistry(image string) bool { return false }
 func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string)    { return "", "" }
 func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)      { return "", "" }
 func (fr fakeRegistry) GetDevImageFromGlobal(imageWithDigest string) string { return "" }
-
-type fakeMetadataCollector struct {
-	metadataMap map[string]*analytics.ImageBuildMetadata
-}
-
-func (fmc fakeMetadataCollector) CollectMetadata(ctx context.Context, manifestName string, buildManifest build.ManifestBuild, toBuildSvcs []string) error {
-	for _, svc := range toBuildSvcs {
-		fmc.metadataMap[svc] = &analytics.ImageBuildMetadata{
-			Name:             svc,
-			DevenvName:       manifestName,
-			Namespace:        "test",
-			RepoURL:          "test",
-			RepoHash:         "test",
-			BuildContextHash: "test",
-		}
-	}
-	return nil
-}
-
-func (fmc fakeMetadataCollector) GetMetadataMap() map[string]*analytics.ImageBuildMetadata {
-	return fmc.metadataMap
-}
-
-type fakeImageChecker struct {
-	imageMap     map[string]*analytics.ImageBuildMetadata
-	fakeRegistry oktetoRegistryInterface
-	tagger       imageTagger
-}
-
-func (fmc fakeImageChecker) CheckServicesCache(ctx context.Context, manifestName string, buildManifest build.ManifestBuild, toBuildSvcs []string) ([]string, []string, error) {
-	return []string{}, toBuildSvcs, nil
-}
-
-func (fmc fakeImageChecker) CloneGlobalImagesToDev(manifestName string, buildManifest build.ManifestBuild, svcsToClone []string) error {
-	return nil
-}
-
-func (fmc fakeImageChecker) GetImageDigestReferenceForServiceDeploy(manifestName, service string, buildInfo *build.Info) (string, error) {
-	image := fmc.tagger.getServiceDevImageReference(manifestName, service, buildInfo)
-	ref, err := fmc.fakeRegistry.GetImageReference(image)
-	if err != nil {
-		return "", err
-	}
-	imageWithDigest, err := fmc.fakeRegistry.GetImageTagWithDigest(ref.Image)
-	if err != nil {
-		return "", err
-	}
-	return imageWithDigest, nil
-}
 
 type fakeImageConfig struct{}
 

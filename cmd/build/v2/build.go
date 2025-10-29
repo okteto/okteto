@@ -39,10 +39,6 @@ import (
 	"github.com/spf13/afero"
 )
 
-const (
-	parallelCheckStrategyEnvVar = "OKTETO_BUILD_CHECK_STRATEGY_PARALLEL"
-)
-
 type oktetoRegistryInterface interface {
 	GetImageTagWithDigest(imageTag string) (string, error)
 	IsOktetoRegistry(image string) bool
@@ -63,16 +59,6 @@ type oktetoBuilderConfigInterface interface {
 	GetGitCommit() string
 	IsOkteto() bool
 	GetAnonymizedRepo() string
-}
-
-type metadataCollectorInterface interface {
-	CollectMetadata(ctx context.Context, manifestName string, buildManifest build.ManifestBuild, toBuildSvcs []string) error
-	GetMetadataMap() map[string]*analytics.ImageBuildMetadata
-}
-
-type imageCheckerInterface interface {
-	CheckServicesCache(ctx context.Context, manifestName string, buildManifest build.ManifestBuild, toBuildSvcs []string) ([]string, []string, error)
-	GetImageDigestReferenceForServiceDeploy(manifestName, service string, buildInfo *build.Info) (string, error)
 }
 
 // OktetoBuilder builds the images

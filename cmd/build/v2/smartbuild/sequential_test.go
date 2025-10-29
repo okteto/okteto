@@ -119,7 +119,7 @@ func (m *MockRegistryController) IsOktetoRegistry(image string) bool {
 }
 
 // Helper function to create a test SequentialCheckStrategy
-func createTestSequentialCheckStrategy() (*SequentialCheckStrategy, *MockImageTagger, *MockHasherController, *MockCacheProbe, *MockServiceEnvVarsSetter, *cloner, *MockRegistryController, *io.Controller) {
+func createTestSequentialCheckStrategy() (*SequentialCheckStrategy, *MockImageTagger, *MockHasherController, *MockCacheProbe, *MockServiceEnvVarsSetter, *MockRegistryController) {
 	tagger := &MockImageTagger{}
 	hasher := &MockHasherController{}
 	imageCacheChecker := &MockCacheProbe{}
@@ -139,7 +139,7 @@ func createTestSequentialCheckStrategy() (*SequentialCheckStrategy, *MockImageTa
 		cloner:               cloner,
 	}
 
-	return strategy, tagger, hasher, imageCacheChecker, serviceEnvVarsSetter, cloner, mockRegistry, ioCtrl
+	return strategy, tagger, hasher, imageCacheChecker, serviceEnvVarsSetter, mockRegistry
 }
 
 func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
@@ -333,7 +333,7 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			strategy, _, hasher, cacheProbe, serviceEnvVarsSetter, _, mockRegistry, _ := createTestSequentialCheckStrategy()
+			strategy, _, hasher, cacheProbe, serviceEnvVarsSetter, mockRegistry := createTestSequentialCheckStrategy()
 			tt.setupMocks(hasher, cacheProbe, serviceEnvVarsSetter, mockRegistry)
 
 			cached, notCached, err := strategy.CheckServicesCache(context.Background(), tt.manifestName, tt.buildManifest, tt.svcsToBuild)
@@ -435,7 +435,7 @@ func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *test
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			strategy, tagger, _, cacheProbe, _, _, _, _ := createTestSequentialCheckStrategy()
+			strategy, tagger, _, cacheProbe, _, _ := createTestSequentialCheckStrategy()
 			tt.setupMocks(tagger, cacheProbe)
 
 			reference, err := strategy.GetImageDigestReferenceForServiceDeploy(tt.manifestName, tt.service, tt.buildInfo)

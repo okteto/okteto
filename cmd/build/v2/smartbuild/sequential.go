@@ -23,10 +23,6 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 )
 
-const (
-	parallelCheckStrategyEnvVar = "OKTETO_BUILD_CHECK_STRATEGY_PARALLEL"
-)
-
 // ImageTagger defines the interface for managing image tags and references.
 type ImageTagger interface {
 	GetGlobalTagFromDevIfNeccesary(tags, namespace, registryURL, buildHash string, ic registry.ImageCtrl) string
