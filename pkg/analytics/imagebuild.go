@@ -27,14 +27,13 @@ type ImageBuildMetadata struct {
 	Namespace                string
 	DevenvName               string
 	RepoURL                  string
-	RepoHash                 string
 	BuildContextHash         string
 	Initiator                string
 	WaitForBuildkitAvailable time.Duration
-	RepoHashDuration         time.Duration
 	BuildContextHashDuration time.Duration
 	CacheHitDuration         time.Duration
 	BuildDuration            time.Duration
+	CloneDuration            time.Duration
 	CacheHit                 bool
 	Success                  bool
 }
@@ -47,12 +46,11 @@ func (m *ImageBuildMetadata) toProps() map[string]interface{} {
 	props := map[string]interface{}{
 		"name":                            m.Name,
 		"repoURL":                         m.RepoURL,
-		"repoHash":                        m.RepoHash,
-		"repoHashDurationSeconds":         m.RepoHashDuration.Seconds(),
 		"waitForBuildkitAvailable":        m.WaitForBuildkitAvailable.Seconds(),
 		"cacheHit":                        m.CacheHit,
 		"cacheHitDurationSeconds":         m.CacheHitDuration.Seconds(),
 		"buildDurationSeconds":            m.BuildDuration.Seconds(),
+		"cloneDurationSeconds":            m.CloneDuration.Seconds(),
 		"buildContextHash":                m.BuildContextHash,
 		"buildContextHashDurationSeconds": m.BuildContextHashDuration.Seconds(),
 		"initiator":                       m.Initiator,

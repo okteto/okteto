@@ -16,7 +16,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
+	buildTypes "github.com/okteto/okteto/cmd/build/v2/types"
 	"github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -66,7 +68,7 @@ func NewSequentialCheckStrategy(tagger ImageTagger, hasher hasherController, ima
 	}
 }
 
-func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manifestName string, buildManifest build.ManifestBuild, svcsToBuild []string) (cachedSvcs []string, notCachedSvcs []string, err error) {
+func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manifestName string, buildManifest build.ManifestBuild, svcsToBuild []*buildTypes.BuildInfo) (cachedSvcs []*buildTypes.BuildInfo, notCachedSvcs []*buildTypes.BuildInfo, err error) {
 	// svcsToBuild is already ordered by dependencies (from DAG.Ordered())
 	// so we can optimize by stopping the check as soon as we find a service that's not cached.
 	// All subsequent services that depend on it will also need to be rebuilt.
@@ -82,60 +84,75 @@ func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manife
 	// Track processed services to avoid duplicates
 	processed := make(map[string]bool)
 
+	// Map of service name to BuildInfo for quick lookup
+	buildInfoByName := make(map[string]*buildTypes.BuildInfo, len(svcsToBuild))
+	for _, bi := range svcsToBuild {
+		buildInfoByName[bi.Name()] = bi
+	}
+
 	for _, svc := range svcsToBuild {
 		// Skip if already processed
-		if processed[svc] {
+		name := svc.Name()
+		if processed[name] {
 			continue
 		}
 
 		s.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svc))
-		buildInfo := buildManifest[svc]
-		buildHash := s.hasher.hashWithBuildContext(buildInfo, svc)
+		buildInfo := buildManifest[name]
 
-		isCached, _, err := s.imageCacheChecker.IsCached(manifestName, buildInfo.Image, buildHash, svc)
+		startBuildHashTime := time.Now()
+		buildHash := s.hasher.hashWithBuildContext(buildInfo, name)
+		buildHashDuration := time.Since(startBuildHashTime)
+		svc.SetBuildHash(buildHash, buildHashDuration)
+
+		isCachedStartTime := time.Now()
+		isCached, _, err := s.imageCacheChecker.IsCached(manifestName, buildInfo.Image, buildHash, name)
 		if err != nil {
-			return cachedSvcs, notCachedSvcs, err
+			s.ioCtrl.Logger().Infof("error checking if image is cached: %s", err)
 		}
+		isCachedDuration := time.Since(isCachedStartTime)
+		svc.SetCacheHit(isCached, isCachedDuration)
 
-		processed[svc] = true
+		processed[name] = true
 
 		if isCached {
 			cachedSvcs = append(cachedSvcs, svc)
 
 			reference, err := s.cloneGlobalImageToDev(manifestName, buildManifest, svc)
 			if err != nil {
-				return cachedSvcs, notCachedSvcs, err
+				s.ioCtrl.Logger().Infof("error cloning global image to dev: %s", err)
+				return cachedSvcs, notCachedSvcs, fmt.Errorf("error cloning svc %s global image to dev: %w", svc.Name(), err)
 			}
-			s.serviceEnvVarsSetter.SetServiceEnvVars(svc, reference)
+			s.serviceEnvVarsSetter.SetServiceEnvVars(svc.Name(), reference)
 		} else {
 			notCachedSvcs = append(notCachedSvcs, svc)
 
 			// Recursively add all dependent services to notCached without checking cache
-			notCachedSvcs = s.addDependentsToNotCached(svc, dependantMap, processed, notCachedSvcs)
+			notCachedSvcs = s.addDependentsToNotCached(svc, dependantMap, processed, notCachedSvcs, buildInfoByName)
 		}
 	}
 	if len(cachedSvcs) == 1 {
 		s.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of %q because it's already built from cache.", cachedSvcs[0])
 	} else if len(cachedSvcs) > 1 {
-		s.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of %d services [%s] because they're already built from cache.", len(cachedSvcs), strings.Join(cachedSvcs, ", "))
+		s.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of %d services [%v] because they're already built from cache.", len(cachedSvcs), cachedSvcs)
 	}
 	return cachedSvcs, notCachedSvcs, nil
 }
 
-func (s *SequentialCheckStrategy) cloneGlobalImageToDev(manifestName string, buildManifest build.ManifestBuild, svc string) (string, error) {
-	buildInfo := buildManifest[svc]
+func (s *SequentialCheckStrategy) cloneGlobalImageToDev(manifestName string, buildManifest build.ManifestBuild, svc *buildTypes.BuildInfo) (string, error) {
+	buildInfo := buildManifest[svc.Name()]
 	devImage := buildInfo.Image
 	if buildInfo.Dockerfile != "" && buildInfo.Image == "" {
-		devImage = s.tagger.GetImageReferencesForDeploy(manifestName, svc)[0]
+		devImage = s.tagger.GetImageReferencesForDeploy(manifestName, svc.Name())[0]
 	}
-	ok, globalImage := s.imageCacheChecker.GetFromCache(svc)
+	ok, globalImage := s.imageCacheChecker.GetFromCache(svc.Name())
 	if !ok {
-		return "", fmt.Errorf("image %s not found in cache", svc)
+		return "", fmt.Errorf("image %s not found in cache", svc.Name())
 	}
+	cloneStartTime := time.Now()
 	reference, err := s.cloner.CloneGlobalImageToDev(globalImage, devImage)
-	if err != nil {
-		return reference, err
-	}
+	cloneDuration := time.Since(cloneStartTime)
+	svc.SetCloneDuration(cloneDuration, err == nil)
 
 	return reference, nil
 }
@@ -143,18 +160,19 @@ func (s *SequentialCheckStrategy) cloneGlobalImageToDev(manifestName string, bui
 // addDependentsToNotCached recursively adds all dependent services to notCached
 // This ensures that when a service is not cached, all services that depend on it
 // (directly or indirectly) are also marked as not cached without checking cache
-func (s *SequentialCheckStrategy) addDependentsToNotCached(svc string, dependantMap map[string][]string, processed map[string]bool, notCachedSvcs []string) []string {
-	if dependents, exists := dependantMap[svc]; exists {
-		for _, dependent := range dependents {
-			if !processed[dependent] {
-				processed[dependent] = true
-				notCachedSvcs = append(notCachedSvcs, dependent)
-				// Set metadata for dependent services
-				// Recursively add dependents of this dependent
-				notCachedSvcs = s.addDependentsToNotCached(dependent, dependantMap, processed, notCachedSvcs)
+func (s *SequentialCheckStrategy) addDependentsToNotCached(svc *buildTypes.BuildInfo, dependantMap map[string][]string, processed map[string]bool, notCachedSvcs []*buildTypes.BuildInfo, buildInfoByName map[string]*buildTypes.BuildInfo) []*buildTypes.BuildInfo {
+	for _, dependent := range dependantMap[svc.Name()] {
+		if !processed[dependent] {
+			processed[dependent] = true
+			bi, ok := buildInfoByName[dependent]
+			if ok {
+				notCachedSvcs = append(notCachedSvcs, bi)
 			}
+			// Recursively add dependents of this dependent
+			notCachedSvcs = s.addDependentsToNotCached(bi, dependantMap, processed, notCachedSvcs, buildInfoByName)
 		}
 	}
+
 	return notCachedSvcs
 }
 

@@ -14,7 +14,6 @@
 package smartbuild
 
 import (
-	"errors"
 	"path/filepath"
 	"testing"
 
@@ -52,43 +51,6 @@ func (m *mockConfigRepo) GetLatestDirSHA(dir string) (string, error) {
 func (m *mockConfigRepo) GetDiffHash(dir string) (string, error) {
 	args := m.Called(dir)
 	return args.String(0), args.Error(1)
-}
-
-func TestServiceHasher_HashProjectCommit(t *testing.T) {
-	fakeErr := errors.New("fake error")
-	tests := []struct {
-		repoCtrl     repositoryCommitRetriever
-		expectedErr  error
-		name         string
-		expectedHash string
-	}{
-		{
-			name: "success",
-			repoCtrl: fakeConfigRepo{
-				sha: "testsha",
-			},
-			expectedHash: "832d66070268d5a47860e9bd4402f504a1c0fe8d0c2dc1ecf814af610de72f0e",
-			expectedErr:  nil,
-		},
-		{
-			name: "error",
-			repoCtrl: fakeConfigRepo{
-				err: fakeErr,
-			},
-			expectedHash: "",
-			expectedErr:  fakeErr,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			wdGetter := fakeWorkingDirGetter{}
-			sh := newServiceHasher(tt.repoCtrl, afero.NewMemMapFs(), wdGetter, io.NewIOController())
-			hash, err := sh.hashProjectCommit(&build.Info{})
-			assert.Equal(t, tt.expectedHash, hash)
-			assert.ErrorIs(t, err, tt.expectedErr)
-		})
-	}
 }
 
 func TestServiceHasher_HashBuildContextWithError(t *testing.T) {

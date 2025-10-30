@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/cmd/build/basic"
 	"github.com/okteto/okteto/cmd/build/v2/environment"
 	"github.com/okteto/okteto/cmd/build/v2/smartbuild"
+	buildTypes "github.com/okteto/okteto/cmd/build/v2/types"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
@@ -326,7 +327,8 @@ func TestTwoStepsBuild(t *testing.T) {
 			},
 		},
 	}
-	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
+	infos := buildTypes.NewBuildInfos(manifest.Name, "test", "", []string{"test"})
+	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{})
 
 	require.NoError(t, err)
 	require.Equal(t, "okteto.dev/test-test:okteto", image)
@@ -357,7 +359,8 @@ func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
 			},
 		},
 	}
-	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
+	infos := buildTypes.NewBuildInfos(manifest.Name, "test", "", []string{"test"})
+	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{})
 
 	// error from the build
 	assert.NoError(t, err)
@@ -391,7 +394,8 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 			},
 		},
 	}
-	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
+	infos := buildTypes.NewBuildInfos(manifest.Name, "test", "", []string{"test"})
+	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{})
 
 	// error from the build
 	assert.NoError(t, err)
@@ -426,7 +430,8 @@ func TestBuildWithStack(t *testing.T) {
 			},
 		},
 	}
-	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
+	infos := buildTypes.NewBuildInfos(manifest.Name, "test", "", []string{"test"})
+	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{})
 
 	// error from the build
 	assert.NoError(t, err)

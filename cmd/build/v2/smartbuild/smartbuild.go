@@ -17,6 +17,7 @@ import (
 	"context"
 
 	"github.com/okteto/okteto/cmd/build/v2/environment"
+	buildTypes "github.com/okteto/okteto/cmd/build/v2/types"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/registry"
@@ -40,13 +41,12 @@ type repositoryInterface interface {
 }
 
 type hasherController interface {
-	hashProjectCommit(*build.Info) (string, error)
 	hashWithBuildContext(*build.Info, string) string
 }
 
 // CheckStrategy is the interface for the check strategy
 type CheckStrategy interface {
-	CheckServicesCache(ctx context.Context, manifestName string, buildManifest build.ManifestBuild, toBuildSvcs []string) ([]string, []string, error)
+	CheckServicesCache(ctx context.Context, manifestName string, buildManifest build.ManifestBuild, toBuildSvcs []*buildTypes.BuildInfo) ([]*buildTypes.BuildInfo, []*buildTypes.BuildInfo, error)
 	GetImageDigestReferenceForServiceDeploy(manifestName, service string, buildInfo *build.Info) (string, error)
 }
 
@@ -100,12 +100,6 @@ func NewSmartBuildCtrl(
 // IsEnabled returns true if smart builds are enabled, false otherwise
 func (s *Ctrl) IsEnabled() bool {
 	return s.config.isEnabled
-}
-
-// GetProjectHash returns the commit hash of the project
-func (s *Ctrl) GetProjectHash(buildInfo *build.Info) (string, error) {
-	s.ioCtrl.Logger().Debugf("getting project hash")
-	return s.hasher.hashProjectCommit(buildInfo)
 }
 
 // GetBuildHash returns the hash of the build based on the env vars

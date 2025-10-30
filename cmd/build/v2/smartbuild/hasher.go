@@ -50,7 +50,6 @@ type serviceHasher struct {
 	serviceShaCache map[string]string
 
 	getCurrentTimestampNano func() int64
-	projectCommit           string
 
 	ioCtrl *io.Controller
 
@@ -68,24 +67,6 @@ func newServiceHasher(gitRepoCtrl repositoryCommitRetriever, fs afero.Fs, wdGett
 		wdGetter:                wdGetter,
 		ioCtrl:                  ioCtrl,
 	}
-}
-
-// hashProjectCommit returns the hash of the repository's commit
-func (sh *serviceHasher) hashProjectCommit(buildInfo *build.Info) (string, error) {
-	sh.lock.Lock()
-	projectCommit := sh.projectCommit
-	sh.lock.Unlock()
-	if projectCommit == "" {
-		var err error
-		projectCommit, err = sh.gitRepoCtrl.GetSHA()
-		if err != nil {
-			return "", fmt.Errorf("could not get repository sha: %w", err)
-		}
-		sh.lock.Lock()
-		sh.projectCommit = projectCommit
-		sh.lock.Unlock()
-	}
-	return sh.hash(buildInfo, projectCommit, ""), nil
 }
 
 // hashBuildContext returns the hash of the service using its context tree hash

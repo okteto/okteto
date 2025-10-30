@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"testing"
 
+	buildTypes "github.com/okteto/okteto/cmd/build/v2/types"
 	"github.com/okteto/okteto/pkg/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -237,8 +238,7 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 				cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(false, "", errors.New("cache check failed"))
 			},
 			expectedCached:    nil,
-			expectedNotCached: nil,
-			expectedError:     errors.New("cache check failed"),
+			expectedNotCached: []string{"service1"},
 		},
 		{
 			name:         "optimization: dependent services added to notCached without cache check",
@@ -336,10 +336,19 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 			strategy, _, hasher, cacheProbe, serviceEnvVarsSetter, mockRegistry := createTestSequentialCheckStrategy()
 			tt.setupMocks(hasher, cacheProbe, serviceEnvVarsSetter, mockRegistry)
 
-			cached, notCached, err := strategy.CheckServicesCache(context.Background(), tt.manifestName, tt.buildManifest, tt.svcsToBuild)
+			svcInfos := buildTypes.NewBuildInfos(tt.manifestName, "test-namespace", "", tt.svcsToBuild)
+			cached, notCached, err := strategy.CheckServicesCache(context.Background(), tt.manifestName, tt.buildManifest, svcInfos)
 
-			assert.ElementsMatch(t, tt.expectedCached, cached, "cached services")
-			assert.ElementsMatch(t, tt.expectedNotCached, notCached, "not cached services")
+			toNames := func(bis []*buildTypes.BuildInfo) []string {
+				out := make([]string, 0, len(bis))
+				for _, bi := range bis {
+					out = append(out, bi.Name())
+				}
+				return out
+			}
+
+			assert.ElementsMatch(t, tt.expectedCached, toNames(cached), "cached services")
+			assert.ElementsMatch(t, tt.expectedNotCached, toNames(notCached), "not cached services")
 			assert.Equal(t, tt.expectedError, err)
 
 			hasher.AssertExpectations(t)
