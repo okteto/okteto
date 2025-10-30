@@ -110,7 +110,7 @@ jobs:
     executor: golang-ci
     steps:
       - checkout:
-          method: blobless
+          method: full
       - restore_cache:
           keys:
             - v4-pkg-cache-{{ checksum "go.sum" }}
