@@ -52,11 +52,9 @@ func (fr fakeRegistryController) GetImageTagWithDigest(image string) (string, er
 }
 
 type fakeHasher struct {
-	err  error
 	hash string
 }
 
-func (fh fakeHasher) hashProjectCommit(*build.Info) (string, error) { return fh.hash, fh.err }
 func (fh fakeHasher) hashWithBuildContext(*build.Info, string) string {
 	return fh.hash
 }

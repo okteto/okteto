@@ -53,11 +53,6 @@ type MockHasherController struct {
 	mock.Mock
 }
 
-func (m *MockHasherController) hashProjectCommit(buildInfo *build.Info) (string, error) {
-	args := m.Called(buildInfo)
-	return args.String(0), args.Error(1)
-}
-
 func (m *MockHasherController) hashWithBuildContext(buildInfo *build.Info, service string) string {
 	args := m.Called(buildInfo, service)
 	return args.String(0)
