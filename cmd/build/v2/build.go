@@ -247,7 +247,8 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		}
 	}(svcInfos)
 
-	var notCachedSvcs, cachedSvcs []*buildTypes.BuildInfo
+	var cachedSvcs []*buildTypes.BuildInfo
+	notCachedSvcs := svcInfos
 	if !options.NoCache && ob.smartBuildCtrl.IsEnabled() {
 		sp := ob.ioCtrl.Out().Spinner("Checking if the images are already built from cache...")
 		sp.Start()
