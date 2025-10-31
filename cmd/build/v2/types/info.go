@@ -39,6 +39,8 @@ func newBuildInfo(devenvName, namespace, repoURL, svcName string) *BuildInfo {
 	metadata.Name = svcName
 	metadata.Namespace = namespace
 	metadata.RepoURL = repoURL
+	metadata.DevenvName = devenvName
+	metadata.Initiator = "build"
 	return &BuildInfo{
 		name:       svcName,
 		devenvName: devenvName,

@@ -222,19 +222,6 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 	buildManifest := options.Manifest.Build
 
-	// send analytics for all builds after Build
-	buildsAnalytics := make([]*analytics.ImageBuildMetadata, 0)
-
-	// send all events appended on each build
-	defer func([]*analytics.ImageBuildMetadata) {
-		for _, meta := range buildsAnalytics {
-			m := meta
-			for _, fn := range ob.onBuildFinish {
-				fn(ctx, m)
-			}
-		}
-	}(buildsAnalytics)
-
 	bg := newBuildGraph(buildManifest, toBuildSvcs)
 	tree, err := bg.GetGraph()
 	if err != nil {
@@ -249,6 +236,17 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	ob.ioCtrl.Logger().Infof("Ordered services: [%s]", strings.Join(toBuildSvcs, ", "))
 
 	svcInfos := buildTypes.NewBuildInfos(options.Manifest.Name, ob.oktetoContext.GetNamespace(), ob.Config.GetAnonymizedRepo(), toBuildSvcs)
+
+	// send all events appended on each build
+	defer func([]*buildTypes.BuildInfo) {
+		for _, info := range svcInfos {
+			m := info.Metadata()
+			for _, fn := range ob.onBuildFinish {
+				fn(ctx, m)
+			}
+		}
+	}(svcInfos)
+
 	var notCachedSvcs, cachedSvcs []*buildTypes.BuildInfo
 	if !options.NoCache && ob.smartBuildCtrl.IsEnabled() {
 		sp := ob.ioCtrl.Out().Spinner("Checking if the images are already built from cache...")
@@ -414,8 +412,3 @@ func validateServices(buildSection build.ManifestBuild, svcsToBuild []string) er
 	}
 	return nil
 }
-
-// func getImageChecker(cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface, sbc smartBuildController, logger loggerInfo) imageChecker {
-// 	tagger := newImageTagger(cfg, sbc)
-// 	return newImageChecker(cfg, registry, tagger, logger)
-// }
