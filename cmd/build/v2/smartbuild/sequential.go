@@ -123,6 +123,9 @@ func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manife
 				s.ioCtrl.Logger().Infof("error cloning global image to dev: %s", err)
 				return cachedSvcs, notCachedSvcs, fmt.Errorf("error cloning svc %s global image to dev: %w", svc.Name(), err)
 			}
+
+			s.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of %q because it's already built from cache.", svc.Name())
+
 			s.serviceEnvVarsSetter.SetServiceEnvVars(svc.Name(), reference)
 		} else {
 			notCachedSvcs = append(notCachedSvcs, svc)
@@ -130,11 +133,6 @@ func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manife
 			// Recursively add all dependent services to notCached without checking cache
 			notCachedSvcs = s.addDependentsToNotCached(svc, dependantMap, processed, notCachedSvcs, buildInfoByName)
 		}
-	}
-	if len(cachedSvcs) == 1 {
-		s.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of %q because it's already built from cache.", cachedSvcs[0])
-	} else if len(cachedSvcs) > 1 {
-		s.ioCtrl.Out().Infof("Okteto Smart Builds is skipping build of %d services [%v] because they're already built from cache.", len(cachedSvcs), cachedSvcs)
 	}
 	return cachedSvcs, notCachedSvcs, nil
 }

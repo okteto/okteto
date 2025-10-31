@@ -262,7 +262,9 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	}
 
 	for _, svcToBuild := range notCachedSvcs {
-		ob.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svcToBuild))
+		if options.EnableStages {
+			ob.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svcToBuild.Name()))
+		}
 		buildSvcInfo := options.Manifest.Build[svcToBuild.Name()]
 		if !ob.oktetoContext.IsOktetoCluster() && buildSvcInfo.Image == "" {
 			return fmt.Errorf("'build.%s.image' is required if your context doesn't have Okteto installed", svcToBuild)
