@@ -108,6 +108,7 @@ func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manife
 		isCachedStartTime := time.Now()
 		isCached, _, err := s.imageCacheChecker.IsCached(manifestName, buildInfo.Image, buildHash, name)
 		if err != nil {
+			// Log the error and continue adding it to the notCachedSvcs list
 			s.ioCtrl.Logger().Infof("error checking if image is cached: %s", err)
 		}
 		isCachedDuration := time.Since(isCachedStartTime)
