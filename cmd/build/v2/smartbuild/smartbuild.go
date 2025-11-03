@@ -82,9 +82,7 @@ func NewSmartBuildCtrl(
 	if smartBuildConfig.isSequentialCheckStrategy {
 		checkStrategy = NewSequentialCheckStrategy(tagger, hasher, cacheChecker, ioCtrl, serviceEnvVarsHandler, cloner)
 	} else {
-		// TODO: Implement parallel check strategy
-		// For now, use sequential strategy as fallback since parallel is not implemented yet
-		checkStrategy = NewSequentialCheckStrategy(tagger, hasher, cacheChecker, ioCtrl, serviceEnvVarsHandler, cloner)
+		checkStrategy = NewParallelCheckStrategy(tagger, hasher, cacheChecker, ioCtrl, serviceEnvVarsHandler, cloner)
 	}
 
 	return &Ctrl{

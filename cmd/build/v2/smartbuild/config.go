@@ -31,7 +31,7 @@ type Config struct {
 // NewConfig creates a new config
 func NewConfig() *Config {
 	isEnabled := env.LoadBooleanOrDefault(OktetoEnableSmartBuildEnvVar, true)
-	isSequentialCheckStrategy := env.LoadBooleanOrDefault(ParallelCheckStrategyEnvVar, false)
+	isSequentialCheckStrategy := !env.LoadBooleanOrDefault(ParallelCheckStrategyEnvVar, true)
 	return &Config{
 		isEnabled:                 isEnabled,
 		isSequentialCheckStrategy: isSequentialCheckStrategy,
