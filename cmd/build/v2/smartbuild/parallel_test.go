@@ -234,7 +234,14 @@ func TestParallelCheckStrategy_CheckServicesCache(t *testing.T) {
 
 			assert.ElementsMatch(t, tt.expectedCached, toNames(cached), "cached services")
 			assert.ElementsMatch(t, tt.expectedNotCached, toNames(notCached), "not cached services")
-			assert.ErrorIs(t, err, tt.expectedError)
+			if tt.expectedError != nil {
+				assert.Error(t, err)
+				if err != nil {
+					assert.Equal(t, tt.expectedError.Error(), err.Error())
+				}
+			} else {
+				assert.NoError(t, err)
+			}
 
 			hasher.AssertExpectations(t)
 			cacheProbe.AssertExpectations(t)
