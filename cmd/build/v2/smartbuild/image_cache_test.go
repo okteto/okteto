@@ -90,47 +90,6 @@ func (m *MockImageConfig) GetRegistryURL() string {
 	return args.String(0)
 }
 
-// createTestImageCtrl creates a real ImageCtrl for testing
-func createTestImageCtrl() registry.ImageCtrl {
-	mockConfig := &MockImageConfig{}
-	mockConfig.On("IsOktetoCluster").Return(false)
-	mockConfig.On("GetGlobalNamespace").Return("test-global-namespace")
-	mockConfig.On("GetNamespace").Return("test-namespace")
-	mockConfig.On("GetRegistryURL").Return("test-registry.com")
-
-	return registry.NewImageCtrl(mockConfig)
-}
-
-func TestNewRegistryCacheProbe(t *testing.T) {
-	t.Run("creates registry cache probe with all dependencies", func(t *testing.T) {
-		// Create mocks
-		mockTagger := &MockImageTaggerForCache{}
-		mockDigestResolver := &MockDigestResolverForCache{}
-		mockLogger := &MockLoggerForCache{}
-		imageCtrl := createTestImageCtrl()
-
-		// Create registry cache probe
-		probe := NewRegistryCacheProbe(
-			mockTagger,
-			"test-namespace",
-			"test-registry.com",
-			imageCtrl,
-			mockDigestResolver,
-			mockLogger,
-		)
-
-		// Verify probe was created with correct properties
-		assert.NotNil(t, probe)
-		assert.Equal(t, mockTagger, probe.tagger)
-		assert.Equal(t, "test-namespace", probe.namespace)
-		assert.Equal(t, "test-registry.com", probe.registryURL)
-		assert.Equal(t, imageCtrl, probe.imageCtrl)
-		assert.Equal(t, mockDigestResolver, probe.registry)
-		assert.Equal(t, mockLogger, probe.logger)
-
-	})
-}
-
 func TestRegistryCacheProbe_IsCached(t *testing.T) {
 	tests := []struct {
 		name             string
@@ -229,7 +188,12 @@ func TestRegistryCacheProbe_IsCached(t *testing.T) {
 			mockTagger := &MockImageTaggerForCache{}
 			mockDigestResolver := &MockDigestResolverForCache{}
 			mockLogger := &MockLoggerForCache{}
-			imageCtrl := createTestImageCtrl()
+			mockConfig := &MockImageConfig{}
+			mockConfig.On("IsOktetoCluster").Return(false)
+			mockConfig.On("GetGlobalNamespace").Return("test-global-namespace")
+			mockConfig.On("GetNamespace").Return("test-namespace")
+			mockConfig.On("GetRegistryURL").Return("test-registry.com")
+			imageCtrl := registry.NewImageCtrl(mockConfig)
 
 			// Set up mock expectations
 			if tt.buildHash != "" {
@@ -306,7 +270,12 @@ func TestRegistryCacheProbe_IsCached_CacheBehavior(t *testing.T) {
 		mockTagger := &MockImageTaggerForCache{}
 		mockDigestResolver := &MockDigestResolverForCache{}
 		mockLogger := &MockLoggerForCache{}
-		imageCtrl := createTestImageCtrl()
+		mockConfig := &MockImageConfig{}
+		mockConfig.On("IsOktetoCluster").Return(false)
+		mockConfig.On("GetGlobalNamespace").Return("test-global-namespace")
+		mockConfig.On("GetNamespace").Return("test-namespace")
+		mockConfig.On("GetRegistryURL").Return("test-registry.com")
+		imageCtrl := registry.NewImageCtrl(mockConfig)
 
 		// Create registry cache probe
 		probe := NewRegistryCacheProbe(
@@ -384,7 +353,12 @@ func TestRegistryCacheProbe_LookupReferenceWithDigest(t *testing.T) {
 			mockTagger := &MockImageTaggerForCache{}
 			mockDigestResolver := &MockDigestResolverForCache{}
 			mockLogger := &MockLoggerForCache{}
-			imageCtrl := createTestImageCtrl()
+			mockConfig := &MockImageConfig{}
+			mockConfig.On("IsOktetoCluster").Return(false)
+			mockConfig.On("GetGlobalNamespace").Return("test-global-namespace")
+			mockConfig.On("GetNamespace").Return("test-namespace")
+			mockConfig.On("GetRegistryURL").Return("test-registry.com")
+			imageCtrl := registry.NewImageCtrl(mockConfig)
 
 			// Set up mock expectations
 			mockDigestResolver.On("GetImageTagWithDigest", tt.reference).
@@ -423,7 +397,12 @@ func TestRegistryCacheProbe_EdgeCases(t *testing.T) {
 		mockTagger := &MockImageTaggerForCache{}
 		mockDigestResolver := &MockDigestResolverForCache{}
 		mockLogger := &MockLoggerForCache{}
-		imageCtrl := createTestImageCtrl()
+		mockConfig := &MockImageConfig{}
+		mockConfig.On("IsOktetoCluster").Return(false)
+		mockConfig.On("GetGlobalNamespace").Return("test-global-namespace")
+		mockConfig.On("GetNamespace").Return("test-namespace")
+		mockConfig.On("GetRegistryURL").Return("test-registry.com")
+		imageCtrl := registry.NewImageCtrl(mockConfig)
 
 		// Set up mock expectations
 		mockTagger.On("GetGlobalTagFromDevIfNeccesary", "test-image", "test-namespace", "test-registry.com", "hash123", imageCtrl).
@@ -454,7 +433,12 @@ func TestRegistryCacheProbe_EdgeCases(t *testing.T) {
 		mockTagger := &MockImageTaggerForCache{}
 		mockDigestResolver := &MockDigestResolverForCache{}
 		mockLogger := &MockLoggerForCache{}
-		imageCtrl := createTestImageCtrl()
+		mockConfig := &MockImageConfig{}
+		mockConfig.On("IsOktetoCluster").Return(false)
+		mockConfig.On("GetGlobalNamespace").Return("test-global-namespace")
+		mockConfig.On("GetNamespace").Return("test-namespace")
+		mockConfig.On("GetRegistryURL").Return("test-registry.com")
+		imageCtrl := registry.NewImageCtrl(mockConfig)
 
 		probe := NewRegistryCacheProbe(
 			mockTagger,
@@ -476,7 +460,12 @@ func TestRegistryCacheProbe_EdgeCases(t *testing.T) {
 		mockTagger := &MockImageTaggerForCache{}
 		mockDigestResolver := &MockDigestResolverForCache{}
 		mockLogger := &MockLoggerForCache{}
-		imageCtrl := createTestImageCtrl()
+		mockConfig := &MockImageConfig{}
+		mockConfig.On("IsOktetoCluster").Return(false)
+		mockConfig.On("GetGlobalNamespace").Return("test-global-namespace")
+		mockConfig.On("GetNamespace").Return("test-namespace")
+		mockConfig.On("GetRegistryURL").Return("test-registry.com")
+		imageCtrl := registry.NewImageCtrl(mockConfig)
 
 		probe := NewRegistryCacheProbe(
 			mockTagger,

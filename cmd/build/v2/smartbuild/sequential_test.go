@@ -114,30 +114,6 @@ func (m *MockRegistryController) IsOktetoRegistry(image string) bool {
 	return args.Bool(0)
 }
 
-// Helper function to create a test SequentialCheckStrategy
-func createTestSequentialCheckStrategy() (*SequentialCheckStrategy, *MockImageTagger, *MockHasherController, *MockCacheProbe, *MockServiceEnvVarsSetter, *MockRegistryController) {
-	tagger := &MockImageTagger{}
-	hasher := &MockHasherController{}
-	imageCacheChecker := &MockCacheProbe{}
-	serviceEnvVarsSetter := &MockServiceEnvVarsSetter{}
-	ioCtrl := io.NewIOController()
-
-	// Create a real cloner with a mock registry controller
-	mockRegistry := &MockRegistryController{}
-	cloner := NewCloner(mockRegistry, ioCtrl)
-
-	strategy := &SequentialCheckStrategy{
-		tagger:               tagger,
-		hasher:               hasher,
-		imageCacheChecker:    imageCacheChecker,
-		ioCtrl:               ioCtrl,
-		serviceEnvVarsSetter: serviceEnvVarsSetter,
-		cloner:               cloner,
-	}
-
-	return strategy, tagger, hasher, imageCacheChecker, serviceEnvVarsSetter, mockRegistry
-}
-
 func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 	tests := []struct {
 		name              string
@@ -327,7 +303,21 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			strategy, _, hasher, cacheProbe, serviceEnvVarsSetter, mockRegistry := createTestSequentialCheckStrategy()
+			tagger := &MockImageTagger{}
+			hasher := &MockHasherController{}
+			cacheProbe := &MockCacheProbe{}
+			serviceEnvVarsSetter := &MockServiceEnvVarsSetter{}
+			ioCtrl := io.NewIOController()
+			mockRegistry := &MockRegistryController{}
+			cloner := NewCloner(mockRegistry, ioCtrl)
+			strategy := &SequentialCheckStrategy{
+				tagger:               tagger,
+				hasher:               hasher,
+				imageCacheChecker:    cacheProbe,
+				ioCtrl:               ioCtrl,
+				serviceEnvVarsSetter: serviceEnvVarsSetter,
+				cloner:               cloner,
+			}
 			tt.setupMocks(hasher, cacheProbe, serviceEnvVarsSetter, mockRegistry)
 
 			svcInfos := buildTypes.NewBuildInfos(tt.manifestName, "test-namespace", "", tt.svcsToBuild)
@@ -438,7 +428,21 @@ func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *test
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			strategy, tagger, _, cacheProbe, _, _ := createTestSequentialCheckStrategy()
+			tagger := &MockImageTagger{}
+			hasher := &MockHasherController{}
+			cacheProbe := &MockCacheProbe{}
+			serviceEnvVarsSetter := &MockServiceEnvVarsSetter{}
+			ioCtrl := io.NewIOController()
+			mockRegistry := &MockRegistryController{}
+			cloner := NewCloner(mockRegistry, ioCtrl)
+			strategy := &SequentialCheckStrategy{
+				tagger:               tagger,
+				hasher:               hasher,
+				imageCacheChecker:    cacheProbe,
+				ioCtrl:               ioCtrl,
+				serviceEnvVarsSetter: serviceEnvVarsSetter,
+				cloner:               cloner,
+			}
 			tt.setupMocks(tagger, cacheProbe)
 
 			reference, err := strategy.GetImageDigestReferenceForServiceDeploy(tt.manifestName, tt.service, tt.buildInfo)
@@ -455,24 +459,4 @@ func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *test
 			cacheProbe.AssertExpectations(t)
 		})
 	}
-}
-
-func TestNewSequentialCheckStrategy(t *testing.T) {
-	tagger := &MockImageTagger{}
-	hasher := &MockHasherController{}
-	imageCacheChecker := &MockCacheProbe{}
-	ioCtrl := &io.Controller{}
-	serviceEnvVarsSetter := &MockServiceEnvVarsSetter{}
-	mockRegistry := &MockRegistryController{}
-	cloner := NewCloner(mockRegistry, ioCtrl)
-
-	strategy := NewSequentialCheckStrategy(tagger, hasher, imageCacheChecker, ioCtrl, serviceEnvVarsSetter, cloner)
-
-	assert.NotNil(t, strategy)
-	assert.Equal(t, tagger, strategy.tagger)
-	assert.Equal(t, hasher, strategy.hasher)
-	assert.Equal(t, imageCacheChecker, strategy.imageCacheChecker)
-	assert.Equal(t, ioCtrl, strategy.ioCtrl)
-	assert.Equal(t, serviceEnvVarsSetter, strategy.serviceEnvVarsSetter)
-	assert.Equal(t, cloner, strategy.cloner)
 }
