@@ -163,15 +163,14 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 
 				cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(true, "digest1", nil)
 				cacheProbe.On("IsCached", "test-manifest", "image2", "hash2", "service2").Return(true, "digest2", nil)
-				cacheProbe.On("GetFromCache", "service1").Return(true, "global-image1")
-				cacheProbe.On("GetFromCache", "service2").Return(true, "global-image2")
 
 				// Set up mock registry controller expectations for cloning
-				mockRegistry.On("IsGlobalRegistry", "global-image1").Return(false)
-				mockRegistry.On("IsGlobalRegistry", "global-image2").Return(false)
+				// The code uses the digest (cachedImage) returned by IsCached directly
+				mockRegistry.On("IsGlobalRegistry", "digest1").Return(false)
+				mockRegistry.On("IsGlobalRegistry", "digest2").Return(false)
 
-				serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "global-image1").Return()
-				serviceEnvVarsSetter.On("SetServiceEnvVars", "service2", "global-image2").Return()
+				serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "digest1").Return()
+				serviceEnvVarsSetter.On("SetServiceEnvVars", "service2", "digest2").Return()
 			},
 			expectedCached:    []string{"service1", "service2"},
 			expectedNotCached: nil,
@@ -210,12 +209,12 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 
 				cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(true, "digest1", nil)
 				cacheProbe.On("IsCached", "test-manifest", "image2", "hash2", "service2").Return(false, "", nil)
-				cacheProbe.On("GetFromCache", "service1").Return(true, "global-image1")
 
 				// Set up mock registry controller expectations for cloning
-				mockRegistry.On("IsGlobalRegistry", "global-image1").Return(false)
+				// The code uses the digest (cachedImage) returned by IsCached directly
+				mockRegistry.On("IsGlobalRegistry", "digest1").Return(false)
 
-				serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "global-image1").Return()
+				serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "digest1").Return()
 			},
 			expectedCached:    []string{"service1"},
 			expectedNotCached: []string{"service2"},
@@ -274,12 +273,12 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 				// service3 is cached, so service4 should be checked normally
 				cacheProbe.On("IsCached", "test-manifest", "image3", "hash3", "service3").Return(true, "digest3", nil)
 				cacheProbe.On("IsCached", "test-manifest", "image4", "hash4", "service4").Return(false, "", nil)
-				cacheProbe.On("GetFromCache", "service3").Return(true, "global-image3")
 
 				// Set up mock registry controller expectations for cloning
-				mockRegistry.On("IsGlobalRegistry", "global-image3").Return(false)
+				// The code uses the digest (cachedImage) returned by IsCached directly
+				mockRegistry.On("IsGlobalRegistry", "digest3").Return(false)
 
-				serviceEnvVarsSetter.On("SetServiceEnvVars", "service3", "global-image3").Return()
+				serviceEnvVarsSetter.On("SetServiceEnvVars", "service3", "digest3").Return()
 			},
 			expectedCached:    []string{"service3"},
 			expectedNotCached: []string{"service1", "service2", "service4"},

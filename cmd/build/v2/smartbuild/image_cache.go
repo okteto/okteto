@@ -13,8 +13,6 @@
 package smartbuild
 
 import (
-	"sync"
-
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/registry"
 )
@@ -34,9 +32,6 @@ type RegistryCacheProbe struct {
 	imageCtrl   registry.ImageCtrl
 	registry    DigestResolver
 	logger      Logger
-
-	mu    sync.RWMutex
-	cache map[string]string
 }
 
 func NewRegistryCacheProbe(tagger ImageTagger, namespace string, registryURL string, imageCtrl registry.ImageCtrl, registry DigestResolver, logger Logger) *RegistryCacheProbe {
@@ -46,8 +41,6 @@ func NewRegistryCacheProbe(tagger ImageTagger, namespace string, registryURL str
 		registryURL: registryURL,
 		imageCtrl:   imageCtrl,
 		registry:    registry,
-		mu:          sync.RWMutex{},
-		cache:       make(map[string]string),
 		logger:      logger,
 	}
 }
@@ -69,12 +62,6 @@ func (c *RegistryCacheProbe) IsCached(manifestName, image, buildHash, svcToBuild
 	}
 
 	for _, ref := range referencesToCheck {
-		c.mu.RLock()
-		_, ok := c.cache[ref]
-		c.mu.RUnlock()
-		if ok {
-			return true, c.cache[ref], nil
-		}
 		imageWithDigest, err := c.registry.GetImageTagWithDigest(ref)
 		if err != nil {
 			if oktetoErrors.IsNotFound(err) {
@@ -85,9 +72,6 @@ func (c *RegistryCacheProbe) IsCached(manifestName, image, buildHash, svcToBuild
 			continue
 		}
 		c.logger.Infof("image %s found", ref)
-		c.mu.Lock()
-		c.cache[svcToBuild] = imageWithDigest
-		c.mu.Unlock()
 		return true, imageWithDigest, nil
 	}
 	return false, "", nil
@@ -95,14 +79,4 @@ func (c *RegistryCacheProbe) IsCached(manifestName, image, buildHash, svcToBuild
 
 func (c *RegistryCacheProbe) LookupReferenceWithDigest(reference string) (string, error) {
 	return c.registry.GetImageTagWithDigest(reference)
-}
-
-func (c *RegistryCacheProbe) GetFromCache(svc string) (hit bool, reference string) {
-	c.mu.RLock()
-	reference, ok := c.cache[svc]
-	c.mu.RUnlock()
-	if ok {
-		return true, reference
-	}
-	return false, ""
 }

@@ -127,8 +127,7 @@ func TestNewRegistryCacheProbe(t *testing.T) {
 		assert.Equal(t, imageCtrl, probe.imageCtrl)
 		assert.Equal(t, mockDigestResolver, probe.registry)
 		assert.Equal(t, mockLogger, probe.logger)
-		assert.NotNil(t, probe.cache)
-		assert.Empty(t, probe.cache) // Cache should be initialized as empty
+
 	})
 }
 
@@ -319,14 +318,15 @@ func TestRegistryCacheProbe_IsCached_CacheBehavior(t *testing.T) {
 			mockLogger,
 		)
 
-		// Pre-populate cache
-		probe.mu.Lock()
-		probe.cache["test-image:tag"] = "test-image:tag@sha256:cached"
-		probe.mu.Unlock()
-
-		// Set up mock expectations - should not be called since result is cached
+		// Set up mock expectations
 		mockTagger.On("GetGlobalTagFromDevIfNeccesary", "test-image", "test-namespace", "test-registry.com", "hash123", imageCtrl).
 			Return("test-image:tag")
+
+		// GetImageTagWithDigest is always called to check if the image exists in the registry
+		mockDigestResolver.On("GetImageTagWithDigest", "test-image:tag").
+			Return("test-image:tag@sha256:cached", nil)
+
+		mockLogger.On("Infof", "image %s found", "test-image:tag").Return()
 
 		// Execute
 		cached, digest, err := probe.IsCached("test-manifest", "test-image", "hash123", "test-service")
@@ -336,9 +336,10 @@ func TestRegistryCacheProbe_IsCached_CacheBehavior(t *testing.T) {
 		assert.Equal(t, "test-image:tag@sha256:cached", digest)
 		assert.NoError(t, err)
 
-		// Verify that digest resolver was not called (cached result)
-		mockDigestResolver.AssertNotCalled(t, "GetImageTagWithDigest")
+		// Verify that digest resolver was called
+		mockDigestResolver.AssertExpectations(t)
 		mockTagger.AssertExpectations(t)
+		mockLogger.AssertExpectations(t)
 	})
 }
 
@@ -486,14 +487,15 @@ func TestRegistryCacheProbe_EdgeCases(t *testing.T) {
 			mockLogger,
 		)
 
-		// Pre-populate cache
-		probe.mu.Lock()
-		probe.cache["test-image:tag"] = "test-image:tag@sha256:cached"
-		probe.mu.Unlock()
-
-		// Set up mock expectations
+		// Set up mock expectations - each goroutine will call these methods
 		mockTagger.On("GetGlobalTagFromDevIfNeccesary", "test-image", "test-namespace", "test-registry.com", "hash123", imageCtrl).
-			Return("test-image:tag")
+			Return("test-image:tag").Maybe()
+
+		// GetImageTagWithDigest will be called by each goroutine (10 times)
+		mockDigestResolver.On("GetImageTagWithDigest", "test-image:tag").
+			Return("test-image:tag@sha256:cached", nil).Maybe()
+
+		mockLogger.On("Infof", "image %s found", "test-image:tag").Return().Maybe()
 
 		// Test concurrent access
 		done := make(chan bool, 10)

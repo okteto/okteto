@@ -41,7 +41,6 @@ type SmartBuildController interface {
 type CacheProbe interface {
 	IsCached(manifestName, image, buildHash, svcToBuild string) (bool, string, error)
 	LookupReferenceWithDigest(reference string) (string, error)
-	GetFromCache(svc string) (hit bool, reference string)
 }
 
 type ServiceEnvVarsSetter interface {
@@ -106,7 +105,7 @@ func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manife
 		svc.SetBuildHash(buildHash, buildHashDuration)
 
 		isCachedStartTime := time.Now()
-		isCached, _, err := s.imageCacheChecker.IsCached(manifestName, buildInfo.Image, buildHash, name)
+		isCached, cachedImage, err := s.imageCacheChecker.IsCached(manifestName, buildInfo.Image, buildHash, name)
 		if err != nil {
 			// Log the error and continue adding it to the notCachedSvcs list
 			s.ioCtrl.Logger().Infof("error checking if image is cached: %s", err)
@@ -119,7 +118,7 @@ func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manife
 		if isCached {
 			cachedSvcs = append(cachedSvcs, svc)
 
-			reference, err := s.cloneGlobalImageToDev(manifestName, buildManifest, svc)
+			reference, err := s.cloneGlobalImageToDev(cachedImage, manifestName, buildManifest, svc)
 			if err != nil {
 				s.ioCtrl.Logger().Infof("error cloning global image to dev: %s", err)
 				return cachedSvcs, notCachedSvcs, fmt.Errorf("error cloning svc %s global image to dev: %w", svc.Name(), err)
@@ -138,18 +137,15 @@ func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manife
 	return cachedSvcs, notCachedSvcs, nil
 }
 
-func (s *SequentialCheckStrategy) cloneGlobalImageToDev(manifestName string, buildManifest build.ManifestBuild, svc *buildTypes.BuildInfo) (string, error) {
+func (s *SequentialCheckStrategy) cloneGlobalImageToDev(cachedImage, manifestName string, buildManifest build.ManifestBuild, svc *buildTypes.BuildInfo) (string, error) {
 	buildInfo := buildManifest[svc.Name()]
 	devImage := buildInfo.Image
 	if buildInfo.Dockerfile != "" && buildInfo.Image == "" {
 		devImage = s.tagger.GetImageReferencesForDeploy(manifestName, svc.Name())[0]
 	}
-	ok, globalImage := s.imageCacheChecker.GetFromCache(svc.Name())
-	if !ok {
-		return "", fmt.Errorf("image %s not found in cache", svc.Name())
-	}
+
 	cloneStartTime := time.Now()
-	reference, err := s.cloner.CloneGlobalImageToDev(globalImage, devImage)
+	reference, err := s.cloner.CloneGlobalImageToDev(cachedImage, devImage)
 	cloneDuration := time.Since(cloneStartTime)
 	svc.SetCloneDuration(cloneDuration, err == nil)
 
