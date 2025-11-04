@@ -141,6 +141,7 @@ func (c *Command) UseContext(ctx context.Context, ctxOptions *Options) error {
 	}
 
 	if ctxOptions.Save {
+		oktetoLog.Debug("check if user can access namespace")
 		hasAccess, err := hasAccessToNamespace(ctx, c, ctxOptions)
 		if err != nil {
 			return err
@@ -227,6 +228,7 @@ func hasAccessToNamespace(ctx context.Context, c *Command, ctxOptions *Options) 
 }
 
 func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) error {
+	oktetoLog.Debug("initializing okteto context")
 	var userContext *types.UserContext
 	userContext, err := getLoggedUserContext(ctx, c, ctxOptions)
 	if err != nil {
@@ -254,6 +256,7 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 		ctxOptions.Namespace = userContext.User.Namespace
 	}
 
+	oktetoLog.Debug("downloading okteto cluster metadata")
 	clusterMetadata, err := getClusterMetadata(ctx, ctxOptions.Namespace, c.OktetoClientProvider)
 	if err != nil {
 		oktetoLog.Infof("error getting cluster metadata: %v", err)
@@ -261,12 +264,14 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 	}
 
 	// once we have namespace and user identify we are able to retrieve the dynamic token for the namespace
+	oktetoLog.Debug("updating okteto context token")
 	err = c.kubetokenController.updateOktetoContextToken(userContext)
 	if err != nil {
 		// TODO: when the static token feature gets removed, we must return an error to the user here
 		oktetoLog.Infof("error updating okteto context token: %v", err)
 	}
 
+	oktetoLog.Debug("adding okteto context to %s", config.GetKubeconfigPath())
 	okteto.AddOktetoContext(ctxOptions.Context, &userContext.User, ctxOptions.Namespace, userContext.User.Namespace)
 	cfg := kubeconfig.Get(config.GetKubeconfigPath())
 	if cfg == nil {
