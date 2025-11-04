@@ -343,7 +343,7 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 	}
 }
 
-func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *testing.T) {
+func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy_Success(t *testing.T) {
 	tests := []struct {
 		name              string
 		manifestName      string
@@ -351,7 +351,6 @@ func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *test
 		buildInfo         *build.Info
 		setupMocks        func(*MockImageTagger, *MockCacheProbe)
 		expectedReference string
-		expectedError     error
 	}{
 		{
 			name:         "dockerfile with image found",
@@ -363,7 +362,6 @@ func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *test
 				cacheProbe.On("LookupReferenceWithDigest", "ref1").Return("ref1@digest1", nil)
 			},
 			expectedReference: "ref1@digest1",
-			expectedError:     nil,
 		},
 		{
 			name:         "dockerfile with image not found in first reference",
@@ -376,7 +374,6 @@ func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *test
 				cacheProbe.On("LookupReferenceWithDigest", "ref2").Return("ref2@digest2", nil)
 			},
 			expectedReference: "ref2@digest2",
-			expectedError:     nil,
 		},
 		{
 			name:         "predefined image found",
@@ -387,8 +384,49 @@ func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *test
 				cacheProbe.On("LookupReferenceWithDigest", "predefined-image").Return("predefined-image@digest", nil)
 			},
 			expectedReference: "predefined-image@digest",
-			expectedError:     nil,
 		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tagger := &MockImageTagger{}
+			hasher := &MockHasherController{}
+			cacheProbe := &MockCacheProbe{}
+			serviceEnvVarsSetter := &MockServiceEnvVarsSetter{}
+			ioCtrl := io.NewIOController()
+			mockRegistry := &MockRegistryController{}
+			cloner := NewCloner(mockRegistry, ioCtrl)
+			strategy := &SequentialCheckStrategy{
+				tagger:               tagger,
+				hasher:               hasher,
+				imageCacheChecker:    cacheProbe,
+				ioCtrl:               ioCtrl,
+				serviceEnvVarsSetter: serviceEnvVarsSetter,
+				cloner:               cloner,
+			}
+			tt.setupMocks(tagger, cacheProbe)
+
+			reference, err := strategy.GetImageDigestReferenceForServiceDeploy(tt.manifestName, tt.service, tt.buildInfo)
+
+			assert.Equal(t, tt.expectedReference, reference)
+			assert.NoError(t, err)
+
+			tagger.AssertExpectations(t)
+			cacheProbe.AssertExpectations(t)
+		})
+	}
+}
+
+func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy_Error(t *testing.T) {
+	tests := []struct {
+		name              string
+		manifestName      string
+		service           string
+		buildInfo         *build.Info
+		setupMocks        func(*MockImageTagger, *MockCacheProbe)
+		expectedReference string
+		expectedError     error
+	}{
 		{
 			name:         "predefined image not found",
 			manifestName: "test-manifest",
@@ -448,12 +486,8 @@ func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *test
 			reference, err := strategy.GetImageDigestReferenceForServiceDeploy(tt.manifestName, tt.service, tt.buildInfo)
 
 			assert.Equal(t, tt.expectedReference, reference)
-			if tt.expectedError != nil {
-				assert.Error(t, err)
-				assert.Equal(t, tt.expectedError.Error(), err.Error())
-			} else {
-				assert.NoError(t, err)
-			}
+			assert.Error(t, err)
+			assert.Equal(t, tt.expectedError.Error(), err.Error())
 
 			tagger.AssertExpectations(t)
 			cacheProbe.AssertExpectations(t)
