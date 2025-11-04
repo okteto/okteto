@@ -96,7 +96,6 @@ func (s *SequentialCheckStrategy) CheckServicesCache(ctx context.Context, manife
 			continue
 		}
 
-		s.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svc))
 		buildInfo := buildManifest[name]
 
 		startBuildHashTime := time.Now()
