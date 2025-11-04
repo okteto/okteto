@@ -80,7 +80,6 @@ func TestParallelCheckStrategy_CheckServicesCache(t *testing.T) {
 		setupMocks        func(*MockHasherController, *MockCacheProbe, *MockServiceEnvVarsSetter, *MockRegistryController)
 		expectedCached    []string
 		expectedNotCached []string
-		expectedError     error
 	}{
 		{
 			name:         "all services cached",
@@ -107,7 +106,6 @@ func TestParallelCheckStrategy_CheckServicesCache(t *testing.T) {
 			},
 			expectedCached:    []string{"service1", "service2"},
 			expectedNotCached: nil,
-			expectedError:     nil,
 		},
 		{
 			name:         "no services cached",
@@ -126,7 +124,6 @@ func TestParallelCheckStrategy_CheckServicesCache(t *testing.T) {
 			},
 			expectedCached:    nil,
 			expectedNotCached: []string{"service1", "service2"},
-			expectedError:     nil,
 		},
 		{
 			name:         "mixed cache results",
@@ -150,7 +147,6 @@ func TestParallelCheckStrategy_CheckServicesCache(t *testing.T) {
 			},
 			expectedCached:    []string{"service1"},
 			expectedNotCached: []string{"service2"},
-			expectedError:     nil,
 		},
 		{
 			name:         "cache check error",
@@ -191,8 +187,48 @@ func TestParallelCheckStrategy_CheckServicesCache(t *testing.T) {
 			},
 			expectedCached:    []string{"service1", "service2"},
 			expectedNotCached: nil,
-			expectedError:     nil,
 		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			strategy, _, hasher, cacheProbe, serviceEnvVarsSetter, mockRegistry := createTestParallelCheckStrategy()
+			tt.setupMocks(hasher, cacheProbe, serviceEnvVarsSetter, mockRegistry)
+
+			svcInfos := buildTypes.NewBuildInfos(tt.manifestName, "test-namespace", "", tt.svcsToBuild)
+			cached, notCached, err := strategy.CheckServicesCache(context.Background(), tt.manifestName, tt.buildManifest, svcInfos)
+
+			toNames := func(bis []*buildTypes.BuildInfo) []string {
+				out := make([]string, 0, len(bis))
+				for _, bi := range bis {
+					out = append(out, bi.Name())
+				}
+				return out
+			}
+
+			assert.ElementsMatch(t, tt.expectedCached, toNames(cached), "cached services")
+			assert.ElementsMatch(t, tt.expectedNotCached, toNames(notCached), "not cached services")
+			assert.NoError(t, err)
+
+			hasher.AssertExpectations(t)
+			cacheProbe.AssertExpectations(t)
+			serviceEnvVarsSetter.AssertExpectations(t)
+			mockRegistry.AssertExpectations(t)
+		})
+	}
+}
+
+func TestParallelCheckStrategy_CheckServicesCache_Error(t *testing.T) {
+	tests := []struct {
+		name              string
+		manifestName      string
+		buildManifest     build.ManifestBuild
+		svcsToBuild       []string
+		setupMocks        func(*MockHasherController, *MockCacheProbe, *MockServiceEnvVarsSetter, *MockRegistryController)
+		expectedCached    []string
+		expectedNotCached []string
+		expectedError     error
+	}{
 		// Note: The clone error test is skipped because mocking IsGlobalRegistry in parallel execution
 		// has proven difficult. The cloner behavior depends on IsGlobalRegistry, and when it returns false,
 		// the cloner returns the image directly without calling Clone, making it hard to test the error path.
@@ -234,14 +270,8 @@ func TestParallelCheckStrategy_CheckServicesCache(t *testing.T) {
 
 			assert.ElementsMatch(t, tt.expectedCached, toNames(cached), "cached services")
 			assert.ElementsMatch(t, tt.expectedNotCached, toNames(notCached), "not cached services")
-			if tt.expectedError != nil {
-				assert.Error(t, err)
-				if err != nil {
-					assert.Equal(t, tt.expectedError.Error(), err.Error())
-				}
-			} else {
-				assert.NoError(t, err)
-			}
+			assert.Error(t, err)
+			assert.Equal(t, tt.expectedError.Error(), err.Error())
 
 			hasher.AssertExpectations(t)
 			cacheProbe.AssertExpectations(t)
@@ -259,7 +289,6 @@ func TestParallelCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *testin
 		buildInfo         *build.Info
 		setupMocks        func(*MockImageTagger, *MockCacheProbe)
 		expectedReference string
-		expectedError     error
 	}{
 		{
 			name:         "dockerfile with image found",
@@ -271,7 +300,6 @@ func TestParallelCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *testin
 				cacheProbe.On("LookupReferenceWithDigest", "ref1").Return("ref1@digest1", nil)
 			},
 			expectedReference: "ref1@digest1",
-			expectedError:     nil,
 		},
 		{
 			name:         "dockerfile with image not found in first reference",
@@ -284,7 +312,6 @@ func TestParallelCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *testin
 				cacheProbe.On("LookupReferenceWithDigest", "ref2").Return("ref2@digest2", nil)
 			},
 			expectedReference: "ref2@digest2",
-			expectedError:     nil,
 		},
 		{
 			name:         "predefined image found",
@@ -295,8 +322,35 @@ func TestParallelCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *testin
 				cacheProbe.On("LookupReferenceWithDigest", "predefined-image").Return("predefined-image@digest", nil)
 			},
 			expectedReference: "predefined-image@digest",
-			expectedError:     nil,
 		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			strategy, tagger, _, cacheProbe, _, _ := createTestParallelCheckStrategy()
+			tt.setupMocks(tagger, cacheProbe)
+
+			reference, err := strategy.GetImageDigestReferenceForServiceDeploy(tt.manifestName, tt.service, tt.buildInfo)
+
+			assert.Equal(t, tt.expectedReference, reference)
+			assert.NoError(t, err)
+
+			tagger.AssertExpectations(t)
+			cacheProbe.AssertExpectations(t)
+		})
+	}
+}
+
+func TestParallelCheckStrategy_GetImageDigestReferenceForServiceDeploy_Error(t *testing.T) {
+	tests := []struct {
+		name              string
+		manifestName      string
+		service           string
+		buildInfo         *build.Info
+		setupMocks        func(*MockImageTagger, *MockCacheProbe)
+		expectedReference string
+		expectedError     error
+	}{
 		{
 			name:         "predefined image not found",
 			manifestName: "test-manifest",
@@ -342,12 +396,8 @@ func TestParallelCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *testin
 			reference, err := strategy.GetImageDigestReferenceForServiceDeploy(tt.manifestName, tt.service, tt.buildInfo)
 
 			assert.Equal(t, tt.expectedReference, reference)
-			if tt.expectedError != nil {
-				assert.Error(t, err)
-				assert.Equal(t, tt.expectedError.Error(), err.Error())
-			} else {
-				assert.NoError(t, err)
-			}
+			assert.Error(t, err)
+			assert.Equal(t, tt.expectedError.Error(), err.Error())
 
 			tagger.AssertExpectations(t)
 			cacheProbe.AssertExpectations(t)
