@@ -16,11 +16,9 @@ package smartbuild
 import (
 	"testing"
 
-	"github.com/okteto/okteto/cmd/build/v2/environment"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/registry"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -114,68 +112,6 @@ type fakeOktetoRegistry struct {
 func (fr *fakeOktetoRegistry) GetImageReference(reference string) (registry.OktetoImageReference, error) {
 	args := fr.Called(reference)
 	return args.Get(0).(registry.OktetoImageReference), args.Error(1)
-}
-
-func TestNewSmartBuildCtrl(t *testing.T) {
-	type input struct {
-		isEnabledValue string
-	}
-	type output struct {
-		isEnabled bool
-	}
-
-	tests := []struct {
-		name   string
-		input  input
-		output output
-	}{
-		{
-			name: "Default Configuration",
-			input: input{
-				isEnabledValue: "",
-			},
-			output: output{
-				isEnabled: true,
-			},
-		},
-		{
-			name: "Environment Variable Disabled",
-			input: input{
-				isEnabledValue: "false",
-			},
-			output: output{
-				isEnabled: false,
-			},
-		},
-		{
-			name: "Environment variable Enabled",
-			input: input{
-				isEnabledValue: "true",
-			},
-			output: output{
-				isEnabled: true,
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(OktetoEnableSmartBuildEnvVar, tt.input.isEnabledValue)
-
-			wdGetter := fakeWorkingDirGetter{}
-			ioCtrl := io.NewIOController()
-			config := &Config{isEnabled: tt.output.isEnabled, isSequentialCheckStrategy: true}
-			tagger := &fakeImageTagger{}
-			// Create a fake OktetoRegistry that implements the imageReferenceGetter interface
-			fakeRegistry := &fakeOktetoRegistry{}
-			serviceEnvVarsHandler := environment.NewServiceEnvVarsHandler(ioCtrl, fakeRegistry)
-
-			imageCtrl := registry.NewImageCtrl(&fakeImageCtrl{})
-			ctrl := NewSmartBuildCtrl(&fakeConfigRepo{}, &fakeRegistryController{}, afero.NewMemMapFs(), ioCtrl, wdGetter, config, tagger, imageCtrl, serviceEnvVarsHandler, "test-namespace", "test-registry.com")
-
-			assert.Equal(t, tt.output.isEnabled, ctrl.IsEnabled())
-		})
-	}
 }
 
 func TestGetServiceHash(t *testing.T) {

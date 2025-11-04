@@ -114,30 +114,6 @@ func (m *MockRegistryController) IsOktetoRegistry(image string) bool {
 	return args.Bool(0)
 }
 
-// Helper function to create a test SequentialCheckStrategy
-func createTestSequentialCheckStrategy() (*SequentialCheckStrategy, *MockImageTagger, *MockHasherController, *MockCacheProbe, *MockServiceEnvVarsSetter, *MockRegistryController) {
-	tagger := &MockImageTagger{}
-	hasher := &MockHasherController{}
-	imageCacheChecker := &MockCacheProbe{}
-	serviceEnvVarsSetter := &MockServiceEnvVarsSetter{}
-	ioCtrl := io.NewIOController()
-
-	// Create a real cloner with a mock registry controller
-	mockRegistry := &MockRegistryController{}
-	cloner := NewCloner(mockRegistry, ioCtrl)
-
-	strategy := &SequentialCheckStrategy{
-		tagger:               tagger,
-		hasher:               hasher,
-		imageCacheChecker:    imageCacheChecker,
-		ioCtrl:               ioCtrl,
-		serviceEnvVarsSetter: serviceEnvVarsSetter,
-		cloner:               cloner,
-	}
-
-	return strategy, tagger, hasher, imageCacheChecker, serviceEnvVarsSetter, mockRegistry
-}
-
 func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 	tests := []struct {
 		name              string
@@ -163,15 +139,14 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 
 				cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(true, "digest1", nil)
 				cacheProbe.On("IsCached", "test-manifest", "image2", "hash2", "service2").Return(true, "digest2", nil)
-				cacheProbe.On("GetFromCache", "service1").Return(true, "global-image1")
-				cacheProbe.On("GetFromCache", "service2").Return(true, "global-image2")
 
 				// Set up mock registry controller expectations for cloning
-				mockRegistry.On("IsGlobalRegistry", "global-image1").Return(false)
-				mockRegistry.On("IsGlobalRegistry", "global-image2").Return(false)
+				// The code uses the digest (cachedImage) returned by IsCached directly
+				mockRegistry.On("IsGlobalRegistry", "digest1").Return(false)
+				mockRegistry.On("IsGlobalRegistry", "digest2").Return(false)
 
-				serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "global-image1").Return()
-				serviceEnvVarsSetter.On("SetServiceEnvVars", "service2", "global-image2").Return()
+				serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "digest1").Return()
+				serviceEnvVarsSetter.On("SetServiceEnvVars", "service2", "digest2").Return()
 			},
 			expectedCached:    []string{"service1", "service2"},
 			expectedNotCached: nil,
@@ -210,12 +185,12 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 
 				cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(true, "digest1", nil)
 				cacheProbe.On("IsCached", "test-manifest", "image2", "hash2", "service2").Return(false, "", nil)
-				cacheProbe.On("GetFromCache", "service1").Return(true, "global-image1")
 
 				// Set up mock registry controller expectations for cloning
-				mockRegistry.On("IsGlobalRegistry", "global-image1").Return(false)
+				// The code uses the digest (cachedImage) returned by IsCached directly
+				mockRegistry.On("IsGlobalRegistry", "digest1").Return(false)
 
-				serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "global-image1").Return()
+				serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "digest1").Return()
 			},
 			expectedCached:    []string{"service1"},
 			expectedNotCached: []string{"service2"},
@@ -274,12 +249,12 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 				// service3 is cached, so service4 should be checked normally
 				cacheProbe.On("IsCached", "test-manifest", "image3", "hash3", "service3").Return(true, "digest3", nil)
 				cacheProbe.On("IsCached", "test-manifest", "image4", "hash4", "service4").Return(false, "", nil)
-				cacheProbe.On("GetFromCache", "service3").Return(true, "global-image3")
 
 				// Set up mock registry controller expectations for cloning
-				mockRegistry.On("IsGlobalRegistry", "global-image3").Return(false)
+				// The code uses the digest (cachedImage) returned by IsCached directly
+				mockRegistry.On("IsGlobalRegistry", "digest3").Return(false)
 
-				serviceEnvVarsSetter.On("SetServiceEnvVars", "service3", "global-image3").Return()
+				serviceEnvVarsSetter.On("SetServiceEnvVars", "service3", "digest3").Return()
 			},
 			expectedCached:    []string{"service3"},
 			expectedNotCached: []string{"service1", "service2", "service4"},
@@ -328,7 +303,21 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			strategy, _, hasher, cacheProbe, serviceEnvVarsSetter, mockRegistry := createTestSequentialCheckStrategy()
+			tagger := &MockImageTagger{}
+			hasher := &MockHasherController{}
+			cacheProbe := &MockCacheProbe{}
+			serviceEnvVarsSetter := &MockServiceEnvVarsSetter{}
+			ioCtrl := io.NewIOController()
+			mockRegistry := &MockRegistryController{}
+			cloner := NewCloner(mockRegistry, ioCtrl)
+			strategy := &SequentialCheckStrategy{
+				tagger:               tagger,
+				hasher:               hasher,
+				imageCacheChecker:    cacheProbe,
+				ioCtrl:               ioCtrl,
+				serviceEnvVarsSetter: serviceEnvVarsSetter,
+				cloner:               cloner,
+			}
 			tt.setupMocks(hasher, cacheProbe, serviceEnvVarsSetter, mockRegistry)
 
 			svcInfos := buildTypes.NewBuildInfos(tt.manifestName, "test-namespace", "", tt.svcsToBuild)
@@ -354,7 +343,7 @@ func TestSequentialCheckStrategy_CheckServicesCache(t *testing.T) {
 	}
 }
 
-func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *testing.T) {
+func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy_Success(t *testing.T) {
 	tests := []struct {
 		name              string
 		manifestName      string
@@ -362,7 +351,6 @@ func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *test
 		buildInfo         *build.Info
 		setupMocks        func(*MockImageTagger, *MockCacheProbe)
 		expectedReference string
-		expectedError     error
 	}{
 		{
 			name:         "dockerfile with image found",
@@ -374,7 +362,6 @@ func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *test
 				cacheProbe.On("LookupReferenceWithDigest", "ref1").Return("ref1@digest1", nil)
 			},
 			expectedReference: "ref1@digest1",
-			expectedError:     nil,
 		},
 		{
 			name:         "dockerfile with image not found in first reference",
@@ -387,7 +374,6 @@ func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *test
 				cacheProbe.On("LookupReferenceWithDigest", "ref2").Return("ref2@digest2", nil)
 			},
 			expectedReference: "ref2@digest2",
-			expectedError:     nil,
 		},
 		{
 			name:         "predefined image found",
@@ -398,8 +384,49 @@ func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *test
 				cacheProbe.On("LookupReferenceWithDigest", "predefined-image").Return("predefined-image@digest", nil)
 			},
 			expectedReference: "predefined-image@digest",
-			expectedError:     nil,
 		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tagger := &MockImageTagger{}
+			hasher := &MockHasherController{}
+			cacheProbe := &MockCacheProbe{}
+			serviceEnvVarsSetter := &MockServiceEnvVarsSetter{}
+			ioCtrl := io.NewIOController()
+			mockRegistry := &MockRegistryController{}
+			cloner := NewCloner(mockRegistry, ioCtrl)
+			strategy := &SequentialCheckStrategy{
+				tagger:               tagger,
+				hasher:               hasher,
+				imageCacheChecker:    cacheProbe,
+				ioCtrl:               ioCtrl,
+				serviceEnvVarsSetter: serviceEnvVarsSetter,
+				cloner:               cloner,
+			}
+			tt.setupMocks(tagger, cacheProbe)
+
+			reference, err := strategy.GetImageDigestReferenceForServiceDeploy(tt.manifestName, tt.service, tt.buildInfo)
+
+			assert.Equal(t, tt.expectedReference, reference)
+			assert.NoError(t, err)
+
+			tagger.AssertExpectations(t)
+			cacheProbe.AssertExpectations(t)
+		})
+	}
+}
+
+func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy_Error(t *testing.T) {
+	tests := []struct {
+		name              string
+		manifestName      string
+		service           string
+		buildInfo         *build.Info
+		setupMocks        func(*MockImageTagger, *MockCacheProbe)
+		expectedReference string
+		expectedError     error
+	}{
 		{
 			name:         "predefined image not found",
 			manifestName: "test-manifest",
@@ -439,41 +466,31 @@ func TestSequentialCheckStrategy_GetImageDigestReferenceForServiceDeploy(t *test
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			strategy, tagger, _, cacheProbe, _, _ := createTestSequentialCheckStrategy()
+			tagger := &MockImageTagger{}
+			hasher := &MockHasherController{}
+			cacheProbe := &MockCacheProbe{}
+			serviceEnvVarsSetter := &MockServiceEnvVarsSetter{}
+			ioCtrl := io.NewIOController()
+			mockRegistry := &MockRegistryController{}
+			cloner := NewCloner(mockRegistry, ioCtrl)
+			strategy := &SequentialCheckStrategy{
+				tagger:               tagger,
+				hasher:               hasher,
+				imageCacheChecker:    cacheProbe,
+				ioCtrl:               ioCtrl,
+				serviceEnvVarsSetter: serviceEnvVarsSetter,
+				cloner:               cloner,
+			}
 			tt.setupMocks(tagger, cacheProbe)
 
 			reference, err := strategy.GetImageDigestReferenceForServiceDeploy(tt.manifestName, tt.service, tt.buildInfo)
 
 			assert.Equal(t, tt.expectedReference, reference)
-			if tt.expectedError != nil {
-				assert.Error(t, err)
-				assert.Equal(t, tt.expectedError.Error(), err.Error())
-			} else {
-				assert.NoError(t, err)
-			}
+			assert.Error(t, err)
+			assert.Equal(t, tt.expectedError.Error(), err.Error())
 
 			tagger.AssertExpectations(t)
 			cacheProbe.AssertExpectations(t)
 		})
 	}
-}
-
-func TestNewSequentialCheckStrategy(t *testing.T) {
-	tagger := &MockImageTagger{}
-	hasher := &MockHasherController{}
-	imageCacheChecker := &MockCacheProbe{}
-	ioCtrl := &io.Controller{}
-	serviceEnvVarsSetter := &MockServiceEnvVarsSetter{}
-	mockRegistry := &MockRegistryController{}
-	cloner := NewCloner(mockRegistry, ioCtrl)
-
-	strategy := NewSequentialCheckStrategy(tagger, hasher, imageCacheChecker, ioCtrl, serviceEnvVarsSetter, cloner)
-
-	assert.NotNil(t, strategy)
-	assert.Equal(t, tagger, strategy.tagger)
-	assert.Equal(t, hasher, strategy.hasher)
-	assert.Equal(t, imageCacheChecker, strategy.imageCacheChecker)
-	assert.Equal(t, ioCtrl, strategy.ioCtrl)
-	assert.Equal(t, serviceEnvVarsSetter, strategy.serviceEnvVarsSetter)
-	assert.Equal(t, cloner, strategy.cloner)
 }

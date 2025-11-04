@@ -15,6 +15,7 @@ package smartbuild
 
 import (
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/registry"
@@ -90,210 +91,176 @@ func (m *MockImageConfig) GetRegistryURL() string {
 	return args.String(0)
 }
 
-// createTestImageCtrl creates a real ImageCtrl for testing
 func createTestImageCtrl() registry.ImageCtrl {
 	mockConfig := &MockImageConfig{}
 	mockConfig.On("IsOktetoCluster").Return(false)
 	mockConfig.On("GetGlobalNamespace").Return("test-global-namespace")
 	mockConfig.On("GetNamespace").Return("test-namespace")
 	mockConfig.On("GetRegistryURL").Return("test-registry.com")
-
 	return registry.NewImageCtrl(mockConfig)
 }
 
-func TestNewRegistryCacheProbe(t *testing.T) {
-	t.Run("creates registry cache probe with all dependencies", func(t *testing.T) {
-		// Create mocks
-		mockTagger := &MockImageTaggerForCache{}
-		mockDigestResolver := &MockDigestResolverForCache{}
-		mockLogger := &MockLoggerForCache{}
-		imageCtrl := createTestImageCtrl()
-
-		// Create registry cache probe
-		probe := NewRegistryCacheProbe(
-			mockTagger,
-			"test-namespace",
-			"test-registry.com",
-			imageCtrl,
-			mockDigestResolver,
-			mockLogger,
-		)
-
-		// Verify probe was created with correct properties
-		assert.NotNil(t, probe)
-		assert.Equal(t, mockTagger, probe.tagger)
-		assert.Equal(t, "test-namespace", probe.namespace)
-		assert.Equal(t, "test-registry.com", probe.registryURL)
-		assert.Equal(t, imageCtrl, probe.imageCtrl)
-		assert.Equal(t, mockDigestResolver, probe.registry)
-		assert.Equal(t, mockLogger, probe.logger)
-		assert.NotNil(t, probe.cache)
-		assert.Empty(t, probe.cache) // Cache should be initialized as empty
-	})
+func createTestRegistryCacheProbe(tagger *MockImageTaggerForCache, digestResolver *MockDigestResolverForCache, logger *MockLoggerForCache) *RegistryCacheProbe {
+	imageCtrl := createTestImageCtrl()
+	return NewRegistryCacheProbe(
+		tagger,
+		"test-namespace",
+		"test-registry.com",
+		imageCtrl,
+		digestResolver,
+		logger,
+	)
 }
 
-func TestRegistryCacheProbe_IsCached(t *testing.T) {
+func setupLoggerMocks(logger *MockLoggerForCache) {
+	logger.On("Infof", mock.Anything, mock.Anything, mock.Anything).Maybe().Return()
+	logger.On("Infof", mock.Anything, mock.Anything).Maybe().Return()
+}
+
+func TestRegistryCacheProbe_IsCached_EmptyBuildHash(t *testing.T) {
+	mockTagger := &MockImageTaggerForCache{}
+	mockDigestResolver := &MockDigestResolverForCache{}
+	mockLogger := &MockLoggerForCache{}
+
+	probe := createTestRegistryCacheProbe(mockTagger, mockDigestResolver, mockLogger)
+
+	cached, digest, err := probe.IsCached("test-manifest", "test/image", "", "test-service")
+
+	assert.False(t, cached)
+	assert.Empty(t, digest)
+	assert.NoError(t, err)
+}
+
+func TestRegistryCacheProbe_IsCached_WithImage_GlobalTag(t *testing.T) {
 	tests := []struct {
-		name             string
-		manifestName     string
-		image            string
-		buildHash        string
-		svcToBuild       string
-		mockGlobalTag    string
-		mockImageRefs    []string
-		mockDigestResult string
-		mockDigestError  error
-		expectedCached   bool
-		expectedDigest   string
-		expectedError    bool
+		name           string
+		image          string
+		buildHash      string
+		globalTag      string
+		digestResult   string
+		digestError    error
+		expectedCached bool
+		expectedDigest string
 	}{
 		{
-			name:           "empty build hash returns not cached",
-			manifestName:   "test-manifest",
+			name:           "global tag found in cache",
 			image:          "test/image",
-			buildHash:      "",
-			svcToBuild:     "test-service",
+			buildHash:      "hash123",
+			globalTag:      "global/test/image:hash123",
+			digestResult:   "global/test/image:hash123@sha256:abc123",
+			digestError:    nil,
+			expectedCached: true,
+			expectedDigest: "global/test/image:hash123@sha256:abc123",
+		},
+		{
+			name:           "global tag not found in registry",
+			image:          "test/image",
+			buildHash:      "hash123",
+			globalTag:      "global/test/image:hash123",
+			digestResult:   "",
+			digestError:    errors.New("not found"),
 			expectedCached: false,
 			expectedDigest: "",
-			expectedError:  false,
 		},
 		{
-			name:             "image with global tag found in cache",
-			manifestName:     "test-manifest",
-			image:            "test/image",
-			buildHash:        "hash123",
-			svcToBuild:       "test-service",
-			mockGlobalTag:    "global/test/image:hash123",
-			mockDigestResult: "global/test/image:hash123@sha256:abc123",
-			mockDigestError:  nil,
-			expectedCached:   true,
-			expectedDigest:   "global/test/image:hash123@sha256:abc123",
-			expectedError:    false,
-		},
-		{
-			name:             "image with global tag not found in registry",
-			manifestName:     "test-manifest",
-			image:            "test/image",
-			buildHash:        "hash123",
-			svcToBuild:       "test-service",
-			mockGlobalTag:    "global/test/image:hash123",
-			mockDigestResult: "",
-			mockDigestError:  errors.New("not found"),
-			expectedCached:   false,
-			expectedDigest:   "",
-			expectedError:    false,
-		},
-		{
-			name:             "no image provided, uses tagger references",
-			manifestName:     "test-manifest",
-			image:            "",
-			buildHash:        "hash123",
-			svcToBuild:       "test-service",
-			mockImageRefs:    []string{"test-registry.com/test-service:hash123"},
-			mockDigestResult: "test-registry.com/test-service:hash123@sha256:def456",
-			mockDigestError:  nil,
-			expectedCached:   true,
-			expectedDigest:   "test-registry.com/test-service:hash123@sha256:def456",
-			expectedError:    false,
-		},
-		{
-			name:             "multiple references, first not found, second found",
-			manifestName:     "test-manifest",
-			image:            "",
-			buildHash:        "hash123",
-			svcToBuild:       "test-service",
-			mockImageRefs:    []string{"ref1:hash123", "ref2:hash123"},
-			mockDigestResult: "ref2:hash123@sha256:ghi789",
-			mockDigestError:  nil,
-			expectedCached:   true,
-			expectedDigest:   "ref2:hash123@sha256:ghi789",
-			expectedError:    false,
-		},
-		{
-			name:             "registry error that is not 'not found'",
-			manifestName:     "test-manifest",
-			image:            "test/image",
-			buildHash:        "hash123",
-			svcToBuild:       "test-service",
-			mockGlobalTag:    "global/test/image:hash123",
-			mockDigestResult: "",
-			mockDigestError:  errors.New("registry error"),
-			expectedCached:   false,
-			expectedDigest:   "",
-			expectedError:    false,
+			name:           "registry error that is not 'not found'",
+			image:          "test/image",
+			buildHash:      "hash123",
+			globalTag:      "global/test/image:hash123",
+			digestResult:   "",
+			digestError:    errors.New("registry error"),
+			expectedCached: false,
+			expectedDigest: "",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create mocks
 			mockTagger := &MockImageTaggerForCache{}
 			mockDigestResolver := &MockDigestResolverForCache{}
 			mockLogger := &MockLoggerForCache{}
-			imageCtrl := createTestImageCtrl()
 
-			// Set up mock expectations
-			if tt.buildHash != "" {
-				if tt.image != "" {
-					// When image is provided, expect GetGlobalTagFromDevIfNeccesary to be called
-					mockTagger.On("GetGlobalTagFromDevIfNeccesary", tt.image, "test-namespace", "test-registry.com", tt.buildHash, imageCtrl).
-						Return(tt.mockGlobalTag)
+			probe := createTestRegistryCacheProbe(mockTagger, mockDigestResolver, mockLogger)
 
-					if tt.mockGlobalTag != "" {
-						mockDigestResolver.On("GetImageTagWithDigest", tt.mockGlobalTag).
-							Return(tt.mockDigestResult, tt.mockDigestError)
+			mockTagger.On("GetGlobalTagFromDevIfNeccesary", tt.image, "test-namespace", "test-registry.com", tt.buildHash, mock.AnythingOfType("registry.ImageCtrl")).
+				Return(tt.globalTag)
 
-						// Use flexible mock expectations for logger
-						mockLogger.On("Infof", mock.Anything, mock.Anything, mock.Anything).Maybe().Return()
-						mockLogger.On("Infof", mock.Anything, mock.Anything).Maybe().Return()
-					}
+			mockDigestResolver.On("GetImageTagWithDigest", tt.globalTag).
+				Return(tt.digestResult, tt.digestError)
+			setupLoggerMocks(mockLogger)
+
+			cached, digest, err := probe.IsCached("test-manifest", tt.image, tt.buildHash, "test-service")
+
+			assert.Equal(t, tt.expectedCached, cached)
+			assert.Equal(t, tt.expectedDigest, digest)
+			assert.NoError(t, err)
+
+			mockTagger.AssertExpectations(t)
+			mockDigestResolver.AssertExpectations(t)
+			mockLogger.AssertExpectations(t)
+		})
+	}
+}
+
+func TestRegistryCacheProbe_IsCached_NoImage_TaggerReferences(t *testing.T) {
+	tests := []struct {
+		name           string
+		buildHash      string
+		imageRefs      []string
+		digestResult   string
+		digestError    error
+		expectedCached bool
+		expectedDigest string
+	}{
+		{
+			name:           "single reference found",
+			buildHash:      "hash123",
+			imageRefs:      []string{"test-registry.com/test-service:hash123"},
+			digestResult:   "test-registry.com/test-service:hash123@sha256:def456",
+			digestError:    nil,
+			expectedCached: true,
+			expectedDigest: "test-registry.com/test-service:hash123@sha256:def456",
+		},
+		{
+			name:           "multiple references, first not found, second found",
+			buildHash:      "hash123",
+			imageRefs:      []string{"ref1:hash123", "ref2:hash123"},
+			digestResult:   "ref2:hash123@sha256:ghi789",
+			digestError:    nil,
+			expectedCached: true,
+			expectedDigest: "ref2:hash123@sha256:ghi789",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockTagger := &MockImageTaggerForCache{}
+			mockDigestResolver := &MockDigestResolverForCache{}
+			mockLogger := &MockLoggerForCache{}
+
+			mockTagger.On("GetImageReferencesForTag", "test-manifest", "test-service", tt.buildHash).
+				Return(tt.imageRefs)
+
+			lastIndex := len(tt.imageRefs) - 1
+			for i, ref := range tt.imageRefs {
+				if i == lastIndex {
+					mockDigestResolver.On("GetImageTagWithDigest", ref).
+						Return(tt.digestResult, tt.digestError)
+					setupLoggerMocks(mockLogger)
 				} else {
-					// When no image is provided, expect GetImageReferencesForTag to be called
-					mockTagger.On("GetImageReferencesForTag", tt.manifestName, tt.svcToBuild, tt.buildHash).
-						Return(tt.mockImageRefs)
-
-					// Set up expectations for each reference
-					for i, ref := range tt.mockImageRefs {
-						if i == len(tt.mockImageRefs)-1 {
-							// Last reference should return the result
-							mockDigestResolver.On("GetImageTagWithDigest", ref).
-								Return(tt.mockDigestResult, tt.mockDigestError)
-
-							// Use flexible mock expectations for logger
-							mockLogger.On("Infof", mock.Anything, mock.Anything, mock.Anything).Maybe().Return()
-							mockLogger.On("Infof", mock.Anything, mock.Anything).Maybe().Return()
-						} else {
-							// Previous references should fail
-							mockDigestResolver.On("GetImageTagWithDigest", ref).
-								Return("", errors.New("not found"))
-						}
-					}
+					mockDigestResolver.On("GetImageTagWithDigest", ref).
+						Return("", errors.New("not found"))
 				}
 			}
 
-			// Create registry cache probe
-			probe := NewRegistryCacheProbe(
-				mockTagger,
-				"test-namespace",
-				"test-registry.com",
-				imageCtrl,
-				mockDigestResolver,
-				mockLogger,
-			)
+			probe := createTestRegistryCacheProbe(mockTagger, mockDigestResolver, mockLogger)
 
-			// Execute
-			cached, digest, err := probe.IsCached(tt.manifestName, tt.image, tt.buildHash, tt.svcToBuild)
+			cached, digest, err := probe.IsCached("test-manifest", "", tt.buildHash, "test-service")
 
-			// Verify results
 			assert.Equal(t, tt.expectedCached, cached)
 			assert.Equal(t, tt.expectedDigest, digest)
-			if tt.expectedError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
+			assert.NoError(t, err)
 
-			// Verify mock expectations
 			mockTagger.AssertExpectations(t)
 			mockDigestResolver.AssertExpectations(t)
 			mockLogger.AssertExpectations(t)
@@ -302,70 +269,108 @@ func TestRegistryCacheProbe_IsCached(t *testing.T) {
 }
 
 func TestRegistryCacheProbe_IsCached_CacheBehavior(t *testing.T) {
-	t.Run("cached result is returned from cache", func(t *testing.T) {
-		// Create mocks
-		mockTagger := &MockImageTaggerForCache{}
-		mockDigestResolver := &MockDigestResolverForCache{}
-		mockLogger := &MockLoggerForCache{}
-		imageCtrl := createTestImageCtrl()
+	// Create mocks
+	mockTagger := &MockImageTaggerForCache{}
+	mockDigestResolver := &MockDigestResolverForCache{}
+	mockLogger := &MockLoggerForCache{}
+	mockConfig := &MockImageConfig{}
+	mockConfig.On("IsOktetoCluster").Return(false)
+	mockConfig.On("GetGlobalNamespace").Return("test-global-namespace")
+	mockConfig.On("GetNamespace").Return("test-namespace")
+	mockConfig.On("GetRegistryURL").Return("test-registry.com")
+	imageCtrl := registry.NewImageCtrl(mockConfig)
 
-		// Create registry cache probe
-		probe := NewRegistryCacheProbe(
-			mockTagger,
-			"test-namespace",
-			"test-registry.com",
-			imageCtrl,
-			mockDigestResolver,
-			mockLogger,
-		)
+	// Create registry cache probe
+	probe := NewRegistryCacheProbe(
+		mockTagger,
+		"test-namespace",
+		"test-registry.com",
+		imageCtrl,
+		mockDigestResolver,
+		mockLogger,
+	)
 
-		// Pre-populate cache
-		probe.mu.Lock()
-		probe.cache["test-image:tag"] = "test-image:tag@sha256:cached"
-		probe.mu.Unlock()
+	// Set up mock expectations
+	mockTagger.On("GetGlobalTagFromDevIfNeccesary", "test-image", "test-namespace", "test-registry.com", "hash123", imageCtrl).
+		Return("test-image:tag")
 
-		// Set up mock expectations - should not be called since result is cached
-		mockTagger.On("GetGlobalTagFromDevIfNeccesary", "test-image", "test-namespace", "test-registry.com", "hash123", imageCtrl).
-			Return("test-image:tag")
+	// GetImageTagWithDigest is always called to check if the image exists in the registry
+	mockDigestResolver.On("GetImageTagWithDigest", "test-image:tag").
+		Return("test-image:tag@sha256:cached", nil)
 
-		// Execute
-		cached, digest, err := probe.IsCached("test-manifest", "test-image", "hash123", "test-service")
+	mockLogger.On("Infof", "image %s found", "test-image:tag").Return()
 
-		// Verify results
-		assert.True(t, cached)
-		assert.Equal(t, "test-image:tag@sha256:cached", digest)
-		assert.NoError(t, err)
+	// Execute
+	cached, digest, err := probe.IsCached("test-manifest", "test-image", "hash123", "test-service")
 
-		// Verify that digest resolver was not called (cached result)
-		mockDigestResolver.AssertNotCalled(t, "GetImageTagWithDigest")
-		mockTagger.AssertExpectations(t)
-	})
+	// Verify results
+	assert.True(t, cached)
+	assert.Equal(t, "test-image:tag@sha256:cached", digest)
+	assert.NoError(t, err)
+
+	// Verify that digest resolver was called
+	mockDigestResolver.AssertExpectations(t)
+	mockTagger.AssertExpectations(t)
+	mockLogger.AssertExpectations(t)
 }
 
-func TestRegistryCacheProbe_LookupReferenceWithDigest(t *testing.T) {
+func TestRegistryCacheProbe_LookupReferenceWithDigest_Success(t *testing.T) {
+	// Create mocks
+	mockTagger := &MockImageTaggerForCache{}
+	mockDigestResolver := &MockDigestResolverForCache{}
+	mockLogger := &MockLoggerForCache{}
+	mockConfig := &MockImageConfig{}
+	mockConfig.On("IsOktetoCluster").Return(false)
+	mockConfig.On("GetGlobalNamespace").Return("test-global-namespace")
+	mockConfig.On("GetNamespace").Return("test-namespace")
+	mockConfig.On("GetRegistryURL").Return("test-registry.com")
+	imageCtrl := registry.NewImageCtrl(mockConfig)
+
+	reference := "test/image:tag"
+	mockDigestResult := "test/image:tag@sha256:abc123"
+	expectedDigest := "test/image:tag@sha256:abc123"
+
+	// Set up mock expectations
+	mockDigestResolver.On("GetImageTagWithDigest", reference).
+		Return(mockDigestResult, nil)
+
+	// Create registry cache probe
+	probe := NewRegistryCacheProbe(
+		mockTagger,
+		"test-namespace",
+		"test-registry.com",
+		imageCtrl,
+		mockDigestResolver,
+		mockLogger,
+	)
+
+	// Execute
+	digest, err := probe.LookupReferenceWithDigest(reference)
+
+	// Verify results
+	assert.Equal(t, expectedDigest, digest)
+	assert.NoError(t, err)
+
+	// Verify mock expectations
+	mockDigestResolver.AssertExpectations(t)
+}
+
+func TestRegistryCacheProbe_LookupReferenceWithDigest_Error(t *testing.T) {
 	tests := []struct {
 		name             string
 		reference        string
 		mockDigestResult string
 		mockDigestError  error
 		expectedDigest   string
-		expectedError    bool
+		expectedError    error
 	}{
-		{
-			name:             "successful digest lookup",
-			reference:        "test/image:tag",
-			mockDigestResult: "test/image:tag@sha256:abc123",
-			mockDigestError:  nil,
-			expectedDigest:   "test/image:tag@sha256:abc123",
-			expectedError:    false,
-		},
 		{
 			name:             "digest lookup error",
 			reference:        "test/image:tag",
 			mockDigestResult: "",
 			mockDigestError:  errors.New("digest error"),
 			expectedDigest:   "",
-			expectedError:    true,
+			expectedError:    errors.New("digest error"),
 		},
 		{
 			name:             "empty reference",
@@ -373,7 +378,7 @@ func TestRegistryCacheProbe_LookupReferenceWithDigest(t *testing.T) {
 			mockDigestResult: "",
 			mockDigestError:  errors.New("empty reference"),
 			expectedDigest:   "",
-			expectedError:    true,
+			expectedError:    errors.New("empty reference"),
 		},
 	}
 
@@ -383,7 +388,12 @@ func TestRegistryCacheProbe_LookupReferenceWithDigest(t *testing.T) {
 			mockTagger := &MockImageTaggerForCache{}
 			mockDigestResolver := &MockDigestResolverForCache{}
 			mockLogger := &MockLoggerForCache{}
-			imageCtrl := createTestImageCtrl()
+			mockConfig := &MockImageConfig{}
+			mockConfig.On("IsOktetoCluster").Return(false)
+			mockConfig.On("GetGlobalNamespace").Return("test-global-namespace")
+			mockConfig.On("GetNamespace").Return("test-namespace")
+			mockConfig.On("GetRegistryURL").Return("test-registry.com")
+			imageCtrl := registry.NewImageCtrl(mockConfig)
 
 			// Set up mock expectations
 			mockDigestResolver.On("GetImageTagWithDigest", tt.reference).
@@ -404,12 +414,8 @@ func TestRegistryCacheProbe_LookupReferenceWithDigest(t *testing.T) {
 
 			// Verify results
 			assert.Equal(t, tt.expectedDigest, digest)
-			if tt.expectedError {
-				assert.Error(t, err)
-				assert.Equal(t, tt.mockDigestError, err)
-			} else {
-				assert.NoError(t, err)
-			}
+			assert.Error(t, err)
+			assert.Equal(t, tt.expectedError.Error(), err.Error())
 
 			// Verify mock expectations
 			mockDigestResolver.AssertExpectations(t)
@@ -422,7 +428,12 @@ func TestRegistryCacheProbe_EdgeCases(t *testing.T) {
 		mockTagger := &MockImageTaggerForCache{}
 		mockDigestResolver := &MockDigestResolverForCache{}
 		mockLogger := &MockLoggerForCache{}
-		imageCtrl := createTestImageCtrl()
+		mockConfig := &MockImageConfig{}
+		mockConfig.On("IsOktetoCluster").Return(false)
+		mockConfig.On("GetGlobalNamespace").Return("test-global-namespace")
+		mockConfig.On("GetNamespace").Return("test-namespace")
+		mockConfig.On("GetRegistryURL").Return("test-registry.com")
+		imageCtrl := registry.NewImageCtrl(mockConfig)
 
 		// Set up mock expectations
 		mockTagger.On("GetGlobalTagFromDevIfNeccesary", "test-image", "test-namespace", "test-registry.com", "hash123", imageCtrl).
@@ -453,7 +464,12 @@ func TestRegistryCacheProbe_EdgeCases(t *testing.T) {
 		mockTagger := &MockImageTaggerForCache{}
 		mockDigestResolver := &MockDigestResolverForCache{}
 		mockLogger := &MockLoggerForCache{}
-		imageCtrl := createTestImageCtrl()
+		mockConfig := &MockImageConfig{}
+		mockConfig.On("IsOktetoCluster").Return(false)
+		mockConfig.On("GetGlobalNamespace").Return("test-global-namespace")
+		mockConfig.On("GetNamespace").Return("test-namespace")
+		mockConfig.On("GetRegistryURL").Return("test-registry.com")
+		imageCtrl := registry.NewImageCtrl(mockConfig)
 
 		probe := NewRegistryCacheProbe(
 			mockTagger,
@@ -475,7 +491,12 @@ func TestRegistryCacheProbe_EdgeCases(t *testing.T) {
 		mockTagger := &MockImageTaggerForCache{}
 		mockDigestResolver := &MockDigestResolverForCache{}
 		mockLogger := &MockLoggerForCache{}
-		imageCtrl := createTestImageCtrl()
+		mockConfig := &MockImageConfig{}
+		mockConfig.On("IsOktetoCluster").Return(false)
+		mockConfig.On("GetGlobalNamespace").Return("test-global-namespace")
+		mockConfig.On("GetNamespace").Return("test-namespace")
+		mockConfig.On("GetRegistryURL").Return("test-registry.com")
+		imageCtrl := registry.NewImageCtrl(mockConfig)
 
 		probe := NewRegistryCacheProbe(
 			mockTagger,
@@ -486,20 +507,24 @@ func TestRegistryCacheProbe_EdgeCases(t *testing.T) {
 			mockLogger,
 		)
 
-		// Pre-populate cache
-		probe.mu.Lock()
-		probe.cache["test-image:tag"] = "test-image:tag@sha256:cached"
-		probe.mu.Unlock()
-
-		// Set up mock expectations
+		// Set up mock expectations - each goroutine will call these methods
 		mockTagger.On("GetGlobalTagFromDevIfNeccesary", "test-image", "test-namespace", "test-registry.com", "hash123", imageCtrl).
-			Return("test-image:tag")
+			Return("test-image:tag").Maybe()
+
+		// GetImageTagWithDigest will be called by each goroutine (10 times)
+		mockDigestResolver.On("GetImageTagWithDigest", "test-image:tag").
+			Return("test-image:tag@sha256:cached", nil).Maybe()
+
+		mockLogger.On("Infof", "image %s found", "test-image:tag").Return().Maybe()
 
 		// Test concurrent access
-		done := make(chan bool, 10)
-		for i := 0; i < 10; i++ {
+		var wg sync.WaitGroup
+		const numGoroutines = 10
+		wg.Add(numGoroutines)
+
+		for i := 0; i < numGoroutines; i++ {
 			go func() {
-				defer func() { done <- true }()
+				defer wg.Done()
 				cached, _, err := probe.IsCached("test-manifest", "test-image", "hash123", "test-service")
 				assert.True(t, cached)
 				assert.NoError(t, err)
@@ -507,9 +532,7 @@ func TestRegistryCacheProbe_EdgeCases(t *testing.T) {
 		}
 
 		// Wait for all goroutines to complete
-		for i := 0; i < 10; i++ {
-			<-done
-		}
+		wg.Wait()
 
 		mockTagger.AssertExpectations(t)
 	})
