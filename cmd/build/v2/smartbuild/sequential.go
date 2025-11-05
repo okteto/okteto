@@ -148,7 +148,7 @@ func (s *SequentialCheckStrategy) cloneGlobalImageToDev(cachedImage, manifestNam
 	cloneDuration := time.Since(cloneStartTime)
 	svc.SetCloneDuration(cloneDuration, err == nil)
 
-	return reference, nil
+	return reference, err
 }
 
 // addDependentsToNotCached recursively adds all dependent services to notCached
